@@ -1,0 +1,154 @@
+{
+  "_comment": "Seed for the OKL — real, dated, receipted lessons from the geospatial pipeline's method.md, promoted to org scope so any repo's first `okl check` returns an earned lesson. Only WORLD-FACTS are org-scoped (portable gates, prior art, data-source gotchas); repo-only quirks are omitted or scoped repo:geospatial-ml-pipeline.",
+  "nodes": [
+    {
+      "key": "d14",
+      "type": "Defect",
+      "scope": "org",
+      "repo": "geospatial-ml-pipeline",
+      "found_by": "check-scaffold-classpaths.sh (importing all 23 mechanically)",
+      "verified": true,
+      "title": "rslearn/OlmoEarth scaffold class_paths written from memory, never imported",
+      "body": "5 of 23 class_paths did not exist. Every class NAME right, every MODULE path wrong; the spec asserted they were 'correct'. They fail at runner startup — Phase 1, on a rented GPU. Any repo scaffolding an rslearn/OlmoEarth model config is exposed.",
+      "tags": "geospatial"
+    },
+    {
+      "key": "g_classpath",
+      "type": "Gate",
+      "scope": "org",
+      "found_by": "the geospatial pipeline",
+      "verified": true,
+      "title": "check-scaffold-classpaths.sh — import every declared class_path mechanically",
+      "body": "Portable Tier-3 gate: parse the scaffold config, import all class_paths, fail if any is unresolvable. Arm this in any repo that scaffolds rslearn/OlmoEarth/model YAML before it writes a class_path.",
+      "tags": "geospatial",
+      "repo": "geospatial-ml-pipeline"
+    },
+    {
+      "key": "d15",
+      "type": "Defect",
+      "scope": "org",
+      "repo": "geospatial-ml-pipeline",
+      "found_by": "verify_materialized() — check rasters on disk, not exit code",
+      "verified": true,
+      "title": "rslearn dataset materialize exited 0 having written zero files",
+      "body": "NotImplementedError on all 238 windows swallowed into a worker pool. 'ingest: false' needs get_item_by_name, which Planetary Computer's Sentinel2 raises by design. Never trust an exit code — verify the outputs exist.",
+      "tags": "geospatial,data-quality"
+    },
+    {
+      "key": "g_verify_outputs",
+      "type": "Gate",
+      "scope": "org",
+      "found_by": "the geospatial pipeline",
+      "verified": true,
+      "title": "verify_materialized() — assert output artifacts exist, never trust exit 0",
+      "body": "Portable pattern: after any batch/pipeline step, assert the expected files are on disk with non-zero size. Exit code 0 with zero outputs is a common swallowed-exception failure.",
+      "tags": "method,data-quality",
+      "repo": "geospatial-ml-pipeline"
+    },
+    {
+      "key": "d16",
+      "type": "Defect",
+      "scope": "org",
+      "repo": "geospatial-ml-pipeline",
+      "found_by": "pinning TMPDIR + CPL_TMPDIR to the data drive",
+      "verified": true,
+      "title": "GDAL temp files (CPL_TMPDIR) not covered by TMPDIR — filled boot disk to zero",
+      "body": "TMPDIR on the data drive still let materialize write 2.8 GB to /. GDAL keeps its own temp, CPL_TMPDIR. Redirect EVERY temp mechanism, not the first one you find. Storage estimate was also ~10x low for ingest (11 GB tile store vs '~1.2 GB' materialised).",
+      "tags": "geospatial"
+    },
+    {
+      "key": "d18",
+      "type": "Defect",
+      "scope": "org",
+      "repo": "geospatial-ml-pipeline",
+      "found_by": "tests/test_class_scheme_contract.py",
+      "verified": true,
+      "title": "num_classes off-by-one when class 0 is reserved (zero_is_invalid)",
+      "body": "model.yaml said num_classes: 4; crosswalk emits 4 real classes and class 0 is reserved, so it needs 5. Crashed 'Target 4 is out of bounds'. Contract test: num_classes == max crosswalk id + 1.",
+      "tags": "geospatial"
+    },
+    {
+      "key": "d19",
+      "type": "Defect",
+      "scope": "org",
+      "repo": "geospatial-ml-pipeline",
+      "found_by": "laptop dry-run before GPU",
+      "verified": true,
+      "title": "SegmentationPoolingDecoder reads spatial dims wrong on a temporal cube",
+      "body": "Decoder reads image.shape[1:3]; a 4-D [bands, timesteps, H, W] input makes it grab (timesteps, H) and predict 12x2 against a 2x2 target. Temporal segmentation needs a decoder reading the true last-two axes. Dry-run on CPU before spending GPU.",
+      "tags": "geospatial"
+    },
+    {
+      "key": "c1",
+      "type": "Claim",
+      "scope": "org",
+      "repo": "geospatial-ml-pipeline",
+      "status": "retracted",
+      "found_by": "/paper-audit",
+      "title": "Novelty claim: 'CSU produced points but no map; nobody has mapped the target species change in the study basin'",
+      "body": "Recorded from the geospatial pipeline method.md (error #5), not independently re-verified here. Per that audit, the claim was retracted because a prior-art paper (attributed there to Evangelista et al., 2018) reportedly shipped 2-epoch change maps incl. the target species in the study basin. Before relying on this in another repo, VERIFY the citation against the literature via `okl check` + a paper audit.",
+      "tags": "method"
+    },
+    {
+      "key": "pa1",
+      "type": "PriorArt",
+      "scope": "org",
+      "status": "live",
+      "verified": true,
+      "found_by": "/paper-audit (recorded in the geospatial repo method.md, not re-verified here)",
+      "title": "Prior art (attributed to Evangelista et al., 2018) — 2-epoch the target species change maps, the study basin",
+      "body": "THREAT verdict recorded in the geospatial pipeline: reportedly refutes the 'nobody has mapped this' novelty claim; the same source also cites CO-RIP geospatial-extent mapping. Citation transcribed from that repo, NOT independently confirmed — verify against the literature before relying on it elsewhere.",
+      "tags": "method",
+      "repo": "geospatial-ml-pipeline"
+    },
+    {
+      "key": "d12",
+      "type": "Defect",
+      "scope": "org",
+      "repo": "geospatial-ml-pipeline",
+      "found_by": "counting before trusting",
+      "verified": true,
+      "title": "Public dataset had x/y transposed — 119 points in the wrong hemisphere",
+      "body": "Virgin_River rows had coordinates transposed. Count / plot points on a map before trusting any public geospatial dataset's coordinate order.",
+      "tags": "geospatial,data-quality"
+    },
+    {
+      "key": "d11",
+      "type": "Defect",
+      "scope": "org",
+      "repo": "geospatial-ml-pipeline",
+      "found_by": "refusing a convenient bad number",
+      "verified": true,
+      "title": "AUC 0.23 looked like a broken encoder; was unshuffled KFold on a spatial grid",
+      "body": "Shuffled KFold: 0.85. A convenient bad number (looks like the thing you feared) is exactly the one to distrust. Use spatial/grouped CV on spatially autocorrelated data.",
+      "tags": "geospatial,eval-integrity"
+    }
+  ],
+  "edges": [
+    {
+      "src": "g_classpath",
+      "rel": "CATCHES",
+      "dst": "d14"
+    },
+    {
+      "src": "g_classpath",
+      "rel": "VERIFIED_ON",
+      "dst": "d14"
+    },
+    {
+      "src": "g_verify_outputs",
+      "rel": "CATCHES",
+      "dst": "d15"
+    },
+    {
+      "src": "g_verify_outputs",
+      "rel": "VERIFIED_ON",
+      "dst": "d15"
+    },
+    {
+      "src": "pa1",
+      "rel": "REFUTES",
+      "dst": "c1"
+    }
+  ]
+}

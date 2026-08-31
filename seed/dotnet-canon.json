@@ -1,0 +1,489 @@
+{
+ "_comment": "The .NET-platform CANON import (curated from the origin repo: CLAUDE.md 2026-07 snapshot, .claude/tombstones.txt, docs/decisions/). Complements dotnet-defects.json (war stories) with the RULES/DECISIONS/TOMBSTONES layer. Deliberately NOT named *-defects.json so a directory-wide `okl seed seed/` skips it — review scope+tags first, then `okl seed seed/dotnet-canon.json`. Org-scoped rules are portable engineering canon (tag-filtered by repo interests); Wolverine/Aspire operational quirks and all tombstoned identifiers stay repo:dotnet-microservices. NOT yet imported: .claude/audits/ (26 dated article-review verdicts -> future Claim/PriorArt batch), frontend/CLAUDE.md beyond the 3 react-defects nodes, docs/project-decisions.md long tail.",
+ "nodes": [
+  {
+   "key": "r_dbcontext_direct",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Data access' + the simplicity refactor (five repositories deleted)",
+   "tags": "dotnet",
+   "title": "DbContext directly in handlers — no IFooRepository wrappers; integration tests replace mocks",
+   "body": "DbContext already IS Unit-of-Work and DbSet<T> already IS Repository; a wrapper interface adds a layer without capability. The mocking defense fails because EF-touching handlers are properly tested with integration tests against real Testcontainers DBs, not unit mocks. Reads project to DTOs inside the IQueryable (AsNoTracking + Select); writes load the aggregate tracked and SaveChangesAsync.",
+   "symptom": "a new IFooRepository interface wrapping DbContext, justified by 'testability'",
+   "fix": "take DbContext (or IDbContextFactory<T>) directly; test with Testcontainers integration tests"
+  },
+  {
+   "key": "r_arch_enforcement_ladder",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Promotion signal' + docs/vsa-vs-clean-architecture.md",
+   "tags": "dotnet,method",
+   "title": "Enforce the dependency rule by escalation: convention → architecture tests → project split",
+   "body": "Two things wear the name Clean Architecture: the dependency rule (Domain references nothing — always in force, never complexity-gated) and the multi-project split (only buys compile-time enforcement). The middle rung most teams skip: an architecture test (NetArchTest/ArchUnitNET) asserting 'Domain references no Infrastructure namespaces' enforces the same boundary in CI without project ceremony. Split projects only when the compiler must hold the line or deploy/versioning units genuinely differ.",
+   "symptom": "a proposal to split Domain/Application/Infrastructure csprojs 'to enforce boundaries'",
+   "fix": "add an architecture test first; split projects only on 5+ aggregates with cross-cutting rules AND Domain/ outgrowing Features/"
+  },
+  {
+   "key": "r_rate_limiter_scaleout",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Rate Limiting'",
+   "tags": "security,dotnet",
+   "title": "In-memory rate limiters silently weaken to N× the limit at N instances",
+   "body": "Framework rate limiters (ASP.NET AddFixedWindowLimiter etc.) count in-process; each instance grants a fresh allowance, so scaling out multiplies the effective limit with no error. At 2+ instances move affected endpoints to a shared-store limiter (Redis); the INCR+EXPIRE pair is two operations with a race window — make it atomic with a Lua script.",
+   "symptom": "a rate-limited endpoint deployed to a second instance/replica",
+   "fix": "swap to a Redis-backed limiter with an atomic (Lua) increment+TTL before scaling out"
+  },
+  {
+   "key": "r_request_naming",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Coding Standards'",
+   "tags": "dotnet,method",
+   "title": "Generic *Dto on a request model hides intent — name messages by role",
+   "body": "CQRS messages are *Command (write) / *Query (read); RPC contracts are *Request/*Response pairs; *Dto is reserved for read-side projections only, where it correctly signals a transfer shape. 'CreateOrderDto' says nothing about direction, pipeline, or intent.",
+   "symptom": "a *Dto-suffixed type used as a command/request input",
+   "fix": "rename by role: Command/Query for CQRS messages, Request/Response for RPC, Dto only for read projections"
+  },
+  {
+   "key": "r_comments_durable_docs",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Commenting Convention' (the STATUS.md dangling-pointer incident)",
+   "tags": "method",
+   "title": "Code comments link durable docs, never rolling-state files",
+   "body": "Rolling state files (STATUS.md, sprint notes) churn every few weeks, so a code comment pointing at them dangles silently — the .NET platform's test-factory comments pointed at a STATUS.md entry that had moved. Point comments at the stable home (a docs/*.md section, an issue number); the rolling file may point at code, never the reverse.",
+   "symptom": "a code comment referencing a status/progress/planning doc",
+   "fix": "repoint the comment at the durable doc or issue; let STATUS-style files point at code instead"
+  },
+  {
+   "key": "r_surprise_in_writing",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Debugging Discipline'",
+   "tags": "method",
+   "title": "If the failure mode would surprise the next person who hits it, the surprise belongs in writing — before moving on",
+   "body": "When debugging surfaces a non-obvious failure (framework version trap, config silently overriding config, ordering gotcha, API contradicting its docs), capture it the same session: a one-liner in the always-on canon, the why in the relevant doc, deferred remainders in the open-issues list. The bar is not 'document every bug fix'; trivial typos don't qualify, rules-discovered-the-hard-way always do.",
+   "symptom": "a hard-won debugging insight living only in the fix commit",
+   "fix": "encode the lesson in canon + docs in the same session as the fix"
+  },
+  {
+   "key": "r_file_move_discipline",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'File-move discipline' (Dockerfile.catalog broken for months after PR #31)",
+   "tags": "method",
+   "title": "Deleting or renaming a file requires grepping for the old path in the same PR",
+   "body": "References live in docs, inline comments, Dockerfile COPY lines, project references, CI run: blocks, and review-bot config — none of which the compiler checks. the .NET platform's Dockerfile.catalog referenced a collapsed project path for months, broken silently until a redeploy attempt. Enforce in layers: a post-move hook printing stale-ref candidates, a CI broken-link audit, review-bot path instructions.",
+   "symptom": "git mv / git rm without a repo-wide grep for the old path",
+   "fix": "grep and sweep every reference to the old path in the same PR; wire a hook + CI link audit as the mechanical catch"
+  },
+  {
+   "key": "r_grep_to_zero",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Identifier-move discipline' (15+ docs taught Azure Service Bus as current after the RabbitMQ swap)",
+   "tags": "method",
+   "title": "An identifier sweep is done when grep returns zero — not when the docs you remembered are updated",
+   "body": "The compiler catches stale identifiers in code; nothing catches them in prose. Memory-based sweeps left 15+ docs teaching the removed transport as current, plus a metric documented as THE alarm that nothing incremented. Completion criterion is mechanical: git grep of the tombstoned identifier returns zero non-allowlisted hits, and the identifier joins a tombstone registry so CI fails any resurfacing.",
+   "symptom": "a removal PR that updates 'the docs I remembered' with no grep-to-zero check",
+   "fix": "grep every removed public identifier to zero across md/comments/CI/scripts; tombstone it so CI holds the line"
+  },
+  {
+   "key": "r_docs_review_surface",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Doc-and-diagram discipline'",
+   "tags": "method",
+   "title": "Docs and diagrams are the review surface, not byproducts — stale ones make every review reason against a fiction",
+   "body": "Reviewers (human or bot) observe the system through the architecture doc and diagrams; if those lag the code, drift is invisible until production. When a change affects what a doc/diagram depicts, the doc updates in the same PR or the PR names the deferred follow-up. Keep editable diagram sources paired with their rendered artifacts and audit the pairing in CI.",
+   "symptom": "a topology/pattern-changing PR with no doc or diagram delta",
+   "fix": "update the depicting doc/diagram in the same PR, or name the deferred issue in the PR body"
+  },
+  {
+   "key": "r_presence_in_loop",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Presence in the loop, not approval at the gate'",
+   "tags": "method,agent-safety",
+   "title": "For non-pattern-conforming AI work, be present during implementation — reviewing the finished diff is not presence",
+   "body": "By the time you review an AI agent's finished diff, it has already filled gaps you didn't notice. For novel work (new bounded context, transport, security model, multi-step refactor) check intermediate state and course-correct before the diff is too large to read honestly; for pattern-conforming work (CRUD matching an existing shape) canon + automated review at the gate is sufficient. 'I'll review when it's done' is how three days of rework happens.",
+   "symptom": "an architecturally significant AI-implemented change reviewed only at PR time",
+   "fix": "classify the change first; stay in the loop for non-pattern-conforming work, gate-review the rest"
+  },
+  {
+   "key": "r_experiment_sunset",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Continue is the verb that gets you in trouble'",
+   "tags": "method",
+   "title": "Continue is the verb that gets you in trouble; build is not — every experiment gets a budget and a sunset up front",
+   "body": "Cheap building is leverage; the discipline is the stop, not the start. Set a token/cost budget and a stop-time before an experiment begins; when either runs out the default is 'we learned what we needed; we don't continue.' Nobody ever approves the drift from prototype to unowned product — it approves itself one month at a time, and carry-debt (maintained, secured code nobody needed) is real.",
+   "symptom": "an experimental branch or prototype with no defined end condition",
+   "fix": "declare budget + stop-time at start; at expiry, default to stop and write down what was learned"
+  },
+  {
+   "key": "r_encoding_loop",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Continuous Rule Encoding'",
+   "tags": "method",
+   "title": "Encode every 'never again / always when' finding to the smallest surface that catches it — a fix PR without the rule is a half-finished job",
+   "body": "Findings from any review surface get encoded the same session, into the smallest applicable layer: always-on canon only if every session needs it (keep it lean — size-budgeted in CI), else file-scoped review-bot instructions, a reviewer-agent checklist item, a skill/procedure, or a supporting doc. The fix lives in the PR; the rule lives in the encoding surfaces; the next instance of the antipattern slips through if only the fix lands.",
+   "symptom": "a merged fix for a recurring antipattern with no corresponding rule/gate change",
+   "fix": "land the rule with the fix (same or paired PR); track deferred encodings as labeled placeholders, never as the encoding itself"
+  },
+  {
+   "key": "r_durability_not_replay",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Durability ≠ replay' + docs/messaging-transport-selection.md",
+   "tags": "messaging",
+   "title": "Durability ≠ replay — don't reach for a stream just to avoid losing messages",
+   "body": "Message loss depends on whether the subscription is durable, not on queue-vs-stream; the misconception comes from Redis Pub/Sub specifically (fire-and-forget). Durable pub/sub (RabbitMQ durable queues, ASB topics, SNS→SQS) persists per-subscriber until ack; with a transactional outbox on the publish side, at-least-once delivery makes the real risk duplication, not loss — hence idempotent handlers. Reach for a stream (Kafka/Event Hubs/Redis Streams) only for replay-from-offset, long retention, an ordered log, or N independent re-readers.",
+   "symptom": "'use Kafka so we don't lose messages' with no replay/retention requirement",
+   "fix": "outbox + durable queue + idempotent handlers covers loss; adopt a stream only for what a durable queue can't do"
+  },
+  {
+   "key": "r_batch_beats_whenall",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Performance Rules' (PlaceOrder fan-out superseded by batch gRPC, issue #71)",
+   "tags": "dotnet,messaging",
+   "title": "Parallelize independent awaits — but when N calls target the SAME service, a batch endpoint beats client-side fan-out",
+   "body": "Sequential awaits serialize latency for free; Task.WhenAll is right for independent calls to different services (one context per task — DbContext is not thread-safe). When the fan-out all hits one service, a batch endpoint wins: one round-trip instead of N, and the server can make the batch atomic — that is why the WhenAll reference shape was superseded by batch ValidateLines/ReserveLines.",
+   "symptom": "a loop of awaits, or a WhenAll fanning N calls into one downstream service",
+   "fix": "WhenAll for independent cross-service calls; a batch endpoint when the target is a single service"
+  },
+  {
+   "key": "r_202_long_running",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Performance Rules'",
+   "tags": "messaging,method",
+   "title": "Long-running work belongs on the message bus — reshape >~1s write paths as 202 Accepted",
+   "body": "Validate, persist a tracking row (the aggregate being created can BE the tracking row), publish a message, return 202 immediately. The same rule applies inside message handlers: minutes-scale work moves to a follow-up message. Fan-out over a recipient list is the same shape — one message per recipient/batch with bounded parallelism, never an inline loop holding the request open.",
+   "symptom": "a synchronous HTTP handler (or message handler) doing multi-second work inline",
+   "fix": "persist a tracking row + publish + return 202; throttled per-item messages for fan-out"
+  },
+  {
+   "key": "r_guid_v7",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Performance Rules'",
+   "tags": "dotnet",
+   "title": "Entity IDs use time-ordered GUIDs (v7) — random v4 PKs fragment the B-tree; but v7 leaks mint time",
+   "body": "Guid.CreateVersion7() appends to the PK index instead of fragmenting it; apply in aggregate factories. Trade-off: the v7 timestamp is decodable from the ID, so don't use it where mint time is sensitive (security tokens, admin-only refs). v4 and v7 coexist fine in the same column.",
+   "symptom": "Guid.NewGuid() for a clustered/indexed primary key, or a v7 ID used as a security token",
+   "fix": "v7 for entity PKs via the factory; v4 (or a real token) where mint time must stay hidden"
+  },
+  {
+   "key": "r_secret_fakes",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Testing' (gitleaks 8.24.x allowlist attempt, tried and removed)",
+   "tags": "security,method",
+   "title": "Test-fixture fake credentials: prefer low-entropy fakes; high-entropy ones need inline scanner markers — and secret scanners scan the whole PR range",
+   "body": "A protocol-syntax-valid low-entropy fake (guest:guest@localhost) never trips the scanner, so no suppressions accumulate. If a parser demands a high-entropy fake, make the literal self-labeling (decodes to 'fake-...-for-testing-only') and suppress with an inline line-scoped marker, not a repo-level scanner config (version-fragile; ORs where you expect ANDs). Diff-range residue trap: the scanner walks every commit in the range — a later fix commit doesn't suppress an earlier unmarked one; squash if hit. Never reproduce a high-entropy literal in docs prose.",
+   "symptom": "a secret-scanner finding on a test fixture, or a repo-level allowlist growing to cover fakes",
+   "fix": "use low-entropy self-evidently-fake values; inline line-scoped markers for unavoidable high-entropy fakes; squash residue"
+  },
+  {
+   "key": "r_aspire_waitfor",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Package Management' (services showing 'Finished' instead of 'Running')",
+   "tags": "dotnet",
+   "title": "Orchestrator reference-injection is not readiness — every WithReference on real infra needs a matching WaitFor",
+   "body": "Aspire's WithReference only injects connection strings; the service starts as soon as env vars resolve, races a still-warming container (RabbitMQ, SQL Server take tens of seconds on first run), and dies with connection-refused. Hard rule: every WithReference on a non-trivial dependency (DB, broker, identity, peer service) gets .WaitFor(x). The generalization: wiring is not readiness in any orchestrator.",
+   "symptom": "services exiting at startup with connection-refused while infra containers warm up",
+   "fix": "pair every WithReference with WaitFor (and generally: gate service start on dependency health, not env-var presence)"
+  },
+  {
+   "key": "r_wolverine_lockstep",
+   "type": "Rule", "scope": "repo", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Package Management' (WolverineFx.RabbitMQ stranded at 6.8.0 by #175)",
+   "tags": "dotnet,messaging",
+   "title": "All WolverineFx.* packages move together — and a package added after a dependabot group PR opened gets left behind",
+   "body": "Core + transports release in lockstep; a transport N minors behind core references changed core APIs — unsupported combination that builds clean (runtime/behavior risk only). The dependabot group normally holds the family together, but a package added to the manifest after a group PR was opened is skipped by that PR. After adding any WolverineFx.* package: grep the versions file and verify family-version match.",
+   "symptom": "mixed WolverineFx.* versions in Directory.Packages.props after a dependency-bot merge",
+   "fix": "bump the whole family as one change; after adding a new member, verify it matches the family version"
+  },
+  {
+   "key": "r_wolverine_inbox",
+   "type": "Rule", "scope": "repo", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Package Management' (fixed in #169)",
+   "tags": "dotnet,messaging",
+   "title": "Wolverine durability is per-direction — durable outbox on senders does nothing for listeners",
+   "body": "Default listeners are buffered: the broker is acked as messages enter the in-memory buffer, before handlers run, so a crashing consumer loses in-flight messages (a stopped one resumes). Store-backed services use UseDurableInboxOnAllListeners(); store-less services use ProcessInline() per listener (ack after handler). Every new ListenToRabbitQueue gets one of the two — a bare listener silently reintroduces the loss window.",
+   "symptom": "a new queue listener declared with neither durable-inbox policy nor inline processing",
+   "fix": "durable inbox for store-backed services, ProcessInline for store-less ones — never a bare listener"
+  },
+  {
+   "key": "r_aspire_versions",
+   "type": "Rule", "scope": "repo", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Package Management'",
+   "tags": "dotnet",
+   "title": "Aspire SDK and runtime packages must match to the minor — mismatches fail at two different layers",
+   "body": "Major mismatches surface at build/startup as TypeLoadException on internal types; minor mismatches surface at runtime as DCP rejecting startup ('newer version of the AppHost package is required'). Bump the AppHost SDK declaration and the Aspire.Hosting.* package versions together as one change.",
+   "symptom": "TypeLoadException at startup, or DCP refusing to launch after a partial Aspire bump",
+   "fix": "bump SDK + packages together; SDK ≥ packages always"
+  },
+  {
+   "key": "r_no_nplus1",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Performance Rules'",
+   "tags": "dotnet",
+   "title": "No N+1 — never query inside a loop over another query's results",
+   "body": "Use Include or (better) projection so the database answers in one round-trip. A loop of per-item queries is the canonical serialized-latency bug and is invisible in tests against tiny datasets.",
+   "symptom": "a query executed inside a foreach over results from another query",
+   "fix": "collapse into one query via Include or a projection"
+  },
+  {
+   "key": "r_sargable",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Performance Rules' + SearchProducts.cs documented trade-off",
+   "tags": "dotnet,data-quality",
+   "title": "Non-sargable predicates defeat indexes — fix at write time, not query time",
+   "body": "A WHERE that wraps the column in a function (lower(email) = x) can't use a B-tree index. Normalize on insert/update (a normalized column populated by the aggregate factory) or use a case-insensitive collation. Leading-wildcard substring search needs a real text index (tsvector/Elasticsearch/Meilisearch) when load justifies it — until then, document the trade-off at the call site.",
+   "symptom": "a Where clause applying a function to the column, or LIKE '%text%'",
+   "fix": "normalize at write time / use collation; adopt a text index only when load demands"
+  },
+  {
+   "key": "r_pagination_cap",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Performance Rules'",
+   "tags": "dotnet",
+   "title": "Every list endpoint paginates with a server-side size cap; keyset pagination for deep offsets",
+   "body": "An unpaginated list endpoint is an unbounded query a client can weaponize by accident. Cap page size server-side (≤100 here); use keyset (seek) pagination where offsets grow large, since OFFSET N scans N rows to discard them.",
+   "symptom": "a list endpoint with no page-size cap, or deep OFFSET pagination on a large table",
+   "fix": "server-side cap on page size; keyset pagination past shallow offsets"
+  },
+  {
+   "key": "r_bulk_ops",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Performance Rules'",
+   "tags": "dotnet",
+   "title": "Bulk mutations use set-based operations — never load thousands of rows to change them",
+   "body": "ExecuteUpdateAsync/ExecuteDeleteAsync (or raw set-based SQL) mutate in the database; materializing entities to loop-and-save multiplies memory, round-trips, and change-tracking cost by row count.",
+   "symptom": "a loop loading entities to update/delete them en masse",
+   "fix": "one set-based ExecuteUpdate/ExecuteDelete statement"
+  },
+  {
+   "key": "r_optimistic_concurrency",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Performance Rules' + docs/performance-and-data-correctness.md",
+   "tags": "dotnet,data-quality",
+   "title": "Every updatable aggregate carries a concurrency token — last-write-wins is not acceptable",
+   "body": "Without a token (row-version column, Postgres xmin), two concurrent editors silently overwrite each other and the loss is undetectable after the fact. The write path handles the concurrency-conflict exception with a bounded retry; conflicts are a normal outcome, not an error to eliminate.",
+   "symptom": "an updatable entity with no row-version/xmin token, or an unhandled concurrency exception",
+   "fix": "add the token; handle the conflict with bounded retry in the write pipeline"
+  },
+  {
+   "key": "r_logging_hygiene",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Performance Rules' + 'Observability' (MA0002)",
+   "tags": "dotnet,method",
+   "title": "Structured logging: message templates with placeholders, summaries not per-item lines, no null scope keys",
+   "body": "Templates ('User {UserId} logged in') keep logs queryable and are required for correlation scopes; interpolation/concatenation destroys both. Tight loops log a summary count, not per-item lines. Scope dictionaries never take null/empty values, and dictionaries are constructed with an ordinal comparer.",
+   "symptom": "interpolated log strings, per-item logging in a loop, or nullable values added to log scopes",
+   "fix": "templates + placeholders; summary logs; guard scope keys and use ordinal comparers"
+  },
+  {
+   "key": "r_connection_hold",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Performance Rules'",
+   "tags": "dotnet",
+   "title": "DB connection hold time: open → query → dispose; never await unrelated work while a connection is open",
+   "body": "Awaiting an HTTP call or message publish while holding a pooled connection starves the pool under load — the outage presents as connection-timeout errors far from the offending code. Do the IO, release, then continue.",
+   "symptom": "an HTTP/messaging await between a query and its connection's disposal",
+   "fix": "finish and dispose the DB work before awaiting unrelated IO"
+  },
+  {
+   "key": "r_cache_write_path",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Performance Rules'",
+   "tags": "dotnet",
+   "title": "Cache invalidation happens in the write path — the mutating handler invalidates, not 'later' or via TTL",
+   "body": "A handler that mutates a cached entity updates or invalidates the cache in the same handler; deferring to TTL expiry or a separate process leaves a window where reads serve data known to be stale. (The frontend mutation-invalidation rule is this same rule client-side.)",
+   "symptom": "a write handler touching a cached entity with no cache update in the same handler",
+   "fix": "invalidate/update the cache in the mutating handler itself"
+  },
+  {
+   "key": "r_migrations_immutable",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Performance Rules'",
+   "tags": "dotnet,data-quality",
+   "title": "Migrations are immutable once applied anywhere; destructive changes need a multi-step plan",
+   "body": "Editing an applied migration desynchronizes environments that already ran it — the schema history lies. Drop/rename/NOT-NULL-on-existing-column changes ship as expand-migrate-contract sequences, never as a single destructive step.",
+   "symptom": "a diff editing an already-applied migration, or a one-shot destructive schema change",
+   "fix": "add a new migration; stage destructive changes across deploys"
+  },
+  {
+   "key": "r_measure_first",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Performance Rules'",
+   "tags": "method,dotnet",
+   "title": "Measure before optimizing — no caching, compiled queries, ValueTask, span tricks, or split queries on intuition",
+   "body": "Benchmarks for code paths, counters/load tools for system behavior, the ORM's query-string dump for SQL shape. Micro-optimizations like AsSpan-over-Substring apply only on profiled synchronous hot paths (spans can't cross awaits anyway). Unmeasured optimization adds complexity with unknown sign.",
+   "symptom": "a performance-motivated change with no profile/benchmark attached",
+   "fix": "profile first; keep the receipt with the change"
+  },
+  {
+   "key": "r_dapper_escape",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Performance Rules'",
+   "tags": "dotnet",
+   "title": "Raw-SQL escape hatches are sanctioned, bounded, and share the ORM's connection — not a peer abstraction",
+   "body": "Reach past the ORM (Dapper here) only when: the SQL is provider-specific and doesn't translate, profiling proves the ORM is the bottleneck, or LINQ obscures a SQL aggregation. Always use the ORM's own connection so the escape hatch shares the ambient transaction. Writes still go through aggregates + the ORM.",
+   "symptom": "a raw-SQL data path introduced for convenience, or one opening its own connection",
+   "fix": "meet one of the three conditions, share the ORM connection, keep writes in the ORM"
+  },
+  {
+   "key": "r_exceptions_canon",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Key Conventions' (Anton Martyniuk VSA audit, .claude/audits/2026-06-08)",
+   "tags": "dotnet,method",
+   "title": "Pick ONE error-flow canon and name the flip triggers — here: exceptions at the handler boundary, no Result<T>",
+   "body": "Expected business errors throw at the handler boundary and a global handler translates to RFC 7807 ProblemDetails. The Result/OneOf/ErrorOr pattern is defensible (exhaustiveness, allocation-cheap) but mixing both styles is the real failure. The named triggers to flip: profiled exception cost on a hot path, or a step with high expected-failure rate where exception-as-control-flow reads wrong. Neither has surfaced.",
+   "symptom": "a Result<T>-style return introduced into an exception-canon codebase (or vice versa)",
+   "fix": "follow the declared canon; flip only when a named trigger fires, repo-wide"
+  },
+  {
+   "key": "r_problemdetails_traceid",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Security Requirements' (GlobalExceptionHandler)",
+   "tags": "security,dotnet",
+   "title": "Error responses: generic detail + trace ID only — the full W3C traceparent leaks server call structure",
+   "body": "Clients get RFC 7807 ProblemDetails with a correlation trace ID; internal state, entity IDs, and stack traces stay in server logs. Subtlety: expose Activity.TraceId (32 hex chars), NOT Activity.Id — the full traceparent embeds the span ID, which leaks server-side handler call structure to clients.",
+   "symptom": "an error body carrying exception details, entity IDs, or a full traceparent string",
+   "fix": "generic ProblemDetails + bare trace ID; details to server logs keyed by that ID"
+  },
+  {
+   "key": "r_https_metadata_failclosed",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Security Requirements' (JWT validation)",
+   "tags": "security,dotnet",
+   "title": "OIDC metadata over plaintext HTTP must fail loudly outside dev — a silent scheme-derived default is a MITM door",
+   "body": "Plaintext OIDC/JWKS fetch lets a man-in-the-middle inject signing keys — game over for token validation. RequireHttpsMetadata is therefore fail-closed outside Development, never silently derived from the authority URL's scheme; a legitimate internal-http deployment opts out explicitly and the opt-out logs a warning.",
+   "symptom": "an http:// identity authority accepted without an explicit, logged opt-out",
+   "fix": "fail startup on plaintext OIDC outside dev; explicit config opt-out with a warning"
+  },
+  {
+   "key": "r_idp_policy_pinned",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Security Requirements' (Keycloak realm) + docs/project-decisions.md §7",
+   "tags": "security",
+   "title": "Identity-provider token policy is pinned explicitly in exported config — never rely on realm/tenant defaults",
+   "body": "Access-token lifespan, refresh-token rotation and single-use, session idle/max are pinned in the committed realm config (here: 5-min access tokens, rotated single-use refresh, 30m/10h sessions). Defaults drift across IdP versions and environments; and dependent settings must move together — if the access-token lifespan changes, the JWT ClockSkew rationale changes with it.",
+   "symptom": "an IdP realm/tenant running on default token lifetimes, or a lifespan changed without its dependents",
+   "fix": "pin the policy in exported config under version control; update coupled settings as one change"
+  },
+  {
+   "key": "r_idempotent_handlers",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Key Conventions' + 'Durability ≠ replay'",
+   "tags": "messaging",
+   "title": "At-least-once delivery makes duplication, not loss, the real risk — every state-mutating handler is idempotent",
+   "body": "With an outbox on the publish side and durable queues on the consume side, messages don't get lost — they get redelivered. Every handler that mutates state must tolerate replay (natural idempotency via state checks, or a processed-message guard). Store-less sinks may be duplicate-tolerant instead (a re-sent notification is benign) — but that's a decision to record, not an accident.",
+   "symptom": "a state-mutating message handler with no idempotency guard",
+   "fix": "make redelivery a no-op via state check or dedup guard; document duplicate-tolerance where chosen"
+  },
+  {
+   "key": "r_rich_domain_when_observed",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Domain-Driven Design' (NotificationService precedent)",
+   "tags": "dotnet,method",
+   "title": "The aggregate pattern only earns its keep when someone observes the invariant — otherwise it's ceremony",
+   "body": "Persisted entities with non-trivial invariants get factories, private setters, and method-guarded state changes. But an in-memory, single-use object discarded after the handler returns needs none of that — inline the validation or use a request validator. Corollary: a service with no domain entities needs no Domain project; its ports live in the application layer (NotificationService: a stateless event-to-email pump, three projects, no Domain).",
+   "symptom": "a factory + private setters + status enum on a type nothing persists or re-reads",
+   "fix": "reserve the aggregate shape for persisted, invariant-bearing entities; inline validation elsewhere"
+  },
+  {
+   "key": "r_aaa_narrative",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Testing'",
+   "tags": "method",
+   "title": "Tests are Arrange-Act-Assert with story comments — a junior reads the test and understands the contract without the SUT",
+   "body": "Each phase explains what's set up and why it matters, what's called, and what each assertion guards. Multi-invariant asserts are numbered with the why (especially security boundaries, idempotency guards, ordering-sensitive operations). Trivial happy paths can be terse; security/concurrency/idempotency tests get the full story.",
+   "symptom": "a security or concurrency test whose assertions don't say what failure they guard against",
+   "fix": "narrate the phases; number and justify multi-invariant assertions"
+  },
+  {
+   "key": "r_authz_test_required",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Testing' (the original GET /orders/{id} IDOR survived the codebase lifetime)",
+   "tags": "security,method",
+   "title": "Authorization behavior is only proven by an authorization-FAILURE test — clean builds and passing unit tests say nothing",
+   "body": "Every endpoint returning or mutating a scoped entity requires an integration test that authenticates as user X, requests user Y's resource, and asserts 404 (not 200, not 403). The absence of exactly this test is how the original IDOR survived undetected for the lifetime of the codebase.",
+   "symptom": "a scoped-entity endpoint shipped without a cross-user access-denied test",
+   "fix": "add the X-cannot-read-Y integration test asserting 404 with every scoped endpoint"
+  },
+  {
+   "key": "r_feature_file_cap",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Project Structure' (Anton Martyniuk VSA audit)",
+   "tags": "dotnet,method",
+   "title": "Co-located feature files carry a soft size cap (~300 lines) — split into sibling files, not into layers",
+   "body": "One-file-per-use-case (command + validator + handler) is the canon, and 'giant file per slice' is its known failure mode. Past the cap, extract the validator or record types into sibling files in the same feature folder — the cap is on size, not on file count per slice, and it never justifies reintroducing layer folders.",
+   "symptom": "a feature file well past ~300 lines, or a size complaint used to argue for layer folders",
+   "fix": "split into sibling files within the feature; keep the slice co-located"
+  },
+  {
+   "key": "r_middleware_order",
+   "type": "Rule", "scope": "repo", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Observability' (MapDefaultEndpoints canonical order)",
+   "tags": "dotnet",
+   "title": "HTTP middleware order is strict: exception → authentication → correlation → authorization",
+   "body": "CorrelationIdMiddleware runs AFTER UseAuthentication (it reads context.User to stamp UserId) and BEFORE UseAuthorization (so 401/403 denials log with the user attached). Reordering silently degrades logs rather than failing.",
+   "symptom": "denial logs missing user identity, or correlation entries with empty UserId",
+   "fix": "keep the canonical order in the shared endpoint setup; don't inline-reorder per service"
+  },
+  {
+   "key": "r_wolverine_instance_middleware",
+   "type": "Rule", "scope": "repo", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Observability'",
+   "tags": "dotnet,messaging",
+   "title": "Wolverine middleware discovery requires instance methods — static methods throw at host startup",
+   "body": "AddMiddleware<T>() only discovers Before/After/Finally (and Async variants) as instance methods on a public class with a public constructor; statics raise InvalidWolverineMiddlewareException at startup. Suppress the analyzer's 'should be static' with a justification referencing this rule.",
+   "symptom": "InvalidWolverineMiddlewareException at host startup after adding middleware",
+   "fix": "instance methods on a public class; suppress S2325 with justification"
+  },
+  {
+   "key": "r_aspire_azure_fallback",
+   "type": "Rule", "scope": "repo", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "CLAUDE.md 'Package Management'",
+   "tags": "dotnet",
+   "title": "Azure-only Aspire resources are gated on publish mode — no local emulator means dev must skip them",
+   "body": "AddAzureApplicationInsights has no local emulator; ungated, the resource pane shows 'Missing subscription configuration' and every service WithReference-ing it fails to start. Gate on ExecutionContext.IsPublishMode and skip in dev.",
+   "symptom": "local AppHost failing to start services over a missing Azure subscription",
+   "fix": "gate Azure-only resources on publish mode"
+  },
+  {
+   "key": "dec_sixth_surface",
+   "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true, "status": "live",
+   "found_by": "docs/decisions/2026-07-17-sixth-surface-okl.md",
+   "tags": "method,retrieval-design",
+   "title": "The 6th surface was built as the OKL — a cross-repo, fail-closed knowledge layer, not in-repo microagents",
+   "body": "'Two readers, one canon' was really N readers, N canons: every repo re-learned the same lessons. The tracked-but-unbuilt 6th surface (trigger-loaded microagents) became a standalone org knowledge layer instead, because microagents in a repo's config are still per-repo and optional context was never the gap — enforcement + cross-repo reach was. Measured: held-fixed A/B with blind judge≠generator showed defect reproduction 50%→6% on covered tasks (75%→8% on baseline-failing tasks); both misses were coverage gaps, so the check doubles as a coverage detector. The five in-repo surfaces are unchanged; the OKL holds the cross-repo subset."
+  },
+  {
+   "key": "dec_asb_removed",
+   "type": "Decision", "scope": "repo", "repo": "dotnet-microservices", "verified": true, "status": "live",
+   "found_by": "docs/full-saga-deployment-plan.md (D3) + #148/#159",
+   "tags": "dotnet,messaging",
+   "title": "Messaging transport is RabbitMQ everywhere; Azure Service Bus was evaluated and removed",
+   "body": "ASB's local emulator cannot run the saga (subscription admin returns HTTP 500 and Wolverine's system queues can't auto-provision against it) and no Azure deployment exists, so carrying a second wiring earned nothing — dev now matches prod. The transport remains swappable behind Wolverine (~5 lines per service). Re-add ASB only if Azure becomes a real deployment target; its identifiers are tombstoned meanwhile."
+  },
+  {
+   "key": "ts_azure_service_bus",
+   "type": "Tombstone", "scope": "repo", "repo": "dotnet-microservices", "verified": true,
+   "found_by": ".claude/tombstones.txt [azure-service-bus] (removed in #159)",
+   "tags": "dotnet,messaging",
+   "title": "Retired: Azure Service Bus identifiers (azureservicebus, Azure.Messaging.ServiceBus, servicebus.windows.net, *-sub subscription names)",
+   "body": "RabbitMQ is the transport. Any doc, comment, or config presenting ASB as current is drift — 15+ docs taught it as current after the swap until the grep-to-zero sweep. Old subscription names (payment-orders-sub, notify-orders-sub, order-payments-sub, shipping-payments-sub, notify-payments-sub, order-shipping-sub, notify-shipping-sub) were renamed to queue names without the -sub suffix. CI tombstone audit fails any resurfacing."
+  },
+  {
+   "key": "ts_send_notification_queue",
+   "type": "Tombstone", "scope": "repo", "repo": "dotnet-microservices", "verified": true,
+   "found_by": ".claude/tombstones.txt [send-notification-queue] (removed in #170)",
+   "tags": "dotnet,messaging",
+   "title": "Retired: SendNotificationCommand / send-notification queue — dead-end wiring, never resurrect",
+   "body": "Nothing published the command and it had no handler; the working path is the in-process cascade of the internal SendNotificationRequest. Documenting the queue as publishable was actively harmful: a conforming publisher's message would arrive unhandleable and be silently discarded."
+  },
+  {
+   "key": "ts_dead_observability",
+   "type": "Tombstone", "scope": "repo", "repo": "dotnet-microservices", "verified": true,
+   "found_by": ".claude/tombstones.txt [dead-observability-artifacts] (removed in #171)",
+   "tags": "dotnet",
+   "title": "Retired: messages.abandoned / MessagesAbandoned / AppMetrics / App.Messaging — dead instruments, replaced by Wolverine's own meter",
+   "body": "Declared/registered but never incremented after the processors feeding them died in the transport migration — a working-looking alarm that never fires. Wolverine's own meter (registered via AddMeter) provides the real instruments. Do not reintroduce the names in code OR prose."
+  }
+ ],
+ "edges": [
+  {"src": "ts_dead_observability", "rel": "ENCODES", "dst": "seed:dotnet-defects:nc_dead_metric"},
+  {"src": "ts_azure_service_bus", "rel": "DEFINED_IN", "dst": "dec_asb_removed"}
+ ]
+}

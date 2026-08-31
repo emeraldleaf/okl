@@ -1,0 +1,133 @@
+{
+ "_comment": "Seed for the OKL — real, dated, receipted lessons from the .NET platform (.NET 10 microservices: Aspire, RabbitMQ/Wolverine, gRPC, EF Core). the .NET platform is the origin repo of the encoding loop. Portable/world-fact lessons are org-scoped; .NET-framework-specific quirks are scoped repo:dotnet-microservices so they don't fire in a Python or geospatial repo's okl check.",
+ "nodes": [
+  {
+   "key": "nc_idor",
+   "type": "Defect",
+   "scope": "org",
+   "repo": "dotnet-microservices",
+   "found_by": "security review; original GET /orders/{id} IDOR survived the codebase lifetime",
+   "verified": true,
+   "title": "Missing ownership scope check is an IDOR (CWE-639) and slips through tests-by-omission",
+   "body": "A resource endpoint that doesn't scope by the caller's identity leaks other users' data. Portable fix: push the ownership predicate INTO the query (read handlers) or check on the tracked entity (write handlers), return 404 not 403 (403 leaks existence). Require an integration test asserting user X cannot read user Y's resource for every scoped-entity endpoint.",
+   "symptom": "an endpoint fetches an entity by id with no owner/tenant predicate",
+   "fix": "add the caller's owner id to the WHERE clause; return 404 (not 403) on no match",
+   "tags": "security,dotnet"
+  },
+  {
+   "key": "nc_jwt_clockskew",
+   "type": "Defect",
+   "scope": "repo",
+   "repo": "dotnet-microservices",
+   "found_by": "JWT config audit",
+   "verified": true,
+   "title": "Default JWT ClockSkew (5 min) doubles the effective lifetime of short-lived tokens",
+   "body": ".NET's TokenValidationParameters defaults ClockSkew to 5 minutes; on a realm with 5-minute access tokens that doubles every token's effective lifetime. Set ClockSkew = 30s explicitly. Stack-specific (.NET), scoped repo.",
+   "symptom": "TokenValidationParameters without an explicit ClockSkew",
+   "fix": "set ClockSkew to ~30s; the 5-min default doubles short-token lifetime",
+   "tags": "security,dotnet"
+  },
+  {
+   "key": "nc_price_tamper",
+   "type": "Defect",
+   "scope": "org",
+   "repo": "dotnet-microservices",
+   "found_by": "security review",
+   "verified": true,
+   "title": "Server-controlled fields trusted from the client body = tampering vulnerability",
+   "body": "A [FromBody] DTO carrying Price/BuyerId/Status/IsAdmin lets a client submit Price=0.01 for a $999 product. Portable rule: money, authorization identifiers, state-machine columns, and security flags are computed server-side from the authoritative source (catalog service, JWT sub, DB) — the request body is untrusted input.",
+   "symptom": "a [FromBody] DTO carries Price/Amount/Status/IsAdmin",
+   "fix": "drop those fields from the DTO; compute them server-side from the catalog/service",
+   "tags": "security"
+  },
+  {
+   "key": "nc_outbox_atomicity",
+   "type": "Defect",
+   "scope": "repo",
+   "repo": "dotnet-microservices",
+   "found_by": "docs/war-story-wolverine6-outbox-atomicity.md",
+   "verified": true,
+   "title": "Constructor-injected IEventPublisher publishes inline under Wolverine 6, breaking outbox atomicity",
+   "body": "Only the IMessageContext Wolverine injects as a HandleAsync parameter (or IDbContextOutbox in non-handler code) is enlisted in the outbox transaction. A constructor-injected IMessageBus/IEventPublisher publishes before commit — events dispatched for entity writes that may roll back. Stack-specific (Wolverine), scoped repo.",
+   "tags": "dotnet"
+  },
+  {
+   "key": "nc_handler_di",
+   "type": "Defect",
+   "scope": "repo",
+   "repo": "dotnet-microservices",
+   "found_by": "OrderReadProjectionTests failed in CI after the repository-wrapper refactor",
+   "verified": true,
+   "title": "Wolverine handler discovery is NOT DI registration — GetRequiredService<Handler> throws unless AddScoped'd",
+   "body": "opts.Discovery.IncludeAssembly builds Wolverine's internal message->handler map; Wolverine constructs handlers itself and never asks IServiceCollection. Any handler resolved by GetRequiredService<T>() in tests needs an explicit AddScoped<T>(). Stack-specific (Wolverine), scoped repo.",
+   "tags": "dotnet"
+  },
+  {
+   "key": "nc_topology_race",
+   "type": "Defect",
+   "scope": "repo",
+   "repo": "dotnet-microservices",
+   "found_by": "issue #168",
+   "verified": true,
+   "title": "Fanout exchanges silently discard unroutable messages before a consumer's first boot",
+   "body": "AutoProvision declares topology lazily per service; an event published before a consumer's queue+binding exists is dropped while the outbox marks it delivered. Each publisher must declare its own exchange AND its consumers' queues+bindings; names from shared constants, never inline literals (a typo is auto-provisioned as an empty object and the consumer starves silently). Stack-specific (RabbitMQ/Wolverine), scoped repo.",
+   "tags": "dotnet"
+  },
+  {
+   "key": "nc_dead_metric",
+   "type": "Defect",
+   "scope": "org",
+   "repo": "dotnet-microservices",
+   "found_by": "review; deleted in #171",
+   "verified": true,
+   "title": "A declared-but-never-incremented metric is a working-looking alarm that never fires",
+   "body": "A AppMetrics class was registered but never injected; all five counters were dead while docs presented one as THE dead-letter-queue alarm. An operator wires an alert to it and it never fires — worse than no counter. Portable: every counter needs at least one increment call site, every metrics holder must be injected somewhere.",
+   "tags": "method"
+  },
+  {
+   "key": "nc_speculative_interface",
+   "type": "Rule",
+   "scope": "org",
+   "repo": "dotnet-microservices",
+   "found_by": "the simplicity refactor (five repositories deleted)",
+   "verified": true,
+   "title": "Interfaces earn their keep through consumer substitution, not 'future swap'",
+   "body": "A port/adapter interface is justified only if (a) a test substitutes it today, (b) 2+ concrete impls are registered today, or (c) a second impl is on a concrete near-term roadmap. Otherwise it's speculative coupling — delete it, take the concrete class. A factory returning one impl for every input is the same coupling. Portable design rule.",
+   "tags": "method"
+  },
+  {
+   "key": "nc_arch_reviewer",
+   "type": "Defect",
+   "scope": "org",
+   "repo": "dotnet-microservices",
+   "found_by": "asking whether it ran",
+   "verified": true,
+   "title": "A surface nobody runs is documentation, not enforcement",
+   "body": "The architecture-reviewer agent was described as a live Tier-2 enforcement surface in six documents while being invoked by nothing, ever. The single most transferable lesson: a rule that is only written down drifts; wire it to something that actually runs. (Also recorded independently in the geospatial repo as error #10.)",
+   "tags": "method"
+  },
+  {
+   "key": "g_tombstones_nc",
+   "type": "Gate",
+   "scope": "org",
+   "found_by": "dotnet-microservices .claude/scripts/check-tombstones.sh",
+   "verified": true,
+   "title": "Tombstone audit — group-scoped exemptions, fail on invalid regex, scan untracked",
+   "body": "The compiler catches stale identifiers in code; nothing catches them in docs/comments/config. A memory-based sweep left 15+ docs teaching Azure Service Bus as current after the RabbitMQ swap. Gate: git grep every tombstoned identifier; exemptions are scoped to ONE group (a file allowlisted for a past removal is still audited against future tombstones); an invalid regex must FAIL the audit, not silently disable itself.",
+   "tags": "method",
+   "repo": "dotnet-microservices"
+  }
+ ],
+ "edges": [
+  {
+   "src": "g_tombstones_nc",
+   "rel": "CATCHES",
+   "dst": "nc_speculative_interface"
+  },
+  {
+   "src": "nc_arch_reviewer",
+   "rel": "RECURS_IN",
+   "dst": "dotnet-microservices"
+  }
+ ]
+}

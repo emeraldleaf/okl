@@ -1,0 +1,484 @@
+"""okl CLI — init / connect / check / record / search / seed / metric / serve.
+
+Stdlib argparse only, so the package installs with zero required deps for the
+local + client path. `serve` and `mcp` import their extras lazily.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+
+from . import core
+from .client import Client, OKLUnreachable, load_config, save_config
+
+
+def _print_json(obj) -> None:
+    json.dump(obj, sys.stdout, indent=2)
+    sys.stdout.write("\n")
+
+
+def _merge_hook_settings(claude: Path) -> bool:
+    """Register both okl hooks in .claude/settings.json. Idempotent: existing settings and
+    unrelated hooks are preserved; an already-registered okl hook is left alone. A hook
+    that is installed but unregistered is a surface nobody runs."""
+    settings_path = claude / "settings.json"
+    try:
+        settings = json.loads(settings_path.read_text()) if settings_path.exists() else {}
+    except json.JSONDecodeError:
+        print(f"! {settings_path} is not valid JSON — not touching it; register the hooks manually.")
+        return False
+    hooks_cfg = settings.setdefault("hooks", {})
+    changed = False
+    # UserPromptSubmit, not PreToolUse: only UserPromptSubmit/SessionStart stdout reaches the
+    # model's context. A PreToolUse briefing fires but is never read (found by E2E test).
+    wanted = [
+        ("UserPromptSubmit", None, '"$CLAUDE_PROJECT_DIR"/.claude/hooks/userpromptsubmit-okl-check.sh'),
+        ("Stop", None, '"$CLAUDE_PROJECT_DIR"/.claude/hooks/stop-okl-encode.sh'),
+    ]
+    for event, matcher, command in wanted:
+        entries = hooks_cfg.setdefault(event, [])
+        if any(h.get("command", "").endswith(Path(command).name)
+               for e in entries for h in e.get("hooks", [])):
+            continue
+        entry: dict = {"hooks": [{"type": "command", "command": command}]}
+        if matcher:
+            entry["matcher"] = matcher
+        entries.append(entry)
+        changed = True
+    if changed:
+        settings_path.write_text(json.dumps(settings, indent=2) + "\n")
+    return changed
+
+
+def cmd_init(args) -> int:
+    """Wire the current repo so the loop runs without manual follow-up steps:
+    config, hooks (installed AND registered), CI verifier, MCP registration."""
+    import shutil
+    repo = args.repo or Path.cwd().name
+    cfg = load_config()
+    cfg["repo"] = repo
+    if args.service:
+        cfg["service_url"] = args.service
+    if args.interests:
+        cfg["interests"] = [t.strip().lower() for t in args.interests.split(",") if t.strip()]
+    # Pin how to invoke okl on THIS machine, for hooks running outside the dev shell
+    # (agent harnesses don't inherit venv/pipx PATH entries). Machine-local by design —
+    # .okl/ is gitignored; hooks fall back to PATH and `python3 -m okl` regardless.
+    cfg["okl_bin"] = shutil.which("okl") or f"{sys.executable} -m okl"
+    path = save_config(cfg)
+    print(f"✓ wrote {path}  (repo={repo}, mode={'remote' if cfg.get('service_url') else 'local'}"
+          + (f", interests={','.join(cfg['interests'])}" if cfg.get("interests") else "") + ")")
+
+    claude = Path(".claude")
+    if claude.exists():
+        _install_claude_wiring(claude)
+    else:
+        print("• no .claude/ dir found — see README to wire the hook for your agent (AGENTS.md/.cursor).")
+    _install_ci_verifier()
+    return 0
+
+
+def _install_claude_wiring(claude: Path) -> None:
+    """Install AND register the hooks: the PreToolUse check (the enforced read) and the
+    Stop encode reminder (the write-side catch). Scripts come from the packaged scaffold —
+    one canonical source, no drift. Also registers the MCP server when the extra exists."""
+    hooks = claude / "hooks"
+    hooks.mkdir(exist_ok=True)
+    scaffold_hooks = Path(__file__).parent / "scaffold" / "hooks"
+    for name, label in [("userpromptsubmit-okl-check.sh", "pre-task check hook (UserPromptSubmit)"),
+                        ("stop-okl-encode.sh", "encode reminder (Stop hook)")]:
+        dst = hooks / name
+        dst.write_text((scaffold_hooks / name).read_text())
+        dst.chmod(0o755)
+        print(f"✓ installed {label} → {dst}")
+    if _merge_hook_settings(claude):
+        print("✓ registered both hooks in .claude/settings.json (UserPromptSubmit + Stop)")
+    else:
+        print("• hooks already registered in .claude/settings.json")
+    # MCP: register the okl server only if the extra is importable (a registration whose
+    # dependency is missing would be a broken tool, worse than none).
+    try:
+        import mcp  # noqa: F401
+    except ImportError:
+        print("• MCP extra not installed — `pip install okl[mcp]` then re-run init to register the agent tools.")
+        return
+    mcp_path = Path(".mcp.json")
+    mcp_cfg = json.loads(mcp_path.read_text()) if mcp_path.exists() else {}
+    servers = mcp_cfg.setdefault("mcpServers", {})
+    if "okl" not in servers:
+        servers["okl"] = {"command": "okl", "args": ["mcp"]}
+        mcp_path.write_text(json.dumps(mcp_cfg, indent=2) + "\n")
+        print("✓ registered okl MCP server → .mcp.json (okl_check / okl_record / okl_search)")
+
+
+def _install_ci_verifier() -> None:
+    """Install the CI verifier workflow instead of printing a copy instruction; warn
+    loudly when git is absent, because the drift layer is dead without history."""
+    if not Path(".git").exists():
+        print("⚠ not a git repository — the drift verifier (okl drift) and the CI gate are DISABLED")
+        print("  until `git init`: drift compares governed files against their last-verified commit.")
+        return
+    wf = Path(".github") / "workflows" / "okl-verify.yml"
+    if wf.exists():
+        print(f"• CI verifier already present → {wf}")
+        return
+    wf.parent.mkdir(parents=True, exist_ok=True)
+    src = Path(__file__).parent / "scaffold" / "ci" / "okl-verify.yml"
+    wf.write_text(src.read_text())
+    print(f"✓ installed CI verifier → {wf}  (drift gate + repo gates on every PR)")
+
+
+def cmd_connect(args) -> int:
+    cfg = load_config()
+    cfg["service_url"] = args.url
+    if args.token:
+        cfg["token"] = args.token
+    path = save_config(cfg)
+    print(f"✓ connected → {args.url}  ({path})")
+    return 0
+
+
+def cmd_check(args) -> int:
+    client = Client()
+    try:
+        result = client.check(args.task, repo=args.repo)
+    except OKLUnreachable as e:
+        # FAIL CLOSED — loud, non-zero, no reassuring empty result.
+        print(f"OKL UNREACHABLE — refusing to report a clean check.\n{e}", file=sys.stderr)
+        return 2
+    if args.format == "json":
+        _print_json(result)
+    else:
+        print(core.render_check_for_agent(result))
+    return 0
+
+
+def cmd_record(args) -> int:
+    client = Client()
+    kwargs = dict(type=args.type, title=args.title, scope=args.scope,
+                  body=args.body, status=args.status, found_by=args.found_by,
+                  ttl_days=args.ttl_days, owner=args.owner, verified=args.verified,
+                  files=args.files, symptom=args.symptom, fix=args.fix, tags=args.tags,
+                  id=args.id)
+    if args.repo:
+        kwargs["repo"] = args.repo
+    node_id = client.record(**{k: v for k, v in kwargs.items() if v is not None})
+    print(node_id)
+    return 0
+
+
+def cmd_link(args) -> int:
+    Client().link(args.src, args.rel, args.dst)
+    print(f"✓ {args.src} -[{args.rel}]-> {args.dst}")
+    return 0
+
+
+def cmd_verify(args) -> int:
+    """Run the named check, and stamp the node verified ONLY on an observed pass.
+
+    The evidence trail (command, expect-match, timestamp) is stored on the node —
+    the store-side mechanization of verify-before-claiming: no run, no stamp."""
+    import subprocess
+    from datetime import datetime, timezone
+    r = subprocess.run(args.run, shell=True, capture_output=True, text=True,
+                       timeout=args.timeout)
+    output = (r.stdout or "") + (r.stderr or "")
+    tail = "\n".join(output.strip().splitlines()[-5:])
+    if r.returncode != 0:
+        print(f"✗ check FAILED (exit {r.returncode}) — NOT stamping verification.\n{tail}",
+              file=sys.stderr)
+        return 1
+    if args.expect and args.expect not in output:
+        # exit 0 alone is a step grading itself — require the positive success signal
+        # when the caller names one (the exit-0-zero-files lesson).
+        print(f"✗ check exited 0 but expected signal {args.expect!r} NOT in output — NOT stamping.\n{tail}",
+              file=sys.stderr)
+        return 1
+    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%MZ")
+    evidence = f"`{args.run}` exit 0" + (f", matched {args.expect!r}" if args.expect else "") + f" @ {stamp}"
+    try:
+        node = Client().verify(args.node_id, evidence)
+    except OKLUnreachable as e:
+        print(f"OKL UNREACHABLE — check passed but the stamp was NOT recorded.\n{e}", file=sys.stderr)
+        return 2
+    print(f"✓ verified {node['id']} — {node['title']}\n  evidence: {node['verified_by']}")
+    return 0
+
+
+def cmd_search(args) -> int:
+    results = Client().search(args.query, scope=args.scope,
+                              node_types=args.type, limit=args.limit)
+    if args.format == "json":
+        _print_json(results)
+    else:
+        for r in results:
+            tag = " (STALE)" if r.get("stale") else ""
+            print(f"[{r['type']:10}] {r['scope']:16} {r['title']}{tag}")
+    return 0
+
+
+def cmd_metric(args) -> int:
+    """Recurrence-after-arming — the quantification the method says it lacks."""
+    try:
+        rows = Client().recurrence()
+    except OKLUnreachable as e:
+        print(f"OKL UNREACHABLE — cannot compute metric.\n{e}", file=sys.stderr)
+        return 2
+    if args.format == "json":
+        _print_json({"recurrence_after_arming": rows, "count": len(rows)})
+    else:
+        if not rows:
+            print("recurrence-after-arming: 0 — no known defect class has recurred where a gate should have armed. ✓")
+        else:
+            print(f"recurrence-after-arming: {len(rows)}")
+            for r in rows:
+                print(f"  {r['defect_class']}  recurred in {r['recurred_in']}  (gate: {r['gate']})")
+    return 0
+
+
+def cmd_drift(args) -> int:
+    """Source-vs-spec drift: rules whose governed code changed after last verification."""
+    from . import drift
+    client = Client()
+    try:
+        nodes = client.all_nodes()
+    except OKLUnreachable as e:
+        print(f"OKL UNREACHABLE — cannot check drift.\n{e}", file=sys.stderr)
+        return 2
+    repo = args.repo or client.repo
+    hits = drift.detect_drift(nodes, repo, repo_dir=args.repo_dir)
+    if args.format == "json":
+        _print_json({"drift": [h.as_dict() for h in hits], "count": len(hits)})
+        return 0
+    print(drift.render_drift(hits))
+    # Fail closed when asked to gate (CI): drift is a defect to surface, exit 1.
+    return 1 if (hits and args.gate) else 0
+
+
+def cmd_coverage(args) -> int:
+    """Knowledge-to-code ratio — a health signal, not a target (Codified Context §4.2)."""
+    import subprocess
+    from pathlib import Path
+    client = Client()
+    try:
+        nodes = client.all_nodes()
+    except OKLUnreachable as e:
+        print(f"OKL UNREACHABLE — cannot compute coverage.\n{e}", file=sys.stderr)
+        return 2
+    repo = args.repo or client.repo
+    in_scope = [n for n in nodes if n.scope == "org" or n.scope == f"repo:{repo}"]
+    knowledge_lines = sum(len((n.body or "").splitlines()) + 1 for n in in_scope)
+    # code lines: git ls-files line count, or None if not a repo
+    code_lines = None
+    try:
+        files = subprocess.run(["git", "-C", args.repo_dir, "ls-files"],
+                               capture_output=True, text=True, timeout=15)
+        if files.returncode == 0:
+            code_lines = 0
+            for f in files.stdout.splitlines():
+                fp = Path(args.repo_dir) / f
+                if fp.suffix.lower() in {".py",".cs",".ts",".tsx",".js",".jsx",".go",".rs",".java",".rb"}:
+                    try:
+                        code_lines += sum(1 for _ in fp.open("rb"))
+                    except OSError:
+                        pass
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+    ratio = (knowledge_lines / code_lines) if code_lines else None
+    out = {"nodes_in_scope": len(in_scope), "knowledge_lines": knowledge_lines,
+           "code_lines": code_lines,
+           "knowledge_to_code": round(ratio, 4) if ratio is not None else None}
+    if args.format == "json":
+        _print_json(out); return 0
+    print(f"OKL coverage for {repo}:")
+    print(f"  encoded nodes in scope : {out['nodes_in_scope']}")
+    print(f"  knowledge lines        : {out['knowledge_lines']}")
+    print(f"  code lines             : {out['code_lines'] if out['code_lines'] is not None else '(not a git repo)'}")
+    if ratio is not None:
+        print(f"  knowledge-to-code      : {ratio:.1%}  (health signal — a sudden spike in agent confusion "
+              "means a relevant node is missing or stale, not that this number is wrong)")
+    return 0
+
+
+def cmd_bootstrap(args) -> int:
+    """Propose starter nodes from repo signals into a reviewable okl-bootstrap.json."""
+    from pathlib import Path
+
+    from . import bootstrap
+    repo = args.repo or Client().repo
+    proposal = bootstrap.propose_nodes(repo, repo_dir=args.repo_dir)
+    out = Path(args.out)
+    out.write_text(json.dumps(proposal, indent=1))
+    n = len(proposal["nodes"])
+    print(f"✓ proposed {n} starter node(s) → {out}")
+    print("  Review + edit (set scope, add symptom/cause/fix, delete noise), then:")
+    print(f"    okl seed {out}")
+    return 0
+
+
+def cmd_seed(args) -> int:
+    import glob
+    from pathlib import Path
+
+    from .seed import seed_from_file
+    path = args.path or str(Path(__file__).parent.parent.parent / "seed")
+    if path == str(Path(__file__).parent.parent.parent / "seed") and not Path(path).exists():
+        # installed package: seeds ship under the package dir
+        path = str(Path(__file__).parent / "seed")
+    targets = (sorted(glob.glob(str(Path(path) / "*-defects.json")))
+               if Path(path).is_dir() else [path])
+    if not targets:
+        print(f"no *-defects.json found under {path}")
+        return 1
+    client, total = Client(), 0
+    for t in targets:
+        n = seed_from_file(client, t)
+        total += n
+        print(f"  ✓ {n} node(s) from {Path(t).name}")
+    print(f"✓ seeded {total} node(s) from {len(targets)} file(s)")
+    return 0
+
+
+def cmd_scaffold(args) -> int:
+    """Stamp the portable method kit (canon, skills, agent, commands, gates, evals, hook) into a repo."""
+    from .scaffold_cmd import scaffold
+    res = scaffold(target=args.target, repo=args.repo, force=args.force, plugin=args.plugin,
+                   profile=args.profile)
+    print(f"✓ scaffolded method kit into {res['root']}  (repo={res['repo']}"
+          + (f", profiles={'+'.join(args.profile)}" if args.profile else "")
+          + (", as Claude Code plugin" if res['plugin'] else "") + ")")
+    print(f"  {len(res['written'])} file(s) written, {len(res['skipped'])} skipped (already existed).")
+    if args.verbose:
+        for f in res["written"]:
+            print(f"    + {f}")
+    if res["skipped"] and not args.force:
+        print(f"  skipped (use --force to overwrite): {', '.join(res['skipped'][:8])}"
+              + (" …" if len(res['skipped']) > 8 else ""))
+    if res["fills"]:
+        print(f"\n  {len(res['fills'])} <<FILL>> slot(s) to complete (stack-specific rules):")
+        for f in res["fills"]:
+            print(f"    • {f}")
+        print("  grep -rn '<<FILL' . to find them all later.")
+    print("\nNext: `okl init` to wire the knowledge layer, then `/feature-spec` before your first change.")
+    return 0
+
+
+def cmd_serve(args) -> int:
+    from .service import run
+    run(host=args.host, port=args.port)
+    return 0
+
+
+def cmd_mcp(args) -> int:
+    from .mcp_server import run_stdio
+    run_stdio()
+    return 0
+
+
+def build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(prog="okl", description="Org Knowledge Layer — the sixth surface.")
+    sub = p.add_subparsers(dest="cmd", required=True)
+
+    pi = sub.add_parser("init", help="wire the current repo (config + hook + CI pointer)")
+    pi.add_argument("--repo"); pi.add_argument("--service")
+    pi.add_argument("--interests", help="comma-sep subject tags this repo cares about "
+                    "(filters org-scope lessons in `check`; see store.KNOWN_TAGS)")
+    pi.set_defaults(func=cmd_init)
+
+    pc = sub.add_parser("connect", help="point this repo at a shared OKL service URL")
+    pc.add_argument("url"); pc.add_argument("--token")
+    pc.set_defaults(func=cmd_connect)
+
+    pk = sub.add_parser("check", help="pre-task read: relevant lessons for a task")
+    pk.add_argument("--task", required=True); pk.add_argument("--repo")
+    pk.add_argument("--format", choices=["agent", "json"], default="agent")
+    pk.set_defaults(func=cmd_check)
+
+    pr = sub.add_parser("record", help="record a node (defect/gate/claim/...)")
+    pr.add_argument("--type", required=True); pr.add_argument("--title", required=True)
+    pr.add_argument("--scope", required=True, help="'org' or 'repo:<name>' or 'repo'")
+    pr.add_argument("--repo"); pr.add_argument("--body"); pr.add_argument("--status")
+    pr.add_argument("--found-by", dest="found_by")
+    pr.add_argument("--ttl-days", dest="ttl_days", type=int); pr.add_argument("--owner")
+    pr.add_argument("--files", help="comma-sep path globs this node governs (enrolls it in drift detection)")
+    pr.add_argument("--symptom", help="Symptom→Cause→Fix: the observable symptom (cause goes in --body)")
+    pr.add_argument("--fix", help="Symptom→Cause→Fix: the fix to apply")
+    pr.add_argument("--tags", help="comma-sep subject tags from the controlled vocabulary "
+                    "(store.KNOWN_TAGS), e.g. 'react,security'")
+    pr.add_argument("--id", help="explicit stable id (makes the write idempotent — re-records replace)")
+    pr.add_argument("--verified", action="store_true")
+    pr.set_defaults(func=cmd_record)
+
+    pl = sub.add_parser("link", help="add an edge between two nodes")
+    pl.add_argument("src"); pl.add_argument("rel"); pl.add_argument("dst")
+    pl.set_defaults(func=cmd_link)
+
+    pvf = sub.add_parser("verify", help="run a check and stamp a node verified only on an observed pass")
+    pvf.add_argument("node_id")
+    pvf.add_argument("--run", required=True, help="the check command; exit 0 required to stamp")
+    pvf.add_argument("--expect", help="substring that must appear in the output — a positive success "
+                     "signal, so exit 0 alone can't self-certify (the exit-0-zero-files lesson)")
+    pvf.add_argument("--timeout", type=int, default=600, help="seconds before the check is killed (default 600)")
+    pvf.set_defaults(func=cmd_verify)
+
+    ps = sub.add_parser("search", help="full-text search over the encoded body")
+    ps.add_argument("query"); ps.add_argument("--scope")
+    ps.add_argument("--type", nargs="*"); ps.add_argument("--limit", type=int, default=25)
+    ps.add_argument("--format", choices=["text", "json"], default="text")
+    ps.set_defaults(func=cmd_search)
+
+    pm = sub.add_parser("metric", help="recurrence-after-arming metric")
+    pm.add_argument("--format", choices=["text", "json"], default="text")
+    pm.set_defaults(func=cmd_metric)
+
+    pdr = sub.add_parser("drift", help="source-vs-spec drift: rules whose governed code changed after verification")
+    pdr.add_argument("--repo"); pdr.add_argument("--repo-dir", dest="repo_dir", default=".")
+    pdr.add_argument("--gate", action="store_true", help="exit 1 if drift found (for CI)")
+    pdr.add_argument("--format", choices=["text", "json"], default="text")
+    pdr.set_defaults(func=cmd_drift)
+
+    pcv = sub.add_parser("coverage", help="knowledge-to-code ratio (health signal)")
+    pcv.add_argument("--repo"); pcv.add_argument("--repo-dir", dest="repo_dir", default=".")
+    pcv.add_argument("--format", choices=["text", "json"], default="text")
+    pcv.set_defaults(func=cmd_coverage)
+
+    pb = sub.add_parser("bootstrap", help="propose starter nodes from repo signals (git log, docs)")
+    pb.add_argument("--repo"); pb.add_argument("--repo-dir", dest="repo_dir", default=".")
+    pb.add_argument("--out", default="okl-bootstrap.json")
+    pb.set_defaults(func=cmd_bootstrap)
+
+    pd = sub.add_parser("seed", help="ingest seed file(s) as nodes (a *-defects.json, or a dir of them)")
+    pd.add_argument("path", nargs="?", default=None,
+                    help="a seed JSON, or a directory of *-defects.json (default: the bundled seed dir — all three repos)")
+    pd.set_defaults(func=cmd_seed)
+
+    psc = sub.add_parser("scaffold", help="stamp the portable method kit into a repo")
+    psc.add_argument("target", nargs="?", default=".", help="target repo dir (default: cwd)")
+    psc.add_argument("--repo", help="repo name (default: dir name)")
+    psc.add_argument("--plugin", action="store_true", help="also write plugin.json (Claude Code plugin)")
+    from .scaffold_cmd import list_profiles
+    psc.add_argument("--profile", action="append", choices=list_profiles(), metavar="PROFILE",
+                     help="drop a stack's verbatim canon into .claude/rules/; repeatable and composable, "
+                          f"e.g. --profile dotnet --profile react (available: {', '.join(list_profiles())})")
+    psc.add_argument("--force", action="store_true", help="overwrite existing files")
+    psc.add_argument("--verbose", "-v", action="store_true")
+    psc.set_defaults(func=cmd_scaffold)
+
+    pv = sub.add_parser("serve", help="run the shared FastAPI service")
+    pv.add_argument("--host", default="0.0.0.0"); pv.add_argument("--port", type=int, default=8080)
+    pv.set_defaults(func=cmd_serve)
+
+    pmcp = sub.add_parser("mcp", help="run the MCP server (stdio) for agent tools")
+    pmcp.set_defaults(func=cmd_mcp)
+    return p
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,45 @@
+{
+ "_comment": "Seed for the OKL — React/frontend-SPA lessons ported from the .NET platform's frontend canon (frontend/CLAUDE.md + the vendored vercel-react-best-practices skill, frozen 2026-06-12). React is backend-agnostic, so these are org-scoped: they propagate to any repo with a React UI. This closes the coverage gap the A/B experiment measured — react_fetch reproduced the useEffect-fetching defect 3/3 in BOTH arms because no React node existed in the store to inject.",
+ "nodes": [
+  {
+   "key": "rx_useeffect_fetch",
+   "type": "Defect",
+   "scope": "org",
+   "repo": "dotnet-microservices",
+   "found_by": "frontend/CLAUDE.md + vercel-react-best-practices (You Might Not Need an Effect)",
+   "verified": true,
+   "title": "Hand-rolled data fetching in useEffect+useState reimplements caching/dedup/races badly",
+   "body": "cause: fetching server data inside a useEffect and storing it in useState re-derives — poorly — the caching, request dedup, race-cancellation, and refetch logic a query library already solves. .NET platform canon: ALL server data goes through TanStack Query v5; fetching-in-useEffect is banned. Query keys are [feature, entity, params].",
+   "symptom": "a component fetches from an API inside useEffect and stores the result in useState",
+   "fix": "use TanStack Query (useQuery) with a [feature,entity,params] key; reserve useEffect for non-data side effects only",
+   "tags": "react"
+  },
+  {
+   "key": "rx_tokens_localstorage",
+   "type": "Defect",
+   "scope": "org",
+   "repo": "dotnet-microservices",
+   "found_by": "frontend/CLAUDE.md (auth)",
+   "verified": true,
+   "title": "Access tokens in localStorage are XSS-exfiltratable",
+   "body": "cause: tokens in localStorage are readable by any script on the page, so one XSS steals the session. .NET platform canon: PKCE auth-code flow (oidc-client-ts → Keycloak), tokens held in memory; the localStorage-vs-BFF trade-off is documented, not defaulted.",
+   "symptom": "auth tokens written to or read from localStorage/sessionStorage",
+   "fix": "hold tokens in memory via the auth library; use PKCE; if persistence is required, document the BFF/cookie trade-off explicitly",
+   "tags": "react,security"
+  },
+  {
+   "key": "rx_fight_compiler",
+   "type": "Rule",
+   "scope": "org",
+   "repo": "dotnet-microservices",
+   "found_by": "vercel-react-best-practices",
+   "verified": true,
+   "title": "Don't fight the React Compiler — no manual memo when it's on",
+   "body": "With the React Compiler enabled, hand-written useMemo/useCallback/React.memo add noise and can pessimize. Let the compiler memoize; keep components pure. Bundle budget is CI-checked (≤200 KB gz); virtualize lists over ~50 items.",
+   "symptom": "manual useMemo/useCallback/React.memo added for performance while the React Compiler is enabled",
+   "fix": "remove the manual memoization; keep the component pure and let the compiler handle it",
+   "tags": "react"
+  }
+ ],
+ "edges": []
+}

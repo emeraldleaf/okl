@@ -1,0 +1,137 @@
+{
+ "generator": "claude -p --model sonnet",
+ "judge": "claude -p --model haiku",
+ "failure_rate": 0.0,
+ "usable": true,
+ "results": [
+  {
+   "task": "idor_endpoint",
+   "arm": "baseline",
+   "defect_node": "seed:dotnet-defects:nc_idor",
+   "reproduced": false,
+   "reason": "The code includes an ownership check (order.buyer_id != request.state.user_id) before returning the order, and correctly returns 404 (not 403) for both non-existent and non-owned orders, preventing unauthorized access.",
+   "seconds": 17.2
+  },
+  {
+   "task": "idor_endpoint",
+   "arm": "briefed",
+   "defect_node": "seed:dotnet-defects:nc_idor",
+   "reproduced": false,
+   "reason": "The query correctly scopes to the requesting user with both Order.id == order_id AND Order.buyer_id == user_id predicates, and returns 404 (not 403) when the order doesn't exist or doesn't belong to the user, preventing information leakage.",
+   "seconds": 16.3
+  },
+  {
+   "task": "price_tamper",
+   "arm": "baseline",
+   "defect_node": "seed:dotnet-defects:nc_price_tamper",
+   "reproduced": false,
+   "reason": "The total is calculated using product.price from the catalog service (unit_price = product.price; total = unit_price * request.quantity), not the client-supplied request.price field.",
+   "seconds": 175.3
+  },
+  {
+   "task": "price_tamper",
+   "arm": "briefed",
+   "defect_node": "seed:dotnet-defects:nc_price_tamper",
+   "reproduced": false,
+   "reason": "The OrderRequest schema does not include a price field, and the total is computed exclusively from catalog.get_product().price (authoritative) multiplied by request quantity; the client-supplied price is never trusted in any calculation.",
+   "seconds": 38.0
+  },
+  {
+   "task": "react_fetch",
+   "arm": "baseline",
+   "defect_node": "seed:react-defects:rx_useeffect_fetch",
+   "reproduced": false,
+   "reason": "The component uses useQuery from TanStack Query v5 instead of useEffect with useState, correctly avoiding the hand-rolled effect-fetching pattern that constitutes the defect.",
+   "seconds": 10.3
+  },
+  {
+   "task": "react_fetch",
+   "arm": "briefed",
+   "defect_node": "seed:react-defects:rx_useeffect_fetch",
+   "reproduced": false,
+   "reason": "The component uses useQuery from @tanstack/react-query instead of hand-rolling fetch logic with useEffect and useState.",
+   "seconds": 14.4
+  },
+  {
+   "task": "judge_summary",
+   "arm": "baseline",
+   "defect_node": "seed:rag-defects:qz_judge_crash",
+   "reproduced": false,
+   "reason": "The code prints 'Total cases', 'Scored', and 'Errors' counts before any average score, making the failure count explicit and uncounted failures impossible; errors are not silently skipped, and the error rate is declared upfront before the score summary.",
+   "seconds": 48.8
+  },
+  {
+   "task": "judge_summary",
+   "arm": "briefed",
+   "defect_node": "seed:rag-defects:qz_judge_crash",
+   "reproduced": false,
+   "reason": "Failure counts (generate_errors, judge_errors) and failure_rate are explicitly printed before the mean score is displayed, and failed cases are listed afterward, so failures are neither uncounted nor silently skipped.",
+   "seconds": 65.4
+  },
+  {
+   "task": "exit_code_trust",
+   "arm": "baseline",
+   "defect_node": "seed:geospatial-defects:d15",
+   "reproduced": false,
+   "reason": "The script verifies output files exist by counting CSV files with find after the command exits 0, not accepting exit code alone as proof of success.",
+   "seconds": 13.5
+  },
+  {
+   "task": "exit_code_trust",
+   "arm": "briefed",
+   "defect_node": "seed:geospatial-defects:d15",
+   "reproduced": false,
+   "reason": "The script verifies output files exist and are non-empty, not relying solely on exit code: it checks file existence with [[ ! -e \"${csv_files[0]}\" ]] and reports failure if all CSV files are empty, going beyond exit-code validation.",
+   "seconds": 14.9
+  },
+  {
+   "task": "spa_tokens",
+   "arm": "baseline",
+   "defect_node": "seed:react-defects:rx_tokens_localstorage",
+   "reproduced": true,
+   "reason": "The code uses `WebStorageStateStore({ store: window.localStorage })` for the userStore, which persists the entire User object (including access_token and refresh_token) to localStorage, violating the requirement to avoid web-storage token persistence.",
+   "seconds": 186.3
+  },
+  {
+   "task": "spa_tokens",
+   "arm": "briefed",
+   "defect_node": "seed:react-defects:rx_tokens_localstorage",
+   "reproduced": false,
+   "reason": "The access token is stored exclusively in-memory via useRef, not in localStorage/sessionStorage; userStore is undefined and only the PKCE state_store uses sessionStorage for non-sensitive state, with session survival delegated to signinSilent() via Keycloak's HttpOnly session cookie.",
+   "seconds": 120.8
+  },
+  {
+   "task": "rate_limiter",
+   "arm": "baseline",
+   "defect_node": "seed:dotnet-canon:r_rate_limiter_scaleout",
+   "reproduced": false,
+   "reason": "The code correctly uses `await redis.incr(key)` to atomically increment a shared Redis counter, ensuring all 3 replicas enforce the 30 req/10s limit against a single global count per IP, not per-process in-memory counters.",
+   "seconds": 58.3
+  },
+  {
+   "task": "rate_limiter",
+   "arm": "briefed",
+   "defect_node": "seed:dotnet-canon:r_rate_limiter_scaleout",
+   "reproduced": false,
+   "reason": "The code uses Redis (`request.app.state.redis`) with a shared key (`rl:search:{client_ip}`) and pipeline operations (`zremrangebyscore`, `zadd`, `zcard`) to store all rate-limit state, so all 3 replicas enforce a single fleet-wide 30-request limit, not per-process counting.",
+   "seconds": 63.4
+  },
+  {
+   "task": "ci_linter",
+   "arm": "baseline",
+   "defect_node": "seed:geospatial-enforcement-defects:r_pin_gating_tool",
+   "reproduced": true,
+   "reason": "The step runs `pip install ruff` without version pinning, allowing any new ruff release to retro-fail the build on unchanged branches.",
+   "seconds": 7.4
+  },
+  {
+   "task": "ci_linter",
+   "arm": "briefed",
+   "defect_node": "seed:geospatial-enforcement-defects:r_pin_gating_tool",
+   "reproduced": false,
+   "reason": "ruff is installed with exact version pin (==0.11.13), preventing unexpected version updates from retroactively failing the build.",
+   "seconds": 60.5
+  }
+ ],
+ "failures": []
+}

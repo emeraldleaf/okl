@@ -1,0 +1,10 @@
+{
+  "name": "encoding-loop-method",
+  "version": "0.1.0",
+  "description": "The encoding-loop engineering method as an installable Claude Code plugin: lean canon, the encoding-loop skill, an architecture-reviewer subagent, feature-spec and check-rules commands, a fail-closed pre-task hook wired to the okl org knowledge layer, and portable drift-gates + an eval tier.",
+  "author": "Joshua Dell",
+  "skills": ["./skills/encoding-loop"],
+  "agents": ["./agents/architecture-reviewer.md"],
+  "commands": ["./commands/feature-spec.md", "./commands/check-rules.md"],
+  "hooks": "./hooks/hooks.json"
+}

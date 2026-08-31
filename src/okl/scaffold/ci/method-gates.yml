@@ -1,0 +1,32 @@
+# Copy into .github/workflows/method-gates.yml
+# Surface 5 in CI: the mechanical drift-gates + the eval tier. Fail-closed — a red gate blocks merge.
+name: method-gates
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run drift-gates (retractions / tombstones / doc-orphans / canon-size)
+        run: bash gates/run-gates.sh
+
+  evals:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Run eval tier (leads with its own failure count; blocks if RESULTS NOT USABLE)
+        env:
+          GENERATOR_MODEL: ${{ vars.GENERATOR_MODEL }}
+          JUDGE_MODEL: ${{ vars.JUDGE_MODEL }}   # must differ from GENERATOR_MODEL
+        run: python evals/run_evals.py --fail-rate 0.20
+
+  # Optional: emit VERIFIED_ON receipts to the org knowledge layer when gates pass.
+  # See okl README + ci/okl-verify.yml.

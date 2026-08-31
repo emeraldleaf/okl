@@ -1,0 +1,116 @@
+{
+ "_comment": "the .NET platform FRONTEND canon import (frontend/CLAUDE.md, 122-line React canon; complements the 3 nodes in react-defects.json: useEffect-fetch ban, localStorage tokens, React Compiler). React is backend-agnostic so most rules are org-scoped with tag react. Not *-defects.json on purpose — review, then `okl seed seed/frontend-canon.json`.",
+ "nodes": [
+  {
+   "key": "rxc_feature_boundaries",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "frontend/CLAUDE.md 'Architecture rules'",
+   "tags": "react",
+   "title": "Feature boundaries are enforced, not conventional — cross-feature imports only via the public index, as a build error",
+   "body": "Feature folders own their components/hooks/api/types; other features import only the feature's index.ts public API, and shared/ never imports from features. The boundary is made real by lint (import/no-restricted-paths) failing the build, not by convention. Barrels are intentional at feature boundaries only — wildcard re-export barrels elsewhere defeat tree-shaking and bloat chunks.",
+   "symptom": "an import reaching into another feature's internal file path",
+   "fix": "import via the feature's index.ts; enforce with import/no-restricted-paths as an error"
+  },
+  {
+   "key": "rxc_shared_promotion",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "frontend/CLAUDE.md 'Architecture rules'",
+   "tags": "react,method",
+   "title": "Promotion to shared/ requires proven reuse (2-3 features), not anticipation",
+   "body": "Speculative abstraction in a shared folder is the same dead weight as speculative interfaces in the backend: it adds surface nobody substitutes. A helper moves from a feature to shared/ only when two-to-three features independently need it today.",
+   "symptom": "a utility placed in shared/ with a single consumer",
+   "fix": "keep it in the owning feature until reuse is demonstrated"
+  },
+  {
+   "key": "rxc_query_keys",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "frontend/CLAUDE.md 'Server state'",
+   "tags": "react",
+   "title": "Query keys are a typed convention — [feature, entity, params] via key factories, not ad-hoc strings",
+   "body": "Cache identity is the contract of a query library; free-form keys make invalidation guesswork. Keys follow [feature, entity, params] and are produced by key factories living in the feature's api module, so invalidation targets are constructible anywhere the mutation lives.",
+   "symptom": "hand-written query key arrays/strings scattered across components",
+   "fix": "define per-feature key factories and use them for both queries and invalidation"
+  },
+  {
+   "key": "rxc_mutation_invalidate",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "frontend/CLAUDE.md 'Server state'",
+   "tags": "react",
+   "title": "Mutations invalidate (or update) their affected queries in the mutation definition — never 'later' or via refetch luck",
+   "body": "The backend's cache-invalidation-in-the-write-path rule, client-side: the onSuccess of the mutation is the write path, so the cache update belongs there, co-located and guaranteed. Relying on refetch-on-focus or a later effect leaves windows where the UI shows stale server state.",
+   "symptom": "a mutation whose affected queries are refreshed somewhere other than the mutation definition",
+   "fix": "invalidate or setQueryData in the mutation's onSuccess, using the feature's key factory"
+  },
+  {
+   "key": "rxc_no_state_copy",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "frontend/CLAUDE.md 'Server state'",
+   "tags": "react",
+   "title": "Server data is not copied into useState — render from the query result and derive during render",
+   "body": "Copying a query result into local state creates a second source of truth that silently goes stale after the next refetch or mutation. Derive view data during render (memoize only if measured-expensive); local state is for genuinely local UI concerns.",
+   "symptom": "useState initialized from (or synced with) a query result",
+   "fix": "render directly from the query result; derive during render"
+  },
+  {
+   "key": "rxc_effects_discipline",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "frontend/CLAUDE.md 'Effects discipline' (distilled from react.dev You Might Not Need an Effect)",
+   "tags": "react",
+   "title": "An Effect is only for synchronizing with an external system — and dependency arrays are facts, not knobs",
+   "body": "Derived data is calculated during render; state reset on prop change uses the key prop; 'user did X' logic (POST, navigation, notifications) lives in the event handler, never an effect watching a flag; external stores use useSyncExternalStore; effect-sets-state-triggers-effect chains collapse into the handler. Never lie to the dependency array to control WHEN an effect runs — restructure instead; exhaustive-deps is an error, not a warning.",
+   "symptom": "an effect implementing app logic, or a dependency array edited to suppress reruns",
+   "fix": "move logic to render/handlers/key/useSyncExternalStore; treat exhaustive-deps as a build error"
+  },
+  {
+   "key": "rxc_no_waterfalls",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "frontend/CLAUDE.md 'Render & bundle performance'",
+   "tags": "react",
+   "title": "No request waterfalls on the critical path — a fetch that waits on a render that waits on a fetch is the client-side N+1",
+   "body": "Route loaders start queries before render; independent fetches run in parallel (Promise.all / parallel queries); Suspense boundaries stream what's ready. Sequential render-then-fetch chains serialize latency exactly like the backend's N+1 query loop.",
+   "symptom": "a child component's fetch starting only after a parent's fetch resolves and renders",
+   "fix": "hoist fetches to route loaders; parallelize independent queries; stream with Suspense"
+  },
+  {
+   "key": "rxc_bundle_budget",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "frontend/CLAUDE.md 'Render & bundle performance'",
+   "tags": "react",
+   "title": "Route-level code splitting is the default; the initial bundle budget is CI-checked; virtualize lists past ~50 items",
+   "body": "Heavy below-the-fold components load via dynamic import and third-party scripts load after hydration; the initial bundle budget (≤200 KB gz here) is enforced in CI, not aspirational. Long lists (product grids, order history) virtualize past ~50 items; non-urgent updates (search-as-you-type) go through startTransition/useDeferredValue to keep input latency flat.",
+   "symptom": "a route importing heavy components statically, or a list rendering hundreds of rows",
+   "fix": "dynamic-import below the fold, CI-check the bundle budget, virtualize long lists"
+  },
+  {
+   "key": "rxc_spa_auth_bff",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "frontend/CLAUDE.md 'Security' (OAuth Browser-Based Apps BCP)",
+   "tags": "react,security",
+   "title": "SPA auth is authorization-code + PKCE, implicit flow is dead — and browser-held tokens are a documented trade-off that flips to BFF with real PII",
+   "body": "The OAuth Browser-Based Apps BCP makes PKCE a MUST for SPA public clients and deprecates response_type=token entirely; refresh tokens require rotation (or sender-constraining) with bounded lifetime. The BCP ranks browser-held tokens as its least secure pattern: acceptable for a demo with fake data, but the moment the app fronts real user data or payments, the BFF (tokens server-side, HttpOnly cookie to the browser) becomes the required shape — record the trade-off where the choice is made.",
+   "symptom": "an SPA using implicit flow, non-rotating refresh tokens, or browser-held tokens over real PII",
+   "fix": "auth-code + PKCE + rotated refresh tokens; migrate to BFF when the data becomes real"
+  },
+  {
+   "key": "rxc_no_client_money",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "frontend/CLAUDE.md 'Security'",
+   "tags": "react,security",
+   "title": "The client never computes or trusts money/authorization fields — displayed totals are previews, the server's answer is authoritative",
+   "body": "The client-side counterpart of the server-controlled-fields rule: a cart's displayed total is a UI preview; the authoritative total comes back from the server's response to the write. Secrets never ship in the bundle — build-time env carries public config only; anything secret belongs behind an endpoint.",
+   "symptom": "client-computed totals submitted to (or trusted from) the API, or a secret in build-time env",
+   "fix": "display server-returned values; keep secrets behind endpoints"
+  },
+  {
+   "key": "rxc_test_behavior",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "frontend/CLAUDE.md 'Testing'",
+   "tags": "react,method",
+   "title": "Test user-visible behavior at the network boundary — every feature ships happy + error + loading/empty tests",
+   "body": "Testing-library queries go by role/label and assert what the user sees — never hook internals or state shapes, which break on refactor without behavior change. Mocks live at the network boundary (MSW handlers mirroring real response shapes, including error and slow cases). The per-feature minimum is happy path + error path + loading/empty state; one E2E walk-through runs against the real stack as both regression gate and demo script.",
+   "symptom": "tests asserting hook state internals, or a feature shipping with only happy-path coverage",
+   "fix": "query by role/label, mock with MSW at the network edge, cover error and empty states per feature"
+  }
+ ],
+ "edges": []
+}

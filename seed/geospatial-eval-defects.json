@@ -1,0 +1,25 @@
+{
+  "_comment": "Experiment-methodology lessons from the geospatial repo Stage-2 (2026-08-04). The beetle-inversion RF arm returned a clean NEGATIVE: a pre-registered control vetoed an underpowered cross-era result, and leave-one-trip-out CV crashed on single-cluster field data. Both are WORLD-FACTS → org scope, portable to any repo running transfer/cross-era evals. Review, then `okl seed seed/geospatial-eval-defects.json`.",
+  "nodes": [
+    {
+      "key": "r_preregistered_control_vetoes",
+      "type": "Rule", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
+      "found_by": "phase3c beetle-inversion — the Russian-olive control dropped 0.285 where it should be flat",
+      "title": "A pre-registered negative control can VETO a transfer/cross-era result the sample is too small or confounded to support",
+      "body": "In a cross-era / cross-sensor / cross-domain comparison, add a control that SHOULD NOT move and declare it in advance. If the control moves, its movement is the noise floor — the claimed effect must clear it or the result is unproven. Pre-registering the control lets it VETO the result instead of being quietly dropped when inconvenient. In phase3c the tamarisk 'signal' moved ~0.05 while the Russian-olive control (the beetle doesn't touch it) moved 0.285 pre-beetle, so the beetle claim was unprovable on that data — and saying so honestly was only possible because the control was declared first.",
+      "symptom": "a small or confounded transfer experiment shows a modest effect in the hoped-for direction",
+      "fix": "pre-register a negative control that should be flat; require the effect to exceed the control's movement; if it doesn't, report a null, not a hint",
+      "tags": "eval-integrity,method,data-quality"
+    },
+    {
+      "key": "d_loo_group_single_class",
+      "type": "Defect", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
+      "found_by": "phase3c IndexError: predict_proba(...)[:, 1] out of bounds — a leave-one-trip-out fold was single-class",
+      "title": "Leave-one-group-out CV crashes or degenerates when a group can be single-class (one-cluster field data)",
+      "body": "Field campaigns cluster geographically, so grouping CV by field trip / site can hand a fold a training set with only ONE class present. The classifier then learns one class, predict_proba returns a single column, and a hard `[:, 1]` throws (or the fold is meaningless). Two fixes: (1) group by SPATIAL BLOCK — bin coordinates into tiles — so blocks within the one cluster mix classes; (2) map the positive-class column via `estimator.classes_` and handle the single-class fold gracefully, never hard-index `[:, 1]`.",
+      "symptom": "predict_proba(...)[:, 1] IndexError, or a grouped-CV fold with only one class present",
+      "fix": "spatial-block folds (bin lat/lon) instead of by-trip; index the positive column via classes_ and guard the degenerate fold",
+      "tags": "eval-integrity,method,data-quality"
+    }
+  ]
+}

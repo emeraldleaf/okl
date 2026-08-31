@@ -1,0 +1,21 @@
+.DS_Store
+__pycache__/
+*.pyc
+*.egg-info/
+.okl/
+okl.db
+*.db
+.pytest_cache/
+dist/
+build/
+.venv/
+okl-starter-kit.tar.gz
+okl-bootstrap.json
+# scratch test repos created by smoke tests
+*_test/
+method-demo/
+e2e/
+
+
+#Ignore vscode AI rules
+.github/instructions/codacy.instructions.md

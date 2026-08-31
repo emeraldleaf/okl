@@ -1,0 +1,59 @@
+{
+  "_comment": "Deep-time / cross-domain modelling lessons from the geospatial repo Stage-2 (2026-08-06). Trying to map invasive extent back through the Landsat record exposed several portable ML failure modes. All WORLD-FACTS → org scope; they apply to any repo that applies a present-day-trained model to out-of-distribution data or reports a metric against its own training labels. Review, then `okl seed seed/geospatial-deeptime-defects.json`.",
+  "nodes": [
+    {
+      "key": "r_resubstitution_not_validation",
+      "type": "Rule", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
+      "found_by": "CodeRabbit caught a map calling a 23% figure 'validated' when the model was trained on those labels",
+      "title": "A prediction reproducing its own training labels' proportions is IN-SAMPLE CALIBRATION, not validation",
+      "body": "\"The prediction matches the label truth\" is circular when the model was trained on those labels — you have only shown the model fits its training data (resubstitution). It is calibration, not validation. Independent validation requires a spatially/temporally HELD-OUT test the model never saw. This is easy to over-claim because the number really does match; the error is the word 'validated'.",
+      "symptom": "a result is called 'validated' because a predicted proportion/accuracy matches the labels the model was trained on",
+      "fix": "call it in-sample calibration; validate on a spatial/temporal holdout the model never trained on before claiming 'validated'",
+      "tags": "eval-integrity,method,data-quality"
+    },
+    {
+      "key": "d_cross_domain_recipe_dependence",
+      "type": "Defect", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
+      "found_by": "the invasive-over-time trajectory changed shape (5×-growth / flat-then-jump / decline-then-jump) across compositing recipes",
+      "title": "A present-day-trained model applied to out-of-distribution history yields a trajectory whose shape depends on the preprocessing recipe",
+      "body": "Applying a model trained on one era/domain to out-of-distribution data (older imagery, a different sensor) produces outputs highly sensitive to arbitrary preprocessing knobs — compositing window, scene count, normalization. The trend's *shape* can flip between equally-reasonable recipes, because OOD inputs land near the fixed decision boundary and flip on tiny feature shifts. Only the in-distribution anchor (the training year) is reliable; the further from it, the more recipe-dependent. Three fixes (multi-year windows, spectral indices, relative radiometric normalization) stabilised the near epochs but never the sensor-distant one.",
+      "symptom": "a deep-time / cross-domain trajectory changes shape when you vary a preprocessing knob (window width, scene count, normalization)",
+      "fix": "re-run with ≥2 preprocessing recipes and require agreement before claiming a trend; report only the in-distribution anchor as reliable; treat divergence as a 'not-reconstructable' verdict, not a knob to tune toward a prettier line",
+      "tags": "eval-integrity,geospatial,method"
+    },
+    {
+      "key": "g_multi_recipe_robustness",
+      "type": "Gate", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
+      "found_by": "bracket + multi-recipe re-runs turned a spurious '5× trajectory' into an honest not-reconstructable verdict",
+      "title": "Prove a cross-domain trend robust by re-running under ≥2 reasonable recipes before publishing it",
+      "body": "Before shipping any deep-time / transfer trajectory, run it under at least two defensible preprocessing recipes (e.g. 5-year vs 7-year windows, N vs 2N scenes). If the points move by more than the effect you want to claim, the trend is an artifact of the recipe — report the null, not the line. A single-recipe trajectory is unfalsified.",
+      "symptom": "a trajectory / trend is reported from a single preprocessing recipe with no robustness check",
+      "fix": "re-run under ≥2 recipes; require per-point agreement within the claimed effect size; else report not-reconstructable",
+      "tags": "eval-integrity,method"
+    },
+    {
+      "key": "r_mask_hierarchical_classifier",
+      "type": "Rule", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
+      "found_by": "an invasive-vs-native (within-woody) classifier fired on non-woody pixels; raw fraction was 65%, masked to the corridor it was 23%",
+      "title": "A classifier trained to separate A-vs-B only within parent class C is undefined outside C — mask it to a C-predictor",
+      "body": "A model trained to distinguish A from B using only class-C examples is undefined on non-C inputs: applied wall-to-wall it fires arbitrarily outside C. Two independent classifiers (a C-detector and an A-within-C detector) are NOT spatially guaranteed to nest. Before reporting any A/C proportion, intersect the A-predictor with the C-predictor (or C labels). The unmasked fraction can be wildly wrong (here 65% vs the true 23%).",
+      "symptom": "a subset-trained classifier is applied to a whole scene and its raw positive fraction is reported",
+      "fix": "mask the subset classifier's predictions to a parent-class predictor; report the proportion as (A ∩ C) / C",
+      "tags": "eval-integrity,data-quality,geospatial"
+    },
+    {
+      "key": "g_multiyear_window_composite",
+      "type": "Gate", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
+      "found_by": "single-year composites swung ±0.5 pp (1999/2000/2001 = 2.1/1.7/1.2%); 5-year windows collapsed the noise",
+      "title": "Composite over multi-year windows, not single years, for a time-series remote-sensing trend",
+      "body": "Single-year growing-season composites carry large year-to-year noise (cloud/atmosphere/phenology) — here ~±0.5 pp, enough to invent or erase a trend and to fake a one-year 'dip'. Median over a multi-year window (e.g. ±2 years, balanced across years) outvotes any single bad year. Bracket a suspicious point with its neighbours: if only it moves, it's a single-year artifact, not a signal.",
+      "symptom": "a per-year point in a satellite time series looks anomalous, or the trend is noisy year to year",
+      "fix": "composite over multi-year windows (balanced per-year scene quota); bracket outliers with ±1-year neighbours before interpreting",
+      "tags": "geospatial,eval-integrity"
+    }
+  ],
+  "edges": [
+    { "src": "g_multi_recipe_robustness", "rel": "CATCHES", "dst": "d_cross_domain_recipe_dependence" },
+    { "src": "g_multiyear_window_composite", "rel": "CATCHES", "dst": "d_cross_domain_recipe_dependence" }
+  ]
+}

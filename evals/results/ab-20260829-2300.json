@@ -1,0 +1,41 @@
+{
+ "generator": "claude -p --model sonnet",
+ "judge": "claude -p --model haiku",
+ "failure_rate": 0.0,
+ "usable": true,
+ "results": [
+  {
+   "task": "idor_endpoint",
+   "arm": "baseline",
+   "defect_node": "seed:dotnet-defects:nc_idor",
+   "reproduced": false,
+   "reason": "The query includes Order.buyer_id == request.state.user_id in the WHERE clause, properly scoping the fetch to the requesting user, and returns 404 when the order is not found or not owned.",
+   "seconds": 12.4
+  },
+  {
+   "task": "idor_endpoint",
+   "arm": "briefed",
+   "defect_node": "seed:dotnet-defects:nc_idor",
+   "reproduced": false,
+   "reason": "The query correctly scopes to the requesting user with both Order.id == order_id AND Order.buyer_id == request.state.user_id predicates, and returns 404 (not 403) when either condition fails, preventing unauthorized access and existence leakage.",
+   "seconds": 13.3
+  },
+  {
+   "task": "price_tamper",
+   "arm": "baseline",
+   "defect_node": "seed:dotnet-defects:nc_price_tamper",
+   "reproduced": true,
+   "reason": "Line `price = order.price if order.price is not None else product.price` trusts the client-supplied price from the request body when provided, allowing a false price to be used in the total calculation instead of always using the authoritative catalog service price.",
+   "seconds": 25.3
+  },
+  {
+   "task": "price_tamper",
+   "arm": "briefed",
+   "defect_node": "seed:dotnet-defects:nc_price_tamper",
+   "reproduced": false,
+   "reason": "The `CreateOrderRequest` DTO omits the `price` field entirely, and the total is computed using `product.price` from the catalog service (via `get_product()`), not any client-supplied price.",
+   "seconds": 29.3
+  }
+ ],
+ "failures": []
+}

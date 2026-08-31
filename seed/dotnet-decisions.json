@@ -1,0 +1,328 @@
+{
+ "_comment": "The .NET-platform ARCHITECTURE DECISIONS import — extracted from docs/project-decisions.md (1279 lines), deduped against dotnet-canon.json. Decisions are recorded so they aren't silently reversed; org-scoped ones carry portable rationale (the honest trade-off tables travel, not just the verdicts). Not *-defects.json on purpose — review, then `okl seed seed/dotnet-decisions.json`.",
+ "nodes": [
+  {
+   "key": "pd_microservices_vs_modular_monolith",
+   "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "project-decisions.md §2",
+   "tags": "method",
+   "title": "Default new systems to a modular monolith; go microservices-first only when distribution is the deliverable",
+   "body": "the .NET platform chose 5 independently-deployable services (own DB each, gRPC sync, RabbitMQ async) explicitly because the project's purpose is demonstrating distributed patterns in their natural habitat — real sagas, a real dual-write problem, real network hops. The doc's honest answer: for a real greenfield production system, 'start with schema-level isolation in one process' is correct. Accepted costs were itemized: 5x deployment surface, real network calls, cross-service eventual consistency, saga complexity."
+  },
+  {
+   "key": "pd_minimal_apis_over_controllers",
+   "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "project-decisions.md §4",
+   "tags": "dotnet",
+   "title": "Minimal APIs over MVC controllers — unless you need heavy model binding or attribute-composed filter stacks",
+   "body": "Every HTTP endpoint is a Minimal API endpoint: less ceremony, ~10-15% throughput gain on simple endpoints, composable route groups, native OpenAPI metadata, and thin-shim endpoints that just dispatch to handlers so business logic has nowhere to leak. Controllers remain the right pick for heavy model binding (form posts, multipart, custom binders) or large attribute-composed filter/auth conventions — the decision names those exceptions explicitly."
+  },
+  {
+   "key": "pd_url_segment_versioning",
+   "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "project-decisions.md §5",
+   "tags": "dotnet",
+   "title": "Version APIs in the URL segment, not headers — visibility beats REST purity",
+   "body": "URL-segment versioning wins because versions are visible in raw logs, HTTP caches key on URL (header versioning needs fragile Vary config), routes are curl/browser-debuggable, and versioned route groups map directly to versioned OpenAPI docs. The 'header versioning is more RESTful' argument is academic — Stripe, GitHub, and AWS all use URL versioning. v2 ships as a side-by-side route group without touching v1 handlers."
+  },
+  {
+   "key": "pd_require_explicit_api_version",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "project-decisions.md §5",
+   "tags": "dotnet",
+   "title": "Require the API version segment — never assume a default for unversioned calls",
+   "body": "An unversioned call gets a 400 instead of silently routing to v1. If unversioned calls implicitly hit 'current', the day v2 ships with a behavior change every unversioned caller silently migrates, turning the rollout into a debugging nightmare. Forcing callers to declare the version they expect makes future migrations opt-in and observable.",
+   "symptom": "AssumeDefaultVersionWhenUnspecified=true, or clients calling unversioned routes",
+   "fix": "require the version segment; unversioned calls fail fast"
+  },
+  {
+   "key": "pd_openapi_dev_only",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "project-decisions.md §6",
+   "tags": "security,dotnet",
+   "title": "OpenAPI specs and interactive API docs are dev-only — a public spec is reconnaissance gold",
+   "body": "OpenAPI output reveals the full attack surface: endpoints, schemas, and auth requirements. All spec routes and the docs UI are registered only in Development; if production spec access were ever needed it would go behind authenticated admin routes, never public.",
+   "symptom": "a spec route or API-docs UI reachable in a non-dev environment",
+   "fix": "gate spec + docs registration on the environment; authenticate any production exposure"
+  },
+  {
+   "key": "pd_scalar_over_swagger",
+   "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "project-decisions.md §6",
+   "tags": "dotnet",
+   "title": "OpenAPI via the first-party generator (Microsoft.AspNetCore.OpenApi) with Scalar UI, serving JSON and YAML",
+   "body": "Scalar over Swashbuckle/Swagger UI: cleaner UX, dark mode, iframe-free try-it-out, and first-class integration with the first-party generator that replaces Swashbuckle for new projects. Both JSON and YAML are served because some tooling (Spectral, docs embedding) prefers YAML and the cost is one extra route per service."
+  },
+  {
+   "key": "pd_established_idp_never_handroll_auth",
+   "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "project-decisions.md §7",
+   "tags": "security,dotnet",
+   "title": "Delegate identity to an established open-source IdP — never hand-roll JWT minting",
+   "body": "Keycloak over Cognito (cloud lock-in) and IdentityServer (went commercial as Duende): battle-tested OAuth2/OIDC compliance, self-hostable, realm-based multi-tenancy, and the exact same IdP container locally and in prod. Hand-rolled token minting was rejected outright — cryptographic security primitives implemented in business code is how breaches happen. App-side validation stays trivial and canonical via the framework's JWT bearer support."
+  },
+  {
+   "key": "pd_keycloak_realm_reimport",
+   "type": "Rule", "scope": "repo", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "project-decisions.md §7",
+   "tags": "security",
+   "title": "Keycloak realm-config changes only take effect after a re-import — fresh container and volume locally",
+   "body": "Edits to auth-realm.json do not hot-apply to a running Keycloak; the realm is read only at import time. To pick up token-policy or client changes, recreate the container with a fresh volume so the realm re-imports.",
+   "symptom": "realm JSON changed but the running Keycloak still shows old token lifetimes or client settings",
+   "fix": "tear down the Keycloak container and its volume so the realm re-imports on next boot"
+  },
+  {
+   "key": "pd_authz_adapts_at_endpoint_boundary",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "project-decisions.md §8",
+   "tags": "security,dotnet",
+   "title": "Principal-vs-resource authorization adapts at the transport edge — handlers never see HttpContext or claims",
+   "body": "The JWT principal and HttpContext are HTTP concepts; application-layer handlers must not know about them. The endpoint compares the authenticated user's claim to the requested resource owner (or passes it in as a domain-meaningful value) before the command crosses the layer boundary, so the domain and application layers stay transport-agnostic.",
+   "symptom": "a handler reaching into HttpContext/ClaimsPrincipal",
+   "fix": "adapt auth context to domain values at the endpoint; dispatch clean commands/queries"
+  },
+  {
+   "key": "pd_three_validation_layers",
+   "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "project-decisions.md §9",
+   "tags": "dotnet",
+   "title": "Validation is layered three deep — pipeline shape checks, domain invariants, state-transition guards — deliberately, not redundantly",
+   "body": "Pipeline validation (FluentValidation before any handler) catches bad input shape; entity factories throw on invariant violations even if pipeline validation somehow passed — defense in depth, not duplication; state-transition methods throw for context-dependent rules where the same input is valid or invalid depending on current state. Each layer catches a class of error the others structurally cannot."
+  },
+  {
+   "key": "pd_wolverine_middleware_order",
+   "type": "Rule", "scope": "repo", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "project-decisions.md §9",
+   "tags": "dotnet,messaging",
+   "title": "Wolverine pipeline order is load-bearing: validation → context propagation → transactions",
+   "body": "Validation runs before ContextPropagationMiddleware opens the logger scope so 400 rejections don't pollute scopes or traces, and AutoApplyTransactions comes last so handlers run inside a transaction with correlation already restored. The handler only ever sees valid messages; reordering silently changes observability and rejection behavior.",
+   "symptom": "rejected-command noise in logger scopes, or handlers running before correlation restore",
+   "fix": "keep the canonical middleware order in Program.cs"
+  },
+  {
+   "key": "pd_rfc7807_global_handler_traceid",
+   "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "project-decisions.md §10",
+   "tags": "dotnet",
+   "title": "One global exception handler maps exception types to RFC 7807 statuses, always carrying the trace ID",
+   "body": "A single shared handler switch-maps exception types to statuses (validation → 400 with per-field errors, concurrency conflict → 409, argument → 400, invalid-operation → 409, everything else → generic 500). Every error response embeds the current trace ID so a user-reported error links straight to full server-side logs — the pairing is what makes RFC 7807 + tracing a complete observability story. Endpoints stay thin: no per-endpoint try/catch, one switch arm per new exception type, one error shape for the frontend."
+  },
+  {
+   "key": "pd_rate_limit_expensive_endpoints",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "project-decisions.md §11",
+   "tags": "security,dotnet",
+   "title": "Rate-limit the endpoints backed by expensive unindexable queries — before one client can DOS the database",
+   "body": "A search endpoint running a leading-wildcard LIKE cannot use an index well, so one scraping client could take down the database; a named fixed-window policy (30 req/10s, no queueing, 429 on reject) applies to exactly that endpoint. The pattern: declare named policies centrally, apply selectively at the endpoint, prioritize search, payment, and auth surfaces. Real users never notice; abusive clients hit the wall.",
+   "symptom": "an unauthenticated or expensive-query endpoint with no rate limit",
+   "fix": "named central policies, applied selectively; search/payment/auth first"
+  },
+  {
+   "key": "pd_transport_decision_tree",
+   "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "project-decisions.md §12",
+   "tags": "dotnet,messaging",
+   "title": "One transport per situation: REST for the frontend only, gRPC for sync inter-service, events for fan-out",
+   "body": "REST (versioned JSON, RFC 7807) is exclusively frontend-to-service; inter-service calls never go over REST. gRPC serves synchronous inter-service queries needing a definitive answer before proceeding (validate product + reserve stock during order placement) — binary payloads ~3-10x smaller than JSON, multiplexing, proto-enforced contracts, deadline propagation. Bus events serve fire-and-forget workflow notifications with multiple subscribers and queue-until-recovery resilience. Making the tree explicit stops ad-hoc transport choices."
+  },
+  {
+   "key": "pd_wolverine_over_mediatr_masstransit",
+   "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "project-decisions.md §13",
+   "tags": "dotnet,messaging",
+   "title": "Wolverine replaces MediatR+MassTransit — one MIT framework covering both, dodging two license transitions",
+   "body": "MediatR went commercial/sponsorware in 2024; MassTransit v9 goes commercial Q1 2026 with v8 OSS maintenance ending after 2026 — the traditional two-library stack becomes two paid dependencies. Wolverine (MIT) covers both concerns with one handler shape, a built-in transactional outbox, cascading messages, convention-based discovery, and a middleware pipeline. Accepted costs: far smaller community (~50x fewer downloads — you're sometimes the first to ask), a startup codegen phase, steeper learning curve, weaker state-machine sagas — acceptable because the saga is choreographed."
+  },
+  {
+   "key": "pd_wolverine6_runtime_compilation_split",
+   "type": "Defect", "scope": "repo", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "project-decisions.md §13 Wolverine 5→6 upgrade notes (GH-2876)",
+   "tags": "dotnet,messaging",
+   "title": "Wolverine 6 split Roslyn codegen out of core — Dynamic mode throws at startup without WolverineFx.RuntimeCompilation",
+   "body": "In the 5.39.3→6.8.0 upgrade, core WolverineFx stopped shipping the Roslyn compiler, so the default TypeLoadMode.Dynamic fails at host startup. The fix — referencing WolverineFx.RuntimeCompilation, which auto-registers — lives in ServiceDefaults so it flows to every service. Deferred production alternative: pre-generated static codegen, dropping the runtime Roslyn dependency for faster cold start and AOT.",
+   "symptom": "host throws at startup: no assembly generator (Roslyn) registered",
+   "fix": "reference WolverineFx.RuntimeCompilation via ServiceDefaults, or pre-generate static codegen"
+  },
+  {
+   "key": "pd_wolverine6_service_location_policy",
+   "type": "Defect", "scope": "repo", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "project-decisions.md §13 Wolverine 5→6 upgrade notes",
+   "tags": "dotnet,messaging",
+   "title": "Wolverine 6 rejects codegen service-location fallback by default — factory-registered dependencies break startup",
+   "body": "Generated handler code either inlines dependencies or falls back to a container lookup; 6.x flipped ServiceLocationPolicy to NotAllowed, so dependencies that can't be inlined (interfaces with factory registrations, pooled DbContexts) fail at startup. This is a codegen-strategy concern, not the service-locator anti-pattern — handlers still use constructor injection. Fixed via a shared extension setting AlwaysAllowed, called by every service.",
+   "symptom": "startup rejection after a Wolverine major bump when a handler dependency has a factory or pooled registration",
+   "fix": "apply the shared service-location extension (AlwaysAllowed) from ServiceDefaults"
+  },
+  {
+   "key": "pd_nonhandler_outbox_idbcontextoutbox",
+   "type": "Defect", "scope": "repo", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "project-decisions.md §13 (PaymentRecoveryJob; proven by PaymentRecoveryAtomicityTests)",
+   "tags": "dotnet,messaging",
+   "title": "Non-handler code publishes through IDbContextOutbox — the hand-rolled transaction+publish wrap silently stopped being atomic on Wolverine 6",
+   "body": "A recovery job publishing outside the handler pipeline has no method-injected enlisted context; its old manual BeginTransaction→Publish→SaveChanges→Commit sequence silently lost atomicity on 6.x. Current pattern: enroll the DbContext in IDbContextOutbox, publish through it, then SaveChangesAndFlushMessagesAsync() — envelope staged, entity saved, both committed in one transaction. The guarantee is proven by a rollback test, not config inspection.",
+   "symptom": "a background job's entity write rolls back but its event was already dispatched (or vice versa)",
+   "fix": "publish via IDbContextOutbox + SaveChangesAndFlushMessagesAsync; never hand-roll transaction-plus-publish outside the pipeline"
+  },
+  {
+   "key": "pd_major_upgrade_runtime_breaks",
+   "type": "Claim", "scope": "org", "repo": "dotnet-microservices", "verified": true, "status": "live",
+   "found_by": "project-decisions.md §13 (Wolverine 5→6: three runtime breaks behind a green build)",
+   "tags": "method",
+   "title": "A source-compatible build on a major dependency upgrade proves nothing — runtime breaks hide behind green compiles",
+   "body": "The Wolverine 5→6 major bump compiled cleanly yet carried three runtime breaking changes: missing Roslyn codegen, a flipped service-location default, and silently lost transaction enlistment for publishes. All three were caught only by the integration suite; the third would have been a production data-loss bug. Treat a green build on a major bump as the start of verification: run integration tests exercising startup, codegen, and transactional behavior, and write up the breaks so the next bump doesn't re-derive them."
+  },
+  {
+   "key": "pd_rollback_test_write_then_publish",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "project-decisions.md §13 (the test that caught the Wolverine 6 non-enlistment bug)",
+   "tags": "messaging,method",
+   "title": "Prove outbox atomicity with rollback tests — force the commit to fail and assert no event escaped",
+   "body": "A save-interceptor throws when the entity commits; the test asserts both that the entity rolled back and that no event was dispatched. On the broken code the order rolled back but the event had already been sent — exactly the failure that config-level reasoning missed three times. Every write-then-publish path deserves a rollback test, because outbox atomicity is a runtime property that inspection cannot verify.",
+   "symptom": "a write-then-publish path whose atomicity is asserted by code review only",
+   "fix": "add a forced-rollback integration test asserting entity rolled back AND no event dispatched"
+  },
+  {
+   "key": "pd_context_propagation_sync_and_async",
+   "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "project-decisions.md §14",
+   "tags": "dotnet,messaging",
+   "title": "Correlation/user/session context propagates across BOTH HTTP and message hops — async hops need the same restoration",
+   "body": "Three middlewares make the IDs flow through every hop: HTTP entry reads headers (correlation, JWT sub, session), sets Activity baggage, opens a logger scope, echoes the correlation ID back; the message-consuming side restores the same IDs from envelope headers; the outgoing side stamps baggage onto outgoing envelopes. The key insight is symmetry — without message-side restoration, traces and log scopes go dark the moment work crosses a queue."
+  },
+  {
+   "key": "pd_otel_vendor_neutral",
+   "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "project-decisions.md §14",
+   "tags": "dotnet",
+   "title": "Instrument with OpenTelemetry/OTLP, never vendor SDKs — and filter health probes out of traces",
+   "body": "The collection layer doesn't know where telemetry goes: OTLP is the standard every modern backend speaks, so swapping observability vendors is exporter config, not app-code change. The exporter activates only when the endpoint env var is set. Tracing filters out /health and /alive so liveness probes don't drown real request traces."
+  },
+  {
+   "key": "pd_melogging_over_serilog",
+   "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "project-decisions.md §15",
+   "tags": "dotnet",
+   "title": "Built-in Microsoft.Extensions.Logging piped through OTel — Serilog would add an adapter layer for wins .NET 8+ already has",
+   "body": "Serilog's historical advantages (structured templates, scopes, async sinks) are first-class in ME.Logging now, and AddOpenTelemetry() ingests it directly; Serilog would add an adapter and 3-4 packages. Its remaining value is the sink ecosystem, but with OTel the sink decision becomes the exporter decision — same backend flexibility, less coupling. Acknowledged exception: Seq's local filtering UI is genuinely nicer; not adopted because the marginal benefit doesn't justify a parallel pipeline."
+  },
+  {
+   "key": "pd_hybridcache_over_handrolled",
+   "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "project-decisions.md §16",
+   "tags": "dotnet",
+   "title": "Two-tier caching uses HybridCache — hand-rolled L1/L2 grows three bugs you only find under load",
+   "body": "A hand-rolled memory-then-distributed-then-DB chain reliably develops: cache stampede (N concurrent misses invoke the factory N times, DDoSing the DB — async-safe per-key locking is hard), L1/L2 invalidation skew (one tier forgotten, stale until TTL), and serialization drift (ad-hoc serializer calls per site creating poison-pill entries). HybridCache solves all three by construction: single-flight factory execution, tag-based invalidation clearing both tiers, source-generated serialization."
+  },
+  {
+   "key": "pd_hybridcache_no_backplane",
+   "type": "Claim", "scope": "org", "repo": "dotnet-microservices", "verified": true, "status": "live",
+   "found_by": "project-decisions.md §16 'What HybridCache doesn't do (yet)'",
+   "tags": "dotnet",
+   "title": "HybridCache 10.x has no cross-replica L1 backplane — a correctness bug the day you scale out",
+   "body": "When replica A invalidates a key, replica B keeps serving its stale in-process L1 entry until the L1 TTL — there is no invalidation backplane. Harmless single-replica; wrong answers multi-replica. Mitigations: drop the local-cache TTL to ~60s, or migrate to FusionCache (Redis pub/sub backplane). This is an explicit precondition for multi-replica deployment of any caching service.",
+   "symptom": "stale reads on some replicas after an invalidation, lasting up to the L1 TTL",
+   "fix": "shorten L1 TTL or adopt a backplane before scaling past one replica"
+  },
+  {
+   "key": "pd_standard_resilience_handler",
+   "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "project-decisions.md §17 (+ .claude/audits/2026-06-03-circuit-breaker verdict)",
+   "tags": "dotnet",
+   "title": "All HttpClients get the platform's standard resilience pipeline by default — no hand-rolled Polly stacks",
+   "body": "ConfigureHttpClientDefaults + AddStandardResilienceHandler gives every outbound HTTP call the curated Polly v8 pipeline — total timeout, exponential-backoff retry, circuit breaker, per-attempt timeout, and a rate limiter against thundering-herd on recovering services — in one line with zero drift across services. The circuit-breaker audit rejected a bespoke pipeline for exactly this reason: it re-implements capability the framework ships. Per-client tuning stays available; gRPC and bus traffic have their own retry machinery."
+  },
+  {
+   "key": "pd_license_driven_test_lib_forks",
+   "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "project-decisions.md §18 (commit 3fd6aee; + audits/2026-06-05-harmful-dotnet-packages)",
+   "tags": "dotnet,method",
+   "title": "When a test dependency changes license, a maintained MIT fork or API-equivalent alternative makes migration nearly free",
+   "body": "Moq added SponsorLink telemetry in 2023 → NSubstitute (also a cleaner API); FluentAssertions v8 went paid-commercial in 2024 → AwesomeAssertions, the community MIT fork of v7 with the identical API, making migration a one-commit package+namespace swap. The stack deliberately sidesteps the .NET OSS commercialization wave — and the audit that recommended moving TO Moq was rejected with receipts."
+  },
+  {
+   "key": "pd_testcontainers_real_providers",
+   "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "project-decisions.md §18",
+   "tags": "dotnet",
+   "title": "Integration tests run against real DB/cache containers — InMemory and SQLite fakes hide provider-specific bugs",
+   "body": "Faking the database leaves whole bug classes uncaught: Postgres xmin concurrency tokens don't exist in SQLite, migrations can emit provider-specific SQL the in-memory provider doesn't model, real Redis behaves unlike fake Redis. Testcontainers boots real Postgres/SQL Server/Redis per test class with the real API hosted in-process. Slower than in-memory — and the only way to prove the seams actually work."
+  },
+  {
+   "key": "pd_macos_docker_host_testcontainers",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "project-decisions.md §18",
+   "tags": "dotnet,method",
+   "title": "On macOS, Testcontainers needs DOCKER_HOST pointed at Docker Desktop's real socket",
+   "body": "Docker Desktop on macOS exposes its socket at ~/.docker/run/docker.sock, not the /var/run/docker.sock default Testcontainers probes; without DOCKER_HOST set (or the default-socket toggle enabled), integration tests fail fast with DockerUnavailableException while Docker is demonstrably running.",
+   "symptom": "DockerUnavailableException on macOS with Docker Desktop up",
+   "fix": "set DOCKER_HOST to unix://$HOME/.docker/run/docker.sock"
+  },
+  {
+   "key": "pd_central_package_management",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "project-decisions.md §19",
+   "tags": "dotnet",
+   "title": "All package versions live in one central file; project files reference packages without versions",
+   "body": "Central Package Management puts every version in Directory.Packages.props, so 20 projects cannot drift onto different versions of the same package and a dependency bump is a one-file PR. One place to bump, zero drift.",
+   "symptom": "a Version attribute on a PackageReference in a csproj",
+   "fix": "move the version to the central props file"
+  },
+  {
+   "key": "pd_zero_warning_build",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "project-decisions.md §19",
+   "tags": "dotnet",
+   "title": "Every analyzer warning is a build error — layered analyzers each catch a distinct class, and banned APIs teach the fix",
+   "body": "TreatWarningsAsErrors + full analysis mode + style-enforced-in-build: zero warnings tolerated. Layers: built-in CA (async patterns), Meziantou (CancellationToken propagation, sync-over-async), Sonar (cognitive complexity, async void), Roslynator (style/perf), and BannedApiAnalyzers compile-rejecting Task.WaitAll/Parallel.For/Thread.Sleep with custom error messages pointing at the correct replacement — the ban teaches the fix instead of just blocking."
+  },
+  {
+   "key": "pd_ci_grep_unanalyzable_hazards",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "project-decisions.md §19",
+   "tags": "method",
+   "title": "When a hazard is structural and no analyzer can express it, enforce it with a CI grep step",
+   "body": "Static mutable collections are a real concurrency hazard the analyzer stack cannot detect (structural, not syntactic); the ban is enforced with a grep step in CI instead. An ugly-but-automated text check beats an unenforced convention — the enforcement ladder doesn't stop where analyzer expressiveness ends.",
+   "symptom": "a real hazard 'enforced' only by convention because no analyzer rule exists",
+   "fix": "encode it as a CI grep/audit step; ugly beats unenforced"
+  },
+  {
+   "key": "pd_dapr_considered_not_adopted",
+   "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "project-decisions.md §22 (+ audits 2026-06-01 sidecar, 2026-06-12 Dapr Workflows)",
+   "tags": "dotnet,messaging",
+   "title": "Dapr rejected for a coherent single-stack system: sidecar hop on hot paths, stringly-typed invocation, an outbox coupled to Dapr's state model",
+   "body": "For a .NET-native stack Dapr would regress what exists: its outbox assumes Dapr-shaped state-store persistence (adopting it means adopting Dapr's data model), typed gRPC contracts become generic invoke-by-name calls, and every call pays a localhost sidecar hop. The five-SDKs-replaced pitch is a strawman when messaging+outbox is one framework, secrets are stock config, caching is HybridCache. Dapr fits polyglot teams, hard multi-cloud portability, or greenfields without an opinionated stack. Documented revisit triggers: non-.NET services, a hard portability requirement the transport swap doesn't cover, or wanting 3+ building blocks simultaneously."
+  },
+  {
+   "key": "pd_broker_swap_portability_oversold",
+   "type": "Claim", "scope": "org", "repo": "dotnet-microservices", "verified": true, "status": "live",
+   "found_by": "project-decisions.md §22",
+   "tags": "messaging",
+   "title": "'Swap brokers via config' is oversold — broker semantics don't survive the swap",
+   "body": "Abstraction layers promising broker portability via one config line deliver it only for trivial fire-and-forget publishes: sessions, FIFO, dead-lettering, and unique-subscription-name constraints have no clean mapping across brokers. Real portability planning names the concrete target swap and verifies the semantic features in use actually map — rather than trusting the abstraction's marketing."
+  },
+  {
+   "key": "pd_choreography_with_flip_trigger",
+   "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "project-decisions.md §22",
+   "tags": "messaging,method",
+   "title": "The saga stays choreography — with a concrete written trigger for when durable orchestration would earn its keep",
+   "body": "At 4 shallow, sub-second, event-shaped steps, choreography's known cost (flow scattered across handlers, unreadable top-to-bottom) is cheap, and the trade buys loose coupling and no orchestrator to operate. The documented flip trigger: if compensation work grows timeouts, first-class retries, human-approval gates, multi-day waits, or 'where is order X stuck?' becomes unanswerable from event logs — run a three-way bake-off (Temporal vs Durable Functions vs Dapr Workflow). Writing the concrete re-evaluation trigger into the decision beats both 'never' and vague 'maybe later'."
+  },
+  {
+   "key": "pd_db_primitives_before_distributed_locks",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "project-decisions.md §22",
+   "tags": "method,data-quality",
+   "title": "Reach for database primitives before distributed locks — the DB almost always solves it first",
+   "body": "The mapping: concurrent row updates → optimistic concurrency tokens; duplicate creation → unique constraints; 'reserve X for 10 min' → a reservation row with TTL/status and a unique constraint on the scarce dimension; idempotent event processing → idempotency-key/envelope-ID dedup; serializing a critical section in one DB → SELECT FOR UPDATE or advisory locks; atomic write-plus-publish → transactional outbox. A walk of all five services found zero legitimate distributed-lock needs. The genuine future case is singleton scheduled jobs on multi-replica services — then a lock library over the DB you already run, never a new runtime or sidecar.",
+   "symptom": "a distributed lock (or lock service) proposed for a problem in the mapping above",
+   "fix": "use the matching DB primitive; locks only for true singleton-job coordination"
+  }
+ ],
+ "edges": [
+  {"src": "pd_nonhandler_outbox_idbcontextoutbox", "rel": "SUPERSEDES", "dst": "seed:dotnet-defects:nc_outbox_atomicity"},
+  {"src": "pd_rollback_test_write_then_publish", "rel": "CATCHES", "dst": "pd_nonhandler_outbox_idbcontextoutbox"},
+  {"src": "pd_choreography_with_flip_trigger", "rel": "DEFINED_IN", "dst": "pd_dapr_considered_not_adopted"}
+ ]
+}

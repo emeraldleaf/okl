@@ -1,0 +1,59 @@
+# Installed by `okl init` into .github/workflows/okl-verify.yml (also stamped by `okl scaffold`).
+#
+# The knowledge layer's CI verifier — real checks, not placeholders:
+#   1. `okl drift --gate`  — fails the build when a rule's governed files changed after the
+#      rule was last verified (a stale rule is a rule nobody re-checked).
+#   2. `gates/run-gates.sh` — the repo's mechanical method gates, when the scaffold is present.
+#
+# Shared-layer connection is optional: without OKL_SERVICE_URL the drift gate runs against
+# the repo's local .okl store. Configure the secrets to verify against the org layer and to
+# let gate scripts emit receipts (`okl link <gate_id> VERIFIED_ON <defect_id>`) — emit those
+# from inside the gate that proved itself against real drift, where the ids are known.
+name: okl-verify
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  okl-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # drift needs history: it compares file mtimes/commits vs verified_at
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install okl
+        # Consumer repos install the released package; in okl's own repo this
+        # workflow dogfoods the working tree (pip install okl would 404 — not on PyPI yet).
+        run: |
+          if grep -q '^name = "okl"' pyproject.toml 2>/dev/null; then
+            pip install -e .
+          else
+            pip install okl
+          fi
+
+      - name: Connect to the shared layer (optional — skipped when secrets are unset)
+        env:
+          OKL_SERVICE_URL: ${{ secrets.OKL_SERVICE_URL }}
+          OKL_TOKEN: ${{ secrets.OKL_TOKEN }}
+        run: |
+          if [ -n "${OKL_SERVICE_URL:-}" ]; then
+            okl connect "$OKL_SERVICE_URL" --token "$OKL_TOKEN"
+          else
+            echo "no OKL_SERVICE_URL secret — verifying against the repo-local store"
+          fi
+
+      - name: Drift gate — rules whose governed code changed after last verification
+        run: okl drift --gate
+
+      - name: Method gates (when the scaffold kit is present)
+        run: |
+          if [ -x gates/run-gates.sh ]; then
+            bash gates/run-gates.sh
+          else
+            echo "no gates/run-gates.sh — method-kit gates not installed (okl scaffold adds them)"
+          fi

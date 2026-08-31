@@ -1,0 +1,121 @@
+{
+  "_comment": "Enforcement/encoding-loop lessons earned in the geospatial pipeline (2026-08-02) while hardening PR #75's CI. All WORLD-FACTS — portable to any repo — so org-scoped: a repo's first `okl check` returns them before the same mistake recurs. Tagged 'method' (encoding-loop/CI discipline), plus 'geospatial'/'data-quality' where the class is subject-specific. No 'ci' tag exists in the controlled vocabulary yet; add one to store.py KNOWN_TAGS if this class grows. Review, then `okl seed seed/geospatial-enforcement-defects.json`.",
+  "nodes": [
+    {
+      "key": "d_invoked_by_nothing",
+      "type": "Defect", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
+      "found_by": "auditing the encoding-loop surfaces — the arch-reviewer, once actually run, caught a must-fix an automatic surface missed",
+      "title": "An 'enforcement surface' that only runs on-demand runs never",
+      "body": "The architecture-reviewer agent was listed in CLAUDE.md as one of the encoding-loop's enforcement surfaces, but was invoked by nothing — no hook, no CI job, only a human typing /check-rules. For the repo's whole life it never ran. A review agent, lint rule, or checklist with no mechanical trigger is documentation, not enforcement: it provides zero protection while appearing on the ledger as covered.",
+      "symptom": "a review agent / rule / checklist is described as enforcement but nothing automatically triggers it",
+      "fix": "wire it to a mechanical trigger (hook or CI job), or relabel it honestly as on-demand-only",
+      "tags": "method"
+    },
+    {
+      "key": "g_review_agent_in_ci",
+      "type": "Gate", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
+      "found_by": "architecture-review.yml — runs the reviewer agent headless on every PR diff",
+      "title": "Run the architecture/review agent headless in CI on every PR diff",
+      "body": "A CI job runs the review agent against `git diff origin/BASE...HEAD` on every PR and fails on any must-fix finding. Self-owned — does not depend on a third-party review SaaS. Soft-passes until its API-key secret is set so it never wedges merges before setup, then becomes a hard gate via branch protection. Portable to any repo that has a review agent or a written architecture checklist.",
+      "symptom": "architecture rules live only as an agent/checklist that a human must remember to run",
+      "fix": "add a CI job that runs the agent on the diff and fails on must-fix; soft-pass until the key is configured",
+      "tags": "method,agent-safety"
+    },
+    {
+      "key": "r_surface_needs_trigger",
+      "type": "Rule", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
+      "found_by": "CLAUDE.md 'What is AUTOMATIC vs what you must RUN' ledger",
+      "title": "Every enforcement surface needs a mechanical trigger and an honest AUTOMATIC-vs-RUN ledger",
+      "body": "Keep an explicit table of what runs automatically (hooks, CI) vs what a human must remember to run; a surface with no trigger belongs in the second column or nowhere. Update the ledger in the SAME change that adds or closes a gate — a ledger claiming coverage it doesn't have is worse than none, because it stops people looking.",
+      "symptom": "a rules doc lists surfaces without saying which actually run automatically",
+      "fix": "maintain an AUTOMATIC-vs-RUN ledger; update it whenever a gate is added or closed",
+      "tags": "method"
+    },
+    {
+      "key": "d_unpinned_linter",
+      "type": "Defect", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
+      "found_by": "ci-python.yml lint gate failing a branch that changed no linted code",
+      "title": "Unpinned linter/formatter in CI retro-fails a branch that changed nothing",
+      "body": "CI ran `pip install ruff` (unpinned). A new release (0.15→0.16) promoted rules to default (RUF059, I001, RUF012, SIM117) and failed a previously-green branch on pre-existing code the PR never touched. Any CI step installing a linter/formatter/type-checker without a pinned version is a time-bomb that fires on the vendor's release schedule, not yours.",
+      "symptom": "a CI lint/format/type step fails on code the PR didn't change, right after a tool release",
+      "fix": "pin the exact tool version; treat bumps as deliberate PRs that address the new findings",
+      "tags": "method"
+    },
+    {
+      "key": "r_pin_gating_tools",
+      "type": "Rule", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
+      "found_by": "the 0.15→0.16 ruff incident above",
+      "title": "Pin every tool that gates CI; an unpinned linter is a time-bomb",
+      "body": "Any tool whose output can fail a build — ruff, black, mypy, eslint, prettier, a Sonar scanner image — must be version-pinned in CI. Unpinned, the gate's behavior changes on the vendor's release cadence and fails work that changed nothing. Pin it; bump it in its own PR where the new findings are visible and addressed.",
+      "symptom": "a CI gate step runs `pip install <tool>` / `npm i -g <tool>` with no version",
+      "fix": "pin the exact version; bumps are deliberate PRs",
+      "tags": "method"
+    },
+    {
+      "key": "d_ungated_zone",
+      "type": "Defect", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
+      "found_by": "the arch-reviewer's 'ungated zone' checklist section — code outside the source roots",
+      "title": "Code outside the linter/type/scan source-roots is gated by nothing",
+      "body": "Python under olmoearth_run_data/ and docs/ was covered by no linter, no type-checker, no Sonar rule, and no AI-review path rule: CI ran ruff only on the package, sonar.sources listed three dirs, CodeRabbit path_instructions matched the package only, and the CI trigger paths didn't even fire on those dirs. Untyped params, bare excepts, and hardcoded-constant drift shipped straight through review because no gate watched that directory. Every repo has these zones; they must be enumerated, not assumed covered.",
+      "symptom": "a .py/.ts/.cs dir ships code but appears in no linter/type/scan source-root and no CI trigger path",
+      "fix": "add the dir to CI trigger paths + the lint/scan invocation; list remaining ungated zones in the ledger",
+      "tags": "method"
+    },
+    {
+      "key": "g_gate_every_dir",
+      "type": "Gate", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
+      "found_by": "ci-python.yml — added olmoearth_run_data to triggers + a dedicated repo-root lint step",
+      "title": "Gate every executable directory; lint each import-tree from its own root",
+      "body": "Add each shipping dir to the CI trigger paths and the lint/type/scan invocation. Subtlety: ruff's isort first-party detection is CWD-anchored, so `ruff check ../otherdir` from a subpackage classifies the other tree's sibling imports differently than the repo root would, and flags I001 in CI though it's clean locally. Give each import tree its own lint step with working-directory at that tree's root.",
+      "symptom": "lint clean locally but I001/import-order fails in CI, or a dir has no gate at all",
+      "fix": "one lint step per import-tree run from that tree's root; add every shipping dir to CI trigger paths",
+      "tags": "method"
+    },
+    {
+      "key": "d_cwd_isort",
+      "type": "Defect", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
+      "found_by": "reproducing the CI I001 locally by matching the working directory",
+      "title": "ruff isort is CWD-anchored: sibling imports sort differently from a subdir vs the repo root",
+      "body": "`ruff check ../olmoearth_run_data` invoked from the python-etl working dir classified the zone's sibling-module imports as third-party and demanded a different grouping than `ruff check olmoearth_run_data` from the repo root — so the same files passed locally (root) and failed in CI (subdir) with I001. The invocation's working directory determines first-party detection; reproduce a CI lint failure with the SAME cwd CI uses.",
+      "symptom": "ruff I001 in CI on files that pass ruff locally",
+      "fix": "lint each import tree from its own root (separate step, working-directory at that root)",
+      "tags": "method"
+    },
+    {
+      "key": "d_masked_gate_order",
+      "type": "Defect", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
+      "found_by": "a test failure that only appeared once the lint step ahead of it went green",
+      "title": "A failing early gate step masks a later gate's failure in the same job",
+      "body": "The CI python job ran ruff before pytest in one job; while ruff failed (the unpinned-bump debt) the job short-circuited before pytest, hiding a real test failure (a test fake's signature missing a newly-added kwarg). Fixing ruff 'revealed' a second red that had been there all along. A single job chaining gates reports only the first failure; green-after-fix is not proof the rest pass.",
+      "symptom": "fixing one CI failure immediately surfaces a different one that was always broken",
+      "fix": "after greening a gate, re-run the full downstream; prefer independent jobs so one red can't hide another",
+      "tags": "method"
+    },
+    {
+      "key": "r_single_source_sets",
+      "type": "Rule", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
+      "found_by": "architecture-reviewer must-fix: hardcoded 2020 in 5 places + a re-defined label frozenset",
+      "title": "Single-source a derived fact — including SETS and class schemes, not just scalars",
+      "body": "A canonical constant (IMAGERY_YEAR=2020) or set (INVASIVE_LABELS=frozenset({TAMARISK, RUSSIAN_OLIVE})) must be imported wherever used, never re-written as a literal. Re-hardcoding 2020 in five places, or re-defining the frozenset locally, is the same drift class: two definitions of one fact are two facts free to diverge. Applies equally to class-index schemes, label sets, peak-season months, and vintages.",
+      "symptom": "a module re-writes a constant, frozenset, or class-list that already exists as a canonical import",
+      "fix": "import the canonical constant/set; never restate it as a literal",
+      "tags": "method,data-quality"
+    },
+    {
+      "key": "d_month_range_28",
+      "type": "Defect", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
+      "found_by": "CodeRabbit review of a monthly-composite date range",
+      "title": "Monthly STAC query ending at day-28 drops days 29-31 of imagery",
+      "body": "A per-month scene search built as `{y}-{m}-01`/`{y}-{m}-28` silently omits days 29, 30, 31 — fewer candidate scenes and a possibly-worse least-cloudy pick. End the range at the first day of the FOLLOWING month (with December→January rollover) so every day is covered uniformly (28/29/30/31). It was inherited by copy into a second script before being caught.",
+      "symptom": "a monthly composite/search date range hard-codes -28 (or -30) as the month end",
+      "fix": "end at first-of-next-month with Dec→Jan rollover; covers all month lengths",
+      "tags": "geospatial"
+    }
+  ],
+  "edges": [
+    { "src": "g_review_agent_in_ci", "rel": "CATCHES", "dst": "d_invoked_by_nothing" },
+    { "src": "g_review_agent_in_ci", "rel": "ENCODES", "dst": "r_surface_needs_trigger" },
+    { "src": "g_gate_every_dir", "rel": "CATCHES", "dst": "d_ungated_zone" },
+    { "src": "g_gate_every_dir", "rel": "CATCHES", "dst": "d_cwd_isort" }
+  ]
+}

@@ -1,0 +1,147 @@
+{
+ "_comment": "the .NET platform REVIEW-SURFACES import — rules encoded in .claude/agents/architecture-reviewer.md (pattern checklist), .coderabbit.yaml path_instructions, and .claude/audits/ verdicts, deduped against dotnet-canon.json and dotnet-decisions.json. These are the rules the repo's automated reviewers enforce; porting them means another repo's agent learns them at check time instead of at review time. Review, then `okl seed seed/dotnet-review-surfaces.json`.",
+ "nodes": [
+  {
+   "key": "rs_endpoint_group_hygiene",
+   "type": "Rule", "scope": "repo", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "architecture-reviewer.md pattern checklist; .coderabbit.yaml **/Endpoints/**/*.cs",
+   "tags": "dotnet,security",
+   "title": "Endpoints register via the shared versioned-group helper, with group-level auth and server-side paging clamps",
+   "body": "Every HTTP endpoint registers via MapV1ApiGroup(tag, name) instead of hand-rolled versioning chains, non-public groups get RequireAuthorization at the group level, and every list endpoint accepts (page, pageSize) clamped server-side at ≤100. Centralizing the policy in one helper makes per-service drift structurally impossible.",
+   "symptom": "a new endpoint hand-rolls versioning, is anonymously reachable, or returns an uncapped list",
+   "fix": "register on the versioned group helper, require auth at group level, clamp pageSize server-side"
+  },
+  {
+   "key": "rs_read_projection_axes",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "architecture-reviewer.md; docs/cqrs-data-access.md; audits/2026-05-31-ef-core-read-performance",
+   "tags": "dotnet,data-quality",
+   "title": "Cartesian explosion has two axes — only projection-to-DTO fixes both; plain AsNoTracking is a half-fix",
+   "body": "Include-based reads suffer client-side object duplication (fixed by identity-resolution tracking variants) AND cartesian SQL row shape (fixed only by projection or split queries). AsNoTracking returning an entity fixes neither the wire shape nor duplication. Inline projection to a DTO with nested collections wins on both axes at once — which is why it's the default read shape; identity-resolution no-tracking is the narrow fallback for materializing an untracked entity graph.",
+   "symptom": "a read path materializing entities with Include, duplicating parents per child row",
+   "fix": "project inline to a DTO with nested collections; the ORM auto-splits projected collection navigations"
+  },
+  {
+   "key": "rs_fanout_per_recipient",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "architecture-reviewer.md; .coderabbit.yaml **/Features/**/*.cs",
+   "tags": "messaging",
+   "title": "Broadcast-to-N is one message per recipient under a bounded-concurrency queue — never a foreach-await loop",
+   "body": "A handler iterating recipients and awaiting a sender per recipient holds the request open for N × latency, concentrates work on one process, and spikes the rest of the system. Publish one message per recipient (or batch of K), return immediately, and process under an explicit parallelism cap — the throttle gives natural back-pressure so fast producers can't starve slow consumers.",
+   "symptom": "foreach (recipient) await sender.Send(...) inside a request or message handler",
+   "fix": "per-recipient messages processed under a bounded-concurrency local queue"
+  },
+  {
+   "key": "rs_meter_wildcard_registration",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "architecture-reviewer.md; .coderabbit.yaml ServiceDefaults/Extensions.cs",
+   "tags": "dotnet,messaging,data-quality",
+   "title": "Frameworks that suffix meter names need wildcard registration — the literal name silently collects nothing",
+   "body": "Wolverine names its meter 'Wolverine:{ServiceName}', so telemetry must register AddMeter(\"Wolverine*\"); a literal AddMeter(\"Wolverine\") collects zero metrics with no error. Flag any 'tidying' of the wildcard to a literal. Corollary: prefer the framework's own instruments (DLQ depth, execution failures, sent/received, inbox/outbox depth) over hand-rolled equivalents — see the dead-metric lesson.",
+   "symptom": "messaging metrics vanish from the dashboard after an innocuous meter-name cleanup",
+   "fix": "keep the wildcard meter registration; lean on framework-emitted instruments"
+  },
+  {
+   "key": "rs_sweeper_hygiene",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "architecture-reviewer.md; .coderabbit.yaml **/*RecoveryJob*.cs",
+   "tags": "dotnet,method",
+   "title": "Background sweepers: fresh DI scope per iteration, no-wait distributed lock, injected clock, per-row exception isolation",
+   "body": "Cron-style background jobs create a fresh DI scope per iteration (a reused scope accumulates every row in the change tracker), take a no-wait distributed lock when running cross-replica (released in await-using for exception safety), inject TimeProvider instead of DateTime.UtcNow for test determinism, and wrap each iteration in try/catch so one poison row can't kill the sweep.",
+   "symptom": "sweep memory grows with table size, duplicate work across replicas, or one bad row aborts the run",
+   "fix": "scope-per-iteration, no-wait lock, injected clock, per-iteration try/catch"
+  },
+  {
+   "key": "rs_rich_aggregate_shape",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "architecture-reviewer.md; .coderabbit.yaml domain-invariant path rules",
+   "tags": "dotnet",
+   "title": "Aggregate shape (when earned): validating factory, private setters, named transitions, read-only collections, zero dependencies",
+   "body": "Entities are built via a validating static Create factory with private setters; state changes go through named transition methods (MarkAsPaid(), never Status = Paid) that throw on invalid transitions; collections expose IReadOnlyList over a private list, mutated only via named methods. The domain references nothing — no ORM, logging, or messaging; concurrency tokens live as shadow state in the persistence layer so the entity stays clean. (When the shape is earned at all — see the observed-invariant rule.)",
+   "symptom": "public setters, direct property mutation from handlers, mutable exposed lists, or infra references in Domain",
+   "fix": "factory + named transitions + read-only collections; shadow concurrency tokens"
+  },
+  {
+   "key": "rs_handler_idempotency_guard",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "architecture-reviewer.md; audits/2026-05-31-idempotent-consumer",
+   "tags": "messaging",
+   "title": "Idempotency lives at the handler (pre-check and no-op); the aggregate's throw is the backstop, not the guard",
+   "body": "Consume handlers pre-check state before invoking the transition (if status isn't the expected precursor, return) so benign redeliveries no-op. The aggregate's throw-on-invalid-transition remains as the invariant backstop — but if the throw IS the guard, every duplicate or late delivery lands on the DLQ as a false poison message. Tests for these guards must state that a no-op, not a throw, is the intended behavior.",
+   "symptom": "duplicate/late-delivered messages filling the DLQ via aggregate invariant throws",
+   "fix": "status short-circuit at the top of the consume handler; aggregate throw as defense in depth"
+  },
+  {
+   "key": "rs_keyed_services_over_factories",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "architecture-reviewer.md; .coderabbit.yaml **/Infrastructure/DependencyInjection.cs",
+   "tags": "dotnet",
+   "title": "Multi-impl ports route via keyed DI; premature factories and unrouted multi-registrations are twin failure modes",
+   "body": "Two DI-registration bugs: (1) premature factory — a keyed/factory setup wrapping a port with exactly one implementation is speculative coupling; plain scoped registration is right until a second impl ships. (2) missing routing — with 2+ impls registered plain AND per-call selection intended (a Channel field picking the sender), DI silently returns the last-registered impl for every call, dropping the routing intent: a latent bug, not a style nit. Use the container's keyed-services API for routing — never a hand-rolled port factory, since the container IS the canonical factory.",
+   "symptom": "every call routes to one impl regardless of the selector field, or an unused factory wraps a single impl",
+   "fix": "one impl: plain registration. multiple + per-call selection: keyed services keyed by the routing value"
+  },
+  {
+   "key": "rs_integration_tests_default",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "architecture-reviewer.md; .coderabbit.yaml **/*Test*.cs",
+   "tags": "dotnet,method",
+   "title": "Integration tests are the default tier for handlers; unit tests are reserved for pure domain logic — and every guard branch gets a test",
+   "body": "Any handler touching the DbContext is tested through the real API against real containers: hit the endpoint, assert DB state and tracked message envelopes — not mock-a-repository-and-count-calls. Unit tests cover pure logic only (transition guards, validation). A mock of a repository wrapper in a unit test signals two defects at once: the wrapper shouldn't exist and the test belongs in the integration tier. A handler with security guards, idempotency short-circuits, or ordering invariants needs a test per branch — one happy-path test on a three-branch handler is a finding.",
+   "symptom": "handler tests mocking repositories and verifying call counts, or multi-branch handlers with one happy-path test",
+   "fix": "move DbContext-touching tests to the integration tier; enumerate the missing branch scenarios"
+  },
+  {
+   "key": "rs_workflow_hardening_baseline",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": "architecture-reviewer.md; .coderabbit.yaml .github/workflows/*.yml",
+   "tags": "security,method",
+   "title": "CI workflow baseline: pipefail, no persisted credentials, least-privilege permissions, concurrency groups — pin actions in one batch, not piecemeal",
+   "body": "Every bash run block starts with set -euo pipefail; checkout sets persist-credentials false when the job doesn't push; every workflow declares explicit least-privilege permissions and a concurrency group cancelling superseded runs. Deliberately NOT a per-PR finding: individually unpinned @vN actions — SHA-pinning one workflow while others float is inconsistency theater, so pinning is a single repo-wide hardening pass.",
+   "symptom": "a run block continuing past a failed pipe segment, or a read-only job persisting its checkout token",
+   "fix": "apply the four baseline hardenings on every new workflow; batch SHA-pinning as one dedicated PR"
+  },
+  {
+   "key": "rs_event_carries_recipient_id",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": ".coderabbit.yaml App.Contracts/**/*.cs (precedent: issue #99, ShipmentDispatchedEvent)",
+   "tags": "messaging,data-quality",
+   "title": "Events that can trigger notifications must denormalize the recipient ID — an OrderId can never resolve to an inbox",
+   "body": "Any cross-service event that triggers (or could trigger) a user-facing notification downstream carries the recipient identifier denormalized from the producing aggregate; a consumer keying a notification on an entity ID has a recipient-key-that-can't-resolve bug. Precedent: a dispatch event shipped without BuyerId while sibling events had it, silently breaking 'Order Shipped' emails. Contract changes are additive-only within a major version — add init-only properties, never remove or rename fields consumers bind to.",
+   "symptom": "a notification consumer silently dropping messages because the event lacks a resolvable recipient",
+   "fix": "add the denormalized recipient field additively; audit consumers for non-recipient keys"
+  },
+  {
+   "key": "rs_transport_removal_orphans",
+   "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
+   "found_by": ".coderabbit.yaml ServiceDefaults/Extensions.cs (both bit the ASB→RabbitMQ swap, PR #159)",
+   "tags": "dotnet,messaging",
+   "title": "Removing a transport package leaves two silent orphans: dead telemetry source registrations and stranded central package versions",
+   "body": "Deleting the PackageReference is not enough. Sweep for (1) a dead AddSource(...) for the removed transport's ActivitySource in the tracing block — it silently collects nothing and masks that the replacement's source may be missing — and (2) an orphaned PackageVersion in the central versions file with no remaining reference. Both bit the ASB-to-RabbitMQ swap.",
+   "symptom": "messaging spans missing after a transport swap; stale central package versions",
+   "fix": "pair every transport removal with a tracing-source and central-package sweep in the same PR"
+  },
+  {
+   "key": "au_di_lifetimes_captive_dependency",
+   "type": "Claim", "scope": "org", "repo": "dotnet-microservices", "verified": true, "status": "live",
+   "found_by": "audits/2026-06-03-di-lifetimes + 2026-06-03-iservicescope-vs-iserviceprovider (gap tracked as #103)",
+   "tags": "dotnet",
+   "title": "Audit verdict: captive-dependency rules held by habit only — enforce with ValidateScopes/ValidateOnBuild, not tribal knowledge",
+   "body": "The DI-lifetimes audit found the project avoids captive dependencies (a singleton capturing a scoped service) purely by developer behavior — no ValidateScopes/ValidateOnBuild enforcement, no canon rule. The follow-up audit added the adjacent anti-pattern: resolving scoped services from the root provider instead of minting a scope. Lesson: lifetime discipline should be build-time-validated, not tribal.",
+   "symptom": "a DI container with scope-validation off and no lifetime rules in canon",
+   "fix": "enable ValidateScopes+ValidateOnBuild; encode the captive-dependency and root-provider rules"
+  },
+  {
+   "key": "au_audit_examples_not_advice",
+   "type": "Claim", "scope": "org", "repo": "dotnet-microservices", "verified": true, "status": "live",
+   "found_by": "audits/2026-06-12-dotnet-microservices-do-avoid (Kerim Kara guide)",
+   "tags": "method,eval-integrity",
+   "title": "Audit verdict: audit an article's EXAMPLES, not just its stated advice — this one violated its own canon three times",
+   "body": "An audit of a do/avoid microservices guide found all 10 stated items already covered by canon — but the article's own code examples contradicted it three times: publish-after-save dual-write instead of an outbox, audience validation disabled against the JWT rule, and a service-interface layer against the architecture. The audit also surfaced a recurring implicit stance the project practiced but never documented (internal-gRPC trust, no API gateway) — the second undocumented-stance find that day. Method lesson: examples are where an article's real teaching lives, and where it quietly contradicts itself."
+  }
+ ],
+ "edges": [
+  {"src": "rs_meter_wildcard_registration", "rel": "ENCODES", "dst": "seed:dotnet-defects:nc_dead_metric"},
+  {"src": "rs_keyed_services_over_factories", "rel": "ENCODES", "dst": "seed:dotnet-defects:nc_speculative_interface"}
+ ]
+}

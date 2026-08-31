@@ -1,0 +1,120 @@
+{
+ "_comment": "Seed for the OKL — real, dated, receipted lessons from the RAG service (Python/FastAPI RAG: Qdrant hybrid, Redis, Postgres, Ollama, deepeval). Eval-integrity and retrieval-vs-identity lessons are org-scoped (portable to any RAG/agent/ML-eval work); pipeline-plumbing quirks are scoped repo:python-rag-service.",
+ "nodes": [
+  {
+   "key": "qz_judge_crash",
+   "type": "Defect",
+   "scope": "org",
+   "repo": "python-rag-service",
+   "found_by": "commit 60bbed7",
+   "verified": true,
+   "title": "'LLM Judge 5.0/5.0' while 19 of 20 cases crashed — a metric that can't report its own failure rate",
+   "body": "The eval harness averaged only the cases that completed; one survived, scored 5, printed a perfect score. The most dangerous bug of the effort — it made everything downstream unfalsifiable. Portable fix: the summary LEADS with its own failure count and prints RESULTS NOT USABLE above a failure-rate threshold, before any score.",
+   "symptom": "a summary score prints while some cases threw or were skipped",
+   "fix": "lead the report with the crash/failure count; mark results unusable above threshold",
+   "tags": "eval-integrity"
+  },
+  {
+   "key": "qz_judge_self",
+   "type": "Defect",
+   "scope": "org",
+   "repo": "python-rag-service",
+   "found_by": "findings-log Part 2 #5",
+   "verified": true,
+   "title": "The LLM judge was grading its own homework (same model as the generator)",
+   "body": "The judge defaulted to the same model as the generator — a mirror, not a signal (its default was even an embedding model that can't generate). Portable rule: the judge must be a different model from the generator; refuse to run if they're equal.",
+   "symptom": "the eval's judge model equals (or defaults to) the generator model",
+   "fix": "require judge≠generator; refuse to run if they're equal",
+   "tags": "eval-integrity"
+  },
+  {
+   "key": "qz_crosstab",
+   "type": "Rule",
+   "scope": "org",
+   "repo": "python-rag-service",
+   "found_by": "findings-log Part 2 #6",
+   "verified": true,
+   "title": "Run the retrieval_hit × judge_score cross-tab — it names which component is actually failing",
+   "body": "A whole session optimized retrieval; the cross-tab revealed generation was the dominant failure mode. The conclusion 'agentic retrieval is architecturally weaker' was exactly backwards, and that eval-results doc was retracted. Portable: bake the precondition×outcome cross-tab into every eval run, not as a one-off.",
+   "tags": "eval-integrity"
+  },
+  {
+   "key": "qz_fixtures",
+   "type": "Defect",
+   "scope": "org",
+   "repo": "python-rag-service",
+   "found_by": "findings-log Part 3",
+   "verified": true,
+   "title": "Invented fixtures can't falsify assumptions the author holds",
+   "body": "Entity tests used invented fixtures (Apple_10K.html) and passed at 100% while the live index had exhibit number '10.1' indexed as a company. Fixtures written by the person who wrote the parser encode the same assumptions as the parser. Portable rule: test against real inputs sampled from the actual corpus, verbatim (the RAG service switched to its 25 real filenames).",
+   "tags": "eval-integrity,data-quality"
+  },
+  {
+   "key": "qz_identity",
+   "type": "Rule",
+   "scope": "org",
+   "repo": "python-rag-service",
+   "found_by": "findings-log Part 3/4 (the through-line)",
+   "verified": true,
+   "title": "Don't infer by resemblance what you can look up — document identity is indexed & pre-filtered, not ranked",
+   "body": "Semantic search ranks by content and cannot distinguish one document from another (every contract has a termination clause). A corpus-wide question ('do any two docs share a company?') is a GROUP BY, not a similarity question — a ranked retriever cannot answer it at any top-k. Make the model choose the constraint and make code satisfy it. Portable across RAG/agent retrieval design.",
+   "tags": "retrieval-design"
+  },
+  {
+   "key": "qz_wrong_corpus",
+   "type": "Defect",
+   "scope": "repo",
+   "repo": "python-rag-service",
+   "found_by": "commits 36db337, 8cab711",
+   "verified": true,
+   "title": "Different eval runs were measuring different Qdrant collections",
+   "body": "Four collections existed (python-rag-service_hybrid / _ids / _full (zero entities) / _entities); the container was hand-pointed at one while config.py named another. Runs were compared as if the same system. Fix: one canonical collection, strays deleted+tombstoned. Stack-specific (Qdrant), scoped repo.",
+   "tags": "python-rag,eval-integrity"
+  },
+  {
+   "key": "qz_broken_tool",
+   "type": "Defect",
+   "scope": "org",
+   "repo": "python-rag-service",
+   "found_by": "commits 8df8bbc, c1b80f5",
+   "verified": true,
+   "title": "An agent whose primary tool throws on every call measures a broken tool, not an architecture",
+   "body": "search_filtered defaulted to a paid Voyage reranker with no key configured and threw on every call; the agent burned its whole step budget retrying because the error told it nothing actionable. 'Agentic loses on the real corpus' measured that, not architecture. Portable: empty/failed results should return actionable guidance (e.g. the entity vocabulary) so the agent can self-correct.",
+   "tags": "agent-safety"
+  },
+  {
+   "key": "qz_unequal_budget",
+   "type": "Defect",
+   "scope": "org",
+   "repo": "python-rag-service",
+   "found_by": "findings-log Part 2 #4",
+   "verified": true,
+   "title": "Comparing arms with unequal budgets attributes the gap to the wrong cause",
+   "body": "search_corpus inherited top_k=3 (the FACTUAL default) while classic used 8 on the same COMPARISON question — comparing an agent given 3 chunks against a pipeline given 8 and blaming the architecture. Portable: give each arm the same retrieval/token budget before concluding anything about the arms.",
+   "tags": "eval-integrity"
+  },
+  {
+   "key": "qz_agent_contract",
+   "type": "Rule",
+   "scope": "org",
+   "repo": "python-rag-service",
+   "found_by": "docs/agent-contract.md",
+   "verified": true,
+   "title": "The agent's capability surface is an allowlist; side-effect machinery is built with the first mutating tool",
+   "body": "A tool exists only if registered; unknown names are never executed ('the loop must never invent capabilities'). Budgets (max steps, token budget, tool timeout) are explicit and env-overridable; finish is the explicit stop. A tool with side effects requires arg-schema validation, a pre-execution control mode (audit/approval/block), and severity-gated alerting BEFORE it ships — built deliberately with the first mutating tool, not speculatively. Portable agent-safety rule.",
+   "tags": "agent-safety"
+  }
+ ],
+ "edges": [
+  {
+   "src": "qz_crosstab",
+   "rel": "REFUTES",
+   "dst": "qz_judge_crash"
+  },
+  {
+   "src": "qz_fixtures",
+   "rel": "RECURS_IN",
+   "dst": "python-rag-service"
+  }
+ ]
+}

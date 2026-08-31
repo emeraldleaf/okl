@@ -1,0 +1,7 @@
+# Tombstones — retired identifiers that must not be resurrected.
+# One identifier per line. The `tombstones` gate fails any doc/comment/config that reintroduces one.
+# Format:  <identifier>  <TAB>  <reason / what replaced it>  <TAB>  <date>
+#
+# <<FILL as you retire things. Examples:>>
+# python-rag-service_full	empty-entity stray collection; canonical is python-rag-service_hybrid	2026-07
+# python-rag-service_ids	stray collection; deleted in 36db337	2026-07
