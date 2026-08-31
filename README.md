@@ -35,6 +35,54 @@ stdlib-only with zero required dependencies.
 
 ---
 
+## What okl is
+
+**A store of your engineering rules, and the machinery that keeps them true.**
+
+Two things ship in the package. They are not coequal:
+
+- **The knowledge layer** is the product. Typed records (rules, architecture decisions,
+  known defects, gates, tombstones, retractions) that live outside any one repo, get
+  retrieved into an agent's context before a task, and go stale loudly when the code
+  they describe moves on. Everything measured in [evals/REPORT.md](evals/REPORT.md)
+  measures this.
+- **`okl scaffold`** is a starter kit for the in-repo discipline the store assumes: a
+  lean canon file, mechanical gates, registries, a review agent, and an eval harness.
+  It is useful on its own and it has never been measured. Use it to get a new repo to
+  the state where a shared store has something to attach to.
+
+| Piece | What it is | Where it lives |
+|---|---|---|
+| **client** (`okl` CLI + agent tools) | `check` / `record` / `verify` / `drift` / `search` / `seed` | installed per-repo (this package) |
+| **shared layer** (`okl serve`) | one small service owning the database, so many repos share one store | one place you run it |
+| **scaffold** (`okl scaffold`) | the in-repo starter files: canon, gates, registries, evals | stamped into each repo, optional |
+
+## What it keeps from drifting, and how
+
+Knowledge rots in a specific way: the code changes and everything written *about* the
+code silently stops being true. Five mechanisms catch five different versions of that,
+and it is worth knowing which one catches what, because they do not overlap.
+
+| Drift | Caught by | How it works | Fires when |
+|---|---|---|---|
+| **A rule vs. the code it governs** | `okl drift --gate` | a record declares the path globs it governs; git is asked for the last commit touching them | that commit is newer than the record's last verification |
+| **A retired identifier reappearing in prose** | `check-tombstones.sh` | greps tracked source, docs, comments and config for every tombstoned name | any non-allowlisted hit |
+| **A withdrawn claim being restated** | `check-retractions.sh` | greps tracked docs for the exact quoted claim from the retraction registry | the quote appears outside the registry |
+| **A doc nobody links to** | `check-doc-orphans.sh` | reachability check from hub files through `docs/` | a doc is unreachable, so it drifts unread |
+| **Verification going quietly stale** | TTL + `verified_by` | records carry when they were last verified and by which observed check | past its TTL, a record is shown demoted rather than deleted |
+
+Two honest limits on that table:
+
+- **Diagrams and comments are covered only where you enroll them.** There is no automatic
+  image-vs-source check. A diagram stays honest by being named in a record's `--files`
+  alongside the code it depicts, so changing the code turns the drift gate red until
+  someone re-verifies the picture. This repo does exactly that with its own architecture
+  diagram and README; it is a convention you opt into, not a guarantee you get free.
+- **`okl drift` only watches what a record claims.** A file no record governs is not
+  watched by anything. Coverage is a curation decision, and the gap is invisible until
+  something breaks — which is why the mechanical gates above scan *everything tracked*
+  rather than only what is enrolled.
+
 ## Where this sits (2026): a crowded space, entered anyway
 
 **This is not a novel idea, and you should know that before reading further.** Agent
@@ -380,14 +428,8 @@ TDD, plan writing/execution, git-worktree isolation) are **not bundled** — the
 best maintained in third-party collections, so `skills/RECOMMENDED-COMPANIONS.md`
 points at those instead of vendoring someone else's work and its cross-references.
 
-The scaffold is independent of the knowledge store — use either half on its own.
-
-## The two halves
-
-| Piece | What it is | Where it lives |
-|---|---|---|
-| **client** (`okl` CLI + agent tools) | `check` / `record` / `search` / `link` / `drift` / `seed` / … | installed per-repo (this package) |
-| **shared layer** (`okl serve`) | a small web service that owns the database, so many repos share one store | one place you run it |
+The scaffold runs with no store at all; the store works in a repo that never scaffolded.
+They are complementary, not a package deal.
 
 **Storage is swappable** via one environment variable — your commands never change:
 
