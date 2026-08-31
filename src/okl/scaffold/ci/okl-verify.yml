@@ -27,13 +27,13 @@ jobs:
         with:
           python-version: "3.13"
       - name: Install okl
-        # Consumer repos install the released package; in okl's own repo this
-        # workflow dogfoods the working tree (pip install okl would 404 — not on PyPI yet).
+        # Detect by the package source, not the distribution name: the name changed once
+        # (PyPI rejects "okl" as confusable) and a name-based check silently broke with it.
         run: |
-          if grep -q '^name = "okl"' pyproject.toml 2>/dev/null; then
+          if [ -f src/okl/cli.py ]; then
             pip install -e .
           else
-            pip install okl
+            pip install org-knowledge-layer
           fi
 
       - name: Connect to the shared layer (optional — skipped when secrets are unset)
