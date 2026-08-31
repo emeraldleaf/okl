@@ -2,42 +2,62 @@
 
 *Part 1 of 3: The loop that learns. How one developer's AI loop remembers, verifies, and enforces.*
 
-I noticed something embarrassing while auditing three of my own codebases: they had all learned the same lesson, separately, the hard way.
+Reviewing an AI agent's code is a lot like reviewing a strong junior's. The syntax is clean, the tests pass, and the thing that needs catching sits one level down: the ownership predicate missing from the WHERE clause, the price trusted in the fallback path, the token dropped into localStorage because that was the shortest way to make a session survive a reload.
 
-One is a .NET microservices platform. One is a geospatial ML pipeline. One is a Python RAG service. In each of them, at some point, I had built a review rule or a checklist, described it in the docs as a live enforcement surface, and then discovered months later that nothing had ever run it. Three repos, three independent discoveries, one lesson: a surface nobody runs is documentation, not enforcement.
+I catch those. After enough years the catching is fast, and it is genuinely the job.
 
-The lesson wasn't the embarrassing part. The embarrassing part was the *three times*. Each repo had a careful CLAUDE.md, encoded rules, a real engineering method. And none of that knowledge could cross the repo boundary. Every project was re-deriving the org's hard-won lessons from scratch, one incident at a time.
+What I could not do was make the catching stick.
 
-I had been thinking of my setup as "two readers, one canon": a human reads the rules, an AI agent reads the rules, and the two must not drift apart. What I actually had was N readers and N canons.
+Every correction I made was scoped to one conversation. The next session started clean. The next repository started cleaner. I wrote the rules down, of course: every project had an instructions file with real standards in it. But a rule in a prompt is a suggestion, not a control. Sometimes the agent applies it, sometimes I restate it, and neither of those is a system.
+
+## What the audit actually found
+
+So I audited my own setup across three codebases: a .NET microservices platform, a geospatial ML pipeline, a Python RAG service. Not looking for bugs, looking for whether the standards I had written down were reaching the work.
+
+Two findings, and the second one is the interesting one.
+
+First, several rules I had documented as enforcement were enforcement in name only. In one repo an architecture-review agent was described across six documents as a live review surface; nothing in CI or in any hook actually invoked it. Every one of those documents was accurate about the design and wrong about the system. Writing a rule down and running it are different acts, and only one of them changes what ships.
+
+Second, and worse: the three repos had independently derived the same lessons. Each had paid separately for knowledge the others already had. My standards existed, they were even written down, and they still could not cross a repository boundary. I had been thinking of my setup as "two readers, one canon": a human reads the rules, an agent reads the rules, and the two must not drift. What I actually had was N readers and N canons.
 
 ## The fix is a layer, not a bigger prompt
 
-The obvious move is to paste every lesson into every prompt. That fails fast, and it fails in a specific way: always-on context taxes every session whether the lesson is relevant or not. My .NET repo enforces a hard size budget on its instructions file in CI (warning at 400 lines, build failure at 500) precisely because every byte of always-on context is cognitive overhead for both readers.
+The obvious move is to paste every standard into every prompt. That fails in a specific way: always-on context taxes every session whether the rule is relevant or not. My .NET repo enforces a hard size budget on its instructions file in CI, warning at 400 lines and failing the build at 500, precisely because every byte of always-on context costs both readers attention.
 
-So the design question became: where does each piece of knowledge belong? I ended up with a three-way triage, decided by three questions asked in order.
+So the design question became: where does each piece of knowledge belong? Three questions, asked in order.
 
-**Does a session doing a totally unrelated task still need this?** Then it goes in the always-on instructions. Almost nothing passes this test. Naming conventions, the security posture, the error-handling canon. This is the most expensive real estate in the system, and the CI size budget keeps it honest.
+**Does a session doing a completely unrelated task still need this?** Then it belongs in the always-on instructions. Almost nothing passes. Naming conventions, the security posture, the error-handling canon. This is the most expensive real estate in the system and the size budget is what keeps it honest.
 
-**Would I want this to appear whenever a future task resembles it?** Then it goes in the knowledge store. This is the interesting category: the rate-limiter lesson that matters enormously to the three tasks a year that touch rate limiting, and is pure noise for everything else.
+**Would I want this in front of me whenever a future task resembles it?** Then it belongs in a retrievable store. This is the large category: the rate-limiter lesson that matters enormously to the three tasks a year touching rate limiting, and is noise for everything else.
 
-**Does it stop mattering once the PR merges?** Then it stays with the task and is allowed to die. The subtle part is extraction: a dead plan often contains one durable decision worth pulling out before you let go of the rest.
+**Does it stop mattering once the PR merges?** Then it stays with the task. The subtle part is extraction, because a dead plan usually contains one durable decision worth pulling out before the rest is discarded.
 
-The store is the part I had to build. It's a small typed database of lessons: defects with symptom, cause, and fix. Rules. Deliberate decisions, so they don't get silently reversed. Tombstones for identifiers that must never come back. Retractions for claims that turned out to be false. Each note carries a scope: org-wide lessons propagate to every connected repo, repo-scoped quirks stay home. Choosing that scope is a human judgment, and it's what keeps a shared layer from filling up with one project's noise.
+The middle tier is the part I had to build: a small typed store of lessons. Defects with symptom, cause, and fix. Rules. Deliberate decisions, recorded so they are not silently reversed. Tombstones for identifiers that must never come back. Retractions for claims that turned out to be false. Every note carries a scope, because org-wide standards should propagate to every project while one repo's quirks should stay home. Choosing that scope is a judgment call and it is the curation step that keeps a shared layer from filling with noise.
 
 ## Retrieved, not loaded
 
-The reason the store can grow forever is that no run ever reads it. Before a task starts, a hook searches the store with the task description and injects only what survives four filters: lexical relevance ranking, scope (another repo's quirks are structurally invisible), declared interests (my Python repo says it cares about eval integrity and retrieval design, so React lessons never appear no matter how well they match), and typed routing that turns the survivors into a short action list. Fix this, run that gate, don't restate this retracted claim.
+The reason the store can grow indefinitely is that no session ever reads it. Before a task starts, a hook queries it with the task description and injects only what survives four filters: relevance ranking, scope, the declared subject interests of the current repo, and typed routing that turns the survivors into a short action list. Fix this. Run that gate. Do not restate this retracted claim.
 
-Each run sees a dozen relevant lines, not the whole library. At ten times the current size the briefing should be the same length, just better chosen.
+Each run sees a dozen relevant lines rather than the whole library. At ten times the current corpus, the briefing should be the same length and better chosen.
 
-Does it work? I measured it the way I'd measure anything: a held-fixed A/B, same model both arms, briefing injected versus not, scored by a blind judge that was deliberately a different model from the generator. In the original experiment, defect reproduction on covered tasks dropped from 50 percent to 6 percent, and from 75 percent to 8 percent on the tasks where the baseline model actually failed. I later rebuilt that experiment as a checked-in harness anyone can re-run, and the fresh receipt (48 sampled runs, zero harness failures) tells a sharper story: today's stronger models dodge much of the bait unaided, but the baseline still reproduced known defect classes in 33 percent of runs, and the briefed arm in 4 percent. On the tasks the baseline failed at least once, briefed runs reproduced in 1 of 15. One task always failed unaided, three out of three, and never failed briefed. The value concentrates exactly where models still get things wrong, which is exactly what an org's hard-won lessons describe. And the misses in the original run were both coverage gaps, a lesson not yet in the store, so the check doubles as a detector for what to encode next.
+## Proving it does something
 
-## The honest part
+A tool that feels helpful and a tool that is helpful are different claims, so I built an A/B harness and committed the results.
 
-The first real dogfood run also found the system's first defect, in itself: the briefing for one specific task marked 28 of the 33 stored notes as relevant. Ranking put the right lessons first, but nothing cut the tail. Subject tags plus per-repo interest declarations cut it to 20 of 33, and a proper relevance cutoff is still open work, recorded in the store as a defect against the store, status: narrowed. The system's failure log lives inside the system.
+Eight tasks, each written to invite a specific defect class the store already covers. The same model in both arms, the briefing as the only variable. A second, different model grading blind, never told which arm produced the code. Failure counts printed before any score, because a metric that cannot report its own failure rate is not a metric.
 
-That's the whole first idea. The state in most loop diagrams only lives inside one execution. The compounding win is memory that outlives the run: record the lesson once, retrieve it into every future task that resembles it, across every repo. Run N+1 should never repeat run N's mistake.
+Unaided, the agent reproduced a known defect class in 33 percent of runs. Briefed, 4 percent. On the tasks the baseline actually failed, briefed runs reproduced the defect in 1 of 15. One task, an unpinned linter version in CI, failed three times out of three without the briefing and never with it.
 
-Next up: the verify step, and why you should never let a step grade itself.
+The result I did not expect: a briefed budget model made roughly a third the known mistakes of an unbriefed frontier model on identical tasks. Context bought more than the model upgrade did, which is the more useful number if you are routing work between cheap and expensive models.
 
-*The model generates, the loop governs, and the team learns.*
+## The limits, stated
+
+Those tasks were authored from my own lesson corpus, so the experiment measures known-lesson prevention rather than general code quality. Small n. Directional, not a benchmark. The full method and every receipt are in the repository, including the runs that went the other way.
+
+The system also found its own first defect: an early briefing marked 28 of 33 stored notes as relevant to a single task. Ranking put the right lessons first, but nothing trimmed the tail. Subject tags and per-repo interest declarations cut it to 20; a proper relevance cutoff is still open work, recorded in the store as a defect against the store. The failure log lives inside the system it describes.
+
+That is the first idea. The state in most agent-loop diagrams lives inside one execution. The compounding win is memory that outlives it: record the standard once, retrieve it into every future task that resembles it, across every project. Run N+1 should not repeat run N's mistake, and neither should the next repository.
+
+Next: the verify step, and why a step's own report of success is not evidence.
+
+*The model generates. The loop governs. The standard holds.*
