@@ -69,15 +69,19 @@ and it is worth knowing which one catches what, because they do not overlap.
 | **A retired identifier reappearing in prose** | `check-tombstones.sh` | greps tracked source, docs, comments and config for every tombstoned name | any non-allowlisted hit |
 | **A withdrawn claim being restated** | `check-retractions.sh` | greps tracked docs for the exact quoted claim from the retraction registry | the quote appears outside the registry |
 | **A doc nobody links to** | `check-doc-orphans.sh` | reachability check from hub files through `docs/` | a doc is unreachable, so it drifts unread |
+| **A link pointing at a file that moved** | `check-links.sh` | resolves every local markdown link against `git ls-files` | the target does not exist |
+| **A diagram source with no rendered image** | `check-diagram-pairs.sh` | pairs each editable source with its export | reviewers would see nothing (a hand-authored image is noted, not failed) |
 | **Verification going quietly stale** | TTL + `verified_by` | records carry when they were last verified and by which observed check | past its TTL, a record is shown demoted rather than deleted |
 
 Two honest limits on that table:
 
-- **Diagrams and comments are covered only where you enroll them.** There is no automatic
-  image-vs-source check. A diagram stays honest by being named in a record's `--files`
-  alongside the code it depicts, so changing the code turns the drift gate red until
-  someone re-verifies the picture. This repo does exactly that with its own architecture
-  diagram and README; it is a convention you opt into, not a guarantee you get free.
+- **Diagram *content* is still a human job.** `check-diagram-pairs.sh` proves the rendered
+  image exists; nothing proves it matches the source it was exported from, or that either
+  matches the code. For that, name the diagram in a record's `--files` alongside the code
+  it depicts, so changing the code turns the drift gate red until someone re-verifies the
+  picture. This repo does exactly that with its own architecture diagram and README.
+- **Comments are covered only by the identifier and claim gates.** A stale comment that
+  names no tombstoned identifier and restates no retracted claim will not be caught.
 - **`okl drift` only watches what a record claims.** A file no record governs is not
   watched by anything. Coverage is a curation decision, and the gap is invisible until
   something breaks — which is why the mechanical gates above scan *everything tracked*

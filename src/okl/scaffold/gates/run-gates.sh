@@ -18,6 +18,8 @@ run() {
 run "retractions"     bash "$GATES_DIR/check-retractions.sh"
 run "tombstones"      bash "$GATES_DIR/check-tombstones.sh"
 run "doc-orphans"     bash "$GATES_DIR/check-doc-orphans.sh"
+run "links"          bash "$GATES_DIR/check-links.sh"
+run "diagram-pairs"  bash "$GATES_DIR/check-diagram-pairs.sh"
 run "canon-size"      bash "$GATES_DIR/check-canon-size.sh"
 
 # <<FILL: STACK-SPECIFIC GATES — e.g. class-path import check, analyzer, type-check, tests>>

@@ -166,3 +166,67 @@ def test_eval_harness_refuses_self_grading(tmp_path, monkeypatch):
     r = subprocess.run([sys.executable, str(harness)], capture_output=True, text=True)
     assert r.returncode == 3
     assert "REFUSING TO RUN" in r.stderr
+
+def _git_repo(tmp_path):
+    """Scaffold into a fresh git repo; the new gates read `git ls-files`, so the files
+    must be tracked for the audit to see them (audits read the repo, not the tree)."""
+    scaffold(target=str(tmp_path), repo="r", claude_dir="dotclaude")
+    if subprocess.run(["git", "-C", str(tmp_path), "init"], capture_output=True).returncode != 0:
+        pytest.skip("git init blocked in this environment")
+    subprocess.run(["git", "-C", str(tmp_path), "add", "-A"], capture_output=True)
+    return tmp_path
+
+
+def _run_gate(repo, gate):
+    return subprocess.run(["bash", f"gates/{gate}"], cwd=repo, capture_output=True, text=True)
+
+
+def test_links_gate_fails_on_broken_link(tmp_path):
+    repo = _git_repo(tmp_path)
+    (repo / "docs").mkdir(exist_ok=True)
+    (repo / "docs" / "a.md").write_text("See [the handler](../src/gone.py) for details.\n")
+    subprocess.run(["git", "-C", str(repo), "add", "-A"], capture_output=True)
+    r = _run_gate(repo, "check-links.sh")
+    assert r.returncode != 0, f"broken link should fail the gate: {r.stdout}"
+    assert "gone.py" in r.stdout
+
+
+def test_links_gate_passes_on_resolving_links(tmp_path):
+    repo = _git_repo(tmp_path)
+    (repo / "docs").mkdir(exist_ok=True)
+    (repo / "docs" / "real.md").write_text("# real\n")
+    (repo / "docs" / "a.md").write_text(
+        "[sibling](real.md), [anchor](#section), [external](https://example.com), "
+        "[with line](real.md#L2)\n")
+    subprocess.run(["git", "-C", str(repo), "add", "-A"], capture_output=True)
+    r = _run_gate(repo, "check-links.sh")
+    assert r.returncode == 0, f"resolving links must pass: {r.stdout}"
+
+
+def test_diagram_pair_gate_fails_on_unpaired_source(tmp_path):
+    repo = _git_repo(tmp_path)
+    (repo / "docs").mkdir(exist_ok=True)
+    (repo / "docs" / "arch.excalidraw").write_text("{}")
+    subprocess.run(["git", "-C", str(repo), "add", "-A"], capture_output=True)
+    r = _run_gate(repo, "check-diagram-pairs.sh")
+    assert r.returncode != 0 and "arch.excalidraw" in r.stdout
+    # pairing it makes the gate pass
+    (repo / "docs" / "arch.svg").write_text("<svg/>")
+    subprocess.run(["git", "-C", str(repo), "add", "-A"], capture_output=True)
+    assert _run_gate(repo, "check-diagram-pairs.sh").returncode == 0
+    # a hand-authored image with no editor source is reported, never failed
+    (repo / "docs" / "handmade.svg").write_text("<svg/>")
+    subprocess.run(["git", "-C", str(repo), "add", "-A"], capture_output=True)
+    r2 = _run_gate(repo, "check-diagram-pairs.sh")
+    assert r2.returncode == 0, "a hand-authored svg must not fail the gate"
+    assert "handmade.svg" in r2.stdout and "note:" in r2.stdout
+
+
+def test_new_gates_noop_without_content(tmp_path):
+    """A repo with no diagrams and no local links must not fail — a gate that cries
+    wolf on an empty repo gets disabled, and then it catches nothing."""
+    repo = _git_repo(tmp_path)
+    for gate in ("check-links.sh", "check-diagram-pairs.sh"):
+        r = _run_gate(repo, gate)
+        assert r.returncode == 0, f"{gate} should no-op cleanly: {r.stdout}"
+
