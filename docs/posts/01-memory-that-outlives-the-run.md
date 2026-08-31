@@ -2,11 +2,9 @@
 
 *Part 1 of 3: The loop that learns. How one developer's AI loop remembers, verifies, and enforces.*
 
-I review the code my agent writes, and the things that need catching are consistent: an ownership predicate missing from a WHERE clause, a price trusted in a fallback path, a token written to localStorage because that was the shortest way to survive a reload. The syntax is clean and the tests pass. The problem sits one level down.
+An agent writing code in one of my repos has no access to what the others learned. That is the problem in one sentence, and better prompting does not solve it.
 
-Catching them in review works. Making the catch stick does not.
-
-Every correction I made was scoped to one conversation. The next session started clean. The next repository started cleaner. I wrote the rules down, of course: every project had an instructions file with real standards in it. But a rule in a prompt is a suggestion, not a control. Sometimes the agent applies it, sometimes I restate it, and neither of those is a system.
+Every project I work in has an instructions file with real standards in it. But a rule in a prompt is a suggestion, not a control: sometimes the agent applies it, sometimes I restate it, and neither of those is a system. Corrections do not persist either. A fix made in review is scoped to one conversation. The next session starts clean, and the next repository starts cleaner.
 
 ## What the audit actually found
 
