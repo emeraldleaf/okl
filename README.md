@@ -5,6 +5,14 @@
 > be broken — plus a command that hands the relevant ones to a coding agent (or a
 > person) **before** they start a task, so the same mistake isn't made twice.
 
+```bash
+pipx install org-knowledge-layer   # the distribution name on PyPI
+okl --help                         # the command, the import package, and the repo are all `okl`
+```
+
+*(PyPI rejects `okl` itself as confusable with the existing `oki`, so only the install
+line differs — everything you type afterwards is `okl`.)*
+
 ## The problem it solves
 
 A team (or an AI agent) fixes a subtle bug, learns *why* it happened, and writes a
