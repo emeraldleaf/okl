@@ -341,3 +341,25 @@ def test_seed_node_without_repo_stays_unattributed(store, tmp_path, capsys):
     (n,) = store.all_nodes()
     assert n.repo is None, "seed node without repo must not inherit the seeding repo"
     assert "no 'repo'" in capsys.readouterr().err
+
+def test_init_dry_run_writes_nothing(tmp_path, monkeypatch, capsys):
+    """--dry-run must list what init would touch and leave the filesystem alone.
+    Anyone about to let a package install executable hooks and a CI workflow into
+    their repo should be able to see the list first."""
+    import argparse
+
+    from okl.cli import cmd_init
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".claude").mkdir()
+    (tmp_path / ".git").mkdir()
+    before = sorted(p.name for p in tmp_path.iterdir())
+    args = argparse.Namespace(repo="demo", service=None, interests=None, dry_run=True)
+    assert cmd_init(args) == 0
+    out = capsys.readouterr().out
+    assert "DRY RUN" in out
+    for expected in ("hooks/userpromptsubmit-okl-check.sh", "settings.json",
+                     ".github/workflows/okl-verify.yml", ".okl/config.json"):
+        assert expected in out, f"dry run must disclose {expected}"
+    assert sorted(p.name for p in tmp_path.iterdir()) == before, "dry run wrote something"
+    assert not (tmp_path / ".okl").exists()
+    assert not (tmp_path / ".github").exists()

@@ -214,6 +214,29 @@ okl init --repo my-repo        # writes .okl/config.json; installs the pre-task 
 okl connect https://okl.myorg.dev   # optional: point at the shared service (else local file)
 ```
 
+### What `okl init` writes to your repo
+
+Run `okl init --dry-run` first: it lists every path and writes nothing. In full, `init`
+touches only the current directory, and only these:
+
+| Path | What it is |
+|---|---|
+| `.okl/config.json` | repo name, subject interests, and the path to your `okl` binary |
+| `.claude/hooks/userpromptsubmit-okl-check.sh` | **executable**; runs when you submit a task, injects the briefing |
+| `.claude/hooks/stop-okl-encode.sh` | **executable**; runs at session end, asks what was learned |
+| `.claude/settings.json` | registers those two hooks (merged in place; your existing keys are preserved) |
+| `.mcp.json` | registers the okl MCP server — only when the `mcp` extra is installed |
+| `.github/workflows/okl-verify.yml` | **a CI workflow** running the drift gate on pull requests |
+
+Two of those deserve a second look before you run it: the hooks are shell scripts that
+execute automatically during agent sessions (the check hook can *block* a task when the
+store is unreachable — that is the fail-closed design), and the CI workflow will run in
+your Actions. Both are plain text you can read first, in
+[`src/okl/scaffold/hooks/`](src/okl/scaffold/hooks/) and
+[`src/okl/scaffold/ci/`](src/okl/scaffold/ci/). Nothing executes at install time; nothing
+is written outside the directory you run `init` in; nothing contacts a network unless you
+run `okl connect` and point it somewhere yourself.
+
 `init` writes `.okl/config.json`. If the repo uses a coding agent with a `.claude/`
 directory, it also installs two hooks: a `UserPromptSubmit` hook that runs `check` on
 the prompt you actually typed and puts the briefing into the model's context (the

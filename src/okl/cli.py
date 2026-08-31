@@ -54,8 +54,30 @@ def _merge_hook_settings(claude: Path) -> bool:
 
 def cmd_init(args) -> int:
     """Wire the current repo so the loop runs without manual follow-up steps:
-    config, hooks (installed AND registered), CI verifier, MCP registration."""
+    config, hooks (installed AND registered), CI verifier, MCP registration.
+
+    `--dry-run` prints every path it would touch and writes nothing. This command
+    installs executable hooks and a CI workflow into your repo; you should be able
+    to see that list before it happens."""
     import shutil
+    if getattr(args, "dry_run", False):
+        repo = args.repo or Path.cwd().name
+        print(f"DRY RUN — nothing will be written. `okl init --repo {repo}` would:\n")
+        print("  .okl/config.json                        repo name, interests, and the path to this okl")
+        if Path(".claude").exists():
+            print("  .claude/hooks/userpromptsubmit-okl-check.sh   executable; runs when you submit a task")
+            print("  .claude/hooks/stop-okl-encode.sh             executable; runs when a session ends")
+            print("  .claude/settings.json                   registers those two hooks (merged, existing keys kept)")
+            print("  .mcp.json                               registers the okl MCP server (only if okl[mcp] is installed)")
+        else:
+            print("  (no .claude/ directory here, so no hooks would be installed)")
+        if Path(".git").exists():
+            print("  .github/workflows/okl-verify.yml        a CI workflow running the drift gate on PRs")
+        else:
+            print("  (not a git repository, so no CI workflow and no drift gate)")
+        print("\nNothing is written outside this directory. Read the hooks before you register them:")
+        print("  https://github.com/emeraldleaf/okl/blob/main/src/okl/scaffold/hooks/")
+        return 0
     repo = args.repo or Path.cwd().name
     cfg = load_config()
     cfg["repo"] = repo
@@ -385,6 +407,8 @@ def build_parser() -> argparse.ArgumentParser:
     pi.add_argument("--repo"); pi.add_argument("--service")
     pi.add_argument("--interests", help="comma-sep subject tags this repo cares about "
                     "(filters org-scope lessons in `check`; see store.KNOWN_TAGS)")
+    pi.add_argument("--dry-run", dest="dry_run", action="store_true",
+                    help="list every file init would write or modify, and write nothing")
     pi.set_defaults(func=cmd_init)
 
     pc = sub.add_parser("connect", help="point this repo at a shared OKL service URL")
