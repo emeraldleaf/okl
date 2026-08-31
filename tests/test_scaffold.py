@@ -13,6 +13,8 @@ def test_scaffold_writes_tree(tmp_path):
     res = scaffold(target=str(tmp_path), repo="myrepo", plugin=True, claude_dir="dotclaude")
     written = set(res["written"])
     assert "CLAUDE.md" in written
+    assert "AGENTS.md" in written, "same canon must ship under both filenames"
+    assert (tmp_path / "CLAUDE.md").read_bytes() == (tmp_path / "AGENTS.md").read_bytes()
     assert "METHOD.md" in written
     assert "plugin.json" in written
     assert any("skills/encoding-loop/SKILL.md" in w for w in written)
@@ -146,6 +148,8 @@ def test_mirror_files_identical():
     pairs = [
         (root / "ci" / "okl-verify.yml", root / "src" / "okl" / "scaffold" / "ci" / "okl-verify.yml"),
         (root / "ci" / "okl-verify.yml", root / ".github" / "workflows" / "okl-verify.yml"),
+        # one canon, two filenames: Claude Code reads CLAUDE.md, other agents read AGENTS.md
+        (root / "CLAUDE.md", root / "AGENTS.md"),
     ]
     for h in (root / "hooks").glob("*.sh"):
         pairs.append((h, root / "src" / "okl" / "scaffold" / "hooks" / h.name))

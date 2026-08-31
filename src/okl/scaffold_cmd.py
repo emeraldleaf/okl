@@ -17,6 +17,7 @@ SCAFFOLD_ROOT = Path(__file__).parent / "scaffold"
 def _layout(c: str = ".claude"):
     return [
         ("root/CLAUDE.md", "CLAUDE.md"),
+        ("root/CLAUDE.md", "AGENTS.md"),   # same source, two names: Claude Code + every other agent
         ("root/METHOD.md", "METHOD.md"),
         ("claude", c),              # dir: skills/agents/commands/rules
         ("gates", "gates"),

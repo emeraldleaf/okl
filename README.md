@@ -215,6 +215,12 @@ of a session that changed files with one question — *did this session learn an
 worth `okl record`ing?* — so the write side of the loop gets a mechanical prompt too,
 not just a convention. It fires once per session and never loops.
 
+**Other agents (AGENTS.md):** `init` and `scaffold` write the repo canon to both
+`CLAUDE.md` and `AGENTS.md` — one content, two filenames, so Codex/Cursor/anything
+reading the AGENTS.md convention gets the same rules Claude Code does (byte-identity is
+test-enforced). The hooks themselves are Claude Code-specific; other agents get the
+canon via AGENTS.md and the store via the MCP server (`okl mcp`).
+
 Hooks run in whatever environment the agent harness spawns — often without your venv or
 pipx bin dir on PATH — so both hooks resolve the `okl` binary in layers: the `OKL_BIN`
 env var, then the `okl_bin` path `init` pins into `.okl/config.json` (machine-local),
