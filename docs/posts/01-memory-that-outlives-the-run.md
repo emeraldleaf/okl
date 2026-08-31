@@ -36,6 +36,12 @@ The reason the store can grow indefinitely is that no session ever reads it. Bef
 
 Each run sees a dozen relevant lines rather than the whole library. At ten times the current corpus, what reaches the agent should be the same length and better chosen.
 
+## None of this is a new idea
+
+Agent memory is one of the most crowded categories in the field: mem0, Zep, Letta and Cognee on the infrastructure side, Cursor Memories and Devin Knowledge built into the coding agents, AGENTS.md and CLAUDE.md as the convention nearly everyone already uses. "Give the agent your team's knowledge" is the consensus position, not an insight, and if semantic recall over what an agent has seen is the problem you have, those tools are better at it than anything I would build.
+
+The gap I kept hitting was invalidation. Every one of those systems accumulates: records get added, ranked, retrieved. None of them knows that a rule went stale because the code it governs moved on without it. So the bet here is narrow and specific, and it is the subject of part 2: a rule cites the source it governs, carries a verification receipt, decays on a clock, and fails CI when the code changes after the rule was last checked. Records treated like tests, not like notes.
+
 ## Proving it does something
 
 A tool that feels helpful and a tool that is helpful are different claims, so I built an A/B harness and committed the results.
