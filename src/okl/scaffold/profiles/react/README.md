@@ -14,5 +14,5 @@ Installed to `.claude/rules/`:
   (BFF trade-off documented), MSW + Playwright testing.
 
 Reference stack: Vite + React 19 + TS strict, CSR SPA, TanStack Query/Router, Zustand, Tailwind v4 +
-shadcn/ui, oidc-client-ts → Keycloak. Deep reference: the vendored `vercel-react-best-practices`
+shadcn/ui, oidc-client-ts → Keycloak. These rules are original to this kit; pair them with any external React guide
 skill (70 rules), where the canon wins on any disagreement.

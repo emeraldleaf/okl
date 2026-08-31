@@ -384,7 +384,11 @@ OKL_DATABASE_URL="sqlite:///okl.db" OKL_TOKEN="a-shared-secret" okl serve
 # repos then: okl connect https://your-host --token a-shared-secret
 ```
 
-`OKL_TOKEN` (optional) gates **writes**; reads stay open. Deploy the service
+`OKL_TOKEN` (optional) gates **writes**; **reads stay open** — `/nodes` returns the
+whole store to anyone who can reach the port. A mature store holds your defect history,
+security patterns and internal architecture, so treat it as sensitive: bind it to a
+private network or put authentication in front of every route before exposing it. See
+[SECURITY.md](SECURITY.md). Deploy the service
 wherever you like — it's storage-agnostic by design (a `Dockerfile` and a
 `fly.toml` are the obvious next commit; not included in v0).
 
@@ -449,3 +453,9 @@ pytest -q          # full suite (one drift test self-skips where git init is una
 ## License
 
 MIT.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, the repo's own rules (mirror files,
+drift, evidence-based verification), and where help is most useful. Security policy and
+the deployment threat model: [SECURITY.md](SECURITY.md).

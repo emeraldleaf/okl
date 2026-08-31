@@ -1,5 +1,5 @@
 {
- "_comment": "Seed for the OKL — React/frontend-SPA lessons ported from the .NET platform's frontend canon (frontend/CLAUDE.md + the vendored vercel-react-best-practices skill, frozen 2026-06-12). React is backend-agnostic, so these are org-scoped: they propagate to any repo with a React UI. This closes the coverage gap the A/B experiment measured — react_fetch reproduced the useEffect-fetching defect 3/3 in BOTH arms because no React node existed in the store to inject.",
+ "_comment": "Seed for the OKL — React/frontend-SPA lessons ported from the author's own frontend canon (frontend/CLAUDE.md, frozen 2026-06-12); external guides are cited in found_by as provenance, not reproduced. React is backend-agnostic, so these are org-scoped: they propagate to any repo with a React UI. This closes the coverage gap the A/B experiment measured — react_fetch reproduced the useEffect-fetching defect 3/3 in BOTH arms because no React node existed in the store to inject.",
  "nodes": [
   {
    "key": "rx_useeffect_fetch",

@@ -9,8 +9,8 @@ paths: ["frontend/**/*.tsx", "frontend/**/*.ts", "**/frontend/**/*.tsx", "**/fro
 > storefront) — but backend-agnostic: stack these onto ANY backend profile (dotnet, python-rag, …)
 > whose repo has a React frontend. Reference stack: Vite + React 19 + TypeScript (strict), CSR SPA;
 > TanStack Query v5 + Router; Zustand (small UI globals only); Tailwind v4 + shadcn/ui; oidc-client-ts
-> → Keycloak (auth-code + PKCE); React Compiler on. Deep reference: the vendored
-> `vercel-react-best-practices` skill (70 rules) — **but this canon wins where they disagree.**
+> → Keycloak (auth-code + PKCE); React Compiler on. These rules are original to this kit;
+> where you also consult an external React best-practices guide, **this canon wins where they disagree.**
 >
 > Where a rule cites "the backend" (VSA feature folders, server-controlled fields, cache-in-write-path,
 > measure-before-optimizing), the parallel holds against whatever backend you pair this with.
