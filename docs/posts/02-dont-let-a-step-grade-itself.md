@@ -2,11 +2,11 @@
 
 *Part 2 of 3: The loop that learns. How one developer's AI loop remembers, verifies, and enforces.*
 
-Never trust an exit code. Most engineers learn that rule from one specific incident, and this was mine.
+Never trust an exit code. This is the incident behind that rule.
 
 A pipeline step was supposed to materialize 238 files. It produced none. Every window raised, the exceptions were swallowed inside a worker pool, and the process exited zero. Downstream steps ran happily against an empty directory. The fix was trivial once seen: count the outputs rather than read the exit status. The discipline it bought has outlasted the project: a step reporting success and the work being done are two different facts, and only one of them is evidence.
 
-That rule matters more when an agent is writing the steps. Review catches a lot, but review is sampling. What makes generated code safe at volume is the checks that run whether or not anyone is paying attention, and those checks are only as good as the question they actually ask.
+That rule matters more when an agent is writing the steps. Review catches things, but review is sampling. What makes generated code safe at volume is the checks that run whether or not anyone is paying attention, and those checks are only as good as the question they actually ask.
 
 ## The same bug wears several costumes
 

@@ -2,19 +2,17 @@
 
 *Part 1 of 3: The loop that learns. How one developer's AI loop remembers, verifies, and enforces.*
 
-Reviewing an AI agent's code is a lot like reviewing a strong junior's. The syntax is clean, the tests pass, and the thing that needs catching sits one level down: the ownership predicate missing from the WHERE clause, the price trusted in the fallback path, the token dropped into localStorage because that was the shortest way to make a session survive a reload.
+I review the code my agent writes, and the things that need catching are consistent: an ownership predicate missing from a WHERE clause, a price trusted in a fallback path, a token written to localStorage because that was the shortest way to survive a reload. The syntax is clean and the tests pass. The problem sits one level down.
 
-I catch those. After enough years the catching is fast, and it is genuinely the job.
-
-What I could not do was make the catching stick.
+Catching them in review works. Making the catch stick does not.
 
 Every correction I made was scoped to one conversation. The next session started clean. The next repository started cleaner. I wrote the rules down, of course: every project had an instructions file with real standards in it. But a rule in a prompt is a suggestion, not a control. Sometimes the agent applies it, sometimes I restate it, and neither of those is a system.
 
 ## What the audit actually found
 
-So I audited my own setup across three codebases: a .NET microservices platform, a geospatial ML pipeline, a Python RAG service. Not looking for bugs, looking for whether the standards I had written down were reaching the work.
+So I audited my own setup across three codebases: a .NET microservices platform, a geospatial ML pipeline, a Python RAG service. The question was not whether the code was good, it was whether the standards I had written down were reaching the work.
 
-Two findings, and the second one is the interesting one.
+Two findings.
 
 First, several rules I had documented as enforcement were enforcement in name only. In one repo an architecture-review agent was described across six documents as a live review surface; nothing in CI or in any hook actually invoked it. Every one of those documents was accurate about the design and wrong about the system. Writing a rule down and running it are different acts, and only one of them changes what ships.
 
