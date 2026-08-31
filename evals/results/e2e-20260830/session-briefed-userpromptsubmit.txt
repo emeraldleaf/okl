@@ -1,0 +1,7 @@
+Yes — the session surfaced one durable lesson, but the knowledge layer couldn't accept it.
+
+**The lesson** (a gap in the existing "pin every CI gate tool" rule): when you must pin a tool version but the registry is unreachable — as happened this session when both the PyPI lookup and local `ruff --version` checks were declined — pin the newest version you can *verify exists* from direct knowledge, never a plausible newer guess. A guessed version that doesn't exist makes the install step 404 and hard-fails every build, which is worse than the unpinned drift the pin was meant to prevent; an older-but-real pin gates deterministically and is a one-line deliberate bump later.
+
+**Recording status:** I ran `okl record` three times (org scope twice, repo scope once as a fallback) and the okl service at `localhost:8765` returned HTTP 500 on `/record` every time — a server-side failure, not a parameter problem. Per the org's own "no run, no stamp" rule I'm not claiming it was recorded. Instead I parked the exact replayable command at `.okl/pending-record-2026-08-30-pin-selection.sh` — run it once the service is healthy, then delete the file. The service 500 itself may also be worth a defect entry, but I couldn't record that either, for the same reason.
+
+[exited with code 0]

@@ -203,6 +203,10 @@ task (the strongest bait: `ci_linter`, 3/3 baseline failure in both model tiers)
 | briefed, hook = PreToolUse | yes, logged before the Write | `pip install ruff` — unpinned (defect) |
 | briefed, hook = UserPromptSubmit | yes, at prompt submit | `pip install ruff==0.14.0` — pinned, gated from repo root, no `paths:` filter, comments citing three lessons from two other repos |
 
+Raw artifacts for this run — the generated workflow files, session transcripts, hook
+log, and the service's 500 responses — are committed in
+[`results/e2e-20260830/`](results/e2e-20260830/) (n=1 per arm; provenance notes inside).
+
 **Finding 1 — the enforced read was silently unread.** The original hook fired on every
 edit, retrieved the correct briefing, and printed it to a channel the model never sees:
 Claude Code adds exit-0 stdout to the model's context only for `UserPromptSubmit` /

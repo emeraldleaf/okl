@@ -1,0 +1,47 @@
+INFO:     127.0.0.1:50475 - "POST /check HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50519 - "POST /check HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50520 - "POST /check HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50547 - "POST /record HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/uvicorn/protocols/http/httptools_impl.py", line 422, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/uvicorn/middleware/proxy_headers.py", line 63, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+--
+  File "<repo>/src/okl/store.py", line 129, in add_node
+    node.validate()
+  File "<repo>/src/okl/store.py", line 85, in validate
+    raise ValueError(f"unknown tag(s) {sorted(unknown)}; the controlled vocabulary is "
+ValueError: unknown tag(s) ['agent-workflow', 'ci', 'pinning']; the controlled vocabulary is ['agent-safety', 'data-quality', 'dotnet', 'eval-integrity', 'geospatial', 'messaging', 'method', 'python-rag', 'react', 'retrieval-design', 'security'] — extend KNOWN_TAGS deliberately to grow it
+INFO:     127.0.0.1:50548 - "POST /record HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/uvicorn/protocols/http/httptools_impl.py", line 422, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/uvicorn/middleware/proxy_headers.py", line 63, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+--
+  File "<repo>/src/okl/store.py", line 129, in add_node
+    node.validate()
+  File "<repo>/src/okl/store.py", line 85, in validate
+    raise ValueError(f"unknown tag(s) {sorted(unknown)}; the controlled vocabulary is "
+ValueError: unknown tag(s) ['agent-workflow', 'ci', 'pinning']; the controlled vocabulary is ['agent-safety', 'data-quality', 'dotnet', 'eval-integrity', 'geospatial', 'messaging', 'method', 'python-rag', 'react', 'retrieval-design', 'security'] — extend KNOWN_TAGS deliberately to grow it
+INFO:     127.0.0.1:50549 - "POST /record HTTP/1.1" 500 Internal Server Error
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/uvicorn/protocols/http/httptools_impl.py", line 422, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/uvicorn/middleware/proxy_headers.py", line 63, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+--
+  File "<repo>/src/okl/store.py", line 129, in add_node
+    node.validate()
+  File "<repo>/src/okl/store.py", line 82, in validate
+    raise ValueError(f"scope must be 'org' or 'repo:<name>', got {self.scope!r}")

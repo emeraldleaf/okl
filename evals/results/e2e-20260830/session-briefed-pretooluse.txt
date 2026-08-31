@@ -1,0 +1,3 @@
+Nothing durable was learned this session — it was a single straightforward task (writing a standard ruff lint workflow to `.github/workflows/lint.yml`) that completed on the first attempt with no failures, surprises, or non-obvious decisions worth encoding. No record needed.
+
+[exited with code 0]

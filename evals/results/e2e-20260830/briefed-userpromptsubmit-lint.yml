@@ -1,0 +1,27 @@
+# Ruff lint gate. ruff is version-pinned: an unpinned linter changes behavior on the
+# vendor's release cadence and retro-fails branches that changed nothing — bump it only
+# in a deliberate PR that addresses the new findings.
+#
+# No `paths:` filter: every directory that ships code must be gated, and a path filter
+# that misses a dir gates nothing. Lint runs from the repo root — ruff's isort
+# first-party detection is CWD-anchored, so this repo's single import tree (app/) must
+# be checked from its own root, not from a subdirectory.
+name: lint
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  ruff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install ruff (pinned)
+        run: pip install ruff==0.14.0
+      - name: Ruff — lint from the repo root, fail on findings
+        run: ruff check . --no-fix --output-format=github
