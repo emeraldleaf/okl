@@ -184,18 +184,18 @@ knowledge. The switch is one environment variable; none of your commands change.
 ## Install
 
 ```bash
-pipx install okl            # once it's published; for now:
-pip install -e .            # from this repo
+pipx install org-knowledge-layer   # provides the `okl` command
+pip install -e .                   # or from a clone of this repo
 ```
 
 The core (local + client + CLI) is **stdlib-only** — zero required dependencies.
 Extras are opt-in:
 
 ```bash
-pip install "okl[service]"    # FastAPI shared service
-pip install "okl[postgres]"   # Postgres backend (psycopg)
-pip install "okl[mcp]"        # MCP server for Claude Code / Cursor / Copilot
-pip install "okl[all]"
+pip install "org-knowledge-layer[service]"    # FastAPI shared service
+pip install "org-knowledge-layer[postgres]"   # Postgres backend (psycopg)
+pip install "org-knowledge-layer[mcp]"        # MCP server for Claude Code / Cursor / Copilot
+pip install "org-knowledge-layer[all]"
 ```
 
 ## Wire a repo
@@ -371,7 +371,7 @@ okl serve --port 8080
 ## Run the shared service
 
 ```bash
-pip install "okl[service]"
+pip install "org-knowledge-layer[service]"
 OKL_DATABASE_URL="sqlite:///okl.db" OKL_TOKEN="a-shared-secret" okl serve
 # repos then: okl connect https://your-host --token a-shared-secret
 ```
@@ -383,7 +383,7 @@ wherever you like — it's storage-agnostic by design (a `Dockerfile` and a
 ## Agent integration (MCP)
 
 ```bash
-pip install "okl[mcp]"
+pip install "org-knowledge-layer[mcp]"
 okl mcp     # register in your coding agent's tool config
 ```
 
@@ -434,7 +434,7 @@ tests/            # end-to-end tests
 ## Test
 
 ```bash
-pip install "okl[dev]"
+pip install "org-knowledge-layer[dev]"
 pytest -q          # full suite (one drift test self-skips where git init is unavailable)
 ```
 
