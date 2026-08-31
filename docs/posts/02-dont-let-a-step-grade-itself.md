@@ -32,7 +32,7 @@ In the knowledge layer from part 1, verification is not one feature. It is four 
 
 **Rung 3: an independent actor re-runs the checks.** CI runs the drift gate and the repository's mechanical gates on every pull request: a different grader, at a different time, with no stake in the original claim. When a gate proves itself by failing against real drift, the receipt is written by the job that watched it happen, not by the gate's author.
 
-**Rung 4: time attacks every stamp.** Each rule declares the files it governs. The moment those files change after the rule was last verified, the drift detector flags it, because a stale rule is a rule nobody re-checked. Verification also decays on a clock: a stamp nobody re-earns is demoted rather than left quietly trusted. And the system is scored on an outcome it cannot flatter itself on: recurrence after arming, the count of defect classes that came back even though a catching check existed. Not "how many lessons were recorded," which measures activity, but "did the mistakes stop repeating," which measures the point.
+**Rung 4: time attacks every stamp.** Each rule declares the files it governs. The moment those files change after the rule was last verified, the drift detector flags it, because a stale rule is a rule nobody re-checked. Verification also decays on a clock: a stamp nobody re-earns is demoted rather than left quietly trusted. And the system is scored on an outcome it cannot flatter itself on: recurrence after arming, the count of defect classes that came back even though a catching check existed. Not "how many rules were recorded," which measures activity, but "did the mistakes stop repeating," which measures the point.
 
 ## Where judgment stays
 

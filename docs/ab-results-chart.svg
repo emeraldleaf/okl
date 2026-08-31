@@ -1,16 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" viewBox="0 0 1200 1200" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
   <rect width="1200" height="1200" fill="#fcfcfb"/>
 
-  <text x="70" y="108" font-size="58" font-weight="700" fill="#0b0b0b">Past lessons mattered</text>
+  <text x="70" y="108" font-size="58" font-weight="700" fill="#0b0b0b">The rules mattered</text>
   <text x="70" y="176" font-size="58" font-weight="700" fill="#0b0b0b">more than the model</text>
 
-  <text x="70" y="232" font-size="27" fill="#52514e">Known-defect reproduction in agent-generated code.</text>
-  <text x="70" y="270" font-size="27" fill="#52514e">8 tasks, 3 samples per arm, graded blind by a different model.</text>
+  <text x="70" y="232" font-size="27" fill="#52514e">Known-defect reproduction in agent-generated code. The project's own rules,</text>
+  <text x="70" y="270" font-size="27" fill="#52514e">architecture decisions and known defects, retrieved into context before the task.</text>
 
   <rect x="70" y="312" width="20" height="20" rx="4" fill="#2a78d6"/>
-  <text x="100" y="330" font-size="25" fill="#52514e">No past lessons</text>
-  <rect x="330" y="312" width="20" height="20" rx="4" fill="#eb6834"/>
-  <text x="360" y="330" font-size="25" fill="#52514e">Past lessons in context</text>
+  <text x="100" y="330" font-size="25" fill="#52514e">No rules in context</text>
+  <rect x="360" y="312" width="20" height="20" rx="4" fill="#eb6834"/>
+  <text x="390" y="330" font-size="25" fill="#52514e">Rules in context</text>
 
   <g stroke="#e6e5e1" stroke-width="1">
     <line x1="70" y1="376" x2="70" y2="904"/>
@@ -21,10 +21,10 @@
   </g>
 
   <g font-size="32" fill="#0b0b0b">
-    <text x="70" y="412">Budget model, no past lessons</text>
-    <text x="70" y="542">Frontier model, no past lessons</text>
-    <text x="70" y="672">Budget model, with past lessons</text>
-    <text x="70" y="802">Frontier model, with past lessons</text>
+    <text x="70" y="412">Budget model, no rules</text>
+    <text x="70" y="542">Frontier model, no rules</text>
+    <text x="70" y="672">Budget model, with the rules</text>
+    <text x="70" y="802">Frontier model, with the rules</text>
   </g>
 
   <path d="M70,428 H949 Q953,428 953,432 V492 Q953,496 949,496 H70 Z" fill="#2a78d6"/>
@@ -49,9 +49,10 @@
 
   <line x1="70" y1="990" x2="1130" y2="990" stroke="#e6e5e1" stroke-width="1"/>
 
-  <text x="70" y="1044" font-size="30" fill="#0b0b0b">Lower is better. The budget model with past lessons made</text>
-  <text x="70" y="1084" font-size="30" fill="#0b0b0b">fewer known mistakes than the frontier model without them.</text>
+  <text x="70" y="1044" font-size="30" fill="#0b0b0b">Lower is better. The budget model with the rules made fewer</text>
+  <text x="70" y="1084" font-size="30" fill="#0b0b0b">known mistakes than the frontier model without them.</text>
 
-  <text x="70" y="1136" font-size="21" fill="#82817c">Measures prevention of defect classes already in the store, not general code quality.</text>
-  <text x="70" y="1166" font-size="21" fill="#82817c">Small n, directional. Method and raw receipts: github.com/emeraldleaf/okl</text>
+  <text x="70" y="1128" font-size="21" fill="#82817c">8 tasks, 3 samples per arm, graded blind by a second, different model. Measures prevention of</text>
+  <text x="70" y="1156" font-size="21" fill="#82817c">defect classes already in the store, not general code quality. Small n, directional.</text>
+  <text x="70" y="1184" font-size="21" fill="#82817c">Method and raw receipts: github.com/emeraldleaf/okl</text>
 </svg>
