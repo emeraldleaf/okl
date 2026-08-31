@@ -1,6 +1,6 @@
 # Memory that outlives the run
 
-*Part 1 of 3: The loop that learns. How our AI dev loop remembers, verifies, and enforces.*
+*Part 1 of 3: The loop that learns. How one developer's AI loop remembers, verifies, and enforces.*
 
 I noticed something embarrassing while auditing three of my own codebases: they had all learned the same lesson, separately, the hard way.
 

@@ -1,6 +1,6 @@
 # Don't let a step grade itself
 
-*Part 2 of 3: The loop that learns. How our AI dev loop remembers, verifies, and enforces.*
+*Part 2 of 3: The loop that learns. How one developer's AI loop remembers, verifies, and enforces.*
 
 I had a pipeline step whose job was to write 238 files. It failed on every single one, swallowed the exceptions inside a worker pool, and exited with a success code. Everything downstream ran happily on an empty folder. By the time I noticed, I was debugging the wrong end of the pipeline.
 

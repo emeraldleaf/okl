@@ -1,6 +1,6 @@
 # Enforcement, or good intentions
 
-*Part 3 of 3: The loop that learns. How our AI dev loop remembers, verifies, and enforces.*
+*Part 3 of 3: The loop that learns. How one developer's AI loop remembers, verifies, and enforces.*
 
 The most instructive bug in my method wasn't in code. It was in the documentation of an agent that reviewed architecture. Six separate documents described it as a live enforcement surface. It had been invoked by nothing, ever. Every one of those documents was telling the truth about the design and lying about the system.
 
