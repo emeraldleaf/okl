@@ -13,6 +13,12 @@ cheaper model perform at or above an unbriefed frontier model on those defect cl
 
 ## 2. How to read these numbers
 
+**On the word "briefed."** The two arms are named `baseline` and `briefed` in the
+committed result files, so this report uses those names to stay aligned with the data.
+Mechanically, *briefed* means: before generation, the relevant past lessons were
+retrieved from the store, filtered by scope and subject, and placed in the model's
+context. Nothing else differs between the arms.
+
 **A "run" is one complete attempt:** the generator gets one task (with or without the
 briefing) and produces code; the blind judge then answers one question — does this code
 contain the specific known mistake this task was designed to invite?

@@ -34,23 +34,23 @@ The middle tier is the part I had to build: a small typed store of lessons. Defe
 
 The reason the store can grow indefinitely is that no session ever reads it. Before a task starts, a hook queries it with the task description and injects only what survives four filters: relevance ranking, scope, the declared subject interests of the current repo, and typed routing that turns the survivors into a short action list. Fix this. Run that gate. Do not restate this retracted claim.
 
-Each run sees a dozen relevant lines rather than the whole library. At ten times the current corpus, the briefing should be the same length and better chosen.
+Each run sees a dozen relevant lines rather than the whole library. At ten times the current corpus, what reaches the agent should be the same length and better chosen.
 
 ## Proving it does something
 
 A tool that feels helpful and a tool that is helpful are different claims, so I built an A/B harness and committed the results.
 
-Eight tasks, each written to invite a specific defect class the store already covers. The same model in both arms, the briefing as the only variable. A second, different model grading blind, never told which arm produced the code. Failure counts printed before any score, because a metric that cannot report its own failure rate is not a metric.
+Eight tasks, each written to invite a specific defect class the store already covers. The same model in both arms, the retrieved lessons as the only variable. A second, different model grading blind, never told which arm produced the code. Failure counts printed before any score, because a metric that cannot report its own failure rate is not a metric.
 
-Unaided, the agent reproduced a known defect class in 33 percent of runs. Briefed, 4 percent. On the tasks the baseline actually failed, briefed runs reproduced the defect in 1 of 15. One task, an unpinned linter version in CI, failed three times out of three without the briefing and never with it.
+With no lessons in context, the agent reproduced a known defect class in 33 percent of runs. With them, 4 percent. On the tasks the baseline actually failed, runs with the lessons reproduced the defect in 1 of 15. One task, an unpinned linter version in CI, failed three times out of three without the lessons and never with them.
 
-The result I did not expect: a briefed budget model made roughly a third the known mistakes of an unbriefed frontier model on identical tasks. Context bought more than the model upgrade did, which is the more useful number if you are routing work between cheap and expensive models.
+The result I did not expect: a budget model with the lessons in context made roughly a third the known mistakes of a frontier model without them on identical tasks. Context bought more than the model upgrade did, which is the more useful number if you are routing work between cheap and expensive models.
 
 ## The limits, stated
 
 Those tasks were authored from my own lesson corpus, so the experiment measures known-lesson prevention rather than general code quality. Small n. Directional, not a benchmark. The full method and every receipt are in the repository, including the runs that went the other way.
 
-The system also found its own first defect: an early briefing marked 28 of 33 stored notes as relevant to a single task. Ranking put the right lessons first, but nothing trimmed the tail. Subject tags and per-repo interest declarations cut it to 20; a proper relevance cutoff is still open work, recorded in the store as a defect against the store. The failure log lives inside the system it describes.
+The system also found its own first defect: an early retrieval marked 28 of 33 stored notes as relevant to a single task. Ranking put the right lessons first, but nothing trimmed the tail. Subject tags and per-repo interest declarations cut it to 20; a proper relevance cutoff is still open work, recorded in the store as a defect against the store. The failure log lives inside the system it describes.
 
 That is the first idea. The state in most agent-loop diagrams lives inside one execution. The compounding win is memory that outlives it: record the standard once, retrieve it into every future task that resembles it, across every project. Run N+1 should not repeat run N's mistake, and neither should the next repository.
 
