@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Every figure the architecture diagram publishes must trace to a committed receipt.
+# Every figure a committed diagram publishes must trace to a committed receipt.
 #
-# The diagram rendered "50% → 6%" and "75% → 8%" under a heading reading
-# "MEASURED (held-fixed A/B, blind judge≠generator)" for weeks, on the repo README and on
-# a public site. Those are the 2026-07-17 numbers that REPORT.md §7 quarantines as
+# The sixth-surface diagram rendered "50% → 6%" and "75% → 8%" under a heading reading
+# "MEASURED (held-fixed A/B, blind judge≠generator)" for weeks, in the repo and on a
+# public site. Those are the 2026-07-17 numbers that REPORT.md §7 quarantines as
 # historical: the raw artifacts were never checked in, so they are not reproducible. The
 # site's own prose cited the receipted figures right beside the image, so the page
 # contradicted itself and a reader had no way to tell which was real.
@@ -17,44 +17,66 @@
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
-src="docs/okl-sixth-surface.excalidraw"
-svg="docs/okl-sixth-surface.svg"
-fail=0
+# A marker file, because the checks run inside a `while read` subshell and a variable set
+# there cannot reach this scope.
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
 
-# 1. Every receipt the diagram names is actually committed.
-named=$(git show "HEAD:$src" | grep -oE 'ab-[0-9]{8}-[0-9]{4}' | sort -u || true)
-if [ -z "$named" ]; then
-  echo "FAIL: the diagram cites no receipt at all — a MEASURED card must name its evidence"
-  fail=1
-fi
-for r in $named; do
-  if git ls-files --error-unmatch "evals/results/$r.json" >/dev/null 2>&1; then
-    echo "ok: $r has a committed receipt"
+# Every diagram under docs/, rather than a hard-coded path: a diagram added later is
+# covered the day it lands, not the day someone remembers to extend this file.
+#
+# `while read` rather than `mapfile`, which is bash 4+. macOS ships bash 3.2, so mapfile
+# would have passed on ubuntu CI and failed for anyone running it locally — the shape of
+# bug this repo already keeps a rule about.
+git ls-files 'docs/*.excalidraw' | while IFS= read -r src; do
+  svg="${src%.excalidraw}.svg"
+  echo "-- $src"
+
+  # 1. Every receipt the diagram names is committed. A diagram that shows a percentage
+  #    while naming no receipt at all is the original failure and fails here too.
+  named=$(git show "HEAD:$src" | grep -oE 'ab-[0-9]{8}-[0-9]{4}' | sort -u || true)
+  if [ -z "$named" ]; then
+    if git show "HEAD:$src" | grep -qE '[0-9]+ ?%'; then
+      echo "   FAIL: shows a percentage but names no receipt"
+      touch "$work/fail"
+    else
+      echo "   ok: publishes no figures"
+    fi
+  fi
+  for r in $named; do
+    if git ls-files --error-unmatch "evals/results/$r.json" >/dev/null 2>&1; then
+      echo "   ok: $r has a committed receipt"
+    else
+      echo "   FAIL: cites $r, which is not committed under evals/results/"
+      touch "$work/fail"
+    fi
+  done
+
+  # 2. The figures REPORT.md §7 marks as historical must never appear as current claims.
+  for q in '50% → 6%' '75% → 8%'; do
+    if git show "HEAD:$src" | grep -qF "$q"; then
+      echo "   FAIL: publishes '$q', quarantined as historical in REPORT.md §7"
+      touch "$work/fail"
+    fi
+  done
+
+  # 3. The SVG is a render of the source, so it must carry the same receipts. This is
+  #    what catches an edited .excalidraw whose SVG was never regenerated — the image is
+  #    what people actually read, and it is the artifact that ships to the site.
+  if git ls-files --error-unmatch "$svg" >/dev/null 2>&1; then
+    for r in $named; do
+      if ! git show "HEAD:$svg" | grep -qF "$r"; then
+        echo "   FAIL: $svg is missing $r — re-render it from the source"
+        touch "$work/fail"
+      fi
+    done
   else
-    echo "FAIL: the diagram cites $r, which is not committed under evals/results/"
-    fail=1
+    echo "   FAIL: $svg is not committed; the source has no published render"
+    touch "$work/fail"
   fi
 done
 
-# 2. The figures REPORT.md §7 marks as historical must never appear as current claims.
-for q in '50% → 6%' '75% → 8%'; do
-  if git show "HEAD:$src" | grep -qF "$q"; then
-    echo "FAIL: the diagram publishes '$q', quarantined as historical in REPORT.md §7"
-    fail=1
-  fi
-done
-
-# 3. The SVG is a render of the source, so it must carry the same receipts. This is what
-#    catches an edited .excalidraw whose SVG was never re-rendered — the published image
-#    is the one people actually read.
-for r in $named; do
-  if ! git show "HEAD:$svg" | grep -qF "$r"; then
-    echo "FAIL: $svg is missing $r — re-render it from the .excalidraw"
-    fail=1
-  fi
-done
-
-if [ "$fail" -eq 0 ]; then
-  echo "DIAGRAM_FIGURES_RECEIPTED"
+if [ -e "$work/fail" ]; then
+  exit 1
 fi
-exit "$fail"
+echo "DIAGRAM_FIGURES_RECEIPTED"
