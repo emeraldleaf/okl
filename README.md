@@ -46,6 +46,17 @@ Two things ship in the package. They are not coequal:
   retrieved into an agent's context before a task, and go stale loudly when the code
   they describe moves on. Everything measured in [evals/REPORT.md](evals/REPORT.md)
   measures this.
+
+  It is worth being precise about what that store fills up with, because "lessons a
+  codebase has learned" invites the picture of a bug database. In the 161-record corpus
+  in [seed/](seed/) it is mostly not that: **90 Rules, 20 Decisions and 7 Gates against
+  34 Defects** — conventions the code follows and trade-offs already settled, not a
+  ledger of things that broke. Count it yourself:
+
+  ```bash
+  python3 -c "import json,glob,collections; c=collections.Counter(
+    n['type'] for f in glob.glob('seed/*.json') for n in json.load(open(f))['nodes']); print(c)"
+  ```
 - **`okl scaffold`** is a starter kit for the in-repo discipline the store assumes: a
   lean canon file, mechanical gates, registries, a review agent, and an eval harness.
   It is useful on its own and it has never been measured. Use it to get a new repo to
