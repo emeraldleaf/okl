@@ -184,6 +184,13 @@ def cmd_check(args) -> int:
         # FAIL CLOSED — loud, non-zero, no reassuring empty result.
         print(f"OKL UNREACHABLE — refusing to report a clean check.\n{e}", file=sys.stderr)
         return 2
+    except ValueError as e:
+        # A 4xx (usually a 401 against a token-protected service) is a REFUSED check,
+        # not a clean one, so it fails closed just the same. It gets its own message
+        # because the fix is different: a credential, not connectivity. Before this,
+        # an unauthorized check exited 0 with a raw urllib traceback.
+        print(f"OKL REFUSED THE CHECK — refusing to report a clean check.\n{e}", file=sys.stderr)
+        return 2
     if args.format == "json":
         _print_json(result)
     elif args.format == "actions":
@@ -203,7 +210,16 @@ def cmd_record(args) -> int:
                   id=args.id)
     if args.repo:
         kwargs["repo"] = args.repo
-    node_id = client.record(**{k: v for k, v in kwargs.items() if v is not None})
+    try:
+        node_id = client.record(**{k: v for k, v in kwargs.items() if v is not None})
+    except ValueError as e:
+        # An unknown tag or a malformed scope is the caller's mistake, and the exception
+        # text names the vocabulary they need. A traceback buries that under a stack.
+        print(f"NOT RECORDED — {e}", file=sys.stderr)
+        return 2
+    except OKLUnreachable as e:
+        print(f"NOT RECORDED — {e}", file=sys.stderr)
+        return 2
     print(node_id)
     return 0
 
@@ -589,7 +605,15 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    return args.func(args)
+    try:
+        return args.func(args)
+    except (ValueError, OKLUnreachable) as e:
+        # The backstop, so no command can ever answer a rejected or unreachable service
+        # with a Python traceback. Commands that can say something more specific catch
+        # these themselves and never reach here; this exists so the ones that do not —
+        # and the ones added later — still exit non-zero with a line a human can act on.
+        print(f"OKL: {e}", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":

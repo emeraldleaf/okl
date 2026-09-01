@@ -68,19 +68,28 @@ class VerifyReq(BaseModel):
 def create_app(store: Store | None = None) -> FastAPI:
     app = FastAPI(title="OKL — the sixth surface", version="0.1.0")
     _store = store or Store(os.environ.get("OKL_DATABASE_URL"))
-    # Optional shared-secret gate. If OKL_TOKEN is set, writes require it.
-    write_token = os.environ.get("OKL_TOKEN")
+    # Optional shared-secret gate. If OKL_TOKEN is set it covers READS as well as
+    # writes. Reads used to be open while writes were gated, which meant a deployed
+    # service handed anyone who found the URL a `GET /nodes` dump of the org's entire
+    # encoded body — its known defects, its retired identifiers, its architecture
+    # decisions. That is a catalogue of where the org is weak, and it is exactly the
+    # material the layer exists to collect. If you set a token, you want it private.
+    token = os.environ.get("OKL_TOKEN")
 
     def _auth(authorization: str | None) -> None:
-        if write_token and authorization != f"Bearer {write_token}":
+        if token and authorization != f"Bearer {token}":
             raise HTTPException(status_code=401, detail="missing or bad bearer token")
 
     @app.get("/health")
     def health() -> dict[str, Any]:
+        # Deliberately open even when a token is set: schedulers and load balancers
+        # probe this before they hold any credential, and a deploy that cannot be
+        # health-checked never goes live. It returns a count and a backend name, no content.
         return {"ok": True, "nodes": len(_store.all_nodes()), "backend": _store.url.split(":")[0]}
 
     @app.post("/check")
-    def check(req: CheckReq) -> dict[str, Any]:
+    def check(req: CheckReq, authorization: str | None = Header(default=None)) -> dict[str, Any]:
+        _auth(authorization)
         return core.check(_store, req.repo, req.task, limit=req.limit,
                           interests=req.interests)
 
@@ -96,7 +105,8 @@ def create_app(store: Store | None = None) -> FastAPI:
         return {"id": node_id}
 
     @app.post("/search")
-    def search(req: SearchReq) -> dict[str, Any]:
+    def search(req: SearchReq, authorization: str | None = Header(default=None)) -> dict[str, Any]:
+        _auth(authorization)
         return {"results": core.search(_store, req.query, req.scope, req.node_types, req.limit)}
 
     @app.post("/link")
@@ -114,12 +124,14 @@ def create_app(store: Store | None = None) -> FastAPI:
             raise HTTPException(status_code=400, detail=str(e)) from e
 
     @app.get("/metric/recurrence")
-    def recurrence() -> dict[str, Any]:
+    def recurrence(authorization: str | None = Header(default=None)) -> dict[str, Any]:
+        _auth(authorization)
         rows = _store.recurrence_after_arming()
         return {"recurrence_after_arming": rows, "count": len(rows)}
 
     @app.get("/nodes")
-    def nodes() -> dict[str, Any]:
+    def nodes(authorization: str | None = Header(default=None)) -> dict[str, Any]:
+        _auth(authorization)
         from dataclasses import asdict
         rows = [asdict(n) for n in _store.all_nodes()]
         return {"nodes": rows, "count": len(rows)}
@@ -127,11 +139,32 @@ def create_app(store: Store | None = None) -> FastAPI:
     return app
 
 
-app = None
+_app: FastAPI | None = None
+
+
+def __getattr__(name: str):
+    """Build `app` on first attribute access, not at import.
+
+    Every ASGI host — uvicorn, gunicorn, a platform's default start command — is
+    pointed at `module:app`, and that is what this module's own docstring tells you
+    to run. `app` used to be a module-level `None` that `run()` reassigned as a side
+    effect, so `uvicorn okl.service:app` served a None: the process started, bound the
+    port, looked healthy to anything watching the port, and answered 500 to every
+    request. A deploy that fails at startup is a nuisance; one that comes up and then
+    fails every call is an outage that reads as a bug in the caller.
+
+    PEP 562 module `__getattr__` fires only when normal lookup fails, which is what
+    keeps the database out of import time: `import okl.service` still touches nothing,
+    so the CLI and the tests can import this module without a configured backend.
+    """
+    if name == "app":
+        global _app
+        if _app is None:
+            _app = create_app()
+        return _app
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def run(host: str = "0.0.0.0", port: int = 8080) -> None:
     import uvicorn
-    global app
-    app = create_app()
-    uvicorn.run(app, host=host, port=port)
+    uvicorn.run(create_app(), host=host, port=port)

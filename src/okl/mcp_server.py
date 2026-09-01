@@ -13,12 +13,33 @@ from .client import Client, OKLUnreachable
 
 
 def _build():
-    try:
-        from mcp.server.fastmcp import FastMCP
-    except ImportError as e:  # pragma: no cover
-        raise RuntimeError("The MCP server needs the 'mcp' package — install okl[mcp]") from e
+    """Construct the MCP server, tolerating both major versions of the SDK.
 
-    mcp = FastMCP("okl")
+    The class was renamed in mcp 2.x: `mcp.server.fastmcp.FastMCP` became
+    `mcp.server.mcpserver.MCPServer`. The decorator API we use (`.tool()`) is the same
+    on both, so try the newer name first and fall back. Without this, `pip install
+    org-knowledge-layer[mcp]` resolves to 2.x and every tool call fails.
+    """
+    server_cls = None
+    errors = []
+    for module, name in (("mcp.server.mcpserver", "MCPServer"),   # mcp >= 2
+                         ("mcp.server.fastmcp", "FastMCP")):      # mcp 1.x
+        try:
+            server_cls = getattr(__import__(module, fromlist=[name]), name)
+            break
+        except (ImportError, AttributeError) as e:
+            errors.append(f"{module}.{name}: {e}")
+    if server_cls is None:
+        # Surface the REAL cause. Saying "install okl[mcp]" to someone who just did is
+        # the same failure as reporting a validation error as an outage: the message
+        # sends them to fix a thing that is not broken.
+        raise RuntimeError(
+            "Could not load an MCP server class from the installed 'mcp' package.\n"
+            + "\n".join(f"  tried {e}" for e in errors)
+            + "\nInstall the extra with `pip install \"org-knowledge-layer[mcp]\"`, or report "
+              "this if the SDK has changed again.")
+
+    mcp = server_cls("okl")
     client = Client()
 
     @mcp.tool()
@@ -62,9 +83,15 @@ def _build():
         tags (comma-sep, controlled vocabulary — e.g. react, security,
         eval-integrity) categorize the subject so `check` can filter by interest.
         """
-        node_id = client.record(type=type, title=title, scope=scope, body=body,
-                                 status=status, found_by=found_by, ttl_days=ttl_days, repo=repo,
-                                 symptom=symptom, fix=fix, files=files, tags=tags)
+        try:
+            node_id = client.record(type=type, title=title, scope=scope, body=body,
+                                    status=status, found_by=found_by, ttl_days=ttl_days,
+                                    repo=repo, symptom=symptom, fix=fix, files=files, tags=tags)
+        except ValueError as e:
+            # Hand the agent the actual complaint (unknown tag, bad scope) so it can fix
+            # its own call. Raising here surfaces as an opaque "Error executing tool",
+            # which reads like an outage and teaches the agent nothing.
+            return f"NOT RECORDED — {e}"
         return f"recorded {node_id} ({type}, {scope})"
 
     @mcp.tool()

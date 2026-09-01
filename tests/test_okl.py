@@ -5,7 +5,9 @@ can learn the contract being checked without opening the code under test. Where 
 guards a security boundary, an ordering rule, or a "silence is not safety" invariant,
 the assertions are numbered and each says which failure it prevents.
 """
+import importlib.util
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -239,6 +241,151 @@ def test_service_check(tmp_path, monkeypatch):
     # an agent inventing tags got an opaque 500 and reported the service as down)
     bad = client.post("/record", json={"type": "Rule", "title": "t", "scope": "org", "tags": "ci,pinning"})
     assert bad.status_code == 400 and "vocabulary" in bad.json()["detail"]
+
+
+def test_service_token_gates_reads_as_well_as_writes(monkeypatch):
+    """When OKL_TOKEN is set, every endpoint but /health requires it.
+
+    Writes were gated from the start and reads were not, which is the natural-looking
+    split and the wrong one: a deployed service handed anyone who found the URL a
+    `GET /nodes` dump of the org's whole encoded body — its known defects, its retired
+    identifiers, its architecture decisions. That is a map of where the org is weak.
+    Found by deploying the service and curling it without a credential.
+    """
+    pytest.importorskip("fastapi")
+    pytest.importorskip("httpx")
+    from fastapi.testclient import TestClient
+
+    from okl.service import create_app
+
+    # ARRANGE — a token-protected service holding one record worth not leaking
+    monkeypatch.setenv("OKL_TOKEN", "s3cret")
+    s = Store("sqlite:///:memory:")
+    core.record(s, type="Defect", title="auth bypass in the admin path", scope="org")
+    client = TestClient(create_app(store=s))
+    auth = {"Authorization": "Bearer s3cret"}
+
+    # ASSERT (1) — /health stays open on purpose. Schedulers and load balancers probe it
+    # holding no credential, and a deploy that cannot be health-checked never goes live.
+    # It returns a count and a backend name, never record content.
+    health = client.get("/health")
+    assert health.status_code == 200
+    assert "auth bypass" not in health.text
+
+    # ASSERT (2) — every content endpoint refuses an anonymous caller. /nodes is the one
+    # that mattered most: it dumps everything in a single unauthenticated GET.
+    assert client.get("/nodes").status_code == 401
+    assert client.get("/metric/recurrence").status_code == 401
+    assert client.post("/check", json={"repo": "x", "task": "auth"}).status_code == 401
+    assert client.post("/search", json={"query": "auth"}).status_code == 401
+    assert client.post("/record", json={"type": "Rule", "title": "x", "scope": "org"}).status_code == 401
+
+    # ASSERT (3) — and the token opens all of them, so the gate is a credential check
+    # rather than an outage
+    assert client.get("/nodes", headers=auth).status_code == 200
+    assert client.post("/check", json={"repo": "x", "task": "auth"}, headers=auth).status_code == 200
+    assert client.post("/record", json={"type": "Rule", "title": "x", "scope": "org"},
+                       headers=auth).status_code == 200
+
+
+def test_saving_config_keeps_the_service_token_out_of_git(tmp_path, monkeypatch):
+    """`.okl/` ignores itself, so `okl connect --token` cannot commit a shared secret.
+
+    The code carried a comment saying ".okl/ is gitignored" and wrote nothing to make it
+    so. `okl connect --token` puts the service bearer credential in cleartext in
+    `.okl/config.json`, so the next `git add .` committed it — and a token in git history
+    outlives any later fix. Found by running the documented connect flow in a real repo
+    and asking git what it would stage.
+    """
+    from okl.client import save_config
+
+    # ARRANGE / ACT — the documented flow: connect with a token
+    monkeypatch.chdir(tmp_path)
+    save_config({"repo": "r", "service_url": "https://okl.internal", "token": "s3cret"})
+
+    # ASSERT (1) — the directory carries its own ignore file, so no edit to the repo's
+    # root .gitignore is needed and a repo that has none is still covered
+    ignore = tmp_path / ".okl" / ".gitignore"
+    assert ignore.exists()
+    assert ignore.read_text().splitlines()[-1] == "*"
+
+    # ASSERT (2) — the secret really is on disk; the ignore file is the only thing
+    # standing between it and a commit, which is why assertion (1) is not cosmetic
+    assert "s3cret" in (tmp_path / ".okl" / "config.json").read_text()
+
+    # ASSERT (3) — writing config again does not clobber an ignore file someone edited
+    ignore.write_text("# hand-edited\n*\n")
+    save_config({"repo": "r2"})
+    assert "hand-edited" in ignore.read_text()
+
+
+def test_asgi_entrypoint_resolves_to_a_real_app_without_importing_the_database(monkeypatch):
+    """`okl.service:app` is a working ASGI app, and importing the module stays cheap.
+
+    These two requirements pull against each other, which is how the bug got in. `app`
+    was a module-level `None` that only `run()` reassigned, so `uvicorn okl.service:app`
+    — the command in this module's own docstring, and the default form every platform
+    uses — started fine, bound the port, passed a port-liveness check, and returned 500
+    to every request. Building the app at import instead would connect to the database
+    whenever anything imported the module, including the CLI and this test suite.
+    """
+    pytest.importorskip("fastapi")
+    pytest.importorskip("httpx")
+    from fastapi.testclient import TestClient
+
+    import okl.service as svc
+
+    # ARRANGE — a database URL that would fail loudly if anything connected to it
+    monkeypatch.setenv("OKL_DATABASE_URL", "sqlite:///:memory:")
+    monkeypatch.setattr(svc, "_app", None)   # forget any app a previous test built
+
+    # ASSERT (1) — importing does not build the app, so it does not touch storage
+    assert svc._app is None
+
+    # ACT — resolve the attribute the way an ASGI server does
+    app = svc.app
+
+    # ASSERT (2) — what comes back actually serves requests. `is not None` would have
+    # passed against the old code the moment any earlier test called run().
+    assert TestClient(app).get("/health").json()["ok"] is True
+
+    # ASSERT (3) — a typo'd entrypoint still raises AttributeError rather than silently
+    # resolving, so `uvicorn okl.service:aap` fails at startup instead of at request time
+    with pytest.raises(AttributeError):
+        getattr(svc, "nonexistent_attribute")  # noqa: B009 — the lookup IS the assertion
+
+
+def test_cli_check_fails_closed_when_the_service_refuses_it(tmp_path, monkeypatch, capsys):
+    """A 401 is a REFUSED check, not a clean one: exit 2, no reassuring output.
+
+    Fail-closed was implemented for the unreachable case only. An authorization failure
+    took a different code path — `ValueError`, not `OKLUnreachable` — and fell through
+    to an unhandled traceback with exit 0, which a hook reads as "no rules apply".
+    Silence is never safety, whatever the reason for the silence.
+    """
+    from okl.cli import main
+
+    # ARRANGE — a repo pointed at a service that will reject it. Nothing listens on this
+    # port; the rejection is simulated at the client boundary below.
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".okl").mkdir()
+    (tmp_path / ".okl" / "config.json").write_text(
+        json.dumps({"repo": "r", "service_url": "http://127.0.0.1:9"}))
+
+    def refuse(self, task, repo=None, limit=None):
+        raise ValueError("OKL service rejected the request (401): missing or bad bearer token")
+    monkeypatch.setattr("okl.client.Client.check", refuse)
+
+    # ACT
+    code = main(["check", "--task", "add a refund endpoint"])
+    out = capsys.readouterr()
+
+    # ASSERT (1) — non-zero, so a hook or CI step blocks instead of proceeding
+    assert code == 2
+    # ASSERT (2) — nothing on stdout that could be mistaken for a clean briefing
+    assert out.out.strip() == ""
+    # ASSERT (3) — and the message names the credential, since that is the actual fix
+    assert "REFUSED" in out.err and "401" in out.err
 
 
 # ---- new-feature tests: schema, router, drift, idempotent seed, coverage ----
@@ -645,3 +792,141 @@ def test_check_limit_threads_through_the_client(tmp_path, monkeypatch):
     args = argparse.Namespace(task="widgets", repo=None, format="actions", limit=2)
     assert cmd_check(args) == 0
 
+
+
+@pytest.mark.skipif(not os.environ.get("OKL_TEST_POSTGRES_URL"),
+                    reason="set OKL_TEST_POSTGRES_URL to run against a real Postgres")
+def test_postgres_matches_sqlite_ranking_on_a_real_server():
+    """Both backends must rank the SAME record first for the same query.
+
+    The interface contract (an identical `search()` signature) is the easy half. The
+    quality contract is the one that broke before: Postgres ran an unranked substring
+    match while SQLite ran BM25, so promoting a repo to the shared service silently gave
+    it worse retrieval than it had on a laptop. Asserting SQL shape against a fake
+    connection cannot catch that — only a real server can.
+
+    Skipped unless OKL_TEST_POSTGRES_URL is set; docs/DEPLOY.md has a throwaway cluster
+    in four commands.
+
+    The test builds its table inside a temporary schema and drops it afterwards, so it
+    never touches a `node` table that was already there. The first version opened with
+    `DELETE FROM node` against whatever the URL pointed at, which would have destroyed
+    the whole store of anyone who set the variable to their real service to "just check
+    parity" — a test whose worst case is worse than the bug it guards against.
+    """
+    # ARRANGE — one corpus, loaded identically into both backends. The fourth record
+    # deliberately mentions BOTH topics, so a backend that merely MATCHES (rather than
+    # ranks) can still return the wrong record first.
+    records = [
+        ("Defect", "rate limiter counts in process across replicas",
+         "in-memory limiter grants a fresh allowance per instance"),
+        ("Rule", "pin every tool that gates CI",
+         "an unpinned linter retro-fails a branch that changed nothing"),
+        ("Rule", "tokens never go in localStorage",
+         "web storage is readable by any script on the page"),
+        ("Defect", "the linter version was not pinned in the rate limiter repo",
+         "mentions both topics, so matching alone is not enough to pass"),
+        ("Rule", "ownership predicate belongs in the WHERE clause",
+         "a non-owner row must never leave the database"),
+    ]
+    url = os.environ["OKL_TEST_POSTGRES_URL"]
+    schema = "okl_parity_test"
+    # Create the scratch schema on a throwaway connection, then hand the Store a URL
+    # whose search_path points at it. libpq passes `options` straight through, so the
+    # Store's own CREATE TABLE lands in the scratch schema without the Store needing to
+    # know anything about schemas — and any real `public.node` stays invisible to it.
+    import psycopg
+    with psycopg.connect(url, autocommit=True) as setup:
+        setup.execute(f"DROP SCHEMA IF EXISTS {schema} CASCADE")
+        setup.execute(f"CREATE SCHEMA {schema}")
+    sep = "&" if "?" in url else "?"
+    pg = Store(f"{url}{sep}options=-csearch_path%3D{schema}")
+    lite = Store("sqlite:///:memory:")
+    try:
+        for s_ in (pg, lite):
+            for t, title, body in records:
+                core.record(s_, type=t, title=title, scope="org", body=body)
+
+        # ACT / ASSERT (1) — the same record leads on every query, on both backends
+        for query in ["rate limiter replicas", "pin linter CI", "tokens localStorage",
+                      "ownership WHERE clause"]:
+            a, b = lite.search(query, limit=3), pg.search(query, limit=3)
+            assert a and b, f"both backends must return something for {query!r}"
+            assert a[0].title == b[0].title, (
+                f"backends disagree on {query!r}: sqlite={a[0].title!r} postgres={b[0].title!r}")
+
+        # ASSERT (2) — the GIN index exists. Without it the ranked query still returns
+        # the right answer but degrades to a sequential scan as the store grows, which is
+        # the kind of regression nobody notices until the store is large.
+        with pg._impl.conn.cursor() as c:
+            c.execute("select indexname from pg_indexes where tablename='node' "
+                      f"and schemaname='{schema}'")
+            assert "node_tsv_idx" in {r[0] for r in c.fetchall()}
+    finally:
+        # Leave the server as it was found, whether the assertions passed or not.
+        pg.close()
+        with psycopg.connect(url, autocommit=True) as teardown:
+            teardown.execute(f"DROP SCHEMA IF EXISTS {schema} CASCADE")
+
+
+@pytest.mark.skipif(importlib.util.find_spec("mcp") is None,
+                    reason="requires the mcp extra: pip install 'org-knowledge-layer[mcp]'")
+def test_mcp_server_builds_and_its_tools_actually_run(tmp_path, monkeypatch):
+    """Build the real MCP server and call every tool through it.
+
+    This test exists because the server shipped for weeks without ever being run, and
+    the first live invocation found three defects at once: the SDK renamed its server
+    class in 2.x (so `pip install [mcp]` produced a server that could not start), an
+    explicit `repo=None` from the tool layer defeated the client's `setdefault` (so every
+    repo-scoped record failed), and validation errors surfaced as an opaque "Error
+    executing tool" the agent could not act on.
+
+    Testing the tool functions in isolation would have caught none of them.
+    """
+    import asyncio
+
+    from okl.client import Client
+    from okl.mcp_server import _build
+
+    # ARRANGE — a configured repo holding one record, so search has something to find
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".okl").mkdir()
+    (tmp_path / ".okl" / "config.json").write_text(json.dumps({"repo": "mcpdemo"}))
+    Client().record(type="Defect", title="price tampering via a client-supplied amount",
+                    scope="org", symptom="a request body carries a price",
+                    fix="compute it server-side")
+
+    def unwrap(res):
+        c = getattr(res, "content", None)
+        if isinstance(c, (list, tuple)):
+            c = c[0]
+        return getattr(c, "text", str(c))
+
+    async def exercise():
+        mcp = _build()   # ASSERT (1) — constructs under whichever SDK major is installed
+        names = {t.name for t in await mcp.list_tools()}
+        assert {"okl_check", "okl_record", "okl_search"} <= names
+
+        # ASSERT (2) — the read path returns a real briefing, compact form included
+        out = unwrap(await mcp.call_tool("okl_check", {
+            "task": "add an endpoint that accepts a price", "compact": True, "limit": 2}))
+        assert "price" in out.lower()
+
+        # ASSERT (3) — scope="repo" resolves to repo:<name>. The tool layer passes every
+        # field explicitly, so repo arrives as None and setdefault cannot fill it.
+        rec = unwrap(await mcp.call_tool("okl_record", {
+            "type": "Rule", "title": "recorded through the MCP layer", "scope": "repo"}))
+        assert rec.startswith("recorded "), rec
+
+        # ASSERT (4) — a bad tag returns readable guidance naming the vocabulary, not an
+        # exception. An agent that cannot read the complaint cannot fix its own call.
+        bad = unwrap(await mcp.call_tool("okl_record", {
+            "type": "Rule", "title": "x", "scope": "org", "tags": "not-a-real-tag"}))
+        assert bad.startswith("NOT RECORDED")
+        assert "vocabulary" in bad
+
+        # ASSERT (5) — the search path returns matches
+        assert "tampering" in unwrap(await mcp.call_tool(
+            "okl_search", {"query": "price tampering", "limit": 2})).lower()
+
+    asyncio.run(exercise())

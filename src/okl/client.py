@@ -40,6 +40,15 @@ def load_config() -> dict[str, Any]:
 def save_config(data: dict[str, Any], root: Path | None = None) -> Path:
     d = (root or Path.cwd()) / CONFIG_DIR
     d.mkdir(parents=True, exist_ok=True)
+    # Ignore the whole directory, from inside it. Everything okl writes here is either
+    # machine-local (`okl_bin`, an absolute interpreter path) or secret (`token`, the
+    # service bearer credential that `okl connect --token` stores in cleartext), and the
+    # local store lands here too. The code claimed ".okl/ is gitignored" while writing
+    # nothing to make that true, so a `git add .` after `okl connect --token` committed
+    # a shared secret. A .gitignore inside .okl/ needs no edit to the repo's own.
+    gitignore = d / ".gitignore"
+    if not gitignore.exists():
+        gitignore.write_text("# okl: machine-local config, credentials and local store\n*\n")
     path = d / CONFIG_FILE
     path.write_text(json.dumps(data, indent=2) + "\n")
     return path
@@ -115,7 +124,11 @@ class Client:
     def record(self, **kwargs) -> str:
         # Default the repo in BOTH modes: `--scope repo` needs it to become repo:<name>,
         # and the remote path used to skip this (found by E2E: 400 on every repo-scoped record).
-        kwargs.setdefault("repo", self.repo)
+        # `setdefault` is not enough: callers that pass every field explicitly (the MCP
+        # tools do) send repo=None, so the key EXISTS and setdefault leaves the None in
+        # place. Found by live-testing the MCP server: every scope="repo" record failed.
+        if kwargs.get("repo") is None:
+            kwargs["repo"] = self.repo
         if self.mode == "remote":
             return self._post("/record", kwargs)["id"]
         return core.record(self._local_store(), **kwargs)
@@ -157,10 +170,24 @@ class Client:
         return self._local_store().all_nodes()
 
     def _get(self, path: str) -> dict:
+        # The token goes on GETs too. It used to go only on POSTs, which was survivable
+        # only because the service left reads open; once reads are gated, an unauthenticated
+        # GET makes drift detection (/nodes) and the recurrence metric fail against every
+        # private deployment — and a 401 here surfaces as "unreachable", i.e. as an outage.
         url = self.service_url.rstrip("/") + path
+        req = _req.Request(url)
+        token = os.environ.get("OKL_TOKEN") or self.config.get("token")
+        if token:
+            req.add_header("Authorization", f"Bearer {token}")
         try:
-            with _req.urlopen(url, timeout=10) as resp:
+            with _req.urlopen(req, timeout=10) as resp:
                 return json.loads(resp.read())
+        except HTTPError as e:
+            if 400 <= e.code < 500:
+                raise ValueError(
+                    f"OKL service rejected the request ({e.code} {e.reason}). "
+                    "If this is 401, set OKL_TOKEN or add \"token\" to .okl/config.json.") from e
+            raise OKLUnreachable(f"OKL service error at {url}: {e.code} {e.reason}") from e
         except URLError as e:
             raise OKLUnreachable(f"OKL service unreachable at {url}: {e}") from e
 

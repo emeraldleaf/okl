@@ -534,17 +534,19 @@ okl serve --port 8080
 
 ```bash
 pip install "org-knowledge-layer[service]"
-OKL_DATABASE_URL="sqlite:///okl.db" OKL_TOKEN="a-shared-secret" okl serve
+OKL_DATABASE_URL="postgresql://user:pass@host/okl" OKL_TOKEN="a-shared-secret" okl serve
 # repos then: okl connect https://your-host --token a-shared-secret
 ```
 
-`OKL_TOKEN` (optional) gates **writes**; **reads stay open** — `/nodes` returns the
-whole store to anyone who can reach the port. A mature store holds your defect history,
-security patterns and internal architecture, so treat it as sensitive: bind it to a
-private network or put authentication in front of every route before exposing it. See
-[SECURITY.md](SECURITY.md). Deploy the service
-wherever you like — it's storage-agnostic by design (a `Dockerfile` and a
-`fly.toml` are the obvious next commit; not included in v0).
+**Set `OKL_TOKEN`.** With it, every route requires the bearer token except `/health`
+(left open so schedulers can probe it). Without it, every route is open — including
+`GET /nodes`, which hands the whole store to anyone who can reach the port. A mature
+store is a catalogue of your known defects and internal architecture, which is a map of
+where you are weak. It is a single shared secret with no per-repo scoping or rotation;
+put a real authenticating proxy in front if you need more.
+
+Full instructions, including a throwaway Postgres for trying it locally and what the
+failure modes look like: **[docs/DEPLOY.md](docs/DEPLOY.md)**.
 
 ## Agent integration (MCP)
 
