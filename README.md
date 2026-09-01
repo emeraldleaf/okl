@@ -70,7 +70,7 @@ and it is worth knowing which one catches what, because they do not overlap.
 | **A withdrawn claim being restated** | `check-retractions.sh` | greps tracked docs for the exact quoted claim from the retraction registry | the quote appears outside the registry |
 | **A doc nobody links to** | `check-doc-orphans.sh` | reachability check from hub files through `docs/` | a doc is unreachable, so it drifts unread |
 | **A link pointing at a file that moved** | `check-links.sh` | resolves every local markdown link against `git ls-files` | the target does not exist |
-| **A diagram source with no rendered image** | `check-diagram-pairs.sh` | pairs each editable source with its export | reviewers would see nothing (a hand-authored image is noted, not failed) |
+| **A diagram source with no rendered image** | `check-diagram-pairs.sh` | pairs each editable source with its export; format-agnostic via `OKL_DIAGRAM_SRC_EXT`/`OUT_EXT` | reviewers would see nothing. A hand-authored image with no source is noted, never failed, and a repo with no diagram sources is a clean no-op |
 | **Verification going quietly stale** | TTL + `verified_by` | records carry when they were last verified and by which observed check | past its TTL, a record is shown demoted rather than deleted |
 
 Two honest limits on that table:
@@ -303,6 +303,18 @@ not just a convention. It fires once per session and never loops.
 reading the AGENTS.md convention gets the same rules Claude Code does (byte-identity is
 test-enforced). The hooks themselves are Claude Code-specific; other agents get the
 canon via AGENTS.md and the store via the MCP server (`okl mcp`).
+
+That split matters: on Claude Code the pre-task read is *enforced* (fail-closed hook);
+everywhere else it is *available* (a tool call or a shell command), which is
+discretionary — the thing enforcement exists to avoid. The hook scripts themselves are
+plain bash reading JSON on stdin, so nothing in them is Claude-specific; what is missing
+for other agents is the config that registers them, and whether the agent fires an event
+early enough to matter. Codex CLI documents a `userpromptsubmit` hook, which is the right
+shape; Copilot, Gemini CLI and Cursor have hook systems worth checking against your
+version; OpenCode's plugin API captures tool events but, as of this writing, no
+pre-prompt event — so there the read stays a tool call rather than a gate. Verify against
+your agent's current docs before trusting any of that. Wiring one up is a well-shaped
+contribution — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Hooks run in whatever environment the agent harness spawns — often without your venv or
 pipx bin dir on PATH — so both hooks resolve the `okl` binary in layers: the `OKL_BIN`

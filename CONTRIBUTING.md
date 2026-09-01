@@ -49,6 +49,17 @@ it is the actual contract. The parts that will fail your build if you miss them:
   cutoff that is still unfinished.
 - **Portability fixes.** Hooks, path resolution, and CI have been exercised on macOS and
   GitHub Actions and nowhere else.
+- **Hook wiring for another agent.** `okl init` auto-registers hooks for Claude Code
+  only, so everywhere else the pre-task read is discretionary rather than enforced. The
+  scripts in `src/okl/scaffold/hooks/` are plain bash reading JSON on stdin and writing
+  the briefing to stdout; nothing in them is Claude-specific. What is missing is the
+  per-agent registration, plus confirming the agent fires an event before the model reads
+  the prompt (Codex CLI documents `userpromptsubmit`; OpenCode's plugin API appears to
+  cover tool events but not pre-prompt, so there it may only ever be a tool call). A PR adding `okl init --agent <name>` for the tool you actually use
+  daily would be the single most valuable contribution here. Bring evidence it fires: a
+  behavioral check against a bare control repo, not just a log line, because a hook that
+  fires is not a hook that is heard.
+
 - **A live-Postgres test.** The ranked search path for Postgres is currently asserted at
   the SQL-shape level against a fake connection; it has never run against a real server.
 

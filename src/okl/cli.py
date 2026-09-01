@@ -97,7 +97,12 @@ def cmd_init(args) -> int:
     if claude.exists():
         _install_claude_wiring(claude)
     else:
-        print("• no .claude/ dir found — see README to wire the hook for your agent (AGENTS.md/.cursor).")
+        print("• no .claude/ dir here, so no hooks were installed. The store still works:")
+        print("    - retrieval: `okl check --task \"...\"`, or the MCP server (`okl mcp`)")
+        print("    - canon for any agent: `okl scaffold .` writes CLAUDE.md and AGENTS.md")
+        print("    - the enforced pre-task read needs a hook, and okl auto-wires Claude Code only.")
+        print("      The scripts in src/okl/scaffold/hooks/ are plain bash on stdin/stdout; if your")
+        print("      agent has a pre-prompt hook, point it at them. Registration formats differ.")
     _install_ci_verifier()
     return 0
 

@@ -13,6 +13,8 @@ cd "$(dirname "$0")/.."
 command -v git >/dev/null 2>&1 || { echo "no git — skipping"; exit 0; }
 git rev-parse --git-dir >/dev/null 2>&1 || { echo "not a git repo — skipping"; exit 0; }
 
+# Defaults suit an excalidraw + svg workflow, but the gate is format-agnostic: point it
+# at whatever your repo uses (drawio/png, mmd/svg, fig/pdf) and the same rule applies.
 SRC_EXT="${OKL_DIAGRAM_SRC_EXT:-excalidraw}"   # editable source
 OUT_EXT="${OKL_DIAGRAM_OUT_EXT:-svg}"          # rendered output
 
@@ -29,5 +31,9 @@ while IFS= read -r out; do
   [ -e "${out%.$OUT_EXT}.$SRC_EXT" ] || echo "  · note: $out has no .$SRC_EXT source (fine if hand-authored)"
 done < <(git ls-files "*.$OUT_EXT")
 
-[ "$n" -eq 0 ] && echo "no .$SRC_EXT/.$OUT_EXT diagrams tracked — nothing to check"
+if [ "$n" -eq 0 ]; then
+  echo "no .$SRC_EXT/.$OUT_EXT diagrams tracked — nothing to check"
+  echo "  (different diagram workflow? set OKL_DIAGRAM_SRC_EXT / OKL_DIAGRAM_OUT_EXT,"
+  echo "   e.g. OKL_DIAGRAM_SRC_EXT=drawio OKL_DIAGRAM_OUT_EXT=png)"
+fi
 exit $rc

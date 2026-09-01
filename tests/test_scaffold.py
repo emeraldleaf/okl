@@ -222,6 +222,26 @@ def test_diagram_pair_gate_fails_on_unpaired_source(tmp_path):
     assert "handmade.svg" in r2.stdout and "note:" in r2.stdout
 
 
+def test_diagram_gate_is_format_agnostic(tmp_path):
+    """The defaults suit one workflow; the rule is general. A repo using another editor
+    must be able to point the gate at its own extensions rather than be told it has
+    nothing to check."""
+    import os
+    repo = _git_repo(tmp_path)
+    (repo / "docs").mkdir(exist_ok=True)
+    (repo / "docs" / "flow.drawio").write_text("<mxfile/>")
+    subprocess.run(["git", "-C", str(repo), "add", "-A"], capture_output=True)
+    env = {**os.environ, "OKL_DIAGRAM_SRC_EXT": "drawio", "OKL_DIAGRAM_OUT_EXT": "png"}
+    r = subprocess.run(["bash", "gates/check-diagram-pairs.sh"], cwd=repo,
+                       capture_output=True, text=True, env=env)
+    assert r.returncode != 0 and "flow.drawio" in r.stdout
+    (repo / "docs" / "flow.png").write_bytes(b"\x89PNG")
+    subprocess.run(["git", "-C", str(repo), "add", "-A"], capture_output=True)
+    r2 = subprocess.run(["bash", "gates/check-diagram-pairs.sh"], cwd=repo,
+                        capture_output=True, text=True, env=env)
+    assert r2.returncode == 0, r2.stdout
+
+
 def test_new_gates_noop_without_content(tmp_path):
     """A repo with no diagrams and no local links must not fail — a gate that cries
     wolf on an empty repo gets disabled, and then it catches nothing."""
