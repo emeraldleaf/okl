@@ -169,6 +169,27 @@ That distinction is the one the flat-retrieval ADR is written around: its trigge
 failing to comply with a record it was handed. Measured miss rate after the cutoff
 remains zero. Compliance is a separate, unmeasured problem.
 
+## 4c. NOT YET RE-RUN: symptom and fix joined the search index (2026-09-01)
+
+**Every number in this report predates this change.** `symptom` and `fix` are now indexed
+alongside `title` and `body` on both backends, with explicit column weights
+(title > body = symptom > fix). Before it, a record whose distinguishing words lived in
+`symptom` — the field every command and doc calls "what a reader matches against" — was
+unretrievable unless those words also appeared in the title.
+
+That is a change to the retrieval path this report measures, and the precedent set in §4b
+is that such a change gets re-measured rather than assumed safe. It has not been re-run
+yet. Until it is:
+
+- the figures in §3 and §4b remain accurate **for the retrieval path as it stood on
+  2026-09-01 before this commit**, and should be cited that way;
+- they should not be quoted as evidence about the current code;
+- the expected direction is more records matching a given task, which the top-k cutoff
+  then trims — so the interaction between the two changes is the thing worth measuring,
+  not either alone.
+
+Run `python3 evals/ab_harness.py` and add a §4d with the receipt.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

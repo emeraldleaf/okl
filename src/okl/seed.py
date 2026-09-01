@@ -33,6 +33,24 @@ def seed_from_file(client: Client, path: str) -> int:
     """
     p = Path(path)
     data = json.loads(p.read_text())
+
+    # A pack that declares itself agent-proposed is held to its citation rule here, not
+    # by the reviewer remembering to check. The commands that write these files tell the
+    # agent "no citation, no record" — but an instruction with no mechanical trigger is
+    # the surface nobody runs, and an uncited record is the worst thing this store can
+    # hold: a plausible sentence nobody can trace, injected into every future task and
+    # believed. Curated packs carry provenance in other ways and are not affected.
+    if data.get("_proposed_by"):
+        uncited = [n.get("key") or n.get("title", "?")
+                   for n in data.get("nodes", []) if not (n.get("found_by") or "").strip()]
+        if uncited:
+            raise ValueError(
+                f"{p.name} declares _proposed_by={data['_proposed_by']!r}, so every node "
+                f"must carry a found_by citation. {len(uncited)} do not:\n  - "
+                + "\n  - ".join(uncited[:10])
+                + ("\n  ..." if len(uncited) > 10 else "")
+                + "\nAdd the path:line each came from, or delete the record.")
+
     ns = f"seed:{p.stem}"
     keymap: dict[str, str] = {}
     for node in data.get("nodes", []):

@@ -968,3 +968,119 @@ def test_mcp_server_builds_and_its_tools_actually_run(tmp_path, monkeypatch):
             "okl_search", {"query": "price tampering", "limit": 2})).lower()
 
     asyncio.run(exercise())
+
+
+def test_a_self_declared_proposal_pack_must_cite_every_record(tmp_path, monkeypatch):
+    """A pack marked `_proposed_by` is refused unless every node carries a citation.
+
+    The commands that generate these files tell the agent "no citation, no record". An
+    instruction with no mechanical trigger is the surface nobody runs, and the reviewer
+    checking by hand is exactly the step that gets skipped on a 40-record proposal. An
+    uncited record is the worst thing this store can hold: a plausible sentence nobody
+    can trace, injected into every future task and believed.
+    """
+    from okl.client import Client
+    from okl.seed import seed_from_file
+
+    # ARRANGE — a configured repo, and a proposal pack with one cited and one uncited node
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".okl").mkdir()
+    (tmp_path / ".okl" / "config.json").write_text(json.dumps({"repo": "r"}))
+    client = Client()
+
+    def pack(nodes):
+        p = tmp_path / "proposed.json"
+        p.write_text(json.dumps({"_proposed_by": "seed-from-docs", "nodes": nodes}))
+        return str(p)
+
+    cited = {"key": "a", "type": "Rule", "title": "money is computed server-side",
+             "scope": "repo:r", "found_by": "docs/specs/checkout.md:118"}
+    uncited = {"key": "b", "type": "Rule", "title": "always validate input", "scope": "repo:r"}
+
+    # ACT / ASSERT (1) — the import is refused, and names the offender so it can be fixed
+    with pytest.raises(ValueError) as e:
+        seed_from_file(client, pack([cited, uncited]))
+    assert "found_by" in str(e.value)
+    assert "b" in str(e.value)
+
+    # ASSERT (2) — refused means NOTHING landed, not "the good ones went in". A partial
+    # import would leave the reviewer unable to tell which half they still have to check.
+    assert client.search("money computed server-side") == []
+
+    # ASSERT (3) — with every node cited, the same pack imports
+    assert seed_from_file(client, pack([cited])) == 1
+    assert client.search("money computed server-side")
+
+    # ASSERT (4) — curated packs carry provenance in other ways and are untouched by
+    # this rule; only a pack that declares itself agent-proposed opts into it
+    p = tmp_path / "curated.json"
+    p.write_text(json.dumps({"nodes": [
+        {"key": "c", "type": "Rule", "title": "outbox pattern for write-then-publish",
+         "scope": "org", "repo": None}]}))
+    assert seed_from_file(client, str(p)) == 1
+
+
+def test_symptom_and_fix_are_searchable(store):
+    """A record is retrievable by the words in its symptom and fix, not only its title.
+
+    `symptom` is the field every command, doc and diagram calls "what a reader matches
+    against" — the observable that says this record applies to the task in hand. It was
+    the one field the index could not see, so a record written the way the guidance says
+    to write it (short title, the distinguishing words in symptom and fix) came back from
+    `check` as "no encoded rule applies". Found by seeding a record seeded from a spec and
+    watching a task quoting its symptom verbatim match nothing.
+    """
+    # ARRANGE — the distinguishing words appear ONLY in symptom and fix. The title is
+    # deliberately generic, the way a real one often is.
+    core.record(store, type="Rule", title="money handling", scope="org",
+                symptom="a request DTO carrying a price or total field",
+                fix="drop the field; compute it from the catalogue server-side")
+    core.record(store, type="Rule", title="pagination", scope="org",
+                symptom="an offset-based query over a large table",
+                fix="use keyset pagination past a few thousand rows")
+
+    # ASSERT (1) — a task quoting the symptom finds the record
+    hits = store.search("request DTO carrying a price", limit=5)
+    assert hits, "a record must be findable by its symptom"
+    assert hits[0].title == "money handling"
+
+    # ASSERT (2) — and by words that appear only in the fix
+    assert [n.title for n in store.search("keyset pagination", limit=5)][:1] == ["pagination"]
+
+    # ASSERT (3) — title still outranks the other fields, so adding them did not flatten
+    # relevance: "pagination" in a title beats "pagination" inside another record's fix
+    assert store.search("pagination", limit=5)[0].title == "pagination"
+
+    # ASSERT (4) — and the whole point, end to end: a briefing surfaces it
+    res = core.check(store, repo="any", task="add an endpoint that takes a price")
+    assert any("money handling" in r["title"] for r in res["rules"])
+
+
+def test_an_index_built_before_symptom_was_indexed_is_rebuilt(tmp_path):
+    """A store created by an older version rebuilds its search index on open.
+
+    FTS5 cannot ALTER a column in, so the table is dropped and rebuilt from `node`, which
+    is the source of truth. Without this, existing users would get the fix in the code and
+    none of it in their data — the worst kind of upgrade, because everything looks fixed.
+    """
+    # ARRANGE — hand-build the pre-fix index shape and a record whose only distinguishing
+    # words live in symptom, exactly as the old code would have left it
+    db = tmp_path / "old.db"
+    s = Store(f"sqlite:///{db}")
+    core.record(s, type="Rule", title="money handling", scope="org",
+                symptom="a request DTO carrying a price or total field", fix="compute it server-side")
+    conn = s._impl.conn
+    conn.execute("DROP TABLE node_fts")
+    conn.execute("CREATE VIRTUAL TABLE node_fts USING fts5(id UNINDEXED, title, body)")
+    conn.execute("INSERT INTO node_fts(id,title,body) SELECT id, title, coalesce(body,'') FROM node")
+    conn.commit()
+    assert s.search("request DTO carrying a price", limit=5) == []   # the old, broken state
+    s.close()
+
+    # ACT — reopen with the current code
+    s2 = Store(f"sqlite:///{db}")
+
+    # ASSERT — the index was rebuilt from the existing rows, so old records become
+    # findable without anyone re-recording them
+    assert [n.title for n in s2.search("request DTO carrying a price", limit=5)] == ["money handling"]
+    s2.close()

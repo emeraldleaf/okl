@@ -427,3 +427,37 @@ def test_seed_from_codebase_command_ships_with_its_guard_rails(tmp_path):
     # ASSERT (5) — it proposes; it does not import. Importing is the human's decision.
     assert "Do **not** run `okl seed` yourself" in text
 
+
+
+def test_seed_from_docs_command_ships_with_its_guard_rails(tmp_path):
+    """The docs-to-records command ships, and states the rule that keeps it honest.
+
+    Specs and plans are the highest-confidence material a team has, because a human
+    already decided each line was true. They are also the easiest to mine badly: prose
+    invites confident paraphrase, and a plan is mostly work items that expire the moment
+    the ticket closes. A store full of expired tasks is worse than an empty one, because
+    it gets injected into future tasks and believed.
+    """
+    # ARRANGE / ACT — stamp the kit into an empty repo
+    scaffold(target=str(tmp_path), repo="r", claude_dir="dotclaude")
+    cmd = tmp_path / "dotclaude" / "commands" / "seed-from-docs.md"
+
+    # ASSERT (1) — it ships; a documented-but-absent command is the surface nobody runs
+    assert cmd.exists(), "the docs-to-records command must ship with the kit"
+    text = cmd.read_text()
+
+    # ASSERT (2) — the durable/expiring distinction is the whole job, so it must survive
+    # any future edit to this file
+    assert "outlives the work item" in text
+
+    # ASSERT (3) — citations are mandatory and the agent is told where to put them
+    assert "found_by" in text
+    assert "path:line" in text
+
+    # ASSERT (4) — it proposes, it does not import. Importing is the human's decision,
+    # made after reading what was proposed.
+    assert "Do **not** run `okl seed` yourself" in text
+
+    # ASSERT (5) — the marker that makes the citation rule mechanical rather than
+    # remembered is present in the template it tells the agent to emit
+    assert "_proposed_by" in text

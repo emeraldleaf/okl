@@ -212,8 +212,25 @@ class _SQLiteBackend(_Backend):
             src TEXT NOT NULL, rel TEXT NOT NULL, dst TEXT NOT NULL, created_at INTEGER NOT NULL,
             PRIMARY KEY (src, rel, dst))""")
         try:
+            # symptom and fix are indexed, not just title and body. `symptom` is the
+            # field every command and doc calls "what a reader matches against" — the
+            # observable that tells you the record applies — and it was the one field
+            # search could not see. A record following the guidance (short title, the
+            # distinguishing words in symptom/fix) was unretrievable unless those words
+            # happened to repeat in the title. Found by seeding a record from a spec and
+            # watching `check` return nothing for a task quoting its symptom verbatim.
             c.execute("""CREATE VIRTUAL TABLE IF NOT EXISTS node_fts
-                         USING fts5(id UNINDEXED, title, body)""")
+                         USING fts5(id UNINDEXED, title, body, symptom, fix)""")
+            # FTS5 cannot ALTER in new columns, so a store built before this rebuilds its
+            # index once. The node table is the source of truth; the index is derived.
+            fts_cols = {r[1] for r in c.execute("PRAGMA table_info(node_fts)").fetchall()}
+            if "symptom" not in fts_cols:
+                c.execute("DROP TABLE node_fts")
+                c.execute("""CREATE VIRTUAL TABLE node_fts
+                             USING fts5(id UNINDEXED, title, body, symptom, fix)""")
+                c.execute("""INSERT INTO node_fts(id, title, body, symptom, fix)
+                             SELECT id, coalesce(title,''), coalesce(body,''),
+                                    coalesce(symptom,''), coalesce(fix,'') FROM node""")
         except self._sqlite3.OperationalError:
             self._has_fts = False   # FTS5 not compiled in — fall back to LIKE
         c.commit()
@@ -229,8 +246,10 @@ class _SQLiteBackend(_Backend):
             )
             if self._has_fts:
                 self.conn.execute("DELETE FROM node_fts WHERE id=?", (node.id,))
-                self.conn.execute("INSERT INTO node_fts(id,title,body) VALUES(?,?,?)",
-                                  (node.id, node.title or "", node.body or ""))
+                self.conn.execute(
+                    "INSERT INTO node_fts(id,title,body,symptom,fix) VALUES(?,?,?,?,?)",
+                    (node.id, node.title or "", node.body or "",
+                     node.symptom or "", node.fix or ""))
             self.conn.commit()
 
     def upsert_edge(self, edge: Edge) -> None:
@@ -252,8 +271,9 @@ class _SQLiteBackend(_Backend):
                        "WHERE node_fts MATCH ?")
                 params.append(_fts_query(q))
             else:
-                sql = "SELECT * FROM node n WHERE (title LIKE ? OR body LIKE ?)"
-                params += [f"%{q}%", f"%{q}%"]
+                sql = ("SELECT * FROM node n WHERE (title LIKE ? OR body LIKE ? "
+                       "OR symptom LIKE ? OR fix LIKE ?)")
+                params += [f"%{q}%"] * 4
             if scope:
                 sql += " AND n.scope=?" if "node_fts" in sql else " AND scope=?"
                 params.append(scope)
@@ -264,7 +284,11 @@ class _SQLiteBackend(_Backend):
             # FTS path: order by FTS5 relevance (rank) so the most task-relevant nodes come first,
             # not insertion order. LIKE fallback has no relevance signal — leave unordered.
             if "node_fts" in sql:
-                sql += " ORDER BY rank"
+                # Explicit column weights rather than bare `rank`, which weights every
+                # column equally: a term in the title should still beat the same term
+                # buried in a fix. One weight per FTS column, id first. The ratios track
+                # the Postgres tsvector weights so the two backends rank alike.
+                sql += " ORDER BY bm25(node_fts, 0.0, 8.0, 4.0, 4.0, 2.0)"
             sql += " LIMIT ?"
             params.append(limit)
             rows = self.conn.execute(sql, params).fetchall()
@@ -316,10 +340,15 @@ def _fts_query(q: str) -> str:
 # Postgres backend — same schema; ranked full-text search mirroring the FTS5 path
 # ---------------------------------------------------------------------------
 
-# Weighted tsvector: title (A) outranks body (B). The GIN index in init_schema uses the
-# EXACT same expression — Postgres only uses an expression index when the query matches it.
+# Weighted tsvector: title (A) outranks body and symptom (B), which outrank fix (C).
+# symptom is indexed because it is the field the whole design calls "what a reader matches
+# against"; leaving it out made a record whose distinguishing words lived there
+# unretrievable. The GIN index in init_schema uses the EXACT same expression — Postgres
+# only uses an expression index when the query matches it character for character.
 _PG_TSV = ("setweight(to_tsvector('english', coalesce(title,'')), 'A') || "
-           "setweight(to_tsvector('english', coalesce(body,'')), 'B')")
+           "setweight(to_tsvector('english', coalesce(body,'')), 'B') || "
+           "setweight(to_tsvector('english', coalesce(symptom,'')), 'B') || "
+           "setweight(to_tsvector('english', coalesce(fix,'')), 'C')")
 
 
 def _pg_ts_query(q: str) -> str:
@@ -354,6 +383,14 @@ class _PostgresBackend(_Backend):
             cur.execute("""CREATE TABLE IF NOT EXISTS edge(
                 src TEXT NOT NULL, rel TEXT NOT NULL, dst TEXT NOT NULL, created_at BIGINT NOT NULL,
                 PRIMARY KEY (src, rel, dst))""")
+            # IF NOT EXISTS is keyed on the NAME, not the expression, so a store created
+            # before symptom/fix joined the tsvector would keep an index Postgres can no
+            # longer use for the new query — silently degrading every search to a
+            # sequential scan. Drop it when its definition no longer matches.
+            cur.execute("SELECT indexdef FROM pg_indexes WHERE indexname='node_tsv_idx'")
+            row = cur.fetchone()
+            if row and "symptom" not in row[0]:
+                cur.execute("DROP INDEX node_tsv_idx")
             cur.execute(f"CREATE INDEX IF NOT EXISTS node_tsv_idx ON node USING GIN (({_PG_TSV}))")
 
     def upsert_node(self, node: Node):
