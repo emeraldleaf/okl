@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.1
+
+### Security
+
+- **Setting `OKL_TOKEN` now also removes `/openapi.json`, `/docs` and `/redoc`.** They
+  were left serving 200 to anonymous callers by the 0.3.0 work that closed every data
+  route, because FastAPI mounts them itself — they are not handlers, so the per-handler
+  auth sweep could not reach them. They leak no records, but they publish the endpoint
+  list, every schema, and which routes want a credential. With no token set the
+  interactive docs remain available, since that case is a developer's laptop.
+
 ## 0.3.0
 
 Everything here came from running three things that had been written but never

@@ -355,6 +355,44 @@ def test_asgi_entrypoint_resolves_to_a_real_app_without_importing_the_database(m
         getattr(svc, "nonexistent_attribute")  # noqa: B009 — the lookup IS the assertion
 
 
+def test_token_also_takes_down_the_openapi_spec_and_docs_ui(monkeypatch):
+    """Setting OKL_TOKEN removes /openapi.json, /docs and /redoc; without it they stay.
+
+    These were missed when the data routes were closed, because they are the one part of
+    the surface `_auth` cannot reach — FastAPI mounts them itself, so adding a dependency
+    to every handler leaves them open. They do not leak records, but they publish the
+    endpoint list, every schema and exactly which routes want a credential: the map you
+    would draw before attacking the rest. Found by reading the store's own rule that
+    OpenAPI specs are dev-only, then testing whether this service obeyed it.
+    """
+    pytest.importorskip("fastapi")
+    pytest.importorskip("httpx")
+    from fastapi.testclient import TestClient
+
+    from okl.service import create_app
+
+    s = Store("sqlite:///:memory:")
+
+    # ASSERT (1) — with a token, the spec routes are gone entirely (404, not 401: the
+    # route does not exist, so there is nothing to probe or brute-force)
+    monkeypatch.setenv("OKL_TOKEN", "s3cret")
+    closed = TestClient(create_app(store=s))
+    for path in ("/openapi.json", "/docs", "/redoc"):
+        assert closed.get(path).status_code == 404, f"{path} still served with a token set"
+
+    # ASSERT (2) — the data routes still work with the credential, so removing the spec
+    # did not remove the API
+    assert closed.post("/check", json={"repo": "x", "task": "t"},
+                       headers={"Authorization": "Bearer s3cret"}).status_code == 200
+
+    # ASSERT (3) — with no token this is someone's laptop, and the interactive docs are
+    # useful there. Taking them away unconditionally would be a worse tool for no gain.
+    monkeypatch.delenv("OKL_TOKEN", raising=False)
+    open_app = TestClient(create_app(store=s))
+    assert open_app.get("/openapi.json").status_code == 200
+    assert open_app.get("/docs").status_code == 200
+
+
 def test_cli_check_fails_closed_when_the_service_refuses_it(tmp_path, monkeypatch, capsys):
     """A 401 is a REFUSED check, not a clean one: exit 2, no reassuring output.
 

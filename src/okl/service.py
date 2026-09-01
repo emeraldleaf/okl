@@ -66,8 +66,6 @@ class VerifyReq(BaseModel):
 
 
 def create_app(store: Store | None = None) -> FastAPI:
-    app = FastAPI(title="OKL — the sixth surface", version="0.1.0")
-    _store = store or Store(os.environ.get("OKL_DATABASE_URL"))
     # Optional shared-secret gate. If OKL_TOKEN is set it covers READS as well as
     # writes. Reads used to be open while writes were gated, which meant a deployed
     # service handed anyone who found the URL a `GET /nodes` dump of the org's entire
@@ -75,6 +73,15 @@ def create_app(store: Store | None = None) -> FastAPI:
     # decisions. That is a catalogue of where the org is weak, and it is exactly the
     # material the layer exists to collect. If you set a token, you want it private.
     token = os.environ.get("OKL_TOKEN")
+    # The same reasoning reaches the spec routes, and they were missed when the data
+    # routes were closed: FastAPI serves /openapi.json, /docs and /redoc to anyone by
+    # default, and no `_auth` call can protect them because the framework mounts them
+    # itself. They leak the endpoint list, every schema and where the credential is
+    # required — the map you would draw before attacking the routes. Setting the token
+    # is the signal that this instance is not a laptop, so the spec comes down with it.
+    docs = {} if token is None else {"openapi_url": None, "docs_url": None, "redoc_url": None}
+    app = FastAPI(title="OKL — the sixth surface", version="0.1.0", **docs)
+    _store = store or Store(os.environ.get("OKL_DATABASE_URL"))
 
     def _auth(authorization: str | None) -> None:
         if token and authorization != f"Bearer {token}":
