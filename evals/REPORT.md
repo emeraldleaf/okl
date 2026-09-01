@@ -139,6 +139,36 @@ reproduced in 1/15.
 
 Conditional subset: 2/12 on the 4 tasks the baseline failed at least once.
 
+## 4b. Re-run after adding the relevance cutoff (2026-09-01)
+
+`check` gained a top-k cutoff: it keeps the highest-ranked `limit` records (12 by
+default) and reports how many it trimmed. That is a change to the retrieval path this
+report measures, so the A/B was re-run rather than assumed safe.
+
+| run | generator | judge | samples | baseline | briefed |
+|---|---|---|---|---|---|
+| ab-20260830-0003 (before cutoff) | sonnet | haiku | 3 | 8/24 (33%) | 1/24 (4%) |
+| **ab-20260901-0133 (after cutoff)** | sonnet | haiku | 3 | **10/24 (42%)** | **2/24 (8%)** |
+
+**Read the baseline first.** It moved 33% → 42% between runs, and the baseline arm never
+receives a briefing — nothing about it changed. That 9-point swing is run-to-run variance
+and sets the noise floor at n=24. The briefed arm's 4% → 8% is one additional
+reproduction, inside that band.
+
+**The one signal worth investigating** was `spa_tokens`, which went 0/3 → 2/3 briefed. If
+the cutoff had trimmed the relevant record, that would be the ADR's miss-rate trigger
+firing. It had not: the localStorage record appears in that task's briefing at
+`--limit 12` exactly as it does at `--limit 40`. The judge's verdicts show the model used
+`sessionStorage` via `WebStorageStateStore` and wrote a comment documenting the security
+trade-off — it had the rule, understood it, and chose a variant the strict signal still
+counts as web-storage persistence. (The earlier haiku run reproduced the same task 2/3
+before any cutoff existed.)
+
+That distinction is the one the flat-retrieval ADR is written around: its trigger is a
+**retrieval miss** — a record that exists in scope and was not surfaced — not a model
+failing to comply with a record it was handed. Measured miss rate after the cutoff
+remains zero. Compliance is a separate, unmeasured problem.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

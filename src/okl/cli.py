@@ -169,14 +169,26 @@ def cmd_connect(args) -> int:
 
 def cmd_check(args) -> int:
     client = Client()
+    if not client.configured:
+        # FAIL CLOSED. Without a config there is no store to read; proceeding would
+        # create an empty database here and then report a clean check against it —
+        # "no rules apply" when the truth is "nothing was ever asked".
+        print("OKL NOT CONFIGURED — refusing to report a clean check.\n"
+              "No .okl/config.json in this directory or any parent, and no OKL_SERVICE_URL.\n"
+              "Run `okl init` here, or `okl connect <url>` to point at a shared store.",
+              file=sys.stderr)
+        return 2
     try:
-        result = client.check(args.task, repo=args.repo)
+        result = client.check(args.task, repo=args.repo, limit=args.limit)
     except OKLUnreachable as e:
         # FAIL CLOSED — loud, non-zero, no reassuring empty result.
         print(f"OKL UNREACHABLE — refusing to report a clean check.\n{e}", file=sys.stderr)
         return 2
     if args.format == "json":
         _print_json(result)
+    elif args.format == "actions":
+        # compact: the imperative list only, for small-context callers (subagents, CI)
+        print(core.render_actions_only(result, limit=args.limit))
     else:
         print(core.render_check_for_agent(result))
     return 0
@@ -339,32 +351,93 @@ def cmd_bootstrap(args) -> int:
     out = Path(args.out)
     out.write_text(json.dumps(proposal, indent=1))
     n = len(proposal["nodes"])
-    print(f"✓ proposed {n} starter node(s) → {out}")
+    print(f"✓ proposed {n} starter record(s) → {out}")
+    if n == 0:
+        print("  Nothing found. This command reads only git history and file names, so it")
+        print("  comes up empty on young repos and on ones whose history is uninformative.")
     print("  Review + edit (set scope, add symptom/cause/fix, delete noise), then:")
     print(f"    okl seed {out}")
+    print("\n  Better: ask your coding agent to run /seed-from-codebase (stamped by")
+    print("  `okl scaffold`). It reads the code itself — the guard rails, the CI config,")
+    print("  the fix commits — and proposes records with a file:line citation each.")
     return 0
 
 
+def _bundled_seed_dir() -> Path:
+    """Where the shipped seed packs live: the repo's seed/ in a checkout, or inside the
+    installed package. Checked in that order so a clone exercises its own files."""
+    repo_seed = Path(__file__).parent.parent.parent / "seed"
+    return repo_seed if repo_seed.exists() else Path(__file__).parent / "seed"
+
+
+def _describe_pack(path: Path) -> tuple[int, set[str]]:
+    """Count a pack's records and collect its subject tags, so the listing can say what
+    a pack is ABOUT before anyone imports it."""
+    try:
+        data = json.loads(path.read_text())
+    except (json.JSONDecodeError, OSError):
+        return 0, set()
+    tags: set[str] = set()
+    for node in data.get("nodes", []):
+        tags |= {t.strip() for t in (node.get("tags") or "").split(",") if t.strip()}
+    return len(data.get("nodes", [])), tags
+
+
 def cmd_seed(args) -> int:
+    """Import seed packs — deliberately a choice, not a default.
+
+    The bundled packs carry real rules from specific stacks. Importing all of them into
+    an unrelated project fills its briefings with noise about frameworks it does not use,
+    and because they are org-scoped that noise then reaches every connected repo. So a
+    bare `okl seed` lists what is available and imports nothing; `--all` is the explicit
+    opt-in.
+    """
     import glob
-    from pathlib import Path
 
     from .seed import seed_from_file
-    path = args.path or str(Path(__file__).parent.parent.parent / "seed")
-    if path == str(Path(__file__).parent.parent.parent / "seed") and not Path(path).exists():
-        # installed package: seeds ship under the package dir
-        path = str(Path(__file__).parent / "seed")
-    targets = (sorted(glob.glob(str(Path(path) / "*-defects.json")))
-               if Path(path).is_dir() else [path])
+    seed_dir = _bundled_seed_dir()
+    interests = {t.lower() for t in (Client().interests or [])}
+
+    if not args.path and not args.all:
+        packs = sorted(glob.glob(str(seed_dir / "*.json")))
+        if not packs:
+            print(f"no seed packs found under {seed_dir}")
+            return 1
+        print("Seed packs available (nothing has been imported):\n")
+        for pk in packs:
+            f = Path(pk)
+            count, tags = _describe_pack(f)
+            hit = " <- matches your interests" if interests & {t.lower() for t in tags} else ""
+            print(f"  {f.name:38} {count:3} records  [{', '.join(sorted(tags)) or 'untagged'}]{hit}")
+        print("\nThese hold real rules from specific stacks. Import the ones that match")
+        print("your project rather than all of them:\n")
+        print(f"  okl seed {seed_dir}/<pack>.json     one pack")
+        print("  okl seed --all                        every pack above")
+        if interests:
+            print(f"\nThis repo declares: {', '.join(sorted(interests))}. Records tagged outside")
+            print("those subjects stay filtered out of briefings even once imported.")
+        else:
+            print("\nTip: `okl init --interests \"<subjects>\"` filters what reaches a briefing.")
+        return 0
+
+    if args.all:
+        targets = sorted(glob.glob(str(seed_dir / "*.json")))
+    else:
+        path = Path(args.path)
+        targets = sorted(glob.glob(str(path / "*.json"))) if path.is_dir() else [str(path)]
     if not targets:
-        print(f"no *-defects.json found under {path}")
+        print(f"no seed files found at {args.path or seed_dir}")
         return 1
+
     client, total = Client(), 0
     for t in targets:
         n = seed_from_file(client, t)
         total += n
-        print(f"  ✓ {n} node(s) from {Path(t).name}")
-    print(f"✓ seeded {total} node(s) from {len(targets)} file(s)")
+        print(f"  ✓ {n} record(s) from {Path(t).name}")
+    print(f"✓ seeded {total} record(s) from {len(targets)} file(s)")
+    if not interests:
+        print("  Note: no interests declared, so any imported record can surface in any")
+        print('  briefing here. `okl init --interests "<subjects>"` narrows that.')
     return 0
 
 
@@ -422,7 +495,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     pk = sub.add_parser("check", help="pre-task read: relevant lessons for a task")
     pk.add_argument("--task", required=True); pk.add_argument("--repo")
-    pk.add_argument("--format", choices=["agent", "json"], default="agent")
+    pk.add_argument("--format", choices=["agent", "actions", "json"], default="agent",
+                    help="agent: the full briefing. actions: the routed action list only, "
+                         "for callers on a small context budget. json: the raw result.")
+    pk.add_argument("--limit", type=int, default=None,
+                    help="cap how many records the briefing draws on (and how many actions "
+                         "'--format actions' prints). Use with subagents on a token budget.")
     pk.set_defaults(func=cmd_check)
 
     pr = sub.add_parser("record", help="record a node (defect/gate/claim/...)")
@@ -480,7 +558,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     pd = sub.add_parser("seed", help="ingest seed file(s) as nodes (a *-defects.json, or a dir of them)")
     pd.add_argument("path", nargs="?", default=None,
-                    help="a seed JSON, or a directory of *-defects.json (default: the bundled seed dir — all three repos)")
+                    help="a seed JSON file, or a directory of them. With no path, lists the "
+                         "bundled packs and imports nothing.")
+    pd.add_argument("--all", action="store_true",
+                    help="import every bundled pack. Explicit on purpose: the packs carry "
+                         "stack-specific rules, and importing all of them into an unrelated "
+                         "project fills its briefings with noise.")
     pd.set_defaults(func=cmd_seed)
 
     psc = sub.add_parser("scaffold", help="stamp the portable method kit into a repo")

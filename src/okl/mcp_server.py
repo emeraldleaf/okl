@@ -22,19 +22,27 @@ def _build():
     client = Client()
 
     @mcp.tool()
-    def okl_check(task: str, repo: str | None = None) -> str:
-        """Read the org's relevant encoded lessons BEFORE starting a task.
+    def okl_check(task: str, repo: str | None = None, limit: int | None = None,
+                  compact: bool = False) -> str:
+        """Read the org's encoded rules that apply to a task, BEFORE starting it.
 
-        Returns armed gates (with the defect each catches), past defects in this
-        area, live retractions, retired identifiers, THREAT prior-art, rules, and
-        vocabulary — as markdown to read before writing any code. Call this first.
+        Returns armed gates (with the defect each catches), past defects in this area,
+        live retractions, retired identifiers, THREAT prior-art, rules and vocabulary.
+        Call this first.
+
+        `compact=True` returns ONLY the imperative action list (what to fix, when you
+        see it, what to do) — roughly 250 tokens at limit=3 versus ~4,400 for the full
+        briefing. Use it when working in a small context budget, e.g. a subagent handling
+        one focused subtask. `limit` caps how many records are drawn on.
         """
         try:
-            result = client.check(task, repo=repo)
+            result = client.check(task, repo=repo, limit=limit)
         except OKLUnreachable as e:
             return (f"⚠️ OKL UNREACHABLE — cannot confirm a clean check ({e}). "
-                    "Treat as: lessons may exist that you cannot see. Proceed with caution "
+                    "Treat as: rules may exist that you cannot see. Proceed with caution "
                     "and re-run once connectivity is restored.")
+        if compact:
+            return core.render_actions_only(result, limit=limit)
         return core.render_check_for_agent(result)
 
     @mcp.tool()

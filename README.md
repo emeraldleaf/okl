@@ -330,6 +330,7 @@ mode, good for trying it before you deploy anything.
 ```bash
 # 1. READ the relevant lessons before starting a task (the load-bearing move)
 okl check --task "add an endpoint that returns an order for the logged-in user"
+#   add --format actions --limit 3 for a ~240-token version (subagents, CI)
 
 # 2. RECORD a lesson after you learn it, with an actionable symptom/cause/fix
 okl record --type Defect --scope org --tags "security" \
@@ -368,6 +369,59 @@ okl metric           # recurrence-after-arming: defect classes that came back in
                      #   where a catching check existed but wasn't turned on
 ```
 
+## Subagents and small context budgets
+
+A full briefing costs roughly **4,400 tokens** — fine for a main session with a large
+window, punishing for a subagent working in a few thousand. That asymmetry matters
+because subagents are exactly where org rules get lost: a focused worker handling one
+subtask has the least context and the most need for "here is the mistake this codebase
+already made."
+
+`--format actions` solves it by dropping everything except the imperative list:
+
+```bash
+okl check --task "add an endpoint returning an order for the logged-in user" \
+  --format actions --limit 3
+```
+
+```
+OKL — 3 rule(s) apply before you start:
+- FIX: Missing ownership scope check is an IDOR (CWE-639) [when: an endpoint fetches an
+  entity by id with no owner/tenant predicate]
+  -> add the caller's owner id to the WHERE clause; return 404 (not 403) on no match
+...
+```
+
+**Measured on this repo's own store:** ~240 tokens at `--limit 3`, ~390 at `--limit 5`,
+~630 at `--limit 8`, against ~2,650 for the full briefing. Cheap enough to call per subtask.
+
+The full briefing is itself capped: `check` keeps the top `--limit` records (12 by
+default) from the ranked, filtered set and says how many it trimmed. Before that cutoff
+existed, one task on this store returned 20 records and ~4,400 tokens. Re-running the A/B
+after adding it showed no retrieval miss — the one task that regressed still had its rule
+in the briefing and the model simply did not follow it, which is a compliance problem
+rather than a retrieval one. See [evals/REPORT.md](evals/REPORT.md).
+
+What it drops: the bucketed sections, the prose bodies explaining *why* each record
+exists, prior-art notes, and the stale-record footer. What it keeps is what changes
+behaviour: the verb, the symptom to watch for, and the fix.
+
+**Wiring it into a subagent.** Three ways, in order of how much enforcement you get:
+
+1. **The MCP tool** — `okl_check(task=..., compact=True, limit=3)`. Any subagent with
+   MCP access can call it. Discretionary: the agent has to choose to.
+2. **In the subagent's prompt** — have the spawning agent run `okl check --format
+   actions --limit 3` and paste the result into the subtask description. Not
+   discretionary, and it costs the parent almost nothing.
+3. **A wrapper script** that runs the check and prepends it to whatever prompt it is
+   handed. This is the enforced version for orchestration you control.
+
+**A caveat worth stating.** `--limit` caps how many records the briefing draws on, and
+ranking decides which survive. If a task's most relevant rule ranks fourth and you ask
+for three, you will not see it, and nothing will tell you. The full briefing exists
+because it does not make that trade. Use the compact form where a token budget forces
+the choice, not by default.
+
 ## Verification: don't let a step grade itself
 
 A step reporting "I succeeded" and the work actually being done are two different facts,
@@ -403,17 +457,36 @@ folder.) Two clarifications that stop the common misreadings:
 
 ## Seed it (so the very first `check` returns something)
 
-An empty store returns nothing. You can hand-`record` your first lessons, or load a
-starter file — a JSON list of notes and links:
+An empty store returns nothing, and says so — a check against an empty store reports
+that it proved nothing rather than reporting "no rules apply". Three ways to fill it:
+
+**1. See what ships, then choose.** A bare `okl seed` imports nothing; it lists the
+bundled packs with their record counts and subject tags, marking the ones that match
+this repo's declared interests:
 
 ```bash
-okl seed seed/react-defects.json      # or point at a directory to load several
+okl seed                              # list the packs, import nothing
+okl seed <path>/rag-defects.json      # import one
+okl seed --all                        # import every pack (explicit on purpose)
 ```
 
-The bundled seed files hold real, dated lessons from a few production codebases
-(a .NET service, a geospatial ML pipeline, a Python search service, a React app).
-Treat them as examples of the format and as genuinely useful starting defects; delete
-what doesn't apply to you.
+The packs hold real, dated records from production codebases (a .NET service, a
+geospatial ML pipeline, a Python RAG service, a React app). They are org-scoped, so
+importing packs for stacks you do not use fills every briefing here with noise about
+frameworks you will never touch — which is why `--all` is opt-in rather than default.
+
+**2. Generate records from this codebase.** If you use a coding agent, the scaffold
+stamps a `/seed-from-codebase` command that has the agent read your repo — the guard
+rails already in the code, what CI enforces, the fix commits, the existing canon — and
+propose records with a `file:line` citation each. Everything it proposes is repo-scoped
+and unverified by design; it writes a reviewable file and imports nothing, because a
+plausible rule no file supports is worse than an empty store.
+
+**3. `okl bootstrap`** greps git history and file names for candidates. It is the weakest
+of the three and comes up empty on young repos; prefer option 2 when an agent is available.
+
+Whichever you use, review before importing. Choosing a record's scope is the curation
+step that keeps a shared layer from filling with one project's noise.
 
 ---
 

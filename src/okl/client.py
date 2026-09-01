@@ -59,6 +59,13 @@ class Client:
     def mode(self) -> str:
         return "remote" if self.service_url else "local"
 
+    @property
+    def configured(self) -> bool:
+        """True when this directory (or an ancestor) has been `okl init`-ed, or a
+        service URL is set. Reading from an unconfigured directory would silently
+        create an empty database and then report a clean check against it."""
+        return bool(self.service_url) or _find_config() is not None
+
     def _local_store(self) -> Store:
         if self._store is None:
             # local store lives next to the config, or ./okl.db
@@ -93,12 +100,17 @@ class Client:
             raise OKLUnreachable(f"OKL service unreachable at {url}: {e}") from e
 
     # -- operations ---------------------------------------------------------
-    def check(self, task: str, repo: str | None = None) -> dict:
+    def check(self, task: str, repo: str | None = None, limit: int | None = None) -> dict:
         repo = repo or self.repo
+        payload = {"repo": repo, "task": task, "interests": self.interests or None}
+        if limit is not None:
+            payload["limit"] = limit
         if self.mode == "remote":
-            return self._post("/check", {"repo": repo, "task": task,
-                                         "interests": self.interests or None})
-        return core.check(self._local_store(), repo, task, interests=self.interests)
+            return self._post("/check", payload)
+        kw = {"interests": self.interests}
+        if limit is not None:
+            kw["limit"] = limit
+        return core.check(self._local_store(), repo, task, **kw)
 
     def record(self, **kwargs) -> str:
         # Default the repo in BOTH modes: `--scope repo` needs it to become repo:<name>,

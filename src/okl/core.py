@@ -22,6 +22,15 @@ def _node_public(n: Node) -> dict[str, Any]:
 
 
 def _in_scope(n: Node, repo_scope: str, interests: list[str] | None) -> bool:
+    """Decide whether one record may appear in this repo's briefing.
+
+    Two independent axes, and it helps to keep them straight:
+      - SCOPE is permission. "org" means every repo; "repo:<name>" means exactly one.
+      - TAGS are subject. They narrow an org record to repos that care about the topic.
+
+    The order below matters. A repo's own records pass first and unconditionally, so a
+    repo can never be filtered away from its own knowledge by its own settings.
+    """
     """Scope answers "who may see this"; tags answer "what is this about".
     The repo's own nodes and untagged nodes always pass — declared interests
     only drop org nodes tagged entirely outside them."""
@@ -49,15 +58,37 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     "who may see this", tags answer "what is this about". Untagged nodes and the
     repo's own nodes always pass — declaring interests must never hide them.
     """
+    # THE PIPELINE, in four steps. Each one narrows what reaches the agent:
+    #
+    #   1. SEARCH   — full-text match the task description against every record's title
+    #                 and body. We ask for 3x `limit` because the next two steps throw
+    #                 records away, and we would rather over-fetch cheaply than come up
+    #                 short after filtering.
+    #   2. FILTER   — drop anything this repo may not see (scope) or does not care about
+    #                 (interests). See _in_scope below.
+    #   3. BUCKET   — sort survivors by type, so the briefing can lead with gates and
+    #                 defects rather than emitting one undifferentiated list.
+    #   4. ROUTE    — turn the buckets into an ordered list of imperatives.
     repo_scope = f"repo:{repo}"
     hits = [n for n in store.search(task, limit=limit * 3)
             if _in_scope(n, repo_scope, interests)]
+    # THE CUTOFF. store.search returns BM25-ranked results, but full-text matching is
+    # permissive: on a mature store a plausible task matches most of it, so without a
+    # cap the "briefing" becomes the library. Ranking already put the best first, so
+    # taking the top `limit` keeps what matters and drops the tail. This is the fix for
+    # the recorded defect "ranking works, filtering doesn't" — raise `limit` when a task
+    # genuinely needs more, rather than removing the cap.
+    dropped = max(0, len(hits) - limit)
+    hits = hits[:limit]
 
     buckets: dict[str, list[dict]] = {
         "armed_gates": [], "relevant_defects": [], "live_retractions": [],
         "in_scope_tombstones": [], "threat_prior_art": [], "rules": [],
         "vocabulary": [], "stale_warnings": [],
     }
+    # Step 3: bucket by type. A record can land in stale_warnings AND its type bucket —
+    # staleness demotes a record, it does not hide it, so the reader still sees the
+    # content and is told not to trust it blindly.
     for n in hits:
         pub = _node_public(n)
         if n.is_stale():
@@ -77,7 +108,9 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
         elif n.type == "Vocabulary":
             buckets["vocabulary"].append(pub)
 
-    # For each armed gate, pull the defect it CATCHES so the briefing says *why*.
+    # Follow each gate's CATCHES edge to name the defect it prevents. "Run this check"
+    # is an order; "run this check, it catches THIS bug" is a reason, and a reason is
+    # what survives contact with someone in a hurry.
     for g in buckets["armed_gates"]:
         why = {n.title for (e, n) in store.neighbors(g["id"], rels=["CATCHES"])
                if n.type == "Defect"}
@@ -101,9 +134,18 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
         actions.append({"kind": "avoid_identifier", "target": t["title"],
                         "how": "do not reintroduce this retired identifier"})
 
+    # stale_warnings is excluded from the count because those records are already
+    # counted inside their own type bucket; including them would double-count.
     total = sum(len(v) for k, v in buckets.items() if k != "stale_warnings")
-    return {"repo": repo, "task": task, "match_count": total,
-            "next_actions": actions, **buckets}
+    out = {"repo": repo, "task": task, "match_count": total,
+           "next_actions": actions, "dropped_by_cutoff": dropped, **buckets}
+    # Zero matches has two very different causes: the store holds rules and none apply
+    # here, or the store holds nothing at all. Reporting both as "proceed" is the
+    # silence-as-safety failure this project exists to prevent, so the count travels
+    # with the result. Only computed on the (rare) empty-result path.
+    if total == 0:
+        out["store_records"] = len(store.all_nodes())
+    return out
 
 
 def record(store: Store, *, type: str, title: str, scope: str, repo: str | None = None,
@@ -168,6 +210,33 @@ def search(store: Store, query: str, scope: str | None = None,
     return [_node_public(n) for n in store.search(query, scope, node_types, limit)]
 
 
+def render_actions_only(result: dict[str, Any], limit: int | None = None) -> str:
+    """The routed action list and nothing else, for callers on a small context budget.
+
+    A subagent working in a few thousand tokens cannot afford the full briefing (~4-5k
+    tokens of bucketed detail). What it actually needs to change its behaviour is the
+    imperative list: what to fix, when you see it, what to do. This drops the buckets,
+    the prose bodies, and the stale-node footer, keeping one line per action.
+    """
+    actions = result.get("next_actions") or []
+    if limit is not None:
+        actions = actions[:limit]
+    if not actions:
+        if result.get("store_records") == 0:
+            return ("OKL: the store is EMPTY (0 records). This is not 'no rules apply' — "
+                    "nothing has been recorded yet, so this check proves nothing. "
+                    "Run `okl seed` or record your first rule.")
+        return f"OKL: no encoded rule applies to this task ({result['repo']}). Proceed."
+    verb = {"arm_gate": "ARM", "apply_fix": "FIX", "avoid_retracted": "AVOID",
+            "avoid_identifier": "AVOID"}
+    out = [f"OKL — {len(actions)} rule(s) apply before you start:"]
+    for a in actions:
+        sym = f" [when: {a['symptom']}]" if a.get("symptom") else ""
+        out.append(f"- {verb.get(a['kind'], 'DO')}: {a['target']}{sym}")
+        out.append(f"  -> {a['how']}")
+    return "\n".join(out)
+
+
 def render_check_for_agent(result: dict[str, Any]) -> str:
     """Format a check() result as compact markdown for injection into agent context."""
     lines = [f"## OKL briefing — {result['repo']} · task: {result['task']}",
@@ -217,7 +286,16 @@ def render_check_for_agent(result: dict[str, Any]) -> str:
         lines.append("")
     if result.get("stale_warnings"):
         lines.append(f"> {len(result['stale_warnings'])} node(s) are past TTL and shown demoted — re-verify before trusting.")
+    if result.get("dropped_by_cutoff"):
+        lines.append(f"> {result['dropped_by_cutoff']} lower-ranked record(s) were trimmed to keep this "
+                     "briefing short. Raise --limit or narrow the task if you expected more.")
     if not any_hit:
-        lines.append("_No encoded lessons matched this task. Proceeding with a clean slate — "
-                     "record anything you learn with `okl record`._")
+        if result.get("store_records") == 0:
+            lines.append("> **The store is EMPTY (0 records).** This check proves nothing: there is "
+                         "no encoded knowledge to match against yet. That is different from "
+                         "\"no rule applies here\". Run `okl seed`, or record your first rule "
+                         "with `okl record`.")
+        else:
+            lines.append("_No encoded rule matched this task. Proceeding with a clean slate — "
+                         "record anything you learn with `okl record`._")
     return "\n".join(lines)
