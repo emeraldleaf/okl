@@ -25,7 +25,7 @@ dev = [
   # that changed nothing, which is a recorded defect in this repo's own store.
   # Verified against PyPI and run green here on 2026-09-02, rather than a
   # plausible-looking guess: an invented version 404s the install step.
-  "pytest==8.4.2", "ruff==0.16.5", "mypy==2.3.1",
+  "pytest==8.4.2", "pytest-cov==7.1.0", "ruff==0.16.5", "mypy==2.3.1",
   "fastapi>=0.110", "uvicorn>=0.29", "pydantic>=2", "httpx>=0.27",
 ]
 
@@ -42,6 +42,19 @@ packages = ["src/okl"]
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["okl"]
+# The scaffold directory is template content copied into other repos, not code this
+# suite executes.
+omit = ["*/scaffold/*"]
+
+[tool.coverage.report]
+# A ratchet at the level measured on 2026-09-02, not an aspiration. It exists to stop
+# coverage sliding while features land, and should only ever be raised. The weak spots
+# it is deliberately NOT hiding: bootstrap.py has no test at all, and cli.py is at 49%.
+fail_under = 69
+show_missing = true
 
 [tool.mypy]
 python_version = "3.10"

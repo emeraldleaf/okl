@@ -1,0 +1,32 @@
+# Dependabot.
+#
+# This exists because of the SHA pinning, not despite it. Pinning actions to a commit
+# closes the "a mutable tag moved under me" hole and opens a quieter one: the pin never
+# updates, so a security fix in an action never arrives. Pinning without an update path
+# is how a repo ends up on a two-year-old checkout action and calls it hardening.
+# Dependabot rewrites the SHA and the trailing `# v5` comment together.
+version: 2
+
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    labels: ["dependencies", "ci"]
+    commit-message:
+      prefix: "ci"
+
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+    labels: ["dependencies"]
+    commit-message:
+      prefix: "deps"
+    # The gating tools are pinned exactly on purpose (a range lets a new release
+    # retro-fail a branch that changed nothing). Dependabot is the intended way to move
+    # those pins: a PR that runs the full suite against the new version before it lands,
+    # rather than a range that upgrades silently mid-branch.
+    groups:
+      dev-tooling:
+        patterns: ["pytest", "ruff", "mypy"]
