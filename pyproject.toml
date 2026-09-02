@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 # Distribution name only. The CLI command, the import package, and the repo are all `okl`;
 # PyPI rejects `okl` as too similar to the existing `oki` (l/i are treated as confusable).
 name = "org-knowledge-layer"
-version = "0.3.1"
+version = "0.4.0"
 description = "Org Knowledge Layer — an installable sixth surface that carries encoded engineering lessons across repos."
 readme = "README.md"
 requires-python = ">=3.10"

@@ -1,5 +1,54 @@
 # Changelog
 
+## 0.4.0
+
+### Behaviour changes worth reading before upgrading
+
+- **Stack tags now filter exclusively.** A record naming a stack (`dotnet`, `react`,
+  `geospatial`, `python`, `python-rag`) is only shown to a repo that declared that stack
+  in its `interests`. Previously any shared tag let it through, so a rule tagged
+  `dotnet,method` reached every repo interested in `method` — a subject 75 records carry.
+  **If you declare `interests`, expect fewer records after upgrading.** That is the point,
+  but it is a change in what your briefings contain. Repos that declare no interests are
+  unaffected, and untagged records still always pass.
+- **`symptom` and `fix` are now searchable.** They were not, which meant a record written
+  the way the docs tell you to write it — short title, the distinguishing words in the
+  symptom — could not be retrieved at all. Existing stores rebuild their index on first
+  open; you do not need to re-record anything.
+
+### Added
+
+- **`okl dedup`** reports near-duplicate records for review. Lexical and explainable:
+  per-field weighted Jaccard over title, symptom and fix, IDF-weighted from your own
+  corpus. It never merges or drops anything — the measured score bands for true
+  paraphrases and for distinct-but-related records overlap, so the call is a person's.
+  The same check runs as an advisory when importing an agent-proposed pack.
+- **`/seed-from-docs`** mines the specs, ADRs and rules files you already wrote into typed
+  records. Built around one distinction: a record is a standing instruction that outlives
+  the work item it came from, so "deep offsets use keyset pagination" belongs and "add
+  pagination to /orders this sprint" does not.
+- A pack declaring `_proposed_by` is refused unless every node carries a `found_by`
+  citation, so the rule the seeding commands state is enforced at import rather than
+  remembered by a reviewer.
+
+### Fixed
+
+- `Client._remote_url` validates the URL scheme once. A `service_url` from config could
+  name `file://`, turning a remote read into a local file read.
+- `OKLUnreachable` is now `OKLUnreachableError`, with the old name kept as an alias so
+  existing `except` clauses still work.
+- Drift timestamps are timezone-aware; `utcfromtimestamp` is deprecated from Python 3.12
+  and returned a naive datetime that read as local time when compared across machines.
+
+### Internal
+
+- `_Backend` is a `typing.Protocol` whose docstring states the behavioural contract, with
+  one conformance test both backends run — the defect it guards (Postgres satisfying every
+  signature while running an unranked match) was invisible to signatures alone.
+- mypy, and ruff widened from 6 rule families to 15 including security and complexity,
+  both wired into CI alongside a secret scan, the method gates and a coverage floor.
+
+
 ## 0.3.1
 
 ### Security
