@@ -51,9 +51,9 @@ jobs:
         run: python evals/run_evals.py --fail-rate 0.20
 
   review:
-    # The architecture reviewer, run headless on the PR diff. Soft-passes until
-    # ANTHROPIC_API_KEY exists, so installing the kit never wedges merges; it becomes a
-    # blocking gate the moment the secret is set, with no second step to remember.
+    # The architecture reviewer, run headless on the PR diff. OFF unless you set the
+    # REVIEW_CMD repository variable to a CLI that takes a prompt on stdin — any vendor,
+    # or a local model. Installing the kit costs you nothing and calls nobody's API.
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
@@ -61,9 +61,12 @@ jobs:
         with:
           fetch-depth: 0   # the reviewer diffs against the base branch
           persist-credentials: false
-      - name: Architecture review (soft-passes without ANTHROPIC_API_KEY)
+      - name: Architecture review (off unless REVIEW_CMD is set)
         env:
+          REVIEW_CMD: ${{ vars.REVIEW_CMD }}
+          # Whatever credential your REVIEW_CMD needs, named by you. Unset is fine.
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           REVIEW_BASE_REF: origin/${{ github.base_ref }}
         run: bash ci/review-agent.sh
 

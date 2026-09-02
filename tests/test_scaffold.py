@@ -528,15 +528,20 @@ def test_review_agent_soft_passes_until_it_is_configured(tmp_path, monkeypatch):
         return subprocess.run(["bash", str(script)], capture_output=True, text=True,
                               cwd=str(tmp_path), env=env)
 
-    # ASSERT (1) — no API key: soft pass, and it says how to turn it on
+    # ASSERT (1) — OFF by default. Installing the kit must not call anybody's API or
+    # spend anybody's money, so an unset REVIEW_CMD is a soft pass that says how to opt in.
     r = run({})
     assert r.returncode == 0, r.stderr
     assert "soft pass" in r.stdout
+    assert "REVIEW_CMD" in r.stdout
 
-    # ASSERT (2) — key set but the CLI absent (a runner without it): still a soft pass,
-    # never a mysterious red build
-    r = run({"ANTHROPIC_API_KEY": "x"})
+    # ASSERT (2) — vendor-neutral: the runner takes a COMMAND, not a provider. Naming one
+    # vendor's CLI here would contradict okl being harness-agnostic and would hand every
+    # consumer a bill. A command that is not installed is still a soft pass, never a
+    # mysterious red build.
+    r = run({"REVIEW_CMD": "definitely-not-installed -p"})
     assert r.returncode == 0, r.stderr
+    assert "not on PATH" in (r.stdout + r.stderr)
 
     # ASSERT (3) — the verdict logic itself blocks only on must-fix. Extracted from the
     # script so the contract is tested rather than assumed; a reviewer that blocks on

@@ -5,29 +5,46 @@
 # never": .claude/agents/architecture-reviewer.md is listed as a review surface but nothing
 # triggers it, so in practice it runs when someone remembers, which is never.
 #
-# SOFT-PASSES when ANTHROPIC_API_KEY is unset. A repo that installs the kit before wiring a
-# key must not have its merges wedged by a gate it has not configured yet — the gate becomes
-# hard the moment the secret exists, with no second step to forget.
+# OFF BY DEFAULT, AND VENDOR-NEUTRAL. Set REVIEW_CMD to any CLI that reads a prompt on
+# stdin and writes the model's reply to stdout:
 #
-# Self-owned on purpose: no third-party review SaaS holds a token for your source. The
+#   REVIEW_CMD="claude -p --model sonnet"
+#   REVIEW_CMD="llm -m gpt-4o"
+#   REVIEW_CMD="ollama run qwen2.5-coder"        # local, no API cost at all
+#
+# Unset, the step soft-passes and says how to switch it on. okl is harness-agnostic —
+# hard-coding one vendor's CLI here would contradict that, and would hand every consumer
+# an API bill they never asked for. This mirrors GENERATOR_CMD/JUDGE_CMD in evals/.
+#
+# Self-owned on purpose: no third-party review SaaS holds a token for your source, and the
 # reviewer reads YOUR encoded rules (it calls `okl check` itself) rather than generic advice.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
-AGENT=".claude/agents/architecture-reviewer.md"
+# Located, not assumed: `okl scaffold --claude-dir` lets a repo name that directory
+# something other than .claude, and a hard-coded path silently skips the review in exactly
+# those repos — a gate that quietly does nothing is the failure this whole file exists to
+# fix. AGENT_FILE overrides for anything unusual.
+AGENT="${AGENT_FILE:-}"
+if [ -z "$AGENT" ]; then
+  AGENT="$(find . -maxdepth 3 -path ./.git -prune -o \
+           -name architecture-reviewer.md -print 2>/dev/null | head -1)"
+fi
 BASE="${REVIEW_BASE_REF:-origin/main}"
 
-if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
-  echo "review-agent: ANTHROPIC_API_KEY not set — skipping (soft pass)."
-  echo "  Set it as a repository secret to turn this into a blocking gate."
+if [ -z "${REVIEW_CMD:-}" ]; then
+  echo "review-agent: REVIEW_CMD not set — skipping (soft pass)."
+  echo "  Set it to any CLI that takes a prompt on stdin to turn this into a blocking gate,"
+  echo "  e.g. REVIEW_CMD=\"claude -p --model sonnet\" or REVIEW_CMD=\"ollama run qwen2.5-coder\"."
   exit 0
 fi
 if [ ! -f "$AGENT" ]; then
   echo "review-agent: no $AGENT — skipping (the reviewer ships with \`okl scaffold\`)."
   exit 0
 fi
-if ! command -v claude >/dev/null 2>&1; then
-  echo "review-agent: the \`claude\` CLI is not on PATH — skipping (soft pass)." >&2
+# shellcheck disable=SC2086 — REVIEW_CMD is a command line, so word splitting is intended
+if ! command -v ${REVIEW_CMD%% *} >/dev/null 2>&1; then
+  echo "review-agent: '${REVIEW_CMD%% *}' from REVIEW_CMD is not on PATH — skipping (soft pass)." >&2
   exit 0
 fi
 
@@ -72,7 +89,7 @@ EOF
 )"
 
 echo "review-agent: reviewing $(printf '%s' "$diff_text" | wc -l | tr -d ' ') lines of diff against $BASE"
-raw="$(printf '%s' "$prompt" | claude -p --model sonnet 2>/dev/null)"
+raw="$(printf '%s' "$prompt" | $REVIEW_CMD 2>/dev/null)"
 
 # Strip any markdown fence the model adds around the JSON.
 json="$(printf '%s' "$raw" | sed -e 's/^```json//' -e 's/^```//' -e '/^```$/d')"

@@ -80,10 +80,12 @@ jobs:
       # a new detection rule from retro-failing a branch that changed nothing.
       # The reviewer okl ships, run on okl. It was listed as a review surface with nothing
       # triggering it — the "enforcement surface that only runs on-demand runs never"
-      # failure, which this repo's own store names. Soft-passes until the secret is set.
-      - name: Architecture review (soft-passes without ANTHROPIC_API_KEY)
+      # failure this repo's own store names. Off unless REVIEW_CMD is set, so it costs
+      # nothing until someone decides it should.
+      - name: Architecture review (off unless REVIEW_CMD is set)
         if: github.event_name == 'pull_request'
         env:
+          REVIEW_CMD: ${{ vars.REVIEW_CMD }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           REVIEW_BASE_REF: origin/${{ github.base_ref }}
         run: bash ci/review-agent.sh
