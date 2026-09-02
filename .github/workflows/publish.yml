@@ -1,0 +1,90 @@
+# Release to PyPI on a version tag, using Trusted Publishing.
+#
+# There is no API token anywhere in this workflow, and none stored in the repository.
+# PyPI accepts the upload because GitHub vouches for it: the publish job mints a
+# short-lived OIDC token that names this repository, this workflow file and this
+# environment, and PyPI checks that against the trusted publisher it was told to expect.
+# A leaked repository secret cannot publish okl because there is no such secret.
+#
+# ONE-TIME SETUP ON PYPI (this workflow does nothing until it is done):
+#   pypi.org → the org-knowledge-layer project → Publishing → Add a pending publisher
+#     Owner:            emeraldleaf
+#     Repository:       okl
+#     Workflow name:    publish.yml
+#     Environment name: pypi
+# Then create the `pypi` environment under repo Settings → Environments. Adding a
+# required reviewer there makes every release a deliberate, approved act.
+name: publish
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09  # v5
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
+        with:
+          python-version: "3.12"
+
+      # The tag is the release's claim about what version this is; pyproject.toml is the
+      # version that actually gets uploaded. When they disagree, PyPI takes pyproject's
+      # answer and the tag becomes a lie that is permanent — you cannot reuse a version
+      # number on PyPI, so the mistake is not fixable, only worked around.
+      - name: Tag must match the version in pyproject.toml
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkg="$(python -c "import tomllib,pathlib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")"
+          echo "tag=$tag  pyproject=$pkg"
+          if [ "$tag" != "$pkg" ]; then
+            echo "::error::tag v$tag does not match pyproject version $pkg"
+            exit 1
+          fi
+
+      - name: Build
+        run: |
+          python -m pip install --upgrade build twine
+          python -m build
+          # `twine check` catches a malformed long_description, which PyPI rejects only
+          # after the upload has otherwise succeeded.
+          python -m twine check dist/*
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    # A named environment is what the PyPI trusted publisher is bound to, and it is where
+    # a required-reviewer rule can gate the release.
+    environment:
+      name: pypi
+      url: https://pypi.org/project/org-knowledge-layer/
+    permissions:
+      id-token: write      # mint the OIDC token PyPI verifies
+      attestations: write  # sign the artifacts
+      contents: read
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
+        with:
+          name: dist
+          path: dist/
+
+      # Provenance: a signed statement that these exact files were built by this workflow
+      # from this commit. It is what lets someone verify the wheel on PyPI came from the
+      # source they are reading, rather than trusting that it did.
+      - uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be  # v2
+        with:
+          subject-path: "dist/*"
+
+      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33  # release/v1
