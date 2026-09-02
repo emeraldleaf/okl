@@ -38,13 +38,17 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: github/codeql-action/init@6f5948dfacef28e207b48d0905cf90c03365536d  # v3
+      - uses: github/codeql-action/init@cdf488f595d80d6e07e03d4674febd5ab45fa938  # v4
         with:
           languages: python
+          # Python needs no compilation, and the autobuilder otherwise hunts for a
+          # setup.py that does not exist here (this is a PEP 621 pyproject project) and
+          # shells out to a python2 that runners no longer ship.
+          build-mode: none
           # security-extended adds the lower-severity security queries; this is a small
           # codebase and the extra noise is affordable.
           queries: security-extended
 
-      - uses: github/codeql-action/analyze@6f5948dfacef28e207b48d0905cf90c03365536d  # v3
+      - uses: github/codeql-action/analyze@cdf488f595d80d6e07e03d4674febd5ab45fa938  # v4
         with:
           category: "/language:python"

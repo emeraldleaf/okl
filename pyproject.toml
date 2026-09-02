@@ -50,10 +50,15 @@ source = ["okl"]
 omit = ["*/scaffold/*"]
 
 [tool.coverage.report]
-# A ratchet at the level measured on 2026-09-02, not an aspiration. It exists to stop
-# coverage sliding while features land, and should only ever be raised. The weak spots
-# it is deliberately NOT hiding: bootstrap.py has no test at all, and cli.py is at 49%.
-fail_under = 69
+# A ratchet at the level measured IN THE CI ENVIRONMENT on 2026-09-02, not an
+# aspiration. The distinction matters and cost a red build: locally, with the optional
+# psycopg and mcp extras installed, coverage reads 69%; CI installs only [dev], so those
+# paths are unreachable and their tests skip, and the true figure is 66.7%. A threshold
+# read off a developer's machine fails on a runner that has less installed.
+#
+# It should only ever be raised. The weak spots it is deliberately NOT hiding:
+# bootstrap.py has no test at all, and cli.py sits at 49%.
+fail_under = 66
 show_missing = true
 
 [tool.mypy]
