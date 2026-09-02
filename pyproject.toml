@@ -43,6 +43,22 @@ packages = ["src/okl"]
 pythonpath = ["src"]
 testpaths = ["tests"]
 
+[tool.mypy]
+python_version = "3.10"
+files = ["src/okl"]
+# Not --strict yet: that is 94 findings, mostly missing annotations on internal helpers
+# and Any returns. Tracked as a follow-up rather than a blanket ignore, so the gate that
+# exists is one that actually passes.
+warn_unused_ignores = true
+warn_redundant_casts = true
+
+[[tool.mypy.overrides]]
+# psycopg and mcp are OPTIONAL extras: the core install has neither, and CI installs
+# only [dev]. Naming them here rather than passing --ignore-missing-imports globally
+# keeps a genuine typo in a first-party import an error.
+module = ["psycopg", "psycopg.*", "mcp", "mcp.*"]
+ignore_missing_imports = true
+
 [tool.ruff]
 line-length = 100
 target-version = "py310"
