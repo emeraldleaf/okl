@@ -50,5 +50,22 @@ jobs:
           JUDGE_MODEL: ${{ vars.JUDGE_MODEL }}   # must differ from GENERATOR_MODEL
         run: python evals/run_evals.py --fail-rate 0.20
 
+  review:
+    # The architecture reviewer, run headless on the PR diff. Soft-passes until
+    # ANTHROPIC_API_KEY exists, so installing the kit never wedges merges; it becomes a
+    # blocking gate the moment the secret is set, with no second step to remember.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09  # v5
+        with:
+          fetch-depth: 0   # the reviewer diffs against the base branch
+          persist-credentials: false
+      - name: Architecture review (soft-passes without ANTHROPIC_API_KEY)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          REVIEW_BASE_REF: origin/${{ github.base_ref }}
+        run: bash ci/review-agent.sh
+
   # Optional: emit VERIFIED_ON receipts to the org knowledge layer when gates pass.
   # See okl README + ci/okl-verify.yml.

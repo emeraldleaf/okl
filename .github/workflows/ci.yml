@@ -78,6 +78,16 @@ jobs:
       # key for organization-owned repositories, so it would break for anyone who forks
       # this into an org. The binary has no such condition, and pinning the release keeps
       # a new detection rule from retro-failing a branch that changed nothing.
+      # The reviewer okl ships, run on okl. It was listed as a review surface with nothing
+      # triggering it — the "enforcement surface that only runs on-demand runs never"
+      # failure, which this repo's own store names. Soft-passes until the secret is set.
+      - name: Architecture review (soft-passes without ANTHROPIC_API_KEY)
+        if: github.event_name == 'pull_request'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          REVIEW_BASE_REF: origin/${{ github.base_ref }}
+        run: bash ci/review-agent.sh
+
       - name: Secret scan — gitleaks
         env:
           GITLEAKS_VERSION: "8.30.1"

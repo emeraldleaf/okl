@@ -30,6 +30,7 @@ def _layout(c: str = ".claude"):
         # A pin with no update path goes stale, so the thing that updates it is part of
         # the kit rather than a step in a README nobody reads.
         ("ci/dependabot.yml", ".github/dependabot.yml"),
+        ("ci/review-agent.sh", "ci/review-agent.sh"),
         ("hooks/userpromptsubmit-okl-check.sh", f"{c}/hooks/userpromptsubmit-okl-check.sh"),
         ("hooks/stop-okl-encode.sh", f"{c}/hooks/stop-okl-encode.sh"),
         ("hooks/hooks.json", f"{c}/hooks/hooks.json"),

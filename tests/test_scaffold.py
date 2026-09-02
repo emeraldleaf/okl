@@ -506,3 +506,47 @@ def test_shipped_workflows_are_hardened_and_ship_their_update_path(tmp_path):
     # ASSERT (6) — and the thing that keeps those pins from rotting ships too
     assert (tmp_path / ".github" / "dependabot.yml").exists(), \
         "SHA pins without an update path go stale; the dependabot config must ship with them"
+
+
+
+def test_review_agent_soft_passes_until_it_is_configured(tmp_path, monkeypatch):
+    """The headless reviewer ships, and cannot wedge merges before it is wired.
+
+    A gate that blocks before anyone has configured it teaches people to bypass gates, so
+    every unconfigured path here exits 0 and says why. It becomes blocking the moment the
+    secret exists, with no second step to remember — which is the difference between this
+    and the review surface it replaces, which ran only when someone thought of it.
+    """
+    # ARRANGE — the kit, stamped, with the reviewer and the runner both present
+    scaffold(target=str(tmp_path), repo="r", claude_dir="dotclaude")
+    script = tmp_path / "ci" / "review-agent.sh"
+    assert script.exists(), "the review runner must ship with the kit"
+
+    def run(env_extra):
+        env = {"PATH": "/usr/bin:/bin", "HOME": str(tmp_path)}
+        env.update(env_extra)
+        return subprocess.run(["bash", str(script)], capture_output=True, text=True,
+                              cwd=str(tmp_path), env=env)
+
+    # ASSERT (1) — no API key: soft pass, and it says how to turn it on
+    r = run({})
+    assert r.returncode == 0, r.stderr
+    assert "soft pass" in r.stdout
+
+    # ASSERT (2) — key set but the CLI absent (a runner without it): still a soft pass,
+    # never a mysterious red build
+    r = run({"ANTHROPIC_API_KEY": "x"})
+    assert r.returncode == 0, r.stderr
+
+    # ASSERT (3) — the verdict logic itself blocks only on must-fix. Extracted from the
+    # script so the contract is tested rather than assumed; a reviewer that blocks on
+    # "consider" would be ignored within a week.
+    verdict = script.read_text().split("python3 -c '")[-1].rsplit("'", 1)[0]
+    for payload, expected in [
+        ('{"findings":[{"severity":"must-fix","file":"a","line":1,"rule":"r","finding":"f"}]}', 1),
+        ('{"findings":[{"severity":"consider","file":"a","line":1,"rule":"r","finding":"f"}]}', 0),
+        ('{"findings":[]}', 0),
+    ]:
+        p = subprocess.run([sys.executable, "-c", verdict], input=payload,
+                           capture_output=True, text=True)
+        assert p.returncode == expected, f"{payload} -> {p.returncode}: {p.stdout}{p.stderr}"
