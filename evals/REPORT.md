@@ -220,6 +220,23 @@ task where the baseline fails every time:
 
 Conditional subset: 1/15 on the 5 tasks the baseline failed at least once.
 
+## 4d. NOT YET RE-RUN: stack tags now filter exclusively (2026-09-02)
+
+A code review found that a record tagged `dotnet,method` reached a Python repo on the
+strength of `method`, a subject 75 records carry. The interest filter was a plain
+any-match over all tags, so one universal subject rescued every off-stack record.
+Stack tags (`dotnet`, `react`, `geospatial`, `python`, `python-rag`) are now exclusive:
+a record naming a stack must name one the repo declared. Subject tags keep the
+permissive any-match.
+
+**This narrows what reaches a briefing and the A/B has not been re-run.** The eval
+repo declares interests, so the change affects it. Expected direction: fewer off-stack
+records competing for the top-k slots, which should help or do nothing — but §4c is the
+standing warning against reading a small move as a result. The baseline arm has spanned
+33-50% across three runs with nothing changed.
+
+Run `python3 evals/ab_harness.py --samples 3` and add §4e with the receipt.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
