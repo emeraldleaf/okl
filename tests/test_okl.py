@@ -1249,45 +1249,48 @@ def test_postgres_backend_conformance():
             teardown.execute(f"DROP SCHEMA IF EXISTS {schema} CASCADE")
 
 
-def test_a_stack_tag_the_repo_does_not_declare_excludes_the_record(store):
-    """A universal subject tag must not rescue an off-stack record into a briefing.
+def test_a_shared_subject_keeps_an_off_stack_record_in_the_briefing(store):
+    """Interest filtering is any-match: one shared tag is enough. Exclusive stack
+    filtering was tried, measured, and reverted — do not reintroduce it without reading why.
 
-    Found by reviewing why a Python repo's briefings were dominated by .NET canon. The
-    filter was a plain any-match over all tags, and `method` is carried by 75 records —
-    so a rule tagged `dotnet,method` reached every repo that declared an interest in
-    method, which is every repo. Stack tags assert "this is about .NET"; a subject tag
-    cannot overrule that claim.
+    The idea was that a record naming a stack the repo has not declared should be dropped
+    even if it shares a subject, so .NET canon would stop reaching a Python repo. It was
+    implemented, and the A/B measured the result: it hid 35 of 172 org records, and the
+    briefed arm reproduced the rate-limiter defect described by a rule it had dropped
+    (ab-20260902-0538, REPORT.md §4d).
+
+    The reason is what a stack tag means. It records where a lesson was FOUND, not where it
+    APPLIES. "In-memory rate limiters weaken to N× the limit at N instances" carries
+    `dotnet` because it came from a .NET codebase and is true of every runtime; so is the
+    IDOR rule, and "exit 0 having written zero files". Filtering on provenance as if it
+    were applicability discards most of what a shared store exists to carry.
+
+    The original complaint is still valid — genuinely stack-specific rules do reach the
+    wrong repo — and fixing it needs applicability recorded separately from provenance.
     """
-    # ARRANGE — one .NET rule that also carries the universal subject, and one rule that
-    # is purely subject-tagged. Both mention the same words, so ranking cannot separate
-    # them and only the filter can.
-    core.record(store, type="Rule", title="aggregates need an observed invariant",
-                scope="org", tags="dotnet,method", body="pattern discipline")
-    core.record(store, type="Rule", title="aggregates of knowledge need an owner",
-                scope="org", tags="method", body="pattern discipline")
+    # ARRANGE — a portable lesson that happens to carry the stack it was found in, and a
+    # purely subject-tagged one. Same words, so only the filter can separate them.
+    core.record(store, type="Rule", title="in-memory rate limiters weaken across instances",
+                scope="org", tags="dotnet,security", body="pattern discipline")
+    core.record(store, type="Rule", title="rate limits belong on the expensive endpoints",
+                scope="org", tags="security", body="pattern discipline")
 
-    interests = ["python", "method"]
-
-    # ASSERT (1) — the .NET record is dropped despite sharing `method`
-    res = core.check(store, repo="okl", task="aggregates pattern discipline",
-                     interests=interests)
+    # ACT — a repo that wants `security` but does no .NET
+    res = core.check(store, repo="okl", task="rate limiters pattern discipline",
+                     interests=["python", "security"])
     titles = [r["title"] for r in res["rules"]]
-    assert not any("aggregates need an observed invariant" in t for t in titles), \
-        f"a dotnet-tagged record reached a repo that did not declare dotnet: {titles}"
 
-    # ASSERT (2) — the purely subject-tagged record still arrives. Excluding by stack
-    # must not become excluding everything.
-    assert any("aggregates of knowledge" in t for t in titles), titles
+    # ASSERT (1) — the portable lesson arrives despite its foreign stack tag. This is the
+    # assertion the reverted change broke, and the one the eval caught.
+    assert any("in-memory rate limiters" in t for t in titles), \
+        f"a portable rule was hidden by its provenance tag: {titles}"
 
-    # ASSERT (3) — a repo that DOES declare the stack still receives it
-    res2 = core.check(store, repo="svc", task="aggregates pattern discipline",
-                      interests=["dotnet", "method"])
-    assert any("observed invariant" in r["title"] for r in res2["rules"])
+    # ASSERT (2) — and the purely subject-tagged rule still arrives
+    assert any("expensive endpoints" in t for t in titles), titles
 
-    # ASSERT (4) — declaring no interests still means no filtering at all
-    res3 = core.check(store, repo="anything", task="aggregates pattern discipline",
-                      interests=None)
-    assert len(res3["rules"]) == 2
+    # ASSERT (3) — declaring no interests still disables filtering entirely
+    assert len(core.check(store, repo="x", task="rate limiters pattern discipline",
+                          interests=None)["rules"]) == 2
 
 
 def test_client_resolves_the_shared_layer_from_the_environment(tmp_path, monkeypatch):

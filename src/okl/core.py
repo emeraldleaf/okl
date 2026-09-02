@@ -12,7 +12,7 @@ from __future__ import annotations
 from dataclasses import asdict
 from typing import Any
 
-from .store import STACK_TAGS, Edge, Node, Store, _now_ms, split_tags
+from .store import Edge, Node, Store, _now_ms, split_tags
 
 
 def _node_public(n: Node) -> dict[str, Any]:
@@ -35,12 +35,21 @@ def _in_scope(n: Node, repo_scope: str, interests: list[str] | None) -> bool:
     The order below matters. A repo's own records pass first and unconditionally, so a
     repo can never be filtered away from its own knowledge by its own settings.
 
-    STACK TAGS ARE EXCLUSIVE; SUBJECT TAGS ARE INCLUSIVE. A plain any-match over all tags
-    let one universal subject rescue every off-stack record: a .NET rule tagged
-    `dotnet,method` reached this Python repo on the strength of `method`, which 75 records
-    carry. So a record naming a stack must name one the repo declared — "this is about
-    .NET" is a claim the subject cannot overrule — while subject tags keep the permissive
-    any-match they were designed for.
+    ANY-MATCH, DELIBERATELY. Exclusive stack filtering was tried and REVERTED after the
+    A/B measured it: a record naming a stack the repo had not declared was dropped even
+    when it shared a subject the repo wanted. It hid 35 of 172 org records here, and the
+    briefed arm then reproduced the rate-limiter defect that the dropped rule described
+    (ab-20260902-0538, REPORT.md §4d).
+
+    The root cause is what a stack tag MEANS. It records where a lesson was FOUND, not
+    where it APPLIES: "in-memory rate limiters weaken to N× at N instances" carries
+    `dotnet` because it came from a .NET codebase, and is true of every runtime. So is the
+    IDOR rule, and "exit 0 having written zero files". Filtering on provenance as though
+    it were applicability throws away most of what a shared store is for.
+
+    The problem that motivated the change is still real — genuinely .NET-only rules do
+    reach a Python repo. Fixing it needs applicability recorded separately from
+    provenance, not a stricter reading of a tag that never meant that.
     """
     if n.scope == repo_scope:
         return True
@@ -49,13 +58,7 @@ def _in_scope(n: Node, repo_scope: str, interests: list[str] | None) -> bool:
     if not interests:
         return True
     tags = split_tags(n.tags)
-    if not tags:
-        return True   # untagged records predate the vocabulary; never hide them
-    wanted = {t.strip().lower() for t in interests if t.strip()}
-    stacks = tags & STACK_TAGS
-    if stacks and not (stacks & wanted):
-        return False
-    return bool(tags & wanted)
+    return not tags or bool(tags & {t.strip().lower() for t in interests if t.strip()})
 
 
 def check(store: Store, repo: str, task: str, limit: int = 12,

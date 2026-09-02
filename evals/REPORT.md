@@ -220,22 +220,66 @@ task where the baseline fails every time:
 
 Conditional subset: 1/15 on the 5 tasks the baseline failed at least once.
 
-## 4d. NOT YET RE-RUN: stack tags now filter exclusively (2026-09-02)
+## 4d. Exclusive stack-tag filtering: measured, and REVERTED (2026-09-02)
 
-A code review found that a record tagged `dotnet,method` reached a Python repo on the
-strength of `method`, a subject 75 records carry. The interest filter was a plain
-any-match over all tags, so one universal subject rescued every off-stack record.
-Stack tags (`dotnet`, `react`, `geospatial`, `python`, `python-rag`) are now exclusive:
-a record naming a stack must name one the repo declared. Subject tags keep the
-permissive any-match.
+`ab-20260902-0538` — **48 runs, 3 failures (6%), usable.** Baseline 10/22 (45%), briefed
+3/23 (13%).
 
-**This narrows what reaches a briefing and the A/B has not been re-run.** The eval
-repo declares interests, so the change affects it. Expected direction: fewer off-stack
-records competing for the top-k slots, which should help or do nothing — but §4c is the
-standing warning against reading a small move as a result. The baseline arm has spanned
-33-50% across three runs with nothing changed.
+That briefed figure is the worst of the four sonnet runs (4%, 8%, 4%, **13%**), and this
+time it was not noise. The change under test made a record naming a stack invisible to a
+repo that had not declared that stack, even when the record shared a subject the repo
+wanted. The rate-limiter rule is tagged `security,dotnet`; the eval repo declares
+`security` and not `dotnet`; the rule left the briefing; the briefed arm then reproduced
+the very defect that rule describes, on a task where the baseline reproduced none.
 
-Run `python3 evals/ab_harness.py --samples 3` and add §4e with the receipt.
+Reproduced directly rather than inferred:
+
+| interests declared | rate-limiter rule in the briefing |
+|---|---|
+| `python, method, security, …` (no `dotnet`) | **no** |
+| none | yes |
+
+**Blast radius: 35 of 172 org records** hidden from this repo, all of them sharing a
+subject it had declared. The sample says why better than any argument:
+
+- *Missing ownership scope check is an IDOR (CWE-639)* — tagged `security,dotnet`
+- *materialize exited 0 having written zero files* — tagged `geospatial,data-quality`
+- *Public dataset had x/y transposed* — tagged `geospatial,data-quality`
+
+None of those is about .NET or geospatial. **A stack tag records where a lesson was FOUND,
+not where it APPLIES**, and filtering on provenance as though it were applicability throws
+away most of what a shared store is for. The change was reverted.
+
+The complaint that motivated it stands: genuinely stack-specific rules — CQRS handlers,
+aggregate discipline — do reach repos that have none of those things. Fixing it needs
+applicability recorded separately from provenance, not a stricter reading of a tag that
+never meant that. Until then, interest filtering stays any-match.
+
+**Three runs failed**, all timeouts on the two slowest tasks plus one non-zero exit
+(`spa_tokens` ×2, `rate_limiter` ×1). At 6% the run is usable under the 20% rule, but the
+sample counts are uneven (22 baseline against 23 briefed), so per-task figures on those two
+tasks carry less weight than the others.
+
+Per task:
+
+| task | baseline | briefed |
+|---|---|---|
+| idor_endpoint | 0/3 | 0/3 |
+| price_tamper | 2/3 | 0/3 |
+| react_fetch | 0/3 | 0/3 |
+| judge_summary | 0/3 | 0/3 |
+| exit_code_trust | 3/3 | 0/3 |
+| spa_tokens | 2/2 | **2/2** |
+| rate_limiter | 0/2 | **1/3** |
+| ci_linter | 3/3 | 0/3 |
+
+`spa_tokens` reproducing in both arms is the standing anomaly §4b named, not new. The
+`rate_limiter` row is the finding.
+
+**What this run bought:** it stopped a regression from shipping as an improvement. The
+change was elegant, argued from the vocabulary's own stack/subject distinction, and made
+retrieval worse in a way no test caught and no reading of the code would have revealed.
+Post-hoc revert on measured evidence is the whole point of keeping the harness runnable.
 
 ## 5. Findings
 
