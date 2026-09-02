@@ -9,6 +9,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+from urllib import request as _req
 
 import pytest
 
@@ -1287,3 +1288,46 @@ def test_a_stack_tag_the_repo_does_not_declare_excludes_the_record(store):
     res3 = core.check(store, repo="anything", task="aggregates pattern discipline",
                       interests=None)
     assert len(res3["rules"]) == 2
+
+
+def test_client_resolves_the_shared_layer_from_the_environment(tmp_path, monkeypatch):
+    """OKL_SERVICE_URL and OKL_TOKEN work with no config file and no `okl connect`.
+
+    The CI verifier okl ships to consumers used to run `okl connect --token`, which wrote
+    the bearer token into .okl/config.json on the runner. That step was removed on the
+    strength of reading the client and concluding it reads both variables from the
+    environment — a claim nothing checked. If it were wrong, every consumer's CI would
+    quietly verify against its local store instead of the shared layer and still pass,
+    which is the silent-degradation failure this project exists to prevent.
+
+    Found by the architecture reviewer on its first real run, flagging the removal as
+    assert-from-memory.
+    """
+    from okl.client import Client
+
+    # ARRANGE — an empty directory: no .okl/config.json anywhere, so the environment is
+    # the only possible source for either value
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("OKL_SERVICE_URL", "https://okl.internal")
+    monkeypatch.setenv("OKL_TOKEN", "s3cret")
+    client = Client()
+
+    # ASSERT (1) — the URL is picked up, so the client is in remote mode with no config
+    assert client.configured is True
+    assert client.mode == "remote"
+    assert client._remote_url("/check") == "https://okl.internal/check"
+
+    # ASSERT (2) — the token reaches the Authorization header. Both verbs, because the
+    # token used to go on POSTs only and every GET 401-ed against a private deployment.
+    for req in (_req.Request("https://okl.internal/check", data=b"{}"),
+                _req.Request("https://okl.internal/nodes")):
+        client._authorize(req)
+        assert req.get_header("Authorization") == "Bearer s3cret"
+
+    # ASSERT (3) — and a config-file token still works when the env var is absent, since
+    # that is the laptop path `okl connect --token` writes
+    monkeypatch.delenv("OKL_TOKEN", raising=False)
+    from_config = Client(config={"service_url": "https://okl.internal", "token": "from-file"})
+    req = _req.Request("https://okl.internal/nodes")
+    from_config._authorize(req)
+    assert req.get_header("Authorization") == "Bearer from-file"
