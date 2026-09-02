@@ -53,6 +53,67 @@ before the failure count — the lesson demands the failure rate lead. A looser 
 would have called it clean; the strict reading stays, because "almost followed the
 lesson" is how defects survive.
 
+## 2b. The decision procedure — what this experiment can and cannot settle
+
+Written after a change was shipped, measured, and reverted on the same day
+(§4d). The reverting was correct; doing it in that order was not. These rules exist so
+the next retrieval change is judged against a standard set BEFORE the numbers arrive.
+
+### Pre-register, or the result is a story
+
+Any change to the retrieval path — what is indexed, what is filtered, what is ranked,
+what is trimmed — is written down before the run, stating:
+
+1. **The prediction.** Which arm moves, in which direction, and by roughly how much.
+2. **The falsifier.** The specific observation that would mean the change is harmful.
+3. **The tasks at risk.** Which of the eight could plausibly lose a record they depend
+   on, and which record.
+
+Point 3 is the one that would have caught §4d before it ran. `rate_limiter` depends on a
+rule tagged `dotnet`; the change hid off-stack records; nobody wrote that down, so a
+predictable regression arrived as a surprise.
+
+### The noise floor is 17 points, and it is not optional
+
+The baseline arm receives no briefing and has never changed. Across four sonnet runs it
+has read 33%, 42%, 50%, 45%. **That 17-point spread is measurement noise on an arm where
+nothing moved**, so:
+
+- A difference smaller than ~17 points, in either arm, is **not interpretable**.
+- The briefing effect (baseline 33-50% against briefed 4-13%) clears it comfortably and
+  is the only headline claim this design supports.
+- Run-to-run movement *within* an arm is not a result. It has been mistaken for one.
+
+### What promotes a per-task signal above noise
+
+A single task moving is noise unless it comes with a mechanism. `rate_limiter` counted in
+§4d because the causal chain was reproduced independently of the run: the rule was shown
+absent from the briefing with interests declared and present without them. **A per-task
+number plus a demonstrated mechanism is evidence; a per-task number alone is not.**
+
+### Failure accounting changes how the run is read
+
+- **Above 20% failures: RESULTS NOT USABLE**, printed before any score.
+- **Below 20% but non-zero:** usable, and the affected tasks carry less weight, because
+  failures fall unevenly. §4d ran 22 baseline against 23 briefed after three timeouts,
+  all on the two slowest tasks — so those two tasks' per-task rows are the least reliable
+  in the table, which is unfortunate given one of them carried the finding.
+- **A run with 0% failures and one with 6% are not the same experiment.** Say which.
+
+### The decision rule for shipping a retrieval change
+
+Ship it if the briefed arm does not worsen beyond the noise floor **and** no task loses a
+record it depends on. Revert if either fails. "The idea is sound" is not an input:
+§4d's change was argued from the vocabulary's own stack/subject distinction, passed
+review, passed its tests, and made retrieval worse.
+
+### What this design cannot settle
+
+The tasks are bait, built from the store's own lessons, so this measures *"does a
+briefing prevent a defect the store already knows about"* — not general code quality, not
+retrieval at scale, and not whether the store contains the right lessons. Threats to
+validity are enumerated in §6 and should be read before quoting any figure.
+
 ## 3. Method
 
 **Design: held-fixed A/B.** Each task runs in two arms with the same generator model,

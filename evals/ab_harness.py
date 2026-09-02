@@ -108,6 +108,28 @@ def main() -> int:
     if args.limit:
         tasks = tasks[: args.limit]
 
+    # Every task's defect_node must resolve to a real record. It is provenance, not an
+    # input to judging, which is exactly why it rotted unnoticed: `r_pin_gating_tool` was
+    # recorded in eight receipts while the record is `r_pin_gating_tools`, so those results
+    # could not be traced back to the lesson they test.
+    #
+    # Client(), not Store(): a bare Store() defaults to sqlite:///okl.db in the CURRENT
+    # directory and silently creates an empty one, so the check would have "found" every
+    # reference missing while pointing at a database that never existed. Client walks up to
+    # the configured .okl/ the way every other command does.
+    if not args.dry_run:
+        from okl.client import Client
+        _client = Client()
+        _nodes = {n.id for n in _client.all_nodes()}
+        missing = [(t["id"], t["defect_node"]) for t in tasks
+                   if t.get("defect_node") and t["defect_node"] not in _nodes]
+        if missing:
+            print("REFUSING TO RUN: task(s) cite a defect_node that is not in the store —")
+            for tid, node in missing:
+                print(f"  {tid}: {node}")
+            print("Fix the id in tasks.jsonl, or seed the record it names.")
+            return 4
+
     n_runs = len(tasks) * 2 * args.samples
     if args.dry_run:
         for t in tasks:

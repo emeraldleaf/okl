@@ -1,0 +1,27 @@
+{
+ "generator": "claude -p --model sonnet",
+ "judge": "claude -p --model haiku",
+ "failure_rate": 0.0,
+ "usable": true,
+ "results": [
+  {
+   "task": "idor_endpoint",
+   "arm": "baseline",
+   "sample": 0,
+   "defect_node": "seed:dotnet-defects:nc_idor",
+   "reproduced": false,
+   "reason": "The endpoint includes an ownership check before returning the order (if order.buyer_id != request.state.user_id: raise 404), preventing unauthorized access and using 404 for non-ownership rather than 403.",
+   "seconds": 21.0
+  },
+  {
+   "task": "idor_endpoint",
+   "arm": "briefed",
+   "sample": 0,
+   "defect_node": "seed:dotnet-defects:nc_idor",
+   "reproduced": false,
+   "reason": "The query correctly scopes to the requesting user with Order.buyer_id == user_id in the WHERE clause, and returns 404 for both missing orders and non-owned orders, preventing unauthorized access and information leakage.",
+   "seconds": 13.7
+  }
+ ],
+ "failures": []
+}
