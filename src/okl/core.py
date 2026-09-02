@@ -12,10 +12,14 @@ from __future__ import annotations
 from dataclasses import asdict
 from typing import Any
 
-from .store import Edge, Node, Store, _now_ms, split_tags
+from .store import STACK_TAGS, Edge, Node, Store, _now_ms, split_tags
 
 
 def _node_public(n: Node) -> dict[str, Any]:
+    """A record as the API exposes it: every field, plus computed staleness.
+
+    Staleness is derived rather than stored so it cannot go out of date on disk.
+    """
     d = asdict(n)
     d["stale"] = n.is_stale()
     return d
@@ -30,10 +34,14 @@ def _in_scope(n: Node, repo_scope: str, interests: list[str] | None) -> bool:
 
     The order below matters. A repo's own records pass first and unconditionally, so a
     repo can never be filtered away from its own knowledge by its own settings.
+
+    STACK TAGS ARE EXCLUSIVE; SUBJECT TAGS ARE INCLUSIVE. A plain any-match over all tags
+    let one universal subject rescue every off-stack record: a .NET rule tagged
+    `dotnet,method` reached this Python repo on the strength of `method`, which 75 records
+    carry. So a record naming a stack must name one the repo declared — "this is about
+    .NET" is a claim the subject cannot overrule — while subject tags keep the permissive
+    any-match they were designed for.
     """
-    """Scope answers "who may see this"; tags answer "what is this about".
-    The repo's own nodes and untagged nodes always pass — declared interests
-    only drop org nodes tagged entirely outside them."""
     if n.scope == repo_scope:
         return True
     if n.scope != "org":
@@ -41,7 +49,13 @@ def _in_scope(n: Node, repo_scope: str, interests: list[str] | None) -> bool:
     if not interests:
         return True
     tags = split_tags(n.tags)
-    return not tags or bool(tags & {t.strip().lower() for t in interests if t.strip()})
+    if not tags:
+        return True   # untagged records predate the vocabulary; never hide them
+    wanted = {t.strip().lower() for t in interests if t.strip()}
+    stacks = tags & STACK_TAGS
+    if stacks and not (stacks & wanted):
+        return False
+    return bool(tags & wanted)
 
 
 def check(store: Store, repo: str, task: str, limit: int = 12,
@@ -81,14 +95,36 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     dropped = max(0, len(hits) - limit)
     hits = hits[:limit]
 
+    buckets = _bucket_by_type(hits)
+    _attach_catches(store, buckets["armed_gates"])
+    actions = _route_actions(buckets)
+
+    # stale_warnings is excluded from the count because those records are already
+    # counted inside their own type bucket; including them would double-count.
+    total = sum(len(v) for k, v in buckets.items() if k != "stale_warnings")
+    out = {"repo": repo, "task": task, "match_count": total,
+           "next_actions": actions, "dropped_by_cutoff": dropped, **buckets}
+    # Zero matches has two very different causes: the store holds rules and none apply
+    # here, or the store holds nothing at all. Reporting both as "proceed" is the
+    # silence-as-safety failure this project exists to prevent, so the count travels
+    # with the result. Only computed on the (rare) empty-result path.
+    if total == 0:
+        out["store_records"] = len(store.all_nodes())
+    return out
+
+
+def _bucket_by_type(hits: list[Node]) -> dict[str, list[dict]]:
+    """Step 3 — sort matched records into the buckets a briefing is organised around.
+
+    A record can land in stale_warnings AND its type bucket. Staleness demotes a record,
+    it does not hide it: the reader still sees the content and is told not to trust it
+    blindly. Deleting or withholding it would destroy the fact that it was once true.
+    """
     buckets: dict[str, list[dict]] = {
         "armed_gates": [], "relevant_defects": [], "live_retractions": [],
         "in_scope_tombstones": [], "threat_prior_art": [], "rules": [],
         "vocabulary": [], "stale_warnings": [],
     }
-    # Step 3: bucket by type. A record can land in stale_warnings AND its type bucket —
-    # staleness demotes a record, it does not hide it, so the reader still sees the
-    # content and is told not to trust it blindly.
     for n in hits:
         pub = _node_public(n)
         if n.is_stale():
@@ -107,45 +143,51 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
             buckets["rules"].append(pub)
         elif n.type == "Vocabulary":
             buckets["vocabulary"].append(pub)
+    return buckets
 
-    # Follow each gate's CATCHES edge to name the defect it prevents. "Run this check"
-    # is an order; "run this check, it catches THIS bug" is a reason, and a reason is
-    # what survives contact with someone in a hurry.
-    for g in buckets["armed_gates"]:
-        why = {n.title for (e, n) in store.neighbors(g["id"], rels=["CATCHES"])
+
+def _attach_catches(store: Store, gates: list[dict]) -> None:
+    """Name, on each gate, the defect it prevents — by following its CATCHES edge.
+
+    "Run this check" is an order; "run this check, it catches THIS bug" is a reason, and
+    a reason is what survives contact with someone in a hurry. Mutates in place because
+    the gate dicts are already the objects the briefing will render.
+    """
+    for g in gates:
+        why = {n.title for (_e, n) in store.neighbors(g["id"], rels=["CATCHES"])
                if n.type == "Defect"}
         g["catches"] = sorted(why)
 
-    # Router (Codified Context §3.1.1 `suggest_agent`): turn the matched nodes into an
-    # explicit, ordered action list so the agent gets "do this" not just "here's context".
-    actions: list[dict] = []
-    for g in buckets["armed_gates"]:
-        actions.append({"kind": "arm_gate", "target": g["title"],
-                        "why": g.get("catches") or None,
-                        "how": g.get("fix") or "run this gate before you finish the task"})
-    for d in buckets["relevant_defects"] + buckets["rules"]:
-        if d.get("fix"):
-            actions.append({"kind": "apply_fix", "target": d["title"],
-                            "symptom": d.get("symptom"), "how": d["fix"]})
-    for r in buckets["live_retractions"]:
-        actions.append({"kind": "avoid_retracted", "target": r["title"],
-                        "how": "do not restate this as fact; it was retracted"})
-    for t in buckets["in_scope_tombstones"]:
-        actions.append({"kind": "avoid_identifier", "target": t["title"],
-                        "how": "do not reintroduce this retired identifier"})
 
-    # stale_warnings is excluded from the count because those records are already
-    # counted inside their own type bucket; including them would double-count.
-    total = sum(len(v) for k, v in buckets.items() if k != "stale_warnings")
-    out = {"repo": repo, "task": task, "match_count": total,
-           "next_actions": actions, "dropped_by_cutoff": dropped, **buckets}
-    # Zero matches has two very different causes: the store holds rules and none apply
-    # here, or the store holds nothing at all. Reporting both as "proceed" is the
-    # silence-as-safety failure this project exists to prevent, so the count travels
-    # with the result. Only computed on the (rare) empty-result path.
-    if total == 0:
-        out["store_records"] = len(store.all_nodes())
-    return out
+def _route_actions(buckets: dict[str, list[dict]]) -> list[dict]:
+    """Step 4 — turn matched records into an ordered list of imperatives.
+
+    The briefing leads with this. An agent handed context decides what to do with it; an
+    agent handed "FIX x, ARM y, AVOID z" has already been told. Order is deliberate:
+    gates first (cheapest to act on), then fixes, then the two prohibitions.
+    """
+    actions: list[dict] = [
+        {"kind": "arm_gate", "target": g["title"],
+         "why": g.get("catches") or None,
+         "how": g.get("fix") or "run this gate before you finish the task"}
+        for g in buckets["armed_gates"]
+    ]
+    actions += [
+        {"kind": "apply_fix", "target": d["title"],
+         "symptom": d.get("symptom"), "how": d["fix"]}
+        for d in buckets["relevant_defects"] + buckets["rules"] if d.get("fix")
+    ]
+    actions += [
+        {"kind": "avoid_retracted", "target": r["title"],
+         "how": "do not restate this as fact; it was retracted"}
+        for r in buckets["live_retractions"]
+    ]
+    actions += [
+        {"kind": "avoid_identifier", "target": t["title"],
+         "how": "do not reintroduce this retired identifier"}
+        for t in buckets["in_scope_tombstones"]
+    ]
+    return actions
 
 
 def record(store: Store, *, type: str, title: str, scope: str, repo: str | None = None,
@@ -168,12 +210,15 @@ def record(store: Store, *, type: str, title: str, scope: str, repo: str | None 
     """
     if scope == "repo" and repo:
         scope = f"repo:{repo}"
-    kw = dict(
-        type=type, title=title, scope=scope, repo=repo, body=body, status=status,
-        found_by=found_by, ttl_days=ttl_days, owner=owner,
-        files=files, symptom=symptom, fix=fix, tags=tags,
-        verified_at=_now_ms() if verified else None,
-    )
+    # Annotated dict[str, Any] because Node's fields are genuinely heterogeneous
+    # (str, int, None); without it the ** splat is checked against whichever field
+    # type mypy infers for the whole dict and every argument looks wrong.
+    kw: dict[str, Any] = {
+        "type": type, "title": title, "scope": scope, "repo": repo, "body": body,
+        "status": status, "found_by": found_by, "ttl_days": ttl_days, "owner": owner,
+        "files": files, "symptom": symptom, "fix": fix, "tags": tags,
+        "verified_at": _now_ms() if verified else None,
+    }
     # An explicit id makes the write idempotent (upsert replaces the same row);
     # omit it and the store mints a fresh random id (a genuinely new node).
     if id is not None:
@@ -183,6 +228,7 @@ def record(store: Store, *, type: str, title: str, scope: str, repo: str | None 
 
 
 def link(store: Store, src: str, rel: str, dst: str) -> None:
+    """Join two records with a typed edge, validating the relation."""
     store.add_edge(Edge(src=src, rel=rel, dst=dst))
 
 
@@ -207,6 +253,7 @@ def verify(store: Store, node_id: str, evidence: str) -> dict[str, Any]:
 
 def search(store: Store, query: str, scope: str | None = None,
            node_types: list[str] | None = None, limit: int = 25) -> list[dict]:
+    """Free-text search with optional scope and type filters, ranked by the backend."""
     return [_node_public(n) for n in store.search(query, scope, node_types, limit)]
 
 
@@ -242,18 +289,7 @@ def render_check_for_agent(result: dict[str, Any]) -> str:
     lines = [f"## OKL briefing — {result['repo']} · task: {result['task']}",
              f"_{result['match_count']} relevant node(s) from the org's encoded body._", ""]
 
-    # Router first: the ordered "do this" list, so the agent acts, not just reads.
-    actions = result.get("next_actions") or []
-    if actions:
-        lines.append("### ✅ Do this (routed actions)")
-        verb = {"arm_gate": "ARM", "apply_fix": "FIX", "avoid_retracted": "AVOID",
-                "avoid_identifier": "AVOID"}
-        for a in actions:
-            v = verb.get(a["kind"], "DO")
-            sym = f" — when you see: {a['symptom']}" if a.get("symptom") else ""
-            lines.append(f"- **{v}: {a['target']}**{sym}")
-            lines.append(f"    → {a['how']}")
-        lines.append("")
+    lines += _render_actions(result.get("next_actions") or [])
 
     order = [
         ("armed_gates", "🔒 Armed gates — adopt before you start"),
@@ -271,18 +307,7 @@ def render_check_for_agent(result: dict[str, Any]) -> str:
             continue
         any_hit = True
         lines.append(f"### {header}")
-        for it in items:
-            suffix = ""
-            if key == "armed_gates" and it.get("catches"):
-                suffix = f"  ← catches: {', '.join(it['catches'])}"
-            tag = " *(STALE — re-verify)*" if it.get("stale") else ""
-            lines.append(f"- **{it['title']}**{tag}{suffix}")
-            if it.get("symptom"):
-                lines.append(f"  symptom: {it['symptom'][:160]}")
-            if it.get("body"):
-                lines.append(f"  cause: {it['body'][:200]}" if it.get("symptom") else f"  {it['body'][:200]}")
-            if it.get("fix"):
-                lines.append(f"  fix: {it['fix'][:200]}")
+        lines += _render_records(items, show_catches=key == "armed_gates")
         lines.append("")
     if result.get("stale_warnings"):
         lines.append(f"> {len(result['stale_warnings'])} node(s) are past TTL and shown demoted — re-verify before trusting.")
@@ -455,3 +480,45 @@ def find_duplicates(store: Store, candidate: Any, threshold: float = DEDUP_THRES
             hits.append((round(score, 3), n))
     hits.sort(key=lambda h: -h[0])
     return hits[:limit]
+
+
+def _render_actions(actions: list[dict]) -> list[str]:
+    """The routed "do this" list, which leads the briefing.
+
+    First on purpose: an agent handed context decides what to do with it, an agent handed
+    "FIX x — when you see y" has already been told. The verb map keeps the imperative
+    consistent so the list is skimmable.
+    """
+    if not actions:
+        return []
+    verb = {"arm_gate": "ARM", "apply_fix": "FIX", "avoid_retracted": "AVOID",
+            "avoid_identifier": "AVOID"}
+    out = ["### ✅ Do this (routed actions)"]
+    for a in actions:
+        sym = f" — when you see: {a['symptom']}" if a.get("symptom") else ""
+        out.append(f"- **{verb.get(a['kind'], 'DO')}: {a['target']}**{sym}")
+        out.append(f"    → {a['how']}")
+    out.append("")
+    return out
+
+
+def _render_records(items: list[dict], show_catches: bool = False) -> list[str]:
+    """One bucket's records, in the briefing's line format.
+
+    Fields are truncated rather than dropped: a reader who needs the whole record has its
+    id, and a briefing that grows without bound stops being read at all.
+    """
+    out: list[str] = []
+    for it in items:
+        suffix = (f"  ← catches: {', '.join(it['catches'])}"
+                  if show_catches and it.get("catches") else "")
+        tag = " *(STALE — re-verify)*" if it.get("stale") else ""
+        out.append(f"- **{it['title']}**{tag}{suffix}")
+        if it.get("symptom"):
+            out.append(f"  symptom: {it['symptom'][:160]}")
+        if it.get("body"):
+            out.append(f"  cause: {it['body'][:200]}" if it.get("symptom")
+                       else f"  {it['body'][:200]}")
+        if it.get("fix"):
+            out.append(f"  fix: {it['fix'][:200]}")
+    return out

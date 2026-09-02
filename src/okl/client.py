@@ -22,6 +22,13 @@ CONFIG_FILE = "config.json"
 
 
 def _find_config(start: Path | None = None) -> Path | None:
+    """Walk up from `start` looking for .okl/config.json.
+
+    Ancestor search, not cwd-only, so okl works from a subdirectory of the repo the
+    way git does. Returning None is meaningful: it is what `configured` reports on,
+    and an unconfigured directory must refuse to answer rather than create an empty
+    store and call it clean.
+    """
     p = (start or Path.cwd()).resolve()
     for d in [p, *p.parents]:
         cfg = d / CONFIG_DIR / CONFIG_FILE
@@ -31,6 +38,7 @@ def _find_config(start: Path | None = None) -> Path | None:
 
 
 def load_config() -> dict[str, Any]:
+    """Read the nearest config, or an empty dict when there is none."""
     cfg = _find_config()
     if cfg:
         return json.loads(cfg.read_text())
@@ -38,6 +46,12 @@ def load_config() -> dict[str, Any]:
 
 
 def save_config(data: dict[str, Any], root: Path | None = None) -> Path:
+    """Write .okl/config.json, creating the directory and its .gitignore.
+
+    The .gitignore is written here rather than at init because this is the single
+    place the directory is created — everything that lands in it is machine-local or
+    secret, and a config written by any path must be protected the same way.
+    """
     d = (root or Path.cwd()) / CONFIG_DIR
     d.mkdir(parents=True, exist_ok=True)
     # Ignore the whole directory, from inside it. Everything okl writes here is either
@@ -83,16 +97,47 @@ class Client:
             self._store = Store(f"sqlite:///{db}")
         return self._store
 
-    # -- HTTP helper (stdlib only; fails CLOSED — raises, never returns empty) --
-    def _post(self, path: str, payload: dict) -> dict:
-        url = self.service_url.rstrip("/") + path
-        data = json.dumps(payload).encode()
-        req = _req.Request(url, data=data, headers={"Content-Type": "application/json"})
+    def _remote_url(self, path: str) -> str:
+        """Absolute URL for `path` on the configured service.
+
+        Every remote call reaches here, so the "a service is configured" invariant is
+        asserted once instead of being assumed at four call sites. Reaching it without a
+        service_url is a programming error — the caller checked `mode` wrongly — not a
+        user-facing condition, so it raises rather than degrading to a local read.
+        """
+        if not self.service_url:
+            raise RuntimeError("no service configured; this path is only valid in remote mode")
+        # The URL comes from .okl/config.json or an env var, so its scheme is input.
+        # urlopen honours file:// and ftp://, which would turn "read from the shared
+        # service" into "read a local file the caller chose" — checked here, once, rather
+        # than trusted at four call sites.
+        if not self.service_url.startswith(("http://", "https://")):
+            raise ValueError(
+                f"service_url must be http:// or https://, got {self.service_url!r}")
+        return self.service_url.rstrip("/") + path
+
+    def _authorize(self, req: _req.Request) -> None:
+        """Attach the bearer token, if one is configured.
+
+        One place, because both verbs need it: the token used to go on POSTs only, which
+        was survivable only while the service left reads open. When reads were gated,
+        every GET started 401-ing and surfaced as "unreachable" — an outage, for a
+        credential problem.
+        """
         token = os.environ.get("OKL_TOKEN") or self.config.get("token")
         if token:
             req.add_header("Authorization", f"Bearer {token}")
+
+    # -- HTTP helper (stdlib only; fails CLOSED — raises, never returns empty) --
+    def _post(self, path: str, payload: dict) -> dict:
+        url = self._remote_url(path)
+        data = json.dumps(payload).encode()
+        # _remote_url has already rejected any scheme but http/https
+        req = _req.Request(url, data=data,  # noqa: S310
+                           headers={"Content-Type": "application/json"})
+        self._authorize(req)
         try:
-            with _req.urlopen(req, timeout=10) as resp:
+            with _req.urlopen(req, timeout=10) as resp:  # noqa: S310
                 return json.loads(resp.read())
         except HTTPError as e:
             # The service answered — so this is NOT "unreachable". A 4xx is the caller's
@@ -104,9 +149,9 @@ class Client:
                 detail = ""
             if 400 <= e.code < 500:
                 raise ValueError(f"OKL service rejected the request ({e.code}): {detail or e.reason}") from e
-            raise OKLUnreachable(f"OKL service error at {url}: {e.code} {detail or e.reason}") from e
+            raise OKLUnreachableError(f"OKL service error at {url}: {e.code} {detail or e.reason}") from e
         except URLError as e:
-            raise OKLUnreachable(f"OKL service unreachable at {url}: {e}") from e
+            raise OKLUnreachableError(f"OKL service unreachable at {url}: {e}") from e
 
     # -- operations ---------------------------------------------------------
     def check(self, task: str, repo: str | None = None, limit: int | None = None) -> dict:
@@ -116,7 +161,7 @@ class Client:
             payload["limit"] = limit
         if self.mode == "remote":
             return self._post("/check", payload)
-        kw = {"interests": self.interests}
+        kw: dict[str, Any] = {"interests": self.interests}
         if limit is not None:
             kw["limit"] = limit
         return core.check(self._local_store(), repo, task, **kw)
@@ -174,26 +219,31 @@ class Client:
         # only because the service left reads open; once reads are gated, an unauthenticated
         # GET makes drift detection (/nodes) and the recurrence metric fail against every
         # private deployment — and a 401 here surfaces as "unreachable", i.e. as an outage.
-        url = self.service_url.rstrip("/") + path
-        req = _req.Request(url)
-        token = os.environ.get("OKL_TOKEN") or self.config.get("token")
-        if token:
-            req.add_header("Authorization", f"Bearer {token}")
+        url = self._remote_url(path)
+        # _remote_url has already rejected any scheme but http/https
+        req = _req.Request(url)  # noqa: S310
+        self._authorize(req)
         try:
-            with _req.urlopen(req, timeout=10) as resp:
+            with _req.urlopen(req, timeout=10) as resp:  # noqa: S310
                 return json.loads(resp.read())
         except HTTPError as e:
             if 400 <= e.code < 500:
                 raise ValueError(
                     f"OKL service rejected the request ({e.code} {e.reason}). "
                     "If this is 401, set OKL_TOKEN or add \"token\" to .okl/config.json.") from e
-            raise OKLUnreachable(f"OKL service error at {url}: {e.code} {e.reason}") from e
+            raise OKLUnreachableError(f"OKL service error at {url}: {e.code} {e.reason}") from e
         except URLError as e:
-            raise OKLUnreachable(f"OKL service unreachable at {url}: {e}") from e
+            raise OKLUnreachableError(f"OKL service unreachable at {url}: {e}") from e
 
 
-class OKLUnreachable(RuntimeError):
+class OKLUnreachableError(RuntimeError):
     """Raised when a configured remote service can't be reached. Callers that
     gate work on OKL (the pre-task hook) must FAIL CLOSED on this — the
     merge-gate lesson: a check that silently returns 'nothing' is worse than
     no check."""
+
+
+# The pre-0.4 name. Kept as an alias because it is importable from a published
+# release and appears in consumers' except clauses; the class is the same object,
+# so `except OKLUnreachable` still catches what `raise OKLUnreachableError` throws.
+OKLUnreachable = OKLUnreachableError

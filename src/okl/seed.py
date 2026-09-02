@@ -42,15 +42,7 @@ def seed_from_file(client: Client, path: str) -> int:
     # hold: a plausible sentence nobody can trace, injected into every future task and
     # believed. Curated packs carry provenance in other ways and are not affected.
     if data.get("_proposed_by"):
-        uncited = [n.get("key") or n.get("title", "?")
-                   for n in data.get("nodes", []) if not (n.get("found_by") or "").strip()]
-        if uncited:
-            raise ValueError(
-                f"{p.name} declares _proposed_by={data['_proposed_by']!r}, so every node "
-                f"must carry a found_by citation. {len(uncited)} do not:\n  - "
-                + "\n  - ".join(uncited[:10])
-                + ("\n  ..." if len(uncited) > 10 else "")
-                + "\nAdd the path:line each came from, or delete the record.")
+        _require_citations(data, p.name)
 
     # Near-duplicate advisory for proposal packs. Unlike the citation rule above this
     # only reports: the similarity score cannot separate a paraphrase from a
@@ -58,20 +50,7 @@ def seed_from_file(client: Client, path: str) -> int:
     # blocking check on a signal that noisy would refuse good imports. An uncited record
     # is unambiguously wrong; a similar one is a question for a person.
     if data.get("_proposed_by") and getattr(client, "mode", "local") == "local":
-        store = client._local_store()
-        if store.all_nodes():
-            idf = core._idf(store)
-            flagged = []
-            for node in data.get("nodes", []):
-                for score, existing in core.find_duplicates(store, node, idf=idf, limit=1):
-                    flagged.append((score, node.get("title", "?"), existing))
-            if flagged:
-                print(f"  ? {len(flagged)} incoming record(s) resemble records already in "
-                      "the store. Importing anyway — review these:", file=sys.stderr)
-                for score, title, existing in sorted(flagged, key=lambda f: -f[0])[:10]:
-                    print(f"      {score:.2f}  incoming: {title[:64]}", file=sys.stderr)
-                    print(f"            existing: [{existing.id}] {existing.title[:56]}",
-                          file=sys.stderr)
+        _warn_near_duplicates(client, data)
 
     ns = f"seed:{p.stem}"
     keymap: dict[str, str] = {}
@@ -93,3 +72,48 @@ def seed_from_file(client: Client, path: str) -> int:
         dst = keymap.get(edge["dst"], edge["dst"])
         client.link(src, edge["rel"], dst)
     return len(data.get("nodes", []))
+
+
+def _require_citations(data: dict, filename: str) -> None:
+    """Refuse a self-declared proposal pack unless every node carries a citation.
+
+    The commands that write these files tell the agent "no citation, no record". An
+    instruction with no mechanical counterpart is the surface nobody runs, and on a
+    forty-record proposal the reviewer is the step that gets skipped. Refusing the whole
+    file rather than the offending nodes is deliberate: a partial import leaves the
+    reviewer unable to tell which half they still have to check.
+    """
+    uncited = [n.get("key") or n.get("title", "?")
+               for n in data.get("nodes", []) if not (n.get("found_by") or "").strip()]
+    if not uncited:
+        return
+    raise ValueError(
+        f"{filename} declares _proposed_by={data['_proposed_by']!r}, so every node "
+        f"must carry a found_by citation. {len(uncited)} do not:\n  - "
+        + "\n  - ".join(uncited[:10])
+        + ("\n  ..." if len(uncited) > 10 else "")
+        + "\nAdd the path:line each came from, or delete the record.")
+
+
+def _warn_near_duplicates(client: Client, data: dict) -> None:
+    """Report incoming records that resemble records already in the store.
+
+    Reports and imports anyway, unlike the citation rule which refuses. The similarity
+    score cannot separate a paraphrase from a genuinely distinct record that shares a
+    subject, so a blocking check here would refuse good imports. An uncited record is
+    unambiguously wrong; a similar one is a question for a person.
+    """
+    store = client._local_store()
+    if not store.all_nodes():
+        return
+    idf = core._idf(store)
+    flagged = [(score, node.get("title", "?"), existing)
+               for node in data.get("nodes", [])
+               for score, existing in core.find_duplicates(store, node, idf=idf, limit=1)]
+    if not flagged:
+        return
+    print(f"  ? {len(flagged)} incoming record(s) resemble records already in the store. "
+          "Importing anyway — review these:", file=sys.stderr)
+    for score, title, existing in sorted(flagged, key=lambda f: -f[0])[:10]:
+        print(f"      {score:.2f}  incoming: {title[:64]}", file=sys.stderr)
+        print(f"            existing: [{existing.id}] {existing.title[:56]}", file=sys.stderr)

@@ -50,3 +50,10 @@ seed-file comments ("eval-integrity lessons are org-scoped") and the scaffold's 
 
 - 2026-07-21: `messaging` added to the vocabulary during the .NET platform canon import — the
   broker/queue/event-driven rules fit no existing subject.
+- 2026-09-02: `python` added. A code review of this repo found 190 records of which 75 were
+  tagged `dotnet` — CQRS, aggregates, outbox, DI scopes — governing a Python codebase that has
+  none of those things, while okl's own conventions had no subject to file under. `python-rag`
+  was the nearest existing tag and is wrong: it is a stack tag for one service's retrieval
+  pipeline, not a language. The distinction the vocabulary already draws (stacks vs subjects)
+  did not have a slot for "the language this is written in", and adding one is cheaper than
+  overloading a stack tag whose meaning other repos depend on.

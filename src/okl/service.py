@@ -65,7 +65,7 @@ class VerifyReq(BaseModel):
     evidence: str   # the observed check that passed (command + timestamp)
 
 
-def create_app(store: Store | None = None) -> FastAPI:
+def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901
     # Optional shared-secret gate. If OKL_TOKEN is set it covers READS as well as
     # writes. Reads used to be open while writes were gated, which meant a deployed
     # service handed anyone who found the URL a `GET /nodes` dump of the org's entire
@@ -79,8 +79,11 @@ def create_app(store: Store | None = None) -> FastAPI:
     # itself. They leak the endpoint list, every schema and where the credential is
     # required — the map you would draw before attacking the routes. Setting the token
     # is the signal that this instance is not a laptop, so the spec comes down with it.
-    docs = {} if token is None else {"openapi_url": None, "docs_url": None, "redoc_url": None}
-    app = FastAPI(title="OKL — the sixth surface", version="0.1.0", **docs)
+    private = token is not None
+    app = FastAPI(title="OKL — the sixth surface", version="0.1.0",
+                  openapi_url=None if private else "/openapi.json",
+                  docs_url=None if private else "/docs",
+                  redoc_url=None if private else "/redoc")
     _store = store or Store(os.environ.get("OKL_DATABASE_URL"))
 
     def _auth(authorization: str | None) -> None:
@@ -173,5 +176,6 @@ def __getattr__(name: str):
 
 
 def run(host: str = "0.0.0.0", port: int = 8080) -> None:
+    """Serve the app with uvicorn. `create_app()` is called here, not at import."""
     import uvicorn
     uvicorn.run(create_app(), host=host, port=port)

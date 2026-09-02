@@ -1,28 +1,64 @@
-# Repo CI — lints and tests okl itself. (okl-verify.yml is different: it demonstrates
-# the product's own drift/method gates, the workflow consumers copy into their repos.)
+# Repo CI — lints, type-checks and tests okl itself. (okl-verify.yml is different: it
+# demonstrates the product's own drift/method gates, the workflow consumers copy.)
+#
+# Hardened per the org rule this repo's own store carries ("CI workflow baseline:
+# pipefail, no persisted credentials, least-privilege permissions, concurrency groups —
+# pin actions"). It satisfied none of the five until this commit, which is the rule's own
+# symptom: an enforcement surface nothing triggers runs never.
 name: ci
+
 on:
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+
+# Least privilege: this job reads code and reports status. It never pushes.
+permissions:
+  contents: read
+
+# One run per ref. A superseded push should stop burning minutes on a result nobody
+# will read.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    # Without pipefail a run block continues past a failed segment of a pipeline, so a
+    # green step can hide a red command.
+    shell: bash -euo pipefail {0}
+
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      # Actions pinned to a commit SHA, not a tag: a tag is mutable, so `@v5` is an
+      # unpinned dependency with write access to the runner.
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09  # v5
         with:
           # The diagram gate reads committed history (git show HEAD:...), not the
-          # checkout tree, so it needs more than the default shallow fetch of one ref.
+          # checkout tree, so it needs more than the default shallow fetch.
           fetch-depth: 0
-      - uses: actions/setup-python@v6
+          # This job never pushes; leaving the token in .git/config lets any later step
+          # (or a compromised dependency) use it.
+          persist-credentials: false
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
         with:
           python-version: "3.12"
+
       - name: Install (dev extras)
         run: pip install -e ".[dev]"
+
       - name: Lint — ruff (config in pyproject.toml)
         run: ruff check .
+
+      - name: Types — mypy
+        run: mypy src/okl
+
       - name: Tests
         run: pytest -q
+
       - name: Diagram figures trace to committed receipts
         run: ./ci/check-diagram-figures.sh

@@ -18,6 +18,12 @@ from typing import Any
 
 
 def _git(args: list[str], repo_dir: str) -> str:
+    """Run a git command in `repo_dir`, returning stdout or '' on any failure.
+
+    Failure is normal here: bootstrap runs in directories that may not be repos at
+    all. It returns empty rather than raising so the caller degrades to fewer
+    proposals instead of aborting.
+    """
     try:
         out = subprocess.run(["git", "-C", repo_dir, *args],
                              capture_output=True, text=True, timeout=20)

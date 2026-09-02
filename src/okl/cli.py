@@ -6,15 +6,21 @@ local + client path. `serve` and `mcp` import their extras lazily.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import sys
 from pathlib import Path
 
 from . import core
-from .client import Client, OKLUnreachable, load_config, save_config
+from .client import Client, OKLUnreachableError, load_config, save_config
 
 
 def _print_json(obj) -> None:
+    """Dump a result as indented JSON.
+
+    The `--format json` path exists so other tools can consume a check without
+    parsing the human briefing, which is markdown and free to change wording.
+    """
     json.dump(obj, sys.stdout, indent=2)
     sys.stdout.write("\n")
 
@@ -158,6 +164,12 @@ def _install_ci_verifier() -> None:
 
 
 def cmd_connect(args) -> int:
+    """Point this repo at a shared service, and optionally store its token.
+
+    Writing the token into .okl/config.json is a convenience for a laptop; CI and
+    shared machines should pass OKL_TOKEN instead. save_config drops a .gitignore
+    beside it so the secret cannot be committed either way.
+    """
     cfg = load_config()
     cfg["service_url"] = args.url
     if args.token:
@@ -180,7 +192,7 @@ def cmd_check(args) -> int:
         return 2
     try:
         result = client.check(args.task, repo=args.repo, limit=args.limit)
-    except OKLUnreachable as e:
+    except OKLUnreachableError as e:
         # FAIL CLOSED — loud, non-zero, no reassuring empty result.
         print(f"OKL UNREACHABLE — refusing to report a clean check.\n{e}", file=sys.stderr)
         return 2
@@ -202,6 +214,12 @@ def cmd_check(args) -> int:
 
 
 def cmd_record(args) -> int:
+    """Write one record to the store.
+
+    Validation errors (an unknown tag, a malformed scope) are the caller's mistake and
+    exit 2 with the message, which names the vocabulary. A traceback would bury the one
+    line that tells them how to fix the call.
+    """
     client = Client()
     kwargs = dict(type=args.type, title=args.title, scope=args.scope,
                   body=args.body, status=args.status, found_by=args.found_by,
@@ -217,7 +235,7 @@ def cmd_record(args) -> int:
         # text names the vocabulary they need. A traceback buries that under a stack.
         print(f"NOT RECORDED — {e}", file=sys.stderr)
         return 2
-    except OKLUnreachable as e:
+    except OKLUnreachableError as e:
         print(f"NOT RECORDED — {e}", file=sys.stderr)
         return 2
     print(node_id)
@@ -225,6 +243,10 @@ def cmd_record(args) -> int:
 
 
 def cmd_link(args) -> int:
+    """Join two records with a typed edge (e.g. a Gate CATCHES a Defect).
+
+    Edges are what let a briefing say WHY a gate is armed rather than just naming it.
+    """
     Client().link(args.src, args.rel, args.dst)
     print(f"✓ {args.src} -[{args.rel}]-> {args.dst}")
     return 0
@@ -255,7 +277,7 @@ def cmd_verify(args) -> int:
     evidence = f"`{args.run}` exit 0" + (f", matched {args.expect!r}" if args.expect else "") + f" @ {stamp}"
     try:
         node = Client().verify(args.node_id, evidence)
-    except OKLUnreachable as e:
+    except OKLUnreachableError as e:
         print(f"OKL UNREACHABLE — check passed but the stamp was NOT recorded.\n{e}", file=sys.stderr)
         return 2
     print(f"✓ verified {node['id']} — {node['title']}\n  evidence: {node['verified_by']}")
@@ -263,6 +285,12 @@ def cmd_verify(args) -> int:
 
 
 def cmd_search(args) -> int:
+    """Free-text search across the encoded body.
+
+    Distinct from `check`: search answers "what do we know about X", check answers
+    "what applies to the task I am about to start" and applies scope, interest and
+    cutoff filtering on the way.
+    """
     results = Client().search(args.query, scope=args.scope,
                               node_types=args.type, limit=args.limit)
     if args.format == "json":
@@ -278,7 +306,7 @@ def cmd_metric(args) -> int:
     """Recurrence-after-arming — the quantification the method says it lacks."""
     try:
         rows = Client().recurrence()
-    except OKLUnreachable as e:
+    except OKLUnreachableError as e:
         print(f"OKL UNREACHABLE — cannot compute metric.\n{e}", file=sys.stderr)
         return 2
     if args.format == "json":
@@ -299,7 +327,7 @@ def cmd_drift(args) -> int:
     client = Client()
     try:
         nodes = client.all_nodes()
-    except OKLUnreachable as e:
+    except OKLUnreachableError as e:
         print(f"OKL UNREACHABLE — cannot check drift.\n{e}", file=sys.stderr)
         return 2
     repo = args.repo or client.repo
@@ -374,7 +402,7 @@ def cmd_coverage(args) -> int:
     client = Client()
     try:
         nodes = client.all_nodes()
-    except OKLUnreachable as e:
+    except OKLUnreachableError as e:
         print(f"OKL UNREACHABLE — cannot compute coverage.\n{e}", file=sys.stderr)
         return 2
     repo = args.repo or client.repo
@@ -390,10 +418,8 @@ def cmd_coverage(args) -> int:
             for f in files.stdout.splitlines():
                 fp = Path(args.repo_dir) / f
                 if fp.suffix.lower() in {".py",".cs",".ts",".tsx",".js",".jsx",".go",".rs",".java",".rb"}:
-                    try:
+                    with contextlib.suppress(OSError):
                         code_lines += sum(1 for _ in fp.open("rb"))
-                    except OSError:
-                        pass
     except (FileNotFoundError, subprocess.TimeoutExpired):
         pass
     ratio = (knowledge_lines / code_lines) if code_lines else None
@@ -463,14 +489,13 @@ def cmd_seed(args) -> int:
     bare `okl seed` lists what is available and imports nothing; `--all` is the explicit
     opt-in.
     """
-    import glob
 
     from .seed import seed_from_file
     seed_dir = _bundled_seed_dir()
     interests = {t.lower() for t in (Client().interests or [])}
 
     if not args.path and not args.all:
-        packs = sorted(glob.glob(str(seed_dir / "*.json")))
+        packs = sorted(str(f) for f in seed_dir.glob("*.json"))
         if not packs:
             print(f"no seed packs found under {seed_dir}")
             return 1
@@ -492,10 +517,10 @@ def cmd_seed(args) -> int:
         return 0
 
     if args.all:
-        targets = sorted(glob.glob(str(seed_dir / "*.json")))
+        targets = sorted(str(f) for f in seed_dir.glob("*.json"))
     else:
         path = Path(args.path)
-        targets = sorted(glob.glob(str(path / "*.json"))) if path.is_dir() else [str(path)]
+        targets = sorted(str(f) for f in path.glob("*.json")) if path.is_dir() else [str(path)]
     if not targets:
         print(f"no seed files found at {args.path or seed_dir}")
         return 1
@@ -537,18 +562,35 @@ def cmd_scaffold(args) -> int:
 
 
 def cmd_serve(args) -> int:
+    """Run the shared HTTP service.
+
+    The 0.0.0.0 default is so the service is reachable from outside its container,
+    which is the only way a shared instance is useful. OKL_TOKEN gates every route
+    except /health; see docs/DEPLOY.md before exposing it.
+    """
     from .service import run
     run(host=args.host, port=args.port)
     return 0
 
 
 def cmd_mcp(args) -> int:
+    """Serve the MCP tool surface over stdio, for a coding agent to call.
+
+    Same operations as the CLI through the same Client, so remote/local mode and the
+    fail-closed behaviour are identical whichever surface the agent uses.
+    """
     from .mcp_server import run_stdio
     run_stdio()
     return 0
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """Build the argparse tree for every subcommand.
+
+    One long declarative function on purpose: the parser IS the CLI's contract, and a
+    reader answering "what flags does verify take" should find the whole answer in one
+    place rather than following a chain of registration helpers.
+    """
     p = argparse.ArgumentParser(prog="okl", description="Org Knowledge Layer — the sixth surface.")
     sub = p.add_subparsers(dest="cmd", required=True)
 
@@ -665,10 +707,16 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Parse argv and dispatch, converting store errors into exit codes.
+
+    The backstop matters more than it looks: this CLI runs inside other people's hooks
+    and CI, where the exit code is the only thing read. No command may answer a
+    rejected or unreachable store with a traceback and a zero exit.
+    """
     args = build_parser().parse_args(argv)
     try:
         return args.func(args)
-    except (ValueError, OKLUnreachable) as e:
+    except (ValueError, OKLUnreachableError) as e:
         # The backstop, so no command can ever answer a rejected or unreachable service
         # with a Python traceback. Commands that can say something more specific catch
         # these themselves and never reach here; this exists so the ones that do not —

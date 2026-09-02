@@ -20,7 +20,12 @@ service = ["fastapi>=0.110", "uvicorn>=0.29", "pydantic>=2"]
 postgres = ["psycopg[binary]>=3.1"]
 mcp = ["mcp>=1.2"]
 all = ["fastapi>=0.110", "uvicorn>=0.29", "pydantic>=2", "psycopg[binary]>=3.1", "mcp>=1.2"]
-dev = ["pytest>=8", "ruff>=0.8", "fastapi>=0.110", "uvicorn>=0.29", "pydantic>=2", "httpx>=0.27"]
+dev = [
+  # Gating tools are pinned exactly: a range lets a new release retro-fail a branch
+  # that changed nothing, which is a recorded defect in this repo's own store.
+  "pytest==8.3.4", "ruff==0.8.6", "mypy==1.14.1",
+  "fastapi>=0.110", "uvicorn>=0.29", "pydantic>=2", "httpx>=0.27",
+]
 
 [project.scripts]
 okl = "okl.cli:main"
@@ -42,8 +47,36 @@ target-version = "py310"
 
 [tool.ruff.lint]
 # E/W pycodestyle, F pyflakes, I import order, UP modernize, B bugbear-lite via flake8-bugbear set
-select = ["E", "W", "F", "I", "UP", "B"]
+# S = security (bandit), C90 = complexity, SIM/RET/PERF = simplification,
+# A = builtin shadowing, DTZ = naive datetimes, PTH = pathlib over os.path.
+select = ["E", "W", "F", "I", "UP", "B", "S", "C90", "SIM", "RET", "PERF", "A", "DTZ", "PTH", "N"]
 ignore = [
   "E501",  # long lines: docstrings and CLI help text read better unwrapped
   "E702",  # semicolon one-liners: deliberate compact setup style throughout the tests
+  "A002",  # `type`/`id` shadow builtins — but they ARE the domain vocabulary here, and
+           # the seed file format uses those exact keys. Renaming the public API to
+           # satisfy a style rule would break every consumer and every seed pack.
+  "S603",  # subprocess without shell: every call site is list-form with a `--` guard
+  "S607",  # partial executable path: `git` is resolved from PATH deliberately, so the
+           # caller's toolchain wins (a hardcoded /usr/bin/git breaks nix, brew, CI images)
+  "S104",  # `okl serve --host 0.0.0.0`: the default exists so the service is reachable
+           # from outside its container, which is the only way a shared instance works.
+           # OKL_TOKEN gates every route; the deploy doc says to put a proxy in front.
+  "S602",  # the single shell=True is `okl verify --run "<cmd>"`, where the command is
+           # typed by the person running it. No stored field ever reaches a shell —
+           # that boundary is the rule "never let stored data reach a shell".
 ]
+
+[tool.ruff.lint.mccabe]
+# 12, not the default 10: the two registration functions (service.create_app,
+# mcp_server._build) are declarative route/tool tables whose "complexity" is an artifact
+# of nested definitions. Splitting them would scatter one readable table across helpers.
+max-complexity = 12
+
+[tool.ruff.lint.per-file-ignores]
+# Tests assert on subprocess output and build temp paths; the security rules aimed at
+# production input handling produce only noise there.
+"tests/*" = ["S101", "S603", "S607", "S108", "S608"]
+# The harness is a measurement script, not shipped code: its main() is a linear
+# experiment procedure whose "complexity" is the number of arms and guards it runs.
+"evals/*" = ["S101", "S603", "S607", "C901"]

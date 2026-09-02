@@ -252,8 +252,8 @@ def test_mirror_files_identical():
         # one canon, two filenames: Claude Code reads CLAUDE.md, other agents read AGENTS.md
         (root / "CLAUDE.md", root / "AGENTS.md"),
     ]
-    for h in (root / "hooks").glob("*.sh"):
-        pairs.append((h, root / "src" / "okl" / "scaffold" / "hooks" / h.name))
+    pairs.extend((h, root / "src" / "okl" / "scaffold" / "hooks" / h.name)
+                 for h in (root / "hooks").glob("*.sh"))
     assert pairs, "expected mirrored files to exist"
     for a, b in pairs:
         assert b.exists(), f"missing mirror: {b}"

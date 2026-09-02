@@ -9,7 +9,7 @@ Requires the `mcp` package: install okl[mcp]. Run: `okl mcp` (stdio transport).
 from __future__ import annotations
 
 from . import core
-from .client import Client, OKLUnreachable
+from .client import Client, OKLUnreachableError
 
 
 def _build():
@@ -58,7 +58,7 @@ def _build():
         """
         try:
             result = client.check(task, repo=repo, limit=limit)
-        except OKLUnreachable as e:
+        except OKLUnreachableError as e:
             return (f"⚠️ OKL UNREACHABLE — cannot confirm a clean check ({e}). "
                     "Treat as: rules may exist that you cannot see. Proceed with caution "
                     "and re-run once connectivity is restored.")
@@ -107,4 +107,5 @@ def _build():
 
 
 def run_stdio() -> None:
+    """Serve the MCP tools over stdio, the transport coding agents spawn."""
     _build().run()

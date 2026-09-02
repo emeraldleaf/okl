@@ -16,6 +16,7 @@ when the governed code moves, not on a fixed schedule.
 """
 from __future__ import annotations
 
+import datetime as _dt
 import subprocess
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -41,6 +42,16 @@ class DriftHit:
             "verified_at": self.verified_at, "reason": self.reason,
         }
 
+
+
+def _utc_day(ms: int) -> str:
+    """Epoch-ms -> YYYY-MM-DD in UTC.
+
+    `utcfromtimestamp` is deprecated from 3.12 and returns a naive datetime that silently
+    reads as local time wherever it is later compared or formatted. Drift timestamps are
+    compared against git commit times across machines and timezones, so naive is wrong.
+    """
+    return _dt.datetime.fromtimestamp(ms / 1000, tz=_dt.timezone.utc).strftime("%Y-%m-%d")
 
 def _git_last_change_ms(globs: list[str], repo_dir: str) -> int | None:
     """Epoch-ms of the most recent commit touching any path matching `globs`.
@@ -103,14 +114,18 @@ def detect_drift(nodes: Iterable[Node], repo: str, repo_dir: str = ".") -> list[
 
 
 def render_drift(hits: list[DriftHit]) -> str:
+    """Format drift hits for a terminal, or the all-clear line.
+
+    The all-clear is deliberately explicit rather than silent: "no output" and "the
+    check did not run" look identical, and only one of them is safe.
+    """
     if not hits:
         return "OKL drift: OK — no encoded rule's governed source changed after its last verification."
     lines = [f"OKL drift: {len(hits)} rule(s) may be stale (source changed after verification):", ""]
-    import datetime as _dt
     for h in hits:
-        when = _dt.datetime.utcfromtimestamp(h.last_change_ms / 1000).strftime("%Y-%m-%d")
+        when = _utc_day(h.last_change_ms)
         ver = ("never verified" if h.verified_at is None
-               else "verified " + _dt.datetime.utcfromtimestamp(h.verified_at / 1000).strftime("%Y-%m-%d"))
+               else "verified " + _utc_day(h.verified_at))
         lines.append(f"  • [{h.node_id}] {h.title}")
         lines.append(f"      files: {h.files}")
         lines.append(f"      last source change: {when} · {ver} → {h.reason}")

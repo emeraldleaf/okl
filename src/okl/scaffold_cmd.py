@@ -15,6 +15,7 @@ SCAFFOLD_ROOT = Path(__file__).parent / "scaffold"
 # (".claude" in real use; overridable only so the logic is testable inside sandboxes that
 # forbid creating a literal ".claude" path).
 def _layout(c: str = ".claude"):
+    """Map each scaffold source directory to its destination in the target repo."""
     return [
         ("root/CLAUDE.md", "CLAUDE.md"),
         ("root/CLAUDE.md", "AGENTS.md"),   # same source, two names: Claude Code + every other agent
@@ -36,7 +37,8 @@ PLUGIN_LAYOUT = [
 ]
 
 
-def _copy(src: Path, dst: Path, repo: str, force: bool, written: list, skipped: list):
+def _copy(src: Path, dst: Path, repo: str, force: bool,
+          written: list[Path], skipped: list[Path]) -> None:
     if src.is_dir():
         for child in src.rglob("*"):
             if child.is_file():
@@ -46,7 +48,8 @@ def _copy(src: Path, dst: Path, repo: str, force: bool, written: list, skipped: 
         _copy_file(src, dst, repo, force, written, skipped)
 
 
-def _copy_file(src: Path, dst: Path, repo: str, force: bool, written: list, skipped: list):
+def _copy_file(src: Path, dst: Path, repo: str, force: bool,
+               written: list[Path], skipped: list[Path]) -> None:
     if dst.exists() and not force:
         skipped.append(dst)
         return
@@ -65,6 +68,7 @@ def _copy_file(src: Path, dst: Path, repo: str, force: bool, written: list, skip
 
 
 def list_profiles() -> list[str]:
+    """Stack profiles available to stamp (one directory each under profiles/)."""
     d = SCAFFOLD_ROOT / "profiles"
     return sorted(p.name for p in d.iterdir() if p.is_dir()) if d.is_dir() else []
 
@@ -72,6 +76,14 @@ def list_profiles() -> list[str]:
 def scaffold(target: str = ".", repo: str | None = None, force: bool = False,
              plugin: bool = False, claude_dir: str = ".claude",
              profile: str | list[str] | None = None) -> dict:
+    """Stamp the method kit into a target repo and report what it wrote.
+
+    Non-clobbering by default: an existing file is skipped, not overwritten, because
+    this writes into somebody else's repository and their edits outrank the template.
+    The returned dict names what was written, what was skipped, and every <<FILL>> slot
+    left for a human, so the caller can tell the difference between "installed" and
+    "installed and still needs you".
+    """
     root = Path(target).resolve()
     root.mkdir(parents=True, exist_ok=True)
     repo = repo or root.name
@@ -98,13 +110,15 @@ def scaffold(target: str = ".", repo: str | None = None, force: bool = False,
               repo, force, written, skipped)
 
     # find FILL slots across everything just written
-    fills = []
-    for p in written:
+    fills: list[str] = []
+    # The try sits inside the loop deliberately: one unreadable file (a binary
+    # template, a bad encoding) must skip that file, not abandon the scan.
+    for written_path in written:
         try:
-            for i, line in enumerate(p.read_text().splitlines(), 1):
+            for i, line in enumerate(written_path.read_text().splitlines(), 1):
                 if "<<FILL" in line:
-                    fills.append(f"{p.relative_to(root)}:{i}")
-        except (UnicodeDecodeError, ValueError):
+                    fills.append(f"{written_path.relative_to(root)}:{i}")
+        except (UnicodeDecodeError, ValueError):  # noqa: PERF203
             pass
     return {"repo": repo, "root": str(root), "written": [str(p.relative_to(root)) for p in written],
             "skipped": [str(p.relative_to(root)) for p in skipped], "fills": fills, "plugin": plugin}

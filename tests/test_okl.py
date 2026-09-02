@@ -1163,3 +1163,127 @@ def test_dedup_never_drops_or_merges(tmp_path, monkeypatch, capsys):
     err = capsys.readouterr().err
     assert "resemble records already in the store" in err
     assert "IDOR" in err
+
+
+def _backend_conformance(store, label):
+    """The behavioural contract every backend owes, asserted identically for each.
+
+    Shared rather than duplicated per backend on purpose: the defect this guards was two
+    backends satisfying the same *signatures* while one ranked results and the other
+    returned an unranked substring match. Separate test bodies drift apart exactly the way
+    the implementations did. One body, run against both, cannot.
+    """
+    from okl.store import _Backend
+
+    # ASSERT (1) — it satisfies the declared Protocol at all
+    assert isinstance(store._impl, _Backend), f"{label}: backend does not satisfy _Backend"
+
+    core.record(store, type="Rule", title="ownership predicate belongs in the WHERE clause",
+                scope="org", symptom="a fetch by id with no owner column in the query",
+                fix="add the caller id to the WHERE clause")
+    core.record(store, type="Rule", title="pin every tool that gates CI", scope="org",
+                symptom="an unpinned linter in a required check",
+                fix="pin the exact version")
+    core.record(store, type="Defect", title="unrelated cache warming behaviour", scope="org",
+                symptom="a cold cache on deploy", fix="warm it")
+
+    # ASSERT (2) — RANKED, not insertion order. The best match leads.
+    top = store.search("ownership predicate WHERE clause", limit=3)
+    assert top, f"{label}: search returned nothing for a matching query"
+    assert "ownership predicate" in top[0].title, f"{label}: results are not ranked, got {top[0].title!r}"
+
+    # ASSERT (3) — symptom and fix are matchable, not just title and body
+    assert any("pin every tool" in n.title for n in store.search("unpinned linter", limit=5)), \
+        f"{label}: symptom is not searchable"
+
+    # ASSERT (4) — OR-permissive across terms. Postgres's websearch_to_tsquery ANDs by
+    # default, which silently returns fewer results than SQLite for the same query.
+    assert len(store.search("ownership unpinned", limit=5)) >= 2, \
+        f"{label}: multi-term query is AND-ing, not OR-ing"
+
+    # ASSERT (5) — filters are exact
+    assert store.search("ownership", scope="repo:nope", limit=5) == []
+    assert all(n.type == "Rule" for n in store.search("ownership", node_types=["Rule"], limit=5))
+
+    # ASSERT (6) — limit is honoured
+    assert len(store.search("ownership OR pin OR cache", limit=1)) <= 1
+
+    # ASSERT (7) — upsert is idempotent AND keeps any derived index consistent with the
+    # row. Re-writing a record with a changed symptom must change what finds it.
+    # Distinctive single tokens, because search is OR-permissive: asserting the ABSENCE
+    # of "first symptom wording" would fail on a record still containing "symptom" and
+    # "wording". Only a term unique to the old version can prove the old row is gone.
+    nid = core.record(store, type="Rule", title="idempotency probe", scope="org",
+                      symptom="zebrafish")
+    before = len(store.all_nodes())
+    store.add_node(Node(id=nid, type="Rule", title="idempotency probe", scope="org",
+                        symptom="narwhal"))
+    assert len(store.all_nodes()) == before, f"{label}: upsert duplicated instead of replacing"
+    assert store.search("narwhal", limit=3), f"{label}: index went stale on upsert"
+    assert not store.search("zebrafish", limit=3), f"{label}: stale index row survived the upsert"
+
+
+def test_sqlite_backend_conformance(store):
+    """The SQLite backend meets the contract."""
+    _backend_conformance(store, "sqlite")
+
+
+@pytest.mark.skipif(not os.environ.get("OKL_TEST_POSTGRES_URL"),
+                    reason="set OKL_TEST_POSTGRES_URL to run against a real Postgres")
+def test_postgres_backend_conformance():
+    """The Postgres backend meets the SAME contract, asserted by the same code."""
+    import psycopg
+    url = os.environ["OKL_TEST_POSTGRES_URL"]
+    schema = "okl_conformance_test"
+    with psycopg.connect(url, autocommit=True) as setup:
+        setup.execute(f"DROP SCHEMA IF EXISTS {schema} CASCADE")
+        setup.execute(f"CREATE SCHEMA {schema}")
+    sep = "&" if "?" in url else "?"
+    pg = Store(f"{url}{sep}options=-csearch_path%3D{schema}")
+    try:
+        _backend_conformance(pg, "postgres")
+    finally:
+        pg.close()
+        with psycopg.connect(url, autocommit=True) as teardown:
+            teardown.execute(f"DROP SCHEMA IF EXISTS {schema} CASCADE")
+
+
+def test_a_stack_tag_the_repo_does_not_declare_excludes_the_record(store):
+    """A universal subject tag must not rescue an off-stack record into a briefing.
+
+    Found by reviewing why a Python repo's briefings were dominated by .NET canon. The
+    filter was a plain any-match over all tags, and `method` is carried by 75 records —
+    so a rule tagged `dotnet,method` reached every repo that declared an interest in
+    method, which is every repo. Stack tags assert "this is about .NET"; a subject tag
+    cannot overrule that claim.
+    """
+    # ARRANGE — one .NET rule that also carries the universal subject, and one rule that
+    # is purely subject-tagged. Both mention the same words, so ranking cannot separate
+    # them and only the filter can.
+    core.record(store, type="Rule", title="aggregates need an observed invariant",
+                scope="org", tags="dotnet,method", body="pattern discipline")
+    core.record(store, type="Rule", title="aggregates of knowledge need an owner",
+                scope="org", tags="method", body="pattern discipline")
+
+    interests = ["python", "method"]
+
+    # ASSERT (1) — the .NET record is dropped despite sharing `method`
+    res = core.check(store, repo="okl", task="aggregates pattern discipline",
+                     interests=interests)
+    titles = [r["title"] for r in res["rules"]]
+    assert not any("aggregates need an observed invariant" in t for t in titles), \
+        f"a dotnet-tagged record reached a repo that did not declare dotnet: {titles}"
+
+    # ASSERT (2) — the purely subject-tagged record still arrives. Excluding by stack
+    # must not become excluding everything.
+    assert any("aggregates of knowledge" in t for t in titles), titles
+
+    # ASSERT (3) — a repo that DOES declare the stack still receives it
+    res2 = core.check(store, repo="svc", task="aggregates pattern discipline",
+                      interests=["dotnet", "method"])
+    assert any("observed invariant" in r["title"] for r in res2["rules"])
+
+    # ASSERT (4) — declaring no interests still means no filtering at all
+    res3 = core.check(store, repo="anything", task="aggregates pattern discipline",
+                      interests=None)
+    assert len(res3["rules"]) == 2

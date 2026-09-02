@@ -10,12 +10,13 @@ promoting SQLite -> Postgres is a one-env-var change, no call-site edits.
 """
 from __future__ import annotations
 
+import contextlib
 import os
 import time
 import uuid
 from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field
-from typing import Any
+from typing import Any, Protocol, runtime_checkable
 
 # Node types and edge relations are closed vocabularies (design doc §3.2).
 NODE_TYPES = {
@@ -37,7 +38,18 @@ KNOWN_TAGS = {
     "eval-integrity", "agent-safety", "security",             # cross-cutting subjects
     "retrieval-design", "data-quality", "method",
     "messaging",   # added 2026-07-21 for the .NET platform canon import (broker/queue/event-driven design)
+    "python",      # added 2026-09-02 for okl's own language canon. Distinct from
+                   # `python-rag`, which is a STACK tag for one service's RAG pipeline:
+                   # a review found this repo had 75 dotnet-tagged records governing a
+                   # Python codebase and no tag under which to file its own conventions.
 }
+
+
+# The stack half of the vocabulary — "what technology is this about". Distinguished from
+# subject tags because the two filter differently: a repo that does not do .NET wants no
+# .NET records, however cross-cutting their subject. Kept beside KNOWN_TAGS so adding a
+# stack cannot silently land in the wrong half.
+STACK_TAGS = {"dotnet", "react", "python-rag", "geospatial", "python"}
 
 
 def split_tags(tags: str | None) -> set[str]:
@@ -46,10 +58,17 @@ def split_tags(tags: str | None) -> set[str]:
 
 
 def _now_ms() -> int:
+    """Epoch milliseconds. Milliseconds because git commit times are compared against
+    verification stamps, and second resolution loses ordering within a busy minute."""
     return int(time.time() * 1000)
 
 
 def new_id(prefix: str = "n") -> str:
+    """A short prefixed id (n_ for nodes).
+
+    Random rather than sequential: ids from different machines land in one shared
+    store, so a counter would collide.
+    """
     return f"{prefix}_{uuid.uuid4().hex[:12]}"
 
 
@@ -156,13 +175,42 @@ class Store:
         self._impl.close()
 
 
-class _Backend:
+@runtime_checkable
+class _Backend(Protocol):
+    """What a storage backend must provide.
+
+    A Protocol rather than a base class: the backends are independent implementations
+    over different drivers, not variations on shared behaviour, and there is nothing to
+    inherit. `runtime_checkable` lets the conformance test assert a backend satisfies
+    this without importing a driver it may not have.
+
+    THE SIGNATURES ARE NOT THE CONTRACT. This interface was satisfied in full while the
+    Postgres backend ran an unranked substring match against SQLite's BM25 — same method
+    names, same types, silently worse retrieval for anyone who promoted their store
+    (recorded as "a swappable backend must match on quality, not just interface"). The
+    behavioural half of the contract is stated here and enforced by the parity tests:
+
+      search(q, scope, node_types, limit)
+        - RANKED, best first. Not insertion order, not arbitrary.
+        - Matches title, body, symptom and fix — every field the design treats as
+          matchable — with title weighted highest.
+        - OR-permissive across terms: a two-term query returns records matching either.
+          (Postgres's websearch_to_tsquery ANDs by default, which silently tightens
+          recall relative to SQLite.)
+        - `limit` caps the rows returned; `scope` and `node_types` filter exactly.
+
+      upsert_node / upsert_edge
+        - Idempotent on the primary key: writing the same id twice replaces, never
+          duplicates, and leaves any derived index consistent with the row.
+    """
+
     def init_schema(self) -> None: ...
     def upsert_node(self, node: Node) -> None: ...
     def upsert_edge(self, edge: Edge) -> None: ...
     def get_node(self, node_id: str) -> Node | None: ...
-    def search(self, q, scope, node_types, limit) -> list[Node]: ...
-    def neighbors(self, node_id, rels) -> list[tuple[Edge, Node]]: ...
+    def search(self, q: str, scope: str | None, node_types: list[str] | None,
+               limit: int) -> list[Node]: ...
+    def neighbors(self, node_id: str, rels: list[str] | None) -> list[tuple[Edge, Node]]: ...
     def recurrence_after_arming(self) -> list[dict[str, str]]: ...
     def all_nodes(self) -> list[Node]: ...
     def close(self) -> None: ...
@@ -174,6 +222,11 @@ _NODE_COLS = ["id", "type", "scope", "repo", "title", "body", "status",
 
 
 def _row_to_node(row: dict[str, Any]) -> Node:
+    """Build a Node from a database row, ignoring columns it does not declare.
+
+    Tolerating extra columns is what lets an older client read a database written by
+    a newer one instead of crashing on an unknown field.
+    """
     return Node(**{k: row[k] for k in _NODE_COLS if k in row})
 
 
@@ -190,10 +243,9 @@ class _SQLiteBackend(_Backend):
         self.conn = sqlite3.connect(path, check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         self._lock = threading.RLock()  # reentrant: neighbors() calls get_node()
-        try:
+        # :memory: and some filesystems do not support WAL; the store works without it.
+        with contextlib.suppress(sqlite3.OperationalError):
             self.conn.execute("PRAGMA journal_mode=WAL")
-        except sqlite3.OperationalError:
-            pass  # :memory: and some FS don't support WAL
         self._has_fts = True
 
     def init_schema(self) -> None:
@@ -425,7 +477,10 @@ class _PostgresBackend(_Backend):
         tsq = _pg_ts_query(q)
         params: list[Any] = []
         if tsq:
-            sql = f"SELECT * FROM node WHERE ({_PG_TSV}) @@ websearch_to_tsquery('english', %s)"
+            # _PG_TSV is a module constant, not input; every caller-supplied value in
+            # this query is bound as a %s parameter below.
+            sql = (f"SELECT * FROM node WHERE ({_PG_TSV}) "  # noqa: S608
+                   "@@ websearch_to_tsquery('english', %s)")
             params.append(tsq)
         else:
             sql = "SELECT * FROM node WHERE (title ILIKE %s OR body ILIKE %s)"
