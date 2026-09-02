@@ -52,8 +52,9 @@ def _build():
         Call this first.
 
         `compact=True` returns ONLY the imperative action list (what to fix, when you
-        see it, what to do) — roughly 250 tokens at limit=3 versus ~4,400 for the full
-        briefing. Use it when working in a small context budget, e.g. a subagent handling
+        see it, what to do) — roughly 250 tokens at limit=3 versus ~2,300 for the full
+        briefing at the default limit of 12. (The 4,400 this used to claim predated the
+        top-k cutoff and was never re-measured after it landed.) Use it when working in a small context budget, e.g. a subagent handling
         one focused subtask. `limit` caps how many records are drawn on.
         """
         try:

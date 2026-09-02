@@ -69,3 +69,20 @@ jobs:
       # run it on their own tree.
       - name: Method gates (links, doc orphans, diagram pairs, tombstones, canon size)
         run: bash gates/run-gates.sh
+
+      # Secret scan over the FULL history, not the working tree. okl writes a bearer
+      # token into .okl/config.json, and the .gitignore it now drops there is the only
+      # thing between that and a commit — this is the check for when that fails.
+      #
+      # The upstream gitleaks-action is deliberately not used: it requires a paid licence
+      # key for organization-owned repositories, so it would break for anyone who forks
+      # this into an org. The binary has no such condition, and pinning the release keeps
+      # a new detection rule from retro-failing a branch that changed nothing.
+      - name: Secret scan — gitleaks
+        env:
+          GITLEAKS_VERSION: "8.30.1"
+        run: |
+          curl -sSfL -o /tmp/gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          tar -xzf /tmp/gitleaks.tar.gz -C /tmp gitleaks
+          /tmp/gitleaks git . --no-banner --redact --exit-code 1

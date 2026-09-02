@@ -271,6 +271,59 @@ pip install "org-knowledge-layer[mcp]"        # MCP server for Claude Code / Cur
 pip install "org-knowledge-layer[all]"
 ```
 
+## What it costs, and how to turn it down
+
+Installing okl is not free. It is worth knowing exactly what you are signing up for
+before you wire it into every prompt, and every number below was measured on this repo's
+own 199-record store rather than estimated.
+
+**Per prompt, once the hook is installed:**
+
+| | |
+|---|---|
+| Latency | **~0.11s** — one local SQLite query, no network in local mode |
+| Context | **~2,300 tokens** at the default `--limit 12`, down to **~250** at `--format actions --limit 3` |
+
+**Per session:** the Stop hook interrupts once at the end to ask what was learned. It
+blocks the first stop only, and answering it is the whole write side of the loop.
+
+**In your repo:** `okl init` writes `.okl/` (config, the local database, a `.gitignore`
+covering both) and, if `.claude/` exists, two hook scripts plus their registration. It
+also installs `.github/workflows/okl-verify.yml`, which runs the drift gate on every PR.
+`okl scaffold` is separate and optional — nothing installs it unless you ask.
+
+### The knobs, cheapest first
+
+```bash
+okl check --task "..." --format actions   # imperatives only, ~60% smaller
+okl check --task "..." --limit 3          # fewer records; the briefing says how many it trimmed
+okl init --interests "python,security"    # drop records tagged for stacks you do not use
+```
+
+- **`--format actions`** is the single biggest saving and loses the least: you keep every
+  "when you see X → do Y" and drop the explanatory prose.
+- **`--limit N`** caps how many records are drawn on. The briefing always reports what it
+  trimmed, so a short briefing can never quietly hide a miss.
+- **`interests`** is the one to reach for on a mature shared store. Stack tags filter
+  exclusively — declaring `python` means records tagged `dotnet` stay out even when they
+  share a subject tag with something you asked for.
+- **Scope records `repo:` rather than `org`** when a lesson is local. Org scope is a claim
+  that every project in the organization should see it, and it costs every project's
+  budget to be wrong about that.
+
+### Turning parts off
+
+The hooks are registered in `.claude/settings.json`; delete the entry to stop one firing.
+The pre-task hook is the read side and the Stop hook is the write side, and they are
+independent — running the read without the write is a reasonable way to start.
+
+Nothing is load-bearing on the hooks: `okl check` and `okl record` work from the terminal,
+from CI, and through the MCP server whether or not any hook is installed.
+
+To remove okl from a repo entirely, delete `.okl/`, the two hook scripts and their entries
+in `.claude/settings.json`, and `.github/workflows/okl-verify.yml`. Nothing else was
+written, and nothing outside that repo was touched.
+
 ## Wire a repo
 
 ```bash
@@ -384,7 +437,7 @@ okl metric           # recurrence-after-arming: defect classes that came back in
 
 ## Subagents and small context budgets
 
-A full briefing costs roughly **4,400 tokens** — fine for a main session with a large
+A full briefing costs roughly **2,300 tokens** — fine for a main session with a large
 window, punishing for a subagent working in a few thousand. That asymmetry matters
 because subagents are exactly where org rules get lost: a focused worker handling one
 subtask has the least context and the most need for "here is the mistake this codebase
