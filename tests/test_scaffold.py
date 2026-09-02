@@ -254,6 +254,11 @@ def test_mirror_files_identical():
     ]
     pairs.extend((h, root / "src" / "okl" / "scaffold" / "hooks" / h.name)
                  for h in (root / "hooks").glob("*.sh"))
+    # gates/ joined the mirror set when this repo started running the gates it ships.
+    # It is the same trap as hooks/: a fix that lands in one copy and not the other means
+    # consumers get a gate the author has never actually run, or vice versa.
+    pairs.extend((g, root / "src" / "okl" / "scaffold" / "gates" / g.name)
+                 for g in (root / "gates").glob("*.sh"))
     assert pairs, "expected mirrored files to exist"
     for a, b in pairs:
         assert b.exists(), f"missing mirror: {b}"

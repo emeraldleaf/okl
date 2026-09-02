@@ -31,8 +31,9 @@ okl drift                          # rules whose governed source changed after v
 ## Rules that are enforced (and why)
 
 - **Mirror files are byte-identical, test-enforced**: `ci/okl-verify.yml` ==
-  `.github/workflows/okl-verify.yml` == `src/okl/scaffold/ci/okl-verify.yml`, and
-  `hooks/*.sh` == `src/okl/scaffold/hooks/*.sh`. The scaffold copies are what consumers
+  `.github/workflows/okl-verify.yml` == `src/okl/scaffold/ci/okl-verify.yml`,
+  `hooks/*.sh` == `src/okl/scaffold/hooks/*.sh`, and
+  `gates/*.sh` == `src/okl/scaffold/gates/*.sh`. The scaffold copies are what consumers
   receive; the repo copies are the dogfood. Edit ONE, copy to the others in the same
   change — `tests/test_scaffold.py::test_mirror_files_identical` fails otherwise.
 - **ruff `E702` is ignored deliberately** (semicolon one-liners): the tests use a

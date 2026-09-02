@@ -62,3 +62,10 @@ jobs:
 
       - name: Diagram figures trace to committed receipts
         run: ./ci/check-diagram-figures.sh
+
+      # The content audits okl ships to consumers, run against okl itself. They were
+      # shipped for weeks without this repo running any of them — the "enforcement
+      # surface nothing triggers" failure, one level up: a gate whose author has never
+      # run it on their own tree.
+      - name: Method gates (links, doc orphans, diagram pairs, tombstones, canon size)
+        run: bash gates/run-gates.sh
