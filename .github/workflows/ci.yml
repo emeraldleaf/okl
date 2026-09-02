@@ -35,7 +35,7 @@ jobs:
     steps:
       # Actions pinned to a commit SHA, not a tag: a tag is mutable, so `@v5` is an
       # unpinned dependency with write access to the runner.
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09  # v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           # The diagram gate reads committed history (git show HEAD:...), not the
           # checkout tree, so it needs more than the default shallow fetch.
