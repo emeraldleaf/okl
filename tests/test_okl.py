@@ -936,7 +936,7 @@ def test_mcp_server_builds_and_its_tools_actually_run(tmp_path, monkeypatch):
 
     def unwrap(res):
         c = getattr(res, "content", None)
-        if isinstance(c, (list, tuple)):
+        if isinstance(c, list | tuple):
             c = c[0]
         return getattr(c, "text", str(c))
 

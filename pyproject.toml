@@ -23,7 +23,9 @@ all = ["fastapi>=0.110", "uvicorn>=0.29", "pydantic>=2", "psycopg[binary]>=3.1",
 dev = [
   # Gating tools are pinned exactly: a range lets a new release retro-fail a branch
   # that changed nothing, which is a recorded defect in this repo's own store.
-  "pytest==8.3.4", "ruff==0.8.6", "mypy==1.14.1",
+  # Verified against PyPI and run green here on 2026-09-02, rather than a
+  # plausible-looking guess: an invented version 404s the install step.
+  "pytest==8.4.2", "ruff==0.16.5", "mypy==2.3.1",
   "fastapi>=0.110", "uvicorn>=0.29", "pydantic>=2", "httpx>=0.27",
 ]
 
