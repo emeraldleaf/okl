@@ -169,26 +169,56 @@ That distinction is the one the flat-retrieval ADR is written around: its trigge
 failing to comply with a record it was handed. Measured miss rate after the cutoff
 remains zero. Compliance is a separate, unmeasured problem.
 
-## 4c. NOT YET RE-RUN: symptom and fix joined the search index (2026-09-01)
+## 4c. Re-run after indexing symptom and fix (2026-09-01)
 
-**Every number in this report predates this change.** `symptom` and `fix` are now indexed
-alongside `title` and `body` on both backends, with explicit column weights
+`symptom` and `fix` joined the search index on both backends, with column weights
 (title > body = symptom > fix). Before it, a record whose distinguishing words lived in
 `symptom` — the field every command and doc calls "what a reader matches against" — was
-unretrievable unless those words also appeared in the title.
+unretrievable unless those words also appeared in the title. That is a change to the
+retrieval path this report measures, so the A/B was re-run rather than assumed safe.
 
-That is a change to the retrieval path this report measures, and the precedent set in §4b
-is that such a change gets re-measured rather than assumed safe. It has not been re-run
-yet. Until it is:
+The three sonnet-generator runs, same 8 tasks, same judge, 3 samples per arm, 0% harness
+failures in every one:
 
-- the figures in §3 and §4b remain accurate **for the retrieval path as it stood on
-  2026-09-01 before this commit**, and should be cited that way;
-- they should not be quoted as evidence about the current code;
-- the expected direction is more records matching a given task, which the top-k cutoff
-  then trims — so the interaction between the two changes is the thing worth measuring,
-  not either alone.
+| run | change under test | baseline | briefed |
+|---|---|---|---|
+| ab-20260830-0003 | (before cutoff) | 8/24 (33%) | 1/24 (4%) |
+| ab-20260901-0133 | after top-k cutoff | 10/24 (42%) | 2/24 (8%) |
+| **ab-20260901-1238** | **after indexing symptom/fix** | **12/24 (50%)** | **1/24 (4%)** |
 
-Run `python3 evals/ab_harness.py` and add a §4d with the receipt.
+**Read the baseline column first, again.** It has now walked 33% → 42% → 50% across three
+runs while nothing about the baseline arm has ever changed — it receives no briefing, and
+no code it touches was modified. That 17-point spread is the noise floor at n=24, and it
+is the most important number on this page: **differences smaller than about 17 points are
+not interpretable in this design.**
+
+What that permits and forbids:
+
+- **Permitted:** the briefing effect itself. Baseline 33-50% against briefed 4-8% is a gap
+  far larger than the noise floor, and it has survived three runs and a model tier.
+- **Forbidden:** any claim about this change specifically. Briefed went 8% → 4%, which is
+  two reproductions becoming one. That is inside the noise, and calling it an improvement
+  would be reading a coin flip.
+
+The defensible statement is the negative one: indexing symptom and fix **did not degrade**
+retrieval, and the briefed arm has now been 1-2 reproductions out of 24 in every
+sonnet run.
+
+Per-task, this run — `spa_tokens` is again the only briefed reproduction, and again the
+task where the baseline fails every time:
+
+| task | baseline | briefed |
+|---|---|---|
+| idor_endpoint | 0/3 | 0/3 |
+| price_tamper | 2/3 | 0/3 |
+| react_fetch | 0/3 | 0/3 |
+| judge_summary | 1/3 | 0/3 |
+| exit_code_trust | 3/3 | 0/3 |
+| spa_tokens | 3/3 | **1/3** |
+| rate_limiter | 0/3 | 0/3 |
+| ci_linter | 3/3 | 0/3 |
+
+Conditional subset: 1/15 on the 5 tasks the baseline failed at least once.
 
 ## 5. Findings
 
