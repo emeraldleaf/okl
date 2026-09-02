@@ -324,6 +324,32 @@ To remove okl from a repo entirely, delete `.okl/`, the two hook scripts and the
 in `.claude/settings.json`, and `.github/workflows/okl-verify.yml`. Nothing else was
 written, and nothing outside that repo was touched.
 
+### Architecture review in CI (off by default)
+
+The kit ships a reviewer that reads a PR diff against your encoded rules and fails the
+build on a must-fix finding. It is **off unless you ask for it**, and it is not tied to any
+vendor. Set the `REVIEW_CMD` repository variable to any CLI that reads a prompt on stdin:
+
+```bash
+gh variable set REVIEW_CMD --body "claude -p --model sonnet"   # your existing Claude Code login
+gh variable set REVIEW_CMD --body "ollama run qwen2.5-coder"   # local model, no API cost
+gh variable set REVIEW_CMD --body "llm -m gpt-4o"              # any other CLI
+```
+
+Two things worth knowing:
+
+- **`claude -p` needs no separate API key.** It authenticates with the Claude Code login you
+  already have, so if you use Claude Code there is nothing else to configure and no second
+  bill. Verified headless with `ANTHROPIC_API_KEY` unset.
+- **Locally you do not need this at all.** The reviewer is a subagent
+  (`.claude/agents/architecture-reviewer.md`); ask your agent to run it on your changes and
+  it costs nothing beyond the session you are already in. The CI job exists for the case
+  where no human and no agent is in the loop — a PR nobody reviewed.
+
+Unset, the step prints one line saying it is off and exits 0. Every other gate in the kit is
+deterministic and free; this is the only one that calls a model, which is why it is the only
+one that is opt-in.
+
 ## Wire a repo
 
 ```bash

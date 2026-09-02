@@ -57,3 +57,11 @@ okl scaffold --profile geospatial                     # rslearn/OlmoEarth pipeli
 Each profile also writes a `_PROFILE_<name>.md` into `.claude/rules/` documenting what it installed.
 Profile rules are the *static* half; the *cross-repo* half (defects, gates, retractions that move
 between repos) lives in okl and surfaces via `okl check`.
+
+## Architecture review (opt-in)
+
+`ci/review-agent.sh` runs `.claude/agents/architecture-reviewer.md` over a PR diff and
+fails on must-fix findings. **Off unless the `REVIEW_CMD` repository variable is set** to
+a CLI that reads a prompt on stdin — `claude -p` (uses your existing Claude Code login,
+no separate API key), `ollama run <model>` (local, free), or any other. Unset, it prints
+one line and passes. It is the only gate in this kit that calls a model.

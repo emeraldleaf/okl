@@ -89,7 +89,14 @@ EOF
 )"
 
 echo "review-agent: reviewing $(printf '%s' "$diff_text" | wc -l | tr -d ' ') lines of diff against $BASE"
-raw="$(printf '%s' "$prompt" | $REVIEW_CMD 2>/dev/null)"
+# CLEAN ROOM. Run the reviewer from a temp directory, never the repo. If REVIEW_CMD is a
+# coding agent, this repo's own hooks would otherwise fire on it: the UserPromptSubmit hook
+# injects a briefing into the review, and the Stop hook answers instead of the reviewer.
+# Reproduced while verifying this script — a smoke call in the repo cwd came back answering
+# the Stop hook rather than the question, which is the same failure evals/ documents.
+clean="$(mktemp -d)"
+raw="$(cd "$clean" && printf '%s' "$prompt" | $REVIEW_CMD 2>/dev/null)"
+rmdir "$clean" 2>/dev/null || true
 
 # Strip any markdown fence the model adds around the JSON.
 json="$(printf '%s' "$raw" | sed -e 's/^```json//' -e 's/^```//' -e '/^```$/d')"
