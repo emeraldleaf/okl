@@ -312,6 +312,61 @@ def cmd_drift(args) -> int:
     return 1 if (hits and args.gate) else 0
 
 
+def cmd_dedup(args) -> int:
+    """Report records that look like near-duplicates of each other.
+
+    A review aid, never an auto-merge. Whether two similar records are "the same" is a
+    judgment about intent, and the measured score bands for true paraphrases and for
+    genuinely-distinct-but-related records overlap (see core.DEDUP_THRESHOLD). Deciding
+    that automatically would delete real records.
+
+    Duplicates are not merely untidy now that `check` applies a top-k cutoff: two records
+    saying the same thing both get injected, spend the budget twice, and can push a third
+    relevant record out of the briefing entirely.
+    """
+    client = Client()
+    if not client.configured:
+        print("OKL NOT CONFIGURED — run `okl init` here, or `okl connect <url>`.", file=sys.stderr)
+        return 2
+    nodes = list(client.all_nodes())
+    store = client._local_store() if client.mode == "local" else None
+    idf = core._idf(store) if store is not None else {}
+
+    seen: set[tuple[str, str]] = set()
+    pairs = []
+    for i, a in enumerate(nodes):
+        for b in nodes[i + 1:]:
+            score = core.duplicate_score(a, b, idf)
+            if score >= args.threshold:
+                key = tuple(sorted((a.id, b.id)))
+                if key not in seen:
+                    seen.add(key)
+                    pairs.append((score, a, b))
+    pairs.sort(key=lambda p: -p[0])
+
+    if not pairs:
+        print(f"OKL dedup: OK — no pair of the {len(nodes)} records scores at or above "
+              f"{args.threshold}.")
+        return 0
+
+    print(f"OKL dedup: {len(pairs)} candidate pair(s) at or above {args.threshold}, "
+          f"out of {len(nodes)} records.\n"
+          "These are candidates for a human to rule on, not confirmed duplicates.\n")
+    for score, a, b in pairs[: args.limit]:
+        print(f"  {score:.2f}")
+        for n in (a, b):
+            print(f"    [{n.id}] {n.type} · {n.scope}")
+            print(f"       {n.title}")
+            if n.symptom:
+                print(f"       symptom: {n.symptom[:88]}")
+        print()
+    if len(pairs) > args.limit:
+        print(f"  ... {len(pairs) - args.limit} more (raise --limit)")
+    print("Resolve by deciding which record is the one to keep, then RETRACT or link the\n"
+          "other with SUPERSEDES — deleting loses the record that it was once believed.")
+    return 1
+
+
 def cmd_coverage(args) -> int:
     """Knowledge-to-code ratio — a health signal, not a target (Codified Context §4.2)."""
     import subprocess
@@ -562,6 +617,12 @@ def build_parser() -> argparse.ArgumentParser:
     pdr.add_argument("--format", choices=["text", "json"], default="text")
     pdr.set_defaults(func=cmd_drift)
 
+    pdd = sub.add_parser("dedup", help="report near-duplicate records for review (never auto-merges)")
+    pdd.add_argument("--threshold", type=float, default=core.DEDUP_THRESHOLD,
+                     help=f"similarity 0-1 to report at (default {core.DEDUP_THRESHOLD}, "
+                          "calibrated to over-report)")
+    pdd.add_argument("--limit", type=int, default=20, help="pairs to print")
+    pdd.set_defaults(func=cmd_dedup)
     pcv = sub.add_parser("coverage", help="knowledge-to-code ratio (health signal)")
     pcv.add_argument("--repo"); pcv.add_argument("--repo-dir", dest="repo_dir", default=".")
     pcv.add_argument("--format", choices=["text", "json"], default="text")

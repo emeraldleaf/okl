@@ -18,6 +18,7 @@ import json
 import sys
 from pathlib import Path
 
+from . import core
 from .client import Client
 
 
@@ -50,6 +51,27 @@ def seed_from_file(client: Client, path: str) -> int:
                 + "\n  - ".join(uncited[:10])
                 + ("\n  ..." if len(uncited) > 10 else "")
                 + "\nAdd the path:line each came from, or delete the record.")
+
+    # Near-duplicate advisory for proposal packs. Unlike the citation rule above this
+    # only reports: the similarity score cannot separate a paraphrase from a
+    # genuinely-distinct record that shares a subject (see core.DEDUP_THRESHOLD), and a
+    # blocking check on a signal that noisy would refuse good imports. An uncited record
+    # is unambiguously wrong; a similar one is a question for a person.
+    if data.get("_proposed_by") and getattr(client, "mode", "local") == "local":
+        store = client._local_store()
+        if store.all_nodes():
+            idf = core._idf(store)
+            flagged = []
+            for node in data.get("nodes", []):
+                for score, existing in core.find_duplicates(store, node, idf=idf, limit=1):
+                    flagged.append((score, node.get("title", "?"), existing))
+            if flagged:
+                print(f"  ? {len(flagged)} incoming record(s) resemble records already in "
+                      "the store. Importing anyway — review these:", file=sys.stderr)
+                for score, title, existing in sorted(flagged, key=lambda f: -f[0])[:10]:
+                    print(f"      {score:.2f}  incoming: {title[:64]}", file=sys.stderr)
+                    print(f"            existing: [{existing.id}] {existing.title[:56]}",
+                          file=sys.stderr)
 
     ns = f"seed:{p.stem}"
     keymap: dict[str, str] = {}

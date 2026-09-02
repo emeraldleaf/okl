@@ -299,3 +299,159 @@ def render_check_for_agent(result: dict[str, Any]) -> str:
             lines.append("_No encoded rule matched this task. Proceeding with a clean slate — "
                          "record anything you learn with `okl record`._")
     return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Near-duplicate detection
+# ---------------------------------------------------------------------------
+
+def _dedup_fields(n: Any) -> dict[str, str]:
+    """The fields worth comparing, per field rather than as one bag.
+
+    `body` is deliberately excluded. It holds the cause — the longest, most prose-like
+    field — and pooling it into one token bag let common corpus vocabulary ("record",
+    "check", "field") dominate the score. Comparing like field with like is far more
+    discriminating: two records describing the same observable have similar SYMPTOMS,
+    whatever their authors called them.
+    """
+    get = (lambda k: getattr(n, k, None)) if not isinstance(n, dict) else n.get
+    return {f: (get(f) or "") for f in ("title", "symptom", "fix")}
+
+
+_DEDUP_STOP = {"the", "a", "an", "is", "are", "to", "of", "in", "on", "and", "or", "for",
+               "it", "that", "this", "with", "from", "by", "be", "not", "no", "as", "at",
+               "its", "so", "than", "then", "when", "which", "must", "never", "always"}
+
+
+def _tokens(s: str) -> set[str]:
+    words = "".join(ch if ch.isalnum() else " " for ch in s.lower()).split()
+    # crude suffix stripping so "paginates"/"pagination" and "index"/"indexed" collide;
+    # a stemmer would be better and would cost a dependency this package does not have.
+    out = set()
+    for w in words:
+        if w in _DEDUP_STOP or len(w) < 3:
+            continue
+        for suf in ("ing", "ed", "es", "s"):
+            if len(w) > 4 and w.endswith(suf):
+                w = w[: -len(suf)]
+                break
+        out.add(w)
+    return out
+
+
+def _idf(store: Store) -> dict[str, float]:
+    """Inverse document frequency over the store's own records.
+
+    Without it every score is dominated by whatever this particular corpus talks about
+    constantly. In a store of engineering lessons that is words like "record", "check"
+    and "test" — present in most records, distinguishing none. Measured on the real
+    190-record store, unweighted Jaccard put true paraphrases and unrelated pairs in the
+    same 0.35-0.45 band, which is a detector that cannot be thresholded.
+    """
+    import math
+    df: dict[str, int] = {}
+    n = 0
+    for node in store.all_nodes():
+        n += 1
+        for t in set().union(*(_tokens(v) for v in _dedup_fields(node).values())) or set():
+            df[t] = df.get(t, 0) + 1
+    if not n:
+        return {}
+    return {t: math.log(1 + n / c) for t, c in df.items()}
+
+
+def _weighted_jaccard(a: set[str], b: set[str], idf: dict[str, float]) -> float:
+    if not a or not b:
+        return 0.0
+    default = 1.0
+    inter = sum(idf.get(t, default) for t in a & b)
+    union = sum(idf.get(t, default) for t in a | b)
+    return inter / union if union else 0.0
+
+
+def duplicate_score(a: Any, b: Any, idf: dict[str, float] | None = None) -> float:
+    """0..1 similarity between two records. Lexical and explainable on purpose.
+
+    Per-field weighted Jaccard (title, symptom, fix) blended with a difflib ratio over
+    the titles, which catches near-identical phrasing that shares few distinctive tokens.
+    Symptom carries the most weight: it is the observable, and it is the field two
+    documents describing the same rule are most likely to agree on.
+    """
+    import difflib
+    idf = idf or {}
+    fa, fb = _dedup_fields(a), _dedup_fields(b)
+    weights = {"title": 1.0, "symptom": 1.4, "fix": 0.8}
+    num = den = 0.0
+    per_field = []
+    for f, w in weights.items():
+        ta, tb = _tokens(fa[f]), _tokens(fb[f])
+        if not ta and not tb:
+            continue
+        j = _weighted_jaccard(ta, tb, idf)
+        per_field.append(j)
+        num += w * j
+        den += w
+    mean_field = num / den if den else 0.0
+    # Blend the mean with the strongest single field rather than averaging alone. Two
+    # records describing the same observable agree strongly on SYMPTOM while their titles
+    # and fixes may share almost nothing — a mean drags that real signal back into the
+    # noise. Measured: an IDOR paraphrase whose symptom was near-identical to the stored
+    # record scored 0.41 on the mean, indistinguishable from unrelated pairs.
+    best_field = max(per_field) if per_field else 0.0
+    field_score = 0.5 * mean_field + 0.5 * best_field
+    # A near-identical title is its own signal: two short titles can share almost no
+    # distinctive tokens for Jaccard to work with and still obviously be the same record.
+    title_ratio = (difflib.SequenceMatcher(None, fa["title"].lower(), fb["title"].lower()).ratio()
+                   if fa["title"] and fb["title"] else 0.0)
+    return max(field_score, title_ratio)
+
+
+DEDUP_THRESHOLD = 0.45
+"""Calibrated on the 190-record dogfood store, and deliberately set to over-report.
+
+Measured. Paraphrases of records already in the store — the same rule as a second
+document would state it — score 0.43 to 0.51. The closest pair of genuinely distinct
+records scores 0.43, and 12 distinct pairs clear 0.45. Those bands overlap, so no
+threshold separates them:
+
+  0.45  catches most paraphrases, and reports ~12 pairs per 190 records that are not
+        duplicates at all
+  0.50  reports nothing false on this corpus, and also misses two of three paraphrases
+
+Lexical similarity cannot do better than this on paraphrased engineering prose; the words
+genuinely differ. Clean separation needs embeddings, which
+`docs/decisions/*-flat-retrieval-until-scale.md` defers until a measured symptom appears.
+This is one: a miss rate high enough to matter, recorded rather than worked around.
+
+So this surfaces candidates for a person to rule on, and never drops or merges a record.
+A detector with this separation that acted on its own would delete real knowledge.
+"""
+
+
+def find_duplicates(store: Store, candidate: Any, threshold: float = DEDUP_THRESHOLD,
+                    limit: int = 5, idf: dict[str, float] | None = None
+                    ) -> list[tuple[float, Node]]:
+    """Existing records that look like `candidate`, best match first.
+
+    Shortlists with the store's own ranked search — the same BM25/ts_rank path a briefing
+    uses, so it needs no extra index and no new dependency — then scores the shortlist.
+    Search alone is the wrong tool (it ranks relevance to a query, not likeness between
+    two records) and scoring every pair is O(n squared); the shortlist is the cheap half
+    of the work and the score is the accurate half.
+    """
+    fields = _dedup_fields(candidate)
+    text = " ".join(fields.values())
+    if not text.strip():
+        return []
+    if idf is None:
+        idf = _idf(store)
+    cand_id = getattr(candidate, "id", None) or (candidate.get("id") if isinstance(candidate, dict) else None)
+    hits = []
+    for n in store.search(text, limit=max(limit * 6, 30)):
+        if n.id == cand_id:
+            continue
+        score = duplicate_score(candidate, n, idf)
+        if score >= threshold:
+            hits.append((round(score, 3), n))
+    hits.sort(key=lambda h: -h[0])
+    return hits[:limit]

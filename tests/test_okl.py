@@ -1084,3 +1084,82 @@ def test_an_index_built_before_symptom_was_indexed_is_rebuilt(tmp_path):
     # findable without anyone re-recording them
     assert [n.title for n in s2.search("request DTO carrying a price", limit=5)] == ["money handling"]
     s2.close()
+
+
+def test_duplicate_scoring_ranks_a_paraphrase_above_an_unrelated_record(store):
+    """The same rule, worded as a second document would word it, scores above noise.
+
+    This is the case doc mining creates: CLAUDE.md, an ADR and a spec all state one rule,
+    an agent paraphrases each heading, and three records arrive with different titles and
+    nearly identical symptoms. Comparing titles alone misses exactly those.
+    """
+    # ARRANGE — one stored rule, plus an unrelated one to compete with it
+    core.record(store, type="Rule", title="Missing ownership scope check is an IDOR",
+                scope="org", symptom="an endpoint fetches an entity by id with no owner predicate",
+                fix="add the caller's id to the WHERE clause; return 404 on no match")
+    core.record(store, type="Rule", title="Log rotation on ingest hosts", scope="org",
+                symptom="disk fills on a long-running ingest host", fix="rotate daily, keep 7")
+
+    paraphrase = {"title": "Queries must filter by the requesting user",
+                  "symptom": "an endpoint fetches a row by id with no owner predicate",
+                  "fix": "put the owner in the WHERE clause and 404 when nothing matches"}
+
+    # ACT
+    hits = core.find_duplicates(store, paraphrase, threshold=0.0)
+
+    # ASSERT (1) — it finds the right record, not merely *a* record. Matching the wrong
+    # one is worse than matching none: it sends a reviewer to compare against the wrong
+    # thing, and they conclude there is no duplicate.
+    assert hits, "a paraphrase of a stored rule must surface it"
+    assert "IDOR" in hits[0][1].title
+
+    # ASSERT (2) — and it outranks the unrelated record by a clear margin
+    scores = {n.title: s for s, n in core.find_duplicates(store, paraphrase, threshold=0.0, limit=9)}
+    assert len(scores) >= 1
+    top = max(scores.values())
+    others = [v for k, v in scores.items() if "IDOR" not in k]
+    assert all(top > v for v in others), f"paraphrase must outrank unrelated records: {scores}"
+
+    # ASSERT (3) — a record never matches itself, or every import would flag everything
+    stored = [n for n in store.all_nodes() if "IDOR" in n.title][0]
+    assert all(n.id != stored.id for _, n in core.find_duplicates(store, stored, threshold=0.0))
+
+
+def test_dedup_never_drops_or_merges(tmp_path, monkeypatch, capsys):
+    """A proposal pack that resembles existing records still imports, with a warning.
+
+    The citation rule blocks because an uncited record is unambiguously wrong. Similarity
+    is not: the measured score bands for true paraphrases and for distinct-but-related
+    records overlap, so a blocking check here would refuse good imports. Report, and let
+    a person rule on it.
+    """
+    from okl.client import Client
+    from okl.seed import seed_from_file
+
+    # ARRANGE — a store holding a rule, and a pack proposing a paraphrase of it
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".okl").mkdir()
+    (tmp_path / ".okl" / "config.json").write_text(json.dumps({"repo": "r"}))
+    client = Client()
+    client.record(type="Rule", title="Missing ownership scope check is an IDOR", scope="org",
+                  symptom="an endpoint fetches an entity by id with no owner predicate",
+                  fix="add the caller's id to the WHERE clause")
+    pack = tmp_path / "proposed.json"
+    pack.write_text(json.dumps({"_proposed_by": "seed-from-docs", "nodes": [
+        {"key": "a", "type": "Rule", "scope": "repo:r",
+         "title": "Queries must filter by the requesting user",
+         "symptom": "an endpoint fetches a row by id with no owner predicate",
+         "fix": "put the owner in the WHERE clause", "found_by": "docs/rules.md:12"}]}))
+
+    # ACT
+    n = seed_from_file(client, str(pack))
+
+    # ASSERT (1) — it imported. A fuzzy signal must not silently discard a record.
+    assert n == 1
+    assert client.search("filter by the requesting user")
+
+    # ASSERT (2) — and the reviewer was told, with both sides named so the comparison
+    # can actually be made
+    err = capsys.readouterr().err
+    assert "resemble records already in the store" in err
+    assert "IDOR" in err
