@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.4.1
+
+### Security — affects the CI workflow already in your repo
+
+- **The shipped CI verifier no longer writes your bearer token to disk.** It ran
+  `okl connect --token`, which persisted `OKL_TOKEN` into `.okl/config.json` on the runner
+  for no reason: the client reads `OKL_SERVICE_URL` and `OKL_TOKEN` from the environment
+  directly, so setting them at job level does the same work with the credential never
+  touching the filesystem. Re-run `okl init` (or `okl scaffold`) to pick up the new file.
+- **Both shipped workflows are hardened.** `okl-verify.yml` and `method-gates.yml` now
+  declare least-privilege `permissions`, a concurrency group, `pipefail`, and
+  `persist-credentials: false`, and pin their actions to commit SHAs rather than mutable
+  tags. They satisfied none of that before.
+- `.github/dependabot.yml` ships with the kit, because pinning to a SHA without an update
+  path is how a repo ends up on a two-year-old action and calls it hardening.
+
+### Added
+
+- **Opt-in architecture review in CI.** `ci/review-agent.sh` runs the reviewer over a PR
+  diff and fails on must-fix findings. **Off unless you set the `REVIEW_CMD` repository
+  variable** to a CLI that reads a prompt on stdin — `claude -p` (authenticates with an
+  existing Claude Code login, no separate API key), `ollama run <model>` (local, free), or
+  any other. Unset, it prints one line and passes. It is the only gate in the kit that
+  calls a model, which is why it is the only one that is opt-in. Documented in the README
+  and the kit manifest.
+
+
 ## 0.4.0
 
 ### Behaviour changes worth reading before upgrading
