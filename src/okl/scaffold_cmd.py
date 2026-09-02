@@ -26,6 +26,10 @@ def _layout(c: str = ".claude"):
         ("evals", "evals"),
         ("ci/method-gates.yml", ".github/workflows/method-gates.yml"),
         ("ci/okl-verify.yml", ".github/workflows/okl-verify.yml"),
+        # Ships alongside the workflows because they pin their actions to commit SHAs.
+        # A pin with no update path goes stale, so the thing that updates it is part of
+        # the kit rather than a step in a README nobody reads.
+        ("ci/dependabot.yml", ".github/dependabot.yml"),
         ("hooks/userpromptsubmit-okl-check.sh", f"{c}/hooks/userpromptsubmit-okl-check.sh"),
         ("hooks/stop-okl-encode.sh", f"{c}/hooks/stop-okl-encode.sh"),
         ("hooks/hooks.json", f"{c}/hooks/hooks.json"),

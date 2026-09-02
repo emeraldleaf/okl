@@ -1,0 +1,17 @@
+# Copy into .github/dependabot.yml
+#
+# This exists because the shipped workflows pin their actions to commit SHAs. Pinning
+# closes the "a mutable tag moved under me" hole and opens a quieter one: the pin never
+# updates, so a security fix in an action never arrives. Pinning with no update path is
+# how a repo ends up on a two-year-old checkout action and calls it hardening.
+# Dependabot rewrites the SHA and the trailing `# v5` comment together.
+version: 2
+
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    labels: ["dependencies", "ci"]
+    commit-message:
+      prefix: "ci"

@@ -10,6 +10,7 @@ again once the breakage is repaired.
 Tests follow ARRANGE / ACT / ASSERT with a story per phase, so the contract is readable
 without opening the gate scripts.
 """
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -466,3 +467,42 @@ def test_seed_from_docs_command_ships_with_its_guard_rails(tmp_path):
     # ASSERT (5) — the marker that makes the citation rule mechanical rather than
     # remembered is present in the template it tells the agent to emit
     assert "_proposed_by" in text
+
+
+def test_shipped_workflows_are_hardened_and_ship_their_update_path(tmp_path):
+    """Every workflow okl stamps into someone's repo carries the CI baseline.
+
+    These files land in other people's repositories, so the org rule this store already
+    holds — least-privilege permissions, a concurrency group, pipefail, no persisted
+    credentials, actions pinned to a SHA — applies to them more strongly than to okl's
+    own, not less. They satisfied none of it until a review checked.
+
+    The dependabot config ships with them because pinning to a SHA closes one hole and
+    opens a quieter one: the pin never updates, so a fix in an action never arrives.
+    Shipping the hardening without the thing that maintains it is half a job.
+    """
+    # ARRANGE / ACT
+    scaffold(target=str(tmp_path), repo="r", claude_dir="dotclaude")
+    workflows = sorted((tmp_path / ".github" / "workflows").glob("*.yml"))
+    assert workflows, "the kit must stamp its workflows"
+
+    for wf in workflows:
+        text = wf.read_text()
+        # ASSERT (1) — least privilege, declared rather than inherited from repo defaults
+        assert "permissions:" in text, f"{wf.name} declares no permissions"
+        # ASSERT (2) — a superseded push should stop burning minutes
+        assert "concurrency:" in text, f"{wf.name} has no concurrency group"
+        # ASSERT (3) — without pipefail a green step can hide a red command in a pipeline
+        assert "pipefail" in text, f"{wf.name} does not set pipefail"
+        # ASSERT (4) — a read-only job must not leave a usable token in .git/config
+        assert "persist-credentials: false" in text, f"{wf.name} persists credentials"
+        # ASSERT (5) — every action pinned to a 40-char commit SHA. A tag is mutable, so
+        # `@v5` is an unpinned dependency with access to the consumer's runner.
+        for line in text.splitlines():
+            if "uses:" in line and "#" in line:
+                ref = line.split("uses:")[1].split("#")[0].strip()
+                assert re.fullmatch(r"[^@]+@[0-9a-f]{40}", ref), f"{wf.name}: unpinned {ref}"
+
+    # ASSERT (6) — and the thing that keeps those pins from rotting ships too
+    assert (tmp_path / ".github" / "dependabot.yml").exists(), \
+        "SHA pins without an update path go stale; the dependabot config must ship with them"

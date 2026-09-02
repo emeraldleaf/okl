@@ -7,19 +7,41 @@ on:
   push:
     branches: [main]
 
+# Least privilege: these jobs read code and report a status. Neither writes.
+permissions:
+  contents: read
+
+concurrency:
+  group: method-gates-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    # Without pipefail a run block continues past a failed segment of a pipeline, so a
+    # green step can hide a red command — which defeats the point of a fail-closed gate.
+    shell: bash -euo pipefail {0}
+
 jobs:
   gates:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # Pinned to a commit SHA, not a tag: a tag is mutable, so `@v5` is an unpinned
+      # dependency with access to your runner. Add a .github/dependabot.yml with the
+      # `github-actions` ecosystem so these pins receive security updates — a pin with no
+      # update path goes stale, which is its own risk.
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09  # v5
+        with:
+          persist-credentials: false
       - name: Run drift-gates (retractions / tombstones / doc-orphans / canon-size)
         run: bash gates/run-gates.sh
 
   evals:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09  # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
         with:
           python-version: "3.13"
       - name: Run eval tier (leads with its own failure count; blocks if RESULTS NOT USABLE)

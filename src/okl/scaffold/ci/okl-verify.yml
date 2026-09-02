@@ -16,16 +16,45 @@ on:
   push:
     branches: [main]
 
+# Least privilege: this workflow reads code and reports a status. It never writes.
+permissions:
+  contents: read
+
+concurrency:
+  group: okl-verify-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    # Without pipefail a run block continues past a failed segment of a pipeline, so a
+    # green step can hide a red command.
+    shell: bash -euo pipefail {0}
+
 jobs:
   okl-verify:
     runs-on: ubuntu-latest
+    env:
+      # Set at job level so every okl command below resolves the shared layer from the
+      # environment. This replaces an `okl connect --token` step, which wrote the bearer
+      # token into .okl/config.json on the runner — needless, since the client reads both
+      # variables directly, and one more place for a credential to end up.
+      # Unset secrets leave these empty, and okl falls back to the repo-local store.
+      OKL_SERVICE_URL: ${{ secrets.OKL_SERVICE_URL }}
+      OKL_TOKEN: ${{ secrets.OKL_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      # Actions are pinned to a commit SHA: a tag is mutable, so `@v5` is an unpinned
+      # dependency with access to your runner. If you copy this file into your own repo,
+      # add a .github/dependabot.yml with the `github-actions` ecosystem so these pins get
+      # security updates — a pin with no update path goes stale and that is its own risk.
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09  # v5
         with:
-          fetch-depth: 0   # drift needs history: it compares file mtimes/commits vs verified_at
-      - uses: actions/setup-python@v5
+          fetch-depth: 0   # drift needs history: it compares governed-file commits vs verified_at
+          persist-credentials: false   # this job never pushes
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
         with:
           python-version: "3.13"
+
       - name: Install okl
         # Detect by the package source, not the distribution name: the name changed once
         # (PyPI rejects "okl" as confusable) and a name-based check silently broke with it.
@@ -36,13 +65,10 @@ jobs:
             pip install org-knowledge-layer
           fi
 
-      - name: Connect to the shared layer (optional — skipped when secrets are unset)
-        env:
-          OKL_SERVICE_URL: ${{ secrets.OKL_SERVICE_URL }}
-          OKL_TOKEN: ${{ secrets.OKL_TOKEN }}
+      - name: Report which store the gate will run against
         run: |
           if [ -n "${OKL_SERVICE_URL:-}" ]; then
-            okl connect "$OKL_SERVICE_URL" --token "$OKL_TOKEN"
+            echo "verifying against the shared layer at $OKL_SERVICE_URL"
           else
             echo "no OKL_SERVICE_URL secret — verifying against the repo-local store"
           fi
