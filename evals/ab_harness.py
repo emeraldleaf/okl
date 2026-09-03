@@ -46,6 +46,12 @@ FAILURE_RATE_UNUSABLE = 0.20
 
 GENERATOR_CMD = os.environ.get("GENERATOR_CMD", "claude -p --model sonnet")
 JUDGE_CMD = os.environ.get("JUDGE_CMD", "claude -p --model haiku")
+# The briefed arm's interest filter. Default "" (unfiltered) is what every run in the
+# report used and why 4f could not measure applies_to: an empty interest set short-circuits
+# the filter entirely. Parameterised so 4h can vary the one retrieval knob this harness is
+# actually able to test. Recorded in the receipt, because a run whose retrieval config is
+# not on its own face cannot be compared to one whose is.
+BRIEF_INTERESTS = os.environ.get("OKL_BRIEF_INTERESTS", "")
 
 GEN_PROMPT = """You are implementing one task for an existing codebase. Output ONLY the code (or YAML/script), no explanation.
 
@@ -84,7 +90,7 @@ def get_briefing(task: str, timeout: int) -> str:
     # declare, so inheriting them made that task measure its rule's ABSENCE across every run
     # in this report. The harness states its retrieval config instead of borrowing one.
     r = subprocess.run([sys.executable, "-m", "okl", "check", "--task", task,
-                        "--format", "agent", "--interests", ""],
+                        "--format", "agent", "--interests", BRIEF_INTERESTS],
                        capture_output=True, text=True, timeout=timeout, cwd=REPO)
     if r.returncode != 0:
         raise RuntimeError(f"okl check failed: {r.stderr.strip()[:200]}")
@@ -284,7 +290,8 @@ def main() -> int:
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M")
     path = out / f"ab-{stamp}.json"
     path.write_text(json.dumps({
-        "generator": GENERATOR_CMD, "judge": JUDGE_CMD, "failure_rate": round(frate, 3),
+        "generator": GENERATOR_CMD, "judge": JUDGE_CMD, "brief_interests": BRIEF_INTERESTS,
+        "failure_rate": round(frate, 3),
         "usable": frate <= FAILURE_RATE_UNUSABLE,
         # Durable: a receipt read months later says on its own face whether it may be
         # compared to its neighbours. Absent means the instrument matched the prior run.

@@ -606,6 +606,57 @@ temporary receipt history (three haiku, newest opus) via `AB_RESULTS_DIR`, which
 shape and separates them. Proved by reintroducing the original comparison and watching it
 go red.
 
+## 4h. PRE-REGISTERED: does interest filtering earn its place? (2026-09-03)
+
+Written before the run, per §2b.
+
+**Why this and not `applies_to`.** §4f established that `applies_to` is outside this
+harness's measurable surface: it changes what reaches a repo *with declared interests*, and
+every run here sets `--interests ""`. Interest filtering **is that pinned flag**. Unpinning
+it is the one retrieval question this harness can actually answer.
+
+**What is being tested.** The briefed arm fetches with okl's own declared interests
+(`python, method, security, agent-safety, retrieval-design, eval-integrity, data-quality`)
+instead of unfiltered. Everything else is held: same tasks, same generator, same haiku
+judge, same sample count. The comparison is against `ab-20260903-1214.json` (§4g).
+
+**The baseline arm is an internal control.** It uses no briefing at all, so filtering
+cannot touch it. If the two runs' baselines differ materially, that difference is sampling
+noise and calibrates how much of any briefed difference to believe. This is the cleanest
+control this harness has ever had, and it is free.
+
+**Deterministic pre-flight, run first.** Exactly one task loses its governing rule under
+filtering: `react_fetch`, whose rule is tagged `react` — the §4b case. Seven of eight keep
+theirs, so the comparison is not rigged. `exit_code_trust` loses nothing.
+
+Filtering removes a mix of noise and signal, which is why the net is not predictable from
+inspection:
+
+| task | records lost to filtering |
+|---|---|
+| `idor_endpoint` | a geospatial `num_classes` off-by-one (noise), GUIDv7 (marginal) |
+| `price_tamper` | a frontend bundle budget (noise on a payment task) |
+| `rate_limiter` | a STAC imagery date-range bug (noise), parallel-awaits (marginal) |
+| `spa_tokens` | TanStack mutation invalidation, feature boundaries (marginal) |
+| `react_fetch` | **its own governing rule**, plus React Compiler and waterfalls (signal) |
+
+**Prediction.** No detectable change. `react_fetch` reads baseline 0/3 briefed 0/3 in every
+run and has no discriminating power, so losing its rule cannot show up in the aggregate;
+what filtering removes elsewhere is mostly off-topic records that were not doing work. If
+anything moves, a small improvement is more likely than a decline, because three tasks shed
+records that are plainly irrelevant to them.
+
+**Falsifier.** The briefed-filtered arm worsens beyond the 17-point noise floor, or any
+task that currently reads briefed 0/3 reproduces. Either means filtering removed something
+load-bearing that the pre-flight did not think to check — which is exactly the §4b failure,
+one level up: pre-flight verifies the *designated* rule survives, not whatever else was
+preventing the defect.
+
+**What this cannot settle.** The task set is deliberately cross-stack, to test cross-repo
+transfer. A repo whose work matched its declared interests would lose less. A null result
+here is therefore weak evidence that filtering is harmless in general, and no evidence at
+all that it helps.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

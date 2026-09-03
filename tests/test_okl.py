@@ -1398,3 +1398,55 @@ def test_applies_to_rejects_a_value_that_is_not_a_stack(store):
     with pytest.raises(ValueError) as e:
         core.record(store, type="Rule", title="t", scope="org", applies_to="security")
     assert "applies_to must name stacks" in str(e.value)
+
+
+def test_search_scope_refuses_a_non_scope_and_resolves_the_repo_shorthand(tmp_path, monkeypatch, capsys):
+    """A mistyped --scope is refused; 'repo' resolves; an unknown repo warns but still runs.
+
+    `--scope repo` is the obvious guess and used to return an empty list and exit 0, because
+    the stored form is `repo:<name>`. That reads as "this repo has learned nothing" when it
+    means "you typed the scope wrong" — the same silence-as-safety failure `check` already
+    refuses to make about an empty store, in the command right next to it.
+
+    The three cases are deliberately graded. A non-scope is a refusal (exit 2, the CLI's
+    "this did not run"). A well-formed scope naming an unknown repo only WARNS, because a
+    fresh repo legitimately has no records and refusing would block a valid query.
+    """
+    import argparse
+    import subprocess
+    import sys as _sys
+
+    from okl.cli import cmd_search
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("OKL_SERVICE_URL", raising=False)
+    # Set up through the shipped CLI rather than hand-built Namespaces: a Namespace that
+    # happens to omit a field the command reads fails as an AttributeError, which tests the
+    # test rather than the behaviour.
+    subprocess.run(["git", "init", "-q", "."], cwd=tmp_path, check=True)
+    okl = [_sys.executable, "-m", "okl"]
+    subprocess.run([*okl, "init", "--repo", "acme"], cwd=tmp_path, check=True,
+                   capture_output=True)
+    subprocess.run([*okl, "record", "--type", "Rule", "--scope", "repo", "--repo", "acme",
+                    "--title", "Handlers validate their input",
+                    "--symptom", "unvalidated input reaches a handler",
+                    "--fix", "validate at the edge"], cwd=tmp_path, check=True,
+                   capture_output=True)
+
+    def search(scope):
+        return cmd_search(argparse.Namespace(query="handlers", scope=scope, type=None,
+                                             limit=10, format="text"))
+
+    # ASSERT (1) — a string that is not a scope at all is REFUSED, not silently empty.
+    assert search("nonsense") == 2
+    assert "REFUSING" in capsys.readouterr().err
+
+    # ASSERT (2) — 'repo' resolves to the configured repo, so nobody has to know the name.
+    assert search("repo") == 0
+    assert "Handlers validate their input" in capsys.readouterr().out
+
+    # ASSERT (3) — a well-formed scope for a repo the store has never seen still RUNS
+    # (exit 0), but says so, naming what the store does know.
+    assert search("repo:notarepo") == 0
+    err = capsys.readouterr().err
+    assert "no record anywhere carries scope" in err
+    assert "repo:acme" in err, "the warning must name the scopes that do exist"

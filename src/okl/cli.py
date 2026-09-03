@@ -302,8 +302,32 @@ def cmd_search(args) -> int:
     "what applies to the task I am about to start" and applies scope, interest and
     cutoff filtering on the way.
     """
-    results = Client().search(args.query, scope=args.scope,
-                              node_types=args.type, limit=args.limit)
+    client = Client()
+    # A wrong --scope used to return an empty list and exit 0, which reads as "this repo
+    # has learned nothing" when it actually means "you typed the scope wrong". `--scope
+    # repo` is the obvious guess and silently found nothing, because the stored form is
+    # `repo:<name>`. Reporting an empty result and a misspelling identically is the
+    # silence-as-safety failure `check` already refuses to make about an empty store.
+    scope = args.scope
+    if scope:
+        if scope in ("repo", "local", "this"):
+            scope = f"repo:{client.repo}"          # shorthand: the configured repo
+        elif scope != "org" and not scope.startswith("repo:"):
+            print(f"REFUSING: --scope {scope!r} is not a scope. Use 'org', 'repo:<name>', "
+                  f"or 'repo' for this repo ({client.repo}).", file=sys.stderr)
+            return 2
+    results = client.search(args.query, scope=scope,
+                            node_types=args.type, limit=args.limit)
+    # A well-formed scope naming a repo the store has never heard of is almost certainly a
+    # typo, and returns the same empty list as a real repo that has recorded nothing yet.
+    # Distinguish them the way `check` distinguishes "no rules apply" from "empty store" —
+    # a warning, never a refusal, because a fresh repo legitimately has no records.
+    if not results and scope and scope.startswith("repo:"):
+        known = sorted({n["scope"] for n in client.search("", limit=10_000)
+                        if n["scope"].startswith("repo:")})
+        if known and scope not in known:
+            print(f"note: no record anywhere carries scope {scope!r}. The store knows "
+                  f"{', '.join(known)} — check for a typo.", file=sys.stderr)
     if args.format == "json":
         _print_json(results)
     else:
@@ -666,7 +690,9 @@ def build_parser() -> argparse.ArgumentParser:
     pvf.set_defaults(func=cmd_verify)
 
     ps = sub.add_parser("search", help="full-text search over the encoded body")
-    ps.add_argument("query"); ps.add_argument("--scope")
+    ps.add_argument("query")
+    ps.add_argument("--scope", help="'org', 'repo:<name>', or 'repo' for this repo "
+                                    "(anything else is refused, not silently empty)")
     ps.add_argument("--type", nargs="*"); ps.add_argument("--limit", type=int, default=25)
     ps.add_argument("--format", choices=["text", "json"], default="text")
     ps.set_defaults(func=cmd_search)
