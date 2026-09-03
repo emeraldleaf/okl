@@ -109,6 +109,35 @@ def main() -> int:
               "its own homework (qz_judge_self).", file=sys.stderr)
         return 3
 
+    # INSTRUMENT CONTINUITY. A run graded by a different judge than the series it will be
+    # quoted alongside is internally valid and externally meaningless, and nothing about it
+    # looks wrong: no failure, no warning, both arms simply shift together the way a
+    # stricter grader shifts them. That happened — REPORT §4f was launched with opus where
+    # every prior run used haiku, typed inline with the other flags and caught only when
+    # the receipts were tabulated by hand afterwards.
+    #
+    # This does not refuse. Changing the instrument is sometimes the point (§4a's
+    # cross-model run swapped both arms deliberately). It makes the change impossible to
+    # MISS: named at startup, repeated in the final report, and — the part that actually
+    # matters — stamped into the receipt, because a run launched in the background scrolls
+    # its startup banner past nobody. A reader tabulating receipts sees the flag.
+    prior = sorted((REPO / "evals" / "results").glob("ab-*.json"))
+    drift_from = None
+    if prior:
+        try:
+            last = json.loads(prior[-1].read_text())
+            changed = {k: (last.get(k), cur) for k, cur in
+                       (("generator", GENERATOR_CMD), ("judge", JUDGE_CMD))
+                       if last.get(k) and last[k].strip() != cur.strip()}
+            if changed:
+                drift_from = {"receipt": prior[-1].name, **{k: v[0] for k, v in changed.items()}}
+                print("⚠️  INSTRUMENT CHANGED since " + prior[-1].name + " — this run's numbers "
+                      "are NOT comparable to the previous series:", file=sys.stderr)
+                for k, (was, now) in changed.items():
+                    print(f"      {k}: {was}  →  {now}", file=sys.stderr)
+        except (OSError, ValueError, KeyError):
+            pass  # an unreadable prior receipt must never block a run
+
     tasks = [json.loads(line) for line in Path(args.tasks).read_text().splitlines() if line.strip()]
     if args.limit:
         tasks = tasks[: args.limit]
@@ -195,6 +224,12 @@ def main() -> int:
     if frate > FAILURE_RATE_UNUSABLE:
         print("❌ RESULTS NOT USABLE — failure rate above threshold. Fix the harness before "
               "reading any number below.")
+    if drift_from:
+        # Repeated here, not just at startup: the report is what gets read and pasted.
+        print(f"⚠️  NOT COMPARABLE ACROSS RUNS — the instrument changed since "
+              f"{drift_from['receipt']} ("
+              + ", ".join(f"{k} was {v}" for k, v in drift_from.items() if k != "receipt")
+              + "). These numbers are internally valid only.")
     def by(arm):
         return [r for r in results if r["arm"] == arm]
 
@@ -223,7 +258,11 @@ def main() -> int:
     path = out / f"ab-{stamp}.json"
     path.write_text(json.dumps({
         "generator": GENERATOR_CMD, "judge": JUDGE_CMD, "failure_rate": round(frate, 3),
-        "usable": frate <= FAILURE_RATE_UNUSABLE, "results": results, "failures": failures,
+        "usable": frate <= FAILURE_RATE_UNUSABLE,
+        # Durable: a receipt read months later says on its own face whether it may be
+        # compared to its neighbours. Absent means the instrument matched the prior run.
+        "instrument_changed_from": drift_from,
+        "results": results, "failures": failures,
     }, indent=1) + "\n")
     print(f"\nwrote {path.relative_to(REPO)}")
     return 0 if frate <= FAILURE_RATE_UNUSABLE else 1

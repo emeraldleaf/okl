@@ -10,6 +10,8 @@ again once the breakage is repaired.
 Tests follow ARRANGE / ACT / ASSERT with a story per phase, so the contract is readable
 without opening the gate scripts.
 """
+import json
+import os
 import re
 import subprocess
 import sys
@@ -279,6 +281,44 @@ def test_eval_harness_refuses_self_grading(tmp_path, monkeypatch):
     r = subprocess.run([sys.executable, str(harness)], capture_output=True, text=True)
     assert r.returncode == 3
     assert "REFUSING TO RUN" in r.stderr
+
+
+def test_ab_harness_flags_a_changed_instrument_but_still_runs():
+    """A run graded by a different judge than the last one says so, and does not refuse.
+
+    REPORT §4f was launched with an opus judge where every prior run used haiku. Nothing
+    failed: the run was internally valid, the judge!=generator guard held, and both arms
+    simply shifted up together the way a stricter grader shifts them. It was caught only by
+    tabulating receipts by hand afterwards. Refusing would be wrong — §4a's cross-model run
+    changed both arms on purpose — so the contract is that the change is impossible to MISS.
+    """
+    harness = Path(__file__).resolve().parents[1] / "evals" / "ab_harness.py"
+
+    def run(judge):
+        env = {**os.environ, "GENERATOR_CMD": "claude -p --model sonnet", "JUDGE_CMD": judge}
+        return subprocess.run([sys.executable, str(harness), "--dry-run"],
+                              capture_output=True, text=True, env=env)
+
+    # ARRANGE — the most recent receipt is the series this run would be quoted alongside.
+    receipts = sorted((Path(__file__).resolve().parents[1] / "evals" / "results").glob("ab-*.json"))
+    if not receipts:
+        pytest.skip("no receipts yet — nothing to compare an instrument against")
+    prior_judge = json.loads(receipts[-1].read_text()).get("judge")
+    if not prior_judge:
+        pytest.skip("most recent receipt predates judge recording")
+
+    # ASSERT (1) — matching the prior instrument is the silent, ordinary case. A warning
+    # that fires on every run is a warning nobody reads, which is the failure this whole
+    # test exists to prevent.
+    same = run(prior_judge)
+    assert "INSTRUMENT CHANGED" not in same.stderr
+
+    # ASSERT (2) — a different judge is named at startup, and the run is NOT refused:
+    # deliberate instrument changes are legitimate, silent ones are not.
+    changed = run("claude -p --model some-other-model")
+    assert "INSTRUMENT CHANGED" in changed.stderr
+    assert changed.returncode != 3, "a changed instrument must warn, never refuse"
+
 
 def _git_repo(tmp_path):
     """Build a scaffolded repo whose files are TRACKED by git, and hand it back.
@@ -555,3 +595,38 @@ def test_review_agent_soft_passes_until_it_is_configured(tmp_path, monkeypatch):
         p = subprocess.run([sys.executable, "-c", verdict], input=payload,
                            capture_output=True, text=True)
         assert p.returncode == expected, f"{payload} -> {p.returncode}: {p.stdout}{p.stderr}"
+
+
+def test_stored_data_never_reaches_a_shell():
+    """Data from the store reaches subprocesses list-form; only a typed arg may be shelled.
+
+    The rule this guards is "never let stored data reach a shell" — record fields are
+    attacker-influenced in a shared layer, and `drift` feeds file globs straight from a
+    record into git. The distinction that matters is the SOURCE of the string, not the
+    presence of `shell=True`: `okl verify --run` shells a command the operator just typed,
+    which is its documented purpose and no escalation. A blanket "no shell=True anywhere"
+    check fails on that legitimate call site and tests a stricter claim than the rule makes
+    — it did, which is why this test exists in this shape.
+    """
+    root = Path(__file__).resolve().parents[1]
+    src = root / "src" / "okl"
+
+    # ASSERT (1) — the stored globs go to git as list items, after a `--` guard so a glob
+    # beginning with a dash can never be read as a git option.
+    drift = (src / "drift.py").read_text()
+    assert '"--", *pathspecs' in drift, "drift lost its list-form/-- guard on stored globs"
+
+    # ASSERT (2) — exactly one shell=True in the package, and it is verify running the
+    # operator's own --run. A second one is a new hazard and must be justified here.
+    shelled = [f"{p.name}:{i}" for p in src.rglob("*.py")
+               for i, line in enumerate(p.read_text().splitlines(), 1)
+               if "shell=True" in line]
+    assert shelled == ["cli.py:273"] or len(shelled) == 1, f"unexpected shell=True: {shelled}"
+    assert "subprocess.run(args.run, shell=True" in (src / "cli.py").read_text()
+
+    # ASSERT (3) — the remote path can never trigger execution: /verify accepts EVIDENCE
+    # already produced by a local run, never a command for the server to execute. If this
+    # ever takes a `run` field, a token holder gets RCE on the shared layer.
+    service = (src / "service.py").read_text()
+    assert "core.verify(_store, req.id, req.evidence)" in service
+    assert "shell" not in service, "the service must never shell out"
