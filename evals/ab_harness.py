@@ -31,10 +31,17 @@ import subprocess
 import sys
 import tempfile
 import time
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
+# Overridable so the instrument guard can be tested against a CONSTRUCTED receipt history.
+# Without this the guard is only testable against whatever this repo happens to hold, and
+# the modal-vs-latest distinction it exists to make is exactly the one real receipts stop
+# discriminating as soon as the series is restored — which is how its first regression test
+# passed against the broken implementation.
+RESULTS_DIR = Path(os.environ.get("AB_RESULTS_DIR") or (REPO / "evals" / "results"))
 FAILURE_RATE_UNUSABLE = 0.20
 
 GENERATOR_CMD = os.environ.get("GENERATOR_CMD", "claude -p --model sonnet")
@@ -121,22 +128,42 @@ def main() -> int:
     # MISS: named at startup, repeated in the final report, and — the part that actually
     # matters — stamped into the receipt, because a run launched in the background scrolls
     # its startup banner past nobody. A reader tabulating receipts sees the flag.
-    prior = sorted((REPO / "evals" / "results").glob("ab-*.json"))
+    # Compared against the MODAL instrument, not the most recent receipt. The first version
+    # compared against the latest one and got its first live run exactly backwards: the run
+    # before it was the anomalous opus-judged §4f, so a run returning to the documented
+    # haiku judge was announced as "NOT COMPARABLE" when it had just restored the series.
+    # A guard that tells you to discard the run that fixed the problem is worse than none.
+    # The series is what a number gets quoted against, and the series is the mode.
     drift_from = None
-    if prior:
+    prior, last_name = [], None
+    for p in sorted(RESULTS_DIR.glob("ab-*.json")):
         try:
-            last = json.loads(prior[-1].read_text())
-            changed = {k: (last.get(k), cur) for k, cur in
-                       (("generator", GENERATOR_CMD), ("judge", JUDGE_CMD))
-                       if last.get(k) and last[k].strip() != cur.strip()}
-            if changed:
-                drift_from = {"receipt": prior[-1].name, **{k: v[0] for k, v in changed.items()}}
-                print("⚠️  INSTRUMENT CHANGED since " + prior[-1].name + " — this run's numbers "
-                      "are NOT comparable to the previous series:", file=sys.stderr)
-                for k, (was, now) in changed.items():
-                    print(f"      {k}: {was}  →  {now}", file=sys.stderr)
-        except (OSError, ValueError, KeyError):
-            pass  # an unreadable prior receipt must never block a run
+            prior.append(json.loads(p.read_text()))
+            last_name = p.name
+        # noqa justified: one corrupt receipt must not stop a run, and this loops over a
+        # handful of files once at startup — PERF203's hot-loop concern does not apply.
+        except (OSError, ValueError):  # noqa: PERF203
+            continue
+    if prior:
+        modal = {}
+        for key, cur in (("generator", GENERATOR_CMD), ("judge", JUDGE_CMD)):
+            seen = Counter(r[key].strip() for r in prior if r.get(key))
+            if seen and seen.most_common(1)[0][0] != cur.strip():
+                was, n = seen.most_common(1)[0]
+                modal[key] = {"series": was, "runs": n}
+        if modal:
+            drift_from = {"differs_from": "modal instrument", **modal}
+            print("⚠️  INSTRUMENT DIFFERS FROM THE SERIES — these numbers are internally "
+                  "valid but may not be quoted against earlier runs:", file=sys.stderr)
+            for k, v in modal.items():
+                print(f"      {k}: series uses {v['series']} ({v['runs']} runs)  →  this run "
+                      f"uses {GENERATOR_CMD if k == 'generator' else JUDGE_CMD}", file=sys.stderr)
+        elif prior and any(prior[-1].get(k, "").strip() != cur.strip()
+                           for k, cur in (("generator", GENERATOR_CMD), ("judge", JUDGE_CMD))):
+            # On the series, but the run immediately before was not. Say so plainly: this
+            # is the case that restores comparability, and it must not read as a warning.
+            print(f"ℹ️  instrument matches the series; the previous receipt ({last_name}) "
+                  "did not. This run restores comparability.", file=sys.stderr)
 
     tasks = [json.loads(line) for line in Path(args.tasks).read_text().splitlines() if line.strip()]
     if args.limit:
@@ -252,7 +279,7 @@ def main() -> int:
         rep = sum(r["reproduced"] for r in cond)
         print(f"  briefed runs on the {len(base_failed)} task(s) the baseline failed at least once: "
               f"{rep}/{len(cond)} reproduced")
-    out = REPO / "evals" / "results"
+    out = RESULTS_DIR
     out.mkdir(exist_ok=True)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M")
     path = out / f"ab-{stamp}.json"

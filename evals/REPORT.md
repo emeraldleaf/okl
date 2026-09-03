@@ -559,6 +559,53 @@ alternative are different skills. It belongs in the report as the honest ceiling
 approach, not smoothed into the aggregate. Whether it is genuinely worsening is a question
 for a clean run.
 
+## 4g. Back on the documented instrument — the series restored (2026-09-03)
+
+Receipt: `evals/results/ab-20260903-1214.json`. Judge back to haiku, which is 9 of 11
+receipts and the series every quotable figure in this report was measured against.
+
+| arm | reproduced | rate |
+|---|---|---|
+| baseline | 8/22 | 36% |
+| briefed | 1/21 | 5% |
+
+**Comparable, and it replicates.** Against the haiku series, baseline has read 33%, 42%,
+50%, 45%, 35% and now 36%; briefed has read 4%, 8%, 4%, 13%, 8% and now 5%. Both land
+mid-band. §4f's elevated 46%/12% was the opus judge, exactly as §4f said it could not rule
+out.
+
+**`spa_tokens` was the judge, not a trend.** It read briefed 3/3 under opus and 1/2 here,
+against prior haiku readings of 2/3, 2/3, 1/3, 2/2, 2/3. §4f's refusal to call it a trend
+was correct. It remains the standing counter-example — briefed at or near baseline in every
+run — but it is not deteriorating.
+
+**Harness health, flagged.** 5 failures (10%): three generator timeouts at 420s and two
+exit-1s. Below the 20% usability bar, but the highest failure count in the series, and the
+timeouts happened despite the limit having been raised from 300s specifically to prevent
+them. That is generation getting slower, not a limit set too tight.
+
+### The instrument guard found its own defect on its first live run
+
+The guard added after §4f compared the run's instrument against the **most recent receipt**.
+The most recent receipt was §4f — the anomaly. So this run, which returned to the documented
+judge and restored the series, was announced as `NOT COMPARABLE ACROSS RUNS`.
+
+The message was technically true and practically backwards: it told the reader to discard
+the one run that had fixed the problem. A guard that fires on the repair is worse than no
+guard, because it trains people to ignore it.
+
+Now compared against the **modal** instrument across all receipts, which is what a number
+actually gets quoted against, and a single off-series run cannot redefine it. Off the
+series it names the series and how many runs back it; returning to the series after a
+departure reports the restoration rather than staying silent.
+
+The regression test needed the same correction. Its first version compared against this
+repo's real receipts and passed against the broken implementation — because once the series
+is restored, the newest receipt *is* the modal one and the two rules agree. It now builds a
+temporary receipt history (three haiku, newest opus) via `AB_RESULTS_DIR`, which is the §4f
+shape and separates them. Proved by reintroducing the original comparison and watching it
+go red.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
