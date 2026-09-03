@@ -232,6 +232,7 @@ def cmd_record(args) -> int:
     """
     client = Client()
     kwargs = dict(type=args.type, title=args.title, scope=args.scope,
+                  applies_to=getattr(args, "applies_to", None),
                   body=args.body, status=args.status, found_by=args.found_by,
                   ttl_days=args.ttl_days, owner=args.owner, verified=args.verified,
                   files=args.files, symptom=args.symptom, fix=args.fix, tags=args.tags,
@@ -640,6 +641,12 @@ def build_parser() -> argparse.ArgumentParser:
     pr.add_argument("--files", help="comma-sep path globs this node governs (enrolls it in drift detection)")
     pr.add_argument("--symptom", help="Symptom→Cause→Fix: the observable symptom (cause goes in --body)")
     pr.add_argument("--fix", help="Symptom→Cause→Fix: the fix to apply")
+    pr.add_argument("--applies-to", dest="applies_to", default=None,
+                    help="stacks this lesson is VALID for (comma-sep), or 'any'. Leave unset "
+                         "for a portable lesson — that is the default and the common case. "
+                         "Use it only when the lesson genuinely does not transfer, e.g. a "
+                         "framework's middleware ordering. Distinct from --tags, which "
+                         "records subject and where the lesson was found.")
     pr.add_argument("--tags", help="comma-sep subject tags from the controlled vocabulary "
                     "(store.KNOWN_TAGS), e.g. 'react,security'")
     pr.add_argument("--id", help="explicit stable id (makes the write idempotent — re-records replace)")

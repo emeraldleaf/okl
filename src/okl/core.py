@@ -35,26 +35,39 @@ def _in_scope(n: Node, repo_scope: str, interests: list[str] | None) -> bool:
     The order below matters. A repo's own records pass first and unconditionally, so a
     repo can never be filtered away from its own knowledge by its own settings.
 
-    ANY-MATCH, DELIBERATELY. Exclusive stack filtering was tried and REVERTED after the
-    A/B measured it: a record naming a stack the repo had not declared was dropped even
-    when it shared a subject the repo wanted. It hid 35 of 172 org records here, and the
-    briefed arm then reproduced the rate-limiter defect that the dropped rule described
-    (ab-20260902-0538, REPORT.md §4d).
+    TWO FILTERS, AND THEY ARE NOT SYMMETRIC.
 
-    The root cause is what a stack tag MEANS. It records where a lesson was FOUND, not
-    where it APPLIES: "in-memory rate limiters weaken to N× at N instances" carries
-    `dotnet` because it came from a .NET codebase, and is true of every runtime. So is the
-    IDOR rule, and "exit 0 having written zero files". Filtering on provenance as though
-    it were applicability throws away most of what a shared store is for.
+    `applies_to` is EXCLUSIVE: it says where a lesson is valid, and a repo outside that
+    set does not get it. Unset means "anywhere", which is the overwhelming default and
+    the reason this is safe — a store that has never used the field behaves exactly as it
+    did before.
 
-    The problem that motivated the change is still real — genuinely .NET-only rules do
-    reach a Python repo. Fixing it needs applicability recorded separately from
-    provenance, not a stricter reading of a tag that never meant that.
+    `tags` are INCLUSIVE: one shared subject is enough. Exclusive stack-tag filtering was
+    tried here and reverted after the A/B measured it (REPORT.md §4d) — it hid 35 of 172
+    org records and the briefed arm reproduced a defect whose rule it had dropped. The
+    reason is that a stack tag records where a lesson was FOUND, not where it applies:
+    "in-memory rate limiters weaken at N instances" carries `dotnet` because that is the
+    codebase it came from, and is true of every runtime.
+
+    That is the whole distinction. Provenance is inferred at import and is often wrong
+    about applicability; `applies_to` is a judgment someone made deliberately, so it is
+    the only one allowed to exclude.
     """
     if n.scope == repo_scope:
         return True
     if n.scope != "org":
         return False
+
+    # APPLICABILITY first, and it is the only exclusive test. `applies_to` says where a
+    # lesson is VALID, set deliberately by whoever recorded it. Unset means "anywhere",
+    # so a store that has never used the field behaves exactly as before — the default is
+    # the permissive path, which is what makes this safe to introduce. Contrast the tag
+    # filter below, which is inclusive: one shared subject is enough.
+    applies = split_tags(n.applies_to) - {"any"}
+    wanted = {t.strip().lower() for t in (interests or []) if t.strip()}
+    if applies and wanted and not (applies & wanted):
+        return False
+
     if not interests:
         return True
     tags = split_tags(n.tags)
@@ -196,8 +209,10 @@ def _route_actions(buckets: dict[str, list[dict]]) -> list[dict]:
 def record(store: Store, *, type: str, title: str, scope: str, repo: str | None = None,
            body: str | None = None, status: str | None = None, found_by: str | None = None,
            ttl_days: int | None = None, owner: str | None = None,
-           files: str | None = None, symptom: str | None = None, fix: str | None = None,
-           tags: str | None = None, verified: bool = False, id: str | None = None) -> str:
+           files: str | None = None, symptom: str | None = None,
+           applies_to: str | None = None, fix: str | None = None,
+           tags: str | None = None, verified: bool = False, id: str | None = None,
+           ) -> str:
     """Create a node. `scope` is 'org' (propagates to all repos) or 'repo:<name>'.
 
     The scope decision is the curation gate: only world-facts (prior art, API
@@ -220,6 +235,7 @@ def record(store: Store, *, type: str, title: str, scope: str, repo: str | None 
         "type": type, "title": title, "scope": scope, "repo": repo, "body": body,
         "status": status, "found_by": found_by, "ttl_days": ttl_days, "owner": owner,
         "files": files, "symptom": symptom, "fix": fix, "tags": tags,
+        "applies_to": applies_to,
         "verified_at": _now_ms() if verified else None,
     }
     # An explicit id makes the write idempotent (upsert replaces the same row);

@@ -88,6 +88,7 @@ class Node:
     symptom: str | None = None           # Symptom→Cause→Fix schema (cause lives in body)
     fix: str | None = None
     tags: str | None = None              # comma-sep subject labels ("react,security"); orthogonal to scope
+    applies_to: str | None = None        # comma-sep stacks this lesson is VALID for; None/"any" = everywhere
     verified_by: str | None = None       # evidence trail: the observed check that last stamped verified_at
     id: str = field(default_factory=lambda: new_id("n"))
     created_at: int = field(default_factory=_now_ms)
@@ -99,6 +100,18 @@ class Node:
             raise ValueError(f"unknown status {self.status!r}; valid: {sorted(s for s in VALID_STATUS if s)}")
         if not (self.scope == "org" or self.scope.startswith("repo:")):
             raise ValueError(f"scope must be 'org' or 'repo:<name>', got {self.scope!r}")
+        # applies_to is WHERE A LESSON IS VALID, which tags cannot express: a stack tag
+        # records where a lesson was FOUND. "In-memory rate limiters weaken at N instances"
+        # carries `dotnet` because that is the codebase it came out of, and is true of every
+        # runtime. Filtering the first as though it were the second hid 35 of 172 records and
+        # caused a measured regression (REPORT.md §4d). None means "anywhere", so the default
+        # is the permissive behaviour that was already there.
+        applies = split_tags(self.applies_to) - {"any"}
+        unknown_stacks = applies - STACK_TAGS
+        if unknown_stacks:
+            raise ValueError(
+                f"applies_to must name stacks from {sorted(STACK_TAGS)} (or 'any'), "
+                f"got {sorted(unknown_stacks)}")
         unknown = split_tags(self.tags) - KNOWN_TAGS
         if unknown:
             raise ValueError(f"unknown tag(s) {sorted(unknown)}; the controlled vocabulary is "
@@ -218,7 +231,7 @@ class _Backend(Protocol):
 
 _NODE_COLS = ["id", "type", "scope", "repo", "title", "body", "status",
               "found_by", "verified_at", "ttl_days", "owner", "files",
-              "symptom", "fix", "tags", "verified_by", "created_at"]
+              "symptom", "fix", "tags", "verified_by", "applies_to", "created_at"]
 
 
 def _row_to_node(row: dict[str, Any]) -> Node:
@@ -254,10 +267,11 @@ class _SQLiteBackend(_Backend):
             id TEXT PRIMARY KEY, type TEXT NOT NULL, scope TEXT NOT NULL, repo TEXT,
             title TEXT NOT NULL, body TEXT, status TEXT, found_by TEXT,
             verified_at INTEGER, ttl_days INTEGER, owner TEXT,
-            files TEXT, symptom TEXT, fix TEXT, tags TEXT, verified_by TEXT, created_at INTEGER NOT NULL)""")
+            files TEXT, symptom TEXT, fix TEXT, tags TEXT, verified_by TEXT,
+            applies_to TEXT, created_at INTEGER NOT NULL)""")
         # Idempotent migration: add columns introduced after v0.1 to pre-existing DBs.
         existing = {r[1] for r in c.execute("PRAGMA table_info(node)").fetchall()}
-        for col in ("files", "symptom", "fix", "tags", "verified_by"):
+        for col in ("files", "symptom", "fix", "tags", "verified_by", "applies_to"):
             if col not in existing:
                 c.execute(f"ALTER TABLE node ADD COLUMN {col} TEXT")
         c.execute("""CREATE TABLE IF NOT EXISTS edge(
@@ -428,9 +442,10 @@ class _PostgresBackend(_Backend):
                 id TEXT PRIMARY KEY, type TEXT NOT NULL, scope TEXT NOT NULL, repo TEXT,
                 title TEXT NOT NULL, body TEXT, status TEXT, found_by TEXT,
                 verified_at BIGINT, ttl_days INTEGER, owner TEXT,
-                files TEXT, symptom TEXT, fix TEXT, tags TEXT, verified_by TEXT, created_at BIGINT NOT NULL)""")
+                files TEXT, symptom TEXT, fix TEXT, tags TEXT, verified_by TEXT,
+                applies_to TEXT, created_at BIGINT NOT NULL)""")
             # Idempotent migration for pre-existing tables.
-            for col in ("files", "symptom", "fix", "tags", "verified_by"):
+            for col in ("files", "symptom", "fix", "tags", "verified_by", "applies_to"):
                 cur.execute(f"ALTER TABLE node ADD COLUMN IF NOT EXISTS {col} TEXT")
             cur.execute("""CREATE TABLE IF NOT EXISTS edge(
                 src TEXT NOT NULL, rel TEXT NOT NULL, dst TEXT NOT NULL, created_at BIGINT NOT NULL,

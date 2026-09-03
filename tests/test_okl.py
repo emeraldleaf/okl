@@ -1334,3 +1334,67 @@ def test_client_resolves_the_shared_layer_from_the_environment(tmp_path, monkeyp
     req = _req.Request("https://okl.internal/nodes")
     from_config._authorize(req)
     assert req.get_header("Authorization") == "Bearer from-file"
+
+
+def test_applies_to_excludes_where_tags_must_not(store):
+    """`applies_to` is the only exclusive filter, and unset means everywhere.
+
+    Two records can be tagged identically — both `dotnet` — while one is a universal truth
+    about distributed state and the other is about one framework's pipeline. Tags cannot
+    tell them apart, because a stack tag records where a lesson was FOUND. Filtering on
+    that hid 35 of 172 records and caused a measured regression (REPORT.md §4d).
+
+    `applies_to` is a judgment made when recording, which is why it is allowed to exclude.
+    Its default of None is the safety property: a store that has never used the field
+    behaves exactly as it did before, so introducing it cannot regress retrieval.
+    """
+    # ARRANGE — a portable lesson found in .NET, and a genuinely .NET-only one. Same tags
+    # as far as any tag-based filter can see; same words, so ranking cannot separate them.
+    core.record(store, type="Rule", title="rate limiters weaken across instances",
+                scope="org", tags="security,dotnet", body="pipeline discipline")
+    core.record(store, type="Rule", title="wolverine pipeline order is load-bearing",
+                scope="org", tags="dotnet,messaging", body="pipeline discipline",
+                applies_to="dotnet")
+    q = "rate limiters wolverine pipeline discipline"
+    titles = lambda res: [r["title"] for r in res["rules"]]  # noqa: E731
+
+    # ASSERT (1) — the portable lesson reaches a repo that does no .NET. This is the
+    # assertion the reverted stack filter broke, and the one the A/B caught.
+    py = titles(core.check(store, repo="okl", task=q, interests=["python", "security", "messaging"]))
+    assert any("rate limiters" in t for t in py), py
+
+    # ASSERT (2) — the framework-specific one does not
+    assert not any("wolverine" in t for t in py), py
+
+    # ASSERT (3) — but it does reach a repo that declares that stack
+    dn = titles(core.check(store, repo="svc", task=q, interests=["dotnet", "messaging"]))
+    assert any("wolverine" in t for t in dn), dn
+
+    # ASSERT (4) — THE SAFETY PROPERTY: with no interests declared nothing is excluded,
+    # so a repo that has not opted into filtering is unaffected by any curation.
+    assert len(titles(core.check(store, repo="any", task=q, interests=None))) == 2
+
+    # ASSERT (5) — the two filters compose and do not override each other. An explicit
+    # `applies_to="any"` says "valid everywhere"; it does NOT force a record past the tag
+    # filter, because tags answer a different question ("is this repo interested in the
+    # subject"). A record must satisfy both, and the first draft of this test conflated
+    # them — asserting a dotnet-only-tagged record should reach a python-only repo.
+    core.record(store, type="Rule", title="explicitly portable pipeline lesson", scope="org",
+                tags="dotnet,security", body="pipeline discipline", applies_to="any")
+    shared = titles(core.check(store, repo="okl", task=q, interests=["python", "security"]))
+    assert any("explicitly portable" in t for t in shared), shared
+    # and with no shared subject, the tag filter still excludes it
+    assert not any("explicitly portable" in t
+                   for t in titles(core.check(store, repo="okl", task=q, interests=["python"])))
+
+
+def test_applies_to_rejects_a_value_that_is_not_a_stack(store):
+    """applies_to names stacks, not subjects — a typo must fail loudly at write time.
+
+    `applies_to="security"` would read as sensible and silently exclude the record from
+    every repo, since no repo declares a *stack* called security. A closed vocabulary
+    checked at write time is the difference between a typo and a record nobody ever sees.
+    """
+    with pytest.raises(ValueError) as e:
+        core.record(store, type="Rule", title="t", scope="org", applies_to="security")
+    assert "applies_to must name stacks" in str(e.value)
