@@ -49,7 +49,8 @@
    "verified": true,
    "title": "Constructor-injected IEventPublisher publishes inline under Wolverine 6, breaking outbox atomicity",
    "body": "Only the IMessageContext Wolverine injects as a HandleAsync parameter (or IDbContextOutbox in non-handler code) is enlisted in the outbox transaction. A constructor-injected IMessageBus/IEventPublisher publishes before commit — events dispatched for entity writes that may roll back. Stack-specific (Wolverine), scoped repo.",
-   "tags": "dotnet"
+   "tags": "dotnet",
+   "applies_to": "dotnet"
   },
   {
    "key": "nc_handler_di",
@@ -60,7 +61,8 @@
    "verified": true,
    "title": "Wolverine handler discovery is NOT DI registration — GetRequiredService<Handler> throws unless AddScoped'd",
    "body": "opts.Discovery.IncludeAssembly builds Wolverine's internal message->handler map; Wolverine constructs handlers itself and never asks IServiceCollection. Any handler resolved by GetRequiredService<T>() in tests needs an explicit AddScoped<T>(). Stack-specific (Wolverine), scoped repo.",
-   "tags": "dotnet"
+   "tags": "dotnet",
+   "applies_to": "dotnet"
   },
   {
    "key": "nc_topology_race",

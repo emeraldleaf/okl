@@ -49,7 +49,8 @@
       "body": "Single-year growing-season composites carry large year-to-year noise (cloud/atmosphere/phenology) — here ~±0.5 pp, enough to invent or erase a trend and to fake a one-year 'dip'. Median over a multi-year window (e.g. ±2 years, balanced across years) outvotes any single bad year. Bracket a suspicious point with its neighbours: if only it moves, it's a single-year artifact, not a signal.",
       "symptom": "a per-year point in a satellite time series looks anomalous, or the trend is noisy year to year",
       "fix": "composite over multi-year windows (balanced per-year scene quota); bracket outliers with ±1-year neighbours before interpreting",
-      "tags": "geospatial,eval-integrity"
+      "tags": "geospatial,eval-integrity",
+      "applies_to": "geospatial"
     }
   ],
   "edges": [
