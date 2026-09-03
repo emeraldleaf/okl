@@ -399,6 +399,166 @@ is 35-45 points and both broken tasks read briefed 0/3 anyway — but the per-ta
 meant less than they appeared to. This establishes the first reference point on a harness
 whose retrieval has been verified.
 
+### Result (2026-09-03)
+
+Receipt: `evals/results/ab-20260903-0157.json`. Generator and judge as configured in §1.
+
+| arm | reproduced | rate |
+|---|---|---|
+| baseline | 8/23 | 35% |
+| briefed | 2/24 | 8% |
+
+One recorded failure: `rate_limiter` baseline sample 0 timed out at 300s, so that arm
+carries 23 samples rather than 24 (§"Failure accounting"). Failure rate 2%, below the 10%
+usability bar.
+
+**Falsifier: not triggered.** The briefed arm did not worsen — 8% sits mid-band against the
+historical 4%, 12%, 8%, 4%, 13%. No task that previously read briefed 0/3 now reproduces:
+`spa_tokens` reads 2/3, but it has read 1-2/3 in every run since 2026-08-30, four runs
+before this change.
+
+**The prediction held. The reasoning behind it did not.** See the correction below.
+
+### Correction (2026-09-03): the pre-registration's premise 1 was false
+
+The pre-registration above states that `applies_to` was set on 7 records. **It was set on
+zero.** The field existed, both write paths worked, and nothing had ever written through
+them.
+
+Verified three ways: raw SQL against the store with the WAL checkpointed returns 0 of 205;
+the string `applies_to` appears zero times across all 11 seed files; and no database on
+disk carries a non-null value in that column. The corpus was written before the field
+existed, `record` and `seed` are the only writers and both act at creation time only, so a
+field nobody re-typed stayed empty.
+
+**What this run therefore measured.** Changes (2) and (3) — the `--interests ""` fix and
+the pre-flight gate — and nothing else. It is not evidence about `applies_to` in either
+direction. The stated expectation of "no detectable change" from (1) was correct by
+accident: a field set on nothing cannot move a number. The clause "which cannot help these
+tasks because none of the 7 curated records governs one" was true of a set that did not
+exist.
+
+The pre-registration text above is left exactly as written. Editing it after the fact would
+destroy the only property that makes it worth writing.
+
+**Since corrected.** 32 records now carry `applies_to` — 21 `dotnet`, 7 `geospatial`,
+4 `react` — written into the seed files so they survive `okl seed`, which is what the
+earlier attempt did not do. The criterion was per-record judgment on whether the lesson is
+*false or meaningless* off-stack, never the tag: `nc_idor`, `r_pagination_cap`,
+`r_rate_limiter_scaleout` and `r_guid_v7` stay unset and reach every repo, because deriving
+applicability from provenance is the §4d defect. Also left unset after inspection:
+Testcontainers' macOS `DOCKER_HOST` quirk (that library ships for Java, Go, Python and
+Node) and `d15` (exit 0 having written zero files), which is tagged `geospatial` and is
+among the most portable records in the store.
+
+Behaviour confirmed in both directions on the task *"order the Wolverine middleware
+pipeline and register a handler for DI"*: a repo declaring `dotnet` receives 10 records
+of which 7 are stack-gated; okl and a Rust repo receive 8 each with 0 gated. The gated
+records disappear off-stack **and the portable ones still arrive** — the property §4d's
+filter destroyed.
+
+The evals are unaffected: the harness fetches with `--interests ""`, which bypasses the
+filter entirely, and pre-flight still passes 7/8 with `exit_code_trust` as the one
+registered gap.
+
+## 4f. Re-run after the applies_to backfill — confounded, and not a test of it (2026-09-03)
+
+Receipt: `evals/results/ab-20260903-0308.json`. 48 runs, **0 failures** — raising
+`--timeout` from 300s to 420s recovered the sample §4e lost.
+
+| arm | reproduced | rate |
+|---|---|---|
+| baseline | 11/24 | 46% |
+| briefed | 3/24 | 12% |
+
+### RESULTS NOT COMPARABLE ACROSS RUNS: the judge was changed
+
+This run was judged by **opus**. Every previous sonnet-generator run in this report was
+judged by **haiku**. The change was made when the run was launched, was not pre-registered,
+and was not noticed until the receipts were tabulated afterward.
+
+The run is internally valid — both arms saw the same judge, so the 46%-vs-12% contrast
+within it stands, and the harness's judge≠generator guard held. But **no figure here may be
+compared to §4a-§4e**, and both arms moving up together (baseline 35%→46%, briefed 8%→12%)
+is exactly the signature a stricter judge produces. Attributing that movement to sampling
+noise, to the timeout change, or to the backfill would each be unfounded.
+
+Two consequences, stated rather than buried:
+
+- **§4e's falsifier cannot be evaluated against this run.** It is defined relative to the
+  noise floor of a series measured with a different instrument. Briefed 12% "sitting inside
+  the historical band" is not a finding; it is a comparison this run cannot support.
+- **This is not the replication it was intended to be.** A replication requires the same
+  instrument. Establishing the run-to-run noise floor on an unchanged retrieval still needs
+  a clean run with the documented judge.
+
+The finding below about `applies_to` is independent of the judge — it is a deterministic
+property of the retrieval path, established by query rather than by outcomes, and it holds
+regardless of who graded the output.
+
+### This run did not test applies_to either, and no run of this harness can
+
+The intent was to measure the 32-record backfill. It cannot, and the reason is structural
+rather than a bug.
+
+The harness fetches briefings with `--interests ""` (§4b correction). The filter reads:
+
+```python
+if applies and wanted and not (applies & wanted):
+    return False
+```
+
+An empty `wanted` short-circuits it. Confirmed against a real gated org-scoped record —
+`g_multiyear_window_composite`, `applies_to=geospatial` — asked whether it reaches a python
+repo:
+
+| interests | reaches it? |
+|---|---|
+| `""` (what the harness sends) | **True** — filter bypassed |
+| `python, method` | False — correctly gated |
+| `dotnet` | False — correctly gated |
+
+So the briefings in this run are byte-identical to §4e's. The retrieval did not change;
+the timeout and the judge did. Whatever separates 46%/12% from 35%/8%, none of it can be
+the backfill.
+
+`--interests ""` is not a defect to fix. It was set deliberately, because the experiment
+measures whether a briefing prevents a defect, not whether a repo's tag curation is good.
+The consequence is that **`applies_to` is outside this harness's measurable surface by
+design**: it changes which records reach a repo *with declared interests*, and every task
+here runs with interests off. Measuring it through the A/B would need a new dimension — the
+same task run in repos declaring different stacks.
+
+That experiment is not worth building. `applies_to` is a retrieval predicate, and §4b's
+lesson is that retrieval questions are deterministic: a query answers them in milliseconds,
+with more precision than 48 model calls. The unit tests
+(`test_applies_to_excludes_where_tags_must_not`,
+`test_a_shared_subject_keeps_an_off_stack_record_in_the_briefing`) plus the direct
+both-directions check are the right instrument, and they already answer it. A run of this
+harness would only ever restate the noise floor.
+
+**The generalisable lesson: an experiment cannot measure a filter it disables.** §4e failed
+to measure `applies_to` because no record set it; §4f failed for a different reason, on a
+corpus where 32 records do. Both were invisible from the outcome numbers and both took one
+deterministic query to see.
+
+### spa_tokens: briefed 3/3, equal to baseline
+
+Flagged rather than buried, with the judge caveat attached. In this run briefed
+`spa_tokens` read **3/3 — identical to its own baseline**, so the briefing bought nothing
+measurable on that task. Under the haiku judge it has read 0/3, 2/3, 2/3, 1/3, 2/2, 2/3;
+the step to 3/3 is not cleanly separable from the judge change and must not be reported as
+a trend.
+
+What is *not* judge-dependent: this is not a retrieval failure. Pre-flight confirms the
+rule (`rx_tokens_localstorage`) reaches the briefing, and that record is deliberately unset
+in the backfill, so nothing in this change touched it. Every reading of this task across
+every run has the briefed arm at or near its baseline, which makes it the standing
+counter-example to the headline — §5's finding 4, that knowing the rule and executing the
+alternative are different skills. It belongs in the report as the honest ceiling on this
+approach, not smoothed into the aggregate. Whether it is genuinely worsening is a question
+for a clean run.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
