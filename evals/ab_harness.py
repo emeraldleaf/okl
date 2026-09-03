@@ -72,7 +72,12 @@ def call(cmd: str, prompt: str, timeout: int, workdir: str) -> str:
 def get_briefing(task: str, timeout: int) -> str:
     # Fails CLOSED: a briefed arm without a briefing would silently become a second
     # baseline arm and corrupt the comparison.
-    r = subprocess.run([sys.executable, "-m", "okl", "check", "--task", task, "--format", "agent"],
+    # --interests "" : unfiltered, matching evals/preflight.py. The host repo's interests
+    # are not the experiment's — react_fetch's rule is tagged `react`, which okl does not
+    # declare, so inheriting them made that task measure its rule's ABSENCE across every run
+    # in this report. The harness states its retrieval config instead of borrowing one.
+    r = subprocess.run([sys.executable, "-m", "okl", "check", "--task", task,
+                        "--format", "agent", "--interests", ""],
                        capture_output=True, text=True, timeout=timeout, cwd=REPO)
     if r.returncode != 0:
         raise RuntimeError(f"okl check failed: {r.stderr.strip()[:200]}")
@@ -118,6 +123,16 @@ def main() -> int:
     # reference missing while pointing at a database that never existed. Client walks up to
     # the configured .okl/ the way every other command does.
     if not args.dry_run:
+        # Retrieval is deterministic, so whether each task still receives the rule it tests
+        # is answerable in milliseconds. Checking it AFTER a 25-minute run is how §4d cost
+        # what it cost. Refused here, before anything is spent.
+        pf = subprocess.run([sys.executable, str(Path(__file__).parent / "preflight.py")],
+                            capture_output=True, text=True)
+        print(pf.stdout, end="")
+        if pf.returncode != 0:
+            print("REFUSING TO RUN: pre-flight failed (see above).")
+            return 5
+
         from okl.client import Client
         _client = Client()
         _nodes = {n.id for n in _client.all_nodes()}

@@ -190,6 +190,16 @@ def cmd_check(args) -> int:
               "Run `okl init` here, or `okl connect <url>` to point at a shared store.",
               file=sys.stderr)
         return 2
+    # An explicit --interests overrides the repo's configured list for this one call.
+    # `--interests ""` means "no filtering", which is distinct from omitting the flag
+    # (use the config). The eval harness needs this: inheriting the host repo's interests
+    # made one of its tasks silently measure the absence of the rule it tests.
+    # getattr, not attribute access: tests and library callers construct a Namespace by
+    # hand with only the fields they care about, and a command handler that assumes the
+    # full argparse surface breaks for every caller that is not the parser.
+    override = getattr(args, "interests", None)
+    if override is not None:
+        client.interests = [t.strip().lower() for t in override.split(",") if t.strip()]
     try:
         result = client.check(args.task, repo=args.repo, limit=args.limit)
     except OKLUnreachableError as e:
@@ -614,6 +624,11 @@ def build_parser() -> argparse.ArgumentParser:
     pk.add_argument("--limit", type=int, default=None,
                     help="cap how many records the briefing draws on (and how many actions "
                          "'--format actions' prints). Use with subagents on a token budget.")
+    pk.add_argument("--interests", default=None,
+                    help="override this repo's configured subject tags for this call. Pass "
+                         "an empty string to disable interest filtering entirely — the eval "
+                         "harness does, because inheriting a host repo's interests made one "
+                         "of its tasks measure the absence of the rule it tests.")
     pk.set_defaults(func=cmd_check)
 
     pr = sub.add_parser("record", help="record a node (defect/gate/claim/...)")

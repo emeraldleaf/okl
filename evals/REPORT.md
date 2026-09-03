@@ -230,6 +230,27 @@ That distinction is the one the flat-retrieval ADR is written around: its trigge
 failing to comply with a record it was handed. Measured miss rate after the cutoff
 remains zero. Compliance is a separate, unmeasured problem.
 
+### Correction (2026-09-02): the cutoff DID cause a retrieval miss
+
+This section concluded the top-k cutoff caused no retrieval miss. That conclusion was
+drawn from run outcomes — no task got obviously worse — and never from asking the
+deterministic question directly: *is each task's governing rule still in the briefing?*
+
+`evals/preflight.py` now asks it, and the answer is no for **`exit_code_trust`**. Its rule
+(`seed:geospatial-defects:d15`) ranks below the top 12 for that task's wording and needs
+`--limit 40` to surface. It has been absent from that task's briefing since the cutoff
+landed.
+
+The task still reads baseline 3/3, briefed 0/3 across runs, so the briefing prevented the
+defect — but something OTHER than the designated rule did that work. The row was never
+evidence for the rule it is filed under.
+
+A second miss, unrelated to the cutoff: `react_fetch`'s rule is tagged `react`, which the
+host repo does not declare, so interest filtering removed it. The harness now fetches its
+briefing with `--interests ""`, because the experiment measures whether a briefing prevents
+a defect, not whether the host repo's tag curation is good. Both were found in milliseconds
+by a check that needs no model.
+
 ## 4c. Re-run after indexing symptom and fix (2026-09-01)
 
 `symptom` and `fix` joined the search index on both backends, with column weights
