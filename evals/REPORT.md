@@ -363,6 +363,42 @@ change was elegant, argued from the vocabulary's own stack/subject distinction, 
 retrieval worse in a way no test caught and no reading of the code would have revealed.
 Post-hoc revert on measured evidence is the whole point of keeping the harness runnable.
 
+## 4e. PRE-REGISTERED: applies_to, and the first run on a fixed harness (2026-09-02)
+
+Written before the run, per §2b.
+
+**What changed since the last run.** Three things, and they are not equivalent:
+
+1. `applies_to` — a new field recording where a lesson is VALID, separate from the tags
+   that record where it was found. 7 records marked `dotnet` (Wolverine, HybridCache,
+   Minimal APIs, Aspire orchestration, the .NET logging stack). Unset on everything else,
+   which is the pre-change behaviour.
+2. The harness now fetches briefings with `--interests ""`. Previously it inherited the
+   host repo's interests, which meant `react_fetch` measured the absence of its own rule.
+3. `evals/preflight.py` gates the run.
+
+**Prediction.** The briefed arm improves or is unchanged; the baseline is untouched by
+construction. The improvement, if any, comes from (2) — `react_fetch` receiving its rule
+for the first time — not from (1), which cannot help these tasks because none of the 7
+curated records governs one. The honest expectation is **no detectable change**, because
+`react_fetch` reads 0/3 briefed already and cannot improve.
+
+**Falsifier.** The briefed arm worsens beyond the noise floor, or any task that previously
+read briefed 0/3 now reproduces. Either means the curation hid something the pre-flight
+did not think to check.
+
+**Tasks at risk.** None of the 7 curated records is a task's governing rule — verified by
+pre-flight, which passes 7/8 with `exit_code_trust` as the one accepted gap (its rule ranks
+below the top-12 cutoff; §4b correction). `exit_code_trust` therefore still measures the
+briefing WITHOUT its designated rule, and its row should not be read as evidence about
+that rule.
+
+**What this run is for.** Every earlier number in this report was produced while two of
+eight tasks were not receiving the rule they test. The headline survives that — the effect
+is 35-45 points and both broken tasks read briefed 0/3 anyway — but the per-task tables
+meant less than they appeared to. This establishes the first reference point on a harness
+whose retrieval has been verified.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
