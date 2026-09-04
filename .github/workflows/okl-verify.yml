@@ -46,7 +46,7 @@ jobs:
       # dependency with access to your runner. If you copy this file into your own repo,
       # add a .github/dependabot.yml with the `github-actions` ecosystem so these pins get
       # security updates — a pin with no update path goes stale and that is its own risk.
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09  # v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           fetch-depth: 0   # drift needs history: it compares governed-file commits vs verified_at
           persist-credentials: false   # this job never pushes
