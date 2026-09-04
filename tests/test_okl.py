@@ -1450,3 +1450,38 @@ def test_search_scope_refuses_a_non_scope_and_resolves_the_repo_shorthand(tmp_pa
     err = capsys.readouterr().err
     assert "no record anywhere carries scope" in err
     assert "repo:acme" in err, "the warning must name the scopes that do exist"
+
+
+def test_pipeline_diagram_is_current():
+    """The committed retrieval diagram must be what the generator produces right now.
+
+    gates/check-diagram-pairs.sh proves a render EXISTS and says so plainly: "it does NOT
+    prove the render matches the source; re-rendering after a source edit stays human."
+    A generated diagram closes that gap — regenerate and diff.
+
+    This exists because the hand-drawn first draft of this diagram was wrong twice within
+    the hour: its record count went stale in ten minutes, and two of its stage counts were
+    transcribed backwards from a measurement that had answered a different question.
+    """
+    import subprocess
+    import sys
+    import tempfile
+
+    root = Path(__file__).resolve().parents[1]
+    svg = root / "docs" / "okl-retrieval-pipeline.svg"
+    assert svg.exists(), "the render is missing; run docs/render_pipeline_diagram.py"
+
+    # ARRANGE / ACT — regenerate to a scratch path, never over the committed file: a test
+    # that repairs what it is checking always passes and detects nothing.
+    with tempfile.TemporaryDirectory() as d:
+        out = Path(d) / "regen.svg"
+        r = subprocess.run([sys.executable, str(root / "docs" / "render_pipeline_diagram.py"),
+                            "--out", str(out)], capture_output=True, text=True, cwd=root)
+        assert r.returncode == 0, f"generator failed: {r.stderr[-400:]}"
+
+        # ASSERT — byte-identical. The generator traces a store seeded from committed files,
+        # so this is reproducible on any checkout; tracing the developer's own .okl store
+        # would make it pass only on the machine that last rendered it.
+        assert out.read_text() == svg.read_text(), (
+            "docs/okl-retrieval-pipeline.svg is stale — the pipeline changed and the diagram "
+            "did not. Re-run: python3 docs/render_pipeline_diagram.py")

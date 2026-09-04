@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="994" viewBox="0 0 980 994" font-family="ui-sans-serif,-apple-system,Segoe UI,Helvetica,Arial,sans-serif">
+<rect width="980" height="994" fill="#F5F3F0"/>
+<text x="28" y="46" font-size="27" font-weight="700" fill="#1E1B18">How an okl briefing gets built</text>
+<text x="28" y="72" font-size="14" fill="#4E4740">161 records and one task sentence become the 12 an agent reads. Two stages can drop a record; only one is entitled to.</text>
+<text x="28" y="96" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A">GENERATED from the live pipeline - docs/render_pipeline_diagram.py</text>
+<text x="28" y="112" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A">traced task: "Add an endpoint that returns a single order by id for the signed-in user."</text>
+<text x="28" y="128" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A">repo interests: python, method, security, agent-safety, retrieval-design, eval-integrity, data-quality</text>
+<rect x="28" y="154" width="924" height="90" fill="#FFFFFF" stroke="#DCD6CE"/>
+<rect x="28" y="154" width="74" height="90" fill="#EBE7E1" stroke="#DCD6CE"/>
+<text x="65" y="192" font-size="26" font-weight="700" fill="#B4531F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle">0</text>
+<text x="65" y="210" font-size="9" fill="#7C736A" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle" letter-spacing="1">STORE</text>
+<text x="120" y="179" font-size="15" font-weight="600" fill="#1E1B18">The corpus</text>
+<text x="120" y="198" font-size="12" fill="#4E4740">Every record carries scope (permission), tags (subject), applies_to (validity) and files</text>
+<text x="120" y="213" font-size="12" fill="#4E4740">(what it governs). Nothing is ranked yet.</text>
+<text x="120" y="224" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">161 records</text>
+<rect x="120" y="230" width="818" height="9" rx="2" fill="#EBE7E1"/><rect x="120" y="230" width="818" height="9" rx="2" fill="#B4531F"/>
+<rect x="28" y="250" width="924" height="90" fill="#FFFFFF" stroke="#DCD6CE"/>
+<rect x="28" y="250" width="74" height="90" fill="#EBE7E1" stroke="#DCD6CE"/>
+<text x="65" y="288" font-size="26" font-weight="700" fill="#B4531F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle">1</text>
+<text x="65" y="306" font-size="9" fill="#7C736A" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle" letter-spacing="1">RANK</text>
+<text x="120" y="275" font-size="15" font-weight="600" fill="#1E1B18">Fetch 3x more candidates than needed</text>
+<text x="120" y="294" font-size="12" fill="#4E4740">SQLite FTS5, weighted title x8, body x4, symptom x4, fix x2. Tags are NOT indexed - a tag</text>
+<text x="120" y="309" font-size="12" fill="#4E4740">can get a record excluded, never help it be found.</text>
+<text x="120" y="320" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">36 fetched</text>
+<text x="938" y="320" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A" text-anchor="end">limit x 3</text>
+<rect x="120" y="326" width="818" height="9" rx="2" fill="#EBE7E1"/><rect x="120" y="326" width="818" height="9" rx="2" fill="#B4531F"/>
+<rect x="28" y="346" width="924" height="90" fill="#FFFFFF" stroke="#DCD6CE"/>
+<rect x="28" y="346" width="74" height="90" fill="#EBE7E1" stroke="#DCD6CE"/>
+<text x="65" y="384" font-size="26" font-weight="700" fill="#B4531F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle">2</text>
+<text x="65" y="402" font-size="9" fill="#7C736A" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle" letter-spacing="1">SCOPE</text>
+<text x="120" y="371" font-size="15" font-weight="600" fill="#1E1B18">Permission - who may see this</text>
+<text x="120" y="390" font-size="12" fill="#4E4740">A repo's own records pass first and unconditionally. org records continue. Another repo's</text>
+<text x="120" y="405" font-size="12" fill="#4E4740">records stop here: the curation boundary.</text>
+<text x="938" y="371" font-size="9.5" fill="#9B3B3B" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="700" text-anchor="end" letter-spacing="0.8">DROPS</text>
+<text x="120" y="416" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">33 survive</text>
+<text x="938" y="416" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A" text-anchor="end">3 dropped: other repos</text>
+<rect x="120" y="422" width="818" height="9" rx="2" fill="#EBE7E1"/><rect x="120" y="422" width="750" height="9" rx="2" fill="#B4531F"/><rect x="870" y="422" width="68" height="9" rx="2" fill="#9B3B3B" opacity="0.4"/>
+<rect x="28" y="442" width="924" height="90" fill="#FFFFFF" stroke="#DCD6CE"/>
+<rect x="28" y="442" width="74" height="90" fill="#EBE7E1" stroke="#DCD6CE"/>
+<text x="65" y="480" font-size="26" font-weight="700" fill="#B4531F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle">3</text>
+<text x="65" y="498" font-size="9" fill="#7C736A" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle" letter-spacing="1">VALID</text>
+<text x="120" y="467" font-size="15" font-weight="600" fill="#1E1B18">applies_to - the only filter allowed to exclude</text>
+<text x="120" y="486" font-size="12" fill="#4E4740">EXCLUSIVE. Set by hand on 32 of 161 records, only where a lesson is false off-stack. Unset</text>
+<text x="120" y="501" font-size="12" fill="#4E4740">means anywhere, which is why it is safe.</text>
+<text x="938" y="467" font-size="9.5" fill="#9B3B3B" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="700" text-anchor="end" letter-spacing="0.8">DROPS</text>
+<text x="120" y="512" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">29 survive</text>
+<text x="938" y="512" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A" text-anchor="end">4 dropped: off-stack</text>
+<rect x="120" y="518" width="818" height="9" rx="2" fill="#EBE7E1"/><rect x="120" y="518" width="659" height="9" rx="2" fill="#B4531F"/><rect x="779" y="518" width="91" height="9" rx="2" fill="#9B3B3B" opacity="0.4"/>
+<rect x="28" y="538" width="924" height="90" fill="#FFFFFF" stroke="#DCD6CE"/>
+<rect x="28" y="538" width="74" height="90" fill="#EBE7E1" stroke="#DCD6CE"/>
+<text x="65" y="576" font-size="26" font-weight="700" fill="#B4531F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle">4</text>
+<text x="65" y="594" font-size="9" fill="#7C736A" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle" letter-spacing="1">SUBJECT</text>
+<text x="120" y="563" font-size="15" font-weight="600" fill="#1E1B18">tags x interests - one shared subject is enough</text>
+<text x="120" y="582" font-size="12" fill="#4E4740">INCLUSIVE. Untagged always passes. The exclusive version was built, reviewed and REVERTED:</text>
+<text x="120" y="597" font-size="12" fill="#4E4740">it hid 35 of 172 records and the briefed arm reproduced a defect whose rule it had dropped</text>
+<text x="938" y="563" font-size="9.5" fill="#4A6B3D" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="700" text-anchor="end" letter-spacing="0.8">ANY-MATCH</text>
+<text x="120" y="608" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">21 survive</text>
+<text x="938" y="608" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A" text-anchor="end">8 dropped: no shared subject</text>
+<rect x="120" y="614" width="818" height="9" rx="2" fill="#EBE7E1"/><rect x="120" y="614" width="477" height="9" rx="2" fill="#B4531F"/><rect x="597" y="614" width="182" height="9" rx="2" fill="#9B3B3B" opacity="0.4"/>
+<rect x="28" y="634" width="924" height="90" fill="#FFFFFF" stroke="#DCD6CE"/>
+<rect x="28" y="634" width="74" height="90" fill="#EBE7E1" stroke="#DCD6CE"/>
+<text x="65" y="672" font-size="26" font-weight="700" fill="#B4531F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle">5</text>
+<text x="65" y="690" font-size="9" fill="#7C736A" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle" letter-spacing="1">CUTOFF</text>
+<text x="120" y="659" font-size="15" font-weight="600" fill="#1E1B18">Top 12, and the rest are counted not hidden</text>
+<text x="120" y="678" font-size="12" fill="#4E4740">Full-text matching is permissive enough that a plausible task matches most of a mature</text>
+<text x="120" y="693" font-size="12" fill="#4E4740">store. The number discarded travels with the result.</text>
+<text x="938" y="659" font-size="9.5" fill="#9B3B3B" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="700" text-anchor="end" letter-spacing="0.8">TRUNCATES</text>
+<text x="120" y="704" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">12 delivered</text>
+<text x="938" y="704" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A" text-anchor="end">9 reported as trimmed</text>
+<rect x="120" y="710" width="818" height="9" rx="2" fill="#EBE7E1"/><rect x="120" y="710" width="273" height="9" rx="2" fill="#B4531F"/><rect x="393" y="710" width="204" height="9" rx="2" fill="#9B3B3B" opacity="0.4"/>
+<rect x="28" y="730" width="924" height="90" fill="#FFFFFF" stroke="#DCD6CE"/>
+<rect x="28" y="730" width="74" height="90" fill="#EBE7E1" stroke="#DCD6CE"/>
+<text x="65" y="768" font-size="26" font-weight="700" fill="#B4531F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle">6</text>
+<text x="65" y="786" font-size="9" fill="#7C736A" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle" letter-spacing="1">SHAPE</text>
+<text x="120" y="755" font-size="15" font-weight="600" fill="#1E1B18">Bucket by type, then route to imperatives</text>
+<text x="120" y="774" font-size="12" fill="#4E4740">Eight buckets: gates, defects, retractions, tombstones, threat prior-art, rules, vocabulary,</text>
+<text x="120" y="789" font-size="12" fill="#4E4740">stale warnings. Stale demotes, never deletes. Then ARM / FIX / AVOID.</text>
+<text x="120" y="800" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">gates -&gt; defects+rules</text>
+<text x="938" y="800" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A" text-anchor="end">-&gt; retractions -&gt; tombstones</text>
+<rect x="28" y="826" width="924" height="90" fill="#FFFFFF" stroke="#DCD6CE"/>
+<rect x="28" y="826" width="74" height="90" fill="#EBE7E1" stroke="#DCD6CE"/>
+<text x="65" y="864" font-size="26" font-weight="700" fill="#B4531F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle">7</text>
+<text x="65" y="882" font-size="9" fill="#7C736A" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle" letter-spacing="1">RENDER</text>
+<text x="120" y="851" font-size="15" font-weight="600" fill="#1E1B18">Three surfaces, one pipeline</text>
+<text x="120" y="870" font-size="12" fill="#4E4740">agent | actions | json. A zero-match result carries the store size, so 'no rules apply' can</text>
+<text x="120" y="885" font-size="12" fill="#4E4740">never be confused with 'the store is empty'.</text>
+<text x="120" y="896" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">hook | MCP | CI</text>
+<text x="28" y="968" font-size="11" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A">src/okl/core.py check() / _in_scope() . src/okl/store.py search() . regenerate: python3 docs/render_pipeline_diagram.py</text>
+</svg>

@@ -657,6 +657,55 @@ transfer. A repo whose work matched its declared interests would lose less. A nu
 here is therefore weak evidence that filtering is harmless in general, and no evidence at
 all that it helps.
 
+### Result (2026-09-03)
+
+Receipt: `evals/results/ab-20260903-1323.json`, `brief_interests` recorded on its face.
+48 runs, 0 failures. Compared against §4g (`ab-20260903-1214.json`): same tasks, same
+generator, same haiku judge, hours apart, filtering the only intended difference.
+
+| | baseline | briefed |
+|---|---|---|
+| §4g unfiltered | 8/22 — 36% | 1/21 — **5%** |
+| §4h filtered | 12/24 — 50% | 1/24 — **4%** |
+
+**The prediction held and the falsifier did not trigger.** Briefed-filtered 4% against
+briefed-unfiltered 5% is one point. No task that read briefed 0/3 reproduces; `spa_tokens`
+went 1/2 to 1/3. On this task set, filtering is not detectably different from not filtering.
+
+### The control moved 14 points, and that is the finding
+
+The baseline arm uses no briefing at all. Filtering cannot reach it. It moved **36% → 50%**
+between two runs that differed in nothing capable of affecting it.
+
+That is the first direct measurement of this harness's run-to-run noise, and it was free —
+a by-product of holding an arm constant rather than an experiment anyone had to design. It
+says two things:
+
+- **The 17-point noise floor asserted in §2 is empirically supported.** Observed control
+  drift of 14 points sits just inside it. Until now that floor was a stated assumption; it
+  is now a measurement.
+- **The filtering result is deep inside noise.** A 1-point difference between arms, against
+  14 points of drift in a control that could not have changed, is not evidence of anything.
+  "No detectable change" is the honest reading, and detectable is doing real work in that
+  sentence — this design could not have detected a change smaller than the floor.
+
+It also retrospectively calibrates every per-task row in this report. A task moving from
+1/3 to 2/3 across runs is inside the same noise, which is why §4g declined to call
+`spa_tokens` a trend and why that was the right call.
+
+**What this does not settle**, restated from the pre-registration because it matters more
+now that the result is null: this task set is deliberately cross-stack. A repo whose work
+matched its declared interests would lose less to filtering. A null here is weak evidence
+that filtering is harmless in general, and no evidence that it helps.
+
+**What it does settle for `KNOWN_TAGS`.** Extending the tag vocabulary so Go, Rust or
+PowerShell teams can declare stacks was blocked on whether the filter those tags feed earns
+its place. It does not measurably earn it — but it does not cost anything either, and the
+mechanism it feeds is 20% of what a briefing contains. That argues for the additive
+alternative: index tags so they can *raise* an on-subject record, rather than only
+*excluding* off-subject ones. Ranking cannot hide a load-bearing rule the way §4d's filter
+did.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
