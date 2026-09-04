@@ -10,6 +10,7 @@ again once the breakage is repaired.
 Tests follow ARRANGE / ACT / ASSERT with a story per phase, so the contract is readable
 without opening the gate scripts.
 """
+import importlib.util
 import json
 import os
 import re
@@ -340,22 +341,24 @@ def test_ab_harness_flags_an_off_series_instrument_but_still_runs():
         # purpose; a change must be impossible to MISS, not impossible to make.
         assert off.returncode != 3, "an off-series instrument must warn, never refuse"
 
-        # ASSERT (4) — the warning must survive to the REPORT, not just to startup. Every
-        # assertion above uses --dry-run, which returns before a report is printed, so the
-        # report-time formatter was never executed by any test. It carried a KeyError for a
-        # field the drift record stopped having when the comparison moved from the latest
-        # receipt to the modal one: the run crashed at the end, on exactly the off-series
-        # case the warning exists to describe. Caught in review, not by the suite.
-        env = {**os.environ, "GENERATOR_CMD": "echo gen",
-               "JUDGE_CMD": "echo judge", "AB_RESULTS_DIR": str(results)}
-        full = subprocess.run([sys.executable, str(harness), "--limit", "1", "--samples", "1",
-                               "--timeout", "5"], capture_output=True, text=True, env=env)
-        # Asserted on the harness's OWN failure signals, not on "Traceback" anywhere in
-        # stderr: some environments emit an unrelated import warning with a traceback on
-        # every interpreter start, and a test keyed on that passes or fails by machine.
-        assert "KeyError" not in full.stderr, f"report crashed: {full.stderr[-300:]}"
-        assert full.returncode in (0, 1), f"unexpected exit {full.returncode}"
-        assert "NOT COMPARABLE ACROSS RUNS" in full.stdout
+        # ASSERT (4) — the REPORT-time banner renders from the same record, without
+        # reaching for a field it does not have. Every assertion above uses --dry-run,
+        # which returns before a report is printed, so the report formatter was executed
+        # by no test at all; when the record's shape changed it kept reading a key that no
+        # longer existed and crashed at the end of a real off-series run.
+        #
+        # Called directly rather than through a full run: on a clean checkout the harness
+        # refuses at pre-flight (exit 5, no .okl store is committed), so a subprocess test
+        # passes on a developer machine and never reaches the report in CI. Testing the
+        # formatter is the part that was untested; testing it through six minutes of
+        # preconditions tests the preconditions.
+        spec = importlib.util.spec_from_file_location("_abh", harness)
+        abh = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(abh)
+        banner = abh.drift_banner({"differs_from": "modal instrument",
+                                   "judge": {"series": "claude -p --model haiku", "runs": 3}})
+        assert "NOT COMPARABLE ACROSS RUNS" in banner
+        assert "claude -p --model haiku" in banner and "3 runs" in banner
 
 
 def _git_repo(tmp_path):

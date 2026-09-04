@@ -107,6 +107,24 @@ def parse_judge(raw: str) -> dict:
     return d
 
 
+def drift_banner(drift_from: dict) -> str:
+    """The report-time instrument warning, as a string.
+
+    A function rather than an inline print so it can be tested. Inline, it was reachable
+    only by a full harness run, and every test used --dry-run, which returns before any
+    report is printed. So when the drift record's shape changed — it carried a `receipt`
+    name while the comparison was against the latest run, and stopped when the comparison
+    moved to the modal instrument — this formatter kept reaching for a key that no longer
+    existed, and nothing failed until a real off-series run crashed at the very end.
+
+    Not merely repeated from startup: the report is what gets read and pasted.
+    """
+    return ("⚠️  NOT COMPARABLE ACROSS RUNS — this run's instrument differs from the series: "
+            + "; ".join(f"{k} series uses {v['series']} ({v['runs']} runs)"
+                        for k, v in drift_from.items() if isinstance(v, dict))
+            + ". These numbers are internally valid only.")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--tasks", default=str(REPO / "evals" / "tasks.jsonl"))
@@ -258,18 +276,7 @@ def main() -> int:
         print("❌ RESULTS NOT USABLE — failure rate above threshold. Fix the harness before "
               "reading any number below.")
     if drift_from:
-        # Repeated here, not just at startup: the report is what gets read and pasted.
-        # Reads the keys drift_from ACTUALLY carries. It used to hold a `receipt` name,
-        # from when the comparison was against the latest run; switching to the modal
-        # instrument changed its shape and left this formatter reaching for a key that no
-        # longer exists — a KeyError at report time, on exactly the off-series run the
-        # warning exists to describe. Invisible to the tests because they use --dry-run,
-        # which returns before any report is printed.
-        print("⚠️  NOT COMPARABLE ACROSS RUNS — this run's instrument differs from the "
-              "series: "
-              + "; ".join(f"{k} series uses {v['series']} ({v['runs']} runs)"
-                          for k, v in drift_from.items() if isinstance(v, dict))
-              + ". These numbers are internally valid only.")
+        print(drift_banner(drift_from))
     def by(arm):
         return [r for r in results if r["arm"] == arm]
 
