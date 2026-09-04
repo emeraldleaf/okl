@@ -806,6 +806,9 @@ def test_check_fails_closed_when_repo_is_not_configured(tmp_path, monkeypatch, c
     from okl.cli import cmd_check
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("OKL_SERVICE_URL", raising=False)
+    # ...and the database URL. The CLI honours it now, so a developer or CI job that
+    # exports it would point this test's subprocesses at their own store instead.
+    monkeypatch.delenv("OKL_DATABASE_URL", raising=False)
     args = argparse.Namespace(task="add an endpoint", repo=None, format="agent", limit=None)
     assert cmd_check(args) == 2, "must fail closed, not report a clean check"
     assert "NOT CONFIGURED" in capsys.readouterr().err
@@ -1398,3 +1401,147 @@ def test_applies_to_rejects_a_value_that_is_not_a_stack(store):
     with pytest.raises(ValueError) as e:
         core.record(store, type="Rule", title="t", scope="org", applies_to="security")
     assert "applies_to must name stacks" in str(e.value)
+
+
+def test_search_scope_refuses_a_non_scope_and_resolves_the_repo_shorthand(tmp_path, monkeypatch, capsys):
+    """A mistyped --scope is refused; 'repo' resolves; an unknown repo warns but still runs.
+
+    `--scope repo` is the obvious guess and used to return an empty list and exit 0, because
+    the stored form is `repo:<name>`. That reads as "this repo has learned nothing" when it
+    means "you typed the scope wrong" — the same silence-as-safety failure `check` already
+    refuses to make about an empty store, in the command right next to it.
+
+    The three cases are deliberately graded. A non-scope is a refusal (exit 2, the CLI's
+    "this did not run"). A well-formed scope naming an unknown repo only WARNS, because a
+    fresh repo legitimately has no records and refusing would block a valid query.
+    """
+    import argparse
+    import subprocess
+    import sys as _sys
+
+    from okl.cli import cmd_search
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("OKL_SERVICE_URL", raising=False)
+    # ...and the database URL. The CLI honours it now, so a developer or CI job that
+    # exports it would point this test's subprocesses at their own store instead.
+    monkeypatch.delenv("OKL_DATABASE_URL", raising=False)
+    # Set up through the shipped CLI rather than hand-built Namespaces: a Namespace that
+    # happens to omit a field the command reads fails as an AttributeError, which tests the
+    # test rather than the behaviour.
+    subprocess.run(["git", "init", "-q", "."], cwd=tmp_path, check=True)
+    okl = [_sys.executable, "-m", "okl"]
+    subprocess.run([*okl, "init", "--repo", "acme"], cwd=tmp_path, check=True,
+                   capture_output=True)
+    subprocess.run([*okl, "record", "--type", "Rule", "--scope", "repo", "--repo", "acme",
+                    "--title", "Handlers validate their input",
+                    "--symptom", "unvalidated input reaches a handler",
+                    "--fix", "validate at the edge"], cwd=tmp_path, check=True,
+                   capture_output=True)
+
+    def search(scope):
+        return cmd_search(argparse.Namespace(query="handlers", scope=scope, type=None,
+                                             limit=10, format="text"))
+
+    # ASSERT (1) — a string that is not a scope at all is REFUSED, not silently empty.
+    assert search("nonsense") == 2
+    assert "REFUSING" in capsys.readouterr().err
+
+    # ASSERT (2) — 'repo' resolves to the configured repo, so nobody has to know the name.
+    assert search("repo") == 0
+    assert "Handlers validate their input" in capsys.readouterr().out
+
+    # ASSERT (3) — a well-formed scope for a repo the store has never seen still RUNS
+    # (exit 0), but says so, naming what the store does know.
+    assert search("repo:notarepo") == 0
+    err = capsys.readouterr().err
+    assert "no record anywhere carries scope" in err
+    assert "repo:acme" in err, "the warning must name the scopes that do exist"
+
+
+def test_pipeline_diagram_is_current():
+    """The committed retrieval diagram must be what the generator produces right now.
+
+    gates/check-diagram-pairs.sh proves a render EXISTS and says so plainly: "it does NOT
+    prove the render matches the source; re-rendering after a source edit stays human."
+    A generated diagram closes that gap — regenerate and diff.
+
+    This exists because the hand-drawn first draft of this diagram was wrong twice within
+    the hour: its record count went stale in ten minutes, and two of its stage counts were
+    transcribed backwards from a measurement that had answered a different question.
+    """
+    import subprocess
+    import sys
+    import tempfile
+
+    root = Path(__file__).resolve().parents[1]
+    svg = root / "docs" / "okl-retrieval-pipeline.svg"
+    assert svg.exists(), "the render is missing; run docs/render_pipeline_diagram.py"
+
+    # ARRANGE / ACT — regenerate to a scratch path, never over the committed file: a test
+    # that repairs what it is checking always passes and detects nothing.
+    with tempfile.TemporaryDirectory() as d:
+        out = Path(d) / "regen.svg"
+        r = subprocess.run([sys.executable, str(root / "docs" / "render_pipeline_diagram.py"),
+                            "--out", str(out)], capture_output=True, text=True, cwd=root)
+        assert r.returncode == 0, f"generator failed: {r.stderr[-400:]}"
+
+        # ASSERT — byte-identical. The generator traces a store seeded from committed files,
+        # so this is reproducible on any checkout; tracing the developer's own .okl store
+        # would make it pass only on the machine that last rendered it.
+        assert out.read_text() == svg.read_text(), (
+            "docs/okl-retrieval-pipeline.svg is stale — the pipeline changed and the diagram "
+            "did not. Re-run: python3 docs/render_pipeline_diagram.py")
+
+
+def test_naming_a_store_by_env_var_configures_both_reads_and_writes(tmp_path, monkeypatch):
+    """`record` and `check` must agree on whether a store has been configured.
+
+    Honouring OKL_DATABASE_URL in the store resolver, without teaching `configured` about
+    it, made the two commands disagree: `record` wrote happily while `check` refused as
+    unconfigured. You could write to a store you were denied a read from.
+
+    Widening the gate is safe because the failure it was written for is caught downstream —
+    `core.check` reports an empty store as EMPTY rather than clean. What it still has to
+    protect is the bare directory, where reading would create a database as a side effect
+    of asking a question.
+    """
+    import subprocess
+    import sys
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("OKL_SERVICE_URL", raising=False)
+    # ...and the database URL. The CLI honours it now, so a developer or CI job that
+    # exports it would point this test's subprocesses at their own store instead.
+    monkeypatch.delenv("OKL_DATABASE_URL", raising=False)
+    subprocess.run(["git", "init", "-q", "."], cwd=tmp_path, check=True)
+    okl = [sys.executable, "-m", "okl"]
+    db = tmp_path / "named.db"
+
+    def run(args, url):
+        env = {**os.environ, "OKL_DATABASE_URL": url} if url else {
+            k: v for k, v in os.environ.items() if k != "OKL_DATABASE_URL"}
+        return subprocess.run([*okl, *args], cwd=tmp_path, capture_output=True,
+                              text=True, env=env)
+
+    url = f"sqlite:///{db}"
+    # ARRANGE / ACT — write to the store the operator named.
+    # --fix matters: `--format actions` renders only ROUTED actions, and a Rule routes
+    # only when it carries a fix. Without one the record is stored and retrieved and the
+    # actions view is still empty, which looks exactly like a configuration failure.
+    w = run(["record", "--type", "Rule", "--scope", "org", "--title", "Validate at the edge",
+             "--symptom", "unvalidated input reaches a handler",
+             "--fix", "validate at the transport edge, never in the handler"], url)
+    assert w.returncode == 0, w.stderr[-300:]
+
+    # ASSERT (1) — and read back from it. Before this, the same env var that accepted the
+    # write made the read refuse.
+    r = run(["check", "--task", "handle unvalidated input", "--format", "actions"], url)
+    assert r.returncode == 0, r.stderr[-300:]
+    assert "NOT CONFIGURED" not in r.stderr
+    assert "Validate at the edge" in r.stdout
+
+    # ASSERT (2) — a bare directory, nothing named, still refuses AND creates nothing.
+    # Reading must never bring a store into existence as a side effect of being asked.
+    bare = run(["check", "--task", "anything"], None)
+    assert "NOT CONFIGURED" in bare.stderr
+    assert not list(tmp_path.glob("okl.db")), "a refused read must not create a store"

@@ -10,9 +10,13 @@ again once the breakage is repaired.
 Tests follow ARRANGE / ACT / ASSERT with a story per phase, so the contract is readable
 without opening the gate scripts.
 """
+import importlib.util
+import json
+import os
 import re
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -279,6 +283,83 @@ def test_eval_harness_refuses_self_grading(tmp_path, monkeypatch):
     r = subprocess.run([sys.executable, str(harness)], capture_output=True, text=True)
     assert r.returncode == 3
     assert "REFUSING TO RUN" in r.stderr
+
+
+def test_ab_harness_flags_an_off_series_instrument_but_still_runs():
+    """A run graded off the series says so; a run on the series stays quiet. Neither refuses.
+
+    REPORT §4f was launched with an opus judge where every prior run used haiku. Nothing
+    failed: the run was internally valid, the judge!=generator guard held, and both arms
+    simply shifted up together the way a stricter grader shifts them. It was caught only by
+    tabulating receipts by hand afterwards.
+
+    The comparison is against the MODAL instrument, not the most recent receipt. The first
+    version of this guard compared against the latest one and got its first live run exactly
+    backwards — the run before it was the anomalous §4f, so a run returning to the documented
+    judge was announced as NOT COMPARABLE when it had just restored the series. A guard that
+    tells you to discard the run that fixed the problem is worse than no guard.
+    """
+    harness = Path(__file__).resolve().parents[1] / "evals" / "ab_harness.py"
+
+    def run(judge, results_dir):
+        env = {**os.environ, "GENERATOR_CMD": "claude -p --model sonnet",
+               "JUDGE_CMD": judge, "AB_RESULTS_DIR": str(results_dir)}
+        return subprocess.run([sys.executable, str(harness), "--dry-run"],
+                              capture_output=True, text=True, env=env)
+
+    # ARRANGE — a CONSTRUCTED history, not this repo's own. The distinction under test is
+    # modal-vs-latest, and real receipts stop discriminating it the moment the series is
+    # restored: once the newest receipt is also the modal one, both implementations agree
+    # and the regression test passes against the broken code. It did exactly that.
+    #
+    # This history separates them: haiku is the series (3 runs), and the NEWEST receipt is
+    # the off-series opus run — the §4f shape precisely.
+    with tempfile.TemporaryDirectory() as d:
+        results = Path(d)
+        for name, judge in [("ab-20260101-0000.json", "haiku"), ("ab-20260102-0000.json", "haiku"),
+                            ("ab-20260103-0000.json", "haiku"), ("ab-20260104-0000.json", "opus")]:
+            (results / name).write_text(json.dumps(
+                {"generator": "claude -p --model sonnet", "judge": f"claude -p --model {judge}",
+                 "results": [], "failures": []}))
+
+        # ASSERT (1) — the load-bearing one. Running haiku here matches the SERIES while
+        # differing from the newest receipt. It must not warn: this is the run that restores
+        # comparability, and a guard that tells you to discard it is worse than no guard.
+        on_series = run("claude -p --model haiku", results)
+        assert "INSTRUMENT DIFFERS" not in on_series.stderr
+        assert "restores comparability" in on_series.stderr, \
+            "returning to the series should be reported as a restoration, not silence"
+
+        # ASSERT (2) — genuinely off the series: warns, and names the series plus how many
+        # runs back it, so the reader knows what the number may not be quoted against.
+        off = run("claude -p --model some-other-model", results)
+        assert "INSTRUMENT DIFFERS FROM THE SERIES" in off.stderr
+        assert "claude -p --model haiku" in off.stderr, "must name the series it departs from"
+        assert "3 runs" in off.stderr, "must say how many runs back the series"
+
+        # ASSERT (3) — it warns, never refuses. §4a's cross-model run changed both arms on
+        # purpose; a change must be impossible to MISS, not impossible to make.
+        assert off.returncode != 3, "an off-series instrument must warn, never refuse"
+
+        # ASSERT (4) — the REPORT-time banner renders from the same record, without
+        # reaching for a field it does not have. Every assertion above uses --dry-run,
+        # which returns before a report is printed, so the report formatter was executed
+        # by no test at all; when the record's shape changed it kept reading a key that no
+        # longer existed and crashed at the end of a real off-series run.
+        #
+        # Called directly rather than through a full run: on a clean checkout the harness
+        # refuses at pre-flight (exit 5, no .okl store is committed), so a subprocess test
+        # passes on a developer machine and never reaches the report in CI. Testing the
+        # formatter is the part that was untested; testing it through six minutes of
+        # preconditions tests the preconditions.
+        spec = importlib.util.spec_from_file_location("_abh", harness)
+        abh = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(abh)
+        banner = abh.drift_banner({"differs_from": "modal instrument",
+                                   "judge": {"series": "claude -p --model haiku", "runs": 3}})
+        assert "NOT COMPARABLE ACROSS RUNS" in banner
+        assert "claude -p --model haiku" in banner and "3 runs" in banner
+
 
 def _git_repo(tmp_path):
     """Build a scaffolded repo whose files are TRACKED by git, and hand it back.
@@ -555,3 +636,38 @@ def test_review_agent_soft_passes_until_it_is_configured(tmp_path, monkeypatch):
         p = subprocess.run([sys.executable, "-c", verdict], input=payload,
                            capture_output=True, text=True)
         assert p.returncode == expected, f"{payload} -> {p.returncode}: {p.stdout}{p.stderr}"
+
+
+def test_stored_data_never_reaches_a_shell():
+    """Data from the store reaches subprocesses list-form; only a typed arg may be shelled.
+
+    The rule this guards is "never let stored data reach a shell" — record fields are
+    attacker-influenced in a shared layer, and `drift` feeds file globs straight from a
+    record into git. The distinction that matters is the SOURCE of the string, not the
+    presence of `shell=True`: `okl verify --run` shells a command the operator just typed,
+    which is its documented purpose and no escalation. A blanket "no shell=True anywhere"
+    check fails on that legitimate call site and tests a stricter claim than the rule makes
+    — it did, which is why this test exists in this shape.
+    """
+    root = Path(__file__).resolve().parents[1]
+    src = root / "src" / "okl"
+
+    # ASSERT (1) — the stored globs go to git as list items, after a `--` guard so a glob
+    # beginning with a dash can never be read as a git option.
+    drift = (src / "drift.py").read_text()
+    assert '"--", *pathspecs' in drift, "drift lost its list-form/-- guard on stored globs"
+
+    # ASSERT (2) — exactly one shell=True in the package, and it is verify running the
+    # operator's own --run. A second one is a new hazard and must be justified here.
+    shelled = [f"{p.name}:{i}" for p in src.rglob("*.py")
+               for i, line in enumerate(p.read_text().splitlines(), 1)
+               if "shell=True" in line]
+    assert shelled == ["cli.py:273"] or len(shelled) == 1, f"unexpected shell=True: {shelled}"
+    assert "subprocess.run(args.run, shell=True" in (src / "cli.py").read_text()
+
+    # ASSERT (3) — the remote path can never trigger execution: /verify accepts EVIDENCE
+    # already produced by a local run, never a command for the server to execute. If this
+    # ever takes a `run` field, a token holder gets RCE on the shared layer.
+    service = (src / "service.py").read_text()
+    assert "core.verify(_store, req.id, req.evidence)" in service
+    assert "shell" not in service, "the service must never shell out"

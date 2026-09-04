@@ -11,6 +11,11 @@ Answer it honestly — record with a deliberate scope (`org` spreads to every re
 `repo` stays local) and tags from the closed vocabulary in `store.KNOWN_TAGS`. Growing
 that vocabulary is an edit to the set plus a note in the tags ADR, never an ad-hoc tag.
 
+- **`applies_to` is where a lesson is TRUE; tags are where it was FOUND.** Leave it unset
+  unless the lesson is false or meaningless off that stack — unset reaches every repo and
+  is the safe default, while a wrong value hides the record silently. Never derive it from
+  a tag: that is the reverted §4d defect, which measured worse than no filter at all.
+
 - **Verification is evidence-based**: `okl verify <id> --run "<check>" --expect "<signal>"`.
   Never re-record with `--verified` to clear drift — run the check.
 - **After changing files a rule governs, `okl drift` goes red on purpose.** Re-verify

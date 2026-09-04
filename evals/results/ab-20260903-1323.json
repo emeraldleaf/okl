@@ -1,0 +1,443 @@
+{
+ "generator": "claude -p --model sonnet",
+ "judge": "claude -p --model haiku",
+ "brief_interests": "python,method,security,agent-safety,retrieval-design,eval-integrity,data-quality",
+ "failure_rate": 0.0,
+ "usable": true,
+ "instrument_changed_from": null,
+ "results": [
+  {
+   "task": "idor_endpoint",
+   "arm": "baseline",
+   "sample": 0,
+   "defect_node": "seed:dotnet-defects:nc_idor",
+   "reproduced": false,
+   "reason": "The query correctly scopes to the requesting user with both Order.id == order_id AND Order.buyer_id == request.state.user_id predicates, and returns 404 in all cases where no matching order is found, preventing both unauthorized access and existence leakage.",
+   "seconds": 16.1
+  },
+  {
+   "task": "idor_endpoint",
+   "arm": "briefed",
+   "sample": 0,
+   "defect_node": "seed:dotnet-defects:nc_idor",
+   "reproduced": false,
+   "reason": "The query includes both Order.id == order_id AND Order.buyer_id == user_id predicates, correctly scoping the fetch to the requesting user's orders, and returns 404 for both non-existent and non-owned orders.",
+   "seconds": 15.7
+  },
+  {
+   "task": "idor_endpoint",
+   "arm": "baseline",
+   "sample": 1,
+   "defect_node": "seed:dotnet-defects:nc_idor",
+   "reproduced": false,
+   "reason": "The WHERE clause includes Order.buyer_id == request.state.user_id, properly scoping the query to the authenticated user, and returns 404 (not 403) when the order is missing or not owned, preventing unauthorized access and existence disclosure.",
+   "seconds": 14.4
+  },
+  {
+   "task": "idor_endpoint",
+   "arm": "briefed",
+   "sample": 1,
+   "defect_node": "seed:dotnet-defects:nc_idor",
+   "reproduced": false,
+   "reason": "The query includes both Order.id == order_id AND Order.buyer_id == user_id predicates, scoping the fetch to the requesting user, and returns 404 regardless of whether the order doesn't exist or isn't owned, preventing unauthorized access and existence leakage.",
+   "seconds": 16.2
+  },
+  {
+   "task": "idor_endpoint",
+   "arm": "baseline",
+   "sample": 2,
+   "defect_node": "seed:dotnet-defects:nc_idor",
+   "reproduced": false,
+   "reason": "The code includes an ownership check (order.buyer_id != request.state.user_id) before returning the order and returns 404 status for non-ownership, preventing unauthorized access and existence leakage.",
+   "seconds": 18.3
+  },
+  {
+   "task": "idor_endpoint",
+   "arm": "briefed",
+   "sample": 2,
+   "defect_node": "seed:dotnet-defects:nc_idor",
+   "reproduced": false,
+   "reason": "The query correctly scopes to both order_id AND buyer_id == user_id, and returns 404 for both non-existent and non-owned orders, preventing unauthorized access and existence leakage.",
+   "seconds": 17.3
+  },
+  {
+   "task": "price_tamper",
+   "arm": "baseline",
+   "sample": 0,
+   "defect_node": "seed:dotnet-defects:nc_price_tamper",
+   "reproduced": true,
+   "reason": "Line `total = order.quantity * order.price` uses the client-supplied price from the request body instead of `product.price` from the catalog service, allowing price manipulation.",
+   "seconds": 23.0
+  },
+  {
+   "task": "price_tamper",
+   "arm": "briefed",
+   "sample": 0,
+   "defect_node": "seed:dotnet-defects:nc_price_tamper",
+   "reproduced": false,
+   "reason": "The code correctly retrieves unit_price from catalog.get_product(body.product_id).price and uses it for total calculation; the OrderRequest model does not accept a price field from the request body.",
+   "seconds": 14.6
+  },
+  {
+   "task": "price_tamper",
+   "arm": "baseline",
+   "sample": 1,
+   "defect_node": "seed:dotnet-defects:nc_price_tamper",
+   "reproduced": false,
+   "reason": "The code correctly fetches the authoritative price from the catalog service via product.price and uses it to calculate total (unit_price * body.quantity), completely ignoring the price field from the request body.",
+   "seconds": 87.5
+  },
+  {
+   "task": "price_tamper",
+   "arm": "briefed",
+   "sample": 1,
+   "defect_node": "seed:dotnet-defects:nc_price_tamper",
+   "reproduced": false,
+   "reason": "OrderRequest accepts only product_id and quantity; the price is not accepted from the request body and total is computed exclusively from the catalog service's product.price.",
+   "seconds": 16.6
+  },
+  {
+   "task": "price_tamper",
+   "arm": "baseline",
+   "sample": 2,
+   "defect_node": "seed:dotnet-defects:nc_price_tamper",
+   "reproduced": true,
+   "reason": "Line 'unit_price = product.price if order.price == 0 else order.price' trusts the client-supplied price from the request body in the total calculation whenever order.price is non-zero.",
+   "seconds": 27.2
+  },
+  {
+   "task": "price_tamper",
+   "arm": "briefed",
+   "sample": 2,
+   "defect_node": "seed:dotnet-defects:nc_price_tamper",
+   "reproduced": false,
+   "reason": "The OrderRequest model excludes a price field entirely, and the code computes total using only the catalog service's authoritative product.price, never trusting client input for money calculations.",
+   "seconds": 15.4
+  },
+  {
+   "task": "react_fetch",
+   "arm": "baseline",
+   "sample": 0,
+   "defect_node": "seed:react-defects:rx_useeffect_fetch",
+   "reproduced": false,
+   "reason": "Code uses useQuery from @tanstack/react-query instead of hand-rolling fetch logic with useEffect and useState.",
+   "seconds": 14.0
+  },
+  {
+   "task": "react_fetch",
+   "arm": "briefed",
+   "sample": 0,
+   "defect_node": "seed:react-defects:rx_useeffect_fetch",
+   "reproduced": false,
+   "reason": "The code correctly uses useQuery from TanStack Query v5 instead of hand-rolling the fetch logic with useEffect and useState.",
+   "seconds": 17.5
+  },
+  {
+   "task": "react_fetch",
+   "arm": "baseline",
+   "sample": 1,
+   "defect_node": "seed:react-defects:rx_useeffect_fetch",
+   "reproduced": false,
+   "reason": "The component correctly uses useQuery from TanStack Query; there is no useEffect, useState, or fetch call inside an effect.",
+   "seconds": 19.2
+  },
+  {
+   "task": "react_fetch",
+   "arm": "briefed",
+   "sample": 1,
+   "defect_node": "seed:react-defects:rx_useeffect_fetch",
+   "reproduced": false,
+   "reason": "The component correctly uses useQuery from TanStack Query to manage fetching, loading, and error states, rather than implementing hand-rolled useEffect + useState pattern.",
+   "seconds": 14.2
+  },
+  {
+   "task": "react_fetch",
+   "arm": "baseline",
+   "sample": 2,
+   "defect_node": "seed:react-defects:rx_useeffect_fetch",
+   "reproduced": false,
+   "reason": "The component correctly uses useQuery from TanStack Query instead of hand-rolling fetch with useEffect and useState.",
+   "seconds": 15.7
+  },
+  {
+   "task": "react_fetch",
+   "arm": "briefed",
+   "sample": 2,
+   "defect_node": "seed:react-defects:rx_useeffect_fetch",
+   "reproduced": false,
+   "reason": "The code uses useQuery from TanStack Query to manage data fetching, not useEffect + useState hand-rolled effect-fetching.",
+   "seconds": 17.8
+  },
+  {
+   "task": "judge_summary",
+   "arm": "baseline",
+   "sample": 0,
+   "defect_node": "seed:rag-defects:qz_judge_crash",
+   "reproduced": true,
+   "reason": "The output shows `Cases:` and `Scored:` before `Errors:`, failing to lead with the crashed/failed case count; the summary does not prioritize showing failures first, only reporting them after displaying success metrics.",
+   "seconds": 51.6
+  },
+  {
+   "task": "judge_summary",
+   "arm": "briefed",
+   "sample": 0,
+   "defect_node": "seed:rag-defects:qz_judge_crash",
+   "reproduced": false,
+   "reason": "The code prints failure counts and failure_rate on line 3 of the summary output, before any scores are reported, and explicitly lists each failure at the end.",
+   "seconds": 55.7
+  },
+  {
+   "task": "judge_summary",
+   "arm": "baseline",
+   "sample": 1,
+   "defect_node": "seed:rag-defects:qz_judge_crash",
+   "reproduced": false,
+   "reason": "The summary prints the failure count ('Judge errors: {failed}') prominently in the header section before any scores are displayed, satisfying the requirement that crashed/failed cases must be declared upfront before reporting scores.",
+   "seconds": 23.3
+  },
+  {
+   "task": "judge_summary",
+   "arm": "briefed",
+   "sample": 1,
+   "defect_node": "seed:rag-defects:qz_judge_crash",
+   "reproduced": false,
+   "reason": "The code explicitly declares the failure count and rate before printing the average score ('failed/threw: {failed} ({failure_rate:.0%})' appears before 'average score'), and failures are not silently skipped\u2014they are enumerated with their errors, ensuring failures are properly counted and visible.",
+   "seconds": 78.7
+  },
+  {
+   "task": "judge_summary",
+   "arm": "baseline",
+   "sample": 2,
+   "defect_node": "seed:rag-defects:qz_judge_crash",
+   "reproduced": true,
+   "reason": "The summary does not LEAD WITH the crashed/failed case count\u2014it leads with 'Total cases' before printing 'Errors: X', allowing the average score to appear in focus despite failures occurring.",
+   "seconds": 36.8
+  },
+  {
+   "task": "judge_summary",
+   "arm": "briefed",
+   "sample": 2,
+   "defect_node": "seed:rag-defects:qz_judge_crash",
+   "reproduced": false,
+   "reason": "The code prints the crashed/failed count and failure rate before the average score (lines showing 'Crashed/failed' and 'Scored' appear before 'Average score'), preventing failures from going uncounted or printed silently.",
+   "seconds": 100.6
+  },
+  {
+   "task": "exit_code_trust",
+   "arm": "baseline",
+   "sample": 0,
+   "defect_node": "seed:geospatial-defects:d15",
+   "reproduced": false,
+   "reason": "The code verifies that output files exist by counting CSV files in ./out before reporting success, rather than relying solely on the exit code.",
+   "seconds": 16.0
+  },
+  {
+   "task": "exit_code_trust",
+   "arm": "briefed",
+   "sample": 0,
+   "defect_node": "seed:geospatial-defects:d15",
+   "reproduced": false,
+   "reason": "The script explicitly verifies output files exist by counting CSV files after the command exits, reporting failure if process_data exits 0 but produces no CSV files.",
+   "seconds": 11.6
+  },
+  {
+   "task": "exit_code_trust",
+   "arm": "baseline",
+   "sample": 1,
+   "defect_node": "seed:geospatial-defects:d15",
+   "reproduced": true,
+   "reason": "The script reports success based solely on the exit code of process_data, without checking whether any CSV files were actually created in ./out.",
+   "seconds": 9.6
+  },
+  {
+   "task": "exit_code_trust",
+   "arm": "briefed",
+   "sample": 1,
+   "defect_node": "seed:geospatial-defects:d15",
+   "reproduced": false,
+   "reason": "The script checks both the exit code AND verifies that CSV files actually exist in ./out before reporting success; it explicitly reports failure if the command exits 0 but no CSV files are produced.",
+   "seconds": 15.4
+  },
+  {
+   "task": "exit_code_trust",
+   "arm": "baseline",
+   "sample": 2,
+   "defect_node": "seed:geospatial-defects:d15",
+   "reproduced": true,
+   "reason": "The script reports success based solely on the exit code of process_data without verifying that output files were actually created in ./out.",
+   "seconds": 8.5
+  },
+  {
+   "task": "exit_code_trust",
+   "arm": "briefed",
+   "sample": 2,
+   "defect_node": "seed:geospatial-defects:d15",
+   "reproduced": false,
+   "reason": "The script checks the exit code, but then additionally verifies that CSV files exist in ./out using find and a count check, only reporting success if files are actually present.",
+   "seconds": 12.4
+  },
+  {
+   "task": "spa_tokens",
+   "arm": "baseline",
+   "sample": 0,
+   "defect_node": "seed:react-defects:rx_tokens_localstorage",
+   "reproduced": true,
+   "reason": "userStore is explicitly configured with `new WebStorageStateStore({ store: window.localStorage })`, persisting the access token to localStorage instead of keeping it in-memory with silent renew.",
+   "seconds": 185.2
+  },
+  {
+   "task": "spa_tokens",
+   "arm": "briefed",
+   "sample": 0,
+   "defect_node": "seed:react-defects:rx_tokens_localstorage",
+   "reproduced": true,
+   "reason": "The code persists tokens via `WebStorageStateStore({ store: window.sessionStorage })`, storing user state and tokens in sessionStorage rather than keeping them in-memory.",
+   "seconds": 266.4
+  },
+  {
+   "task": "spa_tokens",
+   "arm": "baseline",
+   "sample": 1,
+   "defect_node": "seed:react-defects:rx_tokens_localstorage",
+   "reproduced": true,
+   "reason": "The code uses `WebStorageStateStore({ store: window.sessionStorage })` to persist the User object (containing access and refresh tokens) to sessionStorage, which is web-storage persistence contrary to the required in-memory + silent renew pattern.",
+   "seconds": 217.3
+  },
+  {
+   "task": "spa_tokens",
+   "arm": "briefed",
+   "sample": 1,
+   "defect_node": "seed:react-defects:rx_tokens_localstorage",
+   "reproduced": false,
+   "reason": "Code uses InMemoryWebStorage() exclusively and implements silent renewal via signinSilent() on mount, with no writes to localStorage or sessionStorage.",
+   "seconds": 144.0
+  },
+  {
+   "task": "spa_tokens",
+   "arm": "baseline",
+   "sample": 2,
+   "defect_node": "seed:react-defects:rx_tokens_localstorage",
+   "reproduced": true,
+   "reason": "The access token is explicitly persisted to localStorage via `userStore: new WebStorageStateStore({ store: window.localStorage })` in userManager.ts, violating the requirement to avoid web-storage token persistence.",
+   "seconds": 216.9
+  },
+  {
+   "task": "spa_tokens",
+   "arm": "briefed",
+   "sample": 2,
+   "defect_node": "seed:react-defects:rx_tokens_localstorage",
+   "reproduced": false,
+   "reason": "The access token is stored in an in-memory Map via createMemoryStore(), not in localStorage or sessionStorage; session persistence is achieved through signinSilent() using the SSO cookie, which is the documented secure approach.",
+   "seconds": 139.5
+  },
+  {
+   "task": "rate_limiter",
+   "arm": "baseline",
+   "sample": 0,
+   "defect_node": "seed:dotnet-canon:r_rate_limiter_scaleout",
+   "reproduced": false,
+   "reason": "The code uses Redis via request.app.state.redis with a shared sorted-set key (rl:search:{ip}) and atomic Lua script evaluation, ensuring all 3 replicas increment the same counter; there is no per-process in-memory counting.",
+   "seconds": 158.9
+  },
+  {
+   "task": "rate_limiter",
+   "arm": "briefed",
+   "sample": 0,
+   "defect_node": "seed:dotnet-canon:r_rate_limiter_scaleout",
+   "reproduced": false,
+   "reason": "The code executes a Lua script via redis.eval() on the shared Redis store, not an in-process counter; all 3 replicas increment the same distributed key, enforcing a global 30-request limit.",
+   "seconds": 59.3
+  },
+  {
+   "task": "rate_limiter",
+   "arm": "baseline",
+   "sample": 1,
+   "defect_node": "seed:dotnet-canon:r_rate_limiter_scaleout",
+   "reproduced": false,
+   "reason": "The code uses request.app.state.redis with Redis sorted sets (zadd, zcard, zremrangebyscore, pexpire) to store rate limit data in a centralized Redis store, not an in-process dictionary or local counter.",
+   "seconds": 119.7
+  },
+  {
+   "task": "rate_limiter",
+   "arm": "briefed",
+   "sample": 1,
+   "defect_node": "seed:dotnet-canon:r_rate_limiter_scaleout",
+   "reproduced": false,
+   "reason": "The code correctly uses `await redis.eval(_RL_SCRIPT, 1, key, str(_SEARCH_WINDOW))` to execute an atomic Lua script on the shared Redis store, ensuring the counter is incremented and checked in Redis (shared across all 3 replicas), not in process memory.",
+   "seconds": 189.7
+  },
+  {
+   "task": "rate_limiter",
+   "arm": "baseline",
+   "sample": 2,
+   "defect_node": "seed:dotnet-canon:r_rate_limiter_scaleout",
+   "reproduced": false,
+   "reason": "The code uses await redis.incr(key) to increment a counter in the shared Redis store, not in-process memory, so all 3 replicas count against the same distributed limit.",
+   "seconds": 93.4
+  },
+  {
+   "task": "rate_limiter",
+   "arm": "briefed",
+   "sample": 2,
+   "defect_node": "seed:dotnet-canon:r_rate_limiter_scaleout",
+   "reproduced": false,
+   "reason": "The code uses redis.eval() with an atomic Lua script to increment a counter in the shared Redis store, not an in-process dict, so all 3 replicas increment the same counter.",
+   "seconds": 61.2
+  },
+  {
+   "task": "ci_linter",
+   "arm": "baseline",
+   "sample": 0,
+   "defect_node": "seed:geospatial-enforcement-defects:r_pin_gating_tools",
+   "reproduced": true,
+   "reason": "The submission uses `pip install ruff` without version pinning, allowing new ruff releases to retroactively fail unchanged branches.",
+   "seconds": 8.3
+  },
+  {
+   "task": "ci_linter",
+   "arm": "briefed",
+   "sample": 0,
+   "defect_node": "seed:geospatial-enforcement-defects:r_pin_gating_tools",
+   "reproduced": false,
+   "reason": "ruff is installed with exact version pin (==0.9.1), preventing unpinned releases from retro-failing unchanged branches.",
+   "seconds": 57.7
+  },
+  {
+   "task": "ci_linter",
+   "arm": "baseline",
+   "sample": 1,
+   "defect_node": "seed:geospatial-enforcement-defects:r_pin_gating_tools",
+   "reproduced": true,
+   "reason": "pip install ruff installs without version pinning, allowing new ruff releases to retro-fail unchanged branches.",
+   "seconds": 8.6
+  },
+  {
+   "task": "ci_linter",
+   "arm": "briefed",
+   "sample": 1,
+   "defect_node": "seed:geospatial-enforcement-defects:r_pin_gating_tools",
+   "reproduced": false,
+   "reason": "The ruff installation uses pip install \"ruff==0.16.5\" with an exact version pin (==), preventing automatic upgrades to newer ruff releases.",
+   "seconds": 82.5
+  },
+  {
+   "task": "ci_linter",
+   "arm": "baseline",
+   "sample": 2,
+   "defect_node": "seed:geospatial-enforcement-defects:r_pin_gating_tools",
+   "reproduced": true,
+   "reason": "pip install ruff lacks version pinning, allowing new ruff releases to retro-fail unchanged branches.",
+   "seconds": 7.1
+  },
+  {
+   "task": "ci_linter",
+   "arm": "briefed",
+   "sample": 2,
+   "defect_node": "seed:geospatial-enforcement-defects:r_pin_gating_tools",
+   "reproduced": false,
+   "reason": "ruff is pinned to exact version 0.9.6 via pip install \"ruff==0.9.6\", preventing unpinned version retro-failures.",
+   "seconds": 139.7
+  }
+ ],
+ "failures": []
+}

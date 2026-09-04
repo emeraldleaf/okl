@@ -12,7 +12,8 @@
    "body": "cause: fetching server data inside a useEffect and storing it in useState re-derives — poorly — the caching, request dedup, race-cancellation, and refetch logic a query library already solves. .NET platform canon: ALL server data goes through TanStack Query v5; fetching-in-useEffect is banned. Query keys are [feature, entity, params].",
    "symptom": "a component fetches from an API inside useEffect and stores the result in useState",
    "fix": "use TanStack Query (useQuery) with a [feature,entity,params] key; reserve useEffect for non-data side effects only",
-   "tags": "react"
+   "tags": "react",
+   "applies_to": "react"
   },
   {
    "key": "rx_tokens_localstorage",
@@ -38,7 +39,8 @@
    "body": "With the React Compiler enabled, hand-written useMemo/useCallback/React.memo add noise and can pessimize. Let the compiler memoize; keep components pure. Bundle budget is CI-checked (≤200 KB gz); virtualize lists over ~50 items.",
    "symptom": "manual useMemo/useCallback/React.memo added for performance while the React Compiler is enabled",
    "fix": "remove the manual memoization; keep the component pure and let the compiler handle it",
-   "tags": "react"
+   "tags": "react",
+   "applies_to": "react"
   }
  ],
  "edges": []

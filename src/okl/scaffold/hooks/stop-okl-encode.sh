@@ -67,11 +67,19 @@ touch "$marker" 2>/dev/null || true
 cat >&2 <<'MSG'
 ENCODING LOOP — before this session ends: did it surface a lesson worth keeping?
 A non-obvious failure mode, a rule discovered the hard way, a decision that shouldn't be
-silently reversed? If yes, record it now (choose the scope deliberately — 'org' spreads
-to every repo, 'repo' stays local — and tag the subject):
+silently reversed? If yes, record it now. Three independent axes, each chosen deliberately:
+
+  --scope       WHO may see it: 'org' spreads to every repo, 'repo' stays local
+  --tags        WHAT it is about, from the closed vocabulary
+  --applies-to  WHERE IT IS TRUE — omit unless the lesson is false or meaningless off
+                that stack. Unset means valid on every stack - still subject to scope
+                and the repo's declared interests - which is the safe default; a wrong
+                value hides the record silently. A tag says where a lesson was FOUND and
+                is never a reason to set this.
 
   okl record --type Defect|Rule|Decision --scope org|repo --tags "<subjects>" \
-    --title "..." --symptom "..." --body "cause: ..." --fix "..."
+    --title "..." --symptom "..." --body "cause: ..." --fix "..." \
+    [--applies-to <stack>]   # ONLY for a genuinely framework-bound lesson
 
 If the session genuinely learned nothing durable, state that explicitly and finish.
 MSG

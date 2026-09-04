@@ -31,14 +31,27 @@ import subprocess
 import sys
 import tempfile
 import time
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
+# Overridable so the instrument guard can be tested against a CONSTRUCTED receipt history.
+# Without this the guard is only testable against whatever this repo happens to hold, and
+# the modal-vs-latest distinction it exists to make is exactly the one real receipts stop
+# discriminating as soon as the series is restored — which is how its first regression test
+# passed against the broken implementation.
+RESULTS_DIR = Path(os.environ.get("AB_RESULTS_DIR") or (REPO / "evals" / "results"))
 FAILURE_RATE_UNUSABLE = 0.20
 
 GENERATOR_CMD = os.environ.get("GENERATOR_CMD", "claude -p --model sonnet")
 JUDGE_CMD = os.environ.get("JUDGE_CMD", "claude -p --model haiku")
+# The briefed arm's interest filter. Default "" (unfiltered) is what every run in the
+# report used and why 4f could not measure applies_to: an empty interest set short-circuits
+# the filter entirely. Parameterised so 4h can vary the one retrieval knob this harness is
+# actually able to test. Recorded in the receipt, because a run whose retrieval config is
+# not on its own face cannot be compared to one whose is.
+BRIEF_INTERESTS = os.environ.get("OKL_BRIEF_INTERESTS", "")
 
 GEN_PROMPT = """You are implementing one task for an existing codebase. Output ONLY the code (or YAML/script), no explanation.
 
@@ -77,7 +90,7 @@ def get_briefing(task: str, timeout: int) -> str:
     # declare, so inheriting them made that task measure its rule's ABSENCE across every run
     # in this report. The harness states its retrieval config instead of borrowing one.
     r = subprocess.run([sys.executable, "-m", "okl", "check", "--task", task,
-                        "--format", "agent", "--interests", ""],
+                        "--format", "agent", "--interests", BRIEF_INTERESTS],
                        capture_output=True, text=True, timeout=timeout, cwd=REPO)
     if r.returncode != 0:
         raise RuntimeError(f"okl check failed: {r.stderr.strip()[:200]}")
@@ -94,6 +107,24 @@ def parse_judge(raw: str) -> dict:
     return d
 
 
+def drift_banner(drift_from: dict) -> str:
+    """The report-time instrument warning, as a string.
+
+    A function rather than an inline print so it can be tested. Inline, it was reachable
+    only by a full harness run, and every test used --dry-run, which returns before any
+    report is printed. So when the drift record's shape changed — it carried a `receipt`
+    name while the comparison was against the latest run, and stopped when the comparison
+    moved to the modal instrument — this formatter kept reaching for a key that no longer
+    existed, and nothing failed until a real off-series run crashed at the very end.
+
+    Not merely repeated from startup: the report is what gets read and pasted.
+    """
+    return ("⚠️  NOT COMPARABLE ACROSS RUNS — this run's instrument differs from the series: "
+            + "; ".join(f"{k} series uses {v['series']} ({v['runs']} runs)"
+                        for k, v in drift_from.items() if isinstance(v, dict))
+            + ". These numbers are internally valid only.")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--tasks", default=str(REPO / "evals" / "tasks.jsonl"))
@@ -108,6 +139,55 @@ def main() -> int:
         print("REFUSING TO RUN: JUDGE_CMD == GENERATOR_CMD — the judge must not grade "
               "its own homework (qz_judge_self).", file=sys.stderr)
         return 3
+
+    # INSTRUMENT CONTINUITY. A run graded by a different judge than the series it will be
+    # quoted alongside is internally valid and externally meaningless, and nothing about it
+    # looks wrong: no failure, no warning, both arms simply shift together the way a
+    # stricter grader shifts them. That happened — REPORT §4f was launched with opus where
+    # every prior run used haiku, typed inline with the other flags and caught only when
+    # the receipts were tabulated by hand afterwards.
+    #
+    # This does not refuse. Changing the instrument is sometimes the point (§4a's
+    # cross-model run swapped both arms deliberately). It makes the change impossible to
+    # MISS: named at startup, repeated in the final report, and — the part that actually
+    # matters — stamped into the receipt, because a run launched in the background scrolls
+    # its startup banner past nobody. A reader tabulating receipts sees the flag.
+    # Compared against the MODAL instrument, not the most recent receipt. The first version
+    # compared against the latest one and got its first live run exactly backwards: the run
+    # before it was the anomalous opus-judged §4f, so a run returning to the documented
+    # haiku judge was announced as "NOT COMPARABLE" when it had just restored the series.
+    # A guard that tells you to discard the run that fixed the problem is worse than none.
+    # The series is what a number gets quoted against, and the series is the mode.
+    drift_from = None
+    prior, last_name = [], None
+    for p in sorted(RESULTS_DIR.glob("ab-*.json")):
+        try:
+            prior.append(json.loads(p.read_text()))
+            last_name = p.name
+        # noqa justified: one corrupt receipt must not stop a run, and this loops over a
+        # handful of files once at startup — PERF203's hot-loop concern does not apply.
+        except (OSError, ValueError):  # noqa: PERF203
+            continue
+    if prior:
+        modal = {}
+        for key, cur in (("generator", GENERATOR_CMD), ("judge", JUDGE_CMD)):
+            seen = Counter(r[key].strip() for r in prior if r.get(key))
+            if seen and seen.most_common(1)[0][0] != cur.strip():
+                was, n = seen.most_common(1)[0]
+                modal[key] = {"series": was, "runs": n}
+        if modal:
+            drift_from = {"differs_from": "modal instrument", **modal}
+            print("⚠️  INSTRUMENT DIFFERS FROM THE SERIES — these numbers are internally "
+                  "valid but may not be quoted against earlier runs:", file=sys.stderr)
+            for k, v in modal.items():
+                print(f"      {k}: series uses {v['series']} ({v['runs']} runs)  →  this run "
+                      f"uses {GENERATOR_CMD if k == 'generator' else JUDGE_CMD}", file=sys.stderr)
+        elif prior and any(prior[-1].get(k, "").strip() != cur.strip()
+                           for k, cur in (("generator", GENERATOR_CMD), ("judge", JUDGE_CMD))):
+            # On the series, but the run immediately before was not. Say so plainly: this
+            # is the case that restores comparability, and it must not read as a warning.
+            print(f"ℹ️  instrument matches the series; the previous receipt ({last_name}) "
+                  "did not. This run restores comparability.", file=sys.stderr)
 
     tasks = [json.loads(line) for line in Path(args.tasks).read_text().splitlines() if line.strip()]
     if args.limit:
@@ -195,6 +275,8 @@ def main() -> int:
     if frate > FAILURE_RATE_UNUSABLE:
         print("❌ RESULTS NOT USABLE — failure rate above threshold. Fix the harness before "
               "reading any number below.")
+    if drift_from:
+        print(drift_banner(drift_from))
     def by(arm):
         return [r for r in results if r["arm"] == arm]
 
@@ -217,15 +299,24 @@ def main() -> int:
         rep = sum(r["reproduced"] for r in cond)
         print(f"  briefed runs on the {len(base_failed)} task(s) the baseline failed at least once: "
               f"{rep}/{len(cond)} reproduced")
-    out = REPO / "evals" / "results"
-    out.mkdir(exist_ok=True)
+    out = RESULTS_DIR
+    out.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M")
     path = out / f"ab-{stamp}.json"
     path.write_text(json.dumps({
-        "generator": GENERATOR_CMD, "judge": JUDGE_CMD, "failure_rate": round(frate, 3),
-        "usable": frate <= FAILURE_RATE_UNUSABLE, "results": results, "failures": failures,
+        "generator": GENERATOR_CMD, "judge": JUDGE_CMD, "brief_interests": BRIEF_INTERESTS,
+        "failure_rate": round(frate, 3),
+        "usable": frate <= FAILURE_RATE_UNUSABLE,
+        # Durable: a receipt read months later says on its own face whether it may be
+        # compared to its neighbours. Absent means the instrument matched the prior run.
+        "instrument_changed_from": drift_from,
+        "results": results, "failures": failures,
     }, indent=1) + "\n")
-    print(f"\nwrote {path.relative_to(REPO)}")
+    try:
+        shown = path.relative_to(REPO)
+    except ValueError:
+        shown = path   # AB_RESULTS_DIR may point outside the repo
+    print(f"\nwrote {shown}")
     return 0 if frate <= FAILURE_RATE_UNUSABLE else 1
 
 

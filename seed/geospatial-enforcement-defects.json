@@ -109,7 +109,8 @@
       "body": "A per-month scene search built as `{y}-{m}-01`/`{y}-{m}-28` silently omits days 29, 30, 31 — fewer candidate scenes and a possibly-worse least-cloudy pick. End the range at the first day of the FOLLOWING month (with December→January rollover) so every day is covered uniformly (28/29/30/31). It was inherited by copy into a second script before being caught.",
       "symptom": "a monthly composite/search date range hard-codes -28 (or -30) as the month end",
       "fix": "end at first-of-next-month with Dec→Jan rollover; covers all month lengths",
-      "tags": "geospatial"
+      "tags": "geospatial",
+      "applies_to": "geospatial"
     }
   ],
   "edges": [

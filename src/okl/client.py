@@ -84,17 +84,37 @@ class Client:
 
     @property
     def configured(self) -> bool:
-        """True when this directory (or an ancestor) has been `okl init`-ed, or a
-        service URL is set. Reading from an unconfigured directory would silently
-        create an empty database and then report a clean check against it."""
-        return bool(self.service_url) or _find_config() is not None
+        """True when a store has been named: by `okl init`, a service URL, or
+        OKL_DATABASE_URL.
+
+        Naming the database counts as configuring one. Leaving it out made the commands
+        disagree — `record` honoured the variable and wrote, while `check` refused as
+        unconfigured, so you could write to a store you were denied a read from.
+
+        Safe because the thing this guard was written for is caught downstream anyway:
+        `core.check` reports an empty store as EMPTY / "proves nothing" rather than clean.
+        What it still protects is the bare directory where nothing has been named at all —
+        there, reading would create an empty database purely as a side effect of asking.
+        """
+        return (bool(self.service_url)
+                or bool(os.environ.get("OKL_DATABASE_URL"))
+                or _find_config() is not None)
 
     def _local_store(self) -> Store:
         if self._store is None:
-            # local store lives next to the config, or ./okl.db
-            cfg = _find_config()
-            db = (cfg.parent / "okl.db") if cfg else Path("okl.db")
-            self._store = Store(f"sqlite:///{db}")
+            # OKL_DATABASE_URL wins when set. Store has honoured it since v0.1 and the
+            # service passes it through, but this method used to build a config-adjacent
+            # sqlite URL unconditionally — so every CLI command ignored it. Pointing the
+            # variable at Postgres and running `okl record` wrote to a local file instead,
+            # silently, which is the worst shape a storage bug can take: you are told the
+            # record landed, and it landed somewhere else.
+            url = os.environ.get("OKL_DATABASE_URL")
+            if not url:
+                # otherwise the local store lives next to the config, or ./okl.db
+                cfg = _find_config()
+                db = (cfg.parent / "okl.db") if cfg else Path("okl.db")
+                url = f"sqlite:///{db}"
+            self._store = Store(url)
         return self._store
 
     def _remote_url(self, path: str) -> str:
