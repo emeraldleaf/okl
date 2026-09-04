@@ -9,7 +9,9 @@ The hooks fire on your own session: `UserPromptSubmit` injects the store's brief
 your context before you start; `Stop` blocks your first stop to ask what was learned.
 Answer it honestly — record with a deliberate scope (`org` spreads to every repo,
 `repo` stays local) and tags from the closed vocabulary in `store.KNOWN_TAGS`. Growing
-that vocabulary is an edit to the set plus a note in the tags ADR, never an ad-hoc tag.
+that vocabulary is a deliberate act, never an ad-hoc tag: `okl record --type Vocabulary
+--scope org --title <tag>` declares one for THIS store (a Go or Rust team needs no fork),
+and editing `KNOWN_TAGS` changes the floor every store ships with.
 
 - **`applies_to` is where a lesson is TRUE; tags are where it was FOUND.** Leave it unset
   unless the lesson is false or meaningless off that stack — unset reaches every repo and
