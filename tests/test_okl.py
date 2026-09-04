@@ -1485,3 +1485,54 @@ def test_pipeline_diagram_is_current():
         assert out.read_text() == svg.read_text(), (
             "docs/okl-retrieval-pipeline.svg is stale — the pipeline changed and the diagram "
             "did not. Re-run: python3 docs/render_pipeline_diagram.py")
+
+
+def test_naming_a_store_by_env_var_configures_both_reads_and_writes(tmp_path, monkeypatch):
+    """`record` and `check` must agree on whether a store has been configured.
+
+    Honouring OKL_DATABASE_URL in the store resolver, without teaching `configured` about
+    it, made the two commands disagree: `record` wrote happily while `check` refused as
+    unconfigured. You could write to a store you were denied a read from.
+
+    Widening the gate is safe because the failure it was written for is caught downstream —
+    `core.check` reports an empty store as EMPTY rather than clean. What it still has to
+    protect is the bare directory, where reading would create a database as a side effect
+    of asking a question.
+    """
+    import subprocess
+    import sys
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("OKL_SERVICE_URL", raising=False)
+    subprocess.run(["git", "init", "-q", "."], cwd=tmp_path, check=True)
+    okl = [sys.executable, "-m", "okl"]
+    db = tmp_path / "named.db"
+
+    def run(args, url):
+        env = {**os.environ, "OKL_DATABASE_URL": url} if url else {
+            k: v for k, v in os.environ.items() if k != "OKL_DATABASE_URL"}
+        return subprocess.run([*okl, *args], cwd=tmp_path, capture_output=True,
+                              text=True, env=env)
+
+    url = f"sqlite:///{db}"
+    # ARRANGE / ACT — write to the store the operator named.
+    # --fix matters: `--format actions` renders only ROUTED actions, and a Rule routes
+    # only when it carries a fix. Without one the record is stored and retrieved and the
+    # actions view is still empty, which looks exactly like a configuration failure.
+    w = run(["record", "--type", "Rule", "--scope", "org", "--title", "Validate at the edge",
+             "--symptom", "unvalidated input reaches a handler",
+             "--fix", "validate at the transport edge, never in the handler"], url)
+    assert w.returncode == 0, w.stderr[-300:]
+
+    # ASSERT (1) — and read back from it. Before this, the same env var that accepted the
+    # write made the read refuse.
+    r = run(["check", "--task", "handle unvalidated input", "--format", "actions"], url)
+    assert r.returncode == 0, r.stderr[-300:]
+    assert "NOT CONFIGURED" not in r.stderr
+    assert "Validate at the edge" in r.stdout
+
+    # ASSERT (2) — a bare directory, nothing named, still refuses AND creates nothing.
+    # Reading must never bring a store into existence as a side effect of being asked.
+    bare = run(["check", "--task", "anything"], None)
+    assert "NOT CONFIGURED" in bare.stderr
+    assert not list(tmp_path.glob("okl.db")), "a refused read must not create a store"
