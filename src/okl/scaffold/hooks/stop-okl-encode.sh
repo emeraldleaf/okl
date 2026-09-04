@@ -72,7 +72,8 @@ silently reversed? If yes, record it now. Three independent axes, each chosen de
   --scope       WHO may see it: 'org' spreads to every repo, 'repo' stays local
   --tags        WHAT it is about, from the closed vocabulary
   --applies-to  WHERE IT IS TRUE — omit unless the lesson is false or meaningless off
-                that stack. Unset reaches every repo, which is the safe default; a wrong
+                that stack. Unset means valid on every stack - still subject to scope
+                and the repo's declared interests - which is the safe default; a wrong
                 value hides the record silently. A tag says where a lesson was FOUND and
                 is never a reason to set this.
 

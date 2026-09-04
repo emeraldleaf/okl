@@ -340,6 +340,23 @@ def test_ab_harness_flags_an_off_series_instrument_but_still_runs():
         # purpose; a change must be impossible to MISS, not impossible to make.
         assert off.returncode != 3, "an off-series instrument must warn, never refuse"
 
+        # ASSERT (4) — the warning must survive to the REPORT, not just to startup. Every
+        # assertion above uses --dry-run, which returns before a report is printed, so the
+        # report-time formatter was never executed by any test. It carried a KeyError for a
+        # field the drift record stopped having when the comparison moved from the latest
+        # receipt to the modal one: the run crashed at the end, on exactly the off-series
+        # case the warning exists to describe. Caught in review, not by the suite.
+        env = {**os.environ, "GENERATOR_CMD": "echo gen",
+               "JUDGE_CMD": "echo judge", "AB_RESULTS_DIR": str(results)}
+        full = subprocess.run([sys.executable, str(harness), "--limit", "1", "--samples", "1",
+                               "--timeout", "5"], capture_output=True, text=True, env=env)
+        # Asserted on the harness's OWN failure signals, not on "Traceback" anywhere in
+        # stderr: some environments emit an unrelated import warning with a traceback on
+        # every interpreter start, and a test keyed on that passes or fails by machine.
+        assert "KeyError" not in full.stderr, f"report crashed: {full.stderr[-300:]}"
+        assert full.returncode in (0, 1), f"unexpected exit {full.returncode}"
+        assert "NOT COMPARABLE ACROSS RUNS" in full.stdout
+
 
 def _git_repo(tmp_path):
     """Build a scaffolded repo whose files are TRACKED by git, and hand it back.

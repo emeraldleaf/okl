@@ -22,7 +22,6 @@
       "title": "check-scaffold-classpaths.sh — import every declared class_path mechanically",
       "body": "Portable Tier-3 gate: parse the scaffold config, import all class_paths, fail if any is unresolvable. Arm this in any repo that scaffolds rslearn/OlmoEarth/model YAML before it writes a class_path.",
       "tags": "geospatial",
-      "applies_to": "geospatial",
       "repo": "geospatial-ml-pipeline"
     },
     {

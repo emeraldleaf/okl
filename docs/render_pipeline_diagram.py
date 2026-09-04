@@ -134,6 +134,7 @@ def trace(store: Store | None = None) -> dict:
 # Plain geometry and a system font stack: forges sanitise SVG, so no external font can load
 # and no script will run. An explicit light ground keeps it legible in either forge theme.
 W, ROW_H, PAD = 980, 96, 28
+MAX_BODY_LINES = 2   # what fits above the count line at this ROW_H
 FONT = "ui-sans-serif,-apple-system,Segoe UI,Helvetica,Arial,sans-serif"
 MONO = "ui-monospace,SFMono-Regular,Menlo,Consolas,monospace"
 INK, INK2, INK3 = "#1E1B18", "#4E4740", "#7C736A"
@@ -172,9 +173,8 @@ def render(d: dict) -> str:
          f'{d["after_applies"]} survive', f'{d["dropped_applies"]} dropped: off-stack',
          d["after_applies"] / f, d["dropped_applies"] / f, "DROPS"),
         ("4", "SUBJECT", "tags x interests - one shared subject is enough",
-         "INCLUSIVE. Untagged always passes. The exclusive version was built, reviewed and "
-         "REVERTED: it hid 35 of 172 records and the briefed arm reproduced a defect whose "
-         "rule it had dropped (REPORT 4d).",
+         "INCLUSIVE. Untagged always passes. The exclusive version was reverted (REPORT 4d): "
+         "it hid 35 of 172 records and the briefed arm then reproduced a defect it dropped.",
          f'{d["after_tags"]} survive', f'{d["dropped_tags"]} dropped: no shared subject',
          d["after_tags"] / f, d["dropped_tags"] / f, "ANY-MATCH"),
         ("5", "CUTOFF", "Top 12, and the rest are counted not hidden",
@@ -229,7 +229,16 @@ def render(d: dict) -> str:
             else:
                 line = f"{line} {w_}".strip()
         lines.append(line)
-        for i, ln in enumerate(lines[:2]):
+        # Truncating here silently dropped "(REPORT 4d)." from stage 4 for as long as
+        # this file has existed, and nothing said so. A generator that quietly discards
+        # content it was given is the same failure as a check that reports success having
+        # written nothing — so refuse instead, and let whoever adds the text shorten it.
+        if len(lines) > MAX_BODY_LINES:
+            raise SystemExit(
+                f"ABORT: stage {n!r} body wraps to {len(lines)} lines, budget is "
+                f"{MAX_BODY_LINES} at ROW_H={ROW_H}. Shorten it, or raise both together — "
+                "do not let the render drop the tail.")
+        for i, ln in enumerate(lines):
             o.append(f'<text x="{tx}" y="{y + 44 + i * 15}" font-size="12" fill="{INK2}">'
                      f'{escape(ln)}</text>')
         if verdict:

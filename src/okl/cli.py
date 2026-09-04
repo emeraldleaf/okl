@@ -312,7 +312,7 @@ def cmd_search(args) -> int:
     if scope:
         if scope in ("repo", "local", "this"):
             scope = f"repo:{client.repo}"          # shorthand: the configured repo
-        elif scope != "org" and not scope.startswith("repo:"):
+        elif scope != "org" and not (scope.startswith("repo:") and scope[5:].strip()):
             print(f"REFUSING: --scope {scope!r} is not a scope. Use 'org', 'repo:<name>', "
                   f"or 'repo' for this repo ({client.repo}).", file=sys.stderr)
             return 2

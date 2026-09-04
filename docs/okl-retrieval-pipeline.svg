@@ -40,7 +40,7 @@
 <text x="65" y="480" font-size="26" font-weight="700" fill="#B4531F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle">3</text>
 <text x="65" y="498" font-size="9" fill="#7C736A" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle" letter-spacing="1">VALID</text>
 <text x="120" y="467" font-size="15" font-weight="600" fill="#1E1B18">applies_to - the only filter allowed to exclude</text>
-<text x="120" y="486" font-size="12" fill="#4E4740">EXCLUSIVE. Set by hand on 32 of 161 records, only where a lesson is false off-stack. Unset</text>
+<text x="120" y="486" font-size="12" fill="#4E4740">EXCLUSIVE. Set by hand on 31 of 161 records, only where a lesson is false off-stack. Unset</text>
 <text x="120" y="501" font-size="12" fill="#4E4740">means anywhere, which is why it is safe.</text>
 <text x="938" y="467" font-size="9.5" fill="#9B3B3B" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="700" text-anchor="end" letter-spacing="0.8">DROPS</text>
 <text x="120" y="512" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">29 survive</text>
@@ -51,8 +51,8 @@
 <text x="65" y="576" font-size="26" font-weight="700" fill="#B4531F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle">4</text>
 <text x="65" y="594" font-size="9" fill="#7C736A" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle" letter-spacing="1">SUBJECT</text>
 <text x="120" y="563" font-size="15" font-weight="600" fill="#1E1B18">tags x interests - one shared subject is enough</text>
-<text x="120" y="582" font-size="12" fill="#4E4740">INCLUSIVE. Untagged always passes. The exclusive version was built, reviewed and REVERTED:</text>
-<text x="120" y="597" font-size="12" fill="#4E4740">it hid 35 of 172 records and the briefed arm reproduced a defect whose rule it had dropped</text>
+<text x="120" y="582" font-size="12" fill="#4E4740">INCLUSIVE. Untagged always passes. The exclusive version was reverted (REPORT 4d): it hid 35</text>
+<text x="120" y="597" font-size="12" fill="#4E4740">of 172 records and the briefed arm then reproduced a defect it dropped.</text>
 <text x="938" y="563" font-size="9.5" fill="#4A6B3D" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="700" text-anchor="end" letter-spacing="0.8">ANY-MATCH</text>
 <text x="120" y="608" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">21 survive</text>
 <text x="938" y="608" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A" text-anchor="end">8 dropped: no shared subject</text>

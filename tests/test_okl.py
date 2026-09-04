@@ -806,6 +806,9 @@ def test_check_fails_closed_when_repo_is_not_configured(tmp_path, monkeypatch, c
     from okl.cli import cmd_check
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("OKL_SERVICE_URL", raising=False)
+    # ...and the database URL. The CLI honours it now, so a developer or CI job that
+    # exports it would point this test's subprocesses at their own store instead.
+    monkeypatch.delenv("OKL_DATABASE_URL", raising=False)
     args = argparse.Namespace(task="add an endpoint", repo=None, format="agent", limit=None)
     assert cmd_check(args) == 2, "must fail closed, not report a clean check"
     assert "NOT CONFIGURED" in capsys.readouterr().err
@@ -1419,6 +1422,9 @@ def test_search_scope_refuses_a_non_scope_and_resolves_the_repo_shorthand(tmp_pa
     from okl.cli import cmd_search
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("OKL_SERVICE_URL", raising=False)
+    # ...and the database URL. The CLI honours it now, so a developer or CI job that
+    # exports it would point this test's subprocesses at their own store instead.
+    monkeypatch.delenv("OKL_DATABASE_URL", raising=False)
     # Set up through the shipped CLI rather than hand-built Namespaces: a Namespace that
     # happens to omit a field the command reads fails as an AttributeError, which tests the
     # test rather than the behaviour.
@@ -1504,6 +1510,9 @@ def test_naming_a_store_by_env_var_configures_both_reads_and_writes(tmp_path, mo
 
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("OKL_SERVICE_URL", raising=False)
+    # ...and the database URL. The CLI honours it now, so a developer or CI job that
+    # exports it would point this test's subprocesses at their own store instead.
+    monkeypatch.delenv("OKL_DATABASE_URL", raising=False)
     subprocess.run(["git", "init", "-q", "."], cwd=tmp_path, check=True)
     okl = [sys.executable, "-m", "okl"]
     db = tmp_path / "named.db"

@@ -259,10 +259,17 @@ def main() -> int:
               "reading any number below.")
     if drift_from:
         # Repeated here, not just at startup: the report is what gets read and pasted.
-        print(f"⚠️  NOT COMPARABLE ACROSS RUNS — the instrument changed since "
-              f"{drift_from['receipt']} ("
-              + ", ".join(f"{k} was {v}" for k, v in drift_from.items() if k != "receipt")
-              + "). These numbers are internally valid only.")
+        # Reads the keys drift_from ACTUALLY carries. It used to hold a `receipt` name,
+        # from when the comparison was against the latest run; switching to the modal
+        # instrument changed its shape and left this formatter reaching for a key that no
+        # longer exists — a KeyError at report time, on exactly the off-series run the
+        # warning exists to describe. Invisible to the tests because they use --dry-run,
+        # which returns before any report is printed.
+        print("⚠️  NOT COMPARABLE ACROSS RUNS — this run's instrument differs from the "
+              "series: "
+              + "; ".join(f"{k} series uses {v['series']} ({v['runs']} runs)"
+                          for k, v in drift_from.items() if isinstance(v, dict))
+              + ". These numbers are internally valid only.")
     def by(arm):
         return [r for r in results if r["arm"] == arm]
 
@@ -286,7 +293,7 @@ def main() -> int:
         print(f"  briefed runs on the {len(base_failed)} task(s) the baseline failed at least once: "
               f"{rep}/{len(cond)} reproduced")
     out = RESULTS_DIR
-    out.mkdir(exist_ok=True)
+    out.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M")
     path = out / f"ab-{stamp}.json"
     path.write_text(json.dumps({
@@ -298,7 +305,11 @@ def main() -> int:
         "instrument_changed_from": drift_from,
         "results": results, "failures": failures,
     }, indent=1) + "\n")
-    print(f"\nwrote {path.relative_to(REPO)}")
+    try:
+        shown = path.relative_to(REPO)
+    except ValueError:
+        shown = path   # AB_RESULTS_DIR may point outside the repo
+    print(f"\nwrote {shown}")
     return 0 if frate <= FAILURE_RATE_UNUSABLE else 1
 
 
