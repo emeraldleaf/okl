@@ -78,7 +78,7 @@ Give every record a `symptom` where you can: the observable thing a reader would
 means this record applies. A record with no symptom cannot be routed, only read.
 
 Tags come from the closed vocabulary — run `okl seed` with no arguments to see the
-subjects in use, or read `KNOWN_TAGS` in `okl/store.py`. An unknown tag is rejected at
+subjects in use, or run `okl search '' --limit 200` and read the tags in use, or declare a new one with `okl record --type Vocabulary --scope org --title <tag>`. An unknown tag is rejected at
 import.
 
 ## Output

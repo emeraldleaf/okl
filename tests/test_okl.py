@@ -1398,3 +1398,41 @@ def test_applies_to_rejects_a_value_that_is_not_a_stack(store):
     with pytest.raises(ValueError) as e:
         core.record(store, type="Rule", title="t", scope="org", applies_to="security")
     assert "applies_to must name stacks" in str(e.value)
+
+
+def test_a_store_can_declare_its_own_tags_and_still_reject_typos(store):
+    """The vocabulary is closed per store, not fixed in the package.
+
+    KNOWN_TAGS shipped as the whole vocabulary, so a Go, Rust or PowerShell team could not
+    file a lesson under its own language without forking okl. Everything else in the tool
+    is language-agnostic — drift asks git about path globs, verification runs whatever
+    command you give it, the store holds text — and this was the single thing that was not.
+
+    The point of a closed vocabulary is catching the typo that files a record where nobody
+    looks. Closed-PER-STORE keeps that: a declared tag works, an undeclared one does not,
+    and the near-miss of a declared tag is still refused.
+    """
+    # ASSERT (1) — the blocker, before anything is declared.
+    with pytest.raises(ValueError, match="unknown tag"):
+        core.record(store, type="Rule", title="Prefer ? over unwrap", scope="org", tags="rust")
+
+    # ACT — declare it the way a team would. A Vocabulary node's title IS the tag.
+    core.record(store, type="Vocabulary", scope="org", title="rust",
+                body="Rust services. Declared so this org can file its own language canon.")
+
+    # ASSERT (2) — now it records, and round-trips.
+    nid = core.record(store, type="Rule", title="Prefer ? over unwrap in handlers",
+                      scope="org", tags="rust", symptom="unwrap() panics the worker")
+    assert store.get_node(nid).tags == "rust"
+
+    # ASSERT (3) — still closed. A near-miss of the tag just declared is refused, which is
+    # the whole reason the vocabulary is controlled rather than free text.
+    with pytest.raises(ValueError, match="unknown tag"):
+        core.record(store, type="Rule", title="x", scope="org", tags="rustt")
+
+    # ASSERT (4) — declaring a tag cannot require the tag it declares. A Vocabulary node is
+    # validated against the package floor only, or the first declaration in a fresh store
+    # would be unwritable.
+    core.record(store, type="Vocabulary", scope="org", title="powershell",
+                body="Windows automation.")
+    assert "powershell" in store.declared_tags()
