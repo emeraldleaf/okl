@@ -1398,3 +1398,78 @@ def test_applies_to_rejects_a_value_that_is_not_a_stack(store):
     with pytest.raises(ValueError) as e:
         core.record(store, type="Rule", title="t", scope="org", applies_to="security")
     assert "applies_to must name stacks" in str(e.value)
+
+
+def test_tags_are_searchable_but_never_outrank_content(store):
+    """A tag can raise an on-subject record; it must not let a bare label beat real content.
+
+    Tags were curated, validated, and invisible to retrieval: the index covered title, body,
+    symptom and fix, so a tag could get a record EXCLUDED by the interest filter and never
+    help it be FOUND. A task saying "run a security review" surfaced 2 of 12 security-tagged
+    records; the same store with tags indexed surfaces 6.
+
+    The weight is the whole risk. Tags is a one-or-two-word field and BM25 normalises by
+    length, so an unweighted tag column would let a bare label outrank a record whose title
+    and body are actually about the subject. It ships at 1.0 against title's 8.0 — additive,
+    never dominant. Additive is also why this is safe in a way REPORT §4d was not: ranking
+    can promote the wrong record, but it cannot hide a load-bearing one.
+    """
+    # ARRANGE — two records. One is ABOUT messaging in its content; the other merely
+    # carries the tag and is about something else entirely.
+    content = core.record(store, type="Rule", scope="org",
+                          title="Messaging transport retries are idempotent",
+                          body="Every messaging consumer must tolerate redelivery.",
+                          symptom="a duplicate message applies an effect twice")
+    tagged = core.record(store, type="Rule", scope="org", tags="messaging",
+                         title="Prefer keyset pagination for deep offsets",
+                         symptom="deep OFFSET scans get slower as the table grows")
+
+    hits = [n.id for n in store.search("messaging", limit=10)]
+
+    # ASSERT (1) — the tag made the second record findable at all. This is the whole point:
+    # before indexing, nothing in its text mentioned messaging and it was unreachable.
+    assert tagged in hits, "a tagged record must be findable by its subject"
+
+    # ASSERT (2) — and it did NOT overtake the record that is genuinely about the subject.
+    # If this flips, the weight is too high and a bare label is beating real content.
+    assert hits.index(content) < hits.index(tagged), (
+        "a tag match must not outrank a record whose title and body are about the subject")
+
+    # ASSERT (3) — the weight itself, bounded from BOTH sides. The two assertions above
+    # cannot do this: FTS5 MATCH finds by presence and bm25 weights only ORDER, so setting
+    # the tags weight to 0.0 leaves the record findable and both assertions green while the
+    # feature is silently off. Verified by setting it to 0.0 and watching them pass.
+    src = (Path(__file__).resolve().parents[1] / "src" / "okl" / "store.py").read_text()
+    weights = [float(w) for w in
+               src.split("ORDER BY bm25(node_fts, ")[1].split(")")[0].split(", ")]
+    _id_w, title_w, _body_w, _symptom_w, fix_w, tags_w = weights
+    assert tags_w > 0, "a zero weight indexes tags and then ignores them when ranking"
+    assert tags_w <= fix_w, "tags is a two-word field; weight it below the prose fields"
+    assert tags_w * 4 <= title_w, "a tag must stay well under a title match"
+
+
+def test_postgres_tsvector_covers_tags_and_migrates_its_index():
+    """Backend parity: whatever SQLite indexes, the Postgres tsvector indexes too.
+
+    The two backends satisfied the same signature while ranking differently once before —
+    SQLite ran BM25 and Postgres ran an unranked substring match, so promoting a store to
+    Postgres silently degraded every result. Signature parity is not quality parity, so
+    each field added to one index gets asserted in the other.
+    """
+    from okl.store import _PG_TSV
+
+    # ASSERT (1) — tags are in the vector, at D: the lowest weight Postgres offers, which
+    # is the tsvector counterpart of the 1.0 the FTS5 path gives the same column.
+    assert "tags" in _PG_TSV, "tags must be in the Postgres tsvector, as in FTS5"
+    assert "'D'" in _PG_TSV, "tags belong at the lowest weight, not alongside title"
+    # commas are separators, not tokens — same normalisation as the FTS5 insert
+    assert "replace(coalesce(tags,''), ',', ' ')" in _PG_TSV
+
+    # ASSERT (2) — the GIN index migration checks EVERY field the vector covers. A
+    # condition naming one column goes stale the next time the vector grows, and the
+    # failure is silent: the index survives, Postgres stops using it, and every search
+    # quietly becomes a sequential scan.
+    src = (Path(__file__).resolve().parents[1] / "src" / "okl" / "store.py").read_text()
+    guard = src.split("indexname='node_tsv_idx'")[1].split("CREATE INDEX")[0]
+    for col in ("symptom", "fix", "tags"):
+        assert col in guard, f"index migration must notice {col} joining the tsvector"

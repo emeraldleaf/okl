@@ -286,17 +286,18 @@ class _SQLiteBackend(_Backend):
             # happened to repeat in the title. Found by seeding a record from a spec and
             # watching `check` return nothing for a task quoting its symptom verbatim.
             c.execute("""CREATE VIRTUAL TABLE IF NOT EXISTS node_fts
-                         USING fts5(id UNINDEXED, title, body, symptom, fix)""")
+                         USING fts5(id UNINDEXED, title, body, symptom, fix, tags)""")
             # FTS5 cannot ALTER in new columns, so a store built before this rebuilds its
             # index once. The node table is the source of truth; the index is derived.
             fts_cols = {r[1] for r in c.execute("PRAGMA table_info(node_fts)").fetchall()}
-            if "symptom" not in fts_cols:
+            if not {"symptom", "tags"} <= fts_cols:
                 c.execute("DROP TABLE node_fts")
                 c.execute("""CREATE VIRTUAL TABLE node_fts
-                             USING fts5(id UNINDEXED, title, body, symptom, fix)""")
-                c.execute("""INSERT INTO node_fts(id, title, body, symptom, fix)
+                             USING fts5(id UNINDEXED, title, body, symptom, fix, tags)""")
+                c.execute("""INSERT INTO node_fts(id, title, body, symptom, fix, tags)
                              SELECT id, coalesce(title,''), coalesce(body,''),
-                                    coalesce(symptom,''), coalesce(fix,'') FROM node""")
+                                    coalesce(symptom,''), coalesce(fix,''),
+                                    replace(coalesce(tags,''), ',', ' ') FROM node""")
         except self._sqlite3.OperationalError:
             self._has_fts = False   # FTS5 not compiled in — fall back to LIKE
         c.commit()
@@ -313,9 +314,11 @@ class _SQLiteBackend(_Backend):
             if self._has_fts:
                 self.conn.execute("DELETE FROM node_fts WHERE id=?", (node.id,))
                 self.conn.execute(
-                    "INSERT INTO node_fts(id,title,body,symptom,fix) VALUES(?,?,?,?,?)",
+                    "INSERT INTO node_fts(id,title,body,symptom,fix,tags) VALUES(?,?,?,?,?,?)",
                     (node.id, node.title or "", node.body or "",
-                     node.symptom or "", node.fix or ""))
+                     node.symptom or "", node.fix or "",
+                     # comma-separated -> space-separated so FTS tokenises each tag
+                     (node.tags or "").replace(",", " ")))
             self.conn.commit()
 
     def upsert_edge(self, edge: Edge) -> None:
@@ -354,7 +357,7 @@ class _SQLiteBackend(_Backend):
                 # column equally: a term in the title should still beat the same term
                 # buried in a fix. One weight per FTS column, id first. The ratios track
                 # the Postgres tsvector weights so the two backends rank alike.
-                sql += " ORDER BY bm25(node_fts, 0.0, 8.0, 4.0, 4.0, 2.0)"
+                sql += " ORDER BY bm25(node_fts, 0.0, 8.0, 4.0, 4.0, 2.0, 1.0)"
             sql += " LIMIT ?"
             params.append(limit)
             rows = self.conn.execute(sql, params).fetchall()
@@ -414,7 +417,8 @@ def _fts_query(q: str) -> str:
 _PG_TSV = ("setweight(to_tsvector('english', coalesce(title,'')), 'A') || "
            "setweight(to_tsvector('english', coalesce(body,'')), 'B') || "
            "setweight(to_tsvector('english', coalesce(symptom,'')), 'B') || "
-           "setweight(to_tsvector('english', coalesce(fix,'')), 'C')")
+           "setweight(to_tsvector('english', coalesce(fix,'')), 'C') || "
+           "setweight(to_tsvector('english', replace(coalesce(tags,''), ',', ' ')), 'D')")
 
 
 def _pg_ts_query(q: str) -> str:
@@ -456,7 +460,11 @@ class _PostgresBackend(_Backend):
             # sequential scan. Drop it when its definition no longer matches.
             cur.execute("SELECT indexdef FROM pg_indexes WHERE indexname='node_tsv_idx'")
             row = cur.fetchone()
-            if row and "symptom" not in row[0]:
+            # Checks every field the tsvector now covers, not just the one that prompted the
+            # migration. A condition naming a single column goes stale the next time the
+            # vector grows, and the failure is silent: the index still exists, Postgres just
+            # stops using it and every search becomes a sequential scan.
+            if row and not all(col in row[0] for col in ("symptom", "fix", "tags")):
                 cur.execute("DROP INDEX node_tsv_idx")
             cur.execute(f"CREATE INDEX IF NOT EXISTS node_tsv_idx ON node USING GIN (({_PG_TSV}))")
 
