@@ -42,6 +42,12 @@ KNOWN_TAGS = {
                    # `python-rag`, which is a STACK tag for one service's RAG pipeline:
                    # a review found this repo had 75 dotnet-tagged records governing a
                    # Python codebase and no tag under which to file its own conventions.
+    "frontend",    # added 2026-09-17 when emeraldleaf-dev joined: a hand-rolled Astro site
+                   # with no UI framework, so `react` does not fit. Covers markup whitespace
+                   # semantics, CSS layout and responsive behaviour, and browser rendering.
+    "prose",       # added 2026-09-17 with `frontend`. Writing is governed in these repos the
+                   # way code is (an em-dash budget, a claims-must-be-supported rule, voice),
+                   # and those lessons had no subject to file under.
 }
 
 

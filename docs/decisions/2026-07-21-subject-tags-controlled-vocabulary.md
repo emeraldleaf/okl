@@ -82,3 +82,19 @@ seed-file comments ("eval-integrity lessons are org-scoped") and the scaffold's 
   only matters for a lesson that is genuinely false off-stack — and §4h measured that the
   filter `applies_to` feeds changes 0% of delivered briefing slots today. Extending the
   exclusive mechanism without a measurement is exactly what §4d punished.
+- 2026-09-17: `frontend` and `prose` added **to the floor**, when `emeraldleaf-dev` joined
+  the layer and every one of its records was rejected: markup and CSS defects, and rules
+  about writing. `react` was the nearest existing tag for the first group and is wrong for
+  the same reason `python-rag` was wrong for `python`. It is a stack tag, and that repo is a
+  hand-rolled Astro site with no UI framework. `frontend` names the subject those lessons are
+  actually about: markup whitespace semantics, CSS layout and responsive behaviour, browser
+  rendering. `prose` had no near-miss at all. Writing is governed in these repos the way code
+  is, with an em-dash budget and a claims-must-be-supported rule behind mechanical gates, and
+  a rule with a gate behind it is a rule the layer should carry.
+
+  The floor rather than a per-store `Vocabulary` declaration, now that the amendment above
+  makes both available. Neither tag is specific to one org: any repo that renders markup has
+  frontend lessons, and any repo that governs its writing has prose ones. The floor is for
+  subjects every store would otherwise have to declare for itself, which is the same reason
+  `messaging` and `python` are in it. Per-store declaration is for what an org's own stack
+  needs and nobody else's.
