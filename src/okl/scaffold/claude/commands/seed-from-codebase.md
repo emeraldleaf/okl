@@ -79,7 +79,7 @@ importing is the human's decision, made after reading what you proposed.
 ```
 
 Tags must come from the closed vocabulary; run `okl seed` with no arguments to see which
-subjects the packs use, or read `KNOWN_TAGS` in `okl/store.py`. An unknown tag is
+subjects the packs use, or run `okl search '' --limit 200` and read the tags in use, or declare a new one with `okl record --type Vocabulary --scope org --title <tag>`. An unknown tag is
 rejected at import.
 
 ## Finishing

@@ -57,3 +57,28 @@ seed-file comments ("eval-integrity lessons are org-scoped") and the scaffold's 
   pipeline, not a language. The distinction the vocabulary already draws (stacks vs subjects)
   did not have a slot for "the language this is written in", and adding one is cheaper than
   overloading a stack tag whose meaning other repos depend on.
+- 2026-09-03: **the "revisit when" condition above was met, and the vocabulary is now
+  extensible per store.** `KNOWN_TAGS` remains, but as the *floor* every store ships with
+  rather than the whole vocabulary: a store widens it by recording `Vocabulary` nodes,
+  whose title is the tag, and `Store.add_node` validates against floor ∪ declared.
+
+  The trigger was a language-support audit. Everything else in okl is language-agnostic —
+  drift asks git about path globs, verification runs whatever command you hand it, the
+  store holds text — and a Rust repo was driven end to end successfully except for one
+  thing: `okl record --tags rust` was refused, and the only remedy was to fork the package.
+  That is a hard stop on adoption for a tool whose whole claim is that a lesson learned in
+  one place reaches another.
+
+  What the closed vocabulary was *for* survives intact. It exists to catch the typo that
+  files a record where nobody looks, and closed-per-store still does: `rustt` is refused in
+  a store that declared `rust`. What changes is who is entitled to grow it — the org that
+  owns the store, rather than whoever can merge to this package.
+
+  A `Vocabulary` node is validated against the floor only. Otherwise the first declaration
+  in a fresh store would require the tag it is declaring.
+
+  **Not extended:** `STACK_TAGS`, which gates `applies_to`. Declaring `rust` makes it usable
+  as a subject tag, not as an applicability value. That is a narrower and rarer need — it
+  only matters for a lesson that is genuinely false off-stack — and §4h measured that the
+  filter `applies_to` feeds changes 0% of delivered briefing slots today. Extending the
+  exclusive mechanism without a measurement is exactly what §4d punished.
