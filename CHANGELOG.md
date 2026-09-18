@@ -1,5 +1,41 @@
 # Changelog
 
+## 0.5.0
+
+### The vocabulary is no longer fixed in the package
+
+- **A store can declare its own subject tags.** `KNOWN_TAGS` remains, but as the *floor*
+  every store ships with rather than the whole vocabulary. Widen it by recording a
+  `Vocabulary` node, whose title is the tag:
+
+  ```bash
+  okl record --type Vocabulary --scope org --title rust --body "Rust services."
+  okl record --type Rule --scope org --tags rust --title "Prefer ? over unwrap in handlers"
+  ```
+
+  Before this, a Go, Rust or PowerShell team could not file a lesson under its own language
+  without forking the package, which is a hard stop on adoption for a tool whose claim is
+  that a lesson learned in one place reaches another. What the closed vocabulary was *for*
+  survives: it catches the typo that files a record where nobody looks, and closed-per-store
+  still does, so `rustt` is refused in a store that declared `rust`. What changes is who may
+  grow it. `STACK_TAGS`, which gates `applies_to`, is deliberately not extended.
+
+- **`frontend` and `prose` added to the floor.** Neither is specific to one org: any repo
+  that renders markup has frontend lessons, and any repo that governs its writing has prose
+  ones. `react` was the nearest existing tag for the first and is wrong, being a stack tag.
+
+### Fixed
+
+- **The hooks no longer tell you to run `pip install okl`, which cannot work.** PyPI refuses
+  `okl` as confusable, so the distribution is `org-knowledge-layer` and `okl` is only the
+  console script. The wrong name was in the `UserPromptSubmit` hook's not-found message,
+  which fires *exactly* when someone has no working install and sent them to a 404 that
+  reads as "this tool was never published." `okl init` stamps that hook into every repo it
+  touches, so the error propagated with adoption. Re-run `okl init` to pick up the new file.
+- `cli.py`'s MCP hint said `pip install okl[mcp]`; now `pip install 'org-knowledge-layer[mcp]'`,
+  quoted because zsh globs unquoted brackets.
+
+
 ## 0.4.1
 
 ### Security — affects the CI workflow already in your repo
