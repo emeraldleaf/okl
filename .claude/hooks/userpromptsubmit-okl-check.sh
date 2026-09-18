@@ -36,8 +36,10 @@ resolve_okl() {
 if ! OKL=$(resolve_okl); then
   [ "${OKL_OFFLINE:-0}" = "1" ] && exit 0
   echo "okl NOT FOUND — blocking (a check that can't run must not pass as clean)." >&2
-  echo "Install it (pip install okl), set OKL_BIN, or re-run 'okl init' from a shell where it" >&2
-  echo "works (pins okl_bin into .okl/config.json). OKL_OFFLINE=1 proceeds without the layer." >&2
+  echo "Install it: pip install org-knowledge-layer. NOT 'pip install okl' — PyPI refuses that" >&2
+  echo "name as confusable, so it fails and looks like the tool does not exist." >&2
+  echo "Or set OKL_BIN, or re-run 'okl init' from a shell where okl works (that pins okl_bin" >&2
+  echo "into .okl/config.json). OKL_OFFLINE=1 proceeds without the layer." >&2
   exit 2
 fi
 

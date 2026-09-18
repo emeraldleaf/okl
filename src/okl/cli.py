@@ -135,7 +135,8 @@ def _install_claude_wiring(claude: Path) -> None:
     try:
         import mcp  # noqa: F401
     except ImportError:
-        print("• MCP extra not installed — `pip install okl[mcp]` then re-run init to register the agent tools.")
+        print("• MCP extra not installed — `pip install 'org-knowledge-layer[mcp]'` then re-run init")
+        print("  to register the agent tools. (The distribution is not named `okl`; PyPI refuses that.)")
         return
     mcp_path = Path(".mcp.json")
     mcp_cfg = json.loads(mcp_path.read_text()) if mcp_path.exists() else {}
