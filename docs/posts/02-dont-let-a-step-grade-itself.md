@@ -1,6 +1,6 @@
 # Don't let a step grade itself
 
-*Part 2 of 3: The loop that learns. How one developer's AI loop remembers, verifies, and enforces.*
+*Part 2 of 4: The loop that learns. How one developer's AI loop remembers, verifies, and enforces.*
 
 Never trust an exit code. This is the incident behind that rule.
 

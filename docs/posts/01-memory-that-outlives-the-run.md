@@ -1,6 +1,6 @@
 # Memory that outlives the run
 
-*Part 1 of 3: The loop that learns. How one developer's AI loop remembers, verifies, and enforces.*
+*Part 1 of 4: The loop that learns. How one developer's AI loop remembers, verifies, and enforces.*
 
 An agent writing code in one of my repos has no access to what the others learned. That is the problem in one sentence, and better prompting does not solve it.
 
