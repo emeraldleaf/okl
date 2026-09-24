@@ -627,6 +627,34 @@ def test_init_wires_everything_mechanically(tmp_path, monkeypatch, capsys):
     assert settings2 == settings, "re-running init must not duplicate hook registrations"
 
 
+def test_init_hints_when_store_is_empty(tmp_path, monkeypatch, capsys):
+    """Fresh init must name the empty store and the three ways to fill it.
+
+    A second init after a record is written must not repeat the hint.
+    """
+    import argparse
+
+    from okl.cli import cmd_init
+    from okl.client import Client
+
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".git").mkdir()
+    args = argparse.Namespace(repo="emptyhint", service=None, interests=None)
+    assert cmd_init(args) == 0
+    out = capsys.readouterr().out
+    assert "0 records" in out
+    assert "okl seed" in out
+    assert "/seed-from-codebase" in out
+    assert "okl record" in out
+
+    Client().record(type="Rule", title="one lesson", body="so the store is no longer empty",
+                    scope="repo")
+    assert cmd_init(args) == 0
+    out2 = capsys.readouterr().out
+    assert "0 records" not in out2
+    assert "/seed-from-codebase" not in out2
+
+
 def test_init_warns_without_git(tmp_path, monkeypatch, capsys):
     """Without git, the drift gate cannot work, and init must say so out loud.
 

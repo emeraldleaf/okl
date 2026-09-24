@@ -110,7 +110,26 @@ def cmd_init(args) -> int:
         print("      The scripts in src/okl/scaffold/hooks/ are plain bash on stdin/stdout; if your")
         print("      agent has a pre-prompt hook, point it at them. Registration formats differ.")
     _install_ci_verifier()
+    _hint_empty_store()
     return 0
+
+
+def _hint_empty_store() -> None:
+    """Tell a first-time user the store is empty and how to fill it.
+
+    Informational only: init must not import packs. The wrong stack's
+    records would pollute later briefings (see cmd_seed).
+    """
+    try:
+        n = len(Client().all_nodes())
+    except (OSError, OKLUnreachableError, ValueError, RuntimeError):
+        return
+    if n != 0:
+        return
+    print("• store has 0 records — this check would prove nothing until you add some:")
+    print("    okl seed                 list bundled packs; import only those matching this repo")
+    print("    /seed-from-codebase      agent proposes cited records from this repo's code")
+    print("    okl record               add one lesson at a time")
 
 
 def _install_claude_wiring(claude: Path) -> None:
