@@ -327,17 +327,18 @@ class _SQLiteBackend(_Backend):
             # happened to repeat in the title. Found by seeding a record from a spec and
             # watching `check` return nothing for a task quoting its symptom verbatim.
             c.execute("""CREATE VIRTUAL TABLE IF NOT EXISTS node_fts
-                         USING fts5(id UNINDEXED, title, body, symptom, fix)""")
+                         USING fts5(id UNINDEXED, title, body, symptom, fix, tags)""")
             # FTS5 cannot ALTER in new columns, so a store built before this rebuilds its
             # index once. The node table is the source of truth; the index is derived.
             fts_cols = {r[1] for r in c.execute("PRAGMA table_info(node_fts)").fetchall()}
-            if "symptom" not in fts_cols:
+            if not {"symptom", "tags"} <= fts_cols:
                 c.execute("DROP TABLE node_fts")
                 c.execute("""CREATE VIRTUAL TABLE node_fts
-                             USING fts5(id UNINDEXED, title, body, symptom, fix)""")
-                c.execute("""INSERT INTO node_fts(id, title, body, symptom, fix)
+                             USING fts5(id UNINDEXED, title, body, symptom, fix, tags)""")
+                c.execute("""INSERT INTO node_fts(id, title, body, symptom, fix, tags)
                              SELECT id, coalesce(title,''), coalesce(body,''),
-                                    coalesce(symptom,''), coalesce(fix,'') FROM node""")
+                                    coalesce(symptom,''), coalesce(fix,''),
+                                    replace(coalesce(tags,''), ',', ' ') FROM node""")
         except self._sqlite3.OperationalError:
             self._has_fts = False   # FTS5 not compiled in — fall back to LIKE
         c.commit()
@@ -354,9 +355,11 @@ class _SQLiteBackend(_Backend):
             if self._has_fts:
                 self.conn.execute("DELETE FROM node_fts WHERE id=?", (node.id,))
                 self.conn.execute(
-                    "INSERT INTO node_fts(id,title,body,symptom,fix) VALUES(?,?,?,?,?)",
+                    "INSERT INTO node_fts(id,title,body,symptom,fix,tags) VALUES(?,?,?,?,?,?)",
                     (node.id, node.title or "", node.body or "",
-                     node.symptom or "", node.fix or ""))
+                     node.symptom or "", node.fix or "",
+                     # comma-separated -> space-separated so FTS tokenises each tag
+                     (node.tags or "").replace(",", " ")))
             self.conn.commit()
 
     def upsert_edge(self, edge: Edge) -> None:
@@ -395,7 +398,19 @@ class _SQLiteBackend(_Backend):
                 # column equally: a term in the title should still beat the same term
                 # buried in a fix. One weight per FTS column, id first. The ratios track
                 # the Postgres tsvector weights so the two backends rank alike.
-                sql += " ORDER BY bm25(node_fts, 0.0, 8.0, 4.0, 4.0, 2.0)"
+                #
+                # Content matches ALWAYS sort ahead of tag-only matches; bm25 orders within
+                # each tier. The weights alone could not guarantee that: FTS5 normalises by
+                # the length of the whole row, so a record whose TITLE was about the subject
+                # but whose body ran past ~1,500 characters fell below five unrelated records
+                # that merely carried the tag (#1 -> #6). The tag column is tiny and scores
+                # high; no weight ratio survives an arbitrarily long body. Measured on the
+                # real store, tiering keeps every gain tag indexing bought, because the
+                # records tags lifted already matched on content — the tag was reordering
+                # within that tier, which is all it is now allowed to do.
+                sql += (" ORDER BY (f.id NOT IN (SELECT id FROM node_fts WHERE node_fts MATCH ?)),"
+                        " bm25(node_fts, 0.0, 8.0, 4.0, 4.0, 2.0, 1.0)")
+                params.append("{title body symptom fix} : (" + params[0] + ")")
             sql += " LIMIT ?"
             params.append(limit)
             rows = self.conn.execute(sql, params).fetchall()
@@ -455,6 +470,13 @@ def _fts_query(q: str) -> str:
 _PG_TSV = ("setweight(to_tsvector('english', coalesce(title,'')), 'A') || "
            "setweight(to_tsvector('english', coalesce(body,'')), 'B') || "
            "setweight(to_tsvector('english', coalesce(symptom,'')), 'B') || "
+           "setweight(to_tsvector('english', coalesce(fix,'')), 'C') || "
+           "setweight(to_tsvector('english', replace(coalesce(tags,''), ',', ' ')), 'D')")
+# The same vector minus tags: what a record says, as opposed to how it is labelled. Used
+# to sort content matches ahead of tag-only matches (see search()).
+_PG_TSV_CONTENT = ("setweight(to_tsvector('english', coalesce(title,'')), 'A') || "
+           "setweight(to_tsvector('english', coalesce(body,'')), 'B') || "
+           "setweight(to_tsvector('english', coalesce(symptom,'')), 'B') || "
            "setweight(to_tsvector('english', coalesce(fix,'')), 'C')")
 
 
@@ -497,7 +519,11 @@ class _PostgresBackend(_Backend):
             # sequential scan. Drop it when its definition no longer matches.
             cur.execute("SELECT indexdef FROM pg_indexes WHERE indexname='node_tsv_idx'")
             row = cur.fetchone()
-            if row and "symptom" not in row[0]:
+            # Checks every field the tsvector now covers, not just the one that prompted the
+            # migration. A condition naming a single column goes stale the next time the
+            # vector grows, and the failure is silent: the index still exists, Postgres just
+            # stops using it and every search becomes a sequential scan.
+            if row and not all(col in row[0] for col in ("symptom", "fix", "tags")):
                 cur.execute("DROP INDEX node_tsv_idx")
             cur.execute(f"CREATE INDEX IF NOT EXISTS node_tsv_idx ON node USING GIN (({_PG_TSV}))")
 
@@ -546,8 +572,13 @@ class _PostgresBackend(_Backend):
         if node_types:
             sql += " AND type = ANY(%s)"; params.append(list(node_types))
         if tsq:
-            sql += f" ORDER BY ts_rank(({_PG_TSV}), websearch_to_tsquery('english', %s)) DESC"
-            params.append(tsq)
+            # Same tiering as the FTS5 path, for parity of the GUARANTEE rather than of an
+            # accident: ts_rank's default normalisation ignores document length, so Postgres
+            # does not exhibit the inversion today, but a normalisation flag would bring it
+            # back and the two backends must agree on what "tags never outrank content" means.
+            sql += (f" ORDER BY (({_PG_TSV_CONTENT}) @@ websearch_to_tsquery('english', %s)) DESC,"
+                    f" ts_rank(({_PG_TSV}), websearch_to_tsquery('english', %s)) DESC")
+            params += [tsq, tsq]
         sql += " LIMIT %s"; params.append(limit)
         return [_row_to_node(r) for r in self._fetch(sql, params)]
 
