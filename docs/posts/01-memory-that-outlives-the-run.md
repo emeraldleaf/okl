@@ -1,6 +1,6 @@
 # Memory that outlives the run
 
-*Part 1 of 3: The loop that learns. How one developer's AI loop remembers, verifies, and enforces.*
+*Part 1 of 4: The loop that learns. How one developer's AI loop remembers, verifies, and enforces.*
 
 An agent writing code in one of my repos has no access to what the others learned. That is the problem in one sentence, and better prompting does not solve it.
 
@@ -32,7 +32,7 @@ The middle tier is the part I had to build: a small typed store of what the proj
 
 ## Retrieved, not loaded
 
-The reason the store can grow indefinitely is that no session ever reads it. Before a task starts, a hook queries it with the task description and injects only what survives four filters: relevance ranking, scope, the declared subject interests of the current repo, and typed routing that turns the survivors into a short action list. Fix this. Run that gate. Do not restate this retracted claim.
+The reason the store can grow indefinitely is that no session ever reads it. Before a task starts, a hook queries it with the task description and injects only what survives a pipeline: relevance ranking, scope, the files a record applies to, the declared subject interests of the current repo, a cap at the top twelve, and typed routing that turns the survivors into a short action list. Fix this. Run that gate. Do not restate this retracted claim.
 
 Each run sees a dozen relevant lines rather than the whole library. At ten times the current corpus, what reaches the agent should be the same length and better chosen.
 
@@ -48,15 +48,15 @@ A tool that feels helpful and a tool that is helpful are different claims, so I 
 
 Eight tasks, each written to invite a specific defect class the store already covers. The same model in both arms, the retrieved rules as the only variable. A second, different model grading blind, never told which arm produced the code. Failure counts printed before any score, because a metric that cannot report its own failure rate is not a metric.
 
-With none of the rules in context, the agent reproduced a known defect class in 33 percent of runs. With them, 4 percent. On the tasks the baseline actually failed, runs with the rules in context reproduced the defect in 1 of 15. One task, an unpinned linter version in CI, failed three times out of three without the rules and never with them.
+With none of the rules in context, the agent reproduced a known defect class in 33 percent of runs. With them, 4 percent. That is one run. Across four runs the unbriefed arm, which never changed, read anywhere from 33 to 50 percent, so movement inside that spread is noise; the briefed arm stayed between 4 and 13, and it is the gap between them that holds. On the tasks the baseline actually failed, runs with the rules in context reproduced the defect in 1 of 15. One task, an unpinned linter version in CI, failed three times out of three without the rules and never with them.
 
-The result I did not expect: a budget model with the rules in context made roughly a third the known mistakes of a frontier model without them on identical tasks. Context bought more than the model upgrade did, which is the more useful number if you are routing work between cheap and expensive models.
+The result I did not expect: a budget model with the rules in context made roughly a third the known mistakes of a frontier model without them on identical tasks. Context bought more than the model upgrade did, which is the more useful number if you are routing work between cheap and expensive models. The two arms in that comparison were graded by different judge models, so read it as a direction rather than a ratio.
 
 ## The limits, stated
 
 Those tasks were authored from rules already in my own store, so the experiment measures prevention of defect classes the store covers rather than general code quality. Small n. Directional, not a benchmark. The full method and every receipt are in the repository, including the runs that went the other way.
 
-The system also found its own first defect: an early retrieval marked 28 of 33 stored notes as relevant to a single task. Ranking put the right records first, but nothing trimmed the tail. Subject tags and per-repo interest declarations cut it to 20; a proper relevance cutoff is still open work, recorded in the store as a defect against the store. The failure log lives inside the system it describes.
+The system also found its own first defect: an early retrieval marked 28 of 33 stored notes as relevant to a single task. Ranking put the right records first, but nothing trimmed the tail. Subject tags and per-repo interest declarations cut it to 20, recorded in the store as a defect against the store, and a cap at the top twelve followed the next day. The cap then caused a miss of its own: one task's governing rule ranked below it and dropped out of that task's briefing. No run outcome showed it. The eval report found it only by asking directly whether each task's rule was still in its briefing. The failure log lives inside the system it describes.
 
 That is the first idea. The state in most agent-loop diagrams lives inside one execution. The compounding win is memory that outlives it: record the rule once, retrieve it into every future task that resembles it, across every project. Run N+1 should not repeat run N's mistake, and neither should the next repository.
 

@@ -1,6 +1,6 @@
 # Enforcement, or good intentions
 
-*Part 3 of 3: The loop that learns. How one developer's AI loop remembers, verifies, and enforces.*
+*Part 3 of 4: The loop that learns. How one developer's AI loop remembers, verifies, and enforces.*
 
 A rule that is not wired to something that runs is a preference, not a standard.
 
@@ -32,6 +32,6 @@ The same failure again at the environment layer. Hooks run in whatever process t
 
 The stop hook can be lied to. A session can answer "nothing durable" untruthfully and finish. I left that boundary deliberately, the same way a ship-moment reminder is a reminder and not a block: the mechanical part is putting the question in front of you at the right moment, every time. Answering it honestly stays a person's job. The aim is not to remove judgment, it is to guarantee judgment gets exercised at the moments that matter, with the relevant evidence already in view.
 
-That is the series. Memory that outlives the run, verification that does not trust a step's own report, and enforcement that runs without being remembered. None of the three is exotic alone. The compounding comes from wiring them together: the enforced read puts the standard in front of the agent, the verification rungs keep the standard honest, and the recurrence metric reports whether any of it worked, in the only currency that counts: mistakes that stopped repeating.
+That is the method. Memory that outlives the run, verification that does not trust a step's own report, and enforcement that runs without being remembered. None of the three is exotic alone. The compounding comes from wiring them together: the enforced read puts the standard in front of the agent, the verification rungs keep the standard honest, and the recurrence metric reports whether any of it worked, in the only currency that counts: mistakes that stopped repeating.
 
 *The model generates. The loop governs. The standard holds.*

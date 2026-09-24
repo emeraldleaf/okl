@@ -1,6 +1,6 @@
 # Don't let a step grade itself
 
-*Part 2 of 3: The loop that learns. How one developer's AI loop remembers, verifies, and enforces.*
+*Part 2 of 4: The loop that learns. How one developer's AI loop remembers, verifies, and enforces.*
 
 Never trust an exit code. This is the incident behind that rule.
 
@@ -30,9 +30,9 @@ In the knowledge layer from part 1, verification is not one feature. It is four 
 
 **Rung 2: an observed check with a stored evidence trail.** The verify command takes a record and a check to run. It runs the check, reads the real exit status, and when you name an expected success signal it requires that signal in the output, because exit zero alone is precisely what failed on those 238 files. Only an observed pass stamps the record, and the command, result, and timestamp are stored on the record itself. The claimant still chooses the check, and a weak check is still possible, but the stamp shows exactly which check ran. "Verified by: true" is visible to every future reader and invites the obvious question. Assertion hides its emptiness; evidence exposes it.
 
-**Rung 3: an independent actor re-runs the checks.** CI runs the drift gate and the repository's mechanical gates on every pull request: a different grader, at a different time, with no stake in the original claim. When a gate proves itself by failing against real drift, the receipt is written by the job that watched it happen, not by the gate's author.
+**Rung 3: an independent actor re-runs the checks.** CI runs the drift gate and the repository's mechanical gates on every pull request: a different grader, at a different time, with no stake in the original claim. Having the job that watched a gate fail against real drift write the receipt itself, rather than the gate's author, is designed and not yet wired; today the stamp still comes from the verify command. The gate is also only as independent as what it can see. Run against an empty store, it passes having checked nothing, which is now filed against the tool as a defect.
 
-**Rung 4: time attacks every stamp.** Each rule declares the files it governs. The moment those files change after the rule was last verified, the drift detector flags it, because a stale rule is a rule nobody re-checked. Verification also decays on a clock: a stamp nobody re-earns is demoted rather than left quietly trusted. And the system is scored on an outcome it cannot flatter itself on: recurrence after arming, the count of defect classes that came back even though a catching check existed. Not "how many rules were recorded," which measures activity, but "did the mistakes stop repeating," which measures the point.
+**Rung 4: time attacks every stamp.** A rule can declare the files it governs, and in the store today about one in five does. The moment those files change after the rule was last verified, the drift detector flags it, because a stale rule is a rule nobody re-checked. Verification can also decay on a clock: a stamp nobody re-earns is demoted rather than left quietly trusted. The clock is set per record, and no record has set one yet, so today nothing in the store decays. And the system is scored on an outcome it cannot flatter itself on: recurrence after arming, the count of defect classes that came back even though a catching check existed. Not "how many rules were recorded," which measures activity, but "did the mistakes stop repeating," which measures the point.
 
 ## Where judgment stays
 

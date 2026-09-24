@@ -1,8 +1,8 @@
 # The elegant change was the wrong one
 
-*Part 4 of 3: The loop that learns. What happened when the method was pointed at the tool that implements it.*
+*Part 4 of 4: The loop that learns. What happened when the method was pointed at the tool that implements it.*
 
-I built a thing that tells you to verify your claims mechanically, then spent a day running it against itself. It found nineteen defects. This is about what they had in common, and about the one that survived every check I had.
+I built a thing that tells you to verify your claims mechanically, then spent a day running it against itself. It found a run of defects. This is about what they had in common, and about the one that survived every check I had.
 
 ## Everything that broke had never been run
 
@@ -32,7 +32,7 @@ Most of the records tagged `dotnet` in that store are portable engineering lesso
 
 That change had everything except a measurement. It had a rationale, a test suite, a passing review, and a comment block. What it did not have was a number, and the number was the only thing that disagreed with it.
 
-The uncomfortable part is the ranking. Of the nineteen defects, the four unrun surfaces were the easiest to find, because running them was enough. The carefully argued one needed a controlled experiment to catch, and I would have shipped it as an improvement.
+The uncomfortable part is the ranking. Of everything it found, the four unrun surfaces were the easiest to find, because running them was enough. The carefully argued one needed a controlled experiment to catch, and I would have shipped it as an improvement.
 
 There is a corollary I like less. Reverting was correct, but doing it in that order was not. The change should never have run without a written prediction and, more usefully, a list of which cases could plausibly lose a record they depend on. That list would have named the failing task before the experiment started, for free.
 
