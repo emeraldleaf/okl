@@ -72,6 +72,18 @@ purpose; falsify it with data rather than preference.
 
 ## Pull requests
 
+**Comment on the issue before you start.** It stops two people building the same thing,
+and it gives me a chance to tell you what the issue does not say. A PR that arrives
+without one is still welcome, but it may wait while I check it fits.
+
+**If an AI tool wrote the change, say so,** and say which parts you checked yourself.
+That is not a mark against it; most of this repository was written with one. It changes
+how I review: generated changes tend to satisfy the letter of an issue and miss what only
+the surrounding code shows. So before you open the PR, read the tests next to the code you
+changed and follow their setup. For example, tests that drive the CLI clear
+`OKL_DATABASE_URL` and `OKL_SERVICE_URL` first, because the CLI honours both and a test
+that inherits them runs against the developer's own store instead of its temp directory.
+
 Keep them single-purpose. Say what you changed and what you ran to check it, and include
 the real output rather than a description of it. If your change surfaced something
 non-obvious, record it in the store the way the repo records its own findings; a PR that
