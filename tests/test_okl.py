@@ -1438,13 +1438,31 @@ def test_tags_are_searchable_but_never_outrank_content(store):
     assert hits.index(content) < hits.index(tagged), (
         "a tag match must not outrank a record whose title and body are about the subject")
 
+    # ASSERT (2b) — the same guarantee on the corpus shape that actually breaks weights.
+    # FTS5 normalises by the length of the whole row, so a record about the subject with a
+    # long body fell to #6, behind five unrelated records that only carried the tag. The
+    # two-record case above uses a short body and never saw it (found in review, not by
+    # this suite). Content matches must outrank tag-only matches however long the body is.
+    s2 = Store("sqlite:///:memory:")
+    long_body = "Every messaging consumer must tolerate redelivery." + (
+        " Routine operational detail about retries, backoff, paging and limits." * 60)
+    about = core.record(s2, type="Rule", scope="org", body=long_body,
+                        title="Messaging transport retries are idempotent")
+    labelled = [core.record(s2, type="Rule", scope="org", tags="messaging",
+                            title=f"Unrelated rule {i} about pagination") for i in range(5)]
+    ranked = [n.id for n in s2.search("messaging", limit=10)]
+    assert ranked[0] == about, (
+        f"a {len(long_body)}-char record about messaging ranked #{ranked.index(about) + 1}, "
+        "behind tag-only records")
+    assert all(i in ranked for i in labelled), "tag-only records must still be findable"
+
     # ASSERT (3) — the weight itself, bounded from BOTH sides. The two assertions above
     # cannot do this: FTS5 MATCH finds by presence and bm25 weights only ORDER, so setting
     # the tags weight to 0.0 leaves the record findable and both assertions green while the
     # feature is silently off. Verified by setting it to 0.0 and watching them pass.
     src = (Path(__file__).resolve().parents[1] / "src" / "okl" / "store.py").read_text()
     weights = [float(w) for w in
-               src.split("ORDER BY bm25(node_fts, ")[1].split(")")[0].split(", ")]
+               src.split("bm25(node_fts, ")[1].split(")")[0].split(", ")]
     _id_w, title_w, _body_w, _symptom_w, fix_w, tags_w = weights
     assert tags_w > 0, "a zero weight indexes tags and then ignores them when ranking"
     assert tags_w <= fix_w, "tags is a two-word field; weight it below the prose fields"
@@ -1468,14 +1486,43 @@ def test_postgres_tsvector_covers_tags_and_migrates_its_index():
     # commas are separators, not tokens — same normalisation as the FTS5 insert
     assert "replace(coalesce(tags,''), ',', ' ')" in _PG_TSV
 
-    # ASSERT (2) — the GIN index migration checks EVERY field the vector covers. A
-    # condition naming one column goes stale the next time the vector grows, and the
-    # failure is silent: the index survives, Postgres stops using it, and every search
-    # quietly becomes a sequential scan.
-    src = (Path(__file__).resolve().parents[1] / "src" / "okl" / "store.py").read_text()
-    guard = src.split("indexname='node_tsv_idx'")[1].split("CREATE INDEX")[0]
-    for col in ("symptom", "fix", "tags"):
-        assert col in guard, f"index migration must notice {col} joining the tsvector"
+    # ASSERT (2) — the GIN index migration actually RUNS and rebuilds a stale index. This
+    # used to grep the source between two markers for the column names, which passes as
+    # long as the words appear anywhere in that slice — including in a comment. It is
+    # exercised now against a fake connection whose existing index predates tags joining
+    # the vector: symptom and fix present, tags absent.
+    from okl.store import _PostgresBackend
+
+    class _Cur:
+        def __init__(self, indexdef):
+            self.indexdef, self.calls = indexdef, []
+        def execute(self, sql, params=None):
+            self.calls.append(" ".join(sql.split()))
+        def fetchone(self):
+            return (self.indexdef,) if self.indexdef else None
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+
+    class _Conn:
+        def __init__(self, indexdef): self.cur = _Cur(indexdef)
+        def cursor(self): return self.cur
+
+    def migrate(indexdef):
+        b = _PostgresBackend.__new__(_PostgresBackend)   # bypass __init__: no psycopg here
+        b.conn = _Conn(indexdef)
+        b.init_schema()
+        return b.conn.cur.calls
+
+    stale = migrate("CREATE INDEX node_tsv_idx ON node USING gin "
+                    "((setweight(to_tsvector(title),'A') || to_tsvector(symptom) || to_tsvector(fix)))")
+    assert "DROP INDEX node_tsv_idx" in stale, "an index built before tags joined must be rebuilt"
+    create = next(i for i, c in enumerate(stale) if c.startswith("CREATE INDEX IF NOT EXISTS node_tsv_idx"))
+    assert stale.index("DROP INDEX node_tsv_idx") < create, "drop the stale index before recreating"
+
+    # ...and a current index is left alone: rebuilding a GIN index on every open is its own
+    # failure, just a slower one.
+    current = migrate(f"CREATE INDEX node_tsv_idx ON node USING gin (({_PG_TSV}))")
+    assert "DROP INDEX node_tsv_idx" not in current
 
 
 def test_search_scope_refuses_a_non_scope_and_resolves_the_repo_shorthand(tmp_path, monkeypatch, capsys):

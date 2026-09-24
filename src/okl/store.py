@@ -398,7 +398,19 @@ class _SQLiteBackend(_Backend):
                 # column equally: a term in the title should still beat the same term
                 # buried in a fix. One weight per FTS column, id first. The ratios track
                 # the Postgres tsvector weights so the two backends rank alike.
-                sql += " ORDER BY bm25(node_fts, 0.0, 8.0, 4.0, 4.0, 2.0, 1.0)"
+                #
+                # Content matches ALWAYS sort ahead of tag-only matches; bm25 orders within
+                # each tier. The weights alone could not guarantee that: FTS5 normalises by
+                # the length of the whole row, so a record whose TITLE was about the subject
+                # but whose body ran past ~1,500 characters fell below five unrelated records
+                # that merely carried the tag (#1 -> #6). The tag column is tiny and scores
+                # high; no weight ratio survives an arbitrarily long body. Measured on the
+                # real store, tiering keeps every gain tag indexing bought, because the
+                # records tags lifted already matched on content — the tag was reordering
+                # within that tier, which is all it is now allowed to do.
+                sql += (" ORDER BY (f.id NOT IN (SELECT id FROM node_fts WHERE node_fts MATCH ?)),"
+                        " bm25(node_fts, 0.0, 8.0, 4.0, 4.0, 2.0, 1.0)")
+                params.append("{title body symptom fix} : (" + params[0] + ")")
             sql += " LIMIT ?"
             params.append(limit)
             rows = self.conn.execute(sql, params).fetchall()
@@ -460,6 +472,12 @@ _PG_TSV = ("setweight(to_tsvector('english', coalesce(title,'')), 'A') || "
            "setweight(to_tsvector('english', coalesce(symptom,'')), 'B') || "
            "setweight(to_tsvector('english', coalesce(fix,'')), 'C') || "
            "setweight(to_tsvector('english', replace(coalesce(tags,''), ',', ' ')), 'D')")
+# The same vector minus tags: what a record says, as opposed to how it is labelled. Used
+# to sort content matches ahead of tag-only matches (see search()).
+_PG_TSV_CONTENT = ("setweight(to_tsvector('english', coalesce(title,'')), 'A') || "
+           "setweight(to_tsvector('english', coalesce(body,'')), 'B') || "
+           "setweight(to_tsvector('english', coalesce(symptom,'')), 'B') || "
+           "setweight(to_tsvector('english', coalesce(fix,'')), 'C')")
 
 
 def _pg_ts_query(q: str) -> str:
@@ -554,8 +572,13 @@ class _PostgresBackend(_Backend):
         if node_types:
             sql += " AND type = ANY(%s)"; params.append(list(node_types))
         if tsq:
-            sql += f" ORDER BY ts_rank(({_PG_TSV}), websearch_to_tsquery('english', %s)) DESC"
-            params.append(tsq)
+            # Same tiering as the FTS5 path, for parity of the GUARANTEE rather than of an
+            # accident: ts_rank's default normalisation ignores document length, so Postgres
+            # does not exhibit the inversion today, but a normalisation flag would bring it
+            # back and the two backends must agree on what "tags never outrank content" means.
+            sql += (f" ORDER BY (({_PG_TSV_CONTENT}) @@ websearch_to_tsquery('english', %s)) DESC,"
+                    f" ts_rank(({_PG_TSV}), websearch_to_tsquery('english', %s)) DESC")
+            params += [tsq, tsq]
         sql += " LIMIT %s"; params.append(limit)
         return [_row_to_node(r) for r in self._fetch(sql, params)]
 
