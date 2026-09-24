@@ -57,3 +57,44 @@ seed-file comments ("eval-integrity lessons are org-scoped") and the scaffold's 
   pipeline, not a language. The distinction the vocabulary already draws (stacks vs subjects)
   did not have a slot for "the language this is written in", and adding one is cheaper than
   overloading a stack tag whose meaning other repos depend on.
+- 2026-09-03: **the "revisit when" condition above was met, and the vocabulary is now
+  extensible per store.** `KNOWN_TAGS` remains, but as the *floor* every store ships with
+  rather than the whole vocabulary: a store widens it by recording `Vocabulary` nodes,
+  whose title is the tag, and `Store.add_node` validates against floor ∪ declared.
+
+  The trigger was a language-support audit. Everything else in okl is language-agnostic —
+  drift asks git about path globs, verification runs whatever command you hand it, the
+  store holds text — and a Rust repo was driven end to end successfully except for one
+  thing: `okl record --tags rust` was refused, and the only remedy was to fork the package.
+  That is a hard stop on adoption for a tool whose whole claim is that a lesson learned in
+  one place reaches another.
+
+  What the closed vocabulary was *for* survives intact. It exists to catch the typo that
+  files a record where nobody looks, and closed-per-store still does: `rustt` is refused in
+  a store that declared `rust`. What changes is who is entitled to grow it — the org that
+  owns the store, rather than whoever can merge to this package.
+
+  A `Vocabulary` node is validated against the floor only. Otherwise the first declaration
+  in a fresh store would require the tag it is declaring.
+
+  **Not extended:** `STACK_TAGS`, which gates `applies_to`. Declaring `rust` makes it usable
+  as a subject tag, not as an applicability value. That is a narrower and rarer need — it
+  only matters for a lesson that is genuinely false off-stack — and §4h measured that the
+  filter `applies_to` feeds changes 0% of delivered briefing slots today. Extending the
+  exclusive mechanism without a measurement is exactly what §4d punished.
+- 2026-09-17: `frontend` and `prose` added **to the floor**, when `emeraldleaf-dev` joined
+  the layer and every one of its records was rejected: markup and CSS defects, and rules
+  about writing. `react` was the nearest existing tag for the first group and is wrong for
+  the same reason `python-rag` was wrong for `python`. It is a stack tag, and that repo is a
+  hand-rolled Astro site with no UI framework. `frontend` names the subject those lessons are
+  actually about: markup whitespace semantics, CSS layout and responsive behaviour, browser
+  rendering. `prose` had no near-miss at all. Writing is governed in these repos the way code
+  is, with an em-dash budget and a claims-must-be-supported rule behind mechanical gates, and
+  a rule with a gate behind it is a rule the layer should carry.
+
+  The floor rather than a per-store `Vocabulary` declaration, now that the amendment above
+  makes both available. Neither tag is specific to one org: any repo that renders markup has
+  frontend lessons, and any repo that governs its writing has prose ones. The floor is for
+  subjects every store would otherwise have to declare for itself, which is the same reason
+  `messaging` and `python` are in it. Per-store declaration is for what an org's own stack
+  needs and nobody else's.

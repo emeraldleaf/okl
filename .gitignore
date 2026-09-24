@@ -19,3 +19,5 @@ e2e/
 
 #Ignore vscode AI rules
 .github/instructions/codacy.instructions.md
+okl.db-wal
+okl.db-shm

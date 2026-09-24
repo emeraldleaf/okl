@@ -176,6 +176,20 @@ with receipts, not a benchmark.
 
 <img src="docs/okl-how-it-works.svg" alt="One repo records a lesson; every other repo is briefed on it before its next task. The store is typed, scoped and tagged; every verification stamp carries the check that earned it." width="100%">
 
+### How a briefing is actually built
+
+`okl check` is a retrieval pipeline: seven stages turn a task sentence and the whole corpus
+into the twelve records an agent reads. Two stages can drop a record, and only one of them
+is entitled to — the distinction that this project got wrong once and measured its way out
+of ([REPORT §4d](evals/REPORT.md)).
+
+<img src="docs/okl-retrieval-pipeline.svg" alt="Seven stages: the corpus, a BM25 fetch of three times the limit, a scope gate, the exclusive applies_to filter, the inclusive tags-times-interests filter, a top-12 cutoff, bucketing by type, and rendering. Each stage shows how many records survive it." width="100%">
+
+Every count in that diagram is **traced**, not transcribed — `docs/render_pipeline_diagram.py`
+runs the real `store.search` and `core._in_scope` against a store seeded from `seed/`, and
+`test_pipeline_diagram_is_current` fails if the committed render is not what the generator
+produces today. Change a BM25 weight or a filter predicate and the diagram goes red with it.
+
 ### The mental model
 
 `okl` stores small, typed **notes** and the **links** between them.

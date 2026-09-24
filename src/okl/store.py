@@ -42,6 +42,12 @@ KNOWN_TAGS = {
                    # `python-rag`, which is a STACK tag for one service's RAG pipeline:
                    # a review found this repo had 75 dotnet-tagged records governing a
                    # Python codebase and no tag under which to file its own conventions.
+    "frontend",    # added 2026-09-17 when emeraldleaf-dev joined: a hand-rolled Astro site
+                   # with no UI framework, so `react` does not fit. Covers markup whitespace
+                   # semantics, CSS layout and responsive behaviour, and browser rendering.
+    "prose",       # added 2026-09-17 with `frontend`. Writing is governed in these repos the
+                   # way code is (an em-dash budget, a claims-must-be-supported rule, voice),
+                   # and those lessons had no subject to file under.
 }
 
 
@@ -93,7 +99,9 @@ class Node:
     id: str = field(default_factory=lambda: new_id("n"))
     created_at: int = field(default_factory=_now_ms)
 
-    def validate(self) -> None:
+    def validate(self, known_tags: set[str] | None = None) -> None:
+        """Reject a malformed node. `known_tags` widens the tag vocabulary beyond the
+        package floor; Store.add_node supplies the store's declared additions."""
         if self.type not in NODE_TYPES:
             raise ValueError(f"unknown node type {self.type!r}; valid: {sorted(NODE_TYPES)}")
         if self.status not in VALID_STATUS:
@@ -112,10 +120,23 @@ class Node:
             raise ValueError(
                 f"applies_to must name stacks from {sorted(STACK_TAGS)} (or 'any'), "
                 f"got {sorted(unknown_stacks)}")
-        unknown = split_tags(self.tags) - KNOWN_TAGS
+        # The vocabulary is closed but not FIXED. KNOWN_TAGS is the floor shipped in the
+        # package; a store widens it by recording Vocabulary nodes, and Store.add_node
+        # passes the widened set in. Baking the whole vocabulary into the package meant a
+        # Go, Rust or PowerShell team could not file a lesson under its own language
+        # without forking — everything else in okl is language-agnostic, and this was the
+        # single thing that was not. Closed-per-store still catches the typo the closed
+        # vocabulary exists to catch: `securty` is rejected everywhere it was not declared.
+        vocab = KNOWN_TAGS | (known_tags or set())
+        unknown = split_tags(self.tags) - vocab
         if unknown:
-            raise ValueError(f"unknown tag(s) {sorted(unknown)}; the controlled vocabulary is "
-                             f"{sorted(KNOWN_TAGS)} — extend KNOWN_TAGS deliberately to grow it")
+            declared = sorted(vocab - KNOWN_TAGS)
+            raise ValueError(
+                f"unknown tag(s) {sorted(unknown)}; this store's vocabulary is "
+                f"{sorted(vocab)}"
+                + (f" (of which {declared} were declared here)" if declared else "")
+                + " — declare a new one with: okl record --type Vocabulary --scope org "
+                  "--title <tag> --body 'why this subject exists here'")
 
     def is_stale(self, now_ms: int | None = None) -> bool:
         """A node past its TTL is stale (design doc §3.6 — demote, don't delete)."""
@@ -155,16 +176,36 @@ class Store:
         else:
             raise ValueError(f"unsupported OKL_DATABASE_URL scheme: {url!r}")
         self._impl.init_schema()
+        self._declared: set[str] | None = None
 
     # -- writes -------------------------------------------------------------
     def add_node(self, node: Node) -> str:
-        node.validate()
+        # Validate against the floor PLUS whatever this store has declared. A
+        # Vocabulary node is checked against the floor only, so declaring a tag can
+        # never require the tag it is declaring.
+        extra = set() if node.type == "Vocabulary" else self.declared_tags()
+        node.validate(extra)
+        if node.type == "Vocabulary":
+            self._declared = None   # a new declaration invalidates the cache
         self._impl.upsert_node(node)
         return node.id
 
     def add_edge(self, edge: Edge) -> None:
         edge.validate()
         self._impl.upsert_edge(edge)
+
+    def declared_tags(self) -> set[str]:
+        """Tags this store has declared, beyond the package floor.
+
+        A Vocabulary node's title IS the tag. Cached because add_node calls this on
+        every write and a seed run does hundreds; invalidated whenever a Vocabulary
+        node is written.
+        """
+        if self._declared is None:
+            self._declared = {n.title.strip().lower()
+                              for n in self._impl.all_nodes()
+                              if n.type == "Vocabulary" and n.title.strip()}
+        return self._declared
 
     # -- reads --------------------------------------------------------------
     def get_node(self, node_id: str) -> Node | None:

@@ -14,6 +14,7 @@
    "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §4",
    "tags": "dotnet",
+   "applies_to": "dotnet",
    "title": "Minimal APIs over MVC controllers — unless you need heavy model binding or attribute-composed filter stacks",
    "body": "Every HTTP endpoint is a Minimal API endpoint: less ceremony, ~10-15% throughput gain on simple endpoints, composable route groups, native OpenAPI metadata, and thin-shim endpoints that just dispatch to handlers so business logic has nowhere to leak. Controllers remain the right pick for heavy model binding (form posts, multipart, custom binders) or large attribute-composed filter/auth conventions — the decision names those exceptions explicitly."
   },
@@ -50,6 +51,7 @@
    "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §6",
    "tags": "dotnet",
+   "applies_to": "dotnet",
    "title": "OpenAPI via the first-party generator (Microsoft.AspNetCore.OpenApi) with Scalar UI, serving JSON and YAML",
    "body": "Scalar over Swashbuckle/Swagger UI: cleaner UX, dark mode, iframe-free try-it-out, and first-class integration with the first-party generator that replaces Swashbuckle for new projects. Both JSON and YAML are served because some tooling (Spectral, docs embedding) prefers YAML and the cost is one extra route per service."
   },
@@ -94,6 +96,7 @@
    "type": "Rule", "scope": "repo", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §9",
    "tags": "dotnet,messaging",
+   "applies_to": "dotnet",
    "title": "Wolverine pipeline order is load-bearing: validation → context propagation → transactions",
    "body": "Validation runs before ContextPropagationMiddleware opens the logger scope so 400 rejections don't pollute scopes or traces, and AutoApplyTransactions comes last so handlers run inside a transaction with correlation already restored. The handler only ever sees valid messages; reordering silently changes observability and rejection behavior.",
    "symptom": "rejected-command noise in logger scopes, or handlers running before correlation restore",
@@ -130,6 +133,7 @@
    "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §13",
    "tags": "dotnet,messaging",
+   "applies_to": "dotnet",
    "title": "Wolverine replaces MediatR+MassTransit — one MIT framework covering both, dodging two license transitions",
    "body": "MediatR went commercial/sponsorware in 2024; MassTransit v9 goes commercial Q1 2026 with v8 OSS maintenance ending after 2026 — the traditional two-library stack becomes two paid dependencies. Wolverine (MIT) covers both concerns with one handler shape, a built-in transactional outbox, cascading messages, convention-based discovery, and a middleware pipeline. Accepted costs: far smaller community (~50x fewer downloads — you're sometimes the first to ask), a startup codegen phase, steeper learning curve, weaker state-machine sagas — acceptable because the saga is choreographed."
   },
@@ -138,6 +142,7 @@
    "type": "Defect", "scope": "repo", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §13 Wolverine 5→6 upgrade notes (GH-2876)",
    "tags": "dotnet,messaging",
+   "applies_to": "dotnet",
    "title": "Wolverine 6 split Roslyn codegen out of core — Dynamic mode throws at startup without WolverineFx.RuntimeCompilation",
    "body": "In the 5.39.3→6.8.0 upgrade, core WolverineFx stopped shipping the Roslyn compiler, so the default TypeLoadMode.Dynamic fails at host startup. The fix — referencing WolverineFx.RuntimeCompilation, which auto-registers — lives in ServiceDefaults so it flows to every service. Deferred production alternative: pre-generated static codegen, dropping the runtime Roslyn dependency for faster cold start and AOT.",
    "symptom": "host throws at startup: no assembly generator (Roslyn) registered",
@@ -148,6 +153,7 @@
    "type": "Defect", "scope": "repo", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §13 Wolverine 5→6 upgrade notes",
    "tags": "dotnet,messaging",
+   "applies_to": "dotnet",
    "title": "Wolverine 6 rejects codegen service-location fallback by default — factory-registered dependencies break startup",
    "body": "Generated handler code either inlines dependencies or falls back to a container lookup; 6.x flipped ServiceLocationPolicy to NotAllowed, so dependencies that can't be inlined (interfaces with factory registrations, pooled DbContexts) fail at startup. This is a codegen-strategy concern, not the service-locator anti-pattern — handlers still use constructor injection. Fixed via a shared extension setting AlwaysAllowed, called by every service.",
    "symptom": "startup rejection after a Wolverine major bump when a handler dependency has a factory or pooled registration",
@@ -158,6 +164,7 @@
    "type": "Defect", "scope": "repo", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §13 (PaymentRecoveryJob; proven by PaymentRecoveryAtomicityTests)",
    "tags": "dotnet,messaging",
+   "applies_to": "dotnet",
    "title": "Non-handler code publishes through IDbContextOutbox — the hand-rolled transaction+publish wrap silently stopped being atomic on Wolverine 6",
    "body": "A recovery job publishing outside the handler pipeline has no method-injected enlisted context; its old manual BeginTransaction→Publish→SaveChanges→Commit sequence silently lost atomicity on 6.x. Current pattern: enroll the DbContext in IDbContextOutbox, publish through it, then SaveChangesAndFlushMessagesAsync() — envelope staged, entity saved, both committed in one transaction. The guarantee is proven by a rollback test, not config inspection.",
    "symptom": "a background job's entity write rolls back but its event was already dispatched (or vice versa)",
@@ -202,6 +209,7 @@
    "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §15",
    "tags": "dotnet",
+   "applies_to": "dotnet",
    "title": "Built-in Microsoft.Extensions.Logging piped through OTel — Serilog would add an adapter layer for wins .NET 8+ already has",
    "body": "Serilog's historical advantages (structured templates, scopes, async sinks) are first-class in ME.Logging now, and AddOpenTelemetry() ingests it directly; Serilog would add an adapter and 3-4 packages. Its remaining value is the sink ecosystem, but with OTel the sink decision becomes the exporter decision — same backend flexibility, less coupling. Acknowledged exception: Seq's local filtering UI is genuinely nicer; not adopted because the marginal benefit doesn't justify a parallel pipeline."
   },
@@ -210,6 +218,7 @@
    "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §16",
    "tags": "dotnet",
+   "applies_to": "dotnet",
    "title": "Two-tier caching uses HybridCache — hand-rolled L1/L2 grows three bugs you only find under load",
    "body": "A hand-rolled memory-then-distributed-then-DB chain reliably develops: cache stampede (N concurrent misses invoke the factory N times, DDoSing the DB — async-safe per-key locking is hard), L1/L2 invalidation skew (one tier forgotten, stale until TTL), and serialization drift (ad-hoc serializer calls per site creating poison-pill entries). HybridCache solves all three by construction: single-flight factory execution, tag-based invalidation clearing both tiers, source-generated serialization."
   },
@@ -218,6 +227,7 @@
    "type": "Claim", "scope": "org", "repo": "dotnet-microservices", "verified": true, "status": "live",
    "found_by": "project-decisions.md §16 'What HybridCache doesn't do (yet)'",
    "tags": "dotnet",
+   "applies_to": "dotnet",
    "title": "HybridCache 10.x has no cross-replica L1 backplane — a correctness bug the day you scale out",
    "body": "When replica A invalidates a key, replica B keeps serving its stale in-process L1 entry until the L1 TTL — there is no invalidation backplane. Harmless single-replica; wrong answers multi-replica. Mitigations: drop the local-cache TTL to ~60s, or migrate to FusionCache (Redis pub/sub backplane). This is an explicit precondition for multi-replica deployment of any caching service.",
    "symptom": "stale reads on some replicas after an invalidation, lasting up to the L1 TTL",
@@ -228,6 +238,7 @@
    "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §17 (+ .claude/audits/2026-06-03-circuit-breaker verdict)",
    "tags": "dotnet",
+   "applies_to": "dotnet",
    "title": "All HttpClients get the platform's standard resilience pipeline by default — no hand-rolled Polly stacks",
    "body": "ConfigureHttpClientDefaults + AddStandardResilienceHandler gives every outbound HTTP call the curated Polly v8 pipeline — total timeout, exponential-backoff retry, circuit breaker, per-attempt timeout, and a rate limiter against thundering-herd on recovering services — in one line with zero drift across services. The circuit-breaker audit rejected a bespoke pipeline for exactly this reason: it re-implements capability the framework ships. Per-client tuning stays available; gRPC and bus traffic have their own retry machinery."
   },
