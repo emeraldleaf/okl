@@ -26,9 +26,15 @@ Most rules never leave tier 1, and that is fine.
 
 ```
 okl record --type <Defect|Gate|Rule|Claim|Retraction|Tombstone|Decision|PriorArt> \
-  --title "..." --body "..." --scope <org|repo> [--verified]
+  --id "<stable-key>" --title "..." --body "..." --scope <org|repo> [--verified]
 ```
 
+- **`--id`** — a short stable key you choose, which makes the write idempotent: recording the
+  same lesson again replaces that row rather than adding a second one. Omit it and every record
+  is minted a fresh random id, which is how a store accumulates near-duplicates that `okl dedup`
+  reports but cannot remove, there being no delete subcommand. Where a repo keeps its lessons in
+  a seed file, use the id that file derives, `seed:<seed-file-stem>:<key>`, so a later
+  `okl seed` upserts the same row.
 - **`scope=org`** — a fact about the world: prior art, an API contract, a data-source gotcha, a
   portable gate. It will surface in every connected repo's `okl check`.
 - **`scope=repo`** — a quirk true only of this codebase. Stays local.

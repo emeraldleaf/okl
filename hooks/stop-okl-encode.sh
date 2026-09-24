@@ -78,8 +78,15 @@ silently reversed? If yes, record it now. Three independent axes, each chosen de
                 is never a reason to set this.
 
   okl record --type Defect|Rule|Decision --scope org|repo --tags "<subjects>" \
-    --title "..." --symptom "..." --body "cause: ..." --fix "..." \
+    --id "<stable-key>" --title "..." --symptom "..." --body "cause: ..." --fix "..." \
     [--applies-to <stack>]   # ONLY for a genuinely framework-bound lesson
+
+  --id is what makes the write idempotent, and leaving it off is the common mistake.
+  Without it every record is minted a fresh random id, so the same lesson recorded in two
+  sessions becomes two rows, which `okl dedup` will report but cannot remove: there is no
+  delete subcommand. Choose a short stable key and reuse it. Where a repo keeps its
+  lessons in a seed file, use the id that file derives, "seed:<seed-file-stem>:<key>", so
+  a later `okl seed` upserts that same row rather than adding a second one beside it.
 
 If the session genuinely learned nothing durable, state that explicitly and finish.
 MSG
