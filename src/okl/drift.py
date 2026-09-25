@@ -174,8 +174,10 @@ SNAPSHOT_FORMAT = "okl-drift-snapshot/1"
 _FIELDS = ("id", "type", "title", "scope", "files", "verified_at", "verified_by")
 _STAMP = re.compile(r"@ (\d{4}-\d\d-\d\dT\d\d:\d\dZ)$")
 # `okl verify` writes its evidence stamp (minute resolution) just before the store sets
-# verified_at, and a remote service's clock is not the caller's. The window allows both;
-# it does not allow moving a timestamp forward by hand.
+# verified_at, so the two can straddle a minute boundary, and a remote service's clock is
+# not the caller's. So verified_at must fall from one minute before the stamped minute to
+# five minutes after it -- a hand edit can move it that far at most, never past a commit
+# made later than that. Pinned at both edges by a test.
 _STAMP_SKEW_MS = (-60_000, 5 * 60_000)
 
 
@@ -252,7 +254,20 @@ def nodes_from_snapshot(snap: dict[str, Any]) -> tuple[list[Node], list[str]]:
     """Nodes to feed scan_drift, and one problem line per entry that cannot be trusted."""
     nodes: list[Node] = []
     problems: list[str] = []
-    for r in snap.get("rules", []):
+    rules = snap.get("rules")
+    if not isinstance(rules, list):
+        return [], ["`rules` is not a list"]
+    for r in rules:
+        # Shape first. The file is hand-editable, and a traceback exits 1 -- which under
+        # --gate reads as "drift found" rather than "did not run".
+        if not (isinstance(r, dict)
+                and all(isinstance(r.get(k), str) for k in ("id", "title", "scope", "files"))
+                and (r.get("verified_at") is None or type(r.get("verified_at")) is int)
+                and (r.get("verified_by") is None or isinstance(r.get("verified_by"), str))):
+            rid = r.get("id") if isinstance(r, dict) else None
+            problems.append(f"[{rid or '?'}] malformed entry: needs string id/title/scope/"
+                            "files and an integer verified_at or null")
+            continue
         why = stamp_problem(r)
         if why:
             problems.append(f"[{r.get('id')}] {why}")

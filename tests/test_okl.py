@@ -1964,6 +1964,35 @@ def test_drift_snapshot_gives_ci_a_store_it_cannot_clear_by_hand(tmp_path, monke
     assert r.returncode == 2 and "does not match the evidence stamp" in r.stderr
 
 
+def test_snapshot_entries_are_checked_before_they_are_trusted():
+    """#37 review: a malformed snapshot must refuse (exit 2, "did not run"), not crash.
+
+    A traceback exits 1, which under --gate reads as "drift found". And the timestamp
+    window is pinned at both edges: `okl verify` stamps its evidence just before the store
+    sets verified_at, so a stamp can cross a minute boundary and a service clock can
+    differ -- the window allows that, and nothing further.
+    """
+    from okl import drift
+    ok = {"id": "n1", "title": "t", "scope": "org", "files": "a.py",
+          "verified_at": 1_790_000_040_000, "verified_by": "`true` exit 0 @ 2026-09-21T14:14Z"}
+    stamped = 1_790_000_040_000   # 2026-09-21T14:14:00Z
+
+    for bad in ({"format": "x", "rules": "not a list"},
+                {"rules": [{**ok, "title": None}]},
+                {"rules": [{k: v for k, v in ok.items() if k != "files"}]},
+                {"rules": [{**ok, "verified_at": "1790000040000"}]},
+                {"rules": [{**ok, "verified_at": True}]},
+                {"rules": ["not an entry"]}):
+        nodes, problems = drift.nodes_from_snapshot(bad)
+        assert nodes == [] and problems, bad
+
+    def window(at):
+        return drift.stamp_problem({**ok, "verified_at": at}) is None
+    assert window(stamped) and window(stamped + 59_999)          # the stamped minute
+    assert window(stamped - 60_000) and window(stamped + 299_999)  # skew allowed
+    assert not window(stamped - 60_001) and not window(stamped + 300_000)
+
+
 def test_recurrence_report_counts_what_the_metric_could_not_see(store):
     """#31: the metric printed "0 recurrences ✓" while the store held three.
 
