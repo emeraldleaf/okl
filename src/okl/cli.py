@@ -349,21 +349,38 @@ def cmd_search(args) -> int:
 
 
 def cmd_metric(args) -> int:
-    """Recurrence-after-arming — the quantification the method says it lacks."""
+    """Recurrence, with the coverage that makes the number readable (issue #31)."""
+    client = Client()
+    if not client.configured:
+        print("OKL NOT CONFIGURED — refusing to report a metric about a store that is not "
+              "there. Run `okl init` or `okl connect <url>`.", file=sys.stderr)
+        return 2
     try:
-        rows = Client().recurrence()
+        report = client.recurrence_report()
     except OKLUnreachableError as e:
         print(f"OKL UNREACHABLE — cannot compute metric.\n{e}", file=sys.stderr)
         return 2
+    if report is None:
+        print("OKL: the connected service predates the coverage report, so this metric's "
+              "coverage is unknown. Upgrade the service before reading it.", file=sys.stderr)
+        return 2
     if args.format == "json":
-        _print_json({"recurrence_after_arming": rows, "count": len(rows)})
-    else:
-        if not rows:
-            print("recurrence-after-arming: 0 — no known defect class has recurred where a gate should have armed. ✓")
-        else:
-            print(f"recurrence-after-arming: {len(rows)}")
-            for r in rows:
-                print(f"  {r['defect_class']}  recurred in {r['recurred_in']}  (gate: {r['gate']})")
+        _print_json(report)
+        return 0
+    armed, unarmed = report["armed"], report["unarmed"]
+    total, gated = report["defects"], report["defects_with_gate"]
+    pct = f" ({100 * gated // total}%)" if total else ""
+    # No tick. "0" here speaks only for defects that have a gate; the line says how many
+    # that is, so a low-coverage zero cannot read as a result.
+    print(f"recurrence-after-arming: {len(armed)} — among the {gated} of {total} "
+          f"defects that have a gate{pct}")
+    for r in armed:
+        print(f"  {r['defect_class']}  recurred in {r['recurred_in']}  "
+              f"(gate: {', '.join(r['gates'])})")
+    print(f"recurrence without a gate: {len(unarmed)}"
+          + (" — lessons that were written down and came back anyway:" if unarmed else ""))
+    for r in unarmed:
+        print(f"  {r['defect_class']}  recurred in {r['recurred_in']}")
     return 0
 
 

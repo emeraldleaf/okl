@@ -222,6 +222,11 @@ class Store:
         """The metric the method says it lacks (design doc §3.5 / Appendix A)."""
         return self._impl.recurrence_after_arming()
 
+    def edges(self, rels: list[str]) -> list[Edge]:
+        """Every edge whose relation is in `rels`. Deliberately dumb: interpretation lives
+        in core, once, so the two backends cannot disagree about what an edge means."""
+        return self._impl.edges(list(rels))
+
     def all_nodes(self) -> list[Node]:
         return self._impl.all_nodes()
 
@@ -266,6 +271,7 @@ class _Backend(Protocol):
                limit: int) -> list[Node]: ...
     def neighbors(self, node_id: str, rels: list[str] | None) -> list[tuple[Edge, Node]]: ...
     def recurrence_after_arming(self) -> list[dict[str, str]]: ...
+    def edges(self, rels: list[str]) -> list[Edge]: ...
     def all_nodes(self) -> list[Node]: ...
     def close(self) -> None: ...
 
@@ -434,6 +440,16 @@ class _SQLiteBackend(_Backend):
                     out.append((e, n))
             return out
 
+    def edges(self, rels):
+        with self._lock:
+            # Only "?" placeholders are interpolated; every relation is bound as a parameter.
+            marks = ",".join("?" for _ in rels)
+            rows = self.conn.execute(
+                f"SELECT src, rel, dst, created_at FROM edge WHERE rel IN ({marks})",  # noqa: S608
+                rels).fetchall()
+            return [Edge(src=r["src"], rel=r["rel"], dst=r["dst"], created_at=r["created_at"])
+                    for r in rows]
+
     def recurrence_after_arming(self):
         with self._lock:
             sql = """
@@ -595,6 +611,11 @@ class _PostgresBackend(_Backend):
             if n:
                 out.append((e, n))
         return out
+
+    def edges(self, rels):
+        return [Edge(src=r["src"], rel=r["rel"], dst=r["dst"], created_at=r["created_at"])
+                for r in self._fetch("SELECT src, rel, dst, created_at FROM edge "
+                                     "WHERE rel = ANY(%s)", (list(rels),))]
 
     def recurrence_after_arming(self):
         return self._fetch("""

@@ -1226,6 +1226,19 @@ def _backend_conformance(store, label):
     assert store.search("narwhal", limit=3), f"{label}: index went stale on upsert"
     assert not store.search("zebrafish", limit=3), f"{label}: stale index row survived the upsert"
 
+    # ASSERT (8) — edges() returns exactly the requested relations, each once. The
+    # recurrence report is computed from it in core, once, for both backends; a backend
+    # that filtered differently would give the two a different metric.
+    a = core.record(store, type="Defect", title="edge probe a", scope="org")
+    b = core.record(store, type="Gate", title="edge probe b", scope="org")
+    core.link(store, b, "CATCHES", a)
+    core.link(store, a, "RECURS_IN", "some-repo")
+    got = {(e.src, e.rel, e.dst) for e in store.edges(["CATCHES"])}
+    assert (b, "CATCHES", a) in got, f"{label}: edges() missed a requested relation"
+    assert all(rel == "CATCHES" for _, rel, _ in got), f"{label}: edges() leaked another relation"
+    both = store.edges(["CATCHES", "RECURS_IN"])
+    assert len({(e.src, e.rel, e.dst) for e in both}) == len(both), f"{label}: duplicate edges"
+
 
 def test_sqlite_backend_conformance(store):
     """The SQLite backend meets the contract."""
@@ -1867,3 +1880,61 @@ def test_drift_gate_never_reports_clean_having_checked_nothing(tmp_path, monkeyp
              "GIT_AUTHOR_DATE": f"@{int(time.time()) + 60} +0000"}
     subprocess.run([*git, "commit", "-qam", "b"], check=True, env=later)
     assert okl("drift", "--gate").returncode == 1
+
+
+def test_recurrence_report_counts_what_the_metric_could_not_see(store):
+    """#31: the metric printed "0 recurrences ✓" while the store held three.
+
+    It could only see recurrences of defects that had a gate attached (7 of 66 at the
+    time) and never said so. And RECURS_IN is written two ways -- `new RECURS_IN original`
+    and the seed packs' `defect RECURS_IN <repo>` -- of which it read only the first. The
+    report counts both forms, splits armed from unarmed, and carries its coverage.
+    """
+    gated = core.record(store, type="Defect", title="gated defect", scope="org")
+    gate = core.record(store, type="Gate", title="the gate", scope="org")
+    core.link(store, gate, "CATCHES", gated)
+    loose = core.record(store, type="Defect", title="ungated defect", scope="org")
+    seeded = core.record(store, type="Defect", title="seed-form defect", scope="org")
+
+    # ARRANGE — one recurrence of each kind the old query mishandled or could handle.
+    again = core.record(store, type="Defect", title="it came back", scope="repo", repo="svc")
+    core.link(store, again, "RECURS_IN", loose)            # node form, no gate: was invisible
+    core.link(store, seeded, "RECURS_IN", "other-repo")    # seed form: was invisible
+    back = core.record(store, type="Defect", title="gated one came back", scope="repo", repo="svc")
+    core.link(store, back, "RECURS_IN", gated)             # node form, gated: the only one seen
+
+    r = core.recurrence_report(store)
+
+    # ASSERT (1) — the armed recurrence the old metric already saw is still counted.
+    assert [x["defect_id"] for x in r["armed"]] == [gated]
+    assert r["armed"][0]["gates"] == ["the gate"] and r["armed"][0]["recurred_in"] == "svc"
+    # ASSERT (2) — both invisible ones are now reported, each attributed correctly.
+    unarmed = {x["defect_id"]: x["recurred_in"] for x in r["unarmed"]}
+    assert unarmed == {loose: "svc", seeded: "other-repo"}
+    # ASSERT (3) — coverage travels with the number. Five defects, one with a gate.
+    assert (r["defects_with_gate"], r["defects"]) == (1, 5)
+
+
+def test_metric_output_never_prints_a_bare_tick(tmp_path, monkeypatch):
+    """The CLI line carries its coverage, lists recurrences without a gate, and refuses
+    an unconfigured directory rather than reporting on a store that is not there."""
+    import subprocess
+    import sys
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("OKL_DATABASE_URL", raising=False)
+    monkeypatch.delenv("OKL_SERVICE_URL", raising=False)
+
+    def okl(*a):
+        return subprocess.run([sys.executable, "-m", "okl", *a], capture_output=True, text=True)
+
+    assert okl("metric").returncode == 2, "an unconfigured directory must be refused"
+    subprocess.run(["git", "init", "-q", "."], check=True)
+    okl("init", "--repo", "r")
+    d = okl("record", "--type", "Defect", "--scope", "repo", "--title",
+            "came back anyway").stdout.strip().splitlines()[-1]
+    okl("link", d, "RECURS_IN", "elsewhere")
+    out = okl("metric").stdout
+    assert "✓" not in out
+    assert "among the 0 of 1 defects that have a gate" in out
+    assert "recurrence without a gate: 1" in out and "came back anyway" in out

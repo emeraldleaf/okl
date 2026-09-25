@@ -545,3 +545,48 @@ def _render_records(items: list[dict], show_catches: bool = False) -> list[str]:
         if it.get("fix"):
             out.append(f"  fix: {it['fix'][:200]}")
     return out
+
+
+def recurrence_report(store: Store) -> dict[str, Any]:
+    """Recurrence, with the coverage that makes it readable (issue #31).
+
+    The metric used to print "0 recurrences ✓" while the store held recorded recurrences,
+    because it could only see defects that had a gate attached: 8 of 63 at the time, and it
+    never said so. The same shape as the eval judge that scored 5.0/5.0 while 19 of 20
+    cases crashed: a number that cannot report its own coverage reads as a result.
+
+    So the report carries three things, never one:
+      - `armed`:   recurrences of defects that HAD a gate -- the original metric;
+      - `unarmed`: recurrences of defects with no gate -- lessons written down that came
+                   back anyway, which is the stronger signal;
+      - coverage:  how many defects the armed figure can possibly speak for.
+
+    RECURS_IN is written two ways in practice, and both are read. `new RECURS_IN original`
+    (both ends records) names the original as the defect that recurred; the seed packs write
+    `defect RECURS_IN <repo name>`, where the far end is not a record and the near end is
+    the defect. Reading only the first form silently discarded every seeded recurrence.
+    """
+    nodes = {n.id: n for n in store.all_nodes()}
+    defect_ids = {i for i, n in nodes.items() if n.type == "Defect"}
+    gates_for: dict[str, list[str]] = {}
+    for e in store.edges(["CATCHES"]):
+        if e.dst in defect_ids and e.src in nodes:
+            gates_for.setdefault(e.dst, []).append(nodes[e.src].title)
+
+    armed: list[dict[str, Any]] = []
+    unarmed: list[dict[str, Any]] = []
+    for e in store.edges(["RECURS_IN"]):
+        if e.dst in nodes:                        # new RECURS_IN original
+            cls, where = e.dst, (nodes[e.src].repo if e.src in nodes else None)
+        else:                                     # defect RECURS_IN <repo name>
+            cls, where = e.src, e.dst
+        if cls not in nodes:
+            continue                              # neither end names a record we hold
+        row = {"defect_class": nodes[cls].title, "defect_id": cls, "recurred_in": where}
+        if cls in gates_for:
+            armed.append({**row, "gates": gates_for[cls]})
+        else:
+            unarmed.append(row)
+
+    return {"armed": armed, "unarmed": unarmed,
+            "defects": len(defect_ids), "defects_with_gate": len(gates_for)}

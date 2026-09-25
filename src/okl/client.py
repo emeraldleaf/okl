@@ -221,6 +221,13 @@ class Client:
             return self._get("/metric/recurrence")["recurrence_after_arming"]
         return self._local_store().recurrence_after_arming()
 
+    def recurrence_report(self) -> dict | None:
+        """The coverage-aware report, or None from a service too old to compute one --
+        in which case the caller must say coverage is unknown, not assume it is fine."""
+        if self.mode == "remote":
+            return self._get("/metric/recurrence").get("report")
+        return core.recurrence_report(self._local_store())
+
     def all_nodes(self):
         """Return all in-scope Node objects (local store, or /nodes on a remote service).
 

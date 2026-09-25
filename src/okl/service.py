@@ -137,7 +137,9 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901
     def recurrence(authorization: str | None = Header(default=None)) -> dict[str, Any]:
         _auth(authorization)
         rows = _store.recurrence_after_arming()
-        return {"recurrence_after_arming": rows, "count": len(rows)}
+        # `report` is additive: older clients keep reading the two original keys.
+        return {"recurrence_after_arming": rows, "count": len(rows),
+                "report": core.recurrence_report(_store)}
 
     @app.get("/nodes")
     def nodes(authorization: str | None = Header(default=None)) -> dict[str, Any]:
