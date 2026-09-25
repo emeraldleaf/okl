@@ -30,10 +30,19 @@ it is the actual contract. The parts that will fail your build if you miss them:
   and `src/okl/scaffold/ci/okl-verify.yml` must match, as must `hooks/*.sh` and their
   `src/okl/scaffold/hooks/` twins. Edit one, copy to the others in the same change.
   `tests/test_scaffold.py::test_mirror_files_identical` enforces it.
-- **`okl drift` goes red when you change a file a stored rule governs.** That is the
-  system working. Re-verify the affected records with an actual check:
-  `okl verify <id> --run "pytest -q -k <test>" --expect "passed"`. Do not clear drift by
-  re-recording with `--verified`; the whole point is that stamps come from observed runs.
+- **The `okl-verify` check can fail on your PR, and that is not yours to fix.** CI reads
+  the committed `okl-drift.json`: the rules that govern files, and when each was last
+  verified. Change a governed file and CI names the rules that need re-checking. The
+  store that can re-verify them is the maintainer's, not in the repo, so the maintainer
+  re-runs each check and pushes the refreshed `okl-drift.json` to your branch. Leave
+  "Allow edits by maintainers" on. Do not edit `okl-drift.json` by hand: an entry whose
+  timestamp does not match its verification evidence is refused.
+- **Maintainers: `okl drift` goes red when you change a file a stored rule governs.**
+  That is the system working. Commit the change first, then re-verify with an actual
+  check, `okl verify <id> --run "pytest -q -k <test>" --expect "passed"`, then commit
+  the `okl-drift.json` that `okl verify` refreshed. Verifying before the code commit
+  does not count: the commit is newer than the stamp, so the rule drifts again. Do not
+  clear drift by re-recording with `--verified`; stamps come from observed runs.
 - **Tags come from a closed vocabulary** (`store.KNOWN_TAGS`). Growing it is a deliberate
   edit to that set plus a note in the tags ADR, not an ad-hoc string.
 - **Evaluation claims need a committed receipt.** If you change the harness or quote a
