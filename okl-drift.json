@@ -1,0 +1,429 @@
+{
+  "format": "okl-drift-snapshot/1",
+  "repo": "okl",
+  "rules": [
+    {
+      "id": "n_02cc84da158d",
+      "type": "Defect",
+      "title": "OKL_DATABASE_URL was honoured by the store and ignored by every CLI command",
+      "scope": "org",
+      "files": "src/okl/client.py,src/okl/store.py",
+      "verified_at": 1790362085118,
+      "verified_by": "`python3 -m pytest -q -k 'naming_a_store_by_env_var or client_resolves_the_shared_layer'` exit 0, matched 'passed' @ 2026-09-25T18:48Z"
+    },
+    {
+      "id": "n_041a066035b2",
+      "type": "Rule",
+      "title": "applies_to stays opt-in: revisit only when off-stack share or framework-bound share roughly doubles",
+      "scope": "org",
+      "files": "src/okl/core.py,src/okl/store.py,seed/",
+      "verified_at": 1790362060895,
+      "verified_by": "`python3 -m pytest -q -k 'applies_to or off_stack'` exit 0, matched 'passed' @ 2026-09-25T18:47Z"
+    },
+    {
+      "id": "n_07faa4565128",
+      "type": "Rule",
+      "title": "Read a record's own body before gating it — it may already declare its portability",
+      "scope": "org",
+      "files": "seed/,src/okl/store.py",
+      "verified_at": 1790362141761,
+      "verified_by": "`python3 -c \"import json;n=[x for x in json.load(open('seed/geospatial-defects.json'))['nodes'] if x.get('key')=='g_classpath'][0];assert not n.get('applies_to'),'g_classpath gated again';print('PORTABLE GATE UNGATED')\"` exit 0, matched 'PORTABLE GATE UNGATED' @ 2026-09-25T18:49Z"
+    },
+    {
+      "id": "n_0e6928348b1d",
+      "type": "Rule",
+      "title": "An instruction to an agent needs a mechanical counterpart at the point of import",
+      "scope": "org",
+      "files": "src/okl/seed.py",
+      "verified_at": 1788313213915,
+      "verified_by": "`python3 -m pytest -q -k 'self_declared_proposal or dedup_never'` exit 0, matched '2 passed' @ 2026-09-02T01:40Z"
+    },
+    {
+      "id": "n_110bb4fb7112",
+      "type": "Defect",
+      "title": "A dependency bot cannot maintain a pin that lives in a mirrored file it does not scan",
+      "scope": "org",
+      "files": ".github/dependabot.yml,.github/workflows/,ci/okl-verify.yml",
+      "verified_at": 1790362111037,
+      "verified_by": "`python3 -m pytest -q -k 'mirror_files_identical'` exit 0, matched 'passed' @ 2026-09-25T18:48Z"
+    },
+    {
+      "id": "n_119528a07fa5",
+      "type": "Defect",
+      "title": "A subprocess test inherits the developer's state; the same test on a clean checkout hits a precondition",
+      "scope": "org",
+      "files": "evals/ab_harness.py,tests/test_scaffold.py",
+      "verified_at": 1790362140991,
+      "verified_by": "`python3 -m pytest -q -k 'off_series_instrument'` exit 0, matched 'passed' @ 2026-09-25T18:49Z"
+    },
+    {
+      "id": "n_1fe5ef1aaca5",
+      "type": "Rule",
+      "title": "Mirror files (ci workflow, hooks) stay byte-identical across repo and scaffold copies — test-enforced",
+      "scope": "repo:okl",
+      "files": "ci/okl-verify.yml,hooks/*.sh",
+      "verified_at": 1790362108764,
+      "verified_by": "`python3 -m pytest -q -k 'mirror_files_identical'` exit 0, matched 'passed' @ 2026-09-25T18:48Z"
+    },
+    {
+      "id": "n_22ad98216e87",
+      "type": "Defect",
+      "title": "A context-filling default corrupts provenance on imported data — 'unknown origin' became 'this repo'",
+      "scope": "org",
+      "files": "src/okl/seed.py,src/okl/client.py",
+      "verified_at": 1790362073149,
+      "verified_by": "`python3 -m pytest -q -k 'seed_node_without_repo_stays_unattributed'` exit 0, matched 'passed' @ 2026-09-25T18:47Z"
+    },
+    {
+      "id": "n_31bde92d9003",
+      "type": "Rule",
+      "title": "Verification stamps come from observed checks with stored evidence — never from the claimant's assertion",
+      "scope": "org",
+      "files": "src/okl/core.py,src/okl/cli.py",
+      "verified_at": 1790362087971,
+      "verified_by": "`python3 -m pytest -q -k 'verify_stamps_only_from_evidence or cmd_verify_runs_the_check_first'` exit 0, matched 'passed' @ 2026-09-25T18:48Z"
+    },
+    {
+      "id": "n_3dac3a1d8fba",
+      "type": "Rule",
+      "title": "Findability and ranking are separate properties — a test asserting one can pass while the other is off",
+      "scope": "org",
+      "files": "src/okl/store.py,tests/test_okl.py",
+      "verified_at": 1790362063706,
+      "verified_by": "`python3 -m pytest -q -k 'tags_are_searchable'` exit 0, matched 'passed' @ 2026-09-25T18:47Z"
+    },
+    {
+      "id": "n_428707b5e596",
+      "type": "Defect",
+      "title": "A hook that fires is not a hook that's heard — PreToolUse stdout never reaches the model, so the 'enforced read' was silently unread",
+      "scope": "org",
+      "files": "src/okl/scaffold/hooks/userpromptsubmit-okl-check.sh,src/okl/cli.py",
+      "verified_at": 1790362105919,
+      "verified_by": "`python3 -m pytest -q -k 'scaffold_stamps_both_hooks'` exit 0, matched 'passed' @ 2026-09-25T18:48Z"
+    },
+    {
+      "id": "n_473aec369b25",
+      "type": "Defect",
+      "title": "Changing the judge mid-series silently voids every cross-run comparison",
+      "scope": "org",
+      "files": "evals/ab_harness.py,evals/REPORT.md",
+      "verified_at": 1790362135262,
+      "verified_by": "`python3 -m pytest -q -k 'off_series_instrument'` exit 0, matched 'passed' @ 2026-09-25T18:48Z"
+    },
+    {
+      "id": "n_4a398f2f8095",
+      "type": "Rule",
+      "title": "The core and client path stays stdlib-only — every third-party import lives behind an extra",
+      "scope": "repo:okl",
+      "files": "src/okl/core.py,src/okl/client.py,src/okl/store.py,pyproject.toml",
+      "verified_at": 1790362141514,
+      "verified_by": "`python3 -c \"import ast;third={'fastapi','pydantic','httpx','requests','psycopg','psycopg2','uvicorn','mcp','yaml'};bad=[(f,getattr(n,'module','') or '')for f in('src/okl/store.py','src/okl/core.py','src/okl/client.py')for n in ast.parse(open(f).read()).body if isinstance(n,(ast.Import,ast.ImportFrom))and((getattr(n,'module','')or '').split('.')[0]in third or any(a.name.split('.')[0]in third for a in n.names))];assert not bad,bad;print('STDLIB OK')\"` exit 0, matched 'STDLIB OK' @ 2026-09-25T18:49Z"
+    },
+    {
+      "id": "n_5a9589af345f",
+      "type": "Defect",
+      "title": "A remote write path that hides validation errors as outages — the agent couldn't tell 'bad tag' from 'service down'",
+      "scope": "org",
+      "files": "src/okl/service.py,src/okl/client.py",
+      "verified_at": 1790362046440,
+      "verified_by": "`python3 -m pytest -q -k 'cli_check_fails_closed_when_the_service_refuses_it'` exit 0, matched 'passed' @ 2026-09-25T18:47Z"
+    },
+    {
+      "id": "n_5db37b759b1e",
+      "type": "Defect",
+      "title": "Removing a step because you read the code is assert-from-memory — the reviewer caught it in a shipped workflow",
+      "scope": "org",
+      "files": "src/okl/client.py,ci/okl-verify.yml",
+      "verified_at": 1790362116688,
+      "verified_by": "`python3 -m pytest -q -k 'client_resolves_the_shared_layer_from_the_environment'` exit 0, matched 'passed' @ 2026-09-25T18:48Z"
+    },
+    {
+      "id": "n_5ddb0776a863",
+      "type": "Defect",
+      "title": "A CI gate that reads gitignored state checks nothing in CI, and passes",
+      "scope": "org",
+      "files": "src/okl/cli.py,src/okl/drift.py,ci/okl-verify.yml",
+      "verified_at": 1790362091282,
+      "verified_by": "`python3 -m pytest -q -k 'never_reports_clean or drift_step_warns'` exit 0, matched 'passed' @ 2026-09-25T18:48Z"
+    },
+    {
+      "id": "n_69244bb71160",
+      "type": "Defect",
+      "title": "Framework-mounted routes escape a per-handler auth sweep — the OpenAPI spec stayed public",
+      "scope": "org",
+      "files": "src/okl/service.py",
+      "verified_at": 1790362040626,
+      "verified_by": "`python3 -m pytest -q -k 'token_also_takes_down_the_openapi_spec'` exit 0, matched 'passed' @ 2026-09-25T18:47Z"
+    },
+    {
+      "id": "n_696a70084e1a",
+      "type": "Defect",
+      "title": "Importing verification records through the normal write path re-stamps them — a CI store seeded that way can never drift",
+      "scope": "org",
+      "files": "src/okl/drift.py,src/okl/seed.py",
+      "verified_at": 1790367155874,
+      "verified_by": "`python3 -m pytest -q -k drift_snapshot_gives_ci_a_store` exit 0, matched 'passed' @ 2026-09-25T20:12Z"
+    },
+    {
+      "id": "n_6b65aa35593c",
+      "type": "Rule",
+      "title": "A diagram with numbers in it is generated from the system, or it is already wrong",
+      "scope": "org",
+      "files": "docs/render_pipeline_diagram.py,docs/okl-retrieval-pipeline.svg,src/okl/core.py,src/okl/store.py",
+      "verified_at": 1790362129544,
+      "verified_by": "`python3 -m pytest -q -k 'pipeline_diagram_is_current'` exit 0, matched 'passed' @ 2026-09-25T18:48Z"
+    },
+    {
+      "id": "n_713b8c104f12",
+      "type": "Defect",
+      "title": "An empty result and a mistyped filter must not look identical",
+      "scope": "org",
+      "files": "src/okl/cli.py",
+      "verified_at": 1790362079359,
+      "verified_by": "`python3 -m pytest -q -k 'search_scope_refuses'` exit 0, matched 'passed' @ 2026-09-25T18:47Z"
+    },
+    {
+      "id": "n_71c09abf3f37",
+      "type": "Rule",
+      "title": "Dependency direction is one-way: store imports nothing, core imports store, adapters import client",
+      "scope": "repo:okl",
+      "files": "src/okl/store.py,src/okl/core.py,src/okl/client.py",
+      "verified_at": 1790362141414,
+      "verified_by": "`python3 -c \"import ast;m=lambda f:[(getattr(n,'module','') or '')for n in ast.walk(ast.parse(open(f).read()))if isinstance(n,(ast.Import,ast.ImportFrom))];assert not [x for x in m('src/okl/store.py') if 'okl' in x or x.startswith('.')],'store imports okl';assert not [x for x in m('src/okl/core.py') if any(a in x for a in('cli','service','mcp','client'))],'core imports an adapter';print('DIRECTION OK')\"` exit 0, matched 'DIRECTION OK' @ 2026-09-25T18:49Z"
+    },
+    {
+      "id": "n_7e292a18d45d",
+      "type": "Rule",
+      "title": "Hooks that shell out to a CLI must resolve the binary in layers — agent harnesses don't inherit your dev shell",
+      "scope": "org",
+      "files": "src/okl/scaffold/hooks/*.sh,src/okl/__main__.py",
+      "verified_at": 1790362099724,
+      "verified_by": "`python3 -m pytest -q -k 'encode_hook_resolver_layers'` exit 0, matched 'passed' @ 2026-09-25T18:48Z"
+    },
+    {
+      "id": "n_7e50e3588bcd",
+      "type": "Defect",
+      "title": "A test that imports an undeclared package passes only where that package happens to be installed",
+      "scope": "org",
+      "files": "tests/",
+      "verified_at": 1790362141856,
+      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' @ 2026-09-25T18:49Z"
+    },
+    {
+      "id": "n_849a5b0425ef",
+      "type": "Defect",
+      "title": "A tag that records where a lesson was FOUND cannot be filtered on as though it recorded where it APPLIES",
+      "scope": "org",
+      "files": "src/okl/core.py",
+      "verified_at": 1790362058088,
+      "verified_by": "`python3 -m pytest -q -k 'applies_to or off_stack'` exit 0, matched 'passed' @ 2026-09-25T18:47Z"
+    },
+    {
+      "id": "n_8519bf0f71c6",
+      "type": "Gate",
+      "title": "The encoding loop's write side needs a mechanical catch — a session-end hook that asks 'what did we learn?'",
+      "scope": "org",
+      "files": "src/okl/scaffold/hooks/stop-okl-encode.sh",
+      "verified_at": 1790362096931,
+      "verified_by": "`python3 -m pytest -q -k 'encode_hook_loop_guard or stamps_both_hooks'` exit 0, matched 'passed' @ 2026-09-25T18:48Z"
+    },
+    {
+      "id": "n_8a6e1abce5cc",
+      "type": "Defect",
+      "title": "A --dry-run test cannot reach code that runs after the dry-run returns",
+      "scope": "org",
+      "files": "evals/ab_harness.py,tests/test_scaffold.py",
+      "verified_at": 1790362138122,
+      "verified_by": "`python3 -m pytest -q -k 'off_series_instrument'` exit 0, matched 'passed' @ 2026-09-25T18:48Z"
+    },
+    {
+      "id": "n_93f96eae7359",
+      "type": "Defect",
+      "title": "The field designed to be matched against was the one field not indexed",
+      "scope": "org",
+      "files": "src/okl/store.py",
+      "verified_at": 1790362049352,
+      "verified_by": "`python3 -m pytest -q -k 'symptom_and_fix_are_searchable or index_built_before_symptom'` exit 0, matched 'passed' @ 2026-09-25T18:47Z"
+    },
+    {
+      "id": "n_967ef9825472",
+      "type": "Rule",
+      "title": "Anything written into someone else's repo is idempotent and non-clobbering; anything derived migrates on open",
+      "scope": "org",
+      "files": "src/okl/store.py,src/okl/scaffold_cmd.py",
+      "verified_at": 1790362094116,
+      "verified_by": "`python3 -m pytest -q -k 'no_clobber or dry_run_writes_nothing or seed_is_idempotent'` exit 0, matched 'passed' @ 2026-09-25T18:48Z"
+    },
+    {
+      "id": "n_991d07b0549e",
+      "type": "Defect",
+      "title": "A module-level app = None makes an ASGI service start healthy and 500 every request",
+      "scope": "org",
+      "files": "src/okl/service.py",
+      "verified_at": 1790362043549,
+      "verified_by": "`python3 -m pytest -q -k 'asgi_entrypoint_resolves'` exit 0, matched 'passed' @ 2026-09-25T18:47Z"
+    },
+    {
+      "id": "n_9ba48d85ed19",
+      "type": "Gate",
+      "title": "Pre-flight the retrieval before spending on an eval — it is deterministic and answers in milliseconds",
+      "scope": "org",
+      "files": "evals/preflight.py,evals/ab_harness.py",
+      "verified_at": 1790362141311,
+      "verified_by": "`python3 evals/preflight.py` exit 0, matched 'PRE-FLIGHT OK' @ 2026-09-25T18:49Z"
+    },
+    {
+      "id": "n_aa3e45a2ecd6",
+      "type": "Rule",
+      "title": "Provenance references rot precisely because nothing reads them — validate them at startup",
+      "scope": "org",
+      "files": "evals/ab_harness.py,evals/tasks.jsonl",
+      "verified_at": 1790362141151,
+      "verified_by": "`python3 evals/preflight.py` exit 0, matched 'PRE-FLIGHT OK' @ 2026-09-25T18:49Z"
+    },
+    {
+      "id": "n_adea7f2c7373",
+      "type": "Rule",
+      "title": "Never let stored data reach a shell — list-form subprocess, and a -- guard before any pathspec",
+      "scope": "org",
+      "files": "src/okl/drift.py,src/okl/cli.py",
+      "verified_at": 1790362122359,
+      "verified_by": "`python3 -m pytest -q -k 'stored_data_never_reaches_a_shell'` exit 0, matched 'passed' @ 2026-09-25T18:48Z"
+    },
+    {
+      "id": "n_b0457b37c65a",
+      "type": "Decision",
+      "title": "A controlled vocabulary is closed per store, not fixed in the package",
+      "scope": "org",
+      "files": "src/okl/store.py,docs/decisions/2026-07-21-subject-tags-controlled-vocabulary.md",
+      "verified_at": 1790362066530,
+      "verified_by": "`python3 -m pytest -q -k 'declare_its_own_tags'` exit 0, matched 'passed' @ 2026-09-25T18:47Z"
+    },
+    {
+      "id": "n_b4050b826687",
+      "type": "Defect",
+      "title": "A verification stamp earned by grepping for expected strings proves nothing about what else is there",
+      "scope": "org",
+      "files": "ci/check-diagram-figures.sh,docs/okl-sixth-surface.excalidraw",
+      "verified_at": 1788262025269,
+      "verified_by": "`./ci/check-diagram-figures.sh` exit 0, matched 'DIAGRAM_FIGURES_RECEIPTED' @ 2026-09-01T11:27Z"
+    },
+    {
+      "id": "n_b40a468119f6",
+      "type": "Defect",
+      "title": "A tag on some records is not a verdict on the collection they sit in",
+      "scope": "org",
+      "files": "src/okl/cli.py",
+      "verified_at": 1790362070319,
+      "verified_by": "`python3 -m pytest -q -k 'pack_fits_only or empty_store_guidance'` exit 0, matched 'passed' @ 2026-09-25T18:47Z"
+    },
+    {
+      "id": "n_b550ba9c5c8a",
+      "type": "Rule",
+      "title": "The architecture diagram and README are review surfaces — enrolled in drift so they must move with the system",
+      "scope": "repo:okl",
+      "files": "src/okl/*.py,docs/okl-sixth-surface.excalidraw,README.md",
+      "verified_at": 1790362126212,
+      "verified_by": "`python3 -m pytest -q -k 'diagram'` exit 0, matched 'passed' @ 2026-09-25T18:48Z"
+    },
+    {
+      "id": "n_b6cc6890ba26",
+      "type": "Defect",
+      "title": "A subprocess that shells out to a coding agent must run in a clean room, or the repo's own hooks answer it",
+      "scope": "org",
+      "files": "ci/review-agent.sh,evals/ab_harness.py",
+      "verified_at": 1790362119534,
+      "verified_by": "`python3 -m pytest -q -k 'review_agent_soft_passes'` exit 0, matched 'passed' @ 2026-09-25T18:48Z"
+    },
+    {
+      "id": "n_b74bad29fd87",
+      "type": "Rule",
+      "title": "A port is defined by behaviour, not by its signatures — state the contract and test every adapter against one body",
+      "scope": "org",
+      "files": "src/okl/store.py,tests/test_okl.py",
+      "verified_at": 1790362055161,
+      "verified_by": "`python3 -m pytest -q -k 'backend_conformance'` exit 0, matched 'passed' @ 2026-09-25T18:47Z"
+    },
+    {
+      "id": "n_be9f13d587b1",
+      "type": "Defect",
+      "title": "A swappable backend must match on quality, not just interface — the Postgres path had no ranking at all",
+      "scope": "org",
+      "files": "src/okl/store.py",
+      "verified_at": 1790362052241,
+      "verified_by": "`python3 -m pytest -q -k 'postgres_search_is_ranked_fulltext or backend_conformance or tsvector_covers_tags'` exit 0, matched 'passed' @ 2026-09-25T18:47Z"
+    },
+    {
+      "id": "n_c95bdc056620",
+      "type": "Defect",
+      "title": "A rename sweeps the thing renamed, not the checks that test for the old name — capability checks keyed on a name break silently",
+      "scope": "org",
+      "files": "ci/okl-verify.yml",
+      "verified_at": 1790362113843,
+      "verified_by": "`python3 -m pytest -q -k 'shipped_workflows_are_hardened'` exit 0, matched 'passed' @ 2026-09-25T18:48Z"
+    },
+    {
+      "id": "n_d45d7bf64896",
+      "type": "Decision",
+      "title": "Entered a crowded category deliberately: differentiate on verification-of-memory, compose with memory infra, never compete on recall",
+      "scope": "repo:okl",
+      "files": "README.md",
+      "verified_at": 1790362141592,
+      "verified_by": "`bash -c \"! grep -inE 'better recall|best.{0,12}memory|beats (mem0|zep|letta)' README.md && echo 'POSITIONING OK'\"` exit 0, matched 'POSITIONING OK' @ 2026-09-25T18:49Z"
+    },
+    {
+      "id": "n_d8e5ee92ad8f",
+      "type": "Defect",
+      "title": "Inline interpreter snippets in shell hooks break on version-specific syntax — and a silent fallback hides it",
+      "scope": "org",
+      "files": "src/okl/scaffold/hooks/*.sh",
+      "verified_at": 1790362103085,
+      "verified_by": "`python3 -m pytest -q -k 'encode_hook_loop_guard or encode_hook_resolver'` exit 0, matched 'passed' @ 2026-09-25T18:48Z"
+    },
+    {
+      "id": "n_e635fd921086",
+      "type": "Defect",
+      "title": "PyPI rejects a package name as 'too similar' to an existing one — with a bare 400 that hides the reason",
+      "scope": "org",
+      "files": "pyproject.toml",
+      "verified_at": 1790362141667,
+      "verified_by": "`bash -c \"grep -q 'name = \\\"org-knowledge-layer\\\"' pyproject.toml && grep -q 'okl = ' pyproject.toml && echo 'NAME OK'\"` exit 0, matched 'NAME OK' @ 2026-09-25T18:49Z"
+    },
+    {
+      "id": "n_e7988ff536fb",
+      "type": "Rule",
+      "title": "Exit codes are this CLI's public API: 0 clean, 1 findings, 2 refused",
+      "scope": "repo:okl",
+      "files": "src/okl/cli.py",
+      "verified_at": 1790362076532,
+      "verified_by": "`python3 -m pytest -q -k 'fails_closed or empty_store_is_never_reported or search_scope_refuses or never_reports_clean'` exit 0, matched 'passed' @ 2026-09-25T18:47Z"
+    },
+    {
+      "id": "n_ec568941f68a",
+      "type": "Defect",
+      "title": "Honouring a config source in the resolver but not in the 'is it configured' gate splits read from write",
+      "scope": "org",
+      "files": "src/okl/client.py",
+      "verified_at": 1790362082230,
+      "verified_by": "`python3 -m pytest -q -k 'naming_a_store_by_env_var'` exit 0, matched 'passed' @ 2026-09-25T18:48Z"
+    },
+    {
+      "id": "n_ed7e782d12fd",
+      "type": "Defect",
+      "title": "Gating writes but not reads leaks the whole store through the dump endpoint",
+      "scope": "org",
+      "files": "src/okl/service.py",
+      "verified_at": 1790362037718,
+      "verified_by": "`python3 -m pytest -q -k 'service_token_gates_reads_as_well_as_writes'` exit 0, matched 'passed' @ 2026-09-25T18:47Z"
+    },
+    {
+      "id": "n_fe26d1897041",
+      "type": "Defect",
+      "title": "A guard that compares against the latest sample fires on the run that repairs the series",
+      "scope": "org",
+      "files": "evals/ab_harness.py,tests/test_scaffold.py",
+      "verified_at": 1790362132392,
+      "verified_by": "`python3 -m pytest -q -k 'off_series_instrument'` exit 0, matched 'passed' @ 2026-09-25T18:48Z"
+    }
+  ]
+}

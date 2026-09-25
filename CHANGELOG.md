@@ -21,6 +21,14 @@
   governing any file reports "NOTHING CHECKED" and exits 2 under `--gate`; the all-clear
   states how many rules it checked. The shipped `okl-verify` workflow turns exit 2 into a
   "Drift not checked" warning when the job has no store, and fails when it had one.
+- **CI can check drift without a store** (#36). `okl export --drift` writes
+  `okl-drift.json`, the rules drift reads (ids, titles, globs, verification evidence, no
+  lesson bodies); `okl drift --snapshot` reads the committed copy only, and refuses an
+  entry whose `verified_at` does not match its `okl verify` evidence stamp. `okl verify`
+  refreshes an existing snapshot. The shipped workflow uses it when no service is set,
+  which also covers fork PRs. Seeding the rules in CI instead would have been a false
+  all-clear: `record()` stamps them verified at load time. Drift's advice line no longer
+  recommends `okl record --verified`.
 - **`okl init` names an empty store and how to fill it** (#27), listing the bundled seed
   packs that fit the repo's declared stack. `okl seed`'s "matches your interests" marker
   now matches on stack too: a pack about .NET no longer matches a React repo because a few

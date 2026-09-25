@@ -1887,6 +1887,112 @@ def test_drift_gate_never_reports_clean_having_checked_nothing(tmp_path, monkeyp
     assert okl("drift", "--gate").returncode == 1
 
 
+def test_drift_snapshot_gives_ci_a_store_it_cannot_clear_by_hand(tmp_path, monkeypatch):
+    """#36: CI has no store, so drift checked nothing. A committed snapshot is its store.
+
+    Seeding the rules in CI would have been a false all-clear -- record() stamps
+    verified_at fresh, so nothing could drift. The snapshot is read as it was exported,
+    from the COMMITTED copy only, and a timestamp that does not match its `okl verify`
+    evidence refuses the run rather than clearing a rule.
+    """
+    import json
+    import shutil
+    import subprocess
+    import sys
+    import time
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("OKL_DATABASE_URL", raising=False)
+    monkeypatch.delenv("OKL_SERVICE_URL", raising=False)
+    git = ["git", "-c", "user.email=t@t", "-c", "user.name=t"]
+    subprocess.run(["git", "init", "-q", "."], check=True)
+
+    def okl(*a):
+        return subprocess.run([sys.executable, "-m", "okl", *a], capture_output=True, text=True)
+
+    def commit(msg, *paths, env=None):
+        subprocess.run(["git", "add", *paths], check=True)
+        subprocess.run([*git, "commit", "-qm", msg], check=True, env=env)
+
+    (tmp_path / "a.py").write_text("x = 1\n"); commit("a", "a.py")
+    okl("init", "--repo", "r")
+    rid = okl("record", "--type", "Rule", "--scope", "repo", "--title", "t", "--body",
+              "a lesson body", "--files", "a.py").stdout.strip().splitlines()[-1]
+    okl("verify", rid, "--run", "true", "--expect", "")
+    snap_file = tmp_path / "okl-drift.json"
+    assert not snap_file.exists(), "verify refreshes a snapshot, it never creates one"
+
+    # 1. Export: the rules drift reads, without their lessons.
+    assert okl("export", "--drift").returncode == 0
+    snap = json.loads(snap_file.read_text())
+    assert [r["id"] for r in snap["rules"]] == [rid]
+    assert "a lesson body" not in snap_file.read_text()
+
+    # 2. An uncommitted snapshot is not evidence: a gate reads committed files only.
+    r = okl("drift", "--gate", "--snapshot", "okl-drift.json")
+    assert r.returncode == 2 and "not committed" in r.stderr
+    commit("snapshot", "okl-drift.json")
+
+    # 3. Re-verifying refreshes the snapshot in place, so CI sees it once committed.
+    time.sleep(1.1)
+    assert "refreshed" in okl("verify", rid, "--run", "true", "--expect", "").stdout
+    assert json.loads(snap_file.read_text())["rules"][0]["verified_at"] > snap["rules"][0]["verified_at"]
+    commit("reverified", "okl-drift.json")
+
+    # 4. CI: no store at all, only the committed snapshot. A real, counted pass.
+    shutil.rmtree(tmp_path / ".okl")
+    r = okl("drift", "--gate", "--snapshot", "okl-drift.json")
+    assert r.returncode == 0 and "1 rule(s) checked" in r.stdout, r.stdout + r.stderr
+
+    # 5. The governed file changes after verification: drift, from the snapshot alone.
+    # (A minute ahead: git stores commit time to the second -- see the #21 test.)
+    later = {**os.environ, "GIT_COMMITTER_DATE": f"@{int(time.time()) + 60} +0000",
+             "GIT_AUTHOR_DATE": f"@{int(time.time()) + 60} +0000"}
+    (tmp_path / "a.py").write_text("x = 2\n"); commit("b", "a.py", env=later)
+    r = okl("drift", "--gate", "--snapshot", "okl-drift.json")
+    assert r.returncode == 1
+    assert "okl record --verified" not in r.stdout, "drift must not advise clearing by assertion"
+
+    # 6. Clearing it by editing the timestamp: the working-tree edit is not read at all...
+    forged = json.loads(snap_file.read_text())
+    forged["rules"][0]["verified_at"] = (int(time.time()) + 3600) * 1000
+    snap_file.write_text(json.dumps(forged))
+    assert okl("drift", "--gate", "--snapshot", "okl-drift.json").returncode == 1
+    # ...and once committed, it no longer matches its evidence stamp, so the run refuses.
+    commit("forged", "okl-drift.json")
+    r = okl("drift", "--gate", "--snapshot", "okl-drift.json")
+    assert r.returncode == 2 and "does not match the evidence stamp" in r.stderr
+
+
+def test_snapshot_entries_are_checked_before_they_are_trusted():
+    """#37 review: a malformed snapshot must refuse (exit 2, "did not run"), not crash.
+
+    A traceback exits 1, which under --gate reads as "drift found". And the timestamp
+    window is pinned at both edges: `okl verify` stamps its evidence just before the store
+    sets verified_at, so a stamp can cross a minute boundary and a service clock can
+    differ -- the window allows that, and nothing further.
+    """
+    from okl import drift
+    ok = {"id": "n1", "title": "t", "scope": "org", "files": "a.py",
+          "verified_at": 1_790_000_040_000, "verified_by": "`true` exit 0 @ 2026-09-21T14:14Z"}
+    stamped = 1_790_000_040_000   # 2026-09-21T14:14:00Z
+
+    for bad in ({"format": "x", "rules": "not a list"},
+                {"rules": [{**ok, "title": None}]},
+                {"rules": [{k: v for k, v in ok.items() if k != "files"}]},
+                {"rules": [{**ok, "verified_at": "1790000040000"}]},
+                {"rules": [{**ok, "verified_at": True}]},
+                {"rules": ["not an entry"]}):
+        nodes, problems = drift.nodes_from_snapshot(bad)
+        assert nodes == [] and problems, bad
+
+    def window(at):
+        return drift.stamp_problem({**ok, "verified_at": at}) is None
+    assert window(stamped) and window(stamped + 59_999)          # the stamped minute
+    assert window(stamped - 60_000) and window(stamped + 299_999)  # skew allowed
+    assert not window(stamped - 60_001) and not window(stamped + 300_000)
+
+
 def test_recurrence_report_counts_what_the_metric_could_not_see(store):
     """#31: the metric printed "0 recurrences ✓" while the store held three.
 

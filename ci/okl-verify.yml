@@ -5,8 +5,9 @@
 #      rule was last verified (a stale rule is a rule nobody re-checked).
 #   2. `gates/run-gates.sh` — the repo's mechanical method gates, when the scaffold is present.
 #
-# Shared-layer connection is optional: without OKL_SERVICE_URL the drift gate runs against
-# the repo's local .okl store. Configure the secrets to verify against the org layer and to
+# Shared-layer connection is optional: without OKL_SERVICE_URL the drift gate reads the
+# committed snapshot okl-drift.json (`okl export --drift`; `okl verify` keeps it current),
+# which also covers fork PRs, since they get no secrets. Configure the secrets to verify against the org layer and to
 # let gate scripts emit receipts (`okl link <gate_id> VERIFIED_ON <defect_id>`) — emit those
 # from inside the gate that proved itself against real drift, where the ids are known.
 name: okl-verify
@@ -69,8 +70,10 @@ jobs:
         run: |
           if [ -n "${OKL_SERVICE_URL:-}" ]; then
             echo "verifying against the shared layer at $OKL_SERVICE_URL"
+          elif git ls-files --error-unmatch okl-drift.json >/dev/null 2>&1; then
+            echo "no OKL_SERVICE_URL secret — verifying against the committed okl-drift.json"
           else
-            echo "no OKL_SERVICE_URL secret — verifying against the repo-local store"
+            echo "no OKL_SERVICE_URL secret and no committed okl-drift.json — nothing to verify against"
           fi
 
       - name: Drift gate — rules whose governed code changed after last verification
@@ -80,10 +83,21 @@ jobs:
         # as a warning annotation on the PR rather than a failure, because an unseeded
         # store is a setup gap, not a defect in the change under review -- and failing on it
         # would block every pull request from the moment okl is installed. To make this
-        # step a real check, give CI a store: set the OKL_SERVICE_URL secret, or seed one.
+        # step a real check, give CI a store: commit `okl export --drift`, or set the
+        # OKL_SERVICE_URL secret. A committed snapshot IS a store for this purpose, so once
+        # one exists, exit 2 fails like any other configured store.
         run: |
+          snapshot=""
+          if [ -z "${OKL_SERVICE_URL:-}${OKL_DATABASE_URL:-}" ] \
+             && git ls-files --error-unmatch okl-drift.json >/dev/null 2>&1; then
+            snapshot="okl-drift.json"
+          fi
           set +e
-          okl drift --gate
+          if [ -n "$snapshot" ]; then
+            okl drift --gate --snapshot "$snapshot"
+          else
+            okl drift --gate
+          fi
           rc=$?
           set -e
           # Exit 2 means "did not run", which has two causes that deserve opposite outcomes.
@@ -91,8 +105,8 @@ jobs:
           # WAS configured and okl still did not run -- unreachable, refused, or holding no
           # rule for this repo -- something broke, and passing would hide an outage behind
           # a green check. The job knows which it is; okl's exit code alone cannot say.
-          if [ "$rc" -eq 2 ] && [ -z "${OKL_SERVICE_URL:-}${OKL_DATABASE_URL:-}" ]; then
-            echo "::warning title=Drift not checked::No knowledge store is available to this job, so no rule was checked for drift. This step passing is NOT an all-clear."
+          if [ "$rc" -eq 2 ] && [ -z "${OKL_SERVICE_URL:-}${OKL_DATABASE_URL:-}${snapshot}" ]; then
+            echo "::warning title=Drift not checked::No knowledge store is available to this job, so no rule was checked for drift. This step passing is NOT an all-clear. Commit \`okl export --drift\` to give CI one."
           elif [ "$rc" -ne 0 ]; then
             exit "$rc"
           fi

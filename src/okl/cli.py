@@ -303,6 +303,54 @@ def cmd_verify(args) -> int:
         print(f"OKL UNREACHABLE — check passed but the stamp was NOT recorded.\n{e}", file=sys.stderr)
         return 2
     print(f"✓ verified {node['id']} — {node['title']}\n  evidence: {node['verified_by']}")
+    # Keep CI's view in step. A snapshot that exists is one CI reads, and re-verifying
+    # without re-exporting leaves CI red for a rule that is green here -- the safe
+    # direction, but a step everyone would forget. Only refreshed, never created.
+    snap = _snapshot_path()
+    if snap.exists():
+        try:
+            _write_snapshot(Client(), snap)
+            print(f"  refreshed {snap.name} — commit it so CI sees this verification")
+        except OKLUnreachableError as e:
+            print(f"  ! {snap.name} NOT refreshed: {e}", file=sys.stderr)
+    return 0
+
+
+def _snapshot_path() -> Path:
+    """Where the committed drift snapshot lives: the project root, found the way the
+    config is, so running from a subdirectory neither misses it nor writes a second one."""
+    from . import drift
+    cfg = _find_config()
+    return (cfg.parent.parent if cfg else Path.cwd()) / drift.SNAPSHOT_FILE
+
+
+def _write_snapshot(client: Client, path: Path) -> int:
+    from . import drift
+    snap = drift.snapshot(client.all_nodes(), client.repo)
+    path.write_text(drift.dump_snapshot(snap))
+    return len(snap["rules"])
+
+
+def cmd_export(args) -> int:
+    """Write the committed drift snapshot CI reads when it has no store (issue #36)."""
+    client = Client()
+    if not client.configured:
+        print("OKL NOT CONFIGURED — nothing to export. Run `okl init`, `okl connect <url>`, "
+              "or set OKL_DATABASE_URL.", file=sys.stderr)
+        return 2
+    path = Path(args.output) if args.output else _snapshot_path()
+    try:
+        n = _write_snapshot(client, path)
+    except OKLUnreachableError as e:
+        print(f"OKL UNREACHABLE — nothing exported.\n{e}", file=sys.stderr)
+        return 2
+    if n == 0:
+        # An empty snapshot would make CI report NOTHING CHECKED, which is honest, but
+        # committing one is almost certainly a mistake worth saying so about.
+        print(f"wrote {path} with 0 rules — no rule in this store governs files "
+              "(`okl record ... --files <globs>` enrolls one)", file=sys.stderr)
+        return 2
+    print(f"wrote {path}: {n} rule(s). Commit it — CI's drift gate reads the committed copy.")
     return 0
 
 
@@ -388,6 +436,8 @@ def cmd_drift(args) -> int:
     """Source-vs-spec drift: rules whose governed code changed after last verification."""
     from . import drift
     client = Client()
+    if args.snapshot:
+        return _drift_from_snapshot(args, client)
     # Refused before any store is opened. Reading an unconfigured directory created an
     # empty okl.db as a side effect, found nothing in it, and printed OK -- which is what
     # CI saw on every run, because `okl init` gitignores the store (issue #21). `check`
@@ -402,7 +452,35 @@ def cmd_drift(args) -> int:
         print(f"OKL UNREACHABLE — cannot check drift.\n{e}", file=sys.stderr)
         return 2
     repo = args.repo or client.repo
-    hits, checked = drift.scan_drift(nodes, repo, repo_dir=args.repo_dir)
+    return _report_drift(args, drift.scan_drift(nodes, repo, repo_dir=args.repo_dir))
+
+
+def _drift_from_snapshot(args, client: Client) -> int:
+    """Drift against a committed snapshot instead of a store (issue #36).
+
+    The snapshot is the store for a job that has none: CI without a service, and every
+    fork PR. It names the store, so it answers `configured` on its own. An entry whose
+    timestamp does not match its evidence refuses the whole run -- one hand-cleared rule
+    would otherwise pass the gate while the rest of the report looked honest.
+    """
+    from . import drift
+    try:
+        snap = drift.read_committed_snapshot(args.snapshot, args.repo_dir)
+    except ValueError as e:
+        print(f"OKL SNAPSHOT REFUSED — {e}", file=sys.stderr)
+        return 2
+    nodes, problems = drift.nodes_from_snapshot(snap)
+    if problems:
+        print(f"OKL SNAPSHOT REFUSED — {len(problems)} entr(y/ies) cannot be trusted; re-run "
+              "`okl verify` for each and re-export:\n  " + "\n  ".join(problems), file=sys.stderr)
+        return 2
+    repo = args.repo or snap.get("repo") or client.repo
+    return _report_drift(args, drift.scan_drift(nodes, repo, repo_dir=args.repo_dir))
+
+
+def _report_drift(args, scan) -> int:
+    from . import drift
+    hits, checked = scan
     if args.format == "json":
         _print_json({"drift": [h.as_dict() for h in hits], "count": len(hits),
                      "checked": checked})
@@ -826,7 +904,16 @@ def build_parser() -> argparse.ArgumentParser:
     pdr.add_argument("--repo"); pdr.add_argument("--repo-dir", dest="repo_dir", default=".")
     pdr.add_argument("--gate", action="store_true", help="exit 1 if drift found (for CI)")
     pdr.add_argument("--format", choices=["text", "json"], default="text")
+    pdr.add_argument("--snapshot", metavar="FILE",
+                     help="read rules from a committed snapshot (okl export --drift) "
+                          "instead of a store — for CI with no store")
     pdr.set_defaults(func=cmd_drift)
+
+    pex = sub.add_parser("export", help="write the committed drift snapshot CI reads (okl-drift.json)")
+    pex.add_argument("--drift", action="store_true", required=True,
+                     help="the drift snapshot (the only export today; named so others can follow)")
+    pex.add_argument("-o", "--output", help="path (default: okl-drift.json at the project root)")
+    pex.set_defaults(func=cmd_export)
 
     pdd = sub.add_parser("dedup", help="report near-duplicate records for review (never auto-merges)")
     pdd.add_argument("--threshold", type=float, default=core.DEDUP_THRESHOLD,
