@@ -1704,3 +1704,108 @@ def test_a_store_can_declare_its_own_tags_and_still_reject_typos(store):
     core.record(store, type="Vocabulary", scope="org", title="powershell",
                 body="Windows automation.")
     assert "powershell" in store.declared_tags()
+
+
+def test_a_bundled_pack_fits_only_the_stack_it_is_about():
+    """One shared subject must not make a stack-specific pack look like a fit.
+
+    The .NET packs carry `security` on a handful of records. Matching on any shared tag
+    recommended 109 .NET records to a repo that had declared `react, security` — REPORT
+    §4d's mistake of reading a label on some records as a verdict on the whole, made at
+    import time, where a pack arrives all at once.
+    """
+    from okl.cli import _pack_fits
+
+    # A stack pack fits only a repo that declared that stack, however many subjects match.
+    assert not _pack_fits({"dotnet", "security", "messaging"}, {"react", "security"})
+    assert _pack_fits({"react", "security"}, {"react", "security"})
+    assert _pack_fits({"dotnet", "security"}, {"dotnet"})
+    # A pack about no stack still fits on a shared subject.
+    assert _pack_fits({"method", "eval-integrity"}, {"eval-integrity"})
+    assert not _pack_fits({"method"}, {"security"})
+
+
+def test_empty_store_guidance_is_tailored_and_reaches_the_person_not_the_agent(tmp_path, monkeypatch):
+    """#27: an empty store is named at init, with the next steps that fit THIS repo.
+
+    Four properties, each of which a plainer version got wrong or would:
+      1. the packs named are the ones matching the repo's declared stack, not every pack
+         that happens to share a subject;
+      2. /seed-from-codebase is named only where it is installed, since it exists only
+         after `okl scaffold`;
+      3. under `check` the guidance goes to stderr — stdout is what the UserPromptSubmit
+         hook hands the agent, and setup advice is for the person;
+      4. a populated store, or a store owned by a shared service, gets no guidance at all.
+    """
+    import subprocess
+    import sys
+
+    monkeypatch.chdir(tmp_path)
+    # Driven through the real CLI, so the process must not inherit a store the developer
+    # pointed at: the CLI honours both variables, and either would redirect every call.
+    monkeypatch.delenv("OKL_DATABASE_URL", raising=False)
+    monkeypatch.delenv("OKL_SERVICE_URL", raising=False)
+    subprocess.run(["git", "init", "-q", "."], check=True)
+
+    def okl(*a):
+        return subprocess.run([sys.executable, "-m", "okl", *a], capture_output=True, text=True)
+
+    # 1. Tailored to the declared stack.
+    out = okl("init", "--repo", "r", "--interests", "react,security").stdout
+    assert "store is empty" in out
+    assert "react-defects.json" in out and "frontend-canon.json" in out
+    assert "dotnet" not in out, "a React repo must not be pointed at the .NET packs"
+
+    # 2. Not scaffolded yet, so the agent command is offered as something to install.
+    assert "`okl scaffold .` adds /seed-from-codebase" in out
+
+    # 3. `check` on the empty store: guidance on stderr only; json stays clean.
+    chk = okl("check", "--task", "add an endpoint", "--format", "agent")
+    assert "store is empty" in chk.stderr
+    assert "store is empty" not in chk.stdout, "setup advice must not enter the agent's context"
+    js = okl("check", "--task", "add an endpoint", "--format", "json")
+    assert "store is empty" not in js.stdout + js.stderr
+
+    # 2 again. Once scaffolded, the command is named directly as something to run.
+    okl("scaffold", ".")
+    assert "ask your agent to run /seed-from-codebase" in okl("init", "--repo", "r").stdout
+
+    # 5. From a subdirectory the command is still found. okl locates its config by walking
+    # up, so `check` runs from anywhere in the repo; a cwd-relative lookup missed the
+    # command installed at the root and advised `okl scaffold .`, which would have stamped
+    # the kit into the subdirectory. Found in review.
+    (tmp_path / "src" / "deep").mkdir(parents=True)
+    monkeypatch.chdir(tmp_path / "src" / "deep")
+    sub = okl("check", "--task", "add an endpoint", "--format", "agent")
+    assert "ask your agent to run /seed-from-codebase" in sub.stderr
+    assert "okl scaffold ." not in sub.stderr
+    monkeypatch.chdir(tmp_path)
+
+    # 4. A populated store gets nothing.
+    okl("record", "--type", "Rule", "--scope", "repo", "--title", "one lesson")
+    assert "store is empty" not in okl("init", "--repo", "r").stdout
+
+
+def test_suggested_seed_commands_survive_a_path_with_spaces(tmp_path, monkeypatch):
+    """A suggested command must be copy-pasteable. The bundled seed directory is a checkout
+    or an install path, either of which can contain a space; unquoted, a copied
+    `okl seed <path>` splits into two arguments. Found in review."""
+    import shlex
+
+    from okl import cli
+    from okl.client import Client
+
+    packs = tmp_path / "my project" / "seed"
+    packs.mkdir(parents=True)
+    (packs / "react-defects.json").write_text(
+        '{"nodes": [{"type": "Rule", "title": "t", "scope": "org", "tags": "react"}]}')
+    monkeypatch.setattr(cli, "_bundled_seed_dir", lambda: packs)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("OKL_DATABASE_URL", raising=False)
+    monkeypatch.delenv("OKL_SERVICE_URL", raising=False)
+
+    client = Client(config={"repo": "r", "interests": ["react"]})
+    line = next(ln for ln in cli._empty_store_guidance(client) if "okl seed" in ln)
+    args = shlex.split(line.split("(")[0])
+    assert args[:2] == ["okl", "seed"] and len(args) == 3, f"split into {args}"
+    assert args[2] == str(packs / "react-defects.json")
