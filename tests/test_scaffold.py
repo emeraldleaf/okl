@@ -696,12 +696,22 @@ def test_shipped_drift_step_warns_when_nothing_was_checked():
     body = "\n".join(block)
     assert "okl drift --gate" in body, "extracted the wrong block"
 
-    for okl_code, want_code, want_warning in [(0, 0, False), (1, 1, False), (2, 0, True)]:
+    # (okl exit, store configured for the job?, expected step exit, expect the warning?)
+    # The last row is the regression found in review: with a store configured, exit 2 is
+    # an outage or a misconfiguration, and turning it into a warning hid it behind green.
+    cases = [(0, False, 0, False), (1, False, 1, False), (2, False, 0, True),
+             (0, True, 0, False), (1, True, 1, False), (2, True, 2, False)]
+    base = {k: v for k, v in os.environ.items() if k not in ("OKL_SERVICE_URL", "OKL_DATABASE_URL")}
+    for okl_code, configured, want_code, want_warning in cases:
         with tempfile.TemporaryDirectory() as d:
             stub = Path(d) / "okl"
             stub.write_text(f"#!/bin/sh\nexit {okl_code}\n")
             stub.chmod(0o755)
+            env = {**base, "PATH": f"{d}:{os.environ['PATH']}"}
+            if configured:
+                env["OKL_SERVICE_URL"] = "https://store.example"
             r = subprocess.run(["bash", "-euo", "pipefail", "-c", body], capture_output=True,
-                               text=True, env={**os.environ, "PATH": f"{d}:{os.environ['PATH']}"})
-        assert r.returncode == want_code, f"okl exit {okl_code} -> step exit {r.returncode}"
-        assert ("::warning title=Drift not checked" in r.stdout) == want_warning
+                               text=True, env=env)
+        label = f"okl exit {okl_code}, store {'configured' if configured else 'absent'}"
+        assert r.returncode == want_code, f"{label} -> step exit {r.returncode}"
+        assert ("::warning title=Drift not checked" in r.stdout) == want_warning, label

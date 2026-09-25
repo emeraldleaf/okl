@@ -86,7 +86,12 @@ jobs:
           okl drift --gate
           rc=$?
           set -e
-          if [ "$rc" -eq 2 ]; then
+          # Exit 2 means "did not run", which has two causes that deserve opposite outcomes.
+          # If this job was never given a store, it is the setup gap above: warn. If a store
+          # WAS configured and okl still did not run -- unreachable, refused, or holding no
+          # rule for this repo -- something broke, and passing would hide an outage behind
+          # a green check. The job knows which it is; okl's exit code alone cannot say.
+          if [ "$rc" -eq 2 ] && [ -z "${OKL_SERVICE_URL:-}${OKL_DATABASE_URL:-}" ]; then
             echo "::warning title=Drift not checked::No knowledge store is available to this job, so no rule was checked for drift. This step passing is NOT an all-clear."
           elif [ "$rc" -ne 0 ]; then
             exit "$rc"
