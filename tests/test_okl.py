@@ -1770,6 +1770,42 @@ def test_empty_store_guidance_is_tailored_and_reaches_the_person_not_the_agent(t
     okl("scaffold", ".")
     assert "ask your agent to run /seed-from-codebase" in okl("init", "--repo", "r").stdout
 
+    # 5. From a subdirectory the command is still found. okl locates its config by walking
+    # up, so `check` runs from anywhere in the repo; a cwd-relative lookup missed the
+    # command installed at the root and advised `okl scaffold .`, which would have stamped
+    # the kit into the subdirectory. Found in review.
+    (tmp_path / "src" / "deep").mkdir(parents=True)
+    monkeypatch.chdir(tmp_path / "src" / "deep")
+    sub = okl("check", "--task", "add an endpoint", "--format", "agent")
+    assert "ask your agent to run /seed-from-codebase" in sub.stderr
+    assert "okl scaffold ." not in sub.stderr
+    monkeypatch.chdir(tmp_path)
+
     # 4. A populated store gets nothing.
     okl("record", "--type", "Rule", "--scope", "repo", "--title", "one lesson")
     assert "store is empty" not in okl("init", "--repo", "r").stdout
+
+
+def test_suggested_seed_commands_survive_a_path_with_spaces(tmp_path, monkeypatch):
+    """A suggested command must be copy-pasteable. The bundled seed directory is a checkout
+    or an install path, either of which can contain a space; unquoted, a copied
+    `okl seed <path>` splits into two arguments. Found in review."""
+    import shlex
+
+    from okl import cli
+    from okl.client import Client
+
+    packs = tmp_path / "my project" / "seed"
+    packs.mkdir(parents=True)
+    (packs / "react-defects.json").write_text(
+        '{"nodes": [{"type": "Rule", "title": "t", "scope": "org", "tags": "react"}]}')
+    monkeypatch.setattr(cli, "_bundled_seed_dir", lambda: packs)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("OKL_DATABASE_URL", raising=False)
+    monkeypatch.delenv("OKL_SERVICE_URL", raising=False)
+
+    client = Client(config={"repo": "r", "interests": ["react"]})
+    line = next(ln for ln in cli._empty_store_guidance(client) if "okl seed" in ln)
+    args = shlex.split(line.split("(")[0])
+    assert args[:2] == ["okl", "seed"] and len(args) == 3, f"split into {args}"
+    assert args[2] == str(packs / "react-defects.json")

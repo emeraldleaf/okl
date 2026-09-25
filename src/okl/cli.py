@@ -8,11 +8,13 @@ from __future__ import annotations
 import argparse
 import contextlib
 import json
+import os
+import shlex
 import sys
 from pathlib import Path
 
 from . import core
-from .client import Client, OKLUnreachableError, load_config, save_config
+from .client import Client, OKLUnreachableError, _find_config, load_config, save_config
 
 
 def _print_json(obj) -> None:
@@ -560,7 +562,9 @@ def _empty_store_guidance(client: Client) -> list[str]:
             packs.append((f, count))
     if packs:
         lines.append(f"    bundled packs that match your interests ({', '.join(sorted(interests))}):")
-        lines += [f"      okl seed {f}    ({count} records)" for f, count in packs]
+        # Quoted: the bundled dir is a checkout or an install path, and either can contain
+        # a space, which splits a copied command into two arguments.
+        lines += [f"      okl seed {shlex.quote(str(f))}    ({count} records)" for f, count in packs]
     elif interests:
         lines.append("    no bundled pack matches your interests; `okl seed` lists all of them")
     else:
@@ -569,12 +573,20 @@ def _empty_store_guidance(client: Client) -> list[str]:
     # Name the agent-driven route only where it exists. The seeding commands are stamped by
     # `okl scaffold`, possibly under a renamed .claude dir, and pointing at one that is not
     # installed sends the reader to a command their agent will not recognise.
-    if any(Path.cwd().glob("*/commands/seed-from-codebase.md")):
+    #
+    # Resolved from the PROJECT ROOT, not the current directory. okl finds its config by
+    # walking up, so `check` runs fine from a subdirectory — where a cwd-relative lookup
+    # both missed a command installed at the root and advised `okl scaffold .`, which
+    # would have stamped the whole kit into that subdirectory.
+    cfg = _find_config()
+    root = cfg.parent.parent if cfg else Path.cwd()
+    if any(root.glob("*/commands/seed-from-codebase.md")):
         lines.append("    ask your agent to run /seed-from-codebase: it proposes cited records"
                      " from this repo's own code")
     else:
-        lines.append("    `okl scaffold .` adds /seed-from-codebase, which has your agent propose"
-                     " cited records from this repo's own code")
+        rel = os.path.relpath(root, Path.cwd())
+        lines.append(f"    `okl scaffold {shlex.quote(rel)}` adds /seed-from-codebase, which has"
+                     " your agent propose cited records from this repo's own code")
     lines.append("    or write one yourself: okl record --type Rule --scope repo --title \"...\"")
     return lines
 
