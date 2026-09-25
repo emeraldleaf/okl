@@ -141,8 +141,7 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901
         # separate SQL join that could not read the seed packs' `defect RECURS_IN <repo>`
         # form, so one payload could say count 0 beside report.armed 1. They are now
         # derived from the report: one row per gate, the shape older clients read.
-        rows = [{"recurred_in": r["recurred_in"], "defect_class": r["defect_class"], "gate": g}
-                for r in report["armed"] for g in r["gates"]]
+        rows = core.recurrence_rows(report)
         return {"recurrence_after_arming": rows, "count": len(rows), "report": report}
 
     @app.get("/nodes")

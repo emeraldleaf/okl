@@ -1929,6 +1929,42 @@ def test_recurrence_report_counts_what_the_metric_could_not_see(store):
     assert rule not in {x["defect_id"] for x in core.recurrence_report(store)["unarmed"]}
 
 
+def test_recurrence_report_arms_only_on_a_gate_and_counts_every_class(store):
+    """Review of #35: what counts as a class, and what counts as arming it.
+
+    A defect whose RECURS_IN points at a Rule is still a defect class -- only a pointer to
+    another DEFECT marks a record as a report about a recurrence. And only a Gate arms a
+    defect: the seed packs have a Rule that CATCHES a defect (a testing practice), and a
+    practice nobody runs mechanically is not what "recurrence after arming" measures.
+    """
+    rule = core.record(store, type="Rule", title="prove it with rollback tests", scope="org")
+    d = core.record(store, type="Defect", title="outbox stopped being atomic", scope="org")
+    core.link(store, rule, "CATCHES", d)
+    odd = core.record(store, type="Defect", title="points at a rule", scope="org")
+    core.link(store, odd, "RECURS_IN", rule)
+    core.link(store, d, "RECURS_IN", "svc")
+
+    r = core.recurrence_report(store)
+    assert r["defects"] == 2, "a defect pointing at a non-Defect is still a class"
+    assert r["defects_with_gate"] == 0, "a Rule is not a gate"
+    assert [x["defect_id"] for x in r["unarmed"]] == [d] and r["armed"] == []
+
+
+def test_client_recurrence_keeps_its_released_shape(tmp_path, monkeypatch):
+    """`Client.recurrence()` shipped in v0.5.0 and returns flat rows. #35 moved callers to
+    `recurrence_report()`; the old method stays, derived from the same report, so a
+    consumer written against 0.5 neither breaks nor gets a second answer."""
+    from okl.client import Client
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("OKL_DATABASE_URL", f"sqlite:///{tmp_path / 'r.db'}")
+    c = Client(config={})
+    g = c.record(type="Gate", title="the gate", scope="org")
+    d = c.record(type="Defect", title="gated defect", scope="org")
+    c.link(g, "CATCHES", d); c.link(d, "RECURS_IN", "svc")
+    assert c.recurrence() == [{"recurred_in": "svc", "defect_class": "gated defect",
+                               "gate": "the gate"}]
+
+
 def test_metric_output_never_prints_a_bare_tick(tmp_path, monkeypatch):
     """The CLI line carries its coverage, lists recurrences without a gate, and refuses
     an unconfigured directory rather than reporting on a store that is not there."""

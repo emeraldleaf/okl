@@ -12,8 +12,10 @@
   prints no tick. **`okl metric --format json` changed shape** to the report
   (`armed`, `unarmed`, `defects`, `defects_with_gate`). The service's
   `/metric/recurrence` keeps its original `recurrence_after_arming` and `count` keys, now
-  derived from the same report, and adds `report`. Against a service too old to send
-  `report`, the CLI exits 2 and says coverage is unknown rather than guessing.
+  derived from the same report, and adds `report`; `Client.recurrence()` keeps its v0.5
+  rows the same way, beside the new `Client.recurrence_report()`. Only a `Gate` arms a
+  defect now (a Rule that `CATCHES` one no longer counts as a gate). Against a service too
+  old to send `report`, the CLI exits 2 and says coverage is unknown rather than guessing.
 - **`okl drift --gate` no longer passes having checked nothing** (#21). An unconfigured
   directory is refused (and no `okl.db` is created by asking); a store with no rule
   governing any file reports "NOTHING CHECKED" and exits 2 under `--gate`; the all-clear

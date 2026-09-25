@@ -570,12 +570,15 @@ def recurrence_report(store: Store) -> dict[str, Any]:
     recurs = store.edges(["RECURS_IN"])
     # A record written to SAY a defect recurred is not another defect class: it points at
     # the original, never carries a gate, and counting it in the denominator made every
-    # new recurrence quietly lower the coverage percentage. Only classes are counted.
-    reports = {e.src for e in recurs if e.dst in nodes}
+    # new recurrence quietly lower the coverage percentage. Only classes are counted -- and
+    # only a pointer to another DEFECT makes a record a report; one aimed at a Rule does not.
+    reports = {e.src for e in recurs if e.dst in nodes and nodes[e.dst].type == "Defect"}
     defect_ids = {i for i, n in nodes.items() if n.type == "Defect" and i not in reports}
     gates_for: dict[str, list[str]] = {}
     for e in store.edges(["CATCHES"]):
-        if e.dst in defect_ids and e.src in nodes:
+        # Only a Gate arms a defect. The seed packs hold a Rule that CATCHES a defect -- a
+        # testing practice -- and a practice nobody runs mechanically is not arming.
+        if e.dst in defect_ids and e.src in nodes and nodes[e.src].type == "Gate":
             gates_for.setdefault(e.dst, []).append(nodes[e.src].title)
 
     armed: list[dict[str, Any]] = []
@@ -595,3 +598,12 @@ def recurrence_report(store: Store) -> dict[str, Any]:
 
     return {"armed": armed, "unarmed": unarmed,
             "defects": len(defect_ids), "defects_with_gate": len(gates_for)}
+
+
+def recurrence_rows(report: dict[str, Any]) -> list[dict[str, Any]]:
+    """The pre-#31 flat shape -- one row per gate on each armed recurrence -- derived from
+    the report, never computed beside it, so the legacy and new shapes cannot disagree.
+    `/metric/recurrence` and `Client.recurrence()` both serve it to callers written
+    against v0.5."""
+    return [{"recurred_in": r["recurred_in"], "defect_class": r["defect_class"], "gate": g}
+            for r in report["armed"] for g in r["gates"]]

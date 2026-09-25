@@ -223,6 +223,14 @@ class Client:
             return self._get("/metric/recurrence").get("report")
         return core.recurrence_report(self._local_store())
 
+    def recurrence(self) -> list[dict]:
+        """The v0.5 flat rows, kept for callers written against that release. Both modes
+        read the one report: remote through the legacy keys the service derives from it,
+        local through the same derivation."""
+        if self.mode == "remote":
+            return self._get("/metric/recurrence")["recurrence_after_arming"]
+        return core.recurrence_rows(core.recurrence_report(self._local_store()))
+
     def all_nodes(self):
         """Return all in-scope Node objects (local store, or /nodes on a remote service).
 
