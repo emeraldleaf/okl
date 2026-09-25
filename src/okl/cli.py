@@ -371,19 +371,34 @@ def cmd_drift(args) -> int:
     """Source-vs-spec drift: rules whose governed code changed after last verification."""
     from . import drift
     client = Client()
+    # Refused before any store is opened. Reading an unconfigured directory created an
+    # empty okl.db as a side effect, found nothing in it, and printed OK -- which is what
+    # CI saw on every run, because `okl init` gitignores the store (issue #21). `check`
+    # has refused an unconfigured directory for the same reason since v0.2.
+    if not client.configured:
+        print("OKL NOT CONFIGURED — refusing to report drift. No store is named here: run "
+              "`okl init`, `okl connect <url>`, or set OKL_DATABASE_URL.", file=sys.stderr)
+        return 2
     try:
         nodes = client.all_nodes()
     except OKLUnreachableError as e:
         print(f"OKL UNREACHABLE — cannot check drift.\n{e}", file=sys.stderr)
         return 2
     repo = args.repo or client.repo
-    hits = drift.detect_drift(nodes, repo, repo_dir=args.repo_dir)
+    hits, checked = drift.scan_drift(nodes, repo, repo_dir=args.repo_dir)
     if args.format == "json":
-        _print_json({"drift": [h.as_dict() for h in hits], "count": len(hits)})
+        _print_json({"drift": [h.as_dict() for h in hits], "count": len(hits),
+                     "checked": checked})
+    else:
+        print(drift.render_drift(hits, checked))
+    if not args.gate:
         return 0
-    print(drift.render_drift(hits))
-    # Fail closed when asked to gate (CI): drift is a defect to surface, exit 1.
-    return 1 if (hits and args.gate) else 0
+    # Under --gate the exit code is the verdict, and it follows the CLI's contract:
+    # 1 = ran and found drift, 2 = did not run. A gate that checked no rule did not run,
+    # however clean its output looks.
+    if hits:
+        return 1
+    return 2 if checked == 0 else 0
 
 
 def cmd_dedup(args) -> int:

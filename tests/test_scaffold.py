@@ -671,3 +671,47 @@ def test_stored_data_never_reaches_a_shell():
     service = (src / "service.py").read_text()
     assert "core.verify(_store, req.id, req.evidence)" in service
     assert "shell" not in service, "the service must never shell out"
+
+
+def test_shipped_drift_step_warns_when_nothing_was_checked():
+    """The shipped CI step maps okl's exit codes onto a job result, and that mapping is
+    part of the contract: drift must fail the job, but "did not run" must be SAID -- as a
+    warning annotation -- rather than passing silently or blocking every PR.
+
+    Before #21 the step was `okl drift --gate`, which on a store-less runner checked
+    nothing and passed. Run the step's own shell against a stub `okl` for each exit code.
+    """
+    # Read as text, like the other workflow tests: PyYAML is not a test dependency here,
+    # and importing it made this test pass on the machine that had it and fail in CI.
+    root = Path(__file__).resolve().parents[1]
+    lines = (root / "ci" / "okl-verify.yml").read_text().splitlines()
+    start = next(i for i, ln in enumerate(lines) if "- name: Drift gate" in ln)
+    run_at = next(i for i in range(start, len(lines)) if lines[i].strip() == "run: |")
+    indent = len(lines[run_at + 1]) - len(lines[run_at + 1].lstrip())
+    block = []
+    for ln in lines[run_at + 1:]:
+        if ln.strip() and len(ln) - len(ln.lstrip()) < indent:
+            break
+        block.append(ln[indent:])
+    body = "\n".join(block)
+    assert "okl drift --gate" in body, "extracted the wrong block"
+
+    # (okl exit, store configured for the job?, expected step exit, expect the warning?)
+    # The last row is the regression found in review: with a store configured, exit 2 is
+    # an outage or a misconfiguration, and turning it into a warning hid it behind green.
+    cases = [(0, False, 0, False), (1, False, 1, False), (2, False, 0, True),
+             (0, True, 0, False), (1, True, 1, False), (2, True, 2, False)]
+    base = {k: v for k, v in os.environ.items() if k not in ("OKL_SERVICE_URL", "OKL_DATABASE_URL")}
+    for okl_code, configured, want_code, want_warning in cases:
+        with tempfile.TemporaryDirectory() as d:
+            stub = Path(d) / "okl"
+            stub.write_text(f"#!/bin/sh\nexit {okl_code}\n")
+            stub.chmod(0o755)
+            env = {**base, "PATH": f"{d}:{os.environ['PATH']}"}
+            if configured:
+                env["OKL_SERVICE_URL"] = "https://store.example"
+            r = subprocess.run(["bash", "-euo", "pipefail", "-c", body], capture_output=True,
+                               text=True, env=env)
+        label = f"okl exit {okl_code}, store {'configured' if configured else 'absent'}"
+        assert r.returncode == want_code, f"{label} -> step exit {r.returncode}"
+        assert ("::warning title=Drift not checked" in r.stdout) == want_warning, label

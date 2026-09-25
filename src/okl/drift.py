@@ -83,13 +83,27 @@ def _git_last_change_ms(globs: list[str], repo_dir: str) -> int | None:
 def detect_drift(nodes: Iterable[Node], repo: str, repo_dir: str = ".") -> list[DriftHit]:
     """Return nodes whose governed source changed after they were last verified.
 
+    See scan_drift for the same result plus the number of rules actually checked, which
+    is what a caller needs to tell "no drift" from "nothing was checked".
+
     `nodes` is any iterable of Node (Client.all_nodes() in local OR remote mode) —
     drift is mode-agnostic on the node side; only the git lookup is local to `repo_dir`.
     In scope: org nodes and this repo's own nodes (the same curation boundary as check()).
     Only nodes with a non-empty `files` glob list participate.
     """
+    return scan_drift(nodes, repo, repo_dir)[0]
+
+
+def scan_drift(nodes: Iterable[Node], repo: str, repo_dir: str = ".") -> tuple[list[DriftHit], int]:
+    """Detect drift, and count the rules that were actually checked.
+
+    A rule counts as checked only if it is in scope, declares `files`, and git could
+    attribute a change to those files. Anything less is not a verdict either way, and
+    an empty result with nothing checked is not "no drift": it is no evidence at all.
+    """
     repo_scope = f"repo:{repo}"
     hits: list[DriftHit] = []
+    checked = 0
     for n in nodes:
         if not (n.scope == "org" or n.scope == repo_scope):
             continue
@@ -99,6 +113,7 @@ def detect_drift(nodes: Iterable[Node], repo: str, repo_dir: str = ".") -> list[
         last = _git_last_change_ms(globs, repo_dir)
         if last is None:
             continue  # git couldn't attribute a change — not evidence of drift
+        checked += 1
         base = n.verified_at
         if base is None:
             hits.append(DriftHit(
@@ -110,17 +125,25 @@ def detect_drift(nodes: Iterable[Node], repo: str, repo_dir: str = ".") -> list[
                 n.id, n.title, n.scope, n.files, last, base,
                 "governed source changed after the rule was last verified",
             ))
-    return hits
+    return hits, checked
 
 
-def render_drift(hits: list[DriftHit]) -> str:
+def render_drift(hits: list[DriftHit], checked: int | None = None) -> str:
     """Format drift hits for a terminal, or the all-clear line.
 
     The all-clear is deliberately explicit rather than silent: "no output" and "the
     check did not run" look identical, and only one of them is safe.
     """
+    # This docstring's own point was once violated right here: with nothing checked, the
+    # all-clear still printed, so an empty store reported "OK" in CI (issue #21). The
+    # all-clear now states how many rules it rests on, and says so when that is zero.
+    if not hits and checked == 0:
+        return ("OKL drift: NOTHING CHECKED — no rule governing files in this repo was found, "
+                "so this is not an all-clear.")
     if not hits:
-        return "OKL drift: OK — no encoded rule's governed source changed after its last verification."
+        basis = f"{checked} rule(s) checked, " if checked is not None else ""
+        return (f"OKL drift: OK — {basis}no encoded rule's governed source changed after its "
+                "last verification.")
     lines = [f"OKL drift: {len(hits)} rule(s) may be stale (source changed after verification):", ""]
     for h in hits:
         when = _utc_day(h.last_change_ms)
