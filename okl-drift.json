@@ -156,6 +156,15 @@
       "verified_by": "`python3 -m pytest -q -k 'token_also_takes_down_the_openapi_spec'` exit 0, matched 'passed' @ 2026-09-25T18:47Z"
     },
     {
+      "id": "n_696a70084e1a",
+      "type": "Defect",
+      "title": "Importing verification records through the normal write path re-stamps them — a CI store seeded that way can never drift",
+      "scope": "org",
+      "files": "src/okl/drift.py,src/okl/seed.py",
+      "verified_at": 1790367155874,
+      "verified_by": "`python3 -m pytest -q -k drift_snapshot_gives_ci_a_store` exit 0, matched 'passed' @ 2026-09-25T20:12Z"
+    },
+    {
       "id": "n_6b65aa35593c",
       "type": "Rule",
       "title": "A diagram with numbers in it is generated from the system, or it is already wrong",
