@@ -17,6 +17,8 @@ when the governed code moves, not on a fixed schedule.
 from __future__ import annotations
 
 import datetime as _dt
+import json
+import re
 import subprocess
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -152,6 +154,110 @@ def render_drift(hits: list[DriftHit], checked: int | None = None) -> str:
         lines.append(f"  • [{h.node_id}] {h.title}")
         lines.append(f"      files: {h.files}")
         lines.append(f"      last source change: {when} · {ver} → {h.reason}")
-        lines.append("      fix: re-verify against current source, then `okl record --verified` to reset, "
-                     "or update the rule.")
+        # This line used to recommend `okl record --verified`, i.e. clearing drift by
+        # assertion -- the one thing the verify command exists to prevent.
+        lines.append(f"      fix: okl verify {h.node_id} --run \"<a check that fails if the rule "
+                     "is broken>\" --expect \"<its success signal>\" — or update the rule.")
     return "\n".join(lines)
+
+
+# -- committed snapshot (issue #36) ---------------------------------------------------
+#
+# CI usually has no store: the local one is gitignored and a hosted service is optional,
+# and fork PRs get no secrets either way. So drift ran, checked nothing, and warned. The
+# obvious fix -- commit the rules and `okl seed` them in CI -- is a false all-clear:
+# seeding goes through record(), which stamps verified_at fresh, so nothing ever drifts.
+# A snapshot is read straight into Node objects instead, with its real timestamps.
+
+SNAPSHOT_FILE = "okl-drift.json"
+SNAPSHOT_FORMAT = "okl-drift-snapshot/1"
+_FIELDS = ("id", "type", "title", "scope", "files", "verified_at", "verified_by")
+_STAMP = re.compile(r"@ (\d{4}-\d\d-\d\dT\d\d:\d\dZ)$")
+# `okl verify` writes its evidence stamp (minute resolution) just before the store sets
+# verified_at, and a remote service's clock is not the caller's. The window allows both;
+# it does not allow moving a timestamp forward by hand.
+_STAMP_SKEW_MS = (-60_000, 5 * 60_000)
+
+
+def snapshot(nodes: Iterable[Node], repo: str) -> dict[str, Any]:
+    """The rules drift would check for `repo`, in the committed-file shape.
+
+    Only what drift reads: no bodies, so the file publishes titles and evidence, not
+    lessons. Sorted and with no generated timestamp, so an unchanged store exports
+    byte-identically and the diff shows exactly which verifications moved.
+    """
+    repo_scope = f"repo:{repo}"
+    rules = [{f: getattr(n, f) for f in _FIELDS} for n in nodes
+             if n.files and (n.scope == "org" or n.scope == repo_scope)]
+    return {"format": SNAPSHOT_FORMAT, "repo": repo,
+            "rules": sorted(rules, key=lambda r: r["id"])}
+
+
+def dump_snapshot(snap: dict[str, Any]) -> str:
+    return json.dumps(snap, indent=2, ensure_ascii=False) + "\n"
+
+
+def stamp_problem(rule: dict[str, Any]) -> str | None:
+    """Why this entry's verification cannot be trusted, or None.
+
+    The snapshot is an ordinary file, so its verified_at can be edited. An entry is
+    accepted only when verified_at falls at the minute `okl verify` stamped into its
+    evidence: editing the number alone is refused. Editing both is still possible -- it
+    is a deliberate forgery in a reviewed diff, and review is the guard for that.
+    """
+    at = rule.get("verified_at")
+    if at is None:
+        return None                      # never verified: drift reports it, nothing to trust
+    m = _STAMP.search(rule.get("verified_by") or "")
+    if not m:
+        return "verified_at is set but verified_by carries no `okl verify` evidence stamp"
+    stamped = int(_dt.datetime.strptime(m.group(1), "%Y-%m-%dT%H:%MZ")
+                  .replace(tzinfo=_dt.timezone.utc).timestamp() * 1000)
+    lo, hi = _STAMP_SKEW_MS
+    if not (stamped + lo <= at < stamped + hi):
+        return (f"verified_at ({_utc_day(at)}) does not match the evidence stamp "
+                f"({m.group(1)}) -- edited by hand?")
+    return None
+
+
+def read_committed_snapshot(path: str, repo_dir: str = ".") -> dict[str, Any]:
+    """The snapshot as COMMITTED at HEAD, never the working-tree copy.
+
+    An audit reads the repo, not the dirty tree (CLAUDE.md): an uncommitted edit must not
+    pass a gate that main would fail. Raises ValueError, with the reason, when the file is
+    untracked or not a snapshot.
+    """
+    top = subprocess.run(["git", "-C", repo_dir, "rev-parse", "--show-toplevel"],
+                         capture_output=True, text=True)
+    if top.returncode != 0:
+        raise ValueError(f"{repo_dir!r} is not a git repository")
+    rel = subprocess.run(["git", "-C", repo_dir, "ls-files", "--full-name", "--", path],
+                         capture_output=True, text=True).stdout.strip()
+    if not rel:
+        raise ValueError(f"{path} is not committed -- a gate reads committed files only")
+    out = subprocess.run(["git", "-C", repo_dir, "show", f"HEAD:{rel}"],
+                         capture_output=True, text=True)
+    if out.returncode != 0:
+        raise ValueError(f"{path} is staged but not in HEAD -- commit it first")
+    try:
+        snap = json.loads(out.stdout)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"{path} is not valid JSON: {e}") from e
+    if not isinstance(snap, dict) or snap.get("format") != SNAPSHOT_FORMAT:
+        raise ValueError(f"{path} is not an {SNAPSHOT_FORMAT} file")
+    return snap
+
+
+def nodes_from_snapshot(snap: dict[str, Any]) -> tuple[list[Node], list[str]]:
+    """Nodes to feed scan_drift, and one problem line per entry that cannot be trusted."""
+    nodes: list[Node] = []
+    problems: list[str] = []
+    for r in snap.get("rules", []):
+        why = stamp_problem(r)
+        if why:
+            problems.append(f"[{r.get('id')}] {why}")
+            continue
+        nodes.append(Node(type=r.get("type") or "Rule", title=r["title"], scope=r["scope"],
+                          files=r["files"], verified_at=r.get("verified_at"),
+                          verified_by=r.get("verified_by"), id=r["id"]))
+    return nodes, problems

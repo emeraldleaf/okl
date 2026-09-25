@@ -304,6 +304,10 @@ blocks the first stop only, and answering it is the whole write side of the loop
 **In your repo:** `okl init` writes `.okl/` (config, the local database, a `.gitignore`
 covering both) and, if `.claude/` exists, two hook scripts plus their registration. It
 also installs `.github/workflows/okl-verify.yml`, which runs the drift gate on every PR.
+CI has no store of its own (the local one is gitignored), so give it one: commit
+`okl export --drift` (a snapshot of the rules drift reads: no lesson bodies), or set the
+`OKL_SERVICE_URL` secret. Without either, the step warns "Drift not checked" rather than
+passing as if it had.
 `okl scaffold` is separate and optional — nothing installs it unless you ask.
 
 ### The knobs, cheapest first
@@ -468,6 +472,10 @@ okl verify <id> --run "pytest -q" --expect "passed"
                      #   for importing historical receipts; live verification uses this.)
 okl drift --gate     # flag lessons whose governed source changed after they were last verified
                      #   (exit 1 in CI — a stale rule is a rule nobody's re-checked)
+okl export --drift   # write okl-drift.json, the committed snapshot CI's drift gate reads
+                     #   when it has no store; `okl verify` refreshes it once it exists.
+                     #   CI reads the COMMITTED copy, and refuses an entry whose timestamp
+                     #   does not match its verify evidence, so it cannot be cleared by hand.
 okl coverage         # ratio of encoded-knowledge lines to code lines — a health signal
 okl bootstrap        # cold-start a new repo: propose starter notes from its own
                      #   git history + docs into a reviewable file you edit, then seed

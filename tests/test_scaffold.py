@@ -696,22 +696,34 @@ def test_shipped_drift_step_warns_when_nothing_was_checked():
     body = "\n".join(block)
     assert "okl drift --gate" in body, "extracted the wrong block"
 
-    # (okl exit, store configured for the job?, expected step exit, expect the warning?)
-    # The last row is the regression found in review: with a store configured, exit 2 is
-    # an outage or a misconfiguration, and turning it into a warning hid it behind green.
-    cases = [(0, False, 0, False), (1, False, 1, False), (2, False, 0, True),
-             (0, True, 0, False), (1, True, 1, False), (2, True, 2, False)]
+    # (okl exit, the job's store, expected step exit, expect the warning?)
+    # With a store configured, exit 2 is an outage or a misconfiguration, and turning it
+    # into a warning hid it behind green (found in review). A committed okl-drift.json IS
+    # that store (#36): it must be passed to okl, and its exit 2 must fail too. Each case
+    # runs in its own repo, so this repo's own snapshot cannot leak into the "absent" rows.
+    cases = [(0, "absent", 0, False), (1, "absent", 1, False), (2, "absent", 0, True),
+             (0, "service", 0, False), (1, "service", 1, False), (2, "service", 2, False),
+             (0, "snapshot", 0, False), (1, "snapshot", 1, False), (2, "snapshot", 2, False)]
     base = {k: v for k, v in os.environ.items() if k not in ("OKL_SERVICE_URL", "OKL_DATABASE_URL")}
-    for okl_code, configured, want_code, want_warning in cases:
+    git = ["git", "-c", "user.email=t@t", "-c", "user.name=t"]
+    for okl_code, store, want_code, want_warning in cases:
         with tempfile.TemporaryDirectory() as d:
-            stub = Path(d) / "okl"
-            stub.write_text(f"#!/bin/sh\nexit {okl_code}\n")
+            stub = Path(d) / "bin" / "okl"
+            stub.parent.mkdir()
+            stub.write_text(f'#!/bin/sh\necho "okl $*" > "{d}/args"\nexit {okl_code}\n')
             stub.chmod(0o755)
-            env = {**base, "PATH": f"{d}:{os.environ['PATH']}"}
-            if configured:
+            env = {**base, "PATH": f"{stub.parent}:{os.environ['PATH']}"}
+            subprocess.run(["git", "init", "-q", d], check=True)
+            if store == "service":
                 env["OKL_SERVICE_URL"] = "https://store.example"
+            if store == "snapshot":
+                (Path(d) / "okl-drift.json").write_text("{}\n")
+                subprocess.run([*git, "-C", d, "add", "okl-drift.json"], check=True)
+                subprocess.run([*git, "-C", d, "commit", "-qm", "s"], check=True)
             r = subprocess.run(["bash", "-euo", "pipefail", "-c", body], capture_output=True,
-                               text=True, env=env)
-        label = f"okl exit {okl_code}, store {'configured' if configured else 'absent'}"
+                               text=True, env=env, cwd=d)
+            called = (Path(d) / "args").read_text()
+        label = f"okl exit {okl_code}, store {store}"
         assert r.returncode == want_code, f"{label} -> step exit {r.returncode}"
+        assert ("--snapshot okl-drift.json" in called) == (store == "snapshot"), label
         assert ("::warning title=Drift not checked" in r.stdout) == want_warning, label
