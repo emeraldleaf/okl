@@ -216,10 +216,20 @@ class Client:
             return self._post("/verify", {"id": node_id, "evidence": evidence})
         return core.verify(self._local_store(), node_id, evidence)
 
+    def recurrence_report(self) -> dict | None:
+        """The coverage-aware report, or None from a service too old to compute one --
+        in which case the caller must say coverage is unknown, not assume it is fine."""
+        if self.mode == "remote":
+            return self._get("/metric/recurrence").get("report")
+        return core.recurrence_report(self._local_store())
+
     def recurrence(self) -> list[dict]:
+        """The v0.5 flat rows, kept for callers written against that release. Both modes
+        read the one report: remote through the legacy keys the service derives from it,
+        local through the same derivation."""
         if self.mode == "remote":
             return self._get("/metric/recurrence")["recurrence_after_arming"]
-        return self._local_store().recurrence_after_arming()
+        return core.recurrence_rows(core.recurrence_report(self._local_store()))
 
     def all_nodes(self):
         """Return all in-scope Node objects (local store, or /nodes on a remote service).

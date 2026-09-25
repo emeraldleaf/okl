@@ -1,0 +1,1 @@
+- [Review findings log](review_findings_log.md) — recurring finding classes with counts; promote to a gate at 3

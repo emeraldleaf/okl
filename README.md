@@ -471,8 +471,8 @@ okl drift --gate     # flag lessons whose governed source changed after they wer
 okl coverage         # ratio of encoded-knowledge lines to code lines — a health signal
 okl bootstrap        # cold-start a new repo: propose starter notes from its own
                      #   git history + docs into a reviewable file you edit, then seed
-okl metric           # recurrence-after-arming: defect classes that came back in a repo
-                     #   where a catching check existed but wasn't turned on
+okl metric           # recurrence: defect classes that came back, split by whether a
+                     #   gate existed, with how many defects the number can speak for
 ```
 
 ## Subagents and small context budgets
@@ -558,8 +558,11 @@ folder.) Two clarifications that stop the common misreadings:
    `VERIFIED_ON` receipts are written by the job that watched a gate prove itself.
 4. **Time attacks every stamp** — `drift` re-grades verifications the moment governed
    files change after `verified_at`; TTL decays stamps nobody re-earns into `STALE`;
-   and `okl metric` (recurrence-after-arming) scores the whole system on outcomes —
-   defect classes that came back — the one number it can't flatter itself on.
+   and `okl metric` scores the whole system on outcomes — defect classes that came
+   back — the one number it can't flatter itself on. It earns that by stating its own
+   coverage (how many defects have a gate it could speak for) and by counting
+   recurrences with no gate separately: lessons written down that came back anyway.
+   Until issue #31 it printed a bare "0 ✓" while the store held three recurrences.
 
 ## Seed it (so the very first `check` returns something)
 

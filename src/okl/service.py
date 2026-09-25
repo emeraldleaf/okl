@@ -136,8 +136,13 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901
     @app.get("/metric/recurrence")
     def recurrence(authorization: str | None = Header(default=None)) -> dict[str, Any]:
         _auth(authorization)
-        rows = _store.recurrence_after_arming()
-        return {"recurrence_after_arming": rows, "count": len(rows)}
+        report = core.recurrence_report(_store)
+        # ONE computation, served in both shapes. The legacy keys used to come from a
+        # separate SQL join that could not read the seed packs' `defect RECURS_IN <repo>`
+        # form, so one payload could say count 0 beside report.armed 1. They are now
+        # derived from the report: one row per gate, the shape older clients read.
+        rows = core.recurrence_rows(report)
+        return {"recurrence_after_arming": rows, "count": len(rows), "report": report}
 
     @app.get("/nodes")
     def nodes(authorization: str | None = Header(default=None)) -> dict[str, Any]:

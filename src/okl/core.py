@@ -545,3 +545,65 @@ def _render_records(items: list[dict], show_catches: bool = False) -> list[str]:
         if it.get("fix"):
             out.append(f"  fix: {it['fix'][:200]}")
     return out
+
+
+def recurrence_report(store: Store) -> dict[str, Any]:
+    """Recurrence, with the coverage that makes it readable (issue #31).
+
+    The metric used to print "0 recurrences ✓" while the store held recorded recurrences,
+    because it could only see defects that had a gate attached: 8 of 63 at the time, and it
+    never said so. The same shape as the eval judge that scored 5.0/5.0 while 19 of 20
+    cases crashed: a number that cannot report its own coverage reads as a result.
+
+    So the report carries three things, never one:
+      - `armed`:   recurrences of defects that HAD a gate -- the original metric;
+      - `unarmed`: recurrences of defects with no gate -- lessons written down that came
+                   back anyway, which is the stronger signal;
+      - coverage:  how many defects the armed figure can possibly speak for.
+
+    RECURS_IN is written two ways in practice, and both are read. `new RECURS_IN original`
+    (both ends records) names the original as the defect that recurred; the seed packs write
+    `defect RECURS_IN <repo name>`, where the far end is not a record and the near end is
+    the defect. Reading only the first form silently discarded every seeded recurrence.
+    """
+    nodes = {n.id: n for n in store.all_nodes()}
+    recurs = store.edges(["RECURS_IN"])
+    # A record written to SAY a defect recurred is not another defect class: it points at
+    # the original, never carries a gate, and counting it in the denominator made every
+    # new recurrence quietly lower the coverage percentage. Only classes are counted -- and
+    # only a pointer to another DEFECT makes a record a report; one aimed at a Rule does not.
+    reports = {e.src for e in recurs if e.dst in nodes and nodes[e.dst].type == "Defect"}
+    defect_ids = {i for i, n in nodes.items() if n.type == "Defect" and i not in reports}
+    gates_for: dict[str, list[str]] = {}
+    for e in store.edges(["CATCHES"]):
+        # Only a Gate arms a defect. The seed packs hold a Rule that CATCHES a defect -- a
+        # testing practice -- and a practice nobody runs mechanically is not arming.
+        if e.dst in defect_ids and e.src in nodes and nodes[e.src].type == "Gate":
+            gates_for.setdefault(e.dst, []).append(nodes[e.src].title)
+
+    armed: list[dict[str, Any]] = []
+    unarmed: list[dict[str, Any]] = []
+    for e in recurs:
+        if e.dst in nodes:                        # new RECURS_IN original
+            cls, where = e.dst, (nodes[e.src].repo if e.src in nodes else None)
+        else:                                     # defect RECURS_IN <repo name>
+            cls, where = e.src, e.dst
+        if cls not in nodes or nodes[cls].type != "Defect":
+            continue                              # not a defect class we hold
+        row = {"defect_class": nodes[cls].title, "defect_id": cls, "recurred_in": where}
+        if cls in gates_for:
+            armed.append({**row, "gates": gates_for[cls]})
+        else:
+            unarmed.append(row)
+
+    return {"armed": armed, "unarmed": unarmed,
+            "defects": len(defect_ids), "defects_with_gate": len(gates_for)}
+
+
+def recurrence_rows(report: dict[str, Any]) -> list[dict[str, Any]]:
+    """The pre-#31 flat shape -- one row per gate on each armed recurrence -- derived from
+    the report, never computed beside it, so the legacy and new shapes cannot disagree.
+    `/metric/recurrence` and `Client.recurrence()` both serve it to callers written
+    against v0.5."""
+    return [{"recurred_in": r["recurred_in"], "defect_class": r["defect_class"], "gate": g}
+            for r in report["armed"] for g in r["gates"]]
