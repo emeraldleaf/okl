@@ -1809,3 +1809,61 @@ def test_suggested_seed_commands_survive_a_path_with_spaces(tmp_path, monkeypatc
     args = shlex.split(line.split("(")[0])
     assert args[:2] == ["okl", "seed"] and len(args) == 3, f"split into {args}"
     assert args[2] == str(packs / "react-defects.json")
+
+
+def test_drift_gate_never_reports_clean_having_checked_nothing(tmp_path, monkeypatch):
+    """#21: `okl drift --gate` must distinguish "no drift" from "nothing was checked".
+
+    It used to pass in CI on every run: the store is gitignored, so CI had none, and
+    reading an unconfigured directory created an empty okl.db, found no rules in it and
+    printed "OK". A required check that proves nothing is the failure this project
+    exists to prevent. The exit code is the verdict under --gate: 0 ran and clean, 1 ran
+    and found drift, 2 did not run.
+    """
+    import subprocess
+    import sys
+    import time
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("OKL_DATABASE_URL", raising=False)
+    monkeypatch.delenv("OKL_SERVICE_URL", raising=False)
+    git = ["git", "-c", "user.email=t@t", "-c", "user.name=t"]
+    subprocess.run(["git", "init", "-q", "."], check=True)
+    subprocess.run([*git, "commit", "-q", "--allow-empty", "-m", "init"], check=True)
+
+    def okl(*a):
+        return subprocess.run([sys.executable, "-m", "okl", *a], capture_output=True, text=True)
+
+    # 1. No store named: refused, and no database created just by asking.
+    r = okl("drift", "--gate")
+    assert r.returncode == 2, r.stdout + r.stderr
+    assert "NOT CONFIGURED" in r.stderr
+    assert not list(tmp_path.glob("*.db")), "a refused read must not create a store"
+
+    # 2. A store with no rule governing any file: nothing was checked, so no all-clear.
+    okl("init", "--repo", "r")
+    r = okl("drift", "--gate")
+    assert r.returncode == 2
+    assert "NOTHING CHECKED" in r.stdout
+    assert "drift: OK" not in r.stdout, "an all-clear must not print when nothing was checked"
+    assert okl("drift").returncode == 0, "without --gate the report is informational"
+
+    # 3. One governed rule, verified after its file's last change: a real, counted pass.
+    (tmp_path / "a.py").write_text("x = 1\n")
+    subprocess.run(["git", "add", "a.py"], check=True)
+    subprocess.run([*git, "commit", "-qm", "a"], check=True)
+    rid = okl("record", "--type", "Rule", "--scope", "repo", "--title", "t",
+              "--files", "a.py").stdout.strip().splitlines()[-1]
+    okl("verify", rid, "--run", "true", "--expect", "")
+    r = okl("drift", "--gate")
+    assert r.returncode == 0 and "1 rule(s) checked" in r.stdout
+
+    # 4. The file changes after verification: drift, exit 1, as before. Committed a
+    # minute in the future: git stores commit time to the second and verification to the
+    # millisecond, so a commit in the same second as the stamp does not count as after it.
+    # Real edits never land within a second of a verify; this test otherwise would.
+    (tmp_path / "a.py").write_text("x = 2\n")
+    later = {**os.environ, "GIT_COMMITTER_DATE": f"@{int(time.time()) + 60} +0000",
+             "GIT_AUTHOR_DATE": f"@{int(time.time()) + 60} +0000"}
+    subprocess.run([*git, "commit", "-qam", "b"], check=True, env=later)
+    assert okl("drift", "--gate").returncode == 1

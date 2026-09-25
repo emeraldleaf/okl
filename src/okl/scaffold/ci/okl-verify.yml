@@ -74,7 +74,23 @@ jobs:
           fi
 
       - name: Drift gate — rules whose governed code changed after last verification
-        run: okl drift --gate
+        # The exit code is the verdict: 0 checked and clean, 1 drift found, 2 did not run.
+        # "Did not run" is the case this step used to report as a pass: with no store in CI
+        # (okl init gitignores it) the gate checked nothing and printed OK. It now says so,
+        # as a warning annotation on the PR rather than a failure, because an unseeded
+        # store is a setup gap, not a defect in the change under review -- and failing on it
+        # would block every pull request from the moment okl is installed. To make this
+        # step a real check, give CI a store: set the OKL_SERVICE_URL secret, or seed one.
+        run: |
+          set +e
+          okl drift --gate
+          rc=$?
+          set -e
+          if [ "$rc" -eq 2 ]; then
+            echo "::warning title=Drift not checked::No knowledge store is available to this job, so no rule was checked for drift. This step passing is NOT an all-clear."
+          elif [ "$rc" -ne 0 ]; then
+            exit "$rc"
+          fi
 
       - name: Method gates (when the scaffold kit is present)
         run: |

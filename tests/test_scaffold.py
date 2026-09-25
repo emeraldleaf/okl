@@ -671,3 +671,29 @@ def test_stored_data_never_reaches_a_shell():
     service = (src / "service.py").read_text()
     assert "core.verify(_store, req.id, req.evidence)" in service
     assert "shell" not in service, "the service must never shell out"
+
+
+def test_shipped_drift_step_warns_when_nothing_was_checked():
+    """The shipped CI step maps okl's exit codes onto a job result, and that mapping is
+    part of the contract: drift must fail the job, but "did not run" must be SAID -- as a
+    warning annotation -- rather than passing silently or blocking every PR.
+
+    Before #21 the step was `okl drift --gate`, which on a store-less runner checked
+    nothing and passed. Run the step's own shell against a stub `okl` for each exit code.
+    """
+    import yaml
+
+    root = Path(__file__).resolve().parents[1]
+    wf = yaml.safe_load((root / "ci" / "okl-verify.yml").read_text())
+    body = next(s["run"] for s in wf["jobs"]["okl-verify"]["steps"]
+                if s.get("name", "").startswith("Drift gate"))
+
+    for okl_code, want_code, want_warning in [(0, 0, False), (1, 1, False), (2, 0, True)]:
+        with tempfile.TemporaryDirectory() as d:
+            stub = Path(d) / "okl"
+            stub.write_text(f"#!/bin/sh\nexit {okl_code}\n")
+            stub.chmod(0o755)
+            r = subprocess.run(["bash", "-euo", "pipefail", "-c", body], capture_output=True,
+                               text=True, env={**os.environ, "PATH": f"{d}:{os.environ['PATH']}"})
+        assert r.returncode == want_code, f"okl exit {okl_code} -> step exit {r.returncode}"
+        assert ("::warning title=Drift not checked" in r.stdout) == want_warning
