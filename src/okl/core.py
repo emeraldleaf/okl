@@ -12,6 +12,10 @@ from __future__ import annotations
 from dataclasses import asdict
 from typing import Any
 
+# STACK_TAGS is re-exported, not used here: adapters may import core and client but
+# never store (dependency direction is one-way), and the CLI needs the stack list to
+# judge which bundled seed packs fit a repo.
+from .store import STACK_TAGS as STACK_TAGS  # noqa: PLC0414
 from .store import Edge, Node, Store, _now_ms, split_tags
 
 

@@ -110,6 +110,8 @@ def cmd_init(args) -> int:
         print("      The scripts in src/okl/scaffold/hooks/ are plain bash on stdin/stdout; if your")
         print("      agent has a pre-prompt hook, point it at them. Registration formats differ.")
     _install_ci_verifier()
+    for line in _empty_store_guidance(Client()):
+        print(line)
     return 0
 
 
@@ -221,6 +223,12 @@ def cmd_check(args) -> int:
         print(core.render_actions_only(result, limit=args.limit))
     else:
         print(core.render_check_for_agent(result))
+    # stdout is what the UserPromptSubmit hook hands the agent; setup advice is for the
+    # person, so it goes to stderr and never enters the agent's context. Skipped for json,
+    # whose consumers parse the output.
+    if args.format != "json" and result.get("store_records") == 0:
+        for line in _empty_store_guidance(client):
+            print(line, file=sys.stderr)
     return 0
 
 
@@ -503,6 +511,74 @@ def _bundled_seed_dir() -> Path:
     return repo_seed if repo_seed.exists() else Path(__file__).parent / "seed"
 
 
+def _pack_fits(pack_tags: set[str], interests: set[str]) -> bool:
+    """Does a bundled pack fit a repo with these interests?
+
+    A pack that names a stack fits only a repo that declared that stack; a pack with no
+    stack fits on any shared subject. One shared subject is not enough on its own: the
+    .NET packs carry `security` on a handful of records, so any-tag matching recommended
+    109 .NET records to a repo that had declared `react, security`. That is REPORT §4d's
+    mistake — reading a label on some records as a verdict on the whole — made at the
+    point of import, where it is worse, because a pack imports every record at once.
+    """
+    tags = {t.lower() for t in pack_tags}
+    stacks = tags & core.STACK_TAGS
+    if stacks:
+        return bool(stacks & interests)
+    return bool(tags & interests)
+
+
+def _empty_store_guidance(client: Client) -> list[str]:
+    """What to do about an empty store, tailored to this repo. Empty list if not needed.
+
+    Issue #27. Tailored rather than generic, because a list of commands is homework and
+    the repo already knows enough to be specific: the bundled packs describe what they
+    are about, and the repo declared its interests at init, so the packs that fit can be
+    named with their sizes. It still imports nothing — cmd_seed explains why that must
+    stay a deliberate choice.
+
+    Only for a LOCAL store. A connected repo shares a service's store, which is neither
+    "yours" to fill nor cheap to inspect from here.
+
+    Emptiness is asked as "is there at least one record?" — a search capped at one row —
+    rather than by loading every record to count them.
+    """
+    if client.mode == "remote":
+        return []
+    try:
+        if client.search("", limit=1):
+            return []
+    except (OSError, OKLUnreachableError, ValueError, RuntimeError):
+        return []
+
+    lines = ["• this store is empty, so every check will say it proves nothing. To fill it:"]
+    interests = {t.lower() for t in (client.interests or [])}
+    packs = []
+    for f in sorted(_bundled_seed_dir().glob("*.json")):
+        count, tags = _describe_pack(f)
+        if _pack_fits(tags, interests):
+            packs.append((f, count))
+    if packs:
+        lines.append(f"    bundled packs that match your interests ({', '.join(sorted(interests))}):")
+        lines += [f"      okl seed {f}    ({count} records)" for f, count in packs]
+    elif interests:
+        lines.append("    no bundled pack matches your interests; `okl seed` lists all of them")
+    else:
+        lines.append("    `okl seed` lists the bundled packs (declare interests with"
+                     " `okl init --interests` and they are matched for you)")
+    # Name the agent-driven route only where it exists. The seeding commands are stamped by
+    # `okl scaffold`, possibly under a renamed .claude dir, and pointing at one that is not
+    # installed sends the reader to a command their agent will not recognise.
+    if any(Path.cwd().glob("*/commands/seed-from-codebase.md")):
+        lines.append("    ask your agent to run /seed-from-codebase: it proposes cited records"
+                     " from this repo's own code")
+    else:
+        lines.append("    `okl scaffold .` adds /seed-from-codebase, which has your agent propose"
+                     " cited records from this repo's own code")
+    lines.append("    or write one yourself: okl record --type Rule --scope repo --title \"...\"")
+    return lines
+
+
 def _describe_pack(path: Path) -> tuple[int, set[str]]:
     """Count a pack's records and collect its subject tags, so the listing can say what
     a pack is ABOUT before anyone imports it."""
@@ -539,7 +615,7 @@ def cmd_seed(args) -> int:
         for pk in packs:
             f = Path(pk)
             count, tags = _describe_pack(f)
-            hit = " <- matches your interests" if interests & {t.lower() for t in tags} else ""
+            hit = " <- matches your interests" if _pack_fits(tags, interests) else ""
             print(f"  {f.name:38} {count:3} records  [{', '.join(sorted(tags)) or 'untagged'}]{hit}")
         print("\nThese hold real rules from specific stacks. Import the ones that match")
         print("your project rather than all of them:\n")
