@@ -21,7 +21,10 @@ and editing `KNOWN_TAGS` changes the floor every store ships with.
 - **Verification is evidence-based**: `okl verify <id> --run "<check>" --expect "<signal>"`.
   Never re-record with `--verified` to clear drift — run the check.
 - **After changing files a rule governs, `okl drift` goes red on purpose.** Re-verify
-  the affected nodes (their tests are usually the right `--run`) before finishing.
+  the affected nodes (their tests are usually the right `--run`) before finishing, in
+  this order: commit the change, `okl verify`, then commit the `okl-drift.json` it
+  refreshed. CI's drift gate reads that committed snapshot, not the store, so a
+  verification left uncommitted fails CI. Verifying before the code commit re-drifts.
 - The local store (`.okl/okl.db`, gitignored) should hold all 11 seed files plus
   recorded nodes; `okl seed seed/` loads the `*-defects.json` set, while
   `dotnet-{canon,decisions,review-surfaces}.json` and `frontend-canon.json` load explicitly.
