@@ -681,12 +681,20 @@ def test_shipped_drift_step_warns_when_nothing_was_checked():
     Before #21 the step was `okl drift --gate`, which on a store-less runner checked
     nothing and passed. Run the step's own shell against a stub `okl` for each exit code.
     """
-    import yaml
-
+    # Read as text, like the other workflow tests: PyYAML is not a test dependency here,
+    # and importing it made this test pass on the machine that had it and fail in CI.
     root = Path(__file__).resolve().parents[1]
-    wf = yaml.safe_load((root / "ci" / "okl-verify.yml").read_text())
-    body = next(s["run"] for s in wf["jobs"]["okl-verify"]["steps"]
-                if s.get("name", "").startswith("Drift gate"))
+    lines = (root / "ci" / "okl-verify.yml").read_text().splitlines()
+    start = next(i for i, ln in enumerate(lines) if "- name: Drift gate" in ln)
+    run_at = next(i for i in range(start, len(lines)) if lines[i].strip() == "run: |")
+    indent = len(lines[run_at + 1]) - len(lines[run_at + 1].lstrip())
+    block = []
+    for ln in lines[run_at + 1:]:
+        if ln.strip() and len(ln) - len(ln.lstrip()) < indent:
+            break
+        block.append(ln[indent:])
+    body = "\n".join(block)
+    assert "okl drift --gate" in body, "extracted the wrong block"
 
     for okl_code, want_code, want_warning in [(0, 0, False), (1, 1, False), (2, 0, True)]:
         with tempfile.TemporaryDirectory() as d:
