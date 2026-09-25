@@ -1,5 +1,39 @@
 # Changelog
 
+## Unreleased
+
+### Numbers that say what they rest on
+
+- **`okl metric` states its coverage and counts recurrences it could not see** (#31). It
+  printed `recurrence-after-arming: 0 … ✓` while the store held three recurrences: it only
+  counted defects with a gate attached (7 of 66) without saying so, and it could not read
+  the seed packs' `defect RECURS_IN <repo>` form at all. It now reports how many defect
+  classes the number can speak for, lists recurrences that had no gate separately, and
+  prints no tick. **`okl metric --format json` changed shape** to the report
+  (`armed`, `unarmed`, `defects`, `defects_with_gate`). The service's
+  `/metric/recurrence` keeps its original `recurrence_after_arming` and `count` keys, now
+  derived from the same report, and adds `report`. Against a service too old to send
+  `report`, the CLI exits 2 and says coverage is unknown rather than guessing.
+- **`okl drift --gate` no longer passes having checked nothing** (#21). An unconfigured
+  directory is refused (and no `okl.db` is created by asking); a store with no rule
+  governing any file reports "NOTHING CHECKED" and exits 2 under `--gate`; the all-clear
+  states how many rules it checked. The shipped `okl-verify` workflow turns exit 2 into a
+  "Drift not checked" warning when the job has no store, and fails when it had one.
+- **`okl init` names an empty store and how to fill it** (#27), listing the bundled seed
+  packs that fit the repo's declared stack. `okl seed`'s "matches your interests" marker
+  now matches on stack too: a pack about .NET no longer matches a React repo because a few
+  of its records are tagged `security`.
+
+### Retrieval
+
+- **Tags are searchable** (#14), weighted below every prose field, and content matches
+  always rank ahead of records that only match on a tag.
+
+### Fixed
+
+- **The scaffold's recording instruction passes `--id`** (#19), so the same lesson recorded
+  in two sessions is one record, not two.
+
 ## 0.5.0
 
 ### The vocabulary is no longer fixed in the package

@@ -218,10 +218,6 @@ class Store:
     def neighbors(self, node_id: str, rels: Iterable[str] | None = None) -> list[tuple[Edge, Node]]:
         return self._impl.neighbors(node_id, list(rels) if rels else None)
 
-    def recurrence_after_arming(self) -> list[dict[str, str]]:
-        """The metric the method says it lacks (design doc §3.5 / Appendix A)."""
-        return self._impl.recurrence_after_arming()
-
     def edges(self, rels: list[str]) -> list[Edge]:
         """Every edge whose relation is in `rels`. Deliberately dumb: interpretation lives
         in core, once, so the two backends cannot disagree about what an edge means."""
@@ -261,6 +257,16 @@ class _Backend(Protocol):
       upsert_node / upsert_edge
         - Idempotent on the primary key: writing the same id twice replaces, never
           duplicates, and leaves any derived index consistent with the row.
+
+      edges(rels)
+        - Exactly the edges whose relation is in `rels`, each stored edge once.
+        - Returns an edge even when its far end is NOT a node. The seed packs write
+          `defect RECURS_IN <repo name>`; a backend that joined edges to nodes would
+          drop every one of them silently -- the second half of issue #31.
+        - Empty `rels` returns []. (SQLite and Postgres take different paths here:
+          `IN ()` against `= ANY('{}')`.)
+        - Interprets nothing. What an edge means is decided once, in core, so two
+          backends cannot compute two different metrics from the same store.
     """
 
     def init_schema(self) -> None: ...
@@ -270,7 +276,6 @@ class _Backend(Protocol):
     def search(self, q: str, scope: str | None, node_types: list[str] | None,
                limit: int) -> list[Node]: ...
     def neighbors(self, node_id: str, rels: list[str] | None) -> list[tuple[Edge, Node]]: ...
-    def recurrence_after_arming(self) -> list[dict[str, str]]: ...
     def edges(self, rels: list[str]) -> list[Edge]: ...
     def all_nodes(self) -> list[Node]: ...
     def close(self) -> None: ...
@@ -450,16 +455,6 @@ class _SQLiteBackend(_Backend):
             return [Edge(src=r["src"], rel=r["rel"], dst=r["dst"], created_at=r["created_at"])
                     for r in rows]
 
-    def recurrence_after_arming(self):
-        with self._lock:
-            sql = """
-            SELECT d2.repo AS recurred_in, d1.title AS defect_class, g.title AS gate
-            FROM edge rec JOIN node d2 ON rec.src=d2.id AND rec.rel='RECURS_IN'
-            JOIN node d1 ON rec.dst=d1.id
-            JOIN edge c ON c.rel='CATCHES' AND c.dst=d1.id
-            JOIN node g ON c.src=g.id"""
-            return [dict(r) for r in self.conn.execute(sql).fetchall()]
-
     def all_nodes(self):
         with self._lock:
             return [_row_to_node(dict(r)) for r in self.conn.execute("SELECT * FROM node").fetchall()]
@@ -616,14 +611,6 @@ class _PostgresBackend(_Backend):
         return [Edge(src=r["src"], rel=r["rel"], dst=r["dst"], created_at=r["created_at"])
                 for r in self._fetch("SELECT src, rel, dst, created_at FROM edge "
                                      "WHERE rel = ANY(%s)", (list(rels),))]
-
-    def recurrence_after_arming(self):
-        return self._fetch("""
-            SELECT d2.repo AS recurred_in, d1.title AS defect_class, g.title AS gate
-            FROM edge rec JOIN node d2 ON rec.src=d2.id AND rec.rel='RECURS_IN'
-            JOIN node d1 ON rec.dst=d1.id
-            JOIN edge c ON c.rel='CATCHES' AND c.dst=d1.id
-            JOIN node g ON c.src=g.id""", ())
 
     def all_nodes(self):
         return [_row_to_node(r) for r in self._fetch("SELECT * FROM node", ())]

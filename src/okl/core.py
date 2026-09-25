@@ -567,7 +567,12 @@ def recurrence_report(store: Store) -> dict[str, Any]:
     the defect. Reading only the first form silently discarded every seeded recurrence.
     """
     nodes = {n.id: n for n in store.all_nodes()}
-    defect_ids = {i for i, n in nodes.items() if n.type == "Defect"}
+    recurs = store.edges(["RECURS_IN"])
+    # A record written to SAY a defect recurred is not another defect class: it points at
+    # the original, never carries a gate, and counting it in the denominator made every
+    # new recurrence quietly lower the coverage percentage. Only classes are counted.
+    reports = {e.src for e in recurs if e.dst in nodes}
+    defect_ids = {i for i, n in nodes.items() if n.type == "Defect" and i not in reports}
     gates_for: dict[str, list[str]] = {}
     for e in store.edges(["CATCHES"]):
         if e.dst in defect_ids and e.src in nodes:
@@ -575,13 +580,13 @@ def recurrence_report(store: Store) -> dict[str, Any]:
 
     armed: list[dict[str, Any]] = []
     unarmed: list[dict[str, Any]] = []
-    for e in store.edges(["RECURS_IN"]):
+    for e in recurs:
         if e.dst in nodes:                        # new RECURS_IN original
             cls, where = e.dst, (nodes[e.src].repo if e.src in nodes else None)
         else:                                     # defect RECURS_IN <repo name>
             cls, where = e.src, e.dst
-        if cls not in nodes:
-            continue                              # neither end names a record we hold
+        if cls not in nodes or nodes[cls].type != "Defect":
+            continue                              # not a defect class we hold
         row = {"defect_class": nodes[cls].title, "defect_id": cls, "recurred_in": where}
         if cls in gates_for:
             armed.append({**row, "gates": gates_for[cls]})

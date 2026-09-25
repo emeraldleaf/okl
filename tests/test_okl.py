@@ -157,19 +157,19 @@ def test_recurrence_metric(store):
     core.link(store, g, "CATCHES", d)
 
     # ASSERT (1) — baseline: a gate existing is not itself a recurrence
-    assert store.recurrence_after_arming() == [], "no recurrence has happened yet"
+    assert core.recurrence_report(store)["armed"] == [], "no recurrence has happened yet"
 
     # ACT — the defect recurs in a repo that never armed that gate (RECURS_IN edge)
     repo_node = core.record(store, type="Entity", title="dotnet-repo", scope="repo:dotnet-repo",
                             repo="dotnet-repo")
     core.link(store, repo_node, "RECURS_IN", d)
-    rows = store.recurrence_after_arming()
+    rows = core.recurrence_report(store)["armed"]
 
     # ASSERT (2) — exactly one recurrence is reported...
     assert len(rows) == 1
     # ASSERT (3) — ...and it names the gate that would have prevented it, which is the
     # actionable part: the fix is arming that gate here, not inventing something new.
-    assert rows[0]["gate"] == "classpath gate"
+    assert rows[0]["gates"] == ["classpath gate"]
 
 
 def test_seed_file_loads(store, tmp_path, monkeypatch):
@@ -1238,6 +1238,11 @@ def _backend_conformance(store, label):
     assert all(rel == "CATCHES" for _, rel, _ in got), f"{label}: edges() leaked another relation"
     both = store.edges(["CATCHES", "RECURS_IN"])
     assert len({(e.src, e.rel, e.dst) for e in both}) == len(both), f"{label}: duplicate edges"
+    # The case issue #31 turns on: an edge whose far end is a repo name, not a record. A
+    # backend that joined edges to nodes would pass everything above and fail this.
+    assert (a, "RECURS_IN", "some-repo") in {(e.src, e.rel, e.dst) for e in both}, \
+        f"{label}: edges() dropped an edge whose far end is not a node"
+    assert store.edges([]) == [], f"{label}: empty rels must return nothing"
 
 
 def test_sqlite_backend_conformance(store):
@@ -1911,8 +1916,17 @@ def test_recurrence_report_counts_what_the_metric_could_not_see(store):
     # ASSERT (2) — both invisible ones are now reported, each attributed correctly.
     unarmed = {x["defect_id"]: x["recurred_in"] for x in r["unarmed"]}
     assert unarmed == {loose: "svc", seeded: "other-repo"}
-    # ASSERT (3) — coverage travels with the number. Five defects, one with a gate.
-    assert (r["defects_with_gate"], r["defects"]) == (1, 5)
+    # ASSERT (3) — coverage travels with the number. Three defect CLASSES, one gated.
+    # "it came back" and "gated one came back" are records ABOUT recurrences, not classes;
+    # counting them (as the first version did) made each recurrence lower the coverage.
+    assert (r["defects_with_gate"], r["defects"]) == (1, 3)
+
+    # ASSERT (4) — a RECURS_IN aimed at something that is not a Defect is not a
+    # recurrence of a defect class, and is not reported as one.
+    rule = core.record(store, type="Rule", title="a rule, not a defect", scope="org")
+    note = core.record(store, type="Defect", title="points at a rule", scope="repo", repo="svc")
+    core.link(store, note, "RECURS_IN", rule)
+    assert rule not in {x["defect_id"] for x in core.recurrence_report(store)["unarmed"]}
 
 
 def test_metric_output_never_prints_a_bare_tick(tmp_path, monkeypatch):
@@ -1938,3 +1952,40 @@ def test_metric_output_never_prints_a_bare_tick(tmp_path, monkeypatch):
     assert "✓" not in out
     assert "among the 0 of 1 defects that have a gate" in out
     assert "recurrence without a gate: 1" in out and "came back anyway" in out
+
+
+def test_metric_endpoint_answers_once_in_both_shapes(monkeypatch):
+    """/metric/recurrence must give ONE answer, in the legacy keys and in `report`.
+
+    The first version of #31's fix added `report` from core but kept serving the legacy
+    `recurrence_after_arming`/`count` keys from the old SQL, which cannot read the seed
+    packs' `defect RECURS_IN <repo>` form. A gated defect recurring that way came back as
+    count 0 beside report.armed 1 -- two answers in one payload, and older clients still
+    reading the wrong one. Written before the old SQL was deleted, to prove the legacy
+    shape survives the deletion.
+    """
+    pytest.importorskip("fastapi")
+    pytest.importorskip("httpx")
+    from fastapi.testclient import TestClient
+
+    from okl.service import create_app
+
+    monkeypatch.delenv("OKL_TOKEN", raising=False)
+    s = Store("sqlite:///:memory:")
+    d = core.record(s, type="Defect", title="gated defect", scope="org")
+    g1 = core.record(s, type="Gate", title="gate one", scope="org")
+    g2 = core.record(s, type="Gate", title="gate two", scope="org")
+    core.link(s, g1, "CATCHES", d)
+    core.link(s, g2, "CATCHES", d)
+    core.link(s, d, "RECURS_IN", "some-repo")          # the seed form the old SQL missed
+    body = TestClient(create_app(store=s)).get("/metric/recurrence").json()
+
+    # ASSERT (1) — the legacy shape is intact for older clients: one row per gate.
+    rows = body["recurrence_after_arming"]
+    assert body["count"] == len(rows) == 2
+    assert {r["gate"] for r in rows} == {"gate one", "gate two"}
+    assert all(r["defect_class"] == "gated defect" and r["recurred_in"] == "some-repo"
+               for r in rows)
+    # ASSERT (2) — and it agrees with the report in the same payload.
+    assert len(body["report"]["armed"]) == 1
+    assert sorted(body["report"]["armed"][0]["gates"]) == ["gate one", "gate two"]

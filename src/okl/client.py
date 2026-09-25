@@ -216,11 +216,6 @@ class Client:
             return self._post("/verify", {"id": node_id, "evidence": evidence})
         return core.verify(self._local_store(), node_id, evidence)
 
-    def recurrence(self) -> list[dict]:
-        if self.mode == "remote":
-            return self._get("/metric/recurrence")["recurrence_after_arming"]
-        return self._local_store().recurrence_after_arming()
-
     def recurrence_report(self) -> dict | None:
         """The coverage-aware report, or None from a service too old to compute one --
         in which case the caller must say coverage is unknown, not assume it is fine."""
