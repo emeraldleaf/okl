@@ -9,6 +9,14 @@
 # session (marker file) and never loops (stop_hook_active guard).
 set -uo pipefail
 
+# Anchor to the project. A hook runs in the session's CURRENT directory, and a `cd` in any
+# command moves it; from outside the project, okl finds no config and the hook blocked
+# every prompt as "unreachable" until the session was restarted. Claude Code sets
+# CLAUDE_PROJECT_DIR for every hook; without it, stay where we are.
+if [ -n "${CLAUDE_PROJECT_DIR:-}" ] && [ -d "$CLAUDE_PROJECT_DIR" ]; then
+  cd "$CLAUDE_PROJECT_DIR" || true
+fi
+
 # Same resolver as pretooluse-okl-check.sh (env → pinned config → PATH → python3 -m okl);
 # the reminder is best-effort, so an unresolvable okl silently disables it rather than blocking.
 resolve_okl() {

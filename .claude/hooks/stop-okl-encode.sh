@@ -9,6 +9,14 @@
 # session (marker file) and never loops (stop_hook_active guard).
 set -uo pipefail
 
+# Anchor to the project. A hook runs in the session's CURRENT directory, and a `cd` in any
+# command moves it; from outside the project, okl finds no config and the hook blocked
+# every prompt as "unreachable" until the session was restarted. Claude Code sets
+# CLAUDE_PROJECT_DIR for every hook; without it, stay where we are.
+if [ -n "${CLAUDE_PROJECT_DIR:-}" ] && [ -d "$CLAUDE_PROJECT_DIR" ]; then
+  cd "$CLAUDE_PROJECT_DIR" || true
+fi
+
 # Same resolver as pretooluse-okl-check.sh (env → pinned config → PATH → python3 -m okl);
 # the reminder is best-effort, so an unresolvable okl silently disables it rather than blocking.
 resolve_okl() {
@@ -67,11 +75,26 @@ touch "$marker" 2>/dev/null || true
 cat >&2 <<'MSG'
 ENCODING LOOP — before this session ends: did it surface a lesson worth keeping?
 A non-obvious failure mode, a rule discovered the hard way, a decision that shouldn't be
-silently reversed? If yes, record it now (choose the scope deliberately — 'org' spreads
-to every repo, 'repo' stays local — and tag the subject):
+silently reversed? If yes, record it now. Three independent axes, each chosen deliberately:
+
+  --scope       WHO may see it: 'org' spreads to every repo, 'repo' stays local
+  --tags        WHAT it is about, from the closed vocabulary
+  --applies-to  WHERE IT IS TRUE — omit unless the lesson is false or meaningless off
+                that stack. Unset means valid on every stack - still subject to scope
+                and the repo's declared interests - which is the safe default; a wrong
+                value hides the record silently. A tag says where a lesson was FOUND and
+                is never a reason to set this.
 
   okl record --type Defect|Rule|Decision --scope org|repo --tags "<subjects>" \
-    --title "..." --symptom "..." --body "cause: ..." --fix "..."
+    --id "<stable-key>" --title "..." --symptom "..." --body "cause: ..." --fix "..." \
+    [--applies-to <stack>]   # ONLY for a genuinely framework-bound lesson
+
+  --id is what makes the write idempotent, and leaving it off is the common mistake.
+  Without it every record is minted a fresh random id, so the same lesson recorded in two
+  sessions becomes two rows, which `okl dedup` will report but cannot remove: there is no
+  delete subcommand. Choose a short stable key and reuse it. Where a repo keeps its
+  lessons in a seed file, use the id that file derives, "seed:<seed-file-stem>:<key>", so
+  a later `okl seed` upserts that same row rather than adding a second one beside it.
 
 If the session genuinely learned nothing durable, state that explicitly and finish.
 MSG
