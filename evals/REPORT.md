@@ -770,6 +770,12 @@ reproductions are `spa_tokens` (§4h: 1/3; here 2/3, baseline 3/3), the standing
 report has declined to call a trend since §4g, for the same reason now: 1/3 to 2/3 is
 inside the noise the control measures.
 
+**After the run, review found one more loss:** a stale record routed into an action lost
+its per-record "STALE — re-verify" marker. It was fixed by carrying the marker into the
+action. No eval task's briefing contains a stale routed record, so all 8 briefings are
+byte-identical to those this run measured (checked against `2ec40d0`); the receipt still
+describes what ships.
+
 On the five tasks the baseline failed at least once, the briefed arm reproduced 2 of 15.
 The briefing still does its job at 36% fewer characters. Per the pre-registration, that is
 all this can say: the cut is safe on this task set; nothing here shows it helps.

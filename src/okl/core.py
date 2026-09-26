@@ -189,23 +189,23 @@ def _route_actions(buckets: dict[str, list[dict]]) -> list[dict]:
     # `id` and `cause` let the briefing name each record once: the action line carries
     # everything the record's section entry used to repeat (see render_check_for_agent).
     actions: list[dict] = [
-        {"kind": "arm_gate", "target": g["title"], "id": g.get("id"), "cause": g.get("body"),
+        {"kind": "arm_gate", "target": g["title"], "id": g.get("id"), "cause": g.get("body"), "stale": g.get("stale"),
          "symptom": g.get("symptom"), "why": g.get("catches") or None,
          "how": g.get("fix") or "run this gate before you finish the task"}
         for g in buckets["armed_gates"]
     ]
     actions += [
-        {"kind": "apply_fix", "target": d["title"], "id": d.get("id"), "cause": d.get("body"),
+        {"kind": "apply_fix", "target": d["title"], "id": d.get("id"), "cause": d.get("body"), "stale": d.get("stale"),
          "symptom": d.get("symptom"), "how": d["fix"]}
         for d in buckets["relevant_defects"] + buckets["rules"] if d.get("fix")
     ]
     actions += [
-        {"kind": "avoid_retracted", "target": r["title"], "id": r.get("id"), "cause": r.get("body"),
+        {"kind": "avoid_retracted", "target": r["title"], "id": r.get("id"), "cause": r.get("body"), "stale": r.get("stale"),
          "how": "do not restate this as fact; it was retracted"}
         for r in buckets["live_retractions"]
     ]
     actions += [
-        {"kind": "avoid_identifier", "target": t["title"], "id": t.get("id"), "cause": t.get("body"),
+        {"kind": "avoid_identifier", "target": t["title"], "id": t.get("id"), "cause": t.get("body"), "stale": t.get("stale"),
          "how": "do not reintroduce this retired identifier"}
         for t in buckets["in_scope_tombstones"]
     ]
@@ -529,7 +529,10 @@ def _render_actions(actions: list[dict]) -> list[str]:
     out = ["### ✅ Do this (routed actions)"]
     for a in actions:
         sym = f" — when you see: {a['symptom']}" if a.get("symptom") else ""
-        out.append(f"- **{verb.get(a['kind'], 'DO')}: {a['target']}**{sym}")
+        # The per-record stale marker lives here now that a routed record has no section
+        # entry of its own (#52 review); a bare count cannot say which action to distrust.
+        tag = " *(STALE — re-verify)*" if a.get("stale") else ""
+        out.append(f"- **{verb.get(a['kind'], 'DO')}: {a['target']}**{tag}{sym}")
         out.append(f"    → {a['how']}")
         if a.get("why"):
             out.append(f"    catches: {', '.join(a['why'])}")

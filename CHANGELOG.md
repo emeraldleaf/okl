@@ -2,10 +2,11 @@
 
 ## Unreleased
 
-- **The briefing names each record once — about 35% fewer tokens on every prompt.** Every
-  record was printed twice: as a routed action, and again in full under its section. The
-  action now carries the cause, a gate's symptom and what a gate catches, and the section
-  skips it. A test holds the invariant (each record listed once, no field lost), and
+- **The briefing names each record once — 36% fewer characters across the 8 eval tasks.**
+  Every record that became a routed action was printed twice: as the action, and again in
+  full under its section. The action now carries the cause, a gate's symptom, what a gate
+  catches and the stale marker, and the section skips it. A briefing with no routed
+  actions is unchanged. A test holds the invariant (each record listed once, no field lost), and
   `evals/layout_preflight.py` proved the change lossless on all 8 eval tasks before any
   model call. This is the eval harness's treatment, so REPORT §4i pre-registers a new run.
   Eval receipts now record `okl_commit`.

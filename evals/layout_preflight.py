@@ -1,7 +1,8 @@
 """Deterministic pre-flight for a briefing LAYOUT change: is the new render lossless?
 
-Renders every eval task's briefing twice against the same live store -- once with
-`core.py` as it was at a git ref, once with the working copy -- and checks that every
+Fetches every eval task's check result once, through the same client the harness uses,
+and renders it twice -- with `core.py` as it was at a git ref, and with the working
+copy -- then checks that every
 content-bearing fragment of the old briefing (each record's title, symptom, cause and
 fix) still appears in the new one. No model is called; it answers in milliseconds.
 
@@ -61,14 +62,18 @@ def main() -> int:
     sys.modules["okl.core_old"] = old
     spec.loader.exec_module(old)
 
-    interests = [i for i in args.interests.split(",") if i]
-    store = Client()._local_store()
+    # One retrieval per task, through the same client the harness's `okl check` uses (it
+    # may be a remote service, not this machine's store), rendered by both renderers. The
+    # old renderer ignores the fields the new one added, so only the layout differs.
+    client = Client()
+    client.interests = [i for i in args.interests.split(",") if i]
     total_old = total_new = 0
     lost_any = False
     for line in (REPO / "evals" / "tasks.jsonl").read_text().splitlines():
         task = json.loads(line)
-        a = old.render_check_for_agent(old.check(store, "okl", task["task"], interests=interests))
-        b = new.render_check_for_agent(new.check(store, "okl", task["task"], interests=interests))
+        result = client.check(task["task"], repo="okl")
+        a = old.render_check_for_agent(result)
+        b = new.render_check_for_agent(result)
         total_old += len(a)
         total_new += len(b)
         lost = sorted(x for x in fragments(a) if x not in b)

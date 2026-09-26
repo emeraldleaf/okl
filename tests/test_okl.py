@@ -2168,3 +2168,17 @@ def test_briefing_names_each_record_once_and_loses_nothing(store):
                  "defect-symptom", "defect-fix", "gate-symptom", "gate-fix",
                  "catches: defect-title"):
         assert kept in text, f"{kept!r} was lost from the briefing:\n{text}"
+
+
+def test_a_stale_record_stays_marked_when_it_becomes_an_action(store):
+    """#52 review: routing a record into an action removed its section entry, and with it
+    the only per-record "STALE — re-verify" marker; what remained was a bare count, so an
+    agent could not tell which action to distrust. The marker now travels with the action.
+    """
+    import time
+    core.record(store, type="Defect", title="aging-defect", scope="org", body="c",
+                symptom="s", fix="f", ttl_days=0)
+    time.sleep(0.01)
+    text = core.render_check_for_agent(core.check(store, "r", "aging-defect"))
+    line = next(ln for ln in text.splitlines() if "aging-defect" in ln and ln.startswith("- **"))
+    assert "STALE" in line, text
