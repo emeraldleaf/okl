@@ -26,8 +26,8 @@
   the first stop, so their Stop hooks run twice; the capture-everything tools also record
   `okl record`, putting one lesson in two stores; and each injects context beside okl's
   briefing. `okl doctor` (exit 1 when any is found) and `okl init` name each tool found,
-  where, how it collides and what to do. They read settings files only and never edit
-  another tool's configuration.
+  where, how it collides and what to do. `okl doctor` only reads settings; `okl init`
+  writes its own hook registration as before, keeping every other tool's entries.
 - **CI can check drift without a store** (#36). `okl export --drift` writes
   `okl-drift.json`, the rules drift reads (ids, titles, globs, verification evidence, no
   lesson bodies); `okl drift --snapshot` reads the committed copy only, and refuses an
