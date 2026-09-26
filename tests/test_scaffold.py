@@ -1059,3 +1059,39 @@ def test_hooks_neither_run_in_the_wrong_place_nor_use_a_guessable_temp_file(tmp_
         locked.chmod(0o755)
     for name in ("userpromptsubmit-okl-check.sh", "stop-okl-encode.sh"):
         assert "/tmp/okl-hook" not in (scaffold / name).read_text(), f"{name}: guessable temp path"
+
+
+def test_init_never_writes_through_a_symlink_out_of_the_repo(tmp_path):
+    """#50 review (CWE-59). A cloned repo can hold a dangling symlink where okl installs a
+    hook, or a symlinked .claude/ directory; `okl init` followed it and wrote okl's file
+    wherever it pointed. okl now refuses any destination that is, or sits under, a symlink.
+    """
+    import json
+    import sys
+    repo, outside = tmp_path / "r", tmp_path / "outside"
+    (repo / ".claude" / "hooks").mkdir(parents=True); outside.mkdir()
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    # A dangling link at a hook's destination, and settings.json linked out of the repo.
+    (repo / ".claude" / "hooks" / "stop-okl-encode.sh").symlink_to(outside / "planted.sh")
+    (outside / "settings.json").write_text("{}")
+    (repo / ".claude" / "settings.json").symlink_to(outside / "settings.json")
+    env = {**os.environ, "HOME": str(tmp_path)}
+    env.pop("OKL_DATABASE_URL", None); env.pop("OKL_SERVICE_URL", None)
+    r = subprocess.run([sys.executable, "-m", "okl", "init", "--repo", "r"], cwd=repo, env=env,
+                       capture_output=True, text=True)
+    assert not (outside / "planted.sh").exists(), "okl wrote through a dangling symlink"
+    assert json.loads((outside / "settings.json").read_text()) == {}, \
+        "okl rewrote a settings file outside the repo through a symlink"
+    assert "symlink" in r.stdout, r.stdout
+    # The ordinary file beside it was still installed.
+    assert (repo / ".claude" / "hooks" / "userpromptsubmit-okl-check.sh").is_file()
+    # Uninstall does not follow the links either. The outside file holds an okl entry, so a
+    # followed link would rewrite it; it must stay byte-identical, and be named.
+    from okl.cli import HOOK_COMMANDS
+    planted = json.dumps({"hooks": {"Stop": [{"hooks": [
+        {"type": "command", "command": HOOK_COMMANDS["Stop"]}]}]}})
+    (outside / "settings.json").write_text(planted)
+    r = subprocess.run([sys.executable, "-m", "okl", "init", "--uninstall"], cwd=repo, env=env,
+                       capture_output=True, text=True)
+    assert r.returncode == 0 and (outside / "settings.json").read_text() == planted
+    assert "a symlink" in r.stdout, r.stdout
