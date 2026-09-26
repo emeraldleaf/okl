@@ -310,6 +310,11 @@ def main() -> int:
         # Durable: a receipt read months later says on its own face whether it may be
         # compared to its neighbours. Absent means the instrument matched the prior run.
         "instrument_changed_from": drift_from,
+        # The code that rendered the briefings. The briefing's layout is part of the
+        # treatment (§4i changed it), and without this two receipts from different layouts
+        # look identical on their face.
+        "okl_commit": subprocess.run(["git", "-C", str(REPO), "rev-parse", "--short", "HEAD"],
+                                     capture_output=True, text=True).stdout.strip() or None,
         "results": results, "failures": failures,
     }, indent=1) + "\n")
     try:

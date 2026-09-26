@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **The briefing names each record once — about 35% fewer tokens on every prompt.** Every
+  record was printed twice: as a routed action, and again in full under its section. The
+  action now carries the cause, a gate's symptom and what a gate catches, and the section
+  skips it. A test holds the invariant (each record listed once, no field lost), and
+  `evals/layout_preflight.py` proved the change lossless on all 8 eval tasks before any
+  model call. This is the eval harness's treatment, so REPORT §4i pre-registers a new run.
+  Eval receipts now record `okl_commit`.
+
 - **`okl init` no longer overwrites your edits, and `okl init --uninstall` exists** (#49).
   `init` rewrote the hook scripts on every run, silently discarding a local change. Every
   file okl installs now carries a `# okl-fingerprint:` line (the hash of the rest of the

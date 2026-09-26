@@ -186,24 +186,26 @@ def _route_actions(buckets: dict[str, list[dict]]) -> list[dict]:
     agent handed "FIX x, ARM y, AVOID z" has already been told. Order is deliberate:
     gates first (cheapest to act on), then fixes, then the two prohibitions.
     """
+    # `id` and `cause` let the briefing name each record once: the action line carries
+    # everything the record's section entry used to repeat (see render_check_for_agent).
     actions: list[dict] = [
-        {"kind": "arm_gate", "target": g["title"],
-         "why": g.get("catches") or None,
+        {"kind": "arm_gate", "target": g["title"], "id": g.get("id"), "cause": g.get("body"),
+         "symptom": g.get("symptom"), "why": g.get("catches") or None,
          "how": g.get("fix") or "run this gate before you finish the task"}
         for g in buckets["armed_gates"]
     ]
     actions += [
-        {"kind": "apply_fix", "target": d["title"],
+        {"kind": "apply_fix", "target": d["title"], "id": d.get("id"), "cause": d.get("body"),
          "symptom": d.get("symptom"), "how": d["fix"]}
         for d in buckets["relevant_defects"] + buckets["rules"] if d.get("fix")
     ]
     actions += [
-        {"kind": "avoid_retracted", "target": r["title"],
+        {"kind": "avoid_retracted", "target": r["title"], "id": r.get("id"), "cause": r.get("body"),
          "how": "do not restate this as fact; it was retracted"}
         for r in buckets["live_retractions"]
     ]
     actions += [
-        {"kind": "avoid_identifier", "target": t["title"],
+        {"kind": "avoid_identifier", "target": t["title"], "id": t.get("id"), "cause": t.get("body"),
          "how": "do not reintroduce this retired identifier"}
         for t in buckets["in_scope_tombstones"]
     ]
@@ -312,7 +314,13 @@ def render_check_for_agent(result: dict[str, Any]) -> str:
     lines = [f"## OKL briefing — {result['repo']} · task: {result['task']}",
              f"_{result['match_count']} relevant node(s) from the org's encoded body._", ""]
 
-    lines += _render_actions(result.get("next_actions") or [])
+    actions = result.get("next_actions") or []
+    lines += _render_actions(actions)
+    # Each record once. A record routed into an action above used to be printed again, in
+    # full, under its section: about half of every briefing, on every prompt. The action
+    # line now carries its cause (and what a gate catches), so the section skips it.
+    # Guarded by test_briefing_names_each_record_once_and_loses_nothing.
+    actioned = {a["id"] for a in actions if a.get("id")}
 
     order = [
         ("armed_gates", "🔒 Armed gates — adopt before you start"),
@@ -325,7 +333,7 @@ def render_check_for_agent(result: dict[str, Any]) -> str:
     ]
     any_hit = False
     for key, header in order:
-        items = result.get(key) or []
+        items = [it for it in (result.get(key) or []) if it.get("id") not in actioned]
         if not items:
             continue
         any_hit = True
@@ -521,6 +529,10 @@ def _render_actions(actions: list[dict]) -> list[str]:
         sym = f" — when you see: {a['symptom']}" if a.get("symptom") else ""
         out.append(f"- **{verb.get(a['kind'], 'DO')}: {a['target']}**{sym}")
         out.append(f"    → {a['how']}")
+        if a.get("why"):
+            out.append(f"    catches: {', '.join(a['why'])}")
+        if a.get("cause"):
+            out.append(f"    why: {a['cause'][:200]}")
     out.append("")
     return out
 
