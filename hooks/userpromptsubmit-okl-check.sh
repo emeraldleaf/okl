@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:6844b94df87f0f449108569e63f2560284beaf4bfb02022beb0ad24e20872ba6
+# okl-fingerprint: sha256:b71fd0650b1bd0cbfa982533be841cf21a45802c50d86815b1da0f1b29f7fff2
 # UserPromptSubmit hook — inject the org's relevant lessons into the model's context
 # BEFORE it starts the task. This event is the only correct one for delivery: its stdout
 # (exit 0) is added to Claude's context, and its stdin carries the actual prompt text, so
@@ -19,7 +19,12 @@ set -uo pipefail
 # every prompt as "unreachable" until the session was restarted. Claude Code sets
 # CLAUDE_PROJECT_DIR for every hook; without it, stay where we are.
 if [ -n "${CLAUDE_PROJECT_DIR:-}" ] && [ -d "$CLAUDE_PROJECT_DIR" ]; then
-  cd "$CLAUDE_PROJECT_DIR" || true
+  if ! cd "$CLAUDE_PROJECT_DIR" 2>/dev/null; then
+    # Continuing from the drifted directory is the failure this block exists to prevent.
+    echo "OKL CHECK DID NOT RUN — cannot enter the project directory $CLAUDE_PROJECT_DIR, so" >&2
+    echo "a briefing from here would read the wrong configuration. Blocking this prompt." >&2
+    exit 2
+  fi
 fi
 
 # Switched off by name: OKL_DISABLED_HOOKS=briefing,encode. For running beside tools whose
@@ -72,13 +77,16 @@ TASK="${OKL_TASK:-${prompt:-$(git log -1 --pretty=%s 2>/dev/null || echo 'genera
 # $OKL unquoted on purpose: it may be a command + args ("python3 -m okl").
 # okl's stderr is kept: it says WHY a check did not run (unreachable, refused, not
 # configured), and discarding it turned every refusal into a misreported outage.
-errf=$(mktemp 2>/dev/null || echo "/tmp/okl-hook-$$")
-if out=$($OKL check --task "$TASK" --format agent 2>"$errf"); then
-  rm -f "$errf"
+# No guessable fallback path: a fixed name under /tmp could be pre-planted as a symlink by
+# another local user. Without a private temp file the reason is lost, not the check.
+errf=$(mktemp 2>/dev/null) || errf=""
+if out=$($OKL check --task "$TASK" --format agent 2>"${errf:-/dev/null}"); then
+  [ -n "$errf" ] && rm -f "$errf"
   printf '%s\n' "$out"      # stdout → the model's context
   exit 0
 fi
-why=$(head -c 1500 "$errf" 2>/dev/null); rm -f "$errf"
+why=""
+if [ -n "$errf" ]; then why=$(head -c 1500 "$errf" 2>/dev/null); rm -f "$errf"; fi
 
 if [ "${OKL_OFFLINE:-0}" = "1" ]; then
   echo "OKL offline (OKL_OFFLINE=1 acknowledged) — proceeding without the layer." >&2

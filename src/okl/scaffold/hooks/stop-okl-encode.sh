@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:4c8933020cbd49b602efcda19df1dce6f8d586e4d637c7ba5ffdc93e9ceeff2a
+# okl-fingerprint: sha256:4810245df77ba0c1966372c8c399eae745da7187b911f2e453498a3d35d8b23c
 # Stop hook — the write-side mechanical catch for the encoding loop.
 #
 # The read side (okl check) is enforced by the PreToolUse hook; nothing enforced the WRITE
@@ -15,7 +15,11 @@ set -uo pipefail
 # every prompt as "unreachable" until the session was restarted. Claude Code sets
 # CLAUDE_PROJECT_DIR for every hook; without it, stay where we are.
 if [ -n "${CLAUDE_PROJECT_DIR:-}" ] && [ -d "$CLAUDE_PROJECT_DIR" ]; then
-  cd "$CLAUDE_PROJECT_DIR" || true
+  if ! cd "$CLAUDE_PROJECT_DIR" 2>/dev/null; then
+    # Continuing from the drifted directory is the failure this block exists to prevent.
+    echo "okl encode reminder skipped — cannot enter the project directory $CLAUDE_PROJECT_DIR." >&2
+    exit 0   # a reminder: never block ending the session over it
+  fi
 fi
 
 # Switched off by name: OKL_DISABLED_HOOKS=briefing,encode. For running beside tools whose

@@ -1029,3 +1029,33 @@ def test_hooks_can_be_switched_off_by_name(tmp_path):
                OKL_DISABLED_HOOKS="encode").returncode == 2
     assert run("stop-okl-encode.sh", {"session_id": "s", "stop_hook_active": False},
                OKL_DISABLED_HOOKS="encode", OKL_BIN="/opt/x/okl").returncode == 0
+
+
+def test_hooks_neither_run_in_the_wrong_place_nor_use_a_guessable_temp_file(tmp_path):
+    """#48 review. A project dir that exists but cannot be entered left the hooks running
+    from wherever the session had drifted -- the failure #48 fixes, one step removed. And
+    when mktemp failed, the prompt hook fell back to /tmp/okl-hook-<pid>: a path another
+    local user can pre-plant a symlink at, to redirect okl's stderr into their own file.
+    """
+    import json
+    import os as _os
+    scaffold = Path(__file__).resolve().parents[1] / "src" / "okl" / "scaffold" / "hooks"
+    if _os.geteuid() == 0:
+        pytest.skip("root can enter a mode-000 directory")
+    locked, elsewhere = tmp_path / "locked", tmp_path / "elsewhere"
+    locked.mkdir(); elsewhere.mkdir(); locked.chmod(0o000)
+    base = {"PATH": _os.environ["PATH"], "HOME": str(tmp_path), "TMPDIR": str(tmp_path),
+            "CLAUDE_PROJECT_DIR": str(locked)}
+    try:
+        def run(name, payload):
+            return subprocess.run(["bash", str(scaffold / name)], cwd=elsewhere, text=True,
+                                  input=json.dumps(payload), capture_output=True, env=base)
+        r = run("userpromptsubmit-okl-check.sh", {"prompt": "x"})
+        assert r.returncode == 2 and "cannot enter the project" in r.stderr, r.stderr
+        r = run("stop-okl-encode.sh", {"session_id": "s", "stop_hook_active": False})
+        assert r.returncode == 0 and "cannot enter the project" in r.stderr, \
+            "the Stop reminder must say it was skipped, not skip silently or block the stop"
+    finally:
+        locked.chmod(0o755)
+    for name in ("userpromptsubmit-okl-check.sh", "stop-okl-encode.sh"):
+        assert "/tmp/okl-hook" not in (scaffold / name).read_text(), f"{name}: guessable temp path"
