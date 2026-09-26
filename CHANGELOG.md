@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **A blocked prompt says how okl failed.** The pre-task hook's block now names okl's exit
+  code and what it usually means (not found, refused, error, killed by a signal) and
+  whether okl's error output was captured at all. A live block read only "exited non-zero
+  without a reason", and nothing recorded could explain it afterwards.
+
 - **The briefing names each record once — 36% fewer characters across the 8 eval tasks.**
   Every record that became a routed action was printed twice: as the action, and again in
   full under its section. The action now carries the cause, a gate's symptom, what a gate
