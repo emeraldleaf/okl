@@ -738,7 +738,8 @@ def test_the_old_distribution_name_is_swept_and_still_installable():
     tracked files, and the redirect package must offer every extra the real one does,
     or `pip install "org-knowledge-layer[mcp]"` would quietly install without the extra.
     """
-    import tomllib
+    # tomllib is stdlib from 3.11 only, and okl supports 3.10: skip there, never ImportError.
+    tomllib = pytest.importorskip("tomllib")
 
     root = Path(__file__).resolve().parents[1]
     allowed = {
