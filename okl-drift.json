@@ -17,8 +17,8 @@
       "title": "The core and client path stays stdlib-only — every third-party import lives behind an extra",
       "scope": "repo:okl",
       "files": "src/okl/core.py,src/okl/client.py,src/okl/store.py,pyproject.toml",
-      "verified_at": 1790387870560,
-      "verified_by": "`python3 -c \"import ast;third={'fastapi','pydantic','httpx','requests','psycopg','psycopg2','uvicorn','mcp','yaml'};bad=[(f,getattr(n,'module','') or '')for f in('src/okl/store.py','src/okl/core.py','src/okl/client.py')for n in ast.parse(open(f).read()).body if isinstance(n,(ast.Import,ast.ImportFrom))and((getattr(n,'module','')or '').split('.')[0]in third or any(a.name.split('.')[0]in third for a in n.names))];assert not bad,bad;print('STDLIB OK')\"` exit 0, matched 'STDLIB OK' @ 2026-09-26T01:57Z"
+      "verified_at": 1790397589481,
+      "verified_by": "`python3 -c \"import ast;third={'fastapi','pydantic','httpx','requests','psycopg','psycopg2','uvicorn','mcp','yaml'};bad=[(f,getattr(n,'module','') or '')for f in('src/okl/store.py','src/okl/core.py','src/okl/client.py')for n in ast.parse(open(f).read()).body if isinstance(n,(ast.Import,ast.ImportFrom))and((getattr(n,'module','')or '').split('.')[0]in third or any(a.name.split('.')[0]in third for a in n.names))];assert not bad,bad;print('STDLIB OK')\"` exit 0, matched 'STDLIB OK' @ 2026-09-26T04:39Z"
     },
     {
       "id": "n_71c09abf3f37",
@@ -26,8 +26,8 @@
       "title": "Dependency direction is one-way: store imports nothing, core imports store, adapters import client",
       "scope": "repo:okl",
       "files": "src/okl/store.py,src/okl/core.py,src/okl/client.py",
-      "verified_at": 1790384000729,
-      "verified_by": "`python3 -c \"import ast;m=lambda f:[(getattr(n,'module','') or '')for n in ast.walk(ast.parse(open(f).read()))if isinstance(n,(ast.Import,ast.ImportFrom))];assert not [x for x in m('src/okl/store.py') if 'okl' in x or x.startswith('.')],'store imports okl';assert not [x for x in m('src/okl/core.py') if any(a in x for a in('cli','service','mcp','client'))],'core imports an adapter';print('DIRECTION OK')\"` exit 0, matched 'DIRECTION OK' @ 2026-09-26T00:53Z"
+      "verified_at": 1790397589364,
+      "verified_by": "`python3 -c \"import ast;m=lambda f:[(getattr(n,'module','') or '')for n in ast.walk(ast.parse(open(f).read()))if isinstance(n,(ast.Import,ast.ImportFrom))];assert not [x for x in m('src/okl/store.py') if 'okl' in x or x.startswith('.')],'store imports okl';assert not [x for x in m('src/okl/core.py') if any(a in x for a in('cli','service','mcp','client'))],'core imports an adapter';print('DIRECTION OK')\"` exit 0, matched 'DIRECTION OK' @ 2026-09-26T04:39Z"
     },
     {
       "id": "n_7e50e3588bcd",
@@ -35,8 +35,8 @@
       "title": "A test that imports an undeclared package passes only where that package happens to be installed",
       "scope": "org",
       "files": "tests/",
-      "verified_at": 1790396182331,
-      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && ! grep -rnE '^\\s*import tomllib' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' @ 2026-09-26T04:16Z"
+      "verified_at": 1790397589604,
+      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && ! grep -rnE '^\\s*import tomllib' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' @ 2026-09-26T04:39Z"
     },
     {
       "id": "n_9ba48d85ed19",
@@ -44,8 +44,8 @@
       "title": "Pre-flight the retrieval before spending on an eval — it is deterministic and answers in milliseconds",
       "scope": "org",
       "files": "evals/preflight.py,evals/ab_harness.py",
-      "verified_at": 1790362141311,
-      "verified_by": "`python3 evals/preflight.py` exit 0, matched 'PRE-FLIGHT OK' @ 2026-09-25T18:49Z"
+      "verified_at": 1790397586207,
+      "verified_by": "`python3 evals/preflight.py` exit 0, matched 'PRE-FLIGHT OK' @ 2026-09-26T04:39Z"
     },
     {
       "id": "n_aa3e45a2ecd6",
@@ -53,8 +53,8 @@
       "title": "Provenance references rot precisely because nothing reads them — validate them at startup",
       "scope": "org",
       "files": "evals/ab_harness.py,evals/tasks.jsonl",
-      "verified_at": 1790362141151,
-      "verified_by": "`python3 evals/preflight.py` exit 0, matched 'PRE-FLIGHT OK' @ 2026-09-25T18:49Z"
+      "verified_at": 1790397586048,
+      "verified_by": "`python3 evals/preflight.py` exit 0, matched 'PRE-FLIGHT OK' @ 2026-09-26T04:39Z"
     },
     {
       "id": "n_b74bad29fd87",
@@ -62,8 +62,8 @@
       "title": "A port is defined by behaviour, not by its signatures — state the contract and test every adapter against one body",
       "scope": "org",
       "files": "src/okl/store.py,tests/test_okl.py",
-      "verified_at": 1790384000623,
-      "verified_by": "`python3 -m pytest -q -k 'backend_conformance'` exit 0, matched 'passed' @ 2026-09-26T00:53Z"
+      "verified_at": 1790397589259,
+      "verified_by": "`python3 -m pytest -q -k 'backend_conformance'` exit 0, matched 'passed' @ 2026-09-26T04:39Z"
     },
     {
       "id": "n_be9f13d587b1",
@@ -80,8 +80,8 @@
       "title": "Entered a crowded category deliberately: differentiate on verification-of-memory, compose with memory infra, never compete on recall",
       "scope": "repo:okl",
       "files": "README.md",
-      "verified_at": 1790396182208,
-      "verified_by": "`bash -c \"! grep -inE 'better recall|best.{0,12}memory|beats (mem0|zep|letta|claude-mem|agentmemory)' README.md && echo 'POSITIONING OK'\"` exit 0, matched 'POSITIONING OK' @ 2026-09-26T04:16Z"
+      "verified_at": 1790396230607,
+      "verified_by": "`bash -c \"! grep -inE 'better recall|best.{0,12}memory|beats (mem0|zep|letta|claude-mem|agentmemory)' README.md && echo 'POSITIONING OK'\"` exit 0, matched 'POSITIONING OK' @ 2026-09-26T04:17Z"
     },
     {
       "id": "n_e635fd921086",
