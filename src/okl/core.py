@@ -331,7 +331,9 @@ def render_check_for_agent(result: dict[str, Any]) -> str:
         ("rules", "📐 Encoded rules"),
         ("vocabulary", "📖 Vocabulary"),
     ]
-    any_hit = False
+    # Judged on the whole briefing: when every match was routed into an action the sections
+    # are empty, and "No encoded rule matched" appeared under a list of actions.
+    any_hit = bool(actions)
     for key, header in order:
         items = [it for it in (result.get(key) or []) if it.get("id") not in actioned]
         if not items:

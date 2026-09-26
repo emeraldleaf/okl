@@ -2158,6 +2158,12 @@ def test_briefing_names_each_record_once_and_loses_nothing(store):
     for t in titles:
         hits = [ln for ln in entries if ln.split("**")[1].split(": ", 1)[-1] == t]
         assert len(hits) == 1, f"{t} is listed {len(hits)} times:\n{text}"
+    # When every match was routed into an action the sections are empty, and the briefing
+    # said "No encoded rule matched" under a list of actions (seen live, the first prompt
+    # after the change). Emptiness is judged on the whole briefing, not on its sections.
+    only = core.check(store, "r", "symptom")
+    only_text = core.render_check_for_agent(only)
+    assert only["next_actions"] and "No encoded rule matched" not in only_text, only_text
     for kept in ("gate-cause", "defect-cause", "rule-cause", "plain-cause", "retraction-cause",
                  "defect-symptom", "defect-fix", "gate-symptom", "gate-fix",
                  "catches: defect-title"):

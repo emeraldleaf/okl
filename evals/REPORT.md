@@ -721,10 +721,12 @@ a new series rather than extending the old one.
 **Deterministic pre-flight, run first** (`python3 evals/layout_preflight.py --old-ref main`):
 every eval task's briefing rendered with the old and the new code against the same store.
 Every record's title, symptom, cause and fix survives in all 8 tasks; the briefings are
-**35% smaller** (84,225 → 54,796 characters). The first pre-flight run was not clean: it
+**36% smaller** (84,225 → 54,112 characters). The first pre-flight run was not clean: it
 found one lost line, a gate's symptom in `ci_linter`, because gate actions never carried
-one. That was fixed before this entry was written. The content is therefore identical;
-only the layout differs.
+one. And the first live briefing after the change showed a second defect the pre-flight
+could not: with every match routed into an action the sections were empty, so the
+briefing ended "No encoded rule matched" beneath its own list of actions. Both were fixed
+before the run. The content is therefore identical; only the layout differs.
 
 **Why pre-flight matters here.** The briefed arm reads the live store, which has gained
 records since §4h. A live run alone could not separate "the layout changed" from "the
