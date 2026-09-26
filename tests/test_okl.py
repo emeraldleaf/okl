@@ -2131,3 +2131,54 @@ def test_metric_endpoint_answers_once_in_both_shapes(monkeypatch):
     # ASSERT (2) — and it agrees with the report in the same payload.
     assert len(body["report"]["armed"]) == 1
     assert sorted(body["report"]["armed"][0]["gates"]) == ["gate one", "gate two"]
+
+
+def test_briefing_names_each_record_once_and_loses_nothing(store):
+    """Every record in the agent briefing appeared twice: once as a routed action, and
+    again in full under its section -- about half of a ~2,700-token briefing, on every
+    prompt. Each record now appears exactly once. The action line carries what the
+    section used to add (the cause, and what a gate catches), so nothing is dropped.
+
+    Written as the invariant, not today's layout: any future section or format that
+    repeats a record fails here.
+    """
+    gate = core.record(store, type="Gate", title="gate-title", scope="org",
+                       body="gate-cause", symptom="gate-symptom", fix="gate-fix")
+    d = core.record(store, type="Defect", title="defect-title", scope="org",
+                    body="defect-cause", symptom="defect-symptom", fix="defect-fix")
+    core.link(store, gate, "CATCHES", d)
+    core.record(store, type="Rule", title="rule-title", scope="org", body="rule-cause",
+                symptom="rule-symptom", fix="rule-fix")
+    core.record(store, type="Rule", title="plain-rule-title", scope="org", body="plain-cause")
+    core.record(store, type="Retraction", title="retraction-title", scope="org",
+                body="retraction-cause")
+    text = core.render_check_for_agent(core.check(store, "r", "title cause fix symptom"))
+    titles = ["gate-title", "defect-title", "rule-title", "plain-rule-title", "retraction-title"]
+    entries = [ln for ln in text.splitlines() if ln.startswith("- **")]
+    for t in titles:
+        hits = [ln for ln in entries if ln.split("**")[1].split(": ", 1)[-1] == t]
+        assert len(hits) == 1, f"{t} is listed {len(hits)} times:\n{text}"
+    # When every match was routed into an action the sections are empty, and the briefing
+    # said "No encoded rule matched" under a list of actions (seen live, the first prompt
+    # after the change). Emptiness is judged on the whole briefing, not on its sections.
+    only = core.check(store, "r", "symptom")
+    only_text = core.render_check_for_agent(only)
+    assert only["next_actions"] and "No encoded rule matched" not in only_text, only_text
+    for kept in ("gate-cause", "defect-cause", "rule-cause", "plain-cause", "retraction-cause",
+                 "defect-symptom", "defect-fix", "gate-symptom", "gate-fix",
+                 "catches: defect-title"):
+        assert kept in text, f"{kept!r} was lost from the briefing:\n{text}"
+
+
+def test_a_stale_record_stays_marked_when_it_becomes_an_action(store):
+    """#52 review: routing a record into an action removed its section entry, and with it
+    the only per-record "STALE — re-verify" marker; what remained was a bare count, so an
+    agent could not tell which action to distrust. The marker now travels with the action.
+    """
+    import time
+    core.record(store, type="Defect", title="aging-defect", scope="org", body="c",
+                symptom="s", fix="f", ttl_days=0)
+    time.sleep(0.01)
+    text = core.render_check_for_agent(core.check(store, "r", "aging-defect"))
+    line = next(ln for ln in text.splitlines() if "aging-defect" in ln and ln.startswith("- **"))
+    assert "STALE" in line, text

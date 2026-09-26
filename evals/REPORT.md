@@ -706,6 +706,81 @@ alternative: index tags so they can *raise* an on-subject record, rather than on
 *excluding* off-subject ones. Ranking cannot hide a load-bearing rule the way §4d's filter
 did.
 
+## 4i. PRE-REGISTERED: each record once — a change of treatment (2026-09-26)
+
+Written before the run, per §2b.
+
+**What changed.** Every record in the agent briefing was printed twice: once as a routed
+action ("FIX x — when you see y → do z"), and again in full under its section. A typical
+briefing was about 2,700 tokens, on every prompt, half of it repetition. The briefing now
+names each record once; the action line carries what the section used to add (the cause,
+a gate's symptom, what a gate catches). This is the harness's `--format agent`, so **the
+treatment itself changed**, and by the rule this report keeps, a changed instrument starts
+a new series rather than extending the old one.
+
+**Deterministic pre-flight, run first** (`python3 evals/layout_preflight.py --old-ref main`):
+every eval task's briefing rendered with the old and the new code against the same store.
+Every record's title, symptom, cause and fix survives in all 8 tasks; the briefings are
+**36% smaller** (84,225 → 54,112 characters). The first pre-flight run was not clean: it
+found one lost line, a gate's symptom in `ci_linter`, because gate actions never carried
+one. And the first live briefing after the change showed a second defect the pre-flight
+could not: with every match routed into an action the sections were empty, so the
+briefing ended "No encoded rule matched" beneath its own list of actions. Both were fixed
+before the run. The content is therefore identical; only the layout differs.
+
+**Why pre-flight matters here.** The briefed arm reads the live store, which has gained
+records since §4h. A live run alone could not separate "the layout changed" from "the
+store changed". The pre-flight settles the content question; the live run tests only
+whether the layout changes behaviour.
+
+**What is being tested.** Same tasks, generator (sonnet), judge (haiku), 3 samples, and
+okl's declared interests, as §4h (`ab-20260903-1323.json`). The receipt now records
+`okl_commit`, so it states on its face which layout produced it.
+
+**The baseline arm is again the free control.** It carries no briefing, so neither the
+layout nor the store can reach it; its drift calibrates the noise, as it did in §4h.
+
+**Prediction.** No detectable change. The same information reaches the model in 35% fewer
+characters; if anything, a shorter briefing is read more completely.
+
+**Falsifier.** The briefed arm worsens beyond the 17-point noise floor against §4h's 4%,
+or any task that read briefed 0/3 in §4h reproduces. Either means the duplication was doing
+work (repetition as emphasis) that the pre-flight cannot see, and the layout goes back.
+
+**What this cannot settle.** Whether a shorter briefing helps: this design cannot detect a
+change smaller than the floor. A null result says the cut is safe, not that it improves
+anything, and the token saving is the whole case for it.
+
+### Result (2026-09-26)
+
+Receipt: `evals/results/ab-20260926-0528.json`, `okl_commit` `2ec40d0` on its face. 48 runs,
+1 failure (a generator timeout, 2%): usable. Same generator, judge, sample count and
+interests as §4h (`ab-20260903-1323.json`); the layout is the intended difference, and the
+store's growth since §4h is the unintended one the pre-flight accounts for.
+
+| | baseline | briefed |
+|---|---|---|
+| §4h (records printed twice) | 12/24 — 50% | 1/24 — **4%** |
+| §4i (each record once) | 10/23 — 43% | 2/24 — **8%** |
+
+**The prediction held and the falsifier did not trigger.** The briefed arm moved 4 points,
+inside the 17-point floor and smaller than the 7 points the untouched baseline drifted
+between the same two runs. No task that read briefed 0/3 in §4h reproduces. Both briefed
+reproductions are `spa_tokens` (§4h: 1/3; here 2/3, baseline 3/3), the standing anomaly this
+report has declined to call a trend since §4g, for the same reason now: 1/3 to 2/3 is
+inside the noise the control measures.
+
+**After the run, review found one more loss:** a stale record routed into an action lost
+its per-record "STALE — re-verify" marker. It was fixed by carrying the marker into the
+action. No eval task's briefing contains a stale routed record, so all 8 briefings are
+byte-identical to those this run measured (checked against `2ec40d0`); the receipt still
+describes what ships.
+
+On the five tasks the baseline failed at least once, the briefed arm reproduced 2 of 15.
+The briefing still does its job at 36% fewer characters. Per the pre-registration, that is
+all this can say: the cut is safe on this task set; nothing here shows it helps.
+
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

@@ -125,6 +125,19 @@ def drift_banner(drift_from: dict) -> str:
             + ". These numbers are internally valid only.")
 
 
+def _okl_commit() -> str | None:
+    """The commit that rendered this run's briefings, marked `+dirty` when okl's code had
+    uncommitted edits: a bare hash would then name code that did not produce the receipt
+    (found in review of #52)."""
+    head = subprocess.run(["git", "-C", str(REPO), "rev-parse", "--short", "HEAD"],
+                          capture_output=True, text=True).stdout.strip()
+    if not head:
+        return None
+    dirty = subprocess.run(["git", "-C", str(REPO), "status", "--porcelain", "--", "src/okl"],
+                           capture_output=True, text=True).stdout.strip()
+    return f"{head}+dirty" if dirty else head
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--tasks", default=str(REPO / "evals" / "tasks.jsonl"))
@@ -310,6 +323,10 @@ def main() -> int:
         # Durable: a receipt read months later says on its own face whether it may be
         # compared to its neighbours. Absent means the instrument matched the prior run.
         "instrument_changed_from": drift_from,
+        # The code that rendered the briefings. The briefing's layout is part of the
+        # treatment (§4i changed it), and without this two receipts from different layouts
+        # look identical on their face.
+        "okl_commit": _okl_commit(),
         "results": results, "failures": failures,
     }, indent=1) + "\n")
     try:
