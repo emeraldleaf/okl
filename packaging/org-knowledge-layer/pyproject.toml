@@ -23,6 +23,13 @@ postgres = ["observed-knowledge-ledger[postgres]>=0.6.0"]
 mcp = ["observed-knowledge-ledger[mcp]>=0.6.0"]
 all = ["observed-knowledge-ledger[all]>=0.6.0"]
 
+# The same `okl` command, pointing at code the dependency installs. Without it, `pipx
+# install org-knowledge-layer` refuses outright: pipx exposes only the named package's own
+# apps, never a dependency's, and a code-free package has none (found in review of #46,
+# reproduced with pipx before this line was added).
+[project.scripts]
+okl = "okl.cli:main"
+
 [project.urls]
 Homepage = "https://github.com/emeraldleaf/okl"
 

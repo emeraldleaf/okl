@@ -762,6 +762,9 @@ def test_the_old_distribution_name_is_swept_and_still_installable():
     assert set(old["optional-dependencies"]) == wanted
     for extra, deps in old["optional-dependencies"].items():
         assert deps == [f"{new['name']}[{extra}]>={old['version']}"], extra
+    # pipx exposes only the named package's own commands, so the redirect must declare
+    # `okl` itself or `pipx install org-knowledge-layer` refuses to install.
+    assert old.get("scripts") == new["scripts"], "the redirect must provide the okl command"
 
 
 def test_doctor_names_memory_tools_beside_okl_and_changes_nothing(tmp_path):
