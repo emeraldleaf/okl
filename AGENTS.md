@@ -25,6 +25,7 @@ and editing `KNOWN_TAGS` changes the floor every store ships with.
   this order: commit the change, `okl verify`, then commit the `okl-drift.json` it
   refreshed. CI's drift gate reads that committed snapshot, not the store, so a
   verification left uncommitted fails CI. Verifying before the code commit re-drifts.
+  Give a rule `--files` only when CI does not already run its check (#39).
 - The local store (`.okl/okl.db`, gitignored) should hold all 11 seed files plus
   recorded nodes; `okl seed seed/` loads the `*-defects.json` set, while
   `dotnet-{canon,decisions,review-surfaces}.json` and `frontend-canon.json` load explicitly.
