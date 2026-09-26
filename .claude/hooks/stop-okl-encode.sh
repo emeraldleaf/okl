@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:c74f86d35c3140d5f5b024200287ce7d32b4aab35167f2c9c52dff77807db7ca
+# okl-fingerprint: sha256:27db054671808790a169dce7c3a1fef67732e75c698c4a836bfc7db2847cc45f
 # Stop hook — the write-side mechanical catch for the encoding loop.
 #
 # The read side (okl check) is enforced by the PreToolUse hook; nothing enforced the WRITE
@@ -131,11 +131,15 @@ with open(sys.argv[1], encoding="utf-8", errors="replace") as f:
             if b.get("type") == "tool_use":
                 inp = b.get("input") or {}
                 what = inp.get("command") or inp.get("file_path") or inp.get("description") or ""
-                calls[b.get("id")] = (b.get("name", "?"), " ".join(str(what).split())[:90])
+                # Full text here: shortening before de-duplication merged two different
+                # commands that differ only late. Shortened only when printed.
+                calls[b.get("id")] = (b.get("name", "?"), " ".join(str(what).split()))
             elif b.get("type") == "tool_result" and b.get("is_error"):
                 out = b.get("content")
                 if isinstance(out, list):
-                    out = " ".join(x.get("text", "") for x in out if isinstance(x, dict))
+                    # Newlines, not spaces: a result split across text blocks keeps its
+                    # line boundaries, so "Exit code 1" and the error stay separate lines.
+                    out = "\n".join(x.get("text", "") for x in out if isinstance(x, dict))
                 out = str(out or "")
                 if "<tool_use_error>" in out or "Permission for this action was denied" in out:
                     continue
@@ -151,7 +155,7 @@ for name, what, why in reversed(failed):
 if picks:
     print("\nCandidates from this session's transcript (failures, newest first; not findings):")
     for name, what, why in picks:
-        print(f"  - {name} `{what}` -> {why}")
+        print(f"  - {name} `{what[:90]}` -> {why}")
 PY
 fi
 exit 2
