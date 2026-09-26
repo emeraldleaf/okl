@@ -1182,3 +1182,8 @@ def test_a_blocked_prompt_says_how_okl_failed(tmp_path):
     (shim / "mktemp").write_text("#!/bin/sh\nexit 1\n"); (shim / "mktemp").chmod(0o755)
     r = run("exit 1", PATH=f"{shim}:{os.environ['PATH']}")
     assert "not captured" in r.stderr, "an uncapturable reason must be named as such, not as silence"
+    # #53 review: output captured but unreadable is not "printed nothing".
+    unread = tmp_path / "unread"; unread.mkdir()
+    (unread / "head").write_text("#!/bin/sh\nexit 1\n"); (unread / "head").chmod(0o755)
+    r = run("echo boom >&2; exit 1", PATH=f"{unread}:{os.environ['PATH']}")
+    assert "could not be read back" in r.stderr and "printed nothing" not in r.stderr, r.stderr

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:afb3b68bb6f4218e38c6b6daf990e4732f6d5c967f02366f4f8908cd715e4f4a
+# okl-fingerprint: sha256:9fa16cd57ecc2a03da192e5170e1972d1aab85bec8492d50ba8caaa0e955e3a4
 # UserPromptSubmit hook — inject the org's relevant lessons into the model's context
 # BEFORE it starts the task. This event is the only correct one for delivery: its stdout
 # (exit 0) is added to Claude's context, and its stdin carries the actual prompt text, so
@@ -99,8 +99,13 @@ esac
 if [ -z "$errf" ]; then
   why="(okl's error output was not captured: no private temp file could be made)"
 else
-  why=$(head -c 1500 "$errf" 2>/dev/null); rm -f "$errf"
-  [ -n "$why" ] || why="(okl printed nothing)"
+  # A failed read is not silence: only an empty file that read back cleanly is "nothing".
+  if why=$(head -c 1500 "$errf" 2>/dev/null); then
+    [ -n "$why" ] || why="(okl printed nothing)"
+  else
+    why="(okl's error output was captured but could not be read back)"
+  fi
+  rm -f "$errf"
 fi
 
 if [ "${OKL_OFFLINE:-0}" = "1" ]; then
