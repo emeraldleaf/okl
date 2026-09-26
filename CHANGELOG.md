@@ -34,6 +34,13 @@
   governing any file reports "NOTHING CHECKED" and exits 2 under `--gate`; the all-clear
   states how many rules it checked. The shipped `okl-verify` workflow turns exit 2 into a
   "Drift not checked" warning when the job has no store, and fails when it had one.
+- **`okl doctor` names memory tools that collide with okl** (#40). claude-mem,
+  agentmemory, ECC and beads each hook the same events okl does: okl's Stop hook blocks
+  the first stop, so their Stop hooks run twice; the capture-everything tools also record
+  `okl record`, putting one lesson in two stores; and each injects context beside okl's
+  briefing. `okl doctor` (exit 1 when any is found) and `okl init` name each tool found,
+  where, how it collides and what to do. `okl doctor` only reads settings; `okl init`
+  writes its own hook registration as before, keeping every other tool's entries.
 - **CI can check drift without a store** (#36). `okl export --drift` writes
   `okl-drift.json`, the rules drift reads (ids, titles, globs, verification evidence, no
   lesson bodies); `okl drift --snapshot` reads the committed copy only, and refuses an

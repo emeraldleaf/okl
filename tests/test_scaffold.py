@@ -762,3 +762,113 @@ def test_the_old_distribution_name_is_swept_and_still_installable():
     assert set(old["optional-dependencies"]) == wanted
     for extra, deps in old["optional-dependencies"].items():
         assert deps == [f"{new['name']}[{extra}]>={old['version']}"], extra
+
+
+def test_doctor_names_memory_tools_beside_okl_and_changes_nothing(tmp_path):
+    """#40: installed next to okl, the popular memory tools collide at the hooks and
+    nobody is told. `okl doctor` (and `okl init`) name each one found and how it collides.
+
+    Plugins are matched on their exact plugin name, so `ecc` does not match `necc`; a
+    disabled plugin is not reported; hand-registered hooks are matched on their command;
+    okl's own hooks are never reported; an unreadable settings file is skipped, not fatal.
+    """
+    import json
+    import subprocess
+    import sys
+
+    from okl import coexist
+
+    proj, home = tmp_path / "proj", tmp_path / "home"
+    (proj / ".claude").mkdir(parents=True); (home / ".claude").mkdir(parents=True)
+
+    def okl(*a):
+        env = {**os.environ, "HOME": str(home), "USERPROFILE": str(home)}
+        env.pop("CLAUDE_CONFIG_DIR", None)
+        return subprocess.run([sys.executable, "-m", "okl", *a], capture_output=True,
+                              text=True, cwd=proj, env=env)
+
+    # Nothing but okl's own wiring: nothing to report, exit 0.
+    own = {"hooks": {"Stop": [{"hooks": [{"type": "command",
+                                          "command": ".claude/hooks/stop-okl-encode.sh"}]}]}}
+    (proj / ".claude" / "settings.json").write_text(json.dumps(own))
+    (home / ".claude" / "settings.json").write_text("{ not json")
+    assert coexist.detect(proj, home) == []
+    r = okl("doctor")
+    assert r.returncode == 0 and "no known agent-memory tool" in r.stdout, r.stdout + r.stderr
+
+    # Near-miss names and a disabled plugin are not findings.
+    (home / ".claude" / "settings.json").write_text(json.dumps(
+        {"enabledPlugins": {"necc@x": True, "ecc-extras@y": True, "agentmemory@agentmemory": False}}))
+    assert coexist.detect(proj, home) == []
+
+    # A plugin enabled for the user, and a hook registered by hand in the project.
+    user = {"enabledPlugins": {"claude-mem@thedotmack": True, "ecc@ecc": True}}
+    project = {"hooks": {**own["hooks"], "SessionStart": [{"hooks": [
+        {"type": "command", "command": "bd prime --hook-json"}]}]}}
+    (home / ".claude" / "settings.json").write_text(json.dumps(user))
+    (proj / ".claude" / "settings.json").write_text(json.dumps(project))
+    before = {p: p.read_bytes() for p in (home / ".claude").iterdir()}
+    before.update({p: p.read_bytes() for p in (proj / ".claude").iterdir()})
+
+    assert [f.tool.name for f in coexist.detect(proj, home)] == ["claude-mem", "ECC", "beads"]
+    r = okl("doctor")
+    assert r.returncode == 1, "a tool found is a finding: exit 1"
+    assert "claude-mem" in r.stdout and "plugin `claude-mem` enabled" in r.stdout
+    assert "SessionStart hook `bd prime --hook-json`" in r.stdout
+    assert "runs twice" in r.stdout and "Nothing was changed" in r.stdout
+    after = {p: p.read_bytes() for p in list((home / ".claude").iterdir())
+             + list((proj / ".claude").iterdir())}
+    assert after == before, "doctor must never edit another tool's configuration"
+
+    # And `okl init` says so at install time, when someone is reading its output.
+    r = okl("init", "--repo", "r")
+    assert r.returncode == 0 and "3 agent-memory tool(s) installed beside okl" in r.stdout
+
+
+def test_doctor_reads_settings_the_way_claude_code_resolves_them(tmp_path, monkeypatch):
+    """#44 review: doctor must resolve settings as Claude Code does, or it reports a tool
+    that is off, misses one that is on, or crashes on a file it could have skipped.
+
+    - project-local settings override user settings for the same plugin key;
+    - CLAUDE_CONFIG_DIR, when set, is where the user settings live, not ~/.claude;
+    - a malformed `hooks` value is skipped, and the rest of the file still counts;
+    - settings are decoded as UTF-8 whatever the platform's default encoding.
+    """
+    import json
+
+    from okl import coexist
+
+    proj, home, cfgdir = tmp_path / "proj", tmp_path / "home", tmp_path / "cfg"
+    for d in (proj / ".claude", home / ".claude", cfgdir):
+        d.mkdir(parents=True)
+    monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)
+
+    # A plugin on for the user, switched off for this project: not a finding.
+    (home / ".claude" / "settings.json").write_text(
+        json.dumps({"enabledPlugins": {"claude-mem@thedotmack": True}}))
+    (proj / ".claude" / "settings.local.json").write_text(
+        json.dumps({"enabledPlugins": {"claude-mem@thedotmack": False}}))
+    assert coexist.detect(proj, home) == []
+
+    # CLAUDE_CONFIG_DIR moves the user settings; ~/.claude is then not the user layer.
+    (proj / ".claude" / "settings.local.json").unlink()
+    (cfgdir / "settings.json").write_text(json.dumps({"enabledPlugins": {"ecc@ecc": True}}))
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(cfgdir))
+    assert [f.tool.name for f in coexist.detect(proj, home)] == ["ECC"]
+    monkeypatch.delenv("CLAUDE_CONFIG_DIR")
+
+    # A malformed hooks value does not hide the plugin in the same file, or crash.
+    (home / ".claude" / "settings.json").write_text(json.dumps(
+        {"hooks": {"Stop": [{"hooks": 1}], "SessionStart": "x"},
+         "enabledPlugins": {"agentmemory@agentmemory": True}}))
+    assert [f.tool.name for f in coexist.detect(proj, home)] == ["agentmemory"]
+
+    # UTF-8 settings with non-ASCII text, read under a non-UTF-8 default encoding.
+    (home / ".claude" / "settings.json").write_bytes(json.dumps(
+        {"note": "caf\u00e9 \u2014 \u6771\u4eac", "enabledPlugins": {"beads@beads-marketplace": True}},
+        ensure_ascii=False).encode("utf-8"))
+    # Simulate a platform whose default text encoding is not UTF-8, at the call doctor makes.
+    real_read_text = Path.read_text
+    monkeypatch.setattr(Path, "read_text", lambda self, encoding=None, errors=None:
+                        real_read_text(self, encoding=encoding or "ascii", errors=errors))
+    assert [f.tool.name for f in coexist.detect(proj, home)] == ["beads"]

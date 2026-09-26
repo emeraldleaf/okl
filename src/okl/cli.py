@@ -114,7 +114,27 @@ def cmd_init(args) -> int:
     _install_ci_verifier()
     for line in _empty_store_guidance(Client()):
         print(line)
+    # Said at install time, the one moment someone is reading okl's output and deciding
+    # what to wire. Informational here: init succeeded; `okl doctor` is the re-runnable check.
+    from . import coexist
+    found = coexist.detect(Path.cwd(), Path.home())
+    if found:
+        print("\n" + coexist.render(found))
     return 0
+
+
+def cmd_doctor(args) -> int:
+    """Report agent-memory tools installed beside okl and how they collide (#40).
+
+    Exit 1 when any is found -- a finding, per the CLI contract -- and 0 when none is.
+    It reads settings files only and changes nothing.
+    """
+    from . import coexist
+    cfg = _find_config()
+    root = cfg.parent.parent if cfg else Path.cwd()
+    found = coexist.detect(root, Path.home())
+    print(coexist.render(found))
+    return 1 if found else 0
 
 
 def _install_claude_wiring(claude: Path) -> None:
@@ -914,6 +934,10 @@ def build_parser() -> argparse.ArgumentParser:
                      help="the drift snapshot (the only export today; named so others can follow)")
     pex.add_argument("-o", "--output", help="path (default: okl-drift.json at the project root)")
     pex.set_defaults(func=cmd_export)
+
+    pdoc = sub.add_parser("doctor", help="report other agent-memory tools installed beside okl, "
+                                         "and how they collide (changes nothing)")
+    pdoc.set_defaults(func=cmd_doctor)
 
     pdd = sub.add_parser("dedup", help="report near-duplicate records for review (never auto-merges)")
     pdd.add_argument("--threshold", type=float, default=core.DEDUP_THRESHOLD,

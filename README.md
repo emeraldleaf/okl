@@ -496,6 +496,9 @@ okl export --drift   # write okl-drift.json, the committed snapshot CI's drift g
                      #   when it has no store; `okl verify` refreshes it once it exists.
                      #   CI reads the COMMITTED copy, and refuses an entry whose timestamp
                      #   does not match its verify evidence, so it cannot be cleared by hand.
+okl doctor           # names other agent-memory tools installed beside okl (claude-mem,
+                     #   agentmemory, ECC, beads) and how each collides with okl's hooks;
+                     #   reads settings only, changes nothing. `okl init` says the same.
 okl coverage         # ratio of encoded-knowledge lines to code lines — a health signal
 okl bootstrap        # cold-start a new repo: propose starter notes from its own
                      #   git history + docs into a reviewable file you edit, then seed
