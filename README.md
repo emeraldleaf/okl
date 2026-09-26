@@ -371,8 +371,10 @@ never touched; delete it yourself if you mean to. Nothing outside the repo was e
 
 Every file okl installs carries a `# okl-fingerprint:` line, the hash of the rest of the
 file. That is how `init` and `--uninstall` tell an untouched okl file (of any version:
-upgraded freely) from one you edited (kept unless you pass `--force`) — with no local
-state, so it works the same for a teammate who cloned the repo.
+upgraded or removed freely) from one you edited. `init` keeps an edited file unless you
+pass `--force`; `--uninstall` always keeps it. There is no local state, so this works the
+same for a teammate who cloned the repo. okl never writes through a symlink: a hook,
+settings or workflow path that is a link, or sits under one, is refused and named.
 
 ### Architecture review in CI (off by default)
 

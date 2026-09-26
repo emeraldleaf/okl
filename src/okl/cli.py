@@ -32,6 +32,8 @@ def _merge_hook_settings(claude: Path) -> bool:
     unrelated hooks are preserved; an already-registered okl hook is left alone. A hook
     that is installed but unregistered is a surface nobody runs."""
     settings_path = claude / "settings.json"
+    if _refuse_symlink(settings_path):
+        return False
     try:
         settings = json.loads(settings_path.read_text()) if settings_path.exists() else {}
     except json.JSONDecodeError:
@@ -65,6 +67,37 @@ HOOK_COMMANDS = {
 MCP_ENTRY = {"command": "okl", "args": ["mcp"]}
 
 
+def _symlinked(path: Path) -> Path | None:
+    """The first symlink on the way to `path` inside this repo, or None.
+
+    okl writes into repositories it did not create. A cloned repo can hold a symlink
+    (dangling or not) where okl writes -- a hook, settings.json, a symlinked .claude/ --
+    and following it writes okl's file wherever the link points, outside the repo
+    (CWE-59, found in review of #50). okl writes only real files under real directories.
+    """
+    root = Path.cwd().resolve()
+    p = Path(path)
+    for part in [p, *p.parents]:
+        if str(part) in ("", "."):
+            break
+        if part.is_symlink():
+            return part
+        try:
+            if part.resolve() == root:
+                break
+        except OSError:
+            return part
+    return None
+
+
+def _refuse_symlink(path: Path) -> bool:
+    link = _symlinked(path)
+    if link is not None:
+        print(f"! refused {path}: {link} is a symlink, and okl only writes real files inside "
+              f"this repo. Replace the link with a real file or directory, then re-run.")
+    return link is not None
+
+
 def _place_owned(dst: Path, shipped: str, label: str, force: bool) -> None:
     """Install or upgrade one okl-owned file without clobbering an edit (#49).
 
@@ -73,6 +106,8 @@ def _place_owned(dst: Path, shipped: str, label: str, force: bool) -> None:
     version), or with --force; an edited one is kept and reported.
     """
     from . import ownership
+    if _refuse_symlink(dst):
+        return
     state = ownership.status(dst, shipped)
     if state == ownership.MISSING or (state == ownership.OKL and dst.read_text() != shipped):
         verb = "installed" if state == ownership.MISSING else "upgraded"
@@ -88,7 +123,9 @@ def _place_owned(dst: Path, shipped: str, label: str, force: bool) -> None:
               f"with okl's.")
         return
     dst.parent.mkdir(parents=True, exist_ok=True)
-    dst.write_text(shipped)
+    # Exact bytes: text mode would turn \n into \r\n on Windows, and bash cannot run a
+    # script whose shebang line ends in \r.
+    dst.write_bytes(shipped.encode("utf-8"))
     if dst.suffix == ".sh":
         dst.chmod(0o755)
     print(f"✓ {verb} {label} → {dst}")
@@ -116,6 +153,9 @@ def _uninstall_files(act: str, dry_run: bool) -> list[str]:
                      (Path(".claude/hooks/stop-okl-encode.sh"),
                       scaffold / "hooks" / "stop-okl-encode.sh"),
                      (Path(".github/workflows/okl-verify.yml"), scaffold / "ci" / "okl-verify.yml")]:
+        if _symlinked(dst) is not None:
+            kept.append(f"{dst} (a symlink, or under one — okl does not follow links)")
+            continue
         state = ownership.status(dst, src.read_text())
         if state == ownership.OKL:
             if not dry_run:
@@ -133,6 +173,8 @@ def _uninstall_hook_registrations(act: str, dry_run: bool) -> list[str]:
     path = Path(".claude/settings.json")
     if not path.exists():
         return []
+    if _symlinked(path) is not None:
+        return [f"{path} (a symlink — okl's hook entries not removed)"]
     try:
         settings = json.loads(path.read_text())
     except json.JSONDecodeError:
@@ -140,6 +182,18 @@ def _uninstall_hook_registrations(act: str, dry_run: bool) -> list[str]:
     hooks_cfg = settings.get("hooks") if isinstance(settings, dict) else None
     if not isinstance(hooks_cfg, dict):
         return []
+    removed = _drop_okl_hooks(hooks_cfg)
+    if not hooks_cfg:
+        del settings["hooks"]
+    if removed:
+        if not dry_run:
+            path.write_text(json.dumps(settings, indent=2) + "\n")
+        print(f"✓ {act} {removed} okl hook registration(s) from {path}")
+    return []
+
+
+def _drop_okl_hooks(hooks_cfg: dict) -> int:
+    """Remove okl's exact commands from `hooks_cfg` in place; return how many went."""
     removed = 0
     for event, command in HOOK_COMMANDS.items():
         groups = hooks_cfg.get(event)
@@ -154,19 +208,15 @@ def _uninstall_hook_registrations(act: str, dry_run: bool) -> list[str]:
         hooks_cfg[event] = [g for g in groups if not (isinstance(g, dict) and g.get("hooks") == [])]
         if not hooks_cfg[event]:
             del hooks_cfg[event]
-    if not hooks_cfg:
-        del settings["hooks"]
-    if removed:
-        if not dry_run:
-            path.write_text(json.dumps(settings, indent=2) + "\n")
-        print(f"✓ {act} {removed} okl hook registration(s) from {path}")
-    return []
+    return removed
 
 
 def _uninstall_mcp(act: str, dry_run: bool) -> list[str]:
     path = Path(".mcp.json")
     if not path.exists():
         return []
+    if _symlinked(path) is not None:
+        return [f"{path} (a symlink — the okl server entry not removed)"]
     try:
         cfg = json.loads(path.read_text())
     except json.JSONDecodeError:
@@ -285,6 +335,8 @@ def _install_claude_wiring(claude: Path, force: bool = False) -> None:
         print("  to register the agent tools. (The distribution is not named `okl`; PyPI refuses that.)")
         return
     mcp_path = Path(".mcp.json")
+    if _refuse_symlink(mcp_path):
+        return
     mcp_cfg = json.loads(mcp_path.read_text()) if mcp_path.exists() else {}
     servers = mcp_cfg.setdefault("mcpServers", {})
     if "okl" not in servers:
