@@ -35,8 +35,8 @@
       "title": "A test that imports an undeclared package passes only where that package happens to be installed",
       "scope": "org",
       "files": "tests/",
-      "verified_at": 1790396182331,
-      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && ! grep -rnE '^\\s*import tomllib' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' @ 2026-09-26T04:16Z"
+      "verified_at": 1790396230731,
+      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && ! grep -rnE '^\\s*import tomllib' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' @ 2026-09-26T04:17Z"
     },
     {
       "id": "n_9ba48d85ed19",
@@ -80,8 +80,8 @@
       "title": "Entered a crowded category deliberately: differentiate on verification-of-memory, compose with memory infra, never compete on recall",
       "scope": "repo:okl",
       "files": "README.md",
-      "verified_at": 1790396182208,
-      "verified_by": "`bash -c \"! grep -inE 'better recall|best.{0,12}memory|beats (mem0|zep|letta|claude-mem|agentmemory)' README.md && echo 'POSITIONING OK'\"` exit 0, matched 'POSITIONING OK' @ 2026-09-26T04:16Z"
+      "verified_at": 1790396230607,
+      "verified_by": "`bash -c \"! grep -inE 'better recall|best.{0,12}memory|beats (mem0|zep|letta|claude-mem|agentmemory)' README.md && echo 'POSITIONING OK'\"` exit 0, matched 'POSITIONING OK' @ 2026-09-26T04:17Z"
     },
     {
       "id": "n_e635fd921086",
