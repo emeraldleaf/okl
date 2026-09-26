@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# okl-fingerprint: sha256:4c8933020cbd49b602efcda19df1dce6f8d586e4d637c7ba5ffdc93e9ceeff2a
 # Stop hook — the write-side mechanical catch for the encoding loop.
 #
 # The read side (okl check) is enforced by the PreToolUse hook; nothing enforced the WRITE
@@ -16,6 +17,11 @@ set -uo pipefail
 if [ -n "${CLAUDE_PROJECT_DIR:-}" ] && [ -d "$CLAUDE_PROJECT_DIR" ]; then
   cd "$CLAUDE_PROJECT_DIR" || true
 fi
+
+# Switched off by name: OKL_DISABLED_HOOKS=briefing,encode. For running beside tools whose
+# hooks already cover the same moment, or for debugging. Turning off the end-of-session question is a choice
+# the operator makes explicitly, never a fallback the hook takes on its own.
+case ",${OKL_DISABLED_HOOKS:-}," in *,encode,*) exit 0 ;; esac
 
 # Same resolver as pretooluse-okl-check.sh (env → pinned config → PATH → python3 -m okl);
 # the reminder is best-effort, so an unresolvable okl silently disables it rather than blocking.

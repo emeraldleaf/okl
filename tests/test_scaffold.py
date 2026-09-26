@@ -921,3 +921,111 @@ def test_hooks_anchor_to_the_project_not_the_sessions_cwd(tmp_path):
     r = hook("stop-okl-encode.sh", {"session_id": "s1", "stop_hook_active": False},
              CLAUDE_PROJECT_DIR=str(proj))
     assert r.returncode == 2 and "ENCODING LOOP" in r.stderr, r.stderr
+
+
+def test_okl_owned_files_carry_a_current_fingerprint():
+    """Every file okl writes into a repo carries `# okl-fingerprint: sha256:<hash of the
+    rest>`, which is how init and uninstall tell an untouched okl file from an edited one
+    (#49). Editing one without re-stamping would make okl treat its own file as yours."""
+    from okl import ownership
+    root = Path(__file__).resolve().parents[1] / "src" / "okl" / "scaffold"
+    for rel in ("hooks/userpromptsubmit-okl-check.sh", "hooks/stop-okl-encode.sh",
+                "ci/okl-verify.yml"):
+        text = (root / rel).read_text()
+        assert ownership.embedded(text) == ownership.digest(text), (
+            f"{rel}: stale fingerprint; run `python -m okl.ownership --stamp "
+            f"src/okl/scaffold/{rel}` (should be {ownership.digest(text)}) and copy the mirrors")
+
+
+def test_init_never_clobbers_and_uninstall_removes_only_okls(tmp_path):
+    """#49: `okl init` overwrote the hooks on every run, and there was no uninstall.
+
+    Now an edited okl file is kept (unless --force), an unmodified one of any version is
+    upgraded, and `okl init --uninstall` removes okl's files and exact registrations while
+    another tool's hooks in the same events, and the store, are left alone.
+    """
+    import json
+    import sys
+
+    from okl import ownership
+
+    repo = tmp_path / "r"; (repo / ".claude").mkdir(parents=True)
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    other = {"type": "command", "command": "npx other-memory-tool stop"}
+    (repo / ".claude" / "settings.json").write_text(json.dumps(
+        {"model": "keep-me", "hooks": {"Stop": [{"hooks": [other]}]}}))
+    (repo / ".mcp.json").write_text(json.dumps({"mcpServers": {
+        "okl": {"command": "okl", "args": ["mcp"]}, "other": {"command": "x"}}}))
+    env = {**os.environ, "HOME": str(tmp_path)}
+    env.pop("OKL_DATABASE_URL", None); env.pop("OKL_SERVICE_URL", None)
+
+    def okl(*a):
+        return subprocess.run([sys.executable, "-m", "okl", *a], cwd=repo, env=env,
+                              capture_output=True, text=True)
+
+    hook = repo / ".claude" / "hooks" / "stop-okl-encode.sh"
+    shipped = hook_src = (Path(__file__).resolve().parents[1] / "src" / "okl" / "scaffold"
+                          / "hooks" / "stop-okl-encode.sh").read_text()
+    assert okl("init", "--repo", "r").returncode == 0
+    assert hook.read_text() == shipped
+
+    # An edit is kept on re-init, and replaced only with --force.
+    hook.write_text(shipped + "echo my local tweak\n")
+    r = okl("init", "--repo", "r")
+    assert "kept" in r.stdout and "my local tweak" in hook.read_text(), r.stdout
+    okl("init", "--repo", "r", "--force")
+    assert hook.read_text() == shipped
+
+    # An unmodified okl file from another version (valid fingerprint, other content) is
+    # upgraded; a pre-fingerprint file identical to this version is recognised as okl's.
+    hook.write_text(ownership.stamp(ownership.body(hook_src) + "# older release\n"))
+    okl("init", "--repo", "r")
+    assert hook.read_text() == shipped
+    assert ownership.status(hook.parent / "x.sh", shipped) == ownership.MISSING
+    (hook.parent / "old.sh").write_text(ownership.body(shipped))
+    assert ownership.status(hook.parent / "old.sh", shipped) == ownership.OKL
+    (hook.parent / "old.sh").unlink()
+
+    # A dry run changes nothing.
+    tracked = [repo / ".claude" / "settings.json", repo / ".mcp.json", hook]
+    before = {p: p.read_bytes() for p in tracked}
+    r = okl("init", "--uninstall", "--dry-run")
+    assert r.returncode == 0 and "would remove" in r.stdout
+    assert {p: p.read_bytes() for p in tracked} == before
+
+    # Uninstall: okl's pieces go; the other tool, the settings' other keys, an edited
+    # okl file and the store stay.
+    prompt = repo / ".claude" / "hooks" / "userpromptsubmit-okl-check.sh"
+    prompt.write_text(prompt.read_text() + "# edited\n")
+    r = okl("init", "--uninstall")
+    assert r.returncode == 0, r.stderr
+    settings = json.loads((repo / ".claude" / "settings.json").read_text())
+    assert settings["model"] == "keep-me"
+    assert settings["hooks"] == {"Stop": [{"hooks": [other]}]}, "only okl's entries removed"
+    assert json.loads((repo / ".mcp.json").read_text())["mcpServers"] == {"other": {"command": "x"}}
+    assert not hook.exists() and not (repo / ".github" / "workflows" / "okl-verify.yml").exists()
+    assert prompt.exists() and "kept" in r.stdout, "an edited okl file is never deleted"
+    assert (repo / ".okl" / "config.json").exists(), "the store is never removed"
+
+
+def test_hooks_can_be_switched_off_by_name(tmp_path):
+    """OKL_DISABLED_HOOKS=briefing,encode turns a hook off explicitly (#49) -- e.g. the
+    Stop question, when another tool's Stop hooks already run at that moment."""
+    import json
+    scaffold = Path(__file__).resolve().parents[1] / "src" / "okl" / "scaffold" / "hooks"
+    nowhere = tmp_path / "nowhere"; nowhere.mkdir()
+    base = {"PATH": "/usr/bin:/bin", "HOME": str(tmp_path), "TMPDIR": str(tmp_path)}
+
+    def run(name, payload, **env):
+        return subprocess.run(["bash", str(scaffold / name)], cwd=nowhere, text=True,
+                              input=json.dumps(payload), capture_output=True, env={**base, **env})
+
+    # Not disabled: with no okl reachable the briefing fails closed.
+    assert run("userpromptsubmit-okl-check.sh", {"prompt": "x"}).returncode == 2
+    assert run("userpromptsubmit-okl-check.sh", {"prompt": "x"},
+               OKL_DISABLED_HOOKS="encode,briefing").returncode == 0
+    # A different name does not disable it.
+    assert run("userpromptsubmit-okl-check.sh", {"prompt": "x"},
+               OKL_DISABLED_HOOKS="encode").returncode == 2
+    assert run("stop-okl-encode.sh", {"session_id": "s", "stop_hook_active": False},
+               OKL_DISABLED_HOOKS="encode", OKL_BIN="/opt/x/okl").returncode == 0

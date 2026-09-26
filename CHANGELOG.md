@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+- **`okl init` no longer overwrites your edits, and `okl init --uninstall` exists** (#49).
+  `init` rewrote the hook scripts on every run, silently discarding a local change. Every
+  file okl installs now carries a `# okl-fingerprint:` line (the hash of the rest of the
+  file): an untouched okl file of any version is upgraded, an edited one is kept unless
+  `--force`. `--uninstall [--dry-run]` removes okl's files and exact registrations and
+  nothing else — another tool's hooks, edited files and `.okl/` stay.
+- **`OKL_DISABLED_HOOKS=briefing,encode`** switches either hook off by name.
+- **The hooks anchor to the project** (#48): run from wherever the session's directory had
+  drifted, the pre-task hook blocked every prompt as "unreachable" when okl had in fact
+  refused as not configured. Both hooks now `cd` to `$CLAUDE_PROJECT_DIR`, and a block
+  prints okl's own reason.
+
 ## 0.6.0
 
 **Renamed on PyPI: install `observed-knowledge-ledger`.** `org-knowledge-layer` 0.6.0 is a

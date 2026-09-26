@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# okl-fingerprint: sha256:6844b94df87f0f449108569e63f2560284beaf4bfb02022beb0ad24e20872ba6
 # UserPromptSubmit hook — inject the org's relevant lessons into the model's context
 # BEFORE it starts the task. This event is the only correct one for delivery: its stdout
 # (exit 0) is added to Claude's context, and its stdin carries the actual prompt text, so
@@ -20,6 +21,11 @@ set -uo pipefail
 if [ -n "${CLAUDE_PROJECT_DIR:-}" ] && [ -d "$CLAUDE_PROJECT_DIR" ]; then
   cd "$CLAUDE_PROJECT_DIR" || true
 fi
+
+# Switched off by name: OKL_DISABLED_HOOKS=briefing,encode. For running beside tools whose
+# hooks already cover the same moment, or for debugging. Turning off the pre-task briefing is a choice
+# the operator makes explicitly, never a fallback the hook takes on its own.
+case ",${OKL_DISABLED_HOOKS:-}," in *,briefing,*) exit 0 ;; esac
 
 # Resolve how to invoke okl (env → pinned config → PATH → python3 -m okl); hooks run in
 # whatever environment the harness spawns, which often lacks the venv/pipx bin dir.

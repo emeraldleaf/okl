@@ -351,16 +351,25 @@ okl init --interests "python,security"    # drop records tagged for stacks you d
 
 ### Turning parts off
 
-The hooks are registered in `.claude/settings.json`; delete the entry to stop one firing.
-The pre-task hook is the read side and the Stop hook is the write side, and they are
-independent — running the read without the write is a reasonable way to start.
+Switch a hook off by name with `OKL_DISABLED_HOOKS=briefing` (the pre-task read),
+`OKL_DISABLED_HOOKS=encode` (the end-of-session question), or both, comma-separated. The
+pre-task hook is the read side and the Stop hook is the write side, and they are
+independent — running the read without the write is a reasonable way to start, and turning
+off `encode` is the usual choice beside a tool whose own Stop hooks already run.
 
 Nothing is load-bearing on the hooks: `okl check` and `okl record` work from the terminal,
 from CI, and through the MCP server whether or not any hook is installed.
 
-To remove okl from a repo entirely, delete `.okl/`, the two hook scripts and their entries
-in `.claude/settings.json`, and `.github/workflows/okl-verify.yml`. Nothing else was
-written, and nothing outside that repo was touched.
+To remove okl from a repo: `okl init --uninstall` (add `--dry-run` to preview). It removes
+the two hook scripts, their exact entries in `.claude/settings.json`, okl's `.mcp.json`
+server and `.github/workflows/okl-verify.yml` — and nothing else: another tool's hooks in
+the same events stay, a file you edited is kept and named, and `.okl/` (your store) is
+never touched; delete it yourself if you mean to. Nothing outside the repo was ever written.
+
+Every file okl installs carries a `# okl-fingerprint:` line, the hash of the rest of the
+file. That is how `init` and `--uninstall` tell an untouched okl file (of any version:
+upgraded freely) from one you edited (kept unless you pass `--force`) — with no local
+state, so it works the same for a teammate who cloned the repo.
 
 ### Architecture review in CI (off by default)
 
@@ -409,6 +418,9 @@ touches only the current directory, and only these:
 | `.claude/settings.json` | registers those two hooks (merged in place; your existing keys are preserved) |
 | `.mcp.json` | registers the okl MCP server — only when the `mcp` extra is installed |
 | `.github/workflows/okl-verify.yml` | **a CI workflow** running the drift gate on pull requests |
+
+Re-running `init` is safe: it upgrades okl's own files, keeps any you edited (say so with
+`--force` to replace them), and merges settings without duplicating entries.
 
 Two of those deserve a second look before you run it: the hooks are shell scripts that
 execute automatically during agent sessions (the check hook can *block* a task when the
