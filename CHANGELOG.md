@@ -1,6 +1,9 @@
 # Changelog
 
-## Unreleased
+## 0.6.0
+
+**Renamed on PyPI: install `observed-knowledge-ledger`.** `org-knowledge-layer` 0.6.0 is a
+final, code-free release that installs it and keeps the `okl` command working.
 
 ### Renamed: Observed Knowledge Ledger
 
