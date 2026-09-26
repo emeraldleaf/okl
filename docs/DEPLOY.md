@@ -76,7 +76,7 @@ front and leave `OKL_TOKEN` set underneath as defence in depth.
 ## 3. Run it
 
 ```bash
-pip install "org-knowledge-layer[service]"
+pip install "observed-knowledge-ledger[service]"
 okl serve --port 8080                       # convenience wrapper
 uvicorn okl.service:app --host 0.0.0.0 --port 8080   # standard ASGI entrypoint
 ```
@@ -153,7 +153,7 @@ okl in your own tooling, do the same: a check that cannot run has not passed.
 **Not verified.** No Docker daemon was available where this was written, so the project
 ships no Dockerfile rather than an untested one. The service is an ordinary ASGI app with
 no filesystem state when `OKL_DATABASE_URL` points at Postgres, so a container is four
-lines over `python:3.12-slim`: install `org-knowledge-layer[service]`, expose the port,
+lines over `python:3.12-slim`: install `observed-knowledge-ledger[service]`, expose the port,
 and run the `uvicorn okl.service:app` command above. Set `OKL_DATABASE_URL` and
 `OKL_TOKEN` as secrets, and point the platform's health check at `/health`.
 

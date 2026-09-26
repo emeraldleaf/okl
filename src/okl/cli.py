@@ -159,7 +159,7 @@ def _install_claude_wiring(claude: Path) -> None:
     try:
         import mcp  # noqa: F401
     except ImportError:
-        print("• MCP extra not installed — `pip install 'org-knowledge-layer[mcp]'` then re-run init")
+        print("• MCP extra not installed — `pip install 'observed-knowledge-ledger[mcp]'` then re-run init")
         print("  to register the agent tools. (The distribution is not named `okl`; PyPI refuses that.)")
         return
     mcp_path = Path(".mcp.json")
@@ -845,7 +845,7 @@ def build_parser() -> argparse.ArgumentParser:
     reader answering "what flags does verify take" should find the whole answer in one
     place rather than following a chain of registration helpers.
     """
-    p = argparse.ArgumentParser(prog="okl", description="Org Knowledge Layer — the sixth surface.")
+    p = argparse.ArgumentParser(prog="okl", description="Observed Knowledge Ledger — lessons your coding agents can trust, proven by checks.")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     pi = sub.add_parser("init", help="wire the current repo (config + hook + CI pointer)")

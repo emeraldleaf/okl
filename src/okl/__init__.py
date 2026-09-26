@@ -1,7 +1,7 @@
-"""okl — the Org Knowledge Layer (the sixth surface).
+"""okl — the Observed Knowledge Ledger.
 
 Install into any repo; read lessons curated by your other repos; contribute back.
-See the design rationale in the-sixth-surface.md.
+Design rationale: README.md ("Where this sits") and docs/posts/.
 """
 from . import core
 from .client import Client, OKLUnreachable

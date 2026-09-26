@@ -1,0 +1,37 @@
+# The old distribution name, kept installable. okl was published as org-knowledge-layer
+# until 0.5.0 and renamed to observed-knowledge-ledger (the name now says what is different
+# about it: knowledge proven by observed checks). PyPI cannot rename a project, so this
+# final release carries no code and depends on the new name; installs of the old name,
+# extras included, keep working. publish.yml builds it only on the tag matching `version`.
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "org-knowledge-layer"
+version = "0.6.0"
+description = "Renamed: install observed-knowledge-ledger. This package only depends on it."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Joshua Dell" }]
+dependencies = ["observed-knowledge-ledger>=0.6.0"]
+
+[project.optional-dependencies]
+service = ["observed-knowledge-ledger[service]>=0.6.0"]
+postgres = ["observed-knowledge-ledger[postgres]>=0.6.0"]
+mcp = ["observed-knowledge-ledger[mcp]>=0.6.0"]
+all = ["observed-knowledge-ledger[all]>=0.6.0"]
+
+# The same `okl` command, pointing at code the dependency installs. Without it, `pipx
+# install org-knowledge-layer` refuses outright: pipx exposes only the named package's own
+# apps, never a dependency's, and a code-free package has none (found in review of #46,
+# reproduced with pipx before this line was added).
+[project.scripts]
+okl = "okl.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/emeraldleaf/okl"
+
+[tool.setuptools]
+packages = []

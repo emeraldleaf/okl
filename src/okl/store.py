@@ -1,4 +1,4 @@
-"""Storage layer for the Org Knowledge Layer (OKL).
+"""Storage layer for the Observed Knowledge Ledger (OKL).
 
 Swappable backend: SQLite by default (a file, or :memory:), Postgres when
 ``OKL_DATABASE_URL`` starts with ``postgres``.  Both speak the same node/edge
