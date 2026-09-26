@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:b71fd0650b1bd0cbfa982533be841cf21a45802c50d86815b1da0f1b29f7fff2
+# okl-fingerprint: sha256:afb3b68bb6f4218e38c6b6daf990e4732f6d5c967f02366f4f8908cd715e4f4a
 # UserPromptSubmit hook — inject the org's relevant lessons into the model's context
 # BEFORE it starts the task. This event is the only correct one for delivery: its stdout
 # (exit 0) is added to Claude's context, and its stdin carries the actual prompt text, so
@@ -80,19 +80,35 @@ TASK="${OKL_TASK:-${prompt:-$(git log -1 --pretty=%s 2>/dev/null || echo 'genera
 # No guessable fallback path: a fixed name under /tmp could be pre-planted as a symlink by
 # another local user. Without a private temp file the reason is lost, not the check.
 errf=$(mktemp 2>/dev/null) || errf=""
-if out=$($OKL check --task "$TASK" --format agent 2>"${errf:-/dev/null}"); then
+out=$($OKL check --task "$TASK" --format agent 2>"${errf:-/dev/null}")
+rc=$?   # read here: after an if-block, $? is the if's own status, not okl's
+if [ "$rc" -eq 0 ]; then
   [ -n "$errf" ] && rm -f "$errf"
   printf '%s\n' "$out"      # stdout → the model's context
   exit 0
 fi
-why=""
-if [ -n "$errf" ]; then why=$(head -c 1500 "$errf" 2>/dev/null); rm -f "$errf"; fi
+# Say HOW it failed. Seen live: a block reading only "exited non-zero without a reason",
+# with nothing recorded that could explain it afterwards.
+case "$rc" in
+  126|127) meaning="okl could not be started (not found, or not executable)" ;;
+  2) meaning="okl refused (its contract: 2 = did not run)" ;;
+  1) meaning="okl reported an error" ;;
+  *) if [ "$rc" -gt 128 ]; then meaning="okl was killed by signal $((rc - 128)) (e.g. the machine slept, or a timeout)"
+     else meaning="okl failed"; fi ;;
+esac
+if [ -z "$errf" ]; then
+  why="(okl's error output was not captured: no private temp file could be made)"
+else
+  why=$(head -c 1500 "$errf" 2>/dev/null); rm -f "$errf"
+  [ -n "$why" ] || why="(okl printed nothing)"
+fi
 
 if [ "${OKL_OFFLINE:-0}" = "1" ]; then
   echo "OKL offline (OKL_OFFLINE=1 acknowledged) — proceeding without the layer." >&2
   exit 0
 fi
 echo "OKL CHECK DID NOT RUN — blocking this prompt. A check that reports 'clean' while broken is worse than no check." >&2
-echo "okl said: ${why:-(nothing — it exited non-zero without a reason)}" >&2
+echo "exit $rc: $meaning." >&2
+echo "okl said: $why" >&2
 echo "Ran from: $PWD. Fix the cause above, or start the session with OKL_OFFLINE=1 to proceed without the layer." >&2
 exit 2

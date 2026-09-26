@@ -1154,3 +1154,31 @@ def test_init_never_writes_through_a_symlink_out_of_the_repo(tmp_path):
                        capture_output=True, text=True)
     assert r.returncode == 0 and (outside / "settings.json").read_text() == planted
     assert "a symlink" in r.stdout, r.stdout
+
+
+def test_a_blocked_prompt_says_how_okl_failed(tmp_path):
+    """Seen live: the prompt hook blocked with "okl said: (nothing — it exited non-zero
+    without a reason)", and nothing recorded could say why. The block now names okl's exit
+    code and what it usually means, and says whether okl's error output was captured at all.
+    """
+    import json
+    hook = Path(__file__).resolve().parents[1] / "src" / "okl" / "scaffold" / "hooks" / "userpromptsubmit-okl-check.sh"
+
+    def run(stub_body, **env):
+        stub = tmp_path / "okl"
+        stub.write_text(f"#!/bin/sh\n{stub_body}\n"); stub.chmod(0o755)
+        return subprocess.run(["bash", str(hook)], cwd=tmp_path, text=True,
+                              input=json.dumps({"prompt": "x"}), capture_output=True,
+                              env={"PATH": os.environ["PATH"], "HOME": str(tmp_path),
+                                   "TMPDIR": str(tmp_path), "OKL_BIN": str(stub), **env})
+
+    r = run("exit 137")
+    assert r.returncode == 2 and "exit 137" in r.stderr and "killed" in r.stderr, r.stderr
+    assert "printed nothing" in r.stderr, r.stderr
+    r = run("echo 'boom: store locked' >&2; exit 1")
+    assert "exit 1" in r.stderr and "boom: store locked" in r.stderr, r.stderr
+    # A mktemp that fails (macOS falls back to /tmp when TMPDIR is missing, so force it).
+    shim = tmp_path / "shim"; shim.mkdir()
+    (shim / "mktemp").write_text("#!/bin/sh\nexit 1\n"); (shim / "mktemp").chmod(0o755)
+    r = run("exit 1", PATH=f"{shim}:{os.environ['PATH']}")
+    assert "not captured" in r.stderr, "an uncapturable reason must be named as such, not as silence"
