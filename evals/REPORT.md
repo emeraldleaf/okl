@@ -751,6 +751,30 @@ work (repetition as emphasis) that the pre-flight cannot see, and the layout goe
 change smaller than the floor. A null result says the cut is safe, not that it improves
 anything, and the token saving is the whole case for it.
 
+### Result (2026-09-26)
+
+Receipt: `evals/results/ab-20260926-0528.json`, `okl_commit` `2ec40d0` on its face. 48 runs,
+1 failure (a generator timeout, 2%): usable. Same generator, judge, sample count and
+interests as §4h (`ab-20260903-1323.json`); the layout is the intended difference, and the
+store's growth since §4h is the unintended one the pre-flight accounts for.
+
+| | baseline | briefed |
+|---|---|---|
+| §4h (records printed twice) | 12/24 — 50% | 1/24 — **4%** |
+| §4i (each record once) | 10/23 — 43% | 2/24 — **8%** |
+
+**The prediction held and the falsifier did not trigger.** The briefed arm moved 4 points,
+inside the 17-point floor and smaller than the 7 points the untouched baseline drifted
+between the same two runs. No task that read briefed 0/3 in §4h reproduces. Both briefed
+reproductions are `spa_tokens` (§4h: 1/3; here 2/3, baseline 3/3), the standing anomaly this
+report has declined to call a trend since §4g, for the same reason now: 1/3 to 2/3 is
+inside the noise the control measures.
+
+On the five tasks the baseline failed at least once, the briefed arm reproduced 2 of 15.
+The briefing still does its job at 36% fewer characters. Per the pre-registration, that is
+all this can say: the cut is safe on this task set; nothing here shows it helps.
+
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
