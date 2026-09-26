@@ -319,7 +319,10 @@ own 199-record store rather than estimated.
 | Context | **~2,300 tokens** at the default `--limit 12`, down to **~250** at `--format actions --limit 3` |
 
 **Per session:** the Stop hook interrupts once at the end to ask what was learned. It
-blocks the first stop only, and answering it is the whole write side of the loop.
+blocks the first stop only, and answering it is the whole write side of the loop. With
+the question it lists up to five commands that failed during the session, read from the
+session's own transcript — candidates, not records: no hook runs on every tool call, and
+no model is called to summarise anything.
 
 **In your repo:** `okl init` writes `.okl/` (config, the local database, a `.gitignore`
 covering both) and, if `.claude/` exists, two hook scripts plus their registration. It
