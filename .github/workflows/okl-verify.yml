@@ -1,3 +1,4 @@
+# okl-fingerprint: sha256:3cccbf819b12da4c4f8a602b9ff7693c9c99c6b9556a687fe06c9925cbf07e6e
 # Installed by `okl init` into .github/workflows/okl-verify.yml (also stamped by `okl scaffold`).
 #
 # The knowledge layer's CI verifier — real checks, not placeholders:

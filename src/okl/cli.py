@@ -32,6 +32,8 @@ def _merge_hook_settings(claude: Path) -> bool:
     unrelated hooks are preserved; an already-registered okl hook is left alone. A hook
     that is installed but unregistered is a surface nobody runs."""
     settings_path = claude / "settings.json"
+    if _refuse_symlink(settings_path):
+        return False
     try:
         settings = json.loads(settings_path.read_text()) if settings_path.exists() else {}
     except json.JSONDecodeError:
@@ -41,10 +43,7 @@ def _merge_hook_settings(claude: Path) -> bool:
     changed = False
     # UserPromptSubmit, not PreToolUse: only UserPromptSubmit/SessionStart stdout reaches the
     # model's context. A PreToolUse briefing fires but is never read (found by E2E test).
-    wanted = [
-        ("UserPromptSubmit", None, '"$CLAUDE_PROJECT_DIR"/.claude/hooks/userpromptsubmit-okl-check.sh'),
-        ("Stop", None, '"$CLAUDE_PROJECT_DIR"/.claude/hooks/stop-okl-encode.sh'),
-    ]
+    wanted = [(event, None, command) for event, command in HOOK_COMMANDS.items()]
     for event, matcher, command in wanted:
         entries = hooks_cfg.setdefault(event, [])
         if any(h.get("command", "").endswith(Path(command).name)
@@ -60,6 +59,180 @@ def _merge_hook_settings(claude: Path) -> bool:
     return changed
 
 
+HOOK_COMMANDS = {
+    # okl registers exactly these commands; uninstall removes exactly these and nothing else.
+    "UserPromptSubmit": '"$CLAUDE_PROJECT_DIR"/.claude/hooks/userpromptsubmit-okl-check.sh',
+    "Stop": '"$CLAUDE_PROJECT_DIR"/.claude/hooks/stop-okl-encode.sh',
+}
+MCP_ENTRY = {"command": "okl", "args": ["mcp"]}
+
+
+def _symlinked(path: Path) -> Path | None:
+    """The first symlink on the way to `path` inside this repo, or None.
+
+    okl writes into repositories it did not create. A cloned repo can hold a symlink
+    (dangling or not) where okl writes -- a hook, settings.json, a symlinked .claude/ --
+    and following it writes okl's file wherever the link points, outside the repo
+    (CWE-59, found in review of #50). okl writes only real files under real directories.
+    """
+    root = Path.cwd().resolve()
+    p = Path(path)
+    for part in [p, *p.parents]:
+        if str(part) in ("", "."):
+            break
+        if part.is_symlink():
+            return part
+        try:
+            if part.resolve() == root:
+                break
+        except OSError:
+            return part
+    return None
+
+
+def _refuse_symlink(path: Path) -> bool:
+    link = _symlinked(path)
+    if link is not None:
+        print(f"! refused {path}: {link} is a symlink, and okl only writes real files inside "
+              f"this repo. Replace the link with a real file or directory, then re-run.")
+    return link is not None
+
+
+def _place_owned(dst: Path, shipped: str, label: str, force: bool) -> None:
+    """Install or upgrade one okl-owned file without clobbering an edit (#49).
+
+    `okl init` used to overwrite the hooks on every run, silently discarding a local edit.
+    A file is replaced only when its fingerprint says it is an unmodified okl file (any
+    version), or with --force; an edited one is kept and reported.
+    """
+    from . import ownership
+    if _refuse_symlink(dst):
+        return
+    state = ownership.status(dst, shipped)
+    if state == ownership.MISSING or (state == ownership.OKL and dst.read_text() != shipped):
+        verb = "installed" if state == ownership.MISSING else "upgraded"
+    elif state == ownership.OKL:
+        print(f"• {label} already current → {dst}")
+        return
+    elif force:
+        verb = "replaced (--force)"
+    else:
+        why = ("edited since okl installed it" if state == ownership.MODIFIED
+               else "not recognisably okl's (no fingerprint, and not this version)")
+        print(f"! kept {dst}: {why}. Your version stays; `okl init --force` replaces it "
+              f"with okl's.")
+        return
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    # Exact bytes: text mode would turn \n into \r\n on Windows, and bash cannot run a
+    # script whose shebang line ends in \r.
+    dst.write_bytes(shipped.encode("utf-8"))
+    if dst.suffix == ".sh":
+        dst.chmod(0o755)
+    print(f"✓ {verb} {label} → {dst}")
+
+
+def _uninstall(dry_run: bool) -> int:
+    """Remove what okl owns and nothing else (#49). The store (.okl/) is user data and is
+    never touched; an edited okl file is kept and named, never deleted."""
+    act = "would remove" if dry_run else "removed"
+    kept = (_uninstall_files(act, dry_run) + _uninstall_hook_registrations(act, dry_run)
+            + _uninstall_mcp(act, dry_run))
+    for k in kept:
+        print(f"! kept {k}")
+    print("• .okl/ (your store and config) is never removed by uninstall; delete it yourself "
+          "if you mean to.")
+    return 0
+
+
+def _uninstall_files(act: str, dry_run: bool) -> list[str]:
+    from . import ownership
+    scaffold = Path(__file__).parent / "scaffold"
+    kept: list[str] = []
+    for dst, src in [(Path(".claude/hooks/userpromptsubmit-okl-check.sh"),
+                      scaffold / "hooks" / "userpromptsubmit-okl-check.sh"),
+                     (Path(".claude/hooks/stop-okl-encode.sh"),
+                      scaffold / "hooks" / "stop-okl-encode.sh"),
+                     (Path(".github/workflows/okl-verify.yml"), scaffold / "ci" / "okl-verify.yml")]:
+        if _symlinked(dst) is not None:
+            kept.append(f"{dst} (a symlink, or under one — okl does not follow links)")
+            continue
+        state = ownership.status(dst, src.read_text())
+        if state == ownership.OKL:
+            if not dry_run:
+                dst.unlink()
+            print(f"✓ {act} {dst}")
+        elif state != ownership.MISSING:
+            why = "edited" if state == ownership.MODIFIED else "not recognisably okl's"
+            kept.append(f"{dst} ({why})")
+    return kept
+
+
+def _uninstall_hook_registrations(act: str, dry_run: bool) -> list[str]:
+    """Remove okl's exact hook commands, then any group or event that is left empty.
+    Another tool's hook in the same group or event is never touched."""
+    path = Path(".claude/settings.json")
+    if not path.exists():
+        return []
+    if _symlinked(path) is not None:
+        return [f"{path} (a symlink — okl's hook entries not removed)"]
+    try:
+        settings = json.loads(path.read_text())
+    except json.JSONDecodeError:
+        return [f"{path} (not valid JSON — okl's hook entries not removed)"]
+    hooks_cfg = settings.get("hooks") if isinstance(settings, dict) else None
+    if not isinstance(hooks_cfg, dict):
+        return []
+    removed = _drop_okl_hooks(hooks_cfg)
+    if not hooks_cfg:
+        del settings["hooks"]
+    if removed:
+        if not dry_run:
+            path.write_text(json.dumps(settings, indent=2) + "\n")
+        print(f"✓ {act} {removed} okl hook registration(s) from {path}")
+    return []
+
+
+def _drop_okl_hooks(hooks_cfg: dict) -> int:
+    """Remove okl's exact commands from `hooks_cfg` in place; return how many went."""
+    removed = 0
+    for event, command in HOOK_COMMANDS.items():
+        groups = hooks_cfg.get(event)
+        if not isinstance(groups, list):
+            continue
+        for g in groups:
+            if isinstance(g, dict) and isinstance(g.get("hooks"), list):
+                before = len(g["hooks"])
+                g["hooks"] = [h for h in g["hooks"] if not (isinstance(h, dict)
+                                                            and h.get("command") == command)]
+                removed += before - len(g["hooks"])
+        hooks_cfg[event] = [g for g in groups if not (isinstance(g, dict) and g.get("hooks") == [])]
+        if not hooks_cfg[event]:
+            del hooks_cfg[event]
+    return removed
+
+
+def _uninstall_mcp(act: str, dry_run: bool) -> list[str]:
+    path = Path(".mcp.json")
+    if not path.exists():
+        return []
+    if _symlinked(path) is not None:
+        return [f"{path} (a symlink — the okl server entry not removed)"]
+    try:
+        cfg = json.loads(path.read_text())
+    except json.JSONDecodeError:
+        return [f"{path} (not valid JSON — the okl server entry, if any, not removed)"]
+    servers = cfg.get("mcpServers") if isinstance(cfg, dict) else None
+    if not (isinstance(servers, dict) and "okl" in servers):
+        return []
+    if servers["okl"] != MCP_ENTRY:
+        return [f"{path} okl server (changed from what okl wrote)"]
+    del servers["okl"]
+    if not dry_run:
+        path.write_text(json.dumps(cfg, indent=2) + "\n")
+    print(f"✓ {act} the okl MCP server from {path}")
+    return []
+
+
 def cmd_init(args) -> int:
     """Wire the current repo so the loop runs without manual follow-up steps:
     config, hooks (installed AND registered), CI verifier, MCP registration.
@@ -68,6 +241,8 @@ def cmd_init(args) -> int:
     installs executable hooks and a CI workflow into your repo; you should be able
     to see that list before it happens."""
     import shutil
+    if getattr(args, "uninstall", False):
+        return _uninstall(getattr(args, "dry_run", False))
     if getattr(args, "dry_run", False):
         repo = args.repo or Path.cwd().name
         print(f"DRY RUN — nothing will be written. `okl init --repo {repo}` would:\n")
@@ -103,7 +278,7 @@ def cmd_init(args) -> int:
 
     claude = Path(".claude")
     if claude.exists():
-        _install_claude_wiring(claude)
+        _install_claude_wiring(claude, force=getattr(args, "force", False))
     else:
         print("• no .claude/ dir here, so no hooks were installed. The store still works:")
         print("    - retrieval: `okl check --task \"...\"`, or the MCP server (`okl mcp`)")
@@ -111,7 +286,7 @@ def cmd_init(args) -> int:
         print("    - the enforced pre-task read needs a hook, and okl auto-wires Claude Code only.")
         print("      The scripts in src/okl/scaffold/hooks/ are plain bash on stdin/stdout; if your")
         print("      agent has a pre-prompt hook, point it at them. Registration formats differ.")
-    _install_ci_verifier()
+    _install_ci_verifier(force=getattr(args, "force", False))
     for line in _empty_store_guidance(Client()):
         print(line)
     # Said at install time, the one moment someone is reading okl's output and deciding
@@ -137,7 +312,7 @@ def cmd_doctor(args) -> int:
     return 1 if found else 0
 
 
-def _install_claude_wiring(claude: Path) -> None:
+def _install_claude_wiring(claude: Path, force: bool = False) -> None:
     """Install AND register the hooks: the PreToolUse check (the enforced read) and the
     Stop encode reminder (the write-side catch). Scripts come from the packaged scaffold —
     one canonical source, no drift. Also registers the MCP server when the extra exists."""
@@ -146,10 +321,7 @@ def _install_claude_wiring(claude: Path) -> None:
     scaffold_hooks = Path(__file__).parent / "scaffold" / "hooks"
     for name, label in [("userpromptsubmit-okl-check.sh", "pre-task check hook (UserPromptSubmit)"),
                         ("stop-okl-encode.sh", "encode reminder (Stop hook)")]:
-        dst = hooks / name
-        dst.write_text((scaffold_hooks / name).read_text())
-        dst.chmod(0o755)
-        print(f"✓ installed {label} → {dst}")
+        _place_owned(hooks / name, (scaffold_hooks / name).read_text(), label, force)
     if _merge_hook_settings(claude):
         print("✓ registered both hooks in .claude/settings.json (UserPromptSubmit + Stop)")
     else:
@@ -163,15 +335,17 @@ def _install_claude_wiring(claude: Path) -> None:
         print("  to register the agent tools. (The distribution is not named `okl`; PyPI refuses that.)")
         return
     mcp_path = Path(".mcp.json")
+    if _refuse_symlink(mcp_path):
+        return
     mcp_cfg = json.loads(mcp_path.read_text()) if mcp_path.exists() else {}
     servers = mcp_cfg.setdefault("mcpServers", {})
     if "okl" not in servers:
-        servers["okl"] = {"command": "okl", "args": ["mcp"]}
+        servers["okl"] = dict(MCP_ENTRY)
         mcp_path.write_text(json.dumps(mcp_cfg, indent=2) + "\n")
         print("✓ registered okl MCP server → .mcp.json (okl_check / okl_record / okl_search)")
 
 
-def _install_ci_verifier() -> None:
+def _install_ci_verifier(force: bool = False) -> None:
     """Install the CI verifier workflow instead of printing a copy instruction; warn
     loudly when git is absent, because the drift layer is dead without history."""
     if not Path(".git").exists():
@@ -179,13 +353,8 @@ def _install_ci_verifier() -> None:
         print("  until `git init`: drift compares governed files against their last-verified commit.")
         return
     wf = Path(".github") / "workflows" / "okl-verify.yml"
-    if wf.exists():
-        print(f"• CI verifier already present → {wf}")
-        return
-    wf.parent.mkdir(parents=True, exist_ok=True)
     src = Path(__file__).parent / "scaffold" / "ci" / "okl-verify.yml"
-    wf.write_text(src.read_text())
-    print(f"✓ installed CI verifier → {wf}  (drift gate + repo gates on every PR)")
+    _place_owned(wf, src.read_text(), "CI verifier (drift gate + repo gates on every PR)", force)
 
 
 def cmd_connect(args) -> int:
@@ -854,6 +1023,11 @@ def build_parser() -> argparse.ArgumentParser:
                     "(filters org-scope lessons in `check`; see store.KNOWN_TAGS)")
     pi.add_argument("--dry-run", dest="dry_run", action="store_true",
                     help="list every file init would write or modify, and write nothing")
+    pi.add_argument("--force", action="store_true",
+                    help="replace okl files you have edited with okl's version")
+    pi.add_argument("--uninstall", action="store_true",
+                    help="remove okl's hooks, registrations and CI workflow (never .okl/); "
+                         "edited files are kept. Combine with --dry-run to preview")
     pi.set_defaults(func=cmd_init)
 
     pc = sub.add_parser("connect", help="point this repo at a shared OKL service URL")
