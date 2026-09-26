@@ -1061,6 +1061,65 @@ def test_hooks_neither_run_in_the_wrong_place_nor_use_a_guessable_temp_file(tmp_
         assert "/tmp/okl-hook" not in (scaffold / name).read_text(), f"{name}: guessable temp path"
 
 
+def test_stop_hook_suggests_candidates_from_the_sessions_own_transcript(tmp_path):
+    """The Stop question lists what failed in this session, read from the transcript path
+    Claude Code passes the hook -- no per-tool-call hook, no log, no model call. Tooling
+    noise (harness validation errors, permission denials) is left out; a missing or
+    malformed transcript never stops the question itself from being asked.
+    """
+    import json
+    import shutil
+    if shutil.which("git") is None:
+        pytest.skip("git not available")
+    hook = Path(__file__).resolve().parents[1] / "src" / "okl" / "scaffold" / "hooks" / "stop-okl-encode.sh"
+    repo = tmp_path / "r"; repo.mkdir(); (tmp_path / "m").mkdir()
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    (repo / "dirty.txt").write_text("x")
+
+    def row(*blocks):
+        return json.dumps({"message": {"content": list(blocks)}})
+    transcript = tmp_path / "t.jsonl"
+    transcript.write_text("\n".join([
+        row({"type": "tool_use", "id": "a", "name": "Bash", "input": {"command": "pytest -q"}}),
+        row({"type": "tool_result", "tool_use_id": "a", "is_error": True,
+             "content": "Exit code 1\nE  ModuleNotFoundError: No module named 'yaml'"}),
+        "{ not json",
+        row({"type": "tool_use", "id": "b", "name": "Monitor", "input": {}}),
+        row({"type": "tool_result", "tool_use_id": "b", "is_error": True,
+             "content": "<tool_use_error>InputValidationError</tool_use_error>"}),
+        row({"type": "tool_result", "tool_use_id": "c", "is_error": True,
+             "content": "Permission for this action was denied by the classifier"}),
+    ]) + "\n")
+
+    def stop(session, path):
+        payload = {"session_id": session, "stop_hook_active": False, "transcript_path": path}
+        return subprocess.run(["bash", str(hook)], cwd=repo, text=True, input=json.dumps(payload),
+                              capture_output=True,
+                              env={"PATH": os.environ["PATH"], "TMPDIR": str(tmp_path / "m"),
+                                   "OKL_BIN": "/opt/x/okl"})
+
+    r = stop("s1", str(transcript))
+    assert r.returncode == 2 and "ENCODING LOOP" in r.stderr
+    assert "Bash `pytest -q` -> E  ModuleNotFoundError: No module named 'yaml'" in r.stderr, r.stderr
+    assert "InputValidationError" not in r.stderr and "Permission" not in r.stderr
+    # #51 review: two long commands that differ only late stay two candidates, and an
+    # error split across text blocks keeps its line boundaries.
+    long_a, long_b = "x" * 95 + "AAA", "x" * 95 + "BBB"
+    split = tmp_path / "split.jsonl"
+    split.write_text("\n".join([
+        row({"type": "tool_use", "id": "p", "name": "Bash", "input": {"command": long_a}}),
+        row({"type": "tool_result", "tool_use_id": "p", "is_error": True, "content": "first"}),
+        row({"type": "tool_use", "id": "q", "name": "Bash", "input": {"command": long_b}}),
+        row({"type": "tool_result", "tool_use_id": "q", "is_error": True, "content": [
+            {"type": "text", "text": "Exit code 1"}, {"type": "text", "text": "real error here"}]}),
+    ]) + "\n")
+    r = stop("s3", str(split))
+    assert r.stderr.count("- Bash `" + "x" * 90) == 2, r.stderr
+    assert "-> real error here" in r.stderr, r.stderr
+    r = stop("s2", str(tmp_path / "missing.jsonl"))
+    assert r.returncode == 2 and "ENCODING LOOP" in r.stderr and "Candidates" not in r.stderr
+
+
 def test_init_never_writes_through_a_symlink_out_of_the_repo(tmp_path):
     """#50 review (CWE-59). A cloned repo can hold a dangling symlink where okl installs a
     hook, or a symlinked .claude/ directory; `okl init` followed it and wrote okl's file

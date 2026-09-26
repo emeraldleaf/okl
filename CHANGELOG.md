@@ -18,6 +18,11 @@
   `--force`. `--uninstall [--dry-run]` removes okl's files and exact registrations and
   nothing else — another tool's hooks, edited files and `.okl/` stay.
 - **`OKL_DISABLED_HOOKS=briefing,encode`** switches either hook off by name.
+- **The Stop question lists what failed this session.** Up to five distinct failed tool
+  calls, newest first, read from the transcript path Claude Code passes the hook; harness
+  validation errors and permission denials are left out. They are candidates for the agent
+  to judge, never records: capture stays deliberate, and nothing runs on every tool call
+  or calls a model.
 - **The hooks anchor to the project** (#48): run from wherever the session's directory had
   drifted, the pre-task hook blocked every prompt as "unreachable" when okl had in fact
   refused as not configured. Both hooks now `cd` to `$CLAUDE_PROJECT_DIR`, and a block
