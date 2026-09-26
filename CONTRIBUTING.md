@@ -43,6 +43,11 @@ it is the actual contract. The parts that will fail your build if you miss them:
   the `okl-drift.json` that `okl verify` refreshed. Verifying before the code commit
   does not count: the commit is newer than the stamp, so the rule drifts again. Do not
   clear drift by re-recording with `--verified`; stamps come from observed runs.
+- **PRs land as merge commits only; squash and rebase merging are disabled.** Drift
+  compares each governed file's last commit time with its rule's verification. A merge
+  commit keeps the branch's commits and their times; a squash or rebase creates new
+  commits stamped at merge time, which makes every rule the PR touched look stale and
+  turns `main` red. Do not re-enable them without changing how drift reads time.
 - **Tags come from a closed vocabulary** (`store.KNOWN_TAGS`). Growing it is a deliberate
   edit to that set plus a note in the tags ADR, not an ad-hoc string.
 - **Evaluation claims need a committed receipt.** If you change the harness or quote a
