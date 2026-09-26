@@ -98,8 +98,8 @@
       "title": "A gate that reads commit times needs merge commits — squash and rebase restamp history at merge time",
       "scope": "org",
       "files": "CONTRIBUTING.md,src/okl/drift.py",
-      "verified_at": 1790381425317,
-      "verified_by": "`gh api repos/emeraldleaf/okl --jq 'if .allow_squash_merge or .allow_rebase_merge then error(\"squash or rebase enabled\") else \"MERGE COMMITS ONLY\" end'` exit 0, matched 'MERGE COMMITS ONLY' @ 2026-09-26T00:10Z"
+      "verified_at": 1790381917142,
+      "verified_by": "`gh api repos/emeraldleaf/okl --jq 'if .allow_squash_merge or .allow_rebase_merge then error(\"squash or rebase enabled\") else \"MERGE COMMITS ONLY\" end'` exit 0, matched 'MERGE COMMITS ONLY' @ 2026-09-26T00:18Z"
     }
   ]
 }
