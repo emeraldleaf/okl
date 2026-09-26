@@ -14,7 +14,11 @@ set -uo pipefail
 # every prompt as "unreachable" until the session was restarted. Claude Code sets
 # CLAUDE_PROJECT_DIR for every hook; without it, stay where we are.
 if [ -n "${CLAUDE_PROJECT_DIR:-}" ] && [ -d "$CLAUDE_PROJECT_DIR" ]; then
-  cd "$CLAUDE_PROJECT_DIR" || true
+  if ! cd "$CLAUDE_PROJECT_DIR" 2>/dev/null; then
+    # Continuing from the drifted directory is the failure this block exists to prevent.
+    echo "okl encode reminder skipped — cannot enter the project directory $CLAUDE_PROJECT_DIR." >&2
+    exit 0   # a reminder: never block ending the session over it
+  fi
 fi
 
 # Same resolver as pretooluse-okl-check.sh (env → pinned config → PATH → python3 -m okl);

@@ -18,7 +18,12 @@ set -uo pipefail
 # every prompt as "unreachable" until the session was restarted. Claude Code sets
 # CLAUDE_PROJECT_DIR for every hook; without it, stay where we are.
 if [ -n "${CLAUDE_PROJECT_DIR:-}" ] && [ -d "$CLAUDE_PROJECT_DIR" ]; then
-  cd "$CLAUDE_PROJECT_DIR" || true
+  if ! cd "$CLAUDE_PROJECT_DIR" 2>/dev/null; then
+    # Continuing from the drifted directory is the failure this block exists to prevent.
+    echo "OKL CHECK DID NOT RUN — cannot enter the project directory $CLAUDE_PROJECT_DIR, so" >&2
+    echo "a briefing from here would read the wrong configuration. Blocking this prompt." >&2
+    exit 2
+  fi
 fi
 
 # Resolve how to invoke okl (env → pinned config → PATH → python3 -m okl); hooks run in
@@ -66,13 +71,16 @@ TASK="${OKL_TASK:-${prompt:-$(git log -1 --pretty=%s 2>/dev/null || echo 'genera
 # $OKL unquoted on purpose: it may be a command + args ("python3 -m okl").
 # okl's stderr is kept: it says WHY a check did not run (unreachable, refused, not
 # configured), and discarding it turned every refusal into a misreported outage.
-errf=$(mktemp 2>/dev/null || echo "/tmp/okl-hook-$$")
-if out=$($OKL check --task "$TASK" --format agent 2>"$errf"); then
-  rm -f "$errf"
+# No guessable fallback path: a fixed name under /tmp could be pre-planted as a symlink by
+# another local user. Without a private temp file the reason is lost, not the check.
+errf=$(mktemp 2>/dev/null) || errf=""
+if out=$($OKL check --task "$TASK" --format agent 2>"${errf:-/dev/null}"); then
+  [ -n "$errf" ] && rm -f "$errf"
   printf '%s\n' "$out"      # stdout → the model's context
   exit 0
 fi
-why=$(head -c 1500 "$errf" 2>/dev/null); rm -f "$errf"
+why=""
+if [ -n "$errf" ]; then why=$(head -c 1500 "$errf" 2>/dev/null); rm -f "$errf"; fi
 
 if [ "${OKL_OFFLINE:-0}" = "1" ]; then
   echo "OKL offline (OKL_OFFLINE=1 acknowledged) — proceeding without the layer." >&2
