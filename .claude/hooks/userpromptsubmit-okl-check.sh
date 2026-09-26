@@ -13,6 +13,19 @@
 # worse than no check.
 set -uo pipefail
 
+# Anchor to the project. A hook runs in the session's CURRENT directory, and a `cd` in any
+# command moves it; from outside the project, okl finds no config and the hook blocked
+# every prompt as "unreachable" until the session was restarted. Claude Code sets
+# CLAUDE_PROJECT_DIR for every hook; without it, stay where we are.
+if [ -n "${CLAUDE_PROJECT_DIR:-}" ] && [ -d "$CLAUDE_PROJECT_DIR" ]; then
+  if ! cd "$CLAUDE_PROJECT_DIR" 2>/dev/null; then
+    # Continuing from the drifted directory is the failure this block exists to prevent.
+    echo "OKL CHECK DID NOT RUN — cannot enter the project directory $CLAUDE_PROJECT_DIR, so" >&2
+    echo "a briefing from here would read the wrong configuration. Blocking this prompt." >&2
+    exit 2
+  fi
+fi
+
 # Resolve how to invoke okl (env → pinned config → PATH → python3 -m okl); hooks run in
 # whatever environment the harness spawns, which often lacks the venv/pipx bin dir.
 resolve_okl() {
@@ -56,15 +69,24 @@ except Exception:
 TASK="${OKL_TASK:-${prompt:-$(git log -1 --pretty=%s 2>/dev/null || echo 'general work')}}"
 
 # $OKL unquoted on purpose: it may be a command + args ("python3 -m okl").
-if out=$($OKL check --task "$TASK" --format agent 2>/dev/null); then
+# okl's stderr is kept: it says WHY a check did not run (unreachable, refused, not
+# configured), and discarding it turned every refusal into a misreported outage.
+# No guessable fallback path: a fixed name under /tmp could be pre-planted as a symlink by
+# another local user. Without a private temp file the reason is lost, not the check.
+errf=$(mktemp 2>/dev/null) || errf=""
+if out=$($OKL check --task "$TASK" --format agent 2>"${errf:-/dev/null}"); then
+  [ -n "$errf" ] && rm -f "$errf"
   printf '%s\n' "$out"      # stdout → the model's context
   exit 0
 fi
+why=""
+if [ -n "$errf" ]; then why=$(head -c 1500 "$errf" 2>/dev/null); rm -f "$errf"; fi
 
 if [ "${OKL_OFFLINE:-0}" = "1" ]; then
   echo "OKL offline (OKL_OFFLINE=1 acknowledged) — proceeding without the layer." >&2
   exit 0
 fi
-echo "OKL UNREACHABLE — blocking this prompt. A check that reports 'clean' while broken is worse than no check." >&2
-echo "Fix connectivity, or set OKL_OFFLINE=1 to explicitly proceed without the org knowledge layer." >&2
+echo "OKL CHECK DID NOT RUN — blocking this prompt. A check that reports 'clean' while broken is worse than no check." >&2
+echo "okl said: ${why:-(nothing — it exited non-zero without a reason)}" >&2
+echo "Ran from: $PWD. Fix the cause above, or start the session with OKL_OFFLINE=1 to proceed without the layer." >&2
 exit 2

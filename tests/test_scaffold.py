@@ -875,3 +875,79 @@ def test_doctor_reads_settings_the_way_claude_code_resolves_them(tmp_path, monke
     monkeypatch.setattr(Path, "read_text", lambda self, encoding=None, errors=None:
                         real_read_text(self, encoding=encoding or "ascii", errors=errors))
     assert [f.tool.name for f in coexist.detect(proj, home)] == ["beads"]
+
+
+def test_hooks_anchor_to_the_project_not_the_sessions_cwd(tmp_path):
+    """A hook runs in the session's CURRENT directory, and any `cd` in a command moves it.
+
+    Found live: a command cd'd into a scratch folder, and every prompt after it was blocked
+    as "OKL UNREACHABLE" until the session was restarted. The service was fine -- the hook
+    ran `okl check` outside the project, okl correctly refused as NOT CONFIGURED, and the
+    hook swallowed that reason and reported an outage. The Stop hook ran `git status` in the
+    same wrong place and so could skip its question silently.
+
+    Both hooks now anchor to CLAUDE_PROJECT_DIR, which Claude Code sets for every hook, and
+    the prompt hook reports okl's own reason when it does block.
+    """
+    import json
+    import shutil
+    import sys
+    if shutil.which("git") is None:
+        pytest.skip("git not available")
+    scaffold = Path(__file__).resolve().parents[1] / "src" / "okl" / "scaffold" / "hooks"
+    proj, elsewhere, markers = tmp_path / "proj", tmp_path / "elsewhere", tmp_path / "m"
+    for d in (proj, elsewhere, markers):
+        d.mkdir()
+    subprocess.run(["git", "init", "-q", str(proj)], check=True)
+    base = {"PATH": os.environ["PATH"], "HOME": str(tmp_path), "TMPDIR": str(markers),
+            "OKL_BIN": f"{sys.executable} -m okl"}
+    subprocess.run([sys.executable, "-m", "okl", "init", "--repo", "p"], cwd=proj, env=base,
+                   capture_output=True, check=True)
+    (proj / "dirty.txt").write_text("uncommitted change")
+
+    def hook(name, payload, **env):
+        return subprocess.run(["bash", str(scaffold / name)], cwd=elsewhere, text=True,
+                              input=json.dumps(payload), capture_output=True, env={**base, **env})
+
+    # The session's cwd has drifted out of the project; the hook must still brief.
+    r = hook("userpromptsubmit-okl-check.sh", {"prompt": "add an endpoint"},
+             CLAUDE_PROJECT_DIR=str(proj))
+    assert r.returncode == 0, r.stderr
+    # With nothing to anchor to, it still blocks -- but says why, not "unreachable".
+    r = hook("userpromptsubmit-okl-check.sh", {"prompt": "add an endpoint"})
+    assert r.returncode == 2 and "NOT CONFIGURED" in r.stderr, r.stderr
+    assert "UNREACHABLE" not in r.stderr, "a refusal must not be reported as an outage"
+    # The Stop hook checks the PROJECT's working tree, wherever the session wandered.
+    r = hook("stop-okl-encode.sh", {"session_id": "s1", "stop_hook_active": False},
+             CLAUDE_PROJECT_DIR=str(proj))
+    assert r.returncode == 2 and "ENCODING LOOP" in r.stderr, r.stderr
+
+
+def test_hooks_neither_run_in_the_wrong_place_nor_use_a_guessable_temp_file(tmp_path):
+    """#48 review. A project dir that exists but cannot be entered left the hooks running
+    from wherever the session had drifted -- the failure #48 fixes, one step removed. And
+    when mktemp failed, the prompt hook fell back to /tmp/okl-hook-<pid>: a path another
+    local user can pre-plant a symlink at, to redirect okl's stderr into their own file.
+    """
+    import json
+    import os as _os
+    scaffold = Path(__file__).resolve().parents[1] / "src" / "okl" / "scaffold" / "hooks"
+    if _os.geteuid() == 0:
+        pytest.skip("root can enter a mode-000 directory")
+    locked, elsewhere = tmp_path / "locked", tmp_path / "elsewhere"
+    locked.mkdir(); elsewhere.mkdir(); locked.chmod(0o000)
+    base = {"PATH": _os.environ["PATH"], "HOME": str(tmp_path), "TMPDIR": str(tmp_path),
+            "CLAUDE_PROJECT_DIR": str(locked)}
+    try:
+        def run(name, payload):
+            return subprocess.run(["bash", str(scaffold / name)], cwd=elsewhere, text=True,
+                                  input=json.dumps(payload), capture_output=True, env=base)
+        r = run("userpromptsubmit-okl-check.sh", {"prompt": "x"})
+        assert r.returncode == 2 and "cannot enter the project" in r.stderr, r.stderr
+        r = run("stop-okl-encode.sh", {"session_id": "s", "stop_hook_active": False})
+        assert r.returncode == 0 and "cannot enter the project" in r.stderr, \
+            "the Stop reminder must say it was skipped, not skip silently or block the stop"
+    finally:
+        locked.chmod(0o755)
+    for name in ("userpromptsubmit-okl-check.sh", "stop-okl-encode.sh"):
+        assert "/tmp/okl-hook" not in (scaffold / name).read_text(), f"{name}: guessable temp path"
