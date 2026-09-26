@@ -727,3 +727,63 @@ def test_shipped_drift_step_warns_when_nothing_was_checked():
         assert r.returncode == want_code, f"{label} -> step exit {r.returncode}"
         assert ("--snapshot okl-drift.json" in called) == (store == "snapshot"), label
         assert ("::warning title=Drift not checked" in r.stdout) == want_warning, label
+
+
+def test_doctor_names_memory_tools_beside_okl_and_changes_nothing(tmp_path):
+    """#40: installed next to okl, the popular memory tools collide at the hooks and
+    nobody is told. `okl doctor` (and `okl init`) name each one found and how it collides.
+
+    Plugins are matched on their exact plugin name, so `ecc` does not match `necc`; a
+    disabled plugin is not reported; hand-registered hooks are matched on their command;
+    okl's own hooks are never reported; an unreadable settings file is skipped, not fatal.
+    """
+    import json
+    import subprocess
+    import sys
+
+    from okl import coexist
+
+    proj, home = tmp_path / "proj", tmp_path / "home"
+    (proj / ".claude").mkdir(parents=True); (home / ".claude").mkdir(parents=True)
+
+    def okl(*a):
+        env = {**os.environ, "HOME": str(home)}
+        return subprocess.run([sys.executable, "-m", "okl", *a], capture_output=True,
+                              text=True, cwd=proj, env=env)
+
+    # Nothing but okl's own wiring: nothing to report, exit 0.
+    own = {"hooks": {"Stop": [{"hooks": [{"type": "command",
+                                          "command": ".claude/hooks/stop-okl-encode.sh"}]}]}}
+    (proj / ".claude" / "settings.json").write_text(json.dumps(own))
+    (home / ".claude" / "settings.json").write_text("{ not json")
+    assert coexist.detect(proj, home) == []
+    r = okl("doctor")
+    assert r.returncode == 0 and "no known agent-memory tool" in r.stdout, r.stdout + r.stderr
+
+    # Near-miss names and a disabled plugin are not findings.
+    (home / ".claude" / "settings.json").write_text(json.dumps(
+        {"enabledPlugins": {"necc@x": True, "ecc-extras@y": True, "agentmemory@agentmemory": False}}))
+    assert coexist.detect(proj, home) == []
+
+    # A plugin enabled for the user, and a hook registered by hand in the project.
+    user = {"enabledPlugins": {"claude-mem@thedotmack": True, "ecc@ecc": True}}
+    project = {"hooks": {**own["hooks"], "SessionStart": [{"hooks": [
+        {"type": "command", "command": "bd prime --hook-json"}]}]}}
+    (home / ".claude" / "settings.json").write_text(json.dumps(user))
+    (proj / ".claude" / "settings.json").write_text(json.dumps(project))
+    before = {p: p.read_bytes() for p in (home / ".claude").iterdir()}
+    before.update({p: p.read_bytes() for p in (proj / ".claude").iterdir()})
+
+    assert [f.tool.name for f in coexist.detect(proj, home)] == ["claude-mem", "ECC", "beads"]
+    r = okl("doctor")
+    assert r.returncode == 1, "a tool found is a finding: exit 1"
+    assert "claude-mem" in r.stdout and "plugin `claude-mem` enabled" in r.stdout
+    assert "SessionStart hook `bd prime --hook-json`" in r.stdout
+    assert "runs twice" in r.stdout and "Nothing was changed" in r.stdout
+    after = {p: p.read_bytes() for p in list((home / ".claude").iterdir())
+             + list((proj / ".claude").iterdir())}
+    assert after == before, "doctor must never edit another tool's configuration"
+
+    # And `okl init` says so at install time, when someone is reading its output.
+    r = okl("init", "--repo", "r")
+    assert r.returncode == 0 and "3 agent-memory tool(s) installed beside okl" in r.stdout
