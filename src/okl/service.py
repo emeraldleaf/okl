@@ -80,7 +80,7 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901
     # required — the map you would draw before attacking the routes. Setting the token
     # is the signal that this instance is not a laptop, so the spec comes down with it.
     private = token is not None
-    app = FastAPI(title="OKL — the sixth surface", version="0.1.0",
+    app = FastAPI(title="okl — Observed Knowledge Ledger", version="0.1.0",
                   openapi_url=None if private else "/openapi.json",
                   docs_url=None if private else "/docs",
                   redoc_url=None if private else "/redoc")

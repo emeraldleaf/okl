@@ -825,7 +825,7 @@ def build_parser() -> argparse.ArgumentParser:
     reader answering "what flags does verify take" should find the whole answer in one
     place rather than following a chain of registration helpers.
     """
-    p = argparse.ArgumentParser(prog="okl", description="Observed Knowledge Ledger — the sixth surface.")
+    p = argparse.ArgumentParser(prog="okl", description="Observed Knowledge Ledger — lessons your coding agents can trust, proven by checks.")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     pi = sub.add_parser("init", help="wire the current repo (config + hook + CI pointer)")
