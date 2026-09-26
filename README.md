@@ -1,4 +1,7 @@
-# okl — a shared knowledge layer for AI-assisted engineering
+# okl — Observed Knowledge Ledger
+
+**Lessons your coding agents can trust: proven by checks, flagged when the code changes,
+shared across repos when you want.**
 
 > A small database of the specific lessons a codebase has learned — the bugs it
 > keeps almost-reintroducing, the checks that catch them, the rules that must not
@@ -6,8 +9,8 @@
 > person) **before** they start a task, so the same mistake isn't made twice.
 
 ```bash
-pipx install org-knowledge-layer   # the distribution name on PyPI
-okl --help                         # the command, the import package, and the repo are all `okl`
+pipx install observed-knowledge-ledger   # the distribution name on PyPI (formerly org-knowledge-layer)
+okl --help                               # the command, the import package, and the repo are all `okl`
 ```
 
 *(PyPI rejects `okl` itself as confusable with the existing `oki`, so only the install
@@ -134,7 +137,24 @@ the consensus position of 2026, not an insight.
 | mem0 / Zep / Letta / Cognee | extracted facts, conversation graphs, agent-curated tiers | nothing tied to your code — memories accumulate |
 | Cursor Memories / Devin Knowledge | per-project conventions and pinned notes | manual editing |
 | AGENTS.md / CLAUDE.md / rules files | hand-written canon, loaded whole | hand-editing; no per-task selection |
+| claude-mem / agentmemory (Claude Code plugins) | every tool call, compressed into observations by a model; agentmemory adds confidence and decay | file age (claude-mem skips a note when its file changed); time-based decay (agentmemory) — nothing re-checks a memory |
+| ECC (skills + "instincts") | instincts learned from observed tool use, weighted by a model-scored confidence | confidence decay, applied by prompt — no check proves an instinct |
+| beads | work items and short `bd remember` notes — a task tracker, not a lesson store | closing the issue |
 | **okl** | **typed, scoped lessons (Defect / Rule / Decision …), selected per task, fail-closed** | **the drift gate: a lesson whose governed source changed after its last verification fails CI** |
+
+**Read against the Claude Code memory plugins** (claude-mem, agentmemory, ECC, beads — their
+source, September 2026): they are ahead on capture, retrieval engineering, install polish
+and reach across agents, and okl is not trying to catch them there. None re-checks that a
+memory is still true, ties one to the code it describes, or measures whether memory
+improves outcomes — claude-mem's "~10x" is a 5-query code-search benchmark, agentmemory's
+evals are retrieval-only. Their capture also costs model calls (claude-mem runs a model per
+tool call; agentmemory's lessons need an API key); okl requires none. claude-mem remembers
+what happened; okl keeps what must stay true, and proves it.
+
+**Running one of them alongside okl** works, with three known collisions: okl's Stop hook
+blocks the first stop, so their Stop hooks run twice; capture-everything tools record
+`okl record` too, so a lesson lands in two stores; and each injects its own context beside
+okl's briefing. `okl doctor` names whichever is installed and what to do about it.
 
 ### Can I use mem0 / Zep / Letta instead? Or alongside?
 
@@ -271,7 +291,7 @@ knowledge. The switch is one environment variable; none of your commands change.
 ## Install
 
 ```bash
-pipx install org-knowledge-layer   # provides the `okl` command
+pipx install observed-knowledge-ledger   # provides the `okl` command
 pip install -e .                   # or from a clone of this repo
 ```
 
@@ -279,10 +299,10 @@ The core (local + client + CLI) is **stdlib-only** — zero required dependencie
 Extras are opt-in:
 
 ```bash
-pip install "org-knowledge-layer[service]"    # FastAPI shared service
-pip install "org-knowledge-layer[postgres]"   # Postgres backend (psycopg)
-pip install "org-knowledge-layer[mcp]"        # MCP server for Claude Code / Cursor / Copilot
-pip install "org-knowledge-layer[all]"
+pip install "observed-knowledge-ledger[service]"    # FastAPI shared service
+pip install "observed-knowledge-ledger[postgres]"   # Postgres backend (psycopg)
+pip install "observed-knowledge-ledger[mcp]"        # MCP server for Claude Code / Cursor / Copilot
+pip install "observed-knowledge-ledger[all]"
 ```
 
 ## What it costs, and how to turn it down
@@ -650,7 +670,7 @@ okl serve --port 8080
 ## Run the shared service
 
 ```bash
-pip install "org-knowledge-layer[service]"
+pip install "observed-knowledge-ledger[service]"
 OKL_DATABASE_URL="postgresql://user:pass@host/okl" OKL_TOKEN="a-shared-secret" okl serve
 # repos then: okl connect https://your-host --token a-shared-secret
 ```
@@ -668,7 +688,7 @@ failure modes look like: **[docs/DEPLOY.md](docs/DEPLOY.md)**.
 ## Agent integration (MCP)
 
 ```bash
-pip install "org-knowledge-layer[mcp]"
+pip install "observed-knowledge-ledger[mcp]"
 okl mcp     # register in your coding agent's tool config
 ```
 
@@ -719,7 +739,7 @@ tests/            # end-to-end tests
 ## Test
 
 ```bash
-pip install "org-knowledge-layer[dev]"
+pip install "observed-knowledge-ledger[dev]"
 pytest -q          # full suite (one drift test self-skips where git init is unavailable)
 ```
 

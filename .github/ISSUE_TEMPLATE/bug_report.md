@@ -13,7 +13,7 @@ labels: bug
 **Environment**
 - OS:
 - Python:
-- Installed via: `pip install org-knowledge-layer` / `pip install -e .`
+- Installed via: `pip install observed-knowledge-ledger` / `pip install -e .`
 - Mode: local store / shared service
 
 **Especially useful:** if the tool reported success it had not earned (a check that

@@ -1,4 +1,4 @@
-"""okl — the Org Knowledge Layer (the sixth surface).
+"""okl — the Observed Knowledge Ledger (the sixth surface).
 
 Install into any repo; read lessons curated by your other repos; contribute back.
 See the design rationale in the-sixth-surface.md.

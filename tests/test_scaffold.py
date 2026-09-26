@@ -727,3 +727,37 @@ def test_shipped_drift_step_warns_when_nothing_was_checked():
         assert r.returncode == want_code, f"{label} -> step exit {r.returncode}"
         assert ("--snapshot okl-drift.json" in called) == (store == "snapshot"), label
         assert ("::warning title=Drift not checked" in r.stdout) == want_warning, label
+
+
+def test_the_old_distribution_name_is_swept_and_still_installable():
+    """0.6.0 renamed the distribution org-knowledge-layer -> observed-knowledge-ledger.
+
+    The last rename (okl -> org-knowledge-layer) left a CI step grepping for the old name,
+    which silently took its fallback branch: a rename sweeps the thing renamed, not the
+    checks that test for it. So the old name is held to an explicit allowlist across the
+    tracked files, and the redirect package must offer every extra the real one does,
+    or `pip install "org-knowledge-layer[mcp]"` would quietly install without the extra.
+    """
+    import tomllib
+
+    root = Path(__file__).resolve().parents[1]
+    allowed = {
+        "CHANGELOG.md",                                  # history
+        "README.md",                                     # "(formerly org-knowledge-layer)"
+        ".github/workflows/publish.yml",                 # builds the redirect release
+        "packaging/org-knowledge-layer/pyproject.toml",  # the redirect itself
+        "packaging/org-knowledge-layer/README.md",
+        "tests/test_scaffold.py",                        # this test
+    }
+    tracked = subprocess.run(["git", "-C", str(root), "grep", "-l", "org-knowledge-layer"],
+                             capture_output=True, text=True).stdout.split()
+    assert set(tracked) <= allowed, f"old name outside the allowlist: {set(tracked) - allowed}"
+
+    new = tomllib.loads((root / "pyproject.toml").read_text())["project"]
+    old = tomllib.loads((root / "packaging/org-knowledge-layer/pyproject.toml").read_text())["project"]
+    assert new["name"] == "observed-knowledge-ledger"
+    assert old["dependencies"] == [f"{new['name']}>={old['version']}"]
+    wanted = {e for e in new["optional-dependencies"] if e != "dev"}
+    assert set(old["optional-dependencies"]) == wanted
+    for extra, deps in old["optional-dependencies"].items():
+        assert deps == [f"{new['name']}[{extra}]>={old['version']}"], extra

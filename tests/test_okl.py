@@ -912,7 +912,7 @@ def test_postgres_matches_sqlite_ranking_on_a_real_server():
 
 
 @pytest.mark.skipif(importlib.util.find_spec("mcp") is None,
-                    reason="requires the mcp extra: pip install 'org-knowledge-layer[mcp]'")
+                    reason="requires the mcp extra: pip install 'observed-knowledge-ledger[mcp]'")
 def test_mcp_server_builds_and_its_tools_actually_run(tmp_path, monkeypatch):
     """Build the real MCP server and call every tool through it.
 

@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Renamed: Observed Knowledge Ledger
+
+- **The PyPI distribution is now `observed-knowledge-ledger`** (was `org-knowledge-layer`).
+  The name says what is different about okl — knowledge proven by observed checks, kept
+  with its evidence — where "knowledge layer" named the crowded category it is not
+  competing in. `okl` itself is unchanged: the command, the import package, `.okl/`,
+  `OKL_*` variables and `okl-drift.json`. The old name gets one final release (0.6.0,
+  `packaging/org-knowledge-layer`) that contains no code and depends on the new one,
+  extras included, so existing installs and CI steps keep working. A test holds the old
+  name to an allowlist of files, so the rename cannot leave a check behind.
+- **README positions okl against the Claude Code memory plugins** (#41): claude-mem,
+  agentmemory, ECC and beads, from reading their source.
+
 ### Numbers that say what they rest on
 
 - **`okl metric` states its coverage and counts recurrences it could not see** (#31). It

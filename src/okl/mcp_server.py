@@ -18,7 +18,7 @@ def _build():
     The class was renamed in mcp 2.x: `mcp.server.fastmcp.FastMCP` became
     `mcp.server.mcpserver.MCPServer`. The decorator API we use (`.tool()`) is the same
     on both, so try the newer name first and fall back. Without this, `pip install
-    org-knowledge-layer[mcp]` resolves to 2.x and every tool call fails.
+    observed-knowledge-ledger[mcp]` resolves to 2.x and every tool call fails.
     """
     server_cls = None
     errors = []
@@ -36,7 +36,7 @@ def _build():
         raise RuntimeError(
             "Could not load an MCP server class from the installed 'mcp' package.\n"
             + "\n".join(f"  tried {e}" for e in errors)
-            + "\nInstall the extra with `pip install \"org-knowledge-layer[mcp]\"`, or report "
+            + "\nInstall the extra with `pip install \"observed-knowledge-ledger[mcp]\"`, or report "
               "this if the SDK has changed again.")
 
     mcp = server_cls("okl")
