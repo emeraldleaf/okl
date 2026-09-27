@@ -6,7 +6,7 @@ kept), then a headless session with this checkout loaded as a plugin:
 
 ```
 printf '%s' "Reply with exactly the single word: ok" \
-  | OKL_BIN=<dev okl> OKL_DISABLED_HOOKS=encode \
+  | OKL_BIN="/path/to/okl" OKL_DISABLED_HOOKS=encode   # replace with your okl \
     claude --plugin-dir /Users/joshuadell/Dev/okl -p --model haiku --allowedTools ""
 ```
 

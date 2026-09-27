@@ -121,12 +121,15 @@ def _settings_state(project_root: Path, home: Path
         plugins = settings.get("enabledPlugins")
         if isinstance(plugins, dict):
             for key, on in plugins.items():
+                # Keyed both ways: third-party tools by plugin name (the collision is the
+                # plugin's, whatever marketplace served it); okl's own by the full key.
                 plugin_state[key.split("@", 1)[0]] = (on is True, path)
+                plugin_state[key] = (on is True, path)
         hook_sources += [(path, ev, c) for ev, c in _hook_commands(settings)]
     return plugin_state, hook_sources
 
 
-OKL_PLUGIN = "okl"
+OKL_PLUGIN = "okl@okl"     # name@marketplace: an "okl" on another marketplace is not this one
 OKL_HOOK_SCRIPTS = ("userpromptsubmit-okl-check.sh", "stop-okl-encode.sh")
 
 

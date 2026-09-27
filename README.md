@@ -296,7 +296,8 @@ knowledge. The switch is one environment variable; none of your commands change.
 ```
 
 The plugin carries the two hooks, the MCP tools and the seeding commands. It does not
-carry okl itself: install the CLI first (`pipx install observed-knowledge-ledger`), then run
+carry okl itself: install the CLI first, **with the MCP extra**, because the plugin
+registers the `okl mcp` server (`pipx install 'observed-knowledge-ledger[mcp]'`), then run
 `okl init` in the repo for the store and the CI workflow — with the plugin enabled, `init`
 skips the hooks and MCP registration, because registering them twice would brief every
 prompt twice. `okl doctor` reports a repo where both the plugin and the project hooks are

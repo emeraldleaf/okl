@@ -1208,6 +1208,9 @@ def test_init_and_doctor_know_okls_own_plugin(tmp_path):
     proj, home = tmp_path / "p", tmp_path / "home"
     (proj / ".claude").mkdir(parents=True); (home / ".claude").mkdir(parents=True)
     subprocess.run(["git", "init", "-q", str(proj)], check=True)
+    # An "okl" from some other marketplace is not this plugin: init must still wire hooks.
+    (home / ".claude" / "settings.json").write_text(json.dumps({"enabledPlugins": {"okl@elsewhere": True}}))
+    assert not coexist.okl_plugin_enabled(proj, home)
     (home / ".claude" / "settings.json").write_text(json.dumps({"enabledPlugins": {"okl@okl": True}}))
     env = {**os.environ, "HOME": str(home), "USERPROFILE": str(home)}
     env.pop("CLAUDE_CONFIG_DIR", None); env.pop("OKL_DATABASE_URL", None); env.pop("OKL_SERVICE_URL", None)
@@ -1255,8 +1258,9 @@ def test_plugin_manifest_points_at_real_files_and_the_shipped_version():
     assert set(hooks) == {"hooks"} and {"UserPromptSubmit", "Stop"} <= set(hooks["hooks"])
     for event in ("UserPromptSubmit", "Stop"):
         cmd = hooks["hooks"][event][0]["hooks"][0]["command"]
-        assert cmd.startswith("${CLAUDE_PLUGIN_ROOT}/hooks/"), cmd
-        assert (root / cmd.replace("${CLAUDE_PLUGIN_ROOT}/", "")).is_file(), cmd
+        # quoted: an install path with a space would otherwise split the command
+        assert cmd.startswith('"${CLAUDE_PLUGIN_ROOT}"/hooks/'), cmd
+        assert (root / cmd.replace('"${CLAUDE_PLUGIN_ROOT}"/', "")).is_file(), cmd
     market = json.loads((root / ".claude-plugin" / "marketplace.json").read_text())
     assert [p["name"] for p in market["plugins"]] == ["okl"] and market["name"] == "okl"
     mcp = json.loads((root / ".mcp.json").read_text())
