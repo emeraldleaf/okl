@@ -1,6 +1,36 @@
 # Changelog
 
-## Unreleased
+## 0.7.0
+
+- **A dead okl path no longer turns the block into a warning** (#64). The marketplace
+  E2E found the pre-task hook exiting 2 and the prompt going through anyway: the pinned
+  `okl_bin` pointed into a deleted venv, bash wrote `No such file or directory` into the
+  hook's stderr, and Claude Code read that phrase as "hook script missing" — a
+  non-blocking configuration error. Both hooks now use a resolver layer (`OKL_BIN`, the
+  pin, PATH, `python3 -m okl`) only if it can actually run, so a stale pin falls through
+  instead of being executed; the block names the dead pin and never relays that phrase.
+  Receipt: `evals/results/e2e-20260927-marketplace/` — install from the marketplace
+  works, `okl doctor` catches the double wiring, and the A/B of old hook vs new in the
+  same dead-pin repo.
+- **Two worked examples, each with receipts** (#59, #62): `examples/python-fastapi/` and
+  `examples/dotnet-minimal-api/` — a small orders service, three bait tasks from the eval
+  set (IDOR, client-supplied price, unbounded search) and `run_demo.sh`, which plays each
+  task in a control copy and a briefed copy with a real coding agent and keeps the diffs,
+  final messages and the exact briefing. n=1 per arm, so illustration, not measurement:
+  `price_tamper` and `rate_limiter` discriminate on both stacks (the control ships the
+  defect, the briefed arm applies the recorded fix in the framework's own idiom);
+  `idor_endpoint` does not, because the examples' own comments telegraph ownership.
+  The .NET one is the stack most of the bundled lessons came from.
+- **Coexistence receipt** (#60, `evals/results/e2e-20260927-coexist/`): okl's project
+  hooks beside another memory plugin loaded for the session. okl's loop worked; the other
+  tool captured `okl record` as a tool use (one lesson, two stores); `okl doctor` named
+  it. It also corrected a shipped claim — that tool's Stop summariser ran **once** beside
+  okl's blocked stop, not twice; doctor now says what was seen.
+- **The test suite is deaf to a real store named in the environment** (#61). An exported
+  `OKL_DATABASE_URL` leaked into two `pytest` runs and wrote 28 fixture records into the
+  real store. An autouse fixture now strips `OKL_DATABASE_URL`, `OKL_SERVICE_URL` and
+  `OKL_TOKEN` for every test; proven the way the incident happened (suite run with the
+  variable exported, store count unchanged).
 
 - **okl is a Claude Code plugin** (#45): `/plugin marketplace add emeraldleaf/okl` then
   `/plugin install okl@okl`. It carries the hooks, the MCP tools and the seeding commands;
