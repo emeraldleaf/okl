@@ -1,0 +1,2 @@
+command per arm (cwd = the arm's repo):
+  printf "%s" "<task>" | claude -p --model sonnet --allowedTools "Read,Glob,Grep,Write,Edit,Bash(git *),Bash(okl *)"

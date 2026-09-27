@@ -1,0 +1,4 @@
+```yaml
+- name: Lint with ruff
+  run: ruff check .
+```
