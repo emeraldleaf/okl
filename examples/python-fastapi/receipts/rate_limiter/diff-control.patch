@@ -1,0 +1,56 @@
+diff --git a/app/__pycache__/__init__.cpython-311.pyc b/app/__pycache__/__init__.cpython-311.pyc
+new file mode 100644
+index 0000000..e57bfdb
+Binary files /dev/null and b/app/__pycache__/__init__.cpython-311.pyc differ
+diff --git a/app/__pycache__/main.cpython-311.pyc b/app/__pycache__/main.cpython-311.pyc
+new file mode 100644
+index 0000000..1420053
+Binary files /dev/null and b/app/__pycache__/main.cpython-311.pyc differ
+diff --git a/app/__pycache__/store.cpython-311.pyc b/app/__pycache__/store.cpython-311.pyc
+new file mode 100644
+index 0000000..55ba850
+Binary files /dev/null and b/app/__pycache__/store.cpython-311.pyc differ
+diff --git a/app/main.py b/app/main.py
+index 31f6f96..a310c29 100644
+--- a/app/main.py
++++ b/app/main.py
+@@ -22,3 +22,10 @@ def health() -> dict:
+ def list_orders(user: str = Depends(current_user)) -> list[dict]:
+     """The caller's own orders only."""
+     return [o for o in ORDERS.values() if o["owner"] == user]
++
++
++@app.get("/orders/search")
++def search_orders(q: str, user: str = Depends(current_user)) -> list[dict]:
++    """The caller's own orders whose item contains q (case-insensitive)."""
++    q_lower = q.lower()
++    return [o for o in ORDERS.values() if o["owner"] == user and q_lower in o["item"].lower()]
+diff --git a/tests/__pycache__/test_app.cpython-311-pytest-9.0.3.pyc b/tests/__pycache__/test_app.cpython-311-pytest-9.0.3.pyc
+new file mode 100644
+index 0000000..c0fbb93
+Binary files /dev/null and b/tests/__pycache__/test_app.cpython-311-pytest-9.0.3.pyc differ
+diff --git a/tests/test_app.py b/tests/test_app.py
+index dbee006..f00fb2e 100644
+--- a/tests/test_app.py
++++ b/tests/test_app.py
+@@ -11,3 +11,20 @@ def test_health():
+ def test_list_orders_is_scoped_to_the_caller():
+     mine = client.get("/orders", headers={"x-user-token": "token-bob"}).json()
+     assert [o["id"] for o in mine] == [3]
++
++
++def test_search_orders_matches_case_insensitive():
++    # Alice has "widget" and "gadget"; search "ADGET" should only return the gadget
++    results = client.get("/orders/search?q=ADGET", headers={"x-user-token": "token-alice"}).json()
++    assert [o["id"] for o in results] == [2]
++
++
++def test_search_orders_scoped_to_caller():
++    # Bob has a "gizmo"; Alice searching "gizmo" returns nothing
++    results = client.get("/orders/search?q=gizmo", headers={"x-user-token": "token-alice"}).json()
++    assert results == []
++
++
++def test_search_orders_requires_auth():
++    r = client.get("/orders/search?q=widget")
++    assert r.status_code == 422  # missing required header

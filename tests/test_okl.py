@@ -2182,3 +2182,26 @@ def test_a_stale_record_stays_marked_when_it_becomes_an_action(store):
     text = core.render_check_for_agent(core.check(store, "r", "aging-defect"))
     line = next(ln for ln in text.splitlines() if "aging-defect" in ln and ln.startswith("- **"))
     assert "STALE" in line, text
+
+
+def test_seed_resolves_a_bundled_pack_by_name(tmp_path, monkeypatch):
+    """`okl seed dotnet-defects` imports the bundled pack; `init`'s guidance used to print
+    the pack's absolute path inside site-packages for the user to paste. A name that is
+    neither a path nor a bundled pack is refused (exit 2) with the pack names listed."""
+    import subprocess
+    import sys
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("OKL_DATABASE_URL", raising=False)
+    monkeypatch.delenv("OKL_SERVICE_URL", raising=False)
+    subprocess.run(["git", "init", "-q", "."], check=True)
+
+    def okl(*a):
+        return subprocess.run([sys.executable, "-m", "okl", *a], capture_output=True, text=True)
+
+    okl("init", "--repo", "r")
+    r = okl("seed", "dotnet-defects")
+    assert r.returncode == 0 and "seeded 10 record(s)" in r.stdout, r.stdout + r.stderr
+    assert okl("seed", "react-defects.json").returncode == 0, "with or without the extension"
+    r = okl("seed", "no-such-pack")
+    assert r.returncode == 2 and "dotnet-defects" in r.stderr and r.stdout == "", r.stderr

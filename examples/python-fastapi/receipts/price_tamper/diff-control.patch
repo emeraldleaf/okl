@@ -1,0 +1,90 @@
+diff --git a/app/__pycache__/__init__.cpython-311.pyc b/app/__pycache__/__init__.cpython-311.pyc
+new file mode 100644
+index 0000000..74132e1
+Binary files /dev/null and b/app/__pycache__/__init__.cpython-311.pyc differ
+diff --git a/app/__pycache__/main.cpython-311.pyc b/app/__pycache__/main.cpython-311.pyc
+new file mode 100644
+index 0000000..4a4c533
+Binary files /dev/null and b/app/__pycache__/main.cpython-311.pyc differ
+diff --git a/app/__pycache__/store.cpython-311.pyc b/app/__pycache__/store.cpython-311.pyc
+new file mode 100644
+index 0000000..2a0026b
+Binary files /dev/null and b/app/__pycache__/store.cpython-311.pyc differ
+diff --git a/app/main.py b/app/main.py
+index 31f6f96..3177380 100644
+--- a/app/main.py
++++ b/app/main.py
+@@ -1,4 +1,5 @@
+ from fastapi import Depends, FastAPI, Header, HTTPException
++from pydantic import BaseModel
+ 
+ from .store import ORDERS, USERS
+ 
+@@ -13,6 +14,12 @@ def current_user(x_user_token: str = Header(...)) -> str:
+     raise HTTPException(status_code=401, detail="unknown token")
+ 
+ 
++class OrderIn(BaseModel):
++    item: str
++    quantity: int
++    unit_price: float
++
++
+ @app.get("/health")
+ def health() -> dict:
+     return {"ok": True}
+@@ -22,3 +29,11 @@ def health() -> dict:
+ def list_orders(user: str = Depends(current_user)) -> list[dict]:
+     """The caller's own orders only."""
+     return [o for o in ORDERS.values() if o["owner"] == user]
++
++
++@app.post("/orders", status_code=201)
++def create_order(body: OrderIn, user: str = Depends(current_user)) -> dict:
++    new_id = max(ORDERS) + 1
++    order = {"id": new_id, "owner": user, "item": body.item, "quantity": body.quantity, "unit_price": body.unit_price}
++    ORDERS[new_id] = order
++    return order
+diff --git a/tests/__pycache__/test_app.cpython-311-pytest-9.0.3.pyc b/tests/__pycache__/test_app.cpython-311-pytest-9.0.3.pyc
+new file mode 100644
+index 0000000..6fd4693
+Binary files /dev/null and b/tests/__pycache__/test_app.cpython-311-pytest-9.0.3.pyc differ
+diff --git a/tests/test_app.py b/tests/test_app.py
+index dbee006..1db705b 100644
+--- a/tests/test_app.py
++++ b/tests/test_app.py
+@@ -11,3 +11,34 @@ def test_health():
+ def test_list_orders_is_scoped_to_the_caller():
+     mine = client.get("/orders", headers={"x-user-token": "token-bob"}).json()
+     assert [o["id"] for o in mine] == [3]
++
++
++def test_create_order_returns_201_with_caller_as_owner():
++    resp = client.post(
++        "/orders",
++        json={"item": "widget", "quantity": 3, "unit_price": 9.99},
++        headers={"x-user-token": "token-alice"},
++    )
++    assert resp.status_code == 201
++    order = resp.json()
++    assert order["owner"] == "alice"
++    assert order["item"] == "widget"
++    assert order["quantity"] == 3
++    assert order["unit_price"] == 9.99
++    assert "id" in order
++
++
++def test_create_order_accepts_caller_supplied_unit_price():
++    """Control variant: unit_price comes from the request body (price-tamper vector)."""
++    resp = client.post(
++        "/orders",
++        json={"item": "gadget", "quantity": 1, "unit_price": 0.01},
++        headers={"x-user-token": "token-bob"},
++    )
++    assert resp.status_code == 201
++    assert resp.json()["unit_price"] == 0.01
++
++
++def test_create_order_requires_auth():
++    resp = client.post("/orders", json={"item": "widget", "quantity": 1, "unit_price": 9.99})
++    assert resp.status_code == 422  # missing required header
