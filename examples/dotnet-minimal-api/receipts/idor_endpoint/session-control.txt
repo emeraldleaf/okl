@@ -1,0 +1,17 @@
+All 6 tests pass. Here's what was added:
+
+**`src/Program.cs`** — new endpoint after the existing `/orders` handler:
+```csharp
+app.MapGet("/orders/{id}", (int id, HttpContext ctx) =>
+{
+    var user = Auth.CurrentUser(ctx);
+    if (user is null) return Results.Unauthorized();
+    if (!Store.Orders.TryGetValue(id, out var order)) return Results.NotFound();
+    if (order.Owner != user) return Results.StatusCode(403);
+    return Results.Ok(order);
+});
+```
+
+The ownership check (`order.Owner != user`) is explicit: 401 for unauthenticated, 404 for missing order, 403 for an order that belongs to someone else, 200+JSON for a valid owned order.
+
+**`tests/ApiTests.cs`** — four new tests covering the full behavior matrix: own order (200), cross-user order (403), unknown ID (404), and no token (401).

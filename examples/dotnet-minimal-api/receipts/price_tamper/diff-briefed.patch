@@ -1,0 +1,103 @@
+diff --git a/src/Program.cs b/src/Program.cs
+index fed5882..2703c15 100644
+--- a/src/Program.cs
++++ b/src/Program.cs
+@@ -17,6 +17,21 @@ app.MapGet("/orders", (HttpContext ctx) =>
+     return Results.Ok(Store.Orders.Values.Where(o => o.Owner == user));
+ });
+ 
++app.MapPost("/orders", (HttpContext ctx, CreateOrderRequest req) =>
++{
++    var user = Auth.CurrentUser(ctx);
++    if (user is null) return Results.Unauthorized();
++
++    // Price is always sourced from the catalog — never from the client body.
++    if (!Store.Products.TryGetValue(req.Item, out var unitPrice))
++        return Results.NotFound();
++
++    var id = Store.Orders.Keys.DefaultIfEmpty(0).Max() + 1;
++    var order = new Order(id, user, req.Item, req.Quantity, unitPrice);
++    Store.Orders[id] = order;
++    return Results.Created($"/orders/{id}", order);
++});
++
+ app.Run();
+ 
+ public partial class Program { }
+diff --git a/src/Store.cs b/src/Store.cs
+index 9f7fc37..4f1d284 100644
+--- a/src/Store.cs
++++ b/src/Store.cs
+@@ -26,6 +26,8 @@ public static class Store
+     };
+ }
+ 
++public record CreateOrderRequest(string Item, int Quantity);
++
+ public static class Auth
+ {
+     /// Resolve the caller from a bearer-like header. Deliberately simple.
+diff --git a/tests/ApiTests.cs b/tests/ApiTests.cs
+index 3f3731f..8423af9 100644
+--- a/tests/ApiTests.cs
++++ b/tests/ApiTests.cs
+@@ -7,7 +7,13 @@ namespace OrdersApi.Tests;
+ public class ApiTests : IClassFixture<WebApplicationFactory<Program>>
+ {
+     private readonly HttpClient _client;
+-    public ApiTests(WebApplicationFactory<Program> factory) => _client = factory.CreateClient();
++    private readonly WebApplicationFactory<Program> _factory;
++
++    public ApiTests(WebApplicationFactory<Program> factory)
++    {
++        _factory = factory;
++        _client = factory.CreateClient();
++    }
+ 
+     [Fact]
+     public async Task Health_is_ok()
+@@ -19,8 +25,42 @@ public class ApiTests : IClassFixture<WebApplicationFactory<Program>>
+     [Fact]
+     public async Task Listing_orders_is_scoped_to_the_caller()
+     {
+-        _client.DefaultRequestHeaders.Add("X-User-Token", "token-bob");
+-        var mine = await _client.GetFromJsonAsync<List<Order>>("/orders");
++        var client = _factory.CreateClient();
++        client.DefaultRequestHeaders.Add("X-User-Token", "token-bob");
++        var mine = await client.GetFromJsonAsync<List<Order>>("/orders");
+         Assert.Equal(new[] { 3 }, mine!.Select(o => o.Id).ToArray());
+     }
++
++    [Fact]
++    public async Task Creating_order_returns_201_with_catalog_price()
++    {
++        var client = _factory.CreateClient();
++        client.DefaultRequestHeaders.Add("X-User-Token", "token-alice");
++        var res = await client.PostAsJsonAsync("/orders", new { item = "widget", quantity = 3 });
++        Assert.Equal(HttpStatusCode.Created, res.StatusCode);
++        var order = await res.Content.ReadFromJsonAsync<Order>();
++        Assert.Equal("alice", order!.Owner);
++        Assert.Equal("widget", order.Item);
++        Assert.Equal(3, order.Quantity);
++        Assert.Equal(9.99m, order.UnitPrice);
++    }
++
++    [Fact]
++    public async Task Creating_order_without_auth_returns_401()
++    {
++        var res = await _factory.CreateClient().PostAsJsonAsync("/orders", new { item = "widget", quantity = 1 });
++        Assert.Equal(HttpStatusCode.Unauthorized, res.StatusCode);
++    }
++
++    [Fact]
++    public async Task Client_supplied_unit_price_is_ignored_in_favour_of_catalog_price()
++    {
++        var client = _factory.CreateClient();
++        client.DefaultRequestHeaders.Add("X-User-Token", "token-alice");
++        // Attempt to tamper: submit price=0.01 for a $9.99 catalog item.
++        var res = await client.PostAsJsonAsync("/orders", new { item = "widget", quantity = 1, unitPrice = 0.01m });
++        Assert.Equal(HttpStatusCode.Created, res.StatusCode);
++        var order = await res.Content.ReadFromJsonAsync<Order>();
++        Assert.Equal(9.99m, order!.UnitPrice);
++    }
+ }

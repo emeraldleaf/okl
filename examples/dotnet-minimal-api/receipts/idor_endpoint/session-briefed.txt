@@ -1,0 +1,10 @@
+All 4 tests pass. Here's what was done:
+
+**`src/Program.cs`** — added `GET /orders/{id:int}`:
+- Resolves the caller first, returns 401 if unauthenticated
+- The ownership predicate (`order.Owner == user`) is part of the lookup condition, not a post-fetch check — this prevents IDOR by ensuring a hit on id alone is never enough
+- Returns 404 on any non-match, whether the id doesn't exist or belongs to another user (no existence leak)
+
+**`tests/ApiTests.cs`** — added two tests:
+- `Get_order_returns_the_callers_own_order` — happy path, bob fetches his own order 3
+- `Get_order_returns_404_for_another_users_order` — cross-user test, bob requests alice's order 1 and gets 404; the assertion comments call out both what 200 and 403 would mean so the intent is obvious to a future reader
