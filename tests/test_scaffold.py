@@ -818,7 +818,7 @@ def test_doctor_names_memory_tools_beside_okl_and_changes_nothing(tmp_path):
     assert r.returncode == 1, "a tool found is a finding: exit 1"
     assert "claude-mem" in r.stdout and "plugin `claude-mem` enabled" in r.stdout
     assert "SessionStart hook `bd prime --hook-json`" in r.stdout
-    assert "runs twice" in r.stdout and "Nothing was changed" in r.stdout
+    assert "runs again" in r.stdout and "Nothing was changed" in r.stdout
     after = {p: p.read_bytes() for p in list((home / ".claude").iterdir())
              + list((proj / ".claude").iterdir())}
     assert after == before, "doctor must never edit another tool's configuration"

@@ -1,0 +1,7 @@
+okl doctor: 1 agent-memory tool(s) installed beside okl. Nothing was changed; how they collide:
+
+  ! claude-mem — found in /Users/joshuadell/Dev/okl/e2e/e2e-20260927-coexist/.claude/settings.json (plugin `claude-mem` enabled)
+      - its Stop hook runs twice per turn: okl's Stop hook blocks the first stop to ask what was learned, and the agent's reply ends in a second stop (a second session summary)
+      - it records every tool call, including `okl record` and `okl verify`, so the same lesson lands in its store too, where it can drift from okl's
+      - it injects its own context at session start and when files are read, beside okl's per-prompt briefing
+      → treat okl as the source of truth for rules and claude-mem as the session log; if briefings contradict, the verified okl record wins

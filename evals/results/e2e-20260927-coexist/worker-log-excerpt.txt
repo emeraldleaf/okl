@@ -1,0 +1,11 @@
+# claude-mem worker log, hook and summary events only (full log not kept)
+[2026-09-26 20:00:42.199] [INFO ] [HOOK  ] → PostToolUse: Write(/Users/joshuadell/Dev/okl/e2e/e2e-20260927-coexist/hello
+[2026-09-26 20:00:45.281] [INFO ] [HOOK  ] → PostToolUse: Bash(python3 hello.py)
+[2026-09-26 20:00:50.452] [INFO ] [HOOK  ] → PostToolUse: Bash(okl record --type Rule --scope repo --tags method --title
+[2026-09-26 20:00:53.430] [INFO ] [HOOK  ] → Stop: Requesting summary {hasLastAssistantMessage=true}
+[2026-09-26 20:00:52.925] [INFO ] [DB    ] [session-2] STORED | sessionDbId=2 | memorySessionId=07e05a52-8d0e-4607-a54d-8a67c2ebc6ab | obsCo
+[2026-09-26 20:00:53.430] [INFO ] [HOOK  ] → Stop: Requesting summary {hasLastAssistantMessage=true}
+[2026-09-26 20:00:53.438] [INFO ] [QUEUE ] [session-2] ENQUEUED | sessionDbId=2 | messageId=4 | type=summarize | depth=3
+[2026-09-26 20:00:58.727] [INFO ] [DB    ] [session-2] STORED | sessionDbId=2 | memorySessionId=07e05a52-8d0e-4607-a54d-8a67c2ebc6ab | obsCo
+[2026-09-26 20:01:09.908] [INFO ] [DB    ] [session-2] STORED | sessionDbId=2 | memorySessionId=07e05a52-8d0e-4607-a54d-8a67c2ebc6ab | obsCo
+[2026-09-26 20:01:19.672] [INFO ] [DB    ] [session-2] STORED | sessionDbId=2 | memorySessionId=07e05a52-8d0e-4607-a54d-8a67c2ebc6ab | obsCo
