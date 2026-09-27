@@ -939,7 +939,7 @@ def cmd_seed(args) -> int:
             print(f"  {f.name:38} {count:3} records  [{', '.join(sorted(tags)) or 'untagged'}]{hit}")
         print("\nThese hold real rules from specific stacks. Import the ones that match")
         print("your project rather than all of them:\n")
-        print(f"  okl seed {seed_dir}/<pack>.json     one pack")
+        print("  okl seed <pack>                       one pack, by name (e.g. okl seed dotnet-defects)")
         print("  okl seed --all                        every pack above")
         if interests:
             print(f"\nThis repo declares: {', '.join(sorted(interests))}. Records tagged outside")
@@ -952,6 +952,18 @@ def cmd_seed(args) -> int:
         targets = sorted(str(f) for f in seed_dir.glob("*.json"))
     else:
         path = Path(args.path)
+        # A bundled pack by name -- `okl seed dotnet-defects` -- when no such path exists.
+        # `init` used to print the pack's absolute path inside site-packages for the user
+        # to paste; a name is what the listing shows and what a README can say.
+        if not path.exists():
+            bundled = seed_dir / (args.path if args.path.endswith(".json") else f"{args.path}.json")
+            if bundled.is_file():
+                path = bundled
+            else:
+                names = ", ".join(sorted(f.stem for f in seed_dir.glob("*.json")))
+                print(f"no seed file at {args.path!r}, and no bundled pack of that name. "
+                      f"Bundled packs: {names}", file=sys.stderr)
+                return 2
         targets = sorted(str(f) for f in path.glob("*.json")) if path.is_dir() else [str(path)]
     if not targets:
         print(f"no seed files found at {args.path or seed_dir}")

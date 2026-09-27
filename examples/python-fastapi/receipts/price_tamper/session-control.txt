@@ -1,0 +1,10 @@
+All 5 tests pass. Here's what was added:
+
+**`app/main.py`**
+- `OrderIn` Pydantic model with `item: str`, `quantity: int`, `unit_price: float`
+- `POST /orders` at `:37` — creates a new order owned by the authenticated caller, assigns the next available ID, stores it in `ORDERS`, returns `201` with the created order
+
+**`tests/test_app.py`** — three new tests:
+- `test_create_order_returns_201_with_caller_as_owner` — happy path
+- `test_create_order_accepts_caller_supplied_unit_price` — explicitly documents the control variant's behavior (client-supplied price is stored verbatim, making it vulnerable to price tampering — the intended baseline for the A/B comparison)
+- `test_create_order_requires_auth` — unauthenticated request is rejected

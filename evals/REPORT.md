@@ -901,6 +901,40 @@ effect size — that remains the isolated harness's job. The fuller version:
 Second unrun extension: local/open-weight generators (`GENERATOR_CMD="ollama run ..."`)
 to test the budget-tier claim beyond one vendor's model family.
 
+## 10. Fresh-install end-to-end run (2026-09-26): the loop from a wheel
+
+§8 tested delivery a month ago, against the shared service, before the rename, the hook
+anchoring, fingerprints, the failed-command candidates and the each-record-once briefing.
+This run repeats it from what a new user gets: a wheel built off `main` (`e3be24c`),
+installed into a clean environment, in a scratch repo with no okl history, local store.
+Receipt: [`results/e2e-20260926/`](results/e2e-20260926/). n=1 per arm; a delivery check,
+not a measurement.
+
+| surface | result |
+|---|---|
+| briefing reaches the model | yes — `hook_success` attachment in the transcript holds it; briefed arm pinned `ruff==0.9.0` citing two lessons, control wrote unpinned `ruff check .` |
+| Stop question | fired once, answered honestly; no failed commands, so no candidates listed |
+| record → verify → snapshot → drift gate | 0 after verify, 1 after a governed edit |
+| shipped CI drift step, run as its own shell | 0, from the committed snapshot |
+| `doctor`, re-`init`, `--uninstall --dry-run` | clean; nothing clobbered; dry run wrote nothing |
+| `OKL_DISABLED_HOOKS` inside a live session | both hooks stayed silent |
+
+**Finding — `claude -p` prints the answer to the Stop question, not the task.** Print mode
+emits the final message only; a blocked stop makes the reply to "what did we learn?" the
+final message. The user's YAML survived only in the transcript. No documented hook input or
+environment variable distinguishes print mode, and the one undocumented candidate
+(`entrypoint`) is inherited from the parent process, so a nested `-p` run reports the
+parent's value. The honest resolution is the documented switch: headless callers set
+`OKL_DISABLED_HOOKS=encode`, proven in this run. The harness never hit this because it
+runs generators in a clean room (§8's lesson).
+
+**Finding — stack-keyed pack recommendation** (#54): a Python repo was told one 2-record
+pack fits it; the pack holding the rule this run shows working was unmarked because it
+names the stack it was found on.
+
+Two false starts cost no model calls and are recorded so the next run skips them: macOS
+has no `timeout`, and `claude -p` wants the prompt on stdin.
+
 ## 9. Reproduction
 
 ```bash

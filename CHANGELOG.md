@@ -7,6 +7,11 @@
   the CLI is still installed with pipx. `okl init` skips hook and MCP registration when the
   plugin is enabled, and `okl doctor` reports a repo wired both ways. The scaffold's
   `hooks/hooks.json` gained the top-level `hooks` key the plugin loader expects.
+- **Fresh-install end-to-end run** (REPORT §10, receipt `evals/results/e2e-20260926/`):
+  the whole loop from a wheel in a repo that had never seen okl. Every surface worked;
+  two findings. In `claude -p` the Stop question's reply replaces the printed answer, so
+  headless runs should set `OKL_DISABLED_HOOKS=encode` (README says so); and `okl init`'s
+  pack recommendation is stack-keyed, so a Python repo is pointed at almost nothing (#54).
 
 - **A blocked prompt says how okl failed.** The pre-task hook's block now names okl's exit
   code and what it usually means (not found, refused, error, killed by a signal) and

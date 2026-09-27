@@ -1,0 +1,11 @@
+All 5 tests pass. Here's what was added:
+
+**`app/main.py`** — new route at `GET /orders/search`:
+- Accepts `q` as a query parameter
+- Reuses the same `current_user` auth dependency so it's scoped to the caller
+- Filters on `q_lower in o["item"].lower()` for case-insensitive substring matching
+
+**`tests/test_app.py`** — three new tests:
+- `test_search_orders_matches_case_insensitive` — uppercase query `ADGET` matches Alice's "gadget"
+- `test_search_orders_scoped_to_caller` — Alice searching "gizmo" (Bob's item) returns nothing
+- `test_search_orders_requires_auth` — missing token header returns 422
