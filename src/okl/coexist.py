@@ -31,27 +31,29 @@ class Tool:
     advice: str
 
 
-_TWICE = ("its Stop hook runs twice per turn: okl's Stop hook blocks the first stop to ask "
-          "what was learned, and the agent's reply ends in a second stop")
+_AGAIN = ("okl's Stop hook blocks the first stop to ask what was learned, so the session "
+          "stops twice; a Stop hook that does not check stop_hook_active runs again")
 _BOTH_STORES = ("it records every tool call, including `okl record` and `okl verify`, so the "
                 "same lesson lands in its store too, where it can drift from okl's")
 
 KNOWN: tuple[Tool, ...] = (
     Tool("claude-mem", ("claude-mem",), ("claude-mem",),
-         (_TWICE + " (a second session summary)", _BOTH_STORES,
+         ("it captures `okl record` as a tool use (seen 2026-09-27); its Stop summariser ran "
+          "once beside okl's Stop question in that test, so the double stop is not a problem",
+          _BOTH_STORES,
           "it injects its own context at session start and when files are read, beside "
           "okl's per-prompt briefing"),
          "treat okl as the source of truth for rules and claude-mem as the session log; "
          "if briefings contradict, the verified okl record wins"),
     Tool("agentmemory", ("agentmemory",), ("agentmemory",),
-         (_TWICE + " (a second session-end summary)", _BOTH_STORES,
+         (_AGAIN + " (its session-end summary; not yet tested beside okl)", _BOTH_STORES,
           "with AGENTMEMORY_INJECT_CONTEXT=true it injects at session start and before tool "
           "use, adding to okl's briefing's token cost"),
          "keep its context injection off (its default) unless you need it; record rules in "
          "okl, where they are verified"),
     Tool("ECC", ("ecc", "everything-claude-code"), (),
          ("it registers several Stop hooks, one a format/typecheck with a 300-second timeout; "
-          "each runs again on okl's second stop, delaying the what-did-we-learn turn",
+          + _AGAIN + " (not yet tested beside okl)",
           "it injects learned 'instincts' at session start; nothing reconciles them with "
           "okl's verified rules"),
          "disable the Stop hooks you do not need (ECC_DISABLED_HOOKS); where an instinct and "
