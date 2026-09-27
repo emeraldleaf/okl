@@ -355,7 +355,12 @@ okl init --interests "python,security"    # drop records tagged for stacks you d
 ### Turning parts off
 
 Switch a hook off by name with `OKL_DISABLED_HOOKS=briefing` (the pre-task read),
-`OKL_DISABLED_HOOKS=encode` (the end-of-session question), or both, comma-separated. The
+`OKL_DISABLED_HOOKS=encode` (the end-of-session question), or both, comma-separated.
+**Set `OKL_DISABLED_HOOKS=encode` for headless runs (`claude -p`, CI agents, scripts):**
+print mode emits only the final message, and a blocked stop makes the reply to "what did
+we learn?" that final message — the answer you asked for is then only in the transcript.
+Hooks inherit the caller's environment, so the variable set on the `claude` command is
+enough (`evals/REPORT.md` §10). The
 pre-task hook is the read side and the Stop hook is the write side, and they are
 independent — running the read without the write is a reasonable way to start, and turning
 off `encode` is the usual choice beside a tool whose own Stop hooks already run.

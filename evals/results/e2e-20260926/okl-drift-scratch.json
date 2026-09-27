@@ -1,0 +1,15 @@
+{
+  "format": "okl-drift-snapshot/1",
+  "repo": "widgets",
+  "rules": [
+    {
+      "id": "r_lint_pinned",
+      "type": "Rule",
+      "title": "The lint step pins its tool version",
+      "scope": "repo:widgets",
+      "files": ".github/workflows/lint.yml",
+      "verified_at": 1790472167237,
+      "verified_by": "`grep -E 'ruff==[0-9]' .github/workflows/lint.yml` exit 0, matched 'ruff==' @ 2026-09-27T01:22Z"
+    }
+  ]
+}
