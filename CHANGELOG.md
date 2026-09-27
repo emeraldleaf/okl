@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **okl is a Claude Code plugin** (#45): `/plugin marketplace add emeraldleaf/okl` then
+  `/plugin install okl@okl`. It carries the hooks, the MCP tools and the seeding commands;
+  the CLI is still installed with pipx. `okl init` skips hook and MCP registration when the
+  plugin is enabled, and `okl doctor` reports a repo wired both ways. The scaffold's
+  `hooks/hooks.json` gained the top-level `hooks` key the plugin loader expects.
+
 - **A blocked prompt says how okl failed.** The pre-task hook's block now names okl's exit
   code and what it usually means (not found, refused, error, killed by a signal) and
   whether okl's error output was captured at all. A live block read only "exited non-zero
