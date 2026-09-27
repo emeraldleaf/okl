@@ -2205,3 +2205,11 @@ def test_seed_resolves_a_bundled_pack_by_name(tmp_path, monkeypatch):
     assert okl("seed", "react-defects.json").returncode == 0, "with or without the extension"
     r = okl("seed", "no-such-pack")
     assert r.returncode == 2 and "dotnet-defects" in r.stderr and r.stdout == "", r.stderr
+
+
+def test_the_suite_is_deaf_to_a_real_store_named_in_the_environment(store):
+    """conftest strips OKL_DATABASE_URL / OKL_SERVICE_URL / OKL_TOKEN for every test.
+    Proven by the incident it prevents: with the variable exported, a test that writes to
+    a "throwaway" Client would land in the real store. Here it lands in a temp one."""
+    import os
+    assert all(v not in os.environ for v in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN"))
