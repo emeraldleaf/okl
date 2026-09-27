@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:12dd5dba14b2ab83ef6851cb8704eef3d9faa10a0641689a55345dd284c671e3
+# okl-fingerprint: sha256:5c21a4ef0db1d9f64175040ae313e04c97cf6008654c8941bd5864c946708867
 # Stop hook — the write-side mechanical catch for the encoding loop.
 #
-# The read side (okl check) is enforced by the PreToolUse hook; nothing enforced the WRITE
+# The read side (okl check) is enforced by the UserPromptSubmit hook; nothing enforced the WRITE
 # side, so a session could end without recording what it learned ("a merged fix without the
 # rule is a half-finished job"). This hook asks the question at the ship moment, once:
 # if the session changed the working tree, block the first stop (exit 2) with a prompt to

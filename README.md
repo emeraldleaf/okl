@@ -571,10 +571,12 @@ OKL — 3 rule(s) apply before you start:
 
 The full briefing is itself capped: `check` keeps the top `--limit` records (12 by
 default) from the ranked, filtered set and says how many it trimmed. Before that cutoff
-existed, one task on this store returned 20 records and ~4,400 tokens. Re-running the A/B
-after adding it showed no retrieval miss — the one task that regressed still had its rule
-in the briefing and the model simply did not follow it, which is a compliance problem
-rather than a retrieval one. See [evals/REPORT.md](evals/REPORT.md).
+existed, one task on this store returned 20 records and ~4,400 tokens. The cutoff did
+cost one retrieval: `exit_code_trust`'s governing rule ranks below the top 12 for that
+task's wording. Run outcomes hid it (the briefing still prevented the defect, through
+other records); `evals/preflight.py` found it by asking directly whether each task's rule
+is in its briefing, and it is kept in a named register rather than silently. See
+[evals/REPORT.md](evals/REPORT.md) §4b's correction.
 
 What it drops: the bucketed sections, the prose bodies explaining *why* each record
 exists, prior-art notes, and the stale-record footer. What it keeps is what changes
