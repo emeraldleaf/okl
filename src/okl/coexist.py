@@ -31,27 +31,29 @@ class Tool:
     advice: str
 
 
-_TWICE = ("its Stop hook runs twice per turn: okl's Stop hook blocks the first stop to ask "
-          "what was learned, and the agent's reply ends in a second stop")
+_AGAIN = ("okl's Stop hook blocks the first stop to ask what was learned, so the session "
+          "stops twice; a Stop hook that does not check stop_hook_active runs again")
 _BOTH_STORES = ("it records every tool call, including `okl record` and `okl verify`, so the "
                 "same lesson lands in its store too, where it can drift from okl's")
 
 KNOWN: tuple[Tool, ...] = (
     Tool("claude-mem", ("claude-mem",), ("claude-mem",),
-         (_TWICE + " (a second session summary)", _BOTH_STORES,
+         ("it captures `okl record` as a tool use (seen 2026-09-27); its Stop summariser ran "
+          "once beside okl's Stop question in that test, so the double stop is not a problem",
+          _BOTH_STORES,
           "it injects its own context at session start and when files are read, beside "
           "okl's per-prompt briefing"),
          "treat okl as the source of truth for rules and claude-mem as the session log; "
          "if briefings contradict, the verified okl record wins"),
     Tool("agentmemory", ("agentmemory",), ("agentmemory",),
-         (_TWICE + " (a second session-end summary)", _BOTH_STORES,
+         (_AGAIN + " (its session-end summary; not yet tested beside okl)", _BOTH_STORES,
           "with AGENTMEMORY_INJECT_CONTEXT=true it injects at session start and before tool "
           "use, adding to okl's briefing's token cost"),
          "keep its context injection off (its default) unless you need it; record rules in "
          "okl, where they are verified"),
     Tool("ECC", ("ecc", "everything-claude-code"), (),
          ("it registers several Stop hooks, one a format/typecheck with a 300-second timeout; "
-          "each runs again on okl's second stop, delaying the what-did-we-learn turn",
+          + _AGAIN + " (not yet tested beside okl)",
           "it injects learned 'instincts' at session start; nothing reconciles them with "
           "okl's verified rules"),
          "disable the Stop hooks you do not need (ECC_DISABLED_HOOKS); where an instinct and "
@@ -108,9 +110,12 @@ def _hook_commands(settings: dict) -> list[tuple[str, str]]:
     return out
 
 
-def detect(project_root: Path, home: Path) -> list[Finding]:
-    # Plugins: resolve each key's EFFECTIVE value first, as Claude Code does -- a project
-    # that switches off a plugin the user enabled has it off, and must not be told otherwise.
+def _settings_state(project_root: Path, home: Path
+                    ) -> tuple[dict[str, tuple[bool, Path]], list[tuple[Path, str, str]]]:
+    """Effective plugin state, and every registered hook command, across the files Claude
+    Code merges. Plugins resolve to their EFFECTIVE value, as Claude Code does -- a project
+    that switches off a plugin the user enabled has it off. Hooks are not overridden: every
+    registered hook runs, so every file counts."""
     plugin_state: dict[str, tuple[bool, Path]] = {}
     hook_sources: list[tuple[Path, str, str]] = []
     for path in settings_files(project_root, home):
@@ -118,9 +123,47 @@ def detect(project_root: Path, home: Path) -> list[Finding]:
         plugins = settings.get("enabledPlugins")
         if isinstance(plugins, dict):
             for key, on in plugins.items():
+                # Keyed both ways: third-party tools by plugin name (the collision is the
+                # plugin's, whatever marketplace served it); okl's own by the full key.
                 plugin_state[key.split("@", 1)[0]] = (on is True, path)
-        # Hooks are not overridden: every registered hook runs, so every file counts.
+                plugin_state[key] = (on is True, path)
         hook_sources += [(path, ev, c) for ev, c in _hook_commands(settings)]
+    return plugin_state, hook_sources
+
+
+OKL_PLUGIN = "okl@okl"     # name@marketplace: an "okl" on another marketplace is not this one
+OKL_HOOK_SCRIPTS = ("userpromptsubmit-okl-check.sh", "stop-okl-encode.sh")
+
+
+def okl_plugin_enabled(project_root: Path, home: Path) -> bool:
+    """Is okl's own Claude Code plugin (#45) enabled for this project?"""
+    return _settings_state(project_root, home)[0].get(OKL_PLUGIN, (False,))[0]
+
+
+def okl_project_hooks(project_root: Path, home: Path) -> list[tuple[Path, str, str]]:
+    """okl's hooks registered in settings files (what `okl init` writes), as opposed to
+    the plugin's, which live in its own hooks.json and never appear here."""
+    return [(p, ev, c) for p, ev, c in _settings_state(project_root, home)[1]
+            if c.rstrip('"').endswith(OKL_HOOK_SCRIPTS)]
+
+
+def double_wiring(project_root: Path, home: Path) -> str | None:
+    """The one collision okl can cause by itself: plugin enabled AND project hooks
+    registered means every prompt is briefed twice and the Stop question is asked twice."""
+    if not okl_plugin_enabled(project_root, home):
+        return None
+    hooks = okl_project_hooks(project_root, home)
+    if not hooks:
+        return None
+    where = ", ".join(sorted({str(p) for p, _, _ in hooks}))
+    return (f"okl is wired twice: its plugin is enabled AND {len(hooks)} okl hook(s) are "
+            f"registered in {where}. Every prompt is briefed twice and the Stop question is "
+            "asked twice. Keep one: `okl init --uninstall` removes the project registration "
+            "(your store in .okl/ stays), or disable the plugin.")
+
+
+def detect(project_root: Path, home: Path) -> list[Finding]:
+    plugin_state, hook_sources = _settings_state(project_root, home)
 
     found: list[Finding] = []
     for tool in KNOWN:

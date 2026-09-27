@@ -288,6 +288,21 @@ knowledge. The switch is one environment variable; none of your commands change.
 
 ---
 
+## Install as a Claude Code plugin
+
+```
+/plugin marketplace add emeraldleaf/okl
+/plugin install okl@okl
+```
+
+The plugin carries the two hooks, the MCP tools and the seeding commands. It does not
+carry okl itself: install the CLI first, **with the MCP extra**, because the plugin
+registers the `okl mcp` server (`pipx install 'observed-knowledge-ledger[mcp]'`), then run
+`okl init` in the repo for the store and the CI workflow — with the plugin enabled, `init`
+skips the hooks and MCP registration, because registering them twice would brief every
+prompt twice. `okl doctor` reports a repo where both the plugin and the project hooks are
+active. To load the plugin from a checkout for one session: `claude --plugin-dir <path>`.
+
 ## Install
 
 ```bash
