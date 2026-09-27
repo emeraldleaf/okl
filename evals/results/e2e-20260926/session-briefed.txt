@@ -1,0 +1,1 @@
+This session learned nothing durable. The task was a first-time addition of a ruff lint step — no failure modes hit, no surprising behavior observed. The patterns applied (pin the version, explicit path, separate job) were all already present in the briefing as existing nodes. Recording them again would create duplicates that `okl dedup` would flag.
