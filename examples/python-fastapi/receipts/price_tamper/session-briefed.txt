@@ -1,0 +1,13 @@
+All 6 tests pass. Here's what was implemented:
+
+**`app/main.py`** — added:
+- `OrderIn` Pydantic model with only `item: str` and `quantity: int` — `unit_price` is intentionally absent from the DTO
+- `POST /orders` endpoint that looks up `unit_price` from `PRODUCTS` server-side and sets `owner` from the authenticated token
+
+**`tests/test_app.py`** — added four tests:
+- `test_create_order_returns_order_with_catalog_price` — happy path, verifies the catalog price is returned
+- `test_create_order_ignores_client_supplied_price` — sends `unit_price=0.01` in the body; asserts the response still reflects the catalog price (24.50), not the tampered value
+- `test_create_order_rejects_unknown_item` — 422 on unknown item
+- `test_create_order_requires_auth` — 422 (missing required header) on unauthenticated request
+
+The `unit_price` field is excluded from the request schema entirely — Pydantic silently drops extra fields by default, so a client sending `unit_price` in the body has no effect.

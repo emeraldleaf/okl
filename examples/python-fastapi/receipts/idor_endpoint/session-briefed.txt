@@ -1,0 +1,5 @@
+All 5 tests pass. Here's what was added:
+
+**`app/main.py`** — `GET /orders/{order_id}` that looks up the order and checks ownership in one step. A missing order and a cross-user access both return 404 (not 403), which avoids leaking whether the resource exists at all — this is the IDOR fix the briefing flagged.
+
+**`tests/test_app.py`** — three new tests: own order returns 200, cross-user access (IDOR attempt) returns 404, non-existent order returns 404.

@@ -1,0 +1,1 @@
+Added `GET /orders/{order_id}` with the same auth dependency as `list_orders`. It returns 404 if the order doesn't exist and 403 if the order belongs to a different user, preventing IDOR.
