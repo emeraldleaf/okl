@@ -229,16 +229,28 @@ def test_encode_hook_resolver_layers(tmp_path):
         return subprocess.run(["bash", str(hook)], cwd=repo, input=json.dumps(payload),
                               capture_output=True, text=True, env=env)
 
+    # A layer counts only if its command can run: the stub is a real executable.
+    stub = tmp_path / "opt" / "bin" / "okl"; stub.parent.mkdir(parents=True)
+    stub.write_text("#!/bin/sh\nexit 0\n"); stub.chmod(0o755)
+
     # layer-4 miss: nothing resolves -> best-effort reminder silently disabled
     assert stop({"session_id": "rA", "stop_hook_active": False}).returncode == 0
     # layer 2: okl_bin pinned in .okl/config.json resolves without PATH
     (repo / ".okl").mkdir()
-    (repo / ".okl" / "config.json").write_text(json.dumps({"repo": "wt", "okl_bin": "/opt/x/bin/okl"}))
+    (repo / ".okl" / "config.json").write_text(json.dumps({"repo": "wt", "okl_bin": str(stub)}))
     r = stop({"session_id": "rB", "stop_hook_active": False})
     assert r.returncode == 2 and "ENCODING LOOP" in r.stderr
+    # A stale pin (the venv it pointed into was rebuilt) is skipped, not run: with a real
+    # okl further down the chain the hook still fires; with none it stays quiet, and in
+    # neither case does the shell's "No such file or directory" reach stderr.
+    (repo / ".okl" / "config.json").write_text(json.dumps({"repo": "wt", "okl_bin": str(tmp_path / "gone" / "okl")}))
+    r = stop({"session_id": "rD", "stop_hook_active": False}, PATH=f"{stub.parent}:{bare_path}")
+    assert r.returncode == 2 and "ENCODING LOOP" in r.stderr, r.stderr
+    r = stop({"session_id": "rE", "stop_hook_active": False})
+    assert r.returncode == 0 and "No such file" not in r.stderr, r.stderr
     # layer 1: OKL_BIN env override resolves even with no config
     shutil.rmtree(repo / ".okl")
-    assert stop({"session_id": "rC", "stop_hook_active": False}, OKL_BIN="/opt/x/bin/okl").returncode == 2
+    assert stop({"session_id": "rC", "stop_hook_active": False}, OKL_BIN=str(stub)).returncode == 2
 
 
 def test_mirror_files_identical():
@@ -1193,6 +1205,61 @@ def test_a_blocked_prompt_says_how_okl_failed(tmp_path):
     (unread / "head").write_text("#!/bin/sh\nexit 1\n"); (unread / "head").chmod(0o755)
     r = run("echo boom >&2; exit 1", PATH=f"{unread}:{os.environ['PATH']}")
     assert "could not be read back" in r.stderr and "printed nothing" not in r.stderr, r.stderr
+
+
+def test_a_missing_okl_blocks_without_the_shells_enoent_text(tmp_path):
+    """Seen 2026-09-27 on a marketplace install: the pinned okl_bin pointed into a venv that
+    had been deleted, the hook ran it anyway, and bash wrote "…/okl: No such file or
+    directory" into the hook's stderr. Claude Code reads that phrase as "the hook script
+    itself is missing" and downgrades the exit-2 block to a warning — the prompt went
+    through with no briefing. Fail-closed had silently become fail-open.
+
+    Probes settled the cause: a plugin hook that exits 2 with clean stderr blocks; the same
+    hook relaying the shell's ENOENT line does not. So the hook never runs a command it
+    cannot resolve, and never relays that phrase from one it did run.
+    """
+    import json
+    hook = Path(__file__).resolve().parents[1] / "src" / "okl" / "scaffold" / "hooks" / "userpromptsubmit-okl-check.sh"
+    banned = ("No such file or directory", "command not found")
+    bare = "/usr/bin:/bin"  # system python3, no okl
+
+    def run(**env):
+        return subprocess.run(["bash", str(hook)], cwd=tmp_path, text=True,
+                              input=json.dumps({"prompt": "x"}), capture_output=True,
+                              env={"PATH": bare, "HOME": str(tmp_path), "TMPDIR": str(tmp_path), **env})
+
+    # A dead OKL_BIN: blocked, the dead path named, and no ENOENT phrasing anywhere.
+    r = run(OKL_BIN=str(tmp_path / "gone" / "okl"))
+    assert r.returncode == 2 and r.stdout == "", (r.returncode, r.stdout)
+    assert "could not be resolved" in r.stderr and "OKL_BIN=" in r.stderr and "cannot be run" in r.stderr, r.stderr
+    assert not any(b in r.stderr for b in banned), r.stderr
+    # A dead pin in .okl/config.json falls through to a live okl on PATH: briefing delivered.
+    (tmp_path / ".okl").mkdir()
+    (tmp_path / ".okl" / "config.json").write_text(json.dumps({"repo": "t", "okl_bin": str(tmp_path / "gone" / "okl")}))
+    live = tmp_path / "live"; live.mkdir()
+    (live / "okl").write_text("#!/bin/sh\necho BRIEFING\n"); (live / "okl").chmod(0o755)
+    r = run(PATH=f"{live}:{bare}")
+    assert r.returncode == 0 and "BRIEFING" in r.stdout, (r.returncode, r.stderr)
+    # A dead pin and nothing live: blocked, the pin named with the re-pin instruction.
+    r = run()
+    assert r.returncode == 2 and "okl_bin pinned" in r.stderr and "okl init" in r.stderr, r.stderr
+    assert not any(b in r.stderr for b in banned), r.stderr
+    # #64 review: a dead pin's note survives into a later failure of the live fallback, and
+    # the note quotes a path — which can carry the phrase itself.
+    odd = tmp_path / "No such file or directory" / "okl"
+    (tmp_path / ".okl" / "config.json").write_text(json.dumps({"repo": "t", "okl_bin": str(odd)}))
+    (live / "okl").write_text("#!/bin/sh\nexit 1\n")
+    r = run(PATH=f"{live}:{bare}")
+    assert r.returncode == 2 and "resolver:" in r.stderr, r.stderr
+    assert not any(b in r.stderr for b in banned), r.stderr
+    r = run(OKL_BIN=str(odd))
+    assert r.returncode == 2 and not any(b in r.stderr for b in banned), r.stderr
+    # okl resolved but its own output carries the phrase (a wrapper whose interpreter is
+    # gone): still blocked, the reason relayed, the phrase not.
+    (live / "okl").write_text("#!/bin/sh\necho '/venv/bin/python3: No such file or directory' >&2\nexit 127\n")
+    r = run(PATH=f"{live}:{bare}")
+    assert r.returncode == 2 and "exit 127" in r.stderr and "/venv/bin/python3" in r.stderr, r.stderr
+    assert not any(b in r.stderr for b in banned), r.stderr
 
 
 def test_init_and_doctor_know_okls_own_plugin(tmp_path):

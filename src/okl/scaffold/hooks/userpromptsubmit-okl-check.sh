@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:9fa16cd57ecc2a03da192e5170e1972d1aab85bec8492d50ba8caaa0e955e3a4
+# okl-fingerprint: sha256:cb169accaa93f9e91efb99027845847d17497de9c68e1b88d76dc7beef55780b
 # UserPromptSubmit hook — inject the org's relevant lessons into the model's context
 # BEFORE it starts the task. This event is the only correct one for delivery: its stdout
 # (exit 0) is added to Claude's context, and its stdin carries the actual prompt text, so
@@ -34,28 +34,49 @@ case ",${OKL_DISABLED_HOOKS:-}," in *,briefing,*) exit 0 ;; esac
 
 # Resolve how to invoke okl (env → pinned config → PATH → python3 -m okl); hooks run in
 # whatever environment the harness spawns, which often lacks the venv/pipx bin dir.
+# A layer is used only if its command can actually run. A pinned path goes stale when the
+# venv that held it is recreated; running it anyway produced the shell's own "No such file
+# or directory" in this hook's stderr, and Claude Code reads that phrase as "the hook script
+# is missing" and downgrades a blocking exit 2 to a warning -- the prompt went through with
+# no briefing (seen 2026-09-27 on a marketplace install). So: skip what cannot run, and
+# never relay that phrase.
+runnable() { command -v "${1%% *}" >/dev/null 2>&1; }
+# Sets OKL and resolve_note in the calling shell (not via $(...): a subshell would drop the note).
+resolve_note=""
+OKL=""
 resolve_okl() {
-  if [ -n "${OKL_BIN:-}" ]; then printf '%s' "$OKL_BIN"; return 0; fi
+  if [ -n "${OKL_BIN:-}" ]; then
+    if runnable "$OKL_BIN"; then OKL=$OKL_BIN; return 0; fi
+    resolve_note="OKL_BIN=$OKL_BIN cannot be run (absent or not executable); "
+  fi
   local d="$PWD"
   while [ "$d" != "/" ]; do
     if [ -f "$d/.okl/config.json" ]; then
       local bin
       bin=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("okl_bin") or "")' \
             "$d/.okl/config.json" 2>/dev/null || true)
-      if [ -n "$bin" ]; then printf '%s' "$bin"; return 0; fi
+      if [ -n "$bin" ]; then
+        if runnable "$bin"; then OKL=$bin; return 0; fi
+        resolve_note="${resolve_note}the okl_bin pinned in $d/.okl/config.json ($bin) cannot be run -- re-run okl init to re-pin; "
+      fi
       break
     fi
     d=$(dirname "$d")
   done
-  if command -v okl >/dev/null 2>&1; then printf '%s' "okl"; return 0; fi
-  if python3 -c "import okl" >/dev/null 2>&1; then printf '%s' "python3 -m okl"; return 0; fi
+  if command -v okl >/dev/null 2>&1; then OKL=okl; return 0; fi
+  if python3 -c "import okl" >/dev/null 2>&1; then OKL="python3 -m okl"; return 0; fi
   return 1
 }
 
-if ! OKL=$(resolve_okl); then
+# Everything this hook relays passes through here: a path or okl's own words can carry the
+# phrases Claude Code reads as "hook script missing" (see resolve_okl).
+scrub() { sed -e 's/No such file or directory/a file is missing/g' -e 's/command not found/command is absent/g'; }
+
+if ! resolve_okl; then
   [ "${OKL_OFFLINE:-0}" = "1" ] && exit 0
-  echo "okl NOT FOUND — blocking (a check that can't run must not pass as clean)." >&2
-  echo "Install it: pip install observed-knowledge-ledger. NOT 'pip install okl' — PyPI refuses that" >&2
+  echo "okl could not be resolved — blocking (a check that can't run must not pass as clean)." >&2
+  [ -n "$resolve_note" ] && printf '  %s\n' "$resolve_note" | scrub >&2
+  echo "Install it: pip install observed-knowledge-ledger. Do not 'pip install okl' — PyPI refuses that" >&2
   echo "name as confusable, so it fails and looks like the tool does not exist." >&2
   echo "Or set OKL_BIN, or re-run 'okl init' from a shell where okl works (that pins okl_bin" >&2
   echo "into .okl/config.json). OKL_OFFLINE=1 proceeds without the layer." >&2
@@ -90,7 +111,7 @@ fi
 # Say HOW it failed. Seen live: a block reading only "exited non-zero without a reason",
 # with nothing recorded that could explain it afterwards.
 case "$rc" in
-  126|127) meaning="okl could not be started (not found, or not executable)" ;;
+  126|127) meaning="okl could not be started (absent or not executable)" ;;
   2) meaning="okl refused (its contract: 2 = did not run)" ;;
   1) meaning="okl reported an error" ;;
   *) if [ "$rc" -gt 128 ]; then meaning="okl was killed by signal $((rc - 128)) (e.g. the machine slept, or a timeout)"
@@ -100,7 +121,8 @@ if [ -z "$errf" ]; then
   why="(okl's error output was not captured: no private temp file could be made)"
 else
   # A failed read is not silence: only an empty file that read back cleanly is "nothing".
-  if why=$(head -c 1500 "$errf" 2>/dev/null); then
+  # The relayed text must not carry the shell's ENOENT phrasing (see resolve_okl).
+  if why=$(head -c 1500 "$errf" 2>/dev/null | scrub); then
     [ -n "$why" ] || why="(okl printed nothing)"
   else
     why="(okl's error output was captured but could not be read back)"
@@ -114,6 +136,7 @@ if [ "${OKL_OFFLINE:-0}" = "1" ]; then
 fi
 echo "OKL CHECK DID NOT RUN — blocking this prompt. A check that reports 'clean' while broken is worse than no check." >&2
 echo "exit $rc: $meaning." >&2
+[ -n "$resolve_note" ] && printf 'resolver: %s\n' "$resolve_note" | scrub >&2
 echo "okl said: $why" >&2
 echo "Ran from: $PWD. Fix the cause above, or start the session with OKL_OFFLINE=1 to proceed without the layer." >&2
 exit 2

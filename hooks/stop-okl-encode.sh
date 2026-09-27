@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:27db054671808790a169dce7c3a1fef67732e75c698c4a836bfc7db2847cc45f
+# okl-fingerprint: sha256:12dd5dba14b2ab83ef6851cb8704eef3d9faa10a0641689a55345dd284c671e3
 # Stop hook — the write-side mechanical catch for the encoding loop.
 #
 # The read side (okl check) is enforced by the PreToolUse hook; nothing enforced the WRITE
@@ -29,25 +29,41 @@ case ",${OKL_DISABLED_HOOKS:-}," in *,encode,*) exit 0 ;; esac
 
 # Same resolver as pretooluse-okl-check.sh (env → pinned config → PATH → python3 -m okl);
 # the reminder is best-effort, so an unresolvable okl silently disables it rather than blocking.
+# A layer is used only if its command can actually run. A pinned path goes stale when the
+# venv that held it is recreated; running it anyway produced the shell's own "No such file
+# or directory" in this hook's stderr, and Claude Code reads that phrase as "the hook script
+# is missing" and downgrades a blocking exit 2 to a warning -- the prompt went through with
+# no briefing (seen 2026-09-27 on a marketplace install). So: skip what cannot run, and
+# never relay that phrase.
+runnable() { command -v "${1%% *}" >/dev/null 2>&1; }
+# Sets OKL and resolve_note in the calling shell (not via $(...): a subshell would drop the note).
+resolve_note=""
+OKL=""
 resolve_okl() {
-  if [ -n "${OKL_BIN:-}" ]; then printf '%s' "$OKL_BIN"; return 0; fi
+  if [ -n "${OKL_BIN:-}" ]; then
+    if runnable "$OKL_BIN"; then OKL=$OKL_BIN; return 0; fi
+    resolve_note="OKL_BIN=$OKL_BIN cannot be run (absent or not executable); "
+  fi
   local d="$PWD"
   while [ "$d" != "/" ]; do
     if [ -f "$d/.okl/config.json" ]; then
       local bin
       bin=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("okl_bin") or "")' \
             "$d/.okl/config.json" 2>/dev/null || true)
-      if [ -n "$bin" ]; then printf '%s' "$bin"; return 0; fi
+      if [ -n "$bin" ]; then
+        if runnable "$bin"; then OKL=$bin; return 0; fi
+        resolve_note="${resolve_note}the okl_bin pinned in $d/.okl/config.json ($bin) cannot be run -- re-run okl init to re-pin; "
+      fi
       break
     fi
     d=$(dirname "$d")
   done
-  if command -v okl >/dev/null 2>&1; then printf '%s' "okl"; return 0; fi
-  if python3 -c "import okl" >/dev/null 2>&1; then printf '%s' "python3 -m okl"; return 0; fi
+  if command -v okl >/dev/null 2>&1; then OKL=okl; return 0; fi
+  if python3 -c "import okl" >/dev/null 2>&1; then OKL="python3 -m okl"; return 0; fi
   return 1
 }
 
-OKL=$(resolve_okl) || exit 0
+resolve_okl || exit 0
 
 payload=$(cat 2>/dev/null || true)
 parsed=$(printf '%s' "$payload" | python3 -c '
