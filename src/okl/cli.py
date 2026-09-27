@@ -276,8 +276,14 @@ def cmd_init(args) -> int:
     print(f"✓ wrote {path}  (repo={repo}, mode={'remote' if cfg.get('service_url') else 'local'}"
           + (f", interests={','.join(cfg['interests'])}" if cfg.get("interests") else "") + ")")
 
+    from . import coexist
     claude = Path(".claude")
-    if claude.exists():
+    if coexist.okl_plugin_enabled(Path.cwd(), Path.home()):
+        # The plugin carries both hooks and the MCP server; registering them here too
+        # would brief every prompt twice and ask the Stop question twice (#45).
+        print("• okl's Claude Code plugin is enabled here, so it provides the hooks and the MCP "
+              "server: none are installed into .claude/ or registered in settings.")
+    elif claude.exists():
         _install_claude_wiring(claude, force=getattr(args, "force", False))
     else:
         print("• no .claude/ dir here, so no hooks were installed. The store still works:")
@@ -309,7 +315,10 @@ def cmd_doctor(args) -> int:
     root = cfg.parent.parent if cfg else Path.cwd()
     found = coexist.detect(root, Path.home())
     print(coexist.render(found))
-    return 1 if found else 0
+    twice = coexist.double_wiring(root, Path.home())
+    if twice:
+        print(f"\n! {twice}")
+    return 1 if (found or twice) else 0
 
 
 def _install_claude_wiring(claude: Path, force: bool = False) -> None:

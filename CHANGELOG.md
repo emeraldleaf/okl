@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **okl is a Claude Code plugin** (#45): `/plugin marketplace add emeraldleaf/okl` then
+  `/plugin install okl@okl`. It carries the hooks, the MCP tools and the seeding commands;
+  the CLI is still installed with pipx. `okl init` skips hook and MCP registration when the
+  plugin is enabled, and `okl doctor` reports a repo wired both ways. The scaffold's
+  `hooks/hooks.json` gained the top-level `hooks` key the plugin loader expects.
 - **Fresh-install end-to-end run** (REPORT §10, receipt `evals/results/e2e-20260926/`):
   the whole loop from a wheel in a repo that had never seen okl. Every surface worked;
   two findings. In `claude -p` the Stop question's reply replaces the printed answer, so

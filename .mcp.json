@@ -1,0 +1,5 @@
+{
+  "mcpServers": {
+    "okl": { "command": "okl", "args": ["mcp"] }
+  }
+}

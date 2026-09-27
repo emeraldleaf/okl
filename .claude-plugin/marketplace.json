@@ -1,0 +1,15 @@
+{
+  "name": "okl",
+  "owner": {
+    "name": "Joshua Dell",
+    "url": "https://github.com/emeraldleaf"
+  },
+  "description": "okl \u2014 Observed Knowledge Ledger. One plugin: the pre-task briefing hook, the end-of-session question, MCP tools and seeding commands.",
+  "plugins": [
+    {
+      "name": "okl",
+      "source": "./",
+      "description": "Observed Knowledge Ledger: the pre-task briefing and end-of-session hooks, MCP tools and seeding commands. Requires the okl CLI (pipx install 'observed-knowledge-ledger[mcp]')."
+    }
+  ]
+}

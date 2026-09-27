@@ -157,7 +157,9 @@ def test_scaffold_stamps_both_hooks(tmp_path):
     import json
     hooks_cfg = json.loads((tmp_path / "dotclaude" / "hooks" / "hooks.json").read_text())
     # UserPromptSubmit, never PreToolUse: only the former's stdout reaches the model's context
-    assert "UserPromptSubmit" in hooks_cfg and "Stop" in hooks_cfg and "PreToolUse" not in hooks_cfg
+    # the plugin loader's shape: events live under a top-level "hooks" key (#45)
+    assert "UserPromptSubmit" in hooks_cfg["hooks"] and "Stop" in hooks_cfg["hooks"]
+    assert "PreToolUse" not in hooks_cfg["hooks"]
 
 
 def test_encode_hook_loop_guard_and_fires_once(tmp_path, monkeypatch):
@@ -259,6 +261,10 @@ def test_mirror_files_identical():
     ]
     pairs.extend((h, root / "src" / "okl" / "scaffold" / "hooks" / h.name)
                  for h in (root / "hooks").glob("*.sh"))
+    # hooks.json joined when okl became a plugin (#45): the plugin loads the repo-root
+    # copy, `okl scaffold --plugin` ships the scaffold copy.
+    pairs.append((root / "hooks" / "hooks.json",
+                  root / "src" / "okl" / "scaffold" / "hooks" / "hooks.json"))
     # gates/ joined the mirror set when this repo started running the gates it ships.
     # It is the same trap as hooks/: a fix that lands in one copy and not the other means
     # consumers get a gate the author has never actually run, or vice versa.
@@ -818,7 +824,7 @@ def test_doctor_names_memory_tools_beside_okl_and_changes_nothing(tmp_path):
     assert r.returncode == 1, "a tool found is a finding: exit 1"
     assert "claude-mem" in r.stdout and "plugin `claude-mem` enabled" in r.stdout
     assert "SessionStart hook `bd prime --hook-json`" in r.stdout
-    assert "runs twice" in r.stdout and "Nothing was changed" in r.stdout
+    assert "runs again" in r.stdout and "Nothing was changed" in r.stdout
     after = {p: p.read_bytes() for p in list((home / ".claude").iterdir())
              + list((proj / ".claude").iterdir())}
     assert after == before, "doctor must never edit another tool's configuration"
@@ -1187,3 +1193,75 @@ def test_a_blocked_prompt_says_how_okl_failed(tmp_path):
     (unread / "head").write_text("#!/bin/sh\nexit 1\n"); (unread / "head").chmod(0o755)
     r = run("echo boom >&2; exit 1", PATH=f"{unread}:{os.environ['PATH']}")
     assert "could not be read back" in r.stderr and "printed nothing" not in r.stderr, r.stderr
+
+
+def test_init_and_doctor_know_okls_own_plugin(tmp_path):
+    """#45: okl ships as a Claude Code plugin too. If the plugin is enabled, `okl init`
+    must not also register the project hooks (every prompt would be briefed twice and the
+    Stop question asked twice), and `okl doctor` must report a repo where both are active.
+    """
+    import json
+    import sys
+
+    from okl import coexist
+
+    proj, home = tmp_path / "p", tmp_path / "home"
+    (proj / ".claude").mkdir(parents=True); (home / ".claude").mkdir(parents=True)
+    subprocess.run(["git", "init", "-q", str(proj)], check=True)
+    # An "okl" from some other marketplace is not this plugin: init must still wire hooks.
+    (home / ".claude" / "settings.json").write_text(json.dumps({"enabledPlugins": {"okl@elsewhere": True}}))
+    assert not coexist.okl_plugin_enabled(proj, home)
+    (home / ".claude" / "settings.json").write_text(json.dumps({"enabledPlugins": {"okl@okl": True}}))
+    env = {**os.environ, "HOME": str(home), "USERPROFILE": str(home)}
+    env.pop("CLAUDE_CONFIG_DIR", None); env.pop("OKL_DATABASE_URL", None); env.pop("OKL_SERVICE_URL", None)
+
+    def okl(*a):
+        return subprocess.run([sys.executable, "-m", "okl", *a], cwd=proj, env=env,
+                              capture_output=True, text=True)
+
+    assert coexist.okl_plugin_enabled(proj, home)
+    r = okl("init", "--repo", "p")
+    assert r.returncode == 0 and "plugin" in r.stdout, r.stdout
+    settings = json.loads((proj / ".claude" / "settings.json").read_text()) \
+        if (proj / ".claude" / "settings.json").exists() else {}
+    assert "hooks" not in settings, "the plugin already provides the hooks"
+    assert not (proj / ".claude" / "hooks").exists(), "no dead hook files beside the plugin's"
+    assert (proj / ".github" / "workflows" / "okl-verify.yml").exists(), "CI is not the plugin's job"
+    assert okl("doctor").returncode == 0
+
+    # Hooks registered by hand as well: both would fire. doctor says so and exits 1.
+    from okl.cli import HOOK_COMMANDS
+    (proj / ".claude" / "settings.json").write_text(json.dumps({"hooks": {"Stop": [{"hooks": [
+        {"type": "command", "command": HOOK_COMMANDS["Stop"]}]}]}}))
+    r = okl("doctor")
+    assert r.returncode == 1 and "twice" in r.stdout, r.stdout
+
+
+def test_plugin_manifest_points_at_real_files_and_the_shipped_version():
+    """#45: okl installs as a Claude Code plugin from this repo's root. A manifest path
+    that does not exist fails silently at load time, and a plugin version that lags the
+    package misleads `claude plugin update`. hooks.json must carry the top-level `hooks`
+    key the plugin loader expects (the v0.1 file lacked it and was never loaded as one).
+    """
+    import json
+    tomllib = pytest.importorskip("tomllib")
+    root = Path(__file__).resolve().parents[1]
+    manifest = json.loads((root / ".claude-plugin" / "plugin.json").read_text())
+    assert manifest["name"] == "okl"
+    package = tomllib.loads((root / "pyproject.toml").read_text())["project"]["version"]
+    assert manifest["version"] == package, "plugin version must match pyproject"
+    referenced = [manifest["hooks"], manifest["mcpServers"], *manifest["commands"], *manifest["agents"]]
+    for rel in referenced:
+        assert rel.startswith("./"), f"{rel}: plugin paths are relative to the plugin root"
+        assert (root / rel).is_file(), f"{rel}: referenced by the manifest but missing"
+    hooks = json.loads((root / manifest["hooks"]).read_text())
+    assert set(hooks) == {"hooks"} and {"UserPromptSubmit", "Stop"} <= set(hooks["hooks"])
+    for event in ("UserPromptSubmit", "Stop"):
+        cmd = hooks["hooks"][event][0]["hooks"][0]["command"]
+        # quoted: an install path with a space would otherwise split the command
+        assert cmd.startswith('"${CLAUDE_PLUGIN_ROOT}"/hooks/'), cmd
+        assert (root / cmd.replace('"${CLAUDE_PLUGIN_ROOT}"/', "")).is_file(), cmd
+    market = json.loads((root / ".claude-plugin" / "marketplace.json").read_text())
+    assert [p["name"] for p in market["plugins"]] == ["okl"] and market["name"] == "okl"
+    mcp = json.loads((root / ".mcp.json").read_text())
+    assert mcp["mcpServers"]["okl"] == {"command": "okl", "args": ["mcp"]}
