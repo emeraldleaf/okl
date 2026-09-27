@@ -1,0 +1,9 @@
+[project]
+name = "orders-api"
+version = "0.1.0"
+description = "A small FastAPI service used to show okl's loop on a Python stack."
+requires-python = ">=3.12"
+dependencies = ["fastapi>=0.110", "uvicorn>=0.29"]
+
+[project.optional-dependencies]
+dev = ["pytest==9.1.1", "httpx>=0.27"]

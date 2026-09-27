@@ -110,6 +110,7 @@ ignore = [
 max-complexity = 12
 
 [tool.ruff.lint.per-file-ignores]
+"examples/**/tests/*.py" = ["S101"]   # example apps ship their own pytest tests
 # Tests assert on subprocess output and build temp paths; the security rules aimed at
 # production input handling produce only noise there.
 "tests/*" = ["S101", "S603", "S607", "S108", "S608"]
