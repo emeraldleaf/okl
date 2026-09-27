@@ -1,0 +1,60 @@
+diff --git a/src/Program.cs b/src/Program.cs
+index fed5882..20f64a7 100644
+--- a/src/Program.cs
++++ b/src/Program.cs
+@@ -17,6 +17,16 @@ app.MapGet("/orders", (HttpContext ctx) =>
+     return Results.Ok(Store.Orders.Values.Where(o => o.Owner == user));
+ });
+ 
++app.MapGet("/orders/{id:int}", (int id, HttpContext ctx) =>
++{
++    var user = Auth.CurrentUser(ctx);
++    if (user is null) return Results.Unauthorized();
++    // Ownership predicate is part of the lookup — a match on id alone is not enough.
++    return Store.Orders.TryGetValue(id, out var order) && order.Owner == user
++        ? Results.Ok(order)
++        : Results.NotFound();
++});
++
+ app.Run();
+ 
+ public partial class Program { }
+diff --git a/tests/ApiTests.cs b/tests/ApiTests.cs
+index 3f3731f..c1becb7 100644
+--- a/tests/ApiTests.cs
++++ b/tests/ApiTests.cs
+@@ -23,4 +23,34 @@ public class ApiTests : IClassFixture<WebApplicationFactory<Program>>
+         var mine = await _client.GetFromJsonAsync<List<Order>>("/orders");
+         Assert.Equal(new[] { 3 }, mine!.Select(o => o.Id).ToArray());
+     }
++
++    [Fact]
++    public async Task Get_order_returns_the_callers_own_order()
++    {
++        // Arrange: authenticate as bob, who owns order 3
++        _client.DefaultRequestHeaders.Add("X-User-Token", "token-bob");
++
++        // Act
++        var res = await _client.GetAsync("/orders/3");
++
++        // Assert: 200 with the correct order
++        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
++        var order = await res.Content.ReadFromJsonAsync<Order>();
++        Assert.Equal(3, order!.Id);
++        Assert.Equal("bob", order.Owner);
++    }
++
++    [Fact]
++    public async Task Get_order_returns_404_for_another_users_order()
++    {
++        // Arrange: authenticate as bob, who does NOT own order 1 (alice's)
++        _client.DefaultRequestHeaders.Add("X-User-Token", "token-bob");
++
++        // Act: request alice's order by id
++        var res = await _client.GetAsync("/orders/1");
++
++        // Assert 1 — not 200: cross-user data must not be returned (IDOR)
++        // Assert 2 — not 403: existence of the resource must not be revealed
++        Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
++    }
+ }
