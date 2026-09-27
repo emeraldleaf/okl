@@ -1244,6 +1244,16 @@ def test_a_missing_okl_blocks_without_the_shells_enoent_text(tmp_path):
     r = run()
     assert r.returncode == 2 and "okl_bin pinned" in r.stderr and "okl init" in r.stderr, r.stderr
     assert not any(b in r.stderr for b in banned), r.stderr
+    # #64 review: a dead pin's note survives into a later failure of the live fallback, and
+    # the note quotes a path — which can carry the phrase itself.
+    odd = tmp_path / "No such file or directory" / "okl"
+    (tmp_path / ".okl" / "config.json").write_text(json.dumps({"repo": "t", "okl_bin": str(odd)}))
+    (live / "okl").write_text("#!/bin/sh\nexit 1\n")
+    r = run(PATH=f"{live}:{bare}")
+    assert r.returncode == 2 and "resolver:" in r.stderr, r.stderr
+    assert not any(b in r.stderr for b in banned), r.stderr
+    r = run(OKL_BIN=str(odd))
+    assert r.returncode == 2 and not any(b in r.stderr for b in banned), r.stderr
     # okl resolved but its own output carries the phrase (a wrapper whose interpreter is
     # gone): still blocked, the reason relayed, the phrase not.
     (live / "okl").write_text("#!/bin/sh\necho '/venv/bin/python3: No such file or directory' >&2\nexit 127\n")

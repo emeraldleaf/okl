@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:08e6370b649fb2a8c390bb7466b5121fa306679af5eebcbf95a8e8ed36dc50b7
+# okl-fingerprint: sha256:cb169accaa93f9e91efb99027845847d17497de9c68e1b88d76dc7beef55780b
 # UserPromptSubmit hook — inject the org's relevant lessons into the model's context
 # BEFORE it starts the task. This event is the only correct one for delivery: its stdout
 # (exit 0) is added to Claude's context, and its stdin carries the actual prompt text, so
@@ -68,10 +68,14 @@ resolve_okl() {
   return 1
 }
 
+# Everything this hook relays passes through here: a path or okl's own words can carry the
+# phrases Claude Code reads as "hook script missing" (see resolve_okl).
+scrub() { sed -e 's/No such file or directory/a file is missing/g' -e 's/command not found/command is absent/g'; }
+
 if ! resolve_okl; then
   [ "${OKL_OFFLINE:-0}" = "1" ] && exit 0
   echo "okl could not be resolved — blocking (a check that can't run must not pass as clean)." >&2
-  [ -n "$resolve_note" ] && echo "  $resolve_note" >&2
+  [ -n "$resolve_note" ] && printf '  %s\n' "$resolve_note" | scrub >&2
   echo "Install it: pip install observed-knowledge-ledger. Do not 'pip install okl' — PyPI refuses that" >&2
   echo "name as confusable, so it fails and looks like the tool does not exist." >&2
   echo "Or set OKL_BIN, or re-run 'okl init' from a shell where okl works (that pins okl_bin" >&2
@@ -118,7 +122,7 @@ if [ -z "$errf" ]; then
 else
   # A failed read is not silence: only an empty file that read back cleanly is "nothing".
   # The relayed text must not carry the shell's ENOENT phrasing (see resolve_okl).
-  if why=$(head -c 1500 "$errf" 2>/dev/null | sed -e 's/No such file or directory/a file is missing/g' -e 's/command not found/command is absent/g'); then
+  if why=$(head -c 1500 "$errf" 2>/dev/null | scrub); then
     [ -n "$why" ] || why="(okl printed nothing)"
   else
     why="(okl's error output was captured but could not be read back)"
@@ -132,7 +136,7 @@ if [ "${OKL_OFFLINE:-0}" = "1" ]; then
 fi
 echo "OKL CHECK DID NOT RUN — blocking this prompt. A check that reports 'clean' while broken is worse than no check." >&2
 echo "exit $rc: $meaning." >&2
-[ -n "$resolve_note" ] && echo "resolver: $resolve_note" >&2
+[ -n "$resolve_note" ] && printf 'resolver: %s\n' "$resolve_note" | scrub >&2
 echo "okl said: $why" >&2
 echo "Ran from: $PWD. Fix the cause above, or start the session with OKL_OFFLINE=1 to proceed without the layer." >&2
 exit 2
