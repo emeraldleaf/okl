@@ -57,10 +57,11 @@ okl drift                          # rules whose governed source changed after v
 - **Eval integrity**: the harness refuses judge==generator; never quote a number from a
   run marked RESULTS NOT USABLE; every cited figure needs a committed receipt in
   `evals/results/`.
-- **The diagram and README move with the system**: they are drift-enrolled
-  (`n_b550ba9c5c8a`). `docs/okl-sixth-surface.svg` is a *render* of the `.excalidraw`
-  — if you edit the source, re-render or say loudly in the commit that the render is
-  stale.
+- **The diagram and README move with the system**: `ci/check-diagram-figures.sh` fails
+  any diagram figure that does not name a committed receipt (the rule is
+  `n_b550ba9c5c8a`; it governs no files, because that check tests the claims rather than
+  noticing an edit). `docs/*.svg` are *renders* of the `.excalidraw` sources — if you
+  edit a source, re-render or say loudly in the commit that the render is stale.
 
 ## Layout truth
 
