@@ -1,0 +1,61 @@
+diff --git a/src/Program.cs b/src/Program.cs
+index fed5882..6d38a71 100644
+--- a/src/Program.cs
++++ b/src/Program.cs
+@@ -17,6 +17,15 @@ app.MapGet("/orders", (HttpContext ctx) =>
+     return Results.Ok(Store.Orders.Values.Where(o => o.Owner == user));
+ });
+ 
++app.MapGet("/orders/{id}", (int id, HttpContext ctx) =>
++{
++    var user = Auth.CurrentUser(ctx);
++    if (user is null) return Results.Unauthorized();
++    if (!Store.Orders.TryGetValue(id, out var order)) return Results.NotFound();
++    if (order.Owner != user) return Results.StatusCode(403);
++    return Results.Ok(order);
++});
++
+ app.Run();
+ 
+ public partial class Program { }
+diff --git a/tests/ApiTests.cs b/tests/ApiTests.cs
+index 3f3731f..dd8f904 100644
+--- a/tests/ApiTests.cs
++++ b/tests/ApiTests.cs
+@@ -23,4 +23,36 @@ public class ApiTests : IClassFixture<WebApplicationFactory<Program>>
+         var mine = await _client.GetFromJsonAsync<List<Order>>("/orders");
+         Assert.Equal(new[] { 3 }, mine!.Select(o => o.Id).ToArray());
+     }
++
++    [Fact]
++    public async Task Get_order_returns_own_order()
++    {
++        _client.DefaultRequestHeaders.Add("X-User-Token", "token-alice");
++        var order = await _client.GetFromJsonAsync<Order>("/orders/1");
++        Assert.Equal(1, order!.Id);
++        Assert.Equal("alice", order.Owner);
++    }
++
++    [Fact]
++    public async Task Get_order_rejects_another_users_order()
++    {
++        _client.DefaultRequestHeaders.Add("X-User-Token", "token-alice");
++        var res = await _client.GetAsync("/orders/3");
++        Assert.Equal(HttpStatusCode.Forbidden, res.StatusCode);
++    }
++
++    [Fact]
++    public async Task Get_order_returns_404_for_unknown_id()
++    {
++        _client.DefaultRequestHeaders.Add("X-User-Token", "token-alice");
++        var res = await _client.GetAsync("/orders/99");
++        Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
++    }
++
++    [Fact]
++    public async Task Get_order_returns_401_without_token()
++    {
++        var res = await _client.GetAsync("/orders/1");
++        Assert.Equal(HttpStatusCode.Unauthorized, res.StatusCode);
++    }
+ }

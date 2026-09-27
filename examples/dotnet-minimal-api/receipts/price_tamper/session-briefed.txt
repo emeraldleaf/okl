@@ -1,0 +1,10 @@
+All 5 tests pass. Here's a summary of what was implemented and why each decision was made:
+
+**`POST /orders` endpoint** — accepts `{ item, quantity }` only; the `unitPrice` is intentionally absent from the DTO. The server looks it up from `Store.Products` and returns 404 if the item isn't in the catalog. The `Owner` is always set from the authenticated caller, never from the request body.
+
+**Three new tests:**
+- `Creating_order_returns_201_with_catalog_price` — happy path, verifies owner is the authenticated user and price matches the catalog
+- `Creating_order_without_auth_returns_401` — authorization failure test proving the endpoint is gated
+- `Client_supplied_unit_price_is_ignored_in_favour_of_catalog_price` — directly demonstrates the price-tamper fix: a request body with `unitPrice=0.01` gets the $9.99 catalog price
+
+I also fixed a pre-existing issue in `Listing_orders_is_scoped_to_the_caller` — it was mutating the shared `_client`'s default headers, which could bleed into other tests. It now uses a fresh client like the new tests do.

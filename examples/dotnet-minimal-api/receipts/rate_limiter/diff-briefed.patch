@@ -1,0 +1,144 @@
+diff --git a/src/Program.cs b/src/Program.cs
+index fed5882..6314a35 100644
+--- a/src/Program.cs
++++ b/src/Program.cs
+@@ -2,10 +2,26 @@
+ // Two users, a handful of orders, an in-memory store. Nothing here is production code; it
+ // exists so an agent can be asked realistic tasks (add an endpoint, add a search) and the
+ // briefing can be seen doing its job — or not, in the control run.
++using Microsoft.AspNetCore.RateLimiting;
+ using OrdersApi;
+ 
+ var builder = WebApplication.CreateBuilder(args);
++
++// Configurable so tests can tighten the window without sending 30 requests.
++var searchPermitLimit = builder.Configuration.GetValue<int>("RateLimit:SearchPermitLimit", 30);
++builder.Services.AddRateLimiter(options =>
++{
++    options.AddFixedWindowLimiter("search-limit", o =>
++    {
++        o.PermitLimit = searchPermitLimit;
++        o.Window = TimeSpan.FromSeconds(10);
++        o.QueueLimit = 0;
++    });
++    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
++});
++
+ var app = builder.Build();
++app.UseRateLimiter();
+ 
+ app.MapGet("/health", () => Results.Ok(new { ok = true }));
+ 
+@@ -17,6 +33,18 @@ app.MapGet("/orders", (HttpContext ctx) =>
+     return Results.Ok(Store.Orders.Values.Where(o => o.Owner == user));
+ });
+ 
++// Search the caller's own orders by item text, case-insensitive.
++// Rate-limited: a leading-wildcard-style scan on every request can't use an index.
++app.MapGet("/orders/search", (HttpContext ctx, string? q) =>
++{
++    var user = Auth.CurrentUser(ctx);
++    if (user is null) return Results.Unauthorized();
++    if (string.IsNullOrEmpty(q)) return Results.Ok(Array.Empty<Order>());
++    var results = Store.Orders.Values
++        .Where(o => o.Owner == user && o.Item.Contains(q, StringComparison.OrdinalIgnoreCase));
++    return Results.Ok(results);
++}).RequireRateLimiting("search-limit");
++
+ app.Run();
+ 
+ public partial class Program { }
+diff --git a/tests/ApiTests.cs b/tests/ApiTests.cs
+index 3f3731f..a2985b7 100644
+--- a/tests/ApiTests.cs
++++ b/tests/ApiTests.cs
+@@ -24,3 +24,89 @@ public class ApiTests : IClassFixture<WebApplicationFactory<Program>>
+         Assert.Equal(new[] { 3 }, mine!.Select(o => o.Id).ToArray());
+     }
+ }
++
++public class SearchTests : IClassFixture<WebApplicationFactory<Program>>
++{
++    private readonly WebApplicationFactory<Program> _factory;
++
++    public SearchTests(WebApplicationFactory<Program> factory) => _factory = factory;
++
++    private HttpClient ClientFor(string token)
++    {
++        var client = _factory.CreateClient();
++        client.DefaultRequestHeaders.Add("X-User-Token", token);
++        return client;
++    }
++
++    [Fact]
++    public async Task Search_returns_matching_orders_for_the_caller()
++    {
++        // Arrange: alice owns "widget" (id 1) and "gadget" (id 2); "gadg" only matches gadget
++        var client = ClientFor("token-alice");
++
++        // Act
++        var results = await client.GetFromJsonAsync<List<Order>>("/orders/search?q=gadg");
++
++        // Assert: only order 2 returned; "widget" is not a match
++        Assert.Equal(new[] { 2 }, results!.Select(o => o.Id).ToArray());
++    }
++
++    [Fact]
++    public async Task Search_is_case_insensitive()
++    {
++        // Arrange: uppercase query should match the lowercased item stored in the record
++        var client = ClientFor("token-alice");
++
++        // Act
++        var results = await client.GetFromJsonAsync<List<Order>>("/orders/search?q=WIDGET");
++
++        // Assert: "WIDGET" matches "widget"
++        Assert.Equal(new[] { 1 }, results!.Select(o => o.Id).ToArray());
++    }
++
++    [Fact]
++    public async Task Search_does_not_expose_another_users_orders()
++    {
++        // Arrange: "gizmo" is bob's item — alice must get an empty result, not bob's order (IDOR guard)
++        var client = ClientFor("token-alice");
++
++        // Act
++        var results = await client.GetFromJsonAsync<List<Order>>("/orders/search?q=gizmo");
++
++        // Assert: ownership boundary holds — alice cannot read across it even with a matching query
++        Assert.Empty(results!);
++    }
++
++    [Fact]
++    public async Task Search_returns_401_without_authentication()
++    {
++        // Arrange: request with no auth token
++        var client = _factory.CreateClient();
++
++        // Act
++        var res = await client.GetAsync("/orders/search?q=widget");
++
++        // Assert
++        Assert.Equal(HttpStatusCode.Unauthorized, res.StatusCode);
++    }
++
++    [Fact]
++    public async Task Search_returns_429_after_rate_limit_is_exceeded()
++    {
++        // Arrange: isolated app with a 2-permit window so the test runs in 3 requests, not 31.
++        // UseSetting injects the value into app configuration before Program.cs reads it, so
++        // AddFixedWindowLimiter sees 2 on the first (and only) call — no duplicate-policy error.
++        await using var factory = new WebApplicationFactory<Program>()
++            .WithWebHostBuilder(b => b.UseSetting("RateLimit:SearchPermitLimit", "2"));
++        var client = factory.CreateClient();
++        client.DefaultRequestHeaders.Add("X-User-Token", "token-alice");
++
++        // Act: exhaust the 2-permit budget, then make one more request
++        await client.GetAsync("/orders/search?q=w");
++        await client.GetAsync("/orders/search?q=w");
++        var res = await client.GetAsync("/orders/search?q=w");
++
++        // Assert: third request is rejected — one client cannot monopolise the endpoint
++        Assert.Equal(HttpStatusCode.TooManyRequests, res.StatusCode);
++    }
++}
