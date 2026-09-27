@@ -63,8 +63,15 @@ relays. Same scratch repo (`.okl/config.json` pinning `/nonexistent/venv/bin/okl
 And with okl reachable further down the chain (the normal case for a stale pin), the dead
 pin is skipped and the briefing arrives (`hook_success`, seen in the same probe series).
 
-## What is still open
+## 3. Re-run from the marketplace after the fix (#64 merged)
 
-A clean marketplace re-run needs the fix on `main`, since the marketplace serves `main`.
-Until then the fixed hook has only been exercised through `--plugin-dir`, which loads the
-same `hooks/hooks.json` by the same mechanism.
+`/plugin marketplace add emeraldleaf/okl`, `/plugin install okl@okl` again (the installed
+hook carries the fix), one haiku call each:
+
+| repo | result |
+|---|---|
+| dead pin, `PATH=/usr/bin:/bin` | **empty stdout, no transcript** — blocked |
+| the scratch repo, okl reachable | `ok`; one `hook_success` carrying the briefing (`transcript-rerun-live.jsonl`) |
+
+The plugin was uninstalled afterwards so this repo, which has its own project hooks, is
+not wired twice.
