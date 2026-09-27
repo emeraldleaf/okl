@@ -22,7 +22,8 @@ task_text() { python3 -c 'import json,sys;[print(json.loads(l)["task"]) for l in
 
 fresh_copy() {  # $1 = arm dir
   rm -rf "$1"; mkdir -p "$1"
-  cp -R "$HERE/src" "$HERE/tests" "$HERE/OrdersApi.sln" "$HERE/.gitignore" "$1/"
+  # .NET 10's `dotnet new sln` writes .slnx; older SDKs write .sln. Copy whichever exists.
+  cp -R "$HERE/src" "$HERE/tests" "$HERE"/OrdersApi.sln* "$HERE/.gitignore" "$1/"
   rm -rf "$1"/src/bin "$1"/src/obj "$1"/tests/bin "$1"/tests/obj
   mkdir -p "$1/.claude"
   git -C "$1" init -q; git -C "$1" -c user.email=demo@okl -c user.name=okl-demo add -A
