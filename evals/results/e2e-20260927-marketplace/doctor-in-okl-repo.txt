@@ -1,0 +1,2 @@
+! okl is wired twice: its plugin is enabled AND 2 okl hook(s) are registered in /Users/joshuadell/Dev/okl/.claude/settin
+  doctor exit=
