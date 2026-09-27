@@ -1,0 +1,3 @@
+Write|{"file_path":"/Users/joshuadell/Dev/okl/e2e/e2e-20260927-coe
+Bash|{"command":"python3 hello.py","description":"Run hello.py"}
+Bash|{"command":"okl record --type Rule --scope repo --tags metho
