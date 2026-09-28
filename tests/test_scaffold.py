@@ -1262,6 +1262,40 @@ def test_a_missing_okl_blocks_without_the_shells_enoent_text(tmp_path):
     assert not any(b in r.stderr for b in banned), r.stderr
 
 
+def test_doc_orphans_sees_unlinked_images_and_reads_the_committed_tree(tmp_path):
+    """The gate walked docs/*.md only, so a diagram nothing embedded was invisible: okl's
+    first architecture diagram sat unlinked for weeks with a stale heading and figures its
+    receipts no longer supported, while every gate reported clean (deleted in #67).
+    """
+    import shutil
+    if shutil.which("git") is None:
+        pytest.skip("git not available")
+    gate = Path(__file__).resolve().parents[1] / "src" / "okl" / "scaffold" / "gates" / "check-doc-orphans.sh"
+    repo = tmp_path / "r"; (repo / "gates").mkdir(parents=True); (repo / "docs").mkdir()
+    shutil.copy(gate, repo / "gates" / "check-doc-orphans.sh")
+    def git(*a):
+        return subprocess.run(["git", "-C", str(repo), *a], capture_output=True, text=True, check=True)
+    git("init", "-q"); git("config", "user.email", "t@example.com"); git("config", "user.name", "t")
+    (repo / "README.md").write_text("See [guide](docs/guide.md) and ![flow](docs/flow.svg)\n")
+    (repo / "docs" / "guide.md").write_text("guide\n")
+    (repo / "docs" / "flow.svg").write_text("<svg/>\n")
+    (repo / "docs" / "stale-diagram.svg").write_text("<svg/>\n")
+    git("add", "-A"); git("commit", "-qm", "init")
+    def run():
+        return subprocess.run(["bash", "gates/check-doc-orphans.sh"], cwd=repo, capture_output=True, text=True)
+    r = run()
+    assert r.returncode == 1 and "docs/stale-diagram.svg" in r.stdout, r.stdout
+    assert "flow.svg" not in r.stdout and "guide.md" not in r.stdout, r.stdout
+    # Linking it in the working tree only does not satisfy the audit: the committed tree decides.
+    (repo / "docs" / "guide.md").write_text("guide ![d](stale-diagram.svg)\n")
+    assert run().returncode == 1
+    git("commit", "-qam", "link it")
+    assert run().returncode == 0, run().stdout
+    # An untracked image is not the repo's yet, so it cannot fail the audit either.
+    (repo / "docs" / "scratch.png").write_bytes(b"x")
+    assert run().returncode == 0
+
+
 def test_init_and_doctor_know_okls_own_plugin(tmp_path):
     """#45: okl ships as a Claude Code plugin too. If the plugin is enabled, `okl init`
     must not also register the project hooks (every prompt would be briefed twice and the
