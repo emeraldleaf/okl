@@ -1339,6 +1339,20 @@ def test_init_wires_claude_code_without_an_existing_claude_dir(tmp_path):
     r = okl(p, "init", "--repo", "x")
     assert (p / ".claude" / "hooks" / "stop-okl-encode.sh").is_file(), r.stdout
     assert "created .claude/ (Claude Code is installed" in r.stdout, r.stdout
+    # Opted out: Claude Code is installed, but this repo gets no hooks.
+    p = repo("optout")
+    r = okl(p, "init", "--repo", "x", "--no-claude")
+    assert r.returncode == 0 and not (p / ".claude").exists() and "--no-claude" in r.stdout, r.stdout
+    # okl's own plugin enabled: the dry run must say what the real run does -- no hooks --
+    # even though Claude Code is on PATH (#69 review: it listed them).
+    p = repo("plugin")
+    (home / ".claude").mkdir(exist_ok=True)
+    (home / ".claude" / "settings.json").write_text('{"enabledPlugins": {"okl@okl": true}}')
+    r = okl(p, "init", "--repo", "x", "--dry-run")
+    assert "userpromptsubmit" not in r.stdout and "plugin" in r.stdout, r.stdout
+    r = okl(p, "init", "--repo", "x", "--claude")
+    assert not (p / ".claude").exists(), "the plugin wins over --claude: never wired twice"
+    (home / ".claude" / "settings.json").unlink()
     # A dangling symlink at .claude is refused, never written through.
     p = repo("link")
     (p / ".claude").symlink_to(tmp_path / "elsewhere")

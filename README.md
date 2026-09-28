@@ -25,15 +25,17 @@ okl init --repo my-repo             # config, Claude Code hooks, MCP server, CI 
 ```
 
 `init` wires Claude Code when the repo has a `.claude/` directory or `claude` is on your
-PATH; `--claude` forces it. Prefer a plugin? Instead of the hooks from `init`, run
-`/plugin marketplace add emeraldleaf/okl` then `/plugin install okl@okl` in Claude Code —
-`init` notices the plugin and skips its own hooks, so nothing is wired twice.
+PATH; `--claude` forces it and `--no-claude` skips it. **Prefer the plugin?** Install it
+*before* running `init` — `/plugin marketplace add emeraldleaf/okl`, then
+`/plugin install okl@okl` in Claude Code — and `init` leaves the hooks to the plugin, so
+nothing is wired twice. (Installed after? `okl doctor` reports the double wiring, and
+`okl init --uninstall` removes the project copy.)
 
 **3. Give it something to know.** An empty store proves nothing, and says so:
 
 ```bash
 okl seed                    # lists the bundled packs; imports nothing
-okl seed dotnet-defects     # import the packs that match your stack, by name
+okl seed dotnet-defects     # e.g.: import the packs that match your stack, by name
 ```
 
 Or have your agent propose records from your own code: `okl scaffold .` adds a
@@ -56,9 +58,10 @@ okl doctor                  # flags other agent-memory tools and double wiring
 - **Proving a lesson is true** is a check you run, not a flag you set:
   `okl verify <id> --run "pytest -q tests/test_orders.py" --expect "passed"`.
 - **When code a lesson governs changes,** `okl drift` goes red until someone re-runs its
-  check. `okl verify` refreshes `okl-drift.json`; commit it after the code change, because
-  that committed snapshot is what the CI workflow reads. Until the first lesson governs
-  files there is nothing to snapshot: CI warns "Drift not checked", which is expected.
+  check. CI reads a committed snapshot, `okl-drift.json`: once the first lesson governs
+  files, run `okl export --drift` and commit it. From then on `okl verify` refreshes it;
+  commit it after the code change it verifies. Until then CI warns "Drift not checked",
+  which is expected.
 - **Headless runs** (`claude -p`, scripts, CI agents) set `OKL_DISABLED_HOOKS=encode`,
   or the end-of-session question replaces the printed answer.
 
@@ -474,7 +477,7 @@ one that is opt-in.
 
 ```bash
 cd my-repo
-okl init --repo my-repo        # writes .okl/config.json; wires Claude Code if .claude/ exists or `claude` is on PATH (--claude forces it)
+okl init --repo my-repo        # writes .okl/config.json; wires Claude Code if .claude/ exists or `claude` is on PATH (--claude / --no-claude)
 okl connect https://okl.myorg.dev   # optional: point at the shared service (else local file)
 ```
 
@@ -505,7 +508,8 @@ is written outside the directory you run `init` in; nothing contacts a network u
 run `okl connect` and point it somewhere yourself.
 
 `init` writes `.okl/config.json`. When it wires Claude Code (the repo has a `.claude/`
-directory, `claude` is on PATH, or you passed `--claude`), it also installs two hooks: a `UserPromptSubmit` hook that runs `check` on
+directory, `claude` is on PATH, or you passed `--claude`), it also installs two hooks:
+a `UserPromptSubmit` hook that runs `check` on
 the prompt you actually typed and puts the briefing into the model's context (the
 enforced read — it must be this event: `PreToolUse` stdout never reaches the model,
 which an end-to-end test caught the hard way), and a session-end hook that blocks the first stop
@@ -553,9 +557,9 @@ okl record --type Defect --scope org --tags "security" \
   --symptom "a request body carries a price/amount/status/isAdmin field" \
   --body    "cause: the handler saved the client's value instead of computing it" \
   --fix     "drop those fields from the request; compute them server-side" \
-  --files   "**/orders/*.py"
+  --files   "**/orders/*.py"         # prints the new record's id
 
-# ...then prove it with a check, rather than asserting it (prints the id to use)
+# ...then prove it with a check, rather than asserting it
 okl verify <id> --run "pytest -q tests/test_orders.py" --expect "passed"
 
 # 3. SEARCH the stored lessons directly

@@ -233,20 +233,32 @@ def _uninstall_mcp(act: str, dry_run: bool) -> list[str]:
     return []
 
 
-def _wire_claude(args) -> tuple[bool, str]:
-    """Whether init should wire Claude Code here, and why.
+_BY_PLUGIN = "okl's Claude Code plugin is enabled and provides the hooks"
+_OPTED_OUT = "--no-claude"
+
+
+def _should_wire_claude(args) -> tuple[bool, str]:
+    """Whether init should install Claude Code hooks here, and why.
 
     It required an existing .claude/ directory, and many repos have none: Claude Code
     creates it only once project settings exist. A fresh-install walkthrough of the
     README hit exactly that -- init succeeded, installed no hooks, and the enforced
     pre-task read never ran. Now init also wires when Claude Code is installed on this
-    machine, or when asked to with --claude.
+    machine, or when asked to with --claude. --no-claude opts out, and okl's own plugin
+    (which carries the hooks itself) always wins, so nothing is wired twice.
     """
     import shutil
+
+    from . import coexist
+    if coexist.okl_plugin_enabled(Path.cwd(), Path.home()):
+        return False, _BY_PLUGIN
+    choice = getattr(args, "claude", None)
+    if choice is False:
+        return False, _OPTED_OUT
+    if choice:
+        return True, "--claude"
     if Path(".claude").exists():
         return True, ".claude/ exists"
-    if getattr(args, "claude", False):
-        return True, "--claude"
     if shutil.which("claude"):
         return True, "Claude Code is installed (`claude` is on PATH)"
     return False, ""
@@ -254,14 +266,16 @@ def _wire_claude(args) -> tuple[bool, str]:
 
 def _wire_claude_code(args) -> None:
     """init's Claude Code step: defer to okl's plugin, wire the project, or say how to."""
-    from . import coexist
     claude = Path(".claude")
-    if coexist.okl_plugin_enabled(Path.cwd(), Path.home()):
+    wire = _should_wire_claude(args)
+    if wire[1] == _BY_PLUGIN:
         # The plugin carries both hooks and the MCP server; registering them here too
         # would brief every prompt twice and ask the Stop question twice (#45).
         print("• okl's Claude Code plugin is enabled here, so it provides the hooks and the MCP "
               "server: none are installed into .claude/ or registered in settings.")
-    elif (wire := _wire_claude(args))[0]:
+    elif wire[1] == _OPTED_OUT:
+        print("• --no-claude: no Claude Code hooks installed.")
+    elif wire[0]:
         if _refuse_symlink(claude):
             pass  # a (dangling) link at .claude: said so, and wrote nothing through it
         else:
@@ -293,13 +307,15 @@ def cmd_init(args) -> int:
         repo = args.repo or Path.cwd().name
         print(f"DRY RUN — nothing will be written. `okl init --repo {repo}` would:\n")
         print("  .okl/config.json                        repo name, interests, and the path to this okl")
-        wire, why = _wire_claude(args)
+        wire, why = _should_wire_claude(args)
         if wire:
             print(f"  (wiring Claude Code: {why})")
             print("  .claude/hooks/userpromptsubmit-okl-check.sh   executable; runs when you submit a task")
             print("  .claude/hooks/stop-okl-encode.sh             executable; runs when a session ends")
             print("  .claude/settings.json                   registers those two hooks (merged, existing keys kept)")
             print("  .mcp.json                               registers the okl MCP server (only if okl[mcp] is installed)")
+        elif why:
+            print(f"  (no Claude Code hooks: {why})")
         else:
             print("  (no .claude/ here and Claude Code not found, so no hooks; `--claude` installs them anyway)")
         if Path(".git").exists():
@@ -1075,9 +1091,10 @@ def build_parser() -> argparse.ArgumentParser:
     pi.add_argument("--repo"); pi.add_argument("--service")
     pi.add_argument("--interests", help="comma-sep subject tags this repo cares about "
                     "(filters org-scope lessons in `check`; see store.KNOWN_TAGS)")
-    pi.add_argument("--claude", action="store_true",
-                    help="wire Claude Code (hooks, settings, MCP) even if there is no .claude/ yet "
-                         "and `claude` is not on PATH")
+    pi.add_argument("--claude", action=argparse.BooleanOptionalAction, default=None,
+                    help="--claude wires Claude Code (hooks, settings, MCP) even with no .claude/ "
+                         "and no `claude` on PATH; --no-claude skips it. Default: wire when "
+                         ".claude/ exists or `claude` is on PATH")
     pi.add_argument("--dry-run", dest="dry_run", action="store_true",
                     help="list every file init would write or modify, and write nothing")
     pi.add_argument("--force", action="store_true",
