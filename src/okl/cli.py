@@ -233,6 +233,52 @@ def _uninstall_mcp(act: str, dry_run: bool) -> list[str]:
     return []
 
 
+def _wire_claude(args) -> tuple[bool, str]:
+    """Whether init should wire Claude Code here, and why.
+
+    It required an existing .claude/ directory, and many repos have none: Claude Code
+    creates it only once project settings exist. A fresh-install walkthrough of the
+    README hit exactly that -- init succeeded, installed no hooks, and the enforced
+    pre-task read never ran. Now init also wires when Claude Code is installed on this
+    machine, or when asked to with --claude.
+    """
+    import shutil
+    if Path(".claude").exists():
+        return True, ".claude/ exists"
+    if getattr(args, "claude", False):
+        return True, "--claude"
+    if shutil.which("claude"):
+        return True, "Claude Code is installed (`claude` is on PATH)"
+    return False, ""
+
+
+def _wire_claude_code(args) -> None:
+    """init's Claude Code step: defer to okl's plugin, wire the project, or say how to."""
+    from . import coexist
+    claude = Path(".claude")
+    if coexist.okl_plugin_enabled(Path.cwd(), Path.home()):
+        # The plugin carries both hooks and the MCP server; registering them here too
+        # would brief every prompt twice and ask the Stop question twice (#45).
+        print("• okl's Claude Code plugin is enabled here, so it provides the hooks and the MCP "
+              "server: none are installed into .claude/ or registered in settings.")
+    elif (wire := _wire_claude(args))[0]:
+        if _refuse_symlink(claude):
+            pass  # a (dangling) link at .claude: said so, and wrote nothing through it
+        else:
+            if not claude.exists():
+                claude.mkdir()
+                print(f"✓ created .claude/ ({wire[1]})")
+            _install_claude_wiring(claude, force=getattr(args, "force", False))
+    else:
+        print("• no .claude/ dir here and Claude Code was not found, so no hooks were installed.")
+        print("  `okl init --claude` installs them anyway. The store still works:")
+        print("    - retrieval: `okl check --task \"...\"`, or the MCP server (`okl mcp`)")
+        print("    - canon for any agent: `okl scaffold .` writes CLAUDE.md and AGENTS.md")
+        print("    - the enforced pre-task read needs a hook, and okl auto-wires Claude Code only.")
+        print("      The scripts in src/okl/scaffold/hooks/ are plain bash on stdin/stdout; if your")
+        print("      agent has a pre-prompt hook, point it at them. Registration formats differ.")
+
+
 def cmd_init(args) -> int:
     """Wire the current repo so the loop runs without manual follow-up steps:
     config, hooks (installed AND registered), CI verifier, MCP registration.
@@ -247,13 +293,15 @@ def cmd_init(args) -> int:
         repo = args.repo or Path.cwd().name
         print(f"DRY RUN — nothing will be written. `okl init --repo {repo}` would:\n")
         print("  .okl/config.json                        repo name, interests, and the path to this okl")
-        if Path(".claude").exists():
+        wire, why = _wire_claude(args)
+        if wire:
+            print(f"  (wiring Claude Code: {why})")
             print("  .claude/hooks/userpromptsubmit-okl-check.sh   executable; runs when you submit a task")
             print("  .claude/hooks/stop-okl-encode.sh             executable; runs when a session ends")
             print("  .claude/settings.json                   registers those two hooks (merged, existing keys kept)")
             print("  .mcp.json                               registers the okl MCP server (only if okl[mcp] is installed)")
         else:
-            print("  (no .claude/ directory here, so no hooks would be installed)")
+            print("  (no .claude/ here and Claude Code not found, so no hooks; `--claude` installs them anyway)")
         if Path(".git").exists():
             print("  .github/workflows/okl-verify.yml        a CI workflow running the drift gate on PRs")
         else:
@@ -276,22 +324,7 @@ def cmd_init(args) -> int:
     print(f"✓ wrote {path}  (repo={repo}, mode={'remote' if cfg.get('service_url') else 'local'}"
           + (f", interests={','.join(cfg['interests'])}" if cfg.get("interests") else "") + ")")
 
-    from . import coexist
-    claude = Path(".claude")
-    if coexist.okl_plugin_enabled(Path.cwd(), Path.home()):
-        # The plugin carries both hooks and the MCP server; registering them here too
-        # would brief every prompt twice and ask the Stop question twice (#45).
-        print("• okl's Claude Code plugin is enabled here, so it provides the hooks and the MCP "
-              "server: none are installed into .claude/ or registered in settings.")
-    elif claude.exists():
-        _install_claude_wiring(claude, force=getattr(args, "force", False))
-    else:
-        print("• no .claude/ dir here, so no hooks were installed. The store still works:")
-        print("    - retrieval: `okl check --task \"...\"`, or the MCP server (`okl mcp`)")
-        print("    - canon for any agent: `okl scaffold .` writes CLAUDE.md and AGENTS.md")
-        print("    - the enforced pre-task read needs a hook, and okl auto-wires Claude Code only.")
-        print("      The scripts in src/okl/scaffold/hooks/ are plain bash on stdin/stdout; if your")
-        print("      agent has a pre-prompt hook, point it at them. Registration formats differ.")
+    _wire_claude_code(args)
     _install_ci_verifier(force=getattr(args, "force", False))
     for line in _empty_store_guidance(Client()):
         print(line)
@@ -1042,6 +1075,9 @@ def build_parser() -> argparse.ArgumentParser:
     pi.add_argument("--repo"); pi.add_argument("--service")
     pi.add_argument("--interests", help="comma-sep subject tags this repo cares about "
                     "(filters org-scope lessons in `check`; see store.KNOWN_TAGS)")
+    pi.add_argument("--claude", action="store_true",
+                    help="wire Claude Code (hooks, settings, MCP) even if there is no .claude/ yet "
+                         "and `claude` is not on PATH")
     pi.add_argument("--dry-run", dest="dry_run", action="store_true",
                     help="list every file init would write or modify, and write nothing")
     pi.add_argument("--force", action="store_true",

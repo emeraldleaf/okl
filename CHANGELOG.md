@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- **A Quickstart, and `okl init` wires Claude Code without an existing `.claude/`.**
+  A fresh-install walkthrough of the README found the path spread over ~350 lines and
+  one trap: `init` installed hooks only when `.claude/` already existed, which many repos
+  lack, so the pre-task briefing silently never ran. `init` now also wires Claude Code
+  when `claude` is on PATH, or with `--claude`, and `--dry-run` says which applied. The
+  README gains a four-step Quickstart and "what a normal day looks like", and stops
+  teaching `record --verified` (the assertion the verification section quarantines),
+  seeding by file path (packs load by name), and committing a drift snapshot before any
+  rule governs files (CI reads an empty one as broken, and fails).
+
 ## 0.7.0
 
 - **A dead okl path no longer turns the block into a warning** (#64). The marketplace

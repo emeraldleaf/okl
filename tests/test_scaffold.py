@@ -1296,6 +1296,64 @@ def test_doc_orphans_sees_unlinked_images_and_reads_the_committed_tree(tmp_path)
     assert run().returncode == 0
 
 
+def test_init_wires_claude_code_without_an_existing_claude_dir(tmp_path):
+    """A fresh-install walkthrough of the README: `okl init` in a repo with no .claude/
+    succeeded and installed no hooks, so the enforced pre-task read never ran. Many repos
+    have no .claude/ (Claude Code creates it only once project settings exist). init now
+    also wires when Claude Code is installed, or when asked with --claude.
+    """
+    import sys
+    home = tmp_path / "home"; home.mkdir()
+    bare = tmp_path / "bin"; bare.mkdir()  # a PATH with no `claude` on it
+    (bare / "git").symlink_to(shutil_which("git"))
+
+    def okl(proj, *a, path=str(bare)):
+        src = str(Path(__file__).resolve().parents[1] / "src")  # this checkout, not an installed okl
+        env = {"PATH": path, "HOME": str(home), "USERPROFILE": str(home), "TMPDIR": str(tmp_path),
+               "PYTHONPATH": src}
+        return subprocess.run([sys.executable, "-m", "okl", *a], cwd=proj, env=env,
+                              capture_output=True, text=True)
+
+    def repo(name):
+        p = tmp_path / name; p.mkdir(); subprocess.run(["git", "init", "-q", str(p)], check=True)
+        return p
+
+    # Neither: no hooks, and the message names the way to get them.
+    p = repo("neither")
+    r = okl(p, "init", "--repo", "x", "--dry-run")
+    assert "--claude" in r.stdout and "userpromptsubmit" not in r.stdout, r.stdout
+    r = okl(p, "init", "--repo", "x")
+    assert r.returncode == 0 and not (p / ".claude").exists() and "okl init --claude" in r.stdout, r.stdout
+    # Asked for: .claude/ is created and both hooks are registered.
+    p = repo("flag")
+    r = okl(p, "init", "--repo", "x", "--claude")
+    assert r.returncode == 0, r.stderr
+    assert (p / ".claude" / "hooks" / "userpromptsubmit-okl-check.sh").is_file(), r.stdout
+    assert "userpromptsubmit-okl-check.sh" in (p / ".claude" / "settings.json").read_text()
+    # Claude Code installed: wired without the flag, and the dry run says why.
+    p = repo("detected")
+    (bare / "claude").write_text("#!/bin/sh\n"); (bare / "claude").chmod(0o755)
+    r = okl(p, "init", "--repo", "x", "--dry-run")
+    assert "Claude Code is installed" in r.stdout and "userpromptsubmit" in r.stdout, r.stdout
+    assert not (p / ".claude").exists(), "a dry run writes nothing"
+    r = okl(p, "init", "--repo", "x")
+    assert (p / ".claude" / "hooks" / "stop-okl-encode.sh").is_file(), r.stdout
+    assert "created .claude/ (Claude Code is installed" in r.stdout, r.stdout
+    # A dangling symlink at .claude is refused, never written through.
+    p = repo("link")
+    (p / ".claude").symlink_to(tmp_path / "elsewhere")
+    r = okl(p, "init", "--repo", "x", "--claude")
+    assert "refused" in r.stdout and not (tmp_path / "elsewhere").exists(), r.stdout
+
+
+def shutil_which(name):
+    import shutil
+    found = shutil.which(name)
+    if found is None:
+        pytest.skip(f"{name} not available")
+    return found
+
+
 def test_init_and_doctor_know_okls_own_plugin(tmp_path):
     """#45: okl ships as a Claude Code plugin too. If the plugin is enabled, `okl init`
     must not also register the project hooks (every prompt would be briefed twice and the
