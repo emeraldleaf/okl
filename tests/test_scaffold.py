@@ -1356,6 +1356,8 @@ def test_init_wires_claude_code_without_an_existing_claude_dir(tmp_path):
     # A dangling symlink at .claude is refused, never written through.
     p = repo("link")
     (p / ".claude").symlink_to(tmp_path / "elsewhere")
+    r = okl(p, "init", "--repo", "x", "--claude", "--dry-run")
+    assert "symlink" in r.stdout and "userpromptsubmit" not in r.stdout, r.stdout
     r = okl(p, "init", "--repo", "x", "--claude")
     assert "refused" in r.stdout and not (tmp_path / "elsewhere").exists(), r.stdout
 

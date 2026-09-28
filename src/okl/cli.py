@@ -308,7 +308,10 @@ def cmd_init(args) -> int:
         print(f"DRY RUN — nothing will be written. `okl init --repo {repo}` would:\n")
         print("  .okl/config.json                        repo name, interests, and the path to this okl")
         wire, why = _should_wire_claude(args)
-        if wire:
+        link = _symlinked(Path(".claude")) if wire else None
+        if link is not None:
+            print(f"  (no Claude Code hooks: {link} is a symlink, which init refuses to write through)")
+        elif wire:
             print(f"  (wiring Claude Code: {why})")
             print("  .claude/hooks/userpromptsubmit-okl-check.sh   executable; runs when you submit a task")
             print("  .claude/hooks/stop-okl-encode.sh             executable; runs when a session ends")
