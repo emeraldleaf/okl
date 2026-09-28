@@ -26,8 +26,13 @@ Most rules never leave tier 1, and that is fine.
 
 ```
 okl record --type <Defect|Gate|Rule|Claim|Retraction|Tombstone|Decision|PriorArt> \
-  --id "<stable-key>" --title "..." --body "..." --scope <org|repo> [--verified]
+  --id "<stable-key>" --title "..." --body "..." --scope <org|repo>
+okl verify <stable-key> --run "<a check that fails if the lesson is broken>" --expect "<its success signal>"
 ```
+
+- **Verification is a check you run, never a flag.** `okl record --verified` is refused: a
+  stamp the recorder awards itself is the step grading its own homework. `okl verify` runs the
+  check and stores the command and its result as the evidence.
 
 - **`--id`** — a short stable key you choose, which makes the write idempotent: recording the
   same lesson again replaces that row rather than adding a second one. Omit it and every record

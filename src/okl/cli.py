@@ -491,11 +491,21 @@ def cmd_record(args) -> int:
     exit 2 with the message, which names the vocabulary. A traceback would bury the one
     line that tells them how to fix the call.
     """
+    if args.verified:
+        # A stamp the recorder awards itself is the step grading its own homework. The
+        # README said live verification refused this; it accepted it, silently, and the
+        # shipped encoding-loop skill told agents to pass it. Found checking a launch post
+        # that claimed "never by assertion". Historical receipts still import via `okl seed`.
+        print("okl record --verified is refused: a lesson is verified by running a check, not "
+              "by saying so.\n  Record it without --verified, then:  okl verify <id> --run "
+              "\"<a check that fails if the lesson is broken>\" --expect \"<its success signal>\""
+              "\n  (Importing historical, already-verified records? Use okl seed.)", file=sys.stderr)
+        return 2
     client = Client()
     kwargs = dict(type=args.type, title=args.title, scope=args.scope,
                   applies_to=getattr(args, "applies_to", None),
                   body=args.body, status=args.status, found_by=args.found_by,
-                  ttl_days=args.ttl_days, owner=args.owner, verified=args.verified,
+                  ttl_days=args.ttl_days, owner=args.owner,
                   files=args.files, symptom=args.symptom, fix=args.fix, tags=args.tags,
                   id=args.id)
     if args.repo:
@@ -1144,7 +1154,8 @@ def build_parser() -> argparse.ArgumentParser:
     pr.add_argument("--tags", help="comma-sep subject tags from the controlled vocabulary "
                     "(store.KNOWN_TAGS), e.g. 'react,security'")
     pr.add_argument("--id", help="explicit stable id (makes the write idempotent — re-records replace)")
-    pr.add_argument("--verified", action="store_true")
+    pr.add_argument("--verified", action="store_true",
+                    help="refused: verify with `okl verify <id> --run ... --expect ...` instead")
     pr.set_defaults(func=cmd_record)
 
     pl = sub.add_parser("link", help="add an edge between two nodes")

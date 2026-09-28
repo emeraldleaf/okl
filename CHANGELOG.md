@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- **`okl record --verified` is refused.** It stamped a lesson verified with no evidence,
+  while the README said live verification refused it and the shipped `encoding-loop` skill
+  told agents to pass it. It now exits 2, writes nothing, and points at `okl verify`, the
+  only live route to a stamp. Historical, already-verified records still import through
+  `okl seed`, and CI's snapshot reader already rejected evidence-less stamps.
+
 ## 0.7.1
 
 - **A Quickstart, and `okl init` wires Claude Code without an existing `.claude/`.**
