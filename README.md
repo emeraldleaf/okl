@@ -8,13 +8,62 @@ shared across repos when you want.**
 > be broken — plus a command that hands the relevant ones to a coding agent (or a
 > person) **before** they start a task, so the same mistake isn't made twice.
 
+## Quickstart
+
+**1. Install the CLI** (the PyPI name differs — PyPI refuses `okl` as confusable with
+`oki` — but everything you type afterwards is `okl`):
+
 ```bash
-pipx install observed-knowledge-ledger   # the distribution name on PyPI (formerly org-knowledge-layer)
-okl --help                               # the command, the import package, and the repo are all `okl`
+pipx install 'observed-knowledge-ledger[mcp]'
 ```
 
-*(PyPI rejects `okl` itself as confusable with the existing `oki`, so only the install
-line differs — everything you type afterwards is `okl`.)*
+**2. Wire your repo.** From the repository root:
+
+```bash
+okl init --repo my-repo --dry-run   # lists every file it would write; writes nothing
+okl init --repo my-repo             # config, Claude Code hooks, MCP server, CI workflow
+```
+
+`init` wires Claude Code when the repo has a `.claude/` directory or `claude` is on your
+PATH; `--claude` forces it and `--no-claude` skips it. **Prefer the plugin?** Install it
+*before* running `init` — `/plugin marketplace add emeraldleaf/okl`, then
+`/plugin install okl@okl` in Claude Code — and `init` leaves the hooks to the plugin, so
+nothing is wired twice. (Installed after? `okl doctor` reports the double wiring, and
+`okl init --uninstall` removes the project copy.)
+
+**3. Give it something to know.** An empty store proves nothing, and says so:
+
+```bash
+okl seed                    # lists the bundled packs; imports nothing
+okl seed dotnet-defects     # e.g.: import the packs that match your stack, by name
+```
+
+Or have your agent propose records from your own code: `okl scaffold .` adds a
+`/seed-from-codebase` command ([Seed it](#seed-it-so-the-very-first-check-returns-something)).
+
+**4. Check it works:**
+
+```bash
+okl check --task "add an endpoint that returns an order for the logged-in user"
+okl doctor                  # flags other agent-memory tools and double wiring
+```
+
+### What a normal day looks like
+
+- **You prompt as usual.** The pre-task hook runs `okl check` on what you typed and puts
+  the relevant lessons in the agent's context before it starts. Nothing to remember.
+- **At the end of a session that changed files,** the agent is asked once what it
+  learned. If something is worth keeping, it runs `okl record` — with `--files` when the
+  lesson governs specific code.
+- **Proving a lesson is true** is a check you run, not a flag you set:
+  `okl verify <id> --run "pytest -q tests/test_orders.py" --expect "passed"`.
+- **When code a lesson governs changes,** `okl drift` goes red until someone re-runs its
+  check. CI reads a committed snapshot, `okl-drift.json`: once the first lesson governs
+  files, run `okl export --drift` and commit it. From then on `okl verify` refreshes it;
+  commit it after the code change it verifies. Until then CI warns "Drift not checked",
+  which is expected.
+- **Headless runs** (`claude -p`, scripts, CI agents) set `OKL_DISABLED_HOOKS=encode`,
+  or the end-of-session question replaces the printed answer.
 
 ## The problem it solves
 
@@ -340,12 +389,14 @@ session's own transcript — candidates, not records: no hook runs on every tool
 no model is called to summarise anything.
 
 **In your repo:** `okl init` writes `.okl/` (config, the local database, a `.gitignore`
-covering both) and, if `.claude/` exists, two hook scripts plus their registration. It
+covering both) and, when it wires Claude Code, two hook scripts plus their registration. It
 also installs `.github/workflows/okl-verify.yml`, which runs the drift gate on every PR.
-CI has no store of its own (the local one is gitignored), so give it one: commit
-`okl export --drift` (a snapshot of the rules drift reads: no lesson bodies), or set the
+CI has no store of its own (the local one is gitignored), so give it one: once a lesson
+governs files, commit `okl-drift.json` (`okl verify` refreshes it; `okl export --drift`
+writes it; a snapshot of the rules drift reads, no lesson bodies), or set the
 `OKL_SERVICE_URL` secret. Without either, the step warns "Drift not checked" rather than
-passing as if it had.
+passing as if it had. Do not commit a snapshot holding zero rules: CI reads a configured
+store that checked nothing as broken, and fails.
 `okl scaffold` is separate and optional — nothing installs it unless you ask.
 
 ### The knobs, cheapest first
@@ -426,7 +477,7 @@ one that is opt-in.
 
 ```bash
 cd my-repo
-okl init --repo my-repo        # writes .okl/config.json; installs the pre-task hook if .claude/ exists
+okl init --repo my-repo        # writes .okl/config.json; wires Claude Code if .claude/ exists or `claude` is on PATH (--claude / --no-claude)
 okl connect https://okl.myorg.dev   # optional: point at the shared service (else local file)
 ```
 
@@ -456,8 +507,9 @@ your Actions. Both are plain text you can read first, in
 is written outside the directory you run `init` in; nothing contacts a network unless you
 run `okl connect` and point it somewhere yourself.
 
-`init` writes `.okl/config.json`. If the repo uses a coding agent with a `.claude/`
-directory, it also installs two hooks: a `UserPromptSubmit` hook that runs `check` on
+`init` writes `.okl/config.json`. When it wires Claude Code (the repo has a `.claude/`
+directory, `claude` is on PATH, or you passed `--claude`), it also installs two hooks:
+a `UserPromptSubmit` hook that runs `check` on
 the prompt you actually typed and puts the briefing into the model's context (the
 enforced read — it must be this event: `PreToolUse` stdout never reaches the model,
 which an end-to-end test caught the hard way), and a session-end hook that blocks the first stop
@@ -505,7 +557,10 @@ okl record --type Defect --scope org --tags "security" \
   --symptom "a request body carries a price/amount/status/isAdmin field" \
   --body    "cause: the handler saved the client's value instead of computing it" \
   --fix     "drop those fields from the request; compute them server-side" \
-  --files   "**/orders/*.py" --verified
+  --files   "**/orders/*.py"         # prints the new record's id
+
+# ...then prove it with a check, rather than asserting it
+okl verify <id> --run "pytest -q tests/test_orders.py" --expect "passed"
 
 # 3. SEARCH the stored lessons directly
 okl search "price tampering"
@@ -645,7 +700,7 @@ this repo's declared interests:
 
 ```bash
 okl seed                              # list the packs, import nothing
-okl seed <path>/rag-defects.json      # import one
+okl seed rag-defects                  # import one, by name (a path to any pack file works too)
 okl seed --all                        # import every pack (explicit on purpose)
 ```
 
