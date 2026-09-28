@@ -1,16 +1,24 @@
 # Changelog
 
-## Unreleased
+## 0.7.1
 
 - **A Quickstart, and `okl init` wires Claude Code without an existing `.claude/`.**
   A fresh-install walkthrough of the README found the path spread over ~350 lines and
   one trap: `init` installed hooks only when `.claude/` already existed, which many repos
   lack, so the pre-task briefing silently never ran. `init` now also wires Claude Code
-  when `claude` is on PATH, or with `--claude`, and `--dry-run` says which applied. The
+  when `claude` is on PATH, or with `--claude` (`--no-claude` opts out; okl's own plugin
+  always wins, so nothing is wired twice), and `--dry-run` says which applied. The
   README gains a four-step Quickstart and "what a normal day looks like", and stops
   teaching `record --verified` (the assertion the verification section quarantines),
   seeding by file path (packs load by name), and committing a drift snapshot before any
   rule governs files (CI reads an empty one as broken, and fails).
+
+- **The doc-orphans gate sees images** (#68). It walked `docs/*.md` only, so a diagram
+  nothing linked to was invisible to it; it now checks images too and reads the committed
+  tree. It found an unlinked results chart carrying unreceipted figures, now deleted,
+  along with the unlinked architecture diagram (#67).
+- **Docs caught up with the eval report** (#66): the diagram's figures, the README's
+  top-k cutoff claim, and the Stop hook's header.
 
 ## 0.7.0
 
