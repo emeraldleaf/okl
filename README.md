@@ -580,8 +580,8 @@ okl verify <id> --run "pytest -q" --expect "passed"
                      # run the named check and stamp the node verified ONLY on an observed
                      #   pass; the command + result is stored as the evidence trail.
                      #   --expect requires a positive success signal in the output, so an
-                     #   exit code alone can't self-certify. (`record --verified` remains
-                     #   for importing historical receipts; live verification uses this.)
+                     #   exit code alone can't self-certify. (`record --verified` is
+                     #   refused; historical receipts import through `okl seed`.)
 okl drift --gate     # flag lessons whose governed source changed after they were last verified
                      #   (exit 1 in CI — a stale rule is a rule nobody's re-checked)
 okl export --drift   # write okl-drift.json, the committed snapshot CI's drift gate reads
@@ -671,8 +671,10 @@ folder.) Two clarifications that stop the common misreadings:
 
 `okl` applies this to its own knowledge in four escalating rungs:
 
-1. **Assertion is quarantined.** `record --verified` (bare claim, no evidence) exists
-   only for importing historical receipts. Live verification refuses it.
+1. **Assertion is refused.** `okl record --verified` (a bare claim, no evidence) exits 2
+   and points at `okl verify`. Historical, already-verified records still import through
+   `okl seed`, and CI's snapshot reader rejects any stamp that carries no `okl verify`
+   evidence.
 2. **Observed check with a stored trail** — `okl verify <id> --run "pytest -q"
    --expect "passed"` runs the check itself, reads the real outcome, requires the
    positive signal (exit 0 alone can't self-certify), and stores command + result +

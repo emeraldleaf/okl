@@ -2207,6 +2207,37 @@ def test_seed_resolves_a_bundled_pack_by_name(tmp_path, monkeypatch):
     assert r.returncode == 2 and "dotnet-defects" in r.stderr and r.stdout == "", r.stderr
 
 
+def test_record_refuses_a_self_awarded_verified_stamp(tmp_path, monkeypatch):
+    """`okl record --verified` stamped a lesson verified with no evidence at all, while the
+    README said live verification refused it and the shipped encoding-loop skill told agents
+    to pass it. A launch post claiming "never by assertion" was only true in CI. The flag is
+    now refused (exit 2, nothing written); `okl verify` is the only live way to a stamp.
+    """
+    import subprocess
+    import sys
+    src = str(Path(__file__).resolve().parents[1] / "src")
+    monkeypatch.chdir(tmp_path)
+    env = {**os.environ, "PYTHONPATH": src, "HOME": str(tmp_path)}
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN"):
+        env.pop(k, None)
+
+    def okl(*a):
+        return subprocess.run([sys.executable, "-m", "okl", *a], cwd=tmp_path, env=env,
+                              capture_output=True, text=True)
+
+    assert okl("init", "--repo", "t", "--no-claude").returncode == 0
+    r = okl("record", "--type", "Rule", "--scope", "repo", "--title", "self-stamped", "--verified")
+    assert r.returncode == 2 and r.stdout == "", (r.returncode, r.stdout)
+    assert "okl verify" in r.stderr and "okl seed" in r.stderr, r.stderr
+    assert "self-stamped" not in okl("search", "self-stamped").stdout, "refused means nothing written"
+    # The honest path still works: record, then verify with an observed check.
+    r = okl("record", "--type", "Rule", "--scope", "repo", "--title", "checked rule")
+    assert r.returncode == 0, r.stderr
+    nid = r.stdout.strip().splitlines()[-1]
+    v = okl("verify", nid, "--run", f"{sys.executable} -c \"print('CHECK OK')\"", "--expect", "CHECK OK")
+    assert v.returncode == 0 and "evidence:" in v.stdout, (v.stdout, v.stderr)
+
+
 def test_the_suite_is_deaf_to_a_real_store_named_in_the_environment(store):
     """conftest strips OKL_DATABASE_URL / OKL_SERVICE_URL / OKL_TOKEN for every test.
     Proven by the incident it prevents: with the variable exported, a test that writes to
