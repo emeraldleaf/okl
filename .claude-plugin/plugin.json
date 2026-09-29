@@ -1,6 +1,6 @@
 {
   "name": "okl",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "Observed Knowledge Ledger: lessons your coding agents can trust. A pre-task briefing hook, an end-of-session 'what did we learn?' hook, the okl MCP tools, and the seeding commands. Needs the okl CLI with the MCP extra: pipx install 'observed-knowledge-ledger[mcp]'",
   "author": { "name": "Joshua Dell", "url": "https://github.com/emeraldleaf/okl" },
   "hooks": "./hooks/hooks.json",
