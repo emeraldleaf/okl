@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.7.2
 
 - **`okl record --verified` is refused.** It stamped a lesson verified with no evidence,
   while the README said live verification refused it and the shipped `encoding-loop` skill
