@@ -289,6 +289,14 @@ def test_mirror_files_identical():
     # consumers get a gate the author has never actually run, or vice versa.
     pairs.extend((g, root / "src" / "okl" / "scaffold" / "gates" / g.name)
                  for g in (root / "gates").glob("*.sh"))
+    # This repo's own Claude Code setup: it uses project hooks, not the plugin, so it runs
+    # repo copies of the hooks, /record and the encoding-loop skill. Without these pairs
+    # the repo that ships them was not using them (found 2026-09-29).
+    scaffold_claude = root / "src" / "okl" / "scaffold" / "claude"
+    pairs.extend((h, root / ".claude" / "hooks" / h.name) for h in (root / "hooks").glob("*.sh"))
+    pairs.append((scaffold_claude / "commands" / "record.md", root / ".claude" / "commands" / "record.md"))
+    pairs.append((scaffold_claude / "skills" / "encoding-loop" / "SKILL.md",
+                  root / ".claude" / "skills" / "encoding-loop" / "SKILL.md"))
     assert pairs, "expected mirrored files to exist"
     for a, b in pairs:
         assert b.exists(), f"missing mirror: {b}"
