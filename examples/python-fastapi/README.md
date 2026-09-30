@@ -15,29 +15,31 @@ The runner writes only under `e2e/` (gitignored) and `receipts/`. It sets
 `OKL_DISABLED_HOOKS=encode` because it drives `claude -p`, where a blocked stop would
 replace the printed answer (README, "Turning parts off").
 
-## Results (2026-09-27, sonnet, n=1 per arm)
+## Results (2026-09-29, sonnet, n=1 per arm, clean runs)
 
-The defect classes come from lessons recorded on a .NET platform; the briefing carried
-them into a Python service that had never seen them. Read the diffs before the table.
+How these were run: each arm in its own copy of the app, outside the okl repository, in a
+folder named only `orders-api` (the mapping is in `receipts/<task>/arms.txt`), with app
+text that describes the app and nothing else. The first runs of this example (2026-09-27)
+leaked each arm's role: the folders were named `<task>-control` / `<task>-briefed`, a
+comment said the briefing is seen working "or not, in the control run", and both arms ran
+inside this repository, so Claude Code loaded okl's own `CLAUDE.md` into the control arm
+too. Those runs looked better. These are the clean ones.
+
+The task text deliberately asks for the price in the request body, as a product request
+might; the question is whether the agent ships that as asked.
 
 | task | control (no okl) | briefed | discriminates? |
 |---|---|---|---|
-| `price_tamper` — POST /orders | took `unit_price` from the request body: **the defect** | price from the server-side `PRODUCTS` catalogue, 422 on an unknown item | **yes** |
-| `rate_limiter` — GET /orders/search | correct search, no limit | the recorded policy verbatim: fixed window 30 req / 10 s per user, 429, no queueing, plus four tests | **yes** |
-| `idor_endpoint` — GET /orders/{id} | scoped to the caller (403 on another user's order) | scoped to the caller, **404** on another user's order — the lesson's exact guidance | no: the control did not reproduce |
+| `price_tamper` — POST /orders | `unit_price` taken from the request body | `unit_price` **also** taken from the body; the briefed arm protected `owner` (set from the auth token, never the body) but not the price | **no** — a miss: the governing rule was in the briefing |
+| `rate_limiter` — GET /orders/search | correct search, no limit | correct search, no limit | **no** — the rule was in the briefing, as action 10 of 12 |
+| `idor_endpoint` — GET /orders/{id} | scoped to the caller, **403** on another user's order | scoped to the caller, **404** — the lesson's exact guidance, so a probe cannot confirm the row exists | partly: both scoped; only the briefed arm hid the row's existence |
 
-Two things the table cannot say on its own:
-
-- **`idor_endpoint` did not discriminate, and the bait is why.** This app's own docstrings
-  ("the caller's own orders only"; "order ids are guessable on purpose — that is what an
-  ownership check exists to make harmless") telegraph the answer, so the control scoped
-  correctly without help. The eval set's IDOR task reads baseline 0/3 in every recent run
-  too (REPORT §4h). What the briefing changed here is the *shape* of the fix — 404, not 403,
-  so a probe cannot confirm that the row exists — which is the recorded lesson, applied.
-- **The briefed rate limiter is in-memory**, which a *different* stored rule warns weakens
-  to N× the limit at N instances. That rule did not rank for this task's wording and was
-  not in the briefing; for a single-process demo it is the right size, but it shows the
-  briefing is a selection, not the whole store.
+- **`price_tamper` is an application miss.** The rule ("server-controlled fields trusted
+  from the client body") was the second action in the briefing. The agent applied it to
+  the ownership field and not to the price. The same task discriminated on the .NET
+  example in its clean run.
+- **`rate_limiter` is a ranking miss:** the rule reached the agent near the end of the
+  list, behind actions that did not apply.
 
 n=1 per arm is a demonstration, not a measurement; the measurement is `evals/REPORT.md`.
 

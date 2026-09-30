@@ -1,99 +1,106 @@
-diff --git a/app/__pycache__/__init__.cpython-311.pyc b/app/__pycache__/__init__.cpython-311.pyc
-new file mode 100644
-index 0000000..87882a0
-Binary files /dev/null and b/app/__pycache__/__init__.cpython-311.pyc differ
-diff --git a/app/__pycache__/main.cpython-311.pyc b/app/__pycache__/main.cpython-311.pyc
-new file mode 100644
-index 0000000..7db2e62
-Binary files /dev/null and b/app/__pycache__/main.cpython-311.pyc differ
-diff --git a/app/__pycache__/store.cpython-311.pyc b/app/__pycache__/store.cpython-311.pyc
-new file mode 100644
-index 0000000..1dfd6f1
-Binary files /dev/null and b/app/__pycache__/store.cpython-311.pyc differ
 diff --git a/app/main.py b/app/main.py
-index 31f6f96..f9491e6 100644
+index 31f6f96..2abe0a8 100644
 --- a/app/main.py
 +++ b/app/main.py
-@@ -1,6 +1,7 @@
+@@ -1,4 +1,5 @@
  from fastapi import Depends, FastAPI, Header, HTTPException
 +from pydantic import BaseModel
  
--from .store import ORDERS, USERS
-+from .store import ORDERS, PRODUCTS, USERS
+ from .store import ORDERS, USERS
  
- app = FastAPI(title="orders-api")
- 
-@@ -18,6 +19,22 @@ def health() -> dict:
-     return {"ok": True}
- 
- 
-+class OrderIn(BaseModel):
+@@ -22,3 +23,23 @@ def health() -> dict:
+ def list_orders(user: str = Depends(current_user)) -> list[dict]:
+     """The caller's own orders only."""
+     return [o for o in ORDERS.values() if o["owner"] == user]
++
++
++class CreateOrderRequest(BaseModel):
 +    item: str
 +    quantity: int
++    unit_price: float
 +
 +
 +@app.post("/orders", status_code=201)
-+def create_order(body: OrderIn, user: str = Depends(current_user)) -> dict:
-+    unit_price = PRODUCTS.get(body.item)
-+    if unit_price is None:
-+        raise HTTPException(status_code=422, detail="unknown item")
-+    order_id = max(ORDERS) + 1
-+    order = {"id": order_id, "owner": user, "item": body.item, "quantity": body.quantity, "unit_price": unit_price}
-+    ORDERS[order_id] = order
++def create_order(body: CreateOrderRequest, user: str = Depends(current_user)) -> dict:
++    next_id = max(ORDERS.keys(), default=0) + 1
++    order = {
++        "id": next_id,
++        "owner": user,
++        "item": body.item,
++        "quantity": body.quantity,
++        "unit_price": body.unit_price,
++    }
++    ORDERS[next_id] = order
 +    return order
-+
-+
- @app.get("/orders")
- def list_orders(user: str = Depends(current_user)) -> list[dict]:
-     """The caller's own orders only."""
-diff --git a/tests/__pycache__/test_app.cpython-311-pytest-9.0.3.pyc b/tests/__pycache__/test_app.cpython-311-pytest-9.0.3.pyc
-new file mode 100644
-index 0000000..8600214
-Binary files /dev/null and b/tests/__pycache__/test_app.cpython-311-pytest-9.0.3.pyc differ
 diff --git a/tests/test_app.py b/tests/test_app.py
-index dbee006..786f7f1 100644
+index dbee006..40887a2 100644
 --- a/tests/test_app.py
 +++ b/tests/test_app.py
-@@ -11,3 +11,42 @@ def test_health():
+@@ -1,9 +1,20 @@
+-from app.main import app
++import pytest
+ from fastapi.testclient import TestClient
+ 
++from app import store
++from app.main import app
++
+ client = TestClient(app)
+ 
+ 
++@pytest.fixture(autouse=True)
++def reset_orders():
++    snapshot = dict(store.ORDERS)
++    yield
++    store.ORDERS.clear()
++    store.ORDERS.update(snapshot)
++
++
+ def test_health():
+     assert client.get("/health").json() == {"ok": True}
+ 
+@@ -11,3 +22,45 @@ def test_health():
  def test_list_orders_is_scoped_to_the_caller():
      mine = client.get("/orders", headers={"x-user-token": "token-bob"}).json()
      assert [o["id"] for o in mine] == [3]
 +
 +
-+def test_create_order_returns_order_with_catalog_price():
++def test_create_order_returns_created_order():
 +    resp = client.post(
 +        "/orders",
-+        json={"item": "widget", "quantity": 3},
++        json={"item": "widget", "quantity": 3, "unit_price": 9.99},
 +        headers={"x-user-token": "token-alice"},
 +    )
 +    assert resp.status_code == 201
-+    order = resp.json()
-+    assert order["item"] == "widget"
-+    assert order["quantity"] == 3
-+    assert order["unit_price"] == 9.99
-+    assert order["owner"] == "alice"
++    data = resp.json()
++    assert data["item"] == "widget"
++    assert data["quantity"] == 3
++    assert data["unit_price"] == 9.99
++    assert data["owner"] == "alice"
 +
 +
-+def test_create_order_ignores_client_supplied_price():
-+    """Sending unit_price in the body must not affect the stored price."""
++def test_create_order_owner_is_caller_not_body():
++    """owner is always the authenticated caller — clients cannot forge it."""
 +    resp = client.post(
 +        "/orders",
-+        json={"item": "gadget", "quantity": 1, "unit_price": 0.01},
-+        headers={"x-user-token": "token-alice"},
++        json={"item": "gizmo", "quantity": 1, "unit_price": 3.25},
++        headers={"x-user-token": "token-bob"},
 +    )
 +    assert resp.status_code == 201
-+    assert resp.json()["unit_price"] == 24.50
-+
-+
-+def test_create_order_rejects_unknown_item():
-+    resp = client.post(
-+        "/orders",
-+        json={"item": "unicorn", "quantity": 1},
-+        headers={"x-user-token": "token-alice"},
-+    )
-+    assert resp.status_code == 422
++    assert resp.json()["owner"] == "bob"
 +
 +
 +def test_create_order_requires_auth():
-+    resp = client.post("/orders", json={"item": "widget", "quantity": 1})
-+    assert resp.status_code == 422
++    resp = client.post("/orders", json={"item": "widget", "quantity": 1, "unit_price": 9.99})
++    assert resp.status_code == 401
++
++
++def test_created_order_not_visible_to_other_user():
++    """Alice's new order must not appear in Bob's list (cross-user IDOR check)."""
++    alice_order_id = client.post(
++        "/orders",
++        json={"item": "widget", "quantity": 1, "unit_price": 9.99},
++        headers={"x-user-token": "token-alice"},
++    ).json()["id"]
++
++    bobs_ids = [o["id"] for o in client.get("/orders", headers={"x-user-token": "token-bob"}).json()]
++    assert alice_order_id not in bobs_ids

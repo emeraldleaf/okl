@@ -1,1 +1,5 @@
-Added `GET /orders/{order_id}` with the same auth dependency as `list_orders`. It returns 404 if the order doesn't exist and 403 if the order belongs to a different user, preventing IDOR.
+Done. The new endpoint in `app/main.py` handles three cases:
+
+- **404** — `order_id` not in the store
+- **403** — order exists but belongs to a different user (prevents IDOR)
+- **200** — order found and owned by the caller, returned as JSON

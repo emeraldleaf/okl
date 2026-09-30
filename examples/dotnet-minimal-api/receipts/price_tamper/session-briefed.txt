@@ -1,10 +1,13 @@
-All 5 tests pass. Here's a summary of what was implemented and why each decision was made:
+All 4 tests pass. Here's a summary of the changes:
 
-**`POST /orders` endpoint** — accepts `{ item, quantity }` only; the `unitPrice` is intentionally absent from the DTO. The server looks it up from `Store.Products` and returns 404 if the item isn't in the catalog. The `Owner` is always set from the authenticated caller, never from the request body.
+**`src/Store.cs`** — added `CreateOrderRequest(string Item, int Quantity)` DTO. `unitPrice` is intentionally absent: the endpoint resolves it from `Store.Products` rather than trusting the client to supply it (prevents price-tampering).
 
-**Three new tests:**
-- `Creating_order_returns_201_with_catalog_price` — happy path, verifies owner is the authenticated user and price matches the catalog
-- `Creating_order_without_auth_returns_401` — authorization failure test proving the endpoint is gated
-- `Client_supplied_unit_price_is_ignored_in_favour_of_catalog_price` — directly demonstrates the price-tamper fix: a request body with `unitPrice=0.01` gets the $9.99 catalog price
+**`src/Program.cs`** — added `POST /orders` that:
+- Returns 401 if unauthenticated
+- Returns 400 if the item isn't in the catalog
+- Sets `Owner` from the authenticated identity (not the body) and `UnitPrice` from the catalog
+- Returns 201 Created with the full order
 
-I also fixed a pre-existing issue in `Listing_orders_is_scoped_to_the_caller` — it was mutating the shared `_client`'s default headers, which could bleed into other tests. It now uses a fresh client like the new tests do.
+**`tests/ApiTests.cs`** — two new tests using per-request headers (via `HttpRequestMessage`) to avoid `DefaultRequestHeaders` state bleed:
+- `Creating_order_returns_201_with_caller_as_owner` — verifies correct status, owner, item, quantity, and catalog price
+- `Creating_order_unauthenticated_returns_401` — proves the auth gate

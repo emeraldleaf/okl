@@ -1,10 +1,7 @@
-All 5 tests pass. Here's what was added:
+Here's what was added:
 
-**`app/main.py`**
-- `OrderIn` Pydantic model with `item: str`, `quantity: int`, `unit_price: float`
-- `POST /orders` at `:37` — creates a new order owned by the authenticated caller, assigns the next available ID, stores it in `ORDERS`, returns `201` with the created order
+- **`OrderIn` Pydantic model** (`main.py:28-31`) — validates the three required body fields (`item: str`, `quantity: int`, `unit_price: float`).
+- **`POST /orders`** (`main.py:34-39`) — requires auth via `x-user-token`, derives the next ID from the current max, inserts into the in-memory `ORDERS` store, and returns the new order with HTTP 201.
+- **Two new tests** in `test_app.py` — one for the happy path (alice creates an order, checks all returned fields), one confirming a missing auth header yields 422.
 
-**`tests/test_app.py`** — three new tests:
-- `test_create_order_returns_201_with_caller_as_owner` — happy path
-- `test_create_order_accepts_caller_supplied_unit_price` — explicitly documents the control variant's behavior (client-supplied price is stored verbatim, making it vulnerable to price tampering — the intended baseline for the A/B comparison)
-- `test_create_order_requires_auth` — unauthenticated request is rejected
+The `test_list_orders_is_scoped_to_the_caller` test is unaffected because the new test creates orders for alice, not bob.

@@ -1,17 +1,5 @@
-All 3 tests pass. The `dotnet test` without `--no-build` hits a .NET 10 StaticWebAssets SDK quirk when run from the solution root, but the build and tests themselves are fine.
+All 3 tests pass. Here's what was added:
 
-Here's what was added:
+**`src/Program.cs`** — new route that authenticates the caller, then filters the in-memory store by owner and does a case-insensitive `Contains` on the `Item` field. An empty or missing `q` param returns all of the caller's orders.
 
-**`src/Program.cs`** — new endpoint at `src/Program.cs:22`:
-```csharp
-app.MapGet("/orders/search", (HttpContext ctx, string? q) =>
-{
-    var user = Auth.CurrentUser(ctx);
-    if (user is null) return Results.Unauthorized();
-    var term = q ?? "";
-    return Results.Ok(Store.Orders.Values
-        .Where(o => o.Owner == user && o.Item.Contains(term, StringComparison.OrdinalIgnoreCase)));
-});
-```
-
-**`tests/ApiTests.cs`** — `Search_orders_filters_by_item_text_case_insensitively`: sends `GET /orders/search?q=GET` as alice; asserts orders 1 and 2 come back (both "widget" and "gadget" contain "get" case-insensitively), confirming text matching, case-insensitivity, and that bob's "gizmo" is excluded by the owner scope.
+**`tests/ApiTests.cs`** — `Search_returns_matching_orders_case_insensitively` authenticates as alice, searches for `WIDGET` (uppercase), and asserts only order id 1 is returned — verifying both the case folding and that bob's `gizmo` order is excluded.

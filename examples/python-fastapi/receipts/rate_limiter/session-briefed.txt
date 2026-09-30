@@ -1,12 +1,12 @@
-All 6 tests pass. Here's what was added:
+Done. Here's what was added:
 
-**`app/main.py`** — new endpoint + rate limiter:
-- `GET /orders/search?q=<text>` scoped by `owner == user` in the filter predicate (prevents IDOR cross-user reads)
-- Case-insensitive via `q.lower()` / `item.lower()`
-- Fixed-window rate limiter (30 req / 10 s per user, 429 on reject, no queueing) applied only to the search endpoint per the briefing's guidance on expensive unindexable queries
+**`app/main.py`** — new endpoint at line 27–31:
+- Requires auth via `Depends(current_user)`, same as `GET /orders`
+- Ownership predicate (`o["owner"] == user`) is inside the filter — no IDOR: a query matching another user's item returns nothing
+- Case-insensitive via `.lower()` on both sides
 
 **`tests/test_app.py`** — four new tests:
-- `test_search_returns_matching_orders` — basic match
-- `test_search_is_case_insensitive` — `WIDGET` finds widget
-- `test_search_is_scoped_to_caller` — alice searching `gizmo` (bob's) returns `[]`, guarding the ownership boundary
-- `test_search_returns_429_after_rate_limit` — exhausts the 30-req window, asserts the 31st is rejected
+- `test_search_returns_matching_items_for_caller` — basic happy path
+- `test_search_is_case_insensitive` — uppercase query still matches
+- `test_search_is_scoped_to_the_caller` — IDOR guard: alice searching for bob's "gizmo" returns `[]`
+- `test_search_requires_auth` — missing header → 422

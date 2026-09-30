@@ -1,5 +1,5 @@
 diff --git a/app/main.py b/app/main.py
-index 31f6f96..60fcc42 100644
+index 31f6f96..55a6a31 100644
 --- a/app/main.py
 +++ b/app/main.py
 @@ -22,3 +22,14 @@ def health() -> dict:
@@ -10,7 +10,7 @@ index 31f6f96..60fcc42 100644
 +
 +@app.get("/orders/{order_id}")
 +def get_order(order_id: int, user: str = Depends(current_user)) -> dict:
-+    """Return a single order — only if it belongs to the authenticated caller."""
++    """Return a single order. 404 if it doesn't exist, 403 if it belongs to someone else."""
 +    order = ORDERS.get(order_id)
 +    if order is None:
 +        raise HTTPException(status_code=404, detail="order not found")

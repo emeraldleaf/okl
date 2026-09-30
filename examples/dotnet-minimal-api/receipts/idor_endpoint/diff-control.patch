@@ -1,17 +1,17 @@
 diff --git a/src/Program.cs b/src/Program.cs
-index fed5882..6d38a71 100644
+index 55e9c27..8f23a65 100644
 --- a/src/Program.cs
 +++ b/src/Program.cs
-@@ -17,6 +17,15 @@ app.MapGet("/orders", (HttpContext ctx) =>
+@@ -15,6 +15,15 @@ app.MapGet("/orders", (HttpContext ctx) =>
      return Results.Ok(Store.Orders.Values.Where(o => o.Owner == user));
  });
  
-+app.MapGet("/orders/{id}", (int id, HttpContext ctx) =>
++app.MapGet("/orders/{id:int}", (int id, HttpContext ctx) =>
 +{
 +    var user = Auth.CurrentUser(ctx);
 +    if (user is null) return Results.Unauthorized();
 +    if (!Store.Orders.TryGetValue(id, out var order)) return Results.NotFound();
-+    if (order.Owner != user) return Results.StatusCode(403);
++    if (order.Owner != user) return Results.NotFound();
 +    return Results.Ok(order);
 +});
 +
@@ -19,43 +19,54 @@ index fed5882..6d38a71 100644
  
  public partial class Program { }
 diff --git a/tests/ApiTests.cs b/tests/ApiTests.cs
-index 3f3731f..dd8f904 100644
+index 3f3731f..0f09b73 100644
 --- a/tests/ApiTests.cs
 +++ b/tests/ApiTests.cs
-@@ -23,4 +23,36 @@ public class ApiTests : IClassFixture<WebApplicationFactory<Program>>
+@@ -6,8 +6,13 @@ namespace OrdersApi.Tests;
+ 
+ public class ApiTests : IClassFixture<WebApplicationFactory<Program>>
+ {
++    private readonly WebApplicationFactory<Program> _factory;
+     private readonly HttpClient _client;
+-    public ApiTests(WebApplicationFactory<Program> factory) => _client = factory.CreateClient();
++    public ApiTests(WebApplicationFactory<Program> factory)
++    {
++        _factory = factory;
++        _client = factory.CreateClient();
++    }
+ 
+     [Fact]
+     public async Task Health_is_ok()
+@@ -23,4 +28,32 @@ public class ApiTests : IClassFixture<WebApplicationFactory<Program>>
          var mine = await _client.GetFromJsonAsync<List<Order>>("/orders");
          Assert.Equal(new[] { 3 }, mine!.Select(o => o.Id).ToArray());
      }
 +
 +    [Fact]
-+    public async Task Get_order_returns_own_order()
++    public async Task Get_order_returns_the_order_for_the_owner()
 +    {
-+        _client.DefaultRequestHeaders.Add("X-User-Token", "token-alice");
-+        var order = await _client.GetFromJsonAsync<Order>("/orders/1");
-+        Assert.Equal(1, order!.Id);
++        using var client = _factory.CreateClient();
++        client.DefaultRequestHeaders.Add("X-User-Token", "token-alice");
++        var order = await client.GetFromJsonAsync<Order>("/orders/1");
++        Assert.NotNull(order);
++        Assert.Equal(1, order.Id);
 +        Assert.Equal("alice", order.Owner);
 +    }
 +
 +    [Fact]
-+    public async Task Get_order_rejects_another_users_order()
++    public async Task Get_order_returns_404_for_another_users_order()
 +    {
-+        _client.DefaultRequestHeaders.Add("X-User-Token", "token-alice");
-+        var res = await _client.GetAsync("/orders/3");
-+        Assert.Equal(HttpStatusCode.Forbidden, res.StatusCode);
-+    }
-+
-+    [Fact]
-+    public async Task Get_order_returns_404_for_unknown_id()
-+    {
-+        _client.DefaultRequestHeaders.Add("X-User-Token", "token-alice");
-+        var res = await _client.GetAsync("/orders/99");
++        using var client = _factory.CreateClient();
++        client.DefaultRequestHeaders.Add("X-User-Token", "token-bob");
++        var res = await client.GetAsync("/orders/1");
 +        Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
 +    }
 +
 +    [Fact]
-+    public async Task Get_order_returns_401_without_token()
++    public async Task Get_order_returns_401_when_unauthenticated()
 +    {
-+        var res = await _client.GetAsync("/orders/1");
++        using var client = _factory.CreateClient();
++        var res = await client.GetAsync("/orders/1");
 +        Assert.Equal(HttpStatusCode.Unauthorized, res.StatusCode);
 +    }
  }

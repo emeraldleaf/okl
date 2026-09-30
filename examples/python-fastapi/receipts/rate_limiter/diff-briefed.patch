@@ -1,120 +1,52 @@
-diff --git a/app/__pycache__/__init__.cpython-311.pyc b/app/__pycache__/__init__.cpython-311.pyc
-new file mode 100644
-index 0000000..8a00595
-Binary files /dev/null and b/app/__pycache__/__init__.cpython-311.pyc differ
-diff --git a/app/__pycache__/main.cpython-311.pyc b/app/__pycache__/main.cpython-311.pyc
-new file mode 100644
-index 0000000..c1ffe73
-Binary files /dev/null and b/app/__pycache__/main.cpython-311.pyc differ
-diff --git a/app/__pycache__/store.cpython-311.pyc b/app/__pycache__/store.cpython-311.pyc
-new file mode 100644
-index 0000000..73b84f7
-Binary files /dev/null and b/app/__pycache__/store.cpython-311.pyc differ
 diff --git a/app/main.py b/app/main.py
-index 31f6f96..1a27892 100644
+index 31f6f96..e4d38d4 100644
 --- a/app/main.py
 +++ b/app/main.py
-@@ -1,9 +1,26 @@
--from fastapi import Depends, FastAPI, Header, HTTPException
-+import time
-+from collections import defaultdict
-+
-+from fastapi import Depends, FastAPI, Header, HTTPException, Query
- 
- from .store import ORDERS, USERS
- 
- app = FastAPI(title="orders-api")
- 
-+# Fixed-window policy: 30 req / 10 s per user, no queueing, 429 on reject.
-+_SEARCH_LIMIT = 30
-+_SEARCH_WINDOW = 10.0
-+_rate_counters: dict[str, list[float]] = defaultdict(list)
-+
-+
-+def _search_rate_limit(user: str) -> None:
-+    now = time.monotonic()
-+    window_start = now - _SEARCH_WINDOW
-+    _rate_counters[user] = [t for t in _rate_counters[user] if t > window_start]
-+    if len(_rate_counters[user]) >= _SEARCH_LIMIT:
-+        raise HTTPException(status_code=429, detail="rate limit exceeded")
-+    _rate_counters[user].append(now)
-+
- 
- def current_user(x_user_token: str = Header(...)) -> str:
-     """Resolve the caller from a bearer-like header. Deliberately simple."""
-@@ -22,3 +39,16 @@ def health() -> dict:
+@@ -22,3 +22,10 @@ def health() -> dict:
  def list_orders(user: str = Depends(current_user)) -> list[dict]:
      """The caller's own orders only."""
      return [o for o in ORDERS.values() if o["owner"] == user]
 +
 +
 +@app.get("/orders/search")
-+def search_orders(
-+    q: str = Query(..., min_length=1),
-+    user: str = Depends(current_user),
-+) -> list[dict]:
-+    _search_rate_limit(user)
-+    needle = q.lower()
-+    return [
-+        o for o in ORDERS.values()
-+        if o["owner"] == user and needle in o["item"].lower()
-+    ]
-diff --git a/tests/__pycache__/test_app.cpython-311-pytest-9.0.3.pyc b/tests/__pycache__/test_app.cpython-311-pytest-9.0.3.pyc
-new file mode 100644
-index 0000000..a5d2833
-Binary files /dev/null and b/tests/__pycache__/test_app.cpython-311-pytest-9.0.3.pyc differ
++def search_orders(q: str, user: str = Depends(current_user)) -> list[dict]:
++    """The caller's own orders whose item contains q, case-insensitive."""
++    q_lower = q.lower()
++    return [o for o in ORDERS.values() if o["owner"] == user and q_lower in o["item"].lower()]
 diff --git a/tests/test_app.py b/tests/test_app.py
-index dbee006..515f798 100644
+index dbee006..9588346 100644
 --- a/tests/test_app.py
 +++ b/tests/test_app.py
-@@ -1,3 +1,4 @@
-+import app.main as main_module
- from app.main import app
- from fastapi.testclient import TestClient
- 
-@@ -11,3 +12,45 @@ def test_health():
+@@ -11,3 +11,32 @@ def test_health():
  def test_list_orders_is_scoped_to_the_caller():
      mine = client.get("/orders", headers={"x-user-token": "token-bob"}).json()
      assert [o["id"] for o in mine] == [3]
 +
 +
-+def test_search_returns_matching_orders():
-+    # Arrange: alice has widget (id=1) and gadget (id=2)
-+    results = client.get(
-+        "/orders/search?q=widget",
-+        headers={"x-user-token": "token-alice"},
-+    ).json()
-+    # Assert: only the widget order is returned
-+    assert [r["id"] for r in results] == [1]
++def test_search_returns_matching_items_for_caller():
++    # Arrange: alice has orders for 'widget' (1) and 'gadget' (2)
++    # Act
++    results = client.get("/orders/search?q=widget", headers={"x-user-token": "token-alice"}).json()
++    # Assert: only the matching order is returned
++    assert [o["id"] for o in results] == [1]
 +
 +
 +def test_search_is_case_insensitive():
-+    results = client.get(
-+        "/orders/search?q=WIDGET",
-+        headers={"x-user-token": "token-alice"},
-+    ).json()
-+    assert [r["id"] for r in results] == [1]
++    # Arrange: alice has a 'gadget' order; query uses uppercase
++    # Act
++    results = client.get("/orders/search?q=GADGET", headers={"x-user-token": "token-alice"}).json()
++    # Assert: case difference does not prevent a match
++    assert [o["id"] for o in results] == [2]
 +
 +
-+def test_search_is_scoped_to_caller():
-+    # Arrange: bob owns the only "gizmo" order; alice queries for it
-+    results = client.get(
-+        "/orders/search?q=gizmo",
-+        headers={"x-user-token": "token-alice"},
-+    ).json()
-+    # Assert (1): alice sees nothing — ownership predicate blocks cross-user read (IDOR guard)
++def test_search_is_scoped_to_the_caller():
++    # Arrange: 'gizmo' belongs to bob, not alice — cross-owner leak would be an IDOR
++    # Act: alice searches for a term that matches only bob's order
++    results = client.get("/orders/search?q=gizmo", headers={"x-user-token": "token-alice"}).json()
++    # Assert: alice sees nothing; bob's order must not leak
 +    assert results == []
 +
 +
-+def test_search_returns_429_after_rate_limit():
-+    # Arrange: fresh window for bob
-+    main_module._rate_counters.pop("bob", None)
-+    headers = {"x-user-token": "token-bob"}
-+    for _ in range(30):
-+        r = client.get("/orders/search?q=g", headers=headers)
-+        assert r.status_code == 200  # all 30 within the limit succeed
-+
-+    # Act: 31st request in the same window
-+    r = client.get("/orders/search?q=g", headers=headers)
-+    # Assert: rejected without queuing — rate policy enforced
-+    assert r.status_code == 429
++def test_search_requires_auth():
++    resp = client.get("/orders/search?q=widget")
++    assert resp.status_code == 422  # missing required header

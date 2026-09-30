@@ -1,15 +1,3 @@
-diff --git a/app/__pycache__/__init__.cpython-311.pyc b/app/__pycache__/__init__.cpython-311.pyc
-new file mode 100644
-index 0000000..5d43a66
-Binary files /dev/null and b/app/__pycache__/__init__.cpython-311.pyc differ
-diff --git a/app/__pycache__/main.cpython-311.pyc b/app/__pycache__/main.cpython-311.pyc
-new file mode 100644
-index 0000000..fc232a6
-Binary files /dev/null and b/app/__pycache__/main.cpython-311.pyc differ
-diff --git a/app/__pycache__/store.cpython-311.pyc b/app/__pycache__/store.cpython-311.pyc
-new file mode 100644
-index 0000000..6fe3367
-Binary files /dev/null and b/app/__pycache__/store.cpython-311.pyc differ
 diff --git a/app/main.py b/app/main.py
 index 31f6f96..119c860 100644
 --- a/app/main.py
@@ -27,32 +15,3 @@ index 31f6f96..119c860 100644
 +    if order is None or order["owner"] != user:
 +        raise HTTPException(status_code=404, detail="order not found")
 +    return order
-diff --git a/tests/__pycache__/test_app.cpython-311-pytest-9.0.3.pyc b/tests/__pycache__/test_app.cpython-311-pytest-9.0.3.pyc
-new file mode 100644
-index 0000000..88a8e68
-Binary files /dev/null and b/tests/__pycache__/test_app.cpython-311-pytest-9.0.3.pyc differ
-diff --git a/tests/test_app.py b/tests/test_app.py
-index dbee006..3b7e3fb 100644
---- a/tests/test_app.py
-+++ b/tests/test_app.py
-@@ -11,3 +11,20 @@ def test_health():
- def test_list_orders_is_scoped_to_the_caller():
-     mine = client.get("/orders", headers={"x-user-token": "token-bob"}).json()
-     assert [o["id"] for o in mine] == [3]
-+
-+
-+def test_get_order_returns_own_order():
-+    r = client.get("/orders/3", headers={"x-user-token": "token-bob"})
-+    assert r.status_code == 200
-+    assert r.json()["id"] == 3
-+
-+
-+def test_get_order_idor_returns_404():
-+    # bob must not be able to read alice's order 1
-+    r = client.get("/orders/1", headers={"x-user-token": "token-bob"})
-+    assert r.status_code == 404
-+
-+
-+def test_get_order_missing_returns_404():
-+    r = client.get("/orders/999", headers={"x-user-token": "token-alice"})
-+    assert r.status_code == 404

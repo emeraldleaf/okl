@@ -1,12 +1,12 @@
 diff --git a/src/Program.cs b/src/Program.cs
-index fed5882..8c97746 100644
+index 55e9c27..647d83c 100644
 --- a/src/Program.cs
 +++ b/src/Program.cs
-@@ -17,6 +17,16 @@ app.MapGet("/orders", (HttpContext ctx) =>
+@@ -15,6 +15,16 @@ app.MapGet("/orders", (HttpContext ctx) =>
      return Results.Ok(Store.Orders.Values.Where(o => o.Owner == user));
  });
  
-+app.MapPost("/orders", (HttpContext ctx, CreateOrderRequest req) =>
++app.MapPost("/orders", async (HttpContext ctx, CreateOrderRequest req) =>
 +{
 +    var user = Auth.CurrentUser(ctx);
 +    if (user is null) return Results.Unauthorized();
@@ -20,35 +20,32 @@ index fed5882..8c97746 100644
  
  public partial class Program { }
 diff --git a/src/Store.cs b/src/Store.cs
-index 9f7fc37..ed015bd 100644
+index 9f7fc37..1cce69c 100644
 --- a/src/Store.cs
 +++ b/src/Store.cs
-@@ -1,6 +1,7 @@
- namespace OrdersApi;
+@@ -2,6 +2,8 @@ namespace OrdersApi;
  
  public record Order(int Id, string Owner, string Item, int Quantity, decimal UnitPrice);
-+public record CreateOrderRequest(string Item, int Quantity, decimal UnitPrice);
  
++public record CreateOrderRequest(string Item, int Quantity, decimal UnitPrice);
++
  /// In-memory data: two users, orders that belong to each.
  public static class Store
+ {
 diff --git a/tests/ApiTests.cs b/tests/ApiTests.cs
-index 3f3731f..68628cc 100644
+index 3f3731f..c261b46 100644
 --- a/tests/ApiTests.cs
 +++ b/tests/ApiTests.cs
-@@ -23,4 +23,21 @@ public class ApiTests : IClassFixture<WebApplicationFactory<Program>>
+@@ -23,4 +23,17 @@ public class ApiTests : IClassFixture<WebApplicationFactory<Program>>
          var mine = await _client.GetFromJsonAsync<List<Order>>("/orders");
          Assert.Equal(new[] { 3 }, mine!.Select(o => o.Id).ToArray());
      }
 +
 +    [Fact]
-+    public async Task Creating_an_order_returns_201_with_the_new_order()
++    public async Task Creating_an_order_returns_201_with_caller_as_owner()
 +    {
-+        var req = new HttpRequestMessage(HttpMethod.Post, "/orders")
-+        {
-+            Content = JsonContent.Create(new { item = "widget", quantity = 3, unitPrice = 9.99m }),
-+        };
-+        req.Headers.Add("X-User-Token", "token-alice");
-+        var res = await _client.SendAsync(req);
++        _client.DefaultRequestHeaders.Add("X-User-Token", "token-alice");
++        var res = await _client.PostAsJsonAsync("/orders", new { item = "widget", quantity = 3, unitPrice = 9.99m });
 +        Assert.Equal(HttpStatusCode.Created, res.StatusCode);
 +        var order = await res.Content.ReadFromJsonAsync<Order>();
 +        Assert.Equal("alice", order!.Owner);

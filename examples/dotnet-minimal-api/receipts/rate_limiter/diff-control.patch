@@ -1,8 +1,8 @@
 diff --git a/src/Program.cs b/src/Program.cs
-index fed5882..4ec9e64 100644
+index 55e9c27..253c2a1 100644
 --- a/src/Program.cs
 +++ b/src/Program.cs
-@@ -17,6 +17,15 @@ app.MapGet("/orders", (HttpContext ctx) =>
+@@ -15,6 +15,15 @@ app.MapGet("/orders", (HttpContext ctx) =>
      return Results.Ok(Store.Orders.Values.Where(o => o.Owner == user));
  });
  
@@ -19,23 +19,19 @@ index fed5882..4ec9e64 100644
  
  public partial class Program { }
 diff --git a/tests/ApiTests.cs b/tests/ApiTests.cs
-index 3f3731f..91ec428 100644
+index 3f3731f..486bf66 100644
 --- a/tests/ApiTests.cs
 +++ b/tests/ApiTests.cs
-@@ -23,4 +23,16 @@ public class ApiTests : IClassFixture<WebApplicationFactory<Program>>
+@@ -23,4 +23,12 @@ public class ApiTests : IClassFixture<WebApplicationFactory<Program>>
          var mine = await _client.GetFromJsonAsync<List<Order>>("/orders");
          Assert.Equal(new[] { 3 }, mine!.Select(o => o.Id).ToArray());
      }
 +
 +    [Fact]
-+    public async Task Search_orders_filters_by_item_text_case_insensitively()
++    public async Task Search_returns_matching_orders_case_insensitively()
 +    {
-+        // alice owns "widget" (1) and "gadget" (2); both contain "get" case-insensitively.
-+        // bob's "gizmo" (3) must be excluded even though it also matches the owner check never fires.
-+        var req = new HttpRequestMessage(HttpMethod.Get, "/orders/search?q=GET");
-+        req.Headers.Add("X-User-Token", "token-alice");
-+        var res = await _client.SendAsync(req);
-+        var results = await res.Content.ReadFromJsonAsync<List<Order>>();
-+        Assert.Equal(new[] { 1, 2 }, results!.Select(o => o.Id).Order().ToArray());
++        _client.DefaultRequestHeaders.Add("X-User-Token", "token-alice");
++        var results = await _client.GetFromJsonAsync<List<Order>>("/orders/search?q=WIDGET");
++        Assert.Equal(new[] { 1 }, results!.Select(o => o.Id).ToArray());
 +    }
  }

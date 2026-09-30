@@ -1,13 +1,12 @@
-All 7 tests pass. Here's a summary of what was added and why each decision was made:
+All 5 tests pass. Here's what was added:
 
-**`src/Program.cs`**
-- `GET /orders/search?q=<text>` filters by both `o.Owner == user` (prevents IDOR — alice can't see bob's orders even with a matching query) and `o.Item.Contains(q, StringComparison.OrdinalIgnoreCase)` (case-insensitive)
-- Named fixed-window rate limiter policy `"search-limit"` (30 req/10s, no queueing, 429 on reject) applied via `RequireRateLimiting` — the briefing flagged that a full-scan search with no index is a single-client DoS vector
-- `PermitLimit` is read from `RateLimit:SearchPermitLimit` in configuration so tests can override it via `UseSetting` without hitting the "duplicate policy name" error that `PostConfigure` caused
+**`src/Program.cs`** — new endpoint `GET /orders/search?q=<text>`:
+- Returns 401 if unauthenticated
+- Returns 400 if `q` is missing/blank
+- Filters by `o.Owner == user` in the same predicate as the item match — ownership scope is never an afterthought, so another user's data can't leak through
+- Uses `StringComparison.OrdinalIgnoreCase` for case-insensitive substring match
 
-**`tests/ApiTests.cs`** — 5 new tests in `SearchTests`:
-- `Search_returns_matching_orders_for_the_caller` — happy path
-- `Search_is_case_insensitive` — "WIDGET" matches "widget"
-- `Search_does_not_expose_another_users_orders` — alice gets empty results searching bob's item (IDOR proof)
-- `Search_returns_401_without_authentication` — unauthenticated request
-- `Search_returns_429_after_rate_limit_is_exceeded` — isolated factory with `UseSetting("RateLimit:SearchPermitLimit", "2")` so the test runs in 3 requests instead of 31
+**`tests/ApiTests.cs`** — three new tests:
+- `Search_returns_matching_orders_case_insensitively` — alice searches "GET" (uppercase), gets back both "widget" and "gadget"
+- `Search_cannot_return_another_users_orders` — bob searches "widget" (alice's item), gets empty list (IDOR guard)
+- `Search_without_auth_returns_401` — no token, blocked before the query runs
