@@ -7,6 +7,7 @@
   "mcpServers": "./.mcp.json",
   "commands": [
     "./src/okl/scaffold/claude/commands/check-rules.md",
+    "./src/okl/scaffold/claude/commands/record.md",
     "./src/okl/scaffold/claude/commands/seed-from-codebase.md",
     "./src/okl/scaffold/claude/commands/seed-from-docs.md"
   ],

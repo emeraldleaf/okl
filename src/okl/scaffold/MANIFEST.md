@@ -12,7 +12,7 @@ any language/stack. The parts you complete per repo are marked inline with `<<FI
 | `claude/skills/encoding-loop/`, `verify-before-claiming/` | `.claude/skills/` | fully portable |
 | `claude/skills/RECOMMENDED-COMPANIONS.md` | `.claude/skills/` | reference — third-party skills worth pairing |
 | `claude/agents/architecture-reviewer.md` | `.claude/agents/` | skeleton + FILL for stack checks |
-| `claude/commands/feature-spec.md`, `check-rules.md`, `seed-from-codebase.md`, `seed-from-docs.md` | `.claude/commands/` | portable |
+| `claude/commands/feature-spec.md`, `check-rules.md`, `record.md`, `seed-from-codebase.md`, `seed-from-docs.md` | `.claude/commands/` | portable |
 | `claude/rules/example-area.md` | `.claude/rules/` | template — copy per area, set `paths:` |
 | `gates/*.sh` | `gates/` | fully portable (retractions/tombstones/doc-orphans/links/diagram-pairs/canon-size) |
 | `registries/*` | `registries/` | portable format; FILL entries as earned |

@@ -57,7 +57,10 @@ nothing is wired twice. (Installed after? `okl doctor` reports the double wiring
 `okl init --uninstall` removes the project copy.)
 
 **3. Add a rule of your own.** The starter lessons are generic; what pays is what only your
-codebase knows:
+codebase knows. Tell your agent — *"record an okl rule for this repo: order lookups are
+scoped to the signed-in customer; governs app/orders.py"* — and it records the lesson with
+okl's `okl_record` MCP tool (in Claude Code, `/record` drafts it and asks you first).
+Underneath, that is one CLI call you can also run yourself:
 
 ```bash
 okl record --type Rule --scope repo --id order-owner-scope \
@@ -82,9 +85,14 @@ okl doctor                  # flags other agent-memory tools and double wiring
 - **You prompt as usual.** The pre-task hook runs `okl check` on what you typed and puts
   the relevant lessons in the agent's context before it starts, and shows you one line —
   *okl · briefed 9 lesson(s): …* — so you can see it working (`OKL_QUIET=1` hides it).
-- **At the end of a session that changed files,** the agent is asked once what it
-  learned. If something is worth keeping, it runs `okl record` — with `--files` when the
-  lesson governs specific code.
+- **When you learn something worth keeping** — a decision, a convention the agent broke,
+  a bug you fixed — say so and the agent records it (`okl_record`, or `okl record`), with
+  the files it governs. In Claude Code the Stop hook also asks once, at the end of a
+  session that changed files, what was learned.
+- **Using another agent?** The briefing and recording are MCP tools (`okl mcp`); register
+  them and add one line to your `AGENTS.md`: *before each task call `okl_check`*. The hooks
+  that do this automatically are Claude Code's; see
+  [Getting started](docs/GETTING-STARTED.md#using-another-agent).
 - **Proving a lesson is true** is a check you run, not a flag you set:
   `okl verify <id> --run "pytest -q tests/test_orders.py" --expect "passed"`.
 - **When code a lesson governs changes,** `okl drift` goes red until someone re-runs its

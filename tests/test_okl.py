@@ -960,6 +960,15 @@ def test_mcp_server_builds_and_its_tools_actually_run(tmp_path, monkeypatch):
             "type": "Rule", "title": "recorded through the MCP layer", "scope": "repo"}))
         assert rec.startswith("recorded "), rec
 
+        # ASSERT (3b) — an agent asked to "record that" can give a stable id, and
+        # recording the same id again updates the lesson instead of duplicating it.
+        for title in ("first wording", "refined wording"):
+            rec = unwrap(await mcp.call_tool("okl_record", {
+                "type": "Rule", "title": title, "scope": "repo", "id": "mcp-stable-id"}))
+            assert rec.startswith("recorded mcp-stable-id"), rec
+        assert "refined wording" in unwrap(await mcp.call_tool(
+            "okl_search", {"query": "refined wording", "limit": 3}))
+
         # ASSERT (4) — a bad tag returns readable guidance naming the vocabulary, not an
         # exception. An agent that cannot read the complaint cannot fix its own call.
         bad = unwrap(await mcp.call_tool("okl_record", {

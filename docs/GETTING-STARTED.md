@@ -54,20 +54,21 @@ it for your user does not disturb your other projects.
 
 ### Add your first rule of your own
 
-The starter lessons are generic. What makes okl pay is what only your codebase knows. Record
-one convention this repo already has, right now — section 2 shows the full habit:
+The starter lessons are generic. What makes okl pay is what only your codebase knows. Open
+your agent in the repo and tell it one convention this codebase already has:
 
-```bash
-okl record --type Rule --scope repo --id order-owner-scope \
-  --title "Order lookups are scoped to the signed-in customer" \
-  --symptom "an endpoint fetches an order by id with no owner filter" \
-  --body "cause: order ids are sequential, so any id is guessable" \
-  --fix "filter by the caller's customer id in the query; return 404 on no match"
-```
+> Record an okl rule for this repo: order lookups are always scoped to the signed-in
+> customer, because order ids are sequential. Governs app/orders.py.
 
-More bundled lessons: `okl seed` lists every pack and `okl seed <name>` imports one. With
-`okl scaffold .` you also get a `/seed-from-codebase` command: your agent proposes cited
-records from this repo's own code, for you to review before importing.
+The agent records it through okl's `okl_record` MCP tool — any agent that speaks MCP has
+it — or by running `okl record`. In Claude Code, `/record` drafts the lesson, shows it to
+you and records it once you confirm. Section 2 shows what a good lesson contains and the CLI
+underneath.
+
+To start from what the code already does rather than from memory, run
+`/seed-from-codebase` (Claude Code): the agent reads the repo and proposes cited lessons
+into a file you review before importing anything (`okl scaffold .` adds it outside the plugin). `okl seed`
+lists more bundled packs; `okl seed <name>` imports one.
 
 ### Check it works
 
@@ -93,6 +94,21 @@ Not `.okl/`: it holds the local store and machine-specific paths, and `init` git
 
 From now on you prompt Claude Code as usual. The briefing arrives on its own.
 
+### Using another agent
+
+The store, the CLI, the MCP tools and the CI drift gate do not depend on Claude Code. The
+automatic parts do: the per-prompt briefing and the end-of-session question are Claude Code
+hooks. With any other agent that supports MCP (Cursor, Codex, Copilot, Gemini CLI…):
+
+1. Register okl's MCP server in that agent's config — the command is `okl mcp` (stdio).
+   It exposes `okl_check`, `okl_record` and `okl_search`.
+2. Add one line to the agent's instruction file (`AGENTS.md`, `.cursorrules`…): *Before
+   each task, call `okl_check` with the task description and follow what it returns. When
+   we learn something worth keeping, record it with `okl_record`.*
+
+That gives the same briefing and recording, triggered by the instruction file instead of a
+hook. Agents without MCP can run `okl check --task "…"` and `okl record` as shell commands.
+
 ---
 
 ## 2. Add to the canon as you build a feature
@@ -110,18 +126,50 @@ lessons in the agent's context. To see what it will get, run it yourself:
 okl check --task "add discount codes to checkout"
 ```
 
-### While you build: record decisions, rules and bugs as they happen
+### While you build: say it, and your agent records it
 
-**A decision** — something chosen on purpose that should not be quietly reversed:
+You will not type most lessons. The moment something is worth not relearning — a choice
+made on purpose, a convention the agent just broke, a bug you just fixed — say so in the
+session:
 
-```bash
-okl record --type Decision --scope repo --id discount-single-use \
-  --title "Discount codes are single-use per customer" \
-  --body "why: marketing budgets per customer; reuse was abused in the 2025 pilot"
-```
+> That's a decision: discount codes are single-use per customer, because reuse was
+> abused in the 2025 pilot. Record it.
 
-**A rule** — a convention, with the symptom that should trigger it and the fix. Add
-`--files` when it governs specific code; that is what lets CI notice when the code moves:
+> Record a rule: discount amounts are computed server-side, never taken from the request.
+> It governs app/checkout.py.
+
+> Record the rounding bug we just fixed so it doesn't come back.
+
+The agent turns each into a lesson with okl's `okl_record` MCP tool, or with `okl record`
+if it has no MCP. In Claude Code, `/record` does the same with a checklist: it drafts from
+the conversation, shows you the draft, and records it only when you confirm.
+
+**When the session ends** in Claude Code, if it changed files, the Stop hook asks once:
+*did this session learn anything worth recording?* It lists commands that failed during the
+session as candidates. That question is the safety net for the lessons nobody stopped to say out loud;
+answer it, or say explicitly that nothing was worth keeping.
+
+### What a good lesson contains
+
+Whoever writes it, you or the agent, a lesson is one record. Check the draft for these:
+
+| Field | What it is | Example |
+|---|---|---|
+| type | **Decision** (made on purpose), **Rule** (a convention), **Defect** (a bug fixed) | Rule |
+| id | a short stable key; recording the same id again updates the lesson instead of duplicating it | `discount-server-side` |
+| symptom → fix | what an agent would see or do that should trigger it, and what to do instead — this is the line the briefing leads with | "a request body carries a discount amount" → "accept only the code; compute totals on the server" |
+| files | the code it governs; lets CI notice when that code changes | `app/checkout.py` |
+| scope | `repo` stays here; `org` reaches every repo sharing your store — only for lessons true anywhere | repo |
+
+Leave `applies_to` unset unless the lesson is false off one stack; unset is the safe
+default. Tags come from the list in section 1. Other types you will reach for: **Gate** (an
+automated check, linked to what it catches with `okl link <gate-id> CATCHES <defect-id>`),
+**Tombstone** (a retired name that must not come back), **Retraction** (a claim withdrawn).
+
+### Underneath: the CLI
+
+Everything above ends up as an `okl record` call. You can run it yourself — in scripts, in
+CI, or when you know exactly what you want:
 
 ```bash
 okl record --type Rule --scope repo --id discount-server-side \
@@ -132,34 +180,18 @@ okl record --type Rule --scope repo --id discount-server-side \
   --files "app/checkout.py"
 ```
 
-**A defect** — a bug you just fixed, so the next session does not reintroduce it:
+The same record from a Decision needs only `--type Decision`, `--title` and a `--body`
+starting `why:`. There is no delete command, on purpose; re-record the id to correct a
+lesson.
 
-```bash
-okl record --type Defect --scope repo --id discount-rounding \
-  --title "Percentage discounts rounded per line, not per order" \
-  --symptom "order totals off by a cent on multi-line orders with a percent code" \
-  --body "cause: round() applied inside the line loop" \
-  --fix "sum unrounded line amounts, round the order total once"
-```
+### Store records vs. CLAUDE.md / AGENTS.md
 
-Three choices to make each time:
-
-- **`--id`** — a short stable key. Recording the same id again updates that record instead
-  of adding a near-duplicate (there is no delete command, on purpose).
-- **`--scope repo`** stays in this repo. **`--scope org`** reaches every repo that shares
-  your store — use it for lessons true anywhere, and add `--tags` from the list above.
-- **`--applies-to`** — leave it unset unless the lesson is false off one stack. Unset is
-  the safe default.
-
-Other record types you will reach for: **Gate** (an automated check, linked to what it
-catches with `okl link <gate-id> CATCHES <defect-id>`), **Tombstone** (a retired name that
-must not come back), **Retraction** (a claim withdrawn).
-
-### When the session ends
-
-If the session changed files, the Stop hook asks once: *did this session learn anything
-worth recording?* It lists commands that failed during the session as candidates. Record
-what is worth keeping, or say explicitly that nothing was.
+Your agent's instruction file (`CLAUDE.md`, `AGENTS.md`, `.cursorrules`…) is loaded into
+every session in full, so keep it to the few
+rules that are always relevant. Everything that matters only for some tasks belongs in the
+store, where the briefing picks the relevant lessons for each prompt and CI can check them.
+When you are about to add a paragraph to that file, ask whether it should be a lesson
+instead. It usually should.
 
 ### Prove it: a lesson is verified by running a check
 

@@ -72,7 +72,8 @@ def _build():
                    status: str | None = None, found_by: str | None = None,
                    ttl_days: int | None = None, repo: str | None = None,
                    symptom: str | None = None, fix: str | None = None,
-                   files: str | None = None, tags: str | None = None) -> str:
+                   files: str | None = None, tags: str | None = None,
+                   id: str | None = None, applies_to: str | None = None) -> str:
         """Record a lesson so other repos inherit it.
 
         scope='org' for facts about the world (prior art, API contracts, data
@@ -83,11 +84,16 @@ def _build():
         goes in body). files (comma-sep globs) enrolls it in drift detection.
         tags (comma-sep, controlled vocabulary — e.g. react, security,
         eval-integrity) categorize the subject so `check` can filter by interest.
+        id is a short stable key: recording the same id again updates that lesson
+        instead of adding a near-duplicate — reuse it when refining a lesson.
+        applies_to: leave unset unless the lesson is false off one stack; unset
+        reaches every repo, a wrong value hides the lesson silently.
         """
         try:
             node_id = client.record(type=type, title=title, scope=scope, body=body,
                                     status=status, found_by=found_by, ttl_days=ttl_days,
-                                    repo=repo, symptom=symptom, fix=fix, files=files, tags=tags)
+                                    repo=repo, symptom=symptom, fix=fix, files=files, tags=tags,
+                                    id=id, applies_to=applies_to)
         except ValueError as e:
             # Hand the agent the actual complaint (unknown tag, bad scope) so it can fix
             # its own call. Raising here surfaces as an opaque "Error executing tool",
