@@ -316,7 +316,7 @@ def cmd_init(args) -> int:
             print("  .claude/hooks/userpromptsubmit-okl-check.sh   executable; runs when you submit a task")
             print("  .claude/hooks/stop-okl-encode.sh             executable; runs when a session ends")
             print("  .claude/settings.json                   registers those two hooks (merged, existing keys kept)")
-            print("  .mcp.json                               registers the okl MCP server (only if okl[mcp] is installed)")
+            print("  .mcp.json                               registers the okl MCP server (only if the [mcp] extra is installed)")
         elif why:
             print(f"  (no Claude Code hooks: {why})")
         else:
@@ -374,7 +374,7 @@ def cmd_doctor(args) -> int:
 
 
 def _install_claude_wiring(claude: Path, force: bool = False) -> None:
-    """Install AND register the hooks: the PreToolUse check (the enforced read) and the
+    """Install AND register the hooks: the UserPromptSubmit check (the enforced read) and the
     Stop encode reminder (the write-side catch). Scripts come from the packaged scaffold —
     one canonical source, no drift. Also registers the MCP server when the extra exists."""
     hooks = claude / "hooks"
@@ -1230,7 +1230,7 @@ def build_parser() -> argparse.ArgumentParser:
     psc = sub.add_parser("scaffold", help="stamp the portable method kit into a repo")
     psc.add_argument("target", nargs="?", default=".", help="target repo dir (default: cwd)")
     psc.add_argument("--repo", help="repo name (default: dir name)")
-    psc.add_argument("--plugin", action="store_true", help="also write plugin.json (Claude Code plugin)")
+    psc.add_argument("--plugin", action="store_true", help="also write .claude-plugin/plugin.json (Claude Code plugin)")
     from .scaffold_cmd import list_profiles
     psc.add_argument("--profile", action="append", choices=list_profiles(), metavar="PROFILE",
                      help="drop a stack's verbatim canon into .claude/rules/; repeatable and composable, "

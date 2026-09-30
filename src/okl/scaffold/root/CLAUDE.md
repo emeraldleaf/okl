@@ -9,7 +9,8 @@
 
 This repo runs the **encoding loop**: a trigger (planning, a bug, a review finding, an audit)
 produces a rule; the response is always **pick the smallest surface → encode it → promote down the
-spectrum as it earns its keep**. Five surfaces, softest→strongest (1→5 *is* moving down):
+spectrum as it earns its keep**. Five in-repo surfaces, softest→strongest (1→5 *is* moving down);
+a sixth, okl, spans repos:
 
 1. Deep reference — `docs/` + diagrams (passive)
 2. Always-on canon — this file + `.claude/`

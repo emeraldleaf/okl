@@ -4,7 +4,7 @@ This is how Claude Code / Cursor / Copilot call the layer as first-class tools.
 It resolves through the same Client, so it works in local OR remote mode. The
 check tool fails CLOSED (raises) if a configured remote is unreachable.
 
-Requires the `mcp` package: install okl[mcp]. Run: `okl mcp` (stdio transport).
+Requires the `mcp` package: install 'observed-knowledge-ledger[mcp]'. Run: `okl mcp` (stdio transport).
 """
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ def _build():
         except (ImportError, AttributeError) as e:
             errors.append(f"{module}.{name}: {e}")
     if server_cls is None:
-        # Surface the REAL cause. Saying "install okl[mcp]" to someone who just did is
+        # Surface the REAL cause. Saying "install 'observed-knowledge-ledger[mcp]'" to someone who just did is
         # the same failure as reporting a validation error as an outage: the message
         # sends them to fix a thing that is not broken.
         raise RuntimeError(

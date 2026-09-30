@@ -45,7 +45,8 @@ okl verify <stable-key> --run "<a check that fails if the lesson is broken>" --e
 - **`scope=repo`** — a quirk true only of this codebase. Stays local.
 
 If the finding retracts a prior claim, also add it to `registries/RETRACTIONS.md`; if it retires an
-identifier, add it to `registries/tombstones.txt`. The CI gates then fail any doc that contradicts.
+identifier, add it to `registries/tombstones.txt`. The CI gates then fail any doc that restates
+the quoted retracted claim verbatim, or reintroduces the tombstoned identifier.
 
 ## 3. Verify the gate (if you made one)
 

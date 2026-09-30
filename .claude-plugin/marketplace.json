@@ -9,7 +9,7 @@
     {
       "name": "okl",
       "source": "./",
-      "description": "Observed Knowledge Ledger: the pre-task briefing and end-of-session hooks, MCP tools and seeding commands. Requires the okl CLI (pipx install 'observed-knowledge-ledger[mcp]')."
+      "description": "Observed Knowledge Ledger: the pre-task briefing and end-of-session hooks, MCP tools and seeding commands. Requires the okl CLI (pipx install 'observed-knowledge-ledger[mcp]') and `okl init` in each repo to brief (or OKL_SERVICE_URL); repos without it are left alone."
     }
   ]
 }

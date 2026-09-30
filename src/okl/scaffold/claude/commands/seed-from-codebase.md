@@ -55,12 +55,12 @@ Three consequences, all non-negotiable:
 
 ## Output
 
-Write `okl-bootstrap.json` in the seed format. Do **not** run `okl seed` yourself —
+Write `okl-from-codebase.json` in the seed format. Do **not** run `okl seed` yourself —
 importing is the human's decision, made after reading what you proposed.
 
 ```json
 {
-  "_comment": "Proposed from <repo> on <date> by reading the codebase. UNVERIFIED, repo-scoped. Review each record, delete the ones that are wrong, then: okl seed okl-bootstrap.json",
+  "_comment": "Proposed from <repo> on <date> by reading the codebase. UNVERIFIED, repo-scoped. Review each record, delete the ones that are wrong, then: okl seed okl-from-codebase.json",
   "nodes": [
     {
       "key": "orders_ownership",

@@ -40,7 +40,14 @@ def test_scaffold_writes_tree(tmp_path):
     assert "AGENTS.md" in written, "same canon must ship under both filenames"
     assert (tmp_path / "CLAUDE.md").read_bytes() == (tmp_path / "AGENTS.md").read_bytes()
     assert "METHOD.md" in written
-    assert "plugin.json" in written
+    assert ".claude-plugin/plugin.json" in written
+    # every path the scaffolded manifest names must exist where the kit put it (it once
+    # named ./skills, ./agents... that the scaffold never writes)
+    import json
+    manifest = json.loads((tmp_path / ".claude-plugin" / "plugin.json").read_text())
+    for rel in [*manifest["skills"], *manifest["agents"], *manifest["commands"]]:
+        assert rel.startswith("./.claude/"), rel
+        assert (tmp_path / rel.replace("./.claude/", "dotclaude/", 1)).exists(), rel
 
     # ASSERT (2) — and the enforcement surfaces: a skill, a review agent, the gate runner
     assert any("skills/encoding-loop/SKILL.md" in w for w in written)
@@ -301,6 +308,16 @@ def test_eval_harness_refuses_self_grading(tmp_path, monkeypatch):
     r = subprocess.run([sys.executable, str(harness)], capture_output=True, text=True)
     assert r.returncode == 3
     assert "REFUSING TO RUN" in r.stderr
+
+
+def test_eval_harness_refuses_an_unfilled_golden_set(tmp_path, monkeypatch):
+    """The shipped cases.jsonl is a <<FILL>> placeholder. Run as-is, it scored avg 5.00 at
+    a 0% failure rate and exited 0 — a green number over nothing. It must refuse instead."""
+    harness = Path(__file__).resolve().parents[1] / "src" / "okl" / "scaffold" / "evals" / "run_evals.py"
+    monkeypatch.delenv("GENERATOR_MODEL", raising=False); monkeypatch.delenv("JUDGE_MODEL", raising=False)
+    r = subprocess.run([sys.executable, str(harness)], capture_output=True, text=True, cwd=tmp_path)
+    assert r.returncode == 2 and "<<FILL" in r.stderr, (r.returncode, r.stdout, r.stderr)
+    assert "avg score" not in r.stdout
 
 
 def test_ab_harness_flags_an_off_series_instrument_but_still_runs():

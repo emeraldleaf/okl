@@ -7,22 +7,26 @@ any language/stack. The parts you complete per repo are marked inline with `<<FI
 
 | Template (in package) | Installed to | Portable? |
 |---|---|---|
-| `root/CLAUDE.md` | `CLAUDE.md` | skeleton + FILL slots for stack rules |
+| `root/CLAUDE.md` | `CLAUDE.md` and `AGENTS.md` (same file, two names) | skeleton + FILL slots for stack rules |
 | `root/METHOD.md` | `METHOD.md` | fully portable (the seven earned rules) |
-| `claude/skills/encoding-loop/` | `.claude/skills/encoding-loop/` | fully portable |
+| `claude/skills/encoding-loop/`, `verify-before-claiming/` | `.claude/skills/` | fully portable |
+| `claude/skills/RECOMMENDED-COMPANIONS.md` | `.claude/skills/` | reference — third-party skills worth pairing |
 | `claude/agents/architecture-reviewer.md` | `.claude/agents/` | skeleton + FILL for stack checks |
-| `claude/commands/feature-spec.md`, `check-rules.md` | `.claude/commands/` | portable |
+| `claude/commands/feature-spec.md`, `check-rules.md`, `seed-from-codebase.md`, `seed-from-docs.md` | `.claude/commands/` | portable |
 | `claude/rules/example-area.md` | `.claude/rules/` | template — copy per area, set `paths:` |
-| `gates/*.sh` | `gates/` | fully portable (retractions/tombstones/orphans/canon-size) |
+| `gates/*.sh` | `gates/` | fully portable (retractions/tombstones/doc-orphans/links/diagram-pairs/canon-size) |
 | `registries/*` | `registries/` | portable format; FILL entries as earned |
 | `evals/*` | `evals/` | portable harness; FILL `evaluate_one()` + `cases.jsonl` |
-| `ci/method-gates.yml` | `.github/workflows/` | portable |
-| `hooks/*` | `.claude/hooks/` (+ plugin) | portable (fail-closed pre-task check) |
-| `plugin/plugin.json` | repo root (if `--plugin`) | portable — makes the whole thing a Claude Code plugin |
+| `ci/method-gates.yml`, `ci/okl-verify.yml` | `.github/workflows/` | portable |
+| `ci/dependabot.yml` | `.github/dependabot.yml` | portable — keeps the workflows' SHA-pinned actions current |
+| `ci/review-agent.sh` | `ci/review-agent.sh` | portable, opt-in (see below) |
+| `hooks/*` | `.claude/hooks/` | UserPromptSubmit briefing (fail-closed in repos set up with okl) + Stop encode reminder; copied by scaffold, registered by `okl init` |
+| `MANIFEST.md` (this file) | `docs/method-kit-manifest.md` | reference |
+| `plugin/plugin.json` | `.claude-plugin/plugin.json` (if `--plugin`) | portable — packages the skills, agent and commands as a Claude Code plugin (hooks stay with `okl init`) |
 
 ## The portable / stack-specific boundary (the load-bearing decision)
 
-- **Portable (ships as-is):** the encoding loop, the six surfaces, the seven earned rules, the
+- **Portable (ships as-is):** the encoding loop, the five in-repo surfaces (a sixth, okl, spans repos), the seven earned rules, the
   drift-gate *scripts*, the eval *invariants* (failure-count-first, no self-grading judge, cross-tab),
   the fail-closed pre-task hook, the registries *format*.
 - **Stack-specific (you fill):** the actual coding rules that make an agent code *your* way — framework

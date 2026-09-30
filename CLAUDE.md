@@ -27,8 +27,7 @@ and editing `KNOWN_TAGS` changes the floor every store ships with.
   verification left uncommitted fails CI. Verifying before the code commit re-drifts.
   Give a rule `--files` only when CI does not already run its check (#39).
 - The local store (`.okl/okl.db`, gitignored) should hold all 11 seed files plus
-  recorded nodes; `okl seed seed/` loads the `*-defects.json` set, while
-  `dotnet-{canon,decisions,review-surfaces}.json` and `frontend-canon.json` load explicitly.
+  recorded nodes; `okl seed seed/` (or `okl seed --all`) loads all 11 packs.
 
 ## Commands
 
@@ -67,7 +66,7 @@ okl drift                          # rules whose governed source changed after v
 
 `src/okl/` is the package (store/core/client/cli/service/mcp + scaffold templates);
 `seed/` is the curated 161-node corpus (real lessons, real project names — deliberate);
-`evals/` is the A/B harness and receipts; `docs/posts/` is the 3-part write-up;
+`evals/` is the A/B harness and receipts; `docs/posts/` is the 4-part write-up;
 `e2e/` (gitignored) holds scratch repos for end-to-end loop tests.
 
 This file stays lean — always-on rules only. Everything conditionally relevant belongs
