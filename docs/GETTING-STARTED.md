@@ -166,6 +166,21 @@ default. Tags come from the list in section 1. Other types you will reach for: *
 automated check, linked to what it catches with `okl link <gate-id> CATCHES <defect-id>`),
 **Tombstone** (a retired name that must not come back), **Retraction** (a claim withdrawn).
 
+### How hard to enforce it
+
+Every lesson reaches the briefing. Beyond that, pick the softest level that holds — the
+agent proposes one when it records, and you can overrule it:
+
+| The lesson… | Enforcement | How |
+|---|---|---|
+| is useful context for some tasks | briefing only | nothing more to do |
+| governs specific code | watched by CI | give it `files`, prove it with `okl verify`; CI's drift gate goes red when that code changes |
+| has been broken before, or is costly when broken | build-breaking | a test or CI check that fails the build — a sterner lesson will not stop a repeat |
+| is needed in every session, whatever the task | always-on | a line in `CLAUDE.md` / `AGENTS.md` — rare |
+
+Move a lesson down the table only when it earns it: one that keeps being broken gets a
+check, not a longer paragraph.
+
 ### Underneath: the CLI
 
 Everything above ends up as an `okl record` call. You can run it yourself — in scripts, in

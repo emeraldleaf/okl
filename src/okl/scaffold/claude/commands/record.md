@@ -39,14 +39,25 @@ the person to confirm or correct it. On a yes, record it with the `okl_record` M
 If that tool is not available, run the equivalent `okl record --type … --id … --scope …`
 command instead.
 
-## 3. Offer the proof
+## 3. Decide how hard it must be enforced
 
-A lesson is unverified until a check passes. If there is a test or command that fails
-when the lesson is broken, offer to run:
+Use the softest level that holds, and say which you chose:
 
-```bash
-okl verify <id> --run "<that check>" --expect "<text its passing output contains>"
-```
+- **Briefing only** — every lesson reaches the per-task briefing. Most need nothing more.
+- **Watched by CI** — the lesson governs specific code (`files` is set). Offer to prove it
+  with a check that fails when the lesson is broken:
 
-Never mark it verified any other way. If the lesson has `files`, remind the person to
-commit `okl-drift.json` after the verify.
+  ```bash
+  okl verify <id> --run "<that check>" --expect "<text its passing output contains>"
+  ```
+
+  CI's drift gate then goes red when that code changes, until the check is re-run. Remind
+  the person to commit `okl-drift.json` after the verify. Never mark a lesson verified any
+  other way.
+- **Build-breaking** — the same mistake has happened before, or it is costly when it
+  happens (security, data loss, a published number). Propose a test or CI check that
+  fails the build; a sterner lesson will not stop a repeat.
+- **Always-on** — only if every session needs it regardless of task, propose a line for
+  `CLAUDE.md` / `AGENTS.md`. This is rare; the briefing already delivers the rest.
+
+The `encoding-loop` skill has the full table.

@@ -1510,6 +1510,8 @@ def test_plugin_manifest_points_at_real_files_and_the_shipped_version():
     for rel in referenced:
         assert rel.startswith("./"), f"{rel}: plugin paths are relative to the plugin root"
         assert (root / rel).is_file(), f"{rel}: referenced by the manifest but missing"
+    for rel in manifest.get("skills", []):
+        assert rel.startswith("./") and (root / rel / "SKILL.md").is_file(), f"{rel}: skill missing"
     hooks = json.loads((root / manifest["hooks"]).read_text())
     assert set(hooks) == {"hooks"} and {"UserPromptSubmit", "Stop"} <= set(hooks["hooks"])
     for event in ("UserPromptSubmit", "Stop"):

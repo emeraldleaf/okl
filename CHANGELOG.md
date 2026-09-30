@@ -15,6 +15,10 @@
   command drafts a lesson from the conversation and records it once you confirm. The
   getting-started guide leads with this, covers other agents, and keeps the CLI as the
   mechanism underneath.
+- **Choosing how hard to enforce a lesson.** The Stop hook's question, `/record` and the
+  guide now walk the same levels — briefing only, watched by CI (`--files` + `okl verify`),
+  build-breaking (a test or CI check), always-on (`CLAUDE.md`/`AGENTS.md`) — and the plugin
+  now ships the `encoding-loop` skill that holds the full table.
 - **`okl reverify`** re-runs the stored check of every drifted lesson after listing the
   commands and getting a confirmation (or `--yes`).
 - **`okl verify` creates `okl-drift.json`** the first time a lesson that governs files is

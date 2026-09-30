@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:6e5888c797cc89aa5853621da4046c144cca6311a5d28a055de7f6351d91df3e
+# okl-fingerprint: sha256:330e6e866e80cbd1d07bb8c4425e9473e1df4e78126d01f9a1ea72eaf249783a
 # Stop hook — the write-side mechanical catch for the encoding loop.
 #
 # The read side (okl check) is enforced by the UserPromptSubmit hook; nothing enforced the WRITE
@@ -132,6 +132,15 @@ silently reversed? If yes, record it now. Three independent axes, each chosen de
   okl record --type Defect|Rule|Decision --scope org|repo --tags "<subjects>" \
     --id "<stable-key>" --title "..." --symptom "..." --body "cause: ..." --fix "..." \
     [--applies-to <stack>]   # ONLY for a genuinely framework-bound lesson
+
+  Then decide how hard it must be enforced (softest that holds):
+  - Every lesson reaches the per-task briefing; most need nothing more.
+  - Governs specific code? Add --files "<paths>" and prove it:
+      okl verify <id> --run "<check that fails if broken>" --expect "<success text>"
+    CI's drift gate then goes red when that code changes.
+  - Broken more than once, or costly when broken? Propose a test or CI check that
+    fails the build, rather than a sterner lesson.
+  - Needed in every session regardless of task? Only then CLAUDE.md / AGENTS.md.
 
   --id is what makes the write idempotent, and leaving it off is the common mistake.
   Without it every record is minted a fresh random id, so the same lesson recorded in two

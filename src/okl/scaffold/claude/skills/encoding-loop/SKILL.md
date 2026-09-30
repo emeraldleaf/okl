@@ -16,7 +16,7 @@ A trigger surfaced a candidate rule. The response is always the same two moves.
 | 2 | `.claude/rules/<area>.md` with `paths:` glob | scoped to a file category (loads only in context) |
 | 3 | `.claude/skills/` or `.claude/commands/` | a multi-step procedure with real logic |
 | 4 | `.coderabbit.yaml` path_instructions / `architecture-reviewer` checklist | catch at PR-review time |
-| 5 | a gate in `gates/` + CI | mechanical, build-breaking — for rules that keep being broken |
+| 5 | a test or a CI check (`gates/` if you ran `okl scaffold`) | mechanical, build-breaking — for rules that keep being broken |
 
 Default to the *softest* surface that could hold the rule. **Promote down (toward 5) only as it
 earns it** — a rule that keeps being violated moves to a sterner tier, not a sterner paragraph.
@@ -40,6 +40,9 @@ okl verify <stable-key> --run "<a check that fails if the lesson is broken>" --e
   reports but cannot remove, there being no delete subcommand. Where a repo keeps its lessons in
   a seed file, use the id that file derives, `seed:<seed-file-stem>:<key>`, so a later
   `okl seed` upserts the same row.
+- **`--files`** — the code the lesson governs. With it, and once `okl verify` has passed,
+  CI's drift gate goes red whenever that code changes until the check is re-run. This is
+  what sits between tier 1 and a gate: watched, but not build-breaking on its own.
 - **`scope=org`** — a fact about the world: prior art, an API contract, a data-source gotcha, a
   portable gate. It will surface in every connected repo's `okl check`.
 - **`scope=repo`** — a quirk true only of this codebase. Stays local.
