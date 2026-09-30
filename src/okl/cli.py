@@ -621,8 +621,15 @@ def cmd_verify(args) -> int:
     the store-side mechanization of verify-before-claiming: no run, no stamp."""
     import subprocess
     from datetime import datetime, timezone
-    r = subprocess.run(args.run, shell=True, capture_output=True, text=True,
-                       timeout=args.timeout)
+    try:
+        r = subprocess.run(args.run, shell=True, capture_output=True, text=True,
+                           timeout=args.timeout)
+    except subprocess.TimeoutExpired:
+        # Uncaught, one slow check ended `okl reverify` in a traceback and left every
+        # later lesson unchecked (CodeRabbit on #79). A timeout is a failed check.
+        print(f"✗ check TIMED OUT after {args.timeout}s — NOT stamping verification.",
+              file=sys.stderr)
+        return 1
     output = (r.stdout or "") + (r.stderr or "")
     tail = "\n".join(output.strip().splitlines()[-5:])
     if r.returncode != 0:

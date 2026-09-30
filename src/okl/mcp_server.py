@@ -103,11 +103,17 @@ def _build():
 
     @mcp.tool()
     def okl_search(query: str, scope: str | None = None, limit: int = 15) -> str:
-        """Search the org's encoded body for anything matching `query`."""
+        """Search the org's encoded body for anything matching `query`.
+
+        Each line leads with the lesson's id: pass it to okl_record as `id` to update
+        that lesson rather than adding a near-duplicate.
+        """
         rows = client.search(query, scope=scope, limit=limit)
         if not rows:
             return "no matches."
-        return "\n".join(f"[{r['type']}] {r['scope']} — {r['title']}"
+        # The id was missing, so an agent told to "search first and reuse the id" had no
+        # id to reuse (CodeRabbit on #79).
+        return "\n".join(f"{r['id']} [{r['type']}] {r['scope']} — {r['title']}"
                          + (" (STALE)" if r.get("stale") else "") for r in rows)
 
     return mcp
