@@ -25,8 +25,9 @@ hand-written happy-path examples.
 ## Files
 - `run_evals.py` — the harness (framework-agnostic; adapt `evaluate_one()` to your system)
 - `cases.jsonl` — the golden set (`<<FILL>>` with real cases). Until every `<<FILL` is gone,
-  `run_evals.py` refuses to run (exit 2), so the `evals` CI job stays red rather than reporting a
-  score over a placeholder
+  `run_evals.py` refuses to run (exit 2) rather than reporting a score over a placeholder, and
+  the `evals` CI job shows an "Evals not measured" warning instead of a result. A passing job
+  with that warning measured nothing
 - results write to `results/` with the failure count and cross-tab at the top
 
 ## CI

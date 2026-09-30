@@ -2211,6 +2211,7 @@ def test_the_service_keeps_applies_to(tmp_path, monkeypatch):
     """RecordReq had no applies_to field and pydantic ignores unknown fields, so a record
     sent to a shared service with --applies-to arrived valid on every stack."""
     pytest.importorskip("fastapi")
+    pytest.importorskip("httpx")   # TestClient needs it, and the service extra does not install it
     from fastapi.testclient import TestClient
 
     from okl import service
