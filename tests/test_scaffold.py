@@ -895,6 +895,43 @@ def test_doctor_reads_settings_the_way_claude_code_resolves_them(tmp_path, monke
     assert [f.tool.name for f in coexist.detect(proj, home)] == ["beads"]
 
 
+def test_hooks_step_aside_in_a_repo_okl_was_never_set_up_in(tmp_path):
+    """okl's plugin is installed per user, so its hooks run in every repo the user opens.
+    In a repo never set up with `okl init` the pre-task hook blocked every prompt as "OKL
+    NOT CONFIGURED", and the Stop hook asked what was learned of a repo with no store.
+    Found by a docs audit before any user hit it. Unenrolled + a named project = no-op;
+    an enrolled repo whose okl fails still blocks.
+    """
+    import json
+    import shutil
+    import sys
+    if shutil.which("git") is None:
+        pytest.skip("git not available")
+    hooks = Path(__file__).resolve().parents[1] / "src" / "okl" / "scaffold" / "hooks"
+    src = str(Path(__file__).resolve().parents[1] / "src")
+    other = tmp_path / "some-other-repo"; other.mkdir(); markers = tmp_path / "m"; markers.mkdir()
+    subprocess.run(["git", "init", "-q", str(other)], check=True)
+    (other / "dirty.txt").write_text("uncommitted change")   # the Stop hook's trigger
+    env = {"PATH": os.environ["PATH"], "HOME": str(tmp_path), "TMPDIR": str(markers),
+           "PYTHONPATH": src, "OKL_BIN": f"{sys.executable} -m okl",
+           "CLAUDE_PROJECT_DIR": str(other)}
+
+    def hook(name, payload, **extra):
+        return subprocess.run(["bash", str(hooks / name)], cwd=other, text=True,
+                              input=json.dumps(payload), capture_output=True, env={**env, **extra})
+
+    # Unenrolled repo, project named: both hooks are silent no-ops.
+    r = hook("userpromptsubmit-okl-check.sh", {"prompt": "fix the login page"})
+    assert r.returncode == 0 and r.stdout == "" and r.stderr == "", (r.returncode, r.stderr)
+    r = hook("stop-okl-encode.sh", {"session_id": "u1", "stop_hook_active": False})
+    assert r.returncode == 0, r.stderr
+    # Enrolled, but okl cannot run: still fail-closed.
+    (other / ".okl").mkdir(); (other / ".okl" / "config.json").write_text('{"repo": "o"}')
+    r = hook("userpromptsubmit-okl-check.sh", {"prompt": "fix the login page"},
+             OKL_BIN=str(tmp_path / "gone" / "okl"), PATH="/usr/bin:/bin", PYTHONPATH="")
+    assert r.returncode == 2, (r.returncode, r.stderr)
+
+
 def test_hooks_anchor_to_the_project_not_the_sessions_cwd(tmp_path):
     """A hook runs in the session's CURRENT directory, and any `cd` in a command moves it.
 
@@ -1181,6 +1218,8 @@ def test_a_blocked_prompt_says_how_okl_failed(tmp_path):
     """
     import json
     hook = Path(__file__).resolve().parents[1] / "src" / "okl" / "scaffold" / "hooks" / "userpromptsubmit-okl-check.sh"
+
+    (tmp_path / ".okl").mkdir(exist_ok=True); (tmp_path / ".okl" / "config.json").write_text('{"repo": "t"}')
 
     def run(stub_body, **env):
         stub = tmp_path / "okl"
