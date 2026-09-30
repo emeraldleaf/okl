@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+- **A first run that works with no choices.** `okl init` detects the stack and sets
+  interests from it, and seeds an empty local store with 20 portable starter lessons plus
+  the bundled packs for that stack, so the first prompt is briefed. `--no-seed` opts out.
+  Starter lessons are references into the packs, so importing a full pack later updates
+  the same rows.
+- **You can see okl working.** Each briefed prompt shows one line, *okl · briefed N
+  lesson(s): …*, via `okl check --format hook`; `OKL_QUIET=1` hides it. The hook falls back
+  to the plain briefing if the installed okl predates the format.
+- **`okl reverify`** re-runs the stored check of every drifted lesson after listing the
+  commands and getting a confirmation (or `--yes`).
+- **`okl verify` creates `okl-drift.json`** the first time a lesson that governs files is
+  verified, so there is no separate export step.
+- **The plugin's hooks step aside in repos never set up with `okl init`**; Decisions reach
+  the briefing; the service keeps `applies_to`; a getting-started guide
+  (docs/GETTING-STARTED.md); a docs audit's ~74 corrections; clean example re-runs.
+
 ## 0.7.2
 
 - **`okl record --verified` is refused.** It stamped a lesson verified with no evidence,

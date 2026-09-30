@@ -28,15 +28,20 @@ afterwards is `okl`.
 From the root of your repo:
 
 ```bash
-okl init --repo shop --interests python,security --dry-run   # lists every file; writes nothing
-okl init --repo shop --interests python,security
+okl init --repo shop --dry-run   # lists every file it would write, and what it detected
+okl init --repo shop
 ```
 
 - `--repo` names this repo in the store. Always pass the same name when you re-run `init`.
-- `--interests` are the subjects this repo cares about, from a closed list:
-  `agent-safety data-quality dotnet eval-integrity frontend geospatial messaging method
-  prose python python-rag react retrieval-design security`. Shared (org) lessons whose tags
-  share none of these stay out of your briefings; untagged lessons always come through.
+- **It detects your stack** from the files every stack keeps (`*.csproj`/`*.sln`,
+  `package.json`, `pyproject.toml`/`requirements.txt`) and sets this repo's *interests* —
+  the subjects its briefings cover — to that stack plus `security` and `method`. To choose
+  your own, pass `--interests` from this list: `agent-safety data-quality dotnet
+  eval-integrity frontend geospatial messaging method prose python python-rag react
+  retrieval-design security`.
+- **It fills the store** with 20 starter lessons that hold on almost any codebase (web
+  security, CI, docs, verification) plus the bundled packs for your stack, so your very
+  first prompt is briefed. `--no-seed` leaves it empty.
 - `init` wires Claude Code when the repo has a `.claude/` folder or `claude` is on your
   PATH (`--claude` forces it, `--no-claude` skips it). It writes `.okl/` (config and the
   local store, gitignored), two hooks in `.claude/hooks/` registered in
@@ -47,12 +52,10 @@ emeraldleaf/okl`, then `/plugin install okl@okl` — and `init` leaves the hooks
 plugin. The plugin's hooks do nothing in a repo that has not run `okl init`, so installing
 it for your user does not disturb your other projects.
 
-### Give it something to know
+### Add your first rule of your own
 
-An empty store briefs nothing, and says so. Two ways to fill it — do both:
-
-**Your own rules (the part that pays).** Record one convention this repo already has, right
-now. Section 2 shows the full habit; one record is enough to see the loop work:
+The starter lessons are generic. What makes okl pay is what only your codebase knows. Record
+one convention this repo already has, right now — section 2 shows the full habit:
 
 ```bash
 okl record --type Rule --scope repo --id order-owner-scope \
@@ -62,21 +65,9 @@ okl record --type Rule --scope repo --id order-owner-scope \
   --fix "filter by the caller's customer id in the query; return 404 on no match"
 ```
 
-**Bundled packs (a head start).** `okl seed` lists them. They are real lessons from .NET,
-Python RAG, React and geospatial codebases, each tagged by subject. Many are portable: the
-security lessons in `dotnet-defects` (IDOR, trusting a client-supplied price) apply to any
-web service, and reach you if you declared `security`.
-
-```bash
-okl seed                     # lists the packs, their subjects, and which match your interests
-okl seed dotnet-defects      # import one by name
-```
-
-A pack whose subjects share nothing with your `--interests` imports fine but never shows
-up in your briefings — the interest filter is doing its job. If `okl seed` marks nothing as
-a match for your stack, rely on your own records and the portable packs. With `okl scaffold .`
-you also get a `/seed-from-codebase` command: your agent proposes cited records from this
-repo's own code, for you to review before importing.
+More bundled lessons: `okl seed` lists every pack and `okl seed <name>` imports one. With
+`okl scaffold .` you also get a `/seed-from-codebase` command: your agent proposes cited
+records from this repo's own code, for you to review before importing.
 
 ### Check it works
 
@@ -85,9 +76,10 @@ okl check --task "add an endpoint that returns an order for the signed-in custom
 okl doctor
 ```
 
-You should see a briefing that leads with **FIX:** lines — your own rule, and the security
-lessons if you seeded them. If it says the store is empty, or matches nothing, go back one
-step. `okl doctor` reports other agent-memory tools that would collide with okl's hooks, and
+You should see a briefing that leads with **FIX:** lines, your own rule among them. In
+Claude Code you will also see one line per prompt, like *okl · briefed 9 lesson(s): Missing
+ownership scope check…; …* — that is okl telling you what it put in front of the agent
+(`OKL_QUIET=1` turns it off). If the store is empty or nothing matched, see the step above. `okl doctor` reports other agent-memory tools that would collide with okl's hooks, and
 flags okl wired twice (plugin and project hooks).
 
 ### Commit the wiring
@@ -184,19 +176,14 @@ refused.
 ### Commit, in this order
 
 1. Commit the code change.
-2. Run `okl verify` for any lesson whose governed files you touched (`okl drift` lists them).
-3. Commit `okl-drift.json`, which `okl verify` refreshes.
+2. Re-check the lessons whose governed files you touched: `okl reverify` lists each one's
+   stored check and, once you confirm, re-runs them (`--yes` skips the question).
+3. Commit `okl-drift.json`, which `okl verify` / `okl reverify` keep up to date.
 
-**The first time** a lesson has `--files`, create that file once, then commit it:
-
-```bash
-okl export --drift
-git add okl-drift.json && git commit -m "okl: drift snapshot"
-```
-
-CI's drift gate reads this committed snapshot (your store is not in git). Until the first
+`okl-drift.json` is what CI's drift gate reads (your store is not in git). `okl verify`
+creates it the first time a lesson with `--files` is verified — commit it then. Until a
 lesson governs files there is nothing to snapshot, and CI warns "Drift not checked" —
-expected. Do not commit a snapshot with zero rules in it; CI treats that as broken.
+expected.
 
 ---
 
@@ -224,7 +211,7 @@ okl record --type Rule --scope repo --id doc-readme-serve-port \
   --files "README.md,app/cli.py"
 
 okl verify doc-readme-serve-port \
-  --run "bash -c 'grep -q -- \"shop serve --port\" README.md && python -m app.cli serve --help | grep -q -- --port && echo DOC MATCHES CODE'" \
+  --run "bash -c 'grep -q -- \"shop serve --port\" README.md && python3 -m app.cli serve --help | grep -q -- --port && echo DOC MATCHES CODE'" \
   --expect "DOC MATCHES CODE"
 ```
 
@@ -237,8 +224,8 @@ okl drift
 ```
 
 Locally and in CI (from the committed snapshot) that stays red until someone re-runs the
-check. If the check passes, `okl verify` again and commit the refreshed `okl-drift.json`. If
-it fails, the doc or the code is wrong, and you fix whichever is.
+check. `okl reverify` re-runs the stored check: if it passes, commit the refreshed
+`okl-drift.json`; if it fails, the doc or the code is wrong, and you fix whichever is.
 
 ### Writing checks that mean something
 
@@ -274,9 +261,10 @@ statements, architecture rules, published numbers.
 | Prompts are not briefed | this repo has no `.okl/config.json`; the hooks step aside | run `okl init` here |
 | A prompt is blocked with "OKL CHECK DID NOT RUN" | okl is set up here but could not run; the message says why | fix the cause, or start the session with `OKL_OFFLINE=1` |
 | `claude -p` prints the answer to "what did we learn?" | the Stop hook replaced the printed answer | run headless sessions with `OKL_DISABLED_HOOKS=encode` |
-| CI warns "Drift not checked" | no `okl-drift.json` committed yet | expected until a lesson has `--files`; then `okl export --drift` |
+| CI warns "Drift not checked" | no `okl-drift.json` committed yet | expected until a lesson with `--files` is verified; then commit the file `okl verify` creates |
 | CI fails with "NOTHING CHECKED" | a snapshot with zero rules is committed | remove it, or record a lesson with `--files` and re-export |
 | `okl drift` is red right after `okl record --files` | a new rule is unverified until its first `okl verify` | run its check with `okl verify` |
+| `okl drift` is red after you changed code | lessons governing those files need re-checking | `okl reverify` |
 
 More: the [README](../README.md) covers costs, scopes, the shared service and the MCP tools;
 [DEPLOY](DEPLOY.md) covers running a shared store for a team.

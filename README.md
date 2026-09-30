@@ -41,8 +41,13 @@ pipx install 'observed-knowledge-ledger[mcp]'
 
 ```bash
 okl init --repo my-repo --dry-run   # lists every file it would write; writes nothing
-okl init --repo my-repo             # config, Claude Code hooks, MCP server, CI workflow
+okl init --repo my-repo             # config, Claude Code hooks, MCP server, CI workflow, starter lessons
 ```
+
+`init` detects your stack (`*.csproj`, `package.json`, `pyproject.toml` …), sets the repo's
+interests from it, and fills the store with 20 starter lessons that hold on almost any
+codebase plus the bundled packs for your stack, so the first prompt is already briefed
+(`--interests` chooses your own subjects; `--no-seed` leaves the store empty).
 
 `init` wires Claude Code when the repo has a `.claude/` directory or `claude` is on your
 PATH; `--claude` forces it and `--no-claude` skips it. **Prefer the plugin?** Install it
@@ -51,16 +56,19 @@ PATH; `--claude` forces it and `--no-claude` skips it. **Prefer the plugin?** In
 nothing is wired twice. (Installed after? `okl doctor` reports the double wiring, and
 `okl init --uninstall` removes the project copy.)
 
-**3. Give it something to know.** An empty store proves nothing, and says so:
+**3. Add a rule of your own.** The starter lessons are generic; what pays is what only your
+codebase knows:
 
 ```bash
-okl seed                    # lists the bundled packs; imports nothing
-okl seed dotnet-defects     # e.g.: import the packs that match your stack, by name
+okl record --type Rule --scope repo --id order-owner-scope \
+  --title "Order lookups are scoped to the signed-in customer" \
+  --symptom "an endpoint fetches an order by id with no owner filter" \
+  --fix "filter by the caller's customer id in the query; return 404 on no match"
 ```
 
-Or have your agent propose records from your own code: `okl scaffold .` stamps the method
-kit (canon, gates, workflows, agent commands), which includes a `/seed-from-codebase`
-command ([Seed it](#seed-it-so-the-very-first-check-returns-something)).
+More: `okl seed` lists every bundled pack; `okl scaffold .` stamps the method kit, which
+includes a `/seed-from-codebase` command that has your agent propose cited records from
+your own code ([Seed it](#seed-it-so-the-very-first-check-returns-something)).
 
 **4. Check it works:**
 
@@ -72,17 +80,19 @@ okl doctor                  # flags other agent-memory tools and double wiring
 ### What a normal day looks like
 
 - **You prompt as usual.** The pre-task hook runs `okl check` on what you typed and puts
-  the relevant lessons in the agent's context before it starts. Nothing to remember.
+  the relevant lessons in the agent's context before it starts, and shows you one line —
+  *okl · briefed 9 lesson(s): …* — so you can see it working (`OKL_QUIET=1` hides it).
 - **At the end of a session that changed files,** the agent is asked once what it
   learned. If something is worth keeping, it runs `okl record` — with `--files` when the
   lesson governs specific code.
 - **Proving a lesson is true** is a check you run, not a flag you set:
   `okl verify <id> --run "pytest -q tests/test_orders.py" --expect "passed"`.
 - **When code a lesson governs changes,** `okl drift` goes red until someone re-runs its
-  check (a lesson recorded with `--files` is also red until its first `okl verify`). CI reads a committed snapshot, `okl-drift.json`: once the first lesson governs
-  files, run `okl export --drift` and commit it. From then on `okl verify` refreshes it;
-  commit it after the code change it verifies. Until then CI warns "Drift not checked",
-  which is expected.
+  check (a lesson recorded with `--files` is also red until its first `okl verify`).
+  `okl reverify` re-runs each drifted lesson's stored check after you confirm. CI reads a
+  committed snapshot, `okl-drift.json`, which `okl verify` creates the first time a lesson
+  with `--files` is verified and keeps current after that: commit it after the code change
+  it verifies. Until then CI warns "Drift not checked", which is expected.
 - **Headless runs** (`claude -p`, scripts, CI agents) set `OKL_DISABLED_HOOKS=encode`,
   or the end-of-session question replaces the printed answer.
 
@@ -457,7 +467,8 @@ okl init --interests "python,security"    # drop records tagged for stacks you d
 
 ### Turning parts off
 
-Switch a hook off by name with `OKL_DISABLED_HOOKS=briefing` (the pre-task read),
+`OKL_QUIET=1` keeps the briefing but hides the one-line *okl · briefed …* notice. Switch a
+hook off by name with `OKL_DISABLED_HOOKS=briefing` (the pre-task read),
 `OKL_DISABLED_HOOKS=encode` (the end-of-session question), or both, comma-separated.
 **Set `OKL_DISABLED_HOOKS=encode` for headless runs (`claude -p`, CI agents, scripts):**
 print mode emits only the final message, and a blocked stop makes the reply to "what did
@@ -534,7 +545,7 @@ touches only the current directory, and only these:
 |---|---|
 | `.okl/config.json` | repo name, subject interests, and the path to your `okl` binary |
 | `.okl/.gitignore` | keeps `.okl/` (config and store) out of git, with no edit to your own `.gitignore` |
-| `.okl/okl.db` | the local store (local mode only; empty until you seed or record) |
+| `.okl/okl.db` | the local store (local mode only; seeded with the starter lessons and your stack's packs unless `--no-seed`) |
 | `.claude/hooks/userpromptsubmit-okl-check.sh` | **executable**; runs when you submit a task, injects the briefing |
 | `.claude/hooks/stop-okl-encode.sh` | **executable**; runs at session end, asks what was learned |
 | `.claude/settings.json` | registers those two hooks (merged in place; your existing keys are preserved) |
@@ -629,10 +640,14 @@ okl verify <id> --run "pytest -q" --expect "passed"
                      #   --expect requires a positive success signal in the output, so an
                      #   exit code alone can't self-certify. (`record --verified` is
                      #   refused; historical receipts import through `okl seed`.)
+okl reverify         # re-run the stored check of every drifted lesson and re-stamp the passes;
+                     #   lists the commands first and runs them only after you confirm
+                     #   (or --yes), because they come from the store; --dry-run lists only
 okl drift --gate     # flag lessons whose governed source changed after they were last verified
                      #   (exit 1 in CI — a stale rule is a rule nobody's re-checked)
 okl export --drift   # write okl-drift.json, the committed snapshot CI's drift gate reads
-                     #   when it has no store; `okl verify` refreshes it once it exists.
+                     #   when it has no store; `okl verify` creates it for the first lesson
+                     #   with --files and refreshes it after that.
                      #   CI reads the COMMITTED copy, and refuses an entry whose timestamp
                      #   does not match its verify evidence, so editing the timestamp alone
                      #   cannot clear it (editing both fields can; review is the guard).
