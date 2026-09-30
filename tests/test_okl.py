@@ -2366,6 +2366,59 @@ def test_reverify_reruns_stored_checks_only_when_asked(tmp_path):
     assert rid in okl("drift").stdout
 
 
+def test_first_run_notice_and_reverify_in_process(tmp_path, monkeypatch, capsys):
+    """The same paths the subprocess tests drive, run in-process so coverage sees them:
+    init's detection and first-run seeding, check --format hook's notice, and verify ->
+    drift -> reverify with a stored check. (CI's coverage ratchet failed on #77 because
+    these ran only in child processes.)"""
+    import json
+    import subprocess
+    import time
+
+    from okl import core
+    from okl.cli import _stored_check, main
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN", "OKL_QUIET"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+    git = ["git", "-c", "user.email=t@t", "-c", "user.name=t"]
+    subprocess.run(["git", "init", "-q", "."], check=True)
+    (tmp_path / "pyproject.toml").write_text('[project]\nname = "s"\n')
+    (tmp_path / "a.txt").write_text("hello\n")
+    subprocess.run([*git, "add", "-A"], check=True); subprocess.run([*git, "commit", "-qm", "i"], check=True)
+
+    assert main(["init", "--repo", "s", "--no-claude", "--dry-run"]) == 0
+    assert "detected: python" in capsys.readouterr().out
+    assert main(["init", "--repo", "s", "--no-claude"]) == 0
+    assert "seeded 20 starter lessons" in capsys.readouterr().out
+
+    assert main(["check", "--task", "add an endpoint that returns an order for the logged-in user",
+                 "--format", "hook"]) == 0
+    out = json.loads(capsys.readouterr().out)
+    assert out["systemMessage"].startswith("okl · briefed ")
+    # the notice's own edges: nothing matched -> no line; empty store -> says so
+    assert core.briefing_notice({"match_count": 0, "store_records": 5}) is None
+    assert "store is empty" in core.briefing_notice({"match_count": 0, "store_records": 0})
+
+    assert main(["record", "--type", "Rule", "--scope", "repo", "--id", "hi", "--title",
+                 "a.txt says hello", "--files", "a.txt"]) == 0
+    assert main(["verify", "hi", "--run", "grep -q hello a.txt && echo SAYS HELLO",
+                 "--expect", "SAYS HELLO"]) == 0
+    assert "created okl-drift.json" in capsys.readouterr().out
+    assert _stored_check("`grep -q hello a.txt && echo SAYS HELLO` exit 0, matched 'SAYS HELLO' @ 2026-09-29T00:00Z") \
+        == ("grep -q hello a.txt && echo SAYS HELLO", "SAYS HELLO")
+    assert _stored_check("`true` exit 0 @ 2026-09-29T00:00Z") == ("true", None)
+    assert _stored_check(None) is None and _stored_check("asserted") is None
+
+    time.sleep(1.1)
+    (tmp_path / "a.txt").write_text("hello again\n")
+    subprocess.run([*git, "commit", "-qam", "edit"], check=True)
+    assert main(["reverify", "--dry-run"]) == 1
+    assert main(["reverify", "--yes"]) == 0
+    assert "1 re-verified, 0 failed" in capsys.readouterr().out
+    assert main(["reverify"]) == 0          # nothing drifted now
+
+
 def test_stack_detection(tmp_path):
     from okl.cli import _detect_stacks
     (tmp_path / "api").mkdir(); (tmp_path / "api" / "Api.csproj").write_text("<Project/>")
