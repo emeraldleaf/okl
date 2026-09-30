@@ -1918,9 +1918,12 @@ def test_drift_snapshot_gives_ci_a_store_it_cannot_clear_by_hand(tmp_path, monke
     okl("init", "--repo", "r")
     rid = okl("record", "--type", "Rule", "--scope", "repo", "--title", "t", "--body",
               "a lesson body", "--files", "a.py").stdout.strip().splitlines()[-1]
-    okl("verify", rid, "--run", "true", "--expect", "")
     snap_file = tmp_path / "okl-drift.json"
-    assert not snap_file.exists(), "verify refreshes a snapshot, it never creates one"
+    other = okl("record", "--type", "Rule", "--scope", "repo", "--title", "no files").stdout.strip().splitlines()[-1]
+    okl("verify", other, "--run", "true", "--expect", "")
+    assert not snap_file.exists(), "a lesson without files must not create a (zero-rule) snapshot"
+    okl("verify", rid, "--run", "true", "--expect", "")
+    assert snap_file.exists(), "the first verify of a lesson that governs files creates the snapshot"
 
     # 1. Export: the rules drift reads, without their lessons.
     assert okl("export", "--drift").returncode == 0
@@ -2311,6 +2314,56 @@ def test_hook_format_briefs_the_model_and_tells_the_person(tmp_path):
     assert "Missing ownership scope check" in out["systemMessage"], out["systemMessage"]
     assert "systemMessage" not in check("add an endpoint that returns an order", OKL_QUIET="1")
     assert "systemMessage" not in check("zzqx unrelated gibberish task")
+
+
+def test_reverify_reruns_stored_checks_only_when_asked(tmp_path):
+    """okl verify stores the exact check; okl reverify re-runs it for drifted lessons (#63).
+    The commands come from the store, so they are listed and run only on --yes (or a
+    confirmation at a terminal); unattended without --yes it refuses and runs nothing."""
+    import subprocess
+    import sys
+    import time
+    src = str(Path(__file__).resolve().parents[1] / "src")
+    repo = tmp_path / "r"; repo.mkdir()
+    env = {**os.environ, "PYTHONPATH": src, "HOME": str(tmp_path)}
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN"):
+        env.pop(k, None)
+    git = ["git", "-C", str(repo), "-c", "user.email=t@t", "-c", "user.name=t"]
+
+    def okl(*a):
+        return subprocess.run([sys.executable, "-m", "okl", *a], cwd=repo, env=env,
+                              capture_output=True, text=True, stdin=subprocess.DEVNULL)
+
+    def commit(text):
+        time.sleep(1.1)   # git commit times are in seconds
+        (repo / "a.txt").write_text(text)
+        subprocess.run([*git, "add", "a.txt"], check=True)
+        subprocess.run([*git, "commit", "-qm", "edit"], check=True)
+
+    subprocess.run(["git", "init", "-q", str(repo)], check=True); commit("hello\n")
+    okl("init", "--repo", "r", "--no-seed", "--no-claude")
+    rid = okl("record", "--type", "Rule", "--scope", "repo", "--title", "a.txt says hello",
+              "--files", "a.txt").stdout.strip().splitlines()[-1]
+    never = okl("record", "--type", "Rule", "--scope", "repo", "--title", "never checked",
+                "--files", "a.txt").stdout.strip().splitlines()[-1]
+    check = "grep -q hello a.txt && echo SAYS HELLO"
+    assert okl("verify", rid, "--run", check, "--expect", "SAYS HELLO").returncode == 0
+    commit("hello again\n")
+    assert okl("drift", "--gate").returncode == 1
+
+    r = okl("reverify")                       # unattended, no --yes
+    assert r.returncode == 2 and check in r.stdout and "refusing" in r.stderr, (r.stdout, r.stderr)
+    assert f"no stored check: okl verify {never}" in r.stdout, r.stdout
+    assert okl("reverify", "--dry-run").returncode == 1
+    r = okl("reverify", "--yes")
+    assert "1 re-verified, 0 failed, 1 need a first check" in r.stdout, r.stdout
+    drifted = okl("drift").stdout
+    assert rid not in drifted and never in drifted, drifted
+
+    commit("goodbye\n")                      # the lesson is now genuinely broken
+    r = okl("reverify", "--yes")
+    assert r.returncode == 1 and "0 re-verified, 1 failed" in r.stdout, r.stdout
+    assert rid in okl("drift").stdout
 
 
 def test_stack_detection(tmp_path):

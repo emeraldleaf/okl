@@ -645,15 +645,99 @@ def cmd_verify(args) -> int:
     print(f"✓ verified {node['id']} — {node['title']}\n  evidence: {node['verified_by']}")
     # Keep CI's view in step. A snapshot that exists is one CI reads, and re-verifying
     # without re-exporting leaves CI red for a rule that is green here -- the safe
-    # direction, but a step everyone would forget. Only refreshed, never created.
+    # direction, but a step everyone would forget. The FIRST snapshot is created here too,
+    # when the verified lesson governs files: it used to need a separate `okl export
+    # --drift` that the getting-started guide had to teach as a trap. Never for a lesson
+    # without files -- a snapshot of zero rules is one CI rightly reads as broken.
     snap = _snapshot_path()
-    if snap.exists():
+    if snap.exists() or node.get("files"):
         try:
+            existed = snap.exists()
             _write_snapshot(Client(), snap)
-            print(f"  refreshed {snap.name} — commit it so CI sees this verification")
+            print(f"  {'refreshed' if existed else 'created'} {snap.name} — commit it so CI sees this verification")
         except OKLUnreachableError as e:
             print(f"  ! {snap.name} NOT refreshed: {e}", file=sys.stderr)
     return 0
+
+
+def _stored_check(verified_by: str | None) -> tuple[str, str | None] | None:
+    """The command and expected signal `okl verify` recorded, or None if there is none
+    (never verified, or stamped by an import that carried no evidence)."""
+    import ast
+    if not verified_by or not verified_by.startswith("`"):
+        return None
+    end = verified_by.rfind("` exit 0")
+    if end <= 0:
+        return None
+    run = verified_by[1:end]
+    rest = verified_by[end + len("` exit 0"):]
+    expect = None
+    if rest.startswith(", matched "):
+        lit = rest[len(", matched "):].rsplit(" @ ", 1)[0]
+        try:
+            expect = ast.literal_eval(lit)
+        except (ValueError, SyntaxError):
+            return None
+    return run, expect
+
+
+def _reverify_permitted(args, planned: bool, manual: bool) -> int | None:
+    """None to go ahead and run the listed commands, or the exit code to stop with."""
+    if not planned or getattr(args, "dry_run", False):
+        return 1 if (manual or planned) else 0
+    if args.yes:
+        return None
+    if not sys.stdin.isatty():
+        print("refusing to run stored commands unattended: review them above, then pass --yes",
+              file=sys.stderr)
+        return 2
+    return None if input("Run them? [y/N] ").strip().lower() in ("y", "yes") else 2
+
+
+def cmd_reverify(args) -> int:
+    """Re-run the stored check of every drifted lesson and re-stamp the ones that pass.
+
+    `okl verify` already records the exact command and expected signal as evidence, so a
+    drifted lesson's re-check is known. Retyping each one was the step that made drift
+    upkeep a chore (issue #63). The commands come from the STORE, which on a shared
+    service holds records other people wrote, so they are listed and run only after a
+    confirmation or --yes: stored data reaching a shell unasked is how a shared store
+    becomes remote code execution.
+    """
+    from . import drift
+    client = Client()
+    if not client.configured:
+        print("OKL NOT CONFIGURED — nothing to re-verify. Run `okl init` first.", file=sys.stderr)
+        return 2
+    try:
+        nodes = client.all_nodes()
+    except OKLUnreachableError as e:
+        print(f"OKL UNREACHABLE — cannot re-verify.\n{e}", file=sys.stderr)
+        return 2
+    by_id = {n.id: n for n in nodes}
+    hits, _ = drift.scan_drift(nodes, client.repo, repo_dir=str(_snapshot_path().parent))
+    if not hits:
+        print("okl reverify: nothing has drifted.")
+        return 0
+    plan, manual = [], []
+    for h in hits:
+        chk = _stored_check(by_id[h.node_id].verified_by)
+        (plan.append((h, chk)) if chk else manual.append(h))
+    for h in manual:
+        print(f"• [{h.node_id}] {h.title}\n    no stored check: okl verify {h.node_id} --run \"<check>\" --expect \"<signal>\"")
+    if plan:
+        print(f"okl reverify will run {len(plan)} stored check(s), from the store:")
+        for h, (run, _exp) in plan:
+            print(f"  [{h.node_id}] {run}")
+    stop = _reverify_permitted(args, bool(plan), bool(manual))
+    if stop is not None:
+        return stop
+    failed = 0
+    for h, (run, exp) in plan:
+        rc = cmd_verify(argparse.Namespace(node_id=h.node_id, run=run, expect=exp, timeout=args.timeout))
+        failed += rc != 0
+    print(f"okl reverify: {len(plan) - failed} re-verified, {failed} failed, {len(manual)} need a first check.")
+    return 1 if (failed or manual) else 0
 
 
 def _snapshot_path() -> Path:
@@ -1281,6 +1365,14 @@ def build_parser() -> argparse.ArgumentParser:
                      "signal, so exit 0 alone can't self-certify (the exit-0-zero-files lesson)")
     pvf.add_argument("--timeout", type=int, default=600, help="seconds before the check is killed (default 600)")
     pvf.set_defaults(func=cmd_verify)
+
+    prv = sub.add_parser("reverify", help="re-run the stored check of every drifted lesson and re-stamp the passes")
+    prv.add_argument("--yes", action="store_true",
+                     help="run the listed stored commands without asking (they come from the store)")
+    prv.add_argument("--dry-run", dest="dry_run", action="store_true",
+                     help="list what would be re-run, run nothing")
+    prv.add_argument("--timeout", type=int, default=600)
+    prv.set_defaults(func=cmd_reverify)
 
     ps = sub.add_parser("search", help="full-text search over the encoded body")
     ps.add_argument("query")

@@ -303,7 +303,10 @@ def briefing_notice(result: dict[str, Any], shown: int = 3) -> str | None:
     for key in ("armed_gates", "relevant_defects", "rules", "decisions", "live_retractions",
                 "in_scope_tombstones", "threat_prior_art", "context"):
         titles += [r["title"] for r in result.get(key) or [] if r["title"] not in titles]
-    short = [t.split(" — ")[0].split(" = ")[0][:60].rstrip() for t in titles[:shown]]
+    def trim(t: str, n: int = 48) -> str:
+        t = t.split(" — ")[0].split(" = ")[0].strip()
+        return t if len(t) <= n else t[:n].rsplit(" ", 1)[0].rstrip(",;:") + "…"
+    short = [trim(t) for t in titles[:shown]]
     more = result["match_count"] - len(short)
     return (f"okl · briefed {result['match_count']} lesson(s): " + "; ".join(short)
             + (f" (+{more} more)" if more > 0 else ""))
