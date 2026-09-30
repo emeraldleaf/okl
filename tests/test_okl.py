@@ -966,8 +966,8 @@ def test_mcp_server_builds_and_its_tools_actually_run(tmp_path, monkeypatch):
             rec = unwrap(await mcp.call_tool("okl_record", {
                 "type": "Rule", "title": title, "scope": "repo", "id": "mcp-stable-id"}))
             assert rec.startswith("recorded mcp-stable-id"), rec
-        assert "refined wording" in unwrap(await mcp.call_tool(
-            "okl_search", {"query": "refined wording", "limit": 3}))
+        found = unwrap(await mcp.call_tool("okl_search", {"query": "refined wording", "limit": 3}))
+        assert "refined wording" in found and found.startswith("mcp-stable-id "), found
 
         # ASSERT (4) — a bad tag returns readable guidance naming the vocabulary, not an
         # exception. An agent that cannot read the complaint cannot fix its own call.
@@ -2373,6 +2373,18 @@ def test_reverify_reruns_stored_checks_only_when_asked(tmp_path):
     r = okl("reverify", "--yes")
     assert r.returncode == 1 and "0 re-verified, 1 failed" in r.stdout, r.stdout
     assert rid in okl("drift").stdout
+
+    # A check that times out is one failure, not the end of the run (CodeRabbit on #79:
+    # the TimeoutExpired escaped, so later lessons were never re-checked).
+    (repo / "fast").write_text("")
+    slow = okl("record", "--type", "Rule", "--scope", "repo", "--title", "slow check",
+               "--files", "a.txt").stdout.strip().splitlines()[-1]
+    slow_check = "test -f fast && echo QUICK || { sleep 5; echo QUICK; }"
+    assert okl("verify", slow, "--run", slow_check, "--expect", "QUICK").returncode == 0
+    (repo / "fast").unlink(); commit("goodbye again\n")
+    r = okl("reverify", "--yes", "--timeout", "1")
+    assert r.returncode == 1 and "0 re-verified, 2 failed" in r.stdout, (r.stdout, r.stderr)
+    assert "TIMED OUT" in r.stderr and "TimeoutExpired" not in r.stderr, r.stderr
 
 
 def test_first_run_notice_and_reverify_in_process(tmp_path, monkeypatch, capsys):

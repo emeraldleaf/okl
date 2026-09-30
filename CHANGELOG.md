@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- **`okl verify` / `okl reverify` treat a timeout as a failed check.** A check that
+  outlived `--timeout` raised an uncaught error, so `okl reverify` stopped in a traceback
+  and every later lesson went unchecked.
+- **`okl_search` results lead with the lesson id**, so an agent can pass it to
+  `okl_record` to update the lesson instead of adding a near-duplicate.
+- `.coverage` is no longer tracked.
+
 ## 0.7.3
 
 - **A first run that works with no choices.** `okl init` detects the stack and sets

@@ -21,3 +21,6 @@ e2e/
 .github/instructions/codacy.instructions.md
 okl.db-wal
 okl.db-shm
+
+# test output
+.coverage
