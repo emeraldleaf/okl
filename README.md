@@ -447,6 +447,9 @@ store that checked nothing as broken, and fails.
 
 ```bash
 okl check --task "..." --format actions   # imperatives only, about half the size
+okl check --task "..." --format json      # the raw result, for scripts
+okl check --task "..." --format hook      # what the Claude Code hook prints: the briefing plus
+                                            #   the one-line notice you see (OKL_QUIET=1 drops it)
 okl check --task "..." --limit 3          # fewer records; the briefing says how many it trimmed
 okl init --interests "python,security"    # drop records tagged for stacks you do not use
 ```
