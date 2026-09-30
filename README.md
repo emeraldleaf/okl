@@ -1,12 +1,26 @@
+<div align="center">
+
 # okl — Observed Knowledge Ledger
 
-**Lessons your coding agents can trust: proven by checks, flagged when the code changes,
-shared across repos when you want.**
+**Shared, verified coding rules for Claude Code that outlive a session.**<br>
+Briefed to the agent before every task, proven by checks, flagged in CI when the code they govern changes.
 
-> A small database of the specific lessons a codebase has learned — the bugs it
-> keeps almost-reintroducing, the checks that catch them, the rules that must not
-> be broken — plus a command that hands the relevant ones to a coding agent (or a
-> person) **before** they start a task, so the same mistake isn't made twice.
+[![PyPI](https://img.shields.io/pypi/v/observed-knowledge-ledger?color=blue&label=PyPI)](https://pypi.org/project/observed-knowledge-ledger/)
+[![Python](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
+[![ci](https://github.com/emeraldleaf/okl/actions/workflows/ci.yml/badge.svg)](https://github.com/emeraldleaf/okl/actions/workflows/ci.yml)
+[![okl-verify](https://github.com/emeraldleaf/okl/actions/workflows/okl-verify.yml/badge.svg)](https://github.com/emeraldleaf/okl/actions/workflows/okl-verify.yml)
+[![Claude Code plugin](https://img.shields.io/badge/Claude_Code-plugin-D97757)](#install-as-a-claude-code-plugin)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
+🚀 [Quickstart](#quickstart) · 🔬 [How it works](#how-it-works) · 📊 [Results](#measured-effect-and-its-limits) · 🧪 [Eval report](evals/REPORT.md) · 🧩 [Plugin](#install-as-a-claude-code-plugin)
+
+</div>
+
+> A small store of the rules a codebase lives by — its conventions, the decisions made
+> on purpose, the checks that catch mistakes already made once — plus a hook that hands
+> the relevant ones to a coding agent (or a person) **before** they start a task. The
+> rules survive past a session, can be shared across a team, and stay true: each is
+> verified by running a check, and flagged when the code it governs changes.
 
 ## Quickstart
 
