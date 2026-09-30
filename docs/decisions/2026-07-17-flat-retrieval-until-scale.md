@@ -53,3 +53,10 @@ wins on that measurement — mirroring Mem0's mistake in reverse.
   trigger fires, we accept that and lean on good node titles + the FTS body index.
 - **Revisit when:** any trigger above is hit, or the store gains a node type whose matching is inherently
   semantic (e.g. code-embedding similarity over diffs).
+
+## Amendments
+
+- 2026-09-29: the install line above reads `pip install okl`, but the distribution is published
+  as `observed-knowledge-ledger` (PyPI refuses the name `okl`); the command is
+  `pip install observed-knowledge-ledger`, and the CLI is still `okl`. The consequence it
+  illustrates, an install with no ML stack, is unchanged.

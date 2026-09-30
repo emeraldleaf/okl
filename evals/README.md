@@ -34,16 +34,33 @@ different model from the generator; the harness refuses to run otherwise.
 ```bash
 python3 evals/ab_harness.py --dry-run          # list tasks, no calls
 python3 evals/ab_harness.py --limit 2          # smoke run
-python3 evals/ab_harness.py                    # full run (16 generations + 16 judgments)
+python3 evals/ab_harness.py --samples 3        # citable run (8 tasks x 2 arms x 3 = 48 generations + 48 judgments)
 GENERATOR_CMD="..." JUDGE_CMD="..." ...        # any CLI that takes a prompt on stdin
 ```
+
+A single sample per (task, arm) is noisy; quote only `--samples 3` runs. The harness
+reads these variables:
+
+- `OKL_BRIEF_INTERESTS` — the `--interests` the briefed arm's `okl check` runs with.
+  Default empty (unfiltered), which is what every run in the report used; it is stamped
+  into the receipt.
+- `AB_RESULTS_DIR` — where receipts are read and written (default `evals/results/`).
+- `GENERATOR_CMD` / `JUDGE_CMD` — default `claude -p --model sonnet` / `--model haiku`.
+
+Before any model call, a live run refuses to start (a dry run skips these) if:
+
+- `evals/preflight.py` fails — some task would not receive the rule it tests: exit 5;
+- a task's `defect_node` is not a record in the store: exit 4.
+
+Judge == generator exits 3. A run whose failure rate is above 20% exits 1.
 
 Results land in `evals/results/ab-<timestamp>.json` — commit them; they're the receipts.
 
 ## Provenance of the originally quoted numbers
 
-The 50%→6% / 75%→8% figures cited in the sixth-surface decision record came from a
-held-fixed A/B with the same design run on 2026-07-17, whose raw artifacts were not
-checked in. Treat those as *recorded results with documented controls, not currently
-reproducible*. This harness exists so every future number carries a committed,
-re-runnable receipt. Numbers from runs marked RESULTS NOT USABLE are never quoted.
+An earlier held-fixed A/B of the same design, run on 2026-07-17, produced figures whose
+raw artifacts were never checked in, and the decision record that cited them is not in
+this repo. They are quarantined in [REPORT §7](REPORT.md#7-provenance-of-the-earlier-numbers):
+not reproducible here, and not to be quoted as results. This harness exists so every
+number carries a committed, re-runnable receipt. Numbers from runs marked RESULTS NOT
+USABLE are never quoted.

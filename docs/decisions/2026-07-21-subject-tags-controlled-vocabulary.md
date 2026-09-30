@@ -50,6 +50,9 @@ seed-file comments ("eval-integrity lessons are org-scoped") and the scaffold's 
 
 - 2026-07-21: `messaging` added to the vocabulary during the .NET platform canon import — the
   broker/queue/event-driven rules fit no existing subject.
+- 2026-09-01: **the "still open" rank cutoff above is closed.** `check` now keeps the top
+  `limit` records (12 by default) and reports how many it trimmed; the A/B was re-run on
+  the change rather than assumed safe (REPORT.md §4b).
 - 2026-09-02: `python` added. A code review of this repo found 190 records of which 75 were
   tagged `dotnet` — CQRS, aggregates, outbox, DI scopes — governing a Python codebase that has
   none of those things, while okl's own conventions had no subject to file under. `python-rag`
