@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:e5901b5a0dc0fdd5badd835e8c49ceec0c73bce8effd86a23b0df47937c076d7
+# okl-fingerprint: sha256:6e5888c797cc89aa5853621da4046c144cca6311a5d28a055de7f6351d91df3e
 # Stop hook — the write-side mechanical catch for the encoding loop.
 #
 # The read side (okl check) is enforced by the UserPromptSubmit hook; nothing enforced the WRITE
@@ -43,7 +43,7 @@ if [ -n "${CLAUDE_PROJECT_DIR:-}" ] && [ -z "${OKL_SERVICE_URL:-}${OKL_DATABASE_
   [ "$enrolled" = 1 ] || exit 0
 fi
 
-# Same resolver as pretooluse-okl-check.sh (env → pinned config → PATH → python3 -m okl);
+# Same resolver as userpromptsubmit-okl-check.sh (env → pinned config → PATH → python3 -m okl);
 # the reminder is best-effort, so an unresolvable okl silently disables it rather than blocking.
 # A layer is used only if its command can actually run. A pinned path goes stale when the
 # venv that held it is recreated; running it anyway produced the shell's own "No such file

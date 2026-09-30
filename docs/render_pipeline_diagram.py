@@ -183,8 +183,8 @@ def render(d: dict) -> str:
          f'{d["delivered"]} delivered', f'{d["trimmed"]} reported as trimmed',
          d["delivered"] / f, d["trimmed"] / f, "TRUNCATES"),
         ("6", "SHAPE", "Bucket by type, then route to imperatives",
-         "Eight buckets: gates, defects, retractions, tombstones, threat prior-art, rules, "
-         "vocabulary, stale warnings. Stale demotes, never deletes. Then ARM / FIX / AVOID.",
+         "Buckets: gates, defects, retractions, tombstones, threat prior-art, rules, decisions, "
+         "vocabulary, related context. Stale demotes, never deletes. Then ARM / FIX / AVOID.",
          "gates -> defects+rules", "-> retractions -> tombstones", 0.0, 0.0, ""),
         ("7", "RENDER", "Three surfaces, one pipeline",
          "agent | actions | json. A zero-match result carries the store size, so 'no rules "
@@ -199,7 +199,7 @@ def render(d: dict) -> str:
              f'How an okl briefing gets built</text>')
     o.append(f'<text x="{PAD}" y="72" font-size="14" fill="{INK2}">'
              f'{escape(str(d["corpus"]))} records and one task sentence become the '
-             f'{d["limit"]} an agent reads. Two stages can drop a record; only one is entitled to.'
+             f'{d["limit"]} an agent reads. Four stages narrow it; only applies_to may exclude on validity.'
              f'</text>')
     for i, ln in enumerate([
         "GENERATED from the live pipeline - docs/render_pipeline_diagram.py",
