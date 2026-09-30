@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.7.3
 
 - **A first run that works with no choices.** `okl init` detects the stack and sets
   interests from it, and seeds an empty local store with 20 portable starter lessons plus
