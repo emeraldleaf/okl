@@ -39,6 +39,15 @@
       "verified_by": "`R=$PWD; d=$(mktemp -d) && cd $d && git init -q && env -u OKL_DATABASE_URL -u OKL_SERVICE_URL PYTHONPATH=$R/src python3 -m okl init --repo z --no-claude >/dev/null 2>&1; env -u OKL_DATABASE_URL -u OKL_SERVICE_URL PYTHONPATH=$R/src python3 -m okl record --type Rule --scope repo --title x --verified >/dev/null 2>&1; rc=$?; cd $R; rm -rf $d; [ $rc -eq 2 ] && python3 -c \"import sys; t=lambda f: \\\" \\\".join(open(f).read().split()); sys.exit(0 if \\\"exits 2\\\" in t(\\\"README.md\\\") and \\\"okl record --verified\\` is refused\\\" in t(\\\"docs/GETTING-STARTED.md\\\") else 1)\" && echo VERIFIED FLAG REFUSED` exit 0, matched 'VERIFIED FLAG REFUSED' @ 2026-09-30T03:58Z"
     },
     {
+      "id": "docs-agent-neutral",
+      "type": "Decision",
+      "title": "okl's docs are agent-neutral; Claude Code-only parts are labelled as such",
+      "scope": "repo:okl",
+      "files": "docs/GETTING-STARTED.md,README.md",
+      "verified_at": 1790740723335,
+      "verified_by": "`bash -c \"grep -q '## Using another agent\\|### Using another agent' docs/GETTING-STARTED.md && grep -q 'okl mcp' docs/GETTING-STARTED.md && grep -q 'GETTING-STARTED.md#using-another-agent' README.md && echo AGENT NEUTRAL\"` exit 0, matched 'AGENT NEUTRAL' @ 2026-09-30T03:58Z"
+    },
+    {
       "id": "n_07faa4565128",
       "type": "Rule",
       "title": "Read a record's own body before gating it — it may already declare its portability",
