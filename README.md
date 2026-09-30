@@ -1,12 +1,29 @@
+<div align="center">
+
 # okl — Observed Knowledge Ledger
 
-**Lessons your coding agents can trust: proven by checks, flagged when the code changes,
-shared across repos when you want.**
+**A learning loop that keeps coding agents — and your docs — from drifting.**<br>
+Engineering rules, architecture decisions, documentation and diagrams: recorded once, briefed to
+Claude Code before every task, proven by checks, and flagged in CI when what they govern changes.
 
-> A small database of the specific lessons a codebase has learned — the bugs it
-> keeps almost-reintroducing, the checks that catch them, the rules that must not
-> be broken — plus a command that hands the relevant ones to a coding agent (or a
-> person) **before** they start a task, so the same mistake isn't made twice.
+[![PyPI](https://img.shields.io/pypi/v/observed-knowledge-ledger?color=blue&label=PyPI)](https://pypi.org/project/observed-knowledge-ledger/)
+[![Python](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
+[![ci](https://github.com/emeraldleaf/okl/actions/workflows/ci.yml/badge.svg)](https://github.com/emeraldleaf/okl/actions/workflows/ci.yml)
+[![okl-verify](https://github.com/emeraldleaf/okl/actions/workflows/okl-verify.yml/badge.svg)](https://github.com/emeraldleaf/okl/actions/workflows/okl-verify.yml)
+[![Claude Code plugin](https://img.shields.io/badge/Claude_Code-plugin-D97757)](#install-as-a-claude-code-plugin)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
+🚀 [Quickstart](#quickstart) · 🔬 [How it works](#how-it-works) · 📊 [Results](#measured-effect-and-its-limits) · 🧪 [Eval report](evals/REPORT.md) · 🧩 [Plugin](#install-as-a-claude-code-plugin)
+
+</div>
+
+> A small store of what a codebase knows — its conventions, architecture decisions and
+> why they were made, the checks that catch mistakes already made once, and the claims its
+> docs and diagrams make — plus a hook that hands the relevant ones to a coding agent (or a
+> person) **before** they start a task. Each session can record what it learned, so the store
+> grows with the work; it survives past a session and can be shared across a team. And it
+> stays true: an entry is verified by running a check, and flagged when the files it governs
+> change, whether those are code, docs or diagrams.
 
 ## Quickstart
 

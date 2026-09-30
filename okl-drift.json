@@ -80,8 +80,8 @@
       "title": "Entered a crowded category deliberately: differentiate on verification-of-memory, compose with memory infra, never compete on recall",
       "scope": "repo:okl",
       "files": "README.md",
-      "verified_at": 1790568621812,
-      "verified_by": "`bash -c \"! grep -inE 'better recall|best.{0,12}memory|beats (mem0|zep|letta|claude-mem|agentmemory)' README.md && echo 'POSITIONING OK'\"` exit 0, matched 'POSITIONING OK' @ 2026-09-28T04:10Z"
+      "verified_at": 1790730775509,
+      "verified_by": "`bash -c \"! grep -inE 'better recall|best.{0,12}memory|beats (mem0|zep|letta|claude-mem|agentmemory)' README.md && echo 'POSITIONING OK'\"` exit 0, matched 'POSITIONING OK' @ 2026-09-30T01:12Z"
     },
     {
       "id": "n_e635fd921086",
