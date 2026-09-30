@@ -5,17 +5,21 @@ disable-model-invocation: true
 
 # /check-rules — run the drift-gates locally
 
+Needs the method kit that `okl scaffold .` installs (`gates/`, `registries/`, the `encoding-loop`
+skill); without it there is nothing to run.
+
 Run the full gate suite and report, exactly as CI will:
 
 ```bash
-bash gates/run-gates.sh --untracked
+bash gates/run-gates.sh
 ```
 
 This runs:
-- **retractions** — fails any doc that states a retracted claim without retracting it
-- **tombstones** — fails any doc/comment/config resurrecting a retired identifier
-- **doc-orphans** — fails any spec/ADR/audit not reachable from the docs hub
-- **stale-open-items** — fails any registry item marked "open" that has been resolved
+- **retractions** — fails any doc that restates a quoted claim from `registries/RETRACTIONS.md` verbatim
+- **tombstones** — fails any doc/source/config resurrecting a retired identifier
+- **doc-orphans** — fails any doc or image under `docs/` not linked from a hub file or another doc
+- **links** — fails any markdown link to a local file that does not exist
+- **diagram-pairs** — fails any editable diagram source with no rendered sibling
 - **canon-size** — warns/fails if `CLAUDE.md` exceeds the size budget
 
 <!-- <<FILL: STACK-SPECIFIC GATES>>  Add your build/analyzer/test gates here and in gates/run-gates.sh. -->

@@ -2207,6 +2207,50 @@ def test_seed_resolves_a_bundled_pack_by_name(tmp_path, monkeypatch):
     assert r.returncode == 2 and "dotnet-defects" in r.stderr and r.stdout == "", r.stderr
 
 
+def test_the_service_keeps_applies_to(tmp_path, monkeypatch):
+    """RecordReq had no applies_to field and pydantic ignores unknown fields, so a record
+    sent to a shared service with --applies-to arrived valid on every stack."""
+    pytest.importorskip("fastapi")
+    pytest.importorskip("httpx")   # TestClient needs it, and the service extra does not install it
+    from fastapi.testclient import TestClient
+
+    from okl import service
+    monkeypatch.delenv("OKL_TOKEN", raising=False)
+    app = service.create_app(Store(f"sqlite:///{tmp_path}/svc.db"))
+    c = TestClient(app)
+    r = c.post("/record", json={"type": "Rule", "title": "use EF migrations", "scope": "org",
+                                "applies_to": "dotnet"})
+    assert r.status_code == 200, r.text
+    nodes = c.get("/nodes").json()
+    node = next(n for n in (nodes.get("nodes", nodes) if isinstance(nodes, dict) else nodes)
+                if n["id"] == r.json()["id"])
+    assert node.get("applies_to") == "dotnet", node
+
+
+def test_every_record_that_wins_a_slot_is_shown(tmp_path):
+    """A record that wins one of the briefing's top-k slots must appear in it.
+
+    Decision, Entity, a live Claim and non-threat PriorArt had no bucket: they took a slot
+    and vanished, uncounted. A Decision whose own title was the task made the top 12 and
+    never reached the agent, while the README promised decisions are briefed.
+    """
+    from okl.store import NODE_TYPES
+    s = Store(f"sqlite:///{tmp_path}/t.db")
+    ids = {}
+    for t in sorted(NODE_TYPES):
+        if t == "Vocabulary":
+            continue
+        ids[t] = core.record(s, type=t, scope="org", title=f"zebra ledger {t} record",
+                             body="zebra ledger body")
+    r = core.check(s, repo="r", task="zebra ledger")
+    shown = {it["id"] for k, v in r.items() if isinstance(v, list) and k != "next_actions"
+             for it in v if isinstance(it, dict) and "id" in it}
+    missing = sorted(t for t, i in ids.items() if i not in shown)
+    assert not missing, f"won a slot but appear in no section: {missing}"
+    text = core.render_check_for_agent(r)
+    assert "Decisions" in text and "zebra ledger Decision record" in text, text
+
+
 def test_record_refuses_a_self_awarded_verified_stamp(tmp_path, monkeypatch):
     """`okl record --verified` stamped a lesson verified with no evidence at all, while the
     README said live verification refused it and the shipped encoding-loop skill told agents

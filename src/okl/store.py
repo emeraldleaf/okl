@@ -505,7 +505,7 @@ class _PostgresBackend(_Backend):
             import psycopg
         except ImportError as e:  # pragma: no cover - only when pg selected
             raise RuntimeError(
-                "Postgres backend needs 'psycopg' — install okl[postgres]"
+                "Postgres backend needs 'psycopg' — install 'observed-knowledge-ledger[postgres]'"
             ) from e
         self.psycopg = psycopg
         self.conn = psycopg.connect(url, autocommit=True)

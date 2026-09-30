@@ -13,7 +13,7 @@ Claude Code before every task, proven by checks, and flagged in CI when what the
 [![Claude Code plugin](https://img.shields.io/badge/Claude_Code-plugin-D97757)](#install-as-a-claude-code-plugin)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-🚀 [Quickstart](#quickstart) · 🔬 [How it works](#how-it-works) · 📊 [Results](#measured-effect-and-its-limits) · 🧪 [Eval report](evals/REPORT.md) · 🧩 [Plugin](#install-as-a-claude-code-plugin)
+🚀 [Quickstart](#quickstart) · 📘 [Getting started guide](docs/GETTING-STARTED.md) · 🔬 [How it works](#how-it-works) · 📊 [Results](#measured-effect-and-its-limits) · 🧪 [Eval report](evals/REPORT.md) · 🧩 [Plugin](#install-as-a-claude-code-plugin)
 
 </div>
 
@@ -26,6 +26,9 @@ Claude Code before every task, proven by checks, and flagged in CI when what the
 > change, whether those are code, docs or diagrams.
 
 ## Quickstart
+
+> New here? **[docs/GETTING-STARTED.md](docs/GETTING-STARTED.md)** walks through setup, the
+> habit of adding to the canon as you build a feature, and keeping your docs from drifting.
 
 **1. Install the CLI** (the PyPI name differs — PyPI refuses `okl` as confusable with
 `oki` — but everything you type afterwards is `okl`):
@@ -55,8 +58,9 @@ okl seed                    # lists the bundled packs; imports nothing
 okl seed dotnet-defects     # e.g.: import the packs that match your stack, by name
 ```
 
-Or have your agent propose records from your own code: `okl scaffold .` adds a
-`/seed-from-codebase` command ([Seed it](#seed-it-so-the-very-first-check-returns-something)).
+Or have your agent propose records from your own code: `okl scaffold .` stamps the method
+kit (canon, gates, workflows, agent commands), which includes a `/seed-from-codebase`
+command ([Seed it](#seed-it-so-the-very-first-check-returns-something)).
 
 **4. Check it works:**
 
@@ -75,7 +79,7 @@ okl doctor                  # flags other agent-memory tools and double wiring
 - **Proving a lesson is true** is a check you run, not a flag you set:
   `okl verify <id> --run "pytest -q tests/test_orders.py" --expect "passed"`.
 - **When code a lesson governs changes,** `okl drift` goes red until someone re-runs its
-  check. CI reads a committed snapshot, `okl-drift.json`: once the first lesson governs
+  check (a lesson recorded with `--files` is also red until its first `okl verify`). CI reads a committed snapshot, `okl-drift.json`: once the first lesson governs
   files, run `okl export --drift` and commit it. From then on `okl verify` refreshes it;
   commit it after the code change it verifies. Until then CI warns "Drift not checked",
   which is expected.
@@ -145,13 +149,13 @@ and it is worth knowing which one catches what, because they do not overlap.
 
 | Drift | Caught by | How it works | Fires when |
 |---|---|---|---|
-| **A rule vs. the code it governs** | `okl drift --gate` | a record declares the path globs it governs; git is asked for the last commit touching them | that commit is newer than the record's last verification |
-| **A retired identifier reappearing in prose** | `check-tombstones.sh` | greps tracked source, docs, comments and config for every tombstoned name | any non-allowlisted hit |
-| **A withdrawn claim being restated** | `check-retractions.sh` | greps tracked docs for the exact quoted claim from the retraction registry | the quote appears outside the registry |
-| **A doc nobody links to** | `check-doc-orphans.sh` | reachability check from hub files through `docs/` | a doc is unreachable, so it drifts unread |
-| **A link pointing at a file that moved** | `check-links.sh` | resolves every local markdown link against `git ls-files` | the target does not exist |
+| **A rule vs. the code it governs** | `okl drift --gate` | a record declares the path globs it governs; git is asked for the last commit touching them | that commit is newer than the record's last verification — or the rule has never been verified at all, so a new `--files` rule is red until its first `okl verify` |
+| **A retired identifier reappearing in prose** | `check-tombstones.sh` | greps the working tree's source, docs, comments and config for every tombstoned name | any non-allowlisted hit |
+| **A withdrawn claim being restated** | `check-retractions.sh` | greps the working tree's markdown for the exact quoted claim from the retraction registry | the quote appears outside the registry |
+| **A doc nobody links to** | `check-doc-orphans.sh` | checks that each top-level `docs/` doc or image is named by a hub file or a `docs/*.md` (one hop, not transitive) | nothing names it, so it drifts unread |
+| **A link pointing at a file that moved** | `check-links.sh` | reads every markdown file listed by `git ls-files` and checks each local link's target exists in the working tree | the target does not exist |
 | **A diagram source with no rendered image** | `check-diagram-pairs.sh` | pairs each editable source with its export; format-agnostic via `OKL_DIAGRAM_SRC_EXT`/`OUT_EXT` | reviewers would see nothing. A hand-authored image with no source is noted, never failed, and a repo with no diagram sources is a clean no-op |
-| **Verification going quietly stale** | TTL + `verified_by` | records carry when they were last verified and by which observed check | past its TTL, a record is shown demoted rather than deleted |
+| **Verification going quietly stale** | TTL + `verified_by` | records carry when they were last verified and by which observed check; a TTL applies only to records given `--ttl-days` (none by default) | past its TTL, a record is shown demoted rather than deleted |
 
 Two honest limits on that table:
 
@@ -164,8 +168,8 @@ Two honest limits on that table:
   names no tombstoned identifier and restates no retracted claim will not be caught.
 - **`okl drift` only watches what a record claims.** A file no record governs is not
   watched by anything. Coverage is a curation decision, and the gap is invisible until
-  something breaks — which is why the mechanical gates above scan *everything tracked*
-  rather than only what is enrolled.
+  something breaks — which is why the mechanical gates above scan the whole repo (the
+  tombstone and retraction gates grep the working tree) rather than only what is enrolled.
 
 ## Where this sits (2026): a crowded space, entered anyway
 
@@ -187,9 +191,9 @@ the consensus position of 2026, not an insight.
    category isn't new.
 2. **One bet nobody else had made: memories are treated like tests, not notes.** A
    lesson here cites the source it governs, carries a verification receipt
-   (`okl verify` — no run, no stamp), decays on a TTL, and goes stale *loudly*:
-   `okl drift --gate` fails CI when governed code changed after the lesson was last
-   verified. Every other tool in the table below accumulates; nothing invalidates.
+   (`okl verify` — the CLI will not stamp without a run), can decay on a TTL, and goes
+   stale *loudly*: `okl drift --gate` fails CI when governed code changed after the lesson
+   was last verified, or it was never verified. Every other tool in the table below accumulates; nothing invalidates.
    The whole repo is plumbing to get that one bet in front of an agent before the
    first line of code is written.
 3. **Building it was the point.** This repo exists to make a working method concrete —
@@ -206,7 +210,7 @@ the consensus position of 2026, not an insight.
 | claude-mem / agentmemory (Claude Code plugins) | every tool call, compressed into observations by a model; agentmemory adds confidence and decay | file age (claude-mem skips a note when its file changed); time-based decay (agentmemory) — nothing re-checks a memory |
 | ECC (skills + "instincts") | instincts learned from observed tool use, weighted by a model-scored confidence | confidence decay, applied by prompt — no check proves an instinct |
 | beads | work items and short `bd remember` notes — a task tracker, not a lesson store | closing the issue |
-| **okl** | **typed, scoped lessons (Defect / Rule / Decision …), selected per task, fail-closed** | **the drift gate: a lesson whose governed source changed after its last verification fails CI** |
+| **okl** | **typed, scoped lessons (Defect / Rule / Decision …), selected per task, fail-closed** | **the drift gate: a lesson whose governed source changed after its last verification (or that was never verified) fails CI** |
 
 **Read against the Claude Code memory plugins** (claude-mem, agentmemory, ECC, beads — their
 source, September 2026): they are ahead on capture, retrieval engineering, install polish
@@ -245,13 +249,23 @@ you'd be adopting is the discipline, not the storage.
 One held-fixed A/B (8 authored tasks, 3 samples per arm per run; generator and blind
 judge are different models; method + raw receipts in [evals/REPORT.md](evals/REPORT.md)):
 
-- Same model, briefed vs not: defect reproduction fell **33% → 4%** (sonnet) and
-  **38% → 12%** (haiku). Every "reproduced" is a defect class this store had already
-  paid to learn — an IDOR, a price-tamper fallback, tokens in web storage, an unpinned
-  CI gate — not lint noise.
-- The result worth remembering: **briefed haiku (12%) beat unbriefed sonnet (33%)**.
-  The briefing is a cost lever, not just a quality lever — it can hold a cheaper model
-  above a frontier model's unbriefed floor on the org's known failure modes.
+- Same model, briefed vs not: in the first 3-sample runs (2026-08-30), defect
+  reproduction fell **33% → 4%** (sonnet) and **38% → 12%** (haiku). Later sonnet runs, as
+  the retrieval pipeline changed, read **35–50% → 4–8%** (REPORT §4b–§4i, excluding the
+  reverted §4d and the opus-judged §4f; the latest, §4i, 43% → 8%). The unbriefed arm
+  alone has moved 17 points between runs with nothing changed, so that is the noise floor
+  (§2b). Every "reproduced" is a defect class this store had already paid to learn — an
+  IDOR, a price-tamper fallback, tokens in web storage, an unpinned CI gate — not lint
+  noise.
+- The result worth remembering, from those first runs: **briefed haiku (12%) beat
+  unbriefed sonnet (33%)**. It suggests the briefing is a cost lever, not just a quality
+  lever — it can hold a cheaper model above a frontier model's unbriefed floor on the
+  org's known failure modes. Two caveats: the haiku run was never repeated, and it was
+  judged by sonnet where the sonnet runs were judged by haiku.
+- Every run above predates the briefing's **Decisions** section: until recently a
+  Decision that won a slot was silently dropped; it now appears under its own heading.
+  No eval task's briefing held one, so the eight measured briefings are byte-identical
+  either way.
 
 What this does **not** show: the tasks were authored to invite defect classes the store
 encodes, so it measures what a briefing does when a directly relevant lesson exists —
@@ -308,8 +322,9 @@ Everything reduces to two actions:
    them, and returns a short briefing that **leads with concrete actions**:
    *"FIX: server-controlled price tampering — when you see a request carrying a
    Price field → compute it server-side instead,"* *"ARM: run the class-path check
-   before you finish."* An AI agent reads this at the top of its context; a person
-   reads it in the terminal.
+   before you finish."* Records that are not actions follow under their own headings,
+   including the Decisions already made on purpose. An AI agent reads this at the top of
+   its context; a person reads it in the terminal.
 
 2. **`record` — write after you learn.** When you fix something or decide something,
    you record it as a note (optionally with its symptom/cause/fix and the files it
@@ -389,15 +404,17 @@ pip install "observed-knowledge-ledger[all]"
 ## What it costs, and how to turn it down
 
 Installing okl is not free. It is worth knowing exactly what you are signing up for
-before you wire it into every prompt, and every number below was measured on this repo's
-own 199-record store rather than estimated.
+before you wire it into every prompt. Every number below was measured rather than
+estimated — on a fresh store holding the 161 bundled seed records, with one representative
+task ("add an endpoint that returns an order for the logged-in user"; tokens ≈ characters
+÷ 4). Your store and your tasks will differ.
 
 **Per prompt, once the hook is installed:**
 
 | | |
 |---|---|
-| Latency | **~0.11s** — one local SQLite query, no network in local mode |
-| Context | **~2,300 tokens** at the default `--limit 12`, down to **~250** at `--format actions --limit 3` |
+| Latency | **~0.1s** for the whole `okl check` process (0.07s median warm) — one local SQLite query, no network in local mode |
+| Context | **~1,650 tokens** at the default `--limit 12`, down to **~230** at `--format actions --limit 3` |
 
 **Per session:** the Stop hook interrupts once at the end to ask what was learned. It
 blocks the first stop only, and answering it is the whole write side of the loop. With
@@ -419,18 +436,21 @@ store that checked nothing as broken, and fails.
 ### The knobs, cheapest first
 
 ```bash
-okl check --task "..." --format actions   # imperatives only, ~60% smaller
+okl check --task "..." --format actions   # imperatives only, about half the size
 okl check --task "..." --limit 3          # fewer records; the briefing says how many it trimmed
 okl init --interests "python,security"    # drop records tagged for stacks you do not use
 ```
 
 - **`--format actions`** is the single biggest saving and loses the least: you keep every
   "when you see X → do Y" and drop the explanatory prose.
-- **`--limit N`** caps how many records are drawn on. The briefing always reports what it
-  trimmed, so a short briefing can never quietly hide a miss.
-- **`interests`** is the one to reach for on a mature shared store. Stack tags filter
-  exclusively — declaring `python` means records tagged `dotnet` stay out even when they
-  share a subject tag with something you asked for.
+- **`--limit N`** caps how many records are drawn on. The full briefing reports how many
+  it trimmed; `--format actions` does not, so a short actions list can hide a miss
+  without saying so.
+- **`interests`** is the one to reach for on a mature shared store. Tags filter
+  inclusively — an org record passes when it is untagged or shares any one tag with your
+  interests, so declaring `python` keeps out a record tagged only `dotnet`, but not one
+  tagged `dotnet,security` when you also declared `security`. Only a record's
+  `applies_to` excludes by stack.
 - **Scope records `repo:` rather than `org`** when a lesson is local. Org scope is a claim
   that every project in the organization should see it, and it costs every project's
   budget to be wrong about that.
@@ -457,10 +477,13 @@ server and `.github/workflows/okl-verify.yml` — and nothing else: another tool
 the same events stay, a file you edited is kept and named, and `.okl/` (your store) is
 never touched; delete it yourself if you mean to. Nothing outside the repo was ever written.
 
-Every file okl installs carries a `# okl-fingerprint:` line, the hash of the rest of the
-file. That is how `init` and `--uninstall` tell an untouched okl file (of any version:
-upgraded or removed freely) from one you edited. `init` keeps an edited file unless you
-pass `--force`; `--uninstall` always keeps it. There is no local state, so this works the
+The two hook scripts and the CI workflow each carry a `# okl-fingerprint:` line, the hash
+of the rest of the file (settings and `.mcp.json` are merged entry by entry instead). That
+is how `init` and `--uninstall` tell an untouched okl file (of any fingerprinted version:
+upgraded or removed freely) from one you edited. Files installed before 0.7 carry no
+fingerprint, so unless one is byte-identical to the current version, `init` keeps it and
+`okl init --force` is what upgrades it. `init` keeps an edited file unless you pass
+`--force`; `--uninstall` always keeps it. There is no local state, so this works the
 same for a teammate who cloned the repo. okl never writes through a symlink: a hook,
 settings or workflow path that is a link, or sits under one, is refused and named.
 
@@ -471,16 +494,20 @@ build on a must-fix finding. It is **off unless you ask for it**, and it is not 
 vendor. Set the `REVIEW_CMD` repository variable to any CLI that reads a prompt on stdin:
 
 ```bash
-gh variable set REVIEW_CMD --body "claude -p --model sonnet"   # your existing Claude Code login
+gh variable set REVIEW_CMD --body "claude -p --model sonnet"   # Claude Code CLI, installed on the runner
 gh variable set REVIEW_CMD --body "ollama run qwen2.5-coder"   # local model, no API cost
 gh variable set REVIEW_CMD --body "llm -m gpt-4o"              # any other CLI
 ```
 
 Two things worth knowing:
 
-- **`claude -p` needs no separate API key.** It authenticates with the Claude Code login you
-  already have, so if you use Claude Code there is nothing else to configure and no second
-  bill. Verified headless with `ANTHROPIC_API_KEY` unset.
+- **In CI, the runner needs the CLI and a credential.** The scaffolded job does not install
+  whatever `REVIEW_CMD` names, and if that command is not on the runner's PATH the step
+  skips with a soft pass. Install it in the workflow and give it the secret it needs (the
+  job passes `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` through when set). Your personal
+  Claude Code login does not reach a hosted runner.
+- **Run locally, `claude -p` needs no separate API key.** It authenticates with the Claude
+  Code login you already have. Verified headless with `ANTHROPIC_API_KEY` unset.
 - **Locally you do not need this at all.** The reviewer is a subagent
   (`.claude/agents/architecture-reviewer.md`); ask your agent to run it on your changes and
   it costs nothing beyond the session you are already in. The CI job exists for the case
@@ -506,14 +533,17 @@ touches only the current directory, and only these:
 | Path | What it is |
 |---|---|
 | `.okl/config.json` | repo name, subject interests, and the path to your `okl` binary |
+| `.okl/.gitignore` | keeps `.okl/` (config and store) out of git, with no edit to your own `.gitignore` |
+| `.okl/okl.db` | the local store (local mode only; empty until you seed or record) |
 | `.claude/hooks/userpromptsubmit-okl-check.sh` | **executable**; runs when you submit a task, injects the briefing |
 | `.claude/hooks/stop-okl-encode.sh` | **executable**; runs at session end, asks what was learned |
 | `.claude/settings.json` | registers those two hooks (merged in place; your existing keys are preserved) |
 | `.mcp.json` | registers the okl MCP server — only when the `mcp` extra is installed |
-| `.github/workflows/okl-verify.yml` | **a CI workflow** running the drift gate on pull requests |
+| `.github/workflows/okl-verify.yml` | **a CI workflow** running the drift gate on pull requests — only in a git repository |
 
-Re-running `init` is safe: it upgrades okl's own files, keeps any you edited (say so with
-`--force` to replace them), and merges settings without duplicating entries.
+Re-running `init` is safe as long as you pass the same `--repo` (without it, the repo name
+resets to the directory's name): it upgrades okl's own files, keeps any you edited (say so
+with `--force` to replace them), and merges settings without duplicating entries.
 
 Two of those deserve a second look before you run it: the hooks are shell scripts that
 execute automatically during agent sessions (the check hook can *block* a task when the
@@ -534,7 +564,7 @@ of a session that changed files with one question — *did this session learn an
 worth `okl record`ing?* — so the write side of the loop gets a mechanical prompt too,
 not just a convention. It fires once per session and never loops.
 
-**Other agents (AGENTS.md):** `init` and `scaffold` write the repo canon to both
+**Other agents (AGENTS.md):** `okl scaffold` (not `init`) writes the repo canon to both
 `CLAUDE.md` and `AGENTS.md` — one content, two filenames, so Codex/Cursor/anything
 reading the AGENTS.md convention gets the same rules Claude Code does (byte-identity is
 test-enforced). The hooks themselves are Claude Code-specific; other agents get the
@@ -566,7 +596,7 @@ mode, good for trying it before you deploy anything.
 ```bash
 # 1. READ the relevant lessons before starting a task (the load-bearing move)
 okl check --task "add an endpoint that returns an order for the logged-in user"
-#   add --format actions --limit 3 for a ~240-token version (subagents, CI)
+#   add --format actions --limit 3 for a ~230-token version (subagents, CI)
 
 # 2. RECORD a lesson after you learn it, with an actionable symptom/cause/fix
 okl record --type Defect --scope org --tags "security" \
@@ -604,7 +634,8 @@ okl drift --gate     # flag lessons whose governed source changed after they wer
 okl export --drift   # write okl-drift.json, the committed snapshot CI's drift gate reads
                      #   when it has no store; `okl verify` refreshes it once it exists.
                      #   CI reads the COMMITTED copy, and refuses an entry whose timestamp
-                     #   does not match its verify evidence, so it cannot be cleared by hand.
+                     #   does not match its verify evidence, so editing the timestamp alone
+                     #   cannot clear it (editing both fields can; review is the guard).
 okl doctor           # names other agent-memory tools installed beside okl (claude-mem,
                      #   agentmemory, ECC, beads) and how each collides with okl's hooks;
                      #   reads settings only, changes nothing. `okl init` says the same.
@@ -617,7 +648,7 @@ okl metric           # recurrence: defect classes that came back, split by wheth
 
 ## Subagents and small context budgets
 
-A full briefing costs roughly **2,300 tokens** — fine for a main session with a large
+A full briefing costs roughly **1,650 tokens** on the measurement above — fine for a main session with a large
 window, punishing for a subagent working in a few thousand. That asymmetry matters
 because subagents are exactly where org rules get lost: a focused worker handling one
 subtask has the least context and the most need for "here is the mistake this codebase
@@ -638,19 +669,21 @@ OKL — 3 rule(s) apply before you start:
 ...
 ```
 
-**Measured on this repo's own store:** ~240 tokens at `--limit 3`, ~390 at `--limit 5`,
-~630 at `--limit 8`, against ~2,650 for the full briefing. Cheap enough to call per subtask.
+**Measured on the 161 bundled seed records, one representative task:** ~230 tokens at
+`--limit 3`, ~380 at `--limit 5`, ~520 at `--limit 8` and ~830 at `--limit 12`, against
+~1,650 for the full briefing. Cheap enough to call per subtask.
 
 The full briefing is itself capped: `check` keeps the top `--limit` records (12 by
-default) from the ranked, filtered set and says how many it trimmed. Before that cutoff
-existed, one task on this store returned 20 records and ~4,400 tokens. The cutoff did
+default) from the ranked, filtered set and says how many it trimmed. Historically, before
+that cutoff existed, one task on this repo's store at the time returned 20 records and
+~4,400 tokens. The cutoff did
 cost one retrieval: `exit_code_trust`'s governing rule ranks below the top 12 for that
 task's wording. Run outcomes hid it (the briefing still prevented the defect, through
 other records); `evals/preflight.py` found it by asking directly whether each task's rule
 is in its briefing, and it is kept in a named register rather than silently. See
 [evals/REPORT.md](evals/REPORT.md) §4b's correction.
 
-What it drops: the bucketed sections, the prose bodies explaining *why* each record
+What it drops: the bucketed sections (Decisions among them), the prose bodies explaining *why* each record
 exists, prior-art notes, and the stale-record footer. What it keeps is what changes
 behaviour: the verb, the symptom to watch for, and the fix.
 
@@ -688,20 +721,23 @@ folder.) Two clarifications that stop the common misreadings:
 
 `okl` applies this to its own knowledge in four escalating rungs:
 
-1. **Assertion is refused.** `okl record --verified` (a bare claim, no evidence) exits 2
-   and points at `okl verify`. Historical, already-verified records still import through
-   `okl seed`, and CI's snapshot reader rejects any stamp that carries no `okl verify`
-   evidence.
+1. **Assertion is refused at the CLI.** `okl record --verified` (a bare claim, no
+   evidence) exits 2 and points at `okl verify`. Two doors stay open: `okl seed` imports
+   historical, already-verified stamps, and the shared service's API still accepts
+   `verified: true` on a record. What closes the loop is CI: its snapshot reader rejects
+   any stamp that carries no `okl verify` evidence.
 2. **Observed check with a stored trail** — `okl verify <id> --run "pytest -q"
    --expect "passed"` runs the check itself, reads the real outcome, requires the
    positive signal (exit 0 alone can't self-certify), and stores command + result +
    timestamp on the node (`verified_by`). Every stamp is inspectable and re-runnable;
    a lazy check becomes a visible artifact instead of an invisible belief.
 3. **An independent actor re-checks** — CI runs `okl drift --gate` and the method
-   gates on every PR: a mechanical grader with no stake in the original claim, and
-   `VERIFIED_ON` receipts are written by the job that watched a gate prove itself.
+   gates on every PR: a mechanical grader with no stake in the original claim. Nothing
+   shipped writes `VERIFIED_ON` receipts by default; a gate script can emit one with
+   `okl link <gate_id> VERIFIED_ON <defect_id>` when it watches a gate prove itself.
 4. **Time attacks every stamp** — `drift` re-grades verifications the moment governed
-   files change after `verified_at`; TTL decays stamps nobody re-earns into `STALE`;
+   files change after `verified_at`; a record given `--ttl-days` decays into `STALE` when
+   nobody re-earns it (there is no TTL by default);
    and `okl metric` scores the whole system on outcomes — defect classes that came
    back — the one number it can't flatter itself on. It earns that by stating its own
    coverage (how many defects have a gate it could speak for) and by counting
@@ -767,7 +803,7 @@ It also stamps two **first-party method skills** — `encoding-loop` (turn a fin
 into a promoted, recorded lesson) and `verify-before-claiming` (evidence before you
 assert a result). The broader engineering-discipline skills (systematic debugging,
 TDD, plan writing/execution, git-worktree isolation) are **not bundled** — they're
-best maintained in third-party collections, so `skills/RECOMMENDED-COMPANIONS.md`
+best maintained in third-party collections, so `.claude/skills/RECOMMENDED-COMPANIONS.md`
 points at those instead of vendoring someone else's work and its cross-references.
 
 The scaffold runs with no store at all; the store works in a repo that never scaffolded.
@@ -776,8 +812,9 @@ They are complementary, not a package deal.
 **Storage is swappable** via one environment variable — your commands never change:
 
 ```bash
-# default: a local file (single machine)
-export OKL_DATABASE_URL="sqlite:///okl.db"
+# default: no variable at all — the store is .okl/okl.db beside the repo's config
+# an explicit SQLite file, e.g. one several local repos share
+export OKL_DATABASE_URL="sqlite:///path/to/okl.db"
 # a shared database when several repos need one store
 export OKL_DATABASE_URL="postgresql://user:pass@host/okl"
 okl serve --port 8080
@@ -809,10 +846,10 @@ okl mcp     # register in your coding agent's tool config
 ```
 
 Exposes three tools to a coding agent: `okl_check` (read lessons before a task),
-`okl_record`, `okl_search`. `okl_check` **fails closed** — if a configured shared
-instance is unreachable it says so loudly rather than returning a reassuring
+`okl_record`, `okl_search`. `okl_check` **reports an outage loudly** — if a configured
+shared instance is unreachable it says so rather than returning a reassuring
 "nothing found," because those two look identical from the agent's side and only one
-is safe.
+is safe. Unlike the hook, a tool result cannot block the agent; it can only warn it.
 
 ---
 
@@ -842,6 +879,8 @@ src/okl/
   client.py       # resolves local-file vs. shared-service; fails closed
   cli.py          # the `okl` command
   drift.py        # source-vs-spec drift detection
+  ownership.py    # okl-fingerprint lines: which installed files are okl's, and untouched
+  coexist.py      # `okl doctor`: detects other agent-memory plugins and double wiring
   bootstrap.py    # propose starter notes from a repo's git history + docs
   service.py      # the shared web service (okl[service])
   mcp_server.py   # coding-agent tools (okl[mcp])
@@ -855,9 +894,12 @@ tests/            # end-to-end tests
 ## Test
 
 ```bash
-pip install "observed-knowledge-ledger[dev]"
-pytest -q          # full suite (one drift test self-skips where git init is unavailable)
+pip install -e ".[dev]"   # from a clone of this repo
+pytest -q                 # full suite
 ```
+
+Some tests skip rather than fail where git is unavailable (or `git init` is blocked) or
+an optional extra such as `service` is not installed.
 
 ## License
 

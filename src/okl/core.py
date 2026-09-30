@@ -143,7 +143,7 @@ def _bucket_by_type(hits: list[Node]) -> dict[str, list[dict]]:
     buckets: dict[str, list[dict]] = {
         "armed_gates": [], "relevant_defects": [], "live_retractions": [],
         "in_scope_tombstones": [], "threat_prior_art": [], "rules": [],
-        "vocabulary": [], "stale_warnings": [],
+        "vocabulary": [], "decisions": [], "context": [], "stale_warnings": [],
     }
     for n in hits:
         pub = _node_public(n)
@@ -163,6 +163,14 @@ def _bucket_by_type(hits: list[Node]) -> dict[str, list[dict]]:
             buckets["rules"].append(pub)
         elif n.type == "Vocabulary":
             buckets["vocabulary"].append(pub)
+        elif n.type == "Decision":
+            buckets["decisions"].append(pub)
+        else:
+            # Everything else that won a top-k slot (a live Claim, an Entity, prior art that
+            # is not a threat) is still shown. These types had no bucket: they took a slot
+            # and vanished, uncounted, so a Decision matching the task by its own title never
+            # reached the agent (found by a docs audit, 2026-09-29).
+            buckets["context"].append(pub)
     return buckets
 
 
@@ -329,7 +337,9 @@ def render_check_for_agent(result: dict[str, Any]) -> str:
         ("in_scope_tombstones", "⛔ Retired identifiers — do not resurrect"),
         ("threat_prior_art", "📄 Prior art (THREAT) — novelty already claimed"),
         ("rules", "📐 Encoded rules"),
+        ("decisions", "🧭 Decisions — made on purpose; do not silently reverse"),
         ("vocabulary", "📖 Vocabulary"),
+        ("context", "📎 Related context"),
     ]
     # Judged on the whole briefing: when every match was routed into an action the sections
     # are empty, and "No encoded rule matched" appeared under a list of actions.

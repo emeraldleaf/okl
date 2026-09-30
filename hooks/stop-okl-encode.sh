@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:5c21a4ef0db1d9f64175040ae313e04c97cf6008654c8941bd5864c946708867
+# okl-fingerprint: sha256:6e5888c797cc89aa5853621da4046c144cca6311a5d28a055de7f6351d91df3e
 # Stop hook — the write-side mechanical catch for the encoding loop.
 #
 # The read side (okl check) is enforced by the UserPromptSubmit hook; nothing enforced the WRITE
@@ -27,7 +27,23 @@ fi
 # the operator makes explicitly, never a fallback the hook takes on its own.
 case ",${OKL_DISABLED_HOOKS:-}," in *,encode,*) exit 0 ;; esac
 
-# Same resolver as pretooluse-okl-check.sh (env → pinned config → PATH → python3 -m okl);
+# Not enrolled: step aside. okl's Claude Code plugin is installed per user, so these hooks
+# run in EVERY repo the user opens, and most were never set up with `okl init`. There the
+# pre-task hook blocked every prompt as "OKL NOT CONFIGURED" and the Stop hook asked
+# "what did we learn?" of repos with no store to record into (found by a docs audit,
+# 2026-09-29, before any user hit it). Only when Claude Code names the project: with no
+# CLAUDE_PROJECT_DIR the hook cannot tell an unenrolled repo from a session that drifted
+# out of an enrolled one, and fail-closed still wins there.
+if [ -n "${CLAUDE_PROJECT_DIR:-}" ] && [ -z "${OKL_SERVICE_URL:-}${OKL_DATABASE_URL:-}" ]; then
+  enrolled=0; d="$PWD"
+  while [ "$d" != "/" ]; do
+    if [ -f "$d/.okl/config.json" ]; then enrolled=1; break; fi
+    d=$(dirname "$d")
+  done
+  [ "$enrolled" = 1 ] || exit 0
+fi
+
+# Same resolver as userpromptsubmit-okl-check.sh (env → pinned config → PATH → python3 -m okl);
 # the reminder is best-effort, so an unresolvable okl silently disables it rather than blocking.
 # A layer is used only if its command can actually run. A pinned path goes stale when the
 # venv that held it is recreated; running it anyway produced the shell's own "No such file

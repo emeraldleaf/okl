@@ -32,7 +32,7 @@ The middle tier is the part I had to build: a small typed store of what the proj
 
 ## Retrieved, not loaded
 
-The reason the store can grow indefinitely is that no session ever reads it. Before a task starts, a hook queries it with the task description and injects only what survives a pipeline: relevance ranking, scope, the files a record applies to, the declared subject interests of the current repo, a cap at the top twelve, and typed routing that turns the survivors into a short action list. Fix this. Run that gate. Do not restate this retracted claim.
+The reason the store can grow indefinitely is that no session ever reads it. Before a task starts, a hook queries it with the task description and injects only what survives a pipeline: relevance ranking, scope, where a record says it applies, the declared subject interests of the current repo, a cap at the top twelve, and typed routing that turns the survivors into a short action list. Fix this. Run that gate. Do not restate this retracted claim.
 
 Each run sees a dozen relevant lines rather than the whole library. At ten times the current corpus, what reaches the agent should be the same length and better chosen.
 

@@ -15,7 +15,7 @@
    surfaces a rule. The response is always *pick the smallest sufficient surface → encode it →
    promote it down the spectrum (toward mechanical) only as it earns its keep.* It is a ratchet: it
    does not slip back.
-3. **Six surfaces, softest→strongest:** (1) deep reference `docs/`, (2) always-on canon `CLAUDE.md`
+3. **Five in-repo surfaces, softest→strongest; a sixth, okl, spans repos:** (1) deep reference `docs/`, (2) always-on canon `CLAUDE.md`
    + `.claude/rules/`, (3) procedure rituals `.claude/skills/` + commands, (4) PR-review automation
    `.coderabbit.yaml` + `architecture-reviewer`, (5) mechanical gates CI/tests/hooks, (6) the
    cross-repo org knowledge layer (`okl`). 1–2 are Tier 1, 3–4 Tier 2, 5 Tier 3; 6 spans repos.
@@ -37,7 +37,7 @@
    entity layer; a model trained on a 0-file materialized dataset.)
 4. **Fixtures you invented cannot falsify assumptions you hold.** Test against real data sampled from
    the actual corpus/inputs, not fixtures written by the same person who wrote the code under test.
-   The adversarial audit (`/paper-audit`) exists to attack your own confident claims.
+   An adversarial prior-art audit (not shipped; bring your own) exists to attack your own confident claims.
 5. **Report the result that came out** — especially when it disproves your hypothesis. When a result
    turns out wrong, *retract it in a registry*, don't quietly delete it. The retraction is a receipt.
 6. **Record decisions, including the ones you rejected and why.** "Options considered and rejected"

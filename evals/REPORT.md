@@ -818,9 +818,9 @@ all this can say: the cut is safe on this task set; nothing here shows it helps.
 - **n = 3 samples per cell.** Enough to expose single-sample noise (documented above),
   not enough for tight confidence intervals. Directional claims only.
 - **The briefing was harness-injected, not hook-delivered.** In production the same
-  briefing text reaches the model via the fail-closed PreToolUse hook inside an agentic
-  session; here it was prepended to a one-shot prompt, because headless generation never
-  triggers an edit-matched hook. The briefing *content* is identical; the delivery layer
+  briefing text reaches the model via the fail-closed UserPromptSubmit hook inside an agentic
+  session (it was a PreToolUse hook when these runs were made; see §8); here it was
+  prepended to a one-shot prompt. The briefing *content* is identical; the delivery layer
   (hook firing, binary resolution, fail-closed blocking) is exercised by the test suite
   and observed live, but not by this experiment. Likewise no Stop hook, gates, or verify
   step were in the loop — the experiment isolates the briefing variable and measures

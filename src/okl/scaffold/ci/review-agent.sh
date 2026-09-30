@@ -21,9 +21,9 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
-# Located, not assumed: `okl scaffold --claude-dir` lets a repo name that directory
-# something other than .claude, and a hard-coded path silently skips the review in exactly
-# those repos — a gate that quietly does nothing is the failure this whole file exists to
+# Located, not assumed: a repo may keep the agent somewhere other than .claude/agents/
+# (moved by hand, or never scaffolded), and a hard-coded path silently skips the review in
+# exactly those repos — a gate that quietly does nothing is the failure this whole file exists to
 # fix. AGENT_FILE overrides for anything unusual.
 AGENT="${AGENT_FILE:-}"
 if [ -z "$AGENT" ]; then

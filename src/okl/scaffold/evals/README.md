@@ -24,9 +24,14 @@ hand-written happy-path examples.
 
 ## Files
 - `run_evals.py` — the harness (framework-agnostic; adapt `evaluate_one()` to your system)
-- `cases.jsonl` — the golden set (`<<FILL>>` with real cases)
+- `cases.jsonl` — the golden set (`<<FILL>>` with real cases). Until every `<<FILL` is gone,
+  `run_evals.py` refuses to run (exit 2) rather than reporting a score over a placeholder, and
+  the `evals` CI job shows an "Evals not measured" warning instead of a result. A passing job
+  with that warning measured nothing
 - results write to `results/` with the failure count and cross-tab at the top
 
-## Wire into CI
-Add to `ci/` after the gates: a regression fails the build if the usable pass-rate drops below the
-committed baseline. Never quote a number from a run whose failure rate tripped `RESULTS NOT USABLE`.
+## CI
+Already wired: the `evals` job in `.github/workflows/method-gates.yml` runs `run_evals.py` and fails
+on `RESULTS NOT USABLE`. A baseline comparison (fail the build if the usable pass-rate drops below a
+committed baseline) is yours to add. Never quote a number from a run whose failure rate tripped
+`RESULTS NOT USABLE`.

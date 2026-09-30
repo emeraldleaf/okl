@@ -53,10 +53,18 @@ def main(argv=None) -> int:
     if not path.exists():
         print(f"no cases file at {path} — add a golden set (see README). Nothing to measure.")
         return 0
-    cases = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+    text = path.read_text()
+    # An unfilled golden set is not a measurement. The placeholder case "completes" against
+    # the stub and scored avg 5.00 with a 0% failure rate — a green number over nothing.
+    if "<<FILL" in text:
+        print(f"❌ REFUSING TO RUN: {path} still contains <<FILL placeholders. Replace them with "
+              "real cases (see README) — a score over a placeholder is not a result.", file=sys.stderr)
+        return 2
+    cases = [json.loads(line) for line in text.splitlines() if line.strip()]
     if not cases:
-        print("cases.jsonl is empty — add real failing cases before trusting any number.")
-        return 0
+        print("cases.jsonl is empty — nothing was measured. Add real failing cases first.",
+              file=sys.stderr)
+        return 2
 
     results = []
     for c in cases:

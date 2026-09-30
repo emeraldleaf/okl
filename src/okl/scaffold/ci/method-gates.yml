@@ -1,4 +1,4 @@
-# Copy into .github/workflows/method-gates.yml
+# `okl scaffold` installs this as .github/workflows/method-gates.yml.
 # Surface 5 in CI: the mechanical drift-gates + the eval tier. Fail-closed — a red gate blocks merge.
 name: method-gates
 
@@ -26,13 +26,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Pinned to a commit SHA, not a tag: a tag is mutable, so `@v5` is an unpinned
-      # dependency with access to your runner. Add a .github/dependabot.yml with the
-      # `github-actions` ecosystem so these pins receive security updates — a pin with no
-      # update path goes stale, which is its own risk.
+      # dependency with access to your runner. `okl scaffold` also installs
+      # .github/dependabot.yml (the `github-actions` ecosystem) so these pins receive security
+      # updates — a pin with no update path goes stale, which is its own risk.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
-      - name: Run drift-gates (retractions / tombstones / doc-orphans / canon-size)
+      - name: Run drift-gates (retractions / tombstones / doc-orphans / links / diagram-pairs / canon-size)
         run: bash gates/run-gates.sh
 
   evals:
@@ -48,7 +48,19 @@ jobs:
         env:
           GENERATOR_MODEL: ${{ vars.GENERATOR_MODEL }}
           JUDGE_MODEL: ${{ vars.JUDGE_MODEL }}   # must differ from GENERATOR_MODEL
-        run: python evals/run_evals.py --fail-rate 0.20
+        # Exit 2 = did not run: cases.jsonl still holds <<FILL placeholders, so nothing was
+        # measured. A new kit starts there, so that is a warning, not a red build and not a
+        # pass. Any other failure fails the job.
+        run: |
+          set +e
+          python evals/run_evals.py --fail-rate 0.20
+          rc=$?
+          set -e
+          if [ "$rc" -eq 2 ]; then
+            echo "::warning title=Evals not measured::evals/cases.jsonl still holds <<FILL placeholders, so nothing was measured. This step passing is NOT a result."
+            exit 0
+          fi
+          exit "$rc"
 
   review:
     # The architecture reviewer, run headless on the PR diff. OFF unless you set the

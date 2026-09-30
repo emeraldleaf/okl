@@ -37,8 +37,10 @@ def _layout(c: str = ".claude"):
         ("MANIFEST.md", "docs/method-kit-manifest.md"),
     ]
 
+# Claude Code reads a plugin's manifest from .claude-plugin/plugin.json, and resolves the
+# manifest's paths against the plugin root (the repo root here), so they name ./.claude/...
 PLUGIN_LAYOUT = [
-    ("plugin/plugin.json", "plugin.json"),
+    ("plugin/plugin.json", ".claude-plugin/plugin.json"),
 ]
 
 

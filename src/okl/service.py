@@ -15,6 +15,15 @@ from typing import Any
 from . import core
 from .store import Store
 
+
+def _version() -> str:
+    # Was hard-coded "0.1.0" through six releases (docs audit).
+    try:
+        from importlib.metadata import version
+        return version("observed-knowledge-ledger")
+    except Exception:  # noqa: BLE001 - a source checkout without metadata still serves
+        return "unknown"
+
 try:
     from fastapi import FastAPI, Header, HTTPException
     from pydantic import BaseModel
@@ -43,6 +52,9 @@ class RecordReq(BaseModel):
     symptom: str | None = None
     fix: str | None = None
     tags: str | None = None
+    # Was missing, and pydantic drops unknown fields silently: `okl record --applies-to`
+    # against a shared service stored the lesson as valid on every stack (docs audit).
+    applies_to: str | None = None
     id: str | None = None
     verified: bool = False
 
@@ -80,7 +92,7 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901
     # required — the map you would draw before attacking the routes. Setting the token
     # is the signal that this instance is not a laptop, so the spec comes down with it.
     private = token is not None
-    app = FastAPI(title="okl — Observed Knowledge Ledger", version="0.1.0",
+    app = FastAPI(title="okl — Observed Knowledge Ledger", version=_version(),
                   openapi_url=None if private else "/openapi.json",
                   docs_url=None if private else "/docs",
                   redoc_url=None if private else "/redoc")

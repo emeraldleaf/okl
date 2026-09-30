@@ -17,7 +17,7 @@ Try it end to end in a scratch directory before changing anything:
 ```bash
 mkdir /tmp/try && cd /tmp/try && git init
 okl init --repo try --interests security
-okl seed
+okl seed dotnet-defects        # bare `okl seed` only lists the packs
 okl check --task "add an endpoint that returns an order for the logged-in user"
 ```
 
@@ -27,9 +27,15 @@ Read [CLAUDE.md](CLAUDE.md) (identical to AGENTS.md) before a first PR. It is sh
 it is the actual contract. The parts that will fail your build if you miss them:
 
 - **Mirror files are byte-identical.** `ci/okl-verify.yml`, `.github/workflows/okl-verify.yml`
-  and `src/okl/scaffold/ci/okl-verify.yml` must match, as must `hooks/*.sh` and their
-  `src/okl/scaffold/hooks/` twins. Edit one, copy to the others in the same change.
-  `tests/test_scaffold.py::test_mirror_files_identical` enforces it.
+  and `src/okl/scaffold/ci/okl-verify.yml` must match, as must `hooks/*.sh` and
+  `hooks/hooks.json` and their `src/okl/scaffold/hooks/` twins, `gates/*.sh` and their
+  `src/okl/scaffold/gates/` twins, and `CLAUDE.md` and `AGENTS.md`. Edit one, copy to the
+  others in the same change. `tests/test_scaffold.py::test_mirror_files_identical`
+  enforces it.
+- **CI runs more than the tests.** `ruff check .`, `mypy src/okl`, `pytest -q --cov=okl`
+  (the coverage floor is `fail_under` in `pyproject.toml`, currently 66%),
+  `./ci/check-diagram-figures.sh` and `bash gates/run-gates.sh` all gate the build; see
+  `.github/workflows/ci.yml`. Run them locally before pushing.
 - **The `okl-verify` check can fail on your PR, and that is not yours to fix.** CI reads
   the committed `okl-drift.json`: the rules that govern files, and when each was last
   verified. Change a governed file and CI names the rules that need re-checking. The
@@ -52,8 +58,10 @@ it is the actual contract. The parts that will fail your build if you miss them:
   commit keeps the branch's commits and their times; a squash or rebase creates new
   commits stamped at merge time, which makes every rule the PR touched look stale and
   turns `main` red. Do not re-enable them without changing how drift reads time.
-- **Tags come from a closed vocabulary** (`store.KNOWN_TAGS`). Growing it is a deliberate
-  edit to that set plus a note in the tags ADR, not an ad-hoc string.
+- **Tags come from a closed vocabulary** (`store.KNOWN_TAGS`), never an ad-hoc string.
+  A store can declare a tag for itself with
+  `okl record --type Vocabulary --scope org --title <tag>`. Editing `KNOWN_TAGS`, plus a
+  note in the tags ADR, is for a tag every store should ship with.
 - **Evaluation claims need a committed receipt.** If you change the harness or quote a
   number, the run that produced it belongs in `evals/results/`. Never cite a run the
   harness marked RESULTS NOT USABLE.
@@ -62,9 +70,9 @@ it is the actual contract. The parts that will fail your build if you miss them:
 
 - **Bug reports with a reproduction.** Especially anything where the tool reports success
   it did not earn; that class of defect is the project's whole subject.
-- **The open work in the store.** `okl check --task "improve retrieval precision"` will
-  show you the recorded defects against the tool itself, including the briefing relevance
-  cutoff that is still unfinished.
+- **The known gaps.** They are tracked as
+  [GitHub issues](https://github.com/emeraldleaf/okl/issues); the maintainer's store is
+  not in the repo (`.okl/` is gitignored), so a clone has no recorded defects to query.
 - **Portability fixes.** Hooks, path resolution, and CI have been exercised on macOS and
   GitHub Actions and nowhere else.
 - **Hook wiring for another agent.** `okl init` auto-registers hooks for Claude Code

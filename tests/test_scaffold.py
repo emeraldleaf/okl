@@ -40,7 +40,14 @@ def test_scaffold_writes_tree(tmp_path):
     assert "AGENTS.md" in written, "same canon must ship under both filenames"
     assert (tmp_path / "CLAUDE.md").read_bytes() == (tmp_path / "AGENTS.md").read_bytes()
     assert "METHOD.md" in written
-    assert "plugin.json" in written
+    assert ".claude-plugin/plugin.json" in written
+    # every path the scaffolded manifest names must exist where the kit put it (it once
+    # named ./skills, ./agents... that the scaffold never writes)
+    import json
+    manifest = json.loads((tmp_path / ".claude-plugin" / "plugin.json").read_text())
+    for rel in [*manifest["skills"], *manifest["agents"], *manifest["commands"]]:
+        assert rel.startswith("./.claude/"), rel
+        assert (tmp_path / rel.replace("./.claude/", "dotclaude/", 1)).exists(), rel
 
     # ASSERT (2) — and the enforcement surfaces: a skill, a review agent, the gate runner
     assert any("skills/encoding-loop/SKILL.md" in w for w in written)
@@ -301,6 +308,16 @@ def test_eval_harness_refuses_self_grading(tmp_path, monkeypatch):
     r = subprocess.run([sys.executable, str(harness)], capture_output=True, text=True)
     assert r.returncode == 3
     assert "REFUSING TO RUN" in r.stderr
+
+
+def test_eval_harness_refuses_an_unfilled_golden_set(tmp_path, monkeypatch):
+    """The shipped cases.jsonl is a <<FILL>> placeholder. Run as-is, it scored avg 5.00 at
+    a 0% failure rate and exited 0 — a green number over nothing. It must refuse instead."""
+    harness = Path(__file__).resolve().parents[1] / "src" / "okl" / "scaffold" / "evals" / "run_evals.py"
+    monkeypatch.delenv("GENERATOR_MODEL", raising=False); monkeypatch.delenv("JUDGE_MODEL", raising=False)
+    r = subprocess.run([sys.executable, str(harness)], capture_output=True, text=True, cwd=tmp_path)
+    assert r.returncode == 2 and "<<FILL" in r.stderr, (r.returncode, r.stdout, r.stderr)
+    assert "avg score" not in r.stdout
 
 
 def test_ab_harness_flags_an_off_series_instrument_but_still_runs():
@@ -895,6 +912,43 @@ def test_doctor_reads_settings_the_way_claude_code_resolves_them(tmp_path, monke
     assert [f.tool.name for f in coexist.detect(proj, home)] == ["beads"]
 
 
+def test_hooks_step_aside_in_a_repo_okl_was_never_set_up_in(tmp_path):
+    """okl's plugin is installed per user, so its hooks run in every repo the user opens.
+    In a repo never set up with `okl init` the pre-task hook blocked every prompt as "OKL
+    NOT CONFIGURED", and the Stop hook asked what was learned of a repo with no store.
+    Found by a docs audit before any user hit it. Unenrolled + a named project = no-op;
+    an enrolled repo whose okl fails still blocks.
+    """
+    import json
+    import shutil
+    import sys
+    if shutil.which("git") is None:
+        pytest.skip("git not available")
+    hooks = Path(__file__).resolve().parents[1] / "src" / "okl" / "scaffold" / "hooks"
+    src = str(Path(__file__).resolve().parents[1] / "src")
+    other = tmp_path / "some-other-repo"; other.mkdir(); markers = tmp_path / "m"; markers.mkdir()
+    subprocess.run(["git", "init", "-q", str(other)], check=True)
+    (other / "dirty.txt").write_text("uncommitted change")   # the Stop hook's trigger
+    env = {"PATH": os.environ["PATH"], "HOME": str(tmp_path), "TMPDIR": str(markers),
+           "PYTHONPATH": src, "OKL_BIN": f"{sys.executable} -m okl",
+           "CLAUDE_PROJECT_DIR": str(other)}
+
+    def hook(name, payload, **extra):
+        return subprocess.run(["bash", str(hooks / name)], cwd=other, text=True,
+                              input=json.dumps(payload), capture_output=True, env={**env, **extra})
+
+    # Unenrolled repo, project named: both hooks are silent no-ops.
+    r = hook("userpromptsubmit-okl-check.sh", {"prompt": "fix the login page"})
+    assert r.returncode == 0 and r.stdout == "" and r.stderr == "", (r.returncode, r.stderr)
+    r = hook("stop-okl-encode.sh", {"session_id": "u1", "stop_hook_active": False})
+    assert r.returncode == 0, r.stderr
+    # Enrolled, but okl cannot run: still fail-closed.
+    (other / ".okl").mkdir(); (other / ".okl" / "config.json").write_text('{"repo": "o"}')
+    r = hook("userpromptsubmit-okl-check.sh", {"prompt": "fix the login page"},
+             OKL_BIN=str(tmp_path / "gone" / "okl"), PATH="/usr/bin:/bin", PYTHONPATH="")
+    assert r.returncode == 2, (r.returncode, r.stderr)
+
+
 def test_hooks_anchor_to_the_project_not_the_sessions_cwd(tmp_path):
     """A hook runs in the session's CURRENT directory, and any `cd` in a command moves it.
 
@@ -1181,6 +1235,8 @@ def test_a_blocked_prompt_says_how_okl_failed(tmp_path):
     """
     import json
     hook = Path(__file__).resolve().parents[1] / "src" / "okl" / "scaffold" / "hooks" / "userpromptsubmit-okl-check.sh"
+
+    (tmp_path / ".okl").mkdir(exist_ok=True); (tmp_path / ".okl" / "config.json").write_text('{"repo": "t"}')
 
     def run(stub_body, **env):
         stub = tmp_path / "okl"

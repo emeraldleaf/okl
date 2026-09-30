@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:cb169accaa93f9e91efb99027845847d17497de9c68e1b88d76dc7beef55780b
+# okl-fingerprint: sha256:999008256468886146fdb18f0436e1f49c4691c844bf64e461f9011dc8837050
 # UserPromptSubmit hook — inject the org's relevant lessons into the model's context
 # BEFORE it starts the task. This event is the only correct one for delivery: its stdout
 # (exit 0) is added to Claude's context, and its stdin carries the actual prompt text, so
@@ -31,6 +31,22 @@ fi
 # hooks already cover the same moment, or for debugging. Turning off the pre-task briefing is a choice
 # the operator makes explicitly, never a fallback the hook takes on its own.
 case ",${OKL_DISABLED_HOOKS:-}," in *,briefing,*) exit 0 ;; esac
+
+# Not enrolled: step aside. okl's Claude Code plugin is installed per user, so these hooks
+# run in EVERY repo the user opens, and most were never set up with `okl init`. There the
+# pre-task hook blocked every prompt as "OKL NOT CONFIGURED" and the Stop hook asked
+# "what did we learn?" of repos with no store to record into (found by a docs audit,
+# 2026-09-29, before any user hit it). Only when Claude Code names the project: with no
+# CLAUDE_PROJECT_DIR the hook cannot tell an unenrolled repo from a session that drifted
+# out of an enrolled one, and fail-closed still wins there.
+if [ -n "${CLAUDE_PROJECT_DIR:-}" ] && [ -z "${OKL_SERVICE_URL:-}${OKL_DATABASE_URL:-}" ]; then
+  enrolled=0; d="$PWD"
+  while [ "$d" != "/" ]; do
+    if [ -f "$d/.okl/config.json" ]; then enrolled=1; break; fi
+    d=$(dirname "$d")
+  done
+  [ "$enrolled" = 1 ] || exit 0
+fi
 
 # Resolve how to invoke okl (env → pinned config → PATH → python3 -m okl); hooks run in
 # whatever environment the harness spawns, which often lacks the venv/pipx bin dir.

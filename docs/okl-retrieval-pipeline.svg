@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="980" height="994" viewBox="0 0 980 994" font-family="ui-sans-serif,-apple-system,Segoe UI,Helvetica,Arial,sans-serif">
 <rect width="980" height="994" fill="#F5F3F0"/>
 <text x="28" y="46" font-size="27" font-weight="700" fill="#1E1B18">How an okl briefing gets built</text>
-<text x="28" y="72" font-size="14" fill="#4E4740">161 records and one task sentence become the 12 an agent reads. Two stages can drop a record; only one is entitled to.</text>
+<text x="28" y="72" font-size="14" fill="#4E4740">161 records and one task sentence become the 12 an agent reads. Four stages narrow it; only applies_to may exclude on validity.</text>
 <text x="28" y="96" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A">GENERATED from the live pipeline - docs/render_pipeline_diagram.py</text>
 <text x="28" y="112" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A">traced task: "Add an endpoint that returns a single order by id for the signed-in user."</text>
 <text x="28" y="128" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A">repo interests: python, method, security, agent-safety, retrieval-design, eval-integrity, data-quality</text>
@@ -73,8 +73,8 @@
 <text x="65" y="768" font-size="26" font-weight="700" fill="#B4531F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle">6</text>
 <text x="65" y="786" font-size="9" fill="#7C736A" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle" letter-spacing="1">SHAPE</text>
 <text x="120" y="755" font-size="15" font-weight="600" fill="#1E1B18">Bucket by type, then route to imperatives</text>
-<text x="120" y="774" font-size="12" fill="#4E4740">Eight buckets: gates, defects, retractions, tombstones, threat prior-art, rules, vocabulary,</text>
-<text x="120" y="789" font-size="12" fill="#4E4740">stale warnings. Stale demotes, never deletes. Then ARM / FIX / AVOID.</text>
+<text x="120" y="774" font-size="12" fill="#4E4740">Buckets: gates, defects, retractions, tombstones, threat prior-art, rules, decisions,</text>
+<text x="120" y="789" font-size="12" fill="#4E4740">vocabulary, related context. Stale demotes, never deletes. Then ARM / FIX / AVOID.</text>
 <text x="120" y="800" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">gates -&gt; defects+rules</text>
 <text x="938" y="800" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A" text-anchor="end">-&gt; retractions -&gt; tombstones</text>
 <rect x="28" y="826" width="924" height="90" fill="#FFFFFF" stroke="#DCD6CE"/>
