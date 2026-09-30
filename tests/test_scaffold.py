@@ -1426,6 +1426,31 @@ def shutil_which(name):
     return found
 
 
+def test_prompt_hook_passes_hook_json_through_and_falls_back_for_an_older_okl(tmp_path):
+    """The plugin updates from main; the CLI only when upgraded. A hook asking an older okl
+    for --format hook must brief the old way, not block every prompt."""
+    import json
+    hook = Path(__file__).resolve().parents[1] / "src" / "okl" / "scaffold" / "hooks" / "userpromptsubmit-okl-check.sh"
+    (tmp_path / ".okl").mkdir(); (tmp_path / ".okl" / "config.json").write_text('{"repo": "t"}')
+    stub = tmp_path / "okl"
+    env = {"PATH": os.environ["PATH"], "HOME": str(tmp_path), "TMPDIR": str(tmp_path),
+           "OKL_BIN": str(stub), "CLAUDE_PROJECT_DIR": str(tmp_path)}
+
+    def run(body):
+        stub.write_text("#!/bin/sh\n" + body + "\n"); stub.chmod(0o755)
+        return subprocess.run(["bash", str(hook)], cwd=tmp_path, text=True, env=env,
+                              input=json.dumps({"prompt": "x"}), capture_output=True)
+
+    payload = '{"hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext": "B"}, "systemMessage": "okl · briefed 1 lesson(s): x"}'
+    r = run(f"echo '{payload}'")
+    assert r.returncode == 0 and json.loads(r.stdout)["systemMessage"].startswith("okl · briefed"), r.stdout
+    # An okl without --format hook: argparse says "invalid choice" and exits 2.
+    older = ('for a in "$@"; do [ "$a" = hook ] && { echo "okl check: error: argument --format: '
+             'invalid choice: \'hook\'" >&2; exit 2; }; done; echo "## OKL briefing (agent format)"')
+    r = run(older)
+    assert r.returncode == 0 and "OKL briefing (agent format)" in r.stdout, (r.returncode, r.stdout, r.stderr)
+
+
 def test_init_and_doctor_know_okls_own_plugin(tmp_path):
     """#45: okl ships as a Claude Code plugin too. If the plugin is enabled, `okl init`
     must not also register the project hooks (every prompt would be briefed twice and the

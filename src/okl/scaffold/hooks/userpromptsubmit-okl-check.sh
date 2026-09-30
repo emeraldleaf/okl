@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:999008256468886146fdb18f0436e1f49c4691c844bf64e461f9011dc8837050
+# okl-fingerprint: sha256:7bd1125f0adc50f1b805a80228727b54b093ec0b8c974a3d1da3838cab3f762b
 # UserPromptSubmit hook — inject the org's relevant lessons into the model's context
 # BEFORE it starts the task. This event is the only correct one for delivery: its stdout
 # (exit 0) is added to Claude's context, and its stdin carries the actual prompt text, so
@@ -117,8 +117,18 @@ TASK="${OKL_TASK:-${prompt:-$(git log -1 --pretty=%s 2>/dev/null || echo 'genera
 # No guessable fallback path: a fixed name under /tmp could be pre-planted as a symlink by
 # another local user. Without a private temp file the reason is lost, not the check.
 errf=$(mktemp 2>/dev/null) || errf=""
-out=$($OKL check --task "$TASK" --format agent 2>"${errf:-/dev/null}")
+# --format hook: the briefing for the model's context plus one line the person can see,
+# as the JSON Claude Code reads from a UserPromptSubmit hook. Without that line nobody
+# could tell okl helping from okl doing nothing.
+out=$($OKL check --task "$TASK" --format hook 2>"${errf:-/dev/null}")
 rc=$?   # read here: after an if-block, $? is the if's own status, not okl's
+if [ "$rc" -eq 2 ] && [ -n "$errf" ] && grep -q "invalid choice" "$errf" 2>/dev/null; then
+  # An okl older than this hook has no --format hook. The plugin updates from main and the
+  # CLI only when upgraded, so the two can differ: brief the old way rather than block.
+  : > "$errf"
+  out=$($OKL check --task "$TASK" --format agent 2>"${errf:-/dev/null}")
+  rc=$?
+fi
 if [ "$rc" -eq 0 ]; then
   [ -n "$errf" ] && rm -f "$errf"
   printf '%s\n' "$out"      # stdout → the model's context

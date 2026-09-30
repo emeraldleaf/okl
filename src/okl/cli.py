@@ -12,6 +12,7 @@ import os
 import shlex
 import sys
 from pathlib import Path
+from typing import Any
 
 from . import core
 from .client import Client, OKLUnreachableError, _find_config, load_config, save_config
@@ -536,6 +537,17 @@ def cmd_check(args) -> int:
         # an unauthorized check exited 0 with a raw urllib traceback.
         print(f"OKL REFUSED THE CHECK — refusing to report a clean check.\n{e}", file=sys.stderr)
         return 2
+    if args.format == "hook":
+        # What a Claude Code UserPromptSubmit hook prints: the briefing into the model's
+        # context, and one line the person can see. OKL_QUIET=1 keeps the line out.
+        out: dict[str, Any] = {"hookSpecificOutput": {
+            "hookEventName": "UserPromptSubmit",
+            "additionalContext": core.render_check_for_agent(result)}}
+        notice = None if os.environ.get("OKL_QUIET") == "1" else core.briefing_notice(result)
+        if notice:
+            out["systemMessage"] = notice
+        print(json.dumps(out))
+        return 0
     if args.format == "json":
         _print_json(result)
     elif args.format == "actions":
@@ -1222,9 +1234,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     pk = sub.add_parser("check", help="pre-task read: relevant lessons for a task")
     pk.add_argument("--task", required=True); pk.add_argument("--repo")
-    pk.add_argument("--format", choices=["agent", "actions", "json"], default="agent",
+    pk.add_argument("--format", choices=["agent", "actions", "json", "hook"], default="agent",
                     help="agent: the full briefing. actions: the routed action list only, "
-                         "for callers on a small context budget. json: the raw result.")
+                         "for callers on a small context budget. json: the raw result. hook: what a "
+                         "Claude Code UserPromptSubmit hook prints (briefing + a line for the user).")
     pk.add_argument("--limit", type=int, default=None,
                     help="cap how many records the briefing draws on (and how many actions "
                          "'--format actions' prints). Use with subagents on a token budget.")

@@ -2284,6 +2284,35 @@ def test_a_first_run_briefs_without_any_choices(tmp_path):
     assert "seeded" not in r.stdout and "store is empty" in r.stdout, r.stdout
 
 
+def test_hook_format_briefs_the_model_and_tells_the_person(tmp_path):
+    """The briefing goes into the model's context, invisible in the UI, so a user never saw
+    okl work. --format hook adds one line for the person — only when something matched."""
+    import json
+    import subprocess
+    import sys
+    src = str(Path(__file__).resolve().parents[1] / "src")
+    repo = tmp_path / "r"; repo.mkdir(); subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    env = {**os.environ, "PYTHONPATH": src, "HOME": str(tmp_path)}
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN", "OKL_QUIET"):
+        env.pop(k, None)
+
+    def check(task, **extra):
+        r = subprocess.run([sys.executable, "-m", "okl", "check", "--task", task, "--format", "hook"],
+                           cwd=repo, env={**env, **extra}, capture_output=True, text=True)
+        assert r.returncode == 0, r.stderr
+        return json.loads(r.stdout)
+
+    subprocess.run([sys.executable, "-m", "okl", "init", "--repo", "r", "--interests", "security",
+                    "--no-claude"], cwd=repo, env=env, capture_output=True, check=True)
+    out = check("add an endpoint that returns an order for the logged-in user")
+    assert out["hookSpecificOutput"]["hookEventName"] == "UserPromptSubmit"
+    assert "OKL briefing" in out["hookSpecificOutput"]["additionalContext"]
+    assert out["systemMessage"].startswith("okl · briefed "), out["systemMessage"]
+    assert "Missing ownership scope check" in out["systemMessage"], out["systemMessage"]
+    assert "systemMessage" not in check("add an endpoint that returns an order", OKL_QUIET="1")
+    assert "systemMessage" not in check("zzqx unrelated gibberish task")
+
+
 def test_stack_detection(tmp_path):
     from okl.cli import _detect_stacks
     (tmp_path / "api").mkdir(); (tmp_path / "api" / "Api.csproj").write_text("<Project/>")
