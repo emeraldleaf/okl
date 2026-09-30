@@ -237,6 +237,44 @@ _BY_PLUGIN = "okl's Claude Code plugin is enabled and provides the hooks"
 _OPTED_OUT = "--no-claude"
 
 
+# What a repo is built with, read from files every stack keeps at a known place. Nothing is
+# executed and nothing is installed; a miss just means fewer packs are suggested.
+_RAG_DEPS = ("langchain", "llama-index", "llama_index", "chromadb", "qdrant", "faiss",
+             "sentence-transformers", "pgvector", "weaviate", "pinecone")
+_GEO_DEPS = ("rasterio", "geopandas", "gdal", "rslearn", "shapely", "xarray")
+
+
+def _detect_stacks(root: Path) -> list[tuple[str, str]]:
+    """[(stack tag, the file that showed it)], strongest evidence first."""
+    found: list[tuple[str, str]] = []
+
+    def first(patterns: tuple[str, ...]) -> Path | None:
+        for pat in patterns:
+            for hit in root.glob(pat):
+                if not any(part in (".git", "node_modules", ".venv", "venv", "bin", "obj")
+                           for part in hit.relative_to(root).parts):
+                    return hit
+        return None
+
+    dn = first(("*.sln", "*.slnx", "*.csproj", "*/*.csproj", "*/*/*.csproj"))
+    if dn:
+        found.append(("dotnet", dn.relative_to(root).as_posix()))
+    pkg = root / "package.json"
+    if pkg.is_file():
+        text = pkg.read_text(errors="ignore").lower()
+        found.append(("react" if '"react"' in text else "frontend", "package.json"))
+    py = next((root / f for f in ("pyproject.toml", "requirements.txt", "setup.py")
+               if (root / f).is_file()), None)
+    if py:
+        text = py.read_text(errors="ignore").lower()
+        found.append(("python", py.name))
+        if any(d in text for d in _RAG_DEPS):
+            found.append(("python-rag", py.name))
+        if any(d in text for d in _GEO_DEPS):
+            found.append(("geospatial", py.name))
+    return found
+
+
 def _should_wire_claude(args) -> tuple[bool, str]:
     """Whether init should install Claude Code hooks here, and why.
 
@@ -325,6 +363,15 @@ def cmd_init(args) -> int:
             print("  .github/workflows/okl-verify.yml        a CI workflow running the drift gate on PRs")
         else:
             print("  (not a git repository, so no CI workflow and no drift gate)")
+        if args.interests:
+            print(f"  (interests: {args.interests})")
+        else:
+            stacks = _detect_stacks(Path.cwd())
+            print("  (detected: " + (", ".join(f"{t} from {f}" for t, f in stacks) or "no known stack")
+                  + " — interests would be set from it; --interests overrides)")
+        if not getattr(args, "no_seed", False):
+            print("  .okl/okl.db                             seeded with the starter lessons and matching stack packs"
+                  " (if empty; --no-seed skips)")
         print("\nNothing is written outside this directory. Read the hooks before you register them:")
         print("  https://github.com/emeraldleaf/okl/blob/main/src/okl/scaffold/hooks/")
         return 0
@@ -335,6 +382,15 @@ def cmd_init(args) -> int:
         cfg["service_url"] = args.service
     if args.interests:
         cfg["interests"] = [t.strip().lower() for t in args.interests.split(",") if t.strip()]
+    elif not cfg.get("interests"):
+        # Detected, not demanded: the interest list gated what a first briefing could show,
+        # and a new user had to know a closed vocabulary to fill it in. security and method
+        # are added because the portable lessons are filed under them.
+        stacks = _detect_stacks(Path.cwd())
+        if stacks:
+            cfg["interests"] = sorted({t for t, _ in stacks} | {"security", "method"})
+            print("• detected " + ", ".join(f"{t} ({f})" for t, f in stacks)
+                  + " — interests set; pass --interests to choose your own")
     # Pin how to invoke okl on THIS machine, for hooks running outside the dev shell
     # (agent harnesses don't inherit venv/pipx PATH entries). Machine-local by design —
     # .okl/ is gitignored; hooks fall back to PATH and `python3 -m okl` regardless.
@@ -345,6 +401,8 @@ def cmd_init(args) -> int:
 
     _wire_claude_code(args)
     _install_ci_verifier(force=getattr(args, "force", False))
+    if not getattr(args, "no_seed", False):
+        _seed_first_run(Client())
     for line in _empty_store_guidance(Client()):
         print(line)
     # Said at install time, the one moment someone is reading okl's output and deciding
@@ -961,6 +1019,34 @@ def _empty_store_guidance(client: Client) -> list[str]:
     return lines
 
 
+def _seed_first_run(client: Client) -> None:
+    """Give an EMPTY local store something to brief: the starter lessons, plus the bundled
+    packs that fit this repo's interests. Never a store that already has records — seeding
+    goes through record(), which would re-stamp their verification times — and never a
+    shared service's store, which is not this repo's to fill."""
+    from .seed import seed_from_file, seed_starter
+    if client.mode == "remote":
+        return
+    try:
+        if client.search("", limit=1):
+            return
+    except (OSError, OKLUnreachableError, ValueError, RuntimeError):
+        return
+    seed_dir = _bundled_seed_dir()
+    n = seed_starter(client, seed_dir)
+    interests = {t.lower() for t in (client.interests or [])}
+    packs = []
+    for f in sorted(seed_dir.glob("*.json")):
+        _, tags = _describe_pack(f)
+        # Stack packs only: a pack with no stack tag fits on any shared subject, which is
+        # the starter's job, not a reason to import a whole pack.
+        if tags & core.STACK_TAGS and _pack_fits(tags, interests):
+            packs.append((f.stem, seed_from_file(client, str(f))))
+    print(f"✓ seeded {n} starter lessons (portable: web security, CI, docs, verification)"
+          + ("; packs for your stack: " + ", ".join(f"{p} ({c})" for p, c in packs) if packs else ""))
+    print("  your own rules matter most: okl record ... (see docs/GETTING-STARTED.md). --no-seed skips this")
+
+
 def _describe_pack(path: Path) -> tuple[int, set[str]]:
     """Count a pack's records and collect its subject tags, so the listing can say what
     a pack is ABOUT before anyone imports it."""
@@ -1108,6 +1194,9 @@ def build_parser() -> argparse.ArgumentParser:
                     help="--claude wires Claude Code (hooks, settings, MCP) even with no .claude/ "
                          "and no `claude` on PATH; --no-claude skips it. Default: wire when "
                          ".claude/ exists or `claude` is on PATH")
+    pi.add_argument("--no-seed", dest="no_seed", action="store_true",
+                    help="leave the store empty (by default init imports the starter lessons and "
+                         "the bundled packs that match this repo's stack)")
     pi.add_argument("--dry-run", dest="dry_run", action="store_true",
                     help="list every file init would write or modify, and write nothing")
     pi.add_argument("--force", action="store_true",

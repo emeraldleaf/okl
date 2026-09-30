@@ -1769,7 +1769,7 @@ def test_empty_store_guidance_is_tailored_and_reaches_the_person_not_the_agent(t
         return subprocess.run([sys.executable, "-m", "okl", *a], capture_output=True, text=True)
 
     # 1. Tailored to the declared stack.
-    out = okl("init", "--repo", "r", "--interests", "react,security").stdout
+    out = okl("init", "--repo", "r", "--interests", "react,security", "--no-seed").stdout
     assert "store is empty" in out
     assert "react-defects.json" in out and "frontend-canon.json" in out
     assert "dotnet" not in out, "a React repo must not be pointed at the .NET packs"
@@ -1786,7 +1786,7 @@ def test_empty_store_guidance_is_tailored_and_reaches_the_person_not_the_agent(t
 
     # 2 again. Once scaffolded, the command is named directly as something to run.
     okl("scaffold", ".")
-    assert "ask your agent to run /seed-from-codebase" in okl("init", "--repo", "r").stdout
+    assert "ask your agent to run /seed-from-codebase" in okl("init", "--repo", "r", "--no-seed").stdout
 
     # 5. From a subdirectory the command is still found. okl locates its config by walking
     # up, so `check` runs from anywhere in the repo; a cwd-relative lookup missed the
@@ -2086,7 +2086,7 @@ def test_metric_output_never_prints_a_bare_tick(tmp_path, monkeypatch):
 
     assert okl("metric").returncode == 2, "an unconfigured directory must be refused"
     subprocess.run(["git", "init", "-q", "."], check=True)
-    okl("init", "--repo", "r")
+    okl("init", "--repo", "r", "--no-seed")
     d = okl("record", "--type", "Defect", "--scope", "repo", "--title",
             "came back anyway").stdout.strip().splitlines()[-1]
     okl("link", d, "RECURS_IN", "elsewhere")
@@ -2225,6 +2225,72 @@ def test_the_service_keeps_applies_to(tmp_path, monkeypatch):
     node = next(n for n in (nodes.get("nodes", nodes) if isinstance(nodes, dict) else nodes)
                 if n["id"] == r.json()["id"])
     assert node.get("applies_to") == "dotnet", node
+
+
+def test_starter_pack_resolves_and_is_portable():
+    """The starter lessons are references into the bundled packs; every one must resolve,
+    be valid on any stack (no applies_to), and be actionable (a fix, or a gate to arm)."""
+    import json
+    root = Path(__file__).resolve().parents[1]
+    refs = json.loads((root / "src" / "okl" / "starter.json").read_text())["records"]
+    assert 15 <= len(refs) <= 30
+    for r in refs:
+        nodes = json.loads((root / "seed" / f"{r['pack']}.json").read_text())["nodes"]
+        node = next((n for n in nodes if n.get("key") == r["key"]), None)
+        assert node is not None, f"starter ref does not resolve: {r}"
+        assert not node.get("applies_to"), f"starter lesson is stack-bound: {r}"
+        assert node.get("fix") or node["type"] == "Gate", f"starter lesson is not actionable: {r}"
+
+
+def test_a_first_run_briefs_without_any_choices(tmp_path):
+    """Before this, a new user met an empty store and eleven packs from other stacks, none
+    for a Python or JS web app; testing the getting-started guide in a fresh repo showed a
+    first check with nothing in it. init now detects the stack, sets interests, and seeds
+    the starter lessons plus the matching stack packs — once, into an empty store only."""
+    import json
+    import subprocess
+    import sys
+    src = str(Path(__file__).resolve().parents[1] / "src")
+    repo = tmp_path / "shop"; repo.mkdir()
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    (repo / "pyproject.toml").write_text('[project]\nname = "shop"\ndependencies = ["fastapi"]\n')
+    env = {**os.environ, "PYTHONPATH": src, "HOME": str(tmp_path), "PATH": "/usr/bin:/bin"}
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN"):
+        env.pop(k, None)
+
+    def okl(*a, cwd=repo):
+        return subprocess.run([sys.executable, "-m", "okl", *a], cwd=cwd, env=env,
+                              capture_output=True, text=True)
+
+    r = okl("init", "--repo", "shop")
+    assert r.returncode == 0, r.stderr
+    assert "detected python (pyproject.toml)" in r.stdout and "seeded 20 starter lessons" in r.stdout, r.stdout
+    cfg = json.loads((repo / ".okl" / "config.json").read_text())
+    assert set(cfg["interests"]) == {"python", "security", "method"}, cfg
+    brief = okl("check", "--task", "add an endpoint that returns an order for the logged-in user").stdout
+    assert "FIX: Missing ownership scope check" in brief, brief
+    # Re-running init must not re-seed: that would re-stamp every seeded record's verification.
+    before = len(okl("search", "", "--limit", "500").stdout.splitlines())
+    r = okl("init", "--repo", "shop")
+    assert "seeded" not in r.stdout and len(okl("search", "", "--limit", "500").stdout.splitlines()) == before
+    # The full pack later updates the starter's rows instead of duplicating them.
+    okl("seed", "dotnet-defects")
+    hits = [ln for ln in okl("search", "ownership scope check IDOR", "--limit", "50").stdout.splitlines()
+            if "Missing ownership scope check" in ln]
+    assert len(hits) == 1, hits
+    # --no-seed leaves a new repo empty.
+    other = tmp_path / "bare"; other.mkdir(); subprocess.run(["git", "init", "-q", str(other)], check=True)
+    r = okl("init", "--repo", "bare", "--no-seed", cwd=other)
+    assert "seeded" not in r.stdout and "store is empty" in r.stdout, r.stdout
+
+
+def test_stack_detection(tmp_path):
+    from okl.cli import _detect_stacks
+    (tmp_path / "api").mkdir(); (tmp_path / "api" / "Api.csproj").write_text("<Project/>")
+    (tmp_path / "package.json").write_text('{"dependencies": {"react": "^19.0.0"}}')
+    (tmp_path / "requirements.txt").write_text("langchain\nrasterio\n")
+    assert [t for t, _ in _detect_stacks(tmp_path)] == ["dotnet", "react", "python", "python-rag", "geospatial"]
+    assert _detect_stacks(tmp_path / "api") == [("dotnet", "Api.csproj")]
 
 
 def test_every_record_that_wins_a_slot_is_shown(tmp_path):

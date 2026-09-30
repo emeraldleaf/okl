@@ -1,0 +1,85 @@
+{
+  "_about": "The lessons `okl init` imports into an empty store: portable ones, true on almost any codebase, drawn from the bundled packs by reference so a later `okl seed <pack>` updates the same rows instead of duplicating them. Every entry must resolve: see tests/test_okl.py::test_starter_pack_resolves_and_is_portable.",
+  "records": [
+    {
+      "pack": "dotnet-defects",
+      "key": "nc_idor"
+    },
+    {
+      "pack": "dotnet-defects",
+      "key": "nc_price_tamper"
+    },
+    {
+      "pack": "dotnet-canon",
+      "key": "r_authz_test_required"
+    },
+    {
+      "pack": "dotnet-decisions",
+      "key": "pd_rate_limit_expensive_endpoints"
+    },
+    {
+      "pack": "dotnet-canon",
+      "key": "r_rate_limiter_scaleout"
+    },
+    {
+      "pack": "react-defects",
+      "key": "rx_tokens_localstorage"
+    },
+    {
+      "pack": "dotnet-decisions",
+      "key": "pd_openapi_dev_only"
+    },
+    {
+      "pack": "dotnet-canon",
+      "key": "r_secret_fakes"
+    },
+    {
+      "pack": "geospatial-enforcement-defects",
+      "key": "r_pin_gating_tools"
+    },
+    {
+      "pack": "geospatial-enforcement-defects",
+      "key": "d_masked_gate_order"
+    },
+    {
+      "pack": "geospatial-enforcement-defects",
+      "key": "d_ungated_zone"
+    },
+    {
+      "pack": "dotnet-review-surfaces",
+      "key": "rs_workflow_hardening_baseline"
+    },
+    {
+      "pack": "dotnet-canon",
+      "key": "r_file_move_discipline"
+    },
+    {
+      "pack": "dotnet-canon",
+      "key": "r_grep_to_zero"
+    },
+    {
+      "pack": "dotnet-canon",
+      "key": "r_docs_review_surface"
+    },
+    {
+      "pack": "geospatial-defects",
+      "key": "g_verify_outputs"
+    },
+    {
+      "pack": "geospatial-enforcement-defects",
+      "key": "d_invoked_by_nothing"
+    },
+    {
+      "pack": "dotnet-canon",
+      "key": "r_presence_in_loop"
+    },
+    {
+      "pack": "dotnet-canon",
+      "key": "r_encoding_loop"
+    },
+    {
+      "pack": "dotnet-decisions",
+      "key": "pd_db_primitives_before_distributed_locks"
+    }
+  ]
+}
