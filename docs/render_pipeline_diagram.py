@@ -159,8 +159,8 @@ def render(d: dict) -> str:
          "applies_to (validity) and files (what it governs). Nothing is ranked yet.",
          f'{d["corpus"]} records', "", 1.0, 0.0, ""),
         ("1", "RANK", "Fetch 3x more candidates than needed",
-         "SQLite FTS5, weighted title x8, body x4, symptom x4, fix x2. Tags are NOT indexed - "
-         "a tag can get a record excluded, never help it be found.",
+         "SQLite FTS5, weighted title x8, body x4, symptom x4, fix x2, tags x1. A record found "
+         "only by its tag ranks after every content match.",
          f'{d["fetched"]} fetched', "limit x 3", d["fetched"] / f, 0.0, ""),
         ("2", "SCOPE", "Permission - who may see this",
          "A repo's own records pass first and unconditionally. org records continue. Another "
