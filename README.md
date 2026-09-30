@@ -13,7 +13,7 @@ Claude Code before every task, proven by checks, and flagged in CI when what the
 [![Claude Code plugin](https://img.shields.io/badge/Claude_Code-plugin-D97757)](#install-as-a-claude-code-plugin)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-🚀 [Quickstart](#quickstart) · 🔬 [How it works](#how-it-works) · 📊 [Results](#measured-effect-and-its-limits) · 🧪 [Eval report](evals/REPORT.md) · 🧩 [Plugin](#install-as-a-claude-code-plugin)
+🚀 [Quickstart](#quickstart) · 📘 [Getting started guide](docs/GETTING-STARTED.md) · 🔬 [How it works](#how-it-works) · 📊 [Results](#measured-effect-and-its-limits) · 🧪 [Eval report](evals/REPORT.md) · 🧩 [Plugin](#install-as-a-claude-code-plugin)
 
 </div>
 
@@ -26,6 +26,9 @@ Claude Code before every task, proven by checks, and flagged in CI when what the
 > change, whether those are code, docs or diagrams.
 
 ## Quickstart
+
+> New here? **[docs/GETTING-STARTED.md](docs/GETTING-STARTED.md)** walks through setup, the
+> habit of adding to the canon as you build a feature, and keeping your docs from drifting.
 
 **1. Install the CLI** (the PyPI name differs — PyPI refuses `okl` as confusable with
 `oki` — but everything you type afterwards is `okl`):
