@@ -11,6 +11,11 @@
 # git. Runs from anywhere; writes only under e2e/ (gitignored) and receipts/.
 set -euo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd); ROOT=$(cd "$HERE/../.." && pwd)
+# Arms run OUTSIDE this repo, in neutrally named folders. Inside it, Claude Code loads
+# okl's own CLAUDE.md into BOTH arms (it reads every CLAUDE.md above the working
+# directory), and a folder named <task>-control tells the control arm what it is. Both
+# happened in the first runs of this example; the receipts were redone without them.
+WORK="${OKL_DEMO_WORKDIR:-${TMPDIR:-/tmp}}"
 E="$ROOT/e2e/examples-python-$(date -u +%Y%m%d)"; R="$HERE/receipts"
 MODEL="${OKL_DEMO_MODEL:-sonnet}"
 PACKS="${OKL_DEMO_PACKS:-dotnet-defects dotnet-decisions dotnet-canon rag-defects geospatial-enforcement-defects}"
@@ -29,9 +34,10 @@ fresh_copy() {  # $1 = arm dir
 
 for id in "${ids[@]}"; do
   task=$(task_text "$id"); [ -n "$task" ] || { echo "no task '$id' in tasks.jsonl" >&2; exit 2; }
-  out="$R/$id"; mkdir -p "$out"
+  out="$R/$id"; mkdir -p "$out"; : > "$out/arms.txt"
   for arm in control briefed; do
-    d="$E/$id-$arm"; fresh_copy "$d"
+    d="$(mktemp -d "$WORK/tmp.XXXXXXXX")/orders-api"; fresh_copy "$d"
+    echo "$arm $d" >> "$out/arms.txt"
     if [ "$arm" = briefed ]; then
       ( cd "$d" && okl init --repo orders-api --interests python,security,method >/dev/null 2>&1
         for p in $PACKS; do okl seed "$p" >/dev/null 2>&1; done

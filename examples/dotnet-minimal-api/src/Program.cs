@@ -1,7 +1,5 @@
-// orders-api: a deliberately small service with the shapes okl's stored lessons bite on.
-// Two users, a handful of orders, an in-memory store. Nothing here is production code; it
-// exists so an agent can be asked realistic tasks (add an endpoint, add a search) and the
-// briefing can be seen doing its job — or not, in the control run.
+// orders-api: a small orders service.
+// Two users, a handful of orders, an in-memory store.
 using OrdersApi;
 
 var builder = WebApplication.CreateBuilder(args);

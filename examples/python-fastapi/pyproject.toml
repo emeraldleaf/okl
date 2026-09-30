@@ -1,7 +1,7 @@
 [project]
 name = "orders-api"
 version = "0.1.0"
-description = "A small FastAPI service used to show okl's loop on a Python stack."
+description = "A small FastAPI orders service."
 requires-python = ">=3.12"
 dependencies = ["fastapi>=0.110", "uvicorn>=0.29"]
 
