@@ -2207,6 +2207,25 @@ def test_seed_resolves_a_bundled_pack_by_name(tmp_path, monkeypatch):
     assert r.returncode == 2 and "dotnet-defects" in r.stderr and r.stdout == "", r.stderr
 
 
+def test_the_service_keeps_applies_to(tmp_path, monkeypatch):
+    """RecordReq had no applies_to field and pydantic ignores unknown fields, so a record
+    sent to a shared service with --applies-to arrived valid on every stack."""
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+
+    from okl import service
+    monkeypatch.delenv("OKL_TOKEN", raising=False)
+    app = service.create_app(Store(f"sqlite:///{tmp_path}/svc.db"))
+    c = TestClient(app)
+    r = c.post("/record", json={"type": "Rule", "title": "use EF migrations", "scope": "org",
+                                "applies_to": "dotnet"})
+    assert r.status_code == 200, r.text
+    nodes = c.get("/nodes").json()
+    node = next(n for n in (nodes.get("nodes", nodes) if isinstance(nodes, dict) else nodes)
+                if n["id"] == r.json()["id"])
+    assert node.get("applies_to") == "dotnet", node
+
+
 def test_every_record_that_wins_a_slot_is_shown(tmp_path):
     """A record that wins one of the briefing's top-k slots must appear in it.
 

@@ -43,6 +43,9 @@ class RecordReq(BaseModel):
     symptom: str | None = None
     fix: str | None = None
     tags: str | None = None
+    # Was missing, and pydantic drops unknown fields silently: `okl record --applies-to`
+    # against a shared service stored the lesson as valid on every stack (docs audit).
+    applies_to: str | None = None
     id: str | None = None
     verified: bool = False
 
