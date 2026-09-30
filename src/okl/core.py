@@ -290,6 +290,28 @@ def search(store: Store, query: str, scope: str | None = None,
     return [_node_public(n) for n in store.search(query, scope, node_types, limit)]
 
 
+def briefing_notice(result: dict[str, Any], shown: int = 3) -> str | None:
+    """One line for the PERSON, not the model: what okl just briefed, or None when nothing
+    matched (a line on every prompt saying "nothing" is noise). The briefing itself goes to
+    the model's context and is invisible in the UI, so without this a user never sees okl
+    work and cannot tell a helping tool from a dead one."""
+    if not result.get("match_count"):
+        if result.get("store_records") == 0:
+            return "okl · the store is empty, so nothing was briefed — see docs/GETTING-STARTED.md"
+        return None
+    titles = [a["target"] for a in result.get("next_actions") or []]
+    for key in ("armed_gates", "relevant_defects", "rules", "decisions", "live_retractions",
+                "in_scope_tombstones", "threat_prior_art", "context"):
+        titles += [r["title"] for r in result.get(key) or [] if r["title"] not in titles]
+    def trim(t: str, n: int = 48) -> str:
+        t = t.split(" — ")[0].split(" = ")[0].strip()
+        return t if len(t) <= n else t[:n].rsplit(" ", 1)[0].rstrip(",;:") + "…"
+    short = [trim(t) for t in titles[:shown]]
+    more = result["match_count"] - len(short)
+    return (f"okl · briefed {result['match_count']} lesson(s): " + "; ".join(short)
+            + (f" (+{more} more)" if more > 0 else ""))
+
+
 def render_actions_only(result: dict[str, Any], limit: int | None = None) -> str:
     """The routed action list and nothing else, for callers on a small context budget.
 

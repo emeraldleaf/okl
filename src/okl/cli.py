@@ -12,6 +12,7 @@ import os
 import shlex
 import sys
 from pathlib import Path
+from typing import Any
 
 from . import core
 from .client import Client, OKLUnreachableError, _find_config, load_config, save_config
@@ -237,6 +238,44 @@ _BY_PLUGIN = "okl's Claude Code plugin is enabled and provides the hooks"
 _OPTED_OUT = "--no-claude"
 
 
+# What a repo is built with, read from files every stack keeps at a known place. Nothing is
+# executed and nothing is installed; a miss just means fewer packs are suggested.
+_RAG_DEPS = ("langchain", "llama-index", "llama_index", "chromadb", "qdrant", "faiss",
+             "sentence-transformers", "pgvector", "weaviate", "pinecone")
+_GEO_DEPS = ("rasterio", "geopandas", "gdal", "rslearn", "shapely", "xarray")
+
+
+def _detect_stacks(root: Path) -> list[tuple[str, str]]:
+    """[(stack tag, the file that showed it)], strongest evidence first."""
+    found: list[tuple[str, str]] = []
+
+    def first(patterns: tuple[str, ...]) -> Path | None:
+        for pat in patterns:
+            for hit in root.glob(pat):
+                if not any(part in (".git", "node_modules", ".venv", "venv", "bin", "obj")
+                           for part in hit.relative_to(root).parts):
+                    return hit
+        return None
+
+    dn = first(("*.sln", "*.slnx", "*.csproj", "*/*.csproj", "*/*/*.csproj"))
+    if dn:
+        found.append(("dotnet", dn.relative_to(root).as_posix()))
+    pkg = root / "package.json"
+    if pkg.is_file():
+        text = pkg.read_text(errors="ignore").lower()
+        found.append(("react" if '"react"' in text else "frontend", "package.json"))
+    py = next((root / f for f in ("pyproject.toml", "requirements.txt", "setup.py")
+               if (root / f).is_file()), None)
+    if py:
+        text = py.read_text(errors="ignore").lower()
+        found.append(("python", py.name))
+        if any(d in text for d in _RAG_DEPS):
+            found.append(("python-rag", py.name))
+        if any(d in text for d in _GEO_DEPS):
+            found.append(("geospatial", py.name))
+    return found
+
+
 def _should_wire_claude(args) -> tuple[bool, str]:
     """Whether init should install Claude Code hooks here, and why.
 
@@ -293,6 +332,58 @@ def _wire_claude_code(args) -> None:
         print("      agent has a pre-prompt hook, point it at them. Registration formats differ.")
 
 
+def _init_dry_run(args) -> int:
+    """`okl init --dry-run`: every path init would touch, and nothing written."""
+    repo = args.repo or Path.cwd().name
+    print(f"DRY RUN — nothing will be written. `okl init --repo {repo}` would:\n")
+    print("  .okl/config.json                        repo name, interests, and the path to this okl")
+    wire, why = _should_wire_claude(args)
+    link = _symlinked(Path(".claude")) if wire else None
+    if link is not None:
+        print(f"  (no Claude Code hooks: {link} is a symlink, which init refuses to write through)")
+    elif wire:
+        print(f"  (wiring Claude Code: {why})")
+        print("  .claude/hooks/userpromptsubmit-okl-check.sh   executable; runs when you submit a task")
+        print("  .claude/hooks/stop-okl-encode.sh             executable; runs when a session ends")
+        print("  .claude/settings.json                   registers those two hooks (merged, existing keys kept)")
+        print("  .mcp.json                               registers the okl MCP server (only if the [mcp] extra is installed)")
+    elif why:
+        print(f"  (no Claude Code hooks: {why})")
+    else:
+        print("  (no .claude/ here and Claude Code not found, so no hooks; `--claude` installs them anyway)")
+    if Path(".git").exists():
+        print("  .github/workflows/okl-verify.yml        a CI workflow running the drift gate on PRs")
+    else:
+        print("  (not a git repository, so no CI workflow and no drift gate)")
+    if args.interests:
+        print(f"  (interests: {args.interests})")
+    else:
+        stacks = _detect_stacks(Path.cwd())
+        print("  (detected: " + (", ".join(f"{t} from {f}" for t, f in stacks) or "no known stack")
+              + " — interests would be set from it; --interests overrides)")
+    if not getattr(args, "no_seed", False):
+        print("  .okl/okl.db                             seeded with the starter lessons and matching stack packs"
+              " (if empty; --no-seed skips)")
+    print("\nNothing is written outside this directory. Read the hooks before you register them:")
+    print("  https://github.com/emeraldleaf/okl/blob/main/src/okl/scaffold/hooks/")
+    return 0
+
+
+def _init_interests(cfg: dict, args) -> None:
+    """Explicit --interests win; otherwise detect them, once, for a repo that has none."""
+    if args.interests:
+        cfg["interests"] = [t.strip().lower() for t in args.interests.split(",") if t.strip()]
+    elif not cfg.get("interests"):
+        # Detected, not demanded: the interest list gated what a first briefing could show,
+        # and a new user had to know a closed vocabulary to fill it in. security and method
+        # are added because the portable lessons are filed under them.
+        stacks = _detect_stacks(Path.cwd())
+        if stacks:
+            cfg["interests"] = sorted({t for t, _ in stacks} | {"security", "method"})
+            print("• detected " + ", ".join(f"{t} ({f})" for t, f in stacks)
+                  + " — interests set; pass --interests to choose your own")
+
+
 def cmd_init(args) -> int:
     """Wire the current repo so the loop runs without manual follow-up steps:
     config, hooks (installed AND registered), CI verifier, MCP registration.
@@ -304,37 +395,13 @@ def cmd_init(args) -> int:
     if getattr(args, "uninstall", False):
         return _uninstall(getattr(args, "dry_run", False))
     if getattr(args, "dry_run", False):
-        repo = args.repo or Path.cwd().name
-        print(f"DRY RUN — nothing will be written. `okl init --repo {repo}` would:\n")
-        print("  .okl/config.json                        repo name, interests, and the path to this okl")
-        wire, why = _should_wire_claude(args)
-        link = _symlinked(Path(".claude")) if wire else None
-        if link is not None:
-            print(f"  (no Claude Code hooks: {link} is a symlink, which init refuses to write through)")
-        elif wire:
-            print(f"  (wiring Claude Code: {why})")
-            print("  .claude/hooks/userpromptsubmit-okl-check.sh   executable; runs when you submit a task")
-            print("  .claude/hooks/stop-okl-encode.sh             executable; runs when a session ends")
-            print("  .claude/settings.json                   registers those two hooks (merged, existing keys kept)")
-            print("  .mcp.json                               registers the okl MCP server (only if the [mcp] extra is installed)")
-        elif why:
-            print(f"  (no Claude Code hooks: {why})")
-        else:
-            print("  (no .claude/ here and Claude Code not found, so no hooks; `--claude` installs them anyway)")
-        if Path(".git").exists():
-            print("  .github/workflows/okl-verify.yml        a CI workflow running the drift gate on PRs")
-        else:
-            print("  (not a git repository, so no CI workflow and no drift gate)")
-        print("\nNothing is written outside this directory. Read the hooks before you register them:")
-        print("  https://github.com/emeraldleaf/okl/blob/main/src/okl/scaffold/hooks/")
-        return 0
+        return _init_dry_run(args)
     repo = args.repo or Path.cwd().name
     cfg = load_config()
     cfg["repo"] = repo
     if args.service:
         cfg["service_url"] = args.service
-    if args.interests:
-        cfg["interests"] = [t.strip().lower() for t in args.interests.split(",") if t.strip()]
+    _init_interests(cfg, args)
     # Pin how to invoke okl on THIS machine, for hooks running outside the dev shell
     # (agent harnesses don't inherit venv/pipx PATH entries). Machine-local by design —
     # .okl/ is gitignored; hooks fall back to PATH and `python3 -m okl` regardless.
@@ -345,6 +412,8 @@ def cmd_init(args) -> int:
 
     _wire_claude_code(args)
     _install_ci_verifier(force=getattr(args, "force", False))
+    if not getattr(args, "no_seed", False):
+        _seed_first_run(Client())
     for line in _empty_store_guidance(Client()):
         print(line)
     # Said at install time, the one moment someone is reading okl's output and deciding
@@ -468,6 +537,17 @@ def cmd_check(args) -> int:
         # an unauthorized check exited 0 with a raw urllib traceback.
         print(f"OKL REFUSED THE CHECK — refusing to report a clean check.\n{e}", file=sys.stderr)
         return 2
+    if args.format == "hook":
+        # What a Claude Code UserPromptSubmit hook prints: the briefing into the model's
+        # context, and one line the person can see. OKL_QUIET=1 keeps the line out.
+        out: dict[str, Any] = {"hookSpecificOutput": {
+            "hookEventName": "UserPromptSubmit",
+            "additionalContext": core.render_check_for_agent(result)}}
+        notice = None if os.environ.get("OKL_QUIET") == "1" else core.briefing_notice(result)
+        if notice:
+            out["systemMessage"] = notice
+        print(json.dumps(out))
+        return 0
     if args.format == "json":
         _print_json(result)
     elif args.format == "actions":
@@ -565,15 +645,99 @@ def cmd_verify(args) -> int:
     print(f"✓ verified {node['id']} — {node['title']}\n  evidence: {node['verified_by']}")
     # Keep CI's view in step. A snapshot that exists is one CI reads, and re-verifying
     # without re-exporting leaves CI red for a rule that is green here -- the safe
-    # direction, but a step everyone would forget. Only refreshed, never created.
+    # direction, but a step everyone would forget. The FIRST snapshot is created here too,
+    # when the verified lesson governs files: it used to need a separate `okl export
+    # --drift` that the getting-started guide had to teach as a trap. Never for a lesson
+    # without files -- a snapshot of zero rules is one CI rightly reads as broken.
     snap = _snapshot_path()
-    if snap.exists():
+    if snap.exists() or node.get("files"):
         try:
+            existed = snap.exists()
             _write_snapshot(Client(), snap)
-            print(f"  refreshed {snap.name} — commit it so CI sees this verification")
+            print(f"  {'refreshed' if existed else 'created'} {snap.name} — commit it so CI sees this verification")
         except OKLUnreachableError as e:
             print(f"  ! {snap.name} NOT refreshed: {e}", file=sys.stderr)
     return 0
+
+
+def _stored_check(verified_by: str | None) -> tuple[str, str | None] | None:
+    """The command and expected signal `okl verify` recorded, or None if there is none
+    (never verified, or stamped by an import that carried no evidence)."""
+    import ast
+    if not verified_by or not verified_by.startswith("`"):
+        return None
+    end = verified_by.rfind("` exit 0")
+    if end <= 0:
+        return None
+    run = verified_by[1:end]
+    rest = verified_by[end + len("` exit 0"):]
+    expect = None
+    if rest.startswith(", matched "):
+        lit = rest[len(", matched "):].rsplit(" @ ", 1)[0]
+        try:
+            expect = ast.literal_eval(lit)
+        except (ValueError, SyntaxError):
+            return None
+    return run, expect
+
+
+def _reverify_permitted(args, planned: bool, manual: bool) -> int | None:
+    """None to go ahead and run the listed commands, or the exit code to stop with."""
+    if not planned or getattr(args, "dry_run", False):
+        return 1 if (manual or planned) else 0
+    if args.yes:
+        return None
+    if not sys.stdin.isatty():
+        print("refusing to run stored commands unattended: review them above, then pass --yes",
+              file=sys.stderr)
+        return 2
+    return None if input("Run them? [y/N] ").strip().lower() in ("y", "yes") else 2
+
+
+def cmd_reverify(args) -> int:
+    """Re-run the stored check of every drifted lesson and re-stamp the ones that pass.
+
+    `okl verify` already records the exact command and expected signal as evidence, so a
+    drifted lesson's re-check is known. Retyping each one was the step that made drift
+    upkeep a chore (issue #63). The commands come from the STORE, which on a shared
+    service holds records other people wrote, so they are listed and run only after a
+    confirmation or --yes: stored data reaching a shell unasked is how a shared store
+    becomes remote code execution.
+    """
+    from . import drift
+    client = Client()
+    if not client.configured:
+        print("OKL NOT CONFIGURED — nothing to re-verify. Run `okl init` first.", file=sys.stderr)
+        return 2
+    try:
+        nodes = client.all_nodes()
+    except OKLUnreachableError as e:
+        print(f"OKL UNREACHABLE — cannot re-verify.\n{e}", file=sys.stderr)
+        return 2
+    by_id = {n.id: n for n in nodes}
+    hits, _ = drift.scan_drift(nodes, client.repo, repo_dir=str(_snapshot_path().parent))
+    if not hits:
+        print("okl reverify: nothing has drifted.")
+        return 0
+    plan, manual = [], []
+    for h in hits:
+        chk = _stored_check(by_id[h.node_id].verified_by)
+        (plan.append((h, chk)) if chk else manual.append(h))
+    for h in manual:
+        print(f"• [{h.node_id}] {h.title}\n    no stored check: okl verify {h.node_id} --run \"<check>\" --expect \"<signal>\"")
+    if plan:
+        print(f"okl reverify will run {len(plan)} stored check(s), from the store:")
+        for h, (run, _exp) in plan:
+            print(f"  [{h.node_id}] {run}")
+    stop = _reverify_permitted(args, bool(plan), bool(manual))
+    if stop is not None:
+        return stop
+    failed = 0
+    for h, (run, exp) in plan:
+        rc = cmd_verify(argparse.Namespace(node_id=h.node_id, run=run, expect=exp, timeout=args.timeout))
+        failed += rc != 0
+    print(f"okl reverify: {len(plan) - failed} re-verified, {failed} failed, {len(manual)} need a first check.")
+    return 1 if (failed or manual) else 0
 
 
 def _snapshot_path() -> Path:
@@ -961,6 +1125,34 @@ def _empty_store_guidance(client: Client) -> list[str]:
     return lines
 
 
+def _seed_first_run(client: Client) -> None:
+    """Give an EMPTY local store something to brief: the starter lessons, plus the bundled
+    packs that fit this repo's interests. Never a store that already has records — seeding
+    goes through record(), which would re-stamp their verification times — and never a
+    shared service's store, which is not this repo's to fill."""
+    from .seed import seed_from_file, seed_starter
+    if client.mode == "remote":
+        return
+    try:
+        if client.search("", limit=1):
+            return
+    except (OSError, OKLUnreachableError, ValueError, RuntimeError):
+        return
+    seed_dir = _bundled_seed_dir()
+    n = seed_starter(client, seed_dir)
+    interests = {t.lower() for t in (client.interests or [])}
+    packs = []
+    for f in sorted(seed_dir.glob("*.json")):
+        _, tags = _describe_pack(f)
+        # Stack packs only: a pack with no stack tag fits on any shared subject, which is
+        # the starter's job, not a reason to import a whole pack.
+        if tags & core.STACK_TAGS and _pack_fits(tags, interests):
+            packs.append((f.stem, seed_from_file(client, str(f))))
+    print(f"✓ seeded {n} starter lessons (portable: web security, CI, docs, verification)"
+          + ("; packs for your stack: " + ", ".join(f"{p} ({c})" for p, c in packs) if packs else ""))
+    print("  your own rules matter most: okl record ... (see docs/GETTING-STARTED.md). --no-seed skips this")
+
+
 def _describe_pack(path: Path) -> tuple[int, set[str]]:
     """Count a pack's records and collect its subject tags, so the listing can say what
     a pack is ABOUT before anyone imports it."""
@@ -1108,6 +1300,9 @@ def build_parser() -> argparse.ArgumentParser:
                     help="--claude wires Claude Code (hooks, settings, MCP) even with no .claude/ "
                          "and no `claude` on PATH; --no-claude skips it. Default: wire when "
                          ".claude/ exists or `claude` is on PATH")
+    pi.add_argument("--no-seed", dest="no_seed", action="store_true",
+                    help="leave the store empty (by default init imports the starter lessons and "
+                         "the bundled packs that match this repo's stack)")
     pi.add_argument("--dry-run", dest="dry_run", action="store_true",
                     help="list every file init would write or modify, and write nothing")
     pi.add_argument("--force", action="store_true",
@@ -1123,9 +1318,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     pk = sub.add_parser("check", help="pre-task read: relevant lessons for a task")
     pk.add_argument("--task", required=True); pk.add_argument("--repo")
-    pk.add_argument("--format", choices=["agent", "actions", "json"], default="agent",
+    pk.add_argument("--format", choices=["agent", "actions", "json", "hook"], default="agent",
                     help="agent: the full briefing. actions: the routed action list only, "
-                         "for callers on a small context budget. json: the raw result.")
+                         "for callers on a small context budget. json: the raw result. hook: what a "
+                         "Claude Code UserPromptSubmit hook prints (briefing + a line for the user).")
     pk.add_argument("--limit", type=int, default=None,
                     help="cap how many records the briefing draws on (and how many actions "
                          "'--format actions' prints). Use with subagents on a token budget.")
@@ -1169,6 +1365,14 @@ def build_parser() -> argparse.ArgumentParser:
                      "signal, so exit 0 alone can't self-certify (the exit-0-zero-files lesson)")
     pvf.add_argument("--timeout", type=int, default=600, help="seconds before the check is killed (default 600)")
     pvf.set_defaults(func=cmd_verify)
+
+    prv = sub.add_parser("reverify", help="re-run the stored check of every drifted lesson and re-stamp the passes")
+    prv.add_argument("--yes", action="store_true",
+                     help="run the listed stored commands without asking (they come from the store)")
+    prv.add_argument("--dry-run", dest="dry_run", action="store_true",
+                     help="list what would be re-run, run nothing")
+    prv.add_argument("--timeout", type=int, default=600)
+    prv.set_defaults(func=cmd_reverify)
 
     ps = sub.add_parser("search", help="full-text search over the encoded body")
     ps.add_argument("query")

@@ -1,5 +1,32 @@
 # Changelog
 
+## Unreleased
+
+- **A first run that works with no choices.** `okl init` detects the stack and sets
+  interests from it, and seeds an empty local store with 20 portable starter lessons plus
+  the bundled packs for that stack, so the first prompt is briefed. `--no-seed` opts out.
+  Starter lessons are references into the packs, so importing a full pack later updates
+  the same rows.
+- **You can see okl working.** Each briefed prompt shows one line, *okl · briefed N
+  lesson(s): …*, via `okl check --format hook`; `OKL_QUIET=1` hides it. The hook falls back
+  to the plain briefing if the installed okl predates the format.
+- **Record by saying it.** The `okl_record` MCP tool takes `id` (re-recording updates the
+  lesson) and `applies_to`, so any MCP agent can record what the CLI can; a new `/record`
+  command drafts a lesson from the conversation and records it once you confirm. The
+  getting-started guide leads with this, covers other agents, and keeps the CLI as the
+  mechanism underneath.
+- **Choosing how hard to enforce a lesson.** The Stop hook's question, `/record` and the
+  guide now walk the same levels — briefing only, watched by CI (`--files` + `okl verify`),
+  build-breaking (a test or CI check), always-on (`CLAUDE.md`/`AGENTS.md`) — and the plugin
+  now ships the `encoding-loop` skill that holds the full table.
+- **`okl reverify`** re-runs the stored check of every drifted lesson after listing the
+  commands and getting a confirmation (or `--yes`).
+- **`okl verify` creates `okl-drift.json`** the first time a lesson that governs files is
+  verified, so there is no separate export step.
+- **The plugin's hooks step aside in repos never set up with `okl init`**; Decisions reach
+  the briefing; the service keeps `applies_to`; a getting-started guide
+  (docs/GETTING-STARTED.md); a docs audit's ~74 corrections; clean example re-runs.
+
 ## 0.7.2
 
 - **`okl record --verified` is refused.** It stamped a lesson verified with no evidence,

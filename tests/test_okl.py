@@ -960,6 +960,15 @@ def test_mcp_server_builds_and_its_tools_actually_run(tmp_path, monkeypatch):
             "type": "Rule", "title": "recorded through the MCP layer", "scope": "repo"}))
         assert rec.startswith("recorded "), rec
 
+        # ASSERT (3b) — an agent asked to "record that" can give a stable id, and
+        # recording the same id again updates the lesson instead of duplicating it.
+        for title in ("first wording", "refined wording"):
+            rec = unwrap(await mcp.call_tool("okl_record", {
+                "type": "Rule", "title": title, "scope": "repo", "id": "mcp-stable-id"}))
+            assert rec.startswith("recorded mcp-stable-id"), rec
+        assert "refined wording" in unwrap(await mcp.call_tool(
+            "okl_search", {"query": "refined wording", "limit": 3}))
+
         # ASSERT (4) — a bad tag returns readable guidance naming the vocabulary, not an
         # exception. An agent that cannot read the complaint cannot fix its own call.
         bad = unwrap(await mcp.call_tool("okl_record", {
@@ -1769,7 +1778,7 @@ def test_empty_store_guidance_is_tailored_and_reaches_the_person_not_the_agent(t
         return subprocess.run([sys.executable, "-m", "okl", *a], capture_output=True, text=True)
 
     # 1. Tailored to the declared stack.
-    out = okl("init", "--repo", "r", "--interests", "react,security").stdout
+    out = okl("init", "--repo", "r", "--interests", "react,security", "--no-seed").stdout
     assert "store is empty" in out
     assert "react-defects.json" in out and "frontend-canon.json" in out
     assert "dotnet" not in out, "a React repo must not be pointed at the .NET packs"
@@ -1786,7 +1795,7 @@ def test_empty_store_guidance_is_tailored_and_reaches_the_person_not_the_agent(t
 
     # 2 again. Once scaffolded, the command is named directly as something to run.
     okl("scaffold", ".")
-    assert "ask your agent to run /seed-from-codebase" in okl("init", "--repo", "r").stdout
+    assert "ask your agent to run /seed-from-codebase" in okl("init", "--repo", "r", "--no-seed").stdout
 
     # 5. From a subdirectory the command is still found. okl locates its config by walking
     # up, so `check` runs from anywhere in the repo; a cwd-relative lookup missed the
@@ -1918,9 +1927,12 @@ def test_drift_snapshot_gives_ci_a_store_it_cannot_clear_by_hand(tmp_path, monke
     okl("init", "--repo", "r")
     rid = okl("record", "--type", "Rule", "--scope", "repo", "--title", "t", "--body",
               "a lesson body", "--files", "a.py").stdout.strip().splitlines()[-1]
-    okl("verify", rid, "--run", "true", "--expect", "")
     snap_file = tmp_path / "okl-drift.json"
-    assert not snap_file.exists(), "verify refreshes a snapshot, it never creates one"
+    other = okl("record", "--type", "Rule", "--scope", "repo", "--title", "no files").stdout.strip().splitlines()[-1]
+    okl("verify", other, "--run", "true", "--expect", "")
+    assert not snap_file.exists(), "a lesson without files must not create a (zero-rule) snapshot"
+    okl("verify", rid, "--run", "true", "--expect", "")
+    assert snap_file.exists(), "the first verify of a lesson that governs files creates the snapshot"
 
     # 1. Export: the rules drift reads, without their lessons.
     assert okl("export", "--drift").returncode == 0
@@ -2086,7 +2098,7 @@ def test_metric_output_never_prints_a_bare_tick(tmp_path, monkeypatch):
 
     assert okl("metric").returncode == 2, "an unconfigured directory must be refused"
     subprocess.run(["git", "init", "-q", "."], check=True)
-    okl("init", "--repo", "r")
+    okl("init", "--repo", "r", "--no-seed")
     d = okl("record", "--type", "Defect", "--scope", "repo", "--title",
             "came back anyway").stdout.strip().splitlines()[-1]
     okl("link", d, "RECURS_IN", "elsewhere")
@@ -2225,6 +2237,204 @@ def test_the_service_keeps_applies_to(tmp_path, monkeypatch):
     node = next(n for n in (nodes.get("nodes", nodes) if isinstance(nodes, dict) else nodes)
                 if n["id"] == r.json()["id"])
     assert node.get("applies_to") == "dotnet", node
+
+
+def test_starter_pack_resolves_and_is_portable():
+    """The starter lessons are references into the bundled packs; every one must resolve,
+    be valid on any stack (no applies_to), and be actionable (a fix, or a gate to arm)."""
+    import json
+    root = Path(__file__).resolve().parents[1]
+    refs = json.loads((root / "src" / "okl" / "starter.json").read_text())["records"]
+    assert 15 <= len(refs) <= 30
+    for r in refs:
+        nodes = json.loads((root / "seed" / f"{r['pack']}.json").read_text())["nodes"]
+        node = next((n for n in nodes if n.get("key") == r["key"]), None)
+        assert node is not None, f"starter ref does not resolve: {r}"
+        assert not node.get("applies_to"), f"starter lesson is stack-bound: {r}"
+        assert node.get("fix") or node["type"] == "Gate", f"starter lesson is not actionable: {r}"
+
+
+def test_a_first_run_briefs_without_any_choices(tmp_path):
+    """Before this, a new user met an empty store and eleven packs from other stacks, none
+    for a Python or JS web app; testing the getting-started guide in a fresh repo showed a
+    first check with nothing in it. init now detects the stack, sets interests, and seeds
+    the starter lessons plus the matching stack packs — once, into an empty store only."""
+    import json
+    import subprocess
+    import sys
+    src = str(Path(__file__).resolve().parents[1] / "src")
+    repo = tmp_path / "shop"; repo.mkdir()
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    (repo / "pyproject.toml").write_text('[project]\nname = "shop"\ndependencies = ["fastapi"]\n')
+    env = {**os.environ, "PYTHONPATH": src, "HOME": str(tmp_path), "PATH": "/usr/bin:/bin"}
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN"):
+        env.pop(k, None)
+
+    def okl(*a, cwd=repo):
+        return subprocess.run([sys.executable, "-m", "okl", *a], cwd=cwd, env=env,
+                              capture_output=True, text=True)
+
+    r = okl("init", "--repo", "shop")
+    assert r.returncode == 0, r.stderr
+    assert "detected python (pyproject.toml)" in r.stdout and "seeded 20 starter lessons" in r.stdout, r.stdout
+    cfg = json.loads((repo / ".okl" / "config.json").read_text())
+    assert set(cfg["interests"]) == {"python", "security", "method"}, cfg
+    brief = okl("check", "--task", "add an endpoint that returns an order for the logged-in user").stdout
+    assert "FIX: Missing ownership scope check" in brief, brief
+    # Re-running init must not re-seed: that would re-stamp every seeded record's verification.
+    before = len(okl("search", "", "--limit", "500").stdout.splitlines())
+    r = okl("init", "--repo", "shop")
+    assert "seeded" not in r.stdout and len(okl("search", "", "--limit", "500").stdout.splitlines()) == before
+    # The full pack later updates the starter's rows instead of duplicating them.
+    okl("seed", "dotnet-defects")
+    hits = [ln for ln in okl("search", "ownership scope check IDOR", "--limit", "50").stdout.splitlines()
+            if "Missing ownership scope check" in ln]
+    assert len(hits) == 1, hits
+    # --no-seed leaves a new repo empty.
+    other = tmp_path / "bare"; other.mkdir(); subprocess.run(["git", "init", "-q", str(other)], check=True)
+    r = okl("init", "--repo", "bare", "--no-seed", cwd=other)
+    assert "seeded" not in r.stdout and "store is empty" in r.stdout, r.stdout
+
+
+def test_hook_format_briefs_the_model_and_tells_the_person(tmp_path):
+    """The briefing goes into the model's context, invisible in the UI, so a user never saw
+    okl work. --format hook adds one line for the person — only when something matched."""
+    import json
+    import subprocess
+    import sys
+    src = str(Path(__file__).resolve().parents[1] / "src")
+    repo = tmp_path / "r"; repo.mkdir(); subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    env = {**os.environ, "PYTHONPATH": src, "HOME": str(tmp_path)}
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN", "OKL_QUIET"):
+        env.pop(k, None)
+
+    def check(task, **extra):
+        r = subprocess.run([sys.executable, "-m", "okl", "check", "--task", task, "--format", "hook"],
+                           cwd=repo, env={**env, **extra}, capture_output=True, text=True)
+        assert r.returncode == 0, r.stderr
+        return json.loads(r.stdout)
+
+    subprocess.run([sys.executable, "-m", "okl", "init", "--repo", "r", "--interests", "security",
+                    "--no-claude"], cwd=repo, env=env, capture_output=True, check=True)
+    out = check("add an endpoint that returns an order for the logged-in user")
+    assert out["hookSpecificOutput"]["hookEventName"] == "UserPromptSubmit"
+    assert "OKL briefing" in out["hookSpecificOutput"]["additionalContext"]
+    assert out["systemMessage"].startswith("okl · briefed "), out["systemMessage"]
+    assert "Missing ownership scope check" in out["systemMessage"], out["systemMessage"]
+    assert "systemMessage" not in check("add an endpoint that returns an order", OKL_QUIET="1")
+    assert "systemMessage" not in check("zzqx unrelated gibberish task")
+
+
+def test_reverify_reruns_stored_checks_only_when_asked(tmp_path):
+    """okl verify stores the exact check; okl reverify re-runs it for drifted lessons (#63).
+    The commands come from the store, so they are listed and run only on --yes (or a
+    confirmation at a terminal); unattended without --yes it refuses and runs nothing."""
+    import subprocess
+    import sys
+    import time
+    src = str(Path(__file__).resolve().parents[1] / "src")
+    repo = tmp_path / "r"; repo.mkdir()
+    env = {**os.environ, "PYTHONPATH": src, "HOME": str(tmp_path)}
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN"):
+        env.pop(k, None)
+    git = ["git", "-C", str(repo), "-c", "user.email=t@t", "-c", "user.name=t"]
+
+    def okl(*a):
+        return subprocess.run([sys.executable, "-m", "okl", *a], cwd=repo, env=env,
+                              capture_output=True, text=True, stdin=subprocess.DEVNULL)
+
+    def commit(text):
+        time.sleep(1.1)   # git commit times are in seconds
+        (repo / "a.txt").write_text(text)
+        subprocess.run([*git, "add", "a.txt"], check=True)
+        subprocess.run([*git, "commit", "-qm", "edit"], check=True)
+
+    subprocess.run(["git", "init", "-q", str(repo)], check=True); commit("hello\n")
+    okl("init", "--repo", "r", "--no-seed", "--no-claude")
+    rid = okl("record", "--type", "Rule", "--scope", "repo", "--title", "a.txt says hello",
+              "--files", "a.txt").stdout.strip().splitlines()[-1]
+    never = okl("record", "--type", "Rule", "--scope", "repo", "--title", "never checked",
+                "--files", "a.txt").stdout.strip().splitlines()[-1]
+    check = "grep -q hello a.txt && echo SAYS HELLO"
+    assert okl("verify", rid, "--run", check, "--expect", "SAYS HELLO").returncode == 0
+    commit("hello again\n")
+    assert okl("drift", "--gate").returncode == 1
+
+    r = okl("reverify")                       # unattended, no --yes
+    assert r.returncode == 2 and check in r.stdout and "refusing" in r.stderr, (r.stdout, r.stderr)
+    assert f"no stored check: okl verify {never}" in r.stdout, r.stdout
+    assert okl("reverify", "--dry-run").returncode == 1
+    r = okl("reverify", "--yes")
+    assert "1 re-verified, 0 failed, 1 need a first check" in r.stdout, r.stdout
+    drifted = okl("drift").stdout
+    assert rid not in drifted and never in drifted, drifted
+
+    commit("goodbye\n")                      # the lesson is now genuinely broken
+    r = okl("reverify", "--yes")
+    assert r.returncode == 1 and "0 re-verified, 1 failed" in r.stdout, r.stdout
+    assert rid in okl("drift").stdout
+
+
+def test_first_run_notice_and_reverify_in_process(tmp_path, monkeypatch, capsys):
+    """The same paths the subprocess tests drive, run in-process so coverage sees them:
+    init's detection and first-run seeding, check --format hook's notice, and verify ->
+    drift -> reverify with a stored check. (CI's coverage ratchet failed on #77 because
+    these ran only in child processes.)"""
+    import json
+    import subprocess
+    import time
+
+    from okl import core
+    from okl.cli import _stored_check, main
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN", "OKL_QUIET"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+    git = ["git", "-c", "user.email=t@t", "-c", "user.name=t"]
+    subprocess.run(["git", "init", "-q", "."], check=True)
+    (tmp_path / "pyproject.toml").write_text('[project]\nname = "s"\n')
+    (tmp_path / "a.txt").write_text("hello\n")
+    subprocess.run([*git, "add", "-A"], check=True); subprocess.run([*git, "commit", "-qm", "i"], check=True)
+
+    assert main(["init", "--repo", "s", "--no-claude", "--dry-run"]) == 0
+    assert "detected: python" in capsys.readouterr().out
+    assert main(["init", "--repo", "s", "--no-claude"]) == 0
+    assert "seeded 20 starter lessons" in capsys.readouterr().out
+
+    assert main(["check", "--task", "add an endpoint that returns an order for the logged-in user",
+                 "--format", "hook"]) == 0
+    out = json.loads(capsys.readouterr().out)
+    assert out["systemMessage"].startswith("okl · briefed ")
+    # the notice's own edges: nothing matched -> no line; empty store -> says so
+    assert core.briefing_notice({"match_count": 0, "store_records": 5}) is None
+    assert "store is empty" in core.briefing_notice({"match_count": 0, "store_records": 0})
+
+    assert main(["record", "--type", "Rule", "--scope", "repo", "--id", "hi", "--title",
+                 "a.txt says hello", "--files", "a.txt"]) == 0
+    assert main(["verify", "hi", "--run", "grep -q hello a.txt && echo SAYS HELLO",
+                 "--expect", "SAYS HELLO"]) == 0
+    assert "created okl-drift.json" in capsys.readouterr().out
+    assert _stored_check("`grep -q hello a.txt && echo SAYS HELLO` exit 0, matched 'SAYS HELLO' @ 2026-09-29T00:00Z") \
+        == ("grep -q hello a.txt && echo SAYS HELLO", "SAYS HELLO")
+    assert _stored_check("`true` exit 0 @ 2026-09-29T00:00Z") == ("true", None)
+    assert _stored_check(None) is None and _stored_check("asserted") is None
+
+    time.sleep(1.1)
+    (tmp_path / "a.txt").write_text("hello again\n")
+    subprocess.run([*git, "commit", "-qam", "edit"], check=True)
+    assert main(["reverify", "--dry-run"]) == 1
+    assert main(["reverify", "--yes"]) == 0
+    assert "1 re-verified, 0 failed" in capsys.readouterr().out
+    assert main(["reverify"]) == 0          # nothing drifted now
+
+
+def test_stack_detection(tmp_path):
+    from okl.cli import _detect_stacks
+    (tmp_path / "api").mkdir(); (tmp_path / "api" / "Api.csproj").write_text("<Project/>")
+    (tmp_path / "package.json").write_text('{"dependencies": {"react": "^19.0.0"}}')
+    (tmp_path / "requirements.txt").write_text("langchain\nrasterio\n")
+    assert [t for t, _ in _detect_stacks(tmp_path)] == ["dotnet", "react", "python", "python-rag", "geospatial"]
+    assert _detect_stacks(tmp_path / "api") == [("dotnet", "Api.csproj")]
 
 
 def test_every_record_that_wins_a_slot_is_shown(tmp_path):

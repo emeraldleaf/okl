@@ -289,6 +289,14 @@ def test_mirror_files_identical():
     # consumers get a gate the author has never actually run, or vice versa.
     pairs.extend((g, root / "src" / "okl" / "scaffold" / "gates" / g.name)
                  for g in (root / "gates").glob("*.sh"))
+    # This repo's own Claude Code setup: it uses project hooks, not the plugin, so it runs
+    # repo copies of the hooks, /record and the encoding-loop skill. Without these pairs
+    # the repo that ships them was not using them (found 2026-09-29).
+    scaffold_claude = root / "src" / "okl" / "scaffold" / "claude"
+    pairs.extend((h, root / ".claude" / "hooks" / h.name) for h in (root / "hooks").glob("*.sh"))
+    pairs.append((scaffold_claude / "commands" / "record.md", root / ".claude" / "commands" / "record.md"))
+    pairs.append((scaffold_claude / "skills" / "encoding-loop" / "SKILL.md",
+                  root / ".claude" / "skills" / "encoding-loop" / "SKILL.md"))
     assert pairs, "expected mirrored files to exist"
     for a, b in pairs:
         assert b.exists(), f"missing mirror: {b}"
@@ -1426,6 +1434,31 @@ def shutil_which(name):
     return found
 
 
+def test_prompt_hook_passes_hook_json_through_and_falls_back_for_an_older_okl(tmp_path):
+    """The plugin updates from main; the CLI only when upgraded. A hook asking an older okl
+    for --format hook must brief the old way, not block every prompt."""
+    import json
+    hook = Path(__file__).resolve().parents[1] / "src" / "okl" / "scaffold" / "hooks" / "userpromptsubmit-okl-check.sh"
+    (tmp_path / ".okl").mkdir(); (tmp_path / ".okl" / "config.json").write_text('{"repo": "t"}')
+    stub = tmp_path / "okl"
+    env = {"PATH": os.environ["PATH"], "HOME": str(tmp_path), "TMPDIR": str(tmp_path),
+           "OKL_BIN": str(stub), "CLAUDE_PROJECT_DIR": str(tmp_path)}
+
+    def run(body):
+        stub.write_text("#!/bin/sh\n" + body + "\n"); stub.chmod(0o755)
+        return subprocess.run(["bash", str(hook)], cwd=tmp_path, text=True, env=env,
+                              input=json.dumps({"prompt": "x"}), capture_output=True)
+
+    payload = '{"hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext": "B"}, "systemMessage": "okl · briefed 1 lesson(s): x"}'
+    r = run(f"echo '{payload}'")
+    assert r.returncode == 0 and json.loads(r.stdout)["systemMessage"].startswith("okl · briefed"), r.stdout
+    # An okl without --format hook: argparse says "invalid choice" and exits 2.
+    older = ('for a in "$@"; do [ "$a" = hook ] && { echo "okl check: error: argument --format: '
+             'invalid choice: \'hook\'" >&2; exit 2; }; done; echo "## OKL briefing (agent format)"')
+    r = run(older)
+    assert r.returncode == 0 and "OKL briefing (agent format)" in r.stdout, (r.returncode, r.stdout, r.stderr)
+
+
 def test_init_and_doctor_know_okls_own_plugin(tmp_path):
     """#45: okl ships as a Claude Code plugin too. If the plugin is enabled, `okl init`
     must not also register the project hooks (every prompt would be briefed twice and the
@@ -1485,6 +1518,8 @@ def test_plugin_manifest_points_at_real_files_and_the_shipped_version():
     for rel in referenced:
         assert rel.startswith("./"), f"{rel}: plugin paths are relative to the plugin root"
         assert (root / rel).is_file(), f"{rel}: referenced by the manifest but missing"
+    for rel in manifest.get("skills", []):
+        assert rel.startswith("./") and (root / rel / "SKILL.md").is_file(), f"{rel}: skill missing"
     hooks = json.loads((root / manifest["hooks"]).read_text())
     assert set(hooks) == {"hooks"} and {"UserPromptSubmit", "Stop"} <= set(hooks["hooks"])
     for event in ("UserPromptSubmit", "Stop"):

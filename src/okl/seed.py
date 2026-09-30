@@ -74,6 +74,40 @@ def seed_from_file(client: Client, path: str) -> int:
     return len(data.get("nodes", []))
 
 
+STARTER = Path(__file__).parent / "starter.json"
+
+
+def seed_starter(client: Client, seed_dir: Path) -> int:
+    """Import the starter lessons: portable records drawn from the bundled packs BY
+    REFERENCE, so each keeps the id its pack gives it (`seed:<pack>:<key>`). Importing the
+    full pack later then updates these same rows instead of adding near-duplicates.
+
+    Why it exists: a first run that briefs nothing reads as "this does not work". Before
+    it, a new user faced an empty store and eleven packs from other people's stacks —
+    none of them for the most common case, a Python or JS web app.
+    """
+    refs = json.loads(STARTER.read_text())["records"]
+    by_pack: dict[str, list[str]] = {}
+    for r in refs:
+        by_pack.setdefault(r["pack"], []).append(r["key"])
+    n = 0
+    for pack, keys in by_pack.items():
+        data = json.loads((seed_dir / f"{pack}.json").read_text())
+        wanted = set(keys)
+        for node in data.get("nodes", []):
+            if node.get("key") not in wanted:
+                continue
+            node = dict(node)
+            key = node.pop("key")
+            node.setdefault("repo", None)   # provenance is another repo's: unknown, not this one
+            client.record(id=f"seed:{pack}:{key}", **node)
+            n += 1
+        for edge in data.get("edges", []):
+            if edge["src"] in wanted and edge["dst"] in wanted:
+                client.link(f"seed:{pack}:{edge['src']}", edge["rel"], f"seed:{pack}:{edge['dst']}")
+    return n
+
+
 def _require_citations(data: dict, filename: str) -> None:
     """Refuse a self-declared proposal pack unless every node carries a citation.
 
