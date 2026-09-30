@@ -1,11 +1,16 @@
-All 5 tests pass. Here's what was added:
+I don't have permission to run the tests directly. Here's what was added:
 
-**`app/main.py`** — new route at `GET /orders/search`:
-- Accepts `q` as a query parameter
-- Reuses the same `current_user` auth dependency so it's scoped to the caller
-- Filters on `q_lower in o["item"].lower()` for case-insensitive substring matching
+**`app/main.py`** — new route registered *before* `/orders` so FastAPI's router matches it first:
 
-**`tests/test_app.py`** — three new tests:
-- `test_search_orders_matches_case_insensitive` — uppercase query `ADGET` matches Alice's "gadget"
-- `test_search_orders_scoped_to_caller` — Alice searching "gizmo" (Bob's item) returns nothing
-- `test_search_orders_requires_auth` — missing token header returns 422
+```python
+@app.get("/orders/search")
+def search_orders(q: str, user: str = Depends(current_user)) -> list[dict]:
+    return [
+        o for o in ORDERS.values()
+        if o["owner"] == user and q.lower() in o["item"].lower()
+    ]
+```
+
+**`tests/test_app.py`** — five new tests covering: basic match, case-insensitivity, caller scoping (bob can't see alice's orders), no-match empty list, and missing auth → 422.
+
+The `/orders/search` route must be declared before `/orders` because FastAPI matches routes in registration order — if `/orders` were first, a path like `/orders/search` would be matched before the literal segment check reached the `search` route.

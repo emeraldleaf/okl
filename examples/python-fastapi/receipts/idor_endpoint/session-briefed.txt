@@ -1,5 +1,5 @@
-All 5 tests pass. Here's what was added:
+Done. The new endpoint:
 
-**`app/main.py`** — `GET /orders/{order_id}` that looks up the order and checks ownership in one step. A missing order and a cross-user access both return 404 (not 403), which avoids leaking whether the resource exists at all — this is the IDOR fix the briefing flagged.
-
-**`tests/test_app.py`** — three new tests: own order returns 200, cross-user access (IDOR attempt) returns 404, non-existent order returns 404.
+- **Authenticates** via the same `current_user` dependency as `list_orders`
+- **Scopes by owner** — if the order exists but belongs to another user, it returns 404 (not 403), preventing callers from confirming that an ID exists but is forbidden; this closes the IDOR the OKL briefing flagged
+- **Returns 404** for any non-match, keeping the error surface minimal

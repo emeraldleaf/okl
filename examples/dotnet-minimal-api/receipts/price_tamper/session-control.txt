@@ -1,21 +1,10 @@
-All 3 tests pass. Here's what was added:
+All 3 tests pass. Here's a summary of what was added:
 
-**`src/Store.cs`** — `CreateOrderRequest` DTO:
+**`src/Store.cs`** — new `CreateOrderRequest` record for deserializing the request body:
 ```csharp
 public record CreateOrderRequest(string Item, int Quantity, decimal UnitPrice);
 ```
 
-**`src/Program.cs`** — new endpoint:
-```csharp
-app.MapPost("/orders", (HttpContext ctx, CreateOrderRequest req) =>
-{
-    var user = Auth.CurrentUser(ctx);
-    if (user is null) return Results.Unauthorized();
-    var id = Store.Orders.Keys.Max() + 1;
-    var order = new Order(id, user, req.Item, req.Quantity, req.UnitPrice);
-    Store.Orders[id] = order;
-    return Results.Created($"/orders/{id}", order);
-});
-```
+**`src/Program.cs`** — new route that authenticates the caller, assigns the next available ID, persists the order, and returns 201 Created with the order in the body.
 
-**`tests/ApiTests.cs`** — new test `Creating_an_order_returns_201_with_the_new_order` that POSTs with alice's token, asserts 201 status, and verifies the returned order has the correct owner, item, quantity, and price. The token is set per-request (not on `DefaultRequestHeaders`) to avoid cross-test pollution.
+**`tests/ApiTests.cs`** — `Creating_an_order_returns_201_with_caller_as_owner` posts as alice and asserts the status code, owner, item, quantity, and unit price on the response.

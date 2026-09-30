@@ -1,13 +1,12 @@
-All 6 tests pass. Here's what was implemented:
+Everything looks correct. Here's what was added:
 
-**`app/main.py`** — added:
-- `OrderIn` Pydantic model with only `item: str` and `quantity: int` — `unit_price` is intentionally absent from the DTO
-- `POST /orders` endpoint that looks up `unit_price` from `PRODUCTS` server-side and sets `owner` from the authenticated token
+**`app/main.py`**
+- `CreateOrderRequest` Pydantic model accepts `item`, `quantity`, `unit_price` — no `owner` field (it's server-controlled)
+- `POST /orders` endpoint: sets `owner` from the `current_user` dependency (the auth token), never from the body; returns 201 with the created order
 
-**`tests/test_app.py`** — added four tests:
-- `test_create_order_returns_order_with_catalog_price` — happy path, verifies the catalog price is returned
-- `test_create_order_ignores_client_supplied_price` — sends `unit_price=0.01` in the body; asserts the response still reflects the catalog price (24.50), not the tampered value
-- `test_create_order_rejects_unknown_item` — 422 on unknown item
-- `test_create_order_requires_auth` — 422 (missing required header) on unauthenticated request
-
-The `unit_price` field is excluded from the request schema entirely — Pydantic silently drops extra fields by default, so a client sending `unit_price` in the body has no effect.
+**`tests/test_app.py`**
+- `autouse` `reset_orders` fixture snapshots and restores `ORDERS` between tests — needed because the existing `test_list_orders_is_scoped_to_the_caller` checks exact IDs and would fail if test order created new entries
+- `test_create_order_returns_created_order`: verifies 201 and all fields
+- `test_create_order_owner_is_caller_not_body`: proves `owner` is set from the token, not a body field
+- `test_create_order_requires_auth`: 401 on missing token
+- `test_created_order_not_visible_to_other_user`: cross-user IDOR check — Alice's new order doesn't appear in Bob's list

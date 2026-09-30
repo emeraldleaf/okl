@@ -1,10 +1,13 @@
-All 4 tests pass. Here's what was done:
+All 4 tests pass. Here's what was added:
 
-**`src/Program.cs`** — added `GET /orders/{id:int}`:
-- Resolves the caller first, returns 401 if unauthenticated
-- The ownership predicate (`order.Owner == user`) is part of the lookup condition, not a post-fetch check — this prevents IDOR by ensuring a hit on id alone is never enough
-- Returns 404 on any non-match, whether the id doesn't exist or belongs to another user (no existence leak)
+**`src/Program.cs`** — new endpoint after the existing `/orders` handler:
+```csharp
+app.MapGet("/orders/{id}", (int id, HttpContext ctx) => { ... });
+```
+The ownership check is part of the query — `order.Owner != user` — so a caller who doesn't own the order gets 404, not 403 (no resource existence leak).
 
-**`tests/ApiTests.cs`** — added two tests:
-- `Get_order_returns_the_callers_own_order` — happy path, bob fetches his own order 3
-- `Get_order_returns_404_for_another_users_order` — cross-user test, bob requests alice's order 1 and gets 404; the assertion comments call out both what 200 and 403 would mean so the intent is obvious to a future reader
+**`tests/ApiTests.cs`** — two new tests:
+- `GetOrder_returns_own_order_as_json` — happy path: alice fetches her order 1, gets full JSON back.
+- `GetOrder_returns_404_for_another_users_order` — IDOR proof: alice requests bob's order 3, gets 404. This is the authorization-failure test the endpoint can't ship without.
+
+Each new test creates its own `HttpClient` from the stored factory to keep auth headers isolated from the shared `_client`.
