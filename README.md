@@ -2,8 +2,9 @@
 
 # okl — Observed Knowledge Ledger
 
-**Shared, verified coding rules for Claude Code that outlive a session.**<br>
-Briefed to the agent before every task, proven by checks, flagged in CI when the code they govern changes.
+**A learning loop that keeps coding agents — and your docs — from drifting.**<br>
+Engineering rules, architecture decisions, documentation and diagrams: recorded once, briefed to
+Claude Code before every task, proven by checks, and flagged in CI when what they govern changes.
 
 [![PyPI](https://img.shields.io/pypi/v/observed-knowledge-ledger?color=blue&label=PyPI)](https://pypi.org/project/observed-knowledge-ledger/)
 [![Python](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
@@ -16,11 +17,13 @@ Briefed to the agent before every task, proven by checks, flagged in CI when the
 
 </div>
 
-> A small store of the rules a codebase lives by — its conventions, the decisions made
-> on purpose, the checks that catch mistakes already made once — plus a hook that hands
-> the relevant ones to a coding agent (or a person) **before** they start a task. The
-> rules survive past a session, can be shared across a team, and stay true: each is
-> verified by running a check, and flagged when the code it governs changes.
+> A small store of what a codebase knows — its conventions, architecture decisions and
+> why they were made, the checks that catch mistakes already made once, and the claims its
+> docs and diagrams make — plus a hook that hands the relevant ones to a coding agent (or a
+> person) **before** they start a task. Each session can record what it learned, so the store
+> grows with the work; it survives past a session and can be shared across a team. And it
+> stays true: an entry is verified by running a check, and flagged when the files it governs
+> change, whether those are code, docs or diagrams.
 
 ## Quickstart
 
