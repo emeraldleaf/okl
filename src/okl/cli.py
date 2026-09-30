@@ -331,55 +331,45 @@ def _wire_claude_code(args) -> None:
         print("      agent has a pre-prompt hook, point it at them. Registration formats differ.")
 
 
-def cmd_init(args) -> int:
-    """Wire the current repo so the loop runs without manual follow-up steps:
-    config, hooks (installed AND registered), CI verifier, MCP registration.
-
-    `--dry-run` prints every path it would touch and writes nothing. This command
-    installs executable hooks and a CI workflow into your repo; you should be able
-    to see that list before it happens."""
-    import shutil
-    if getattr(args, "uninstall", False):
-        return _uninstall(getattr(args, "dry_run", False))
-    if getattr(args, "dry_run", False):
-        repo = args.repo or Path.cwd().name
-        print(f"DRY RUN — nothing will be written. `okl init --repo {repo}` would:\n")
-        print("  .okl/config.json                        repo name, interests, and the path to this okl")
-        wire, why = _should_wire_claude(args)
-        link = _symlinked(Path(".claude")) if wire else None
-        if link is not None:
-            print(f"  (no Claude Code hooks: {link} is a symlink, which init refuses to write through)")
-        elif wire:
-            print(f"  (wiring Claude Code: {why})")
-            print("  .claude/hooks/userpromptsubmit-okl-check.sh   executable; runs when you submit a task")
-            print("  .claude/hooks/stop-okl-encode.sh             executable; runs when a session ends")
-            print("  .claude/settings.json                   registers those two hooks (merged, existing keys kept)")
-            print("  .mcp.json                               registers the okl MCP server (only if the [mcp] extra is installed)")
-        elif why:
-            print(f"  (no Claude Code hooks: {why})")
-        else:
-            print("  (no .claude/ here and Claude Code not found, so no hooks; `--claude` installs them anyway)")
-        if Path(".git").exists():
-            print("  .github/workflows/okl-verify.yml        a CI workflow running the drift gate on PRs")
-        else:
-            print("  (not a git repository, so no CI workflow and no drift gate)")
-        if args.interests:
-            print(f"  (interests: {args.interests})")
-        else:
-            stacks = _detect_stacks(Path.cwd())
-            print("  (detected: " + (", ".join(f"{t} from {f}" for t, f in stacks) or "no known stack")
-                  + " — interests would be set from it; --interests overrides)")
-        if not getattr(args, "no_seed", False):
-            print("  .okl/okl.db                             seeded with the starter lessons and matching stack packs"
-                  " (if empty; --no-seed skips)")
-        print("\nNothing is written outside this directory. Read the hooks before you register them:")
-        print("  https://github.com/emeraldleaf/okl/blob/main/src/okl/scaffold/hooks/")
-        return 0
+def _init_dry_run(args) -> int:
+    """`okl init --dry-run`: every path init would touch, and nothing written."""
     repo = args.repo or Path.cwd().name
-    cfg = load_config()
-    cfg["repo"] = repo
-    if args.service:
-        cfg["service_url"] = args.service
+    print(f"DRY RUN — nothing will be written. `okl init --repo {repo}` would:\n")
+    print("  .okl/config.json                        repo name, interests, and the path to this okl")
+    wire, why = _should_wire_claude(args)
+    link = _symlinked(Path(".claude")) if wire else None
+    if link is not None:
+        print(f"  (no Claude Code hooks: {link} is a symlink, which init refuses to write through)")
+    elif wire:
+        print(f"  (wiring Claude Code: {why})")
+        print("  .claude/hooks/userpromptsubmit-okl-check.sh   executable; runs when you submit a task")
+        print("  .claude/hooks/stop-okl-encode.sh             executable; runs when a session ends")
+        print("  .claude/settings.json                   registers those two hooks (merged, existing keys kept)")
+        print("  .mcp.json                               registers the okl MCP server (only if the [mcp] extra is installed)")
+    elif why:
+        print(f"  (no Claude Code hooks: {why})")
+    else:
+        print("  (no .claude/ here and Claude Code not found, so no hooks; `--claude` installs them anyway)")
+    if Path(".git").exists():
+        print("  .github/workflows/okl-verify.yml        a CI workflow running the drift gate on PRs")
+    else:
+        print("  (not a git repository, so no CI workflow and no drift gate)")
+    if args.interests:
+        print(f"  (interests: {args.interests})")
+    else:
+        stacks = _detect_stacks(Path.cwd())
+        print("  (detected: " + (", ".join(f"{t} from {f}" for t, f in stacks) or "no known stack")
+              + " — interests would be set from it; --interests overrides)")
+    if not getattr(args, "no_seed", False):
+        print("  .okl/okl.db                             seeded with the starter lessons and matching stack packs"
+              " (if empty; --no-seed skips)")
+    print("\nNothing is written outside this directory. Read the hooks before you register them:")
+    print("  https://github.com/emeraldleaf/okl/blob/main/src/okl/scaffold/hooks/")
+    return 0
+
+
+def _init_interests(cfg: dict, args) -> None:
+    """Explicit --interests win; otherwise detect them, once, for a repo that has none."""
     if args.interests:
         cfg["interests"] = [t.strip().lower() for t in args.interests.split(",") if t.strip()]
     elif not cfg.get("interests"):
@@ -391,6 +381,26 @@ def cmd_init(args) -> int:
             cfg["interests"] = sorted({t for t, _ in stacks} | {"security", "method"})
             print("• detected " + ", ".join(f"{t} ({f})" for t, f in stacks)
                   + " — interests set; pass --interests to choose your own")
+
+
+def cmd_init(args) -> int:
+    """Wire the current repo so the loop runs without manual follow-up steps:
+    config, hooks (installed AND registered), CI verifier, MCP registration.
+
+    `--dry-run` prints every path it would touch and writes nothing. This command
+    installs executable hooks and a CI workflow into your repo; you should be able
+    to see that list before it happens."""
+    import shutil
+    if getattr(args, "uninstall", False):
+        return _uninstall(getattr(args, "dry_run", False))
+    if getattr(args, "dry_run", False):
+        return _init_dry_run(args)
+    repo = args.repo or Path.cwd().name
+    cfg = load_config()
+    cfg["repo"] = repo
+    if args.service:
+        cfg["service_url"] = args.service
+    _init_interests(cfg, args)
     # Pin how to invoke okl on THIS machine, for hooks running outside the dev shell
     # (agent harnesses don't inherit venv/pipx PATH entries). Machine-local by design —
     # .okl/ is gitignored; hooks fall back to PATH and `python3 -m okl` regardless.
