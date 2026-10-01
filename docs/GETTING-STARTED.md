@@ -23,6 +23,10 @@ pipx install 'observed-knowledge-ledger[mcp]'
 The PyPI name differs (PyPI refuses `okl` as confusable with `oki`); everything you type
 afterwards is `okl`.
 
+Needs Python 3.10+ (and git for drift detection). Tested on macOS and Linux. **Windows is untested**: the core
+should work, but the Claude Code hooks likely need fixes there
+([#85](https://github.com/emeraldleaf/okl/issues/85)).
+
 ### Wire the repository
 
 From the root of your repo:
