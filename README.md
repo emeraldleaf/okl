@@ -37,7 +37,7 @@ Claude Code before every task, proven by checks, and flagged in CI when what the
 pipx install 'observed-knowledge-ledger[mcp]'
 ```
 
-Needs Python 3.10+ and git. Tested on macOS and Linux. **Windows is untested**: the core
+Needs Python 3.10+ (and git for drift detection). Tested on macOS and Linux. **Windows is untested**: the core
 should work, but the Claude Code hooks likely need fixes there
 ([#85](https://github.com/emeraldleaf/okl/issues/85)).
 
