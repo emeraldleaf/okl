@@ -125,8 +125,8 @@
       "title": "Entered a crowded category deliberately: differentiate on verification-of-memory, compose with memory infra, never compete on recall",
       "scope": "repo:okl",
       "files": "README.md",
-      "verified_at": 1790888011966,
-      "verified_by": "`bash -c \"! grep -inE 'better recall|best.{0,12}memory|beats (mem0|zep|letta|claude-mem|agentmemory)' README.md && echo 'POSITIONING OK'\"` exit 0, matched 'POSITIONING OK' @ 2026-10-01T20:53Z"
+      "verified_at": 1790895385804,
+      "verified_by": "`bash -c \"! grep -inE 'better recall|best.{0,12}memory|beats (mem0|zep|letta|claude-mem|agentmemory)|nobody else|nothing invalidates|no other tool|the only tool|first tool to' README.md && echo 'POSITIONING OK'\"` exit 0, matched 'POSITIONING OK' @ 2026-10-01T22:56Z"
     },
     {
       "id": "n_e635fd921086",
