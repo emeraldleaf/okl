@@ -215,9 +215,10 @@ the consensus position of 2026, not an insight.
    carries a verification receipt from a check you choose (`okl verify` — the CLI will
    not stamp without a run), can decay on a TTL, and goes stale *loudly*:
    `okl drift --gate` fails CI when governed code changed after the lesson was last
-   verified, or it was never verified. Most tools in the table below accumulate; the
-   ones that do invalidate do it by re-reading code or checking references, not by
-   running your check. The whole repo is plumbing to get that bet in front of an agent
+   verified, or it was never verified. Most tools in the table below accumulate or
+   decay with time; the ones that tie a memory to code check it by re-reading the
+   code, checking a reference, or noticing a file changed, not by running your check.
+   The whole repo is plumbing to get that bet in front of an agent
    before the first line of code is written.
 3. **Building it was the point.** This repo exists to make a working method concrete —
    and the things it surfaced would not have come from adopting a product: the eval
@@ -230,7 +231,7 @@ the consensus position of 2026, not an insight.
 | mem0 / Zep / Letta / Cognee | extracted facts, conversation graphs, agent-curated tiers | nothing tied to your code — memories accumulate |
 | Cursor Memories / Devin Knowledge | per-project conventions and pinned notes | manual editing |
 | GitHub Copilot Memory (2026) | repo facts the agent saves as it works, each citing the code lines behind it; shared by Copilot's coding agent, CLI and code review | the agent re-reads the cited lines before use and replaces a contradicted memory; memories expire unless re-confirmed — a model's judgment at use time, Copilot only, no CI gate |
-| driftlint, agents-lint, scavi (instruction-file linters) | nothing of their own: they check the claims already in CLAUDE.md / AGENTS.md (driftlint also syncs approved facts into them) | a referenced path, command, link or import that no longer exists; driftlint fails CI — they check references, not whether a rule still holds |
+| driftlint, agents-lint, scavi (instruction-file linters) | nothing of their own: they check the claims already in CLAUDE.md / AGENTS.md (driftlint also syncs approved facts into them) | a referenced path, command, link or import that no longer exists; driftlint fails CI. The reference checks don't test whether a rule still holds; driftlint's optional `--llm` mode asks a model whether the code contradicts a prose claim |
 | AGENTS.md / CLAUDE.md / rules files | hand-written canon, loaded whole | hand-editing; no per-task selection |
 | claude-mem / agentmemory (Claude Code plugins) | every tool call, compressed into observations by a model; agentmemory adds confidence and decay | file age (claude-mem skips a note when its file changed); time-based decay (agentmemory) — nothing re-checks a memory |
 | ECC (skills + "instincts") | instincts learned from observed tool use, weighted by a model-scored confidence | confidence decay, applied by prompt — no check proves an instinct |
