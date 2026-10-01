@@ -462,6 +462,8 @@ writes it; a snapshot of the rules drift reads, no lesson bodies), or set the
 `OKL_SERVICE_URL` secret. Without either, the step warns "Drift not checked" rather than
 passing as if it had. Do not commit a snapshot holding zero rules: CI reads a configured
 store that checked nothing as broken, and fails.
+Not on GitHub Actions? The gate is one command; [Getting started §4](docs/GETTING-STARTED.md#4-run-the-drift-gate-without-github-actions)
+covers GitLab, Azure Pipelines and a pre-push hook for no CI at all.
 `okl scaffold` is separate and optional — nothing installs it unless you ask.
 
 ### The knobs, cheapest first
