@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.7.4
 
 - **`okl verify` / `okl reverify` treat a timeout as a failed check.** A check that
   outlived `--timeout` raised an uncaught error, so `okl reverify` stopped in a traceback
