@@ -36,12 +36,14 @@ class DriftHit:
     last_change_ms: int          # newest governed-file commit, epoch ms
     verified_at: int | None      # node's last verification, epoch ms (None = never)
     reason: str
+    evidence: bool = True        # False: verified_at is set but no observed check backs it
 
     def as_dict(self) -> dict[str, Any]:
         return {
             "node_id": self.node_id, "title": self.title, "scope": self.scope,
             "files": self.files, "last_change_ms": self.last_change_ms,
             "verified_at": self.verified_at, "reason": self.reason,
+            "evidence": self.evidence,
         }
 
 
@@ -117,10 +119,21 @@ def scan_drift(nodes: Iterable[Node], repo: str, repo_dir: str = ".") -> tuple[l
             continue  # git couldn't attribute a change — not evidence of drift
         checked += 1
         base = n.verified_at
+        # A stamp with no observed check behind it is an assertion, and an assertion is not
+        # a verification: that is the whole claim this tool makes. The snapshot path has
+        # refused one since #36, while this path trusted verified_at alone, so a record
+        # stamped without evidence cleared the gate exactly like a real pass (#20). `okl
+        # seed` stamps verified_at fresh, so any seeded record declaring `files` landed in
+        # that state. Same predicate on both paths now.
+        stamp = stamp_problem({"verified_at": base, "verified_by": n.verified_by})
         if base is None:
             hits.append(DriftHit(
                 n.id, n.title, n.scope, n.files, last, None,
                 "governed source has commits but the rule was never verified",
+            ))
+        elif stamp:
+            hits.append(DriftHit(
+                n.id, n.title, n.scope, n.files, last, base, stamp, evidence=False,
             ))
         elif last > base:
             hits.append(DriftHit(
@@ -150,6 +163,7 @@ def render_drift(hits: list[DriftHit], checked: int | None = None) -> str:
     for h in hits:
         when = _utc_day(h.last_change_ms)
         ver = ("never verified" if h.verified_at is None
+               else ("stamped " + _utc_day(h.verified_at) + ", unverified") if not h.evidence
                else "verified " + _utc_day(h.verified_at))
         lines.append(f"  • [{h.node_id}] {h.title}")
         lines.append(f"      files: {h.files}")
