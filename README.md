@@ -4,7 +4,8 @@
 
 **A learning loop that keeps coding agents — and your docs — from drifting.**<br>
 Engineering rules, architecture decisions, documentation and diagrams: recorded once, briefed to
-Claude Code before every task, proven by checks, and flagged in CI when what they govern changes.
+Claude Code or any MCP agent before every task, proven by checks, and flagged in CI when what they
+govern changes. Use it in one repo, or share one store across every repo your team runs.
 
 [![PyPI](https://img.shields.io/pypi/v/observed-knowledge-ledger?color=blue&label=PyPI)](https://pypi.org/project/observed-knowledge-ledger/)
 [![Python](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
