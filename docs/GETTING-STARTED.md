@@ -305,6 +305,91 @@ statements, architecture rules, published numbers.
 
 ---
 
+## 4. Run the drift gate without GitHub Actions
+
+`okl init` writes a GitHub Actions workflow, but the gate itself is one command:
+
+```bash
+okl drift --gate --snapshot okl-drift.json
+```
+
+It exits **0** when nothing has drifted, **1** when a lesson's governed code changed since
+its last check (fail the build), and **2** when it could not check at all, for example when
+no `okl-drift.json` is committed yet. Run it in any CI, or with no CI at all.
+
+### Any CI system
+
+Four things matter, whichever CI you use:
+
+1. **Full git history in the checkout.** The gate compares each governed file's last commit
+   time with when its lesson was verified. In a shallow clone, every lesson reads as
+   drifted: okl's own repo cloned with `--depth 1` reports all 16 of its lessons stale.
+   GitHub: `fetch-depth: 0`. GitLab: `GIT_DEPTH: 0`. Azure Pipelines: `fetchDepth: 0`.
+   Jenkins: leave shallow clone off.
+2. **Merge commits, not squash or rebase.** Squash and rebase rewrite commit times when a
+   PR merges, so main goes red right after a green PR. This is a repository setting, not a
+   CI one.
+3. **The committed `okl-drift.json`**, or a shared store through the `OKL_SERVICE_URL` and
+   `OKL_TOKEN` environment variables.
+4. **Python 3.10 or newer.** Pin okl to the version you run locally (`okl --version`), so a
+   new release cannot change the gate under you.
+
+GitLab CI:
+
+```yaml
+okl-drift:
+  image: python:3.13
+  variables:
+    GIT_DEPTH: 0
+    OKL_VERSION: "0.7.4"   # the version you run locally
+  script:
+    - pip install "observed-knowledge-ledger==$OKL_VERSION"
+    - okl drift --gate --snapshot okl-drift.json
+```
+
+Azure Pipelines:
+
+```yaml
+steps:
+  - checkout: self
+    fetchDepth: 0
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: "3.13"
+  - script: |
+      pip install "observed-knowledge-ledger==0.7.4"
+      okl drift --gate --snapshot okl-drift.json
+    displayName: okl drift gate
+```
+
+On GitHub, a self-hosted runner can run the same workflow without using your Actions
+minutes.
+
+The GitLab and Azure snippets follow those systems' documented settings but have not been
+run there yet; the shallow-clone result above and the hook below were run as shown. If one
+needs a change on your CI, an issue or PR is welcome.
+
+### No CI: a pre-push hook
+
+For a solo project, a git hook can run the gate against your local store before every push:
+
+```bash
+#!/usr/bin/env bash
+# .git/hooks/pre-push: block the push only when lessons have actually drifted
+okl drift --gate; rc=$?
+if [ "$rc" -eq 1 ]; then echo "okl: lessons drifted; run 'okl reverify' first" >&2; exit 1; fi
+exit 0   # 0 = clean; 2 = couldn't check (no store); don't block on that
+```
+
+Save it as `.git/hooks/pre-push` and run `chmod +x .git/hooks/pre-push`. If your repo sets
+`core.hooksPath` (Husky and similar tools do), put it in that directory instead.
+
+A local hook is an early warning, not a merge gate: each developer installs it themselves,
+`git push --no-verify` skips it, and a teammate without it is not checked. On a team, keep
+a CI gate as well.
+
+---
+
 ## When something is off
 
 | You see | It means | Do |
@@ -316,6 +401,7 @@ statements, architecture rules, published numbers.
 | CI fails with "NOTHING CHECKED" | a snapshot with zero rules is committed | remove it, or record a lesson with `--files` and re-export |
 | `okl drift` is red right after `okl record --files` | a new rule is unverified until its first `okl verify` | run its check with `okl verify` |
 | `okl drift` is red after you changed code | lessons governing those files need re-checking | `okl reverify` |
+| Every lesson is drifted in CI, but `okl drift` is clean locally | the CI checkout is shallow, so every file looks freshly changed | fetch full history (section 4) |
 
 More: the [README](../README.md) covers costs, scopes, the shared service and the MCP tools;
 [DEPLOY](DEPLOY.md) covers running a shared store for a team.
