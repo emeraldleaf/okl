@@ -205,15 +205,20 @@ the consensus position of 2026, not an insight.
    *personalization* memory — facts extracted from conversations, per-user context,
    knowledge graphs of what the agent experienced. The *institutional* half — receipted
    engineering lessons with governance over who sees what, injected before work with
-   teeth — is mostly served by hand-edited rules files. That gap is real even if the
-   category isn't new.
-2. **One bet nobody else had made: memories are treated like tests, not notes.** A
-   lesson here cites the source it governs, carries a verification receipt
-   (`okl verify` — the CLI will not stamp without a run), can decay on a TTL, and goes
-   stale *loudly*: `okl drift --gate` fails CI when governed code changed after the lesson
-   was last verified, or it was never verified. Every other tool in the table below accumulates; nothing invalidates.
-   The whole repo is plumbing to get that one bet in front of an agent before the
-   first line of code is written.
+   teeth — is mostly served by hand-edited rules files, and inside Copilot by its
+   repository memory. That gap is real even if the category isn't new.
+2. **The bet: memories are treated like tests, not notes.** okl is not alone in tying
+   memory to code: GitHub Copilot's memory (2026) cites the code lines behind each
+   memory and has the agent re-read them before use, and driftlint fails CI when an
+   instruction file names a path or command that no longer exists. okl's version is
+   stricter for the lessons that matter. A lesson cites the source it governs and
+   carries a verification receipt from a check you choose (`okl verify` — the CLI will
+   not stamp without a run), can decay on a TTL, and goes stale *loudly*:
+   `okl drift --gate` fails CI when governed code changed after the lesson was last
+   verified, or it was never verified. Most tools in the table below accumulate; the
+   ones that do invalidate do it by re-reading code or checking references, not by
+   running your check. The whole repo is plumbing to get that bet in front of an agent
+   before the first line of code is written.
 3. **Building it was the point.** This repo exists to make a working method concrete —
    and the things it surfaced would not have come from adopting a product: the eval
    receipts in `evals/`, the store carrying its own failure log, and the end-to-end
@@ -224,6 +229,8 @@ the consensus position of 2026, not an insight.
 |---|---|---|
 | mem0 / Zep / Letta / Cognee | extracted facts, conversation graphs, agent-curated tiers | nothing tied to your code — memories accumulate |
 | Cursor Memories / Devin Knowledge | per-project conventions and pinned notes | manual editing |
+| GitHub Copilot Memory (2026) | repo facts the agent saves as it works, each citing the code lines behind it; shared by Copilot's coding agent, CLI and code review | the agent re-reads the cited lines before use and replaces a contradicted memory; memories expire unless re-confirmed — a model's judgment at use time, Copilot only, no CI gate |
+| driftlint, agents-lint, scavi (instruction-file linters) | nothing of their own: they check the claims already in CLAUDE.md / AGENTS.md (driftlint also syncs approved facts into them) | a referenced path, command, link or import that no longer exists; driftlint fails CI — they check references, not whether a rule still holds |
 | AGENTS.md / CLAUDE.md / rules files | hand-written canon, loaded whole | hand-editing; no per-task selection |
 | claude-mem / agentmemory (Claude Code plugins) | every tool call, compressed into observations by a model; agentmemory adds confidence and decay | file age (claude-mem skips a note when its file changed); time-based decay (agentmemory) — nothing re-checks a memory |
 | ECC (skills + "instincts") | instincts learned from observed tool use, weighted by a model-scored confidence | confidence decay, applied by prompt — no check proves an instinct |
