@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:7bd1125f0adc50f1b805a80228727b54b093ec0b8c974a3d1da3838cab3f762b
+# okl-fingerprint: sha256:dac5cf6546328dbfc01e0a664b5307ab1f98860b30f348a27b1b7b054684b099
 # UserPromptSubmit hook — inject the org's relevant lessons into the model's context
 # BEFORE it starts the task. This event is the only correct one for delivery: its stdout
 # (exit 0) is added to Claude's context, and its stdin carries the actual prompt text, so
@@ -120,15 +120,29 @@ errf=$(mktemp 2>/dev/null) || errf=""
 # --format hook: the briefing for the model's context plus one line the person can see,
 # as the JSON Claude Code reads from a UserPromptSubmit hook. Without that line nobody
 # could tell okl helping from okl doing nothing.
-out=$($OKL check --task "$TASK" --format hook 2>"${errf:-/dev/null}")
-rc=$?   # read here: after an if-block, $? is the if's own status, not okl's
-if [ "$rc" -eq 2 ] && [ -n "$errf" ] && grep -q "invalid choice" "$errf" 2>/dev/null; then
-  # An okl older than this hook has no --format hook. The plugin updates from main and the
-  # CLI only when upgraded, so the two can differ: brief the old way rather than block.
-  : > "$errf"
-  out=$($OKL check --task "$TASK" --format agent 2>"${errf:-/dev/null}")
-  rc=$?
-fi
+fmt=hook
+check_once() {
+  [ -n "$errf" ] && : > "$errf"   # keep only the last attempt's reason
+  out=$($OKL check --task "$TASK" --format "$fmt" 2>"${errf:-/dev/null}")
+  rc=$?   # read here: after an if-block, $? is the if's own status, not okl's
+}
+# Retried briefly before blocking. A repo that rebuilds its gitignored store from committed
+# lessons deletes and recreates the SQLite file in about a second, and a prompt landing in
+# that window was refused for a fault that had already healed; the fix lived in one repo's
+# hand-edited copy of this hook until it was brought back here. Three tries over ~1s still
+# fails closed. A binary that cannot start (126/127) will not heal in a second: no retry.
+for attempt in 1 2 3; do
+  check_once
+  if [ "$rc" -eq 2 ] && [ "$fmt" = hook ] && [ -n "$errf" ] && grep -q "invalid choice" "$errf" 2>/dev/null; then
+    # An okl older than this hook has no --format hook. The plugin updates from main and the
+    # CLI only when upgraded, so the two can differ: brief the old way rather than block.
+    fmt=agent
+    check_once
+  fi
+  [ "$rc" -eq 0 ] && break
+  case "$rc" in 126|127) break ;; esac
+  [ "$attempt" -lt 3 ] && sleep 0.5
+done
 if [ "$rc" -eq 0 ]; then
   [ -n "$errf" ] && rm -f "$errf"
   printf '%s\n' "$out"      # stdout → the model's context
