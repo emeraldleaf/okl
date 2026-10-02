@@ -2498,6 +2498,30 @@ def test_a_briefed_lesson_says_when_its_code_changed_after_its_last_check(tmp_pa
     assert "STALE — orders.py changed" in brief()[0]
 
 
+def test_unverified_mark_covers_uncommitted_files_and_skips_other_repos(tmp_path):
+    """A never-verified lesson about a new, uncommitted file has no git time, and was left
+    unmarked (CodeRabbit on #101). A lesson whose files are not in this checkout, or that
+    belongs to another repo, must stay unmarked."""
+    import subprocess
+
+    from okl import drift
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    (tmp_path / "new_module.py").write_text("x = 1\n")   # exists, never committed
+    result = {"rules": [
+        {"id": "new", "scope": "repo:s", "files": "new_module.py", "verified_at": None},
+        {"id": "glob", "scope": "repo:s", "files": "*.py", "verified_at": None},
+        {"id": "elsewhere", "scope": "org", "files": "src/**/*.cs", "verified_at": None},
+        {"id": "nofiles", "scope": "repo:s", "files": None, "verified_at": None},
+        {"id": "other-repo", "scope": "repo:t", "files": "new_module.py", "verified_at": None},
+    ], "next_actions": [{"id": "new"}]}
+    assert drift.annotate_briefing(result, "s", str(tmp_path)) == 2
+    marked = {r["id"] for r in result["rules"] if r.get("drift")}
+    assert marked == {"new", "glob"}, marked
+    assert result["rules"][0]["drift"]["reason"] == "never verified"
+    assert result["next_actions"][0]["drift"]["reason"] == "never verified"
+    assert result["drifted"] == 2
+
+
 def test_stack_detection(tmp_path):
     from okl.cli import _detect_stacks
     (tmp_path / "api").mkdir(); (tmp_path / "api" / "Api.csproj").write_text("<Project/>")
