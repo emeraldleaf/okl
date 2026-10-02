@@ -316,6 +316,7 @@ statements, architecture rules, published numbers.
 | CI fails with "NOTHING CHECKED" | a snapshot with zero rules is committed | remove it, or record a lesson with `--files` and re-export |
 | `okl drift` is red right after `okl record --files` | a new rule is unverified until its first `okl verify` | run its check with `okl verify` |
 | `okl drift` is red after you changed code | lessons governing those files need re-checking | `okl reverify` |
+| A briefed lesson is marked *STALE* or *UNVERIFIED* | its governed files changed after its last check, or no check has passed yet | `okl reverify`, or `okl verify <id> --run … --expect …` for a first check |
 
 More: the [README](../README.md) covers costs, scopes, the shared service and the MCP tools;
 [DEPLOY](DEPLOY.md) covers running a shared store for a team.

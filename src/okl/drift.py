@@ -130,6 +130,54 @@ def scan_drift(nodes: Iterable[Node], repo: str, repo_dir: str = ".") -> tuple[l
     return hits, checked
 
 
+def _record_drift(rec: dict[str, Any], repo_scope: str, repo_dir: str) -> dict[str, Any] | None:
+    """scan_drift's verdict for one briefed record (a dict, as check returns it), or None."""
+    if not rec.get("files") or rec.get("scope") not in ("org", repo_scope):
+        return None
+    last = _git_last_change_ms([g for g in rec["files"].split(",") if g.strip()], repo_dir)
+    if last is None:
+        return None
+    base = rec.get("verified_at")
+    if base is not None and last <= base:
+        return None
+    out = {"files": rec["files"], "changed": _utc_day(last),
+           "reason": "never verified" if base is None else "changed since last verified"}
+    if base is not None:
+        out["verified"] = _utc_day(base)
+    return out
+
+
+def annotate_briefing(result: dict[str, Any], repo: str, repo_dir: str = ".") -> int:
+    """Mark the briefed lessons whose governed code changed after their last check (#93).
+
+    Until now only `okl drift` and the CI gate said so; the briefing that puts a lesson in
+    front of the agent stayed silent, so the agent trusted a lesson that might no longer
+    hold. Copilot Memory re-checks citations before using a fact for the same reason.
+    Only the briefed records are checked (one `git log` each), and it runs on the client
+    because a shared service has no checkout of this repo. Returns how many were marked.
+    """
+    repo_scope = f"repo:{repo}"
+    verdicts: dict[str, dict[str, Any] | None] = {}
+    for key, value in result.items():
+        if key == "next_actions" or not isinstance(value, list):
+            continue
+        for rec in value:
+            if not isinstance(rec, dict) or not rec.get("id"):
+                continue
+            if rec["id"] not in verdicts:
+                verdicts[rec["id"]] = _record_drift(rec, repo_scope, repo_dir)
+            if verdicts[rec["id"]]:
+                rec["drift"] = verdicts[rec["id"]]
+    # A routed action is the same record, shown once at the top; it carries the mark too.
+    for action in result.get("next_actions") or []:
+        if verdicts.get(action.get("id")):
+            action["drift"] = verdicts[action["id"]]
+    marked = sum(1 for v in verdicts.values() if v)
+    if marked:
+        result["drifted"] = marked
+    return marked
+
+
 def render_drift(hits: list[DriftHit], checked: int | None = None) -> str:
     """Format drift hits for a terminal, or the all-clear line.
 

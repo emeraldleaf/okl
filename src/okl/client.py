@@ -14,7 +14,7 @@ from typing import Any
 from urllib import request as _req
 from urllib.error import HTTPError, URLError
 
-from . import core
+from . import core, drift
 from .store import Store
 
 CONFIG_DIR = ".okl"
@@ -180,11 +180,18 @@ class Client:
         if limit is not None:
             payload["limit"] = limit
         if self.mode == "remote":
-            return self._post("/check", payload)
-        kw: dict[str, Any] = {"interests": self.interests}
-        if limit is not None:
-            kw["limit"] = limit
-        return core.check(self._local_store(), repo, task, **kw)
+            result = self._post("/check", payload)
+        else:
+            kw: dict[str, Any] = {"interests": self.interests}
+            if limit is not None:
+                kw["limit"] = limit
+            result = core.check(self._local_store(), repo, task, **kw)
+        # Mark briefed lessons whose code changed since their last check (#93). Done here,
+        # not in core, because only the client has this repo's checkout: a shared service
+        # answering /check has no git history to compare against.
+        cfg = _find_config()
+        drift.annotate_briefing(result, repo, str(cfg.parent.parent if cfg else Path.cwd()))
+        return result
 
     def record(self, **kwargs) -> str:
         # Default the repo in BOTH modes: `--scope repo` needs it to become repo:<name>,

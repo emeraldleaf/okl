@@ -101,7 +101,9 @@ okl doctor                  # flags other agent-memory tools and double wiring
 - **Proving a lesson is true** is a check you run, not a flag you set:
   `okl verify <id> --run "pytest -q tests/test_orders.py" --expect "passed"`.
 - **When code a lesson governs changes,** `okl drift` goes red until someone re-runs its
-  check (a lesson recorded with `--files` is also red until its first `okl verify`).
+  check (a lesson recorded with `--files` is also red until its first `okl verify`). The
+  briefing says so too: such a lesson is marked *STALE* (or *UNVERIFIED*) with the file
+  that changed, so the agent confirms it against the code instead of trusting it blindly.
   `okl reverify` re-runs each drifted lesson's stored check after you confirm. CI reads a
   committed snapshot, `okl-drift.json`, which `okl verify` creates the first time a lesson
   with `--files` is verified and keeps current after that: commit it after the code change

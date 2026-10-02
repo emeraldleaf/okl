@@ -2440,6 +2440,64 @@ def test_first_run_notice_and_reverify_in_process(tmp_path, monkeypatch, capsys)
     assert main(["reverify"]) == 0          # nothing drifted now
 
 
+def test_a_briefed_lesson_says_when_its_code_changed_after_its_last_check(tmp_path, monkeypatch, capsys):
+    """#93: only `okl drift` and the CI gate used to say a lesson's code had moved. The
+    briefing that puts the lesson in front of the agent said nothing, so the agent trusted a
+    lesson that might no longer hold. Run in-process so coverage sees the client path."""
+    import json
+    import subprocess
+    import time
+
+    from okl.cli import main
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN", "OKL_QUIET"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+    git = ["git", "-c", "user.email=t@t", "-c", "user.name=t"]
+    subprocess.run(["git", "init", "-q", "."], check=True)
+    (tmp_path / "orders.py").write_text("def get_order(order_id, customer_id): ...\n")
+    subprocess.run([*git, "add", "-A"], check=True); subprocess.run([*git, "commit", "-qm", "i"], check=True)
+    assert main(["init", "--repo", "s", "--no-claude", "--no-seed"]) == 0
+    assert main(["record", "--type", "Rule", "--scope", "repo", "--id", "order-scope",
+                 "--title", "Order lookups are scoped to the signed-in customer",
+                 "--symptom", "an endpoint fetches an order by id with no owner filter",
+                 "--fix", "filter by the caller's customer id", "--files", "orders.py"]) == 0
+    capsys.readouterr()
+
+    def brief():
+        assert main(["check", "--task", "fetch an order by id", "--format", "hook"]) == 0
+        out = json.loads(capsys.readouterr().out)
+        return out["hookSpecificOutput"]["additionalContext"], out["systemMessage"]
+
+    # ASSERT (1) — governs a file but no check has passed yet: marked, with the command.
+    ctx, notice = brief()
+    assert "UNVERIFIED" in ctx and "okl verify order-scope" in ctx, ctx
+    assert "1 need re-checking" in notice, notice
+
+    # ASSERT (2) — checked and the code unchanged: no mark anywhere.
+    assert main(["verify", "order-scope", "--run", "grep -q customer_id orders.py && echo SCOPED",
+                 "--expect", "SCOPED"]) == 0
+    capsys.readouterr()
+    ctx, notice = brief()
+    assert "STALE" not in ctx and "UNVERIFIED" not in ctx and "re-checking" not in notice, ctx
+
+    # ASSERT (3) — the governed file changes after the check: the briefing says which file,
+    # when, and how to settle it, and the footer and the person's notice both count it.
+    time.sleep(1.1)   # git commit times are in seconds
+    (tmp_path / "orders.py").write_text("def get_order(order_id): ...\n")
+    subprocess.run([*git, "commit", "-qam", "drop the owner filter"], check=True)
+    ctx, notice = brief()
+    assert "STALE — orders.py changed" in ctx and "okl reverify" in ctx, ctx
+    assert "1 lesson(s) govern code that changed after their last check" in ctx, ctx
+    assert "1 need re-checking" in notice, notice
+
+    # ASSERT (4) — re-running the stored check settles it; here it fails, because the change
+    # really did break the lesson, so the mark stays until the code or the lesson is fixed.
+    assert main(["reverify", "--yes"]) == 1
+    capsys.readouterr()
+    assert "STALE — orders.py changed" in brief()[0]
+
+
 def test_stack_detection(tmp_path):
     from okl.cli import _detect_stacks
     (tmp_path / "api").mkdir(); (tmp_path / "api" / "Api.csproj").write_text("<Project/>")
