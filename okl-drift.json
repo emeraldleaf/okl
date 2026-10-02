@@ -80,8 +80,8 @@
       "title": "A test that imports an undeclared package passes only where that package happens to be installed",
       "scope": "org",
       "files": "tests/",
-      "verified_at": 1790905564685,
-      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && ! grep -rnE '^\\s*import tomllib' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' @ 2026-10-02T01:46Z"
+      "verified_at": 1790906042499,
+      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && ! grep -rnE '^\\s*import tomllib' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' @ 2026-10-02T01:54Z"
     },
     {
       "id": "n_9ba48d85ed19",
@@ -107,8 +107,8 @@
       "title": "A port is defined by behaviour, not by its signatures — state the contract and test every adapter against one body",
       "scope": "org",
       "files": "src/okl/store.py,tests/test_okl.py",
-      "verified_at": 1790905564137,
-      "verified_by": "`python3 -m pytest -q -k 'backend_conformance'` exit 0, matched 'passed' @ 2026-10-02T01:46Z"
+      "verified_at": 1790906042437,
+      "verified_by": "`python3 -m pytest -q -k 'backend_conformance'` exit 0, matched 'passed' @ 2026-10-02T01:54Z"
     },
     {
       "id": "n_be9f13d587b1",
@@ -143,8 +143,8 @@
       "title": "A gate that reads commit times needs merge commits — squash and rebase restamp history at merge time",
       "scope": "org",
       "files": "CONTRIBUTING.md,src/okl/drift.py",
-      "verified_at": 1790905560815,
-      "verified_by": "`gh api repos/emeraldleaf/okl --jq 'if .allow_squash_merge or .allow_rebase_merge then error(\"squash or rebase enabled\") else \"MERGE COMMITS ONLY\" end'` exit 0, matched 'MERGE COMMITS ONLY' @ 2026-10-02T01:46Z"
+      "verified_at": 1790906039180,
+      "verified_by": "`gh api repos/emeraldleaf/okl --jq 'if .allow_squash_merge or .allow_rebase_merge then error(\"squash or rebase enabled\") else \"MERGE COMMITS ONLY\" end'` exit 0, matched 'MERGE COMMITS ONLY' @ 2026-10-02T01:53Z"
     }
   ]
 }
