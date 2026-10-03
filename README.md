@@ -1,3 +1,4 @@
+<!-- mcp-name: io.github.emeraldleaf/okl -->
 <div align="center">
 
 # okl — Observed Knowledge Ledger
