@@ -309,7 +309,8 @@ def briefing_notice(result: dict[str, Any], shown: int = 3) -> str | None:
     short = [trim(t) for t in titles[:shown]]
     more = result["match_count"] - len(short)
     return (f"okl · briefed {result['match_count']} lesson(s): " + "; ".join(short)
-            + (f" (+{more} more)" if more > 0 else ""))
+            + (f" (+{more} more)" if more > 0 else "")
+            + (f" · {result['drifted']} need re-checking" if result.get("drifted") else ""))
 
 
 def render_actions_only(result: dict[str, Any], limit: int | None = None) -> str:
@@ -334,7 +335,7 @@ def render_actions_only(result: dict[str, Any], limit: int | None = None) -> str
     out = [f"OKL — {len(actions)} rule(s) apply before you start:"]
     for a in actions:
         sym = f" [when: {a['symptom']}]" if a.get("symptom") else ""
-        out.append(f"- {verb.get(a['kind'], 'DO')}: {a['target']}{sym}")
+        out.append(f"- {verb.get(a['kind'], 'DO')}: {a['target']}{_drift_tag(a)}{sym}")
         out.append(f"  -> {a['how']}")
     return "\n".join(out)
 
@@ -376,6 +377,9 @@ def render_check_for_agent(result: dict[str, Any]) -> str:
         lines.append("")
     if result.get("stale_warnings"):
         lines.append(f"> {len(result['stale_warnings'])} node(s) are past TTL and shown demoted — re-verify before trusting.")
+    if result.get("drifted"):
+        lines.append(f"> {result['drifted']} lesson(s) govern code that changed after their last check, "
+                     "or were never checked: confirm them against the code before relying on them.")
     if result.get("dropped_by_cutoff"):
         lines.append(f"> {result['dropped_by_cutoff']} lower-ranked record(s) were trimmed to keep this "
                      "briefing short. Raise --limit or narrow the task if you expected more.")
@@ -547,6 +551,23 @@ def find_duplicates(store: Store, candidate: Any, threshold: float = DEDUP_THRES
     return hits[:limit]
 
 
+def _drift_tag(item: dict) -> str:
+    """The briefing's mark for a lesson whose governed code moved since its last check (#93).
+
+    Says which files and when, and the command that settles it, so the agent can treat the
+    lesson as a lead to confirm rather than a settled rule, and the person can re-check it.
+    """
+    d = item.get("drift")
+    if not d:
+        return ""
+    files = d["files"] if len(d["files"]) <= 60 else d["files"][:59] + "…"
+    if d["reason"] == "never verified":
+        return (f" *(UNVERIFIED — governs {files} but no check has passed; "
+                f"prove it: okl verify {item.get('id')} --run …)*")
+    return (f" *(STALE — {files} changed {d['changed']}, after its last check on "
+            f"{d['verified']}; confirm against the code, re-check: okl reverify)*")
+
+
 def _render_actions(actions: list[dict]) -> list[str]:
     """The routed "do this" list, which leads the briefing.
 
@@ -563,7 +584,7 @@ def _render_actions(actions: list[dict]) -> list[str]:
         sym = f" — when you see: {a['symptom']}" if a.get("symptom") else ""
         # The per-record stale marker lives here now that a routed record has no section
         # entry of its own (#52 review); a bare count cannot say which action to distrust.
-        tag = " *(STALE — re-verify)*" if a.get("stale") else ""
+        tag = (" *(STALE — re-verify)*" if a.get("stale") else "") + _drift_tag(a)
         out.append(f"- **{verb.get(a['kind'], 'DO')}: {a['target']}**{tag}{sym}")
         out.append(f"    → {a['how']}")
         if a.get("why"):
@@ -584,7 +605,7 @@ def _render_records(items: list[dict], show_catches: bool = False) -> list[str]:
     for it in items:
         suffix = (f"  ← catches: {', '.join(it['catches'])}"
                   if show_catches and it.get("catches") else "")
-        tag = " *(STALE — re-verify)*" if it.get("stale") else ""
+        tag = (" *(STALE — re-verify)*" if it.get("stale") else "") + _drift_tag(it)
         out.append(f"- **{it['title']}**{tag}{suffix}")
         if it.get("symptom"):
             out.append(f"  symptom: {it['symptom'][:160]}")

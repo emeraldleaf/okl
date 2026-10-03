@@ -7,6 +7,12 @@
   briefed instead of refused. A store that stays gone still blocks, with okl's reason; an
   okl that cannot start is not retried. The fix had lived only in one repo's edited copy
   of the hook (#91).
+- **Briefings mark lessons whose code changed after their last check** (#93). A briefed
+  lesson that governs files changed since its last `okl verify` is tagged *STALE*, with the
+  file and dates and `okl reverify`; one that governs files but has never passed a check is
+  tagged *UNVERIFIED*. The briefing's footer and the per-prompt notice count them. Only
+  `okl drift` and CI said this before; the agent reading the lesson did not. Computed on
+  the client, so it also works against a shared service.
 
 ## 0.7.4
 
