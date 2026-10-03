@@ -1,7 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.7.7
 
+- **The docs say what okl is not for** (#99): always-on rules and commands go in
+  `CLAUDE.md` / `AGENTS.md`, procedures in a skill or runbook, style in a formatter or
+  linter, open bugs in the issue tracker, secrets nowhere near the store. Everything with
+  a symptom and a fix belongs in okl.
 - **Drift compares the commit a check passed at, not the clock** (#102). `okl verify`
   records HEAD, and a rule has drifted when its governed files differ between that commit
   and HEAD. Comparing times missed a change committed in the same second as the check,
