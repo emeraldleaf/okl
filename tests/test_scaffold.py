@@ -1579,6 +1579,8 @@ def test_registry_entry_starts_the_server_it_lists():
        must add the SDK itself, at the extra's own requirement.
     3. A version bump that skips server.json lists the previous release.
     4. The registry will not list a PyPI server whose README lacks the mcp-name line.
+    5. `okl mcp` serves stdio only; an entry declaring HTTP or SSE would send clients to
+       a port nothing listens on.
     """
     import json
     tomllib = pytest.importorskip("tomllib")
@@ -1597,3 +1599,5 @@ def test_registry_entry_starts_the_server_it_lists():
     assert server["version"] == package["version"] == project["version"]
     # 4
     assert f"mcp-name: {server['name']}" in (root / "README.md").read_text()
+    # 5
+    assert package["transport"] == {"type": "stdio"}
