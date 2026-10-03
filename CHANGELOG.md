@@ -9,7 +9,7 @@
   re-seeded lesson now keeps its stamp, evidence and commit while its governed files are
   the same, and is cleared when they change. New lessons and `okl record` re-records
   behave as before.
-- **`okl drift` names this repo's lessons whose files no longer exist** (#109), beside the
+- **`okl drift` names this repo's lessons whose files match nothing committed** (#109), beside the
   drift report and as `governs_nothing` in its JSON. Drift saw the deletion as the last
   change, so such a lesson watched nothing and nothing said so. Re-pointing it, dropping
   its files or retiring it is a decision, so the exit code is unchanged.

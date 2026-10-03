@@ -293,8 +293,8 @@ def render_governs_nothing(nodes: list[Node]) -> str:
     """The advisory under the drift report; empty when every lesson's files exist."""
     if not nodes:
         return ""
-    lines = ["", f"OKL: {len(nodes)} lesson(s) govern files that no longer exist here. Re-point each "
-                 "at the code that replaced them, drop its files, or retire it:"]
+    lines = ["", f"OKL: {len(nodes)} lesson(s) govern files that match nothing committed here. "
+                 "Re-point each at the code it is about, drop its files, or retire it:"]
     lines.extend(f"  • [{n.id}] {n.title}  (files: {n.files})" for n in nodes)
     return "\n".join(lines)
 

@@ -2702,9 +2702,13 @@ def test_drift_reports_this_repos_lessons_whose_files_no_longer_exist(tmp_path, 
              rule("never-existed", "src/*.zz"),                        # matches nothing: reported
              rule("exists", "src/app.py"), rule("glob", "src/*.py"),   # present: quiet
              rule("folder", "src"), rule("mixed", "Glyph.astro, src/app.py"),
-             rule("elsewhere", "src/**/*.cs", scope="org", repo="other")]  # another repo's: quiet
+             rule("elsewhere", "src/**/*.cs", scope="org", repo="other"),  # another repo's: quiet
+             # git's default pathspec gives ** no special meaning, so src/**/*.py needs a
+             # subfolder and misses src/app.py, in drift's own `git log` as here. Reported,
+             # since drift cannot see that file either; making ** optional belongs in both.
+             rule("recursive", "src/**/*.py")]
     assert [n.id for n in drift.governs_nothing(rules, "s", str(tmp_path))] == \
-        ["deleted", "org-but-ours", "never-existed"]
+        ["deleted", "org-but-ours", "never-existed", "recursive"]
     assert drift.governs_nothing(rules, "s", str(tmp_path / "not-a-repo")) == []   # git can't say
 
     # Through the CLI: reported under the drift output, exit code untouched.
@@ -2714,7 +2718,7 @@ def test_drift_reports_this_repos_lessons_whose_files_no_longer_exist(tmp_path, 
     capsys.readouterr()
     assert main(["drift"]) == 0
     out = capsys.readouterr().out
-    assert "1 lesson(s) govern files that no longer exist here" in out and "[pixel]" in out, out
+    assert "1 lesson(s) govern files that match nothing committed here" in out and "[pixel]" in out, out
 
 
 def test_init_no_ci_skips_the_workflow_and_remembers_it(tmp_path, monkeypatch, capsys):
@@ -2741,6 +2745,9 @@ def test_init_no_ci_skips_the_workflow_and_remembers_it(tmp_path, monkeypatch, c
     main(["doctor"])
     assert "drift is not gated in CI here" in capsys.readouterr().out
     assert main([*base, "--ci"]) == 0 and wf.exists(), "--ci turns it back on"
+    # doctor is a diagnostic: a corrupt config must not end it in a traceback (CodeRabbit on #112)
+    (tmp_path / ".okl" / "config.json").write_text("{not json")
+    main(["doctor"])
 
 
 def test_the_verified_commit_is_bound_to_its_evidence_and_older_entries_still_read(tmp_path):
