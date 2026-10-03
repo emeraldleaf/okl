@@ -1,7 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.7.5
 
+- **Ready for the official MCP Registry.** The README carries the registry's ownership line
+  (`mcp-name: io.github.emeraldleaf/okl`), which the registry checks against the PyPI
+  package before it will list the server.
 - **The prompt hook retries a briefly unavailable store before blocking.** Three tries over
   about a second, so a prompt that lands while a repo rebuilds its gitignored store is
   briefed instead of refused. A store that stays gone still blocks, with okl's reason; an
