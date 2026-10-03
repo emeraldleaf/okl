@@ -212,6 +212,12 @@ store, where the briefing picks the relevant lessons for each prompt and CI can 
 When you are about to add a paragraph to that file, ask whether it should be a lesson
 instead. It usually should.
 
+Some things belong in neither. A procedure (how to release, migrate or set up) is read
+whole and in order, so it goes in a skill, runbook or script. Formatting and style go to a
+formatter or linter, which enforces them on every line. An open bug goes in your issue
+tracker until it is fixed; the lesson comes after. Secrets never go in the store: it is
+shared, and its lessons are copied into agent context.
+
 ### Prove it: a lesson is verified by running a check
 
 ```bash
