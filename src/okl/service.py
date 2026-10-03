@@ -75,6 +75,7 @@ class LinkReq(BaseModel):
 class VerifyReq(BaseModel):
     id: str
     evidence: str   # the observed check that passed (command + timestamp)
+    commit: str | None = None   # git HEAD the check passed at; drift diffs against it (#102)
 
 
 def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901
@@ -141,7 +142,7 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901
     def verify(req: VerifyReq, authorization: str | None = Header(default=None)) -> dict[str, Any]:
         _auth(authorization)
         try:
-            return core.verify(_store, req.id, req.evidence)
+            return core.verify(_store, req.id, req.evidence, req.commit)
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e)) from e
 

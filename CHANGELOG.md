@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+- **Drift compares the commit a check passed at, not the clock** (#102). `okl verify`
+  records HEAD, and a rule has drifted when its governed files differ between that commit
+  and HEAD. Comparing times missed a change committed in the same second as the check,
+  since git keeps commit time to the second, and read a commit from a clock running ahead
+  as a change the check never saw. A change and its revert no longer count either. The CI
+  gate, `okl drift`, `okl reverify` and the briefing's STALE mark share the one verdict.
+  Verifications from before this, or whose commit a clone lacks after a squash, still
+  compare times. The commit is written into the evidence ahead of the time stamp, which
+  binds it in `okl-drift.json` (a hand edit is refused, as an edited time already is)
+  and keeps older okl versions reading the snapshot. Stores gain the column on open.
+- **`okl verify` warns when the governed files have uncommitted changes**: the check saw
+  them, but the record points at the commit without them, so the lesson would read as
+  drifted once they are committed.
+- **A STALE lesson in a briefing says what to do**: re-run its check with `okl reverify`,
+  and if it fails, fix the code or change the lesson on purpose.
+
 ## 0.7.6
 
 - **An entry for the official MCP Registry** (`server.json`, `io.github.emeraldleaf/okl`).

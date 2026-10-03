@@ -218,10 +218,12 @@ class Client:
             return
         core.link(self._local_store(), src, rel, dst)
 
-    def verify(self, node_id: str, evidence: str) -> dict:
+    def verify(self, node_id: str, evidence: str, commit: str | None = None) -> dict:
         if self.mode == "remote":
-            return self._post("/verify", {"id": node_id, "evidence": evidence})
-        return core.verify(self._local_store(), node_id, evidence)
+            # A service older than #102 drops `commit` (pydantic ignores unknown fields),
+            # and drift then falls back to comparing times: degraded, never wrong.
+            return self._post("/verify", {"id": node_id, "evidence": evidence, "commit": commit})
+        return core.verify(self._local_store(), node_id, evidence, commit)
 
     def recurrence_report(self) -> dict | None:
         """The coverage-aware report, or None from a service too old to compute one --

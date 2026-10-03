@@ -709,11 +709,18 @@ def test_stored_data_never_reaches_a_shell():
     assert "subprocess.run(args.run, shell=True" in (src / "cli.py").read_text()
 
     # ASSERT (3) — the remote path can never trigger execution: /verify accepts EVIDENCE
-    # already produced by a local run, never a command for the server to execute. If this
-    # ever takes a `run` field, a token holder gets RCE on the shared layer.
+    # already produced by a local run, and the commit it ran at, never a command for the
+    # server to execute. If this ever takes a `run` field, a token holder gets RCE on the
+    # shared layer.
     service = (src / "service.py").read_text()
-    assert "core.verify(_store, req.id, req.evidence)" in service
+    assert "core.verify(_store, req.id, req.evidence, req.commit)" in service
     assert "shell" not in service, "the service must never shell out"
+
+    # ASSERT (4) — that commit is stored data that later reaches `git diff` (#102), so it
+    # is refused unless it is a hex object name, both where it is written and where it is
+    # used: a shared store or a committed snapshot holds whatever someone put there.
+    assert 're.fullmatch(r"[0-9a-f]{7,64}", commit)' in (src / "core.py").read_text()
+    assert "_COMMIT.fullmatch(commit)" in drift
 
 
 def test_shipped_drift_step_warns_when_nothing_was_checked():

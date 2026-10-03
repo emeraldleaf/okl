@@ -7,9 +7,11 @@ doc-orphans (a doc nobody links) and resurrected tombstones (a retired id reused
 nothing catches "the code this rule governs moved after the rule was last verified."
 
 This closes that gap. A node may declare `files` (comma-separated path globs it governs).
-For each such node we ask git for the last commit that touched any matching path; if that
-commit is newer than the node's `verified_at` (or the node was never verified), the node
-has *drifted* — its source changed under it and a human should re-verify it.
+`okl verify` records the commit its check passed at, and the node has *drifted* when the
+governed files differ between that commit and HEAD (or it was never verified) — its source
+changed under it and a human should re-verify it. A verification that recorded no commit,
+or one this history does not contain, falls back to comparing the governed files' last
+commit time with `verified_at`.
 
 Unlike the passive TTL clock (store.Node.is_stale), this is event-driven: it fires exactly
 when the governed code moves, not on a fixed schedule.
@@ -83,6 +85,45 @@ def _git_last_change_ms(globs: list[str], repo_dir: str) -> int | None:
         return None
 
 
+# A commit is passed to `git diff`, so anything but a hex object name is not used: a shared
+# store or a committed snapshot can hold whatever someone wrote into it.
+_COMMIT = re.compile(r"[0-9a-f]{7,64}")
+
+
+def _git_changed_since(commit: str | None, globs: list[str], repo_dir: str) -> bool | None:
+    """Whether the governed files differ between `commit` and HEAD; None if git can't say.
+
+    Compares content, not history: a change and its revert, or a squash of the commits a
+    check already saw, leave the files as verified. None (no commit recorded, or one this
+    clone does not have) sends the caller back to comparing times.
+    """
+    pathspecs = [g.strip() for g in globs if g.strip()]
+    if not commit or not _COMMIT.fullmatch(commit) or not pathspecs:
+        return None
+    try:
+        out = subprocess.run(
+            ["git", "-C", repo_dir, "diff", "--quiet", "--no-ext-diff", "--no-textconv",
+             commit, "HEAD", "--", *pathspecs],
+            capture_output=True, timeout=15,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return None
+    return {0: False, 1: True}.get(out.returncode)   # 128: commit unknown to this clone
+
+
+def _changed_since_check(commit: str | None, verified_at: int, last_change_ms: int,
+                         globs: list[str], repo_dir: str) -> bool:
+    """The one drift verdict for a verified rule, shared by the gate and the briefing.
+
+    Comparing times alone missed a commit made in the same second as the verification,
+    because git keeps commit time to the second and `verified_at` is in milliseconds
+    (#102), and it trusted whatever clock made each commit. The recorded commit has
+    neither problem; time is only the fallback for verifications that recorded none.
+    """
+    since = _git_changed_since(commit, globs, repo_dir)
+    return since if since is not None else last_change_ms > verified_at
+
+
 def detect_drift(nodes: Iterable[Node], repo: str, repo_dir: str = ".") -> list[DriftHit]:
     """Return nodes whose governed source changed after they were last verified.
 
@@ -123,7 +164,7 @@ def scan_drift(nodes: Iterable[Node], repo: str, repo_dir: str = ".") -> tuple[l
                 n.id, n.title, n.scope, n.files, last, None,
                 "governed source has commits but the rule was never verified",
             ))
-        elif last > base:
+        elif _changed_since_check(n.verified_commit, base, last, globs, repo_dir):
             hits.append(DriftHit(
                 n.id, n.title, n.scope, n.files, last, base,
                 "governed source changed after the rule was last verified",
@@ -165,9 +206,10 @@ def _record_drift(rec: dict[str, Any], repo_scope: str, repo_dir: str) -> dict[s
         if last is not None:
             out["changed"] = _utc_day(last)
         return out
-    # Same comparison as scan_drift, so the briefing and the CI gate never disagree. Both
-    # share the same-second gap recorded in the store; it is fixed in both or neither.
-    if last is None or last <= base:
+    # Same verdict as scan_drift, from the same function, so the briefing and the CI gate
+    # never disagree.
+    if last is None or not _changed_since_check(rec.get("verified_commit"), base, last,
+                                                globs, repo_dir):
         return None
     return {"files": rec["files"], "changed": _utc_day(last), "verified": _utc_day(base),
             "reason": "changed since last verified"}
@@ -245,8 +287,10 @@ def render_drift(hits: list[DriftHit], checked: int | None = None) -> str:
 
 SNAPSHOT_FILE = "okl-drift.json"
 SNAPSHOT_FORMAT = "okl-drift-snapshot/1"
-_FIELDS = ("id", "type", "title", "scope", "files", "verified_at", "verified_by")
-_STAMP = re.compile(r"@ (\d{4}-\d\d-\d\dT\d\d:\d\dZ)$")
+_FIELDS = ("id", "type", "title", "scope", "files", "verified_at", "verified_by", "verified_commit")
+# The commit sits BEFORE the time stamp, so an okl older than #102 still finds the stamp
+# at the end and keeps reading the snapshot (it just compares times).
+_STAMP = re.compile(r"(?: on commit ([0-9a-f]{7,64}))? @ (\d{4}-\d\d-\d\dT\d\d:\d\dZ)$")
 # `okl verify` writes its evidence stamp (minute resolution) just before the store sets
 # verified_at, so the two can straddle a minute boundary, and a remote service's clock is
 # not the caller's. So verified_at must fall from one minute before the stamped minute to
@@ -287,12 +331,17 @@ def stamp_problem(rule: dict[str, Any]) -> str | None:
     m = _STAMP.search(rule.get("verified_by") or "")
     if not m:
         return "verified_at is set but verified_by carries no `okl verify` evidence stamp"
-    stamped = int(_dt.datetime.strptime(m.group(1), "%Y-%m-%dT%H:%MZ")
+    stamped = int(_dt.datetime.strptime(m.group(2), "%Y-%m-%dT%H:%MZ")
                   .replace(tzinfo=_dt.timezone.utc).timestamp() * 1000)
     lo, hi = _STAMP_SKEW_MS
     if not (stamped + lo <= at < stamped + hi):
         return (f"verified_at ({_utc_day(at)}) does not match the evidence stamp "
-                f"({m.group(1)}) -- edited by hand?")
+                f"({m.group(2)}) -- edited by hand?")
+    # The commit is bound the same way. Unbound, setting it to HEAD would clear drift with
+    # one edit -- the forgery the stamp check exists to stop.
+    commit = rule.get("verified_commit")
+    if commit is not None and not (m.group(1) and commit.startswith(m.group(1))):
+        return "verified_commit does not match the commit its evidence names -- edited by hand?"
     return None
 
 
@@ -337,7 +386,8 @@ def nodes_from_snapshot(snap: dict[str, Any]) -> tuple[list[Node], list[str]]:
         if not (isinstance(r, dict)
                 and all(isinstance(r.get(k), str) for k in ("id", "title", "scope", "files"))
                 and (r.get("verified_at") is None or type(r.get("verified_at")) is int)
-                and (r.get("verified_by") is None or isinstance(r.get("verified_by"), str))):
+                and (r.get("verified_by") is None or isinstance(r.get("verified_by"), str))
+                and (r.get("verified_commit") is None or isinstance(r.get("verified_commit"), str))):
             rid = r.get("id") if isinstance(r, dict) else None
             problems.append(f"[{rid or '?'}] malformed entry: needs string id/title/scope/"
                             "files and an integer verified_at or null")
@@ -348,5 +398,6 @@ def nodes_from_snapshot(snap: dict[str, Any]) -> tuple[list[Node], list[str]]:
             continue
         nodes.append(Node(type=r.get("type") or "Rule", title=r["title"], scope=r["scope"],
                           files=r["files"], verified_at=r.get("verified_at"),
-                          verified_by=r.get("verified_by"), id=r["id"]))
+                          verified_by=r.get("verified_by"),
+                          verified_commit=r.get("verified_commit"), id=r["id"]))
     return nodes, problems

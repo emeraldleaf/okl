@@ -1737,8 +1737,8 @@
       "containerId": null,
       "autoResize": true,
       "lineHeight": 1.25,
-      "text": "the last commit touching those paths, against the\ntimestamp of the record's last verification. Code\nnewer than the stamp means the rule may now be\ndescribing something that has already changed.",
-      "originalText": "the last commit touching those paths, against the\ntimestamp of the record's last verification. Code\nnewer than the stamp means the rule may now be\ndescribing something that has already changed.",
+      "text": "those paths at the commit the record was checked\non, against the same paths at HEAD. Any change\nmeans the rule may now be describing something\nthat has already changed.",
+      "originalText": "those paths at the commit the record was checked\non, against the same paths at HEAD. Any change\nmeans the rule may now be describing something\nthat has already changed.",
       "id": "el50"
     },
     {
