@@ -12,6 +12,10 @@
   compare times. The commit is written into the evidence ahead of the time stamp, which
   binds it in `okl-drift.json` (a hand edit is refused, as an edited time already is)
   and keeps older okl versions reading the snapshot. Stores gain the column on open.
+  One mixed-version limit: an older okl's `okl reverify` cannot parse the commit in this
+  version's evidence when the check has an expected signal, so it lists those lessons as
+  needing a first check rather than running a weaker one. Upgrade the clients that share
+  a store together.
 - **`okl verify` warns when the governed files have uncommitted changes**: the check saw
   them, but the record points at the commit without them, so the lesson would read as
   drifted once they are committed.
