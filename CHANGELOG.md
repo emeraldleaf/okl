@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **The prompt hook retries a briefly unavailable store before blocking.** Three tries over
+  about a second, so a prompt that lands while a repo rebuilds its gitignored store is
+  briefed instead of refused. A store that stays gone still blocks, with okl's reason; an
+  okl that cannot start is not retried. The fix had lived only in one repo's edited copy
+  of the hook (#91).
 - **Briefings mark lessons whose code changed after their last check** (#93). A briefed
   lesson that governs files changed since its last `okl verify` is tagged *STALE*, with the
   file and dates and `okl reverify`; one that governs files but has never passed a check is

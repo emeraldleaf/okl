@@ -1459,6 +1459,42 @@ def test_prompt_hook_passes_hook_json_through_and_falls_back_for_an_older_okl(tm
     assert r.returncode == 0 and "OKL briefing (agent format)" in r.stdout, (r.returncode, r.stdout, r.stderr)
 
 
+def test_prompt_hook_retries_a_briefly_unavailable_store_but_not_a_missing_binary(tmp_path):
+    """A repo that rebuilds its gitignored store from committed lessons has no store for
+    about a second, and a prompt landing then was blocked for a fault that had healed. The
+    retry lived in one repo's hand-edited hook until it was brought back here (#91)."""
+    import json
+    hook = Path(__file__).resolve().parents[1] / "src" / "okl" / "scaffold" / "hooks" / "userpromptsubmit-okl-check.sh"
+    (tmp_path / ".okl").mkdir(); (tmp_path / ".okl" / "config.json").write_text('{"repo": "t"}')
+    stub, calls = tmp_path / "okl", tmp_path / "calls"
+    env = {"PATH": os.environ["PATH"], "HOME": str(tmp_path), "TMPDIR": str(tmp_path),
+           "OKL_BIN": str(stub), "CLAUDE_PROJECT_DIR": str(tmp_path)}
+
+    def run(body):
+        # The stub logs each call before doing anything, so the count is the number of tries.
+        calls.write_text("")
+        stub.write_text(f"#!/bin/sh\necho call >> '{calls}'\n{body}\n"); stub.chmod(0o755)
+        r = subprocess.run(["bash", str(hook)], cwd=tmp_path, text=True, env=env,
+                           input=json.dumps({"prompt": "x"}), capture_output=True)
+        return r, len(calls.read_text().splitlines())
+
+    payload = '{"hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext": "B"}, "systemMessage": "okl · briefed 1 lesson(s): x"}'
+
+    # ASSERT (1) — the store is back on the second try: the prompt is briefed, not blocked.
+    r, n = run(f"[ \"$(wc -l < '{calls}')\" -ge 2 ] && {{ echo '{payload}'; exit 0; }}\n"
+               "echo 'OKL UNREACHABLE: store rebuilding' >&2; exit 2")
+    assert r.returncode == 0 and "okl · briefed" in r.stdout and n == 2, (r.returncode, n, r.stderr)
+
+    # ASSERT (2) — a store that stays gone still fails closed, after three tries, and the
+    # block relays okl's own reason from the last one.
+    r, n = run("echo 'OKL UNREACHABLE: store gone' >&2; exit 2")
+    assert r.returncode == 2 and n == 3 and "store gone" in r.stderr, (r.returncode, n, r.stderr)
+
+    # ASSERT (3) — a binary that cannot start is not retried: a second will not fix it.
+    r, n = run("exit 127")
+    assert r.returncode == 2 and n == 1, (r.returncode, n, r.stderr)
+
+
 def test_init_and_doctor_know_okls_own_plugin(tmp_path):
     """#45: okl ships as a Claude Code plugin too. If the plugin is enabled, `okl init`
     must not also register the project hooks (every prompt would be briefed twice and the
