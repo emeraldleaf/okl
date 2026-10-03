@@ -227,6 +227,7 @@ def record(store: Store, *, type: str, title: str, scope: str, repo: str | None 
            files: str | None = None, symptom: str | None = None,
            applies_to: str | None = None, fix: str | None = None,
            tags: str | None = None, verified: bool = False, id: str | None = None,
+           keep_verification: bool = False,
            ) -> str:
     """Create a node. `scope` is 'org' (propagates to all repos) or 'repo:<name>'.
 
@@ -240,6 +241,12 @@ def record(store: Store, *, type: str, title: str, scope: str, repo: str | None 
     so `check` can surface "if you see X, it's Y, do Z" instead of prose.
     `tags` is a comma-separated subject list from the controlled vocabulary
     (store.KNOWN_TAGS); repos declare interest tags so `check` can filter by subject.
+
+    `keep_verification` is for re-importing a lesson the store already holds (`okl seed`).
+    Verification is about the code, not the lesson's wording, so the existing stamp, its
+    evidence and its commit are kept while the governed files are the same, and cleared
+    when they change (#110). Without it, every re-seed re-stamped each lesson as verified
+    now and wiped its evidence, so a repo that re-seeds after edits could never drift.
     """
     if scope == "repo" and repo:
         scope = f"repo:{repo}"
@@ -257,8 +264,23 @@ def record(store: Store, *, type: str, title: str, scope: str, repo: str | None 
     # omit it and the store mints a fresh random id (a genuinely new node).
     if id is not None:
         kw["id"] = id
+        old = store.get_node(id) if keep_verification else None
+        if old is not None:
+            if _same_files(old.files, files):
+                if old.verified_at is not None:
+                    kw.update(verified_at=old.verified_at, verified_by=old.verified_by,
+                              verified_commit=old.verified_commit)
+            else:
+                kw["verified_at"] = None   # a check of other files proves nothing about these
     n = Node(**kw)
     return store.add_node(n)
+
+
+def _same_files(a: str | None, b: str | None) -> bool:
+    """Whether two `files` values name the same globs, ignoring order, spacing and blanks."""
+    def norm(v: str | None) -> set[str]:
+        return {g.strip() for g in (v or "").split(",") if g.strip()}
+    return norm(a) == norm(b)
 
 
 def link(store: Store, src: str, rel: str, dst: str) -> None:

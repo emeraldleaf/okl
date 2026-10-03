@@ -551,6 +551,67 @@ def test_seed_is_idempotent(store, tmp_path):
     assert n1 == n2 == 2, f"re-seed duplicated: {n1} -> {n2}"
 
 
+def test_reseeding_keeps_verification_unless_the_governed_files_change(store, tmp_path):
+    """#110: okl seed went through record(), which replaced the row, so every re-seed
+    re-stamped each lesson as verified now and wiped its evidence and commit. A repo that
+    keeps its lessons in a seed file and re-seeds after an edit (emeraldleaf-dev does) could
+    therefore never drift. Re-seeding now updates a lesson's content and keeps its
+    verification while the governed files are the same; a change to those files clears it."""
+    import subprocess
+
+    from okl import drift
+    from okl.seed import seed_from_file
+    class _C:  # minimal client shim over the in-memory store
+        repo = "r"
+        def record(self, **k): return core.record(store, **k)
+        def link(self, s, r, d): return core.link(store, s, r, d)
+    repo = tmp_path / "repo"; repo.mkdir()
+    git = ["git", "-C", str(repo), "-c", "user.email=t@t", "-c", "user.name=t"]
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    def commit(text):
+        (repo / "a.css").write_text(text)
+        subprocess.run([*git, "add", "-A"], check=True); subprocess.run([*git, "commit", "-qm", "c"], check=True)
+        return subprocess.run([*git, "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+    pack = tmp_path / "site.json"
+    def write_pack(files, title="Grid minimums fit their container"):
+        pack.write_text(json.dumps({"nodes": [{"key": "grid", "type": "Rule", "scope": "org", "repo": "r",
+                                               "verified": True, "title": title, "files": files}]}))
+    nid = "seed:site:grid"
+
+    # ARRANGE — seed the lesson, then prove it with a check at the current commit.
+    head = commit("a { min-width: min(22rem, 100%); }\n")
+    write_pack("a.css"); seed_from_file(_C(), str(pack))
+    core.verify(store, nid, f"`check` exit 0 on commit {head[:12]} @ 2026-10-03T21:00Z", commit=head)
+    checked = store.get_node(nid)
+
+    # ASSERT (1) — re-seeding new wording keeps the stamp, its evidence and its commit.
+    write_pack("a.css", title="Grid minimums never exceed their container"); seed_from_file(_C(), str(pack))
+    n = store.get_node(nid)
+    assert n.title == "Grid minimums never exceed their container"
+    assert (n.verified_at, n.verified_by, n.verified_commit) == (checked.verified_at, checked.verified_by, head)
+
+    # ASSERT (2) — the website's flow: the governed file changes, then the pack is re-seeded.
+    # Re-stamping here used to clear the drift; it must still be reported.
+    commit("a { min-width: 22rem; }\n")
+    seed_from_file(_C(), str(pack))
+    assert [h.node_id for h in drift.scan_drift(store.all_nodes(), "r", str(repo))[0]] == [nid]
+
+    # ASSERT (3) — the same globs written in another order or spacing are the same files.
+    write_pack(" a.css ,"); seed_from_file(_C(), str(pack))
+    assert store.get_node(nid).verified_commit == head
+
+    # ASSERT (4) — pointing the lesson at other files clears its check: it proved nothing
+    # about them, so drift asks for a first check of the new paths.
+    write_pack("b.css"); seed_from_file(_C(), str(pack))
+    n = store.get_node(nid)
+    assert (n.verified_at, n.verified_by, n.verified_commit) == (None, None, None)
+
+    # ASSERT (5) — a plain re-record (okl record --id) is unchanged: it keeps nothing.
+    core.verify(store, nid, "`check` exit 0 @ 2026-10-03T21:05Z")
+    core.record(store, id=nid, type="Rule", title="t", scope="org", files="b.css")
+    assert store.get_node(nid).verified_at is None
+
+
 # ---- subject tags: controlled vocabulary + interest filtering ----
 
 def test_tags_roundtrip_and_vocabulary_enforced(store):
