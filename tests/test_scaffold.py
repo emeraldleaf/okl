@@ -806,8 +806,9 @@ def test_the_old_distribution_name_is_swept_and_still_installable():
     for extra, deps in old["optional-dependencies"].items():
         assert deps == [f"{new['name']}[{extra}]>={old['version']}"], extra
     # pipx exposes only the named package's own commands, so the redirect must declare
-    # `okl` itself or `pipx install org-knowledge-layer` refuses to install.
-    assert old.get("scripts") == new["scripts"], "the redirect must provide the okl command"
+    # `okl` itself or `pipx install org-knowledge-layer` refuses to install. Only `okl`:
+    # the package's second command is named after the NEW distribution, for uvx.
+    assert old.get("scripts") == {"okl": new["scripts"]["okl"]}, "the redirect must provide the okl command"
 
 
 def test_doctor_names_memory_tools_beside_okl_and_changes_nothing(tmp_path):
@@ -1567,3 +1568,36 @@ def test_plugin_manifest_points_at_real_files_and_the_shipped_version():
     assert [p["name"] for p in market["plugins"]] == ["okl"] and market["name"] == "okl"
     mcp = json.loads((root / ".mcp.json").read_text())
     assert mcp["mcpServers"]["okl"] == {"command": "okl", "args": ["mcp"]}
+
+
+def test_registry_entry_starts_the_server_it_lists():
+    """server.json lists okl on the official MCP Registry, whose clients start a PyPI
+    server as `uvx <package>==<version> <args>`. Each numbered assertion is a way the
+    listing would install a server that cannot start, or advertise the wrong one:
+    1. uvx runs the command named after the package; with only `okl`, it refused.
+    2. okl keeps the MCP SDK in an extra and uvx installs the bare package, so the entry
+       must add the SDK itself, at the extra's own requirement.
+    3. A version bump that skips server.json lists the previous release.
+    4. The registry will not list a PyPI server whose README lacks the mcp-name line.
+    5. `okl mcp` serves stdio only; an entry declaring HTTP or SSE would send clients to
+       a port nothing listens on.
+    """
+    import json
+    tomllib = pytest.importorskip("tomllib")
+    root = Path(__file__).resolve().parents[1]
+    project = tomllib.loads((root / "pyproject.toml").read_text())["project"]
+    server = json.loads((root / "server.json").read_text())
+    [package] = server["packages"]
+    assert package["registryType"] == "pypi" and package["identifier"] == project["name"]
+    # 1
+    assert project["scripts"][project["name"]] == project["scripts"]["okl"]
+    assert [a["value"] for a in package["packageArguments"]] == ["mcp"]
+    # 2
+    assert [(a["name"], a["value"]) for a in package["runtimeArguments"]] == [
+        ("--with", req) for req in project["optional-dependencies"]["mcp"]]
+    # 3
+    assert server["version"] == package["version"] == project["version"]
+    # 4
+    assert f"mcp-name: {server['name']}" in (root / "README.md").read_text()
+    # 5
+    assert package["transport"] == {"type": "stdio"}

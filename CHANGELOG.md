@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.7.6
+
+- **An entry for the official MCP Registry** (`server.json`, `io.github.emeraldleaf/okl`).
+  Registry clients start a PyPI server as `uvx <package> <args>`, and uvx runs the command
+  named after the package; okl's only command was `okl`, so that failed. The CLI now also
+  installs as `observed-knowledge-ledger`, and the entry adds the MCP SDK
+  (`--with mcp>=1.2`) that okl keeps in its optional `mcp` extra.
+- **The PyPI page links back to the repo**, its issues, the changelog and the getting
+  started guide. It had no project links.
+
 ## 0.7.5
 
 - **Ready for the official MCP Registry.** The README carries the registry's ownership line

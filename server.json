@@ -1,0 +1,39 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.emeraldleaf/okl",
+  "title": "okl — Observed Knowledge Ledger",
+  "description": "Lessons your coding agent can trust: briefed before each task, proven by checks, flagged on change.",
+  "websiteUrl": "https://github.com/emeraldleaf/okl/blob/main/docs/GETTING-STARTED.md",
+  "repository": {
+    "url": "https://github.com/emeraldleaf/okl",
+    "source": "github",
+    "id": "1351779410"
+  },
+  "version": "0.7.6",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "registryBaseUrl": "https://pypi.org",
+      "identifier": "observed-knowledge-ledger",
+      "version": "0.7.6",
+      "runtimeHint": "uvx",
+      "runtimeArguments": [
+        {
+          "type": "named",
+          "name": "--with",
+          "value": "mcp>=1.2",
+          "description": "The MCP SDK. okl keeps it in the optional `mcp` extra, and uvx installs only the base package."
+        }
+      ],
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "mcp"
+        }
+      ],
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}
