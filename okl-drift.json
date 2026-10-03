@@ -26,8 +26,8 @@
       "title": "The install command in the README and guide names the real PyPI distribution",
       "scope": "repo:okl",
       "files": "README.md,docs/GETTING-STARTED.md,pyproject.toml",
-      "verified_at": 1790991829195,
-      "verified_by": "`python3 -c \"import tomllib,sys; n=tomllib.load(open(\\\"pyproject.toml\\\",\\\"rb\\\"))[\\\"project\\\"][\\\"name\\\"]; line=\\\"pipx install '\\\"+n+\\\"[mcp]'\\\"; bad=[f for f in (\\\"README.md\\\",\\\"docs/GETTING-STARTED.md\\\") if line not in open(f).read()]; sys.exit(\\\"install line missing in %s\\\" % bad) if bad else print(\\\"INSTALL LINE MATCHES\\\", n)\"` exit 0, matched 'INSTALL LINE MATCHES' @ 2026-10-03T01:43Z"
+      "verified_at": 1791052966329,
+      "verified_by": "`python3 -c \"import tomllib,sys; n=tomllib.load(open(\\\"pyproject.toml\\\",\\\"rb\\\"))[\\\"project\\\"][\\\"name\\\"]; line=\\\"pipx install '\\\"+n+\\\"[mcp]'\\\"; bad=[f for f in (\\\"README.md\\\",\\\"docs/GETTING-STARTED.md\\\") if line not in open(f).read()]; sys.exit(\\\"install line missing in %s\\\" % bad) if bad else print(\\\"INSTALL LINE MATCHES\\\", n)\"` exit 0, matched 'INSTALL LINE MATCHES' @ 2026-10-03T18:42Z"
     },
     {
       "id": "doc-verified-refused",
@@ -62,8 +62,8 @@
       "title": "The core and client path stays stdlib-only — every third-party import lives behind an extra",
       "scope": "repo:okl",
       "files": "src/okl/core.py,src/okl/client.py,src/okl/store.py,pyproject.toml",
-      "verified_at": 1790991828725,
-      "verified_by": "`python3 -c \"import ast;third={'fastapi','pydantic','httpx','requests','psycopg','psycopg2','uvicorn','mcp','yaml'};bad=[(f,getattr(n,'module','') or '')for f in('src/okl/store.py','src/okl/core.py','src/okl/client.py')for n in ast.parse(open(f).read()).body if isinstance(n,(ast.Import,ast.ImportFrom))and((getattr(n,'module','')or '').split('.')[0]in third or any(a.name.split('.')[0]in third for a in n.names))];assert not bad,bad;print('STDLIB OK')\"` exit 0, matched 'STDLIB OK' @ 2026-10-03T01:43Z"
+      "verified_at": 1791052966292,
+      "verified_by": "`python3 -c \"import ast;third={'fastapi','pydantic','httpx','requests','psycopg','psycopg2','uvicorn','mcp','yaml'};bad=[(f,getattr(n,'module','') or '')for f in('src/okl/store.py','src/okl/core.py','src/okl/client.py')for n in ast.parse(open(f).read()).body if isinstance(n,(ast.Import,ast.ImportFrom))and((getattr(n,'module','')or '').split('.')[0]in third or any(a.name.split('.')[0]in third for a in n.names))];assert not bad,bad;print('STDLIB OK')\"` exit 0, matched 'STDLIB OK' @ 2026-10-03T18:42Z"
     },
     {
       "id": "n_71c09abf3f37",
@@ -80,8 +80,8 @@
       "title": "A test that imports an undeclared package passes only where that package happens to be installed",
       "scope": "org",
       "files": "tests/",
-      "verified_at": 1790991622155,
-      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && ! grep -rnE '^\\s*import tomllib' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' @ 2026-10-03T01:40Z"
+      "verified_at": 1791053909373,
+      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && ! grep -rnE '^\\s*import tomllib' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' @ 2026-10-03T18:58Z"
     },
     {
       "id": "n_9ba48d85ed19",
@@ -134,8 +134,8 @@
       "title": "PyPI rejects a package name as 'too similar' to an existing one — with a bare 400 that hides the reason",
       "scope": "org",
       "files": "pyproject.toml",
-      "verified_at": 1790991828681,
-      "verified_by": "`python3 -c \"import tomllib;p=tomllib.load(open('pyproject.toml','rb'))['project'];assert p['name']!='okl';assert p['scripts'].get('okl');print('NAME OK',p['name'])\"` exit 0, matched 'NAME OK' @ 2026-10-03T01:43Z"
+      "verified_at": 1791052966253,
+      "verified_by": "`python3 -c \"import tomllib;p=tomllib.load(open('pyproject.toml','rb'))['project'];assert p['name']!='okl';assert p['scripts'].get('okl');print('NAME OK',p['name'])\"` exit 0, matched 'NAME OK' @ 2026-10-03T18:42Z"
     },
     {
       "id": "n_ead8e0a2b43d",
@@ -143,8 +143,8 @@
       "title": "A gate that reads commit times needs merge commits — squash and rebase restamp history at merge time",
       "scope": "org",
       "files": "CONTRIBUTING.md,src/okl/drift.py",
-      "verified_at": 1790906039180,
-      "verified_by": "`gh api repos/emeraldleaf/okl --jq 'if .allow_squash_merge or .allow_rebase_merge then error(\"squash or rebase enabled\") else \"MERGE COMMITS ONLY\" end'` exit 0, matched 'MERGE COMMITS ONLY' @ 2026-10-02T01:53Z"
+      "verified_at": 1791053621849,
+      "verified_by": "`gh api repos/emeraldleaf/okl --jq 'if .allow_squash_merge or .allow_rebase_merge then error(\"squash or rebase enabled\") else \"MERGE COMMITS ONLY\" end'` exit 0, matched 'MERGE COMMITS ONLY' @ 2026-10-03T18:53Z"
     }
   ]
 }
