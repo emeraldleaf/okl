@@ -169,6 +169,26 @@ Two things ship in the package. They are not coequal:
 | **shared layer** (`okl serve`) | one small service owning the database, so many repos share one store | one place you run it |
 | **scaffold** (`okl scaffold`) | the in-repo starter files: canon, gates, registries, evals | stamped into each repo, optional |
 
+## What okl is not for
+
+okl holds lessons: what an agent would see or do (the symptom), what to do instead (the
+fix), why, and where it can be proven, the check. Most of a good agent setup is other
+things, and they work better elsewhere:
+
+| If it is… | Put it in | Why not okl |
+|---|---|---|
+| a rule every session needs, whatever the task | `CLAUDE.md` / `AGENTS.md` | those load in full every time; a briefing picks lessons per task |
+| a procedure: how to release, migrate or set up | a skill, runbook or script | a procedure is read whole and in order; a briefing hands over a few short records |
+| commands, and "for X, read Y" pointers | `CLAUDE.md` / `AGENTS.md`, or a skill | it is a map the agent needs on every relevant task |
+| formatting and code style | a formatter or linter | a tool enforces it on every line; a lesson can only remind |
+| a bug that is still open | your issue tracker | the tracker owns open work; okl keeps what was learned once it is fixed |
+| secrets, credentials, personal data | nowhere near okl | the store is shared and its lessons are copied into agent context |
+
+Everything with a symptom and a fix belongs here: a convention the code follows, a decision
+made on purpose, a defect class you have already paid for. The
+[getting-started guide](docs/GETTING-STARTED.md#store-records-vs-claudemd--agentsmd) has
+the same split from the side of recording.
+
 ## What it keeps from drifting, and how
 
 Knowledge rots in a specific way: the code changes and everything written *about* the
