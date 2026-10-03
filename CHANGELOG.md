@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.7.8
+
+- **Re-seeding keeps a lesson's verification** (#110). `okl seed` replaced each row, so
+  every re-seed re-stamped its lessons as verified now and wiped their evidence and
+  commit. A repo that keeps its lessons in a seed file and re-seeds after an edit could
+  therefore never drift, and its next drift snapshot carried stamps with no evidence. A
+  re-seeded lesson now keeps its stamp, evidence and commit while its governed files are
+  the same, and is cleared when they change. New lessons and `okl record` re-records
+  behave as before.
+- **`okl drift` names this repo's lessons whose files match nothing committed** (#109), beside the
+  drift report and as `governs_nothing` in its JSON. Drift saw the deletion as the last
+  change, so such a lesson watched nothing and nothing said so. Re-pointing it, dropping
+  its files or retiring it is a decision, so the exit code is unchanged.
+- **`okl init --no-ci`** skips the GitHub Actions workflow (#111), for a private repo that
+  would pay for its minutes or one that runs another CI. The choice is recorded in
+  `.okl/config.json`, so later runs keep it; `--ci` turns it back on, and `okl doctor`
+  says when drift is not gated in CI.
+
 ## 0.7.7
 
 - **The docs say what okl is not for** (#99): always-on rules and commands go in

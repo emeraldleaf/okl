@@ -551,6 +551,67 @@ def test_seed_is_idempotent(store, tmp_path):
     assert n1 == n2 == 2, f"re-seed duplicated: {n1} -> {n2}"
 
 
+def test_reseeding_keeps_verification_unless_the_governed_files_change(store, tmp_path):
+    """#110: okl seed went through record(), which replaced the row, so every re-seed
+    re-stamped each lesson as verified now and wiped its evidence and commit. A repo that
+    keeps its lessons in a seed file and re-seeds after an edit (emeraldleaf-dev does) could
+    therefore never drift. Re-seeding now updates a lesson's content and keeps its
+    verification while the governed files are the same; a change to those files clears it."""
+    import subprocess
+
+    from okl import drift
+    from okl.seed import seed_from_file
+    class _C:  # minimal client shim over the in-memory store
+        repo = "r"
+        def record(self, **k): return core.record(store, **k)
+        def link(self, s, r, d): return core.link(store, s, r, d)
+    repo = tmp_path / "repo"; repo.mkdir()
+    git = ["git", "-C", str(repo), "-c", "user.email=t@t", "-c", "user.name=t"]
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    def commit(text):
+        (repo / "a.css").write_text(text)
+        subprocess.run([*git, "add", "-A"], check=True); subprocess.run([*git, "commit", "-qm", "c"], check=True)
+        return subprocess.run([*git, "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+    pack = tmp_path / "site.json"
+    def write_pack(files, title="Grid minimums fit their container"):
+        pack.write_text(json.dumps({"nodes": [{"key": "grid", "type": "Rule", "scope": "org", "repo": "r",
+                                               "verified": True, "title": title, "files": files}]}))
+    nid = "seed:site:grid"
+
+    # ARRANGE — seed the lesson, then prove it with a check at the current commit.
+    head = commit("a { min-width: min(22rem, 100%); }\n")
+    write_pack("a.css"); seed_from_file(_C(), str(pack))
+    core.verify(store, nid, f"`check` exit 0 on commit {head[:12]} @ 2026-10-03T21:00Z", commit=head)
+    checked = store.get_node(nid)
+
+    # ASSERT (1) — re-seeding new wording keeps the stamp, its evidence and its commit.
+    write_pack("a.css", title="Grid minimums never exceed their container"); seed_from_file(_C(), str(pack))
+    n = store.get_node(nid)
+    assert n.title == "Grid minimums never exceed their container"
+    assert (n.verified_at, n.verified_by, n.verified_commit) == (checked.verified_at, checked.verified_by, head)
+
+    # ASSERT (2) — the website's flow: the governed file changes, then the pack is re-seeded.
+    # Re-stamping here used to clear the drift; it must still be reported.
+    commit("a { min-width: 22rem; }\n")
+    seed_from_file(_C(), str(pack))
+    assert [h.node_id for h in drift.scan_drift(store.all_nodes(), "r", str(repo))[0]] == [nid]
+
+    # ASSERT (3) — the same globs written in another order or spacing are the same files.
+    write_pack(" a.css ,"); seed_from_file(_C(), str(pack))
+    assert store.get_node(nid).verified_commit == head
+
+    # ASSERT (4) — pointing the lesson at other files clears its check: it proved nothing
+    # about them, so drift asks for a first check of the new paths.
+    write_pack("b.css"); seed_from_file(_C(), str(pack))
+    n = store.get_node(nid)
+    assert (n.verified_at, n.verified_by, n.verified_commit) == (None, None, None)
+
+    # ASSERT (5) — a plain re-record (okl record --id) is unchanged: it keeps nothing.
+    core.verify(store, nid, "`check` exit 0 @ 2026-10-03T21:05Z")
+    core.record(store, id=nid, type="Rule", title="t", scope="org", files="b.css")
+    assert store.get_node(nid).verified_at is None
+
+
 # ---- subject tags: controlled vocabulary + interest filtering ----
 
 def test_tags_roundtrip_and_vocabulary_enforced(store):
@@ -2612,6 +2673,81 @@ def test_drift_compares_the_commit_a_check_passed_at_not_the_clock(store, tmp_pa
     edit("SCOPED = True  # edited\n"); capsys.readouterr()
     assert main(check) == 0
     assert "uncommitted changes to orders.py" in capsys.readouterr().err
+
+
+def test_drift_reports_this_repos_lessons_whose_files_no_longer_exist(tmp_path, monkeypatch, capsys):
+    """#109: a lesson governing src/components/PixelGlyph.astro, deleted on 2026-09-22, was
+    reported OK. Drift sees the deletion as the last change, and a lesson stamped after it
+    reads as unchanged, so it watched nothing and nothing said so. It is reported now, as a
+    finding beside the drift rather than drift: what to do with it is a decision."""
+    import subprocess
+
+    from okl import drift
+    from okl.cli import main
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+    git = ["git", "-c", "user.email=t@t", "-c", "user.name=t"]
+    subprocess.run(["git", "init", "-q", "."], check=True)
+    (tmp_path / "src").mkdir(); (tmp_path / "src" / "app.py").write_text("x = 1\n")
+    (tmp_path / "Glyph.astro").write_text("<svg/>\n")
+    subprocess.run([*git, "add", "-A"], check=True); subprocess.run([*git, "commit", "-qm", "i"], check=True)
+    subprocess.run([*git, "rm", "-q", "Glyph.astro"], check=True); subprocess.run([*git, "commit", "-qm", "rm"], check=True)
+
+    def rule(id, files, scope="repo:s", repo="s"):
+        return Node(type="Rule", title=id, scope=scope, repo=repo, files=files, verified_at=1, id=id)
+    rules = [rule("deleted", "Glyph.astro"),                            # gone: reported
+             rule("org-but-ours", "Glyph.astro", scope="org"),         # recorded here: reported
+             rule("never-existed", "src/*.zz"),                        # matches nothing: reported
+             rule("exists", "src/app.py"), rule("glob", "src/*.py"),   # present: quiet
+             rule("folder", "src"), rule("mixed", "Glyph.astro, src/app.py"),
+             rule("elsewhere", "src/**/*.cs", scope="org", repo="other"),  # another repo's: quiet
+             # git's default pathspec gives ** no special meaning, so src/**/*.py needs a
+             # subfolder and misses src/app.py, in drift's own `git log` as here. Reported,
+             # since drift cannot see that file either; making ** optional belongs in both.
+             rule("recursive", "src/**/*.py")]
+    assert [n.id for n in drift.governs_nothing(rules, "s", str(tmp_path))] == \
+        ["deleted", "org-but-ours", "never-existed", "recursive"]
+    assert drift.governs_nothing(rules, "s", str(tmp_path / "not-a-repo")) == []   # git can't say
+
+    # Through the CLI: reported under the drift output, exit code untouched.
+    assert main(["init", "--repo", "s", "--no-claude", "--no-seed"]) == 0
+    assert main(["record", "--type", "Rule", "--scope", "repo", "--id", "pixel",
+                 "--title", "Pixel shapes taper one cell per row", "--files", "Glyph.astro"]) == 0
+    capsys.readouterr()
+    assert main(["drift"]) == 0
+    out = capsys.readouterr().out
+    assert "1 lesson(s) govern files that match nothing committed here" in out and "[pixel]" in out, out
+
+
+def test_init_no_ci_skips_the_workflow_and_remembers_it(tmp_path, monkeypatch, capsys):
+    """#111: init always wrote .github/workflows/okl-verify.yml. In a private repo that
+    workflow spends the account's Actions minutes on every push, and deleting it did not
+    last, because init restores missing files by design. --no-ci skips it and is recorded
+    in .okl/config.json, so a later plain init keeps skipping it; --ci turns it back on."""
+    import subprocess
+
+    from okl.cli import main
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+    subprocess.run(["git", "init", "-q", "."], check=True)
+    wf = tmp_path / ".github" / "workflows" / "okl-verify.yml"
+    base = ["init", "--repo", "r", "--no-claude", "--no-seed"]
+
+    assert main([*base, "--no-ci"]) == 0
+    assert not wf.exists() and json.loads((tmp_path / ".okl" / "config.json").read_text())["ci"] is False
+    assert main(base) == 0 and not wf.exists(), "a later plain init must keep skipping it"
+    capsys.readouterr()
+    assert main([*base, "--dry-run"]) == 0 and "no CI workflow" in capsys.readouterr().out
+    main(["doctor"])
+    assert "drift is not gated in CI here" in capsys.readouterr().out
+    assert main([*base, "--ci"]) == 0 and wf.exists(), "--ci turns it back on"
+    # doctor is a diagnostic: a corrupt config must not end it in a traceback (CodeRabbit on #112)
+    (tmp_path / ".okl" / "config.json").write_text("{not json")
+    main(["doctor"])
 
 
 def test_the_verified_commit_is_bound_to_its_evidence_and_older_entries_still_read(tmp_path):

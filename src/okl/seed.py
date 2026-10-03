@@ -64,7 +64,9 @@ def seed_from_file(client: Client, path: str) -> int:
             print(f"  ! {key or node.get('title', '?')}: seed node has no 'repo' — "
                   "recording provenance as unknown, not this repo", file=sys.stderr)
         stable_id = f"{ns}:{key}" if key else None
-        node_id = client.record(id=stable_id, **node) if stable_id else client.record(**node)
+        # A re-seed updates a lesson's content; it does not verify it (#110).
+        node_id = (client.record(id=stable_id, keep_verification=True, **node) if stable_id
+                   else client.record(**node))
         if key:
             keymap[key] = node_id
     for edge in data.get("edges", []):
@@ -100,7 +102,7 @@ def seed_starter(client: Client, seed_dir: Path) -> int:
             node = dict(node)
             key = node.pop("key")
             node.setdefault("repo", None)   # provenance is another repo's: unknown, not this one
-            client.record(id=f"seed:{pack}:{key}", **node)
+            client.record(id=f"seed:{pack}:{key}", keep_verification=True, **node)
             n += 1
         for edge in data.get("edges", []):
             if edge["src"] in wanted and edge["dst"] in wanted:

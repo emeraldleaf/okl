@@ -19,6 +19,7 @@ when the governed code moves, not on a fixed schedule.
 from __future__ import annotations
 
 import datetime as _dt
+import fnmatch
 import json
 import re
 import subprocess
@@ -244,6 +245,58 @@ def annotate_briefing(result: dict[str, Any], repo: str, repo_dir: str = ".") ->
     if marked:
         result["drifted"] = marked
     return marked
+
+
+def _head_files(repo_dir: str) -> list[str] | None:
+    """Every path committed at HEAD, or None when git cannot say (no repo, no commits)."""
+    try:
+        out = subprocess.run(["git", "-C", repo_dir, "ls-tree", "-r", "--name-only", "-z", "HEAD"],
+                             capture_output=True, timeout=15)
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return None
+    if out.returncode != 0:
+        return None
+    return [p for p in out.stdout.decode("utf-8", "surrogateescape").split("\0") if p]
+
+
+def _glob_matches(glob: str, path: str) -> bool:
+    """git's default pathspec: the path itself, a directory above it, or an fnmatch
+    pattern whose `*` also crosses `/` -- the same matching drift's `git log` applies."""
+    g = glob.strip().rstrip("/")
+    return bool(g) and (path == g or path.startswith(g + "/") or fnmatch.fnmatchcase(path, g))
+
+
+def governs_nothing(nodes: Iterable[Node], repo: str, repo_dir: str = ".") -> list[Node]:
+    """This repo's lessons whose `files` match nothing committed at HEAD (#109).
+
+    Drift is silent about them: the deletion is the last change git reports, and a lesson
+    stamped after it, or diffed against a commit that also lacked the file, reads as
+    unchanged. It watches nothing, and nothing said so. Only lessons this repo owns are
+    judged, scoped to it or recorded in it: an org lesson's files may live in another repo.
+    A finding, not drift: re-pointing, dropping `files` or retiring it is a decision.
+    """
+    paths = _head_files(repo_dir)
+    if paths is None:
+        return []
+    repo_scope = f"repo:{repo}"
+    out = []
+    for n in nodes:
+        if not n.files or not (n.scope == repo_scope or n.repo == repo):
+            continue
+        globs = [g for g in n.files.split(",") if g.strip()]
+        if not any(_glob_matches(g, p) for g in globs for p in paths):
+            out.append(n)
+    return out
+
+
+def render_governs_nothing(nodes: list[Node]) -> str:
+    """The advisory under the drift report; empty when every lesson's files exist."""
+    if not nodes:
+        return ""
+    lines = ["", f"OKL: {len(nodes)} lesson(s) govern files that match nothing committed here. "
+                 "Re-point each at the code it is about, drop its files, or retire it:"]
+    lines.extend(f"  • [{n.id}] {n.title}  (files: {n.files})" for n in nodes)
+    return "\n".join(lines)
 
 
 def render_drift(hits: list[DriftHit], checked: int | None = None) -> str:

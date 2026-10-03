@@ -57,6 +57,8 @@ class RecordReq(BaseModel):
     applies_to: str | None = None
     id: str | None = None
     verified: bool = False
+    # okl seed re-importing a lesson the store holds: keep its verification (#110).
+    keep_verification: bool = False
 
 
 class SearchReq(BaseModel):

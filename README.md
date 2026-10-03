@@ -56,7 +56,9 @@ codebase plus the bundled packs for your stack, so the first prompt is already b
 (`--interests` chooses your own subjects; `--no-seed` leaves the store empty).
 
 `init` wires Claude Code when the repo has a `.claude/` directory or `claude` is on your
-PATH; `--claude` forces it and `--no-claude` skips it. **Prefer the plugin?** Install it
+PATH; `--claude` forces it and `--no-claude` skips it. `--no-ci` skips the GitHub Actions
+workflow, for a private repo that would pay for its minutes or one that runs another CI,
+and later runs remember that; `--ci` puts it back. **Prefer the plugin?** Install it
 *before* running `init` — `/plugin marketplace add emeraldleaf/okl`, then
 `/plugin install okl@okl` in Claude Code — and `init` leaves the hooks to the plugin, so
 nothing is wired twice. (Installed after? `okl doctor` reports the double wiring, and
@@ -477,8 +479,9 @@ session's own transcript — candidates, not records: no hook runs on every tool
 no model is called to summarise anything.
 
 **In your repo:** `okl init` writes `.okl/` (config, the local database, a `.gitignore`
-covering both) and, when it wires Claude Code, two hook scripts plus their registration. It
-also installs `.github/workflows/okl-verify.yml`, which runs the drift gate on every PR.
+covering both) and, when it wires Claude Code, two hook scripts plus their registration. In a
+git repository it also installs `.github/workflows/okl-verify.yml`, which runs the drift
+gate on every PR, unless you pass `--no-ci`.
 CI has no store of its own (the local one is gitignored), so give it one: once a lesson
 governs files, commit `okl-drift.json` (`okl verify` refreshes it; `okl export --drift`
 writes it; a snapshot of the rules drift reads, no lesson bodies), or set the
@@ -597,7 +600,7 @@ touches only the current directory, and only these:
 | `.claude/hooks/stop-okl-encode.sh` | **executable**; runs at session end, asks what was learned |
 | `.claude/settings.json` | registers those two hooks (merged in place; your existing keys are preserved) |
 | `.mcp.json` | registers the okl MCP server — only when the `mcp` extra is installed |
-| `.github/workflows/okl-verify.yml` | **a CI workflow** running the drift gate on pull requests — only in a git repository |
+| `.github/workflows/okl-verify.yml` | **a CI workflow** running the drift gate on pull requests — only in a git repository, and not with `--no-ci` |
 
 Re-running `init` is safe as long as you pass the same `--repo` (without it, the repo name
 resets to the directory's name): it upgrades okl's own files, keeps any you edited (say so
