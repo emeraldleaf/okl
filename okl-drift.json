@@ -28,9 +28,9 @@
       "title": "The install command in the README and guide names the real PyPI distribution",
       "scope": "repo:okl",
       "files": "README.md,docs/GETTING-STARTED.md,pyproject.toml",
-      "verified_at": 1791065180402,
-      "verified_by": "`python3 -c \"import tomllib,sys; n=tomllib.load(open(\\\"pyproject.toml\\\",\\\"rb\\\"))[\\\"project\\\"][\\\"name\\\"]; line=\\\"pipx install '\\\"+n+\\\"[mcp]'\\\"; bad=[f for f in (\\\"README.md\\\",\\\"docs/GETTING-STARTED.md\\\") if line not in open(f).read()]; sys.exit(\\\"install line missing in %s\\\" % bad) if bad else print(\\\"INSTALL LINE MATCHES\\\", n)\"` exit 0, matched 'INSTALL LINE MATCHES' on commit b0680667f605 @ 2026-10-03T22:06Z",
-      "verified_commit": "b0680667f6051b914f1e9f87d6a02a93932f87af"
+      "verified_at": 1791065229364,
+      "verified_by": "`python3 -c \"import tomllib,sys; n=tomllib.load(open(\\\"pyproject.toml\\\",\\\"rb\\\"))[\\\"project\\\"][\\\"name\\\"]; line=\\\"pipx install '\\\"+n+\\\"[mcp]'\\\"; bad=[f for f in (\\\"README.md\\\",\\\"docs/GETTING-STARTED.md\\\") if line not in open(f).read()]; sys.exit(\\\"install line missing in %s\\\" % bad) if bad else print(\\\"INSTALL LINE MATCHES\\\", n)\"` exit 0, matched 'INSTALL LINE MATCHES' on commit 62be5af44034 @ 2026-10-03T22:07Z",
+      "verified_commit": "62be5af4403498702b208b49cb72b112409c69b0"
     },
     {
       "id": "doc-verified-refused",
@@ -68,9 +68,9 @@
       "title": "The core and client path stays stdlib-only — every third-party import lives behind an extra",
       "scope": "repo:okl",
       "files": "src/okl/core.py,src/okl/client.py,src/okl/store.py,pyproject.toml",
-      "verified_at": 1791065180353,
-      "verified_by": "`python3 -c \"import ast;third={'fastapi','pydantic','httpx','requests','psycopg','psycopg2','uvicorn','mcp','yaml'};bad=[(f,getattr(n,'module','') or '')for f in('src/okl/store.py','src/okl/core.py','src/okl/client.py')for n in ast.parse(open(f).read()).body if isinstance(n,(ast.Import,ast.ImportFrom))and((getattr(n,'module','')or '').split('.')[0]in third or any(a.name.split('.')[0]in third for a in n.names))];assert not bad,bad;print('STDLIB OK')\"` exit 0, matched 'STDLIB OK' on commit b0680667f605 @ 2026-10-03T22:06Z",
-      "verified_commit": "b0680667f6051b914f1e9f87d6a02a93932f87af"
+      "verified_at": 1791065229315,
+      "verified_by": "`python3 -c \"import ast;third={'fastapi','pydantic','httpx','requests','psycopg','psycopg2','uvicorn','mcp','yaml'};bad=[(f,getattr(n,'module','') or '')for f in('src/okl/store.py','src/okl/core.py','src/okl/client.py')for n in ast.parse(open(f).read()).body if isinstance(n,(ast.Import,ast.ImportFrom))and((getattr(n,'module','')or '').split('.')[0]in third or any(a.name.split('.')[0]in third for a in n.names))];assert not bad,bad;print('STDLIB OK')\"` exit 0, matched 'STDLIB OK' on commit 62be5af44034 @ 2026-10-03T22:07Z",
+      "verified_commit": "62be5af4403498702b208b49cb72b112409c69b0"
     },
     {
       "id": "n_71c09abf3f37",
@@ -148,9 +148,9 @@
       "title": "PyPI rejects a package name as 'too similar' to an existing one — with a bare 400 that hides the reason",
       "scope": "org",
       "files": "pyproject.toml",
-      "verified_at": 1791065180300,
-      "verified_by": "`python3 -c \"import tomllib;p=tomllib.load(open('pyproject.toml','rb'))['project'];assert p['name']!='okl';assert p['scripts'].get('okl');print('NAME OK',p['name'])\"` exit 0, matched 'NAME OK' on commit b0680667f605 @ 2026-10-03T22:06Z",
-      "verified_commit": "b0680667f6051b914f1e9f87d6a02a93932f87af"
+      "verified_at": 1791065229262,
+      "verified_by": "`python3 -c \"import tomllib;p=tomllib.load(open('pyproject.toml','rb'))['project'];assert p['name']!='okl';assert p['scripts'].get('okl');print('NAME OK',p['name'])\"` exit 0, matched 'NAME OK' on commit 62be5af44034 @ 2026-10-03T22:07Z",
+      "verified_commit": "62be5af4403498702b208b49cb72b112409c69b0"
     },
     {
       "id": "n_ead8e0a2b43d",
