@@ -242,6 +242,13 @@ def test_service_check(tmp_path, monkeypatch):
     # an agent inventing tags got an opaque 500 and reported the service as down)
     bad = client.post("/record", json={"type": "Rule", "title": "t", "scope": "org", "tags": "ci,pinning"})
     assert bad.status_code == 400 and "vocabulary" in bad.json()["detail"]
+    # /verify carries the commit a check passed at (#102) and refuses anything that is not a
+    # commit name, because drift later hands it to git on every client that reads it
+    ok = client.post("/verify", json={"id": d, "evidence": "`true` exit 0 @ 2026-10-03T18:42Z",
+                                      "commit": "a1b2c3d4e5f6"})
+    assert ok.status_code == 200 and ok.json()["verified_commit"] == "a1b2c3d4e5f6"
+    hostile = client.post("/verify", json={"id": d, "evidence": "x", "commit": "--output=/tmp/x"})
+    assert hostile.status_code == 400 and "git object name" in hostile.json()["detail"]
 
 
 def test_service_token_gates_reads_as_well_as_writes(monkeypatch):
@@ -2331,7 +2338,6 @@ def test_reverify_reruns_stored_checks_only_when_asked(tmp_path):
     confirmation at a terminal); unattended without --yes it refuses and runs nothing."""
     import subprocess
     import sys
-    import time
     src = str(Path(__file__).resolve().parents[1] / "src")
     repo = tmp_path / "r"; repo.mkdir()
     env = {**os.environ, "PYTHONPATH": src, "HOME": str(tmp_path)}
@@ -2344,7 +2350,6 @@ def test_reverify_reruns_stored_checks_only_when_asked(tmp_path):
                               capture_output=True, text=True, stdin=subprocess.DEVNULL)
 
     def commit(text):
-        time.sleep(1.1)   # git commit times are in seconds
         (repo / "a.txt").write_text(text)
         subprocess.run([*git, "add", "a.txt"], check=True)
         subprocess.run([*git, "commit", "-qm", "edit"], check=True)
@@ -2394,7 +2399,6 @@ def test_first_run_notice_and_reverify_in_process(tmp_path, monkeypatch, capsys)
     these ran only in child processes.)"""
     import json
     import subprocess
-    import time
 
     from okl import core
     from okl.cli import _stored_check, main
@@ -2431,7 +2435,6 @@ def test_first_run_notice_and_reverify_in_process(tmp_path, monkeypatch, capsys)
     assert _stored_check("`true` exit 0 @ 2026-09-29T00:00Z") == ("true", None)
     assert _stored_check(None) is None and _stored_check("asserted") is None
 
-    time.sleep(1.1)
     (tmp_path / "a.txt").write_text("hello again\n")
     subprocess.run([*git, "commit", "-qam", "edit"], check=True)
     assert main(["reverify", "--dry-run"]) == 1
@@ -2446,7 +2449,6 @@ def test_a_briefed_lesson_says_when_its_code_changed_after_its_last_check(tmp_pa
     lesson that might no longer hold. Run in-process so coverage sees the client path."""
     import json
     import subprocess
-    import time
 
     from okl.cli import main
     for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN", "OKL_QUIET"):
@@ -2483,7 +2485,6 @@ def test_a_briefed_lesson_says_when_its_code_changed_after_its_last_check(tmp_pa
 
     # ASSERT (3) — the governed file changes after the check: the briefing says which file,
     # when, and how to settle it, and the footer and the person's notice both count it.
-    time.sleep(1.1)   # git commit times are in seconds
     (tmp_path / "orders.py").write_text("def get_order(order_id): ...\n")
     subprocess.run([*git, "commit", "-qam", "drop the owner filter"], check=True)
     ctx, notice = brief()
@@ -2520,6 +2521,149 @@ def test_unverified_mark_covers_uncommitted_files_and_skips_other_repos(tmp_path
     assert result["rules"][0]["drift"]["reason"] == "never verified"
     assert result["next_actions"][0]["drift"]["reason"] == "never verified"
     assert result["drifted"] == 2
+
+
+def test_drift_compares_the_commit_a_check_passed_at_not_the_clock(store, tmp_path, monkeypatch, capsys):
+    """#102: drift compared a governed file's last commit TIME with verified_at. Git keeps
+    commit time to the second, so a change committed in the same second as the check was
+    missed, and a commit stamped by a clock running ahead read as a change the check never
+    saw. `okl verify` now records the commit the check passed at, and the gate and the
+    briefing both diff the governed files there against HEAD. The tests used to sleep past
+    the second, which hid the gap; here the commit dates are pinned so each case is exact."""
+    import json
+    import subprocess
+
+    from okl import drift
+    from okl.cli import main
+    from okl.client import Client
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN", "OKL_QUIET"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+
+    def commit(msg, at=None):
+        env = {**os.environ}
+        if at is not None:
+            env.update(GIT_COMMITTER_DATE=f"@{at} +0000", GIT_AUTHOR_DATE=f"@{at} +0000")
+        subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qam", msg],
+                       check=True, env=env)
+
+    def edit(text):
+        (tmp_path / "orders.py").write_text(text)
+
+    subprocess.run(["git", "init", "-q", "."], check=True)
+    edit("SCOPED = True\n"); subprocess.run(["git", "add", "-A"], check=True); commit("init")
+    assert main(["init", "--repo", "s", "--no-claude", "--no-seed"]) == 0
+    assert main(["record", "--type", "Rule", "--scope", "repo", "--id", "scoped",
+                 "--title", "Order lookups are scoped to the customer", "--files", "orders.py"]) == 0
+    check = ["verify", "scoped", "--run", "grep -q 'SCOPED = True' orders.py && echo OK", "--expect", "OK"]
+
+    def node():
+        return {n.id: n for n in Client().all_nodes()}["scoped"]
+
+    def drifted():
+        return [h.node_id for h in drift.scan_drift(Client().all_nodes(), "s", str(tmp_path))[0]]
+
+    # ARRANGE — a passing check records the commit it ran at, in the record and its evidence.
+    assert main(check) == 0
+    head = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+    n = node()
+    assert n.verified_commit == head and f" on commit {head[:12]} @ " in n.verified_by, n.verified_by
+    capsys.readouterr()
+
+    # ASSERT (1) — the #102 case: the governed file changes in the SAME second as the check.
+    # Comparing times saw last <= verified_at and missed it; the commit diff does not, and the
+    # gate and the briefing agree.
+    edit("SCOPED = False\n"); commit("drop the scope", at=n.verified_at // 1000)
+    assert drifted() == ["scoped"]
+    assert main(["check", "--task", "order lookups scoped to the customer", "--format", "hook"]) == 0
+    ctx = json.loads(capsys.readouterr().out)["hookSpecificOutput"]["additionalContext"]
+    assert "STALE — orders.py changed" in ctx and "re-run its check (okl reverify)" in ctx, ctx
+
+    # ASSERT (2) — the reverse: a commit stamped an hour AHEAD by a fast clock, then checked.
+    # Comparing times called that a change the check never saw; the check ran on it.
+    edit("SCOPED = True\n"); commit("restore", at=n.verified_at // 1000 + 3600)
+    assert main(check) == 0
+    assert drifted() == []
+
+    # ASSERT (3) — content, not history: a change and its revert leave the file as checked.
+    edit("SCOPED = False\n"); commit("break")
+    edit("SCOPED = True\n"); commit("revert")
+    assert drifted() == []
+
+    # ASSERT (4) — a commit this clone does not have (a squashed branch, a shallow fetch)
+    # falls back to comparing times, and a value that is not a commit name never reaches
+    # git: it falls back too, and git writes nothing for it.
+    leak = tmp_path / "leak"
+    rules = [Node(type="Rule", title="t", scope="repo:s", files="orders.py", verified_at=1,
+                  verified_commit="0" * 40, id="gone"),
+             Node(type="Rule", title="t", scope="repo:s", files="orders.py", verified_at=10**13,
+                  verified_commit="0" * 40, id="checked-later"),
+             Node(type="Rule", title="t", scope="repo:s", files="orders.py", verified_at=1,
+                  verified_commit=f"--output={leak}", id="hostile")]
+    hits = drift.scan_drift(rules, "s", str(tmp_path))[0]
+    assert sorted(h.node_id for h in hits) == ["gone", "hostile"] and not leak.exists()
+    nid = core.record(store, type="Rule", title="t", scope="org")
+    with pytest.raises(ValueError, match="git object name"):
+        core.verify(store, nid, "`true` exit 0 @ 2026-10-03T18:42Z", commit="HEAD~1")
+
+    # ASSERT (5) — a check run against uncommitted edits says so: the stamp is the commit
+    # without them, so the lesson will read as changed once they are committed.
+    edit("SCOPED = True  # edited\n"); capsys.readouterr()
+    assert main(check) == 0
+    assert "uncommitted changes to orders.py" in capsys.readouterr().err
+
+
+def test_the_verified_commit_is_bound_to_its_evidence_and_older_entries_still_read(tmp_path):
+    """Drift now trusts the recorded commit to clear a rule, so a committed snapshot must not
+    let it be edited on its own, any more than the timestamp can be. The commit is written
+    into the evidence BEFORE the stamp: that binds it, and keeps entries written before #102,
+    and okl versions older than it reading the evidence the same way."""
+    import re
+    import sqlite3
+    from datetime import datetime, timezone
+
+    from okl import drift
+    from okl.cli import _stored_check
+    sha = "a1b2c3d4e5f6" + "0" * 28
+    at = int(datetime(2026, 10, 3, 18, 42, 30, tzinfo=timezone.utc).timestamp() * 1000)
+    new = {"id": "r", "title": "t", "scope": "org", "files": "a.py", "verified_at": at,
+           "verified_by": "`pytest -q` exit 0, matched 'passed' on commit a1b2c3d4e5f6 @ 2026-10-03T18:42Z",
+           "verified_commit": sha}
+    old = {**new, "verified_by": "`pytest -q` exit 0, matched 'passed' @ 2026-10-03T18:42Z",
+           "verified_commit": None}
+
+    # ASSERT (1) — both shapes are trusted, and reverify finds the stored check in each.
+    assert drift.stamp_problem(new) is None and drift.stamp_problem(old) is None
+    assert _stored_check(new["verified_by"]) == _stored_check(old["verified_by"]) == ("pytest -q", "passed")
+    assert _stored_check("`true` exit 0 on commit a1b2c3d4e5f6 @ 2026-10-03T18:42Z") == ("true", None)
+
+    # ASSERT (2) — pointing the commit somewhere else by hand is refused, like the stamp.
+    assert "does not match the commit its evidence names" in drift.stamp_problem(
+        {**new, "verified_commit": "f" * 40})
+
+    # ASSERT (3) — an okl older than #102 looks for the stamp at the very end, and finds it.
+    assert re.search(r"@ (\d{4}-\d\d-\d\dT\d\d:\d\dZ)$", new["verified_by"])
+
+    # ASSERT (4) — the snapshot carries the commit, and reading it back keeps it.
+    nodes, problems = drift.nodes_from_snapshot({"format": drift.SNAPSHOT_FORMAT, "rules": [new, old]})
+    assert problems == [] and [n.verified_commit for n in nodes] == [sha, None]
+
+    # ASSERT (5) — a store created before the column existed gains it on open, with nothing
+    # to run, and its rows read as having recorded no commit until they are verified again.
+    db = tmp_path / "old.db"
+    c = sqlite3.connect(db)
+    c.execute("""CREATE TABLE node(id TEXT PRIMARY KEY, type TEXT NOT NULL, scope TEXT NOT NULL,
+        repo TEXT, title TEXT NOT NULL, body TEXT, status TEXT, found_by TEXT, verified_at INTEGER,
+        ttl_days INTEGER, owner TEXT, files TEXT, symptom TEXT, fix TEXT, tags TEXT,
+        verified_by TEXT, applies_to TEXT, created_at INTEGER NOT NULL)""")
+    c.execute("INSERT INTO node(id, type, scope, title, verified_at, created_at) "
+              "VALUES('old', 'Rule', 'org', 'an old rule', 1, 1)")
+    c.commit(); c.close()
+    s = Store(f"sqlite:///{db}")
+    assert s.get_node("old").verified_commit is None
+    core.verify(s, "old", new["verified_by"], commit=sha)
+    assert Store(f"sqlite:///{db}").get_node("old").verified_commit == sha
 
 
 def test_stack_detection(tmp_path):

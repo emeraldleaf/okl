@@ -9,6 +9,7 @@ import argparse
 import contextlib
 import json
 import os
+import re
 import shlex
 import sys
 from pathlib import Path
@@ -643,13 +644,26 @@ def cmd_verify(args) -> int:
               file=sys.stderr)
         return 1
     stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%MZ")
-    evidence = f"`{args.run}` exit 0" + (f", matched {args.expect!r}" if args.expect else "") + f" @ {stamp}"
+    # The commit the check passed at: drift diffs the governed files there against HEAD
+    # instead of comparing clocks (#102). It goes into the evidence before the stamp, which
+    # binds it in the committed snapshot and keeps older okl versions able to read it.
+    root = _snapshot_path().parent
+    commit = _head_commit(root)
+    evidence = (f"`{args.run}` exit 0" + (f", matched {args.expect!r}" if args.expect else "")
+                + (f" on commit {commit[:12]}" if commit else "") + f" @ {stamp}")
     try:
-        node = Client().verify(args.node_id, evidence)
+        node = Client().verify(args.node_id, evidence, commit=commit)
     except OKLUnreachableError as e:
         print(f"OKL UNREACHABLE — check passed but the stamp was NOT recorded.\n{e}", file=sys.stderr)
         return 2
     print(f"✓ verified {node['id']} — {node['title']}\n  evidence: {node['verified_by']}")
+    dirty = _uncommitted(root, node.get("files")) if commit else []
+    if dirty:
+        # The check saw these edits, but the stamp is the commit without them, so the lesson
+        # reads as changed the moment they are committed. Commit first, then verify.
+        print(f"  ! uncommitted changes to {', '.join(dirty[:3])}{' …' if len(dirty) > 3 else ''}: "
+              "commit them, then verify again, or this lesson will show as drifted",
+              file=sys.stderr)
     # Keep CI's view in step. A snapshot that exists is one CI reads, and re-verifying
     # without re-exporting leaves CI red for a rule that is green here -- the safe
     # direction, but a step everyone would forget. The FIRST snapshot is created here too,
@@ -667,6 +681,32 @@ def cmd_verify(args) -> int:
     return 0
 
 
+def _head_commit(root: Path) -> str | None:
+    """HEAD's full commit name for the repository at `root`, or None outside git."""
+    import subprocess
+    try:
+        out = subprocess.run(["git", "-C", str(root), "rev-parse", "--verify", "-q", "HEAD"],
+                             capture_output=True, text=True, timeout=15)
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return None
+    sha = out.stdout.strip()
+    return sha if out.returncode == 0 and re.fullmatch(r"[0-9a-f]{40,64}", sha) else None
+
+
+def _uncommitted(root: Path, files: str | None) -> list[str]:
+    """Governed paths with uncommitted changes, as git reports them (empty when clean)."""
+    import subprocess
+    specs = [g.strip() for g in (files or "").split(",") if g.strip()]
+    if not specs:
+        return []
+    try:
+        out = subprocess.run(["git", "-C", str(root), "status", "--porcelain", "--", *specs],
+                             capture_output=True, text=True, timeout=15)
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return []
+    return [line[3:] for line in out.stdout.splitlines() if len(line) > 3] if out.returncode == 0 else []
+
+
 def _stored_check(verified_by: str | None) -> tuple[str, str | None] | None:
     """The command and expected signal `okl verify` recorded, or None if there is none
     (never verified, or stamped by an import that carried no evidence)."""
@@ -681,6 +721,7 @@ def _stored_check(verified_by: str | None) -> tuple[str, str | None] | None:
     expect = None
     if rest.startswith(", matched "):
         lit = rest[len(", matched "):].rsplit(" @ ", 1)[0]
+        lit = re.sub(r" on commit [0-9a-f]{7,64}$", "", lit)   # the commit #102 records
         try:
             expect = ast.literal_eval(lit)
         except (ValueError, SyntaxError):

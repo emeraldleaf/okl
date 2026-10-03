@@ -195,7 +195,7 @@ and it is worth knowing which one catches what, because they do not overlap.
 
 | Drift | Caught by | How it works | Fires when |
 |---|---|---|---|
-| **A rule vs. the code it governs** | `okl drift --gate` | a record declares the path globs it governs; git is asked for the last commit touching them | that commit is newer than the record's last verification — or the rule has never been verified at all, so a new `--files` rule is red until its first `okl verify` |
+| **A rule vs. the code it governs** | `okl drift --gate` | a record declares the path globs it governs, and `okl verify` records the commit its check passed at | those files differ between that commit and HEAD (a verification with no recorded commit, or one this clone lacks, compares commit times instead) — or the rule has never been verified at all, so a new `--files` rule is red until its first `okl verify` |
 | **A retired identifier reappearing in prose** | `check-tombstones.sh` | greps the working tree's source, docs, comments and config for every tombstoned name | any non-allowlisted hit |
 | **A withdrawn claim being restated** | `check-retractions.sh` | greps the working tree's markdown for the exact quoted claim from the retraction registry | the quote appears outside the registry |
 | **A doc nobody links to** | `check-doc-orphans.sh` | checks that each top-level `docs/` doc or image is named by a hub file or a `docs/*.md` (one hop, not transitive) | nothing names it, so it drifts unread |
@@ -798,7 +798,7 @@ folder.) Two clarifications that stop the common misreadings:
    shipped writes `VERIFIED_ON` receipts by default; a gate script can emit one with
    `okl link <gate_id> VERIFIED_ON <defect_id>` when it watches a gate prove itself.
 4. **Time attacks every stamp** — `drift` re-grades verifications the moment governed
-   files change after `verified_at`; a record given `--ttl-days` decays into `STALE` when
+   files change after their last verification; a record given `--ttl-days` decays into `STALE` when
    nobody re-earns it (there is no TTL by default);
    and `okl metric` scores the whole system on outcomes — defect classes that came
    back — the one number it can't flatter itself on. It earns that by stating its own

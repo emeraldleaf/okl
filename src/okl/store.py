@@ -96,6 +96,7 @@ class Node:
     tags: str | None = None              # comma-sep subject labels ("react,security"); orthogonal to scope
     applies_to: str | None = None        # comma-sep stacks this lesson is VALID for; None/"any" = everywhere
     verified_by: str | None = None       # evidence trail: the observed check that last stamped verified_at
+    verified_commit: str | None = None   # git HEAD that check passed at; drift diffs the governed files there vs HEAD (#102)
     id: str = field(default_factory=lambda: new_id("n"))
     created_at: int = field(default_factory=_now_ms)
 
@@ -283,7 +284,8 @@ class _Backend(Protocol):
 
 _NODE_COLS = ["id", "type", "scope", "repo", "title", "body", "status",
               "found_by", "verified_at", "ttl_days", "owner", "files",
-              "symptom", "fix", "tags", "verified_by", "applies_to", "created_at"]
+              "symptom", "fix", "tags", "verified_by", "applies_to", "verified_commit",
+              "created_at"]
 
 
 def _row_to_node(row: dict[str, Any]) -> Node:
@@ -320,10 +322,11 @@ class _SQLiteBackend(_Backend):
             title TEXT NOT NULL, body TEXT, status TEXT, found_by TEXT,
             verified_at INTEGER, ttl_days INTEGER, owner TEXT,
             files TEXT, symptom TEXT, fix TEXT, tags TEXT, verified_by TEXT,
-            applies_to TEXT, created_at INTEGER NOT NULL)""")
+            applies_to TEXT, verified_commit TEXT, created_at INTEGER NOT NULL)""")
         # Idempotent migration: add columns introduced after v0.1 to pre-existing DBs.
         existing = {r[1] for r in c.execute("PRAGMA table_info(node)").fetchall()}
-        for col in ("files", "symptom", "fix", "tags", "verified_by", "applies_to"):
+        for col in ("files", "symptom", "fix", "tags", "verified_by", "applies_to",
+                    "verified_commit"):
             if col not in existing:
                 c.execute(f"ALTER TABLE node ADD COLUMN {col} TEXT")
         c.execute("""CREATE TABLE IF NOT EXISTS edge(
@@ -517,9 +520,10 @@ class _PostgresBackend(_Backend):
                 title TEXT NOT NULL, body TEXT, status TEXT, found_by TEXT,
                 verified_at BIGINT, ttl_days INTEGER, owner TEXT,
                 files TEXT, symptom TEXT, fix TEXT, tags TEXT, verified_by TEXT,
-                applies_to TEXT, created_at BIGINT NOT NULL)""")
+                applies_to TEXT, verified_commit TEXT, created_at BIGINT NOT NULL)""")
             # Idempotent migration for pre-existing tables.
-            for col in ("files", "symptom", "fix", "tags", "verified_by", "applies_to"):
+            for col in ("files", "symptom", "fix", "tags", "verified_by", "applies_to",
+                    "verified_commit"):
                 cur.execute(f"ALTER TABLE node ADD COLUMN IF NOT EXISTS {col} TEXT")
             cur.execute("""CREATE TABLE IF NOT EXISTS edge(
                 src TEXT NOT NULL, rel TEXT NOT NULL, dst TEXT NOT NULL, created_at BIGINT NOT NULL,

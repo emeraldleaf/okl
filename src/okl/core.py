@@ -9,6 +9,7 @@ search(query, ...)  -> targeted retrieval (progressive disclosure).
 """
 from __future__ import annotations
 
+import re
 from dataclasses import asdict
 from typing import Any
 
@@ -265,21 +266,31 @@ def link(store: Store, src: str, rel: str, dst: str) -> None:
     store.add_edge(Edge(src=src, rel=rel, dst=dst))
 
 
-def verify(store: Store, node_id: str, evidence: str) -> dict[str, Any]:
+def verify(store: Store, node_id: str, evidence: str, commit: str | None = None) -> dict[str, Any]:
     """Stamp a node verified from an OBSERVED check — never from assertion.
 
     `evidence` names the check that passed (the command + when). This is the
     store-side half of the verify-before-claiming rule: callers (the CLI, CI)
     must actually run the check first; this function just refuses to stamp
     without an evidence string and records it as the audit trail.
+
+    `commit` is the git HEAD the check passed at. Drift compares the governed files
+    there with HEAD instead of comparing clocks, which git keeps to the second (#102).
+    It is always overwritten, so a re-verification outside git cannot leave an older
+    commit standing in for a check it never saw.
     """
     if not evidence or not evidence.strip():
         raise ValueError("refusing to stamp verification without evidence — run a check and pass it")
+    # The commit reaches `git diff` later, so anything but a hex object name is refused
+    # here: a shared store is written by other people.
+    if commit is not None and not re.fullmatch(r"[0-9a-f]{7,64}", commit):
+        raise ValueError(f"commit must be a git object name (7-64 hex digits), got {commit!r}")
     n = store.get_node(node_id)
     if n is None:
         raise ValueError(f"no node with id {node_id!r}")
     n.verified_at = _now_ms()
     n.verified_by = evidence.strip()
+    n.verified_commit = commit
     store.add_node(n)
     return _node_public(n)
 
@@ -565,7 +576,8 @@ def _drift_tag(item: dict) -> str:
         return (f" *(UNVERIFIED — governs {files} but no check has passed; "
                 f"prove it: okl verify {item.get('id')} --run …)*")
     return (f" *(STALE — {files} changed {d['changed']}, after its last check on "
-            f"{d['verified']}; confirm against the code, re-check: okl reverify)*")
+            f"{d['verified']}; a lead, not a settled rule: re-run its check (okl reverify), "
+            "and if it fails, fix the code or change the lesson on purpose)*")
 
 
 def _render_actions(actions: list[dict]) -> list[str]:
