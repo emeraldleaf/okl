@@ -459,7 +459,7 @@ def cmd_doctor(args) -> int:
     # Informational: a choice, not a finding (#111). A diagnostic must not end in a
     # traceback, so an unreadable config simply does not report it (CodeRabbit on #112).
     try:
-        ci_off = bool(cfg) and json.loads(cfg.read_text()).get("ci") is False
+        ci_off = cfg is not None and json.loads(cfg.read_text()).get("ci") is False
     except (OSError, ValueError, AttributeError):
         ci_off = False
     if ci_off:

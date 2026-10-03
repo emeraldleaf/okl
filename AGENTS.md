@@ -34,6 +34,7 @@ and editing `KNOWN_TAGS` changes the floor every store ships with.
 ```bash
 pytest -q                          # full suite; must be green before any commit
 ruff check .                       # lint (config in pyproject.toml)
+mypy src/okl                       # types; CI runs it too, and it caught what pytest and ruff passed
 python3 evals/ab_harness.py --dry-run     # eval harness; see evals/README.md before running live
 okl drift                          # rules whose governed source changed after verification
 ```
