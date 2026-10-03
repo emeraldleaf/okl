@@ -2717,6 +2717,32 @@ def test_drift_reports_this_repos_lessons_whose_files_no_longer_exist(tmp_path, 
     assert "1 lesson(s) govern files that no longer exist here" in out and "[pixel]" in out, out
 
 
+def test_init_no_ci_skips_the_workflow_and_remembers_it(tmp_path, monkeypatch, capsys):
+    """#111: init always wrote .github/workflows/okl-verify.yml. In a private repo that
+    workflow spends the account's Actions minutes on every push, and deleting it did not
+    last, because init restores missing files by design. --no-ci skips it and is recorded
+    in .okl/config.json, so a later plain init keeps skipping it; --ci turns it back on."""
+    import subprocess
+
+    from okl.cli import main
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+    subprocess.run(["git", "init", "-q", "."], check=True)
+    wf = tmp_path / ".github" / "workflows" / "okl-verify.yml"
+    base = ["init", "--repo", "r", "--no-claude", "--no-seed"]
+
+    assert main([*base, "--no-ci"]) == 0
+    assert not wf.exists() and json.loads((tmp_path / ".okl" / "config.json").read_text())["ci"] is False
+    assert main(base) == 0 and not wf.exists(), "a later plain init must keep skipping it"
+    capsys.readouterr()
+    assert main([*base, "--dry-run"]) == 0 and "no CI workflow" in capsys.readouterr().out
+    main(["doctor"])
+    assert "drift is not gated in CI here" in capsys.readouterr().out
+    assert main([*base, "--ci"]) == 0 and wf.exists(), "--ci turns it back on"
+
+
 def test_the_verified_commit_is_bound_to_its_evidence_and_older_entries_still_read(tmp_path):
     """Drift now trusts the recorded commit to clear a rule, so a committed snapshot must not
     let it be edited on its own, any more than the timestamp can be. The commit is written

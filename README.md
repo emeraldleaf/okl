@@ -56,7 +56,9 @@ codebase plus the bundled packs for your stack, so the first prompt is already b
 (`--interests` chooses your own subjects; `--no-seed` leaves the store empty).
 
 `init` wires Claude Code when the repo has a `.claude/` directory or `claude` is on your
-PATH; `--claude` forces it and `--no-claude` skips it. **Prefer the plugin?** Install it
+PATH; `--claude` forces it and `--no-claude` skips it. `--no-ci` skips the GitHub Actions
+workflow, for a private repo that would pay for its minutes or one that runs another CI,
+and later runs remember that. **Prefer the plugin?** Install it
 *before* running `init` — `/plugin marketplace add emeraldleaf/okl`, then
 `/plugin install okl@okl` in Claude Code — and `init` leaves the hooks to the plugin, so
 nothing is wired twice. (Installed after? `okl doctor` reports the double wiring, and

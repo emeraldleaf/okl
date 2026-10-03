@@ -352,7 +352,9 @@ def _init_dry_run(args) -> int:
         print(f"  (no Claude Code hooks: {why})")
     else:
         print("  (no .claude/ here and Claude Code not found, so no hooks; `--claude` installs them anyway)")
-    if Path(".git").exists():
+    if Path(".git").exists() and not _ci_wanted(args, load_config()):
+        print("  (no CI workflow: --no-ci, or an earlier init recorded it)")
+    elif Path(".git").exists():
         print("  .github/workflows/okl-verify.yml        a CI workflow running the drift gate on PRs")
     else:
         print("  (not a git repository, so no CI workflow and no drift gate)")
@@ -368,6 +370,14 @@ def _init_dry_run(args) -> int:
     print("\nNothing is written outside this directory. Read the hooks before you register them:")
     print("  https://github.com/emeraldleaf/okl/blob/main/src/okl/scaffold/hooks/")
     return 0
+
+
+def _ci_wanted(args, cfg: dict) -> bool:
+    """Whether init installs the CI workflow: --ci/--no-ci when given, else what an earlier
+    init recorded (#111). Remembered because init restores missing files by design, so a
+    deleted workflow came back on the next run."""
+    flag = getattr(args, "ci", None)
+    return cfg.get("ci", True) if flag is None else flag
 
 
 def _init_interests(cfg: dict, args) -> None:
@@ -407,12 +417,18 @@ def cmd_init(args) -> int:
     # (agent harnesses don't inherit venv/pipx PATH entries). Machine-local by design —
     # .okl/ is gitignored; hooks fall back to PATH and `python3 -m okl` regardless.
     cfg["okl_bin"] = shutil.which("okl") or f"{sys.executable} -m okl"
+    if getattr(args, "ci", None) is not None:
+        cfg["ci"] = args.ci
     path = save_config(cfg)
     print(f"✓ wrote {path}  (repo={repo}, mode={'remote' if cfg.get('service_url') else 'local'}"
           + (f", interests={','.join(cfg['interests'])}" if cfg.get("interests") else "") + ")")
 
     _wire_claude_code(args)
-    _install_ci_verifier(force=getattr(args, "force", False))
+    if _ci_wanted(args, cfg):
+        _install_ci_verifier(force=getattr(args, "force", False))
+    else:
+        print("• no CI workflow (--no-ci, recorded in .okl/config.json); run `okl drift --gate` "
+              "from your own CI or a hook")
     if not getattr(args, "no_seed", False):
         _seed_first_run(Client())
     for line in _empty_store_guidance(Client()):
@@ -440,6 +456,10 @@ def cmd_doctor(args) -> int:
     twice = coexist.double_wiring(root, Path.home())
     if twice:
         print(f"\n! {twice}")
+    # Informational: a choice, not a finding (#111).
+    if cfg and json.loads(cfg.read_text()).get("ci") is False:
+        print("\n• drift is not gated in CI here (okl init --no-ci); run `okl drift --gate` from "
+              "another CI or a git hook")
     return 1 if (found or twice) else 0
 
 
@@ -1354,6 +1374,10 @@ def build_parser() -> argparse.ArgumentParser:
                     help="--claude wires Claude Code (hooks, settings, MCP) even with no .claude/ "
                          "and no `claude` on PATH; --no-claude skips it. Default: wire when "
                          ".claude/ exists or `claude` is on PATH")
+    pi.add_argument("--ci", action=argparse.BooleanOptionalAction, default=None,
+                    help="--no-ci skips the GitHub Actions drift workflow (a private repo pays for its "
+                         "minutes; another CI or a hook can run `okl drift --gate`) and records that in "
+                         ".okl/config.json so later runs skip it too; --ci turns it back on")
     pi.add_argument("--no-seed", dest="no_seed", action="store_true",
                     help="leave the store empty (by default init imports the starter lessons and "
                          "the bundled packs that match this repo's stack)")
