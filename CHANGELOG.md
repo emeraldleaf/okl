@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- **The prompt hook retries a briefly unavailable store before blocking.** Three tries over
+  about a second, so a prompt that lands while a repo rebuilds its gitignored store is
+  briefed instead of refused. A store that stays gone still blocks, with okl's reason; an
+  okl that cannot start is not retried. The fix had lived only in one repo's edited copy
+  of the hook (#91).
+
 ## 0.7.4
 
 - **`okl verify` / `okl reverify` treat a timeout as a failed check.** A check that
