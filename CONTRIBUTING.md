@@ -2,6 +2,7 @@
 
 Thanks for looking. This is a v0 project with one maintainer, so the most useful
 contributions are small, verifiable, and self-contained.
+Everyone taking part is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Setup
 
