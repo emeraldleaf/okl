@@ -924,7 +924,8 @@ def cmd_drift(args) -> int:
         print(f"OKL UNREACHABLE — cannot check drift.\n{e}", file=sys.stderr)
         return 2
     repo = args.repo or client.repo
-    return _report_drift(args, drift.scan_drift(nodes, repo, repo_dir=args.repo_dir))
+    return _report_drift(args, drift.scan_drift(nodes, repo, repo_dir=args.repo_dir),
+                         drift.governs_nothing(nodes, repo, args.repo_dir))
 
 
 def _drift_from_snapshot(args, client: Client) -> int:
@@ -947,17 +948,22 @@ def _drift_from_snapshot(args, client: Client) -> int:
               "`okl verify` for each and re-export:\n  " + "\n  ".join(problems), file=sys.stderr)
         return 2
     repo = args.repo or snap.get("repo") or client.repo
-    return _report_drift(args, drift.scan_drift(nodes, repo, repo_dir=args.repo_dir))
+    return _report_drift(args, drift.scan_drift(nodes, repo, repo_dir=args.repo_dir),
+                         drift.governs_nothing(nodes, repo, args.repo_dir))
 
 
-def _report_drift(args, scan) -> int:
+def _report_drift(args, scan, missing=()) -> int:
     from . import drift
     hits, checked = scan
+    # Lessons watching files that are gone are reported beside the drift, never as drift:
+    # the exit code is unchanged, because what to do with them is a decision (#109).
     if args.format == "json":
         _print_json({"drift": [h.as_dict() for h in hits], "count": len(hits),
-                     "checked": checked})
+                     "checked": checked,
+                     "governs_nothing": [{"node_id": n.id, "title": n.title, "files": n.files}
+                                         for n in missing]})
     else:
-        print(drift.render_drift(hits, checked))
+        print(drift.render_drift(hits, checked) + drift.render_governs_nothing(list(missing)))
     if not args.gate:
         return 0
     # Under --gate the exit code is the verdict, and it follows the CLI's contract:

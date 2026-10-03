@@ -2675,6 +2675,48 @@ def test_drift_compares_the_commit_a_check_passed_at_not_the_clock(store, tmp_pa
     assert "uncommitted changes to orders.py" in capsys.readouterr().err
 
 
+def test_drift_reports_this_repos_lessons_whose_files_no_longer_exist(tmp_path, monkeypatch, capsys):
+    """#109: a lesson governing src/components/PixelGlyph.astro, deleted on 2026-09-22, was
+    reported OK. Drift sees the deletion as the last change, and a lesson stamped after it
+    reads as unchanged, so it watched nothing and nothing said so. It is reported now, as a
+    finding beside the drift rather than drift: what to do with it is a decision."""
+    import subprocess
+
+    from okl import drift
+    from okl.cli import main
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+    git = ["git", "-c", "user.email=t@t", "-c", "user.name=t"]
+    subprocess.run(["git", "init", "-q", "."], check=True)
+    (tmp_path / "src").mkdir(); (tmp_path / "src" / "app.py").write_text("x = 1\n")
+    (tmp_path / "Glyph.astro").write_text("<svg/>\n")
+    subprocess.run([*git, "add", "-A"], check=True); subprocess.run([*git, "commit", "-qm", "i"], check=True)
+    subprocess.run([*git, "rm", "-q", "Glyph.astro"], check=True); subprocess.run([*git, "commit", "-qm", "rm"], check=True)
+
+    def rule(id, files, scope="repo:s", repo="s"):
+        return Node(type="Rule", title=id, scope=scope, repo=repo, files=files, verified_at=1, id=id)
+    rules = [rule("deleted", "Glyph.astro"),                            # gone: reported
+             rule("org-but-ours", "Glyph.astro", scope="org"),         # recorded here: reported
+             rule("never-existed", "src/*.zz"),                        # matches nothing: reported
+             rule("exists", "src/app.py"), rule("glob", "src/*.py"),   # present: quiet
+             rule("folder", "src"), rule("mixed", "Glyph.astro, src/app.py"),
+             rule("elsewhere", "src/**/*.cs", scope="org", repo="other")]  # another repo's: quiet
+    assert [n.id for n in drift.governs_nothing(rules, "s", str(tmp_path))] == \
+        ["deleted", "org-but-ours", "never-existed"]
+    assert drift.governs_nothing(rules, "s", str(tmp_path / "not-a-repo")) == []   # git can't say
+
+    # Through the CLI: reported under the drift output, exit code untouched.
+    assert main(["init", "--repo", "s", "--no-claude", "--no-seed"]) == 0
+    assert main(["record", "--type", "Rule", "--scope", "repo", "--id", "pixel",
+                 "--title", "Pixel shapes taper one cell per row", "--files", "Glyph.astro"]) == 0
+    capsys.readouterr()
+    assert main(["drift"]) == 0
+    out = capsys.readouterr().out
+    assert "1 lesson(s) govern files that no longer exist here" in out and "[pixel]" in out, out
+
+
 def test_the_verified_commit_is_bound_to_its_evidence_and_older_entries_still_read(tmp_path):
     """Drift now trusts the recorded commit to clear a rule, so a committed snapshot must not
     let it be edited on its own, any more than the timestamp can be. The commit is written
