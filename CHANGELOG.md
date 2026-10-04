@@ -10,7 +10,7 @@
   too old for `--compact` briefs in full instead of blocking the prompt.
 - **The briefing sizes the docs quote are measured, together, by `evals/briefing_size.py`.**
   The MCP `okl_check` description said the full briefing was ~2,300 tokens and the README
-  said ~1,650; on today's 178 seed records it is ~1,620, and the action list is ~230 at
+  said ~1,650; on today's 183 seed records it is ~1,620, and the action list is ~230 at
   `--limit 3` and ~810 at 12. The receipt is in `evals/results/`.
 - **A withdrawn record of any type is briefed as withdrawn.** Only a retracted Claim was
   treated that way; a Decision or Rule with status `retracted` was still briefed as live
@@ -20,13 +20,15 @@
   files it covers, the tests that already mention them, and a ready-to-run, shell-quoted
   `okl verify` command. It stamps nothing and exits 2. `okl drift` and `okl reverify` say in
   plain words what to do next.
-- **A Python canon: `okl seed python-canon`.** 17 lessons that translate the .NET packs'
+- **A Python canon: `okl seed python-canon`.** 22 lessons that translate the .NET packs'
   engineering rules to Python. Each one cites the sources that agree on it (PEPs 20, 257,
   544 and 735; the mypy, pytest and import-linter docs; Google's Python style guide; the
   Scientific Python development guide) and the okl change that adopted it. It covers the
   dependency rule as an import-linter contract, docstrings, type hints, size limits, strict
-  pytest, errors, mocks, choosing one type checker and one docstring format, and two dated
-  defects. Nothing in it claims verification: verify each lesson against your own repo.
+  pytest, errors, mocks, why `isinstance()` against a Protocol proves nothing about
+  signatures, one composition root, value objects at seams, a contract test over every
+  implementation, typing syntax by Python floor, choosing one type checker and one
+  docstring format, and two dated defects. Nothing in it claims verification: verify each lesson against your own repo.
   `okl init` imports it when it creates a new, empty store in a Python repo; a repo whose
   store already holds lessons runs `okl seed python-canon`.
 - **A command run where okl was never set up now refuses (exit 2) instead of writing to a

@@ -149,8 +149,8 @@ Two things ship in the package. They are not coequal:
   measures this.
 
   It is worth being precise about what that store fills up with, because "lessons a
-  codebase has learned" invites the picture of a bug database. In the 178-record corpus
-  in [seed/](seed/) it is mostly not that: **105 Rules, 20 Decisions and 7 Gates against
+  codebase has learned" invites the picture of a bug database. In the 183-record corpus
+  in [seed/](seed/) it is mostly not that: **110 Rules, 20 Decisions and 7 Gates against
   36 Defects** — conventions the code follows and trade-offs already settled, not a
   ledger of things that broke. Count it yourself:
 
@@ -463,8 +463,8 @@ Installing okl is not free. It is worth knowing exactly what you are signing up 
 before you wire it into every prompt. Every number below was measured rather than
 estimated, with one representative task ("add an endpoint that returns an order for the
 logged-in user"; tokens ≈ characters ÷ 4). The sizes come from a fresh store holding every
-bundled seed pack, 178 records (`python3 evals/briefing_size.py`, receipt
-[`evals/results/briefing-size-20261004-1543.json`](evals/results/briefing-size-20261004-1543.json)); the latency from the 161 seed records bundled before that.
+bundled seed pack, 183 records (`python3 evals/briefing_size.py`, receipt
+[`evals/results/briefing-size-20261004-2244.json`](evals/results/briefing-size-20261004-2244.json)); the latency from the 161 seed records bundled before that.
 Your store and your tasks will differ.
 
 **Per prompt, once the hook is installed:**
@@ -740,8 +740,8 @@ OKL — 3 rule(s) apply before you start:
 ...
 ```
 
-**Measured on every bundled seed pack (178 records), one representative task**
-([receipt](evals/results/briefing-size-20261004-1543.json)): ~230 tokens at `--limit 3`, ~380 at `--limit 5`, ~510 at
+**Measured on every bundled seed pack (183 records), one representative task**
+([receipt](evals/results/briefing-size-20261004-2244.json)): ~230 tokens at `--limit 3`, ~380 at `--limit 5`, ~510 at
 `--limit 8` and ~810 at `--limit 12`, against ~1,620 for the full briefing. Cheap enough
 to call per subtask.
 
