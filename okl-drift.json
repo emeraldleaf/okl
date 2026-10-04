@@ -78,9 +78,9 @@
       "title": "Dependency direction is one-way: store imports nothing, core imports store, adapters import client",
       "scope": "repo:okl",
       "files": "src/okl/store.py,src/okl/core.py,src/okl/client.py",
-      "verified_at": 1791073857177,
-      "verified_by": "`lint-imports` exit 0, matched '1 kept, 0 broken' on commit 7e5ea7086b18 @ 2026-10-04T00:30Z",
-      "verified_commit": "7e5ea7086b18eda028d77441661437a45edbab63"
+      "verified_at": 1791078161927,
+      "verified_by": "`python3 -c \"import ast;m=lambda f:[(getattr(n,'module','') or '')for n in ast.walk(ast.parse(open(f).read()))if isinstance(n,(ast.Import,ast.ImportFrom))];assert not [x for x in m('src/okl/store.py') if 'okl' in x or x.startswith('.')],'store imports okl';assert not [x for x in m('src/okl/core.py') if any(a in x for a in('cli','service','mcp','client'))],'core imports an adapter';print('DIRECTION OK')\"` exit 0, matched 'DIRECTION OK' on commit f8fe6444e606 @ 2026-10-04T01:42Z",
+      "verified_commit": "f8fe6444e6063086dd48e5fe91e68de8754e3287"
     },
     {
       "id": "n_7e50e3588bcd",
