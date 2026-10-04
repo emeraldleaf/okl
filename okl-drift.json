@@ -8,9 +8,9 @@
       "title": "The README's stated check defaults (limit 12; formats agent, actions, json, hook) match the code",
       "scope": "repo:okl",
       "files": "README.md,src/okl/core.py,src/okl/cli/",
-      "verified_at": 1791078141132,
-      "verified_by": "`PYTHONPATH=src python3 -c \"import inspect,re,subprocess,sys; from okl import core; d=inspect.signature(core.check).parameters[\\\"limit\\\"].default; h=subprocess.run([sys.executable,\\\"-m\\\",\\\"okl\\\",\\\"check\\\",\\\"--help\\\"],capture_output=True,text=True).stdout; fmts=re.search(r\\\"--format \\{([a-z,]+)\\}\\\",h).group(1).split(\\\",\\\"); r=open(\\\"README.md\\\").read(); missing=[f for f in fmts if f!=\\\"agent\\\" and \\\"--format \\\"+f not in r]; ok=d==12 and \\\"--limit 12\\\" in r and not missing; sys.exit(\\\"limit=%s, formats undocumented: %s\\\" % (d, missing)) if not ok else print(\\\"CHECK DEFAULTS MATCH\\\", fmts)\"` exit 0, matched 'CHECK DEFAULTS MATCH' on commit b6766faeaa73 @ 2026-10-04T01:42Z",
-      "verified_commit": "b6766faeaa73472bad95fb9cb8200daed87ba7df"
+      "verified_at": 1791078316527,
+      "verified_by": "`PYTHONPATH=src python3 -c \"import inspect,re,subprocess,sys; from okl import core; d=inspect.signature(core.check).parameters[\\\"limit\\\"].default; h=subprocess.run([sys.executable,\\\"-m\\\",\\\"okl\\\",\\\"check\\\",\\\"--help\\\"],capture_output=True,text=True).stdout; fmts=re.search(r\\\"--format \\{([a-z,]+)\\}\\\",h).group(1).split(\\\",\\\"); r=open(\\\"README.md\\\").read(); missing=[f for f in fmts if f!=\\\"agent\\\" and \\\"--format \\\"+f not in r]; ok=d==12 and \\\"--limit 12\\\" in r and not missing; sys.exit(\\\"limit=%s, formats undocumented: %s\\\" % (d, missing)) if not ok else print(\\\"CHECK DEFAULTS MATCH\\\", fmts)\"` exit 0, matched 'CHECK DEFAULTS MATCH' on commit 6926208b23c5 @ 2026-10-04T01:45Z",
+      "verified_commit": "6926208b23c57a80038375439c0b42391b307e45"
     },
     {
       "id": "doc-init-flags",
@@ -28,9 +28,9 @@
       "title": "The install command in the README and guide names the real PyPI distribution",
       "scope": "repo:okl",
       "files": "README.md,docs/GETTING-STARTED.md,pyproject.toml",
-      "verified_at": 1791078141580,
-      "verified_by": "`python3 -c \"import tomllib,sys; n=tomllib.load(open(\\\"pyproject.toml\\\",\\\"rb\\\"))[\\\"project\\\"][\\\"name\\\"]; line=\\\"pipx install '\\\"+n+\\\"[mcp]'\\\"; bad=[f for f in (\\\"README.md\\\",\\\"docs/GETTING-STARTED.md\\\") if line not in open(f).read()]; sys.exit(\\\"install line missing in %s\\\" % bad) if bad else print(\\\"INSTALL LINE MATCHES\\\", n)\"` exit 0, matched 'INSTALL LINE MATCHES' on commit b6766faeaa73 @ 2026-10-04T01:42Z",
-      "verified_commit": "b6766faeaa73472bad95fb9cb8200daed87ba7df"
+      "verified_at": 1791078316577,
+      "verified_by": "`python3 -c \"import tomllib,sys; n=tomllib.load(open(\\\"pyproject.toml\\\",\\\"rb\\\"))[\\\"project\\\"][\\\"name\\\"]; line=\\\"pipx install '\\\"+n+\\\"[mcp]'\\\"; bad=[f for f in (\\\"README.md\\\",\\\"docs/GETTING-STARTED.md\\\") if line not in open(f).read()]; sys.exit(\\\"install line missing in %s\\\" % bad) if bad else print(\\\"INSTALL LINE MATCHES\\\", n)\"` exit 0, matched 'INSTALL LINE MATCHES' on commit 6926208b23c5 @ 2026-10-04T01:45Z",
+      "verified_commit": "6926208b23c57a80038375439c0b42391b307e45"
     },
     {
       "id": "doc-verified-refused",
@@ -58,9 +58,9 @@
       "title": "Read a record's own body before gating it — it may already declare its portability",
       "scope": "org",
       "files": "seed/,src/okl/store.py",
-      "verified_at": 1791078140941,
-      "verified_by": "`python3 -c \"import json;n=[x for x in json.load(open('seed/geospatial-defects.json'))['nodes'] if x.get('key')=='g_classpath'][0];assert not n.get('applies_to'),'g_classpath gated again';print('PORTABLE GATE UNGATED')\"` exit 0, matched 'PORTABLE GATE UNGATED' on commit b6766faeaa73 @ 2026-10-04T01:42Z",
-      "verified_commit": "b6766faeaa73472bad95fb9cb8200daed87ba7df"
+      "verified_at": 1791078316385,
+      "verified_by": "`python3 -c \"import json;n=[x for x in json.load(open('seed/geospatial-defects.json'))['nodes'] if x.get('key')=='g_classpath'][0];assert not n.get('applies_to'),'g_classpath gated again';print('PORTABLE GATE UNGATED')\"` exit 0, matched 'PORTABLE GATE UNGATED' on commit 6926208b23c5 @ 2026-10-04T01:45Z",
+      "verified_commit": "6926208b23c57a80038375439c0b42391b307e45"
     },
     {
       "id": "n_4a398f2f8095",
@@ -68,9 +68,9 @@
       "title": "The core and client path stays stdlib-only — every third-party import lives behind an extra",
       "scope": "repo:okl",
       "files": "src/okl/core.py,src/okl/client.py,src/okl/store.py,pyproject.toml",
-      "verified_at": 1791078137737,
-      "verified_by": "`python3 -c \"import ast;third={'fastapi','pydantic','httpx','requests','psycopg','psycopg2','uvicorn','mcp','yaml'};bad=[(f,getattr(n,'module','') or '')for f in('src/okl/store.py','src/okl/core.py','src/okl/client.py')for n in ast.parse(open(f).read()).body if isinstance(n,(ast.Import,ast.ImportFrom))and((getattr(n,'module','')or '').split('.')[0]in third or any(a.name.split('.')[0]in third for a in n.names))];assert not bad,bad;print('STDLIB OK')\"` exit 0, matched 'STDLIB OK' on commit b6766faeaa73 @ 2026-10-04T01:42Z",
-      "verified_commit": "b6766faeaa73472bad95fb9cb8200daed87ba7df"
+      "verified_at": 1791078313507,
+      "verified_by": "`python3 -c \"import ast;third={'fastapi','pydantic','httpx','requests','psycopg','psycopg2','uvicorn','mcp','yaml'};bad=[(f,getattr(n,'module','') or '')for f in('src/okl/store.py','src/okl/core.py','src/okl/client.py')for n in ast.parse(open(f).read()).body if isinstance(n,(ast.Import,ast.ImportFrom))and((getattr(n,'module','')or '').split('.')[0]in third or any(a.name.split('.')[0]in third for a in n.names))];assert not bad,bad;print('STDLIB OK')\"` exit 0, matched 'STDLIB OK' on commit 6926208b23c5 @ 2026-10-04T01:45Z",
+      "verified_commit": "6926208b23c57a80038375439c0b42391b307e45"
     },
     {
       "id": "n_71c09abf3f37",
@@ -78,9 +78,9 @@
       "title": "Dependency direction is one-way: store imports nothing, core imports store, adapters import client",
       "scope": "repo:okl",
       "files": "src/okl/store.py,src/okl/core.py,src/okl/client.py",
-      "verified_at": 1791078161927,
-      "verified_by": "`python3 -c \"import ast;m=lambda f:[(getattr(n,'module','') or '')for n in ast.walk(ast.parse(open(f).read()))if isinstance(n,(ast.Import,ast.ImportFrom))];assert not [x for x in m('src/okl/store.py') if 'okl' in x or x.startswith('.')],'store imports okl';assert not [x for x in m('src/okl/core.py') if any(a in x for a in('cli','service','mcp','client'))],'core imports an adapter';print('DIRECTION OK')\"` exit 0, matched 'DIRECTION OK' on commit f8fe6444e606 @ 2026-10-04T01:42Z",
-      "verified_commit": "f8fe6444e6063086dd48e5fe91e68de8754e3287"
+      "verified_at": 1791078316821,
+      "verified_by": "`lint-imports` exit 0, matched '1 kept, 0 broken' on commit 6926208b23c5 @ 2026-10-04T01:45Z",
+      "verified_commit": "6926208b23c57a80038375439c0b42391b307e45"
     },
     {
       "id": "n_7e50e3588bcd",
@@ -98,9 +98,9 @@
       "title": "Pre-flight the retrieval before spending on an eval — it is deterministic and answers in milliseconds",
       "scope": "org",
       "files": "evals/preflight.py,evals/ab_harness.py",
-      "verified_at": 1791078133722,
-      "verified_by": "`python3 evals/preflight.py` exit 0, matched 'PRE-FLIGHT OK' on commit b6766faeaa73 @ 2026-10-04T01:42Z",
-      "verified_commit": "b6766faeaa73472bad95fb9cb8200daed87ba7df"
+      "verified_at": 1791078309746,
+      "verified_by": "`python3 evals/preflight.py` exit 0, matched 'PRE-FLIGHT OK' on commit 6926208b23c5 @ 2026-10-04T01:45Z",
+      "verified_commit": "6926208b23c57a80038375439c0b42391b307e45"
     },
     {
       "id": "n_aa3e45a2ecd6",
@@ -108,9 +108,9 @@
       "title": "Provenance references rot precisely because nothing reads them — validate them at startup",
       "scope": "org",
       "files": "evals/ab_harness.py,evals/tasks.jsonl",
-      "verified_at": 1791078133513,
-      "verified_by": "`python3 evals/preflight.py` exit 0, matched 'PRE-FLIGHT OK' on commit b6766faeaa73 @ 2026-10-04T01:42Z",
-      "verified_commit": "b6766faeaa73472bad95fb9cb8200daed87ba7df"
+      "verified_at": 1791078309638,
+      "verified_by": "`python3 evals/preflight.py` exit 0, matched 'PRE-FLIGHT OK' on commit 6926208b23c5 @ 2026-10-04T01:45Z",
+      "verified_commit": "6926208b23c57a80038375439c0b42391b307e45"
     },
     {
       "id": "n_b74bad29fd87",
@@ -118,9 +118,9 @@
       "title": "A port is defined by behaviour, not by its signatures — state the contract and test every adapter against one body",
       "scope": "org",
       "files": "src/okl/store.py,tests/test_okl.py",
-      "verified_at": 1791078140730,
-      "verified_by": "`python3 -m pytest -q -k 'backend_conformance'` exit 0, matched 'passed' on commit b6766faeaa73 @ 2026-10-04T01:42Z",
-      "verified_commit": "b6766faeaa73472bad95fb9cb8200daed87ba7df"
+      "verified_at": 1791078316335,
+      "verified_by": "`python3 -m pytest -q -k 'backend_conformance'` exit 0, matched 'passed' on commit 6926208b23c5 @ 2026-10-04T01:45Z",
+      "verified_commit": "6926208b23c57a80038375439c0b42391b307e45"
     },
     {
       "id": "n_be9f13d587b1",
@@ -128,9 +128,9 @@
       "title": "A swappable backend must match on quality, not just interface — the Postgres path had no ranking at all",
       "scope": "org",
       "files": "src/okl/store.py",
-      "verified_at": 1791078136968,
-      "verified_by": "`python3 -m pytest -q -k 'postgres_search_is_ranked_fulltext or backend_conformance or tsvector_covers_tags'` exit 0, matched 'passed' on commit b6766faeaa73 @ 2026-10-04T01:42Z",
-      "verified_commit": "b6766faeaa73472bad95fb9cb8200daed87ba7df"
+      "verified_at": 1791078312877,
+      "verified_by": "`python3 -m pytest -q -k 'postgres_search_is_ranked_fulltext or backend_conformance or tsvector_covers_tags'` exit 0, matched 'passed' on commit 6926208b23c5 @ 2026-10-04T01:45Z",
+      "verified_commit": "6926208b23c57a80038375439c0b42391b307e45"
     },
     {
       "id": "n_d45d7bf64896",
@@ -148,9 +148,9 @@
       "title": "PyPI rejects a package name as 'too similar' to an existing one — with a bare 400 that hides the reason",
       "scope": "org",
       "files": "pyproject.toml",
-      "verified_at": 1791078137792,
-      "verified_by": "`python3 -c \"import tomllib;p=tomllib.load(open('pyproject.toml','rb'))['project'];assert p['name']!='okl';assert p['scripts'].get('okl');print('NAME OK',p['name'])\"` exit 0, matched 'NAME OK' on commit b6766faeaa73 @ 2026-10-04T01:42Z",
-      "verified_commit": "b6766faeaa73472bad95fb9cb8200daed87ba7df"
+      "verified_at": 1791078313558,
+      "verified_by": "`python3 -c \"import tomllib;p=tomllib.load(open('pyproject.toml','rb'))['project'];assert p['name']!='okl';assert p['scripts'].get('okl');print('NAME OK',p['name'])\"` exit 0, matched 'NAME OK' on commit 6926208b23c5 @ 2026-10-04T01:45Z",
+      "verified_commit": "6926208b23c57a80038375439c0b42391b307e45"
     },
     {
       "id": "n_ead8e0a2b43d",
@@ -158,9 +158,9 @@
       "title": "A gate that reads commit times needs merge commits — squash and rebase restamp history at merge time",
       "scope": "org",
       "files": "CONTRIBUTING.md,src/okl/drift.py",
-      "verified_at": 1791078137549,
-      "verified_by": "`gh api repos/emeraldleaf/okl --jq 'if .allow_squash_merge or .allow_rebase_merge then error(\"squash or rebase enabled\") else \"MERGE COMMITS ONLY\" end'` exit 0, matched 'MERGE COMMITS ONLY' on commit b6766faeaa73 @ 2026-10-04T01:42Z",
-      "verified_commit": "b6766faeaa73472bad95fb9cb8200daed87ba7df"
+      "verified_at": 1791078313433,
+      "verified_by": "`gh api repos/emeraldleaf/okl --jq 'if .allow_squash_merge or .allow_rebase_merge then error(\"squash or rebase enabled\") else \"MERGE COMMITS ONLY\" end'` exit 0, matched 'MERGE COMMITS ONLY' on commit 6926208b23c5 @ 2026-10-04T01:45Z",
+      "verified_commit": "6926208b23c57a80038375439c0b42391b307e45"
     }
   ]
 }

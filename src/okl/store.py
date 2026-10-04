@@ -14,6 +14,7 @@ import contextlib
 import os
 import time
 import uuid
+import weakref
 from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field
 from typing import Any, Protocol, runtime_checkable
@@ -297,6 +298,18 @@ def _row_to_node(row: dict[str, Any]) -> Node:
     return Node(**{k: row[k] for k in _NODE_COLS if k in row})
 
 
+def _close_when_collected(owner: object, conn: Any) -> weakref.finalize:
+    """Close `conn` when `owner` is garbage-collected, unless something closed it first.
+
+    The CLI opens a store for each command and never closes it, which was harmless until
+    Python 3.13 began warning about every connection that is never closed ("unclosed
+    database"); the strict pytest config turns those warnings into failures. Python's
+    docs recommend `weakref.finalize` over `__del__` for this. Calling the returned
+    finalizer closes the connection now, and a second call does nothing.
+    """
+    return weakref.finalize(owner, conn.close)
+
+
 # ---------------------------------------------------------------------------
 # SQLite backend (default) — FTS5 full-text search
 # ---------------------------------------------------------------------------
@@ -308,6 +321,7 @@ class _SQLiteBackend(_Backend):
         # check_same_thread=False so the FastAPI threadpool can share the conn;
         # a lock serializes access since sqlite3 connections aren't thread-safe.
         self.conn = sqlite3.connect(path, check_same_thread=False)
+        self._closer = _close_when_collected(self, self.conn)
         self.conn.row_factory = sqlite3.Row
         self._lock = threading.RLock()  # reentrant: neighbors() calls get_node()
         # :memory: and some filesystems do not support WAL; the store works without it.
@@ -463,7 +477,7 @@ class _SQLiteBackend(_Backend):
             return [_row_to_node(dict(r)) for r in self.conn.execute("SELECT * FROM node").fetchall()]
 
     def close(self):
-        self.conn.close()
+        self._closer()
 
 
 def _fts_query(q: str) -> str:
@@ -512,6 +526,7 @@ class _PostgresBackend(_Backend):
             ) from e
         self.psycopg = psycopg
         self.conn = psycopg.connect(url, autocommit=True)
+        self._closer = _close_when_collected(self, self.conn)
 
     def init_schema(self):
         with self.conn.cursor() as cur:
@@ -560,7 +575,8 @@ class _PostgresBackend(_Backend):
     def _fetch(self, sql, params):
         with self.conn.cursor() as cur:
             cur.execute(sql, params)
-            cols = [d.name for d in cur.description]
+            # description is None only for statements that return no rows; _fetch runs SELECTs.
+            cols = [d.name for d in cur.description or ()]
             return [dict(zip(cols, row, strict=True)) for row in cur.fetchall()]
 
     def get_node(self, node_id):
@@ -620,4 +636,4 @@ class _PostgresBackend(_Backend):
         return [_row_to_node(r) for r in self._fetch("SELECT * FROM node", ())]
 
     def close(self):
-        self.conn.close()
+        self._closer()

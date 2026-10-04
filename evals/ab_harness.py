@@ -177,7 +177,7 @@ def main() -> int:
         try:
             prior.append(json.loads(p.read_text()))
             last_name = p.name
-        # noqa justified: one corrupt receipt must not stop a run, and this loops over a
+        # Why the noqa below: one corrupt receipt must not stop a run, and this loops over a
         # handful of files once at startup — PERF203's hot-loop concern does not apply.
         except (OSError, ValueError):  # noqa: PERF203
             continue

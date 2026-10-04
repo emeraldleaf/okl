@@ -24,8 +24,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from okl import core  # noqa: E402
-from okl.client import Client, load_config  # noqa: E402
+from okl import core
+from okl.client import Client, load_config
 
 REPO = Path(__file__).resolve().parent.parent
 

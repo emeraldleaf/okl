@@ -33,10 +33,13 @@ it is the actual contract. The parts that will fail your build if you miss them:
   `src/okl/scaffold/gates/` twins, and `CLAUDE.md` and `AGENTS.md`. Edit one, copy to the
   others in the same change. `tests/test_scaffold.py::test_mirror_files_identical`
   enforces it.
-- **CI runs more than the tests.** `ruff check .`, `mypy src/okl`, `pytest -q --cov=okl`
-  (the coverage floor is `fail_under` in `pyproject.toml`, currently 66%),
-  `./ci/check-diagram-figures.sh` and `bash gates/run-gates.sh` all gate the build; see
-  `.github/workflows/ci.yml`. Run them locally before pushing.
+- **CI runs more than the tests.** `ruff check .`, `mypy src/okl`, `lint-imports` (the
+  layers contract in `pyproject.toml`: store imports nothing of okl's, core imports store,
+  and so on up to the CLI), `pytest -q --cov=okl` (the coverage floor is `fail_under` in
+  `pyproject.toml`, currently 66%), `./ci/check-diagram-figures.sh` and
+  `bash gates/run-gates.sh` all gate the build, and the tests run again on every Python
+  version okl supports; see `.github/workflows/ci.yml`. Run them locally before pushing.
+  pytest is strict: any warning fails the test that raised it.
 - **The `okl-verify` check can fail on your PR, and that is not yours to fix.** CI reads
   the committed `okl-drift.json`: the rules that govern files, and when each was last
   verified. Change a governed file and CI names the rules that need re-checking. The
