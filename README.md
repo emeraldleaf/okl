@@ -150,7 +150,7 @@ Two things ship in the package. They are not coequal:
 
   It is worth being precise about what that store fills up with, because "lessons a
   codebase has learned" invites the picture of a bug database. In the 178-record corpus
-  in [seed/](seed/) it is mostly not that: **103 Rules, 22 Decisions and 7 Gates against
+  in [seed/](seed/) it is mostly not that: **105 Rules, 20 Decisions and 7 Gates against
   36 Defects** — conventions the code follows and trade-offs already settled, not a
   ledger of things that broke. Count it yourself:
 
@@ -461,7 +461,7 @@ pip install "observed-knowledge-ledger[all]"
 
 Installing okl is not free. It is worth knowing exactly what you are signing up for
 before you wire it into every prompt. Every number below was measured rather than
-estimated — on a fresh store holding the 161 bundled seed records, with one representative
+estimated — on a fresh store holding the 161 seed records bundled at the time, with one representative
 task ("add an endpoint that returns an order for the logged-in user"; tokens ≈ characters
 ÷ 4). Your store and your tasks will differ.
 
@@ -734,7 +734,7 @@ OKL — 3 rule(s) apply before you start:
 ...
 ```
 
-**Measured on the 161 bundled seed records, one representative task:** ~230 tokens at
+**Measured on the 161 seed records bundled at the time, one representative task:** ~230 tokens at
 `--limit 3`, ~380 at `--limit 5`, ~520 at `--limit 8` and ~830 at `--limit 12`, against
 ~1,650 for the full briefing. Cheap enough to call per subtask.
 
@@ -827,7 +827,7 @@ okl seed --all                        # import every pack (explicit on purpose)
 The packs hold real, dated records from production codebases (a .NET service, a
 geospatial ML pipeline, a Python RAG service, a React app), plus `python-canon`: the .NET
 packs' engineering rules translated to Python from cited sources (PEPs, the mypy, pytest
-and import-linter docs, Google's style guide), with the incidents that proved them in okl. They are org-scoped, so
+and import-linter docs, Google's style guide), with the okl incidents that prompted them. They are org-scoped, so
 importing packs for stacks you do not use fills every briefing here with noise about
 frameworks you will never touch — which is why `--all` is opt-in rather than default.
 
