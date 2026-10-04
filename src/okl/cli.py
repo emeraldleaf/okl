@@ -775,11 +775,17 @@ def _suggest_check(node_id: str) -> int:
             print("\nTests that mention those files, the likeliest checks:")
             for t in tests:
                 print(f"  {t}")
-            run = f"pytest -q {tests[0]}" if tests[0].endswith(".py") else "<the command that runs that test>"
+            # Quoted, because the user pastes this and `okl verify --run` hands it to a shell:
+            # a tracked test file named `a; rm -rf x.py` must arrive as one argument.
+            run = (f"pytest -q {shlex.quote(tests[0])}" if tests[0].endswith(".py")
+                   else "<the command that runs that test>")
             print(f"\nIf one of them fails when the lesson is broken, prove the lesson with it:\n"
-                  f"  okl verify {node.id} --run \"{run}\" --expect \"passed\"")
+                  f"  okl verify {shlex.quote(node.id)} --run {shlex.quote(run)} --expect passed")
         else:
-            print("\nNo test mentions those files yet, so a check has to be written first.")
+            # A search miss, not proof: a test can cover a lesson by driving the command
+            # without ever naming the file.
+            print("\nNo test mentions those files by name. One may still cover the lesson by driving\n"
+                  "the command instead, so look for it before writing a new check.")
     print("\nOr ask your agent to prove it: it reads the lesson, finds or writes a test that fails\n"
           "when the lesson is broken, runs it, and records the result. Nothing was stamped.")
     return 2
