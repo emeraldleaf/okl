@@ -461,16 +461,18 @@ pip install "observed-knowledge-ledger[all]"
 
 Installing okl is not free. It is worth knowing exactly what you are signing up for
 before you wire it into every prompt. Every number below was measured rather than
-estimated — on a fresh store holding the 161 seed records bundled at the time, with one representative
-task ("add an endpoint that returns an order for the logged-in user"; tokens ≈ characters
-÷ 4). Your store and your tasks will differ.
+estimated, with one representative task ("add an endpoint that returns an order for the
+logged-in user"; tokens ≈ characters ÷ 4). The sizes come from a fresh store holding every
+bundled seed pack, 178 records (`python3 evals/briefing_size.py`, receipt
+[`evals/results/briefing-size-20261004-1543.json`](evals/results/briefing-size-20261004-1543.json)); the latency from the 161 seed records bundled before that.
+Your store and your tasks will differ.
 
 **Per prompt, once the hook is installed:**
 
 | | |
 |---|---|
 | Latency | **~0.1s** for the whole `okl check` process (0.07s median warm) — one local SQLite query, no network in local mode |
-| Context | **~1,650 tokens** at the default `--limit 12`, down to **~230** at `--format actions --limit 3` |
+| Context | **~1,620 tokens** at the default `--limit 12`, down to **~230** for only the action list at `--limit 3` |
 
 **Per session:** the Stop hook interrupts once at the end to ask what was learned. It
 blocks the first stop only, and answering it is the whole write side of the loop. With
@@ -506,6 +508,10 @@ okl init --interests "python,security"    # drop records tagged for stacks you d
 - **`--limit N`** caps how many records are drawn on. The full briefing reports how many
   it trimmed; `--format actions` does not, so a short actions list can hide a miss
   without saying so.
+- **The prompt hook takes two of these from the environment**: `OKL_BRIEFING_LIMIT=N`
+  becomes `--limit N`, and `OKL_BRIEFING_COMPACT=1` sends only the action list. They are
+  for a model with a small context window; see
+  [Subagents and small context budgets](#subagents-and-small-context-budgets).
 - **`interests`** is the one to reach for on a mature shared store. Tags filter
   inclusively — an org record passes when it is untagged or shares any one tag with your
   interests, so declaring `python` keeps out a record tagged only `dotnet`, but not one
@@ -713,7 +719,7 @@ okl metric           # recurrence: defect classes that came back, split by wheth
 
 ## Subagents and small context budgets
 
-A full briefing costs roughly **1,650 tokens** on the measurement above — fine for a main session with a large
+A full briefing costs roughly **1,620 tokens** on the measurement above — fine for a main session with a large
 window, punishing for a subagent working in a few thousand. That asymmetry matters
 because subagents are exactly where org rules get lost: a focused worker handling one
 subtask has the least context and the most need for "here is the mistake this codebase
@@ -734,9 +740,19 @@ OKL — 3 rule(s) apply before you start:
 ...
 ```
 
-**Measured on the 161 seed records bundled at the time, one representative task:** ~230 tokens at
-`--limit 3`, ~380 at `--limit 5`, ~520 at `--limit 8` and ~830 at `--limit 12`, against
-~1,650 for the full briefing. Cheap enough to call per subtask.
+**Measured on every bundled seed pack (178 records), one representative task**
+([receipt](evals/results/briefing-size-20261004-1543.json)): ~230 tokens at `--limit 3`, ~380 at `--limit 5`, ~510 at
+`--limit 8` and ~810 at `--limit 12`, against ~1,620 for the full briefing. Cheap enough
+to call per subtask.
+
+The same holds for a main session on a model with a small context window, where the
+briefing arrives with every prompt. Set `OKL_BRIEFING_COMPACT=1` and the prompt hook sends
+only the action list (`okl check --compact`); set `OKL_BRIEFING_LIMIT=5` and it draws on
+five records instead of twelve. Together that is ~380 tokens instead of ~1,620 on the
+measurement above. Set them where the agent starts: hooks inherit its environment. A
+limit that is not a whole number above zero is ignored, and an okl too old for
+`--compact` briefs in full rather than blocking the prompt. Like `--format actions`, the
+compact briefing does not say how many records it trimmed.
 
 The full briefing is itself capped: `check` keeps the top `--limit` records (12 by
 default) from the ranked, filtered set and says how many it trimmed. Historically, before

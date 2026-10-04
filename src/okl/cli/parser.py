@@ -59,6 +59,10 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
     pk.add_argument("--limit", type=int, default=None,
                     help="cap how many records the briefing draws on (and how many actions "
                          "'--format actions' prints). Use with subagents on a token budget.")
+    pk.add_argument("--compact", action="store_true",
+                    help="only the action list, in the agent and hook formats: roughly half the "
+                         "tokens at the same --limit. For models with a small context window; "
+                         "the prompt hook sets it from OKL_BRIEFING_COMPACT=1.")
     pk.add_argument("--interests", default=None,
                     help="override this repo's configured subject tags for this call. Pass "
                          "an empty string to disable interest filtering entirely — the eval "

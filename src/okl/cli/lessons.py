@@ -14,6 +14,14 @@ from .common import _print_json
 from .packs import _empty_store_guidance
 
 
+def _briefing_text(result: dict[str, Any], args: argparse.Namespace) -> str:
+    """The briefing for the agent: in full, or only its action list under --compact."""
+    # getattr, as for interests in cmd_check: a library caller's Namespace may not have it.
+    if getattr(args, "compact", False):
+        return core.render_actions_only(result, limit=args.limit)
+    return core.render_check_for_agent(result)
+
+
 def cmd_check(args: argparse.Namespace) -> int:
     """Print the lessons that apply to `--task`, in the shape `--format` names.
 
@@ -59,7 +67,7 @@ def cmd_check(args: argparse.Namespace) -> int:
         # context, and one line the person can see. OKL_QUIET=1 keeps the line out.
         out: dict[str, Any] = {"hookSpecificOutput": {
             "hookEventName": "UserPromptSubmit",
-            "additionalContext": core.render_check_for_agent(result)}}
+            "additionalContext": _briefing_text(result, args)}}
         notice = None if os.environ.get("OKL_QUIET") == "1" else core.briefing_notice(result)
         if notice:
             out["systemMessage"] = notice
@@ -71,7 +79,7 @@ def cmd_check(args: argparse.Namespace) -> int:
         # compact: the imperative list only, for small-context callers (subagents, CI)
         print(core.render_actions_only(result, limit=args.limit))
     else:
-        print(core.render_check_for_agent(result))
+        print(_briefing_text(result, args))
     # stdout is what the UserPromptSubmit hook hands the agent; setup advice is for the
     # person, so it goes to stderr and never enters the agent's context. Skipped for json,
     # whose consumers parse the output.

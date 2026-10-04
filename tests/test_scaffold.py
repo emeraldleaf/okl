@@ -1518,6 +1518,48 @@ def test_prompt_hook_passes_hook_json_through_and_falls_back_for_an_older_okl(tm
     assert r.returncode == 0 and "OKL briefing (agent format)" in r.stdout, (r.returncode, r.stdout, r.stderr)
 
 
+
+def test_prompt_hook_shrinks_the_briefing_on_request_and_survives_an_older_okl(tmp_path):
+    """A full briefing is roughly 1,600 tokens on every prompt, a fifth of a small model's
+    window. OKL_BRIEFING_LIMIT and OKL_BRIEFING_COMPACT=1 shrink it. Only a whole number
+    above zero becomes --limit, so nothing else from the environment reaches okl; and an
+    okl too old for --compact gets the full briefing rather than a blocked prompt."""
+    import json
+    hook = Path(__file__).resolve().parents[1] / "src" / "okl" / "scaffold" / "hooks" / "userpromptsubmit-okl-check.sh"
+    (tmp_path / ".okl").mkdir(); (tmp_path / ".okl" / "config.json").write_text('{"repo": "t"}')
+    stub, seen = tmp_path / "okl", tmp_path / "args.txt"
+    base = {"PATH": os.environ["PATH"], "HOME": str(tmp_path), "TMPDIR": str(tmp_path),
+            "OKL_BIN": str(stub), "CLAUDE_PROJECT_DIR": str(tmp_path)}
+    payload = '{"hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext": "B"}}'
+
+    def run(body, **extra):
+        stub.write_text("#!/bin/sh\n" + body + "\n"); stub.chmod(0o755)
+        seen.write_text("")
+        return subprocess.run(["bash", str(hook)], cwd=tmp_path, text=True, env={**base, **extra},
+                              input=json.dumps({"prompt": "x"}), capture_output=True)
+
+    record_and_brief = f'echo "$@" >> {seen}; echo \'{payload}\''
+
+    # ASSERT (1) — both settings reach okl as flags.
+    r = run(record_and_brief, OKL_BRIEFING_LIMIT="3", OKL_BRIEFING_COMPACT="1")
+    assert r.returncode == 0 and "--limit 3 --compact" in seen.read_text(), (r.stderr, seen.read_text())
+
+    # ASSERT (2) — no settings, no extra flags: the default briefing is unchanged.
+    r = run(record_and_brief)
+    assert r.returncode == 0 and "--limit" not in seen.read_text() and "--compact" not in seen.read_text()
+
+    # ASSERT (3) — a limit that is not a whole number above zero is ignored, not passed on.
+    for bad in ("0", "abc", "3; touch pwned", "-1"):
+        r = run(record_and_brief, OKL_BRIEFING_LIMIT=bad)
+        assert r.returncode == 0 and "--limit" not in seen.read_text(), (bad, seen.read_text())
+    assert not (tmp_path / "pwned").exists()
+
+    # ASSERT (4) — an okl without --compact: argparse refuses it, and the hook briefs in full.
+    older = (f'echo "$@" >> {seen}; for a in "$@"; do [ "$a" = --compact ] && {{ echo "okl: error: '
+             f'unrecognized arguments: --compact" >&2; exit 2; }}; done; echo \'{payload}\'')
+    r = run(older, OKL_BRIEFING_COMPACT="1")
+    assert r.returncode == 0 and json.loads(r.stdout)["hookSpecificOutput"]["additionalContext"] == "B", (r.stdout, r.stderr)
+
 def test_prompt_hook_retries_a_briefly_unavailable_store_but_not_a_missing_binary(tmp_path):
     """A repo that rebuilds its gitignored store from committed lessons has no store for
     about a second, and a prompt landing then was blocked for a fault that had healed. The

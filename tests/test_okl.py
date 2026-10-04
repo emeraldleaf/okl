@@ -2562,6 +2562,40 @@ def test_a_retracted_record_of_any_type_is_briefed_as_withdrawn(tmp_path):
     avoid = {a["target"] for a in result["next_actions"] if a["kind"] == "avoid_retracted"}
     assert "keep the ledger in mypy-typed sqlite until ty reaches 1.0" in avoid
 
+
+def test_a_compact_briefing_is_the_action_list_and_much_smaller(tmp_path, monkeypatch, capsys):
+    """--compact gives a model with a small context window only the action list, in the
+    hook's JSON as well as the agent format, so the prompt hook can use it."""
+    import subprocess
+
+    from okl.cli import main
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+    subprocess.run(["git", "init", "-q", "."], check=True)
+    assert main(["init", "--repo", "r", "--no-claude", "--no-seed", "--no-ci"]) == 0
+    assert main(["seed", "dotnet-defects"]) == 0
+    capsys.readouterr()
+    task = ["check", "--task", "add an endpoint that returns an order for the logged-in user"]
+
+    # ACT — the hook format, in full and compact.
+    assert main([*task, "--format", "hook"]) == 0
+    full = json.loads(capsys.readouterr().out)["hookSpecificOutput"]["additionalContext"]
+    assert main([*task, "--format", "hook", "--compact"]) == 0
+    compact = json.loads(capsys.readouterr().out)["hookSpecificOutput"]["additionalContext"]
+
+    # ASSERT — the compact one is the action list (no section headings), and well under the full one.
+    assert "###" in full and "###" not in compact, compact
+    assert compact.strip() and len(compact) < 0.7 * len(full), (len(compact), len(full))
+
+    # ASSERT — a library caller's hand-built Namespace without the new field still briefs.
+    import argparse
+
+    from okl.cli.lessons import cmd_check
+    assert cmd_check(argparse.Namespace(task=task[2], repo=None, format="agent", limit=None)) == 0
+    assert "###" in capsys.readouterr().out
+
 def test_starter_pack_resolves_and_is_portable():
     """The starter lessons are references into the bundled packs; every one must resolve,
     be valid on any stack (no applies_to), and be actionable (a fix, or a gate to arm)."""

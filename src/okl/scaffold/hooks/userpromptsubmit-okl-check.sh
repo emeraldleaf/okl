@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:dac5cf6546328dbfc01e0a664b5307ab1f98860b30f348a27b1b7b054684b099
+# okl-fingerprint: sha256:b4f92428e4e0274c2e96e55238c837dc44e7bf855288c76190aa24f2db1fb4c7
 # UserPromptSubmit hook — inject the org's relevant lessons into the model's context
 # BEFORE it starts the task. This event is the only correct one for delivery: its stdout
 # (exit 0) is added to Claude's context, and its stdin carries the actual prompt text, so
@@ -121,9 +121,20 @@ errf=$(mktemp 2>/dev/null) || errf=""
 # as the JSON Claude Code reads from a UserPromptSubmit hook. Without that line nobody
 # could tell okl helping from okl doing nothing.
 fmt=hook
+# A smaller briefing, for a model with a small context window: a full one is roughly 1,600
+# tokens on every prompt. OKL_BRIEFING_LIMIT caps how many lessons it draws on (okl's
+# default is 12); OKL_BRIEFING_COMPACT=1 sends only the action list. Anything that is not a
+# whole number above zero is ignored, so only digits and fixed flags ever reach okl.
+size_args=""
+case "${OKL_BRIEFING_LIMIT:-}" in
+  ''|*[!0-9]*) ;;
+  *) [ "$OKL_BRIEFING_LIMIT" -gt 0 ] 2>/dev/null && size_args="--limit $OKL_BRIEFING_LIMIT" ;;
+esac
+[ "${OKL_BRIEFING_COMPACT:-0}" = "1" ] && size_args="$size_args --compact"
 check_once() {
   [ -n "$errf" ] && : > "$errf"   # keep only the last attempt's reason
-  out=$($OKL check --task "$TASK" --format "$fmt" 2>"${errf:-/dev/null}")
+  # $size_args unquoted on purpose: empty, or validated digits and fixed flags only.
+  out=$($OKL check --task "$TASK" --format "$fmt" $size_args 2>"${errf:-/dev/null}")
   rc=$?   # read here: after an if-block, $? is the if's own status, not okl's
 }
 # Retried briefly before blocking. A repo that rebuilds its gitignored store from committed
@@ -137,6 +148,11 @@ for attempt in 1 2 3; do
     # An okl older than this hook has no --format hook. The plugin updates from main and the
     # CLI only when upgraded, so the two can differ: brief the old way rather than block.
     fmt=agent
+    check_once
+  fi
+  if [ "$rc" -eq 2 ] && [ -n "$size_args" ] && [ -n "$errf" ] && grep -q "unrecognized arguments" "$errf" 2>/dev/null; then
+    # An okl older than OKL_BRIEFING_COMPACT: brief in full rather than block the prompt.
+    size_args=""
     check_once
   fi
   [ "$rc" -eq 0 ] && break
