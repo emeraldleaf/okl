@@ -68,7 +68,7 @@ okl drift                          # rules whose governed source changed after v
 ## Layout truth
 
 `src/okl/` is the package (store/core/client/cli/service/mcp + scaffold templates);
-`seed/` is the curated 179-node corpus (real lessons, real project names — deliberate);
+`seed/` is the curated 183-node corpus (real lessons, real project names — deliberate);
 `evals/` is the A/B harness and receipts; `docs/posts/` is the 4-part write-up;
 `e2e/` (gitignored) holds scratch repos for end-to-end loop tests.
 

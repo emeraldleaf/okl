@@ -57,6 +57,20 @@
       "fix": "ruff ANN on every signature; mypy flags in the documented order; --strict once the public signatures are typed"
     },
     {
+      "key": "py_typing_syntax_floor",
+      "type": "Rule",
+      "scope": "org",
+      "repo": "okl",
+      "verified": false,
+      "applies_to": "python",
+      "tags": "python",
+      "found_by": "PEPs 585, 604, 695 and 749; the Python typing docs (AnyStr deprecated in 3.13); ruff's pyupgrade rules UP006, UP007, UP040, UP045, UP046 and UP047, checked on ruff 0.16 on 2026-10-04",
+      "title": "Write type hints in the newest syntax your Python floor allows, and let ruff's UP rules hold the line",
+      "body": "Each syntax has a minimum version: builtin generics such as list[str] (PEP 585) from 3.9; X | None (PEP 604) from 3.10; and the type statement with def f[T]() and class C[T] type parameters (PEP 695) from 3.12, which retire the TypeVar, Generic and TypeAlias boilerplate. typing.AnyStr is deprecated since 3.13 and leaves typing in 3.18. Your requires-python decides which apply, not the newest release: a 3.10 floor cannot use PEP 695. ruff's UP rules flag the older forms against the target version, which ruff takes from requires-python (a TypeVar function is flagged under >=3.12 and passes under >=3.10): UP006 for builtin generics, UP007 and UP045 for unions, UP040 for type aliases, UP046 and UP047 for generic classes and functions. ruff marks the PEP 695 fixes unsafe, because the new syntax infers variance, so apply those by hand. from __future__ import annotations still helps below 3.14, but PEP 749 (Final) deprecates it once 3.13 reaches end of life, so do not make it a permanent rule.",
+      "symptom": "new code written with TypeVar, Optional[...] or List[...] in a repo whose Python floor has the newer syntax",
+      "fix": "select ruff's UP rules and let requires-python set the target; apply the PEP 695 rewrites by hand; give from __future__ import annotations an end date"
+    },
+    {
       "key": "py_strict_pytest",
       "type": "Rule",
       "scope": "org",
@@ -193,7 +207,48 @@
       "title": "isinstance() against a Protocol checks names, not signatures: conformance comes from the type checker and a shared test",
       "body": "The Python docs: @runtime_checkable 'will check only the presence of the required methods or attributes, not their type signatures or types.' mypy's docs say the same ('signatures of methods are not checked'), and PEP 544 likens the check to a hasattr() per member. Pydantic inherits the gap: with arbitrary_types_allowed, a field typed with a Protocol is validated by 'a simple check of instance type', and 'nothing in the instance of the arbitrary type is checked'. Reproduced on a published example that offered @runtime_checkable plus a Pydantic model as an extra safety layer: an invoke(a, b, c, d) that returns 42 passed both, and a LangChain chat model passed both, then answered with an AIMessage where the Protocol promised str. The type checker rejected both, and also caught the example's own pipeline passing a PromptValue where its Protocol took str. So a runtime check says an object has the right names, never that it fits. What makes an implementation fit is the type checker over the code that wires it in, plus one behaviour test that every implementation, real or fake, runs.",
       "symptom": "an isinstance() check against a Protocol, or a Pydantic field typed with one, treated as proof that an implementation fits",
-      "fix": "type-check the code that wires implementations in; run one shared behaviour test over every implementation; use isinstance on a Protocol only to choose between shapes, never to validate one"
+      "fix": "type-check the code that wires implementations in; run one shared behaviour test over every implementation; trust isinstance on a Protocol for what it checks, that the members exist, and never as proof of signatures, types or behaviour"
+    },
+    {
+      "key": "py_composition_root",
+      "type": "Rule",
+      "scope": "org",
+      "repo": "okl",
+      "verified": false,
+      "applies_to": "python",
+      "tags": "python,method",
+      "found_by": "Mark Seemann, 'Composition Root' (blog.ploeh.dk, 2011); Architecture Patterns with Python, ch. 13 'Dependency Injection (and Bootstrapping)' (Percival and Gregory, cosmicpython.com); the import-linter docs (forbidden contracts)",
+      "title": "Build the adapters in one place near the entry point and pass them in; business code never constructs its own collaborators",
+      "body": "Seemann: 'A Composition Root is a (preferably) unique location in an application where modules are composed together', placed 'as close as possible to the application's entry point', and 'Only applications should have Composition Roots. Libraries and frameworks shouldn't.' Architecture Patterns with Python calls it 'a bootstrap script to you and me' and does 'manual DI (dependency injection without a framework)': each collaborator arrives as a constructor parameter typed with the Protocol it is used through, so business code depends on an abstraction and a test passes a fake. The book reaches for a DI framework only with dependency chains, 'in which your dependencies have their own dependencies'; until then the root is a plain function that calls constructors. A root that is only named in a document drifts: an import-linter forbidden contract that lets nothing but the root import the adapter modules fails CI on the first stray import.",
+      "symptom": "a business-logic class that builds its own client from environment variables, or adapter imports scattered through the code",
+      "fix": "construct adapters in one composition root near the entry point and inject them; add a DI framework only once dependency chains appear; an import-linter forbidden contract keeps the adapters out of everything else"
+    },
+    {
+      "key": "py_value_objects_at_seams",
+      "type": "Rule",
+      "scope": "org",
+      "repo": "okl",
+      "verified": false,
+      "applies_to": "python",
+      "tags": "python,method",
+      "found_by": "Architecture Patterns with Python, ch. 1 (value objects as frozen dataclasses); the Python dataclasses docs, 'Frozen instances'; Microsoft Azure Architecture Center, 'Anti-Corruption Layer pattern', after Eric Evans, Domain-Driven Design",
+      "title": "Data crosses a seam as a frozen dataclass you own; a provider's format is translated inside its adapter and goes no further",
+      "body": "Architecture Patterns with Python: 'A value object is any domain object that is uniquely identified by the data it holds; we usually make them immutable', written as @dataclass(frozen=True), which also gives value equality. The Python docs state the limit: 'It is not possible to create truly immutable Python objects'; frozen=True emulates it by refusing assignment to fields, so a list inside one can still be changed in place. Use tuples and frozensets for its collections. Pass these across a Protocol instead of a provider's response objects or loose dicts. The anti-corruption layer (Evans, in Microsoft's architecture guide) is where translation lives: it 'contains all the logic necessary to translate between the two systems', so the provider's model never leaks past its adapter, and changing provider rewrites one translation rather than every caller.",
+      "symptom": "callers read a provider's raw response fields, or a 'frozen' value object is changed through a list it holds",
+      "fix": "own frozen dataclasses for everything that crosses a seam, with tuples for their collections; translate provider payloads inside the adapter"
+    },
+    {
+      "key": "py_contract_tests",
+      "type": "Rule",
+      "scope": "org",
+      "repo": "okl",
+      "verified": false,
+      "tags": "method,python",
+      "found_by": "Martin Fowler, 'ContractTest' (martinfowler.com/bliki, 2011); J.B. Rainsberger, 'Getting Started with Contract Tests' (blog.thecodewhisperer.com, 2017); okl's backend conformance tests, one body run against SQLite and Postgres",
+      "title": "Every implementation of a Protocol, fakes included, runs one shared contract test",
+      "body": "A type checker proves an implementation has the right signatures. It cannot prove a fake behaves like the real thing, and logic tests that only ever run against fakes keep passing while the real adapter is broken. Fowler's contract tests 'check that all the calls against your test doubles return the same results as a call to the external service would'. Rainsberger writes them once against the interface and runs them against every implementation: a contract test 'describes behavior that clients rely on without referring to a specific implementation of the collaborator'. In pytest that is one test module with a fixture parametrized over the implementations: the fake every run, the real adapter against a local server or recorded responses, and the live service behind a marker. okl runs one body over its SQLite and Postgres backends this way, after the Postgres one matched every signature and returned unranked results.",
+      "symptom": "unit tests pass against a fake while the real adapter is broken, or two implementations with the same signatures return different results",
+      "fix": "one contract test module per Protocol, parametrized over every implementation including the fake; the real adapter runs it against a local or recorded dependency"
     },
     {
       "key": "py_print_at_edges",
@@ -263,6 +318,7 @@
     {"src": "py_classes_earn_place", "rel": "ENCODES", "dst": "seed:dotnet-defects:nc_speculative_interface"},
     {"src": "py_dont_mock_what_you_dont_own", "rel": "ENCODES", "dst": "seed:dotnet-canon:r_dbcontext_direct"},
     {"src": "py_size_limits", "rel": "ENCODES", "dst": "seed:dotnet-canon:r_feature_file_cap"},
-    {"src": "py_pyproject_versions", "rel": "ENCODES", "dst": "seed:geospatial-enforcement-defects:r_pin_gating_tools"}
+    {"src": "py_pyproject_versions", "rel": "ENCODES", "dst": "seed:geospatial-enforcement-defects:r_pin_gating_tools"},
+    {"src": "py_contract_tests", "rel": "ENCODES", "dst": "seed:dotnet-decisions:pd_testcontainers_real_providers"}
   ]
 }

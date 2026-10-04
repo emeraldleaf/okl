@@ -149,8 +149,8 @@ Two things ship in the package. They are not coequal:
   measures this.
 
   It is worth being precise about what that store fills up with, because "lessons a
-  codebase has learned" invites the picture of a bug database. In the 179-record corpus
-  in [seed/](seed/) it is mostly not that: **106 Rules, 20 Decisions and 7 Gates against
+  codebase has learned" invites the picture of a bug database. In the 183-record corpus
+  in [seed/](seed/) it is mostly not that: **110 Rules, 20 Decisions and 7 Gates against
   36 Defects** — conventions the code follows and trade-offs already settled, not a
   ledger of things that broke. Count it yourself:
 
