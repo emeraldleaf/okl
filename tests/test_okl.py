@@ -2756,13 +2756,14 @@ def test_verify_without_a_check_suggests_one_and_drift_says_what_to_do(tmp_path,
     out = capsys.readouterr().out
     assert "Retrieval hit counts every evidence path" in out and "covers: pkg/evaluator.py" in out
     assert "tests/test_evaluator.py" in out and "tests/test_other.py" not in out, out
-    assert 'okl verify hit --run "pytest -q tests/test_evaluator.py" --expect "passed"' in out, out
+    assert "okl verify hit --run 'pytest -q tests/test_evaluator.py' --expect passed" in out, out
     assert "ask your agent" in out
 
-    # ASSERT (2) — nothing was stamped; a lesson with no test says a check must be written.
+    # ASSERT (2) — nothing was stamped; for a lesson no test names, it reports a search miss,
+    # not that no check exists (a test may drive the command without naming the file).
     assert {n.id: n for n in Client().all_nodes()}["hit"].verified_at is None
     assert main(["verify", "lonely"]) == 2
-    assert "No test mentions those files yet" in capsys.readouterr().out
+    assert "No test mentions those files by name" in capsys.readouterr().out
 
     # ASSERT (3) — an unknown id says where ids come from.
     assert main(["verify", "nope"]) == 2
@@ -2773,6 +2774,46 @@ def test_verify_without_a_check_suggests_one_and_drift_says_what_to_do(tmp_path,
     out = capsys.readouterr().out
     assert "re-check the stale okl lessons" in out and "<a check that fails" not in out, out
 
+
+
+def test_a_suggested_check_quotes_a_hostile_test_filename(tmp_path, monkeypatch, capsys):
+    """The suggestion is a command the user pastes, and `okl verify --run` hands its value to
+    a shell. A tracked test file can be named anything, and `git grep -l` prints a space or a
+    semicolon in a path as-is, so an unquoted path would carry shell syntax into what the
+    user runs (CodeRabbit on #115, CWE-78). The path must reach pytest as one argument."""
+    import shlex
+    import subprocess
+
+    from okl.cli import main
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+
+    # ARRANGE — a repo whose only test that mentions the governed file has a hostile name.
+    git = ["git", "-c", "user.email=t@t", "-c", "user.name=t"]
+    subprocess.run(["git", "init", "-q", "."], check=True)
+    (tmp_path / "pkg").mkdir(); (tmp_path / "tests").mkdir()
+    (tmp_path / "pkg" / "evaluator.py").write_text("def hit(paths): return any(paths)\n")
+    hostile = "tests/test_x; touch pwned.py"
+    (tmp_path / hostile).write_text("from pkg import evaluator\n")
+    subprocess.run([*git, "add", "-A"], check=True); subprocess.run([*git, "commit", "-qm", "i"], check=True)
+    assert main(["init", "--repo", "r", "--no-claude", "--no-seed", "--no-ci"]) == 0
+    assert main(["record", "--type", "Rule", "--scope", "repo", "--id", "hit",
+                 "--title", "Retrieval hit counts every evidence path", "--files", "pkg/evaluator.py"]) == 0
+    capsys.readouterr()
+
+    # ACT — ask for a suggestion.
+    assert main(["verify", "hit"]) == 2
+    line = next(ln.strip() for ln in capsys.readouterr().out.splitlines()
+                if ln.strip().startswith("okl verify "))
+
+    # ASSERT — split as a shell would, the command is okl verify with the --run value intact,
+    # and that value, split again by the shell okl verify uses, keeps the path as one argument.
+    argv = shlex.split(line)
+    assert argv[:3] == ["okl", "verify", "hit"] and argv[3] == "--run", argv
+    assert argv[5:] == ["--expect", "passed"], argv
+    assert shlex.split(argv[4]) == ["pytest", "-q", hostile], argv[4]
 
 def test_init_no_ci_skips_the_workflow_and_remembers_it(tmp_path, monkeypatch, capsys):
     """#111: init always wrote .github/workflows/okl-verify.yml. In a private repo that
