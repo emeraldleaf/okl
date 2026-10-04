@@ -1,5 +1,5 @@
 {
-  "_comment": "The Python canon: the pragmatism of the .NET platform canon (dotnet-canon, dotnet-decisions), translated to Python from sources that agree - PEPs 8/20/257/544/735, the Python docs and devguide, Google's Python style guide, the mypy, pytest and import-linter docs, the Scientific Python development guide, Architecture Patterns with Python, and Hynek Schlawack - researched 2026-10-04 and adopted in okl #116, #118 and #120. Rules that only make sense in Python set applies_to 'python'; the language-neutral ones leave it unset. Nothing here claims verification: a citation is not a check. Verify each against your own repo with `okl verify`. Not *-defects.json on purpose: review, then `okl seed python-canon`.",
+  "_comment": "The Python canon: the pragmatism of the .NET platform canon (dotnet-canon, dotnet-decisions), translated to Python from sources that agree - PEPs 8/20/257/544/735, the Python docs and devguide, Google's Python style guide, the mypy, pytest and import-linter docs, the Scientific Python development guide, Architecture Patterns with Python, and Hynek Schlawack - researched 2026-10-04 and adopted in okl #116, #118 and #120. Rules that only make sense in Python set applies_to 'python'; the language-neutral ones leave it unset. Nothing here claims verification: a citation is not a check. Verify each against your own repo with `okl verify`. `okl init` imports it into a repo whose stack it detects as python; elsewhere, `okl seed python-canon`.",
   "nodes": [
     {
       "key": "py_layers_contract",
@@ -11,7 +11,7 @@
       "tags": "python,method",
       "found_by": "import-linter docs, contract types: layers (import-linter.readthedocs.io); adopted in okl #116 with import-linter 2.15",
       "title": "Enforce the dependency rule with an import-linter layers contract: Python's architecture test",
-      "body": "The middle step of convention -> architecture test -> package split, in Python. A `layers` contract in pyproject.toml lists the layers top to bottom: a higher layer may import a lower one, never the reverse, and `|` marks siblings that must not import each other either. `lint-imports` in CI fails on the first import that points up and names its line. It needs no package split and no new structure. okl's contract held on its first run; an upward import planted on purpose (store -> client) reported BROKEN with its line number, which is how to prove yours before trusting it. Modules a contract does not list are not constrained, so list every module that belongs to a layer.",
+      "body": "The middle step of convention -> architecture test -> package split, in Python. A `layers` contract in pyproject.toml lists the layers top to bottom: a higher layer may import a lower one, never the reverse, and `|` marks siblings that must not import each other either. `lint-imports` in CI fails on the first import that points up and names its line. It needs no package split and no new structure. okl's contract held on its first run; an upward import planted on purpose (store -> client) reported BROKEN with its line number, which is how to prove yours before trusting it. Set `exhaustive = true` (with `containers`) so a module left out of the list is an error, not one the contract silently ignores.",
       "symptom": "a lower module imports a higher one (the store imports the client) and nothing fails",
       "fix": "add a [tool.importlinter] layers contract, run lint-imports in CI, and plant one upward import to watch it go red"
     },
@@ -25,7 +25,7 @@
       "tags": "python,method",
       "found_by": "PEP 257; Google Python Style Guide 3.8 (google.github.io/styleguide/pyguide.html); adopted in okl #118 (50 docstrings, ruff D100-D104)",
       "title": "Every module, public class and public function has a docstring that lets a reader call it without reading its body",
-      "body": "PEP 257: all modules, and every function and class a module exports, have docstrings. Google's Python guide sets the bar: 'A docstring should give enough information to write a call to the function without reading the function's code.' One to three lines is usual: what it is for, and what a caller must know - what it returns, what None or an empty filter means, what it raises, a command's exit codes. Args and Returns sections only where a name and a type do not explain a parameter. Enforce presence, not format: ruff D100-D104 with pydocstyle convention = \"google\". Tests are documented by their names and their Arrange-Act-Assert comments, not by docstrings on fixtures.",
+      "body": "PEP 257: all modules, and every function and class a module exports, have docstrings. Google's Python guide sets the bar: 'A docstring should give enough information to write a call to the function without reading the function's code.' One to three lines is usual: what it is for, and what a caller must know - what it returns, what None or an empty filter means, what it raises, a command's exit codes. Writing Args and Returns only where a name and a type do not explain a parameter is a deliberate departure from Google's guide, which lists every parameter. Enforce presence, not format: ruff D100-D104 with pydocstyle convention = \"google\". Tests can be exempt: a test reads as its name and its comments.",
       "symptom": "a public function whose purpose and contract can only be learned by reading its body",
       "fix": "select ruff D100-D104 (convention google); write what it is for and what a caller must know"
     },
@@ -36,9 +36,9 @@
       "repo": "okl",
       "verified": false,
       "tags": "method,python",
-      "found_by": "Google Python Style Guide 3.8; the .NET canon's two-tier commenting convention; okl's rule that comments carry the incident",
+      "found_by": "Google Python Style Guide 3.8; okl's rule that comments carry the incident",
       "title": "Comment the tricky parts and the reasons; never describe the code",
-      "body": "Google's Python guide: 'Never describe the code. Assume the person reading the code knows Python (though not what you're trying to do) better than you do', and 'If you're going to have to explain it at the next code review, you should comment it now.' A comment carries why: the constraint, the incident, the failure a line prevents, a decision and what would change it. A comment that restates the line below it is noise that goes stale. Two tiers, as in the .NET canon: teaching-grade comments where a newcomer learns the architecture, and none on plumbing whose names already say what it is.",
+      "body": "Google's Python guide: 'Never describe the code. Assume the person reading the code knows Python (though not what you're trying to do) better than you do', and 'If you're going to have to explain it at the next code review, you should comment it now.' A comment carries why: the constraint, the incident, the failure a line prevents, a decision and what would change it. A comment that restates the line below it is noise that goes stale. Two tiers work well: teaching-grade comments where a newcomer learns the architecture, and none on plumbing whose names already say what it is.",
       "symptom": "a comment paraphrasing the line below it, or a non-obvious line with no comment at all",
       "fix": "delete what-comments; add a why-comment wherever you would otherwise explain the line in review"
     },
@@ -50,9 +50,9 @@
       "verified": false,
       "applies_to": "python",
       "tags": "python",
-      "found_by": "mypy docs, 'Using mypy with an existing codebase'; Google Python Style Guide 2.21; adopted in okl #116 (mypy flags) and #118 (ruff ANN, 86 signatures)",
-      "title": "Type every signature, and tighten mypy in the order its docs give: check_untyped_defs first, --strict last",
-      "body": "Types are documentation a tool checks. Google: at least annotate your public APIs; ruff ANN flags any signature without hints, tests exempt. mypy's guide for an existing codebase gives the order: warn_unused_configs, warn_unused_ignores and warn_redundant_casts; then strict_equality; then check_untyped_defs, which it recommends 'as soon as you can' because without it mypy does not check the bodies of unannotated functions at all; then the disallow_* flags; --strict last. Each step must be a gate that passes, never a blanket ignore, and enable_error_code = ['ignore-without-code'] makes every type: ignore name the error it silences. In okl, typing the store let mypy check a CLI line it had never checked, and it found a real mismatch there.",
+      "found_by": "mypy docs, 'Using mypy with an existing codebase'; Google Python Style Guide 3.19; adopted in okl #116 (mypy flags) and #118 (ruff ANN)",
+      "title": "Type every signature, and tighten mypy one step at a time, in the order its docs give",
+      "body": "Types are documentation a tool checks. Google: at least annotate your public APIs; ruff ANN flags any signature without hints, tests exempt. mypy's guide for an existing codebase gives the order: warn_unused_configs, warn_unused_ignores and warn_redundant_casts; then strict_equality; then check_untyped_defs, which it recommends 'as soon as you can' because without it mypy does not check the bodies of unannotated functions at all; then the disallow_* flags, which together amount to --strict. Each step must be a gate that passes, never a blanket ignore, and enable_error_code = ['ignore-without-code'] makes every type: ignore name the error it silences. In okl, typing the store let mypy check a CLI line it had never checked, and it found a real mismatch there.",
       "symptom": "mypy passes code it never checked, because the functions have no annotations",
       "fix": "ruff ANN on every signature; mypy flags in the documented order; --strict once the public signatures are typed"
     },
@@ -66,7 +66,7 @@
       "tags": "python",
       "found_by": "Scientific Python Development Guide, pytest page (learn.scientific-python.org/development/guides/pytest/); adopted in okl #116",
       "title": "pytest runs strict, and any warning fails the test that raised it",
-      "body": "The Scientific Python development guide's configuration: strict markers and strict config (in pytest 9, `strict = true`, which also fails an xfail that starts passing) and filterwarnings = [\"error\"], because 'Python hides important warnings by default... If you are a developer, you don't want it to be nice.' Deprecation warnings are how a new Python or library version says what it will break. Strict pytest makes them failures on the day they appear, rather than a broken upgrade months later. okl's first strict run found two real problems: Starlette 1.7 deprecating httpx in its TestClient, and SQLite connections that were never closed. When a third-party warning has to be tolerated, ignore that one warning by message and category, with a comment, never a whole class of warnings.",
+      "body": "The Scientific Python development guide's configuration: strict markers and strict config (in pytest 9, `strict = true`, which also fails an xfail that starts passing) and filterwarnings = [\"error\"], because 'Python hides important warnings by default... If you are a developer, you don't want it to be nice.' Deprecation warnings are how a new Python or library version says what it will break. Strict pytest makes them failures on the day they appear, rather than a broken upgrade months later. okl's first strict run found two real problems: Starlette's TestClient deprecating httpx (since 1.2.0), and SQLite connections that were never closed. When a third-party warning has to be tolerated, ignore that one warning by message and category, with a comment, never a whole class of warnings.",
       "symptom": "a deprecation warning scrolls past in CI output for months, then an upgrade breaks",
       "fix": "[tool.pytest.ini_options] strict = true and filterwarnings = [\"error\"]; narrow, commented ignores only"
     },
@@ -79,10 +79,10 @@
       "applies_to": "python",
       "tags": "python",
       "found_by": "Python devguide, 'Status of Python versions' (devguide.python.org/versions/); okl #116, which added the CI matrix",
-      "title": "CI tests every Python version requires-python claims, and the floor follows CPython's end-of-life dates",
-      "body": "A version range in pyproject.toml is a promise, and testing one version leaves the rest assumed. okl claimed >=3.10 and tested 3.12 alone. Its first matrix run (3.10 to 3.14) passed only after fixing a failure that appeared on 3.13 and later and nowhere else: SQLite connections that were never closed. Run the suite once per version with fail-fast off, and keep lint, types and coverage on a single version. Drop a version when it reaches end of life on the devguide's schedule (3.10 ended on 2026-10-01). That is a deliberate, announced change, because it leaves users of that version on older releases.",
+      "title": "CI tests every Python version requires-python claims, and dropping one is a dated decision",
+      "body": "A version range in pyproject.toml is a promise, and testing one version leaves the rest assumed. okl claimed >=3.10 and tested 3.12 alone. Its first matrix run (3.10 to 3.14) passed only after fixing a failure that appeared on 3.13 and later and nowhere else: SQLite connections that were never closed. Run the suite once per version with fail-fast off, and keep lint, types and coverage on a single version. The devguide gives each version's end-of-life date (3.10's was 2026-10-01); when to drop one is a choice. Some projects drop at end of life, Scientific Python's SPEC 0 drops earlier, and okl still supports 3.10 after its end of life. Whichever you choose, announce it, because it leaves users of that version on older releases.",
       "symptom": "requires-python claims versions CI never runs, and a version-specific failure ships",
-      "fix": "a CI matrix over every claimed version with fail-fast: false; raise the floor on CPython's end-of-life dates"
+      "fix": "a CI matrix over every claimed version with fail-fast: false; decide, and announce, when to drop one"
     },
     {
       "key": "py_unclosed_sqlite",
@@ -107,8 +107,8 @@
       "applies_to": "python",
       "tags": "python",
       "found_by": "okl #116, on its first run with strict pytest",
-      "title": "Starlette 1.7 moved its TestClient to httpx2 and warns when it falls back to httpx",
-      "body": "cause: Starlette 1.7 (2026-09-23) imports httpx2 (github.com/pydantic/httpx2, the maintained successor to httpx, whose last release was 0.28.1 in December 2024) and falls back to httpx with a deprecation warning. A fresh install picks up the new Starlette through FastAPI's open version range, so the change arrives without any edit to the repo. Strict pytest then turns it into a failure in every test that builds a TestClient.",
+      "title": "Starlette's TestClient moved to httpx2 in 1.2.0, and warns when it falls back to httpx",
+      "body": "cause: from Starlette 1.2.0 (2026-05-28), the TestClient imports httpx2 (github.com/pydantic/httpx2, which Pydantic maintains as httpx's successor; httpx's last stable release was 0.28.1 in December 2024) and falls back to httpx with a deprecation warning. Pinning Starlette below 1.7 does not avoid it. A fresh install picks up the new Starlette through FastAPI's open version range, so the change arrives without any edit to the repo. Strict pytest then turns it into a failure in every test that builds a TestClient.",
       "symptom": "service tests that passed for months fail with StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead",
       "fix": "add httpx2 to the test dependencies; keep httpx only while an older Starlette, whose TestClient imports only httpx, must still work"
     },
@@ -150,7 +150,7 @@
       "tags": "python",
       "found_by": "PEP 20; the Python glossary (EAFP); the .NET canon's 'Pick ONE error-flow canon'; adopted in okl #116 (ruff BLE)",
       "title": "Errors flow as specific exceptions, turned into exit codes or responses at the edge; no catch-all without a stated reason",
-      "body": "Python's error idiom is exceptions (the glossary's EAFP), so this is Python's form of picking one way for errors to flow. Raise a specific exception, with a message that says what to do, where the problem is found. Catch it once, at the edge: a CLI turns it into an exit code (okl: 0 clean, 1 findings, 2 could not run), and a service turns it into a 4xx. PEP 20: 'Errors should never pass silently. Unless explicitly silenced.' ruff BLE001 makes silencing explicit: a bare `except Exception` fails lint unless its noqa says why on the same line. Result-style return values are not idiomatic Python, so do not mix them in.",
+      "body": "Python's error idiom is exceptions (the glossary's EAFP), so this is Python's form of picking one way for errors to flow. Raise a specific exception, with a message that says what to do, where the problem is found. Catch it once, at the edge: a CLI turns it into an exit code (okl: 0 clean, 1 findings, 2 could not run), and a service turns it into a 4xx. PEP 20: 'Errors should never pass silently. Unless explicitly silenced.' ruff BLE001 flags a catch-all `except Exception` that neither re-raises nor logs the exception; giving the reason beside its noqa is a convention ruff does not check (a bare `except:` is E722). Result-style return values are not idiomatic Python, so do not mix them in.",
       "symptom": "an except Exception that swallows an error, or a caller's mistake reported as an outage",
       "fix": "specific exceptions, one place at the edge that translates them, and ruff BLE001 with a stated reason for every catch-all"
     },
@@ -177,7 +177,7 @@
       "tags": "python,method",
       "found_by": "Architecture Patterns with Python, ch. 2 (Percival and Gregory, cosmicpython.com); Hynek Schlawack, 'Subclassing in Python Redux'; PEP 544",
       "title": "Start with a function; use a class when state and behaviour travel together, and a Protocol only when something substitutes it",
-      "body": "The Python form of 'interfaces earn their keep through consumer substitution'. Architecture Patterns with Python, the book that teaches these patterns, lists their cost: 'Any extra layer of indirection always increases maintenance costs and adds a WTF factor', and 'If your app is just a simple CRUD wrapper around a database, then you don't need a domain model or a repository.' Prefer composition to inheritance (Hynek, 'Subclassing in Python Redux'). Use a dataclass for a record, and a typing.Protocol (PEP 544) for a port, because structural typing lets a test fake satisfy it without inheriting anything. A class with only __init__ and one method is a function.",
+      "body": "The Python form of 'interfaces earn their keep through consumer substitution'. Architecture Patterns with Python, the book that teaches these patterns, lists their cost: 'Any extra layer of indirection always increases maintenance costs and adds a \"WTF factor\" for Python programmers who've never seen the Repository pattern before', and 'If your app is just a simple CRUD (create-read-update-delete) wrapper around a database, then you don't need a domain model or a repository.' Prefer composition to inheritance (Hynek, 'Subclassing in Python Redux'). Use a dataclass for a record, and a typing.Protocol (PEP 544) for a port, because structural typing lets a test fake satisfy it without inheriting anything. A class with only __init__ and one method is a function.",
       "symptom": "a class, base class or interface with one implementation and nothing substituting it",
       "fix": "inline it as a function or a dataclass; introduce a Protocol when a second implementation or a test fake needs one"
     },
@@ -191,7 +191,7 @@
       "tags": "python",
       "found_by": "Python Logging HOWTO, 'Configuring Logging for a Library'; adopted in okl #118 (ruff T20)",
       "title": "Library code never prints; output belongs to the command-line layer",
-      "body": "Python's logging HOWTO: a library leaves logging configuration to the application (it adds a NullHandler and configures nothing). The same goes for print: a module that prints cannot be used by a service, an MCP server or a test without its output leaking into theirs. Enforce it with ruff T20, with per-file-ignores naming the command-line layers. When logging, pass values as arguments rather than f-strings (ruff G004), so the message is only formatted when a record is actually emitted.",
+      "body": "Python's logging HOWTO: a library leaves logging configuration to the application (it configures nothing; at most it adds a NullHandler). The same goes for print: a module that prints cannot be used by a service, an MCP server or a test without its output leaking into theirs. Enforce it with ruff T20, with per-file-ignores naming the command-line layers. When logging, pass values as arguments rather than f-strings (ruff G004), so the message is only formatted when a record is actually emitted.",
       "symptom": "a print() in a module that services or tests import",
       "fix": "return the text or raise; print only in the CLI layer; ruff T20 with per-file-ignores for that layer"
     },
@@ -210,32 +210,32 @@
       "fix": "versions only in pyproject.toml; exact pins for gate tools; dev tools in [dependency-groups]"
     },
     {
-      "key": "py_type_checker_decision",
-      "type": "Decision",
+      "key": "py_one_type_checker",
+      "type": "Rule",
       "scope": "org",
       "repo": "okl",
       "verified": false,
       "applies_to": "python",
       "tags": "python",
-      "found_by": "PyPI release history for mypy, pyright and ty, checked 2026-10-04; Astral's ty beta announcement (December 2025)",
-      "title": "mypy stays the type checker until ty reaches a stable 1.0",
-      "body": "Credible sources disagree about which checker to use. mypy (2.4, October 2026) is the reference implementation. pyright follows the typing spec most closely. Astral's ty is the fastest, but has been in beta since December 2025 (0.0.84 in September 2026). okl's CI already gates on mypy, so switching would buy speed nobody has asked for, at the cost of re-triaging every finding. The trigger to revisit: ty reaches 1.0 and checks this repo with no new ignores. Then measure again and decide.",
-      "symptom": "a proposal to switch type checkers for speed alone",
-      "fix": "keep mypy; revisit when the written trigger fires"
+      "found_by": "PyPI release history for mypy, pyright, pyrefly and ty, checked 2026-10-04; the typing project's conformance suite (github.com/python/typing, conformance/); the .NET canon's 'name the flip triggers'",
+      "title": "Gate CI on one type checker, and write down what would make you switch",
+      "body": "Credible sources disagree on which type checker is best, and the field moves fast. mypy is the reference implementation; pyright, pyrefly (stable since its 1.0 in May 2026) and Astral's ty (in beta since December 2025) are faster, and the typing project's conformance suite tracks how fully each one implements the typing spec. Which you pick matters less than gating CI on exactly one, so its findings mean something, and writing down the trigger that would make you switch (a check you need, a speed you need, a checker reaching stable), so the choice is revisited on evidence rather than fashion.",
+      "symptom": "two type checkers disagreeing in CI, or a proposal to switch checkers with no stated reason",
+      "fix": "one checker gates CI; record the trigger that would make you switch, and revisit when it fires"
     },
     {
-      "key": "py_docstring_format_decision",
-      "type": "Decision",
+      "key": "py_one_docstring_format",
+      "type": "Rule",
       "scope": "org",
       "repo": "okl",
       "verified": false,
       "applies_to": "python",
       "tags": "python",
-      "found_by": "PEP 257; Google Python Style Guide 3.8; ruff pydocstyle settings; decided in okl #118",
-      "title": "Docstrings follow Google style, and only their presence is enforced",
-      "body": "Credible sources disagree on the format: Google style, NumPy style and Sphinx (reST) style all have large followings, and PEP 257 prescribes none of them. Google style suits short docstrings that read as prose. Enforcing the sections (D2xx and D4xx) produces churn over formatting, not understanding, so only presence (D100-D104) is enforced, with convention = \"google\" recorded for when a section is needed. The trigger to revisit: generated API docs become a deliverable, which would make section structure matter to a tool.",
-      "symptom": "a proposal to enforce docstring sections or switch the docstring format",
-      "fix": "keep Google style with presence-only enforcement; revisit if API docs become a deliverable"
+      "found_by": "PEP 257; ruff's pydocstyle settings; okl #118",
+      "title": "Pick one docstring format, and enforce that docstrings exist before enforcing their sections",
+      "body": "Google, NumPy and Sphinx (reST) styles all have large followings, and PEP 257 prescribes none of them. Pick one and tell the linter (ruff's pydocstyle `convention`). Enforce presence first (ruff D100-D104): that is what makes a codebase followable. The section rules (D405-D417) mostly produce churn over formatting rather than understanding, so add them when generated API docs become a deliverable.",
+      "symptom": "a proposal to enforce docstring sections across a codebase whose public functions still lack docstrings",
+      "fix": "one format, set as ruff's pydocstyle convention; enforce D100-D104; add the section rules only for generated API docs"
     }
   ],
   "edges": [
@@ -246,6 +246,9 @@
     {"src": "py_exceptions_canon", "rel": "ENCODES", "dst": "seed:dotnet-canon:r_exceptions_canon"},
     {"src": "py_pyproject_versions", "rel": "ENCODES", "dst": "seed:dotnet-decisions:pd_central_package_management"},
     {"src": "py_strict_pytest", "rel": "ENCODES", "dst": "seed:dotnet-decisions:pd_zero_warning_build"},
-    {"src": "py_classes_earn_place", "rel": "ENCODES", "dst": "seed:dotnet-defects:nc_speculative_interface"}
+    {"src": "py_classes_earn_place", "rel": "ENCODES", "dst": "seed:dotnet-defects:nc_speculative_interface"},
+    {"src": "py_dont_mock_what_you_dont_own", "rel": "ENCODES", "dst": "seed:dotnet-canon:r_dbcontext_direct"},
+    {"src": "py_size_limits", "rel": "ENCODES", "dst": "seed:dotnet-canon:r_feature_file_cap"},
+    {"src": "py_pyproject_versions", "rel": "ENCODES", "dst": "seed:geospatial-enforcement-defects:r_pin_gating_tools"}
   ]
 }
