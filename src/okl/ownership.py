@@ -85,7 +85,7 @@ def main(argv: list[str]) -> int:
         p = Path(name)
         try:
             p.write_text(stamp(p.read_text(encoding="utf-8")), encoding="utf-8")
-        except OSError as e:
+        except (OSError, UnicodeDecodeError) as e:
             print(f"cannot stamp {p}: {e}", file=sys.stderr)
             return 2
         print(f"stamped {p}")

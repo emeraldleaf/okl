@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import argparse
-import importlib.util
+import importlib
 import sys
 
 
@@ -19,7 +19,9 @@ def cmd_serve(args: argparse.Namespace) -> int:
     except RuntimeError as e:
         print(f"OKL: {e}", file=sys.stderr)
         return 2
-    if importlib.util.find_spec("uvicorn") is None:
+    try:
+        importlib.import_module("uvicorn")   # imported here only to fail before serving
+    except ImportError:
         print("OKL: okl serve needs uvicorn: install 'observed-knowledge-ledger[service]'",
               file=sys.stderr)
         return 2

@@ -48,16 +48,16 @@ jobs:
         env:
           GENERATOR_MODEL: ${{ vars.GENERATOR_MODEL }}
           JUDGE_MODEL: ${{ vars.JUDGE_MODEL }}   # must differ from GENERATOR_MODEL
-        # Exit 2 = did not run: cases.jsonl still holds <<FILL placeholders, so nothing was
-        # measured. A new kit starts there, so that is a warning, not a red build and not a
-        # pass. Any other failure fails the job.
+        # Exit 2 = did not run: no cases file, an empty one, or one still holding <<FILL
+        # placeholders, so nothing was measured. A new kit starts there, so that is a warning,
+        # not a red build and not a pass. Any other failure fails the job.
         run: |
           set +e
           python evals/run_evals.py --fail-rate 0.20
           rc=$?
           set -e
           if [ "$rc" -eq 2 ]; then
-            echo "::warning title=Evals not measured::evals/cases.jsonl still holds <<FILL placeholders, so nothing was measured. This step passing is NOT a result."
+            echo "::warning title=Evals not measured::evals/cases.jsonl is missing, empty, or still holds <<FILL placeholders, so nothing was measured. This step passing is NOT a result."
             exit 0
           fi
           exit "$rc"

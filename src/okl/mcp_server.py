@@ -11,11 +11,11 @@ from __future__ import annotations
 from typing import Any
 
 from . import core
-from .client import Client, OKLUnreachableError
+from .client import Client, OKLNotConfiguredError, OKLRejectedError, OKLUnreachableError
 
 
 # Any: the server's class is picked at runtime from whichever SDK major is installed.
-def _build() -> Any:
+def _build() -> Any:  # noqa: C901 - a declarative table of tool definitions, see pyproject
     """Construct the MCP server, tolerating both major versions of the SDK.
 
     The class was renamed in mcp 2.x: `mcp.server.fastmcp.FastMCP` became
@@ -66,13 +66,14 @@ def _build() -> Any:
             return (f"⚠️ OKL UNREACHABLE — cannot confirm a clean check ({e}). "
                     "Treat as: rules may exist that you cannot see. Proceed with caution "
                     "and re-run once connectivity is restored.")
-        except ValueError as e:
-            # Over a service this is a rejected request (any 4xx, such as a 401 for a
-            # missing token); locally, no store named. Either way no check ran, and the
-            # agent must hear that as plainly as an outage, not as a raw tool error.
+        except (OKLRejectedError, OKLNotConfiguredError) as e:
+            # A service that refused the request (any 4xx, such as a 401 for a missing
+            # token), or no store named here. Either way no check ran, and the agent must
+            # hear that as plainly as an outage, not as a raw tool error. Only these two:
+            # any other ValueError is a bug, and must surface as one.
             return (f"⚠️ OKL REFUSED THE CHECK — cannot confirm a clean check ({e}). "
-                    "Treat as: rules may exist that you cannot see. Fix the cause above "
-                    "and re-run.")
+                    "Treat as: rules may exist that you cannot see. Fix the cause in "
+                    "parentheses and re-run.")
         if compact:
             return core.render_actions_only(result, limit=limit)
         return core.render_check_for_agent(result)
@@ -120,7 +121,12 @@ def _build() -> Any:
         Each line leads with the lesson's id: pass it to okl_record as `id` to update
         that lesson rather than adding a near-duplicate.
         """
-        rows = client.search(query, scope=scope, limit=limit)
+        try:
+            rows = client.search(query, scope=scope, limit=limit)
+        except OKLUnreachableError as e:
+            return f"⚠️ OKL UNREACHABLE — no search ran ({e})."
+        except (OKLRejectedError, OKLNotConfiguredError) as e:
+            return f"⚠️ OKL REFUSED THE SEARCH — no search ran ({e})."
         if not rows:
             return "no matches."
         # The id was missing, so an agent told to "search first and reuse the id" had no
