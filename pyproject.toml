@@ -86,8 +86,9 @@ omit = ["*/scaffold/*"]
 # paths are unreachable and their tests skip, and the true figure is 66.7%. A threshold
 # read off a developer's machine fails on a runner that has less installed.
 #
-# It should only ever be raised. The weak spots it is deliberately NOT hiding:
-# bootstrap.py has no test at all, and cli.py sits at 49%.
+# It should only ever be raised. The weak spots it is deliberately NOT hiding, measured
+# 2026-10-04: bootstrap.py has no test at all, and in the CLI, health.py is at 30%,
+# servers.py at 40% and lessons.py at 49%.
 fail_under = 66
 show_missing = true
 
@@ -207,7 +208,7 @@ max-complexity = 12
 # The command-line layers, where printing IS the output: the CLI itself, seed's warnings
 # while importing a pack, ownership's `python -m okl.ownership --stamp`, the scripts the
 # scaffold copies into other repos, and the diagram renderer.
-"src/okl/cli.py" = ["T20"]
+"src/okl/cli/**" = ["T20"]
 "src/okl/seed.py" = ["T20"]
 "src/okl/ownership.py" = ["T20"]
 "src/okl/scaffold/**" = ["T20"]
