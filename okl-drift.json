@@ -8,9 +8,9 @@
       "title": "The README's stated check defaults (limit 12; formats agent, actions, json, hook) match the code",
       "scope": "repo:okl",
       "files": "README.md,src/okl/core.py,src/okl/cli/",
-      "verified_at": 1791083878171,
-      "verified_by": "`PYTHONPATH=src python3 -c \"import inspect,re,subprocess,sys; from okl import core; d=inspect.signature(core.check).parameters[\\\"limit\\\"].default; h=subprocess.run([sys.executable,\\\"-m\\\",\\\"okl\\\",\\\"check\\\",\\\"--help\\\"],capture_output=True,text=True).stdout; fmts=re.search(r\\\"--format \\{([a-z,]+)\\}\\\",h).group(1).split(\\\",\\\"); r=open(\\\"README.md\\\").read(); missing=[f for f in fmts if f!=\\\"agent\\\" and \\\"--format \\\"+f not in r]; ok=d==12 and \\\"--limit 12\\\" in r and not missing; sys.exit(\\\"limit=%s, formats undocumented: %s\\\" % (d, missing)) if not ok else print(\\\"CHECK DEFAULTS MATCH\\\", fmts)\"` exit 0, matched 'CHECK DEFAULTS MATCH' on commit b59855cab751 @ 2026-10-04T03:17Z",
-      "verified_commit": "b59855cab7516132f946cc1c2addcb68962d02b4"
+      "verified_at": 1791084029369,
+      "verified_by": "`PYTHONPATH=src python3 -c \"import inspect,re,subprocess,sys; from okl import core; d=inspect.signature(core.check).parameters[\\\"limit\\\"].default; h=subprocess.run([sys.executable,\\\"-m\\\",\\\"okl\\\",\\\"check\\\",\\\"--help\\\"],capture_output=True,text=True).stdout; fmts=re.search(r\\\"--format \\{([a-z,]+)\\}\\\",h).group(1).split(\\\",\\\"); r=open(\\\"README.md\\\").read(); missing=[f for f in fmts if f!=\\\"agent\\\" and \\\"--format \\\"+f not in r]; ok=d==12 and \\\"--limit 12\\\" in r and not missing; sys.exit(\\\"limit=%s, formats undocumented: %s\\\" % (d, missing)) if not ok else print(\\\"CHECK DEFAULTS MATCH\\\", fmts)\"` exit 0, matched 'CHECK DEFAULTS MATCH' on commit 2d5502c4c993 @ 2026-10-04T03:20Z",
+      "verified_commit": "2d5502c4c9932db798e278b4f341a8a665da9685"
     },
     {
       "id": "doc-init-flags",
@@ -18,9 +18,9 @@
       "title": "Every okl init flag the README and guide document exists in the CLI",
       "scope": "repo:okl",
       "files": "README.md,docs/GETTING-STARTED.md,src/okl/cli/",
-      "verified_at": 1791083877728,
-      "verified_by": "`PYTHONPATH=src python3 -c \"import re,subprocess,sys; h=subprocess.run([sys.executable,\\\"-m\\\",\\\"okl\\\",\\\"init\\\",\\\"--help\\\"],capture_output=True,text=True).stdout; docs=open(\\\"README.md\\\").read()+open(\\\"docs/GETTING-STARTED.md\\\").read(); flags=set(f for m in re.findall(r\\\"okl init[^\\n\\`]*\\\",docs) for f in re.findall(r\\\"--[a-z][a-z-]+\\\",m)); miss=sorted(f for f in flags if f not in h); sys.exit(\\\"documented but missing: %s\\\" % miss) if miss or not flags else print(\\\"INIT FLAGS EXIST\\\", sorted(flags))\"` exit 0, matched 'INIT FLAGS EXIST' on commit b59855cab751 @ 2026-10-04T03:17Z",
-      "verified_commit": "b59855cab7516132f946cc1c2addcb68962d02b4"
+      "verified_at": 1791084028989,
+      "verified_by": "`PYTHONPATH=src python3 -c \"import re,subprocess,sys; h=subprocess.run([sys.executable,\\\"-m\\\",\\\"okl\\\",\\\"init\\\",\\\"--help\\\"],capture_output=True,text=True).stdout; docs=open(\\\"README.md\\\").read()+open(\\\"docs/GETTING-STARTED.md\\\").read(); flags=set(f for m in re.findall(r\\\"okl init[^\\n\\`]*\\\",docs) for f in re.findall(r\\\"--[a-z][a-z-]+\\\",m)); miss=sorted(f for f in flags if f not in h); sys.exit(\\\"documented but missing: %s\\\" % miss) if miss or not flags else print(\\\"INIT FLAGS EXIST\\\", sorted(flags))\"` exit 0, matched 'INIT FLAGS EXIST' on commit 2d5502c4c993 @ 2026-10-04T03:20Z",
+      "verified_commit": "2d5502c4c9932db798e278b4f341a8a665da9685"
     },
     {
       "id": "doc-install-name",
@@ -38,9 +38,9 @@
       "title": "The docs' claim that okl record --verified is refused is true",
       "scope": "repo:okl",
       "files": "README.md,docs/GETTING-STARTED.md,src/okl/cli/",
-      "verified_at": 1791083877946,
-      "verified_by": "`R=$PWD; d=$(mktemp -d) && cd $d && git init -q && env -u OKL_DATABASE_URL -u OKL_SERVICE_URL PYTHONPATH=$R/src python3 -m okl init --repo z --no-claude >/dev/null 2>&1; env -u OKL_DATABASE_URL -u OKL_SERVICE_URL PYTHONPATH=$R/src python3 -m okl record --type Rule --scope repo --title x --verified >/dev/null 2>&1; rc=$?; cd $R; rm -rf $d; [ $rc -eq 2 ] && python3 -c \"import sys; t=lambda f: \\\" \\\".join(open(f).read().split()); sys.exit(0 if \\\"exits 2\\\" in t(\\\"README.md\\\") and \\\"okl record --verified\\` is refused\\\" in t(\\\"docs/GETTING-STARTED.md\\\") else 1)\" && echo VERIFIED FLAG REFUSED` exit 0, matched 'VERIFIED FLAG REFUSED' on commit b59855cab751 @ 2026-10-04T03:17Z",
-      "verified_commit": "b59855cab7516132f946cc1c2addcb68962d02b4"
+      "verified_at": 1791084029210,
+      "verified_by": "`R=$PWD; d=$(mktemp -d) && cd $d && git init -q && env -u OKL_DATABASE_URL -u OKL_SERVICE_URL PYTHONPATH=$R/src python3 -m okl init --repo z --no-claude >/dev/null 2>&1; env -u OKL_DATABASE_URL -u OKL_SERVICE_URL PYTHONPATH=$R/src python3 -m okl record --type Rule --scope repo --title x --verified >/dev/null 2>&1; rc=$?; cd $R; rm -rf $d; [ $rc -eq 2 ] && python3 -c \"import sys; t=lambda f: \\\" \\\".join(open(f).read().split()); sys.exit(0 if \\\"exits 2\\\" in t(\\\"README.md\\\") and \\\"okl record --verified\\` is refused\\\" in t(\\\"docs/GETTING-STARTED.md\\\") else 1)\" && echo VERIFIED FLAG REFUSED` exit 0, matched 'VERIFIED FLAG REFUSED' on commit 2d5502c4c993 @ 2026-10-04T03:20Z",
+      "verified_commit": "2d5502c4c9932db798e278b4f341a8a665da9685"
     },
     {
       "id": "docs-agent-neutral",
@@ -68,9 +68,9 @@
       "title": "The core and client path stays stdlib-only — every third-party import lives behind an extra",
       "scope": "repo:okl",
       "files": "src/okl/core.py,src/okl/client.py,src/okl/store.py,pyproject.toml",
-      "verified_at": 1791083924713,
-      "verified_by": "`python3 -c \"import ast;third={'fastapi','pydantic','httpx','requests','psycopg','psycopg2','uvicorn','mcp','yaml'};bad=[(f,getattr(n,'module','') or '')for f in('src/okl/store.py','src/okl/core.py','src/okl/client.py')for n in ast.parse(open(f).read()).body if isinstance(n,(ast.Import,ast.ImportFrom))and((getattr(n,'module','')or '').split('.')[0]in third or any(a.name.split('.')[0]in third for a in n.names))];assert not bad,bad;print('STDLIB OK')\"` exit 0, matched 'STDLIB OK' on commit 11f2e3e61270 @ 2026-10-04T03:18Z",
-      "verified_commit": "11f2e3e61270df3f0e3e3295a13249795cea73fd"
+      "verified_at": 1791084033020,
+      "verified_by": "`python3 -c \"import ast;third={'fastapi','pydantic','httpx','requests','psycopg','psycopg2','uvicorn','mcp','yaml'};bad=[(f,getattr(n,'module','') or '')for f in('src/okl/store.py','src/okl/core.py','src/okl/client.py')for n in ast.parse(open(f).read()).body if isinstance(n,(ast.Import,ast.ImportFrom))and((getattr(n,'module','')or '').split('.')[0]in third or any(a.name.split('.')[0]in third for a in n.names))];assert not bad,bad;print('STDLIB OK')\"` exit 0, matched 'STDLIB OK' on commit 2d5502c4c993 @ 2026-10-04T03:20Z",
+      "verified_commit": "2d5502c4c9932db798e278b4f341a8a665da9685"
     },
     {
       "id": "n_71c09abf3f37",
@@ -78,9 +78,9 @@
       "title": "Dependency direction is one-way: store imports nothing, core imports store, adapters import client",
       "scope": "repo:okl",
       "files": "src/okl/store.py,src/okl/core.py,src/okl/client.py",
-      "verified_at": 1791083921198,
-      "verified_by": "`lint-imports` exit 0, matched '1 kept, 0 broken' on commit 11f2e3e61270 @ 2026-10-04T03:18Z",
-      "verified_commit": "11f2e3e61270df3f0e3e3295a13249795cea73fd"
+      "verified_at": 1791084029509,
+      "verified_by": "`lint-imports` exit 0, matched '1 kept, 0 broken' on commit 2d5502c4c993 @ 2026-10-04T03:20Z",
+      "verified_commit": "2d5502c4c9932db798e278b4f341a8a665da9685"
     },
     {
       "id": "n_7e50e3588bcd",
@@ -88,9 +88,9 @@
       "title": "A test that imports an undeclared package passes only where that package happens to be installed",
       "scope": "org",
       "files": "tests/",
-      "verified_at": 1791083921365,
-      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && ! grep -rnE '^\\s*import tomllib' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' on commit 11f2e3e61270 @ 2026-10-04T03:18Z",
-      "verified_commit": "11f2e3e61270df3f0e3e3295a13249795cea73fd"
+      "verified_at": 1791084029667,
+      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && ! grep -rnE '^\\s*import tomllib' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' on commit 2d5502c4c993 @ 2026-10-04T03:20Z",
+      "verified_commit": "2d5502c4c9932db798e278b4f341a8a665da9685"
     },
     {
       "id": "n_9ba48d85ed19",
@@ -118,9 +118,9 @@
       "title": "A port is defined by behaviour, not by its signatures — state the contract and test every adapter against one body",
       "scope": "org",
       "files": "src/okl/store.py,tests/test_okl.py",
-      "verified_at": 1791083924658,
-      "verified_by": "`python3 -m pytest -q -k 'backend_conformance'` exit 0, matched 'passed' on commit 11f2e3e61270 @ 2026-10-04T03:18Z",
-      "verified_commit": "11f2e3e61270df3f0e3e3295a13249795cea73fd"
+      "verified_at": 1791084032967,
+      "verified_by": "`python3 -m pytest -q -k 'backend_conformance'` exit 0, matched 'passed' on commit 2d5502c4c993 @ 2026-10-04T03:20Z",
+      "verified_commit": "2d5502c4c9932db798e278b4f341a8a665da9685"
     },
     {
       "id": "n_be9f13d587b1",
