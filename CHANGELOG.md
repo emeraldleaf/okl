@@ -22,6 +22,9 @@
   directory holds no packs, and `python -m okl.ownership --stamp` on a file it cannot read
   (it raised a traceback). The MCP `okl_check` tool reports a refused request (a 401, or no
   store named) as "OKL REFUSED THE CHECK" rather than a raw tool error.
+- **`okl serve` and `okl mcp` without their extra exit 2** and name the install command
+  (`observed-knowledge-ledger[service]` or `[mcp]`); they raised a traceback, and serve
+  named a package that no longer exists.
 - **The scaffolded eval runner exits 2 when it has no cases file**, as it already did for
   an empty one: nothing was measured either way.
 - **okl closes its SQLite connections** (#116). Python 3.13 warns about every connection

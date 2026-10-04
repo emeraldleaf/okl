@@ -2397,6 +2397,34 @@ def test_seed_and_stamp_exit_2_when_they_cannot_run(tmp_path, monkeypatch, capsy
     assert r.returncode == 2 and "cannot stamp missing.yml" in r.stderr, r
     assert "Traceback" not in r.stderr, r.stderr
 
+
+def test_serve_and_mcp_without_their_extra_exit_2_and_name_it(monkeypatch, capsys):
+    """`okl serve` without the service extra raised a RuntimeError past main(): a traceback
+    and exit 1, naming `okl[service]`, a name the package no longer has. `okl mcp` without
+    the MCP SDK did the same. Both could not run, so both must exit 2 and say what to
+    install. Found by the architecture review of #120."""
+    import sys
+
+    from okl.cli import main
+
+    # ARRANGE — FastAPI is missing, and okl.service must be imported afresh to notice.
+    monkeypatch.delitem(sys.modules, "okl.service", raising=False)
+    monkeypatch.setitem(sys.modules, "fastapi", None)
+
+    # ACT / ASSERT (1) — serve refuses with the install command, no traceback.
+    assert main(["serve"]) == 2
+    err = capsys.readouterr().err
+    assert "observed-knowledge-ledger[service]" in err and "Traceback" not in err, err
+
+    # ARRANGE (2) — the MCP SDK is missing, whether or not another test imported it.
+    for mod in ("mcp", "mcp.server", "mcp.server.mcpserver", "mcp.server.fastmcp"):
+        monkeypatch.setitem(sys.modules, mod, None)
+
+    # ACT / ASSERT (2) — mcp refuses, names the install command, and never starts serving.
+    assert main(["mcp"]) == 2
+    err = capsys.readouterr().err
+    assert "observed-knowledge-ledger[mcp]" in err and "Traceback" not in err, err
+
 def test_the_service_answers_an_unknown_relation_with_400(tmp_path, monkeypatch):
     """#119: /link let core.link's ValueError escape as a 500, which the client reads as an
     outage, so a caller's typo in a relation looked like the service was down. It must be
