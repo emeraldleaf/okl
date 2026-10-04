@@ -235,6 +235,7 @@ def main() -> int:
         pf = subprocess.run([sys.executable, str(Path(__file__).parent / "preflight.py")],
                             capture_output=True, text=True)
         print(pf.stdout, end="")
+        print(pf.stderr, end="", file=sys.stderr)   # a refusal (e.g. no store) says why here
         if pf.returncode != 0:
             print("REFUSING TO RUN: pre-flight failed (see above).")
             return 5

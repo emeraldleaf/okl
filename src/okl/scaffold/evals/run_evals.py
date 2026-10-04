@@ -39,8 +39,8 @@ def main(argv: list[str] | None = None) -> int:
     """Run every case, print the report (failure count first), and write results/eval-<time>.json.
 
     `argv` defaults to the command line. Returns the exit code: 0 when the results are
-    usable (and, as things stand, when there is no cases file at all), 1 when too many
-    cases crashed, 2 or 3 when the run is refused.
+    usable, 1 when too many cases crashed, 2 when there is nothing to measure (no cases,
+    an empty file, or unfilled placeholders), 3 when the judge is the generator.
     """
     ap = argparse.ArgumentParser()
     ap.add_argument("--cases", default=str(Path(__file__).parent / "cases.jsonl"))
@@ -57,8 +57,10 @@ def main(argv: list[str] | None = None) -> int:
 
     path = Path(args.cases)
     if not path.exists():
-        print(f"no cases file at {path} — add a golden set (see README). Nothing to measure.")
-        return 0
+        # Exit 2, like an empty file: nothing ran, and exit 0 would read as a clean run.
+        print(f"no cases file at {path} — add a golden set (see README). Nothing was measured.",
+              file=sys.stderr)
+        return 2
     text = path.read_text()
     # An unfilled golden set is not a measurement. The placeholder case "completes" against
     # the stub and scored avg 5.00 with a 0% failure rate — a green number over nothing.

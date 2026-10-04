@@ -333,6 +333,7 @@ statements, architecture rules, published numbers.
 
 | You see | It means | Do |
 |---|---|---|
+| `OKL: not configured: no .okl/config.json here or in any parent directory…` (exit 2) | Nothing names a store here: a fresh clone, a git worktree, or the wrong directory | Run `okl init` here, `okl connect <url>`, or set `OKL_DATABASE_URL` |
 | Prompts are not briefed | this repo has no `.okl/config.json`; the hooks step aside | run `okl init` here |
 | A prompt is blocked with "OKL CHECK DID NOT RUN" | okl is set up here but could not run; the message says why | fix the cause, or start the session with `OKL_OFFLINE=1` |
 | `claude -p` prints the answer to "what did we learn?" | the Stop hook replaced the printed answer | run headless sessions with `OKL_DISABLED_HOOKS=encode` |

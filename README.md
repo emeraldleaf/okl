@@ -949,8 +949,8 @@ src/okl/
   ownership.py    # okl-fingerprint lines: which installed files are okl's, and untouched
   coexist.py      # `okl doctor`: detects other agent-memory plugins and double wiring
   bootstrap.py    # propose starter notes from a repo's git history + docs
-  service.py      # the shared web service (okl[service])
-  mcp_server.py   # coding-agent tools (okl[mcp])
+  service.py      # the shared web service (the [service] extra)
+  mcp_server.py   # coding-agent tools (the [mcp] extra)
   seed.py         # load a JSON seed file
   scaffold_cmd.py # the `okl scaffold` starter-files stamper
 seed/             # starter lesson files (examples + genuinely useful defects)

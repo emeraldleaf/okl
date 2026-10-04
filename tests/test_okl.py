@@ -1896,8 +1896,9 @@ def test_suggested_seed_commands_survive_a_path_with_spaces(tmp_path, monkeypatc
         '{"nodes": [{"type": "Rule", "title": "t", "scope": "org", "tags": "react"}]}')
     monkeypatch.setattr(seed_packs, "_bundled_seed_dir", lambda: packs)
     monkeypatch.chdir(tmp_path)
-    monkeypatch.delenv("OKL_DATABASE_URL", raising=False)
     monkeypatch.delenv("OKL_SERVICE_URL", raising=False)
+    # A named, empty store: the guidance reads it, and an unnamed one is refused (#117).
+    monkeypatch.setenv("OKL_DATABASE_URL", f"sqlite:///{tmp_path / 'okl.db'}")
 
     client = Client(config={"repo": "r", "interests": ["react"]})
     line = next(ln for ln in seed_packs._empty_store_guidance(client) if "okl seed" in ln)
@@ -2306,6 +2307,175 @@ def test_the_service_keeps_applies_to(tmp_path, monkeypatch):
                 if n["id"] == r.json()["id"])
     assert node.get("applies_to") == "dotnet", node
 
+
+
+def test_a_command_with_no_store_named_refuses_and_writes_nothing(tmp_path, monkeypatch, capsys):
+    """#117: in a directory where okl was never set up, `okl record` and `okl seed` exited 0
+    having written their lessons to a stray ./okl.db that no hook, check or CI job reads,
+    and `okl coverage` reported a clean zero. Every command that needs a store must refuse
+    with exit 2 instead, say why on stderr, and leave no database behind."""
+    import subprocess
+
+    from okl.cli import main
+    from okl.client import _find_config
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+    subprocess.run(["git", "init", "-q", "."], check=True)
+    # Nothing above this directory may name a store either, or the commands below would
+    # write to it before the assertions fail (the 2026-09-27 fixture-records incident).
+    assert _find_config() is None, "the test directory sits inside an okl-enrolled repo"
+
+    # ACT / ASSERT (1) — each store command, run where nothing names a store, refuses: exit
+    # 2, nothing on stdout (a hook reading stdout must not see a result), the reason on stderr.
+    for argv in (["record", "--type", "Rule", "--scope", "repo", "--title", "probe"],
+                 ["seed", "dotnet-defects"],
+                 ["link", "a", "CATCHES", "b"],
+                 ["verify", "x", "--run", "true"],
+                 ["verify", "x", "--run", "false"],          # not "check failed" (1): it never ran
+                 ["verify", "x", "--run", "touch ran.txt"],  # and the command is not executed
+                 ["verify", "x"],
+                 ["coverage"]):
+        assert main(argv) == 2, argv
+        out, err = capsys.readouterr()
+        assert out == "" and "not configured" in err, (argv, out, err)
+
+    # ASSERT (2) — no database was created anywhere, by any of them, and verify ran nothing.
+    assert not list(tmp_path.rglob("*.db")), list(tmp_path.rglob("*.db"))
+    assert not (tmp_path / "ran.txt").exists(), "okl verify ran the check with no store to record it"
+
+    # ASSERT (3) — listing the bundled packs needs no store, so it still works here.
+    assert main(["seed"]) == 0
+
+
+
+def test_the_mcp_check_reports_a_refused_check_as_no_check(tmp_path, monkeypatch):
+    """okl_check caught only OKLUnreachableError, so a request the store refused (a 401
+    from a token-protected service, or no store named at all) escaped as a raw tool error
+    an agent may read past. It must say, as plainly as an outage, that no check ran.
+    Found by the architecture review of #118."""
+    pytest.importorskip("mcp")
+    import asyncio
+
+    from okl.mcp_server import _build
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.chdir(tmp_path)   # ARRANGE — nothing here names a store
+
+    async def ask() -> str:
+        res = await _build().call_tool("okl_check", {"task": "add an endpoint"})
+        c = getattr(res, "content", res)
+        c = c[0] if isinstance(c, list | tuple) else c
+        c = c[0] if isinstance(c, list | tuple) else c
+        return getattr(c, "text", str(c))
+
+    # ACT / ASSERT — a refusal that names the cause, never a briefing or a raw error.
+    out = asyncio.run(ask())
+    assert out.startswith("⚠️ OKL REFUSED THE CHECK") and "not configured" in out, out
+
+    # ASSERT (2) — search, the other read tool, says the same instead of a raw tool error.
+    async def search() -> str:
+        res = await _build().call_tool("okl_search", {"query": "anything"})
+        c = getattr(res, "content", res)
+        c = c[0] if isinstance(c, list | tuple) else c
+        c = c[0] if isinstance(c, list | tuple) else c
+        return getattr(c, "text", str(c))
+    out = asyncio.run(search())
+    assert out.startswith("⚠️ OKL REFUSED THE SEARCH") and "not configured" in out, out
+
+
+def test_seed_and_stamp_exit_2_when_they_cannot_run(tmp_path, monkeypatch, capsys):
+    """Under the CLI contract, 1 means "ran and found something" and 2 "could not run".
+    `okl seed <dir>` with no packs in it, and `python -m okl.ownership --stamp` on a file
+    it cannot read, both reported as something else (1, and a traceback). Found by the
+    architecture review of #118."""
+    import subprocess
+    import sys
+
+    from okl.cli import main
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+    subprocess.run(["git", "init", "-q", "."], check=True)
+    assert main(["init", "--repo", "r", "--no-claude", "--no-seed", "--no-ci"]) == 0
+    (tmp_path / "empty").mkdir()
+    capsys.readouterr()
+
+    # ASSERT (1) — a directory holding no packs: nothing to import, so it could not run.
+    assert main(["seed", "empty"]) == 2
+    out, err = capsys.readouterr()
+    assert out == "" and "no seed files found" in err, (out, err)
+
+    # ASSERT (1b) — no bundled packs at all (a broken install): listing and --all both
+    # could not run, so 2, with nothing on stdout for a script to mistake for a listing.
+    from okl.cli import packs as seed_packs
+    monkeypatch.setattr(seed_packs, "_bundled_seed_dir", lambda: tmp_path / "empty")
+    for argv in (["seed"], ["seed", "--all"]):
+        assert main(argv) == 2, argv
+        out, err = capsys.readouterr()
+        assert out == "" and "no seed" in err, (argv, out, err)
+
+    # ASSERT (2) — a file that is not there: exit 2 with the reason, not a traceback.
+    r = subprocess.run([sys.executable, "-m", "okl.ownership", "--stamp", "missing.yml"],
+                       capture_output=True, text=True)
+    assert r.returncode == 2 and "cannot stamp missing.yml" in r.stderr, r
+    assert r.stdout == "" and "Traceback" not in r.stderr, r
+
+
+def test_serve_and_mcp_without_their_extra_exit_2_and_name_it(monkeypatch, capsys):
+    """`okl serve` without the service extra raised a RuntimeError past main(): a traceback
+    and exit 1, naming `okl[service]`, a name the package no longer has. `okl mcp` without
+    the MCP SDK did the same. Both could not run, so both must exit 2 and say what to
+    install. Found by the architecture review of #120."""
+    import sys
+
+    from okl.cli import main
+
+    # ARRANGE — FastAPI is missing, and okl.service must be imported afresh to notice.
+    monkeypatch.delitem(sys.modules, "okl.service", raising=False)
+    monkeypatch.setitem(sys.modules, "fastapi", None)
+
+    # ACT / ASSERT (1) — serve refuses with the install command, no traceback.
+    assert main(["serve"]) == 2
+    out, err = capsys.readouterr()
+    assert out == "" and "observed-knowledge-ledger[service]" in err and "Traceback" not in err, err
+
+    # ARRANGE / ACT / ASSERT (1b) — FastAPI present but uvicorn missing: same refusal.
+    monkeypatch.delitem(sys.modules, "fastapi")
+    monkeypatch.setitem(sys.modules, "uvicorn", None)
+    assert main(["serve"]) == 2
+    out, err = capsys.readouterr()
+    assert out == "" and "needs uvicorn" in err and "[service]" in err, err
+
+    # ARRANGE (2) — the MCP SDK is missing, whether or not another test imported it.
+    for mod in ("mcp", "mcp.server", "mcp.server.mcpserver", "mcp.server.fastmcp"):
+        monkeypatch.setitem(sys.modules, mod, None)
+
+    # ACT / ASSERT (2) — mcp refuses, names the install command, and never starts serving.
+    assert main(["mcp"]) == 2
+    out, err = capsys.readouterr()
+    assert out == "" and "observed-knowledge-ledger[mcp]" in err and "Traceback" not in err, err
+
+def test_the_service_answers_an_unknown_relation_with_400(tmp_path, monkeypatch):
+    """#119: /link let core.link's ValueError escape as a 500, which the client reads as an
+    outage, so a caller's typo in a relation looked like the service was down. It must be
+    a 400 that carries the message, as /record and /verify already were."""
+    pytest.importorskip("fastapi")
+    pytest.importorskip("httpx")
+    from fastapi.testclient import TestClient
+
+    from okl import service
+    monkeypatch.delenv("OKL_TOKEN", raising=False)
+    c = TestClient(service.create_app(Store(f"sqlite:///{tmp_path}/svc.db")))
+
+    # ACT — a link with a relation the store does not have.
+    r = c.post("/link", json={"src": "a", "rel": "BOGUS", "dst": "b"})
+
+    # ASSERT — the caller's error, with the valid relations named, not a server error.
+    assert r.status_code == 400, (r.status_code, r.text)
+    assert "BOGUS" in r.json()["detail"] and "CATCHES" in r.json()["detail"], r.text
 
 
 def test_the_core_and_cli_import_only_the_standard_library_at_module_level():

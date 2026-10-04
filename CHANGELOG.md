@@ -12,9 +12,27 @@
   Scientific Python development guide) and the okl change that adopted it. It covers the
   dependency rule as an import-linter contract, docstrings, type hints, size limits, strict
   pytest, errors, mocks, choosing one type checker and one docstring format, and two dated
-  defects. Nothing in it claims verification: verify
-  each lesson against your own repo. `okl init` imports it when it creates a new, empty store
-  in a Python repo; a repo whose store already holds lessons runs `okl seed python-canon`.
+  defects. Nothing in it claims verification: verify each lesson against your own repo.
+  `okl init` imports it when it creates a new, empty store in a Python repo; a repo whose
+  store already holds lessons runs `okl seed python-canon`.
+- **A command run where okl was never set up now refuses (exit 2) instead of writing to a
+  stray `./okl.db`** (#117). `okl record` and `okl seed` used to exit 0 having saved their
+  lessons where no hook, check or CI job looks, and `okl coverage` reported a clean zero.
+  Every CLI command that needs a store now says so and stops, and `okl verify` refuses
+  before running its check: run `okl init` first, or name a store with `OKL_DATABASE_URL`
+  or `okl connect <url>`. Listing packs (`okl seed`) still works anywhere. `okl serve` still
+  defaults to `./okl.db` when nothing names a store (#125).
+- **A shared service answers an unknown link relation with a 400**, not a 500 the client
+  reported as an outage (#119).
+- **More "could not run" cases exit 2**, as the CLI's contract says: `okl seed <dir>` when the
+  directory holds no packs, and `python -m okl.ownership --stamp` on a file it cannot read
+  (it raised a traceback). The MCP `okl_check` tool reports a refused request (a 401, or no
+  store named) as "OKL REFUSED THE CHECK" rather than a raw tool error.
+- **`okl serve` and `okl mcp` without their extra exit 2** and name the install command
+  (`observed-knowledge-ledger[service]` or `[mcp]`); they raised a traceback, and serve
+  named a package that no longer exists.
+- **The scaffolded eval runner exits 2 when it has no cases file**, as it already did for
+  an empty one: nothing was measured either way.
 - **okl closes its SQLite connections** (#116). Python 3.13 warns about every connection
   that is never closed, and okl opened one per command.
 - **Tested on Python 3.10 to 3.14** (#116); CI had tested 3.12 alone. 3.10 reached end of

@@ -94,8 +94,8 @@ class Client:
 
         Safe because the thing this guard was written for is caught downstream anyway:
         `core.check` reports an empty store as EMPTY / "proves nothing" rather than clean.
-        What it still protects is the bare directory where nothing has been named at all —
-        there, reading would create an empty database purely as a side effect of asking.
+        What it still protects is the bare directory where nothing has been named at all,
+        where `_local_store` refuses rather than invent a database.
         """
         return (bool(self.service_url)
                 or bool(os.environ.get("OKL_DATABASE_URL"))
@@ -111,10 +111,17 @@ class Client:
             # record landed, and it landed somewhere else.
             url = os.environ.get("OKL_DATABASE_URL")
             if not url:
-                # otherwise the local store lives next to the config, or ./okl.db
+                # Otherwise the local store lives next to the config. With no config there
+                # is no store, and this used to invent one as ./okl.db: `okl record` and
+                # `okl seed` then exited 0 having written lessons where no hook, check or
+                # CI job ever looks (#117). Refusing here covers every command at once.
                 cfg = _find_config()
-                db = (cfg.parent / "okl.db") if cfg else Path("okl.db")
-                url = f"sqlite:///{db}"
+                if cfg is None:
+                    raise OKLNotConfiguredError(
+                        "not configured: no .okl/config.json here or in any parent directory, "
+                        "and neither OKL_SERVICE_URL nor OKL_DATABASE_URL is set, so there is "
+                        "no store to use. Run `okl init` here, or `okl connect <url>`.")
+                url = f"sqlite:///{cfg.parent / 'okl.db'}"
             self._store = Store(url)
         return self._store
 
@@ -169,7 +176,7 @@ class Client:
             except Exception:  # noqa: BLE001
                 detail = ""
             if 400 <= e.code < 500:
-                raise ValueError(f"OKL service rejected the request ({e.code}): {detail or e.reason}") from e
+                raise OKLRejectedError(f"OKL service rejected the request ({e.code}): {detail or e.reason}") from e
             raise OKLUnreachableError(f"OKL service error at {url}: {e.code} {detail or e.reason}") from e
         except URLError as e:
             raise OKLUnreachableError(f"OKL service unreachable at {url}: {e}") from e
@@ -229,8 +236,7 @@ class Client:
     def link(self, src: str, rel: str, dst: str) -> None:
         """Join two lessons with a typed edge, `src -rel-> dst`.
 
-        An unknown relation raises ValueError locally; a shared service currently answers
-        it with a 500, which arrives as OKLUnreachableError (#119).
+        An unknown relation raises ValueError, locally or over a shared service.
         """
         if self.mode == "remote":
             self._post("/link", {"src": src, "rel": rel, "dst": dst})
@@ -291,12 +297,24 @@ class Client:
                 return json.loads(resp.read())
         except HTTPError as e:
             if 400 <= e.code < 500:
-                raise ValueError(
+                raise OKLRejectedError(
                     f"OKL service rejected the request ({e.code} {e.reason}). "
                     "If this is 401, set OKL_TOKEN or add \"token\" to .okl/config.json.") from e
             raise OKLUnreachableError(f"OKL service error at {url}: {e.code} {e.reason}") from e
         except URLError as e:
             raise OKLUnreachableError(f"OKL service unreachable at {url}: {e}") from e
+
+
+class OKLRejectedError(ValueError):
+    """Raised when a shared service answered and refused the request (any 4xx, such as a
+    401 for a missing token or a 400 for an unknown tag). The caller's mistake, not an
+    outage; a ValueError, so the CLI's backstop still turns it into exit 2."""
+
+
+class OKLNotConfiguredError(ValueError):
+    """Raised when a command needs a store and nothing names one: no .okl/config.json, no
+    OKL_SERVICE_URL, no OKL_DATABASE_URL. A ValueError, so the CLI's backstop turns it
+    into exit 2 ("could not run") with this message, never a write to a stray file."""
 
 
 class OKLUnreachableError(RuntimeError):
