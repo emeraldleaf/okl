@@ -15,7 +15,8 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     """Report agent-memory tools installed beside okl and how they collide (#40).
 
     Exit 1 when any is found, or when okl itself is wired twice (its plugin enabled AND
-    its hooks registered in the project, so every prompt is briefed twice) -- findings,
+    its hooks registered in the project or user settings, so every prompt is briefed
+    twice) -- findings,
     per the CLI contract -- and 0 when neither is. It reads settings files only and
     changes nothing.
     """

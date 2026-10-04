@@ -75,7 +75,8 @@ def status(path: Path, shipped: str) -> str:
 def main(argv: list[str]) -> int:
     """`python -m okl.ownership --stamp <file>...`: re-stamp each file in place.
 
-    Returns the exit code: 0, or 2 for a usage error.
+    Returns the exit code: 0, or 2 for a usage error. A file that cannot be read or
+    written raises (a traceback and exit 1) rather than returning 2 (#117).
     """
     if len(argv) < 2 or argv[0] != "--stamp":
         print("usage: python -m okl.ownership --stamp <file>...", file=sys.stderr)
