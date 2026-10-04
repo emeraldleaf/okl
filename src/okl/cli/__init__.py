@@ -9,7 +9,10 @@ Where to look:
     verification.py  okl verify / reverify / drift / export: proving lessons, finding stale ones
     health.py        okl doctor / metric / coverage: reports on the install and the store
     servers.py       okl serve / mcp: the long-running HTTP and MCP servers
-    common.py        the few helpers more than one of the above uses
+    common.py        _print_json, the JSON printer three of the above share
+
+A leading underscore marks a helper as private to this package, not to one module: the
+first-run helpers in packs.py are used by install.py and lessons.py too.
 
 Every command is a `cmd_<name>(args) -> int` handler, and the int is the exit code: 0
 ran clean, 1 ran and found something, 2 could not run. okl runs inside other people's

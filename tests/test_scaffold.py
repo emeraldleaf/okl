@@ -304,6 +304,26 @@ def test_mirror_files_identical():
 
 
 
+
+def test_the_shipped_workflow_detects_okls_checkout_by_a_file_that_exists():
+    """okl-verify.yml installs the checkout when `[ -f <path> ]` holds, and the PyPI release
+    otherwise. The path was src/okl/cli.py until that file became a package (#120), after
+    which okl's own CI would have tested the release, not the branch, with every check
+    still green. The path it tests must be a file git tracks."""
+    import re
+    root = Path(__file__).resolve().parents[1]
+    workflow = (root / "src/okl/scaffold/ci/okl-verify.yml").read_text()
+
+    # ARRANGE — the path the install step tests before installing the checkout.
+    paths = re.findall(r"if \[ -f (\S+) \]; then\s*\n\s*pip install -e \.", workflow)
+    assert paths, "no checkout-detection step found in okl-verify.yml"
+
+    # ASSERT — it names a file this repo tracks, so the test is true in okl's own CI.
+    for path in paths:
+        tracked = subprocess.run(["git", "-C", str(root), "ls-files", "--error-unmatch", path],
+                                 capture_output=True, text=True)
+        assert tracked.returncode == 0, f"okl-verify.yml detects the checkout by {path}, which git does not track"
+
 def test_the_package_version_is_the_installed_distributions():
     """okl.__version__ said 0.1.0 through release 0.7.8: a hand-kept constant nothing
     checked. It is now read from the installed distribution, so wherever okl is installed
