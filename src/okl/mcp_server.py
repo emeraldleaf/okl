@@ -66,6 +66,13 @@ def _build() -> Any:
             return (f"⚠️ OKL UNREACHABLE — cannot confirm a clean check ({e}). "
                     "Treat as: rules may exist that you cannot see. Proceed with caution "
                     "and re-run once connectivity is restored.")
+        except ValueError as e:
+            # Over a service this is a rejected request (any 4xx, such as a 401 for a
+            # missing token); locally, no store named. Either way no check ran, and the
+            # agent must hear that as plainly as an outage, not as a raw tool error.
+            return (f"⚠️ OKL REFUSED THE CHECK — cannot confirm a clean check ({e}). "
+                    "Treat as: rules may exist that you cannot see. Fix the cause above "
+                    "and re-run.")
         if compact:
             return core.render_actions_only(result, limit=limit)
         return core.render_check_for_agent(result)

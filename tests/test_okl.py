@@ -2342,6 +2342,61 @@ def test_a_command_with_no_store_named_refuses_and_writes_nothing(tmp_path, monk
     assert main(["seed"]) == 0
 
 
+
+def test_the_mcp_check_reports_a_refused_check_as_no_check(tmp_path, monkeypatch):
+    """okl_check caught only OKLUnreachableError, so a request the store refused (a 401
+    from a token-protected service, or no store named at all) escaped as a raw tool error
+    an agent may read past. It must say, as plainly as an outage, that no check ran.
+    Found by the architecture review of #118."""
+    pytest.importorskip("mcp")
+    import asyncio
+
+    from okl.mcp_server import _build
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.chdir(tmp_path)   # ARRANGE — nothing here names a store
+
+    async def ask() -> str:
+        res = await _build().call_tool("okl_check", {"task": "add an endpoint"})
+        c = getattr(res, "content", res)
+        c = c[0] if isinstance(c, list | tuple) else c
+        c = c[0] if isinstance(c, list | tuple) else c
+        return getattr(c, "text", str(c))
+
+    # ACT / ASSERT — a refusal that names the cause, never a briefing or a raw error.
+    out = asyncio.run(ask())
+    assert out.startswith("⚠️ OKL REFUSED THE CHECK") and "not configured" in out, out
+
+
+def test_seed_and_stamp_exit_2_when_they_cannot_run(tmp_path, monkeypatch, capsys):
+    """Under the CLI contract, 1 means "ran and found something" and 2 "could not run".
+    `okl seed <dir>` with no packs in it, and `python -m okl.ownership --stamp` on a file
+    it cannot read, both reported as something else (1, and a traceback). Found by the
+    architecture review of #118."""
+    import subprocess
+    import sys
+
+    from okl.cli import main
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+    subprocess.run(["git", "init", "-q", "."], check=True)
+    assert main(["init", "--repo", "r", "--no-claude", "--no-seed", "--no-ci"]) == 0
+    (tmp_path / "empty").mkdir()
+    capsys.readouterr()
+
+    # ASSERT (1) — a directory holding no packs: nothing to import, so it could not run.
+    assert main(["seed", "empty"]) == 2
+    out, err = capsys.readouterr()
+    assert out == "" and "no seed files found" in err, (out, err)
+
+    # ASSERT (2) — a file that is not there: exit 2 with the reason, not a traceback.
+    r = subprocess.run([sys.executable, "-m", "okl.ownership", "--stamp", "missing.yml"],
+                       capture_output=True, text=True)
+    assert r.returncode == 2 and "cannot stamp missing.yml" in r.stderr, r
+    assert "Traceback" not in r.stderr, r.stderr
+
 def test_the_service_answers_an_unknown_relation_with_400(tmp_path, monkeypatch):
     """#119: /link let core.link's ValueError escape as a 500, which the client reads as an
     outage, so a caller's typo in a relation looked like the service was down. It must be

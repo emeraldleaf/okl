@@ -236,8 +236,7 @@ class Client:
     def link(self, src: str, rel: str, dst: str) -> None:
         """Join two lessons with a typed edge, `src -rel-> dst`.
 
-        An unknown relation raises ValueError locally; a shared service currently answers
-        it with a 500, which arrives as OKLUnreachableError (#119).
+        An unknown relation raises ValueError, locally or over a shared service.
         """
         if self.mode == "remote":
             self._post("/link", {"src": src, "rel": rel, "dst": dst})
