@@ -35,7 +35,13 @@ def evaluate_one(case: dict) -> dict:
             "precondition": bool(q), "outcome_bad": not bool(q), "error": None}
 
 
-def main(argv=None) -> int:
+def main(argv: list[str] | None = None) -> int:
+    """Run every case, print the report (failure count first), and write results/eval-<time>.json.
+
+    `argv` defaults to the command line. Returns the exit code: 0 when the results are
+    usable (and, as things stand, when there is no cases file at all), 1 when too many
+    cases crashed, 2 or 3 when the run is refused.
+    """
     ap = argparse.ArgumentParser()
     ap.add_argument("--cases", default=str(Path(__file__).parent / "cases.jsonl"))
     ap.add_argument("--fail-rate", type=float, default=0.20,

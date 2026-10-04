@@ -8,11 +8,14 @@ Requires the `mcp` package: install 'observed-knowledge-ledger[mcp]'. Run: `okl 
 """
 from __future__ import annotations
 
+from typing import Any
+
 from . import core
 from .client import Client, OKLUnreachableError
 
 
-def _build():
+# Any: the server's class is picked at runtime from whichever SDK major is installed.
+def _build() -> Any:
     """Construct the MCP server, tolerating both major versions of the SDK.
 
     The class was renamed in mcp 2.x: `mcp.server.fastmcp.FastMCP` became
@@ -67,8 +70,10 @@ def _build():
             return core.render_actions_only(result, limit=limit)
         return core.render_check_for_agent(result)
 
+    # Keyword-only: the SDK always calls a tool with named arguments, and fourteen
+    # mostly-string parameters are too easy to pass in the wrong order by position.
     @mcp.tool()
-    def okl_record(type: str, title: str, scope: str, body: str | None = None,
+    def okl_record(*, type: str, title: str, scope: str, body: str | None = None,
                    status: str | None = None, found_by: str | None = None,
                    ttl_days: int | None = None, repo: str | None = None,
                    symptom: str | None = None, fix: str | None = None,

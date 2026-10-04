@@ -33,6 +33,8 @@ from .store import Node
 
 @dataclass
 class DriftHit:
+    """One rule whose governed files changed after its last verification, or that was never verified."""
+
     node_id: str
     title: str
     scope: str
@@ -42,6 +44,7 @@ class DriftHit:
     reason: str
 
     def as_dict(self) -> dict[str, Any]:
+        """The hit as a JSON-ready dict, the shape `okl drift --format json` prints."""
         return {
             "node_id": self.node_id, "title": self.title, "scope": self.scope,
             "files": self.files, "last_change_ms": self.last_change_ms,
@@ -372,6 +375,7 @@ def snapshot(nodes: Iterable[Node], repo: str) -> dict[str, Any]:
 
 
 def dump_snapshot(snap: dict[str, Any]) -> str:
+    """The snapshot as the exact text to write to the committed snapshot file."""
     return json.dumps(snap, indent=2, ensure_ascii=False) + "\n"
 
 

@@ -2896,6 +2896,8 @@ def test_the_verified_commit_is_bound_to_its_evidence_and_older_entries_still_re
 
 
 def test_stack_detection(tmp_path):
+    """Stacks are read from manifest files (a .csproj, package.json, requirements.txt and
+    the dependencies inside them), each paired with the file that showed it."""
     from okl.cli import _detect_stacks
     (tmp_path / "api").mkdir(); (tmp_path / "api" / "Api.csproj").write_text("<Project/>")
     (tmp_path / "package.json").write_text('{"dependencies": {"react": "^19.0.0"}}')

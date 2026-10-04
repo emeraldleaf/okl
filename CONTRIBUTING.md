@@ -40,6 +40,13 @@ it is the actual contract. The parts that will fail your build if you miss them:
   `bash gates/run-gates.sh` all gate the build, and the tests run again on every Python
   version okl supports; see `.github/workflows/ci.yml`. Run them locally before pushing.
   pytest is strict: any warning fails the test that raised it.
+- **Code is written for the next reader, and ruff checks it.** It requires a docstring on
+  every module and public function or class (what it is for and what a caller must know,
+  Google style), type hints on every signature outside the tests, functions inside
+  pylint's size limits, and no `print` outside the command-line layers.
+- **Conventions no tool checks, which review will ask about:** comments say why, never
+  what; and when a lint rule does not fit (a declarative table, a deliberate catch-all),
+  the exemption says why beside it, e.g. `# noqa: PLR0915 - one declarative table`.
 - **The `okl-verify` check can fail on your PR, and that is not yours to fix.** CI reads
   the committed `okl-drift.json`: the rules that govern files, and when each was last
   verified. Change a governed file and CI names the rules that need re-checking. The
