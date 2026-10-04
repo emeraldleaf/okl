@@ -58,9 +58,9 @@
       "title": "Read a record's own body before gating it — it may already declare its portability",
       "scope": "org",
       "files": "seed/,src/okl/store.py",
-      "verified_at": 1791153898950,
-      "verified_by": "`python3 -c \"import json;n=[x for x in json.load(open('seed/geospatial-defects.json'))['nodes'] if x.get('key')=='g_classpath'][0];assert not n.get('applies_to'),'g_classpath gated again';print('PORTABLE GATE UNGATED')\"` exit 0, matched 'PORTABLE GATE UNGATED' on commit 733d815f4e2e @ 2026-10-04T22:44Z",
-      "verified_commit": "733d815f4e2ece030bd3e1344a78324da3e4a21b"
+      "verified_at": 1791155759124,
+      "verified_by": "`python3 -c \"import json;n=[x for x in json.load(open('seed/geospatial-defects.json'))['nodes'] if x.get('key')=='g_classpath'][0];assert not n.get('applies_to'),'g_classpath gated again';print('PORTABLE GATE UNGATED')\"` exit 0, matched 'PORTABLE GATE UNGATED' on commit 9ad65f9887c7 @ 2026-10-04T23:15Z",
+      "verified_commit": "9ad65f9887c716b1fd78497bced58bf4ff9afe65"
     },
     {
       "id": "n_71c09abf3f37",
