@@ -12,9 +12,9 @@
   Scientific Python development guide) and the okl change that adopted it. It covers the
   dependency rule as an import-linter contract, docstrings, type hints, size limits, strict
   pytest, errors, mocks, choosing one type checker and one docstring format, and two dated
-  defects. Nothing in it claims verification: verify
-  each lesson against your own repo. `okl init` in a Python repo now imports it with the
-  other packs that match the stack.
+  defects. Nothing in it claims verification: verify each lesson against your own repo.
+  `okl init` imports it when it creates a new, empty store in a Python repo; a repo whose
+  store already holds lessons runs `okl seed python-canon`.
 - **A command run where okl was never set up now refuses (exit 2) instead of writing to a
   stray `./okl.db`** (#117). `okl record` and `okl seed` used to exit 0 having saved their
   lessons where no hook, check or CI job looks, and `okl coverage` reported a clean zero.
