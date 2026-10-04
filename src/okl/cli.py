@@ -45,16 +45,12 @@ def _merge_hook_settings(claude: Path) -> bool:
     changed = False
     # UserPromptSubmit, not PreToolUse: only UserPromptSubmit/SessionStart stdout reaches the
     # model's context. A PreToolUse briefing fires but is never read (found by E2E test).
-    wanted = [(event, None, command) for event, command in HOOK_COMMANDS.items()]
-    for event, matcher, command in wanted:
+    for event, command in HOOK_COMMANDS.items():
         entries = hooks_cfg.setdefault(event, [])
         if any(h.get("command", "").endswith(Path(command).name)
                for e in entries for h in e.get("hooks", [])):
             continue
-        entry: dict = {"hooks": [{"type": "command", "command": command}]}
-        if matcher:
-            entry["matcher"] = matcher
-        entries.append(entry)
+        entries.append({"hooks": [{"type": "command", "command": command}]})
         changed = True
     if changed:
         settings_path.write_text(json.dumps(settings, indent=2) + "\n")

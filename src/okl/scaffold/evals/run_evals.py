@@ -70,7 +70,7 @@ def main(argv=None) -> int:
     for c in cases:
         try:
             r = evaluate_one(c)
-        except Exception as e:  # a crash is a completed-with-failure, counted as such
+        except Exception as e:  # noqa: BLE001 - a crash is a completed-with-failure, counted as such
             r = {"ok": False, "score": None, "precondition": False, "outcome_bad": True, "error": repr(e)}
         results.append(r)
 
