@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **The prompt hook can send a smaller briefing, for a model with a small context window.**
+  A full briefing is roughly 1,600 tokens on every prompt. Set `OKL_BRIEFING_COMPACT=1` and
+  the hook sends only the action list (the new `okl check --compact`); set
+  `OKL_BRIEFING_LIMIT=5` and it draws on five lessons instead of twelve. Both together come
+  to about 380 tokens. A limit that is not a whole number above zero is ignored, and an okl
+  too old for `--compact` briefs in full instead of blocking the prompt.
+- **The briefing sizes the docs quote are measured, together, by `evals/briefing_size.py`.**
+  The MCP `okl_check` description said the full briefing was ~2,300 tokens and the README
+  said ~1,650; on today's 178 seed records it is ~1,620, and the action list is ~230 at
+  `--limit 3` and ~810 at 12. The receipt is in `evals/results/`.
 - **A withdrawn record of any type is briefed as withdrawn.** Only a retracted Claim was
   treated that way; a Decision or Rule with status `retracted` was still briefed as live
   guidance, a retracted Decision under "made on purpose; do not silently reverse". Now any
