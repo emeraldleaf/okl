@@ -41,7 +41,7 @@ class CheckReq(BaseModel):
 
 
 class RecordReq(BaseModel):
-    """Request body for POST /record; the fields are core.record's keyword arguments."""
+    """Request body for POST /record: one lesson to write. type, title and scope are required."""
 
     type: str
     title: str
@@ -93,8 +93,10 @@ class VerifyReq(BaseModel):
 def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901
     """Build the HTTP app over `store`, or over the store OKL_DATABASE_URL names.
 
-    When OKL_TOKEN is set, every route except /health needs it as a bearer token and
-    the API docs routes (/openapi.json, /docs, /redoc) are switched off.
+    With neither, it uses ./okl.db in the current directory, so a deployment should
+    always set OKL_DATABASE_URL (#125). When OKL_TOKEN is set, every route except /health
+    needs it as a bearer token and the API docs routes (/openapi.json, /docs, /redoc)
+    are switched off.
     """
     # Optional shared-secret gate. If OKL_TOKEN is set it covers READS as well as
     # writes. Reads used to be open while writes were gated, which meant a deployed

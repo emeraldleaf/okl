@@ -239,7 +239,8 @@ class Store:
         """Return up to `limit` nodes matching any word of `query`, best match first.
 
         `scope` and `node_types` filter exactly; None or empty means no filter. An empty
-        query matches every node, in no particular order.
+        query matches every node, in no particular order. Without SQLite's FTS5 the
+        fallback matches the whole query as one phrase, unranked (#125).
         """
         return self._impl.search(query, scope, list(node_types) if node_types else None, limit)
 

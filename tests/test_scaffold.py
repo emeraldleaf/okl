@@ -303,6 +303,25 @@ def test_mirror_files_identical():
         assert a.read_bytes() == b.read_bytes(), f"mirror drift: {a} != {b}"
 
 
+
+def test_the_package_version_is_the_installed_distributions():
+    """okl.__version__ said 0.1.0 through release 0.7.8: a hand-kept constant nothing
+    checked. It is now read from the installed distribution, so wherever okl is installed
+    (CI installs it with pip -e) it must equal pyproject's version."""
+    from importlib.metadata import PackageNotFoundError, version
+
+    import okl
+    # tomllib is stdlib from 3.11 only, and okl supports 3.10: skip there, never ImportError.
+    tomllib = pytest.importorskip("tomllib")
+    root = Path(__file__).resolve().parents[1]
+    wanted = tomllib.loads((root / "pyproject.toml").read_text())["project"]["version"]
+    try:
+        installed = version("observed-knowledge-ledger")
+    except PackageNotFoundError:
+        assert okl.__version__ == "unknown"   # a source tree with no install says so
+        return
+    assert installed == wanted and okl.__version__ == wanted, (okl.__version__, installed, wanted)
+
 def test_eval_harness_refuses_self_grading(tmp_path, monkeypatch):
     """The eval harness refuses to run when the judge is the same model as the generator.
 
