@@ -10,7 +10,7 @@
   too old for `--compact` briefs in full instead of blocking the prompt.
 - **The briefing sizes the docs quote are measured, together, by `evals/briefing_size.py`.**
   The MCP `okl_check` description said the full briefing was ~2,300 tokens and the README
-  said ~1,650; on today's 179 seed records it is ~1,620, and the action list is ~230 at
+  said ~1,650; on today's 183 seed records it is ~1,620, and the action list is ~230 at
   `--limit 3` and ~810 at 12. The receipt is in `evals/results/`.
 - **A withdrawn record of any type is briefed as withdrawn.** Only a retracted Claim was
   treated that way; a Decision or Rule with status `retracted` was still briefed as live

@@ -1,8 +1,8 @@
 {
-  "measured_at": "2026-10-04T22:21Z",
-  "okl_commit": "ca0ae2e",
+  "measured_at": "2026-10-04T22:44Z",
+  "okl_commit": "e1c076f",
   "uncommitted_changes_in_src": false,
-  "store": "fresh, every bundled seed pack: 179 records, no interest filter",
+  "store": "fresh, every bundled seed pack: 183 records, no interest filter",
   "task": "add an endpoint that returns an order for the logged-in user",
   "method": "tokens = characters / 4, to the nearest 10; the text that reaches the model",
   "briefings": {
