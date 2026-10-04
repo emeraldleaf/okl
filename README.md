@@ -149,9 +149,9 @@ Two things ship in the package. They are not coequal:
   measures this.
 
   It is worth being precise about what that store fills up with, because "lessons a
-  codebase has learned" invites the picture of a bug database. In the 161-record corpus
-  in [seed/](seed/) it is mostly not that: **90 Rules, 20 Decisions and 7 Gates against
-  34 Defects** — conventions the code follows and trade-offs already settled, not a
+  codebase has learned" invites the picture of a bug database. In the 178-record corpus
+  in [seed/](seed/) it is mostly not that: **103 Rules, 22 Decisions and 7 Gates against
+  36 Defects** — conventions the code follows and trade-offs already settled, not a
   ledger of things that broke. Count it yourself:
 
   ```bash
@@ -825,7 +825,9 @@ okl seed --all                        # import every pack (explicit on purpose)
 ```
 
 The packs hold real, dated records from production codebases (a .NET service, a
-geospatial ML pipeline, a Python RAG service, a React app). They are org-scoped, so
+geospatial ML pipeline, a Python RAG service, a React app), plus `python-canon`: the .NET
+packs' engineering rules translated to Python from cited sources (PEPs, the mypy, pytest
+and import-linter docs, Google's style guide), with the incidents that proved them in okl. They are org-scoped, so
 importing packs for stacks you do not use fills every briefing here with noise about
 frameworks you will never touch — which is why `--all` is opt-in rather than default.
 

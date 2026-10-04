@@ -1,5 +1,26 @@
 # Changelog
 
+## Unreleased
+
+- **A Python canon: `okl seed python-canon`.** 17 lessons that translate the .NET packs'
+  engineering rules to Python. Each one cites the sources that agree on it (PEPs 20, 257,
+  544 and 735; the mypy, pytest and import-linter docs; Google's Python style guide; the
+  Scientific Python development guide) and the okl change that adopted it. It covers the
+  dependency rule as an import-linter contract, docstrings, type hints, size limits, strict
+  pytest, errors, mocks, and two dated defects. Nothing in it claims verification: verify
+  each lesson against your own repo. `okl init` in a Python repo now imports it with the
+  other packs that match the stack.
+- **okl closes its SQLite connections** (#116). Python 3.13 warns about every connection
+  that is never closed, and okl opened one per command.
+- **Tested on Python 3.10 to 3.14** (#116); CI had tested 3.12 alone. 3.10 reached end of
+  life on 2026-10-01, and is still supported for now.
+- **The shipped `okl-verify` workflow** recognises okl's own source checkout by
+  `src/okl/__init__.py` instead of `src/okl/cli.py` (#120). Re-running `okl init` upgrades
+  an installed copy you have not edited.
+- **Internals:** the CLI is now a package, `okl.cli`, with one module per command group
+  (#120); `okl.cli:main` is unchanged. The MCP `okl_record` tool takes keyword arguments
+  only, which is how MCP clients already call it (#118).
+
 ## 0.7.8
 
 - **Re-seeding keeps a lesson's verification** (#110). `okl seed` replaced each row, so
