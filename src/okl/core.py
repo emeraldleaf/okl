@@ -150,12 +150,15 @@ def _bucket_by_type(hits: list[Node]) -> dict[str, list[dict]]:
         pub = _node_public(n)
         if n.is_stale():
             buckets["stale_warnings"].append(pub)
-        if n.type == "Gate":
+        if n.type == "Retraction" or n.status == "retracted":
+            # A withdrawn record of ANY type is a retraction, never live guidance. Only a
+            # retracted Claim used to land here, so a Decision withdrawn in #122 was still
+            # briefed under "made on purpose; do not silently reverse".
+            buckets["live_retractions"].append(pub)
+        elif n.type == "Gate":
             buckets["armed_gates"].append(pub)
         elif n.type == "Defect":
             buckets["relevant_defects"].append(pub)
-        elif n.type == "Retraction" or (n.type == "Claim" and n.status == "retracted"):
-            buckets["live_retractions"].append(pub)
         elif n.type == "Tombstone":
             buckets["in_scope_tombstones"].append(pub)
         elif n.type == "PriorArt" and (n.status == "live" or (n.body and "THREAT" in n.body)):
