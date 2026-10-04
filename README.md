@@ -961,7 +961,7 @@ tests/            # end-to-end tests
 ## Test
 
 ```bash
-pip install -e ".[dev]"   # from a clone of this repo
+pip install -e . --group dev   # from a clone of this repo (pip 25.1+; or `uv sync`)
 pytest -q                 # full suite
 ```
 

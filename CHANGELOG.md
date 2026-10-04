@@ -27,6 +27,9 @@
 - **The shipped `okl-verify` workflow** recognises okl's own source checkout by
   `src/okl/__init__.py` instead of `src/okl/cli.py` (#120). Re-running `okl init` upgrades
   an installed copy you have not edited.
+- **Contributors:** okl's own dev tools moved from the published `[dev]` extra to a PEP 735
+  dependency group (#121). Install with `pip install -e . --group dev` (pip 25.1 or later)
+  or `uv sync`.
 - **Internals:** the CLI is now a package, `okl.cli`, with one module per command group
   (#120); `okl.cli:main` is unchanged. The MCP `okl_record` tool takes keyword arguments
   only, which is how MCP clients already call it (#118).
