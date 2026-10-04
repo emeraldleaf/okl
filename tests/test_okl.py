@@ -2337,6 +2337,29 @@ def test_the_core_and_cli_import_only_the_standard_library_at_module_level():
     # ASSERT — nothing third-party at module level.
     assert not bad, bad
 
+
+def test_every_seed_pack_edge_resolves():
+    """A pack's edges name their ends by a key in the same pack, or by a full id in another
+    pack (seed:<pack>:<key>). A typo in either loads without complaint: the edge points at
+    nothing, and the link it was meant to make is silently absent. Only RECURS_IN may name
+    something outside the packs: the repo a defect came back in. (#122 review)"""
+    seed = Path(__file__).resolve().parents[1] / "seed"
+    packs = {f.stem: json.loads(f.read_text()) for f in sorted(seed.glob("*.json"))}
+    ids = {f"seed:{name}:{n['key']}" for name, pack in packs.items()
+           for n in pack["nodes"] if n.get("key")}
+
+    unresolved = []
+    for name, pack in packs.items():
+        local = {n["key"] for n in pack["nodes"] if n.get("key")}
+        for edge in pack.get("edges", []):
+            for end in ("src", "dst"):
+                if end == "dst" and edge["rel"] == "RECURS_IN":
+                    continue
+                if edge[end] not in local and edge[end] not in ids:
+                    unresolved.append(f"{name}: {edge}")
+
+    assert not unresolved, unresolved
+
 def test_starter_pack_resolves_and_is_portable():
     """The starter lessons are references into the bundled packs; every one must resolve,
     be valid on any stack (no applies_to), and be actionable (a fix, or a gate to arm)."""
