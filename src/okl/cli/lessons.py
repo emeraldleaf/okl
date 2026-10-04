@@ -16,7 +16,8 @@ from .packs import _empty_store_guidance
 
 def _briefing_text(result: dict[str, Any], args: argparse.Namespace) -> str:
     """The briefing for the agent: in full, or only its action list under --compact."""
-    if args.compact:
+    # getattr, as for interests in cmd_check: a library caller's Namespace may not have it.
+    if getattr(args, "compact", False):
         return core.render_actions_only(result, limit=args.limit)
     return core.render_check_for_agent(result)
 

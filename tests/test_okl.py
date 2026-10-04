@@ -877,8 +877,7 @@ def test_check_fails_closed_when_repo_is_not_configured(tmp_path, monkeypatch, c
     # ...and the database URL. The CLI honours it now, so a developer or CI job that
     # exports it would point this test's subprocesses at their own store instead.
     monkeypatch.delenv("OKL_DATABASE_URL", raising=False)
-    args = argparse.Namespace(task="add an endpoint", repo=None, format="agent", limit=None,
-                              compact=False)
+    args = argparse.Namespace(task="add an endpoint", repo=None, format="agent", limit=None)
     assert cmd_check(args) == 2, "must fail closed, not report a clean check"
     assert "NOT CONFIGURED" in capsys.readouterr().err
     assert not list(tmp_path.glob("*.db")), "must not create a store just to read from it"
@@ -2589,6 +2588,13 @@ def test_a_compact_briefing_is_the_action_list_and_much_smaller(tmp_path, monkey
     # ASSERT — the compact one is the action list (no section headings), and well under the full one.
     assert "###" in full and "###" not in compact, compact
     assert compact.strip() and len(compact) < 0.7 * len(full), (len(compact), len(full))
+
+    # ASSERT — a library caller's hand-built Namespace without the new field still briefs.
+    import argparse
+
+    from okl.cli.lessons import cmd_check
+    assert cmd_check(argparse.Namespace(task=task[2], repo=None, format="agent", limit=None)) == 0
+    assert "###" in capsys.readouterr().out
 
 def test_starter_pack_resolves_and_is_portable():
     """The starter lessons are references into the bundled packs; every one must resolve,
