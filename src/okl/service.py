@@ -28,7 +28,7 @@ try:
     from fastapi import FastAPI, Header, HTTPException
     from pydantic import BaseModel
 except ImportError as e:  # pragma: no cover
-    raise RuntimeError("The service needs FastAPI — install okl[service]") from e
+    raise RuntimeError("The service needs FastAPI: install 'observed-knowledge-ledger[service]'") from e
 
 
 class CheckReq(BaseModel):
