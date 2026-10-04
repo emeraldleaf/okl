@@ -8,7 +8,7 @@ Everyone taking part is expected to follow the [Code of Conduct](CODE_OF_CONDUCT
 
 ```bash
 git clone https://github.com/emeraldleaf/okl && cd okl
-pip install -e ".[dev]"
+pip install -e . --group dev    # pip 25.1 or later; with uv, `uv sync` does the same
 pytest -q          # must be green before and after your change
 ruff check .
 ```

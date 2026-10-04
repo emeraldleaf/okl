@@ -203,9 +203,9 @@
       "verified": false,
       "applies_to": "python",
       "tags": "python",
-      "found_by": "PEP 735 (dependency groups); the Python Packaging User Guide; okl's rule on pinning CI gate tools",
+      "found_by": "PEP 735 (dependency groups); the Python Packaging User Guide; okl's rule on pinning CI gate tools; adopted in okl for its own dev tools (#121)",
       "title": "pyproject.toml is the one home for versions: ranges for what users install, exact pins for the tools that gate CI",
-      "body": "The Python form of 'all package versions live in one central file'. Runtime dependencies take ranges, because a published package has to coexist with its users' other dependencies. The lint, type and test tools that gate CI are pinned exactly, after checking that the version exists on PyPI, so a new release cannot fail a branch that changed nothing. Dev tools belong in a dependency group (PEP 735), not in a published extra users can install; okl itself still uses a [dev] extra (#121). An application also commits a lock file, so its installs are reproducible.",
+      "body": "The Python form of 'all package versions live in one central file'. Runtime dependencies take ranges, because a published package has to coexist with its users' other dependencies. The lint, type and test tools that gate CI are pinned exactly, after checking that the version exists on PyPI, so a new release cannot fail a branch that changed nothing. Dev tools belong in a dependency group (PEP 735), not in a published extra users can install. An application also commits a lock file, so its installs are reproducible.",
       "symptom": "a tool version pinned in a workflow file, or dev tools shipped as an installable extra",
       "fix": "versions only in pyproject.toml; exact pins for gate tools; dev tools in [dependency-groups]"
     },

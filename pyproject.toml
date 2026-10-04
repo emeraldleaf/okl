@@ -29,6 +29,11 @@ service = ["fastapi>=0.110", "uvicorn>=0.29", "pydantic>=2"]
 postgres = ["psycopg[binary]>=3.1"]
 mcp = ["mcp>=1.2"]
 all = ["fastapi>=0.110", "uvicorn>=0.29", "pydantic>=2", "psycopg[binary]>=3.1", "mcp>=1.2"]
+
+[dependency-groups]
+# The tools that build and gate okl itself. A dependency group (PEP 735), not an extra:
+# extras are published, so `[dev]` let anyone `pip install` pytest and ruff as if they
+# were part of okl. Install with `pip install -e . --group dev` (pip 25.1+) or `uv sync`.
 dev = [
   # Gating tools are pinned exactly: a range lets a new release retro-fail a branch
   # that changed nothing, which is a recorded defect in this repo's own store.
@@ -82,7 +87,7 @@ omit = ["*/scaffold/*"]
 [tool.coverage.report]
 # A ratchet at the level measured IN THE CI ENVIRONMENT on 2026-09-02, not an
 # aspiration. The distinction matters and cost a red build: locally, with the optional
-# psycopg and mcp extras installed, coverage reads 69%; CI installs only [dev], so those
+# psycopg and mcp extras installed, coverage reads 69%; CI installs only the dev group, so those
 # paths are unreachable and their tests skip, and the true figure is 66.7%. A threshold
 # read off a developer's machine fails on a runner that has less installed.
 #
@@ -115,7 +120,7 @@ enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
 
 [[tool.mypy.overrides]]
 # psycopg and mcp are OPTIONAL extras: the core install has neither, and CI installs
-# only [dev]. Naming them here rather than passing --ignore-missing-imports globally
+# only the dev group. Naming them here rather than passing --ignore-missing-imports globally
 # keeps a genuine typo in a first-party import an error.
 module = ["psycopg", "psycopg.*", "mcp", "mcp.*"]
 ignore_missing_imports = true
