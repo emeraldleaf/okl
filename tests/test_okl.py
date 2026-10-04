@@ -1896,8 +1896,9 @@ def test_suggested_seed_commands_survive_a_path_with_spaces(tmp_path, monkeypatc
         '{"nodes": [{"type": "Rule", "title": "t", "scope": "org", "tags": "react"}]}')
     monkeypatch.setattr(seed_packs, "_bundled_seed_dir", lambda: packs)
     monkeypatch.chdir(tmp_path)
-    monkeypatch.delenv("OKL_DATABASE_URL", raising=False)
     monkeypatch.delenv("OKL_SERVICE_URL", raising=False)
+    # A named, empty store: the guidance reads it, and an unnamed one is refused (#117).
+    monkeypatch.setenv("OKL_DATABASE_URL", f"sqlite:///{tmp_path / 'okl.db'}")
 
     client = Client(config={"repo": "r", "interests": ["react"]})
     line = next(ln for ln in seed_packs._empty_store_guidance(client) if "okl seed" in ln)
@@ -2306,6 +2307,59 @@ def test_the_service_keeps_applies_to(tmp_path, monkeypatch):
                 if n["id"] == r.json()["id"])
     assert node.get("applies_to") == "dotnet", node
 
+
+
+def test_a_command_with_no_store_named_refuses_and_writes_nothing(tmp_path, monkeypatch, capsys):
+    """#117: in a directory where okl was never set up, `okl record` and `okl seed` exited 0
+    having written their lessons to a stray ./okl.db that no hook, check or CI job reads,
+    and `okl coverage` reported a clean zero. Every command that needs a store must refuse
+    with exit 2 instead, say why on stderr, and leave no database behind."""
+    import subprocess
+
+    from okl.cli import main
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+    subprocess.run(["git", "init", "-q", "."], check=True)
+
+    # ACT / ASSERT (1) — each store command, run where nothing names a store, refuses: exit
+    # 2, nothing on stdout (a hook reading stdout must not see a result), the reason on stderr.
+    for argv in (["record", "--type", "Rule", "--scope", "repo", "--title", "probe"],
+                 ["seed", "dotnet-defects"],
+                 ["link", "a", "CATCHES", "b"],
+                 ["verify", "x", "--run", "true"],
+                 ["verify", "x"],
+                 ["coverage"]):
+        assert main(argv) == 2, argv
+        out, err = capsys.readouterr()
+        assert out == "" and "not configured" in err, (argv, out, err)
+
+    # ASSERT (2) — no database was created anywhere, by any of them.
+    assert not list(tmp_path.rglob("*.db")), list(tmp_path.rglob("*.db"))
+
+    # ASSERT (3) — listing the bundled packs needs no store, so it still works here.
+    assert main(["seed"]) == 0
+
+
+def test_the_service_answers_an_unknown_relation_with_400(tmp_path, monkeypatch):
+    """#119: /link let core.link's ValueError escape as a 500, which the client reads as an
+    outage, so a caller's typo in a relation looked like the service was down. It must be
+    a 400 that carries the message, as /record and /verify already were."""
+    pytest.importorskip("fastapi")
+    pytest.importorskip("httpx")
+    from fastapi.testclient import TestClient
+
+    from okl import service
+    monkeypatch.delenv("OKL_TOKEN", raising=False)
+    c = TestClient(service.create_app(Store(f"sqlite:///{tmp_path}/svc.db")))
+
+    # ACT — a link with a relation the store does not have.
+    r = c.post("/link", json={"src": "a", "rel": "BOGUS", "dst": "b"})
+
+    # ASSERT — the caller's error, with the valid relations named, not a server error.
+    assert r.status_code == 400, (r.status_code, r.text)
+    assert "BOGUS" in r.json()["detail"] and "CATCHES" in r.json()["detail"], r.text
 
 def test_starter_pack_resolves_and_is_portable():
     """The starter lessons are references into the bundled packs; every one must resolve,

@@ -152,7 +152,12 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901
     @app.post("/link")
     def link(req: LinkReq, authorization: str | None = Header(default=None)) -> dict[str, bool]:
         _auth(authorization)
-        core.link(_store, req.src, req.rel, req.dst)
+        try:
+            core.link(_store, req.src, req.rel, req.dst)
+        except ValueError as e:
+            # An unknown relation is the caller's mistake, as in /record: a 500 here made
+            # the client report a typo as an outage (#119).
+            raise HTTPException(status_code=400, detail=str(e)) from e
         return {"ok": True}
 
     @app.post("/verify")

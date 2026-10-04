@@ -10,6 +10,16 @@
   pytest, errors, mocks, and two dated defects. Nothing in it claims verification: verify
   each lesson against your own repo. `okl init` in a Python repo now imports it with the
   other packs that match the stack.
+- **A command run where okl was never set up now refuses (exit 2) instead of writing to a
+  stray `./okl.db`** (#117). `okl record` and `okl seed` used to exit 0 having saved their
+  lessons where no hook, check or CI job looks, and `okl coverage` reported a clean zero.
+  Every command that needs a store now says so and stops: run `okl init` first, or name a
+  store with `OKL_DATABASE_URL` or `okl connect <url>`. Listing packs (`okl seed`) still
+  works anywhere.
+- **A shared service answers an unknown link relation with a 400**, not a 500 the client
+  reported as an outage (#119).
+- **The scaffolded eval runner exits 2 when it has no cases file**, as it already did for
+  an empty one: nothing was measured either way.
 - **okl closes its SQLite connections** (#116). Python 3.13 warns about every connection
   that is never closed, and okl opened one per command.
 - **Tested on Python 3.10 to 3.14** (#116); CI had tested 3.12 alone. 3.10 reached end of
