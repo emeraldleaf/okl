@@ -13,8 +13,8 @@
   dependency rule as an import-linter contract, docstrings, type hints, size limits, strict
   pytest, errors, mocks, choosing one type checker and one docstring format, and two dated
   defects. Nothing in it claims verification: verify
-  each lesson against your own repo. `okl init` in a Python repo now imports it with the
-  other packs that match the stack.
+  each lesson against your own repo. `okl init` imports it when it creates a new, empty store
+  in a Python repo; a repo whose store already holds lessons runs `okl seed python-canon`.
 - **okl closes its SQLite connections** (#116). Python 3.13 warns about every connection
   that is never closed, and okl opened one per command.
 - **Tested on Python 3.10 to 3.14** (#116); CI had tested 3.12 alone. 3.10 reached end of
