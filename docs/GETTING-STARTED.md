@@ -220,15 +220,32 @@ shared, and its lessons are copied into agent context.
 
 ### Prove it: a lesson is verified by running a check
 
+A lesson counts as verified when a check actually ran and passed. The easy way is to ask
+your agent in plain words: *"prove the discount-server-side lesson"*, or after a change,
+*"re-check the stale okl lessons"*. It reads each lesson, finds or writes a test that fails
+when the lesson is broken, runs it, and records the result.
+
+Underneath, that is one command with three parts:
+
+| Part | What it is | Where it comes from |
+|---|---|---|
+| the lesson's id | `discount-server-side` | the `--id` it was recorded with; `okl drift` and the briefing show it in brackets |
+| `--run` | a command that fails if the lesson is broken, usually a test | a test that already exists, or one written for the lesson |
+| `--expect` | a word that appears in the output when it passes | `passed` for pytest |
+
 ```bash
 okl verify discount-server-side \
   --run "pytest -q tests/test_checkout.py" --expect "passed"
 ```
 
-`okl verify` runs the check and stamps the lesson only if it exits 0 **and** its output
-contains the `--expect` text. The command and result are stored as the evidence. There is
-no way to mark a lesson verified without running something: `okl record --verified` is
-refused.
+Not sure what to run? `okl verify <id>` on its own shows the lesson, the files it covers and
+the tests that already mention them, and stamps nothing. If no test mentions them, the check
+has to be written first, which is a good job to hand your agent.
+
+`okl verify` stamps the lesson only if the check exits 0 **and** its output contains the
+`--expect` text. The command is stored as the evidence, so the next time the lesson goes
+stale, `okl reverify` re-runs it with no parameters. There is no way to mark a lesson
+verified without running something: `okl record --verified` is refused.
 
 ### Commit, in this order
 
@@ -322,7 +339,7 @@ statements, architecture rules, published numbers.
 | CI fails with "NOTHING CHECKED" | a snapshot with zero rules is committed | remove it, or record a lesson with `--files` and re-export |
 | `okl drift` is red right after `okl record --files` | a new rule is unverified until its first `okl verify` | run its check with `okl verify` |
 | `okl drift` is red after you changed code | lessons governing those files need re-checking | `okl reverify` |
-| A briefed lesson is marked *STALE* or *UNVERIFIED* | its governed files changed after its last check, or no check has passed yet | `okl reverify`, or `okl verify <id> --run … --expect …` for a first check |
+| A briefed lesson is marked *STALE* or *UNVERIFIED* | its governed files changed after its last check, or no check has passed yet | `okl reverify` re-runs stored checks; a lesson with none needs one first: ask your agent to re-check it, or run `okl verify <id>` to see what to run |
 
 More: the [README](../README.md) covers costs, scopes, the shared service and the MCP tools;
 [DEPLOY](DEPLOY.md) covers running a shared store for a team.

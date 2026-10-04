@@ -2428,7 +2428,7 @@ def test_reverify_reruns_stored_checks_only_when_asked(tmp_path):
 
     r = okl("reverify")                       # unattended, no --yes
     assert r.returncode == 2 and check in r.stdout and "refusing" in r.stderr, (r.stdout, r.stderr)
-    assert f"no stored check: okl verify {never}" in r.stdout, r.stdout
+    assert "no stored check yet" in r.stdout and f"okl verify {never}`" in r.stdout, r.stdout
     assert okl("reverify", "--dry-run").returncode == 1
     r = okl("reverify", "--yes")
     assert "1 re-verified, 0 failed, 1 need a first check" in r.stdout, r.stdout
@@ -2719,6 +2719,58 @@ def test_drift_reports_this_repos_lessons_whose_files_no_longer_exist(tmp_path, 
     assert main(["drift"]) == 0
     out = capsys.readouterr().out
     assert "1 lesson(s) govern files that match nothing committed here" in out and "[pixel]" in out, out
+
+
+def test_verify_without_a_check_suggests_one_and_drift_says_what_to_do(tmp_path, monkeypatch, capsys):
+    """Drift used to print `okl verify <id> --run "<a check that fails if the rule is broken>"
+    --expect "<its success signal>"` under every stale lesson, and a user asked how they were
+    supposed to know any of it. `okl verify <id>` on its own now shows the lesson, the files
+    it covers and the tests that already mention them, with the command to run, and stamps
+    nothing; drift says once, in plain words, how to re-check."""
+    import subprocess
+
+    from okl.cli import main
+    from okl.client import Client
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+    git = ["git", "-c", "user.email=t@t", "-c", "user.name=t"]
+    subprocess.run(["git", "init", "-q", "."], check=True)
+    (tmp_path / "pkg").mkdir(); (tmp_path / "tests").mkdir()
+    (tmp_path / "pkg" / "evaluator.py").write_text("def hit(paths): return any(paths)\n")
+    (tmp_path / "tests" / "test_evaluator.py").write_text("from pkg import evaluator\n")
+    (tmp_path / "tests" / "test_other.py").write_text("x = 1\n")
+    subprocess.run([*git, "add", "-A"], check=True); subprocess.run([*git, "commit", "-qm", "i"], check=True)
+    assert main(["init", "--repo", "r", "--no-claude", "--no-seed", "--no-ci"]) == 0
+    assert main(["record", "--type", "Rule", "--scope", "repo", "--id", "hit",
+                 "--title", "Retrieval hit counts every evidence path", "--fix", "count tool evidence too",
+                 "--files", "pkg/evaluator.py"]) == 0
+    assert main(["record", "--type", "Rule", "--scope", "repo", "--id", "lonely",
+                 "--title", "Nothing tests this", "--files", "pkg/unseen.py"]) == 0
+    capsys.readouterr()
+
+    # ASSERT (1) — the lesson, its files, the test that mentions them, and the command.
+    assert main(["verify", "hit"]) == 2
+    out = capsys.readouterr().out
+    assert "Retrieval hit counts every evidence path" in out and "covers: pkg/evaluator.py" in out
+    assert "tests/test_evaluator.py" in out and "tests/test_other.py" not in out, out
+    assert 'okl verify hit --run "pytest -q tests/test_evaluator.py" --expect "passed"' in out, out
+    assert "ask your agent" in out
+
+    # ASSERT (2) — nothing was stamped; a lesson with no test says a check must be written.
+    assert {n.id: n for n in Client().all_nodes()}["hit"].verified_at is None
+    assert main(["verify", "lonely"]) == 2
+    assert "No test mentions those files yet" in capsys.readouterr().out
+
+    # ASSERT (3) — an unknown id says where ids come from.
+    assert main(["verify", "nope"]) == 2
+    assert "show ids in brackets" in capsys.readouterr().err
+
+    # ASSERT (4) — drift says what to do in plain words, with no placeholder to fill in.
+    main(["drift"])
+    out = capsys.readouterr().out
+    assert "re-check the stale okl lessons" in out and "<a check that fails" not in out, out
 
 
 def test_init_no_ci_skips_the_workflow_and_remembers_it(tmp_path, monkeypatch, capsys):
