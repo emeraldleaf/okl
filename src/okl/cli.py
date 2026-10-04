@@ -603,9 +603,9 @@ def cmd_record(args) -> int:
         # shipped encoding-loop skill told agents to pass it. Found checking a launch post
         # that claimed "never by assertion". Historical receipts still import via `okl seed`.
         print("okl record --verified is refused: a lesson is verified by running a check, not "
-              "by saying so.\n  Record it without --verified, then:  okl verify <id> --run "
-              "\"<a check that fails if the lesson is broken>\" --expect \"<its success signal>\""
-              "\n  (Importing historical, already-verified records? Use okl seed.)", file=sys.stderr)
+              "by saying so.\n  Record it without --verified, then run `okl verify <id>` to see the "
+              "tests that touch its files, or ask your agent to prove it.\n  (Importing historical, "
+              "already-verified records? Use okl seed.)", file=sys.stderr)
         return 2
     client = Client()
     kwargs = dict(type=args.type, title=args.title, scope=args.scope,
@@ -647,6 +647,8 @@ def cmd_verify(args) -> int:
     the store-side mechanization of verify-before-claiming: no run, no stamp."""
     import subprocess
     from datetime import datetime, timezone
+    if not args.run:
+        return _suggest_check(args.node_id)
     try:
         r = subprocess.run(args.run, shell=True, capture_output=True, text=True,
                            timeout=args.timeout)
@@ -704,6 +706,79 @@ def cmd_verify(args) -> int:
         except OKLUnreachableError as e:
             print(f"  ! {snap.name} NOT refreshed: {e}", file=sys.stderr)
     return 0
+
+
+_GENERIC_STEMS = {"src", "lib", "app", "main", "index", "test", "tests", "pages", "utils", "util",
+                  "init", "__init__", "core", "common", "components", "styles", "docs", "readme"}
+
+
+def _tests_touching(root: Path, files: str | None, limit: int = 5) -> list[str]:
+    """Tracked test files that mention a governed file by name: the likeliest checks."""
+    import subprocess
+    stems = set()
+    for glob in (files or "").split(","):
+        name = glob.strip().rstrip("/").rsplit("/", 1)[-1]
+        stem = name.split(".")[0]
+        if len(stem) >= 4 and not any(c in stem for c in "*?[") and stem.lower() not in _GENERIC_STEMS:
+            stems.add(stem)
+    if not stems:
+        return []
+    listed = subprocess.run(["git", "-C", str(root), "ls-files"], capture_output=True, text=True)
+    tests = [p for p in listed.stdout.splitlines()
+             if any(t in p.lower() for t in ("test", "spec"))][:2000]
+    if not tests:
+        return []
+    args = ["git", "-C", str(root), "grep", "-l", "-I", "-F"]
+    for s in sorted(stems):
+        args += ["-e", s]
+    found = subprocess.run([*args, "--", *tests], capture_output=True, text=True)
+    return found.stdout.splitlines()[:limit]
+
+
+def _suggest_check(node_id: str) -> int:
+    """`okl verify <id>` with no --run: what the lesson says, the files it covers, and the
+    tests that already mention them -- the parts a person has to supply, found for them.
+
+    The three-part command was the step people could not fill in ("how am I supposed to
+    know them?"); this answers it from the store and the repo. Exit 2: nothing was stamped.
+    """
+    client = Client()
+    try:
+        node = next((n for n in client.all_nodes() if n.id == node_id), None)
+    except OKLUnreachableError as e:
+        print(f"OKL UNREACHABLE — cannot look the lesson up.\n{e}", file=sys.stderr)
+        return 2
+    if node is None:
+        print(f"no lesson with id {node_id!r}. `okl drift` and the briefing show ids in brackets.",
+              file=sys.stderr)
+        return 2
+    print(f"[{node.id}] {node.title}")
+    if node.symptom:
+        print(f"  when you see: {node.symptom}")
+    if node.fix:
+        print(f"  the lesson says: {node.fix}")
+    root = _snapshot_path().parent
+    if node.files:
+        print(f"  covers: {node.files}")
+        tests = _tests_touching(root, node.files)
+        if tests:
+            print("\nTests that mention those files, the likeliest checks:")
+            for t in tests:
+                print(f"  {t}")
+            # Quoted, because the user pastes this and `okl verify --run` hands it to a shell:
+            # a tracked test file named `a; rm -rf x.py` must arrive as one argument.
+            run = (f"pytest -q {shlex.quote(tests[0])}" if tests[0].endswith(".py")
+                   else "<the command that runs that test>")
+            print(f"\nIf one of them fails when the lesson is broken, prove the lesson with it:\n"
+                  f"  okl verify {shlex.quote(node.id)} --run {shlex.quote(run)} --expect passed")
+        else:
+            # A search miss, not proof: a test can cover a lesson by driving the command
+            # without ever naming the file.
+            print("\nNo test mentions those files by name. One may still cover the lesson by driving\n"
+                  "the command instead, so look for it before writing a new check.")
+    print("\nOr ask your agent to prove it: it reads the lesson, finds or writes a test that fails\n"
+          "when the lesson is broken, runs it, and records the result. Nothing was stamped.")
+    return 2
 
 
 def _head_commit(root: Path) -> str | None:
@@ -797,7 +872,8 @@ def cmd_reverify(args) -> int:
         chk = _stored_check(by_id[h.node_id].verified_by)
         (plan.append((h, chk)) if chk else manual.append(h))
     for h in manual:
-        print(f"• [{h.node_id}] {h.title}\n    no stored check: okl verify {h.node_id} --run \"<check>\" --expect \"<signal>\"")
+        print(f"• [{h.node_id}] {h.title}\n    no stored check yet: ask your agent to write one, or run "
+              f"`okl verify {h.node_id}` to see the tests that touch its files")
     if plan:
         print(f"okl reverify will run {len(plan)} stored check(s), from the store:")
         for h, (run, _exp) in plan:
@@ -1443,7 +1519,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     pvf = sub.add_parser("verify", help="run a check and stamp a node verified only on an observed pass")
     pvf.add_argument("node_id")
-    pvf.add_argument("--run", required=True, help="the check command; exit 0 required to stamp")
+    pvf.add_argument("--run", help="the check command; exit 0 required to stamp. Without it, "
+                     "okl verify shows the lesson and the tests that touch its files, and stamps nothing")
     pvf.add_argument("--expect", help="substring that must appear in the output — a positive success "
                      "signal, so exit 0 alone can't self-certify (the exit-0-zero-files lesson)")
     pvf.add_argument("--timeout", type=int, default=600, help="seconds before the check is killed (default 600)")

@@ -323,10 +323,15 @@ def render_drift(hits: list[DriftHit], checked: int | None = None) -> str:
         lines.append(f"  • [{h.node_id}] {h.title}")
         lines.append(f"      files: {h.files}")
         lines.append(f"      last source change: {when} · {ver} → {h.reason}")
-        # This line used to recommend `okl record --verified`, i.e. clearing drift by
-        # assertion -- the one thing the verify command exists to prevent.
-        lines.append(f"      fix: okl verify {h.node_id} --run \"<a check that fails if the rule "
-                     "is broken>\" --expect \"<its success signal>\" — or update the rule.")
+    # Once, in plain words. Each hit used to carry `okl verify <id> --run "<a check that fails
+    # if the rule is broken>" --expect "<its success signal>"`, which named three things a
+    # person had no way to fill in. (Before that it recommended `okl record --verified`, i.e.
+    # clearing drift by assertion -- the one thing verify exists to prevent.)
+    lines += ["",
+              "To re-check them: `okl reverify` re-runs each lesson's stored check. A lesson with no",
+              "stored check needs one first: ask your agent to \"re-check the stale okl lessons\", or run",
+              "`okl verify <id>` to see the lesson and the tests that touch its files. If a check fails,",
+              "fix the code, or change the lesson on purpose."]
     return "\n".join(lines)
 
 
