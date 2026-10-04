@@ -2307,6 +2307,36 @@ def test_the_service_keeps_applies_to(tmp_path, monkeypatch):
     assert node.get("applies_to") == "dotnet", node
 
 
+
+def test_the_core_and_cli_import_only_the_standard_library_at_module_level():
+    """okl installs onto other people's machines and runs in their hooks and CI, so the
+    local read/write path needs nothing outside the standard library: every third-party
+    import lives behind an extra, inside the function that needs it. The stored check for
+    this rule covered store, core and client only; the rule names drift and the cli/
+    package too, and CI installs the extras, so a top-level `import fastapi` there passed
+    everything. This covers every file the rule names (#120 review)."""
+    import ast
+    import sys
+    root = Path(__file__).resolve().parents[1] / "src" / "okl"
+    files = [root / f for f in ("store.py", "core.py", "client.py", "drift.py")]
+    files += sorted((root / "cli").glob("*.py"))
+    allowed = set(sys.stdlib_module_names) | {"okl"}
+
+    # ACT — every import at module level (inside a function is the sanctioned place).
+    bad = []
+    for f in files:
+        for node in ast.parse(f.read_text()).body:
+            if isinstance(node, ast.Import):
+                names = [a.name for a in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+                names = [node.module]
+            else:
+                continue
+            bad += [f"{f.relative_to(root)}: {n}" for n in names if n.split(".")[0] not in allowed]
+
+    # ASSERT — nothing third-party at module level.
+    assert not bad, bad
+
 def test_starter_pack_resolves_and_is_portable():
     """The starter lessons are references into the bundled packs; every one must resolve,
     be valid on any stack (no applies_to), and be actionable (a fix, or a gate to arm)."""
