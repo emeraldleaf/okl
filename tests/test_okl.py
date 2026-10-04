@@ -666,7 +666,7 @@ def test_init_wires_everything_mechanically(tmp_path, monkeypatch, capsys):
     import argparse
     import importlib.util
 
-    from okl.cli import cmd_init
+    from okl.cli.install import cmd_init
     monkeypatch.chdir(tmp_path)
     (tmp_path / ".claude").mkdir()
     (tmp_path / ".git").mkdir()  # cmd_init only checks for the directory's existence
@@ -704,7 +704,7 @@ def test_init_warns_without_git(tmp_path, monkeypatch, capsys):
     """
     import argparse
 
-    from okl.cli import cmd_init
+    from okl.cli.install import cmd_init
     monkeypatch.chdir(tmp_path)
     args = argparse.Namespace(repo="nogit", service=None, interests=None)
     assert cmd_init(args) == 0
@@ -737,7 +737,7 @@ def test_cmd_verify_runs_the_check_first(tmp_path, monkeypatch, capsys):
     (a step's own success report isn't enough); observed pass -> stamped with evidence."""
     import argparse
 
-    from okl.cli import cmd_verify
+    from okl.cli.verification import cmd_verify
     from okl.client import Client
     monkeypatch.chdir(tmp_path)
     (tmp_path / ".okl").mkdir()
@@ -808,7 +808,7 @@ def test_init_dry_run_writes_nothing(tmp_path, monkeypatch, capsys):
     their repo should be able to see the list first."""
     import argparse
 
-    from okl.cli import cmd_init
+    from okl.cli.install import cmd_init
     monkeypatch.chdir(tmp_path)
     (tmp_path / ".claude").mkdir()
     (tmp_path / ".git").mkdir()
@@ -871,7 +871,7 @@ def test_check_fails_closed_when_repo_is_not_configured(tmp_path, monkeypatch, c
     an empty database and then report 'no rules apply' against it, forever."""
     import argparse
 
-    from okl.cli import cmd_check
+    from okl.cli.lessons import cmd_check
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("OKL_SERVICE_URL", raising=False)
     # ...and the database URL. The CLI honours it now, so a developer or CI job that
@@ -887,7 +887,7 @@ def test_check_limit_threads_through_the_client(tmp_path, monkeypatch):
     """--limit has to reach core.check, not just trim the rendered output."""
     import argparse
 
-    from okl.cli import cmd_check
+    from okl.cli.lessons import cmd_check
     from okl.client import Client
     monkeypatch.chdir(tmp_path)
     (tmp_path / ".okl").mkdir()
@@ -1636,7 +1636,7 @@ def test_search_scope_refuses_a_non_scope_and_resolves_the_repo_shorthand(tmp_pa
     import subprocess
     import sys as _sys
 
-    from okl.cli import cmd_search
+    from okl.cli.lessons import cmd_search
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("OKL_SERVICE_URL", raising=False)
     # ...and the database URL. The CLI honours it now, so a developer or CI job that
@@ -1809,7 +1809,7 @@ def test_a_bundled_pack_fits_only_the_stack_it_is_about():
     §4d's mistake of reading a label on some records as a verdict on the whole, made at
     import time, where a pack arrives all at once.
     """
-    from okl.cli import _pack_fits
+    from okl.cli.packs import _pack_fits
 
     # A stack pack fits only a repo that declared that stack, however many subjects match.
     assert not _pack_fits({"dotnet", "security", "messaging"}, {"react", "security"})
@@ -1887,20 +1887,20 @@ def test_suggested_seed_commands_survive_a_path_with_spaces(tmp_path, monkeypatc
     `okl seed <path>` splits into two arguments. Found in review."""
     import shlex
 
-    from okl import cli
+    from okl.cli import packs as seed_packs
     from okl.client import Client
 
     packs = tmp_path / "my project" / "seed"
     packs.mkdir(parents=True)
     (packs / "react-defects.json").write_text(
         '{"nodes": [{"type": "Rule", "title": "t", "scope": "org", "tags": "react"}]}')
-    monkeypatch.setattr(cli, "_bundled_seed_dir", lambda: packs)
+    monkeypatch.setattr(seed_packs, "_bundled_seed_dir", lambda: packs)
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("OKL_DATABASE_URL", raising=False)
     monkeypatch.delenv("OKL_SERVICE_URL", raising=False)
 
     client = Client(config={"repo": "r", "interests": ["react"]})
-    line = next(ln for ln in cli._empty_store_guidance(client) if "okl seed" in ln)
+    line = next(ln for ln in seed_packs._empty_store_guidance(client) if "okl seed" in ln)
     args = shlex.split(line.split("(")[0])
     assert args[:2] == ["okl", "seed"] and len(args) == 3, f"split into {args}"
     assert args[2] == str(packs / "react-defects.json")
@@ -2462,7 +2462,8 @@ def test_first_run_notice_and_reverify_in_process(tmp_path, monkeypatch, capsys)
     import subprocess
 
     from okl import core
-    from okl.cli import _stored_check, main
+    from okl.cli import main
+    from okl.cli.verification import _stored_check
     for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN", "OKL_QUIET"):
         monkeypatch.delenv(k, raising=False)
     monkeypatch.setenv("HOME", str(tmp_path))
@@ -2812,7 +2813,7 @@ def test_the_verified_commit_is_bound_to_its_evidence_and_older_entries_still_re
     from datetime import datetime, timezone
 
     from okl import drift
-    from okl.cli import _stored_check
+    from okl.cli.verification import _stored_check
     sha = "a1b2c3d4e5f6" + "0" * 28
     at = int(datetime(2026, 10, 3, 18, 42, 30, tzinfo=timezone.utc).timestamp() * 1000)
     new = {"id": "r", "title": "t", "scope": "org", "files": "a.py", "verified_at": at,
@@ -2857,7 +2858,7 @@ def test_the_verified_commit_is_bound_to_its_evidence_and_older_entries_still_re
 def test_stack_detection(tmp_path):
     """Stacks are read from manifest files (a .csproj, package.json, requirements.txt and
     the dependencies inside them), each paired with the file that showed it."""
-    from okl.cli import _detect_stacks
+    from okl.cli.install import _detect_stacks
     (tmp_path / "api").mkdir(); (tmp_path / "api" / "Api.csproj").write_text("<Project/>")
     (tmp_path / "package.json").write_text('{"dependencies": {"react": "^19.0.0"}}')
     (tmp_path / "requirements.txt").write_text("langchain\nrasterio\n")

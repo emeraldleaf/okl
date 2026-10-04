@@ -705,8 +705,9 @@ def test_stored_data_never_reaches_a_shell():
     shelled = [f"{p.name}:{i}" for p in src.rglob("*.py")
                for i, line in enumerate(p.read_text().splitlines(), 1)
                if "shell=True" in line]
-    assert shelled == ["cli.py:273"] or len(shelled) == 1, f"unexpected shell=True: {shelled}"
-    assert "subprocess.run(args.run, shell=True" in (src / "cli.py").read_text()
+    assert len(shelled) == 1 and shelled[0].startswith("verification.py:"), \
+        f"unexpected shell=True: {shelled}"
+    assert "subprocess.run(args.run, shell=True" in (src / "cli" / "verification.py").read_text()
 
     # ASSERT (3) — the remote path can never trigger execution: /verify accepts EVIDENCE
     # already produced by a local run, and the commit it ran at, never a command for the
@@ -1234,7 +1235,7 @@ def test_init_never_writes_through_a_symlink_out_of_the_repo(tmp_path):
     assert (repo / ".claude" / "hooks" / "userpromptsubmit-okl-check.sh").is_file()
     # Uninstall does not follow the links either. The outside file holds an okl entry, so a
     # followed link would rewrite it; it must stay byte-identical, and be named.
-    from okl.cli import HOOK_COMMANDS
+    from okl.cli.install import HOOK_COMMANDS
     planted = json.dumps({"hooks": {"Stop": [{"hooks": [
         {"type": "command", "command": HOOK_COMMANDS["Stop"]}]}]}})
     (outside / "settings.json").write_text(planted)
@@ -1539,7 +1540,7 @@ def test_init_and_doctor_know_okls_own_plugin(tmp_path):
     assert okl("doctor").returncode == 0
 
     # Hooks registered by hand as well: both would fire. doctor says so and exits 1.
-    from okl.cli import HOOK_COMMANDS
+    from okl.cli.install import HOOK_COMMANDS
     (proj / ".claude" / "settings.json").write_text(json.dumps({"hooks": {"Stop": [{"hooks": [
         {"type": "command", "command": HOOK_COMMANDS["Stop"]}]}]}}))
     r = okl("doctor")

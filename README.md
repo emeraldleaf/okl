@@ -942,7 +942,7 @@ src/okl/
   store.py        # the database: note + link schema, swappable SQLite/Postgres backend
   core.py         # check / record / search / link — the logic, independent of transport
   client.py       # resolves local-file vs. shared-service; fails closed
-  cli.py          # the `okl` command
+  cli/            # the `okl` command, one module per command group (cli/__init__.py maps them)
   drift.py        # source-vs-spec drift detection
   ownership.py    # okl-fingerprint lines: which installed files are okl's, and untouched
   coexist.py      # `okl doctor`: detects other agent-memory plugins and double wiring

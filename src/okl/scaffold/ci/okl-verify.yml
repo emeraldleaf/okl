@@ -1,4 +1,4 @@
-# okl-fingerprint: sha256:3cccbf819b12da4c4f8a602b9ff7693c9c99c6b9556a687fe06c9925cbf07e6e
+# okl-fingerprint: sha256:722f20ffe01eaa125f8f6a2d63f2206456b8dc2d0947e3223404942e17bcfe2a
 # Installed by `okl init` into .github/workflows/okl-verify.yml (also stamped by `okl scaffold`).
 #
 # The knowledge layer's CI verifier — real checks, not placeholders:
@@ -60,8 +60,10 @@ jobs:
       - name: Install okl
         # Detect by the package source, not the distribution name: the name changed once
         # (PyPI rejects "okl" as confusable) and a name-based check silently broke with it.
+        # And by the package itself, not one of its modules: this named src/okl/cli.py
+        # until the CLI became a package, when okl's own CI would have tested the release.
         run: |
-          if [ -f src/okl/cli.py ]; then
+          if [ -f src/okl/__init__.py ]; then
             pip install -e .
           else
             pip install observed-knowledge-ledger
