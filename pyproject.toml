@@ -47,6 +47,9 @@ dev = [
   # falls back to httpx; the strict pytest config turns that warning into six failures.
   # httpx stays for older Starlette, whose TestClient imports only httpx.
   "httpx2>=2.13",
+  # The MCP SDK, so CI runs the MCP server's own test: without it that test skips, and
+  # the server reached CI untested (as Postgres did before, #35).
+  "mcp>=1.2",
 ]
 
 [project.scripts]
@@ -108,6 +111,10 @@ warn_redundant_casts = true
 strict_equality = true
 check_untyped_defs = true
 warn_unreachable = true
+# Every function in src/okl is typed (#118), so these hold with no changes: an untyped
+# or half-typed new function is now an error. --strict is the remaining step.
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
 # A `# type: ignore` must name the error it silences, so it cannot hide a new one.
 enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
 
@@ -150,8 +157,9 @@ target-version = "py310"
 #
 # Readability, so someone new can follow any file (PEP 257 and Google's Python guide):
 # D1xx = every module, public class and public function has a docstring that says what
-# it is for; ANN = every signature is typed, because types are documentation mypy
-# checks; PLR09xx = function size held to pylint's limits; T20 = no print() outside
+# it is for; ANN = every signature is typed, because types are documentation (mypy
+# checks them in src/okl; elsewhere they are for the reader); PLR09xx = function size
+# held to pylint's limits; T20 = no print() outside
 # the command-line layers (per-file-ignores below say which those are).
 select = ["E", "W", "F", "I", "UP", "B", "S", "C90", "SIM", "RET", "PERF", "A", "DTZ", "PTH", "N",
           "BLE", "PGH", "RUF100",
@@ -189,6 +197,10 @@ max-complexity = 12
 
 [tool.ruff.lint.per-file-ignores]
 "examples/**/tests/*.py" = ["S101", "ANN"]   # example apps ship their own pytest tests
+# The example app is a demo fixture: run_demo.sh copies it into both arms, its text must
+# describe the app and nothing else, and the README's results were measured on these exact
+# files. Docstring and type-hint rules would change the fixture under the receipts.
+"examples/**" = ["D100", "D101", "D102", "D103", "D104", "ANN"]
 # Tests assert on subprocess output and build temp paths; the security rules aimed at
 # production input handling produce only noise there.
 # Tests are not typed (ANN) or size-capped (PLR09xx): a test reads as its name and its

@@ -142,12 +142,12 @@ def _describe_pack(path: Path) -> tuple[int, set[str]]:
 def _list_seed_packs(seed_dir: Path, interests: set[str]) -> int:
     """Print the bundled packs, marking those that fit this repo's interests; import nothing.
 
-    Exits 1 when there are no packs to list, which means a broken install.
+    Exits 2 when there are no packs to list: a broken install, so it could not run.
     """
     packs = sorted(str(f) for f in seed_dir.glob("*.json"))
     if not packs:
-        print(f"no seed packs found under {seed_dir}")
-        return 1
+        print(f"no seed packs found under {seed_dir}", file=sys.stderr)
+        return 2
     print("Seed packs available (nothing has been imported):\n")
     for pk in packs:
         f = Path(pk)
@@ -201,8 +201,8 @@ def cmd_seed(args: argparse.Namespace) -> int:
                 return 2
         targets = sorted(str(f) for f in path.glob("*.json")) if path.is_dir() else [str(path)]
     if not targets:
-        print(f"no seed files found at {args.path or seed_dir}")
-        return 1
+        print(f"no seed files found at {args.path or seed_dir}", file=sys.stderr)
+        return 2
 
     client, total = Client(), 0
     for t in targets:

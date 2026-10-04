@@ -18,6 +18,10 @@
   works anywhere.
 - **A shared service answers an unknown link relation with a 400**, not a 500 the client
   reported as an outage (#119).
+- **More "could not run" cases exit 2**, as the CLI's contract says: `okl seed <dir>` when the
+  directory holds no packs, and `python -m okl.ownership --stamp` on a file it cannot read
+  (it raised a traceback). The MCP `okl_check` tool reports a refused request (a 401, or no
+  store named) as "OKL REFUSED THE CHECK" rather than a raw tool error.
 - **The scaffolded eval runner exits 2 when it has no cases file**, as it already did for
   an empty one: nothing was measured either way.
 - **okl closes its SQLite connections** (#116). Python 3.13 warns about every connection

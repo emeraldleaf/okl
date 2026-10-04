@@ -186,7 +186,9 @@ class Client:
         """The briefing for starting `task` in `repo` (default: this repo), as core.check returns it.
 
         Lessons whose governed code changed since their last check come back marked.
-        Raises OKLUnreachableError when a configured service cannot be reached.
+        Over a shared service, raises ValueError when the service rejects the request (any
+        4xx, such as a 401 for a missing token) and OKLUnreachableError when it cannot be
+        reached or fails on its side (a network error or any 5xx).
         """
         repo = repo or self.repo
         payload = {"repo": repo, "task": task, "interests": self.interests or None}
@@ -232,7 +234,10 @@ class Client:
         return core.search(self._local_store(), query, scope, node_types, limit)
 
     def link(self, src: str, rel: str, dst: str) -> None:
-        """Join two lessons with a typed edge, `src -rel-> dst`; an unknown relation is refused."""
+        """Join two lessons with a typed edge, `src -rel-> dst`.
+
+        An unknown relation raises ValueError, locally or over a shared service.
+        """
         if self.mode == "remote":
             self._post("/link", {"src": src, "rel": rel, "dst": dst})
             return
@@ -267,7 +272,7 @@ class Client:
         return core.recurrence_rows(core.recurrence_report(self._local_store()))
 
     def all_nodes(self) -> list[Node]:
-        """Return all in-scope Node objects (local store, or /nodes on a remote service).
+        """Return every node in the store, unfiltered (local store, or /nodes on a remote service).
 
         Used by the drift detector, which needs the node set locally but runs its
         git lookups against the working tree.
