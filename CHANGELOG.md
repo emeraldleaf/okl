@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **A withdrawn record of any type is briefed as withdrawn.** Only a retracted Claim was
+  treated that way; a Decision or Rule with status `retracted` was still briefed as live
+  guidance, a retracted Decision under "made on purpose; do not silently reverse". Now any
+  retracted record is listed as "AVOID: … do not restate this as fact".
 - **`okl verify <id>` without `--run` shows how to prove the lesson** (#115): the lesson, the
   files it covers, the tests that already mention them, and a ready-to-run, shell-quoted
   `okl verify` command. It stamps nothing and exits 2. `okl drift` and `okl reverify` say in

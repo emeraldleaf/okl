@@ -8,9 +8,9 @@
       "title": "The README's stated check defaults (limit 12; formats agent, actions, json, hook) match the code",
       "scope": "repo:okl",
       "files": "README.md,src/okl/core.py,src/okl/cli/",
-      "verified_at": 1791096129746,
-      "verified_by": "`PYTHONPATH=src python3 -c \"import inspect,re,subprocess,sys; from okl import core; d=inspect.signature(core.check).parameters[\\\"limit\\\"].default; h=subprocess.run([sys.executable,\\\"-m\\\",\\\"okl\\\",\\\"check\\\",\\\"--help\\\"],capture_output=True,text=True).stdout; fmts=re.search(r\\\"--format \\{([a-z,]+)\\}\\\",h).group(1).split(\\\",\\\"); r=open(\\\"README.md\\\").read(); missing=[f for f in fmts if f!=\\\"agent\\\" and \\\"--format \\\"+f not in r]; ok=d==12 and \\\"--limit 12\\\" in r and not missing; sys.exit(\\\"limit=%s, formats undocumented: %s\\\" % (d, missing)) if not ok else print(\\\"CHECK DEFAULTS MATCH\\\", fmts)\"` exit 0, matched 'CHECK DEFAULTS MATCH' on commit 2f51b62af522 @ 2026-10-04T06:42Z",
-      "verified_commit": "2f51b62af522dcb8c15a9090b56edad93bf765f6"
+      "verified_at": 1791123064730,
+      "verified_by": "`PYTHONPATH=src python3 -c \"import inspect,re,subprocess,sys; from okl import core; d=inspect.signature(core.check).parameters[\\\"limit\\\"].default; h=subprocess.run([sys.executable,\\\"-m\\\",\\\"okl\\\",\\\"check\\\",\\\"--help\\\"],capture_output=True,text=True).stdout; fmts=re.search(r\\\"--format \\{([a-z,]+)\\}\\\",h).group(1).split(\\\",\\\"); r=open(\\\"README.md\\\").read(); missing=[f for f in fmts if f!=\\\"agent\\\" and \\\"--format \\\"+f not in r]; ok=d==12 and \\\"--limit 12\\\" in r and not missing; sys.exit(\\\"limit=%s, formats undocumented: %s\\\" % (d, missing)) if not ok else print(\\\"CHECK DEFAULTS MATCH\\\", fmts)\"` exit 0, matched 'CHECK DEFAULTS MATCH' on commit ccace103d8cf @ 2026-10-04T14:11Z",
+      "verified_commit": "ccace103d8cfffb234f19fce7893365a07ba0e92"
     },
     {
       "id": "doc-init-flags",
@@ -68,9 +68,9 @@
       "title": "Dependency direction is one-way: store imports nothing, core imports store, adapters import client",
       "scope": "repo:okl",
       "files": "src/okl/store.py,src/okl/core.py,src/okl/client.py",
-      "verified_at": 1791096070224,
-      "verified_by": "`lint-imports` exit 0, matched '1 kept, 0 broken' on commit 74ddbc5c4789 @ 2026-10-04T06:41Z",
-      "verified_commit": "74ddbc5c478979f87f83aae6f83896d2ed3fbedc"
+      "verified_at": 1791123061166,
+      "verified_by": "`lint-imports` exit 0, matched '1 kept, 0 broken' on commit ccace103d8cf @ 2026-10-04T14:11Z",
+      "verified_commit": "ccace103d8cfffb234f19fce7893365a07ba0e92"
     },
     {
       "id": "n_7e50e3588bcd",
@@ -78,9 +78,9 @@
       "title": "A test that imports an undeclared package passes only where that package happens to be installed",
       "scope": "org",
       "files": "tests/",
-      "verified_at": 1791096070380,
-      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && ! grep -rnE '^\\s*import tomllib' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' on commit 74ddbc5c4789 @ 2026-10-04T06:41Z",
-      "verified_commit": "74ddbc5c478979f87f83aae6f83896d2ed3fbedc"
+      "verified_at": 1791123061362,
+      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && ! grep -rnE '^\\s*import tomllib' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' on commit ccace103d8cf @ 2026-10-04T14:11Z",
+      "verified_commit": "ccace103d8cfffb234f19fce7893365a07ba0e92"
     },
     {
       "id": "n_9ba48d85ed19",
@@ -108,9 +108,9 @@
       "title": "A port is defined by behaviour, not by its signatures — state the contract and test every adapter against one body",
       "scope": "org",
       "files": "src/okl/store.py,tests/test_okl.py",
-      "verified_at": 1791096073551,
-      "verified_by": "`python3 -m pytest -q -k 'backend_conformance'` exit 0, matched 'passed' on commit 74ddbc5c4789 @ 2026-10-04T06:41Z",
-      "verified_commit": "74ddbc5c478979f87f83aae6f83896d2ed3fbedc"
+      "verified_at": 1791123064572,
+      "verified_by": "`python3 -m pytest -q -k 'backend_conformance'` exit 0, matched 'passed' on commit ccace103d8cf @ 2026-10-04T14:11Z",
+      "verified_commit": "ccace103d8cfffb234f19fce7893365a07ba0e92"
     },
     {
       "id": "n_be9f13d587b1",

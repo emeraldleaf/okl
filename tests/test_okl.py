@@ -2530,6 +2530,38 @@ def test_every_seed_pack_edge_resolves():
 
     assert not unresolved, unresolved
 
+
+def test_a_retracted_record_of_any_type_is_briefed_as_withdrawn(tmp_path):
+    """Only a retracted Claim was routed to retractions. A Decision or Rule given status
+    "retracted" fell through to its type's section, so a withdrawn decision was still
+    briefed as "made on purpose; do not silently reverse" (found 2026-10-04, after two
+    canon decisions were withdrawn in #122)."""
+    s = Store(f"sqlite:///{tmp_path}/r.db")
+
+    # ARRANGE — a live decision, and a decision and a rule that were both withdrawn.
+    core.record(s, type="Decision", scope="org", title="keep the ledger in sqlite for now")
+    core.record(s, type="Decision", scope="org", status="retracted",
+                title="keep the ledger in mypy-typed sqlite until ty reaches 1.0")
+    core.record(s, type="Rule", scope="org", status="retracted",
+                title="the ledger always uses Google-style docstrings")
+
+    # ACT
+    result = core.check(s, repo="r", task="decide how the ledger is kept and typed")
+
+    # ASSERT (1) — the withdrawn records are retractions, not decisions or rules.
+    def titles(bucket: str) -> set[str]:
+        return {r["title"] for r in result[bucket]}
+
+    assert "keep the ledger in sqlite for now" in titles("decisions")
+    assert "keep the ledger in mypy-typed sqlite until ty reaches 1.0" not in titles("decisions")
+    assert "the ledger always uses Google-style docstrings" not in titles("rules")
+    assert {"keep the ledger in mypy-typed sqlite until ty reaches 1.0",
+            "the ledger always uses Google-style docstrings"} <= titles("live_retractions")
+
+    # ASSERT (2) — and the agent is told not to restate them.
+    avoid = {a["target"] for a in result["next_actions"] if a["kind"] == "avoid_retracted"}
+    assert "keep the ledger in mypy-typed sqlite until ty reaches 1.0" in avoid
+
 def test_starter_pack_resolves_and_is_portable():
     """The starter lessons are references into the bundled packs; every one must resolve,
     be valid on any stack (no applies_to), and be actionable (a fix, or a gate to arm)."""
