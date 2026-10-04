@@ -877,7 +877,8 @@ def test_check_fails_closed_when_repo_is_not_configured(tmp_path, monkeypatch, c
     # ...and the database URL. The CLI honours it now, so a developer or CI job that
     # exports it would point this test's subprocesses at their own store instead.
     monkeypatch.delenv("OKL_DATABASE_URL", raising=False)
-    args = argparse.Namespace(task="add an endpoint", repo=None, format="agent", limit=None)
+    args = argparse.Namespace(task="add an endpoint", repo=None, format="agent", limit=None,
+                              compact=False)
     assert cmd_check(args) == 2, "must fail closed, not report a clean check"
     assert "NOT CONFIGURED" in capsys.readouterr().err
     assert not list(tmp_path.glob("*.db")), "must not create a store just to read from it"
@@ -2561,6 +2562,33 @@ def test_a_retracted_record_of_any_type_is_briefed_as_withdrawn(tmp_path):
     # ASSERT (2) — and the agent is told not to restate them.
     avoid = {a["target"] for a in result["next_actions"] if a["kind"] == "avoid_retracted"}
     assert "keep the ledger in mypy-typed sqlite until ty reaches 1.0" in avoid
+
+
+def test_a_compact_briefing_is_the_action_list_and_much_smaller(tmp_path, monkeypatch, capsys):
+    """--compact gives a model with a small context window only the action list, in the
+    hook's JSON as well as the agent format, so the prompt hook can use it."""
+    import subprocess
+
+    from okl.cli import main
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+    subprocess.run(["git", "init", "-q", "."], check=True)
+    assert main(["init", "--repo", "r", "--no-claude", "--no-seed", "--no-ci"]) == 0
+    assert main(["seed", "dotnet-defects"]) == 0
+    capsys.readouterr()
+    task = ["check", "--task", "add an endpoint that returns an order for the logged-in user"]
+
+    # ACT — the hook format, in full and compact.
+    assert main([*task, "--format", "hook"]) == 0
+    full = json.loads(capsys.readouterr().out)["hookSpecificOutput"]["additionalContext"]
+    assert main([*task, "--format", "hook", "--compact"]) == 0
+    compact = json.loads(capsys.readouterr().out)["hookSpecificOutput"]["additionalContext"]
+
+    # ASSERT — the compact one is the action list (no section headings), and well under the full one.
+    assert "###" in full and "###" not in compact, compact
+    assert compact.strip() and len(compact) < 0.7 * len(full), (len(compact), len(full))
 
 def test_starter_pack_resolves_and_is_portable():
     """The starter lessons are references into the bundled packs; every one must resolve,
