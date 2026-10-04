@@ -182,6 +182,20 @@
       "fix": "inline it as a function or a dataclass; introduce a Protocol when a second implementation or a test fake needs one"
     },
     {
+      "key": "py_protocol_isinstance_names_only",
+      "type": "Rule",
+      "scope": "org",
+      "repo": "okl",
+      "verified": false,
+      "applies_to": "python",
+      "tags": "python,method",
+      "found_by": "Python docs, typing.runtime_checkable; mypy docs, 'Protocols and structural subtyping'; PEP 544, 'Runtime checkable protocols'; Pydantic docs, ConfigDict.arbitrary_types_allowed; reproduced 2026-10-04 on a published Protocols-for-agents example (langchain-core 1.6.6, pydantic 2.13.5, mypy 2.4.0)",
+      "title": "isinstance() against a Protocol checks names, not signatures: conformance comes from the type checker and a shared test",
+      "body": "The Python docs: @runtime_checkable 'will check only the presence of the required methods or attributes, not their type signatures or types.' mypy's docs say the same ('signatures of methods are not checked'), and PEP 544 likens the check to a hasattr() per member. Pydantic inherits the gap: with arbitrary_types_allowed, a field typed with a Protocol is validated by 'a simple check of instance type', and 'nothing in the instance of the arbitrary type is checked'. Reproduced on a published example that offered @runtime_checkable plus a Pydantic model as an extra safety layer: an invoke(a, b, c, d) that returns 42 passed both, and a LangChain chat model passed both, then answered with an AIMessage where the Protocol promised str. The type checker rejected both, and also caught the example's own pipeline passing a PromptValue where its Protocol took str. So a runtime check says an object has the right names, never that it fits. What makes an implementation fit is the type checker over the code that wires it in, plus one behaviour test that every implementation, real or fake, runs.",
+      "symptom": "an isinstance() check against a Protocol, or a Pydantic field typed with one, treated as proof that an implementation fits",
+      "fix": "type-check the code that wires implementations in; run one shared behaviour test over every implementation; use isinstance on a Protocol only to choose between shapes, never to validate one"
+    },
+    {
       "key": "py_print_at_edges",
       "type": "Rule",
       "scope": "org",
