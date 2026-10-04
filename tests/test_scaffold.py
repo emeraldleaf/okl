@@ -374,7 +374,7 @@ def test_eval_harness_with_no_cases_file_says_nothing_was_measured(tmp_path, mon
     monkeypatch.delenv("GENERATOR_MODEL", raising=False); monkeypatch.delenv("JUDGE_MODEL", raising=False)
     r = subprocess.run([sys.executable, str(harness), "--cases", str(tmp_path / "none.jsonl")],
                        capture_output=True, text=True, cwd=tmp_path)
-    assert r.returncode == 2 and "Nothing was measured" in r.stderr, (r.returncode, r.stdout, r.stderr)
+    assert r.returncode == 2 and r.stdout == "" and "Nothing was measured" in r.stderr, (r.returncode, r.stdout, r.stderr)
 
 
 def test_ab_harness_flags_an_off_series_instrument_but_still_runs():

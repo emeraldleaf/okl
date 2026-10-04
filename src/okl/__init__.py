@@ -7,7 +7,7 @@ from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _version
 
 from . import core
-from .client import Client, OKLUnreachable
+from .client import Client, OKLNotConfiguredError, OKLRejectedError, OKLUnreachable
 from .store import EDGE_RELS, NODE_TYPES, Edge, Node, Store
 
 try:
@@ -17,5 +17,6 @@ try:
 except PackageNotFoundError:
     __version__ = "unknown"
 
-__all__ = ["Store", "Node", "Edge", "Client", "OKLUnreachable", "core",
+__all__ = ["Store", "Node", "Edge", "Client", "OKLUnreachable", "OKLNotConfiguredError",
+           "OKLRejectedError", "core",
            "NODE_TYPES", "EDGE_RELS", "__version__"]

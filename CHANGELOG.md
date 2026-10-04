@@ -18,9 +18,10 @@
 - **A command run where okl was never set up now refuses (exit 2) instead of writing to a
   stray `./okl.db`** (#117). `okl record` and `okl seed` used to exit 0 having saved their
   lessons where no hook, check or CI job looks, and `okl coverage` reported a clean zero.
-  Every command that needs a store now says so and stops: run `okl init` first, or name a
-  store with `OKL_DATABASE_URL` or `okl connect <url>`. Listing packs (`okl seed`) still
-  works anywhere.
+  Every CLI command that needs a store now says so and stops, and `okl verify` refuses
+  before running its check: run `okl init` first, or name a store with `OKL_DATABASE_URL`
+  or `okl connect <url>`. Listing packs (`okl seed`) still works anywhere. `okl serve` still
+  defaults to `./okl.db` when nothing names a store (#125).
 - **A shared service answers an unknown link relation with a 400**, not a 500 the client
   reported as an outage (#119).
 - **More "could not run" cases exit 2**, as the CLI's contract says: `okl seed <dir>` when the

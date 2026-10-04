@@ -176,7 +176,7 @@ class Client:
             except Exception:  # noqa: BLE001
                 detail = ""
             if 400 <= e.code < 500:
-                raise ValueError(f"OKL service rejected the request ({e.code}): {detail or e.reason}") from e
+                raise OKLRejectedError(f"OKL service rejected the request ({e.code}): {detail or e.reason}") from e
             raise OKLUnreachableError(f"OKL service error at {url}: {e.code} {detail or e.reason}") from e
         except URLError as e:
             raise OKLUnreachableError(f"OKL service unreachable at {url}: {e}") from e
@@ -297,12 +297,18 @@ class Client:
                 return json.loads(resp.read())
         except HTTPError as e:
             if 400 <= e.code < 500:
-                raise ValueError(
+                raise OKLRejectedError(
                     f"OKL service rejected the request ({e.code} {e.reason}). "
                     "If this is 401, set OKL_TOKEN or add \"token\" to .okl/config.json.") from e
             raise OKLUnreachableError(f"OKL service error at {url}: {e.code} {e.reason}") from e
         except URLError as e:
             raise OKLUnreachableError(f"OKL service unreachable at {url}: {e}") from e
+
+
+class OKLRejectedError(ValueError):
+    """Raised when a shared service answered and refused the request (any 4xx, such as a
+    401 for a missing token or a 400 for an unknown tag). The caller's mistake, not an
+    outage; a ValueError, so the CLI's backstop still turns it into exit 2."""
 
 
 class OKLNotConfiguredError(ValueError):

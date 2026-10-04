@@ -22,15 +22,13 @@ if TYPE_CHECKING:
     from ..store import Node
 
 
-def cmd_verify(args: argparse.Namespace) -> int:
-    """Run the named check, and stamp the node verified ONLY on an observed pass.
+def _run_check(args: argparse.Namespace) -> str | None:
+    """Run `--run` and return its output if it passed, or None after saying why it did not.
 
-    The evidence trail (command, expect-match, timestamp) is stored on the node —
-    the store-side mechanization of verify-before-claiming: no run, no stamp."""
+    Passing means exit 0 and, when `--expect` is given, that text in the output: exit 0
+    alone is a step grading itself (the exit-0-zero-files lesson).
+    """
     import subprocess
-    from datetime import datetime, timezone
-    if not args.run:
-        return _suggest_check(args.node_id)
     try:
         r = subprocess.run(args.run, shell=True, capture_output=True, text=True,
                            timeout=args.timeout)
@@ -39,18 +37,35 @@ def cmd_verify(args: argparse.Namespace) -> int:
         # later lesson unchecked (CodeRabbit on #79). A timeout is a failed check.
         print(f"✗ check TIMED OUT after {args.timeout}s — NOT stamping verification.",
               file=sys.stderr)
-        return 1
+        return None
     output = (r.stdout or "") + (r.stderr or "")
     tail = "\n".join(output.strip().splitlines()[-5:])
     if r.returncode != 0:
         print(f"✗ check FAILED (exit {r.returncode}) — NOT stamping verification.\n{tail}",
               file=sys.stderr)
-        return 1
+        return None
     if args.expect and args.expect not in output:
-        # exit 0 alone is a step grading itself — require the positive success signal
-        # when the caller names one (the exit-0-zero-files lesson).
         print(f"✗ check exited 0 but expected signal {args.expect!r} NOT in output — NOT stamping.\n{tail}",
               file=sys.stderr)
+        return None
+    return output
+
+
+def cmd_verify(args: argparse.Namespace) -> int:
+    """Run the named check, and stamp the node verified ONLY on an observed pass.
+
+    The evidence trail (command, expect-match, timestamp) is stored on the node —
+    the store-side mechanization of verify-before-claiming: no run, no stamp."""
+    from datetime import datetime, timezone
+    # Before anything runs: with no store, the check's result could not be recorded, and
+    # running it anyway executed the user's command and reported its failure as a finding.
+    if not Client().configured:
+        print("OKL: not configured: no store to record a verification in, so the check was "
+              "not run. Run `okl init` here, or `okl connect <url>`.", file=sys.stderr)
+        return 2
+    if not args.run:
+        return _suggest_check(args.node_id)
+    if _run_check(args) is None:
         return 1
     stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%MZ")
     # The commit the check passed at: drift diffs the governed files there against HEAD
