@@ -1435,6 +1435,7 @@ def test_init_wires_claude_code_without_an_existing_claude_dir(tmp_path):
 
 
 def shutil_which(name):
+    """Return the full path of the `name` executable, or skip the test when it is not installed."""
     import shutil
     found = shutil.which(name)
     if found is None:

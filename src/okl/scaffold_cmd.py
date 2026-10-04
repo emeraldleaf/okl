@@ -14,7 +14,7 @@ SCAFFOLD_ROOT = Path(__file__).parent / "scaffold"
 # (src relative to scaffold/, dst relative to repo root). `{c}` is the claude dir name
 # (".claude" in real use; overridable only so the logic is testable inside sandboxes that
 # forbid creating a literal ".claude" path).
-def _layout(c: str = ".claude"):
+def _layout(c: str = ".claude") -> list[tuple[str, str]]:
     """Map each scaffold source directory to its destination in the target repo."""
     return [
         ("root/CLAUDE.md", "CLAUDE.md"),
@@ -44,18 +44,19 @@ PLUGIN_LAYOUT = [
 ]
 
 
-def _copy(src: Path, dst: Path, repo: str, force: bool,
+def _copy(src: Path, dst: Path, *, repo: str, force: bool,
           written: list[Path], skipped: list[Path]) -> None:
     if src.is_dir():
         for child in src.rglob("*"):
             if child.is_file():
                 rel = child.relative_to(src)
-                _copy_file(child, dst / rel, repo, force, written, skipped)
+                _copy_file(child, dst / rel, repo=repo, force=force,
+                           written=written, skipped=skipped)
     else:
-        _copy_file(src, dst, repo, force, written, skipped)
+        _copy_file(src, dst, repo=repo, force=force, written=written, skipped=skipped)
 
 
-def _copy_file(src: Path, dst: Path, repo: str, force: bool,
+def _copy_file(src: Path, dst: Path, *, repo: str, force: bool,
                written: list[Path], skipped: list[Path]) -> None:
     if dst.exists() and not force:
         skipped.append(dst)
@@ -80,7 +81,7 @@ def list_profiles() -> list[str]:
     return sorted(p.name for p in d.iterdir() if p.is_dir()) if d.is_dir() else []
 
 
-def scaffold(target: str = ".", repo: str | None = None, force: bool = False,
+def scaffold(target: str = ".", *, repo: str | None = None, force: bool = False,
              plugin: bool = False, claude_dir: str = ".claude",
              profile: str | list[str] | None = None) -> dict:
     """Stamp the method kit into a target repo and report what it wrote.
@@ -107,14 +108,16 @@ def scaffold(target: str = ".", repo: str | None = None, force: bool = False,
 
     layout = _layout(claude_dir) + (PLUGIN_LAYOUT if plugin else [])
     for src_rel, dst_rel in layout:
-        _copy(SCAFFOLD_ROOT / src_rel, root / dst_rel, repo, force, written, skipped)
+        _copy(SCAFFOLD_ROOT / src_rel, root / dst_rel,
+              repo=repo, force=force, written=written, skipped=skipped)
 
     # Each profile drops its stack's verbatim canon into .claude/rules/ (+ a README).
     for p in profiles:
         prof_root = SCAFFOLD_ROOT / "profiles" / p
-        _copy(prof_root / "rules", root / claude_dir / "rules", repo, force, written, skipped)
+        _copy(prof_root / "rules", root / claude_dir / "rules",
+              repo=repo, force=force, written=written, skipped=skipped)
         _copy(prof_root / "README.md", root / claude_dir / "rules" / f"_PROFILE_{p}.md",
-              repo, force, written, skipped)
+              repo=repo, force=force, written=written, skipped=skipped)
 
     # find FILL slots across everything just written
     fills: list[str] = []

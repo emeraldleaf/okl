@@ -15,7 +15,7 @@ import os
 import time
 import uuid
 import weakref
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from dataclasses import asdict, dataclass, field
 from typing import Any, Protocol, runtime_checkable
 
@@ -81,6 +81,12 @@ def new_id(prefix: str = "n") -> str:
 
 @dataclass
 class Node:
+    """One record in the ledger: a typed lesson (a Rule, Defect, Gate, ...) and its metadata.
+
+    `id` and `created_at` are filled in when not given. Building a Node does not
+    validate it; Store.add_node does, before writing.
+    """
+
     type: str
     title: str
     scope: str = "repo:unknown"          # 'org' or 'repo:<name>'
@@ -151,12 +157,18 @@ class Node:
 
 @dataclass
 class Edge:
+    """A directed, typed link from `src` to `dst`, read as a sentence: a Gate CATCHES a Defect.
+
+    `dst` need not be a node id: seed packs write `defect RECURS_IN <repo name>`.
+    """
+
     src: str
     rel: str
     dst: str
     created_at: int = field(default_factory=_now_ms)
 
     def validate(self) -> None:
+        """Raise ValueError if `rel` is not one of EDGE_RELS."""
         if self.rel not in EDGE_RELS:
             raise ValueError(f"unknown edge relation {self.rel!r}; valid: {sorted(EDGE_RELS)}")
 
@@ -167,7 +179,7 @@ class Edge:
 class Store:
     """Facade over whichever backend the environment selects."""
 
-    def __init__(self, url: str | None = None):
+    def __init__(self, url: str | None = None) -> None:
         url = url or os.environ.get("OKL_DATABASE_URL") or "sqlite:///okl.db"
         self.url = url
         if url.startswith("postgres"):
@@ -182,6 +194,10 @@ class Store:
 
     # -- writes -------------------------------------------------------------
     def add_node(self, node: Node) -> str:
+        """Validate and write a node, replacing any node with the same id; return its id.
+
+        Raises ValueError if the node is malformed or uses a tag this store has not declared.
+        """
         # Validate against the floor PLUS whatever this store has declared. A
         # Vocabulary node is checked against the floor only, so declaring a tag can
         # never require the tag it is declaring.
@@ -193,6 +209,10 @@ class Store:
         return node.id
 
     def add_edge(self, edge: Edge) -> None:
+        """Validate and write an edge; writing the same edge twice stores it once.
+
+        Raises ValueError for an unknown relation. The ends are not checked to exist.
+        """
         edge.validate()
         self._impl.upsert_edge(edge)
 
@@ -211,13 +231,24 @@ class Store:
 
     # -- reads --------------------------------------------------------------
     def get_node(self, node_id: str) -> Node | None:
+        """Return the node with this id, or None if there is none."""
         return self._impl.get_node(node_id)
 
     def search(self, query: str, scope: str | None = None,
                node_types: Iterable[str] | None = None, limit: int = 25) -> list[Node]:
+        """Return up to `limit` nodes matching any word of `query`, best match first.
+
+        `scope` and `node_types` filter exactly; None or empty means no filter. An empty
+        query matches every node, in no particular order.
+        """
         return self._impl.search(query, scope, list(node_types) if node_types else None, limit)
 
     def neighbors(self, node_id: str, rels: Iterable[str] | None = None) -> list[tuple[Edge, Node]]:
+        """Return (edge, node at the other end) for each edge touching `node_id`, either direction.
+
+        `rels` limits the relations; None or empty means all. Edges whose other end is
+        not a node are left out.
+        """
         return self._impl.neighbors(node_id, list(rels) if rels else None)
 
     def edges(self, rels: list[str]) -> list[Edge]:
@@ -226,9 +257,11 @@ class Store:
         return self._impl.edges(list(rels))
 
     def all_nodes(self) -> list[Node]:
+        """Return every node in the store, in no particular order."""
         return self._impl.all_nodes()
 
     def close(self) -> None:
+        """Close the database connection; calling it again does nothing."""
         self._impl.close()
 
 
@@ -314,7 +347,7 @@ def _close_when_collected(owner: object, conn: Any) -> weakref.finalize:
 # SQLite backend (default) — FTS5 full-text search
 # ---------------------------------------------------------------------------
 class _SQLiteBackend(_Backend):
-    def __init__(self, path: str):
+    def __init__(self, path: str) -> None:
         import sqlite3
         import threading
         self._sqlite3 = sqlite3
@@ -401,7 +434,8 @@ class _SQLiteBackend(_Backend):
             r = self.conn.execute("SELECT * FROM node WHERE id=?", (node_id,)).fetchone()
             return _row_to_node(dict(r)) if r else None
 
-    def search(self, q, scope, node_types, limit):
+    def search(self, q: str, scope: str | None, node_types: list[str] | None,
+               limit: int) -> list[Node]:
         with self._lock:
             params: list[Any] = []
             if self._has_fts and q.strip():
@@ -444,7 +478,7 @@ class _SQLiteBackend(_Backend):
             rows = self.conn.execute(sql, params).fetchall()
             return [_row_to_node(dict(r)) for r in rows]
 
-    def neighbors(self, node_id, rels):
+    def neighbors(self, node_id: str, rels: list[str] | None) -> list[tuple[Edge, Node]]:
         with self._lock:
             sql = ("SELECT e.src,e.rel,e.dst,e.created_at FROM edge e "
                    "WHERE e.src=? OR e.dst=?")
@@ -462,7 +496,7 @@ class _SQLiteBackend(_Backend):
                     out.append((e, n))
             return out
 
-    def edges(self, rels):
+    def edges(self, rels: list[str]) -> list[Edge]:
         with self._lock:
             # Only "?" placeholders are interpolated; every relation is bound as a parameter.
             marks = ",".join("?" for _ in rels)
@@ -472,11 +506,11 @@ class _SQLiteBackend(_Backend):
             return [Edge(src=r["src"], rel=r["rel"], dst=r["dst"], created_at=r["created_at"])
                     for r in rows]
 
-    def all_nodes(self):
+    def all_nodes(self) -> list[Node]:
         with self._lock:
             return [_row_to_node(dict(r)) for r in self.conn.execute("SELECT * FROM node").fetchall()]
 
-    def close(self):
+    def close(self) -> None:
         self._closer()
 
 
@@ -517,7 +551,7 @@ def _pg_ts_query(q: str) -> str:
 
 
 class _PostgresBackend(_Backend):
-    def __init__(self, url: str):
+    def __init__(self, url: str) -> None:
         try:
             import psycopg
         except ImportError as e:  # pragma: no cover - only when pg selected
@@ -528,7 +562,7 @@ class _PostgresBackend(_Backend):
         self.conn = psycopg.connect(url, autocommit=True)
         self._closer = _close_when_collected(self, self.conn)
 
-    def init_schema(self):
+    def init_schema(self) -> None:
         with self.conn.cursor() as cur:
             cur.execute("""CREATE TABLE IF NOT EXISTS node(
                 id TEXT PRIMARY KEY, type TEXT NOT NULL, scope TEXT NOT NULL, repo TEXT,
@@ -557,7 +591,7 @@ class _PostgresBackend(_Backend):
                 cur.execute("DROP INDEX node_tsv_idx")
             cur.execute(f"CREATE INDEX IF NOT EXISTS node_tsv_idx ON node USING GIN (({_PG_TSV}))")
 
-    def upsert_node(self, node: Node):
+    def upsert_node(self, node: Node) -> None:
         vals = asdict(node)
         cols = ",".join(_NODE_COLS)
         ph = ",".join(f"%({k})s" for k in _NODE_COLS)
@@ -566,24 +600,25 @@ class _PostgresBackend(_Backend):
             cur.execute(f"INSERT INTO node({cols}) VALUES({ph}) "
                         f"ON CONFLICT(id) DO UPDATE SET {upd}", vals)
 
-    def upsert_edge(self, edge: Edge):
+    def upsert_edge(self, edge: Edge) -> None:
         with self.conn.cursor() as cur:
             cur.execute("INSERT INTO edge(src,rel,dst,created_at) VALUES(%s,%s,%s,%s) "
                         "ON CONFLICT(src,rel,dst) DO NOTHING",
                         (edge.src, edge.rel, edge.dst, edge.created_at))
 
-    def _fetch(self, sql, params):
+    def _fetch(self, sql: str, params: Sequence[Any]) -> list[dict[str, Any]]:
         with self.conn.cursor() as cur:
             cur.execute(sql, params)
             # description is None only for statements that return no rows; _fetch runs SELECTs.
             cols = [d.name for d in cur.description or ()]
             return [dict(zip(cols, row, strict=True)) for row in cur.fetchall()]
 
-    def get_node(self, node_id):
+    def get_node(self, node_id: str) -> Node | None:
         rows = self._fetch("SELECT * FROM node WHERE id=%s", (node_id,))
         return _row_to_node(rows[0]) if rows else None
 
-    def search(self, q, scope, node_types, limit):
+    def search(self, q: str, scope: str | None, node_types: list[str] | None,
+               limit: int) -> list[Node]:
         # Ranked full-text when there's a query (parity with the SQLite FTS5/BM25 path);
         # plain ILIKE only as the blank-query fallback. Without ranking, the shared
         # service would silently degrade retrieval below the local-file baseline.
@@ -613,7 +648,7 @@ class _PostgresBackend(_Backend):
         sql += " LIMIT %s"; params.append(limit)
         return [_row_to_node(r) for r in self._fetch(sql, params)]
 
-    def neighbors(self, node_id, rels):
+    def neighbors(self, node_id: str, rels: list[str] | None) -> list[tuple[Edge, Node]]:
         sql = "SELECT src,rel,dst,created_at FROM edge WHERE (src=%s OR dst=%s)"
         params: list[Any] = [node_id, node_id]
         if rels:
@@ -627,13 +662,13 @@ class _PostgresBackend(_Backend):
                 out.append((e, n))
         return out
 
-    def edges(self, rels):
+    def edges(self, rels: list[str]) -> list[Edge]:
         return [Edge(src=r["src"], rel=r["rel"], dst=r["dst"], created_at=r["created_at"])
                 for r in self._fetch("SELECT src, rel, dst, created_at FROM edge "
                                      "WHERE rel = ANY(%s)", (list(rels),))]
 
-    def all_nodes(self):
+    def all_nodes(self) -> list[Node]:
         return [_row_to_node(r) for r in self._fetch("SELECT * FROM node", ())]
 
-    def close(self):
+    def close(self) -> None:
         self._closer()

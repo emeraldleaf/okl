@@ -36,6 +36,7 @@ def body(text: str) -> str:
 
 
 def digest(text: str) -> str:
+    """The fingerprint `text` should carry: the sha256 hex of its body."""
     return hashlib.sha256(body(text).encode("utf-8")).hexdigest()
 
 
@@ -50,6 +51,7 @@ def stamp(text: str) -> str:
 
 
 def embedded(text: str) -> str | None:
+    """The fingerprint hex `text` carries, or None when it has no fingerprint line."""
     m = re.search(r"^# okl-fingerprint: sha256:([0-9a-f]+)$", text, re.MULTILINE)
     return m.group(1) if m else None
 
@@ -71,6 +73,10 @@ def status(path: Path, shipped: str) -> str:
 
 
 def main(argv: list[str]) -> int:
+    """`python -m okl.ownership --stamp <file>...`: re-stamp each file in place.
+
+    Returns the exit code: 0, or 2 for a usage error.
+    """
     if len(argv) < 2 or argv[0] != "--stamp":
         print("usage: python -m okl.ownership --stamp <file>...", file=sys.stderr)
         return 2

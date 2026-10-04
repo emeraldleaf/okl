@@ -33,7 +33,7 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src"))
 
 from okl.core import _in_scope  # noqa: E402
-from okl.store import Store, split_tags  # noqa: E402
+from okl.store import Node, Store, split_tags  # noqa: E402
 
 # The task traced through the pipeline. A real eval task, so the diagram depicts a case the
 # report also measures rather than a contrived one.
@@ -88,7 +88,7 @@ def trace(store: Store | None = None) -> dict:
     after_scope = own + org
 
     # Stage 3 — applies_to, the only EXCLUSIVE filter. Own-repo records never reach it.
-    def gated(n):
+    def gated(n: Node) -> bool:
         a = split_tags(n.applies_to) - {"any"}
         return bool(a and wanted and not (a & wanted))
 
@@ -96,7 +96,7 @@ def trace(store: Store | None = None) -> dict:
     after_applies = own + [n for n in org if not gated(n)]
 
     # Stage 4 — tags, INCLUSIVE: untagged always passes, one shared subject is enough.
-    def off_subject(n):
+    def off_subject(n: Node) -> bool:
         t = split_tags(n.tags)
         return bool(t and wanted and not (t & wanted))
 
@@ -142,7 +142,11 @@ FLOW, PASS, DROP = "#B4531F", "#4A6B3D", "#9B3B3B"
 PAPER, SURF, RULE = "#F5F3F0", "#FFFFFF", "#DCD6CE"
 
 
-def _bar(x, y, w, keep_frac, cut_frac):
+def _bar(x: int, y: int, w: int, keep_frac: float, cut_frac: float) -> str:
+    """Draw one stage's bar: a track `w` wide, the kept share, then the dropped share.
+
+    `keep_frac` and `cut_frac` are fractions of `w`; the SVG markup comes back as a string.
+    """
     out = [f'<rect x="{x}" y="{y}" width="{w}" height="9" rx="2" fill="#EBE7E1"/>']
     kw = round(w * keep_frac)
     out.append(f'<rect x="{x}" y="{y}" width="{kw}" height="9" rx="2" fill="{FLOW}"/>')
@@ -153,6 +157,7 @@ def _bar(x, y, w, keep_frac, cut_frac):
 
 
 def render(d: dict) -> str:
+    """Turn the counts from `trace()` into the complete SVG document text."""
     f = d["fetched"] or 1
     stages = [
         ("0", "STORE", "The corpus", "Every record carries scope (permission), tags (subject), "
@@ -262,6 +267,7 @@ def render(d: dict) -> str:
 
 
 def main() -> int:
+    """Trace the pipeline, then write the SVG (or print the counts with --json)."""
     ap = argparse.ArgumentParser()
     ap.add_argument("--json", action="store_true", help="emit traced counts, render nothing")
     ap.add_argument("--out", default=str(REPO / "docs" / "okl-retrieval-pipeline.svg"))

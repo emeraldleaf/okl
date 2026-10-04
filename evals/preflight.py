@@ -41,6 +41,7 @@ ACCEPTED_GAPS = {
 
 
 def main() -> int:
+    """Check each eval task's briefing holds the record it tests; return 1 if one is missing and not an accepted gap."""
     tasks = [json.loads(line) for line in (REPO / "evals" / "tasks.jsonl").read_text().splitlines()
              if line.strip()]
     client = Client()

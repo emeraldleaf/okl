@@ -13,13 +13,19 @@ import re
 import shlex
 import sys
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from . import core
 from .client import Client, OKLUnreachableError, _find_config, load_config, save_config
 
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
-def _print_json(obj) -> None:
+    from .drift import DriftHit
+    from .store import Node
+
+
+def _print_json(obj: object) -> None:
     """Dump a result as indented JSON.
 
     The `--format json` path exists so other tools can consume a check without
@@ -273,7 +279,7 @@ def _detect_stacks(root: Path) -> list[tuple[str, str]]:
     return found
 
 
-def _should_wire_claude(args) -> tuple[bool, str]:
+def _should_wire_claude(args: argparse.Namespace) -> tuple[bool, str]:
     """Whether init should install Claude Code hooks here, and why.
 
     It required an existing .claude/ directory, and many repos have none: Claude Code
@@ -300,7 +306,7 @@ def _should_wire_claude(args) -> tuple[bool, str]:
     return False, ""
 
 
-def _wire_claude_code(args) -> None:
+def _wire_claude_code(args: argparse.Namespace) -> None:
     """init's Claude Code step: defer to okl's plugin, wire the project, or say how to."""
     claude = Path(".claude")
     wire = _should_wire_claude(args)
@@ -329,7 +335,7 @@ def _wire_claude_code(args) -> None:
         print("      agent has a pre-prompt hook, point it at them. Registration formats differ.")
 
 
-def _init_dry_run(args) -> int:
+def _init_dry_run(args: argparse.Namespace) -> int:
     """`okl init --dry-run`: every path init would touch, and nothing written."""
     repo = args.repo or Path.cwd().name
     print(f"DRY RUN — nothing will be written. `okl init --repo {repo}` would:\n")
@@ -368,7 +374,7 @@ def _init_dry_run(args) -> int:
     return 0
 
 
-def _ci_wanted(args, cfg: dict) -> bool:
+def _ci_wanted(args: argparse.Namespace, cfg: dict) -> bool:
     """Whether init installs the CI workflow: --ci/--no-ci when given, else what an earlier
     init recorded (#111). Remembered because init restores missing files by design, so a
     deleted workflow came back on the next run."""
@@ -376,7 +382,7 @@ def _ci_wanted(args, cfg: dict) -> bool:
     return cfg.get("ci", True) if flag is None else flag
 
 
-def _init_interests(cfg: dict, args) -> None:
+def _init_interests(cfg: dict, args: argparse.Namespace) -> None:
     """Explicit --interests win; otherwise detect them, once, for a repo that has none."""
     if args.interests:
         cfg["interests"] = [t.strip().lower() for t in args.interests.split(",") if t.strip()]
@@ -391,7 +397,7 @@ def _init_interests(cfg: dict, args) -> None:
                   + " — interests set; pass --interests to choose your own")
 
 
-def cmd_init(args) -> int:
+def cmd_init(args: argparse.Namespace) -> int:
     """Wire the current repo so the loop runs without manual follow-up steps:
     config, hooks (installed AND registered), CI verifier, MCP registration.
 
@@ -438,11 +444,13 @@ def cmd_init(args) -> int:
     return 0
 
 
-def cmd_doctor(args) -> int:
+def cmd_doctor(args: argparse.Namespace) -> int:
     """Report agent-memory tools installed beside okl and how they collide (#40).
 
-    Exit 1 when any is found -- a finding, per the CLI contract -- and 0 when none is.
-    It reads settings files only and changes nothing.
+    Exit 1 when any is found, or when okl itself is wired twice (its plugin enabled AND
+    its hooks registered in the project, so every prompt is briefed twice) -- findings,
+    per the CLI contract -- and 0 when neither is. It reads settings files only and
+    changes nothing.
     """
     from . import coexist
     cfg = _find_config()
@@ -509,7 +517,7 @@ def _install_ci_verifier(force: bool = False) -> None:
     _place_owned(wf, src.read_text(), "CI verifier (drift gate + repo gates on every PR)", force)
 
 
-def cmd_connect(args) -> int:
+def cmd_connect(args: argparse.Namespace) -> int:
     """Point this repo at a shared service, and optionally store its token.
 
     Writing the token into .okl/config.json is a convenience for a laptop; CI and
@@ -525,7 +533,13 @@ def cmd_connect(args) -> int:
     return 0
 
 
-def cmd_check(args) -> int:
+def cmd_check(args: argparse.Namespace) -> int:
+    """Print the lessons that apply to `--task`, in the shape `--format` names.
+
+    Exit 0 when the check ran, even if nothing applies; 2 when it could not run (no
+    config, an unreachable store, or a rejected request), so a hook never reads a
+    failure as a clean check.
+    """
     client = Client()
     if not client.configured:
         # FAIL CLOSED. Without a config there is no store to read; proceeding would
@@ -586,7 +600,7 @@ def cmd_check(args) -> int:
     return 0
 
 
-def cmd_record(args) -> int:
+def cmd_record(args: argparse.Namespace) -> int:
     """Write one record to the store.
 
     Validation errors (an unknown tag, a malformed scope) are the caller's mistake and
@@ -626,7 +640,7 @@ def cmd_record(args) -> int:
     return 0
 
 
-def cmd_link(args) -> int:
+def cmd_link(args: argparse.Namespace) -> int:
     """Join two records with a typed edge (e.g. a Gate CATCHES a Defect).
 
     Edges are what let a briefing say WHY a gate is armed rather than just naming it.
@@ -636,7 +650,7 @@ def cmd_link(args) -> int:
     return 0
 
 
-def cmd_verify(args) -> int:
+def cmd_verify(args: argparse.Namespace) -> int:
     """Run the named check, and stamp the node verified ONLY on an observed pass.
 
     The evidence trail (command, expect-match, timestamp) is stored on the node —
@@ -819,7 +833,7 @@ def _stored_check(verified_by: str | None) -> tuple[str, str | None] | None:
     return run, expect
 
 
-def _reverify_permitted(args, planned: bool, manual: bool) -> int | None:
+def _reverify_permitted(args: argparse.Namespace, planned: bool, manual: bool) -> int | None:
     """None to go ahead and run the listed commands, or the exit code to stop with."""
     if not planned or getattr(args, "dry_run", False):
         return 1 if (manual or planned) else 0
@@ -832,7 +846,7 @@ def _reverify_permitted(args, planned: bool, manual: bool) -> int | None:
     return None if input("Run them? [y/N] ").strip().lower() in ("y", "yes") else 2
 
 
-def cmd_reverify(args) -> int:
+def cmd_reverify(args: argparse.Namespace) -> int:
     """Re-run the stored check of every drifted lesson and re-stamp the ones that pass.
 
     `okl verify` already records the exact command and expected signal as evidence, so a
@@ -894,7 +908,7 @@ def _write_snapshot(client: Client, path: Path) -> int:
     return len(snap["rules"])
 
 
-def cmd_export(args) -> int:
+def cmd_export(args: argparse.Namespace) -> int:
     """Write the committed drift snapshot CI reads when it has no store (issue #36)."""
     client = Client()
     if not client.configured:
@@ -917,7 +931,7 @@ def cmd_export(args) -> int:
     return 0
 
 
-def cmd_search(args) -> int:
+def cmd_search(args: argparse.Namespace) -> int:
     """Free-text search across the encoded body.
 
     Distinct from `check`: search answers "what do we know about X", check answers
@@ -959,7 +973,7 @@ def cmd_search(args) -> int:
     return 0
 
 
-def cmd_metric(args) -> int:
+def cmd_metric(args: argparse.Namespace) -> int:
     """Recurrence, with the coverage that makes the number readable (issue #31)."""
     client = Client()
     if not client.configured:
@@ -995,7 +1009,7 @@ def cmd_metric(args) -> int:
     return 0
 
 
-def cmd_drift(args) -> int:
+def cmd_drift(args: argparse.Namespace) -> int:
     """Source-vs-spec drift: rules whose governed code changed after last verification."""
     from . import drift
     client = Client()
@@ -1019,7 +1033,7 @@ def cmd_drift(args) -> int:
                          drift.governs_nothing(nodes, repo, args.repo_dir))
 
 
-def _drift_from_snapshot(args, client: Client) -> int:
+def _drift_from_snapshot(args: argparse.Namespace, client: Client) -> int:
     """Drift against a committed snapshot instead of a store (issue #36).
 
     The snapshot is the store for a job that has none: CI without a service, and every
@@ -1043,7 +1057,8 @@ def _drift_from_snapshot(args, client: Client) -> int:
                          drift.governs_nothing(nodes, repo, args.repo_dir))
 
 
-def _report_drift(args, scan, missing=()) -> int:
+def _report_drift(args: argparse.Namespace, scan: tuple[list[DriftHit], int],
+                  missing: Sequence[Node] = ()) -> int:
     from . import drift
     hits, checked = scan
     # Lessons watching files that are gone are reported beside the drift, never as drift:
@@ -1065,7 +1080,7 @@ def _report_drift(args, scan, missing=()) -> int:
     return 2 if checked == 0 else 0
 
 
-def cmd_dedup(args) -> int:
+def cmd_dedup(args: argparse.Namespace) -> int:
     """Report records that look like near-duplicates of each other.
 
     A review aid, never an auto-merge. Whether two similar records are "the same" is a
@@ -1076,6 +1091,9 @@ def cmd_dedup(args) -> int:
     Duplicates are not merely untidy now that `check` applies a top-k cutoff: two records
     saying the same thing both get injected, spend the budget twice, and can push a third
     relevant record out of the briefing entirely.
+
+    Exit 1 when it finds candidate pairs, 0 when it finds none, 2 when okl is not
+    configured here.
     """
     client = Client()
     if not client.configured:
@@ -1085,7 +1103,7 @@ def cmd_dedup(args) -> int:
     store = client._local_store() if client.mode == "local" else None
     idf = core._idf(store) if store is not None else {}
 
-    seen: set[tuple[str, str]] = set()
+    seen: set[tuple[str, ...]] = set()
     pairs = []
     for i, a in enumerate(nodes):
         for b in nodes[i + 1:]:
@@ -1120,10 +1138,9 @@ def cmd_dedup(args) -> int:
     return 1
 
 
-def cmd_coverage(args) -> int:
+def cmd_coverage(args: argparse.Namespace) -> int:
     """Knowledge-to-code ratio — a health signal, not a target (Codified Context §4.2)."""
     import subprocess
-    from pathlib import Path
     client = Client()
     try:
         nodes = client.all_nodes()
@@ -1163,10 +1180,8 @@ def cmd_coverage(args) -> int:
     return 0
 
 
-def cmd_bootstrap(args) -> int:
+def cmd_bootstrap(args: argparse.Namespace) -> int:
     """Propose starter nodes from repo signals into a reviewable okl-bootstrap.json."""
-    from pathlib import Path
-
     from . import bootstrap
     repo = args.repo or Client().repo
     proposal = bootstrap.propose_nodes(repo, repo_dir=args.repo_dir)
@@ -1311,7 +1326,34 @@ def _describe_pack(path: Path) -> tuple[int, set[str]]:
     return len(data.get("nodes", [])), tags
 
 
-def cmd_seed(args) -> int:
+def _list_seed_packs(seed_dir: Path, interests: set[str]) -> int:
+    """Print the bundled packs, marking those that fit this repo's interests; import nothing.
+
+    Exits 1 when there are no packs to list, which means a broken install.
+    """
+    packs = sorted(str(f) for f in seed_dir.glob("*.json"))
+    if not packs:
+        print(f"no seed packs found under {seed_dir}")
+        return 1
+    print("Seed packs available (nothing has been imported):\n")
+    for pk in packs:
+        f = Path(pk)
+        count, tags = _describe_pack(f)
+        hit = " <- matches your interests" if _pack_fits(tags, interests) else ""
+        print(f"  {f.name:38} {count:3} records  [{', '.join(sorted(tags)) or 'untagged'}]{hit}")
+    print("\nThese hold real rules from specific stacks. Import the ones that match")
+    print("your project rather than all of them:\n")
+    print("  okl seed <pack>                       one pack, by name (e.g. okl seed dotnet-defects)")
+    print("  okl seed --all                        every pack above")
+    if interests:
+        print(f"\nThis repo declares: {', '.join(sorted(interests))}. Records tagged outside")
+        print("those subjects stay filtered out of briefings even once imported.")
+    else:
+        print("\nTip: `okl init --interests \"<subjects>\"` filters what reaches a briefing.")
+    return 0
+
+
+def cmd_seed(args: argparse.Namespace) -> int:
     """Import seed packs — deliberately a choice, not a default.
 
     The bundled packs carry real rules from specific stacks. Importing all of them into
@@ -1326,26 +1368,7 @@ def cmd_seed(args) -> int:
     interests = {t.lower() for t in (Client().interests or [])}
 
     if not args.path and not args.all:
-        packs = sorted(str(f) for f in seed_dir.glob("*.json"))
-        if not packs:
-            print(f"no seed packs found under {seed_dir}")
-            return 1
-        print("Seed packs available (nothing has been imported):\n")
-        for pk in packs:
-            f = Path(pk)
-            count, tags = _describe_pack(f)
-            hit = " <- matches your interests" if _pack_fits(tags, interests) else ""
-            print(f"  {f.name:38} {count:3} records  [{', '.join(sorted(tags)) or 'untagged'}]{hit}")
-        print("\nThese hold real rules from specific stacks. Import the ones that match")
-        print("your project rather than all of them:\n")
-        print("  okl seed <pack>                       one pack, by name (e.g. okl seed dotnet-defects)")
-        print("  okl seed --all                        every pack above")
-        if interests:
-            print(f"\nThis repo declares: {', '.join(sorted(interests))}. Records tagged outside")
-            print("those subjects stay filtered out of briefings even once imported.")
-        else:
-            print("\nTip: `okl init --interests \"<subjects>\"` filters what reaches a briefing.")
-        return 0
+        return _list_seed_packs(seed_dir, interests)
 
     if args.all:
         targets = sorted(str(f) for f in seed_dir.glob("*.json"))
@@ -1380,7 +1403,7 @@ def cmd_seed(args) -> int:
     return 0
 
 
-def cmd_scaffold(args) -> int:
+def cmd_scaffold(args: argparse.Namespace) -> int:
     """Stamp the portable method kit (canon, skills, agent, commands, gates, evals, hook) into a repo."""
     from .scaffold_cmd import scaffold
     res = scaffold(target=args.target, repo=args.repo, force=args.force, plugin=args.plugin,
@@ -1404,7 +1427,7 @@ def cmd_scaffold(args) -> int:
     return 0
 
 
-def cmd_serve(args) -> int:
+def cmd_serve(args: argparse.Namespace) -> int:
     """Run the shared HTTP service.
 
     The 0.0.0.0 default is so the service is reachable from outside its container,
@@ -1416,7 +1439,7 @@ def cmd_serve(args) -> int:
     return 0
 
 
-def cmd_mcp(args) -> int:
+def cmd_mcp(args: argparse.Namespace) -> int:
     """Serve the MCP tool surface over stdio, for a coding agent to call.
 
     Same operations as the CLI through the same Client, so remote/local mode and the
@@ -1427,7 +1450,7 @@ def cmd_mcp(args) -> int:
     return 0
 
 
-def build_parser() -> argparse.ArgumentParser:
+def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarative table, see below
     """Build the argparse tree for every subcommand.
 
     One long declarative function on purpose: the parser IS the CLI's contract, and a

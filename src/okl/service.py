@@ -32,6 +32,8 @@ except ImportError as e:  # pragma: no cover
 
 
 class CheckReq(BaseModel):
+    """Request body for POST /check."""
+
     repo: str
     task: str
     limit: int = 12
@@ -39,6 +41,8 @@ class CheckReq(BaseModel):
 
 
 class RecordReq(BaseModel):
+    """Request body for POST /record; the fields are core.record's keyword arguments."""
+
     type: str
     title: str
     scope: str
@@ -62,6 +66,8 @@ class RecordReq(BaseModel):
 
 
 class SearchReq(BaseModel):
+    """Request body for POST /search."""
+
     query: str
     scope: str | None = None
     node_types: list[str] | None = None
@@ -69,18 +75,27 @@ class SearchReq(BaseModel):
 
 
 class LinkReq(BaseModel):
+    """Request body for POST /link."""
+
     src: str
     rel: str
     dst: str
 
 
 class VerifyReq(BaseModel):
+    """Request body for POST /verify."""
+
     id: str
     evidence: str   # the observed check that passed (command + timestamp)
     commit: str | None = None   # git HEAD the check passed at; drift diffs against it (#102)
 
 
 def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901
+    """Build the HTTP app over `store`, or over the store OKL_DATABASE_URL names.
+
+    When OKL_TOKEN is set, every route except /health needs it as a bearer token and
+    the API docs routes (/openapi.json, /docs, /redoc) are switched off.
+    """
     # Optional shared-secret gate. If OKL_TOKEN is set it covers READS as well as
     # writes. Reads used to be open while writes were gated, which meant a deployed
     # service handed anyone who found the URL a `GET /nodes` dump of the org's entire
@@ -172,7 +187,7 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901
 _app: FastAPI | None = None
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> FastAPI:
     """Build `app` on first attribute access, not at import.
 
     Every ASGI host — uvicorn, gunicorn, a platform's default start command — is

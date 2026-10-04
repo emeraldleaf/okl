@@ -75,6 +75,11 @@ Respond with ONLY this JSON, nothing else:
 
 
 def call(cmd: str, prompt: str, timeout: int, workdir: str) -> str:
+    """Send `prompt` on stdin to the model command `cmd`, run from `workdir`; return stdout.
+
+    `cmd` is split like a shell line but no shell runs it; `timeout` is in seconds.
+    Raises RuntimeError on a non-zero exit, so the caller counts the run as a failure.
+    """
     r = subprocess.run(shlex.split(cmd), input=prompt, capture_output=True, text=True,
                        timeout=timeout, cwd=workdir)
     if r.returncode != 0:
@@ -83,6 +88,7 @@ def call(cmd: str, prompt: str, timeout: int, workdir: str) -> str:
 
 
 def get_briefing(task: str, timeout: int) -> str:
+    """Return the briefing `okl check` gives the briefed arm for `task`; raises RuntimeError if it fails."""
     # Fails CLOSED: a briefed arm without a briefing would silently become a second
     # baseline arm and corrupt the comparison.
     # --interests "" : unfiltered, matching evals/preflight.py. The host repo's interests
@@ -98,6 +104,7 @@ def get_briefing(task: str, timeout: int) -> str:
 
 
 def parse_judge(raw: str) -> dict:
+    """Pull the verdict JSON out of the judge's reply; raises ValueError without a boolean `defect_reproduced`."""
     m = re.search(r"\{.*\}", raw, re.DOTALL)
     if not m:
         raise ValueError(f"no JSON in judge output: {raw.strip()[:120]}")
@@ -139,6 +146,12 @@ def _okl_commit() -> str | None:
 
 
 def main() -> int:
+    """Run every task through both arms, print the report, and write the receipt to evals/results/.
+
+    Returns the exit code: 0 for a usable run (or a --dry-run, which only lists the plan),
+    1 when the failure rate makes the results unusable, and 3, 4 or 5 when it refuses to start
+    (judge equals generator, a task cites an unknown defect_node, the pre-flight failed).
+    """
     ap = argparse.ArgumentParser()
     ap.add_argument("--tasks", default=str(REPO / "evals" / "tasks.jsonl"))
     ap.add_argument("--limit", type=int, default=None)
@@ -290,7 +303,7 @@ def main() -> int:
               "reading any number below.")
     if drift_from:
         print(drift_banner(drift_from))
-    def by(arm):
+    def by(arm: str) -> list[dict]:
         return [r for r in results if r["arm"] == arm]
 
     for arm in ("baseline", "briefed"):

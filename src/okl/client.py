@@ -15,7 +15,7 @@ from urllib import request as _req
 from urllib.error import HTTPError, URLError
 
 from . import core, drift
-from .store import Store
+from .store import Node, Store
 
 CONFIG_DIR = ".okl"
 CONFIG_FILE = "config.json"
@@ -71,7 +71,7 @@ def save_config(data: dict[str, Any], root: Path | None = None) -> Path:
 class Client:
     """Uniform surface over local-store and remote-service modes."""
 
-    def __init__(self, config: dict[str, Any] | None = None):
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
         self.config = config if config is not None else load_config()
         self.service_url = os.environ.get("OKL_SERVICE_URL") or self.config.get("service_url")
         self.repo = self.config.get("repo") or Path.cwd().name
@@ -80,6 +80,7 @@ class Client:
 
     @property
     def mode(self) -> str:
+        """Where operations go: "remote" when a service URL is set, else "local"."""
         return "remote" if self.service_url else "local"
 
     @property
@@ -175,6 +176,11 @@ class Client:
 
     # -- operations ---------------------------------------------------------
     def check(self, task: str, repo: str | None = None, limit: int | None = None) -> dict:
+        """The briefing for starting `task` in `repo` (default: this repo), as core.check returns it.
+
+        Lessons whose governed code changed since their last check come back marked.
+        Raises OKLUnreachableError when a configured service cannot be reached.
+        """
         repo = repo or self.repo
         payload = {"repo": repo, "task": task, "interests": self.interests or None}
         if limit is not None:
@@ -193,7 +199,12 @@ class Client:
         drift.annotate_briefing(result, repo, str(cfg.parent.parent if cfg else Path.cwd()))
         return result
 
-    def record(self, **kwargs) -> str:
+    def record(self, **kwargs: Any) -> str:
+        """Record a lesson and return its id; takes core.record's keyword fields.
+
+        `repo` defaults to this repo. Raises ValueError when the lesson is rejected,
+        e.g. for an unknown tag or a bad scope.
+        """
         # Default the repo in BOTH modes: `--scope repo` needs it to become repo:<name>,
         # and the remote path used to skip this (found by E2E: 400 on every repo-scoped record).
         # `setdefault` is not enough: callers that pass every field explicitly (the MCP
@@ -207,18 +218,26 @@ class Client:
 
     def search(self, query: str, scope: str | None = None,
                node_types: list[str] | None = None, limit: int = 25) -> list[dict]:
+        """Lessons matching `query`, best first, optionally limited to a scope and node types."""
         if self.mode == "remote":
             return self._post("/search", {"query": query, "scope": scope,
                                           "node_types": node_types, "limit": limit})["results"]
         return core.search(self._local_store(), query, scope, node_types, limit)
 
     def link(self, src: str, rel: str, dst: str) -> None:
+        """Join two lessons with a typed edge, `src -rel-> dst`; an unknown relation is refused."""
         if self.mode == "remote":
             self._post("/link", {"src": src, "rel": rel, "dst": dst})
             return
         core.link(self._local_store(), src, rel, dst)
 
     def verify(self, node_id: str, evidence: str, commit: str | None = None) -> dict:
+        """Mark a lesson verified and return it as a dict.
+
+        `evidence` names the check that passed; `commit` is the git HEAD it passed at,
+        which drift compares against. Raises ValueError for an unknown id, empty evidence or
+        a commit that is not a git object name.
+        """
         if self.mode == "remote":
             # A service older than #102 drops `commit` (pydantic ignores unknown fields),
             # and drift then falls back to comparing times: degraded, never wrong.
@@ -240,13 +259,12 @@ class Client:
             return self._get("/metric/recurrence")["recurrence_after_arming"]
         return core.recurrence_rows(core.recurrence_report(self._local_store()))
 
-    def all_nodes(self):
+    def all_nodes(self) -> list[Node]:
         """Return all in-scope Node objects (local store, or /nodes on a remote service).
 
         Used by the drift detector, which needs the node set locally but runs its
         git lookups against the working tree.
         """
-        from .store import Node
         if self.mode == "remote":
             rows = self._get("/nodes")["nodes"]
             return [Node(**{k: v for k, v in r.items()

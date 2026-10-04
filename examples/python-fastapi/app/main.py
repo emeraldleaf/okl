@@ -1,3 +1,4 @@
+"""The orders-api HTTP routes. From the project folder: serve with `uvicorn app.main:app`, test with `pytest`."""
 from fastapi import Depends, FastAPI, Header, HTTPException
 
 from .store import ORDERS, USERS
@@ -15,6 +16,7 @@ def current_user(x_user_token: str = Header(...)) -> str:
 
 @app.get("/health")
 def health() -> dict:
+    """Report that the service is up."""
     return {"ok": True}
 
 
