@@ -239,11 +239,12 @@ okl verify discount-server-side \
 ```
 
 Not sure what to run? `okl verify <id>` on its own shows the lesson, the files it covers and
-the tests that already mention them, and stamps nothing. If no test mentions them, the check
-has to be written first, which is a good job to hand your agent.
+the tests that already mention them, and stamps nothing. If none does, that is a search
+miss, not proof: a test can cover a lesson by driving the command without naming its files.
+Look before writing a new check, or hand both jobs to your agent.
 
-`okl verify` stamps the lesson only if the check exits 0 **and** its output contains the
-`--expect` text. The command is stored as the evidence, so the next time the lesson goes
+`okl verify` stamps the lesson only if the check exits 0 and, when you give `--expect`, its
+output contains that text. Give it: exit 0 alone can come from a check that ran nothing. The command is stored as the evidence, so the next time the lesson goes
 stale, `okl reverify` re-runs it with no parameters. There is no way to mark a lesson
 verified without running something: `okl record --verified` is refused.
 
