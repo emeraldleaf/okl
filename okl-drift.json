@@ -18,9 +18,9 @@
       "title": "Every okl init flag the README and guide document exists in the CLI",
       "scope": "repo:okl",
       "files": "README.md,docs/GETTING-STARTED.md,src/okl/cli/",
-      "verified_at": null,
-      "verified_by": null,
-      "verified_commit": null
+      "verified_at": 1791086425378,
+      "verified_by": "`PYTHONPATH=src python3 -c \"import re,subprocess,sys; h=subprocess.run([sys.executable,\\\"-m\\\",\\\"okl\\\",\\\"init\\\",\\\"--help\\\"],capture_output=True,text=True).stdout; docs=open(\\\"README.md\\\").read()+open(\\\"docs/GETTING-STARTED.md\\\").read(); flags=set(f for m in re.findall(r\\\"okl init[^\\n\\`]*\\\",docs) for f in re.findall(r\\\"--[a-z][a-z-]+\\\",m)); miss=sorted(f for f in flags if f not in h); sys.exit(\\\"documented but missing: %s\\\" % miss) if miss or not flags else print(\\\"INIT FLAGS EXIST\\\", sorted(flags))\"` exit 0, matched 'INIT FLAGS EXIST' on commit 6ab610471685 @ 2026-10-04T04:00Z",
+      "verified_commit": "6ab6104716854198dbe9d01dac941867bd9ba531"
     },
     {
       "id": "doc-install-name",
