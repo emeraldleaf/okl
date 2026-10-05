@@ -2580,6 +2580,19 @@ def test_a_retracted_record_of_any_type_is_briefed_as_withdrawn(tmp_path):
     assert "keep the ledger in mypy-typed sqlite until ty reaches 1.0" in avoid
 
 
+
+def test_version_names_the_installed_release(capsys):
+    """okl --version prints the installed distribution's version: a repo whose hooks run a
+    pinned release has to be able to ask which one."""
+    import pytest
+
+    import okl
+    from okl.cli import main
+    with pytest.raises(SystemExit) as done:
+        main(["--version"])
+    assert done.value.code == 0
+    assert capsys.readouterr().out.strip() == f"okl {okl.__version__}"
+
 def test_a_compact_briefing_is_the_action_list_and_much_smaller(tmp_path, monkeypatch, capsys):
     """--compact gives a model with a small context window only the action list, in the
     hook's JSON as well as the agent format, so the prompt hook can use it."""
