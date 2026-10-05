@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import argparse
 
-from .. import core
+from .. import __version__, core
 from .health import cmd_coverage, cmd_doctor, cmd_metric
 from .install import cmd_connect, cmd_init, cmd_scaffold
 from .lessons import cmd_bootstrap, cmd_check, cmd_dedup, cmd_link, cmd_record, cmd_search
@@ -20,6 +20,9 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
     place rather than following a chain of registration helpers.
     """
     p = argparse.ArgumentParser(prog="okl", description="Observed Knowledge Ledger — lessons your coding agents can trust, proven by checks.")
+    # The installed distribution's version, read from package metadata (okl.__version__),
+    # so a repo pinned to a release can tell which one its hooks are running.
+    p.add_argument("--version", action="version", version=f"okl {__version__}")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     pi = sub.add_parser("init", help="wire the current repo (config + hook + CI pointer)")
