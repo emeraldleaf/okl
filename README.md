@@ -710,6 +710,7 @@ okl export --drift   # write okl-drift.json, the committed snapshot CI's drift g
 okl doctor           # names other agent-memory tools installed beside okl (claude-mem,
                      #   agentmemory, ECC, beads) and how each collides with okl's hooks;
                      #   reads settings only, changes nothing. `okl init` says the same.
+okl --version        # the installed release, for a repo whose hooks run a pinned okl
 okl coverage         # ratio of encoded-knowledge lines to code lines — a health signal
 okl bootstrap        # cold-start a new repo: propose starter notes from its own
                      #   git history + docs into a reviewable file you edit, then seed

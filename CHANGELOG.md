@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- **`okl --version`** prints the installed release. A repo whose hooks run a pinned okl
+  (`okl_bin` in `.okl/config.json`) had no way to ask which one it was.
+- **Contributors:** the figures the docs quote are now tests (`tests/test_docs.py`). The
+  corpus counts in README.md and CLAUDE.md must match `seed/`. Every briefing size in the
+  README, the MCP `okl_check` description and the how-it-works diagram must match the one
+  receipt the README cites, and that receipt must have measured today's corpus. Adding a
+  seed lesson now fails CI until the sizes are measured again
+  (`python3 evals/briefing_size.py`), which is what keeps "every bundled seed pack" true.
+
 ## 0.7.9
 
 - **The prompt hook can send a smaller briefing, for a model with a small context window.**
