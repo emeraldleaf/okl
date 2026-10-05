@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 from urllib import request as _req
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
 
 from . import core, drift
 from .store import Node, Store
@@ -176,7 +177,8 @@ class Client:
             except Exception:  # noqa: BLE001
                 detail = ""
             if 400 <= e.code < 500:
-                raise OKLRejectedError(f"OKL service rejected the request ({e.code}): {detail or e.reason}") from e
+                raise OKLRejectedError(f"OKL service rejected the request ({e.code}): {detail or e.reason}",
+                                       status=e.code) from e
             raise OKLUnreachableError(f"OKL service error at {url}: {e.code} {detail or e.reason}") from e
         except URLError as e:
             raise OKLUnreachableError(f"OKL service unreachable at {url}: {e}") from e
@@ -200,7 +202,11 @@ class Client:
             kw: dict[str, Any] = {"interests": self.interests}
             if limit is not None:
                 kw["limit"] = limit
-            result = core.check(self._local_store(), repo, task, **kw)
+            store = self._local_store()
+            result = core.check(store, repo, task, **kw)
+            # Over a shared service the service logs the briefing it answers; locally, the
+            # client is the only one who sees it (#129).
+            core.record_briefing(store, repo, result)
         # Mark briefed lessons whose code changed since their last check (#93). Done here,
         # not in core, because only the client has this repo's checkout: a shared service
         # answering /check has no git history to compare against.
@@ -263,6 +269,19 @@ class Client:
             return self._get("/metric/recurrence").get("report")
         return core.recurrence_report(self._local_store())
 
+    def exposure_report(self) -> dict | None:
+        """Which lessons this repo's briefings have shown (#129), or None from a service
+        too old to report it, in which case the caller says exposure is unknown."""
+        if self.mode == "remote":
+            query = urlencode({"repo": self.repo, "interests": ",".join(self.interests or [])})
+            try:
+                return self._get(f"/metric/exposure?{query}").get("report")
+            except OKLRejectedError as e:
+                if e.status == 404:
+                    return None
+                raise
+        return core.exposure_report(self._local_store(), self.repo, self.interests)
+
     def recurrence(self) -> list[dict]:
         """The v0.5 flat rows, kept for callers written against that release. Both modes
         read the one report: remote through the legacy keys the service derives from it,
@@ -299,7 +318,8 @@ class Client:
             if 400 <= e.code < 500:
                 raise OKLRejectedError(
                     f"OKL service rejected the request ({e.code} {e.reason}). "
-                    "If this is 401, set OKL_TOKEN or add \"token\" to .okl/config.json.") from e
+                    "If this is 401, set OKL_TOKEN or add \"token\" to .okl/config.json.",
+                    status=e.code) from e
             raise OKLUnreachableError(f"OKL service error at {url}: {e.code} {e.reason}") from e
         except URLError as e:
             raise OKLUnreachableError(f"OKL service unreachable at {url}: {e}") from e
@@ -308,7 +328,15 @@ class Client:
 class OKLRejectedError(ValueError):
     """Raised when a shared service answered and refused the request (any 4xx, such as a
     401 for a missing token or a 400 for an unknown tag). The caller's mistake, not an
-    outage; a ValueError, so the CLI's backstop still turns it into exit 2."""
+    outage; a ValueError, so the CLI's backstop still turns it into exit 2.
+
+    `status` is the HTTP code, so a caller can tell a 404 from an older service that
+    lacks a route apart from a 401 it must not paper over.
+    """
+
+    def __init__(self, message: str, status: int | None = None) -> None:
+        super().__init__(message)
+        self.status = status
 
 
 class OKLNotConfiguredError(ValueError):

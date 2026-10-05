@@ -11,6 +11,7 @@ promoting SQLite -> Postgres is a one-env-var change, no call-site edits.
 from __future__ import annotations
 
 import contextlib
+import json
 import os
 import time
 import uuid
@@ -176,6 +177,19 @@ class Edge:
 # ---------------------------------------------------------------------------
 # Backend selection
 # ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class Briefing:
+    """One logged briefing: when it ran, for which repo, and the lessons it showed.
+
+    No task text: a briefing's task is usually the user's prompt, which can carry
+    anything that was pasted into it. The ids are enough to count exposure (#129).
+    """
+
+    at: int                    # epoch milliseconds
+    repo: str
+    node_ids: tuple[str, ...]  # in the order the briefing showed them
+
+
 class Store:
     """Facade over whichever backend the environment selects."""
 
@@ -261,6 +275,18 @@ class Store:
         """Return every node in the store, in no particular order."""
         return self._impl.all_nodes()
 
+    # -- the exposure log (#129) ---------------------------------------------
+    def log_briefing(self, repo: str, node_ids: Iterable[str]) -> None:
+        """Append one briefing to the exposure log: now, for `repo`, showing `node_ids`.
+
+        Append-only. Two identical briefings are two rows, because exposure is a count.
+        """
+        self._impl.log_briefing(Briefing(at=_now_ms(), repo=repo, node_ids=tuple(node_ids)))
+
+    def briefings(self, repo: str | None = None) -> list[Briefing]:
+        """Every logged briefing, oldest first. `repo` filters exactly; None means all."""
+        return self._impl.briefings(repo)
+
     def close(self) -> None:
         """Close the database connection; calling it again does nothing."""
         self._impl.close()
@@ -303,6 +329,11 @@ class _Backend(Protocol):
           `IN ()` against `= ANY('{}')`.)
         - Interprets nothing. What an edge means is decided once, in core, so two
           backends cannot compute two different metrics from the same store.
+
+      log_briefing(b) / briefings(repo)
+        - Append-only: logging the same briefing twice stores two rows.
+        - briefings returns every row oldest first, `repo` filtering exactly, with each
+          row's node ids in the order they were logged.
     """
 
     def init_schema(self) -> None: ...
@@ -314,6 +345,8 @@ class _Backend(Protocol):
     def neighbors(self, node_id: str, rels: list[str] | None) -> list[tuple[Edge, Node]]: ...
     def edges(self, rels: list[str]) -> list[Edge]: ...
     def all_nodes(self) -> list[Node]: ...
+    def log_briefing(self, briefing: Briefing) -> None: ...
+    def briefings(self, repo: str | None) -> list[Briefing]: ...
     def close(self) -> None: ...
 
 
@@ -380,6 +413,9 @@ class _SQLiteBackend(_Backend):
         c.execute("""CREATE TABLE IF NOT EXISTS edge(
             src TEXT NOT NULL, rel TEXT NOT NULL, dst TEXT NOT NULL, created_at INTEGER NOT NULL,
             PRIMARY KEY (src, rel, dst))""")
+        # The exposure log. A store opened by an older okl simply gains the table.
+        c.execute("""CREATE TABLE IF NOT EXISTS briefing(
+            at INTEGER NOT NULL, repo TEXT NOT NULL, node_ids TEXT NOT NULL)""")
         try:
             # symptom and fix are indexed, not just title and body. `symptom` is the
             # field every command and doc calls "what a reader matches against" — the
@@ -511,6 +547,21 @@ class _SQLiteBackend(_Backend):
         with self._lock:
             return [_row_to_node(dict(r)) for r in self.conn.execute("SELECT * FROM node").fetchall()]
 
+    def log_briefing(self, briefing: Briefing) -> None:
+        with self._lock:
+            self.conn.execute("INSERT INTO briefing(at, repo, node_ids) VALUES(?,?,?)",
+                              (briefing.at, briefing.repo, json.dumps(list(briefing.node_ids))))
+            self.conn.commit()
+
+    def briefings(self, repo: str | None) -> list[Briefing]:
+        with self._lock:
+            # rowid breaks ties between briefings logged in the same millisecond.
+            sql = "SELECT at, repo, node_ids FROM briefing"
+            rows = (self.conn.execute(sql + " WHERE repo=? ORDER BY at, rowid", (repo,))
+                    if repo is not None else self.conn.execute(sql + " ORDER BY at, rowid"))
+            return [Briefing(at=r["at"], repo=r["repo"], node_ids=tuple(json.loads(r["node_ids"])))
+                    for r in rows.fetchall()]
+
     def close(self) -> None:
         self._closer()
 
@@ -578,6 +629,10 @@ class _PostgresBackend(_Backend):
             cur.execute("""CREATE TABLE IF NOT EXISTS edge(
                 src TEXT NOT NULL, rel TEXT NOT NULL, dst TEXT NOT NULL, created_at BIGINT NOT NULL,
                 PRIMARY KEY (src, rel, dst))""")
+            # The exposure log; id orders briefings logged in the same millisecond.
+            cur.execute("""CREATE TABLE IF NOT EXISTS briefing(
+                id BIGSERIAL PRIMARY KEY, at BIGINT NOT NULL, repo TEXT NOT NULL,
+                node_ids TEXT NOT NULL)""")
             # IF NOT EXISTS is keyed on the NAME, not the expression, so a store created
             # before symptom/fix joined the tsvector would keep an index Postgres can no
             # longer use for the new query — silently degrading every search to a
@@ -670,6 +725,18 @@ class _PostgresBackend(_Backend):
 
     def all_nodes(self) -> list[Node]:
         return [_row_to_node(r) for r in self._fetch("SELECT * FROM node", ())]
+
+    def log_briefing(self, briefing: Briefing) -> None:
+        with self.conn.cursor() as cur:
+            cur.execute("INSERT INTO briefing(at, repo, node_ids) VALUES(%s,%s,%s)",
+                        (briefing.at, briefing.repo, json.dumps(list(briefing.node_ids))))
+
+    def briefings(self, repo: str | None) -> list[Briefing]:
+        sql = "SELECT at, repo, node_ids FROM briefing"
+        rows = (self._fetch(sql + " WHERE repo = %s ORDER BY at, id", (repo,))
+                if repo is not None else self._fetch(sql + " ORDER BY at, id", ()))
+        return [Briefing(at=r["at"], repo=r["repo"], node_ids=tuple(json.loads(r["node_ids"])))
+                for r in rows]
 
     def close(self) -> None:
         self._closer()

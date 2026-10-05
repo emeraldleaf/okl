@@ -238,6 +238,10 @@ def test_service_check(tmp_path, monkeypatch):
     # connects to the shared store.
     r = client.post("/check", json={"repo": "x", "task": "temporal segmentation decoder axes"})
     assert r.status_code == 200 and r.json()["armed_gates"]
+    # ASSERT (3) — the service logs each briefing it answers and reports exposure (#129):
+    # over a shared store it is the only party that sees every client's briefings.
+    exposure = client.get("/metric/exposure", params={"repo": "x"}).json()["report"]
+    assert exposure["briefings"] == 1 and g in {x["id"] for x in exposure["most_shown"]}
     # validation errors are the caller's: 400 WITH the message, never a 500 (E2E finding —
     # an agent inventing tags got an opaque 500 and reported the service as down)
     bad = client.post("/record", json={"type": "Rule", "title": "t", "scope": "org", "tags": "ci,pinning"})
@@ -284,6 +288,7 @@ def test_service_token_gates_reads_as_well_as_writes(monkeypatch):
     # that mattered most: it dumps everything in a single unauthenticated GET.
     assert client.get("/nodes").status_code == 401
     assert client.get("/metric/recurrence").status_code == 401
+    assert client.get("/metric/exposure", params={"repo": "x"}).status_code == 401
     assert client.post("/check", json={"repo": "x", "task": "auth"}).status_code == 401
     assert client.post("/search", json={"query": "auth"}).status_code == 401
     assert client.post("/record", json={"type": "Rule", "title": "x", "scope": "org"}).status_code == 401
@@ -1320,6 +1325,18 @@ def _backend_conformance(store, label):
     assert (a, "RECURS_IN", "some-repo") in {(e.src, e.rel, e.dst) for e in both}, \
         f"{label}: edges() dropped an edge whose far end is not a node"
     assert store.edges([]) == [], f"{label}: empty rels must return nothing"
+
+    # ASSERT (9) — the exposure log appends and reads back in order (#129). Two identical
+    # briefings are two rows: exposure is a count, and a backend that upserted them would
+    # undercount every lesson shown twice.
+    store.log_briefing("conf-repo", [a, b])
+    store.log_briefing("conf-repo", [a, b])
+    store.log_briefing("other-repo", [b])
+    mine = store.briefings("conf-repo")
+    assert [x.node_ids for x in mine] == [(a, b), (a, b)], f"{label}: briefings not appended in order"
+    assert {x.repo for x in mine} == {"conf-repo"}, f"{label}: the repo filter leaked another repo"
+    assert mine[0].at <= mine[1].at, f"{label}: briefings not oldest first"
+    assert len(store.briefings()) >= 3, f"{label}: briefings(None) must return every repo's rows"
 
 
 def test_sqlite_backend_conformance(store):
@@ -2608,6 +2625,109 @@ def test_a_compact_briefing_is_the_action_list_and_much_smaller(tmp_path, monkey
     from okl.cli.lessons import cmd_check
     assert cmd_check(argparse.Namespace(task=task[2], repo=None, format="agent", limit=None)) == 0
     assert "###" in capsys.readouterr().out
+
+
+def test_briefed_ids_counts_each_shown_lesson_once():
+    """A briefing lists a record in its type bucket and may repeat it in next_actions and
+    stale_warnings; exposure counts it once."""
+    result = {"next_actions": [{"id": "a"}], "rules": [{"id": "a"}, {"id": "b"}],
+              "stale_warnings": [{"id": "b"}], "dropped_by_cutoff": 3, "task": "t"}
+    assert core.briefed_ids(result) == ["a", "b"]
+
+
+def test_briefing_log_reports_what_was_shown_and_what_never_was(monkeypatch):
+    """The exposure report counts what briefings showed, per repo, and never lets the log
+    cost a briefing (#129)."""
+    # ARRANGE — a lesson the task matches, one it cannot, and another repo's own lesson.
+    monkeypatch.delenv("OKL_BRIEFING_LOG", raising=False)
+    s = Store("sqlite:///:memory:")
+    shown = core.record(s, type="Rule", scope="org", title="put the ownership predicate in the WHERE clause")
+    unseen = core.record(s, type="Rule", scope="org", title="close every sqlite connection you open")
+    private = core.record(s, type="Rule", scope="repo:other", repo="other", title="the other repo's own lesson")
+    result = core.check(s, "app", "add the ownership predicate to the query")
+    assert shown in core.briefed_ids(result) and unseen not in core.briefed_ids(result)
+
+    # ACT — the same briefing twice, then one for another repo.
+    assert core.record_briefing(s, "app", result) is True
+    core.record_briefing(s, "app", result)
+    core.record_briefing(s, "other", result)
+    report = core.exposure_report(s, "app")
+
+    # ASSERT (1) — coverage first: two briefings for this repo; the other repo's excluded.
+    assert report["briefings"] == 2 and report["first_at"] <= report["last_at"]
+    # (2) the shown lesson counted twice; the unseen one listed as never shown.
+    assert {r["id"]: r["times"] for r in report["most_shown"]}[shown] == 2
+    assert unseen in {r["id"] for r in report["never_shown"]}
+    # (3) a lesson this repo can never be briefed is not reported as unseen here.
+    assert private not in {r["id"] for r in report["never_shown"]}
+    # (4) shown, with no stored check: a candidate for one.
+    assert shown in {r["id"] for r in report["most_shown_unchecked"]}
+    # (5) OKL_BRIEFING_LOG=0 writes nothing (the eval harness sets it).
+    monkeypatch.setenv("OKL_BRIEFING_LOG", "0")
+    assert core.record_briefing(s, "app", result) is False
+    assert core.exposure_report(s, "app")["briefings"] == 2
+
+    # (6) a store that cannot write the log costs a log row, never the briefing: the
+    # prompt hook fails closed, so a raise here would block the user's prompt.
+    class FullDisk:
+        def log_briefing(self, repo, node_ids):
+            raise OSError("disk full")
+    monkeypatch.delenv("OKL_BRIEFING_LOG")
+    assert core.record_briefing(FullDisk(), "app", result) is False
+
+
+def test_metric_reports_briefing_exposure_with_its_coverage(tmp_path, monkeypatch, capsys):
+    """okl check logs each briefing in local mode, and okl metric reports exposure only
+    once it has some: zero briefings says so rather than listing every lesson as unseen."""
+    import subprocess
+
+    from okl.cli import main
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN", "OKL_BRIEFING_LOG"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+    subprocess.run(["git", "init", "-q", "."], check=True)
+    assert main(["init", "--repo", "r", "--no-claude", "--no-seed", "--no-ci"]) == 0
+    assert main(["seed", "dotnet-defects"]) == 0
+    capsys.readouterr()
+
+    # ASSERT (1) — before any briefing, the absence is reported, not a list of everything.
+    assert main(["metric"]) == 0
+    assert "briefings logged: none yet" in capsys.readouterr().out
+
+    # ACT — two briefings, the way the prompt hook asks for them.
+    task = ["check", "--task", "add an endpoint that returns an order for the logged-in user"]
+    assert main([*task, "--format", "hook"]) == 0
+    assert main([*task, "--format", "hook", "--compact"]) == 0
+    capsys.readouterr()
+
+    # ASSERT (2) — both counted, with what the figures cover stated first.
+    assert main(["metric"]) == 0
+    out = capsys.readouterr().out
+    assert "briefings logged: 2 since" in out and "never shown:" in out, out
+    # (3) the JSON adds exposure beside the recurrence report, which keeps its keys.
+    assert main(["metric", "--format", "json"]) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data["exposure"]["briefings"] == 2 and "armed" in data
+
+
+def test_remote_exposure_is_unknown_on_an_older_service_but_never_hides_a_refusal(monkeypatch):
+    """A service without /metric/exposure (404) makes exposure unknown; any other refusal,
+    such as a 401, must still surface rather than read as "no data"."""
+    from okl.client import Client, OKLRejectedError
+    monkeypatch.setenv("OKL_SERVICE_URL", "http://okl.invalid")
+    c = Client()
+
+    def older_service(path):
+        raise OKLRejectedError("rejected (404)", status=404)
+    monkeypatch.setattr(c, "_get", older_service)
+    assert c.exposure_report() is None
+
+    def no_token(path):
+        raise OKLRejectedError("rejected (401)", status=401)
+    monkeypatch.setattr(c, "_get", no_token)
+    with pytest.raises(OKLRejectedError):
+        c.exposure_report()
 
 def test_starter_pack_resolves_and_is_portable():
     """The starter lessons are references into the bundled packs; every one must resolve,

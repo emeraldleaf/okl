@@ -523,6 +523,10 @@ okl init --interests "python,security"    # drop records tagged for stacks you d
 
 ### Turning parts off
 
+`OKL_BRIEFING_LOG=0` stops okl logging which lessons each briefing showed, the log
+`okl metric` reads to report exposure. The log keeps the time, the repo and the lesson ids,
+never the task: a briefing's task is usually your prompt.
+
 `OKL_QUIET=1` keeps the briefing but hides the one-line *okl · briefed …* notice. Switch a
 hook off by name with `OKL_DISABLED_HOOKS=briefing` (the pre-task read),
 `OKL_DISABLED_HOOKS=encode` (the end-of-session question), or both, comma-separated.
@@ -715,7 +719,9 @@ okl coverage         # ratio of encoded-knowledge lines to code lines — a heal
 okl bootstrap        # cold-start a new repo: propose starter notes from its own
                      #   git history + docs into a reviewable file you edit, then seed
 okl metric           # recurrence: defect classes that came back, split by whether a
-                     #   gate existed, with how many defects the number can speak for
+                     #   gate existed, with how many defects the number can speak for;
+                     #   and exposure: how many briefings okl has logged, the lessons
+                     #   never shown, and those shown most with no stored check
 ```
 
 ## Subagents and small context budgets
@@ -953,6 +959,12 @@ is safe. Unlike the hook, a tool result cannot block the agent; it can only warn
 - **Start simple, grow on evidence.** A stdlib-only core and a single SQLite file by
   default; add the shared service, Postgres, or anything heavier only when a concrete
   symptom demands it (recorded as a decision in `docs/decisions/`).
+- **Records, not an ontology store.** Lessons are typed records found by ranked full-text
+  search, with one-step relationships for reporting. An RDF triple store would answer
+  precise structural questions okl does not ask, and could not rank a task sentence
+  without adding back a search engine. [The decision](docs/decisions/2026-10-05-records-not-an-ontology-store.md)
+  explains how lessons are stored and found now, and when a one-way RDF export would earn
+  its place.
 
 ## Layout
 
