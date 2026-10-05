@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+- **okl logs which lessons each briefing showed, and `okl metric` reports it** (the first
+  piece of #129). Every `okl check`, whether from the prompt hook, the CLI or MCP, appends
+  the time, the repo and the ids of the lessons it showed; a shared service logs the
+  briefings it answers. `okl metric` now adds how many briefings were logged and since
+  when, the lessons this repo can be briefed that were never shown (oldest first, as
+  candidates to review or retire), and those shown most with no stored check (candidates
+  for one). Before anything is logged it says so instead of listing every lesson as
+  unseen. No task or prompt text is stored. `OKL_BRIEFING_LOG=0` turns the log off; the
+  eval harness sets it, so test runs do not count as exposure. A failed log write never
+  costs the briefing.
+
 ## 0.7.9
 
 - **The prompt hook can send a smaller briefing, for a model with a small context window.**

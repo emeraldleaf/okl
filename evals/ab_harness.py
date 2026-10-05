@@ -95,9 +95,13 @@ def get_briefing(task: str, timeout: int) -> str:
     # are not the experiment's — react_fetch's rule is tagged `react`, which okl does not
     # declare, so inheriting them made that task measure its rule's ABSENCE across every run
     # in this report. The harness states its retrieval config instead of borrowing one.
+    # OKL_BRIEFING_LOG=0: an experiment's briefings are not exposure. Logging them would
+    # count every bait task's rules as "shown" in the store's exposure report (#129). It
+    # changes nothing in the briefing itself.
     r = subprocess.run([sys.executable, "-m", "okl", "check", "--task", task,
                         "--format", "agent", "--interests", BRIEF_INTERESTS],
-                       capture_output=True, text=True, timeout=timeout, cwd=REPO)
+                       capture_output=True, text=True, timeout=timeout, cwd=REPO,
+                       env={**os.environ, "OKL_BRIEFING_LOG": "0"})
     if r.returncode != 0:
         raise RuntimeError(f"okl check failed: {r.stderr.strip()[:200]}")
     return r.stdout

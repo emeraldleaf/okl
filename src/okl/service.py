@@ -132,8 +132,11 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901
     @app.post("/check")
     def check(req: CheckReq, authorization: str | None = Header(default=None)) -> dict[str, Any]:
         _auth(authorization)
-        return core.check(_store, req.repo, req.task, limit=req.limit,
-                          interests=req.interests)
+        result = core.check(_store, req.repo, req.task, limit=req.limit,
+                            interests=req.interests)
+        # The service is the only party that sees every client's briefings (#129).
+        core.record_briefing(_store, req.repo, result)
+        return result
 
     @app.post("/record")
     def record(req: RecordReq, authorization: str | None = Header(default=None)) -> dict[str, str]:
@@ -180,6 +183,13 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901
         # derived from the report: one row per gate, the shape older clients read.
         rows = core.recurrence_rows(report)
         return {"recurrence_after_arming": rows, "count": len(rows), "report": report}
+
+    @app.get("/metric/exposure")
+    def exposure(repo: str, interests: str = "",
+                 authorization: str | None = Header(default=None)) -> dict[str, Any]:
+        _auth(authorization)
+        wanted = [t for t in interests.split(",") if t] or None
+        return {"report": core.exposure_report(_store, repo, wanted)}
 
     @app.get("/nodes")
     def nodes(authorization: str | None = Header(default=None)) -> dict[str, Any]:

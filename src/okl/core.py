@@ -9,7 +9,9 @@ search(query, ...)  -> targeted retrieval (progressive disclosure).
 """
 from __future__ import annotations
 
+import os
 import re
+from collections import Counter
 from dataclasses import asdict
 from typing import Any
 
@@ -714,3 +716,88 @@ def recurrence_rows(report: dict[str, Any]) -> list[dict[str, Any]]:
     against v0.5."""
     return [{"recurred_in": r["recurred_in"], "defect_class": r["defect_class"], "gate": g}
             for r in report["armed"] for g in r["gates"]]
+
+
+# ---------------------------------------------------------------------------
+# The exposure log (#129): which lessons briefings actually show. Recurrence says which
+# lessons came back; this says which ones anybody was shown, so a lesson nobody has seen
+# in months, or one shown constantly with nothing checking it, becomes visible.
+# ---------------------------------------------------------------------------
+
+# Left out of "could have been shown": a Vocabulary record declares a tag. It is not
+# advice, so going unseen says nothing about whether to keep it.
+_NOT_ADVICE = frozenset({"Vocabulary"})
+
+
+def briefed_ids(result: dict[str, Any]) -> list[str]:
+    """The ids of the lessons a briefing showed, in the order it showed them, each once.
+
+    Read from the type buckets, where every briefed record sits exactly once.
+    next_actions and stale_warnings are skipped: both repeat records already counted.
+    """
+    ids: dict[str, None] = {}
+    for key, items in result.items():
+        if key in ("next_actions", "stale_warnings") or not isinstance(items, list):
+            continue
+        for item in items:
+            if isinstance(item, dict) and item.get("id"):
+                ids.setdefault(str(item["id"]), None)
+    return list(ids)
+
+
+def record_briefing(store: Store, repo: str, result: dict[str, Any]) -> bool:
+    """Log which lessons `result` showed, and return whether the log was written.
+
+    OKL_BRIEFING_LOG=0 turns logging off; the eval harness sets it, so test runs do not
+    count as exposure. A failed write returns False instead of raising. The log is a side
+    channel: the prompt hook fails closed, so an exception here would block the user's
+    prompt over a counter.
+    """
+    if os.environ.get("OKL_BRIEFING_LOG") == "0":
+        return False
+    try:
+        store.log_briefing(repo, briefed_ids(result))
+    except Exception:  # noqa: BLE001 - losing one log row beats losing the briefing; see above
+        return False
+    return True
+
+
+def exposure_report(store: Store, repo: str, interests: list[str] | None = None,
+                    top: int = 10) -> dict[str, Any]:
+    """Which of the lessons `repo` can be briefed its briefings have actually shown (#129).
+
+    Coverage travels with the figures, as in recurrence_report. The log holds only the
+    briefings since it existed, and only while OKL_BRIEFING_LOG was not 0, so "never
+    shown" means never shown in `briefings` logged briefings since `first_at`. Over zero
+    briefings the report says nothing about any lesson, and the caller must say so.
+
+    "Can be briefed" is _in_scope, the test check applies, so a lesson this repo's scope
+    or interests filter out is not reported as unseen. Each list holds at most `top`.
+    """
+    logged = store.briefings(repo)
+    repo_scope = f"repo:{repo}"
+    reachable = [n for n in store.all_nodes()
+                 if n.type not in _NOT_ADVICE and _in_scope(n, repo_scope, interests)]
+    times = Counter(i for b in logged for i in b.node_ids)
+
+    def row(n: Node) -> dict[str, Any]:
+        return {"id": n.id, "type": n.type, "title": n.title, "times": times[n.id],
+                "checked": bool(n.verified_by)}
+
+    # Never shown, oldest first: the longer a lesson has gone unseen, the better a
+    # candidate it is to review or retire.
+    never = sorted((n for n in reachable if not times[n.id]), key=lambda n: (n.created_at, n.id))
+    shown = sorted((n for n in reachable if times[n.id]), key=lambda n: (-times[n.id], n.id))
+    return {
+        "repo": repo,
+        "briefings": len(logged),
+        "first_at": logged[0].at if logged else None,
+        "last_at": logged[-1].at if logged else None,
+        "reachable": len(reachable),
+        "shown": len(shown),
+        "never_shown_count": len(never),
+        "never_shown": [row(n) for n in never[:top]],
+        "most_shown": [row(n) for n in shown[:top]],
+        # Shown often with nothing proving it: candidates for a check (`okl verify --run`).
+        "most_shown_unchecked": [row(n) for n in shown if not n.verified_by][:top],
+    }

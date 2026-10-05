@@ -5,6 +5,7 @@ import argparse
 import contextlib
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 from ..client import Client, OKLUnreachableError, _find_config
@@ -49,6 +50,7 @@ def cmd_metric(args: argparse.Namespace) -> int:
         return 2
     try:
         report = client.recurrence_report()
+        exposure = client.exposure_report() if report is not None else None
     except OKLUnreachableError as e:
         print(f"OKL UNREACHABLE — cannot compute metric.\n{e}", file=sys.stderr)
         return 2
@@ -57,7 +59,7 @@ def cmd_metric(args: argparse.Namespace) -> int:
               "coverage is unknown. Upgrade the service before reading it.", file=sys.stderr)
         return 2
     if args.format == "json":
-        _print_json(report)
+        _print_json({**report, "exposure": exposure})
         return 0
     armed, unarmed = report["armed"], report["unarmed"]
     total, gated = report["defects"], report["defects_with_gate"]
@@ -73,7 +75,37 @@ def cmd_metric(args: argparse.Namespace) -> int:
           + (" — lessons that were written down and came back anyway:" if unarmed else ""))
     for r in unarmed:
         print(f"  {r['defect_class']}  recurred in {r['recurred_in']}")
+    _print_exposure(exposure)
     return 0
+
+
+def _print_exposure(report: dict | None) -> None:
+    """The briefing-exposure lines of `okl metric` (#129), led by what they cover."""
+    if report is None:
+        print("\nbriefing exposure: unknown — the connected service predates the briefing log")
+        return
+    n = report["briefings"]
+    if not n:
+        # Zero briefings logged says nothing about any lesson. Report the absence, not a
+        # list of every lesson as "never shown".
+        print("\nbriefings logged: none yet, so which lessons get shown is not reported. "
+              "The log fills as okl check runs (OKL_BRIEFING_LOG=0 turns it off).")
+        return
+    since = datetime.fromtimestamp(report["first_at"] / 1000, tz=timezone.utc).date()
+    print(f"\nbriefings logged: {n} since {since} — the figures below cover only these")
+    print(f"lessons this repo can be briefed: {report['reachable']} — shown at least once: "
+          f"{report['shown']}, never shown: {report['never_shown_count']}")
+    if report["never_shown"]:
+        print("  never shown, oldest first (review or retire?):")
+        for r in report["never_shown"]:
+            print(f"    [{r['id']}] {r['title']}")
+        more = report["never_shown_count"] - len(report["never_shown"])
+        if more > 0:
+            print(f"    … and {more} more")
+    if report["most_shown_unchecked"]:
+        print("  shown most often with no stored check (worth an `okl verify --run`?):")
+        for r in report["most_shown_unchecked"]:
+            print(f"    [{r['id']}] {r['title']} — in {r['times']} of {n} briefings")
 
 
 def cmd_coverage(args: argparse.Namespace) -> int:

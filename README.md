@@ -523,6 +523,10 @@ okl init --interests "python,security"    # drop records tagged for stacks you d
 
 ### Turning parts off
 
+`OKL_BRIEFING_LOG=0` stops okl logging which lessons each briefing showed, the log
+`okl metric` reads to report exposure. The log keeps the time, the repo and the lesson ids,
+never the task: a briefing's task is usually your prompt.
+
 `OKL_QUIET=1` keeps the briefing but hides the one-line *okl · briefed …* notice. Switch a
 hook off by name with `OKL_DISABLED_HOOKS=briefing` (the pre-task read),
 `OKL_DISABLED_HOOKS=encode` (the end-of-session question), or both, comma-separated.
@@ -714,7 +718,9 @@ okl coverage         # ratio of encoded-knowledge lines to code lines — a heal
 okl bootstrap        # cold-start a new repo: propose starter notes from its own
                      #   git history + docs into a reviewable file you edit, then seed
 okl metric           # recurrence: defect classes that came back, split by whether a
-                     #   gate existed, with how many defects the number can speak for
+                     #   gate existed, with how many defects the number can speak for;
+                     #   and exposure: how many briefings okl has logged, the lessons
+                     #   never shown, and those shown most with no stored check
 ```
 
 ## Subagents and small context budgets
