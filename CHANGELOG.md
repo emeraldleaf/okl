@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.7.9
 
 - **The prompt hook can send a smaller briefing, for a model with a small context window.**
   A full briefing is roughly 1,600 tokens on every prompt. Set `OKL_BRIEFING_COMPACT=1` and
