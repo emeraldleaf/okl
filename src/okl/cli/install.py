@@ -7,11 +7,12 @@ and non-clobbering: an edited file is kept, a symlinked destination is refused, 
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import sys
 from pathlib import Path
 
-from ..client import Client, load_config, save_config
+from ..client import Client, _find_config, load_config, save_config
 from .packs import _empty_store_guidance, _seed_first_run
 
 
@@ -321,9 +322,35 @@ def _wire_claude_code(args: argparse.Namespace) -> None:
         print("      agent has a pre-prompt hook, point it at them. Registration formats differ.")
 
 
+def _own_repo_name() -> str | None:
+    """The repo name in THIS directory's own .okl/config.json, or None.
+
+    Only this directory's config counts: load_config walks up, and a new repo nested
+    inside another okl repo must not inherit, or appear to rename, its parent's name.
+    """
+    found = _find_config()
+    if found is None or found.parent.parent != Path.cwd().resolve():
+        return None
+    with contextlib.suppress(OSError, ValueError):
+        name = json.loads(found.read_text()).get("repo")
+        return str(name) if name else None
+    return None
+
+
+def _repo_name(args: argparse.Namespace) -> str:
+    """The repo name init writes: --repo, else the name this directory is already
+    configured with, else the folder's name.
+
+    Re-running init is how hook copies are upgraded, and it used to fall straight back to
+    the folder name, so a repo configured as "quartzose" in a folder named "Quartzose"
+    was renamed on every upgrade, detaching its repo-scoped lessons.
+    """
+    return str(args.repo) if args.repo else (_own_repo_name() or Path.cwd().name)
+
+
 def _init_dry_run(args: argparse.Namespace) -> int:
     """`okl init --dry-run`: every path init would touch, and nothing written."""
-    repo = args.repo or Path.cwd().name
+    repo = _repo_name(args)
     print(f"DRY RUN — nothing will be written. `okl init --repo {repo}` would:\n")
     print("  .okl/config.json                        repo name, interests, and the path to this okl")
     wire, why = _should_wire_claude(args)
@@ -395,7 +422,13 @@ def cmd_init(args: argparse.Namespace) -> int:
         return _uninstall(getattr(args, "dry_run", False))
     if getattr(args, "dry_run", False):
         return _init_dry_run(args)
-    repo = args.repo or Path.cwd().name
+    repo = _repo_name(args)
+    previous = _own_repo_name()
+    if previous and previous != repo:
+        # Only an explicit --repo gets here. Say what it costs: lessons recorded as
+        # repo:<old> stop briefing in this repo.
+        print(f"• repo renamed {previous} → {repo}: lessons scoped repo:{previous} "
+              "no longer brief here")
     cfg = load_config()
     cfg["repo"] = repo
     if args.service:

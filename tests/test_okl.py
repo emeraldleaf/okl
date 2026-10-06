@@ -3266,6 +3266,43 @@ def test_init_no_ci_skips_the_workflow_and_remembers_it(tmp_path, monkeypatch, c
     main(["doctor"])
 
 
+
+def test_init_rerun_keeps_the_configured_repo_name(tmp_path, monkeypatch, capsys):
+    """Re-running init upgrades hook copies, and it used to rename the repo to its folder
+    name: a repo configured as "quartzose" in a folder named "Quartzose" lost its
+    repo-scoped lessons on every upgrade. It now keeps the configured name; only an
+    explicit --repo renames, and says what that costs. A repo nested inside another okl
+    repo still gets its own folder's name, not its parent's."""
+    import subprocess
+
+    from okl.cli import main
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    repo_dir = tmp_path / "Quartzose"; repo_dir.mkdir(); monkeypatch.chdir(repo_dir)
+    subprocess.run(["git", "init", "-q", "."], check=True)
+    cfg = repo_dir / ".okl" / "config.json"
+    flags = ["--no-claude", "--no-seed", "--no-ci"]
+    assert main(["init", "--repo", "quartzose", *flags]) == 0
+    capsys.readouterr()
+
+    # ASSERT (1) — a plain re-run, and its dry run, keep the configured name.
+    assert main(["init", *flags, "--dry-run"]) == 0
+    assert "okl init --repo quartzose" in capsys.readouterr().out
+    assert main(["init", *flags]) == 0
+    assert json.loads(cfg.read_text())["repo"] == "quartzose"
+    assert "renamed" not in capsys.readouterr().out
+    # (2) an explicit --repo still renames, and says what it costs.
+    assert main(["init", "--repo", "renamed", *flags]) == 0
+    assert json.loads(cfg.read_text())["repo"] == "renamed"
+    assert "repo renamed quartzose → renamed" in capsys.readouterr().out
+    # (3) a new repo nested inside this one takes its own folder's name, silently.
+    nested = repo_dir / "inner"; nested.mkdir(); monkeypatch.chdir(nested)
+    subprocess.run(["git", "init", "-q", "."], check=True)
+    assert main(["init", *flags]) == 0
+    assert json.loads((nested / ".okl" / "config.json").read_text())["repo"] == "inner"
+    assert "renamed" not in capsys.readouterr().out
+
 def test_the_verified_commit_is_bound_to_its_evidence_and_older_entries_still_read(tmp_path):
     """Drift now trusts the recorded commit to clear a rule, so a committed snapshot must not
     let it be edited on its own, any more than the timestamp can be. The commit is written

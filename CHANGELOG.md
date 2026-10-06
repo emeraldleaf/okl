@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **Re-running `okl init` keeps the repo's configured name.** It fell back to the folder's
+  name, so a repo configured as `quartzose` in a folder named `Quartzose` was renamed on
+  every re-run, and re-running init is how hook copies are upgraded. A rename detaches the
+  repo's `repo:<name>` lessons. Now a plain re-run (and its `--dry-run`) keeps the name in
+  this directory's own `.okl/config.json`; an explicit `--repo` still renames, and says
+  which lessons stop briefing. A new repo nested inside another okl repo still takes its
+  own folder's name.
 - **okl logs which lessons each briefing showed, and `okl metric` reports it** (the first
   piece of #129). Every `okl check`, whether from the prompt hook, the CLI or MCP, appends
   the time, the repo and the ids of the lessons it showed; a shared service logs the
