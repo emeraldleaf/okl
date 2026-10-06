@@ -345,18 +345,23 @@ no `okl-drift.json` is committed yet. Run it in any CI, or with no CI at all.
 
 Four things matter, whichever CI you use:
 
-1. **Full git history in the checkout.** The gate compares each governed file's last commit
-   time with when its lesson was verified. In a shallow clone, every lesson reads as
-   drifted: okl's own repo cloned with `--depth 1` reports all 16 of its lessons stale.
+1. **Full git history in the checkout.** The gate compares each lesson's governed files at
+   the commit its check passed at with the same files now. A shallow clone does not have
+   that commit, so the gate falls back to comparing commit times, and in a clone with one
+   commit every file looks freshly changed: okl's own `main`, cloned with `--depth 1`,
+   reports all 15 of its lessons stale, and a full clone reports none (measured
+   2026-10-06 at `4f830b9`).
    GitHub: `fetch-depth: 0`. GitLab: `GIT_DEPTH: 0`. Azure Pipelines: `fetchDepth: 0`.
    Jenkins: leave shallow clone off.
-2. **Merge commits, not squash or rebase.** Squash and rebase rewrite commit times when a
-   PR merges, so main goes red right after a green PR. This is a repository setting, not a
-   CI one.
+2. **Merge commits, not squash or rebase.** Squash and rebase replace the commits a check
+   passed at with new ones, so main cannot find them, falls back to times, and goes red
+   right after a green PR. This is a repository setting, not a CI one.
 3. **The committed `okl-drift.json`**, or a shared store through the `OKL_SERVICE_URL` and
    `OKL_TOKEN` environment variables.
-4. **Python 3.10 or newer.** Pin okl to the version you run locally (`okl --version`), so a
-   new release cannot change the gate under you.
+4. **Python 3.10 or newer.** Pin okl to the version you run locally, so a new release
+   cannot change the gate under you. `okl --version` prints it from the release after
+   0.7.9; on 0.7.9 and earlier, `pip show observed-knowledge-ledger` (or `uv tool list`)
+   does.
 
 GitLab CI:
 
@@ -365,7 +370,7 @@ okl-drift:
   image: python:3.13
   variables:
     GIT_DEPTH: 0
-    OKL_VERSION: "0.7.4"   # the version you run locally
+    OKL_VERSION: "0.7.9"   # the version you run locally
   script:
     - pip install "observed-knowledge-ledger==$OKL_VERSION"
     - okl drift --gate --snapshot okl-drift.json
@@ -381,7 +386,7 @@ steps:
     inputs:
       versionSpec: "3.13"
   - script: |
-      pip install "observed-knowledge-ledger==0.7.4"
+      pip install "observed-knowledge-ledger==0.7.9"
       okl drift --gate --snapshot okl-drift.json
     displayName: okl drift gate
 ```
@@ -390,8 +395,9 @@ On GitHub, a self-hosted runner can run the same workflow without using your Act
 minutes.
 
 The GitLab and Azure snippets follow those systems' documented settings but have not been
-run there yet; the shallow-clone result above and the hook below were run as shown. If one
-needs a change on your CI, an issue or PR is welcome.
+run there yet. The shallow-clone result above and the hook below were run as shown (the hook
+on 2026-10-06, against okl 0.7.9: a clean push went through, a drifted lesson blocked it,
+and a repo with no store pushed). If one needs a change on your CI, an issue or PR is welcome.
 
 ### No CI: a pre-push hook
 
@@ -406,7 +412,10 @@ exit 0   # 0 = clean; 2 = couldn't check (no store); don't block on that
 ```
 
 Save it as `.git/hooks/pre-push` and run `chmod +x .git/hooks/pre-push`. If your repo sets
-`core.hooksPath` (Husky and similar tools do), put it in that directory instead.
+`core.hooksPath` (Husky and similar tools do), put it in that directory instead. Git runs
+hooks with your shell's `PATH`; if a GUI client cannot find `okl`, use its full path
+(`command -v okl` prints it). Installing this hook from `okl init` is tracked in
+[#90](https://github.com/emeraldleaf/okl/issues/90).
 
 A local hook is an early warning, not a merge gate: each developer installs it themselves,
 `git push --no-verify` skips it, and a teammate without it is not checked. On a team, keep
