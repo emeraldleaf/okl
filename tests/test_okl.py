@@ -521,10 +521,17 @@ def test_drift_refuses_a_stamp_with_no_observed_check(store, tmp_path):
     # and the report must not call it verified
     text = drift.render_drift(hits)
     assert "unverified" in text and "verified 2" not in text
+    # and the briefing marks it the same way: the briefing and the gate must never
+    # disagree about the same lesson (the briefing path once trusted verified_at alone).
+    from dataclasses import asdict
+    briefing = {"rules": [asdict(store.get_node(nid))]}
+    assert drift.annotate_briefing(briefing, "r", str(rd)) == 1
+    assert briefing["rules"][0]["drift"]["reason"] == "verified with no observed check"
 
     # ACT — an observed check clears it, and nothing else had to change.
     core.verify(store, nid, _evidence_now())
     assert drift.detect_drift(store.all_nodes(), "r", str(rd)) == []
+    assert drift.annotate_briefing({"rules": [asdict(store.get_node(nid))]}, "r", str(rd)) == 0
 
 
 def _evidence_now(run: str = "pytest -q") -> str:
