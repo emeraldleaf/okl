@@ -34,6 +34,7 @@ PREFIXES = ("symptom: ", "cause: ", "fix: ", "→ ")
 
 
 def fragments(briefing: str) -> set[str]:
+    """Return the content a briefing carries: each record's title and its symptom, cause, fix and → lines."""
     out = set()
     for raw in briefing.splitlines():
         ln = raw.strip()
@@ -47,6 +48,7 @@ def fragments(briefing: str) -> set[str]:
 
 
 def main() -> int:
+    """Render each eval task's briefing with core.py at --old-ref and as it is now; return 1 if content was lost."""
     ap = argparse.ArgumentParser()
     ap.add_argument("--old-ref", default="main")
     ap.add_argument("--interests", default=os.environ.get(

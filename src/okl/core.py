@@ -9,13 +9,16 @@ search(query, ...)  -> targeted retrieval (progressive disclosure).
 """
 from __future__ import annotations
 
+import os
+import re
+from collections import Counter
 from dataclasses import asdict
 from typing import Any
 
 # STACK_TAGS is re-exported, not used here: adapters may import core and client but
 # never store (dependency direction is one-way), and the CLI needs the stack list to
 # judge which bundled seed packs fit a repo.
-from .store import STACK_TAGS as STACK_TAGS  # noqa: PLC0414
+from .store import STACK_TAGS as STACK_TAGS
 from .store import Edge, Node, Store, _now_ms, split_tags
 
 
@@ -149,12 +152,15 @@ def _bucket_by_type(hits: list[Node]) -> dict[str, list[dict]]:
         pub = _node_public(n)
         if n.is_stale():
             buckets["stale_warnings"].append(pub)
-        if n.type == "Gate":
+        if n.type == "Retraction" or n.status == "retracted":
+            # A withdrawn record of ANY type is a retraction, never live guidance. Only a
+            # retracted Claim used to land here, so a Decision withdrawn in #122 was still
+            # briefed under "made on purpose; do not silently reverse".
+            buckets["live_retractions"].append(pub)
+        elif n.type == "Gate":
             buckets["armed_gates"].append(pub)
         elif n.type == "Defect":
             buckets["relevant_defects"].append(pub)
-        elif n.type == "Retraction" or (n.type == "Claim" and n.status == "retracted"):
-            buckets["live_retractions"].append(pub)
         elif n.type == "Tombstone":
             buckets["in_scope_tombstones"].append(pub)
         elif n.type == "PriorArt" and (n.status == "live" or (n.body and "THREAT" in n.body)):
@@ -226,6 +232,7 @@ def record(store: Store, *, type: str, title: str, scope: str, repo: str | None 
            files: str | None = None, symptom: str | None = None,
            applies_to: str | None = None, fix: str | None = None,
            tags: str | None = None, verified: bool = False, id: str | None = None,
+           keep_verification: bool = False,
            ) -> str:
     """Create a node. `scope` is 'org' (propagates to all repos) or 'repo:<name>'.
 
@@ -239,6 +246,12 @@ def record(store: Store, *, type: str, title: str, scope: str, repo: str | None 
     so `check` can surface "if you see X, it's Y, do Z" instead of prose.
     `tags` is a comma-separated subject list from the controlled vocabulary
     (store.KNOWN_TAGS); repos declare interest tags so `check` can filter by subject.
+
+    `keep_verification` is for re-importing a lesson the store already holds (`okl seed`).
+    Verification is about the code, not the lesson's wording, so the existing stamp, its
+    evidence and its commit are kept while the governed files are the same, and cleared
+    when they change (#110). Without it, every re-seed re-stamped each lesson as verified
+    now and wiped its evidence, so a repo that re-seeds after edits could never drift.
     """
     if scope == "repo" and repo:
         scope = f"repo:{repo}"
@@ -256,8 +269,23 @@ def record(store: Store, *, type: str, title: str, scope: str, repo: str | None 
     # omit it and the store mints a fresh random id (a genuinely new node).
     if id is not None:
         kw["id"] = id
+        old = store.get_node(id) if keep_verification else None
+        if old is not None:
+            if _same_files(old.files, files):
+                if old.verified_at is not None:
+                    kw.update(verified_at=old.verified_at, verified_by=old.verified_by,
+                              verified_commit=old.verified_commit)
+            else:
+                kw["verified_at"] = None   # a check of other files proves nothing about these
     n = Node(**kw)
     return store.add_node(n)
+
+
+def _same_files(a: str | None, b: str | None) -> bool:
+    """Whether two `files` values name the same globs, ignoring order, spacing and blanks."""
+    def norm(v: str | None) -> set[str]:
+        return {g.strip() for g in (v or "").split(",") if g.strip()}
+    return norm(a) == norm(b)
 
 
 def link(store: Store, src: str, rel: str, dst: str) -> None:
@@ -265,21 +293,31 @@ def link(store: Store, src: str, rel: str, dst: str) -> None:
     store.add_edge(Edge(src=src, rel=rel, dst=dst))
 
 
-def verify(store: Store, node_id: str, evidence: str) -> dict[str, Any]:
+def verify(store: Store, node_id: str, evidence: str, commit: str | None = None) -> dict[str, Any]:
     """Stamp a node verified from an OBSERVED check — never from assertion.
 
     `evidence` names the check that passed (the command + when). This is the
     store-side half of the verify-before-claiming rule: callers (the CLI, CI)
     must actually run the check first; this function just refuses to stamp
     without an evidence string and records it as the audit trail.
+
+    `commit` is the git HEAD the check passed at. Drift compares the governed files
+    there with HEAD instead of comparing clocks, which git keeps to the second (#102).
+    It is always overwritten, so a re-verification outside git cannot leave an older
+    commit standing in for a check it never saw.
     """
     if not evidence or not evidence.strip():
         raise ValueError("refusing to stamp verification without evidence — run a check and pass it")
+    # The commit reaches `git diff` later, so anything but a hex object name is refused
+    # here: a shared store is written by other people.
+    if commit is not None and not re.fullmatch(r"[0-9a-f]{7,64}", commit):
+        raise ValueError(f"commit must be a git object name (7-64 hex digits), got {commit!r}")
     n = store.get_node(node_id)
     if n is None:
         raise ValueError(f"no node with id {node_id!r}")
     n.verified_at = _now_ms()
     n.verified_by = evidence.strip()
+    n.verified_commit = commit
     store.add_node(n)
     return _node_public(n)
 
@@ -309,7 +347,8 @@ def briefing_notice(result: dict[str, Any], shown: int = 3) -> str | None:
     short = [trim(t) for t in titles[:shown]]
     more = result["match_count"] - len(short)
     return (f"okl · briefed {result['match_count']} lesson(s): " + "; ".join(short)
-            + (f" (+{more} more)" if more > 0 else ""))
+            + (f" (+{more} more)" if more > 0 else "")
+            + (f" · {result['drifted']} need re-checking" if result.get("drifted") else ""))
 
 
 def render_actions_only(result: dict[str, Any], limit: int | None = None) -> str:
@@ -334,7 +373,7 @@ def render_actions_only(result: dict[str, Any], limit: int | None = None) -> str
     out = [f"OKL — {len(actions)} rule(s) apply before you start:"]
     for a in actions:
         sym = f" [when: {a['symptom']}]" if a.get("symptom") else ""
-        out.append(f"- {verb.get(a['kind'], 'DO')}: {a['target']}{sym}")
+        out.append(f"- {verb.get(a['kind'], 'DO')}: {a['target']}{_drift_tag(a)}{sym}")
         out.append(f"  -> {a['how']}")
     return "\n".join(out)
 
@@ -376,6 +415,9 @@ def render_check_for_agent(result: dict[str, Any]) -> str:
         lines.append("")
     if result.get("stale_warnings"):
         lines.append(f"> {len(result['stale_warnings'])} node(s) are past TTL and shown demoted — re-verify before trusting.")
+    if result.get("drifted"):
+        lines.append(f"> {result['drifted']} lesson(s) govern code that changed after their last check, "
+                     "or were never checked: confirm them against the code before relying on them.")
     if result.get("dropped_by_cutoff"):
         lines.append(f"> {result['dropped_by_cutoff']} lower-ranked record(s) were trimmed to keep this "
                      "briefing short. Raise --limit or narrow the task if you expected more.")
@@ -547,6 +589,24 @@ def find_duplicates(store: Store, candidate: Any, threshold: float = DEDUP_THRES
     return hits[:limit]
 
 
+def _drift_tag(item: dict) -> str:
+    """The briefing's mark for a lesson whose governed code moved since its last check (#93).
+
+    Says which files and when, and the command that settles it, so the agent can treat the
+    lesson as a lead to confirm rather than a settled rule, and the person can re-check it.
+    """
+    d = item.get("drift")
+    if not d:
+        return ""
+    files = d["files"] if len(d["files"]) <= 60 else d["files"][:59] + "…"
+    if d["reason"] == "never verified":
+        return (f" *(UNVERIFIED — governs {files} but no check has passed; "
+                f"prove it: okl verify {item.get('id')} --run …)*")
+    return (f" *(STALE — {files} changed {d['changed']}, after its last check on "
+            f"{d['verified']}; a lead, not a settled rule: re-run its check (okl reverify), "
+            "and if it fails, fix the code or change the lesson on purpose)*")
+
+
 def _render_actions(actions: list[dict]) -> list[str]:
     """The routed "do this" list, which leads the briefing.
 
@@ -563,7 +623,7 @@ def _render_actions(actions: list[dict]) -> list[str]:
         sym = f" — when you see: {a['symptom']}" if a.get("symptom") else ""
         # The per-record stale marker lives here now that a routed record has no section
         # entry of its own (#52 review); a bare count cannot say which action to distrust.
-        tag = " *(STALE — re-verify)*" if a.get("stale") else ""
+        tag = (" *(STALE — re-verify)*" if a.get("stale") else "") + _drift_tag(a)
         out.append(f"- **{verb.get(a['kind'], 'DO')}: {a['target']}**{tag}{sym}")
         out.append(f"    → {a['how']}")
         if a.get("why"):
@@ -584,7 +644,7 @@ def _render_records(items: list[dict], show_catches: bool = False) -> list[str]:
     for it in items:
         suffix = (f"  ← catches: {', '.join(it['catches'])}"
                   if show_catches and it.get("catches") else "")
-        tag = " *(STALE — re-verify)*" if it.get("stale") else ""
+        tag = (" *(STALE — re-verify)*" if it.get("stale") else "") + _drift_tag(it)
         out.append(f"- **{it['title']}**{tag}{suffix}")
         if it.get("symptom"):
             out.append(f"  symptom: {it['symptom'][:160]}")
@@ -656,3 +716,88 @@ def recurrence_rows(report: dict[str, Any]) -> list[dict[str, Any]]:
     against v0.5."""
     return [{"recurred_in": r["recurred_in"], "defect_class": r["defect_class"], "gate": g}
             for r in report["armed"] for g in r["gates"]]
+
+
+# ---------------------------------------------------------------------------
+# The exposure log (#129): which lessons briefings actually show. Recurrence says which
+# lessons came back; this says which ones anybody was shown, so a lesson nobody has seen
+# in months, or one shown constantly with nothing checking it, becomes visible.
+# ---------------------------------------------------------------------------
+
+# Left out of "could have been shown": a Vocabulary record declares a tag. It is not
+# advice, so going unseen says nothing about whether to keep it.
+_NOT_ADVICE = frozenset({"Vocabulary"})
+
+
+def briefed_ids(result: dict[str, Any]) -> list[str]:
+    """The ids of the lessons a briefing showed, in the order it showed them, each once.
+
+    Read from the type buckets, where every briefed record sits exactly once.
+    next_actions and stale_warnings are skipped: both repeat records already counted.
+    """
+    ids: dict[str, None] = {}
+    for key, items in result.items():
+        if key in ("next_actions", "stale_warnings") or not isinstance(items, list):
+            continue
+        for item in items:
+            if isinstance(item, dict) and item.get("id"):
+                ids.setdefault(str(item["id"]), None)
+    return list(ids)
+
+
+def record_briefing(store: Store, repo: str, result: dict[str, Any]) -> bool:
+    """Log which lessons `result` showed, and return whether the log was written.
+
+    OKL_BRIEFING_LOG=0 turns logging off; the eval harness sets it, so test runs do not
+    count as exposure. A failed write returns False instead of raising. The log is a side
+    channel: the prompt hook fails closed, so an exception here would block the user's
+    prompt over a counter.
+    """
+    if os.environ.get("OKL_BRIEFING_LOG") == "0":
+        return False
+    try:
+        store.log_briefing(repo, briefed_ids(result))
+    except Exception:  # noqa: BLE001 - losing one log row beats losing the briefing; see above
+        return False
+    return True
+
+
+def exposure_report(store: Store, repo: str, interests: list[str] | None = None,
+                    top: int = 10) -> dict[str, Any]:
+    """Which of the lessons `repo` can be briefed its briefings have actually shown (#129).
+
+    Coverage travels with the figures, as in recurrence_report. The log holds only the
+    briefings since it existed, and only while OKL_BRIEFING_LOG was not 0, so "never
+    shown" means never shown in `briefings` logged briefings since `first_at`. Over zero
+    briefings the report says nothing about any lesson, and the caller must say so.
+
+    "Can be briefed" is _in_scope, the test check applies, so a lesson this repo's scope
+    or interests filter out is not reported as unseen. Each list holds at most `top`.
+    """
+    logged = store.briefings(repo)
+    repo_scope = f"repo:{repo}"
+    reachable = [n for n in store.all_nodes()
+                 if n.type not in _NOT_ADVICE and _in_scope(n, repo_scope, interests)]
+    times = Counter(i for b in logged for i in b.node_ids)
+
+    def row(n: Node) -> dict[str, Any]:
+        return {"id": n.id, "type": n.type, "title": n.title, "times": times[n.id],
+                "checked": bool(n.verified_by)}
+
+    # Never shown, oldest first: the longer a lesson has gone unseen, the better a
+    # candidate it is to review or retire.
+    never = sorted((n for n in reachable if not times[n.id]), key=lambda n: (n.created_at, n.id))
+    shown = sorted((n for n in reachable if times[n.id]), key=lambda n: (-times[n.id], n.id))
+    return {
+        "repo": repo,
+        "briefings": len(logged),
+        "first_at": logged[0].at if logged else None,
+        "last_at": logged[-1].at if logged else None,
+        "reachable": len(reachable),
+        "shown": len(shown),
+        "never_shown_count": len(never),
+        "never_shown": [row(n) for n in never[:top]],
+        "most_shown": [row(n) for n in shown[:top]],
+        # Shown often with nothing proving it: candidates for a check (`okl verify --run`).
+        "most_shown_unchecked": [row(n) for n in shown if not n.verified_by][:top],
+    }

@@ -11,10 +11,12 @@ promoting SQLite -> Postgres is a one-env-var change, no call-site edits.
 from __future__ import annotations
 
 import contextlib
+import json
 import os
 import time
 import uuid
-from collections.abc import Iterable
+import weakref
+from collections.abc import Iterable, Sequence
 from dataclasses import asdict, dataclass, field
 from typing import Any, Protocol, runtime_checkable
 
@@ -80,6 +82,12 @@ def new_id(prefix: str = "n") -> str:
 
 @dataclass
 class Node:
+    """One record in the ledger: a typed lesson (a Rule, Defect, Gate, ...) and its metadata.
+
+    `id` and `created_at` are filled in when not given. Building a Node does not
+    validate it; Store.add_node does, before writing.
+    """
+
     type: str
     title: str
     scope: str = "repo:unknown"          # 'org' or 'repo:<name>'
@@ -96,6 +104,7 @@ class Node:
     tags: str | None = None              # comma-sep subject labels ("react,security"); orthogonal to scope
     applies_to: str | None = None        # comma-sep stacks this lesson is VALID for; None/"any" = everywhere
     verified_by: str | None = None       # evidence trail: the observed check that last stamped verified_at
+    verified_commit: str | None = None   # git HEAD that check passed at; drift diffs the governed files there vs HEAD (#102)
     id: str = field(default_factory=lambda: new_id("n"))
     created_at: int = field(default_factory=_now_ms)
 
@@ -149,12 +158,18 @@ class Node:
 
 @dataclass
 class Edge:
+    """A directed, typed link from `src` to `dst`, read as a sentence: a Gate CATCHES a Defect.
+
+    `dst` need not be a node id: seed packs write `defect RECURS_IN <repo name>`.
+    """
+
     src: str
     rel: str
     dst: str
     created_at: int = field(default_factory=_now_ms)
 
     def validate(self) -> None:
+        """Raise ValueError if `rel` is not one of EDGE_RELS."""
         if self.rel not in EDGE_RELS:
             raise ValueError(f"unknown edge relation {self.rel!r}; valid: {sorted(EDGE_RELS)}")
 
@@ -162,10 +177,23 @@ class Edge:
 # ---------------------------------------------------------------------------
 # Backend selection
 # ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class Briefing:
+    """One logged briefing: when it ran, for which repo, and the lessons it showed.
+
+    No task text: a briefing's task is usually the user's prompt, which can carry
+    anything that was pasted into it. The ids are enough to count exposure (#129).
+    """
+
+    at: int                    # epoch milliseconds
+    repo: str
+    node_ids: tuple[str, ...]  # in the order the briefing showed them
+
+
 class Store:
     """Facade over whichever backend the environment selects."""
 
-    def __init__(self, url: str | None = None):
+    def __init__(self, url: str | None = None) -> None:
         url = url or os.environ.get("OKL_DATABASE_URL") or "sqlite:///okl.db"
         self.url = url
         if url.startswith("postgres"):
@@ -180,6 +208,10 @@ class Store:
 
     # -- writes -------------------------------------------------------------
     def add_node(self, node: Node) -> str:
+        """Validate and write a node, replacing any node with the same id; return its id.
+
+        Raises ValueError if the node is malformed or uses a tag this store has not declared.
+        """
         # Validate against the floor PLUS whatever this store has declared. A
         # Vocabulary node is checked against the floor only, so declaring a tag can
         # never require the tag it is declaring.
@@ -191,6 +223,10 @@ class Store:
         return node.id
 
     def add_edge(self, edge: Edge) -> None:
+        """Validate and write an edge; writing the same edge twice stores it once.
+
+        Raises ValueError for an unknown relation. The ends are not checked to exist.
+        """
         edge.validate()
         self._impl.upsert_edge(edge)
 
@@ -209,13 +245,25 @@ class Store:
 
     # -- reads --------------------------------------------------------------
     def get_node(self, node_id: str) -> Node | None:
+        """Return the node with this id, or None if there is none."""
         return self._impl.get_node(node_id)
 
     def search(self, query: str, scope: str | None = None,
                node_types: Iterable[str] | None = None, limit: int = 25) -> list[Node]:
+        """Return up to `limit` nodes matching any word of `query`, best match first.
+
+        `scope` and `node_types` filter exactly; None or empty means no filter. An empty
+        query matches every node, in no particular order. Without SQLite's FTS5 the
+        fallback matches the whole query as one phrase, unranked (#125).
+        """
         return self._impl.search(query, scope, list(node_types) if node_types else None, limit)
 
     def neighbors(self, node_id: str, rels: Iterable[str] | None = None) -> list[tuple[Edge, Node]]:
+        """Return (edge, node at the other end) for each edge touching `node_id`, either direction.
+
+        `rels` limits the relations; None or empty means all. Edges whose other end is
+        not a node are left out.
+        """
         return self._impl.neighbors(node_id, list(rels) if rels else None)
 
     def edges(self, rels: list[str]) -> list[Edge]:
@@ -224,9 +272,23 @@ class Store:
         return self._impl.edges(list(rels))
 
     def all_nodes(self) -> list[Node]:
+        """Return every node in the store, in no particular order."""
         return self._impl.all_nodes()
 
+    # -- the exposure log (#129) ---------------------------------------------
+    def log_briefing(self, repo: str, node_ids: Iterable[str]) -> None:
+        """Append one briefing to the exposure log: now, for `repo`, showing `node_ids`.
+
+        Append-only. Two identical briefings are two rows, because exposure is a count.
+        """
+        self._impl.log_briefing(Briefing(at=_now_ms(), repo=repo, node_ids=tuple(node_ids)))
+
+    def briefings(self, repo: str | None = None) -> list[Briefing]:
+        """Every logged briefing, oldest first. `repo` filters exactly; None means all."""
+        return self._impl.briefings(repo)
+
     def close(self) -> None:
+        """Close the database connection; calling it again does nothing."""
         self._impl.close()
 
 
@@ -267,6 +329,11 @@ class _Backend(Protocol):
           `IN ()` against `= ANY('{}')`.)
         - Interprets nothing. What an edge means is decided once, in core, so two
           backends cannot compute two different metrics from the same store.
+
+      log_briefing(b) / briefings(repo)
+        - Append-only: logging the same briefing twice stores two rows.
+        - briefings returns every row oldest first, `repo` filtering exactly, with each
+          row's node ids in the order they were logged.
     """
 
     def init_schema(self) -> None: ...
@@ -278,12 +345,15 @@ class _Backend(Protocol):
     def neighbors(self, node_id: str, rels: list[str] | None) -> list[tuple[Edge, Node]]: ...
     def edges(self, rels: list[str]) -> list[Edge]: ...
     def all_nodes(self) -> list[Node]: ...
+    def log_briefing(self, briefing: Briefing) -> None: ...
+    def briefings(self, repo: str | None) -> list[Briefing]: ...
     def close(self) -> None: ...
 
 
 _NODE_COLS = ["id", "type", "scope", "repo", "title", "body", "status",
               "found_by", "verified_at", "ttl_days", "owner", "files",
-              "symptom", "fix", "tags", "verified_by", "applies_to", "created_at"]
+              "symptom", "fix", "tags", "verified_by", "applies_to", "verified_commit",
+              "created_at"]
 
 
 def _row_to_node(row: dict[str, Any]) -> Node:
@@ -295,17 +365,30 @@ def _row_to_node(row: dict[str, Any]) -> Node:
     return Node(**{k: row[k] for k in _NODE_COLS if k in row})
 
 
+def _close_when_collected(owner: object, conn: Any) -> weakref.finalize:
+    """Close `conn` when `owner` is garbage-collected, unless something closed it first.
+
+    The CLI opens a store for each command and never closes it, which was harmless until
+    Python 3.13 began warning about every connection that is never closed ("unclosed
+    database"); the strict pytest config turns those warnings into failures. Python's
+    docs recommend `weakref.finalize` over `__del__` for this. Calling the returned
+    finalizer closes the connection now, and a second call does nothing.
+    """
+    return weakref.finalize(owner, conn.close)
+
+
 # ---------------------------------------------------------------------------
 # SQLite backend (default) — FTS5 full-text search
 # ---------------------------------------------------------------------------
 class _SQLiteBackend(_Backend):
-    def __init__(self, path: str):
+    def __init__(self, path: str) -> None:
         import sqlite3
         import threading
         self._sqlite3 = sqlite3
         # check_same_thread=False so the FastAPI threadpool can share the conn;
         # a lock serializes access since sqlite3 connections aren't thread-safe.
         self.conn = sqlite3.connect(path, check_same_thread=False)
+        self._closer = _close_when_collected(self, self.conn)
         self.conn.row_factory = sqlite3.Row
         self._lock = threading.RLock()  # reentrant: neighbors() calls get_node()
         # :memory: and some filesystems do not support WAL; the store works without it.
@@ -320,15 +403,19 @@ class _SQLiteBackend(_Backend):
             title TEXT NOT NULL, body TEXT, status TEXT, found_by TEXT,
             verified_at INTEGER, ttl_days INTEGER, owner TEXT,
             files TEXT, symptom TEXT, fix TEXT, tags TEXT, verified_by TEXT,
-            applies_to TEXT, created_at INTEGER NOT NULL)""")
+            applies_to TEXT, verified_commit TEXT, created_at INTEGER NOT NULL)""")
         # Idempotent migration: add columns introduced after v0.1 to pre-existing DBs.
         existing = {r[1] for r in c.execute("PRAGMA table_info(node)").fetchall()}
-        for col in ("files", "symptom", "fix", "tags", "verified_by", "applies_to"):
+        for col in ("files", "symptom", "fix", "tags", "verified_by", "applies_to",
+                    "verified_commit"):
             if col not in existing:
                 c.execute(f"ALTER TABLE node ADD COLUMN {col} TEXT")
         c.execute("""CREATE TABLE IF NOT EXISTS edge(
             src TEXT NOT NULL, rel TEXT NOT NULL, dst TEXT NOT NULL, created_at INTEGER NOT NULL,
             PRIMARY KEY (src, rel, dst))""")
+        # The exposure log. A store opened by an older okl simply gains the table.
+        c.execute("""CREATE TABLE IF NOT EXISTS briefing(
+            at INTEGER NOT NULL, repo TEXT NOT NULL, node_ids TEXT NOT NULL)""")
         try:
             # symptom and fix are indexed, not just title and body. `symptom` is the
             # field every command and doc calls "what a reader matches against" — the
@@ -384,7 +471,8 @@ class _SQLiteBackend(_Backend):
             r = self.conn.execute("SELECT * FROM node WHERE id=?", (node_id,)).fetchone()
             return _row_to_node(dict(r)) if r else None
 
-    def search(self, q, scope, node_types, limit):
+    def search(self, q: str, scope: str | None, node_types: list[str] | None,
+               limit: int) -> list[Node]:
         with self._lock:
             params: list[Any] = []
             if self._has_fts and q.strip():
@@ -427,7 +515,7 @@ class _SQLiteBackend(_Backend):
             rows = self.conn.execute(sql, params).fetchall()
             return [_row_to_node(dict(r)) for r in rows]
 
-    def neighbors(self, node_id, rels):
+    def neighbors(self, node_id: str, rels: list[str] | None) -> list[tuple[Edge, Node]]:
         with self._lock:
             sql = ("SELECT e.src,e.rel,e.dst,e.created_at FROM edge e "
                    "WHERE e.src=? OR e.dst=?")
@@ -445,7 +533,7 @@ class _SQLiteBackend(_Backend):
                     out.append((e, n))
             return out
 
-    def edges(self, rels):
+    def edges(self, rels: list[str]) -> list[Edge]:
         with self._lock:
             # Only "?" placeholders are interpolated; every relation is bound as a parameter.
             marks = ",".join("?" for _ in rels)
@@ -455,12 +543,27 @@ class _SQLiteBackend(_Backend):
             return [Edge(src=r["src"], rel=r["rel"], dst=r["dst"], created_at=r["created_at"])
                     for r in rows]
 
-    def all_nodes(self):
+    def all_nodes(self) -> list[Node]:
         with self._lock:
             return [_row_to_node(dict(r)) for r in self.conn.execute("SELECT * FROM node").fetchall()]
 
-    def close(self):
-        self.conn.close()
+    def log_briefing(self, briefing: Briefing) -> None:
+        with self._lock:
+            self.conn.execute("INSERT INTO briefing(at, repo, node_ids) VALUES(?,?,?)",
+                              (briefing.at, briefing.repo, json.dumps(list(briefing.node_ids))))
+            self.conn.commit()
+
+    def briefings(self, repo: str | None) -> list[Briefing]:
+        with self._lock:
+            # rowid breaks ties between briefings logged in the same millisecond.
+            sql = "SELECT at, repo, node_ids FROM briefing"
+            rows = (self.conn.execute(sql + " WHERE repo=? ORDER BY at, rowid", (repo,))
+                    if repo is not None else self.conn.execute(sql + " ORDER BY at, rowid"))
+            return [Briefing(at=r["at"], repo=r["repo"], node_ids=tuple(json.loads(r["node_ids"])))
+                    for r in rows.fetchall()]
+
+    def close(self) -> None:
+        self._closer()
 
 
 def _fts_query(q: str) -> str:
@@ -500,7 +603,7 @@ def _pg_ts_query(q: str) -> str:
 
 
 class _PostgresBackend(_Backend):
-    def __init__(self, url: str):
+    def __init__(self, url: str) -> None:
         try:
             import psycopg
         except ImportError as e:  # pragma: no cover - only when pg selected
@@ -509,21 +612,27 @@ class _PostgresBackend(_Backend):
             ) from e
         self.psycopg = psycopg
         self.conn = psycopg.connect(url, autocommit=True)
+        self._closer = _close_when_collected(self, self.conn)
 
-    def init_schema(self):
+    def init_schema(self) -> None:
         with self.conn.cursor() as cur:
             cur.execute("""CREATE TABLE IF NOT EXISTS node(
                 id TEXT PRIMARY KEY, type TEXT NOT NULL, scope TEXT NOT NULL, repo TEXT,
                 title TEXT NOT NULL, body TEXT, status TEXT, found_by TEXT,
                 verified_at BIGINT, ttl_days INTEGER, owner TEXT,
                 files TEXT, symptom TEXT, fix TEXT, tags TEXT, verified_by TEXT,
-                applies_to TEXT, created_at BIGINT NOT NULL)""")
+                applies_to TEXT, verified_commit TEXT, created_at BIGINT NOT NULL)""")
             # Idempotent migration for pre-existing tables.
-            for col in ("files", "symptom", "fix", "tags", "verified_by", "applies_to"):
+            for col in ("files", "symptom", "fix", "tags", "verified_by", "applies_to",
+                    "verified_commit"):
                 cur.execute(f"ALTER TABLE node ADD COLUMN IF NOT EXISTS {col} TEXT")
             cur.execute("""CREATE TABLE IF NOT EXISTS edge(
                 src TEXT NOT NULL, rel TEXT NOT NULL, dst TEXT NOT NULL, created_at BIGINT NOT NULL,
                 PRIMARY KEY (src, rel, dst))""")
+            # The exposure log; id orders briefings logged in the same millisecond.
+            cur.execute("""CREATE TABLE IF NOT EXISTS briefing(
+                id BIGSERIAL PRIMARY KEY, at BIGINT NOT NULL, repo TEXT NOT NULL,
+                node_ids TEXT NOT NULL)""")
             # IF NOT EXISTS is keyed on the NAME, not the expression, so a store created
             # before symptom/fix joined the tsvector would keep an index Postgres can no
             # longer use for the new query — silently degrading every search to a
@@ -538,7 +647,7 @@ class _PostgresBackend(_Backend):
                 cur.execute("DROP INDEX node_tsv_idx")
             cur.execute(f"CREATE INDEX IF NOT EXISTS node_tsv_idx ON node USING GIN (({_PG_TSV}))")
 
-    def upsert_node(self, node: Node):
+    def upsert_node(self, node: Node) -> None:
         vals = asdict(node)
         cols = ",".join(_NODE_COLS)
         ph = ",".join(f"%({k})s" for k in _NODE_COLS)
@@ -547,23 +656,25 @@ class _PostgresBackend(_Backend):
             cur.execute(f"INSERT INTO node({cols}) VALUES({ph}) "
                         f"ON CONFLICT(id) DO UPDATE SET {upd}", vals)
 
-    def upsert_edge(self, edge: Edge):
+    def upsert_edge(self, edge: Edge) -> None:
         with self.conn.cursor() as cur:
             cur.execute("INSERT INTO edge(src,rel,dst,created_at) VALUES(%s,%s,%s,%s) "
                         "ON CONFLICT(src,rel,dst) DO NOTHING",
                         (edge.src, edge.rel, edge.dst, edge.created_at))
 
-    def _fetch(self, sql, params):
+    def _fetch(self, sql: str, params: Sequence[Any]) -> list[dict[str, Any]]:
         with self.conn.cursor() as cur:
             cur.execute(sql, params)
-            cols = [d.name for d in cur.description]
+            # description is None only for statements that return no rows; _fetch runs SELECTs.
+            cols = [d.name for d in cur.description or ()]
             return [dict(zip(cols, row, strict=True)) for row in cur.fetchall()]
 
-    def get_node(self, node_id):
+    def get_node(self, node_id: str) -> Node | None:
         rows = self._fetch("SELECT * FROM node WHERE id=%s", (node_id,))
         return _row_to_node(rows[0]) if rows else None
 
-    def search(self, q, scope, node_types, limit):
+    def search(self, q: str, scope: str | None, node_types: list[str] | None,
+               limit: int) -> list[Node]:
         # Ranked full-text when there's a query (parity with the SQLite FTS5/BM25 path);
         # plain ILIKE only as the blank-query fallback. Without ranking, the shared
         # service would silently degrade retrieval below the local-file baseline.
@@ -593,7 +704,7 @@ class _PostgresBackend(_Backend):
         sql += " LIMIT %s"; params.append(limit)
         return [_row_to_node(r) for r in self._fetch(sql, params)]
 
-    def neighbors(self, node_id, rels):
+    def neighbors(self, node_id: str, rels: list[str] | None) -> list[tuple[Edge, Node]]:
         sql = "SELECT src,rel,dst,created_at FROM edge WHERE (src=%s OR dst=%s)"
         params: list[Any] = [node_id, node_id]
         if rels:
@@ -607,13 +718,25 @@ class _PostgresBackend(_Backend):
                 out.append((e, n))
         return out
 
-    def edges(self, rels):
+    def edges(self, rels: list[str]) -> list[Edge]:
         return [Edge(src=r["src"], rel=r["rel"], dst=r["dst"], created_at=r["created_at"])
                 for r in self._fetch("SELECT src, rel, dst, created_at FROM edge "
                                      "WHERE rel = ANY(%s)", (list(rels),))]
 
-    def all_nodes(self):
+    def all_nodes(self) -> list[Node]:
         return [_row_to_node(r) for r in self._fetch("SELECT * FROM node", ())]
 
-    def close(self):
-        self.conn.close()
+    def log_briefing(self, briefing: Briefing) -> None:
+        with self.conn.cursor() as cur:
+            cur.execute("INSERT INTO briefing(at, repo, node_ids) VALUES(%s,%s,%s)",
+                        (briefing.at, briefing.repo, json.dumps(list(briefing.node_ids))))
+
+    def briefings(self, repo: str | None) -> list[Briefing]:
+        sql = "SELECT at, repo, node_ids FROM briefing"
+        rows = (self._fetch(sql + " WHERE repo = %s ORDER BY at, id", (repo,))
+                if repo is not None else self._fetch(sql + " ORDER BY at, id", ()))
+        return [Briefing(at=r["at"], repo=r["repo"], node_ids=tuple(json.loads(r["node_ids"])))
+                for r in rows]
+
+    def close(self) -> None:
+        self._closer()

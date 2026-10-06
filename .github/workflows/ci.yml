@@ -49,13 +49,21 @@ jobs:
           python-version: "3.12"
 
       - name: Install (dev extras)
-        run: pip install -e ".[dev]"
+        # --group needs pip 25.1 or later (PEP 735 dependency groups).
+        run: |
+          python -m pip install "pip>=25.1"
+          pip install -e . --group dev
 
       - name: Lint — ruff (config in pyproject.toml)
         run: ruff check .
 
       - name: Types — mypy
         run: mypy src/okl
+
+      # The architecture test: the layers contract in pyproject.toml fails the first
+      # import that points up (store -> core, core -> client, ...).
+      - name: Architecture — import-linter
+        run: lint-imports
 
       - name: Tests (with the coverage ratchet)
         run: pytest -q --cov=okl
@@ -98,3 +106,34 @@ jobs:
             "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
           tar -xzf /tmp/gitleaks.tar.gz -C /tmp gitleaks
           /tmp/gitleaks git . --no-banner --redact --exit-code 1
+
+  # pyproject says requires-python >=3.10, and the job above tests one version, so the
+  # rest of that claim was assumed rather than tested. This runs the suite on every
+  # other version it covers. Lint, types, coverage and the gates stay in the job above:
+  # they read the source, and the coverage ratchet was measured on that one version.
+  tests-other-pythons:
+    runs-on: ubuntu-latest
+    strategy:
+      # One version failing must not cancel the others: which versions break is the
+      # information this job exists to give.
+      fail-fast: false
+      matrix:
+        python-version: [ "3.10", "3.11", "3.13", "3.14" ]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install (dev extras)
+        # --group needs pip 25.1 or later (PEP 735 dependency groups).
+        run: |
+          python -m pip install "pip>=25.1"
+          pip install -e . --group dev
+
+      - name: Tests
+        run: pytest -q

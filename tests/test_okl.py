@@ -238,10 +238,21 @@ def test_service_check(tmp_path, monkeypatch):
     # connects to the shared store.
     r = client.post("/check", json={"repo": "x", "task": "temporal segmentation decoder axes"})
     assert r.status_code == 200 and r.json()["armed_gates"]
+    # ASSERT (3) — the service logs each briefing it answers and reports exposure (#129):
+    # over a shared store it is the only party that sees every client's briefings.
+    exposure = client.get("/metric/exposure", params={"repo": "x"}).json()["report"]
+    assert exposure["briefings"] == 1 and g in {x["id"] for x in exposure["most_shown"]}
     # validation errors are the caller's: 400 WITH the message, never a 500 (E2E finding —
     # an agent inventing tags got an opaque 500 and reported the service as down)
     bad = client.post("/record", json={"type": "Rule", "title": "t", "scope": "org", "tags": "ci,pinning"})
     assert bad.status_code == 400 and "vocabulary" in bad.json()["detail"]
+    # /verify carries the commit a check passed at (#102) and refuses anything that is not a
+    # commit name, because drift later hands it to git on every client that reads it
+    ok = client.post("/verify", json={"id": d, "evidence": "`true` exit 0 @ 2026-10-03T18:42Z",
+                                      "commit": "a1b2c3d4e5f6"})
+    assert ok.status_code == 200 and ok.json()["verified_commit"] == "a1b2c3d4e5f6"
+    hostile = client.post("/verify", json={"id": d, "evidence": "x", "commit": "--output=/tmp/x"})
+    assert hostile.status_code == 400 and "git object name" in hostile.json()["detail"]
 
 
 def test_service_token_gates_reads_as_well_as_writes(monkeypatch):
@@ -277,6 +288,7 @@ def test_service_token_gates_reads_as_well_as_writes(monkeypatch):
     # that mattered most: it dumps everything in a single unauthenticated GET.
     assert client.get("/nodes").status_code == 401
     assert client.get("/metric/recurrence").status_code == 401
+    assert client.get("/metric/exposure", params={"repo": "x"}).status_code == 401
     assert client.post("/check", json={"repo": "x", "task": "auth"}).status_code == 401
     assert client.post("/search", json={"query": "auth"}).status_code == 401
     assert client.post("/record", json={"type": "Rule", "title": "x", "scope": "org"}).status_code == 401
@@ -601,6 +613,67 @@ def test_seed_is_idempotent(store, tmp_path):
     assert n1 == n2 == 2, f"re-seed duplicated: {n1} -> {n2}"
 
 
+def test_reseeding_keeps_verification_unless_the_governed_files_change(store, tmp_path):
+    """#110: okl seed went through record(), which replaced the row, so every re-seed
+    re-stamped each lesson as verified now and wiped its evidence and commit. A repo that
+    keeps its lessons in a seed file and re-seeds after an edit (emeraldleaf-dev does) could
+    therefore never drift. Re-seeding now updates a lesson's content and keeps its
+    verification while the governed files are the same; a change to those files clears it."""
+    import subprocess
+
+    from okl import drift
+    from okl.seed import seed_from_file
+    class _C:  # minimal client shim over the in-memory store
+        repo = "r"
+        def record(self, **k): return core.record(store, **k)
+        def link(self, s, r, d): return core.link(store, s, r, d)
+    repo = tmp_path / "repo"; repo.mkdir()
+    git = ["git", "-C", str(repo), "-c", "user.email=t@t", "-c", "user.name=t"]
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    def commit(text):
+        (repo / "a.css").write_text(text)
+        subprocess.run([*git, "add", "-A"], check=True); subprocess.run([*git, "commit", "-qm", "c"], check=True)
+        return subprocess.run([*git, "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+    pack = tmp_path / "site.json"
+    def write_pack(files, title="Grid minimums fit their container"):
+        pack.write_text(json.dumps({"nodes": [{"key": "grid", "type": "Rule", "scope": "org", "repo": "r",
+                                               "verified": True, "title": title, "files": files}]}))
+    nid = "seed:site:grid"
+
+    # ARRANGE — seed the lesson, then prove it with a check at the current commit.
+    head = commit("a { min-width: min(22rem, 100%); }\n")
+    write_pack("a.css"); seed_from_file(_C(), str(pack))
+    core.verify(store, nid, f"`check` exit 0 on commit {head[:12]} @ 2026-10-03T21:00Z", commit=head)
+    checked = store.get_node(nid)
+
+    # ASSERT (1) — re-seeding new wording keeps the stamp, its evidence and its commit.
+    write_pack("a.css", title="Grid minimums never exceed their container"); seed_from_file(_C(), str(pack))
+    n = store.get_node(nid)
+    assert n.title == "Grid minimums never exceed their container"
+    assert (n.verified_at, n.verified_by, n.verified_commit) == (checked.verified_at, checked.verified_by, head)
+
+    # ASSERT (2) — the website's flow: the governed file changes, then the pack is re-seeded.
+    # Re-stamping here used to clear the drift; it must still be reported.
+    commit("a { min-width: 22rem; }\n")
+    seed_from_file(_C(), str(pack))
+    assert [h.node_id for h in drift.scan_drift(store.all_nodes(), "r", str(repo))[0]] == [nid]
+
+    # ASSERT (3) — the same globs written in another order or spacing are the same files.
+    write_pack(" a.css ,"); seed_from_file(_C(), str(pack))
+    assert store.get_node(nid).verified_commit == head
+
+    # ASSERT (4) — pointing the lesson at other files clears its check: it proved nothing
+    # about them, so drift asks for a first check of the new paths.
+    write_pack("b.css"); seed_from_file(_C(), str(pack))
+    n = store.get_node(nid)
+    assert (n.verified_at, n.verified_by, n.verified_commit) == (None, None, None)
+
+    # ASSERT (5) — a plain re-record (okl record --id) is unchanged: it keeps nothing.
+    core.verify(store, nid, "`check` exit 0 @ 2026-10-03T21:05Z")
+    core.record(store, id=nid, type="Rule", title="t", scope="org", files="b.css")
+    assert store.get_node(nid).verified_at is None
+
+
 # ---- subject tags: controlled vocabulary + interest filtering ----
 
 def test_tags_roundtrip_and_vocabulary_enforced(store):
@@ -655,7 +728,7 @@ def test_init_wires_everything_mechanically(tmp_path, monkeypatch, capsys):
     import argparse
     import importlib.util
 
-    from okl.cli import cmd_init
+    from okl.cli.install import cmd_init
     monkeypatch.chdir(tmp_path)
     (tmp_path / ".claude").mkdir()
     (tmp_path / ".git").mkdir()  # cmd_init only checks for the directory's existence
@@ -693,7 +766,7 @@ def test_init_warns_without_git(tmp_path, monkeypatch, capsys):
     """
     import argparse
 
-    from okl.cli import cmd_init
+    from okl.cli.install import cmd_init
     monkeypatch.chdir(tmp_path)
     args = argparse.Namespace(repo="nogit", service=None, interests=None)
     assert cmd_init(args) == 0
@@ -726,7 +799,7 @@ def test_cmd_verify_runs_the_check_first(tmp_path, monkeypatch, capsys):
     (a step's own success report isn't enough); observed pass -> stamped with evidence."""
     import argparse
 
-    from okl.cli import cmd_verify
+    from okl.cli.verification import cmd_verify
     from okl.client import Client
     monkeypatch.chdir(tmp_path)
     (tmp_path / ".okl").mkdir()
@@ -797,7 +870,7 @@ def test_init_dry_run_writes_nothing(tmp_path, monkeypatch, capsys):
     their repo should be able to see the list first."""
     import argparse
 
-    from okl.cli import cmd_init
+    from okl.cli.install import cmd_init
     monkeypatch.chdir(tmp_path)
     (tmp_path / ".claude").mkdir()
     (tmp_path / ".git").mkdir()
@@ -860,7 +933,7 @@ def test_check_fails_closed_when_repo_is_not_configured(tmp_path, monkeypatch, c
     an empty database and then report 'no rules apply' against it, forever."""
     import argparse
 
-    from okl.cli import cmd_check
+    from okl.cli.lessons import cmd_check
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("OKL_SERVICE_URL", raising=False)
     # ...and the database URL. The CLI honours it now, so a developer or CI job that
@@ -876,7 +949,7 @@ def test_check_limit_threads_through_the_client(tmp_path, monkeypatch):
     """--limit has to reach core.check, not just trim the rendered output."""
     import argparse
 
-    from okl.cli import cmd_check
+    from okl.cli.lessons import cmd_check
     from okl.client import Client
     monkeypatch.chdir(tmp_path)
     (tmp_path / ".okl").mkdir()
@@ -1310,6 +1383,18 @@ def _backend_conformance(store, label):
         f"{label}: edges() dropped an edge whose far end is not a node"
     assert store.edges([]) == [], f"{label}: empty rels must return nothing"
 
+    # ASSERT (9) — the exposure log appends and reads back in order (#129). Two identical
+    # briefings are two rows: exposure is a count, and a backend that upserted them would
+    # undercount every lesson shown twice.
+    store.log_briefing("conf-repo", [a, b])
+    store.log_briefing("conf-repo", [a, b])
+    store.log_briefing("other-repo", [b])
+    mine = store.briefings("conf-repo")
+    assert [x.node_ids for x in mine] == [(a, b), (a, b)], f"{label}: briefings not appended in order"
+    assert {x.repo for x in mine} == {"conf-repo"}, f"{label}: the repo filter leaked another repo"
+    assert mine[0].at <= mine[1].at, f"{label}: briefings not oldest first"
+    assert len(store.briefings()) >= 3, f"{label}: briefings(None) must return every repo's rows"
+
 
 def test_sqlite_backend_conformance(store):
     """The SQLite backend meets the contract."""
@@ -1625,7 +1710,7 @@ def test_search_scope_refuses_a_non_scope_and_resolves_the_repo_shorthand(tmp_pa
     import subprocess
     import sys as _sys
 
-    from okl.cli import cmd_search
+    from okl.cli.lessons import cmd_search
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("OKL_SERVICE_URL", raising=False)
     # ...and the database URL. The CLI honours it now, so a developer or CI job that
@@ -1798,7 +1883,7 @@ def test_a_bundled_pack_fits_only_the_stack_it_is_about():
     §4d's mistake of reading a label on some records as a verdict on the whole, made at
     import time, where a pack arrives all at once.
     """
-    from okl.cli import _pack_fits
+    from okl.cli.packs import _pack_fits
 
     # A stack pack fits only a repo that declared that stack, however many subjects match.
     assert not _pack_fits({"dotnet", "security", "messaging"}, {"react", "security"})
@@ -1876,20 +1961,21 @@ def test_suggested_seed_commands_survive_a_path_with_spaces(tmp_path, monkeypatc
     `okl seed <path>` splits into two arguments. Found in review."""
     import shlex
 
-    from okl import cli
+    from okl.cli import packs as seed_packs
     from okl.client import Client
 
     packs = tmp_path / "my project" / "seed"
     packs.mkdir(parents=True)
     (packs / "react-defects.json").write_text(
         '{"nodes": [{"type": "Rule", "title": "t", "scope": "org", "tags": "react"}]}')
-    monkeypatch.setattr(cli, "_bundled_seed_dir", lambda: packs)
+    monkeypatch.setattr(seed_packs, "_bundled_seed_dir", lambda: packs)
     monkeypatch.chdir(tmp_path)
-    monkeypatch.delenv("OKL_DATABASE_URL", raising=False)
     monkeypatch.delenv("OKL_SERVICE_URL", raising=False)
+    # A named, empty store: the guidance reads it, and an unnamed one is refused (#117).
+    monkeypatch.setenv("OKL_DATABASE_URL", f"sqlite:///{tmp_path / 'okl.db'}")
 
     client = Client(config={"repo": "r", "interests": ["react"]})
-    line = next(ln for ln in cli._empty_store_guidance(client) if "okl seed" in ln)
+    line = next(ln for ln in seed_packs._empty_store_guidance(client) if "okl seed" in ln)
     args = shlex.split(line.split("(")[0])
     assert args[:2] == ["okl", "seed"] and len(args) == 3, f"split into {args}"
     assert args[2] == str(packs / "react-defects.json")
@@ -2296,6 +2382,410 @@ def test_the_service_keeps_applies_to(tmp_path, monkeypatch):
     assert node.get("applies_to") == "dotnet", node
 
 
+
+def test_a_command_with_no_store_named_refuses_and_writes_nothing(tmp_path, monkeypatch, capsys):
+    """#117: in a directory where okl was never set up, `okl record` and `okl seed` exited 0
+    having written their lessons to a stray ./okl.db that no hook, check or CI job reads,
+    and `okl coverage` reported a clean zero. Every command that needs a store must refuse
+    with exit 2 instead, say why on stderr, and leave no database behind."""
+    import subprocess
+
+    from okl.cli import main
+    from okl.client import _find_config
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+    subprocess.run(["git", "init", "-q", "."], check=True)
+    # Nothing above this directory may name a store either, or the commands below would
+    # write to it before the assertions fail (the 2026-09-27 fixture-records incident).
+    assert _find_config() is None, "the test directory sits inside an okl-enrolled repo"
+
+    # ACT / ASSERT (1) — each store command, run where nothing names a store, refuses: exit
+    # 2, nothing on stdout (a hook reading stdout must not see a result), the reason on stderr.
+    for argv in (["record", "--type", "Rule", "--scope", "repo", "--title", "probe"],
+                 ["seed", "dotnet-defects"],
+                 ["link", "a", "CATCHES", "b"],
+                 ["verify", "x", "--run", "true"],
+                 ["verify", "x", "--run", "false"],          # not "check failed" (1): it never ran
+                 ["verify", "x", "--run", "touch ran.txt"],  # and the command is not executed
+                 ["verify", "x"],
+                 ["coverage"]):
+        assert main(argv) == 2, argv
+        out, err = capsys.readouterr()
+        assert out == "" and "not configured" in err, (argv, out, err)
+
+    # ASSERT (2) — no database was created anywhere, by any of them, and verify ran nothing.
+    assert not list(tmp_path.rglob("*.db")), list(tmp_path.rglob("*.db"))
+    assert not (tmp_path / "ran.txt").exists(), "okl verify ran the check with no store to record it"
+
+    # ASSERT (3) — listing the bundled packs needs no store, so it still works here.
+    assert main(["seed"]) == 0
+
+
+
+def test_the_mcp_check_reports_a_refused_check_as_no_check(tmp_path, monkeypatch):
+    """okl_check caught only OKLUnreachableError, so a request the store refused (a 401
+    from a token-protected service, or no store named at all) escaped as a raw tool error
+    an agent may read past. It must say, as plainly as an outage, that no check ran.
+    Found by the architecture review of #118."""
+    pytest.importorskip("mcp")
+    import asyncio
+
+    from okl.mcp_server import _build
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.chdir(tmp_path)   # ARRANGE — nothing here names a store
+
+    async def ask() -> str:
+        res = await _build().call_tool("okl_check", {"task": "add an endpoint"})
+        c = getattr(res, "content", res)
+        c = c[0] if isinstance(c, list | tuple) else c
+        c = c[0] if isinstance(c, list | tuple) else c
+        return getattr(c, "text", str(c))
+
+    # ACT / ASSERT — a refusal that names the cause, never a briefing or a raw error.
+    out = asyncio.run(ask())
+    assert out.startswith("⚠️ OKL REFUSED THE CHECK") and "not configured" in out, out
+
+    # ASSERT (2) — search, the other read tool, says the same instead of a raw tool error.
+    async def search() -> str:
+        res = await _build().call_tool("okl_search", {"query": "anything"})
+        c = getattr(res, "content", res)
+        c = c[0] if isinstance(c, list | tuple) else c
+        c = c[0] if isinstance(c, list | tuple) else c
+        return getattr(c, "text", str(c))
+    out = asyncio.run(search())
+    assert out.startswith("⚠️ OKL REFUSED THE SEARCH") and "not configured" in out, out
+
+
+def test_seed_and_stamp_exit_2_when_they_cannot_run(tmp_path, monkeypatch, capsys):
+    """Under the CLI contract, 1 means "ran and found something" and 2 "could not run".
+    `okl seed <dir>` with no packs in it, and `python -m okl.ownership --stamp` on a file
+    it cannot read, both reported as something else (1, and a traceback). Found by the
+    architecture review of #118."""
+    import subprocess
+    import sys
+
+    from okl.cli import main
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+    subprocess.run(["git", "init", "-q", "."], check=True)
+    assert main(["init", "--repo", "r", "--no-claude", "--no-seed", "--no-ci"]) == 0
+    (tmp_path / "empty").mkdir()
+    capsys.readouterr()
+
+    # ASSERT (1) — a directory holding no packs: nothing to import, so it could not run.
+    assert main(["seed", "empty"]) == 2
+    out, err = capsys.readouterr()
+    assert out == "" and "no seed files found" in err, (out, err)
+
+    # ASSERT (1b) — no bundled packs at all (a broken install): listing and --all both
+    # could not run, so 2, with nothing on stdout for a script to mistake for a listing.
+    from okl.cli import packs as seed_packs
+    monkeypatch.setattr(seed_packs, "_bundled_seed_dir", lambda: tmp_path / "empty")
+    for argv in (["seed"], ["seed", "--all"]):
+        assert main(argv) == 2, argv
+        out, err = capsys.readouterr()
+        assert out == "" and "no seed" in err, (argv, out, err)
+
+    # ASSERT (2) — a file that is not there: exit 2 with the reason, not a traceback.
+    r = subprocess.run([sys.executable, "-m", "okl.ownership", "--stamp", "missing.yml"],
+                       capture_output=True, text=True)
+    assert r.returncode == 2 and "cannot stamp missing.yml" in r.stderr, r
+    assert r.stdout == "" and "Traceback" not in r.stderr, r
+
+
+def test_serve_and_mcp_without_their_extra_exit_2_and_name_it(monkeypatch, capsys):
+    """`okl serve` without the service extra raised a RuntimeError past main(): a traceback
+    and exit 1, naming `okl[service]`, a name the package no longer has. `okl mcp` without
+    the MCP SDK did the same. Both could not run, so both must exit 2 and say what to
+    install. Found by the architecture review of #120."""
+    import sys
+
+    from okl.cli import main
+
+    # ARRANGE — FastAPI is missing, and okl.service must be imported afresh to notice.
+    monkeypatch.delitem(sys.modules, "okl.service", raising=False)
+    monkeypatch.setitem(sys.modules, "fastapi", None)
+
+    # ACT / ASSERT (1) — serve refuses with the install command, no traceback.
+    assert main(["serve"]) == 2
+    out, err = capsys.readouterr()
+    assert out == "" and "observed-knowledge-ledger[service]" in err and "Traceback" not in err, err
+
+    # ARRANGE / ACT / ASSERT (1b) — FastAPI present but uvicorn missing: same refusal.
+    monkeypatch.delitem(sys.modules, "fastapi")
+    monkeypatch.setitem(sys.modules, "uvicorn", None)
+    assert main(["serve"]) == 2
+    out, err = capsys.readouterr()
+    assert out == "" and "needs uvicorn" in err and "[service]" in err, err
+
+    # ARRANGE (2) — the MCP SDK is missing, whether or not another test imported it.
+    for mod in ("mcp", "mcp.server", "mcp.server.mcpserver", "mcp.server.fastmcp"):
+        monkeypatch.setitem(sys.modules, mod, None)
+
+    # ACT / ASSERT (2) — mcp refuses, names the install command, and never starts serving.
+    assert main(["mcp"]) == 2
+    out, err = capsys.readouterr()
+    assert out == "" and "observed-knowledge-ledger[mcp]" in err and "Traceback" not in err, err
+
+def test_the_service_answers_an_unknown_relation_with_400(tmp_path, monkeypatch):
+    """#119: /link let core.link's ValueError escape as a 500, which the client reads as an
+    outage, so a caller's typo in a relation looked like the service was down. It must be
+    a 400 that carries the message, as /record and /verify already were."""
+    pytest.importorskip("fastapi")
+    pytest.importorskip("httpx")
+    from fastapi.testclient import TestClient
+
+    from okl import service
+    monkeypatch.delenv("OKL_TOKEN", raising=False)
+    c = TestClient(service.create_app(Store(f"sqlite:///{tmp_path}/svc.db")))
+
+    # ACT — a link with a relation the store does not have.
+    r = c.post("/link", json={"src": "a", "rel": "BOGUS", "dst": "b"})
+
+    # ASSERT — the caller's error, with the valid relations named, not a server error.
+    assert r.status_code == 400, (r.status_code, r.text)
+    assert "BOGUS" in r.json()["detail"] and "CATCHES" in r.json()["detail"], r.text
+
+
+def test_the_core_and_cli_import_only_the_standard_library_at_module_level():
+    """okl installs onto other people's machines and runs in their hooks and CI, so the
+    local read/write path needs nothing outside the standard library: every third-party
+    import lives behind an extra, inside the function that needs it. The stored check for
+    this rule covered store, core and client only; the rule names drift and the cli/
+    package too, and CI installs the extras, so a top-level `import fastapi` there passed
+    everything. This covers every file the rule names (#120 review)."""
+    import ast
+    import sys
+    root = Path(__file__).resolve().parents[1] / "src" / "okl"
+    files = [root / f for f in ("store.py", "core.py", "client.py", "drift.py")]
+    files += sorted((root / "cli").glob("*.py"))
+    allowed = set(sys.stdlib_module_names) | {"okl"}
+
+    # ACT — every import at module level (inside a function is the sanctioned place).
+    bad = []
+    for f in files:
+        for node in ast.parse(f.read_text()).body:
+            if isinstance(node, ast.Import):
+                names = [a.name for a in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+                names = [node.module]
+            else:
+                continue
+            bad += [f"{f.relative_to(root)}: {n}" for n in names if n.split(".")[0] not in allowed]
+
+    # ASSERT — nothing third-party at module level.
+    assert not bad, bad
+
+
+def test_every_seed_pack_edge_resolves():
+    """A pack's edges name their ends by a key in the same pack, or by a full id in another
+    pack (seed:<pack>:<key>). A typo in either loads without complaint: the edge points at
+    nothing, and the link it was meant to make is silently absent. Only RECURS_IN may name
+    something outside the packs: the repo a defect came back in. (#122 review)"""
+    seed = Path(__file__).resolve().parents[1] / "seed"
+    packs = {f.stem: json.loads(f.read_text()) for f in sorted(seed.glob("*.json"))}
+    ids = {f"seed:{name}:{n['key']}" for name, pack in packs.items()
+           for n in pack["nodes"] if n.get("key")}
+
+    unresolved = []
+    for name, pack in packs.items():
+        local = {n["key"] for n in pack["nodes"] if n.get("key")}
+        for edge in pack.get("edges", []):
+            for end in ("src", "dst"):
+                if end == "dst" and edge["rel"] == "RECURS_IN":
+                    continue
+                if edge[end] not in local and edge[end] not in ids:
+                    unresolved.append(f"{name}: {edge}")
+
+    assert not unresolved, unresolved
+
+
+def test_a_retracted_record_of_any_type_is_briefed_as_withdrawn(tmp_path):
+    """Only a retracted Claim was routed to retractions. A Decision or Rule given status
+    "retracted" fell through to its type's section, so a withdrawn decision was still
+    briefed as "made on purpose; do not silently reverse" (found 2026-10-04, after two
+    canon decisions were withdrawn in #122)."""
+    s = Store(f"sqlite:///{tmp_path}/r.db")
+
+    # ARRANGE — a live decision, and a decision and a rule that were both withdrawn.
+    core.record(s, type="Decision", scope="org", title="keep the ledger in sqlite for now")
+    core.record(s, type="Decision", scope="org", status="retracted",
+                title="keep the ledger in mypy-typed sqlite until ty reaches 1.0")
+    core.record(s, type="Rule", scope="org", status="retracted",
+                title="the ledger always uses Google-style docstrings")
+
+    # ACT
+    result = core.check(s, repo="r", task="decide how the ledger is kept and typed")
+
+    # ASSERT (1) — the withdrawn records are retractions, not decisions or rules.
+    def titles(bucket: str) -> set[str]:
+        return {r["title"] for r in result[bucket]}
+
+    assert "keep the ledger in sqlite for now" in titles("decisions")
+    assert "keep the ledger in mypy-typed sqlite until ty reaches 1.0" not in titles("decisions")
+    assert "the ledger always uses Google-style docstrings" not in titles("rules")
+    assert {"keep the ledger in mypy-typed sqlite until ty reaches 1.0",
+            "the ledger always uses Google-style docstrings"} <= titles("live_retractions")
+
+    # ASSERT (2) — and the agent is told not to restate them.
+    avoid = {a["target"] for a in result["next_actions"] if a["kind"] == "avoid_retracted"}
+    assert "keep the ledger in mypy-typed sqlite until ty reaches 1.0" in avoid
+
+
+
+def test_version_names_the_installed_release(capsys):
+    """okl --version prints the installed distribution's version: a repo whose hooks run a
+    pinned release has to be able to ask which one."""
+    import pytest
+
+    import okl
+    from okl.cli import main
+    with pytest.raises(SystemExit) as done:
+        main(["--version"])
+    assert done.value.code == 0
+    assert capsys.readouterr().out.strip() == f"okl {okl.__version__}"
+
+def test_a_compact_briefing_is_the_action_list_and_much_smaller(tmp_path, monkeypatch, capsys):
+    """--compact gives a model with a small context window only the action list, in the
+    hook's JSON as well as the agent format, so the prompt hook can use it."""
+    import subprocess
+
+    from okl.cli import main
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+    subprocess.run(["git", "init", "-q", "."], check=True)
+    assert main(["init", "--repo", "r", "--no-claude", "--no-seed", "--no-ci"]) == 0
+    assert main(["seed", "dotnet-defects"]) == 0
+    capsys.readouterr()
+    task = ["check", "--task", "add an endpoint that returns an order for the logged-in user"]
+
+    # ACT — the hook format, in full and compact.
+    assert main([*task, "--format", "hook"]) == 0
+    full = json.loads(capsys.readouterr().out)["hookSpecificOutput"]["additionalContext"]
+    assert main([*task, "--format", "hook", "--compact"]) == 0
+    compact = json.loads(capsys.readouterr().out)["hookSpecificOutput"]["additionalContext"]
+
+    # ASSERT — the compact one is the action list (no section headings), and well under the full one.
+    assert "###" in full and "###" not in compact, compact
+    assert compact.strip() and len(compact) < 0.7 * len(full), (len(compact), len(full))
+
+    # ASSERT — a library caller's hand-built Namespace without the new field still briefs.
+    import argparse
+
+    from okl.cli.lessons import cmd_check
+    assert cmd_check(argparse.Namespace(task=task[2], repo=None, format="agent", limit=None)) == 0
+    assert "###" in capsys.readouterr().out
+
+
+def test_briefed_ids_counts_each_shown_lesson_once():
+    """A briefing lists a record in its type bucket and may repeat it in next_actions and
+    stale_warnings; exposure counts it once."""
+    result = {"next_actions": [{"id": "a"}], "rules": [{"id": "a"}, {"id": "b"}],
+              "stale_warnings": [{"id": "b"}], "dropped_by_cutoff": 3, "task": "t"}
+    assert core.briefed_ids(result) == ["a", "b"]
+
+
+def test_briefing_log_reports_what_was_shown_and_what_never_was(monkeypatch):
+    """The exposure report counts what briefings showed, per repo, and never lets the log
+    cost a briefing (#129)."""
+    # ARRANGE — a lesson the task matches, one it cannot, and another repo's own lesson.
+    monkeypatch.delenv("OKL_BRIEFING_LOG", raising=False)
+    s = Store("sqlite:///:memory:")
+    shown = core.record(s, type="Rule", scope="org", title="put the ownership predicate in the WHERE clause")
+    unseen = core.record(s, type="Rule", scope="org", title="close every sqlite connection you open")
+    private = core.record(s, type="Rule", scope="repo:other", repo="other", title="the other repo's own lesson")
+    result = core.check(s, "app", "add the ownership predicate to the query")
+    assert shown in core.briefed_ids(result) and unseen not in core.briefed_ids(result)
+
+    # ACT — the same briefing twice, then one for another repo.
+    assert core.record_briefing(s, "app", result) is True
+    core.record_briefing(s, "app", result)
+    core.record_briefing(s, "other", result)
+    report = core.exposure_report(s, "app")
+
+    # ASSERT (1) — coverage first: two briefings for this repo; the other repo's excluded.
+    assert report["briefings"] == 2 and report["first_at"] <= report["last_at"]
+    # (2) the shown lesson counted twice; the unseen one listed as never shown.
+    assert {r["id"]: r["times"] for r in report["most_shown"]}[shown] == 2
+    assert unseen in {r["id"] for r in report["never_shown"]}
+    # (3) a lesson this repo can never be briefed is not reported as unseen here.
+    assert private not in {r["id"] for r in report["never_shown"]}
+    # (4) shown, with no stored check: a candidate for one.
+    assert shown in {r["id"] for r in report["most_shown_unchecked"]}
+    # (5) OKL_BRIEFING_LOG=0 writes nothing (the eval harness sets it).
+    monkeypatch.setenv("OKL_BRIEFING_LOG", "0")
+    assert core.record_briefing(s, "app", result) is False
+    assert core.exposure_report(s, "app")["briefings"] == 2
+
+    # (6) a store that cannot write the log costs a log row, never the briefing: the
+    # prompt hook fails closed, so a raise here would block the user's prompt.
+    class FullDisk:
+        def log_briefing(self, repo, node_ids):
+            raise OSError("disk full")
+    monkeypatch.delenv("OKL_BRIEFING_LOG")
+    assert core.record_briefing(FullDisk(), "app", result) is False
+
+
+def test_metric_reports_briefing_exposure_with_its_coverage(tmp_path, monkeypatch, capsys):
+    """okl check logs each briefing in local mode, and okl metric reports exposure only
+    once it has some: zero briefings says so rather than listing every lesson as unseen."""
+    import subprocess
+
+    from okl.cli import main
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN", "OKL_BRIEFING_LOG"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+    subprocess.run(["git", "init", "-q", "."], check=True)
+    assert main(["init", "--repo", "r", "--no-claude", "--no-seed", "--no-ci"]) == 0
+    assert main(["seed", "dotnet-defects"]) == 0
+    capsys.readouterr()
+
+    # ASSERT (1) — before any briefing, the absence is reported, not a list of everything.
+    assert main(["metric"]) == 0
+    assert "briefings logged: none yet" in capsys.readouterr().out
+
+    # ACT — two briefings, the way the prompt hook asks for them.
+    task = ["check", "--task", "add an endpoint that returns an order for the logged-in user"]
+    assert main([*task, "--format", "hook"]) == 0
+    assert main([*task, "--format", "hook", "--compact"]) == 0
+    capsys.readouterr()
+
+    # ASSERT (2) — both counted, with what the figures cover stated first.
+    assert main(["metric"]) == 0
+    out = capsys.readouterr().out
+    assert "briefings logged: 2 since" in out and "never shown:" in out, out
+    # (3) the JSON adds exposure beside the recurrence report, which keeps its keys.
+    assert main(["metric", "--format", "json"]) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data["exposure"]["briefings"] == 2 and "armed" in data
+
+
+def test_remote_exposure_is_unknown_on_an_older_service_but_never_hides_a_refusal(monkeypatch):
+    """A service without /metric/exposure (404) makes exposure unknown; any other refusal,
+    such as a 401, must still surface rather than read as "no data"."""
+    from okl.client import Client, OKLRejectedError
+    monkeypatch.setenv("OKL_SERVICE_URL", "http://okl.invalid")
+    c = Client()
+
+    def older_service(path):
+        raise OKLRejectedError("rejected (404)", status=404)
+    monkeypatch.setattr(c, "_get", older_service)
+    assert c.exposure_report() is None
+
+    def no_token(path):
+        raise OKLRejectedError("rejected (401)", status=401)
+    monkeypatch.setattr(c, "_get", no_token)
+    with pytest.raises(OKLRejectedError):
+        c.exposure_report()
+
 def test_starter_pack_resolves_and_is_portable():
     """The starter lessons are references into the bundled packs; every one must resolve,
     be valid on any stack (no applies_to), and be actionable (a fix, or a gate to arm)."""
@@ -2388,7 +2878,6 @@ def test_reverify_reruns_stored_checks_only_when_asked(tmp_path):
     confirmation at a terminal); unattended without --yes it refuses and runs nothing."""
     import subprocess
     import sys
-    import time
     src = str(Path(__file__).resolve().parents[1] / "src")
     repo = tmp_path / "r"; repo.mkdir()
     env = {**os.environ, "PYTHONPATH": src, "HOME": str(tmp_path)}
@@ -2401,7 +2890,6 @@ def test_reverify_reruns_stored_checks_only_when_asked(tmp_path):
                               capture_output=True, text=True, stdin=subprocess.DEVNULL)
 
     def commit(text):
-        time.sleep(1.1)   # git commit times are in seconds
         (repo / "a.txt").write_text(text)
         subprocess.run([*git, "add", "a.txt"], check=True)
         subprocess.run([*git, "commit", "-qm", "edit"], check=True)
@@ -2419,7 +2907,7 @@ def test_reverify_reruns_stored_checks_only_when_asked(tmp_path):
 
     r = okl("reverify")                       # unattended, no --yes
     assert r.returncode == 2 and check in r.stdout and "refusing" in r.stderr, (r.stdout, r.stderr)
-    assert f"no stored check: okl verify {never}" in r.stdout, r.stdout
+    assert "no stored check yet" in r.stdout and f"okl verify {never}`" in r.stdout, r.stdout
     assert okl("reverify", "--dry-run").returncode == 1
     r = okl("reverify", "--yes")
     assert "1 re-verified, 0 failed, 1 need a first check" in r.stdout, r.stdout
@@ -2451,10 +2939,10 @@ def test_first_run_notice_and_reverify_in_process(tmp_path, monkeypatch, capsys)
     these ran only in child processes.)"""
     import json
     import subprocess
-    import time
 
     from okl import core
-    from okl.cli import _stored_check, main
+    from okl.cli import main
+    from okl.cli.verification import _stored_check
     for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN", "OKL_QUIET"):
         monkeypatch.delenv(k, raising=False)
     monkeypatch.setenv("HOME", str(tmp_path))
@@ -2488,7 +2976,6 @@ def test_first_run_notice_and_reverify_in_process(tmp_path, monkeypatch, capsys)
     assert _stored_check("`true` exit 0 @ 2026-09-29T00:00Z") == ("true", None)
     assert _stored_check(None) is None and _stored_check("asserted") is None
 
-    time.sleep(1.1)
     (tmp_path / "a.txt").write_text("hello again\n")
     subprocess.run([*git, "commit", "-qam", "edit"], check=True)
     assert main(["reverify", "--dry-run"]) == 1
@@ -2497,8 +2984,409 @@ def test_first_run_notice_and_reverify_in_process(tmp_path, monkeypatch, capsys)
     assert main(["reverify"]) == 0          # nothing drifted now
 
 
+def test_a_briefed_lesson_says_when_its_code_changed_after_its_last_check(tmp_path, monkeypatch, capsys):
+    """#93: only `okl drift` and the CI gate used to say a lesson's code had moved. The
+    briefing that puts the lesson in front of the agent said nothing, so the agent trusted a
+    lesson that might no longer hold. Run in-process so coverage sees the client path."""
+    import json
+    import subprocess
+
+    from okl.cli import main
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN", "OKL_QUIET"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+    git = ["git", "-c", "user.email=t@t", "-c", "user.name=t"]
+    subprocess.run(["git", "init", "-q", "."], check=True)
+    (tmp_path / "orders.py").write_text("def get_order(order_id, customer_id): ...\n")
+    subprocess.run([*git, "add", "-A"], check=True); subprocess.run([*git, "commit", "-qm", "i"], check=True)
+    assert main(["init", "--repo", "s", "--no-claude", "--no-seed"]) == 0
+    assert main(["record", "--type", "Rule", "--scope", "repo", "--id", "order-scope",
+                 "--title", "Order lookups are scoped to the signed-in customer",
+                 "--symptom", "an endpoint fetches an order by id with no owner filter",
+                 "--fix", "filter by the caller's customer id", "--files", "orders.py"]) == 0
+    capsys.readouterr()
+
+    def brief():
+        assert main(["check", "--task", "fetch an order by id", "--format", "hook"]) == 0
+        out = json.loads(capsys.readouterr().out)
+        return out["hookSpecificOutput"]["additionalContext"], out["systemMessage"]
+
+    # ASSERT (1) — governs a file but no check has passed yet: marked, with the command.
+    ctx, notice = brief()
+    assert "UNVERIFIED" in ctx and "okl verify order-scope" in ctx, ctx
+    assert "1 need re-checking" in notice, notice
+
+    # ASSERT (2) — checked and the code unchanged: no mark anywhere.
+    assert main(["verify", "order-scope", "--run", "grep -q customer_id orders.py && echo SCOPED",
+                 "--expect", "SCOPED"]) == 0
+    capsys.readouterr()
+    ctx, notice = brief()
+    assert "STALE" not in ctx and "UNVERIFIED" not in ctx and "re-checking" not in notice, ctx
+
+    # ASSERT (3) — the governed file changes after the check: the briefing says which file,
+    # when, and how to settle it, and the footer and the person's notice both count it.
+    (tmp_path / "orders.py").write_text("def get_order(order_id): ...\n")
+    subprocess.run([*git, "commit", "-qam", "drop the owner filter"], check=True)
+    ctx, notice = brief()
+    assert "STALE — orders.py changed" in ctx and "okl reverify" in ctx, ctx
+    assert "1 lesson(s) govern code that changed after their last check" in ctx, ctx
+    assert "1 need re-checking" in notice, notice
+
+    # ASSERT (4) — re-running the stored check settles it; here it fails, because the change
+    # really did break the lesson, so the mark stays until the code or the lesson is fixed.
+    assert main(["reverify", "--yes"]) == 1
+    capsys.readouterr()
+    assert "STALE — orders.py changed" in brief()[0]
+
+
+def test_unverified_mark_covers_uncommitted_files_and_skips_other_repos(tmp_path):
+    """A never-verified lesson about a new, uncommitted file has no git time, and was left
+    unmarked (CodeRabbit on #101). A lesson whose files are not in this checkout, or that
+    belongs to another repo, must stay unmarked."""
+    import subprocess
+
+    from okl import drift
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    (tmp_path / "new_module.py").write_text("x = 1\n")   # exists, never committed
+    result = {"rules": [
+        {"id": "new", "scope": "repo:s", "files": "new_module.py", "verified_at": None},
+        {"id": "glob", "scope": "repo:s", "files": "*.py", "verified_at": None},
+        {"id": "elsewhere", "scope": "org", "files": "src/**/*.cs", "verified_at": None},
+        {"id": "nofiles", "scope": "repo:s", "files": None, "verified_at": None},
+        {"id": "other-repo", "scope": "repo:t", "files": "new_module.py", "verified_at": None},
+    ], "next_actions": [{"id": "new"}]}
+    assert drift.annotate_briefing(result, "s", str(tmp_path)) == 2
+    marked = {r["id"] for r in result["rules"] if r.get("drift")}
+    assert marked == {"new", "glob"}, marked
+    assert result["rules"][0]["drift"]["reason"] == "never verified"
+    assert result["next_actions"][0]["drift"]["reason"] == "never verified"
+    assert result["drifted"] == 2
+
+
+def test_drift_compares_the_commit_a_check_passed_at_not_the_clock(store, tmp_path, monkeypatch, capsys):
+    """#102: drift compared a governed file's last commit TIME with verified_at. Git keeps
+    commit time to the second, so a change committed in the same second as the check was
+    missed, and a commit stamped by a clock running ahead read as a change the check never
+    saw. `okl verify` now records the commit the check passed at, and the gate and the
+    briefing both diff the governed files there against HEAD. The tests used to sleep past
+    the second, which hid the gap; here the commit dates are pinned so each case is exact."""
+    import json
+    import subprocess
+
+    from okl import drift
+    from okl.cli import main
+    from okl.client import Client
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN", "OKL_QUIET"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+
+    def commit(msg, at=None):
+        env = {**os.environ}
+        if at is not None:
+            env.update(GIT_COMMITTER_DATE=f"@{at} +0000", GIT_AUTHOR_DATE=f"@{at} +0000")
+        subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qam", msg],
+                       check=True, env=env)
+
+    def edit(text):
+        (tmp_path / "orders.py").write_text(text)
+
+    subprocess.run(["git", "init", "-q", "."], check=True)
+    edit("SCOPED = True\n"); subprocess.run(["git", "add", "-A"], check=True); commit("init")
+    assert main(["init", "--repo", "s", "--no-claude", "--no-seed"]) == 0
+    assert main(["record", "--type", "Rule", "--scope", "repo", "--id", "scoped",
+                 "--title", "Order lookups are scoped to the customer", "--files", "orders.py"]) == 0
+    check = ["verify", "scoped", "--run", "grep -q 'SCOPED = True' orders.py && echo OK", "--expect", "OK"]
+
+    def node():
+        return {n.id: n for n in Client().all_nodes()}["scoped"]
+
+    def drifted():
+        return [h.node_id for h in drift.scan_drift(Client().all_nodes(), "s", str(tmp_path))[0]]
+
+    # ARRANGE — a passing check records the commit it ran at, in the record and its evidence.
+    assert main(check) == 0
+    head = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+    n = node()
+    assert n.verified_commit == head and f" on commit {head[:12]} @ " in n.verified_by, n.verified_by
+    capsys.readouterr()
+
+    # ASSERT (1) — the #102 case: the governed file changes in the SAME second as the check.
+    # Comparing times saw last <= verified_at and missed it; the commit diff does not, and the
+    # gate and the briefing agree.
+    edit("SCOPED = False\n"); commit("drop the scope", at=n.verified_at // 1000)
+    assert drifted() == ["scoped"]
+    assert main(["check", "--task", "order lookups scoped to the customer", "--format", "hook"]) == 0
+    ctx = json.loads(capsys.readouterr().out)["hookSpecificOutput"]["additionalContext"]
+    assert "STALE — orders.py changed" in ctx and "re-run its check (okl reverify)" in ctx, ctx
+
+    # ASSERT (2) — the reverse: a commit stamped an hour AHEAD by a fast clock, then checked.
+    # Comparing times called that a change the check never saw; the check ran on it.
+    edit("SCOPED = True\n"); commit("restore", at=n.verified_at // 1000 + 3600)
+    assert main(check) == 0
+    assert drifted() == []
+
+    # ASSERT (3) — content, not history: a change and its revert leave the file as checked.
+    edit("SCOPED = False\n"); commit("break")
+    edit("SCOPED = True\n"); commit("revert")
+    assert drifted() == []
+
+    # ASSERT (4) — a commit this clone does not have (a squashed branch, a shallow fetch)
+    # falls back to comparing times. Each stamp carries evidence shaped as `okl verify`
+    # writes it, because since #20 a stamp with none is drift on its own. A value that is
+    # not a commit name can never be bound into that evidence, so it is drift before git
+    # is ever asked about it, and git writes nothing for it.
+    import datetime as _dt
+
+    def evidence(at_ms, commit):
+        minute = _dt.datetime.fromtimestamp(at_ms // 1000, tz=_dt.timezone.utc).strftime("%Y-%m-%dT%H:%MZ")
+        return f"`grep` exit 0, matched 'OK' on commit {commit[:12]} @ {minute}"
+    leak = tmp_path / "leak"
+    rules = [Node(type="Rule", title="t", scope="repo:s", files="orders.py", verified_at=1,
+                  verified_commit="0" * 40, verified_by=evidence(1, "0" * 40), id="gone"),
+             Node(type="Rule", title="t", scope="repo:s", files="orders.py", verified_at=10**13,
+                  verified_commit="0" * 40, verified_by=evidence(10**13, "0" * 40),
+                  id="checked-later"),
+             Node(type="Rule", title="t", scope="repo:s", files="orders.py", verified_at=1,
+                  verified_commit=f"--output={leak}", id="hostile")]
+    hits = drift.scan_drift(rules, "s", str(tmp_path))[0]
+    assert sorted(h.node_id for h in hits) == ["gone", "hostile"] and not leak.exists()
+    nid = core.record(store, type="Rule", title="t", scope="org")
+    with pytest.raises(ValueError, match="git object name"):
+        core.verify(store, nid, "`true` exit 0 @ 2026-10-03T18:42Z", commit="HEAD~1")
+
+    # ASSERT (5) — a check run against uncommitted edits says so: the stamp is the commit
+    # without them, so the lesson will read as changed once they are committed.
+    edit("SCOPED = True  # edited\n"); capsys.readouterr()
+    assert main(check) == 0
+    assert "uncommitted changes to orders.py" in capsys.readouterr().err
+
+
+def test_drift_reports_this_repos_lessons_whose_files_no_longer_exist(tmp_path, monkeypatch, capsys):
+    """#109: a lesson governing src/components/PixelGlyph.astro, deleted on 2026-09-22, was
+    reported OK. Drift sees the deletion as the last change, and a lesson stamped after it
+    reads as unchanged, so it watched nothing and nothing said so. It is reported now, as a
+    finding beside the drift rather than drift: what to do with it is a decision."""
+    import subprocess
+
+    from okl import drift
+    from okl.cli import main
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+    git = ["git", "-c", "user.email=t@t", "-c", "user.name=t"]
+    subprocess.run(["git", "init", "-q", "."], check=True)
+    (tmp_path / "src").mkdir(); (tmp_path / "src" / "app.py").write_text("x = 1\n")
+    (tmp_path / "Glyph.astro").write_text("<svg/>\n")
+    subprocess.run([*git, "add", "-A"], check=True); subprocess.run([*git, "commit", "-qm", "i"], check=True)
+    subprocess.run([*git, "rm", "-q", "Glyph.astro"], check=True); subprocess.run([*git, "commit", "-qm", "rm"], check=True)
+
+    def rule(id, files, scope="repo:s", repo="s"):
+        return Node(type="Rule", title=id, scope=scope, repo=repo, files=files, verified_at=1, id=id)
+    rules = [rule("deleted", "Glyph.astro"),                            # gone: reported
+             rule("org-but-ours", "Glyph.astro", scope="org"),         # recorded here: reported
+             rule("never-existed", "src/*.zz"),                        # matches nothing: reported
+             rule("exists", "src/app.py"), rule("glob", "src/*.py"),   # present: quiet
+             rule("folder", "src"), rule("mixed", "Glyph.astro, src/app.py"),
+             rule("elsewhere", "src/**/*.cs", scope="org", repo="other"),  # another repo's: quiet
+             # git's default pathspec gives ** no special meaning, so src/**/*.py needs a
+             # subfolder and misses src/app.py, in drift's own `git log` as here. Reported,
+             # since drift cannot see that file either; making ** optional belongs in both.
+             rule("recursive", "src/**/*.py")]
+    assert [n.id for n in drift.governs_nothing(rules, "s", str(tmp_path))] == \
+        ["deleted", "org-but-ours", "never-existed", "recursive"]
+    assert drift.governs_nothing(rules, "s", str(tmp_path / "not-a-repo")) == []   # git can't say
+
+    # Through the CLI: reported under the drift output, exit code untouched.
+    assert main(["init", "--repo", "s", "--no-claude", "--no-seed"]) == 0
+    assert main(["record", "--type", "Rule", "--scope", "repo", "--id", "pixel",
+                 "--title", "Pixel shapes taper one cell per row", "--files", "Glyph.astro"]) == 0
+    capsys.readouterr()
+    assert main(["drift"]) == 0
+    out = capsys.readouterr().out
+    assert "1 lesson(s) govern files that match nothing committed here" in out and "[pixel]" in out, out
+
+
+def test_verify_without_a_check_suggests_one_and_drift_says_what_to_do(tmp_path, monkeypatch, capsys):
+    """Drift used to print `okl verify <id> --run "<a check that fails if the rule is broken>"
+    --expect "<its success signal>"` under every stale lesson, and a user asked how they were
+    supposed to know any of it. `okl verify <id>` on its own now shows the lesson, the files
+    it covers and the tests that already mention them, with the command to run, and stamps
+    nothing; drift says once, in plain words, how to re-check."""
+    import subprocess
+
+    from okl.cli import main
+    from okl.client import Client
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+    git = ["git", "-c", "user.email=t@t", "-c", "user.name=t"]
+    subprocess.run(["git", "init", "-q", "."], check=True)
+    (tmp_path / "pkg").mkdir(); (tmp_path / "tests").mkdir()
+    (tmp_path / "pkg" / "evaluator.py").write_text("def hit(paths): return any(paths)\n")
+    (tmp_path / "tests" / "test_evaluator.py").write_text("from pkg import evaluator\n")
+    (tmp_path / "tests" / "test_other.py").write_text("x = 1\n")
+    subprocess.run([*git, "add", "-A"], check=True); subprocess.run([*git, "commit", "-qm", "i"], check=True)
+    assert main(["init", "--repo", "r", "--no-claude", "--no-seed", "--no-ci"]) == 0
+    assert main(["record", "--type", "Rule", "--scope", "repo", "--id", "hit",
+                 "--title", "Retrieval hit counts every evidence path", "--fix", "count tool evidence too",
+                 "--files", "pkg/evaluator.py"]) == 0
+    assert main(["record", "--type", "Rule", "--scope", "repo", "--id", "lonely",
+                 "--title", "Nothing tests this", "--files", "pkg/unseen.py"]) == 0
+    capsys.readouterr()
+
+    # ASSERT (1) — the lesson, its files, the test that mentions them, and the command.
+    assert main(["verify", "hit"]) == 2
+    out = capsys.readouterr().out
+    assert "Retrieval hit counts every evidence path" in out and "covers: pkg/evaluator.py" in out
+    assert "tests/test_evaluator.py" in out and "tests/test_other.py" not in out, out
+    assert "okl verify hit --run 'pytest -q tests/test_evaluator.py' --expect passed" in out, out
+    assert "ask your agent" in out
+
+    # ASSERT (2) — nothing was stamped; for a lesson no test names, it reports a search miss,
+    # not that no check exists (a test may drive the command without naming the file).
+    assert {n.id: n for n in Client().all_nodes()}["hit"].verified_at is None
+    assert main(["verify", "lonely"]) == 2
+    assert "No test mentions those files by name" in capsys.readouterr().out
+
+    # ASSERT (3) — an unknown id says where ids come from.
+    assert main(["verify", "nope"]) == 2
+    assert "show ids in brackets" in capsys.readouterr().err
+
+    # ASSERT (4) — drift says what to do in plain words, with no placeholder to fill in.
+    main(["drift"])
+    out = capsys.readouterr().out
+    assert "re-check the stale okl lessons" in out and "<a check that fails" not in out, out
+
+
+
+def test_a_suggested_check_quotes_a_hostile_test_filename(tmp_path, monkeypatch, capsys):
+    """The suggestion is a command the user pastes, and `okl verify --run` hands its value to
+    a shell. A tracked test file can be named anything, and `git grep -l` prints a space or a
+    semicolon in a path as-is, so an unquoted path would carry shell syntax into what the
+    user runs (CodeRabbit on #115, CWE-78). The path must reach pytest as one argument."""
+    import shlex
+    import subprocess
+
+    from okl.cli import main
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+
+    # ARRANGE — a repo whose only test that mentions the governed file has a hostile name.
+    git = ["git", "-c", "user.email=t@t", "-c", "user.name=t"]
+    subprocess.run(["git", "init", "-q", "."], check=True)
+    (tmp_path / "pkg").mkdir(); (tmp_path / "tests").mkdir()
+    (tmp_path / "pkg" / "evaluator.py").write_text("def hit(paths): return any(paths)\n")
+    hostile = "tests/test_x; touch pwned.py"
+    (tmp_path / hostile).write_text("from pkg import evaluator\n")
+    subprocess.run([*git, "add", "-A"], check=True); subprocess.run([*git, "commit", "-qm", "i"], check=True)
+    assert main(["init", "--repo", "r", "--no-claude", "--no-seed", "--no-ci"]) == 0
+    assert main(["record", "--type", "Rule", "--scope", "repo", "--id", "hit",
+                 "--title", "Retrieval hit counts every evidence path", "--files", "pkg/evaluator.py"]) == 0
+    capsys.readouterr()
+
+    # ACT — ask for a suggestion.
+    assert main(["verify", "hit"]) == 2
+    line = next(ln.strip() for ln in capsys.readouterr().out.splitlines()
+                if ln.strip().startswith("okl verify "))
+
+    # ASSERT — split as a shell would, the command is okl verify with the --run value intact,
+    # and that value, split again by the shell okl verify uses, keeps the path as one argument.
+    argv = shlex.split(line)
+    assert argv[:3] == ["okl", "verify", "hit"] and argv[3] == "--run", argv
+    assert argv[5:] == ["--expect", "passed"], argv
+    assert shlex.split(argv[4]) == ["pytest", "-q", hostile], argv[4]
+
+def test_init_no_ci_skips_the_workflow_and_remembers_it(tmp_path, monkeypatch, capsys):
+    """#111: init always wrote .github/workflows/okl-verify.yml. In a private repo that
+    workflow spends the account's Actions minutes on every push, and deleting it did not
+    last, because init restores missing files by design. --no-ci skips it and is recorded
+    in .okl/config.json, so a later plain init keeps skipping it; --ci turns it back on."""
+    import subprocess
+
+    from okl.cli import main
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+    subprocess.run(["git", "init", "-q", "."], check=True)
+    wf = tmp_path / ".github" / "workflows" / "okl-verify.yml"
+    base = ["init", "--repo", "r", "--no-claude", "--no-seed"]
+
+    assert main([*base, "--no-ci"]) == 0
+    assert not wf.exists() and json.loads((tmp_path / ".okl" / "config.json").read_text())["ci"] is False
+    assert main(base) == 0 and not wf.exists(), "a later plain init must keep skipping it"
+    capsys.readouterr()
+    assert main([*base, "--dry-run"]) == 0 and "no CI workflow" in capsys.readouterr().out
+    main(["doctor"])
+    assert "drift is not gated in CI here" in capsys.readouterr().out
+    assert main([*base, "--ci"]) == 0 and wf.exists(), "--ci turns it back on"
+    # doctor is a diagnostic: a corrupt config must not end it in a traceback (CodeRabbit on #112)
+    (tmp_path / ".okl" / "config.json").write_text("{not json")
+    main(["doctor"])
+
+
+def test_the_verified_commit_is_bound_to_its_evidence_and_older_entries_still_read(tmp_path):
+    """Drift now trusts the recorded commit to clear a rule, so a committed snapshot must not
+    let it be edited on its own, any more than the timestamp can be. The commit is written
+    into the evidence BEFORE the stamp: that binds it, and keeps entries written before #102,
+    and okl versions older than it reading the evidence the same way."""
+    import re
+    import sqlite3
+    from datetime import datetime, timezone
+
+    from okl import drift
+    from okl.cli.verification import _stored_check
+    sha = "a1b2c3d4e5f6" + "0" * 28
+    at = int(datetime(2026, 10, 3, 18, 42, 30, tzinfo=timezone.utc).timestamp() * 1000)
+    new = {"id": "r", "title": "t", "scope": "org", "files": "a.py", "verified_at": at,
+           "verified_by": "`pytest -q` exit 0, matched 'passed' on commit a1b2c3d4e5f6 @ 2026-10-03T18:42Z",
+           "verified_commit": sha}
+    old = {**new, "verified_by": "`pytest -q` exit 0, matched 'passed' @ 2026-10-03T18:42Z",
+           "verified_commit": None}
+
+    # ASSERT (1) — both shapes are trusted, and reverify finds the stored check in each.
+    assert drift.stamp_problem(new) is None and drift.stamp_problem(old) is None
+    assert _stored_check(new["verified_by"]) == _stored_check(old["verified_by"]) == ("pytest -q", "passed")
+    assert _stored_check("`true` exit 0 on commit a1b2c3d4e5f6 @ 2026-10-03T18:42Z") == ("true", None)
+
+    # ASSERT (2) — pointing the commit somewhere else by hand is refused, like the stamp.
+    assert "does not match the commit its evidence names" in drift.stamp_problem(
+        {**new, "verified_commit": "f" * 40})
+
+    # ASSERT (3) — an okl older than #102 looks for the stamp at the very end, and finds it.
+    assert re.search(r"@ (\d{4}-\d\d-\d\dT\d\d:\d\dZ)$", new["verified_by"])
+
+    # ASSERT (4) — the snapshot carries the commit, and reading it back keeps it.
+    nodes, problems = drift.nodes_from_snapshot({"format": drift.SNAPSHOT_FORMAT, "rules": [new, old]})
+    assert problems == [] and [n.verified_commit for n in nodes] == [sha, None]
+
+    # ASSERT (5) — a store created before the column existed gains it on open, with nothing
+    # to run, and its rows read as having recorded no commit until they are verified again.
+    db = tmp_path / "old.db"
+    c = sqlite3.connect(db)
+    c.execute("""CREATE TABLE node(id TEXT PRIMARY KEY, type TEXT NOT NULL, scope TEXT NOT NULL,
+        repo TEXT, title TEXT NOT NULL, body TEXT, status TEXT, found_by TEXT, verified_at INTEGER,
+        ttl_days INTEGER, owner TEXT, files TEXT, symptom TEXT, fix TEXT, tags TEXT,
+        verified_by TEXT, applies_to TEXT, created_at INTEGER NOT NULL)""")
+    c.execute("INSERT INTO node(id, type, scope, title, verified_at, created_at) "
+              "VALUES('old', 'Rule', 'org', 'an old rule', 1, 1)")
+    c.commit(); c.close()
+    s = Store(f"sqlite:///{db}")
+    assert s.get_node("old").verified_commit is None
+    core.verify(s, "old", new["verified_by"], commit=sha)
+    assert Store(f"sqlite:///{db}").get_node("old").verified_commit == sha
+
+
 def test_stack_detection(tmp_path):
-    from okl.cli import _detect_stacks
+    """Stacks are read from manifest files (a .csproj, package.json, requirements.txt and
+    the dependencies inside them), each paired with the file that showed it."""
+    from okl.cli.install import _detect_stacks
     (tmp_path / "api").mkdir(); (tmp_path / "api" / "Api.csproj").write_text("<Project/>")
     (tmp_path / "package.json").write_text('{"dependencies": {"react": "^19.0.0"}}')
     (tmp_path / "requirements.txt").write_text("langchain\nrasterio\n")

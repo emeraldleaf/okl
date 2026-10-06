@@ -23,6 +23,10 @@ pipx install 'observed-knowledge-ledger[mcp]'
 The PyPI name differs (PyPI refuses `okl` as confusable with `oki`); everything you type
 afterwards is `okl`.
 
+Needs Python 3.10+ (and git for drift detection). Tested on macOS and Linux. **Windows is untested**: the core
+should work, but the Claude Code hooks likely need fixes there
+([#85](https://github.com/emeraldleaf/okl/issues/85)).
+
 ### Wire the repository
 
 From the root of your repo:
@@ -208,17 +212,41 @@ store, where the briefing picks the relevant lessons for each prompt and CI can 
 When you are about to add a paragraph to that file, ask whether it should be a lesson
 instead. It usually should.
 
+Some things belong in neither. A procedure (how to release, migrate or set up) is read
+whole and in order, so it goes in a skill, runbook or script. Formatting and style go to a
+formatter or linter, which enforces them on every line. An open bug goes in your issue
+tracker until it is fixed; the lesson comes after. Secrets never go in the store: it is
+shared, and its lessons are copied into agent context.
+
 ### Prove it: a lesson is verified by running a check
+
+A lesson counts as verified when a check actually ran and passed. The easy way is to ask
+your agent in plain words: *"prove the discount-server-side lesson"*, or after a change,
+*"re-check the stale okl lessons"*. It reads each lesson, finds or writes a test that fails
+when the lesson is broken, runs it, and records the result.
+
+Underneath, that is one command with three parts:
+
+| Part | What it is | Where it comes from |
+|---|---|---|
+| the lesson's id | `discount-server-side` | the `--id` it was recorded with; `okl drift` and the briefing show it in brackets |
+| `--run` | a command that fails if the lesson is broken, usually a test | a test that already exists, or one written for the lesson |
+| `--expect` | a word that appears in the output when it passes | `passed` for pytest |
 
 ```bash
 okl verify discount-server-side \
   --run "pytest -q tests/test_checkout.py" --expect "passed"
 ```
 
-`okl verify` runs the check and stamps the lesson only if it exits 0 **and** its output
-contains the `--expect` text. The command and result are stored as the evidence. There is
-no way to mark a lesson verified without running something: `okl record --verified` is
-refused.
+Not sure what to run? `okl verify <id>` on its own shows the lesson, the files it covers and
+the tests that already mention them, and stamps nothing. If none does, that is a search
+miss, not proof: a test can cover a lesson by driving the command without naming its files.
+Look before writing a new check, or hand both jobs to your agent.
+
+`okl verify` stamps the lesson only if the check exits 0 and, when you give `--expect`, its
+output contains that text. Give it: exit 0 alone can come from a check that ran nothing. The command is stored as the evidence, so the next time the lesson goes
+stale, `okl reverify` re-runs it with no parameters. There is no way to mark a lesson
+verified without running something: `okl record --verified` is refused.
 
 ### Commit, in this order
 
@@ -305,6 +333,7 @@ statements, architecture rules, published numbers.
 
 | You see | It means | Do |
 |---|---|---|
+| `OKL: not configured: no .okl/config.json here or in any parent directory…` (exit 2) | Nothing names a store here: a fresh clone, a git worktree, or the wrong directory | Run `okl init` here, `okl connect <url>`, or set `OKL_DATABASE_URL` |
 | Prompts are not briefed | this repo has no `.okl/config.json`; the hooks step aside | run `okl init` here |
 | A prompt is blocked with "OKL CHECK DID NOT RUN" | okl is set up here but could not run; the message says why | fix the cause, or start the session with `OKL_OFFLINE=1` |
 | `claude -p` prints the answer to "what did we learn?" | the Stop hook replaced the printed answer | run headless sessions with `OKL_DISABLED_HOOKS=encode` |
@@ -312,6 +341,7 @@ statements, architecture rules, published numbers.
 | CI fails with "NOTHING CHECKED" | a snapshot with zero rules is committed | remove it, or record a lesson with `--files` and re-export |
 | `okl drift` is red right after `okl record --files` | a new rule is unverified until its first `okl verify` | run its check with `okl verify` |
 | `okl drift` is red after you changed code | lessons governing those files need re-checking | `okl reverify` |
+| A briefed lesson is marked *STALE* or *UNVERIFIED* | its governed files changed after its last check, or no check has passed yet | `okl reverify` re-runs stored checks; a lesson with none needs one first: ask your agent to re-check it, or run `okl verify <id>` to see what to run |
 
 More: the [README](../README.md) covers costs, scopes, the shared service and the MCP tools;
 [DEPLOY](DEPLOY.md) covers running a shared store for a team.

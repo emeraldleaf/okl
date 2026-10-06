@@ -13,9 +13,10 @@ from pathlib import Path
 from typing import Any
 from urllib import request as _req
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
 
-from . import core
-from .store import Store
+from . import core, drift
+from .store import Node, Store
 
 CONFIG_DIR = ".okl"
 CONFIG_FILE = "config.json"
@@ -71,7 +72,7 @@ def save_config(data: dict[str, Any], root: Path | None = None) -> Path:
 class Client:
     """Uniform surface over local-store and remote-service modes."""
 
-    def __init__(self, config: dict[str, Any] | None = None):
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
         self.config = config if config is not None else load_config()
         self.service_url = os.environ.get("OKL_SERVICE_URL") or self.config.get("service_url")
         self.repo = self.config.get("repo") or Path.cwd().name
@@ -80,6 +81,7 @@ class Client:
 
     @property
     def mode(self) -> str:
+        """Where operations go: "remote" when a service URL is set, else "local"."""
         return "remote" if self.service_url else "local"
 
     @property
@@ -93,8 +95,8 @@ class Client:
 
         Safe because the thing this guard was written for is caught downstream anyway:
         `core.check` reports an empty store as EMPTY / "proves nothing" rather than clean.
-        What it still protects is the bare directory where nothing has been named at all —
-        there, reading would create an empty database purely as a side effect of asking.
+        What it still protects is the bare directory where nothing has been named at all,
+        where `_local_store` refuses rather than invent a database.
         """
         return (bool(self.service_url)
                 or bool(os.environ.get("OKL_DATABASE_URL"))
@@ -110,10 +112,17 @@ class Client:
             # record landed, and it landed somewhere else.
             url = os.environ.get("OKL_DATABASE_URL")
             if not url:
-                # otherwise the local store lives next to the config, or ./okl.db
+                # Otherwise the local store lives next to the config. With no config there
+                # is no store, and this used to invent one as ./okl.db: `okl record` and
+                # `okl seed` then exited 0 having written lessons where no hook, check or
+                # CI job ever looks (#117). Refusing here covers every command at once.
                 cfg = _find_config()
-                db = (cfg.parent / "okl.db") if cfg else Path("okl.db")
-                url = f"sqlite:///{db}"
+                if cfg is None:
+                    raise OKLNotConfiguredError(
+                        "not configured: no .okl/config.json here or in any parent directory, "
+                        "and neither OKL_SERVICE_URL nor OKL_DATABASE_URL is set, so there is "
+                        "no store to use. Run `okl init` here, or `okl connect <url>`.")
+                url = f"sqlite:///{cfg.parent / 'okl.db'}"
             self._store = Store(url)
         return self._store
 
@@ -168,25 +177,49 @@ class Client:
             except Exception:  # noqa: BLE001
                 detail = ""
             if 400 <= e.code < 500:
-                raise ValueError(f"OKL service rejected the request ({e.code}): {detail or e.reason}") from e
+                raise OKLRejectedError(f"OKL service rejected the request ({e.code}): {detail or e.reason}",
+                                       status=e.code) from e
             raise OKLUnreachableError(f"OKL service error at {url}: {e.code} {detail or e.reason}") from e
         except URLError as e:
             raise OKLUnreachableError(f"OKL service unreachable at {url}: {e}") from e
 
     # -- operations ---------------------------------------------------------
     def check(self, task: str, repo: str | None = None, limit: int | None = None) -> dict:
+        """The briefing for starting `task` in `repo` (default: this repo), as core.check returns it.
+
+        Lessons whose governed code changed since their last check come back marked.
+        Over a shared service, raises ValueError when the service rejects the request (any
+        4xx, such as a 401 for a missing token) and OKLUnreachableError when it cannot be
+        reached or fails on its side (a network error or any 5xx).
+        """
         repo = repo or self.repo
         payload = {"repo": repo, "task": task, "interests": self.interests or None}
         if limit is not None:
             payload["limit"] = limit
         if self.mode == "remote":
-            return self._post("/check", payload)
-        kw: dict[str, Any] = {"interests": self.interests}
-        if limit is not None:
-            kw["limit"] = limit
-        return core.check(self._local_store(), repo, task, **kw)
+            result = self._post("/check", payload)
+        else:
+            kw: dict[str, Any] = {"interests": self.interests}
+            if limit is not None:
+                kw["limit"] = limit
+            store = self._local_store()
+            result = core.check(store, repo, task, **kw)
+            # Over a shared service the service logs the briefing it answers; locally, the
+            # client is the only one who sees it (#129).
+            core.record_briefing(store, repo, result)
+        # Mark briefed lessons whose code changed since their last check (#93). Done here,
+        # not in core, because only the client has this repo's checkout: a shared service
+        # answering /check has no git history to compare against.
+        cfg = _find_config()
+        drift.annotate_briefing(result, repo, str(cfg.parent.parent if cfg else Path.cwd()))
+        return result
 
-    def record(self, **kwargs) -> str:
+    def record(self, **kwargs: Any) -> str:
+        """Record a lesson and return its id; takes core.record's keyword fields.
+
+        `repo` defaults to this repo. Raises ValueError when the lesson is rejected,
+        e.g. for an unknown tag or a bad scope.
+        """
         # Default the repo in BOTH modes: `--scope repo` needs it to become repo:<name>,
         # and the remote path used to skip this (found by E2E: 400 on every repo-scoped record).
         # `setdefault` is not enough: callers that pass every field explicitly (the MCP
@@ -200,21 +233,34 @@ class Client:
 
     def search(self, query: str, scope: str | None = None,
                node_types: list[str] | None = None, limit: int = 25) -> list[dict]:
+        """Lessons matching `query`, best first, optionally limited to a scope and node types."""
         if self.mode == "remote":
             return self._post("/search", {"query": query, "scope": scope,
                                           "node_types": node_types, "limit": limit})["results"]
         return core.search(self._local_store(), query, scope, node_types, limit)
 
     def link(self, src: str, rel: str, dst: str) -> None:
+        """Join two lessons with a typed edge, `src -rel-> dst`.
+
+        An unknown relation raises ValueError, locally or over a shared service.
+        """
         if self.mode == "remote":
             self._post("/link", {"src": src, "rel": rel, "dst": dst})
             return
         core.link(self._local_store(), src, rel, dst)
 
-    def verify(self, node_id: str, evidence: str) -> dict:
+    def verify(self, node_id: str, evidence: str, commit: str | None = None) -> dict:
+        """Mark a lesson verified and return it as a dict.
+
+        `evidence` names the check that passed; `commit` is the git HEAD it passed at,
+        which drift compares against. Raises ValueError for an unknown id, empty evidence or
+        a commit that is not a git object name.
+        """
         if self.mode == "remote":
-            return self._post("/verify", {"id": node_id, "evidence": evidence})
-        return core.verify(self._local_store(), node_id, evidence)
+            # A service older than #102 drops `commit` (pydantic ignores unknown fields),
+            # and drift then falls back to comparing times: degraded, never wrong.
+            return self._post("/verify", {"id": node_id, "evidence": evidence, "commit": commit})
+        return core.verify(self._local_store(), node_id, evidence, commit)
 
     def recurrence_report(self) -> dict | None:
         """The coverage-aware report, or None from a service too old to compute one --
@@ -222,6 +268,19 @@ class Client:
         if self.mode == "remote":
             return self._get("/metric/recurrence").get("report")
         return core.recurrence_report(self._local_store())
+
+    def exposure_report(self) -> dict | None:
+        """Which lessons this repo's briefings have shown (#129), or None from a service
+        too old to report it, in which case the caller says exposure is unknown."""
+        if self.mode == "remote":
+            query = urlencode({"repo": self.repo, "interests": ",".join(self.interests or [])})
+            try:
+                return self._get(f"/metric/exposure?{query}").get("report")
+            except OKLRejectedError as e:
+                if e.status == 404:
+                    return None
+                raise
+        return core.exposure_report(self._local_store(), self.repo, self.interests)
 
     def recurrence(self) -> list[dict]:
         """The v0.5 flat rows, kept for callers written against that release. Both modes
@@ -231,13 +290,12 @@ class Client:
             return self._get("/metric/recurrence")["recurrence_after_arming"]
         return core.recurrence_rows(core.recurrence_report(self._local_store()))
 
-    def all_nodes(self):
-        """Return all in-scope Node objects (local store, or /nodes on a remote service).
+    def all_nodes(self) -> list[Node]:
+        """Return every node in the store, unfiltered (local store, or /nodes on a remote service).
 
         Used by the drift detector, which needs the node set locally but runs its
         git lookups against the working tree.
         """
-        from .store import Node
         if self.mode == "remote":
             rows = self._get("/nodes")["nodes"]
             return [Node(**{k: v for k, v in r.items()
@@ -258,12 +316,33 @@ class Client:
                 return json.loads(resp.read())
         except HTTPError as e:
             if 400 <= e.code < 500:
-                raise ValueError(
+                raise OKLRejectedError(
                     f"OKL service rejected the request ({e.code} {e.reason}). "
-                    "If this is 401, set OKL_TOKEN or add \"token\" to .okl/config.json.") from e
+                    "If this is 401, set OKL_TOKEN or add \"token\" to .okl/config.json.",
+                    status=e.code) from e
             raise OKLUnreachableError(f"OKL service error at {url}: {e.code} {e.reason}") from e
         except URLError as e:
             raise OKLUnreachableError(f"OKL service unreachable at {url}: {e}") from e
+
+
+class OKLRejectedError(ValueError):
+    """Raised when a shared service answered and refused the request (any 4xx, such as a
+    401 for a missing token or a 400 for an unknown tag). The caller's mistake, not an
+    outage; a ValueError, so the CLI's backstop still turns it into exit 2.
+
+    `status` is the HTTP code, so a caller can tell a 404 from an older service that
+    lacks a route apart from a 401 it must not paper over.
+    """
+
+    def __init__(self, message: str, status: int | None = None) -> None:
+        super().__init__(message)
+        self.status = status
+
+
+class OKLNotConfiguredError(ValueError):
+    """Raised when a command needs a store and nothing names one: no .okl/config.json, no
+    OKL_SERVICE_URL, no OKL_DATABASE_URL. A ValueError, so the CLI's backstop turns it
+    into exit 2 ("could not run") with this message, never a write to a stray file."""
 
 
 class OKLUnreachableError(RuntimeError):

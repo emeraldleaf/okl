@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="980" height="994" viewBox="0 0 980 994" font-family="ui-sans-serif,-apple-system,Segoe UI,Helvetica,Arial,sans-serif">
 <rect width="980" height="994" fill="#F5F3F0"/>
 <text x="28" y="46" font-size="27" font-weight="700" fill="#1E1B18">How an okl briefing gets built</text>
-<text x="28" y="72" font-size="14" fill="#4E4740">161 records and one task sentence become the 12 an agent reads. Four stages narrow it; only applies_to may exclude on validity.</text>
+<text x="28" y="72" font-size="14" fill="#4E4740">183 records and one task sentence become the 12 an agent reads. Four stages narrow it; only applies_to may exclude on validity.</text>
 <text x="28" y="96" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A">GENERATED from the live pipeline - docs/render_pipeline_diagram.py</text>
 <text x="28" y="112" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A">traced task: "Add an endpoint that returns a single order by id for the signed-in user."</text>
 <text x="28" y="128" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A">repo interests: python, method, security, agent-safety, retrieval-design, eval-integrity, data-quality</text>
@@ -12,7 +12,7 @@
 <text x="120" y="179" font-size="15" font-weight="600" fill="#1E1B18">The corpus</text>
 <text x="120" y="198" font-size="12" fill="#4E4740">Every record carries scope (permission), tags (subject), applies_to (validity) and files</text>
 <text x="120" y="213" font-size="12" fill="#4E4740">(what it governs). Nothing is ranked yet.</text>
-<text x="120" y="224" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">161 records</text>
+<text x="120" y="224" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">183 records</text>
 <rect x="120" y="230" width="818" height="9" rx="2" fill="#EBE7E1"/><rect x="120" y="230" width="818" height="9" rx="2" fill="#B4531F"/>
 <rect x="28" y="250" width="924" height="90" fill="#FFFFFF" stroke="#DCD6CE"/>
 <rect x="28" y="250" width="74" height="90" fill="#EBE7E1" stroke="#DCD6CE"/>
@@ -40,7 +40,7 @@
 <text x="65" y="480" font-size="26" font-weight="700" fill="#B4531F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle">3</text>
 <text x="65" y="498" font-size="9" fill="#7C736A" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle" letter-spacing="1">VALID</text>
 <text x="120" y="467" font-size="15" font-weight="600" fill="#1E1B18">applies_to - the only filter allowed to exclude</text>
-<text x="120" y="486" font-size="12" fill="#4E4740">EXCLUSIVE. Set by hand on 31 of 161 records, only where a lesson is false off-stack. Unset</text>
+<text x="120" y="486" font-size="12" fill="#4E4740">EXCLUSIVE. Set by hand on 50 of 183 records, only where a lesson is false off-stack. Unset</text>
 <text x="120" y="501" font-size="12" fill="#4E4740">means anywhere, which is why it is safe.</text>
 <text x="938" y="467" font-size="9.5" fill="#9B3B3B" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="700" text-anchor="end" letter-spacing="0.8">DROPS</text>
 <text x="120" y="512" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">29 survive</text>
@@ -54,9 +54,9 @@
 <text x="120" y="582" font-size="12" fill="#4E4740">INCLUSIVE. Untagged always passes. The exclusive version was reverted (REPORT 4d): it hid 35</text>
 <text x="120" y="597" font-size="12" fill="#4E4740">of 172 records and the briefed arm then reproduced a defect it dropped.</text>
 <text x="938" y="563" font-size="9.5" fill="#4A6B3D" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="700" text-anchor="end" letter-spacing="0.8">ANY-MATCH</text>
-<text x="120" y="608" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">21 survive</text>
-<text x="938" y="608" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A" text-anchor="end">8 dropped: no shared subject</text>
-<rect x="120" y="614" width="818" height="9" rx="2" fill="#EBE7E1"/><rect x="120" y="614" width="477" height="9" rx="2" fill="#B4531F"/><rect x="597" y="614" width="182" height="9" rx="2" fill="#9B3B3B" opacity="0.4"/>
+<text x="120" y="608" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">22 survive</text>
+<text x="938" y="608" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A" text-anchor="end">7 dropped: no shared subject</text>
+<rect x="120" y="614" width="818" height="9" rx="2" fill="#EBE7E1"/><rect x="120" y="614" width="500" height="9" rx="2" fill="#B4531F"/><rect x="620" y="614" width="159" height="9" rx="2" fill="#9B3B3B" opacity="0.4"/>
 <rect x="28" y="634" width="924" height="90" fill="#FFFFFF" stroke="#DCD6CE"/>
 <rect x="28" y="634" width="74" height="90" fill="#EBE7E1" stroke="#DCD6CE"/>
 <text x="65" y="672" font-size="26" font-weight="700" fill="#B4531F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle">5</text>
@@ -66,8 +66,8 @@
 <text x="120" y="693" font-size="12" fill="#4E4740">store. The number discarded travels with the result.</text>
 <text x="938" y="659" font-size="9.5" fill="#9B3B3B" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="700" text-anchor="end" letter-spacing="0.8">TRUNCATES</text>
 <text x="120" y="704" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">12 delivered</text>
-<text x="938" y="704" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A" text-anchor="end">9 reported as trimmed</text>
-<rect x="120" y="710" width="818" height="9" rx="2" fill="#EBE7E1"/><rect x="120" y="710" width="273" height="9" rx="2" fill="#B4531F"/><rect x="393" y="710" width="204" height="9" rx="2" fill="#9B3B3B" opacity="0.4"/>
+<text x="938" y="704" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A" text-anchor="end">10 reported as trimmed</text>
+<rect x="120" y="710" width="818" height="9" rx="2" fill="#EBE7E1"/><rect x="120" y="710" width="273" height="9" rx="2" fill="#B4531F"/><rect x="393" y="710" width="227" height="9" rx="2" fill="#9B3B3B" opacity="0.4"/>
 <rect x="28" y="730" width="924" height="90" fill="#FFFFFF" stroke="#DCD6CE"/>
 <rect x="28" y="730" width="74" height="90" fill="#EBE7E1" stroke="#DCD6CE"/>
 <text x="65" y="768" font-size="26" font-weight="700" fill="#B4531F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle">6</text>
