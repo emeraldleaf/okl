@@ -828,6 +828,14 @@ all this can say: the cut is safe on this task set; nothing here shows it helps.
 - **Both models are one vendor's; "budget model" ≈ haiku.** The local-model version of
   the claim (via `GENERATOR_CMD="ollama run ..."`) is unmeasured — the harness supports
   it; nobody has run it yet.
+- **The corpus changed on 2026-10-04: every run above briefed from a smaller one.** Adding
+  `seed/python-canon.json` (#122) took the bundled seed corpus from 161 records to 178. In
+  this repo's store (the one the harness briefs from, with `--interests ""`), 4 of the 8
+  tasks' briefings now include 1-3 Python-canon lessons: `judge_summary` and `ci_linter` 3
+  each, `spa_tokens` and `rate_limiter` 1 each. The briefed arm has changed, so a run after
+  this date is not comparable to the receipts above without saying so. `evals/preflight.py`
+  still passes: each task still receives the rule it tests (7 of 8, plus the accepted
+  `exit_code_trust` gap).
 
 ## 7. Provenance of the earlier numbers
 

@@ -28,10 +28,12 @@ try:
     from fastapi import FastAPI, Header, HTTPException
     from pydantic import BaseModel
 except ImportError as e:  # pragma: no cover
-    raise RuntimeError("The service needs FastAPI — install okl[service]") from e
+    raise RuntimeError("The service needs FastAPI: install 'observed-knowledge-ledger[service]'") from e
 
 
 class CheckReq(BaseModel):
+    """Request body for POST /check."""
+
     repo: str
     task: str
     limit: int = 12
@@ -39,6 +41,8 @@ class CheckReq(BaseModel):
 
 
 class RecordReq(BaseModel):
+    """Request body for POST /record: one lesson to write. type, title and scope are required."""
+
     type: str
     title: str
     scope: str
@@ -57,9 +61,13 @@ class RecordReq(BaseModel):
     applies_to: str | None = None
     id: str | None = None
     verified: bool = False
+    # okl seed re-importing a lesson the store holds: keep its verification (#110).
+    keep_verification: bool = False
 
 
 class SearchReq(BaseModel):
+    """Request body for POST /search."""
+
     query: str
     scope: str | None = None
     node_types: list[str] | None = None
@@ -67,17 +75,29 @@ class SearchReq(BaseModel):
 
 
 class LinkReq(BaseModel):
+    """Request body for POST /link."""
+
     src: str
     rel: str
     dst: str
 
 
 class VerifyReq(BaseModel):
+    """Request body for POST /verify."""
+
     id: str
     evidence: str   # the observed check that passed (command + timestamp)
+    commit: str | None = None   # git HEAD the check passed at; drift diffs against it (#102)
 
 
 def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901
+    """Build the HTTP app over `store`, or over the store OKL_DATABASE_URL names.
+
+    With neither, it uses ./okl.db in the current directory, so a deployment should
+    always set OKL_DATABASE_URL (#125). When OKL_TOKEN is set, every route except /health
+    needs it as a bearer token and the API docs routes (/openapi.json, /docs, /redoc)
+    are switched off.
+    """
     # Optional shared-secret gate. If OKL_TOKEN is set it covers READS as well as
     # writes. Reads used to be open while writes were gated, which meant a deployed
     # service handed anyone who found the URL a `GET /nodes` dump of the org's entire
@@ -112,8 +132,11 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901
     @app.post("/check")
     def check(req: CheckReq, authorization: str | None = Header(default=None)) -> dict[str, Any]:
         _auth(authorization)
-        return core.check(_store, req.repo, req.task, limit=req.limit,
-                          interests=req.interests)
+        result = core.check(_store, req.repo, req.task, limit=req.limit,
+                            interests=req.interests)
+        # The service is the only party that sees every client's briefings (#129).
+        core.record_briefing(_store, req.repo, result)
+        return result
 
     @app.post("/record")
     def record(req: RecordReq, authorization: str | None = Header(default=None)) -> dict[str, str]:
@@ -134,14 +157,19 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901
     @app.post("/link")
     def link(req: LinkReq, authorization: str | None = Header(default=None)) -> dict[str, bool]:
         _auth(authorization)
-        core.link(_store, req.src, req.rel, req.dst)
+        try:
+            core.link(_store, req.src, req.rel, req.dst)
+        except ValueError as e:
+            # An unknown relation is the caller's mistake, as in /record: a 500 here made
+            # the client report a typo as an outage (#119).
+            raise HTTPException(status_code=400, detail=str(e)) from e
         return {"ok": True}
 
     @app.post("/verify")
     def verify(req: VerifyReq, authorization: str | None = Header(default=None)) -> dict[str, Any]:
         _auth(authorization)
         try:
-            return core.verify(_store, req.id, req.evidence)
+            return core.verify(_store, req.id, req.evidence, req.commit)
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -156,6 +184,13 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901
         rows = core.recurrence_rows(report)
         return {"recurrence_after_arming": rows, "count": len(rows), "report": report}
 
+    @app.get("/metric/exposure")
+    def exposure(repo: str, interests: str = "",
+                 authorization: str | None = Header(default=None)) -> dict[str, Any]:
+        _auth(authorization)
+        wanted = [t for t in interests.split(",") if t] or None
+        return {"report": core.exposure_report(_store, repo, wanted)}
+
     @app.get("/nodes")
     def nodes(authorization: str | None = Header(default=None)) -> dict[str, Any]:
         _auth(authorization)
@@ -169,7 +204,7 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901
 _app: FastAPI | None = None
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> FastAPI:
     """Build `app` on first attribute access, not at import.
 
     Every ASGI host — uvicorn, gunicorn, a platform's default start command — is

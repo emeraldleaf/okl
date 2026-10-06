@@ -1,3 +1,4 @@
+<!-- mcp-name: io.github.emeraldleaf/okl -->
 <div align="center">
 
 # okl — Observed Knowledge Ledger
@@ -55,7 +56,9 @@ codebase plus the bundled packs for your stack, so the first prompt is already b
 (`--interests` chooses your own subjects; `--no-seed` leaves the store empty).
 
 `init` wires Claude Code when the repo has a `.claude/` directory or `claude` is on your
-PATH; `--claude` forces it and `--no-claude` skips it. **Prefer the plugin?** Install it
+PATH; `--claude` forces it and `--no-claude` skips it. `--no-ci` skips the GitHub Actions
+workflow, for a private repo that would pay for its minutes or one that runs another CI,
+and later runs remember that; `--ci` puts it back. **Prefer the plugin?** Install it
 *before* running `init` — `/plugin marketplace add emeraldleaf/okl`, then
 `/plugin install okl@okl` in Claude Code — and `init` leaves the hooks to the plugin, so
 nothing is wired twice. (Installed after? `okl doctor` reports the double wiring, and
@@ -101,7 +104,9 @@ okl doctor                  # flags other agent-memory tools and double wiring
 - **Proving a lesson is true** is a check you run, not a flag you set:
   `okl verify <id> --run "pytest -q tests/test_orders.py" --expect "passed"`.
 - **When code a lesson governs changes,** `okl drift` goes red until someone re-runs its
-  check (a lesson recorded with `--files` is also red until its first `okl verify`).
+  check (a lesson recorded with `--files` is also red until its first `okl verify`). The
+  briefing says so too: such a lesson is marked *STALE* (or *UNVERIFIED*) with the file
+  that changed, so the agent confirms it against the code instead of trusting it blindly.
   `okl reverify` re-runs each drifted lesson's stored check after you confirm. CI reads a
   committed snapshot, `okl-drift.json`, which `okl verify` creates the first time a lesson
   with `--files` is verified and keeps current after that: commit it after the code change
@@ -144,9 +149,9 @@ Two things ship in the package. They are not coequal:
   measures this.
 
   It is worth being precise about what that store fills up with, because "lessons a
-  codebase has learned" invites the picture of a bug database. In the 161-record corpus
-  in [seed/](seed/) it is mostly not that: **90 Rules, 20 Decisions and 7 Gates against
-  34 Defects** — conventions the code follows and trade-offs already settled, not a
+  codebase has learned" invites the picture of a bug database. In the 183-record corpus
+  in [seed/](seed/) it is mostly not that: **110 Rules, 20 Decisions and 7 Gates against
+  36 Defects** — conventions the code follows and trade-offs already settled, not a
   ledger of things that broke. Count it yourself:
 
   ```bash
@@ -164,6 +169,26 @@ Two things ship in the package. They are not coequal:
 | **shared layer** (`okl serve`) | one small service owning the database, so many repos share one store | one place you run it |
 | **scaffold** (`okl scaffold`) | the in-repo starter files: canon, gates, registries, evals | stamped into each repo, optional |
 
+## What okl is not for
+
+okl holds lessons: what an agent would see or do (the symptom), what to do instead (the
+fix), why, and where it can be proven, the check. Most of a good agent setup is other
+things, and they work better elsewhere:
+
+| If it is… | Put it in | Why not okl |
+|---|---|---|
+| a rule every session needs, whatever the task | `CLAUDE.md` / `AGENTS.md` | those load in full every time; a briefing picks lessons per task |
+| a procedure: how to release, migrate or set up | a skill, runbook or script | a procedure is read whole and in order; a briefing hands over a few short records |
+| commands, and "for X, read Y" pointers | `CLAUDE.md` / `AGENTS.md`, or a skill | it is a map the agent needs on every relevant task |
+| formatting and code style | a formatter or linter | a tool enforces it on every line; a lesson can only remind |
+| a bug that is still open | your issue tracker | the tracker owns open work; okl keeps what was learned once it is fixed |
+| secrets, credentials, personal data | nowhere near okl | the store is shared and its lessons are copied into agent context |
+
+Everything with a symptom and a fix belongs here: a convention the code follows, a decision
+made on purpose, a defect class you have already paid for. The
+[getting-started guide](docs/GETTING-STARTED.md#store-records-vs-claudemd--agentsmd) has
+the same split from the side of recording.
+
 ## What it keeps from drifting, and how
 
 Knowledge rots in a specific way: the code changes and everything written *about* the
@@ -172,7 +197,7 @@ and it is worth knowing which one catches what, because they do not overlap.
 
 | Drift | Caught by | How it works | Fires when |
 |---|---|---|---|
-| **A rule vs. the code it governs** | `okl drift --gate` | a record declares the path globs it governs; git is asked for the last commit touching them | that commit is newer than the record's last verification — or the rule has never been verified at all, so a new `--files` rule is red until its first `okl verify` |
+| **A rule vs. the code it governs** | `okl drift --gate` | a record declares the path globs it governs, and `okl verify` records the commit its check passed at | those files differ between that commit and HEAD (a verification with no recorded commit, or one this clone lacks, compares commit times instead) — or the rule has never been verified at all, so a new `--files` rule is red until its first `okl verify` |
 | **A retired identifier reappearing in prose** | `check-tombstones.sh` | greps the working tree's source, docs, comments and config for every tombstoned name | any non-allowlisted hit |
 | **A withdrawn claim being restated** | `check-retractions.sh` | greps the working tree's markdown for the exact quoted claim from the retraction registry | the quote appears outside the registry |
 | **A doc nobody links to** | `check-doc-orphans.sh` | checks that each top-level `docs/` doc or image is named by a hub file or a `docs/*.md` (one hop, not transitive) | nothing names it, so it drifts unread |
@@ -436,16 +461,18 @@ pip install "observed-knowledge-ledger[all]"
 
 Installing okl is not free. It is worth knowing exactly what you are signing up for
 before you wire it into every prompt. Every number below was measured rather than
-estimated — on a fresh store holding the 161 bundled seed records, with one representative
-task ("add an endpoint that returns an order for the logged-in user"; tokens ≈ characters
-÷ 4). Your store and your tasks will differ.
+estimated, with one representative task ("add an endpoint that returns an order for the
+logged-in user"; tokens ≈ characters ÷ 4). The sizes come from a fresh store holding every
+bundled seed pack, 183 records (`python3 evals/briefing_size.py`, receipt
+[`evals/results/briefing-size-20261004-2244.json`](evals/results/briefing-size-20261004-2244.json)); the latency from the 161 seed records bundled before that.
+Your store and your tasks will differ.
 
 **Per prompt, once the hook is installed:**
 
 | | |
 |---|---|
 | Latency | **~0.1s** for the whole `okl check` process (0.07s median warm) — one local SQLite query, no network in local mode |
-| Context | **~1,650 tokens** at the default `--limit 12`, down to **~230** at `--format actions --limit 3` |
+| Context | **~1,620 tokens** at the default `--limit 12`, down to **~230** for only the action list at `--limit 3` |
 
 **Per session:** the Stop hook interrupts once at the end to ask what was learned. It
 blocks the first stop only, and answering it is the whole write side of the loop. With
@@ -454,8 +481,9 @@ session's own transcript — candidates, not records: no hook runs on every tool
 no model is called to summarise anything.
 
 **In your repo:** `okl init` writes `.okl/` (config, the local database, a `.gitignore`
-covering both) and, when it wires Claude Code, two hook scripts plus their registration. It
-also installs `.github/workflows/okl-verify.yml`, which runs the drift gate on every PR.
+covering both) and, when it wires Claude Code, two hook scripts plus their registration. In a
+git repository it also installs `.github/workflows/okl-verify.yml`, which runs the drift
+gate on every PR, unless you pass `--no-ci`.
 CI has no store of its own (the local one is gitignored), so give it one: once a lesson
 governs files, commit `okl-drift.json` (`okl verify` refreshes it; `okl export --drift`
 writes it; a snapshot of the rules drift reads, no lesson bodies), or set the
@@ -482,6 +510,10 @@ okl init --interests "python,security"    # drop records tagged for stacks you d
 - **`--limit N`** caps how many records are drawn on. The full briefing reports how many
   it trimmed; `--format actions` does not, so a short actions list can hide a miss
   without saying so.
+- **The prompt hook takes two of these from the environment**: `OKL_BRIEFING_LIMIT=N`
+  becomes `--limit N`, and `OKL_BRIEFING_COMPACT=1` sends only the action list. They are
+  for a model with a small context window; see
+  [Subagents and small context budgets](#subagents-and-small-context-budgets).
 - **`interests`** is the one to reach for on a mature shared store. Tags filter
   inclusively — an org record passes when it is untagged or shares any one tag with your
   interests, so declaring `python` keeps out a record tagged only `dotnet`, but not one
@@ -492,6 +524,10 @@ okl init --interests "python,security"    # drop records tagged for stacks you d
   budget to be wrong about that.
 
 ### Turning parts off
+
+`OKL_BRIEFING_LOG=0` stops okl logging which lessons each briefing showed, the log
+`okl metric` reads to report exposure. The log keeps the time, the repo and the lesson ids,
+never the task: a briefing's task is usually your prompt.
 
 `OKL_QUIET=1` keeps the briefing but hides the one-line *okl · briefed …* notice. Switch a
 hook off by name with `OKL_DISABLED_HOOKS=briefing` (the pre-task read),
@@ -576,7 +612,7 @@ touches only the current directory, and only these:
 | `.claude/hooks/stop-okl-encode.sh` | **executable**; runs at session end, asks what was learned |
 | `.claude/settings.json` | registers those two hooks (merged in place; your existing keys are preserved) |
 | `.mcp.json` | registers the okl MCP server — only when the `mcp` extra is installed |
-| `.github/workflows/okl-verify.yml` | **a CI workflow** running the drift gate on pull requests — only in a git repository |
+| `.github/workflows/okl-verify.yml` | **a CI workflow** running the drift gate on pull requests — only in a git repository, and not with `--no-ci` |
 
 Re-running `init` is safe as long as you pass the same `--repo` (without it, the repo name
 resets to the directory's name): it upgrades okl's own files, keeps any you edited (say so
@@ -680,16 +716,19 @@ okl export --drift   # write okl-drift.json, the committed snapshot CI's drift g
 okl doctor           # names other agent-memory tools installed beside okl (claude-mem,
                      #   agentmemory, ECC, beads) and how each collides with okl's hooks;
                      #   reads settings only, changes nothing. `okl init` says the same.
+okl --version        # the installed release, for a repo whose hooks run a pinned okl
 okl coverage         # ratio of encoded-knowledge lines to code lines — a health signal
 okl bootstrap        # cold-start a new repo: propose starter notes from its own
                      #   git history + docs into a reviewable file you edit, then seed
 okl metric           # recurrence: defect classes that came back, split by whether a
-                     #   gate existed, with how many defects the number can speak for
+                     #   gate existed, with how many defects the number can speak for;
+                     #   and exposure: how many briefings okl has logged, the lessons
+                     #   never shown, and those shown most with no stored check
 ```
 
 ## Subagents and small context budgets
 
-A full briefing costs roughly **1,650 tokens** on the measurement above — fine for a main session with a large
+A full briefing costs roughly **1,620 tokens** on the measurement above — fine for a main session with a large
 window, punishing for a subagent working in a few thousand. That asymmetry matters
 because subagents are exactly where org rules get lost: a focused worker handling one
 subtask has the least context and the most need for "here is the mistake this codebase
@@ -710,9 +749,19 @@ OKL — 3 rule(s) apply before you start:
 ...
 ```
 
-**Measured on the 161 bundled seed records, one representative task:** ~230 tokens at
-`--limit 3`, ~380 at `--limit 5`, ~520 at `--limit 8` and ~830 at `--limit 12`, against
-~1,650 for the full briefing. Cheap enough to call per subtask.
+**Measured on every bundled seed pack (183 records), one representative task**
+([receipt](evals/results/briefing-size-20261004-2244.json)): ~230 tokens at `--limit 3`, ~380 at `--limit 5`, ~510 at
+`--limit 8` and ~810 at `--limit 12`, against ~1,620 for the full briefing. Cheap enough
+to call per subtask.
+
+The same holds for a main session on a model with a small context window, where the
+briefing arrives with every prompt. Set `OKL_BRIEFING_COMPACT=1` and the prompt hook sends
+only the action list (`okl check --compact`); set `OKL_BRIEFING_LIMIT=5` and it draws on
+five records instead of twelve. Together that is ~380 tokens instead of ~1,620 on the
+measurement above. Set them where the agent starts: hooks inherit its environment. A
+limit that is not a whole number above zero is ignored, and an okl too old for
+`--compact` briefs in full rather than blocking the prompt. Like `--format actions`, the
+compact briefing does not say how many records it trimmed.
 
 The full briefing is itself capped: `check` keeps the top `--limit` records (12 by
 default) from the ranked, filtered set and says how many it trimmed. Historically, before
@@ -777,7 +826,7 @@ folder.) Two clarifications that stop the common misreadings:
    shipped writes `VERIFIED_ON` receipts by default; a gate script can emit one with
    `okl link <gate_id> VERIFIED_ON <defect_id>` when it watches a gate prove itself.
 4. **Time attacks every stamp** — `drift` re-grades verifications the moment governed
-   files change after `verified_at`; a record given `--ttl-days` decays into `STALE` when
+   files change after their last verification; a record given `--ttl-days` decays into `STALE` when
    nobody re-earns it (there is no TTL by default);
    and `okl metric` scores the whole system on outcomes — defect classes that came
    back — the one number it can't flatter itself on. It earns that by stating its own
@@ -801,7 +850,9 @@ okl seed --all                        # import every pack (explicit on purpose)
 ```
 
 The packs hold real, dated records from production codebases (a .NET service, a
-geospatial ML pipeline, a Python RAG service, a React app). They are org-scoped, so
+geospatial ML pipeline, a Python RAG service, a React app), plus `python-canon`: the .NET
+packs' engineering rules translated to Python from cited sources (PEPs, the mypy, pytest
+and import-linter docs, Google's style guide), with the okl incidents that prompted them. They are org-scoped, so
 importing packs for stacks you do not use fills every briefing here with noise about
 frameworks you will never touch — which is why `--all` is opt-in rather than default.
 
@@ -910,6 +961,12 @@ is safe. Unlike the hook, a tool result cannot block the agent; it can only warn
 - **Start simple, grow on evidence.** A stdlib-only core and a single SQLite file by
   default; add the shared service, Postgres, or anything heavier only when a concrete
   symptom demands it (recorded as a decision in `docs/decisions/`).
+- **Records, not an ontology store.** Lessons are typed records found by ranked full-text
+  search, with one-step relationships for reporting. An RDF triple store would answer
+  precise structural questions okl does not ask, and could not rank a task sentence
+  without adding back a search engine. [The decision](docs/decisions/2026-10-05-records-not-an-ontology-store.md)
+  explains how lessons are stored and found now, and when a one-way RDF export would earn
+  its place.
 
 ## Layout
 
@@ -918,13 +975,13 @@ src/okl/
   store.py        # the database: note + link schema, swappable SQLite/Postgres backend
   core.py         # check / record / search / link — the logic, independent of transport
   client.py       # resolves local-file vs. shared-service; fails closed
-  cli.py          # the `okl` command
+  cli/            # the `okl` command, one module per command group (cli/__init__.py maps them)
   drift.py        # source-vs-spec drift detection
   ownership.py    # okl-fingerprint lines: which installed files are okl's, and untouched
   coexist.py      # `okl doctor`: detects other agent-memory plugins and double wiring
   bootstrap.py    # propose starter notes from a repo's git history + docs
-  service.py      # the shared web service (okl[service])
-  mcp_server.py   # coding-agent tools (okl[mcp])
+  service.py      # the shared web service (the [service] extra)
+  mcp_server.py   # coding-agent tools (the [mcp] extra)
   seed.py         # load a JSON seed file
   scaffold_cmd.py # the `okl scaffold` starter-files stamper
 seed/             # starter lesson files (examples + genuinely useful defects)
@@ -935,7 +992,7 @@ tests/            # end-to-end tests
 ## Test
 
 ```bash
-pip install -e ".[dev]"   # from a clone of this repo
+pip install -e . --group dev   # from a clone of this repo (pip 25.1+; or `uv sync`)
 pytest -q                 # full suite
 ```
 

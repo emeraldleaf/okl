@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 # Distribution name only. The CLI command, the import package, and the repo are all `okl`;
 # PyPI rejects `okl` as too similar to the existing `oki` (l/i are treated as confusable).
 name = "observed-knowledge-ledger"
-version = "0.7.4"
+version = "0.7.9"
 description = "Observed Knowledge Ledger — lessons your coding agents can trust: proven by checks, flagged when the code changes, shared across repos when you want."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -15,22 +15,50 @@ authors = [{ name = "Joshua Dell" }]
 keywords = ["ai-engineering", "knowledge-layer", "mcp", "agentic-coding", "encoding-loop"]
 dependencies = []  # local + client path is stdlib-only
 
+[project.urls]
+# PyPI shows these as the project's links. Without them the PyPI page had no way back to
+# the repo, its issues or the changelog.
+Homepage = "https://emeraldleaf.dev/projects/okl/"
+Repository = "https://github.com/emeraldleaf/okl"
+Issues = "https://github.com/emeraldleaf/okl/issues"
+Changelog = "https://github.com/emeraldleaf/okl/blob/main/CHANGELOG.md"
+Documentation = "https://github.com/emeraldleaf/okl/blob/main/docs/GETTING-STARTED.md"
+
 [project.optional-dependencies]
 service = ["fastapi>=0.110", "uvicorn>=0.29", "pydantic>=2"]
 postgres = ["psycopg[binary]>=3.1"]
 mcp = ["mcp>=1.2"]
 all = ["fastapi>=0.110", "uvicorn>=0.29", "pydantic>=2", "psycopg[binary]>=3.1", "mcp>=1.2"]
+
+[dependency-groups]
+# The tools that build and gate okl itself. A dependency group (PEP 735), not an extra:
+# extras are published, so `[dev]` let anyone `pip install` pytest and ruff as if they
+# were part of okl. Install with `pip install -e . --group dev` (pip 25.1+) or `uv sync`.
 dev = [
   # Gating tools are pinned exactly: a range lets a new release retro-fail a branch
   # that changed nothing, which is a recorded defect in this repo's own store.
   # Verified against PyPI and run green here on 2026-09-02, rather than a
   # plausible-looking guess: an invented version 404s the install step.
   "pytest==9.1.1", "pytest-cov==7.1.0", "ruff==0.16.8", "mypy==2.3.1",
+  "import-linter==2.15",  # verified on PyPI 2026-10-04 (released 2026-09-04)
   "fastapi>=0.110", "uvicorn>=0.29", "pydantic>=2", "httpx>=0.27",
+  # The service tests use Starlette's TestClient. Starlette 1.2.0 (2026-05-28) moved it to
+  # httpx2 (github.com/pydantic/httpx2, which Pydantic maintains as httpx's successor) and
+  # warns when it falls back to httpx; the strict pytest config turns that into failures.
+  # httpx stays for older Starlette, whose TestClient imports only httpx.
+  "httpx2>=2.13",
+  # The MCP SDK, so CI runs the MCP server's own test: without it that test skips, and
+  # the server reached CI untested (as Postgres did before, #35).
+  "mcp>=1.2",
 ]
 
 [project.scripts]
 okl = "okl.cli:main"
+# The same CLI under the distribution's name, for the MCP Registry (server.json). Its
+# clients start a PyPI server as `uvx <package> <args>`, and uvx runs the command named
+# after the package; with only `okl` that failed: "An executable named
+# `observed-knowledge-ledger` is not provided by package `observed-knowledge-ledger`".
+observed-knowledge-ledger = "okl.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/okl"]
@@ -42,6 +70,13 @@ packages = ["src/okl"]
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+# Strict, as the Scientific Python development guide recommends: a mistyped marker or
+# config key is an error instead of a silently ignored line, and an xfail that starts
+# passing fails. `strict` turns all of pytest's strictness options on at once.
+strict = true
+# Any warning fails the test that raised it. Python hides deprecation warnings by
+# default, and they are how a new Python or library version says what it will break.
+filterwarnings = ["error"]
 
 [tool.coverage.run]
 source = ["okl"]
@@ -52,30 +87,62 @@ omit = ["*/scaffold/*"]
 [tool.coverage.report]
 # A ratchet at the level measured IN THE CI ENVIRONMENT on 2026-09-02, not an
 # aspiration. The distinction matters and cost a red build: locally, with the optional
-# psycopg and mcp extras installed, coverage reads 69%; CI installs only [dev], so those
+# psycopg and mcp extras installed, coverage reads 69%; CI installs only the dev group, so those
 # paths are unreachable and their tests skip, and the true figure is 66.7%. A threshold
 # read off a developer's machine fails on a runner that has less installed.
 #
-# It should only ever be raised. The weak spots it is deliberately NOT hiding:
-# bootstrap.py has no test at all, and cli.py sits at 49%.
+# It should only ever be raised. The weak spots it is deliberately NOT hiding, measured
+# 2026-10-04: bootstrap.py has no test at all, and in the CLI, health.py is at 30%,
+# servers.py at 40% and lessons.py at 49%.
 fail_under = 66
 show_missing = true
 
 [tool.mypy]
 python_version = "3.10"
 files = ["src/okl"]
-# Not --strict yet: that is 94 findings, mostly missing annotations on internal helpers
-# and Any returns. Tracked as a follow-up rather than a blanket ignore, so the gate that
-# exists is one that actually passes.
+# Tightened in the order mypy's own docs give for an existing codebase ("Using mypy with
+# an existing codebase"): the cheap warnings first, then check_untyped_defs, which they
+# recommend "as soon as you can" because it checks the BODIES of functions that have no
+# annotations. Full --strict comes last, once public signatures are annotated; each step
+# is a gate that passes, never a blanket ignore.
+warn_unused_configs = true
 warn_unused_ignores = true
 warn_redundant_casts = true
+strict_equality = true
+check_untyped_defs = true
+warn_unreachable = true
+# Every function in src/okl is typed (#118), so these hold with no changes: an untyped
+# or half-typed new function is now an error. --strict is the remaining step.
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+# A `# type: ignore` must name the error it silences, so it cannot hide a new one.
+enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
 
 [[tool.mypy.overrides]]
 # psycopg and mcp are OPTIONAL extras: the core install has neither, and CI installs
-# only [dev]. Naming them here rather than passing --ignore-missing-imports globally
+# only the dev group. Naming them here rather than passing --ignore-missing-imports globally
 # keeps a genuine typo in a first-party import an error.
 module = ["psycopg", "psycopg.*", "mcp", "mcp.*"]
 ignore_missing_imports = true
+
+[tool.importlinter]
+root_package = "okl"
+
+[[tool.importlinter.contracts]]
+# The architecture test for the rule "dependency direction is one-way". It held by
+# convention alone until this contract; now CI fails the first import that points up.
+# Higher layers may import lower ones, never the reverse; `|` marks siblings that must
+# not import each other either. Modules not listed (bootstrap, coexist, ownership,
+# scaffold_cmd) import nothing from okl and are used only by the CLI.
+name = "Dependencies point one way: CLI -> adapters -> client -> core -> store"
+type = "layers"
+layers = [
+  "okl.cli",
+  "okl.service | okl.mcp_server | okl.seed",
+  "okl.client",
+  "okl.core | okl.drift",
+  "okl.store",
+]
 
 [tool.ruff]
 line-length = 100
@@ -85,7 +152,20 @@ target-version = "py310"
 # E/W pycodestyle, F pyflakes, I import order, UP modernize, B bugbear-lite via flake8-bugbear set
 # S = security (bandit), C90 = complexity, SIM/RET/PERF = simplification,
 # A = builtin shadowing, DTZ = naive datetimes, PTH = pathlib over os.path.
-select = ["E", "W", "F", "I", "UP", "B", "S", "C90", "SIM", "RET", "PERF", "A", "DTZ", "PTH", "N"]
+# BLE = no catch-all `except Exception` without a stated reason; PGH = a noqa or type:
+# ignore names the rule it silences; RUF100 = a noqa that silences nothing is removed.
+#
+# Readability, so someone new can follow any file (PEP 257 and Google's Python guide):
+# D1xx = every module, public class and public function has a docstring that says what
+# it is for; ANN = every signature is typed, because types are documentation (mypy
+# checks them in src/okl; elsewhere they are for the reader); PLR09xx = function size
+# held to pylint's limits; T20 = no print() outside
+# the command-line layers (per-file-ignores below say which those are).
+select = ["E", "W", "F", "I", "UP", "B", "S", "C90", "SIM", "RET", "PERF", "A", "DTZ", "PTH", "N",
+          "BLE", "PGH", "RUF100",
+          "D100", "D101", "D102", "D103", "D104",
+          "ANN001", "ANN002", "ANN003", "ANN201", "ANN202", "ANN204", "ANN205", "ANN206",
+          "PLR0911", "PLR0912", "PLR0915", "PLR0917", "T20"]
 ignore = [
   "E501",  # long lines: docstrings and CLI help text read better unwrapped
   "E702",  # semicolon one-liners: deliberate compact setup style throughout the tests
@@ -103,6 +183,12 @@ ignore = [
            # that boundary is the rule "never let stored data reach a shell".
 ]
 
+[tool.ruff.lint.pydocstyle]
+# The format to follow when a docstring needs sections. Only presence is enforced
+# (D100-D104): most docstrings here are one to three lines saying what a thing is for
+# and why, and Args/Returns sections are for parameters a name and a type do not explain.
+convention = "google"
+
 [tool.ruff.lint.mccabe]
 # 12, not the default 10: the two registration functions (service.create_app,
 # mcp_server._build) are declarative route/tool tables whose "complexity" is an artifact
@@ -110,10 +196,25 @@ ignore = [
 max-complexity = 12
 
 [tool.ruff.lint.per-file-ignores]
-"examples/**/tests/*.py" = ["S101"]   # example apps ship their own pytest tests
+"examples/**/tests/*.py" = ["S101", "ANN"]   # example apps ship their own pytest tests
+# The example app is a demo fixture: run_demo.sh copies it into both arms, its text must
+# describe the app and nothing else, and the README's results were measured on these exact
+# files. Docstring and type-hint rules would change the fixture under the receipts.
+"examples/**" = ["D100", "D101", "D102", "D103", "D104", "ANN"]
 # Tests assert on subprocess output and build temp paths; the security rules aimed at
 # production input handling produce only noise there.
-"tests/*" = ["S101", "S603", "S607", "S108", "S608"]
+# Tests are not typed (ANN) or size-capped (PLR09xx): a test reads as its name and its
+# Arrange-Act-Assert story comments, and annotating fixtures adds nothing a reader needs.
+"tests/*" = ["S101", "S603", "S607", "S108", "S608", "ANN", "PLR0912", "PLR0915"]
 # The harness is a measurement script, not shipped code: its main() is a linear
 # experiment procedure whose "complexity" is the number of arms and guards it runs.
-"evals/*" = ["S101", "S603", "S607", "C901"]
+# The same holds for its branch and statement counts, and it reports by printing.
+"evals/*" = ["S101", "S603", "S607", "C901", "PLR0912", "PLR0915", "T20"]
+# The command-line layers, where printing IS the output: the CLI itself, seed's warnings
+# while importing a pack, ownership's `python -m okl.ownership --stamp`, the scripts the
+# scaffold copies into other repos, and the diagram renderer.
+"src/okl/cli/**" = ["T20"]
+"src/okl/seed.py" = ["T20"]
+"src/okl/ownership.py" = ["T20"]
+"src/okl/scaffold/**" = ["T20"]
+"docs/*.py" = ["T20"]

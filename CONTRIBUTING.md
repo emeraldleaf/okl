@@ -2,12 +2,13 @@
 
 Thanks for looking. This is a v0 project with one maintainer, so the most useful
 contributions are small, verifiable, and self-contained.
+Everyone taking part is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Setup
 
 ```bash
 git clone https://github.com/emeraldleaf/okl && cd okl
-pip install -e ".[dev]"
+pip install -e . --group dev    # pip 25.1 or later; with uv, `uv sync` does the same
 pytest -q          # must be green before and after your change
 ruff check .
 ```
@@ -32,10 +33,20 @@ it is the actual contract. The parts that will fail your build if you miss them:
   `src/okl/scaffold/gates/` twins, and `CLAUDE.md` and `AGENTS.md`. Edit one, copy to the
   others in the same change. `tests/test_scaffold.py::test_mirror_files_identical`
   enforces it.
-- **CI runs more than the tests.** `ruff check .`, `mypy src/okl`, `pytest -q --cov=okl`
-  (the coverage floor is `fail_under` in `pyproject.toml`, currently 66%),
-  `./ci/check-diagram-figures.sh` and `bash gates/run-gates.sh` all gate the build; see
-  `.github/workflows/ci.yml`. Run them locally before pushing.
+- **CI runs more than the tests.** `ruff check .`, `mypy src/okl`, `lint-imports` (the
+  layers contract in `pyproject.toml`: store imports nothing of okl's, core imports store,
+  and so on up to the CLI), `pytest -q --cov=okl` (the coverage floor is `fail_under` in
+  `pyproject.toml`, currently 66%), `./ci/check-diagram-figures.sh` and
+  `bash gates/run-gates.sh` all gate the build, and the tests run again on every Python
+  version okl supports; see `.github/workflows/ci.yml`. Run them locally before pushing.
+  pytest is strict: any warning fails the test that raised it.
+- **Code is written for the next reader, and ruff checks it.** It requires a docstring on
+  every module and public function or class (what it is for and what a caller must know,
+  Google style), type hints on every signature outside the tests, functions inside
+  pylint's size limits, and no `print` outside the command-line layers.
+- **Conventions no tool checks, which review will ask about:** comments say why, never
+  what; and when a lint rule does not fit (a declarative table, a deliberate catch-all),
+  the exemption says why beside it, e.g. `# noqa: PLR0915 - one declarative table`.
 - **The `okl-verify` check can fail on your PR, and that is not yours to fix.** CI reads
   the committed `okl-drift.json`: the rules that govern files, and when each was last
   verified. Change a governed file and CI names the rules that need re-checking. The
@@ -47,17 +58,19 @@ it is the actual contract. The parts that will fail your build if you miss them:
   That is the system working. Commit the change first, then re-verify with an actual
   check, `okl verify <id> --run "pytest -q -k <test>" --expect "passed"`, then commit
   the `okl-drift.json` that `okl verify` refreshed. Verifying before the code commit
-  does not count: the commit is newer than the stamp, so the rule drifts again. Do not
+  does not count: the check is recorded against the commit without your change, so the
+  rule drifts again (`okl verify` warns when it sees uncommitted governed files). Do not
   clear drift by re-recording with `--verified`; stamps come from observed runs.
 - **Enroll a rule in drift (`--files`) only if CI does not already run its check** (#39).
   A rule proven by a test in the suite is enforced by that test on every PR; tracking it
   in drift too only adds a re-verify step. Drift is for claims nothing else watches: the
   README, the architecture's shape, checks CI skips.
 - **PRs land as merge commits only; squash and rebase merging are disabled.** Drift
-  compares each governed file's last commit time with its rule's verification. A merge
-  commit keeps the branch's commits and their times; a squash or rebase creates new
-  commits stamped at merge time, which makes every rule the PR touched look stale and
-  turns `main` red. Do not re-enable them without changing how drift reads time.
+  compares a rule's governed files at the commit its check passed on with HEAD. A merge
+  commit keeps the branch's commits, so CI finds that commit; a squash or rebase replaces
+  it, so CI falls back to comparing commit times, and the new commits are stamped at merge
+  time, which makes every rule the PR touched look stale and turns `main` red. Do not
+  re-enable them without changing how drift finds a verification's commit.
 - **Tags come from a closed vocabulary** (`store.KNOWN_TAGS`), never an ad-hoc string.
   A store can declare a tag for itself with
   `okl record --type Vocabulary --scope org --title <tag>`. Editing `KNOWN_TAGS`, plus a

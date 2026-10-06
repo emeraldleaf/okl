@@ -24,6 +24,9 @@ from pathlib import Path
 
 @dataclass(frozen=True)
 class Tool:
+    """An agent-memory tool okl can detect: how to recognise it, how it collides with okl,
+    and what to do about it (`collides` is one sentence per collision)."""
+
     name: str
     plugins: tuple[str, ...]        # exact plugin names, as in "<name>@<marketplace>"
     commands: tuple[str, ...]       # substrings of a hook command that identify it
@@ -69,6 +72,8 @@ KNOWN: tuple[Tool, ...] = (
 
 @dataclass(frozen=True)
 class Finding:
+    """One known tool found installed for this project, and where it was found."""
+
     tool: Tool
     where: str      # the settings file and how it was recognised
 
@@ -163,6 +168,8 @@ def double_wiring(project_root: Path, home: Path) -> str | None:
 
 
 def detect(project_root: Path, home: Path) -> list[Finding]:
+    """Every known tool that is installed for this project, read from its Claude Code
+    settings files. At most one finding per tool: an enabled plugin wins over a hook."""
     plugin_state, hook_sources = _settings_state(project_root, home)
 
     found: list[Finding] = []
@@ -179,6 +186,8 @@ def detect(project_root: Path, home: Path) -> list[Finding]:
 
 
 def render(findings: list[Finding]) -> str:
+    """The `okl doctor` report: each tool's collisions and advice, or an all-clear
+    naming the tools that were checked."""
     if not findings:
         return ("okl doctor: no known agent-memory tool found beside okl "
                 f"(checked for {', '.join(t.name for t in KNOWN)}).")

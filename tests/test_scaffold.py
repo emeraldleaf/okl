@@ -303,6 +303,45 @@ def test_mirror_files_identical():
         assert a.read_bytes() == b.read_bytes(), f"mirror drift: {a} != {b}"
 
 
+
+
+def test_the_shipped_workflow_detects_okls_checkout_by_a_file_that_exists():
+    """okl-verify.yml installs the checkout when `[ -f <path> ]` holds, and the PyPI release
+    otherwise. The path was src/okl/cli.py until that file became a package (#120), after
+    which okl's own CI would have tested the release, not the branch, with every check
+    still green. The path it tests must be a file git tracks."""
+    import re
+    root = Path(__file__).resolve().parents[1]
+    workflow = (root / "src/okl/scaffold/ci/okl-verify.yml").read_text()
+
+    # ARRANGE — the path the install step tests before installing the checkout.
+    paths = re.findall(r"if \[ -f (\S+) \]; then\s*\n\s*pip install -e \.", workflow)
+    assert paths, "no checkout-detection step found in okl-verify.yml"
+
+    # ASSERT — it names a file this repo tracks, so the test is true in okl's own CI.
+    for path in paths:
+        tracked = subprocess.run(["git", "-C", str(root), "ls-files", "--error-unmatch", path],
+                                 capture_output=True, text=True)
+        assert tracked.returncode == 0, f"okl-verify.yml detects the checkout by {path}, which git does not track"
+
+def test_the_package_version_is_the_installed_distributions():
+    """okl.__version__ said 0.1.0 through release 0.7.8: a hand-kept constant nothing
+    checked. It is now read from the installed distribution, so wherever okl is installed
+    (CI installs it with pip -e) it must equal pyproject's version."""
+    from importlib.metadata import PackageNotFoundError, version
+
+    import okl
+    # tomllib is stdlib from 3.11 only, and okl supports 3.10: skip there, never ImportError.
+    tomllib = pytest.importorskip("tomllib")
+    root = Path(__file__).resolve().parents[1]
+    wanted = tomllib.loads((root / "pyproject.toml").read_text())["project"]["version"]
+    try:
+        installed = version("observed-knowledge-ledger")
+    except PackageNotFoundError:
+        assert okl.__version__ == "unknown"   # a source tree with no install says so
+        return
+    assert installed == wanted and okl.__version__ == wanted, (okl.__version__, installed, wanted)
+
 def test_eval_harness_refuses_self_grading(tmp_path, monkeypatch):
     """The eval harness refuses to run when the judge is the same model as the generator.
 
@@ -326,6 +365,16 @@ def test_eval_harness_refuses_an_unfilled_golden_set(tmp_path, monkeypatch):
     r = subprocess.run([sys.executable, str(harness)], capture_output=True, text=True, cwd=tmp_path)
     assert r.returncode == 2 and "<<FILL" in r.stderr, (r.returncode, r.stdout, r.stderr)
     assert "avg score" not in r.stdout
+
+
+def test_eval_harness_with_no_cases_file_says_nothing_was_measured(tmp_path, monkeypatch):
+    """A missing cases file exited 0 while an empty one exited 2, though both mean nothing
+    ran (#117). A CI job reading the exit code took the missing file for a clean run."""
+    harness = Path(__file__).resolve().parents[1] / "src" / "okl" / "scaffold" / "evals" / "run_evals.py"
+    monkeypatch.delenv("GENERATOR_MODEL", raising=False); monkeypatch.delenv("JUDGE_MODEL", raising=False)
+    r = subprocess.run([sys.executable, str(harness), "--cases", str(tmp_path / "none.jsonl")],
+                       capture_output=True, text=True, cwd=tmp_path)
+    assert r.returncode == 2 and r.stdout == "" and "Nothing was measured" in r.stderr, (r.returncode, r.stdout, r.stderr)
 
 
 def test_ab_harness_flags_an_off_series_instrument_but_still_runs():
@@ -705,15 +754,23 @@ def test_stored_data_never_reaches_a_shell():
     shelled = [f"{p.name}:{i}" for p in src.rglob("*.py")
                for i, line in enumerate(p.read_text().splitlines(), 1)
                if "shell=True" in line]
-    assert shelled == ["cli.py:273"] or len(shelled) == 1, f"unexpected shell=True: {shelled}"
-    assert "subprocess.run(args.run, shell=True" in (src / "cli.py").read_text()
+    assert len(shelled) == 1 and shelled[0].startswith("verification.py:"), \
+        f"unexpected shell=True: {shelled}"
+    assert "subprocess.run(args.run, shell=True" in (src / "cli" / "verification.py").read_text()
 
     # ASSERT (3) — the remote path can never trigger execution: /verify accepts EVIDENCE
-    # already produced by a local run, never a command for the server to execute. If this
-    # ever takes a `run` field, a token holder gets RCE on the shared layer.
+    # already produced by a local run, and the commit it ran at, never a command for the
+    # server to execute. If this ever takes a `run` field, a token holder gets RCE on the
+    # shared layer.
     service = (src / "service.py").read_text()
-    assert "core.verify(_store, req.id, req.evidence)" in service
+    assert "core.verify(_store, req.id, req.evidence, req.commit)" in service
     assert "shell" not in service, "the service must never shell out"
+
+    # ASSERT (4) — that commit is stored data that later reaches `git diff` (#102), so it
+    # is refused unless it is a hex object name, both where it is written and where it is
+    # used: a shared store or a committed snapshot holds whatever someone put there.
+    assert 're.fullmatch(r"[0-9a-f]{7,64}", commit)' in (src / "core.py").read_text()
+    assert "_COMMIT.fullmatch(commit)" in drift
 
 
 def test_shipped_drift_step_warns_when_nothing_was_checked():
@@ -806,8 +863,9 @@ def test_the_old_distribution_name_is_swept_and_still_installable():
     for extra, deps in old["optional-dependencies"].items():
         assert deps == [f"{new['name']}[{extra}]>={old['version']}"], extra
     # pipx exposes only the named package's own commands, so the redirect must declare
-    # `okl` itself or `pipx install org-knowledge-layer` refuses to install.
-    assert old.get("scripts") == new["scripts"], "the redirect must provide the okl command"
+    # `okl` itself or `pipx install org-knowledge-layer` refuses to install. Only `okl`:
+    # the package's second command is named after the NEW distribution, for uvx.
+    assert old.get("scripts") == {"okl": new["scripts"]["okl"]}, "the redirect must provide the okl command"
 
 
 def test_doctor_names_memory_tools_beside_okl_and_changes_nothing(tmp_path):
@@ -1226,7 +1284,7 @@ def test_init_never_writes_through_a_symlink_out_of_the_repo(tmp_path):
     assert (repo / ".claude" / "hooks" / "userpromptsubmit-okl-check.sh").is_file()
     # Uninstall does not follow the links either. The outside file holds an okl entry, so a
     # followed link would rewrite it; it must stay byte-identical, and be named.
-    from okl.cli import HOOK_COMMANDS
+    from okl.cli.install import HOOK_COMMANDS
     planted = json.dumps({"hooks": {"Stop": [{"hooks": [
         {"type": "command", "command": HOOK_COMMANDS["Stop"]}]}]}})
     (outside / "settings.json").write_text(planted)
@@ -1427,6 +1485,7 @@ def test_init_wires_claude_code_without_an_existing_claude_dir(tmp_path):
 
 
 def shutil_which(name):
+    """Return the full path of the `name` executable, or skip the test when it is not installed."""
     import shutil
     found = shutil.which(name)
     if found is None:
@@ -1457,6 +1516,84 @@ def test_prompt_hook_passes_hook_json_through_and_falls_back_for_an_older_okl(tm
              'invalid choice: \'hook\'" >&2; exit 2; }; done; echo "## OKL briefing (agent format)"')
     r = run(older)
     assert r.returncode == 0 and "OKL briefing (agent format)" in r.stdout, (r.returncode, r.stdout, r.stderr)
+
+
+
+def test_prompt_hook_shrinks_the_briefing_on_request_and_survives_an_older_okl(tmp_path):
+    """A full briefing is roughly 1,600 tokens on every prompt, a fifth of a small model's
+    window. OKL_BRIEFING_LIMIT and OKL_BRIEFING_COMPACT=1 shrink it. Only a whole number
+    above zero becomes --limit, so nothing else from the environment reaches okl; and an
+    okl too old for --compact gets the full briefing rather than a blocked prompt."""
+    import json
+    hook = Path(__file__).resolve().parents[1] / "src" / "okl" / "scaffold" / "hooks" / "userpromptsubmit-okl-check.sh"
+    (tmp_path / ".okl").mkdir(); (tmp_path / ".okl" / "config.json").write_text('{"repo": "t"}')
+    stub, seen = tmp_path / "okl", tmp_path / "args.txt"
+    base = {"PATH": os.environ["PATH"], "HOME": str(tmp_path), "TMPDIR": str(tmp_path),
+            "OKL_BIN": str(stub), "CLAUDE_PROJECT_DIR": str(tmp_path)}
+    payload = '{"hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext": "B"}}'
+
+    def run(body, **extra):
+        stub.write_text("#!/bin/sh\n" + body + "\n"); stub.chmod(0o755)
+        seen.write_text("")
+        return subprocess.run(["bash", str(hook)], cwd=tmp_path, text=True, env={**base, **extra},
+                              input=json.dumps({"prompt": "x"}), capture_output=True)
+
+    record_and_brief = f'echo "$@" >> {seen}; echo \'{payload}\''
+
+    # ASSERT (1) — both settings reach okl as flags.
+    r = run(record_and_brief, OKL_BRIEFING_LIMIT="3", OKL_BRIEFING_COMPACT="1")
+    assert r.returncode == 0 and "--limit 3 --compact" in seen.read_text(), (r.stderr, seen.read_text())
+
+    # ASSERT (2) — no settings, no extra flags: the default briefing is unchanged.
+    r = run(record_and_brief)
+    assert r.returncode == 0 and "--limit" not in seen.read_text() and "--compact" not in seen.read_text()
+
+    # ASSERT (3) — a limit that is not a whole number above zero is ignored, not passed on.
+    for bad in ("0", "abc", "3; touch pwned", "-1"):
+        r = run(record_and_brief, OKL_BRIEFING_LIMIT=bad)
+        assert r.returncode == 0 and "--limit" not in seen.read_text(), (bad, seen.read_text())
+    assert not (tmp_path / "pwned").exists()
+
+    # ASSERT (4) — an okl without --compact: argparse refuses it, and the hook briefs in full.
+    older = (f'echo "$@" >> {seen}; for a in "$@"; do [ "$a" = --compact ] && {{ echo "okl: error: '
+             f'unrecognized arguments: --compact" >&2; exit 2; }}; done; echo \'{payload}\'')
+    r = run(older, OKL_BRIEFING_COMPACT="1")
+    assert r.returncode == 0 and json.loads(r.stdout)["hookSpecificOutput"]["additionalContext"] == "B", (r.stdout, r.stderr)
+
+def test_prompt_hook_retries_a_briefly_unavailable_store_but_not_a_missing_binary(tmp_path):
+    """A repo that rebuilds its gitignored store from committed lessons has no store for
+    about a second, and a prompt landing then was blocked for a fault that had healed. The
+    retry lived in one repo's hand-edited hook until it was brought back here (#91)."""
+    import json
+    hook = Path(__file__).resolve().parents[1] / "src" / "okl" / "scaffold" / "hooks" / "userpromptsubmit-okl-check.sh"
+    (tmp_path / ".okl").mkdir(); (tmp_path / ".okl" / "config.json").write_text('{"repo": "t"}')
+    stub, calls = tmp_path / "okl", tmp_path / "calls"
+    env = {"PATH": os.environ["PATH"], "HOME": str(tmp_path), "TMPDIR": str(tmp_path),
+           "OKL_BIN": str(stub), "CLAUDE_PROJECT_DIR": str(tmp_path)}
+
+    def run(body):
+        # The stub logs each call before doing anything, so the count is the number of tries.
+        calls.write_text("")
+        stub.write_text(f"#!/bin/sh\necho call >> '{calls}'\n{body}\n"); stub.chmod(0o755)
+        r = subprocess.run(["bash", str(hook)], cwd=tmp_path, text=True, env=env,
+                           input=json.dumps({"prompt": "x"}), capture_output=True)
+        return r, len(calls.read_text().splitlines())
+
+    payload = '{"hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext": "B"}, "systemMessage": "okl · briefed 1 lesson(s): x"}'
+
+    # ASSERT (1) — the store is back on the second try: the prompt is briefed, not blocked.
+    r, n = run(f"[ \"$(wc -l < '{calls}')\" -ge 2 ] && {{ echo '{payload}'; exit 0; }}\n"
+               "echo 'OKL UNREACHABLE: store rebuilding' >&2; exit 2")
+    assert r.returncode == 0 and "okl · briefed" in r.stdout and n == 2, (r.returncode, n, r.stderr)
+
+    # ASSERT (2) — a store that stays gone still fails closed, after three tries, and the
+    # block relays okl's own reason from the last one.
+    r, n = run("echo 'OKL UNREACHABLE: store gone' >&2; exit 2")
+    assert r.returncode == 2 and n == 3 and "store gone" in r.stderr, (r.returncode, n, r.stderr)
+
+    # ASSERT (3) — a binary that cannot start is not retried: a second will not fix it.
+    r, n = run("exit 127")
+    assert r.returncode == 2 and n == 1, (r.returncode, n, r.stderr)
 
 
 def test_init_and_doctor_know_okls_own_plugin(tmp_path):
@@ -1494,7 +1631,7 @@ def test_init_and_doctor_know_okls_own_plugin(tmp_path):
     assert okl("doctor").returncode == 0
 
     # Hooks registered by hand as well: both would fire. doctor says so and exits 1.
-    from okl.cli import HOOK_COMMANDS
+    from okl.cli.install import HOOK_COMMANDS
     (proj / ".claude" / "settings.json").write_text(json.dumps({"hooks": {"Stop": [{"hooks": [
         {"type": "command", "command": HOOK_COMMANDS["Stop"]}]}]}}))
     r = okl("doctor")
@@ -1531,3 +1668,36 @@ def test_plugin_manifest_points_at_real_files_and_the_shipped_version():
     assert [p["name"] for p in market["plugins"]] == ["okl"] and market["name"] == "okl"
     mcp = json.loads((root / ".mcp.json").read_text())
     assert mcp["mcpServers"]["okl"] == {"command": "okl", "args": ["mcp"]}
+
+
+def test_registry_entry_starts_the_server_it_lists():
+    """server.json lists okl on the official MCP Registry, whose clients start a PyPI
+    server as `uvx <package>==<version> <args>`. Each numbered assertion is a way the
+    listing would install a server that cannot start, or advertise the wrong one:
+    1. uvx runs the command named after the package; with only `okl`, it refused.
+    2. okl keeps the MCP SDK in an extra and uvx installs the bare package, so the entry
+       must add the SDK itself, at the extra's own requirement.
+    3. A version bump that skips server.json lists the previous release.
+    4. The registry will not list a PyPI server whose README lacks the mcp-name line.
+    5. `okl mcp` serves stdio only; an entry declaring HTTP or SSE would send clients to
+       a port nothing listens on.
+    """
+    import json
+    tomllib = pytest.importorskip("tomllib")
+    root = Path(__file__).resolve().parents[1]
+    project = tomllib.loads((root / "pyproject.toml").read_text())["project"]
+    server = json.loads((root / "server.json").read_text())
+    [package] = server["packages"]
+    assert package["registryType"] == "pypi" and package["identifier"] == project["name"]
+    # 1
+    assert project["scripts"][project["name"]] == project["scripts"]["okl"]
+    assert [a["value"] for a in package["packageArguments"]] == ["mcp"]
+    # 2
+    assert [(a["name"], a["value"]) for a in package["runtimeArguments"]] == [
+        ("--with", req) for req in project["optional-dependencies"]["mcp"]]
+    # 3
+    assert server["version"] == package["version"] == project["version"]
+    # 4
+    assert f"mcp-name: {server['name']}" in (root / "README.md").read_text()
+    # 5
+    assert package["transport"] == {"type": "stdio"}

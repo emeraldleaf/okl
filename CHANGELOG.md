@@ -1,5 +1,167 @@
 # Changelog
 
+## Unreleased
+
+- **Re-running `okl init` keeps the repo's configured name.** It fell back to the folder's
+  name, so a repo configured as `quartzose` in a folder named `Quartzose` was renamed on
+  every re-run, and re-running init is how hook copies are upgraded. A rename detaches the
+  repo's `repo:<name>` lessons. Now a plain re-run (and its `--dry-run`) keeps the name in
+  this directory's own `.okl/config.json`; an explicit `--repo` still renames, and says
+  which lessons stop briefing. A new repo nested inside another okl repo still takes its
+  own folder's name.
+- **okl logs which lessons each briefing showed, and `okl metric` reports it** (the first
+  piece of #129). Every `okl check`, whether from the prompt hook, the CLI or MCP, appends
+  the time, the repo and the ids of the lessons it showed; a shared service logs the
+  briefings it answers. `okl metric` now adds how many briefings were logged and since
+  when, the lessons this repo can be briefed that were never shown (oldest first, as
+  candidates to review or retire), and those shown most with no stored check (candidates
+  for one). Before anything is logged it says so instead of listing every lesson as
+  unseen. No task or prompt text is stored. `OKL_BRIEFING_LOG=0` turns the log off; the
+  eval harness sets it, so test runs do not count as exposure. A failed log write never
+  costs the briefing.
+- **`okl --version`** prints the installed release. A repo whose hooks run a pinned okl
+  (`okl_bin` in `.okl/config.json`) had no way to ask which one it was.
+- **Contributors:** the figures the docs quote are now tests (`tests/test_docs.py`). The
+  corpus counts in README.md and CLAUDE.md must match `seed/`. Every briefing size in the
+  README, the MCP `okl_check` description and the how-it-works diagram must match the one
+  receipt the README cites, and that receipt must have measured today's corpus. Adding a
+  seed lesson now fails CI until the sizes are measured again
+  (`python3 evals/briefing_size.py`), which is what keeps "every bundled seed pack" true.
+
+## 0.7.9
+
+- **The prompt hook can send a smaller briefing, for a model with a small context window.**
+  A full briefing is roughly 1,600 tokens on every prompt. Set `OKL_BRIEFING_COMPACT=1` and
+  the hook sends only the action list (the new `okl check --compact`); set
+  `OKL_BRIEFING_LIMIT=5` and it draws on five lessons instead of twelve. Both together come
+  to about 380 tokens. A limit that is not a whole number above zero is ignored, and an okl
+  too old for `--compact` briefs in full instead of blocking the prompt.
+- **The briefing sizes the docs quote are measured, together, by `evals/briefing_size.py`.**
+  The MCP `okl_check` description said the full briefing was ~2,300 tokens and the README
+  said ~1,650; on today's 183 seed records it is ~1,620, and the action list is ~230 at
+  `--limit 3` and ~810 at 12. The receipt is in `evals/results/`.
+- **A withdrawn record of any type is briefed as withdrawn.** Only a retracted Claim was
+  treated that way; a Decision or Rule with status `retracted` was still briefed as live
+  guidance, a retracted Decision under "made on purpose; do not silently reverse". Now any
+  retracted record is listed as "AVOID: … do not restate this as fact".
+- **`okl verify <id>` without `--run` shows how to prove the lesson** (#115): the lesson, the
+  files it covers, the tests that already mention them, and a ready-to-run, shell-quoted
+  `okl verify` command. It stamps nothing and exits 2. `okl drift` and `okl reverify` say in
+  plain words what to do next.
+- **A Python canon: `okl seed python-canon`.** 22 lessons that translate the .NET packs'
+  engineering rules to Python. Each one cites the sources that agree on it (PEPs 20, 257,
+  544 and 735; the mypy, pytest and import-linter docs; Google's Python style guide; the
+  Scientific Python development guide) and the okl change that adopted it. It covers the
+  dependency rule as an import-linter contract, docstrings, type hints, size limits, strict
+  pytest, errors, mocks, why `isinstance()` against a Protocol proves nothing about
+  signatures, one composition root, value objects at seams, a contract test over every
+  implementation, typing syntax by Python floor, choosing one type checker and one
+  docstring format, and two dated defects. Nothing in it claims verification: verify each lesson against your own repo.
+  `okl init` imports it when it creates a new, empty store in a Python repo; a repo whose
+  store already holds lessons runs `okl seed python-canon`.
+- **A command run where okl was never set up now refuses (exit 2) instead of writing to a
+  stray `./okl.db`** (#117). `okl record` and `okl seed` used to exit 0 having saved their
+  lessons where no hook, check or CI job looks, and `okl coverage` reported a clean zero.
+  Every CLI command that needs a store now says so and stops, and `okl verify` refuses
+  before running its check: run `okl init` first, or name a store with `OKL_DATABASE_URL`
+  or `okl connect <url>`. Listing packs (`okl seed`) still works anywhere. `okl serve` still
+  defaults to `./okl.db` when nothing names a store (#125).
+- **A shared service answers an unknown link relation with a 400**, not a 500 the client
+  reported as an outage (#119).
+- **More "could not run" cases exit 2**, as the CLI's contract says: `okl seed <dir>` when the
+  directory holds no packs, and `python -m okl.ownership --stamp` on a file it cannot read
+  (it raised a traceback). The MCP `okl_check` tool reports a refused request (a 401, or no
+  store named) as "OKL REFUSED THE CHECK" rather than a raw tool error.
+- **`okl serve` and `okl mcp` without their extra exit 2** and name the install command
+  (`observed-knowledge-ledger[service]` or `[mcp]`); they raised a traceback, and serve
+  named a package that no longer exists.
+- **The scaffolded eval runner exits 2 when it has no cases file**, as it already did for
+  an empty one: nothing was measured either way.
+- **okl closes its SQLite connections** (#116). Python 3.13 warns about every connection
+  that is never closed, and okl opened one per command.
+- **Tested on Python 3.10 to 3.14** (#116); CI had tested 3.12 alone. 3.10 reached end of
+  life on 2026-10-01, and is still supported for now.
+- **The shipped `okl-verify` workflow** recognises okl's own source checkout by
+  `src/okl/__init__.py` instead of `src/okl/cli.py` (#120). Re-running `okl init` upgrades
+  an installed copy you have not edited.
+- **Contributors:** okl's own dev tools moved from the published `[dev]` extra to a PEP 735
+  dependency group (#121). Install with `pip install -e . --group dev` (pip 25.1 or later)
+  or `uv sync`.
+- **Internals:** the CLI is now a package, `okl.cli`, with one module per command group
+  (#120); `okl.cli:main` is unchanged. The MCP `okl_record` tool takes keyword arguments
+  only, which is how MCP clients already call it (#118).
+
+## 0.7.8
+
+- **Re-seeding keeps a lesson's verification** (#110). `okl seed` replaced each row, so
+  every re-seed re-stamped its lessons as verified now and wiped their evidence and
+  commit. A repo that keeps its lessons in a seed file and re-seeds after an edit could
+  therefore never drift, and its next drift snapshot carried stamps with no evidence. A
+  re-seeded lesson now keeps its stamp, evidence and commit while its governed files are
+  the same, and is cleared when they change. New lessons and `okl record` re-records
+  behave as before.
+- **`okl drift` names this repo's lessons whose files match nothing committed** (#109), beside the
+  drift report and as `governs_nothing` in its JSON. Drift saw the deletion as the last
+  change, so such a lesson watched nothing and nothing said so. Re-pointing it, dropping
+  its files or retiring it is a decision, so the exit code is unchanged.
+- **`okl init --no-ci`** skips the GitHub Actions workflow (#111), for a private repo that
+  would pay for its minutes or one that runs another CI. The choice is recorded in
+  `.okl/config.json`, so later runs keep it; `--ci` turns it back on, and `okl doctor`
+  says when drift is not gated in CI.
+
+## 0.7.7
+
+- **The docs say what okl is not for** (#99): always-on rules and commands go in
+  `CLAUDE.md` / `AGENTS.md`, procedures in a skill or runbook, style in a formatter or
+  linter, open bugs in the issue tracker, secrets nowhere near the store. Everything with
+  a symptom and a fix belongs in okl.
+- **Drift compares the commit a check passed at, not the clock** (#102). `okl verify`
+  records HEAD, and a rule has drifted when its governed files differ between that commit
+  and HEAD. Comparing times missed a change committed in the same second as the check,
+  since git keeps commit time to the second, and read a commit from a clock running ahead
+  as a change the check never saw. A change and its revert no longer count either. The CI
+  gate, `okl drift`, `okl reverify` and the briefing's STALE mark share the one verdict.
+  Verifications from before this, or whose commit a clone lacks after a squash, still
+  compare times. The commit is written into the evidence ahead of the time stamp, which
+  binds it in `okl-drift.json` (a hand edit is refused, as an edited time already is)
+  and keeps older okl versions reading the snapshot. Stores gain the column on open.
+  One mixed-version limit: an older okl's `okl reverify` cannot parse the commit in this
+  version's evidence when the check has an expected signal, so it lists those lessons as
+  needing a first check rather than running a weaker one. Upgrade the clients that share
+  a store together.
+- **`okl verify` warns when the governed files have uncommitted changes**: the check saw
+  them, but the record points at the commit without them, so the lesson would read as
+  drifted once they are committed.
+- **A STALE lesson in a briefing says what to do**: re-run its check with `okl reverify`,
+  and if it fails, fix the code or change the lesson on purpose.
+
+## 0.7.6
+
+- **An entry for the official MCP Registry** (`server.json`, `io.github.emeraldleaf/okl`).
+  Registry clients start a PyPI server as `uvx <package> <args>`, and uvx runs the command
+  named after the package; okl's only command was `okl`, so that failed. The CLI now also
+  installs as `observed-knowledge-ledger`, and the entry adds the MCP SDK
+  (`--with mcp>=1.2`) that okl keeps in its optional `mcp` extra.
+- **The PyPI page links back to the repo**, its issues, the changelog and the getting
+  started guide. It had no project links.
+
+## 0.7.5
+
+- **Ready for the official MCP Registry.** The README carries the registry's ownership line
+  (`mcp-name: io.github.emeraldleaf/okl`), which the registry checks against the PyPI
+  package before it will list the server.
+- **The prompt hook retries a briefly unavailable store before blocking.** Three tries over
+  about a second, so a prompt that lands while a repo rebuilds its gitignored store is
+  briefed instead of refused. A store that stays gone still blocks, with okl's reason; an
+  okl that cannot start is not retried. The fix had lived only in one repo's edited copy
+  of the hook (#91).
+- **Briefings mark lessons whose code changed after their last check** (#93). A briefed
+  lesson that governs files changed since its last `okl verify` is tagged *STALE*, with the
+  file and dates and `okl reverify`; one that governs files but has never passed a check is
+  tagged *UNVERIFIED*. The briefing's footer and the per-prompt notice count them. Only
+  `okl drift` and CI said this before; the agent reading the lesson did not. Computed on
+  the client, so it also works against a shared service.
+
 ## 0.7.4
 
 - **`okl verify` / `okl reverify` treat a timeout as a failed check.** A check that
