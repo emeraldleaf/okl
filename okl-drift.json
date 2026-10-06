@@ -78,9 +78,9 @@
       "title": "A test that imports an undeclared package passes only where that package happens to be installed",
       "scope": "org",
       "files": "tests/",
-      "verified_at": 1791249828371,
-      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && ! grep -rnE '^\\s*import tomllib' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' on commit 1b97b0ab411f @ 2026-10-06T01:23Z",
-      "verified_commit": "1b97b0ab411f7939bac2f141554fa86b19803b08"
+      "verified_at": 1791252090980,
+      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && ! grep -rnE '^\\s*import tomllib' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' on commit efad96ee3db8 @ 2026-10-06T02:01Z",
+      "verified_commit": "efad96ee3db8012f8099ec6ce9cc1c28c4344006"
     },
     {
       "id": "n_9ba48d85ed19",
@@ -108,9 +108,9 @@
       "title": "A port is defined by behaviour, not by its signatures — state the contract and test every adapter against one body",
       "scope": "org",
       "files": "src/okl/store.py,tests/test_okl.py",
-      "verified_at": 1791249831641,
-      "verified_by": "`python3 -m pytest -q -k 'backend_conformance'` exit 0, matched 'passed' on commit 1b97b0ab411f @ 2026-10-06T01:23Z",
-      "verified_commit": "1b97b0ab411f7939bac2f141554fa86b19803b08"
+      "verified_at": 1791252094104,
+      "verified_by": "`python3 -m pytest -q -k 'backend_conformance'` exit 0, matched 'passed' on commit efad96ee3db8 @ 2026-10-06T02:01Z",
+      "verified_commit": "efad96ee3db8012f8099ec6ce9cc1c28c4344006"
     },
     {
       "id": "n_be9f13d587b1",
@@ -148,9 +148,9 @@
       "title": "A gate that reads commit times needs merge commits — squash and rebase restamp history at merge time",
       "scope": "org",
       "files": "CONTRIBUTING.md,src/okl/drift.py",
-      "verified_at": 1791096129166,
-      "verified_by": "`gh api repos/emeraldleaf/okl --jq 'if .allow_squash_merge or .allow_rebase_merge then error(\"squash or rebase enabled\") else \"MERGE COMMITS ONLY\" end'` exit 0, matched 'MERGE COMMITS ONLY' on commit 2f51b62af522 @ 2026-10-04T06:42Z",
-      "verified_commit": "2f51b62af522dcb8c15a9090b56edad93bf765f6"
+      "verified_at": 1791252090797,
+      "verified_by": "`gh api repos/emeraldleaf/okl --jq 'if .allow_squash_merge or .allow_rebase_merge then error(\"squash or rebase enabled\") else \"MERGE COMMITS ONLY\" end'` exit 0, matched 'MERGE COMMITS ONLY' on commit efad96ee3db8 @ 2026-10-06T02:01Z",
+      "verified_commit": "efad96ee3db8012f8099ec6ce9cc1c28c4344006"
     }
   ]
 }

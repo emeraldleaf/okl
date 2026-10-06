@@ -484,6 +484,66 @@ def test_check_router_actions(store):
     assert "compute server-side" in md
 
 
+def test_drift_refuses_a_stamp_with_no_observed_check(store, tmp_path):
+    """A verified_at nothing backs is drift, not verification (#20).
+
+    `okl record --verified` is refused outright, but `okl seed` and the Python API still
+    stamp verified_at directly, so a record declaring `files` could clear the gate on a
+    stamp it awarded itself. The snapshot path has refused that since #36; this is the
+    live-store path catching up, and it is the claim the tool is sold on: a lesson counts
+    once a check you wrote has passed.
+    """
+    import shutil
+    import subprocess
+
+    from okl import drift
+    if shutil.which("git") is None:
+        pytest.skip("git not available")
+    rd = tmp_path / "repo"; rd.mkdir()
+    def git(*a): return subprocess.run(["git", "-C", str(rd), *a], capture_output=True)
+    if git("init").returncode != 0:
+        pytest.skip("git init blocked in this environment")
+    git("config", "user.email", "t@t.co"); git("config", "user.name", "t")
+    (rd / "orders.py").write_text("x=1\n")
+    if git("add", "-A").returncode != 0 or git("commit", "-m", "init").returncode != 0:
+        pytest.skip("git commit blocked in this environment")
+
+    # ARRANGE — stamped verified without ever running anything, which is what seeding does.
+    nid = core.record(store, type="Rule", title="orders rule", scope="org",
+                      files="orders.py", verified=True)
+
+    # ASSERT — the source has NOT changed since the stamp, so the only thing wrong with
+    # this record is that nothing earned the stamp. Before #20 this returned [].
+    hits = drift.detect_drift(store.all_nodes(), "r", str(rd))
+    assert [h.node_id for h in hits] == [nid]
+    assert hits[0].evidence is False
+    assert "no `okl verify` evidence stamp" in hits[0].reason
+    # and the report must not call it verified
+    text = drift.render_drift(hits)
+    assert "unverified" in text and "verified 2" not in text
+    # and the briefing marks it the same way: the briefing and the gate must never
+    # disagree about the same lesson (the briefing path once trusted verified_at alone).
+    from dataclasses import asdict
+    briefing = {"rules": [asdict(store.get_node(nid))]}
+    assert drift.annotate_briefing(briefing, "r", str(rd)) == 1
+    assert briefing["rules"][0]["drift"]["reason"] == "verified with no observed check"
+
+    # ACT — an observed check clears it, and nothing else had to change.
+    core.verify(store, nid, _evidence_now())
+    assert drift.detect_drift(store.all_nodes(), "r", str(rd)) == []
+    assert drift.annotate_briefing({"rules": [asdict(store.get_node(nid))]}, "r", str(rd)) == 0
+
+
+def _evidence_now(run: str = "pytest -q") -> str:
+    """An evidence string shaped exactly as `okl verify` writes one.
+
+    drift.stamp_problem reads the trailing `@ <minute>` back and requires verified_at to
+    land in that minute, so a test that hand-rolls the string has to use the real clock.
+    """
+    import datetime as _d
+    return f"`{run}` exit 0, matched 'passed' @ " + _d.datetime.now(_d.timezone.utc).strftime("%Y-%m-%dT%H:%MZ")
+
+
 def test_drift_fires_when_source_changes(store, tmp_path):
     """Drift fires when the code a rule governs changes after the rule was verified.
 
@@ -511,8 +571,12 @@ def test_drift_fires_when_source_changes(store, tmp_path):
         pytest.skip("git commit blocked in this environment")
     # ARRANGE — a rule that declares the file it governs, verified right now. `files`
     # is what enrols a record in drift detection; a record without it is watched by nothing.
+    # The stamp has to carry real evidence: since #20 a verified_at with no observed check
+    # behind it is itself drift, so recording with verified=True would fire on that instead
+    # and this test would pass for the wrong reason.
     nid = core.record(store, type="Rule", title="orders rule", scope="org",
-                      files="orders.py", verified=True)
+                      files="orders.py")
+    core.verify(store, nid, _evidence_now())
 
     # ASSERT (1) — nothing has changed since verification, so there is no drift
     assert drift.detect_drift(store.all_nodes(), "r", str(rd)) == []
@@ -3076,13 +3140,21 @@ def test_drift_compares_the_commit_a_check_passed_at_not_the_clock(store, tmp_pa
     assert drifted() == []
 
     # ASSERT (4) — a commit this clone does not have (a squashed branch, a shallow fetch)
-    # falls back to comparing times, and a value that is not a commit name never reaches
-    # git: it falls back too, and git writes nothing for it.
+    # falls back to comparing times. Each stamp carries evidence shaped as `okl verify`
+    # writes it, because since #20 a stamp with none is drift on its own. A value that is
+    # not a commit name can never be bound into that evidence, so it is drift before git
+    # is ever asked about it, and git writes nothing for it.
+    import datetime as _dt
+
+    def evidence(at_ms, commit):
+        minute = _dt.datetime.fromtimestamp(at_ms // 1000, tz=_dt.timezone.utc).strftime("%Y-%m-%dT%H:%MZ")
+        return f"`grep` exit 0, matched 'OK' on commit {commit[:12]} @ {minute}"
     leak = tmp_path / "leak"
     rules = [Node(type="Rule", title="t", scope="repo:s", files="orders.py", verified_at=1,
-                  verified_commit="0" * 40, id="gone"),
+                  verified_commit="0" * 40, verified_by=evidence(1, "0" * 40), id="gone"),
              Node(type="Rule", title="t", scope="repo:s", files="orders.py", verified_at=10**13,
-                  verified_commit="0" * 40, id="checked-later"),
+                  verified_commit="0" * 40, verified_by=evidence(10**13, "0" * 40),
+                  id="checked-later"),
              Node(type="Rule", title="t", scope="repo:s", files="orders.py", verified_at=1,
                   verified_commit=f"--output={leak}", id="hostile")]
     hits = drift.scan_drift(rules, "s", str(tmp_path))[0]

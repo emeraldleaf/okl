@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **A verification stamp with no observed check behind it is drift** (#20). `okl drift`
+  read the store's `verified_at` alone, so a lesson stamped without evidence, such as a
+  seeded record that declares `files`, cleared the gate exactly like one whose check had
+  passed. The committed-snapshot path has refused that since #36; the live-store scan and
+  the briefing's STALE marks now apply the same test. Such a lesson is reported as
+  "stamped …, unverified", and `okl verify` with a real check clears it.
 - **Re-running `okl init` keeps the repo's configured name.** It fell back to the folder's
   name, so a repo configured as `quartzose` in a folder named `Quartzose` was renamed on
   every re-run, and re-running init is how hook copies are upgraded. A rename detaches the
