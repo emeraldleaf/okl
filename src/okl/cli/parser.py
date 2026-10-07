@@ -37,6 +37,12 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                     help="--no-ci skips the GitHub Actions drift workflow (a private repo pays for its "
                          "minutes; another CI or a hook can run `okl drift --gate`) and records that in "
                          ".okl/config.json so later runs skip it too; --ci turns it back on")
+    pi.add_argument("--git-hook", dest="git_hook", action=argparse.BooleanOptionalAction,
+                    default=None,
+                    help="--git-hook installs a git pre-push hook that runs `okl drift --gate` and "
+                         "blocks a push only when lessons have drifted (core.hooksPath honoured; "
+                         "another tool's pre-push hook is never replaced). Recorded in "
+                         ".okl/config.json so later runs upgrade it; --no-git-hook stops that")
     pi.add_argument("--no-seed", dest="no_seed", action="store_true",
                     help="leave the store empty (by default init imports the starter lessons and "
                          "the bundled packs that match this repo's stack)")

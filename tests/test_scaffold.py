@@ -1068,7 +1068,7 @@ def test_okl_owned_files_carry_a_current_fingerprint():
     from okl import ownership
     root = Path(__file__).resolve().parents[1] / "src" / "okl" / "scaffold"
     for rel in ("hooks/userpromptsubmit-okl-check.sh", "hooks/stop-okl-encode.sh",
-                "ci/okl-verify.yml"):
+                "ci/okl-verify.yml", "git-hooks/pre-push"):
         text = (root / rel).read_text()
         assert ownership.embedded(text) == ownership.digest(text), (
             f"{rel}: stale fingerprint; run `python -m okl.ownership --stamp "
@@ -1701,3 +1701,125 @@ def test_registry_entry_starts_the_server_it_lists():
     assert f"mcp-name: {server['name']}" in (root / "README.md").read_text()
     # 5
     assert package["transport"] == {"type": "stdio"}
+
+
+def _git_hook_repo(tmp_path):
+    """A repo with one commit and a bare remote to push to, an `okl` runner that uses this
+    checkout's okl, and a `push` that goes through git, so git itself runs the hook."""
+    repo, remote = tmp_path / "r", tmp_path / "remote.git"
+    env = {**os.environ, "HOME": str(tmp_path), "GIT_CONFIG_NOSYSTEM": "1",
+           "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t",
+           "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t",
+           # The hook resolves okl from OKL_BIN first: this checkout, not a release on PATH.
+           "OKL_BIN": f"{sys.executable} -m okl"}
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN"):
+        env.pop(k, None)
+
+    def git(*a, **kw):
+        return subprocess.run(["git", *a], cwd=repo, env={**env, **kw}, capture_output=True,
+                              text=True)
+
+    def okl(*a):
+        return subprocess.run([sys.executable, "-m", "okl", *a], cwd=repo, env=env,
+                              capture_output=True, text=True)
+
+    repo.mkdir()
+    subprocess.run(["git", "init", "-q", "--bare", str(remote)], check=True, env=env)
+    git("init", "-q")
+    (repo / "a.py").write_text("x = 1\n")
+    git("add", "a.py"); git("commit", "-qm", "a")
+    git("remote", "add", "origin", str(remote))
+    return repo, git, okl
+
+
+def test_git_hook_blocks_a_push_only_when_lessons_drifted(tmp_path):
+    """#90: `okl init --git-hook` installs a pre-push hook running `okl drift --gate`.
+
+    A repo without CI had to copy a script into .git/hooks by hand. The hook blocks only
+    on exit 1 (drift). Exit 2 (nothing checked, or no store) lets the push through with a
+    warning: blocking there would stop every push from a clone with no store yet.
+    """
+    import time
+
+    # ARRANGE — init with the hook: installed where git runs hooks, executable, remembered.
+    repo, git, okl = _git_hook_repo(tmp_path)
+    r = okl("init", "--repo", "r", "--git-hook", "--no-claude", "--no-seed", "--no-ci")
+    hook = repo / ".git" / "hooks" / "pre-push"
+    assert r.returncode == 0 and "pre-push drift gate" in r.stdout, r.stdout + r.stderr
+    assert os.access(hook, os.X_OK)
+    assert json.loads((repo / ".okl" / "config.json").read_text())["git_hook"] is True
+    assert "already current" in okl("init", "--repo", "r", "--no-claude", "--no-seed").stdout
+
+    # ACT/ASSERT 1 — no lesson governs a file: nothing checked (exit 2), so the push goes.
+    p = git("push", "-q", "origin", "HEAD:main")
+    assert p.returncode == 0 and "DRIFT NOT CHECKED" in p.stderr, p.stderr
+
+    # 2 — a governed lesson, verified after its file's last change: clean, pushed.
+    rid = okl("record", "--type", "Rule", "--scope", "repo", "--title", "t",
+              "--files", "a.py").stdout.strip().splitlines()[-1]
+    assert okl("verify", rid, "--run", "true", "--expect", "").returncode == 0
+    (repo / "b.txt").write_text("b\n"); git("add", "b.txt"); git("commit", "-qm", "b")
+    p = git("push", "-q", "origin", "HEAD:main")
+    assert p.returncode == 0 and "NOT CHECKED" not in p.stderr, p.stderr
+
+    # 3 — the governed file changes after verification: drift, and the push is refused.
+    # Committed a minute ahead: commit times are whole seconds, verification is in ms.
+    later = f"@{int(time.time()) + 60} +0000"
+    (repo / "a.py").write_text("x = 2\n")
+    git("commit", "-qam", "c", GIT_COMMITTER_DATE=later, GIT_AUTHOR_DATE=later)
+    p = git("push", "-q", "origin", "HEAD:main")
+    assert p.returncode != 0 and "lessons drifted" in p.stderr, p.stderr
+    assert git("push", "-q", "--no-verify", "origin", "HEAD:main").returncode == 0
+
+    # 4 — no store at all (a fresh clone): not checked, and not blocked.
+    (repo / ".okl" / "config.json").unlink()
+    (repo / "c.txt").write_text("c\n"); git("add", "c.txt"); git("commit", "-qm", "d")
+    p = git("push", "-q", "origin", "HEAD:main")
+    assert p.returncode == 0 and "DRIFT NOT CHECKED" in p.stderr, p.stderr
+
+
+def test_git_hook_never_replaces_another_hook_and_goes_where_git_looks(tmp_path):
+    """#90's install rules: core.hooksPath (Husky and similar) is honoured; a pre-push hook
+    okl did not write is never replaced, not even with --force; a hooks directory outside
+    the repo is refused; doctor reports the hook and uninstall removes only okl's."""
+    # ARRANGE — Husky's layout: hooks run from .husky/_, which already holds a pre-push.
+    repo, git, okl = _git_hook_repo(tmp_path)
+    git("config", "core.hooksPath", ".husky/_")
+    theirs = repo / ".husky" / "_" / "pre-push"
+    theirs.parent.mkdir(parents=True)
+    theirs.write_text("#!/bin/sh\necho husky\n")
+    base = ["init", "--repo", "r", "--no-claude", "--no-seed", "--no-ci"]
+
+    # ACT/ASSERT 1 — their hook is kept, even under --force, and the line to add is printed.
+    for extra in ([], ["--force"]):
+        r = okl(*base, "--git-hook", *extra)
+        assert r.returncode == 0 and "okl drift --gate || [ $? -ne 1 ] || exit 1" in r.stdout, r.stdout
+        assert theirs.read_text() == "#!/bin/sh\necho husky\n"
+    assert not (repo / ".git" / "hooks" / "pre-push").exists()
+    assert "another tool's pre-push hook" in okl("doctor").stdout
+
+    # 2 — with that slot free, okl's hook goes where git runs hooks: .husky/_, not .git/hooks.
+    theirs.unlink()
+    assert okl(*base).returncode == 0, "the recorded choice installs it on a plain re-run"
+    assert "okl-fingerprint" in theirs.read_text()
+    assert "pre-push drift gate: installed (.husky/_/pre-push)" in okl("doctor").stdout
+    assert ".husky/_/pre-push" in okl(*base, "--dry-run").stdout
+
+    # 3 — uninstall removes okl's hook, and only that.
+    r = okl("init", "--uninstall")
+    assert r.returncode == 0 and not theirs.exists(), r.stdout
+    assert (repo / ".husky").is_dir()
+
+    # 4 — a hooks directory outside the repo (a global core.hooksPath) is refused.
+    shared = tmp_path / "shared-hooks"
+    git("config", "core.hooksPath", str(shared))
+    r = okl(*base, "--git-hook")
+    assert r.returncode == 0 and "outside this directory" in r.stdout, r.stdout
+    assert not shared.exists()
+
+    # 5 — a symlinked hook slot is refused, not written through.
+    git("config", "--unset", "core.hooksPath")
+    hooks = repo / ".git" / "hooks"; hooks.mkdir(exist_ok=True)
+    (hooks / "pre-push").symlink_to(tmp_path / "elsewhere")
+    r = okl(*base, "--git-hook")
+    assert "refused" in r.stdout and not (tmp_path / "elsewhere").exists(), r.stdout

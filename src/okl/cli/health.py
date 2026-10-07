@@ -18,8 +18,8 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     Exit 1 when any is found, or when okl itself is wired twice (its plugin enabled AND
     its hooks registered in the project or user settings, so every prompt is briefed
     twice) -- findings,
-    per the CLI contract -- and 0 when neither is. It reads settings files only and
-    changes nothing.
+    per the CLI contract -- and 0 when neither is. It reads settings files, asks git where
+    its hooks live, and changes nothing.
     """
     from .. import coexist
     cfg = _find_config()
@@ -38,7 +38,25 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     if ci_off:
         print("\n• drift is not gated in CI here (okl init --no-ci); run `okl drift --gate` from "
               "another CI or a git hook")
+    print(_git_hook_state(root))
     return 1 if (found or twice) else 0
+
+
+def _git_hook_state(root: Path) -> str:
+    """One informational line on the pre-push drift gate (#90): okl's, edited, or absent."""
+    from .. import ownership
+    from .install import GIT_HOOK_SRC, _git_hooks_dir
+    hooks, why = _git_hooks_dir(root)
+    if hooks is None:
+        return f"\n• pre-push drift gate: cannot be installed here ({why})"
+    rel = hooks / "pre-push"
+    state = ownership.status(root / rel, GIT_HOOK_SRC.read_text())
+    if state == ownership.OKL:
+        return f"\n• pre-push drift gate: installed ({rel})"
+    if state == ownership.MODIFIED:
+        return f"\n• pre-push drift gate: installed and edited since okl wrote it ({rel})"
+    other = " (another tool's pre-push hook is there)" if state == ownership.UNKNOWN else ""
+    return f"\n• pre-push drift gate: not installed{other}; `okl init --git-hook` installs it"
 
 
 def cmd_metric(args: argparse.Namespace) -> int:

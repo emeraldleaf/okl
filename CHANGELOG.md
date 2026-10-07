@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **`okl init --git-hook` installs a pre-push drift gate** (#90), for a repo with no CI or
+  one that would rather not spend Actions minutes on it. The hook runs `okl drift --gate`
+  and blocks a push only on drift; when nothing could be checked (no store yet, no lesson
+  governing a file, okl not found) it warns and lets the push through. It is installed
+  where git runs hooks, so `core.hooksPath` (Husky) is honoured; a pre-push hook okl did
+  not write is never replaced, even with `--force`, and init prints the line to add to it
+  instead. A hooks directory outside the repo (a global `core.hooksPath`, a linked
+  worktree) is refused. The choice is remembered like `--no-ci`; `okl doctor` reports the
+  hook and `okl init --uninstall` removes it. A local hook is per-clone and
+  `--no-verify` skips it, so on a team it complements a CI gate rather than replacing it.
 - **A verification stamp with no observed check behind it is drift** (#20). `okl drift`
   read the store's `verified_at` alone, so a lesson stamped without evidence, such as a
   seeded record that declares `files`, cleared the gate exactly like one whose check had
