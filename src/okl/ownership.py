@@ -65,7 +65,11 @@ def status(path: Path, shipped: str) -> str:
     """
     if not path.exists():
         return MISSING
-    text = path.read_text(encoding="utf-8")
+    try:
+        text = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        return UNKNOWN   # not text, so not okl's: another tool's binary pre-push hook, say
+
     mark = embedded(text)
     if mark is None:
         return OKL if text == body(shipped) else UNKNOWN

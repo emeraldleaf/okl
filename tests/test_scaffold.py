@@ -1771,6 +1771,42 @@ def test_git_hook_blocks_a_push_only_when_lessons_drifted(tmp_path):
     assert p.returncode != 0 and "lessons drifted" in p.stderr, p.stderr
     assert git("push", "-q", "--no-verify", "origin", "HEAD:main").returncode == 0
 
+    # Still drifted. Each push below needs a new commit, or git has nothing to push.
+    def push_new_commit(name, **env):
+        (repo / name).write_text(name); git("add", name); git("commit", "-qm", name)
+        return git("push", "-q", "origin", "HEAD:main", **env)
+
+    def stub(path, body):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"#!/bin/sh\n{body}\n"); path.chmod(0o755)
+        return path
+
+    # No fallback can run okl from here: okl_bin pins a python whose okl module is gone
+    # (it still exists, and `python -m okl` exits 1), and PATH holds no okl.
+    fake_py = stub(tmp_path / "fakebin" / "python3",
+                   f'[ "$1" = "-m" ] && {{ echo "No module named okl" >&2; exit 1; }}\n'
+                   f'exec "{sys.executable}" "$@"')
+    cfg_path = repo / ".okl" / "config.json"
+    cfg = json.loads(cfg_path.read_text())
+    cfg_path.write_text(json.dumps({**cfg, "okl_bin": f"{fake_py} -m okl"}))
+    no_okl = {"PATH": f"{fake_py.parent}:/usr/bin:/bin"}
+
+    # 3a — the only working okl is under a directory with spaces: run whole, drift found.
+    spaced = stub(tmp_path / "my tools" / "okl", f'exec "{sys.executable}" -m okl "$@"')
+    p = push_new_commit("e.txt", OKL_BIN=str(spaced), **no_okl)
+    assert p.returncode != 0 and "may be stale" in p.stdout + p.stderr, p.stdout + p.stderr
+
+    # 3b — then only that broken python is left: its exit 1 is not drift.
+    p = push_new_commit("f.txt", OKL_BIN="", **no_okl)
+    assert p.returncode == 0 and "okl could not be found" in p.stderr, p.stderr
+    cfg_path.write_text(json.dumps(cfg))
+
+    # 3c — okl crashes (Python exits 1 on an uncaught exception): not drift, not blocked.
+    crashy = stub(tmp_path / "crashy" / "okl",
+                  '[ "$2" = "--help" ] && exit 0\necho "Traceback: boom" >&2; exit 1')
+    p = push_new_commit("g.txt", OKL_BIN=str(crashy))
+    assert p.returncode == 0 and "DRIFT NOT CHECKED (okl exit 1" in p.stderr, p.stderr
+
     # 4 — no store at all (a fresh clone): not checked, and not blocked.
     (repo / ".okl" / "config.json").unlink()
     (repo / "c.txt").write_text("c\n"); git("add", "c.txt"); git("commit", "-qm", "d")
@@ -1787,8 +1823,16 @@ def test_git_hook_never_replaces_another_hook_and_goes_where_git_looks(tmp_path)
     git("config", "core.hooksPath", ".husky/_")
     theirs = repo / ".husky" / "_" / "pre-push"
     theirs.parent.mkdir(parents=True)
-    theirs.write_text("#!/bin/sh\necho husky\n")
     base = ["init", "--repo", "r", "--no-claude", "--no-seed", "--no-ci"]
+
+    # A binary hook (not UTF-8) is another tool's too: no traceback from init or doctor.
+    binary = b"\x7fELF\x02\x01\xff\xfe\x00"
+    theirs.write_bytes(binary)
+    r = okl(*base, "--git-hook")
+    assert r.returncode == 0 and theirs.read_bytes() == binary, r.stderr
+    r = okl("doctor")
+    assert "Traceback" not in r.stderr and "another tool's pre-push hook" in r.stdout, r.stderr
+    theirs.write_text("#!/bin/sh\necho husky\n")
 
     # ACT/ASSERT 1 — their hook is kept, even under --force, and the line to add is printed.
     for extra in ([], ["--force"]):
