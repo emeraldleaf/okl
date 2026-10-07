@@ -1,6 +1,11 @@
 <!-- mcp-name: io.github.emeraldleaf/okl -->
 <div align="center">
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/emeraldleaf/okl/main/docs/brand/okl-logo-dark.png">
+  <img src="https://raw.githubusercontent.com/emeraldleaf/okl/main/docs/brand/okl-logo-light.png" alt="okl logo: a tree's growth rings around a healed scar, in an engraved frame with okl in the gap" width="240">
+</picture>
+
 # okl — Observed Knowledge Ledger
 
 **A learning loop that keeps coding agents — and your docs — from drifting.**<br>
