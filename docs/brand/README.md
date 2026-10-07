@@ -12,6 +12,9 @@ in its wood and grows over a wound without erasing it; okl records each lesson a
 it on record after the code moves on. The engraved detail does not survive below 64 px,
 which is why the small icon drops the frame.
 
+The rings, scar and frame began as images from Google's Gemini (Nano Banana Pro). They
+were then recoloured, cut out, given a wider gap in the frame, and lettered in Manrope.
+
 "okl" is set in [Manrope](https://github.com/googlefonts/manrope) ExtraBold, licensed
 under the SIL Open Font License 1.1.
 
