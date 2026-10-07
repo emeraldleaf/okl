@@ -67,6 +67,11 @@ packages = ["src/okl"]
 # scaffold/ lives under src/okl and is shipped by `packages` above; only seed/ is external.
 "seed" = "okl/seed"
 
+[tool.hatch.build.targets.sdist]
+# The logo and social-preview images serve GitHub and the website. The README links them
+# by URL, so the source distribution on PyPI has no use for 1.6 MB of PNGs.
+exclude = ["docs/brand"]
+
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
