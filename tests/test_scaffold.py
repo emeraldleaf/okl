@@ -1714,6 +1714,11 @@ def _git_hook_repo(tmp_path):
            "OKL_BIN": f"{sys.executable} -m okl"}
     for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN"):
         env.pop(k, None)
+    # Run from inside a git hook, GIT_DIR and friends would point every git call below at
+    # that repo instead of cwd. git names the variables that locate a repository.
+    for k in subprocess.run(["git", "rev-parse", "--local-env-vars"], capture_output=True,
+                            text=True, check=True).stdout.split():
+        env.pop(k, None)
 
     def git(*a, **kw):
         return subprocess.run(["git", *a], cwd=repo, env={**env, **kw}, capture_output=True,
@@ -1806,6 +1811,25 @@ def test_git_hook_blocks_a_push_only_when_lessons_drifted(tmp_path):
                   '[ "$2" = "--help" ] && exit 0\necho "Traceback: boom" >&2; exit 1')
     p = push_new_commit("g.txt", OKL_BIN=str(crashy))
     assert p.returncode == 0 and "DRIFT NOT CHECKED (okl exit 1" in p.stderr, p.stderr
+
+    # 3d — a drift report longer than a pipe buffer still blocks. Piped to `grep -q`, grep
+    # exits at the first match, printf takes SIGPIPE, and pipefail read that as no match.
+    big = stub(tmp_path / "big" / "okl",
+               '[ "$2" = "--help" ] && exit 0\necho "OKL drift: 1 rule(s) may be stale"\n'
+               'i=0; while [ $i -lt 20000 ]; do echo "  padding line $i of a long report"; '
+               'i=$((i+1)); done; exit 1')
+    p = push_new_commit("h.txt", OKL_BIN=str(big))
+    assert p.returncode != 0 and "lessons drifted" in p.stderr, p.stderr[-500:]
+
+    # 3e — a GUI client's PATH with no python3 and no okl: the pinned okl_bin is still read.
+    import shutil
+    bare = tmp_path / "bare-path"; bare.mkdir()
+    for tool in ("bash", "git", "sed"):
+        (bare / tool).symlink_to(shutil.which(tool))
+    cfg_path.write_text(json.dumps({**cfg, "okl_bin": str(spaced)}, indent=2) + "\n")
+    p = push_new_commit("i.txt", OKL_BIN="", PATH=str(bare))
+    assert p.returncode != 0 and "may be stale" in p.stdout + p.stderr, p.stdout + p.stderr
+    cfg_path.write_text(json.dumps(cfg))
 
     # 4 — no store at all (a fresh clone): not checked, and not blocked.
     (repo / ".okl" / "config.json").unlink()

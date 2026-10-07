@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:e72cbb9b0a21af78de42dedbd6dc73a2697f1efc4417c82ff5495de2a6539ca3
+# okl-fingerprint: sha256:62a225a9e29c1df5ee542c977d96fa782421b5d51d847b55417e7675e4e77740
 # git pre-push hook, installed by `okl init --git-hook` (#90): run the drift gate before a push.
 #
 # Blocks the push ONLY when okl ran and found drift (exit 1): a lesson whose governed files
@@ -32,9 +32,15 @@ try_pinned() {
 resolve_okl() {
   if [ -n "${OKL_BIN:-}" ] && try_pinned "$OKL_BIN"; then return 0; fi
   if [ -f .okl/config.json ]; then
-    local bin
-    bin=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("okl_bin") or "")' \
-          .okl/config.json 2>/dev/null || true)
+    local bin=""
+    if command -v python3 >/dev/null 2>&1; then
+      bin=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("okl_bin") or "")' \
+            .okl/config.json 2>/dev/null || true)
+    else
+      # No python3 on a GUI client's PATH, where the pinned path matters most. okl writes
+      # one key per line; a value holding a JSON escape is skipped, never misread.
+      bin=$(sed -n 's/^ *"okl_bin": *"\([^"\\]*\)",\{0,1\} *$/\1/p' .okl/config.json 2>/dev/null || true)
+    fi
     if [ -n "$bin" ] && try_pinned "$bin"; then return 0; fi
   fi
   try_okl okl || try_okl python3 -m okl
@@ -50,7 +56,9 @@ out=$("${OKL[@]}" drift --gate)
 rc=$?
 printf '%s\n' "$out"
 # Exit 1 is drift only alongside the drift report: Python also exits 1 when okl crashes.
-if [ "$rc" -eq 1 ] && printf '%s' "$out" | grep -q "may be stale"; then
+# Matched in bash, not piped to `grep -q`: on a long report grep exits early, printf takes
+# SIGPIPE, and under pipefail the drift would read as no match.
+if [ "$rc" -eq 1 ] && [[ "$out" == *"may be stale"* ]]; then
   echo "okl pre-push: lessons drifted (above). Re-check them with 'okl reverify', commit," >&2
   echo "  then push again. 'git push --no-verify' skips this check." >&2
   exit 1
