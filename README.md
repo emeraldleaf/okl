@@ -52,7 +52,7 @@ should work, but the Claude Code hooks likely need fixes there
 
 ```bash
 okl init --repo my-repo --dry-run   # lists every file it would write; writes nothing
-okl init --repo my-repo             # config, Claude Code hooks, MCP server, CI workflow, starter lessons
+okl init --repo my-repo             # config, Claude Code hooks, MCP server, pre-push drift gate, starter lessons
 ```
 
 `init` detects your stack (`*.csproj`, `package.json`, `pyproject.toml` …), sets the repo's

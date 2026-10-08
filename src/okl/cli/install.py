@@ -53,6 +53,10 @@ HOOK_COMMANDS = {
 
 MCP_ENTRY = {"command": "okl", "args": ["mcp"]}
 
+# The GitHub Actions drift workflow: where init installs it, and the copy okl ships.
+WORKFLOW = Path(".github") / "workflows" / "okl-verify.yml"
+WORKFLOW_SRC = Path(__file__).parent.parent / "scaffold" / "ci" / "okl-verify.yml"
+
 
 def _symlinked(path: Path) -> Path | None:
     """The first symlink on the way to `path` inside this repo, or None.
@@ -138,7 +142,7 @@ def _uninstall_files(act: str, dry_run: bool) -> list[str]:
     owned = [(Path(".claude/hooks/userpromptsubmit-okl-check.sh"),
               scaffold / "hooks" / "userpromptsubmit-okl-check.sh"),
              (Path(".claude/hooks/stop-okl-encode.sh"), scaffold / "hooks" / "stop-okl-encode.sh"),
-             (Path(".github/workflows/okl-verify.yml"), scaffold / "ci" / "okl-verify.yml")]
+             (WORKFLOW, WORKFLOW_SRC)]
     hooks, _ = _git_hooks_dir()
     if hooks is not None:
         owned.append((hooks / "pre-push", GIT_HOOK_SRC))
@@ -418,19 +422,30 @@ def _ci_wanted(args: argparse.Namespace, cfg: dict) -> bool:
         return bool(flag)
     if "ci" in cfg:
         return bool(cfg["ci"])
-    return (Path(".github") / "workflows" / "okl-verify.yml").exists()
+    from .. import ownership
+    return _workflow_state() in (ownership.OKL, ownership.MODIFIED)
+
+
+def _workflow_state() -> str:
+    """ownership.status of .github/workflows/okl-verify.yml. Only okl's own workflow (edited
+    or not) is a drift gate: another file at that path is kept, never replaced, and checks
+    nothing okl knows of."""
+    from .. import ownership
+    return ownership.status(WORKFLOW, WORKFLOW_SRC.read_text())
 
 
 def _git_hook_wanted(args: argparse.Namespace, cfg: dict) -> bool:
     """Whether init installs the pre-push drift gate: --git-hook/--no-git-hook when given,
-    else what an earlier init recorded, else wherever there is no CI gate -- so that, by
-    default, drift is gated somewhere."""
+    else what an earlier init recorded, else wherever CI will not gate drift -- no workflow
+    wanted, or one wanted where another tool's file holds its path -- so that, by default,
+    drift is gated somewhere."""
     flag = getattr(args, "git_hook", None)
     if flag is not None:
         return bool(flag)
     if "git_hook" in cfg:
         return bool(cfg["git_hook"])
-    return not _ci_wanted(args, cfg)
+    from .. import ownership
+    return not _ci_wanted(args, cfg) or _workflow_state() == ownership.UNKNOWN
 
 
 def _init_interests(cfg: dict, args: argparse.Namespace) -> None:
@@ -545,18 +560,18 @@ def _wire_drift_gates(cfg: dict, force: bool) -> None:
     else:
         print("• no GitHub Actions workflow (`okl init --ci` adds one). A local hook is skippable "
               "and per-clone; on a team, gate drift in CI too")
+    from .. import ownership
     if cfg["git_hook"]:
         _install_git_hook(force=force)
-    elif not cfg["ci"]:
-        print("! drift is gated nowhere here (--no-git-hook and no CI): `okl init --git-hook` "
-              "or `okl init --ci` adds a gate")
+    elif not cfg["ci"] or _workflow_state() == ownership.UNKNOWN:
+        print("! drift is gated nowhere here (no pre-push hook, and no okl CI workflow): "
+              "`okl init --git-hook` or `okl init --ci` adds a gate")
 
 
 def _install_ci_verifier(force: bool = False) -> None:
     """Install the CI verifier workflow instead of printing a copy instruction."""
-    wf = Path(".github") / "workflows" / "okl-verify.yml"
-    src = Path(__file__).parent.parent / "scaffold" / "ci" / "okl-verify.yml"
-    _place_owned(wf, src.read_text(), "CI verifier (drift gate + repo gates on every PR)", force)
+    _place_owned(WORKFLOW, WORKFLOW_SRC.read_text(), "CI verifier (drift gate + repo gates on every PR)",
+                 force)
 
 
 GIT_HOOK_SRC = Path(__file__).parent.parent / "scaffold" / "git-hooks" / "pre-push"

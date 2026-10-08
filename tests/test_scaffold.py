@@ -1933,6 +1933,22 @@ def test_init_gates_drift_locally_by_default_and_keeps_an_existing_workflow(tmp_
     assert not (old / ".git" / "hooks" / "pre-push").exists(), "a CI-gated repo gets no hook"
     assert cfg["ci"] is True and cfg["git_hook"] is False, cfg
 
+    # 4 — another tool's file at the workflow's path is not a drift gate: it is kept, and
+    # the hook gates drift instead, with or without --ci (init will not replace that file).
+    for extra in ([], ["--ci"]):
+        other = tmp_path / f"other{len(extra)}"; other.mkdir()
+        subprocess.run(["git", "init", "-q", str(other)], check=True)
+        theirs = other / ".github" / "workflows" / "okl-verify.yml"
+        theirs.parent.mkdir(parents=True); theirs.write_text("name: someone else's\n")
+        r = subprocess.run([sys.executable, "-m", "okl", "init", "--repo", "x", "--no-claude",
+                            "--no-seed", *extra], cwd=other, env=env, capture_output=True, text=True)
+        assert r.returncode == 0, r.stderr
+        assert theirs.read_text() == "name: someone else's\n"
+        assert (other / ".git" / "hooks" / "pre-push").exists(), (extra, r.stdout)
+        cfg = json.loads((other / ".okl" / "config.json").read_text())
+        # Without --ci, that file must not be recorded as the CI gate this repo has.
+        assert cfg["git_hook"] is True and cfg["ci"] is bool(extra), (extra, cfg)
+
 
 def test_verify_writes_no_snapshot_nothing_reads(tmp_path):
     """#114: `okl verify` created okl-drift.json for CI even where init recorded no CI, so

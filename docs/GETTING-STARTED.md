@@ -49,7 +49,8 @@ okl init --repo shop
 - `init` wires Claude Code when the repo has a `.claude/` folder or `claude` is on your
   PATH (`--claude` forces it, `--no-claude` skips it). It writes `.okl/` (config and the
   local store, gitignored), two hooks in `.claude/hooks/` registered in
-  `.claude/settings.json`, `.mcp.json`, and a CI workflow.
+  `.claude/settings.json`, `.mcp.json`, and a git pre-push hook that gates drift
+  (`--ci` adds a GitHub Actions workflow as well).
 
 **Prefer the Claude Code plugin?** Install it *before* `init` — `/plugin marketplace add
 emeraldleaf/okl`, then `/plugin install okl@okl` — and `init` leaves the hooks to the
@@ -94,8 +95,10 @@ git add .claude .mcp.json      # and .github/workflows/okl-verify.yml if you ran
 git commit -m "Wire okl"
 ```
 
-The pre-push hook lives in `.git/hooks`, which git never commits: each clone gets it when
-someone runs `okl init` there.
+With git's default hooks folder, the pre-push hook lives in `.git/hooks`, which git never
+commits: each clone gets it when someone runs `okl init` there. If `core.hooksPath` names a
+folder inside the repo, init installs it there instead, and whether it is committed is up to
+that folder.
 
 Not `.okl/`: it holds the local store and machine-specific paths, and `init` gitignores it.
 
