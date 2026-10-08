@@ -730,8 +730,8 @@ def test_check_filters_org_nodes_by_declared_interests(store):
 
 def test_init_wires_everything_mechanically(tmp_path, monkeypatch, capsys):
     """`okl init` must DO the wiring, not print instructions: hooks installed AND
-    registered in settings.json (idempotently, preserving existing settings), CI verifier
-    installed when git exists, loud warning when it doesn't (drift layer dead)."""
+    registered in settings.json (idempotently, preserving existing settings), and drift
+    gated by default without GitHub: no workflow unless asked, the pre-push hook instead."""
     import argparse
     import importlib.util
 
@@ -755,7 +755,9 @@ def test_init_wires_everything_mechanically(tmp_path, monkeypatch, capsys):
     assert any("userpromptsubmit-okl-check.sh" in h["command"] for e in ups for h in e["hooks"])
     assert any("stop-okl-encode.sh" in h["command"] for e in settings["hooks"]["Stop"] for h in e["hooks"])
     assert (tmp_path / ".claude" / "hooks" / "userpromptsubmit-okl-check.sh").exists()
-    assert (tmp_path / ".github" / "workflows" / "okl-verify.yml").exists()
+    assert not (tmp_path / ".github").exists(), "the GitHub workflow is opt-in (--ci)"
+    cfg = json.loads((tmp_path / ".okl" / "config.json").read_text())
+    assert cfg["ci"] is False and cfg["git_hook"] is True, cfg
     if importlib.util.find_spec("mcp"):
         assert "okl" in json.loads((tmp_path / ".mcp.json").read_text())["mcpServers"]
     # idempotent: second run adds nothing
@@ -887,7 +889,7 @@ def test_init_dry_run_writes_nothing(tmp_path, monkeypatch, capsys):
     out = capsys.readouterr().out
     assert "DRY RUN" in out
     for expected in ("hooks/userpromptsubmit-okl-check.sh", "settings.json",
-                     ".github/workflows/okl-verify.yml", ".okl/config.json"):
+                     "no CI workflow", "pre-push", ".okl/config.json"):
         assert expected in out, f"dry run must disclose {expected}"
     assert sorted(p.name for p in tmp_path.iterdir()) == before, "dry run wrote something"
     assert not (tmp_path / ".okl").exists()
@@ -2074,7 +2076,7 @@ def test_drift_snapshot_gives_ci_a_store_it_cannot_clear_by_hand(tmp_path, monke
         subprocess.run([*git, "commit", "-qm", msg], check=True, env=env)
 
     (tmp_path / "a.py").write_text("x = 1\n"); commit("a", "a.py")
-    okl("init", "--repo", "r")
+    okl("init", "--repo", "r", "--ci")
     rid = okl("record", "--type", "Rule", "--scope", "repo", "--title", "t", "--body",
               "a lesson body", "--files", "a.py").stdout.strip().splitlines()[-1]
     snap_file = tmp_path / "okl-drift.json"
@@ -2962,7 +2964,7 @@ def test_first_run_notice_and_reverify_in_process(tmp_path, monkeypatch, capsys)
 
     assert main(["init", "--repo", "s", "--no-claude", "--dry-run"]) == 0
     assert "detected: python" in capsys.readouterr().out
-    assert main(["init", "--repo", "s", "--no-claude"]) == 0
+    assert main(["init", "--repo", "s", "--no-claude", "--ci"]) == 0
     assert "seeded 20 starter lessons" in capsys.readouterr().out
 
     assert main(["check", "--task", "add an endpoint that returns an order for the logged-in user",

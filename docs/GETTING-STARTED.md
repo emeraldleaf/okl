@@ -49,7 +49,8 @@ okl init --repo shop
 - `init` wires Claude Code when the repo has a `.claude/` folder or `claude` is on your
   PATH (`--claude` forces it, `--no-claude` skips it). It writes `.okl/` (config and the
   local store, gitignored), two hooks in `.claude/hooks/` registered in
-  `.claude/settings.json`, `.mcp.json`, and a CI workflow.
+  `.claude/settings.json`, `.mcp.json`, and a git pre-push hook that gates drift
+  (`--ci` adds a GitHub Actions workflow as well).
 
 **Prefer the Claude Code plugin?** Install it *before* `init` — `/plugin marketplace add
 emeraldleaf/okl`, then `/plugin install okl@okl` — and `init` leaves the hooks to the
@@ -90,9 +91,14 @@ flags okl wired twice (plugin and project hooks).
 ### Commit the wiring
 
 ```bash
-git add .claude .mcp.json .github/workflows/okl-verify.yml
+git add .claude .mcp.json      # and .github/workflows/okl-verify.yml if you ran init --ci
 git commit -m "Wire okl"
 ```
+
+With git's default hooks folder, the pre-push hook lives in `.git/hooks`, which git never
+commits: each clone gets it when someone runs `okl init` there. If `core.hooksPath` names a
+folder inside the repo, init installs it there instead, and whether it is committed is up to
+that folder.
 
 Not `.okl/`: it holds the local store and machine-specific paths, and `init` gitignores it.
 
@@ -253,12 +259,15 @@ verified without running something: `okl record --verified` is refused.
 1. Commit the code change.
 2. Re-check the lessons whose governed files you touched: `okl reverify` lists each one's
    stored check and, once you confirm, re-runs them (`--yes` skips the question).
-3. Commit `okl-drift.json`, which `okl verify` / `okl reverify` keep up to date.
+3. If CI gates drift, commit `okl-drift.json`, which `okl verify` / `okl reverify` keep up
+   to date.
 
-`okl-drift.json` is what CI's drift gate reads (your store is not in git). `okl verify`
-creates it the first time a lesson with `--files` is verified — commit it then. Until a
-lesson governs files there is nothing to snapshot, and CI warns "Drift not checked" —
-expected.
+`okl-drift.json` is what CI's drift gate reads (your store is not in git). Where `okl init
+--ci` installed the GitHub workflow, `okl verify` creates it the first time a lesson with
+`--files` is verified — commit it then. Until a lesson governs files there is nothing to
+snapshot, and CI warns "Drift not checked" — expected. With no workflow, `okl verify`
+writes no snapshot, so none sits untracked; for another CI, run `okl export --drift` once
+and commit it, and `okl verify` keeps that committed copy current.
 
 ---
 
@@ -331,7 +340,7 @@ statements, architecture rules, published numbers.
 
 ## 4. Run the drift gate without GitHub Actions
 
-`okl init` writes a GitHub Actions workflow, but the gate itself is one command:
+`okl init --ci` writes a GitHub Actions workflow, but the gate itself is one command:
 
 ```bash
 okl drift --gate --snapshot okl-drift.json
@@ -357,7 +366,8 @@ Four things matter, whichever CI you use:
    passed at with new ones, so main cannot find them, falls back to times, and goes red
    right after a green PR. This is a repository setting, not a CI one.
 3. **The committed `okl-drift.json`**, or a shared store through the `OKL_SERVICE_URL` and
-   `OKL_TOKEN` environment variables.
+   `OKL_TOKEN` environment variables. Without okl's GitHub workflow, `okl export --drift`
+   writes the first snapshot; once it is committed, `okl verify` keeps it current.
 4. **Python 3.10 or newer.** Pin okl to the version you run locally, so a new release
    cannot change the gate under you. `okl --version` prints it from the release after
    0.7.9; on 0.7.9 and earlier, `pip show observed-knowledge-ledger` (or `uv tool list`)
@@ -401,10 +411,13 @@ with no store pushes. If one needs a change on your CI, an issue or PR is welcom
 
 ### No CI: a pre-push hook
 
-For a solo project, a git hook can run the gate against your local store before every push:
+In a git repository, `okl init` installs a git hook that runs the gate against your local
+store before every push. It is the default wherever okl's GitHub workflow is not installed:
 
 ```bash
-okl init --git-hook          # add --no-ci if you do not want the GitHub workflow as well
+okl init                     # the pre-push hook, and no GitHub workflow
+okl init --ci --git-hook     # both: the hook warns early, CI is the gate nobody can skip
+okl init --no-git-hook       # neither, if you gate drift some other way
 ```
 
 The hook runs `okl drift --gate` and blocks the push only when lessons have drifted (exit 1).

@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- **Drift is gated locally by default; the GitHub workflow is opt-in.** In a git repository
+  `okl init` now installs the pre-push drift gate, not `.github/workflows/okl-verify.yml`.
+  The workflow spends a private repo's Actions minutes and does nothing on another CI, so
+  `--ci` adds it; `--no-git-hook` skips the hook, and with neither init says drift is gated
+  nowhere. **Upgrading changes nothing for a repo that already has okl's workflow:** with
+  no recorded choice, init keeps the workflow wherever it is installed and adds no hook.
+  Both choices are recorded in `.okl/config.json`, so later runs give the same answer.
+- **`okl verify` writes no `okl-drift.json` that nothing reads** (#114). Where init
+  recorded no CI workflow, verify used to create the snapshot anyway, leaving an untracked
+  file after every verify. It now writes none there unless a snapshot is already committed
+  (another CI or a hook may gate on it), and says how to make the first one:
+  `okl export --drift`, then commit it.
 - **`okl init --git-hook` installs a pre-push drift gate** (#90), for a repo with no CI or
   one that would rather not spend Actions minutes on it. The hook runs `okl drift --gate`
   and blocks a push only on drift; when nothing could be checked (no store yet, no lesson

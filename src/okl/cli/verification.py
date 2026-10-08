@@ -88,6 +88,14 @@ def cmd_verify(args: argparse.Namespace) -> int:
         print(f"  ! uncommitted changes to {', '.join(dirty[:3])}{' …' if len(dirty) > 3 else ''}: "
               "commit them, then verify again, or this lesson will show as drifted",
               file=sys.stderr)
+    _refresh_snapshot(node)
+    if getattr(args, "branch_warning", True):
+        _warn_off_branch(Client(), skip=node["id"])
+    return 0
+
+
+def _refresh_snapshot(node: dict) -> None:
+    """After a passing verify: create or refresh the committed drift snapshot CI reads."""
     # Keep CI's view in step. A snapshot that exists is one CI reads, and re-verifying
     # without re-exporting leaves CI red for a rule that is green here -- the safe
     # direction, but a step everyone would forget. The FIRST snapshot is created here too,
@@ -95,6 +103,14 @@ def cmd_verify(args: argparse.Namespace) -> int:
     # --drift` that the getting-started guide had to teach as a trap. Never for a lesson
     # without files -- a snapshot of zero rules is one CI rightly reads as broken.
     snap = _snapshot_path()
+    if _no_ci_reads(snap):
+        # #114: with no CI workflow, a snapshot nobody committed is read by nothing, and
+        # creating one left an untracked file after every verify. A committed one is still
+        # refreshed: another CI or a hook may run the gate against it.
+        if node.get("files") and not snap.exists():
+            print(f"  (no {snap.name} written: no CI workflow here. If another CI runs the "
+                  "gate, `okl export --drift` once and commit it)")
+        return
     if snap.exists() or node.get("files"):
         try:
             existed = snap.exists()
@@ -102,9 +118,6 @@ def cmd_verify(args: argparse.Namespace) -> int:
             print(f"  {'refreshed' if existed else 'created'} {snap.name} — commit it so CI sees this verification")
         except OKLUnreachableError as e:
             print(f"  ! {snap.name} NOT refreshed: {e}", file=sys.stderr)
-    if getattr(args, "branch_warning", True):
-        _warn_off_branch(Client(), skip=node["id"])
-    return 0
 
 
 def _warn_off_branch(client: Client, skip: str | None = None) -> None:
@@ -320,6 +333,27 @@ def _snapshot_path() -> Path:
     from .. import drift
     cfg = _find_config()
     return (cfg.parent.parent if cfg else Path.cwd()) / drift.SNAPSHOT_FILE
+
+
+def _no_ci_reads(snap: Path) -> bool:
+    """True when nothing will read `snap`: init recorded no CI workflow ("ci": false) and
+    the snapshot is not committed. Committed means tracked by git, not present on disk:
+    an untracked copy is exactly the clutter #114 is about."""
+    import json
+    import subprocess
+    cfg = _find_config()
+    try:
+        ci_off = cfg is not None and json.loads(cfg.read_text()).get("ci") is False
+    except (OSError, ValueError, AttributeError):
+        return False   # unreadable config: keep the old behaviour, which writes
+    if not ci_off:
+        return False
+    try:
+        tracked = subprocess.run(["git", "-C", str(snap.parent), "ls-files", "--error-unmatch",
+                                  snap.name], capture_output=True, timeout=10).returncode == 0
+    except (OSError, subprocess.TimeoutExpired):
+        tracked = False
+    return not tracked
 
 
 def _write_snapshot(client: Client, path: Path) -> int:

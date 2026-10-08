@@ -36,8 +36,8 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     except (OSError, ValueError, AttributeError):
         ci_off = False
     if ci_off:
-        print("\n• drift is not gated in CI here (okl init --no-ci); run `okl drift --gate` from "
-              "another CI or a git hook")
+        print("\n• drift is not gated in CI here; `okl init --ci` adds the GitHub workflow, and "
+              "another CI can run `okl drift --gate`")
     print(_git_hook_state(root))
     return 1 if (found or twice) else 0
 

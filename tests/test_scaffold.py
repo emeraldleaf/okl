@@ -1621,7 +1621,7 @@ def test_init_and_doctor_know_okls_own_plugin(tmp_path):
                               capture_output=True, text=True)
 
     assert coexist.okl_plugin_enabled(proj, home)
-    r = okl("init", "--repo", "p")
+    r = okl("init", "--repo", "p", "--ci")
     assert r.returncode == 0 and "plugin" in r.stdout, r.stdout
     settings = json.loads((proj / ".claude" / "settings.json").read_text()) \
         if (proj / ".claude" / "settings.json").exists() else {}
@@ -1891,3 +1891,88 @@ def test_git_hook_never_replaces_another_hook_and_goes_where_git_looks(tmp_path)
     (hooks / "pre-push").symlink_to(tmp_path / "elsewhere")
     r = okl(*base, "--git-hook")
     assert "refused" in r.stdout and not (tmp_path / "elsewhere").exists(), r.stdout
+
+
+def test_init_gates_drift_locally_by_default_and_keeps_an_existing_workflow(tmp_path):
+    """The GitHub workflow is opt-in: it spends a private repo's Actions minutes and does
+    nothing on another CI. By default init gates drift with the pre-push hook instead, and
+    records both choices. A repo an older init gave the workflow keeps it on re-run, so
+    upgrading okl never removes a gate."""
+    # ARRANGE/ACT 1 — a fresh init with no flags.
+    repo, git, okl = _git_hook_repo(tmp_path)
+    wf = repo / ".github" / "workflows" / "okl-verify.yml"
+    r = okl("init", "--repo", "r", "--no-claude", "--no-seed")
+    cfg = json.loads((repo / ".okl" / "config.json").read_text())
+
+    # ASSERT — no workflow, the hook instead, both recorded.
+    assert r.returncode == 0 and "no GitHub Actions workflow" in r.stdout, r.stdout
+    assert not wf.exists() and (repo / ".git" / "hooks" / "pre-push").exists()
+    assert cfg["ci"] is False and cfg["git_hook"] is True, cfg
+
+    # 2 — opting out of both is allowed, and said out loud.
+    r = okl("init", "--repo", "r", "--no-claude", "--no-seed", "--no-git-hook")
+    assert "drift is gated nowhere" in r.stdout, r.stdout
+
+    # 3 — a repo an older init set up: the workflow is installed and nothing is recorded.
+    old = tmp_path / "old"; old.mkdir()
+    subprocess.run(["git", "init", "-q", str(old)], check=True)
+    env = {k: v for k, v in os.environ.items() if k not in ("OKL_DATABASE_URL", "OKL_SERVICE_URL")}
+    env["HOME"] = str(tmp_path)
+
+    def okl_old(*a):
+        return subprocess.run([sys.executable, "-m", "okl", *a], cwd=old, env=env,
+                              capture_output=True, text=True)
+
+    assert okl_old("init", "--repo", "o", "--no-claude", "--no-seed", "--ci").returncode == 0
+    cfg_path = old / ".okl" / "config.json"
+    legacy = {k: v for k, v in json.loads(cfg_path.read_text()).items() if k not in ("ci", "git_hook")}
+    cfg_path.write_text(json.dumps(legacy))
+    r = okl_old("init", "--repo", "o", "--no-claude", "--no-seed")
+    cfg = json.loads(cfg_path.read_text())
+    assert (old / ".github" / "workflows" / "okl-verify.yml").exists(), r.stdout
+    assert not (old / ".git" / "hooks" / "pre-push").exists(), "a CI-gated repo gets no hook"
+    assert cfg["ci"] is True and cfg["git_hook"] is False, cfg
+
+    # 4 — another tool's file at the workflow's path is not a drift gate: it is kept, and
+    # the hook gates drift instead, with or without --ci (init will not replace that file).
+    for extra in ([], ["--ci"]):
+        other = tmp_path / f"other{len(extra)}"; other.mkdir()
+        subprocess.run(["git", "init", "-q", str(other)], check=True)
+        theirs = other / ".github" / "workflows" / "okl-verify.yml"
+        theirs.parent.mkdir(parents=True); theirs.write_text("name: someone else's\n")
+        r = subprocess.run([sys.executable, "-m", "okl", "init", "--repo", "x", "--no-claude",
+                            "--no-seed", *extra], cwd=other, env=env, capture_output=True, text=True)
+        assert r.returncode == 0, r.stderr
+        assert theirs.read_text() == "name: someone else's\n"
+        assert (other / ".git" / "hooks" / "pre-push").exists(), (extra, r.stdout)
+        cfg = json.loads((other / ".okl" / "config.json").read_text())
+        # Without --ci, that file must not be recorded as the CI gate this repo has.
+        assert cfg["git_hook"] is True and cfg["ci"] is bool(extra), (extra, cfg)
+
+
+def test_verify_writes_no_snapshot_nothing_reads(tmp_path):
+    """#114: `okl verify` created okl-drift.json for CI even where init recorded no CI, so
+    every verify left an untracked file. With "ci": false it writes none, unless a snapshot
+    is committed: another CI or a hook may run the gate against that one."""
+    # ARRANGE — the default init (no CI) and a lesson governing a file.
+    repo, git, okl = _git_hook_repo(tmp_path)
+    okl("init", "--repo", "r", "--no-claude", "--no-seed")
+    snap = repo / "okl-drift.json"
+    rid = okl("record", "--type", "Rule", "--scope", "repo", "--title", "t",
+              "--files", "a.py").stdout.strip().splitlines()[-1]
+
+    # ACT/ASSERT 1 — verified: no snapshot, and verify says how to get one.
+    r = okl("verify", rid, "--run", "true", "--expect", "")
+    assert r.returncode == 0 and not snap.exists(), r.stdout
+    assert "okl export --drift" in r.stdout, r.stdout
+
+    # 2 — exported but not committed: still read by nothing, so not refreshed.
+    assert okl("export", "--drift").returncode == 0 and snap.exists()
+    before = snap.read_text()
+    r = okl("verify", rid, "--run", "true", "--expect", "")
+    assert "refreshed" not in r.stdout and snap.read_text() == before, r.stdout
+
+    # 3 — committed: now something reads it, so verify keeps it current.
+    git("add", "okl-drift.json"); git("commit", "-qm", "snapshot")
+    r = okl("verify", rid, "--run", "true", "--expect", "")
+    assert "refreshed okl-drift.json" in r.stdout and snap.read_text() != before, r.stdout
