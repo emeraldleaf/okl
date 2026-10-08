@@ -8,7 +8,7 @@ Expect an acknowledgement within a week. This is a v0 project maintained by one 
 fixes are best-effort, and the honest expectation is a patch release or a documented
 mitigation, not a same-day turnaround.
 
-Supported: the latest release (currently `0.7.x`). Older versions get nothing.
+Supported: the latest release (currently `0.8.x`). Older versions get nothing.
 
 ## What this software does that you should know about
 
@@ -54,7 +54,9 @@ must come from an executed check. It also means **never pass untrusted input to
 ### 3. The hooks execute scripts from your repository
 
 `okl init` installs shell hooks into `.claude/hooks/` and registers them. They run
-whenever your agent runs. Read them before installing, the same as any other hook, and
+whenever your agent runs. In a git repository it also installs a pre-push hook (in
+`.git/hooks/` or your `core.hooksPath`) that runs on every push, from any git client, and
+executes the okl named by `OKL_BIN` or `.okl/config.json`. Read them before installing, the same as any other hook, and
 review changes to them the same way you would review CI configuration.
 
 ## What ships in the package

@@ -25,7 +25,7 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
     p.add_argument("--version", action="version", version=f"okl {__version__}")
     sub = p.add_subparsers(dest="cmd", required=True)
 
-    pi = sub.add_parser("init", help="wire the current repo (config + hook + CI pointer)")
+    pi = sub.add_parser("init", help="wire the current repo (config, Claude Code hooks, MCP, pre-push drift gate; --ci for the GitHub workflow)")
     pi.add_argument("--repo"); pi.add_argument("--service")
     pi.add_argument("--interests", help="comma-sep subject tags this repo cares about "
                     "(filters org-scope lessons in `check`; see store.KNOWN_TAGS)")
@@ -43,7 +43,7 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                     help="--git-hook installs a git pre-push hook that runs `okl drift --gate` and "
                          "blocks a push only when lessons have drifted (core.hooksPath honoured; "
                          "another tool's pre-push hook is never replaced); --no-git-hook skips it. "
-                         "Default: installed wherever there is no CI workflow. Recorded in "
+                         "Default: installed wherever okl's GitHub workflow is not. Recorded in "
                          ".okl/config.json so later runs upgrade it")
     pi.add_argument("--no-seed", dest="no_seed", action="store_true",
                     help="leave the store empty (by default init imports the starter lessons and "
@@ -132,13 +132,13 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
     ps.add_argument("--format", choices=["text", "json"], default="text")
     ps.set_defaults(func=cmd_search)
 
-    pm = sub.add_parser("metric", help="recurrence-after-arming metric")
+    pm = sub.add_parser("metric", help="recurrence-after-arming, plus briefing exposure (lessons never shown, most shown unchecked)")
     pm.add_argument("--format", choices=["text", "json"], default="text")
     pm.set_defaults(func=cmd_metric)
 
     pdr = sub.add_parser("drift", help="source-vs-spec drift: rules whose governed code changed after verification")
     pdr.add_argument("--repo"); pdr.add_argument("--repo-dir", dest="repo_dir", default=".")
-    pdr.add_argument("--gate", action="store_true", help="exit 1 if drift found (for CI)")
+    pdr.add_argument("--gate", action="store_true", help="exit 1 if drift found, 2 if nothing could be checked (for CI and the pre-push hook)")
     pdr.add_argument("--format", choices=["text", "json"], default="text")
     pdr.add_argument("--snapshot", metavar="FILE",
                      help="read rules from a committed snapshot (okl export --drift) "
@@ -152,7 +152,7 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
     pex.set_defaults(func=cmd_export)
 
     pdoc = sub.add_parser("doctor", help="report other agent-memory tools installed beside okl, "
-                                         "and how they collide (changes nothing)")
+                                         "how they collide, and where drift is gated (changes nothing)")
     pdoc.set_defaults(func=cmd_doctor)
 
     pdd = sub.add_parser("dedup", help="report near-duplicate records for review (never auto-merges)")

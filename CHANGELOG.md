@@ -9,6 +9,20 @@
   nowhere. **Upgrading changes nothing for a repo that already has okl's workflow:** with
   no recorded choice, init keeps the workflow wherever it is installed and adds no hook.
   Both choices are recorded in `.okl/config.json`, so later runs give the same answer.
+  **A repo with no okl workflow gets the hook on its next `okl init`.** Since #20 a lesson
+  stamped without an observed check (a seed file's `"verified": true`, for one) is drift,
+  so prove those lessons with `okl verify` first, or pass `--no-git-hook`, or the hook
+  blocks the push. `--ci` installs the workflow *in place of* the hook; `--ci --git-hook`
+  gives both.
+- **`okl scaffold` no longer installs okl's drift workflow.** It still stamped
+  `okl-verify.yml` after the workflow became opt-in. Run in the order scaffold suggests
+  (scaffold, then `okl init`), init found the workflow, recorded CI as on and installed no
+  pre-push hook; run the other way round, init recorded no CI beside a workflow that then
+  warned "Drift not checked" on every run. okl's drift gate is now `okl init`'s alone: the
+  pre-push hook by default, the workflow with `--ci`. The method kit's own workflow,
+  `method-gates.yml`, is unchanged. `okl init --ci --dry-run` also now gives the real reason
+  it installs no hook (okl's workflow gates drift) instead of blaming a `--no-git-hook`
+  nobody passed.
 - **`okl verify` writes no `okl-drift.json` that nothing reads** (#114). Where init
   recorded no CI workflow, verify used to create the snapshot anyway, leaving an untracked
   file after every verify. It now writes none there unless a snapshot is already committed

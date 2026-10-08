@@ -25,7 +25,6 @@ def _layout(c: str = ".claude") -> list[tuple[str, str]]:
         ("registries", "registries"),
         ("evals", "evals"),
         ("ci/method-gates.yml", ".github/workflows/method-gates.yml"),
-        ("ci/okl-verify.yml", ".github/workflows/okl-verify.yml"),
         # Ships alongside the workflows because they pin their actions to commit SHAs.
         # A pin with no update path goes stale, so the thing that updates it is part of
         # the kit rather than a step in a README nobody reads.
