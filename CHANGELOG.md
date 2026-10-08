@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **`.okl/config.json` is owner-only when it holds the service token** (#98). `okl connect
+  --token` stores the bearer credential there, and the file was written with default
+  permissions (`-rw-r--r--` on macOS), so every local user could read it. It is now written
+  with mode 0600, and an existing config is tightened on the next write. A config with no
+  token keeps the default mode. On CI and shared machines, `OKL_TOKEN` in the environment
+  is still the better place for the token.
 - **A verification stamp with no observed check behind it is drift** (#20). `okl drift`
   read the store's `verified_at` alone, so a lesson stamped without evidence, such as a
   seeded record that declares `files`, cleared the gate exactly like one whose check had

@@ -65,7 +65,19 @@ def save_config(data: dict[str, Any], root: Path | None = None) -> Path:
     if not gitignore.exists():
         gitignore.write_text("# okl: machine-local config, credentials and local store\n*\n")
     path = d / CONFIG_FILE
-    path.write_text(json.dumps(data, indent=2) + "\n")
+    text = json.dumps(data, indent=2) + "\n"
+    if not data.get("token"):
+        path.write_text(text)
+        return path
+    # A config holding the service token is a credential file, so it is owner-only (#98):
+    # written with default permissions, every local user could read it. The mode passed to
+    # os.open applies only when the file is created, so a config an older okl wrote is
+    # tightened explicitly, before the token goes into it. Windows has no such bits; there
+    # the advice stays OKL_TOKEN from the environment.
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        path.chmod(0o600)
+        f.write(text)
     return path
 
 
