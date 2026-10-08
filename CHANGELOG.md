@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.8.0
 
 - **Drift is gated locally by default; the GitHub workflow is opt-in.** In a git repository
   `okl init` now installs the pre-push drift gate, not `.github/workflows/okl-verify.yml`.
