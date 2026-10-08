@@ -46,6 +46,30 @@ def test_an_existing_readable_config_is_tightened_when_a_token_goes_in(tmp_path,
     assert _mode(path) == 0o600
 
 
+def test_a_reader_holding_the_old_config_open_never_sees_the_token(tmp_path, monkeypatch):
+    """chmod does not revoke a handle that is already open (CodeRabbit on #144). A local
+    user who opened the old, world-readable config keeps reading that file, so the token
+    must go into a new file that replaces it, never into the old one."""
+    from okl.client import save_config
+
+    # ARRANGE — a world-readable config, held open as another local user could hold it
+    monkeypatch.chdir(tmp_path)
+    path = save_config({"repo": "r"})
+    path.chmod(0o644)
+    with path.open() as reader:
+        # ACT — `okl connect --token` writes the token while that handle is open
+        save_config({"repo": "r", "service_url": "https://okl.internal", "token": "s3cret"})
+
+        # ASSERT — the old handle still reads the old, token-free file
+        reader.seek(0)
+        assert "s3cret" not in reader.read()
+
+    # ...and the config itself now holds the token, owner-only, with no stray copy beside it
+    assert "s3cret" in path.read_text()
+    assert _mode(path) == 0o600
+    assert sorted(p.name for p in path.parent.iterdir()) == [".gitignore", "config.json"]
+
+
 def test_a_config_without_a_token_keeps_the_default_mode(tmp_path, monkeypatch):
     """Owner-only is for credentials. A config with no secret is written as before, so a
     teammate can still read a shared checkout's repo name and interests."""
