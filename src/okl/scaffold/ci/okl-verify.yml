@@ -1,5 +1,5 @@
-# okl-fingerprint: sha256:722f20ffe01eaa125f8f6a2d63f2206456b8dc2d0947e3223404942e17bcfe2a
-# Installed by `okl init` into .github/workflows/okl-verify.yml (also stamped by `okl scaffold`).
+# okl-fingerprint: sha256:79cdf5c0350c1f622357593321be83305f6e64ae0b8228263da905736c29bee3
+# Installed by `okl init --ci` into .github/workflows/okl-verify.yml (a repo an earlier okl gave it keeps it).
 #
 # The knowledge layer's CI verifier — real checks, not placeholders:
 #   1. `okl drift --gate`  — fails the build when a rule's governed files changed after the
