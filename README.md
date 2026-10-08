@@ -63,7 +63,8 @@ codebase plus the bundled packs for your stack, so the first prompt is already b
 `init` wires Claude Code when the repo has a `.claude/` directory or `claude` is on your
 PATH; `--claude` forces it and `--no-claude` skips it. `--no-ci` skips the GitHub Actions
 workflow, for a private repo that would pay for its minutes or one that runs another CI,
-and later runs remember that; `--ci` puts it back. **Prefer the plugin?** Install it
+and later runs remember that; `--ci` puts it back. `--git-hook` adds a pre-push hook that
+runs the drift gate locally, and is remembered the same way. **Prefer the plugin?** Install it
 *before* running `init` — `/plugin marketplace add emeraldleaf/okl`, then
 `/plugin install okl@okl` in Claude Code — and `init` leaves the hooks to the plugin, so
 nothing is wired twice. (Installed after? `okl doctor` reports the double wiring, and
@@ -496,7 +497,8 @@ writes it; a snapshot of the rules drift reads, no lesson bodies), or set the
 passing as if it had. Do not commit a snapshot holding zero rules: CI reads a configured
 store that checked nothing as broken, and fails.
 Not on GitHub Actions? The gate is one command; [Getting started §4](docs/GETTING-STARTED.md#4-run-the-drift-gate-without-github-actions)
-covers GitLab, Azure Pipelines and a pre-push hook for no CI at all.
+covers GitLab, Azure Pipelines and, for no CI at all, the pre-push hook `okl init --git-hook`
+installs.
 `okl scaffold` is separate and optional — nothing installs it unless you ask.
 
 ### The knobs, cheapest first
@@ -618,6 +620,7 @@ touches only the current directory, and only these:
 | `.claude/settings.json` | registers those two hooks (merged in place; your existing keys are preserved) |
 | `.mcp.json` | registers the okl MCP server — only when the `mcp` extra is installed |
 | `.github/workflows/okl-verify.yml` | **a CI workflow** running the drift gate on pull requests — only in a git repository, and not with `--no-ci` |
+| `.git/hooks/pre-push` (or your `core.hooksPath`) | **executable**, only with `--git-hook`; runs the drift gate before a push and blocks only on drift; never written over another tool's hook |
 
 Re-running `init` is safe as long as you pass the same `--repo` (without it, the repo name
 resets to the directory's name): it upgrades okl's own files, keeps any you edited (say so

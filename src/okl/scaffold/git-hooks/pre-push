@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# okl-fingerprint: sha256:62a225a9e29c1df5ee542c977d96fa782421b5d51d847b55417e7675e4e77740
+# git pre-push hook, installed by `okl init --git-hook` (#90): run the drift gate before a push.
+#
+# Blocks the push ONLY when okl ran and found drift (exit 1): a lesson whose governed files
+# changed after its last verification. Anything else lets the push through with a warning on
+# stderr -- exit 2 (no store, or no lesson governs a file), or okl not runnable at all.
+# Blocking on those would stop every push from a clone that has no store yet, and
+# uninstalling okl would leave a hook that refuses pushes.
+#
+# This is an early warning for one clone, not a merge gate: it runs only where it was
+# installed, and `git push --no-verify` skips it. On a team, gate drift in CI as well.
+set -uo pipefail
+
+# Git runs hooks from the top of the working tree, where .okl/config.json lives. The refs
+# being pushed arrive on stdin; drift reads the checked-out history, so they are not read.
+
+# Resolve how to invoke okl (env → pinned config → PATH → python3 -m okl), as the Claude
+# Code hooks do: a GUI git client or an IDE runs hooks without the shell's venv/pipx PATH.
+# OKL is an array, so a pinned path containing spaces stays one word. A candidate counts
+# only if it can run okl's drift command: a pinned python whose okl was uninstalled still
+# exists, and `python -m okl` would then exit 1, which reads as drift.
+OKL=()
+try_okl() { command -v "$1" >/dev/null 2>&1 && "$@" drift --help >/dev/null 2>&1 && OKL=("$@"); }
+# A pinned value is a path, or a python path followed by " -m okl" (what okl init writes).
+try_pinned() {
+  case "$1" in
+    *" -m okl") try_okl "${1% -m okl}" -m okl ;;
+    *) try_okl "$1" ;;
+  esac
+}
+resolve_okl() {
+  if [ -n "${OKL_BIN:-}" ] && try_pinned "$OKL_BIN"; then return 0; fi
+  if [ -f .okl/config.json ]; then
+    local bin=""
+    if command -v python3 >/dev/null 2>&1; then
+      bin=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("okl_bin") or "")' \
+            .okl/config.json 2>/dev/null || true)
+    else
+      # No python3 on a GUI client's PATH, where the pinned path matters most. okl writes
+      # one key per line; a value holding a JSON escape is skipped, never misread.
+      bin=$(sed -n 's/^ *"okl_bin": *"\([^"\\]*\)",\{0,1\} *$/\1/p' .okl/config.json 2>/dev/null || true)
+    fi
+    if [ -n "$bin" ] && try_pinned "$bin"; then return 0; fi
+  fi
+  try_okl okl || try_okl python3 -m okl
+}
+
+if ! resolve_okl; then
+  echo "okl pre-push: DRIFT NOT CHECKED -- okl could not be found (set OKL_BIN, or re-run" >&2
+  echo "  'okl init' from a shell where okl works). Pushing anyway." >&2
+  exit 0
+fi
+
+out=$("${OKL[@]}" drift --gate)
+rc=$?
+printf '%s\n' "$out"
+# Exit 1 is drift only alongside the drift report: Python also exits 1 when okl crashes.
+# Matched in bash, not piped to `grep -q`: on a long report grep exits early, printf takes
+# SIGPIPE, and under pipefail the drift would read as no match.
+if [ "$rc" -eq 1 ] && [[ "$out" == *"may be stale"* ]]; then
+  echo "okl pre-push: lessons drifted (above). Re-check them with 'okl reverify', commit," >&2
+  echo "  then push again. 'git push --no-verify' skips this check." >&2
+  exit 1
+fi
+if [ "$rc" -ne 0 ]; then
+  echo "okl pre-push: DRIFT NOT CHECKED (okl exit $rc, reason above). Pushing anyway." >&2
+fi
+exit 0

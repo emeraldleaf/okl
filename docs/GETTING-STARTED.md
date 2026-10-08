@@ -395,27 +395,32 @@ On GitHub, a self-hosted runner can run the same workflow without using your Act
 minutes.
 
 The GitLab and Azure snippets follow those systems' documented settings but have not been
-run there yet. The shallow-clone result above and the hook below were run as shown (the hook
-on 2026-10-06, against okl 0.7.9: a clean push went through, a drifted lesson blocked it,
-and a repo with no store pushed). If one needs a change on your CI, an issue or PR is welcome.
+run there yet. The shallow-clone result above was run as shown, and the hook below is tested
+through a real `git push`: a clean push goes through, a drifted lesson blocks it, and a repo
+with no store pushes. If one needs a change on your CI, an issue or PR is welcome.
 
 ### No CI: a pre-push hook
 
 For a solo project, a git hook can run the gate against your local store before every push:
 
 ```bash
-#!/usr/bin/env bash
-# .git/hooks/pre-push: block the push only when lessons have actually drifted
-okl drift --gate; rc=$?
-if [ "$rc" -eq 1 ]; then echo "okl: lessons drifted; run 'okl reverify' first" >&2; exit 1; fi
-exit 0   # 0 = clean; 2 = couldn't check (no store); don't block on that
+okl init --git-hook          # add --no-ci if you do not want the GitHub workflow as well
 ```
 
-Save it as `.git/hooks/pre-push` and run `chmod +x .git/hooks/pre-push`. If your repo sets
-`core.hooksPath` (Husky and similar tools do), put it in that directory instead. Git runs
-hooks with your shell's `PATH`; if a GUI client cannot find `okl`, use its full path
-(`command -v okl` prints it). Installing this hook from `okl init` is tracked in
-[#90](https://github.com/emeraldleaf/okl/issues/90).
+The hook runs `okl drift --gate` and blocks the push only when lessons have drifted (exit 1).
+When nothing could be checked (no store yet, or no lesson governs a file) it says so and lets
+the push through. It goes where git runs hooks, so a `core.hooksPath` set by Husky or a similar
+tool is honoured. If a pre-push hook is already there, okl leaves it alone, even with
+`--force`, and prints the one line to add to it:
+
+```bash
+okl drift --gate || [ $? -ne 1 ] || exit 1
+```
+
+Later `okl init` runs remember the choice and upgrade the hook; `okl doctor` says whether it is
+installed, and `okl init --uninstall` removes it. The hook finds `okl` the way the Claude Code
+hooks do (`OKL_BIN`, then the path pinned in `.okl/config.json`, then `PATH`), so a GUI git
+client that lacks your shell's `PATH` still runs it.
 
 A local hook is an early warning, not a merge gate: each developer installs it themselves,
 `git push --no-verify` skips it, and a teammate without it is not checked. On a team, keep

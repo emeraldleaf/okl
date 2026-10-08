@@ -113,7 +113,7 @@ def _place_owned(dst: Path, shipped: str, label: str, force: bool) -> None:
     # Exact bytes: text mode would turn \n into \r\n on Windows, and bash cannot run a
     # script whose shebang line ends in \r.
     dst.write_bytes(shipped.encode("utf-8"))
-    if dst.suffix == ".sh":
+    if shipped.startswith("#!"):   # git runs its hooks by name: pre-push has no .sh
         dst.chmod(0o755)
     print(f"✓ {verb} {label} → {dst}")
 
@@ -135,11 +135,14 @@ def _uninstall_files(act: str, dry_run: bool) -> list[str]:
     from .. import ownership
     scaffold = Path(__file__).parent.parent / "scaffold"
     kept: list[str] = []
-    for dst, src in [(Path(".claude/hooks/userpromptsubmit-okl-check.sh"),
-                      scaffold / "hooks" / "userpromptsubmit-okl-check.sh"),
-                     (Path(".claude/hooks/stop-okl-encode.sh"),
-                      scaffold / "hooks" / "stop-okl-encode.sh"),
-                     (Path(".github/workflows/okl-verify.yml"), scaffold / "ci" / "okl-verify.yml")]:
+    owned = [(Path(".claude/hooks/userpromptsubmit-okl-check.sh"),
+              scaffold / "hooks" / "userpromptsubmit-okl-check.sh"),
+             (Path(".claude/hooks/stop-okl-encode.sh"), scaffold / "hooks" / "stop-okl-encode.sh"),
+             (Path(".github/workflows/okl-verify.yml"), scaffold / "ci" / "okl-verify.yml")]
+    hooks, _ = _git_hooks_dir()
+    if hooks is not None:
+        owned.append((hooks / "pre-push", GIT_HOOK_SRC))
+    for dst, src in owned:
         if _symlinked(dst) is not None:
             kept.append(f"{dst} (a symlink, or under one — okl does not follow links)")
             continue
@@ -367,12 +370,7 @@ def _init_dry_run(args: argparse.Namespace) -> int:
         print(f"  (no Claude Code hooks: {why})")
     else:
         print("  (no .claude/ here and Claude Code not found, so no hooks; `--claude` installs them anyway)")
-    if Path(".git").exists() and not _ci_wanted(args, load_config()):
-        print("  (no CI workflow: --no-ci, or an earlier init recorded it)")
-    elif Path(".git").exists():
-        print("  .github/workflows/okl-verify.yml        a CI workflow running the drift gate on PRs")
-    else:
-        print("  (not a git repository, so no CI workflow and no drift gate)")
+    _dry_run_drift_gates(args)
     if args.interests:
         print(f"  (interests: {args.interests})")
     else:
@@ -387,12 +385,39 @@ def _init_dry_run(args: argparse.Namespace) -> int:
     return 0
 
 
+def _dry_run_drift_gates(args: argparse.Namespace) -> None:
+    """The dry run's lines for the two places drift can be gated: CI and a pre-push hook."""
+    if not Path(".git").exists():
+        print("  (not a git repository, so no CI workflow and no drift gate)")
+        return
+    cfg = load_config()
+    if _ci_wanted(args, cfg):
+        print("  .github/workflows/okl-verify.yml        a CI workflow running the drift gate on PRs")
+    else:
+        print("  (no CI workflow: --no-ci, or an earlier init recorded it)")
+    if not _git_hook_wanted(args, cfg):
+        return
+    hooks, why = _git_hooks_dir()
+    if hooks is None:
+        print(f"  (no pre-push hook: {why})")
+    else:
+        print(f"  {hooks / 'pre-push'!s:<40}a git pre-push hook running the drift gate "
+              "(never over another tool's hook)")
+
+
 def _ci_wanted(args: argparse.Namespace, cfg: dict) -> bool:
     """Whether init installs the CI workflow: --ci/--no-ci when given, else what an earlier
     init recorded (#111). Remembered because init restores missing files by design, so a
     deleted workflow came back on the next run."""
     flag = getattr(args, "ci", None)
     return cfg.get("ci", True) if flag is None else flag
+
+
+def _git_hook_wanted(args: argparse.Namespace, cfg: dict) -> bool:
+    """Whether init installs the pre-push drift gate: --git-hook/--no-git-hook when given,
+    else what an earlier init recorded, so a re-run upgrades the hook instead of losing it."""
+    flag = getattr(args, "git_hook", None)
+    return bool(cfg.get("git_hook", False)) if flag is None else flag
 
 
 def _init_interests(cfg: dict, args: argparse.Namespace) -> None:
@@ -440,6 +465,8 @@ def cmd_init(args: argparse.Namespace) -> int:
     cfg["okl_bin"] = shutil.which("okl") or f"{sys.executable} -m okl"
     if getattr(args, "ci", None) is not None:
         cfg["ci"] = args.ci
+    if getattr(args, "git_hook", None) is not None:
+        cfg["git_hook"] = args.git_hook
     path = save_config(cfg)
     print(f"✓ wrote {path}  (repo={repo}, mode={'remote' if cfg.get('service_url') else 'local'}"
           + (f", interests={','.join(cfg['interests'])}" if cfg.get("interests") else "") + ")")
@@ -450,6 +477,8 @@ def cmd_init(args: argparse.Namespace) -> int:
     else:
         print("• no CI workflow (--no-ci, recorded in .okl/config.json); run `okl drift --gate` "
               "from your own CI or a hook")
+    if _git_hook_wanted(args, cfg) and Path(".git").exists():
+        _install_git_hook(force=getattr(args, "force", False))
     if not getattr(args, "no_seed", False):
         _seed_first_run(Client())
     for line in _empty_store_guidance(Client()):
@@ -506,6 +535,58 @@ def _install_ci_verifier(force: bool = False) -> None:
     wf = Path(".github") / "workflows" / "okl-verify.yml"
     src = Path(__file__).parent.parent / "scaffold" / "ci" / "okl-verify.yml"
     _place_owned(wf, src.read_text(), "CI verifier (drift gate + repo gates on every PR)", force)
+
+
+GIT_HOOK_SRC = Path(__file__).parent.parent / "scaffold" / "git-hooks" / "pre-push"
+
+# What to add to a pre-push hook okl did not write. `|| [ $? -ne 1 ]` lets exit 2 (did not
+# run) through, and stays correct in a hook running under `set -e`.
+_GATE_LINE = "okl drift --gate || [ $? -ne 1 ] || exit 1"
+
+
+def _git_hooks_dir(root: Path | None = None) -> tuple[Path | None, str]:
+    """Where git runs this repo's hooks, relative to `root` (default: here), or None and why.
+
+    Git is asked, so core.hooksPath (Husky and similar) is honoured. A hooks directory
+    outside `root` -- a global core.hooksPath, or the shared .git of a linked worktree --
+    is refused: okl writes only inside the repo it was run in.
+    """
+    import os
+    import subprocess
+    root = root or Path.cwd()
+    try:
+        r = subprocess.run(["git", "-C", str(root), "rev-parse", "--git-path", "hooks"],
+                           capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.TimeoutExpired):
+        return None, "git could not be run"
+    if r.returncode != 0:
+        return None, "not a git repository"
+    # Lexical, not resolve(): a symlink on the way is _place_owned's to refuse, by name.
+    hooks = Path(os.path.normpath(root / r.stdout.strip()))
+    if not hooks.is_relative_to(root):
+        return None, (f"git runs this repo's hooks from {hooks}, outside this directory "
+                      "(a global core.hooksPath, or a linked worktree), and okl writes only "
+                      "inside the repo")
+    return hooks.relative_to(root), ""
+
+
+def _install_git_hook(force: bool = False) -> None:
+    """Install the pre-push drift gate (#90) where git will run it, never over another
+    tool's hook: a pre-push hook okl did not write is kept even with --force, and the line
+    that runs the gate from it is printed instead."""
+    from .. import ownership
+    hooks, why = _git_hooks_dir()
+    if hooks is None:
+        print(f"! no pre-push hook installed: {why}.")
+        return
+    dst = hooks / "pre-push"
+    shipped = GIT_HOOK_SRC.read_text()
+    if _symlinked(dst) is None and ownership.status(dst, shipped) == ownership.UNKNOWN:
+        print(f"! kept {dst}: another pre-push hook is there, and okl does not replace a hook "
+              f"it did not write. To gate drift from it (with Husky, in .husky/pre-push), add:"
+              f"\n    {_GATE_LINE}")
+        return
+    _place_owned(dst, shipped, "pre-push drift gate (git hook)", force)
 
 
 def cmd_connect(args: argparse.Namespace) -> int:
