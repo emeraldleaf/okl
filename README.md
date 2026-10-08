@@ -65,8 +65,9 @@ PATH; `--claude` forces it and `--no-claude` skips it. Drift is gated locally by
 in a git repository `init` installs a pre-push hook that runs the drift gate and blocks a
 push only when lessons have drifted (`--no-git-hook` skips it). The GitHub Actions workflow
 is opt-in, because it spends a private repo's minutes and does nothing on another CI: `--ci`
-installs it in place of the hook (`--ci --git-hook` gives both), for a team that wants a
-gate `git push --no-verify` cannot skip; a repo an earlier okl gave the workflow keeps it. Later runs remember both choices. **Prefer the plugin?** Install it
+installs it instead of the hook, unless an earlier `init` already installed the hook, which
+stays (`--ci --git-hook` gives both), for a team that wants a gate `git push --no-verify`
+cannot skip; a repo an earlier okl gave the workflow keeps it. Later runs remember both choices. **Prefer the plugin?** Install it
 *before* running `init` — `/plugin marketplace add emeraldleaf/okl`, then
 `/plugin install okl@okl` in Claude Code — and `init` leaves the hooks to the plugin, so
 nothing is wired twice. (Installed after? `okl doctor` reports the double wiring; run `okl init --uninstall`, then
@@ -494,8 +495,9 @@ no model is called to summarise anything.
 **In your repo:** `okl init` writes `.okl/` (config, the local database, a `.gitignore`
 covering both) and, when it wires Claude Code, two hook scripts plus their registration. In a
 git repository it also installs a pre-push hook that runs the drift gate (`--no-git-hook`
-skips it). `--ci` installs `.github/workflows/okl-verify.yml` in its place, which runs the
-gate on every PR (`--ci --git-hook` keeps both).
+skips it). `--ci` installs `.github/workflows/okl-verify.yml`, which runs the gate on every
+PR, instead of the hook. A hook an earlier `init` installed stays: `--no-git-hook` only stops
+`init` installing it, and `okl init --uninstall` removes it.
 CI has no store of its own (the local one is gitignored), so give it one: once a lesson
 governs files, commit `okl-drift.json` (`okl verify` refreshes it; `okl export --drift`
 writes it; a snapshot of the rules drift reads, no lesson bodies), or set the

@@ -51,7 +51,8 @@ okl init --repo shop
   PATH (`--claude` forces it, `--no-claude` skips it). It writes `.okl/` (config and the
   local store, gitignored), two hooks in `.claude/hooks/` registered in
   `.claude/settings.json`, `.mcp.json`, and a git pre-push hook that gates drift
-  (`--ci` installs a GitHub Actions workflow instead; `--ci --git-hook` gives both).
+  (`--ci` installs a GitHub Actions workflow instead, unless an earlier `init` already
+  installed the hook, which stays; `--ci --git-hook` gives both).
 
 **Prefer the Claude Code plugin?** Install it *before* `init` — `/plugin marketplace add
 emeraldleaf/okl`, then `/plugin install okl@okl` — and `init` leaves the hooks to the

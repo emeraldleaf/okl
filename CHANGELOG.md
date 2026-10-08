@@ -13,7 +13,8 @@
   stamped without an observed check (a seed file's `"verified": true`, for one) is drift,
   so prove those lessons with `okl verify` first, or pass `--no-git-hook`, or the hook
   blocks the push. `--ci` installs the workflow *in place of* the hook; `--ci --git-hook`
-  gives both.
+  gives both. A hook an earlier `init` installed stays: `--no-git-hook` only stops init
+  installing it, and `okl init --uninstall` removes it.
 - **`okl scaffold` no longer installs okl's drift workflow.** It still stamped
   `okl-verify.yml` after the workflow became opt-in. Run in the order scaffold suggests
   (scaffold, then `okl init`), init found the workflow, recorded CI as on and installed no
