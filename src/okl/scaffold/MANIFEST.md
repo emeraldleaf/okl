@@ -17,11 +17,12 @@ any language/stack. The parts you complete per repo are marked inline with `<<FI
 | `gates/*.sh` | `gates/` | fully portable (retractions/tombstones/doc-orphans/links/diagram-pairs/canon-size) |
 | `registries/*` | `registries/` | portable format; FILL entries as earned |
 | `evals/*` | `evals/` | portable harness; FILL `evaluate_one()` + `cases.jsonl` |
-| `ci/method-gates.yml`, `ci/okl-verify.yml` | `.github/workflows/` | portable |
+| `ci/method-gates.yml` | `.github/workflows/` | portable |
+| `ci/okl-verify.yml` | `.github/workflows/okl-verify.yml` | not copied by scaffold — okl's drift gate in CI, installed by `okl init --ci` |
 | `ci/dependabot.yml` | `.github/dependabot.yml` | portable — keeps the workflows' SHA-pinned actions current |
 | `ci/review-agent.sh` | `ci/review-agent.sh` | portable, opt-in (see below) |
 | `hooks/*` | `.claude/hooks/` | UserPromptSubmit briefing (fail-closed in repos set up with okl) + Stop encode reminder; copied by scaffold, registered by `okl init` |
-| `git-hooks/pre-push` | git's hooks directory (honours `core.hooksPath`) | portable; not copied by scaffold — installed only by `okl init --git-hook` |
+| `git-hooks/pre-push` | git's hooks directory (honours `core.hooksPath`) | portable; not copied by scaffold — installed by `okl init` (the default in a git repo without okl's CI workflow; `--git-hook` forces it, `--no-git-hook` skips it) |
 | `MANIFEST.md` (this file) | `docs/method-kit-manifest.md` | reference |
 | `plugin/plugin.json` | `.claude-plugin/plugin.json` (if `--plugin`) | portable — packages the skills, agent and commands as a Claude Code plugin (hooks stay with `okl init`) |
 

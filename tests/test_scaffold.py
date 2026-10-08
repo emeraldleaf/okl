@@ -658,6 +658,10 @@ def test_shipped_workflows_are_hardened_and_ship_their_update_path(tmp_path):
     scaffold(target=str(tmp_path), repo="r", claude_dir="dotclaude")
     workflows = sorted((tmp_path / ".github" / "workflows").glob("*.yml"))
     assert workflows, "the kit must stamp its workflows"
+    # okl's drift workflow is installed by `okl init --ci`, not by scaffold, since 0.8.0
+    # made it opt-in; it reaches other people's repos all the same, so it is held to the
+    # same baseline from its shipped template.
+    workflows.append(Path(__file__).resolve().parents[1] / "src/okl/scaffold/ci/okl-verify.yml")
 
     for wf in workflows:
         text = wf.read_text()
@@ -1976,3 +1980,33 @@ def test_verify_writes_no_snapshot_nothing_reads(tmp_path):
     git("add", "okl-drift.json"); git("commit", "-qm", "snapshot")
     r = okl("verify", rid, "--run", "true", "--expect", "")
     assert "refreshed okl-drift.json" in r.stdout and snap.read_text() != before, r.stdout
+
+
+def test_scaffold_leaves_the_drift_workflow_to_init(tmp_path):
+    """0.8.0 made okl's GitHub workflow opt-in (`okl init --ci`), but scaffold still stamped
+    it. Run in the order scaffold's own "Next: `okl init`" line gives, init then found okl's
+    workflow, recorded `ci: true` and installed no pre-push hook, so the opt-in default
+    never applied. Run the other way round, init recorded no CI while scaffold put a
+    workflow beside it, and `okl verify` refused to write the snapshot that workflow reads.
+    """
+    # ARRANGE / ACT — a git repo, scaffolded, then wired the way scaffold says to
+    repo = tmp_path / "r"; repo.mkdir()
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    scaffold(target=str(repo), repo="r", claude_dir="dotclaude")
+    env = {**os.environ, "PYTHONPATH": str(Path(__file__).resolve().parents[1] / "src"),
+           "HOME": str(tmp_path)}
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN"):
+        env.pop(k, None)
+    r = subprocess.run([sys.executable, "-m", "okl", "init", "--repo", "r", "--no-claude",
+                        "--no-seed"], cwd=repo, env=env, capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+
+    # ASSERT (1) — scaffold stamped the method kit's own workflow, not okl's drift workflow
+    assert (repo / ".github" / "workflows" / "method-gates.yml").exists()
+    assert not (repo / ".github" / "workflows" / "okl-verify.yml").exists()
+    # ASSERT (2) — so init applied the 0.8.0 default: the pre-push gate, recorded
+    cfg = json.loads((repo / ".okl" / "config.json").read_text())
+    assert cfg.get("ci") is False and cfg.get("git_hook") is True, cfg
+    hooks = subprocess.run(["git", "-C", str(repo), "rev-parse", "--git-path", "hooks"],
+                           capture_output=True, text=True, check=True).stdout.strip()
+    assert (repo / hooks / "pre-push").exists() or Path(hooks, "pre-push").exists()

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:330e6e866e80cbd1d07bb8c4425e9473e1df4e78126d01f9a1ea72eaf249783a
+# okl-fingerprint: sha256:ca2e2077e43f1a8c5f6fee98b6222131e31a46f9127b6c63e2d95347a05c721d
 # Stop hook — the write-side mechanical catch for the encoding loop.
 #
 # The read side (okl check) is enforced by the UserPromptSubmit hook; nothing enforced the WRITE
@@ -137,7 +137,7 @@ silently reversed? If yes, record it now. Three independent axes, each chosen de
   - Every lesson reaches the per-task briefing; most need nothing more.
   - Governs specific code? Add --files "<paths>" and prove it:
       okl verify <id> --run "<check that fails if broken>" --expect "<success text>"
-    CI's drift gate then goes red when that code changes.
+    The drift gate then goes red when that code changes.
   - Broken more than once, or costly when broken? Propose a test or CI check that
     fails the build, rather than a sterner lesson.
   - Needed in every session regardless of task? Only then CLAUDE.md / AGENTS.md.

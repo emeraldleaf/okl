@@ -386,6 +386,7 @@ def _init_dry_run(args: argparse.Namespace) -> int:
               " (if empty; --no-seed skips)")
     print("\nNothing is written outside this directory. Read the hooks before you register them:")
     print("  https://github.com/emeraldleaf/okl/blob/main/src/okl/scaffold/hooks/")
+    print("  https://github.com/emeraldleaf/okl/blob/main/src/okl/scaffold/git-hooks/pre-push")
     return 0
 
 
@@ -395,12 +396,17 @@ def _dry_run_drift_gates(args: argparse.Namespace) -> None:
         print("  (not a git repository, so no CI workflow and no drift gate)")
         return
     cfg = load_config()
-    if _ci_wanted(args, cfg):
+    ci = _ci_wanted(args, cfg)
+    if ci:
         print("  .github/workflows/okl-verify.yml        a CI workflow running the drift gate on PRs")
     else:
         print("  (no CI workflow: opt-in with --ci, or an earlier init recorded --no-ci)")
     if not _git_hook_wanted(args, cfg):
-        print("  (no pre-push hook: --no-git-hook, or an earlier init recorded it)")
+        # Name the real reason: with --ci and no hook choice, the hook is skipped because
+        # CI gates drift, and the old line blamed a --no-git-hook nobody had passed.
+        chose = getattr(args, "git_hook", None) is not None or "git_hook" in cfg
+        print("  (no pre-push hook: " + ("--no-git-hook, or an earlier init recorded it)" if chose or not ci
+                                         else "okl's CI workflow gates drift here; --git-hook adds the hook too)"))
         return
     hooks, why = _git_hooks_dir()
     if hooks is None:

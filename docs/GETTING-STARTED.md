@@ -2,8 +2,8 @@
 
 okl keeps what your codebase has learned — its conventions, the decisions made on purpose,
 the mistakes already made once, and the claims its docs make — and puts the relevant ones
-in front of Claude Code before every task. Each entry is proven by a check, and CI flags it
-when the files it governs change.
+in front of Claude Code before every task. Each entry is proven by a check, and the drift
+gate (before each push, or in CI) flags it when the files it governs change.
 
 This guide gets you from nothing to that loop working, then shows the two habits that make
 it pay off: **adding to the canon as you build a feature**, and **putting your docs in the
@@ -36,7 +36,8 @@ okl init --repo shop --dry-run   # lists every file it would write, and what it 
 okl init --repo shop
 ```
 
-- `--repo` names this repo in the store. Always pass the same name when you re-run `init`.
+- `--repo` names this repo in the store. A later `okl init` keeps this name; pass `--repo`
+  again only to rename, which stops `repo:<old>` lessons from briefing here.
 - **It detects your stack** from the files every stack keeps (`*.csproj`/`*.sln`,
   `package.json`, `pyproject.toml`/`requirements.txt`) and sets this repo's *interests* —
   the subjects its briefings cover — to that stack plus `security` and `method`. To choose
@@ -50,7 +51,8 @@ okl init --repo shop
   PATH (`--claude` forces it, `--no-claude` skips it). It writes `.okl/` (config and the
   local store, gitignored), two hooks in `.claude/hooks/` registered in
   `.claude/settings.json`, `.mcp.json`, and a git pre-push hook that gates drift
-  (`--ci` adds a GitHub Actions workflow as well).
+  (`--ci` installs a GitHub Actions workflow instead, unless an earlier `init` already
+  installed the hook, which stays; `--ci --git-hook` gives both).
 
 **Prefer the Claude Code plugin?** Install it *before* `init` — `/plugin marketplace add
 emeraldleaf/okl`, then `/plugin install okl@okl` — and `init` leaves the hooks to the
@@ -168,7 +170,7 @@ Whoever writes it, you or the agent, a lesson is one record. Check the draft for
 | type | **Decision** (made on purpose), **Rule** (a convention), **Defect** (a bug fixed) | Rule |
 | id | a short stable key; recording the same id again updates the lesson instead of duplicating it | `discount-server-side` |
 | symptom → fix | what an agent would see or do that should trigger it, and what to do instead — this is the line the briefing leads with | "a request body carries a discount amount" → "accept only the code; compute totals on the server" |
-| files | the code it governs; lets CI notice when that code changes | `app/checkout.py` |
+| files | the code it governs; lets the drift gate (the pre-push hook, or CI) notice when that code changes | `app/checkout.py` |
 | scope | `repo` stays here; `org` reaches every repo sharing your store — only for lessons true anywhere | repo |
 
 Leave `applies_to` unset unless the lesson is false off one stack; unset is the safe
@@ -184,7 +186,7 @@ agent proposes one when it records, and you can overrule it:
 | The lesson… | Enforcement | How |
 |---|---|---|
 | is useful context for some tasks | briefing only | nothing more to do |
-| governs specific code | watched by CI | give it `files`, prove it with `okl verify`; CI's drift gate goes red when that code changes |
+| governs specific code | watched by the drift gate | give it `files`, prove it with `okl verify`; the drift gate (before the push, or in CI) goes red when that code changes |
 | has been broken before, or is costly when broken | build-breaking | a test or CI check that fails the build — a sterner lesson will not stop a repeat |
 | is needed in every session, whatever the task | always-on | a line in `CLAUDE.md` / `AGENTS.md` — rare |
 
@@ -307,9 +309,9 @@ okl drift
 #   • [doc-readme-serve-port] README's 'shop serve --port' matches the real CLI
 ```
 
-Locally and in CI (from the committed snapshot) that stays red until someone re-runs the
-check. `okl reverify` re-runs the stored check: if it passes, commit the refreshed
-`okl-drift.json`; if it fails, the doc or the code is wrong, and you fix whichever is.
+Locally, at the pre-push hook, and in CI if you added it (from the committed snapshot),
+that stays red until someone re-runs the check. `okl reverify` re-runs the stored check: if
+it passes, commit the refreshed `okl-drift.json` if your repo keeps one; if it fails, the doc or the code is wrong, and you fix whichever is.
 
 ### Writing checks that mean something
 
@@ -369,8 +371,8 @@ Four things matter, whichever CI you use:
    `OKL_TOKEN` environment variables. Without okl's GitHub workflow, `okl export --drift`
    writes the first snapshot; once it is committed, `okl verify` keeps it current.
 4. **Python 3.10 or newer.** Pin okl to the version you run locally, so a new release
-   cannot change the gate under you. `okl --version` prints it from the release after
-   0.7.9; on 0.7.9 and earlier, `pip show observed-knowledge-ledger` (or `uv tool list`)
+   cannot change the gate under you. `okl --version` prints it from 0.8.0; on 0.7.9
+   and earlier, `pip show observed-knowledge-ledger` (or `uv tool list`)
    does.
 
 GitLab CI:
@@ -380,7 +382,7 @@ okl-drift:
   image: python:3.13
   variables:
     GIT_DEPTH: 0
-    OKL_VERSION: "0.7.9"   # the version you run locally
+    OKL_VERSION: "0.8.0"   # the version you run locally
   script:
     - pip install "observed-knowledge-ledger==$OKL_VERSION"
     - okl drift --gate --snapshot okl-drift.json
@@ -396,7 +398,7 @@ steps:
     inputs:
       versionSpec: "3.13"
   - script: |
-      pip install "observed-knowledge-ledger==0.7.9"
+      pip install "observed-knowledge-ledger==0.8.0"
       okl drift --gate --snapshot okl-drift.json
     displayName: okl drift gate
 ```
@@ -409,7 +411,7 @@ run there yet. The shallow-clone result above was run as shown, and the hook bel
 through a real `git push`: a clean push goes through, a drifted lesson blocks it, and a repo
 with no store pushes. If one needs a change on your CI, an issue or PR is welcome.
 
-### No CI: a pre-push hook
+### The default: a pre-push hook
 
 In a git repository, `okl init` installs a git hook that runs the gate against your local
 store before every push. It is the default wherever okl's GitHub workflow is not installed:
@@ -453,6 +455,8 @@ a CI gate as well.
 | CI fails with "NOTHING CHECKED" | a snapshot with zero rules is committed | remove it, or record a lesson with `--files` and re-export |
 | `okl drift` is red right after `okl record --files` | a new rule is unverified until its first `okl verify` | run its check with `okl verify` |
 | `okl drift` is red after you changed code | lessons governing those files need re-checking | `okl reverify` |
+| `git push` stops with "okl pre-push: lessons drifted" | the pre-push hook found drift | `okl reverify`, commit, push again; `git push --no-verify` skips the check once |
+| `okl drift` reports a lesson "stamped …, unverified" | its stamp has no observed check behind it, often from a seed file that marked it verified | prove it with `okl verify <id> --run …`, or drop its `files` if nothing should gate it |
 | A briefed lesson is marked *STALE*, *UNVERIFIED* or *UNPROVEN* | its governed files changed after its last check, no check has passed yet, or its stamp has no observed check behind it | `okl reverify` re-runs stored checks; a lesson with none needs one first: ask your agent to re-check it, or run `okl verify <id>` to see what to run |
 | `okl drift` lists lessons "last verified on a commit outside this branch's history" | one local store serves every branch, and those lessons were checked on another one | `okl reverify` re-checks them on this branch; until then their evidence depends on that branch still existing |
 | Every lesson is drifted in CI, but `okl drift` is clean locally | the CI checkout is shallow, so every file looks freshly changed | fetch full history (section 4) |

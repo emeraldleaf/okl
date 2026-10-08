@@ -1321,8 +1321,8 @@
       "containerId": null,
       "autoResize": true,
       "lineHeight": 1.25,
-      "text": "UserPromptSubmit hook — into context, before the turn\nMCP  okl_check · okl_record · okl_search\nCLI for humans · CI: okl drift --gate on every PR",
-      "originalText": "UserPromptSubmit hook — into context, before the turn\nMCP  okl_check · okl_record · okl_search\nCLI for humans · CI: okl drift --gate on every PR",
+      "text": "UserPromptSubmit hook — into context, before the turn\nMCP  okl_check · okl_record · okl_search\nCLI for humans · drift gate: pre-push hook, or CI",
+      "originalText": "UserPromptSubmit hook — into context, before the turn\nMCP  okl_check · okl_record · okl_search\nCLI for humans · drift gate: pre-push hook, or CI",
       "id": "el38"
     },
     {
@@ -1908,8 +1908,8 @@
       "containerId": null,
       "autoResize": true,
       "lineHeight": 1.25,
-      "text": "STALE FAILS THE PR THAT MADE IT STALE",
-      "originalText": "STALE FAILS THE PR THAT MADE IT STALE",
+      "text": "STALE BLOCKS THE PUSH THAT MADE IT STALE",
+      "originalText": "STALE BLOCKS THE PUSH THAT MADE IT STALE",
       "id": "el55"
     },
     {
@@ -2934,8 +2934,8 @@
       "containerId": null,
       "autoResize": true,
       "lineHeight": 1.25,
-      "text": "Write the spec. This does not replace one — the rules and specs you already wrote\nare the first thing it imports.\n\nA spec states the intent for one piece of work. This carries the standing intent of\nthe codebase, and it is mostly not a ledger of bugs: the largest share by far is\nconventions this code follows, the trade-offs already decided and why, the\ngates armed and what each catches, the outside advice vetted, the names retired.\nWhat went wrong here is the smaller part of it. Then three things a document cannot do:\n\nSELECTED    a rules file is read once and skimmed forever after. Only the records\n            matching this task are handed over, action first, inside the budget.\nENFORCED    the read runs in a hook and fails closed. A spec cannot block a task\n            that never opened it.\nRE-GRADED   a spec is exactly as true as the day it was written, and nothing tells\n            you when that stopped being true. A record names the files it governs,\n            and CI fails if they change after the commit it passed on.",
-      "originalText": "Write the spec. This does not replace one — the rules and specs you already wrote\nare the first thing it imports.\n\nA spec states the intent for one piece of work. This carries the standing intent of\nthe codebase, and it is mostly not a ledger of bugs: the largest share by far is\nconventions this code follows, the trade-offs already decided and why, the\ngates armed and what each catches, the outside advice vetted, the names retired.\nWhat went wrong here is the smaller part of it. Then three things a document cannot do:\n\nSELECTED    a rules file is read once and skimmed forever after. Only the records\n            matching this task are handed over, action first, inside the budget.\nENFORCED    the read runs in a hook and fails closed. A spec cannot block a task\n            that never opened it.\nRE-GRADED   a spec is exactly as true as the day it was written, and nothing tells\n            you when that stopped being true. A record names the files it governs,\n            and CI fails if they change after the commit it passed on.",
+      "text": "Write the spec. This does not replace one — the rules and specs you already wrote\nare the first thing it imports.\n\nA spec states the intent for one piece of work. This carries the standing intent of\nthe codebase, and it is mostly not a ledger of bugs: the largest share by far is\nconventions this code follows, the trade-offs already decided and why, the\ngates armed and what each catches, the outside advice vetted, the names retired.\nWhat went wrong here is the smaller part of it. Then three things a document cannot do:\n\nSELECTED    a rules file is read once and skimmed forever after. Only the records\n            matching this task are handed over, action first, inside the budget.\nENFORCED    the read runs in a hook and fails closed. A spec cannot block a task\n            that never opened it.\nRE-GRADED   a spec is exactly as true as the day it was written, and nothing tells\n            you when that stopped being true. A record names the files it governs,\n            and the drift gate fails if they change after the commit it passed on.",
+      "originalText": "Write the spec. This does not replace one — the rules and specs you already wrote\nare the first thing it imports.\n\nA spec states the intent for one piece of work. This carries the standing intent of\nthe codebase, and it is mostly not a ledger of bugs: the largest share by far is\nconventions this code follows, the trade-offs already decided and why, the\ngates armed and what each catches, the outside advice vetted, the names retired.\nWhat went wrong here is the smaller part of it. Then three things a document cannot do:\n\nSELECTED    a rules file is read once and skimmed forever after. Only the records\n            matching this task are handed over, action first, inside the budget.\nENFORCED    the read runs in a hook and fails closed. A spec cannot block a task\n            that never opened it.\nRE-GRADED   a spec is exactly as true as the day it was written, and nothing tells\n            you when that stopped being true. A record names the files it governs,\n            and the drift gate fails if they change after the commit it passed on.",
       "id": "el84"
     },
     {

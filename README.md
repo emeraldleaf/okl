@@ -10,8 +10,8 @@
 
 **A learning loop that keeps coding agents — and your docs — from drifting.**<br>
 Engineering rules, architecture decisions, documentation and diagrams: recorded once, briefed to
-Claude Code or any MCP agent before every task, proven by checks, and flagged in CI when what they
-govern changes. Use it in one repo, or share one store across every repo your team runs.
+Claude Code or any MCP agent before every task, proven by checks, and flagged before you push (or in CI) when what
+they govern changes. Use it in one repo, or share one store across every repo your team runs.
 
 [![PyPI](https://img.shields.io/pypi/v/observed-knowledge-ledger?color=blue&label=PyPI)](https://pypi.org/project/observed-knowledge-ledger/)
 [![Python](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
@@ -65,12 +65,15 @@ PATH; `--claude` forces it and `--no-claude` skips it. Drift is gated locally by
 in a git repository `init` installs a pre-push hook that runs the drift gate and blocks a
 push only when lessons have drifted (`--no-git-hook` skips it). The GitHub Actions workflow
 is opt-in, because it spends a private repo's minutes and does nothing on another CI: `--ci`
-adds it, for a team that wants a gate `git push --no-verify` cannot skip, and a repo an
-earlier okl gave the workflow keeps it. Later runs remember both choices. **Prefer the plugin?** Install it
+installs it instead of the hook, unless an earlier `init` already installed the hook, which
+stays (`--ci --git-hook` gives both), for a team that wants a gate `git push --no-verify`
+cannot skip; a repo an earlier okl gave the workflow keeps it. Later runs remember both choices. **Prefer the plugin?** Install it
 *before* running `init` — `/plugin marketplace add emeraldleaf/okl`, then
 `/plugin install okl@okl` in Claude Code — and `init` leaves the hooks to the plugin, so
-nothing is wired twice. (Installed after? `okl doctor` reports the double wiring, and
-`okl init --uninstall` removes the project copy.)
+nothing is wired twice. (Installed after? `okl doctor` reports the double wiring; run `okl init --uninstall`, then
+`okl init` again, which leaves the Claude Code hooks to the plugin and reinstalls okl's
+pre-push gate; where another tool owns the pre-push hook, `init` prints the one line to add
+to it instead.)
 
 **3. Add a rule of your own.** The starter lessons are generic; what pays is what only your
 codebase knows. Tell your agent — *"record an okl rule for this repo: order lookups are
@@ -93,7 +96,7 @@ your own code ([Seed it](#seed-it-so-the-very-first-check-returns-something)).
 
 ```bash
 okl check --task "add an endpoint that returns an order for the logged-in user"
-okl doctor                  # flags other agent-memory tools and double wiring
+okl doctor                  # flags other memory tools, double wiring, and where drift is gated
 ```
 
 ### What a normal day looks like
@@ -113,7 +116,7 @@ okl doctor                  # flags other agent-memory tools and double wiring
   `okl verify <id> --run "pytest -q tests/test_orders.py" --expect "passed"`.
 - **When code a lesson governs changes,** `okl drift` goes red until someone re-runs its
   check (a lesson recorded with `--files` is also red until its first `okl verify`). The
-  briefing says so too: such a lesson is marked *STALE* (or *UNVERIFIED*) with the file
+  briefing says so too: such a lesson is marked *STALE* (or *UNVERIFIED*, or *UNPROVEN*) with the file
   that changed, so the agent confirms it against the code instead of trusting it blindly.
   `okl reverify` re-runs each drifted lesson's stored check after you confirm. With the
   GitHub workflow (`okl init --ci`), CI reads a committed snapshot, `okl-drift.json`, which
@@ -207,7 +210,7 @@ and it is worth knowing which one catches what, because they do not overlap.
 
 | Drift | Caught by | How it works | Fires when |
 |---|---|---|---|
-| **A rule vs. the code it governs** | `okl drift --gate` | a record declares the path globs it governs, and `okl verify` records the commit its check passed at | those files differ between that commit and HEAD (a verification with no recorded commit, or one this clone lacks, compares commit times instead) — or the rule has never been verified at all, so a new `--files` rule is red until its first `okl verify` |
+| **A rule vs. the code it governs** | `okl drift --gate` | a record declares the path globs it governs, and `okl verify` records the commit its check passed at | those files differ between that commit and HEAD (a verification with no recorded commit, or one this clone lacks, compares commit times instead) — or the rule has never been verified at all, so a new `--files` rule is red until its first `okl verify` — or its stamp has no observed check behind it |
 | **A retired identifier reappearing in prose** | `check-tombstones.sh` | greps the working tree's source, docs, comments and config for every tombstoned name | any non-allowlisted hit |
 | **A withdrawn claim being restated** | `check-retractions.sh` | greps the working tree's markdown for the exact quoted claim from the retraction registry | the quote appears outside the registry |
 | **A doc nobody links to** | `check-doc-orphans.sh` | checks that each top-level `docs/` doc or image is named by a hub file or a `docs/*.md` (one hop, not transitive) | nothing names it, so it drifts unread |
@@ -254,8 +257,8 @@ the consensus position of 2026, not an insight.
    stricter for the lessons that matter. A lesson cites the source it governs and
    carries a verification receipt from a check you choose (`okl verify` — the CLI will
    not stamp without a run), can decay on a TTL, and goes stale *loudly*:
-   `okl drift --gate` fails CI when governed code changed after the lesson was last
-   verified, or it was never verified. Most tools in the table below accumulate or
+   `okl drift --gate` blocks the push (or fails CI, with `--ci`) when governed code
+   changed after the lesson was last verified, or it was never verified. Most tools in the table below accumulate or
    decay with time; the ones that tie a memory to code check it by re-reading the
    code, checking a reference, or noticing a file changed, not by running your check.
    The whole repo is plumbing to get that bet in front of an agent
@@ -276,7 +279,7 @@ the consensus position of 2026, not an insight.
 | claude-mem / agentmemory (Claude Code plugins) | every tool call, compressed into observations by a model; agentmemory adds confidence and decay | file age (claude-mem skips a note when its file changed); time-based decay (agentmemory) — nothing re-checks a memory |
 | ECC (skills + "instincts") | instincts learned from observed tool use, weighted by a model-scored confidence | confidence decay, applied by prompt — no check proves an instinct |
 | beads | work items and short `bd remember` notes — a task tracker, not a lesson store | closing the issue |
-| **okl** | **typed, scoped lessons (Defect / Rule / Decision …), selected per task, fail-closed** | **the drift gate: a lesson whose governed source changed after its last verification (or that was never verified) fails CI** |
+| **okl** | **typed, scoped lessons (Defect / Rule / Decision …), selected per task, fail-closed** | **the drift gate: a lesson whose governed source changed after its last verification (or that was never verified) blocks the push, or fails CI** |
 
 **Read against the Claude Code memory plugins** (claude-mem, agentmemory, ECC, beads — their
 source, September 2026): they are ahead on capture, retrieval engineering, install polish
@@ -302,7 +305,7 @@ they're better at it, and this deliberately isn't that (no embeddings, by
 **Alongside — they compose, because they're different layers.** Memory infrastructure
 remembers what the agent *experienced*; this governs what the org has *verified*. A
 reasonable stack runs both: mem0/Zep for recall, okl for the fail-closed pre-task
-briefing, the drift gate in CI, and the record/verify loop.
+briefing, the drift gate (before the push, or in CI), and the record/verify loop.
 
 **On top — the discipline is portable; the database is deliberately boring.** The parts
 worth stealing are the typed schema, the org/repo scope boundary, verification-with-
@@ -445,7 +448,8 @@ knowledge. The switch is one environment variable; none of your commands change.
 The plugin carries the two hooks, the MCP tools and the seeding commands. It does not
 carry okl itself: install the CLI first, **with the MCP extra**, because the plugin
 registers the `okl mcp` server (`pipx install 'observed-knowledge-ledger[mcp]'`), then run
-`okl init` in the repo for the store and the CI workflow — with the plugin enabled, `init`
+`okl init` in the repo for the store and the drift gate (a pre-push hook; `--ci` for the
+GitHub workflow) — with the plugin enabled, `init`
 skips the hooks and MCP registration, because registering them twice would brief every
 prompt twice. `okl doctor` reports a repo where both the plugin and the project hooks are
 active. To load the plugin from a checkout for one session: `claude --plugin-dir <path>`.
@@ -493,7 +497,9 @@ no model is called to summarise anything.
 **In your repo:** `okl init` writes `.okl/` (config, the local database, a `.gitignore`
 covering both) and, when it wires Claude Code, two hook scripts plus their registration. In a
 git repository it also installs a pre-push hook that runs the drift gate (`--no-git-hook`
-skips it). `--ci` adds `.github/workflows/okl-verify.yml`, which runs the gate on every PR.
+skips it). `--ci` installs `.github/workflows/okl-verify.yml`, which runs the gate on every
+PR, instead of the hook. A hook an earlier `init` installed stays: `--no-git-hook` only stops
+`init` installing it, and `okl init --uninstall` removes it.
 CI has no store of its own (the local one is gitignored), so give it one: once a lesson
 governs files, commit `okl-drift.json` (`okl verify` refreshes it; `okl export --drift`
 writes it; a snapshot of the rules drift reads, no lesson bodies), or set the
@@ -560,7 +566,8 @@ server, `.github/workflows/okl-verify.yml` and its pre-push hook — and nothing
 the same events stay, a file you edited is kept and named, and `.okl/` (your store) is
 never touched; delete it yourself if you mean to. Nothing outside the repo was ever written.
 
-The two hook scripts and the CI workflow each carry a `# okl-fingerprint:` line, the hash
+The two Claude Code hook scripts, the pre-push hook and the CI workflow each carry a
+`# okl-fingerprint:` line, the hash
 of the rest of the file (settings and `.mcp.json` are merged entry by entry instead). That
 is how `init` and `--uninstall` tell an untouched okl file (of any fingerprinted version:
 upgraded or removed freely) from one you edited. Files installed before 0.7 carry no
@@ -625,15 +632,17 @@ touches only the current directory, and only these:
 | `.github/workflows/okl-verify.yml` | **a CI workflow** running the drift gate on pull requests — only with `--ci`, or where an earlier okl installed it |
 | `.git/hooks/pre-push` (or your `core.hooksPath`) | **executable**; in a git repository with no okl workflow, or with `--git-hook`; runs the drift gate before a push and blocks only on drift; never written over another tool's hook |
 
-Re-running `init` is safe as long as you pass the same `--repo` (without it, the repo name
-resets to the directory's name): it upgrades okl's own files, keeps any you edited (say so
+Re-running `init` is safe: it keeps the repo name already configured here (`--repo` renames,
+which stops the old `repo:<name>` lessons from briefing), upgrades okl's own files, keeps any you edited (say so
 with `--force` to replace them), and merges settings without duplicating entries.
 
-Two of those deserve a second look before you run it: the hooks are shell scripts that
-execute automatically during agent sessions (the check hook can *block* a task when the
-store is unreachable — that is the fail-closed design), and the CI workflow will run in
-your Actions. Both are plain text you can read first, in
-[`src/okl/scaffold/hooks/`](src/okl/scaffold/hooks/) and
+The executable ones deserve a second look before you run it: the Claude Code hooks are
+shell scripts that execute automatically during agent sessions (the check hook can *block* a
+task when the store is unreachable — that is the fail-closed design), and the pre-push hook
+runs on every `git push` and blocks it on drift (with `--ci`, the workflow runs in your
+Actions instead). All are plain text you can read first, in
+[`src/okl/scaffold/hooks/`](src/okl/scaffold/hooks/),
+[`src/okl/scaffold/git-hooks/`](src/okl/scaffold/git-hooks/) and
 [`src/okl/scaffold/ci/`](src/okl/scaffold/ci/). Nothing executes at install time; nothing
 is written outside the directory you run `init` in; nothing contacts a network unless you
 run `okl connect` and point it somewhere yourself.
@@ -718,7 +727,9 @@ okl reverify         # re-run the stored check of every drifted lesson, and of a
                      #   lists the commands first and runs them only after you confirm
                      #   (or --yes), because they come from the store; --dry-run lists only
 okl drift --gate     # flag lessons whose governed source changed after they were last verified
-                     #   (exit 1 in CI — a stale rule is a rule nobody's re-checked)
+                     #   (exit 1 on drift, 2 when nothing could be checked; the pre-push hook
+                     #   and CI run it; lessons last checked on another branch are listed
+                     #   below the report, exit code unchanged)
 okl export --drift   # write okl-drift.json, the committed snapshot CI's drift gate reads
                      #   when it has no store; `okl verify` creates it for the first lesson
                      #   with --files and refreshes it after that (with no CI workflow, it
@@ -727,8 +738,9 @@ okl export --drift   # write okl-drift.json, the committed snapshot CI's drift g
                      #   does not match its verify evidence, so editing the timestamp alone
                      #   cannot clear it (editing both fields can; review is the guard).
 okl doctor           # names other agent-memory tools installed beside okl (claude-mem,
-                     #   agentmemory, ECC, beads) and how each collides with okl's hooks;
-                     #   reads settings only, changes nothing. `okl init` says the same.
+                     #   agentmemory, ECC, beads) and how each collides with okl's hooks,
+                     #   and whether the pre-push drift gate is installed and CI gates
+                     #   drift; reads settings and git config, changes nothing.
 okl --version        # the installed release, for a repo whose hooks run a pinned okl
 okl coverage         # ratio of encoded-knowledge lines to code lines — a health signal
 okl bootstrap        # cold-start a new repo: propose starter notes from its own
@@ -827,15 +839,19 @@ folder.) Two clarifications that stop the common misreadings:
 1. **Assertion is refused at the CLI.** `okl record --verified` (a bare claim, no
    evidence) exits 2 and points at `okl verify`. Two doors stay open: `okl seed` imports
    historical, already-verified stamps, and the shared service's API still accepts
-   `verified: true` on a record. What closes the loop is CI: its snapshot reader rejects
-   any stamp that carries no `okl verify` evidence.
+   `verified: true` on a record. What closes the loop is the drift gate: the live-store
+   scan (and so the pre-push hook) reports a stamp with no `okl verify` evidence as drift,
+   CI's snapshot reader refuses a snapshot that carries one (exit 2), and the briefing
+   marks it *UNPROVEN*.
 2. **Observed check with a stored trail** — `okl verify <id> --run "pytest -q"
    --expect "passed"` runs the check itself, reads the real outcome, requires the
    positive signal (exit 0 alone can't self-certify), and stores command + result +
    timestamp on the node (`verified_by`). Every stamp is inspectable and re-runnable;
    a lazy check becomes a visible artifact instead of an invisible belief.
-3. **An independent actor re-checks** — CI runs `okl drift --gate` and the method
-   gates on every PR: a mechanical grader with no stake in the original claim. Nothing
+3. **An independent actor re-checks** — with `okl init --ci` (or your own CI), CI runs
+   `okl drift --gate` and the method gates on every PR: a mechanical grader with no stake
+   in the original claim. The default pre-push hook runs the same gate locally, but it is
+   per-clone and `--no-verify` skips it, so it is an early warning, not an independent grader. Nothing
    shipped writes `VERIFIED_ON` receipts by default; a gate script can emit one with
    `okl link <gate_id> VERIFIED_ON <defect_id>` when it watches a gate prove itself.
 4. **Time attacks every stamp** — `drift` re-grades verifications the moment governed
@@ -911,7 +927,8 @@ TDD, plan writing/execution, git-worktree isolation) are **not bundled** — the
 best maintained in third-party collections, so `.claude/skills/RECOMMENDED-COMPANIONS.md`
 points at those instead of vendoring someone else's work and its cross-references.
 
-The scaffold runs with no store at all; the store works in a repo that never scaffolded.
+The scaffold runs with no store at all; the store works in a repo that never scaffolded. okl's own drift gate is
+`okl init`'s job (a pre-push hook, or the GitHub workflow with `--ci`), so scaffold leaves it alone.
 They are complementary, not a package deal.
 
 **Storage is swappable** via one environment variable — your commands never change:

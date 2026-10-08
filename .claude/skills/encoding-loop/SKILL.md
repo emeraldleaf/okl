@@ -41,7 +41,8 @@ okl verify <stable-key> --run "<a check that fails if the lesson is broken>" --e
   a seed file, use the id that file derives, `seed:<seed-file-stem>:<key>`, so a later
   `okl seed` upserts the same row.
 - **`--files`** — the code the lesson governs. With it, and once `okl verify` has passed,
-  CI's drift gate goes red whenever that code changes until the check is re-run. This is
+  the drift gate (the pre-push hook, or CI) goes red whenever that code changes until the
+  check is re-run. This is
   what sits between tier 1 and a gate: watched, but not build-breaking on its own.
 - **`scope=org`** — a fact about the world: prior art, an API contract, a data-source gotcha, a
   portable gate. It will surface in every connected repo's `okl check`.
