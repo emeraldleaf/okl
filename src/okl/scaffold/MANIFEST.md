@@ -17,7 +17,8 @@ any language/stack. The parts you complete per repo are marked inline with `<<FI
 | `gates/*.sh` | `gates/` | fully portable (retractions/tombstones/doc-orphans/links/diagram-pairs/canon-size) |
 | `registries/*` | `registries/` | portable format; FILL entries as earned |
 | `evals/*` | `evals/` | portable harness; FILL `evaluate_one()` + `cases.jsonl` |
-| `ci/method-gates.yml`, `ci/okl-verify.yml` | `.github/workflows/` | portable |
+| `ci/method-gates.yml` | `.github/workflows/` | portable |
+| `ci/okl-verify.yml` | `.github/workflows/okl-verify.yml` | not copied by scaffold — okl's drift gate in CI, installed by `okl init --ci` |
 | `ci/dependabot.yml` | `.github/dependabot.yml` | portable — keeps the workflows' SHA-pinned actions current |
 | `ci/review-agent.sh` | `ci/review-agent.sh` | portable, opt-in (see below) |
 | `hooks/*` | `.claude/hooks/` | UserPromptSubmit briefing (fail-closed in repos set up with okl) + Stop encode reminder; copied by scaffold, registered by `okl init` |
