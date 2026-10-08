@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- **The Stop hook, `/record` and the encoding-loop skill no longer promise a gate a repo
+  may not have.** They said a drift gate "goes red" when a lesson's code changes, which
+  was false in a repo set up with `--no-git-hook` and no `--ci`. They now say what
+  happens everywhere: the briefing and `okl drift` mark the lesson STALE until its check
+  passes again, and a drift gate, where the repo has one, fails.
+
 ## 0.8.0
 
 - **Drift is gated locally by default; the GitHub workflow is opt-in.** In a git repository

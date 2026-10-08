@@ -186,7 +186,7 @@ agent proposes one when it records, and you can overrule it:
 | The lesson… | Enforcement | How |
 |---|---|---|
 | is useful context for some tasks | briefing only | nothing more to do |
-| governs specific code | watched by the drift gate | give it `files`, prove it with `okl verify`; the drift gate (before the push, or in CI) goes red when that code changes |
+| governs specific code | watched for drift | give it `files`, prove it with `okl verify`; when that code changes, the briefing marks it STALE and the drift gate (before the push, or in CI), if installed, fails |
 | has been broken before, or is costly when broken | build-breaking | a test or CI check that fails the build — a sterner lesson will not stop a repeat |
 | is needed in every session, whatever the task | always-on | a line in `CLAUDE.md` / `AGENTS.md` — rare |
 
