@@ -16,6 +16,13 @@
   marks such a lesson in the briefing, but the mark had no verification date and the
   renderer read one (`KeyError: 'verified'`), so the briefing could not be printed. It now
   reads *UNPROVEN*, with the command that settles it.
+- **`.okl/config.json` is owner-only when it holds the service token** (#98). `okl connect
+  --token` stores the bearer credential there, and the file was written with default
+  permissions (`-rw-r--r--` on macOS), so every local user could read it. It is now
+  written to a new owner-only file (mode 0600) that replaces the old one, so even a reader
+  who already had the old config open never sees the token. A config with no token keeps
+  the default mode. On CI and shared machines, `OKL_TOKEN` in the environment
+  is still the better place for the token.
 - **A verification stamp with no observed check behind it is drift** (#20). `okl drift`
   read the store's `verified_at` alone, so a lesson stamped without evidence, such as a
   seeded record that declares `files`, cleared the gate exactly like one whose check had

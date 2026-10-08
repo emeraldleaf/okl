@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import tempfile
 from pathlib import Path
 from typing import Any
 from urllib import request as _req
@@ -65,7 +66,24 @@ def save_config(data: dict[str, Any], root: Path | None = None) -> Path:
     if not gitignore.exists():
         gitignore.write_text("# okl: machine-local config, credentials and local store\n*\n")
     path = d / CONFIG_FILE
-    path.write_text(json.dumps(data, indent=2) + "\n")
+    text = json.dumps(data, indent=2) + "\n"
+    if not data.get("token"):
+        path.write_text(text)
+        return path
+    # A config holding the service token is a credential file, so it is owner-only (#98):
+    # written with default permissions, every local user could read it. The token goes
+    # into a NEW file that replaces the old one, never into the old one: chmod does not
+    # revoke a handle another user already opened on a world-readable config, and the
+    # token written through that file would be read through it (CodeRabbit on #144).
+    # mkstemp creates the file 0600; the replace swaps it in atomically. Windows has no
+    # such bits; there the advice stays OKL_TOKEN from the environment.
+    fd, tmp = tempfile.mkstemp(dir=d, prefix=".config.", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(text)
+        Path(tmp).replace(path)
+    finally:
+        Path(tmp).unlink(missing_ok=True)   # gone after the replace; no stray copy if it failed
     return path
 
 
