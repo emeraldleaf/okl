@@ -61,10 +61,12 @@ codebase plus the bundled packs for your stack, so the first prompt is already b
 (`--interests` chooses your own subjects; `--no-seed` leaves the store empty).
 
 `init` wires Claude Code when the repo has a `.claude/` directory or `claude` is on your
-PATH; `--claude` forces it and `--no-claude` skips it. `--no-ci` skips the GitHub Actions
-workflow, for a private repo that would pay for its minutes or one that runs another CI,
-and later runs remember that; `--ci` puts it back. `--git-hook` adds a pre-push hook that
-runs the drift gate locally, and is remembered the same way. **Prefer the plugin?** Install it
+PATH; `--claude` forces it and `--no-claude` skips it. Drift is gated locally by default:
+in a git repository `init` installs a pre-push hook that runs the drift gate and blocks a
+push only when lessons have drifted (`--no-git-hook` skips it). The GitHub Actions workflow
+is opt-in, because it spends a private repo's minutes and does nothing on another CI: `--ci`
+adds it, for a team that wants a gate `git push --no-verify` cannot skip, and a repo an
+earlier okl gave the workflow keeps it. Later runs remember both choices. **Prefer the plugin?** Install it
 *before* running `init` — `/plugin marketplace add emeraldleaf/okl`, then
 `/plugin install okl@okl` in Claude Code — and `init` leaves the hooks to the plugin, so
 nothing is wired twice. (Installed after? `okl doctor` reports the double wiring, and
@@ -113,10 +115,12 @@ okl doctor                  # flags other agent-memory tools and double wiring
   check (a lesson recorded with `--files` is also red until its first `okl verify`). The
   briefing says so too: such a lesson is marked *STALE* (or *UNVERIFIED*) with the file
   that changed, so the agent confirms it against the code instead of trusting it blindly.
-  `okl reverify` re-runs each drifted lesson's stored check after you confirm. CI reads a
-  committed snapshot, `okl-drift.json`, which `okl verify` creates the first time a lesson
-  with `--files` is verified and keeps current after that: commit it after the code change
-  it verifies. Until then CI warns "Drift not checked", which is expected.
+  `okl reverify` re-runs each drifted lesson's stored check after you confirm. With the
+  GitHub workflow (`okl init --ci`), CI reads a committed snapshot, `okl-drift.json`, which
+  `okl verify` creates the first time a lesson with `--files` is verified and keeps current
+  after that: commit it after the code change it verifies. Until then CI warns "Drift not
+  checked", which is expected. Without the workflow, `okl verify` writes no snapshot unless
+  one is already committed.
 - **Headless runs** (`claude -p`, scripts, CI agents) set `OKL_DISABLED_HOOKS=encode`,
   or the end-of-session question replaces the printed answer.
 
@@ -488,8 +492,8 @@ no model is called to summarise anything.
 
 **In your repo:** `okl init` writes `.okl/` (config, the local database, a `.gitignore`
 covering both) and, when it wires Claude Code, two hook scripts plus their registration. In a
-git repository it also installs `.github/workflows/okl-verify.yml`, which runs the drift
-gate on every PR, unless you pass `--no-ci`.
+git repository it also installs a pre-push hook that runs the drift gate (`--no-git-hook`
+skips it). `--ci` adds `.github/workflows/okl-verify.yml`, which runs the gate on every PR.
 CI has no store of its own (the local one is gitignored), so give it one: once a lesson
 governs files, commit `okl-drift.json` (`okl verify` refreshes it; `okl export --drift`
 writes it; a snapshot of the rules drift reads, no lesson bodies), or set the
@@ -497,8 +501,7 @@ writes it; a snapshot of the rules drift reads, no lesson bodies), or set the
 passing as if it had. Do not commit a snapshot holding zero rules: CI reads a configured
 store that checked nothing as broken, and fails.
 Not on GitHub Actions? The gate is one command; [Getting started §4](docs/GETTING-STARTED.md#4-run-the-drift-gate-without-github-actions)
-covers GitLab, Azure Pipelines and, for no CI at all, the pre-push hook `okl init --git-hook`
-installs.
+covers GitLab, Azure Pipelines and the pre-push hook.
 `okl scaffold` is separate and optional — nothing installs it unless you ask.
 
 ### The knobs, cheapest first
@@ -553,7 +556,7 @@ from CI, and through the MCP server whether or not any hook is installed.
 
 To remove okl from a repo: `okl init --uninstall` (add `--dry-run` to preview). It removes
 the two hook scripts, their exact entries in `.claude/settings.json`, okl's `.mcp.json`
-server and `.github/workflows/okl-verify.yml` — and nothing else: another tool's hooks in
+server, `.github/workflows/okl-verify.yml` and its pre-push hook — and nothing else: another tool's hooks in
 the same events stay, a file you edited is kept and named, and `.okl/` (your store) is
 never touched; delete it yourself if you mean to. Nothing outside the repo was ever written.
 
@@ -619,8 +622,8 @@ touches only the current directory, and only these:
 | `.claude/hooks/stop-okl-encode.sh` | **executable**; runs at session end, asks what was learned |
 | `.claude/settings.json` | registers those two hooks (merged in place; your existing keys are preserved) |
 | `.mcp.json` | registers the okl MCP server — only when the `mcp` extra is installed |
-| `.github/workflows/okl-verify.yml` | **a CI workflow** running the drift gate on pull requests — only in a git repository, and not with `--no-ci` |
-| `.git/hooks/pre-push` (or your `core.hooksPath`) | **executable**, only with `--git-hook`; runs the drift gate before a push and blocks only on drift; never written over another tool's hook |
+| `.github/workflows/okl-verify.yml` | **a CI workflow** running the drift gate on pull requests — only with `--ci`, or where an earlier okl installed it |
+| `.git/hooks/pre-push` (or your `core.hooksPath`) | **executable**; in a git repository with no okl workflow, or with `--git-hook`; runs the drift gate before a push and blocks only on drift; never written over another tool's hook |
 
 Re-running `init` is safe as long as you pass the same `--repo` (without it, the repo name
 resets to the directory's name): it upgrades okl's own files, keeps any you edited (say so
@@ -717,7 +720,8 @@ okl drift --gate     # flag lessons whose governed source changed after they wer
                      #   (exit 1 in CI — a stale rule is a rule nobody's re-checked)
 okl export --drift   # write okl-drift.json, the committed snapshot CI's drift gate reads
                      #   when it has no store; `okl verify` creates it for the first lesson
-                     #   with --files and refreshes it after that.
+                     #   with --files and refreshes it after that (with no CI workflow, it
+                     #   only refreshes a committed one).
                      #   CI reads the COMMITTED copy, and refuses an entry whose timestamp
                      #   does not match its verify evidence, so editing the timestamp alone
                      #   cannot clear it (editing both fields can; review is the guard).

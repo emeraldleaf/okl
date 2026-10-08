@@ -394,8 +394,9 @@ def _dry_run_drift_gates(args: argparse.Namespace) -> None:
     if _ci_wanted(args, cfg):
         print("  .github/workflows/okl-verify.yml        a CI workflow running the drift gate on PRs")
     else:
-        print("  (no CI workflow: --no-ci, or an earlier init recorded it)")
+        print("  (no CI workflow: opt-in with --ci, or an earlier init recorded --no-ci)")
     if not _git_hook_wanted(args, cfg):
+        print("  (no pre-push hook: --no-git-hook, or an earlier init recorded it)")
         return
     hooks, why = _git_hooks_dir()
     if hooks is None:
@@ -406,18 +407,30 @@ def _dry_run_drift_gates(args: argparse.Namespace) -> None:
 
 
 def _ci_wanted(args: argparse.Namespace, cfg: dict) -> bool:
-    """Whether init installs the CI workflow: --ci/--no-ci when given, else what an earlier
-    init recorded (#111). Remembered because init restores missing files by design, so a
-    deleted workflow came back on the next run."""
+    """Whether init installs the GitHub Actions workflow: --ci/--no-ci when given, else what
+    an earlier init recorded (#111), else only where okl's workflow is already installed.
+
+    Opt-in, because the workflow spends a private repo's Actions minutes and does nothing on
+    another CI; drift is gated locally by default instead (_git_hook_wanted). A repo an older
+    init gave the workflow keeps it, so upgrading okl never removes a gate."""
     flag = getattr(args, "ci", None)
-    return cfg.get("ci", True) if flag is None else flag
+    if flag is not None:
+        return bool(flag)
+    if "ci" in cfg:
+        return bool(cfg["ci"])
+    return (Path(".github") / "workflows" / "okl-verify.yml").exists()
 
 
 def _git_hook_wanted(args: argparse.Namespace, cfg: dict) -> bool:
     """Whether init installs the pre-push drift gate: --git-hook/--no-git-hook when given,
-    else what an earlier init recorded, so a re-run upgrades the hook instead of losing it."""
+    else what an earlier init recorded, else wherever there is no CI gate -- so that, by
+    default, drift is gated somewhere."""
     flag = getattr(args, "git_hook", None)
-    return bool(cfg.get("git_hook", False)) if flag is None else flag
+    if flag is not None:
+        return bool(flag)
+    if "git_hook" in cfg:
+        return bool(cfg["git_hook"])
+    return not _ci_wanted(args, cfg)
 
 
 def _init_interests(cfg: dict, args: argparse.Namespace) -> None:
@@ -463,22 +476,16 @@ def cmd_init(args: argparse.Namespace) -> int:
     # (agent harnesses don't inherit venv/pipx PATH entries). Machine-local by design —
     # .okl/ is gitignored; hooks fall back to PATH and `python3 -m okl` regardless.
     cfg["okl_bin"] = shutil.which("okl") or f"{sys.executable} -m okl"
-    if getattr(args, "ci", None) is not None:
-        cfg["ci"] = args.ci
-    if getattr(args, "git_hook", None) is not None:
-        cfg["git_hook"] = args.git_hook
+    # Recorded, defaults included, so a later run does not change its answer because the
+    # workflow file came or went in between.
+    cfg["ci"] = _ci_wanted(args, cfg)
+    cfg["git_hook"] = _git_hook_wanted(args, cfg)
     path = save_config(cfg)
     print(f"✓ wrote {path}  (repo={repo}, mode={'remote' if cfg.get('service_url') else 'local'}"
           + (f", interests={','.join(cfg['interests'])}" if cfg.get("interests") else "") + ")")
 
     _wire_claude_code(args)
-    if _ci_wanted(args, cfg):
-        _install_ci_verifier(force=getattr(args, "force", False))
-    else:
-        print("• no CI workflow (--no-ci, recorded in .okl/config.json); run `okl drift --gate` "
-              "from your own CI or a hook")
-    if _git_hook_wanted(args, cfg) and Path(".git").exists():
-        _install_git_hook(force=getattr(args, "force", False))
+    _wire_drift_gates(cfg, force=getattr(args, "force", False))
     if not getattr(args, "no_seed", False):
         _seed_first_run(Client())
     for line in _empty_store_guidance(Client()):
@@ -525,13 +532,28 @@ def _install_claude_wiring(claude: Path, force: bool = False) -> None:
         print("✓ registered okl MCP server → .mcp.json (okl_check / okl_record / okl_search)")
 
 
-def _install_ci_verifier(force: bool = False) -> None:
-    """Install the CI verifier workflow instead of printing a copy instruction; warn
-    loudly when git is absent, because the drift layer is dead without history."""
+def _wire_drift_gates(cfg: dict, force: bool) -> None:
+    """init's drift gates, as `cfg` records them: the GitHub workflow, the pre-push hook."""
     if not Path(".git").exists():
-        print("⚠ not a git repository — the drift verifier (okl drift) and the CI gate are DISABLED")
+        # Loud, because the drift layer is dead without history: drift compares governed
+        # files against their last-verified commit.
+        print("⚠ not a git repository — the drift verifier (okl drift) and its gates are DISABLED")
         print("  until `git init`: drift compares governed files against their last-verified commit.")
         return
+    if cfg["ci"]:
+        _install_ci_verifier(force=force)
+    else:
+        print("• no GitHub Actions workflow (`okl init --ci` adds one). A local hook is skippable "
+              "and per-clone; on a team, gate drift in CI too")
+    if cfg["git_hook"]:
+        _install_git_hook(force=force)
+    elif not cfg["ci"]:
+        print("! drift is gated nowhere here (--no-git-hook and no CI): `okl init --git-hook` "
+              "or `okl init --ci` adds a gate")
+
+
+def _install_ci_verifier(force: bool = False) -> None:
+    """Install the CI verifier workflow instead of printing a copy instruction."""
     wf = Path(".github") / "workflows" / "okl-verify.yml"
     src = Path(__file__).parent.parent / "scaffold" / "ci" / "okl-verify.yml"
     _place_owned(wf, src.read_text(), "CI verifier (drift gate + repo gates on every PR)", force)
