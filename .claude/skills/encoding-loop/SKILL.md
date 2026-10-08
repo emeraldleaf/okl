@@ -42,7 +42,7 @@ okl verify <stable-key> --run "<a check that fails if the lesson is broken>" --e
   `okl seed` upserts the same row.
 - **`--files`** — the code the lesson governs. With it, and once `okl verify` has passed,
   a change to that code marks the lesson STALE in the briefing and `okl drift` until the
-  check is re-run, and fails the drift gate (the pre-push hook, or CI) where one is
+  check passes again, and fails the drift gate (the pre-push hook, or CI) where one is
   installed. This is what sits between tier 1 and a gate: watched, but not
   build-breaking on its own.
 - **`scope=org`** — a fact about the world: prior art, an API contract, a data-source gotcha, a

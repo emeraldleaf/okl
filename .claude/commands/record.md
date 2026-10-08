@@ -52,7 +52,7 @@ Use the softest level that holds, and say which you chose:
   ```
 
   When that code changes, the briefing and `okl drift` mark the lesson STALE until the
-  check is re-run, and a drift gate, where the repo has one (the pre-push hook by
+  check passes again, and a drift gate, where the repo has one (the pre-push hook by
   default, or CI with `okl init --ci`), fails. If the repo commits `okl-drift.json`,
   remind the person to commit the refreshed copy. Never mark a lesson verified any
   other way.
