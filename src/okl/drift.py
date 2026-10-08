@@ -117,6 +117,31 @@ def _git_changed_since(commit: str | None, globs: list[str], repo_dir: str) -> b
     return {0: False, 1: True}.get(out.returncode)   # 128: commit unknown to this clone
 
 
+def _on_this_branch(commit: str | None, repo_dir: str) -> bool | None:
+    """Whether the stamped commit is in HEAD's history; None when git can't say.
+
+    One local store serves every branch, so a lesson verified on branch B carries B's
+    commit when drift runs on branch A (#126). The content comparison still answers
+    correctly while that commit exists, but the evidence now depends on a sibling branch,
+    and a message built from times reads as nonsense ("changed 10-07, after its check on
+    10-08"). None: no commit recorded, not an object name, or one this clone lacks.
+    """
+    if not commit or not _COMMIT.fullmatch(commit):
+        return None
+    try:
+        out = subprocess.run(["git", "-C", repo_dir, "merge-base", "--is-ancestor", commit, "HEAD"],
+                             capture_output=True, timeout=15)
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return None
+    return {0: True, 1: False}.get(out.returncode)    # 128: commit unknown to this clone
+
+
+def _off_branch_reason(commit: str) -> str:
+    """The drift reason for a lesson checked on another branch whose files differ here."""
+    return (f"verified on {commit[:7]}, a commit outside this branch's history, and the "
+            "governed files differ from it: re-verify on this branch")
+
+
 def _changed_since_check(commit: str | None, verified_at: int, last_change_ms: int,
                          globs: list[str], repo_dir: str) -> bool:
     """The one drift verdict for a verified rule, shared by the gate and the briefing.
@@ -181,11 +206,49 @@ def scan_drift(nodes: Iterable[Node], repo: str, repo_dir: str = ".") -> tuple[l
             hits.append(DriftHit(n.id, n.title, n.scope, n.files, last, base, stamp,
                                  evidence=False))
         elif _changed_since_check(n.verified_commit, base, last, globs, repo_dir):
-            hits.append(DriftHit(
-                n.id, n.title, n.scope, n.files, last, base,
-                "governed source changed after the rule was last verified",
-            ))
+            reason = "governed source changed after the rule was last verified"
+            if n.verified_commit and _on_this_branch(n.verified_commit, repo_dir) is False:
+                reason = _off_branch_reason(n.verified_commit)
+            hits.append(DriftHit(n.id, n.title, n.scope, n.files, last, base, reason))
     return hits, checked
+
+
+def off_branch(nodes: Iterable[Node], repo: str, repo_dir: str = ".") -> list[tuple[Node, str]]:
+    """Lessons whose last check ran on a commit outside HEAD's history, with that commit (#126).
+
+    Not drift: when the governed files still match that commit, the check passed on the
+    same content HEAD has. But the evidence depends on another branch, and if that branch
+    is deleted or rebased the commit disappears and drift quietly falls back to comparing
+    times. So it is reported beside drift, never as drift: the gate's exit code is
+    unchanged, because content comparison is what lets a squash merge pass, and a project
+    that squashes would otherwise go red on its main branch after every merge.
+    """
+    repo_scope = f"repo:{repo}"
+    seen: dict[str, bool | None] = {}
+    out = []
+    for n in nodes:
+        if not (n.files and n.verified_at is not None and n.verified_commit
+                and n.scope in ("org", repo_scope)):
+            continue
+        if stamp_problem({"verified_at": n.verified_at, "verified_by": n.verified_by,
+                          "verified_commit": n.verified_commit}):
+            continue                     # reported as drift already: no observed check
+        if n.verified_commit not in seen:
+            seen[n.verified_commit] = _on_this_branch(n.verified_commit, repo_dir)
+        if seen[n.verified_commit] is False:
+            out.append((n, n.verified_commit))
+    return out
+
+
+def render_off_branch(items: list[tuple[Node, str]]) -> str:
+    """The advisory under the drift report; empty when every stamp is on this branch."""
+    if not items:
+        return ""
+    lines = ["", f"OKL: {len(items)} lesson(s) were last verified on a commit outside this branch's "
+                 "history, so their evidence depends on another branch. `okl reverify` re-runs "
+                 "their checks here:"]
+    lines.extend(f"  • [{n.id}] {n.title}  (verified on {commit[:7]})" for n, commit in items)
+    return "\n".join(lines)
 
 
 def _governed_paths_exist(globs: list[str], repo_dir: str) -> bool:
@@ -227,11 +290,16 @@ def _record_drift(rec: dict[str, Any], repo_scope: str, repo_dir: str) -> dict[s
     if last is not None and stamp_problem(rec):
         return {"files": rec["files"], "changed": _utc_day(last),
                 "reason": "verified with no observed check"}
-    if last is None or not _changed_since_check(rec.get("verified_commit"), base, last,
-                                                globs, repo_dir):
+    commit = rec.get("verified_commit")
+    if last is None or not _changed_since_check(commit, base, last, globs, repo_dir):
         return None
-    return {"files": rec["files"], "changed": _utc_day(last), "verified": _utc_day(base),
-            "reason": "changed since last verified"}
+    out = {"files": rec["files"], "changed": _utc_day(last), "verified": _utc_day(base),
+           "reason": "changed since last verified"}
+    # Checked on another branch: its dates cannot explain the verdict (the check can be
+    # newer than the change), so say what happened instead (#126).
+    if commit and _on_this_branch(commit, repo_dir) is False:
+        out.update(reason="verified on another branch", commit=commit[:7])
+    return out
 
 
 def annotate_briefing(result: dict[str, Any], repo: str, repo_dir: str = ".") -> int:

@@ -599,12 +599,21 @@ def _drift_tag(item: dict) -> str:
     if not d:
         return ""
     files = d["files"] if len(d["files"]) <= 60 else d["files"][:59] + "…"
+    lead = ("a lead, not a settled rule: re-run its check (okl reverify), "
+            "and if it fails, fix the code or change the lesson on purpose")
     if d["reason"] == "never verified":
         return (f" *(UNVERIFIED — governs {files} but no check has passed; "
                 f"prove it: okl verify {item.get('id')} --run …)*")
+    # Each verdict carries different fields, so each gets its own sentence. This one has
+    # no verification date to print, and reading one crashed the briefing (#126).
+    if d["reason"] == "verified with no observed check":
+        return (f" *(UNPROVEN — governs {files}, but no observed check backs its stamp; "
+                f"prove it: okl verify {item.get('id')} --run …)*")
+    if d["reason"] == "verified on another branch":
+        return (f" *(STALE — last checked on {d.get('commit', '?')}, a commit from another "
+                f"branch, and {files} differ here; {lead})*")
     return (f" *(STALE — {files} changed {d['changed']}, after its last check on "
-            f"{d['verified']}; a lead, not a settled rule: re-run its check (okl reverify), "
-            "and if it fails, fix the code or change the lesson on purpose)*")
+            f"{d['verified']}; {lead})*")
 
 
 def _render_actions(actions: list[dict]) -> list[str]:

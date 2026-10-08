@@ -710,7 +710,8 @@ okl verify <id> --run "pytest -q" --expect "passed"
                      #   --expect requires a positive success signal in the output, so an
                      #   exit code alone can't self-certify. (`record --verified` is
                      #   refused; historical receipts import through `okl seed`.)
-okl reverify         # re-run the stored check of every drifted lesson and re-stamp the passes;
+okl reverify         # re-run the stored check of every drifted lesson, and of any last checked
+                     #   on another branch, and re-stamp the passes;
                      #   lists the commands first and runs them only after you confirm
                      #   (or --yes), because they come from the store; --dry-run lists only
 okl drift --gate     # flag lessons whose governed source changed after they were last verified

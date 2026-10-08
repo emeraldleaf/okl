@@ -12,6 +12,27 @@
   worktree) is refused. The choice is remembered like `--no-ci`; `okl doctor` reports the
   hook and `okl init --uninstall` removes it. A local hook is per-clone and
   `--no-verify` skips it, so on a team it complements a CI gate rather than replacing it.
+- **A lesson last checked on another branch says so** (#126). One local store serves every
+  branch, so a lesson verified on branch B carried B's commit when drift ran on branch A.
+  If the governed files differed, drift reported it stale with dates that could
+  contradict each other ("changed 10-07, after its last check on 10-08"). Now that drift
+  hit, and the briefing's STALE mark, say the check ran on a commit outside this branch's
+  history and name it. If the files still match, the check passed on the same content, so
+  it is not drift, but its evidence depends on the other branch. `okl drift` lists those
+  lessons below the report without changing the gate's exit code: content comparison is
+  what lets a squash merge pass. `okl verify` and `okl export --drift`, which write the
+  snapshot CI reads, warn about them, and `okl reverify` now re-checks them here.
+- **A briefing no longer crashes on a lesson stamped without evidence.** Since #20, drift
+  marks such a lesson in the briefing, but the mark had no verification date and the
+  renderer read one (`KeyError: 'verified'`), so the briefing could not be printed. It now
+  reads *UNPROVEN*, with the command that settles it.
+- **`.okl/config.json` is owner-only when it holds the service token** (#98). `okl connect
+  --token` stores the bearer credential there, and the file was written with default
+  permissions (`-rw-r--r--` on macOS), so every local user could read it. It is now
+  written to a new owner-only file (mode 0600) that replaces the old one, so even a reader
+  who already had the old config open never sees the token. A config with no token keeps
+  the default mode. On CI and shared machines, `OKL_TOKEN` in the environment
+  is still the better place for the token.
 - **A verification stamp with no observed check behind it is drift** (#20). `okl drift`
   read the store's `verified_at` alone, so a lesson stamped without evidence, such as a
   seeded record that declares `files`, cleared the gate exactly like one whose check had
