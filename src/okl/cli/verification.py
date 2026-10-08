@@ -89,6 +89,8 @@ def cmd_verify(args: argparse.Namespace) -> int:
               "commit them, then verify again, or this lesson will show as drifted",
               file=sys.stderr)
     _refresh_snapshot(node)
+    if getattr(args, "branch_warning", True):
+        _warn_off_branch(Client(), skip=node["id"])
     return 0
 
 
@@ -116,6 +118,24 @@ def _refresh_snapshot(node: dict) -> None:
             print(f"  {'refreshed' if existed else 'created'} {snap.name} — commit it so CI sees this verification")
         except OKLUnreachableError as e:
             print(f"  ! {snap.name} NOT refreshed: {e}", file=sys.stderr)
+
+
+def _warn_off_branch(client: Client, skip: str | None = None) -> None:
+    """Name, on stderr, the lessons whose stamps sit on another branch's commit (#126).
+
+    One store serves every branch, so a lesson verified on a sibling branch carries that
+    branch's commit here, and the snapshot written on this branch commits it. Said where
+    the snapshot is written, `okl verify` and `okl export --drift`, so nobody learns of it
+    from a red build on a branch whose files never changed.
+    """
+    from .. import drift
+    try:
+        items = drift.off_branch(client.all_nodes(), client.repo, str(_snapshot_path().parent))
+    except OKLUnreachableError:
+        return
+    items = [(n, c) for n, c in items if n.id != skip]
+    if items:
+        print(drift.render_off_branch(items).lstrip("\n"), file=sys.stderr)
 
 
 _GENERIC_STEMS = {"src", "lib", "app", "main", "index", "test", "tests", "pages", "utils", "util",
@@ -273,29 +293,37 @@ def cmd_reverify(args: argparse.Namespace) -> int:
         print(f"OKL UNREACHABLE — cannot re-verify.\n{e}", file=sys.stderr)
         return 2
     by_id = {n.id: n for n in nodes}
-    hits, _ = drift.scan_drift(nodes, client.repo, repo_dir=str(_snapshot_path().parent))
-    if not hits:
+    root = str(_snapshot_path().parent)
+    hits, _ = drift.scan_drift(nodes, client.repo, repo_dir=root)
+    # A lesson last checked on another branch is re-checked here too, even when its files
+    # still match: re-stamping it on this branch is the fix the drift report points to (#126).
+    targets = [(h.node_id, h.title) for h in hits]
+    targets += [(n.id, n.title) for n, _c in drift.off_branch(nodes, client.repo, root)
+                if n.id not in {h.node_id for h in hits}]
+    if not targets:
         print("okl reverify: nothing has drifted.")
         return 0
     plan, manual = [], []
-    for h in hits:
-        chk = _stored_check(by_id[h.node_id].verified_by)
-        (plan.append((h, chk)) if chk else manual.append(h))
-    for h in manual:
-        print(f"• [{h.node_id}] {h.title}\n    no stored check yet: ask your agent to write one, or run "
-              f"`okl verify {h.node_id}` to see the tests that touch its files")
+    for nid, title in targets:
+        chk = _stored_check(by_id[nid].verified_by)
+        (plan.append((nid, chk)) if chk else manual.append((nid, title)))
+    for nid, title in manual:
+        print(f"• [{nid}] {title}\n    no stored check yet: ask your agent to write one, or run "
+              f"`okl verify {nid}` to see the tests that touch its files")
     if plan:
         print(f"okl reverify will run {len(plan)} stored check(s), from the store:")
-        for h, (run, _exp) in plan:
-            print(f"  [{h.node_id}] {run}")
+        for nid, (run, _exp) in plan:
+            print(f"  [{nid}] {run}")
     stop = _reverify_permitted(args, bool(plan), bool(manual))
     if stop is not None:
         return stop
     failed = 0
-    for h, (run, exp) in plan:
-        rc = cmd_verify(argparse.Namespace(node_id=h.node_id, run=run, expect=exp, timeout=args.timeout))
+    for nid, (run, exp) in plan:
+        rc = cmd_verify(argparse.Namespace(node_id=nid, run=run, expect=exp, timeout=args.timeout,
+                                           branch_warning=False))
         failed += rc != 0
     print(f"okl reverify: {len(plan) - failed} re-verified, {failed} failed, {len(manual)} need a first check.")
+    _warn_off_branch(client)
     return 1 if (failed or manual) else 0
 
 
@@ -355,6 +383,7 @@ def cmd_export(args: argparse.Namespace) -> int:
               "(`okl record ... --files <globs>` enrolls one)", file=sys.stderr)
         return 2
     print(f"wrote {path}: {n} rule(s). Commit it — CI's drift gate reads the committed copy.")
+    _warn_off_branch(client)
     return 0
 
 
@@ -379,7 +408,8 @@ def cmd_drift(args: argparse.Namespace) -> int:
         return 2
     repo = args.repo or client.repo
     return _report_drift(args, drift.scan_drift(nodes, repo, repo_dir=args.repo_dir),
-                         drift.governs_nothing(nodes, repo, args.repo_dir))
+                         drift.governs_nothing(nodes, repo, args.repo_dir),
+                         drift.off_branch(nodes, repo, args.repo_dir))
 
 
 def _drift_from_snapshot(args: argparse.Namespace, client: Client) -> int:
@@ -403,22 +433,30 @@ def _drift_from_snapshot(args: argparse.Namespace, client: Client) -> int:
         return 2
     repo = args.repo or snap.get("repo") or client.repo
     return _report_drift(args, drift.scan_drift(nodes, repo, repo_dir=args.repo_dir),
-                         drift.governs_nothing(nodes, repo, args.repo_dir))
+                         drift.governs_nothing(nodes, repo, args.repo_dir),
+                         drift.off_branch(nodes, repo, args.repo_dir))
 
 
 def _report_drift(args: argparse.Namespace, scan: tuple[list[DriftHit], int],
-                  missing: Sequence[Node] = ()) -> int:
+                  missing: Sequence[Node] = (),
+                  elsewhere: Sequence[tuple[Node, str]] = ()) -> int:
     from .. import drift
     hits, checked = scan
     # Lessons watching files that are gone are reported beside the drift, never as drift:
-    # the exit code is unchanged, because what to do with them is a decision (#109).
+    # the exit code is unchanged, because what to do with them is a decision (#109). So
+    # are lessons last checked on another branch whose files still match (#126); one whose
+    # files differ is drift already, and its reason says where it was checked.
+    elsewhere = [(n, c) for n, c in elsewhere if n.id not in {h.node_id for h in hits}]
     if args.format == "json":
         _print_json({"drift": [h.as_dict() for h in hits], "count": len(hits),
                      "checked": checked,
                      "governs_nothing": [{"node_id": n.id, "title": n.title, "files": n.files}
-                                         for n in missing]})
+                                         for n in missing],
+                     "off_branch": [{"node_id": n.id, "title": n.title, "verified_commit": c}
+                                    for n, c in elsewhere]})
     else:
-        print(drift.render_drift(hits, checked) + drift.render_governs_nothing(list(missing)))
+        print(drift.render_drift(hits, checked) + drift.render_governs_nothing(list(missing))
+              + drift.render_off_branch(elsewhere))
     if not args.gate:
         return 0
     # Under --gate the exit code is the verdict, and it follows the CLI's contract:
