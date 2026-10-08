@@ -44,15 +44,16 @@ command instead.
 Use the softest level that holds, and say which you chose:
 
 - **Briefing only** — every lesson reaches the per-task briefing. Most need nothing more.
-- **Watched by the drift gate** — the lesson governs specific code (`files` is set). Offer to prove it
+- **Watched for drift** — the lesson governs specific code (`files` is set). Offer to prove it
   with a check that fails when the lesson is broken:
 
   ```bash
   okl verify <id> --run "<that check>" --expect "<text its passing output contains>"
   ```
 
-  The drift gate (the pre-push hook by default, or CI with `okl init --ci`) then goes red
-  when that code changes, until the check is re-run. If the repo commits `okl-drift.json`,
+  When that code changes, the briefing and `okl drift` mark the lesson STALE until the
+  check is re-run, and a drift gate, where the repo has one (the pre-push hook by
+  default, or CI with `okl init --ci`), fails. If the repo commits `okl-drift.json`,
   remind the person to commit the refreshed copy. Never mark a lesson verified any
   other way.
 - **Build-breaking** — the same mistake has happened before, or it is costly when it
