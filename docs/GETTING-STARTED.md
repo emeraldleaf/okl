@@ -435,7 +435,8 @@ a CI gate as well.
 | CI fails with "NOTHING CHECKED" | a snapshot with zero rules is committed | remove it, or record a lesson with `--files` and re-export |
 | `okl drift` is red right after `okl record --files` | a new rule is unverified until its first `okl verify` | run its check with `okl verify` |
 | `okl drift` is red after you changed code | lessons governing those files need re-checking | `okl reverify` |
-| A briefed lesson is marked *STALE* or *UNVERIFIED* | its governed files changed after its last check, or no check has passed yet | `okl reverify` re-runs stored checks; a lesson with none needs one first: ask your agent to re-check it, or run `okl verify <id>` to see what to run |
+| A briefed lesson is marked *STALE*, *UNVERIFIED* or *UNPROVEN* | its governed files changed after its last check, no check has passed yet, or its stamp has no observed check behind it | `okl reverify` re-runs stored checks; a lesson with none needs one first: ask your agent to re-check it, or run `okl verify <id>` to see what to run |
+| `okl drift` lists lessons "last verified on a commit outside this branch's history" | one local store serves every branch, and those lessons were checked on another one | `okl reverify` re-checks them on this branch; until then their evidence depends on that branch still existing |
 | Every lesson is drifted in CI, but `okl drift` is clean locally | the CI checkout is shallow, so every file looks freshly changed | fetch full history (section 4) |
 
 More: the [README](../README.md) covers costs, scopes, the shared service and the MCP tools;

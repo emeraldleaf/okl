@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- **A lesson last checked on another branch says so** (#126). One local store serves every
+  branch, so a lesson verified on branch B carried B's commit when drift ran on branch A.
+  If the governed files differed, drift reported it stale with dates that could
+  contradict each other ("changed 10-07, after its last check on 10-08"). Now that drift
+  hit, and the briefing's STALE mark, say the check ran on a commit outside this branch's
+  history and name it. If the files still match, the check passed on the same content, so
+  it is not drift, but its evidence depends on the other branch. `okl drift` lists those
+  lessons below the report without changing the gate's exit code: content comparison is
+  what lets a squash merge pass. `okl verify` and `okl export --drift`, which write the
+  snapshot CI reads, warn about them, and `okl reverify` now re-checks them here.
+- **A briefing no longer crashes on a lesson stamped without evidence.** Since #20, drift
+  marks such a lesson in the briefing, but the mark had no verification date and the
+  renderer read one (`KeyError: 'verified'`), so the briefing could not be printed. It now
+  reads *UNPROVEN*, with the command that settles it.
 - **A verification stamp with no observed check behind it is drift** (#20). `okl drift`
   read the store's `verified_at` alone, so a lesson stamped without evidence, such as a
   seeded record that declares `files`, cleared the gate exactly like one whose check had

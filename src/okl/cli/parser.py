@@ -108,7 +108,7 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
     pvf.add_argument("--timeout", type=int, default=600, help="seconds before the check is killed (default 600)")
     pvf.set_defaults(func=cmd_verify)
 
-    prv = sub.add_parser("reverify", help="re-run the stored check of every drifted lesson and re-stamp the passes")
+    prv = sub.add_parser("reverify", help="re-run the stored check of every drifted lesson, and of any last checked on another branch, and re-stamp the passes")
     prv.add_argument("--yes", action="store_true",
                      help="run the listed stored commands without asking (they come from the store)")
     prv.add_argument("--dry-run", dest="dry_run", action="store_true",
