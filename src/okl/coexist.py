@@ -164,8 +164,9 @@ def double_wiring(project_root: Path, home: Path) -> str | None:
     return (f"okl is wired twice: its plugin is enabled AND {len(hooks)} okl hook(s) are "
             f"registered in {where}. Every prompt is briefed twice and the Stop question is "
             "asked twice. Keep one: run `okl init --uninstall`, then `okl init` again, which leaves "
-            "the hooks to the plugin and puts the drift gate back (your store in .okl/ stays), "
-            "or disable the plugin.")
+            "the Claude Code hooks to the plugin and reinstalls okl's pre-push gate (or prints the "
+            "line to add to a pre-push hook okl did not write; your store in .okl/ stays), or "
+            "disable the plugin.")
 
 
 def detect(project_root: Path, home: Path) -> list[Finding]:

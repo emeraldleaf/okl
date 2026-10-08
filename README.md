@@ -71,7 +71,9 @@ cannot skip; a repo an earlier okl gave the workflow keeps it. Later runs rememb
 *before* running `init` — `/plugin marketplace add emeraldleaf/okl`, then
 `/plugin install okl@okl` in Claude Code — and `init` leaves the hooks to the plugin, so
 nothing is wired twice. (Installed after? `okl doctor` reports the double wiring; run `okl init --uninstall`, then
-`okl init` again, which leaves the hooks to the plugin and puts the drift gate back.)
+`okl init` again, which leaves the Claude Code hooks to the plugin and reinstalls okl's
+pre-push gate; where another tool owns the pre-push hook, `init` prints the one line to add
+to it instead.)
 
 **3. Add a rule of your own.** The starter lessons are generic; what pays is what only your
 codebase knows. Tell your agent — *"record an okl rule for this repo: order lookups are
@@ -838,8 +840,9 @@ folder.) Two clarifications that stop the common misreadings:
    evidence) exits 2 and points at `okl verify`. Two doors stay open: `okl seed` imports
    historical, already-verified stamps, and the shared service's API still accepts
    `verified: true` on a record. What closes the loop is the drift gate: the live-store
-   scan (and so the pre-push hook) and CI's snapshot reader both treat a stamp with no
-   `okl verify` evidence as drift, and the briefing marks it *UNPROVEN*.
+   scan (and so the pre-push hook) reports a stamp with no `okl verify` evidence as drift,
+   CI's snapshot reader refuses a snapshot that carries one (exit 2), and the briefing
+   marks it *UNPROVEN*.
 2. **Observed check with a stored trail** — `okl verify <id> --run "pytest -q"
    --expect "passed"` runs the check itself, reads the real outcome, requires the
    positive signal (exit 0 alone can't self-certify), and stores command + result +
