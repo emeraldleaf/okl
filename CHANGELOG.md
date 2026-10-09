@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.8.1
 
 - **The Claude Code hooks run an okl whose path contains a space (#140).** Both hooks cut
   the path to okl at its first space, so an okl in a virtualenv under a project folder
