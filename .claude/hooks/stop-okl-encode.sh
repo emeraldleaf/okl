@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:e1afe16444b7fdfae70f013c3bf6616f92e97411bb29a2abdcc6c1960e6d56fd
+# okl-fingerprint: sha256:65bb6b773f48bb60a3520b39b1ae4c381f344b0292d142ab219c3c8f35c0caec
 # Stop hook — the write-side mechanical catch for the encoding loop.
 #
 # The read side (okl check) is enforced by the UserPromptSubmit hook; nothing enforced the WRITE
@@ -56,7 +56,8 @@ fi
 # the prompt hook then blocked every prompt on an okl that existed (#140). As in the
 # pre-push hook, a pinned value is a path, or a python path followed by " -m okl" (what
 # okl init writes), and the python form counts only if that python can still import okl:
-# a venv whose okl was uninstalled keeps its python.
+# a venv whose okl was uninstalled keeps its python. Anything else is one path, so a
+# launcher with arguments (uv run okl) belongs in a script that OKL_BIN points at.
 try_pinned() {
   case "$1" in
     *" -m okl") command -v "${1% -m okl}" >/dev/null 2>&1 \
@@ -70,7 +71,7 @@ OKL=()
 resolve_okl() {
   if [ -n "${OKL_BIN:-}" ]; then
     if try_pinned "$OKL_BIN"; then return 0; fi
-    resolve_note="OKL_BIN=$OKL_BIN cannot be run (absent or not executable); "
+    resolve_note="OKL_BIN=$OKL_BIN cannot be run (it takes a path to okl, or \"<python> -m okl\" with a python that can import okl); "
   fi
   local d="$PWD"
   while [ "$d" != "/" ]; do

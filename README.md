@@ -679,7 +679,9 @@ contribution — see [CONTRIBUTING.md](CONTRIBUTING.md).
 Hooks run in whatever environment the agent harness spawns — often without your venv or
 pipx bin dir on PATH — so both hooks resolve the `okl` binary in layers: the `OKL_BIN`
 env var, then the `okl_bin` path `init` pins into `.okl/config.json` (machine-local),
-then PATH, then any `python3` that can `import okl` (`python3 -m okl`). If nothing
+then PATH, then any `python3` that can `import okl` (`python3 -m okl`). `OKL_BIN` and
+`okl_bin` hold a path to okl (spaces are fine) or `<python> -m okl`; a launcher with
+arguments, such as `uv run okl`, belongs in a script they point at. If nothing
 resolves, the check hook blocks with install instructions (fail closed, `OKL_OFFLINE=1`
 to override) while the encode reminder silently disables (best-effort by design).
 With no shared service configured it uses a local `.okl/okl.db` — single-machine

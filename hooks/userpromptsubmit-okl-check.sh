@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:078772741410e54b7918cb59cc7dd257a204993cd3717a26a4b7dfca7d41ff3a
+# okl-fingerprint: sha256:8874c62ec095d3a54e1b083f05ddf009eb652e02658fcd2c1df05736dbe26125
 # UserPromptSubmit hook — inject the org's relevant lessons into the model's context
 # BEFORE it starts the task. This event is the only correct one for delivery: its stdout
 # (exit 0) is added to Claude's context, and its stdin carries the actual prompt text, so
@@ -61,7 +61,8 @@ fi
 # the prompt hook then blocked every prompt on an okl that existed (#140). As in the
 # pre-push hook, a pinned value is a path, or a python path followed by " -m okl" (what
 # okl init writes), and the python form counts only if that python can still import okl:
-# a venv whose okl was uninstalled keeps its python.
+# a venv whose okl was uninstalled keeps its python. Anything else is one path, so a
+# launcher with arguments (uv run okl) belongs in a script that OKL_BIN points at.
 try_pinned() {
   case "$1" in
     *" -m okl") command -v "${1% -m okl}" >/dev/null 2>&1 \
@@ -75,7 +76,7 @@ OKL=()
 resolve_okl() {
   if [ -n "${OKL_BIN:-}" ]; then
     if try_pinned "$OKL_BIN"; then return 0; fi
-    resolve_note="OKL_BIN=$OKL_BIN cannot be run (absent or not executable); "
+    resolve_note="OKL_BIN=$OKL_BIN cannot be run (it takes a path to okl, or \"<python> -m okl\" with a python that can import okl); "
   fi
   local d="$PWD"
   while [ "$d" != "/" ]; do
