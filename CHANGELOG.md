@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **The Claude Code hooks run an okl whose path contains a space (#140).** Both hooks cut
+  the path to okl at its first space, so an okl installed under a folder like
+  `Application Support`, or in a home directory with a space in its name, could not be
+  run. With no other okl on `PATH`, the prompt hook then blocked every prompt, blaming a
+  file that existed, and the Stop hook skipped its question without saying so. Both now
+  keep the path whole, as the pre-push hook already did. A pinned `<python> -m okl` is
+  used only if that python can still import okl, so a venv whose okl was uninstalled is
+  skipped instead of run.
 - **The Stop hook, `/record` and the encoding-loop skill no longer promise a gate a repo
   may not have.** They said a drift gate "goes red" when a lesson's code changes, which
   was false in a repo set up with `--no-git-hook` and no `--ci`. They now say what
