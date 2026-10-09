@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:62a416cdd1565ff7238afa29b808204b1dea25aa7cb242b98bac137de6dd8795
+# okl-fingerprint: sha256:65bb6b773f48bb60a3520b39b1ae4c381f344b0292d142ab219c3c8f35c0caec
 # Stop hook — the write-side mechanical catch for the encoding loop.
 #
 # The read side (okl check) is enforced by the UserPromptSubmit hook; nothing enforced the WRITE
@@ -51,14 +51,27 @@ fi
 # is missing" and downgrades a blocking exit 2 to a warning -- the prompt went through with
 # no briefing (seen 2026-09-27 on a marketplace install). So: skip what cannot run, and
 # never relay that phrase.
-runnable() { command -v "${1%% *}" >/dev/null 2>&1; }
+# OKL is an array, so a path with spaces in it stays one word. The old form found the
+# command with "${1%% *}" and ran it unquoted, which cut a pinned path at its first space:
+# the prompt hook then blocked every prompt on an okl that existed (#140). As in the
+# pre-push hook, a pinned value is a path, or a python path followed by " -m okl" (what
+# okl init writes), and the python form counts only if that python can still import okl:
+# a venv whose okl was uninstalled keeps its python. Anything else is one path, so a
+# launcher with arguments (uv run okl) belongs in a script that OKL_BIN points at.
+try_pinned() {
+  case "$1" in
+    *" -m okl") command -v "${1% -m okl}" >/dev/null 2>&1 \
+                  && "${1% -m okl}" -c "import okl" >/dev/null 2>&1 && OKL=("${1% -m okl}" -m okl) ;;
+    *) command -v "$1" >/dev/null 2>&1 && OKL=("$1") ;;
+  esac
+}
 # Sets OKL and resolve_note in the calling shell (not via $(...): a subshell would drop the note).
 resolve_note=""
-OKL=""
+OKL=()
 resolve_okl() {
   if [ -n "${OKL_BIN:-}" ]; then
-    if runnable "$OKL_BIN"; then OKL=$OKL_BIN; return 0; fi
-    resolve_note="OKL_BIN=$OKL_BIN cannot be run (absent or not executable); "
+    if try_pinned "$OKL_BIN"; then return 0; fi
+    resolve_note="OKL_BIN=$OKL_BIN cannot be run (it takes a path to okl, or \"<python> -m okl\" with a python that can import okl); "
   fi
   local d="$PWD"
   while [ "$d" != "/" ]; do
@@ -67,15 +80,15 @@ resolve_okl() {
       bin=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("okl_bin") or "")' \
             "$d/.okl/config.json" 2>/dev/null || true)
       if [ -n "$bin" ]; then
-        if runnable "$bin"; then OKL=$bin; return 0; fi
+        if try_pinned "$bin"; then return 0; fi
         resolve_note="${resolve_note}the okl_bin pinned in $d/.okl/config.json ($bin) cannot be run -- re-run okl init to re-pin; "
       fi
       break
     fi
     d=$(dirname "$d")
   done
-  if command -v okl >/dev/null 2>&1; then OKL=okl; return 0; fi
-  if python3 -c "import okl" >/dev/null 2>&1; then OKL="python3 -m okl"; return 0; fi
+  if command -v okl >/dev/null 2>&1; then OKL=(okl); return 0; fi
+  if python3 -c "import okl" >/dev/null 2>&1; then OKL=(python3 -m okl); return 0; fi
   return 1
 }
 

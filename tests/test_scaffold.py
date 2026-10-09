@@ -1388,6 +1388,102 @@ def test_a_missing_okl_blocks_without_the_shells_enoent_text(tmp_path):
     assert not any(b in r.stderr for b in banned), r.stderr
 
 
+def test_both_claude_hooks_run_an_okl_whose_path_contains_spaces(tmp_path):
+    """#140: both hooks found okl with `command -v "${1%% *}"` and ran it unquoted, which
+    cuts a path at its first space. `okl init` pins okl_bin as shutil.which("okl") or
+    "<sys.executable> -m okl", and either can hold a space (a virtualenv under a project
+    folder with a space in its name, or an install under Application Support). With no
+    other okl on PATH the prompt
+    hook blocked every prompt, blaming a file that existed, and the Stop hook skipped its
+    question without a word. The pre-push hook already kept the command whole (#137).
+    """
+    import json
+    import shutil
+    if shutil.which("git") is None:
+        pytest.skip("git not available")
+    hooks = Path(__file__).resolve().parents[1] / "src" / "okl" / "scaffold" / "hooks"
+    bare = "/usr/bin:/bin"  # a system python3 to parse JSON, and no okl
+
+    def stub(path, body):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"#!/bin/sh\n{body}\n"); path.chmod(0o755)
+        return path
+
+    spaced = stub(tmp_path / "my tools" / "okl", 'echo "BRIEFING $1"')
+    # What init pins when okl is not on PATH: a python, under a spaced path, with " -m okl".
+    # It answers only the exact import probe and the exact module run, so a probe the hooks
+    # get wrong (a typo in "import okl") fails here as it would against a real python.
+    spaced_py = stub(tmp_path / "py env" / "python3",
+                     '[ "$1" = -c ] && [ "$2" = "import okl" ] && exit 0\n'
+                     '[ "$1" = -m ] && [ "$2" = okl ] && { echo "MODULE BRIEFING $3"; exit 0; }\nexit 1')
+    # A pinned python whose okl was uninstalled: it still exists, so it must be skipped on
+    # whether it can import okl, not on whether the file is there.
+    gone_py = stub(tmp_path / "old env" / "python3", 'echo "No module named okl" >&2; exit 1')
+
+    repo = tmp_path / "repo"; (repo / ".okl").mkdir(parents=True)
+    # A failed init would look exactly like the bug: the Stop hook stays quiet outside a repo.
+    subprocess.run(["git", "-C", str(repo), "init", "-q"], capture_output=True, check=True)
+    (repo / "dirty.txt").write_text("an uncommitted change, so the Stop hook has a reason to ask")
+    markers = tmp_path / "markers"; markers.mkdir()
+
+    def pin(okl_bin):
+        (repo / ".okl" / "config.json").write_text(json.dumps({"repo": "t", "okl_bin": okl_bin}))
+
+    def run(hook, payload, **env):
+        return subprocess.run(["bash", str(hooks / hook)], cwd=repo, text=True,
+                              input=json.dumps(payload), capture_output=True,
+                              env={"PATH": bare, "HOME": str(tmp_path), "TMPDIR": str(markers), **env})
+
+    def prompt(**env):
+        return run("userpromptsubmit-okl-check.sh", {"prompt": "x"}, **env)
+
+    def stop(session, **env):
+        return run("stop-okl-encode.sh", {"session_id": session, "stop_hook_active": False}, **env)
+
+    # 1 — a spaced path from OKL_BIN and from the pin: the briefing is delivered.
+    pin("")
+    r = prompt(OKL_BIN=str(spaced))
+    assert r.returncode == 0 and "BRIEFING check" in r.stdout, (r.returncode, r.stderr)
+    pin(str(spaced))
+    r = prompt()
+    assert r.returncode == 0 and "BRIEFING check" in r.stdout, (r.returncode, r.stderr)
+    # OKL_BIN still wins over a pin that can run: the array changed how each layer runs
+    # okl, not the order the layers are tried in.
+    pin(str(stub(tmp_path / "pinned" / "okl", 'echo "PINNED $1"')))
+    r = prompt(OKL_BIN=str(spaced))
+    assert "BRIEFING check" in r.stdout and "PINNED" not in r.stdout, r.stdout
+    # 2 — the "<python> -m okl" form, with the python under a spaced path.
+    pin(f"{spaced_py} -m okl")
+    r = prompt()
+    assert r.returncode == 0 and "MODULE BRIEFING check" in r.stdout, (r.returncode, r.stderr)
+    # 3 — a pinned python that can no longer import okl is skipped: with nothing else to
+    # fall back on, the block names the pin instead of relaying okl's import error as a reason.
+    pin(f"{gone_py} -m okl")
+    r = prompt()
+    assert r.returncode == 2 and "okl_bin pinned" in r.stderr, r.stderr
+    # The last layer, "python3 -m okl", must reach okl as three words: run as one word it
+    # would exit 127 for anyone whose only okl is a python3 that can import it.
+    layer4 = stub(tmp_path / "py4" / "python3",
+                  '[ "$1" = -c ] && [ "$2" = "import okl" ] && exit 0\n'
+                  '[ "$1" = -m ] && [ "$2" = okl ] && { echo "LAYER4 BRIEFING $3"; exit 0; }\n'
+                  'exec /usr/bin/python3 "$@"')
+    pin("")
+    r = prompt(PATH=f"{layer4.parent}:{bare}")
+    assert r.returncode == 0 and "LAYER4 BRIEFING check" in r.stdout, (r.returncode, r.stderr)
+    # 4 — the Stop hook asks its question with the same spaced okl, from either layer.
+    pin(str(spaced))
+    r = stop("s1")
+    assert r.returncode == 2 and "ENCODING LOOP" in r.stderr, r.stderr
+    pin("")
+    r = stop("s2", OKL_BIN=f"{spaced_py} -m okl")
+    assert r.returncode == 2 and "ENCODING LOOP" in r.stderr, r.stderr
+    # ...and stays quiet when the only okl is a python that can no longer import it: asking
+    # what was learned is pointless where okl record cannot run.
+    pin(f"{gone_py} -m okl")
+    r = stop("s3")
+    assert r.returncode == 0 and "ENCODING LOOP" not in r.stderr, r.stderr
+
+
 def test_doc_orphans_sees_unlinked_images_and_reads_the_committed_tree(tmp_path):
     """The gate walked docs/*.md only, so a diagram nothing embedded was invisible: okl's
     first architecture diagram sat unlinked for weeks with a stale heading and figures its
