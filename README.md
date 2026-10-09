@@ -115,8 +115,9 @@ okl doctor                  # flags other memory tools, double wiring, and where
 - **Proving a lesson is true** is a check you run, not a flag you set:
   `okl verify <id> --run "pytest -q tests/test_orders.py" --expect "passed"`.
 - **When code a lesson governs changes,** `okl drift` goes red until its check passes
-  again (a lesson recorded with `--files` is also red until its first `okl verify`). The
-  briefing says so too: such a lesson is marked *STALE* (or *UNVERIFIED*, or *UNPROVEN*) with the file
+  again, or the code is put back as it was when the check passed (a lesson recorded
+  with `--files` is also red until its first `okl verify`). The briefing says so too:
+  such a lesson is marked *STALE* (or *UNVERIFIED*, or *UNPROVEN*) with the file
   that changed, so the agent confirms it against the code instead of trusting it blindly.
   `okl reverify` re-runs each drifted lesson's stored check after you confirm. With the
   GitHub workflow (`okl init --ci`), CI reads a committed snapshot, `okl-drift.json`, which
