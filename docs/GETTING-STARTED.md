@@ -310,7 +310,7 @@ okl drift
 ```
 
 Locally, at the pre-push hook, and in CI if you added it (from the committed snapshot),
-that stays red until someone re-runs the check. `okl reverify` re-runs the stored check: if
+that stays red until the check passes again. `okl reverify` re-runs the stored check: if
 it passes, commit the refreshed `okl-drift.json` if your repo keeps one; if it fails, the doc or the code is wrong, and you fix whichever is.
 
 ### Writing checks that mean something

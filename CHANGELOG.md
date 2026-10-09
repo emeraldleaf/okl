@@ -6,7 +6,9 @@
   may not have.** They said a drift gate "goes red" when a lesson's code changes, which
   was false in a repo set up with `--no-git-hook` and no `--ci`. They now say what
   happens everywhere: the briefing and `okl drift` mark the lesson STALE until its check
-  passes again, and a drift gate, where the repo has one, fails.
+  passes again, and a drift gate, where the repo has one, fails. The README and the guide
+  said a lesson stays red "until someone re-runs" its check; they now say until it passes,
+  since a failing re-run leaves it red.
 
 ## 0.8.0
 
