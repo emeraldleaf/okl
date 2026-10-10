@@ -294,6 +294,8 @@ def _carry_over(store: Store, kw: dict[str, Any], node_id: str, *,
     Refuses unless the overwrite is meant. Always keeps the first creation date. Keeps
     the proof only for a re-import (`keep_verification`) whose governed files are the
     same: verification is about the code, so a check of other files proves nothing here.
+    When the files differ the stamp goes but the stored check (`verified_by`) stays, so
+    `okl reverify` can re-run it against the new files.
     """
     old = store.get_node(node_id)
     if old is None:
@@ -307,7 +309,7 @@ def _carry_over(store: Store, kw: dict[str, Any], node_id: str, *,
     if not keep_verification:
         return
     if not _same_files(old.files, kw.get("files")):
-        kw["verified_at"] = None
+        kw.update(verified_at=None, verified_commit=None, verified_by=old.verified_by)
     elif old.verified_at is not None:
         kw.update(verified_at=old.verified_at, verified_by=old.verified_by,
                   verified_commit=old.verified_commit)
@@ -326,9 +328,11 @@ def update(store: Store, node_id: str, repo: str | None = None,
     The way to refine a lesson (okl review R1). A field passed as None is left alone, and
     an empty string clears an optional one. The proof (verified_at, verified_by,
     verified_commit) and the first creation date are kept, unless the governed `files`
-    change: a check of other files proves nothing about these, so the stamp is cleared
-    and the lesson shows as unproven until it is verified again. `scope="repo"` becomes
-    `repo:<repo>`, as in `record`.
+    change: a check of other files proves nothing about these, so the stamp
+    (verified_at, verified_commit) is cleared and the lesson shows as unproven until it
+    is verified again. The stored check (verified_by) stays, so `okl reverify` can re-run
+    it. `scope="repo"` becomes `repo:<repo>`, as in `record`, and is refused when there is
+    no repo to name.
 
     Raises ValueError for an unknown id, an unknown field, nothing to change, an empty
     required field, or a value the store rejects (an unknown tag, a bad scope).
@@ -341,7 +345,7 @@ def update(store: Store, node_id: str, repo: str | None = None,
     for k, v in changes.items():
         setattr(n, k, v)
     if "files" in changes and not _same_files(old_files, n.files):
-        n.verified_at = n.verified_by = n.verified_commit = None
+        n.verified_at = n.verified_commit = None
     store.add_node(n)
     return _node_public(n)
 
@@ -361,7 +365,10 @@ def _update_values(fields: dict[str, Any], repo: str | None) -> dict[str, Any]:
         if blank and k in _REQUIRED:
             raise ValueError(f"{k} cannot be empty")
         if (k, v) == ("scope", "repo"):
-            v = f"repo:{repo or 'unknown'}"
+            if not repo:
+                raise ValueError("scope 'repo' needs a repo name to become repo:<name>; "
+                                 "pass the repo, or give the scope as repo:<name>")
+            v = f"repo:{repo}"
         out[k] = None if blank else v
     return out
 

@@ -12,7 +12,13 @@ import json
 from typing import Any
 
 from . import core
-from .client import Client, OKLNotConfiguredError, OKLRejectedError, OKLUnreachableError
+from .client import (
+    Client,
+    OKLNoAnswerError,
+    OKLNotConfiguredError,
+    OKLRejectedError,
+    OKLUnreachableError,
+)
 
 
 # Any: the server's class is picked at runtime from whichever SDK major is installed.
@@ -98,8 +104,7 @@ def _build() -> Any:  # noqa: C901, PLR0915 - a declarative table of tool defini
                    ttl_days: int | None = None, repo: str | None = None,
                    symptom: str | None = None, fix: str | None = None,
                    files: str | None = None, tags: str | None = None,
-                   id: str | None = None, applies_to: str | None = None,
-                   replace: bool = False) -> str:
+                   id: str | None = None, applies_to: str | None = None) -> str:
         """Record a NEW lesson. To change an existing one, use okl_update.
 
         scope='org' for facts about the world (prior art, API contracts, data
@@ -112,8 +117,7 @@ def _build() -> Any:  # noqa: C901, PLR0915 - a declarative table of tool defini
         tags (comma-sep, controlled vocabulary — e.g. react, security,
         eval-integrity) categorize the subject so `check` can filter by interest.
         id is a short stable key for the new lesson. An id that already exists is
-        refused: refine that lesson with okl_update, which keeps its proof, or pass
-        replace=true to overwrite it entirely (proof included).
+        refused: refine that lesson with okl_update, which keeps its proof.
         applies_to: leave unset unless the lesson is false off one stack; unset
         reaches every repo, a wrong value hides the lesson silently.
         """
@@ -121,7 +125,14 @@ def _build() -> Any:  # noqa: C901, PLR0915 - a declarative table of tool defini
             node_id = client.record(type=type, title=title, scope=scope, body=body,
                                     status=status, found_by=found_by, ttl_days=ttl_days,
                                     repo=repo, symptom=symptom, fix=fix, files=files, tags=tags,
-                                    id=id, applies_to=applies_to, replace=replace or None)
+                                    id=id, applies_to=applies_to)
+        except core.LessonExistsError:
+            # Point only at okl_update. The CLI also offers --replace, a deliberate
+            # overwrite; an agent is not offered a one-step way to wipe a lesson's proof,
+            # which is the defect this refusal exists for (review of okl R1).
+            return (f"NOT RECORDED — a lesson with id {id!r} already exists. To change it, "
+                    "call okl_update with that id: it changes only the fields you give and "
+                    "keeps the lesson's proof.")
         except ValueError as e:
             # Hand the agent the actual complaint (unknown tag, bad scope) so it can fix
             # its own call. Raising here surfaces as an opaque "Error executing tool",
@@ -155,7 +166,8 @@ def _build() -> Any:  # noqa: C901, PLR0915 - a declarative table of tool defini
                    status: str | None = None, found_by: str | None = None,
                    symptom: str | None = None, fix: str | None = None,
                    files: str | None = None, tags: str | None = None,
-                   applies_to: str | None = None) -> str:
+                   applies_to: str | None = None, ttl_days: int | None = None,
+                   owner: str | None = None) -> str:
         """Refine an existing lesson by its id (the briefing shows it in [brackets]).
 
         Only the fields given change; an empty string clears an optional one. The proof
@@ -163,18 +175,24 @@ def _build() -> Any:  # noqa: C901, PLR0915 - a declarative table of tool defini
         files proves nothing about these, so the lesson then needs verifying again.
         """
         try:
-            before = client.get(id)
+            before = client.get(id)   # nothing is sent yet, so any failure is NOT UPDATED
+        except (OKLUnreachableError, ValueError) as e:
+            return f"NOT UPDATED — {e}"
+        try:
             node = client.update(id, type=type, title=title, scope=scope, body=body,
                                  status=status, found_by=found_by, symptom=symptom, fix=fix,
-                                 files=files, tags=tags, applies_to=applies_to)
-        except OKLUnreachableError as e:
-            return f"NOT UPDATED — {e}"
-        except ValueError as e:
+                                 files=files, tags=tags, applies_to=applies_to,
+                                 ttl_days=ttl_days, owner=owner)
+        except OKLNoAnswerError as e:
+            return (f"MAYBE UPDATED — the service may have applied this; calling okl_update "
+                    f"again with the same fields is safe. ({e})")
+        except (OKLUnreachableError, ValueError) as e:
             return f"NOT UPDATED — {e}"
         if node.get("verified_at") is not None:
             proof = "proof kept"
         elif before and before.get("verified_at") is not None:
-            proof = "proof cleared: its governed files changed; verify it again"
+            proof = ("proof cleared: its governed files changed. `okl reverify` re-runs its "
+                     "stored check")
         else:
             proof = "not proven yet"
         return f"updated {node['id']} ({node['type']}, {node['scope']}): {proof}"

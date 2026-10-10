@@ -21,6 +21,12 @@ from .servers import cmd_mcp, cmd_serve
 from .verification import cmd_drift, cmd_export, cmd_reverify, cmd_verify
 
 
+def _days_or_blank(value: str) -> int | str:
+    """`okl update --ttl-days`: a whole number of days, or "" to clear it, as an empty
+    value clears every other optional field."""
+    return "" if not value.strip() else int(value)
+
+
 def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarative table, see below
     """Build the argparse tree for every subcommand.
 
@@ -122,7 +128,7 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                  "--fix", "--tags"):
         pu.add_argument(flag)
     pu.add_argument("--found-by", dest="found_by")
-    pu.add_argument("--ttl-days", dest="ttl_days", type=int)
+    pu.add_argument("--ttl-days", dest="ttl_days", type=_days_or_blank)
     pu.add_argument("--applies-to", dest="applies_to")
     pu.add_argument("--files", help="changing the governed files clears the proof: a check of "
                                     "other files proves nothing about these")

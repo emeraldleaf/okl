@@ -14,6 +14,7 @@ from .. import core
 from ..client import Client, OKLNoAnswerError, OKLUnreachableError
 from .common import _print_json
 from .packs import _empty_store_guidance
+from .verification import _refresh_snapshot
 
 
 def _briefing_text(result: dict[str, Any], args: argparse.Namespace) -> str:
@@ -108,6 +109,10 @@ def cmd_record(args: argparse.Namespace) -> int:
               "tests that touch its files, or ask your agent to prove it.\n  (Importing historical, "
               "already-verified records? Use okl seed.)", file=sys.stderr)
         return 2
+    if getattr(args, "replace", False) and not args.id:
+        print("okl record --replace needs --id: it overwrites the lesson with that id. Without "
+              "one there is nothing to replace.", file=sys.stderr)
+        return 2
     client = Client()
     kwargs = dict(type=args.type, title=args.title, scope=args.scope,
                   applies_to=getattr(args, "applies_to", None),
@@ -128,7 +133,7 @@ def cmd_record(args: argparse.Namespace) -> int:
         # The service took the request before the answer was lost, so the lesson may be
         # stored. "NOT RECORDED" sent people to record it again, and without --id the
         # second write is a second lesson.
-        again = ("recording it again with the same --id is safe: okl refuses if it was stored"
+        again = (f"check with `okl show {args.id}` before recording it again"
                  if args.id else
                  "check with `okl search` before recording it again, or it may be stored twice")
         print(f"MAYBE RECORDED — the service may have stored this lesson; {again}.\n{e}",
@@ -150,23 +155,43 @@ def cmd_update(args: argparse.Namespace) -> int:
     fields = {k: getattr(args, k, None) for k in core.UPDATABLE_FIELDS}
     client = Client()
     try:
-        before = client.get(args.node_id)
-        node = client.update(args.node_id, **fields)
-    except OKLNoAnswerError as e:
-        print(f"MAYBE UPDATED — the service may have applied this; running it again is "
-              f"safe.\n{e}", file=sys.stderr)
-        return 2
+        before = client.get(args.node_id)   # nothing is sent yet: any failure is NOT UPDATED
+        node = _send_update(client, args.node_id, fields)
     except (OKLUnreachableError, ValueError) as e:
         print(f"NOT UPDATED — {e}", file=sys.stderr)
+        return 2
+    if node is None:
         return 2
     print(f"✓ updated {node['id']} — {node['title']}")
     if node.get("verified_at") is not None:
         print("  proof kept")
     elif before and before.get("verified_at") is not None:
+        rerun = ("re-run its stored check: okl reverify" if node.get("verified_by")
+                 else f"prove it again: okl verify {node['id']} --run \"<check>\" "
+                      "--expect \"<signal>\"")
         print(f"  proof cleared: its governed files changed, and a check of other files proves "
-              f"nothing about these.\n  Prove it again: okl verify {node['id']} --run \"<check>\" "
-              f"--expect \"<signal>\"")
+              f"nothing about these.\n  To {rerun}")
+    if before and (before.get("files") or None) != (node.get("files") or None):
+        # The committed snapshot CI's drift gate reads still showed the old files as proven:
+        # green in CI while the store said stale (review of okl R1).
+        _refresh_snapshot(node, why="its governed files changed")
+    if node["id"].startswith("seed:"):
+        # The pack owns this lesson's text: the next `okl seed` of it puts the pack's back.
+        print(f"  note: {node['id']} comes from a seed pack, and the next `okl seed` of that "
+              "pack restores the pack's text. To keep this change, edit the pack too.",
+              file=sys.stderr)
     return 0
+
+
+def _send_update(client: Client, node_id: str, fields: dict[str, Any]) -> dict | None:
+    """Send the update; on a lost answer say MAYBE UPDATED and return None. Other errors
+    propagate: the request was refused or never sent, so NOT UPDATED is the truth."""
+    try:
+        return client.update(node_id, **fields)
+    except OKLNoAnswerError as e:
+        print(f"MAYBE UPDATED — the service may have applied this; running it again is "
+              f"safe.\n{e}", file=sys.stderr)
+        return None
 
 
 def cmd_show(args: argparse.Namespace) -> int:
@@ -203,9 +228,14 @@ def _render_lesson(n: dict[str, Any]) -> str:
     if n.get("verified_at"):
         on = f" on commit {n['verified_commit'][:12]}" if n.get("verified_commit") else ""
         evidence = n.get("verified_by") or "(no evidence recorded)"
-        out.append(f"  verified {day(n['verified_at'])}{on}: {evidence}")
+        stale = " (STALE — past its ttl; re-verify)" if n.get("stale") else ""
+        out.append(f"  verified {day(n['verified_at'])}{on}: {evidence}{stale}")
+    elif n.get("verified_by"):
+        out.append(f"  not proven for its current files; its stored check: {n['verified_by']}"
+                   " (okl reverify re-runs it)")
     else:
         out.append(f"  not proven yet: okl verify {n['id']} --run \"<check>\" --expect \"<signal>\"")
+    out.append("  (whether its governed code changed since: okl drift)")
     return "\n".join(out)
 
 

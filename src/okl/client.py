@@ -258,8 +258,35 @@ class Client:
         if kwargs.get("repo") is None:
             kwargs["repo"] = self.repo
         if self.mode == "remote":
-            return self._post("/record", kwargs)["id"]
+            # None means "not given": the service has defaults for every optional field,
+            # and a null where it expects a boolean (replace) is a 422 (review of okl R1).
+            body = {k: v for k, v in kwargs.items() if v is not None}
+            if body.get("id") and not (body.get("replace") or body.get("keep_verification")):
+                self._require_refusing_service()
+            try:
+                return self._post("/record", body)["id"]
+            except OKLRejectedError as e:
+                # The same refusal as in local mode, so every caller can tell it apart
+                # from any other rejected write.
+                if e.status == 400 and "already exists" in str(e):
+                    raise core.LessonExistsError(str(e)) from e
+                raise
         return core.record(self._local_store(), **kwargs)
+
+    def _require_refusing_service(self) -> None:
+        """Refuse to record an id against a service that would silently overwrite it.
+
+        A service older than okl's refusal (R1) ignores `replace` and replaces the lesson,
+        proof and all, which is the defect R1 fixed. It also lacks GET /node, so asking for
+        any lesson tells the two apart: a 404 is the old service.
+        """
+        try:
+            self._get("/node/-")
+        except OKLRejectedError as e:
+            if e.status == 404:
+                raise OKLRejectedError(_TOO_OLD.format(what="refuses to overwrite an "
+                                                            "existing id"), status=404) from e
+            raise
 
     def update(self, node_id: str, **fields: Any) -> dict:
         """Change the given fields of a lesson, keep the rest and its proof, and return it.
@@ -269,9 +296,15 @@ class Client:
         unknown id or a rejected value.
         """
         if self.mode == "remote":
-            return self._post("/update", {"id": node_id, "repo": self.repo,
-                                          "fields": {k: v for k, v in fields.items()
-                                                     if v is not None}})
+            try:
+                return self._post("/update", {"id": node_id, "repo": self.repo,
+                                              "fields": {k: v for k, v in fields.items()
+                                                         if v is not None}})
+            except OKLRejectedError as e:
+                if e.status == 404:
+                    raise OKLRejectedError(_TOO_OLD.format(what="has okl update"),
+                                           status=404) from e
+                raise
         return core.update(self._local_store(), node_id, repo=self.repo, **fields)
 
     def get(self, node_id: str) -> dict | None:
@@ -279,7 +312,13 @@ class Client:
         if self.mode == "remote":
             # A missing lesson is {"node": null}, never a 404: a service too old to have
             # this route answers 404, and that must not read as "no such lesson".
-            return self._get(f"/node/{quote(node_id, safe='')}")["node"]
+            try:
+                return self._get(f"/node/{quote(node_id, safe='')}")["node"]
+            except OKLRejectedError as e:
+                if e.status == 404:
+                    raise OKLRejectedError(_TOO_OLD.format(what="has okl show"),
+                                           status=404) from e
+                raise
         return core.get(self._local_store(), node_id)
 
     def search(self, query: str, scope: str | None = None,
@@ -376,6 +415,12 @@ class Client:
             raise OKLUnreachableError(f"OKL service unreachable at {url}: {e}") from e
         except (OSError, http.client.HTTPException) as e:   # after URLError, an OSError too
             raise _no_answer(url, e) from e
+
+
+# For a 404 from a route a service older than R1 lacks: say so, rather than leave the
+# person reading "404 Not Found" as a missing lesson or an outage.
+_TOO_OLD = ("the OKL service is older than this okl client and nothing was changed: it "
+            "predates the version that {what}. Upgrade the service to match.")
 
 
 def _no_answer(url: str, e: OSError | http.client.HTTPException) -> OKLNoAnswerError:

@@ -22,6 +22,7 @@ import re
 import subprocess
 import sys
 import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -51,6 +52,8 @@ def main() -> int:
     """Render each eval task's briefing with core.py at --old-ref and as it is now; return 1 if content was lost."""
     ap = argparse.ArgumentParser()
     ap.add_argument("--old-ref", default="main")
+    ap.add_argument("--receipt", action="store_true",
+                    help="also write evals/results/layout-preflight-<stamp>.json for REPORT to cite")
     ap.add_argument("--interests", default=os.environ.get(
         "BRIEF_INTERESTS",
         "python,method,security,agent-safety,retrieval-design,eval-integrity,data-quality"))
@@ -74,6 +77,7 @@ def main() -> int:
     client.interests = [i for i in args.interests.split(",") if i]
     total_old = total_new = 0
     lost_any = False
+    rows = []
     for line in (REPO / "evals" / "tasks.jsonl").read_text().splitlines():
         task = json.loads(line)
         result = client.check(task["task"], repo="okl")
@@ -83,16 +87,44 @@ def main() -> int:
         total_new += len(b)
         lost = sorted(x for x in fragments(a) if x not in b)
         lost_any |= bool(lost)
+        rows.append({"task": task.get("id", task["task"][:24]), "old_chars": len(a),
+                     "new_chars": len(b), "lost": lost})
         print(f"{task.get('id', task['task'][:24]):22} old {len(a):6}  new {len(b):6}  lost {len(lost)}")
         for x in lost[:3]:
             print(f"    lost: {x}")
     # Signed: written when the only layout change on the table shrank the briefing, it
     # printed "-5% smaller" for one that grew 5% (the ids added for okl review R1).
     change = round(100 * (total_new - total_old) / total_old)
-    direction = "larger" if change >= 0 else "smaller"
-    print(f"TOTAL old {total_old} chars, new {total_new} chars: {abs(change)}% {direction}")
-    print("LAYOUT PRE-FLIGHT: LOST CONTENT" if lost_any else "LAYOUT PRE-FLIGHT OK: lossless")
+    size = (f"{abs(change)}% {'larger' if change > 0 else 'smaller'}" if change
+            else "about the same size")
+    print(f"TOTAL old {total_old} chars, new {total_new} chars: {size}")
+    verdict = "LAYOUT PRE-FLIGHT: LOST CONTENT" if lost_any else "LAYOUT PRE-FLIGHT OK: lossless"
+    print(verdict)
+    if args.receipt:
+        old_sha = subprocess.run(["git", "-C", str(REPO), "rev-parse", "--short", args.old_ref],
+                                 capture_output=True, text=True, check=False).stdout.strip()
+        print("receipt:", _write_receipt("layout-preflight", {
+            "old_ref": f"{args.old_ref} ({old_sha})", "interests": args.interests,
+            "tasks": rows, "total_old_chars": total_old, "total_new_chars": total_new,
+            "verdict": verdict}).relative_to(REPO))
     return 1 if lost_any else 0
+
+
+def _write_receipt(name: str, body: dict) -> Path:
+    """Write evals/results/<name>-<stamp>.json, stamped with the commit it measured.
+
+    Opt-in (--receipt): a REPORT figure needs a committed receipt, but a test runs this
+    script too, and a default write would drop a file into the repo on every run.
+    """
+    def git(*argv: str) -> str:
+        return subprocess.run(["git", "-C", str(REPO), *argv], capture_output=True,
+                              text=True, check=False).stdout.strip()
+    now = datetime.now(timezone.utc)
+    receipt = {"measured_at": now.strftime("%Y-%m-%dT%H:%MZ"), "okl_commit": git("rev-parse", "--short", "HEAD"),
+               "uncommitted_changes_in_src": bool(git("status", "--porcelain", "--", "src")), **body}
+    path = REPO / "evals" / "results" / f"{name}-{now.strftime('%Y%m%d-%H%M')}.json"
+    path.write_text(json.dumps(receipt, indent=2) + "\n")
+    return path
 
 
 if __name__ == "__main__":

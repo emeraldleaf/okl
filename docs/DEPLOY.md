@@ -113,7 +113,7 @@ That is the whole client setup. From then on:
 
 ```bash
 # in checkout-api
-okl record --type Defect --scope org \
+okl record --type Defect --scope org --id refund-amount-server-side \
   --title "Refund amount trusted from the client body" \
   --symptom "a refund endpoint reads amount from the request" \
   --fix "look the original charge up server-side and refund that"
@@ -121,7 +121,7 @@ okl record --type Defect --scope org \
 # later, in billing-worker — a different repo, a different machine
 okl check --task "add an endpoint that issues a refund" --format actions
 # OKL — 1 rule(s) apply before you start:
-# - FIX: Refund amount trusted from the client body [when: a refund endpoint reads amount from the request]
+# - FIX: Refund amount trusted from the client body [refund-amount-server-side] [when: a refund endpoint reads amount from the request]
 #   -> look the original charge up server-side and refund that
 ```
 

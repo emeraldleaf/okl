@@ -344,6 +344,9 @@ judge are different models; method + raw receipts in [evals/REPORT.md](evals/REP
   Decision that won a slot was silently dropped; it now appears under its own heading.
   No eval task's briefing held one, so the eight measured briefings are byte-identical
   either way.
+- Every run above also predates the **`[id]`** each briefed lesson now carries. That one
+  is not byte-identical: the eight eval briefings are 5% larger, with every lesson's
+  content kept (REPORT §4j). Its effect on the result is unmeasured until §4j's run.
 
 What this does **not** show: the tasks were authored to invite defect classes the store
 encodes, so it measures what a briefing does when a directly relevant lesson exists —
@@ -781,8 +784,8 @@ okl check --task "add an endpoint returning an order for the logged-in user" \
 
 ```
 OKL — 3 rule(s) apply before you start:
-- FIX: Missing ownership scope check is an IDOR (CWE-639) [when: an endpoint fetches an
-  entity by id with no owner/tenant predicate]
+- FIX: Missing ownership scope check is an IDOR (CWE-639) [seed:dotnet-defects:nc_idor] [when:
+  an endpoint fetches an entity by id with no owner/tenant predicate]
   -> add the caller's owner id to the WHERE clause; return 404 (not 403) on no match
 ...
 ```
@@ -980,8 +983,9 @@ pip install "observed-knowledge-ledger[mcp]"
 okl mcp     # register in your coding agent's tool config
 ```
 
-Exposes three tools to a coding agent: `okl_check` (read lessons before a task),
-`okl_record`, `okl_search`. `okl_check` **reports an outage loudly** — if a configured
+Exposes five tools to a coding agent: `okl_check` (read lessons before a task),
+`okl_record` (a new lesson), `okl_update` (refine one by id, keeping its proof),
+`okl_get` (one lesson whole) and `okl_search`. `okl_check` **reports an outage loudly** — if a configured
 shared instance is unreachable it says so rather than returning a reassuring
 "nothing found," because those two look identical from the agent's side and only one
 is safe. Unlike the hook, a tool result cannot block the agent; it can only warn it.

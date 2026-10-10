@@ -669,11 +669,13 @@ def test_reseeding_keeps_verification_unless_the_governed_files_change(store, tm
     write_pack(" a.css ,"); seed_from_file(_C(), str(pack))
     assert store.get_node(nid).verified_commit == head
 
-    # ASSERT (4) — pointing the lesson at other files clears its check: it proved nothing
-    # about them, so drift asks for a first check of the new paths.
+    # ASSERT (4) — pointing the lesson at other files clears its stamp: it proved nothing
+    # about them, so drift asks for a check of the new paths. The stored check stays, so
+    # okl reverify can re-run it there (review of okl R1).
     write_pack("b.css"); seed_from_file(_C(), str(pack))
     n = store.get_node(nid)
-    assert (n.verified_at, n.verified_by, n.verified_commit) == (None, None, None)
+    assert (n.verified_at, n.verified_commit) == (None, None)
+    assert n.verified_by == checked.verified_by
 
     # ASSERT (5) — a plain re-record of an existing id is refused (okl review R1), and a
     # deliberate overwrite (--replace) keeps none of the old proof.

@@ -113,7 +113,7 @@ automatic parts do: the per-prompt briefing and the end-of-session question are 
 hooks. With any other agent that supports MCP (Cursor, Codex, Copilot, Gemini CLI…):
 
 1. Register okl's MCP server in that agent's config — the command is `okl mcp` (stdio).
-   It exposes `okl_check`, `okl_record` and `okl_search`.
+   It exposes `okl_check`, `okl_record`, `okl_update`, `okl_get` and `okl_search`.
 2. Add one line to the agent's instruction file (`AGENTS.md`, `.cursorrules`…): *Before
    each task, call `okl_check` with the task description and follow what it returns. When
    we learn something worth keeping, record it with `okl_record`.*
