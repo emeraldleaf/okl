@@ -42,7 +42,18 @@ def _build() -> Any:  # noqa: C901 - a declarative table of tool definitions, se
             + "\nInstall the extra with `pip install \"observed-knowledge-ledger[mcp]\"`, or report "
               "this if the SDK has changed again.")
 
-    mcp = server_cls("okl")
+    # Clients read the server's version from the initialize reply. With none passed, mcp
+    # 2.x sends "" and 1.x sends the SDK's own version (#159). Only 2.x takes `version`;
+    # 1.x's FastMCP would fold an unknown keyword into its settings and drop it, so ask the
+    # signature rather than catching an error.
+    import inspect
+
+    from . import __version__
+    if "version" in inspect.signature(server_cls).parameters:
+        mcp = server_cls("okl", version=__version__)
+    else:
+        mcp = server_cls("okl")
+        mcp._mcp_server.version = __version__
     client = Client()
 
     @mcp.tool()

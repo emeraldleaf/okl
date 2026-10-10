@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- **The MCP server reports okl's version (#159).** Its `initialize` reply carried an empty
+  `serverInfo.version` on mcp 2.x and the SDK's own version on mcp 1.x, because okl passed
+  none. It now passes the installed okl version on both, and a test reads it from a real
+  `initialize` over stdio. The MCP build test also reads mcp 1.x's tool replies now, so it
+  passes on both SDK majors as its docstring claims.
+- **The Stop hook, the encoding-loop skill and CLAUDE.md no longer say an org lesson
+  reaches every repo.** Each repo has its own store, so a lesson recorded with
+  `--scope org` reaches another repo only through a pack that repo loads. They now say
+  that; `org` still means a lesson true in any repo.
+
 ## 0.8.2
 
 - **A shared service that stalls, drops the connection or answers garbage now fails the
