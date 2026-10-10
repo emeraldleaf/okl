@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:8874c62ec095d3a54e1b083f05ddf009eb652e02658fcd2c1df05736dbe26125
+# okl-fingerprint: sha256:8e7ffd607bb6e4597f400b01e18f7bdc68d58d40295b9dbfb6ae37b4dd8a6953
 # UserPromptSubmit hook — inject the org's relevant lessons into the model's context
 # BEFORE it starts the task. This event is the only correct one for delivery: its stdout
 # (exit 0) is added to Claude's context, and its stdin carries the actual prompt text, so
@@ -155,7 +155,12 @@ check_once() {
 # that window was refused for a fault that had already healed; the fix lived in one repo's
 # hand-edited copy of this hook until it was brought back here. Three tries over ~1s still
 # fails closed. A binary that cannot start (126/127) will not heal in a second: no retry.
+# Nor does a try that failed slowly: that is a shared service stalled or out of reach, not
+# a store being rebuilt, and each such try can take okl's whole timeout once per address
+# the host resolves to. Three of them ran this hook past Claude Code's 30 s limit on a
+# UserPromptSubmit hook, which then lets the prompt through unbriefed (okl review R10).
 for attempt in 1 2 3; do
+  started=$SECONDS
   check_once
   if [ "$rc" -eq 2 ] && [ "$fmt" = hook ] && [ -n "$errf" ] && grep -q "invalid choice" "$errf" 2>/dev/null; then
     # An okl older than this hook has no --format hook. The plugin updates from main and the
@@ -170,6 +175,7 @@ for attempt in 1 2 3; do
   fi
   [ "$rc" -eq 0 ] && break
   case "$rc" in 126|127) break ;; esac
+  [ $((SECONDS - started)) -ge 2 ] && break
   [ "$attempt" -lt 3 ] && sleep 0.5
 done
 if [ "$rc" -eq 0 ]; then
