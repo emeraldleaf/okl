@@ -7,6 +7,7 @@ before you've deployed the shared service and after.
 """
 from __future__ import annotations
 
+import http.client
 import json
 import os
 import tempfile
@@ -21,6 +22,15 @@ from .store import Node, Store
 
 CONFIG_DIR = ".okl"
 CONFIG_FILE = "config.json"
+
+# How long to wait on the shared service. It is not a limit on the whole call: urllib
+# applies it to each connect and each read, and tries a connect once per address the host
+# resolves to, so a dual-stack host that drops connections costs 10 s. The prompt hook
+# bounds it: Claude Code cancels a UserPromptSubmit hook after 30 s and lets the prompt
+# through unbriefed. At 10 s, three stalled tries took about 31 s (okl review R10); the
+# hook now retries only a quick failure, and tests/test_remote_failures.py keeps its
+# worst case, two stalled addresses included, under that limit.
+_HTTP_TIMEOUT_S = 5
 
 
 def _find_config(start: Path | None = None) -> Path | None:
@@ -184,7 +194,7 @@ class Client:
                            headers={"Content-Type": "application/json"})
         self._authorize(req)
         try:
-            with _req.urlopen(req, timeout=10) as resp:  # noqa: S310
+            with _req.urlopen(req, timeout=_HTTP_TIMEOUT_S) as resp:  # noqa: S310
                 return json.loads(resp.read())
         except HTTPError as e:
             # The service answered — so this is NOT "unreachable". A 4xx is the caller's
@@ -200,6 +210,8 @@ class Client:
             raise OKLUnreachableError(f"OKL service error at {url}: {e.code} {detail or e.reason}") from e
         except URLError as e:
             raise OKLUnreachableError(f"OKL service unreachable at {url}: {e}") from e
+        except (OSError, http.client.HTTPException) as e:   # after URLError, an OSError too
+            raise _no_answer(url, e) from e
 
     # -- operations ---------------------------------------------------------
     def check(self, task: str, repo: str | None = None, limit: int | None = None) -> dict:
@@ -330,7 +342,7 @@ class Client:
         req = _req.Request(url)  # noqa: S310
         self._authorize(req)
         try:
-            with _req.urlopen(req, timeout=10) as resp:  # noqa: S310
+            with _req.urlopen(req, timeout=_HTTP_TIMEOUT_S) as resp:  # noqa: S310
                 return json.loads(resp.read())
         except HTTPError as e:
             if 400 <= e.code < 500:
@@ -341,6 +353,29 @@ class Client:
             raise OKLUnreachableError(f"OKL service error at {url}: {e.code} {e.reason}") from e
         except URLError as e:
             raise OKLUnreachableError(f"OKL service unreachable at {url}: {e}") from e
+        except (OSError, http.client.HTTPException) as e:   # after URLError, an OSError too
+            raise _no_answer(url, e) from e
+
+
+def _no_answer(url: str, e: OSError | http.client.HTTPException) -> OKLNoAnswerError:
+    """The service took the request and no usable answer came back: it stalled past the
+    timeout, dropped the connection, or replied with something that is not HTTP.
+
+    urllib wraps a failure to connect or to send in URLError; these come later, from
+    reading the reply, as a bare TimeoutError, ConnectionResetError, RemoteDisconnected,
+    BadStatusLine or IncompleteRead. They escaped `okl check` as a traceback and exit 1
+    (okl review R10). They are an outage like any other, so the callers that fail closed
+    on OKLUnreachableError fail closed on them too.
+    """
+    if isinstance(e, TimeoutError):
+        cause = f"no full reply came within {_HTTP_TIMEOUT_S} s"
+    elif isinstance(e, OSError):   # RemoteDisconnected is an HTTPException as well
+        cause = f"the connection was dropped before a full reply ({str(e) or type(e).__name__})"
+    else:
+        # repr, and cut short: a banner from whatever answered on that port carries its own
+        # line breaks and can run to 64 KB, and the CLI prints this as one line.
+        cause = f"the reply was not HTTP or was cut short ({repr(e)[:200]})"
+    return OKLNoAnswerError(f"OKL service unreachable at {url}: the request was sent, and {cause}")
 
 
 class OKLRejectedError(ValueError):
@@ -368,6 +403,15 @@ class OKLUnreachableError(RuntimeError):
     gate work on OKL (the pre-task hook) must FAIL CLOSED on this — the
     merge-gate lesson: a check that silently returns 'nothing' is worse than
     no check."""
+
+
+class OKLNoAnswerError(OKLUnreachableError):
+    """Raised when a request reached the shared service and no usable answer came back.
+
+    The request was sent before the answer was lost, so the service may have acted on it.
+    Still an outage to every caller that fails closed; a caller that wrote (record, verify)
+    must not tell the person the write was lost, or a retry stores it twice.
+    """
 
 
 # The pre-0.4 name. Kept as an alias because it is importable from a published

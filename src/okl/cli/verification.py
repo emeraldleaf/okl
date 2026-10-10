@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from ..client import Client, OKLUnreachableError, _find_config
+from ..client import Client, OKLNoAnswerError, OKLUnreachableError, _find_config
 from .common import _print_json
 
 if TYPE_CHECKING:
@@ -77,6 +77,12 @@ def cmd_verify(args: argparse.Namespace) -> int:
                 + (f" on commit {commit[:12]}" if commit else "") + f" @ {stamp}")
     try:
         node = Client().verify(args.node_id, evidence, commit=commit)
+    except OKLNoAnswerError as e:
+        # The stamp was sent before the answer was lost, so it may be stored; saying it was
+        # not would be a guess. A second stamp of the same lesson does no harm.
+        print("OKL DID NOT ANSWER — check passed, and the service may have recorded the stamp; "
+              f"running this verify again is safe.\n{e}", file=sys.stderr)
+        return 2
     except OKLUnreachableError as e:
         print(f"OKL UNREACHABLE — check passed but the stamp was NOT recorded.\n{e}", file=sys.stderr)
         return 2

@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from .. import core
-from ..client import Client, OKLUnreachableError
+from ..client import Client, OKLNoAnswerError, OKLUnreachableError
 from .common import _print_json
 from .packs import _empty_store_guidance
 
@@ -121,6 +121,16 @@ def cmd_record(args: argparse.Namespace) -> int:
         # An unknown tag or a malformed scope is the caller's mistake, and the exception
         # text names the vocabulary they need. A traceback buries that under a stack.
         print(f"NOT RECORDED — {e}", file=sys.stderr)
+        return 2
+    except OKLNoAnswerError as e:
+        # The service took the request before the answer was lost, so the lesson may be
+        # stored. "NOT RECORDED" sent people to record it again, and without --id the
+        # second write is a second lesson.
+        again = ("recording it again with the same --id updates it rather than adding a copy"
+                 if args.id else
+                 "check with `okl search` before recording it again, or it may be stored twice")
+        print(f"MAYBE RECORDED — the service may have stored this lesson; {again}.\n{e}",
+              file=sys.stderr)
         return 2
     except OKLUnreachableError as e:
         print(f"NOT RECORDED — {e}", file=sys.stderr)

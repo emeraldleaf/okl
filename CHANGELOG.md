@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+- **A shared service that stalls, drops the connection or answers garbage now fails the
+  briefing closed, in time.** The client translated a failure to connect, but not a
+  service that accepted the connection and then never answered (a bare `TimeoutError`),
+  hung up without replying (`ConnectionResetError`, `RemoteDisconnected`), or sent back
+  something that is not HTTP or is cut off mid-reply (`BadStatusLine`, `IncompleteRead`,
+  as from `OKL_SERVICE_URL` pointed at the wrong port): `okl check` died with a
+  traceback and exit 1. Each try also waited 10 s, and the prompt hook tries three
+  times, so a stalled service held the hook about 31 s; Claude Code cancels a
+  UserPromptSubmit hook after 30 s and lets the prompt through, so the agent started
+  with no briefing. All of these are now reported as unreachable (exit 2, with a reason
+  naming the service and the cause), the timeout is 5 s, and the hook retries a failure
+  that came back within 2 s, the store rebuild the retry exists for, but not one that
+  took 3 s or more. The 5 s applies to each address a host resolves to and to each read,
+  not to the whole call: a stall on one address blocks in about 5 s, and a dual-stack
+  host whose firewall drops connections, which took 31.5 s even at 5 s a try, in about
+  10 s. A DNS lookup that hangs is still bounded only by the resolver. A test reads the
+  hook's retry rules and keeps its worst case under Claude Code's limit. **`okl record`
+  and `okl verify` no longer say a write was lost when it may not have been:** these
+  failures arrive after the request was sent, so the service may have stored it, and
+  "NOT RECORDED" sent people to record the lesson again, as a second copy. They now say
+  "MAYBE RECORDED" (search before recording again, or reuse `--id`) and that verifying
+  again is safe.
 - **Public claims about the A/B now match the receipts.** README, REPORT.md and a shipped
   seed comment named an IDOR, and once a React fetch, among the defects the A/B
   reproduced; those tasks never reproduced at baseline in any committed receipt. The
