@@ -114,8 +114,10 @@ okl doctor                  # flags other memory tools, double wiring, and where
   [Getting started](docs/GETTING-STARTED.md#using-another-agent).
 - **When a lesson needs correcting,** take its `[id]` from the briefing and change only
   what is wrong: `okl update <id> --fix "..."` (or the `okl_update` tool) keeps the rest,
-  including its proof. `okl show <id>` prints the whole lesson. Recording an existing id
-  again is refused, because it used to replace the lesson and wipe its proof.
+  including its proof, unless you change its governed `--files`: then it needs verifying
+  again, and `okl reverify` re-runs its stored check. `okl show <id>` prints the whole
+  lesson. Recording an existing id again is refused, because it used to replace the
+  lesson and wipe its proof.
 - **Proving a lesson is true** is a check you run, not a flag you set:
   `okl verify <id> --run "pytest -q tests/test_orders.py" --expect "passed"`.
 - **When code a lesson governs changes,** `okl drift` goes red until its check passes
@@ -410,7 +412,8 @@ Everything reduces to two actions:
 2. **`record` — write after you learn.** When you fix something or decide something,
    you record it as a note (optionally with its symptom/cause/fix and the files it
    governs). From then on, every `check` whose task resembles it surfaces it, with its
-   id, and `okl update <id>` refines it later without losing its proof.
+   id, and `okl update <id>` refines it later without losing its proof (unless its
+   governed files change, which needs a new check).
 
 ### Scope — what stays local vs. what spreads
 

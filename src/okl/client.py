@@ -199,11 +199,14 @@ class Client:
         except HTTPError as e:
             # The service answered — so this is NOT "unreachable". A 4xx is the caller's
             # error and must surface its detail (found by E2E: an unknown-tag 400 was
-            # reported to the agent as an outage).
-            try:
-                detail = json.loads(e.read()).get("detail", "")
-            except Exception:  # noqa: BLE001
-                detail = ""
+            # reported to the agent as an outage). An HTTPError owns the response, socket
+            # and all, so it is closed here: R1 made 400s and 404s routine, and the leak
+            # failed the 3.14 suite on ResourceWarning.
+            with e:
+                try:
+                    detail = json.loads(e.read()).get("detail", "")
+                except Exception:  # noqa: BLE001
+                    detail = ""
             if 400 <= e.code < 500:
                 raise OKLRejectedError(f"OKL service rejected the request ({e.code}): {detail or e.reason}",
                                        status=e.code) from e
@@ -405,6 +408,7 @@ class Client:
             with _req.urlopen(req, timeout=_HTTP_TIMEOUT_S) as resp:  # noqa: S310
                 return json.loads(resp.read())
         except HTTPError as e:
+            e.close()   # it owns the response and its socket; see _post
             if 400 <= e.code < 500:
                 raise OKLRejectedError(
                     f"OKL service rejected the request ({e.code} {e.reason}). "

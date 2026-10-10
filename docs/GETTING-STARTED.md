@@ -209,8 +209,9 @@ okl record --type Rule --scope repo --id discount-server-side \
 
 The same record from a Decision needs only `--type Decision`, `--title` and a `--body`
 starting `why:`. To correct a lesson later, change only what is wrong:
-`okl update discount-server-side --fix "..."` keeps everything else, including its proof,
-and `okl show discount-server-side` prints the whole lesson. Recording an existing id again
+`okl update discount-server-side --fix "..."` keeps everything else, including its proof
+(changing `--files` clears the proof until the check passes again: `okl reverify`), and
+`okl show discount-server-side` prints the whole lesson. Recording an existing id again
 is refused (`--replace` overwrites it entirely). There is no delete command, on purpose.
 
 ### Store records vs. CLAUDE.md / AGENTS.md

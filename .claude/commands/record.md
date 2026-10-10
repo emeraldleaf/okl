@@ -40,7 +40,8 @@ the person to confirm or correct it. On a yes, record it with the `okl_record` M
 If that tool is not available, run the equivalent `okl record --type … --id … --scope …`
 command instead. To refine an existing lesson, use `okl_update` (or
 `okl update <id> --<field> …`) with only the fields that change: it keeps the lesson's
-proof, and recording its id again is refused.
+proof unless its governed `files` change (then `okl reverify` re-runs its check), and
+recording its id again is refused.
 
 ## 3. Decide how hard it must be enforced
 

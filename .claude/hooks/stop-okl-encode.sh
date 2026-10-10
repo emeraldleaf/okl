@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:36e6e5bcb53c86e4a20c6582acf34e7b90db987010df838557f8cb2bc525bea6
+# okl-fingerprint: sha256:fd4550f40e21ba8048a5a24f000b9fc143190b7989b5598c3d672be102ff6985
 # Stop hook — the write-side mechanical catch for the encoding loop.
 #
 # The read side (okl check) is enforced by the UserPromptSubmit hook; nothing enforced the WRITE
@@ -162,7 +162,8 @@ silently reversed? If yes, record it now. Three independent axes, each chosen de
   becomes two rows, which `okl dedup` will report but cannot remove: there is no delete
   subcommand. To REFINE a lesson that exists, including one the briefing showed you by
   its [id], run `okl update <id> --fix "..."`: it changes only the fields you give and
-  keeps the lesson's proof. Recording an existing id again is refused. Where a repo keeps
+  keeps the lesson's proof, unless --files changes (then `okl reverify` re-runs its check).
+  Recording an existing id again is refused. Where a repo keeps
   its lessons in a seed file, use the id that file derives, "seed:<seed-file-stem>:<key>",
   so a later `okl seed` updates that same row rather than adding a second one beside it.
 

@@ -29,7 +29,9 @@
     concurrent updates lost a change without an error. A client recording an id against a
     service older than this refuses, instead of letting it overwrite: upgrade the service
     with the client. Every write now checks that text fields are text and `ttl_days` a
-    whole number, so a wrong type is refused before it is stored.
+    whole number, so a wrong type is refused before it is stored. The client also closes
+    every HTTP error response it catches: each holds its socket, and R1 made 400s and 404s
+    routine, so the leak failed the Python 3.14 suite.
   - The Stop hook, `/record`, the skill, the README and the guide now teach `okl update`.
 - **The MCP server reports okl's version (#159).** Its `initialize` reply carried an empty
   `serverInfo.version` on mcp 2.x and the SDK's own version on mcp 1.x, because okl passed
