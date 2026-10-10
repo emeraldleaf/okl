@@ -308,3 +308,163 @@ def test_mcp_and_a_service_can_retire(remote):
     assert out.startswith("retired a"), out
     assert remote.store.get_node("a").status == "superseded"
     assert [(r.kind, r.by) for r in remote.store.retirements("a")] == [("superseded", "b")]
+
+
+# ---- found by the two reviews of R2 (2026-10-10) ----------------------------------------
+
+def _store_with(*records) -> Store:
+    s = Store("sqlite:///:memory:")
+    for r in records:
+        core.record(s, **r)
+    return s
+
+
+def test_reseeding_keeps_a_retirement_when_the_pack_sets_a_status(repo):
+    """Eight bundled lessons say "live": the guard only covered a pack with no status."""
+    from okl.seed import seed_from_file
+
+    # ARRANGE
+    pack = repo / "site.json"
+    pack.write_text(json.dumps({"nodes": [{"key": "grid", "type": "Rule", "scope": "org",
+                                           "repo": "r", "title": "Grid", "status": "live"}]}))
+    seed_from_file(Client(), str(pack))
+    assert main(["retire", "seed:site:grid", "--obsolete", "--reason", "gone"]) == 0
+
+    # ACT
+    seed_from_file(Client(), str(pack))
+
+    # ASSERT
+    assert Client().get("seed:site:grid")["status"] == "obsolete"
+
+
+def test_a_replacement_must_be_live_and_visible_where_the_lesson_was():
+    """A retired replacement (and so a cycle) left neither lesson briefed; a narrower one
+    hid an org lesson from every other repo and named a private title in their briefings."""
+    s = _store_with(dict(id="a", type="Rule", title="a", scope="org"),
+                    dict(id="b", type="Rule", title="b", scope="org"),
+                    dict(id="x", type="Rule", title="x", scope="repo:x"))
+    core.retire(s, "a", "replaced", by="b")
+
+    with pytest.raises(ValueError, match="itself retired"):     # the cycle: b by a
+        core.retire(s, "b", "back", by="a")
+    with pytest.raises(ValueError, match="narrower"):
+        core.retire(s, "b", "private", by="x")
+    assert s.get_node("b").status is None
+
+
+def test_the_pointer_follows_the_latest_replacement_through_a_chain():
+    """Edges have no order: after a second --by the pointer stayed on the first."""
+    s = _store_with(*(dict(id=i, type="Rule", title=f"refund ledger {i}", scope="org",
+                           fix="f") for i in ("a", "b", "c", "d")))
+    core.retire(s, "a", "first", by="b")
+    core.retire(s, "a", "second", by="c")       # the latest replacement wins
+    core.retire(s, "c", "chain", by="d")        # and a chain is followed to a live one
+
+    res = core.check(s, "r", "refund ledger a")
+
+    assert [(r["id"], r["by"]) for r in res["replaced"]] == [("a", "d"), ("c", "d")]
+
+
+def test_a_superseded_lesson_with_no_visible_replacement_stays_briefed():
+    """Dropping it would leave the repo with nothing: older data, or a replacement this
+    repo cannot see, keeps the old lesson in the briefing."""
+    s = _store_with(dict(id="a", type="Rule", title="refund ledger order", scope="org", fix="f"),
+                    dict(id="x", type="Rule", title="x", scope="repo:x"))
+    n = s.get_node("a")
+    n.status = "superseded"
+    s.add_node(n)
+    s.add_edge(core.Edge(src="x", rel="SUPERSEDES", dst="a"))
+
+    res = core.check(s, "y", "refund ledger order")
+
+    assert [r["id"] for r in res["rules"]] == ["a"] and res["replaced"] == []
+
+
+def test_retired_lessons_do_not_use_up_the_search_window():
+    """Three obsolete matches above a live one left a one-slot briefing empty, saying
+    nothing matched."""
+    s = _store_with(*(dict(id=f"gone{i}", type="Rule", title="refund ledger refund ledger",
+                           scope="org", fix="f") for i in range(3)),
+                    dict(id="live", type="Rule", title="refund ledger", scope="org", fix="f"))
+    for i in range(3):
+        core.retire(s, f"gone{i}", "gone", obsolete=True)
+
+    res = core.check(s, "r", "refund ledger", limit=1)
+
+    assert [r["id"] for r in res["rules"]] == ["live"]
+
+
+def test_update_and_record_cannot_set_or_clear_a_retirement():
+    """`okl retire` keeps the reason and the replacement; update and record went around it."""
+    s = _store_with(dict(id="a", type="Rule", title="a", scope="org"),
+                    dict(id="b", type="Rule", title="b", scope="org"))
+    for status in ("superseded", "obsolete", "retracted"):
+        with pytest.raises(ValueError, match="okl retire"):
+            core.update(s, "a", status=status)
+    with pytest.raises(ValueError, match="okl retire"):
+        core.record(s, type="Rule", title="c", scope="org", status="obsolete")
+    core.retire(s, "a", "replaced", by="b")
+    with pytest.raises(ValueError, match="okl retire"):
+        core.update(s, "a", status="live")
+    with pytest.raises(ValueError, match="okl retire"):
+        core.update(s, "a", status="")
+    core.record(s, id="a", type="Rule", title="a again", scope="org", replace=True)
+    assert s.get_node("a").status == "superseded"
+
+
+def test_a_retired_lesson_is_not_marked_stale_and_retiring_refreshes_the_snapshot(
+        repo, capsys, monkeypatch):
+    """Drift skips a retired lesson; the briefing's STALE mark and CI's snapshot must agree."""
+    from okl import drift
+
+    # ASSERT (1) — no drift verdict for a retired record
+    assert drift._record_drift({"files": "a.py", "scope": "org", "status": "retracted"},
+                               "repo:r", str(repo)) is None
+    # ASSERT (2) — retiring a lesson that governs files refreshes the committed snapshot
+    calls = []
+    monkeypatch.setattr("okl.cli.lessons._refresh_snapshot",
+                        lambda node, why="": calls.append((node["id"], why)))
+    _lessons(Client())
+    assert main(["retire", "refund-new", "--reason", "x"]) == 0      # governs no files
+    assert main(["retire", "refund-old", "--reason", "x"]) == 0      # governs src/refunds.py
+    assert calls == [("refund-old", "its retirement")]
+
+
+def test_exposure_does_not_count_retired_lessons():
+    """The pointer list counted as shown, and an obsolete lesson was offered for review."""
+    s = _store_with(dict(id="a", type="Rule", title="refund ledger", scope="org", fix="f"),
+                    dict(id="b", type="Rule", title="refund ledger new", scope="org", fix="f"),
+                    dict(id="c", type="Rule", title="other", scope="org"))
+    core.retire(s, "a", "replaced", by="b")
+    core.retire(s, "c", "gone", obsolete=True)
+
+    res = core.check(s, "r", "refund ledger")
+    assert "a" not in core.briefed_ids(res)
+    s.log_briefing("r", core.briefed_ids(res))
+    report = core.exposure_report(s, "r")
+    assert report["reachable"] == 1
+    assert "c" not in [r["id"] for r in report["never_shown"]]
+
+
+def test_a_briefing_with_only_a_pointer_does_not_say_nothing_matched():
+    """A pointer is a match: "nothing matched" above it contradicted the line below."""
+    s = _store_with(dict(id="a", type="Rule", title="refund ledger", scope="org", fix="f"),
+                    dict(id="b", type="Rule", title="new", scope="org", fix="g"))
+    core.retire(s, "a", "replaced", by="b")
+    res = core.check(s, "r", "refund ledger")
+
+    assert "No encoded rule matched" not in core.render_check_for_agent(res)
+    assert "no encoded rule applies" not in core.render_actions_only(res)
+    assert "[a] was replaced by new [b]" in core.render_actions_only(res)
+
+
+def test_dedup_recommends_retire(repo, capsys):
+    """okl dedup told people to link SUPERSEDES by hand, which check did not read."""
+    c = Client()
+    c.record(type="Rule", title="refunds post to the ledger before the charge", scope="repo",
+             body="refund ledger ordering rule")
+    c.record(type="Rule", title="refunds post to the ledger before the charge", scope="repo",
+             body="refund ledger ordering rule")
+    capsys.readouterr()
+    main(["dedup"])
+    assert "okl retire" in capsys.readouterr().out

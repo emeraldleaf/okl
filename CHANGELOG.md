@@ -14,9 +14,20 @@
   - The reason goes to a new `retirement` table rather than a column on the lesson, so an
     older okl rewriting the lesson's row cannot lose it. `okl show` and `okl_get` list a
     lesson's retirements.
-  - Drift, the committed snapshot and the governs-nothing advisory skip retired lessons,
-    and `okl seed` keeps a retirement made locally instead of restoring the pack's status.
+  - Only `okl retire` changes a retirement: `okl update` and `okl record` refuse the retired
+    statuses, and neither `okl seed` (eight bundled lessons say "live") nor `--replace`
+    brings a retired lesson back.
+  - A replacement must be live and visible wherever the lesson it replaces was, which also
+    rules out a cycle. The pointer follows the latest replacement through a chain to a
+    live one; a superseded lesson with no replacement this repo can see stays briefed.
+    Retired lessons no longer use up the search's window.
+  - Drift, the committed snapshot, the governs-nothing advisory and the briefing's STALE
+    mark skip retired lessons, and retiring one that governs files refreshes
+    `okl-drift.json`. Exposure metrics skip them too, and `okl dedup` recommends
+    `okl retire --by` instead of a hand-written SUPERSEDES link `okl check` never read.
   - A shared service gets `POST /retire`.
+  - Upgrade every okl that writes to a store before retiring lessons in it: an older
+    okl's `seed` resets a retired status, and its `verify` refuses the new statuses.
 
 - **Refining a lesson no longer wipes its proof (okl review R1).** Recording a lesson again
   with its `--id`, which the Stop hook, `/record` and the encoding-loop skill all taught as

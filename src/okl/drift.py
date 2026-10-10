@@ -270,7 +270,10 @@ def _governed_paths_exist(globs: list[str], repo_dir: str) -> bool:
 
 def _record_drift(rec: dict[str, Any], repo_scope: str, repo_dir: str) -> dict[str, Any] | None:
     """scan_drift's verdict for one briefed record (a dict, as check returns it), or None."""
-    if not rec.get("files") or rec.get("scope") not in ("org", repo_scope):
+    if (not rec.get("files") or rec.get("scope") not in ("org", repo_scope)
+            or rec.get("status") in RETIRED_STATUSES):
+        # Retired: scan_drift skips it, so marking it STALE here broke "the briefing and
+        # the CI gate never disagree", with no okl reverify able to clear it (R2 review).
         return None
     globs = [g for g in rec["files"].split(",") if g.strip()]
     last = _git_last_change_ms(globs, repo_dir)

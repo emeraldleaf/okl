@@ -210,6 +210,10 @@ def cmd_retire(args: argparse.Namespace) -> int:
               "superseded": f"left out of briefings, which point to [{args.by}] instead"}
     print(f"✓ retired {node['id']} — {node['title']}\n  {node['status']}: "
           f"{effect.get(node['status'], node['status'])}")
+    if node.get("files"):
+        # Drift skips a retired lesson; the committed snapshot CI reads must say so too, or
+        # the local gate and CI's disagree (review of okl R2).
+        _refresh_snapshot(node, why="its retirement")
     return 0
 
 
@@ -366,8 +370,10 @@ def cmd_dedup(args: argparse.Namespace) -> int:
         print()
     if len(pairs) > args.limit:
         print(f"  ... {len(pairs) - args.limit} more (raise --limit)")
-    print("Resolve by deciding which record is the one to keep, then RETRACT or link the\n"
-          "other with SUPERSEDES — deleting loses the record that it was once believed.")
+    print("Resolve by deciding which record is the one to keep, then retire the other:\n"
+          "  okl retire <other> --by <kept> --reason \"...\"\n"
+          "Briefings then point from it to the one kept. Nothing is deleted: the record "
+          "that it was once believed stays.")
     return 1
 
 
