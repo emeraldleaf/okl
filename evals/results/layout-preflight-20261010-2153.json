@@ -1,0 +1,60 @@
+{
+  "measured_at": "2026-10-10T21:53Z",
+  "okl_commit": "694cc78",
+  "uncommitted_changes_in_src": false,
+  "old_ref": "main (71cde71)",
+  "interests": "python,method,security,agent-safety,retrieval-design,eval-integrity,data-quality",
+  "tasks": [
+    {
+      "task": "idor_endpoint",
+      "old_chars": 7534,
+      "new_chars": 8025,
+      "lost": []
+    },
+    {
+      "task": "price_tamper",
+      "old_chars": 7306,
+      "new_chars": 7790,
+      "lost": []
+    },
+    {
+      "task": "react_fetch",
+      "old_chars": 7497,
+      "new_chars": 7830,
+      "lost": []
+    },
+    {
+      "task": "judge_summary",
+      "old_chars": 7405,
+      "new_chars": 7736,
+      "lost": []
+    },
+    {
+      "task": "exit_code_trust",
+      "old_chars": 9018,
+      "new_chars": 9337,
+      "lost": []
+    },
+    {
+      "task": "spa_tokens",
+      "old_chars": 7081,
+      "new_chars": 7458,
+      "lost": []
+    },
+    {
+      "task": "rate_limiter",
+      "old_chars": 8157,
+      "new_chars": 8500,
+      "lost": []
+    },
+    {
+      "task": "ci_linter",
+      "old_chars": 7148,
+      "new_chars": 7611,
+      "lost": []
+    }
+  ],
+  "total_old_chars": 61146,
+  "total_new_chars": 64287,
+  "verdict": "LAYOUT PRE-FLIGHT OK: lossless"
+}

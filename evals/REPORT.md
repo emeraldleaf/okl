@@ -807,12 +807,15 @@ The briefing is the treatment, so by the rule §4i applied, this starts a new se
 
 **Deterministic pre-flights, run first.**
 
-- `python3 evals/layout_preflight.py --old-ref main` (main at `71cde71`): every record's
-  title, symptom, cause and fix survives in all 8 tasks, 0 lost. The briefings are **5%
-  larger** (61,146 → 64,287 characters). The script's summary line printed "-5% smaller"
-  for this; its sign is fixed in the same change.
-- `python3 evals/preflight.py`: 7 of 8 tasks receive the rule they test, plus the one
-  accepted gap (`exit_code_trust`, §4b), unchanged.
+- `python3 evals/layout_preflight.py --old-ref main --receipt` (main at `71cde71`): every
+  record's title, symptom, cause and fix survives in all 8 tasks, 0 lost. The briefings
+  are **5% larger** (61,146 → 64,287 characters;
+  `evals/results/layout-preflight-20261010-2153.json`). The script's summary line printed
+  "-5% smaller" for this; its sign is fixed in the same change, and it gained `--receipt`
+  so this figure has one.
+- `python3 evals/preflight.py --receipt`: 7 of 8 tasks receive the rule they test, plus
+  the one accepted gap (`exit_code_trust`, §4b), unchanged
+  (`evals/results/preflight-20261010-2153.json`).
 - Size on every bundled seed pack (183 records), measured the same day on the same packs
   before and after: the full briefing goes from ~1,620 to ~1,770 tokens, and the action list
   at `--limit 3` from ~230 to ~260 (`evals/results/briefing-size-20261010-2126.json` at
@@ -824,8 +827,9 @@ The briefing is the treatment, so by the rule §4i applied, this starts a new se
 samples and interests as §4i (`ab-20260926-0528.json`), with `okl_commit` on its face. It
 is reported as a new series and is not pooled with §4i or earlier runs.
 
-**Prediction.** No detectable change. The ids carry no instruction and add about 9% to the
-briefing.
+**Prediction.** No detectable change. The ids carry no instruction; they add 5% to the
+eight eval briefings the briefed arm reads (about 9% on the bundled-pack measurement
+above).
 
 **Falsifier.** The briefed arm worsens beyond the 17-point noise floor against §4i's 8%, or
 any task that read briefed 0/3 in §4i reproduces. Either means the ids crowd out what the
@@ -834,6 +838,12 @@ briefing is for, and they move to a footer or come out.
 **What this cannot settle.** Whether the ids help: their purpose is the write side (an agent
 refining a lesson instead of re-recording it), which this eval does not measure. No live run
 has been made yet; until one is, this section claims nothing about the effect.
+
+**Shipping before the run, stated rather than implied.** §2b's rule for shipping a
+retrieval change asks for the run first. This change does not touch retrieval: the
+pre-flight shows every task gets the same records with the same content. It is merged
+before its run, and the run is due before the release that carries it. Until then the
+README's measured effect says every quoted run predates the ids.
 
 
 ## 5. Findings
