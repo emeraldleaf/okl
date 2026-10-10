@@ -22,7 +22,7 @@ Default to the *softest* surface that could hold the rule. **Promote down (towar
 earns it** — a rule that keeps being violated moves to a sterner tier, not a sterner paragraph.
 Most rules never leave tier 1, and that is fine.
 
-## 2. Record it to the org layer so other repos inherit it
+## 2. Record it in the store, scoped to the repos it is true for
 
 ```
 okl record --type <Defect|Gate|Rule|Claim|Retraction|Tombstone|Decision|PriorArt> \
