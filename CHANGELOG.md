@@ -7,9 +7,9 @@
   none. It now passes the installed okl version on both, and a test reads it from a real
   `initialize` over stdio. The MCP build test also reads mcp 1.x's tool replies now, so it
   passes on both SDK majors as its docstring claims.
-- **The Stop hook, the encoding-loop skill and CLAUDE.md no longer say an org lesson
-  reaches every repo.** Each repo has its own store, so a lesson recorded with
-  `--scope org` reaches another repo only through a pack that repo loads. They now say
+- **The Stop hook, the encoding-loop skill, CLAUDE.md and the README no longer say an org
+  lesson reaches every repo.** By default each repo has its own store, so a lesson recorded
+  with `--scope org` reaches another repo through a pack that repo loads. They now say
   that; `org` still means a lesson true in any repo.
 
 ## 0.8.2

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:1d3e92f546c71f31462d0e85a400770247e686bb717430276174be747bfb614a
+# okl-fingerprint: sha256:36e6e5bcb53c86e4a20c6582acf34e7b90db987010df838557f8cb2bc525bea6
 # Stop hook — the write-side mechanical catch for the encoding loop.
 #
 # The read side (okl check) is enforced by the UserPromptSubmit hook; nothing enforced the WRITE
@@ -134,8 +134,8 @@ ENCODING LOOP — before this session ends: did it surface a lesson worth keepin
 A non-obvious failure mode, a rule discovered the hard way, a decision that shouldn't be
 silently reversed? If yes, record it now. Three independent axes, each chosen deliberately:
 
-  --scope       WHO it is for: 'org' if true in any repo, 'repo' if true only here. Each
-                repo has its own store: an org lesson reaches another only in a pack
+  --scope       WHO it is for: 'org' if true in any repo, 'repo' if true only here. By
+                default each repo has its own store, which gets org lessons from packs
   --tags        WHAT it is about, from the closed vocabulary
   --applies-to  WHERE IT IS TRUE — omit unless the lesson is false or meaningless off
                 that stack. Unset means valid on every stack - still subject to scope
