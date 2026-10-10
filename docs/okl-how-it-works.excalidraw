@@ -697,8 +697,8 @@
       "containerId": null,
       "autoResize": true,
       "lineHeight": 1.25,
-      "text": "org → every connected repo, so a lesson paid for once\nprotects the next project. repo:<name> → stays here,\nso a local quirk never fires in someone else's work.",
-      "originalText": "org → every connected repo, so a lesson paid for once\nprotects the next project. repo:<name> → stays here,\nso a local quirk never fires in someone else's work.",
+      "text": "org → repos that load it, so a lesson paid for once\nprotects the next project. repo:<name> → stays here,\nso a local quirk never fires in someone else's work.",
+      "originalText": "org → repos that load it, so a lesson paid for once\nprotects the next project. repo:<name> → stays here,\nso a local quirk never fires in someone else's work.",
       "id": "el20"
     },
     {

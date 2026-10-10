@@ -1078,7 +1078,9 @@ def test_mcp_server_builds_and_its_tools_actually_run(tmp_path, monkeypatch):
                     fix="compute it server-side")
 
     def unwrap(res):
-        c = getattr(res, "content", None)
+        if isinstance(res, tuple):   # mcp 1.x: (content blocks, structured result)
+            res = res[0]
+        c = getattr(res, "content", res)
         if isinstance(c, list | tuple):
             c = c[0]
         return getattr(c, "text", str(c))
@@ -1120,6 +1122,33 @@ def test_mcp_server_builds_and_its_tools_actually_run(tmp_path, monkeypatch):
             "okl_search", {"query": "price tampering", "limit": 2})).lower()
 
     asyncio.run(exercise())
+
+
+def test_the_mcp_server_reports_okls_version_when_a_client_connects(tmp_path):
+    """MCP clients read the server's version from its `initialize` reply. okl passed none,
+    so mcp 2.x reported "" and mcp 1.x reported the SDK's own version (#159). Run as a
+    registry client runs it: the real server over stdio, so either SDK major is covered."""
+    import subprocess
+    import sys
+
+    import okl
+    pytest.importorskip("mcp")
+
+    # ARRANGE — the initialize request a client sends first
+    init = {"jsonrpc": "2.0", "id": 1, "method": "initialize",
+            "params": {"protocolVersion": "2025-06-18", "capabilities": {},
+                       "clientInfo": {"name": "test", "version": "0"}}}
+
+    # ACT — closing stdin after the request ends the server once it has replied
+    r = subprocess.run([sys.executable, "-m", "okl", "mcp"], cwd=tmp_path, text=True,
+                       input=json.dumps(init) + "\n", capture_output=True, timeout=60,
+                       env={**os.environ, "HOME": str(tmp_path)})
+
+    # ASSERT — the reply names okl's installed version, not "" or the SDK's
+    replies = [json.loads(line) for line in r.stdout.splitlines() if line.startswith("{")]
+    reply = next((m for m in replies if m.get("id") == 1), None)
+    assert reply, (r.returncode, r.stdout[-500:], r.stderr[-500:])
+    assert reply["result"]["serverInfo"]["version"] == okl.__version__, reply["result"]
 
 
 def test_a_self_declared_proposal_pack_must_cite_every_record(tmp_path, monkeypatch):
