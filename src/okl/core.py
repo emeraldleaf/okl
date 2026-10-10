@@ -321,9 +321,14 @@ def record(store: Store, *, type: str, title: str, scope: str, repo: str | None 
     """
     if scope == "repo" and repo:
         scope = f"repo:{repo}"
-    if status in ("superseded", "obsolete") and not keep_verification:
-        raise ValueError(f"status {status!r} is set by `okl retire`, which keeps the reason "
-                         "(and, for superseded, the replacement)")
+    if status in ("superseded", "obsolete"):
+        # Only `okl retire` sets these, with a reason. A re-import of a lesson retired here
+        # passes (its status is kept anyway); a NEW record, re-import path or not, may not
+        # arrive already retired with nothing logged (CodeRabbit on #163).
+        existing = store.get_node(id) if id else None
+        if existing is None or existing.status not in RETIRED_STATUSES:
+            raise ValueError(f"status {status!r} is set by `okl retire`, which keeps the "
+                             "reason (and, for superseded, the replacement)")
     # Annotated dict[str, Any] because Node's fields are genuinely heterogeneous
     # (str, int, None); without it the ** splat is checked against whichever field
     # type mypy infers for the whole dict and every argument looks wrong.
@@ -499,11 +504,15 @@ def retire(store: Store, node_id: str, reason: str, *, by: str | None = None,
                              f"({n.scope}): a replacement must be visible wherever the lesson "
                              "it replaces was")
     kind = "superseded" if by else ("obsolete" if obsolete else "wrong")
-    n.status = _RETIRED_AS[kind]
-    store.add_node(n)
+    # The reason first, the status last. The three writes are not one transaction; in this
+    # order a failure part-way leaves a reason logged and the lesson not yet retired (a
+    # retry is safe), never a retired lesson with no reason that only `okl retire` could
+    # then touch (CodeRabbit on #163).
+    store.log_retirement(node_id, kind, reason.strip(), by)
     if by is not None:
         store.add_edge(Edge(src=by, rel="SUPERSEDES", dst=node_id))
-    store.log_retirement(node_id, kind, reason.strip(), by)
+    n.status = _RETIRED_AS[kind]
+    store.add_node(n)
     return get(store, node_id) or {}
 
 

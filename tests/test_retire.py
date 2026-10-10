@@ -468,3 +468,34 @@ def test_dedup_recommends_retire(repo, capsys):
     capsys.readouterr()
     main(["dedup"])
     assert "okl retire" in capsys.readouterr().out
+
+
+def test_a_new_record_cannot_arrive_already_retired_even_on_the_import_path():
+    """keep_verification (okl seed's path, and a service's /record) skipped the guard, so a
+    new stable id could be created superseded or obsolete with no reason (CodeRabbit, #163)."""
+    s = _store_with(dict(id="a", type="Rule", title="a", scope="org"))
+    with pytest.raises(ValueError, match="okl retire"):
+        core.record(s, id="new", type="Rule", title="n", scope="org", status="obsolete",
+                    keep_verification=True)
+    assert s.get_node("new") is None
+    # a re-import of a lesson retired here still passes, and keeps its retirement
+    core.retire(s, "a", "gone", obsolete=True)
+    core.record(s, id="a", type="Rule", title="a", scope="org", status="obsolete",
+                keep_verification=True)
+    assert s.get_node("a").status == "obsolete"
+
+
+def test_retire_logs_the_reason_before_it_changes_the_status():
+    """The writes are not one transaction; a failure part-way must never leave a retired
+    lesson with no reason, which only okl retire could then touch (CodeRabbit, #163)."""
+    s = _store_with(dict(id="a", type="Rule", title="a", scope="org"))
+
+    def fail(node):
+        raise RuntimeError("disk full")
+    s.add_node = fail
+
+    with pytest.raises(RuntimeError):
+        core.retire(s, "a", "wrong")
+    del s.add_node
+    assert s.get_node("a").status is None
+    assert [r.reason for r in s.retirements("a")] == ["wrong"]
