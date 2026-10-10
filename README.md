@@ -357,7 +357,7 @@ with receipts, not a benchmark.
 
 ## How it works
 
-<img src="docs/okl-how-it-works.svg" alt="One repo records a lesson; a repo that loads it is briefed on it before its next task. The store is typed, scoped and tagged; every verification stamp carries the check that earned it." width="100%">
+<img src="docs/okl-how-it-works.svg" alt="One repo records a lesson; a repo that loads it can be briefed on it before a task it applies to. The store is typed, scoped and tagged; every verification stamp carries the check that earned it." width="100%">
 
 ### How a briefing is actually built
 
@@ -421,10 +421,11 @@ Every note has a **scope**, and this is the one decision that matters most:
 
 - **`repo:<name>`** — a lesson specific to one project. It only ever shows up for
   that project. (This repo's quirky build step, a workaround for one service.)
-- **`org`** — a lesson that's true everywhere. It shows up for every project that
-  reads the store it is in. By default each project has its own store, so another
-  project gets an org lesson through a pack it loads. (A security pattern, an API
-  contract, a data-source gotcha.)
+- **`org`** — visible to every project that reads the store it is in; use it for a
+  lesson that holds beyond one project. (A security pattern, an API contract, a
+  data-source gotcha.) By default each project has its own store, so another project
+  gets an org lesson through a pack it loads. Being visible is not being briefed: its
+  `applies_to`, the project's interests and the task decide whether a briefing shows it.
 
 Choosing the scope when you record is the human curation step. It's what keeps a
 shared layer from filling up with one project's noise: another project's `check`

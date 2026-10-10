@@ -22,7 +22,7 @@ Default to the *softest* surface that could hold the rule. **Promote down (towar
 earns it** — a rule that keeps being violated moves to a sterner tier, not a sterner paragraph.
 Most rules never leave tier 1, and that is fine.
 
-## 2. Record it in the store, scoped to the repos it is true for
+## 2. Record it in the store, with a scope that decides which repos may see it
 
 ```
 okl record --type <Defect|Gate|Rule|Claim|Retraction|Tombstone|Decision|PriorArt> \
@@ -48,7 +48,8 @@ okl verify <stable-key> --run "<a check that fails if the lesson is broken>" --e
   installed. This is what sits between tier 1 and a gate: watched, but not
   build-breaking on its own.
 - **`scope=org`** — a fact about the world: prior art, an API contract, a data-source gotcha, a
-  portable gate. It is briefed in every repo that reads this store; each repo has its own
+  portable gate. Every repo that reads this store may see it; whether a briefing shows it
+  is then up to its `applies_to`, the repo's interests and the task. Each repo has its own
   store by default, so another repo gets it through a pack it loads.
 - **`scope=repo`** — a quirk true only of this codebase. Stays local.
 
