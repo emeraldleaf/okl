@@ -90,6 +90,13 @@ An agent can run it, and the Stop question can mention it for a lesson that hold
 repo where it was learned. The lesson stays a working repo lesson while the pull request is
 open. Agents never approve: only the people CODEOWNERS names can.
 
+**When the org copy arrives.** After the pull request merges and the project syncs, its store
+holds the repo lesson and the org copy, which names the repo lesson's id in its provenance.
+Sync retires the repo lesson in favour of the org copy (`okl retire <id> --by <org id>`), so
+it is briefed once. Proof does not move with it: sync prints the `okl verify` command with the
+stored check, and running it proves the org copy in this repo. A stamp is only ever written by
+a check that ran.
+
 ### The ledger's CI: `okl ledger check`
 
 It runs the checks okl already applies to packs, as a gate, on every pull request:
@@ -120,13 +127,24 @@ A project commits `okl-ledger.json` beside `okl-drift.json`:
 - **It is committed**, unlike `.okl/config.json`, which holds machine-local paths. Everyone
   on the project gets the same org lessons.
 - **`ref` pins a ledger commit**, as a lockfile pins a dependency. `okl ledger sync` fetches
-  that commit and loads the subscribed areas into the repo's store with ids
-  `ledger:<area>:<key>`. A changed lesson keeps its local proof unless its governed files
-  change, which is the rule planned for `okl update`.
+  that commit and loads the subscribed areas into the repo's store. A changed lesson keeps its
+  local proof unless its governed files change, which is the rule planned for `okl update`.
+- **A ledger lesson's id never changes.** It is `seed:ledger-<area>:<key>`, the id `okl seed`
+  already gives a lesson keyed `<key>` in a pack file named `ledger-<area>.json`. The first
+  slice below loads such pack files with today's `okl seed`, and `okl ledger sync` later
+  writes the same ids, so no store ever holds two copies of one lesson or needs its proof
+  moved from one id to another. The `ledger-` prefix keeps an area from colliding with a
+  bundled pack's name.
 - **Withdrawals propagate.** A lesson that is gone from a subscribed area at the new ref, or
   marked retired there, is retired in the store with the reason "retired in the ledger at
   <commit>", through `okl retire`. Without this, a withdrawn org rule stays in every briefing
   of every repo that ever loaded it.
+- **Unsubscribing retires too.** When a project drops an optional area from
+  `okl-ledger.json`, sync retires that area's lessons in its store with the reason "area
+  <area> unsubscribed". Briefings do not filter by area, and an untagged org lesson passes
+  every other filter, so a lesson left live would keep being briefed. Subscribing again
+  restores them. Sync owns the content and status of `seed:ledger-` lessons only; a project's
+  own lessons, its deviations included, are never touched.
 - **A project takes updates on purpose.** `okl ledger update` moves `ref` to the ledger's
   newest commit and prints what changes for this repo: lessons added, changed and retired in
   its areas. The project commits that in its own pull request, so its reviewers see which org
@@ -157,7 +175,7 @@ Three levels of choice, cheapest first:
 2. **`applies_to`, set in review.** A lesson true only on some stacks says so in the ledger,
    and the existing exclusive filter keeps it out of the rest.
 3. **A recorded deviation.** When a project deliberately departs from an org lesson it
-   follows, it records a repo Decision and links it `SUPERSEDES ledger:<area>:<key>`. Its
+   follows, it records a repo Decision and links it `SUPERSEDES seed:ledger-<area>:<key>`. Its
    briefings then show the decision in place of the org lesson, through the one-hop
    SUPERSEDES handling planned with `okl retire`. Once a repo's own lessons are committed
    files, the departure is a file a reviewer can find, never a lesson that quietly stopped
@@ -267,10 +285,11 @@ It depends on three planned changes: lesson ids in the briefing with `okl update
 `okl retire` with SUPERSEDES handling, and the committed file format for lessons.
 
 1. **Now, with no new code:** document the pattern with what exists. A ledger repository of
-   one pack file per area, CODEOWNERS, a CI job that loads every pack into a throwaway store
-   with `okl seed` (packs declare `_proposed_by`, so the citation rule applies), and projects
-   that run `okl seed` on the areas they follow. Missing: the pin, withdrawal, and refusing
-   direct org writes.
+   one pack file per area, named `ledger-<area>.json` so its lessons already carry the ids
+   sync will use; CODEOWNERS; a CI job that loads every pack into a throwaway store with
+   `okl seed` (packs declare `_proposed_by`, so the citation rule applies); and projects that
+   run `okl seed` on the areas they follow. Missing: the pin, withdrawal, cleanup when a
+   project drops an area, and refusing direct org writes.
 2. `okl-ledger.json`, `ledger.json`'s required areas, `okl ledger sync` and
    `okl ledger update`, with withdrawal through `okl retire`, and `okl doctor` reporting a
    store synced from another commit.
