@@ -8,8 +8,8 @@ it is the most load-bearing document in the repo (method, results, threats to va
 The hooks fire on your own session: `UserPromptSubmit` injects the store's briefing into
 your context before you start; `Stop` blocks your first stop to ask what was learned.
 Answer it honestly — record with a deliberate scope (`org` for a lesson true in any repo,
-`repo` for one true only here; each repo has its own store, so an `org` lesson reaches
-another repo only through a pack it loads) and tags from the closed vocabulary in
+`repo` for one true only here; by default each repo has its own store, so an `org`
+lesson reaches another repo through a pack it loads) and tags from the closed vocabulary in
 `store.KNOWN_TAGS`. Growing
 that vocabulary is a deliberate act, never an ad-hoc tag: `okl record --type Vocabulary
 --scope org --title <tag>` declares one for THIS store (a Go or Rust team needs no fork),

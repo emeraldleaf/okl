@@ -47,7 +47,7 @@ okl verify <stable-key> --run "<a check that fails if the lesson is broken>" --e
   build-breaking on its own.
 - **`scope=org`** — a fact about the world: prior art, an API contract, a data-source gotcha, a
   portable gate. It is briefed in every repo that reads this store; each repo has its own
-  store by default, so another repo gets it only through a pack it loads.
+  store by default, so another repo gets it through a pack it loads.
 - **`scope=repo`** — a quirk true only of this codebase. Stays local.
 
 If the finding retracts a prior claim, also add it to `registries/RETRACTIONS.md`; if it retires an

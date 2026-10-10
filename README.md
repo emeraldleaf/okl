@@ -410,9 +410,10 @@ Every note has a **scope**, and this is the one decision that matters most:
 
 - **`repo:<name>`** — a lesson specific to one project. It only ever shows up for
   that project. (This repo's quirky build step, a workaround for one service.)
-- **`org`** — a lesson that's true everywhere. It shows up for *every* project
-  connected to the same instance. (A security pattern, an API contract, a
-  data-source gotcha.)
+- **`org`** — a lesson that's true everywhere. It shows up for every project that
+  reads the store it is in. By default each project has its own store, so another
+  project gets an org lesson through a pack it loads. (A security pattern, an API
+  contract, a data-source gotcha.)
 
 Choosing the scope when you record is the human curation step. It's what keeps a
 shared layer from filling up with one project's noise: another project's `check`
