@@ -377,6 +377,36 @@ def test_eval_harness_with_no_cases_file_says_nothing_was_measured(tmp_path, mon
     assert r.returncode == 2 and r.stdout == "" and "Nothing was measured" in r.stderr, (r.returncode, r.stdout, r.stderr)
 
 
+def test_layout_preflight_does_not_count_its_briefings_as_exposure(tmp_path):
+    """A pre-flight's briefings are not lessons shown to an agent, so they are not exposure.
+
+    The A/B harness sets OKL_BRIEFING_LOG=0 for exactly this reason. evals/layout_preflight.py
+    fetched its briefings through the same Client without it, so one run wrote a row per
+    eval task into the real store's exposure log. Found on 2026-10-10 as a burst of 8
+    briefings inside one second, which inflated `okl metric` until they were deleted by hand.
+    """
+    import sqlite3
+    script = Path(__file__).resolve().parents[1] / "evals" / "layout_preflight.py"
+    tasks = (Path(__file__).resolve().parents[1] / "evals" / "tasks.jsonl").read_text().splitlines()
+    db = tmp_path / "store.db"
+
+    # ARRANGE — a throwaway store, named the one way that wins over any config, and no
+    # inherited OKL_BRIEFING_LOG that would hide the bug by switching logging off for us.
+    env = {k: v for k, v in os.environ.items() if k not in ("OKL_BRIEFING_LOG", "OKL_SERVICE_URL", "OKL_TOKEN")}
+    env["OKL_DATABASE_URL"] = f"sqlite:///{db}"
+
+    # ACT
+    r = subprocess.run([sys.executable, str(script), "--old-ref", "HEAD"],
+                       cwd=tmp_path, env=env, capture_output=True, text=True)
+
+    # ASSERT (1) — it ran and briefed every task, so (2) is not passing by doing nothing.
+    assert r.returncode == 0 and "LAYOUT PRE-FLIGHT OK" in r.stdout, r.stdout + r.stderr
+    assert sum("  lost " in ln for ln in r.stdout.splitlines()) == len(tasks), r.stdout
+    # ASSERT (2) — and logged none of those briefings as exposure.
+    with sqlite3.connect(db) as con:
+        assert con.execute("select count(*) from briefing").fetchone()[0] == 0
+
+
 def test_ab_harness_flags_an_off_series_instrument_but_still_runs():
     """A run graded off the series says so; a run on the series stays quiet. Neither refuses.
 

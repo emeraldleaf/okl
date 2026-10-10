@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- **`evals/layout_preflight.py` no longer counts its briefings as exposure.** It fetched one
+  briefing per eval task through the normal client without `OKL_BRIEFING_LOG=0`, so each run
+  wrote 8 rows of false exposure into the store `okl metric` reads. It now switches the log
+  off, as the A/B harness does.
+
 ## 0.8.1
 
 - **The Claude Code hooks run an okl whose path contains a space (#140).** Both hooks cut
