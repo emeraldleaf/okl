@@ -8,6 +8,7 @@ Requires the `mcp` package: install 'observed-knowledge-ledger[mcp]'. Run: `okl 
 """
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from . import core
@@ -15,7 +16,7 @@ from .client import Client, OKLNotConfiguredError, OKLRejectedError, OKLUnreacha
 
 
 # Any: the server's class is picked at runtime from whichever SDK major is installed.
-def _build() -> Any:  # noqa: C901 - a declarative table of tool definitions, see pyproject
+def _build() -> Any:  # noqa: C901, PLR0915 - a declarative table of tool definitions, see pyproject
     """Construct the MCP server, tolerating both major versions of the SDK.
 
     The class was renamed in mcp 2.x: `mcp.server.fastmcp.FastMCP` became
@@ -97,19 +98,22 @@ def _build() -> Any:  # noqa: C901 - a declarative table of tool definitions, se
                    ttl_days: int | None = None, repo: str | None = None,
                    symptom: str | None = None, fix: str | None = None,
                    files: str | None = None, tags: str | None = None,
-                   id: str | None = None, applies_to: str | None = None) -> str:
-        """Record a lesson so other repos inherit it.
+                   id: str | None = None, applies_to: str | None = None,
+                   replace: bool = False) -> str:
+        """Record a NEW lesson. To change an existing one, use okl_update.
 
         scope='org' for facts about the world (prior art, API contracts, data
-        gotchas, vocabulary) that should propagate to every repo; scope='repo'
-        for a quirk true only of this codebase. type is one of: Defect, Gate,
+        gotchas, vocabulary) true in any repo; each repo has its own store, so another
+        repo gets an org lesson only through a pack it loads. scope='repo' for a quirk
+        true only of this codebase. type is one of: Defect, Gate,
         Rule, Claim, Retraction, Tombstone, Decision, PriorArt, Vocabulary, Entity.
         symptom/fix make the lesson actionable ("when you see X → do Z"; cause
         goes in body). files (comma-sep globs) enrolls it in drift detection.
         tags (comma-sep, controlled vocabulary — e.g. react, security,
         eval-integrity) categorize the subject so `check` can filter by interest.
-        id is a short stable key: recording the same id again updates that lesson
-        instead of adding a near-duplicate — reuse it when refining a lesson.
+        id is a short stable key for the new lesson. An id that already exists is
+        refused: refine that lesson with okl_update, which keeps its proof, or pass
+        replace=true to overwrite it entirely (proof included).
         applies_to: leave unset unless the lesson is false off one stack; unset
         reaches every repo, a wrong value hides the lesson silently.
         """
@@ -117,7 +121,7 @@ def _build() -> Any:  # noqa: C901 - a declarative table of tool definitions, se
             node_id = client.record(type=type, title=title, scope=scope, body=body,
                                     status=status, found_by=found_by, ttl_days=ttl_days,
                                     repo=repo, symptom=symptom, fix=fix, files=files, tags=tags,
-                                    id=id, applies_to=applies_to)
+                                    id=id, applies_to=applies_to, replace=replace or None)
         except ValueError as e:
             # Hand the agent the actual complaint (unknown tag, bad scope) so it can fix
             # its own call. Raising here surfaces as an opaque "Error executing tool",
@@ -129,8 +133,8 @@ def _build() -> Any:  # noqa: C901 - a declarative table of tool definitions, se
     def okl_search(query: str, scope: str | None = None, limit: int = 15) -> str:
         """Search the org's encoded body for anything matching `query`.
 
-        Each line leads with the lesson's id: pass it to okl_record as `id` to update
-        that lesson rather than adding a near-duplicate.
+        Each line leads with the lesson's id: pass it to okl_update to refine that
+        lesson rather than adding a near-duplicate, or to okl_get to read it whole.
         """
         try:
             rows = client.search(query, scope=scope, limit=limit)
@@ -144,6 +148,49 @@ def _build() -> Any:  # noqa: C901 - a declarative table of tool definitions, se
         # id to reuse (CodeRabbit on #79).
         return "\n".join(f"{r['id']} [{r['type']}] {r['scope']} — {r['title']}"
                          + (" (STALE)" if r.get("stale") else "") for r in rows)
+
+    @mcp.tool()
+    def okl_update(*, id: str, type: str | None = None, title: str | None = None,
+                   scope: str | None = None, body: str | None = None,
+                   status: str | None = None, found_by: str | None = None,
+                   symptom: str | None = None, fix: str | None = None,
+                   files: str | None = None, tags: str | None = None,
+                   applies_to: str | None = None) -> str:
+        """Refine an existing lesson by its id (the briefing shows it in [brackets]).
+
+        Only the fields given change; an empty string clears an optional one. The proof
+        and the first creation date are kept, unless `files` changes: a check of other
+        files proves nothing about these, so the lesson then needs verifying again.
+        """
+        try:
+            before = client.get(id)
+            node = client.update(id, type=type, title=title, scope=scope, body=body,
+                                 status=status, found_by=found_by, symptom=symptom, fix=fix,
+                                 files=files, tags=tags, applies_to=applies_to)
+        except OKLUnreachableError as e:
+            return f"NOT UPDATED — {e}"
+        except ValueError as e:
+            return f"NOT UPDATED — {e}"
+        if node.get("verified_at") is not None:
+            proof = "proof kept"
+        elif before and before.get("verified_at") is not None:
+            proof = "proof cleared: its governed files changed; verify it again"
+        else:
+            proof = "not proven yet"
+        return f"updated {node['id']} ({node['type']}, {node['scope']}): {proof}"
+
+    @mcp.tool()
+    def okl_get(id: str) -> str:
+        """Read one lesson whole by its id, with its proof, as JSON."""
+        try:
+            node = client.get(id)
+        except OKLUnreachableError as e:
+            return f"⚠️ OKL UNREACHABLE — could not read the lesson ({e})."
+        except ValueError as e:
+            return f"⚠️ OKL REFUSED — could not read the lesson ({e})."
+        if node is None:
+            return f"no lesson with id {id!r}"
+        return json.dumps(node, sort_keys=True)
 
     return mcp
 

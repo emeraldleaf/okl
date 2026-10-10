@@ -675,9 +675,12 @@ def test_reseeding_keeps_verification_unless_the_governed_files_change(store, tm
     n = store.get_node(nid)
     assert (n.verified_at, n.verified_by, n.verified_commit) == (None, None, None)
 
-    # ASSERT (5) — a plain re-record (okl record --id) is unchanged: it keeps nothing.
+    # ASSERT (5) — a plain re-record of an existing id is refused (okl review R1), and a
+    # deliberate overwrite (--replace) keeps none of the old proof.
     core.verify(store, nid, "`check` exit 0 @ 2026-10-03T21:05Z")
-    core.record(store, id=nid, type="Rule", title="t", scope="org", files="b.css")
+    with pytest.raises(core.LessonExistsError):
+        core.record(store, id=nid, type="Rule", title="t", scope="org", files="b.css")
+    core.record(store, id=nid, type="Rule", title="t", scope="org", files="b.css", replace=True)
     assert store.get_node(nid).verified_at is None
 
 
@@ -1101,12 +1104,18 @@ def test_mcp_server_builds_and_its_tools_actually_run(tmp_path, monkeypatch):
             "type": "Rule", "title": "recorded through the MCP layer", "scope": "repo"}))
         assert rec.startswith("recorded "), rec
 
-        # ASSERT (3b) — an agent asked to "record that" can give a stable id, and
-        # recording the same id again updates the lesson instead of duplicating it.
-        for title in ("first wording", "refined wording"):
-            rec = unwrap(await mcp.call_tool("okl_record", {
-                "type": "Rule", "title": title, "scope": "repo", "id": "mcp-stable-id"}))
-            assert rec.startswith("recorded mcp-stable-id"), rec
+        # ASSERT (3b) — an agent can give a new lesson a stable id; recording that id
+        # again is refused (it used to wipe the lesson's proof, okl review R1), and the
+        # refusal names okl_update, which refines it in place.
+        rec = unwrap(await mcp.call_tool("okl_record", {
+            "type": "Rule", "title": "first wording", "scope": "repo", "id": "mcp-stable-id"}))
+        assert rec.startswith("recorded mcp-stable-id"), rec
+        again = unwrap(await mcp.call_tool("okl_record", {
+            "type": "Rule", "title": "refined wording", "scope": "repo", "id": "mcp-stable-id"}))
+        assert again.startswith("NOT RECORDED") and "okl_update" in again, again
+        upd = unwrap(await mcp.call_tool("okl_update", {
+            "id": "mcp-stable-id", "title": "refined wording"}))
+        assert upd.startswith("updated mcp-stable-id"), upd
         found = unwrap(await mcp.call_tool("okl_search", {"query": "refined wording", "limit": 3}))
         assert "refined wording" in found and found.startswith("mcp-stable-id "), found
 

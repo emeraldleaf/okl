@@ -63,6 +63,8 @@ class RecordReq(BaseModel):
     verified: bool = False
     # okl seed re-importing a lesson the store holds: keep its verification (#110).
     keep_verification: bool = False
+    # An explicit overwrite of an existing id; without it, a re-record is refused (R1).
+    replace: bool = False
 
 
 class SearchReq(BaseModel):
@@ -80,6 +82,14 @@ class LinkReq(BaseModel):
     src: str
     rel: str
     dst: str
+
+
+class UpdateReq(BaseModel):
+    """Request body for POST /update: the fields to change on one lesson (core.update)."""
+
+    id: str
+    repo: str | None = None   # what scope "repo" becomes repo:<name> against
+    fields: dict[str, Any]
 
 
 class VerifyReq(BaseModel):
@@ -164,6 +174,21 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901
             # the client report a typo as an outage (#119).
             raise HTTPException(status_code=400, detail=str(e)) from e
         return {"ok": True}
+
+    @app.post("/update")
+    def update(req: UpdateReq, authorization: str | None = Header(default=None)) -> dict[str, Any]:
+        _auth(authorization)
+        try:
+            return core.update(_store, req.id, repo=req.repo, **req.fields)
+        except (TypeError, ValueError) as e:
+            raise HTTPException(status_code=400, detail=str(e)) from e
+
+    @app.get("/node/{node_id}")
+    def node(node_id: str, authorization: str | None = Header(default=None)) -> dict[str, Any]:
+        _auth(authorization)
+        # A missing lesson is an explicit null, so a 404 keeps meaning "no such route"
+        # (an older service) and the client never mistakes that for a missing lesson.
+        return {"node": core.get(_store, node_id)}
 
     @app.post("/verify")
     def verify(req: VerifyReq, authorization: str | None = Header(default=None)) -> dict[str, Any]:

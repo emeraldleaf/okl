@@ -1,10 +1,12 @@
-"""Reading and writing lessons: `okl check`, `record`, `link`, `search`, `bootstrap`, `dedup`."""
+"""Reading and writing lessons: `okl check`, `record`, `update`, `show`, `link`, `search`,
+`bootstrap`, `dedup`."""
 from __future__ import annotations
 
 import argparse
 import json
 import os
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -112,7 +114,7 @@ def cmd_record(args: argparse.Namespace) -> int:
                   body=args.body, status=args.status, found_by=args.found_by,
                   ttl_days=args.ttl_days, owner=args.owner,
                   files=args.files, symptom=args.symptom, fix=args.fix, tags=args.tags,
-                  id=args.id)
+                  id=args.id, replace=getattr(args, "replace", False) or None)
     if args.repo:
         kwargs["repo"] = args.repo
     try:
@@ -126,7 +128,7 @@ def cmd_record(args: argparse.Namespace) -> int:
         # The service took the request before the answer was lost, so the lesson may be
         # stored. "NOT RECORDED" sent people to record it again, and without --id the
         # second write is a second lesson.
-        again = ("recording it again with the same --id updates it rather than adding a copy"
+        again = ("recording it again with the same --id is safe: okl refuses if it was stored"
                  if args.id else
                  "check with `okl search` before recording it again, or it may be stored twice")
         print(f"MAYBE RECORDED — the service may have stored this lesson; {again}.\n{e}",
@@ -137,6 +139,74 @@ def cmd_record(args: argparse.Namespace) -> int:
         return 2
     print(node_id)
     return 0
+
+
+def cmd_update(args: argparse.Namespace) -> int:
+    """Change the given fields of one lesson, keeping the rest, its proof and its dates.
+
+    Exit 2, with the reason and nothing on stdout, for an unknown id, nothing to change,
+    an empty required field or a rejected value; the lesson is left as it was.
+    """
+    fields = {k: getattr(args, k, None) for k in core.UPDATABLE_FIELDS}
+    client = Client()
+    try:
+        before = client.get(args.node_id)
+        node = client.update(args.node_id, **fields)
+    except OKLNoAnswerError as e:
+        print(f"MAYBE UPDATED — the service may have applied this; running it again is "
+              f"safe.\n{e}", file=sys.stderr)
+        return 2
+    except (OKLUnreachableError, ValueError) as e:
+        print(f"NOT UPDATED — {e}", file=sys.stderr)
+        return 2
+    print(f"✓ updated {node['id']} — {node['title']}")
+    if node.get("verified_at") is not None:
+        print("  proof kept")
+    elif before and before.get("verified_at") is not None:
+        print(f"  proof cleared: its governed files changed, and a check of other files proves "
+              f"nothing about these.\n  Prove it again: okl verify {node['id']} --run \"<check>\" "
+              f"--expect \"<signal>\"")
+    return 0
+
+
+def cmd_show(args: argparse.Namespace) -> int:
+    """Print one lesson by id, with its proof. Exit 2 when there is no such lesson."""
+    try:
+        node = Client().get(args.node_id)
+    except (OKLUnreachableError, ValueError) as e:
+        print(f"COULD NOT SHOW — {e}", file=sys.stderr)
+        return 2
+    if node is None:
+        print(f"no lesson with id {args.node_id!r}", file=sys.stderr)
+        return 2
+    if args.format == "json":
+        _print_json(node)
+    else:
+        print(_render_lesson(node))
+    return 0
+
+
+def _render_lesson(n: dict[str, Any]) -> str:
+    """One lesson as `okl show` prints it: the fields it has, then its proof."""
+    def day(ms: int | None) -> str:
+        if not ms:
+            return "?"
+        return datetime.fromtimestamp(ms / 1000, tz=timezone.utc).strftime("%Y-%m-%d %H:%MZ")
+
+    out = [f"[{n['id']}] {n['type']} · {n['scope']} · created {day(n.get('created_at'))}",
+           f"  {n['title']}"]
+    labels = (("symptom", "symptom"), ("body", "cause" if n.get("symptom") else "body"),
+              ("fix", "fix"), ("tags", "tags"), ("applies_to", "applies to"),
+              ("files", "governs"), ("status", "status"), ("found_by", "found by"),
+              ("owner", "owner"), ("ttl_days", "ttl days"))
+    out += [f"  {label}: {n[key]}" for key, label in labels if n.get(key) not in (None, "")]
+    if n.get("verified_at"):
+        on = f" on commit {n['verified_commit'][:12]}" if n.get("verified_commit") else ""
+        evidence = n.get("verified_by") or "(no evidence recorded)"
+        out.append(f"  verified {day(n['verified_at'])}{on}: {evidence}")
+    else:
+        out.append(f"  not proven yet: okl verify {n['id']} --run \"<check>\" --expect \"<signal>\"")
+    return "\n".join(out)
 
 
 def cmd_link(args: argparse.Namespace) -> int:

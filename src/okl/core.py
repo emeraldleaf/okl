@@ -232,9 +232,9 @@ def record(store: Store, *, type: str, title: str, scope: str, repo: str | None 
            files: str | None = None, symptom: str | None = None,
            applies_to: str | None = None, fix: str | None = None,
            tags: str | None = None, verified: bool = False, id: str | None = None,
-           keep_verification: bool = False,
+           keep_verification: bool = False, replace: bool = False,
            ) -> str:
-    """Create a node. `scope` is 'org' (propagates to all repos) or 'repo:<name>'.
+    """Create a node. `scope` is 'org' (meant for every repo) or 'repo:<name>'.
 
     The scope decision is the curation gate: only world-facts (prior art, API
     contracts, data-source gotchas, vocabulary) should be 'org'. Repo-specific
@@ -252,6 +252,12 @@ def record(store: Store, *, type: str, title: str, scope: str, repo: str | None 
     evidence and its commit are kept while the governed files are the same, and cleared
     when they change (#110). Without it, every re-seed re-stamped each lesson as verified
     now and wiped its evidence, so a repo that re-seeds after edits could never drift.
+
+    An `id` that already names a lesson raises LessonExistsError unless `replace` (or
+    `keep_verification`) says the overwrite is meant. Re-recording an id used to replace
+    the whole row, proof and creation date included, and every surface taught it as the
+    way to refine a lesson (okl review R1); `update` is that way now. An overwrite keeps
+    the lesson's first creation date.
     """
     if scope == "repo" and repo:
         scope = f"repo:{repo}"
@@ -265,20 +271,105 @@ def record(store: Store, *, type: str, title: str, scope: str, repo: str | None 
         "applies_to": applies_to,
         "verified_at": _now_ms() if verified else None,
     }
-    # An explicit id makes the write idempotent (upsert replaces the same row);
-    # omit it and the store mints a fresh random id (a genuinely new node).
+    # An explicit id names the lesson; omit it and the store mints a fresh random one.
     if id is not None:
         kw["id"] = id
-        old = store.get_node(id) if keep_verification else None
-        if old is not None:
-            if _same_files(old.files, files):
-                if old.verified_at is not None:
-                    kw.update(verified_at=old.verified_at, verified_by=old.verified_by,
-                              verified_commit=old.verified_commit)
-            else:
-                kw["verified_at"] = None   # a check of other files proves nothing about these
+        _carry_over(store, kw, id, replace=replace, keep_verification=keep_verification)
     n = Node(**kw)
     return store.add_node(n)
+
+
+class LessonExistsError(ValueError):
+    """Raised when `record` is given the id of a lesson the store already holds.
+
+    A ValueError, so every caller that reports a rejected write (exit 2, a 400 from the
+    service, NOT RECORDED over MCP) reports this one too, with its message.
+    """
+
+
+def _carry_over(store: Store, kw: dict[str, Any], node_id: str, *,
+                replace: bool, keep_verification: bool) -> None:
+    """Decide what a write to an existing id keeps from the lesson it overwrites.
+
+    Refuses unless the overwrite is meant. Always keeps the first creation date. Keeps
+    the proof only for a re-import (`keep_verification`) whose governed files are the
+    same: verification is about the code, so a check of other files proves nothing here.
+    """
+    old = store.get_node(node_id)
+    if old is None:
+        return
+    if not (replace or keep_verification):
+        raise LessonExistsError(
+            f"a lesson with id {node_id!r} already exists ({old.title!r}). To change it, use "
+            f"`okl update {node_id} --<field> ...` (the okl_update tool over MCP), which keeps "
+            "its proof; to overwrite it entirely, record it again with --replace.")
+    kw["created_at"] = old.created_at
+    if not keep_verification:
+        return
+    if not _same_files(old.files, kw.get("files")):
+        kw["verified_at"] = None
+    elif old.verified_at is not None:
+        kw.update(verified_at=old.verified_at, verified_by=old.verified_by,
+                  verified_commit=old.verified_commit)
+
+
+# The fields `update` may change, and those it may not leave empty.
+UPDATABLE_FIELDS = ("type", "title", "scope", "body", "status", "found_by", "ttl_days",
+                    "owner", "files", "symptom", "fix", "tags", "applies_to")
+_REQUIRED = ("type", "title", "scope")
+
+
+def update(store: Store, node_id: str, repo: str | None = None,
+           **fields: Any) -> dict[str, Any]:
+    """Change the given fields of an existing lesson, keep the rest, and return it.
+
+    The way to refine a lesson (okl review R1). A field passed as None is left alone, and
+    an empty string clears an optional one. The proof (verified_at, verified_by,
+    verified_commit) and the first creation date are kept, unless the governed `files`
+    change: a check of other files proves nothing about these, so the stamp is cleared
+    and the lesson shows as unproven until it is verified again. `scope="repo"` becomes
+    `repo:<repo>`, as in `record`.
+
+    Raises ValueError for an unknown id, an unknown field, nothing to change, an empty
+    required field, or a value the store rejects (an unknown tag, a bad scope).
+    """
+    n = store.get_node(node_id)
+    if n is None:
+        raise ValueError(f"no lesson with id {node_id!r}")
+    changes = _update_values(fields, repo or n.repo)
+    old_files = n.files
+    for k, v in changes.items():
+        setattr(n, k, v)
+    if "files" in changes and not _same_files(old_files, n.files):
+        n.verified_at = n.verified_by = n.verified_commit = None
+    store.add_node(n)
+    return _node_public(n)
+
+
+def _update_values(fields: dict[str, Any], repo: str | None) -> dict[str, Any]:
+    """The values `update` writes: None is left out, an empty string clears the field, and
+    a required field may not be cleared. Raises ValueError, naming what is wrong."""
+    unknown = set(fields) - set(UPDATABLE_FIELDS)
+    if unknown:
+        raise ValueError(f"cannot update {sorted(unknown)}; updatable: {list(UPDATABLE_FIELDS)}")
+    given = {k: v for k, v in fields.items() if v is not None}
+    if not given:
+        raise ValueError(f"nothing to change: pass at least one of {list(UPDATABLE_FIELDS)}")
+    out: dict[str, Any] = {}
+    for k, v in given.items():
+        blank = isinstance(v, str) and not v.strip()
+        if blank and k in _REQUIRED:
+            raise ValueError(f"{k} cannot be empty")
+        if (k, v) == ("scope", "repo"):
+            v = f"repo:{repo or 'unknown'}"
+        out[k] = None if blank else v
+    return out
+
+
+def get(store: Store, node_id: str) -> dict[str, Any] | None:
+    """One lesson by id, as the API exposes it, or None if there is none."""
+    n = store.get_node(node_id)
+    return _node_public(n) if n is not None else None
 
 
 def _same_files(a: str | None, b: str | None) -> bool:
@@ -373,7 +464,7 @@ def render_actions_only(result: dict[str, Any], limit: int | None = None) -> str
     out = [f"OKL — {len(actions)} rule(s) apply before you start:"]
     for a in actions:
         sym = f" [when: {a['symptom']}]" if a.get("symptom") else ""
-        out.append(f"- {verb.get(a['kind'], 'DO')}: {a['target']}{_drift_tag(a)}{sym}")
+        out.append(f"- {verb.get(a['kind'], 'DO')}: {a['target']}{_id_tag(a)}{_drift_tag(a)}{sym}")
         out.append(f"  -> {a['how']}")
     return "\n".join(out)
 
@@ -616,6 +707,12 @@ def _drift_tag(item: dict) -> str:
             f"{d['verified']}; {lead})*")
 
 
+def _id_tag(item: dict) -> str:
+    """The lesson's id in brackets, so an agent can update, retire, link or verify the
+    lesson it was just shown without searching for it first (okl review R1)."""
+    return f" [{item['id']}]" if item.get("id") else ""
+
+
 def _render_actions(actions: list[dict]) -> list[str]:
     """The routed "do this" list, which leads the briefing.
 
@@ -633,7 +730,7 @@ def _render_actions(actions: list[dict]) -> list[str]:
         # The per-record stale marker lives here now that a routed record has no section
         # entry of its own (#52 review); a bare count cannot say which action to distrust.
         tag = (" *(STALE — re-verify)*" if a.get("stale") else "") + _drift_tag(a)
-        out.append(f"- **{verb.get(a['kind'], 'DO')}: {a['target']}**{tag}{sym}")
+        out.append(f"- **{verb.get(a['kind'], 'DO')}: {a['target']}**{_id_tag(a)}{tag}{sym}")
         out.append(f"    → {a['how']}")
         if a.get("why"):
             out.append(f"    catches: {', '.join(a['why'])}")
@@ -654,7 +751,7 @@ def _render_records(items: list[dict], show_catches: bool = False) -> list[str]:
         suffix = (f"  ← catches: {', '.join(it['catches'])}"
                   if show_catches and it.get("catches") else "")
         tag = (" *(STALE — re-verify)*" if it.get("stale") else "") + _drift_tag(it)
-        out.append(f"- **{it['title']}**{tag}{suffix}")
+        out.append(f"- **{it['title']}**{_id_tag(it)}{tag}{suffix}")
         if it.get("symptom"):
             out.append(f"  symptom: {it['symptom'][:160]}")
         if it.get("body"):

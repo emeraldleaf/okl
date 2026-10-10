@@ -6,7 +6,16 @@ import argparse
 from .. import __version__, core
 from .health import cmd_coverage, cmd_doctor, cmd_metric
 from .install import cmd_connect, cmd_init, cmd_scaffold
-from .lessons import cmd_bootstrap, cmd_check, cmd_dedup, cmd_link, cmd_record, cmd_search
+from .lessons import (
+    cmd_bootstrap,
+    cmd_check,
+    cmd_dedup,
+    cmd_link,
+    cmd_record,
+    cmd_search,
+    cmd_show,
+    cmd_update,
+)
 from .packs import cmd_seed
 from .servers import cmd_mcp, cmd_serve
 from .verification import cmd_drift, cmd_export, cmd_reverify, cmd_verify
@@ -98,10 +107,33 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                          "records subject and where the lesson was found.")
     pr.add_argument("--tags", help="comma-sep subject tags from the controlled vocabulary "
                     "(store.KNOWN_TAGS), e.g. 'react,security'")
-    pr.add_argument("--id", help="explicit stable id (makes the write idempotent — re-records replace)")
+    pr.add_argument("--id", help="a short stable id for a NEW lesson. An id that already exists "
+                    "is refused: change that lesson with `okl update <id>`, which keeps its proof")
+    pr.add_argument("--replace", action="store_true",
+                    help="overwrite the lesson with this --id entirely, proof included (it keeps "
+                         "only its first creation date); to refine one, use `okl update`")
     pr.add_argument("--verified", action="store_true",
                     help="refused: verify with `okl verify <id> --run ... --expect ...` instead")
     pr.set_defaults(func=cmd_record)
+
+    pu = sub.add_parser("update", help="change fields of a lesson by id, keeping the rest and its proof")
+    pu.add_argument("node_id", help="the lesson's id, as the briefing shows it in [brackets]")
+    for flag in ("--type", "--title", "--scope", "--body", "--status", "--owner", "--symptom",
+                 "--fix", "--tags"):
+        pu.add_argument(flag)
+    pu.add_argument("--found-by", dest="found_by")
+    pu.add_argument("--ttl-days", dest="ttl_days", type=int)
+    pu.add_argument("--applies-to", dest="applies_to")
+    pu.add_argument("--files", help="changing the governed files clears the proof: a check of "
+                                    "other files proves nothing about these")
+    pu.epilog = ("Only the fields given change. An empty value (--fix \"\") clears an optional "
+                 "field. The proof and the first creation date are kept unless --files changes.")
+    pu.set_defaults(func=cmd_update)
+
+    psh = sub.add_parser("show", help="print one lesson by id, with its proof")
+    psh.add_argument("node_id")
+    psh.add_argument("--format", choices=["text", "json"], default="text")
+    psh.set_defaults(func=cmd_show)
 
     pl = sub.add_parser("link", help="add an edge between two nodes")
     pl.add_argument("src"); pl.add_argument("rel"); pl.add_argument("dst")

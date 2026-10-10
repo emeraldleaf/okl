@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 from urllib import request as _req
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 
 from . import core, drift
 from .store import Node, Store
@@ -260,6 +260,27 @@ class Client:
         if self.mode == "remote":
             return self._post("/record", kwargs)["id"]
         return core.record(self._local_store(), **kwargs)
+
+    def update(self, node_id: str, **fields: Any) -> dict:
+        """Change the given fields of a lesson, keep the rest and its proof, and return it.
+
+        Takes core.update's fields: None leaves one alone, "" clears an optional one. The
+        proof is cleared only when the governed files change. Raises ValueError for an
+        unknown id or a rejected value.
+        """
+        if self.mode == "remote":
+            return self._post("/update", {"id": node_id, "repo": self.repo,
+                                          "fields": {k: v for k, v in fields.items()
+                                                     if v is not None}})
+        return core.update(self._local_store(), node_id, repo=self.repo, **fields)
+
+    def get(self, node_id: str) -> dict | None:
+        """One lesson by id, or None if there is none."""
+        if self.mode == "remote":
+            # A missing lesson is {"node": null}, never a 404: a service too old to have
+            # this route answers 404, and that must not read as "no such lesson".
+            return self._get(f"/node/{quote(node_id, safe='')}")["node"]
+        return core.get(self._local_store(), node_id)
 
     def search(self, query: str, scope: str | None = None,
                node_types: list[str] | None = None, limit: int = 25) -> list[dict]:
