@@ -113,7 +113,8 @@ automatic parts do: the per-prompt briefing and the end-of-session question are 
 hooks. With any other agent that supports MCP (Cursor, Codex, Copilot, Gemini CLI…):
 
 1. Register okl's MCP server in that agent's config — the command is `okl mcp` (stdio).
-   It exposes `okl_check`, `okl_record`, `okl_update`, `okl_get` and `okl_search`.
+   It exposes `okl_check`, `okl_record`, `okl_update`, `okl_retire`, `okl_get` and
+   `okl_search`.
 2. Add one line to the agent's instruction file (`AGENTS.md`, `.cursorrules`…): *Before
    each task, call `okl_check` with the task description and follow what it returns. When
    we learn something worth keeping, record it with `okl_record`.*
@@ -212,7 +213,9 @@ starting `why:`. To correct a lesson later, change only what is wrong:
 `okl update discount-server-side --fix "..."` keeps everything else, including its proof
 (changing `--files` clears the proof until the check passes again: `okl reverify`), and
 `okl show discount-server-side` prints the whole lesson. Recording an existing id again
-is refused (`--replace` overwrites it entirely). There is no delete command, on purpose.
+is refused (`--replace` overwrites it entirely). There is no delete command, on purpose:
+a lesson that turns out wrong or replaced is retired with a reason, and kept
+(`okl retire discount-server-side --reason "..." [--by <new-id>]`).
 
 ### Store records vs. CLAUDE.md / AGENTS.md
 

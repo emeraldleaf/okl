@@ -15,11 +15,12 @@ from collections import Counter
 from dataclasses import asdict
 from typing import Any
 
+from .store import RETIRED_STATUSES, Edge, Node, Store, _now_ms, split_tags
+
 # STACK_TAGS is re-exported, not used here: adapters may import core and client but
 # never store (dependency direction is one-way), and the CLI needs the stack list to
 # judge which bundled seed packs fit a repo.
 from .store import STACK_TAGS as STACK_TAGS
-from .store import Edge, Node, Store, _now_ms, split_tags
 
 
 def _node_public(n: Node) -> dict[str, Any]:
@@ -109,6 +110,11 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     repo_scope = f"repo:{repo}"
     hits = [n for n in store.search(task, limit=limit * 3)
             if _in_scope(n, repo_scope, interests)]
+    # Superseded and obsolete lessons leave BEFORE the cut, so they never take a slot from
+    # a live one; a superseded one leaves a pointer to its replacement (okl review R2).
+    # check never read SUPERSEDES, so a replaced lesson was briefed beside its successor.
+    replaced = [_replacement(store, n) for n in hits if n.status == "superseded"]
+    hits = [n for n in hits if n.status not in ("superseded", "obsolete")]
     # THE CUTOFF. store.search returns BM25-ranked results, but full-text matching is
     # permissive: on a mature store a plausible task matches most of it, so without a
     # cap the "briefing" becomes the library. Ranking already put the best first, so
@@ -126,7 +132,8 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     # counted inside their own type bucket; including them would double-count.
     total = sum(len(v) for k, v in buckets.items() if k != "stale_warnings")
     out = {"repo": repo, "task": task, "match_count": total,
-           "next_actions": actions, "dropped_by_cutoff": dropped, **buckets}
+           "next_actions": actions, "dropped_by_cutoff": dropped, **buckets,
+           "replaced": replaced[:3]}
     # Zero matches has two very different causes: the store holds rules and none apply
     # here, or the store holds nothing at all. Reporting both as "proceed" is the
     # silence-as-safety failure this project exists to prevent, so the count travels
@@ -134,6 +141,14 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     if total == 0:
         out["store_records"] = len(store.all_nodes())
     return out
+
+
+def _replacement(store: Store, n: Node) -> dict[str, Any]:
+    """The one-line pointer from a superseded lesson to what replaced it (one hop)."""
+    by = [m for (e, m) in store.neighbors(n.id, rels=["SUPERSEDES"]) if e.dst == n.id]
+    new = by[0] if by else None
+    return {"id": n.id, "title": n.title, "by": new.id if new else None,
+            "by_title": new.title if new else None}
 
 
 def _bucket_by_type(hits: list[Node]) -> dict[str, list[dict]]:
@@ -306,6 +321,10 @@ def _carry_over(store: Store, kw: dict[str, Any], node_id: str, *,
             f"`okl update {node_id} --<field> ...` (the okl_update tool over MCP), which keeps "
             "its proof; to overwrite it entirely, record it again with --replace.")
     kw["created_at"] = old.created_at
+    if keep_verification and old.status in RETIRED_STATUSES and kw.get("status") is None:
+        # A re-seed rewrites a pack's lessons from the pack; a retirement made here is a
+        # local decision the pack knows nothing about, and must survive it (R2).
+        kw["status"] = old.status
     if not keep_verification:
         return
     if not _same_files(old.files, kw.get("files")):
@@ -374,9 +393,51 @@ def _update_values(fields: dict[str, Any], repo: str | None) -> dict[str, Any]:
 
 
 def get(store: Store, node_id: str) -> dict[str, Any] | None:
-    """One lesson by id, as the API exposes it, or None if there is none."""
+    """One lesson by id, as the API exposes it, with its retirements; None if there is none."""
     n = store.get_node(node_id)
-    return _node_public(n) if n is not None else None
+    if n is None:
+        return None
+    d = _node_public(n)
+    d["retirements"] = [asdict(r) for r in store.retirements(node_id)]
+    return d
+
+
+_RETIRED_AS = {"wrong": "retracted", "obsolete": "obsolete", "superseded": "superseded"}
+
+
+def retire(store: Store, node_id: str, reason: str, *, by: str | None = None,
+           obsolete: bool = False) -> dict[str, Any]:
+    """Retire a lesson with a reason, keep everything else, and return it (okl review R2).
+
+    Three outcomes. Wrong (the default) sets status retracted, and the briefing shows it
+    as AVOID. `by` names the lesson that replaces it: status superseded, a `by SUPERSEDES
+    node_id` edge, and briefings leave it out with a pointer to the replacement.
+    `obsolete` is for a lesson whose subject is gone: it is no longer briefed. The reason
+    goes to the retirement log, which no rewrite of the lesson's row can lose.
+
+    Raises ValueError, before writing anything, for an empty reason, an unknown id or
+    replacement, a lesson replacing itself, or `by` with `obsolete`.
+    """
+    if not (reason or "").strip():
+        raise ValueError("a retirement needs a reason: say why the lesson is wrong, replaced "
+                         "or obsolete")
+    n = store.get_node(node_id)
+    if n is None:
+        raise ValueError(f"no lesson with id {node_id!r}")
+    if by is not None and obsolete:
+        raise ValueError("a lesson is either replaced (--by) or obsolete, not both")
+    if by is not None:
+        if by == node_id:
+            raise ValueError("a lesson cannot replace itself")
+        if store.get_node(by) is None:
+            raise ValueError(f"no lesson with id {by!r} to replace it")
+    kind = "superseded" if by else ("obsolete" if obsolete else "wrong")
+    n.status = _RETIRED_AS[kind]
+    store.add_node(n)
+    if by is not None:
+        store.add_edge(Edge(src=by, rel="SUPERSEDES", dst=node_id))
+    store.log_retirement(node_id, kind, reason.strip(), by)
+    return get(store, node_id) or {}
 
 
 def _same_files(a: str | None, b: str | None) -> bool:
@@ -465,7 +526,8 @@ def render_actions_only(result: dict[str, Any], limit: int | None = None) -> str
             return ("OKL: the store is EMPTY (0 records). This is not 'no rules apply' — "
                     "nothing has been recorded yet, so this check proves nothing. "
                     "Run `okl seed` or record your first rule.")
-        return f"OKL: no encoded rule applies to this task ({result['repo']}). Proceed."
+        return "\n".join([f"OKL: no encoded rule applies to this task ({result['repo']}). "
+                          "Proceed.", *_replaced_lines(result)])
     verb = {"arm_gate": "ARM", "apply_fix": "FIX", "avoid_retracted": "AVOID",
             "avoid_identifier": "AVOID"}
     out = [f"OKL — {len(actions)} rule(s) apply before you start:"]
@@ -473,7 +535,17 @@ def render_actions_only(result: dict[str, Any], limit: int | None = None) -> str
         sym = f" [when: {a['symptom']}]" if a.get("symptom") else ""
         out.append(f"- {verb.get(a['kind'], 'DO')}: {a['target']}{_id_tag(a)}{_drift_tag(a)}{sym}")
         out.append(f"  -> {a['how']}")
-    return "\n".join(out)
+    return "\n".join(out + _replaced_lines(result))
+
+
+def _replaced_lines(result: dict[str, Any]) -> list[str]:
+    """One line per superseded lesson the task matched, pointing at its replacement by id."""
+    out = []
+    for r in result.get("replaced") or []:
+        to = (f"replaced by {r['by_title']} [{r['by']}]" if r.get("by")
+              else "superseded, with no replacement on record")
+        out.append(f"> {r['title']} [{r['id']}] was {to}; follow the replacement.")
+    return out
 
 
 def render_check_for_agent(result: dict[str, Any]) -> str:
@@ -511,6 +583,7 @@ def render_check_for_agent(result: dict[str, Any]) -> str:
         lines.append(f"### {header}")
         lines += _render_records(items, show_catches=key == "armed_gates")
         lines.append("")
+    lines += _replaced_lines(result)
     if result.get("stale_warnings"):
         lines.append(f"> {len(result['stale_warnings'])} node(s) are past TTL and shown demoted — re-verify before trusting.")
     if result.get("drifted"):

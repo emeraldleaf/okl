@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- **Retiring a lesson is a verb, with a reason (okl review R2).** "Retracted" was the only
+  way out, retracting meant re-recording (which wiped the lesson), and `okl check` never
+  read SUPERSEDES, so a replaced lesson was briefed beside its replacement.
+  - `okl retire <id> --reason "..."` (and the `okl_retire` MCP tool) keeps every field.
+    Without a flag the lesson is wrong: status retracted, briefed as AVOID. `--by <new-id>`
+    marks it superseded and writes `<new> SUPERSEDES <id>`: briefings leave it out before
+    the cut, so it never takes a live lesson's slot, and print one line pointing to the
+    replacement by id. `--obsolete` takes it out of briefings. A resolved defect is not
+    retired and keeps briefing against its return.
+  - The reason goes to a new `retirement` table rather than a column on the lesson, so an
+    older okl rewriting the lesson's row cannot lose it. `okl show` and `okl_get` list a
+    lesson's retirements.
+  - Drift, the committed snapshot and the governs-nothing advisory skip retired lessons,
+    and `okl seed` keeps a retirement made locally instead of restoring the pack's status.
+  - A shared service gets `POST /retire`.
+
 - **Refining a lesson no longer wipes its proof (okl review R1).** Recording a lesson again
   with its `--id`, which the Stop hook, `/record` and the encoding-loop skill all taught as
   the way to refine one, replaced the whole row: its verification, its governed files and

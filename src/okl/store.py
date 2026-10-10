@@ -30,8 +30,14 @@ EDGE_RELS = {
     "VERIFIED_ON", "RECURS_IN", "CONTRADICTS", "DEFINED_IN",
 }
 VALID_STATUS = {
-    None, "live", "narrowed", "retracted", "open", "resolved", "stale",
+    None, "live", "narrowed", "retracted", "open", "resolved", "stale", "obsolete",
+    "superseded",
 }
+# The statuses `okl retire` sets (okl review R2). A retired lesson is not a rule anyone
+# keeps proven, so drift skips it; superseded and obsolete ones are also left out of
+# briefings, while a retracted one is briefed as AVOID. "resolved" is not here: a fixed
+# defect keeps briefing against its return.
+RETIRED_STATUSES = frozenset({"retracted", "obsolete", "superseded"})
 # Subject tags are a controlled vocabulary like NODE_TYPES: grow it by editing this
 # set (a deliberate curation act), not ad hoc — freeform tags sprawl and stop filtering.
 # Stacks mirror the scaffold profiles; the rest are cross-cutting subjects.
@@ -204,6 +210,21 @@ class Briefing:
     node_ids: tuple[str, ...]  # in the order the briefing showed them
 
 
+@dataclass(frozen=True)
+class Retirement:
+    """One retirement of a lesson: when, as what, why, and what replaced it (R2).
+
+    Kept in its own table rather than on the lesson's row: an okl from before R2 rewrites
+    whole rows on SQLite (INSERT OR REPLACE) and would blank any column it does not know.
+    """
+
+    at: int                    # epoch milliseconds
+    node_id: str
+    kind: str                  # "wrong", "obsolete" or "superseded"
+    reason: str
+    by: str | None = None      # the replacement, for "superseded"
+
+
 class Store:
     """Facade over whichever backend the environment selects."""
 
@@ -311,6 +332,17 @@ class Store:
         """Every logged briefing, oldest first. `repo` filters exactly; None means all."""
         return self._impl.briefings(repo)
 
+    # -- retirements (okl review R2) -------------------------------------------
+    def log_retirement(self, node_id: str, kind: str, reason: str,
+                       by: str | None = None) -> None:
+        """Append why and how a lesson was retired. Append-only, like the exposure log."""
+        self._impl.log_retirement(Retirement(at=_now_ms(), node_id=node_id, kind=kind,
+                                             reason=reason, by=by))
+
+    def retirements(self, node_id: str) -> list[Retirement]:
+        """Every retirement logged for `node_id`, oldest first."""
+        return self._impl.retirements(node_id)
+
     def close(self) -> None:
         """Close the database connection; calling it again does nothing."""
         self._impl.close()
@@ -354,6 +386,9 @@ class _Backend(Protocol):
         - Interprets nothing. What an edge means is decided once, in core, so two
           backends cannot compute two different metrics from the same store.
 
+      log_retirement(r) / retirements(node_id)
+        - Append-only, oldest first, filtered exactly by node id.
+
       log_briefing(b) / briefings(repo)
         - Append-only: logging the same briefing twice stores two rows.
         - briefings returns every row oldest first, `repo` filtering exactly, with each
@@ -371,6 +406,8 @@ class _Backend(Protocol):
     def all_nodes(self) -> list[Node]: ...
     def log_briefing(self, briefing: Briefing) -> None: ...
     def briefings(self, repo: str | None) -> list[Briefing]: ...
+    def log_retirement(self, retirement: Retirement) -> None: ...
+    def retirements(self, node_id: str) -> list[Retirement]: ...
     def close(self) -> None: ...
 
 
@@ -440,6 +477,11 @@ class _SQLiteBackend(_Backend):
         # The exposure log. A store opened by an older okl simply gains the table.
         c.execute("""CREATE TABLE IF NOT EXISTS briefing(
             at INTEGER NOT NULL, repo TEXT NOT NULL, node_ids TEXT NOT NULL)""")
+        # Why and how lessons were retired (R2); its own table, so no row rewrite by an
+        # older okl can lose it. A store opened by an older okl simply gains the table.
+        c.execute("""CREATE TABLE IF NOT EXISTS retirement(
+            at INTEGER NOT NULL, node_id TEXT NOT NULL, kind TEXT NOT NULL,
+            reason TEXT NOT NULL, by_id TEXT)""")
         try:
             # symptom and fix are indexed, not just title and body. `symptom` is the
             # field every command and doc calls "what a reader matches against" — the
@@ -586,6 +628,22 @@ class _SQLiteBackend(_Backend):
             return [Briefing(at=r["at"], repo=r["repo"], node_ids=tuple(json.loads(r["node_ids"])))
                     for r in rows.fetchall()]
 
+    def log_retirement(self, retirement: Retirement) -> None:
+        with self._lock:
+            self.conn.execute(
+                "INSERT INTO retirement(at, node_id, kind, reason, by_id) VALUES(?,?,?,?,?)",
+                (retirement.at, retirement.node_id, retirement.kind, retirement.reason,
+                 retirement.by))
+            self.conn.commit()
+
+    def retirements(self, node_id: str) -> list[Retirement]:
+        with self._lock:
+            rows = self.conn.execute(
+                "SELECT at, node_id, kind, reason, by_id FROM retirement WHERE node_id=? "
+                "ORDER BY at, rowid", (node_id,)).fetchall()
+            return [Retirement(at=r["at"], node_id=r["node_id"], kind=r["kind"],
+                               reason=r["reason"], by=r["by_id"]) for r in rows]
+
     def close(self) -> None:
         self._closer()
 
@@ -657,6 +715,9 @@ class _PostgresBackend(_Backend):
             cur.execute("""CREATE TABLE IF NOT EXISTS briefing(
                 id BIGSERIAL PRIMARY KEY, at BIGINT NOT NULL, repo TEXT NOT NULL,
                 node_ids TEXT NOT NULL)""")
+            cur.execute("""CREATE TABLE IF NOT EXISTS retirement(
+                id BIGSERIAL PRIMARY KEY, at BIGINT NOT NULL, node_id TEXT NOT NULL,
+                kind TEXT NOT NULL, reason TEXT NOT NULL, by_id TEXT)""")
             # IF NOT EXISTS is keyed on the NAME, not the expression, so a store created
             # before symptom/fix joined the tsvector would keep an index Postgres can no
             # longer use for the new query — silently degrading every search to a
@@ -761,6 +822,19 @@ class _PostgresBackend(_Backend):
                 if repo is not None else self._fetch(sql + " ORDER BY at, id", ()))
         return [Briefing(at=r["at"], repo=r["repo"], node_ids=tuple(json.loads(r["node_ids"])))
                 for r in rows]
+
+    def log_retirement(self, retirement: Retirement) -> None:
+        with self.conn.cursor() as cur:
+            cur.execute("INSERT INTO retirement(at, node_id, kind, reason, by_id) "
+                        "VALUES(%s,%s,%s,%s,%s)",
+                        (retirement.at, retirement.node_id, retirement.kind,
+                         retirement.reason, retirement.by))
+
+    def retirements(self, node_id: str) -> list[Retirement]:
+        rows = self._fetch("SELECT at, node_id, kind, reason, by_id FROM retirement "
+                           "WHERE node_id = %s ORDER BY at, id", (node_id,))
+        return [Retirement(at=r["at"], node_id=r["node_id"], kind=r["kind"],
+                           reason=r["reason"], by=r["by_id"]) for r in rows]
 
     def close(self) -> None:
         self._closer()

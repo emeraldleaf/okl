@@ -12,6 +12,7 @@ from .lessons import (
     cmd_dedup,
     cmd_link,
     cmd_record,
+    cmd_retire,
     cmd_search,
     cmd_show,
     cmd_update,
@@ -135,6 +136,20 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
     pu.epilog = ("Only the fields given change. An empty value (--fix \"\") clears an optional "
                  "field. The proof and the first creation date are kept unless --files changes.")
     pu.set_defaults(func=cmd_update)
+
+    prt = sub.add_parser("retire", help="retire a lesson with a reason: wrong, replaced (--by) "
+                                        "or obsolete; it is never deleted")
+    prt.add_argument("node_id")
+    prt.add_argument("--reason", required=True, help="why it is retired; kept with the lesson")
+    how = prt.add_mutually_exclusive_group()
+    how.add_argument("--by", help="the id of the lesson that replaces it: briefings then leave "
+                                  "this one out and point to that one")
+    how.add_argument("--obsolete", action="store_true",
+                     help="its subject is gone: it is no longer briefed")
+    prt.epilog = ("Without --by or --obsolete the lesson is wrong: it stays briefed as AVOID, so "
+                  "nobody restates it as fact. A resolved defect is not retired; it keeps "
+                  "briefing against its return.")
+    prt.set_defaults(func=cmd_retire)
 
     psh = sub.add_parser("show", help="print one lesson by id, with its proof")
     psh.add_argument("node_id")

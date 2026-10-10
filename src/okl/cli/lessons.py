@@ -194,6 +194,25 @@ def _send_update(client: Client, node_id: str, fields: dict[str, Any]) -> dict |
         return None
 
 
+def cmd_retire(args: argparse.Namespace) -> int:
+    """Retire one lesson with a reason; exit 2, writing nothing, for anything refused."""
+    try:
+        node = Client().retire(args.node_id, args.reason, by=args.by, obsolete=args.obsolete)
+    except OKLNoAnswerError as e:
+        print(f"MAYBE RETIRED — the service may have applied this; running it again is "
+              f"safe.\n{e}", file=sys.stderr)
+        return 2
+    except (OKLUnreachableError, ValueError) as e:
+        print(f"NOT RETIRED — {e}", file=sys.stderr)
+        return 2
+    effect = {"retracted": "briefed from now on as AVOID, so nobody restates it as fact",
+              "obsolete": "no longer briefed",
+              "superseded": f"left out of briefings, which point to [{args.by}] instead"}
+    print(f"✓ retired {node['id']} — {node['title']}\n  {node['status']}: "
+          f"{effect.get(node['status'], node['status'])}")
+    return 0
+
+
 def cmd_show(args: argparse.Namespace) -> int:
     """Print one lesson by id, with its proof. Exit 2 when there is no such lesson."""
     try:
@@ -235,6 +254,9 @@ def _render_lesson(n: dict[str, Any]) -> str:
                    " (okl reverify re-runs it)")
     else:
         out.append(f"  not proven yet: okl verify {n['id']} --run \"<check>\" --expect \"<signal>\"")
+    for r in n.get("retirements") or []:
+        by = f" by [{r['by']}]" if r.get("by") else ""
+        out.append(f"  retired {day(r['at'])} as {r['kind']}{by}: {r['reason']}")
     out.append("  (whether its governed code changed since: okl drift)")
     return "\n".join(out)
 
