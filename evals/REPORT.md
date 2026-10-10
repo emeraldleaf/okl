@@ -794,6 +794,48 @@ The briefing still does its job at 36% fewer characters. Per the pre-registratio
 all this can say: the cut is safe on this task set; nothing here shows it helps.
 
 
+## 4j. PRE-REGISTERED: each briefed lesson carries its id — a change of treatment (2026-10-10)
+
+Written before any live run, per §2b.
+
+**What changed.** Each lesson in the briefing now prints its id in brackets after its title
+or action line (`- **FIX: …** [seed:rag-defects:qz_judge_crash]`), in the full briefing the
+briefed arm reads (`--format agent`) and in the compact one. Nothing else in the rendering
+changed. The reason is okl's write side, not the eval: an agent could not update, retire or
+link a lesson it had just been shown without searching for its id first (okl review R1).
+The briefing is the treatment, so by the rule §4i applied, this starts a new series.
+
+**Deterministic pre-flights, run first.**
+
+- `python3 evals/layout_preflight.py --old-ref main` (main at `71cde71`): every record's
+  title, symptom, cause and fix survives in all 8 tasks, 0 lost. The briefings are **5%
+  larger** (61,146 → 64,287 characters). The script's summary line printed "-5% smaller"
+  for this; its sign is fixed in the same change.
+- `python3 evals/preflight.py`: 7 of 8 tasks receive the rule they test, plus the one
+  accepted gap (`exit_code_trust`, §4b), unchanged.
+- Size on every bundled seed pack (183 records), measured the same day on the same packs
+  before and after: the full briefing goes from ~1,620 to ~1,770 tokens, and the action list
+  at `--limit 3` from ~230 to ~260 (`evals/results/briefing-size-20261010-2126.json` at
+  `617c34d`, `briefing-size-20261010-2127.json` at `e83eba7`). The review estimated 80 to 100
+  tokens; seed-pack ids are long (`seed:dotnet-review-surfaces:rs_event_carries_recipient_id`),
+  so the full briefing pays about 150.
+
+**What the next citable run tests.** Same tasks, generator (sonnet), judge (haiku), 3
+samples and interests as §4i (`ab-20260926-0528.json`), with `okl_commit` on its face. It
+is reported as a new series and is not pooled with §4i or earlier runs.
+
+**Prediction.** No detectable change. The ids carry no instruction and add about 9% to the
+briefing.
+
+**Falsifier.** The briefed arm worsens beyond the 17-point noise floor against §4i's 8%, or
+any task that read briefed 0/3 in §4i reproduces. Either means the ids crowd out what the
+briefing is for, and they move to a footer or come out.
+
+**What this cannot settle.** Whether the ids help: their purpose is the write side (an agent
+refining a lesson instead of re-recording it), which this eval does not measure. No live run
+has been made yet; until one is, this section claims nothing about the effect.
+
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

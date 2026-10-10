@@ -1425,8 +1425,8 @@
       "containerId": null,
       "autoResize": true,
       "lineHeight": 1.25,
-      "text": "--format actions returns the imperative list alone:\nroughly 230 tokens at limit=3, against ~1,620 for the\nfull briefing. A subagent on one focused subtask still\ngets the rules without paying for the prose.",
-      "originalText": "--format actions returns the imperative list alone:\nroughly 230 tokens at limit=3, against ~1,620 for the\nfull briefing. A subagent on one focused subtask still\ngets the rules without paying for the prose.",
+      "text": "--format actions returns the imperative list alone:\nroughly 260 tokens at limit=3, against ~1,770 for the\nfull briefing. A subagent on one focused subtask still\ngets the rules without paying for the prose.",
+      "originalText": "--format actions returns the imperative list alone:\nroughly 260 tokens at limit=3, against ~1,770 for the\nfull briefing. A subagent on one focused subtask still\ngets the rules without paying for the prose.",
       "id": "el41"
     },
     {

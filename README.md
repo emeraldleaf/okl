@@ -489,7 +489,7 @@ before you wire it into every prompt. Every number below was measured rather tha
 estimated, with one representative task ("add an endpoint that returns an order for the
 logged-in user"; tokens ≈ characters ÷ 4). The sizes come from a fresh store holding every
 bundled seed pack, 183 records (`python3 evals/briefing_size.py`, receipt
-[`evals/results/briefing-size-20261004-2244.json`](evals/results/briefing-size-20261004-2244.json)); the latency from the 161 seed records bundled before that.
+[`evals/results/briefing-size-20261010-2127.json`](evals/results/briefing-size-20261010-2127.json)); the latency from the 161 seed records bundled before that.
 Your store and your tasks will differ.
 
 **Per prompt, once the hook is installed:**
@@ -497,7 +497,7 @@ Your store and your tasks will differ.
 | | |
 |---|---|
 | Latency | **~0.1s** for the whole `okl check` process (0.07s median warm) — one local SQLite query, no network in local mode |
-| Context | **~1,620 tokens** at the default `--limit 12`, down to **~230** for only the action list at `--limit 3` |
+| Context | **~1,770 tokens** at the default `--limit 12`, down to **~260** for only the action list at `--limit 3` |
 
 **Per session:** the Stop hook interrupts once at the end to ask what was learned. It
 blocks the first stop only, and answering it is the whole write side of the loop. With
@@ -702,7 +702,7 @@ mode, good for trying it before you deploy anything.
 ```bash
 # 1. READ the relevant lessons before starting a task (the load-bearing move)
 okl check --task "add an endpoint that returns an order for the logged-in user"
-#   add --format actions --limit 3 for a ~230-token version (subagents, CI)
+#   add --format actions --limit 3 for a ~260-token version (subagents, CI)
 
 # 2. RECORD a lesson after you learn it, with an actionable symptom/cause/fix
 okl record --type Defect --scope org --tags "security" \
@@ -766,7 +766,7 @@ okl metric           # recurrence: defect classes that came back, split by wheth
 
 ## Subagents and small context budgets
 
-A full briefing costs roughly **1,620 tokens** on the measurement above — fine for a main session with a large
+A full briefing costs roughly **1,770 tokens** on the measurement above — fine for a main session with a large
 window, punishing for a subagent working in a few thousand. That asymmetry matters
 because subagents are exactly where org rules get lost: a focused worker handling one
 subtask has the least context and the most need for "here is the mistake this codebase
@@ -788,14 +788,14 @@ OKL — 3 rule(s) apply before you start:
 ```
 
 **Measured on every bundled seed pack (183 records), one representative task**
-([receipt](evals/results/briefing-size-20261004-2244.json)): ~230 tokens at `--limit 3`, ~380 at `--limit 5`, ~510 at
-`--limit 8` and ~810 at `--limit 12`, against ~1,620 for the full briefing. Cheap enough
+([receipt](evals/results/briefing-size-20261010-2127.json)): ~260 tokens at `--limit 3`, ~350 at `--limit 5`, ~590 at
+`--limit 8` and ~940 at `--limit 12`, against ~1,770 for the full briefing. Cheap enough
 to call per subtask.
 
 The same holds for a main session on a model with a small context window, where the
 briefing arrives with every prompt. Set `OKL_BRIEFING_COMPACT=1` and the prompt hook sends
 only the action list (`okl check --compact`); set `OKL_BRIEFING_LIMIT=5` and it draws on
-five records instead of twelve. Together that is ~380 tokens instead of ~1,620 on the
+five records instead of twelve. Together that is ~350 tokens instead of ~1,770 on the
 measurement above. Set them where the agent starts: hooks inherit its environment. A
 limit that is not a whole number above zero is ignored, and an okl too old for
 `--compact` briefs in full rather than blocking the prompt. Like `--format actions`, the

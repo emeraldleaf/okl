@@ -1,0 +1,50 @@
+{
+  "measured_at": "2026-10-10T21:26Z",
+  "okl_commit": "617c34d",
+  "uncommitted_changes_in_src": false,
+  "store": "fresh, every bundled seed pack: 183 records, no interest filter",
+  "task": "add an endpoint that returns an order for the logged-in user",
+  "method": "tokens = characters / 4, to the nearest 10; the text that reaches the model",
+  "briefings": {
+    "full (agent format, default --limit 12)": {
+      "characters": 6498,
+      "tokens": 1620
+    },
+    "hook format, default --limit 12": {
+      "characters": 6497,
+      "tokens": 1620
+    },
+    "compact, --limit 3": {
+      "characters": 910,
+      "tokens": 230
+    },
+    "compact, --limit 5": {
+      "characters": 1212,
+      "tokens": 300
+    },
+    "compact, --limit 8": {
+      "characters": 2042,
+      "tokens": 510
+    },
+    "compact, --limit 12": {
+      "characters": 3238,
+      "tokens": 810
+    },
+    "--format actions --limit 3": {
+      "characters": 911,
+      "tokens": 230
+    },
+    "--format actions --limit 5": {
+      "characters": 1213,
+      "tokens": 300
+    },
+    "--format actions --limit 8": {
+      "characters": 2043,
+      "tokens": 510
+    },
+    "--format actions --limit 12": {
+      "characters": 3239,
+      "tokens": 810
+    }
+  }
+}

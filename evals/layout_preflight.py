@@ -86,8 +86,11 @@ def main() -> int:
         print(f"{task.get('id', task['task'][:24]):22} old {len(a):6}  new {len(b):6}  lost {len(lost)}")
         for x in lost[:3]:
             print(f"    lost: {x}")
-    pct = 100 - round(100 * total_new / total_old)
-    print(f"TOTAL old {total_old} chars, new {total_new} chars: {pct}% smaller")
+    # Signed: written when the only layout change on the table shrank the briefing, it
+    # printed "-5% smaller" for one that grew 5% (the ids added for okl review R1).
+    change = round(100 * (total_new - total_old) / total_old)
+    direction = "larger" if change >= 0 else "smaller"
+    print(f"TOTAL old {total_old} chars, new {total_new} chars: {abs(change)}% {direction}")
     print("LAYOUT PRE-FLIGHT: LOST CONTENT" if lost_any else "LAYOUT PRE-FLIGHT OK: lossless")
     return 1 if lost_any else 0
 
