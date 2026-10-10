@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **A shared service that stalls or drops the connection now fails the briefing closed,
+  in time.** The client translated a failure to connect, but not a service that accepted
+  the connection and then never answered (a bare `TimeoutError`) or hung up without
+  replying (`ConnectionResetError`, `RemoteDisconnected`): `okl check` died with a
+  traceback and exit 1. Each try also waited 10 s, and the prompt hook tries three times,
+  so a stalled service held the hook about 31 s; Claude Code cancels a UserPromptSubmit
+  hook after 30 s and lets the prompt through, so the agent started with no briefing.
+  Both failures are now reported as unreachable (exit 2, one line naming the service and
+  the cause), and the timeout is 5 s, so the hook blocks in about 16 s. A test reads the
+  hook's retry count and keeps tries x timeout under Claude Code's limit.
 - **Public claims about the A/B now match the receipts.** README, REPORT.md and a shipped
   seed comment named an IDOR, and once a React fetch, among the defects the A/B
   reproduced; those tasks never reproduced at baseline in any committed receipt. The

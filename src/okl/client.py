@@ -22,6 +22,13 @@ from .store import Node, Store
 CONFIG_DIR = ".okl"
 CONFIG_FILE = "config.json"
 
+# How long to wait on the shared service, for each connect and each read. The prompt hook
+# bounds it: the hook runs `okl check` up to three times, and Claude Code cancels a
+# UserPromptSubmit hook after 30 s and lets the prompt through unbriefed. At 10 s, three
+# stalled tries took about 31 s, so the briefing failed open (okl review R10).
+# tests/test_remote_failures.py keeps tries x timeout + pauses under that limit.
+_HTTP_TIMEOUT_S = 5
+
 
 def _find_config(start: Path | None = None) -> Path | None:
     """Walk up from `start` looking for .okl/config.json.
@@ -184,7 +191,7 @@ class Client:
                            headers={"Content-Type": "application/json"})
         self._authorize(req)
         try:
-            with _req.urlopen(req, timeout=10) as resp:  # noqa: S310
+            with _req.urlopen(req, timeout=_HTTP_TIMEOUT_S) as resp:  # noqa: S310
                 return json.loads(resp.read())
         except HTTPError as e:
             # The service answered — so this is NOT "unreachable". A 4xx is the caller's
@@ -200,6 +207,8 @@ class Client:
             raise OKLUnreachableError(f"OKL service error at {url}: {e.code} {detail or e.reason}") from e
         except URLError as e:
             raise OKLUnreachableError(f"OKL service unreachable at {url}: {e}") from e
+        except OSError as e:   # after URLError, which is an OSError too
+            raise _no_answer(url, e) from e
 
     # -- operations ---------------------------------------------------------
     def check(self, task: str, repo: str | None = None, limit: int | None = None) -> dict:
@@ -330,7 +339,7 @@ class Client:
         req = _req.Request(url)  # noqa: S310
         self._authorize(req)
         try:
-            with _req.urlopen(req, timeout=10) as resp:  # noqa: S310
+            with _req.urlopen(req, timeout=_HTTP_TIMEOUT_S) as resp:  # noqa: S310
                 return json.loads(resp.read())
         except HTTPError as e:
             if 400 <= e.code < 500:
@@ -341,6 +350,24 @@ class Client:
             raise OKLUnreachableError(f"OKL service error at {url}: {e.code} {e.reason}") from e
         except URLError as e:
             raise OKLUnreachableError(f"OKL service unreachable at {url}: {e}") from e
+        except OSError as e:   # after URLError, which is an OSError too
+            raise _no_answer(url, e) from e
+
+
+def _no_answer(url: str, e: OSError) -> OKLUnreachableError:
+    """The service took the connection and no answer came back: it stalled past the
+    timeout, or dropped the connection (reset, or closed before replying).
+
+    urllib wraps only a failure to connect in URLError; these arrive as a bare
+    TimeoutError, ConnectionResetError or RemoteDisconnected, and escaped `okl check` as a
+    traceback and exit 1 (okl review R10). They are an outage like any other, so the
+    callers that fail closed on OKLUnreachableError fail closed on them too.
+    """
+    if isinstance(e, TimeoutError):
+        cause = f"no response within {_HTTP_TIMEOUT_S} s"
+    else:
+        cause = f"the connection was dropped ({str(e) or type(e).__name__})"
+    return OKLUnreachableError(f"OKL service unreachable at {url}: {cause}")
 
 
 class OKLRejectedError(ValueError):
