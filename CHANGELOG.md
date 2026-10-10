@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.8.2
 
 - **A shared service that stalls, drops the connection or answers garbage now fails the
   briefing closed, in time.** The client translated a failure to connect, but not a
