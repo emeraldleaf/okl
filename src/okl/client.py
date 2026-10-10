@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 from urllib import request as _req
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 
 from . import core, drift
 from .store import Node, Store
@@ -199,11 +199,14 @@ class Client:
         except HTTPError as e:
             # The service answered — so this is NOT "unreachable". A 4xx is the caller's
             # error and must surface its detail (found by E2E: an unknown-tag 400 was
-            # reported to the agent as an outage).
-            try:
-                detail = json.loads(e.read()).get("detail", "")
-            except Exception:  # noqa: BLE001
-                detail = ""
+            # reported to the agent as an outage). An HTTPError owns the response, socket
+            # and all, so it is closed here: R1 made 400s and 404s routine, and the leak
+            # failed the 3.14 suite on ResourceWarning.
+            with e:
+                try:
+                    detail = json.loads(e.read()).get("detail", "")
+                except Exception:  # noqa: BLE001
+                    detail = ""
             if 400 <= e.code < 500:
                 raise OKLRejectedError(f"OKL service rejected the request ({e.code}): {detail or e.reason}",
                                        status=e.code) from e
@@ -258,8 +261,68 @@ class Client:
         if kwargs.get("repo") is None:
             kwargs["repo"] = self.repo
         if self.mode == "remote":
-            return self._post("/record", kwargs)["id"]
+            # None means "not given": the service has defaults for every optional field,
+            # and a null where it expects a boolean (replace) is a 422 (review of okl R1).
+            body = {k: v for k, v in kwargs.items() if v is not None}
+            if body.get("id") and not (body.get("replace") or body.get("keep_verification")):
+                self._require_refusing_service()
+            try:
+                return self._post("/record", body)["id"]
+            except OKLRejectedError as e:
+                # The same refusal as in local mode, so every caller can tell it apart
+                # from any other rejected write.
+                if e.status == 400 and "already exists" in str(e):
+                    raise core.LessonExistsError(str(e)) from e
+                raise
         return core.record(self._local_store(), **kwargs)
+
+    def _require_refusing_service(self) -> None:
+        """Refuse to record an id against a service that would silently overwrite it.
+
+        A service older than okl's refusal (R1) ignores `replace` and replaces the lesson,
+        proof and all, which is the defect R1 fixed. It also lacks GET /node, so asking for
+        any lesson tells the two apart: a 404 is the old service.
+        """
+        try:
+            self._get("/node/-")
+        except OKLRejectedError as e:
+            if e.status == 404:
+                raise OKLRejectedError(_TOO_OLD.format(what="refuses to overwrite an "
+                                                            "existing id"), status=404) from e
+            raise
+
+    def update(self, node_id: str, **fields: Any) -> dict:
+        """Change the given fields of a lesson, keep the rest and its proof, and return it.
+
+        Takes core.update's fields: None leaves one alone, "" clears an optional one. The
+        proof is cleared only when the governed files change. Raises ValueError for an
+        unknown id or a rejected value.
+        """
+        if self.mode == "remote":
+            try:
+                return self._post("/update", {"id": node_id, "repo": self.repo,
+                                              "fields": {k: v for k, v in fields.items()
+                                                         if v is not None}})
+            except OKLRejectedError as e:
+                if e.status == 404:
+                    raise OKLRejectedError(_TOO_OLD.format(what="has okl update"),
+                                           status=404) from e
+                raise
+        return core.update(self._local_store(), node_id, repo=self.repo, **fields)
+
+    def get(self, node_id: str) -> dict | None:
+        """One lesson by id, or None if there is none."""
+        if self.mode == "remote":
+            # A missing lesson is {"node": null}, never a 404: a service too old to have
+            # this route answers 404, and that must not read as "no such lesson".
+            try:
+                return self._get(f"/node/{quote(node_id, safe='')}")["node"]
+            except OKLRejectedError as e:
+                if e.status == 404:
+                    raise OKLRejectedError(_TOO_OLD.format(what="has okl show"),
+                                           status=404) from e
+                raise
+        return core.get(self._local_store(), node_id)
 
     def search(self, query: str, scope: str | None = None,
                node_types: list[str] | None = None, limit: int = 25) -> list[dict]:
@@ -345,6 +408,7 @@ class Client:
             with _req.urlopen(req, timeout=_HTTP_TIMEOUT_S) as resp:  # noqa: S310
                 return json.loads(resp.read())
         except HTTPError as e:
+            e.close()   # it owns the response and its socket; see _post
             if 400 <= e.code < 500:
                 raise OKLRejectedError(
                     f"OKL service rejected the request ({e.code} {e.reason}). "
@@ -355,6 +419,12 @@ class Client:
             raise OKLUnreachableError(f"OKL service unreachable at {url}: {e}") from e
         except (OSError, http.client.HTTPException) as e:   # after URLError, an OSError too
             raise _no_answer(url, e) from e
+
+
+# For a 404 from a route a service older than R1 lacks: say so, rather than leave the
+# person reading "404 Not Found" as a missing lesson or an outage.
+_TOO_OLD = ("the OKL service is older than this okl client and nothing was changed: it "
+            "predates the version that {what}. Upgrade the service to match.")
 
 
 def _no_answer(url: str, e: OSError | http.client.HTTPException) -> OKLNoAnswerError:

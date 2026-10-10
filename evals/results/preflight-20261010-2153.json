@@ -1,0 +1,67 @@
+{
+  "measured_at": "2026-10-10T21:53Z",
+  "okl_commit": "694cc78",
+  "uncommitted_changes_in_src": false,
+  "interests": null,
+  "tasks": [
+    {
+      "task": "idor_endpoint",
+      "rule": "seed:dotnet-defects:nc_idor",
+      "present": true,
+      "trimmed": 21
+    },
+    {
+      "task": "price_tamper",
+      "rule": "seed:dotnet-defects:nc_price_tamper",
+      "present": true,
+      "trimmed": 21
+    },
+    {
+      "task": "react_fetch",
+      "rule": "seed:react-defects:rx_useeffect_fetch",
+      "present": true,
+      "trimmed": 23
+    },
+    {
+      "task": "judge_summary",
+      "rule": "seed:rag-defects:qz_judge_crash",
+      "present": true,
+      "trimmed": 23
+    },
+    {
+      "task": "exit_code_trust",
+      "rule": "seed:geospatial-defects:d15",
+      "present": false,
+      "trimmed": 23
+    },
+    {
+      "task": "spa_tokens",
+      "rule": "seed:react-defects:rx_tokens_localstorage",
+      "present": true,
+      "trimmed": 22
+    },
+    {
+      "task": "rate_limiter",
+      "rule": "seed:dotnet-canon:r_rate_limiter_scaleout",
+      "present": true,
+      "trimmed": 21
+    },
+    {
+      "task": "ci_linter",
+      "rule": "seed:geospatial-enforcement-defects:r_pin_gating_tools",
+      "present": true,
+      "trimmed": 24
+    }
+  ],
+  "missing": [
+    {
+      "task": "exit_code_trust",
+      "rule": "seed:geospatial-defects:d15",
+      "why": "not in briefing (tags=geospatial,data-quality)"
+    }
+  ],
+  "accepted_gaps": {
+    "exit_code_trust": "rule ranks below the top-12 cutoff for this task's wording; needs limit>=40 to surface (REPORT.md \u00a74b correction)"
+  },
+  "verdict": "OK"
+}

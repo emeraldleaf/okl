@@ -112,6 +112,12 @@ okl doctor                  # flags other memory tools, double wiring, and where
   them and add one line to your `AGENTS.md`: *before each task call `okl_check`*. The hooks
   that do this automatically are Claude Code's; see
   [Getting started](docs/GETTING-STARTED.md#using-another-agent).
+- **When a lesson needs correcting,** take its `[id]` from the briefing and change only
+  what is wrong: `okl update <id> --fix "..."` (or the `okl_update` tool) keeps the rest,
+  including its proof, unless you change its governed `--files`: then it needs verifying
+  again, and `okl reverify` re-runs its stored check. `okl show <id>` prints the whole
+  lesson. Recording an existing id again is refused, because it used to replace the
+  lesson and wipe its proof.
 - **Proving a lesson is true** is a check you run, not a flag you set:
   `okl verify <id> --run "pytest -q tests/test_orders.py" --expect "passed"`.
 - **When code a lesson governs changes,** `okl drift` goes red until its check passes
@@ -340,6 +346,9 @@ judge are different models; method + raw receipts in [evals/REPORT.md](evals/REP
   Decision that won a slot was silently dropped; it now appears under its own heading.
   No eval task's briefing held one, so the eight measured briefings are byte-identical
   either way.
+- Every run above also predates the **`[id]`** each briefed lesson now carries. That one
+  is not byte-identical: the eight eval briefings are 5% larger, with every lesson's
+  content kept (REPORT §4j). Its effect on the result is unmeasured until §4j's run.
 
 What this does **not** show: the tasks were authored to invite defect classes the store
 encodes, so it measures what a briefing does when a directly relevant lesson exists —
@@ -402,7 +411,9 @@ Everything reduces to two actions:
 
 2. **`record` — write after you learn.** When you fix something or decide something,
    you record it as a note (optionally with its symptom/cause/fix and the files it
-   governs). From then on, every `check` whose task resembles it surfaces it.
+   governs). From then on, every `check` whose task resembles it surfaces it, with its
+   id, and `okl update <id>` refines it later without losing its proof (unless its
+   governed files change, which needs a new check).
 
 ### Scope — what stays local vs. what spreads
 
@@ -485,7 +496,7 @@ before you wire it into every prompt. Every number below was measured rather tha
 estimated, with one representative task ("add an endpoint that returns an order for the
 logged-in user"; tokens ≈ characters ÷ 4). The sizes come from a fresh store holding every
 bundled seed pack, 183 records (`python3 evals/briefing_size.py`, receipt
-[`evals/results/briefing-size-20261004-2244.json`](evals/results/briefing-size-20261004-2244.json)); the latency from the 161 seed records bundled before that.
+[`evals/results/briefing-size-20261010-2127.json`](evals/results/briefing-size-20261010-2127.json)); the latency from the 161 seed records bundled before that.
 Your store and your tasks will differ.
 
 **Per prompt, once the hook is installed:**
@@ -493,7 +504,7 @@ Your store and your tasks will differ.
 | | |
 |---|---|
 | Latency | **~0.1s** for the whole `okl check` process (0.07s median warm) — one local SQLite query, no network in local mode |
-| Context | **~1,620 tokens** at the default `--limit 12`, down to **~230** for only the action list at `--limit 3` |
+| Context | **~1,770 tokens** at the default `--limit 12`, down to **~260** for only the action list at `--limit 3` |
 
 **Per session:** the Stop hook interrupts once at the end to ask what was learned. It
 blocks the first stop only, and answering it is the whole write side of the loop. With
@@ -698,7 +709,7 @@ mode, good for trying it before you deploy anything.
 ```bash
 # 1. READ the relevant lessons before starting a task (the load-bearing move)
 okl check --task "add an endpoint that returns an order for the logged-in user"
-#   add --format actions --limit 3 for a ~230-token version (subagents, CI)
+#   add --format actions --limit 3 for a ~260-token version (subagents, CI)
 
 # 2. RECORD a lesson after you learn it, with an actionable symptom/cause/fix
 okl record --type Defect --scope org --tags "security" \
@@ -762,7 +773,7 @@ okl metric           # recurrence: defect classes that came back, split by wheth
 
 ## Subagents and small context budgets
 
-A full briefing costs roughly **1,620 tokens** on the measurement above — fine for a main session with a large
+A full briefing costs roughly **1,770 tokens** on the measurement above — fine for a main session with a large
 window, punishing for a subagent working in a few thousand. That asymmetry matters
 because subagents are exactly where org rules get lost: a focused worker handling one
 subtask has the least context and the most need for "here is the mistake this codebase
@@ -777,21 +788,21 @@ okl check --task "add an endpoint returning an order for the logged-in user" \
 
 ```
 OKL — 3 rule(s) apply before you start:
-- FIX: Missing ownership scope check is an IDOR (CWE-639) [when: an endpoint fetches an
-  entity by id with no owner/tenant predicate]
+- FIX: Missing ownership scope check is an IDOR (CWE-639) [seed:dotnet-defects:nc_idor] [when:
+  an endpoint fetches an entity by id with no owner/tenant predicate]
   -> add the caller's owner id to the WHERE clause; return 404 (not 403) on no match
 ...
 ```
 
 **Measured on every bundled seed pack (183 records), one representative task**
-([receipt](evals/results/briefing-size-20261004-2244.json)): ~230 tokens at `--limit 3`, ~380 at `--limit 5`, ~510 at
-`--limit 8` and ~810 at `--limit 12`, against ~1,620 for the full briefing. Cheap enough
+([receipt](evals/results/briefing-size-20261010-2127.json)): ~260 tokens at `--limit 3`, ~350 at `--limit 5`, ~590 at
+`--limit 8` and ~940 at `--limit 12`, against ~1,770 for the full briefing. Cheap enough
 to call per subtask.
 
 The same holds for a main session on a model with a small context window, where the
 briefing arrives with every prompt. Set `OKL_BRIEFING_COMPACT=1` and the prompt hook sends
 only the action list (`okl check --compact`); set `OKL_BRIEFING_LIMIT=5` and it draws on
-five records instead of twelve. Together that is ~380 tokens instead of ~1,620 on the
+five records instead of twelve. Together that is ~350 tokens instead of ~1,770 on the
 measurement above. Set them where the agent starts: hooks inherit its environment. A
 limit that is not a whole number above zero is ignored, and an okl too old for
 `--compact` briefs in full rather than blocking the prompt. Like `--format actions`, the
@@ -976,8 +987,9 @@ pip install "observed-knowledge-ledger[mcp]"
 okl mcp     # register in your coding agent's tool config
 ```
 
-Exposes three tools to a coding agent: `okl_check` (read lessons before a task),
-`okl_record`, `okl_search`. `okl_check` **reports an outage loudly** — if a configured
+Exposes five tools to a coding agent: `okl_check` (read lessons before a task),
+`okl_record` (a new lesson), `okl_update` (refine one by id, keeping its proof),
+`okl_get` (one lesson whole) and `okl_search`. `okl_check` **reports an outage loudly** — if a configured
 shared instance is unreachable it says so rather than returning a reassuring
 "nothing found," because those two look identical from the agent's side and only one
 is safe. Unlike the hook, a tool result cannot block the agent; it can only warn it.

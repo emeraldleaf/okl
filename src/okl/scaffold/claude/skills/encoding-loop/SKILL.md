@@ -34,12 +34,14 @@ okl verify <stable-key> --run "<a check that fails if the lesson is broken>" --e
   stamp the recorder awards itself is the step grading its own homework. `okl verify` runs the
   check and stores the command and its result as the evidence.
 
-- **`--id`** — a short stable key you choose, which makes the write idempotent: recording the
-  same lesson again replaces that row rather than adding a second one. Omit it and every record
-  is minted a fresh random id, which is how a store accumulates near-duplicates that `okl dedup`
-  reports but cannot remove, there being no delete subcommand. Where a repo keeps its lessons in
-  a seed file, use the id that file derives, `seed:<seed-file-stem>:<key>`, so a later
-  `okl seed` upserts the same row.
+- **`--id`** — a short stable key you choose for a NEW lesson. Omit it and every record is
+  minted a fresh random id, which is how a store accumulates near-duplicates that `okl dedup`
+  reports but cannot remove, there being no delete subcommand. To refine a lesson that already
+  exists (the briefing shows each lesson's `[id]`), run `okl update <id> --<field> "..."`: it
+  changes only the fields given and keeps the lesson's proof, unless `--files` changes.
+  Recording an existing id again is refused; `--replace` overwrites it, proof included. Where
+  a repo keeps its lessons in a seed file, use the id that file derives,
+  `seed:<seed-file-stem>:<key>`, so a later `okl seed` updates the same row.
 - **`--files`** — the code the lesson governs. With it, and once `okl verify` has passed,
   a change to that code marks the lesson STALE in the briefing and `okl drift` until the
   check passes again, and fails the drift gate (the pre-push hook, or CI) where one is

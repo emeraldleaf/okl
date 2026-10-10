@@ -10,6 +10,7 @@ Run: `okl serve` (or `uvicorn okl.service:app`).
 from __future__ import annotations
 
 import os
+import threading
 from typing import Any
 
 from . import core
@@ -26,7 +27,7 @@ def _version() -> str:
 
 try:
     from fastapi import FastAPI, Header, HTTPException
-    from pydantic import BaseModel
+    from pydantic import BaseModel, ConfigDict
 except ImportError as e:  # pragma: no cover
     raise RuntimeError("The service needs FastAPI: install 'observed-knowledge-ledger[service]'") from e
 
@@ -63,6 +64,8 @@ class RecordReq(BaseModel):
     verified: bool = False
     # okl seed re-importing a lesson the store holds: keep its verification (#110).
     keep_verification: bool = False
+    # An explicit overwrite of an existing id; without it, a re-record is refused (R1).
+    replace: bool = False
 
 
 class SearchReq(BaseModel):
@@ -82,6 +85,38 @@ class LinkReq(BaseModel):
     dst: str
 
 
+class UpdateFields(BaseModel):
+    """The fields POST /update may change (core.UPDATABLE_FIELDS), typed like /record.
+
+    Typed and closed: an untyped dict let `ttl_days="x"` reach the store, where it was
+    written and then crashed every read of the lesson (review of okl R1).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    type: str | None = None
+    title: str | None = None
+    scope: str | None = None
+    body: str | None = None
+    status: str | None = None
+    found_by: str | None = None
+    ttl_days: int | None = None
+    owner: str | None = None
+    files: str | None = None
+    symptom: str | None = None
+    fix: str | None = None
+    tags: str | None = None
+    applies_to: str | None = None
+
+
+class UpdateReq(BaseModel):
+    """Request body for POST /update: the fields to change on one lesson (core.update)."""
+
+    id: str
+    repo: str | None = None   # what scope "repo" becomes repo:<name> against
+    fields: UpdateFields
+
+
 class VerifyReq(BaseModel):
     """Request body for POST /verify."""
 
@@ -90,7 +125,7 @@ class VerifyReq(BaseModel):
     commit: str | None = None   # git HEAD the check passed at; drift diffs against it (#102)
 
 
-def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901
+def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901, PLR0915 - a declarative route table, see pyproject
     """Build the HTTP app over `store`, or over the store OKL_DATABASE_URL names.
 
     With neither, it uses ./okl.db in the current directory, so a deployment should
@@ -117,6 +152,13 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901
                   docs_url=None if private else "/docs",
                   redoc_url=None if private else "/redoc")
     _store = store or Store(os.environ.get("OKL_DATABASE_URL"))
+    # Writes read a lesson, change it and write it back (record's existence check, update,
+    # verify). The endpoints run on a thread pool, so two requests could interleave and
+    # one change would be lost without an error: measured at 60 in 150 rounds of two
+    # concurrent updates (review of okl R1). One lock per app serialises them. It does not
+    # span several worker processes; run one, as the Postgres backend's autocommit
+    # connection already assumes.
+    _write = threading.Lock()
 
     def _auth(authorization: str | None) -> None:
         if token and authorization != f"Bearer {token}":
@@ -142,7 +184,8 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901
     def record(req: RecordReq, authorization: str | None = Header(default=None)) -> dict[str, str]:
         _auth(authorization)
         try:
-            node_id = core.record(_store, **req.model_dump())
+            with _write:
+                node_id = core.record(_store, **req.model_dump())
         except ValueError as e:
             # Validation (unknown tag, bad scope) is the CALLER's error and must carry the
             # message (e.g. the tag vocabulary) — a 500 hides it and reads as an outage.
@@ -165,11 +208,31 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901
             raise HTTPException(status_code=400, detail=str(e)) from e
         return {"ok": True}
 
+    @app.post("/update")
+    def update(req: UpdateReq, authorization: str | None = Header(default=None)) -> dict[str, Any]:
+        _auth(authorization)
+        try:
+            with _write:
+                return core.update(_store, req.id, repo=req.repo,
+                                   **req.fields.model_dump(exclude_unset=True))
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e)) from e
+
+    # `:path`, so an id holding a "/" is found: without it the route never matched the
+    # decoded id, and `okl show auth/idor` worked locally and was a 404 here.
+    @app.get("/node/{node_id:path}")
+    def node(node_id: str, authorization: str | None = Header(default=None)) -> dict[str, Any]:
+        _auth(authorization)
+        # A missing lesson is an explicit null, so a 404 keeps meaning "no such route"
+        # (an older service) and the client never mistakes that for a missing lesson.
+        return {"node": core.get(_store, node_id)}
+
     @app.post("/verify")
     def verify(req: VerifyReq, authorization: str | None = Header(default=None)) -> dict[str, Any]:
         _auth(authorization)
         try:
-            return core.verify(_store, req.id, req.evidence, req.commit)
+            with _write:
+                return core.verify(_store, req.id, req.evidence, req.commit)
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e)) from e
 

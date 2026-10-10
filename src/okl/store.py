@@ -88,6 +88,13 @@ class Node:
     validate it; Store.add_node does, before writing.
     """
 
+    # The text fields. A shared service's /update took any JSON, so a list, or a string
+    # where a number belongs, reached the database: `ttl_days="x"` was stored, then crashed
+    # every read of that lesson (review of okl R1). Checked in validate, every write path is.
+    _TEXT_FIELDS = ("type", "title", "scope", "repo", "body", "status", "found_by", "owner",
+                    "files", "symptom", "fix", "tags", "applies_to", "verified_by",
+                    "verified_commit")
+
     type: str
     title: str
     scope: str = "repo:unknown"          # 'org' or 'repo:<name>'
@@ -111,6 +118,13 @@ class Node:
     def validate(self, known_tags: set[str] | None = None) -> None:
         """Reject a malformed node. `known_tags` widens the tag vocabulary beyond the
         package floor; Store.add_node supplies the store's declared additions."""
+        for name in self._TEXT_FIELDS:
+            value = getattr(self, name)
+            if value is not None and not isinstance(value, str):
+                raise ValueError(f"{name} must be text, got {type(value).__name__}")
+        if self.ttl_days is not None and (isinstance(self.ttl_days, bool)
+                                          or not isinstance(self.ttl_days, int)):
+            raise ValueError(f"ttl_days must be a whole number of days, got {self.ttl_days!r}")
         if self.type not in NODE_TYPES:
             raise ValueError(f"unknown node type {self.type!r}; valid: {sorted(NODE_TYPES)}")
         if self.status not in VALID_STATUS:
@@ -217,10 +231,20 @@ class Store:
         # never require the tag it is declaring.
         extra = set() if node.type == "Vocabulary" else self.declared_tags()
         node.validate(extra)
-        if node.type == "Vocabulary":
-            self._declared = None   # a new declaration invalidates the cache
+        if node.type == "Vocabulary" or self._was_vocabulary(node.id):
+            # A declaration written, or one retyped away by an update or a --replace,
+            # changes what this store declares.
+            self._declared = None
         self._impl.upsert_node(node)
         return node.id
+
+    def _was_vocabulary(self, node_id: str) -> bool:
+        """Whether the stored row this write replaces is a Vocabulary declaration. Only
+        asked while the declared-tag cache is filled, since only then can it go stale."""
+        if self._declared is None:
+            return False
+        old = self._impl.get_node(node_id)
+        return old is not None and old.type == "Vocabulary"
 
     def add_edge(self, edge: Edge) -> None:
         """Validate and write an edge; writing the same edge twice stores it once.

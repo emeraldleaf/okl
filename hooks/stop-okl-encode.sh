@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:1ef6f8c0d55405007581653de8f00c5d9c73ec650fe4e4091793d5b73e86f20a
+# okl-fingerprint: sha256:fd4550f40e21ba8048a5a24f000b9fc143190b7989b5598c3d672be102ff6985
 # Stop hook — the write-side mechanical catch for the encoding loop.
 #
 # The read side (okl check) is enforced by the UserPromptSubmit hook; nothing enforced the WRITE
@@ -157,12 +157,15 @@ silently reversed? If yes, record it now. Three independent axes, each chosen de
     fails the build, rather than a sterner lesson.
   - Needed in every session regardless of task? Only then CLAUDE.md / AGENTS.md.
 
-  --id is what makes the write idempotent, and leaving it off is the common mistake.
-  Without it every record is minted a fresh random id, so the same lesson recorded in two
-  sessions becomes two rows, which `okl dedup` will report but cannot remove: there is no
-  delete subcommand. Choose a short stable key and reuse it. Where a repo keeps its
-  lessons in a seed file, use the id that file derives, "seed:<seed-file-stem>:<key>", so
-  a later `okl seed` upserts that same row rather than adding a second one beside it.
+  Give a NEW lesson an --id, a short stable key; leaving it off is the common mistake.
+  Without it the lesson gets a random id, so the same lesson recorded in two sessions
+  becomes two rows, which `okl dedup` will report but cannot remove: there is no delete
+  subcommand. To REFINE a lesson that exists, including one the briefing showed you by
+  its [id], run `okl update <id> --fix "..."`: it changes only the fields you give and
+  keeps the lesson's proof, unless --files changes (then `okl reverify` re-runs its check).
+  Recording an existing id again is refused. Where a repo keeps
+  its lessons in a seed file, use the id that file derives, "seed:<seed-file-stem>:<key>",
+  so a later `okl seed` updates that same row rather than adding a second one beside it.
 
 If the session genuinely learned nothing durable, state that explicitly and finish.
 MSG

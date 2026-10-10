@@ -18,8 +18,11 @@ without saying why.
 """
 from __future__ import annotations
 
+import argparse
 import json
+import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
@@ -42,6 +45,10 @@ ACCEPTED_GAPS = {
 
 def main() -> int:
     """Check each eval task's briefing holds the record it tests; return 1 if one is missing and not an accepted gap."""
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--receipt", action="store_true",
+                    help="also write evals/results/preflight-<stamp>.json for REPORT to cite")
+    args = ap.parse_args()
     tasks = [json.loads(line) for line in (REPO / "evals" / "tasks.jsonl").read_text().splitlines()
              if line.strip()]
     client = Client()
@@ -56,6 +63,7 @@ def main() -> int:
 
     print(f"pre-flight: {len(tasks)} task(s), interests={interests} (unfiltered by design)\n")
     missing = []
+    rows = []
     for t in tasks:
         node = store.get_node(t["defect_node"])
         if node is None:
@@ -70,6 +78,7 @@ def main() -> int:
         mark = "ok " if present else "MISSING"
         trimmed = res.get("dropped_by_cutoff", 0)
         print(f"  [{mark}] {t['id']:17} tags={node.tags or '-':28} trimmed={trimmed}")
+        rows.append({"task": t["id"], "rule": node.id, "present": present, "trimmed": trimmed})
         if not present:
             missing.append((t["id"], node.id, f"not in briefing (tags={node.tags})"))
 
@@ -78,6 +87,13 @@ def main() -> int:
     for tid in (m[0] for m in missing):
         if tid in ACCEPTED_GAPS:
             print(f"  accepted gap: {tid} — {ACCEPTED_GAPS[tid]}")
+    if args.receipt:
+        print("receipt:", _write_receipt("preflight", {
+            "interests": interests, "tasks": rows,
+            "missing": [{"task": m[0], "rule": m[1], "why": m[2]} for m in missing],
+            "accepted_gaps": {k: v for k, v in ACCEPTED_GAPS.items()
+                              if k in {m[0] for m in missing}},
+            "verdict": "FAILED" if unexpected else "OK"}).relative_to(REPO))
     if unexpected:
         print(f"\nPRE-FLIGHT FAILED: {len(unexpected)} task(s) would measure the absence of "
               "their rule:")
@@ -89,6 +105,23 @@ def main() -> int:
     print(f"PRE-FLIGHT OK — {len(tasks) - len(missing)}/{len(tasks)} tasks receive the rule "
           f"they test; {len(missing)} accepted gap(s) listed above.")
     return 0
+
+
+def _write_receipt(name: str, body: dict) -> Path:
+    """Write evals/results/<name>-<stamp>.json, stamped with the commit it measured.
+
+    Opt-in (--receipt): a REPORT figure needs a committed receipt, but a test runs this
+    script too, and a default write would drop a file into the repo on every run.
+    """
+    def git(*argv: str) -> str:
+        return subprocess.run(["git", "-C", str(REPO), *argv], capture_output=True,
+                              text=True, check=False).stdout.strip()
+    now = datetime.now(timezone.utc)
+    receipt = {"measured_at": now.strftime("%Y-%m-%dT%H:%MZ"), "okl_commit": git("rev-parse", "--short", "HEAD"),
+               "uncommitted_changes_in_src": bool(git("status", "--porcelain", "--", "src")), **body}
+    path = REPO / "evals" / "results" / f"{name}-{now.strftime('%Y%m%d-%H%M')}.json"
+    path.write_text(json.dumps(receipt, indent=2) + "\n")
+    return path
 
 
 if __name__ == "__main__":

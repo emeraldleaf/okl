@@ -100,8 +100,9 @@ def cmd_verify(args: argparse.Namespace) -> int:
     return 0
 
 
-def _refresh_snapshot(node: dict) -> None:
-    """After a passing verify: create or refresh the committed drift snapshot CI reads."""
+def _refresh_snapshot(node: dict, why: str = "this verification") -> None:
+    """After a passing verify, or an update that changed a lesson's governed files: create
+    or refresh the committed drift snapshot CI reads. `why` ends the commit reminder."""
     # Keep CI's view in step. A snapshot that exists is one CI reads, and re-verifying
     # without re-exporting leaves CI red for a rule that is green here -- the safe
     # direction, but a step everyone would forget. The FIRST snapshot is created here too,
@@ -121,7 +122,7 @@ def _refresh_snapshot(node: dict) -> None:
         try:
             existed = snap.exists()
             _write_snapshot(Client(), snap)
-            print(f"  {'refreshed' if existed else 'created'} {snap.name} — commit it so CI sees this verification")
+            print(f"  {'refreshed' if existed else 'created'} {snap.name} — commit it so CI sees {why}")
         except OKLUnreachableError as e:
             print(f"  ! {snap.name} NOT refreshed: {e}", file=sys.stderr)
 

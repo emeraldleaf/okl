@@ -113,7 +113,7 @@ automatic parts do: the per-prompt briefing and the end-of-session question are 
 hooks. With any other agent that supports MCP (Cursor, Codex, Copilot, Gemini CLI…):
 
 1. Register okl's MCP server in that agent's config — the command is `okl mcp` (stdio).
-   It exposes `okl_check`, `okl_record` and `okl_search`.
+   It exposes `okl_check`, `okl_record`, `okl_update`, `okl_get` and `okl_search`.
 2. Add one line to the agent's instruction file (`AGENTS.md`, `.cursorrules`…): *Before
    each task, call `okl_check` with the task description and follow what it returns. When
    we learn something worth keeping, record it with `okl_record`.*
@@ -168,7 +168,7 @@ Whoever writes it, you or the agent, a lesson is one record. Check the draft for
 | Field | What it is | Example |
 |---|---|---|
 | type | **Decision** (made on purpose), **Rule** (a convention), **Defect** (a bug fixed) | Rule |
-| id | a short stable key; recording the same id again updates the lesson instead of duplicating it | `discount-server-side` |
+| id | a short stable key for a new lesson; the briefing shows it in brackets, and `okl update <id>` refines the lesson later | `discount-server-side` |
 | symptom → fix | what an agent would see or do that should trigger it, and what to do instead — this is the line the briefing leads with | "a request body carries a discount amount" → "accept only the code; compute totals on the server" |
 | files | the code it governs; lets the drift gate (the pre-push hook, or CI) notice when that code changes | `app/checkout.py` |
 | scope | `repo` stays here; `org` reaches every repo sharing your store — only for lessons true anywhere | repo |
@@ -208,8 +208,11 @@ okl record --type Rule --scope repo --id discount-server-side \
 ```
 
 The same record from a Decision needs only `--type Decision`, `--title` and a `--body`
-starting `why:`. There is no delete command, on purpose; re-record the id to correct a
-lesson.
+starting `why:`. To correct a lesson later, change only what is wrong:
+`okl update discount-server-side --fix "..."` keeps everything else, including its proof
+(changing `--files` clears the proof until the check passes again: `okl reverify`), and
+`okl show discount-server-side` prints the whole lesson. Recording an existing id again
+is refused (`--replace` overwrites it entirely). There is no delete command, on purpose.
 
 ### Store records vs. CLAUDE.md / AGENTS.md
 
@@ -237,7 +240,7 @@ Underneath, that is one command with three parts:
 
 | Part | What it is | Where it comes from |
 |---|---|---|
-| the lesson's id | `discount-server-side` | the `--id` it was recorded with; `okl drift` and the briefing show it in brackets |
+| the lesson's id | `discount-server-side` | the `--id` it was recorded with; the briefing and `okl drift` show it in brackets |
 | `--run` | a command that fails if the lesson is broken, usually a test | a test that already exists, or one written for the lesson |
 | `--expect` | a word that appears in the output when it passes | `passed` for pytest |
 

@@ -1,10 +1,12 @@
-"""Reading and writing lessons: `okl check`, `record`, `link`, `search`, `bootstrap`, `dedup`."""
+"""Reading and writing lessons: `okl check`, `record`, `update`, `show`, `link`, `search`,
+`bootstrap`, `dedup`."""
 from __future__ import annotations
 
 import argparse
 import json
 import os
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +14,7 @@ from .. import core
 from ..client import Client, OKLNoAnswerError, OKLUnreachableError
 from .common import _print_json
 from .packs import _empty_store_guidance
+from .verification import _refresh_snapshot
 
 
 def _briefing_text(result: dict[str, Any], args: argparse.Namespace) -> str:
@@ -106,13 +109,17 @@ def cmd_record(args: argparse.Namespace) -> int:
               "tests that touch its files, or ask your agent to prove it.\n  (Importing historical, "
               "already-verified records? Use okl seed.)", file=sys.stderr)
         return 2
+    if getattr(args, "replace", False) and not args.id:
+        print("okl record --replace needs --id: it overwrites the lesson with that id. Without "
+              "one there is nothing to replace.", file=sys.stderr)
+        return 2
     client = Client()
     kwargs = dict(type=args.type, title=args.title, scope=args.scope,
                   applies_to=getattr(args, "applies_to", None),
                   body=args.body, status=args.status, found_by=args.found_by,
                   ttl_days=args.ttl_days, owner=args.owner,
                   files=args.files, symptom=args.symptom, fix=args.fix, tags=args.tags,
-                  id=args.id)
+                  id=args.id, replace=getattr(args, "replace", False) or None)
     if args.repo:
         kwargs["repo"] = args.repo
     try:
@@ -126,7 +133,7 @@ def cmd_record(args: argparse.Namespace) -> int:
         # The service took the request before the answer was lost, so the lesson may be
         # stored. "NOT RECORDED" sent people to record it again, and without --id the
         # second write is a second lesson.
-        again = ("recording it again with the same --id updates it rather than adding a copy"
+        again = (f"check with `okl show {args.id}` before recording it again"
                  if args.id else
                  "check with `okl search` before recording it again, or it may be stored twice")
         print(f"MAYBE RECORDED — the service may have stored this lesson; {again}.\n{e}",
@@ -137,6 +144,99 @@ def cmd_record(args: argparse.Namespace) -> int:
         return 2
     print(node_id)
     return 0
+
+
+def cmd_update(args: argparse.Namespace) -> int:
+    """Change the given fields of one lesson, keeping the rest, its proof and its dates.
+
+    Exit 2, with the reason and nothing on stdout, for an unknown id, nothing to change,
+    an empty required field or a rejected value; the lesson is left as it was.
+    """
+    fields = {k: getattr(args, k, None) for k in core.UPDATABLE_FIELDS}
+    client = Client()
+    try:
+        before = client.get(args.node_id)   # nothing is sent yet: any failure is NOT UPDATED
+        node = _send_update(client, args.node_id, fields)
+    except (OKLUnreachableError, ValueError) as e:
+        print(f"NOT UPDATED — {e}", file=sys.stderr)
+        return 2
+    if node is None:
+        return 2
+    print(f"✓ updated {node['id']} — {node['title']}")
+    if node.get("verified_at") is not None:
+        print("  proof kept")
+    elif before and before.get("verified_at") is not None:
+        rerun = ("re-run its stored check: okl reverify" if node.get("verified_by")
+                 else f"prove it again: okl verify {node['id']} --run \"<check>\" "
+                      "--expect \"<signal>\"")
+        print(f"  proof cleared: its governed files changed, and a check of other files proves "
+              f"nothing about these.\n  To {rerun}")
+    if before and (before.get("files") or None) != (node.get("files") or None):
+        # The committed snapshot CI's drift gate reads still showed the old files as proven:
+        # green in CI while the store said stale (review of okl R1).
+        _refresh_snapshot(node, why="its governed files changed")
+    if node["id"].startswith("seed:"):
+        # The pack owns this lesson's text: the next `okl seed` of it puts the pack's back.
+        print(f"  note: {node['id']} comes from a seed pack, and the next `okl seed` of that "
+              "pack restores the pack's text. To keep this change, edit the pack too.",
+              file=sys.stderr)
+    return 0
+
+
+def _send_update(client: Client, node_id: str, fields: dict[str, Any]) -> dict | None:
+    """Send the update; on a lost answer say MAYBE UPDATED and return None. Other errors
+    propagate: the request was refused or never sent, so NOT UPDATED is the truth."""
+    try:
+        return client.update(node_id, **fields)
+    except OKLNoAnswerError as e:
+        print(f"MAYBE UPDATED — the service may have applied this; running it again is "
+              f"safe.\n{e}", file=sys.stderr)
+        return None
+
+
+def cmd_show(args: argparse.Namespace) -> int:
+    """Print one lesson by id, with its proof. Exit 2 when there is no such lesson."""
+    try:
+        node = Client().get(args.node_id)
+    except (OKLUnreachableError, ValueError) as e:
+        print(f"COULD NOT SHOW — {e}", file=sys.stderr)
+        return 2
+    if node is None:
+        print(f"no lesson with id {args.node_id!r}", file=sys.stderr)
+        return 2
+    if args.format == "json":
+        _print_json(node)
+    else:
+        print(_render_lesson(node))
+    return 0
+
+
+def _render_lesson(n: dict[str, Any]) -> str:
+    """One lesson as `okl show` prints it: the fields it has, then its proof."""
+    def day(ms: int | None) -> str:
+        if not ms:
+            return "?"
+        return datetime.fromtimestamp(ms / 1000, tz=timezone.utc).strftime("%Y-%m-%d %H:%MZ")
+
+    out = [f"[{n['id']}] {n['type']} · {n['scope']} · created {day(n.get('created_at'))}",
+           f"  {n['title']}"]
+    labels = (("symptom", "symptom"), ("body", "cause" if n.get("symptom") else "body"),
+              ("fix", "fix"), ("tags", "tags"), ("applies_to", "applies to"),
+              ("files", "governs"), ("status", "status"), ("found_by", "found by"),
+              ("owner", "owner"), ("ttl_days", "ttl days"))
+    out += [f"  {label}: {n[key]}" for key, label in labels if n.get(key) not in (None, "")]
+    if n.get("verified_at"):
+        on = f" on commit {n['verified_commit'][:12]}" if n.get("verified_commit") else ""
+        evidence = n.get("verified_by") or "(no evidence recorded)"
+        stale = " (STALE — past its ttl; re-verify)" if n.get("stale") else ""
+        out.append(f"  verified {day(n['verified_at'])}{on}: {evidence}{stale}")
+    elif n.get("verified_by"):
+        out.append(f"  not proven for its current files; its stored check: {n['verified_by']}"
+                   " (okl reverify re-runs it)")
+    else:
+        out.append(f"  not proven yet: okl verify {n['id']} --run \"<check>\" --expect \"<signal>\"")
+    out.append("  (whether its governed code changed since: okl drift)")
+    return "\n".join(out)
 
 
 def cmd_link(args: argparse.Namespace) -> int:

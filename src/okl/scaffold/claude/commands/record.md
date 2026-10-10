@@ -21,8 +21,9 @@ Pick the type from what it is:
 
 Then fill in, from evidence in this session only:
 
-- **id** — a short kebab-case key (`discount-single-use`). Reusing an id updates that
-  lesson; search first (`okl_search`) and reuse the id if this refines an existing one.
+- **id** — a short kebab-case key (`discount-single-use`) for a new lesson. If this refines
+  an existing one (search first with `okl_search`, or take the `[id]` the briefing showed),
+  do not record it again: update that lesson instead (step 2).
 - **scope** — `repo` unless the lesson is true in every codebase that shares the store.
   If unsure, `repo`.
 - **files** — the files the lesson governs, if it governs specific code. This is what
@@ -37,7 +38,10 @@ Do not invent a cause, a number or a file you have not seen in this session.
 Show the draft as a short block (type, id, scope, title, symptom → fix, files) and ask
 the person to confirm or correct it. On a yes, record it with the `okl_record` MCP tool.
 If that tool is not available, run the equivalent `okl record --type … --id … --scope …`
-command instead.
+command instead. To refine an existing lesson, use `okl_update` (or
+`okl update <id> --<field> …`) with only the fields that change: it keeps the lesson's
+proof unless its governed `files` change (then `okl reverify` re-runs its check), and
+recording its id again is refused.
 
 ## 3. Decide how hard it must be enforced
 

@@ -2,6 +2,37 @@
 
 ## Unreleased
 
+- **Refining a lesson no longer wipes its proof (okl review R1).** Recording a lesson again
+  with its `--id`, which the Stop hook, `/record` and the encoding-loop skill all taught as
+  the way to refine one, replaced the whole row: its verification, its governed files and
+  its creation date were lost, and it quietly left drift.
+  - `okl update <id> --<field> ...` (and the `okl_update` MCP tool) changes only the fields
+    given and keeps the rest, the proof and the first creation date included. Changing
+    `--files` clears the stamp, because a check of other files proves nothing about these;
+    it keeps the stored check, so `okl reverify` re-runs it, and refreshes `okl-drift.json`
+    as `okl verify` does. An empty value clears an optional field, `--ttl-days ""` too.
+    Updating a `seed:` lesson warns that the next `okl seed` restores the pack's text.
+  - `okl record --id <existing>` is refused (exit 2), naming `okl update`; `--replace`
+    (which needs `--id`) overwrites the lesson deliberately and keeps only its first
+    creation date. The MCP `okl_record` tool does not offer `replace`: an agent is pointed
+    at `okl_update`. `okl seed` still updates its own lessons in place, and now keeps their
+    first creation date too.
+  - `okl show <id>` (and `okl_get`) prints one lesson whole, with its proof.
+  - Every briefed lesson carries its `[id]`, so an agent can act on a lesson it was just
+    shown. That adds about 150 tokens to a full briefing on the bundled packs (~1,620 to
+    ~1,770; receipts in `evals/results/`), and REPORT §4j registers it as a change of
+    treatment for the A/B. The layout pre-flight confirms no content was lost, and its
+    summary line no longer prints a growth as "-5% smaller".
+  - A shared service gets `POST /update` (a closed, typed body), `GET /node/{id}` (any id,
+    `/` included; an unknown one is `{"node": null}`, so a 404 means an older service) and
+    `replace` on `/record`. Its read-modify-write endpoints are serialised, since two
+    concurrent updates lost a change without an error. A client recording an id against a
+    service older than this refuses, instead of letting it overwrite: upgrade the service
+    with the client. Every write now checks that text fields are text and `ttl_days` a
+    whole number, so a wrong type is refused before it is stored. The client also closes
+    every HTTP error response it catches: each holds its socket, and R1 made 400s and 404s
+    routine, so the leak failed the Python 3.14 suite.
+  - The Stop hook, `/record`, the skill, the README and the guide now teach `okl update`.
 - **The MCP server reports okl's version (#159).** Its `initialize` reply carried an empty
   `serverInfo.version` on mcp 2.x and the SDK's own version on mcp 1.x, because okl passed
   none. It now passes the installed okl version on both, and a test reads it from a real
