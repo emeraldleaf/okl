@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:8e7ffd607bb6e4597f400b01e18f7bdc68d58d40295b9dbfb6ae37b4dd8a6953
+# okl-fingerprint: sha256:6a8f8ab1a4faba7fe1b2cf47d89195d30dfd4451e56f453f1fbdf66432951ccf
 # UserPromptSubmit hook — inject the org's relevant lessons into the model's context
 # BEFORE it starts the task. This event is the only correct one for delivery: its stdout
 # (exit 0) is added to Claude's context, and its stdin carries the actual prompt text, so
@@ -175,7 +175,7 @@ for attempt in 1 2 3; do
   fi
   [ "$rc" -eq 0 ] && break
   case "$rc" in 126|127) break ;; esac
-  [ $((SECONDS - started)) -ge 2 ] && break
+  [ $((SECONDS - started)) -ge 3 ] && break
   [ "$attempt" -lt 3 ] && sleep 0.5
 done
 if [ "$rc" -eq 0 ]; then

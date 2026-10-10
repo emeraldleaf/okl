@@ -261,12 +261,13 @@ def test_the_prompt_hook_does_not_retry_a_try_that_failed_slowly(tmp_path):
     31.5 s, past Claude Code's 30 s limit, and the prompt went through unbriefed."""
     import json
 
-    # ARRANGE — an okl that fails after two seconds, as one stalled on the service would,
-    # and logs each call so the count is the number of tries
+    # ARRANGE — an okl that fails after three seconds, as one stalled on the service would,
+    # and logs each call so the count is the number of tries. Three whole seconds always
+    # reads as slow to the hook's SECONDS check, wherever in a second the try starts.
     (tmp_path / ".okl").mkdir(); (tmp_path / ".okl" / "config.json").write_text('{"repo": "t"}')
     stub, calls = tmp_path / "okl", tmp_path / "calls"
     calls.write_text("")
-    stub.write_text(f"#!/bin/sh\necho call >> '{calls}'\nsleep 2\n"
+    stub.write_text(f"#!/bin/sh\necho call >> '{calls}'\nsleep 3\n"
                     "echo 'OKL UNREACHABLE: no full reply came within 5 s' >&2; exit 2\n")
     stub.chmod(0o755)
     env = {"PATH": os.environ["PATH"], "HOME": str(tmp_path), "TMPDIR": str(tmp_path),
