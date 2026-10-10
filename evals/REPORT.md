@@ -851,13 +851,20 @@ Receipt: `evals/results/ab-20261010-2314.json`, `okl_commit` `f2bdf85` on its fa
 1 failure (a generator timeout on `spa_tokens` at baseline, 2%): usable. Same generator,
 judge, sample count and interests as §4i (`ab-20260926-0528.json`).
 
+**One briefed sample did not implement the task.** `idor_endpoint` sample 1 returned a plan,
+not code; the judge's reason says so ("No actual code was submitted—only a plan"), yet the
+harness scored it clean. It shows nothing either way, so it is counted here as unevaluable,
+as a failure would be: 2 failures of 48 (4%), still usable, and the briefed arm 0/23. The
+receipt is left as written; the harness fix is #164. A scan of every committed receipt's
+judge reasons found no other plan-only sample.
+
 | | baseline | briefed |
 |---|---|---|
 | §4i (each record once) | 10/23 — 43% | 2/24 — 8% |
-| §4j (each lesson with its id) | 4/23 — 17% | 0/24 — **0%** |
+| §4j (each lesson with its id) | 4/23 — 17% | 0/23 — **0%** |
 
-**The prediction held and the falsifier did not trigger.** No briefed run reproduced its
-defect, and no task that read briefed 0/3 in §4i reproduced. Per the pre-registration, the
+**The prediction held and the falsifier did not trigger.** No briefed run that implemented
+the task reproduced its defect, and no task that read briefed 0/3 in §4i reproduced. Per the pre-registration, the
 ids are safe on this task set; nothing here shows they help.
 
 **The baseline moved more than the floor.** The unbriefed arm fell 26 points, from 43% to
@@ -867,7 +874,7 @@ environment. `price_tamper`, `judge_summary` and `spa_tokens`, which reproduced 
 §4i (2/3, 1/3 and 3/3), did not here (0/3, 0/3 and 0/2). The receipt names the model alias
 `sonnet`, not the model it resolved to, so this cannot be pinned to a model release;
 recording the resolved model is review item R12. Until it is, read this run within itself,
-briefed 0/24 against unbriefed 4/23 on the same day, and do not compare its baseline with
+briefed 0/23 against unbriefed 4/23 on the same day, and do not compare its baseline with
 earlier ones. With fewer baseline failures there is less for the briefing to prevent: on
 the two tasks the baseline failed at least once (`exit_code_trust`, `ci_linter`), the
 briefed arm reproduced 0 of 6.

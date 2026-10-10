@@ -21,8 +21,8 @@
   - Every briefed lesson carries its `[id]`, so an agent can act on a lesson it was just
     shown. That adds about 150 tokens to a full briefing on the bundled packs (~1,620 to
     ~1,770; receipts in `evals/results/`), and REPORT §4j registers it as a change of
-    treatment for the A/B. Its run (2026-10-10, `ab-20261010-2314.json`) read 4/23 unbriefed against 0/24
-    briefed: the ids are safe on the task set, and the unbriefed arm's own 26-point fall
+    treatment for the A/B. Its run (2026-10-10, `ab-20261010-2314.json`) read 4/23 unbriefed against 0/23
+    briefed (one briefed sample returned a plan, not code, and is not counted; #164): the ids are safe on the task set, and the unbriefed arm's own 26-point fall
     from §4i starts a new series. The layout pre-flight confirms no content was lost, and its
     summary line no longer prints a growth as "-5% smaller".
   - A shared service gets `POST /update` (a closed, typed body), `GET /node/{id}` (any id,
