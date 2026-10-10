@@ -37,9 +37,12 @@ verdicts from the receipts show what that looks like:
 > pinning, allowing new ruff releases to retro-fail unchanged branches."
 
 **So "baseline 33%" means:** unaided, one in three pieces of freshly generated code
-contained a bug this org has already paid to learn about — a price-tampering hole, an
-IDOR, tokens in localStorage, an unpinned CI gate. These are the kinds of defects that
-ship, not lint noise. **"Briefed 4%" means** the same model, same tasks, with the
+contained a bug this org has already paid to learn about — an unpinned CI gate, tokens
+in localStorage, a price-tampering hole, a script that trusts exit 0, an eval summary
+that showed its error count but not its failure rate. These are the kinds of defects that
+ship, not lint noise. (The IDOR, React-fetch and rate-limiter tasks reproduced in none of
+that run's baseline samples, nor at baseline in any run since; corrected 2026-10-10, when
+an earlier version of this sentence named the IDOR.) **"Briefed 4%" means** the same model, same tasks, with the
 relevant lessons injected first, produced such a bug once in twenty-four attempts.
 
 **The conditional subset is the fairer denominator.** Several bait tasks never fool a
@@ -241,7 +244,8 @@ deterministic question directly: *is each task's governing rule still in the bri
 `--limit 40` to surface. It has been absent from that task's briefing since the cutoff
 landed.
 
-The task still reads baseline 3/3, briefed 0/3 across runs, so the briefing prevented the
+The task still reads briefed 0/3 in every run (baseline 1/3 to 3/3; corrected 2026-10-10,
+this sentence said baseline 3/3), so the briefing prevented the
 defect — but something OTHER than the designated rule did that work. The row was never
 evidence for the rule it is filed under.
 
@@ -399,6 +403,9 @@ is 35-45 points and both broken tasks read briefed 0/3 anyway — but the per-ta
 meant less than they appeared to. This establishes the first reference point on a harness
 whose retrieval has been verified.
 
+*Note, 2026-10-10:* the "35-45 points" above was wrong when written. The sonnet effects
+before this run were 29, 33, 46 and 32 points.
+
 ### Result (2026-09-03)
 
 Receipt: `evals/results/ab-20260903-0157.json`. Generator and judge as configured in §1.
@@ -409,8 +416,8 @@ Receipt: `evals/results/ab-20260903-0157.json`. Generator and judge as configure
 | briefed | 2/24 | 8% |
 
 One recorded failure: `rate_limiter` baseline sample 0 timed out at 300s, so that arm
-carries 23 samples rather than 24 (§"Failure accounting"). Failure rate 2%, below the 10%
-usability bar.
+carries 23 samples rather than 24 (§"Failure accounting"). Failure rate 2%, below the 20%
+usability bar (corrected 2026-10-10; it said 10%).
 
 **Falsifier: not triggered.** The briefed arm did not worsen — 8% sits mid-band against the
 historical 4%, 12%, 8%, 4%, 13%. No task that previously read briefed 0/3 now reproduces:
@@ -550,6 +557,11 @@ measurable on that task. Under the haiku judge it has read 0/3, 2/3, 2/3, 1/3, 2
 the step to 3/3 is not cleanly separable from the judge change and must not be reported as
 a trend.
 
+*Note, 2026-10-10:* the second 2/3 in that list is the haiku-generated run, which sonnet
+judged. And "at or near its baseline" below does not hold for every run: 0003 read 2/3 →
+0/3, and 1238 and 1323 read 3/3 → 1/3. On the documented instrument (sonnet generator,
+haiku judge) the pooled figure is 22/23 → 11/23: reduced, not prevented.
+
 What is *not* judge-dependent: this is not a retrieval failure. Pre-flight confirms the
 rule (`rx_tokens_localstorage`) reaches the briefing, and that record is deliberately unset
 in the backfill, so nothing in this change touched it. Every reading of this task across
@@ -577,7 +589,8 @@ out.
 **`spa_tokens` was the judge, not a trend.** It read briefed 3/3 under opus and 1/2 here,
 against prior haiku readings of 2/3, 2/3, 1/3, 2/2, 2/3. §4f's refusal to call it a trend
 was correct. It remains the standing counter-example — briefed at or near baseline in every
-run — but it is not deteriorating.
+run — but it is not deteriorating. (*Note, 2026-10-10:* not in every run; see the note
+under "spa_tokens: briefed 3/3, equal to baseline".)
 
 **Harness health, flagged.** 5 failures (10%): three generator timeouts at 420s and two
 exit-1s. Below the 20% usability bar, but the highest failure count in the series, and the
@@ -785,16 +798,24 @@ all this can say: the cut is safe on this task set; nothing here shows it helps.
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
    task the sonnet baseline failed was fully prevented except one residual
-   (judge_summary 1/3).
+   (judge_summary 1/3). *Note, 2026-10-10:* "fully prevented" held in no 3-sample run
+   after that one. spa_tokens is reduced, not prevented: 28/29 → 16/29 (97% → 55%) across
+   the 11 receipts that include it, and 22/23 → 11/23 on the documented instrument
+   (sonnet generator, haiku judge).
 2. **Cross-model headline: briefed haiku (12%) beat unbriefed sonnet (33%)** on the
    identical task set — a briefed budget model reproduced org-known defect classes at
-   roughly a third the rate of an unbriefed frontier model.
+   roughly a third the rate of an unbriefed frontier model. One haiku run, never
+   repeated, and judged by sonnet where the sonnet runs were judged by haiku: a
+   direction, not a ratio.
 3. **Context bought more than capability.** Upgrading the model (haiku→sonnet baseline)
    removed 5 points of defect reproduction; adding the briefing removed 26 (haiku) and
    29 (sonnet).
 4. **Capability still matters at execution time.** Briefed sonnet (4%) beat briefed
    haiku (12%): haiku read the token-storage lesson and still put tokens in web storage
    2/3 times — knowing the rule and executing the alternative are different skills.
+   *Note, 2026-10-10:* findings 3 and 4 compare tiers through the one haiku run, which
+   sonnet judged. Their 5- and 8-point gaps are inside the §2b noise floor, so only the
+   within-tier briefing effects (26 and 29 points) are measured.
 5. **ci_linter is the cross-repo thesis in one row:** 3/3 reproduced unaided in BOTH
    tiers, 0/3 briefed in both — prevented by a lesson recorded in a different repo
    weeks earlier.

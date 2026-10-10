@@ -1,5 +1,5 @@
 {
- "_comment": "Seed for the OKL — React/frontend-SPA lessons ported from the author's own frontend canon (frontend/CLAUDE.md, frozen 2026-06-12); external guides are cited in found_by as provenance, not reproduced. React is backend-agnostic, so these are org-scoped: they propagate to any repo with a React UI. This closes the coverage gap the A/B experiment measured — react_fetch reproduced the useEffect-fetching defect 3/3 in BOTH arms because no React node existed in the store to inject.",
+ "_comment": "Seed for the OKL — React/frontend-SPA lessons ported from the author's own frontend canon (frontend/CLAUDE.md, frozen 2026-06-12); external guides are cited in found_by as provenance, not reproduced. React is backend-agnostic, so these are org-scoped: they propagate to any repo with a React UI. This closes a React coverage gap seen in an earlier, unreceipted experiment (2026-07-17, evals/REPORT.md §7). In the committed harness, react_fetch has not reproduced in either arm (0/31 baseline, 0/31 briefed).",
  "nodes": [
   {
    "key": "rx_useeffect_fetch",

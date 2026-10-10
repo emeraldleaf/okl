@@ -50,7 +50,7 @@ Eight tasks, each written to invite a specific defect class the store already co
 
 With none of the rules in context, the agent reproduced a known defect class in 33 percent of runs. With them, 4 percent. That is one run. Across four runs the unbriefed arm, which never changed, read anywhere from 33 to 50 percent, so movement inside that spread is noise; the briefed arm stayed between 4 and 13, and it is the gap between them that holds. On the tasks the baseline actually failed, runs with the rules in context reproduced the defect in 1 of 15. One task, an unpinned linter version in CI, failed three times out of three without the rules and never with them.
 
-The result I did not expect: a budget model with the rules in context made roughly a third the known mistakes of a frontier model without them on identical tasks. Context bought more than the model upgrade did, which is the more useful number if you are routing work between cheap and expensive models. The two arms in that comparison were graded by different judge models, so read it as a direction rather than a ratio.
+The result I did not expect: a budget model with the rules in context made roughly a third the known mistakes of a frontier model without them on identical tasks. Context appeared to buy more than the model upgrade did, which would be the more useful number if you are routing work between cheap and expensive models. But the two arms in that comparison were graded by different judge models, the budget-model run has not been repeated, and the 5-point gap from upgrading the model sits inside the noise floor, so read it as a direction rather than a measurement.
 
 ## The limits, stated
 

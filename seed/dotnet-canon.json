@@ -453,7 +453,7 @@
    "found_by": "docs/decisions/2026-07-17-sixth-surface-okl.md",
    "tags": "method,retrieval-design",
    "title": "The 6th surface was built as the OKL — a cross-repo, fail-closed knowledge layer, not in-repo microagents",
-   "body": "'Two readers, one canon' was really N readers, N canons: every repo re-learned the same lessons. The tracked-but-unbuilt 6th surface (trigger-loaded microagents) became a standalone org knowledge layer instead, because microagents in a repo's config are still per-repo and optional context was never the gap — enforcement + cross-repo reach was. Measured: held-fixed A/B with blind judge≠generator showed defect reproduction 50%→6% on covered tasks (75%→8% on baseline-failing tasks); both misses were coverage gaps, so the check doubles as a coverage detector. The five in-repo surfaces are unchanged; the OKL holds the cross-repo subset."
+   "body": "'Two readers, one canon' was really N readers, N canons: every repo re-learned the same lessons. The tracked-but-unbuilt 6th surface (trigger-loaded microagents) became a standalone org knowledge layer instead, because microagents in a repo's config are still per-repo and optional context was never the gap — enforcement + cross-repo reach was. An earlier, unreceipted A/B (2026-07-17, evals/REPORT.md §7) motivated it, and its two misses were coverage gaps, so the check doubles as a coverage detector. The committed A/B series reads 33–50% unbriefed against 4–13% briefed (evals/REPORT.md). The five in-repo surfaces are unchanged; the OKL holds the cross-repo subset."
   },
   {
    "key": "dec_asb_removed",
