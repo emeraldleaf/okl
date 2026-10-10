@@ -324,9 +324,13 @@ judge are different models; method + raw receipts in [evals/REPORT.md](evals/REP
   the retrieval pipeline changed, read **35–50% → 4–8%** (REPORT §4b–§4i, excluding the
   reverted §4d and the opus-judged §4f; the latest, §4i, 43% → 8%). The unbriefed arm
   alone has moved 17 points between runs with nothing changed, so that is the noise floor
-  (§2b). Every "reproduced" is a defect class this store had already paid to learn — an
-  IDOR, a price-tamper fallback, tokens in web storage, an unpinned CI gate — not lint
-  noise.
+  (§2b). Every "reproduced" is a defect class this store had already paid to learn — a
+  price-tamper fallback, tokens in web storage, an unpinned CI gate, a script that trusts
+  exit 0 without checking its output, an eval summary that does not put its failure
+  rate first — not lint noise. Three tasks (an IDOR endpoint, a React fetch, a rate limiter)
+  have never reproduced without the briefing in any committed receipt (27–33 unbriefed
+  samples each), so they cannot show a reduction; the rate limiter has reproduced only
+  with the briefing, 2 of 30 times (REPORT §4d, §5 finding 6).
 - The result worth remembering, from those first runs: **briefed haiku (12%) beat
   unbriefed sonnet (33%)**. It suggests the briefing is a cost lever, not just a quality
   lever — it can hold a cheaper model above a frontier model's unbriefed floor on the

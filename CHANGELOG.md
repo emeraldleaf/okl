@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **Public claims about the A/B now match the receipts.** README, REPORT.md and a shipped
+  seed comment named an IDOR, and once a React fetch, among the defects the A/B
+  reproduced; those tasks never reproduced at baseline in any committed receipt. The
+  defects that did are listed by name, the rate limiter's briefed-only reproductions are
+  stated, spa_tokens is described as reduced (97% → 55%) rather than prevented, and the
+  cross-model findings carry their single-run, cross-judge caveats. A shipped seed
+  Decision quoted the quarantined 2026-07-17 figures as "Measured"; it now cites the
+  committed series. Three tests hold these to the receipts.
 - **`evals/layout_preflight.py` no longer counts its briefings as exposure.** It fetched one
   briefing per eval task through the normal client without `OKL_BRIEFING_LOG=0`, so each run
   wrote 8 rows of false exposure into the store `okl metric` reads. It now switches the log
@@ -337,9 +345,13 @@
   set (IDOR, client-supplied price, unbounded search) and `run_demo.sh`, which plays each
   task in a control copy and a briefed copy with a real coding agent and keeps the diffs,
   final messages and the exact briefing. n=1 per arm, so illustration, not measurement:
-  `price_tamper` and `rate_limiter` discriminate on both stacks (the control ships the
+  `price_tamper` and `rate_limiter` discriminate on both stacks (the control writes the
   defect, the briefed arm applies the recorded fix in the framework's own idiom);
   `idor_endpoint` does not, because the examples' own comments telegraph ownership.
+  *Corrected 2026-10-10:* those first runs leaked each arm's role through its folder name.
+  In the clean 2026-09-29 re-runs only the .NET `price_tamper` discriminates;
+  `rate_limiter` is a ranking miss on both stacks and the Python `price_tamper` an
+  application miss (examples/*/README.md).
   The .NET one is the stack most of the bundled lessons came from.
 - **Coexistence receipt** (#60, `evals/results/e2e-20260927-coexist/`): okl's project
   hooks beside another memory plugin loaded for the session. okl's loop worked; the other
