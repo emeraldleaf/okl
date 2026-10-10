@@ -560,7 +560,8 @@ a trend.
 *Note, 2026-10-10:* the second 2/3 in that list is the haiku-generated run, which sonnet
 judged. And "at or near its baseline" below does not hold for every run: 0003 read 2/3 →
 0/3, and 1238 and 1323 read 3/3 → 1/3. On the documented instrument (sonnet generator,
-haiku judge) the pooled figure is 22/23 → 11/23: reduced, not prevented.
+haiku judge) the pooled figure is 22/25 → 11/26 across its ten receipts, §4j's included:
+reduced, not prevented.
 
 What is *not* judge-dependent: this is not a retrieval failure. Pre-flight confirms the
 rule (`rx_tokens_localstorage`) reaches the briefing, and that record is deliberately unset
@@ -836,14 +837,40 @@ any task that read briefed 0/3 in §4i reproduces. Either means the ids crowd ou
 briefing is for, and they move to a footer or come out.
 
 **What this cannot settle.** Whether the ids help: their purpose is the write side (an agent
-refining a lesson instead of re-recording it), which this eval does not measure. No live run
-has been made yet; until one is, this section claims nothing about the effect.
+refining a lesson instead of re-recording it), which this eval does not measure.
 
 **Shipping before the run, stated rather than implied.** §2b's rule for shipping a
 retrieval change asks for the run first. This change does not touch retrieval: the
-pre-flight shows every task gets the same records with the same content. It is merged
-before its run, and the run is due before the release that carries it. Until then the
-README's measured effect says every quoted run predates the ids.
+pre-flight shows every task gets the same records with the same content. It was merged
+before its run, and the run was due before the release that carries it. It ran the same
+day, below.
+
+### Result (2026-10-10)
+
+Receipt: `evals/results/ab-20261010-2314.json`, `okl_commit` `f2bdf85` on its face. 48 runs,
+1 failure (a generator timeout on `spa_tokens` at baseline, 2%): usable. Same generator,
+judge, sample count and interests as §4i (`ab-20260926-0528.json`).
+
+| | baseline | briefed |
+|---|---|---|
+| §4i (each record once) | 10/23 — 43% | 2/24 — 8% |
+| §4j (each lesson with its id) | 4/23 — 17% | 0/24 — **0%** |
+
+**The prediction held and the falsifier did not trigger.** No briefed run reproduced its
+defect, and no task that read briefed 0/3 in §4i reproduced. Per the pre-registration, the
+ids are safe on this task set; nothing here shows they help.
+
+**The baseline moved more than the floor.** The unbriefed arm fell 26 points, from 43% to
+17%, past the 17-point noise floor that arm itself set (§2b). It carries no briefing, so
+neither the ids nor the store can reach it: the change is in the generator or its
+environment. `price_tamper`, `judge_summary` and `spa_tokens`, which reproduced unbriefed in
+§4i (2/3, 1/3 and 3/3), did not here (0/3, 0/3 and 0/2). The receipt names the model alias
+`sonnet`, not the model it resolved to, so this cannot be pinned to a model release;
+recording the resolved model is review item R12. Until it is, read this run within itself,
+briefed 0/24 against unbriefed 4/23 on the same day, and do not compare its baseline with
+earlier ones. With fewer baseline failures there is less for the briefing to prevent: on
+the two tasks the baseline failed at least once (`exit_code_trust`, `ci_linter`), the
+briefed arm reproduced 0 of 6.
 
 
 ## 5. Findings
@@ -851,9 +878,9 @@ README's measured effect says every quoted run predates the ids.
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
    task the sonnet baseline failed was fully prevented except one residual
    (judge_summary 1/3). *Note, 2026-10-10:* "fully prevented" held in no 3-sample run
-   after that one. spa_tokens is reduced, not prevented: 28/29 → 16/29 (97% → 55%) across
-   the 11 receipts that include it, and 22/23 → 11/23 on the documented instrument
-   (sonnet generator, haiku judge).
+   after that one. spa_tokens is reduced, not prevented: 28/31 → 16/32 (90% → 50%) across
+   the 12 receipts that include it, and 22/25 → 11/26 on the documented instrument
+   (sonnet generator, haiku judge). The 12 include §4j's run, where it read 0/2 → 0/3.
 2. **Cross-model headline: briefed haiku (12%) beat unbriefed sonnet (33%)** on the
    identical task set — a briefed budget model reproduced org-known defect classes at
    roughly a third the rate of an unbriefed frontier model. One haiku run, never
