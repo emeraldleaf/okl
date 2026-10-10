@@ -386,6 +386,7 @@ def test_layout_preflight_does_not_count_its_briefings_as_exposure(tmp_path):
     briefings inside one second, which inflated `okl metric` until they were deleted by hand.
     """
     import sqlite3
+    from contextlib import closing
     script = Path(__file__).resolve().parents[1] / "evals" / "layout_preflight.py"
     tasks = (Path(__file__).resolve().parents[1] / "evals" / "tasks.jsonl").read_text().splitlines()
     db = tmp_path / "store.db"
@@ -402,8 +403,9 @@ def test_layout_preflight_does_not_count_its_briefings_as_exposure(tmp_path):
     # ASSERT (1) — it ran and briefed every task, so (2) is not passing by doing nothing.
     assert r.returncode == 0 and "LAYOUT PRE-FLIGHT OK" in r.stdout, r.stdout + r.stderr
     assert sum("  lost " in ln for ln in r.stdout.splitlines()) == len(tasks), r.stdout
-    # ASSERT (2) — and logged none of those briefings as exposure.
-    with sqlite3.connect(db) as con:
+    # ASSERT (2) — and logged none of those briefings as exposure. closing(), because
+    # sqlite3's own `with` only commits: Python 3.13+ warns on the unclosed connection.
+    with closing(sqlite3.connect(db)) as con:
         assert con.execute("select count(*) from briefing").fetchone()[0] == 0
 
 
