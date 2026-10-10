@@ -67,6 +67,9 @@ def main() -> int:
     # One retrieval per task, through the same client the harness's `okl check` uses (it
     # may be a remote service, not this machine's store), rendered by both renderers. The
     # old renderer ignores the fields the new one added, so only the layout differs.
+    # OKL_BRIEFING_LOG=0, as the harness sets it: these briefings reach no agent, and
+    # logging them wrote 8 rows of false exposure into the real store (2026-10-10).
+    os.environ["OKL_BRIEFING_LOG"] = "0"
     client = Client()
     client.interests = [i for i in args.interests.split(",") if i]
     total_old = total_new = 0
