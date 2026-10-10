@@ -326,8 +326,8 @@ judge are different models; method + raw receipts in [evals/REPORT.md](evals/REP
   alone has moved 17 points between runs with nothing changed, so that is the noise floor
   (§2b). Every "reproduced" is a defect class this store had already paid to learn — a
   price-tamper fallback, tokens in web storage, an unpinned CI gate, a script that trusts
-  exit 0 without checking its output, an eval summary that does not lead with its failure
-  count — not lint noise. Three tasks (an IDOR endpoint, a React fetch, a rate limiter)
+  exit 0 without checking its output, an eval summary that does not put its failure
+  rate first — not lint noise. Three tasks (an IDOR endpoint, a React fetch, a rate limiter)
   have never reproduced without the briefing in any committed receipt (27–33 unbriefed
   samples each), so they cannot show a reduction; the rate limiter has reproduced only
   with the briefing, 2 of 30 times (REPORT §4d, §5 finding 6).
