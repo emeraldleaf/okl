@@ -22,8 +22,9 @@ if TYPE_CHECKING:
     from ..store import Node
 
 
-def _run_check(args: argparse.Namespace) -> str | None:
-    """Run `--run` and return its output if it passed, or None after saying why it did not.
+def _run_check(args: argparse.Namespace) -> tuple[str | None, str]:
+    """Run `--run`; return its output if it passed (None after saying why it did not), and
+    a short outcome for the check log: "exit 0", "exit 1", "timed out after 120s", ...
 
     Passing means exit 0 and, when `--expect` is given, that text in the output: exit 0
     alone is a step grading itself (the exit-0-zero-files lesson).
@@ -37,18 +38,55 @@ def _run_check(args: argparse.Namespace) -> str | None:
         # later lesson unchecked (CodeRabbit on #79). A timeout is a failed check.
         print(f"✗ check TIMED OUT after {args.timeout}s — NOT stamping verification.",
               file=sys.stderr)
-        return None
+        return None, f"timed out after {args.timeout}s"
     output = (r.stdout or "") + (r.stderr or "")
     tail = "\n".join(output.strip().splitlines()[-5:])
     if r.returncode != 0:
         print(f"✗ check FAILED (exit {r.returncode}) — NOT stamping verification.\n{tail}",
               file=sys.stderr)
-        return None
+        return None, f"exit {r.returncode}"
     if args.expect and args.expect not in output:
         print(f"✗ check exited 0 but expected signal {args.expect!r} NOT in output — NOT stamping.\n{tail}",
               file=sys.stderr)
+        return None, "exit 0, expected signal missing"
+    return output, "exit 0"
+
+
+def _log_check(args: argparse.Namespace, passed: bool, outcome: str, commit: str | None) -> None:
+    """Keep this run in the lesson's check log (okl review R3). The log records the check;
+    it is never part of it, so a run that cannot be logged warns and changes no verdict."""
+    try:
+        Client().log_check(args.node_id, passed=passed, command=args.run, outcome=outcome,
+                           expect=args.expect or None, commit=commit)
+    except OKLNoAnswerError as e:
+        print(f"  ! this check's result may not have been logged: {e}", file=sys.stderr)
+    # The log is advisory, so nothing it raises may reach the verdict. A full disk, a locked
+    # or read-only store raise sqlite3 or psycopg errors, neither a ValueError nor an
+    # outage: they escaped as a traceback, turned a stamped pass into exit 1, and stopped
+    # reverify at that lesson (review of #170).
+    except Exception as e:  # noqa: BLE001 - see above
+        print(f"  ! this check's result was not logged: {e}", file=sys.stderr)
+
+
+def _clean_commit(root: Path, commit: str | None) -> str | None:
+    """`commit` if the working tree matches it, else None. A check run on uncommitted edits
+    ran no commit, and logging it against HEAD would credit HEAD with what the edits did.
+    Untracked files count: a check can read a new test file HEAD does not have (CodeRabbit
+    on #170). Ignored files do not, or every build directory would hide the commit, and
+    neither do okl's own: verify rewrites the snapshot after each stamp, so counting it
+    would take the commit from every run after the first in a reverify."""
+    import subprocess
+
+    from .. import drift
+    if commit is None:
         return None
-    return output
+    try:
+        r = subprocess.run(["git", "-C", str(root), "status", "--porcelain", "--", ".",
+                            f":(exclude){drift.SNAPSHOT_FILE}", ":(exclude).okl"],
+                           capture_output=True, text=True, timeout=15)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return commit if r.returncode == 0 and not r.stdout.strip() else None
 
 
 def cmd_verify(args: argparse.Namespace) -> int:
@@ -65,14 +103,19 @@ def cmd_verify(args: argparse.Namespace) -> int:
         return 2
     if not args.run:
         return _suggest_check(args.node_id)
-    if _run_check(args) is None:
-        return 1
-    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%MZ")
-    # The commit the check passed at: drift diffs the governed files there against HEAD
+    output, outcome = _run_check(args)
+    # The commit the check ran at: drift diffs the governed files there against HEAD
     # instead of comparing clocks (#102). It goes into the evidence before the stamp, which
     # binds it in the committed snapshot and keeps older okl versions able to read it.
     root = _snapshot_path().parent
     commit = _head_commit(root)
+    if output is None:
+        _log_check(args, False, outcome, _clean_commit(root, commit))
+        return 1
+    # Logged before the stamp is sent: the check passed whatever happens to the stamp, and
+    # a stamp that fails must not take the record of the run with it (CodeRabbit on #170).
+    _log_check(args, True, outcome, _clean_commit(root, commit))
+    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%MZ")
     evidence = (f"`{args.run}` exit 0" + (f", matched {args.expect!r}" if args.expect else "")
                 + (f" on commit {commit[:12]}" if commit else "") + f" @ {stamp}")
     try:

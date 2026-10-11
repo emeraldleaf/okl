@@ -128,6 +128,19 @@ class RetireReq(BaseModel):
     obsolete: bool = False
 
 
+class CheckRunReq(BaseModel):
+    """Request body for POST /check-run (core.log_check)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    passed: bool
+    command: str
+    outcome: str
+    expect: str | None = None
+    commit: str | None = None
+
+
 class VerifyReq(BaseModel):
     """Request body for POST /verify."""
 
@@ -246,6 +259,17 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901, PLR0915 - 
                 return core.retire(_store, req.id, req.reason, by=req.by, obsolete=req.obsolete)
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e)) from e
+
+    @app.post("/check-run")
+    def check_run(req: CheckRunReq, authorization: str | None = Header(default=None)) -> dict[str, Any]:
+        _auth(authorization)
+        try:
+            with _write:
+                core.log_check(_store, req.id, passed=req.passed, command=req.command,
+                               outcome=req.outcome, expect=req.expect, commit=req.commit)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e)) from e
+        return {"ok": True}
 
     @app.post("/verify")
     def verify(req: VerifyReq, authorization: str | None = Header(default=None)) -> dict[str, Any]:
