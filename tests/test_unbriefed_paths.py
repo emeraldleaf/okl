@@ -239,3 +239,57 @@ def test_without_offline_an_unreachable_check_still_blocks(repo, tmp_path):
     r = _prompt(repo)
 
     assert r.returncode == 2 and "OKL CHECK DID NOT RUN" in r.stderr, (r.returncode, r.stderr)
+
+
+# --- a prompt with no text (an image or a file alone) ------------------------------------
+
+def _logging_okl(tmp_path: Path) -> tuple[Path, Path]:
+    """An okl on PATH that records every call, so a test can see whether check ran."""
+    log = tmp_path / "okl-calls.log"
+    okl = _stub(tmp_path / "bin" / "okl", f'echo "$*" >> "{log}"; echo "BRIEFED $1"')
+    return okl, log
+
+
+def _send(repo: Path, okl: Path, payload: str, **env: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(["bash", str(HOOK)], cwd=repo, text=True, capture_output=True, input=payload,
+                          env={"PATH": f"{okl.parent}:{BARE}", "HOME": str(repo.parent), **env})
+
+
+@pytest.mark.parametrize("payload", [
+    {"prompt": ""},
+    {"prompt": "   \n "},
+    {"hook_event_name": "UserPromptSubmit", "session_id": "s"},   # the key left out
+])
+def test_a_prompt_with_no_text_briefs_nothing_and_says_so(repo, tmp_path, payload):
+    """An image-only prompt was briefed on the last commit's subject: twelve lessons about
+    unrelated work. It names no task, so nothing is briefed, and okl is not asked: an okl
+    before 0.8.6 answers an empty task with every lesson it has."""
+    okl, log = _logging_okl(tmp_path)
+
+    r = _send(repo, okl, json.dumps(payload))
+
+    assert r.returncode == 0, r.stderr
+    out = _hook_json(r)
+    assert "nothing briefed" in out["hookSpecificOutput"]["additionalContext"]
+    assert "nothing to brief on" in out["systemMessage"]
+    assert "check" not in (log.read_text() if log.exists() else ""), log.read_text()
+
+
+def test_okl_task_still_overrides_a_prompt_with_no_text(repo, tmp_path):
+    """OKL_TASK is the operator's explicit choice, so it is briefed even with no prompt text."""
+    okl, log = _logging_okl(tmp_path)
+
+    r = _send(repo, okl, json.dumps({"prompt": ""}), OKL_TASK="add a refund endpoint")
+
+    assert r.returncode == 0 and "BRIEFED check" in r.stdout, (r.stdout, r.stderr)
+    assert "add a refund endpoint" in log.read_text()
+
+
+def test_a_run_with_no_prompt_event_keeps_the_last_resort_task(repo, tmp_path):
+    """Run by hand with nothing on stdin, the hook still briefs on a fallback task."""
+    okl, log = _logging_okl(tmp_path)
+
+    r = _send(repo, okl, "")
+
+    assert r.returncode == 0 and "BRIEFED check" in r.stdout, (r.stdout, r.stderr)
+    assert "general work" in log.read_text()
