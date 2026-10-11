@@ -16,6 +16,12 @@
   It also reports which lessons take the most slots. REPORT §4l pre-registers the A/B run
   this retrieval change needs before it ships.
 
+- **The A/B judge reads the whole submission (#182).** It read only the first 8,000
+  characters, so a long submission reached it cut off mid-line: §4l lost a 15,585-character
+  sample the judge called no code. It now reads up to 40,000 characters, a longer submission
+  is unevaluable rather than judged on a cut copy, and each receipt records the window.
+  REPORT §4m pre-registers the change of instrument.
+
 ## 0.8.5
 
 - **The Stop question names the lessons the session touched (okl review R4, first slice).**
