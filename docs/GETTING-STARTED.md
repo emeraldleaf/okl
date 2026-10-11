@@ -212,7 +212,8 @@ The same record from a Decision needs only `--type Decision`, `--title` and a `-
 starting `why:`. To correct a lesson later, change only what is wrong:
 `okl update discount-server-side --fix "..."` keeps everything else, including its proof
 (changing `--files` clears the proof until the check passes again: `okl reverify`), and
-`okl show discount-server-side` prints the whole lesson. Recording an existing id again
+`okl show discount-server-side` prints the whole lesson, with how often its check has
+passed and failed (every `okl verify` run is kept). Recording an existing id again
 is refused (`--replace` overwrites it entirely). There is no delete command, on purpose:
 a lesson that turns out wrong or replaced is retired with a reason, and kept
 (`okl retire discount-server-side --reason "..." [--by <new-id>]`).

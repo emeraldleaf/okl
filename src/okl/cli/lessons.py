@@ -261,6 +261,13 @@ def _render_lesson(n: dict[str, Any]) -> str:
     for r in n.get("retirements") or []:
         by = f" by [{r['by']}]" if r.get("by") else ""
         out.append(f"  retired {day(r['at'])} as {r['kind']}{by}: {r['reason']}")
+    counts = n.get("check_counts") or {}
+    if counts.get("passed") or counts.get("failed"):
+        line = f"  checks: {counts.get('passed', 0)} passed, {counts.get('failed', 0)} failed"
+        last = n.get("last_failed_check")
+        if last:
+            line += f"; last failed {day(last['at'])} ({last['outcome']}): `{last['command']}`"
+        out.append(line)
     out.append("  (whether its governed code changed since: okl drift)")
     return "\n".join(out)
 
