@@ -471,6 +471,9 @@ def get(store: Store, node_id: str) -> dict[str, Any] | None:
     d["checks"] = [asdict(r) for r in runs[-CHECKS_SHOWN:]]
     d["check_counts"] = {"passed": sum(r.passed for r in runs),
                          "failed": sum(not r.passed for r in runs)}
+    # Separately: the latest runs can all be passes, and the last failure is the catch.
+    failed = [r for r in runs if not r.passed]
+    d["last_failed_check"] = asdict(failed[-1]) if failed else None
     return d
 
 
@@ -490,8 +493,10 @@ def log_check(store: Store, node_id: str, *, passed: bool, command: str, outcome
         raise ValueError(f"commit must be a git object name (7-64 hex digits), got {commit!r}")
     if store.get_node(node_id) is None:
         raise ValueError(f"no node with id {node_id!r}")
-    store.log_check(node_id, bool(passed), command.strip(), outcome.strip() or "unknown",
-                    expect=expect, commit=commit)
+    # The command as it ran, unstripped, so it matches the one in the lesson's evidence;
+    # an empty expected signal is no signal.
+    store.log_check(node_id, bool(passed), command, outcome.strip() or "unknown",
+                    expect=expect or None, commit=commit)
 
 
 _RETIRED_AS = {"wrong": "retracted", "obsolete": "obsolete", "superseded": "superseded"}

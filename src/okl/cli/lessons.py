@@ -264,9 +264,8 @@ def _render_lesson(n: dict[str, Any]) -> str:
     counts = n.get("check_counts") or {}
     if counts.get("passed") or counts.get("failed"):
         line = f"  checks: {counts.get('passed', 0)} passed, {counts.get('failed', 0)} failed"
-        failed = [c for c in n.get("checks") or [] if not c["passed"]]
-        if failed:
-            last = failed[-1]
+        last = n.get("last_failed_check")
+        if last:
             line += f"; last failed {day(last['at'])} ({last['outcome']}): `{last['command']}`"
         out.append(line)
     out.append("  (whether its governed code changed since: okl drift)")

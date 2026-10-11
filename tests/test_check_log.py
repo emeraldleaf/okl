@@ -90,9 +90,34 @@ def test_reverify_keeps_the_run_of_a_stored_check_that_now_fails(repo):
     git("commit", "-q", "-am", "break it")
     rc = main(["reverify", "--yes"])
 
-    # ASSERT — reverify reports the failure, and the log keeps both runs, oldest first
+    # ASSERT — reverify reports the failure, and the log keeps both runs, oldest first,
+    # each against the commit it ran at
     assert rc == 1
     assert [(r.passed, r.outcome) for r in _checks()] == [(True, "exit 0"), (False, "exit 1")]
+    heads = [subprocess.run(["git", "rev-parse", ref], cwd=repo, capture_output=True,
+                            text=True).stdout.strip() for ref in ("HEAD~1", "HEAD")]
+    assert [r.commit for r in _checks()] == heads
+
+    # ACT / ASSERT (2) — a run on uncommitted edits ran no commit, so it names none
+    (repo / "state.txt").write_text("ok\n")
+    main(["verify", "les", "--run", "grep -qx ok state.txt"])
+    assert _checks()[-1].passed and _checks()[-1].commit is None
+
+
+def test_show_names_the_latest_failure_even_after_many_passes(repo, capsys):
+    """The ten runs get lists can all be passes; the last failure is still the one that
+    matters, and the latest of several (review of #170)."""
+    main(["verify", "les", "--run", "exit 5"])
+    main(["verify", "les", "--run", "exit 6"])
+    for _ in range(core.CHECKS_SHOWN + 1):
+        main(["verify", "les", "--run", "true"])
+    capsys.readouterr()
+
+    main(["show", "les"])
+    shown = capsys.readouterr().out
+
+    assert "checks: 11 passed, 2 failed; last failed" in shown and "(exit 6)" in shown, shown
+    assert Client().get("les")["last_failed_check"]["outcome"] == "exit 6"
 
 
 def test_show_and_get_report_the_runs(repo, capsys):
@@ -116,11 +141,11 @@ def test_get_lists_only_the_latest_runs_but_counts_them_all(tmp_path):
     s = Store(f"sqlite:///{tmp_path / 'okl.db'}")
     core.record(s, id="x", type="Rule", title="x", scope="org")
     for i in range(13):
-        core.log_check(s, "x", passed=i % 2 == 0, command="t", outcome=f"exit {i % 2}")
+        core.log_check(s, "x", passed=i % 2 == 0, command=f"run {i}", outcome=f"exit {i % 2}")
 
     got = core.get(s, "x")
 
-    assert len(got["checks"]) == core.CHECKS_SHOWN
+    assert [c["command"] for c in got["checks"]] == [f"run {i}" for i in range(3, 13)]
     assert got["check_counts"] == {"passed": 7, "failed": 6}
     s.close()
 
@@ -140,6 +165,24 @@ def test_log_check_refuses_what_it_cannot_record_truthfully(tmp_path, kwargs, me
     with pytest.raises(ValueError, match=message):
         core.log_check(s, node_id, **args)
     s.close()
+
+
+@pytest.mark.parametrize("error", ["database or disk is full", "attempt to write a readonly database"])
+def test_a_store_that_cannot_take_the_run_does_not_change_the_verdict(repo, monkeypatch, capsys, error):
+    """A sqlite3 error is neither a ValueError nor an outage: it escaped as a traceback,
+    turned a stamped pass into exit 1, and would stop reverify at that lesson (#170)."""
+    import sqlite3
+
+    from okl import store as store_mod
+
+    def fail(self, run):
+        raise sqlite3.OperationalError(error)
+    monkeypatch.setattr(store_mod._SQLiteBackend, "log_check", fail)
+
+    assert main(["verify", "les", "--run", "true"]) == 0
+    assert main(["verify", "les", "--run", "false"]) == 1
+    err = capsys.readouterr().err
+    assert err.count("not logged") == 2 and error in err, err
 
 
 def test_a_check_that_cannot_be_logged_does_not_change_the_verdict(repo, monkeypatch, capsys):

@@ -419,6 +419,11 @@ class _Backend(Protocol):
       log_retirement(r) / retirements(node_id)
         - Append-only, oldest first, filtered exactly by node id.
 
+      log_check(run) / checks(node_id)
+        - Append-only, oldest first, filtered exactly by node id; `passed` reads back as
+          a bool on every backend (SQLite stores 0/1). A rewrite of the lesson's row
+          leaves its runs alone.
+
       log_briefing(b) / briefings(repo)
         - Append-only: logging the same briefing twice stores two rows.
         - briefings returns every row oldest first, `repo` filtering exactly, with each
@@ -525,6 +530,8 @@ class _SQLiteBackend(_Backend):
         c.execute("""CREATE TABLE IF NOT EXISTS check_run(
             at INTEGER NOT NULL, node_id TEXT NOT NULL, passed INTEGER NOT NULL,
             command TEXT NOT NULL, outcome TEXT NOT NULL, expect TEXT, commit_id TEXT)""")
+        # reverify can run a check hundreds of times; reads are always one lesson's runs.
+        c.execute("CREATE INDEX IF NOT EXISTS check_run_node ON check_run(node_id, at)")
         try:
             # symptom and fix are indexed, not just title and body. `symptom` is the
             # field every command and doc calls "what a reader matches against" — the
@@ -781,6 +788,7 @@ class _PostgresBackend(_Backend):
                 id BIGSERIAL PRIMARY KEY, at BIGINT NOT NULL, node_id TEXT NOT NULL,
                 passed BOOLEAN NOT NULL, command TEXT NOT NULL, outcome TEXT NOT NULL,
                 expect TEXT, commit_id TEXT)""")
+            cur.execute("CREATE INDEX IF NOT EXISTS check_run_node ON check_run(node_id, at)")
             # IF NOT EXISTS is keyed on the NAME, not the expression, so a store created
             # before symptom/fix joined the tsvector would keep an index Postgres can no
             # longer use for the new query — silently degrading every search to a

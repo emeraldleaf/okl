@@ -58,8 +58,28 @@ def _log_check(args: argparse.Namespace, passed: bool, outcome: str, commit: str
     try:
         Client().log_check(args.node_id, passed=passed, command=args.run, outcome=outcome,
                            expect=args.expect or None, commit=commit)
-    except (OKLUnreachableError, ValueError) as e:
+    except OKLNoAnswerError as e:
+        print(f"  ! this check's result may not have been logged: {e}", file=sys.stderr)
+    # The log is advisory, so nothing it raises may reach the verdict. A full disk, a locked
+    # or read-only store raise sqlite3 or psycopg errors, neither a ValueError nor an
+    # outage: they escaped as a traceback, turned a stamped pass into exit 1, and stopped
+    # reverify at that lesson (review of #170).
+    except Exception as e:  # noqa: BLE001 - see above
         print(f"  ! this check's result was not logged: {e}", file=sys.stderr)
+
+
+def _clean_commit(root: Path, commit: str | None) -> str | None:
+    """`commit` if the tracked tree matches it, else None. A check run on uncommitted edits
+    ran no commit, and logging it against HEAD would credit HEAD with what the edits did."""
+    import subprocess
+    if commit is None:
+        return None
+    try:
+        r = subprocess.run(["git", "-C", str(root), "diff", "--quiet", "HEAD", "--"],
+                           capture_output=True, timeout=15)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return commit if r.returncode == 0 else None
 
 
 def cmd_verify(args: argparse.Namespace) -> int:
@@ -83,7 +103,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
     root = _snapshot_path().parent
     commit = _head_commit(root)
     if output is None:
-        _log_check(args, False, outcome, commit)
+        _log_check(args, False, outcome, _clean_commit(root, commit))
         return 1
     stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%MZ")
     evidence = (f"`{args.run}` exit 0" + (f", matched {args.expect!r}" if args.expect else "")
@@ -100,7 +120,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
         print(f"OKL UNREACHABLE — check passed but the stamp was NOT recorded.\n{e}", file=sys.stderr)
         return 2
     print(f"✓ verified {node['id']} — {node['title']}\n  evidence: {node['verified_by']}")
-    _log_check(args, True, outcome, commit)
+    _log_check(args, True, outcome, _clean_commit(root, commit))
     dirty = _uncommitted(root, node.get("files")) if commit else []
     if dirty:
         # The check saw these edits, but the stamp is the commit without them, so the lesson
