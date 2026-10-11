@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+- **A 200 that is not JSON is no answer, not a refusal (okl review R10).** Something other
+  than okl can answer at the service's address with a web page: a proxy's sign-in page,
+  or a web app on the port `OKL_SERVICE_URL` names. The client's JSON parse failed with a
+  `ValueError`, which `okl check` reported as "OKL REFUSED THE CHECK" and the MCP tools as
+  a refusal. It is now reported as unreachable, showing the start of what came back, and
+  after a write it says MAYBE, since the service behind the page may have stored it.
+- **The MCP `okl_record` tool says MAYBE RECORDED when a write may have landed.** It caught
+  only `ValueError`, so a shared service that took the lesson and never answered reached
+  the agent as an opaque tool error, and one that could not be reached did too.
+  `okl_update` and `okl_retire` already said MAYBE. It now says the service may have
+  stored the lesson, to look with `okl_search` before recording it again, and that
+  recording it again with the same id is safe; a refused connection says NOT RECORDED.
+
 ## 0.8.3
 
 - **Retiring a lesson is a verb, with a reason (okl review R2).** "Retracted" was the only
