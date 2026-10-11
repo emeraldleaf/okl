@@ -43,7 +43,7 @@ src/okl/
 3. **Make the change, then run what CI runs:**
 
    ```bash
-   pytest -q                         # strict: any warning fails
+   pytest -q --cov=okl               # strict, and enforces the coverage floor (66%)
    ruff check .
    mypy src/okl
    lint-imports
