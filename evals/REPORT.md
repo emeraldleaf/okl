@@ -560,8 +560,8 @@ a trend.
 *Note, 2026-10-10:* the second 2/3 in that list is the haiku-generated run, which sonnet
 judged. And "at or near its baseline" below does not hold for every run: 0003 read 2/3 →
 0/3, and 1238 and 1323 read 3/3 → 1/3. On the documented instrument (sonnet generator,
-haiku judge) the pooled figure is 22/25 → 11/26 across its ten receipts, §4j's included:
-reduced, not prevented.
+haiku judge) the pooled figure is 23/28 → 12/29 across its eleven receipts, §4j's and §4k's
+included (updated 2026-10-11): reduced, not prevented.
 
 What is *not* judge-dependent: this is not a retrieval failure. Pre-flight confirms the
 rule (`rx_tokens_localstorage`) reaches the briefing, and that record is deliberately unset
@@ -923,14 +923,43 @@ judge reasons found one plan-only sample. Both arms read within the 17-point flo
 **What this cannot settle.** Whether §4j's baseline fall came from a model change: its
 receipt cannot say. Only runs from this one on can be compared by resolved model.
 
+### Result (2026-10-11)
+
+Receipt: `evals/results/ab-20261011-0414.json`, `okl_commit` `05ed88b` on its face, and the
+first receipt to name its models: `sonnet` resolved to `claude-sonnet-4-6` and `haiku` to
+`claude-haiku-4-5-20251001`. 48 runs, 1 failure (a generator timeout on `rate_limiter` at
+baseline, 2%): usable. Same tasks, sample count and interests as §4j.
+
+**No sample was unevaluable.** The judge returned the new field on all 47 samples it graded
+and marked every one as implemented. Every record carries its `code_chars`, from 82 to
+14,310 characters (median 1,116). The prediction (at most 1 of 48) held, and the first
+falsifier did not trigger.
+
+| | baseline | briefed |
+|---|---|---|
+| §4j (each lesson with its id) | 4/23 — 17% | 0/23 — 0% |
+| §4k (the judge says whether there was code) | 5/23 — 22% | 1/24 — 4% |
+
+**Both arms stayed inside the floor.** The baseline moved 5 points and the briefed arm 4,
+both within the 17-point floor, so the second falsifier did not trigger: nothing here shows
+the new field changing how the judge reads the defect. The one briefed reproduction is
+`spa_tokens` sample 2, which left tokens in oidc-client-ts's default `localStorage`: the
+task §5 already describes as reduced, not prevented. On the three tasks the baseline failed
+at least once (`judge_summary`, `spa_tokens`, `ci_linter`), the briefed arm reproduced 1 of 9.
+
+**Read it as its own series.** §4j's receipt cannot say which model `sonnet` was then, so
+the two runs are not pooled. From here on a receipt names its models, and a run that
+resolves to a different one starts a new series.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
    task the sonnet baseline failed was fully prevented except one residual
    (judge_summary 1/3). *Note, 2026-10-10:* "fully prevented" held in no 3-sample run
-   after that one. spa_tokens is reduced, not prevented: 28/31 → 16/32 (90% → 50%) across
-   the 12 receipts that include it, and 22/25 → 11/26 on the documented instrument
-   (sonnet generator, haiku judge). The 12 include §4j's run, where it read 0/2 → 0/3.
+   after that one. spa_tokens is reduced, not prevented: 29/34 → 17/35 (85% → 49%) across
+   the 13 receipts that include it, and 23/28 → 12/29 on the documented instrument
+   (sonnet generator, haiku judge). The 13 include §4j's run, where it read 0/2 → 0/3,
+   and §4k's, where it read 1/3 → 1/3 (updated 2026-10-11).
 2. **Cross-model headline: briefed haiku (12%) beat unbriefed sonnet (33%)** on the
    identical task set — a briefed budget model reproduced org-known defect classes at
    roughly a third the rate of an unbriefed frontier model. One haiku run, never

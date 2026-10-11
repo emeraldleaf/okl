@@ -326,6 +326,23 @@ class Client:
                 raise
         return core.retire(self._local_store(), node_id, reason, by=by, obsolete=obsolete)
 
+    def log_check(self, node_id: str, *, passed: bool, command: str, outcome: str,
+                  expect: str | None = None, commit: str | None = None) -> None:
+        """Keep one run of a lesson's check, pass or fail (core.log_check). Raises
+        ValueError for a run it refuses, or for a service too old to keep them."""
+        if self.mode == "remote":
+            try:
+                self._post("/check-run", {"id": node_id, "passed": passed, "command": command,
+                                          "outcome": outcome, "expect": expect, "commit": commit})
+            except OKLRejectedError as e:
+                if e.status == 404:
+                    raise OKLRejectedError(_TOO_OLD.format(what="keeps check runs"),
+                                           status=404) from e
+                raise
+            return
+        core.log_check(self._local_store(), node_id, passed=passed, command=command,
+                       outcome=outcome, expect=expect, commit=commit)
+
     def get(self, node_id: str) -> dict | None:
         """One lesson by id, or None if there is none."""
         if self.mode == "remote":
