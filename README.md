@@ -348,7 +348,9 @@ judge are different models; method + raw receipts in [evals/REPORT.md](evals/REP
   either way.
 - Every run above also predates the **`[id]`** each briefed lesson now carries. That one
   is not byte-identical: the eight eval briefings are 5% larger, with every lesson's
-  content kept (REPORT §4j). Its effect on the result is unmeasured until §4j's run.
+  content kept (REPORT §4j). Its run (2026-10-10) read **17% → 0%**, but the unbriefed arm
+  itself fell 26 points from §4i's, which points at the generator rather than okl, so it
+  starts a new series and is not pooled with the runs above.
 
 What this does **not** show: the tasks were authored to invite defect classes the store
 encodes, so it measures what a briefing does when a directly relevant lesson exists —
