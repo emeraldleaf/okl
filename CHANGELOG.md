@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **Every run of a lesson's check is kept, pass or fail (okl review R3, first slice).** The
+  stamp keeps only a lesson's last pass, so a check that failed, the run that caught a
+  change, left nothing but a line on stderr, and a check that has caught regressions looked
+  the same as one that never failed. `okl verify`, and `okl reverify` through it, now keeps
+  each run (command, expected signal, outcome, commit) in a new `check_run` table: its own
+  table, so an older okl rewriting a lesson's row cannot lose it. `okl show` prints how
+  often the check passed and failed and its last failure; `okl_get` returns the latest
+  runs and the counts. A shared service gets `POST /check-run`; against an older service,
+  or if the write fails, verify warns that the run was not logged and its result stands.
+
 - **Every unbriefed prompt now says so (okl review R21).** `OKL_OFFLINE=1` let a prompt
   through when okl could not run, with a line on stderr that neither the agent nor, in
   most views, the person ever saw: the agent started the task as if a check had found

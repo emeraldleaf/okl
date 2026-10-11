@@ -455,14 +455,43 @@ def _update_values(fields: dict[str, Any], repo: str | None) -> dict[str, Any]:
     return out
 
 
+# How many of a lesson's latest check runs `get` lists; it counts them all.
+CHECKS_SHOWN = 10
+
+
 def get(store: Store, node_id: str) -> dict[str, Any] | None:
-    """One lesson by id, as the API exposes it, with its retirements; None if there is none."""
+    """One lesson by id, as the API exposes it, with its retirements and check runs;
+    None if there is none."""
     n = store.get_node(node_id)
     if n is None:
         return None
     d = _node_public(n)
     d["retirements"] = [asdict(r) for r in store.retirements(node_id)]
+    runs = store.checks(node_id)
+    d["checks"] = [asdict(r) for r in runs[-CHECKS_SHOWN:]]
+    d["check_counts"] = {"passed": sum(r.passed for r in runs),
+                         "failed": sum(not r.passed for r in runs)}
     return d
+
+
+def log_check(store: Store, node_id: str, *, passed: bool, command: str, outcome: str,
+              expect: str | None = None, commit: str | None = None) -> None:
+    """Keep one run of a lesson's check, pass or fail (okl review R3).
+
+    The stamp keeps only the last pass, so a check that caught a regression left no trace,
+    and nothing could tell a check that has caught changes from one that never failed.
+    Refuses a run it cannot record truthfully: no command, a commit that is not an object
+    name (it is shown beside the run, and a shared store is written by other people), or
+    a lesson that does not exist.
+    """
+    if not command or not command.strip():
+        raise ValueError("refusing to log a check run without the command that ran")
+    if commit is not None and not re.fullmatch(r"[0-9a-f]{7,64}", commit):
+        raise ValueError(f"commit must be a git object name (7-64 hex digits), got {commit!r}")
+    if store.get_node(node_id) is None:
+        raise ValueError(f"no node with id {node_id!r}")
+    store.log_check(node_id, bool(passed), command.strip(), outcome.strip() or "unknown",
+                    expect=expect, commit=commit)
 
 
 _RETIRED_AS = {"wrong": "retracted", "obsolete": "obsolete", "superseded": "superseded"}

@@ -22,8 +22,9 @@ if TYPE_CHECKING:
     from ..store import Node
 
 
-def _run_check(args: argparse.Namespace) -> str | None:
-    """Run `--run` and return its output if it passed, or None after saying why it did not.
+def _run_check(args: argparse.Namespace) -> tuple[str | None, str]:
+    """Run `--run`; return its output if it passed (None after saying why it did not), and
+    a short outcome for the check log: "exit 0", "exit 1", "timed out after 120s", ...
 
     Passing means exit 0 and, when `--expect` is given, that text in the output: exit 0
     alone is a step grading itself (the exit-0-zero-files lesson).
@@ -37,18 +38,28 @@ def _run_check(args: argparse.Namespace) -> str | None:
         # later lesson unchecked (CodeRabbit on #79). A timeout is a failed check.
         print(f"✗ check TIMED OUT after {args.timeout}s — NOT stamping verification.",
               file=sys.stderr)
-        return None
+        return None, f"timed out after {args.timeout}s"
     output = (r.stdout or "") + (r.stderr or "")
     tail = "\n".join(output.strip().splitlines()[-5:])
     if r.returncode != 0:
         print(f"✗ check FAILED (exit {r.returncode}) — NOT stamping verification.\n{tail}",
               file=sys.stderr)
-        return None
+        return None, f"exit {r.returncode}"
     if args.expect and args.expect not in output:
         print(f"✗ check exited 0 but expected signal {args.expect!r} NOT in output — NOT stamping.\n{tail}",
               file=sys.stderr)
-        return None
-    return output
+        return None, "exit 0, expected signal missing"
+    return output, "exit 0"
+
+
+def _log_check(args: argparse.Namespace, passed: bool, outcome: str, commit: str | None) -> None:
+    """Keep this run in the lesson's check log (okl review R3). The log records the check;
+    it is never part of it, so a run that cannot be logged warns and changes no verdict."""
+    try:
+        Client().log_check(args.node_id, passed=passed, command=args.run, outcome=outcome,
+                           expect=args.expect or None, commit=commit)
+    except (OKLUnreachableError, ValueError) as e:
+        print(f"  ! this check's result was not logged: {e}", file=sys.stderr)
 
 
 def cmd_verify(args: argparse.Namespace) -> int:
@@ -65,14 +76,16 @@ def cmd_verify(args: argparse.Namespace) -> int:
         return 2
     if not args.run:
         return _suggest_check(args.node_id)
-    if _run_check(args) is None:
-        return 1
-    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%MZ")
-    # The commit the check passed at: drift diffs the governed files there against HEAD
+    output, outcome = _run_check(args)
+    # The commit the check ran at: drift diffs the governed files there against HEAD
     # instead of comparing clocks (#102). It goes into the evidence before the stamp, which
     # binds it in the committed snapshot and keeps older okl versions able to read it.
     root = _snapshot_path().parent
     commit = _head_commit(root)
+    if output is None:
+        _log_check(args, False, outcome, commit)
+        return 1
+    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%MZ")
     evidence = (f"`{args.run}` exit 0" + (f", matched {args.expect!r}" if args.expect else "")
                 + (f" on commit {commit[:12]}" if commit else "") + f" @ {stamp}")
     try:
@@ -87,6 +100,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
         print(f"OKL UNREACHABLE — check passed but the stamp was NOT recorded.\n{e}", file=sys.stderr)
         return 2
     print(f"✓ verified {node['id']} — {node['title']}\n  evidence: {node['verified_by']}")
+    _log_check(args, True, outcome, commit)
     dirty = _uncommitted(root, node.get("files")) if commit else []
     if dirty:
         # The check saw these edits, but the stamp is the commit without them, so the lesson

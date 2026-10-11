@@ -116,8 +116,9 @@ okl doctor                  # flags other memory tools, double wiring, and where
   what is wrong: `okl update <id> --fix "..."` (or the `okl_update` tool) keeps the rest,
   including its proof, unless you change its governed `--files`: then it needs verifying
   again, and `okl reverify` re-runs its stored check. `okl show <id>` prints the whole
-  lesson. Recording an existing id again is refused, because it used to replace the
-  lesson and wipe its proof.
+  lesson, with how often its check has passed and failed: every run of `okl verify` and
+  `okl reverify` is kept, so a check that caught a change leaves a record. Recording an
+  existing id again is refused, because it used to replace the lesson and wipe its proof.
 - **When a lesson is wrong or replaced,** retire it with a reason; nothing is deleted.
   `okl retire <id> --reason "..."` keeps a wrong one briefed as AVOID, so nobody restates
   it; `--by <new-id>` takes a replaced one out of briefings, which point to the new one;

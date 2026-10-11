@@ -1456,6 +1456,19 @@ def _backend_conformance(store, label):
     assert mine[0].at <= mine[1].at, f"{label}: retirements not oldest first"
     assert [r.node_id for r in store.retirements(b)] == [b], f"{label}: retirement filter"
 
+    # ASSERT (11) — the check log appends pass and fail alike, reads back oldest first with
+    # every field, filters by lesson, and survives a rewrite of the lesson's row (R3).
+    store.log_check(a, False, "pytest -q", "exit 1", expect="passed", commit="abc1234")
+    store.log_check(a, True, "pytest -q", "exit 0")
+    store.log_check(b, True, "true", "exit 0")
+    store.add_node(store.get_node(a))
+    runs = store.checks(a)
+    assert [(r.passed, r.command, r.outcome, r.expect, r.commit) for r in runs] == [
+        (False, "pytest -q", "exit 1", "passed", "abc1234"),
+        (True, "pytest -q", "exit 0", None, None)], f"{label}: checks"
+    assert runs[0].at <= runs[1].at, f"{label}: checks not oldest first"
+    assert [r.node_id for r in store.checks(b)] == [b], f"{label}: check filter"
+
 
 def test_sqlite_backend_conformance(store):
     """The SQLite backend meets the contract."""

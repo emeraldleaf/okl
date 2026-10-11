@@ -225,6 +225,24 @@ class Retirement:
     by: str | None = None      # the replacement, for "superseded"
 
 
+@dataclass(frozen=True)
+class CheckRun:
+    """One run of a lesson's check, passed or failed (okl review R3).
+
+    The stamp on a lesson keeps only its last pass, so a check that caught a regression
+    left no trace. Failures are the catches. Its own table, like retirements, so an older
+    okl rewriting the lesson's row cannot lose it.
+    """
+
+    at: int                    # epoch milliseconds
+    node_id: str
+    passed: bool
+    command: str
+    outcome: str               # "exit 0", "exit 1", "timed out after 120s", ...
+    expect: str | None = None
+    commit: str | None = None
+
+
 class Store:
     """Facade over whichever backend the environment selects."""
 
@@ -343,6 +361,18 @@ class Store:
         """Every retirement logged for `node_id`, oldest first."""
         return self._impl.retirements(node_id)
 
+    # -- check runs (okl review R3) ---------------------------------------------
+    def log_check(self, node_id: str, passed: bool, command: str, outcome: str, *,
+                  expect: str | None = None, commit: str | None = None) -> None:
+        """Append one run of a lesson's check. Append-only: each run is a row."""
+        self._impl.log_check(CheckRun(at=_now_ms(), node_id=node_id, passed=passed,
+                                      command=command, outcome=outcome, expect=expect,
+                                      commit=commit))
+
+    def checks(self, node_id: str) -> list[CheckRun]:
+        """Every check run logged for `node_id`, oldest first."""
+        return self._impl.checks(node_id)
+
     def close(self) -> None:
         """Close the database connection; calling it again does nothing."""
         self._impl.close()
@@ -408,6 +438,8 @@ class _Backend(Protocol):
     def briefings(self, repo: str | None) -> list[Briefing]: ...
     def log_retirement(self, retirement: Retirement) -> None: ...
     def retirements(self, node_id: str) -> list[Retirement]: ...
+    def log_check(self, run: CheckRun) -> None: ...
+    def checks(self, node_id: str) -> list[CheckRun]: ...
     def close(self) -> None: ...
 
 
@@ -415,6 +447,13 @@ _NODE_COLS = ["id", "type", "scope", "repo", "title", "body", "status",
               "found_by", "verified_at", "ttl_days", "owner", "files",
               "symptom", "fix", "tags", "verified_by", "applies_to", "verified_commit",
               "created_at"]
+
+
+def _row_to_check(r: dict) -> CheckRun:
+    """A check_run row as a CheckRun; SQLite stores the flag as 0/1, Postgres as a boolean."""
+    return CheckRun(at=r["at"], node_id=r["node_id"], passed=bool(r["passed"]),
+                    command=r["command"], outcome=r["outcome"], expect=r["expect"],
+                    commit=r["commit_id"])
 
 
 def _row_to_node(row: dict[str, Any]) -> Node:
@@ -482,6 +521,10 @@ class _SQLiteBackend(_Backend):
         c.execute("""CREATE TABLE IF NOT EXISTS retirement(
             at INTEGER NOT NULL, node_id TEXT NOT NULL, kind TEXT NOT NULL,
             reason TEXT NOT NULL, by_id TEXT)""")
+        # Every run of a lesson's check, pass or fail (R3). Its own table for the same reason.
+        c.execute("""CREATE TABLE IF NOT EXISTS check_run(
+            at INTEGER NOT NULL, node_id TEXT NOT NULL, passed INTEGER NOT NULL,
+            command TEXT NOT NULL, outcome TEXT NOT NULL, expect TEXT, commit_id TEXT)""")
         try:
             # symptom and fix are indexed, not just title and body. `symptom` is the
             # field every command and doc calls "what a reader matches against" — the
@@ -644,6 +687,22 @@ class _SQLiteBackend(_Backend):
             return [Retirement(at=r["at"], node_id=r["node_id"], kind=r["kind"],
                                reason=r["reason"], by=r["by_id"]) for r in rows]
 
+    def log_check(self, run: CheckRun) -> None:
+        with self._lock:
+            self.conn.execute(
+                "INSERT INTO check_run(at, node_id, passed, command, outcome, expect, commit_id) "
+                "VALUES(?,?,?,?,?,?,?)",
+                (run.at, run.node_id, int(run.passed), run.command, run.outcome, run.expect,
+                 run.commit))
+            self.conn.commit()
+
+    def checks(self, node_id: str) -> list[CheckRun]:
+        with self._lock:
+            rows = self.conn.execute(
+                "SELECT at, node_id, passed, command, outcome, expect, commit_id FROM check_run "
+                "WHERE node_id=? ORDER BY at, rowid", (node_id,)).fetchall()
+            return [_row_to_check(dict(r)) for r in rows]
+
     def close(self) -> None:
         self._closer()
 
@@ -718,6 +777,10 @@ class _PostgresBackend(_Backend):
             cur.execute("""CREATE TABLE IF NOT EXISTS retirement(
                 id BIGSERIAL PRIMARY KEY, at BIGINT NOT NULL, node_id TEXT NOT NULL,
                 kind TEXT NOT NULL, reason TEXT NOT NULL, by_id TEXT)""")
+            cur.execute("""CREATE TABLE IF NOT EXISTS check_run(
+                id BIGSERIAL PRIMARY KEY, at BIGINT NOT NULL, node_id TEXT NOT NULL,
+                passed BOOLEAN NOT NULL, command TEXT NOT NULL, outcome TEXT NOT NULL,
+                expect TEXT, commit_id TEXT)""")
             # IF NOT EXISTS is keyed on the NAME, not the expression, so a store created
             # before symptom/fix joined the tsvector would keep an index Postgres can no
             # longer use for the new query — silently degrading every search to a
@@ -835,6 +898,18 @@ class _PostgresBackend(_Backend):
                            "WHERE node_id = %s ORDER BY at, id", (node_id,))
         return [Retirement(at=r["at"], node_id=r["node_id"], kind=r["kind"],
                            reason=r["reason"], by=r["by_id"]) for r in rows]
+
+    def log_check(self, run: CheckRun) -> None:
+        with self.conn.cursor() as cur:
+            cur.execute("INSERT INTO check_run(at, node_id, passed, command, outcome, expect, "
+                        "commit_id) VALUES(%s,%s,%s,%s,%s,%s,%s)",
+                        (run.at, run.node_id, run.passed, run.command, run.outcome, run.expect,
+                         run.commit))
+
+    def checks(self, node_id: str) -> list[CheckRun]:
+        rows = self._fetch("SELECT at, node_id, passed, command, outcome, expect, commit_id "
+                           "FROM check_run WHERE node_id = %s ORDER BY at, id", (node_id,))
+        return [_row_to_check(r) for r in rows]
 
     def close(self) -> None:
         self._closer()
