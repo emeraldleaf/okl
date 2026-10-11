@@ -17,6 +17,10 @@
   It also reports which lessons take the most slots. REPORT §4l pre-registers the A/B run
   this retrieval change needs before it ships.
 
+- **A one-page overview at the top of "How it works".** Guardrails and a learning loop on one
+  page, in light and dark, rendered from `docs/overview/okl-overview.html`; the detailed
+  diagram stays below it. `ci/check-diagram-figures.sh` now reads HTML diagram sources too.
+
 - **The A/B judge reads the whole submission (#182).** It read only the first 8,000
   characters, so a long submission reached it cut off mid-line: §4l lost a 15,585-character
   sample the judge called no code. It now reads up to 40,000 characters, a longer submission
