@@ -504,11 +504,19 @@ def retire(store: Store, node_id: str, reason: str, *, by: str | None = None,
                              f"({n.scope}): a replacement must be visible wherever the lesson "
                              "it replaces was")
     kind = "superseded" if by else ("obsolete" if obsolete else "wrong")
+    # Idempotent for an identical request: the same kind, replacement and reason as the
+    # latest retirement add no second row. A different reason or replacement is a new
+    # retirement and is logged (CodeRabbit on #163).
+    past = store.retirements(node_id)
+    same = bool(past) and (past[-1].kind, past[-1].by, past[-1].reason) == (kind, by, reason.strip())
+    if same and n.status == _RETIRED_AS[kind]:
+        return get(store, node_id) or {}
     # The reason first, the status last. The three writes are not one transaction; in this
-    # order a failure part-way leaves a reason logged and the lesson not yet retired (a
-    # retry is safe), never a retired lesson with no reason that only `okl retire` could
-    # then touch (CodeRabbit on #163).
-    store.log_retirement(node_id, kind, reason.strip(), by)
+    # order a failure part-way leaves a reason logged and the lesson not yet retired, and
+    # a retry finishes it without logging twice, never a retired lesson with no reason
+    # that only `okl retire` could then touch (CodeRabbit on #163).
+    if not same:
+        store.log_retirement(node_id, kind, reason.strip(), by)
     if by is not None:
         store.add_edge(Edge(src=by, rel="SUPERSEDES", dst=node_id))
     n.status = _RETIRED_AS[kind]

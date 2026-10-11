@@ -499,3 +499,55 @@ def test_retire_logs_the_reason_before_it_changes_the_status():
     del s.add_node
     assert s.get_node("a").status is None
     assert [r.reason for r in s.retirements("a")] == ["wrong"]
+
+
+def test_an_identical_retirement_is_not_logged_twice():
+    """MAYBE RETIRED says running it again is safe; an identical retry added a duplicate
+    row to the lesson's history (CodeRabbit on #163)."""
+    s = _store_with(dict(id="a", type="Rule", title="a", scope="org"),
+                    dict(id="b", type="Rule", title="b", scope="org"))
+
+    # ACT / ASSERT (1) — the same request twice: one row
+    core.retire(s, "a", "replaced", by="b")
+    core.retire(s, "a", "replaced", by="b")
+    assert [(r.kind, r.by) for r in s.retirements("a")] == [("superseded", "b")]
+
+    # ACT / ASSERT (2) — a different reason is a new retirement, and is kept
+    core.retire(s, "a", "replaced, and here is why", by="b")
+    assert len(s.retirements("a")) == 2
+
+
+def test_a_retry_after_a_partial_failure_finishes_without_logging_twice():
+    """The reason is written first; when the status write then failed, a retry must
+    finish the retirement, not log the same reason again."""
+    s = _store_with(dict(id="a", type="Rule", title="a", scope="org"))
+    s.add_node = lambda node: (_ for _ in ()).throw(RuntimeError("disk full"))
+    with pytest.raises(RuntimeError):
+        core.retire(s, "a", "wrong")
+    del s.add_node
+
+    core.retire(s, "a", "wrong")
+
+    assert s.get_node("a").status == "retracted"
+    assert [r.reason for r in s.retirements("a")] == ["wrong"]
+
+
+def test_mcp_retire_says_to_refresh_the_snapshot_when_the_lesson_governs_files(repo):
+    """The CLI refreshes okl-drift.json; MCP cannot reach that layer, so it must say so."""
+    import asyncio
+    pytest.importorskip("mcp")
+    from okl.mcp_server import _build
+    _lessons(Client())
+
+    def text(res):
+        if isinstance(res, tuple):
+            res = res[0]
+        c = getattr(res, "content", res)
+        if isinstance(c, list | tuple):
+            c = c[0]
+        return getattr(c, "text", str(c))
+
+    governs = text(asyncio.run(_build().call_tool("okl_retire", {"id": "refund-old", "reason": "x"})))
+    plain = text(asyncio.run(_build().call_tool("okl_retire", {"id": "refund-new", "reason": "x"})))
+    assert "okl export --drift" in governs, governs
+    assert "okl export" not in plain, plain

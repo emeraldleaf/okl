@@ -214,7 +214,14 @@ def _build() -> Any:  # noqa: C901, PLR0915 - a declarative table of tool defini
                     f"again is safe. ({e})")
         except (OKLUnreachableError, ValueError) as e:
             return f"NOT RETIRED — {e}"
-        return f"retired {node['id']} ({node['status']})"
+        note = ""
+        if node.get("files"):
+            # The CLI refreshes the committed snapshot CI's drift gate reads; this layer
+            # cannot reach the CLI, so it says so (CodeRabbit on #163). Until then CI may
+            # still judge the retired lesson: a false red, never a false green.
+            note = (". It governs files: run `okl export --drift` and commit okl-drift.json "
+                    "so CI's drift gate stops judging it")
+        return f"retired {node['id']} ({node['status']}){note}"
 
     @mcp.tool()
     def okl_get(id: str) -> str:
