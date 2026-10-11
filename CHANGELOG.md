@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.8.5
 
 - **The Stop question names the lessons the session touched (okl review R4, first slice).**
   It asked once, generically, whether the session learned anything, and told the agent
