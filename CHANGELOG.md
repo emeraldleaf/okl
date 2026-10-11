@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.8.3
 
 - **Retiring a lesson is a verb, with a reason (okl review R2).** "Retracted" was the only
   way out, retracting meant re-recording (which wiped the lesson), and `okl check` never
@@ -20,11 +20,14 @@
   - A replacement must be live and visible wherever the lesson it replaces was, which also
     rules out a cycle. The pointer follows the latest replacement through a chain to a
     live one; a superseded lesson with no replacement this repo can see stays briefed.
-    Retired lessons no longer use up the search's window.
+    Retired lessons no longer use up the search's window. Retiring a lesson again with
+    the same reason and replacement changes nothing once the first call has finished; a
+    retry after a call that failed part-way finishes it without logging the reason twice.
   - Drift, the committed snapshot, the governs-nothing advisory and the briefing's STALE
-    mark skip retired lessons, and retiring one that governs files refreshes
-    `okl-drift.json`. Exposure metrics skip them too, and `okl dedup` recommends
-    `okl retire --by` instead of a hand-written SUPERSEDES link `okl check` never read.
+    mark skip retired lessons, and `okl retire` on one that governs files refreshes
+    `okl-drift.json` (the MCP tool cannot, so it says to run `okl export --drift`).
+    Exposure metrics skip them too, and `okl dedup` recommends `okl retire --by` instead
+    of a hand-written SUPERSEDES link `okl check` never read.
   - A shared service gets `POST /retire`.
   - Upgrade every okl that writes to a store before retiring lessons in it: an older
     okl's `seed` resets a retired status, and its `verify` refuses the new statuses.
