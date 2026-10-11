@@ -82,6 +82,63 @@ def _in_scope(n: Node, repo_scope: str, interests: list[str] | None) -> bool:
     return not tags or bool(tags & {t.strip().lower() for t in interests if t.strip()})
 
 
+# Words that carry no subject, so they never reach a briefing's search (okl review R7,
+# #178). Every word of a prompt was OR-ed into the full-text query, and "ok go", "do it"
+# or "what about this one?" each matched enough of a store to fill the 12-lesson cap.
+# Curated rather than a standard English list: a standard list still briefs most chatty
+# prompts, and one that drops short tokens loses rules that hang on `id`, `ci` or `db`.
+# So function words and chat filler only; `get` stays (the HTTP verb), and so does `go`
+# (the language): a prompt still needs one term of 3+ characters to brief at all.
+_BRIEFING_STOP = frozenset({
+    # articles and determiners
+    "a", "an", "the", "this", "that", "these", "those", "some", "any", "each", "every", "all",
+    "both", "either", "neither", "another", "such",
+    # pronouns and question words
+    "i", "me", "my", "mine", "we", "us", "our", "ours", "you", "your", "yours", "he", "him",
+    "his", "she", "her", "hers", "it", "its", "they", "them", "their", "who", "whom", "whose",
+    "which", "what", "whats", "where", "when", "why", "how", "there", "here",
+    # auxiliaries
+    "is", "am", "are", "was", "were", "be", "been", "being", "do", "does", "did", "doing",
+    "done", "have", "has", "had", "having", "will", "would", "shall", "should", "can", "could",
+    "may", "might", "must", "let", "lets",
+    # prepositions, conjunctions, adverbs
+    "to", "of", "in", "on", "at", "by", "for", "with", "from", "into", "onto", "about", "as",
+    "than", "then", "so", "if", "or", "and", "but", "not", "no", "nor", "yet", "up", "out",
+    "off", "over", "under", "again", "just", "also", "too", "very", "really", "still", "only",
+    "even", "now", "once", "more", "most", "much", "many", "few",
+    # chat filler
+    "ok", "okay", "kk", "yes", "yeah", "yep", "yup", "sure", "thanks", "thank", "thx", "ty",
+    "please", "pls", "plz", "hi", "hello", "hey", "cool", "nice", "great", "good", "fine",
+    "awesome", "perfect", "lgtm", "sounds", "looks", "seems", "right", "alright", "agreed",
+    "hmm", "um", "uh", "oh", "ah", "huh", "wow", "going", "gone", "keep", "continue", "proceed",
+    "next", "ahead", "try", "one", "ones", "thing", "things", "stuff", "something", "anything",
+    "everything", "nothing", "think", "know", "want", "like", "see", "say", "tell", "ask",
+})
+# An order-preserving cap: a pasted log or a long notification otherwise ORs hundreds of
+# terms and matches most of a store. The eval tasks run 24 to 47 words, well under it.
+MAX_BRIEFING_TERMS = 40
+
+
+def briefing_terms(task: str) -> list[str]:
+    """The words of `task` a briefing searches on, in order, each once, at most
+    MAX_BRIEFING_TERMS; [] when the task has no subject (no term of 3+ characters).
+
+    Single characters and _BRIEFING_STOP words are left out. Explicit `okl search` is not
+    filtered: a person searching names what they want.
+    """
+    seen: set[str] = set()
+    out: list[str] = []
+    for raw in "".join(ch if ch.isalnum() else " " for ch in task).split():
+        w = raw.lower()
+        if len(w) < 2 or w in _BRIEFING_STOP or w in seen:
+            continue
+        seen.add(w)
+        out.append(raw)
+        if len(out) == MAX_BRIEFING_TERMS:
+            break
+    return out if any(len(w) >= 3 for w in out) else []
+
+
 def check(store: Store, repo: str, task: str, limit: int = 12,
           interests: list[str] | None = None) -> dict[str, Any]:
     """Return the slice of the encoded body relevant to starting `task` in `repo`.
@@ -147,9 +204,14 @@ def _live_hits(store: Store, task: str, limit: int, repo_scope: str,
     lesson with no such replacement stays briefed: dropping it would leave nothing. The
     search widens by as many as were left out, so they do not use up its window either.
     """
+    # The search runs on the task's subject words, never on an empty query: the store
+    # turns an empty query into a substring match on "" that returns every record.
+    query = " ".join(briefing_terms(task))
+    if not query:
+        return [], []
     fetch = limit * 3
     for _ in range(3):
-        found = store.search(task, limit=fetch)
+        found = store.search(query, limit=fetch)
         live: list[Node] = []
         replaced: list[dict[str, Any]] = []
         left_out = 0

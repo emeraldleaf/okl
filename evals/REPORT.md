@@ -951,6 +951,44 @@ at least once (`judge_summary`, `spa_tokens`, `ci_linter`), the briefed arm repr
 the two runs are not pooled. From here on a receipt names its models, and a run that
 resolves to a different one starts a new series.
 
+## 4l. PRE-REGISTERED: the briefing searches on a prompt's subject words — a change of treatment (2026-10-11)
+
+Written before any live run, per §2b.
+
+**What changed.** The briefing's search used every word of the prompt, OR-ed together. It
+now drops single characters and a curated list of function words and chat filler, keeps
+each remaining term once and in order up to 40, and briefs nothing when no term of three or
+more characters is left (#178). Short subject tokens (`id`, `ci`, `db`, `go`) and `get` stay.
+An explicit `okl search` is unchanged.
+
+**Deterministic checks, run first.**
+
+- Precision, `evals/precision.py` (new, R8, #179): 30 filler prompts on a store built only
+  from the committed seed packs. On main, 18 of 30 briefed more than 3 lessons and 12 hit the
+  12-lesson cap; with this change, none is over budget and none hits the cap. Receipt below.
+- Recall, `python3 evals/preflight.py`: 7 of 8 tasks receive the rule they test, plus the
+  accepted gap (`exit_code_trust`, §4b), unchanged.
+- The bait briefings change. Taking function words out of the query changes BM25's ranking,
+  and on this machine's store all eight bait briefings differ from main's in which lessons
+  they carry or in what order, while each task's own rule is still present (the pre-flight
+  above). `layout_preflight.py` does not see this: it renders one retrieval with both
+  renderers, so it measures layout only, and it reported the same size for both. A check
+  that two retrievals select the same lessons is #33's subject.
+
+**What the next citable run tests.** Same tasks, generator (sonnet), judge (haiku), 3
+samples and interests as §4k (`ab-20261011-0414.json`), with the resolved models on its face.
+
+**Prediction.** No detectable change: both arms within the 17-point floor of §4k (5/23
+baseline, 1/24 briefed). The baseline carries no briefing, so it can move only by noise or
+a model change, which its receipt now names.
+
+**Falsifier.** The briefed arm worsens beyond the floor against §4k's 4%, or a task that read
+briefed 0/3 in §4k reproduces. Either would mean the stoplist removed words a bait task's
+rule needed to rank, and it is narrowed or reverted.
+
+**What this cannot settle.** Whether quieter briefings help on real work. The bait tasks all
+still fill the 12-lesson cap; the gain is on the prompts the A/B never sends.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
