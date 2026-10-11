@@ -21,7 +21,8 @@
     rules out a cycle. The pointer follows the latest replacement through a chain to a
     live one; a superseded lesson with no replacement this repo can see stays briefed.
     Retired lessons no longer use up the search's window. Retiring a lesson again with
-    the same reason and replacement changes nothing, so a retry is safe.
+    the same reason and replacement changes nothing once the first call has finished; a
+    retry after a call that failed part-way finishes it without logging the reason twice.
   - Drift, the committed snapshot, the governs-nothing advisory and the briefing's STALE
     mark skip retired lessons, and `okl retire` on one that governs files refreshes
     `okl-drift.json` (the MCP tool cannot, so it says to run `okl export --drift`).
