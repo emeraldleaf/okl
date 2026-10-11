@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+- **The Stop question names the lessons the session touched (okl review R4, first slice).**
+  It asked once, generically, whether the session learned anything, and told the agent
+  how to update or retire a lesson but never which ones to look at, so lessons were added
+  and almost never corrected. A new `okl recap --transcript <path>` lists up to five
+  lessons the session was briefed on most often, read from the prompt hook's context in a
+  Claude Code transcript, and up to five whose governed files the session changed
+  (uncommitted, or committed since it began), with the command for each case: retire,
+  update, re-verify, or say it was irrelevant. The agent proposes a change in one line and
+  makes it once the person agrees. The Stop hook adds it to its question; with an okl too
+  old to have `recap`, or a transcript it cannot read, the question is as before. It reads
+  a 200 MB transcript in under a second.
+
 ## 0.8.4
 
 - **Every run of a lesson's check is kept, pass or fail (okl review R3, first slice).** The

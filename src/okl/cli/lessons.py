@@ -217,6 +217,27 @@ def cmd_retire(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_recap(args: argparse.Namespace) -> int:
+    """The lessons a session touched, for the Stop question (okl review R4): those it was
+    briefed on, from its transcript, and those whose governed files it changed. Prints
+    nothing when it touched none. Exit 2 when the store cannot be read."""
+    from .. import recap
+    from .verification import _snapshot_path
+    client = Client()
+    if not client.configured:
+        print("OKL NOT CONFIGURED — no store to recap from.", file=sys.stderr)
+        return 2
+    try:
+        nodes = client.all_nodes()
+    except OKLUnreachableError as e:
+        print(f"OKL UNREACHABLE — no recap.\n{e}", file=sys.stderr)
+        return 2
+    result = recap.recap(nodes, client.repo, str(_snapshot_path().parent), args.transcript,
+                         since=args.since, limit=args.limit)
+    print(recap.render(result), end="")
+    return 0
+
+
 def cmd_show(args: argparse.Namespace) -> int:
     """Print one lesson by id, with its proof. Exit 2 when there is no such lesson."""
     try:

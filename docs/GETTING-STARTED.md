@@ -159,7 +159,10 @@ the conversation, shows you the draft, and records it only when you confirm.
 
 **When the session ends** in Claude Code, if it changed files, the Stop hook asks once:
 *did this session learn anything worth recording?* It lists commands that failed during the
-session as candidates. That question is the safety net for the lessons nobody stopped to say out loud;
+session as candidates, and the lessons the session touched: the ones it was briefed on most
+often, and the ones whose governed files it changed. For each, the agent can say it still
+holds, or propose a correction (`okl update`) or retirement (`okl retire`) for you to
+approve. That question is the safety net for the lessons nobody stopped to say out loud;
 answer it, or say explicitly that nothing was worth keeping.
 
 ### What a good lesson contains

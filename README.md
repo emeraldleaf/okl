@@ -107,7 +107,9 @@ okl doctor                  # flags other memory tools, double wiring, and where
 - **When you learn something worth keeping** — a decision, a convention the agent broke,
   a bug you fixed — say so and the agent records it (`okl_record`, or `okl record`), with
   the files it governs. In Claude Code the Stop hook also asks once, at the end of a
-  session that changed files, what was learned.
+  session that changed files, what was learned, and names the lessons the session was
+  briefed on and those whose files it changed, so the agent can propose correcting or
+  retiring one (you approve).
 - **Using another agent?** The briefing and recording are MCP tools (`okl mcp`); register
   them and add one line to your `AGENTS.md`: *before each task call `okl_check`*. The hooks
   that do this automatically are Claude Code's; see
@@ -518,7 +520,10 @@ Your store and your tasks will differ.
 blocks the first stop only, and answering it is the whole write side of the loop. With
 the question it lists up to five commands that failed during the session, read from the
 session's own transcript — candidates, not records: no hook runs on every tool call, and
-no model is called to summarise anything.
+no model is called to summarise anything. Then `okl recap` names the lessons the session
+touched: up to five it was briefed on most often, and up to five whose governed files it
+changed, each with the command that corrects, retires or re-proves it. The agent proposes
+a change in one line and makes it once you agree.
 
 **In your repo:** `okl init` writes `.okl/` (config, the local database, a `.gitignore`
 covering both) and, when it wires Claude Code, two hook scripts plus their registration. In a
