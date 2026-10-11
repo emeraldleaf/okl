@@ -8,6 +8,7 @@
   nothing. The prompt hook now hands the agent a notice that it was not briefed, with okl's
   reason and that the absence of a briefing is not a clean check, and shows the person one
   line saying the same. Without `OKL_OFFLINE`, a prompt okl cannot brief is still blocked.
+
 - **A pinned okl that cannot start no longer blocks a prompt another okl could brief
   (#152).** A venv `okl` whose python was removed, by a Homebrew upgrade for example, still
   exists and is executable, so the hooks accepted the pin and the prompt hook blocked on its
@@ -18,6 +19,20 @@
   such as a `docker run` whose image lacks okl, is not run again: at three layers it could
   have taken the hook past Claude Code's 30 s limit. A working pin costs nothing extra;
   with nothing else to run, the block names the pin and says to re-run `okl init`.
+
+- **A 200 that is not JSON is no answer, not a refusal (okl review R10).** Something other
+  than okl can answer at the service's address with a web page: a proxy's sign-in page,
+  or a web app on the port `OKL_SERVICE_URL` names. The client's JSON parse failed with a
+  `ValueError`, which `okl check` reported as "OKL REFUSED THE CHECK" and the MCP tools as
+  a refusal. It is now reported as unreachable, showing the start of what came back, and
+  after a write it says MAYBE, since the service behind the page may have stored it.
+
+- **The MCP `okl_record` tool says MAYBE RECORDED when a write may have landed.** It caught
+  only `ValueError`, so a shared service that took the lesson and never answered reached
+  the agent as an opaque tool error, and one that could not be reached did too.
+  `okl_update` and `okl_retire` already said MAYBE. It now says the service may have
+  stored the lesson, to look with `okl_search` before recording it again, and that
+  recording it again with the same id is safe; a refused connection says NOT RECORDED.
 
 ## 0.8.3
 

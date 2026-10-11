@@ -90,10 +90,16 @@ NOT_HTTP = b"SSH-2.0-OpenSSH_9.6\r\n"
 CUT_SHORT = (b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n"
              b"Content-Length: 500\r\n\r\n{\"res")
 
+# A 200 from something that is not okl: a proxy's login page, or a web app on that port.
+_PAGE = b"<html>\r\n<p>Sign in</p></html>"
+NOT_JSON = (b"HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n"
+            b"Content-Length: " + str(len(_PAGE)).encode() + b"\r\n\r\n" + _PAGE)
+
 DEAD_SERVICES = {"stalls": _service_that_stalls,
                  "hangs up": lambda: _service_that_replies(b""),
                  "is not HTTP": lambda: _service_that_replies(NOT_HTTP),
-                 "cuts its reply short": lambda: _service_that_replies(CUT_SHORT)}
+                 "cuts its reply short": lambda: _service_that_replies(CUT_SHORT),
+                 "answers 200 with HTML": lambda: _service_that_replies(NOT_JSON)}
 # Both verbs: _post carries the briefing, _get carries drift (/nodes) and the metrics.
 CALLS = {"POST /check": lambda c: c.check("add a refund endpoint"),
          "GET /nodes": lambda c: c.all_nodes()}
@@ -204,6 +210,30 @@ def test_a_service_whose_reply_is_not_http_or_is_cut_short_is_unreachable(
     assert "\r" not in message, repr(message)
 
 
+@pytest.mark.parametrize("call", list(CALLS))
+def test_a_200_that_is_not_json_is_no_answer_not_a_refusal(tmp_path, monkeypatch, call):
+    """json.loads raised a ValueError, which `okl check` reports as "OKL REFUSED THE CHECK"
+    and the MCP tools as a refusal: nothing refused anything. And after a write, the service
+    behind the page may well have stored it (okl review R10)."""
+    from okl.client import Client, OKLNoAnswerError
+
+    # ARRANGE — something that answers 200 with a web page
+    monkeypatch.chdir(tmp_path)
+    with DEAD_SERVICES["answers 200 with HTML"]() as url:
+        c = Client(config={"repo": "r", "service_url": url})
+
+        # ACT
+        with pytest.raises(OKLNoAnswerError) as caught:
+            CALLS[call](c)
+
+    # ASSERT — an outage that may have acted, naming the service and what came back, on
+    # one line, with the parse error kept as the cause
+    message = str(caught.value)
+    assert url in message and "not JSON" in message and "Sign in" in message, message
+    assert "\n" not in message and "\r" not in message, repr(message)
+    assert isinstance(caught.value.__cause__, ValueError), repr(caught.value.__cause__)
+
+
 @pytest.mark.parametrize("dead", list(DEAD_SERVICES))
 def test_okl_check_against_a_dead_service_exits_2_with_a_reason_not_a_traceback(tmp_path, dead):
     """What the prompt hook actually saw: a traceback and exit 1 from `okl check`."""
@@ -228,15 +258,16 @@ def test_okl_check_against_a_dead_service_exits_2_with_a_reason_not_a_traceback(
     assert f"OKL service unreachable at {url}/check: " in lines[1], r.stderr
 
 
+@pytest.mark.parametrize("dead", ["stalls", "answers 200 with HTML"])
 @pytest.mark.parametrize("command", ["record", "verify"])
-def test_a_write_the_service_took_and_never_answered_is_not_reported_as_lost(tmp_path, command):
+def test_a_write_the_service_took_and_never_answered_is_not_reported_as_lost(tmp_path, command, dead):
     """A stall or hang-up reaches the client only after urllib has sent the whole request,
     so the service may have stored the write. `okl record` said "NOT RECORDED", and recording
     the lesson again without --id stored it a second time under a new id."""
     # ARRANGE — a service that takes the request and never answers
     argv = {"record": ["record", "--type", "Rule", "--scope", "org", "--title", "a lesson"],
             "verify": ["verify", "n_0123456789ab", "--run", "true"]}[command]
-    with _service_that_stalls() as url:
+    with DEAD_SERVICES[dead]() as url:
 
         # ACT
         r = _run_okl(tmp_path, url, *argv)
@@ -337,3 +368,55 @@ def test_the_prompt_hook_finishes_before_claude_code_cancels_it():
         f"+ one try stalled on {stalled_addresses} addresses at {_HTTP_TIMEOUT_S} s each = "
         f"{worst_case_s} s, which Claude Code cuts off at {CLAUDE_CODE_PROMPT_HOOK_TIMEOUT_S} s "
         f"and lets the prompt through unbriefed")
+
+
+def _mcp_text(result) -> str:
+    """The text of one MCP tool reply, on either major version of the SDK."""
+    if isinstance(result, tuple):
+        result = result[0]
+    content = getattr(result, "content", result)
+    if isinstance(content, list | tuple):
+        content = content[0]
+    return getattr(content, "text", str(content))
+
+
+@pytest.fixture
+def mcp_record(tmp_path, monkeypatch):
+    """okl_record over MCP, against whatever OKL_SERVICE_URL names, with a short timeout."""
+    import asyncio
+    pytest.importorskip("mcp")
+    from okl import client as client_mod
+    from okl.mcp_server import _build
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    for k in ("OKL_DATABASE_URL", "OKL_TOKEN"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setattr(client_mod, "_HTTP_TIMEOUT_S", 0.2)
+
+    def record(url: str, **extra: str) -> str:
+        monkeypatch.setenv("OKL_SERVICE_URL", url)
+        args = {"type": "Rule", "title": "a lesson", "scope": "org", **extra}
+        return _mcp_text(asyncio.run(_build().call_tool("okl_record", args)))
+    return record
+
+
+@pytest.mark.parametrize("dead", ["stalls", "answers 200 with HTML"])
+def test_mcp_record_says_maybe_when_the_service_may_have_stored_it(mcp_record, dead):
+    """okl_record caught only ValueError, so a write that may have landed reached the agent
+    as an opaque tool error; okl_update and okl_retire already said MAYBE (okl review R10)."""
+    with DEAD_SERVICES[dead]() as url:
+        text = mcp_record(url)
+
+    assert text.startswith("MAYBE RECORDED"), text
+    assert "okl_search" in text and "same id" in text, text
+
+
+def test_mcp_record_says_not_recorded_when_the_service_could_not_be_reached(mcp_record):
+    """A refused connection is before anything was sent: that write was not made."""
+    with socket.create_server(("127.0.0.1", 0)) as s:
+        url = f"http://127.0.0.1:{s.getsockname()[1]}"
+    # the port is closed now: the connection is refused before anything is sent
+
+    text = mcp_record(url)
+
+    assert text.startswith("NOT RECORDED") and "unreachable" in text, text
