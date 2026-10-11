@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:41c253dfebf783401e6ef21c96265e4e4ab72459517f1a06a72c0049e7eae1d8
+# okl-fingerprint: sha256:d07086d1e2ac22b97b6bb4a1cdeced0e2a76fe4822b8776b495ef8f7a78cb5ff
 # UserPromptSubmit hook — inject the org's relevant lessons into the model's context
 # BEFORE it starts the task. This event is the only correct one for delivery: its stdout
 # (exit 0) is added to Claude's context, and its stdin carries the actual prompt text, so
@@ -129,9 +129,13 @@ layer_fix() {
 # (okl review R21). The JSON is the shape `okl check --format hook` prints; if python3
 # cannot build it, plain stdout still enters the agent's context.
 offline_pass() {
-  local why="$1" context line
-  context="OKL NOT BRIEFED — okl's check did not run for this prompt, and OKL_OFFLINE=1 let it through ($why). Lessons, gates and past defects for this task may exist that you cannot see: no briefing is not a clean check. Say so before relying on the absence of a rule, and run \`okl check --task \"...\"\` once okl works."
-  line="okl: not briefed (OKL_OFFLINE=1). $why"
+  local why="$1"
+  pass_with "OKL NOT BRIEFED — okl's check did not run for this prompt, and OKL_OFFLINE=1 let it through ($why). Lessons, gates and past defects for this task may exist that you cannot see: no briefing is not a clean check. Say so before relying on the absence of a rule, and run \`okl check --task \"...\"\` once okl works." \
+    "okl: not briefed (OKL_OFFLINE=1). $why"
+}
+# Let the prompt through with `context` for the agent and `line` for the person, exit 0.
+pass_with() {
+  local context="$1" line="$2"
   echo "$line" >&2
   # The person's line is cut short; the agent gets the whole reason.
   if ! OKL_CONTEXT="$context" OKL_LINE="$line" python3 -c '
@@ -169,15 +173,27 @@ if ! resolve_okl; then
 fi
 
 # The task is the prompt itself (stdin JSON: {"prompt": "..."}); OKL_TASK overrides;
-# last-commit-message is only the fallback of last resort.
+# last-commit-message is only the fallback of last resort, for a run with no prompt event
+# at all. The first line printed says which: "event" when Claude Code sent a prompt.
 payload=$(cat 2>/dev/null || true)
-prompt=$(printf '%s' "$payload" | python3 -c '
+parsed=$(printf '%s' "$payload" | python3 -c '
 import json, sys
 try:
-    print((json.load(sys.stdin).get("prompt") or "").strip()[:2000])
+    d = json.load(sys.stdin)
 except Exception:
-    print("")
+    d = None
+event = isinstance(d, dict) and ("prompt" in d or d.get("hook_event_name") == "UserPromptSubmit")
+print("event" if event else "none")
+print(str(d.get("prompt") or "").strip()[:2000] if event else "")
 ' 2>/dev/null || true)
+prompt=$(printf '%s\n' "$parsed" | sed -n '2,$p')
+# A prompt with no text (an image or a file alone) names no task. It was briefed on the last
+# commit's subject instead, twelve lessons about unrelated work. okl is not asked: an okl
+# before 0.8.6 answers an empty task with every lesson it has.
+if [ -z "${OKL_TASK:-}" ] && [ -z "$prompt" ] && [ "$(printf '%s\n' "$parsed" | sed -n 1p)" = "event" ]; then
+  pass_with "OKL: nothing briefed. This prompt has no text (an image or a file alone), so it names no task to brief on. If the work has a subject, run \`okl check --task \"...\"\` before relying on the absence of a rule." \
+    "okl: nothing to brief on (the prompt has no text)"
+fi
 TASK="${OKL_TASK:-${prompt:-$(git log -1 --pretty=%s 2>/dev/null || echo 'general work')}}"
 
 # "${OKL[@]}": a spaced path stays whole and "python3 -m okl" stays three words (#140).

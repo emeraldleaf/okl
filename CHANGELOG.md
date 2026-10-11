@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **A prompt with no text briefs nothing.** An image or a file sent alone reached the prompt
+  hook as an empty prompt, and the hook briefed the last commit's subject instead: twelve
+  lessons about unrelated work. The hook now says there is nothing to brief on, to the
+  agent and the person, without asking okl (an okl before this release answers an empty
+  task with every lesson). `OKL_TASK` still overrides, and a run with no prompt event at
+  all keeps the last-resort task.
+
 - **A prompt with no subject is no longer briefed (okl review R7, #178).** Every word of a
   prompt was OR-ed into the briefing's search, so "ok go", "do it" or "what about this one?"
   matched enough of a store to fill the 12-lesson cap. The briefing now searches on the
