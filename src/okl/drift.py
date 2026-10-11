@@ -28,7 +28,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .store import Node
+from .store import RETIRED_STATUSES, Node
 
 
 @dataclass
@@ -182,8 +182,8 @@ def scan_drift(nodes: Iterable[Node], repo: str, repo_dir: str = ".") -> tuple[l
     for n in nodes:
         if not (n.scope == "org" or n.scope == repo_scope):
             continue
-        if not n.files:
-            continue
+        if not n.files or n.status in RETIRED_STATUSES:
+            continue   # a retired lesson is not a rule anyone keeps proven (R2)
         globs = [g for g in n.files.split(",") if g.strip()]
         last = _git_last_change_ms(globs, repo_dir)
         if last is None:
@@ -228,7 +228,7 @@ def off_branch(nodes: Iterable[Node], repo: str, repo_dir: str = ".") -> list[tu
     out = []
     for n in nodes:
         if not (n.files and n.verified_at is not None and n.verified_commit
-                and n.scope in ("org", repo_scope)):
+                and n.scope in ("org", repo_scope)) or n.status in RETIRED_STATUSES:
             continue
         if stamp_problem({"verified_at": n.verified_at, "verified_by": n.verified_by,
                           "verified_commit": n.verified_commit}):
@@ -270,7 +270,10 @@ def _governed_paths_exist(globs: list[str], repo_dir: str) -> bool:
 
 def _record_drift(rec: dict[str, Any], repo_scope: str, repo_dir: str) -> dict[str, Any] | None:
     """scan_drift's verdict for one briefed record (a dict, as check returns it), or None."""
-    if not rec.get("files") or rec.get("scope") not in ("org", repo_scope):
+    if (not rec.get("files") or rec.get("scope") not in ("org", repo_scope)
+            or rec.get("status") in RETIRED_STATUSES):
+        # Retired: scan_drift skips it, so marking it STALE here broke "the briefing and
+        # the CI gate never disagree", with no okl reverify able to clear it (R2 review).
         return None
     globs = [g for g in rec["files"].split(",") if g.strip()]
     last = _git_last_change_ms(globs, repo_dir)
@@ -367,7 +370,8 @@ def governs_nothing(nodes: Iterable[Node], repo: str, repo_dir: str = ".") -> li
     repo_scope = f"repo:{repo}"
     out = []
     for n in nodes:
-        if not n.files or not (n.scope == repo_scope or n.repo == repo):
+        if (not n.files or not (n.scope == repo_scope or n.repo == repo)
+                or n.status in RETIRED_STATUSES):
             continue
         globs = [g for g in n.files.split(",") if g.strip()]
         if not any(_glob_matches(g, p) for g in globs for p in paths):
@@ -453,7 +457,8 @@ def snapshot(nodes: Iterable[Node], repo: str) -> dict[str, Any]:
     """
     repo_scope = f"repo:{repo}"
     rules = [{f: getattr(n, f) for f in _FIELDS} for n in nodes
-             if n.files and (n.scope == "org" or n.scope == repo_scope)]
+             if n.files and (n.scope == "org" or n.scope == repo_scope)
+             and n.status not in RETIRED_STATUSES]
     return {"format": SNAPSHOT_FORMAT, "repo": repo,
             "rules": sorted(rules, key=lambda r: r["id"])}
 

@@ -41,7 +41,8 @@ If that tool is not available, run the equivalent `okl record --type … --id �
 command instead. To refine an existing lesson, use `okl_update` (or
 `okl update <id> --<field> …`) with only the fields that change: it keeps the lesson's
 proof unless its governed `files` change (then `okl reverify` re-runs its check), and
-recording its id again is refused.
+recording its id again is refused. If what you learned is that an existing lesson is wrong
+or replaced, retire it instead: `okl_retire` (or `okl retire <id> --reason … [--by <new>]`).
 
 ## 3. Decide how hard it must be enforced
 

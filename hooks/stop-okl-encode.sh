@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:fd4550f40e21ba8048a5a24f000b9fc143190b7989b5598c3d672be102ff6985
+# okl-fingerprint: sha256:e062b1600d16e92859f0208c2cbebfaa5386337c80372d1218a205e9901999d5
 # Stop hook — the write-side mechanical catch for the encoding loop.
 #
 # The read side (okl check) is enforced by the UserPromptSubmit hook; nothing enforced the WRITE
@@ -163,9 +163,10 @@ silently reversed? If yes, record it now. Three independent axes, each chosen de
   subcommand. To REFINE a lesson that exists, including one the briefing showed you by
   its [id], run `okl update <id> --fix "..."`: it changes only the fields you give and
   keeps the lesson's proof, unless --files changes (then `okl reverify` re-runs its check).
-  Recording an existing id again is refused. Where a repo keeps
-  its lessons in a seed file, use the id that file derives, "seed:<seed-file-stem>:<key>",
-  so a later `okl seed` updates that same row rather than adding a second one beside it.
+  Recording an existing id again is refused. If a lesson is WRONG or REPLACED, retire it,
+  never record over it: `okl retire <id> --reason "..." [--by <new-id>]`. Where a repo
+  keeps its lessons in a seed file, use the id that file derives,
+  "seed:<seed-file-stem>:<key>", so a later `okl seed` updates that same row.
 
 If the session genuinely learned nothing durable, state that explicitly and finish.
 MSG

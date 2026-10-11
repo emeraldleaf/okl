@@ -310,6 +310,21 @@ class Client:
                 raise
         return core.update(self._local_store(), node_id, repo=self.repo, **fields)
 
+    def retire(self, node_id: str, reason: str, by: str | None = None,
+               obsolete: bool = False) -> dict:
+        """Retire a lesson with a reason: wrong (the default), replaced `by` another, or
+        `obsolete`. Returns the lesson; raises ValueError for anything core.retire refuses."""
+        if self.mode == "remote":
+            try:
+                return self._post("/retire", {"id": node_id, "reason": reason, "by": by,
+                                              "obsolete": obsolete})
+            except OKLRejectedError as e:
+                if e.status == 404:
+                    raise OKLRejectedError(_TOO_OLD.format(what="has okl retire"),
+                                           status=404) from e
+                raise
+        return core.retire(self._local_store(), node_id, reason, by=by, obsolete=obsolete)
+
     def get(self, node_id: str) -> dict | None:
         """One lesson by id, or None if there is none."""
         if self.mode == "remote":

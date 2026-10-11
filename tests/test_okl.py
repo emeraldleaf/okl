@@ -1444,6 +1444,18 @@ def _backend_conformance(store, label):
     assert mine[0].at <= mine[1].at, f"{label}: briefings not oldest first"
     assert len(store.briefings()) >= 3, f"{label}: briefings(None) must return every repo's rows"
 
+    # ASSERT (10) — the retirement log appends, reads back oldest first, and filters by
+    # lesson (okl review R2). Its own table, so a rewrite of the lesson's row keeps it.
+    store.log_retirement(a, "superseded", "replaced", b)
+    store.log_retirement(a, "wrong", "it was wrong")
+    store.log_retirement(b, "obsolete", "gone")
+    store.add_node(store.get_node(a))
+    mine = store.retirements(a)
+    assert [(r.kind, r.reason, r.by) for r in mine] == [
+        ("superseded", "replaced", b), ("wrong", "it was wrong", None)], f"{label}: retirements"
+    assert mine[0].at <= mine[1].at, f"{label}: retirements not oldest first"
+    assert [r.node_id for r in store.retirements(b)] == [b], f"{label}: retirement filter"
+
 
 def test_sqlite_backend_conformance(store):
     """The SQLite backend meets the contract."""

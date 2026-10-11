@@ -117,6 +117,17 @@ class UpdateReq(BaseModel):
     fields: UpdateFields
 
 
+class RetireReq(BaseModel):
+    """Request body for POST /retire (core.retire)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    reason: str
+    by: str | None = None
+    obsolete: bool = False
+
+
 class VerifyReq(BaseModel):
     """Request body for POST /verify."""
 
@@ -226,6 +237,15 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901, PLR0915 - 
         # A missing lesson is an explicit null, so a 404 keeps meaning "no such route"
         # (an older service) and the client never mistakes that for a missing lesson.
         return {"node": core.get(_store, node_id)}
+
+    @app.post("/retire")
+    def retire(req: RetireReq, authorization: str | None = Header(default=None)) -> dict[str, Any]:
+        _auth(authorization)
+        try:
+            with _write:
+                return core.retire(_store, req.id, req.reason, by=req.by, obsolete=req.obsolete)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e)) from e
 
     @app.post("/verify")
     def verify(req: VerifyReq, authorization: str | None = Header(default=None)) -> dict[str, Any]:

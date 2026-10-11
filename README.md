@@ -118,6 +118,11 @@ okl doctor                  # flags other memory tools, double wiring, and where
   again, and `okl reverify` re-runs its stored check. `okl show <id>` prints the whole
   lesson. Recording an existing id again is refused, because it used to replace the
   lesson and wipe its proof.
+- **When a lesson is wrong or replaced,** retire it with a reason; nothing is deleted.
+  `okl retire <id> --reason "..."` keeps a wrong one briefed as AVOID, so nobody restates
+  it; `--by <new-id>` takes a replaced one out of briefings, which point to the new one;
+  `--obsolete` is for a lesson whose subject is gone. A fixed defect is not retired: it
+  keeps briefing against its return.
 - **Proving a lesson is true** is a check you run, not a flag you set:
   `okl verify <id> --run "pytest -q tests/test_orders.py" --expect "passed"`.
 - **When code a lesson governs changes,** `okl drift` goes red until its check passes
@@ -989,9 +994,10 @@ pip install "observed-knowledge-ledger[mcp]"
 okl mcp     # register in your coding agent's tool config
 ```
 
-Exposes five tools to a coding agent: `okl_check` (read lessons before a task),
+Exposes six tools to a coding agent: `okl_check` (read lessons before a task),
 `okl_record` (a new lesson), `okl_update` (refine one by id, keeping its proof),
-`okl_get` (one lesson whole) and `okl_search`. `okl_check` **reports an outage loudly** — if a configured
+`okl_retire` (withdraw one, with a reason), `okl_get` (one lesson whole) and
+`okl_search`. `okl_check` **reports an outage loudly** — if a configured
 shared instance is unreachable it says so rather than returning a reassuring
 "nothing found," because those two look identical from the agent's side and only one
 is safe. Unlike the hook, a tool result cannot block the agent; it can only warn it.
