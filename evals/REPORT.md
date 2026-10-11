@@ -990,6 +990,38 @@ rule needed to rank, and it is narrowed or reverted.
 **What this cannot settle.** Whether quieter briefings help on real work. The bait tasks all
 still fill the 12-lesson cap; the gain is on the prompts the A/B never sends.
 
+### Result (2026-10-11)
+
+Receipt: `evals/results/ab-20261011-2149.json`, `okl_commit` `8ccbb3e`, on the same resolved
+models as §4k (`claude-sonnet-4-6` and `claude-haiku-4-5-20251001`). 48 runs, 2 failures
+(4%): a generator timeout on `spa_tokens` (briefed) and one unevaluable sample
+(`rate_limiter`, briefed). Usable by the 20% rule.
+
+| | baseline | briefed |
+|---|---|---|
+| §4k (the judge says whether there was code) | 5/23 — 22% | 1/24 — 4% |
+| §4l (the briefing searches on subject words) | 5/24 — 21% | 1/22 — 5% |
+
+**On the samples that could be judged, the prediction held.** Each arm moved by about a
+point. The one briefed reproduction is `spa_tokens` (tokens kept in `sessionStorage`), which
+read 1/3 briefed in §4k, so the second falsifier did not trigger on it. On the three tasks
+the baseline failed at least once, the briefed arm reproduced 1 of 8.
+
+**One sample could not be judged, and it trips §4k's first falsifier.** The unevaluable
+`rate_limiter` sample holds 15,585 characters of code. The harness shows the judge only the
+first 8,000 (R12, #182), so the judge saw a submission cut off mid-line and answered
+`implemented: false`. §4k named exactly this, an unevaluable sample with more than 1,000
+characters of code, and said the instrument must change before its numbers are used. The
+cause is the harness's cut, not the field's wording. It matters here: `rate_limiter` read
+briefed 0/3 in §4k, so a reproduction in that sample would have triggered this section's
+second falsifier, and the receipt keeps no code to judge it again. The cut reached §4k's
+run too, where two judged samples were longer than 8,000 characters.
+
+**So, until the instrument is fixed,** this reads: no change on the 46 samples that could be
+judged, and one that could not. The fix is to give the judge the whole submission, up to a
+much larger limit, and record when it was cut (R12, #182); it is pre-registered as a change
+of instrument, and this comparison runs again on it.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
