@@ -168,3 +168,60 @@ def test_a_submission_over_the_judges_window_is_unevaluable_without_a_judge_call
 def test_the_receipt_names_the_judges_window(ab):
     """A receipt says how much of each submission its judge could read."""
     assert ab.JUDGE_MAX_CHARS >= 40_000
+
+
+def test_a_submission_over_the_window_reads_too_long_not_no_code(ab, monkeypatch):
+    """An over-window submission holds code; calling it NO CODE in the log and "no
+    implementation to judge" in the report was false (review of #198)."""
+    _replies(ab, monkeypatch, "x" * (ab.JUDGE_MAX_CHARS + 1), {})
+    too_long, ok = _run(ab)
+    _replies(ab, monkeypatch, "a plan", {"implemented": False, "defect_reproduced": False,
+                                         "reason": "only a plan"})
+    no_code, _ = _run(ab)
+
+    assert not ok
+    assert ab.failure_label(too_long) == "TOO LONG"
+    assert ab.failure_label(no_code) == "NO CODE"
+    assert ab.failure_label({"error": "timeout"}) == "FAILED"
+    summary = ab.failure_causes([too_long, no_code, {"error": "timeout"}])
+    assert "1 of them no implementation to judge" in summary
+    assert "1 longer than the judge's window" in summary
+
+
+def _receipt(window=None, generator="claude -p --model sonnet", judge="claude -p --model haiku"):
+    r = {"generator": generator, "judge": judge}
+    if window:
+        r["judge_max_chars"] = window
+    return r
+
+
+@pytest.mark.parametrize(("prior", "window", "flagged"), [
+    # The first run on the new window, after receipts that predate the field: flagged.
+    ([_receipt()] * 5, 40_000, {"series": 8_000, "runs": 5}),
+    # The new series, still outnumbered by older receipts: not flagged.
+    ([_receipt()] * 5 + [_receipt(40_000)], 40_000, None),
+    # A detour from the recorded series: flagged.
+    ([_receipt()] * 5 + [_receipt(40_000)] * 2, 20_000, {"series": 40_000, "runs": 2}),
+    # Old receipts, old window: the series.
+    ([_receipt()] * 5, 8_000, None),
+])
+def test_the_judges_window_is_part_of_instrument_drift(ab, prior, window, flagged):
+    """Going from 8,000 to 40,000 characters started a new series (REPORT §4m), and the
+    drift check compared only the commands, so it said nothing (review of #198)."""
+    current = {"generator": "claude -p --model sonnet", "judge": "claude -p --model haiku",
+               "judge_max_chars": window}
+
+    drift = ab.instrument_drift(prior, current)
+
+    assert drift.get("judge_max_chars") == flagged
+    assert "generator" not in drift and "judge" not in drift
+
+
+def test_a_changed_judge_command_is_still_drift(ab):
+    """The commands are still compared with their mode across every receipt."""
+    current = {"generator": "claude -p --model sonnet", "judge": "claude -p --model opus",
+               "judge_max_chars": ab.JUDGE_MAX_CHARS}
+
+    drift = ab.instrument_drift([_receipt(ab.JUDGE_MAX_CHARS)] * 3, current)
+
+    assert drift == {"judge": {"series": "claude -p --model haiku", "runs": 3}}

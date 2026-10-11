@@ -437,14 +437,17 @@ def test_ab_harness_flags_an_off_series_instrument_but_still_runs():
     # and the regression test passes against the broken code. It did exactly that.
     #
     # This history separates them: haiku is the series (3 runs), and the NEWEST receipt is
-    # the off-series opus run — the §4f shape precisely.
+    # the off-series opus run — the §4f shape precisely. Every receipt records the judge's
+    # current window, which is also part of the instrument (#198), so only the judge differs.
+    spec = importlib.util.spec_from_file_location("ab_harness", harness)
+    ab = importlib.util.module_from_spec(spec); spec.loader.exec_module(ab)
     with tempfile.TemporaryDirectory() as d:
         results = Path(d)
         for name, judge in [("ab-20260101-0000.json", "haiku"), ("ab-20260102-0000.json", "haiku"),
                             ("ab-20260103-0000.json", "haiku"), ("ab-20260104-0000.json", "opus")]:
             (results / name).write_text(json.dumps(
                 {"generator": "claude -p --model sonnet", "judge": f"claude -p --model {judge}",
-                 "results": [], "failures": []}))
+                 "judge_max_chars": ab.JUDGE_MAX_CHARS, "results": [], "failures": []}))
 
         # ASSERT (1) — the load-bearing one. Running haiku here matches the SERIES while
         # differing from the newest receipt. It must not warn: this is the run that restores
