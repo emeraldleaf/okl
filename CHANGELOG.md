@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased
+
+- **Every unbriefed prompt now says so (okl review R21).** `OKL_OFFLINE=1` let a prompt
+  through when okl could not run, with a line on stderr that neither the agent nor, in
+  most views, the person ever saw: the agent started the task as if a check had found
+  nothing. The prompt hook now hands the agent a notice that it was not briefed, with okl's
+  reason and that the absence of a briefing is not a clean check, and shows the person one
+  line saying the same. Without `OKL_OFFLINE`, a prompt okl cannot brief is still blocked.
+- **A pinned okl that cannot start no longer blocks a prompt another okl could brief
+  (#152).** A venv `okl` whose python was removed, by a Homebrew upgrade for example, still
+  exists and is executable, so the hooks accepted the pin and the prompt hook blocked on its
+  exit 126 even with a working okl on `PATH`. When a command fails to start within 2 s, the
+  prompt hook now moves on to the next layer (`OKL_BIN`, then the pin, then `PATH`, then
+  `python3 -m okl`), never running a command that already failed, and adds the one it
+  passed over, with its fix, to the line you see. A command that ran and then exited 127,
+  such as a `docker run` whose image lacks okl, is not run again: at three layers it could
+  have taken the hook past Claude Code's 30 s limit. A working pin costs nothing extra;
+  with nothing else to run, the block names the pin and says to re-run `okl init`.
+
 ## 0.8.3
 
 - **Retiring a lesson is a verb, with a reason (okl review R2).** "Retracted" was the only
