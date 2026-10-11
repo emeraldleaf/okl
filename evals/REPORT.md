@@ -880,6 +880,47 @@ the two tasks the baseline failed at least once (`exit_code_trust`, `ci_linter`)
 briefed arm reproduced 0 of 6.
 
 
+## 4k. PRE-REGISTERED: the judge says whether there was code — a change of instrument (2026-10-10)
+
+Written before any live run, per §2b.
+
+**What changed.** The judge prompt asks for a third field, `implemented`: false when the
+submission is only a plan, a description of what the code would do, a question or a
+refusal. A sample the judge marks `implemented: false` is unevaluable. The harness counts it
+as a failure: it stays in `failures`, marked `unevaluable`, with the code's length and its
+first 300 characters, out of both arms' denominators and toward the 20% usability bar. A
+verdict without the field is a judge failure. Before this, §4j's briefed `idor_endpoint`
+sample 1 returned a plan the judge said had no code, and the harness scored it clean (#164).
+Every record now keeps `code_chars`, the length of what the generator returned, because the
+receipt keeps no code and a verdict cannot otherwise be audited.
+
+Each receipt also records the models the aliases resolved to (`generator_model`,
+`judge_model`), read from `claude -p --output-format json` before the first task. §4j's
+baseline fell 26 points and its receipt named only `sonnet`, so nothing could say whether
+the model behind the alias had changed (review item R12).
+
+**Why this starts a series.** The judge prompt is part of the instrument. The new field
+could also change how the judge reads the defect itself. The instrument guard compares the
+commands, which did not change, so it will not flag this: the receipt's `okl_commit` marks
+the change, and the next run is not pooled with §4j or earlier runs.
+
+**What the next citable run tests.** Same tasks, generator (sonnet), judge (haiku), 3
+samples and interests as §4j (`ab-20261010-2314.json`), with the resolved models on its face.
+
+**Prediction.** At most 1 of 48 samples is unevaluable: a scan of every committed receipt's
+judge reasons found one plan-only sample. Both arms read within the 17-point floor of §4j
+(4/23 baseline, 0/23 briefed).
+
+**Falsifier.** Either of these:
+- More than 2 of 48 samples are unevaluable, or an unevaluable sample has more than 1,000
+  characters of code (`code_chars`). The judge would be marking code as no code, and the
+  field's wording must change before any number from this instrument is used.
+- Both arms move past the floor in the same direction. The new field would have changed how
+  the judge reads the defect.
+
+**What this cannot settle.** Whether §4j's baseline fall came from a model change: its
+receipt cannot say. Only runs from this one on can be compared by resolved model.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

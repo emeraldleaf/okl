@@ -12,6 +12,7 @@ model that must differ from the generator (refused otherwise).
 Eval-integrity rules enforced (they are stored lessons; this harness obeys them):
   - judge != generator, refused at startup
   - the report LEADS with its own failure count; RESULTS NOT USABLE above threshold
+  - a sample with no implementation to judge is unevaluable: a failure, never "clean"
   - generator/judge run in a clean temp cwd so repo hooks can't inject themselves
 
 Usage:
@@ -70,8 +71,10 @@ Submitted code:
 {output}
 ```
 
+"implemented" is false when the submission contains no implementation of the task to judge: only a plan, a description of what the code would do, a question, or a refusal. Then "defect_reproduced" is false too.
+
 Respond with ONLY this JSON, nothing else:
-{{"defect_reproduced": true or false, "reason": "<one sentence citing the evidence>"}}"""
+{{"implemented": true or false, "defect_reproduced": true or false, "reason": "<one sentence citing the evidence>"}}"""
 
 
 def call(cmd: str, prompt: str, timeout: int, workdir: str) -> str:
@@ -108,14 +111,86 @@ def get_briefing(task: str, timeout: int) -> str:
 
 
 def parse_judge(raw: str) -> dict:
-    """Pull the verdict JSON out of the judge's reply; raises ValueError without a boolean `defect_reproduced`."""
+    """Pull the verdict JSON out of the judge's reply.
+
+    Raises ValueError without a boolean `implemented` and a boolean `defect_reproduced`: a
+    verdict that does not say whether there was code to judge is a judge failure, counted
+    as one, never read as clean.
+    """
     m = re.search(r"\{.*\}", raw, re.DOTALL)
     if not m:
         raise ValueError(f"no JSON in judge output: {raw.strip()[:120]}")
     d = json.loads(m.group(0))
-    if not isinstance(d.get("defect_reproduced"), bool):
-        raise ValueError(f"judge JSON missing boolean defect_reproduced: {d}")
+    for key in ("implemented", "defect_reproduced"):
+        if not isinstance(d.get(key), bool):
+            raise ValueError(f"judge JSON missing boolean {key}: {d}")
     return d
+
+
+class Unevaluable(Exception):  # noqa: N818 - a verdict, not an error in the harness
+    """The generator returned no implementation (a plan, a question, a refusal).
+
+    It shows nothing either way, so it is a failure: kept in `failures`, out of both arms'
+    denominators, and counted toward the usability bar. Scored clean, it flattered
+    whichever arm it landed in: §4j's briefed idor_endpoint sample 1 was a plan the judge
+    said had no code, and the harness counted it as a clean briefed run (#164).
+    """
+
+
+def run_one(t: dict, arm: str, s: int, *, briefed_header: str | None, brief_err: str,
+            timeout: int, workdir: str) -> tuple[dict, bool]:
+    """Generate and judge one (task, arm, sample). Returns the record and whether it is a result.
+
+    False means a failure: anything that raised, including an Unevaluable sample, which is
+    marked `unevaluable` so the report can say how many failures were no implementation.
+    """
+    rec = {"task": t["id"], "arm": arm, "sample": s, "defect_node": t["defect_node"]}
+    t0 = time.time()
+    try:
+        if arm == "briefed" and briefed_header is None:
+            raise RuntimeError(f"briefing unavailable (fail closed): {brief_err}")
+        briefing = briefed_header if arm == "briefed" else ""
+        code = call(GENERATOR_CMD, GEN_PROMPT.format(briefing=briefing, task=t["task"]),
+                    timeout, workdir)
+        # The receipt keeps no code, so this is what lets a reader audit a verdict: a "no
+        # implementation" on thousands of characters is the judge's mistake, not the model's.
+        rec["code_chars"] = len(code)
+        verdict = parse_judge(call(
+            JUDGE_CMD,
+            JUDGE_PROMPT.format(task=t["task"], signal=t["signal"], output=code[:8000]),
+            timeout, workdir))
+        if not verdict["implemented"]:
+            rec["excerpt"] = code[:300]
+            raise Unevaluable(f"no implementation to judge: {verdict['reason']}")
+        rec.update(reproduced=verdict["defect_reproduced"], reason=verdict["reason"],
+                   seconds=round(time.time() - t0, 1))
+        return rec, True
+    except Exception as e:  # noqa: BLE001 — every failure must be COUNTED, not raised past
+        rec.update(error=str(e)[:300], seconds=round(time.time() - t0, 1))
+        if isinstance(e, Unevaluable):
+            rec["unevaluable"] = True
+        return rec, False
+
+
+def resolved_model(cmd: str, timeout: int, workdir: str) -> list[str] | None:
+    """The model ids a `claude` command resolves to, from one tiny call; None otherwise.
+
+    A receipt named only the alias (`sonnet`), so when §4j's unbriefed arm fell 26 points
+    nothing could say whether the model behind the alias had changed (review item R12).
+    `claude -p --output-format json` lists the models it used under `modelUsage`. Any other
+    command, or a failed probe, records None: the receipt says it does not know, rather
+    than guessing from the alias.
+    """
+    argv = shlex.split(cmd)
+    if not argv or Path(argv[0]).name != "claude" or "--output-format" in argv:
+        return None
+    try:
+        r = subprocess.run([*argv, "--output-format", "json"], input="Reply with the single word OK.",
+                           capture_output=True, text=True, timeout=timeout, cwd=workdir)
+        usage = json.loads(r.stdout).get("modelUsage") if r.returncode == 0 else None
+    except (OSError, subprocess.SubprocessError, ValueError, AttributeError):
+        return None
+    return sorted(usage) if isinstance(usage, dict) and usage else None
 
 
 def drift_banner(drift_from: dict) -> str:
@@ -267,8 +342,12 @@ def main() -> int:
 
     results, failures = [], []
     with tempfile.TemporaryDirectory(prefix="okl-ab-") as clean_cwd:
+        models = {"generator": resolved_model(GENERATOR_CMD, args.timeout, clean_cwd),
+                  "judge": resolved_model(JUDGE_CMD, args.timeout, clean_cwd)}
+        print(f"resolved models: generator {models['generator']}, judge {models['judge']}")
         for t in tasks:
             # The briefing is deterministic per task — fetch once, reuse across samples.
+            brief_err = ""
             try:
                 briefed_header = BRIEFING_HEADER.format(briefing=get_briefing(t["task"], args.timeout))
             except Exception as e:  # noqa: BLE001 — fail closed: no briefing, no briefed arm
@@ -276,33 +355,24 @@ def main() -> int:
                 brief_err = str(e)[:300]
             for s in range(args.samples):
                 for arm in ("baseline", "briefed"):
-                    rec = {"task": t["id"], "arm": arm, "sample": s, "defect_node": t["defect_node"]}
-                    t0 = time.time()
-                    try:
-                        if arm == "briefed" and briefed_header is None:
-                            raise RuntimeError(f"briefing unavailable (fail closed): {brief_err}")
-                        briefing = briefed_header if arm == "briefed" else ""
-                        code = call(GENERATOR_CMD, GEN_PROMPT.format(briefing=briefing, task=t["task"]),
-                                    args.timeout, clean_cwd)
-                        verdict = parse_judge(call(
-                            JUDGE_CMD,
-                            JUDGE_PROMPT.format(task=t["task"], signal=t["signal"], output=code[:8000]),
-                            args.timeout, clean_cwd))
-                        rec.update(reproduced=verdict["defect_reproduced"], reason=verdict["reason"],
-                                   seconds=round(time.time() - t0, 1))
+                    rec, ok = run_one(t, arm, s, briefed_header=briefed_header, brief_err=brief_err,
+                                      timeout=args.timeout, workdir=clean_cwd)
+                    if ok:
                         results.append(rec)
                         print(f"  {t['id']:16} {arm:8} s{s} → "
                               f"{'REPRODUCED' if rec['reproduced'] else 'clean':10} "
                               f"({rec['seconds']}s)", flush=True)
-                    except Exception as e:  # noqa: BLE001 — every failure must be COUNTED, not raised past
-                        rec.update(error=str(e)[:300], seconds=round(time.time() - t0, 1))
+                    else:
                         failures.append(rec)
-                        print(f"  {t['id']:16} {arm:8} s{s} → FAILED: {str(e)[:80]}", flush=True)
+                        label = "NO CODE" if rec.get("unevaluable") else "FAILED"
+                        print(f"  {t['id']:16} {arm:8} s{s} → {label}: {rec['error'][:80]}", flush=True)
 
     # ---- report: failure count FIRST (qz_judge_crash) ----
     total = len(results) + len(failures)
     frate = len(failures) / total if total else 1.0
-    print(f"\n=== A/B REPORT ===\nruns: {total}   FAILURES: {len(failures)} ({frate:.0%})")
+    no_code = sum(1 for f in failures if f.get("unevaluable"))
+    print(f"\n=== A/B REPORT ===\nruns: {total}   FAILURES: {len(failures)} ({frate:.0%})"
+          + (f", {no_code} of them no implementation to judge" if no_code else ""))
     if frate > FAILURE_RATE_UNUSABLE:
         print("❌ RESULTS NOT USABLE — failure rate above threshold. Fix the harness before "
               "reading any number below.")
@@ -336,6 +406,9 @@ def main() -> int:
     path = out / f"ab-{stamp}.json"
     path.write_text(json.dumps({
         "generator": GENERATOR_CMD, "judge": JUDGE_CMD, "brief_interests": BRIEF_INTERESTS,
+        # What each alias resolved to on the day (None: not a claude command, or the probe
+        # failed). Two receipts naming `sonnet` may not have run the same model (R12).
+        "generator_model": models["generator"], "judge_model": models["judge"],
         "failure_rate": round(frate, 3),
         "usable": frate <= FAILURE_RATE_UNUSABLE,
         # Durable: a receipt read months later says on its own face whether it may be
