@@ -1703,11 +1703,11 @@ def test_prompt_hook_retries_a_briefly_unavailable_store_but_not_a_missing_binar
     env = {"PATH": os.environ["PATH"], "HOME": str(tmp_path), "TMPDIR": str(tmp_path),
            "OKL_BIN": str(stub), "CLAUDE_PROJECT_DIR": str(tmp_path)}
 
-    def run(body):
+    def run(body, **over):
         # The stub logs each call before doing anything, so the count is the number of tries.
         calls.write_text("")
         stub.write_text(f"#!/bin/sh\necho call >> '{calls}'\n{body}\n"); stub.chmod(0o755)
-        r = subprocess.run(["bash", str(hook)], cwd=tmp_path, text=True, env=env,
+        r = subprocess.run(["bash", str(hook)], cwd=tmp_path, text=True, env={**env, **over},
                            input=json.dumps({"prompt": "x"}), capture_output=True)
         return r, len(calls.read_text().splitlines())
 
@@ -1723,8 +1723,9 @@ def test_prompt_hook_retries_a_briefly_unavailable_store_but_not_a_missing_binar
     r, n = run("echo 'OKL UNREACHABLE: store gone' >&2; exit 2")
     assert r.returncode == 2 and n == 3 and "store gone" in r.stderr, (r.returncode, n, r.stderr)
 
-    # ASSERT (3) — a binary that cannot start is not retried: a second will not fix it.
-    r, n = run("exit 127")
+    # ASSERT (3) — a binary that cannot start is not retried: a second will not fix it. The
+    # hook moves on to the next layer instead (#152); with no other okl to run, it blocks.
+    r, n = run("exit 127", PATH="/usr/bin:/bin")
     assert r.returncode == 2 and n == 1, (r.returncode, n, r.stderr)
 
 

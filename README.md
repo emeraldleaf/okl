@@ -705,9 +705,12 @@ pipx bin dir on PATH — so both hooks resolve the `okl` binary in layers: the `
 env var, then the `okl_bin` path `init` pins into `.okl/config.json` (machine-local),
 then PATH, then any `python3` that can `import okl` (`python3 -m okl`). `OKL_BIN` and
 `okl_bin` hold a path to okl (spaces are fine) or `<python> -m okl`; a launcher with
-arguments, such as `uv run okl`, belongs in a script they point at. If nothing
-resolves, the check hook blocks with install instructions (fail closed, `OKL_OFFLINE=1`
-to override) while the encode reminder silently disables (best-effort by design).
+arguments, such as `uv run okl`, belongs in a script they point at. If a command
+resolves but cannot start (a venv `okl` whose python was removed), the check hook moves
+on to the next layer. If nothing runs, the check hook blocks with install
+instructions (fail closed) while the encode reminder silently disables (best-effort by
+design). `OKL_OFFLINE=1` lets the prompt through anyway, and says so: the agent is told
+it was not briefed and why, and you see one line saying the same.
 With no shared service configured it uses a local `.okl/okl.db` — single-machine
 mode, good for trying it before you deploy anything.
 
