@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.8.4
 
 - **Every unbriefed prompt now says so (okl review R21).** `OKL_OFFLINE=1` let a prompt
   through when okl could not run, with a line on stderr that neither the agent nor, in
