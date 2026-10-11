@@ -334,12 +334,20 @@ def test_the_prompt_hook_finishes_before_claude_code_cancels_it():
     # ARRANGE — the retry loop as the hook ships it (the repo's own copies are held
     # byte-identical to this one by test_mirror_files_identical)
     hook = PROMPT_HOOK.read_text()
-    loop = re.search(r"^for attempt in ([0-9 ]+); do$", hook, re.MULTILINE)
+    loop = re.search(r"^\s*for attempt in ([0-9 ]+); do$", hook, re.MULTILINE)
+    # A command that cannot start ends the loop and the hook moves on to the next layer
+    # (#152), but only after a quick failure, and never to a command that already failed:
+    # budget that quick failure for every layer but the last, which gets the full loop.
+    fallthrough = re.search(r'\[ "\$run_s" -lt ([0-9]+) \]; do$', hook, re.MULTILINE)
+    layers = {int(n) for n in re.findall(r"okl_layer=([0-9]+);", hook)}
     pause = re.search(r"&& sleep ([0-9.]+)$", hook, re.MULTILINE)
     quick = re.search(r"^\s*\[ \$\(\(SECONDS - started\)\) -ge ([0-9]+) \] && break$", hook, re.MULTILINE)
     assert loop, "the hook's retry loop changed shape; re-derive this budget from it"
     assert pause, "the hook's pause between tries changed shape; re-derive this budget"
     assert quick, "the hook no longer stops after a slow try; three of them overran Claude Code's limit"
+    assert fallthrough, "the hook's fall-through to the next layer changed shape; re-derive this budget"
+    assert layers == {1, 2, 3, 4}, f"the hook resolves okl in layers {sorted(layers)}; re-derive this budget"
+    layers_passed_over, quick_fail_s = len(layers) - 1, int(fallthrough.group(1))
     attempts = len(loop.group(1).split())
     # SECONDS counts whole seconds, so a try the hook retried took less than this.
     quick_try_s = int(quick.group(1))
@@ -351,8 +359,8 @@ def test_the_prompt_hook_finishes_before_claude_code_cancels_it():
 
     # ACT — the longest the hook can take: quick failures until the last try, which stalls
     slow_try_s = stalled_addresses * _HTTP_TIMEOUT_S + start_allowance_s
-    worst_case_s = (hook_prelude_s + (attempts - 1) * (quick_try_s + float(pause.group(1)))
-                    + slow_try_s)
+    worst_case_s = (hook_prelude_s + layers_passed_over * quick_fail_s
+                    + (attempts - 1) * (quick_try_s + float(pause.group(1))) + slow_try_s)
 
     # ASSERT — the hook ends, and blocks, before Claude Code gives up on it
     assert worst_case_s < CLAUDE_CODE_PROMPT_HOOK_TIMEOUT_S, (
