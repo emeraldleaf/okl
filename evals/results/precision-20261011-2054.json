@@ -1,0 +1,85 @@
+{
+ "store_records": 183,
+ "limit": 12,
+ "filler_budget": 3,
+ "filler": {
+  "ok": 0,
+  "k": 0,
+  "yes": 0,
+  "no": 0,
+  "sure": 0,
+  "thanks": 0,
+  "thank you": 0,
+  "ok thanks": 0,
+  "ok go": 0,
+  "go ahead": 0,
+  "do it": 0,
+  "yes do it": 0,
+  "ok do that": 0,
+  "keep going": 0,
+  "continue": 0,
+  "next": 0,
+  "ok whats next": 0,
+  "what's next": 0,
+  "ok now what": 0,
+  "sounds good": 0,
+  "looks good": 0,
+  "lgtm": 0,
+  "what about this one?": 0,
+  "done?": 0,
+  "why?": 0,
+  "hmm": 0,
+  "try again": 0,
+  "is it done?": 0,
+  "can you do that?": 0,
+  "let's do it": 0
+ },
+ "filler_over_budget": [],
+ "filler_cap_hits": 0,
+ "bait": {
+  "idor_endpoint": 12,
+  "price_tamper": 12,
+  "react_fetch": 12,
+  "judge_summary": 12,
+  "exit_code_trust": 12,
+  "spa_tokens": 12,
+  "rate_limiter": 12,
+  "ci_linter": 12
+ },
+ "bait_cap_hits": 8,
+ "top_lessons": [
+  [
+   "seed:python-canon:py_print_at_edges",
+   4
+  ],
+  [
+   "seed:dotnet-decisions:pd_openapi_dev_only",
+   3
+  ],
+  [
+   "seed:frontend-canon:rxc_effects_discipline",
+   3
+  ],
+  [
+   "seed:dotnet-decisions:pd_standard_resilience_handler",
+   3
+  ],
+  [
+   "seed:frontend-canon:rxc_bundle_budget",
+   3
+  ],
+  [
+   "seed:frontend-canon:rxc_test_behavior",
+   3
+  ],
+  [
+   "seed:geospatial-defects:g_verify_outputs",
+   3
+  ],
+  [
+   "seed:dotnet-defects:nc_price_tamper",
+   2
+  ]
+ ],
+ "okl_commit": "77c3626"
+}
