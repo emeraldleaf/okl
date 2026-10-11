@@ -127,6 +127,13 @@ def parse_judge(raw: str) -> dict:
     return d
 
 
+# How much of a submission the judge reads. It read only the first 8,000 characters: a
+# 15,585-character rate limiter was cut off mid-line, the judge said there was no code,
+# and §4l lost that sample (#182). 40,000 characters is about 10,000 tokens, far inside the
+# judge's context; a longer submission is unevaluable rather than judged on a cut copy.
+JUDGE_MAX_CHARS = 40_000
+
+
 class Unevaluable(Exception):  # noqa: N818 - a verdict, not an error in the harness
     """The generator returned no implementation (a plan, a question, a refusal).
 
@@ -155,9 +162,13 @@ def run_one(t: dict, arm: str, s: int, *, briefed_header: str | None, brief_err:
         # The receipt keeps no code, so this is what lets a reader audit a verdict: a "no
         # implementation" on thousands of characters is the judge's mistake, not the model's.
         rec["code_chars"] = len(code)
+        if len(code) > JUDGE_MAX_CHARS:
+            rec["truncated"] = True
+            raise Unevaluable(f"{len(code)} characters, longer than the judge's "
+                              f"{JUDGE_MAX_CHARS}-character window")
         verdict = parse_judge(call(
             JUDGE_CMD,
-            JUDGE_PROMPT.format(task=t["task"], signal=t["signal"], output=code[:8000]),
+            JUDGE_PROMPT.format(task=t["task"], signal=t["signal"], output=code),
             timeout, workdir))
         if not verdict["implemented"]:
             rec["excerpt"] = code[:300]
@@ -424,6 +435,8 @@ def main() -> int:
     path = out / f"ab-{stamp}.json"
     path.write_text(json.dumps({
         "generator": GENERATOR_CMD, "judge": JUDGE_CMD, "brief_interests": BRIEF_INTERESTS,
+        # How much of each submission the judge read (#182): part of the instrument.
+        "judge_max_chars": JUDGE_MAX_CHARS,
         # What each alias resolved to on the day (None: not a claude command, or the probe
         # failed). Two receipts naming `sonnet` may not have run the same model (R12).
         "generator_model": models["generator"], "judge_model": models["judge"],

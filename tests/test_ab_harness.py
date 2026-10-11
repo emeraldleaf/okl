@@ -126,3 +126,45 @@ def test_a_judge_that_resolves_to_the_generators_model_is_caught(ab, generator, 
     startup guard compared only the strings, so the judge could grade its own model's
     output (CodeRabbit on #168)."""
     assert ab.judge_is_generator({"generator": generator, "judge": judge}) is same
+
+
+def test_the_judge_sees_a_long_submission_whole(ab, monkeypatch):
+    """The judge saw only the first 8,000 characters: a 15,585-character rate limiter was
+    cut off mid-line, the judge said there was no code, and §4l lost that sample (#182)."""
+    seen = {}
+
+    def fake_call(cmd, prompt, timeout, workdir):
+        if cmd == ab.JUDGE_CMD:
+            seen["prompt"] = prompt
+            return json.dumps({"implemented": True, "defect_reproduced": False, "reason": "ok"})
+        return "x = 1\n" * 2600   # 15,600 characters
+
+    monkeypatch.setattr(ab, "call", fake_call)
+
+    rec, ok = _run(ab)
+
+    assert ok is True and rec["code_chars"] == 15600
+    assert "x = 1\n" * 2600 in seen["prompt"]          # every character reached the judge
+
+
+def test_a_submission_over_the_judges_window_is_unevaluable_without_a_judge_call(ab, monkeypatch):
+    """Judging a cut-off copy is a guess: past the window the sample is a failure, marked
+    as too long, and no judge is asked."""
+    calls = []
+
+    def fake_call(cmd, prompt, timeout, workdir):
+        calls.append(cmd)
+        return "y" * (ab.JUDGE_MAX_CHARS + 1)
+
+    monkeypatch.setattr(ab, "call", fake_call)
+
+    rec, ok = _run(ab)
+
+    assert ok is False and rec["unevaluable"] is True and rec["truncated"] is True
+    assert "longer than the judge's" in rec["error"]
+    assert calls == [ab.GENERATOR_CMD]                  # the judge was never called
+
+
+def test_the_receipt_names_the_judges_window(ab):
+    """A receipt says how much of each submission its judge could read."""
+    assert ab.JUDGE_MAX_CHARS >= 40_000
