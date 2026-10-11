@@ -34,6 +34,15 @@
   stored the lesson, to look with `okl_search` before recording it again, and that
   recording it again with the same id is safe; a refused connection says NOT RECORDED.
 
+- **The A/B harness no longer counts a sample with no code as a clean run (#164).** The judge
+  now says whether the submission implemented the task at all. A plan, a description, a
+  question or a refusal is unevaluable: a failure, kept out of both arms' denominators and
+  counted toward the usability bar, with the code's length and an excerpt so the verdict
+  can be audited. §4j's briefed `idor_endpoint` sample was a plan the harness scored clean.
+  Receipts also record the model each alias resolved to (review item R12), and the harness
+  refuses a judge that resolves to the generator's model under a different command string.
+  REPORT §4k pre-registers the change of instrument.
+
 ## 0.8.3
 
 - **Retiring a lesson is a verb, with a reason (okl review R2).** "Retracted" was the only
