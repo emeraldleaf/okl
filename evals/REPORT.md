@@ -560,8 +560,8 @@ a trend.
 *Note, 2026-10-10:* the second 2/3 in that list is the haiku-generated run, which sonnet
 judged. And "at or near its baseline" below does not hold for every run: 0003 read 2/3 →
 0/3, and 1238 and 1323 read 3/3 → 1/3. On the documented instrument (sonnet generator,
-haiku judge) the pooled figure is 24/31 → 13/31 across its twelve receipts, §4j's, §4k's
-and §4l's included (updated 2026-10-11): reduced, not prevented.
+haiku judge) the pooled figure is 26/34 → 14/34 across its thirteen receipts, §4j's, §4k's,
+§4l's and §4m's included (updated 2026-10-11): reduced, not prevented.
 
 What is *not* judge-dependent: this is not a retrieval failure. Pre-flight confirms the
 rule (`rx_tokens_localstorage`) reaches the briefing, and that record is deliberately unset
@@ -1053,15 +1053,52 @@ means the `implemented` field still misfires.
 **What this cannot settle.** Whether the cut changed §4k's or §4l's verdicts on the samples it
 did judge: their code was not kept (the sidecar in #182).
 
+### Result (2026-10-11)
+
+Receipt: `evals/results/ab-20261011-2254.json`, `okl_commit` `5e9b9dd`, `judge_max_chars`
+40,000, on the same resolved models as §4k and §4l (`claude-sonnet-4-6` and
+`claude-haiku-4-5-20251001`). 48 runs, no failures.
+
+| | baseline | briefed |
+|---|---|---|
+| §4l (the judge saw the first 8,000 characters) | 5/24 — 21% | 1/22 — 5% |
+| §4m (the judge reads the whole submission) | 10/24 — 42% | 1/24 — 4% |
+
+**The instrument held.** No sample was unevaluable. The two longest submissions, both
+`rate_limiter` baseline samples at 15,349 and 15,619 characters, were judged whole and judged
+clean. Under the old cut they were the shape of the sample §4l lost.
+
+**The falsifier did not trigger.** The one briefed reproduction is `spa_tokens` again (1/3, as
+in §4k). No task that read briefed 0/3 in §4k reproduced when briefed, `rate_limiter`
+included, and the briefed arm held at 4% against §4l's 5%. On the five tasks the baseline
+failed at least once, the briefed arm reproduced 1 of 15. By its pre-registered test, the
+subject-words briefing (#178) ships.
+
+**The prediction failed on the baseline, and the judge is not why.** The baseline read 10/24,
+21 points above §4l and past the 17-point floor. The wider window cannot explain it: all ten
+baseline reproductions are short submissions, 82 to 4,637 characters, which the old
+8,000-character judge read whole too. The baseline carries no briefing, so nothing this
+branch changed reaches it. Its movement is the generator's own variation between runs, and
+it widens the floor: two runs of one 24-sample arm can differ by 21 points. Most of the rise
+is `price_tamper`, 3/3 here after 0/3 in §4k and 1/3 in §4l; its 3-sample sonnet baselines
+have read 0/3 four times, 1/3 three times and 2/3 five times, so 3/3 is one step past its
+usual range. `rate_limiter`'s baseline reproduced for the first time on record. The judge's
+reason is that the submission claims a Redis-backed store without showing the code for it,
+a call on a claim rather than on code; it can be checked once receipts keep the code (#182).
+
+**For the series this run starts:** its gap, 42% → 4%, is not an effect size. The baseline
+sits at the top of its range, and the floor between runs is now at least 21 points. The
+direction matches every run before it.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
    task the sonnet baseline failed was fully prevented except one residual
    (judge_summary 1/3). *Note, 2026-10-10:* "fully prevented" held in no 3-sample run
-   after that one. spa_tokens is reduced, not prevented: 30/37 → 18/37 (81% → 49%) across
-   the 14 receipts that include it, and 24/31 → 13/31 on the documented instrument
-   (sonnet generator, haiku judge). The 14 include §4j's run, where it read 0/2 → 0/3,
-   §4k's, 1/3 → 1/3, and §4l's, 1/3 → 1/2 (updated 2026-10-11).
+   after that one. spa_tokens is reduced, not prevented: 32/40 → 19/40 (80% → 48%) across
+   the 15 receipts that include it, and 26/34 → 14/34 on the documented instrument
+   (sonnet generator, haiku judge). The 15 include §4j's run, where it read 0/2 → 0/3,
+   §4k's, 1/3 → 1/3, §4l's, 1/3 → 1/2, and §4m's, 2/3 → 1/3 (updated 2026-10-11).
 2. **Cross-model headline: briefed haiku (12%) beat unbriefed sonnet (33%)** on the
    identical task set — a briefed budget model reproduced org-known defect classes at
    roughly a third the rate of an unbriefed frontier model. One haiku run, never
