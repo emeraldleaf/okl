@@ -367,7 +367,7 @@ with receipts, not a benchmark.
 
 ## How it works
 
-<img src="docs/okl-how-it-works.svg" alt="One repo records a lesson; a repo that loads it can be briefed on it before a task it applies to. The store is typed, scoped and tagged; every verification stamp carries the check that earned it." width="100%">
+<img src="docs/okl-how-it-works.svg" alt="One repo records a lesson; a repo that loads it can be briefed on it before a task it applies to. The store is typed, scoped and tagged; every verification stamp carries the check that earned it. Lessons are corrected and retired with a reason, not only added, and every check run is kept." width="100%">
 
 ### How a briefing is actually built
 
