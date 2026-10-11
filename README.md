@@ -1074,5 +1074,7 @@ MIT.
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, the repo's own rules (mirror files,
-drift, evidence-based verification), and where help is most useful. Security policy and
-the deployment threat model: [SECURITY.md](SECURITY.md).
+drift, evidence-based verification), and where help is most useful.
+[docs/DEVELOPING.md](docs/DEVELOPING.md) walks through how okl is developed end to end: the
+everyday loop, CI, pull requests, releases, the evaluations and what you can observe.
+Security policy and the deployment threat model: [SECURITY.md](SECURITY.md).
