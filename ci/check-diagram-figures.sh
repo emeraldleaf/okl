@@ -76,6 +76,38 @@ git ls-files 'docs/*.excalidraw' | while IFS= read -r src; do
   fi
 done
 
+# HTML diagram sources too: the one-page overview (docs/overview/) is HTML rendered to PNG,
+# so the loop above, which reads .excalidraw files only, never saw it. A PNG cannot be read
+# back, so the source is the only place a figure can be caught. CSS is full of percentages
+# (`width: 94%`), so style blocks and attributes are stripped before looking for figures.
+git ls-files 'docs/*.html' | while IFS= read -r src; do
+  echo "-- $src"
+  text=$(git show "HEAD:$src" | sed '/<style>/,/<\/style>/d' | sed -E 's/style="[^"]*"//g')
+  named=$(printf '%s\n' "$text" | grep -oE 'ab-[0-9]{8}-[0-9]{4}' | sort -u || true)
+  if [ -z "$named" ]; then
+    if printf '%s\n' "$text" | grep -qE '[0-9]+ ?%'; then
+      echo "   FAIL: shows a percentage but names no receipt"
+      touch "$work/fail"
+    else
+      echo "   ok: publishes no figures"
+    fi
+  fi
+  for r in $named; do
+    if git ls-files --error-unmatch "evals/results/$r.json" >/dev/null 2>&1; then
+      echo "   ok: $r has a committed receipt"
+    else
+      echo "   FAIL: cites $r, which is not committed under evals/results/"
+      touch "$work/fail"
+    fi
+  done
+  for q in '50% → 6%' '75% → 8%'; do
+    if printf '%s\n' "$text" | grep -qF "$q"; then
+      echo "   FAIL: publishes '$q', quarantined as historical in REPORT.md §7"
+      touch "$work/fail"
+    fi
+  done
+done
+
 if [ -e "$work/fail" ]; then
   exit 1
 fi

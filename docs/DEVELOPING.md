@@ -61,8 +61,9 @@ src/okl/
 
 5. **Change the docs in the same PR.** That means the README, `docs/GETTING-STARTED.md`,
    the CHANGELOG's `## Unreleased` section, and the diagram if what it shows changed. The
-   diagram is edited in the `.excalidraw` source and re-rendered to SVG. The website's okl
-   page and its copy of the diagram follow each release.
+   diagram is edited in the `.excalidraw` source and re-rendered to SVG; the one-page
+   overview is edited in `docs/overview/okl-overview.html` and re-rendered with the
+   `render.py` beside it. The website's okl page and its copies of both follow each release.
 6. **Commit, then re-verify, then commit the snapshot** (maintainer). This order matters:
 
    ```bash
