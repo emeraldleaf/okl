@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.8.4
 
 - **Every run of a lesson's check is kept, pass or fail (okl review R3, first slice).** The
   stamp keeps only a lesson's last pass, so a check that failed, the run that caught a
