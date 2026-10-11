@@ -560,8 +560,8 @@ a trend.
 *Note, 2026-10-10:* the second 2/3 in that list is the haiku-generated run, which sonnet
 judged. And "at or near its baseline" below does not hold for every run: 0003 read 2/3 →
 0/3, and 1238 and 1323 read 3/3 → 1/3. On the documented instrument (sonnet generator,
-haiku judge) the pooled figure is 23/28 → 12/29 across its eleven receipts, §4j's and §4k's
-included (updated 2026-10-11): reduced, not prevented.
+haiku judge) the pooled figure is 26/34 → 14/34 across its thirteen receipts, §4j's, §4k's,
+§4l's and §4m's included (updated 2026-10-11): reduced, not prevented.
 
 What is *not* judge-dependent: this is not a retrieval failure. Pre-flight confirms the
 rule (`rx_tokens_localstorage`) reaches the briefing, and that record is deliberately unset
@@ -951,6 +951,77 @@ at least once (`judge_summary`, `spa_tokens`, `ci_linter`), the briefed arm repr
 the two runs are not pooled. From here on a receipt names its models, and a run that
 resolves to a different one starts a new series.
 
+## 4l. PRE-REGISTERED: the briefing searches on a prompt's subject words — a change of treatment (2026-10-11)
+
+Written before any live run, per §2b.
+
+**What changed.** The briefing's search used every word of the prompt, OR-ed together. It
+now drops single characters and a curated list of function words and chat filler, keeps
+each remaining term once and in order up to 40, and briefs nothing when no term of three or
+more characters is left (#178). Short subject tokens (`id`, `ci`, `db`, `go`) and `get` stay.
+An explicit `okl search` is unchanged.
+
+**Deterministic checks, run first.**
+
+- Precision, `evals/precision.py` (new, R8, #179): 30 filler prompts on a store built only
+  from the committed seed packs. On main, 18 of 30 briefed more than 3 lessons and 12 hit the
+  12-lesson cap; with this change, none is over budget and none hits the cap
+  (`evals/results/precision-20261011-2054.json`).
+- Recall, `python3 evals/preflight.py`: 7 of 8 tasks receive the rule they test, plus the
+  accepted gap (`exit_code_trust`, §4b), unchanged.
+- The bait briefings change. Taking function words out of the query changes BM25's ranking,
+  and on this machine's store all eight bait briefings differ from main's in which lessons
+  they carry or in what order, while each task's own rule is still present (the pre-flight
+  above). `layout_preflight.py` does not see this: it renders one retrieval with both
+  renderers, so it measures layout only, and it reported the same size for both. A check
+  that two retrievals select the same lessons is #33's subject.
+
+**What the next citable run tests.** Same tasks, generator (sonnet), judge (haiku), 3
+samples and interests as §4k (`ab-20261011-0414.json`), with the resolved models on its face.
+
+**Prediction.** No detectable change: both arms within the 17-point floor of §4k (5/23
+baseline, 1/24 briefed). The baseline carries no briefing, so it can move only by noise or
+a model change, which its receipt now names.
+
+**Falsifier.** The briefed arm worsens beyond the floor against §4k's 4%, or a task that read
+briefed 0/3 in §4k reproduces. Either would mean the stoplist removed words a bait task's
+rule needed to rank, and it is narrowed or reverted.
+
+**What this cannot settle.** Whether quieter briefings help on real work. The bait tasks all
+still fill the 12-lesson cap; the gain is on the prompts the A/B never sends.
+
+### Result (2026-10-11)
+
+Receipt: `evals/results/ab-20261011-2149.json`, `okl_commit` `8ccbb3e`, on the same resolved
+models as §4k (`claude-sonnet-4-6` and `claude-haiku-4-5-20251001`). 48 runs, 2 failures
+(4%): a generator timeout on `spa_tokens` (briefed) and one unevaluable sample
+(`rate_limiter`, briefed). Usable by the 20% rule.
+
+| | baseline | briefed |
+|---|---|---|
+| §4k (the judge says whether there was code) | 5/23 — 22% | 1/24 — 4% |
+| §4l (the briefing searches on subject words) | 5/24 — 21% | 1/22 — 5% |
+
+**On the samples that could be judged, the prediction held.** Each arm moved by about a
+point. The one briefed reproduction is `spa_tokens` (tokens kept in `sessionStorage`), which
+read 1/3 briefed in §4k, so the second falsifier did not trigger on it. On the three tasks
+the baseline failed at least once, the briefed arm reproduced 1 of 8.
+
+**One sample could not be judged, and it trips §4k's first falsifier.** The unevaluable
+`rate_limiter` sample holds 15,585 characters of code. The harness shows the judge only the
+first 8,000 (R12, #182), so the judge saw a submission cut off mid-line and answered
+`implemented: false`. §4k named exactly this, an unevaluable sample with more than 1,000
+characters of code, and said the instrument must change before its numbers are used. The
+cause is the harness's cut, not the field's wording. It matters here: `rate_limiter` read
+briefed 0/3 in §4k, so a reproduction in that sample would have triggered this section's
+second falsifier, and the receipt keeps no code to judge it again. The cut reached §4k's
+run too, where two judged samples were longer than 8,000 characters.
+
+**So, until the instrument is fixed,** this reads: no change on the 46 samples that could be
+judged, and one that could not. The fix is to give the judge the whole submission, up to a
+much larger limit, and record when it was cut (R12, #182); it is pre-registered as a change
+of instrument, and this comparison runs again on it.
+
 ## 4m. PRE-REGISTERED: the judge reads the whole submission — a change of instrument (2026-10-11)
 
 Written before any live run, per §2b.
@@ -982,15 +1053,57 @@ means the `implemented` field still misfires.
 **What this cannot settle.** Whether the cut changed §4k's or §4l's verdicts on the samples it
 did judge: their code was not kept (the sidecar in #182).
 
+### Result (2026-10-11)
+
+Receipt: `evals/results/ab-20261011-2254.json`, `okl_commit` `5e9b9dd`, `judge_max_chars`
+40,000, on the same resolved models as §4k and §4l (`claude-sonnet-4-6` and
+`claude-haiku-4-5-20251001`). 48 runs, no failures.
+
+| | baseline | briefed |
+|---|---|---|
+| §4l (the judge saw the first 8,000 characters) | 5/24 — 21% | 1/22 — 5% |
+| §4m (the judge reads the whole submission) | 10/24 — 42% | 1/24 — 4% |
+
+**The instrument held.** No sample was unevaluable. The two longest submissions, both
+`rate_limiter` baseline samples at 15,349 and 15,619 characters, were judged whole and judged
+clean. Under the old cut they were the shape of the sample §4l lost.
+
+**The falsifier did not trigger.** The one briefed reproduction is `spa_tokens` again (1/3, as
+in §4k). No task that read briefed 0/3 in §4k reproduced when briefed, `rate_limiter`
+included, and the briefed arm held at 4% against §4l's 5%. On the five tasks the baseline
+failed at least once, the briefed arm reproduced 1 of 15. By its pre-registered test, the
+subject-words briefing (#178) ships.
+
+**The prediction failed on the baseline, and the judge is not why.** The baseline read 10/24,
+21 points above §4l and past the 17-point floor. The wider window cannot explain it: all ten
+baseline reproductions are short submissions, 82 to 4,637 characters, which the old
+8,000-character judge read whole too. The baseline carries no briefing, so nothing this
+branch changed reaches it. Its movement is the generator's own variation between runs, and
+it widens the floor: two runs of one 24-sample arm can differ by 21 points. Most of the rise
+is `price_tamper`, 3/3 here after 0/3 in §4k and 1/3 in §4l; its 3-sample sonnet baselines
+have read 0/3 four times, 1/3 three times and 2/3 five times, so 3/3 is one step past its
+usual range. `rate_limiter`'s baseline reproduced for the first time on record. The judge's
+reason is that the submission claims a Redis-backed store without showing the code for it,
+a call on a claim rather than on code; it can be checked once receipts keep the code (#182).
+
+**For the series this run starts:** its gap, 42% → 4%, is not an effect size. The baseline
+sits at the top of its range, and the floor between runs is now at least 21 points. The
+direction matches every run before it.
+
+*After the run (2026-10-11):* review of #196 found that "Next.js" alone briefed nothing,
+because `next` is on the filler list. A filler word joined by a dot to the next word is now
+kept as part of a name. The eight bait tasks' search terms are unchanged by it, so their
+briefings are byte-identical and this result stands for the shipped code.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
    task the sonnet baseline failed was fully prevented except one residual
    (judge_summary 1/3). *Note, 2026-10-10:* "fully prevented" held in no 3-sample run
-   after that one. spa_tokens is reduced, not prevented: 29/34 → 17/35 (85% → 49%) across
-   the 13 receipts that include it, and 23/28 → 12/29 on the documented instrument
-   (sonnet generator, haiku judge). The 13 include §4j's run, where it read 0/2 → 0/3,
-   and §4k's, where it read 1/3 → 1/3 (updated 2026-10-11).
+   after that one. spa_tokens is reduced, not prevented: 32/40 → 19/40 (80% → 48%) across
+   the 15 receipts that include it, and 26/34 → 14/34 on the documented instrument
+   (sonnet generator, haiku judge). The 15 include §4j's run, where it read 0/2 → 0/3,
+   §4k's, 1/3 → 1/3, §4l's, 1/3 → 1/2, and §4m's, 2/3 → 1/3 (updated 2026-10-11).
 2. **Cross-model headline: briefed haiku (12%) beat unbriefed sonnet (33%)** on the
    identical task set — a briefed budget model reproduced org-known defect classes at
    roughly a third the rate of an unbriefed frontier model. One haiku run, never
