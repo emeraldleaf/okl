@@ -78,9 +78,9 @@
       "title": "A test that imports an undeclared package passes only where that package happens to be installed",
       "scope": "org",
       "files": "tests/",
-      "verified_at": 1791687794043,
-      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && ! grep -rnE '^\\s*import tomllib' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' on commit e3fdc94f8936 @ 2026-10-11T03:03Z",
-      "verified_commit": "e3fdc94f893626c2f67ebd7701fdeae18a93743e"
+      "verified_at": 1791688051617,
+      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && ! grep -rnE '^\\s*import tomllib' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' on commit bb2995fbe477 @ 2026-10-11T03:07Z",
+      "verified_commit": "bb2995fbe4774476ed9eb2cfa8d942dc87c2f747"
     },
     {
       "id": "n_9ba48d85ed19",
@@ -88,9 +88,9 @@
       "title": "Pre-flight the retrieval before spending on an eval — it is deterministic and answers in milliseconds",
       "scope": "org",
       "files": "evals/preflight.py,evals/ab_harness.py",
-      "verified_at": 1791687793836,
-      "verified_by": "`python3 evals/preflight.py` exit 0, matched 'PRE-FLIGHT OK' on commit e3fdc94f8936 @ 2026-10-11T03:03Z",
-      "verified_commit": "e3fdc94f893626c2f67ebd7701fdeae18a93743e"
+      "verified_at": 1791688051410,
+      "verified_by": "`python3 evals/preflight.py` exit 0, matched 'PRE-FLIGHT OK' on commit bb2995fbe477 @ 2026-10-11T03:07Z",
+      "verified_commit": "bb2995fbe4774476ed9eb2cfa8d942dc87c2f747"
     },
     {
       "id": "n_aa3e45a2ecd6",
@@ -98,9 +98,9 @@
       "title": "Provenance references rot precisely because nothing reads them — validate them at startup",
       "scope": "org",
       "files": "evals/ab_harness.py,evals/tasks.jsonl",
-      "verified_at": 1791687793701,
-      "verified_by": "`python3 evals/preflight.py` exit 0, matched 'PRE-FLIGHT OK' on commit e3fdc94f8936 @ 2026-10-11T03:03Z",
-      "verified_commit": "e3fdc94f893626c2f67ebd7701fdeae18a93743e"
+      "verified_at": 1791688051250,
+      "verified_by": "`python3 evals/preflight.py` exit 0, matched 'PRE-FLIGHT OK' on commit bb2995fbe477 @ 2026-10-11T03:07Z",
+      "verified_commit": "bb2995fbe4774476ed9eb2cfa8d942dc87c2f747"
     },
     {
       "id": "n_b74bad29fd87",
