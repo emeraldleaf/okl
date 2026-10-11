@@ -103,6 +103,12 @@ def test_reverify_keeps_the_run_of_a_stored_check_that_now_fails(repo):
     main(["verify", "les", "--run", "grep -qx ok state.txt"])
     assert _checks()[-1].passed and _checks()[-1].commit is None
 
+    # ACT / ASSERT (3) — nor does a run that read a file HEAD does not have (CodeRabbit on #170)
+    git("checkout", "-q", "--", "state.txt")
+    (repo / "new_check.txt").write_text("ok\n")
+    main(["verify", "les", "--run", "grep -qx ok new_check.txt"])
+    assert _checks()[-1].passed and _checks()[-1].commit is None
+
 
 def test_show_names_the_latest_failure_even_after_many_passes(repo, capsys):
     """The ten runs get lists can all be passes; the last failure is still the one that
@@ -195,6 +201,18 @@ def test_a_check_that_cannot_be_logged_does_not_change_the_verdict(repo, monkeyp
     assert main(["verify", "les", "--run", "true"]) == 0
     assert main(["verify", "les", "--run", "false"]) == 1
     assert capsys.readouterr().err.count("not logged") == 2
+
+
+def test_a_pass_whose_stamp_fails_is_still_logged(repo, monkeypatch):
+    """The check passed whatever happens to the stamp (CodeRabbit on #170)."""
+    from okl.client import OKLUnreachableError
+
+    def down(self, *a, **k):
+        raise OKLUnreachableError("the service is down")
+    monkeypatch.setattr(Client, "verify", down)
+
+    assert main(["verify", "les", "--run", "true"]) == 2
+    assert [r.passed for r in _checks()] == [True]
 
 
 def test_a_service_logs_checks_through_the_real_client(remote):

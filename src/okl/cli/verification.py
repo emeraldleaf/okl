@@ -69,17 +69,24 @@ def _log_check(args: argparse.Namespace, passed: bool, outcome: str, commit: str
 
 
 def _clean_commit(root: Path, commit: str | None) -> str | None:
-    """`commit` if the tracked tree matches it, else None. A check run on uncommitted edits
-    ran no commit, and logging it against HEAD would credit HEAD with what the edits did."""
+    """`commit` if the working tree matches it, else None. A check run on uncommitted edits
+    ran no commit, and logging it against HEAD would credit HEAD with what the edits did.
+    Untracked files count: a check can read a new test file HEAD does not have (CodeRabbit
+    on #170). Ignored files do not, or every build directory would hide the commit, and
+    neither do okl's own: verify rewrites the snapshot after each stamp, so counting it
+    would take the commit from every run after the first in a reverify."""
     import subprocess
+
+    from .. import drift
     if commit is None:
         return None
     try:
-        r = subprocess.run(["git", "-C", str(root), "diff", "--quiet", "HEAD", "--"],
-                           capture_output=True, timeout=15)
+        r = subprocess.run(["git", "-C", str(root), "status", "--porcelain", "--", ".",
+                            f":(exclude){drift.SNAPSHOT_FILE}", ":(exclude).okl"],
+                           capture_output=True, text=True, timeout=15)
     except (OSError, subprocess.TimeoutExpired):
         return None
-    return commit if r.returncode == 0 else None
+    return commit if r.returncode == 0 and not r.stdout.strip() else None
 
 
 def cmd_verify(args: argparse.Namespace) -> int:
@@ -105,6 +112,9 @@ def cmd_verify(args: argparse.Namespace) -> int:
     if output is None:
         _log_check(args, False, outcome, _clean_commit(root, commit))
         return 1
+    # Logged before the stamp is sent: the check passed whatever happens to the stamp, and
+    # a stamp that fails must not take the record of the run with it (CodeRabbit on #170).
+    _log_check(args, True, outcome, _clean_commit(root, commit))
     stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%MZ")
     evidence = (f"`{args.run}` exit 0" + (f", matched {args.expect!r}" if args.expect else "")
                 + (f" on commit {commit[:12]}" if commit else "") + f" @ {stamp}")
@@ -120,7 +130,6 @@ def cmd_verify(args: argparse.Namespace) -> int:
         print(f"OKL UNREACHABLE — check passed but the stamp was NOT recorded.\n{e}", file=sys.stderr)
         return 2
     print(f"✓ verified {node['id']} — {node['title']}\n  evidence: {node['verified_by']}")
-    _log_check(args, True, outcome, _clean_commit(root, commit))
     dirty = _uncommitted(root, node.get("files")) if commit else []
     if dirty:
         # The check saw these edits, but the stamp is the commit without them, so the lesson
