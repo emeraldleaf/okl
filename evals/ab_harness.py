@@ -127,8 +127,18 @@ def parse_judge(raw: str) -> dict:
     return d
 
 
+# How much of a submission the judge reads. It read only the first 8,000 characters: a
+# 15,585-character rate limiter was cut off mid-line, the judge said there was no code,
+# and §4l lost that sample (#182). 40,000 characters is about 10,000 tokens, far inside the
+# judge's context; a longer submission is unevaluable rather than judged on a cut copy.
+JUDGE_MAX_CHARS = 40_000
+# The window every receipt before #182 was judged with; those receipts do not record one.
+HISTORICAL_JUDGE_MAX_CHARS = 8_000
+
+
 class Unevaluable(Exception):  # noqa: N818 - a verdict, not an error in the harness
-    """The generator returned no implementation (a plan, a question, a refusal).
+    """A sample the judge cannot rule on: no implementation (a plan, a question, a refusal),
+    or a submission longer than the judge's window (marked `truncated`).
 
     It shows nothing either way, so it is a failure: kept in `failures`, out of both arms'
     denominators, and counted toward the usability bar. Scored clean, it flattered
@@ -142,7 +152,8 @@ def run_one(t: dict, arm: str, s: int, *, briefed_header: str | None, brief_err:
     """Generate and judge one (task, arm, sample). Returns the record and whether it is a result.
 
     False means a failure: anything that raised, including an Unevaluable sample, which is
-    marked `unevaluable` so the report can say how many failures were no implementation.
+    marked `unevaluable` so the report can say how many failures were no implementation,
+    and `truncated` as well when the cause was length.
     """
     rec = {"task": t["id"], "arm": arm, "sample": s, "defect_node": t["defect_node"]}
     t0 = time.time()
@@ -155,9 +166,13 @@ def run_one(t: dict, arm: str, s: int, *, briefed_header: str | None, brief_err:
         # The receipt keeps no code, so this is what lets a reader audit a verdict: a "no
         # implementation" on thousands of characters is the judge's mistake, not the model's.
         rec["code_chars"] = len(code)
+        if len(code) > JUDGE_MAX_CHARS:
+            rec["truncated"] = True
+            raise Unevaluable(f"{len(code)} characters, longer than the judge's "
+                              f"{JUDGE_MAX_CHARS}-character window")
         verdict = parse_judge(call(
             JUDGE_CMD,
-            JUDGE_PROMPT.format(task=t["task"], signal=t["signal"], output=code[:8000]),
+            JUDGE_PROMPT.format(task=t["task"], signal=t["signal"], output=code),
             timeout, workdir))
         if not verdict["implemented"]:
             rec["excerpt"] = code[:300]
@@ -170,6 +185,47 @@ def run_one(t: dict, arm: str, s: int, *, briefed_header: str | None, brief_err:
         if isinstance(e, Unevaluable):
             rec["unevaluable"] = True
         return rec, False
+
+
+def failure_label(rec: dict) -> str:
+    """How a failed sample reads in the run log.
+
+    An over-window submission holds code, so it must not read NO CODE (review of #198).
+    """
+    if rec.get("truncated"):
+        return "TOO LONG"
+    return "NO CODE" if rec.get("unevaluable") else "FAILED"
+
+
+def failure_causes(failures: list[dict]) -> str:
+    """The report's breakdown of failures that were verdicts rather than crashes."""
+    too_long = sum(1 for f in failures if f.get("truncated"))
+    no_code = sum(1 for f in failures if f.get("unevaluable") and not f.get("truncated"))
+    return ((f", {no_code} of them no implementation to judge" if no_code else "")
+            + (f", {too_long} longer than the judge's window" if too_long else ""))
+
+
+def instrument_drift(prior: list[dict], current: dict) -> dict:
+    """Each part of the instrument this run changes, against the series it is quoted with.
+
+    The commands are compared with their mode across every receipt. The judge's window is
+    compared with its mode across the receipts that record one, or with the 8,000
+    characters every earlier receipt used when none do. Counting the unrecorded receipts as
+    8,000 would flag every run of the 40,000-character series for as long as the older
+    receipts outnumber it: the guard telling you to discard the runs that fixed the problem
+    (review of #198).
+    """
+    modal: dict = {}
+    for key in ("generator", "judge"):
+        seen = Counter(r[key].strip() for r in prior if r.get(key))
+        if seen and seen.most_common(1)[0][0] != current[key]:
+            was, n = seen.most_common(1)[0]
+            modal[key] = {"series": was, "runs": n}
+    windows = Counter(r["judge_max_chars"] for r in prior if r.get("judge_max_chars"))
+    was, n = windows.most_common(1)[0] if windows else (HISTORICAL_JUDGE_MAX_CHARS, len(prior))
+    if prior and was != current["judge_max_chars"]:
+        modal["judge_max_chars"] = {"series": was, "runs": n}
+    return modal
 
 
 def judge_is_generator(models: dict) -> bool:
@@ -286,22 +342,19 @@ def main() -> int:
         # handful of files once at startup — PERF203's hot-loop concern does not apply.
         except (OSError, ValueError):  # noqa: PERF203
             continue
+    current = {"generator": GENERATOR_CMD.strip(), "judge": JUDGE_CMD.strip(),
+               "judge_max_chars": JUDGE_MAX_CHARS}
     if prior:
-        modal = {}
-        for key, cur in (("generator", GENERATOR_CMD), ("judge", JUDGE_CMD)):
-            seen = Counter(r[key].strip() for r in prior if r.get(key))
-            if seen and seen.most_common(1)[0][0] != cur.strip():
-                was, n = seen.most_common(1)[0]
-                modal[key] = {"series": was, "runs": n}
+        modal = instrument_drift(prior, current)
         if modal:
             drift_from = {"differs_from": "modal instrument", **modal}
             print("⚠️  INSTRUMENT DIFFERS FROM THE SERIES — these numbers are internally "
                   "valid but may not be quoted against earlier runs:", file=sys.stderr)
             for k, v in modal.items():
                 print(f"      {k}: series uses {v['series']} ({v['runs']} runs)  →  this run "
-                      f"uses {GENERATOR_CMD if k == 'generator' else JUDGE_CMD}", file=sys.stderr)
-        elif prior and any(prior[-1].get(k, "").strip() != cur.strip()
-                           for k, cur in (("generator", GENERATOR_CMD), ("judge", JUDGE_CMD))):
+                      f"uses {current[k]}", file=sys.stderr)
+        elif (any(prior[-1].get(k, "").strip() != current[k] for k in ("generator", "judge"))
+              or prior[-1].get("judge_max_chars", HISTORICAL_JUDGE_MAX_CHARS) != JUDGE_MAX_CHARS):
             # On the series, but the run immediately before was not. Say so plainly: this
             # is the case that restores comparability, and it must not read as a warning.
             print(f"ℹ️  instrument matches the series; the previous receipt ({last_name}) "
@@ -382,15 +435,14 @@ def main() -> int:
                               f"({rec['seconds']}s)", flush=True)
                     else:
                         failures.append(rec)
-                        label = "NO CODE" if rec.get("unevaluable") else "FAILED"
-                        print(f"  {t['id']:16} {arm:8} s{s} → {label}: {rec['error'][:80]}", flush=True)
+                        print(f"  {t['id']:16} {arm:8} s{s} → {failure_label(rec)}: {rec['error'][:80]}",
+                              flush=True)
 
     # ---- report: failure count FIRST (qz_judge_crash) ----
     total = len(results) + len(failures)
     frate = len(failures) / total if total else 1.0
-    no_code = sum(1 for f in failures if f.get("unevaluable"))
     print(f"\n=== A/B REPORT ===\nruns: {total}   FAILURES: {len(failures)} ({frate:.0%})"
-          + (f", {no_code} of them no implementation to judge" if no_code else ""))
+          + failure_causes(failures))
     if frate > FAILURE_RATE_UNUSABLE:
         print("❌ RESULTS NOT USABLE — failure rate above threshold. Fix the harness before "
               "reading any number below.")
@@ -424,6 +476,8 @@ def main() -> int:
     path = out / f"ab-{stamp}.json"
     path.write_text(json.dumps({
         "generator": GENERATOR_CMD, "judge": JUDGE_CMD, "brief_interests": BRIEF_INTERESTS,
+        # How much of each submission the judge read (#182): part of the instrument.
+        "judge_max_chars": JUDGE_MAX_CHARS,
         # What each alias resolved to on the day (None: not a claude command, or the probe
         # failed). Two receipts naming `sonnet` may not have run the same model (R12).
         "generator_model": models["generator"], "judge_model": models["judge"],

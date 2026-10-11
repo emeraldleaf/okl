@@ -951,6 +951,37 @@ at least once (`judge_summary`, `spa_tokens`, `ci_linter`), the briefed arm repr
 the two runs are not pooled. From here on a receipt names its models, and a run that
 resolves to a different one starts a new series.
 
+## 4m. PRE-REGISTERED: the judge reads the whole submission — a change of instrument (2026-10-11)
+
+Written before any live run, per §2b.
+
+**What changed.** The judge read only the first 8,000 characters of each submission. It now
+reads the whole of it, up to 40,000 characters (about 10,000 tokens). A longer submission is
+unevaluable, marked `truncated`, and no judge is asked. Each receipt records the window as
+`judge_max_chars`. The cut cost §4l a 15,585-character `rate_limiter` sample, which the judge
+saw stop mid-line and called no code, and in §4k two samples were judged from a cut copy (#182).
+
+**Why this starts a series.** The judge now sees all of a long submission, so it can find a
+defect that sat past the cut, and it no longer calls a cut submission empty. Runs before this
+one are not pooled with runs after it.
+
+**What the next run tests.** The comparison of §4l again: the briefing searching on a
+prompt's subject words (#178), with the same tasks, generator, judge model, samples and
+interests, on this judge. It settles the sample §4l could not judge and starts the series.
+
+**Prediction.** No sample is unevaluable for its length: the longest so far is 15,585
+characters. Both arms read within the 17-point floor of §4l (5/24 baseline, 1/22 briefed).
+
+**Falsifier.** A task that read briefed 0/3 in §4k reproduces when briefed, or the briefed arm
+worsens beyond the floor against §4l: the subject-words briefing then needs another look
+before it ships. For `rate_limiter`, the base rate matters: it has reproduced only when
+briefed, 2 of 30 times (§4d, §5), so one reproduction in three samples is plausible by chance
+and is read beside that rate. An unevaluable sample with more than 1,000 characters of code
+means the `implemented` field still misfires.
+
+**What this cannot settle.** Whether the cut changed §4k's or §4l's verdicts on the samples it
+did judge: their code was not kept (the sidecar in #182).
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
