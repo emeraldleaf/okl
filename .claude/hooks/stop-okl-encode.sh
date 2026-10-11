@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:e062b1600d16e92859f0208c2cbebfaa5386337c80372d1218a205e9901999d5
+# okl-fingerprint: sha256:1377c6aebad857f2fa59b370420c902b8d9c0b5f27bc3fe9f50783c45f5239b2
 # Stop hook — the write-side mechanical catch for the encoding loop.
 #
 # The read side (okl check) is enforced by the UserPromptSubmit hook; nothing enforced the WRITE
@@ -218,4 +218,11 @@ if picks:
         print(f"  - {name} `{what[:90]}` -> {why}")
 PY
 fi
+
+# The lessons this session touched: the ones it was briefed on, and the ones whose governed
+# files it changed, with the commands that act on them. The question used to name none, so
+# lessons were added and never corrected or retired (okl review R4). Advisory: an okl too
+# old to know `recap`, or one that cannot read its store, adds nothing and the question
+# stands as it was; its own errors are not the agent's business.
+"${OKL[@]}" recap --transcript "$transcript" >&2 2>/dev/null || true
 exit 2

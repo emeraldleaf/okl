@@ -147,6 +147,7 @@ layers = [
   "okl.cli",
   "okl.service | okl.mcp_server | okl.seed",
   "okl.client",
+  "okl.recap",
   "okl.core | okl.drift",
   "okl.store",
 ]

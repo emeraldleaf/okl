@@ -11,6 +11,7 @@ from .lessons import (
     cmd_check,
     cmd_dedup,
     cmd_link,
+    cmd_recap,
     cmd_record,
     cmd_retire,
     cmd_search,
@@ -155,6 +156,19 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
     psh.add_argument("node_id")
     psh.add_argument("--format", choices=["text", "json"], default="text")
     psh.set_defaults(func=cmd_show)
+
+    prc = sub.add_parser(
+        "recap", help="the lessons a session touched: briefed on, or whose files it changed",
+        description="List the lessons this session was briefed on (read from a Claude Code "
+                    "transcript) and those whose governed files it changed, with the commands "
+                    "that act on them. The Stop hook adds this to its question. Prints nothing "
+                    "when the session touched no lesson.")
+    prc.add_argument("--transcript", help="the session's transcript (JSONL), as the Stop hook "
+                     "receives its path")
+    prc.add_argument("--since", help="when the session began (ISO 8601); default: the "
+                     "transcript's first timestamp")
+    prc.add_argument("--limit", type=int, default=5, help="briefed lessons to list (default 5)")
+    prc.set_defaults(func=cmd_recap)
 
     pl = sub.add_parser("link", help="add an edge between two nodes")
     pl.add_argument("src"); pl.add_argument("rel"); pl.add_argument("dst")
