@@ -88,3 +88,36 @@ def test_the_precision_check_passes_on_the_seed_packs():
     script = Path(__file__).resolve().parents[1] / "evals" / "precision.py"
     r = subprocess.run([sys.executable, str(script)], capture_output=True, text=True, timeout=120)
     assert r.returncode == 0 and "PRECISION OK" in r.stdout, r.stdout[-1500:] + r.stderr[-500:]
+
+
+@pytest.mark.parametrize(("task", "kept"), [("Next.js", "Next"), ("add a Next.js page", "Next"),
+                                           ("use it.each for the table", "it")])
+def test_a_stopword_in_a_dotted_name_is_kept(task, kept):
+    """`next` is filler, but Next.js is a subject: the bare name briefed nothing (review of #196)."""
+    assert kept in core.briefing_terms(task)
+
+
+def test_a_stopword_ending_a_sentence_is_still_filler():
+    """Only a dot joined to the next word makes a name; "next." ending a sentence does not."""
+    assert core.briefing_terms("do it next. then") == []
+
+
+def test_the_precision_check_reads_only_tracked_seed_packs(tmp_path, monkeypatch):
+    """A glob loaded any JSON in seed/, so an untracked pack changed the result while the
+    receipt named a clean commit (review of #196)."""
+    import importlib.util
+    import subprocess
+    from pathlib import Path
+    script = Path(__file__).resolve().parents[1] / "evals" / "precision.py"
+    spec = importlib.util.spec_from_file_location("precision", script)
+    precision = importlib.util.module_from_spec(spec); spec.loader.exec_module(precision)
+    (tmp_path / "seed").mkdir()
+    (tmp_path / "seed" / "tracked.json").write_text("[]")
+    subprocess.run(["git", "-C", str(tmp_path), "init", "-q"], check=True)
+    subprocess.run(["git", "-C", str(tmp_path), "add", "seed/tracked.json"], check=True)
+    (tmp_path / "seed" / "untracked.json").write_text("[]")
+    monkeypatch.setattr(precision, "REPO", tmp_path)
+
+    packs = precision._seed_packs()
+
+    assert [p.name for p in packs] == ["tracked.json"]

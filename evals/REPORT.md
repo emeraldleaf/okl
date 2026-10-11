@@ -1090,6 +1090,11 @@ a call on a claim rather than on code; it can be checked once receipts keep the 
 sits at the top of its range, and the floor between runs is now at least 21 points. The
 direction matches every run before it.
 
+*After the run (2026-10-11):* review of #196 found that "Next.js" alone briefed nothing,
+because `next` is on the filler list. A filler word joined by a dot to the next word is now
+kept as part of a name. The eight bait tasks' search terms are unchanged by it, so their
+briefings are byte-identical and this result stands for the shipped code.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

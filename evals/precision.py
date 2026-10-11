@@ -47,8 +47,16 @@ FILLER = ["ok", "k", "yes", "no", "sure", "thanks", "thank you", "ok thanks", "o
           "can you do that?", "let's do it"]
 
 
+def _seed_packs() -> list[Path]:
+    """The seed packs git tracks. A glob took any JSON in seed/, so an untracked pack
+    changed the result while the receipt named a clean commit (review of #196)."""
+    tracked = subprocess.run(["git", "-C", str(REPO), "ls-files", "seed/*.json"],
+                             capture_output=True, text=True, check=True).stdout.split()
+    return [REPO / p for p in sorted(tracked)]
+
+
 def _seeded_client(workdir: Path) -> Client:
-    """A client on a store in `workdir` holding exactly the committed seed packs."""
+    """A client on a store in `workdir` holding exactly the tracked seed packs."""
     from okl.client import Client
     from okl.seed import seed_from_file
     (workdir / ".okl").mkdir()
@@ -56,7 +64,7 @@ def _seeded_client(workdir: Path) -> Client:
     os.chdir(workdir)
     client = Client()
     with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
-        for pack in sorted((REPO / "seed").glob("*.json")):
+        for pack in _seed_packs():
             seed_from_file(client, str(pack))
     return client
 
@@ -64,7 +72,8 @@ def _seeded_client(workdir: Path) -> Client:
 def _okl_commit() -> str | None:
     out = subprocess.run(["git", "-C", str(REPO), "rev-parse", "--short", "HEAD"],
                          capture_output=True, text=True).stdout.strip() or None
-    dirty = subprocess.run(["git", "-C", str(REPO), "status", "--porcelain", "--", "src"],
+    # seed/ too: an edited pack changes what is measured as surely as edited code does.
+    dirty = subprocess.run(["git", "-C", str(REPO), "status", "--porcelain", "--", "src", "seed"],
                            capture_output=True, text=True).stdout.strip()
     return f"{out}+dirty" if out and dirty else out
 

@@ -8,10 +8,11 @@
   prompt's subject words: single characters and a curated list of function words and chat
   filler are left out, each term counts once, at most 40 are used, and a prompt with no term
   of three or more characters briefs nothing. Short subject tokens such as `id`, `ci` and
-  `db`, and `get`, are kept. `okl search` is unchanged. An empty prompt also no longer falls
+  `db`, and `get`, are kept, and so is a filler word inside a dotted name, so "Next.js" still
+  briefs. `okl search` is unchanged. An empty prompt also no longer falls
   through to a search that matched every lesson.
 - **A precision check for the briefing (okl review R8, #179).** `evals/precision.py` scores 30
-  filler prompts on a store built only from the committed seed packs, and fails when one
+  filler prompts on a store built only from the seed packs git tracks, and fails when one
   briefs more than 3 lessons: before this change 18 did, 12 of them at the cap; now none.
   It also reports which lessons take the most slots. REPORT §4l pre-registers the A/B run
   this retrieval change needs before it ships.

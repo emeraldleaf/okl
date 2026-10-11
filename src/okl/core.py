@@ -123,14 +123,16 @@ def briefing_terms(task: str) -> list[str]:
     """The words of `task` a briefing searches on, in order, each once, at most
     MAX_BRIEFING_TERMS; [] when the task has no subject (no term of 3+ characters).
 
-    Single characters and _BRIEFING_STOP words are left out. Explicit `okl search` is not
-    filtered: a person searching names what they want.
+    Single characters and _BRIEFING_STOP words are left out, except a stopword joined by a
+    dot to the next word, which is part of a name: "Next.js" alone briefed nothing (review
+    of #196). Explicit `okl search` is not filtered: a person searching names what they want.
     """
+    named = {m.group(1).lower() for m in re.finditer(r"([^\W_]+)\.(?=[^\W_])", task)}
     seen: set[str] = set()
     out: list[str] = []
     for raw in "".join(ch if ch.isalnum() else " " for ch in task).split():
         w = raw.lower()
-        if len(w) < 2 or w in _BRIEFING_STOP or w in seen:
+        if len(w) < 2 or (w in _BRIEFING_STOP and w not in named) or w in seen:
             continue
         seen.add(w)
         out.append(raw)
