@@ -965,7 +965,8 @@ An explicit `okl search` is unchanged.
 
 - Precision, `evals/precision.py` (new, R8, #179): 30 filler prompts on a store built only
   from the committed seed packs. On main, 18 of 30 briefed more than 3 lessons and 12 hit the
-  12-lesson cap; with this change, none is over budget and none hits the cap. Receipt below.
+  12-lesson cap; with this change, none is over budget and none hits the cap
+  (`evals/results/precision-20261011-2054.json`).
 - Recall, `python3 evals/preflight.py`: 7 of 8 tasks receive the rule they test, plus the
   accepted gap (`exit_code_trust`, §4b), unchanged.
 - The bait briefings change. Taking function words out of the query changes BM25's ranking,
