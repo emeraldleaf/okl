@@ -198,6 +198,25 @@ def _build() -> Any:  # noqa: C901, PLR0915 - a declarative table of tool defini
         return f"updated {node['id']} ({node['type']}, {node['scope']}): {proof}"
 
     @mcp.tool()
+    def okl_retire(*, id: str, reason: str, by: str | None = None,
+                   obsolete: bool = False) -> str:
+        """Retire a lesson that is wrong, replaced or obsolete; it is never deleted.
+
+        Wrong (the default) keeps it briefed as AVOID so nobody restates it as fact. `by`
+        names the lesson that replaces it: briefings leave this one out and point there.
+        `obsolete` is for a lesson whose subject is gone. A fixed defect is not retired; it
+        keeps briefing against its return. `reason` is required and kept.
+        """
+        try:
+            node = client.retire(id, reason, by=by, obsolete=obsolete)
+        except OKLNoAnswerError as e:
+            return (f"MAYBE RETIRED — the service may have applied this; calling okl_retire "
+                    f"again is safe. ({e})")
+        except (OKLUnreachableError, ValueError) as e:
+            return f"NOT RETIRED — {e}"
+        return f"retired {node['id']} ({node['status']})"
+
+    @mcp.tool()
     def okl_get(id: str) -> str:
         """Read one lesson whole by its id, with its proof, as JSON."""
         try:

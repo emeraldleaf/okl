@@ -15,11 +15,12 @@ from collections import Counter
 from dataclasses import asdict
 from typing import Any
 
+from .store import RETIRED_STATUSES, Edge, Node, Store, _now_ms, split_tags
+
 # STACK_TAGS is re-exported, not used here: adapters may import core and client but
 # never store (dependency direction is one-way), and the CLI needs the stack list to
 # judge which bundled seed packs fit a repo.
 from .store import STACK_TAGS as STACK_TAGS
-from .store import Edge, Node, Store, _now_ms, split_tags
 
 
 def _node_public(n: Node) -> dict[str, Any]:
@@ -107,8 +108,7 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     #                 defects rather than emitting one undifferentiated list.
     #   4. ROUTE    — turn the buckets into an ordered list of imperatives.
     repo_scope = f"repo:{repo}"
-    hits = [n for n in store.search(task, limit=limit * 3)
-            if _in_scope(n, repo_scope, interests)]
+    hits, replaced = _live_hits(store, task, limit, repo_scope, interests)
     # THE CUTOFF. store.search returns BM25-ranked results, but full-text matching is
     # permissive: on a mature store a plausible task matches most of it, so without a
     # cap the "briefing" becomes the library. Ranking already put the best first, so
@@ -126,7 +126,8 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     # counted inside their own type bucket; including them would double-count.
     total = sum(len(v) for k, v in buckets.items() if k != "stale_warnings")
     out = {"repo": repo, "task": task, "match_count": total,
-           "next_actions": actions, "dropped_by_cutoff": dropped, **buckets}
+           "next_actions": actions, "dropped_by_cutoff": dropped, **buckets,
+           "replaced": replaced[:3]}
     # Zero matches has two very different causes: the store holds rules and none apply
     # here, or the store holds nothing at all. Reporting both as "proceed" is the
     # silence-as-safety failure this project exists to prevent, so the count travels
@@ -134,6 +135,65 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     if total == 0:
         out["store_records"] = len(store.all_nodes())
     return out
+
+
+def _live_hits(store: Store, task: str, limit: int, repo_scope: str,
+               interests: list[str] | None) -> tuple[list[Node], list[dict[str, Any]]]:
+    """Steps 1 and 2 without retired lessons, and the pointers for the replaced ones.
+
+    Obsolete lessons, and superseded ones whose live replacement this repo can see, leave
+    BEFORE the cut, so they never take a live lesson's slot (okl review R2); check never
+    read SUPERSEDES, so a replaced lesson was briefed beside its successor. A superseded
+    lesson with no such replacement stays briefed: dropping it would leave nothing. The
+    search widens by as many as were left out, so they do not use up its window either.
+    """
+    fetch = limit * 3
+    for _ in range(3):
+        found = store.search(task, limit=fetch)
+        live: list[Node] = []
+        replaced: list[dict[str, Any]] = []
+        left_out = 0
+        for n in (m for m in found if _in_scope(m, repo_scope, interests)):
+            to = (_live_replacement(store, n, repo_scope, interests)
+                  if n.status == "superseded" else None)
+            if n.status == "obsolete" or to is not None:
+                left_out += 1
+                if to is not None:
+                    replaced.append({"id": n.id, "title": n.title, "by": to.id,
+                                     "by_title": to.title})
+                continue
+            live.append(n)
+        if not left_out or len(found) < fetch:
+            break
+        fetch += left_out
+    return live, replaced
+
+
+def _live_replacement(store: Store, n: Node, repo_scope: str,
+                      interests: list[str] | None) -> Node | None:
+    """The live lesson that replaces a superseded one, through any chain of replacements,
+    if this repo may see it; otherwise None.
+
+    The replacement is the one the latest retirement named: the log keeps their order,
+    and edges do not (a second --by left the pointer on the first). The SUPERSEDES edges
+    are the fallback for data written before the log, taken in a fixed order.
+    """
+    seen = {n.id}
+    cur = n
+    for _ in range(8):
+        named = [r.by for r in store.retirements(cur.id) if r.kind == "superseded" and r.by]
+        edges = sorted(m.id for (e, m) in store.neighbors(cur.id, rels=["SUPERSEDES"])
+                       if e.dst == cur.id)
+        by = named[-1] if named else (edges[0] if edges else None)
+        nxt = store.get_node(by) if by and by not in seen else None
+        if nxt is None:
+            return None
+        if nxt.status != "superseded":
+            ok = nxt.status not in RETIRED_STATUSES and _in_scope(nxt, repo_scope, interests)
+            return nxt if ok else None
+        seen.add(nxt.id)
+        cur = nxt
+    return None
 
 
 def _bucket_by_type(hits: list[Node]) -> dict[str, list[dict]]:
@@ -261,6 +321,14 @@ def record(store: Store, *, type: str, title: str, scope: str, repo: str | None 
     """
     if scope == "repo" and repo:
         scope = f"repo:{repo}"
+    if status in ("superseded", "obsolete"):
+        # Only `okl retire` sets these, with a reason. A re-import of a lesson retired here
+        # passes (its status is kept anyway); a NEW record, re-import path or not, may not
+        # arrive already retired with nothing logged (CodeRabbit on #163).
+        existing = store.get_node(id) if id else None
+        if existing is None or existing.status not in RETIRED_STATUSES:
+            raise ValueError(f"status {status!r} is set by `okl retire`, which keeps the "
+                             "reason (and, for superseded, the replacement)")
     # Annotated dict[str, Any] because Node's fields are genuinely heterogeneous
     # (str, int, None); without it the ** splat is checked against whichever field
     # type mypy infers for the whole dict and every argument looks wrong.
@@ -306,6 +374,12 @@ def _carry_over(store: Store, kw: dict[str, Any], node_id: str, *,
             f"`okl update {node_id} --<field> ...` (the okl_update tool over MCP), which keeps "
             "its proof; to overwrite it entirely, record it again with --replace.")
     kw["created_at"] = old.created_at
+    if old.status in RETIRED_STATUSES:
+        # A retirement is changed only by `okl retire`, which keeps the reason. A re-seed
+        # rewrites a lesson from its pack, which knows nothing of a local decision and
+        # sets "live" on eight bundled lessons; a --replace rewrites it from scratch.
+        # Neither may quietly bring a retired lesson back (review of okl R2).
+        kw["status"] = old.status
     if not keep_verification:
         return
     if not _same_files(old.files, kw.get("files")):
@@ -340,6 +414,14 @@ def update(store: Store, node_id: str, repo: str | None = None,
     n = store.get_node(node_id)
     if n is None:
         raise ValueError(f"no lesson with id {node_id!r}")
+    status = fields.get("status")
+    if status is not None and ((status or None) in RETIRED_STATUSES
+                               or (n.status in RETIRED_STATUSES and (status or None) != n.status)):
+        # Retiring without a reason (or a replacement), and un-retiring with nothing
+        # logged, both went around `okl retire` through here (review of okl R2).
+        raise ValueError("a lesson's retirement is set only by `okl retire` (okl_retire over "
+                         "MCP), which keeps the reason; okl update cannot retire a lesson or "
+                         "bring a retired one back")
     changes = _update_values(fields, repo or n.repo)
     old_files = n.files
     for k, v in changes.items():
@@ -374,9 +456,64 @@ def _update_values(fields: dict[str, Any], repo: str | None) -> dict[str, Any]:
 
 
 def get(store: Store, node_id: str) -> dict[str, Any] | None:
-    """One lesson by id, as the API exposes it, or None if there is none."""
+    """One lesson by id, as the API exposes it, with its retirements; None if there is none."""
     n = store.get_node(node_id)
-    return _node_public(n) if n is not None else None
+    if n is None:
+        return None
+    d = _node_public(n)
+    d["retirements"] = [asdict(r) for r in store.retirements(node_id)]
+    return d
+
+
+_RETIRED_AS = {"wrong": "retracted", "obsolete": "obsolete", "superseded": "superseded"}
+
+
+def retire(store: Store, node_id: str, reason: str, *, by: str | None = None,
+           obsolete: bool = False) -> dict[str, Any]:
+    """Retire a lesson with a reason, keep everything else, and return it (okl review R2).
+
+    Three outcomes. Wrong (the default) sets status retracted, and the briefing shows it
+    as AVOID. `by` names the lesson that replaces it: status superseded, a `by SUPERSEDES
+    node_id` edge, and briefings leave it out with a pointer to the replacement.
+    `obsolete` is for a lesson whose subject is gone: it is no longer briefed. The reason
+    goes to the retirement log, which no rewrite of the lesson's row can lose.
+
+    Raises ValueError, before writing anything, for an empty reason, an unknown id or
+    replacement, a lesson replacing itself, or `by` with `obsolete`.
+    """
+    if not (reason or "").strip():
+        raise ValueError("a retirement needs a reason: say why the lesson is wrong, replaced "
+                         "or obsolete")
+    n = store.get_node(node_id)
+    if n is None:
+        raise ValueError(f"no lesson with id {node_id!r}")
+    if by is not None and obsolete:
+        raise ValueError("a lesson is either replaced (--by) or obsolete, not both")
+    if by is not None:
+        if by == node_id:
+            raise ValueError("a lesson cannot replace itself")
+        new = store.get_node(by)
+        if new is None:
+            raise ValueError(f"no lesson with id {by!r} to replace it")
+        if new.status in RETIRED_STATUSES:
+            # Also what blocks a cycle: A by B, then B by A, would leave neither briefed.
+            raise ValueError(f"{by!r} is itself retired ({new.status}): replace a lesson only "
+                             "with a live one")
+        if not (new.scope == "org" or new.scope == n.scope):
+            raise ValueError(f"{by!r} is scoped {new.scope}, narrower than {node_id!r} "
+                             f"({n.scope}): a replacement must be visible wherever the lesson "
+                             "it replaces was")
+    kind = "superseded" if by else ("obsolete" if obsolete else "wrong")
+    # The reason first, the status last. The three writes are not one transaction; in this
+    # order a failure part-way leaves a reason logged and the lesson not yet retired (a
+    # retry is safe), never a retired lesson with no reason that only `okl retire` could
+    # then touch (CodeRabbit on #163).
+    store.log_retirement(node_id, kind, reason.strip(), by)
+    if by is not None:
+        store.add_edge(Edge(src=by, rel="SUPERSEDES", dst=node_id))
+    n.status = _RETIRED_AS[kind]
+    store.add_node(n)
+    return get(store, node_id) or {}
 
 
 def _same_files(a: str | None, b: str | None) -> bool:
@@ -465,6 +602,9 @@ def render_actions_only(result: dict[str, Any], limit: int | None = None) -> str
             return ("OKL: the store is EMPTY (0 records). This is not 'no rules apply' — "
                     "nothing has been recorded yet, so this check proves nothing. "
                     "Run `okl seed` or record your first rule.")
+        if result.get("replaced"):
+            return "\n".join([f"OKL: no live rule applies to this task ({result['repo']}); "
+                              "a lesson it matched was replaced:", *_replaced_lines(result)])
         return f"OKL: no encoded rule applies to this task ({result['repo']}). Proceed."
     verb = {"arm_gate": "ARM", "apply_fix": "FIX", "avoid_retracted": "AVOID",
             "avoid_identifier": "AVOID"}
@@ -473,7 +613,13 @@ def render_actions_only(result: dict[str, Any], limit: int | None = None) -> str
         sym = f" [when: {a['symptom']}]" if a.get("symptom") else ""
         out.append(f"- {verb.get(a['kind'], 'DO')}: {a['target']}{_id_tag(a)}{_drift_tag(a)}{sym}")
         out.append(f"  -> {a['how']}")
-    return "\n".join(out)
+    return "\n".join(out + _replaced_lines(result))
+
+
+def _replaced_lines(result: dict[str, Any]) -> list[str]:
+    """One line per superseded lesson the task matched, pointing at its replacement by id."""
+    return [f"> {r['title']} [{r['id']}] was replaced by {r['by_title']} [{r['by']}]; "
+            "follow the replacement." for r in result.get("replaced") or []]
 
 
 def render_check_for_agent(result: dict[str, Any]) -> str:
@@ -502,7 +648,7 @@ def render_check_for_agent(result: dict[str, Any]) -> str:
     ]
     # Judged on the whole briefing: when every match was routed into an action the sections
     # are empty, and "No encoded rule matched" appeared under a list of actions.
-    any_hit = bool(actions)
+    any_hit = bool(actions) or bool(result.get("replaced"))   # a pointer is a match too
     for key, header in order:
         items = [it for it in (result.get(key) or []) if it.get("id") not in actioned]
         if not items:
@@ -511,6 +657,7 @@ def render_check_for_agent(result: dict[str, Any]) -> str:
         lines.append(f"### {header}")
         lines += _render_records(items, show_catches=key == "armed_gates")
         lines.append("")
+    lines += _replaced_lines(result)
     if result.get("stale_warnings"):
         lines.append(f"> {len(result['stale_warnings'])} node(s) are past TTL and shown demoted — re-verify before trusting.")
     if result.get("drifted"):
@@ -850,7 +997,8 @@ def briefed_ids(result: dict[str, Any]) -> list[str]:
     """
     ids: dict[str, None] = {}
     for key, items in result.items():
-        if key in ("next_actions", "stale_warnings") or not isinstance(items, list):
+        # "replaced" holds superseded lessons the briefing pointed past, not ones it showed.
+        if key in ("next_actions", "stale_warnings", "replaced") or not isinstance(items, list):
             continue
         for item in items:
             if isinstance(item, dict) and item.get("id"):
@@ -889,8 +1037,11 @@ def exposure_report(store: Store, repo: str, interests: list[str] | None = None,
     """
     logged = store.briefings(repo)
     repo_scope = f"repo:{repo}"
+    # Superseded and obsolete lessons are retired: no briefing is meant to show them, so
+    # "never shown" would offer them for review again (review of okl R2).
     reachable = [n for n in store.all_nodes()
-                 if n.type not in _NOT_ADVICE and _in_scope(n, repo_scope, interests)]
+                 if n.type not in _NOT_ADVICE and _in_scope(n, repo_scope, interests)
+                 and n.status not in ("superseded", "obsolete")]
     times = Counter(i for b in logged for i in b.node_ids)
 
     def row(n: Node) -> dict[str, Any]:

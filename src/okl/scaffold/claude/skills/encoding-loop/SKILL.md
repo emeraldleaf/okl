@@ -39,8 +39,11 @@ okl verify <stable-key> --run "<a check that fails if the lesson is broken>" --e
   reports but cannot remove, there being no delete subcommand. To refine a lesson that already
   exists (the briefing shows each lesson's `[id]`), run `okl update <id> --<field> "..."`: it
   changes only the fields given and keeps the lesson's proof, unless `--files` changes.
-  Recording an existing id again is refused; `--replace` overwrites it, proof included. Where
-  a repo keeps its lessons in a seed file, use the id that file derives,
+  Recording an existing id again is refused; `--replace` overwrites it, proof included. A
+  lesson that is wrong, replaced or obsolete is retired, never deleted:
+  `okl retire <id> --reason "..." [--by <new-id> | --obsolete]`. A wrong one stays briefed
+  as AVOID; a replaced one leaves briefings, which point to its replacement. Where a repo
+  keeps its lessons in a seed file, use the id that file derives,
   `seed:<seed-file-stem>:<key>`, so a later `okl seed` updates the same row.
 - **`--files`** — the code the lesson governs. With it, and once `okl verify` has passed,
   a change to that code marks the lesson STALE in the briefing and `okl drift` until the
