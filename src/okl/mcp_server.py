@@ -126,6 +126,14 @@ def _build() -> Any:  # noqa: C901, PLR0915 - a declarative table of tool defini
                                     status=status, found_by=found_by, ttl_days=ttl_days,
                                     repo=repo, symptom=symptom, fix=fix, files=files, tags=tags,
                                     id=id, applies_to=applies_to)
+        except OKLNoAnswerError as e:
+            # Sent, and no usable answer: the service may have stored it, and recording it
+            # again without an id would store it twice (okl review R10).
+            return ("MAYBE RECORDED — the service may have stored this lesson. Before recording "
+                    "it again, look for it with okl_search; if you gave it an id, recording it "
+                    f"again with the same id is safe, because a stored id is refused. ({e})")
+        except OKLUnreachableError as e:
+            return f"NOT RECORDED — {e}"
         except core.LessonExistsError:
             # Point only at okl_update. The CLI also offers --replace, a deliberate
             # overwrite; an agent is not offered a one-step way to wipe a lesson's proof,

@@ -195,7 +195,7 @@ class Client:
         self._authorize(req)
         try:
             with _req.urlopen(req, timeout=_HTTP_TIMEOUT_S) as resp:  # noqa: S310
-                return json.loads(resp.read())
+                body = resp.read()
         except HTTPError as e:
             # The service answered — so this is NOT "unreachable". A 4xx is the caller's
             # error and must surface its detail (found by E2E: an unknown-tag 400 was
@@ -215,6 +215,7 @@ class Client:
             raise OKLUnreachableError(f"OKL service unreachable at {url}: {e}") from e
         except (OSError, http.client.HTTPException) as e:   # after URLError, an OSError too
             raise _no_answer(url, e) from e
+        return _json_reply(url, body)
 
     # -- operations ---------------------------------------------------------
     def check(self, task: str, repo: str | None = None, limit: int | None = None) -> dict:
@@ -421,7 +422,7 @@ class Client:
         self._authorize(req)
         try:
             with _req.urlopen(req, timeout=_HTTP_TIMEOUT_S) as resp:  # noqa: S310
-                return json.loads(resp.read())
+                body = resp.read()
         except HTTPError as e:
             e.close()   # it owns the response and its socket; see _post
             if 400 <= e.code < 500:
@@ -434,6 +435,7 @@ class Client:
             raise OKLUnreachableError(f"OKL service unreachable at {url}: {e}") from e
         except (OSError, http.client.HTTPException) as e:   # after URLError, an OSError too
             raise _no_answer(url, e) from e
+        return _json_reply(url, body)
 
 
 # For a 404 from a route a service older than R1 lacks: say so, rather than leave the
@@ -461,6 +463,25 @@ def _no_answer(url: str, e: OSError | http.client.HTTPException) -> OKLNoAnswerE
         # line breaks and can run to 64 KB, and the CLI prints this as one line.
         cause = f"the reply was not HTTP or was cut short ({repr(e)[:200]})"
     return OKLNoAnswerError(f"OKL service unreachable at {url}: the request was sent, and {cause}")
+
+
+def _json_reply(url: str, body: bytes) -> Any:
+    """The service's 2xx reply, parsed.
+
+    Something that is not okl can answer 200: a proxy's sign-in page, or a web app on the
+    port OKL_SERVICE_URL names. json.loads raised a ValueError, which every caller reads
+    as the service refusing the request ("OKL REFUSED THE CHECK"); nothing refused it, and
+    after a write the service behind the page may have stored it (okl review R10). So it
+    is no answer: an outage to every caller that fails closed, a "maybe" to a writer.
+    """
+    try:
+        return json.loads(body)
+    except ValueError as e:   # JSONDecodeError, and UnicodeDecodeError for bytes that are not text
+        # One line, cut short: the CLI prints it under its refusal.
+        shown = " ".join(body[:120].decode("utf-8", "replace").split())
+        raise OKLNoAnswerError(
+            f"OKL service unreachable at {url}: the request was sent, and the reply was not "
+            f"JSON ({shown!r}); is something other than okl answering at this address?") from e
 
 
 class OKLRejectedError(ValueError):
