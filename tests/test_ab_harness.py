@@ -112,3 +112,17 @@ def test_a_model_that_cannot_be_resolved_is_recorded_as_unknown(ab, tmp_path, ca
            "own format": "claude -p --output-format text"}[case]
 
     assert ab.resolved_model(cmd, 10, str(tmp_path)) is None
+
+
+@pytest.mark.parametrize(("generator", "judge", "same"), [
+    (["claude-sonnet-5-5-20260901"], ["claude-sonnet-5-5-20260901"], True),
+    (["claude-sonnet-5-5-20260901"], ["claude-haiku-4-5-20251001"], False),
+    # unknown on either side cannot prove a match; the command-string guard still applies
+    (None, ["claude-haiku-4-5-20251001"], False),
+    (None, None, False),
+])
+def test_a_judge_that_resolves_to_the_generators_model_is_caught(ab, generator, judge, same):
+    """Two command strings can name one model (`--model sonnet` and the full id), and the
+    startup guard compared only the strings, so the judge could grade its own model's
+    output (CodeRabbit on #168)."""
+    assert ab.judge_is_generator({"generator": generator, "judge": judge}) is same

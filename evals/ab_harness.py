@@ -172,6 +172,19 @@ def run_one(t: dict, arm: str, s: int, *, briefed_header: str | None, brief_err:
         return rec, False
 
 
+def judge_is_generator(models: dict) -> bool:
+    """True when the judge resolved to exactly the generator's models.
+
+    The startup guard compares command strings, and two strings can name one model
+    (`--model sonnet` and the model's full id), so the judge could grade its own model's
+    output (CodeRabbit on #168). Equal sets, not overlap: a CLI can report a helper model
+    beside the main one, and a shared helper is not the judge grading itself. Unknown on
+    either side proves nothing; the string guard still stands.
+    """
+    gen, judge = models.get("generator"), models.get("judge")
+    return bool(gen) and gen == judge
+
+
 def resolved_model(cmd: str, timeout: int, workdir: str) -> list[str] | None:
     """The model ids a `claude` command resolves to, from one tiny call; None otherwise.
 
@@ -345,6 +358,11 @@ def main() -> int:
         models = {"generator": resolved_model(GENERATOR_CMD, args.timeout, clean_cwd),
                   "judge": resolved_model(JUDGE_CMD, args.timeout, clean_cwd)}
         print(f"resolved models: generator {models['generator']}, judge {models['judge']}")
+        if judge_is_generator(models):
+            print(f"REFUSING TO RUN: the judge resolves to the generator's model "
+                  f"({', '.join(models['judge'])}) — it must not grade its own homework "
+                  "(qz_judge_self).", file=sys.stderr)
+            return 3
         for t in tasks:
             # The briefing is deterministic per task — fetch once, reuse across samples.
             brief_err = ""

@@ -897,7 +897,9 @@ receipt keeps no code and a verdict cannot otherwise be audited.
 Each receipt also records the models the aliases resolved to (`generator_model`,
 `judge_model`), read from `claude -p --output-format json` before the first task. §4j's
 baseline fell 26 points and its receipt named only `sonnet`, so nothing could say whether
-the model behind the alias had changed (review item R12).
+the model behind the alias had changed (review item R12). The harness refuses to run when
+the judge resolves to exactly the generator's models: the startup guard compared command
+strings, and two strings can name one model.
 
 **Why this starts a series.** The judge prompt is part of the instrument. The new field
 could also change how the judge reads the defect itself. The instrument guard compares the

@@ -39,8 +39,9 @@
   question or a refusal is unevaluable: a failure, kept out of both arms' denominators and
   counted toward the usability bar, with the code's length and an excerpt so the verdict
   can be audited. §4j's briefed `idor_endpoint` sample was a plan the harness scored clean.
-  Receipts also record the model each alias resolved to (review item R12). REPORT §4k
-  pre-registers the change of instrument.
+  Receipts also record the model each alias resolved to (review item R12), and the harness
+  refuses a judge that resolves to the generator's model under a different command string.
+  REPORT §4k pre-registers the change of instrument.
 
 ## 0.8.3
 
