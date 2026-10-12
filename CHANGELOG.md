@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **A new repo's pushes get a note, not an error (#204).** Until a lesson governs a file,
+  the drift gate has nothing to check, and the pre-push hook printed "NOTHING CHECKED" and
+  "DRIFT NOT CHECKED" on every push, which read like a failure. It now says there is nothing
+  to gate yet and how to start. A missing or unreadable store still gets the loud warning,
+  and `okl drift --gate` and CI are unchanged. Re-run `okl init` to refresh the hook.
+
 - **`okl init` names all six MCP tools.** It said the server offers okl_check, okl_record
   and okl_search; since 0.8.3 it also has okl_get, okl_update and okl_retire. Found by a
   fresh install of 0.8.6 from PyPI.

@@ -1891,9 +1891,11 @@ def test_git_hook_blocks_a_push_only_when_lessons_drifted(tmp_path):
     assert json.loads((repo / ".okl" / "config.json").read_text())["git_hook"] is True
     assert "already current" in okl("init", "--repo", "r", "--no-claude", "--no-seed").stdout
 
-    # ACT/ASSERT 1 — no lesson governs a file: nothing checked (exit 2), so the push goes.
+    # ACT/ASSERT 1 — no lesson governs a file: nothing checked (exit 2), so the push goes,
+    # with a calm note on how to start rather than an error on every push (#204).
     p = git("push", "-q", "origin", "HEAD:main")
-    assert p.returncode == 0 and "DRIFT NOT CHECKED" in p.stderr, p.stderr
+    assert p.returncode == 0 and "nothing to gate" in p.stderr, p.stderr
+    assert "NOT CHECKED" not in p.stdout + p.stderr, p.stdout + p.stderr
 
     # 2 — a governed lesson, verified after its file's last change: clean, pushed.
     rid = okl("record", "--type", "Rule", "--scope", "repo", "--title", "t",
