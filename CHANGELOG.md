@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.8.7
 
 - **A new repo's pushes get a note, not an error (#204).** Until a lesson governs a file,
   the drift gate has nothing to check, and the pre-push hook printed "NOTHING CHECKED" and
@@ -11,6 +11,10 @@
 - **`okl init` names all six MCP tools.** It said the server offers okl_check, okl_record
   and okl_search; since 0.8.3 it also has okl_get, okl_update and okl_retire. Found by a
   fresh install of 0.8.6 from PyPI.
+
+- **The README leads with what okl is.** Its first screen says "Guardrails and a learning
+  loop for AI coding agents" and shows the one-page overview, which sat under "How it
+  works", about 370 lines down.
 
 ## 0.8.6
 
