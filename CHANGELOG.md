@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **`okl init` names all six MCP tools.** It said the server offers okl_check, okl_record
+  and okl_search; since 0.8.3 it also has okl_get, okl_update and okl_retire. Found by a
+  fresh install of 0.8.6 from PyPI.
+
 ## 0.8.6
 
 - **A prompt with no text briefs nothing.** An image or a file sent alone reached the prompt

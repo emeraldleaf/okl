@@ -550,7 +550,7 @@ def _install_claude_wiring(claude: Path, force: bool = False) -> None:
     if "okl" not in servers:
         servers["okl"] = dict(MCP_ENTRY)
         mcp_path.write_text(json.dumps(mcp_cfg, indent=2) + "\n")
-        print("✓ registered okl MCP server → .mcp.json (okl_check / okl_record / okl_search)")
+        print("✓ registered okl MCP server → .mcp.json (okl_check, okl_search, okl_get, okl_record, okl_update, okl_retire)")
 
 
 def _wire_drift_gates(cfg: dict, force: bool) -> None:

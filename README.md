@@ -8,10 +8,11 @@
 
 # okl — Observed Knowledge Ledger
 
-**A learning loop that keeps coding agents — and your docs — from drifting.**<br>
+**Guardrails and a learning loop for AI coding agents.**<br>
 Engineering rules, architecture decisions, documentation and diagrams: recorded once, briefed to
-Claude Code or any MCP agent before every task, proven by checks, and flagged before you push (or in CI) when what
-they govern changes. Use it in one repo, or share one store across every repo your team runs.
+Claude Code or any MCP agent before every task, proven by checks you choose, and flagged before
+you push (or in CI) when what they govern changes. Each session's lessons are fed back in. Use it
+in one repo, or share one store across every repo your team runs.
 
 [![PyPI](https://img.shields.io/pypi/v/observed-knowledge-ledger?color=blue&label=PyPI)](https://pypi.org/project/observed-knowledge-ledger/)
 [![Python](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
@@ -23,6 +24,11 @@ they govern changes. Use it in one repo, or share one store across every repo yo
 🚀 [Quickstart](#quickstart) · 📘 [Getting started guide](docs/GETTING-STARTED.md) · 🔬 [How it works](#how-it-works) · 📊 [Results](#measured-effect-and-its-limits) · 🧪 [Eval report](evals/REPORT.md) · 🧩 [Plugin](#install-as-a-claude-code-plugin)
 
 </div>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/emeraldleaf/okl/main/docs/overview/okl-overview-dark.png">
+  <img src="https://raw.githubusercontent.com/emeraldleaf/okl/main/docs/overview/okl-overview-light.png" alt="Guardrails and a learning loop for AI coding agents: hold your agent to your rules, and make it better every session. The loop runs from rules decided up front, to the store, to a briefing in front of the agent before every task, to a check re-graded on every push, to lessons kept current at session end, with corrections flowing back to the store. Six cards: one shape for every lesson, scope decides reach, selected not skimmed, a stamp is evidence, stale blocks the push, corrected not only added. Below them, it fails closed and keeps every check run, and the loop from a terminal: okl check, okl verify, okl drift --gate, okl retire." width="100%">
+</picture>
 
 > A small store of what a codebase knows — its conventions, architecture decisions and
 > why they were made, the checks that catch mistakes already made once, and the claims its
@@ -370,13 +376,8 @@ with receipts, not a benchmark.
 
 ## How it works
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/emeraldleaf/okl/main/docs/overview/okl-overview-dark.png">
-  <img src="https://raw.githubusercontent.com/emeraldleaf/okl/main/docs/overview/okl-overview-light.png" alt="Guardrails and a learning loop for AI coding agents: hold your agent to your rules, and make it better every session. The loop runs from rules decided up front, to the store, to a briefing in front of the agent before every task, to a check re-graded on every push, to lessons kept current at session end, with corrections flowing back to the store. Six cards: one shape for every lesson, scope decides reach, selected not skimmed, a stamp is evidence, stale blocks the push, corrected not only added. Below them, it fails closed and keeps every check run, and the loop from a terminal: okl check, okl verify, okl drift --gate, okl retire." width="100%">
-</picture>
-
-The overview is rendered from [`docs/overview/okl-overview.html`](docs/overview/okl-overview.html).
-In more detail:
+The overview at the top is rendered from
+[`docs/overview/okl-overview.html`](docs/overview/okl-overview.html). In more detail:
 
 <img src="docs/okl-how-it-works.svg" alt="One repo records a lesson; a repo that loads it can be briefed on it before a task it applies to. The store is typed, scoped and tagged; every verification stamp carries the check that earned it. Lessons are corrected and retired with a reason, not only added, and every check run is kept." width="100%">
 
