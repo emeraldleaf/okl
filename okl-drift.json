@@ -78,9 +78,9 @@
       "title": "A test that imports an undeclared package passes only where that package happens to be installed",
       "scope": "org",
       "files": "tests/",
-      "verified_at": 1791838575819,
-      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && ! grep -rnE '^\\s*import tomllib' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' on commit 6c04dbc7281e @ 2026-10-12T20:56Z",
-      "verified_commit": "6c04dbc7281ec67af612f43f8a5385986e2c704a"
+      "verified_at": 1791841229288,
+      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && ! grep -rnE '^\\s*import tomllib' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' on commit 950cac1284ff @ 2026-10-12T21:40Z",
+      "verified_commit": "950cac1284ff271708a33efcb8586de414c5f3bb"
     },
     {
       "id": "n_9ba48d85ed19",
