@@ -184,11 +184,18 @@ POOLED_RECEIPTS = ["ab-20260830-0003", "ab-20260901-0133", "ab-20260901-1238", "
                    "ab-20260903-0157", "ab-20260903-1214", "ab-20260903-1323", "ab-20260926-0528"]
 
 
+# REPORT §4j counts this sample as unevaluable: the generator returned a plan, not code, and
+# the receipt, written before the harness could say so (#164), scores it clean.
+PLAN_ONLY = {("ab-20261010-2314", "idor_endpoint", "briefed", 1)}
+
+
 def _pool(names):
     """Unbriefed hits/n and briefed hits/n over the named receipts' judged samples."""
     out = [0, 0, 0, 0]
     for name in names:
         for row in json.loads((ROOT / "evals" / "results" / f"{name}.json").read_text())["results"]:
+            if row.get("unevaluable") or (name, row["task"], row["arm"], row.get("sample")) in PLAN_ONLY:
+                continue
             i = 0 if row["arm"] == "baseline" else 2
             out[i] += bool(row["reproduced"]); out[i + 1] += 1
     return out

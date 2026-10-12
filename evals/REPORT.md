@@ -1137,7 +1137,8 @@ briefings are byte-identical and this result stands for the shipped code.
    not the documented instrument) and every run from §4j on, because each of those
    started a new series (§4j's unbriefed arm moved 26 points with nothing changed; §4k
    and §4m changed the instrument). Pooling all twelve comparable receipts, those
-   included, reads 102 of 280 (36%) against 16 of 282 (6%). Read it with §6: one-shot
+   included, reads 102 of 280 (36%) against 16 of 281 (6%), leaving out §4j's plan-only
+   sample as §4j itself does. Read it with §6: one-shot
    code on bait tasks written to invite defects the store already knew about, a small
    n, and nothing about code quality improving over time.
 
