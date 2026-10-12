@@ -10,8 +10,9 @@
 
 **Guardrails and a learning loop for AI coding agents.**<br>
 Engineering rules, architecture decisions, documentation and diagrams: recorded once, briefed to
-Claude Code or any MCP agent before every task, proven by checks you choose, and flagged before
-you push (or in CI) when what they govern changes. Each session's lessons are fed back in. Use it
+your agent before every task (by a hook in Claude Code; any MCP agent can ask for the same
+briefing), proven by checks you choose, and flagged before you push (or in CI) when what they
+govern changes. Each session's lessons are fed back in. Use it
 in one repo, or share one store across every repo your team runs.
 
 [![PyPI](https://img.shields.io/pypi/v/observed-knowledge-ledger?color=blue&label=PyPI)](https://pypi.org/project/observed-knowledge-ledger/)
