@@ -9,13 +9,13 @@
     "source": "github",
     "id": "1351779410"
   },
-  "version": "0.8.5",
+  "version": "0.8.6",
   "packages": [
     {
       "registryType": "pypi",
       "registryBaseUrl": "https://pypi.org",
       "identifier": "observed-knowledge-ledger",
-      "version": "0.8.5",
+      "version": "0.8.6",
       "runtimeHint": "uvx",
       "runtimeArguments": [
         {
