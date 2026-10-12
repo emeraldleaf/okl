@@ -91,6 +91,9 @@ def test_quoted_briefing_sizes_match_the_receipt_the_readme_cites():
     for doc in ("docs/okl-how-it-works.excalidraw", "docs/okl-how-it-works.svg"):
         line = f"roughly {actions[3]} tokens at limit=3, against ~{full:,} for the"
         assert line in (ROOT / doc).read_text(), f"{doc} no longer says: {line}"
+    # (5) and so does the anatomy sheet's "Under the hood" panel.
+    sheet = "docs/overview/okl-anatomy.html"
+    assert f"about {full:,} tokens" in (ROOT / sheet).read_text(), f"{sheet} no longer says: about {full:,} tokens"
 
 
 def _baseline_hits(receipts: list[Path]) -> Counter[str]:
@@ -175,3 +178,46 @@ def test_the_quarantined_july_figures_appear_nowhere_they_ship():
                              capture_output=True, text=True, check=True).stdout.split()
     hits = [f for f in tracked if f.endswith((".json", ".md", ".py")) and pattern.search((ROOT / f).read_text())]
     assert not hits, f"quarantined 2026-07-17 figures quoted in {hits}; cite the committed series instead (REPORT)"
+
+
+POOLED_RECEIPTS = ["ab-20260830-0003", "ab-20260901-0133", "ab-20260901-1238", "ab-20260902-0538",
+                   "ab-20260903-0157", "ab-20260903-1214", "ab-20260903-1323", "ab-20260926-0528"]
+
+
+def _pool(names):
+    """Unbriefed hits/n and briefed hits/n over the named receipts' judged samples."""
+    out = [0, 0, 0, 0]
+    for name in names:
+        for row in json.loads((ROOT / "evals" / "results" / f"{name}.json").read_text())["results"]:
+            i = 0 if row["arm"] == "baseline" else 2
+            out[i] += bool(row["reproduced"]); out[i + 1] += 1
+    return out
+
+
+def test_the_pooled_launch_figure_is_recomputed_from_its_receipts():
+    """The launch posts quote 42% against 7% and send readers to the repo for it; REPORT §5
+    finding 7 names the eight receipts, and every figure it gives is recomputed here."""
+    # ARRANGE — the pool as REPORT defines it, the same without the reverted §4d run, and all
+    # twelve receipts on the documented instrument with eight tasks and three samples.
+    documented = []
+    for receipt in sorted((ROOT / "evals" / "results").glob("ab-*.json")):
+        data = json.loads(receipt.read_text())
+        rows = data.get("results", [])
+        if ("sonnet" in data.get("generator", "") and "haiku" in data.get("judge", "")
+                and len({r["task"] for r in rows}) == 8 and max(r.get("sample", 0) for r in rows) == 2):
+            documented.append(receipt.stem)
+    report = _flat("evals/REPORT.md")
+
+    # ASSERT — each quoted pair is the recomputed one, and every receipt it names exists.
+    assert set(POOLED_RECEIPTS) <= set(documented), "a pooled receipt is missing or off-instrument"
+    for names in (POOLED_RECEIPTS, [n for n in POOLED_RECEIPTS if n != "ab-20260902-0538"], documented):
+        bh, bn, rh, rn = _pool(names)
+        quoted = f"{bh} of {bn}"
+        assert quoted in report and f"{rh} of {rn}" in report, (
+            f"REPORT §5 finding 7 should quote {bh} of {bn} against {rh} of {rn} for {len(names)} receipts")
+    # The anatomy sheet quotes the eight-run pool too, and names every receipt in it.
+    sheet = (ROOT / "docs" / "overview" / "okl-anatomy.html").read_text()
+    bh, bn, rh, rn = _pool(POOLED_RECEIPTS)
+    for figure in (f"{bh} of {bn} unbriefed", f"{rh} of {rn} briefed", f"{round(100 * bh / bn)}%", f"{round(100 * rh / rn)}%"):
+        assert figure in sheet, f"docs/overview/okl-anatomy.html should say {figure}"
+    assert all(name in sheet for name in POOLED_RECEIPTS), "the anatomy sheet must name every pooled receipt"

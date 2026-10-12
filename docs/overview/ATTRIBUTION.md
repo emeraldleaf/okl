@@ -6,6 +6,15 @@ re-render both from this folder:
 
     python render.py okl-overview.html okl-overview
 
+`okl-anatomy.html` is the longer sheet: one lesson followed all the way round, with real
+okl output in its terminal band. It renders the same way:
+
+    python render.py okl-anatomy.html okl-anatomy
+
+Its terminal lines are okl's own output from a throwaway repo, trimmed where marked (…) and
+annotated with `#` notes. When okl's wording changes, run the story again and copy the new
+lines in rather than editing them by hand.
+
 `render.py` drives a local Chrome through Playwright (`pip install playwright`, and
 `channel="chrome"` uses the system browser, so no browser download). Look at both renders
 before committing: the PNGs are what people read, and nothing checks them against the HTML.

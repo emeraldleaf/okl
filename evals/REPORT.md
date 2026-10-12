@@ -1124,6 +1124,22 @@ briefings are byte-identical and this result stands for the shipped code.
 6. **Anomaly, retained:** briefed haiku reproduced rate_limiter 1/3 where its baseline
    was 0/3 — a briefed run worse than baseline on one task. Small-sample noise or
    briefing-as-distraction; it stays in the data.
+7. **The pooled figure quoted in the launch posts (added 2026-10-12).** Over the eight
+   committed runs on the documented instrument (sonnet generator, haiku judge, eight tasks
+   with three samples per arm) from §4 through §4i, 78 of 186 unbriefed attempts
+   reproduced a known defect (42%) against 13 of 188 briefed ones (7%). The eight receipts:
+   `ab-20260830-0003`, `ab-20260901-0133`, `ab-20260901-1238`, `ab-20260902-0538`,
+   `ab-20260903-0157`, `ab-20260903-1214`, `ab-20260903-1323`, `ab-20260926-0528`.
+   Denominators fall short of 192 because failed and unevaluable samples are left out.
+   The pool keeps §4d's run (`ab-20260902-0538`), whose retrieval change was reverted:
+   its briefed arm read 3 of 23, so keeping it raises the briefed rate. Without it the
+   pool reads 68 of 164 (41%) against 10 of 165 (6%). It leaves out §4f (judged by opus,
+   not the documented instrument) and every run from §4j on, because each of those
+   started a new series (§4j's unbriefed arm moved 26 points with nothing changed; §4k
+   and §4m changed the instrument). Pooling all twelve comparable receipts, those
+   included, reads 102 of 280 (36%) against 16 of 282 (6%). Read it with §6: one-shot
+   code on bait tasks written to invite defects the store already knew about, a small
+   n, and nothing about code quality improving over time.
 
 ## 6. Threats to validity (read before quoting)
 
