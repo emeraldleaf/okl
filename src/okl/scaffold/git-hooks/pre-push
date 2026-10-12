@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:62a225a9e29c1df5ee542c977d96fa782421b5d51d847b55417e7675e4e77740
+# okl-fingerprint: sha256:c4b181106819b30c00de40039e3617ca53bb116386bc39886e40eef4fcaae70e
 # git pre-push hook, installed by `okl init --git-hook` (#90): run the drift gate before a push.
 #
 # Blocks the push ONLY when okl ran and found drift (exit 1): a lesson whose governed files
-# changed after its last verification. Anything else lets the push through with a warning on
-# stderr -- exit 2 (no store, or no lesson governs a file), or okl not runnable at all.
+# changed after its last verification. Anything else lets the push through: a short note when
+# no lesson governs a file yet (a new repo's normal state), a warning on stderr for any other
+# exit 2 (no store) or an okl that cannot run at all.
 # Blocking on those would stop every push from a clone that has no store yet, and
 # uninstalling okl would leave a hook that refuses pushes.
 #
@@ -54,6 +55,15 @@ fi
 
 out=$("${OKL[@]}" drift --gate)
 rc=$?
+# No lesson governs a file yet: nothing to gate, which is how every new repo starts. Printed
+# as "NOTHING CHECKED" and "DRIFT NOT CHECKED" on every push, it read like an error (#204).
+# Only this reason is calmed: an exit 2 for a missing or unreadable store stays loud below.
+if [ "$rc" -eq 2 ] && [[ "$out" == *"no rule governing files"* ]]; then
+  printf '%s\n' "$out" | grep -v "no rule governing files" >&2
+  echo "okl pre-push: no lesson governs a file here yet, so there is nothing to gate. Give one" >&2
+  echo "  --files and a check (okl record ... --files <path>, then okl verify <id> --run ...)." >&2
+  exit 0
+fi
 printf '%s\n' "$out"
 # Exit 1 is drift only alongside the drift report: Python also exits 1 when okl crashes.
 # Matched in bash, not piped to `grep -q`: on a long report grep exits early, printf takes
