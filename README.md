@@ -251,7 +251,8 @@ Two honest limits on that table:
 
 **This is not a novel idea, and you should know that before reading further.** Agent
 memory is one of the most crowded categories in the field: mem0, Zep, Letta, and Cognee
-on the infrastructure side; Cursor Memories and Devin Knowledge built into the coding
+on the infrastructure side, with enterprise knowledge graphs such as Utopia beside them;
+Cursor Memories and Devin Knowledge built into the coding
 agents; AGENTS.md / CLAUDE.md / rules files as the convention standard everyone already
 uses; and the research literature (e.g. Codified Context, arXiv 2602.20478) arriving at
 tiered knowledge + retrieval independently. "Give the agent your team's knowledge" is
@@ -273,8 +274,9 @@ the consensus position of 2026, not an insight.
    carries a verification receipt from a check you choose (`okl verify` — the CLI will
    not stamp without a run), can decay on a TTL, and goes stale *loudly*:
    `okl drift --gate` blocks the push (or fails CI, with `--ci`) when governed code
-   changed after the lesson was last verified, or it was never verified. Most tools in the table below accumulate or
-   decay with time; the ones that tie a memory to code check it by re-reading the
+   changed after the lesson was last verified, or it was never verified. Most tools in the
+   table below accumulate, decay with time, or close a memory when a newer fact contradicts
+   it; the ones that tie a memory to code check it by re-reading the
    code, checking a reference, or noticing a file changed, not by running your check.
    The whole repo is plumbing to get that bet in front of an agent
    before the first line of code is written.
@@ -286,7 +288,8 @@ the consensus position of 2026, not an insight.
 
 | Tool / convention | What it remembers | What invalidates a memory |
 |---|---|---|
-| mem0 / Zep / Letta / Cognee | extracted facts, conversation graphs, agent-curated tiers | nothing tied to your code — memories accumulate |
+| mem0 / Zep / Letta / Cognee | extracted facts, conversation graphs, agent-curated tiers | a newer fact that contradicts one: Zep closes it on a timeline of when it held, mem0's model updates or deletes it. Nothing tied to your code |
+| Utopia (enterprise world model) | entities and facts extracted from business documents into an ontology-driven, bitemporal graph | a newer document's contradicting fact can close the old one (or both are kept, or the new one is rejected), with when each held and when it was learned; doubtful cases go to a person. Nothing tied to your code |
 | Cursor Memories / Devin Knowledge | per-project conventions and pinned notes | manual editing |
 | GitHub Copilot Memory (2026) | repo facts the agent saves as it works, each citing the code lines behind it; shared by Copilot's coding agent, CLI and code review | the agent re-reads the cited lines before use and replaces a contradicted memory; memories expire unless re-confirmed — a model's judgment at use time, Copilot only, no CI gate |
 | driftlint, agents-lint, scavi (instruction-file linters) | nothing of their own: they check the claims already in CLAUDE.md / AGENTS.md (driftlint also syncs approved facts into them) | a referenced path, command, link or import that no longer exists; driftlint fails CI. The reference checks don't test whether a rule still holds; driftlint's optional `--llm` mode asks a model whether the code contradicts a prose claim |

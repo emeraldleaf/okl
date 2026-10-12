@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.8.6
 
 - **A prompt with no text briefs nothing.** An image or a file sent alone reached the prompt
   hook as an empty prompt, and the hook briefed the last commit's subject instead: twelve
@@ -27,6 +27,11 @@
 - **A one-page overview at the top of "How it works".** Guardrails and a learning loop on one
   page, in light and dark, rendered from `docs/overview/okl-overview.html`; the detailed
   diagram stays below it. `ci/check-diagram-figures.sh` now reads HTML diagram sources too.
+
+- **The README's comparison credits the neighbours that do invalidate.** It said mem0, Zep,
+  Letta and Cognee let memories accumulate; Zep closes a contradicted fact on a timeline and
+  mem0's model updates or deletes one. Utopia, an enterprise bitemporal knowledge graph, is
+  added. What none of them does is tie a memory to your code, which is the row's point.
 
 - **The A/B judge reads the whole submission (#182).** It read only the first 8,000
   characters, so a long submission reached it cut off mid-line: §4l lost a 15,585-character
