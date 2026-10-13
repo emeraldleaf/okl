@@ -28,7 +28,7 @@ in one repo, or share one store across every repo your team runs.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/emeraldleaf/okl/main/docs/overview/okl-overview-dark.png">
-  <img src="https://raw.githubusercontent.com/emeraldleaf/okl/main/docs/overview/okl-overview-light.png" alt="Guardrails and a learning loop for AI coding agents: hold your agent to your rules, and make it better every session. The loop runs from rules decided up front, to the store, to a briefing in front of the agent before every task, to a check re-graded on every push, to lessons kept current at session end, with corrections flowing back to the store. Six cards: one shape for every lesson, scope decides reach, selected not skimmed, a stamp is evidence, stale blocks the push, corrected not only added. Below them, it fails closed and keeps every check run, and the loop from a terminal: okl check, okl verify, okl drift --gate, okl retire." width="100%">
+  <img src="https://raw.githubusercontent.com/emeraldleaf/okl/main/docs/overview/okl-overview-light.png" alt="Guardrails and a learning loop for AI coding agents: hold your agent to your rules, and let each session teach the next. Five stages: your rules and ADRs, decided up front once; the store, one local file; a briefing in front of the agent before every task; gated as code moves, on every push; kept current at session end. The briefing before every task and the session-end question are Claude Code hooks; other MCP agents can call okl_check, and the push gate works with any agent. Six cards: one shape for every lesson (when you see, do, why); scope decides reach; selected, not skimmed; a stamp is evidence, and a stamp with no run behind it is unproven; stale blocks the push; corrected, not only added. It fails closed, keeps every check run, and starts in four commands: install, okl init, okl record with the files a rule governs, okl verify." width="100%">
 </picture>
 
 > A small store of what a codebase knows — its conventions, architecture decisions and
@@ -346,7 +346,10 @@ judge are different models; method + raw receipts in [evals/REPORT.md](evals/REP
 - Same model, briefed vs not: in the first 3-sample runs (2026-08-30), defect
   reproduction fell **33% → 4%** (sonnet) and **38% → 12%** (haiku). Later sonnet runs, as
   the retrieval pipeline changed, read **35–50% → 4–8%** (REPORT §4b–§4i, excluding the
-  reverted §4d and the opus-judged §4f; the latest, §4i, 43% → 8%). The unbriefed arm
+  reverted §4d and the opus-judged §4f; the latest, §4i, 43% → 8%). Pooled over the eight
+  runs on that instrument from §4 to §4i, the reverted §4d included: **78 of 186 unbriefed
+  attempts repeated a known defect (42%) against 13 of 188 briefed (7%)**; REPORT §5
+  finding 7 names the receipts and the other ways to cut it. The unbriefed arm
   alone has moved 17 points between runs with nothing changed, so that is the noise floor
   (§2b). Every "reproduced" is a defect class this store had already paid to learn — a
   price-tamper fallback, tokens in web storage, an unpinned CI gate, a script that trusts
@@ -378,9 +381,19 @@ with receipts, not a benchmark.
 ## How it works
 
 The overview at the top is rendered from
-[`docs/overview/okl-overview.html`](docs/overview/okl-overview.html). In more detail:
+[`docs/overview/okl-overview.html`](docs/overview/okl-overview.html). The anatomy below
+follows one lesson all the way round, in okl's own output; it is rendered from
+[`docs/overview/okl-anatomy.html`](docs/overview/okl-anatomy.html), and
+[`docs/overview/anatomy-story.sh`](docs/overview/anatomy-story.sh) runs the same story in a
+throwaway repo.
 
-<img src="docs/okl-how-it-works.svg" alt="One repo records a lesson; a repo that loads it can be briefed on it before a task it applies to. The store is typed, scoped and tagged; every verification stamp carries the check that earned it. Lessons are corrected and retired with a reason, not only added, and every check run is kept." width="100%">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/emeraldleaf/okl/main/docs/overview/okl-anatomy-dark.png">
+  <img src="https://raw.githubusercontent.com/emeraldleaf/okl/main/docs/overview/okl-anatomy-light.png" alt="Anatomy of okl, guardrails and a learning loop: load your rules, hold your agent to them, keep learning as you build. A ring around the store runs through six steps: lessons come in, up front from your rules, ADRs, standards and specs plus starter lessons for your stack, and as you build from new rules, mistakes, drift the gate finds, failing tests and reviews; each is written down as a lesson; okl proves it with a check you choose; it is briefed before each task (by a Claude Code hook; other MCP agents can call okl_check); when a file it covers changes, the pre-push hook holds the push until the check passes again or the code is back to what passed; then it is re-checked, fixed or retired. Below, real okl 0.8.7 output follows the lesson 'order lookups are scoped to the signed-in customer' from okl record to a blocked push, where re-running its check caught a change that dropped the owner check. Then where a lesson lives (briefing only, watched for drift, build-breaking); what the briefing did (78 of 186 unbriefed attempts repeated a known defect against 13 of 188 briefed, over eight A/B runs on tasks built to invite one); and how it ranks, what it costs and where it breaks." width="100%">
+</picture>
+
+An older, denser diagram of the same parts is
+[`docs/okl-how-it-works.svg`](docs/okl-how-it-works.svg).
 
 ### How a briefing is actually built
 

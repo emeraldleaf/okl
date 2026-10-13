@@ -21,7 +21,7 @@
 :root {
   --bg: #f8f6f3; --surface: #ffffff; --text: #2a2622; --text-secondary: #5a5550;
   --muted: #8a8279; --accent: #1a4d4a; --accent-soft: #e8f0f0; --secondary: #b8956a;
-  --secondary-soft: #f0e8dd; --bronze-text: #8a6636; --border: #e5e0db; --code-bg: #f5f2ef;
+  --secondary-soft: #f0e8dd; --bronze-text: #75562b; --border: #e5e0db; --code-bg: #f5f2ef;
   --on-accent: #ffffff; --bad: #a3412f; --bad-soft: #f6e6e1;
 }
 :root[data-mode="dark"] {
@@ -75,7 +75,7 @@ h1::after { content: ''; position: absolute; left: 0; bottom: 0; width: 84px; he
 .stage .what { font-size: 16.5px; line-height: 1.4; color: var(--text-secondary); min-height: 70px; }
 .stage .chip { margin-top: 10px; }
 .stage .chip.none { visibility: hidden; }
-.arrow { color: var(--secondary); padding-top: 20px; display: flex; justify-content: center; }
+.arrow { color: var(--bronze-text); padding-top: 20px; display: flex; justify-content: center; }
 .back { display: block; width: 1054px; height: 52px; overflow: visible; }
 .back path { fill: none; stroke: var(--accent); stroke-width: 2.2; }
 .back .head { fill: var(--accent); stroke: none; }
@@ -159,6 +159,7 @@ h1::after { content: ''; position: absolute; left: 0; bottom: 0; width: 84px; he
 .foot .brand img { width: 36px; height: auto; }
 .foot .brand b { font-family: 'Space Grotesk', sans-serif; color: var(--text); font-size: 22px; }
 .foot .url { font-weight: 600; color: var(--accent); }
+.foot-note { font-size: 15px; color: var(--text-secondary); margin: 6px 4px 6px; text-align: center; }
 </style>
 </head>
 <body>
@@ -189,8 +190,8 @@ h1::after { content: ''; position: absolute; left: 0; bottom: 0; width: 84px; he
         <img class="logo-dark" src="../brand/okl-logo-dark.png" alt="">
       </div>
     </div>
-    <h1>Hold your agent to your rules,<br><span class="hl">and make it better every session</span></h1>
-    <p class="sub">okl wraps your agent: your rules and ADRs briefed before every task, gates that fail when the code drifts from them, and each session's lessons fed back in.</p>
+    <h1>Hold your agent to your rules,<br><span class="hl">and let each session teach the next</span></h1>
+    <p class="sub">okl works with your agent: it brings your rules and ADRs into context before each task (automatically in Claude Code; other agents call okl_check), proves them with checks you choose, and blocks the push when the code they govern changes.</p>
   </header>
 
   <section class="card loop">
@@ -206,20 +207,20 @@ h1::after { content: ''; position: absolute; left: 0; bottom: 0; width: 84px; he
         <div class="badge"><svg class="ic"><use href="#i-db"/></svg></div>
         <h3>The store</h3>
         <div class="what">Rules · decisions · past defects · gates</div>
-        <span class="chip none">.</span>
+        <span class="chip">one local file</span>
       </div>
       <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg></div>
       <div class="stage">
         <div class="badge"><svg class="ic"><use href="#i-bot"/></svg></div>
         <h3>In front of the agent</h3>
         <div class="what">Task arrives → ranked and filtered → briefing in context</div>
-        <span class="chip">before every task</span>
+        <span class="chip">before every task *</span>
       </div>
       <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg></div>
       <div class="stage">
         <div class="badge"><svg class="ic"><use href="#i-badge"/></svg></div>
-        <h3>Re-graded as code moves</h3>
-        <div class="what">A check must pass → drift since the check → push or CI fails</div>
+        <h3>Gated as code moves</h3>
+        <div class="what">A check must pass → its files change → push or CI fails until it passes again</div>
         <span class="chip">on every push</span>
       </div>
       <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg></div>
@@ -227,7 +228,7 @@ h1::after { content: ''; position: absolute; left: 0; bottom: 0; width: 84px; he
         <div class="badge"><svg class="ic"><use href="#i-refresh"/></svg></div>
         <h3>Kept current</h3>
         <div class="what">Update keeps proof · retire with a reason · end-of-session recap</div>
-        <span class="chip">at session end</span>
+        <span class="chip">at session end *</span>
       </div>
     </div>
     <svg class="back" viewBox="0 0 1054 52">
@@ -236,6 +237,7 @@ h1::after { content: ''; position: absolute; left: 0; bottom: 0; width: 84px; he
       <rect x="524" y="26" width="220" height="24"/>
       <text x="634" y="44" text-anchor="middle">corrections flow back</text>
     </svg>
+    <p class="foot-note">* Claude Code hooks brief every prompt and ask at session end; other MCP agents call okl_check. The push gate works with any agent.</p>
   </section>
 
   <section class="panels">
@@ -244,9 +246,9 @@ h1::after { content: ''; position: absolute; left: 0; bottom: 0; width: 84px; he
       <div class="panel-head"><div class="badge"><svg class="ic"><use href="#i-pen"/></svg></div><h3>One shape for every lesson</h3></div>
       <p class="note">A paragraph can't be routed into an action; a lesson can.</p>
       <div class="viz rows">
-        <div class="row"><span class="k">when you see</span><span class="v mono">X</span></div>
-        <div class="row"><span class="k">do</span><span class="v mono">Y</span></div>
-        <div class="row"><span class="k">why</span><span class="v">the cause</span></div>
+        <div class="row"><span class="k">when you see</span><span class="v">a request body carries Price</span></div>
+        <div class="row"><span class="k">do</span><span class="v">compute it server-side</span></div>
+        <div class="row"><span class="k">why</span><span class="v">the client sets its own price</span></div>
       </div>
     </article>
     <article class="card panel">
@@ -273,10 +275,10 @@ h1::after { content: ''; position: absolute; left: 0; bottom: 0; width: 84px; he
     <article class="card panel">
       <span class="num mono">04</span>
       <div class="panel-head"><div class="badge"><svg class="ic"><use href="#i-stamp"/></svg></div><h3>A stamp is evidence</h3></div>
-      <p class="note">A check you chose must run and pass. Marking a lesson verified without one is refused.</p>
+      <p class="note">A check you chose must run and pass, and the stamp keeps the command it ran. A stamp with no run behind it is unproven.</p>
       <div class="viz rows">
         <div class="verdict"><span class="mark ok">✓</span>your check passed<span class="chip teal">stamped</span></div>
-        <div class="verdict"><span class="mark no">✕</span>claimed, not run<span class="chip no">refused</span></div>
+        <div class="verdict"><span class="mark no">✕</span>stamp, no run<span class="chip no">unproven</span></div>
       </div>
     </article>
     <article class="card panel">
@@ -292,27 +294,27 @@ h1::after { content: ''; position: absolute; left: 0; bottom: 0; width: 84px; he
     <article class="card panel">
       <span class="num mono">06</span>
       <div class="panel-head"><div class="badge"><svg class="ic"><use href="#i-history"/></svg></div><h3>Corrected, not only added</h3></div>
-      <p class="note">Wrong or outdated lessons get fixed or retired, and the store keeps why.</p>
+      <p class="note">Wrong or outdated lessons get fixed or retired; a retirement keeps its reason.</p>
       <div class="viz rows">
         <div class="row"><span class="k short">update</span><span class="v">keeps the proof</span></div>
         <div class="row"><span class="k short">retire</span><span class="v">keeps the reason</span></div>
-        <div class="row"><span class="k short">recap</span><span class="v">names what to fix</span></div>
+        <div class="row"><span class="k short">recap</span><span class="v">names what to review</span></div>
       </div>
     </article>
   </section>
 
   <section class="planes">
-    <div class="plane"><div class="badge"><svg class="ic"><use href="#i-shield"/></svg></div><div><b>Fails closed</b><span>No briefing is never a clean check.</span></div></div>
+    <div class="plane"><div class="badge"><svg class="ic"><use href="#i-shield"/></svg></div><div><b>Fails closed</b><span>If okl can't brief, the prompt is blocked or told so.</span></div></div>
     <div class="plane"><div class="badge"><svg class="ic"><use href="#i-activity"/></svg></div><div><b>Observable</b><span>Every check run kept · <span class="mono">okl metric</span> · <span class="mono">okl show</span></span></div></div>
   </section>
 
   <section class="cli">
-    <div class="cli-head"><h2>The loop from a terminal</h2><span>Brief, prove, gate, retire.</span></div>
+    <div class="cli-head"><h2>Start in four commands</h2><span>Then every push checks it.</span></div>
     <div class="track">
-      <div class="tstep"><span class="n">01</span><h3>Brief</h3><code>okl check --task "add an invoice endpoint"</code></div>
-      <div class="tstep"><span class="n">02</span><h3>Prove</h3><code>okl verify &lt;id&gt; --run "pytest -q" --expect passed</code></div>
-      <div class="tstep"><span class="n">03</span><h3>Gate</h3><code>okl drift --gate</code></div>
-      <div class="tstep"><span class="n">04</span><h3>Retire</h3><code>okl retire &lt;id&gt; --reason "replaced" --by &lt;new&gt;</code></div>
+      <div class="tstep"><span class="n">01</span><h3>Install</h3><code>pipx install 'observed-knowledge-ledger[mcp]'</code></div>
+      <div class="tstep"><span class="n">02</span><h3>Wire a repo</h3><code>okl init --repo my-repo</code></div>
+      <div class="tstep"><span class="n">03</span><h3>Add a rule</h3><code>okl record --type Rule --scope repo --files app/orders.py --title "…"</code></div>
+      <div class="tstep"><span class="n">04</span><h3>Prove it</h3><code>okl verify &lt;id&gt; --run "pytest -q" --expect passed</code></div>
     </div>
   </section>
 
