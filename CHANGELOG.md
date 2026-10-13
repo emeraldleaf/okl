@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.8.8
+
+No change to what okl does; this release carries the README to PyPI.
+
+- **The README, the overview and a new anatomy sheet say what okl is for: load your
+  rules, hold your agent to them, keep learning as you build (#208, #210).** The overview
+  no longer claims more than the code does: a stamp with no run behind it is unproven
+  rather than refused, and the briefing before every task is labelled as Claude Code's.
+  The anatomy sheet follows one lesson all the way round in okl's own output.
+- **A guide to loading the rules, ADRs, standards and specs a team already has (#211).**
+  `docs/LOAD-YOUR-RULES.md` covers the import, proving the lessons that govern code,
+  keeping them in step with their source docs, teams, and keeping docs and comments
+  current, including what okl does not do yet. The README names `/seed-from-docs`.
+- **The pipeline diagram traces the query `okl check` runs (#209).** It had searched the
+  raw task sentence since 0.8.6 moved the briefing to the task's subject words, so its
+  counts were not the briefing's. The older Excalidraw diagram is retired.
+- **The pooled figure the launch posts quote is in REPORT §5, finding 7 (#208)**, with a
+  test that recomputes it from its eight receipts.
+
 ## 0.8.7
 
 - **A new repo's pushes get a note, not an error (#204).** Until a lesson governs a file,
