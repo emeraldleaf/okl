@@ -43,8 +43,8 @@ in one repo, or share one store across every repo your team runs.
 
 > New here? **[docs/GETTING-STARTED.md](docs/GETTING-STARTED.md)** walks through setup, the
 > habit of adding to the canon as you build a feature, and keeping your docs from drifting.
-> Already have a `CLAUDE.md`, ADRs, standards or specs? **[Seed it](#seed-it-so-the-very-first-check-returns-something)**
-> shows how to load them.
+> Already have a `CLAUDE.md`, ADRs, standards or specs? **[Load your rules](docs/LOAD-YOUR-RULES.md)**
+> shows how to load them, prove the ones that matter, and keep them current.
 
 **1. Install the CLI** (the PyPI name differs — PyPI refuses `okl` as confusable with
 `oki` — but everything you type afterwards is `okl`):
@@ -962,11 +962,14 @@ It comes with the Claude Code plugin or `okl scaffold .`; with another agent, gi
 prompt itself, `src/okl/scaffold/claude/commands/seed-from-docs.md`. Three things to know:
 
 - Imported records are briefed, not watched. Give the ones that govern specific code
-  `--files` and a check (`okl update <id> --files ...`, then `okl verify`).
+  `files` in the lessons file, run `okl seed` again, then prove them with `okl verify`.
 - Leave superseded ADRs out, or retire an imported one with `okl retire <id> --by <new-id>`.
 - Running `okl seed` on the edited file again updates the same records, but it keeps a
   record you deleted from the file, and it overwrites corrections made with `okl update`.
   Make corrections in the file.
+
+The whole walk-through, with ADR status, teams, and keeping docs and comments current, is
+[docs/LOAD-YOUR-RULES.md](docs/LOAD-YOUR-RULES.md).
 
 **3. Generate records from this codebase.** If you use a coding agent, the scaffold
 stamps a `/seed-from-codebase` command that has the agent read your repo — the guard
