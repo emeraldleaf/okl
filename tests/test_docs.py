@@ -54,7 +54,7 @@ def test_readme_and_claude_md_count_the_seed_corpus_as_it_is():
 
 
 def test_quoted_briefing_sizes_match_the_receipt_the_readme_cites():
-    """Every briefing size the README, the MCP description and the diagram quote comes
+    """Every briefing size the README, the MCP description and the anatomy sheet quote comes
     from one receipt, and that receipt measured the corpus as it is now."""
     # ARRANGE — the one receipt the README cites, and what it measured.
     readme = _flat("README.md")
@@ -87,11 +87,7 @@ def test_quoted_briefing_sizes_match_the_receipt_the_readme_cites():
     # (3) so does the MCP tool description an agent reads.
     mcp = f"roughly {actions[3]} tokens at limit=3 and {actions[12]} at the default limit of 12, versus ~{full:,}"
     assert mcp in _flat("src/okl/mcp_server.py"), f"the okl_check description no longer says: {mcp}"
-    # (4) and so do the diagram's source and its render.
-    for doc in ("docs/okl-how-it-works.excalidraw", "docs/okl-how-it-works.svg"):
-        line = f"roughly {actions[3]} tokens at limit=3, against ~{full:,} for the"
-        assert line in (ROOT / doc).read_text(), f"{doc} no longer says: {line}"
-    # (5) and so does the anatomy sheet's "Under the hood" panel.
+    # (4) and so does the anatomy sheet's "Under the hood" panel.
     sheet = "docs/overview/okl-anatomy.html"
     assert f"about {full:,} tokens" in (ROOT / sheet).read_text(), f"{sheet} no longer says: about {full:,} tokens"
 

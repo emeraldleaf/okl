@@ -28,7 +28,7 @@ in one repo, or share one store across every repo your team runs.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/emeraldleaf/okl/main/docs/overview/okl-overview-dark.png">
-  <img src="https://raw.githubusercontent.com/emeraldleaf/okl/main/docs/overview/okl-overview-light.png" alt="Guardrails and a learning loop for AI coding agents: hold your agent to your rules, and let each session teach the next. Five stages: your rules and ADRs, decided up front once; the store, one local file; a briefing in front of the agent before every task; gated as code moves, on every push; kept current at session end. The briefing before every task and the session-end question are Claude Code hooks; other MCP agents can call okl_check, and the push gate works with any agent. Six cards: one shape for every lesson (when you see, do, why); scope decides reach; selected, not skimmed; a stamp is evidence, and a stamp with no run behind it is unproven; stale blocks the push; corrected, not only added. It fails closed, keeps every check run, and starts in four commands: install, okl init, okl record with the files a rule governs, okl verify." width="100%">
+  <img src="https://raw.githubusercontent.com/emeraldleaf/okl/main/docs/overview/okl-overview-light.png" alt="Load your rules. Hold your agent to them. Keep learning as you build. Five stages: your rules, ADRs, standards and specs plus starter lessons for your stack, loaded up front; the store, one local file; a briefing in front of the agent before every task; gated as code moves, on every push; and it keeps learning as you build, with new lessons from mistakes, drift and failing tests, updates that keep their proof and retirements that keep their reason. The briefing before every task and the session-end question are Claude Code hooks; other MCP agents can call okl_check, and the push gate works with any agent. Six cards: one shape for every lesson (when you see, do, why); scope decides reach; selected, not skimmed; a stamp is evidence, and a stamp with no run behind it is unproven; stale blocks the push; corrected, not only added. It fails closed, keeps every check run, and starts in four commands: install, okl init, okl record with the files a rule governs, and okl verify with the check that proves it." width="100%">
 </picture>
 
 > A small store of what a codebase knows — its conventions, architecture decisions and
@@ -43,6 +43,8 @@ in one repo, or share one store across every repo your team runs.
 
 > New here? **[docs/GETTING-STARTED.md](docs/GETTING-STARTED.md)** walks through setup, the
 > habit of adding to the canon as you build a feature, and keeping your docs from drifting.
+> Already have a `CLAUDE.md`, ADRs, standards or specs? **[Seed it](#seed-it-so-the-very-first-check-returns-something)**
+> shows how to load them.
 
 **1. Install the CLI** (the PyPI name differs — PyPI refuses `okl` as confusable with
 `oki` — but everything you type afterwards is `okl`):
@@ -95,9 +97,10 @@ okl record --type Rule --scope repo --id order-owner-scope \
   --fix "filter by the caller's customer id in the query; return 404 on no match"
 ```
 
-More: `okl seed` lists every bundled pack; `okl scaffold .` stamps the method kit, which
-includes a `/seed-from-codebase` command that has your agent propose cited records from
-your own code ([Seed it](#seed-it-so-the-very-first-check-returns-something)).
+More: `okl seed` lists every bundled pack; `/seed-from-docs` has your agent propose cited
+records from the rules, ADRs, standards and specs you already wrote, and
+`/seed-from-codebase` from your own code. Both come with the Claude Code plugin or
+`okl scaffold .` ([Seed it](#seed-it-so-the-very-first-check-returns-something)).
 
 **4. Check it works:**
 
@@ -227,8 +230,8 @@ the same split from the side of recording.
 ## What it keeps from drifting, and how
 
 Knowledge rots in a specific way: the code changes and everything written *about* the
-code silently stops being true. Five mechanisms catch five different versions of that,
-and it is worth knowing which one catches what, because they do not overlap.
+code silently stops being true. Each row below catches a different version of that, and
+it is worth knowing which one catches what, because they do not overlap.
 
 | Drift | Caught by | How it works | Fires when |
 |---|---|---|---|
@@ -240,15 +243,19 @@ and it is worth knowing which one catches what, because they do not overlap.
 | **A diagram source with no rendered image** | `check-diagram-pairs.sh` | pairs each editable source with its export; format-agnostic via `OKL_DIAGRAM_SRC_EXT`/`OUT_EXT` | reviewers would see nothing. A hand-authored image with no source is noted, never failed, and a repo with no diagram sources is a clean no-op |
 | **Verification going quietly stale** | TTL + `verified_by` | records carry when they were last verified and by which observed check; a TTL applies only to records given `--ttl-days` (none by default) | past its TTL, a record is shown demoted rather than deleted |
 
-Two honest limits on that table:
+Three honest limits on that table:
 
 - **Diagram *content* is still a human job.** `check-diagram-pairs.sh` proves the rendered
   image exists; nothing proves it matches the source it was exported from, or that either
   matches the code. For that, name the diagram in a record's `--files` alongside the code
   it depicts, so changing the code turns the drift gate red until someone re-verifies the
-  picture. This repo does exactly that with its own architecture diagram and README.
-- **Comments are covered only by the identifier and claim gates.** A stale comment that
-  names no tombstoned identifier and restates no retracted claim will not be caught.
+  picture. This repo holds its README that way; its pipeline diagram is generated from the
+  code instead, and a test fails when the committed render no longer matches.
+- **Comments are covered only by the tombstone gate.** It finds a retired name in
+  `.md`, `.py`, `.ts`, `.tsx`, `.cs`, `.yaml`, `.yml`, `.json` and `.sh` files; the
+  retraction gate reads markdown only. Any other stale comment is not caught, and
+  `okl reverify` re-stamps a governed file without reading its comments, so a check has
+  to test the claim a comment makes for drift to mean anything.
 - **`okl drift` only watches what a record claims.** A file no record governs is not
   watched by anything. Coverage is a curation decision, and the gap is invisible until
   something breaks — which is why the mechanical gates above scan the whole repo (the
@@ -392,22 +399,22 @@ throwaway repo.
   <img src="https://raw.githubusercontent.com/emeraldleaf/okl/main/docs/overview/okl-anatomy-light.png" alt="Anatomy of okl, guardrails and a learning loop: load your rules, hold your agent to them, keep learning as you build. A ring around the store runs through six steps: lessons come in, up front from your rules, ADRs, standards and specs plus starter lessons for your stack, and as you build from new rules, mistakes, drift the gate finds, failing tests and reviews; each is written down as a lesson; okl proves it with a check you choose; it is briefed before each task (by a Claude Code hook; other MCP agents can call okl_check); when a file it covers changes, the pre-push hook holds the push until the check passes again or the code is back to what passed; then it is re-checked, fixed or retired. Below, real okl 0.8.7 output follows the lesson 'order lookups are scoped to the signed-in customer' from okl record to a blocked push, where re-running its check caught a change that dropped the owner check. Then where a lesson lives (briefing only, watched for drift, build-breaking); what the briefing did (78 of 186 unbriefed attempts repeated a known defect against 13 of 188 briefed, over eight A/B runs on tasks built to invite one); and how it ranks, what it costs and where it breaks." width="100%">
 </picture>
 
-An older, denser diagram of the same parts is
-[`docs/okl-how-it-works.svg`](docs/okl-how-it-works.svg).
-
 ### How a briefing is actually built
 
-`okl check` is a retrieval pipeline: seven stages turn a task sentence and the whole corpus
-into the twelve records an agent reads. Two stages can drop a record, and only one of them
+`okl check` is a retrieval pipeline: it searches the task's subject words, then narrows the
+whole corpus to the twelve records an agent reads. Two stages can drop a record, and only one of them
 is entitled to — the distinction that this project got wrong once and measured its way out
 of ([REPORT §4d](evals/REPORT.md)).
 
-<img src="docs/okl-retrieval-pipeline.svg" alt="Seven stages: the corpus, a BM25 fetch of three times the limit, a scope gate, the exclusive applies_to filter, the inclusive tags-times-interests filter, a top-12 cutoff, bucketing by type, and rendering. Each stage shows how many records survive it." width="100%">
+<img src="docs/okl-retrieval-pipeline.svg" alt="The corpus; the task's subject words; a BM25 fetch of three times the limit; a scope gate; the exclusive applies_to filter; the inclusive tags-times-interests filter; retired lessons out and a top-12 cutoff; bucketing by type; and rendering. Each stage shows how many records survive it." width="100%">
 
-Every count in that diagram is **traced**, not transcribed — `docs/render_pipeline_diagram.py`
-runs the real `store.search` and `core._in_scope` against a store seeded from `seed/`, and
-`test_pipeline_diagram_is_current` fails if the committed render is not what the generator
-produces today. Change a BM25 weight or a filter predicate and the diagram goes red with it.
+Every count in that diagram is **traced**, not transcribed: `docs/render_pipeline_diagram.py`
+runs the real `briefing_terms`, `store.search`, `core._in_scope` and `core._live_hits` against
+a store seeded from `seed/`, and `test_pipeline_diagram_is_current` fails if the committed
+render is not what the generator produces today. Change a BM25 weight or a filter predicate
+and the diagram goes red with it. The generator once searched the raw sentence after
+`okl check` had moved to subject words, and that test could not notice; the trace now
+cross-checks itself against `_live_hits`.
 
 ### The mental model
 
@@ -928,7 +935,7 @@ folder.) Two clarifications that stop the common misreadings:
 ## Seed it (so the very first `check` returns something)
 
 An empty store returns nothing, and says so — a check against an empty store reports
-that it proved nothing rather than reporting "no rules apply". Three ways to fill it:
+that it proved nothing rather than reporting "no rules apply". Four ways to fill it:
 
 **1. See what ships, then choose.** A bare `okl seed` imports nothing; it lists the
 bundled packs with their record counts and subject tags, marking the ones that match
@@ -947,15 +954,29 @@ and import-linter docs, Google's style guide), with the okl incidents that promp
 importing packs for stacks you do not use fills every briefing here with noise about
 frameworks you will never touch — which is why `--all` is opt-in rather than default.
 
-**2. Generate records from this codebase.** If you use a coding agent, the scaffold
+**2. Load the rules you already wrote.** `/seed-from-docs` has your agent read your rules
+files (`CLAUDE.md`, `AGENTS.md`, `.cursor/rules`), ADRs, standards and specs, keep the
+standing rules and drop the work items, and propose records that cite the line each came
+from. It writes a reviewable file and imports nothing; review it, then `okl seed <file>`.
+It comes with the Claude Code plugin or `okl scaffold .`; with another agent, give it the
+prompt itself, `src/okl/scaffold/claude/commands/seed-from-docs.md`. Three things to know:
+
+- Imported records are briefed, not watched. Give the ones that govern specific code
+  `--files` and a check (`okl update <id> --files ...`, then `okl verify`).
+- Leave superseded ADRs out, or retire an imported one with `okl retire <id> --by <new-id>`.
+- Running `okl seed` on the edited file again updates the same records, but it keeps a
+  record you deleted from the file, and it overwrites corrections made with `okl update`.
+  Make corrections in the file.
+
+**3. Generate records from this codebase.** If you use a coding agent, the scaffold
 stamps a `/seed-from-codebase` command that has the agent read your repo — the guard
 rails already in the code, what CI enforces, the fix commits, the existing canon — and
 propose records with a `file:line` citation each. Everything it proposes is repo-scoped
 and unverified by design; it writes a reviewable file and imports nothing, because a
 plausible rule no file supports is worse than an empty store.
 
-**3. `okl bootstrap`** greps git history and file names for candidates. It is the weakest
-of the three and comes up empty on young repos; prefer option 2 when an agent is available.
+**4. `okl bootstrap`** greps git history and file names for candidates. It is the weakest
+of these and comes up empty on young repos; prefer options 2 and 3 when an agent is available.
 
 Whichever you use, review before importing. Choosing a record's scope is the curation
 step that keeps a shared layer from filling with one project's noise.
@@ -1046,8 +1067,8 @@ is safe. Unlike the hook, a tool result cannot block the agent; it can only warn
   read is a hook / a first step, not an optional lookup.
 - **It fails closed.** An unreachable store blocks or warns; it never reports "clean."
   Silence and safety are different things.
-- **The scope decision is human curation.** `org` spreads everywhere; `repo:<name>`
-  stays local. A person picks which when recording — that's what keeps a shared store
+- **The scope decision is human curation.** `org` reaches any repo that loads it, through
+  a pack; `repo:<name>` stays local. A person picks which when recording — that's what keeps a shared store
   from filling with one project's noise.
 - **Staleness demotes, never deletes.** A note carries when it was last verified and
   how long that's good for; past that it's shown as `STALE`, not removed — deleting it
