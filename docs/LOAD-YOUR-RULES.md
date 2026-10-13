@@ -300,8 +300,10 @@ What works today, with no server: the lessons live in a file in git, reviewed by
    # Run after `okl init --repo <name>`, on a clean, committed tree.
    set -euo pipefail
    okl seed okl-lessons.json
-   # Removed rules: clones that loaded them retire them; a fresh clone never had them.
-   okl retire seed:okl-lessons:log_4xx_at_info --obsolete --reason "removed from CLAUDE.md" || true
+   # Removed rules: retire them where this store holds them. A fresh clone never loaded
+   # them, so skip only an id the store does not have; any other failure stops the script.
+   retire_removed() { if okl show "$1" >/dev/null 2>&1; then okl retire "$@"; fi; }
+   retire_removed seed:okl-lessons:log_4xx_at_info --obsolete --reason "removed from CLAUDE.md"
    okl verify seed:okl-lessons:order_owner_scope \
      --run "pytest -q tests/test_ownership.py" --expect "passed"
    okl verify seed:okl-lessons:adr_0003_problem_details \
