@@ -8,8 +8,12 @@ lessons while writing it moved the number. And transcription is a place to be wr
 draft also had the stage-3 and stage-4 counts backwards (0/9 rather than 3/6), written from
 memory of an earlier measurement that had asked a different question.
 
-So the numbers here are TRACED, by calling the same `store.search` and `core._in_scope` that
-serve real briefings. If the pipeline changes, this diagram changes with it or the freshness
+So the numbers here are TRACED, by calling the same `briefing_terms`, `store.search`,
+`core._in_scope` and `core._live_hits` that serve real briefings. The first version searched
+the raw task sentence; `okl check` has searched only its subject words since 0.8.6, so for a
+release the diagram showed a query nobody ran, and its freshness test, which compares this
+script's output with the committed render, could not notice. The trace now cross-checks its
+result against `_live_hits` itself. If the pipeline changes, this diagram changes with it or the freshness
 test fails (tests/test_okl.py::test_pipeline_diagram_is_current). That is the difference
 between a render that exists and a render that is true — the gap gates/check-diagram-pairs.sh
 documents as "stays human".
@@ -32,7 +36,7 @@ from xml.sax.saxutils import escape
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src"))
 
-from okl.core import _in_scope  # noqa: E402
+from okl.core import _in_scope, _live_hits, briefing_terms  # noqa: E402
 from okl.store import Node, Store, split_tags  # noqa: E402
 
 # The task traced through the pipeline. A real eval task, so the diagram depicts a case the
@@ -81,7 +85,10 @@ def trace(store: Store | None = None) -> dict:
     repo_scope = f"repo:{TRACE_REPO}"
 
     total = len(store.all_nodes())
-    fetched = store.search(TRACE_TASK, limit=LIMIT * 3)
+    # Stage 1: the search runs on the task's subject words, as check() does (core._live_hits).
+    terms = briefing_terms(TRACE_TASK)
+    query = " ".join(terms)
+    fetched = store.search(query, limit=LIMIT * 3)
 
     own = [n for n in fetched if n.scope == repo_scope]
     org = [n for n in fetched if n.scope == "org"]
@@ -111,10 +118,20 @@ def trace(store: Store | None = None) -> dict:
         raise SystemExit("ABORT: traced stages disagree with core._in_scope — fix the trace "
                          "before rendering, or the diagram depicts a pipeline nobody runs.")
 
+    # Retired lessons (obsolete, or superseded by a live one this repo can see) leave before
+    # the cut. Take the survivors from _live_hits itself, the function check() calls; if it had
+    # to widen its window, this trace's single fetch no longer matches it, so stop.
+    live, _ = _live_hits(store, TRACE_TASK, LIMIT, repo_scope, interests)
+    live_ids = {n.id for n in live}
+    if not live_ids <= {n.id for n in after_tags}:
+        raise SystemExit("ABORT: _live_hits widened its search past this trace's window — "
+                         "trace the wider fetch before rendering.")
+    retired = [n for n in after_tags if n.id not in live_ids]
+
     applies_set = sum(1 for n in store.all_nodes()
                       if (n.applies_to or "").strip() and n.applies_to.strip().lower() != "any")
     out = {
-        "task": TRACE_TASK, "repo": TRACE_REPO, "limit": LIMIT,
+        "task": TRACE_TASK, "query": query, "terms": len(terms), "repo": TRACE_REPO, "limit": LIMIT,
         "interests": interests,
         "corpus": total,
         "applies_to_set": applies_set,
@@ -122,8 +139,9 @@ def trace(store: Store | None = None) -> dict:
         "after_scope": len(after_scope), "dropped_scope": len(fetched) - len(after_scope),
         "after_applies": len(after_applies), "dropped_applies": len(dropped_applies),
         "after_tags": len(after_tags), "dropped_tags": len(dropped_tags),
-        "delivered": min(LIMIT, len(after_tags)),
-        "trimmed": max(0, len(after_tags) - LIMIT),
+        "retired": len(retired), "live": len(live),
+        "delivered": min(LIMIT, len(live)),
+        "trimmed": max(0, len(live) - LIMIT),
     }
     if tmp is not None:
         store.close(); tmp.cleanup()
@@ -163,35 +181,39 @@ def render(d: dict) -> str:
         ("0", "STORE", "The corpus", "Every record carries scope (permission), tags (subject), "
          "applies_to (validity) and files (what it governs). Nothing is ranked yet.",
          f'{d["corpus"]} records', "", 1.0, 0.0, ""),
-        ("1", "RANK", "Fetch 3x more candidates than needed",
+        ("1", "QUERY", "The task's subject words, not the sentence",
+         "Function words, chat filler and single characters drop out; each word counts once, "
+         "up to 40. A prompt with no subject word is briefed nothing.",
+         f'{d["terms"]} words', "searched", 0.0, 0.0, ""),
+        ("2", "RANK", "Fetch 3x more candidates than needed",
          "SQLite FTS5, weighted title x8, body x4, symptom x4, fix x2, tags x1. A record found "
          "only by its tag ranks after every content match.",
          f'{d["fetched"]} fetched', "limit x 3", d["fetched"] / f, 0.0, ""),
-        ("2", "SCOPE", "Permission - who may see this",
+        ("3", "SCOPE", "Permission - who may see this",
          "A repo's own records pass first and unconditionally. org records continue. Another "
          "repo's records stop here: the curation boundary.",
          f'{d["after_scope"]} survive', f'{d["dropped_scope"]} dropped: other repos',
          d["after_scope"] / f, d["dropped_scope"] / f, "DROPS"),
-        ("3", "VALID", "applies_to - the only filter allowed to exclude",
+        ("4", "VALID", "applies_to - the only filter allowed to exclude",
          f'EXCLUSIVE. Set by hand on {d["applies_to_set"]} of {d["corpus"]} records, only where a '
          "lesson is false off-stack. Unset means anywhere, which is why it is safe.",
          f'{d["after_applies"]} survive', f'{d["dropped_applies"]} dropped: off-stack',
          d["after_applies"] / f, d["dropped_applies"] / f, "DROPS"),
-        ("4", "SUBJECT", "tags x interests - one shared subject is enough",
+        ("5", "SUBJECT", "tags x interests - one shared subject is enough",
          "INCLUSIVE. Untagged always passes. The exclusive version was reverted (REPORT 4d): "
          "it hid 35 of 172 records and the briefed arm then reproduced a defect it dropped.",
          f'{d["after_tags"]} survive', f'{d["dropped_tags"]} dropped: no shared subject',
          d["after_tags"] / f, d["dropped_tags"] / f, "ANY-MATCH"),
-        ("5", "CUTOFF", "Top 12, and the rest are counted not hidden",
-         "Full-text matching is permissive enough that a plausible task matches most of a "
-         "mature store. The number discarded travels with the result.",
-         f'{d["delivered"]} delivered', f'{d["trimmed"]} reported as trimmed',
+        ("6", "CUTOFF", "Retired lessons out, then the top 12",
+         "Obsolete and replaced lessons leave first, so they never take a live slot. The "
+         "number cut travels with the result.",
+         f'{d["delivered"]} delivered', f'{d["trimmed"]} trimmed, {d["retired"]} retired',
          d["delivered"] / f, d["trimmed"] / f, "TRUNCATES"),
-        ("6", "SHAPE", "Bucket by type, then route to imperatives",
+        ("7", "SHAPE", "Bucket by type, then route to imperatives",
          "Buckets: gates, defects, retractions, tombstones, threat prior-art, rules, decisions, "
          "vocabulary, related context. Stale demotes, never deletes. Then ARM / FIX / AVOID.",
          "gates -> defects+rules", "-> retractions -> tombstones", 0.0, 0.0, ""),
-        ("7", "RENDER", "Three surfaces, one pipeline",
+        ("8", "RENDER", "Three surfaces, one pipeline",
          "agent | actions | json. A zero-match result carries the store size, so 'no rules "
          "apply' can never be confused with 'the store is empty'.",
          "hook | MCP | CI", "", 0.0, 0.0, ""),
@@ -209,6 +231,7 @@ def render(d: dict) -> str:
     for i, ln in enumerate([
         "GENERATED from the live pipeline - docs/render_pipeline_diagram.py",
         f'traced task: "{d["task"]}"',
+        f'searched as: "{d["query"]}"',
         f'repo interests: {", ".join(d["interests"])}',
     ]):
         o.append(f'<text x="{PAD}" y="{96 + i * 16}" font-size="11.5" font-family="{MONO}" '
@@ -260,7 +283,7 @@ def render(d: dict) -> str:
             o.append(_bar(tx, y + ROW_H - 20, W - PAD - tx - 14, keep, cut))
         y += ROW_H
     o.append(f'<text x="{PAD}" y="{h - 26}" font-size="11" font-family="{MONO}" fill="{INK3}">'
-             f'src/okl/core.py check() / _in_scope() . src/okl/store.py search() . '
+             f'src/okl/core.py briefing_terms() / _live_hits() / _in_scope() . src/okl/store.py search() . '
              f'regenerate: python3 docs/render_pipeline_diagram.py</text>')
     o.append("</svg>")
     return "\n".join(o) + "\n"
