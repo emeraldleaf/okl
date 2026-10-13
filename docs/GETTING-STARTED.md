@@ -77,6 +77,10 @@ To start from what the code already does rather than from memory, run
 into a file you review before importing anything (`okl scaffold .` adds it outside the plugin). `okl seed`
 lists more bundled packs; `okl seed <name>` imports one.
 
+Already have rules files, ADRs, standards or specs? [Load your rules](LOAD-YOUR-RULES.md)
+walks through importing them with `/seed-from-docs`, proving the ones that govern code,
+and keeping them current.
+
 ### Check it works
 
 ```bash
