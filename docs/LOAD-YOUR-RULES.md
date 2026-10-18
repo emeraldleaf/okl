@@ -225,6 +225,8 @@ For each one:
 
 1. Find or write a check that fails when the lesson is broken. Commit it.
 2. Add `files` to the record in `okl-lessons.json`. List the code the lesson governs, plus the doc it came from when it restates a doc. Then run `okl seed okl-lessons.json`.
+
+   Include what the behaviour depends on, too: a caller whose contract the rule relies on, or the lockfile when a dependency's version matters. Drift re-opens a lesson only when one of its own `files` changes, so a rule broken from outside them (a caller changed, a dependency bumped) stays stamped until something else runs the check. Every file you add also means more re-checks, so list the inputs that matter, not the whole tree.
 3. Prove it:
 
    ```bash
