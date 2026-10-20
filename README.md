@@ -382,6 +382,8 @@ project's interests and the task agree. Subject tags from a closed vocabulary (`
 `store.py`, grown with `okl record --type Vocabulary`) say what a lesson is about; `okl init
 --interests` says what a repo cares about ([decision](docs/decisions/2026-07-21-subject-tags-controlled-vocabulary.md)).
 
+**The choices behind all this**, and why: [docs/DESIGN-CHOICES.md](docs/DESIGN-CHOICES.md).
+
 **The data** is one SQLite file per clone by default, `.okl/okl.db`, gitignored. Point several
 repos at a shared service when you want one store ([docs/SCAFFOLD.md](docs/SCAFFOLD.md#run-the-shared-service)).
 
@@ -411,7 +413,9 @@ okl link <gate_id> CATCHES <defect_id>
 ```
 
 `okl record --verified` is refused: it exits 2 and points at `okl verify`, because a stamp is
-evidence of a run, not a claim.
+evidence of a run, not a claim. Every other command, with its exit codes: [docs/COMMANDS.md](docs/COMMANDS.md).
+Why a step never grades itself, and the four rungs okl applies to its own stamps:
+[docs/VERIFICATION.md](docs/VERIFICATION.md).
 
 `--symptom`/`--fix` are what make `check` emit a leading **"Do this"** action list
 (*"FIX: … — when you see: …"*) instead of a wall of prose. `--files` tells `okl` which

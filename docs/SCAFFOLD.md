@@ -58,4 +58,4 @@ where you are weak. It is a single shared secret with no per-repo scoping or rot
 put a real authenticating proxy in front if you need more.
 
 Full instructions, including a throwaway Postgres for trying it locally and what the
-failure modes look like: **[docs/DEPLOY.md](docs/DEPLOY.md)**.
+failure modes look like: **[docs/DEPLOY.md](DEPLOY.md)**.

@@ -35,9 +35,9 @@ shell scripts that execute automatically during agent sessions (the check hook c
 task when the store is unreachable — that is the fail-closed design), and the pre-push hook
 runs on every `git push` and blocks it on drift (with `--ci`, the workflow runs in your
 Actions instead). All are plain text you can read first, in
-[`src/okl/scaffold/hooks/`](src/okl/scaffold/hooks/),
-[`src/okl/scaffold/git-hooks/`](src/okl/scaffold/git-hooks/) and
-[`src/okl/scaffold/ci/`](src/okl/scaffold/ci/). Nothing executes at install time; nothing
+[`src/okl/scaffold/hooks/`](../src/okl/scaffold/hooks/),
+[`src/okl/scaffold/git-hooks/`](../src/okl/scaffold/git-hooks/) and
+[`src/okl/scaffold/ci/`](../src/okl/scaffold/ci/). Nothing executes at install time; nothing
 is written outside the directory you run `init` in; nothing contacts a network unless you
 run `okl connect` and point it somewhere yourself.
 
@@ -67,7 +67,7 @@ shape; Copilot, Gemini CLI and Cursor have hook systems worth checking against y
 version; OpenCode's plugin API captures tool events but, as of this writing, no
 pre-prompt event — so there the read stays a tool call rather than a gate. Verify against
 your agent's current docs before trusting any of that. Wiring one up is a well-shaped
-contribution — see [CONTRIBUTING.md](CONTRIBUTING.md).
+contribution — see [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 Hooks run in whatever environment the agent harness spawns — often without your venv or
 pipx bin dir on PATH — so both hooks resolve the `okl` binary in layers: the `OKL_BIN`

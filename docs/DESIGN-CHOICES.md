@@ -19,6 +19,6 @@ Part of okl's documentation; the [README](../README.md) is the short version.
 - **Records, not an ontology store.** Lessons are typed records found by ranked full-text
   search, with one-step relationships for reporting. An RDF triple store would answer
   precise structural questions okl does not ask, and could not rank a task sentence
-  without adding back a search engine. [The decision](docs/decisions/2026-10-05-records-not-an-ontology-store.md)
+  without adding back a search engine. [The decision](decisions/2026-10-05-records-not-an-ontology-store.md)
   explains how lessons are stored and found now, and when a one-way RDF export would earn
   its place.

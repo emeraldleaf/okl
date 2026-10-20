@@ -10,7 +10,7 @@ cost one retrieval: `exit_code_trust`'s governing rule ranks below the top 12 fo
 task's wording. Run outcomes hid it (the briefing still prevented the defect, through
 other records); `evals/preflight.py` found it by asking directly whether each task's rule
 is in its briefing, and it is kept in a named register rather than silently. See
-[evals/REPORT.md](evals/REPORT.md) §4b's correction.
+[evals/REPORT.md](../evals/REPORT.md) §4b's correction.
 
 What it drops: the bucketed sections (Decisions among them), the prose bodies explaining *why* each record
 exists, prior-art notes, and the stale-record footer. What it keeps is what changes

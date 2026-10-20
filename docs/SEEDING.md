@@ -37,7 +37,7 @@ prompt itself, `src/okl/scaffold/claude/commands/seed-from-docs.md`. Three thing
   Make corrections in the file.
 
 The whole walk-through, with ADR status, teams, and keeping docs and comments current, is
-[docs/LOAD-YOUR-RULES.md](docs/LOAD-YOUR-RULES.md).
+[docs/LOAD-YOUR-RULES.md](LOAD-YOUR-RULES.md).
 
 **3. Generate records from this codebase.** If you use a coding agent, the scaffold
 stamps a `/seed-from-codebase` command that has the agent read your repo — the guard

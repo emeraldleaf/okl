@@ -72,7 +72,7 @@ okl's briefing. `okl doctor` names whichever is installed and what to do about i
 **Instead — yes, if your problem is theirs.** If you want semantic recall over what an
 agent has seen, per-user personalization, or conversation-scale memory, use them;
 they're better at it, and this deliberately isn't that (no embeddings, by
-[recorded decision](docs/decisions/2026-07-17-flat-retrieval-until-scale.md)).
+[recorded decision](decisions/2026-07-17-flat-retrieval-until-scale.md)).
 
 **Alongside — they compose, because they're different layers.** Memory infrastructure
 remembers what the agent *experienced*; this governs what the org has *verified*. A
