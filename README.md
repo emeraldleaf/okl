@@ -14,8 +14,8 @@ briefed to your agent before every task (by a hook in Claude Code; any MCP agent
 the same briefing), each proven by a check you choose, flagged before you push (or in CI) when
 what it covers changes, and corrected or retired as you build. Prompts advise; the gate
 enforces. Use it in one repo, or share one store across every repo your team runs.<br>
-Typed records, keyword search and one-step links: no embeddings, no model calls in the loop,
-no automatic capture. A lesson is written on purpose and proven by a check.
+Under the hood: typed records, keyword search and one-step links. No embeddings, no model
+calls in the loop, no automatic capture. A lesson is written on purpose and proven by a check.
 
 [![PyPI](https://img.shields.io/pypi/v/observed-knowledge-ledger?color=blue&label=PyPI)](https://pypi.org/project/observed-knowledge-ledger/)
 [![Python](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
