@@ -36,7 +36,7 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
     reader answering "what flags does verify take" should find the whole answer in one
     place rather than following a chain of registration helpers.
     """
-    p = argparse.ArgumentParser(prog="okl", description="Observed Knowledge Ledger — lessons your coding agents can trust, proven by checks.")
+    p = argparse.ArgumentParser(prog="okl", description="Observed Knowledge Ledger — verified memory for coding agents, proven by checks.")
     # The installed distribution's version, read from package metadata (okl.__version__),
     # so a repo pinned to a release can tell which one its hooks are running.
     p.add_argument("--version", action="version", version=f"okl {__version__}")

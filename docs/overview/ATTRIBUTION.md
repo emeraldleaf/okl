@@ -26,3 +26,13 @@ before committing: the PNGs are what people read, and nothing checks them agains
 - **Icons**: Lucide, from `lucide-static@0.460.0` (https://lucide.dev), ISC License, inlined
   unmodified as `<symbol>`s in the HTML.
 - **Logo**: okl's own, from `docs/brand/`.
+
+## The LinkedIn cut
+
+`render_linkedin.py okl-anatomy.html <out-prefix>` renders a 4:5 version of the anatomy
+sheet for the LinkedIn feed: header, the six panels around the ring, the measured figure as
+a full-width strip, and the footer; the terminal band and the lower panels are left out. It
+widens the sheet until the render fits 4:5, so scale the PNG to 2400 px wide afterwards
+(the Playwright venv has no PIL; use the framework Python or `sips -Z`). Re-run it whenever
+the anatomy sheet changes.
+

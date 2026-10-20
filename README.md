@@ -8,12 +8,14 @@
 
 # okl — Observed Knowledge Ledger
 
-**Guardrails and a learning loop for AI coding agents.**<br>
-Engineering rules, architecture decisions, documentation and diagrams: recorded once, briefed to
-your agent before every task (by a hook in Claude Code; any MCP agent can ask for the same
-briefing), proven by checks you choose, and flagged before you push (or in CI) when what they
-govern changes. Each session's lessons are fed back in. Use it
-in one repo, or share one store across every repo your team runs.
+**Verified memory for coding agents, and the loop that keeps it true.**<br>
+Your rules, architecture decisions, past defects, documentation and diagrams: recorded once,
+briefed to your agent before every task (by a hook in Claude Code; any MCP agent can ask for
+the same briefing), each proven by a check you choose, flagged before you push (or in CI) when
+what it covers changes, and corrected or retired as you build. Prompts advise; the gate
+enforces. Use it in one repo, or share one store across every repo your team runs.<br>
+Under the hood: typed records, keyword search and one-step links. No embeddings, no model
+calls in the loop, no automatic capture. A lesson is written on purpose and proven by a check.
 
 [![PyPI](https://img.shields.io/pypi/v/observed-knowledge-ledger?color=blue&label=PyPI)](https://pypi.org/project/observed-knowledge-ledger/)
 [![Python](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
@@ -396,7 +398,7 @@ throwaway repo.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/emeraldleaf/okl/main/docs/overview/okl-anatomy-dark.png">
-  <img src="https://raw.githubusercontent.com/emeraldleaf/okl/main/docs/overview/okl-anatomy-light.png" alt="Anatomy of okl, guardrails and a learning loop: load your rules, hold your agent to them, keep learning as you build. A ring around the store runs through six steps: lessons come in, up front from your rules, ADRs, standards and specs plus starter lessons for your stack, and as you build from new rules, mistakes, drift the gate finds, failing tests and reviews; each is written down as a lesson; okl proves it with a check you choose; it is briefed before each task (by a Claude Code hook; other MCP agents can call okl_check); when a file it covers changes, the pre-push hook holds the push until the check passes again or the code is back to what passed; then it is re-checked, fixed or retired. Below, real okl 0.8.7 output follows the lesson 'order lookups are scoped to the signed-in customer' from okl record to a blocked push, where re-running its check caught a change that dropped the owner check. Then where a lesson lives (briefing only, watched for drift, build-breaking); what the briefing did (78 of 186 unbriefed attempts repeated a known defect against 13 of 188 briefed, over eight A/B runs on tasks built to invite one); and how it ranks, what it costs and where it breaks." width="100%">
+  <img src="https://raw.githubusercontent.com/emeraldleaf/okl/main/docs/overview/okl-anatomy-light.png" alt="Anatomy of okl, verified memory and the loop that keeps it true: load your rules, hold your agent to them, keep learning as you build. A ring around the store runs through six steps: lessons come in, up front from your rules, ADRs, standards and specs plus starter lessons for your stack, and as you build from new rules, mistakes, drift the gate finds, failing tests and reviews; each is written down as a lesson; okl proves it with a check you choose; it is briefed before each task (by a Claude Code hook; other MCP agents can call okl_check); when a file it covers changes, the pre-push hook holds the push until the check passes again or the code is back to what passed; then it is re-checked, fixed or retired. Below, real okl 0.8.7 output follows the lesson 'order lookups are scoped to the signed-in customer' from okl record to a blocked push, where re-running its check caught a change that dropped the owner check. Then where a lesson lives (briefing only, watched for drift, build-breaking); what the briefing did (78 of 186 unbriefed attempts repeated a known defect against 13 of 188 briefed, over eight A/B runs on tasks built to invite one); and how it ranks, what it costs and where it breaks." width="100%">
 </picture>
 
 ### How a briefing is actually built
