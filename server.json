@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.emeraldleaf/okl",
   "title": "okl — Observed Knowledge Ledger",
-  "description": "Lessons your coding agent can trust: briefed before each task, proven by checks, flagged on change.",
+  "description": "Verified memory for coding agents: briefed before each task, proven by checks, gated when the code changes.",
   "websiteUrl": "https://github.com/emeraldleaf/okl/blob/main/docs/GETTING-STARTED.md",
   "repository": {
     "url": "https://github.com/emeraldleaf/okl",
