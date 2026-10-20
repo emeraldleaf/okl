@@ -410,6 +410,9 @@ okl search "price tampering"
 okl link <gate_id> CATCHES <defect_id>
 ```
 
+`okl record --verified` is refused: it exits 2 and points at `okl verify`, because a stamp is
+evidence of a run, not a claim.
+
 `--symptom`/`--fix` are what make `check` emit a leading **"Do this"** action list
 (*"FIX: … — when you see: …"*) instead of a wall of prose. `--files` tells `okl` which
 source files a lesson governs, which powers drift detection (below).
@@ -460,6 +463,10 @@ measurement above. Set them where the agent starts: hooks inherit its environmen
 limit that is not a whole number above zero is ignored, and an okl too old for
 `--compact` briefs in full rather than blocking the prompt. Like `--format actions`, the
 compact briefing does not say how many records it trimmed.
+
+`okl check --format actions` is the imperatives only, about half the size; `--format json` is
+the raw result for scripts; `--format hook` is what the Claude Code hook prints; `--limit N`
+draws on fewer records and says how many it trimmed.
 
 Every knob, what `okl init` writes, how to turn parts off, and the opt-in architecture review:
 [Costs and knobs](docs/COSTS-AND-KNOBS.md). Subagents and small windows: [docs/SUBAGENTS.md](docs/SUBAGENTS.md).
