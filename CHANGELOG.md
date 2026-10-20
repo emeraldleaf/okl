@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+- **The README is a short version again, and says what okl is in its readers' terms.** It
+  opens with the install line and the measured figure, puts a what-goes-wrong-and-what-catches-it
+  table and a which-agent-which-part table in text (the six cards used to live only inside the
+  overview image), states how okl differs in four lines, and ends with questions. The essays
+  moved to `docs/` with their content intact: where this sits, verification, design choices,
+  costs and knobs, what `okl init` writes, every command, subagents, seeding, the scaffold and
+  the shared service. One noun throughout: a lesson. Every sentence a test or a drift rule
+  pins (the corpus count, the token costs and their receipt, the reproduced-defect list, the
+  install line, the init flags) is unchanged.
+- **okl describes itself as verified memory for coding agents, and the loop that keeps it
+  true (#235)**: the README headline, the PyPI and MCP Registry descriptions, the plugin and
+  CLI descriptions, and the overview and anatomy sheets, which are re-rendered.
+  `docs/overview/render_linkedin.py` is the recipe for the 4:5 feed cut of the anatomy.
+
 ## 0.8.8
 
 No change to what okl does; this release carries the README to PyPI.
