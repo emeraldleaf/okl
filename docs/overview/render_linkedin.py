@@ -40,15 +40,18 @@ with sync_playwright() as p:
     page.goto(src.as_uri())
     page.evaluate("document.fonts.ready")
     page.evaluate(STRIP)
-    width = 1200
-    while width < 2000:
+    for width in range(1200, 2001, 40):
         page.set_viewport_size({"width": width, "height": 900})
         page.evaluate(f"const s = document.getElementById('sheet'); s.style.width = '{width}px'; s.style.maxWidth = 'none';")
         page.wait_for_timeout(100)
         h = page.evaluate("document.getElementById('sheet').getBoundingClientRect().height")
         if h / width <= TARGET_RATIO:
             break
-        width += 40
+    else:
+        # Past 2000 px the text gets too small to read in a feed; a sheet that still does not
+        # fit needs cutting, not widening, so stop rather than save an image that breaks 4:5.
+        raise SystemExit(f"sheet is {h:.0f} css px tall at {width} wide (ratio {h / width:.2f}); "
+                         f"it cannot meet {TARGET_RATIO}: shorten the anatomy sheet")
     print("sheet width (css px):", width)
     for mode in ("light", "dark"):
         page.evaluate(f"document.documentElement.dataset.mode = '{mode}'")
