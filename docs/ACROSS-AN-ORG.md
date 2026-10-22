@@ -16,8 +16,9 @@ A pack is a seed file: a JSON list of `org`-scoped lessons, each with its sympto
 fix, its tags, a `found_by` naming where it was paid for, and, where it governs code, the
 files and the check. The twelve bundled packs in [seed/](../seed/) are the worked example:
 real, dated records from several production codebases. `okl seed <path>` imports one, and
-running it again on the edited file updates the same rows; [SEEDING.md](SEEDING.md) lists
-the two things a re-seed will not do.
+running it again on the edited file updates the same rows for records that carry a key, the
+id `okl seed` derives from it; a record without a key gets a fresh id on every import, so every
+pack row carries one. [SEEDING.md](SEEDING.md) lists the two things a re-seed will not do.
 
 ## The ledger repo
 
@@ -30,8 +31,9 @@ replaces it, so the row and its provenance stay; nothing is deleted from a pack.
 A consuming repo declares what it cares about at init, `okl init --repo <name> --interests
 <tags>`, then loads the packs it wants from a checkout of the ledger: `okl seed
 <path-to-pack>`. Its store stays local (`.okl/okl.db`, gitignored), nothing in the loop calls
-a service, and a repo that loads a pack it has no interest in simply fills its briefings with
-noise, which is why `okl seed --all` is explicit on purpose.
+a service, and a repo that loads a pack it has no interest in grows its store with records the
+interests filter then has to keep out of its briefings, and untagged records pass that filter,
+which is why `okl seed --all` is explicit on purpose.
 
 ## Re-proven where it lands
 
@@ -40,7 +42,7 @@ governs there and proves it with `okl verify <id> --run "<check>" --expect "<sig
 then on drift marks the lesson stale when those files move, the push gate holds until the
 check passes again, and the briefing carries the verdict. The same pack row can be proven in
 one repo, stale in a second and unwatched in a third, because the stamps live in each repo's
-own `okl-drift.json`, not in the ledger. That is what "verified" means across an org: not
+own store, with the `okl-drift.json` snapshot it commits for CI, not in the ledger. That is what "verified" means across an org: not
 that the ledger reviewer believed it, but that this repo's check ran.
 
 ## Scope is the curation step
@@ -61,7 +63,9 @@ a Defect with its cause, never a transcript of how it was found. okl's own measu
 a transfer result in the same sense: the eight A/B tasks are fresh code written from a task
 prompt, the defect classes they invite were learned in other projects and arrive through six
 of the twelve packs, and 78 of 186 unbriefed attempts repeated one against 13 of 188 briefed
-(REPORT §5, finding 7). Measuring which lesson shapes transfer, and which do not, is #254.
+(REPORT §5, finding 7). Seven of the eight tasks had that lesson in their briefing; the eighth's
+ranked below the twelve-record cutoff for its wording (REPORT §4b), so its arm measured the
+briefing without it. Measuring which lesson shapes transfer, and which do not, is #254.
 
 ## Hygiene, and what to watch
 
