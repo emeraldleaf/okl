@@ -8,7 +8,7 @@ idor_endpoint    paraphrase  MISS     MISS      None/98    []
 idor_endpoint    bug-report  MISS     MISS        39/50    ['other']
 price_tamper     authored    yes      yes          1/179   ['product', 'price', 'catalog', 'service', 'client']
 price_tamper     ticket      yes      yes          1/56    ['product', 'price', 'body']
-price_tamper     paraphrase  yes      yes          1/50    ['submit', 'amount', 'computed']
+price_tamper     paraphrase  MISS     MISS      None/17    []
 price_tamper     bug-report  MISS     MISS        31/57    ['request']
 react_fetch      authored    yes      MISS         1/185   ['react', 'component', 'tanstack', 'query', 'v5', 'api']
 react_fetch      ticket      yes      MISS         5/80    ['component', 'api']
@@ -35,7 +35,7 @@ ci_linter        ticket      yes      yes          1/114   ['step', 'ruff', 'fai
 ci_linter        paraphrase  MISS     MISS        72/118   ['runs']
 ci_linter        bug-report  yes      yes          4/170   ['ci', 'linter', 'new']
 
-recall by variant (of 8): {'authored': 'harness 7/8, hook 6/8', 'ticket': 'harness 7/8, hook 6/8', 'paraphrase': 'harness 1/8, hook 1/8', 'bug-report': 'harness 2/8, hook 2/8'}
+recall by variant (of 8): {'authored': 'harness 7/8, hook 6/8', 'ticket': 'harness 7/8, hook 6/8', 'paraphrase': 'harness 0/8, hook 0/8', 'bug-report': 'harness 2/8, hook 2/8'}
 
 B. PRECISION on six real prompts from this session (hook config). For each of the 12 returned: terms matched, and the rarest matched term's document frequency.
 

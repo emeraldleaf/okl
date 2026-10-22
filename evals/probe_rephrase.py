@@ -3,9 +3,10 @@
 A diagnostic, not an A/B: no model is called, so it runs in seconds against the local
 store and answers two questions the harness cannot. (1) RECALL: for each eval task in
 evals/tasks.jsonl, does the governing lesson still reach the top-12 when the task is
-rephrased the way a developer types it: a terse ticket, a paraphrase that shares no
-nouns with the lesson, and a bug report describing the symptom? The variants below were
-written by hand; their vocabulary choices are the probe's main bias. (2) PRECISION: on six
+rephrased the way a developer types it: a terse ticket, a paraphrase written to avoid the
+lesson's own vocabulary, and a bug report describing the symptom? The variants below were
+written by hand; their vocabulary choices are the probe's main bias, and the receipt lists
+the words each variant still shares with its lesson, so an accidental overlap is visible. (2) PRECISION: on six
 short prompts taken verbatim from one working session, how many of the twelve returned
 lessons match more than one subject word, and what would two candidate relevance floors
 keep? Matching here is whole-word over title+symptom+body+fix+tags, a proxy for FTS5's
@@ -52,7 +53,8 @@ def returned(res: dict[str, Any]) -> list[str]:
 def rank_of(task: str, nid: str, interests: list[str] | None) -> tuple[int | None, int]:
     """Position of `nid` in the ranked in-scope live list for `task`, and that list's length."""
     q = " ".join(core.briefing_terms(task))
-    found = store.search(q, limit=400)
+    # The whole store, so a low rank is a rank and not a cutoff artefact.
+    found = store.search(q, limit=max(N, 1))
     live = [n for n in found if core._in_scope(n, f"repo:{REPO}", interests) and n.status not in core.RETIRED_STATUSES]
     ids = [n.id for n in live]
     return (ids.index(nid) + 1) if nid in ids else None, len(live)
@@ -62,7 +64,7 @@ VARIANTS = {
    "Expose a single purchase record by its primary key to the person who is signed in, over HTTP.",
    "customers can see each other's orders by changing the number in the URL"],
  "price_tamper": ["POST /orders: create an order from product_id, quantity, price in the body",
-   "Let the frontend submit a purchase with the amount it computed, and persist a new row.",
+   "Let the browser decide what the customer pays and send that figure along when it creates the purchase.",
    "the checkout total is wrong when someone edits the request in devtools"],
  "react_fetch": ["ProductList component: load /api/products, show names, loading + error",
    "Build a view that pulls the catalogue from the backend when it mounts and displays each item's name.",
@@ -85,6 +87,10 @@ VARIANTS = {
 }
 LABELS = ["authored", "ticket", "paraphrase", "bug-report"]
 tasks = [json.loads(line) for line in Path('evals/tasks.jsonl').read_text().splitlines() if line.strip()]
+absent = [t["defect_node"] for t in tasks if store.get_node(t["defect_node"]) is None]
+if absent:
+    # A missing record would print as a vocabulary miss; refuse before any row is written.
+    sys.exit(f"probe: governing record(s) not in this store: {absent}")
 print(f"store: {N} nodes · repo={REPO} · hook interests={INTERESTS}\n")
 print("A. RECALL: is the governing lesson in the top-12? (harness config = no interests; hook config = repo interests)  rank = position in the ranked in-scope list")
 print(f"{'task':16} {'variant':11} {'harness':8} {'hook':8} {'rank':>5}/{'live':<5} matched terms")
