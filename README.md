@@ -351,11 +351,14 @@ throwaway repo.
 ### How a briefing is actually built
 
 `okl check` is a retrieval pipeline: it searches the task's subject words, then narrows the
-whole corpus to the twelve records an agent reads. Two stages can drop a record, and only one of them
-is entitled to — the distinction that this project got wrong once and measured its way out
-of ([REPORT §4d](evals/REPORT.md)).
+whole corpus to the twelve records an agent reads. Two stages can drop a record on what it is
+about, and only one of them is entitled to — the distinction that this project got wrong once
+and measured its way out of ([REPORT §4d](evals/REPORT.md)). A third drops on relevance: a
+record that shares only one subject word with a task of several, outside its title and
+symptom, is left out and counted, so a short or generic prompt is no longer answered with twelve lessons
+chosen by a word in common ([the probe](evals/results/probe-rephrase-20261021.txt), #257).
 
-<img src="docs/okl-retrieval-pipeline.svg" alt="The corpus; the task's subject words; a BM25 fetch of three times the limit; a scope gate; the exclusive applies_to filter; the inclusive tags-times-interests filter; retired lessons out and a top-12 cutoff; bucketing by type; and rendering. Each stage shows how many records survive it." width="100%">
+<img src="docs/okl-retrieval-pipeline.svg" alt="The corpus; the task's subject words; a BM25 fetch of three times the limit; a scope gate; the exclusive applies_to filter; the inclusive tags-times-interests filter; the relevance floor of two shared subject words or one in the title or symptom, with retired lessons out; a top-12 cutoff; bucketing by type; and rendering. Each stage shows how many records survive it." width="100%">
 
 Every count in that diagram is **traced**, not transcribed: `docs/render_pipeline_diagram.py`
 runs the real `briefing_terms`, `store.search`, `core._in_scope` and `core._live_hits` against
