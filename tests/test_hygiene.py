@@ -106,3 +106,14 @@ def test_seed_warns_and_strict_refuses(tmp_path, monkeypatch, capsys):
     strict = argparse.Namespace(path=str(pack), all=False, strict=True)
     assert cmd_seed(strict) == 2
     assert "nothing imported" in capsys.readouterr().err
+
+
+def test_records_without_a_symptom_are_warned_about_once_per_batch():
+    """Advice records with no symptom earn one aggregated line; a Decision needs none."""
+    recs = [{"key": "a", "type": "Rule", "title": "pin it", "scope": "org"},
+            {"key": "b", "type": "Defect", "title": "it broke", "scope": "org", "symptom": "x fails"},
+            {"key": "c", "type": "Decision", "title": "we chose y", "scope": "org"},
+            {"key": "d", "type": "Gate", "title": "run the check", "scope": "org"}]
+    lines = hygiene.hygiene_warnings(recs)
+    assert len(lines) == 1 and lines[0].startswith("2 record(s) have no symptom (a, d)")
+    assert hygiene.hygiene_warnings([recs[1], recs[2]]) == []

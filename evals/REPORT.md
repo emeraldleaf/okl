@@ -1095,6 +1095,41 @@ because `next` is on the filler list. A filler word joined by a dot to the next 
 kept as part of a name. The eight bait tasks' search terms are unchanged by it, so their
 briefings are byte-identical and this result stands for the shipped code.
 
+## 4o. PRE-REGISTERED: twenty seed records gain a symptom, and the §4b gap closes (2026-10-22)
+
+Written before any live run, per §2b. A corpus change, not a retrieval change, but one the
+instrument can see, so it is registered the same way.
+
+**What changed.** Twenty org Rules, Defects and Gates in the seed packs had no `symptom`
+(nine of nine in `geospatial-defects`, six of eight in `rag-defects`, four of six in
+`dotnet-defects`, one in `dotnet-decisions`). Each now carries one, written in the words a
+developer would use when the problem bites, after the lesson's own title, body and fix.
+`okl seed` warns when an advice record has none (#258, step 2). Nothing in the retrieval
+path changed; the instrument is §4m's.
+
+**The tasks at risk, measured first.** No task loses a record: a symptom only adds words a
+record can be found by. One task gains the record it exists to test. `exit_code_trust`'s
+lesson (`seed:geospatial-defects:d15`) ranked 54th for the task's own wording and sat in
+`evals/preflight.py` as the accepted gap since the §4b correction; with the symptom "a
+pipeline or batch step exits 0 and reports success while its output directory is empty or
+far smaller than expected" it ranks 4th, the pre-flight reads 8 of 8 with no accepted gap,
+and the probe's bug-report row reads 3 of 8 (was 2); receipt
+`evals/results/probe-rephrase-20261022-symptoms.txt`. The other seven tasks' briefings are
+unchanged in which record they carry.
+
+**Prediction.** On the next run of this instrument, `exit_code_trust` briefed reproductions
+fall toward 0 of 3; every earlier briefed sample of that task was the briefing without its
+lesson. The other seven tasks and the baseline arm read within the floor of §4m.
+
+**Falsifier.** `exit_code_trust` reproduces when briefed with its lesson present in the
+briefing (the receipt's briefing text shows it), at the same rate as before: the lesson then
+does not prevent the defect it describes, and its fix text needs another look before the
+symptom pass counts as an improvement.
+
+**What this cannot settle.** Whether the other nineteen symptoms help: no eval task
+exercises them. The probe's bug-report row is their measure, and it moved by the one task
+that has an eval.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

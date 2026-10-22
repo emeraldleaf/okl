@@ -323,9 +323,9 @@ The figure is also a transfer result. The eight tasks are fresh code written fro
 prompt, and the defect classes they invite were learned in other projects: each task names
 its lesson in [evals/tasks.jsonl](evals/tasks.jsonl), and those lessons arrive through six of
 the twelve seed packs. A lesson paid for in one project prevented the defect in code written
-for another. Seven of the eight tasks had that lesson in their briefing; the eighth's ranked
-below the twelve-record cutoff for its wording (REPORT §4b), so its arm measures the briefing
-without it. Running that across an organisation, and what it asks of a lesson, is
+for another. In the pooled runs seven of the eight tasks had that lesson in their briefing;
+the eighth's ranked below the twelve-record cutoff for its wording until the lesson gained a
+symptom on 2026-10-22 (REPORT §4b, §4o), so those runs measure its arm without it. Running that across an organisation, and what it asks of a lesson, is
 [Across an org](docs/ACROSS-AN-ORG.md).
 
 What this does **not** show: the tasks were authored to invite defect classes the store
