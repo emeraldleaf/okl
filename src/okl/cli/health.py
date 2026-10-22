@@ -69,6 +69,7 @@ def cmd_metric(args: argparse.Namespace) -> int:
     try:
         report = client.recurrence_report()
         exposure = client.exposure_report() if report is not None else None
+        hygiene = client.hygiene_report() if report is not None else None
     except OKLUnreachableError as e:
         print(f"OKL UNREACHABLE — cannot compute metric.\n{e}", file=sys.stderr)
         return 2
@@ -77,7 +78,7 @@ def cmd_metric(args: argparse.Namespace) -> int:
               "coverage is unknown. Upgrade the service before reading it.", file=sys.stderr)
         return 2
     if args.format == "json":
-        _print_json({**report, "exposure": exposure})
+        _print_json({**report, "exposure": exposure, "hygiene": hygiene})
         return 0
     armed, unarmed = report["armed"], report["unarmed"]
     total, gated = report["defects"], report["defects_with_gate"]
@@ -94,7 +95,33 @@ def cmd_metric(args: argparse.Namespace) -> int:
     for r in unarmed:
         print(f"  {r['defect_class']}  recurred in {r['recurred_in']}")
     _print_exposure(exposure)
+    _print_hygiene(hygiene)
     return 0
+
+
+def _print_hygiene(report: dict | None) -> None:
+    """The hygiene lines of `okl metric` (#252): stale-use and over-scope, denominators first."""
+    if report is None:
+        print("\nhygiene: unknown — the connected service predates the hygiene report")
+        return
+    su, os_ = report["stale_use"], report["over_scope"]
+    if not su["briefings"]:
+        print("\nstale-use: no briefings logged yet, so not reported")
+    else:
+        print(f"\nstale-use: {su['with_drifted']} of {su['briefings']} logged briefings included "
+              "a lesson whose code had changed since its last check")
+        for r in su["lessons"]:
+            print(f"  [{r['id']}] {r['title']} — stale in {r['times']} briefing(s)")
+    print(f"over-scope: {os_['flagged']} of {os_['org_lessons']} org lessons name one "
+          "repository's world in their title, symptom or fix")
+    for r in os_["lessons"]:
+        print(f"  [{r['id']}] {r['title']} — {'; '.join(r['signals'])}")
+    ts = report["trace_shaped"]
+    if ts["flagged"]:
+        print(f"trace-shaped: {ts['flagged']} of {ts['org_lessons']} org lessons read as a pasted "
+              "transcript rather than a lesson")
+        for r in ts["lessons"]:
+            print(f"  [{r['id']}] {r['title']} — {'; '.join(r['signals'])}")
 
 
 def _print_exposure(report: dict | None) -> None:

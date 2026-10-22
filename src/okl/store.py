@@ -208,6 +208,10 @@ class Briefing:
     at: int                    # epoch milliseconds
     repo: str
     node_ids: tuple[str, ...]  # in the order the briefing showed them
+    # The briefed lessons whose governed code had changed since their last check, as the
+    # briefing marked them at the time (#252). Empty for rows logged before the column
+    # existed, and for briefings a shared service answered (it has no checkout to compare).
+    drifted_ids: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -339,12 +343,15 @@ class Store:
         return self._impl.all_nodes()
 
     # -- the exposure log (#129) ---------------------------------------------
-    def log_briefing(self, repo: str, node_ids: Iterable[str]) -> None:
-        """Append one briefing to the exposure log: now, for `repo`, showing `node_ids`.
+    def log_briefing(self, repo: str, node_ids: Iterable[str],
+                     drifted_ids: Iterable[str] = ()) -> None:
+        """Append one briefing to the exposure log: now, for `repo`, showing `node_ids`,
+        of which `drifted_ids` were marked as changed since their last check.
 
         Append-only. Two identical briefings are two rows, because exposure is a count.
         """
-        self._impl.log_briefing(Briefing(at=_now_ms(), repo=repo, node_ids=tuple(node_ids)))
+        self._impl.log_briefing(Briefing(at=_now_ms(), repo=repo, node_ids=tuple(node_ids),
+                                         drifted_ids=tuple(drifted_ids)))
 
     def briefings(self, repo: str | None = None) -> list[Briefing]:
         """Every logged briefing, oldest first. `repo` filters exactly; None means all."""
@@ -427,7 +434,8 @@ class _Backend(Protocol):
       log_briefing(b) / briefings(repo)
         - Append-only: logging the same briefing twice stores two rows.
         - briefings returns every row oldest first, `repo` filtering exactly, with each
-          row's node ids in the order they were logged.
+          row's node ids in the order they were logged, and its drifted ids (empty for a
+          row logged before that column existed).
     """
 
     def init_schema(self) -> None: ...
@@ -459,6 +467,13 @@ def _row_to_check(r: dict) -> CheckRun:
     return CheckRun(at=r["at"], node_id=r["node_id"], passed=bool(r["passed"]),
                     command=r["command"], outcome=r["outcome"], expect=r["expect"],
                     commit=r["commit_id"])
+
+
+def _row_to_briefing(r: dict) -> Briefing:
+    """One exposure-log row as a Briefing; a row from before the drift column reads as none."""
+    raw = r.get("drifted_ids")
+    return Briefing(at=r["at"], repo=r["repo"], node_ids=tuple(json.loads(r["node_ids"])),
+                    drifted_ids=tuple(json.loads(raw)) if raw else ())
 
 
 def _row_to_node(row: dict[str, Any]) -> Node:
@@ -521,6 +536,9 @@ class _SQLiteBackend(_Backend):
         # The exposure log. A store opened by an older okl simply gains the table.
         c.execute("""CREATE TABLE IF NOT EXISTS briefing(
             at INTEGER NOT NULL, repo TEXT NOT NULL, node_ids TEXT NOT NULL)""")
+        # The drift verdict per briefed lesson (#252); a store from before it gains the column.
+        if "drifted_ids" not in {r[1] for r in c.execute("PRAGMA table_info(briefing)").fetchall()}:
+            c.execute("ALTER TABLE briefing ADD COLUMN drifted_ids TEXT")
         # Why and how lessons were retired (R2); its own table, so no row rewrite by an
         # older okl can lose it. A store opened by an older okl simply gains the table.
         c.execute("""CREATE TABLE IF NOT EXISTS retirement(
@@ -665,18 +683,19 @@ class _SQLiteBackend(_Backend):
 
     def log_briefing(self, briefing: Briefing) -> None:
         with self._lock:
-            self.conn.execute("INSERT INTO briefing(at, repo, node_ids) VALUES(?,?,?)",
-                              (briefing.at, briefing.repo, json.dumps(list(briefing.node_ids))))
+            self.conn.execute(
+                "INSERT INTO briefing(at, repo, node_ids, drifted_ids) VALUES(?,?,?,?)",
+                (briefing.at, briefing.repo, json.dumps(list(briefing.node_ids)),
+                 json.dumps(list(briefing.drifted_ids))))
             self.conn.commit()
 
     def briefings(self, repo: str | None) -> list[Briefing]:
         with self._lock:
             # rowid breaks ties between briefings logged in the same millisecond.
-            sql = "SELECT at, repo, node_ids FROM briefing"
+            sql = "SELECT at, repo, node_ids, drifted_ids FROM briefing"
             rows = (self.conn.execute(sql + " WHERE repo=? ORDER BY at, rowid", (repo,))
                     if repo is not None else self.conn.execute(sql + " ORDER BY at, rowid"))
-            return [Briefing(at=r["at"], repo=r["repo"], node_ids=tuple(json.loads(r["node_ids"])))
-                    for r in rows.fetchall()]
+            return [_row_to_briefing(dict(r)) for r in rows.fetchall()]
 
     def log_retirement(self, retirement: Retirement) -> None:
         with self._lock:
@@ -781,6 +800,7 @@ class _PostgresBackend(_Backend):
             cur.execute("""CREATE TABLE IF NOT EXISTS briefing(
                 id BIGSERIAL PRIMARY KEY, at BIGINT NOT NULL, repo TEXT NOT NULL,
                 node_ids TEXT NOT NULL)""")
+            cur.execute("ALTER TABLE briefing ADD COLUMN IF NOT EXISTS drifted_ids TEXT")
             cur.execute("""CREATE TABLE IF NOT EXISTS retirement(
                 id BIGSERIAL PRIMARY KEY, at BIGINT NOT NULL, node_id TEXT NOT NULL,
                 kind TEXT NOT NULL, reason TEXT NOT NULL, by_id TEXT)""")
@@ -884,15 +904,16 @@ class _PostgresBackend(_Backend):
 
     def log_briefing(self, briefing: Briefing) -> None:
         with self.conn.cursor() as cur:
-            cur.execute("INSERT INTO briefing(at, repo, node_ids) VALUES(%s,%s,%s)",
-                        (briefing.at, briefing.repo, json.dumps(list(briefing.node_ids))))
+            cur.execute("INSERT INTO briefing(at, repo, node_ids, drifted_ids) "
+                        "VALUES(%s,%s,%s,%s)",
+                        (briefing.at, briefing.repo, json.dumps(list(briefing.node_ids)),
+                         json.dumps(list(briefing.drifted_ids))))
 
     def briefings(self, repo: str | None) -> list[Briefing]:
-        sql = "SELECT at, repo, node_ids FROM briefing"
+        sql = "SELECT at, repo, node_ids, drifted_ids FROM briefing"
         rows = (self._fetch(sql + " WHERE repo = %s ORDER BY at, id", (repo,))
                 if repo is not None else self._fetch(sql + " ORDER BY at, id", ()))
-        return [Briefing(at=r["at"], repo=r["repo"], node_ids=tuple(json.loads(r["node_ids"])))
-                for r in rows]
+        return [_row_to_briefing(r) for r in rows]
 
     def log_retirement(self, retirement: Retirement) -> None:
         with self.conn.cursor() as cur:

@@ -70,7 +70,9 @@ briefing without it. Measuring which lesson shapes transfer, and which do not, i
 ## Hygiene, and what to watch
 
 - An `org` lesson that names one repository's paths or project is the kind that transfers
-  badly; reporting that rate per pack is tracked in #252, and a warning at `okl seed` time in #255.
+  badly. `okl metric` reports the over-scope rate with the lessons it flags, and `okl seed`
+  warns on such a record at import, or fails with `--strict` for CI on the ledger repo
+  (#252, #255). Reporting the rate per pack rather than per store is still open in #252.
 - `okl dedup` reports the same lesson recorded twice across packs; give new lessons a stable
   `--id` so a re-record is refused rather than duplicated.
 - `okl retire <id> --reason ... --by <new-id>` keeps the chain: the briefing drops the old row

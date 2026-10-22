@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Hygiene: stale-use and over-scope, reported and warned about** (#252, #255). The exposure log now keeps which briefed lessons the briefing marked as changed since their last check (a new `drifted_ids` column; older rows read as none), and the client logs after the drift marks rather than before. `okl metric` gains a hygiene block: stale-use (briefings that included such a lesson, over the briefings logged) and over-scope (live org lessons whose title, symptom or fix names one repository's world), each with its denominator and the lessons it flags, plus a count of trace-shaped org lessons; `--format json` carries it, and the service serves it at `/metric/hygiene`. `okl seed` prints the same two findings as warnings before importing, and `--strict` exits 2 instead, for CI on a ledger repo. One detector module (`okl.hygiene`) feeds both, so the metric and the warning cannot disagree.
 - Docs: `docs/RELATED-WORK.md`, a dated page with one row per 2026 paper on memory for coding agents: what each measured, with figures read from the PDFs, and where okl stands beside it. Linked from the README's "How okl differs" section. Products stay out of it on purpose.
 - **The README is a short version again, and says what okl is in its readers' terms.** It
   opens with the install line and the measured figure, puts a what-goes-wrong-and-what-catches-it

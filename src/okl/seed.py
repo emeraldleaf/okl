@@ -18,8 +18,16 @@ import json
 import sys
 from pathlib import Path
 
-from . import core
+from . import core, hygiene
 from .client import Client
+
+
+def hygiene_warnings_for_file(path: str, repo_names: list[str] | None = None) -> list[str]:
+    """The hygiene warnings a seed file would earn on import (#255): one line per org
+    record that is trace-shaped or over-scoped, from the same detectors `okl metric` uses.
+    Reads the file only; imports nothing."""
+    data = json.loads(Path(path).read_text())
+    return hygiene.hygiene_warnings(data.get("nodes", []), repo_names or [])
 
 
 def seed_from_file(client: Client, path: str) -> int:

@@ -50,7 +50,13 @@ plausible rule no file supports is worse than an empty store.
 of these and comes up empty on young repos; prefer options 2 and 3 when an agent is available.
 
 Whichever you use, review before importing. Choosing a record's scope is the curation
-step that keeps a shared layer from filling with one project's noise.
+step that keeps a shared layer from filling with one project's noise. `okl seed` helps
+with the two shapes that transfer badly: it warns on an org record that reads as a pasted
+transcript (diff markers, stack traces, shell prompts, or simply too long) and on one whose
+title, symptom or fix names a single repository's world (an absolute path, a deep file
+path, a repository's name). The warning never refuses an import; `okl seed --strict` turns
+it into exit 2, for CI on a ledger repo. `okl metric` reports the same two findings as
+rates over the whole store.
 
 Running packs across many repositories, through a ledger repo and pull requests, with each
 repo proving what it loads: [ACROSS-AN-ORG.md](ACROSS-AN-ORG.md).
