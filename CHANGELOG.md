@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **A relevance floor before the top-12 cutoff** (#257). The search is an OR of the task's subject words, so a short or generic prompt used to fill every slot with records sharing one word with it. A record is now briefed only when it shares two subject words with the task, or one that is in its title or symptom, or one when the task has only one word; a record below the floor stays when it links one step to a kept one. What the floor left out is counted (`weak_matches`), each briefed record names its `matched_terms` in the JSON, and both the briefing and the hook's one-line notice say when nothing matched closely. The pipeline diagram gains the stage.
 - Docs: `docs/RELATED-WORK.md`, a dated page with one row per 2026 paper on memory for coding agents: what each measured, with figures read from the PDFs, and where okl stands beside it. Linked from the README's "How okl differs" section. Products stay out of it on purpose.
 - **The README is a short version again, and says what okl is in its readers' terms.** It
   opens with the install line and the measured figure, puts a what-goes-wrong-and-what-catches-it
