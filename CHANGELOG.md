@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Docs: `docs/RELATED-WORK.md`, a dated page with one row per 2026 paper that measured the problems the evidence rule prevents (figures read from the PDFs, a "where okl stands" column), linked from the README's "How okl differs" section. Products stay out of it on purpose.
 - **The README is a short version again, and says what okl is in its readers' terms.** It
   opens with the install line and the measured figure, puts a what-goes-wrong-and-what-catches-it
   table and a which-agent-which-part table in text (the six cards used to live only inside the
