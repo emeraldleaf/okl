@@ -261,6 +261,9 @@ def _apply_floor(store: Store, hits: list[Node], terms: list[str],
     strong = {n.id for n in hits
               if len(matched[n.id]) >= floor
               or (matched[n.id] and _in_subject(matched[n.id], n))}
+    if not strong:
+        # No hit to link to, so no neighbour lookup can rescue one (review on #259).
+        return [], matched, len(hits)
     kept = [n for n in hits
             if n.id in strong or any(m.id in strong for (_e, m) in store.neighbors(n.id))]
     return kept, matched, len(hits) - len(kept)
@@ -284,7 +287,9 @@ def _live_hits(store: Store, task: str, limit: int, repo_scope: str,
     if not query:
         return [], [], True
     fetch = limit * 3
+    asked = fetch
     for _ in range(3):
+        asked = fetch
         found = store.search(query, limit=fetch)
         live: list[Node] = []
         replaced: list[dict[str, Any]] = []
@@ -302,7 +307,9 @@ def _live_hits(store: Store, task: str, limit: int, repo_scope: str,
         if not left_out or len(found) < fetch:
             break
         fetch += left_out
-    return live, replaced, len(found) < fetch
+    # Exhaustion is judged against the window the last search asked for, not the wider one
+    # the loop may have set after it (review on #259).
+    return live, replaced, len(found) < asked
 
 
 def _live_replacement(store: Store, n: Node, repo_scope: str,

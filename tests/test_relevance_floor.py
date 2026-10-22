@@ -153,3 +153,39 @@ def test_the_floor_changes_no_eval_briefing(tmp_path, monkeypatch):
         if set(with_floor) != set(without):
             changed[t["id"]] = (sorted(set(without) - set(with_floor)), sorted(set(with_floor) - set(without)))
     assert not changed, changed
+
+
+def test_no_neighbour_lookup_when_nothing_clears_the_floor():
+    """With no strong hit there is nothing a link could attach to, so the floor returns
+    without asking the store for neighbours (review on #259)."""
+
+    class NoNeighbours(Store):
+        def neighbors(self, node_id, rels=None):
+            raise AssertionError("neighbors() must not be called when no hit is strong")
+
+    s = NoNeighbours("sqlite:///:memory:")
+    for i in range(3):
+        core.record(s, type="Rule", title=f"filler {i}", scope="org", body="the price is set")
+    res = core.check(s, repo="r", task="price catalogue")
+    assert res["match_count"] == 0 and res["weak_matches"] == 3
+
+
+def test_exhaustion_is_judged_against_the_window_last_asked_for():
+    """Three full windows each holding retired lessons leave the loop having widened its
+    next window after the last search; exhaustion must compare the last result with the
+    window that produced it, or check() skips the floor's widening (review on #259)."""
+    import dataclasses
+
+    class InOrder(Store):
+        def search(self, query, limit=20, **kw):
+            rows = super().search(query, limit=200, **kw)
+            rows.sort(key=lambda n: n.created_at)
+            return rows[:limit]
+
+    s = InOrder("sqlite:///:memory:")
+    ids = [core.record(s, type="Rule", title="pin the linter", scope="org") for _ in range(8)]
+    for i in (0, 3, 5):   # one retired lesson inside each of the windows 3, 4 and 6
+        s._impl.upsert_node(dataclasses.replace(s.get_node(ids[i]), status="obsolete"))
+    live, _replaced, exhausted = core._live_hits(s, "pin the linter", 1, "repo:r", None)
+    assert len(live) == 3
+    assert exhausted is False

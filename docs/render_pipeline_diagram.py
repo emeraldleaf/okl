@@ -36,7 +36,7 @@ from xml.sax.saxutils import escape
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src"))
 
-from okl.core import _apply_floor, _in_scope, _live_hits, briefing_terms  # noqa: E402
+from okl.core import _apply_floor, _in_scope, _live_hits, briefing_terms, check  # noqa: E402
 from okl.store import Node, Store, split_tags  # noqa: E402
 
 # The task traced through the pipeline. A real eval task, so the diagram depicts a case the
@@ -131,6 +131,15 @@ def trace(store: Store | None = None) -> dict:
     # The floor: two shared subject words, or one when the task has only one; a hit below
     # it stays only through a one-step link to a hit above it (core._apply_floor).
     kept, _matched, weak = _apply_floor(store, live, terms)
+    # check() widens the fetch when a full window leaves fewer than the limit above the
+    # floor. This trace applies the floor to one window, so it asks check() itself and stops
+    # if the briefing it would deliver differs from the counts traced here.
+    delivered_by_check = check(store, TRACE_REPO, TRACE_TASK, LIMIT, interests)
+    if (delivered_by_check["match_count"] != min(LIMIT, len(kept))
+            or delivered_by_check["weak_matches"] != weak):
+        raise SystemExit("ABORT: check() widened past this trace's window (its briefing holds "
+                         f"{delivered_by_check['match_count']} records, the trace {min(LIMIT, len(kept))}); "
+                         "trace the wider fetch before rendering.")
 
     applies_set = sum(1 for n in store.all_nodes()
                       if (n.applies_to or "").strip() and n.applies_to.strip().lower() != "any")
