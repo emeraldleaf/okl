@@ -1095,6 +1095,45 @@ because `next` is on the filler list. A filler word joined by a dot to the next 
 kept as part of a name. The eight bait tasks' search terms are unchanged by it, so their
 briefings are byte-identical and this result stands for the shipped code.
 
+## 4n. PRE-REGISTERED: a relevance floor before the cutoff, and why it is not run live (2026-10-22)
+
+Written before any live run, per §2b, for the change in #259 (issue #257).
+
+**What changed.** The search is an OR of the task's subject words, so a short or generic
+prompt filled every slot with records sharing one word with it. A record is now briefed only
+when it shares two subject words with the task, or one that is in its title or symptom, or one
+when the task has only one word; a record below the floor stays when it links one step to a
+kept record; a full window the floor empties widens the fetch, bounded. The instrument is
+§4m's: judge window 40,000 characters, same models, same tasks, same interests.
+
+**The tasks at risk, measured first.** The floor can only lower recall, so §2b's third point
+is the whole question: which of the eight tasks loses a record it depends on? None, and more
+than that, none loses any record at all. On a store seeded from the twelve packs, the twelve
+ids each task is briefed are identical with the floor and without it; `exit_code_trust`'s
+accepted gap is unchanged. `evals/preflight.py` is green (7 of 8, the accepted gap listed),
+and `tests/test_relevance_floor.py::test_the_floor_changes_no_eval_briefing` asserts the
+identity, so the day the floor reaches an eval briefing the suite says so.
+
+**Prediction.** Identical briefings give identical arms up to the generator's own movement
+between runs (at least 21 points on the baseline, §4m). Nothing this change does can reach
+either arm of this instrument.
+
+**Falsifier.** Any difference in the briefed ids between the two pipelines on the eight
+tasks: the test above. Were it to fail, a live run on this instrument would be due before
+the floor ships to the next release.
+
+**Why no live run.** An A/B whose two arms receive byte-identical briefings measures the
+generator's noise and nothing else, at 48 generations and 48 judgments. The change's
+effect lies where this instrument cannot look: on prompts that share one word with many
+records, which the eval tasks do not (each shares two to ten with its lesson). That effect
+is measured by `evals/probe_rephrase.py` (`evals/results/probe-rephrase-20261022.txt`): the
+recall rows are unchanged, and six short real prompts return 5, 9, 0, 11, 7 and 11 records
+where every one returned twelve. A live run belongs to the briefing-size series (#234),
+where a shorter briefing is the variable.
+
+**What this cannot settle.** Whether a briefing that loses a weak but useful record costs
+anything downstream: no eval task exercises that case. The hook's one-line notice now says
+how many records the floor left out, so the exposure log can be read for it.
 ## 4o. PRE-REGISTERED: twenty seed records gain a symptom, and the §4b gap closes (2026-10-22)
 
 Written before any live run, per §2b. A corpus change, not a retrieval change, but one the
