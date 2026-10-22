@@ -1438,8 +1438,10 @@ def _backend_conformance(store, label):
     store.log_briefing("conf-repo", [a, b])
     store.log_briefing("conf-repo", [a, b])
     store.log_briefing("other-repo", [b])
+    store.log_briefing("conf-repo", [a, b], drifted_ids=[a])
     mine = store.briefings("conf-repo")
-    assert [x.node_ids for x in mine] == [(a, b), (a, b)], f"{label}: briefings not appended in order"
+    assert [x.node_ids for x in mine] == [(a, b), (a, b), (a, b)], f"{label}: briefings not appended in order"
+    assert [x.drifted_ids for x in mine] == [(), (), (a,)], f"{label}: drifted ids not kept per row"
     assert {x.repo for x in mine} == {"conf-repo"}, f"{label}: the repo filter leaked another repo"
     assert mine[0].at <= mine[1].at, f"{label}: briefings not oldest first"
     assert len(store.briefings()) >= 3, f"{label}: briefings(None) must return every repo's rows"

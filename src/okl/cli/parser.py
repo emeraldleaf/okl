@@ -246,6 +246,9 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                     help="import every bundled pack. Explicit on purpose: the packs carry "
                          "stack-specific rules, and importing all of them into an unrelated "
                          "project fills its briefings with noise.")
+    pd.add_argument("--strict", action="store_true",
+                    help="exit 2 instead of importing when a record is trace-shaped or an org "
+                         "record names one repository's paths or name (for CI on a ledger repo)")
     pd.set_defaults(func=cmd_seed)
 
     psc = sub.add_parser("scaffold", help="stamp the portable method kit into a repo")

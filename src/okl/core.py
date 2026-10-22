@@ -1204,10 +1204,78 @@ def record_briefing(store: Store, repo: str, result: dict[str, Any]) -> bool:
     if os.environ.get("OKL_BRIEFING_LOG") == "0":
         return False
     try:
-        store.log_briefing(repo, briefed_ids(result))
+        store.log_briefing(repo, briefed_ids(result), drifted_ids(result))
     except Exception:  # noqa: BLE001 - losing one log row beats losing the briefing; see above
         return False
     return True
+
+
+def drifted_ids(result: dict[str, Any]) -> list[str]:
+    """The briefed lessons the briefing marked as changed since their last check (#252).
+
+    Read the same way as briefed_ids; a record carries `drift` once drift.annotate_briefing
+    has run, which is why the client annotates before it logs.
+    """
+    ids: dict[str, None] = {}
+    for key, items in result.items():
+        if key in ("next_actions", "stale_warnings", "replaced") or not isinstance(items, list):
+            continue
+        for item in items:
+            if isinstance(item, dict) and item.get("id") and item.get("drift"):
+                ids[item["id"]] = None
+    return list(ids)
+
+
+def hygiene_report(store: Store, repo: str, top: int = 10) -> dict[str, Any]:
+    """Two hygiene rates with their denominators (#252), after DreamBench-SWE's diagnostics.
+
+    stale-use: the share of this repo's logged briefings that included a lesson marked as
+    changed since its last check. A stale lesson can still be right, so this is a hygiene
+    signal, not a defect count; it covers only briefings logged since the drift column
+    existed, and a shared service logs none as drifted (it has no checkout).
+
+    over-scope: the share of live org lessons whose title, symptom or fix names one
+    repository's world (an absolute path, a repository-deep path, a known repo name).
+    Each flagged lesson is listed so it can be re-scoped or generalised.
+    """
+    from . import hygiene  # local import: core is imported by hygiene's callers too
+
+    logged = store.briefings(repo)
+    with_drift = [b for b in logged if b.drifted_ids]
+    times = Counter(i for b in with_drift for i in b.drifted_ids)
+    nodes = store.all_nodes()
+    by_id = {n.id: n for n in nodes}
+    repo_names = {n.scope[len("repo:"):] for n in nodes if n.scope.startswith("repo:")}
+    repo_names |= {n.repo for n in nodes if n.repo}
+    org = [n for n in nodes if n.scope == "org" and n.type not in _NOT_ADVICE
+           and n.status not in RETIRED_STATUSES]
+    over = [(n, hygiene.overscope_signals(n, repo_names)) for n in org]
+    over = [(n, sig) for n, sig in over if sig]
+    trace = [(n, hygiene.trace_signals(n)) for n in org]
+    trace = [(n, sig) for n, sig in trace if sig]
+    return {
+        "repo": repo,
+        "stale_use": {
+            "briefings": len(logged),
+            "with_drifted": len(with_drift),
+            "rate": (len(with_drift) / len(logged)) if logged else None,
+            "lessons": [{"id": i, "title": by_id[i].title if i in by_id else "?", "times": t}
+                        for i, t in times.most_common(top)],
+        },
+        "over_scope": {
+            "org_lessons": len(org),
+            "flagged": len(over),
+            "rate": (len(over) / len(org)) if org else None,
+            "lessons": [{"id": n.id, "title": n.title, "signals": sig}
+                        for n, sig in sorted(over, key=lambda x: x[0].id)[:top]],
+        },
+        "trace_shaped": {
+            "org_lessons": len(org),
+            "flagged": len(trace),
+            "lessons": [{"id": n.id, "title": n.title, "signals": sig}
+                        for n, sig in sorted(trace, key=lambda x: x[0].id)[:top]],
+        },
+    }
 
 
 def exposure_report(store: Store, repo: str, interests: list[str] | None = None,

@@ -298,6 +298,11 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901, PLR0915 - 
         wanted = [t for t in interests.split(",") if t] or None
         return {"report": core.exposure_report(_store, repo, wanted)}
 
+    @app.get("/metric/hygiene")
+    def hygiene(repo: str, authorization: str | None = Header(default=None)) -> dict[str, Any]:
+        _auth(authorization)
+        return {"report": core.hygiene_report(_store, repo)}
+
     @app.get("/nodes")
     def nodes(authorization: str | None = Header(default=None)) -> dict[str, Any]:
         _auth(authorization)

@@ -36,6 +36,14 @@ okl bootstrap        # cold-start a new repo: propose starter notes from its own
                      #   git history + docs into a reviewable file you edit, then seed
 okl metric           # recurrence: defect classes that came back, split by whether a
                      #   gate existed, with how many defects the number can speak for;
-                     #   and exposure: how many briefings okl has logged, the lessons
-                     #   never shown, and those shown most with no stored check
+                     #   exposure: how many briefings okl has logged, the lessons
+                     #   never shown, and those shown most with no stored check;
+                     #   and hygiene: stale-use (briefings that included a lesson whose
+                     #   code had changed since its check) and over-scope (org lessons
+                     #   whose title, symptom or fix names one repository's world),
+                     #   each with its denominator and the lessons it flags
+okl seed <pack> --strict
+                     # exit 2 instead of importing when a record is trace-shaped or an
+                     #   org record names one repository's paths or name; without it
+                     #   the same findings are printed as warnings and the import runs
 ```
