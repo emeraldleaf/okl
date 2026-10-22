@@ -1130,6 +1130,44 @@ symptom pass counts as an improvement.
 exercises them. The probe's bug-report row is their measure, and it moved by the one task
 that has an eval.
 
+### Result (2026-10-22)
+
+Receipt: `evals/results/ab-20261022-0455.json`. 48 runs, no failures, `judge_max_chars`
+40,000, interests unfiltered. Generator `claude -p --model sonnet`, judge `--model haiku`.
+
+| | baseline | briefed |
+|---|---|---|
+| this run | 6/24 — 25% | 1/24 — 4% |
+
+Per task: `spa_tokens` baseline 3/3, briefed 1/3 (the one briefed reproduction, as in §4k
+and §4m); `ci_linter` baseline 3/3, briefed 0/3; every other task 0/3 in both arms,
+`exit_code_trust` included.
+
+**The prediction's object did not occur.** `exit_code_trust`'s baseline read 0/3 here, so
+its briefed 0/3 shows nothing about the lesson: there was no reproduction to prevent. The
+task has reproduced unbriefed before, so the prediction stands for the next run that
+produces one. **The falsifier did not trigger**: no briefed sample of that task reproduced.
+
+**Two things make this run its own series, not a point in §4m's.** First, the models
+behind the aliases changed: the receipt resolves the generator to `claude-sonnet-5-5` (with
+`claude-haiku-5-5` as the CLI's helper model) and the judge to `claude-haiku-5-5`, where
+every run from §4k to §4m resolved to `claude-sonnet-4-6` and `claude-haiku-4-5`. By §2b a
+new generator or judge starts a new series; the 6/24 baseline is this pair's first reading
+and its own floor is unknown until a second run. The judge-is-generator guard passed as the
+harness defines it (equal sets, a helper model beside the main one is not the judge grading
+itself), and that definition is the right place to look if a reader doubts it.
+
+Second, a provenance fault in how the run was made, recorded here rather than tidied. The
+harness renders the briefed arm from the working tree (`python -m okl` on `src/`) and stamps
+`okl_commit` from the tree's HEAD when it writes the receipt. The run was started on this
+branch at `acdcb99`, and the tree was switched to the relevance-floor branch (#259) while
+it ran, to answer that PR's review; the receipt therefore names `b54e075`, that branch's
+head, and the later samples were briefed by code carrying the floor. The two codes brief the
+eight eval tasks identically (§4n's `test_the_floor_changes_no_eval_briefing`, and the
+store was constant), so the briefed input did not change mid-run; but a receipt should not
+need that argument. A lesson is recorded, and the harness is to record HEAD at start and
+refuse to write a usable receipt when it has moved.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
