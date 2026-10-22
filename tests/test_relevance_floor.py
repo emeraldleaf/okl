@@ -177,13 +177,18 @@ def test_exhaustion_is_judged_against_the_window_last_asked_for():
     import dataclasses
 
     class InOrder(Store):
+        order: list[str] = []
+
         def search(self, query, limit=20, **kw):
             rows = super().search(query, limit=200, **kw)
-            rows.sort(key=lambda n: n.created_at)
+            # Insertion order, by id: created_at ties within a millisecond and BM25 ties on
+            # identical text, so neither orders the same way on every machine (CI on #259).
+            rows.sort(key=lambda n: self.order.index(n.id))
             return rows[:limit]
 
     s = InOrder("sqlite:///:memory:")
     ids = [core.record(s, type="Rule", title="pin the linter", scope="org") for _ in range(8)]
+    InOrder.order = ids
     for i in (0, 3, 5):   # one retired lesson inside each of the windows 3, 4 and 6
         s._impl.upsert_node(dataclasses.replace(s.get_node(ids[i]), status="obsolete"))
     live, _replaced, exhausted = core._live_hits(s, "pin the linter", 1, "repo:r", None)
