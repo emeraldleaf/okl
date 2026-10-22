@@ -262,3 +262,43 @@ def test_tree_state_fingerprints_uncommitted_code(ab, tmp_path, monkeypatch):
     label2, fp2 = ab.tree_state()
     assert label1 == label2 and label1.endswith("+dirty")
     assert fp1 != fp2
+
+
+def test_tree_state_hashes_each_untracked_file_separately(ab, tmp_path, monkeypatch):
+    """Two untracked files whose contents shift a boundary must not fingerprint alike, and a
+    path git would quote still reaches the manifest."""
+    import subprocess
+    repo = tmp_path / "r"
+    (repo / "src" / "okl").mkdir(parents=True)
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    subprocess.run(["git", "-C", str(repo), "-c", "user.email=t@t", "-c", "user.name=t",
+                    "commit", "-q", "--allow-empty", "-m", "base"], check=True)
+    monkeypatch.setattr(ab, "REPO", repo)
+    a, b = repo / "src" / "okl" / "a.py", repo / "src" / "okl" / "b.py"
+    a.write_text("ab"); b.write_text("c")
+    _, fp1 = ab.tree_state()
+    a.write_text("a"); b.write_text("bc")
+    _, fp2 = ab.tree_state()
+    assert fp1 != fp2
+    quoted = repo / "src" / "okl" / "wei\u00dfe datei.py"   # a name git quotes in porcelain v1
+    quoted.write_text("x = 1")
+    _, fp3 = ab.tree_state()
+    quoted.write_text("x = 2")
+    _, fp4 = ab.tree_state()
+    assert fp3 != fp4
+
+
+def test_tree_state_fails_closed_when_git_status_fails(ab, tmp_path, monkeypatch):
+    """A status probe that cannot run yields a fingerprint that equals nothing, so the run
+    reads as moved and the receipt as not usable."""
+    import subprocess
+    real = subprocess.run
+
+    def broken(cmd, *a, **kw):
+        if "status" in cmd:
+            return subprocess.CompletedProcess(cmd, 128, stdout=b"", stderr=b"fatal")
+        return real(cmd, *a, **kw)
+    monkeypatch.setattr(ab.subprocess, "run", broken)
+    one, two = ab.tree_state(), ab.tree_state()
+    assert one[0].endswith("+unknown") and one[1] != two[1]
+    assert ab.head_moved(one, two) is not None

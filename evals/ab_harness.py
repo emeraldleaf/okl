@@ -326,17 +326,29 @@ def tree_state() -> tuple[str | None, str]:
     if not head:
         return None, ""
     full = subprocess.run([*git, "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
-    # --untracked-files=all: a wholly untracked directory is otherwise one "?? dir/" line,
-    # and its files' content would never reach the fingerprint.
-    status = subprocess.run([*git, "status", "--porcelain", "--untracked-files=all", "--", "src/okl"],
-                            capture_output=True, text=True).stdout
-    if not status.strip():
+    # --untracked-files=all: a wholly untracked directory is otherwise one "?? dir/" entry,
+    # and its files' content would never reach the fingerprint. -z: NUL-delimited entries
+    # with unquoted paths, so a name git would quote still resolves to its file.
+    probe = subprocess.run([*git, "status", "--porcelain", "-z", "--untracked-files=all", "--", "src/okl"],
+                           capture_output=True)
+    if probe.returncode != 0:
+        # Fail closed: a probe that cannot say what the tree holds must not compare equal
+        # to anything, so the run reads as moved and the receipt as not usable.
+        return f"{head}+unknown", f"{full}+status-failed-{os.urandom(4).hex()}"
+    entries = [e for e in probe.stdout.decode("utf-8", "surrogateescape").split("\0") if e]
+    if not entries:
         return head, full
-    diff = subprocess.run([*git, "diff", "HEAD", "--", "src/okl"], capture_output=True, text=True).stdout
-    untracked = [line[3:] for line in status.splitlines() if line.startswith("??")]
-    blobs = "".join(Path(REPO, f).read_text(errors="replace") for f in untracked if Path(REPO, f).is_file())
-    digest = hashlib.sha256((diff + status + blobs).encode()).hexdigest()[:16]
-    return f"{head}+dirty", f"{full}+{digest}"
+    diff = subprocess.run([*git, "diff", "HEAD", "--", "src/okl"], capture_output=True).stdout
+    # One digest per untracked file, keyed by path: a lossless manifest, so two files whose
+    # contents shift a boundary ("ab","c" -> "a","bc") do not hash alike.
+    manifest = hashlib.sha256(diff)
+    for entry in entries:
+        manifest.update(entry.encode("utf-8", "surrogateescape") + b"\0")
+        if entry.startswith("?? "):
+            path = Path(REPO, entry[3:])
+            if path.is_file():
+                manifest.update(hashlib.sha256(path.read_bytes()).digest())
+    return f"{head}+dirty", f"{full}+{manifest.hexdigest()[:16]}"
 
 
 def main() -> int:
