@@ -324,7 +324,9 @@ def tree_state() -> tuple[str | None, str]:
     head = subprocess.run([*git, "rev-parse", "--short", "HEAD"],
                           capture_output=True, text=True).stdout.strip()
     if not head:
-        return None, ""
+        # Fail closed, as for the other probes: no HEAD means no claim about the tree, and
+        # two such readings must not compare equal.
+        return None, f"head-failed-{os.urandom(4).hex()}"
     full = subprocess.run([*git, "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
     # --untracked-files=all: a wholly untracked directory is otherwise one "?? dir/" entry,
     # and its files' content would never reach the fingerprint. -z: NUL-delimited entries

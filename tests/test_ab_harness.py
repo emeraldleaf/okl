@@ -323,3 +323,11 @@ def test_tree_state_fails_closed_when_git_diff_fails(ab, tmp_path, monkeypatch):
     monkeypatch.setattr(ab.subprocess, "run", broken)
     one, two = ab.tree_state(), ab.tree_state()
     assert one[0].endswith("+unknown") and one[1] != two[1]
+
+
+def test_tree_state_fails_closed_when_head_cannot_be_read(ab, tmp_path, monkeypatch):
+    """Outside a repository the probe has no HEAD; two readings must still differ."""
+    monkeypatch.setattr(ab, "REPO", tmp_path)   # not a git repository
+    one, two = ab.tree_state(), ab.tree_state()
+    assert one[0] is None and one[1] != two[1]
+    assert ab.head_moved(one, two) is not None
