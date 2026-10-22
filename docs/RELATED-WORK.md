@@ -1,0 +1,46 @@
+# Related work: what the research measured, and where okl stands
+
+Part of okl's documentation; the [README](../README.md) is the short version, and
+[Where this sits](WHERE-THIS-SITS.md) covers the product landscape. This page covers the
+research literature only. It is dated, it cites arXiv ids, and every figure was read from
+the paper's own pages (noted per row), never from a search snippet. Products are not
+compared here; a product enters public copy only with a measured comparison and a receipt
+in [evals/results/](../evals/results/).
+
+Read on 2026-10-21.
+
+## Seven results from 2026
+
+| Paper | Who | What it shows | Where okl stands |
+| --- | --- | --- | --- |
+| **ContextCov**: Bridging the Gap Between Developer Intent and Autonomous Agent Execution. [arXiv 2603.00822](https://arxiv.org/abs/2603.00822), v2 4 May 2026 (pp. 1–3 read) | University of Washington | Compiles instruction files (`AGENTS.md`, `CLAUDE.md`, `copilot-instructions.md`) into three kinds of executable check: Tree-sitter queries for code patterns, PATH shims that intercept forbidden commands, and architectural validators for layering. On SWE-bench Lite (12 repositories, 300 tasks) it reaches 88.3% constraint compliance against 67.0% prompt-only and 50.3% LLM reflection, at 3.4× lower feedback cost. Code: reSHARMA/ContextCov. | The closest prior art to loading rules as lessons that carry a check. ContextCov generates the checks from the prose and enforces at agent run time; okl keeps the check you wrote beside the lesson that says why, marks the lesson stale when the governed files move, re-runs the check on `okl reverify`, and blocks the push until it passes. The README's "instruction-file linters" bullet describes a narrower category than this; ContextCov is a constraint compiler, and the two are complementary: its generated checks are candidate `--run` values. |
+| **TRACE**: Getting Better at Working With You: Compiling User Corrections into Runtime Enforcement for Coding Agents. [arXiv 2606.13174](https://arxiv.org/abs/2606.13174), 11 Jun 2026 (pp. 1–3 read) | University of Notre Dame, IBM Research, Tencent AI Lab | Memory alone does not force compliance: with Mem0 memory, 57.5% of applicable preference checks were still violated. Compiling corrections into runtime checks the agent must pass cut held-out violations from 100.0% to 37.6% in distribution and to 2.0% out of distribution on ClawArena, and from 100.0% to 60.5% on MemoryArena-derived tasks, while matching the strongest memory baseline on task pass. Code: YujunZhou/TRACE_exp and YujunZhou/tellonce. | The same thesis as a lesson with a `--run` check and a gate, measured on different benchmarks. TRACE mines corrections per user at session time; okl's checks are committed, re-run on demand after drift, and gated at push and in CI. Its "access–compliance gap" is what the eval harness's reproduction rate measures: [evals/REPORT.md](../evals/REPORT.md) §5 finding 7 reports 42% → 7% (78 of 186 unbriefed attempts against 13 of 188 briefed) on the documented instrument. |
+| **Phantom Guardrails**: When Self-Improving Agent Harnesses Fix Failures That Never Happened. [arXiv 2607.13083](https://arxiv.org/abs/2607.13083), 13 Jul 2026 (pp. 1–3 read) | Carnegie Mellon University, Corespeed Inc., Georgia Tech, independent researchers | A suppression-rewarded proposer invented a guardrail for a rule violation that provably never occurred in 15/60 runs when the input carried a harmless rule-like pattern, against 0/60 on featureless input, across five proposer models. Three conditions must co-occur: a rule-shaped pattern, an open-ended rule set, and an instruction that presupposes failures. Under add-only acceptance the phantom is absorbing; warrant-aware acceptance excludes it. Instrument: the Counterfactual Fabrication Lab, deterministic, with a byte-exact oracle. | The failure mode okl's evidence rule exists to prevent: no stamp without a run, `found_by` on every seed record (a corpus convention the CLI does not yet enforce; see the open work below), and "reproduced" in the evals is a blind cross-model judge's verdict against a stated signal, with the receipt committed. The Stop hook's question ("did it surface a lesson worth keeping?") presupposes a lesson, which is their third condition. Their lab is the control condition for any auto-curation experiment. |
+| **DreamBench-SWE**: A Multi-Session Memory-Hygiene Benchmark for Software Agents. [arXiv 2608.20664](https://arxiv.org/abs/2608.20664), 21 Aug 2026 (pp. 1–3 read) | Sarthak Singh, independent researcher | Later tasks depend on non-inferable evidence from earlier sessions, graded by hidden executable oracles. The primary contrast between a typed-plus-raw memory probe and verbatim event memory was null (95/180 against 89/180, p=.518). In the successor audit: no memory 21/180, verbatim event memory 82/180, the reference probe 83/180, a hosted Mem0 literal-storage configuration 97/180. Executable hygiene diagnostics: StaleUseRate 0.200, RepeatedErrorRate 0.571, OverscopeRate 0.167, IrrelevantImportRate 0.474. | Staleness is measured here as stale *use* by the agent. What no benchmark reports is whether a memory system *detects* that a stored lesson has gone stale before it briefs. okl's drift is such a detector; its precision and recall are the open figure. The paper's own habit of narrowing its claims is the standard this documentation is written to. |
+| **Memory Transfer Learning**: How Memories are Transferred Across Domains in Coding Agents. [arXiv 2604.14004](https://arxiv.org/abs/2604.14004), 15 Apr 2026 (pp. 1–3 read) | KAIST, New York University, DeepAuto.ai | A unified memory pool across heterogeneous coding domains improved average scores on 6 benchmarks by 3.7%. The gain comes from meta-knowledge such as validation routines, not task-specific code. Abstraction dictates transferability: Insight-format memories transfer, raw Trajectories cause negative transfer. Transfer scales with pool size and works across models. | Independent support for `org` scope, for the finding that a wrong `applies_to` hides records, and for the Gate type as the thing that transfers. It argues against ever recording raw traces as lessons. |
+| **ReasoningBank**: Scaling Agent Self-Evolving with Reasoning Memory. [arXiv 2509.25140](https://arxiv.org/abs/2509.25140), v2 16 Mar 2026 (pp. 1–3 read) | University of Illinois Urbana-Champaign, Google Cloud AI Research, Yale University | Distils reasoning strategies from successful and failed experiences, judged by the agent itself without ground-truth labels. Up to 20% relative improvement and up to 16% fewer interaction steps on WebArena, Mind2Web and SWE-Bench-Verified. Code: google-research/reasoning-bank. | The unverified end of the line: admission by self-judgment. Its released code is the baseline for a verified-against-unverified comparison. |
+| **ACE**: Agentic Context Engineering: Evolving Contexts for Self-Improving Language Models. [arXiv 2510.04618](https://arxiv.org/abs/2510.04618), v3 29 Mar 2026, ICLR 2026 (pp. 1–2 read) | Stanford University, SambaNova Systems, UC Berkeley | Contexts as evolving playbooks updated by generation, reflection and curation. +10.6% on agents (AppWorld) and +8.6% on domain benchmarks, without labeled supervision, using execution feedback. Finds that concise summaries lose domain detail ("brevity bias") and that iterative rewriting erodes contexts ("context collapse"). Code: ace-agent/ace. | The playbook shape okl shares, with admission by reflection rather than by a check that ran. Its brevity-bias finding is a reason to measure the 12-record briefing limit rather than assume it. |
+
+## What the literature leaves open
+
+No published system admits a lesson only when its check ran red on the old state and green
+on the new one in the real repository, okl included: its verify step proves a lesson after
+admission, which the third piece of work below would change. No benchmark reports a memory system's precision and
+recall at detecting that a stored lesson has gone stale. Both are measurable with the
+existing harness ([evals/ab_harness.py](../evals/ab_harness.py)) and the receipt rules in
+[evals/REPORT.md](../evals/REPORT.md).
+
+Three pieces of work follow directly from the rows above and are tracked as issues:
+
+- **Fabrication under the Stop hook.** Phantom Guardrails' third condition is an instruction
+  that presupposes failures. The Stop hook asks whether the session surfaced a lesson worth
+  keeping; it already accepts "nothing durable" and lists the session's failed commands as
+  candidates. Measure how often a session with nothing to learn records a lesson anyway, then
+  lead with the evidence question: which check went red and then green, which correction was
+  made.
+- **Stale-use and over-scope as okl metrics.** DreamBench-SWE's diagnostics have direct
+  equivalents: a lesson briefed while its drift was red, and an `org` lesson whose text names
+  one repository's paths.
+- **Verified against unverified curation.** Run the released ReasoningBank code on the
+  harness beside an okl arm that admits a proposed lesson only when its check passes, with
+  the Counterfactual Fabrication Lab's featureless pool as the control.

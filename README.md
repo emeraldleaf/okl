@@ -281,6 +281,9 @@ The long version, with the comparison table and how to run okl beside another me
 [Where this sits](docs/WHERE-THIS-SITS.md). It fails closed by design: an unreachable store
 blocks or warns, never reports "clean".
 
+What the research literature measured in 2026, with figures read from the papers and a
+"where okl stands" column beside each result: [Related work](docs/RELATED-WORK.md).
+
 ## Measured effect, and its limits
 
 One held-fixed A/B (8 authored tasks, 3 samples per arm per run; generator and blind
