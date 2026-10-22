@@ -42,6 +42,7 @@
   },
   {
    "key": "nc_outbox_atomicity",
+   "symptom": "an event arrives at a consumer for an entity write that was rolled back, or appears before the row it describes is committed; the publisher was injected through the constructor rather than taken from the handler's message context",
    "type": "Defect",
    "scope": "repo",
    "repo": "dotnet-microservices",
@@ -54,6 +55,7 @@
   },
   {
    "key": "nc_handler_di",
+   "symptom": "a test resolving a message handler from the service provider throws 'no service registered' although Wolverine discovers and runs the handler in production",
    "type": "Defect",
    "scope": "repo",
    "repo": "dotnet-microservices",
@@ -66,6 +68,7 @@
   },
   {
    "key": "nc_topology_race",
+   "symptom": "an event published during a consumer's first boot is marked delivered in the outbox but never reaches the queue; the consumer's exchange or binding did not exist yet, or a misspelled name was auto-provisioned as an empty exchange",
    "type": "Defect",
    "scope": "repo",
    "repo": "dotnet-microservices",
@@ -77,6 +80,7 @@
   },
   {
    "key": "nc_dead_metric",
+   "symptom": "a counter or gauge that a dashboard or runbook names as the alarm, whose value has never moved; a metrics class registered but never injected",
    "type": "Defect",
    "scope": "org",
    "repo": "dotnet-microservices",
@@ -88,6 +92,7 @@
   },
   {
    "key": "nc_speculative_interface",
+   "symptom": "an interface with one implementation that no test substitutes and no roadmap item will; a factory that returns the same class for every input",
    "type": "Rule",
    "scope": "org",
    "repo": "dotnet-microservices",
@@ -99,6 +104,7 @@
   },
   {
    "key": "nc_arch_reviewer",
+   "symptom": "a review agent, linter or gate described in the docs as enforcement that no hook, CI job or command ever invokes",
    "type": "Defect",
    "scope": "org",
    "repo": "dotnet-microservices",
@@ -110,6 +116,7 @@
   },
   {
    "key": "g_tombstones_nc",
+   "symptom": "a retired identifier, service name or transport still taught as current in docs, comments or config after the code dropped it",
    "type": "Gate",
    "scope": "org",
    "found_by": "dotnet-microservices .claude/scripts/check-tombstones.sh",

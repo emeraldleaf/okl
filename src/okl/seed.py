@@ -23,11 +23,16 @@ from .client import Client
 
 
 def hygiene_warnings_for_file(path: str, repo_names: list[str] | None = None) -> list[str]:
-    """The hygiene warnings a seed file would earn on import (#255): one line per org
-    record that is trace-shaped or over-scoped, from the same detectors `okl metric` uses.
-    Reads the file only; imports nothing."""
+    """The hygiene warnings a seed file would earn on import (#255), from the same
+    detectors `okl metric` uses. Reads the file only; imports nothing."""
+    return hygiene_findings_for_file(path, repo_names)[0]
+
+
+def hygiene_findings_for_file(path: str, repo_names: list[str] | None = None) -> tuple[list[str], int]:
+    """The warning lines and how many records they cover (the missing-symptom line is one
+    per file, so `--strict` counts records, not lines)."""
     data = json.loads(Path(path).read_text())
-    return hygiene.hygiene_warnings(data.get("nodes", []), repo_names or [])
+    return hygiene.hygiene_findings(data.get("nodes", []), repo_names or [])
 
 
 def seed_from_file(client: Client, path: str) -> int:
