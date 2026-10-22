@@ -560,8 +560,10 @@ a trend.
 *Note, 2026-10-10:* the second 2/3 in that list is the haiku-generated run, which sonnet
 judged. And "at or near its baseline" below does not hold for every run: 0003 read 2/3 →
 0/3, and 1238 and 1323 read 3/3 → 1/3. On the documented instrument (sonnet generator,
-haiku judge) the pooled figure is 29/37 → 15/37 across its fourteen receipts, §4j's, §4k's,
-§4l's and §4m's included (updated 2026-10-11): reduced, not prevented.
+haiku judge, as the aliases name them) the pooled figure is 29/37 → 15/37 across its
+fourteen receipts, §4j's, §4k's, §4l's, §4m's and §4o's included; §4o's aliases resolved to
+different models and start their own series (§4o), so on the earlier models alone the figure
+is 26/34 → 14/34 across thirteen (updated 2026-10-22): reduced, not prevented.
 
 What is *not* judge-dependent: this is not a retrieval failure. Pre-flight confirms the
 rule (`rx_tokens_localstorage`) reaches the briefing, and that record is deliberately unset
@@ -1227,9 +1229,12 @@ refuse to write a usable receipt when it has moved.
    task the sonnet baseline failed was fully prevented except one residual
    (judge_summary 1/3). *Note, 2026-10-10:* "fully prevented" held in no 3-sample run
    after that one. spa_tokens is reduced, not prevented: 35/43 → 20/43 (81% → 47%) across
-   the 16 receipts that include it, and 29/37 → 15/37 on the documented instrument
-   (sonnet generator, haiku judge). The 15 include §4j's run, where it read 0/2 → 0/3,
-   §4k's, 1/3 → 1/3, §4l's, 1/3 → 1/2, and §4m's, 2/3 → 1/3, and §4o's, 3/3 → 1/3 (updated 2026-10-22).
+   the 16 receipts that include it, and 29/37 → 15/37 on the receipts the aliases name as
+   sonnet generator and haiku judge (the pool `tests/test_docs.py` recomputes). §4o's run
+   among them resolved those aliases to different models and starts its own series, so on
+   the earlier models alone the figure is 26/34 → 14/34. The 16 include §4j's run, where it
+   read 0/2 → 0/3, §4k's, 1/3 → 1/3, §4l's, 1/3 → 1/2, §4m's, 2/3 → 1/3, and §4o's, 3/3 → 1/3
+   (updated 2026-10-22).
 2. **Cross-model headline: briefed haiku (12%) beat unbriefed sonnet (33%)** on the
    identical task set — a briefed budget model reproduced org-known defect classes at
    roughly a third the rate of an unbriefed frontier model. One haiku run, never

@@ -93,7 +93,10 @@ if absent:
     # A missing record would print as a vocabulary miss; refuse before any row is written.
     sys.exit(f"probe: governing record(s) not in this store: {absent}")
 
-_head = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()
+try:
+    _head = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()
+except OSError:   # no git on PATH: the header says '?' rather than the probe failing to run
+    _head = ""
 _floor = "on" if hasattr(core, "_apply_floor") else "off"
 print(f"store: {N} nodes · repo={REPO} · hook interests={INTERESTS}")
 print(f"retrieval code: commit {_head or '?'} · relevance floor {_floor} · every row below, "
