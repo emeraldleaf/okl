@@ -238,14 +238,16 @@ class Client:
                 kw["limit"] = limit
             store = self._local_store()
             result = core.check(store, repo, task, **kw)
-            # Over a shared service the service logs the briefing it answers; locally, the
-            # client is the only one who sees it (#129).
-            core.record_briefing(store, repo, result)
         # Mark briefed lessons whose code changed since their last check (#93). Done here,
         # not in core, because only the client has this repo's checkout: a shared service
         # answering /check has no git history to compare against.
         cfg = _find_config()
         drift.annotate_briefing(result, repo, str(cfg.parent.parent if cfg else Path.cwd()))
+        if self.mode != "remote":
+            # Over a shared service the service logs the briefing it answers; locally, the
+            # client is the only one who sees it (#129). Logged after the drift marks, so
+            # the log keeps which briefed lessons were stale at the time (#252).
+            core.record_briefing(store, repo, result)
         return result
 
     def record(self, **kwargs: Any) -> str:
@@ -407,6 +409,18 @@ class Client:
                     return None
                 raise
         return core.exposure_report(self._local_store(), self.repo, self.interests)
+
+    def hygiene_report(self) -> dict | None:
+        """Stale-use and over-scope rates for this repo (#252), or None from a service too
+        old to report them, in which case the caller says hygiene is unknown."""
+        if self.mode == "remote":
+            try:
+                return self._get(f"/metric/hygiene?{urlencode({'repo': self.repo})}").get("report")
+            except OKLRejectedError as e:
+                if e.status == 404:
+                    return None
+                raise
+        return core.hygiene_report(self._local_store(), self.repo)
 
     def recurrence(self) -> list[dict]:
         """The v0.5 flat rows, kept for callers written against that release. Both modes
