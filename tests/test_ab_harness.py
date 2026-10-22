@@ -230,10 +230,35 @@ def test_a_changed_judge_command_is_still_drift(ab):
 def test_a_run_whose_working_tree_moved_is_marked_not_usable(ab):
     """REPORT §4o: a branch switch during a run briefs the later samples with other code.
     The helper names both commits, and the banner says what to do instead."""
-    assert ab.head_moved("acdcb99", "acdcb99") is None
-    assert ab.head_moved(None, "b54e075") is None       # unknown proves nothing, as elsewhere
-    moved = ab.head_moved("acdcb99", "b54e075")
+    same = ("acdcb99", "acdcb99full")
+    assert ab.head_moved(same, same) is None
+    assert ab.head_moved(None, same) is None       # unknown proves nothing, as elsewhere
+    moved = ab.head_moved(("acdcb99", "acdcb99full"), ("b54e075", "b54e075full"))
     assert moved == {"okl_commit_at_start": "acdcb99", "okl_commit": "b54e075",
                      "working_tree_moved": True}
     banner = ab.moved_banner(moved)
     assert "NOT USABLE" in banner and "acdcb99" in banner and "b54e075" in banner
+    # A tree that was already dirty and whose uncommitted code then changed: the label is
+    # the same "+dirty" on both sides, the fingerprint is not, and that counts as movement.
+    dirty_a = ("acdcb99+dirty", "acdcb99full+1111")
+    dirty_b = ("acdcb99+dirty", "acdcb99full+2222")
+    assert ab.head_moved(dirty_a, dirty_b)["working_tree_moved"] is True
+
+
+def test_tree_state_fingerprints_uncommitted_code(ab, tmp_path, monkeypatch):
+    """The label stays `<head>+dirty` while the fingerprint follows the uncommitted content."""
+    import subprocess
+    repo = tmp_path / "r"
+    (repo / "src" / "okl").mkdir(parents=True)
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    subprocess.run(["git", "-C", str(repo), "-c", "user.email=t@t", "-c", "user.name=t",
+                    "commit", "-q", "--allow-empty", "-m", "base"], check=True)
+    monkeypatch.setattr(ab, "REPO", repo)
+    label, fp = ab.tree_state()
+    assert "+dirty" not in label and "+" not in fp
+    (repo / "src" / "okl" / "new.py").write_text("x = 1\n")
+    label1, fp1 = ab.tree_state()
+    (repo / "src" / "okl" / "new.py").write_text("x = 2\n")
+    label2, fp2 = ab.tree_state()
+    assert label1 == label2 and label1.endswith("+dirty")
+    assert fp1 != fp2
