@@ -167,7 +167,7 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     #                 defects rather than emitting one undifferentiated list.
     #   4. ROUTE    — turn the buckets into an ordered list of imperatives.
     repo_scope = f"repo:{repo}"
-    hits, replaced = _live_hits(store, task, limit, repo_scope, interests)
+    hits, replaced, exhausted = _live_hits(store, task, limit, repo_scope, interests)
     # THE FLOOR. The search is an OR of the task's subject words, so on a short or generic
     # task every slot fills with records that share one word with it ("point", "doc"):
     # twelve imperatives chosen by a word in common, at about two thousand tokens a
@@ -176,6 +176,15 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     # symptom, or one when the task has only one word. Trimmed records are counted, not hidden: the
     # briefing says how many weak matches it left out.
     hits, matched, weak = _apply_floor(store, hits, briefing_terms(task))
+    # The floor can empty a full window: when every fetched record was weak, a qualifying
+    # one ranked just past the window would read as "no close match". Widen the fetch,
+    # bounded, while the window was full and the floor left fewer than the limit
+    # (review on #259; the same shape as the retired-lesson widening in _live_hits).
+    window = limit
+    while len(hits) < limit and not exhausted and window < limit * 27:
+        window *= 3
+        wider, replaced, exhausted = _live_hits(store, task, window, repo_scope, interests)
+        hits, matched, weak = _apply_floor(store, wider, briefing_terms(task))
     # THE CUTOFF. store.search returns BM25-ranked results, but full-text matching is
     # permissive: on a mature store a plausible task matches most of it, so without a
     # cap the "briefing" becomes the library. Ranking already put the best first, so
@@ -258,8 +267,10 @@ def _apply_floor(store: Store, hits: list[Node], terms: list[str],
 
 
 def _live_hits(store: Store, task: str, limit: int, repo_scope: str,
-               interests: list[str] | None) -> tuple[list[Node], list[dict[str, Any]]]:
-    """Steps 1 and 2 without retired lessons, and the pointers for the replaced ones.
+               interests: list[str] | None,
+               ) -> tuple[list[Node], list[dict[str, Any]], bool]:
+    """Steps 1 and 2 without retired lessons, the pointers for the replaced ones, and
+    whether the search was exhausted (returned fewer rows than the window asked for).
 
     Obsolete lessons, and superseded ones whose live replacement this repo can see, leave
     BEFORE the cut, so they never take a live lesson's slot (okl review R2); check never
@@ -271,7 +282,7 @@ def _live_hits(store: Store, task: str, limit: int, repo_scope: str,
     # turns an empty query into a substring match on "" that returns every record.
     query = " ".join(briefing_terms(task))
     if not query:
-        return [], []
+        return [], [], True
     fetch = limit * 3
     for _ in range(3):
         found = store.search(query, limit=fetch)
@@ -291,7 +302,7 @@ def _live_hits(store: Store, task: str, limit: int, repo_scope: str,
         if not left_out or len(found) < fetch:
             break
         fetch += left_out
-    return live, replaced
+    return live, replaced, len(found) < fetch
 
 
 def _live_replacement(store: Store, n: Node, repo_scope: str,

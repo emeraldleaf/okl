@@ -121,7 +121,7 @@ def trace(store: Store | None = None) -> dict:
     # Retired lessons (obsolete, or superseded by a live one this repo can see) leave before
     # the cut. Take the survivors from _live_hits itself, the function check() calls; if it had
     # to widen its window, this trace's single fetch no longer matches it, so stop.
-    live, _ = _live_hits(store, TRACE_TASK, LIMIT, repo_scope, interests)
+    live, _, _ = _live_hits(store, TRACE_TASK, LIMIT, repo_scope, interests)
     live_ids = {n.id for n in live}
     if not live_ids <= {n.id for n in after_tags}:
         raise SystemExit("ABORT: _live_hits widened its search past this trace's window — "

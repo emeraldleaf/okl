@@ -98,3 +98,58 @@ def test_the_floor_keeps_every_eval_task_governing_record(tmp_path, monkeypatch)
         if t["defect_node"] not in ids:
             missing.append(t["id"])
     assert not missing, missing
+
+
+def test_the_fetch_widens_when_the_floor_empties_a_full_window():
+    """When ranking puts forty single-word matches ahead of the one record that shares both
+    words, the first window holds only weak matches; the fetch widens until the qualifying
+    record is seen (review on #259). A store subclass stands in for that ranking, since
+    BM25 would put the two-word match first on its own."""
+
+    class WeakFirst(Store):
+        def search(self, query, limit=20, **kw):
+            rows = super().search(query, limit=200, **kw)
+            rows.sort(key=lambda n: n.title == "money handling")   # the strong one last
+            return rows[:limit]
+
+    s = WeakFirst("sqlite:///:memory:")
+    for i in range(40):
+        core.record(s, type="Rule", title=f"filler rule {i}", scope="org", body="the price is set")
+    wanted = core.record(s, type="Rule", title="money handling", scope="org",
+                         body="the catalogue sets the price")
+    assert wanted not in {n.id for n in s.search("price catalogue", limit=36)}
+    res = core.check(s, repo="r", task="price catalogue")
+    assert wanted in {r["id"] for r in res["rules"]}
+    assert res["match_count"] == 1
+
+
+def test_the_floor_changes_no_eval_briefing(tmp_path, monkeypatch):
+    """REPORT §4n rests on this: on the eight eval tasks the briefed ids are the same with
+    the floor and without it, so the A/B instrument cannot observe the change. The day this
+    fails, the floor has reached an eval briefing and a live run is due."""
+    import json
+    from pathlib import Path
+
+    from okl.client import Client
+    from okl.seed import seed_from_file
+    root = Path(__file__).resolve().parents[1]
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("OKL_DATABASE_URL", raising=False)
+    monkeypatch.delenv("OKL_SERVICE_URL", raising=False)
+    (tmp_path / ".okl").mkdir()
+    (tmp_path / ".okl" / "config.json").write_text(json.dumps({"repo": "okl"}))
+    client = Client()
+    for pack in sorted((root / "seed").glob("*.json")):
+        seed_from_file(client, str(pack))
+    s = client._local_store()
+    tasks = [json.loads(line) for line in (root / "evals" / "tasks.jsonl").read_text().splitlines()
+             if line.strip()]
+    changed = {}
+    for t in tasks:
+        with_floor = core.briefed_ids(core.check(s, repo="okl", task=t["task"], interests=None))
+        hits, _, _ = core._live_hits(s, t["task"], 12, "repo:okl", None)
+        without = [n.id for n in hits[:12]]
+        # briefed_ids reads bucket order, _live_hits rank order: compare the sets.
+        if set(with_floor) != set(without):
+            changed[t["id"]] = (sorted(set(without) - set(with_floor)), sorted(set(with_floor) - set(without)))
+    assert not changed, changed
