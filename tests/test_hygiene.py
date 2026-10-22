@@ -117,3 +117,10 @@ def test_records_without_a_symptom_are_warned_about_once_per_batch():
     lines = hygiene.hygiene_warnings(recs)
     assert len(lines) == 1 and lines[0].startswith("2 record(s) have no symptom (a, d)")
     assert hygiene.hygiene_warnings([recs[1], recs[2]]) == []
+
+
+def test_strict_mode_counts_records_not_warning_lines():
+    """Four symptom-less records print one aggregated line but count as four flagged records."""
+    recs = [{"key": k, "type": "Rule", "title": k, "scope": "org"} for k in ("a", "b", "c", "d")]
+    lines, flagged = hygiene.hygiene_findings(recs)
+    assert len(lines) == 1 and flagged == 4

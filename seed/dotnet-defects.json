@@ -42,6 +42,7 @@
   },
   {
    "key": "nc_outbox_atomicity",
+   "symptom": "an event arrives at a consumer for an entity write that was rolled back, or appears before the row it describes is committed; the publisher was injected through the constructor rather than taken from the handler's message context",
    "type": "Defect",
    "scope": "repo",
    "repo": "dotnet-microservices",
@@ -54,6 +55,7 @@
   },
   {
    "key": "nc_handler_di",
+   "symptom": "a test resolving a message handler from the service provider throws 'no service registered' although Wolverine discovers and runs the handler in production",
    "type": "Defect",
    "scope": "repo",
    "repo": "dotnet-microservices",
@@ -66,6 +68,7 @@
   },
   {
    "key": "nc_topology_race",
+   "symptom": "an event published during a consumer's first boot is marked delivered in the outbox but never reaches the queue; the consumer's exchange or binding did not exist yet, or a misspelled name was auto-provisioned as an empty exchange",
    "type": "Defect",
    "scope": "repo",
    "repo": "dotnet-microservices",

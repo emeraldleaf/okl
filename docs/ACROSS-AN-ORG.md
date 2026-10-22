@@ -63,9 +63,11 @@ a Defect with its cause, never a transcript of how it was found. okl's own measu
 a transfer result in the same sense: the eight A/B tasks are fresh code written from a task
 prompt, the defect classes they invite were learned in other projects and arrive through six
 of the twelve packs, and 78 of 186 unbriefed attempts repeated one against 13 of 188 briefed
-(REPORT §5, finding 7). In those runs seven of the eight tasks had that lesson in their
-briefing; the eighth's ranked below the twelve-record cutoff for its wording until the lesson
-gained a symptom on 2026-10-22 (REPORT §4b, §4o), so those runs measured its arm without it. Measuring which lesson shapes transfer, and which do not, is #254.
+(REPORT §5, finding 7). In those runs the briefing held each task's lesson with three
+exceptions, whose arms measured the briefing without it: `exit_code_trust`'s ranked below the
+cutoff in every run until the lesson gained a symptom on 2026-10-22 (REPORT §4b, §4o),
+`rate_limiter`'s was filtered out in the reverted §4d run, and `react_fetch`'s in the two runs
+made with this repo's declared interests (§4h). Measuring which lesson shapes transfer, and which do not, is #254.
 
 ## Hygiene, and what to watch
 

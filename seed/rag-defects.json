@@ -65,6 +65,7 @@
   },
   {
    "key": "qz_wrong_corpus",
+   "symptom": "two eval runs of the same code disagree, and the container and the config file name different vector collections, or several similarly named collections exist and one is empty",
    "type": "Defect",
    "scope": "repo",
    "repo": "python-rag-service",
