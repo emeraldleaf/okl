@@ -225,3 +225,15 @@ def test_a_changed_judge_command_is_still_drift(ab):
     drift = ab.instrument_drift([_receipt(ab.JUDGE_MAX_CHARS)] * 3, current)
 
     assert drift == {"judge": {"series": "claude -p --model haiku", "runs": 3}}
+
+
+def test_a_run_whose_working_tree_moved_is_marked_not_usable(ab):
+    """REPORT §4o: a branch switch during a run briefs the later samples with other code.
+    The helper names both commits, and the banner says what to do instead."""
+    assert ab.head_moved("acdcb99", "acdcb99") is None
+    assert ab.head_moved(None, "b54e075") is None       # unknown proves nothing, as elsewhere
+    moved = ab.head_moved("acdcb99", "b54e075")
+    assert moved == {"okl_commit_at_start": "acdcb99", "okl_commit": "b54e075",
+                     "working_tree_moved": True}
+    banner = ab.moved_banner(moved)
+    assert "NOT USABLE" in banner and "acdcb99" in banner and "b54e075" in banner

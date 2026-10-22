@@ -280,6 +280,26 @@ def drift_banner(drift_from: dict) -> str:
             + ". These numbers are internally valid only.")
 
 
+def head_moved(started: str | None, now: str | None) -> dict | None:
+    """The receipt fields for a working tree that moved during a run, or None.
+
+    The briefed arm renders from this checkout's `src/`, so a branch switch mid-run
+    briefs the later samples with code the pre-registration never described, and the
+    receipt would then name only the commit found at the end. Receipt ab-20261022-0455
+    was made that way (REPORT §4o); a run whose tree moved is not usable, and says so.
+    """
+    if started is None or now is None or started == now:
+        return None
+    return {"okl_commit_at_start": started, "okl_commit": now, "working_tree_moved": True}
+
+
+def moved_banner(moved: dict) -> str:
+    """The report-time line for a run whose working tree moved; a function so it is testable."""
+    return (f"❌ RESULTS NOT USABLE — the working tree moved from {moved['okl_commit_at_start']} to "
+            f"{moved['okl_commit']} during the run, so the later briefings came from code the "
+            "pre-registration did not describe. Run the harness from a pinned worktree.")
+
+
 def _okl_commit() -> str | None:
     """The commit that rendered this run's briefings, marked `+dirty` when okl's code had
     uncommitted edits: a bare hash would then name code that did not produce the receipt
@@ -407,6 +427,7 @@ def main() -> int:
         return 0
 
     results, failures = [], []
+    started_at_commit = _okl_commit()
     with tempfile.TemporaryDirectory(prefix="okl-ab-") as clean_cwd:
         models = {"generator": resolved_model(GENERATOR_CMD, args.timeout, clean_cwd),
                   "judge": resolved_model(JUDGE_CMD, args.timeout, clean_cwd)}
@@ -446,6 +467,9 @@ def main() -> int:
     if frate > FAILURE_RATE_UNUSABLE:
         print("❌ RESULTS NOT USABLE — failure rate above threshold. Fix the harness before "
               "reading any number below.")
+    moved = head_moved(started_at_commit, _okl_commit())
+    if moved:
+        print(moved_banner(moved))
     if drift_from:
         print(drift_banner(drift_from))
     def by(arm: str) -> list[dict]:
@@ -482,7 +506,7 @@ def main() -> int:
         # failed). Two receipts naming `sonnet` may not have run the same model (R12).
         "generator_model": models["generator"], "judge_model": models["judge"],
         "failure_rate": round(frate, 3),
-        "usable": frate <= FAILURE_RATE_UNUSABLE,
+        "usable": frate <= FAILURE_RATE_UNUSABLE and not moved,
         # Durable: a receipt read months later says on its own face whether it may be
         # compared to its neighbours. Absent means the instrument matched the prior run.
         "instrument_changed_from": drift_from,
@@ -490,6 +514,9 @@ def main() -> int:
         # treatment (§4i changed it), and without this two receipts from different layouts
         # look identical on their face.
         "okl_commit": _okl_commit(),
+        # Where the tree stood when the run began, and whether it moved (REPORT §4o).
+        "okl_commit_at_start": started_at_commit,
+        **({"working_tree_moved": True} if moved else {}),
         "results": results, "failures": failures,
     }, indent=1) + "\n")
     try:
@@ -497,7 +524,7 @@ def main() -> int:
     except ValueError:
         shown = path   # AB_RESULTS_DIR may point outside the repo
     print(f"\nwrote {shown}")
-    return 0 if frate <= FAILURE_RATE_UNUSABLE else 1
+    return 0 if frate <= FAILURE_RATE_UNUSABLE and not moved else 1
 
 
 if __name__ == "__main__":
