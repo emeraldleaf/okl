@@ -51,3 +51,6 @@ of these and comes up empty on young repos; prefer options 2 and 3 when an agent
 
 Whichever you use, review before importing. Choosing a record's scope is the curation
 step that keeps a shared layer from filling with one project's noise.
+
+Running packs across many repositories, through a ledger repo and pull requests, with each
+repo proving what it loads: [ACROSS-AN-ORG.md](ACROSS-AN-ORG.md).

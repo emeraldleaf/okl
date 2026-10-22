@@ -319,6 +319,13 @@ judge are different models; method + raw receipts in [evals/REPORT.md](evals/REP
   itself fell 26 points from §4i's, which points at the generator rather than okl, so it
   starts a new series and is not pooled with the runs above.
 
+The figure is also a transfer result. The eight tasks are fresh code written from a task
+prompt, and the defect classes they invite were learned in other projects: each task names
+its lesson in [evals/tasks.jsonl](evals/tasks.jsonl), and those lessons arrive through six of
+the twelve seed packs. A lesson paid for in one project prevented the defect in code written
+for another. Running that across an organisation, and what it asks of a lesson, is
+[Across an org](docs/ACROSS-AN-ORG.md).
+
 What this does **not** show: the tasks were authored to invite defect classes the store
 encodes, so it measures what a briefing does when a directly relevant lesson exists —
 not general code quality, and not retrieval at scale. n is small; treat it as a pilot
@@ -384,6 +391,8 @@ reaches any project that loads the pack it is in, and is briefed only when its `
 project's interests and the task agree. Subject tags from a closed vocabulary (`KNOWN_TAGS` in
 `store.py`, grown with `okl record --type Vocabulary`) say what a lesson is about; `okl init
 --interests` says what a repo cares about ([decision](docs/decisions/2026-07-21-subject-tags-controlled-vocabulary.md)).
+Packs of `org` lessons across many repositories, through a ledger repo and pull requests,
+with each repo proving what it loads: [Across an org](docs/ACROSS-AN-ORG.md).
 
 **The choices behind all this**, and why: [docs/DESIGN-CHOICES.md](docs/DESIGN-CHOICES.md).
 
