@@ -32,15 +32,15 @@ existing harness ([evals/ab_harness.py](../evals/ab_harness.py)) and the receipt
 
 Three pieces of work follow directly from the rows above and are tracked as issues:
 
-- **Fabrication under the Stop hook.** Phantom Guardrails' third condition is an instruction
+- **Fabrication under the Stop hook** (#251). Phantom Guardrails' third condition is an instruction
   that presupposes failures. The Stop hook asks whether the session surfaced a lesson worth
   keeping; it already accepts "nothing durable" and lists the session's failed commands as
   candidates. Measure how often a session with nothing to learn records a lesson anyway, then
   lead with the evidence question: which check went red and then green, which correction was
   made.
-- **Stale-use and over-scope as okl metrics.** DreamBench-SWE's diagnostics have direct
+- **Stale-use and over-scope as okl metrics** (#252). DreamBench-SWE's diagnostics have direct
   equivalents: a lesson briefed while its drift was red, and an `org` lesson whose text names
   one repository's paths.
-- **Verified against unverified curation.** Run the released ReasoningBank code on the
+- **Verified against unverified curation** (#253). Run the released ReasoningBank code on the
   harness beside an okl arm that admits a proposed lesson only when its check passes, with
   the Counterfactual Fabrication Lab's featureless pool as the control.
