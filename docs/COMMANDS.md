@@ -43,7 +43,8 @@ okl metric           # recurrence: defect classes that came back, split by wheth
                      #   whose title, symptom or fix names one repository's world),
                      #   each with its denominator and the lessons it flags
 okl seed <pack> --strict
-                     # exit 2 instead of importing when a record is trace-shaped or an
-                     #   org record names one repository's paths or name; without it
-                     #   the same findings are printed as warnings and the import runs
+                     # exit 2 instead of importing when an advice record has no symptom,
+                     #   a record is trace-shaped, or an org record names one repository's
+                     #   paths or name; without it the same findings are printed as
+                     #   warnings and the import runs
 ```

@@ -1267,9 +1267,11 @@ refuse to write a usable receipt when it has moved.
    pool reads 68 of 164 (41%) against 10 of 165 (6%). It leaves out §4f (judged by opus,
    not the documented instrument) and every run from §4j on, because each of those
    started a new series (§4j's unbriefed arm moved 26 points with nothing changed; §4k
-   and §4m changed the instrument). Pooling all thirteen comparable receipts, those
-   included, reads 108 of 304 (36%) against 17 of 305 (6%), leaving out §4j's plan-only
-   sample as §4j itself does. Read it with §6: one-shot
+   and §4m changed the instrument). For reference, the aggregate over all thirteen receipts
+   that the alias and run-shape filters select, those included, reads 108 of 304 (36%)
+   against 17 of 305 (6%), leaving out §4j's plan-only sample as §4j itself does; it spans
+   several model series (§4o's among them), so it is an alias-selected aggregate, not a
+   comparable-series estimate. Read it with §6: one-shot
    code on bait tasks written to invite defects the store already knew about, a small
    n, and nothing about code quality improving over time.
 
