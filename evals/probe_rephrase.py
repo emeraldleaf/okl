@@ -19,6 +19,7 @@ repo's configured interests, since both change the answer.
 """
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -91,7 +92,12 @@ absent = [t["defect_node"] for t in tasks if store.get_node(t["defect_node"]) is
 if absent:
     # A missing record would print as a vocabulary miss; refuse before any row is written.
     sys.exit(f"probe: governing record(s) not in this store: {absent}")
-print(f"store: {N} nodes · repo={REPO} · hook interests={INTERESTS}\n")
+
+_head = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()
+_floor = "on" if hasattr(core, "_apply_floor") else "off"
+print(f"store: {N} nodes · repo={REPO} · hook interests={INTERESTS}")
+print(f"retrieval code: commit {_head or '?'} · relevance floor {_floor} · every row below, "
+      "recall and precision alike, is measured with this code against this store\n")
 print("A. RECALL: is the governing lesson in the top-12? (harness config = no interests; hook config = repo interests)  rank = position in the ranked in-scope list")
 print(f"{'task':16} {'variant':11} {'harness':8} {'hook':8} {'rank':>5}/{'live':<5} matched terms")
 hits = {k: [0, 0] for k in LABELS}

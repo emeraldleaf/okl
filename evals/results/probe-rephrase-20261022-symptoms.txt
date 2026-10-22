@@ -1,39 +1,40 @@
-store: 311 nodes · repo=okl · hook interests=['python', 'method', 'security', 'agent-safety', 'retrieval-design', 'eval-integrity', 'data-quality']
+store: 312 nodes · repo=okl · hook interests=['python', 'method', 'security', 'agent-safety', 'retrieval-design', 'eval-integrity', 'data-quality']
+retrieval code: commit b47acb3 · relevance floor off · every row below, recall and precision alike, is measured with this code against this store
 
 A. RECALL: is the governing lesson in the top-12? (harness config = no interests; hook config = repo interests)  rank = position in the ranked in-scope list
 task             variant     harness  hook      rank/live  matched terms
-idor_endpoint    authored    yes      yes          9/212   ['add', 'endpoint', 'id', 'user']
+idor_endpoint    authored    yes      yes          9/213   ['add', 'endpoint', 'id', 'user']
 idor_endpoint    ticket      yes      yes          4/90    ['add', 'id', 'return']
-idor_endpoint    paraphrase  MISS     MISS      None/98    []
-idor_endpoint    bug-report  MISS     MISS        39/50    ['other']
-price_tamper     authored    yes      yes          1/180   ['product', 'price', 'catalog', 'service', 'client']
+idor_endpoint    paraphrase  MISS     MISS      None/99    []
+idor_endpoint    bug-report  MISS     MISS        40/51    ['other']
+price_tamper     authored    yes      yes          1/181   ['product', 'price', 'catalog', 'service', 'client']
 price_tamper     ticket      yes      yes          1/56    ['product', 'price', 'body']
 price_tamper     paraphrase  MISS     MISS      None/17    []
-price_tamper     bug-report  MISS     MISS        30/59    ['request']
-react_fetch      authored    yes      MISS         1/186   ['react', 'component', 'tanstack', 'query', 'v5', 'api']
-react_fetch      ticket      yes      MISS         5/81    ['component', 'api']
+price_tamper     bug-report  MISS     MISS        31/60    ['request']
+react_fetch      authored    yes      MISS         1/187   ['react', 'component', 'tanstack', 'query', 'v5', 'api']
+react_fetch      ticket      yes      MISS         5/82    ['component', 'api']
 react_fetch      paraphrase  MISS     MISS      None/60    []
-react_fetch      bug-report  MISS     MISS        36/149   ['re', 'data']
-judge_summary    authored    yes      yes          1/203   ['llm', 'eval', 'cases', 'judge', 'prints', 'summary']
-judge_summary    ticket      yes      yes          1/101   ['llm', 'eval', 'cases', 'judge', 'score', 'summary']
-judge_summary    paraphrase  MISS     MISS        62/154   ['report']
-judge_summary    bug-report  yes      yes          1/49    ['eval', 'printed', 'score', 'cases', 'threw']
-exit_code_trust  authored    yes      yes          4/164   ['data', 'files', 'reports', 'output']
-exit_code_trust  ticket      yes      yes          9/149   ['data', 'success']
+react_fetch      bug-report  MISS     MISS        36/150   ['re', 'data']
+judge_summary    authored    yes      yes          1/204   ['llm', 'eval', 'cases', 'judge', 'prints', 'summary']
+judge_summary    ticket      yes      yes          1/102   ['llm', 'eval', 'cases', 'judge', 'score', 'summary']
+judge_summary    paraphrase  MISS     MISS        63/155   ['report']
+judge_summary    bug-report  yes      yes          1/50    ['eval', 'printed', 'score', 'cases', 'threw']
+exit_code_trust  authored    yes      yes          4/165   ['data', 'files', 'reports', 'output']
+exit_code_trust  ticket      yes      yes          9/150   ['data', 'success']
 exit_code_trust  paraphrase  MISS     MISS        91/104   ['data']
 exit_code_trust  bug-report  yes      yes          1/67    ['pipeline', 'output', 'directory', 'empty']
-spa_tokens       authored    yes      yes          1/149   ['react', 'oidc', 'client', 'ts', 'keycloak', 'session']
+spa_tokens       authored    yes      yes          1/150   ['react', 'oidc', 'client', 'ts', 'keycloak', 'session']
 spa_tokens       ticket      yes      yes          1/71    ['oidc', 'client', 'ts', 'keycloak', 'access', 'page']
 spa_tokens       paraphrase  MISS     MISS      None/46    []
 spa_tokens       bug-report  MISS     MISS        25/62    ['session']
-rate_limiter     authored    yes      yes          8/217   ['rate', 'endpoint', 'redis']
+rate_limiter     authored    yes      yes          8/218   ['rate', 'endpoint', 'redis']
 rate_limiter     ticket      yes      yes          2/75    ['rate', 'limit', 'redis']
 rate_limiter     paraphrase  MISS     MISS      None/61    []
 rate_limiter     bug-report  MISS     MISS      None/74    []
-ci_linter        authored    yes      yes          1/150   ['step', 'ruff', 'fails', 'build', 'findings', 'output']
+ci_linter        authored    yes      yes          1/151   ['step', 'ruff', 'fails', 'build', 'findings', 'output']
 ci_linter        ticket      yes      yes          1/116   ['step', 'ruff', 'fail', 'findings']
-ci_linter        paraphrase  MISS     MISS        72/118   ['runs']
-ci_linter        bug-report  yes      yes          4/170   ['ci', 'linter', 'new']
+ci_linter        paraphrase  MISS     MISS        74/119   ['runs']
+ci_linter        bug-report  yes      yes          4/171   ['ci', 'linter', 'new']
 
 recall by variant (of 8): {'authored': 'harness 8/8, hook 7/8', 'ticket': 'harness 8/8, hook 7/8', 'paraphrase': 'harness 0/8, hook 0/8', 'bug-report': 'harness 3/8, hook 3/8'}
 
@@ -63,12 +64,12 @@ B. PRECISION on six real prompts from this session (hook config). For each of th
    2 term(s) ['updates', 'update']                    rarest df=6  | Docs and diagrams are the review surface, not byproducts —
    1 term(s) ['updates']                              rarest df=6  | An identifier sweep is done when grep returns zero — not w
    1 term(s) ['section']                              rarest df=9  | Pick one docstring format, and enforce that docstrings exi
-   1 term(s) ['writing']                              rarest df=11  | If the failure mode would surprise the next person who hit
+   1 term(s) ['writing']                              rarest df=12  | If the failure mode would surprise the next person who hit
    1 term(s) ['section']                              rarest df=9  | Code comments link durable docs, never rolling-state files
    1 term(s) ['site']                                 rarest df=7  | A declared-but-never-incremented metric is a working-looki
    1 term(s) ['site']                                 rarest df=7  | Leave-one-group-out CV crashes or degenerates when a group
    1 term(s) ['section']                              rarest df=9  | Docstrings follow Google style, and only their presence is
-   1 term(s) ['writing']                              rarest df=11  | Writing each function's contract down exposes the bugs tha
+   1 term(s) ['writing']                              rarest df=12  | Writing each function's contract down exposes the bugs tha
   would survive: >=2 terms: 4/12 · a term in <=3% of store: 10/12
 
 > 'what about the org knowwledge ideae is that a nich ?'
