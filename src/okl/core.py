@@ -167,7 +167,24 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     #                 defects rather than emitting one undifferentiated list.
     #   4. ROUTE    — turn the buckets into an ordered list of imperatives.
     repo_scope = f"repo:{repo}"
-    hits, replaced = _live_hits(store, task, limit, repo_scope, interests)
+    hits, replaced, exhausted = _live_hits(store, task, limit, repo_scope, interests)
+    # THE FLOOR. The search is an OR of the task's subject words, so on a short or generic
+    # task every slot fills with records that share one word with it ("point", "doc"):
+    # twelve imperatives chosen by a word in common, at about two thousand tokens a
+    # prompt (evals/results/probe-rephrase-20261021.txt, #257). A record is briefed only
+    # when it shares two subject words with the task, or one that is in its title or
+    # symptom, or one when the task has only one word. Trimmed records are counted, not hidden: the
+    # briefing says how many weak matches it left out.
+    hits, matched, weak = _apply_floor(store, hits, briefing_terms(task))
+    # The floor can empty a full window: when every fetched record was weak, a qualifying
+    # one ranked just past the window would read as "no close match". Widen the fetch,
+    # bounded, while the window was full and the floor left fewer than the limit
+    # (review on #259; the same shape as the retired-lesson widening in _live_hits).
+    window = limit
+    while len(hits) < limit and not exhausted and window < limit * 27:
+        window *= 3
+        wider, replaced, exhausted = _live_hits(store, task, window, repo_scope, interests)
+        hits, matched, weak = _apply_floor(store, wider, briefing_terms(task))
     # THE CUTOFF. store.search returns BM25-ranked results, but full-text matching is
     # permissive: on a mature store a plausible task matches most of it, so without a
     # cap the "briefing" becomes the library. Ranking already put the best first, so
@@ -178,6 +195,9 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     hits = hits[:limit]
 
     buckets = _bucket_by_type(hits)
+    for recs in buckets.values():
+        for pub in recs:
+            pub["matched_terms"] = matched.get(pub["id"], [])
     _attach_catches(store, buckets["armed_gates"])
     actions = _route_actions(buckets)
 
@@ -185,8 +205,8 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     # counted inside their own type bucket; including them would double-count.
     total = sum(len(v) for k, v in buckets.items() if k != "stale_warnings")
     out = {"repo": repo, "task": task, "match_count": total,
-           "next_actions": actions, "dropped_by_cutoff": dropped, **buckets,
-           "replaced": replaced[:3]}
+           "next_actions": actions, "dropped_by_cutoff": dropped, "weak_matches": weak,
+           **buckets, "replaced": replaced[:3]}
     # Zero matches has two very different causes: the store holds rules and none apply
     # here, or the store holds nothing at all. Reporting both as "proceed" is the
     # silence-as-safety failure this project exists to prevent, so the count travels
@@ -196,9 +216,64 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     return out
 
 
+def _matched_terms(terms: list[str], n: Node) -> list[str]:
+    """The task's lower-cased subject words that occur whole in the record's prose.
+
+    Whole-word, with letters and digits as word characters, which is how the FTS5
+    `unicode61` tokenizer splits text: `OKL_DATABASE_URL` is three words to both.
+    """
+    text = " ".join(x or "" for x in (n.title, n.symptom, n.body, n.fix, n.tags)).lower()
+    return [t for t in terms
+            if re.search(r"(?<![a-z0-9])" + re.escape(t) + r"(?![a-z0-9])", text)]
+
+
+def _in_subject(words: list[str], n: Node) -> bool:
+    """Whether any of `words` occurs whole in the record's title or symptom.
+
+    Those two fields say what a lesson is about and when it applies; the guidance tells
+    authors to keep the title short and put the distinguishing words in the symptom.
+    """
+    subject = " ".join(x or "" for x in (n.title, n_symptom(n))).lower()
+    return any(re.search(r"(?<![a-z0-9])" + re.escape(w) + r"(?![a-z0-9])", subject) for w in words)
+
+
+def n_symptom(n: Node) -> str:
+    """The record's symptom, or '' when it has none."""
+    return n.symptom or ""
+
+
+def _apply_floor(store: Store, hits: list[Node], terms: list[str],
+                 ) -> tuple[list[Node], dict[str, list[str]], int]:
+    """Keep the hits that share enough subject words with the task; count the rest.
+
+    The floor is two words, or one when the task has only one, or one that appears in the
+    record's title or symptom: those fields say what the lesson is about and when it
+    applies, so a task using that word is on its subject ("add an endpoint that sets a
+    price" reaches the price-tamper lesson through "price" in its symptom). A hit
+    below the floor still stays when it links one step to a hit above it (a Gate that
+    CATCHES a matched Defect, a Decision that SUPERSEDES one): the link is the relevance,
+    not the words. Returns the kept hits in rank order, each hit's matched words by id,
+    and how many were left out.
+    """
+    words = [t.lower() for t in terms]
+    floor = 2 if len(words) >= 2 else 1
+    matched = {n.id: _matched_terms(words, n) for n in hits}
+    strong = {n.id for n in hits
+              if len(matched[n.id]) >= floor
+              or (matched[n.id] and _in_subject(matched[n.id], n))}
+    if not strong:
+        # No hit to link to, so no neighbour lookup can rescue one (review on #259).
+        return [], matched, len(hits)
+    kept = [n for n in hits
+            if n.id in strong or any(m.id in strong for (_e, m) in store.neighbors(n.id))]
+    return kept, matched, len(hits) - len(kept)
+
+
 def _live_hits(store: Store, task: str, limit: int, repo_scope: str,
-               interests: list[str] | None) -> tuple[list[Node], list[dict[str, Any]]]:
-    """Steps 1 and 2 without retired lessons, and the pointers for the replaced ones.
+               interests: list[str] | None,
+               ) -> tuple[list[Node], list[dict[str, Any]], bool]:
+    """Steps 1 and 2 without retired lessons, the pointers for the replaced ones, and
+    whether the search was exhausted (returned fewer rows than the window asked for).
 
     Obsolete lessons, and superseded ones whose live replacement this repo can see, leave
     BEFORE the cut, so they never take a live lesson's slot (okl review R2); check never
@@ -210,9 +285,11 @@ def _live_hits(store: Store, task: str, limit: int, repo_scope: str,
     # turns an empty query into a substring match on "" that returns every record.
     query = " ".join(briefing_terms(task))
     if not query:
-        return [], []
+        return [], [], True
     fetch = limit * 3
+    asked = fetch
     for _ in range(3):
+        asked = fetch
         found = store.search(query, limit=fetch)
         live: list[Node] = []
         replaced: list[dict[str, Any]] = []
@@ -230,7 +307,9 @@ def _live_hits(store: Store, task: str, limit: int, repo_scope: str,
         if not left_out or len(found) < fetch:
             break
         fetch += left_out
-    return live, replaced
+    # Exhaustion is judged against the window the last search asked for, not the wider one
+    # the loop may have set after it (review on #259).
+    return live, replaced, len(found) < asked
 
 
 def _live_replacement(store: Store, n: Node, repo_scope: str,
@@ -677,6 +756,11 @@ def briefing_notice(result: dict[str, Any], shown: int = 3) -> str | None:
     if not result.get("match_count"):
         if result.get("store_records") == 0:
             return "okl · the store is empty, so nothing was briefed — see docs/GETTING-STARTED.md"
+        if result.get("weak_matches"):
+            # Not silence: okl ran and found only single-word matches, which is a different
+            # fact from an empty store and from a task with no subject words.
+            return (f"okl · nothing briefed: {result['weak_matches']} weak match(es) on a "
+                    "single word were left out")
         return None
     titles = [a["target"] for a in result.get("next_actions") or []]
     for key in ("armed_gates", "relevant_defects", "rules", "decisions", "live_retractions",
@@ -778,6 +862,10 @@ def render_check_for_agent(result: dict[str, Any]) -> str:
                          "no encoded knowledge to match against yet. That is different from "
                          "\"no rule applies here\". Run `okl seed`, or record your first rule "
                          "with `okl record`.")
+        elif result.get("weak_matches"):
+            lines.append(f"_No encoded rule matched this task closely: {result['weak_matches']} "
+                         "record(s) sharing a single word with it were left out. Proceeding with "
+                         "a clean slate — record anything you learn with `okl record`._")
         else:
             lines.append("_No encoded rule matched this task. Proceeding with a clean slate — "
                          "record anything you learn with `okl record`._")

@@ -36,7 +36,7 @@ from xml.sax.saxutils import escape
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src"))
 
-from okl.core import _in_scope, _live_hits, briefing_terms  # noqa: E402
+from okl.core import _apply_floor, _in_scope, _live_hits, briefing_terms, check  # noqa: E402
 from okl.store import Node, Store, split_tags  # noqa: E402
 
 # The task traced through the pipeline. A real eval task, so the diagram depicts a case the
@@ -121,12 +121,25 @@ def trace(store: Store | None = None) -> dict:
     # Retired lessons (obsolete, or superseded by a live one this repo can see) leave before
     # the cut. Take the survivors from _live_hits itself, the function check() calls; if it had
     # to widen its window, this trace's single fetch no longer matches it, so stop.
-    live, _ = _live_hits(store, TRACE_TASK, LIMIT, repo_scope, interests)
+    live, _, _ = _live_hits(store, TRACE_TASK, LIMIT, repo_scope, interests)
     live_ids = {n.id for n in live}
     if not live_ids <= {n.id for n in after_tags}:
         raise SystemExit("ABORT: _live_hits widened its search past this trace's window — "
                          "trace the wider fetch before rendering.")
     retired = [n for n in after_tags if n.id not in live_ids]
+
+    # The floor: two shared subject words, or one when the task has only one; a hit below
+    # it stays only through a one-step link to a hit above it (core._apply_floor).
+    kept, _matched, weak = _apply_floor(store, live, terms)
+    # check() widens the fetch when a full window leaves fewer than the limit above the
+    # floor. This trace applies the floor to one window, so it asks check() itself and stops
+    # if the briefing it would deliver differs from the counts traced here.
+    delivered_by_check = check(store, TRACE_REPO, TRACE_TASK, LIMIT, interests)
+    if (delivered_by_check["match_count"] != min(LIMIT, len(kept))
+            or delivered_by_check["weak_matches"] != weak):
+        raise SystemExit("ABORT: check() widened past this trace's window (its briefing holds "
+                         f"{delivered_by_check['match_count']} records, the trace {min(LIMIT, len(kept))}); "
+                         "trace the wider fetch before rendering.")
 
     applies_set = sum(1 for n in store.all_nodes()
                       if (n.applies_to or "").strip() and n.applies_to.strip().lower() != "any")
@@ -140,8 +153,9 @@ def trace(store: Store | None = None) -> dict:
         "after_applies": len(after_applies), "dropped_applies": len(dropped_applies),
         "after_tags": len(after_tags), "dropped_tags": len(dropped_tags),
         "retired": len(retired), "live": len(live),
-        "delivered": min(LIMIT, len(live)),
-        "trimmed": max(0, len(live) - LIMIT),
+        "after_floor": len(kept), "weak": weak,
+        "delivered": min(LIMIT, len(kept)),
+        "trimmed": max(0, len(kept) - LIMIT),
     }
     if tmp is not None:
         store.close(); tmp.cleanup()
@@ -204,16 +218,21 @@ def render(d: dict) -> str:
          "it hid 35 of 172 records and the briefed arm then reproduced a defect it dropped.",
          f'{d["after_tags"]} survive', f'{d["dropped_tags"]} dropped: no shared subject',
          d["after_tags"] / f, d["dropped_tags"] / f, "ANY-MATCH"),
-        ("6", "CUTOFF", "Retired lessons out, then the top 12",
-         "Obsolete and replaced lessons leave first, so they never take a live slot. The "
+        ("6", "FLOOR", "Two shared subject words, or one in the title or symptom",
+         "A record found by one word in common ('point', 'doc') outside its title and symptom "
+         "is left out and counted, unless it links one step to a kept record. Retired leave too.",
+         f'{d["after_floor"]} survive', f'{d["weak"]} dropped: one shared word, {d["retired"]} retired',
+         d["after_floor"] / f, (d["weak"] + d["retired"]) / f, "DROPS"),
+        ("7", "CUTOFF", "The top 12",
+         "Ranking already put the best first; the cut keeps the briefing short. The "
          "number cut travels with the result.",
-         f'{d["delivered"]} delivered', f'{d["trimmed"]} trimmed, {d["retired"]} retired',
+         f'{d["delivered"]} delivered', f'{d["trimmed"]} trimmed',
          d["delivered"] / f, d["trimmed"] / f, "TRUNCATES"),
-        ("7", "SHAPE", "Bucket by type, then route to imperatives",
+        ("8", "SHAPE", "Bucket by type, then route to imperatives",
          "Buckets: gates, defects, retractions, tombstones, threat prior-art, rules, decisions, "
          "vocabulary, related context. Stale demotes, never deletes. Then ARM / FIX / AVOID.",
          "gates -> defects+rules", "-> retractions -> tombstones", 0.0, 0.0, ""),
-        ("8", "RENDER", "Three surfaces, one pipeline",
+        ("9", "RENDER", "Three surfaces, one pipeline",
          "agent | actions | json. A zero-match result carries the store size, so 'no rules "
          "apply' can never be confused with 'the store is empty'.",
          "hook | MCP | CI", "", 0.0, 0.0, ""),
@@ -226,7 +245,7 @@ def render(d: dict) -> str:
              f'How an okl briefing gets built</text>')
     o.append(f'<text x="{PAD}" y="72" font-size="14" fill="{INK2}">'
              f'{escape(str(d["corpus"]))} records and one task sentence become the '
-             f'{d["limit"]} an agent reads. Four stages narrow it; only applies_to may exclude on validity.'
+             f'{d["limit"]} an agent reads. Five stages narrow it; only applies_to may exclude on validity.'
              f'</text>')
     for i, ln in enumerate([
         "GENERATED from the live pipeline - docs/render_pipeline_diagram.py",
@@ -283,7 +302,7 @@ def render(d: dict) -> str:
             o.append(_bar(tx, y + ROW_H - 20, W - PAD - tx - 14, keep, cut))
         y += ROW_H
     o.append(f'<text x="{PAD}" y="{h - 26}" font-size="11" font-family="{MONO}" fill="{INK3}">'
-             f'src/okl/core.py briefing_terms() / _live_hits() / _in_scope() . src/okl/store.py search() . '
+             f'src/okl/core.py briefing_terms() / _live_hits() / _in_scope() / _apply_floor() . src/okl/store.py search() . '
              f'regenerate: python3 docs/render_pipeline_diagram.py</text>')
     o.append("</svg>")
     return "\n".join(o) + "\n"
