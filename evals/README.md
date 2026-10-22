@@ -56,6 +56,14 @@ Judge == generator exits 3. A run whose failure rate is above 20% exits 1.
 
 Results land in `evals/results/ab-<timestamp>.json` — commit them; they're the receipts.
 
+Two cheaper checks run with no model at all. `evals/preflight.py` asks whether each task's
+governing record reaches its briefing. `evals/probe_rephrase.py` asks the two questions the
+A/B cannot: whether that record still reaches the top-12 when the task is rephrased (a
+terse ticket, a paraphrase sharing no nouns, a bug report), and how many of the twelve
+records a short real prompt returns match more than one subject word. Its output is a
+diagnostic receipt, `evals/results/probe-rephrase-<date>.txt`; the rephrasings are
+hand-written, which is its main bias, and it is not pooled with any A/B.
+
 ## Provenance of the originally quoted numbers
 
 An earlier held-fixed A/B of the same design, run on 2026-07-17, produced figures whose
