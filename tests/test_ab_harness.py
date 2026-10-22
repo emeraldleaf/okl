@@ -302,3 +302,24 @@ def test_tree_state_fails_closed_when_git_status_fails(ab, tmp_path, monkeypatch
     one, two = ab.tree_state(), ab.tree_state()
     assert one[0].endswith("+unknown") and one[1] != two[1]
     assert ab.head_moved(one, two) is not None
+
+
+def test_tree_state_fails_closed_when_git_diff_fails(ab, tmp_path, monkeypatch):
+    """A dirty tree whose diff cannot be read must not fingerprint equal to itself either."""
+    import subprocess
+    repo = tmp_path / "r"
+    (repo / "src" / "okl").mkdir(parents=True)
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    subprocess.run(["git", "-C", str(repo), "-c", "user.email=t@t", "-c", "user.name=t",
+                    "commit", "-q", "--allow-empty", "-m", "base"], check=True)
+    (repo / "src" / "okl" / "new.py").write_text("x = 1\n")   # dirty, so the diff runs
+    monkeypatch.setattr(ab, "REPO", repo)
+    real = subprocess.run
+
+    def broken(cmd, *a, **kw):
+        if "diff" in cmd:
+            return subprocess.CompletedProcess(cmd, 128, stdout=b"", stderr=b"fatal")
+        return real(cmd, *a, **kw)
+    monkeypatch.setattr(ab.subprocess, "run", broken)
+    one, two = ab.tree_state(), ab.tree_state()
+    assert one[0].endswith("+unknown") and one[1] != two[1]

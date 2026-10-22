@@ -338,10 +338,13 @@ def tree_state() -> tuple[str | None, str]:
     entries = [e for e in probe.stdout.decode("utf-8", "surrogateescape").split("\0") if e]
     if not entries:
         return head, full
-    diff = subprocess.run([*git, "diff", "HEAD", "--", "src/okl"], capture_output=True).stdout
+    diffed = subprocess.run([*git, "diff", "HEAD", "--", "src/okl"], capture_output=True)
+    if diffed.returncode != 0:
+        # Same rule as the status probe: a diff that cannot be read must not compare equal.
+        return f"{head}+unknown", f"{full}+diff-failed-{os.urandom(4).hex()}"
     # One digest per untracked file, keyed by path: a lossless manifest, so two files whose
     # contents shift a boundary ("ab","c" -> "a","bc") do not hash alike.
-    manifest = hashlib.sha256(diff)
+    manifest = hashlib.sha256(diffed.stdout)
     for entry in entries:
         manifest.update(entry.encode("utf-8", "surrogateescape") + b"\0")
         if entry.startswith("?? "):
