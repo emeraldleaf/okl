@@ -37,10 +37,10 @@ REPO = Path(__file__).resolve().parent.parent
 # is an admission recorded in REPORT.md, not a way to make the check quiet: the task still
 # runs, and its result is read as "the briefing without this rule", which is a different
 # question from the one the task was written to ask.
-ACCEPTED_GAPS = {
-    "exit_code_trust": "rule ranks below the top-12 cutoff for this task's wording; "
-                       "needs limit>=40 to surface (REPORT.md §4b correction)",
-}
+# Empty since 2026-10-22. `exit_code_trust` sat here from the §4b correction (its lesson
+# ranked 54th for the task's own wording) until the lesson gained a symptom written in the
+# words a developer would use; it now ranks 4th (REPORT.md §4o).
+ACCEPTED_GAPS: dict[str, str] = {}
 
 
 def main() -> int:

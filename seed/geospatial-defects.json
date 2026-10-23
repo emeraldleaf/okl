@@ -3,6 +3,7 @@
   "nodes": [
     {
       "key": "d14",
+      "symptom": "a model or scaffold config whose class_path entries fail to import at runner startup, often on a rented GPU, after a spec said they were correct",
       "type": "Defect",
       "scope": "org",
       "repo": "geospatial-ml-pipeline",
@@ -15,6 +16,7 @@
     },
     {
       "key": "g_classpath",
+      "symptom": "a config file that declares class_path or module strings nothing imports until the training run starts",
       "type": "Gate",
       "scope": "org",
       "found_by": "the geospatial pipeline",
@@ -26,6 +28,7 @@
     },
     {
       "key": "d15",
+      "symptom": "a pipeline or batch step exits 0 and reports success while its output directory is empty or far smaller than expected",
       "type": "Defect",
       "scope": "org",
       "repo": "geospatial-ml-pipeline",
@@ -37,6 +40,7 @@
     },
     {
       "key": "g_verify_outputs",
+      "symptom": "a script that treats exit code 0 from a batch step as proof the outputs exist",
       "type": "Gate",
       "scope": "org",
       "found_by": "the geospatial pipeline",
@@ -48,6 +52,7 @@
     },
     {
       "key": "d16",
+      "symptom": "the boot disk fills during a data run even though TMPDIR points at the data drive; files appear under / from a library's own temp setting",
       "type": "Defect",
       "scope": "org",
       "repo": "geospatial-ml-pipeline",
@@ -60,6 +65,7 @@
     },
     {
       "key": "d18",
+      "symptom": "training crashes with 'Target N is out of bounds' where N equals num_classes, or predictions never include the highest class id",
       "type": "Defect",
       "scope": "org",
       "repo": "geospatial-ml-pipeline",
@@ -72,6 +78,7 @@
     },
     {
       "key": "d19",
+      "symptom": "a segmentation decoder predicts the wrong spatial shape on a time-series input, such as 12x2 against a 2x2 target, when the input is [bands, timesteps, H, W]",
       "type": "Defect",
       "scope": "org",
       "repo": "geospatial-ml-pipeline",
@@ -107,6 +114,7 @@
     },
     {
       "key": "d12",
+      "symptom": "sample points from a public dataset plot in the wrong hemisphere or in the ocean when mapped; latitude and longitude columns look swapped",
       "type": "Defect",
       "scope": "org",
       "repo": "geospatial-ml-pipeline",
@@ -118,6 +126,7 @@
     },
     {
       "key": "d11",
+      "symptom": "a cross-validated AUC far below chance, around 0.2 to 0.3, on spatially clustered data with an unshuffled or ungrouped KFold",
       "type": "Defect",
       "scope": "org",
       "repo": "geospatial-ml-pipeline",

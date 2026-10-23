@@ -280,6 +280,7 @@
   },
   {
    "key": "pd_zero_warning_build",
+   "symptom": "a build that passes with analyzer warnings in its output, or a banned API such as Task.WaitAll, Parallel.For or Thread.Sleep compiling without complaint",
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §19",
    "tags": "dotnet",

@@ -74,18 +74,53 @@ def overscope_signals(rec: Any, repo_names: Iterable[str] = ()) -> list[str]:
     return out
 
 
+ADVICE_TYPES = ("Rule", "Defect", "Gate")
+
+
+def missing_symptom(rec: Any) -> bool:
+    """Whether an advice record has no symptom: the field a bug report matches against.
+
+    A prompt describing what went wrong ("users get logged out on refresh") reaches a
+    lesson through its symptom; a record with none is found only by a prompt that happens
+    to use its title's or body's words (#258).
+    """
+    return _field(rec, "type") in ADVICE_TYPES and not _field(rec, "symptom").strip()
+
+
 def hygiene_warnings(records: Iterable[Any], repo_names: Iterable[str] = ()) -> list[str]:
-    """One line per flagged record, for `okl seed` and the metric's listings."""
+    """One line per flagged record, plus one line per batch for records with no symptom,
+    for `okl seed` and the metric's listings."""
+    return hygiene_findings(records, repo_names)[0]
+
+
+def hygiene_findings(records: Iterable[Any], repo_names: Iterable[str] = ()) -> tuple[list[str], int]:
+    """The warning lines and the number of records they cover.
+
+    The missing-symptom warning is one line for the whole batch, so a caller counting
+    lines would count four symptom-less records as one; the second value counts records.
+    """
     names = list(repo_names)
     lines = []
+    flagged = 0
+    records = list(records)
+    no_symptom = [(_field(r, "id") or _field(r, "key") or _field(r, "title")[:32]) for r in records
+                  if missing_symptom(r)]
+    flagged += len(no_symptom)
+    if no_symptom:
+        shown = ", ".join(no_symptom[:6]) + (f", and {len(no_symptom) - 6} more" if len(no_symptom) > 6 else "")
+        lines.append(f"{len(no_symptom)} record(s) have no symptom ({shown}) — a prompt that describes "
+                     "what went wrong finds a lesson through its symptom; write one in the words a "
+                     "developer would use when it bites")
     for rec in records:
         ident = _field(rec, "id") or _field(rec, "key") or _field(rec, "title")[:48]
         trace = trace_signals(rec)
         over = overscope_signals(rec, names)
+        if trace or over:
+            flagged += 1
         if trace:
             lines.append(f"{ident}: trace-shaped ({'; '.join(trace)}) — a lesson is a rule, a "
                          "decision or a defect with its cause, not a transcript; traces transfer badly")
         if over:
             lines.append(f"{ident}: over-scoped org record ({'; '.join(over)}) — an org lesson "
                          "that names one repository's world is the kind that transfers badly")
-    return lines
+    return lines, flagged

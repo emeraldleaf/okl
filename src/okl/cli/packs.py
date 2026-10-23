@@ -208,14 +208,15 @@ def cmd_seed(args: argparse.Namespace) -> int:
     # Hygiene first, and for every file before any import (#255): a trace-shaped or
     # over-scoped org record is warned about, never refused, unless --strict asks CI on a
     # ledger repo to fail the pull request that adds one.
-    from ..seed import hygiene_warnings_for_file
+    from ..seed import hygiene_findings_for_file
     known = sorted({n.scope[len("repo:"):] for n in client.all_nodes() if n.scope.startswith("repo:")}
                    | {n.repo for n in client.all_nodes() if n.repo})
     flagged = 0
     for t in targets:
-        for line in hygiene_warnings_for_file(t, known):
+        lines, count = hygiene_findings_for_file(t, known)
+        for line in lines:
             print(f"  ! {Path(t).name}: {line}", file=sys.stderr)
-            flagged += 1
+        flagged += count
     if flagged and getattr(args, "strict", False):
         print(f"okl seed --strict: {flagged} record(s) flagged above; nothing imported.",
               file=sys.stderr)

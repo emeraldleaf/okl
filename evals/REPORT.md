@@ -560,8 +560,10 @@ a trend.
 *Note, 2026-10-10:* the second 2/3 in that list is the haiku-generated run, which sonnet
 judged. And "at or near its baseline" below does not hold for every run: 0003 read 2/3 →
 0/3, and 1238 and 1323 read 3/3 → 1/3. On the documented instrument (sonnet generator,
-haiku judge) the pooled figure is 26/34 → 14/34 across its thirteen receipts, §4j's, §4k's,
-§4l's and §4m's included (updated 2026-10-11): reduced, not prevented.
+haiku judge, as the aliases name them) the pooled figure is 29/37 → 15/37 across its
+fourteen receipts, §4j's, §4k's, §4l's, §4m's and §4o's included; §4o's aliases resolved to
+different models and start their own series (§4o), so on the earlier models alone the figure
+is 26/34 → 14/34 across thirteen (updated 2026-10-22): reduced, not prevented.
 
 What is *not* judge-dependent: this is not a retrieval failure. Pre-flight confirms the
 rule (`rx_tokens_localstorage`) reaches the briefing, and that record is deliberately unset
@@ -1134,16 +1136,105 @@ where a shorter briefing is the variable.
 **What this cannot settle.** Whether a briefing that loses a weak but useful record costs
 anything downstream: no eval task exercises that case. The hook's one-line notice now says
 how many records the floor left out, so the exposure log can be read for it.
+## 4o. PRE-REGISTERED: twenty seed records gain a symptom, and the §4b gap closes (2026-10-22)
+
+Written before any live run, per §2b. A corpus change, not a retrieval change, but one the
+instrument can see, so it is registered the same way.
+
+**What changed.** Twenty org Rules, Defects and Gates in the seed packs had no `symptom`
+(nine of nine in `geospatial-defects`, six of eight in `rag-defects`, four of six in
+`dotnet-defects`, one in `dotnet-decisions`). Each now carries one, written in the words a
+developer would use when the problem bites, after the lesson's own title, body and fix.
+`okl seed` warns when an advice record has none (#258, step 2). Nothing in the retrieval
+path changed; the instrument is §4m's.
+
+**The tasks at risk, measured first.** No task loses its governing record: a symptom only
+adds words a record can be found by, and all eight are present. One task gains the record it
+exists to test. `exit_code_trust`'s lesson (`seed:geospatial-defects:d15`) ranked 54th for
+the task's own wording and sat in `evals/preflight.py` as the accepted gap since the §4b
+correction; with the symptom "a pipeline or batch step exits 0 and reports success while its
+output directory is empty or far smaller than expected" it ranks 4th, the pre-flight reads
+8 of 8 with no accepted gap, and the probe's bug-report row reads 3 of 8 (was 2); receipt
+`evals/results/probe-rephrase-20261022-symptoms.txt`.
+
+The twelve-record membership of the briefings did change, which a first draft of this
+section denied and a review caught: comparing the briefed id sets on two stores seeded from
+the packs before and after, `judge_summary` is identical and the other seven each swap
+records at the cutoff. Six swap one: the new symptom on `d15` carries words common in task
+prompts ("pipeline", "step", "reports", "output"), so it enters the `idor_endpoint` and
+`price_tamper` briefings in place of a dotnet decision, and elsewhere one peripheral record
+replaces another (`react_fetch`, `spa_tokens`, `rate_limiter`, `ci_linter`). `exit_code_trust`
+swaps three, gaining its own lesson, `nc_arch_reviewer` and `qz_crosstab` for a naming rule, a
+testing rule and the unpinned-linter rule. None of the records that left is a task's
+governing record; whether a briefing that gains an off-topic defect is any worse is what the
+floor (#259) exists to keep small, and this corpus change is a reason to revisit the probe
+with it on.
+
+**Prediction.** On the next run of this instrument, `exit_code_trust` briefed reproductions
+fall toward 0 of 3; every earlier briefed sample of that task was the briefing without its
+lesson. The other seven tasks and the baseline arm read within the floor of §4m.
+
+**Falsifier.** `exit_code_trust` reproduces when briefed with its lesson present in the
+briefing (the receipt's briefing text shows it), at the same rate as before: the lesson then
+does not prevent the defect it describes, and its fix text needs another look before the
+symptom pass counts as an improvement.
+
+**What this cannot settle.** Whether the other nineteen symptoms help: no eval task
+exercises them, and the probe's bug-report row holds only the eight task lessons, so it
+measures the one evaluated lesson and says nothing about the other nineteen. Their measure
+would be rephrased prompts for records outside the eval set, which the probe does not yet
+carry.
+
+### Result (2026-10-22)
+
+Receipt: `evals/results/ab-20261022-0455.json`. 48 runs, no failures, `judge_max_chars`
+40,000, interests unfiltered. Generator `claude -p --model sonnet`, judge `--model haiku`.
+
+| | baseline | briefed |
+|---|---|---|
+| this run | 6/24 — 25% | 1/24 — 4% |
+
+Per task: `spa_tokens` baseline 3/3, briefed 1/3 (the one briefed reproduction, as in §4k
+and §4m); `ci_linter` baseline 3/3, briefed 0/3; every other task 0/3 in both arms,
+`exit_code_trust` included.
+
+**The prediction's object did not occur.** `exit_code_trust`'s baseline read 0/3 here, so
+its briefed 0/3 shows nothing about the lesson: there was no reproduction to prevent. The
+task has reproduced unbriefed before, so the prediction stands for the next run that
+produces one. **The falsifier did not trigger**: no briefed sample of that task reproduced.
+
+**Two things make this run its own series, not a point in §4m's.** First, the models
+behind the aliases changed: the receipt resolves the generator to `claude-sonnet-5-5` (with
+`claude-haiku-5-5` as the CLI's helper model) and the judge to `claude-haiku-5-5`, where
+every run from §4k to §4m resolved to `claude-sonnet-4-6` and `claude-haiku-4-5`. By §2b a
+new generator or judge starts a new series; the 6/24 baseline is this pair's first reading
+and its own floor is unknown until a second run. The judge-is-generator guard passed as the
+harness defines it (equal sets, a helper model beside the main one is not the judge grading
+itself), and that definition is the right place to look if a reader doubts it.
+
+Second, a provenance fault in how the run was made, recorded here rather than tidied. The
+harness renders the briefed arm from the working tree (`python -m okl` on `src/`) and stamps
+`okl_commit` from the tree's HEAD when it writes the receipt. The run was started on this
+branch at `acdcb99`, and the tree was switched to the relevance-floor branch (#259) while
+it ran, to answer that PR's review; the receipt therefore names `b54e075`, that branch's
+head, and the later samples were briefed by code carrying the floor. The two codes brief the
+eight eval tasks identically (§4n's `test_the_floor_changes_no_eval_briefing`, and the
+store was constant), so the briefed input did not change mid-run; but a receipt should not
+need that argument. A lesson is recorded, and the harness is to record HEAD at start and
+refuse to write a usable receipt when it has moved.
 
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
    task the sonnet baseline failed was fully prevented except one residual
    (judge_summary 1/3). *Note, 2026-10-10:* "fully prevented" held in no 3-sample run
-   after that one. spa_tokens is reduced, not prevented: 32/40 → 19/40 (80% → 48%) across
-   the 15 receipts that include it, and 26/34 → 14/34 on the documented instrument
-   (sonnet generator, haiku judge). The 15 include §4j's run, where it read 0/2 → 0/3,
-   §4k's, 1/3 → 1/3, §4l's, 1/3 → 1/2, and §4m's, 2/3 → 1/3 (updated 2026-10-11).
+   after that one. spa_tokens is reduced, not prevented: 35/43 → 20/43 (81% → 47%) across
+   the 16 receipts that include it, and 29/37 → 15/37 on the receipts the aliases name as
+   sonnet generator and haiku judge (the pool `tests/test_docs.py` recomputes). §4o's run
+   among them resolved those aliases to different models and starts its own series, so on
+   the earlier models alone the figure is 26/34 → 14/34. The 16 include §4j's run, where it
+   read 0/2 → 0/3, §4k's, 1/3 → 1/3, §4l's, 1/3 → 1/2, §4m's, 2/3 → 1/3, and §4o's, 3/3 → 1/3
+   (updated 2026-10-22).
 2. **Cross-model headline: briefed haiku (12%) beat unbriefed sonnet (33%)** on the
    identical task set — a briefed budget model reproduced org-known defect classes at
    roughly a third the rate of an unbriefed frontier model. One haiku run, never
@@ -1176,9 +1267,11 @@ how many records the floor left out, so the exposure log can be read for it.
    pool reads 68 of 164 (41%) against 10 of 165 (6%). It leaves out §4f (judged by opus,
    not the documented instrument) and every run from §4j on, because each of those
    started a new series (§4j's unbriefed arm moved 26 points with nothing changed; §4k
-   and §4m changed the instrument). Pooling all twelve comparable receipts, those
-   included, reads 102 of 280 (36%) against 16 of 281 (6%), leaving out §4j's plan-only
-   sample as §4j itself does. Read it with §6: one-shot
+   and §4m changed the instrument). For reference, the aggregate over all thirteen receipts
+   that the alias and run-shape filters select, those included, reads 108 of 304 (36%)
+   against 17 of 305 (6%), leaving out §4j's plan-only sample as §4j itself does; it spans
+   several model series (§4o's among them), so it is an alias-selected aggregate, not a
+   comparable-series estimate. Read it with §6: one-shot
    code on bait tasks written to invite defects the store already knew about, a small
    n, and nothing about code quality improving over time.
 

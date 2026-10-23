@@ -29,6 +29,7 @@
   },
   {
    "key": "qz_crosstab",
+   "symptom": "an eval run reports one average score with no breakdown of whether the retrieval hit before generation failed, and a whole session goes into tuning the wrong component",
    "type": "Rule",
    "scope": "org",
    "repo": "python-rag-service",
@@ -40,6 +41,7 @@
   },
   {
    "key": "qz_fixtures",
+   "symptom": "entity or parser tests pass at 100% on hand-written fixture files while the live index holds a wrong value, such as an exhibit number indexed as a company",
    "type": "Defect",
    "scope": "org",
    "repo": "python-rag-service",
@@ -51,6 +53,7 @@
   },
   {
    "key": "qz_identity",
+   "symptom": "a question about which documents share a property, or how many there are, answered by similarity search over chunks, so the answer changes with top-k",
    "type": "Rule",
    "scope": "org",
    "repo": "python-rag-service",
@@ -62,6 +65,7 @@
   },
   {
    "key": "qz_wrong_corpus",
+   "symptom": "two eval runs of the same code disagree, and the container and the config file name different vector collections, or several similarly named collections exist and one is empty",
    "type": "Defect",
    "scope": "repo",
    "repo": "python-rag-service",
@@ -73,6 +77,7 @@
   },
   {
    "key": "qz_broken_tool",
+   "symptom": "an agent retries the same tool call until its step budget is gone because every call throws, and the comparison then blames the agent architecture",
    "type": "Defect",
    "scope": "org",
    "repo": "python-rag-service",
@@ -84,6 +89,7 @@
   },
   {
    "key": "qz_unequal_budget",
+   "symptom": "two retrieval arms compared with different top-k, token or step budgets, and the gap attributed to their design",
    "type": "Defect",
    "scope": "org",
    "repo": "python-rag-service",
@@ -95,6 +101,7 @@
   },
   {
    "key": "qz_agent_contract",
+   "symptom": "an agent loop that will call a tool name the model invented, or a mutating tool shipped without argument validation, an approval mode or alerting",
    "type": "Rule",
    "scope": "org",
    "repo": "python-rag-service",

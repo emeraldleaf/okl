@@ -119,6 +119,7 @@ This step is what makes the import worth trusting. For each record:
 4. Check for overlap with lessons already in the store: `okl search "<a few words>"`. Keep one copy.
 5. Put the decision and its reason at the start of `body`. A briefing shows only the start of a long body.
 6. Leave `applies_to` unset. It filters only org-scoped lessons, and a wrong value hides a lesson without warning.
+7. Give every Rule, Defect and Gate a `symptom` in the words a developer uses when it bites ("users get logged out when they refresh", not "token storage"). A prompt that describes what went wrong reaches a lesson through its symptom, and a record without one is found only by a prompt that happens to use its title's words. `okl seed` warns when one is missing.
 
 Then check the file as a whole:
 
