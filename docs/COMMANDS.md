@@ -51,6 +51,9 @@ okl check --hybrid   # fuse the nearest records by that embedding with the full-
                      #   candidates (linear, the measured configuration, or --hybrid rrf);
                      #   `"hybrid": "linear"` in .okl/config.json or OKL_HYBRID turns it on for
                      #   every check. What it buys and costs: REPORT §4q.
+okl check --index    # append every other lesson in scope as `- [id] title`, so an agent can
+                     #   fetch one with `okl show <id>` when the briefing did not select it.
+                     #   A treatment under measurement (REPORT §4r); about 120 characters a lesson.
 okl seed <pack> --strict
                      # exit 2 instead of importing when an advice record has no symptom,
                      #   a record is trace-shaped, or an org record names one repository's

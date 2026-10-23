@@ -120,6 +120,7 @@ class Client:
         self.repo = self.config.get("repo") or Path.cwd().name
         self.interests = self.config.get("interests") or []
         self.hybrid = hybrid_setting(os.environ.get("OKL_HYBRID"), self.config.get("hybrid"))
+        self.index = False   # the index arm (REPORT §4r): set per call by `okl check --index`
         self._store: Store | None = None
 
     @property
@@ -243,13 +244,13 @@ class Client:
         """
         repo = repo or self.repo
         payload = {"repo": repo, "task": task, "interests": self.interests or None,
-                   "hybrid": self.hybrid}
+                   "hybrid": self.hybrid, "index": self.index}
         if limit is not None:
             payload["limit"] = limit
         if self.mode == "remote":
             result = self._post("/check", payload)
         else:
-            kw: dict[str, Any] = {"interests": self.interests, "hybrid": self.hybrid}
+            kw: dict[str, Any] = {"interests": self.interests, "hybrid": self.hybrid, "index": self.index}
             if limit is not None:
                 kw["limit"] = limit
             store = self._local_store()

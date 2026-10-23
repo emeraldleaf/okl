@@ -1,4 +1,5 @@
 """evals/preflight.py gates an A/B on the briefing the run will use, under the run's own interests."""
+import json
 import os
 import subprocess
 import sys
@@ -41,3 +42,18 @@ def test_preflight_reads_the_interests_the_briefed_arm_runs_with(tmp_path):
     assert "interests=none (unfiltered" in plain.stdout, plain.stdout
     assert f"interests={FILTERED}" in filtered.stdout, filtered.stdout
     assert filtered.returncode == 1 and "[MISSING] react_fetch" in filtered.stdout, filtered.stdout + filtered.stderr
+
+
+def test_preflight_gates_the_task_file_it_is_given_and_can_accept_a_missing_lesson(tmp_path):
+    """The harness passes the task set it runs; a held-out task whose briefing lacks its lesson
+    fails the gate unless the run declares that absence as its subject (review on #269)."""
+    seeded = _run([sys.executable, "-m", "okl", "seed", str(ROOT / "seed")], tmp_path)
+    assert seeded.returncode == 0, seeded.stdout + seeded.stderr
+    tasks = tmp_path / "tasks.jsonl"
+    tasks.write_text(json.dumps({"id": "far/paraphrase", "task": "arrange the furniture in the lobby by colour",
+                                 "signal": "n/a", "defect_node": "seed:dotnet-defects:nc_idor"}) + "\n")
+    script = str(ROOT / "evals" / "preflight.py")
+    refused = _run([sys.executable, script, "--tasks", str(tasks)], tmp_path)
+    assert refused.returncode == 1 and "[MISSING] far/paraphrase" in refused.stdout, refused.stdout
+    accepted = _run([sys.executable, script, "--tasks", str(tasks), "--accept-missing"], tmp_path)
+    assert accepted.returncode == 0 and "accepted by --accept-missing: far/paraphrase" in accepted.stdout, accepted.stdout

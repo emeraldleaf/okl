@@ -1465,6 +1465,102 @@ over every vector that holds to roughly 100,000 of them (under a millisecond at 
 at 50,000, plus 14 and 49 ms to read them; `okl.semantic`'s docstring has the measurements
 and the next tier); and the ADR amendment. The hook never reaches the network for any of it.
 
+## 4r. PRE-REGISTERED: the index arm, measured where it can act (2026-10-23)
+
+Written before the run, per §2b, for #258's first vectorless arm, on a new instrument.
+
+**The question.** §4q measured retrieval as recall: is the governing lesson among the twelve
+briefed? The index arm asks something the probe cannot: when the briefing names every other
+lesson in scope by id and title, does the agent fetch the one it needs? The one eval cited
+on #258 scored an always-present index at 100% where loading on demand scored about half;
+that was a different setup (skills, not lessons), and nothing has measured it for okl.
+
+**The instrument, and why it is a new series.** The generator is agentic: `claude -p` may
+run one tool, `okl show <id>` (`--allowedTools "Bash(okl show:*)"`), against the store this
+harness reads, through an `okl` shim on its PATH that logs every invocation. The judge is
+the §4m judge, haiku, unchanged. The tasks are the 24 held-out rephrasings
+(`evals/heldout_tasks.jsonl`, built by `evals/make_heldout_tasks.py` from the blind set),
+each judged by its authored task's signal. Three arms, three samples each: `baseline` (no
+briefing), `briefed` (the twelve-record briefing), `indexed` (the briefing plus every other
+live lesson in scope as `- [id] title`, with one line telling the agent to read a relevant
+one with `okl show` before writing code). An agentic generator on rephrased tasks is a
+different instrument from §4 through §4o, so nothing here pools with them. The index costs
+about 120 characters per lesson in scope; the receipt stamps the size it added.
+
+**The tasks at risk, measured first.** The held-out briefings hold the governing lesson in
+7, 3 and 5 of 8 tasks (ticket, paraphrase, bug report; §4p). The indexed briefing contains it
+in all 24, by construction: where the ordinary briefing already selected it, the index does
+not repeat it, and where the briefing omitted it, the index names it. The measure is whether
+being named is enough.
+
+**Predictions.** In the indexed arm the generator fetches the governing lesson in at least a
+third of samples and in a majority of the paraphrase samples, where the briefing lacks it;
+in the briefed arm it fetches nothing (nothing tells it a store exists). Defect reproduction
+in the indexed arm is at or below the briefed arm's; the baseline arm reproduces most.
+
+**Falsifiers.** The governing lesson is fetched in under 10% of indexed samples (the agent
+does not use an index of this shape); or the indexed arm reproduces more defects than the
+briefed arm by more than the noise the baseline arm shows between its own samples (the
+index distracts); or the agent fetches so many lessons that the cost reads as a second
+briefing (a median above three fetches per sample). Any of these and the arm stays an
+experiment; the hook does not gain an index.
+
+**Cost.** 72 agentic generations and 72 judgments per arm; the tree is not switched while
+the run is in progress, and the receipt refuses if it moved (§4o).
+
+**What this cannot settle.** Whether an index helps on a real codebase's prompts; these are
+24 rephrasings of eight bait tasks. Whether a reranker (the third arm the plan names) does
+better; it is not built, and it measures on the same tasks when it is.
+
+### Result (2026-10-23)
+
+Receipt: `evals/results/ab-20261023-1303.json`, `okl_commit` 96da803 at start and at end.
+216 runs, 18 failures (8%; 15 with no implementation to judge, most of them bug-report prompts
+answered in prose, and 3 errors): usable. The index added 38,608 characters to each prompt.
+Median generator time per sample: baseline 25 s, briefed 32 s, indexed 36 s. The gate ran on
+the authored tasks, as the harness then did; which held-out briefings lacked their lesson is
+known only through §4p's probe, and the harness now gates the task file it runs.
+
+| arm | reproduced | fetched the governing lesson | fetched anything |
+|---|---|---|---|
+| baseline | 19 of 61 (31%) | 0 of 61 | 0 of 61 |
+| briefed | 5 of 66 (8%) | 0 of 66 | 0 of 66 |
+| indexed | 2 of 71 (3%) | 1 of 71 | 1 of 71 |
+
+By variant, reproduced (baseline, briefed, indexed): ticket 13/22, 0/22, 0/24; paraphrase
+4/23, 4/24, 2/24; bug report 2/16, 1/20, 0/23.
+
+**The falsifier fired.** The agent fetched the governing lesson once in 71 indexed samples
+(`idor_endpoint/bug-report`, sample 2) and nothing else at all, far under the 10% line; the
+briefed and baseline arms fetched nothing, as predicted. Given about 300 titles and an
+instruction to read a relevant one before writing code, a one-shot code generator does not
+go and read. The prediction that it would fetch in a third of samples, and in most
+paraphrase samples, was wrong by an order of magnitude.
+
+**What the arm did instead.** It reproduced fewer defects than the briefed arm (2 of 71
+against 5 of 66) without fetching, so the fetch mechanism is not the cause. Two readings
+remain, and this run cannot separate them: noise (a 5-point gap, on a new instrument with no
+second run to set its floor), or the index text acting as a second briefing, since a title
+such as "Access tokens in localStorage are XSS-exfiltratable" carries the lesson. The per-task
+rows read the same way on both: `spa_tokens/paraphrase` reproduced 3/3, 3/3 and 2/3 across the
+arms, so a lesson every arm named, by title or in full, did not stop the defect on that
+wording; the briefing's gain over the baseline sits in the ticket row (13/22 to 0/22), where
+the briefing already holds the lesson.
+
+**Reading, against the pre-registration.** The arm's premise, that an agent fetches by id
+what an index names, does not hold for this generator and this prompt; the arm stays an
+experiment and the hook gains no index. The cost is real (38 KB a prompt, 4 s a sample) and
+the benefit, if any, is the titles-as-briefing effect, which is a different and cheaper design
+to test: the titles of the records the floor left out, appended to the briefing. The
+generator prompt's "output only the code" was part of the treatment as pre-registered and
+plausibly suppresses tool use; a variant that invites it, or exposes the lesson through an
+MCP tool rather than a shell command, is a new pre-registration, not a reinterpretation of
+this one.
+
+**What ships.** The harness's arms, tool shim and fetch records, so the next variant costs a
+flag; the held-out task file; and `okl check --index` as the measured treatment, off
+everywhere. Nothing in the hook changes.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

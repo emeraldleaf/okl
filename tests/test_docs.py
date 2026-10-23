@@ -92,12 +92,19 @@ def test_quoted_briefing_sizes_match_the_receipt_the_readme_cites():
     assert f"about {full:,} tokens" in (ROOT / sheet).read_text(), f"{sheet} no longer says: about {full:,} tokens"
 
 
+def _authored_tasks() -> set[str]:
+    """The eight authored task ids. Receipts on other instruments (REPORT §4r's held-out
+    rephrasings, ids like "idor_endpoint/ticket") are not the series the docs describe."""
+    return {json.loads(line)["id"] for line in (ROOT / "evals" / "tasks.jsonl").read_text().splitlines() if line.strip()}
+
+
 def _baseline_hits(receipts: list[Path]) -> Counter[str]:
-    """Baseline reproductions per task across the given A/B receipts."""
+    """Baseline reproductions per authored task across the given A/B receipts."""
     hits = Counter[str]()
+    authored = _authored_tasks()
     for receipt in receipts:
         for row in json.loads(receipt.read_text()).get("results", []):
-            if row.get("arm") == "baseline":
+            if row.get("arm") == "baseline" and row["task"] in authored:
                 hits[row["task"]] += bool(row.get("reproduced"))
     return hits
 
@@ -241,9 +248,12 @@ def _sentence_containing(path: str, phrase: str) -> str:
 def _arm_counts(receipts: list[Path]) -> dict[str, list[int]]:
     """Per task: [unbriefed hits, unbriefed n, briefed hits, briefed n] over the judged samples."""
     counts: dict[str, list[int]] = {}
+    authored = _authored_tasks()
     for receipt in receipts:
         for row in json.loads(receipt.read_text()).get("results", []):
-            if row.get("reproduced") is None or row.get("unevaluable"):
+            # Only the two arms the sentence describes; an indexed arm (§4r) is another treatment.
+            if (row.get("reproduced") is None or row.get("unevaluable") or row["task"] not in authored
+                    or row["arm"] not in ("baseline", "briefed")):
                 continue
             cell = counts.setdefault(row["task"], [0, 0, 0, 0])
             i = 0 if row["arm"] == "baseline" else 2

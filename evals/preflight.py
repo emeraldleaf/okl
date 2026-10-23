@@ -47,11 +47,19 @@ ACCEPTED_GAPS: dict[str, str] = {}
 def main() -> int:
     """Check each eval task's briefing holds the record it tests; return 1 if one is missing and not an accepted gap."""
     ap = argparse.ArgumentParser()
+    ap.add_argument("--tasks", default=str(REPO / "evals" / "tasks.jsonl"),
+                    help="the task file to gate (default: the authored tasks)")
+    ap.add_argument("--limit", type=int, default=None, help="gate only the first N tasks, as the harness runs them")
+    ap.add_argument("--accept-missing", action="store_true",
+                    help="list the tasks whose briefing lacks their governing record and exit 0 anyway: "
+                         "for an instrument where that absence is the condition under study (REPORT "
+                         "§4r), never for the authored series")
     ap.add_argument("--receipt", action="store_true",
                     help="also write evals/results/preflight-<stamp>.json for REPORT to cite")
     args = ap.parse_args()
-    tasks = [json.loads(line) for line in (REPO / "evals" / "tasks.jsonl").read_text().splitlines()
-             if line.strip()]
+    tasks = [json.loads(line) for line in Path(args.tasks).read_text().splitlines() if line.strip()]
+    if args.limit:
+        tasks = tasks[: args.limit]
     client = Client()
     store = client._local_store()
     # The interests the briefed arm will run with: evals/ab_harness.py passes
@@ -101,6 +109,10 @@ def main() -> int:
             "accepted_gaps": {k: v for k, v in ACCEPTED_GAPS.items()
                               if k in {m[0] for m in missing}},
             "verdict": "FAILED" if unexpected else "OK"}).relative_to(REPO))
+    if unexpected and args.accept_missing:
+        print(f"\nPRE-FLIGHT: {len(unexpected)} task(s) measure the briefing without their governing "
+              "record, accepted by --accept-missing: " + ", ".join(m[0] for m in unexpected))
+        return 0
     if unexpected:
         print(f"\nPRE-FLIGHT FAILED: {len(unexpected)} task(s) would measure the absence of "
               "their rule:")
