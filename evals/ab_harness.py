@@ -24,6 +24,7 @@ Env:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -282,17 +283,93 @@ def drift_banner(drift_from: dict) -> str:
             + ". These numbers are internally valid only.")
 
 
+def head_moved(started: tuple[str | None, str] | None,
+               now: tuple[str | None, str] | None) -> dict | None:
+    """The receipt fields for a working tree that moved during a run, or None.
+
+    The briefed arm renders from this checkout's `src/`, so a branch switch mid-run
+    briefs the later samples with code the pre-registration never described, and the
+    receipt would then name only the commit found at the end. Receipt ab-20261022-0455
+    was made that way (REPORT §4o); a run whose tree moved is not usable, and says so.
+
+    Each side is `tree_state()`: the commit label the receipt shows and a fingerprint of
+    the code. The fingerprint decides, so an edit to a tree that was already `+dirty`
+    counts as movement even though its label did not change (review on #262).
+    """
+    if started is None or now is None or started[1] == now[1]:
+        return None
+    return {"okl_commit_at_start": started[0], "okl_commit": now[0], "working_tree_moved": True}
+
+
+def moved_banner(moved: dict) -> str:
+    """The report-time line for a run whose working tree moved; a function so it is testable."""
+    return (f"❌ RESULTS NOT USABLE — the working tree moved from {moved['okl_commit_at_start']} to "
+            f"{moved['okl_commit']} during the run, so the later briefings came from code the "
+            "pre-registration did not describe. Run the harness from a pinned worktree.")
+
+
 def _okl_commit() -> str | None:
     """The commit that rendered this run's briefings, marked `+dirty` when okl's code had
     uncommitted edits: a bare hash would then name code that did not produce the receipt
     (found in review of #52)."""
-    head = subprocess.run(["git", "-C", str(REPO), "rev-parse", "--short", "HEAD"],
-                          capture_output=True, text=True).stdout.strip()
-    if not head:
+    return tree_state()[0]
+
+
+def _head(git: list[str]) -> tuple[str, str] | None:
+    """The short and full HEAD, or None when either lookup fails or reads empty."""
+    short = subprocess.run([*git, "rev-parse", "--short", "HEAD"], capture_output=True, text=True)
+    full = subprocess.run([*git, "rev-parse", "HEAD"], capture_output=True, text=True)
+    if short.returncode != 0 or full.returncode != 0:
         return None
-    dirty = subprocess.run(["git", "-C", str(REPO), "status", "--porcelain", "--", "src/okl"],
-                           capture_output=True, text=True).stdout.strip()
-    return f"{head}+dirty" if dirty else head
+    return (short.stdout.strip(), full.stdout.strip()) if short.stdout.strip() and full.stdout.strip() else None
+
+
+def tree_state() -> tuple[str | None, str]:
+    """The receipt's commit label for okl's code, and a fingerprint of that code.
+
+    The label is the short HEAD, `+dirty` when `src/okl` has uncommitted edits. The
+    fingerprint is the full HEAD plus a hash of the uncommitted diff and the untracked
+    files under `src/okl`, so two dirty trees with different content do not compare equal.
+    """
+    git = ["git", "-C", str(REPO)]
+    heads = _head(git)
+    if heads is None:
+        # Fail closed, as for the other probes: no HEAD means no claim about the tree, and
+        # two such readings must not compare equal. A full lookup that fails after the short
+        # one read is the same case: an empty fingerprint would equal itself (review on #262).
+        return None, f"head-failed-{os.urandom(4).hex()}"
+    head, full = heads
+    # --untracked-files=all: a wholly untracked directory is otherwise one "?? dir/" entry,
+    # and its files' content would never reach the fingerprint. -z: NUL-delimited entries
+    # with unquoted paths, so a name git would quote still resolves to its file.
+    probe = subprocess.run([*git, "status", "--porcelain", "-z", "--untracked-files=all", "--", "src/okl"],
+                           capture_output=True)
+    if probe.returncode != 0:
+        # Fail closed: a probe that cannot say what the tree holds must not compare equal
+        # to anything, so the run reads as moved and the receipt as not usable.
+        return f"{head}+unknown", f"{full}+status-failed-{os.urandom(4).hex()}"
+    entries = [e for e in probe.stdout.decode("utf-8", "surrogateescape").split("\0") if e]
+    if not entries:
+        return head, full
+    diffed = subprocess.run([*git, "diff", "HEAD", "--", "src/okl"], capture_output=True)
+    if diffed.returncode != 0:
+        # Same rule as the status probe: a diff that cannot be read must not compare equal.
+        return f"{head}+unknown", f"{full}+diff-failed-{os.urandom(4).hex()}"
+    # One digest per untracked file, keyed by path: a lossless manifest, so two files whose
+    # contents shift a boundary ("ab","c" -> "a","bc") do not hash alike.
+    manifest = hashlib.sha256(diffed.stdout)
+    for entry in entries:
+        manifest.update(entry.encode("utf-8", "surrogateescape") + b"\0")
+        if entry.startswith("?? "):
+            path = Path(REPO, entry[3:])
+            if path.is_file():
+                try:
+                    manifest.update(hashlib.sha256(path.read_bytes()).digest())
+                except OSError:
+                    # Listed a moment ago and unreadable now: the tree is moving under the
+                    # probe, which is the very thing to report, not a reason to abort the run.
+                    return f"{head}+unknown", f"{full}+read-failed-{os.urandom(4).hex()}"
+    return f"{head}+dirty", f"{full}+{manifest.hexdigest()[:16]}"
 
 
 def main() -> int:
@@ -409,6 +486,7 @@ def main() -> int:
         return 0
 
     results, failures = [], []
+    started_tree = tree_state()
     with tempfile.TemporaryDirectory(prefix="okl-ab-") as clean_cwd:
         models = {"generator": resolved_model(GENERATOR_CMD, args.timeout, clean_cwd),
                   "judge": resolved_model(JUDGE_CMD, args.timeout, clean_cwd)}
@@ -448,6 +526,12 @@ def main() -> int:
     if frate > FAILURE_RATE_UNUSABLE:
         print("❌ RESULTS NOT USABLE — failure rate above threshold. Fix the harness before "
               "reading any number below.")
+    # One reading of the tree at the end, used for both the verdict and the receipt, so
+    # the receipt cannot say usable beside a commit the verdict never saw (review on #262).
+    ended_tree = tree_state()
+    moved = head_moved(started_tree, ended_tree)
+    if moved:
+        print(moved_banner(moved))
     if drift_from:
         print(drift_banner(drift_from))
     def by(arm: str) -> list[dict]:
@@ -484,14 +568,17 @@ def main() -> int:
         # failed). Two receipts naming `sonnet` may not have run the same model (R12).
         "generator_model": models["generator"], "judge_model": models["judge"],
         "failure_rate": round(frate, 3),
-        "usable": frate <= FAILURE_RATE_UNUSABLE,
+        "usable": frate <= FAILURE_RATE_UNUSABLE and not moved,
         # Durable: a receipt read months later says on its own face whether it may be
         # compared to its neighbours. Absent means the instrument matched the prior run.
         "instrument_changed_from": drift_from,
         # The code that rendered the briefings. The briefing's layout is part of the
         # treatment (§4i changed it), and without this two receipts from different layouts
         # look identical on their face.
-        "okl_commit": _okl_commit(),
+        "okl_commit": ended_tree[0],
+        # Where the tree stood when the run began, and whether it moved (REPORT §4o).
+        "okl_commit_at_start": started_tree[0],
+        **({"working_tree_moved": True} if moved else {}),
         "results": results, "failures": failures,
     }, indent=1) + "\n")
     try:
@@ -499,7 +586,7 @@ def main() -> int:
     except ValueError:
         shown = path   # AB_RESULTS_DIR may point outside the repo
     print(f"\nwrote {shown}")
-    return 0 if frate <= FAILURE_RATE_UNUSABLE else 1
+    return 0 if frate <= FAILURE_RATE_UNUSABLE and not moved else 1
 
 
 if __name__ == "__main__":

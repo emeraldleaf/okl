@@ -58,6 +58,12 @@ Judge == generator exits 3. A run whose failure rate is above 20% exits 1.
 
 Results land in `evals/results/ab-<timestamp>.json` — commit them; they're the receipts.
 
+The receipt names the commit the tree stood at when the run began (`okl_commit_at_start`)
+and at the end (`okl_commit`). The briefed arm renders from this checkout's `src/`, so a
+branch switch during a run briefs the later samples with other code; a receipt whose tree
+moved carries `working_tree_moved` and is not usable (REPORT §4o is the run that taught
+this). Run the harness from a pinned git worktree, never from the checkout other work uses.
+
 Two cheaper checks run with no model at all. `evals/preflight.py` asks whether each task's
 governing record reaches its briefing. `evals/probe_rephrase.py` asks the two questions the
 A/B cannot: whether that record still reaches the top-12 when the task is rephrased (a
