@@ -119,6 +119,7 @@ def cmd_record(args: argparse.Namespace) -> int:
                   body=args.body, status=args.status, found_by=args.found_by,
                   ttl_days=args.ttl_days, owner=args.owner,
                   files=args.files, symptom=args.symptom, fix=args.fix, tags=args.tags,
+                  aliases=_join_aliases(getattr(args, "aliases", None)),
                   id=args.id, replace=getattr(args, "replace", False) or None)
     if args.repo:
         kwargs["repo"] = args.repo
@@ -153,6 +154,7 @@ def cmd_update(args: argparse.Namespace) -> int:
     an empty required field or a rejected value; the lesson is left as it was.
     """
     fields = {k: getattr(args, k, None) for k in core.UPDATABLE_FIELDS}
+    fields["aliases"] = _join_aliases(fields.get("aliases"))
     client = Client()
     try:
         before = client.get(args.node_id)   # nothing is sent yet: any failure is NOT UPDATED
@@ -238,6 +240,13 @@ def cmd_recap(args: argparse.Namespace) -> int:
     return 0
 
 
+def _join_aliases(given: list[str] | None) -> str | None:
+    """`--alias a --alias b` as the stored field, "a; b"; `--alias ""` alone clears it."""
+    if given is None:
+        return None
+    return "; ".join(a.strip() for a in given if a.strip())
+
+
 def cmd_show(args: argparse.Namespace) -> int:
     """Print one lesson by id, with its proof. Exit 2 when there is no such lesson."""
     try:
@@ -264,7 +273,8 @@ def _render_lesson(n: dict[str, Any]) -> str:
 
     out = [f"[{n['id']}] {n['type']} · {n['scope']} · created {day(n.get('created_at'))}",
            f"  {n['title']}"]
-    labels = (("symptom", "symptom"), ("body", "cause" if n.get("symptom") else "body"),
+    labels = (("symptom", "symptom"), ("aliases", "aliases"),
+              ("body", "cause" if n.get("symptom") else "body"),
               ("fix", "fix"), ("tags", "tags"), ("applies_to", "applies to"),
               ("files", "governs"), ("status", "status"), ("found_by", "found by"),
               ("owner", "owner"), ("ttl_days", "ttl days"))

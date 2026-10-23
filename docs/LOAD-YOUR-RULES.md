@@ -120,6 +120,7 @@ This step is what makes the import worth trusting. For each record:
 5. Put the decision and its reason at the start of `body`. A briefing shows only the start of a long body.
 6. Leave `applies_to` unset. It filters only org-scoped lessons, and a wrong value hides a lesson without warning.
 7. Give every Rule, Defect and Gate a `symptom` in the words a developer uses when it bites ("users get logged out when they refresh", not "token storage"). A prompt that describes what went wrong reaches a lesson through its symptom, and a record without one is found only by a prompt that happens to use its title's words. `okl seed` warns when one is missing.
+8. Add `aliases` where your team's words differ from the lesson's: the phrases a developer types when it bites (`"aliases": ["logged out on refresh", "session lost"]`). They are indexed like the symptom, and one alias word is enough to pass the relevance floor, so they are the cheapest way to make a lesson reachable from a bug report or a paraphrase (#258). Write them from the lesson, not from one prompt that missed.
 
 Then check the file as a whole:
 
@@ -127,7 +128,7 @@ Then check the file as a whole:
 - Every record has `"scope": "repo"`, or `"repo:<name>"` with exactly the name in `.okl/config.json`.
 - No record has `"status"`. `okl seed` refuses `superseded` and `obsolete` (only `okl retire` sets them), and the import stops partway.
 - No record has `"verified": true`. That stamps a lesson with no check behind it. On a lesson with `files`, it blocks your push and makes CI refuse the snapshot.
-- Records use only these fields: `key`, `type`, `title`, `scope`, `repo`, `body`, `symptom`, `fix`, `tags`, `applies_to`, `files`, `found_by`, `owner`, `ttl_days`. Any other field, such as a check command, crashes the import partway.
+- Records use only these fields: `key`, `type`, `title`, `scope`, `repo`, `body`, `symptom`, `aliases`, `fix`, `tags`, `applies_to`, `files`, `found_by`, `owner`, `ttl_days`. Any other field, such as a check command, crashes the import partway.
 - Every tag is known (see the extra instructions above).
 
 Here is the format, with a new tag:
@@ -179,7 +180,7 @@ okl show seed:okl-lessons:price_from_catalogue
 okl check --task "let customers apply a discount code at checkout"
 ```
 
-Try tasks written in your team's words, not the doc's words. The briefing matches shared words and does no stemming, so "rename" does not match "renaming". When a lesson you expected is missing, add your team's words to its title or symptom in the file, and run `okl seed` again.
+Try tasks written in your team's words, not the doc's words. The briefing matches shared words and does no stemming, so "rename" does not match "renaming". When a lesson you expected is missing, add your team's words to its `aliases` in the file, and run `okl seed` again.
 
 ## 6. ADRs, including superseded ones
 

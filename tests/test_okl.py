@@ -1278,6 +1278,54 @@ def test_an_index_built_before_symptom_was_indexed_is_rebuilt(tmp_path):
     s2.close()
 
 
+def test_aliases_are_searchable_and_count_as_the_records_subject(store):
+    """A lesson is reachable through the words a developer uses when it bites (#258).
+
+    The probe's bug-report row read 3 of 8 after the symptom pass: "users get logged out
+    when they refresh" shares no word with a lesson about tokens in web storage. The
+    `aliases` field carries those words, indexed with the symptom at its weight, and one
+    alias word counts as the record's subject for the relevance floor.
+    """
+    # ARRANGE — the distinguishing words live ONLY in aliases; a second record shares none.
+    core.record(store, type="Rule", title="token storage", scope="org",
+                symptom="an access token written to web storage", fix="keep it in memory",
+                aliases="logged out on refresh; session lost")
+    core.record(store, type="Rule", title="pagination", scope="org",
+                symptom="an offset-based query", fix="use a cursor", aliases="slow pages")
+
+    # ASSERT (1) — the search sees the alias words
+    assert [n.title for n in store.search("logged out refresh", limit=5)] == ["token storage"]
+    # ASSERT (2) — one alias word on a prompt of several is the lesson's subject: the floor
+    # keeps it, and the briefing carries the field
+    res = core.check(store, repo="r", task="a session that does not survive a browser reload")
+    assert [r["title"] for r in res["rules"]] == ["token storage"]
+    assert res["rules"][0]["aliases"] == "logged out on refresh; session lost"
+    assert res["rules"][0]["matched_terms"] == ["session"]
+
+
+def test_an_index_built_before_aliases_was_indexed_is_rebuilt(tmp_path):
+    """A store from before the aliases column rebuilds its search index on open, as it did
+    when symptom joined the index: the node table is the source of truth."""
+    # ARRANGE — the pre-aliases index shape, with the alias words nowhere else
+    db = tmp_path / "old.db"
+    s = Store(f"sqlite:///{db}")
+    core.record(s, type="Rule", title="token storage", scope="org",
+                symptom="an access token written to web storage", aliases="logged out on refresh")
+    conn = s._impl.conn
+    conn.execute("DROP TABLE node_fts")
+    conn.execute("CREATE VIRTUAL TABLE node_fts USING fts5(id UNINDEXED, title, body, symptom, fix, tags)")
+    conn.execute("INSERT INTO node_fts(id,title,body,symptom,fix,tags) SELECT id, title, coalesce(body,''),"
+                 " coalesce(symptom,''), coalesce(fix,''), coalesce(tags,'') FROM node")
+    conn.commit()
+    assert s.search("logged out refresh", limit=5) == []   # the old state
+    s.close()
+
+    # ACT — reopen with the current code; ASSERT — the aliases are searchable
+    s2 = Store(f"sqlite:///{db}")
+    assert [n.title for n in s2.search("logged out refresh", limit=5)] == ["token storage"]
+    s2.close()
+
+
 def test_duplicate_scoring_ranks_a_paraphrase_above_an_unrelated_record(store):
     """The same rule, worded as a second document would word it, scores above noise.
 
@@ -1708,7 +1756,8 @@ def test_tags_are_searchable_but_never_outrank_content(store):
     src = (Path(__file__).resolve().parents[1] / "src" / "okl" / "store.py").read_text()
     weights = [float(w) for w in
                src.split("bm25(node_fts, ")[1].split(")")[0].split(", ")]
-    _id_w, title_w, _body_w, _symptom_w, fix_w, tags_w = weights
+    _id_w, title_w, _body_w, symptom_w, fix_w, tags_w, aliases_w = weights
+    assert aliases_w == symptom_w, "aliases are indexed with the symptom, at its weight (#258)"
     assert tags_w > 0, "a zero weight indexes tags and then ignores them when ranking"
     assert tags_w <= fix_w, "tags is a two-word field; weight it below the prose fields"
     assert tags_w * 4 <= title_w, "a tag must stay well under a title match"

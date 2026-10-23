@@ -11,6 +11,8 @@ File format:
 }
 `key` is a local alias used only to wire edges within the file; the store
 assigns the real id. Edges reference keys, which are resolved to ids on load.
+A node's `aliases` may be a list of phrases; the store holds them as one "; "-joined
+string.
 """
 from __future__ import annotations
 
@@ -69,6 +71,7 @@ def seed_from_file(client: Client, path: str) -> int:
     keymap: dict[str, str] = {}
     for node in data.get("nodes", []):
         key = node.pop("key", None)
+        _join_alias_list(node)
         # Seed nodes carry provenance from ANOTHER repo. Client.record defaults a
         # missing `repo` to the CURRENT repo, which would mislabel it — pass None
         # explicitly ("unknown") and warn, rather than inherit that default.
@@ -114,6 +117,7 @@ def seed_starter(client: Client, seed_dir: Path) -> int:
                 continue
             node = dict(node)
             key = node.pop("key")
+            _join_alias_list(node)
             node.setdefault("repo", None)   # provenance is another repo's: unknown, not this one
             client.record(id=f"seed:{pack}:{key}", keep_verification=True, **node)
             n += 1
@@ -121,6 +125,12 @@ def seed_starter(client: Client, seed_dir: Path) -> int:
             if edge["src"] in wanted and edge["dst"] in wanted:
                 client.link(f"seed:{pack}:{edge['src']}", edge["rel"], f"seed:{pack}:{edge['dst']}")
     return n
+
+
+def _join_alias_list(node: dict) -> None:
+    """A pack may write `aliases` as a list; the store holds one "; "-separated string."""
+    if isinstance(node.get("aliases"), list):
+        node["aliases"] = "; ".join(str(a).strip() for a in node["aliases"] if str(a).strip())
 
 
 def _require_citations(data: dict, filename: str) -> None:
