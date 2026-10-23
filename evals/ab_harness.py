@@ -313,6 +313,15 @@ def _okl_commit() -> str | None:
     return tree_state()[0]
 
 
+def _head(git: list[str]) -> tuple[str, str] | None:
+    """The short and full HEAD, or None when either lookup fails or reads empty."""
+    short = subprocess.run([*git, "rev-parse", "--short", "HEAD"], capture_output=True, text=True)
+    full = subprocess.run([*git, "rev-parse", "HEAD"], capture_output=True, text=True)
+    if short.returncode != 0 or full.returncode != 0:
+        return None
+    return (short.stdout.strip(), full.stdout.strip()) if short.stdout.strip() and full.stdout.strip() else None
+
+
 def tree_state() -> tuple[str | None, str]:
     """The receipt's commit label for okl's code, and a fingerprint of that code.
 
@@ -321,13 +330,13 @@ def tree_state() -> tuple[str | None, str]:
     files under `src/okl`, so two dirty trees with different content do not compare equal.
     """
     git = ["git", "-C", str(REPO)]
-    head = subprocess.run([*git, "rev-parse", "--short", "HEAD"],
-                          capture_output=True, text=True).stdout.strip()
-    if not head:
+    heads = _head(git)
+    if heads is None:
         # Fail closed, as for the other probes: no HEAD means no claim about the tree, and
-        # two such readings must not compare equal.
+        # two such readings must not compare equal. A full lookup that fails after the short
+        # one read is the same case: an empty fingerprint would equal itself (review on #262).
         return None, f"head-failed-{os.urandom(4).hex()}"
-    full = subprocess.run([*git, "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+    head, full = heads
     # --untracked-files=all: a wholly untracked directory is otherwise one "?? dir/" entry,
     # and its files' content would never reach the fingerprint. -z: NUL-delimited entries
     # with unquoted paths, so a name git would quote still resolves to its file.
@@ -352,7 +361,12 @@ def tree_state() -> tuple[str | None, str]:
         if entry.startswith("?? "):
             path = Path(REPO, entry[3:])
             if path.is_file():
-                manifest.update(hashlib.sha256(path.read_bytes()).digest())
+                try:
+                    manifest.update(hashlib.sha256(path.read_bytes()).digest())
+                except OSError:
+                    # Listed a moment ago and unreadable now: the tree is moving under the
+                    # probe, which is the very thing to report, not a reason to abort the run.
+                    return f"{head}+unknown", f"{full}+read-failed-{os.urandom(4).hex()}"
     return f"{head}+dirty", f"{full}+{manifest.hexdigest()[:16]}"
 
 

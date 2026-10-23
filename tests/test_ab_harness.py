@@ -331,3 +331,39 @@ def test_tree_state_fails_closed_when_head_cannot_be_read(ab, tmp_path, monkeypa
     one, two = ab.tree_state(), ab.tree_state()
     assert one[0] is None and one[1] != two[1]
     assert ab.head_moved(one, two) is not None
+
+
+def test_tree_state_fails_closed_when_the_full_head_cannot_be_read(ab, monkeypatch):
+    """The short HEAD read but the full one did not (review on #262): an empty fingerprint
+    would compare equal to itself, so two readings must differ instead."""
+    import subprocess
+    real = subprocess.run
+
+    def broken(cmd, *a, **kw):
+        if list(cmd[-2:]) == ["rev-parse", "HEAD"]:
+            return subprocess.CompletedProcess(cmd, 128, stdout="", stderr="fatal")
+        return real(cmd, *a, **kw)
+    monkeypatch.setattr(ab.subprocess, "run", broken)
+    one, two = ab.tree_state(), ab.tree_state()
+    assert one[0] is None and one[1] != two[1]
+    assert ab.head_moved(one, two) is not None
+
+
+def test_tree_state_fails_closed_when_an_untracked_file_vanishes_mid_read(ab, tmp_path, monkeypatch):
+    """A file git listed as untracked that cannot be read a moment later is a moving tree:
+    the probe reports it as such rather than raising past the run's receipt."""
+    import subprocess
+    repo = tmp_path / "r"
+    (repo / "src" / "okl").mkdir(parents=True)
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    subprocess.run(["git", "-C", str(repo), "-c", "user.email=t@t", "-c", "user.name=t",
+                    "commit", "-q", "--allow-empty", "-m", "base"], check=True)
+    (repo / "src" / "okl" / "new.py").write_text("x = 1\n")   # untracked, so it is read
+    monkeypatch.setattr(ab, "REPO", repo)
+
+    def vanished(self):
+        raise OSError("gone")
+    monkeypatch.setattr(ab.Path, "read_bytes", vanished)
+    one, two = ab.tree_state(), ab.tree_state()
+    assert one[0].endswith("+unknown") and one[1] != two[1]
+    assert ab.head_moved(one, two) is not None
