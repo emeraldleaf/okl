@@ -42,6 +42,23 @@ def test_record_update_and_show_carry_aliases(tmp_path):
     assert not json.loads(_okl(tmp_path, "show", "t1", "--format", "json").stdout).get("aliases")
 
 
+def test_an_empty_alias_list_clears_on_update_and_a_list_records():
+    """`core.update(aliases=[])` is an explicit clear, not "not given"; `core.record` takes a
+    list the way a pack writes it (review on #266)."""
+    from okl import core
+    from okl.store import Store
+    s = Store("sqlite:///:memory:")
+    try:
+        a = core.record(s, type="Rule", title="t", scope="org", aliases=["logged out", "session lost"])
+        assert s.get_node(a).aliases == "logged out; session lost"
+        assert core.update(s, a, aliases=[])["aliases"] in ("", None)
+        assert not s.get_node(a).aliases
+        b = core.record(s, type="Rule", title="u", scope="org", aliases=[])
+        assert s.get_node(b).aliases is None
+    finally:
+        s.close()
+
+
 def test_a_seed_pack_may_write_aliases_as_a_list(tmp_path):
     """Packs write `aliases` as a JSON list; the loader joins it the way the CLI does."""
     pack = tmp_path / "my-pack.json"

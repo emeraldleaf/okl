@@ -586,7 +586,7 @@ def record(store: Store, *, type: str, title: str, scope: str, repo: str | None 
         "type": type, "title": title, "scope": scope, "repo": repo, "body": body,
         "status": status, "found_by": found_by, "ttl_days": ttl_days, "owner": owner,
         "files": files, "symptom": symptom, "fix": fix, "tags": tags,
-        "applies_to": applies_to, "aliases": join_aliases(aliases),
+        "applies_to": applies_to, "aliases": join_aliases(aliases) or None,
         "verified_at": _now_ms() if verified else None,
     }
     # An explicit id names the lesson; omit it and the store mints a fresh random one.
@@ -641,9 +641,11 @@ def _carry_over(store: Store, kw: dict[str, Any], node_id: str, *,
 
 def join_aliases(aliases: Any) -> str | None:
     """The stored form of `aliases`: a "; "-joined string. A seed pack writes a list and the
-    CLI collects repeated flags, so every writer meets one rule here; a string passes as is."""
+    CLI collects repeated flags, so every writer meets one rule here; a string passes as is.
+    An empty list is "", the clearing value, so `update(aliases=[])` clears rather than
+    reading as "not given" (review on #266); `record` stores it as none."""
     if isinstance(aliases, (list, tuple)):
-        return "; ".join(str(a).strip() for a in aliases if str(a).strip()) or None
+        return "; ".join(str(a).strip() for a in aliases if str(a).strip())
     return aliases
 
 
