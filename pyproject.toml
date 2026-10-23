@@ -51,7 +51,7 @@ dev = [
   # httpx2 (github.com/pydantic/httpx2, which Pydantic maintains as httpx's successor) and
   # warns when it falls back to httpx; the strict pytest config turns that into failures.
   # httpx stays for older Starlette, whose TestClient imports only httpx.
-  "httpx2>=2.13",
+  "httpx2>=2.14.0",
   # The MCP SDK, so CI runs the MCP server's own test: without it that test skips, and
   # the server reached CI untested (as Postgres did before, #35).
   "mcp>=1.2",
