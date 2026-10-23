@@ -62,7 +62,7 @@ from abstract insights and validation routines, and raw traces cause negative tr
 a Defect with its cause, never a transcript of how it was found. okl's own measured figure is
 a transfer result in the same sense: the eight A/B tasks are fresh code written from a task
 prompt, the defect classes they invite were learned in other projects and arrive through six
-of the twelve packs, and 78 of 186 unbriefed attempts repeated one against 13 of 188 briefed
+of the twelve packs, and 68 of 163 unbriefed attempts repeated one against 11 of 164 briefed
 (REPORT §5, finding 7). In those runs the briefing held each task's lesson with three
 exceptions, whose arms measured the briefing without it: `exit_code_trust`'s ranked below the
 cutoff in every run until the lesson gained a symptom on 2026-10-22 (REPORT §4b, §4o),

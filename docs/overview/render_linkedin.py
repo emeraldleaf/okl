@@ -20,7 +20,7 @@ strip.style.cssText = 'display:flex;gap:28px;align-items:center;padding:22px 28p
 strip.innerHTML = `
   <div class="stat" style="flex:0 0 auto;margin:0"><span class="big bad">42%</span><span class="arrowto">→</span><span class="big good">7%</span></div>
   <p class="mech" style="margin:0;font-size:15px;line-height:1.45"><b>of attempts repeated a known defect, without the briefing and with it</b>:
-  78 of 186 against 13 of 188, over eight A/B runs on tasks built to invite one, one-shot code with the briefing put in the prompt.
+  68 of 163 against 11 of 164, over seven A/B runs on tasks built to invite one, one-shot code with the briefing put in the prompt.
   Receipts: evals/REPORT.md §5, finding 7.</p>`;
 lower.replaceWith(strip);
 // The worked-example callout belongs to the terminal band, which this cut drops.
