@@ -1243,6 +1243,114 @@ store was constant), so the briefed input did not change mid-run; but a receipt 
 need that argument. A lesson is recorded, and the harness is to record HEAD at start and
 refuse to write a usable receipt when it has moved.
 
+## 4p. PRE-REGISTERED: every org advice record gains aliases, measured by the probe (2026-10-23)
+
+Written before any measurement, per §2b, for #258's second vectorless arm.
+
+**What changed.** Each of the 136 org-scoped Rules, Defects and Gates in the seed packs now
+carries `aliases`: two to eight short phrases in the words a developer uses when the lesson
+bites or when asking for the work ("logged out on refresh", "query in a loop", "CI failed
+with no code change"). The field is indexed with the symptom at its weight, and one alias
+word counts as the record's subject for the relevance floor (#257). The phrases were written
+from each record's title, symptom and body, not from any prompt that had missed; the author
+had read the probe's own rephrasings, which is the bias the held-out set below exists to
+bound.
+
+**The instrument.** No model. `evals/probe_rephrase.py`, with the floor on, on a store seeded
+from the twelve packs with okl's configured interests, as in §4o's receipt. Two recall tables:
+the probe's authored rephrasings (seen by the alias author), and a held-out set
+(`evals/heldout_variants.json`) written on 2026-10-23 by an agent given only the id and task
+fields of `evals/tasks.jsonl`, which opened no pack, receipt or probe code; the alias author
+read it only after the aliases were written. The six short real prompts measure precision as
+before.
+
+**The tasks at risk, measured first.** Aliases add terms, so no record can lose a match; but
+BM25 normalises by the record's length, so a record that was marginal for its task can lose
+rank to records whose aliases match. `exit_code_trust` is the one at risk: its lesson ranked
+4th after §4o, from 54th before. `evals/preflight.py` on a store seeded from the new packs,
+and the eight tasks' briefed id sets compared against a store seeded from the packs at
+`origin/main`, settle it before any row is read.
+
+**Prediction.** Authored and ticket rows stay 8 of 8. The probe's paraphrase row (0 of 8) and
+bug-report row (3 of 8) rise; by how much is the measurement. On the held-out set no row
+reads lower than the probe's corresponding row did before this change (ticket 8, paraphrase
+0, bug-report 3). The eight eval briefings keep every record they had; the six precision
+prompts return no more records than in §4n (5, 9, 0, 11, 7, 11) beyond what an alias
+legitimately matches, and none returns twelve.
+
+**Falsifier.** A task's governing lesson leaves its briefing (pre-flight red, or a removed id
+in the comparison); a held-out row below its pre-change probe row; a precision prompt back
+to twelve. Any of these and the aliases that caused it are revised, or the field's weight
+drops, before this ships.
+
+**What this cannot settle.** Whether the briefed arm's behaviour changes: the A/B's authored
+tasks already receive their lessons, so a live run would measure generator noise (§4n). The
+arm that would show it is a run on rephrased tasks, which belongs to #258's third step with
+the hybrid index, so the two arms are measured on one instrument.
+
+**First pass (2026-10-23, recorded, not shipped).** Receipt
+`evals/results/probe-rephrase-20261023-aliases-pass1.txt`. Pre-flight green and every
+governing lesson kept. The probe's bug-report row rose from 3 to 8 of 8 and its paraphrase
+row from 0 to 1; the held-out rows read ticket 7, paraphrase 2, bug-report 5. Two
+falsifiers fired. The sixth precision prompt returned twelve records again, nine of them
+sharing one word with it ("search", in aliases such as "throttle search" and "count with
+similarity search"), and every eval briefing swapped one to four records at its margin
+(`r_202_long_running` entered the IDOR briefing on "endpoint"). The cause is the rule as
+pre-registered: one alias word made a record on-subject, and an alias is a phrase, so its
+common words ("search", "endpoint", "tests") did exactly what the floor exists to stop.
+Revision, per the falsifier's remedy: aliases count toward the two shared words, and a
+single alias word is the record's subject only when it is a one-word alias matched whole
+("PKCE", "I001", "throttling"). The result below is of the revised rule, on the same
+aliases.
+
+### Result (2026-10-23, revised rule)
+
+Receipts: `evals/results/probe-rephrase-20261023-aliases.txt` (the probe on the live store,
+313 records) and `evals/results/seed-compare-20261023-aliases.txt`
+(`evals/compare_seed_briefings.py`: two stores seeded from the packs at `origin/main` and from
+this tree, so the aliases are the only difference between them).
+
+| of 8 tasks | before | after |
+|---|---|---|
+| held-out ticket | 6 | 7 |
+| held-out paraphrase | 2 | 3 |
+| held-out bug report | 5 | 5 |
+| probe's own bug report (seen by the author) | 3 | 8 |
+| probe's own paraphrase (seen by the author) | 0 | 1 |
+| six precision prompts, seeded store (records returned) | 3, 8, 0, 4, 1, 2 | 3, 8, 0, 4, 1, 2 |
+
+**What held.** Every governing lesson is briefed on both sides; pre-flight is green on a
+store seeded from the new packs; the authored and ticket rows stay 8 of 8. On the seeded
+stores the six precision prompts return exactly what they returned before, so the aliases
+cost no precision there. No held-out row fell.
+
+**What did not.** The prediction that each briefing keeps every record it had was wrong: on
+all eight tasks, one to three records at the margin left and as many arrived
+(`rxc_effects_discipline` and `d15` left the IDOR briefing; `r_202_long_running` and
+`rx_tokens_localstorage` arrived). Each arrival shares two or more words with its task,
+through its aliases and body, and outranks a record that shared as few: BM25 reordering from
+added indexed text, which any edit to a record's text also does, showing at the margin of a
+twelve-record briefing. The falsifier's "removed id" clause fired on it; the clause was
+written for the governing lesson, which it did not touch. The pre-registered comparison of
+the held-out rows against the probe's own pre-change rows was also the wrong baseline, since
+they are different sentences; the comparison tool gives the held-out set its own before, and
+that is the table above. The probe's precision table on the live store reads 4, 9, 0, 11,
+7, 12 against §4n's 5, 9, 0, 11, 7, 11: the twelfth record on the sixth prompt is a lesson
+recorded in the live store since §4n whose title says "search", and the seeded comparison,
+where the store does not move, shows the aliases added nothing to that prompt.
+
+**Reading.** The honest effect is the held-out column: one more task found from a ticket and
+one more from a paraphrase, none from a bug report, on wording the alias author had not seen.
+The probe's own bug-report row rising from 3 to 8 is an upper bound, since the author had
+read those eight sentences; it says the field can carry a developer's words to a lesson once
+someone writes them, which is this arm's whole premise and its whole cost. Paraphrases that
+avoid every noun stay out of a lexical index's reach, 3 of 8 held-out and 1 of 8 authored:
+that is the case for #258's third step, to be measured on this same held-out set.
+
+**What ships.** The field, the revised floor rule and the 136 alias lines. The ADR's
+amendment waits for the third step, so one amendment records both vectorless arms and the
+hybrid measurement together.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

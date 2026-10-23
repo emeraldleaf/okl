@@ -31,6 +31,9 @@ _DEEP_PATH = re.compile(r"(?<![\w/])[\w.-]+(?:/[\w.-]+){2,}\.\w{1,6}\b")
 def _field(rec: Any, name: str) -> str:
     """A text field of a record, whether it is a Node or the dict form a seed file holds."""
     value = rec.get(name) if isinstance(rec, dict) else getattr(rec, name, None)
+    if isinstance(value, list):
+        # A seed file may write `aliases` as a list; the loader joins it the same way.
+        return "; ".join(str(v) for v in value)
     return value or ""
 
 
@@ -54,13 +57,13 @@ def trace_signals(rec: Any) -> list[str]:
 def overscope_signals(rec: Any, repo_names: Iterable[str] = ()) -> list[str]:
     """Why an org record names one repository's world in its subject fields; [] when not.
 
-    Reads title, symptom and fix, the fields that say what a lesson is about and what to
-    do. The body is left alone: it is the cause, and may legitimately say where the
+    Reads title, symptom, aliases and fix, the fields that say what a lesson is about and
+    what to do. The body is left alone: it is the cause, and may legitimately say where the
     lesson was paid for. `repo_names` are the repositories the store knows.
     """
     if _field(rec, "scope") != "org":
         return []
-    subject = " ".join(_field(rec, f) for f in ("title", "symptom", "fix"))
+    subject = " ".join(_field(rec, f) for f in ("title", "symptom", "aliases", "fix"))
     out = []
     if _ABS_PATH.search(subject):
         out.append("an absolute path")

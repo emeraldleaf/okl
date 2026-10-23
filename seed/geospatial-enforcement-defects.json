@@ -3,6 +3,7 @@
   "nodes": [
     {
       "key": "d_invoked_by_nothing",
+      "aliases": ["nothing runs the check", "review agent only on demand", "rule nobody triggers", "manual enforcement", "automatic vs on request"],
       "type": "Defect", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
       "found_by": "auditing the encoding-loop surfaces — the arch-reviewer, once actually run, caught a must-fix an automatic surface missed",
       "title": "An 'enforcement surface' that only runs on-demand runs never",
@@ -13,6 +14,7 @@
     },
     {
       "key": "g_review_agent_in_ci",
+      "aliases": ["run the review agent in CI", "headless review on every PR", "architecture check in the pipeline", "automated review job"],
       "type": "Gate", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
       "found_by": "architecture-review.yml — runs the reviewer agent headless on every PR diff",
       "title": "Run the architecture/review agent headless in CI on every PR diff",
@@ -23,6 +25,7 @@
     },
     {
       "key": "r_surface_needs_trigger",
+      "aliases": ["which checks actually run", "ledger of gates", "enforcement list", "hook or CI job", "is this rule enforced"],
       "type": "Rule", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
       "found_by": "CLAUDE.md 'What is AUTOMATIC vs what you must RUN' ledger",
       "title": "Every enforcement surface needs a mechanical trigger and an honest AUTOMATIC-vs-RUN ledger",
@@ -33,6 +36,7 @@
     },
     {
       "key": "d_unpinned_linter",
+      "aliases": ["CI failed with no code change", "lint fails after a tool update", "new ruff rule broke the build", "unpinned tool", "RUF012", "formatter version drift"],
       "type": "Defect", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
       "found_by": "ci-python.yml lint gate failing a branch that changed no linted code",
       "title": "Unpinned linter/formatter in CI retro-fails a branch that changed nothing",
@@ -43,6 +47,7 @@
     },
     {
       "key": "r_pin_gating_tools",
+      "aliases": ["pin the linter version", "pip install without a version", "tool version in CI", "npm install -g latest", "reproducible CI"],
       "type": "Rule", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
       "found_by": "the 0.15→0.16 ruff incident above",
       "title": "Pin every tool that gates CI; an unpinned linter is a time-bomb",
@@ -53,6 +58,7 @@
     },
     {
       "key": "d_ungated_zone",
+      "aliases": ["folder not linted", "code outside the lint paths", "scripts directory skipped by CI", "no type check on this directory", "unchecked code"],
       "type": "Defect", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
       "found_by": "the arch-reviewer's 'ungated zone' checklist section — code outside the source roots",
       "title": "Code outside the linter/type/scan source-roots is gated by nothing",
@@ -63,6 +69,7 @@
     },
     {
       "key": "g_gate_every_dir",
+      "aliases": ["import order differs between local and CI", "lint every directory", "ruff from a subfolder", "CI trigger paths", "I001 in CI only"],
       "type": "Gate", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
       "found_by": "ci-python.yml — added olmoearth_run_data to triggers + a dedicated repo-root lint step",
       "title": "Gate every executable directory; lint each import-tree from its own root",
@@ -73,6 +80,7 @@
     },
     {
       "key": "d_cwd_isort",
+      "aliases": ["import sorting fails in CI", "isort differs by working directory", "I001", "sibling import order", "ruff passes locally"],
       "type": "Defect", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
       "found_by": "reproducing the CI I001 locally by matching the working directory",
       "title": "ruff isort is CWD-anchored: sibling imports sort differently from a subdir vs the repo root",
@@ -83,6 +91,7 @@
     },
     {
       "key": "d_masked_gate_order",
+      "aliases": ["fix one CI failure and another appears", "hidden failure behind an earlier step", "gate order", "always broken but never seen", "independent CI jobs"],
       "type": "Defect", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
       "found_by": "a test failure that only appeared once the lint step ahead of it went green",
       "title": "A failing early gate step masks a later gate's failure in the same job",
@@ -93,6 +102,7 @@
     },
     {
       "key": "r_single_source_sets",
+      "aliases": ["duplicated constant", "class list copied", "same set defined twice", "restated literal", "single source of truth for a list"],
       "type": "Rule", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
       "found_by": "architecture-reviewer must-fix: hardcoded 2020 in 5 places + a re-defined label frozenset",
       "title": "Single-source a derived fact — including SETS and class schemes, not just scalars",
@@ -103,6 +113,7 @@
     },
     {
       "key": "d_month_range_28",
+      "aliases": ["missing the end of the month", "date range ends on the 28th", "days 29 to 31 dropped", "monthly STAC search", "month end rollover", "December to January"],
       "type": "Defect", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
       "found_by": "CodeRabbit review of a monthly-composite date range",
       "title": "Monthly STAC query ending at day-28 drops days 29-31 of imagery",

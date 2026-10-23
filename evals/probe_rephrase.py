@@ -6,7 +6,10 @@ evals/tasks.jsonl, does the governing lesson still reach the top-12 when the tas
 rephrased the way a developer types it: a terse ticket, a paraphrase written to avoid the
 lesson's own vocabulary, and a bug report describing the symptom? The variants below were
 written by hand; their vocabulary choices are the probe's main bias, and the receipt lists
-the words each variant still shares with its lesson, so an accidental overlap is visible. (2) PRECISION: on six
+the words each variant still shares with its lesson, so an accidental overlap is visible. A second
+recall table uses evals/heldout_variants.json, rephrasings written blind from tasks.jsonl's id and
+task fields by an agent that saw no pack or receipt (its _provenance key says how), so a change
+authored by someone who had read the variants above is measured on wording they had not. (2) PRECISION: on six
 short prompts taken verbatim from one working session, how many of the twelve returned
 lessons match more than one subject word, and what would two candidate relevance floors
 keep? Matching here is whole-word over title+symptom+body+fix+tags, a proxy for FTS5's
@@ -33,7 +36,7 @@ REPO = cfg.get('repo') or 'okl'; INTERESTS = cfg.get('interests')
 nodes = store.all_nodes(); N = len(nodes)
 def text(n: Any) -> str:
     """The searchable prose of one record, lower-cased."""
-    return " ".join(x or "" for x in (n.title, n.symptom, n.body, n.fix, n.tags)).lower()
+    return " ".join(x or "" for x in (n.title, n.symptom, n.aliases, n.body, n.fix, n.tags)).lower()
 TXT = {n.id: text(n) for n in nodes}
 def matched(task: str, n: Any) -> list[str]:
     """The task's subject words that occur whole in the record's prose."""
@@ -98,7 +101,7 @@ try:
 except OSError:   # no git on PATH: the header says '?' rather than the probe failing to run
     _head = ""
 _floor = "on" if hasattr(core, "_apply_floor") else "off"
-print(f"store: {N} nodes · repo={REPO} · hook interests={INTERESTS}")
+print(f"store: {N} nodes ({sum(1 for n in nodes if n.aliases)} with aliases) · repo={REPO} · hook interests={INTERESTS}")
 print(f"retrieval code: commit {_head or '?'} · relevance floor {_floor} · every row below, "
       "recall and precision alike, is measured with this code against this store\n")
 print("A. RECALL: is the governing lesson in the top-12? (harness config = no interests; hook config = repo interests)  rank = position in the ranked in-scope list")
@@ -115,13 +118,23 @@ for t in tasks:
         print(f"{t['id']:16} {label:11} {'yes' if r1 else 'MISS':8} {'yes' if r2 else 'MISS':8} {str(rk):>5}/{live:<5} {m[:6]}")
 print("\nrecall by variant (of 8):", {k: f"harness {v[0]}/8, hook {v[1]}/8" for k, v in hits.items()})
 
+HELDOUT = json.loads(Path('evals/heldout_variants.json').read_text())
+print("\nA2. HELD-OUT RECALL: rephrasings written blind from tasks.jsonl (evals/heldout_variants.json); same columns")
+hits2 = {k: [0, 0] for k in LABELS[1:]}
+for t in tasks:
+    nid = t["defect_node"]; n = store.get_node(nid)
+    for label in LABELS[1:]:
+        task = HELDOUT[t["id"]][label]
+        r1 = nid in returned(core.check(store, repo=REPO, task=task, interests=None))
+        r2 = nid in returned(core.check(store, repo=REPO, task=task, interests=INTERESTS))
+        rk, live = rank_of(task, nid, None)
+        hits2[label][0] += r1; hits2[label][1] += r2
+        m = matched(task, n)
+        print(f"{t['id']:16} {label:11} {'yes' if r1 else 'MISS':8} {'yes' if r2 else 'MISS':8} {str(rk):>5}/{live:<5} {m[:6]}")
+print("\nheld-out recall by variant (of 8):", {k: f"harness {v[0]}/8, hook {v[1]}/8" for k, v in hits2.items()})
+
 print("\nB. PRECISION on six real prompts from this session (hook config). For each of the 12 returned: terms matched, and the rarest matched term's document frequency.")
-PROMPTS = ["this seems like a major point to scrutinize",
- "ok do the updates and update my site and the writing section",
- "what about the org knowwledge ideae is that a nich ?",
- "give me a doc for that too",
- "how do we come up with a good plan for governing github copilot and mcp",
- "what about the search ?  and how this thing finds the lessions needed to each prompt?"]
+PROMPTS = json.loads(Path('evals/probe_prompts.json').read_text())["prompts"]
 for p in PROMPTS:
     res = core.check(store, repo=REPO, task=p, interests=INTERESTS)
     ids = returned(res); terms = [x.lower() for x in core.briefing_terms(p)]

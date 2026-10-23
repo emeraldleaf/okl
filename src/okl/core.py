@@ -172,8 +172,8 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     # task every slot fills with records that share one word with it ("point", "doc"):
     # twelve imperatives chosen by a word in common, at about two thousand tokens a
     # prompt (evals/results/probe-rephrase-20261021.txt, #257). A record is briefed only
-    # when it shares two subject words with the task, or one that is in its title or
-    # symptom, or one when the task has only one word. Trimmed records are counted, not hidden: the
+    # when it shares two subject words with the task, or one that is in its title or symptom
+    # (or is a one-word alias), or one when the task has only one word. Trimmed records are counted, not hidden: the
     # briefing says how many weak matches it left out.
     hits, matched, weak = _apply_floor(store, hits, briefing_terms(task))
     # The floor can empty a full window: when every fetched record was weak, a qualifying
@@ -222,19 +222,28 @@ def _matched_terms(terms: list[str], n: Node) -> list[str]:
     Whole-word, with letters and digits as word characters, which is how the FTS5
     `unicode61` tokenizer splits text: `OKL_DATABASE_URL` is three words to both.
     """
-    text = " ".join(x or "" for x in (n.title, n.symptom, n.body, n.fix, n.tags)).lower()
+    text = " ".join(x or "" for x in (n.title, n.symptom, n.aliases, n.body, n.fix, n.tags)).lower()
     return [t for t in terms
             if re.search(r"(?<![a-z0-9])" + re.escape(t) + r"(?![a-z0-9])", text)]
 
 
 def _in_subject(words: list[str], n: Node) -> bool:
-    """Whether any of `words` occurs whole in the record's title or symptom.
+    """Whether any of `words` occurs whole in the record's title or symptom, or is one of
+    its one-word aliases.
 
-    Those two fields say what a lesson is about and when it applies; the guidance tells
-    authors to keep the title short and put the distinguishing words in the symptom.
+    Title and symptom say what a lesson is about and when it applies. An alias is a phrase
+    in a developer's words, so its common words are not the subject: when any alias word
+    counted, "throttle search" made the rate-limit decision on-subject for every prompt
+    that said "search", and a short prompt was answered with twelve records again
+    (REPORT §4p, first pass). A one-word alias ("PKCE", "I001", "throttling") is the
+    subject when the task says that word; longer aliases count toward the two shared
+    words the floor asks for, through _matched_terms.
     """
     subject = " ".join(x or "" for x in (n.title, n_symptom(n))).lower()
-    return any(re.search(r"(?<![a-z0-9])" + re.escape(w) + r"(?![a-z0-9])", subject) for w in words)
+    if any(re.search(r"(?<![a-z0-9])" + re.escape(w) + r"(?![a-z0-9])", subject) for w in words):
+        return True
+    single = {a.strip().lower() for a in (n.aliases or "").split(";") if a.strip() and " " not in a.strip()}
+    return any(w in single for w in words)
 
 
 def n_symptom(n: Node) -> str:
@@ -247,8 +256,9 @@ def _apply_floor(store: Store, hits: list[Node], terms: list[str],
     """Keep the hits that share enough subject words with the task; count the rest.
 
     The floor is two words, or one when the task has only one, or one that appears in the
-    record's title or symptom: those fields say what the lesson is about and when it
-    applies, so a task using that word is on its subject ("add an endpoint that sets a
+    record's title or symptom, or is one of its one-word aliases: those say what the
+    lesson is about, when it applies and what a developer calls it, so a task using that
+    word is on its subject ("add an endpoint that sets a
     price" reaches the price-tamper lesson through "price" in its symptom). A hit
     below the floor still stays when it links one step to a hit above it (a Gate that
     CATCHES a matched Defect, a Decision that SUPERSEDES one): the link is the relevance,
@@ -434,7 +444,8 @@ def record(store: Store, *, type: str, title: str, scope: str, repo: str | None 
            ttl_days: int | None = None, owner: str | None = None,
            files: str | None = None, symptom: str | None = None,
            applies_to: str | None = None, fix: str | None = None,
-           tags: str | None = None, verified: bool = False, id: str | None = None,
+           tags: str | None = None, aliases: str | None = None,
+           verified: bool = False, id: str | None = None,
            keep_verification: bool = False, replace: bool = False,
            ) -> str:
     """Create a node. `scope` is 'org' (meant for every repo) or 'repo:<name>'.
@@ -447,6 +458,10 @@ def record(store: Store, *, type: str, title: str, scope: str, repo: str | None 
     enrolls the node in the source-vs-spec drift detector (see drift.py).
     `symptom`/`fix` populate the Symptom→Cause→Fix schema (cause lives in `body`)
     so `check` can surface "if you see X, it's Y, do Z" instead of prose.
+    `aliases` is a "; "-separated list of the phrases a developer uses when the lesson
+    bites ("logged out on refresh; session lost"); it is indexed with the symptom, its words
+    count toward the relevance floor, and a one-word alias matched whole counts as the
+    record's subject (#258).
     `tags` is a comma-separated subject list from the controlled vocabulary
     (store.KNOWN_TAGS); repos declare interest tags so `check` can filter by subject.
 
@@ -479,7 +494,7 @@ def record(store: Store, *, type: str, title: str, scope: str, repo: str | None 
         "type": type, "title": title, "scope": scope, "repo": repo, "body": body,
         "status": status, "found_by": found_by, "ttl_days": ttl_days, "owner": owner,
         "files": files, "symptom": symptom, "fix": fix, "tags": tags,
-        "applies_to": applies_to,
+        "applies_to": applies_to, "aliases": join_aliases(aliases) or None,
         "verified_at": _now_ms() if verified else None,
     }
     # An explicit id names the lesson; omit it and the store mints a fresh random one.
@@ -532,9 +547,19 @@ def _carry_over(store: Store, kw: dict[str, Any], node_id: str, *,
                   verified_commit=old.verified_commit)
 
 
+def join_aliases(aliases: Any) -> str | None:
+    """The stored form of `aliases`: a "; "-joined string. A seed pack writes a list and the
+    CLI collects repeated flags, so every writer meets one rule here; a string passes as is.
+    An empty list is "", the clearing value, so `update(aliases=[])` clears rather than
+    reading as "not given" (review on #266); `record` stores it as none."""
+    if isinstance(aliases, (list, tuple)):
+        return "; ".join(str(a).strip() for a in aliases if str(a).strip())
+    return aliases
+
+
 # The fields `update` may change, and those it may not leave empty.
 UPDATABLE_FIELDS = ("type", "title", "scope", "body", "status", "found_by", "ttl_days",
-                    "owner", "files", "symptom", "fix", "tags", "applies_to")
+                    "owner", "files", "symptom", "fix", "tags", "applies_to", "aliases")
 _REQUIRED = ("type", "title", "scope")
 
 
@@ -554,6 +579,8 @@ def update(store: Store, node_id: str, repo: str | None = None,
     Raises ValueError for an unknown id, an unknown field, nothing to change, an empty
     required field, or a value the store rejects (an unknown tag, a bad scope).
     """
+    if "aliases" in fields:
+        fields["aliases"] = join_aliases(fields["aliases"])
     n = store.get_node(node_id)
     if n is None:
         raise ValueError(f"no lesson with id {node_id!r}")

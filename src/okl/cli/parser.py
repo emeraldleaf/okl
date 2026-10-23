@@ -106,6 +106,10 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
     pr.add_argument("--ttl-days", dest="ttl_days", type=int); pr.add_argument("--owner")
     pr.add_argument("--files", help="comma-sep path globs this node governs (enrolls it in drift detection)")
     pr.add_argument("--symptom", help="Symptom→Cause→Fix: the observable symptom (cause goes in --body)")
+    pr.add_argument("--alias", action="append", dest="aliases", metavar="PHRASE",
+                    help="the words a developer uses when this bites, repeatable (--alias 'logged out "
+                         "on refresh' --alias 'session lost'); indexed like the symptom, so a prompt "
+                         "in those words finds the lesson")
     pr.add_argument("--fix", help="Symptom→Cause→Fix: the fix to apply")
     pr.add_argument("--applies-to", dest="applies_to", default=None,
                     help="stacks this lesson is VALID for (comma-sep), or 'any'. Leave unset "
@@ -130,6 +134,8 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                  "--fix", "--tags"):
         pu.add_argument(flag)
     pu.add_argument("--found-by", dest="found_by")
+    pu.add_argument("--alias", action="append", dest="aliases", metavar="PHRASE",
+                    help="replace the lesson's aliases (repeatable); --alias \"\" clears them")
     pu.add_argument("--ttl-days", dest="ttl_days", type=_days_or_blank)
     pu.add_argument("--applies-to", dest="applies_to")
     pu.add_argument("--files", help="changing the governed files clears the proof: a check of "

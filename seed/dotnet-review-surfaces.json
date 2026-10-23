@@ -13,6 +13,7 @@
   },
   {
    "key": "rs_read_projection_axes",
+   "aliases": ["cartesian explosion", "Include duplicates rows", "slow read with many joins", "AsNoTracking is not enough", "project to a DTO", "split query"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "architecture-reviewer.md; docs/cqrs-data-access.md; audits/2026-05-31-ef-core-read-performance",
    "tags": "dotnet,data-quality",
@@ -23,6 +24,7 @@
   },
   {
    "key": "rs_fanout_per_recipient",
+   "aliases": ["send to every user", "broadcast notification", "loop sending emails", "fan out to recipients", "await in a foreach"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "architecture-reviewer.md; .coderabbit.yaml **/Features/**/*.cs",
    "tags": "messaging",
@@ -33,6 +35,7 @@
   },
   {
    "key": "rs_meter_wildcard_registration",
+   "aliases": ["metrics disappeared", "meter not collected", "renamed the meter and lost the dashboard", "OpenTelemetry meter registration"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "architecture-reviewer.md; .coderabbit.yaml ServiceDefaults/Extensions.cs",
    "tags": "dotnet,messaging,data-quality",
@@ -43,6 +46,7 @@
   },
   {
    "key": "rs_sweeper_hygiene",
+   "aliases": ["background sweeper", "scheduled cleanup job", "memory grows in a hosted service", "duplicate work across replicas", "one bad row stops the batch", "polling job"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "architecture-reviewer.md; .coderabbit.yaml **/*RecoveryJob*.cs",
    "tags": "dotnet,method",
@@ -53,6 +57,7 @@
   },
   {
    "key": "rs_rich_aggregate_shape",
+   "aliases": ["public setters on an entity", "mutate the entity from the handler", "exposed List on a domain object", "domain model shape", "infrastructure reference in Domain"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "architecture-reviewer.md; .coderabbit.yaml domain-invariant path rules",
    "tags": "dotnet",
@@ -63,6 +68,7 @@
   },
   {
    "key": "rs_handler_idempotency_guard",
+   "aliases": ["dead letter queue filling up", "duplicate message throws", "late message", "already processed", "status check at the top of the handler"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "architecture-reviewer.md; audits/2026-05-31-idempotent-consumer",
    "tags": "messaging",
@@ -73,6 +79,7 @@
   },
   {
    "key": "rs_keyed_services_over_factories",
+   "aliases": ["multiple implementations of one interface", "pick an implementation at runtime", "strategy selection by a field", "factory for DI", "keyed services", "wrong implementation resolved"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "architecture-reviewer.md; .coderabbit.yaml **/Infrastructure/DependencyInjection.cs",
    "tags": "dotnet",
@@ -83,6 +90,7 @@
   },
   {
    "key": "rs_integration_tests_default",
+   "aliases": ["mock the repository", "verify the method was called", "unit test vs integration test", "test the handler against a real database", "untested branch"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "architecture-reviewer.md; .coderabbit.yaml **/*Test*.cs",
    "tags": "dotnet,method",
@@ -93,6 +101,7 @@
   },
   {
    "key": "rs_workflow_hardening_baseline",
+   "aliases": ["GitHub Actions security", "pipefail", "persist-credentials", "workflow permissions", "pin actions to a SHA", "concurrency group"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "architecture-reviewer.md; .coderabbit.yaml .github/workflows/*.yml",
    "tags": "security,method",
@@ -103,6 +112,7 @@
   },
   {
    "key": "rs_event_carries_recipient_id",
+   "aliases": ["notification never arrives", "consumer drops the message", "cannot find who to notify", "event has no user id", "resolve the recipient"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": ".coderabbit.yaml App.Contracts/**/*.cs (precedent: issue #99, ShipmentDispatchedEvent)",
    "tags": "messaging,data-quality",
@@ -113,6 +123,7 @@
   },
   {
    "key": "rs_transport_removal_orphans",
+   "aliases": ["removed RabbitMQ", "swap the message broker", "traces missing after the migration", "leftover package versions", "dead telemetry source"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": ".coderabbit.yaml ServiceDefaults/Extensions.cs (both bit the ASB→RabbitMQ swap, PR #159)",
    "tags": "dotnet,messaging",

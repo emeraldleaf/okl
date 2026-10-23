@@ -69,7 +69,14 @@ governing record reaches its briefing. `evals/probe_rephrase.py` asks the two qu
 A/B cannot: whether that record still reaches the top-12 when the task is rephrased (a
 terse ticket, a paraphrase sharing no nouns, a bug report), and how many of the twelve
 records a short real prompt returns match more than one subject word. Its output is a
-diagnostic receipt, `evals/results/probe-rephrase-<date>.txt`; the rephrasings are
+diagnostic receipt, `evals/results/probe-rephrase-<date>.txt`. Its second recall table uses
+`evals/heldout_variants.json`, rephrasings written blind from the task text alone (its
+`_provenance` key says how), so a retrieval change authored by someone who had read the
+probe's own variants is also measured on wording they had not; its six precision prompts
+are in `evals/probe_prompts.json`. For a change to the seed packs rather than the code,
+`evals/compare_seed_briefings.py --against origin/main` seeds two throwaway stores and
+prints, per eval task, the governing record's presence and the ids that left and arrived,
+plus the held-out recall and the precision prompts' counts on each side. The rephrasings are
 hand-written, which is its main bias, and it is not pooled with any A/B.
 
 ## Provenance of the originally quoted numbers

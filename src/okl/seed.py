@@ -11,6 +11,8 @@ File format:
 }
 `key` is a local alias used only to wire edges within the file; the store
 assigns the real id. Edges reference keys, which are resolved to ids on load.
+A node's `aliases` may be a list of phrases; core.record joins them into the one "; "-joined
+string the store holds.
 """
 from __future__ import annotations
 

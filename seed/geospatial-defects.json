@@ -3,6 +3,7 @@
   "nodes": [
     {
       "key": "d14",
+      "aliases": ["class_path import error", "config written from memory", "fails on the GPU box", "module not found at training start", "wrong import path in the config"],
       "symptom": "a model or scaffold config whose class_path entries fail to import at runner startup, often on a rented GPU, after a spec said they were correct",
       "type": "Defect",
       "scope": "org",
@@ -16,6 +17,7 @@
     },
     {
       "key": "g_classpath",
+      "aliases": ["check the config imports", "import every class_path", "config validation", "dry run the scaffold"],
       "symptom": "a config file that declares class_path or module strings nothing imports until the training run starts",
       "type": "Gate",
       "scope": "org",
@@ -28,6 +30,7 @@
     },
     {
       "key": "d15",
+      "aliases": ["job succeeded but nothing was written", "empty output directory", "exit code 0 but no files", "silent failure in a worker pool", "swallowed exception", "pipeline said success"],
       "symptom": "a pipeline or batch step exits 0 and reports success while its output directory is empty or far smaller than expected",
       "type": "Defect",
       "scope": "org",
@@ -40,6 +43,7 @@
     },
     {
       "key": "g_verify_outputs",
+      "aliases": ["check the outputs exist", "assert files were written", "don't trust the exit code", "verify after the batch step", "count the output files"],
       "symptom": "a script that treats exit code 0 from a batch step as proof the outputs exist",
       "type": "Gate",
       "scope": "org",
@@ -52,6 +56,7 @@
     },
     {
       "key": "d16",
+      "aliases": ["disk full", "root filesystem filling up", "temp files on the boot disk", "GDAL temp directory", "TMPDIR ignored", "no space left on device"],
       "symptom": "the boot disk fills during a data run even though TMPDIR points at the data drive; files appear under / from a library's own temp setting",
       "type": "Defect",
       "scope": "org",
@@ -65,6 +70,7 @@
     },
     {
       "key": "d18",
+      "aliases": ["target out of bounds", "off by one in the class count", "class 0 is ignore", "num_classes", "highest class never predicted", "CUDA assert on labels"],
       "symptom": "training crashes with 'Target N is out of bounds' where N equals num_classes, or predictions never include the highest class id",
       "type": "Defect",
       "scope": "org",
@@ -78,6 +84,7 @@
     },
     {
       "key": "d19",
+      "aliases": ["wrong output shape", "temporal dimension mistaken for spatial", "decoder shape mismatch", "time-series input tensor", "12x2 instead of 2x2"],
       "symptom": "a segmentation decoder predicts the wrong spatial shape on a time-series input, such as 12x2 against a 2x2 target, when the input is [bands, timesteps, H, W]",
       "type": "Defect",
       "scope": "org",
@@ -114,6 +121,7 @@
     },
     {
       "key": "d12",
+      "aliases": ["points in the wrong place on the map", "lat lon swapped", "coordinates transposed", "samples in the ocean", "x y order"],
       "symptom": "sample points from a public dataset plot in the wrong hemisphere or in the ocean when mapped; latitude and longitude columns look swapped",
       "type": "Defect",
       "scope": "org",
@@ -126,6 +134,7 @@
     },
     {
       "key": "d11",
+      "aliases": ["AUC below 0.5", "model worse than random", "cross-validation on spatial data", "spatial leakage", "unshuffled folds", "grouped CV", "suspiciously bad score"],
       "symptom": "a cross-validated AUC far below chance, around 0.2 to 0.3, on spatially clustered data with an unshuffled or ungrouped KFold",
       "type": "Defect",
       "scope": "org",

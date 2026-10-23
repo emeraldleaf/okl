@@ -3,6 +3,7 @@
  "nodes": [
   {
    "key": "rxc_feature_boundaries",
+   "aliases": ["import from another feature", "deep import", "cross-module import", "folder structure by feature", "restricted paths lint"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "frontend/CLAUDE.md 'Architecture rules'",
    "tags": "react",
@@ -13,6 +14,7 @@
   },
   {
    "key": "rxc_shared_promotion",
+   "aliases": ["move it to shared", "common utils folder", "when to extract a shared component", "premature reuse"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "frontend/CLAUDE.md 'Architecture rules'",
    "tags": "react,method",
@@ -23,6 +25,7 @@
   },
   {
    "key": "rxc_query_keys",
+   "aliases": ["query key strings", "cache key for react-query", "invalidate the wrong key", "key factory", "TanStack Query keys"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "frontend/CLAUDE.md 'Server state'",
    "tags": "react",
@@ -33,6 +36,7 @@
   },
   {
    "key": "rxc_mutation_invalidate",
+   "aliases": ["list does not refresh after saving", "stale data after a mutation", "refetch after update", "invalidateQueries", "onSuccess refresh"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "frontend/CLAUDE.md 'Server state'",
    "tags": "react",
@@ -43,6 +47,7 @@
   },
   {
    "key": "rxc_no_state_copy",
+   "aliases": ["copy the API response into state", "useState from a query", "state out of sync with the server", "derived state", "sync state with props"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "frontend/CLAUDE.md 'Server state'",
    "tags": "react",
@@ -54,6 +59,7 @@
   },
   {
    "key": "rxc_effects_discipline",
+   "aliases": ["useEffect for business logic", "missing dependency warning", "disable exhaustive-deps", "effect runs twice", "when to use an effect"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "frontend/CLAUDE.md 'Effects discipline' (distilled from react.dev You Might Not Need an Effect)",
    "tags": "react",
@@ -65,6 +71,7 @@
   },
   {
    "key": "rxc_no_waterfalls",
+   "aliases": ["spinner after spinner", "sequential fetches", "child waits for parent data", "slow page load from chained requests", "parallel data loading", "route loader"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "frontend/CLAUDE.md 'Render & bundle performance'",
    "tags": "react",
@@ -75,6 +82,7 @@
   },
   {
    "key": "rxc_bundle_budget",
+   "aliases": ["bundle too big", "code splitting", "lazy load a route", "long list is slow", "virtualize the list", "initial load time"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "frontend/CLAUDE.md 'Render & bundle performance'",
    "tags": "react",
@@ -85,6 +93,7 @@
   },
   {
    "key": "rxc_spa_auth_bff",
+   "aliases": ["login flow for a SPA", "implicit flow", "PKCE", "refresh token in the browser", "backend for frontend", "where to keep auth tokens"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "frontend/CLAUDE.md 'Security' (OAuth Browser-Based Apps BCP)",
    "tags": "react,security",
@@ -95,6 +104,7 @@
   },
   {
    "key": "rxc_no_client_money",
+   "aliases": ["calculate the total in the frontend", "price computed in the browser", "secret in the frontend bundle", "trust the client total", "VITE_ env secret"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "frontend/CLAUDE.md 'Security'",
    "tags": "react,security",
@@ -105,6 +115,7 @@
   },
   {
    "key": "rxc_test_behavior",
+   "aliases": ["test implementation details", "mock fetch", "MSW", "testing hooks directly", "missing error state test", "loading state test"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "frontend/CLAUDE.md 'Testing'",
    "tags": "react,method",

@@ -200,7 +200,7 @@ def render(d: dict) -> str:
          "up to 40. A prompt with no subject word is briefed nothing.",
          f'{d["terms"]} words', "searched", 0.0, 0.0, ""),
         ("2", "RANK", "Fetch 3x more candidates than needed",
-         "SQLite FTS5, weighted title x8, body x4, symptom x4, fix x2, tags x1. A record found "
+         "SQLite FTS5, weighted title x8, body x4, symptom x4, aliases x4, fix x2, tags x1. A record found "
          "only by its tag ranks after every content match.",
          f'{d["fetched"]} fetched', "limit x 3", d["fetched"] / f, 0.0, ""),
         ("3", "SCOPE", "Permission - who may see this",
@@ -218,7 +218,7 @@ def render(d: dict) -> str:
          "it hid 35 of 172 records and the briefed arm then reproduced a defect it dropped.",
          f'{d["after_tags"]} survive', f'{d["dropped_tags"]} dropped: no shared subject',
          d["after_tags"] / f, d["dropped_tags"] / f, "ANY-MATCH"),
-        ("6", "FLOOR", "Two shared subject words, or one in the title or symptom",
+        ("6", "FLOOR", "Two shared subject words, or one in the title or symptom, or a one-word alias",
          "A record found by one word in common ('point', 'doc') outside its title and symptom "
          "is left out and counted, unless it links one step to a kept record. Retired leave too.",
          f'{d["after_floor"]} survive', f'{d["weak"]} dropped: one shared word, {d["retired"]} retired',

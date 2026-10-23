@@ -1,0 +1,11 @@
+{
+ "_provenance": "Six short prompts taken verbatim from one working session on 2026-10-21; evals/probe_rephrase.py's precision table and evals/compare_seed_briefings.py both read them.",
+ "prompts": [
+  "this seems like a major point to scrutinize",
+  "ok do the updates and update my site and the writing section",
+  "what about the org knowwledge ideae is that a nich ?",
+  "give me a doc for that too",
+  "how do we come up with a good plan for governing github copilot and mcp",
+  "what about the search ?  and how this thing finds the lessions needed to each prompt?"
+ ]
+}
