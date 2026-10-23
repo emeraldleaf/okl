@@ -25,8 +25,11 @@ PROBE_VARIANTS = {t["id"]: t for t in tasks}
 
 
 def ids(task: str, hybrid: str | None, interests: list[str] | None) -> list[str]:
-    """The briefed ids for `task` under one setting."""
+    """The briefed ids for `task` under one setting; a hybrid cell that silently fell back to
+    full-text would print as a measurement, so it aborts instead (review on #267)."""
     res = core.check(store, repo=REPO, task=task, interests=interests, hybrid=hybrid)
+    if hybrid and res.get("hybrid_unavailable"):
+        sys.exit(f"grid: the semantic arm did not run for {hybrid!r}: {res['hybrid_unavailable']}")
     return [r["id"] for b in BUCKETS for r in res.get(b, [])]
 
 

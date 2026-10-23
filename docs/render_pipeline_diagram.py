@@ -66,13 +66,17 @@ SEED_INTERESTS = ["python", "method", "security", "agent-safety",
 def _seeded_store(tmpdir: str) -> Store:
     """Build a store from every committed seed file, via the shipped seed path."""
     url = f"sqlite:///{Path(tmpdir) / 'trace.db'}"
-    # A configured service URL would send the seeds to the live service instead of this
-    # throwaway store (review on #266), so the variable that selects one is dropped.
+    # The seeds must land in this throwaway store and nowhere else. A service URL in the
+    # environment, or in the checkout's own .okl/config.json, would put the client in remote
+    # mode and send them to the live service (reviews on #266 and #267), so the subprocess
+    # runs from the temporary directory, outside any config's ancestor tree, with the
+    # variable dropped, the database named, and the checkout's source on its import path.
     env = {k: v for k, v in os.environ.items() if k != "OKL_SERVICE_URL"}
     env["OKL_DATABASE_URL"] = url
+    env["PYTHONPATH"] = os.pathsep.join(p for p in (str(REPO / "src"), env.get("PYTHONPATH", "")) if p)
     for f in sorted((REPO / "seed").glob("*.json")):
         r = subprocess.run([sys.executable, "-m", "okl", "seed", str(f)],
-                           capture_output=True, text=True, env=env, cwd=REPO)
+                           capture_output=True, text=True, env=env, cwd=tmpdir)
         if r.returncode != 0:
             raise SystemExit(f"ABORT: seeding {f.name} failed — {r.stderr.strip()[:200]}")
     store = Store(url)

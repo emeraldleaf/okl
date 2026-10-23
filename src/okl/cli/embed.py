@@ -18,7 +18,9 @@ def cmd_embed(args: argparse.Namespace) -> int:
         print("okl embed builds the LOCAL store's vectors; a shared service keeps its own.", file=sys.stderr)
         return 2
     try:
-        report = semantic.build_index(client._local_store(), model_id=args.model)
+        # One model, semantic.MODEL_ID: check searches that model's vectors and no other, so a
+        # choice here would write vectors nothing reads (review on #267).
+        report = semantic.build_index(client._local_store())
     except semantic.SemanticUnavailableError as e:
         print(f"NOT EMBEDDED — {e}", file=sys.stderr)
         return 2

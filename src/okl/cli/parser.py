@@ -108,9 +108,8 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
 
     pe = sub.add_parser("embed", help="build or refresh the local vectors that --hybrid briefings "
                                        "fuse with the full-text search (needs the hybrid extra; "
-                                       "downloads the model once)")
-    pe.add_argument("--model", default=semantic.MODEL_ID,
-                    help=f"the embedding model to use (default {semantic.MODEL_ID})")
+                                       f"downloads {semantic.MODEL_ID} once). The model is fixed: "
+                                       "check searches the vectors of that one model")
     pe.set_defaults(func=cmd_embed)
 
     pr = sub.add_parser("record", help="record a node (defect/gate/claim/...)")
