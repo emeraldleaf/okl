@@ -97,6 +97,20 @@ def save_config(data: dict[str, Any], root: Path | None = None) -> Path:
     return path
 
 
+def hybrid_setting(env: str | None, configured: Any) -> str | None:
+    """The fusion `check` runs, or None for full-text only: OKL_HYBRID wins over the
+    config's `hybrid`; off/0/empty turn it off, on/1/true/linear mean the convex
+    combination (the measured configuration, REPORT §4q), rrf reciprocal-rank fusion (#258)."""
+    raw = env if env is not None else configured
+    if raw in (None, False, "", "0", "off", "false", "none"):
+        return None
+    if raw in (True, "1", "on", "true", "linear"):
+        return "linear"
+    if raw == "rrf":
+        return "rrf"
+    raise ValueError(f"hybrid must be rrf, linear or off, not {raw!r}")
+
+
 class Client:
     """Uniform surface over local-store and remote-service modes."""
 
@@ -105,6 +119,7 @@ class Client:
         self.service_url = os.environ.get("OKL_SERVICE_URL") or self.config.get("service_url")
         self.repo = self.config.get("repo") or Path.cwd().name
         self.interests = self.config.get("interests") or []
+        self.hybrid = hybrid_setting(os.environ.get("OKL_HYBRID"), self.config.get("hybrid"))
         self._store: Store | None = None
 
     @property
@@ -227,13 +242,14 @@ class Client:
         reached or fails on its side (a network error or any 5xx).
         """
         repo = repo or self.repo
-        payload = {"repo": repo, "task": task, "interests": self.interests or None}
+        payload = {"repo": repo, "task": task, "interests": self.interests or None,
+                   "hybrid": self.hybrid}
         if limit is not None:
             payload["limit"] = limit
         if self.mode == "remote":
             result = self._post("/check", payload)
         else:
-            kw: dict[str, Any] = {"interests": self.interests}
+            kw: dict[str, Any] = {"interests": self.interests, "hybrid": self.hybrid}
             if limit is not None:
                 kw["limit"] = limit
             store = self._local_store()

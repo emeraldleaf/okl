@@ -52,6 +52,9 @@ def cmd_check(args: argparse.Namespace) -> int:
     override = getattr(args, "interests", None)
     if override is not None:
         client.interests = [t.strip().lower() for t in override.split(",") if t.strip()]
+    fusion = getattr(args, "hybrid", None)
+    if fusion is not None:
+        client.hybrid = None if fusion == "off" else fusion
     try:
         result = client.check(args.task, repo=args.repo, limit=args.limit)
     except OKLUnreachableError as e:

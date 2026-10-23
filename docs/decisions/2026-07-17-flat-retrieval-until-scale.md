@@ -60,3 +60,20 @@ wins on that measurement — mirroring Mem0's mistake in reverse.
   as `observed-knowledge-ledger` (PyPI refuses the name `okl`); the command is
   `pip install observed-knowledge-ledger`, and the CLI is still `okl`. The consequence it
   illustrates, an install with no ML stack, is unchanged.
+- 2026-10-23: the vocabulary-mismatch trigger fired (`evals/results/probe-rephrase-20261021.txt`,
+  #258: paraphrases of the eval tasks reached their lesson 0 of 8 times). The first step was
+  not the embedding index. Two lexical arms were measured first and both shipped: a symptom on
+  every advice record (REPORT §4o; the probe's bug-report row 3 → 8 of 8) and authored
+  aliases (§4p; one more ticket and one more paraphrase on a blind held-out set). The index
+  then followed the step above: a local static model (`minishlab/potion-retrieval-32M`) beside
+  FTS5, fused by reciprocal rank and by a convex combination, measured on the same tasks
+  (§4q). It did not win by enough to become the default: one more held-out paraphrase of
+  eight under linear fusion at a 0.40 cosine line, nothing on tickets or bug reports, one
+  record more on two of six short prompts, and 0.8 s per prompt for the model load. It ships
+  optional (`okl embed`, `okl check --hybrid`, `"hybrid": "linear"` in `.okl/config.json`),
+  off by default, and the README's "no embeddings" line says so. Scale: the search is a numpy
+  matrix product over every stored vector (3 ms at 50,000 records); the next tier, an
+  approximate index over the same table (sqlite-vec locally, pgvector on the service), is the
+  amendment to make when a store crosses about 100,000 vectors or a search exceeds 100 ms.
+  The next retrieval experiment is a stronger local model or a reranker on the held-out set;
+  the default changes only if one wins there.

@@ -3,7 +3,8 @@ from __future__ import annotations
 
 import argparse
 
-from .. import __version__, core
+from .. import __version__, core, semantic
+from .embed import cmd_embed
 from .health import cmd_coverage, cmd_doctor, cmd_metric
 from .install import cmd_connect, cmd_init, cmd_scaffold
 from .lessons import (
@@ -96,7 +97,21 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                          "an empty string to disable interest filtering entirely — the eval "
                          "harness does, because inheriting a host repo's interests made one "
                          "of its tasks measure the absence of the rule it tests.")
+    pk.add_argument("--hybrid", nargs="?", const="linear", choices=["rrf", "linear", "off"], default=None,
+                    help="fuse the full-text candidates with the nearest records by a local embedding "
+                         "(linear, the measured configuration and the default when the flag is bare, "
+                         "or rrf); 'off' for full-text "
+                         "only. Omit it to follow the config's `hybrid` or OKL_HYBRID. Needs `okl "
+                         "embed` to have run once; otherwise the briefing is the full-text one and "
+                         "the JSON says so (#258).")
     pk.set_defaults(func=cmd_check)
+
+    pe = sub.add_parser("embed", help="build or refresh the local vectors that --hybrid briefings "
+                                       "fuse with the full-text search (needs the hybrid extra; "
+                                       "downloads the model once)")
+    pe.add_argument("--model", default=semantic.MODEL_ID,
+                    help=f"the embedding model to use (default {semantic.MODEL_ID})")
+    pe.set_defaults(func=cmd_embed)
 
     pr = sub.add_parser("record", help="record a node (defect/gate/claim/...)")
     pr.add_argument("--type", required=True); pr.add_argument("--title", required=True)

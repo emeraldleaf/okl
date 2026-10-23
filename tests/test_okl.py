@@ -1527,6 +1527,18 @@ def _backend_conformance(store, label):
     assert runs[0].at <= runs[1].at, f"{label}: checks not oldest first"
     assert [r.node_id for r in store.checks(b)] == [b], f"{label}: check filter"
 
+    # Semantic vectors (#258): one per record per model, replaced on re-put, dropped on delete,
+    # read back byte for byte.
+    store.put_embedding(a, "m", "h1", b"\x00\x00\x80\x3f")
+    store.put_embedding(b, "m", "h2", b"\x00\x00\x00\x40")
+    store.put_embedding(a, "other", "h9", b"\x01")
+    assert set(store.embeddings("m")) == {(a, "h1", b"\x00\x00\x80\x3f"), (b, "h2", b"\x00\x00\x00\x40")}, f"{label}: embeddings"
+    store.put_embedding(a, "m", "h3", b"\x00\x00\x40\x40")
+    assert dict((i, h) for i, h, _ in store.embeddings("m"))[a] == "h3", f"{label}: re-put replaces"
+    store.delete_embedding(a, "m")
+    assert [i for i, _, _ in store.embeddings("m")] == [b], f"{label}: delete"
+    assert store.embeddings("other") == [(a, "h9", b"\x01")], f"{label}: models are separate"
+
 
 def test_sqlite_backend_conformance(store):
     """The SQLite backend meets the contract."""

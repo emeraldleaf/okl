@@ -383,6 +383,20 @@ class Store:
         """Every check run logged for `node_id`, oldest first."""
         return self._impl.checks(node_id)
 
+    # -- semantic vectors (#258) ----------------------------------------------
+    def put_embedding(self, node_id: str, model: str, text_hash: str, vector: bytes) -> None:
+        """Store one record's vector under `model`, replacing the one it had. `text_hash`
+        names the text it was computed from, so a rebuild can skip unchanged records."""
+        self._impl.put_embedding(node_id, model, text_hash, vector)
+
+    def embeddings(self, model: str) -> list[tuple[str, str, bytes]]:
+        """Every (node id, text hash, vector) stored under `model`, in no particular order."""
+        return self._impl.embeddings(model)
+
+    def delete_embedding(self, node_id: str, model: str) -> None:
+        """Drop one record's vector under `model`; nothing happens when there is none."""
+        self._impl.delete_embedding(node_id, model)
+
     def close(self) -> None:
         """Close the database connection; calling it again does nothing."""
         self._impl.close()
@@ -456,6 +470,9 @@ class _Backend(Protocol):
     def retirements(self, node_id: str) -> list[Retirement]: ...
     def log_check(self, run: CheckRun) -> None: ...
     def checks(self, node_id: str) -> list[CheckRun]: ...
+    def put_embedding(self, node_id: str, model: str, text_hash: str, vector: bytes) -> None: ...
+    def embeddings(self, model: str) -> list[tuple[str, str, bytes]]: ...
+    def delete_embedding(self, node_id: str, model: str) -> None: ...
     def close(self) -> None: ...
 
 
@@ -553,6 +570,11 @@ class _SQLiteBackend(_Backend):
             command TEXT NOT NULL, outcome TEXT NOT NULL, expect TEXT, commit_id TEXT)""")
         # reverify can run a check hundreds of times; reads are always one lesson's runs.
         c.execute("CREATE INDEX IF NOT EXISTS check_run_node ON check_run(node_id, at)")
+        # One vector per record per embedding model (#258); derived from the node table
+        # by `okl embed`, so a store from before it simply gains the empty table.
+        c.execute("""CREATE TABLE IF NOT EXISTS embedding(
+            node_id TEXT NOT NULL, model TEXT NOT NULL, text_hash TEXT NOT NULL,
+            vector BLOB NOT NULL, PRIMARY KEY (node_id, model))""")
         try:
             # symptom and fix are indexed, not just title and body. `symptom` is the
             # field every command and doc calls "what a reader matches against" — the
@@ -697,6 +719,23 @@ class _SQLiteBackend(_Backend):
                  json.dumps(list(briefing.drifted_ids))))
             self.conn.commit()
 
+    def put_embedding(self, node_id: str, model: str, text_hash: str, vector: bytes) -> None:
+        with self._lock:
+            self.conn.execute("INSERT OR REPLACE INTO embedding(node_id, model, text_hash, vector) "
+                              "VALUES(?,?,?,?)", (node_id, model, text_hash, vector))
+            self.conn.commit()
+
+    def embeddings(self, model: str) -> list[tuple[str, str, bytes]]:
+        with self._lock:
+            rows = self.conn.execute("SELECT node_id, text_hash, vector FROM embedding WHERE model=?",
+                                     (model,)).fetchall()
+            return [(r[0], r[1], bytes(r[2])) for r in rows]
+
+    def delete_embedding(self, node_id: str, model: str) -> None:
+        with self._lock:
+            self.conn.execute("DELETE FROM embedding WHERE node_id=? AND model=?", (node_id, model))
+            self.conn.commit()
+
     def briefings(self, repo: str | None) -> list[Briefing]:
         with self._lock:
             # rowid breaks ties between briefings logged in the same millisecond.
@@ -819,6 +858,9 @@ class _PostgresBackend(_Backend):
                 passed BOOLEAN NOT NULL, command TEXT NOT NULL, outcome TEXT NOT NULL,
                 expect TEXT, commit_id TEXT)""")
             cur.execute("CREATE INDEX IF NOT EXISTS check_run_node ON check_run(node_id, at)")
+            cur.execute("""CREATE TABLE IF NOT EXISTS embedding(
+                node_id TEXT NOT NULL, model TEXT NOT NULL, text_hash TEXT NOT NULL,
+                vector BYTEA NOT NULL, PRIMARY KEY (node_id, model))""")
             # IF NOT EXISTS is keyed on the NAME, not the expression, so a store created
             # before symptom/fix joined the tsvector would keep an index Postgres can no
             # longer use for the new query — silently degrading every search to a
@@ -918,6 +960,20 @@ class _PostgresBackend(_Backend):
                         "VALUES(%s,%s,%s,%s)",
                         (briefing.at, briefing.repo, json.dumps(list(briefing.node_ids)),
                          json.dumps(list(briefing.drifted_ids))))
+
+    def put_embedding(self, node_id: str, model: str, text_hash: str, vector: bytes) -> None:
+        with self.conn.cursor() as cur:
+            cur.execute("INSERT INTO embedding(node_id, model, text_hash, vector) VALUES(%s,%s,%s,%s) "
+                        "ON CONFLICT(node_id, model) DO UPDATE SET text_hash=EXCLUDED.text_hash, "
+                        "vector=EXCLUDED.vector", (node_id, model, text_hash, vector))
+
+    def embeddings(self, model: str) -> list[tuple[str, str, bytes]]:
+        return [(r["node_id"], r["text_hash"], bytes(r["vector"])) for r in
+                self._fetch("SELECT node_id, text_hash, vector FROM embedding WHERE model = %s", (model,))]
+
+    def delete_embedding(self, node_id: str, model: str) -> None:
+        with self.conn.cursor() as cur:
+            cur.execute("DELETE FROM embedding WHERE node_id = %s AND model = %s", (node_id, model))
 
     def briefings(self, repo: str | None) -> list[Briefing]:
         sql = "SELECT at, repo, node_ids, drifted_ids FROM briefing"

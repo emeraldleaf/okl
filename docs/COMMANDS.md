@@ -42,6 +42,15 @@ okl metric           # recurrence: defect classes that came back, split by wheth
                      #   code had changed since its check) and over-scope (org lessons
                      #   whose title, symptom or fix names one repository's world),
                      #   each with its denominator and the lessons it flags
+okl embed            # build or refresh one local vector per record for --hybrid briefings
+                     #   (needs the `hybrid` extra; downloads a 249 MB static model once;
+                     #   re-embeds only records whose text changed). Off by default: a check
+                     #   never reaches the network for it, and without the extra, the model or
+                     #   the vectors the briefing is the full-text one and the JSON says why.
+okl check --hybrid   # fuse the nearest records by that embedding with the full-text
+                     #   candidates (linear, the measured configuration, or --hybrid rrf);
+                     #   `"hybrid": "linear"` in .okl/config.json or OKL_HYBRID turns it on for
+                     #   every check. What it buys and costs: REPORT §4q.
 okl seed <pack> --strict
                      # exit 2 instead of importing when an advice record has no symptom,
                      #   a record is trace-shaped, or an org record names one repository's

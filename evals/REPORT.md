@@ -1351,6 +1351,120 @@ that is the case for #258's third step, to be measured on this same held-out set
 amendment waits for the third step, so one amendment records both vectorless arms and the
 hybrid measurement together.
 
+## 4q. PRE-REGISTERED: a local embedding beside the full-text search, fused and measured (2026-10-23)
+
+Written before any hybrid row was read, per §2b, for #258's third step. The flat-retrieval
+ADR (`docs/decisions/2026-07-17-flat-retrieval-until-scale.md`) says what to do when its
+vocabulary-mismatch trigger fires: add an embedding index beside FTS, fuse by reciprocal
+rank, measure against FTS-only on the same tasks, adopt only if it wins.
+
+**What changed.** `okl embed` writes one vector per record into the store from a local static
+embedding model (`minishlab/potion-retrieval-32M`: Model2Vec, 249 MB on disk, 512 dimensions;
+its model card gives MTEB retrieval 35.1 against all-MiniLM-L6-v2's 42.9, at well under a
+millisecond per text). `okl check --hybrid` fetches the nearest records by cosine beside the
+full-text candidates and fuses the two orders: `rrf` sums reciprocal ranks (k = 60); `linear`
+is a convex combination (alpha 0.5, untuned) of a rank-normalised full-text score and the
+min-max-normalised cosine, the family Bruch, Gai and Ingber (ACM TOIS 2023) found to beat RRF
+once its one weight is tuned. A candidate whose cosine reaches 0.25 passes the relevance floor
+whatever words it shares; the line was set from one probe before this section was written (a
+held-out paraphrase of its lesson scored 0.31, an unrelated bug report 0.16, chat filler 0.12)
+and is a parameter this measurement may move, in which case the first pass is recorded as
+§4p's was. Off by default; at check time the model is loaded from the local cache only, so
+the hook path never reaches the network, and without the extra, the model or the vectors the
+briefing is the full-text one and says so.
+
+**The instrument.** `evals/probe_rephrase.py --hybrid off|rrf|linear`, floor on, on the live
+store (313 records, every one embedded), with okl's configured interests: three receipts, one
+per mode. The rows: the authored eval tasks, the probe's own rephrasings, the held-out set
+(`evals/heldout_variants.json`), and the six precision prompts. No paid model call; the
+embedding runs on this machine.
+
+**The tasks at risk, measured first.** Fusion reorders candidates, so a governing lesson that
+full-text ranks high can fall; the authored row must stay 8 of 8 in each mode
+(`exit_code_trust`, 4th by full-text, is the one to watch). Wall time: a check took 0.09 s
+full-text and 0.62 s hybrid before this section was written, most of it loading the model;
+the hook's budget is 30 s.
+
+**Prediction.** The held-out paraphrase row rises from 3 of 8 in both modes; the held-out
+bug-report row (5) and ticket row (7) do not fall; the probe's own paraphrase row rises from
+1 of 8. Between the modes, no prediction: the literature favours the convex combination once
+tuned, and alpha is not tuned here. On the six precision prompts the semantic arm admits
+records by meaning, so the counts may rise; the falsifier is below.
+
+**Falsifier.** An authored task's governing lesson leaves its briefing in either mode; a
+held-out row below its full-text value; a precision prompt returning twelve records, or more
+than three above its full-text count. Any of these and the subject line (0.25) rises, or the
+arm stays off by default with the measurement recorded, before the ADR is amended.
+
+**What this cannot settle.** Whether a briefed arm behaves differently with the semantic arm
+on. The A/B's authored tasks already receive their lessons (§4n); the live run that could show
+it is one on rephrased tasks, a new instrument with its own pre-registration, and the held-out
+set here is its candidate task list.
+
+**First pass (2026-10-23, recorded, not shipped).** Receipts
+`evals/results/probe-rephrase-20261023-hybrid-{off,rrf,linear}.txt`, at the 0.25 line. The
+full-text run on this store reads held-out paraphrase 2 of 8 (the pre-registration's "3" was
+the seeded-store figure of §4p; the live store differs by its recorded lessons). Linear:
+authored 8, the probe's own paraphrase 1 → 3, bug report 8; held-out ticket 7 → 7,
+paraphrase 2 → 4, bug report 5 → 5. RRF: the probe's own ticket row fell 8 → 7, held-out
+ticket 7 → 6 and bug report 5 → 4. In both modes three of the six precision prompts returned
+twelve records (full-text: 9, 11, 7, 12), so the falsifier fired for both, and the held-out
+clause fired for RRF. Two causes, read from the receipts. The line was too low: "ok do the
+updates and update my site and the writing section" has 31 records at or above 0.25 and
+10 at 0.30. And the fused window is up to twice the full-text one, so more records reached
+the floor's one-word title-or-symptom rule, which was written for a full-text window.
+Revision: a record only the semantic arm found is on the subject only by meaning (the word
+rules stay with the full-text candidates), and the line is chosen by a grid over 0.25, 0.30,
+0.35 and 0.40 in both modes, by a rule written before the grid ran: the lowest line at which
+no precision prompt returns twelve and no held-out row is below its full-text value; between
+modes, the higher held-out paraphrase row, ties to RRF as the ADR's named default. The grid
+is `evals/hybrid_grid.py`, its receipt `evals/results/hybrid-grid-20261023.txt`.
+
+### Result (2026-10-23, second pass, line 0.40)
+
+Receipts: `evals/results/hybrid-grid-20261023.txt` (the grid) and
+`evals/results/probe-rephrase-20261023-hybrid-{rrf,linear}-040.txt` (the probe at the chosen
+line); full-text is `probe-rephrase-20261023-hybrid-off.txt`.
+
+| of 8 tasks | full-text | linear 0.40 | rrf 0.40 |
+|---|---|---|---|
+| authored | 8 | 8 | 8 |
+| probe's own ticket / paraphrase / bug report | 8 / 1 / 8 | 8 / 2 / 8 | 7 / 1 / 8 |
+| held-out ticket / paraphrase / bug report | 7 / 2 / 5 | 7 / 3 / 5 | 6 / 4 / 4 |
+| six precision prompts, records returned | 4, 9, 0, 11, 7, 12 | 5, 9, 0, 12, 7, 12 | 5, 9, 0, 12, 7, 12 |
+
+**The rule's verdict.** No cell satisfies the rule as written: at every line two prompts
+touch twelve, and the sixth already returns twelve on full-text (a lesson recorded in the
+live store since §4n whose title says "search"), so the absolute clause was unattainable on
+this store and should have been relative. By the relative clause, linear at 0.40 adds one
+record to two prompts and none to the rest; RRF fails the held-out clause at every line (its
+ticket and bug-report rows fall, because reciprocal ranks let the semantic arm's order
+displace full-text's on tasks full-text already had right). Linear at 0.40 is therefore the
+arm's configuration when it is on, and the arm does not become the default.
+
+**What the arm buys.** One more held-out paraphrase found of eight (2 → 3) and one more of
+the probe's own (1 → 2); nothing on tickets or bug reports; one record more on two of six
+short prompts; 0.8 s per prompt for the model load (the search itself is under a millisecond
+with numpy) and a 249 MB model on disk. The two vectorless arms bought more: symptoms took the
+probe's own bug-report row from 3 to 8 of 8 (§4o), and aliases one held-out ticket and one
+held-out paraphrase (§4p). The static model's cosines sit in a narrow band (true pairs 0.30
+to 0.55, chat filler up to 0.42), which is why no line separates meaning from filler cleanly;
+a stronger local model (bge-small through ONNX at about 130 MB) or a reranker over the fused
+top 36 is the next experiment, on this same held-out set, before the semantic arm can earn
+the default.
+
+**Prediction check.** The held-out paraphrase row rose in both modes, as predicted; held-out
+ticket and bug report held under linear and fell under RRF, which was not predicted; the
+probe's own paraphrase row rose under linear, as predicted; precision rose by one on two
+prompts, which the falsifier allowed. The pre-registration's "about 30 MB" was another model's
+figure: this one is 249 MB on disk.
+
+**What ships.** `okl embed`; `okl check --hybrid` (linear fusion at the 0.40 line when the
+flag is bare; `rrf` stays selectable for measurement), off by default; a numpy matrix product
+over every vector that holds to roughly 100,000 of them (under a millisecond at 10,000, 3 ms
+at 50,000, plus 14 and 49 ms to read them; `okl.semantic`'s docstring has the measurements
+and the next tier); and the ADR amendment. The hook never reaches the network for any of it.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

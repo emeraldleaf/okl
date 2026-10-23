@@ -28,7 +28,10 @@ Documentation = "https://github.com/emeraldleaf/okl/blob/main/docs/GETTING-START
 service = ["fastapi>=0.110", "uvicorn>=0.29", "pydantic>=2"]
 postgres = ["psycopg[binary]>=3.1"]
 mcp = ["mcp>=1.2"]
-all = ["fastapi>=0.110", "uvicorn>=0.29", "pydantic>=2", "psycopg[binary]>=3.1", "mcp>=1.2"]
+# The optional semantic arm (#258): a local static embedding model, loaded only inside the
+# functions that need it, so the core path stays stdlib-only.
+hybrid = ["model2vec>=0.10"]
+all = ["fastapi>=0.110", "uvicorn>=0.29", "pydantic>=2", "psycopg[binary]>=3.1", "mcp>=1.2", "model2vec>=0.10"]
 
 [dependency-groups]
 # The tools that build and gate okl itself. A dependency group (PEP 735), not an extra:
@@ -149,6 +152,7 @@ layers = [
   "okl.client",
   "okl.recap",
   "okl.core | okl.drift",
+  "okl.semantic",
   "okl.store",
 ]
 
