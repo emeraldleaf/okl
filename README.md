@@ -365,6 +365,13 @@ chosen by a word in common ([the probe](evals/results/probe-rephrase-20261021.tx
 
 <img src="docs/okl-retrieval-pipeline.svg" alt="The corpus; the task's subject words; a BM25 fetch of three times the limit; a scope gate; the exclusive applies_to filter; the inclusive tags-times-interests filter; the relevance floor of two shared subject words or one in the title or symptom or a one-word alias, with retired lessons out; a top-12 cutoff; bucketing by type; and rendering. Each stage shows how many records survive it." width="100%">
 
+With the optional semantic arm on (`okl check --hybrid`), a second candidate source joins
+before the gates: the task as one vector, its nearest records by cosine, and a fusion of the
+two orders. The same generator draws it from the same code path, and REPORT §4q says what it
+buys and costs.
+
+<img src="docs/okl-retrieval-pipeline-hybrid.svg" alt="The same pipeline with the semantic arm on: beside the full-text fetch, the task embedded as one 512-dimension vector and its nearest records by cosine, fused with the full-text order by a convex combination, then the scope gate, the applies_to filter, the tags filter, a floor that also admits a record by a cosine at or above 0.40, the cutoff, the buckets and the renderers">
+
 Every count in that diagram is **traced**, not transcribed: `docs/render_pipeline_diagram.py`
 runs the real `briefing_terms`, `store.search`, `core._in_scope` and `core._live_hits` against
 a store seeded from `seed/`, and `test_pipeline_diagram_is_current` fails if the committed

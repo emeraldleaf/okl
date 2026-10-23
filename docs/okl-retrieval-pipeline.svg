@@ -106,5 +106,6 @@
 <text x="120" y="1062" font-size="12" fill="#4E4740">agent | actions | json. A zero-match result carries the store size, so 'no rules apply' can</text>
 <text x="120" y="1077" font-size="12" fill="#4E4740">never be confused with 'the store is empty'.</text>
 <text x="120" y="1088" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">hook | MCP | CI</text>
-<text x="28" y="1160" font-size="11" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A">src/okl/core.py briefing_terms() / _live_hits() / _in_scope() / _apply_floor() . src/okl/store.py search() . regenerate: python3 docs/render_pipeline_diagram.py</text>
+<text x="28" y="1146" font-size="11" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A">src/okl/core.py briefing_terms() / ranked_candidates() / _live_hits() / _in_scope() / _apply_floor() . src/okl/store.py search()</text>
+<text x="28" y="1160" font-size="11" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A">regenerate: python3 docs/render_pipeline_diagram.py</text>
 </svg>
