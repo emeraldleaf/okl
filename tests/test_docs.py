@@ -177,7 +177,10 @@ def test_the_quarantined_july_figures_appear_nowhere_they_ship():
 
 
 POOLED_RECEIPTS = ["ab-20260830-0003", "ab-20260901-0133", "ab-20260901-1238", "ab-20260902-0538",
-                   "ab-20260903-0157", "ab-20260903-1214", "ab-20260903-1323", "ab-20260926-0528"]
+                   "ab-20260903-0157", "ab-20260903-1214", "ab-20260903-1323"]
+# The launch posts of 2026-10-12 quoted the pool with §4i's run added; §4i pre-registered its
+# layout change as a new series, so finding 7 reports that figure beside the pool (#265).
+LAUNCH_POST_RECEIPTS = [*POOLED_RECEIPTS, "ab-20260926-0528"]
 
 
 # REPORT §4j counts this sample as unevaluable: the generator returned a plan, not code, and
@@ -199,10 +202,10 @@ def _pool(names):
 
 def test_the_pooled_launch_figure_is_recomputed_from_its_receipts():
     """The launch posts quote 42% against 7% and send readers to the repo for it; REPORT §5
-    finding 7 names the eight receipts, and every figure it gives is recomputed here."""
-    # ARRANGE — the pool as REPORT defines it, the same without the reverted §4d run and
-    # without §4i's relabelled one, and every receipt on the documented instrument with eight
-    # tasks and three samples.
+    finding 7 names the seven receipts, and every figure it gives is recomputed here."""
+    # ARRANGE — the pool as REPORT defines it, the same without the reverted §4d run, the
+    # eight-run figure the launch posts quoted, and every receipt on the documented
+    # instrument with eight tasks and three samples.
     documented = []
     for receipt in sorted((ROOT / "evals" / "results").glob("ab-*.json")):
         data = json.loads(receipt.read_text())
@@ -213,14 +216,14 @@ def test_the_pooled_launch_figure_is_recomputed_from_its_receipts():
     report = _flat("evals/REPORT.md")
 
     # ASSERT — each quoted pair is the recomputed one, and every receipt it names exists.
-    assert set(POOLED_RECEIPTS) <= set(documented), "a pooled receipt is missing or off-instrument"
+    assert set(LAUNCH_POST_RECEIPTS) <= set(documented), "a pooled receipt is missing or off-instrument"
     for names in (POOLED_RECEIPTS, [n for n in POOLED_RECEIPTS if n != "ab-20260902-0538"],
-                  [n for n in POOLED_RECEIPTS if n != "ab-20260926-0528"], documented):
+                  LAUNCH_POST_RECEIPTS, documented):
         bh, bn, rh, rn = _pool(names)
         quoted = f"{bh} of {bn}"
         assert quoted in report and f"{rh} of {rn}" in report, (
             f"REPORT §5 finding 7 should quote {bh} of {bn} against {rh} of {rn} for {len(names)} receipts")
-    # The anatomy sheet quotes the eight-run pool too, and names every receipt in it.
+    # The anatomy sheet quotes the seven-run pool too, and names every receipt in it.
     sheet = (ROOT / "docs" / "overview" / "okl-anatomy.html").read_text()
     bh, bn, rh, rn = _pool(POOLED_RECEIPTS)
     for figure in (f"{bh} of {bn} unbriefed", f"{rh} of {rn} briefed", f"{round(100 * bh / bn)}%", f"{round(100 * rh / rn)}%"):

@@ -801,11 +801,12 @@ On the five tasks the baseline failed at least once, the briefed arm reproduced 
 The briefing still does its job at 36% fewer characters. Per the pre-registration, that is
 all this can say: the cut is safe on this task set; nothing here shows it helps.
 
-*Added 2026-10-22, from an independent verification.* This section calls the layout change
-a new series; §5 finding 7 pools this run (`ab-20260926-0528`) with §4 through §4h all the
-same. The ground is the pre-flight above: the content that reached the model was identical,
-so the pool treats the layout as the same treatment. Finding 7 now says so, and gives the
-figure without this run.
+*Added 2026-10-22, revised 2026-10-23.* This section calls the layout change a new series,
+and from 2026-10-12 to 2026-10-23 §5 finding 7 pooled this run (`ab-20260926-0528`) with
+§4 through §4h all the same. The pre-flight above shows that every record's content
+survived the new layout, not that the briefings were identical, and the rule this report
+keeps is that a changed treatment starts a new series; finding 7 now reports this run
+beside the pool, with the figure the launch posts quoted, rather than in it.
 
 
 ## 4j. PRE-REGISTERED: each briefed lesson carries its id — a change of treatment (2026-10-10)
@@ -1144,7 +1145,7 @@ the floor ships to the next release.
 **Why no live run.** An A/B whose two arms receive byte-identical briefings measures the
 generator's noise and nothing else, at 48 generations and 48 judgments. The change's
 effect lies where this instrument cannot look: on prompts that share one word with many
-records, which the eval tasks do not (each shares two to ten with its lesson). That effect
+records, which the eval tasks do not (each shares three to ten with its lesson). That effect
 is measured by `evals/probe_rephrase.py` (`evals/results/probe-rephrase-20261022.txt`): the
 recall rows are unchanged, and six short real prompts return 5, 9, 0, 11, 7 and 11 records
 where every one returned twelve. A live run belongs to the briefing-size series (#234),
@@ -1272,24 +1273,25 @@ refuse to write a usable receipt when it has moved.
 6. **Anomaly, retained:** briefed haiku reproduced rate_limiter 1/3 where its baseline
    was 0/3 — a briefed run worse than baseline on one task. Small-sample noise or
    briefing-as-distraction; it stays in the data.
-7. **The pooled figure quoted in the launch posts (added 2026-10-12).** Over the eight
-   committed runs on the documented instrument (sonnet generator, haiku judge, eight tasks
-   with three samples per arm) from §4 through §4i, 78 of 186 unbriefed attempts
-   reproduced a known defect (42%) against 13 of 188 briefed ones (7%). The eight receipts:
+7. **The pooled figure (added 2026-10-12; recut 2026-10-23).** Over the seven committed
+   runs on the documented instrument (sonnet generator, haiku judge, eight tasks with
+   three samples per arm) from §4 through §4h, 68 of 163 unbriefed attempts reproduced a
+   known defect (42%) against 11 of 164 briefed ones (7%). The seven receipts:
    `ab-20260830-0003`, `ab-20260901-0133`, `ab-20260901-1238`, `ab-20260902-0538`,
-   `ab-20260903-0157`, `ab-20260903-1214`, `ab-20260903-1323`, `ab-20260926-0528`.
+   `ab-20260903-0157`, `ab-20260903-1214`, `ab-20260903-1323`.
    Three earlier receipts on the same models are outside the pool because they are not
    eight-task, three-sample runs: `ab-20260829-2300` (two tasks, one sample),
    `ab-20260829-2315` (eight tasks, one sample) and `ab-20260902-1216` (one task,
    `idor_endpoint`, one sample, 0/1 in each arm), which no other section names.
-   Denominators fall short of 192 because failed and unevaluable samples are left out.
+   Denominators fall short of 168 because failed and unevaluable samples are left out.
    The pool keeps §4d's run (`ab-20260902-0538`), whose retrieval change was reverted:
    its briefed arm read 3 of 23, so keeping it raises the briefed rate. Without it the
-   pool reads 68 of 164 (41%) against 10 of 165 (6%). The pool also keeps §4i's run
-   (`ab-20260926-0528`), which §4i pre-registered as a new series because the layout
-   changed; its pre-flight showed the content identical, which is the ground for pooling
-   it, and without it the pool reads 68 of 163 (42%) against 11 of 164 (7%). It leaves out
-   §4f (judged by opus,
+   pool reads 58 of 141 (41%) against 8 of 141 (6%). The launch posts of 2026-10-12
+   quoted this pool with §4i's run (`ab-20260926-0528`) added: 78 of 186 (42%) against
+   13 of 188 (7%), the same percentages. §4i pre-registered its layout change as a new
+   series, and its pre-flight shows that every record's content survived the new layout,
+   not that the briefings were identical, so from 2026-10-23 that run is reported beside
+   the pool rather than in it (review on #265). It leaves out §4f (judged by opus,
    not the documented instrument) and every run from §4j on, because each of those
    started a new series (§4j's unbriefed arm moved 26 points with nothing changed; §4k
    and §4m changed the instrument). For reference, the aggregate over all thirteen receipts

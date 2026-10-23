@@ -33,8 +33,8 @@ pipx install 'observed-knowledge-ledger[mcp]'   # the command it installs is `ok
 okl init --repo my-repo                         # hooks, MCP server, push gate, starter lessons
 ```
 
-**42% → 7%.** On eight tasks written to invite defects the store already knew about, 78 of 186
-unbriefed attempts repeated one against 13 of 188 briefed, pooled over eight A/B runs with a
+**42% → 7%.** On eight tasks written to invite defects the store already knew about, 68 of 163
+unbriefed attempts repeated one against 11 of 164 briefed, pooled over seven A/B runs with a
 different model judging than generating ([the receipts](evals/REPORT.md), §5 finding 7). Small
 sample, one-shot code on bait tasks; [what it does and does not show](#measured-effect-and-its-limits).
 
@@ -292,9 +292,9 @@ judge are different models; method + raw receipts in [evals/REPORT.md](evals/REP
 - Same model, briefed vs not: in the first 3-sample runs (2026-08-30), defect
   reproduction fell **33% → 4%** (sonnet) and **38% → 12%** (haiku). Later sonnet runs, as
   the retrieval pipeline changed, read **35–50% → 4–8%** (REPORT §4b–§4i, excluding the
-  reverted §4d and the opus-judged §4f; the latest, §4i, 43% → 8%). Pooled over the eight
-  runs on that instrument from §4 to §4i, the reverted §4d included: **78 of 186 unbriefed
-  attempts repeated a known defect (42%) against 13 of 188 briefed (7%)**; REPORT §5
+  reverted §4d and the opus-judged §4f; the latest, §4i, 43% → 8%). Pooled over the seven
+  runs on that instrument from §4 to §4h, the reverted §4d included: **68 of 163 unbriefed
+  attempts repeated a known defect (42%) against 11 of 164 briefed (7%)**; REPORT §5
   finding 7 names the receipts and the other ways to cut it. The unbriefed arm
   alone has moved 21 points between runs with nothing changed, and 26 across the §4j
   boundary, so the noise floor is at least 21 points (§2b, §4m). Every "reproduced" is a
