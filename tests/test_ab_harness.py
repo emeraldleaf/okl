@@ -225,3 +225,145 @@ def test_a_changed_judge_command_is_still_drift(ab):
     drift = ab.instrument_drift([_receipt(ab.JUDGE_MAX_CHARS)] * 3, current)
 
     assert drift == {"judge": {"series": "claude -p --model haiku", "runs": 3}}
+
+
+def test_a_run_whose_working_tree_moved_is_marked_not_usable(ab):
+    """REPORT §4o: a branch switch during a run briefs the later samples with other code.
+    The helper names both commits, and the banner says what to do instead."""
+    same = ("acdcb99", "acdcb99full")
+    assert ab.head_moved(same, same) is None
+    assert ab.head_moved(None, same) is None       # unknown proves nothing, as elsewhere
+    moved = ab.head_moved(("acdcb99", "acdcb99full"), ("b54e075", "b54e075full"))
+    assert moved == {"okl_commit_at_start": "acdcb99", "okl_commit": "b54e075",
+                     "working_tree_moved": True}
+    banner = ab.moved_banner(moved)
+    assert "NOT USABLE" in banner and "acdcb99" in banner and "b54e075" in banner
+    # A tree that was already dirty and whose uncommitted code then changed: the label is
+    # the same "+dirty" on both sides, the fingerprint is not, and that counts as movement.
+    dirty_a = ("acdcb99+dirty", "acdcb99full+1111")
+    dirty_b = ("acdcb99+dirty", "acdcb99full+2222")
+    assert ab.head_moved(dirty_a, dirty_b)["working_tree_moved"] is True
+
+
+def test_tree_state_fingerprints_uncommitted_code(ab, tmp_path, monkeypatch):
+    """The label stays `<head>+dirty` while the fingerprint follows the uncommitted content."""
+    import subprocess
+    repo = tmp_path / "r"
+    (repo / "src" / "okl").mkdir(parents=True)
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    subprocess.run(["git", "-C", str(repo), "-c", "user.email=t@t", "-c", "user.name=t",
+                    "commit", "-q", "--allow-empty", "-m", "base"], check=True)
+    monkeypatch.setattr(ab, "REPO", repo)
+    label, fp = ab.tree_state()
+    assert "+dirty" not in label and "+" not in fp
+    (repo / "src" / "okl" / "new.py").write_text("x = 1\n")
+    label1, fp1 = ab.tree_state()
+    (repo / "src" / "okl" / "new.py").write_text("x = 2\n")
+    label2, fp2 = ab.tree_state()
+    assert label1 == label2 and label1.endswith("+dirty")
+    assert fp1 != fp2
+
+
+def test_tree_state_hashes_each_untracked_file_separately(ab, tmp_path, monkeypatch):
+    """Two untracked files whose contents shift a boundary must not fingerprint alike, and a
+    path git would quote still reaches the manifest."""
+    import subprocess
+    repo = tmp_path / "r"
+    (repo / "src" / "okl").mkdir(parents=True)
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    subprocess.run(["git", "-C", str(repo), "-c", "user.email=t@t", "-c", "user.name=t",
+                    "commit", "-q", "--allow-empty", "-m", "base"], check=True)
+    monkeypatch.setattr(ab, "REPO", repo)
+    a, b = repo / "src" / "okl" / "a.py", repo / "src" / "okl" / "b.py"
+    a.write_text("ab"); b.write_text("c")
+    _, fp1 = ab.tree_state()
+    a.write_text("a"); b.write_text("bc")
+    _, fp2 = ab.tree_state()
+    assert fp1 != fp2
+    quoted = repo / "src" / "okl" / "wei\u00dfe datei.py"   # a name git quotes in porcelain v1
+    quoted.write_text("x = 1")
+    _, fp3 = ab.tree_state()
+    quoted.write_text("x = 2")
+    _, fp4 = ab.tree_state()
+    assert fp3 != fp4
+
+
+def test_tree_state_fails_closed_when_git_status_fails(ab, tmp_path, monkeypatch):
+    """A status probe that cannot run yields a fingerprint that equals nothing, so the run
+    reads as moved and the receipt as not usable."""
+    import subprocess
+    real = subprocess.run
+
+    def broken(cmd, *a, **kw):
+        if "status" in cmd:
+            return subprocess.CompletedProcess(cmd, 128, stdout=b"", stderr=b"fatal")
+        return real(cmd, *a, **kw)
+    monkeypatch.setattr(ab.subprocess, "run", broken)
+    one, two = ab.tree_state(), ab.tree_state()
+    assert one[0].endswith("+unknown") and one[1] != two[1]
+    assert ab.head_moved(one, two) is not None
+
+
+def test_tree_state_fails_closed_when_git_diff_fails(ab, tmp_path, monkeypatch):
+    """A dirty tree whose diff cannot be read must not fingerprint equal to itself either."""
+    import subprocess
+    repo = tmp_path / "r"
+    (repo / "src" / "okl").mkdir(parents=True)
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    subprocess.run(["git", "-C", str(repo), "-c", "user.email=t@t", "-c", "user.name=t",
+                    "commit", "-q", "--allow-empty", "-m", "base"], check=True)
+    (repo / "src" / "okl" / "new.py").write_text("x = 1\n")   # dirty, so the diff runs
+    monkeypatch.setattr(ab, "REPO", repo)
+    real = subprocess.run
+
+    def broken(cmd, *a, **kw):
+        if "diff" in cmd:
+            return subprocess.CompletedProcess(cmd, 128, stdout=b"", stderr=b"fatal")
+        return real(cmd, *a, **kw)
+    monkeypatch.setattr(ab.subprocess, "run", broken)
+    one, two = ab.tree_state(), ab.tree_state()
+    assert one[0].endswith("+unknown") and one[1] != two[1]
+
+
+def test_tree_state_fails_closed_when_head_cannot_be_read(ab, tmp_path, monkeypatch):
+    """Outside a repository the probe has no HEAD; two readings must still differ."""
+    monkeypatch.setattr(ab, "REPO", tmp_path)   # not a git repository
+    one, two = ab.tree_state(), ab.tree_state()
+    assert one[0] is None and one[1] != two[1]
+    assert ab.head_moved(one, two) is not None
+
+
+def test_tree_state_fails_closed_when_the_full_head_cannot_be_read(ab, monkeypatch):
+    """The short HEAD read but the full one did not (review on #262): an empty fingerprint
+    would compare equal to itself, so two readings must differ instead."""
+    import subprocess
+    real = subprocess.run
+
+    def broken(cmd, *a, **kw):
+        if list(cmd[-2:]) == ["rev-parse", "HEAD"]:
+            return subprocess.CompletedProcess(cmd, 128, stdout="", stderr="fatal")
+        return real(cmd, *a, **kw)
+    monkeypatch.setattr(ab.subprocess, "run", broken)
+    one, two = ab.tree_state(), ab.tree_state()
+    assert one[0] is None and one[1] != two[1]
+    assert ab.head_moved(one, two) is not None
+
+
+def test_tree_state_fails_closed_when_an_untracked_file_vanishes_mid_read(ab, tmp_path, monkeypatch):
+    """A file git listed as untracked that cannot be read a moment later is a moving tree:
+    the probe reports it as such rather than raising past the run's receipt."""
+    import subprocess
+    repo = tmp_path / "r"
+    (repo / "src" / "okl").mkdir(parents=True)
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    subprocess.run(["git", "-C", str(repo), "-c", "user.email=t@t", "-c", "user.name=t",
+                    "commit", "-q", "--allow-empty", "-m", "base"], check=True)
+    (repo / "src" / "okl" / "new.py").write_text("x = 1\n")   # untracked, so it is read
+    monkeypatch.setattr(ab, "REPO", repo)
+
+    def vanished(self):
+        raise OSError("gone")
+    monkeypatch.setattr(ab.Path, "read_bytes", vanished)
+    one, two = ab.tree_state(), ab.tree_state()
+    assert one[0].endswith("+unknown") and one[1] != two[1]
+    assert ab.head_moved(one, two) is not None
