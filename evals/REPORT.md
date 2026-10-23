@@ -747,7 +747,9 @@ found one lost line, a gate's symptom in `ci_linter`, because gate actions never
 one. And the first live briefing after the change showed a second defect the pre-flight
 could not: with every match routed into an action the sections were empty, so the
 briefing ended "No encoded rule matched" beneath its own list of actions. Both were fixed
-before the run. The content is therefore identical; only the layout differs.
+before the run. Every record's content therefore survives the new layout; the pre-flight
+says nothing about the rendered briefings being identical, and they are not, since the
+layout is the change.
 
 **Why pre-flight matters here.** The briefed arm reads the live store, which has gained
 records since §4h. A live run alone could not separate "the layout changed" from "the
