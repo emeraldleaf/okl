@@ -104,6 +104,10 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                          "only. Omit it to follow the config's `hybrid` or OKL_HYBRID. Needs `okl "
                          "embed` to have run once; otherwise the briefing is the full-text one and "
                          "the JSON says so (#258).")
+    pk.add_argument("--index", action="store_true",
+                    help="append every other lesson in scope as id and title, so the agent can fetch "
+                         "one with `okl show <id>` when the briefing did not select it. A treatment "
+                         "under measurement (REPORT §4r), about 120 characters per lesson.")
     pk.set_defaults(func=cmd_check)
 
     pe = sub.add_parser("embed", help="build or refresh the local vectors that --hybrid briefings "

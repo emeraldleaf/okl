@@ -1465,6 +1465,51 @@ over every vector that holds to roughly 100,000 of them (under a millisecond at 
 at 50,000, plus 14 and 49 ms to read them; `okl.semantic`'s docstring has the measurements
 and the next tier); and the ADR amendment. The hook never reaches the network for any of it.
 
+## 4r. PRE-REGISTERED: the index arm, measured where it can act (2026-10-23)
+
+Written before the run, per §2b, for #258's first vectorless arm, on a new instrument.
+
+**The question.** §4q measured retrieval as recall: is the governing lesson among the twelve
+briefed? The index arm asks something the probe cannot: when the briefing names every other
+lesson in scope by id and title, does the agent fetch the one it needs? The one eval cited
+on #258 scored an always-present index at 100% where loading on demand scored about half;
+that was a different setup (skills, not lessons), and nothing has measured it for okl.
+
+**The instrument, and why it is a new series.** The generator is agentic: `claude -p` may
+run one tool, `okl show <id>` (`--allowedTools "Bash(okl show:*)"`), against the store this
+harness reads, through an `okl` shim on its PATH that logs every invocation. The judge is
+the §4m judge, haiku, unchanged. The tasks are the 24 held-out rephrasings
+(`evals/heldout_tasks.jsonl`, built by `evals/make_heldout_tasks.py` from the blind set),
+each judged by its authored task's signal. Three arms, three samples each: `baseline` (no
+briefing), `briefed` (the twelve-record briefing), `indexed` (the briefing plus every other
+live lesson in scope as `- [id] title`, with one line telling the agent to read a relevant
+one with `okl show` before writing code). An agentic generator on rephrased tasks is a
+different instrument from §4 through §4o, so nothing here pools with them. The index costs
+about 120 characters per lesson in scope; the receipt stamps the size it added.
+
+**The tasks at risk, measured first.** The held-out briefings hold the governing lesson in
+7, 3 and 5 of 8 tasks (ticket, paraphrase, bug report; §4p). The index names it in all 24,
+by construction. The measure is whether being named is enough.
+
+**Predictions.** In the indexed arm the generator fetches the governing lesson in at least a
+third of samples and in a majority of the paraphrase samples, where the briefing lacks it;
+in the briefed arm it fetches nothing (nothing tells it a store exists). Defect reproduction
+in the indexed arm is at or below the briefed arm's; the baseline arm reproduces most.
+
+**Falsifiers.** The governing lesson is fetched in under 10% of indexed samples (the agent
+does not use an index of this shape); or the indexed arm reproduces more defects than the
+briefed arm by more than the noise the baseline arm shows between its own samples (the
+index distracts); or the agent fetches so many lessons that the cost reads as a second
+briefing (a median above three fetches per sample). Any of these and the arm stays an
+experiment; the hook does not gain an index.
+
+**Cost.** 72 agentic generations and 72 judgments per arm; the tree is not switched while
+the run is in progress, and the receipt refuses if it moved (§4o).
+
+**What this cannot settle.** Whether an index helps on a real codebase's prompts; these are
+24 rephrasings of eight bait tasks. Whether a reranker (the third arm the plan names) does
+better; it is not built, and it measures on the same tasks when it is.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

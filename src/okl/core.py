@@ -142,7 +142,8 @@ def briefing_terms(task: str) -> list[str]:
 
 
 def check(store: Store, repo: str, task: str, limit: int = 12,
-          interests: list[str] | None = None, *, hybrid: str | None = None) -> dict[str, Any]:
+          interests: list[str] | None = None, *, hybrid: str | None = None,
+          index: bool = False) -> dict[str, Any]:
     """Return the slice of the encoded body relevant to starting `task` in `repo`.
 
     Matches on the task text across all node types, then buckets by type so the
@@ -158,6 +159,10 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     `hybrid` is None (full-text search only, the default), "linear" (the measured
     configuration) or "rrf": fuse the full-text candidates with the nearest records by a
     local embedding (#258, REPORT §4q).
+
+    `index` adds every other live lesson this repo may see, as id and title, so an agent
+    can fetch one by id when the briefing did not select it (#258's first vectorless arm,
+    REPORT §4r). It is a treatment under measurement, off by default.
     When asked for and not possible here (no extra, no cached model, no vectors) the
     briefing is the full-text one and `hybrid_unavailable` in the result says why.
     """
@@ -226,6 +231,13 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     # with the result. Only computed on the (rare) empty-result path.
     if total == 0:
         out["store_records"] = len(store.all_nodes())
+    if index:
+        briefed = {pub["id"] for recs in buckets.values() for pub in recs}
+        out["index"] = sorted(
+            ({"id": n.id, "title": n.title} for n in store.all_nodes()
+             if n.id not in briefed and n.status not in RETIRED_STATUSES
+             and _in_scope(n, repo_scope, interests)),
+            key=lambda e: e["title"].lower())
     return out
 
 
@@ -980,6 +992,14 @@ def render_check_for_agent(result: dict[str, Any]) -> str:
     if result.get("dropped_by_cutoff"):
         lines.append(f"> {result['dropped_by_cutoff']} lower-ranked record(s) were trimmed to keep this "
                      "briefing short. Raise --limit or narrow the task if you expected more.")
+    if result.get("index"):
+        # The index arm (REPORT §4r): every other lesson in scope, one line each, so the agent
+        # can fetch what the search did not select. The instruction is part of the treatment.
+        lines.append("")
+        lines.append(f"### Every other lesson in scope ({len(result['index'])}). If one looks relevant to the "
+                     "task, read it with `okl show <id>` before you write code.")
+        lines += [f"- [{e['id']}] {e['title']}" for e in result["index"]]
+        lines.append("")
     if not any_hit:
         if result.get("store_records") == 0:
             lines.append("> **The store is EMPTY (0 records).** This check proves nothing: there is "

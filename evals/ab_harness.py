@@ -54,6 +54,12 @@ JUDGE_CMD = os.environ.get("JUDGE_CMD", "claude -p --model haiku")
 # actually able to test. Recorded in the receipt, because a run whose retrieval config is
 # not on its own face cannot be compared to one whose is.
 BRIEF_INTERESTS = os.environ.get("OKL_BRIEF_INTERESTS", "")
+# Tools the generator may use, as `claude -p --allowedTools` takes them (REPORT §4r:
+# "Bash(okl show:*)"). Empty, the default, is the one-shot generator every earlier section
+# ran. When set, an `okl` shim on the generator's PATH logs each invocation, so the receipt
+# says which lessons each sample fetched. Stamped into the receipt: it is the instrument.
+GENERATOR_TOOLS = os.environ.get("GENERATOR_TOOLS", "")
+ARMS = ("baseline", "briefed", "indexed")
 
 GEN_PROMPT = """You are implementing one task for an existing codebase. Output ONLY the code (or YAML/script), no explanation.
 
@@ -78,21 +84,23 @@ Respond with ONLY this JSON, nothing else:
 {{"implemented": true or false, "defect_reproduced": true or false, "reason": "<one sentence citing the evidence>"}}"""
 
 
-def call(cmd: str, prompt: str, timeout: int, workdir: str) -> str:
+def call(cmd: str, prompt: str, timeout: int, workdir: str, env: dict[str, str] | None = None) -> str:
     """Send `prompt` on stdin to the model command `cmd`, run from `workdir`; return stdout.
 
-    `cmd` is split like a shell line but no shell runs it; `timeout` is in seconds.
+    `cmd` is split like a shell line but no shell runs it; `timeout` is in seconds; `env`
+    replaces the environment when given (the generator's PATH shim and store, §4r).
     Raises RuntimeError on a non-zero exit, so the caller counts the run as a failure.
     """
     r = subprocess.run(shlex.split(cmd), input=prompt, capture_output=True, text=True,
-                       timeout=timeout, cwd=workdir)
+                       timeout=timeout, cwd=workdir, env=env)
     if r.returncode != 0:
         raise RuntimeError(f"exit {r.returncode}: {r.stderr.strip()[:200]}")
     return r.stdout
 
 
-def get_briefing(task: str, timeout: int) -> str:
-    """Return the briefing `okl check` gives the briefed arm for `task`; raises RuntimeError if it fails."""
+def get_briefing(task: str, timeout: int, *, index: bool = False) -> str:
+    """Return the briefing `okl check` gives the briefed arm for `task`, with the index of every
+    other lesson in scope when `index` (the indexed arm); raises RuntimeError if it fails."""
     # Fails CLOSED: a briefed arm without a briefing would silently become a second
     # baseline arm and corrupt the comparison.
     # --interests from OKL_BRIEF_INTERESTS, default "" (unfiltered); evals/preflight.py reads
@@ -105,7 +113,7 @@ def get_briefing(task: str, timeout: int) -> str:
     # count every bait task's rules as "shown" in the store's exposure report (#129). It
     # changes nothing in the briefing itself.
     r = subprocess.run([sys.executable, "-m", "okl", "check", "--task", task,
-                        "--format", "agent", "--interests", BRIEF_INTERESTS],
+                        "--format", "agent", "--interests", BRIEF_INTERESTS, *(["--index"] if index else [])],
                        capture_output=True, text=True, timeout=timeout, cwd=REPO,
                        env={**os.environ, "OKL_BRIEFING_LOG": "0"})
     if r.returncode != 0:
@@ -150,22 +158,78 @@ class Unevaluable(Exception):  # noqa: N818 - a verdict, not an error in the har
     """
 
 
+def generator_env(workdir: str, log: str) -> dict[str, str] | None:
+    """The generator's environment when it may run tools (§4r): an `okl` shim first on PATH
+    that appends each invocation to `log` and runs the real okl against the store this harness
+    reads; None (inherit) when no tools are allowed."""
+    if not GENERATOR_TOOLS:
+        return None
+    return {**os.environ, "PATH": f"{Path(workdir) / 'bin'}{os.pathsep}{os.environ.get('PATH', '')}",
+            "OKL_SHIM_LOG": log, "OKL_BRIEFING_LOG": "0",
+            "OKL_DATABASE_URL": os.environ.get("OKL_DATABASE_URL") or f"sqlite:///{REPO / '.okl' / 'okl.db'}"}
+
+
+def write_shim(workdir: str) -> None:
+    """Put the `okl` shim in `workdir`/bin: logs its arguments, then execs the real okl."""
+    bin_dir = Path(workdir) / "bin"
+    bin_dir.mkdir(exist_ok=True)
+    shim = bin_dir / "okl"
+    shim.write_text('#!/bin/sh\nprintf \'%s\\n\' "$*" >> "$OKL_SHIM_LOG"\n'
+                    f'exec {shlex.quote(sys.executable)} -m okl "$@"\n')
+    shim.chmod(0o755)
+
+
+def fetched_ids(log: str) -> list[str]:
+    """The lesson ids an `okl show` fetched, in order, from the shim's log; [] when none."""
+    try:
+        lines = Path(log).read_text().splitlines()
+    except OSError:
+        return []
+    out = []
+    for line in lines:
+        parts = shlex.split(line) if line.strip() else []
+        if len(parts) >= 2 and parts[0] == "show":
+            out.append(parts[1])
+    return out
+
+
+def parse_arms(spec: str) -> list[str]:
+    """`--arms` as a list, refused by argparse when it names an arm that does not exist."""
+    arms = [a.strip() for a in spec.split(",") if a.strip()]
+    if not arms or any(a not in ARMS for a in arms):
+        raise argparse.ArgumentTypeError(f"--arms must name a subset of {','.join(ARMS)}, not {spec!r}")
+    return arms
+
+
+def generator_cmd() -> str:
+    """The generator command, with the allowed tools when any (claude -p's flag; §4r)."""
+    return f"{GENERATOR_CMD} --allowedTools {shlex.quote(GENERATOR_TOOLS)}" if GENERATOR_TOOLS else GENERATOR_CMD
+
+
 def run_one(t: dict, arm: str, s: int, *, briefed_header: str | None, brief_err: str,
-            timeout: int, workdir: str) -> tuple[dict, bool]:
+            timeout: int, workdir: str, indexed_header: str | None = None) -> tuple[dict, bool]:
     """Generate and judge one (task, arm, sample). Returns the record and whether it is a result.
 
     False means a failure: anything that raised, including an Unevaluable sample, which is
     marked `unevaluable` so the report can say how many failures were no implementation,
-    and `truncated` as well when the cause was length.
+    and `truncated` as well when the cause was length. With tools allowed, the record also
+    carries the lesson ids the generator fetched and whether the governing one was among them.
     """
     rec = {"task": t["id"], "arm": arm, "sample": s, "defect_node": t["defect_node"]}
     t0 = time.time()
+    log = str(Path(workdir) / f"shim-{t['id'].replace('/', '_')}-{arm}-{s}.log")
     try:
-        if arm == "briefed" and briefed_header is None:
+        header = {"baseline": "", "briefed": briefed_header, "indexed": indexed_header}[arm]
+        if header is None:
             raise RuntimeError(f"briefing unavailable (fail closed): {brief_err}")
-        briefing = briefed_header if arm == "briefed" else ""
-        code = call(GENERATOR_CMD, GEN_PROMPT.format(briefing=briefing, task=t["task"]),
-                    timeout, workdir)
+        env = generator_env(workdir, log)
+        # The environment is passed only when tools are on, so the one-shot path is byte for
+        # byte the call every section through §4q made (and its tests' fakes still fit).
+        code = call(generator_cmd(), GEN_PROMPT.format(briefing=header, task=t["task"]),
+                    timeout, workdir, **({"env": env} if env else {}))
+        if GENERATOR_TOOLS:
+            rec["fetched"] = fetched_ids(log)
+            rec["fetched_governing"] = t["defect_node"] in rec["fetched"]
         # The receipt keeps no code, so this is what lets a reader audit a verdict: a "no
         # implementation" on thousands of characters is the judge's mistake, not the model's.
         rec["code_chars"] = len(code)
@@ -386,7 +450,11 @@ def main() -> int:
                     help="repetitions per (task, arm) — single samples are noisy; ≥3 for citable numbers")
     ap.add_argument("--timeout", type=int, default=300)
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--arms", default="baseline,briefed", type=parse_arms,
+                    help="comma-separated subset of baseline,briefed,indexed (§4r adds indexed: the "
+                         "briefing plus every other lesson in scope, for a generator that may `okl show`)")
     args = ap.parse_args()
+    arms = args.arms
 
     if GENERATOR_CMD.strip() == JUDGE_CMD.strip():
         print("REFUSING TO RUN: JUDGE_CMD == GENERATOR_CMD — the judge must not grade "
@@ -476,18 +544,22 @@ def main() -> int:
             print("Fix the id in tasks.jsonl, or seed the record it names.")
             return 4
 
-    n_runs = len(tasks) * 2 * args.samples
+    n_runs = len(tasks) * len(arms) * args.samples
     if args.dry_run:
         for t in tasks:
             print(f"— {t['id']}  (defect: {t['defect_node']})")
-        print(f"\n{len(tasks)} task(s) × 2 arms × {args.samples} sample(s) = "
+        print(f"\n{len(tasks)} task(s) × {len(arms)} arm(s) ({', '.join(arms)}) × {args.samples} sample(s) = "
               f"{n_runs} generations + {n_runs} judgments")
-        print(f"generator: {GENERATOR_CMD}\njudge:     {JUDGE_CMD}")
+        print(f"generator: {generator_cmd()}\njudge:     {JUDGE_CMD}"
+              + (f"\ntools:     {GENERATOR_TOOLS} (an okl shim logs each fetch)" if GENERATOR_TOOLS else ""))
         return 0
 
     results, failures = [], []
+    index_chars: int | None = None
     started_tree = tree_state()
     with tempfile.TemporaryDirectory(prefix="okl-ab-") as clean_cwd:
+        if GENERATOR_TOOLS:
+            write_shim(clean_cwd)
         models = {"generator": resolved_model(GENERATOR_CMD, args.timeout, clean_cwd),
                   "judge": resolved_model(JUDGE_CMD, args.timeout, clean_cwd)}
         print(f"resolved models: generator {models['generator']}, judge {models['judge']}")
@@ -499,15 +571,21 @@ def main() -> int:
         for t in tasks:
             # The briefing is deterministic per task — fetch once, reuse across samples.
             brief_err = ""
+            briefed_header = indexed_header = None
             try:
-                briefed_header = BRIEFING_HEADER.format(briefing=get_briefing(t["task"], args.timeout))
+                if "briefed" in arms:
+                    briefed_header = BRIEFING_HEADER.format(briefing=get_briefing(t["task"], args.timeout))
+                if "indexed" in arms:
+                    with_index = get_briefing(t["task"], args.timeout, index=True)
+                    indexed_header = BRIEFING_HEADER.format(briefing=with_index)
+                    # The index's cost is part of the treatment: the characters it adds.
+                    index_chars = max(index_chars or 0, len(with_index) - len(get_briefing(t["task"], args.timeout)))
             except Exception as e:  # noqa: BLE001 — fail closed: no briefing, no briefed arm
-                briefed_header = None
                 brief_err = str(e)[:300]
             for s in range(args.samples):
-                for arm in ("baseline", "briefed"):
+                for arm in arms:
                     rec, ok = run_one(t, arm, s, briefed_header=briefed_header, brief_err=brief_err,
-                                      timeout=args.timeout, workdir=clean_cwd)
+                                      timeout=args.timeout, workdir=clean_cwd, indexed_header=indexed_header)
                     if ok:
                         results.append(rec)
                         print(f"  {t['id']:16} {arm:8} s{s} → "
@@ -537,11 +615,15 @@ def main() -> int:
     def by(arm: str) -> list[dict]:
         return [r for r in results if r["arm"] == arm]
 
-    for arm in ("baseline", "briefed"):
+    for arm in arms:
         rows = by(arm)
         rep = sum(r["reproduced"] for r in rows)
         print(f"  {arm:8}: defect reproduced in {rep}/{len(rows)} runs"
               + (f"  ({rep/len(rows):.0%})" if rows else ""))
+        if GENERATOR_TOOLS and rows:
+            got = sum(1 for r in rows if r.get("fetched_governing"))
+            any_fetch = sum(1 for r in rows if r.get("fetched"))
+            print(f"            fetched the governing lesson in {got}/{len(rows)}, fetched anything in {any_fetch}/{len(rows)}")
     if args.samples > 1:
         print("  per task (reproduced/samples):")
         for t in tasks:
@@ -562,6 +644,9 @@ def main() -> int:
     path = out / f"ab-{stamp}.json"
     path.write_text(json.dumps({
         "generator": GENERATOR_CMD, "judge": JUDGE_CMD, "brief_interests": BRIEF_INTERESTS,
+        # §4r: which arms ran, what the generator could do, and what the index cost per prompt.
+        "arms": arms, "generator_tools": GENERATOR_TOOLS, "tasks_file": str(args.tasks),
+        **({"index_chars": index_chars} if index_chars is not None else {}),
         # How much of each submission the judge read (#182): part of the instrument.
         "judge_max_chars": JUDGE_MAX_CHARS,
         # What each alias resolved to on the day (None: not a claude command, or the probe
