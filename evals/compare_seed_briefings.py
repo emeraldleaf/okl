@@ -31,11 +31,20 @@ BUCKETS = ("rules", "relevant_defects", "armed_gates", "live_retractions", "in_s
 
 
 def _seeded(seed_dir: Path, db: Path) -> Store:
-    """A store seeded from every pack in `seed_dir`, at `db` (this process's env only)."""
+    """A store seeded from every pack in `seed_dir`, at `db` (this process's env only).
+
+    The client is built from an explicit config with no service URL, and the variable that
+    would select a shared service is dropped for this process: with either set, Client()
+    goes remote and the seeds would be written to the live service, not the throwaway store
+    (review on #266).
+    """
     from okl.client import Client
     from okl.seed import seed_from_file
+    os.environ.pop("OKL_SERVICE_URL", None)
     os.environ["OKL_DATABASE_URL"] = f"sqlite:///{db}"
-    client = Client()
+    client = Client(config={"repo": "okl"})
+    if client.mode != "local":
+        raise SystemExit("ABORT: the comparison must write to throwaway stores, and this client is remote")
     for pack in sorted(seed_dir.glob("*.json")):
         seed_from_file(client, str(pack))
     return client._local_store()

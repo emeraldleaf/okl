@@ -57,7 +57,9 @@ class RecordReq(BaseModel):
     symptom: str | None = None
     fix: str | None = None
     tags: str | None = None
-    aliases: str | None = None
+    # A pack writes aliases as a list and `okl seed` against a service forwards it as one;
+    # core.record joins either form (review on #266).
+    aliases: str | list[str] | None = None
     # Was missing, and pydantic drops unknown fields silently: `okl record --applies-to`
     # against a shared service stored the lesson as valid on every stack (docs audit).
     applies_to: str | None = None
@@ -108,7 +110,7 @@ class UpdateFields(BaseModel):
     fix: str | None = None
     tags: str | None = None
     applies_to: str | None = None
-    aliases: str | None = None
+    aliases: str | list[str] | None = None   # a list clears when empty, as core.update reads it
 
 
 class UpdateReq(BaseModel):
