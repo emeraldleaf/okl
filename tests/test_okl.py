@@ -1283,24 +1283,32 @@ def test_aliases_are_searchable_and_count_as_the_records_subject(store):
 
     The probe's bug-report row read 3 of 8 after the symptom pass: "users get logged out
     when they refresh" shares no word with a lesson about tokens in web storage. The
-    `aliases` field carries those words, indexed with the symptom at its weight, and one
-    alias word counts as the record's subject for the relevance floor.
+    `aliases` field carries those words, indexed with the symptom at its weight; its words
+    count toward the floor's two shared words, and a one-word alias matched whole is the
+    record's subject (REPORT §4p: any alias word as subject let "throttle search" answer
+    every prompt that said "search").
     """
     # ARRANGE — the distinguishing words live ONLY in aliases; a second record shares none.
     core.record(store, type="Rule", title="token storage", scope="org",
                 symptom="an access token written to web storage", fix="keep it in memory",
-                aliases="logged out on refresh; session lost")
+                aliases="logged out on refresh; session lost; JWT")
     core.record(store, type="Rule", title="pagination", scope="org",
                 symptom="an offset-based query", fix="use a cursor", aliases="slow pages")
 
     # ASSERT (1) — the search sees the alias words
     assert [n.title for n in store.search("logged out refresh", limit=5)] == ["token storage"]
-    # ASSERT (2) — one alias word on a prompt of several is the lesson's subject: the floor
-    # keeps it, and the briefing carries the field
-    res = core.check(store, repo="r", task="a session that does not survive a browser reload")
+    # ASSERT (2) — two task words found in the aliases clear the floor, and the briefing
+    # carries the field and the words that matched
+    res = core.check(store, repo="r", task="users get logged out after every refresh of the page")
     assert [r["title"] for r in res["rules"]] == ["token storage"]
-    assert res["rules"][0]["aliases"] == "logged out on refresh; session lost"
-    assert res["rules"][0]["matched_terms"] == ["session"]
+    assert res["rules"][0]["aliases"] == "logged out on refresh; session lost; JWT"
+    assert {"logged", "refresh"} <= set(res["rules"][0]["matched_terms"])
+    # ASSERT (3) — one word is the subject only as a one-word alias matched whole ...
+    res = core.check(store, repo="r", task="where should the JWT live in this app")
+    assert [r["title"] for r in res["rules"]] == ["token storage"]
+    # ... and one word from inside a longer alias is a weak match, counted and left out
+    res = core.check(store, repo="r", task="a session that does not survive a browser reload")
+    assert res["rules"] == [] and res["weak_matches"] == 1
 
 
 def test_an_index_built_before_aliases_was_indexed_is_rebuilt(tmp_path):

@@ -120,7 +120,7 @@ This step is what makes the import worth trusting. For each record:
 5. Put the decision and its reason at the start of `body`. A briefing shows only the start of a long body.
 6. Leave `applies_to` unset. It filters only org-scoped lessons, and a wrong value hides a lesson without warning.
 7. Give every Rule, Defect and Gate a `symptom` in the words a developer uses when it bites ("users get logged out when they refresh", not "token storage"). A prompt that describes what went wrong reaches a lesson through its symptom, and a record without one is found only by a prompt that happens to use its title's words. `okl seed` warns when one is missing.
-8. Add `aliases` where your team's words differ from the lesson's: the phrases a developer types when it bites (`"aliases": ["logged out on refresh", "session lost"]`). They are indexed like the symptom, and one alias word is enough to pass the relevance floor, so they are the cheapest way to make a lesson reachable from a bug report or a paraphrase (#258). Write them from the lesson, not from one prompt that missed.
+8. Add `aliases` where your team's words differ from the lesson's: the phrases a developer types when it bites (`"aliases": ["logged out on refresh", "session lost"]`). They are indexed like the symptom; two words shared with them, or a one-word alias matched whole ("PKCE", "I001"), pass the relevance floor, so they are the cheapest way to make a lesson reachable from a bug report or a paraphrase (#258). Write them from the lesson, not from one prompt that missed.
 
 Then check the file as a whole:
 

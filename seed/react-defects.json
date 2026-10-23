@@ -3,6 +3,7 @@
  "nodes": [
   {
    "key": "rx_useeffect_fetch",
+   "aliases": ["fetch in useEffect", "load data on mount", "setState after fetch", "race condition between requests", "duplicate requests", "refetch on every render", "stale response overwrites a newer one"],
    "type": "Defect",
    "scope": "org",
    "repo": "dotnet-microservices",
@@ -17,6 +18,7 @@
   },
   {
    "key": "rx_tokens_localstorage",
+   "aliases": ["store the JWT in localStorage", "where to keep the access token", "stay logged in after a refresh", "token persistence in the browser", "XSS steals the token", "sessionStorage"],
    "type": "Defect",
    "scope": "org",
    "repo": "dotnet-microservices",
@@ -30,6 +32,7 @@
   },
   {
    "key": "rx_fight_compiler",
+   "aliases": ["useMemo everywhere", "useCallback for performance", "React.memo", "React Compiler", "manual memoization"],
    "type": "Rule",
    "scope": "org",
    "repo": "dotnet-microservices",

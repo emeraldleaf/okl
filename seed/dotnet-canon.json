@@ -3,6 +3,7 @@
  "nodes": [
   {
    "key": "r_dbcontext_direct",
+   "aliases": ["repository pattern", "repository wrapper around the ORM", "mocking the database in tests", "generic repository"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Data access' + the simplicity refactor (five repositories deleted)",
    "tags": "dotnet",
@@ -13,6 +14,7 @@
   },
   {
    "key": "r_arch_enforcement_ladder",
+   "aliases": ["split the solution into layer projects", "clean architecture projects", "enforce layering", "architecture tests"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Promotion signal' + docs/vsa-vs-clean-architecture.md",
    "tags": "dotnet,method",
@@ -23,6 +25,7 @@
   },
   {
    "key": "r_rate_limiter_scaleout",
+   "aliases": ["throttling", "rate limit not working with multiple replicas", "too many requests get through", "requests per second per client", "horizontal scaling breaks the limiter"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Rate Limiting'",
    "tags": "security,dotnet",
@@ -33,6 +36,7 @@
   },
   {
    "key": "r_request_naming",
+   "aliases": ["Dto naming", "name the request class", "command vs query naming", "what to call the input model"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Coding Standards'",
    "tags": "dotnet,method",
@@ -43,6 +47,7 @@
   },
   {
    "key": "r_comments_durable_docs",
+   "aliases": ["comment links to a TODO file", "comment points at a status document", "link in a code comment"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Commenting Convention' (the STATUS.md dangling-pointer incident)",
    "tags": "method",
@@ -53,6 +58,7 @@
   },
   {
    "key": "r_surprise_in_writing",
+   "aliases": ["write down the gotcha", "debugging insight lost", "document the workaround", "lesson only in the commit message"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Debugging Discipline'",
    "tags": "method",
@@ -63,6 +69,7 @@
   },
   {
    "key": "r_file_move_discipline",
+   "aliases": ["rename a file", "move a file", "delete a file", "broken reference after a rename", "stale path"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'File-move discipline' (Dockerfile.catalog broken for months after PR #31)",
    "tags": "method",
@@ -73,6 +80,7 @@
   },
   {
    "key": "r_grep_to_zero",
+   "aliases": ["remove a public method", "rename an identifier everywhere", "leftover references", "search the codebase for old names"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Identifier-move discipline' (15+ docs taught Azure Service Bus as current after the RabbitMQ swap)",
    "tags": "method",
@@ -83,6 +91,7 @@
   },
   {
    "key": "r_docs_review_surface",
+   "aliases": ["update the diagram", "stale architecture diagram", "docs out of date after a refactor", "keep docs in sync"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Doc-and-diagram discipline'",
    "tags": "method",
@@ -93,6 +102,7 @@
   },
   {
    "key": "r_presence_in_loop",
+   "aliases": ["review an AI-generated PR", "big refactor by the agent", "pairing with the agent", "architecture change unsupervised"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Presence in the loop, not approval at the gate'",
    "tags": "method,agent-safety",
@@ -103,6 +113,7 @@
   },
   {
    "key": "r_experiment_sunset",
+   "aliases": ["spike", "prototype with no deadline", "proof of concept dragging on", "time-box the experiment"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Continue is the verb that gets you in trouble'",
    "tags": "method",
@@ -113,6 +124,7 @@
   },
   {
    "key": "r_encoding_loop",
+   "aliases": ["same bug again", "recurring mistake", "add a lint rule for the fix", "prevent the regression", "never again"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Continuous Rule Encoding'",
    "tags": "method",
@@ -123,6 +135,7 @@
   },
   {
    "key": "r_durability_not_replay",
+   "aliases": ["use Kafka", "event streaming", "message loss", "do we need a stream", "durable queue"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Durability ≠ replay' + docs/messaging-transport-selection.md",
    "tags": "messaging",
@@ -133,6 +146,7 @@
   },
   {
    "key": "r_batch_beats_whenall",
+   "aliases": ["Task.WhenAll in a loop", "many calls to the same service", "fan out requests", "batch API", "N calls to one downstream"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Performance Rules' (PlaceOrder fan-out superseded by batch gRPC, issue #71)",
    "tags": "dotnet,messaging",
@@ -143,6 +157,7 @@
   },
   {
    "key": "r_202_long_running",
+   "aliases": ["slow endpoint", "request takes several seconds", "background job", "async processing", "return 202 Accepted", "timeout on a long request"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Performance Rules'",
    "tags": "messaging,method",
@@ -153,6 +168,7 @@
   },
   {
    "key": "r_guid_v7",
+   "aliases": ["Guid primary key", "random ids fragment the index", "sequential guid", "id leaks creation time"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Performance Rules'",
    "tags": "dotnet",
@@ -163,6 +179,7 @@
   },
   {
    "key": "r_secret_fakes",
+   "aliases": ["fake API key in a test", "secret scanner false positive", "gitleaks flagged a test", "placeholder credentials"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Testing' (gitleaks 8.24.x allowlist attempt, tried and removed)",
    "tags": "security,method",
@@ -173,6 +190,7 @@
   },
   {
    "key": "r_aspire_waitfor",
+   "aliases": ["connection refused on startup", "service starts before the database is ready", "container not ready", "startup race with dependencies"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Package Management' (services showing 'Finished' instead of 'Running')",
    "tags": "dotnet",
@@ -217,6 +235,7 @@
   },
   {
    "key": "r_no_nplus1",
+   "aliases": ["query in a loop", "N+1 queries", "lazy loading in a loop", "too many database round trips"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Performance Rules'",
    "tags": "dotnet",
@@ -227,6 +246,7 @@
   },
   {
    "key": "r_sargable",
+   "aliases": ["index not used", "LIKE with a leading wildcard", "case-insensitive search is slow", "function on a column in WHERE", "full table scan"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Performance Rules' + SearchProducts.cs documented trade-off",
    "tags": "dotnet,data-quality",
@@ -237,6 +257,7 @@
   },
   {
    "key": "r_pagination_cap",
+   "aliases": ["list endpoint returns everything", "page size unbounded", "offset pagination slow on page 1000", "cursor pagination", "paging"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Performance Rules'",
    "tags": "dotnet",
@@ -247,6 +268,7 @@
   },
   {
    "key": "r_bulk_ops",
+   "aliases": ["update thousands of rows", "loop over entities to delete", "mass update", "bulk delete", "ExecuteUpdate"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Performance Rules'",
    "tags": "dotnet",
@@ -257,6 +279,7 @@
   },
   {
    "key": "r_optimistic_concurrency",
+   "aliases": ["lost update", "two users edit the same record", "last write wins", "row version", "concurrency conflict"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Performance Rules' + docs/performance-and-data-correctness.md",
    "tags": "dotnet,data-quality",
@@ -267,6 +290,7 @@
   },
   {
    "key": "r_logging_hygiene",
+   "aliases": ["string interpolation in log messages", "logging inside a loop", "log noise", "structured logs", "log scope null key"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Performance Rules' + 'Observability' (MA0002)",
    "tags": "dotnet,method",
@@ -277,6 +301,7 @@
   },
   {
    "key": "r_connection_hold",
+   "aliases": ["connection pool exhausted", "too many open connections", "await an HTTP call while the transaction is open", "holding the db connection"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Performance Rules'",
    "tags": "dotnet",
@@ -287,6 +312,7 @@
   },
   {
    "key": "r_cache_write_path",
+   "aliases": ["stale cache after an update", "cache not invalidated", "users see old data", "cache TTL", "when to clear the cache"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Performance Rules'",
    "tags": "dotnet",
@@ -297,6 +323,7 @@
   },
   {
    "key": "r_migrations_immutable",
+   "aliases": ["edit a migration", "fix a migration that already ran", "drop a column safely", "schema change breaks production", "migration rollback"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Performance Rules'",
    "tags": "dotnet,data-quality",
@@ -307,6 +334,7 @@
   },
   {
    "key": "r_measure_first",
+   "aliases": ["add caching for performance", "premature optimization", "it feels slow", "optimize without profiling", "benchmark first"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Performance Rules'",
    "tags": "method,dotnet",
@@ -317,6 +345,7 @@
   },
   {
    "key": "r_dapper_escape",
+   "aliases": ["raw SQL", "Dapper alongside EF", "hand-written query", "bypass the ORM", "its own connection"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Performance Rules'",
    "tags": "dotnet",
@@ -327,6 +356,7 @@
   },
   {
    "key": "r_exceptions_canon",
+   "aliases": ["Result type", "return errors instead of throwing", "error handling style", "exceptions vs result objects", "railway oriented"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Key Conventions' (Anton Martyniuk VSA audit, .claude/audits/2026-06-08)",
    "tags": "dotnet,method",
@@ -337,6 +367,7 @@
   },
   {
    "key": "r_problemdetails_traceid",
+   "aliases": ["error response leaks details", "stack trace in the API response", "correlation id in errors", "what to return on 500", "traceparent in the body"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Security Requirements' (GlobalExceptionHandler)",
    "tags": "security,dotnet",
@@ -347,6 +378,7 @@
   },
   {
    "key": "r_https_metadata_failclosed",
+   "aliases": ["http authority", "OIDC discovery over http", "insecure identity provider URL", "RequireHttpsMetadata false"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Security Requirements' (JWT validation)",
    "tags": "security,dotnet",
@@ -357,6 +389,7 @@
   },
   {
    "key": "r_idp_policy_pinned",
+   "aliases": ["token lifetime changed", "sessions expire too early", "Keycloak realm defaults", "access token expiry", "refresh token lifespan"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Security Requirements' (Keycloak realm) + docs/project-decisions.md §7",
    "tags": "security",
@@ -367,6 +400,7 @@
   },
   {
    "key": "r_idempotent_handlers",
+   "aliases": ["duplicate messages", "message processed twice", "at-least-once delivery", "redelivery", "handler runs again on retry", "double charge"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Key Conventions' + 'Durability ≠ replay'",
    "tags": "messaging",
@@ -377,6 +411,7 @@
   },
   {
    "key": "r_rich_domain_when_observed",
+   "aliases": ["DDD boilerplate", "aggregate for a simple object", "private setters everywhere", "over-engineered domain model", "anemic vs rich model"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Domain-Driven Design' (NotificationService precedent)",
    "tags": "dotnet,method",
@@ -387,6 +422,7 @@
   },
   {
    "key": "r_aaa_narrative",
+   "aliases": ["test is hard to read", "what does this assert prove", "arrange act assert", "test comments", "unclear test failure"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Testing'",
    "tags": "method",
@@ -397,6 +433,7 @@
   },
   {
    "key": "r_authz_test_required",
+   "aliases": ["authorization test", "can another user read my data", "test the forbidden path", "access denied test", "cross-tenant access"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Testing' (the original GET /orders/{id} IDOR survived the codebase lifetime)",
    "tags": "security,method",
@@ -407,6 +444,7 @@
   },
   {
    "key": "r_feature_file_cap",
+   "aliases": ["file too long", "split a large file", "giant handler file", "organise by layer or by feature", "thousand-line file"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Project Structure' (Anton Martyniuk VSA audit)",
    "tags": "dotnet,method",

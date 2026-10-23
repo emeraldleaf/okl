@@ -3,6 +3,7 @@
   "nodes": [
     {
       "key": "r_resubstitution_not_validation",
+      "aliases": ["validated on the training data", "accuracy matches the labels", "in-sample", "holdout set", "test on training labels"],
       "type": "Rule", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
       "found_by": "CodeRabbit caught a map calling a 23% figure 'validated' when the model was trained on those labels",
       "title": "A prediction reproducing its own training labels' proportions is IN-SAMPLE CALIBRATION, not validation",
@@ -13,6 +14,7 @@
     },
     {
       "key": "d_cross_domain_recipe_dependence",
+      "aliases": ["result changes with preprocessing", "trend depends on the window size", "out of distribution", "historical imagery", "normalization changes the answer", "fragile trend"],
       "type": "Defect", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
       "found_by": "the invasive-over-time trajectory changed shape (5×-growth / flat-then-jump / decline-then-jump) across compositing recipes",
       "title": "A present-day-trained model applied to out-of-distribution history yields a trajectory whose shape depends on the preprocessing recipe",
@@ -23,6 +25,7 @@
     },
     {
       "key": "g_multi_recipe_robustness",
+      "aliases": ["robustness check", "re-run with different settings", "sensitivity to preprocessing", "one recipe", "publish a trend"],
       "type": "Gate", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
       "found_by": "bracket + multi-recipe re-runs turned a spurious '5× trajectory' into an honest not-reconstructable verdict",
       "title": "Prove a cross-domain trend robust by re-running under ≥2 reasonable recipes before publishing it",
@@ -33,6 +36,7 @@
     },
     {
       "key": "r_mask_hierarchical_classifier",
+      "aliases": ["classifier applied outside its training domain", "positive fraction over the whole scene", "hierarchical classification", "subset classifier", "mask predictions to the parent class"],
       "type": "Rule", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
       "found_by": "an invasive-vs-native (within-woody) classifier fired on non-woody pixels; raw fraction was 65%, masked to the corridor it was 23%",
       "title": "A classifier trained to separate A-vs-B only within parent class C is undefined outside C — mask it to a C-predictor",
@@ -43,6 +47,7 @@
     },
     {
       "key": "g_multiyear_window_composite",
+      "aliases": ["noisy yearly values", "one odd year", "annual composite", "multi-year composite", "time series outlier", "smooth the trend"],
       "type": "Gate", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
       "found_by": "single-year composites swung ±0.5 pp (1999/2000/2001 = 2.1/1.7/1.2%); 5-year windows collapsed the noise",
       "title": "Composite over multi-year windows, not single years, for a time-series remote-sensing trend",

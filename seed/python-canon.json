@@ -3,6 +3,7 @@
   "nodes": [
     {
       "key": "py_layers_contract",
+      "aliases": ["circular import", "lower layer imports the upper layer", "architecture test in Python", "import-linter", "dependency direction"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -17,6 +18,7 @@
     },
     {
       "key": "py_docstrings",
+      "aliases": ["missing docstring", "D100", "what does this function do", "pydocstyle", "document the public API"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -31,6 +33,7 @@
     },
     {
       "key": "py_comments_why",
+      "aliases": ["comment restates the code", "obvious comment", "why not what", "uncommented tricky line", "commenting style"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -44,6 +47,7 @@
     },
     {
       "key": "py_type_hints_gradual",
+      "aliases": ["mypy passes but the code is untyped", "add type hints", "untyped function", "tighten mypy", "disallow-untyped-defs"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -58,6 +62,7 @@
     },
     {
       "key": "py_typing_syntax_floor",
+      "aliases": ["Optional vs | None", "List vs list", "old typing syntax", "UP rules", "PEP 604", "target-version"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -72,6 +77,7 @@
     },
     {
       "key": "py_strict_pytest",
+      "aliases": ["deprecation warning in CI", "warnings as errors in pytest", "filterwarnings", "ignored warning broke the upgrade", "strict pytest"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -86,6 +92,7 @@
     },
     {
       "key": "py_test_every_version",
+      "aliases": ["supported Python versions", "CI matrix", "only tested on one Python", "requires-python", "drop Python 3.9"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -100,6 +107,7 @@
     },
     {
       "key": "py_unclosed_sqlite",
+      "aliases": ["ResourceWarning unclosed database", "random test failures on 3.13", "sqlite connection not closed", "flaky tests after a Python upgrade", "weakref.finalize"],
       "type": "Defect",
       "scope": "org",
       "repo": "okl",
@@ -114,6 +122,7 @@
     },
     {
       "key": "py_starlette_httpx2",
+      "aliases": ["StarletteDeprecationWarning", "TestClient warning", "install httpx2", "service tests started failing", "Starlette upgrade"],
       "type": "Defect",
       "scope": "org",
       "repo": "okl",
@@ -128,6 +137,7 @@
     },
     {
       "key": "py_size_limits",
+      "aliases": ["function too long", "too many branches", "too many return statements", "PLR0911", "PLR0912", "PLR0915", "split the module", "scrolling to follow a function"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -142,6 +152,7 @@
     },
     {
       "key": "py_no_power_features",
+      "aliases": ["metaclass", "getattr magic", "__del__", "clever code", "reflection", "hard to find where behaviour comes from"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -156,6 +167,7 @@
     },
     {
       "key": "py_exceptions_canon",
+      "aliases": ["except Exception", "bare except", "swallowed error", "BLE001", "exit code for errors", "catch-all"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -170,6 +182,7 @@
     },
     {
       "key": "py_dont_mock_what_you_dont_own",
+      "aliases": ["mock requests.get", "patch a library internal", "tests pass but the real call is broken", "adapter for a third-party API", "fake the client"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -183,6 +196,7 @@
     },
     {
       "key": "py_classes_earn_place",
+      "aliases": ["class with one method", "do I need a class", "Protocol with one implementation", "abstract base class", "just a function"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -197,6 +211,7 @@
     },
     {
       "key": "py_protocol_isinstance_names_only",
+      "aliases": ["isinstance with a Protocol", "runtime_checkable", "structural typing check", "Pydantic field typed as a Protocol", "signature mismatch not caught"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -211,6 +226,7 @@
     },
     {
       "key": "py_composition_root",
+      "aliases": ["client created inside business logic", "os.environ in a service class", "where to construct dependencies", "bootstrap function", "dependency injection in Python", "pass the connection in"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -225,6 +241,7 @@
     },
     {
       "key": "py_value_objects_at_seams",
+      "aliases": ["raw provider response leaking", "frozen dataclass", "provider payload fields used everywhere", "translate at the adapter", "immutable value object", "frozen but the list changed"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -239,6 +256,7 @@
     },
     {
       "key": "py_contract_tests",
+      "aliases": ["fake behaves differently from the real adapter", "shared test for every implementation", "parametrize over implementations", "contract test", "two backends disagree"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -252,6 +270,7 @@
     },
     {
       "key": "py_print_at_edges",
+      "aliases": ["print in a library module", "T201", "G004", "logging vs print", "output from library code", "print statements in imported modules"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -266,6 +285,7 @@
     },
     {
       "key": "py_pyproject_versions",
+      "aliases": ["version pinned in the workflow file", "dev dependencies as an extra", "where do versions live", "dependency-groups", "pin tool versions"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -280,6 +300,7 @@
     },
     {
       "key": "py_one_type_checker",
+      "aliases": ["mypy vs pyright", "two type checkers", "switch type checker", "which checker gates CI"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -294,6 +315,7 @@
     },
     {
       "key": "py_one_docstring_format",
+      "aliases": ["google vs numpy docstrings", "docstring sections", "enforce Args and Returns", "pydocstyle convention", "docstring format"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",

@@ -3,6 +3,7 @@
   "nodes": [
     {
       "key": "r_preregistered_control_vetoes",
+      "aliases": ["negative control", "small sample shows the effect we hoped for", "transfer result", "confounded experiment", "effect smaller than the control", "report a null"],
       "type": "Rule", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
       "found_by": "phase3c beetle-inversion — the Russian-olive control dropped 0.285 where it should be flat",
       "title": "A pre-registered negative control can VETO a transfer/cross-era result the sample is too small or confounded to support",
@@ -13,6 +14,7 @@
     },
     {
       "key": "d_loo_group_single_class",
+      "aliases": ["IndexError in predict_proba", "fold with one class", "leave one group out", "GroupKFold crash", "single-class fold", "spatial block folds"],
       "type": "Defect", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
       "found_by": "phase3c IndexError: predict_proba(...)[:, 1] out of bounds — a leave-one-trip-out fold was single-class",
       "title": "Leave-one-group-out CV crashes or degenerates when a group can be single-class (one-cluster field data)",

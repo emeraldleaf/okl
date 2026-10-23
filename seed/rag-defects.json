@@ -3,6 +3,7 @@
  "nodes": [
   {
    "key": "qz_judge_crash",
+   "aliases": ["perfect score but everything crashed", "eval summary hides failures", "report the failure rate first", "exceptions skipped in the eval", "misleading average"],
    "type": "Defect",
    "scope": "org",
    "repo": "python-rag-service",
@@ -16,6 +17,7 @@
   },
   {
    "key": "qz_judge_self",
+   "aliases": ["judge is the same model", "grading its own homework", "judge equals generator", "blind judge", "evaluator model choice"],
    "type": "Defect",
    "scope": "org",
    "repo": "python-rag-service",
@@ -29,6 +31,7 @@
   },
   {
    "key": "qz_crosstab",
+   "aliases": ["is retrieval or generation failing", "one average score", "break down the eval by retrieval hit", "tuning the wrong component", "cross-tab"],
    "symptom": "an eval run reports one average score with no breakdown of whether the retrieval hit before generation failed, and a whole session goes into tuning the wrong component",
    "type": "Rule",
    "scope": "org",
@@ -41,6 +44,7 @@
   },
   {
    "key": "qz_fixtures",
+   "aliases": ["hand-written test fixtures", "tests pass but production data is wrong", "fixture shares the author's assumptions", "test against the live index", "invented examples"],
    "symptom": "entity or parser tests pass at 100% on hand-written fixture files while the live index holds a wrong value, such as an exhibit number indexed as a company",
    "type": "Defect",
    "scope": "org",
@@ -53,6 +57,7 @@
   },
   {
    "key": "qz_identity",
+   "aliases": ["how many documents mention X", "count with similarity search", "answer changes with top-k", "metadata filter instead of ranking", "which documents share a property", "aggregate question over chunks"],
    "symptom": "a question about which documents share a property, or how many there are, answered by similarity search over chunks, so the answer changes with top-k",
    "type": "Rule",
    "scope": "org",
@@ -77,6 +82,7 @@
   },
   {
    "key": "qz_broken_tool",
+   "aliases": ["tool throws on every call", "agent retries until the step budget runs out", "broken tool blamed on the architecture", "tool error loop"],
    "symptom": "an agent retries the same tool call until its step budget is gone because every call throws, and the comparison then blames the agent architecture",
    "type": "Defect",
    "scope": "org",
@@ -89,6 +95,7 @@
   },
   {
    "key": "qz_unequal_budget",
+   "aliases": ["different top-k between arms", "unfair comparison", "token budget differs", "step budget", "apples to oranges"],
    "symptom": "two retrieval arms compared with different top-k, token or step budgets, and the gap attributed to their design",
    "type": "Defect",
    "scope": "org",
@@ -101,6 +108,7 @@
   },
   {
    "key": "qz_agent_contract",
+   "aliases": ["model invents a tool name", "unknown tool call", "tool allowlist", "mutating tool without approval", "max steps", "tool timeout"],
    "symptom": "an agent loop that will call a tool name the model invented, or a mutating tool shipped without argument validation, an approval mode or alerting",
    "type": "Rule",
    "scope": "org",

@@ -1,0 +1,20 @@
+briefings: seed/ at origin/main vs the working tree · interests=none
+  idor_endpoint    governing kept  left=['rxc_effects_discipline', 'd15']  arrived=['r_202_long_running', 'rx_tokens_localstorage']
+  price_tamper     governing kept  left=['r_rich_domain_when_observed']  arrived=['pd_minimal_apis_over_controllers']
+  react_fetch      governing kept  left=['rxc_feature_boundaries', 'rx_fight_compiler']  arrived=['r_no_nplus1', 'rxc_no_state_copy']
+  judge_summary    governing kept  left=['rxc_test_behavior']  arrived=['py_exceptions_canon']
+  exit_code_trust  governing kept  left=['nc_arch_reviewer']  arrived=['r_202_long_running']
+  spa_tokens       governing kept  left=['pd_rate_limit_expensive_endpoints', 'rxc_feature_boundaries', 'd_ungated_zone']  arrived=['rxc_no_waterfalls', 'r_optimistic_concurrency', 'nc_idor']
+  rate_limiter     governing kept  left=['r_authz_test_required', 'rxc_bundle_budget', 'py_starlette_httpx2']  arrived=['py_dont_mock_what_you_dont_own', 'rxc_no_waterfalls', 'r_202_long_running']
+  ci_linter        governing kept  left=['py_strict_pytest', 'py_one_type_checker', 'g_review_agent_in_ci']  arrived=['r_encoding_loop', 'py_type_hints_gradual', 'd15']
+held-out recall (of 8), before -> after:
+  ticket      6 -> 7
+  paraphrase  2 -> 3
+  bug-report  5 -> 5
+records returned to the six precision prompts, before -> after:
+   3 ->  3  'this seems like a major point to scrutinize'
+   8 ->  8  'ok do the updates and update my site and the writing section'
+   0 ->  0  'what about the org knowwledge ideae is that a nich ?'
+   4 ->  4  'give me a doc for that too'
+   1 ->  1  'how do we come up with a good plan for governing github copilot and mcp'
+   2 ->  2  'what about the search ?  and how this thing finds the lessions needed to each prompt?'

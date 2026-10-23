@@ -115,7 +115,7 @@ class Node:
     symptom: str | None = None           # Symptom→Cause→Fix schema (cause lives in body)
     aliases: str | None = None           # the words a developer uses when it bites, "; "-separated
                                          # ("logged out on refresh; session lost"); indexed with the
-                                         # symptom and counted as the record's subject (#258)
+                                         # symptom; a one-word alias is the record's subject (#258)
     fix: str | None = None
     tags: str | None = None              # comma-sep subject labels ("react,security"); orthogonal to scope
     applies_to: str | None = None        # comma-sep stacks this lesson is VALID for; None/"any" = everywhere

@@ -3,6 +3,7 @@
  "nodes": [
   {
    "key": "nc_idor",
+   "aliases": ["user can see another user's record", "change the id in the URL", "missing ownership check", "insecure direct object reference", "any id works", "access control on GET by id"],
    "type": "Defect",
    "scope": "org",
    "repo": "dotnet-microservices",
@@ -29,6 +30,7 @@
   },
   {
    "key": "nc_price_tamper",
+   "aliases": ["client sends the price", "trust the request body", "user sets their own role", "edit the request in devtools", "server-side pricing", "isAdmin from the client"],
    "type": "Defect",
    "scope": "org",
    "repo": "dotnet-microservices",
@@ -80,6 +82,7 @@
   },
   {
    "key": "nc_dead_metric",
+   "aliases": ["metric always zero", "alert never fires", "counter never increments", "dashboard shows nothing", "dead gauge"],
    "symptom": "a counter or gauge that a dashboard or runbook names as the alarm, whose value has never moved; a metrics class registered but never injected",
    "type": "Defect",
    "scope": "org",
@@ -92,6 +95,7 @@
   },
   {
    "key": "nc_speculative_interface",
+   "aliases": ["interface with one implementation", "IFoo for everything", "abstraction for a future swap", "unnecessary interface", "factory that returns one class"],
    "symptom": "an interface with one implementation that no test substitutes and no roadmap item will; a factory that returns the same class for every input",
    "type": "Rule",
    "scope": "org",
@@ -104,6 +108,7 @@
   },
   {
    "key": "nc_arch_reviewer",
+   "aliases": ["review step nobody runs", "checklist nobody follows", "manual gate", "enforcement that is only documentation", "no hook triggers it"],
    "symptom": "a review agent, linter or gate described in the docs as enforcement that no hook, CI job or command ever invokes",
    "type": "Defect",
    "scope": "org",
@@ -116,6 +121,7 @@
   },
   {
    "key": "g_tombstones_nc",
+   "aliases": ["old name still in the docs", "removed service still referenced", "stale identifier", "tombstone", "retired term reappears"],
    "symptom": "a retired identifier, service name or transport still taught as current in docs, comments or config after the code dropped it",
    "type": "Gate",
    "scope": "org",

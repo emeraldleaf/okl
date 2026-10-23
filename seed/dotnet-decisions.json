@@ -28,6 +28,7 @@
   },
   {
    "key": "pd_require_explicit_api_version",
+   "aliases": ["API versioning", "default API version", "unversioned route", "v1 in the URL"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §5",
    "tags": "dotnet",
@@ -38,6 +39,7 @@
   },
   {
    "key": "pd_openapi_dev_only",
+   "aliases": ["Swagger in production", "swagger UI exposed", "OpenAPI spec public", "hide the API docs"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §6",
    "tags": "security,dotnet",
@@ -75,6 +77,7 @@
   },
   {
    "key": "pd_authz_adapts_at_endpoint_boundary",
+   "aliases": ["HttpContext in a handler", "read claims in business logic", "current user in the service layer", "who is the caller"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §8",
    "tags": "security,dotnet",
@@ -112,6 +115,7 @@
   },
   {
    "key": "pd_rate_limit_expensive_endpoints",
+   "aliases": ["expensive search endpoint", "protect the database from abuse", "unauthenticated endpoint hammered", "throttle search", "DoS through a slow query"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §11",
    "tags": "security,dotnet",
@@ -180,6 +184,7 @@
   },
   {
    "key": "pd_rollback_test_write_then_publish",
+   "aliases": ["event published but the write rolled back", "outbox", "save and publish atomically", "phantom event", "dual write"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §13 (the test that caught the Wolverine 6 non-enlistment bug)",
    "tags": "messaging,method",
@@ -260,6 +265,7 @@
   },
   {
    "key": "pd_macos_docker_host_testcontainers",
+   "aliases": ["Testcontainers cannot connect to Docker", "Docker not found on Mac", "DOCKER_HOST", "docker socket on macOS", "integration tests fail locally on a Mac"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §18",
    "tags": "dotnet,method",
@@ -270,6 +276,7 @@
   },
   {
    "key": "pd_central_package_management",
+   "aliases": ["package versions in every csproj", "NuGet version drift", "Directory.Packages.props", "upgrade a package everywhere"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §19",
    "tags": "dotnet",
@@ -280,6 +287,7 @@
   },
   {
    "key": "pd_zero_warning_build",
+   "aliases": ["warnings as errors", "analyzer warnings ignored", "TreatWarningsAsErrors", "banned API", "Thread.Sleep in production code"],
    "symptom": "a build that passes with analyzer warnings in its output, or a banned API such as Task.WaitAll, Parallel.For or Thread.Sleep compiling without complaint",
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §19",
@@ -289,6 +297,7 @@
   },
   {
    "key": "pd_ci_grep_unanalyzable_hazards",
+   "aliases": ["grep in CI", "no analyzer rule for this", "forbid a pattern in the codebase", "custom lint via shell", "convention nobody checks"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §19",
    "tags": "method",
@@ -323,6 +332,7 @@
   },
   {
    "key": "pd_db_primitives_before_distributed_locks",
+   "aliases": ["distributed lock", "Redis lock", "only one instance should run this", "leader election", "prevent two workers doing the same job", "unique constraint instead of a lock"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §22",
    "tags": "method,data-quality",

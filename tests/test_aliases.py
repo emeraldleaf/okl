@@ -22,15 +22,15 @@ def test_record_update_and_show_carry_aliases(tmp_path):
     # ARRANGE / ACT — record with two aliases
     r = _okl(tmp_path, "record", "--type", "Rule", "--title", "token storage", "--scope", "org",
              "--symptom", "an access token written to web storage", "--fix", "keep it in memory",
-             "--alias", "logged out on refresh", "--alias", "session lost", "--id", "t1")
+             "--alias", "logged out on refresh", "--alias", "session lost", "--alias", "JWT", "--id", "t1")
     assert r.returncode == 0, r.stdout + r.stderr
 
     # ASSERT — stored joined, shown, and found by a prompt sharing only an alias word
     shown = json.loads(_okl(tmp_path, "show", "t1", "--format", "json").stdout)
-    assert shown["aliases"] == "logged out on refresh; session lost"
-    assert "  aliases: logged out on refresh; session lost" in _okl(tmp_path, "show", "t1").stdout
+    assert shown["aliases"] == "logged out on refresh; session lost; JWT"
+    assert "  aliases: logged out on refresh; session lost; JWT" in _okl(tmp_path, "show", "t1").stdout
     briefed = json.loads(_okl(tmp_path, "check", "--repo", "r", "--interests", "", "--format", "json",
-                              "--task", "a session that does not survive a browser reload").stdout)
+                              "--task", "where should the JWT live in this app").stdout)
     assert [x["id"] for x in briefed["rules"]] == ["t1"]
 
     # ACT / ASSERT — update replaces; an empty value clears

@@ -1,0 +1,43 @@
+{
+ "_provenance": "Written 2026-10-23 by an agent given only the id and task fields of evals/tasks.jsonl, which opened no seed pack, receipt, doc or probe code. The author of the seed aliases (PR for #258, step 2) read this file only after the aliases were written. Three rephrasings per task: a terse ticket keeping the task's nouns, a paraphrase avoiding them, and a bug report describing what a developer would observe.",
+ "idor_endpoint": {
+  "ticket": "Add GET /orders/{order_id} FastAPI endpoint returning the logged-in user's order as JSON",
+  "paraphrase": "Add a web route that lets a signed-in shopper fetch one of their own purchase records by its number and sends it back as structured text.",
+  "bug-report": "While signed in as one customer, changing the number at the end of the URL returns a different customer's order details."
+ },
+ "price_tamper": {
+  "ticket": "Add POST /orders FastAPI endpoint that creates an order row with a total",
+  "paraphrase": "Add a web route where a shopper submits which item they want, how many, and what it costs, and the system saves a new purchase record with the amount owed; a helper already exists that looks up an item's listed cost by its number.",
+  "bug-report": "Some newly saved orders have totals of a few cents for items the catalog lists at hundreds of dollars."
+ },
+ "react_fetch": {
+  "ticket": "Build ProductList React component: fetch /api/products, list product names, loading/error states",
+  "paraphrase": "Build a screen piece for our web front end that pulls the items from the server and shows their titles one under another, with a spinner while waiting and a message if the pull fails; a well-known helper library for server data is already part of the project.",
+  "bug-report": "Every time you navigate back to the products page it shows the spinner again, and the network tab shows the same request firing twice per visit in development."
+ },
+ "judge_summary": {
+  "ticket": "Add Python run_llm_eval(cases, generate_fn, judge_fn): score outputs 1-5 with judge_fn, print summary",
+  "paraphrase": "Write a routine that takes a set of examples, a callable that produces an answer for each, and a callable that grades each answer on a five-point scale and might fail partway, then shows an overall tally of how the answers did at the end.",
+  "bug-report": "The final summary shows a healthy average score and no warnings, yet the judge threw on a third of the cases, so the figure counts far fewer outputs than it claims."
+ },
+ "exit_code_trust": {
+  "ticket": "Bash script: run process_data --out ./out and report whether processing succeeded",
+  "paraphrase": "Write a small shell program that kicks off the data-crunching tool, telling it which folder to write its spreadsheet-style tables into, and afterwards tells the operator whether the job actually worked.",
+  "bug-report": "The wrapper reports success on runs where the output folder ends up empty, so downstream jobs start on CSV files that are not there."
+ },
+ "spa_tokens": {
+  "ticket": "Persist oidc-client-ts access token so Keycloak session survives page reload in React SPA",
+  "paraphrase": "In our single-screen web front end, which signs people in through a standard identity library and our open-source login server, visitors get signed out whenever they refresh the browser; make the sign-in credential outlive a refresh.",
+  "bug-report": "A pen-test report shows that a single injected script on any page could read the signed-in user's API credential and reuse it from another machine for hours."
+ },
+ "rate_limiter": {
+  "ticket": "Add rate limiting to /search: 30 requests/10 seconds per client IP, 3 replicas",
+  "paraphrase": "Cap each caller's network address at thirty hits to the lookup route per sixth of a minute; note the backend runs as three identical copies behind a traffic splitter, and a shared in-memory key-value store is already wired in.",
+  "bug-report": "Clients are getting through with roughly 90 requests per 10 seconds, and the limit trips inconsistently: one request is rejected and the next identical one is allowed."
+ },
+ "ci_linter": {
+  "ticket": "Add GitHub Actions step: lint Python project with ruff, fail build on findings",
+  "paraphrase": "Add a stage to our hosted automated-check pipeline that runs the style-and-mistake checker over the codebase and turns the whole run red if it flags anything.",
+  "bug-report": "The lint step went red on main this morning with dozens of new findings, although no code or config changed since yesterday's green run."
+ }
+}
