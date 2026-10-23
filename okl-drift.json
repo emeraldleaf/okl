@@ -78,9 +78,9 @@
       "title": "A test that imports an undeclared package passes only where that package happens to be installed",
       "scope": "org",
       "files": "tests/",
-      "verified_at": 1792764329713,
-      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && ! grep -rnE '^\\s*import tomllib' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' on commit 9fa8d3f8eb36 @ 2026-10-23T14:05Z",
-      "verified_commit": "9fa8d3f8eb36efc81a92c3e301fb10aec459deac"
+      "verified_at": 1792764460391,
+      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && ! grep -rnE '^\\s*import tomllib' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' on commit ba97fe75973b @ 2026-10-23T14:07Z",
+      "verified_commit": "ba97fe75973beaa8d6b1de225beb372a6b1fb056"
     },
     {
       "id": "n_9ba48d85ed19",
@@ -88,9 +88,9 @@
       "title": "Pre-flight the retrieval before spending on an eval — it is deterministic and answers in milliseconds",
       "scope": "org",
       "files": "evals/preflight.py,evals/ab_harness.py",
-      "verified_at": 1792761047656,
-      "verified_by": "`python3 evals/preflight.py` exit 0, matched 'PRE-FLIGHT OK' on commit 2caceda79c53 @ 2026-10-23T13:10Z",
-      "verified_commit": "2caceda79c533cce0d3b815a94b0124bdc11958a"
+      "verified_at": 1792764460083,
+      "verified_by": "`python3 evals/preflight.py` exit 0, matched 'PRE-FLIGHT OK' on commit ba97fe75973b @ 2026-10-23T14:07Z",
+      "verified_commit": "ba97fe75973beaa8d6b1de225beb372a6b1fb056"
     },
     {
       "id": "n_aa3e45a2ecd6",
@@ -98,9 +98,9 @@
       "title": "Provenance references rot precisely because nothing reads them — validate them at startup",
       "scope": "org",
       "files": "evals/ab_harness.py,evals/tasks.jsonl",
-      "verified_at": 1792761047364,
-      "verified_by": "`python3 evals/preflight.py && python3 -m pytest -q tests/test_ab_harness.py` exit 0, matched 'passed' on commit 2caceda79c53 @ 2026-10-23T13:10Z",
-      "verified_commit": "2caceda79c533cce0d3b815a94b0124bdc11958a"
+      "verified_at": 1792764459823,
+      "verified_by": "`python3 evals/preflight.py && python3 -m pytest -q tests/test_ab_harness.py` exit 0, matched 'passed' on commit ba97fe75973b @ 2026-10-23T14:07Z",
+      "verified_commit": "ba97fe75973beaa8d6b1de225beb372a6b1fb056"
     },
     {
       "id": "n_b74bad29fd87",
