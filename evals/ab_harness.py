@@ -201,8 +201,9 @@ def fetched_ids(log: str) -> list[str]:
 def parse_arms(spec: str) -> list[str]:
     """`--arms` as a list, refused by argparse when it names an arm that does not exist."""
     arms = [a.strip() for a in spec.split(",") if a.strip()]
-    if not arms or any(a not in ARMS for a in arms):
-        raise argparse.ArgumentTypeError(f"--arms must name a subset of {','.join(ARMS)}, not {spec!r}")
+    if not arms or any(a not in ARMS for a in arms) or len(set(arms)) != len(arms):
+        # A repeated arm would run and count twice (review on #269).
+        raise argparse.ArgumentTypeError(f"--arms must name each of {','.join(ARMS)} at most once, not {spec!r}")
     return arms
 
 

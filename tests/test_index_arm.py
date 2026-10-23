@@ -105,6 +105,15 @@ def test_run_one_records_what_the_generator_fetched(ab, monkeypatch, tmp_path):
     assert not ok and "fail closed" in rec["error"]
 
 
+def test_arms_are_a_subset_named_once(ab):
+    """`--arms` takes each arm at most once; a repeat would run and count twice."""
+    import argparse
+    assert ab.parse_arms("baseline,indexed") == ["baseline", "indexed"]
+    for bad in ("baseline,indexed,indexed", "briefed,reranked", ""):
+        with pytest.raises(argparse.ArgumentTypeError):
+            ab.parse_arms(bad)
+
+
 def test_generator_cmd_carries_the_allowed_tools(ab, monkeypatch):
     """The allowed tools reach the generator as claude -p's flag, quoted as one word."""
     assert ab.generator_cmd() == ab.GENERATOR_CMD
