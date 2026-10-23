@@ -8,9 +8,9 @@
       "title": "The README's stated check defaults (limit 12; formats agent, actions, json, hook) match the code",
       "scope": "repo:okl",
       "files": "README.md,src/okl/core.py,src/okl/cli/",
-      "verified_at": 1792724507360,
-      "verified_by": "`PYTHONPATH=src python3 -c \"import inspect,re,subprocess,sys; from okl import core; d=inspect.signature(core.check).parameters[\\\"limit\\\"].default; h=subprocess.run([sys.executable,\\\"-m\\\",\\\"okl\\\",\\\"check\\\",\\\"--help\\\"],capture_output=True,text=True).stdout; fmts=re.search(r\\\"--format \\{([a-z,]+)\\}\\\",h).group(1).split(\\\",\\\"); r=open(\\\"README.md\\\").read(); missing=[f for f in fmts if f!=\\\"agent\\\" and \\\"--format \\\"+f not in r]; ok=d==12 and \\\"--limit 12\\\" in r and not missing; sys.exit(\\\"limit=%s, formats undocumented: %s\\\" % (d, missing)) if not ok else print(\\\"CHECK DEFAULTS MATCH\\\", fmts)\"` exit 0, matched 'CHECK DEFAULTS MATCH' on commit 62bf520c120b @ 2026-10-23T03:01Z",
-      "verified_commit": "62bf520c120b08c7d3d52ceeaaeb25c9f036be77"
+      "verified_at": 1792761048433,
+      "verified_by": "`PYTHONPATH=src python3 -c \"import inspect,re,subprocess,sys; from okl import core; d=inspect.signature(core.check).parameters[\\\"limit\\\"].default; h=subprocess.run([sys.executable,\\\"-m\\\",\\\"okl\\\",\\\"check\\\",\\\"--help\\\"],capture_output=True,text=True).stdout; fmts=re.search(r\\\"--format \\{([a-z,]+)\\}\\\",h).group(1).split(\\\",\\\"); r=open(\\\"README.md\\\").read(); missing=[f for f in fmts if f!=\\\"agent\\\" and \\\"--format \\\"+f not in r]; ok=d==12 and \\\"--limit 12\\\" in r and not missing; sys.exit(\\\"limit=%s, formats undocumented: %s\\\" % (d, missing)) if not ok else print(\\\"CHECK DEFAULTS MATCH\\\", fmts)\"` exit 0, matched 'CHECK DEFAULTS MATCH' on commit 2caceda79c53 @ 2026-10-23T13:10Z",
+      "verified_commit": "2caceda79c533cce0d3b815a94b0124bdc11958a"
     },
     {
       "id": "doc-init-flags",
@@ -68,9 +68,9 @@
       "title": "Dependency direction is one-way: store imports nothing, core imports store, adapters import client",
       "scope": "repo:okl",
       "files": "src/okl/store.py,src/okl/core.py,src/okl/client.py",
-      "verified_at": 1792724506923,
-      "verified_by": "`lint-imports` exit 0, matched '1 kept, 0 broken' on commit 62bf520c120b @ 2026-10-23T03:01Z",
-      "verified_commit": "62bf520c120b08c7d3d52ceeaaeb25c9f036be77"
+      "verified_at": 1792761047857,
+      "verified_by": "`lint-imports` exit 0, matched '1 kept, 0 broken' on commit 2caceda79c53 @ 2026-10-23T13:10Z",
+      "verified_commit": "2caceda79c533cce0d3b815a94b0124bdc11958a"
     },
     {
       "id": "n_7e50e3588bcd",
@@ -78,9 +78,9 @@
       "title": "A test that imports an undeclared package passes only where that package happens to be installed",
       "scope": "org",
       "files": "tests/",
-      "verified_at": 1792724507168,
-      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && ! grep -rnE '^\\s*import tomllib' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' on commit 62bf520c120b @ 2026-10-23T03:01Z",
-      "verified_commit": "62bf520c120b08c7d3d52ceeaaeb25c9f036be77"
+      "verified_at": 1792761048185,
+      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && ! grep -rnE '^\\s*import tomllib' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' on commit 2caceda79c53 @ 2026-10-23T13:10Z",
+      "verified_commit": "2caceda79c533cce0d3b815a94b0124bdc11958a"
     },
     {
       "id": "n_9ba48d85ed19",
@@ -88,9 +88,9 @@
       "title": "Pre-flight the retrieval before spending on an eval — it is deterministic and answers in milliseconds",
       "scope": "org",
       "files": "evals/preflight.py,evals/ab_harness.py",
-      "verified_at": 1792724506351,
-      "verified_by": "`python3 evals/preflight.py` exit 0, matched 'PRE-FLIGHT OK' on commit 62bf520c120b @ 2026-10-23T03:01Z",
-      "verified_commit": "62bf520c120b08c7d3d52ceeaaeb25c9f036be77"
+      "verified_at": 1792761047656,
+      "verified_by": "`python3 evals/preflight.py` exit 0, matched 'PRE-FLIGHT OK' on commit 2caceda79c53 @ 2026-10-23T13:10Z",
+      "verified_commit": "2caceda79c533cce0d3b815a94b0124bdc11958a"
     },
     {
       "id": "n_aa3e45a2ecd6",
@@ -98,9 +98,9 @@
       "title": "Provenance references rot precisely because nothing reads them — validate them at startup",
       "scope": "org",
       "files": "evals/ab_harness.py,evals/tasks.jsonl",
-      "verified_at": 1792724506142,
-      "verified_by": "`python3 evals/preflight.py && python3 -m pytest -q tests/test_ab_harness.py` exit 0, matched 'passed' on commit 62bf520c120b @ 2026-10-23T03:01Z",
-      "verified_commit": "62bf520c120b08c7d3d52ceeaaeb25c9f036be77"
+      "verified_at": 1792761047364,
+      "verified_by": "`python3 evals/preflight.py && python3 -m pytest -q tests/test_ab_harness.py` exit 0, matched 'passed' on commit 2caceda79c53 @ 2026-10-23T13:10Z",
+      "verified_commit": "2caceda79c533cce0d3b815a94b0124bdc11958a"
     },
     {
       "id": "n_b74bad29fd87",
