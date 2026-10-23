@@ -29,7 +29,9 @@ for doc in ("README.md", "docs/GETTING-STARTED.md"):
         # the sentence names; beside `okl verify`, a bare `--files` is verify's.
         if not re.search(r"`okl (?!init\b)\w+", unit):
             flags.update(re.findall(r"`(--[a-z][a-z-]+)[^`]*`", unit))
-missing = sorted(f for f in flags if f not in help_text)
+# Whole flag names, so a typo that is a prefix of a real flag (`--no-clau`) is caught.
+known = set(re.findall(r"--[a-z][a-z-]+", help_text))
+missing = sorted(flags - known)
 if missing or not flags:
     sys.exit(f"documented but missing from `okl init --help`: {missing}")
 print("INIT FLAGS EXIST", sorted(flags))  # noqa: T201 - a check script reports on stdout

@@ -251,7 +251,9 @@ def _arm_counts(receipts: list[Path]) -> dict[str, list[int]]:
     authored = _authored_tasks()
     for receipt in receipts:
         for row in json.loads(receipt.read_text()).get("results", []):
-            if row.get("reproduced") is None or row.get("unevaluable") or row["task"] not in authored:
+            # Only the two arms the sentence describes; an indexed arm (§4r) is another treatment.
+            if (row.get("reproduced") is None or row.get("unevaluable") or row["task"] not in authored
+                    or row["arm"] not in ("baseline", "briefed")):
                 continue
             cell = counts.setdefault(row["task"], [0, 0, 0, 0])
             i = 0 if row["arm"] == "baseline" else 2
