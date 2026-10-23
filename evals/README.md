@@ -76,7 +76,11 @@ probe's own variants is also measured on wording they had not; its six precision
 are in `evals/probe_prompts.json`. For a change to the seed packs rather than the code,
 `evals/compare_seed_briefings.py --against origin/main` seeds two throwaway stores and
 prints, per eval task, the governing record's presence and the ids that left and arrived,
-plus the held-out recall and the precision prompts' counts on each side. The rephrasings are
+plus the held-out recall and the precision prompts' counts on each side. The probe's
+`--hybrid off|rrf|linear` runs the same tables with the semantic arm (REPORT §4q; it refuses
+to run hybrid when the model or the vectors are missing rather than fall back silently), and
+`evals/hybrid_grid.py` prints the recall rows and precision counts over a grid of cosine lines
+and both fusion modes, the receipt the subject line was chosen from. The rephrasings are
 hand-written, which is its main bias, and it is not pooled with any A/B.
 
 ## Provenance of the originally quoted numbers

@@ -147,7 +147,7 @@ def test_the_floor_changes_no_eval_briefing(tmp_path, monkeypatch):
     changed = {}
     for t in tasks:
         with_floor = core.briefed_ids(core.check(s, repo="okl", task=t["task"], interests=None))
-        hits, _, _ = core._live_hits(s, t["task"], 12, "repo:okl", None)
+        hits, _, _, _ = core._live_hits(s, t["task"], 12, "repo:okl", None)
         without = [n.id for n in hits[:12]]
         # briefed_ids reads bucket order, _live_hits rank order: compare the sets.
         if set(with_floor) != set(without):
@@ -191,6 +191,6 @@ def test_exhaustion_is_judged_against_the_window_last_asked_for():
     InOrder.order = ids
     for i in (0, 3, 5):   # one retired lesson inside each of the windows 3, 4 and 6
         s._impl.upsert_node(dataclasses.replace(s.get_node(ids[i]), status="obsolete"))
-    live, _replaced, exhausted = core._live_hits(s, "pin the linter", 1, "repo:r", None)
+    live, _replaced, exhausted, _ = core._live_hits(s, "pin the linter", 1, "repo:r", None)
     assert len(live) == 3
     assert exhausted is False

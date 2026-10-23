@@ -1527,6 +1527,18 @@ def _backend_conformance(store, label):
     assert runs[0].at <= runs[1].at, f"{label}: checks not oldest first"
     assert [r.node_id for r in store.checks(b)] == [b], f"{label}: check filter"
 
+    # Semantic vectors (#258): one per record per model, replaced on re-put, dropped on delete,
+    # read back byte for byte.
+    store.put_embedding(a, "m", "h1", b"\x00\x00\x80\x3f")
+    store.put_embedding(b, "m", "h2", b"\x00\x00\x00\x40")
+    store.put_embedding(a, "other", "h9", b"\x01")
+    assert set(store.embeddings("m")) == {(a, "h1", b"\x00\x00\x80\x3f"), (b, "h2", b"\x00\x00\x00\x40")}, f"{label}: embeddings"
+    store.put_embedding(a, "m", "h3", b"\x00\x00\x40\x40")
+    assert dict((i, h) for i, h, _ in store.embeddings("m"))[a] == "h3", f"{label}: re-put replaces"
+    store.delete_embedding(a, "m")
+    assert [i for i, _, _ in store.embeddings("m")] == [b], f"{label}: delete"
+    assert store.embeddings("other") == [(a, "h9", b"\x01")], f"{label}: models are separate"
+
 
 def test_sqlite_backend_conformance(store):
     """The SQLite backend meets the contract."""
@@ -1915,6 +1927,32 @@ def test_pipeline_diagram_is_current():
         assert out.read_text() == svg.read_text(), (
             "docs/okl-retrieval-pipeline.svg is stale — the pipeline changed and the diagram "
             "did not. Re-run: python3 docs/render_pipeline_diagram.py")
+
+
+def test_hybrid_pipeline_diagram_is_current():
+    """The committed hybrid render (docs/okl-retrieval-pipeline-hybrid.svg) is what the generator
+    produces with the semantic arm on. It needs the embedding model in the local cache, so a
+    machine without it skips rather than fails; CI has no model and skips."""
+    import subprocess
+    import sys
+    import tempfile
+
+    from okl import semantic
+    try:
+        semantic.load_model(offline=True)
+    except semantic.SemanticUnavailableError as e:
+        pytest.skip(f"no cached embedding model here: {e}")
+    root = Path(__file__).resolve().parents[1]
+    svg = root / "docs" / "okl-retrieval-pipeline-hybrid.svg"
+    assert svg.exists(), "the render is missing; run docs/render_pipeline_diagram.py --hybrid linear"
+    with tempfile.TemporaryDirectory() as d:
+        out = Path(d) / "regen.svg"
+        r = subprocess.run([sys.executable, str(root / "docs" / "render_pipeline_diagram.py"),
+                            "--hybrid", "linear", "--out", str(out)], capture_output=True, text=True, cwd=root)
+        assert r.returncode == 0, f"generator failed: {r.stderr[-400:]}"
+        assert out.read_text() == svg.read_text(), (
+            "docs/okl-retrieval-pipeline-hybrid.svg is stale; re-run: "
+            "python3 docs/render_pipeline_diagram.py --hybrid linear")
 
 
 def test_naming_a_store_by_env_var_configures_both_reads_and_writes(tmp_path, monkeypatch):

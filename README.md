@@ -14,8 +14,10 @@ briefed to your agent before every task (by a hook in Claude Code; any MCP agent
 the same briefing), each proven by a check you choose, flagged before you push (or in CI) when
 what it covers changes, and corrected or retired as you build. Prompts advise; the gate
 enforces. Use it in one repo, or share one store across every repo your team runs.<br>
-Under the hood: typed records, keyword search and one-step links. No embeddings, no model
-calls in the loop, no automatic capture. A lesson is written on purpose and proven by a check.
+Under the hood: typed records, keyword search and one-step links. No embeddings by default,
+no model calls in the loop, no automatic capture; an optional local embedding arm exists,
+measured and off until you turn it on ([REPORT §4q](evals/REPORT.md)). A lesson is written
+on purpose and proven by a check.
 
 [![PyPI](https://img.shields.io/pypi/v/observed-knowledge-ledger?color=blue&label=PyPI)](https://pypi.org/project/observed-knowledge-ledger/)
 [![Python](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
@@ -362,6 +364,13 @@ symptom (a one-word alias matched whole counts as either), is left out and count
 chosen by a word in common ([the probe](evals/results/probe-rephrase-20261021.txt), #257).
 
 <img src="docs/okl-retrieval-pipeline.svg" alt="The corpus; the task's subject words; a BM25 fetch of three times the limit; a scope gate; the exclusive applies_to filter; the inclusive tags-times-interests filter; the relevance floor of two shared subject words or one in the title or symptom or a one-word alias, with retired lessons out; a top-12 cutoff; bucketing by type; and rendering. Each stage shows how many records survive it." width="100%">
+
+With the optional semantic arm on (`okl check --hybrid`), a second candidate source joins
+before the gates: the task as one vector, its nearest records by cosine, and a fusion of the
+two orders. The same generator draws it from the same code path, and REPORT §4q says what it
+buys and costs.
+
+<img src="docs/okl-retrieval-pipeline-hybrid.svg" alt="The same pipeline with the semantic arm on: beside the full-text fetch, the task embedded as one 512-dimension vector and its nearest records by cosine, fused with the full-text order by a convex combination, then the scope gate, the applies_to filter, the tags filter, a floor that also admits a record by a cosine at or above 0.40, the cutoff, the buckets and the renderers">
 
 Every count in that diagram is **traced**, not transcribed: `docs/render_pipeline_diagram.py`
 runs the real `briefing_terms`, `store.search`, `core._in_scope` and `core._live_hits` against

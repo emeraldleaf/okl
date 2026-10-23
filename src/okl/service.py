@@ -39,6 +39,7 @@ class CheckReq(BaseModel):
     task: str
     limit: int = 12
     interests: list[str] | None = None   # the calling repo's declared subject tags
+    hybrid: str | None = None            # None, "rrf" or "linear" (#258); the service's own vectors
 
 
 class RecordReq(BaseModel):
@@ -203,7 +204,7 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901, PLR0915 - 
     def check(req: CheckReq, authorization: str | None = Header(default=None)) -> dict[str, Any]:
         _auth(authorization)
         result = core.check(_store, req.repo, req.task, limit=req.limit,
-                            interests=req.interests)
+                            interests=req.interests, hybrid=req.hybrid)
         # The service is the only party that sees every client's briefings (#129).
         core.record_briefing(_store, req.repo, result)
         return result

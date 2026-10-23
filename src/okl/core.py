@@ -12,14 +12,14 @@ from __future__ import annotations
 import os
 import re
 from collections import Counter
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from typing import Any
-
-from .store import RETIRED_STATUSES, Edge, Node, Store, _now_ms, split_tags
 
 # STACK_TAGS is re-exported, not used here: adapters may import core and client but
 # never store (dependency direction is one-way), and the CLI needs the stack list to
 # judge which bundled seed packs fit a repo.
+from . import semantic
+from .store import RETIRED_STATUSES, Edge, Node, Store, _now_ms, split_tags
 from .store import STACK_TAGS as STACK_TAGS
 
 
@@ -142,7 +142,7 @@ def briefing_terms(task: str) -> list[str]:
 
 
 def check(store: Store, repo: str, task: str, limit: int = 12,
-          interests: list[str] | None = None) -> dict[str, Any]:
+          interests: list[str] | None = None, *, hybrid: str | None = None) -> dict[str, Any]:
     """Return the slice of the encoded body relevant to starting `task` in `repo`.
 
     Matches on the task text across all node types, then buckets by type so the
@@ -154,6 +154,12 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     set, org-scope nodes tagged entirely OUTSIDE it are dropped: scope answers
     "who may see this", tags answer "what is this about". Untagged nodes and the
     repo's own nodes always pass — declaring interests must never hide them.
+
+    `hybrid` is None (full-text search only, the default), "linear" (the measured
+    configuration) or "rrf": fuse the full-text candidates with the nearest records by a
+    local embedding (#258, REPORT §4q).
+    When asked for and not possible here (no extra, no cached model, no vectors) the
+    briefing is the full-text one and `hybrid_unavailable` in the result says why.
     """
     # THE PIPELINE, in four steps. Each one narrows what reaches the agent:
     #
@@ -167,7 +173,7 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     #                 defects rather than emitting one undifferentiated list.
     #   4. ROUTE    — turn the buckets into an ordered list of imperatives.
     repo_scope = f"repo:{repo}"
-    hits, replaced, exhausted = _live_hits(store, task, limit, repo_scope, interests)
+    hits, replaced, exhausted, cand = _live_hits(store, task, limit, repo_scope, interests, hybrid=hybrid)
     # THE FLOOR. The search is an OR of the task's subject words, so on a short or generic
     # task every slot fills with records that share one word with it ("point", "doc"):
     # twelve imperatives chosen by a word in common, at about two thousand tokens a
@@ -175,7 +181,7 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     # when it shares two subject words with the task, or one that is in its title or symptom
     # (or is a one-word alias), or one when the task has only one word. Trimmed records are counted, not hidden: the
     # briefing says how many weak matches it left out.
-    hits, matched, weak = _apply_floor(store, hits, briefing_terms(task))
+    hits, matched, weak = _apply_floor(store, hits, briefing_terms(task), cand)
     # The floor can empty a full window: when every fetched record was weak, a qualifying
     # one ranked just past the window would read as "no close match". Widen the fetch,
     # bounded, while the window was full and the floor left fewer than the limit
@@ -183,8 +189,8 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     window = limit
     while len(hits) < limit and not exhausted and window < limit * 27:
         window *= 3
-        wider, replaced, exhausted = _live_hits(store, task, window, repo_scope, interests)
-        hits, matched, weak = _apply_floor(store, wider, briefing_terms(task))
+        wider, replaced, exhausted, cand = _live_hits(store, task, window, repo_scope, interests, hybrid=hybrid)
+        hits, matched, weak = _apply_floor(store, wider, briefing_terms(task), cand)
     # THE CUTOFF. store.search returns BM25-ranked results, but full-text matching is
     # permissive: on a mature store a plausible task matches most of it, so without a
     # cap the "briefing" becomes the library. Ranking already put the best first, so
@@ -198,6 +204,8 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     for recs in buckets.values():
         for pub in recs:
             pub["matched_terms"] = matched.get(pub["id"], [])
+            if pub["id"] in cand.scores:
+                pub["semantic_score"] = round(cand.scores[pub["id"]], 3)
     _attach_catches(store, buckets["armed_gates"])
     actions = _route_actions(buckets)
 
@@ -206,7 +214,12 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     total = sum(len(v) for k, v in buckets.items() if k != "stale_warnings")
     out = {"repo": repo, "task": task, "match_count": total,
            "next_actions": actions, "dropped_by_cutoff": dropped, "weak_matches": weak,
+           "hybrid": hybrid if hybrid and cand.note is None else None,
            **buckets, "replaced": replaced[:3]}
+    if hybrid and cand.note:
+        # Asked for and not possible here: the briefing above is the full-text one. Said in
+        # the result rather than raised, because a briefing must never fail on an optional arm.
+        out["hybrid_unavailable"] = cand.note
     # Zero matches has two very different causes: the store holds rules and none apply
     # here, or the store holds nothing at all. Reporting both as "proceed" is the
     # silence-as-safety failure this project exists to prevent, so the count travels
@@ -252,6 +265,7 @@ def n_symptom(n: Node) -> str:
 
 
 def _apply_floor(store: Store, hits: list[Node], terms: list[str],
+                 cand: Candidates | None = None,
                  ) -> tuple[list[Node], dict[str, list[str]], int]:
     """Keep the hits that share enough subject words with the task; count the rest.
 
@@ -262,15 +276,22 @@ def _apply_floor(store: Store, hits: list[Node], terms: list[str],
     price" reaches the price-tamper lesson through "price" in its symptom). A hit
     below the floor still stays when it links one step to a hit above it (a Gate that
     CATCHES a matched Defect, a Decision that SUPERSEDES one): the link is the relevance,
-    not the words. Returns the kept hits in rank order, each hit's matched words by id,
-    and how many were left out.
+    not the words. A hit the semantic arm scored at or above semantic.SUBJECT_SIMILARITY
+    is on the subject by meaning, whatever words it shares; a hit only that arm found is on
+    the subject only by meaning, because the word rules belong to the full-text candidates,
+    and a wider fused window must not admit the one-word matches the full-text search would
+    never have reached (#258, REPORT §4q first pass). Returns the kept hits in rank order,
+    each hit's matched words by id, and how many were left out.
     """
     words = [t.lower() for t in terms]
     floor = 2 if len(words) >= 2 else 1
+    near = cand.scores if cand else {}
+    lexical = cand.lexical if cand else frozenset(n.id for n in hits)
     matched = {n.id: _matched_terms(words, n) for n in hits}
     strong = {n.id for n in hits
-              if len(matched[n.id]) >= floor
-              or (matched[n.id] and _in_subject(matched[n.id], n))}
+              if near.get(n.id, 0.0) >= semantic.SUBJECT_SIMILARITY
+              or (n.id in lexical and (len(matched[n.id]) >= floor
+                                       or bool(matched[n.id]) and _in_subject(matched[n.id], n)))}
     if not strong:
         # No hit to link to, so no neighbour lookup can rescue one (review on #259).
         return [], matched, len(hits)
@@ -280,10 +301,11 @@ def _apply_floor(store: Store, hits: list[Node], terms: list[str],
 
 
 def _live_hits(store: Store, task: str, limit: int, repo_scope: str,
-               interests: list[str] | None,
-               ) -> tuple[list[Node], list[dict[str, Any]], bool]:
-    """Steps 1 and 2 without retired lessons, the pointers for the replaced ones, and
-    whether the search was exhausted (returned fewer rows than the window asked for).
+               interests: list[str] | None, *, hybrid: str | None = None,
+               ) -> tuple[list[Node], list[dict[str, Any]], bool, Candidates]:
+    """Steps 1 and 2 without retired lessons, the pointers for the replaced ones, whether
+    the search was exhausted (returned fewer rows than the window asked for), and the
+    Candidates the floor needs (each one's semantic score, which arm found it).
 
     Obsolete lessons, and superseded ones whose live replacement this repo can see, leave
     BEFORE the cut, so they never take a live lesson's slot (okl review R2); check never
@@ -293,14 +315,15 @@ def _live_hits(store: Store, task: str, limit: int, repo_scope: str,
     """
     # The search runs on the task's subject words, never on an empty query: the store
     # turns an empty query into a substring match on "" that returns every record.
-    query = " ".join(briefing_terms(task))
-    if not query:
-        return [], [], True
+    if not briefing_terms(task):
+        # Nothing to search on, so neither arm ran; when the semantic arm was asked for, the
+        # result must not report it as on (review on #267).
+        note = "the task has no subject words to search" if hybrid else None
+        return [], [], True, Candidates([], {}, frozenset(), note, True)
     fetch = limit * 3
-    asked = fetch
     for _ in range(3):
-        asked = fetch
-        found = store.search(query, limit=fetch)
+        cand = ranked_candidates(store, task, fetch, hybrid)
+        found = cand.nodes
         live: list[Node] = []
         replaced: list[dict[str, Any]] = []
         left_out = 0
@@ -314,12 +337,86 @@ def _live_hits(store: Store, task: str, limit: int, repo_scope: str,
                                      "by_title": to.title})
                 continue
             live.append(n)
-        if not left_out or len(found) < fetch:
+        if not left_out or cand.short:
             break
         fetch += left_out
     # Exhaustion is judged against the window the last search asked for, not the wider one
-    # the loop may have set after it (review on #259).
-    return live, replaced, len(found) < asked
+    # the loop may have set after it (review on #259); with the semantic arm on, both arms
+    # must have come up short.
+    return live, replaced, cand.short, cand
+
+
+RRF_K = 60          # the constant of reciprocal-rank fusion; 60 is the value its paper used
+LINEAR_ALPHA = 0.5  # the convex combination's weight on the full-text arm
+
+
+@dataclass(frozen=True)
+class Candidates:
+    """Step 1's output: the candidates in order, the cosine of each one the semantic arm
+    scored, the ids the full-text search returned (`lexical`), why the semantic arm did not
+    run when it was asked for, and whether both arms returned fewer than asked."""
+
+    nodes: list[Node]
+    scores: dict[str, float]
+    lexical: frozenset[str]
+    note: str | None
+    short: bool
+
+
+def ranked_candidates(store: Store, task: str, fetch: int, hybrid: str | None) -> Candidates:
+    """Step 1: the `fetch` best candidates for `task`, best first.
+
+    Full-text alone when `hybrid` is None. Otherwise the nearest `fetch` records by the
+    local embedding join the list and the two orders are fused: "rrf" sums reciprocal
+    ranks (unsupervised, the ADR's named default); "linear" is a convex combination of a
+    rank-normalised full-text score and the min-max-normalised cosine, the family Bruch,
+    Gai and Ingber (TOIS 2023) found to beat RRF once its one weight is tuned. Returns the
+    candidates, each one's cosine where the semantic arm scored it, why that arm did not
+    run when it was asked for, and whether both arms returned fewer than asked (the
+    exhaustion signal the caller widens on).
+    """
+    query = " ".join(briefing_terms(task))
+    found = store.search(query, limit=fetch) if query else []
+    lexical = frozenset(n.id for n in found)
+    if not hybrid:
+        return Candidates(found, {}, lexical, None, len(found) < fetch)
+    try:
+        nearest = semantic.search(store, task, limit=fetch)
+    except semantic.SemanticUnavailableError as e:
+        return Candidates(found, {}, lexical, str(e), len(found) < fetch)
+    fused = _fuse(store, found, nearest, hybrid)
+    return Candidates(fused, dict(nearest), lexical, None, len(found) < fetch and len(nearest) < fetch)
+
+
+def _fuse(store: Store, fts: list[Node], nearest: list[tuple[str, float]], method: str) -> list[Node]:
+    """One order from two: see ranked_candidates. A record only the semantic arm found is
+    fetched by id; one the store no longer holds is dropped."""
+    by_id = {n.id: n for n in fts}
+    for node_id, _ in nearest:
+        if node_id not in by_id:
+            n = store.get_node(node_id)
+            if n is not None:
+                by_id[node_id] = n
+    nearest = [(i, sc) for i, sc in nearest if i in by_id]
+    score: dict[str, float] = dict.fromkeys(by_id, 0.0)
+    if method == "linear":
+        for rank, n in enumerate(fts):
+            score[n.id] += LINEAR_ALPHA * (1 - rank / len(fts))
+        if nearest:
+            lo, hi = min(sc for _, sc in nearest), max(sc for _, sc in nearest)
+            for node_id, sc in nearest:
+                # Min-max over the semantic list; when every cosine ties the range is zero and
+                # the raw cosine stands in, or a semantic-only candidate would weigh nothing
+                # and fall off the cut (review on #267).
+                score[node_id] += (1 - LINEAR_ALPHA) * (sc if hi == lo else (sc - lo) / (hi - lo))
+    elif method == "rrf":
+        for rank, n in enumerate(fts):
+            score[n.id] += 1 / (RRF_K + rank + 1)
+        for rank, (node_id, _) in enumerate(nearest):
+            score[node_id] += 1 / (RRF_K + rank + 1)
+    else:
+        raise ValueError(f"hybrid must be 'rrf' or 'linear', not {method!r}")
+    return sorted(by_id.values(), key=lambda n: -score[n.id])
 
 
 def _live_replacement(store: Store, n: Node, repo_scope: str,

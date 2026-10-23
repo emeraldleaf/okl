@@ -114,3 +114,16 @@ Two things worth knowing:
 Unset, the step prints one line saying it is off and exits 0. Every other gate in the kit is
 deterministic and free; this is the only one that calls a model, which is why it is the only
 one that is opt-in.
+
+## The semantic arm (`--hybrid`), off by default
+
+Measured in REPORT §4q and not made the default. Turning it on costs a 249 MB static model on
+disk (`pip install 'observed-knowledge-ledger[hybrid]'`, then `okl embed` once online), about
+0.8 s per prompt for the model load (the hook runs `okl check` as a new process each time; the
+vector search itself is under a millisecond with numpy, 3 ms at 50,000 records), and one vector
+per record in the store, refreshed by `okl embed` after the records change. It buys one more
+paraphrased task in eight finding its lesson on the held-out set, nothing on tickets or bug
+reports, and one record more on two of six short prompts. Before it, the two free arms did
+more: a `symptom` on every lesson and `aliases` in your team's words (`docs/LOAD-YOUR-RULES.md`,
+items 7 and 8). Past roughly 100,000 vectors the search needs an approximate index; the
+retrieval ADR names that tier and its trigger.

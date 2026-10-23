@@ -1,0 +1,11 @@
+store: 313 records · 313 with a vector · hook interests=['python', 'method', 'security', 'agent-safety', 'retrieval-design', 'eval-integrity', 'data-quality']
+line   mode    authored  held-out ticket/paraphrase/bug  precision prompts (hook config)
+  -    off     8/8       7/2/5             4  9  0 11  7 12
+0.25   rrf     8/8       6/5/4             5 12  0 12 12 12
+0.25   linear  8/8       7/4/5             5 12  0 12 12 12
+0.30   rrf     8/8       6/5/4             5 12  0 12  7 12
+0.30   linear  8/8       7/4/5             5 12  0 12  7 12
+0.35   rrf     8/8       6/4/4             5 11  0 12  7 12
+0.35   linear  8/8       7/3/5             5 11  0 12  7 12
+0.40   rrf     8/8       6/4/4             5  9  0 12  7 12
+0.40   linear  8/8       7/3/5             5  9  0 12  7 12

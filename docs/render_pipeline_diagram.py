@@ -36,7 +36,15 @@ from xml.sax.saxutils import escape
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src"))
 
-from okl.core import _apply_floor, _in_scope, _live_hits, briefing_terms, check  # noqa: E402
+from okl import semantic  # noqa: E402
+from okl.core import (  # noqa: E402
+    _apply_floor,
+    _in_scope,
+    _live_hits,
+    briefing_terms,
+    check,
+    ranked_candidates,
+)
 from okl.store import Node, Store, split_tags  # noqa: E402
 
 # The task traced through the pipeline. A real eval task, so the diagram depicts a case the
@@ -58,10 +66,20 @@ SEED_INTERESTS = ["python", "method", "security", "agent-safety",
 def _seeded_store(tmpdir: str) -> Store:
     """Build a store from every committed seed file, via the shipped seed path."""
     url = f"sqlite:///{Path(tmpdir) / 'trace.db'}"
-    env = {**os.environ, "OKL_DATABASE_URL": url}
+    # The seeds must land in this throwaway store and nowhere else. A service URL in the
+    # environment, or in the checkout's own .okl/config.json, would put the client in remote
+    # mode and send them to the live service (reviews on #266 and #267), so the subprocess
+    # runs from the temporary directory, outside any config's ancestor tree, with the
+    # variable dropped, the database named, and the checkout's source on its import path.
+    env = {k: v for k, v in os.environ.items() if k != "OKL_SERVICE_URL"}
+    env["OKL_DATABASE_URL"] = url
+    env["PYTHONPATH"] = os.pathsep.join(p for p in (str(REPO / "src"), env.get("PYTHONPATH", "")) if p)
     for f in sorted((REPO / "seed").glob("*.json")):
-        r = subprocess.run([sys.executable, "-m", "okl", "seed", str(f)],
-                           capture_output=True, text=True, env=env, cwd=REPO)
+        try:
+            r = subprocess.run([sys.executable, "-m", "okl", "seed", str(f)], capture_output=True,
+                               text=True, env=env, cwd=tmpdir, timeout=120)
+        except subprocess.TimeoutExpired:
+            raise SystemExit(f"ABORT: seeding {f.name} did not finish in 120 s") from None
         if r.returncode != 0:
             raise SystemExit(f"ABORT: seeding {f.name} failed — {r.stderr.strip()[:200]}")
     store = Store(url)
@@ -74,8 +92,13 @@ def _seeded_store(tmpdir: str) -> Store:
     return store
 
 
-def trace(store: Store | None = None) -> dict:
-    """Run the real pipeline against the seeded corpus, recording each stage's survivors."""
+def trace(store: Store | None = None, hybrid: str | None = None) -> dict:
+    """Run the real pipeline against the seeded corpus, recording each stage's survivors.
+
+    With `hybrid`, the seeded corpus is embedded from the locally cached model first and the
+    candidates come from the fused order check() uses; the trace aborts if the semantic arm
+    cannot run here, rather than drawing a full-text pipeline under a hybrid title.
+    """
     tmp = None
     if store is None:
         tmp = tempfile.TemporaryDirectory()
@@ -85,10 +108,16 @@ def trace(store: Store | None = None) -> dict:
     repo_scope = f"repo:{TRACE_REPO}"
 
     total = len(store.all_nodes())
-    # Stage 1: the search runs on the task's subject words, as check() does (core._live_hits).
+    # Stage 1: the search runs on the task's subject words, as check() does (core._live_hits),
+    # through the same candidate function, so a fused order is traced the way it is served.
     terms = briefing_terms(TRACE_TASK)
     query = " ".join(terms)
-    fetched = store.search(query, limit=LIMIT * 3)
+    if hybrid:
+        semantic.build_index(store, offline=True)
+    cand = ranked_candidates(store, TRACE_TASK, LIMIT * 3, hybrid)
+    if hybrid and cand.note:
+        raise SystemExit(f"ABORT: the semantic arm did not run: {cand.note}")
+    fetched = cand.nodes
 
     own = [n for n in fetched if n.scope == repo_scope]
     org = [n for n in fetched if n.scope == "org"]
@@ -121,7 +150,7 @@ def trace(store: Store | None = None) -> dict:
     # Retired lessons (obsolete, or superseded by a live one this repo can see) leave before
     # the cut. Take the survivors from _live_hits itself, the function check() calls; if it had
     # to widen its window, this trace's single fetch no longer matches it, so stop.
-    live, _, _ = _live_hits(store, TRACE_TASK, LIMIT, repo_scope, interests)
+    live, _, _, _ = _live_hits(store, TRACE_TASK, LIMIT, repo_scope, interests, hybrid=hybrid)
     live_ids = {n.id for n in live}
     if not live_ids <= {n.id for n in after_tags}:
         raise SystemExit("ABORT: _live_hits widened its search past this trace's window — "
@@ -130,11 +159,11 @@ def trace(store: Store | None = None) -> dict:
 
     # The floor: two shared subject words, or one when the task has only one; a hit below
     # it stays only through a one-step link to a hit above it (core._apply_floor).
-    kept, _matched, weak = _apply_floor(store, live, terms)
+    kept, _matched, weak = _apply_floor(store, live, terms, cand)
     # check() widens the fetch when a full window leaves fewer than the limit above the
     # floor. This trace applies the floor to one window, so it asks check() itself and stops
     # if the briefing it would deliver differs from the counts traced here.
-    delivered_by_check = check(store, TRACE_REPO, TRACE_TASK, LIMIT, interests)
+    delivered_by_check = check(store, TRACE_REPO, TRACE_TASK, LIMIT, interests, hybrid=hybrid)
     if (delivered_by_check["match_count"] != min(LIMIT, len(kept))
             or delivered_by_check["weak_matches"] != weak):
         raise SystemExit("ABORT: check() widened past this trace's window (its briefing holds "
@@ -156,7 +185,17 @@ def trace(store: Store | None = None) -> dict:
         "after_floor": len(kept), "weak": weak,
         "delivered": min(LIMIT, len(kept)),
         "trimmed": max(0, len(kept) - LIMIT),
+        "hybrid": hybrid,
     }
+    if hybrid:
+        vectors = store.embeddings(semantic.MODEL_ID)
+        out.update({
+            "lexical": len(cand.lexical), "nearest": len(cand.scores),
+            "semantic_only": sum(1 for n in fetched if n.id not in cand.lexical),
+            "by_meaning": sum(1 for n in kept if n.id not in cand.lexical),
+            "line": semantic.SUBJECT_SIMILARITY,
+            "dim": len(semantic.unpack(vectors[0][2])) if vectors else 0,
+        })
     if tmp is not None:
         store.close(); tmp.cleanup()
     return out
@@ -237,16 +276,40 @@ def render(d: dict) -> str:
          "apply' can never be confused with 'the store is empty'.",
          "hook | MCP | CI", "", 0.0, 0.0, ""),
     ]
+    if d.get("hybrid"):
+        # The semantic arm: a second candidate source and the fusion, drawn between RANK and
+        # SCOPE because that is where ranked_candidates() puts them; the floor gains its line.
+        rank = next(i for i, st in enumerate(stages) if st[1] == "RANK")
+        stages[rank] = ("2", "RANK", "Full text: fetch 3x more candidates than needed", stages[rank][3],
+                        f'{d["lexical"]} fetched', "limit x 3", d["lexical"] / f, 0.0, "")
+        stages.insert(rank + 1, (
+            "2b", "EMBED", f"The task as one {d['dim']}-dimension vector; the nearest records by cosine",
+            "A local static model (potion-retrieval-32M) read from the cache, never the network; "
+            "the vectors come from `okl embed`. One matrix product over every record.",
+            f'{d["nearest"]} nearest', f'{d["semantic_only"]} not in the full-text list',
+            d["nearest"] / f, 0.0, ""))
+        stages.insert(rank + 2, (
+            "2c", "FUSE", f"Two orders become one: {d['hybrid']} fusion",
+            "linear: a convex combination of a rank-normalised full-text score and the min-max "
+            "cosine (alpha 0.5). rrf: reciprocal ranks summed (k = 60). Measured in REPORT 4q.",
+            f'{d["fetched"]} candidates', "", 1.0, 0.0, ""))
+        floor = next(i for i, st in enumerate(stages) if st[1] == "FLOOR")
+        st = list(stages[floor])
+        st[2] = f"Two shared words, one in the title or symptom, or a cosine at or above {d['line']:.2f}"
+        st[3] = (f"Only-by-embedding records count by meaning alone ({d['by_meaning']} kept so). A single "
+                 "shared word outside title and symptom is left out and counted, unless it links to a kept record.")
+        stages[floor] = tuple(st)
     h = 166 + len(stages) * ROW_H + 60
     o = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{h}" '
          f'viewBox="0 0 {W} {h}" font-family="{FONT}">',
          f'<rect width="{W}" height="{h}" fill="{PAPER}"/>']
+    title = "How an okl briefing gets built" + (" with the semantic arm on" if d.get("hybrid") else "")
     o.append(f'<text x="{PAD}" y="46" font-size="27" font-weight="700" fill="{INK}">'
-             f'How an okl briefing gets built</text>')
-    o.append(f'<text x="{PAD}" y="72" font-size="14" fill="{INK2}">'
-             f'{escape(str(d["corpus"]))} records and one task sentence become the '
-             f'{d["limit"]} an agent reads. Five stages narrow it; only applies_to may exclude on validity.'
-             f'</text>')
+             f'{escape(title)}</text>')
+    sub = (f'{d["corpus"]} records and one task sentence become the {d["limit"]} an agent reads. '
+           + ("A local embedding adds candidates by meaning; five stages then narrow them."
+              if d.get("hybrid") else "Five stages narrow it; only applies_to may exclude on validity."))
+    o.append(f'<text x="{PAD}" y="72" font-size="14" fill="{INK2}">{escape(sub)}</text>')
     for i, ln in enumerate([
         "GENERATED from the live pipeline - docs/render_pipeline_diagram.py",
         f'traced task: "{d["task"]}"',
@@ -301,9 +364,11 @@ def render(d: dict) -> str:
         if keep > 0:
             o.append(_bar(tx, y + ROW_H - 20, W - PAD - tx - 14, keep, cut))
         y += ROW_H
-    o.append(f'<text x="{PAD}" y="{h - 26}" font-size="11" font-family="{MONO}" fill="{INK3}">'
-             f'src/okl/core.py briefing_terms() / _live_hits() / _in_scope() / _apply_floor() . src/okl/store.py search() . '
-             f'regenerate: python3 docs/render_pipeline_diagram.py</text>')
+    fns = ["src/okl/core.py briefing_terms() / ranked_candidates() / _live_hits() / _in_scope() / _apply_floor() . "
+           "src/okl/store.py search()" + (" . src/okl/semantic.py search()" if d.get("hybrid") else ""),
+           "regenerate: python3 docs/render_pipeline_diagram.py" + (f" --hybrid {d['hybrid']}" if d.get("hybrid") else "")]
+    for i, ln in enumerate(fns):
+        o.append(f'<text x="{PAD}" y="{h - 40 + i * 14}" font-size="11" font-family="{MONO}" fill="{INK3}">{escape(ln)}</text>')
     o.append("</svg>")
     return "\n".join(o) + "\n"
 
@@ -312,19 +377,23 @@ def main() -> int:
     """Trace the pipeline, then write the SVG (or print the counts with --json)."""
     ap = argparse.ArgumentParser()
     ap.add_argument("--json", action="store_true", help="emit traced counts, render nothing")
-    ap.add_argument("--out", default=str(REPO / "docs" / "okl-retrieval-pipeline.svg"))
+    ap.add_argument("--hybrid", choices=["rrf", "linear"], default=None,
+                    help="trace with the semantic arm on (needs the cached model); the render goes to "
+                         "docs/okl-retrieval-pipeline-hybrid.svg unless --out says otherwise")
+    ap.add_argument("--out", default=None)
     a = ap.parse_args()
-    d = trace()
+    out_path = a.out or str(REPO / "docs" / ("okl-retrieval-pipeline-hybrid.svg" if a.hybrid else "okl-retrieval-pipeline.svg"))
+    d = trace(hybrid=a.hybrid)
     if a.json:
         print(json.dumps(d, indent=2))
         return 0
-    Path(a.out).write_text(render(d))
+    Path(out_path).write_text(render(d))
     # --out may point outside the repo (the freshness test regenerates to a scratch dir),
     # so relative_to is a best effort, not a guarantee.
     try:
-        shown = Path(a.out).relative_to(REPO)
+        shown = Path(out_path).relative_to(REPO)
     except ValueError:
-        shown = Path(a.out)
+        shown = Path(out_path)
     print(f"wrote {shown}  "
           f"({d['corpus']} records -> {d['fetched']} -> {d['after_scope']} -> "
           f"{d['after_applies']} -> {d['after_tags']} -> {d['delivered']})")
