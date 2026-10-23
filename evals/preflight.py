@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -53,15 +54,21 @@ def main() -> int:
              if line.strip()]
     client = Client()
     store = client._local_store()
-    # interests=None deliberately: the A/B measures whether a BRIEFING prevents a defect.
-    # Interest filtering is a separate mechanism whose job is precision, and inheriting the
-    # host repo's interests conflates the two — react_fetch's rule is tagged `react`, which
-    # okl does not declare, so that task silently measured its rule's absence. The harness
-    # states its own retrieval config rather than distorting okl's to suit the experiment.
-    interests = None
+    # The interests the briefed arm will run with: evals/ab_harness.py passes
+    # OKL_BRIEF_INTERESTS to `okl check --interests`, and this gate reads the same variable,
+    # so it checks the briefing the run uses and not another one. (It hard-coded unfiltered
+    # until 2026-10-22, while receipts ab-20260903-1323 through ab-20261011-2254 ran
+    # filtered: react_fetch's rule was absent from the arm and present in the check.)
+    # Default empty: unfiltered. The A/B measures whether a BRIEFING prevents a defect;
+    # interest filtering is a separate mechanism whose job is precision, and the host
+    # repo's interests are not the experiment's — react_fetch's rule is tagged `react`,
+    # which okl does not declare, so inheriting them made that task measure its rule's
+    # absence (REPORT §4b, §4h).
+    interests = brief_interests(os.environ.get("OKL_BRIEF_INTERESTS", ""))
     repo = load_config().get("repo") or "okl"
 
-    print(f"pre-flight: {len(tasks)} task(s), interests={interests} (unfiltered by design)\n")
+    shown = ",".join(interests) if interests else "none (unfiltered; set OKL_BRIEF_INTERESTS as the run will)"
+    print(f"pre-flight: {len(tasks)} task(s), interests={shown}\n")
     missing = []
     rows = []
     for t in tasks:
@@ -105,6 +112,11 @@ def main() -> int:
     print(f"PRE-FLIGHT OK — {len(tasks) - len(missing)}/{len(tasks)} tasks receive the rule "
           f"they test; {len(missing)} accepted gap(s) listed above.")
     return 0
+
+
+def brief_interests(raw: str) -> list[str] | None:
+    """The interest list `okl check --interests <raw>` applies: comma-separated, lower-cased, None when empty."""
+    return [t.strip().lower() for t in raw.split(",") if t.strip()] or None
 
 
 def _write_receipt(name: str, body: dict) -> Path:

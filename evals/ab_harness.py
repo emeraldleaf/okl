@@ -94,10 +94,12 @@ def get_briefing(task: str, timeout: int) -> str:
     """Return the briefing `okl check` gives the briefed arm for `task`; raises RuntimeError if it fails."""
     # Fails CLOSED: a briefed arm without a briefing would silently become a second
     # baseline arm and corrupt the comparison.
-    # --interests "" : unfiltered, matching evals/preflight.py. The host repo's interests
-    # are not the experiment's — react_fetch's rule is tagged `react`, which okl does not
-    # declare, so inheriting them made that task measure its rule's ABSENCE across every run
-    # in this report. The harness states its retrieval config instead of borrowing one.
+    # --interests from OKL_BRIEF_INTERESTS, default "" (unfiltered); evals/preflight.py reads
+    # the same variable, so the gate checks the briefing this arm receives. The host repo's
+    # interests are not the experiment's — react_fetch's rule is tagged `react`, which okl
+    # does not declare, so inheriting them made that task measure its rule's ABSENCE; the
+    # receipts from ab-20260903-1323 to ab-20261011-2254 ran with okl's seven set and stamp
+    # the value. The harness states its retrieval config instead of borrowing one.
     # OKL_BRIEFING_LOG=0: an experiment's briefings are not exposure. Logging them would
     # count every bait task's rules as "shown" in the store's exposure report (#129). It
     # changes nothing in the briefing itself.
