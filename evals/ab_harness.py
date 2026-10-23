@@ -170,17 +170,22 @@ def generator_env(workdir: str, log: str) -> dict[str, str] | None:
 
 
 def write_shim(workdir: str) -> None:
-    """Put the `okl` shim in `workdir`/bin: logs its arguments, then execs the real okl."""
+    """Put the `okl` shim in `workdir`/bin: runs the real okl, then logs the exit status and
+    the arguments, so a fetch counts only when `okl show` succeeded (review on #269)."""
     bin_dir = Path(workdir) / "bin"
     bin_dir.mkdir(exist_ok=True)
     shim = bin_dir / "okl"
-    shim.write_text('#!/bin/sh\nprintf \'%s\\n\' "$*" >> "$OKL_SHIM_LOG"\n'
-                    f'exec {shlex.quote(sys.executable)} -m okl "$@"\n')
+    shim.write_text('#!/bin/sh\n'
+                    f'{shlex.quote(sys.executable)} -m okl "$@"\n'
+                    'rc=$?\n'
+                    'printf \'%s %s\\n\' "$rc" "$*" >> "$OKL_SHIM_LOG"\n'
+                    'exit $rc\n')
     shim.chmod(0o755)
 
 
 def fetched_ids(log: str) -> list[str]:
-    """The lesson ids an `okl show` fetched, in order, from the shim's log; [] when none."""
+    """The lesson ids an `okl show` fetched AND returned (exit 0), in order, from the shim's
+    log; [] when none. An attempt that failed is not a lesson read."""
     try:
         lines = Path(log).read_text().splitlines()
     except OSError:
@@ -188,8 +193,8 @@ def fetched_ids(log: str) -> list[str]:
     out = []
     for line in lines:
         parts = shlex.split(line) if line.strip() else []
-        if len(parts) >= 2 and parts[0] == "show":
-            out.append(parts[1])
+        if len(parts) >= 3 and parts[0] == "0" and parts[1] == "show":
+            out.append(parts[2])
     return out
 
 
@@ -450,6 +455,10 @@ def main() -> int:
                     help="repetitions per (task, arm) — single samples are noisy; ≥3 for citable numbers")
     ap.add_argument("--timeout", type=int, default=300)
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--accept-missing-lessons", action="store_true",
+                    help="run even when some tasks' briefings lack their governing lesson, and list them "
+                         "in the receipt. For an instrument where that absence is the condition under "
+                         "study (§4r's held-out tasks), never for the authored series.")
     ap.add_argument("--arms", default="baseline,briefed", type=parse_arms,
                     help="comma-separated subset of baseline,briefed,indexed (§4r adds indexed: the "
                          "briefing plus every other lesson in scope, for a generator that may `okl show`)")
@@ -520,17 +529,25 @@ def main() -> int:
     # directory and silently creates an empty one, so the check would have "found" every
     # reference missing while pointing at a database that never existed. Client walks up to
     # the configured .okl/ the way every other command does.
+    lacking: list[str] = []
     if not args.dry_run:
         # Retrieval is deterministic, so whether each task still receives the rule it tests
         # is answerable in milliseconds. Checking it AFTER a 25-minute run is how §4d cost
         # what it cost. Refused here, before anything is spent.
-        pf = subprocess.run([sys.executable, str(Path(__file__).parent / "preflight.py")],
+        # The gate reads the task set this run executes, with its --limit, not the authored
+        # file regardless (review on #269).
+        pf = subprocess.run([sys.executable, str(Path(__file__).parent / "preflight.py"),
+                             "--tasks", str(args.tasks),
+                             *(["--limit", str(args.limit)] if args.limit else []),
+                             *(["--accept-missing"] if args.accept_missing_lessons else [])],
                             capture_output=True, text=True)
         print(pf.stdout, end="")
         print(pf.stderr, end="", file=sys.stderr)   # a refusal (e.g. no store) says why here
         if pf.returncode != 0:
             print("REFUSING TO RUN: pre-flight failed (see above).")
             return 5
+        # Which tasks measure the briefing without their lesson, for the receipt's face.
+        lacking = [ln.split()[1] for ln in pf.stdout.splitlines() if ln.strip().startswith("[MISSING]")]
 
         from okl.client import Client
         _client = Client()
@@ -627,10 +644,11 @@ def main() -> int:
     if args.samples > 1:
         print("  per task (reproduced/samples):")
         for t in tasks:
-            b = [r for r in by("baseline") if r["task"] == t["id"]]
-            f = [r for r in by("briefed") if r["task"] == t["id"]]
-            print(f"    {t['id']:16} baseline {sum(r['reproduced'] for r in b)}/{len(b)}"
-                  f"   briefed {sum(r['reproduced'] for r in f)}/{len(f)}")
+            cells = []
+            for arm in arms:
+                rs = [r for r in by(arm) if r["task"] == t["id"]]
+                cells.append(f"{arm} {sum(r['reproduced'] for r in rs)}/{len(rs)}")
+            print(f"    {t['id']:28} " + "   ".join(cells))
     # conditional subset: tasks where the BASELINE arm failed at least once
     base_failed = {r["task"] for r in by("baseline") if r["reproduced"]}
     cond = [r for r in by("briefed") if r["task"] in base_failed]
@@ -646,6 +664,7 @@ def main() -> int:
         "generator": GENERATOR_CMD, "judge": JUDGE_CMD, "brief_interests": BRIEF_INTERESTS,
         # §4r: which arms ran, what the generator could do, and what the index cost per prompt.
         "arms": arms, "generator_tools": GENERATOR_TOOLS, "tasks_file": str(args.tasks),
+        **({"preflight_missing": lacking} if args.accept_missing_lessons else {}),
         **({"index_chars": index_chars} if index_chars is not None else {}),
         # How much of each submission the judge read (#182): part of the instrument.
         "judge_max_chars": JUDGE_MAX_CHARS,

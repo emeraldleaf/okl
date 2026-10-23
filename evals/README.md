@@ -46,7 +46,9 @@ reads these variables:
   show:*)"` with `--arms baseline,briefed,indexed` is REPORT §4r's instrument: an `okl` shim
   on the generator's PATH logs each fetch, and the receipt says which lessons each sample
   read. `--tasks evals/heldout_tasks.jsonl` (from `evals/make_heldout_tasks.py`) runs the 24
-  held-out rephrasings instead of the eight authored tasks.
+  held-out rephrasings instead of the eight authored tasks; `--accept-missing-lessons` lets
+  such a run start although some briefings lack their governing lesson, and the receipt lists
+  them (`preflight_missing`). The gate always reads the task file the run executes.
 - `OKL_BRIEF_INTERESTS` — the `--interests` the briefed arm's `okl check` runs with.
   Default empty (unfiltered). Receipts `ab-20260903-1323` through `ab-20261011-2254` ran
   with okl's seven interests set and §4o's run unfiltered; each stamps the value it ran

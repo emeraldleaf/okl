@@ -1331,12 +1331,13 @@ def briefed_ids(result: dict[str, Any]) -> list[str]:
     """The ids of the lessons a briefing showed, in the order it showed them, each once.
 
     Read from the type buckets, where every briefed record sits exactly once.
-    next_actions and stale_warnings are skipped: both repeat records already counted.
+    next_actions and stale_warnings are skipped: both repeat records already counted; so is
+    "index", which names lessons by id and title without showing them (review on #269).
     """
     ids: dict[str, None] = {}
     for key, items in result.items():
         # "replaced" holds superseded lessons the briefing pointed past, not ones it showed.
-        if key in ("next_actions", "stale_warnings", "replaced") or not isinstance(items, list):
+        if key in ("next_actions", "stale_warnings", "replaced", "index") or not isinstance(items, list):
             continue
         for item in items:
             if isinstance(item, dict) and item.get("id"):

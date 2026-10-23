@@ -40,6 +40,8 @@ def test_the_index_lists_every_other_live_lesson_in_scope(store):
     text = core.render_check_for_agent(res)
     assert "Every other lesson in scope (1)" in text and f"- [{b}] pagination" in text and "okl show <id>" in text
     assert "index" not in core.check(store, repo="r", task="an access token written to web storage")
+    # The index names lessons; it does not show them, so the exposure log must not count them.
+    assert core.briefed_ids(res) == [a]
 
 
 def test_okl_check_index_flag_appends_the_index(tmp_path):
@@ -63,14 +65,20 @@ def ab():
     return mod
 
 
-def test_the_shim_logs_each_okl_call_and_runs_the_real_one(ab, tmp_path):
-    """The generator's `okl` shim appends its arguments to the log, then execs okl."""
+def test_the_shim_counts_a_fetch_only_when_okl_show_succeeded(ab, tmp_path):
+    """The generator's `okl` shim runs the real okl and logs its exit status with the
+    arguments; a show that failed is an attempt, not a lesson read (review on #269)."""
     ab.write_shim(str(tmp_path))
     log = str(tmp_path / "shim.log")
-    env = {**os.environ, "OKL_SHIM_LOG": log, "PATH": f"{tmp_path / 'bin'}{os.pathsep}{os.environ['PATH']}"}
-    r = subprocess.run(["okl", "show", "seed:x:y", "--format", "json"], env=env, capture_output=True, text=True, cwd=tmp_path)
-    assert r.returncode != 0   # no store here: the real okl refused, which proves it ran
-    assert ab.fetched_ids(log) == ["seed:x:y"]
+    env = {k: v for k, v in os.environ.items() if k not in ("OKL_SERVICE_URL", "OKL_TOKEN")}
+    env.update(OKL_SHIM_LOG=log, PATH=f"{tmp_path / 'bin'}{os.pathsep}{os.environ['PATH']}",
+               OKL_DATABASE_URL=f"sqlite:///{tmp_path / 'store.db'}")
+    assert subprocess.run([sys.executable, "-m", "okl", "record", "--type", "Rule", "--title", "t", "--scope", "org", "--id", "t1"],
+                          env=env, capture_output=True, text=True, cwd=tmp_path).returncode == 0
+    ok = subprocess.run(["okl", "show", "t1", "--format", "json"], env=env, capture_output=True, text=True, cwd=tmp_path)
+    bad = subprocess.run(["okl", "show", "nope"], env=env, capture_output=True, text=True, cwd=tmp_path)
+    assert ok.returncode == 0 and json.loads(ok.stdout)["id"] == "t1" and bad.returncode != 0
+    assert ab.fetched_ids(log) == ["t1"]
     assert ab.fetched_ids(str(tmp_path / "missing.log")) == []
 
 
@@ -83,7 +91,7 @@ def test_run_one_records_what_the_generator_fetched(ab, monkeypatch, tmp_path):
     def fake_call(cmd, prompt, timeout, workdir, env=None):
         if "--allowedTools" in cmd:                       # the generator
             seen["env"] = env
-            Path(env["OKL_SHIM_LOG"]).write_text("show seed:p:gov --format json\nshow seed:p:other\n")
+            Path(env["OKL_SHIM_LOG"]).write_text("0 show seed:p:gov --format json\n0 show seed:p:other\n2 show seed:p:failed\n")
             return "def f(): return 1"
         return json.dumps({"implemented": True, "defect_reproduced": False, "reason": "clean"})
     monkeypatch.setattr(ab, "call", fake_call)
