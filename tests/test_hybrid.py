@@ -149,6 +149,10 @@ def test_fusion_orders_candidates_by_rank_fusion_or_convex_combination(store):
     assert [n.id for n in core._fuse(store, fts, nearest, "linear")] == [b, a, c]
     with pytest.raises(ValueError, match="rrf"):
         core._fuse(store, fts, nearest, "cosine")
+    # Tied cosines: the raw score stands in for the zero-range min-max, so a record only the
+    # semantic arm found still carries weight instead of falling to the end (review on #267).
+    tied = core._fuse(store, fts, [(b, 0.6), (c, 0.6)], "linear")
+    assert [n.id for n in tied] == [b, a, c]   # c weighs 0.3, not 0; a's full-text rank still beats it
 
 
 def test_hybrid_setting_reads_the_environment_over_the_config():

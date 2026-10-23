@@ -404,9 +404,11 @@ def _fuse(store: Store, fts: list[Node], nearest: list[tuple[str, float]], metho
             score[n.id] += LINEAR_ALPHA * (1 - rank / len(fts))
         if nearest:
             lo, hi = min(sc for _, sc in nearest), max(sc for _, sc in nearest)
-            span = (hi - lo) or 1.0
             for node_id, sc in nearest:
-                score[node_id] += (1 - LINEAR_ALPHA) * (sc - lo) / span
+                # Min-max over the semantic list; when every cosine ties the range is zero and
+                # the raw cosine stands in, or a semantic-only candidate would weigh nothing
+                # and fall off the cut (review on #267).
+                score[node_id] += (1 - LINEAR_ALPHA) * (sc if hi == lo else (sc - lo) / (hi - lo))
     elif method == "rrf":
         for rank, n in enumerate(fts):
             score[n.id] += 1 / (RRF_K + rank + 1)
