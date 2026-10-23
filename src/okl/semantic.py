@@ -54,12 +54,20 @@ def text_hash(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
 
 
+# Loaded models, by id. The load is the arm's fixed cost (0.8 s from the cache), paid once
+# per process: a hook pays it per prompt, but the MCP server, the service and the probe
+# are long-lived and must not pay it per check.
+_LOADED: dict[str, Any] = {}
+
+
 def load_model(model_id: str = MODEL_ID, *, offline: bool = True) -> Any:
     """The embedding model, or SemanticUnavailableError with the reason and the remedy.
 
     `offline` is the check-time rule: a briefing must never wait on the network, so the
     model comes from the local cache or not at all. `okl embed` passes offline=False.
     """
+    if model_id in _LOADED:
+        return _LOADED[model_id]
     try:
         from model2vec import StaticModel
     except ImportError as e:
@@ -68,7 +76,8 @@ def load_model(model_id: str = MODEL_ID, *, offline: bool = True) -> Any:
     if offline:
         os.environ["HF_HUB_OFFLINE"] = "1"
     try:
-        return StaticModel.from_pretrained(model_id)
+        _LOADED[model_id] = StaticModel.from_pretrained(model_id)
+        return _LOADED[model_id]
     except (OSError, ValueError, RuntimeError) as e:
         raise SemanticUnavailableError(
             f"the model {model_id} is not cached locally ({type(e).__name__}); run `okl embed` once online"
