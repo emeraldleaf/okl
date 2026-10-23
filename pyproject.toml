@@ -129,10 +129,10 @@ disallow_incomplete_defs = true
 enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
 
 [[tool.mypy.overrides]]
-# psycopg and mcp are OPTIONAL extras: the core install has neither, and CI installs
-# only the dev group. Naming them here rather than passing --ignore-missing-imports globally
-# keeps a genuine typo in a first-party import an error.
-module = ["psycopg", "psycopg.*", "mcp", "mcp.*"]
+# psycopg, mcp, model2vec and numpy are OPTIONAL extras: the core install has none of them,
+# and CI installs only the dev group. Naming them here rather than passing
+# --ignore-missing-imports globally keeps a genuine typo in a first-party import an error.
+module = ["psycopg", "psycopg.*", "mcp", "mcp.*", "model2vec", "model2vec.*", "numpy", "numpy.*"]
 ignore_missing_imports = true
 
 [tool.importlinter]

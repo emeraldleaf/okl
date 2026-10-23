@@ -316,7 +316,10 @@ def _live_hits(store: Store, task: str, limit: int, repo_scope: str,
     # The search runs on the task's subject words, never on an empty query: the store
     # turns an empty query into a substring match on "" that returns every record.
     if not briefing_terms(task):
-        return [], [], True, Candidates([], {}, frozenset(), None, True)
+        # Nothing to search on, so neither arm ran; when the semantic arm was asked for, the
+        # result must not report it as on (review on #267).
+        note = "the task has no subject words to search" if hybrid else None
+        return [], [], True, Candidates([], {}, frozenset(), note, True)
     fetch = limit * 3
     for _ in range(3):
         cand = ranked_candidates(store, task, fetch, hybrid)

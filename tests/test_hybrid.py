@@ -128,6 +128,16 @@ def test_hybrid_falls_back_to_full_text_and_says_why_when_the_model_is_missing(s
     assert [r["id"] for r in res["rules"]] == [a] and "extra" in res["hybrid_unavailable"]
 
 
+def test_a_task_with_no_subject_words_does_not_report_the_arm_as_on(store, fake_model):
+    """"ok go" has no subject words, so neither arm runs; the result says the arm did not
+    run rather than reporting hybrid as on (review on #267)."""
+    _seed(store)
+    semantic.build_index(store)
+    res = core.check(store, repo="r", task="ok go", hybrid="linear")
+    assert res["hybrid"] is None and "subject words" in res["hybrid_unavailable"]
+    assert res["match_count"] == 0
+
+
 def test_fusion_orders_candidates_by_rank_fusion_or_convex_combination(store):
     """RRF sums reciprocal ranks; linear mixes a rank-normalised full-text score with the
     min-max-normalised cosine. A record only one arm found still takes its place."""

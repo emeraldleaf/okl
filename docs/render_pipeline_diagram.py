@@ -75,8 +75,11 @@ def _seeded_store(tmpdir: str) -> Store:
     env["OKL_DATABASE_URL"] = url
     env["PYTHONPATH"] = os.pathsep.join(p for p in (str(REPO / "src"), env.get("PYTHONPATH", "")) if p)
     for f in sorted((REPO / "seed").glob("*.json")):
-        r = subprocess.run([sys.executable, "-m", "okl", "seed", str(f)],
-                           capture_output=True, text=True, env=env, cwd=tmpdir)
+        try:
+            r = subprocess.run([sys.executable, "-m", "okl", "seed", str(f)], capture_output=True,
+                               text=True, env=env, cwd=tmpdir, timeout=120)
+        except subprocess.TimeoutExpired:
+            raise SystemExit(f"ABORT: seeding {f.name} did not finish in 120 s") from None
         if r.returncode != 0:
             raise SystemExit(f"ABORT: seeding {f.name} failed — {r.stderr.strip()[:200]}")
     store = Store(url)
