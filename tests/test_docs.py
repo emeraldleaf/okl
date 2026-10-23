@@ -177,7 +177,10 @@ def test_the_quarantined_july_figures_appear_nowhere_they_ship():
 
 
 POOLED_RECEIPTS = ["ab-20260830-0003", "ab-20260901-0133", "ab-20260901-1238", "ab-20260902-0538",
-                   "ab-20260903-0157", "ab-20260903-1214", "ab-20260903-1323", "ab-20260926-0528"]
+                   "ab-20260903-0157", "ab-20260903-1214", "ab-20260903-1323"]
+# The launch posts of 2026-10-12 quoted the pool with §4i's run added; §4i pre-registered its
+# layout change as a new series, so finding 7 reports that figure beside the pool (#265).
+LAUNCH_POST_RECEIPTS = [*POOLED_RECEIPTS, "ab-20260926-0528"]
 
 
 # REPORT §4j counts this sample as unevaluable: the generator returned a plan, not code, and
@@ -199,9 +202,10 @@ def _pool(names):
 
 def test_the_pooled_launch_figure_is_recomputed_from_its_receipts():
     """The launch posts quote 42% against 7% and send readers to the repo for it; REPORT §5
-    finding 7 names the eight receipts, and every figure it gives is recomputed here."""
-    # ARRANGE — the pool as REPORT defines it, the same without the reverted §4d run, and all
-    # twelve receipts on the documented instrument with eight tasks and three samples.
+    finding 7 names the seven receipts, and every figure it gives is recomputed here."""
+    # ARRANGE — the pool as REPORT defines it, the same without the reverted §4d run, the
+    # eight-run figure the launch posts quoted, and every receipt on the documented
+    # instrument with eight tasks and three samples.
     documented = []
     for receipt in sorted((ROOT / "evals" / "results").glob("ab-*.json")):
         data = json.loads(receipt.read_text())
@@ -212,15 +216,62 @@ def test_the_pooled_launch_figure_is_recomputed_from_its_receipts():
     report = _flat("evals/REPORT.md")
 
     # ASSERT — each quoted pair is the recomputed one, and every receipt it names exists.
-    assert set(POOLED_RECEIPTS) <= set(documented), "a pooled receipt is missing or off-instrument"
-    for names in (POOLED_RECEIPTS, [n for n in POOLED_RECEIPTS if n != "ab-20260902-0538"], documented):
+    assert set(LAUNCH_POST_RECEIPTS) <= set(documented), "a pooled receipt is missing or off-instrument"
+    for names in (POOLED_RECEIPTS, [n for n in POOLED_RECEIPTS if n != "ab-20260902-0538"],
+                  LAUNCH_POST_RECEIPTS, documented):
         bh, bn, rh, rn = _pool(names)
         quoted = f"{bh} of {bn}"
         assert quoted in report and f"{rh} of {rn}" in report, (
             f"REPORT §5 finding 7 should quote {bh} of {bn} against {rh} of {rn} for {len(names)} receipts")
-    # The anatomy sheet quotes the eight-run pool too, and names every receipt in it.
+    # The anatomy sheet quotes the seven-run pool too, and names every receipt in it.
     sheet = (ROOT / "docs" / "overview" / "okl-anatomy.html").read_text()
     bh, bn, rh, rn = _pool(POOLED_RECEIPTS)
     for figure in (f"{bh} of {bn} unbriefed", f"{rh} of {rn} briefed", f"{round(100 * bh / bn)}%", f"{round(100 * rh / rn)}%"):
         assert figure in sheet, f"docs/overview/okl-anatomy.html should say {figure}"
     assert all(name in sheet for name in POOLED_RECEIPTS), "the anatomy sheet must name every pooled receipt"
+
+
+def _sentence_containing(path: str, phrase: str) -> str:
+    """The sentence of a doc that contains `phrase`."""
+    text = _flat(path)
+    at = text.index(phrase)
+    return text[text.rfind(". ", 0, at) + 2:text.index(". ", at)]
+
+
+def _arm_counts(receipts: list[Path]) -> dict[str, list[int]]:
+    """Per task: [unbriefed hits, unbriefed n, briefed hits, briefed n] over the judged samples."""
+    counts: dict[str, list[int]] = {}
+    for receipt in receipts:
+        for row in json.loads(receipt.read_text()).get("results", []):
+            if row.get("reproduced") is None or row.get("unevaluable"):
+                continue
+            cell = counts.setdefault(row["task"], [0, 0, 0, 0])
+            i = 0 if row["arm"] == "baseline" else 2
+            cell[i] += bool(row["reproduced"]); cell[i + 1] += 1
+    return counts
+
+
+def test_the_never_reproduced_sentence_counts_match_the_receipts():
+    """README's sentence on the tasks that never reproduced unbriefed is held to every receipt.
+
+    It said three tasks, 27–33 unbriefed samples each, and a rate limiter briefed 2 of 30,
+    for eleven days after §4m's receipt had the rate limiter reproduce unbriefed and the
+    sample counts had passed 40 (found 2026-10-22 by an independent verification).
+    """
+    # ARRANGE — every task's arm counts over every receipt, and the sentence that states them.
+    counts = _arm_counts(sorted((ROOT / "evals" / "results").glob("ab-*.json")))
+    never = {task for task, cell in counts.items() if cell[0] == 0}
+    assert never <= set(_PROSE), f"give the task(s) a prose name in _PROSE: {never - set(_PROSE)}"
+    sentence = _sentence_containing("README.md", "have never reproduced without the briefing")
+    clause, _, rest = sentence.partition(";")
+
+    # ASSERT — the clause names exactly the never-reproduced tasks and their sample range, and
+    # the rest quotes the counts of every named task that did reproduce.
+    for task, name in _PROSE.items():
+        assert (name.lower() in clause.lower()) == (task in never), f"{name!r} in {clause!r} is wrong"
+    lo, hi = min(counts[t][1] for t in never), max(counts[t][1] for t in never)
+    assert f"({lo}–{hi} unbriefed samples each)" in clause, f"README should say ({lo}–{hi} unbriefed samples each)"
+    for task in set(_PROSE) - never:
+        bh, bn, rh, rn = counts[task]
+        assert f"{bh} of {bn}" in rest and f"{rh} of {rn}" in rest, \
+            f"README should quote {_PROSE[task]} as {bh} of {bn} unbriefed and {rh} of {rn} briefed"

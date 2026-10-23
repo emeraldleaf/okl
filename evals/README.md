@@ -42,8 +42,10 @@ A single sample per (task, arm) is noisy; quote only `--samples 3` runs. The har
 reads these variables:
 
 - `OKL_BRIEF_INTERESTS` — the `--interests` the briefed arm's `okl check` runs with.
-  Default empty (unfiltered), which is what every run in the report used; it is stamped
-  into the receipt.
+  Default empty (unfiltered). Receipts `ab-20260903-1323` through `ab-20261011-2254` ran
+  with okl's seven interests set and §4o's run unfiltered; each stamps the value it ran
+  with, and `evals/preflight.py` reads the same variable, so the gate checks the briefing
+  the run will use.
 - `AB_RESULTS_DIR` — where receipts are read and written (default `evals/results/`).
 - `GENERATOR_CMD` / `JUDGE_CMD` — default `claude -p --model sonnet` / `--model haiku`.
 

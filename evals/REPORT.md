@@ -76,15 +76,20 @@ Point 3 is the one that would have caught §4d before it ran. `rate_limiter` dep
 rule tagged `dotnet`; the change hid off-stack records; nobody wrote that down, so a
 predictable regression arrived as a surprise.
 
-### The noise floor is 17 points, and it is not optional
+### The noise floor is at least 21 points, and it is not optional
 
-The baseline arm receives no briefing and has never changed. Across four sonnet runs it
-has read 33%, 42%, 50%, 45%. **That 17-point spread is measurement noise on an arm where
-nothing moved**, so:
+The baseline arm receives no briefing and has never changed. Across the first four sonnet
+runs it read 33%, 42%, 50%, 45%, and that 17-point spread was the floor this section first
+set. The same arm has since moved further with nothing changed: 21 points between two runs
+of one instrument (§4m, 21% to 42%) and 26 points across the §4j boundary (43% to 17%),
+which §4j attributes to the generator and treats as the start of a new series. **The spread
+on an arm where nothing moved is measurement noise**, so:
 
-- A difference smaller than ~17 points, in either arm, is **not interpretable**.
-- The briefing effect (baseline 33-50% against briefed 4-13%) clears it comfortably and
-  is the only headline claim this design supports.
+- A difference smaller than ~21 points, in either arm, is **not interpretable**. The
+  sections written before §4m say 17, which was the floor as measured when they were written.
+- The pooled briefing effect (42% against 7%, §5 finding 7) clears it; a single run's gap
+  need not (§4j's 17% against 0% does not), which is why the headline is the pool and not
+  one run.
 - Run-to-run movement *within* an arm is not a result. It has been mistaken for one.
 
 ### What promotes a per-task signal above noise
@@ -742,7 +747,9 @@ found one lost line, a gate's symptom in `ci_linter`, because gate actions never
 one. And the first live briefing after the change showed a second defect the pre-flight
 could not: with every match routed into an action the sections were empty, so the
 briefing ended "No encoded rule matched" beneath its own list of actions. Both were fixed
-before the run. The content is therefore identical; only the layout differs.
+before the run. Every record's content therefore survives the new layout; the pre-flight
+says nothing about the rendered briefings being identical, and they are not, since the
+layout is the change.
 
 **Why pre-flight matters here.** The briefed arm reads the live store, which has gained
 records since §4h. A live run alone could not separate "the layout changed" from "the
@@ -795,6 +802,13 @@ describes what ships.
 On the five tasks the baseline failed at least once, the briefed arm reproduced 2 of 15.
 The briefing still does its job at 36% fewer characters. Per the pre-registration, that is
 all this can say: the cut is safe on this task set; nothing here shows it helps.
+
+*Added 2026-10-22, revised 2026-10-23.* This section calls the layout change a new series,
+and from 2026-10-12 to 2026-10-23 §5 finding 7 pooled this run (`ab-20260926-0528`) with
+§4 through §4h all the same. The pre-flight above shows that every record's content
+survived the new layout, not that the briefings were identical, and the rule this report
+keeps is that a changed treatment starts a new series; finding 7 now reports this run
+beside the pool, with the figure the launch posts quoted, rather than in it.
 
 
 ## 4j. PRE-REGISTERED: each briefed lesson carries its id — a change of treatment (2026-10-10)
@@ -1116,6 +1130,12 @@ accepted gap is unchanged. `evals/preflight.py` is green (7 of 8, the accepted g
 and `tests/test_relevance_floor.py::test_the_floor_changes_no_eval_briefing` asserts the
 identity, so the day the floor reaches an eval briefing the suite says so.
 
+**What that identity covers.** Eight authored prompts, each sharing three to ten subject
+words with its governing lesson (`evals/results/probe-rephrase-20261022-symptoms.txt`,
+section C). It says nothing about a prompt whose only link to a lesson is one identifier in
+the lesson's body, which the floor drops by design and an independent verification on
+2026-10-22 reproduced on three records; #263 tracks that rule.
+
 **Prediction.** Identical briefings give identical arms up to the generator's own movement
 between runs (at least 21 points on the baseline, §4m). Nothing this change does can reach
 either arm of this instrument.
@@ -1127,7 +1147,7 @@ the floor ships to the next release.
 **Why no live run.** An A/B whose two arms receive byte-identical briefings measures the
 generator's noise and nothing else, at 48 generations and 48 judgments. The change's
 effect lies where this instrument cannot look: on prompts that share one word with many
-records, which the eval tasks do not (each shares two to ten with its lesson). That effect
+records, which the eval tasks do not (each shares three to ten with its lesson). That effect
 is measured by `evals/probe_rephrase.py` (`evals/results/probe-rephrase-20261022.txt`): the
 recall rows are unchanged, and six short real prompts return 5, 9, 0, 11, 7 and 11 records
 where every one returned twelve. A live run belongs to the briefing-size series (#234),
@@ -1255,16 +1275,25 @@ refuse to write a usable receipt when it has moved.
 6. **Anomaly, retained:** briefed haiku reproduced rate_limiter 1/3 where its baseline
    was 0/3 — a briefed run worse than baseline on one task. Small-sample noise or
    briefing-as-distraction; it stays in the data.
-7. **The pooled figure quoted in the launch posts (added 2026-10-12).** Over the eight
-   committed runs on the documented instrument (sonnet generator, haiku judge, eight tasks
-   with three samples per arm) from §4 through §4i, 78 of 186 unbriefed attempts
-   reproduced a known defect (42%) against 13 of 188 briefed ones (7%). The eight receipts:
+7. **The pooled figure (added 2026-10-12; recut 2026-10-23).** Over the seven committed
+   runs on the documented instrument (sonnet generator, haiku judge, eight tasks with
+   three samples per arm) from §4 through §4h, 68 of 163 unbriefed attempts reproduced a
+   known defect (42%) against 11 of 164 briefed ones (7%). The seven receipts:
    `ab-20260830-0003`, `ab-20260901-0133`, `ab-20260901-1238`, `ab-20260902-0538`,
-   `ab-20260903-0157`, `ab-20260903-1214`, `ab-20260903-1323`, `ab-20260926-0528`.
-   Denominators fall short of 192 because failed and unevaluable samples are left out.
+   `ab-20260903-0157`, `ab-20260903-1214`, `ab-20260903-1323`.
+   Three earlier receipts on the same models are outside the pool because they are not
+   eight-task, three-sample runs: `ab-20260829-2300` (two tasks, one sample),
+   `ab-20260829-2315` (eight tasks, one sample) and `ab-20260902-1216` (one task,
+   `idor_endpoint`, one sample, 0/1 in each arm), which no other section names.
+   Denominators fall short of 168 because failed and unevaluable samples are left out.
    The pool keeps §4d's run (`ab-20260902-0538`), whose retrieval change was reverted:
    its briefed arm read 3 of 23, so keeping it raises the briefed rate. Without it the
-   pool reads 68 of 164 (41%) against 10 of 165 (6%). It leaves out §4f (judged by opus,
+   pool reads 58 of 141 (41%) against 8 of 141 (6%). The launch posts of 2026-10-12
+   quoted this pool with §4i's run (`ab-20260926-0528`) added: 78 of 186 (42%) against
+   13 of 188 (7%), the same percentages. §4i pre-registered its layout change as a new
+   series, and its pre-flight shows that every record's content survived the new layout,
+   not that the briefings were identical, so from 2026-10-23 that run is reported beside
+   the pool rather than in it (review on #265). It leaves out §4f (judged by opus,
    not the documented instrument) and every run from §4j on, because each of those
    started a new series (§4j's unbriefed arm moved 26 points with nothing changed; §4k
    and §4m changed the instrument). For reference, the aggregate over all thirteen receipts
