@@ -249,15 +249,18 @@ def report(store: Any, repo: str, repo_dir: str, *, since_ms: int, now_ms: int,
     def after(first: dict[str, int]) -> set[str]:
         done = {n.id for n, c in runs if c.at >= first.get(n.id, now_ms + 1)}
         return done | {r["id"] for r in retired if r["at"] >= first.get(r["id"], now_ms + 1)}
+    # Shown: from the first showing, for the broad count. Stale: from the LATEST stale showing,
+    # since a lesson re-checked and then marked stale again is open again (review on #281);
+    # briefings come oldest first, so the last write wins.
     first_shown: dict[str, int] = {}
-    first_stale: dict[str, int] = {}
+    last_stale: dict[str, int] = {}
     for b in briefings:
         for i in b.node_ids:
             first_shown.setdefault(i, b.at)
         for i in b.drifted_ids:
-            first_stale.setdefault(i, b.at)
+            last_stale[i] = b.at
     quiet = sum(1 for i in shown if i in by_id and i not in after(first_shown))
-    stale_open = [(i, c) for i, c in stale.most_common() if i in by_id and i not in after(first_stale)]
+    stale_open = [(i, c) for i, c in stale.most_common() if i in by_id and i not in after(last_stale)]
     return {
         "repo": repo, "since": since_ms, "until": now_ms,
         "briefings": len(briefings), "lessons_shown": len(shown),

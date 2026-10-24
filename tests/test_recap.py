@@ -298,3 +298,22 @@ def test_the_report_counts_stale_showings_past_the_limit_and_says_when_drift_saw
     assert "8 of them while stale" in text and "**Shown stale, not re-checked:** 7 lessons" in text
     assert "**Still open:** unknown" in text and "proven against them" not in text
     s.close()
+
+
+def test_a_lesson_stale_again_after_its_recheck_is_open_again(monkeypatch):
+    """Shown stale, re-checked, then shown stale again with nothing after: the loop is open,
+    because it is judged from the latest stale showing, not the first (review on #281)."""
+    from okl import core
+    from okl.store import Store
+    s = Store("sqlite:///:memory:")
+    core.record(s, id="x", type="Rule", title="lesson x", scope="org")
+    clock = iter([1_000, 2_000, 3_000])
+    monkeypatch.setattr("okl.store._now_ms", lambda: next(clock))
+    s.log_briefing("r", ["x"], drifted_ids=["x"])        # 1: shown stale
+    s.log_check("x", True, "pytest -q", "exit 0")         # 2: re-checked
+    s.log_briefing("r", ["x"], drifted_ids=["x"])        # 3: its code changed again; shown stale again
+    plain = Path(__file__).parent
+    r = recap.report(s, "r", str(plain), since_ms=0, now_ms=10_000)
+    assert [x["id"] for x in r["stale_not_rechecked"]] == ["x"] and r["stale_not_rechecked_total"] == 1
+    assert r["shown_then_quiet"] == 0                     # the broad count still sees the check
+    s.close()
