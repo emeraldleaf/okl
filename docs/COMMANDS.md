@@ -64,6 +64,10 @@ okl check --rerank   # reorder the first 24 candidates (fused when --hybrid is o
 okl check --index    # append every other lesson in scope as `- [id] title`, so an agent can
                      #   fetch one with `okl show <id>` when the briefing did not select it.
                      #   A treatment under measurement (REPORT §4r); about 120 characters a lesson.
+okl seed --refresh   # re-import only the records this store already holds, from the packs
+                     #   they came from (newer symptoms, aliases, text; verification kept),
+                     #   without importing the rest of each pack. No path: the bundled packs
+                     #   the store's own seed ids name; a repo's own pack file is named.
 okl seed <pack> --strict
                      # exit 2 instead of importing when an advice record has no symptom,
                      #   a record is trace-shaped, or an org record names one repository's
