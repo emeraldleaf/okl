@@ -1,0 +1,47 @@
+model jinaai/jina-reranker-v1-turbo-en · load 3.4 s · store 318 records, 313 with a vector · window 36 per arm
+
+task                         before after  gov score best other  pairs     ms
+idor_endpoint/ticket              3     4       -1.0      -0.87     53   5366
+idor_endpoint/paraphrase         25    13      -2.54      -1.51     57   5296
+idor_endpoint/bug-report         36     1      -2.21      -2.23     66   5896
+price_tamper/ticket            None  None       None       -0.9     64   5941
+price_tamper/paraphrase           2     9      -2.36      -1.29     64   6314
+price_tamper/bug-report           9     3      -2.95      -2.11     49   5107
+react_fetch/ticket                2     1      -0.94      -1.01     58   5407
+react_fetch/paraphrase            2     4      -2.14      -1.68     61   6798
+react_fetch/bug-report           43    43       -4.1      -2.44     58   7843
+judge_summary/ticket              2     1       0.97       0.38     57   7359
+judge_summary/paraphrase          6    12      -2.11      -1.53     61   6896
+judge_summary/bug-report          1     1      -0.15      -1.71     57   5541
+exit_code_trust/ticket            2     6      -1.77      -1.56     57   5758
+exit_code_trust/paraphrase       18     4      -2.01      -1.64     63   6248
+exit_code_trust/bug-report        1     1      -0.02      -1.45     60   4667
+spa_tokens/ticket                 2     1        0.8       0.04     61   8442
+spa_tokens/paraphrase             3     4      -1.86      -0.89     59   5937
+spa_tokens/bug-report             4    14      -2.72      -1.59     57   5593
+rate_limiter/ticket               1     2       0.16        0.5     58   6292
+rate_limiter/paraphrase          21    14      -2.16      -1.23     58   6501
+rate_limiter/bug-report           1     1      -0.91      -1.41     58   5588
+ci_linter/ticket                  8     2      -0.03       0.28     56   5745
+ci_linter/paraphrase           None  None       None      -0.72     59   5991
+ci_linter/bug-report             12     7      -1.33       -0.4     58   4412
+
+held-out: governing lesson in the top 12 after reranking: {'ticket': '7/8', 'paraphrase': '5/8', 'bug-report': '6/8'} · median 5916 ms per task, max 8442 ms
+
+authored tasks: governing rank after reranking (must stay in the top 12):
+  idor_endpoint    rank 6  score -1.19
+  price_tamper     rank 1  score -0.8
+  react_fetch      rank 1  score -0.33
+  judge_summary    rank 1  score 0.72
+  exit_code_trust  rank 1  score -1.03
+  spa_tokens       rank 1  score 0.72
+  rate_limiter     rank 2  score 0.3
+  ci_linter        rank 2  score -0.55
+
+precision prompts: reranker scores of the fused window (top 5, and how many at or above -2 / 0 / 2):
+  top=[-2.0, -2.3, -2.5, -3.1, -3.2]  n>=-2:1 n>=0:0 n>=2:0  'this seems like a major point to scrutinize'
+  top=[-0.3, -1.2, -1.8, -1.9, -2.2]  n>=-2:4 n>=0:0 n>=2:0  'ok do the updates and update my site and the wri'
+  top=[-2.5, -2.6, -2.6, -2.8, -2.8]  n>=-2:0 n>=0:0 n>=2:0  'what about the org knowwledge ideae is that a ni'
+  top=[-1.0, -1.2, -1.3, -1.4, -1.5]  n>=-2:15 n>=0:0 n>=2:0  'give me a doc for that too'
+  top=[-2.0, -2.2, -2.5, -2.5, -2.6]  n>=-2:0 n>=0:0 n>=2:0  'how do we come up with a good plan for governing'
+  top=[-0.7, -0.8, -1.4, -1.4, -1.4]  n>=-2:27 n>=0:0 n>=2:0  'what about the search ?  and how this thing find'

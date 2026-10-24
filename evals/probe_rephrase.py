@@ -23,8 +23,10 @@ repo's configured interests, since both change the answer.
 import argparse
 import json
 import re
+import statistics
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -57,9 +59,14 @@ def matched(task: str, n: Any) -> list[str]:
     """The task's subject words that occur whole in the record's prose."""
     terms = [t.lower() for t in core.briefing_terms(task)]
     return [t for t in terms if re.search(r'(?<![a-z0-9])' + re.escape(t) + r'(?![a-z0-9])', TXT[n.id])]
+LATENCY: list[float] = []   # seconds per core.check call, the first one including any model load
+
+
 def check(task: str, interests: list[str] | None) -> dict[str, Any]:
-    """core.check with the probe's retrieval setting."""
+    """core.check with the probe's retrieval setting, timed."""
+    t0 = time.perf_counter()
     res = core.check(store, repo=REPO, task=task, interests=interests, hybrid=HYBRID, rerank=RERANK)
+    LATENCY.append(time.perf_counter() - t0)
     if RERANK and res.get("rerank_unavailable"):
         sys.exit(f"probe: --rerank asked for but {res['rerank_unavailable']}")
     return res
@@ -155,6 +162,8 @@ for t in tasks:
         m = matched(task, n)
         print(f"{t['id']:16} {label:11} {'yes' if r1 else 'MISS':8} {'yes' if r2 else 'MISS':8} {str(rk):>5}/{live:<5} {m[:6]}")
 print("\nheld-out recall by variant (of 8):", {k: f"harness {v[0]}/8, hook {v[1]}/8" for k, v in hits2.items()})
+print(f"check latency over {len(LATENCY)} calls: median {statistics.median(LATENCY)*1000:.0f} ms · "
+      f"max {max(LATENCY)*1000:.0f} ms · first {LATENCY[0]*1000:.0f} ms (includes any model load)")
 
 print("\nB. PRECISION on six real prompts from this session (hook config). For each of the 12 returned: terms matched, and the rarest matched term's document frequency.")
 PROMPTS = json.loads(Path('evals/probe_prompts.json').read_text())["prompts"]

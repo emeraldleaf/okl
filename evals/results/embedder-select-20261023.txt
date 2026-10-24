@@ -1,0 +1,8 @@
+315 records · 32 selection queries (8 authored + 24 probe variants) · 6 filler prompts
+model                                            load s ms/rec authored@12 ticket@12 para@12 bug@12 para@36 filler max cos
+minishlab/potion-retrieval-32M                      5.1    0.6        6/8      7/8    5/8   6/8    6/8           0.42
+BAAI/bge-small-en-v1.5                              2.8  298.2        8/8      6/8    5/8   7/8    7/8           0.68
+snowflake/snowflake-arctic-embed-s                  4.4  471.9        7/8      6/8    5/8   6/8    7/8           0.82
+ibm-granite/granite-embedding-small-english-r2   FAILED: [ONNXRuntimeError] : 2 : INVALID_ARGUMENT : Non-zero status code returned while 
+sentence-transformers/all-MiniLM-L6-v2              3.3   35.9        7/8      5/8    5/8   7/8    6/8           0.45
+minishlab/potion-base-8M                            2.6    0.3        7/8      6/8    5/8   4/8    7/8           0.53
