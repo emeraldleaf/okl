@@ -254,7 +254,8 @@ class Client:
             # briefing; a caller who asked for the index or the near misses must not read
             # that as "none" (review on #270).
             for wanted, key in ((self.index, "index"), (self.near_misses, "near_misses")):
-                if wanted and key not in result:
+                # A missing key and a null are the same answer: not the list that was asked for.
+                if wanted and not isinstance(result.get(key), list):
                     raise OKLRejectedError(_TOO_OLD.format(what=f"answers `{key}` on /check"), status=404)
         else:
             kw: dict[str, Any] = {"interests": self.interests, "hybrid": self.hybrid, "index": self.index,

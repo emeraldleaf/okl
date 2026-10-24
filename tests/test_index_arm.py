@@ -79,6 +79,11 @@ def test_a_remote_check_that_drops_the_near_misses_is_refused(monkeypatch):
     c.near_misses = True
     with pytest.raises(OKLRejectedError, match="near_misses"):
         c.check("a task")
+    monkeypatch.setattr(c, "_post", lambda path, body: {"repo": "r", "task": body["task"], "rules": [], "match_count": 0, "near_misses": None})
+    with pytest.raises(OKLRejectedError, match="near_misses"):   # a null is not the list asked for
+        c.check("a task")
+    monkeypatch.setattr(c, "_post", lambda path, body: {"repo": "r", "task": body["task"], "rules": [], "match_count": 0, "near_misses": []})
+    assert c.check("a task")["near_misses"] == []
 
 
 def test_okl_check_index_flag_appends_the_index(tmp_path):
