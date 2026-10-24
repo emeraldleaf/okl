@@ -1813,6 +1813,50 @@ None in the same change, with the receipts kept.
 one row moved, and it was read first. Whether the semantic arm, with this rule, earns the
 default: that remains an A/B question (§4n's rule), not a probe one.
 
+### Result (2026-10-24)
+
+Receipts at commit b36d1b7 (the rule at 2 in `core`, the probe's `--semantic-words off` for
+the control), one 322-record store, one sitting: `evals/results/probe-rephrase-20261024-semwords-{off-fulltext,control,2}.txt`
+are the pre-registered runs; `probe-rephrase-20261024-semwords-rerank-{control,2}.txt` are
+exploratory, reranker on, and were not pre-registered.
+
+| of 8 tasks | full-text | linear, rule off (control) | linear, rule 2 |
+|---|---|---|---|
+| authored | 8 | 8 | 8 |
+| probe's own ticket / paraphrase / bug report | 8 / 1 / 8 | 8 / 2 / 8 | 8 / 2 / 8 |
+| held-out ticket / paraphrase / bug report | 7 / 2 / 5 | 7 / 3 / 5 | 7 / 3 / 5 |
+| six precision prompts, records returned | 4, 11, 0, 11, 9, 12 | 5, 11, 0, 12, 9, 12 | 5, 11, 0, 12, 9, 12 |
+
+**The falsifier fired: the named row did not enter.** Every cell is identical. Tracing the
+row through `check`: the floor now keeps the lesson, the sixteenth of thirty-six kept
+records, and the cutoff at twelve drops it, because fifteen records the floor also keeps
+rank above it in the fused order ("Never let stored data reach a shell", "Write commit
+bodies to a file", and others sharing two generic words with a prompt about writing a data
+job's output). The mechanism was half-read: two gates stood in the row's way and the
+pre-registration named the first. By the rule as written `SEMANTIC_WORD_FLOOR` reverts to
+None in this change; the knob, its test and the probe flag stay for a later pre-registration.
+
+**Exploratory, not pre-registered.** With the reranker on (§4t's configuration), where the
+probe had the row at rank 5, the rule admits it (MISS → yes) and the rate-limiter paraphrase,
+which sat at the cutoff's edge, leaves in the harness configuration (yes → MISS) because one
+more admitted record ranks above it; the held-out paraphrase row reads 4 of 8 under both
+settings, the hook configuration gains one (3 → 4), the six counts are identical, and the
+authored and probe's own rows do not move. A rule that decides who holds the twelfth slot is
+not a gain, and it is reported here so nobody re-runs it expecting one.
+
+**Reading.** On this store a paraphrase's lesson, once the floor admits it, sits at fused
+position 15 to 20 behind records kept by the same two-word rule on generic words. What binds
+is the order among the kept records and the cutoff that reads it, not the floor. The next
+retrieval pre-registration is about that order: a cut that prefers matches in a record's
+title, symptom and aliases over matches in its body, or a cutoff that counts by type, each
+measured first on the six prompts and the authored row. Nothing here changes the default,
+and §4n's rule stands: the probe measures recall; the harness measures what the agent
+writes.
+
+**What ships.** Nothing in behaviour. `core.FETCH_MULTIPLIER` and `core.SEMANTIC_WORD_FLOOR`
+as constants at today's values, `evals/admission_grid.py` and `evals/window_grid.py` with
+their receipts, the probe's `--semantic-words`, and the floor test for the knob.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

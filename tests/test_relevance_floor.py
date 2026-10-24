@@ -196,10 +196,11 @@ def test_exhaustion_is_judged_against_the_window_last_asked_for():
     assert exhausted is False
 
 
-def test_a_semantic_only_hit_passes_by_two_shared_words_and_not_by_one_in_its_title():
-    """A record only the semantic arm returned is judged by the same two-word rule as a
-    full-text one (REPORT §4u); one word, even in its title, is still not enough for it,
-    and a cosine at the line still admits it on its own (§4q)."""
+def test_a_semantic_only_hit_passes_by_two_shared_words_only_when_the_knob_says_so(monkeypatch):
+    """With SEMANTIC_WORD_FLOOR set, a record only the semantic arm returned is judged by the
+    same two-word rule as a full-text one; one word, even in its title, is still not enough
+    for it, and a cosine at the line admits it on its own (§4q). Shipped at None (REPORT
+    §4u measured 2 and reverted it): then words alone admit no semantic-only record."""
     s = Store("sqlite:///:memory:")
     two = core.record(s, type="Rule", title="exit codes lie", scope="org",
                       symptom="the data job said it succeeded and wrote nothing")
@@ -207,6 +208,10 @@ def test_a_semantic_only_hit_passes_by_two_shared_words_and_not_by_one_in_its_ti
     near = core.record(s, type="Rule", title="unrelated words entirely", scope="org", symptom="none")
     hits = [s.get_node(two), s.get_node(one), s.get_node(near)]
     cand = core.Candidates(hits, {near: semantic.SUBJECT_SIMILARITY}, frozenset(), None, False)
+    assert core.SEMANTIC_WORD_FLOOR is None
+    kept, matched, weak = core._apply_floor(s, hits, ["data", "job", "export"], cand)
+    assert [n.id for n in kept] == [near] and weak == 2
+    monkeypatch.setattr(core, "SEMANTIC_WORD_FLOOR", 2)
     kept, matched, weak = core._apply_floor(s, hits, ["data", "job", "export"], cand)
     assert [n.id for n in kept] == [two, near] and weak == 1
     assert matched[two] == ["data", "job"] and matched[one] == ["data"]
