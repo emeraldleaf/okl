@@ -68,6 +68,9 @@ def load_model(model_id: str = MODEL_ID, *, offline: bool = True) -> Any:
     """
     if model_id in _LOADED:
         return _LOADED[model_id]
+    # The tokenizer's thread pool warns in any process that forks after encoding (the probe
+    # shells out to git); single-threaded, nothing is lost on one short task text.
+    os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
     try:
         from model2vec import StaticModel
     except ImportError as e:

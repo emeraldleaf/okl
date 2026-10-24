@@ -1,5 +1,5 @@
 store: 318 nodes (141 with aliases) · repo=okl · hook interests=['python', 'method', 'security', 'agent-safety', 'retrieval-design', 'eval-integrity', 'data-quality']
-retrieval code: commit 8e9c9c4 · relevance floor on · hybrid off (313 records with a vector) · rerank off · every row below, recall and precision alike, is measured with this code against this store
+retrieval code: commit c2f8b87 · relevance floor on · hybrid off (318 records with a vector) · rerank off · every row below, recall and precision alike, is measured with this code against this store
 
 A. RECALL: is the governing lesson in the top-12? (harness config = no interests; hook config = repo interests)  rank = position in the ranked in-scope list
 task             variant     harness  hook      rank/live  matched terms
