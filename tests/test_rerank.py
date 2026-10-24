@@ -156,3 +156,47 @@ def test_load_model_serialises_concurrent_first_loads(monkeypatch):
     for th in threads:
         th.join()
     assert calls == ["m"] and "HF_HUB_OFFLINE" not in os.environ
+
+
+def test_both_loaders_share_one_lock_and_one_offline_switch(monkeypatch):
+    """An offline reranker load and an online embedder load at the same time: each sees the
+    switch it asked for throughout its load, and the switch is as it was afterwards. Two
+    locks would let one loader restore the other's value (review on #271)."""
+    import threading
+    import types
+
+    from okl import semantic
+
+    seen = {}
+
+    class Encoder:
+        def __init__(self, model_name):
+            seen["rerank-start"] = os.environ.get("HF_HUB_OFFLINE")
+            threading.Event().wait(0.05)
+            seen["rerank-end"] = os.environ.get("HF_HUB_OFFLINE")
+
+    class Static:
+        @staticmethod
+        def from_pretrained(model_id):
+            seen["embed-start"] = os.environ.get("HF_HUB_OFFLINE")
+            threading.Event().wait(0.05)
+            seen["embed-end"] = os.environ.get("HF_HUB_OFFLINE")
+            return object()
+
+    fe = types.ModuleType("fastembed.rerank.cross_encoder"); fe.TextCrossEncoder = Encoder
+    m2v = types.ModuleType("model2vec"); m2v.StaticModel = Static
+    for name, mod in (("fastembed", types.ModuleType("fastembed")), ("fastembed.rerank", types.ModuleType("fastembed.rerank")),
+                      ("fastembed.rerank.cross_encoder", fe), ("model2vec", m2v)):
+        monkeypatch.setitem(sys.modules, name, mod)
+    monkeypatch.setattr(rerank, "_LOADED", {})
+    monkeypatch.setattr(semantic, "_LOADED", {})
+    monkeypatch.delenv("HF_HUB_OFFLINE", raising=False)
+    threads = [threading.Thread(target=rerank.load_model, kwargs={"model_id": "r", "offline": True}),
+               threading.Thread(target=semantic.load_model, kwargs={"model_id": "s", "offline": False})]
+    for th in threads:
+        th.start()
+    for th in threads:
+        th.join()
+    assert seen["rerank-start"] == seen["rerank-end"] == "1"
+    assert seen["embed-start"] is None and seen["embed-end"] is None
+    assert "HF_HUB_OFFLINE" not in os.environ
