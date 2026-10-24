@@ -699,6 +699,25 @@ def test_seed_refresh_does_not_read_a_bundled_pack_over_a_same_named_local_file(
     assert Client().get("seed:python-canon:py_pyproject_versions")["title"] == "OUR wording"
 
 
+def test_seed_refresh_in_the_checkout_reads_its_own_seed_dir_as_bundled(tmp_path, monkeypatch, capsys):
+    """In okl's own checkout the bundled packs ARE ./seed; the no-path refresh must read them,
+    not call them a local collision and refuse (review on #276)."""
+    from okl.cli import main, packs
+    from okl.client import Client
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".okl").mkdir(); (tmp_path / "seed").mkdir()
+    (tmp_path / ".okl" / "config.json").write_text('{"repo": "r", "database_url": "sqlite:///okl.db", "interests": ["python"]}')
+    monkeypatch.delenv("OKL_DATABASE_URL", raising=False); monkeypatch.delenv("OKL_SERVICE_URL", raising=False)
+    (tmp_path / "seed" / "mine.json").write_text(json.dumps({"nodes": [
+        {"key": "k", "type": "Rule", "scope": "org", "repo": "r", "title": "pack wording"}]}))
+    monkeypatch.setattr(packs, "_bundled_seed_dir", lambda: tmp_path / "seed")
+    Client().record(id="seed:mine:k", type="Rule", title="stale", scope="org", repo=None)
+    assert main(["seed", "--refresh"]) == 0
+    out = capsys.readouterr()
+    assert "refreshed 1 of 1" in out.out and "shares the bundled pack" not in out.err
+    assert Client().get("seed:mine:k")["title"] == "pack wording"
+
+
 def test_reseeding_keeps_verification_unless_the_governed_files_change(store, tmp_path):
     """#110: okl seed went through record(), which replaced the row, so every re-seed
     re-stamped each lesson as verified now and wiped its evidence and commit. A repo that

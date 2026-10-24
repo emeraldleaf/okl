@@ -242,7 +242,9 @@ def _seed_targets(args: argparse.Namespace, seed_dir: Path, present: set[str]) -
         # would overwrite the repo's (review on #276). A same-named file in the repo's
         # conventional places wins by being skipped: the user names the source they mean.
         stems = {i.split(":")[1] for i in present if i.startswith("seed:") and i.count(":") >= 2}
-        local = {s: p for s in stems for p in (Path("seed") / f"{s}.json", Path(f"{s}.json")) if p.is_file()}
+        # In okl's own checkout the bundled dir IS ./seed, which is no collision (review on #276).
+        local = {s: p for s in stems for p in (Path("seed") / f"{s}.json", Path(f"{s}.json"))
+                 if p.is_file() and p.resolve() != (seed_dir / f"{s}.json").resolve()}
         bundled_stems = {s for s in stems if (seed_dir / f"{s}.json").is_file()}
         targets = sorted(str(seed_dir / f"{s}.json") for s in bundled_stems - set(local))
         for _s, p in sorted(local.items()):
