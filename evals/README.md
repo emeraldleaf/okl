@@ -45,7 +45,7 @@ reads these variables:
   them; default empty, the one-shot generator every section through §4q used. `"Bash(okl
   show:*)"` with `--arms baseline,briefed,indexed` is REPORT §4r's instrument: an `okl` shim
   on the generator's PATH logs each fetch, and the receipt says which lessons each sample
-  read. `--tasks evals/heldout_tasks.jsonl` (from `evals/make_heldout_tasks.py`) runs the 24
+  read. `nearmiss` (the briefing plus `--near-misses`, §4s) is a fourth arm. `--tasks evals/heldout_tasks.jsonl` (from `evals/make_heldout_tasks.py`) runs the 24
   held-out rephrasings instead of the eight authored tasks; `--accept-missing-lessons` lets
   such a run start although some briefings lack their governing lesson, and the receipt lists
   them (`preflight_missing`). The gate always reads the task file the run executes.

@@ -41,6 +41,7 @@ class CheckReq(BaseModel):
     interests: list[str] | None = None   # the calling repo's declared subject tags
     hybrid: str | None = None            # None, "rrf" or "linear" (#258); the service's own vectors
     index: bool = False                  # the index arm (REPORT §4r)
+    near_misses: bool = False            # the near-miss arm (REPORT §4s)
 
 
 class RecordReq(BaseModel):
@@ -205,7 +206,8 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901, PLR0915 - 
     def check(req: CheckReq, authorization: str | None = Header(default=None)) -> dict[str, Any]:
         _auth(authorization)
         result = core.check(_store, req.repo, req.task, limit=req.limit,
-                            interests=req.interests, hybrid=req.hybrid, index=req.index)
+                            interests=req.interests, hybrid=req.hybrid, index=req.index,
+                            near_misses=req.near_misses)
         # The service is the only party that sees every client's briefings (#129).
         core.record_briefing(_store, req.repo, result)
         return result

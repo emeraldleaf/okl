@@ -141,9 +141,12 @@ def briefing_terms(task: str) -> list[str]:
     return out if any(len(w) >= 3 for w in out) else []
 
 
+NEAR_MISSES = 12   # the most records the near-miss list names: one line each, about 120 characters
+
+
 def check(store: Store, repo: str, task: str, limit: int = 12,
           interests: list[str] | None = None, *, hybrid: str | None = None,
-          index: bool = False) -> dict[str, Any]:
+          index: bool = False, near_misses: bool = False) -> dict[str, Any]:
     """Return the slice of the encoded body relevant to starting `task` in `repo`.
 
     Matches on the task text across all node types, then buckets by type so the
@@ -162,7 +165,10 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
 
     `index` adds every other live lesson this repo may see, as id and title, so an agent
     can fetch one by id when the briefing did not select it (#258's first vectorless arm,
-    REPORT §4r). It is a treatment under measurement, off by default.
+    REPORT §4r: measured, the agent did not fetch). `near_misses` adds instead only the
+    records that matched the task and were left out, by the floor or the cutoff, as id and
+    title, at most NEAR_MISSES of them (REPORT §4s). Both are treatments under measurement,
+    off by default.
     When asked for and not possible here (no extra, no cached model, no vectors) the
     briefing is the full-text one and `hybrid_unavailable` in the result says why.
     """
@@ -186,6 +192,7 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     # when it shares two subject words with the task, or one that is in its title or symptom
     # (or is a one-word alias), or one when the task has only one word. Trimmed records are counted, not hidden: the
     # briefing says how many weak matches it left out.
+    candidates = hits
     hits, matched, weak = _apply_floor(store, hits, briefing_terms(task), cand)
     # The floor can empty a full window: when every fetched record was weak, a qualifying
     # one ranked just past the window would read as "no close match". Widen the fetch,
@@ -195,6 +202,7 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     while len(hits) < limit and not exhausted and window < limit * 27:
         window *= 3
         wider, replaced, exhausted, cand = _live_hits(store, task, window, repo_scope, interests, hybrid=hybrid)
+        candidates = wider
         hits, matched, weak = _apply_floor(store, wider, briefing_terms(task), cand)
     # THE CUTOFF. store.search returns BM25-ranked results, but full-text matching is
     # permissive: on a mature store a plausible task matches most of it, so without a
@@ -203,6 +211,10 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     # the recorded defect "ranking works, filtering doesn't" — raise `limit` when a task
     # genuinely needs more, rather than removing the cap.
     dropped = max(0, len(hits) - limit)
+    kept_ids = {n.id for n in hits[:limit]}
+    # What matched and was left out, in rank order: the cutoff's tail first (it passed the
+    # floor), then the floor's weak matches. The near-miss list (REPORT §4s) is drawn from it.
+    left_out = [n for n in candidates if n.id not in kept_ids and n.status not in RETIRED_STATUSES]
     hits = hits[:limit]
 
     buckets = _bucket_by_type(hits)
@@ -231,6 +243,8 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     # with the result. Only computed on the (rare) empty-result path.
     if total == 0:
         out["store_records"] = len(store.all_nodes())
+    if near_misses:
+        out["near_misses"] = [{"id": n.id, "title": n.title} for n in left_out[:NEAR_MISSES]]
     if index:
         briefed = {pub["id"] for recs in buckets.values() for pub in recs}
         out["index"] = sorted(
@@ -992,6 +1006,14 @@ def render_check_for_agent(result: dict[str, Any]) -> str:
     if result.get("dropped_by_cutoff"):
         lines.append(f"> {result['dropped_by_cutoff']} lower-ranked record(s) were trimmed to keep this "
                      "briefing short. Raise --limit or narrow the task if you expected more.")
+    if result.get("near_misses"):
+        # The near-miss arm (REPORT §4s): what matched and was left out, one line each, so a
+        # title can carry its lesson and the agent can fetch the record if it fits.
+        lines.append("")
+        lines.append(f"### Near misses ({len(result['near_misses'])}): matched this task and were left out. "
+                     "If one fits, read it with `okl show <id>` before you write code.")
+        lines += [f"- [{e['id']}] {e['title']}" for e in result["near_misses"]]
+        lines.append("")
     if result.get("index"):
         # The index arm (REPORT §4r): every other lesson in scope, one line each, so the agent
         # can fetch what the search did not select. The instruction is part of the treatment.
@@ -1332,12 +1354,12 @@ def briefed_ids(result: dict[str, Any]) -> list[str]:
 
     Read from the type buckets, where every briefed record sits exactly once.
     next_actions and stale_warnings are skipped: both repeat records already counted; so is
-    "index", which names lessons by id and title without showing them (review on #269).
+    "index" and "near_misses", which name lessons by id and title without showing them (#269, §4s).
     """
     ids: dict[str, None] = {}
     for key, items in result.items():
         # "replaced" holds superseded lessons the briefing pointed past, not ones it showed.
-        if key in ("next_actions", "stale_warnings", "replaced", "index") or not isinstance(items, list):
+        if key in ("next_actions", "stale_warnings", "replaced", "index", "near_misses") or not isinstance(items, list):
             continue
         for item in items:
             if isinstance(item, dict) and item.get("id"):

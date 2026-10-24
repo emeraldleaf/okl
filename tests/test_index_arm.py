@@ -44,6 +44,23 @@ def test_the_index_lists_every_other_live_lesson_in_scope(store):
     assert core.briefed_ids(res) == [a]
 
 
+def test_near_misses_name_what_matched_and_was_left_out(store):
+    """The near-miss list (REPORT §4s) holds the records the floor or the cutoff left out, in
+    rank order, never a briefed one, at most NEAR_MISSES; the agent format prints it."""
+    kept = core.record(store, type="Rule", title="orders endpoint ownership", scope="org",
+                       symptom="an orders endpoint fetches by id with no owner check")
+    weak = core.record(store, type="Rule", title="pagination caps", scope="org",
+                       body="every list endpoint paginates")      # shares one word, outside the subject
+    res = core.check(store, repo="r", task="add an orders endpoint that fetches one order by id for the owner",
+                     near_misses=True)
+    assert [x["id"] for x in res["rules"]] == [kept]
+    assert res["near_misses"] == [{"id": weak, "title": "pagination caps"}]
+    text = core.render_check_for_agent(res)
+    assert "Near misses (1)" in text and f"- [{weak}] pagination caps" in text
+    assert "near_misses" not in core.check(store, repo="r", task="add an orders endpoint for the owner")
+    assert core.briefed_ids(res) == [kept]
+
+
 def test_okl_check_index_flag_appends_the_index(tmp_path):
     """`okl check --index` carries the index in the JSON and the agent format."""
     env = {k: v for k, v in os.environ.items() if k not in ("OKL_SERVICE_URL", "OKL_TOKEN")}
@@ -53,6 +70,9 @@ def test_okl_check_index_flag_appends_the_index(tmp_path):
     assert okl("record", "--type", "Rule", "--title", "pagination", "--scope", "org", "--id", "p").returncode == 0
     out = json.loads(okl("check", "--repo", "r", "--interests", "", "--format", "json", "--index", "--task", "add a login form").stdout)
     assert out["index"] == [{"id": "p", "title": "pagination"}]
+    near = json.loads(okl("check", "--repo", "r", "--interests", "", "--format", "json", "--near-misses",
+                          "--task", "pagination of the login list page").stdout)
+    assert "near_misses" in near
     assert "- [p] pagination" in okl("check", "--repo", "r", "--interests", "", "--index", "--task", "add a login form").stdout
 
 
