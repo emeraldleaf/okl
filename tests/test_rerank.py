@@ -140,7 +140,7 @@ def test_load_model_serialises_concurrent_first_loads(monkeypatch):
     calls = []
 
     class Encoder:
-        def __init__(self, model_name):
+        def __init__(self, model_name, cache_dir=None):
             calls.append(model_name)
             threading.Event().wait(0.05)
 
@@ -170,7 +170,7 @@ def test_both_loaders_share_one_lock_and_one_offline_switch(monkeypatch):
     seen = {}
 
     class Encoder:
-        def __init__(self, model_name):
+        def __init__(self, model_name, cache_dir=None):
             seen["rerank-start"] = os.environ.get("HF_HUB_OFFLINE")
             threading.Event().wait(0.05)
             seen["rerank-end"] = os.environ.get("HF_HUB_OFFLINE")
@@ -200,3 +200,36 @@ def test_both_loaders_share_one_lock_and_one_offline_switch(monkeypatch):
     assert seen["rerank-start"] == seen["rerank-end"] == "1"
     assert seen["embed-start"] is None and seen["embed-end"] is None
     assert "HF_HUB_OFFLINE" not in os.environ
+
+
+def test_the_reranker_is_cached_under_the_cache_home_not_the_temp_dir(monkeypatch, tmp_path):
+    """fastembed's default cache is the system temp directory, which macOS prunes; okl passes
+    an explicit directory under the cache home, and honours fastembed's own override."""
+    import types
+
+    from okl import hub
+
+    seen = {}
+
+    class Encoder:
+        def __init__(self, model_name, cache_dir=None):
+            seen["cache_dir"] = cache_dir
+
+    fe = types.ModuleType("fastembed.rerank.cross_encoder"); fe.TextCrossEncoder = Encoder
+    for name, mod in (("fastembed", types.ModuleType("fastembed")), ("fastembed.rerank", types.ModuleType("fastembed.rerank")),
+                      ("fastembed.rerank.cross_encoder", fe)):
+        monkeypatch.setitem(sys.modules, name, mod)
+    monkeypatch.delenv("FASTEMBED_CACHE_PATH", raising=False)
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "xdg"))
+    monkeypatch.setattr(rerank, "_LOADED", {})
+    rerank.load_model("m")
+    assert seen["cache_dir"] == str(tmp_path / "xdg" / "okl" / "models")   # pytest's tmp is itself under $TMPDIR
+
+    monkeypatch.delenv("XDG_CACHE_HOME")
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    assert hub.model_cache_dir() == tmp_path / "home" / ".cache" / "okl" / "models"
+
+    monkeypatch.setenv("FASTEMBED_CACHE_PATH", str(tmp_path / "theirs"))
+    monkeypatch.setattr(rerank, "_LOADED", {})
+    rerank.load_model("m")
+    assert seen["cache_dir"] == str(tmp_path / "theirs")

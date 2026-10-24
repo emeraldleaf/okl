@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **The reranker's model is cached under the cache home, not the system temp directory.** fastembed's default cache is `$TMPDIR/fastembed_cache`, which macOS prunes on its own schedule, so a model that loaded offline one day was "not cached" the next and `okl check --rerank` fell back to the first-stage order. `okl embed` now fetches it to `$XDG_CACHE_HOME/okl/models` (`~/.cache/okl/models`), or to `FASTEMBED_CACHE_PATH` when that is set. The embedder is unaffected (model2vec reads the Hugging Face hub cache). Run `okl embed` once online after upgrading; the old copy in the temp directory is not read.
+
 ## 0.8.9
 
 The retrieval work since 0.8.8, each step measured and most of it shipped off: a relevance

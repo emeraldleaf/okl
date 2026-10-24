@@ -16,8 +16,27 @@ import os
 import threading
 from collections.abc import Iterator
 from contextlib import contextmanager
+from pathlib import Path
 
 _LOCK = threading.Lock()
+
+
+def model_cache_dir() -> Path:
+    """Where okl keeps the models it fetches itself (today the reranker's ONNX files).
+
+    fastembed's default is the system temp directory, which macOS prunes on its own schedule,
+    so a model that loaded offline one day is "not cached" the next and the check-time load
+    fails. okl passes an explicit directory under the user's cache home instead:
+    FASTEMBED_CACHE_PATH when set (fastembed's own override, kept for people who manage that
+    cache), else $XDG_CACHE_HOME/okl/models, else ~/.cache/okl/models. The embedder is not
+    affected: model2vec reads the Hugging Face hub cache, which already lives under ~/.cache.
+    """
+    override = os.environ.get("FASTEMBED_CACHE_PATH")
+    if override:
+        return Path(override).expanduser()
+    base = os.environ.get("XDG_CACHE_HOME")
+    root = Path(base).expanduser() if base else Path.home() / ".cache"
+    return root / "okl" / "models"
 
 
 @contextmanager
