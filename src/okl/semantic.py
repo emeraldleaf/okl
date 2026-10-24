@@ -25,6 +25,7 @@ from __future__ import annotations
 import hashlib
 import os
 import struct
+import threading
 from typing import Any
 
 from .store import Node, Store
@@ -58,6 +59,7 @@ def text_hash(text: str) -> str:
 # per process: a hook pays it per prompt, but the MCP server, the service and the probe
 # are long-lived and must not pay it per check.
 _LOADED: dict[str, Any] = {}
+_LOAD_LOCK = threading.Lock()   # the load sets and restores a process-wide env var (review on #271)
 
 
 def load_model(model_id: str = MODEL_ID, *, offline: bool = True) -> Any:
@@ -66,6 +68,11 @@ def load_model(model_id: str = MODEL_ID, *, offline: bool = True) -> Any:
     `offline` is the check-time rule: a briefing must never wait on the network, so the
     model comes from the local cache or not at all. `okl embed` passes offline=False.
     """
+    with _LOAD_LOCK:
+        return _load_model(model_id, offline=offline)
+
+
+def _load_model(model_id: str, *, offline: bool) -> Any:
     if model_id in _LOADED:
         return _LOADED[model_id]
     # The tokenizer's thread pool warns in any process that forks after encoding (the probe

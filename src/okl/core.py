@@ -344,8 +344,9 @@ def _live_hits(store: Store, task: str, limit: int, repo_scope: str,
     if not briefing_terms(task):
         # Nothing to search on, so neither arm ran; when the semantic arm was asked for, the
         # result must not report it as on (review on #267).
-        note = "the task has no subject words to search" if hybrid else None
-        return [], [], True, Candidates([], {}, frozenset(), note, True)
+        note = "the task has no subject words to search"
+        return [], [], True, Candidates([], {}, frozenset(), note if hybrid else None, True,
+                                        rerank_note=note if rerank else None)
     fetch = limit * 3
     for _ in range(3):
         cand = ranked_candidates(store, task, fetch, hybrid, rerank=rerank)

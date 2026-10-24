@@ -1,6 +1,10 @@
 """The cross-encoder second stage (REPORT §4t), with a stub model so the suite needs no ML stack."""
 from __future__ import annotations
 
+import argparse
+import os
+import sys
+
 import pytest
 
 from okl import core, rerank
@@ -93,3 +97,62 @@ def test_rerank_setting_reads_the_environment_over_the_config():
     assert rerank_setting("off", True) is False and rerank_setting("1", None) is True
     with pytest.raises(ValueError, match="rerank"):
         rerank_setting("maybe", None)
+
+
+def test_check_reports_the_reranker_off_when_the_task_has_no_subject_words(store, monkeypatch):
+    """A task with nothing to search on runs no stage; the result must not say the second
+    stage ran (review on #271)."""
+    monkeypatch.setattr(rerank, "load_model", lambda *a, **k: FakeEncoder())
+    res = core.check(store, repo="r", task="the of and", rerank=True)
+    assert res["rerank"] is False and "no subject words" in res["rerank_unavailable"]
+
+
+def test_embed_caches_the_reranker_without_the_embedding_extra(tmp_path, monkeypatch, capsys):
+    """An install with only the rerank extra still needs `okl embed` to fetch its model: the
+    embedding step's failure is reported and the command goes on to the reranker, exiting 2
+    for the step that failed (review on #271)."""
+    from okl import semantic
+    from okl.cli.embed import cmd_embed
+
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".okl").mkdir()
+    (tmp_path / ".okl" / "config.json").write_text('{"repo": "r", "database_url": "sqlite:///:memory:"}')
+    monkeypatch.delenv("OKL_DATABASE_URL", raising=False)
+    monkeypatch.delenv("OKL_SERVICE_URL", raising=False)
+
+    def no_embedder(store):
+        raise semantic.SemanticUnavailableError("the hybrid extra is not installed")
+    monkeypatch.setattr(semantic, "build_index", no_embedder)
+    loaded = []
+    monkeypatch.setattr(rerank, "load_model", lambda *a, **k: loaded.append(k) or FakeEncoder())
+    rc = cmd_embed(argparse.Namespace())
+    out = capsys.readouterr()
+    assert rc == 2 and "NOT EMBEDDED" in out.err
+    assert loaded == [{"offline": False}] and "reranker" in out.out
+
+
+def test_load_model_serialises_concurrent_first_loads(monkeypatch):
+    """Two threads loading at once must not race on the process-wide offline flag: the second
+    waits for the first and finds the cache (review on #271)."""
+    import threading
+    import types
+
+    calls = []
+
+    class Encoder:
+        def __init__(self, model_name):
+            calls.append(model_name)
+            threading.Event().wait(0.05)
+
+    fake = types.ModuleType("fastembed.rerank.cross_encoder"); fake.TextCrossEncoder = Encoder
+    monkeypatch.setitem(sys.modules, "fastembed", types.ModuleType("fastembed"))
+    monkeypatch.setitem(sys.modules, "fastembed.rerank", types.ModuleType("fastembed.rerank"))
+    monkeypatch.setitem(sys.modules, "fastembed.rerank.cross_encoder", fake)
+    monkeypatch.setattr(rerank, "_LOADED", {})
+    monkeypatch.delenv("HF_HUB_OFFLINE", raising=False)
+    threads = [threading.Thread(target=rerank.load_model, kwargs={"model_id": "m"}) for _ in range(4)]
+    for th in threads:
+        th.start()
+    for th in threads:
+        th.join()
+    assert calls == ["m"] and "HF_HUB_OFFLINE" not in os.environ

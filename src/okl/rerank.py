@@ -16,6 +16,7 @@ reranker orders and the relevance floor still decides (§4t).
 from __future__ import annotations
 
 import os
+import threading
 from typing import Any
 
 from .store import Node
@@ -25,6 +26,7 @@ EXTRA = "observed-knowledge-ledger[rerank]"
 RERANK_POOL = 24   # pairs scored per check: the fused top 24, about 0.6 s on a laptop CPU
 
 _LOADED: dict[str, Any] = {}
+_LOAD_LOCK = threading.Lock()   # the load sets and restores a process-wide env var (review on #271)
 
 
 class RerankUnavailableError(RuntimeError):
@@ -40,8 +42,14 @@ def load_model(model_id: str = MODEL_ID, *, offline: bool = True) -> Any:
     """The cross-encoder, loaded once per process, or RerankUnavailableError with the remedy.
 
     `offline` is the check-time rule: the model comes from the local cache or not at all;
-    `okl embed` passes offline=False to fetch it once.
+    `okl embed` passes offline=False to fetch it once. One load at a time: the service runs
+    checks on a thread pool, and two first loads would race on HF_HUB_OFFLINE below.
     """
+    with _LOAD_LOCK:
+        return _load_model(model_id, offline=offline)
+
+
+def _load_model(model_id: str, *, offline: bool) -> Any:
     if model_id in _LOADED:
         return _LOADED[model_id]
     # The tokenizer's thread pool warns, loudly, in any process that forks after scoring (the
