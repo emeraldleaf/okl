@@ -360,10 +360,11 @@ whole corpus to the twelve records an agent reads. Two stages can drop a record 
 about, and only one of them is entitled to — the distinction that this project got wrong once
 and measured its way out of ([REPORT §4d](evals/REPORT.md)). A third drops on relevance: a
 record that shares only one subject word with a task of several, outside its title and
-symptom (a one-word alias matched whole counts as either), is left out and counted, so a short or generic prompt is no longer answered with twelve lessons
+symptom, or inside them when more than one record in twenty carries that word (a one-word
+alias matched whole counts as a subject word), is left out and counted, so a short or generic prompt is no longer answered with twelve lessons
 chosen by a word in common ([the probe](evals/results/probe-rephrase-20261021.txt), #257).
 
-<img src="docs/okl-retrieval-pipeline.svg" alt="The corpus; the task's subject words; a BM25 fetch of three times the limit; a scope gate; the exclusive applies_to filter; the inclusive tags-times-interests filter; the relevance floor of two shared subject words or one in the title or symptom or a one-word alias, with retired lessons out; a top-12 cutoff; bucketing by type; and rendering. Each stage shows how many records survive it." width="100%">
+<img src="docs/okl-retrieval-pipeline.svg" alt="The corpus; the task's subject words; a BM25 fetch of three times the limit; a scope gate; the exclusive applies_to filter; the inclusive tags-times-interests filter; the relevance floor of two shared subject words, one in the title or symptom that at most one record in twenty shares, or a one-word alias, with retired lessons out; a top-12 cutoff; bucketing by type; and rendering. Each stage shows how many records survive it." width="100%">
 
 With the optional semantic arm on (`okl check --hybrid`), a second candidate source joins
 before the gates: the task as one vector, its nearest records by cosine, and a fusion of the

@@ -229,10 +229,13 @@ def test_a_common_title_word_admits_only_when_the_knob_allows_it(monkeypatch):
     aliased = core.record(s, type="Rule", title="browser token storage", scope="org", aliases="doc")
     hits = [s.get_node(i) for i in [*ids, pkce, aliased]]
     cand = core.Candidates(hits, {}, frozenset(n.id for n in hits), None, False)
-    assert core.COMMON_WORD_SHARE is None
+    monkeypatch.setattr(core, "COMMON_WORD_SHARE", None)
     kept, _m, _w = core._apply_floor(s, hits, ["doc", "pkce"], cand)
-    assert {n.id for n in kept} == {*ids, pkce, aliased}          # any title word admits today
+    assert {n.id for n in kept} == {*ids, pkce, aliased}          # §4n's rule: any title word admits
     monkeypatch.setattr(core, "COMMON_WORD_SHARE", 0.5)
+    kept, _m, _w = core._apply_floor(s, hits, ["doc", "pkce"], cand)
+    assert {n.id for n in kept} == {*ids, pkce, aliased}          # four records is under the absolute minimum
+    monkeypatch.setattr(core, "COMMON_WORD_MIN_RECORDS", 3)
     kept, _m, weak = core._apply_floor(s, hits, ["doc", "pkce"], cand)
     assert {n.id for n in kept} == {pkce, aliased} and weak == 4   # "doc" is in 4 of 6: too common; the alias still counts
     kept, _m, _w = core._apply_floor(s, hits, ["doc", "rule"], cand)

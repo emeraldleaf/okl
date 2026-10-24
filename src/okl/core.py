@@ -143,7 +143,7 @@ def briefing_terms(task: str) -> list[str]:
     return out if any(len(w) >= 3 for w in out) else []
 
 
-NEAR_MISSES = 12
+NEAR_MISSES = 12   # the most records the near-miss list names: one line each, about 120 characters
 # The first stage's window: each arm fetches FETCH_MULTIPLIER times the limit (REPORT §4u grids it).
 FETCH_MULTIPLIER = 3
 # The floor's word rule for a candidate only the semantic arm returned: None is §4q's rule
@@ -155,7 +155,10 @@ SEMANTIC_WORD_FLOOR: int | None = None
 # §4v (#277): a single shared word in a record's title or symptom admits the record only when
 # that word is in at most this share of the store's live records; None is §4n's rule (any such
 # word). Two shared words, and a one-word alias matched whole, admit regardless.
-COMMON_WORD_SHARE: float | None = None   # the most records the near-miss list names: one line each, about 120 characters
+COMMON_WORD_SHARE: float | None = 0.05
+# A word is "common" only past this many records as well as past the share: in a store of a
+# dozen records every word is in a large share, and calling one generic would be unjustified.
+COMMON_WORD_MIN_RECORDS = 5
 
 
 def check(store: Store, repo: str, task: str, limit: int = 12,
@@ -320,7 +323,7 @@ def _alias_words(words: list[str], n: Node) -> list[str]:
     return [w for w in words if w in single]
 
 
-def _subject_admits(words: list[str], n: Node, share_of: Callable[[str], float]) -> bool:
+def _subject_admits(words: list[str], n: Node, is_common: Callable[[str], bool]) -> bool:
     """The one-word rule: a word in the record's title or symptom, or a one-word alias, says
     the record is on the task's subject. With COMMON_WORD_SHARE set, a title or symptom word
     counts only when it is specific enough, in at most that share of the store's live records,
@@ -331,7 +334,7 @@ def _subject_admits(words: list[str], n: Node, share_of: Callable[[str], float])
     subject = _subject_words(words, n)
     if COMMON_WORD_SHARE is None:
         return bool(subject)
-    return any(share_of(w) <= COMMON_WORD_SHARE for w in subject)
+    return any(not is_common(w) for w in subject)
 
 
 def n_symptom(n: Node) -> str:
@@ -365,11 +368,11 @@ def _apply_floor(store: Store, hits: list[Node], terms: list[str],
     near = cand.scores if cand else {}
     lexical = cand.lexical if cand else frozenset(n.id for n in hits)
     matched = {n.id: _matched_terms(words, n) for n in hits}
-    share_of = _share_counter(store) if COMMON_WORD_SHARE is not None else (lambda _w: 0.0)
+    is_common = _common_word_test(store) if COMMON_WORD_SHARE is not None else (lambda _w: False)
     strong = {n.id for n in hits
               if near.get(n.id, 0.0) >= semantic.SUBJECT_SIMILARITY
               or (n.id in lexical and (len(matched[n.id]) >= floor
-                                       or bool(matched[n.id]) and _subject_admits(matched[n.id], n, share_of)))
+                                       or bool(matched[n.id]) and _subject_admits(matched[n.id], n, is_common)))
               or (n.id not in lexical and SEMANTIC_WORD_FLOOR is not None
                   and len(matched[n.id]) >= max(SEMANTIC_WORD_FLOOR, floor))}
     if not strong:
@@ -380,20 +383,21 @@ def _apply_floor(store: Store, hits: list[Node], terms: list[str],
     return kept, matched, len(hits) - len(kept)
 
 
-def _share_counter(store: Store) -> Callable[[str], float]:
-    """How common a word is: the share of the store's live records whose prose holds it whole,
-    counted once per word per call. A scan of the store, which is a few milliseconds at a few
-    hundred records; a count from the full-text index is the version for a large store, if §4v
-    earns the rule a default."""
+def _common_word_test(store: Store) -> Callable[[str], bool]:
+    """Whether a word is too common to name a subject on its own: in more than
+    COMMON_WORD_MIN_RECORDS of the store's live records and in more than COMMON_WORD_SHARE of
+    them, counted once per word per call (§4v). A scan of the store, a few milliseconds at a
+    few hundred records; a count from the full-text index is the version for a large store."""
     live = [m for m in store.all_nodes() if m.status not in RETIRED_STATUSES]
     total = max(len(live), 1)
-    seen: dict[str, float] = {}
+    seen: dict[str, bool] = {}
 
-    def share(word: str) -> float:
+    def is_common(word: str) -> bool:
         if word not in seen:
-            seen[word] = sum(1 for m in live if _matched_terms([word], m)) / total
+            count = sum(1 for m in live if _matched_terms([word], m))
+            seen[word] = count > COMMON_WORD_MIN_RECORDS and count / total > (COMMON_WORD_SHARE or 1.0)
         return seen[word]
-    return share
+    return is_common
 
 
 def _live_hits(store: Store, task: str, limit: int, repo_scope: str,

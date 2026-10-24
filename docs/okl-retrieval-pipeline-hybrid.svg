@@ -90,13 +90,13 @@
 <rect x="28" y="922" width="74" height="90" fill="#EBE7E1" stroke="#DCD6CE"/>
 <text x="65" y="960" font-size="26" font-weight="700" fill="#B4531F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle">6</text>
 <text x="65" y="978" font-size="9" fill="#7C736A" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle" letter-spacing="1">FLOOR</text>
-<text x="120" y="947" font-size="15" font-weight="600" fill="#1E1B18">Two shared words, one in the title or symptom, or a cosine at or above 0.40</text>
-<text x="120" y="966" font-size="12" fill="#4E4740">Only-by-embedding records count by meaning alone (1 kept so). A single shared word outside</text>
+<text x="120" y="947" font-size="15" font-weight="600" fill="#1E1B18">Two shared words, one in the title or symptom that at most 5% of records share, or a cosine at or above 0.40</text>
+<text x="120" y="966" font-size="12" fill="#4E4740">Only-by-embedding records count by meaning alone (0 kept so). A single shared word outside</text>
 <text x="120" y="981" font-size="12" fill="#4E4740">title and symptom is left out and counted, unless it links to a kept record.</text>
 <text x="938" y="947" font-size="9.5" fill="#9B3B3B" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="700" text-anchor="end" letter-spacing="0.8">DROPS</text>
-<text x="120" y="992" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">18 survive</text>
-<text x="938" y="992" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A" text-anchor="end">17 dropped: one shared word, 0 retired</text>
-<rect x="120" y="998" width="818" height="9" rx="2" fill="#EBE7E1"/><rect x="120" y="998" width="268" height="9" rx="2" fill="#B4531F"/><rect x="388" y="998" width="253" height="9" rx="2" fill="#9B3B3B" opacity="0.4"/>
+<text x="120" y="992" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">14 survive</text>
+<text x="938" y="992" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A" text-anchor="end">21 dropped: one shared word, 0 retired</text>
+<rect x="120" y="998" width="818" height="9" rx="2" fill="#EBE7E1"/><rect x="120" y="998" width="208" height="9" rx="2" fill="#B4531F"/><rect x="328" y="998" width="312" height="9" rx="2" fill="#9B3B3B" opacity="0.4"/>
 <rect x="28" y="1018" width="924" height="90" fill="#FFFFFF" stroke="#DCD6CE"/>
 <rect x="28" y="1018" width="74" height="90" fill="#EBE7E1" stroke="#DCD6CE"/>
 <text x="65" y="1056" font-size="26" font-weight="700" fill="#B4531F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle">7</text>
@@ -106,8 +106,8 @@
 <text x="120" y="1077" font-size="12" fill="#4E4740">with the result.</text>
 <text x="938" y="1043" font-size="9.5" fill="#9B3B3B" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="700" text-anchor="end" letter-spacing="0.8">TRUNCATES</text>
 <text x="120" y="1088" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">12 delivered</text>
-<text x="938" y="1088" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A" text-anchor="end">6 trimmed</text>
-<rect x="120" y="1094" width="818" height="9" rx="2" fill="#EBE7E1"/><rect x="120" y="1094" width="178" height="9" rx="2" fill="#B4531F"/><rect x="298" y="1094" width="89" height="9" rx="2" fill="#9B3B3B" opacity="0.4"/>
+<text x="938" y="1088" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A" text-anchor="end">2 trimmed</text>
+<rect x="120" y="1094" width="818" height="9" rx="2" fill="#EBE7E1"/><rect x="120" y="1094" width="178" height="9" rx="2" fill="#B4531F"/><rect x="298" y="1094" width="30" height="9" rx="2" fill="#9B3B3B" opacity="0.4"/>
 <rect x="28" y="1114" width="924" height="90" fill="#FFFFFF" stroke="#DCD6CE"/>
 <rect x="28" y="1114" width="74" height="90" fill="#EBE7E1" stroke="#DCD6CE"/>
 <text x="65" y="1152" font-size="26" font-weight="700" fill="#B4531F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle">8</text>
