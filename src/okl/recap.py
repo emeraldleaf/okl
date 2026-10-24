@@ -239,12 +239,34 @@ def report(store: Any, repo: str, repo_dir: str, *, since_ms: int, now_ms: int,
     runs = sorted(((n, c) for n in nodes for c in store.checks(n.id) if c.at >= since_ms), key=lambda p: p[1].at)
     since_iso = _ms_iso(since_ms)
     changed = governing(nodes, repo, changed_paths(repo_dir, since_iso))
-    hits, _checked = scan_drift(nodes, repo, repo_dir)
+    # `checked` is how many lessons drift could judge; zero is no evidence, not "all proven"
+    # (scan_drift's own rule, review on #281).
+    hits, checked = scan_drift(nodes, repo, repo_dir)
+    # The open loop (#279, review on #281): a lesson the briefing marked stale (its code changed
+    # since its last check) with no check run and no retirement at or after that showing. Advice
+    # with no check is "acted on" by being followed, which no log records, so it is only counted.
+    # An `okl update` would also close the loop, but it carries no time yet.
+    def after(first: dict[str, int]) -> set[str]:
+        done = {n.id for n, c in runs if c.at >= first.get(n.id, now_ms + 1)}
+        return done | {r["id"] for r in retired if r["at"] >= first.get(r["id"], now_ms + 1)}
+    first_shown: dict[str, int] = {}
+    first_stale: dict[str, int] = {}
+    for b in briefings:
+        for i in b.node_ids:
+            first_shown.setdefault(i, b.at)
+        for i in b.drifted_ids:
+            first_stale.setdefault(i, b.at)
+    quiet = sum(1 for i in shown if i in by_id and i not in after(first_shown))
+    stale_open = [(i, c) for i, c in stale.most_common() if i in by_id and i not in after(first_stale)]
     return {
         "repo": repo, "since": since_ms, "until": now_ms,
         "briefings": len(briefings), "lessons_shown": len(shown),
         "most_shown": [{"id": i, "title": title(i), "times": c} for i, c in shown.most_common(top)],
         "shown_stale": [{"id": i, "title": title(i), "times": c} for i, c in stale.most_common(top)],
+        "shown_stale_total": len(stale),
+        "stale_not_rechecked": [{"id": i, "title": title(i), "times": c} for i, c in stale_open[:top]],
+        "stale_not_rechecked_total": len(stale_open),
+        "shown_then_quiet": quiet,
         "recorded": sorted(({"id": n.id, "title": n.title, "type": n.type, "at": n.created_at}
                             for n in nodes if (n.created_at or 0) >= since_ms), key=lambda r: r["at"]),
         "retired": retired,
@@ -255,6 +277,7 @@ def report(store: Any, repo: str, repo_dir: str, *, since_ms: int, now_ms: int,
         "commits": len(_git_lines(repo_dir, "log", f"--since={since_iso}", "--format=%H")),
         "changed": [{"id": n.id, "title": n.title, "files": n.files} for n in changed],
         "stale_now": [{"id": h.node_id, "title": h.title, "reason": h.reason} for h in hits],
+        "drift_checked": checked,
     }
 
 
@@ -268,8 +291,11 @@ def render_report(r: dict[str, Any]) -> str:
     hours = (r["until"] - r["since"]) / 3_600_000
     out = [f"## okl session report · {r['repo']} · {span} (UTC{start[16:]}, {hours:.1f} h)", ""]
     out.append(f"**Briefings:** {r['briefings']} prompts briefed, {r['lessons_shown']} distinct lessons shown"
-               + (f", {len(r['shown_stale'])} of them while stale" if r["shown_stale"] else "") + ".")
+               + (f", {r['shown_stale_total']} of them while stale" if r["shown_stale_total"] else "") + ".")
     out += [f"- [{x['id']}] {x['title']} ({x['times']}×)" for x in r["most_shown"]]
+    if r["shown_then_quiet"]:
+        out.append(f"{r['shown_then_quiet']} of the lessons shown saw no check run or retirement afterwards; "
+                   "for advice that is normal, since following it leaves no record.")
     if r["shown_stale"]:
         out.append("\nShown while their code had changed since their last check:")
         out += [f"- [{x['id']}] {x['title']} ({x['times']}×)" for x in r["shown_stale"]]
@@ -284,11 +310,18 @@ def render_report(r: dict[str, Any]) -> str:
     out += [f"- {hm(x['at'])} [{x['id']}] {x['title']}: `{x['command'][:80]}` {x['outcome']}" for x in c["failed"]]
     out.append(f"\n**Code:** {r['commits']} commits; {len(r['changed'])} lessons govern files changed in the window.")
     out += [f"- [{x['id']}] {x['title']} (governs {x['files']})" for x in r["changed"]]
+    if r["stale_not_rechecked_total"]:
+        out.append(f"\n**Shown stale, not re-checked:** {r['stale_not_rechecked_total']} lessons. The briefing "
+                   "said their code had changed and nothing re-ran their check or retired them afterwards.")
+        out += [f"- [{x['id']}] {x['title']} ({x['times']}×)" for x in r["stale_not_rechecked"]]
     if r["stale_now"]:
         out.append(f"\n**Still open:** {len(r['stale_now'])} lessons are stale now. `okl reverify` re-runs their checks.")
         out += [f"- [{x['id']}] {x['title']}: {x['reason']}" for x in r["stale_now"]]
+    elif r["drift_checked"]:
+        out.append(f"\n**Still open:** nothing; the {r['drift_checked']} lessons that govern files are proven against them.")
     else:
-        out.append("\n**Still open:** nothing; every lesson that governs files is proven against them.")
+        out.append("\n**Still open:** unknown. Drift could judge no lesson here (none governs a file git can "
+                   "attribute), so this report cannot say what is proven.")
     out.append("\nNot covered yet: corrections made with `okl update`, which carry no timestamp, and "
                "anything a shared service logged.")
     return "\n".join(out) + "\n"

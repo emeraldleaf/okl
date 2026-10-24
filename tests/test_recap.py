@@ -250,6 +250,11 @@ def test_the_report_counts_what_happened_in_the_window(repo):
     assert [x["id"] for x in r["checks"]["failed"]] == ["once"]
     assert [x["id"] for x in r["changed"]] == ["pay-rule"]
     assert [x["id"] for x in r["stale_now"]] == ["pay-rule"]          # never verified, and governs a file
+    assert r["drift_checked"] == 1
+    # Briefed while stale (it governs a file and was never verified), and nothing re-checked it:
+    # the open loop the report lists.
+    assert r["shown_then_quiet"] == 1
+    assert [x["id"] for x in r["stale_not_rechecked"]] == ["pay-rule"]
     later = recap.report(store, "r", str(repo), since_ms=now - 1, now_ms=now)
     assert later["briefings"] == 0 and later["recorded"] == [] and later["retired"] == []
     assert later["checks"]["runs"] == 0
@@ -270,3 +275,26 @@ def test_recap_report_prints_markdown_or_json(repo, capsys):
     assert data["repo"] == "r" and data["briefings"] == 1
     assert main(["recap", "--report", "--since", "whenever"]) == 2
     assert "90m, 6h, 2d" in capsys.readouterr().err
+
+
+def test_the_report_counts_stale_showings_past_the_limit_and_says_when_drift_saw_nothing(tmp_path, monkeypatch):
+    """The stale count is the true total, not the listed top; a lesson shown stale and checked
+    afterwards has left the open loop; and with no git to judge by, the report says it cannot
+    tell what is proven rather than calling everything proven (review on #281)."""
+    from okl import core
+    from okl.store import Store
+    s = Store("sqlite:///:memory:")
+    for i in range(8):
+        core.record(s, id=f"l{i}", type="Rule", title=f"lesson {i}", scope="org")
+    s.log_briefing("r", [f"l{i}" for i in range(8)], drifted_ids=[f"l{i}" for i in range(8)])
+    s.log_check("l0", True, "pytest -q", "exit 0")                   # acted on after the briefing
+    not_git = tmp_path / "plain"; not_git.mkdir()
+    r = recap.report(s, "r", str(not_git), since_ms=0, now_ms=recap._iso_ms("2100-01-01T00:00:00Z"), top=5)
+    assert len(r["shown_stale"]) == 5 and r["shown_stale_total"] == 8
+    assert r["stale_not_rechecked_total"] == 7 and "l0" not in {x["id"] for x in r["stale_not_rechecked"]}
+    assert r["shown_then_quiet"] == 7
+    assert r["drift_checked"] == 0
+    text = recap.render_report(r)
+    assert "8 of them while stale" in text and "**Shown stale, not re-checked:** 7 lessons" in text
+    assert "**Still open:** unknown" in text and "proven against them" not in text
+    s.close()
