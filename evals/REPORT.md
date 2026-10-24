@@ -1904,6 +1904,49 @@ fewer than two heavy prompts drop. Then the knob stays at None with the receipts
 size, where a word's share means something different; the index-count version and a re-grid
 belong to that store. Whether refusing filler changes what the agent writes (an A/B question).
 
+### Result (2026-10-24)
+
+Receipts at commit 2ae05a8, one 323-record store, one sitting:
+`evals/results/probe-rephrase-20261024-common-{fulltext,linear}-{control,on}.txt`, the
+control run with `--common-share off`. An absolute minimum joined the rule before the run:
+a word counts as common only past five records as well as past the share, because in a store
+of a dozen records every word is in a large share, and the suite's small-store floor tests
+said so.
+
+| | full-text, rule off | full-text, 5% | linear, rule off | linear, 5% |
+|---|---|---|---|---|
+| authored | 8 | 8 | 8 | 8 |
+| probe's own ticket / paraphrase / bug report | 8 / 1 / 8 | 8 / 1 / 8 | 8 / 2 / 8 | 8 / 2 / 8 |
+| held-out ticket / paraphrase / bug report | 7 / 2 / 5 | 7 / 2 / 5 | 7 / 3 / 5 | 7 / 3 / 5 |
+| six no-match prompts, records returned | 4, 11, 0, 11, 9, 12 | 1, 10, 0, 2, 9, 6 | 5, 11, 0, 12, 9, 12 | 1, 11, 0, 3, 9, 6 |
+| refused at the three-lesson budget | 1 of 6 | 3 of 6 | 1 of 6 | 3 of 6 |
+| median `core.check`, in-process | 7 ms | 19 ms | 21 ms | 39 ms |
+
+**No falsifier fired; one prediction was half right.** No recall row moved, in any
+configuration, held-out or authored or the probe's own: the rule took nothing. All three
+heavy prompts dropped, which is what the falsifier asked, but only one dropped below six
+("give me a doc for that too", 11 → 2, losing the lessons that share nothing but "doc" in
+their titles); the search prompt went 12 → 6 exactly, and the updates prompt 11 → 10. The
+rejection line reads 3 of 6 as predicted. The prediction of two prompts under six was wrong
+by one prompt and one lesson.
+
+**What left and what stayed.** The lessons that left are the ones the rule was written for:
+four "doc" titles, four of the search prompt's "search" titles, three of the scrutinize
+prompt's one-word matches. The updates prompt keeps ten because its words ("updates",
+"update", "site", "writing") each sit under the line or match twice; the governing-plan
+prompt keeps nine for the same reason. Those two are the ordering question §4u named, not
+this one. The search prompt's six are lessons about retrieval in a store that is largely
+about retrieval; six may be close to right.
+
+**Cost.** The share is a scan of the store per check: 12 ms at 323 records, which is the
+whole of the 7 → 19 ms change. A count from the full-text index replaces the scan when a
+store makes it matter; §4q's ADR amendment carries the same tier logic for vectors.
+
+**What ships.** `COMMON_WORD_SHARE = 0.05` with the five-record minimum, as the default;
+the diagram's floor text and both renders, the README's floor sentence and alt text; the
+grid and probe receipts; the probe's `--common-share`. The rejection line in `evals/README`'s
+standing table reads 3 of 6 once #278 and this land.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
