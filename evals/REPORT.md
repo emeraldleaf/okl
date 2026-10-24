@@ -1742,6 +1742,77 @@ floor's rule for a candidate only the semantic arm returned (an admission by the
 stage's cosine and the second stage's rank together, pre-registered against the six prompts),
 or a wider first-stage window; each is its own pre-registration.
 
+## 4u. PRE-REGISTERED: the floor's word rule for a candidate only the semantic arm returned (2026-10-24)
+
+Written before the run, per §2b, for the two follow-ups §4t named; the first is settled here
+without a run and the second is measured by the probe.
+
+**The admission rule, settled by the grid.** §4t's reranker lifted the lesson of several
+paraphrases to rank 1 or 2 and the floor then dropped them. The proposed rule was an
+admission by the first stage's cosine and the second stage's rank together.
+`evals/admission_grid.py` (receipt `evals/results/admission-grid-20261024.txt`) lists, on the
+selection set, every governing lesson the floor drops with its cosine and reranker rank, and
+every record the six chat prompts' floor drops with the same two numbers, then counts both
+over a grid of cosine lines (0, 0.25, 0.30, 0.35) and rank bounds (1, 2, 3, 5). The dropped
+governing lessons sit at cosines 0.20 to 0.29; the chat prompts' rank-1 to rank-3 filler
+reaches 0.36. Rank alone admits two lessons and two filler records, one of them on the prompt
+that returns nothing today (the §4n case); every cosine line at or above 0.25 admits no
+lesson at all. No cell separates them, so the rule is not pre-registered on the held-out set
+and the reranker stays as §4t left it.
+
+**The second follow-up, and what the diagnostic found.** A wider first-stage window was named
+because one held-out bug report sat at fused position 35, past the reranked pool. Tracing
+every held-out row the §4t receipt marks MISS through the first stage at fetches of 36, 72
+and 108 per arm (reranker off) found a different mechanism in one row: the paraphrase for the
+exit-code lesson shares two subject words with it ("data", "job") and sits at fused position
+18, but the full-text search's 36 did not include the lesson, so the floor judged it as a
+candidate only the semantic arm found and asked for a cosine of 0.40 (it has 0.31). At a
+fetch of 72 the full-text search includes it and the two-word rule passes it. Every other
+MISS row shares at most one word with its lesson, outside its title and symptom, at every
+fetch, so no window admits it after the floor. This diagnostic read the held-out rows, which
+§4t had already read once; the row it names is therefore not blind, and the prediction below
+is a mechanism check on that row plus a cost check on everything else, not a blind recall
+claim.
+
+**Two knobs, both neutral where they can be chosen.** `core.FETCH_MULTIPLIER` (the first
+stage's fetch per arm, 3 times the limit today) and `core.SEMANTIC_WORD_FLOOR` (None today:
+a semantic-only candidate passes by cosine alone; an integer n admits it when it shares n
+subject words with the task, never fewer than the floor's own two). `evals/window_grid.py`
+(receipt `evals/results/window-grid-20261024.txt`) runs `core.check` on the selection set
+and the six prompts for hybrid off and linear, fetches of 36, 72 and 108, and the word rule
+off and at 2: every cell is identical on recall (8 / 8 / 2 / 8 under linear; 8 / 8 / 1 / 8
+full-text) and on the six counts. The selection set cannot choose, and it says neither knob
+costs precision there.
+
+**The choice, and why.** The two-word rule ships (`SEMANTIC_WORD_FLOOR = 2`); the fetch stays
+at 3 times the limit. The rule judges a candidate by the evidence in front of the floor,
+two shared subject words, rather than by which arm's window happened to reach it, which is
+what §4q's first pass got wrong in the other direction (one word in the subject was never
+enough for a semantic candidate, and still is not). A wider fetch would reach the same row
+by accident of window size, costs more per check as the store grows, and changes the
+fusion's normalisation for every query.
+
+**The measure.** `evals/probe_rephrase.py --hybrid linear` against the same probe with
+`--semantic-words off`, at one commit, one store, one sitting; the full-text probe beside
+them, which the rule cannot change (it has no semantic-only candidates). Held-out recall by
+variant after the floor, the authored row, the probe's own rows, the six precision prompts'
+counts.
+
+**Predictions.** Under linear, the held-out paraphrase row rises by one (3 → 4: the exit-code
+row, named above); no other held-out row changes; the authored and probe's own rows do not
+change (the grid says so); the six counts do not change; the full-text probe is identical
+under both settings.
+
+**Falsifiers.** Any precision prompt gains a record; or any held-out row falls; or the
+named row does not enter (the mechanism was misread). Any of these and the rule reverts to
+None in the same change, with the receipts kept.
+
+**Cost.** Nothing: the rule reads words the floor already matched.
+
+**What this cannot settle.** Whether the rule matters on prompts the author has not read:
+one row moved, and it was read first. Whether the semantic arm, with this rule, earns the
+default: that remains an A/B question (§4n's rule), not a probe one.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

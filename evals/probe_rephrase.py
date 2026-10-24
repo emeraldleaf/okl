@@ -39,9 +39,15 @@ _ap.add_argument("--hybrid", choices=["off", "rrf", "linear"], default="off",
                  help="fuse the full-text candidates with the local embedding's nearest records (#258)")
 _ap.add_argument("--rerank", action="store_true",
                  help="run the local cross-encoder over the first candidates before the gates (REPORT §4t)")
+_ap.add_argument("--semantic-words", default=None,
+                 help="the floor's word rule for a candidate only the semantic arm returned: 'off' for cosine "
+                      "alone (REPORT §4q), or the number of shared subject words that admit it (§4u). "
+                      "Omit it to measure what core ships.")
 _args = _ap.parse_args()
 HYBRID = None if _args.hybrid == "off" else _args.hybrid
 RERANK = _args.rerank
+if _args.semantic_words is not None:
+    core.SEMANTIC_WORD_FLOOR = None if _args.semantic_words == "off" else int(_args.semantic_words)
 c = Client(); store = c._local_store(); cfg = load_config()
 if HYBRID:
     # A probe that claimed the semantic arm while silently falling back would be a lie.
@@ -139,7 +145,8 @@ _floor = "on" if hasattr(core, "_apply_floor") else "off"
 print(f"store: {N} nodes ({sum(1 for n in nodes if n.aliases)} with aliases) · repo={REPO} · hook interests={INTERESTS}")
 _vectors = len(store.embeddings(semantic.MODEL_ID))
 print(f"retrieval code: commit {_head or '?'} · relevance floor {_floor} · hybrid {HYBRID or 'off'}"
-      f" ({_vectors} records with a vector) · rerank {'on' if RERANK else 'off'} · every row below, "
+      f" ({_vectors} records with a vector) · rerank {'on' if RERANK else 'off'} · semantic-only word rule "
+      f"{core.SEMANTIC_WORD_FLOOR if core.SEMANTIC_WORD_FLOOR is not None else 'off'} · every row below, "
       "recall and precision alike, is measured with this code against this store\n")
 print("A. RECALL: is the governing lesson in the top-12? (harness config = no interests; hook config = repo interests)  rank = position in the ranked in-scope list")
 print(f"{'task':16} {'variant':11} {'harness':8} {'hook':8} {'rank':>5}/{'live':<5} matched terms")

@@ -1,0 +1,25 @@
+store 322 records · repo=okl · window 36 per arm, linear, reranked pool 24 · floor 0.4 cosine for a semantic-only candidate
+
+A. Governing lessons the floor DROPS on the selection set (harness config), with what the rule would see:
+task             variant     in pool lexical cosine rank
+idor_endpoint    paraphrase  no      no        0.21 None
+price_tamper     paraphrase  yes     no         0.2    2
+react_fetch      paraphrase  yes     no        0.29    8
+rate_limiter     paraphrase  yes     no        0.24    1
+4 governing lessons dropped of 32 queries
+
+B. The six chat prompts (hook config): records the floor drops, best three by reranker rank, with cosine:
+  kept  5 · dropped 14 · [(6, 0.11, 'An agent whose primary tool throws on ev'), (7, 0.12, 'A surface nobody runs is documentation, '), (8, 0.18, 'Public dataset had x/y transposed — 119 ')]  <- 'this seems like a major point to scrutinize'
+  kept 11 · dropped  7 · [(3, 0.36, 'A resolver that falls back to a default '), (8, 0.38, 'okl gates CI on mypy; revisit when a fas'), (11, 0.34, 'A git worktree has no okl store: re-veri')]  <- 'ok do the updates and update my site and the'
+  kept  0 · dropped 24 · [(1, 0.14, 'An idea from outside reading becomes tra'), (2, None, 'The 6th surface was built as the OKL — a'), (3, 0.14, 'A second retrieval arm widens the candid')]  <- 'what about the org knowwledge ideae is that '
+  kept 11 · dropped 11 · [(1, 0.16, 'Every module, public class and public fu'), (9, 0.24, 'Pick one docstring format, and enforce t'), (13, 0.23, "okl's docstrings follow Google style, an")]  <- 'give me a doc for that too'
+  kept  9 · dropped 14 · [(3, None, 'A gate that reads commit times needs mer'), (7, 0.26, "okl's docs are agent-neutral; Claude Cod"), (9, 0.25, 'The core and client path stays stdlib-on')]  <- 'how do we come up with a good plan for gover'
+  kept 14 · dropped  9 · [(9, None, 'Findability and ranking are separate pro'), (14, 0.24, 'Rate-limit the endpoints backed by expen'), (16, None, 'OKL_DATABASE_URL was honoured by the sto')]  <- 'what about the search ?  and how this thing '
+
+C. GRID: governing lessons admitted (of the dropped ones above) / records the six prompts would gain in total
+ cosine >=      rank <= 1      rank <= 2      rank <= 3      rank <= 5
+       0.0  1 /  2  001100  2 /  2  001100  2 /  4  012100  2 /  5  013100
+      0.25  0 /  0  000000  0 /  0  000000  0 /  1  010000  0 /  1  010000
+       0.3  0 /  0  000000  0 /  0  000000  0 /  1  010000  0 /  1  010000
+      0.35  0 /  0  000000  0 /  0  000000  0 /  1  010000  0 /  1  010000
+(each cell: lessons admitted / filler records admitted, then the six prompts' gains as digits)

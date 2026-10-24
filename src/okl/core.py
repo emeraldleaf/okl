@@ -142,7 +142,12 @@ def briefing_terms(task: str) -> list[str]:
     return out if any(len(w) >= 3 for w in out) else []
 
 
-NEAR_MISSES = 12   # the most records the near-miss list names: one line each, about 120 characters
+NEAR_MISSES = 12
+# The first stage's window: each arm fetches FETCH_MULTIPLIER times the limit (REPORT §4u grids it).
+FETCH_MULTIPLIER = 3
+# The floor's word rule for a candidate only the semantic arm returned: None keeps §4q's rule
+# (cosine alone); an integer n admits it when it shares n subject words with the task (§4u).
+SEMANTIC_WORD_FLOOR: int | None = None   # the most records the near-miss list names: one line each, about 120 characters
 
 
 def check(store: Store, repo: str, task: str, limit: int = 12,
@@ -331,7 +336,9 @@ def _apply_floor(store: Store, hits: list[Node], terms: list[str],
     strong = {n.id for n in hits
               if near.get(n.id, 0.0) >= semantic.SUBJECT_SIMILARITY
               or (n.id in lexical and (len(matched[n.id]) >= floor
-                                       or bool(matched[n.id]) and _in_subject(matched[n.id], n)))}
+                                       or bool(matched[n.id]) and _in_subject(matched[n.id], n)))
+              or (n.id not in lexical and SEMANTIC_WORD_FLOOR is not None
+                  and len(matched[n.id]) >= max(SEMANTIC_WORD_FLOOR, floor))}
     if not strong:
         # No hit to link to, so no neighbour lookup can rescue one (review on #259).
         return [], matched, len(hits)
@@ -361,7 +368,7 @@ def _live_hits(store: Store, task: str, limit: int, repo_scope: str,
         note = "the task has no subject words to search"
         return [], [], True, Candidates([], {}, frozenset(), note if hybrid else None, True,
                                         rerank_note=note if rerank else None)
-    fetch = limit * 3
+    fetch = limit * FETCH_MULTIPLIER
     for _ in range(3):
         cand = ranked_candidates(store, task, fetch, hybrid, rerank=rerank)
         found = cand.nodes
