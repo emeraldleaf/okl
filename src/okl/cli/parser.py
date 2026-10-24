@@ -284,6 +284,11 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                     help="import every bundled pack. Explicit on purpose: the packs carry "
                          "stack-specific rules, and importing all of them into an unrelated "
                          "project fills its briefings with noise.")
+    pd.add_argument("--refresh", action="store_true",
+                    help="re-import only the records this store already holds, from the packs they came "
+                         "from (their newer symptoms, aliases and text; verification is kept), without "
+                         "importing the rest of each pack. With no path, finds the bundled packs from the "
+                         "store's own seed ids; a repo's own pack file still has to be named.")
     pd.add_argument("--strict", action="store_true",
                     help="exit 2 instead of importing when an advice record has no symptom, a record is "
                          "trace-shaped, or an org record names one repository's paths or name "
