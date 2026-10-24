@@ -48,7 +48,7 @@ dev = [
   # plausible-looking guess: an invented version 404s the install step.
   # ruff and mypy moved to the versions Dependabot proposed in #139, run green here
   # on 2026-10-10.
-  "pytest==9.1.1", "pytest-cov==7.1.0", "ruff==0.16.10", "mypy==2.4.0",
+  "pytest==9.1.1", "pytest-cov==7.1.0", "ruff==0.17.1", "mypy==2.4.0",
   "import-linter==2.15",  # verified on PyPI 2026-10-04 (released 2026-09-04)
   "fastapi>=0.110", "uvicorn>=0.29", "pydantic>=2", "httpx>=0.27",
   # The service tests use Starlette's TestClient. Starlette 1.2.0 (2026-05-28) moved it to
