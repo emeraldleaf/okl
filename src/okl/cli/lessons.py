@@ -25,6 +25,29 @@ def _briefing_text(result: dict[str, Any], args: argparse.Namespace) -> str:
     return core.render_check_for_agent(result)
 
 
+def _apply_check_flags(client: Client, args: argparse.Namespace) -> None:
+    """The per-call retrieval flags, each overriding the config only when given.
+
+    An explicit --interests overrides the repo's configured list for this one call.
+    `--interests ""` means "no filtering", which is distinct from omitting the flag
+    (use the config). The eval harness needs this: inheriting the host repo's interests
+    made one of its tasks silently measure the absence of the rule it tests.
+    getattr, not attribute access: tests and library callers construct a Namespace by
+    hand with only the fields they care about, and a command handler that assumes the
+    full argparse surface breaks for every caller that is not the parser.
+    """
+    override = getattr(args, "interests", None)
+    if override is not None:
+        client.interests = [t.strip().lower() for t in override.split(",") if t.strip()]
+    fusion = getattr(args, "hybrid", None)
+    if fusion is not None:
+        client.hybrid = None if fusion == "off" else fusion
+    client.index = bool(getattr(args, "index", False))
+    second = getattr(args, "rerank", None)
+    if second is not None:
+        client.rerank = second == "on"
+
+
 def cmd_check(args: argparse.Namespace) -> int:
     """Print the lessons that apply to `--task`, in the shape `--format` names.
 
@@ -42,20 +65,7 @@ def cmd_check(args: argparse.Namespace) -> int:
               "Run `okl init` here, or `okl connect <url>` to point at a shared store.",
               file=sys.stderr)
         return 2
-    # An explicit --interests overrides the repo's configured list for this one call.
-    # `--interests ""` means "no filtering", which is distinct from omitting the flag
-    # (use the config). The eval harness needs this: inheriting the host repo's interests
-    # made one of its tasks silently measure the absence of the rule it tests.
-    # getattr, not attribute access: tests and library callers construct a Namespace by
-    # hand with only the fields they care about, and a command handler that assumes the
-    # full argparse surface breaks for every caller that is not the parser.
-    override = getattr(args, "interests", None)
-    if override is not None:
-        client.interests = [t.strip().lower() for t in override.split(",") if t.strip()]
-    fusion = getattr(args, "hybrid", None)
-    if fusion is not None:
-        client.hybrid = None if fusion == "off" else fusion
-    client.index = bool(getattr(args, "index", False))
+    _apply_check_flags(client, args)
     try:
         result = client.check(args.task, repo=args.repo, limit=args.limit)
     except OKLUnreachableError as e:

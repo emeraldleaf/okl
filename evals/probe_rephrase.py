@@ -35,8 +35,11 @@ from okl.client import Client, load_config
 _ap = argparse.ArgumentParser()
 _ap.add_argument("--hybrid", choices=["off", "rrf", "linear"], default="off",
                  help="fuse the full-text candidates with the local embedding's nearest records (#258)")
-_mode = _ap.parse_args().hybrid
-HYBRID = None if _mode == "off" else _mode
+_ap.add_argument("--rerank", action="store_true",
+                 help="run the local cross-encoder over the first candidates before the gates (REPORT §4t)")
+_args = _ap.parse_args()
+HYBRID = None if _args.hybrid == "off" else _args.hybrid
+RERANK = _args.rerank
 c = Client(); store = c._local_store(); cfg = load_config()
 if HYBRID:
     # A probe that claimed the semantic arm while silently falling back would be a lie.
@@ -56,7 +59,10 @@ def matched(task: str, n: Any) -> list[str]:
     return [t for t in terms if re.search(r'(?<![a-z0-9])' + re.escape(t) + r'(?![a-z0-9])', TXT[n.id])]
 def check(task: str, interests: list[str] | None) -> dict[str, Any]:
     """core.check with the probe's retrieval setting."""
-    return core.check(store, repo=REPO, task=task, interests=interests, hybrid=HYBRID)
+    res = core.check(store, repo=REPO, task=task, interests=interests, hybrid=HYBRID, rerank=RERANK)
+    if RERANK and res.get("rerank_unavailable"):
+        sys.exit(f"probe: --rerank asked for but {res['rerank_unavailable']}")
+    return res
 DF: dict[str, int] = {}
 
 
@@ -73,7 +79,7 @@ def rank_of(task: str, nid: str, interests: list[str] | None) -> tuple[int | Non
     """Position of `nid` in the ranked in-scope live list for `task`, and that list's length."""
     # The whole store, so a low rank is a rank and not a cutoff artefact; the candidate
     # order is the one check() uses, fused when --hybrid is on.
-    found = core.ranked_candidates(store, task, max(N, 1), HYBRID).nodes
+    found = core.ranked_candidates(store, task, max(N, 1), HYBRID, rerank=RERANK).nodes
     live = [n for n in found if core._in_scope(n, f"repo:{REPO}", interests) and n.status not in core.RETIRED_STATUSES]
     ids = [n.id for n in live]
     return (ids.index(nid) + 1) if nid in ids else None, len(live)
@@ -119,8 +125,8 @@ _floor = "on" if hasattr(core, "_apply_floor") else "off"
 print(f"store: {N} nodes ({sum(1 for n in nodes if n.aliases)} with aliases) · repo={REPO} · hook interests={INTERESTS}")
 _vectors = len(store.embeddings(semantic.MODEL_ID))
 print(f"retrieval code: commit {_head or '?'} · relevance floor {_floor} · hybrid {HYBRID or 'off'}"
-      f" ({_vectors} records with a vector) · every row below, recall and precision alike, is "
-      "measured with this code against this store\n")
+      f" ({_vectors} records with a vector) · rerank {'on' if RERANK else 'off'} · every row below, "
+      "recall and precision alike, is measured with this code against this store\n")
 print("A. RECALL: is the governing lesson in the top-12? (harness config = no interests; hook config = repo interests)  rank = position in the ranked in-scope list")
 print(f"{'task':16} {'variant':11} {'harness':8} {'hook':8} {'rank':>5}/{'live':<5} matched terms")
 hits = {k: [0, 0] for k in LABELS}

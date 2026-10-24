@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from .. import semantic
+from .. import rerank, semantic
 from ..client import Client
 
 
@@ -27,4 +27,10 @@ def cmd_embed(args: argparse.Namespace) -> int:
     print(f"✓ {report['embedded']} record(s) embedded, {report['unchanged']} unchanged, "
           f"{report['removed']} removed · {report['model']}"
           + (f" ({report['dim']} dims)" if report["dim"] else ""))
+    # The reranker needs no index, only its model in the cache; this is its one online step.
+    try:
+        rerank.load_model(offline=False)
+        print(f"✓ reranker {rerank.MODEL_ID} cached for `okl check --rerank`")
+    except rerank.RerankUnavailableError as e:
+        print(f"  reranker not set up ({e})")
     return 0

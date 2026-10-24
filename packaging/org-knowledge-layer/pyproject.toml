@@ -22,6 +22,7 @@ service = ["observed-knowledge-ledger[service]>=0.6.0"]
 postgres = ["observed-knowledge-ledger[postgres]>=0.6.0"]
 mcp = ["observed-knowledge-ledger[mcp]>=0.6.0"]
 hybrid = ["observed-knowledge-ledger[hybrid]>=0.6.0"]
+rerank = ["observed-knowledge-ledger[rerank]>=0.6.0"]
 all = ["observed-knowledge-ledger[all]>=0.6.0"]
 
 # The same `okl` command, pointing at code the dependency installs. Without it, `pipx
