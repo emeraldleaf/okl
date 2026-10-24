@@ -43,8 +43,14 @@ _ap.add_argument("--semantic-words", default=None,
                  help="the floor's word rule for a candidate only the semantic arm returned: 'off' for cosine "
                       "alone (REPORT §4q), or the number of shared subject words that admit it (§4u). "
                       "Omit it to measure what core ships.")
+_ap.add_argument("--common-share", default=None,
+                 help="the floor's one-word rule applies only to a title or symptom word in at most this share "
+                      "of the store (REPORT §4v, #277): 'off' for any word, or a share such as 0.10. Omit it "
+                      "to measure what core ships.")
 _args = _ap.parse_args()
 HYBRID = None if _args.hybrid == "off" else _args.hybrid
+if _args.common_share is not None:
+    core.COMMON_WORD_SHARE = None if _args.common_share == "off" else float(_args.common_share)
 RERANK = _args.rerank
 if _args.semantic_words is not None:
     core.SEMANTIC_WORD_FLOOR = None if _args.semantic_words == "off" else int(_args.semantic_words)
@@ -146,7 +152,8 @@ print(f"store: {N} nodes ({sum(1 for n in nodes if n.aliases)} with aliases) · 
 _vectors = len(store.embeddings(semantic.MODEL_ID))
 print(f"retrieval code: commit {_head or '?'} · relevance floor {_floor} · hybrid {HYBRID or 'off'}"
       f" ({_vectors} records with a vector) · rerank {'on' if RERANK else 'off'} · semantic-only word rule "
-      f"{core.SEMANTIC_WORD_FLOOR if core.SEMANTIC_WORD_FLOOR is not None else 'off'} · every row below, "
+      f"{core.SEMANTIC_WORD_FLOOR if core.SEMANTIC_WORD_FLOOR is not None else 'off'} · common-word share "
+      f"{core.COMMON_WORD_SHARE if core.COMMON_WORD_SHARE is not None else 'off'} · every row below, "
       "recall and precision alike, is measured with this code against this store\n")
 print("A. RECALL: is the governing lesson in the top-12? (harness config = no interests; hook config = repo interests)  rank = position in the ranked in-scope list")
 print(f"{'task':16} {'variant':11} {'harness':8} {'hook':8} {'rank':>5}/{'live':<5} matched terms")

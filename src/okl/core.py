@@ -12,6 +12,7 @@ from __future__ import annotations
 import os
 import re
 from collections import Counter
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, field, replace
 from typing import Any
 
@@ -150,7 +151,11 @@ FETCH_MULTIPLIER = 3
 # fewer than the floor's own two. Measured at 2 in §4u and reverted: the floor admitted the
 # one lesson it was built for and the cutoff still dropped it, so the knob stays at None until
 # a pre-registration about the order of kept records earns it.
-SEMANTIC_WORD_FLOOR: int | None = None   # the most records the near-miss list names: one line each, about 120 characters
+SEMANTIC_WORD_FLOOR: int | None = None
+# §4v (#277): a single shared word in a record's title or symptom admits the record only when
+# that word is in at most this share of the store's live records; None is §4n's rule (any such
+# word). Two shared words, and a one-word alias matched whole, admit regardless.
+COMMON_WORD_SHARE: float | None = None   # the most records the near-miss list names: one line each, about 120 characters
 
 
 def check(store: Store, repo: str, task: str, limit: int = 12,
@@ -290,7 +295,7 @@ def _matched_terms(terms: list[str], n: Node) -> list[str]:
 
 def _in_subject(words: list[str], n: Node) -> bool:
     """Whether any of `words` occurs whole in the record's title or symptom, or is one of
-    its one-word aliases.
+    its one-word aliases (the union of _subject_words and _alias_words).
 
     Title and symptom say what a lesson is about and when it applies. An alias is a phrase
     in a developer's words, so its common words are not the subject: when any alias word
@@ -300,11 +305,33 @@ def _in_subject(words: list[str], n: Node) -> bool:
     subject when the task says that word; longer aliases count toward the two shared
     words the floor asks for, through _matched_terms.
     """
+    return bool(_subject_words(words, n) or _alias_words(words, n))
+
+
+def _subject_words(words: list[str], n: Node) -> list[str]:
+    """The words among `words` that occur whole in the record's title or symptom."""
     subject = " ".join(x or "" for x in (n.title, n_symptom(n))).lower()
-    if any(re.search(r"(?<![a-z0-9])" + re.escape(w) + r"(?![a-z0-9])", subject) for w in words):
-        return True
+    return [w for w in words if re.search(r"(?<![a-z0-9])" + re.escape(w) + r"(?![a-z0-9])", subject)]
+
+
+def _alias_words(words: list[str], n: Node) -> list[str]:
+    """The words among `words` that are one of the record's one-word aliases."""
     single = {a.strip().lower() for a in (n.aliases or "").split(";") if a.strip() and " " not in a.strip()}
-    return any(w in single for w in words)
+    return [w for w in words if w in single]
+
+
+def _subject_admits(words: list[str], n: Node, share_of: Callable[[str], float]) -> bool:
+    """The one-word rule: a word in the record's title or symptom, or a one-word alias, says
+    the record is on the task's subject. With COMMON_WORD_SHARE set, a title or symptom word
+    counts only when it is specific enough, in at most that share of the store's live records,
+    because "doc" or "update" in a title names no subject (REPORT §4v); an alias is a deliberate
+    choice and counts regardless."""
+    if _alias_words(words, n):
+        return True
+    subject = _subject_words(words, n)
+    if COMMON_WORD_SHARE is None:
+        return bool(subject)
+    return any(share_of(w) <= COMMON_WORD_SHARE for w in subject)
 
 
 def n_symptom(n: Node) -> str:
@@ -338,10 +365,11 @@ def _apply_floor(store: Store, hits: list[Node], terms: list[str],
     near = cand.scores if cand else {}
     lexical = cand.lexical if cand else frozenset(n.id for n in hits)
     matched = {n.id: _matched_terms(words, n) for n in hits}
+    share_of = _share_counter(store) if COMMON_WORD_SHARE is not None else (lambda _w: 0.0)
     strong = {n.id for n in hits
               if near.get(n.id, 0.0) >= semantic.SUBJECT_SIMILARITY
               or (n.id in lexical and (len(matched[n.id]) >= floor
-                                       or bool(matched[n.id]) and _in_subject(matched[n.id], n)))
+                                       or bool(matched[n.id]) and _subject_admits(matched[n.id], n, share_of)))
               or (n.id not in lexical and SEMANTIC_WORD_FLOOR is not None
                   and len(matched[n.id]) >= max(SEMANTIC_WORD_FLOOR, floor))}
     if not strong:
@@ -350,6 +378,22 @@ def _apply_floor(store: Store, hits: list[Node], terms: list[str],
     kept = [n for n in hits
             if n.id in strong or any(m.id in strong for (_e, m) in store.neighbors(n.id))]
     return kept, matched, len(hits) - len(kept)
+
+
+def _share_counter(store: Store) -> Callable[[str], float]:
+    """How common a word is: the share of the store's live records whose prose holds it whole,
+    counted once per word per call. A scan of the store, which is a few milliseconds at a few
+    hundred records; a count from the full-text index is the version for a large store, if §4v
+    earns the rule a default."""
+    live = [m for m in store.all_nodes() if m.status not in RETIRED_STATUSES]
+    total = max(len(live), 1)
+    seen: dict[str, float] = {}
+
+    def share(word: str) -> float:
+        if word not in seen:
+            seen[word] = sum(1 for m in live if _matched_terms([word], m)) / total
+        return seen[word]
+    return share
 
 
 def _live_hits(store: Store, task: str, limit: int, repo_scope: str,
