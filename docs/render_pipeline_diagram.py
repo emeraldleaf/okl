@@ -298,7 +298,7 @@ def render(d: dict) -> str:
         floor = next(i for i, st in enumerate(stages) if st[1] == "FLOOR")
         st = list(stages[floor])
         st[2] = (f"Two shared words, one in the title or symptom that at most {COMMON_WORD_SHARE:.0%} of records "
-                 f"share, or a cosine at or above {d['line']:.2f}")
+                 f"share, a one-word alias, or a cosine at or above {d['line']:.2f}")
         st[3] = (f"Only-by-embedding records count by meaning alone ({d['by_meaning']} kept so). A single "
                  "shared word outside title and symptom is left out and counted, unless it links to a kept record.")
         stages[floor] = tuple(st)

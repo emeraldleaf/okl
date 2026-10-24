@@ -364,6 +364,9 @@ def _apply_floor(store: Store, hits: list[Node], terms: list[str],
     each hit's matched words by id, and how many were left out.
     """
     words = [t.lower() for t in terms]
+    # A one-word task keeps §4n's rule: its word is the whole subject and admits on its own,
+    # common or not. §4v's common-word weighting covers the one-word match inside a longer
+    # task only; no probe prompt has one subject word, so extending it is unmeasured (#282).
     floor = 2 if len(words) >= 2 else 1
     near = cand.scores if cand else {}
     lexical = cand.lexical if cand else frozenset(n.id for n in hits)

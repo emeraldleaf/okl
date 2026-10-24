@@ -241,3 +241,18 @@ def test_a_common_title_word_admits_only_when_the_knob_allows_it(monkeypatch):
     kept, _m, _w = core._apply_floor(s, hits, ["doc", "rule"], cand)
     assert set(ids) <= {n.id for n in kept}                        # two shared words always admit
     s.close()
+
+
+def test_a_one_word_task_keeps_the_old_rule_even_for_a_common_word(monkeypatch):
+    """§4v weighs the one-word match inside a longer task; a task of one subject word is its
+    whole subject and still admits on that word, common or not, until a measured change says
+    otherwise (#282, review on #280)."""
+    s = Store("sqlite:///:memory:")
+    ids = [core.record(s, type="Rule", title=f"doc rule {i}", scope="org") for i in range(8)]
+    hits = [s.get_node(i) for i in ids]
+    cand = core.Candidates(hits, {}, frozenset(ids), None, False)
+    monkeypatch.setattr(core, "COMMON_WORD_SHARE", 0.05)
+    monkeypatch.setattr(core, "COMMON_WORD_MIN_RECORDS", 3)
+    kept, _m, weak = core._apply_floor(s, hits, ["doc"], cand)
+    assert {n.id for n in kept} == set(ids) and weak == 0
+    s.close()

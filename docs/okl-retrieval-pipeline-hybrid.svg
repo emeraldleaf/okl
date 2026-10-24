@@ -90,7 +90,7 @@
 <rect x="28" y="922" width="74" height="90" fill="#EBE7E1" stroke="#DCD6CE"/>
 <text x="65" y="960" font-size="26" font-weight="700" fill="#B4531F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle">6</text>
 <text x="65" y="978" font-size="9" fill="#7C736A" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle" letter-spacing="1">FLOOR</text>
-<text x="120" y="947" font-size="15" font-weight="600" fill="#1E1B18">Two shared words, one in the title or symptom that at most 5% of records share, or a cosine at or above 0.40</text>
+<text x="120" y="947" font-size="15" font-weight="600" fill="#1E1B18">Two shared words, one in the title or symptom that at most 5% of records share, a one-word alias, or a cosine at or above 0.40</text>
 <text x="120" y="966" font-size="12" fill="#4E4740">Only-by-embedding records count by meaning alone (0 kept so). A single shared word outside</text>
 <text x="120" y="981" font-size="12" fill="#4E4740">title and symptom is left out and counted, unless it links to a kept record.</text>
 <text x="938" y="947" font-size="9.5" fill="#9B3B3B" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="700" text-anchor="end" letter-spacing="0.8">DROPS</text>
