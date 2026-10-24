@@ -42,6 +42,10 @@ def pool_view(text: str, interests: list[str] | None) -> tuple[list[dict], set[s
     """Each in-scope live candidate of check's window with its cosine, reranker rank and
     whether the floor keeps it, plus the ids the floor keeps."""
     cand = core.ranked_candidates(store, text, 36, "linear", rerank=True)
+    # Both stages must have run: a lexical-only fallback would print a cosine grid with no
+    # cosines in it and read as a measurement (review on #275).
+    if cand.note:
+        sys.exit(f"admission grid: the semantic arm did not run ({cand.note})")
     if cand.rerank_note:
         sys.exit(f"admission grid: the reranker did not run ({cand.rerank_note})")
     scope = f"repo:{REPO}"
