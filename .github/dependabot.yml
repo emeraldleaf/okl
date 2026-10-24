@@ -23,6 +23,14 @@ updates:
     labels: ["dependencies"]
     commit-message:
       prefix: "deps"
+    # Move a requirement only when the new release falls outside it. The extras users
+    # install are ranges on purpose (a published package has to coexist with its users'
+    # other dependencies), and the default strategy raised their floors to each new release
+    # (#248, #249), narrowing what okl installs beside for no reason. With this, a range
+    # such as pydantic>=2 is left alone and an exact gate pin such as ruff==0.16.10 still
+    # becomes ruff==0.17.1 (dependabot-core's python requirements_updater, checked
+    # 2026-10-24). Raising a floor is a deliberate edit, made when okl needs the newer release.
+    versioning-strategy: increase-if-necessary
     # The gating tools are pinned exactly on purpose (a range lets a new release
     # retro-fail a branch that changed nothing). Dependabot is the intended way to move
     # those pins: a PR that runs the full suite against the new version before it lands,
