@@ -4,8 +4,8 @@ Off unless asked for. The first stage, full text fused with the embedding's near
 orders candidates by what they share with the task; a cross-encoder reads each (task, record)
 pair together and scores whether the record answers it, which is a different and sharper
 question. The model (`Xenova/ms-marco-MiniLM-L-6-v2`, an ONNX cross-encoder of about 80 MB,
-installed with the `rerank` extra, downloaded once by `okl embed`) scores the first
-RERANK_POOL candidates against a short text per record (title, symptom, aliases; the cause
+installed with the `rerank` extra, downloaded once by `okl embed`, kept under `okl.hub.model_cache_dir()`, not the temp directory fastembed
+would use) scores the first RERANK_POOL candidates against a short text per record (title, symptom, aliases; the cause
 paragraph slows the model five-fold and buys nothing, measured in §4t's spike) and reorders
 them; the tail keeps its order. At check time the model loads from the local cache only, so a
 hook never reaches the network, and when the extra or the model is missing the first-stage
@@ -51,7 +51,7 @@ def load_model(model_id: str = MODEL_ID, *, offline: bool = True) -> Any:
         except ImportError as e:
             raise RerankUnavailableError(f"the rerank extra is not installed: pip install '{EXTRA}'") from e
         try:
-            _LOADED[model_id] = TextCrossEncoder(model_name=model_id)
+            _LOADED[model_id] = TextCrossEncoder(model_name=model_id, cache_dir=str(hub.model_cache_dir()))
         except (OSError, ValueError, RuntimeError) as e:
             raise RerankUnavailableError(
                 f"the reranker {model_id} is not cached locally ({type(e).__name__}); run `okl embed` once online"
