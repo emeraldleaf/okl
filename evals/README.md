@@ -94,7 +94,28 @@ tables with the median `core.check` latency. `evals/rerank_select.py` and
 `evals/embedder_select.py` score local cross-encoders and dense models on the selection set
 (the probe's own rephrasings and the authored tasks, never the held-out set), one model per
 process; `evals/rerank_spike.py` is the first held-out spike §4t declares. The rephrasings are
-hand-written, which is its main bias, and it is not pooled with any A/B.
+hand-written, which is its main bias, and it is not pooled with any A/B. Its precision
+section ends with a **rejection** line: how many of the six no-match prompts return at most
+three lessons (#179), the abstention measure a recall set cannot give.
+
+## What working means: the standing measures
+
+The targets the retrieval work is held to, and where the briefing stands on them. Each
+figure is read from a committed probe receipt; a retrieval change is measured by re-running
+the probe at one commit with the change off and on, and §2b's noise floor applies to the
+A/B, not to these, which are deterministic for a store. Refreshed with each receipt.
+
+| measure (target) | full-text, the default | with the semantic arm (`--hybrid linear`) | with the reranker too (`--rerank`) |
+|---|---|---|---|
+| held-out recall, ticket / paraphrase / bug report of 8 (must not fall under a change) | 7 / 2 / 5 | 7 / 3 / 5 | 7 / 4 / 4 |
+| authored tasks whose lesson is briefed, of 8 (stays 8) | 8 | 8 | 8 |
+| no-match prompts refused, at most 3 lessons, of 6 (must not fall; the counts must not rise) | 1 of 6: 4, 11, 0, 11, 9, 12 | 1 of 6: 5, 11, 0, 12, 9, 12 | 1 of 6: 5, 11, 0, 12, 9, 12 |
+| median `core.check`, in-process, model loaded (under 1 s on a laptop) | 7 ms | 24 ms | 538 ms |
+
+Receipts, 2026-10-24, one 322-record store: `probe-rephrase-20261024-rejection-fulltext.txt`,
+`probe-rephrase-20261024-semwords-control.txt`, `probe-rephrase-20261024-semwords-rerank-control.txt`.
+The three no-match prompts that still carry 9 to 12 lessons each pass the floor on one shared
+title word ("doc", "update", "search"); #277 is the pre-registered experiment on that.
 
 ## Provenance of the originally quoted numbers
 
