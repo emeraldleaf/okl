@@ -44,6 +44,48 @@ def test_the_index_lists_every_other_live_lesson_in_scope(store):
     assert core.briefed_ids(res) == [a]
 
 
+def test_near_misses_name_what_matched_and_was_left_out(store):
+    """The near-miss list (REPORT §4s) holds the records the floor or the cutoff left out, in
+    rank order, never a briefed one, at most NEAR_MISSES; the agent format prints it."""
+    kept = core.record(store, type="Rule", title="orders endpoint ownership", scope="org",
+                       symptom="an orders endpoint fetches by id with no owner check")
+    weak = core.record(store, type="Rule", title="pagination caps", scope="org",
+                       body="every list endpoint paginates")      # shares one word, outside the subject
+    res = core.check(store, repo="r", task="add an orders endpoint that fetches one order by id for the owner",
+                     near_misses=True)
+    assert [x["id"] for x in res["rules"]] == [kept]
+    assert res["near_misses"] == [{"id": weak, "title": "pagination caps"}]
+    text = core.render_check_for_agent(res)
+    assert "Near misses (1)" in text and f"- [{weak}] pagination caps" in text
+    assert "near_misses" not in core.check(store, repo="r", task="add an orders endpoint for the owner")
+    assert core.briefed_ids(res) == [kept]
+    # Drift marks on a near miss are not exposure either (review on #270).
+    res["near_misses"][0]["drift"] = {"reason": "never verified", "files": "x"}
+    assert core.drifted_ids(res) == []
+    # When nothing passed the floor, the briefing points at the near misses, not a clean slate.
+    none = core.check(store, repo="r", task="paginate the admin list", near_misses=True)
+    assert none["rules"] == [] and none["near_misses"]
+    assert "clean slate" not in core.render_check_for_agent(none) and "came closest" in core.render_check_for_agent(none)
+
+
+def test_a_remote_check_that_drops_the_near_misses_is_refused(monkeypatch):
+    """An older service answers an ordinary briefing to a request it does not understand; the
+    client must not read that as "no near misses" (review on #270)."""
+    from okl.client import Client, OKLRejectedError
+    c = Client(config={"repo": "r", "service_url": "http://service.invalid"})
+    monkeypatch.setattr(c, "_post", lambda path, body: {"repo": "r", "task": body["task"], "rules": [], "match_count": 0})
+    monkeypatch.setattr("okl.client.drift.annotate_briefing", lambda *a, **k: None)
+    assert c.check("a task")["match_count"] == 0            # nothing asked for: fine
+    c.near_misses = True
+    with pytest.raises(OKLRejectedError, match="near_misses"):
+        c.check("a task")
+    monkeypatch.setattr(c, "_post", lambda path, body: {"repo": "r", "task": body["task"], "rules": [], "match_count": 0, "near_misses": None})
+    with pytest.raises(OKLRejectedError, match="near_misses"):   # a null is not the list asked for
+        c.check("a task")
+    monkeypatch.setattr(c, "_post", lambda path, body: {"repo": "r", "task": body["task"], "rules": [], "match_count": 0, "near_misses": []})
+    assert c.check("a task")["near_misses"] == []
+
+
 def test_okl_check_index_flag_appends_the_index(tmp_path):
     """`okl check --index` carries the index in the JSON and the agent format."""
     env = {k: v for k, v in os.environ.items() if k not in ("OKL_SERVICE_URL", "OKL_TOKEN")}
@@ -53,6 +95,9 @@ def test_okl_check_index_flag_appends_the_index(tmp_path):
     assert okl("record", "--type", "Rule", "--title", "pagination", "--scope", "org", "--id", "p").returncode == 0
     out = json.loads(okl("check", "--repo", "r", "--interests", "", "--format", "json", "--index", "--task", "add a login form").stdout)
     assert out["index"] == [{"id": "p", "title": "pagination"}]
+    near = json.loads(okl("check", "--repo", "r", "--interests", "", "--format", "json", "--near-misses",
+                          "--task", "pagination of the login list page").stdout)
+    assert "near_misses" in near
     assert "- [p] pagination" in okl("check", "--repo", "r", "--interests", "", "--index", "--task", "add a login form").stdout
 
 

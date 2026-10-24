@@ -51,6 +51,10 @@ okl check --hybrid   # fuse the nearest records by that embedding with the full-
                      #   candidates (linear, the measured configuration, or --hybrid rrf);
                      #   `"hybrid": "linear"` in .okl/config.json or OKL_HYBRID turns it on for
                      #   every check. What it buys and costs: REPORT §4q.
+okl check --near-misses
+                     # append the records that matched the task and were left out, by the floor
+                     #   or the cutoff, as `- [id] title`, at most twelve (about 1.8 KB). Off by
+                     #   default; REPORT §4s says why it was not measured live.
 okl check --index    # append every other lesson in scope as `- [id] title`, so an agent can
                      #   fetch one with `okl show <id>` when the briefing did not select it.
                      #   A treatment under measurement (REPORT §4r); about 120 characters a lesson.

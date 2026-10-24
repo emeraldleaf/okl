@@ -56,6 +56,7 @@ def cmd_check(args: argparse.Namespace) -> int:
     if fusion is not None:
         client.hybrid = None if fusion == "off" else fusion
     client.index = bool(getattr(args, "index", False))
+    client.near_misses = bool(getattr(args, "near_misses", False))
     try:
         result = client.check(args.task, repo=args.repo, limit=args.limit)
     except OKLUnreachableError as e:
