@@ -620,6 +620,104 @@ def test_seed_is_idempotent(store, tmp_path):
     assert n1 == n2 == 2, f"re-seed duplicated: {n1} -> {n2}"
 
 
+def test_seed_refresh_updates_only_the_records_the_store_holds(store, tmp_path):
+    """A store that took two records of a three-record pack (a starter subset) refreshes those
+    two from the pack's newer text without importing the third, keeps what the pack does not
+    mention, and writes an edge only when both ends were refreshed."""
+    pack = tmp_path / "p.json"
+    def write(title_a):
+        pack.write_text(json.dumps({"nodes": [
+            {"key": "a", "type": "Defect", "title": title_a, "scope": "org", "repo": "r"},
+            {"key": "b", "type": "Gate", "title": "B", "scope": "org", "repo": "r"},
+            {"key": "c", "type": "Rule", "title": "C, never imported here", "scope": "org", "repo": "r"}],
+            "edges": [{"src": "b", "rel": "CATCHES", "dst": "a"}, {"src": "c", "rel": "CATCHES", "dst": "a"}]}))
+    from okl.seed import seed_from_file
+    class _C:
+        repo = "r"
+        def record(self, **k): return core.record(store, **k)
+        def link(self, s, r, d): return core.link(store, s, r, d)
+    write("A, first wording")
+    # ARRANGE — the starter subset: a and b, by reference, as okl init does.
+    for key, typ, title in (("a", "Defect", "A, first wording"), ("b", "Gate", "B")):
+        core.record(store, id=f"seed:p:{key}", type=typ, title=title, scope="org", repo="r")
+    core.record(store, id="local", type="Rule", title="recorded here", scope="org", repo="r")
+    # ACT — the pack gains new wording (and, in life, a symptom and aliases); refresh.
+    write("A, second wording")
+    n = seed_from_file(_C(), str(pack), only={m.id for m in store.all_nodes()})
+    # ASSERT
+    assert n == 2
+    ids = {m.id for m in store.all_nodes()}
+    assert ids == {"seed:p:a", "seed:p:b", "local"}, ids          # c was not imported
+    assert store.get_node("seed:p:a").title == "A, second wording"
+    assert [(e.src, e.rel) for e, _m in store.neighbors("seed:p:a")] == [("seed:p:b", "CATCHES")]   # c->a not written
+
+
+def test_seed_refresh_cli_finds_bundled_packs_from_the_store_and_names_foreign_ones(tmp_path, monkeypatch, capsys):
+    """`okl seed --refresh` with no path refreshes from the bundled packs the store's own seed
+    ids name, reports a pack it cannot find, and refuses an empty store."""
+    from okl.cli import main
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".okl").mkdir()
+    (tmp_path / ".okl" / "config.json").write_text('{"repo": "r", "database_url": "sqlite:///okl.db", "interests": ["python"]}')
+    monkeypatch.delenv("OKL_DATABASE_URL", raising=False); monkeypatch.delenv("OKL_SERVICE_URL", raising=False)
+    assert main(["seed", "--refresh"]) == 2
+    assert "no records to refresh" in capsys.readouterr().err
+    # Two records by reference from the bundled Python canon, with stale text, plus one from a pack that is not bundled.
+    from okl.client import Client
+    c = Client()
+    c.record(id="seed:python-canon:py_pyproject_versions", type="Rule", title="stale title", scope="org", repo=None)
+    c.record(id="seed:python-canon:py_strict_pytest", type="Rule", title="stale too", scope="org", repo=None)
+    c.record(id="seed:my-site:x", type="Rule", title="from a repo's own pack", scope="org", repo=None)
+    assert main(["seed", "--refresh"]) == 0
+    out = capsys.readouterr()
+    assert "refreshed 2 of" in out.out and "python-canon.json" in out.out
+    assert "my-site" in out.err and "not bundled" in out.err
+    titles = {n.id: n.title for n in c.all_nodes()}
+    assert titles["seed:python-canon:py_pyproject_versions"] != "stale title"
+    assert titles["seed:my-site:x"] == "from a repo's own pack"
+    assert len(titles) == 3      # the rest of the Python canon stayed out
+
+
+def test_seed_refresh_does_not_read_a_bundled_pack_over_a_same_named_local_file(tmp_path, monkeypatch, capsys):
+    """A repo's own seed/python-canon.json makes ids a bundled pack also makes; the no-path
+    refresh must not pick the bundled text over the repo's (review on #276). It skips that
+    pack, says how to name the source, and refreshes from the file when it is named."""
+    from okl.cli import main
+    from okl.client import Client
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".okl").mkdir(); (tmp_path / "seed").mkdir()
+    (tmp_path / ".okl" / "config.json").write_text('{"repo": "r", "database_url": "sqlite:///okl.db", "interests": ["python"]}')
+    monkeypatch.delenv("OKL_DATABASE_URL", raising=False); monkeypatch.delenv("OKL_SERVICE_URL", raising=False)
+    (tmp_path / "seed" / "python-canon.json").write_text(json.dumps({"nodes": [
+        {"key": "py_pyproject_versions", "type": "Rule", "scope": "org", "repo": "r", "title": "OUR wording"}]}))
+    Client().record(id="seed:python-canon:py_pyproject_versions", type="Rule", title="stale", scope="org", repo=None)
+    assert main(["seed", "--refresh"]) == 2
+    err = capsys.readouterr().err
+    assert "shares the bundled pack's name" in err and "seed/python-canon.json" in err
+    assert Client().get("seed:python-canon:py_pyproject_versions")["title"] == "stale"
+    assert main(["seed", "--refresh", "seed/python-canon.json"]) == 0
+    assert Client().get("seed:python-canon:py_pyproject_versions")["title"] == "OUR wording"
+
+
+def test_seed_refresh_in_the_checkout_reads_its_own_seed_dir_as_bundled(tmp_path, monkeypatch, capsys):
+    """In okl's own checkout the bundled packs ARE ./seed; the no-path refresh must read them,
+    not call them a local collision and refuse (review on #276)."""
+    from okl.cli import main, packs
+    from okl.client import Client
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".okl").mkdir(); (tmp_path / "seed").mkdir()
+    (tmp_path / ".okl" / "config.json").write_text('{"repo": "r", "database_url": "sqlite:///okl.db", "interests": ["python"]}')
+    monkeypatch.delenv("OKL_DATABASE_URL", raising=False); monkeypatch.delenv("OKL_SERVICE_URL", raising=False)
+    (tmp_path / "seed" / "mine.json").write_text(json.dumps({"nodes": [
+        {"key": "k", "type": "Rule", "scope": "org", "repo": "r", "title": "pack wording"}]}))
+    monkeypatch.setattr(packs, "_bundled_seed_dir", lambda: tmp_path / "seed")
+    Client().record(id="seed:mine:k", type="Rule", title="stale", scope="org", repo=None)
+    assert main(["seed", "--refresh"]) == 0
+    out = capsys.readouterr()
+    assert "refreshed 1 of 1" in out.out and "shares the bundled pack" not in out.err
+    assert Client().get("seed:mine:k")["title"] == "pack wording"
+
+
 def test_reseeding_keeps_verification_unless_the_governed_files_change(store, tmp_path):
     """#110: okl seed went through record(), which replaced the row, so every re-seed
     re-stamped each lesson as verified now and wiped its evidence and commit. A repo that

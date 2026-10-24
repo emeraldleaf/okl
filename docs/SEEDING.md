@@ -35,6 +35,14 @@ prompt itself, `src/okl/scaffold/claude/commands/seed-from-docs.md`. Three thing
 - Running `okl seed` on the edited file again updates the same records, but it keeps a
   record you deleted from the file, and it overwrites corrections made with `okl update`.
   Make corrections in the file.
+- When the bundled packs improve (a symptom or aliases on a lesson you already hold),
+  `okl seed --refresh` re-imports only the records your store already has, from the packs
+  they came from, and leaves the rest of each pack out; verification is kept. With no path
+  it finds the bundled packs from your store's own seed ids; your repo's own pack file is
+  refreshed by naming it (`okl seed --refresh seed/<repo>.json`). A record's id names its
+  pack by file stem, so give your own pack a name no bundled pack has; when a same-named
+  file sits in `seed/` or the repo root, the no-path form skips that pack and asks you to
+  name the source.
 
 The whole walk-through, with ADR status, teams, and keeping docs and comments current, is
 [docs/LOAD-YOUR-RULES.md](LOAD-YOUR-RULES.md).
