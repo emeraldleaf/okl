@@ -1654,6 +1654,66 @@ regardless of store size, so the cost is flat and the recall question moves to t
 whether a stronger cross-encoder would do better than the fastest one on wording the author
 has not read.
 
+### Result (2026-10-23)
+
+Receipts: `evals/results/probe-rephrase-20261023-rerank-{control-off,control-linear,on}.txt`,
+all three at commit 3bbe621 against the same 318-record store (every record with a vector),
+run in one sitting; the control is the middle column.
+
+| of 8 tasks | full-text | linear 0.40 (control) | linear 0.40 + rerank |
+|---|---|---|---|
+| authored | 8 | 8 | 8 |
+| probe's own ticket / paraphrase / bug report | 8 / 1 / 8 | 8 / 2 / 8 | 7 / 2 / 8 |
+| held-out ticket / paraphrase / bug report | 7 / 2 / 5 | 7 / 3 / 5 | 7 / 4 / 4 |
+| six precision prompts, records returned | 4, 11, 0, 11, 8, 12 | 5, 11, 0, 12, 8, 12 | 5, 11, 0, 12, 8, 12 |
+| median `core.check`, in-process | 7 ms | 24 ms | 538 ms (first call 900 ms, max 1.7 s) |
+
+**The falsifier fired.** One held-out row fell: the bug report for the token-storage lesson
+(`spa_tokens`), briefed at rank 5 under the control, left the twelve at rank 17 under the
+reranker; and the probe's own ticket row lost one (`ci_linter`, rank 12 → 18). The held-out
+paraphrase row rose as predicted (`rate_limiter`'s entered), the ticket rows held, the
+authored row held, the precision counts did not move at all (the same twelve records in
+another order on every prompt), and the latency was as predicted. By the rule as written the
+stage ships as an experiment flag, off.
+
+**What the order did.** The cross-encoder moves records a long way in both directions. Toward
+the top: the governing lesson of five paraphrases that share no subject word with it went
+from ranks 23, 42, 39, 72 and 77 to 2, 1, 8, 11 and 25 (`price_tamper`, `rate_limiter` and
+`react_fetch`'s own paraphrases; `judge_summary`'s and `idor_endpoint`'s held-out ones), and
+eight tickets and bug reports already briefed went to rank 1. Away from it: `price_tamper`'s
+held-out paraphrase 1 → 8 and bug report 4 → 20, `spa_tokens`' paraphrase 3 → 8 and bug
+report 5 → 17, `react_fetch`'s paraphrase 2 → 8. The pool was the limiter once:
+`idor_endpoint`'s held-out bug report sits at fused position 35 and was never scored.
+
+**Why the gains did not reach the briefing.** Four of the five paraphrases the reranker lifted
+into the top twelve share no subject word with their lesson, so the full-text arm did not
+return them and the §4q rule holds, as pre-registered: a candidate only the semantic arm found
+passes the floor by cosine (0.40) and never by a word or a rank. The reranker's score cannot
+take the floor's place: in check's own window the lifted lessons scored −9.8 to −11.4 while
+the six chat prompts' best candidate scored −4.0 to −11.4 (the band the selection set
+showed), so a score line that admitted the lessons would admit the filler, and a rank line
+admits whatever is first, which on a chat prompt is filler by construction. The second stage
+orders well enough to put a paraphrase's lesson first and not well enough to say that it
+belongs; the floor, which is what keeps the short prompts at 0, 5 and 8 records, still has to
+decide, and it decides on words.
+
+**Reading, against the pre-registration.** Net on the held-out set after the floor: one in,
+one out; on the probe's own rows, one out. The paraphrase gain is real and the bug-report loss
+is real; a measurement this size cannot rank them. A passage cross-encoder trained on web
+search queries, reading one to three sentences per record, is a different regime from the one
+its benchmark gains come from; the heavier models that read more carefully found one more
+paraphrase on the selection set at nine to twelve times the time and lost authored lessons.
+The default stays the first stage, and the "what a pass earns" clause does not apply.
+
+**What ships.** `okl check --rerank` (and `"rerank": true` in the config, `OKL_RERANK`), the
+`rerank` extra, `okl embed` caching the model, each briefed record's `rerank_score` in the
+JSON, `evals/probe_rephrase.py --rerank`, a latency line on every probe receipt, and the three
+selection scripts with their receipts; off everywhere; documented as the measured experiment
+it is. The next retrieval experiment is not another cross-encoder on this pool. It is the
+floor's rule for a candidate only the semantic arm returned (an admission by the first
+stage's cosine and the second stage's rank together, pre-registered against the six prompts),
+or a wider first-stage window; each is its own pre-registration.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

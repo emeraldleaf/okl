@@ -1,5 +1,5 @@
 store: 318 nodes (141 with aliases) · repo=okl · hook interests=['python', 'method', 'security', 'agent-safety', 'retrieval-design', 'eval-integrity', 'data-quality']
-retrieval code: commit 833bb9e · relevance floor on · hybrid off (318 records with a vector) · rerank off · every row below, recall and precision alike, is measured with this code against this store
+retrieval code: commit 3bbe621 · relevance floor on · hybrid off (318 records with a vector) · rerank off · every row below, recall and precision alike, is measured with this code against this store
 
 A. RECALL: is the governing lesson in the top-12? (harness config = no interests; hook config = repo interests)  rank = position in the ranked in-scope list
 task             variant     harness  hook      rank/live  matched terms
@@ -65,7 +65,7 @@ ci_linter        paraphrase  MISS     MISS       130/181   ['runs']
 ci_linter        bug-report  yes      yes          6/192   ['step', 'new', 'findings', 'changed']
 
 held-out recall by variant (of 8): {'ticket': 'harness 7/8, hook 6/8', 'paraphrase': 'harness 2/8, hook 2/8', 'bug-report': 'harness 5/8, hook 5/8'}
-check latency over 112 calls: median 7 ms · max 28 ms · first 18 ms (includes any model load)
+check latency over 112 calls: median 7 ms · max 20 ms · first 14 ms (includes any model load)
 
 B. PRECISION on six real prompts from this session (hook config). For each of the 12 returned: terms matched, and the rarest matched term's document frequency.
 

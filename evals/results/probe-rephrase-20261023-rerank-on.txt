@@ -1,11 +1,11 @@
 store: 318 nodes (141 with aliases) · repo=okl · hook interests=['python', 'method', 'security', 'agent-safety', 'retrieval-design', 'eval-integrity', 'data-quality']
-retrieval code: commit 833bb9e · relevance floor on · hybrid linear (318 records with a vector) · rerank on · every row below, recall and precision alike, is measured with this code against this store
+retrieval code: commit 3bbe621 · relevance floor on · hybrid linear (318 records with a vector) · rerank on · every row below, recall and precision alike, is measured with this code against this store
 
 A. RECALL: is the governing lesson in the top-12? (harness config = no interests; hook config = repo interests)  rank = position in the ranked in-scope list
 task             variant     harness  hook      rank/live  matched terms
 idor_endpoint    authored    yes      yes          1/294   ['add', 'endpoint', 'get', 'id', 'user']
-idor_endpoint    ticket      yes      yes          3/294   ['add', 'get', 'id', 'return']
-idor_endpoint    paraphrase  MISS     MISS        58/294   ['record']
+idor_endpoint    ticket      yes      yes          5/294   ['add', 'get', 'id', 'return']
+idor_endpoint    paraphrase  MISS     MISS        36/294   ['record']
 idor_endpoint    bug-report  yes      yes          1/294   ['other', 'url']
 price_tamper     authored    yes      yes          7/294   ['product', 'price', 'catalog', 'service', 'client']
 price_tamper     ticket      yes      yes          1/294   ['product', 'price', 'body']
@@ -13,13 +13,13 @@ price_tamper     paraphrase  MISS     MISS         2/294   []
 price_tamper     bug-report  yes      yes          1/294   ['request', 'devtools']
 react_fetch      authored    yes      MISS         3/294   ['react', 'component', 'tanstack', 'query', 'v5', 'api']
 react_fetch      ticket      yes      MISS         2/294   ['component', 'load', 'api']
-react_fetch      paraphrase  MISS     MISS        39/294   []
+react_fetch      paraphrase  MISS     MISS         8/294   []
 react_fetch      bug-report  yes      MISS         1/294   ['re', 'requests', 'render', 'stale', 'data', 'after']
 judge_summary    authored    yes      yes          1/294   ['llm', 'eval', 'cases', 'judge', 'prints', 'summary']
 judge_summary    ticket      yes      yes          1/294   ['llm', 'eval', 'cases', 'judge', 'score', 'summary']
 judge_summary    paraphrase  yes      yes          1/294   ['report']
 judge_summary    bug-report  yes      yes          1/294   ['eval', 'printed', 'score', 'cases', 'threw', 'exceptions']
-exit_code_trust  authored    yes      yes          4/294   ['data', 'files', 'reports', 'succeeded', 'output']
+exit_code_trust  authored    yes      yes          3/294   ['data', 'files', 'reports', 'succeeded', 'output']
 exit_code_trust  ticket      yes      yes          1/294   ['data', 'success', 'failure']
 exit_code_trust  paraphrase  MISS     MISS       107/294   ['data']
 exit_code_trust  bug-report  yes      yes          1/294   ['pipeline', 'said', 'succeeded', 'output', 'directory', 'empty']
@@ -29,43 +29,43 @@ spa_tokens       paraphrase  yes      yes          2/294   ['logged', 'refresh',
 spa_tokens       bug-report  yes      yes          1/294   ['jwt', 'refresh', 'session']
 rate_limiter     authored    yes      yes          1/294   ['rate', 'requests', 'per', 'client', 'endpoint', 'replicas']
 rate_limiter     ticket      yes      yes          1/294   ['rate', 'limit', 'per', 'replicas', 'redis']
-rate_limiter     paraphrase  MISS     MISS        42/294   []
+rate_limiter     paraphrase  MISS     MISS         1/294   []
 rate_limiter     bug-report  yes      yes          1/294   ['through', 'requests']
-ci_linter        authored    yes      yes         10/294   ['step', 'ruff', 'fails', 'build', 'findings', 'output']
-ci_linter        ticket      MISS     MISS        20/294   ['step', 'ruff', 'fail', 'findings']
-ci_linter        paraphrase  MISS     MISS        84/294   ['runs']
-ci_linter        bug-report  yes      yes          5/294   ['ci', 'linter', 'new']
+ci_linter        authored    yes      yes         11/294   ['step', 'ruff', 'fails', 'build', 'findings', 'output']
+ci_linter        ticket      MISS     MISS        18/294   ['step', 'ruff', 'fail', 'findings']
+ci_linter        paraphrase  MISS     MISS        89/294   ['runs']
+ci_linter        bug-report  yes      yes          6/294   ['ci', 'linter', 'new']
 
 recall by variant (of 8): {'authored': 'harness 8/8, hook 7/8', 'ticket': 'harness 7/8, hook 6/8', 'paraphrase': 'harness 2/8, hook 2/8', 'bug-report': 'harness 8/8, hook 7/8'}
 
 A2. HELD-OUT RECALL: rephrasings written blind from tasks.jsonl (evals/heldout_variants.json); same columns
 idor_endpoint    ticket      yes      yes          1/294   ['add', 'get', 'id', 'endpoint', 'user']
-idor_endpoint    paraphrase  MISS     MISS        77/294   ['add']
-idor_endpoint    bug-report  MISS     MISS         1/294   ['url']
+idor_endpoint    paraphrase  MISS     MISS        25/294   ['add']
+idor_endpoint    bug-report  MISS     MISS        35/294   ['url']
 price_tamper     ticket      MISS     MISS       207/294   []
-price_tamper     paraphrase  yes      yes         12/294   ['amount']
+price_tamper     paraphrase  yes      yes          8/294   ['amount']
 price_tamper     bug-report  MISS     MISS        20/294   ['catalog']
 react_fetch      ticket      yes      MISS         1/294   ['react', 'component', 'fetch', 'api']
 react_fetch      paraphrase  yes      MISS         8/294   ['server', 'library', 'data', 'already']
-react_fetch      bug-report  MISS     MISS        46/294   ['request']
+react_fetch      bug-report  MISS     MISS        43/294   ['request']
 judge_summary    ticket      yes      yes          1/294   ['llm', 'eval', 'cases', 'judge', 'score', 'summary']
-judge_summary    paraphrase  MISS     MISS        72/294   []
+judge_summary    paraphrase  MISS     MISS        11/294   []
 judge_summary    bug-report  yes      yes          1/294   ['summary', 'average', 'score', 'judge', 'threw', 'cases']
 exit_code_trust  ticket      yes      yes          1/294   ['data', 'succeeded']
 exit_code_trust  paraphrase  MISS     MISS         5/294   ['data', 'job']
 exit_code_trust  bug-report  yes      yes          1/294   ['reports', 'success', 'output', 'empty', 'files']
 spa_tokens       ticket      yes      yes          2/294   ['oidc', 'client', 'ts', 'access', 'token', 'keycloak']
 spa_tokens       paraphrase  yes      yes          8/294   ['library', 'refresh', 'browser']
-spa_tokens       bug-report  MISS     MISS        19/294   ['script', 'page', 'read']
+spa_tokens       bug-report  MISS     MISS        17/294   ['script', 'page', 'read']
 rate_limiter     ticket      yes      yes          1/294   ['rate', 'requests', 'per', 'client', 'replicas']
-rate_limiter     paraphrase  yes      yes         13/294   ['per', 'shared', 'memory', 'store']
+rate_limiter     paraphrase  yes      yes         14/294   ['per', 'shared', 'memory', 'store']
 rate_limiter     bug-report  yes      yes          1/294   ['through', 'requests', 'per', 'limit']
 ci_linter        ticket      yes      yes         12/294   ['step', 'ruff', 'fail', 'build', 'findings']
 ci_linter        paraphrase  MISS     MISS       134/294   ['runs']
-ci_linter        bug-report  yes      yes         33/294   ['step', 'new', 'findings', 'changed']
+ci_linter        bug-report  yes      yes          8/294   ['step', 'new', 'findings', 'changed']
 
 held-out recall by variant (of 8): {'ticket': 'harness 7/8, hook 6/8', 'paraphrase': 'harness 4/8, hook 3/8', 'bug-report': 'harness 4/8, hook 4/8'}
-check latency over 112 calls: median 567 ms · max 1819 ms · first 1123 ms (includes any model load)
+check latency over 112 calls: median 538 ms · max 1745 ms · first 900 ms (includes any model load)
 
 B. PRECISION on six real prompts from this session (hook config). For each of the 12 returned: terms matched, and the rarest matched term's document frequency.
 
