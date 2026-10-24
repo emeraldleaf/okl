@@ -145,9 +145,11 @@ def briefing_terms(task: str) -> list[str]:
 NEAR_MISSES = 12
 # The first stage's window: each arm fetches FETCH_MULTIPLIER times the limit (REPORT §4u grids it).
 FETCH_MULTIPLIER = 3
-# The floor's word rule for a candidate only the semantic arm returned: None keeps §4q's rule
-# (cosine alone); an integer n admits it when it shares n subject words with the task (§4u).
-SEMANTIC_WORD_FLOOR: int | None = None   # the most records the near-miss list names: one line each, about 120 characters
+# The floor's word rule for a candidate only the semantic arm returned: None is §4q's rule
+# (cosine alone); an integer n admits it when it shares n subject words with the task, never
+# fewer than the floor's own two. Two since §4u: the evidence is the words, not which arm's
+# window happened to reach the record.
+SEMANTIC_WORD_FLOOR: int | None = 2   # the most records the near-miss list names: one line each, about 120 characters
 
 
 def check(store: Store, repo: str, task: str, limit: int = 12,
@@ -323,9 +325,10 @@ def _apply_floor(store: Store, hits: list[Node], terms: list[str],
     CATCHES a matched Defect, a Decision that SUPERSEDES one): the link is the relevance,
     not the words. A hit the semantic arm scored at or above semantic.SUBJECT_SIMILARITY
     is on the subject by meaning, whatever words it shares; a hit only that arm found is on
-    the subject only by meaning, because the word rules belong to the full-text candidates,
-    and a wider fused window must not admit the one-word matches the full-text search would
-    never have reached (#258, REPORT §4q first pass). Returns the kept hits in rank order,
+    the subject by meaning or by sharing two subject words (SEMANTIC_WORD_FLOOR, §4u), never
+    by one word in its subject, because that rule belongs to the full-text candidates and a
+    wider fused window must not admit the one-word matches the full-text search would never
+    have reached (#258, REPORT §4q first pass). Returns the kept hits in rank order,
     each hit's matched words by id, and how many were left out.
     """
     words = [t.lower() for t in terms]

@@ -4,7 +4,7 @@ The search is an OR of the task's subject words, so before the floor a short or 
 task filled every slot with records sharing a single word with it (#257, measured in
 evals/results/probe-rephrase-20261021.txt). These tests pin the rule and what it reports.
 """
-from okl import core
+from okl import core, semantic
 from okl.store import Store
 
 
@@ -194,3 +194,20 @@ def test_exhaustion_is_judged_against_the_window_last_asked_for():
     live, _replaced, exhausted, _ = core._live_hits(s, "pin the linter", 1, "repo:r", None)
     assert len(live) == 3
     assert exhausted is False
+
+
+def test_a_semantic_only_hit_passes_by_two_shared_words_and_not_by_one_in_its_title():
+    """A record only the semantic arm returned is judged by the same two-word rule as a
+    full-text one (REPORT §4u); one word, even in its title, is still not enough for it,
+    and a cosine at the line still admits it on its own (§4q)."""
+    s = Store("sqlite:///:memory:")
+    two = core.record(s, type="Rule", title="exit codes lie", scope="org",
+                      symptom="the data job said it succeeded and wrote nothing")
+    one = core.record(s, type="Rule", title="data retention", scope="org", symptom="old rows never leave")
+    near = core.record(s, type="Rule", title="unrelated words entirely", scope="org", symptom="none")
+    hits = [s.get_node(two), s.get_node(one), s.get_node(near)]
+    cand = core.Candidates(hits, {near: semantic.SUBJECT_SIMILARITY}, frozenset(), None, False)
+    kept, matched, weak = core._apply_floor(s, hits, ["data", "job", "export"], cand)
+    assert [n.id for n in kept] == [two, near] and weak == 1
+    assert matched[two] == ["data", "job"] and matched[one] == ["data"]
+    s.close()
