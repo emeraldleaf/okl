@@ -250,6 +250,12 @@ class Client:
             payload["limit"] = limit
         if self.mode == "remote":
             result = self._post("/check", payload)
+            # An older service drops a request field it does not know and answers an ordinary
+            # briefing; a caller who asked for the index or the near misses must not read
+            # that as "none" (review on #270).
+            for wanted, key in ((self.index, "index"), (self.near_misses, "near_misses")):
+                if wanted and key not in result:
+                    raise OKLRejectedError(_TOO_OLD.format(what=f"answers `{key}` on /check"), status=404)
         else:
             kw: dict[str, Any] = {"interests": self.interests, "hybrid": self.hybrid, "index": self.index,
                                   "near_misses": self.near_misses}

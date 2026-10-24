@@ -59,6 +59,26 @@ def test_near_misses_name_what_matched_and_was_left_out(store):
     assert "Near misses (1)" in text and f"- [{weak}] pagination caps" in text
     assert "near_misses" not in core.check(store, repo="r", task="add an orders endpoint for the owner")
     assert core.briefed_ids(res) == [kept]
+    # Drift marks on a near miss are not exposure either (review on #270).
+    res["near_misses"][0]["drift"] = {"reason": "never verified", "files": "x"}
+    assert core.drifted_ids(res) == []
+    # When nothing passed the floor, the briefing points at the near misses, not a clean slate.
+    none = core.check(store, repo="r", task="paginate the admin list", near_misses=True)
+    assert none["rules"] == [] and none["near_misses"]
+    assert "clean slate" not in core.render_check_for_agent(none) and "came closest" in core.render_check_for_agent(none)
+
+
+def test_a_remote_check_that_drops_the_near_misses_is_refused(monkeypatch):
+    """An older service answers an ordinary briefing to a request it does not understand; the
+    client must not read that as "no near misses" (review on #270)."""
+    from okl.client import Client, OKLRejectedError
+    c = Client(config={"repo": "r", "service_url": "http://service.invalid"})
+    monkeypatch.setattr(c, "_post", lambda path, body: {"repo": "r", "task": body["task"], "rules": [], "match_count": 0})
+    monkeypatch.setattr("okl.client.drift.annotate_briefing", lambda *a, **k: None)
+    assert c.check("a task")["match_count"] == 0            # nothing asked for: fine
+    c.near_misses = True
+    with pytest.raises(OKLRejectedError, match="near_misses"):
+        c.check("a task")
 
 
 def test_okl_check_index_flag_appends_the_index(tmp_path):

@@ -1028,6 +1028,11 @@ def render_check_for_agent(result: dict[str, Any]) -> str:
                          "no encoded knowledge to match against yet. That is different from "
                          "\"no rule applies here\". Run `okl seed`, or record your first rule "
                          "with `okl record`.")
+        elif result.get("near_misses"):
+            # The near-miss list above offers records to inspect; "clean slate" would contradict it.
+            lines.append(f"_No encoded rule matched this task closely; the {len(result['near_misses'])} "
+                         "near miss(es) above are what came closest. Read any that fits before you "
+                         "proceed, and record anything you learn with `okl record`._")
         elif result.get("weak_matches"):
             lines.append(f"_No encoded rule matched this task closely: {result['weak_matches']} "
                          "record(s) sharing a single word with it were left out. Proceeding with "
@@ -1387,12 +1392,12 @@ def record_briefing(store: Store, repo: str, result: dict[str, Any]) -> bool:
 def drifted_ids(result: dict[str, Any]) -> list[str]:
     """The briefed lessons the briefing marked as changed since their last check (#252).
 
-    Read the same way as briefed_ids; a record carries `drift` once drift.annotate_briefing
-    has run, which is why the client annotates before it logs.
+    Read the same way as briefed_ids, skipping the same keys; a record carries `drift` once
+    drift.annotate_briefing has run, which is why the client annotates before it logs.
     """
     ids: dict[str, None] = {}
     for key, items in result.items():
-        if key in ("next_actions", "stale_warnings", "replaced") or not isinstance(items, list):
+        if key in ("next_actions", "stale_warnings", "replaced", "index", "near_misses") or not isinstance(items, list):
             continue
         for item in items:
             if isinstance(item, dict) and item.get("id") and item.get("drift"):
