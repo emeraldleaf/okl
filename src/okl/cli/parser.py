@@ -104,6 +104,11 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                          "only. Omit it to follow the config's `hybrid` or OKL_HYBRID. Needs `okl "
                          "embed` to have run once; otherwise the briefing is the full-text one and "
                          "the JSON says so (#258).")
+    pk.add_argument("--rerank", nargs="?", const="on", choices=["on", "off"], default=None,
+                    help="run a local cross-encoder over the first candidates and reorder them before "
+                         "the gates (REPORT §4t); 'off' for the first-stage order. Omit it to follow the "
+                         "config's `rerank` or OKL_RERANK. Needs the rerank extra and `okl embed` once "
+                         "online; otherwise the first-stage order stands and the JSON says why.")
     pk.add_argument("--near-misses", action="store_true", dest="near_misses",
                     help="append the records that matched the task and were left out (by the floor or "
                          "the cutoff) as id and title, at most twelve. A treatment under measurement "

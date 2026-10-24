@@ -77,3 +77,11 @@ wins on that measurement — mirroring Mem0's mistake in reverse.
   amendment to make when a store crosses about 100,000 vectors or a search exceeds 100 ms.
   The next retrieval experiment is a stronger local model or a reranker on the held-out set;
   the default changes only if one wins there.
+- 2026-10-23, later: the reranker was measured (REPORT §4t). A local cross-encoder
+  (`Xenova/ms-marco-MiniLM-L-6-v2`, chosen from five on a selection set; five contextual
+  embedders were compared at the same time and the static model kept) over the first 24
+  fused candidates moved one held-out paraphrase into the briefing and one held-out bug
+  report out, left the six short prompts' counts unchanged, and cost 0.5 s a check; the
+  pre-registered falsifier fired, so it ships as `okl check --rerank`, off. The default
+  remains the first stage. The next experiment is the floor's rule for a candidate only the
+  semantic arm returned, or a wider first-stage window, each pre-registered.

@@ -23,10 +23,10 @@ not something to build before a store exists that needs it.
 from __future__ import annotations
 
 import hashlib
-import os
 import struct
 from typing import Any
 
+from . import hub
 from .store import Node, Store
 
 MODEL_ID = "minishlab/potion-retrieval-32M"
@@ -66,28 +66,20 @@ def load_model(model_id: str = MODEL_ID, *, offline: bool = True) -> Any:
     `offline` is the check-time rule: a briefing must never wait on the network, so the
     model comes from the local cache or not at all. `okl embed` passes offline=False.
     """
-    if model_id in _LOADED:
+    with hub.loading(offline=offline):
+        if model_id in _LOADED:
+            return _LOADED[model_id]
+        try:
+            from model2vec import StaticModel
+        except ImportError as e:
+            raise SemanticUnavailableError(f"the hybrid extra is not installed: pip install '{EXTRA}'") from e
+        try:
+            _LOADED[model_id] = StaticModel.from_pretrained(model_id)
+        except (OSError, ValueError, RuntimeError) as e:
+            raise SemanticUnavailableError(
+                f"the model {model_id} is not cached locally ({type(e).__name__}); run `okl embed` once online"
+            ) from e
         return _LOADED[model_id]
-    try:
-        from model2vec import StaticModel
-    except ImportError as e:
-        raise SemanticUnavailableError(f"the hybrid extra is not installed: pip install '{EXTRA}'") from e
-    prior = os.environ.get("HF_HUB_OFFLINE")
-    if offline:
-        os.environ["HF_HUB_OFFLINE"] = "1"
-    try:
-        _LOADED[model_id] = StaticModel.from_pretrained(model_id)
-        return _LOADED[model_id]
-    except (OSError, ValueError, RuntimeError) as e:
-        raise SemanticUnavailableError(
-            f"the model {model_id} is not cached locally ({type(e).__name__}); run `okl embed` once online"
-        ) from e
-    finally:
-        if offline:
-            if prior is None:
-                os.environ.pop("HF_HUB_OFFLINE", None)
-            else:
-                os.environ["HF_HUB_OFFLINE"] = prior
 
 
 def encode(model: Any, texts: list[str]) -> list[list[float]]:

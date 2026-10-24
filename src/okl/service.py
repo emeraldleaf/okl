@@ -42,6 +42,7 @@ class CheckReq(BaseModel):
     hybrid: str | None = None            # None, "rrf" or "linear" (#258); the service's own vectors
     index: bool = False                  # the index arm (REPORT §4r)
     near_misses: bool = False            # the near-miss arm (REPORT §4s)
+    rerank: bool = False                 # the cross-encoder second stage (REPORT §4t); the service's own model
 
 
 class RecordReq(BaseModel):
@@ -207,7 +208,7 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901, PLR0915 - 
         _auth(authorization)
         result = core.check(_store, req.repo, req.task, limit=req.limit,
                             interests=req.interests, hybrid=req.hybrid, index=req.index,
-                            near_misses=req.near_misses)
+                            near_misses=req.near_misses, rerank=req.rerank)
         # The service is the only party that sees every client's briefings (#129).
         core.record_briefing(_store, req.repo, result)
         return result

@@ -88,7 +88,12 @@ plus the held-out recall and the precision prompts' counts on each side. The pro
 `--hybrid off|rrf|linear` runs the same tables with the semantic arm (REPORT §4q; it refuses
 to run hybrid when the model or the vectors are missing rather than fall back silently), and
 `evals/hybrid_grid.py` prints the recall rows and precision counts over a grid of cosine lines
-and both fusion modes, the receipt the subject line was chosen from. The rephrasings are
+and both fusion modes, the receipt the subject line was chosen from. `--rerank` runs the
+tables with the cross-encoder second stage (REPORT §4t), and every receipt ends its recall
+tables with the median `core.check` latency. `evals/rerank_select.py` and
+`evals/embedder_select.py` score local cross-encoders and dense models on the selection set
+(the probe's own rephrasings and the authored tasks, never the held-out set), one model per
+process; `evals/rerank_spike.py` is the first held-out spike §4t declares. The rephrasings are
 hand-written, which is its main bias, and it is not pooled with any A/B.
 
 ## Provenance of the originally quoted numbers

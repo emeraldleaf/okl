@@ -12,12 +12,13 @@ from __future__ import annotations
 import os
 import re
 from collections import Counter
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field, replace
 from typing import Any
 
 # STACK_TAGS is re-exported, not used here: adapters may import core and client but
 # never store (dependency direction is one-way), and the CLI needs the stack list to
 # judge which bundled seed packs fit a repo.
+from . import rerank as rerank_stage
 from . import semantic
 from .store import RETIRED_STATUSES, Edge, Node, Store, _now_ms, split_tags
 from .store import STACK_TAGS as STACK_TAGS
@@ -146,7 +147,7 @@ NEAR_MISSES = 12   # the most records the near-miss list names: one line each, a
 
 def check(store: Store, repo: str, task: str, limit: int = 12,
           interests: list[str] | None = None, *, hybrid: str | None = None,
-          index: bool = False, near_misses: bool = False) -> dict[str, Any]:
+          index: bool = False, near_misses: bool = False, rerank: bool = False) -> dict[str, Any]:
     """Return the slice of the encoded body relevant to starting `task` in `repo`.
 
     Matches on the task text across all node types, then buckets by type so the
@@ -162,6 +163,11 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     `hybrid` is None (full-text search only, the default), "linear" (the measured
     configuration) or "rrf": fuse the full-text candidates with the nearest records by a
     local embedding (#258, REPORT §4q).
+
+    `rerank` runs a local cross-encoder over the first candidates (fused when `hybrid`, the
+    full-text window otherwise) and reorders them before the gates (#258, REPORT §4t); when
+    asked for and not possible here, the first-stage order stands and `rerank_unavailable`
+    says why. Off by default.
 
     `index` adds every other live lesson this repo may see, as id and title, so an agent
     can fetch one by id when the briefing did not select it (#258's first vectorless arm,
@@ -184,7 +190,8 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     #                 defects rather than emitting one undifferentiated list.
     #   4. ROUTE    — turn the buckets into an ordered list of imperatives.
     repo_scope = f"repo:{repo}"
-    hits, replaced, exhausted, cand = _live_hits(store, task, limit, repo_scope, interests, hybrid=hybrid)
+    hits, replaced, exhausted, cand = _live_hits(store, task, limit, repo_scope, interests, hybrid=hybrid,
+                                                 rerank=rerank)
     # THE FLOOR. The search is an OR of the task's subject words, so on a short or generic
     # task every slot fills with records that share one word with it ("point", "doc"):
     # twelve imperatives chosen by a word in common, at about two thousand tokens a
@@ -201,7 +208,8 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     window = limit
     while len(hits) < limit and not exhausted and window < limit * 27:
         window *= 3
-        wider, replaced, exhausted, cand = _live_hits(store, task, window, repo_scope, interests, hybrid=hybrid)
+        wider, replaced, exhausted, cand = _live_hits(store, task, window, repo_scope, interests, hybrid=hybrid,
+                                                      rerank=rerank)
         candidates = wider
         hits, matched, weak = _apply_floor(store, wider, briefing_terms(task), cand)
     # THE CUTOFF. store.search returns BM25-ranked results, but full-text matching is
@@ -223,6 +231,8 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
             pub["matched_terms"] = matched.get(pub["id"], [])
             if pub["id"] in cand.scores:
                 pub["semantic_score"] = round(cand.scores[pub["id"]], 3)
+            if pub["id"] in cand.rerank_scores:
+                pub["rerank_score"] = round(cand.rerank_scores[pub["id"]], 2)
     _attach_catches(store, buckets["armed_gates"])
     actions = _route_actions(buckets)
 
@@ -237,6 +247,10 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
         # Asked for and not possible here: the briefing above is the full-text one. Said in
         # the result rather than raised, because a briefing must never fail on an optional arm.
         out["hybrid_unavailable"] = cand.note
+    if rerank:
+        out["rerank"] = cand.rerank_note is None
+        if cand.rerank_note:
+            out["rerank_unavailable"] = cand.rerank_note
     # Zero matches has two very different causes: the store holds rules and none apply
     # here, or the store holds nothing at all. Reporting both as "proceed" is the
     # silence-as-safety failure this project exists to prevent, so the count travels
@@ -327,7 +341,7 @@ def _apply_floor(store: Store, hits: list[Node], terms: list[str],
 
 
 def _live_hits(store: Store, task: str, limit: int, repo_scope: str,
-               interests: list[str] | None, *, hybrid: str | None = None,
+               interests: list[str] | None, *, hybrid: str | None = None, rerank: bool = False,
                ) -> tuple[list[Node], list[dict[str, Any]], bool, Candidates]:
     """Steps 1 and 2 without retired lessons, the pointers for the replaced ones, whether
     the search was exhausted (returned fewer rows than the window asked for), and the
@@ -344,11 +358,12 @@ def _live_hits(store: Store, task: str, limit: int, repo_scope: str,
     if not briefing_terms(task):
         # Nothing to search on, so neither arm ran; when the semantic arm was asked for, the
         # result must not report it as on (review on #267).
-        note = "the task has no subject words to search" if hybrid else None
-        return [], [], True, Candidates([], {}, frozenset(), note, True)
+        note = "the task has no subject words to search"
+        return [], [], True, Candidates([], {}, frozenset(), note if hybrid else None, True,
+                                        rerank_note=note if rerank else None)
     fetch = limit * 3
     for _ in range(3):
-        cand = ranked_candidates(store, task, fetch, hybrid)
+        cand = ranked_candidates(store, task, fetch, hybrid, rerank=rerank)
         found = cand.nodes
         live: list[Node] = []
         replaced: list[dict[str, Any]] = []
@@ -387,9 +402,12 @@ class Candidates:
     lexical: frozenset[str]
     note: str | None
     short: bool
+    rerank_scores: dict[str, float] = field(default_factory=dict)   # by id, when the reranker ran
+    rerank_note: str | None = None                                  # why it did not, when asked for
 
 
-def ranked_candidates(store: Store, task: str, fetch: int, hybrid: str | None) -> Candidates:
+def ranked_candidates(store: Store, task: str, fetch: int, hybrid: str | None,
+                      *, rerank: bool = False) -> Candidates:
     """Step 1: the `fetch` best candidates for `task`, best first.
 
     Full-text alone when `hybrid` is None. Otherwise the nearest `fetch` records by the
@@ -400,18 +418,35 @@ def ranked_candidates(store: Store, task: str, fetch: int, hybrid: str | None) -
     candidates, each one's cosine where the semantic arm scored it, why that arm did not
     run when it was asked for, and whether both arms returned fewer than asked (the
     exhaustion signal the caller widens on).
+
+    With `rerank`, a local cross-encoder reads the task against each of the first
+    `rerank_stage.RERANK_POOL` candidates and reorders them (REPORT §4t); the rest keep
+    their first-stage order behind them.
     """
     query = " ".join(briefing_terms(task))
     found = store.search(query, limit=fetch) if query else []
     lexical = frozenset(n.id for n in found)
     if not hybrid:
-        return Candidates(found, {}, lexical, None, len(found) < fetch)
+        return _reranked(Candidates(found, {}, lexical, None, len(found) < fetch), task, rerank)
     try:
         nearest = semantic.search(store, task, limit=fetch)
     except semantic.SemanticUnavailableError as e:
-        return Candidates(found, {}, lexical, str(e), len(found) < fetch)
+        return _reranked(Candidates(found, {}, lexical, str(e), len(found) < fetch), task, rerank)
     fused = _fuse(store, found, nearest, hybrid)
-    return Candidates(fused, dict(nearest), lexical, None, len(found) < fetch and len(nearest) < fetch)
+    return _reranked(Candidates(fused, dict(nearest), lexical, None, len(found) < fetch and len(nearest) < fetch),
+                     task, rerank)
+
+
+def _reranked(cand: Candidates, task: str, rerank: bool) -> Candidates:
+    """The candidates with the cross-encoder's order over their head when `rerank` (§4t);
+    unchanged, with the reason recorded, when it was asked for and cannot run here."""
+    if not rerank:
+        return cand
+    try:
+        nodes, scores = rerank_stage.rerank(task, cand.nodes)
+    except rerank_stage.RerankUnavailableError as e:
+        return replace(cand, rerank_note=str(e))
+    return replace(cand, nodes=nodes, rerank_scores=scores)
 
 
 def _fuse(store: Store, fts: list[Node], nearest: list[tuple[str, float]], method: str) -> list[Node]:

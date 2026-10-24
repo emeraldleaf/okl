@@ -127,3 +127,15 @@ reports, and one record more on two of six short prompts. Before it, the two fre
 more: a `symptom` on every lesson and `aliases` in your team's words (`docs/LOAD-YOUR-RULES.md`,
 items 7 and 8). Past roughly 100,000 vectors the search needs an approximate index; the
 retrieval ADR names that tier and its trigger.
+
+## The second stage (`--rerank`), off by default
+
+Measured in REPORT §4t and not made the default. It costs an 80 MB ONNX cross-encoder
+(`pip install 'observed-knowledge-ledger[rerank]'`, then `okl embed` once online caches it),
+about 0.5 s per check with the model loaded and 0.9 s for a process's first call (the hook runs
+`okl check` as a new process each time, so each check pays the load), and nothing in the
+store. It reorders the first 24 candidates by how well each record answers the task. On the
+held-out set that moved one paraphrase into the briefing and one bug report out, left the
+precision prompts' counts unchanged, and the pre-registered falsifier fired. The relevance
+floor still decides what is briefed, on words and cosine, because the cross-encoder's scores
+on records of one to three sentences do not separate a lesson from chat filler.

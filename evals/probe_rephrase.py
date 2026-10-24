@@ -23,8 +23,10 @@ repo's configured interests, since both change the answer.
 import argparse
 import json
 import re
+import statistics
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -35,8 +37,11 @@ from okl.client import Client, load_config
 _ap = argparse.ArgumentParser()
 _ap.add_argument("--hybrid", choices=["off", "rrf", "linear"], default="off",
                  help="fuse the full-text candidates with the local embedding's nearest records (#258)")
-_mode = _ap.parse_args().hybrid
-HYBRID = None if _mode == "off" else _mode
+_ap.add_argument("--rerank", action="store_true",
+                 help="run the local cross-encoder over the first candidates before the gates (REPORT §4t)")
+_args = _ap.parse_args()
+HYBRID = None if _args.hybrid == "off" else _args.hybrid
+RERANK = _args.rerank
 c = Client(); store = c._local_store(); cfg = load_config()
 if HYBRID:
     # A probe that claimed the semantic arm while silently falling back would be a lie.
@@ -54,9 +59,17 @@ def matched(task: str, n: Any) -> list[str]:
     """The task's subject words that occur whole in the record's prose."""
     terms = [t.lower() for t in core.briefing_terms(task)]
     return [t for t in terms if re.search(r'(?<![a-z0-9])' + re.escape(t) + r'(?![a-z0-9])', TXT[n.id])]
+LATENCY: list[float] = []   # seconds per core.check call, the first one including any model load
+
+
 def check(task: str, interests: list[str] | None) -> dict[str, Any]:
-    """core.check with the probe's retrieval setting."""
-    return core.check(store, repo=REPO, task=task, interests=interests, hybrid=HYBRID)
+    """core.check with the probe's retrieval setting, timed."""
+    t0 = time.perf_counter()
+    res = core.check(store, repo=REPO, task=task, interests=interests, hybrid=HYBRID, rerank=RERANK)
+    LATENCY.append(time.perf_counter() - t0)
+    if RERANK and res.get("rerank_unavailable"):
+        sys.exit(f"probe: --rerank asked for but {res['rerank_unavailable']}")
+    return res
 DF: dict[str, int] = {}
 
 
@@ -72,8 +85,15 @@ def returned(res: dict[str, Any]) -> list[str]:
 def rank_of(task: str, nid: str, interests: list[str] | None) -> tuple[int | None, int]:
     """Position of `nid` in the ranked in-scope live list for `task`, and that list's length."""
     # The whole store, so a low rank is a rank and not a cutoff artefact; the candidate
-    # order is the one check() uses, fused when --hybrid is on.
+    # order is the one check() uses, fused when --hybrid is on. With --rerank the order is
+    # check's own window (three times its limit per arm) with the pool reranked, since the
+    # stage never sees a lesson outside that window; a lesson past the window keeps its
+    # whole-store rank with no reranking, which is where the stage left it.
     found = core.ranked_candidates(store, task, max(N, 1), HYBRID).nodes
+    if RERANK:
+        window = core.ranked_candidates(store, task, 36, HYBRID, rerank=True).nodes
+        seen = {n.id for n in window}
+        found = window + [n for n in found if n.id not in seen]
     live = [n for n in found if core._in_scope(n, f"repo:{REPO}", interests) and n.status not in core.RETIRED_STATUSES]
     ids = [n.id for n in live]
     return (ids.index(nid) + 1) if nid in ids else None, len(live)
@@ -119,8 +139,8 @@ _floor = "on" if hasattr(core, "_apply_floor") else "off"
 print(f"store: {N} nodes ({sum(1 for n in nodes if n.aliases)} with aliases) · repo={REPO} · hook interests={INTERESTS}")
 _vectors = len(store.embeddings(semantic.MODEL_ID))
 print(f"retrieval code: commit {_head or '?'} · relevance floor {_floor} · hybrid {HYBRID or 'off'}"
-      f" ({_vectors} records with a vector) · every row below, recall and precision alike, is "
-      "measured with this code against this store\n")
+      f" ({_vectors} records with a vector) · rerank {'on' if RERANK else 'off'} · every row below, "
+      "recall and precision alike, is measured with this code against this store\n")
 print("A. RECALL: is the governing lesson in the top-12? (harness config = no interests; hook config = repo interests)  rank = position in the ranked in-scope list")
 print(f"{'task':16} {'variant':11} {'harness':8} {'hook':8} {'rank':>5}/{'live':<5} matched terms")
 hits = {k: [0, 0] for k in LABELS}
@@ -149,6 +169,8 @@ for t in tasks:
         m = matched(task, n)
         print(f"{t['id']:16} {label:11} {'yes' if r1 else 'MISS':8} {'yes' if r2 else 'MISS':8} {str(rk):>5}/{live:<5} {m[:6]}")
 print("\nheld-out recall by variant (of 8):", {k: f"harness {v[0]}/8, hook {v[1]}/8" for k, v in hits2.items()})
+print(f"check latency over {len(LATENCY)} calls: median {statistics.median(LATENCY)*1000:.0f} ms · "
+      f"max {max(LATENCY)*1000:.0f} ms · first {LATENCY[0]*1000:.0f} ms (includes any model load)")
 
 print("\nB. PRECISION on six real prompts from this session (hook config). For each of the 12 returned: terms matched, and the rarest matched term's document frequency.")
 PROMPTS = json.loads(Path('evals/probe_prompts.json').read_text())["prompts"]

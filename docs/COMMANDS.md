@@ -55,6 +55,12 @@ okl check --near-misses
                      # append the records that matched the task and were left out, by the floor
                      #   or the cutoff, as `- [id] title`, at most twelve (about 1.8 KB). Off by
                      #   default; REPORT §4s says why it was not measured live.
+okl check --rerank   # reorder the first 24 candidates (fused when --hybrid is on) by a local
+                     #   cross-encoder's score for the (task, record) pair before the gates;
+                     #   `"rerank": true` in .okl/config.json or OKL_RERANK=1 turns it on for
+                     #   every check. Needs the `rerank` extra and `okl embed` once online (an
+                     #   80 MB ONNX model). Measured and shipped off (REPORT §4t): one held-out
+                     #   paraphrase in, one bug report out, 0.5 s a check.
 okl check --index    # append every other lesson in scope as `- [id] title`, so an agent can
                      #   fetch one with `okl show <id>` when the briefing did not select it.
                      #   A treatment under measurement (REPORT §4r); about 120 characters a lesson.

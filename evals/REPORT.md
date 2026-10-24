@@ -1589,6 +1589,158 @@ for a reader who wants to see what else matched, off by default, and nothing in 
 changes. The finding that matters is the seven: the gap on paraphrases is a candidate-window
 problem, not a ranking problem, and a reranker over the full-text window alone cannot reach
 them either. §4t measures the fused window for that reason.
+## 4t. PRE-REGISTERED: a cross-encoder second stage over the fused candidates (2026-10-23)
+
+Written before the run, per §2b, for #258's second stage, on the probe (§4p's instrument).
+
+**The question.** §4q left the semantic arm optional: it found one more held-out paraphrase
+and nothing else, because a static embedding's cosines sit in a band too narrow to separate
+the governing lesson from filler. The standard second stage reads the task and each candidate
+together: a cross-encoder scores the pair, a sharper question than either arm's independent
+score. Does reordering the fused candidates by that score put the governing lesson among the
+twelve where the first stage ranked it past them, without displacing it where the first stage
+had it right, at a latency a hook can carry?
+
+**The design.** `check` fetches three times its limit per arm (36 full-text and 36 by cosine,
+fused by the §4q linear rule). The cross-encoder scores the first 24 fused candidates against
+a short text per record (title, symptom, aliases) and reorders them; the tail keeps its order;
+the scope gates, the §4n relevance floor and the cutoff are unchanged and run after. The score
+is an order, not a line: on the selection set below the governing lesson scored from −11.4 to
++8.2 (medians −5.8 authored, −3.3 ticket, −8.6 paraphrase, −1.1 bug report) while the six chat
+prompts' best candidate peaked at −4.0, so no absolute score separates the two, and the floor
+still admits or drops. A candidate only the semantic arm returned still needs its cosine at
+0.40 to pass the floor; a reranker rank does not admit it. Off by default: `okl check
+--rerank`, `"rerank": true` in the config or `OKL_RERANK=1`; the model comes from the local
+cache or the stage says why it did not run.
+
+**How the model was chosen, and on what.** Five local cross-encoders fastembed ships were run
+on a selection set that is not the held-out set: the probe's own rephrasings and the eight
+authored tasks, over fused windows of 18 and 36 per arm, one process per model (receipt
+`evals/results/rerank-select-20261023.txt`, script `evals/rerank_select.py`). At the smaller
+window `Xenova/ms-marco-MiniLM-L-6-v2` kept all eight authored lessons in the top twelve
+(ranks 2, 8, 3, 1, 3, 3, 1, 12), found 7 tickets, 5 paraphrases and 8 bug reports of 8, at
+612 ms a task and a 0.1 s load from cache. MiniLM-L12, bge-reranker-v2-m3 (int8) and
+bge-reranker-base each found one more of the probe's own paraphrases and lost one or two
+authored lessons, at 2.6, 9 and 12 times the time (and 3.5, 9.8 and 18.4 s to load); jina
+turbo lost an authored lesson and a bug report. The larger window hurt every model: given
+more filler, each ranked some of it ahead of a governing lesson (MiniLM-L6 authored 8 → 6).
+The shipped pool, the first 24 of the fused list from the 36-per-arm fetch, is therefore the
+smaller side of the fetch, between the two windows measured. Short text was chosen in the
+first spike (`evals/rerank_spike.py`, receipts `rerank-spike-20261023-*.txt`): the record's
+full text slowed scoring about five-fold (4.4 s a task) and found nothing more. The current
+best small cross-encoders by published benchmark (Ettin-reranker, Qwen3-Reranker) are not in
+fastembed's registry and were not run; they are the next spike if this one moves a row.
+
+**The embedder under it, checked at the same time.** Five contextual dense models were scored
+on the same selection set as the semantic arm alone (receipt
+`evals/results/embedder-select-20261023.txt`, script `evals/embedder_select.py`): none found
+more held-out-shaped paraphrases than the static model (5 of 8 for every model), the best of
+them found two more authored lessons and one more bug report at 500 times the encode time per
+record, and their filler cosines rose with their true-pair cosines (bge-small's chat prompts
+reached 0.68), so none offers a cleaner line. The static model stays; the reranker is where
+the precision is sought.
+
+**What the held-out set has already seen, stated.** The first spike scored the held-out tasks
+twice before the selection set existed: full text at window 36 (MiniLM 7/4/6 of 8 by variant,
+jina 7/5/6) and short text at window 18 (MiniLM 7/5/5, jina 6/6/4), as ranks in the reranked
+list, before the floor. The model, text and window were then chosen on the selection set, but
+the held-out rows below were seen once by the author and are not blind for this arm. The
+probe's own rows were used for selection and are reported, not pooled.
+
+**The measure.** `evals/probe_rephrase.py --hybrid linear --rerank` against the same probe
+without `--rerank`, at the same commit and store, in the same sitting (and the full-text probe
+beside them for orientation): held-out recall by variant after the floor (harness and hook
+configurations), the governing lesson's rank in the reranked in-scope list, the authored row,
+the probe's own rows, the six precision prompts' counts, and the median `core.check` latency
+the probe now prints (the first call includes the model load). §4q's control at an earlier
+commit and a 313-record store: held-out 7 / 3 / 5, probe's own 8 / 2 / 8, authored 8,
+precision 5, 9, 0, 12, 7, 12.
+
+**Predictions.** The held-out paraphrase row rises by at least one over the same-sitting
+control; the held-out ticket and bug-report rows do not fall; the authored row stays 8; no
+precision prompt gains more than one record; the median check latency with the model loaded
+is under one second on this laptop, and the first call under two.
+
+**Falsifiers.** Any held-out row falls below the control (the second stage displaces what the
+first had right); or the paraphrase row does not rise after the floor while its rank column
+does (the order was not the limiter; the floor is, and a relative admission rule for
+reranked semantic-only candidates is the next pre-registration, not a reinterpretation of this
+one); or a precision prompt gains two or more records; or the median check exceeds 1.5 s. Any
+of these and the stage ships as an experiment flag, off, with the result recorded.
+
+**What a pass earns.** The flag is documented beside `--hybrid` as the measured configuration
+of the semantic arm, and the next agentic A/B on the held-out tasks (§4r's instrument) runs
+with both on, since the probe measures recall and the harness measures what the agent writes.
+Neither becomes the default on the probe alone (§4n's rule).
+
+**Cost.** No paid call; about a minute per probe run; an 80 MB ONNX model on disk under the
+`rerank` extra, fetched once by `okl embed`.
+
+**What this cannot settle.** Whether a better order changes what the agent writes; whether
+the first stage's recall, which bounds the pool, holds on a larger store (the pool is 24
+regardless of store size, so the cost is flat and the recall question moves to the fetch);
+whether a stronger cross-encoder would do better than the fastest one on wording the author
+has not read.
+
+### Result (2026-10-23)
+
+Receipts: `evals/results/probe-rephrase-20261023-rerank-{control-off,control-linear,on}.txt`,
+all three at commit 3bbe621 against the same 318-record store (every record with a vector),
+run in one sitting; the control is the middle column.
+
+| of 8 tasks | full-text | linear 0.40 (control) | linear 0.40 + rerank |
+|---|---|---|---|
+| authored | 8 | 8 | 8 |
+| probe's own ticket / paraphrase / bug report | 8 / 1 / 8 | 8 / 2 / 8 | 7 / 2 / 8 |
+| held-out ticket / paraphrase / bug report | 7 / 2 / 5 | 7 / 3 / 5 | 7 / 4 / 4 |
+| six precision prompts, records returned | 4, 11, 0, 11, 8, 12 | 5, 11, 0, 12, 8, 12 | 5, 11, 0, 12, 8, 12 |
+| median `core.check`, in-process | 7 ms | 24 ms | 538 ms (first call 900 ms, max 1.7 s) |
+
+**The falsifier fired.** One held-out row fell: the bug report for the token-storage lesson
+(`spa_tokens`), briefed at rank 5 under the control, left the twelve at rank 17 under the
+reranker; and the probe's own ticket row lost one (`ci_linter`, rank 12 → 18). The held-out
+paraphrase row rose as predicted (`rate_limiter`'s entered), the ticket rows held, the
+authored row held, the precision counts did not move at all (the same twelve records in
+another order on every prompt), and the latency was as predicted. By the rule as written the
+stage ships as an experiment flag, off.
+
+**What the order did.** The cross-encoder moves records a long way in both directions. Toward
+the top: the governing lesson of five paraphrases that share no subject word with it went
+from ranks 23, 42, 39, 72 and 77 to 2, 1, 8, 11 and 25 (`price_tamper`, `rate_limiter` and
+`react_fetch`'s own paraphrases; `judge_summary`'s and `idor_endpoint`'s held-out ones), and
+eight tickets and bug reports already briefed went to rank 1. Away from it: `price_tamper`'s
+held-out paraphrase 1 → 8 and bug report 4 → 20, `spa_tokens`' paraphrase 3 → 8 and bug
+report 5 → 17, `react_fetch`'s paraphrase 2 → 8. The pool was the limiter once:
+`idor_endpoint`'s held-out bug report sits at fused position 35 and was never scored.
+
+**Why the gains did not reach the briefing.** Four of the five paraphrases the reranker lifted
+into the top twelve share no subject word with their lesson, so the full-text arm did not
+return them and the §4q rule holds, as pre-registered: a candidate only the semantic arm found
+passes the floor by cosine (0.40) and never by a word or a rank. The reranker's score cannot
+take the floor's place: in check's own window the lifted lessons scored −9.8 to −11.4 while
+the six chat prompts' best candidate scored −4.0 to −11.4 (the band the selection set
+showed), so a score line that admitted the lessons would admit the filler, and a rank line
+admits whatever is first, which on a chat prompt is filler by construction. The second stage
+orders well enough to put a paraphrase's lesson first and not well enough to say that it
+belongs; the floor, which is what keeps the short prompts at 0, 5 and 8 records, still has to
+decide, and it decides on words.
+
+**Reading, against the pre-registration.** Net on the held-out set after the floor: one in,
+one out; on the probe's own rows, one out. The paraphrase gain is real and the bug-report loss
+is real; a measurement this size cannot rank them. A passage cross-encoder trained on web
+search queries, reading one to three sentences per record, is a different regime from the one
+its benchmark gains come from; the heavier models that read more carefully found one more
+paraphrase on the selection set at nine to twelve times the time and lost authored lessons.
+The default stays the first stage, and the "what a pass earns" clause does not apply.
+
+**What ships.** `okl check --rerank` (and `"rerank": true` in the config, `OKL_RERANK`), the
+`rerank` extra, `okl embed` caching the model, each briefed record's `rerank_score` in the
+JSON, `evals/probe_rephrase.py --rerank`, a latency line on every probe receipt, and the three
+selection scripts with their receipts; off everywhere; documented as the measured experiment
+it is. The next retrieval experiment is not another cross-encoder on this pool. It is the
+floor's rule for a candidate only the semantic arm returned (an admission by the first
+stage's cosine and the second stage's rank together, pre-registered against the six prompts),
+or a wider first-stage window; each is its own pre-registration.
 
 ## 5. Findings
 
