@@ -37,7 +37,7 @@ def hygiene_findings_for_file(path: str, repo_names: list[str] | None = None) ->
     return hygiene.hygiene_findings(data.get("nodes", []), repo_names or [])
 
 
-def seed_from_file(client: Client, path: str) -> int:
+def seed_from_file(client: Client, path: str, *, only: set[str] | None = None) -> int:
     """Ingest a *-defects.json file. Idempotent: re-seeding the same file REPLACES
     its own nodes instead of duplicating them.
 
@@ -46,6 +46,12 @@ def seed_from_file(client: Client, path: str) -> int:
     to wire edges; here it does double duty as the persistent identity so a second
     `okl seed` run upserts the same rows. A node without a `key` falls back to a
     fresh random id (non-idempotent) — every bundled seed node has a key.
+
+    `only` is the refresh mode (`okl seed --refresh`): import a node only when its stable
+    id is in that set (the ids the store already holds), so a store that took a starter
+    subset of a pack picks up the pack's newer text for those records without importing
+    the rest; a node with no key is skipped, and an edge is written only when both ends
+    were imported. Returns how many nodes were imported.
     """
     p = Path(path)
     data = json.loads(p.read_text())
@@ -71,6 +77,8 @@ def seed_from_file(client: Client, path: str) -> int:
     keymap: dict[str, str] = {}
     for node in data.get("nodes", []):
         key = node.pop("key", None)
+        if only is not None and (not key or f"{ns}:{key}" not in only):
+            continue
         # Seed nodes carry provenance from ANOTHER repo. Client.record defaults a
         # missing `repo` to the CURRENT repo, which would mislabel it — pass None
         # explicitly ("unknown") and warn, rather than inherit that default.
@@ -85,10 +93,17 @@ def seed_from_file(client: Client, path: str) -> int:
         if key:
             keymap[key] = node_id
     for edge in data.get("edges", []):
+        if only is not None and not (edge["src"] in keymap and edge["dst"] in keymap):
+            continue
         src = keymap.get(edge["src"], edge["src"])
         dst = keymap.get(edge["dst"], edge["dst"])
         client.link(src, edge["rel"], dst)
-    return len(data.get("nodes", []))
+    return len(keymap) if only is not None else len(data.get("nodes", []))
+
+
+def pack_node_count(path: str) -> int:
+    """How many nodes a pack holds, for the refresh report's "X of Y"."""
+    return len(json.loads(Path(path).read_text()).get("nodes", []))
 
 
 STARTER = Path(__file__).parent / "starter.json"
