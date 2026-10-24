@@ -43,6 +43,7 @@ def _apply_check_flags(client: Client, args: argparse.Namespace) -> None:
     if fusion is not None:
         client.hybrid = None if fusion == "off" else fusion
     client.index = bool(getattr(args, "index", False))
+    client.near_misses = bool(getattr(args, "near_misses", False))
     second = getattr(args, "rerank", None)
     if second is not None:
         client.rerank = second == "on"

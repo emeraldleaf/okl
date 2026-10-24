@@ -59,7 +59,7 @@ BRIEF_INTERESTS = os.environ.get("OKL_BRIEF_INTERESTS", "")
 # ran. When set, an `okl` shim on the generator's PATH logs each invocation, so the receipt
 # says which lessons each sample fetched. Stamped into the receipt: it is the instrument.
 GENERATOR_TOOLS = os.environ.get("GENERATOR_TOOLS", "")
-ARMS = ("baseline", "briefed", "indexed")
+ARMS = ("baseline", "briefed", "indexed", "nearmiss")
 
 GEN_PROMPT = """You are implementing one task for an existing codebase. Output ONLY the code (or YAML/script), no explanation.
 
@@ -98,9 +98,10 @@ def call(cmd: str, prompt: str, timeout: int, workdir: str, env: dict[str, str] 
     return r.stdout
 
 
-def get_briefing(task: str, timeout: int, *, index: bool = False) -> str:
-    """Return the briefing `okl check` gives the briefed arm for `task`, with the index of every
-    other lesson in scope when `index` (the indexed arm); raises RuntimeError if it fails."""
+def get_briefing(task: str, timeout: int, *, index: bool = False, near_misses: bool = False) -> str:
+    """Return the briefing `okl check` gives the briefed arm for `task`; with the index of every
+    other lesson in scope when `index` (the indexed arm, §4r), or with the near-miss list when
+    `near_misses` (§4s); raises RuntimeError if it fails."""
     # Fails CLOSED: a briefed arm without a briefing would silently become a second
     # baseline arm and corrupt the comparison.
     # --interests from OKL_BRIEF_INTERESTS, default "" (unfiltered); evals/preflight.py reads
@@ -113,7 +114,8 @@ def get_briefing(task: str, timeout: int, *, index: bool = False) -> str:
     # count every bait task's rules as "shown" in the store's exposure report (#129). It
     # changes nothing in the briefing itself.
     r = subprocess.run([sys.executable, "-m", "okl", "check", "--task", task,
-                        "--format", "agent", "--interests", BRIEF_INTERESTS, *(["--index"] if index else [])],
+                        "--format", "agent", "--interests", BRIEF_INTERESTS,
+                        *(["--index"] if index else []), *(["--near-misses"] if near_misses else [])],
                        capture_output=True, text=True, timeout=timeout, cwd=REPO,
                        env={**os.environ, "OKL_BRIEFING_LOG": "0"})
     if r.returncode != 0:
@@ -213,7 +215,8 @@ def generator_cmd() -> str:
 
 
 def run_one(t: dict, arm: str, s: int, *, briefed_header: str | None, brief_err: str,
-            timeout: int, workdir: str, indexed_header: str | None = None) -> tuple[dict, bool]:
+            timeout: int, workdir: str, indexed_header: str | None = None,
+            nearmiss_header: str | None = None) -> tuple[dict, bool]:
     """Generate and judge one (task, arm, sample). Returns the record and whether it is a result.
 
     False means a failure: anything that raised, including an Unevaluable sample, which is
@@ -225,7 +228,8 @@ def run_one(t: dict, arm: str, s: int, *, briefed_header: str | None, brief_err:
     t0 = time.time()
     log = str(Path(workdir) / f"shim-{t['id'].replace('/', '_')}-{arm}-{s}.log")
     try:
-        header = {"baseline": "", "briefed": briefed_header, "indexed": indexed_header}[arm]
+        header = {"baseline": "", "briefed": briefed_header, "indexed": indexed_header,
+                  "nearmiss": nearmiss_header}[arm]
         if header is None:
             raise RuntimeError(f"briefing unavailable (fail closed): {brief_err}")
         env = generator_env(workdir, log)
@@ -589,10 +593,13 @@ def main() -> int:
         for t in tasks:
             # The briefing is deterministic per task — fetch once, reuse across samples.
             brief_err = ""
-            briefed_header = indexed_header = None
+            briefed_header = indexed_header = nearmiss_header = None
             try:
                 if "briefed" in arms:
                     briefed_header = BRIEFING_HEADER.format(briefing=get_briefing(t["task"], args.timeout))
+                if "nearmiss" in arms:
+                    nearmiss_header = BRIEFING_HEADER.format(
+                        briefing=get_briefing(t["task"], args.timeout, near_misses=True))
                 if "indexed" in arms:
                     with_index = get_briefing(t["task"], args.timeout, index=True)
                     indexed_header = BRIEFING_HEADER.format(briefing=with_index)
@@ -603,7 +610,8 @@ def main() -> int:
             for s in range(args.samples):
                 for arm in arms:
                     rec, ok = run_one(t, arm, s, briefed_header=briefed_header, brief_err=brief_err,
-                                      timeout=args.timeout, workdir=clean_cwd, indexed_header=indexed_header)
+                                      timeout=args.timeout, workdir=clean_cwd, indexed_header=indexed_header,
+                                      nearmiss_header=nearmiss_header)
                     if ok:
                         results.append(rec)
                         print(f"  {t['id']:16} {arm:8} s{s} → "

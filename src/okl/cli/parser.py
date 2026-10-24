@@ -109,6 +109,10 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                          "the gates (REPORT §4t); 'off' for the first-stage order. Omit it to follow the "
                          "config's `rerank` or OKL_RERANK. Needs the rerank extra and `okl embed` once "
                          "online; otherwise the first-stage order stands and the JSON says why.")
+    pk.add_argument("--near-misses", action="store_true", dest="near_misses",
+                    help="append the records that matched the task and were left out (by the floor or "
+                         "the cutoff) as id and title, at most twelve. A treatment under measurement "
+                         "(REPORT §4s).")
     pk.add_argument("--index", action="store_true",
                     help="append every other lesson in scope as id and title, so the agent can fetch "
                          "one with `okl show <id>` when the briefing did not select it. A treatment "

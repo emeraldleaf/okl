@@ -1561,6 +1561,34 @@ this one.
 flag; the held-out task file; and `okl check --index` as the measured treatment, off
 everywhere. Nothing in the hook changes.
 
+## 4s. PRE-REGISTERED: near misses appended to the briefing, settled by pre-flight (2026-10-23)
+
+Written per §2b for the cheaper design §4r pointed at: instead of every lesson in scope (38 KB),
+append only the records that matched the task and were left out, by the floor or the cutoff,
+as id and title, at most twelve lines (`okl check --near-misses`, about 1.8 KB). The premise
+was that a title can carry its lesson, so naming the near misses might do what the index did
+not, at a twentieth of the cost.
+
+**The pre-flight, run before any model.** For each of the 24 held-out tasks, where does the
+governing lesson land with the flag on: briefed, in the near-miss list, or neither?
+
+| where the governing lesson lands | tasks |
+|---|---|
+| in the briefing already | 14 |
+| in the near-miss list | 3 (`price_tamper/paraphrase`, `price_tamper/bug-report`, `rate_limiter/paraphrase`) |
+| neither | 7 |
+
+The seven are not in the full-text candidate window at all: each shares zero or one common
+word with its task (`add`, `url`, `request`, `runs`), so no list drawn from that window can
+name them. The three the list would name are tasks on which §4r's briefed arm reproduced
+nothing (0 of 3, 0 of 1, 0 of 3), so a live run could not show a gain on them, only noise.
+
+**Decision.** No live run: the instrument cannot measure the arm, which is what the
+pre-flight exists to say (§4b, §4d). The flag ships as an optional, unmeasured convenience
+for a reader who wants to see what else matched, off by default, and nothing in the hook
+changes. The finding that matters is the seven: the gap on paraphrases is a candidate-window
+problem, not a ranking problem, and a reranker over the full-text window alone cannot reach
+them either. §4t measures the fused window for that reason.
 ## 4t. PRE-REGISTERED: a cross-encoder second stage over the fused candidates (2026-10-23)
 
 Written before the run, per §2b, for #258's second stage, on the probe (§4p's instrument).

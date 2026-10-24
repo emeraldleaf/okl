@@ -132,6 +132,7 @@ class Client:
         self.interests = self.config.get("interests") or []
         self.hybrid = hybrid_setting(os.environ.get("OKL_HYBRID"), self.config.get("hybrid"))
         self.index = False   # the index arm (REPORT §4r): set per call by `okl check --index`
+        self.near_misses = False   # the near-miss arm (REPORT §4s): `okl check --near-misses`
         self.rerank = rerank_setting(os.environ.get("OKL_RERANK"), self.config.get("rerank"))
         self._store: Store | None = None
 
@@ -256,14 +257,22 @@ class Client:
         """
         repo = repo or self.repo
         payload = {"repo": repo, "task": task, "interests": self.interests or None,
-                   "hybrid": self.hybrid, "index": self.index, "rerank": self.rerank}
+                   "hybrid": self.hybrid, "index": self.index, "near_misses": self.near_misses,
+                   "rerank": self.rerank}
         if limit is not None:
             payload["limit"] = limit
         if self.mode == "remote":
             result = self._post("/check", payload)
+            # An older service drops a request field it does not know and answers an ordinary
+            # briefing; a caller who asked for the index or the near misses must not read
+            # that as "none" (review on #270).
+            for wanted, key in ((self.index, "index"), (self.near_misses, "near_misses")):
+                # A missing key and a null are the same answer: not the list that was asked for.
+                if wanted and not isinstance(result.get(key), list):
+                    raise OKLRejectedError(_TOO_OLD.format(what=f"answers `{key}` on /check"), status=404)
         else:
             kw: dict[str, Any] = {"interests": self.interests, "hybrid": self.hybrid, "index": self.index,
-                                  "rerank": self.rerank}
+                                  "near_misses": self.near_misses, "rerank": self.rerank}
             if limit is not None:
                 kw["limit"] = limit
             store = self._local_store()
