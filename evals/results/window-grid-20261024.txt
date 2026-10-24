@@ -1,0 +1,11 @@
+store 322 records · repo=okl · reranker off · limit 12
+hybrid  fetch sem-words | authored ticket para bug | six prompts' counts
+off        36      None |        8      8    1   8 | 4, 11, 0, 11, 9, 12
+off        72      None |        8      8    1   8 | 4, 11, 0, 11, 9, 12
+off       108      None |        8      8    1   8 | 4, 11, 0, 11, 9, 12
+linear     36      None |        8      8    2   8 | 5, 11, 0, 12, 9, 12
+linear     36         2 |        8      8    2   8 | 5, 11, 0, 12, 9, 12
+linear     72      None |        8      8    2   8 | 5, 11, 0, 12, 9, 12
+linear     72         2 |        8      8    2   8 | 5, 11, 0, 12, 9, 12
+linear    108      None |        8      8    2   8 | 5, 11, 0, 12, 9, 12
+linear    108         2 |        8      8    2   8 | 5, 11, 0, 12, 9, 12

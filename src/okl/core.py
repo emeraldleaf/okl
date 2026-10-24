@@ -142,7 +142,15 @@ def briefing_terms(task: str) -> list[str]:
     return out if any(len(w) >= 3 for w in out) else []
 
 
-NEAR_MISSES = 12   # the most records the near-miss list names: one line each, about 120 characters
+NEAR_MISSES = 12
+# The first stage's window: each arm fetches FETCH_MULTIPLIER times the limit (REPORT §4u grids it).
+FETCH_MULTIPLIER = 3
+# The floor's word rule for a candidate only the semantic arm returned: None is §4q's rule
+# (cosine alone); an integer n admits it when it shares n subject words with the task, never
+# fewer than the floor's own two. Measured at 2 in §4u and reverted: the floor admitted the
+# one lesson it was built for and the cutoff still dropped it, so the knob stays at None until
+# a pre-registration about the order of kept records earns it.
+SEMANTIC_WORD_FLOOR: int | None = None   # the most records the near-miss list names: one line each, about 120 characters
 
 
 def check(store: Store, repo: str, task: str, limit: int = 12,
@@ -318,9 +326,11 @@ def _apply_floor(store: Store, hits: list[Node], terms: list[str],
     CATCHES a matched Defect, a Decision that SUPERSEDES one): the link is the relevance,
     not the words. A hit the semantic arm scored at or above semantic.SUBJECT_SIMILARITY
     is on the subject by meaning, whatever words it shares; a hit only that arm found is on
-    the subject only by meaning, because the word rules belong to the full-text candidates,
-    and a wider fused window must not admit the one-word matches the full-text search would
-    never have reached (#258, REPORT §4q first pass). Returns the kept hits in rank order,
+    the subject only by meaning (or, with SEMANTIC_WORD_FLOOR set, by sharing that many
+    subject words, §4u), never by one word in its subject, because that rule belongs to the
+    full-text candidates and a wider fused window must not admit the one-word matches the
+    full-text search would never have reached (#258, REPORT §4q first pass). Returns the
+    kept hits in rank order,
     each hit's matched words by id, and how many were left out.
     """
     words = [t.lower() for t in terms]
@@ -331,7 +341,9 @@ def _apply_floor(store: Store, hits: list[Node], terms: list[str],
     strong = {n.id for n in hits
               if near.get(n.id, 0.0) >= semantic.SUBJECT_SIMILARITY
               or (n.id in lexical and (len(matched[n.id]) >= floor
-                                       or bool(matched[n.id]) and _in_subject(matched[n.id], n)))}
+                                       or bool(matched[n.id]) and _in_subject(matched[n.id], n)))
+              or (n.id not in lexical and SEMANTIC_WORD_FLOOR is not None
+                  and len(matched[n.id]) >= max(SEMANTIC_WORD_FLOOR, floor))}
     if not strong:
         # No hit to link to, so no neighbour lookup can rescue one (review on #259).
         return [], matched, len(hits)
@@ -361,7 +373,7 @@ def _live_hits(store: Store, task: str, limit: int, repo_scope: str,
         note = "the task has no subject words to search"
         return [], [], True, Candidates([], {}, frozenset(), note if hybrid else None, True,
                                         rerank_note=note if rerank else None)
-    fetch = limit * 3
+    fetch = limit * FETCH_MULTIPLIER
     for _ in range(3):
         cand = ranked_candidates(store, task, fetch, hybrid, rerank=rerank)
         found = cand.nodes

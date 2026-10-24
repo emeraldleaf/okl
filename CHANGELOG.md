@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Two retrieval follow-ups measured, nothing changed in behaviour** (REPORT §4u). The admission rule §4t proposed for the reranker (first-stage cosine and second-stage rank together) is settled on the selection set: no line admits a lifted lesson without admitting chat filler (`evals/admission_grid.py`). The floor's two-word rule for a candidate only the semantic arm returned was pre-registered and measured: it admits the one lesson it was built for and the cutoff still drops it behind fifteen kept records, so the knob (`core.SEMANTIC_WORD_FLOOR`) ships at None, beside `core.FETCH_MULTIPLIER` and `evals/window_grid.py`, which found both neutral on the selection set. The probe gains `--semantic-words`. The next retrieval question is the order among kept records, not the floor.
 - **The reranker's model is cached under the cache home, not the system temp directory.** fastembed's default cache is `$TMPDIR/fastembed_cache`, which macOS prunes on its own schedule, so a model that loaded offline one day was "not cached" the next and `okl check --rerank` fell back to the first-stage order. `okl embed` now fetches it to `$XDG_CACHE_HOME/okl/models` (`~/.cache/okl/models`), or to `FASTEMBED_CACHE_PATH` when that is set. The embedder is unaffected (model2vec reads the Hugging Face hub cache). Run `okl embed` once online after upgrading; the old copy in the temp directory is not read.
 
 ## 0.8.9
