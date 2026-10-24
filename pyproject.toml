@@ -50,7 +50,7 @@ dev = [
   # on 2026-10-10.
   "pytest==9.1.1", "pytest-cov==7.1.0", "ruff==0.16.10", "mypy==2.4.0",
   "import-linter==2.15",  # verified on PyPI 2026-10-04 (released 2026-09-04)
-  "fastapi>=0.110", "uvicorn>=0.29", "pydantic>=2", "httpx>=0.27",
+  "fastapi>=0.110", "uvicorn>=0.29", "pydantic>=2", "httpx>=0.28.1",
   # The service tests use Starlette's TestClient. Starlette 1.2.0 (2026-05-28) moved it to
   # httpx2 (github.com/pydantic/httpx2, which Pydantic maintains as httpx's successor) and
   # warns when it falls back to httpx; the strict pytest config turns that into failures.
