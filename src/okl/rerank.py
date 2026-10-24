@@ -44,6 +44,10 @@ def load_model(model_id: str = MODEL_ID, *, offline: bool = True) -> Any:
     """
     if model_id in _LOADED:
         return _LOADED[model_id]
+    # The tokenizer's thread pool warns, loudly, in any process that forks after scoring (the
+    # probe shells out to git; a service may fork workers); single-threaded, nothing is lost
+    # on two dozen short pairs.
+    os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
     try:
         from fastembed.rerank.cross_encoder import TextCrossEncoder
     except ImportError as e:
