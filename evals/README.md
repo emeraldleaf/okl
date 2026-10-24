@@ -103,17 +103,23 @@ three lessons (#179), the abstention measure a recall set cannot give.
 The targets the retrieval work is held to, and where the briefing stands on them. Each
 figure is read from a committed probe receipt; a retrieval change is measured by re-running
 the probe at one commit with the change off and on, and §2b's noise floor applies to the
-A/B, not to these, which are deterministic for a store. Refreshed with each receipt.
+A/B, not to these, which are deterministic for a store. The table is generated from receipts
+by `evals/standing_table.py`, never typed.
 
 | measure (target) | full-text, the default | with the semantic arm (`--hybrid linear`) | with the reranker too (`--rerank`) |
 |---|---|---|---|
-| held-out recall, ticket / paraphrase / bug report of 8 (must not fall under a change) | 7 / 2 / 5 | 7 / 3 / 5 | 7 / 4 / 4 |
-| authored tasks whose lesson is briefed, of 8 (stays 8) | 8 | 8 | 8 |
-| no-match prompts refused, at most 3 lessons, of 6 (must not fall; the counts must not rise) | 1 of 6: 4, 11, 0, 11, 9, 12 | 1 of 6: 5, 11, 0, 12, 9, 12 | 1 of 6: 5, 11, 0, 12, 9, 12 |
-| median `core.check`, in-process, model loaded (under 1 s on a laptop) | 7 ms | 24 ms | 538 ms |
+| held-out recall, ticket / paraphrase / bug report of 8, harness configuration (must not fall under a change) | 7 / 2 / 5 | 7 / 3 / 5 | 7 / 4 / 4 |
+| the same, hook configuration: the repo's interests applied, as a live briefing is | 6 / 1 / 5 | 6 / 2 / 5 | 6 / 3 / 4 |
+| authored tasks whose lesson is briefed, of 8, harness · hook (harness stays 8) | 8 · 7 | 8 · 7 | 8 · 7 |
+| no-match prompts refused, at most 3 lessons, hook configuration (must not fall; the counts must not rise) | 1 of 6: 4, 11, 0, 11, 9, 12 | 1 of 6: 5, 11, 0, 12, 9, 12 | 1 of 6: 5, 11, 0, 12, 9, 12 |
+| median `core.check`, in-process, model loaded (under 1 s on a laptop) | 7 ms | 21 ms | 510 ms |
 
-Receipts, 2026-10-24, one 322-record store: `probe-rephrase-20261024-rejection-fulltext.txt`,
-`probe-rephrase-20261024-semwords-control.txt`, `probe-rephrase-20261024-semwords-rerank-control.txt`.
+Receipts: `probe-rephrase-20261024-standing-{fulltext,linear,rerank}.txt`, run in one sitting at
+commit 67f4d65 against one 323-record store (323 with a vector), so the columns differ only
+in the retrieval setting. The harness configuration applies no interests (what the A/B and
+pre-flight measure); the hook configuration applies this repo's interests (what a live
+briefing does), which is why its recall can be lower. Regenerate with `evals/standing_table.py`.
+
 The three no-match prompts that still carry 9 to 12 lessons each pass the floor on one shared
 title word ("doc", "update", "search"); #277 is the pre-registered experiment on that.
 
