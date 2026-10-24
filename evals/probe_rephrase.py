@@ -181,6 +181,8 @@ print(f"check latency over {len(LATENCY)} calls: median {statistics.median(LATEN
 
 print("\nB. PRECISION on six real prompts from this session (hook config). For each of the 12 returned: terms matched, and the rarest matched term's document frequency.")
 PROMPTS = json.loads(Path('evals/probe_prompts.json').read_text())["prompts"]
+REJECTION_BUDGET = 3   # a no-match prompt may carry this many lessons and still count as rejected (#179)
+counts: list[int] = []
 for p in PROMPTS:
     res = check(p, INTERESTS)
     ids = returned(res); terms = [x.lower() for x in core.briefing_terms(p)]
@@ -193,6 +195,11 @@ for p in PROMPTS:
         keep2 += two; keep_rare += rr
         print(f"   {len(m)} term(s) {str(m[:4]):40} rarest df={rare}  | {n.title[:58]}")
     print(f"  would survive: >=2 terms: {keep2}/{len(ids)} · a term in <=3% of store: {keep_rare}/{len(ids)}")
+    counts.append(len(ids))
+# The abstention measure (#179): these prompts have no right answer, so a lesson returned is
+# a false positive; the summary says how many prompts the briefing refused, by the budget.
+print(f"\nrejection: {sum(c <= REJECTION_BUDGET for c in counts)} of {len(counts)} no-match prompts return at most "
+      f"{REJECTION_BUDGET} lessons · counts {counts}")
 
 print("\nC. The same two policies on the governing lesson of each AUTHORED eval task (would a threshold cost recall?)")
 for t in tasks:
