@@ -85,8 +85,15 @@ def returned(res: dict[str, Any]) -> list[str]:
 def rank_of(task: str, nid: str, interests: list[str] | None) -> tuple[int | None, int]:
     """Position of `nid` in the ranked in-scope live list for `task`, and that list's length."""
     # The whole store, so a low rank is a rank and not a cutoff artefact; the candidate
-    # order is the one check() uses, fused when --hybrid is on.
-    found = core.ranked_candidates(store, task, max(N, 1), HYBRID, rerank=RERANK).nodes
+    # order is the one check() uses, fused when --hybrid is on. With --rerank the order is
+    # check's own window (three times its limit per arm) with the pool reranked, since the
+    # stage never sees a lesson outside that window; a lesson past the window keeps its
+    # whole-store rank with no reranking, which is where the stage left it.
+    found = core.ranked_candidates(store, task, max(N, 1), HYBRID).nodes
+    if RERANK:
+        window = core.ranked_candidates(store, task, 36, HYBRID, rerank=True).nodes
+        seen = {n.id for n in window}
+        found = window + [n for n in found if n.id not in seen]
     live = [n for n in found if core._in_scope(n, f"repo:{REPO}", interests) and n.status not in core.RETIRED_STATUSES]
     ids = [n.id for n in live]
     return (ids.index(nid) + 1) if nid in ids else None, len(live)

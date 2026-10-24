@@ -1,2 +1,0 @@
-usage: probe_rephrase.py [-h] [--hybrid {off,rrf,linear}] [--rerank]
-probe_rephrase.py: error: argument --hybrid: invalid choice: 'linear --rerank' (choose from 'off', 'rrf', 'linear')
