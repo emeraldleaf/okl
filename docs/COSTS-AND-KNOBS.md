@@ -132,8 +132,9 @@ retrieval ADR names that tier and its trigger.
 
 Measured in REPORT §4t and not made the default. It costs an 80 MB ONNX cross-encoder
 (`pip install 'observed-knowledge-ledger[rerank]'`, then `okl embed` once online caches it under
-`~/.cache/okl/models`, or `FASTEMBED_CACHE_PATH` when you set it; the temp directory fastembed
-would use by default is pruned by the OS), about 0.5 s per check with the model loaded and 0.9 s for a process's first call (the hook runs
+`$XDG_CACHE_HOME/okl/models`, which is `~/.cache/okl/models` unless you set that variable, or
+under `FASTEMBED_CACHE_PATH` when you set it; the temp directory fastembed would use by default
+is pruned by the OS), about 0.5 s per check with the model loaded and 0.9 s for a process's first call (the hook runs
 `okl check` as a new process each time, so each check pays the load), and nothing in the
 store. It reorders the first 24 candidates by how well each record answers the task. On the
 held-out set that moved one paraphrase into the briefing and one bug report out, left the
