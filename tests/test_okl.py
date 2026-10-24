@@ -678,6 +678,27 @@ def test_seed_refresh_cli_finds_bundled_packs_from_the_store_and_names_foreign_o
     assert len(titles) == 3      # the rest of the Python canon stayed out
 
 
+def test_seed_refresh_does_not_read_a_bundled_pack_over_a_same_named_local_file(tmp_path, monkeypatch, capsys):
+    """A repo's own seed/python-canon.json makes ids a bundled pack also makes; the no-path
+    refresh must not pick the bundled text over the repo's (review on #276). It skips that
+    pack, says how to name the source, and refreshes from the file when it is named."""
+    from okl.cli import main
+    from okl.client import Client
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".okl").mkdir(); (tmp_path / "seed").mkdir()
+    (tmp_path / ".okl" / "config.json").write_text('{"repo": "r", "database_url": "sqlite:///okl.db", "interests": ["python"]}')
+    monkeypatch.delenv("OKL_DATABASE_URL", raising=False); monkeypatch.delenv("OKL_SERVICE_URL", raising=False)
+    (tmp_path / "seed" / "python-canon.json").write_text(json.dumps({"nodes": [
+        {"key": "py_pyproject_versions", "type": "Rule", "scope": "org", "repo": "r", "title": "OUR wording"}]}))
+    Client().record(id="seed:python-canon:py_pyproject_versions", type="Rule", title="stale", scope="org", repo=None)
+    assert main(["seed", "--refresh"]) == 2
+    err = capsys.readouterr().err
+    assert "shares the bundled pack's name" in err and "seed/python-canon.json" in err
+    assert Client().get("seed:python-canon:py_pyproject_versions")["title"] == "stale"
+    assert main(["seed", "--refresh", "seed/python-canon.json"]) == 0
+    assert Client().get("seed:python-canon:py_pyproject_versions")["title"] == "OUR wording"
+
+
 def test_reseeding_keeps_verification_unless_the_governed_files_change(store, tmp_path):
     """#110: okl seed went through record(), which replaced the row, so every re-seed
     re-stamped each lesson as verified now and wiped its evidence and commit. A repo that

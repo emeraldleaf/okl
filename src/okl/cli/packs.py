@@ -237,14 +237,23 @@ def _seed_targets(args: argparse.Namespace, seed_dir: Path, present: set[str]) -
             path = bundled
         targets = sorted(str(f) for f in path.glob("*.json")) if path.is_dir() else [str(path)]
     else:
+        # A seed id names its pack by file stem, not by path, so a repo's own file that
+        # shares a bundled pack's name would be indistinguishable here and the bundled text
+        # would overwrite the repo's (review on #276). A same-named file in the repo's
+        # conventional places wins by being skipped: the user names the source they mean.
         stems = {i.split(":")[1] for i in present if i.startswith("seed:") and i.count(":") >= 2}
-        targets = sorted(str(seed_dir / f"{s}.json") for s in stems if (seed_dir / f"{s}.json").is_file())
-        foreign = sorted(s for s in stems if not (seed_dir / f"{s}.json").is_file())
+        local = {s: p for s in stems for p in (Path("seed") / f"{s}.json", Path(f"{s}.json")) if p.is_file()}
+        bundled_stems = {s for s in stems if (seed_dir / f"{s}.json").is_file()}
+        targets = sorted(str(seed_dir / f"{s}.json") for s in bundled_stems - set(local))
+        for _s, p in sorted(local.items()):
+            print(f"  note: {p} shares the bundled pack's name; refresh from it by path "
+                  f"(okl seed --refresh {p}), or from the bundled pack by name.", file=sys.stderr)
+        foreign = sorted(s for s in stems - bundled_stems - set(local))
         if foreign:
             print(f"  note: {len(foreign)} pack(s) this store was seeded from are not bundled "
                   f"({', '.join(foreign)}); pass each one's file to refresh its records.", file=sys.stderr)
         if not targets:
-            print("okl seed --refresh: none of this store's records came from a bundled pack.", file=sys.stderr)
+            print("okl seed --refresh: nothing to refresh from the bundled packs here.", file=sys.stderr)
             return None
     if not targets:
         print(f"no seed files found at {args.path or seed_dir}", file=sys.stderr)
