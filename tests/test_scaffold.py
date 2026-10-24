@@ -2144,3 +2144,12 @@ def test_scaffold_leaves_the_drift_workflow_to_init(tmp_path):
     hooks = subprocess.run(["git", "-C", str(repo), "rev-parse", "--git-path", "hooks"],
                            capture_output=True, text=True, check=True).stdout.strip()
     assert (repo / hooks / "pre-push").exists() or Path(hooks, "pre-push").exists()
+
+
+def test_server_json_description_fits_the_registry_limit():
+    """The MCP Registry refuses a server.json whose description is over 100 characters
+    (a 422 naming body.description on the 0.8.9 publish, 2026-10-23); the PyPI description
+    has no such limit, so the two may differ, and this is the check the publish lacked."""
+    server = json.loads((Path(__file__).resolve().parents[1] / "server.json").read_text())
+    assert len(server["description"]) <= 100, len(server["description"])
+    assert server["description"].startswith("Verified memory for coding agents")
