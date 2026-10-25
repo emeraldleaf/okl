@@ -108,20 +108,27 @@ by `evals/standing_table.py`, never typed.
 
 | measure (target) | full-text, the default | with the semantic arm (`--hybrid linear`) | with the reranker too (`--rerank`) |
 |---|---|---|---|
-| held-out recall, ticket / paraphrase / bug report of 8, harness configuration (must not fall under a change) | 7 / 2 / 5 | 7 / 3 / 5 | 7 / 4 / 4 |
-| the same, hook configuration: the repo's interests applied, as a live briefing is | 6 / 1 / 5 | 6 / 2 / 5 | 6 / 3 / 4 |
+| held-out recall, ticket / paraphrase / bug report of 8, harness configuration (must not fall under a change) | 7 / 2 / 5 | 7 / 3 / 4 | 7 / 4 / 4 |
+| the same, hook configuration: the repo's interests applied, as a live briefing is | 6 / 1 / 5 | 6 / 2 / 4 | 6 / 3 / 4 |
 | authored tasks whose lesson is briefed, of 8, harness · hook (harness stays 8) | 8 · 7 | 8 · 7 | 8 · 7 |
-| no-match prompts refused, at most 3 lessons, hook configuration (must not fall; the counts must not rise) | 1 of 6: 4, 11, 0, 11, 9, 12 | 1 of 6: 5, 11, 0, 12, 9, 12 | 1 of 6: 5, 11, 0, 12, 9, 12 |
-| median `core.check`, in-process, model loaded (under 1 s on a laptop) | 7 ms | 21 ms | 510 ms |
+| no-match prompts refused, at most 3 lessons, hook configuration (must not fall; the counts must not rise) | 3 of 6: 1, 11, 0, 2, 12, 7 | 3 of 6: 1, 12, 0, 3, 12, 7 | 3 of 6: 1, 12, 0, 3, 12, 7 |
+| median `core.check`, in-process, model loaded (under 1 s on a laptop) | 20 ms | 41 ms | 608 ms |
 
-Receipts: `probe-rephrase-20261024-standing-{fulltext,linear,rerank}.txt`, run in one sitting at
-commit 67f4d65 against one 323-record store (323 with a vector), so the columns differ only
+Receipts: `probe-rephrase-20261025-standing-{fulltext,linear,rerank}.txt`, run in one sitting at
+commit 88fa573 against one 328-record store (328 with a vector), so the columns differ only
 in the retrieval setting. The harness configuration applies no interests (what the A/B and
 pre-flight measure); the hook configuration applies this repo's interests (what a live
 briefing does), which is why its recall can be lower. Regenerate with `evals/standing_table.py`.
 
-The three no-match prompts that still carry 9 to 12 lessons each pass the floor on one shared
-title word ("doc", "update", "search"); #277 is the pre-registered experiment on that.
+Against the previous table (2026-10-24, 323 records), the refused prompts rose from 1 to 3 of 6:
+§4v's common-word floor (#277). At this commit and store with its share off, the probe gives
+1 of 6 and the same recall in both modes (`probe-rephrase-20261025-common-{fulltext,linear}-control.txt`),
+so the floor costs no recall here either. Two figures moved the same way with the floor off, so
+the floor is not their cause: the semantic arm's bug-report recall is one lower, and the GitHub
+Copilot and MCP prompt returns 12 lessons where it returned 9, lessons recorded since about MCP
+servers and Dependabot among them. The prompts still above three share a rare word or two with
+each record they return, which the floor admits by design; §4u puts the next retrieval question
+in the order among kept records, not the floor.
 
 ## Provenance of the originally quoted numbers
 

@@ -1,0 +1,157 @@
+store: 328 nodes (143 with aliases) · repo=okl · hook interests=['python', 'method', 'security', 'agent-safety', 'retrieval-design', 'eval-integrity', 'data-quality']
+retrieval code: commit 88fa573 · relevance floor on · hybrid off (328 records with a vector) · rerank off · semantic-only word rule off · common-word share off · every row below, recall and precision alike, is measured with this code against this store
+
+A. RECALL: is the governing lesson in the top-12? (harness config = no interests; hook config = repo interests)  rank = position in the ranked in-scope list
+task             variant     harness  hook      rank/live  matched terms
+idor_endpoint    authored    yes      yes          3/231   ['add', 'endpoint', 'get', 'id', 'user']
+idor_endpoint    ticket      yes      yes          1/105   ['add', 'get', 'id', 'return']
+idor_endpoint    paraphrase  MISS     MISS        81/110   ['record']
+idor_endpoint    bug-report  yes      yes          5/56    ['other', 'url']
+price_tamper     authored    yes      yes          1/196   ['product', 'price', 'catalog', 'service', 'client']
+price_tamper     ticket      yes      yes          1/64    ['product', 'price', 'body']
+price_tamper     paraphrase  MISS     MISS      None/21    []
+price_tamper     bug-report  yes      yes          1/65    ['request', 'devtools']
+react_fetch      authored    yes      MISS         1/204   ['react', 'component', 'tanstack', 'query', 'v5', 'api']
+react_fetch      ticket      yes      MISS         2/95    ['component', 'load', 'api']
+react_fetch      paraphrase  MISS     MISS      None/65    []
+react_fetch      bug-report  yes      MISS         1/167   ['re', 'requests', 'render', 'stale', 'data', 'after']
+judge_summary    authored    yes      yes          1/223   ['llm', 'eval', 'cases', 'judge', 'prints', 'summary']
+judge_summary    ticket      yes      yes          1/113   ['llm', 'eval', 'cases', 'judge', 'score', 'summary']
+judge_summary    paraphrase  MISS     MISS        71/168   ['report']
+judge_summary    bug-report  yes      yes          1/59    ['eval', 'printed', 'score', 'cases', 'threw', 'exceptions']
+exit_code_trust  authored    yes      yes          1/181   ['data', 'files', 'reports', 'succeeded', 'output']
+exit_code_trust  ticket      yes      yes          1/161   ['data', 'success', 'failure']
+exit_code_trust  paraphrase  MISS     MISS       104/115   ['data']
+exit_code_trust  bug-report  yes      yes          1/76    ['pipeline', 'said', 'succeeded', 'output', 'directory', 'empty']
+spa_tokens       authored    yes      yes          1/162   ['react', 'oidc', 'client', 'ts', 'keycloak', 'session']
+spa_tokens       ticket      yes      yes          1/78    ['oidc', 'client', 'ts', 'keycloak', 'access', 'token']
+spa_tokens       paraphrase  yes      yes          2/54    ['logged', 'refresh', 'browser']
+spa_tokens       bug-report  yes      yes          2/68    ['jwt', 'refresh', 'session']
+rate_limiter     authored    yes      yes          1/238   ['rate', 'requests', 'per', 'client', 'endpoint', 'replicas']
+rate_limiter     ticket      yes      yes          2/86    ['rate', 'limit', 'per', 'replicas', 'redis']
+rate_limiter     paraphrase  MISS     MISS      None/65    []
+rate_limiter     bug-report  yes      yes          6/89    ['through', 'requests']
+ci_linter        authored    yes      yes          1/167   ['step', 'ruff', 'fails', 'build', 'findings', 'output']
+ci_linter        ticket      yes      yes          1/129   ['step', 'ruff', 'fail', 'findings']
+ci_linter        paraphrase  MISS     MISS        93/131   ['runs']
+ci_linter        bug-report  yes      yes          5/185   ['ci', 'linter', 'new']
+
+recall by variant (of 8): {'authored': 'harness 8/8, hook 7/8', 'ticket': 'harness 8/8, hook 7/8', 'paraphrase': 'harness 1/8, hook 1/8', 'bug-report': 'harness 8/8, hook 7/8'}
+
+A2. HELD-OUT RECALL: rephrasings written blind from tasks.jsonl (evals/heldout_variants.json); same columns
+idor_endpoint    ticket      yes      yes          1/119   ['add', 'get', 'id', 'endpoint', 'user']
+idor_endpoint    paraphrase  MISS     MISS       125/138   ['add']
+idor_endpoint    bug-report  MISS     MISS        54/131   ['url']
+price_tamper     ticket      MISS     MISS      None/89    []
+price_tamper     paraphrase  MISS     MISS        24/174   ['amount']
+price_tamper     bug-report  MISS     MISS         4/19    ['catalog']
+react_fetch      ticket      yes      MISS         3/131   ['react', 'component', 'fetch', 'api']
+react_fetch      paraphrase  yes      MISS         6/210   ['server', 'library', 'data', 'already']
+react_fetch      bug-report  MISS     MISS        78/181   ['request']
+judge_summary    ticket      yes      yes          1/159   ['llm', 'eval', 'cases', 'judge', 'score', 'summary']
+judge_summary    paraphrase  MISS     MISS      None/138   []
+judge_summary    bug-report  yes      yes          1/74    ['summary', 'average', 'score', 'judge', 'threw', 'cases']
+exit_code_trust  ticket      yes      yes          1/160   ['data', 'succeeded']
+exit_code_trust  paraphrase  MISS     MISS        40/165   ['data', 'job']
+exit_code_trust  bug-report  yes      yes          1/119   ['reports', 'success', 'output', 'empty', 'files']
+spa_tokens       ticket      yes      yes          1/90    ['oidc', 'client', 'ts', 'access', 'token', 'keycloak']
+spa_tokens       paraphrase  yes      yes          5/162   ['library', 'refresh', 'browser']
+spa_tokens       bug-report  yes      yes          5/197   ['script', 'page', 'read']
+rate_limiter     ticket      yes      yes          1/154   ['rate', 'requests', 'per', 'client', 'replicas']
+rate_limiter     paraphrase  MISS     MISS        15/214   ['per', 'shared', 'memory', 'store']
+rate_limiter     bug-report  yes      yes          2/149   ['through', 'requests', 'per', 'limit']
+ci_linter        ticket      yes      yes          2/150   ['step', 'ruff', 'fail', 'build', 'findings']
+ci_linter        paraphrase  MISS     MISS       140/190   ['runs']
+ci_linter        bug-report  yes      yes          7/202   ['step', 'new', 'findings', 'changed']
+
+held-out recall by variant (of 8): {'ticket': 'harness 7/8, hook 6/8', 'paraphrase': 'harness 2/8, hook 1/8', 'bug-report': 'harness 5/8, hook 5/8'}
+check latency over 112 calls: median 7 ms · max 19 ms · first 19 ms (includes any model load)
+
+B. PRECISION on six real prompts from this session (hook config). For each of the 12 returned: terms matched, and the rarest matched term's document frequency.
+
+> 'this seems like a major point to scrutinize'
+  terms=['major', 'point', 'scrutinize']  returned=4  dropped_by_cutoff=0
+   1 term(s) ['point']                                rarest df=20  | An instruction to an agent needs a mechanical counterpart 
+   1 term(s) ['point']                                rarest df=20  | Build the adapters (clients, connections, repositories) in
+   1 term(s) ['point']                                rarest df=20  | OKL_DATABASE_URL was honoured by the store and ignored by 
+   1 term(s) ['major']                                rarest df=4  | A source-compatible build on a major dependency upgrade pr
+  would survive: >=2 terms: 0/4 · a term in <=3% of store: 1/4
+
+> 'ok do the updates and update my site and the writing section'
+  terms=['updates', 'update', 'site', 'writing', 'section']  returned=12  dropped_by_cutoff=0
+   3 term(s) ['updates', 'update', 'section']         rarest df=7  | Reach for database primitives before distributed locks — t
+   2 term(s) ['updates', 'update']                    rarest df=7  | A hook that calls a CLI must survive an older CLI — plugin
+   2 term(s) ['updates', 'update']                    rarest df=7  | Docs and diagrams are the review surface, not byproducts —
+   2 term(s) ['update', 'site']                       rarest df=10  | Non-sargable predicates defeat indexes — fix at write time
+   2 term(s) ['update', 'site']                       rarest df=10  | A distrusted CA lives in several trust stores at once, and
+   2 term(s) ['writing', 'section']                   rarest df=10  | A pre-registered falsifier is written relative to the cont
+   1 term(s) ['updates']                              rarest df=7  | An identifier sweep is done when grep returns zero — not w
+   1 term(s) ['writing']                              rarest df=15  | If the failure mode would surprise the next person who hit
+   1 term(s) ['site']                                 rarest df=10  | A 'nobody else does this' claim expires as the field ships
+   1 term(s) ['update']                               rarest df=19  | A state with a verb that records why is refused by every g
+   3 term(s) ['updates', 'update', 'site']            rarest df=7  | A second retrieval arm widens the candidate window, and th
+   1 term(s) ['writing']                              rarest df=15  | Writing each function's contract down exposes the bugs tha
+  would survive: >=2 terms: 7/12 · a term in <=3% of store: 5/12
+
+> 'what about the org knowwledge ideae is that a nich ?'
+  terms=['org', 'knowwledge', 'ideae', 'nich']  returned=0  dropped_by_cutoff=0
+  would survive: >=2 terms: 0/0 · a term in <=3% of store: 0/0
+
+> 'give me a doc for that too'
+  terms=['give', 'doc']  returned=11  dropped_by_cutoff=0
+   1 term(s) ['give']                                 rarest df=9  | Type every signature, and tighten mypy one step at a time,
+   1 term(s) ['doc']                                  rarest df=18  | Wire a doc claim to a check that governs the doc AND the c
+   1 term(s) ['doc']                                  rarest df=18  | Docs and diagrams are the review surface, not byproducts —
+   1 term(s) ['doc']                                  rarest df=18  | The docs' claim that okl record --verified is refused is t
+   1 term(s) ['doc']                                  rarest df=18  | Code comments link durable docs, never rolling-state files
+   1 term(s) ['doc']                                  rarest df=18  | The install command in the README and guide names the real
+   1 term(s) ['doc']                                  rarest df=18  | The README's stated check defaults (limit 12; formats agen
+   1 term(s) ['doc']                                  rarest df=18  | A render is a separate artifact from its source and needs 
+   1 term(s) ['doc']                                  rarest df=18  | Every enforcement surface needs a mechanical trigger and a
+   1 term(s) ['doc']                                  rarest df=18  | A diagram with numbers in it is generated from the system,
+   1 term(s) ['give']                                 rarest df=9  | Importing verification records through the normal write pa
+  would survive: >=2 terms: 0/11 · a term in <=3% of store: 2/11
+
+> 'how do we come up with a good plan for governing github copilot and mcp'
+  terms=['come', 'plan', 'governing', 'github', 'copilot', 'mcp']  returned=12  dropped_by_cutoff=0
+   2 term(s) ['github', 'copilot']                    rarest df=1  | A 'nobody else does this' claim expires as the field ships
+   2 term(s) ['github', 'mcp']                        rarest df=12  | An MCP Registry publish fails on two limits the schema doe
+   1 term(s) ['come']                                 rarest df=3  | Verification stamps come from observed checks with stored 
+   1 term(s) ['plan']                                 rarest df=5  | Migrations are immutable once applied anywhere; destructiv
+   2 term(s) ['github', 'mcp']                        rarest df=12  | Audits read the repo, not the working tree — a scan of dir
+   1 term(s) ['come']                                 rarest df=3  | A table comparing configurations is a comparison only if o
+   1 term(s) ['governing']                            rarest df=5  | A lesson's files should include what its behaviour depends
+   2 term(s) ['plan', 'github']                       rarest df=5  | Dependabot alerts reach no one unless a step reads them
+   2 term(s) ['governing', 'mcp']                     rarest df=5  | A one-shot code generator given an index of 300 lesson tit
+   1 term(s) ['plan']                                 rarest df=5  | Importing verification records through the normal write pa
+   1 term(s) ['mcp']                                  rarest df=14  | A PyPI MCP server listed on the MCP Registry cannot start 
+   1 term(s) ['mcp']                                  rarest df=14  | An MCP server run as a Docker container reaches 'localhost
+  would survive: >=2 terms: 5/12 · a term in <=3% of store: 8/12
+
+> 'what about the search ?  and how this thing finds the lessions needed to each prompt?'
+  terms=['search', 'finds', 'lessions', 'needed', 'prompt']  returned=12  dropped_by_cutoff=3
+   1 term(s) ['prompt']                               rarest df=18  | Driving claude -p from a script: prompt on stdin, no GNU t
+   1 term(s) ['finds']                                rarest df=5  | A distrusted CA lives in several trust stores at once, and
+   1 term(s) ['search']                               rarest df=21  | A 'nobody measures X' or 'no published system does X' clai
+   1 term(s) ['search']                               rarest df=21  | Don't infer by resemblance what you can look up — document
+   1 term(s) ['search']                               rarest df=21  | A 'nobody else does this' claim expires as the field ships
+   2 term(s) ['needed', 'prompt']                     rarest df=7  | A one-shot code generator given an index of 300 lesson tit
+   2 term(s) ['search', 'prompt']                     rarest df=18  | A second retrieval arm widens the candidate window, and th
+   2 term(s) ['search', 'prompt']                     rarest df=18  | A per-socket timeout is not a deadline, and a failure afte
+   1 term(s) ['finds']                                rarest df=5  | A committed drift snapshot with zero rules fails CI, and o
+   1 term(s) ['prompt']                               rarest df=18  | A hook runs in the session's current directory — anchor it
+   2 term(s) ['finds', 'prompt']                      rarest df=5  | The encoding loop has no runtime input — every lesson ente
+   2 term(s) ['search', 'prompt']                     rarest df=18  | okl stores lessons as typed records found by full-text sea
+  would survive: >=2 terms: 5/12 · a term in <=3% of store: 4/12
+
+rejection: 1 of 6 no-match prompts return at most 3 lessons · counts [4, 12, 0, 11, 12, 12]
+
+C. The same two policies on the governing lesson of each AUTHORED eval task (would a threshold cost recall?)
+  idor_endpoint    matched= 5 rarest df=17  >=2:ok  rare<=3%:LOST
+  price_tamper     matched= 5 rarest df=2  >=2:ok  rare<=3%:ok
+  react_fetch      matched= 6 rarest df=1  >=2:ok  rare<=3%:ok
+  judge_summary    matched= 7 rarest df=3  >=2:ok  rare<=3%:ok
+  exit_code_trust  matched= 5 rarest df=1  >=2:ok  rare<=3%:ok
+  spa_tokens       matched=11 rarest df=3  >=2:ok  rare<=3%:ok
+  rate_limiter     matched= 7 rarest df=3  >=2:ok  rare<=3%:ok
+  ci_linter        matched= 6 rarest df=7  >=2:ok  rare<=3%:ok

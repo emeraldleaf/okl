@@ -1,0 +1,14 @@
+store 323 records · repo=okl · reranker off · limit 12 · budget 3
+hybrid  share | authored ticket para bug | refused  six prompts' counts
+off       off |        8      8    1   8 | 1 of 6  4, 11, 0, 11, 9, 12
+off      0.03 |        8      8    1   8 | 3 of 6  1, 8, 0, 2, 8, 6
+off      0.05 |        8      8    1   8 | 3 of 6  1, 10, 0, 2, 9, 6
+off       0.1 |        8      8    1   8 | 1 of 6  4, 11, 0, 11, 9, 12
+off      0.15 |        8      8    1   8 | 1 of 6  4, 11, 0, 11, 9, 12
+off      0.25 |        8      8    1   8 | 1 of 6  4, 11, 0, 11, 9, 12
+linear    off |        8      8    2   8 | 1 of 6  5, 11, 0, 12, 9, 12
+linear   0.03 |        8      8    2   8 | 3 of 6  1, 9, 0, 3, 8, 6
+linear   0.05 |        8      8    2   8 | 3 of 6  1, 11, 0, 3, 9, 6
+linear    0.1 |        8      8    2   8 | 1 of 6  5, 11, 0, 12, 9, 12
+linear   0.15 |        8      8    2   8 | 1 of 6  5, 11, 0, 12, 9, 12
+linear   0.25 |        8      8    2   8 | 1 of 6  5, 11, 0, 12, 9, 12

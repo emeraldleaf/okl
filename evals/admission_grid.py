@@ -14,26 +14,12 @@ records the six chat prompts would gain. The rows above it show each dropped gov
 lesson's cosine and rank, and each chat prompt's best dropped candidates, so the table can be
 checked by hand.
 """
-import ast
-import json
-import re
 import sys
-from pathlib import Path
 
-sys.path.insert(0, "src")
-from okl import core, semantic
-from okl.client import Client, load_config
+from grid_setup import INTERESTS, LABELS, REPO, prompts, store, tasks, variants
 
-store = Client()._local_store()
-cfg = load_config()
-REPO = cfg.get("repo") or "okl"
-INTERESTS = cfg.get("interests")
-src = Path("evals/probe_rephrase.py").read_text()
-variants = ast.literal_eval(re.search(r"VARIANTS = (\{.*?\n\})\n", src, re.S).group(1))
-tasks = {json.loads(line)["id"]: json.loads(line)
-         for line in Path("evals/tasks.jsonl").read_text().splitlines() if line.strip()}
-prompts = json.loads(Path("evals/probe_prompts.json").read_text())["prompts"]
-LABELS = ("authored", "ticket", "paraphrase", "bug-report")
+from okl import core, semantic  # grid_setup has put src/ on the path
+
 COSINES = (0.0, 0.25, 0.30, 0.35)
 RANKS = (1, 2, 3, 5)
 
