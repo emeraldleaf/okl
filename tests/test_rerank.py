@@ -234,6 +234,12 @@ def test_the_offline_switch_reaches_huggingface_hubs_own_constant(monkeypatch):
         assert late.HF_HUB_OFFLINE is True
     assert late.HF_HUB_OFFLINE is True
 
+    # The library reads the first variable that is set, so HF_HUB_OFFLINE=0 outranks the other.
+    monkeypatch.setenv("HF_HUB_OFFLINE", "0")
+    with hub.loading(offline=False):
+        assert late.HF_HUB_OFFLINE is False
+    assert late.HF_HUB_OFFLINE is False
+
 
 def test_the_reranker_is_cached_under_the_cache_home_not_the_temp_dir(monkeypatch, tmp_path):
     """fastembed's default cache is the system temp directory, which macOS prunes; okl passes

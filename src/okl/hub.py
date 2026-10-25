@@ -62,9 +62,11 @@ def loading(*, offline: bool) -> Iterator[None]:
     with _LOCK:
         os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
         prior = os.environ.get("HF_HUB_OFFLINE")
-        # huggingface_hub's own reading: either variable, any of its four true spellings.
-        prior_offline = any((os.environ.get(v) or "").upper() in {"1", "ON", "YES", "TRUE"}
-                            for v in ("HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE"))
+        # huggingface_hub's own reading: the first of the two variables that is set and not
+        # empty, then any of its four true spellings, so HF_HUB_OFFLINE=0 outranks
+        # TRANSFORMERS_OFFLINE=1 (review on #290).
+        setting = os.environ.get("HF_HUB_OFFLINE") or os.environ.get("TRANSFORMERS_OFFLINE") or ""
+        prior_offline = setting.upper() in {"1", "ON", "YES", "TRUE"}
         if offline:
             os.environ["HF_HUB_OFFLINE"] = "1"
         _set_hub_offline(offline or prior_offline)
