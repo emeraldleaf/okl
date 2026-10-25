@@ -371,7 +371,8 @@ def _apply_floor(store: Store, hits: list[Node], terms: list[str],
     near = cand.scores if cand else {}
     lexical = cand.lexical if cand else frozenset(n.id for n in hits)
     matched = {n.id: _matched_terms(words, n) for n in hits}
-    is_common = _common_word_test(store) if COMMON_WORD_SHARE is not None else (lambda _w: False)
+    share = COMMON_WORD_SHARE
+    is_common = _common_word_test(store, share) if share is not None else (lambda _w: False)
     strong = {n.id for n in hits
               if near.get(n.id, 0.0) >= semantic.SUBJECT_SIMILARITY
               or (n.id in lexical and (len(matched[n.id]) >= floor
@@ -386,10 +387,11 @@ def _apply_floor(store: Store, hits: list[Node], terms: list[str],
     return kept, matched, len(hits) - len(kept)
 
 
-def _common_word_test(store: Store) -> Callable[[str], bool]:
+def _common_word_test(store: Store, share: float) -> Callable[[str], bool]:
     """Whether a word is too common to name a subject on its own: in more than
-    COMMON_WORD_MIN_RECORDS of the store's live records and in more than COMMON_WORD_SHARE of
-    them, counted once per word per call (§4v). A scan of the store, a few milliseconds at a
+    COMMON_WORD_MIN_RECORDS of the store's live records and in more than `share` of them
+    (COMMON_WORD_SHARE; 0 makes every word past the minimum common), counted once per word
+    per call (§4v). A scan of the store, a few milliseconds at a
     few hundred records; a count from the full-text index is the version for a large store."""
     live = [m for m in store.all_nodes() if m.status not in RETIRED_STATUSES]
     total = max(len(live), 1)
@@ -398,7 +400,7 @@ def _common_word_test(store: Store) -> Callable[[str], bool]:
     def is_common(word: str) -> bool:
         if word not in seen:
             count = sum(1 for m in live if _matched_terms([word], m))
-            seen[word] = count > COMMON_WORD_MIN_RECORDS and count / total > (COMMON_WORD_SHARE or 1.0)
+            seen[word] = count > COMMON_WORD_MIN_RECORDS and count / total > share
         return seen[word]
     return is_common
 

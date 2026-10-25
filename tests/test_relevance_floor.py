@@ -256,3 +256,23 @@ def test_a_one_word_task_keeps_the_old_rule_even_for_a_common_word(monkeypatch):
     kept, _m, weak = core._apply_floor(s, hits, ["doc"], cand)
     assert {n.id for n in kept} == set(ids) and weak == 0
     s.close()
+
+
+def test_a_zero_common_word_share_makes_every_word_past_the_minimum_common(monkeypatch):
+    """A share of 0 is a setting, not an unset knob: a word in more records than the minimum
+    is common at any share above nothing, while one at the minimum still admits (review on
+    #280: `COMMON_WORD_SHARE or 1.0` read 0 as unset and admitted every word)."""
+    s = Store("sqlite:///:memory:")
+    # "doc" sits in four of five titles, "pkce" in one; the minimum is set to three.
+    ids = [core.record(s, type="Rule", title=f"doc rule {i} about nothing", scope="org") for i in range(4)]
+    pkce = core.record(s, type="Rule", title="pkce for public clients", scope="org")
+    hits = [s.get_node(i) for i in [*ids, pkce]]
+    cand = core.Candidates(hits, {}, frozenset(n.id for n in hits), None, False)
+    monkeypatch.setattr(core, "COMMON_WORD_SHARE", 0.0)
+    monkeypatch.setattr(core, "COMMON_WORD_MIN_RECORDS", 3)
+    kept, _m, weak = core._apply_floor(s, hits, ["doc", "pkce"], cand)
+    assert {n.id for n in kept} == {pkce} and weak == 4   # "doc": 4 > 3 records, share > 0
+    monkeypatch.setattr(core, "COMMON_WORD_MIN_RECORDS", 4)
+    kept, _m, _w = core._apply_floor(s, hits, ["doc", "pkce"], cand)
+    assert set(ids) <= {n.id for n in kept}                # 4 is not more than the minimum of 4
+    s.close()
