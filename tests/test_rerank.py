@@ -202,6 +202,45 @@ def test_both_loaders_share_one_lock_and_one_offline_switch(monkeypatch):
     assert "HF_HUB_OFFLINE" not in os.environ
 
 
+def test_the_offline_switch_reaches_huggingface_hubs_own_constant(monkeypatch):
+    """huggingface_hub reads HF_HUB_OFFLINE once, at import. After an online first load had
+    imported it, a check-time load set the variable and still went to the network (twelve
+    attempts, a stalled suite on a slow network). The switch sets the module's constant too,
+    and afterwards leaves it as a fresh import would read the restored variable."""
+    import types
+
+    from okl import hub
+
+    monkeypatch.delenv("HF_HUB_OFFLINE", raising=False)
+    monkeypatch.delenv("TRANSFORMERS_OFFLINE", raising=False)
+    constants = types.SimpleNamespace(HF_HUB_OFFLINE=False)    # imported by an online load
+    monkeypatch.setitem(sys.modules, "huggingface_hub.constants", constants)
+    with hub.loading(offline=True):
+        assert constants.HF_HUB_OFFLINE is True
+    assert constants.HF_HUB_OFFLINE is False and "HF_HUB_OFFLINE" not in os.environ
+
+    # First imported inside an offline block, it froze True; online loads afterwards must not stay offline.
+    monkeypatch.delitem(sys.modules, "huggingface_hub.constants")
+    with hub.loading(offline=True):
+        late = types.SimpleNamespace(HF_HUB_OFFLINE=True)
+        monkeypatch.setitem(sys.modules, "huggingface_hub.constants", late)
+    assert late.HF_HUB_OFFLINE is False
+    with hub.loading(offline=False):
+        assert late.HF_HUB_OFFLINE is False
+
+    # The user's own offline setting, in either variable, holds through an online load and after it.
+    monkeypatch.setenv("TRANSFORMERS_OFFLINE", "yes")
+    with hub.loading(offline=False):
+        assert late.HF_HUB_OFFLINE is True
+    assert late.HF_HUB_OFFLINE is True
+
+    # The library reads the first variable that is set, so HF_HUB_OFFLINE=0 outranks the other.
+    monkeypatch.setenv("HF_HUB_OFFLINE", "0")
+    with hub.loading(offline=False):
+        assert late.HF_HUB_OFFLINE is False
+    assert late.HF_HUB_OFFLINE is False
+
+
 def test_the_reranker_is_cached_under_the_cache_home_not_the_temp_dir(monkeypatch, tmp_path):
     """fastembed's default cache is the system temp directory, which macOS prunes; okl passes
     an explicit directory under the cache home, and honours fastembed's own override."""
