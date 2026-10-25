@@ -13,10 +13,12 @@ task text or two dozen pairs.
 from __future__ import annotations
 
 import os
+import sys
 import threading
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
+from typing import Any
 
 _LOCK = threading.Lock()
 
@@ -39,15 +41,35 @@ def model_cache_dir() -> Path:
     return root / "okl" / "models"
 
 
+def _set_hub_offline(value: bool) -> None:
+    """huggingface_hub reads HF_HUB_OFFLINE once, when it is first imported, into a constant
+    its downloads consult from then on. In a process whose first load was online (`okl embed`
+    fetching the reranker), the variable alone left every later check-time load going to the
+    network first: twelve connection attempts before the cache answered, and a stalled test
+    suite when the network was slow. So the constant is set beside the variable whenever the
+    module is loaded."""
+    constants: Any = sys.modules.get("huggingface_hub.constants")   # a third-party module
+    if constants is not None:
+        constants.HF_HUB_OFFLINE = value
+
+
 @contextmanager
 def loading(*, offline: bool) -> Iterator[None]:
     """Hold the process's one model-loading lock, with HF_HUB_OFFLINE set when `offline`
-    and restored to what it was on the way out."""
+    and restored to what it was on the way out, in the environment and in huggingface_hub's
+    own constant. After the block the constant reads what the restored variable says, as a
+    fresh import would, even when the module was first imported inside the block."""
     with _LOCK:
         os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
         prior = os.environ.get("HF_HUB_OFFLINE")
+        # huggingface_hub's own reading: the first of the two variables that is set and not
+        # empty, then any of its four true spellings, so HF_HUB_OFFLINE=0 outranks
+        # TRANSFORMERS_OFFLINE=1 (review on #290).
+        setting = os.environ.get("HF_HUB_OFFLINE") or os.environ.get("TRANSFORMERS_OFFLINE") or ""
+        prior_offline = setting.upper() in {"1", "ON", "YES", "TRUE"}
         if offline:
             os.environ["HF_HUB_OFFLINE"] = "1"
+        _set_hub_offline(offline or prior_offline)
         try:
             yield
         finally:
@@ -56,3 +78,4 @@ def loading(*, offline: bool) -> Iterator[None]:
                     os.environ.pop("HF_HUB_OFFLINE", None)
                 else:
                     os.environ["HF_HUB_OFFLINE"] = prior
+            _set_hub_offline(prior_offline)
