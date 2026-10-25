@@ -5,7 +5,7 @@ import argparse
 import contextlib
 import json
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from ..client import Client, OKLUnreachableError, _find_config
@@ -136,7 +136,7 @@ def _print_exposure(report: dict | None) -> None:
         print("\nbriefings logged: none yet, so which lessons get shown is not reported. "
               "The log fills as okl check runs (OKL_BRIEFING_LOG=0 turns it off).")
         return
-    since = datetime.fromtimestamp(report["first_at"] / 1000, tz=timezone.utc).date()
+    since = datetime.fromtimestamp(report["first_at"] / 1000, tz=UTC).date()
     print(f"\nbriefings logged: {n} since {since} — the figures below cover only these")
     print(f"lessons this repo can be briefed: {report['reachable']} — shown at least once: "
           f"{report['shown']}, never shown: {report['never_shown_count']}")

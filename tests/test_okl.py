@@ -8,6 +8,7 @@ the assertions are numbered and each says which failure it prevents.
 import importlib.util
 import json
 import os
+from datetime import UTC
 from pathlib import Path
 from urllib import request as _req
 
@@ -541,7 +542,7 @@ def _evidence_now(run: str = "pytest -q") -> str:
     land in that minute, so a test that hand-rolls the string has to use the real clock.
     """
     import datetime as _d
-    return f"`{run}` exit 0, matched 'passed' @ " + _d.datetime.now(_d.timezone.utc).strftime("%Y-%m-%dT%H:%MZ")
+    return f"`{run}` exit 0, matched 'passed' @ " + _d.datetime.now(_d.UTC).strftime("%Y-%m-%dT%H:%MZ")
 
 
 def test_drift_fires_when_source_changes(store, tmp_path):
@@ -3409,7 +3410,7 @@ def test_drift_compares_the_commit_a_check_passed_at_not_the_clock(store, tmp_pa
     import datetime as _dt
 
     def evidence(at_ms, commit):
-        minute = _dt.datetime.fromtimestamp(at_ms // 1000, tz=_dt.timezone.utc).strftime("%Y-%m-%dT%H:%MZ")
+        minute = _dt.datetime.fromtimestamp(at_ms // 1000, tz=_dt.UTC).strftime("%Y-%m-%dT%H:%MZ")
         return f"`grep` exit 0, matched 'OK' on commit {commit[:12]} @ {minute}"
     leak = tmp_path / "leak"
     rules = [Node(type="Rule", title="t", scope="repo:s", files="orders.py", verified_at=1,
@@ -3644,12 +3645,12 @@ def test_the_verified_commit_is_bound_to_its_evidence_and_older_entries_still_re
     and okl versions older than it reading the evidence the same way."""
     import re
     import sqlite3
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     from okl import drift
     from okl.cli.verification import _stored_check
     sha = "a1b2c3d4e5f6" + "0" * 28
-    at = int(datetime(2026, 10, 3, 18, 42, 30, tzinfo=timezone.utc).timestamp() * 1000)
+    at = int(datetime(2026, 10, 3, 18, 42, 30, tzinfo=UTC).timestamp() * 1000)
     new = {"id": "r", "title": "t", "scope": "org", "files": "a.py", "verified_at": at,
            "verified_by": "`pytest -q` exit 0, matched 'passed' on commit a1b2c3d4e5f6 @ 2026-10-03T18:42Z",
            "verified_commit": sha}

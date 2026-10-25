@@ -23,7 +23,7 @@ pipx install 'observed-knowledge-ledger[mcp]'
 The PyPI name differs (PyPI refuses `okl` as confusable with `oki`); everything you type
 afterwards is `okl`.
 
-Needs Python 3.10+ (and git for drift detection). Tested on macOS and Linux. **Windows is untested**: the core
+Needs Python 3.11+ (and git for drift detection). Tested on macOS and Linux. **Windows is untested**: the core
 should work, but the Claude Code hooks likely need fixes there
 ([#85](https://github.com/emeraldleaf/okl/issues/85)).
 
@@ -385,7 +385,7 @@ Four things matter, whichever CI you use:
 3. **The committed `okl-drift.json`**, or a shared store through the `OKL_SERVICE_URL` and
    `OKL_TOKEN` environment variables. Without okl's GitHub workflow, `okl export --drift`
    writes the first snapshot; once it is committed, `okl verify` keeps it current.
-4. **Python 3.10 or newer.** Pin okl to the version you run locally, so a new release
+4. **Python 3.11 or newer** (0.8.9 is the last release for 3.10). Pin okl to the version you run locally, so a new release
    cannot change the gate under you. `okl --version` prints it from 0.8.0; on 0.7.9
    and earlier, `pip show observed-knowledge-ledger` (or `uv tool list`)
    does.

@@ -22,7 +22,7 @@ import re
 import subprocess
 import sys
 import tempfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -119,7 +119,7 @@ def _write_receipt(name: str, body: dict) -> Path:
     def git(*argv: str) -> str:
         return subprocess.run(["git", "-C", str(REPO), *argv], capture_output=True,
                               text=True, check=False).stdout.strip()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     receipt = {"measured_at": now.strftime("%Y-%m-%dT%H:%MZ"), "okl_commit": git("rev-parse", "--short", "HEAD"),
                "uncommitted_changes_in_src": bool(git("status", "--porcelain", "--", "src")), **body}
     path = REPO / "evals" / "results" / f"{name}-{now.strftime('%Y%m%d-%H%M')}.json"

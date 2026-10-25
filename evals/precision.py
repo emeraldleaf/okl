@@ -26,7 +26,7 @@ import subprocess
 import sys
 import tempfile
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -126,7 +126,7 @@ def main() -> int:
     print(f"bait tasks at the cap: {report['bait_cap_hits']} of {len(report['bait'])}")
     print("lessons taking the most slots:", ", ".join(f"{i} ({n})" for i, n in report["top_lessons"][:5]))
     if args.receipt:
-        stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M")
+        stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M")
         out = REPO / "evals" / "results" / f"precision-{stamp}.json"
         out.write_text(json.dumps(report, indent=1) + "\n")
         print(f"wrote {out.relative_to(REPO)}")

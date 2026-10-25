@@ -16,7 +16,10 @@ updates:
     commit-message:
       prefix: "ci"
 
-  - package-ecosystem: pip
+  # uv, not pip: the uv ecosystem moves uv.lock with pyproject.toml, where pip moved only
+  # pyproject.toml and the lock drifted from it for weeks (#285). Both run dependabot-core's
+  # python requirements updater (uv aliases it), so versioning-strategy reads the same.
+  - package-ecosystem: uv
     directory: "/"
     schedule:
       interval: weekly
@@ -37,4 +40,4 @@ updates:
     # rather than a range that upgrades silently mid-branch.
     groups:
       dev-tooling:
-        patterns: ["pytest", "ruff", "mypy"]
+        patterns: ["pytest", "ruff", "mypy", "uv"]

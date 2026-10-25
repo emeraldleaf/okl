@@ -50,7 +50,7 @@ def branches(tmp_path):
 
 def _lesson(nid, commit):
     """A lesson stamped exactly as `okl verify` stamps one, on `commit`."""
-    now = _dt.datetime.now(_dt.timezone.utc)
+    now = _dt.datetime.now(_dt.UTC)
     return Node(type="Rule", title=nid, scope="repo:r", files="g.py",
                 verified_at=int(now.timestamp() * 1000),
                 verified_by=f"`true` exit 0, matched '' on commit {commit} @ "

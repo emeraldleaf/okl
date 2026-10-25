@@ -17,6 +17,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -331,8 +332,6 @@ def test_the_package_version_is_the_installed_distributions():
     from importlib.metadata import PackageNotFoundError, version
 
     import okl
-    # tomllib is stdlib from 3.11 only, and okl supports 3.10: skip there, never ImportError.
-    tomllib = pytest.importorskip("tomllib")
     root = Path(__file__).resolve().parents[1]
     wanted = tomllib.loads((root / "pyproject.toml").read_text())["project"]["version"]
     try:
@@ -877,9 +876,6 @@ def test_the_old_distribution_name_is_swept_and_still_installable():
     tracked files, and the redirect package must offer every extra the real one does,
     or `pip install "org-knowledge-layer[mcp]"` would quietly install without the extra.
     """
-    # tomllib is stdlib from 3.11 only, and okl supports 3.10: skip there, never ImportError.
-    tomllib = pytest.importorskip("tomllib")
-
     root = Path(__file__).resolve().parents[1]
     allowed = {
         "CHANGELOG.md",                                  # history
@@ -1781,7 +1777,6 @@ def test_plugin_manifest_points_at_real_files_and_the_shipped_version():
     key the plugin loader expects (the v0.1 file lacked it and was never loaded as one).
     """
     import json
-    tomllib = pytest.importorskip("tomllib")
     root = Path(__file__).resolve().parents[1]
     manifest = json.loads((root / ".claude-plugin" / "plugin.json").read_text())
     assert manifest["name"] == "okl"
@@ -1819,7 +1814,6 @@ def test_registry_entry_starts_the_server_it_lists():
        a port nothing listens on.
     """
     import json
-    tomllib = pytest.importorskip("tomllib")
     root = Path(__file__).resolve().parents[1]
     project = tomllib.loads((root / "pyproject.toml").read_text())["project"]
     server = json.loads((root / "server.json").read_text())

@@ -20,7 +20,7 @@ measured and off until you turn it on ([REPORT §4q](evals/REPORT.md)). A lesson
 on purpose and proven by a check.
 
 [![PyPI](https://img.shields.io/pypi/v/observed-knowledge-ledger?color=blue&label=PyPI)](https://pypi.org/project/observed-knowledge-ledger/)
-[![Python](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
+[![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
 [![ci](https://github.com/emeraldleaf/okl/actions/workflows/ci.yml/badge.svg)](https://github.com/emeraldleaf/okl/actions/workflows/ci.yml)
 [![okl-verify](https://github.com/emeraldleaf/okl/actions/workflows/okl-verify.yml/badge.svg)](https://github.com/emeraldleaf/okl/actions/workflows/okl-verify.yml)
 [![Claude Code plugin](https://img.shields.io/badge/Claude_Code-plugin-D97757)](#install-as-a-claude-code-plugin)
@@ -63,7 +63,8 @@ sample, one-shot code on bait tasks; [what it does and does not show](#measured-
 > specs? **[Load your rules](docs/LOAD-YOUR-RULES.md)** shows how to load them, prove the ones
 > that matter, and keep them current.
 
-**1. Install the CLI.** Python 3.10+, git for drift. macOS and Linux; Windows is untested
+**1. Install the CLI.** Python 3.11+ (0.8.9 is the last release for 3.10), git for drift.
+macOS and Linux; Windows is untested
 ([#85](https://github.com/emeraldleaf/okl/issues/85)).[^name]
 
 ```bash
