@@ -78,9 +78,9 @@
       "title": "A test that imports an undeclared package passes only where that package happens to be installed",
       "scope": "org",
       "files": "tests/",
-      "verified_at": 1792942353324,
-      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' on commit 146f6294d004 @ 2026-10-25T15:32Z",
-      "verified_commit": "146f6294d0046ab6e9347f352bba26b29981e8b4"
+      "verified_at": 1792945108040,
+      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' on commit f05eafeef87e @ 2026-10-25T16:18Z",
+      "verified_commit": "f05eafeef87ecb89a16346cc445f49149a60ad4c"
     },
     {
       "id": "n_9ba48d85ed19",
@@ -128,8 +128,8 @@
       "title": "Dependabot alerts reach no one unless a step reads them",
       "scope": "org",
       "files": "docs/DEVELOPING.md",
-      "verified_at": 1792935822276,
-      "verified_by": "`grep -c 'dependabot/alerts?state=open' docs/DEVELOPING.md` exit 0, matched '1' on commit 444dba012971 @ 2026-10-25T13:43Z",
+      "verified_at": 1792945101761,
+      "verified_by": "`awk '/^## Releasing/{r=1;next} r&&/^(## |2\\. )/{exit} r&&/^1\\. /{s=1} s{print}' docs/DEVELOPING.md | tr '\\n' ' ' | grep -o 'dependabot/alerts?state=open.*--jq length.*should print 0'` exit 0, matched 'should print 0' on commit 444dba012971 @ 2026-10-25T16:18Z",
       "verified_commit": "444dba012971f716c2f80d481d256063f7049d26"
     },
     {
