@@ -16,6 +16,7 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
+FLAG = r"--[a-z][a-z-]+"
 help_text = subprocess.run([sys.executable, "-m", "okl", "init", "--help"],
                            capture_output=True, text=True, cwd=REPO, check=True).stdout
 flags: set[str] = set()
@@ -24,15 +25,24 @@ for doc in ("README.md", "docs/GETTING-STARTED.md"):
         if not re.search(r"\binit\b", unit):
             continue
         for command in re.findall(r"okl init[^\n`]*", unit):
-            flags.update(re.findall(r"--[a-z][a-z-]+", command))
+            flags.update(re.findall(FLAG, command))
         # A flag written on its own belongs to init only when init is the sole okl command
         # the sentence names; beside `okl verify`, a bare `--files` is verify's.
         if not re.search(r"`okl (?!init\b)\w+", unit):
-            # (?![a-z-]) pins the name's end, so an unclosed backtick fails in linear time
-            # rather than retrying every shorter name (SonarQube Cloud python:S8786).
-            flags.update(re.findall(r"`(--[a-z][a-z-]+)(?![a-z-])[^`]*`", unit))
+            # A backtick, a flag, then text up to the next backtick, which closes it and
+            # opens nothing. Walked over the pieces between backticks rather than matched as
+            # one pattern, which backtracked on an unclosed backtick (SonarQube Cloud
+            # python:S8786; a lookahead did not satisfy it).
+            pieces = unit.split("`")
+            k = 1
+            while k < len(pieces) - 1:   # pieces[k] has a backtick on each side
+                if flag := re.match(FLAG, pieces[k]):
+                    flags.add(flag.group())
+                    k += 2
+                else:
+                    k += 1
 # Whole flag names, so a typo that is a prefix of a real flag (`--no-clau`) is caught.
-known = set(re.findall(r"--[a-z][a-z-]+", help_text))
+known = set(re.findall(FLAG, help_text))
 missing = sorted(flags - known)
 if missing or not flags:
     sys.exit(f"documented but missing from `okl init --help`: {missing}")
