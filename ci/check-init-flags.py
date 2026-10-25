@@ -16,6 +16,9 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
+# Digits included, so a documented `--no-claude1` reads whole and fails rather than
+# passing as `--no-claude` (review on #284).
+FLAG = re.compile(r"--[a-z][a-z0-9-]+")
 help_text = subprocess.run([sys.executable, "-m", "okl", "init", "--help"],
                            capture_output=True, text=True, cwd=REPO, check=True).stdout
 flags: set[str] = set()
@@ -24,13 +27,19 @@ for doc in ("README.md", "docs/GETTING-STARTED.md"):
         if not re.search(r"\binit\b", unit):
             continue
         for command in re.findall(r"okl init[^\n`]*", unit):
-            flags.update(re.findall(r"--[a-z][a-z-]+", command))
+            flags.update(FLAG.findall(command))
         # A flag written on its own belongs to init only when init is the sole okl command
         # the sentence names; beside `okl verify`, a bare `--files` is verify's.
         if not re.search(r"`okl (?!init\b)\w+", unit):
-            flags.update(re.findall(r"`(--[a-z][a-z-]+)[^`]*`", unit))
+            # The code spans, as backticks pair from the left: every odd piece between two
+            # backticks, so a flag outside a span never counts and never shifts the pairing
+            # (review on #284). Split, not matched as one pattern, which backtracked on an
+            # unclosed backtick (SonarQube Cloud python:S8786).
+            for span in unit.split("`")[1:-1:2]:
+                if flag := FLAG.match(span):
+                    flags.add(flag.group())
 # Whole flag names, so a typo that is a prefix of a real flag (`--no-clau`) is caught.
-known = set(re.findall(r"--[a-z][a-z-]+", help_text))
+known = set(FLAG.findall(help_text))
 missing = sorted(flags - known)
 if missing or not flags:
     sys.exit(f"documented but missing from `okl init --help`: {missing}")

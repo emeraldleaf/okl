@@ -26,6 +26,27 @@ MANY_LINES = 12
 # An org record is over-scoped when its subject fields name one repository's world.
 _ABS_PATH = re.compile(r"(?:(?<=\s)|^)(?:/(?:Users|home|var|opt|tmp|srv|mnt)/\S+|[A-Za-z]:\\\S+)")
 _DEEP_PATH = re.compile(r"(?<![\w/])[\w.-]+(?:/[\w.-]+){2,}\.\w{1,6}\b")
+# A chain of non-empty segments joined by single slashes, the only shape _DEEP_PATH can match.
+_PATH_CHAIN = re.compile(r"[\w.-]+(?:/[\w.-]+)*")
+
+
+def _has_deep_path(text: str) -> bool:
+    """Whether _DEEP_PATH matches anywhere in `text`, in time linear in its length.
+
+    Searching _DEEP_PATH directly tries a start after every '-' or '.' of a long run of them
+    and rescans the rest of the run from each: quadratic, about 0.7 s for 8,000 dashes, on
+    text that seed packs supply (SonarQube Cloud python:S8786, 2026-10-25). A match can only
+    lie inside one chain of segments, and a match from a later start in a chain is also a
+    match from the earliest start the pattern allows in that chain (its first segment absorbs
+    the difference), so one anchored attempt per chain gives the same answer.
+    """
+    for chain in _PATH_CHAIN.finditer(text):
+        for i in range(chain.start(), chain.end()):
+            if text[i] != "/" and (i == 0 or not (text[i - 1].isalnum() or text[i - 1] in "_/")):
+                if _DEEP_PATH.match(text, i):
+                    return True
+                break   # the earliest allowed start decides for the whole chain
+    return False
 
 
 def _field(rec: Any, name: str) -> str:
@@ -67,7 +88,7 @@ def overscope_signals(rec: Any, repo_names: Iterable[str] = ()) -> list[str]:
     out = []
     if _ABS_PATH.search(subject):
         out.append("an absolute path")
-    if _DEEP_PATH.search(subject):
+    if _has_deep_path(subject):
         out.append("a repository-deep file path")
     low = subject.lower()
     named = sorted(r for r in {n.strip().lower() for n in repo_names if n}
