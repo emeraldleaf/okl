@@ -123,6 +123,16 @@
       "verified_commit": "c68226b4fb64debbcc9b39a3ed73313a33a7946a"
     },
     {
+      "id": "n_bf6a2aee2f12",
+      "type": "Defect",
+      "title": "Dependabot alerts reach no one unless a step reads them",
+      "scope": "org",
+      "files": "docs/DEVELOPING.md",
+      "verified_at": 1792899902681,
+      "verified_by": "`grep -c 'dependabot/alerts?state=open' docs/DEVELOPING.md` exit 0, matched '1' on commit b98929da2b9b @ 2026-10-25T03:45Z",
+      "verified_commit": "b98929da2b9b6882413d1950436d0f853d328600"
+    },
+    {
       "id": "n_d45d7bf64896",
       "type": "Decision",
       "title": "Entered a crowded category deliberately: differentiate on verification-of-memory, compose with memory infra, never compete on recall",
