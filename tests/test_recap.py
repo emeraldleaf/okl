@@ -213,3 +213,107 @@ def test_the_stop_hook_asks_as_before_with_an_okl_that_has_no_recap(repo, tmp_pa
 
     assert r.returncode == 2 and "ENCODING LOOP" in r.stderr
     assert "invalid choice" not in r.stderr, r.stderr
+
+
+# --- the session report (#279) --------------------------------------------------------------
+
+def test_the_window_reads_iso_relative_the_transcript_or_a_day(tmp_path):
+    """--since takes ISO 8601 or a span back from now; without it the transcript's start;
+    without that, a day; an unreadable --since is an error the command can name."""
+    now = recap._iso_ms("2026-10-24T12:00:00Z")
+    assert recap.window_start("2026-10-24T10:00Z", None, now) == now - 2 * 3_600_000
+    assert recap.window_start("90m", None, now) == now - 90 * 60_000
+    assert recap.window_start("2d", None, now) == now - 2 * 86_400_000
+    t = _transcript(tmp_path, json.dumps({"timestamp": "2026-10-24T11:00:00.000Z"}))
+    assert recap.window_start(None, str(t), now) == now - 3_600_000
+    assert recap.window_start(None, None, now) == now - 86_400_000
+    with pytest.raises(ValueError):
+        recap.window_start("yesterday-ish", None, now)
+
+
+def test_the_report_counts_what_happened_in_the_window(repo):
+    """Briefings, recorded and retired lessons, check runs (failures named), changed files
+    and current drift all come from the store's logs and git, inside the window only."""
+    c = Client()
+    c.check("payments go through the ledger")
+    c.check("payments go through the ledger")
+    store = c._local_store()
+    store.log_check("often", True, "pytest -q", "exit 0")
+    store.log_check("once", False, "ruff check .", "exit 1")
+    (repo / "src" / "pay.py").write_text("v2\n")          # uncommitted: the session changed it
+    now = recap._iso_ms("2100-01-01T00:00:00Z")
+    r = recap.report(store, "r", str(repo), since_ms=0, now_ms=now)
+    assert r["briefings"] == 2 and r["most_shown"][0]["id"] == "pay-rule" and r["most_shown"][0]["times"] == 2
+    assert {x["id"] for x in r["recorded"]} == {"pay-rule", "often", "once", "gone"}
+    assert [x["id"] for x in r["retired"]] == ["gone"] and r["retired"][0]["reason"] == "it was wrong"
+    assert r["checks"]["runs"] == 2 and r["checks"]["passed"] == 1
+    assert [x["id"] for x in r["checks"]["failed"]] == ["once"]
+    assert [x["id"] for x in r["changed"]] == ["pay-rule"]
+    assert [x["id"] for x in r["stale_now"]] == ["pay-rule"]          # never verified, and governs a file
+    assert r["drift_checked"] == 1
+    # Briefed while stale (it governs a file and was never verified), and nothing re-checked it:
+    # the open loop the report lists.
+    assert r["shown_then_quiet"] == 1
+    assert [x["id"] for x in r["stale_not_rechecked"]] == ["pay-rule"]
+    later = recap.report(store, "r", str(repo), since_ms=now - 1, now_ms=now)
+    assert later["briefings"] == 0 and later["recorded"] == [] and later["retired"] == []
+    assert later["checks"]["runs"] == 0
+
+
+def test_recap_report_prints_markdown_or_json(repo, capsys):
+    """The command prints the sections a person reads, says what it does not cover yet, and
+    gives the same data as JSON; an unreadable --since exits 2 with the forms it accepts."""
+    Client().check("payments go through the ledger")
+    assert main(["recap", "--report", "--since", "1h"]) == 0
+    out = capsys.readouterr().out
+    for heading in ("okl session report", "**Briefings:** 1 prompts", "**Lessons recorded:**",
+                    "**Lessons retired:** 1", "**Checks run:**", "**Code:**", "**Still open:**",
+                    "Not covered yet"):
+        assert heading in out, heading
+    assert main(["recap", "--report", "--since", "1h", "--format", "json"]) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data["repo"] == "r" and data["briefings"] == 1
+    assert main(["recap", "--report", "--since", "whenever"]) == 2
+    assert "90m, 6h, 2d" in capsys.readouterr().err
+
+
+def test_the_report_counts_stale_showings_past_the_limit_and_says_when_drift_saw_nothing(tmp_path, monkeypatch):
+    """The stale count is the true total, not the listed top; a lesson shown stale and checked
+    afterwards has left the open loop; and with no git to judge by, the report says it cannot
+    tell what is proven rather than calling everything proven (review on #281)."""
+    from okl import core
+    from okl.store import Store
+    s = Store("sqlite:///:memory:")
+    for i in range(8):
+        core.record(s, id=f"l{i}", type="Rule", title=f"lesson {i}", scope="org")
+    s.log_briefing("r", [f"l{i}" for i in range(8)], drifted_ids=[f"l{i}" for i in range(8)])
+    s.log_check("l0", True, "pytest -q", "exit 0")                   # acted on after the briefing
+    not_git = tmp_path / "plain"; not_git.mkdir()
+    r = recap.report(s, "r", str(not_git), since_ms=0, now_ms=recap._iso_ms("2100-01-01T00:00:00Z"), top=5)
+    assert len(r["shown_stale"]) == 5 and r["shown_stale_total"] == 8
+    assert r["stale_not_rechecked_total"] == 7 and "l0" not in {x["id"] for x in r["stale_not_rechecked"]}
+    assert r["shown_then_quiet"] == 7
+    assert r["drift_checked"] == 0
+    text = recap.render_report(r)
+    assert "8 of them while stale" in text and "**Shown stale, not re-checked:** 7 lessons" in text
+    assert "**Still open:** unknown" in text and "proven against them" not in text
+    s.close()
+
+
+def test_a_lesson_stale_again_after_its_recheck_is_open_again(monkeypatch):
+    """Shown stale, re-checked, then shown stale again with nothing after: the loop is open,
+    because it is judged from the latest stale showing, not the first (review on #281)."""
+    from okl import core
+    from okl.store import Store
+    s = Store("sqlite:///:memory:")
+    core.record(s, id="x", type="Rule", title="lesson x", scope="org")
+    clock = iter([1_000, 2_000, 3_000])
+    monkeypatch.setattr("okl.store._now_ms", lambda: next(clock))
+    s.log_briefing("r", ["x"], drifted_ids=["x"])        # 1: shown stale
+    s.log_check("x", True, "pytest -q", "exit 0")         # 2: re-checked
+    s.log_briefing("r", ["x"], drifted_ids=["x"])        # 3: its code changed again; shown stale again
+    plain = Path(__file__).parent
+    r = recap.report(s, "r", str(plain), since_ms=0, now_ms=10_000)
+    assert [x["id"] for x in r["stale_not_rechecked"]] == ["x"] and r["stale_not_rechecked_total"] == 1
+    assert r["shown_then_quiet"] == 0                     # the broad count still sees the check
+    s.close()
