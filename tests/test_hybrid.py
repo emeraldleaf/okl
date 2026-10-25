@@ -8,7 +8,7 @@ import re
 
 import pytest
 
-from okl import core, semantic
+from okl import core, rerank, semantic
 from okl.client import hybrid_setting
 from okl.store import Store
 
@@ -173,5 +173,11 @@ def test_embed_command_exits_2_with_the_remedy_when_the_arm_cannot_run(tmp_path,
     def missing(*a, **k):
         raise semantic.SemanticUnavailableError("the hybrid extra is not installed: pip install 'observed-knowledge-ledger[hybrid]'")
     monkeypatch.setattr(semantic, "load_model", missing)
+    # embed goes on to the reranker, its one online step; unmocked, a machine with the rerank
+    # extra fetched it for real here, and that online import is what sent later check-time
+    # loads to the network (test_rerank: the offline switch reaches huggingface_hub's constant).
+    def no_reranker(*a, **k):
+        raise rerank.RerankUnavailableError("the rerank extra is not installed")
+    monkeypatch.setattr(rerank, "load_model", no_reranker)
     assert main(["embed"]) == 2
     assert "NOT EMBEDDED" in capsys.readouterr().err
