@@ -28,7 +28,9 @@ for doc in ("README.md", "docs/GETTING-STARTED.md"):
         # A flag written on its own belongs to init only when init is the sole okl command
         # the sentence names; beside `okl verify`, a bare `--files` is verify's.
         if not re.search(r"`okl (?!init\b)\w+", unit):
-            flags.update(re.findall(r"`(--[a-z][a-z-]+)[^`]*`", unit))
+            # (?![a-z-]) pins the name's end, so an unclosed backtick fails in linear time
+            # rather than retrying every shorter name (SonarQube Cloud python:S8786).
+            flags.update(re.findall(r"`(--[a-z][a-z-]+)(?![a-z-])[^`]*`", unit))
 # Whole flag names, so a typo that is a prefix of a real flag (`--no-clau`) is caught.
 known = set(re.findall(r"--[a-z][a-z-]+", help_text))
 missing = sorted(flags - known)
