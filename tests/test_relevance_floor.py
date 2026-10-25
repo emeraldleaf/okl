@@ -216,3 +216,63 @@ def test_a_semantic_only_hit_passes_by_two_shared_words_only_when_the_knob_says_
     assert [n.id for n in kept] == [two, near] and weak == 1
     assert matched[two] == ["data", "job"] and matched[one] == ["data"]
     s.close()
+
+
+def test_a_common_title_word_admits_only_when_the_knob_allows_it(monkeypatch):
+    """With COMMON_WORD_SHARE set, one shared word in a title admits a record only when the
+    word is in at most that share of the store; two shared words and a one-word alias admit
+    regardless; shipped at None, any title word admits (REPORT §4v)."""
+    s = Store("sqlite:///:memory:")
+    # "doc" sits in four of six titles (common); "pkce" in one (specific).
+    ids = [core.record(s, type="Rule", title=f"doc rule {i} about nothing", scope="org") for i in range(4)]
+    pkce = core.record(s, type="Rule", title="pkce for public clients", scope="org")
+    aliased = core.record(s, type="Rule", title="browser token storage", scope="org", aliases="doc")
+    hits = [s.get_node(i) for i in [*ids, pkce, aliased]]
+    cand = core.Candidates(hits, {}, frozenset(n.id for n in hits), None, False)
+    monkeypatch.setattr(core, "COMMON_WORD_SHARE", None)
+    kept, _m, _w = core._apply_floor(s, hits, ["doc", "pkce"], cand)
+    assert {n.id for n in kept} == {*ids, pkce, aliased}          # §4n's rule: any title word admits
+    monkeypatch.setattr(core, "COMMON_WORD_SHARE", 0.5)
+    kept, _m, _w = core._apply_floor(s, hits, ["doc", "pkce"], cand)
+    assert {n.id for n in kept} == {*ids, pkce, aliased}          # four records is under the absolute minimum
+    monkeypatch.setattr(core, "COMMON_WORD_MIN_RECORDS", 3)
+    kept, _m, weak = core._apply_floor(s, hits, ["doc", "pkce"], cand)
+    assert {n.id for n in kept} == {pkce, aliased} and weak == 4   # "doc" is in 4 of 6: too common; the alias still counts
+    kept, _m, _w = core._apply_floor(s, hits, ["doc", "rule"], cand)
+    assert set(ids) <= {n.id for n in kept}                        # two shared words always admit
+    s.close()
+
+
+def test_a_one_word_task_keeps_the_old_rule_even_for_a_common_word(monkeypatch):
+    """§4v weighs the one-word match inside a longer task; a task of one subject word is its
+    whole subject and still admits on that word, common or not, until a measured change says
+    otherwise (#282, review on #280)."""
+    s = Store("sqlite:///:memory:")
+    ids = [core.record(s, type="Rule", title=f"doc rule {i}", scope="org") for i in range(8)]
+    hits = [s.get_node(i) for i in ids]
+    cand = core.Candidates(hits, {}, frozenset(ids), None, False)
+    monkeypatch.setattr(core, "COMMON_WORD_SHARE", 0.05)
+    monkeypatch.setattr(core, "COMMON_WORD_MIN_RECORDS", 3)
+    kept, _m, weak = core._apply_floor(s, hits, ["doc"], cand)
+    assert {n.id for n in kept} == set(ids) and weak == 0
+    s.close()
+
+
+def test_a_zero_common_word_share_makes_every_word_past_the_minimum_common(monkeypatch):
+    """A share of 0 is a setting, not an unset knob: a word in more records than the minimum
+    is common at any share above nothing, while one at the minimum still admits (review on
+    #280: `COMMON_WORD_SHARE or 1.0` read 0 as unset and admitted every word)."""
+    s = Store("sqlite:///:memory:")
+    # "doc" sits in four of five titles, "pkce" in one; the minimum is set to three.
+    ids = [core.record(s, type="Rule", title=f"doc rule {i} about nothing", scope="org") for i in range(4)]
+    pkce = core.record(s, type="Rule", title="pkce for public clients", scope="org")
+    hits = [s.get_node(i) for i in [*ids, pkce]]
+    cand = core.Candidates(hits, {}, frozenset(n.id for n in hits), None, False)
+    monkeypatch.setattr(core, "COMMON_WORD_SHARE", 0.0)
+    monkeypatch.setattr(core, "COMMON_WORD_MIN_RECORDS", 3)
+    kept, _m, weak = core._apply_floor(s, hits, ["doc", "pkce"], cand)
+    assert {n.id for n in kept} == {pkce} and weak == 4   # "doc": 4 > 3 records, share > 0
+    monkeypatch.setattr(core, "COMMON_WORD_MIN_RECORDS", 4)
+    kept, _m, _w = core._apply_floor(s, hits, ["doc", "pkce"], cand)
+    assert set(ids) <= {n.id for n in kept}                # 4 is not more than the minimum of 4
+    s.close()

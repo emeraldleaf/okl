@@ -1857,6 +1857,96 @@ writes.
 as constants at today's values, `evals/admission_grid.py` and `evals/window_grid.py` with
 their receipts, the probe's `--semantic-words`, and the floor test for the knob.
 
+## 4v. PRE-REGISTERED: the floor's one-word rule, weighted by how common the word is (2026-10-24)
+
+Written before the run, per §2b, for #277; the selection grid is the only thing run first.
+
+**The question.** The floor admits a record that shares one word with the task when that word
+sits in the record's title or symptom (§4n). Written for "price" and "endpoint", the rule also
+admits every record whose title holds "doc", "update" or "search", so three of the six no-match
+prompts still return 9 to 12 lessons (§4u's receipts: 4, 11, 0, 11, 9, 12), each through one
+common title word. Does weighting that rule by how common the word is in the store refuse
+those prompts without costing recall?
+
+**The design.** `core.COMMON_WORD_SHARE` (None today): a title or symptom word admits a record
+on its own only when it occurs whole in at most that share of the store's live records; two
+shared words admit regardless, and so does a one-word alias matched whole, since an alias is a
+deliberate choice. The share is counted by a scan of the store per check (a few milliseconds
+at a few hundred records; a count from the full-text index is the version for a large store).
+
+**Selection, on the selection set.** `evals/common_word_grid.py` (receipt
+`evals/results/common-word-grid-20261024.txt`) ran `core.check` over the probe's own
+rephrasings, the authored tasks and the six prompts at shares of 3, 5, 10, 15 and 25 per
+cent, full-text and linear. Recall did not move in any cell (authored 8, the probe's own
+8 / 1 / 8 full-text and 8 / 2 / 8 linear, at every share). The six prompts: at 3 per cent
+4, 11, 0, 11, 9, 12 became 1, 8, 0, 2, 8, 6 (three refused at the three-lesson budget); at 5
+per cent 1, 10, 0, 2, 9, 6 (three refused); from 10 per cent up nothing changed, because
+"doc", "update" and "search" each sit in about 6 per cent of the 323 records. #277's rule
+picks the largest share that keeps the authored row and lowers all three heavy prompts: 5 per
+cent. The 3 per cent reading is reported beside it below. §4n's section C had put the IDOR
+task at risk under a flat 3 per cent line; the grid shows why it is not: that lesson passes
+by two shared words, which the knob leaves alone.
+
+**The measure.** `evals/probe_rephrase.py` at one commit with the knob at 0.05 and with
+`--common-share off` as the control, full-text and linear: held-out recall by variant after
+the floor, the authored row, the probe's own rows, the six counts and the rejection line.
+
+**Predictions.** At least two of the three heavy prompts drop below 6 lessons and the
+rejection line reads 3 of 6; no held-out row falls; the authored row stays 8; the probe's own
+rows do not move.
+
+**Falsifiers.** Any held-out row falls below the control; or the authored row falls; or
+fewer than two heavy prompts drop. Then the knob stays at None with the receipts kept.
+
+**Cost.** One scan of the store per check at this scale; nothing else.
+
+**What this cannot settle.** Whether 5 per cent is the right line on a store ten times this
+size, where a word's share means something different; the index-count version and a re-grid
+belong to that store. Whether refusing filler changes what the agent writes (an A/B question).
+
+### Result (2026-10-24)
+
+Receipts at commit 2ae05a8, one 323-record store, one sitting:
+`evals/results/probe-rephrase-20261024-common-{fulltext,linear}-{control,on}.txt`, the
+control run with `--common-share off`. An absolute minimum joined the rule before the run:
+a word counts as common only past five records as well as past the share, because in a store
+of a dozen records every word is in a large share, and the suite's small-store floor tests
+said so.
+
+| | full-text, rule off | full-text, 5% | linear, rule off | linear, 5% |
+|---|---|---|---|---|
+| authored | 8 | 8 | 8 | 8 |
+| probe's own ticket / paraphrase / bug report | 8 / 1 / 8 | 8 / 1 / 8 | 8 / 2 / 8 | 8 / 2 / 8 |
+| held-out ticket / paraphrase / bug report | 7 / 2 / 5 | 7 / 2 / 5 | 7 / 3 / 5 | 7 / 3 / 5 |
+| six no-match prompts, records returned | 4, 11, 0, 11, 9, 12 | 1, 10, 0, 2, 9, 6 | 5, 11, 0, 12, 9, 12 | 1, 11, 0, 3, 9, 6 |
+| refused at the three-lesson budget | 1 of 6 | 3 of 6 | 1 of 6 | 3 of 6 |
+| median `core.check`, in-process | 7 ms | 19 ms | 21 ms | 39 ms |
+
+**No falsifier fired; one prediction was half right.** No recall row moved, in any
+configuration, held-out or authored or the probe's own: the rule took nothing. All three
+heavy prompts dropped, which is what the falsifier asked, but only one dropped below six
+("give me a doc for that too", 11 → 2, losing the lessons that share nothing but "doc" in
+their titles); the search prompt went 12 → 6 exactly, and the updates prompt 11 → 10. The
+rejection line reads 3 of 6 as predicted. The prediction of two prompts under six was wrong
+by one prompt and one lesson.
+
+**What left and what stayed.** The lessons that left are the ones the rule was written for:
+four "doc" titles, four of the search prompt's "search" titles, three of the scrutinize
+prompt's one-word matches. The updates prompt keeps ten because its words ("updates",
+"update", "site", "writing") each sit under the line or match twice; the governing-plan
+prompt keeps nine for the same reason. Those two are the ordering question §4u named, not
+this one. The search prompt's six are lessons about retrieval in a store that is largely
+about retrieval; six may be close to right.
+
+**Cost.** The share is a scan of the store per check: 12 ms at 323 records, which is the
+whole of the 7 → 19 ms change. A count from the full-text index replaces the scan when a
+store makes it matter; §4q's ADR amendment carries the same tier logic for vectors.
+
+**What ships.** `COMMON_WORD_SHARE = 0.05` with the five-record minimum, as the default;
+the diagram's floor text and both renders, the README's floor sentence and alt text; the
+grid and probe receipts; the probe's `--common-share`. The rejection line in `evals/README`'s
+standing table reads 3 of 6 once #278 and this land.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
