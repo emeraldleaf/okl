@@ -1,6 +1,13 @@
 # Changelog
 
-## Unreleased
+## 0.9.0
+
+okl now needs Python 3.11 or newer: 3.10 is past end of life, and no filelock or pillow
+release that installs on it is free of the advisories open against it (0.8.9 stays
+installable there). The relevance floor weighs a one-word match by how common the word is,
+which refuses three of the six no-match prompts instead of one at no recall cost; `okl recap
+--report` says how a session went; `okl seed --refresh` takes a pack's newer lessons without
+the rest of the pack; and the reranker's model leaves the system temp directory.
 
 - **okl needs Python 3.11 or newer** (#285). Python 3.10 reached end of life on 2026-10-01, and the libraries the `hybrid` and `rerank` extras pull in have moved on: no release of filelock or pillow that installs on 3.10 is free of the advisories open against it (filelock 4.1.0 has six, one high; pillow 12.3.0 has twelve, one critical), and the fixes need 3.11. On 3.10, pip keeps installing 0.8.9, the last release for it. The files okl copies into a repo still run on 3.10, since they run on that repo's Python. For contributors: CI drops its 3.10 job, adds 3.15 (released 2026-10-09), and checks that `uv.lock` matches `pyproject.toml` (it had drifted for weeks, which is where the alerts came from), and Dependabot now updates both through its `uv` ecosystem.
 - **The relevance floor weighs a one-word match by how common the word is** (#277, REPORT §4v). A record that shares one word with the task in its title or symptom is briefed on that word only when at most one record in twenty carries it; a word in five or fewer records always counts, so a small store keeps the old rule; two shared words and a one-word alias admit as before. Measured by the probe at one commit against the control: no recall row moved (held-out, authored or the probe's own) and three of the six no-match prompts are now refused at a three-lesson budget, where one was ("give me a doc for that too" 11 → 2, the search prompt 12 → 6). The share is a scan of the store per check, 12 ms at 323 records. The pipeline diagrams and the README's floor sentence name the rule; `evals/common_word_grid.py` is the selection grid and `evals/probe_rephrase.py --common-share` the probe's switch.
