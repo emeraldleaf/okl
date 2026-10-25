@@ -478,7 +478,9 @@ session's own transcript — candidates, not records: no hook runs on every tool
 no model is called to summarise anything. Then `okl recap` names the lessons the session
 touched: up to five it was briefed on most often, and up to five whose governed files it
 changed, each with the command that corrects, retires or re-proves it. The agent proposes
-a change in one line and makes it once you agree.
+a change in one line and makes it once you agree. To read the whole session back afterwards, `okl recap --report` lists the
+briefings, the lessons recorded and retired, the checks run and failed, the commits, and what
+is stale now, from the store's own logs.
 
 A full briefing costs roughly **1,770 tokens** on the measurement above — fine for a main session with a large
 window, punishing for a subagent working in a few thousand. That asymmetry matters

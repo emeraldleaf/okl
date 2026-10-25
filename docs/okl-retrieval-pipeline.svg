@@ -72,8 +72,8 @@
 <text x="65" y="768" font-size="26" font-weight="700" fill="#B4531F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle">6</text>
 <text x="65" y="786" font-size="9" fill="#7C736A" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle" letter-spacing="1">FLOOR</text>
 <text x="120" y="755" font-size="15" font-weight="600" fill="#1E1B18">Two shared subject words, one in the title or symptom that at most 5% of records share, or a one-word alias</text>
-<text x="120" y="774" font-size="12" fill="#4E4740">A record found by one word in common ('point', 'doc') outside its title and symptom is left</text>
-<text x="120" y="789" font-size="12" fill="#4E4740">out and counted, unless it links one step to a kept record. Retired leave too.</text>
+<text x="120" y="774" font-size="12" fill="#4E4740">One shared word outside title and symptom is left out and counted unless it links to a kept</text>
+<text x="120" y="789" font-size="12" fill="#4E4740">record; a title or symptom word alone needs at most 5% of records, or 5. Retired leave too.</text>
 <text x="938" y="755" font-size="9.5" fill="#9B3B3B" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="700" text-anchor="end" letter-spacing="0.8">DROPS</text>
 <text x="120" y="800" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">13 survive</text>
 <text x="938" y="800" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A" text-anchor="end">8 dropped: one shared word, 0 retired</text>

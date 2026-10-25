@@ -38,6 +38,7 @@ sys.path.insert(0, str(REPO / "src"))
 
 from okl import semantic  # noqa: E402
 from okl.core import (  # noqa: E402
+    COMMON_WORD_MIN_RECORDS,
     COMMON_WORD_SHARE,
     _apply_floor,
     _in_scope,
@@ -260,8 +261,9 @@ def render(d: dict) -> str:
          d["after_tags"] / f, d["dropped_tags"] / f, "ANY-MATCH"),
         ("6", "FLOOR", f"Two shared subject words, one in the title or symptom that at most {COMMON_WORD_SHARE:.0%} "
                        "of records share, or a one-word alias",
-         "A record found by one word in common ('point', 'doc') outside its title and symptom "
-         "is left out and counted, unless it links one step to a kept record. Retired leave too.",
+         "One shared word outside title and symptom is left out and counted unless it links to a kept "
+         f"record; a title or symptom word alone needs at most {COMMON_WORD_SHARE:.0%} of records, or "
+         f"{COMMON_WORD_MIN_RECORDS}. Retired leave too.",
          f'{d["after_floor"]} survive', f'{d["weak"]} dropped: one shared word, {d["retired"]} retired',
          d["after_floor"] / f, (d["weak"] + d["retired"]) / f, "DROPS"),
         ("7", "CUTOFF", "The top 12",
@@ -299,8 +301,9 @@ def render(d: dict) -> str:
         st = list(stages[floor])
         st[2] = (f"Two shared words, one in the title or symptom that at most {COMMON_WORD_SHARE:.0%} of records "
                  f"share, a one-word alias, or a cosine at or above {d['line']:.2f}")
-        st[3] = (f"Only-by-embedding records count by meaning alone ({d['by_meaning']} kept so). A single "
-                 "shared word outside title and symptom is left out and counted, unless it links to a kept record.")
+        st[3] = (f"Only-by-embedding records count by meaning alone ({d['by_meaning']} kept so). A title or symptom "
+                 f"word counts alone if at most {COMMON_WORD_SHARE:.0%}, or {COMMON_WORD_MIN_RECORDS}, of records "
+                 "hold it; others need two words.")
         stages[floor] = tuple(st)
     h = 166 + len(stages) * ROW_H + 60
     o = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{h}" '

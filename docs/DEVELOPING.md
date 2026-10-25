@@ -199,6 +199,7 @@ OKL_BRIEF_INTERESTS="python,method,security,agent-safety,retrieval-design,eval-i
 | `okl show <id>` (MCP `okl_get`) | One lesson: its proof, why it was retired, and every run of its check, with pass and fail counts and its last failure |
 | `okl drift` | Lessons whose governed files changed since their check passed |
 | `okl recap --transcript <path>` | The lessons a session was briefed on and those whose files it changed |
+| `okl recap --report [--since 6h]` | How the session went: briefings, lessons recorded and retired, checks run and failed, commits, and what is stale now, from the local store's logs (`--format json` for scripts) |
 | `okl dedup` | Near-duplicate lessons, for review |
 | `okl doctor` | Other agent-memory tools beside okl, how they collide, and where drift is gated |
 | `okl coverage` | How much of the code the store's lessons govern |

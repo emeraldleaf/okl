@@ -249,9 +249,36 @@ def cmd_recap(args: argparse.Namespace) -> int:
     except OKLUnreachableError as e:
         print(f"OKL UNREACHABLE — no recap.\n{e}", file=sys.stderr)
         return 2
-    result = recap.recap(nodes, client.repo, str(_snapshot_path().parent), args.transcript,
+    repo_dir = str(_snapshot_path().parent)
+    if getattr(args, "report", False):
+        return _recap_report(client, repo_dir, args)
+    result = recap.recap(nodes, client.repo, repo_dir, args.transcript,
                          since=args.since, limit=args.limit)
     print(recap.render(result), end="")
+    return 0
+
+
+def _recap_report(client: Client, repo_dir: str, args: argparse.Namespace) -> int:
+    """`okl recap --report`: how the session went, from the local store's logs (#279)."""
+    import time
+
+    from .. import recap
+    if client.mode != "local":
+        print("okl recap --report reads the local store's logs; a shared service keeps its own.",
+              file=sys.stderr)
+        return 2
+    now = int(time.time() * 1000)
+    try:
+        since = recap.window_start(args.since, args.transcript, now)
+    except ValueError:
+        print(f"okl recap: cannot read --since {args.since!r}; give ISO 8601 or 90m, 6h, 2d.", file=sys.stderr)
+        return 2
+    data = recap.report(client._local_store(), client.repo, repo_dir, since_ms=since, now_ms=now,
+                        top=args.limit)
+    if args.format == "json":
+        print(json.dumps(data, indent=2))
+    else:
+        print(recap.render_report(data), end="")
     return 0
 
 

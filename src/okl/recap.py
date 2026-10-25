@@ -173,3 +173,158 @@ def render(result: dict[str, Any]) -> str:
             "the briefing, not a reason to retire the lesson.",
             "If none needs anything, say so in one line."]
     return "\n".join(out) + "\n"
+
+
+# --- the session report (#279) ---------------------------------------------------------------
+#
+# "How did this session go": what okl did and what changed in the store over a window, read
+# from the store's own append-only logs (briefings, check runs, retirements), the lessons'
+# creation times, git, and drift as it stands now. Local stores only: a shared service keeps
+# its logs on the server, which has no checkout to read commits or drift from.
+
+_RELATIVE = re.compile(r"^(\d+(?:\.\d+)?)([mhd])$")
+
+
+def window_start(since: str | None, transcript: str | None, now_ms: int) -> int:
+    """Where the report's window begins, in epoch milliseconds.
+
+    `since` may be ISO 8601 ("2026-10-24T14:00Z") or relative to now ("90m", "6h", "2d");
+    without it the window starts at the transcript's first timestamp, and without that, a day
+    ago. A `since` that cannot be read raises ValueError, so the command can say so.
+    """
+    if since:
+        m = _RELATIVE.match(since.strip())
+        if m:
+            unit = {"m": 60_000, "h": 3_600_000, "d": 86_400_000}[m.group(2)]
+            return now_ms - int(float(m.group(1)) * unit)
+        return _iso_ms(since)
+    start = session_start(transcript) if transcript else None
+    if start:
+        try:
+            return _iso_ms(start)
+        except ValueError:
+            pass    # an unreadable transcript time is the default window, never an error
+    return now_ms - 86_400_000
+
+
+def _iso_ms(value: str) -> int:
+    from datetime import datetime, timezone
+    dt = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return int(dt.timestamp() * 1000)
+
+
+def _ms_iso(ms: int) -> str:
+    from datetime import datetime
+    return datetime.fromtimestamp(ms / 1000).astimezone().isoformat(timespec="minutes")
+
+
+def report(store: Any, repo: str, repo_dir: str, *, since_ms: int, now_ms: int,
+           top: int = 5) -> dict[str, Any]:
+    """The session report as data: every list newest last, every time in epoch ms."""
+    from .drift import scan_drift
+    nodes = store.all_nodes()
+    by_id = {n.id: n for n in nodes}
+
+    def title(i: str) -> str:
+        return by_id[i].title if i in by_id else "(no longer in the store)"
+
+    briefings = [b for b in store.briefings(repo) if b.at >= since_ms]
+    shown: Counter[str] = Counter(i for b in briefings for i in b.node_ids)
+    stale: Counter[str] = Counter(i for b in briefings for i in b.drifted_ids)
+    retired = sorted(({"id": n.id, "title": n.title, "kind": r.kind, "reason": r.reason, "by": r.by, "at": r.at}
+                      for n in nodes for r in store.retirements(n.id) if r.at >= since_ms),
+                     key=lambda r: r["at"])
+    runs = sorted(((n, c) for n in nodes for c in store.checks(n.id) if c.at >= since_ms), key=lambda p: p[1].at)
+    since_iso = _ms_iso(since_ms)
+    changed = governing(nodes, repo, changed_paths(repo_dir, since_iso))
+    # `checked` is how many lessons drift could judge; zero is no evidence, not "all proven"
+    # (scan_drift's own rule, review on #281).
+    hits, checked = scan_drift(nodes, repo, repo_dir)
+    # The open loop (#279, review on #281): a lesson the briefing marked stale (its code changed
+    # since its last check) with no check run and no retirement at or after that showing. Advice
+    # with no check is "acted on" by being followed, which no log records, so it is only counted.
+    # An `okl update` would also close the loop, but it carries no time yet.
+    def after(first: dict[str, int]) -> set[str]:
+        done = {n.id for n, c in runs if c.at >= first.get(n.id, now_ms + 1)}
+        return done | {r["id"] for r in retired if r["at"] >= first.get(r["id"], now_ms + 1)}
+    # Shown: from the first showing, for the broad count. Stale: from the LATEST stale showing,
+    # since a lesson re-checked and then marked stale again is open again (review on #281);
+    # briefings come oldest first, so the last write wins.
+    first_shown: dict[str, int] = {}
+    last_stale: dict[str, int] = {}
+    for b in briefings:
+        for i in b.node_ids:
+            first_shown.setdefault(i, b.at)
+        for i in b.drifted_ids:
+            last_stale[i] = b.at
+    quiet = sum(1 for i in shown if i in by_id and i not in after(first_shown))
+    stale_open = [(i, c) for i, c in stale.most_common() if i in by_id and i not in after(last_stale)]
+    return {
+        "repo": repo, "since": since_ms, "until": now_ms,
+        "briefings": len(briefings), "lessons_shown": len(shown),
+        "most_shown": [{"id": i, "title": title(i), "times": c} for i, c in shown.most_common(top)],
+        "shown_stale": [{"id": i, "title": title(i), "times": c} for i, c in stale.most_common(top)],
+        "shown_stale_total": len(stale),
+        "stale_not_rechecked": [{"id": i, "title": title(i), "times": c} for i, c in stale_open[:top]],
+        "stale_not_rechecked_total": len(stale_open),
+        "shown_then_quiet": quiet,
+        "recorded": sorted(({"id": n.id, "title": n.title, "type": n.type, "at": n.created_at}
+                            for n in nodes if (n.created_at or 0) >= since_ms), key=lambda r: r["at"]),
+        "retired": retired,
+        "checks": {"runs": len(runs), "passed": sum(c.passed for _n, c in runs),
+                   "lessons": len({n.id for n, _c in runs}),
+                   "failed": [{"id": n.id, "title": n.title, "command": c.command, "outcome": c.outcome,
+                               "at": c.at} for n, c in runs if not c.passed]},
+        "commits": len(_git_lines(repo_dir, "log", f"--since={since_iso}", "--format=%H")),
+        "changed": [{"id": n.id, "title": n.title, "files": n.files} for n in changed],
+        "stale_now": [{"id": h.node_id, "title": h.title, "reason": h.reason} for h in hits],
+        "drift_checked": checked,
+    }
+
+
+def render_report(r: dict[str, Any]) -> str:
+    """The report as Markdown, for a terminal or a pull request."""
+    def hm(ms: int) -> str:
+        return _ms_iso(ms)[11:16]
+    start, end = _ms_iso(r["since"]), _ms_iso(r["until"])
+    span = (f"{start[:10]} {start[11:16]} to {end[11:16]}" if start[:10] == end[:10]
+            else f"{start[:10]} {start[11:16]} to {end[:10]} {end[11:16]}")
+    hours = (r["until"] - r["since"]) / 3_600_000
+    out = [f"## okl session report · {r['repo']} · {span} (UTC{start[16:]}, {hours:.1f} h)", ""]
+    out.append(f"**Briefings:** {r['briefings']} prompts briefed, {r['lessons_shown']} distinct lessons shown"
+               + (f", {r['shown_stale_total']} of them while stale" if r["shown_stale_total"] else "") + ".")
+    out += [f"- [{x['id']}] {x['title']} ({x['times']}×)" for x in r["most_shown"]]
+    if r["shown_then_quiet"]:
+        out.append(f"{r['shown_then_quiet']} of the lessons shown saw no check run or retirement afterwards; "
+                   "for advice that is normal, since following it leaves no record.")
+    if r["shown_stale"]:
+        out.append("\nShown while their code had changed since their last check:")
+        out += [f"- [{x['id']}] {x['title']} ({x['times']}×)" for x in r["shown_stale"]]
+    out.append(f"\n**Lessons recorded:** {len(r['recorded'])}.")
+    out += [f"- {hm(x['at'])} [{x['id']}] ({x['type']}) {x['title']}" for x in r["recorded"]]
+    out.append(f"\n**Lessons retired:** {len(r['retired'])}.")
+    out += [f"- {hm(x['at'])} [{x['id']}] {x['kind']}" + (f", replaced by [{x['by']}]" if x["by"] else "")
+            + f": {x['reason']}" for x in r["retired"]]
+    c = r["checks"]
+    out.append(f"\n**Checks run:** {c['runs']} across {c['lessons']} lessons, {c['passed']} passed, "
+               f"{len(c['failed'])} failed.")
+    out += [f"- {hm(x['at'])} [{x['id']}] {x['title']}: `{x['command'][:80]}` {x['outcome']}" for x in c["failed"]]
+    out.append(f"\n**Code:** {r['commits']} commits; {len(r['changed'])} lessons govern files changed in the window.")
+    out += [f"- [{x['id']}] {x['title']} (governs {x['files']})" for x in r["changed"]]
+    if r["stale_not_rechecked_total"]:
+        out.append(f"\n**Shown stale, not re-checked:** {r['stale_not_rechecked_total']} lessons. The briefing "
+                   "said their code had changed and nothing re-ran their check or retired them afterwards.")
+        out += [f"- [{x['id']}] {x['title']} ({x['times']}×)" for x in r["stale_not_rechecked"]]
+    if r["stale_now"]:
+        out.append(f"\n**Still open:** {len(r['stale_now'])} lessons are stale now. `okl reverify` re-runs their checks.")
+        out += [f"- [{x['id']}] {x['title']}: {x['reason']}" for x in r["stale_now"]]
+    elif r["drift_checked"]:
+        out.append(f"\n**Still open:** nothing; the {r['drift_checked']} lessons that govern files are proven against them.")
+    else:
+        out.append("\n**Still open:** unknown. Drift could judge no lesson here (none governs a file git can "
+                   "attribute), so this report cannot say what is proven.")
+    out.append("\nNot covered yet: corrections made with `okl update`, which carry no timestamp, and "
+               "anything a shared service logged.")
+    return "\n".join(out) + "\n"
