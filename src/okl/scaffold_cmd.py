@@ -127,7 +127,7 @@ def scaffold(target: str = ".", *, repo: str | None = None, force: bool = False,
             for i, line in enumerate(written_path.read_text().splitlines(), 1):
                 if "<<FILL" in line:
                     fills.append(f"{written_path.relative_to(root)}:{i}")
-        except (UnicodeDecodeError, ValueError):  # noqa: PERF203
+        except (UnicodeDecodeError, ValueError):
             pass
     return {"repo": repo, "root": str(root), "written": [str(p.relative_to(root)) for p in written],
             "skipped": [str(p.relative_to(root)) for p in skipped], "fills": fills, "plugin": plugin}

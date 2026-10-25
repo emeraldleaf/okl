@@ -9,7 +9,7 @@ name = "observed-knowledge-ledger"
 version = "0.8.9"
 description = "Observed Knowledge Ledger — verified memory for coding agents: rules, decisions and past defects, briefed when they apply, proven by checks, gated when the code they cover changes, shared across repos when you want."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "Joshua Dell" }]
 keywords = ["ai-engineering", "knowledge-layer", "mcp", "agentic-coding", "encoding-loop"]
@@ -50,6 +50,9 @@ dev = [
   # on 2026-10-10.
   "pytest==9.1.1", "pytest-cov==7.1.0", "ruff==0.16.10", "mypy==2.4.0",
   "import-linter==2.15",  # verified on PyPI 2026-10-04 (released 2026-09-04)
+  # CI runs `uv lock --check`: uv.lock is what `uv sync` builds, and it drifted from this
+  # file for weeks with nothing reading it (#285). Verified on PyPI 2026-10-25.
+  "uv==0.13.5",
   "fastapi>=0.110", "uvicorn>=0.29", "pydantic>=2", "httpx>=0.27",
   # The service tests use Starlette's TestClient. Starlette 1.2.0 (2026-05-28) moved it to
   # httpx2 (github.com/pydantic/httpx2, which Pydantic maintains as httpx's successor) and
@@ -112,7 +115,7 @@ fail_under = 66
 show_missing = true
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 files = ["src/okl"]
 # Tightened in the order mypy's own docs give for an existing codebase ("Using mypy with
 # an existing codebase"): the cheap warnings first, then check_untyped_defs, which they
@@ -163,7 +166,7 @@ layers = [
 
 [tool.ruff]
 line-length = 100
-target-version = "py310"
+target-version = "py311"
 
 [tool.ruff.lint]
 # E/W pycodestyle, F pyflakes, I import order, UP modernize, B bugbear-lite via flake8-bugbear set
@@ -233,5 +236,7 @@ max-complexity = 12
 "src/okl/cli/**" = ["T20"]
 "src/okl/seed.py" = ["T20"]
 "src/okl/ownership.py" = ["T20"]
-"src/okl/scaffold/**" = ["T20"]
+# The scaffold's Python runs on the consuming repo's interpreter, not on okl's, so it keeps
+# to what 3.10 can run (datetime.UTC is 3.11+) after okl itself moved to 3.11 (#285).
+"src/okl/scaffold/**" = ["T20", "UP017"]
 "docs/*.py" = ["T20"]

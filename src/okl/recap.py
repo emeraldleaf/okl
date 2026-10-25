@@ -208,10 +208,10 @@ def window_start(since: str | None, transcript: str | None, now_ms: int) -> int:
 
 
 def _iso_ms(value: str) -> int:
-    from datetime import datetime, timezone
+    from datetime import UTC, datetime
     dt = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
     return int(dt.timestamp() * 1000)
 
 

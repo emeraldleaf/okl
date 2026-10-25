@@ -6,7 +6,7 @@ import argparse
 import json
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -311,7 +311,7 @@ def _render_lesson(n: dict[str, Any]) -> str:
     def day(ms: int | None) -> str:
         if not ms:
             return "?"
-        return datetime.fromtimestamp(ms / 1000, tz=timezone.utc).strftime("%Y-%m-%d %H:%MZ")
+        return datetime.fromtimestamp(ms / 1000, tz=UTC).strftime("%Y-%m-%d %H:%MZ")
 
     out = [f"[{n['id']}] {n['type']} · {n['scope']} · created {day(n.get('created_at'))}",
            f"  {n['title']}"]

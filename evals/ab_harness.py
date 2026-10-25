@@ -34,7 +34,7 @@ import sys
 import tempfile
 import time
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -501,7 +501,7 @@ def main() -> int:
             last_name = p.name
         # Why the noqa below: one corrupt receipt must not stop a run, and this loops over a
         # handful of files once at startup — PERF203's hot-loop concern does not apply.
-        except (OSError, ValueError):  # noqa: PERF203
+        except (OSError, ValueError):
             continue
     current = {"generator": GENERATOR_CMD.strip(), "judge": JUDGE_CMD.strip(),
                "judge_max_chars": JUDGE_MAX_CHARS}
@@ -667,7 +667,7 @@ def main() -> int:
               f"{rep}/{len(cond)} reproduced")
     out = RESULTS_DIR
     out.mkdir(parents=True, exist_ok=True)
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M")
+    stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M")
     path = out / f"ab-{stamp}.json"
     path.write_text(json.dumps({
         "generator": GENERATOR_CMD, "judge": JUDGE_CMD, "brief_interests": BRIEF_INTERESTS,

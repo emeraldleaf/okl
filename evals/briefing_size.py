@@ -22,7 +22,7 @@ import sqlite3
 import subprocess
 import sys
 import tempfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
@@ -80,7 +80,7 @@ def main() -> int:
         }
 
     receipt = {
-        "measured_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%MZ"),
+        "measured_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%MZ"),
         "okl_commit": commit,
         "uncommitted_changes_in_src": dirty,
         "store": f"fresh, every bundled seed pack: {records} records, no interest filter",
@@ -89,7 +89,7 @@ def main() -> int:
         "briefings": {name: {"characters": len(text), "tokens": _tokens(text)}
                       for name, text in sizes.items()},
     }
-    out = REPO / "evals" / "results" / f"briefing-size-{datetime.now(timezone.utc):%Y%m%d-%H%M}.json"
+    out = REPO / "evals" / "results" / f"briefing-size-{datetime.now(UTC):%Y%m%d-%H%M}.json"
     out.write_text(json.dumps(receipt, indent=2) + "\n")
     for name, size in receipt["briefings"].items():
         print(f"{size['tokens']:>6,} tokens  {name}")

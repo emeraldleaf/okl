@@ -62,7 +62,7 @@ def _utc_day(ms: int) -> str:
     reads as local time wherever it is later compared or formatted. Drift timestamps are
     compared against git commit times across machines and timezones, so naive is wrong.
     """
-    return _dt.datetime.fromtimestamp(ms / 1000, tz=_dt.timezone.utc).strftime("%Y-%m-%d")
+    return _dt.datetime.fromtimestamp(ms / 1000, tz=_dt.UTC).strftime("%Y-%m-%d")
 
 def _git_last_change_ms(globs: list[str], repo_dir: str) -> int | None:
     """Epoch-ms of the most recent commit touching any path matching `globs`.
@@ -483,7 +483,7 @@ def stamp_problem(rule: dict[str, Any]) -> str | None:
     if not m:
         return "verified_at is set but verified_by carries no `okl verify` evidence stamp"
     stamped = int(_dt.datetime.strptime(m.group(2), "%Y-%m-%dT%H:%MZ")
-                  .replace(tzinfo=_dt.timezone.utc).timestamp() * 1000)
+                  .replace(tzinfo=_dt.UTC).timestamp() * 1000)
     lo, hi = _STAMP_SKEW_MS
     if not (stamped + lo <= at < stamped + hi):
         return (f"verified_at ({_utc_day(at)}) does not match the evidence stamp "

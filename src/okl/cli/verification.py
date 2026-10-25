@@ -94,7 +94,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
 
     The evidence trail (command, expect-match, timestamp) is stored on the node —
     the store-side mechanization of verify-before-claiming: no run, no stamp."""
-    from datetime import datetime, timezone
+    from datetime import UTC, datetime
     # Before anything runs: with no store, the check's result could not be recorded, and
     # running it anyway executed the user's command and reported its failure as a finding.
     if not Client().configured:
@@ -115,7 +115,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
     # Logged before the stamp is sent: the check passed whatever happens to the stamp, and
     # a stamp that fails must not take the record of the run with it (CodeRabbit on #170).
     _log_check(args, True, outcome, _clean_commit(root, commit))
-    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%MZ")
+    stamp = datetime.now(UTC).strftime("%Y-%m-%dT%H:%MZ")
     evidence = (f"`{args.run}` exit 0" + (f", matched {args.expect!r}" if args.expect else "")
                 + (f" on commit {commit[:12]}" if commit else "") + f" @ {stamp}")
     try:

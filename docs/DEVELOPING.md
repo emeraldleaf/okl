@@ -98,7 +98,7 @@ okl is developed with its own hooks switched on:
 | Workflow | Job | What it checks |
 |---|---|---|
 | `ci.yml` | lint-and-test (Python 3.12) | ruff, mypy, lint-imports, pytest with a coverage floor (66%), diagram figures, the method gates, gitleaks, and an architecture review that runs only when `REVIEW_CMD` is set |
-| `ci.yml` | tests-other-pythons | the suite on 3.10, 3.11, 3.13 and 3.14 |
+| `ci.yml` | tests-other-pythons | the suite on 3.11, 3.13 and 3.14 |
 | `okl-verify.yml` | drift gate | the committed `okl-drift.json`: a rule whose governed files changed since its check passed fails the build |
 | CodeQL | Analyze | GitHub's code scanning |
 | `publish.yml` | build, publish | on a `v*` tag only (see Releasing) |
