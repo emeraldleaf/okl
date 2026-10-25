@@ -43,14 +43,28 @@ _ap.add_argument("--semantic-words", default=None,
                  help="the floor's word rule for a candidate only the semantic arm returned: 'off' for cosine "
                       "alone (REPORT §4q), or the number of shared subject words that admit it (§4u). "
                       "Omit it to measure what core ships.")
-_ap.add_argument("--common-share", default=None,
+def _share(value: str) -> str | float:
+    """'off', or a finite share in [0, 1]; anything else is a usage error, since nan or a
+    negative share would quietly change which words count (review on #280)."""
+    if value == "off":
+        return value
+    try:
+        share = float(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"expected 'off' or a share from 0 to 1, not {value!r}") from None
+    if not (0.0 <= share <= 1.0):   # also false for nan
+        raise argparse.ArgumentTypeError(f"expected 'off' or a share from 0 to 1, not {value!r}")
+    return share
+
+
+_ap.add_argument("--common-share", default=None, type=_share,
                  help="the floor's one-word rule applies only to a title or symptom word in at most this share "
                       "of the store (REPORT §4v, #277): 'off' for any word, or a share such as 0.10. Omit it "
                       "to measure what core ships.")
 _args = _ap.parse_args()
 HYBRID = None if _args.hybrid == "off" else _args.hybrid
 if _args.common_share is not None:
-    core.COMMON_WORD_SHARE = None if _args.common_share == "off" else float(_args.common_share)
+    core.COMMON_WORD_SHARE = None if _args.common_share == "off" else _args.common_share
 RERANK = _args.rerank
 if _args.semantic_words is not None:
     core.SEMANTIC_WORD_FLOOR = None if _args.semantic_words == "off" else int(_args.semantic_words)
