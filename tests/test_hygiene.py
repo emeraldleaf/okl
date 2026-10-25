@@ -124,3 +124,22 @@ def test_strict_mode_counts_records_not_warning_lines():
     recs = [{"key": k, "type": "Rule", "title": k, "scope": "org"} for k in ("a", "b", "c", "d")]
     lines, flagged = hygiene.hygiene_findings(recs)
     assert len(lines) == 1 and flagged == 4
+
+
+def test_the_deep_path_check_matches_the_pattern_and_stays_linear():
+    """_has_deep_path answers exactly as _DEEP_PATH.search does, including a path that starts
+    after a dot ('/.config/...'), and a long run of dashes or dots takes milliseconds, not
+    the quadratic seconds a direct search took (SonarQube Cloud python:S8786, 2026-10-25)."""
+    import random
+    import time
+    for s in ("/.config/app/settings.json", "see src/okl/cli/parser.py", "a//b/c/d.py",
+              "x-a/b/c.py", "foo/bar.py", "--/a/b/c.md", "./x/y/z.ts", ""):
+        assert hygiene._has_deep_path(s) == bool(hygiene._DEEP_PATH.search(s)), s
+    rng = random.Random(23)  # noqa: S311 - seeded fuzz input for an equivalence check, not a secret
+    for _ in range(20000):
+        s = "".join(rng.choice("ab9._-/ !é") for _ in range(rng.randint(0, 48)))
+        assert hygiene._has_deep_path(s) == bool(hygiene._DEEP_PATH.search(s)), repr(s)
+    start = time.perf_counter()
+    for run in ("-" * 40000, "." * 40000, "a." * 20000):
+        assert hygiene._has_deep_path(run) is False
+    assert time.perf_counter() - start < 1.0    # the direct search took about 18 s here
