@@ -125,22 +125,27 @@ That is expected; see CONTRIBUTING.
 
 ## Releasing
 
-1. **On a `release-X.Y.Z` branch,** set the version in `pyproject.toml`, in `server.json`
+1. **Check for open security alerts:**
+   `gh api 'repos/emeraldleaf/okl/dependabot/alerts?state=open' --jq length` should print 0.
+   Fix each alert, or dismiss it with a reason, before the release. Nothing else surfaces
+   them: CI, the reviews and drift all stay green while an alert is open. Six sat for a day
+   in October 2026 and were noticed only because a `git push` printed them (#285).
+2. **On a `release-X.Y.Z` branch,** set the version in `pyproject.toml`, in `server.json`
    (twice), in `.claude-plugin/plugin.json` and in `docs/GETTING-STARTED.md` (twice).
    Rename the CHANGELOG's `## Unreleased` to `## X.Y.Z`. Reinstall the editable package so
    the version test passes: `pip install --no-deps -e .`.
-2. **Commit, re-verify, open the PR, merge.**
-3. **Tag the merge commit:**
-   `gh release create vX.Y.Z --target <sha> --title X.Y.Z --notes-file <that CHANGELOG section>`.
+3. **Commit, re-verify, open the PR, merge.**
+4. **Tag the merge commit:**
+   `gh release create vX.Y.Z --target <sha> --title "okl X.Y.Z" --notes-file <that CHANGELOG section>`.
    The tag starts `publish.yml`. It builds, checks that the tag matches `pyproject.toml`,
    then waits at the `pypi` environment for the maintainer's approval.
-4. **Publish to the MCP Registry** from the repo, in a regular terminal (it asks for a
+5. **Publish to the MCP Registry** from the repo, in a regular terminal (it asks for a
    GitHub device code): `mcp-publisher login github && mcp-publisher publish`.
-5. **Check what was published.** PyPI should list the version. Then launch the server the
+6. **Check what was published.** PyPI should list the version. Then launch the server the
    way a registry client would,
    `uvx --with 'mcp>=1.2' observed-knowledge-ledger==X.Y.Z mcp`, and confirm it answers
    `initialize` with `serverInfo.version` X.Y.Z and lists its tools.
-6. **If the hooks changed,** refresh them in repos set up with `okl init`: run
+7. **If the hooks changed,** refresh them in repos set up with `okl init`: run
    `okl init --repo <name> --no-seed`, or copy the scaffold hook byte for byte. Then
    update the website's okl page.
 
