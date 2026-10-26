@@ -1446,8 +1446,9 @@ arm's configuration when it is on, and the arm does not become the default.
 the probe's own (1 → 2); nothing on tickets or bug reports; one record more on two of six
 short prompts; 0.8 s per prompt for the model load (the search itself is under a millisecond
 with numpy) and a 249 MB model on disk. The two vectorless arms bought more: symptoms took the
-probe's own bug-report row from 3 to 8 of 8 (§4o), and aliases one held-out ticket and one
-held-out paraphrase (§4p). The static model's cosines sit in a narrow band (true pairs 0.30
+probe's own bug-report row from 2 to 3 of 8 (§4o), and aliases took it from 3 to 8 of 8 and
+added one held-out ticket and one held-out paraphrase (§4p; corrected 2026-10-26, this sentence
+had given the alias gain to symptoms). The static model's cosines sit in a narrow band (true pairs 0.30
 to 0.55, chat filler up to 0.42), which is why no line separates meaning from filler cleanly;
 a stronger local model (bge-small through ONNX at about 130 MB) or a reranker over the fused
 top 36 is the next experiment, on this same held-out set, before the semantic arm can earn
@@ -1963,11 +1964,14 @@ at that size needs about six discordant tasks in one direction before it can see
 `evals/bench/` is built to decide:
 
 - **Corpus**: the twelve committed seed packs, 183 records, imported fresh on every run.
-- **Queries**: 519, three per advice lesson (a ticket, a paraphrase sharing no word with the
-  lesson's title, a bug report), written by Claude Sonnet from the lesson alone under
-  `evals/bench/GENERATION.md`, which was written before any query existed. Every rule in it is
-  checked mechanically (`assemble_queries.py`). Split by lesson, by the parity of a hash of its
-  id: 249 selection, 270 held out.
+- **Queries**: 519, three per advice lesson (a ticket, a paraphrase sharing no content word
+  with the lesson's title, a bug report), written by Claude Sonnet from the lesson alone under
+  `evals/bench/GENERATION.md`, which was written before any query existed. Its structural rules
+  are checked mechanically (`assemble_queries.py`: three registers per lesson, 6 to 40 words,
+  no title word in a paraphrase other than a stopword or a single character). Its rules about
+  content (never naming the lesson or its advice, a bug report never naming the cause or the
+  fix) were instructions to the writer and are not checked. Split by lesson, by the parity of a
+  hash of its id: 249 selection, 270 held out.
 - **Null prompts**: 550 real prompts with no subject of their own, the NULL label given by a
   Sonnet sub-agent to 1,367 distinct prompts typed in one developer's Claude Code sessions (577
   were TASK, 240 UNCLEAR). Beyond the Claude sub-agents that label and judge them, they never
@@ -1986,9 +1990,9 @@ at that size needs about six discordant tasks in one direction before it can see
 
 **What it found about today's default (selection, receipts at 2993368).** Recall 75.1% [69.1,
 80.7]; 11.8 lessons briefed per query; and 149 of 268 unseen null prompts (55.6%) briefed
-something, about five lessons each. The briefing also treats prompts a harness wrote (task
-notifications, sub-agent reports) as typed by a person: in the session that built the bench,
-each one was briefed up to twelve lessons.
+something; a briefed null prompt got 5.1 lessons on average, over all 550. The briefing also
+treats prompts a harness wrote (task notifications, sub-agent reports) as typed by a person: in
+the session that built the bench, they were briefed repeatedly, up to twelve lessons each.
 
 **The design, two parts measured apart.**
 
@@ -2009,7 +2013,8 @@ each one was briefed up to twelve lessons.
    first, at most five.
 
 **Selection, on the selection split** (receipts `evals/results/bench-20261026-sel-*.txt`, each
-naming its commit: the decision arms at 2993368, the model arms at fa0d8ca, cb73568 and 2077f09):
+naming its commit: the decision arms and the first two dense runs (bge-small, potion) at
+2993368, the other model arms at fa0d8ca, cb73568 and 2077f09):
 
 | arm (alpha 0.05, cap 5 where it applies) | recall [95%] | lessons per query | unseen null prompts briefed |
 |---|---|---|---|
@@ -2022,8 +2027,9 @@ naming its commit: the decision arms at 2993368, the model arms at fa0d8ca, cb73
 | **decision: shared subject words, with triggers (production)** | **88.0% [83.9, 91.6]** | **4.7** | **9 of 268 (3.4%)** |
 | decision: rarity evidence, without triggers | 30.1% [24.1, 36.5] | 0.9 | 2 of 268 (0.7%) |
 
-**Models, on the same split.** Every recent local model this machine's CPU could run was
-measured three ways (receipts `-rerank-*`, `-rank-*` and `-dense-*`). The runner applies each
+**Models, on the same split.** Each recent local model tried on this machine's CPU was
+measured in up to three ways (receipts `-rerank-*`, `-rank-*` and `-dense-*`; the rerankers
+have only the first, bge-small, granite and answerai-colbert-small only the last). The runner applies each
 model card's retrieval prompts itself. fastembed 0.9 names them in its model descriptions, but
 its `query_embed` and `passage_embed` apply none of them, and the first EmbeddingGemma receipt
 ran without them. That receipt is kept, renamed `-noprompts`, as an ablation.
@@ -2031,7 +2037,7 @@ ran without them. That receipt is kept, renamed `-noprompts`, as an ablation.
 *A model as the decision.* A cross-encoder scores each prompt's full-text candidates. The line
 is set by the same split conformal procedure.
 
-| reranker (int8 ONNX) | candidates scored | recall [95%] | lessons per query | unseen null prompts briefed | scoring one prompt, median, other runs sharing the machine |
+| reranker (quantized ONNX) | candidates scored | recall [95%] | lessons per query | unseen null prompts briefed | scoring one prompt, median, other runs sharing the machine |
 |---|---|---|---|---|---|
 | gte-reranker-modernbert-base | 24 | 22.5% [16.9, 28.5] | 0.54 | 16 of 268 (6.0%) | 1.2 s |
 | Qwen3-Reranker-0.6B, P(yes) | 8 | 31.3% [24.5, 38.2] | 0.63 | 13 of 268 (4.9%) | 2.5 s |
@@ -2081,8 +2087,10 @@ Recall at each W:
 |---|---|---|---|---|---|---|
 | recall | 90.8% | 92.4% | 91.2% | 89.6% | 86.3% | 83.9% |
 
-Its cold load measured 12.4 s at fa0d8ca, the first load after download, and 1.8 to 2.1 s in
-the runs after; a hook process pays somewhere in that range on every prompt.
+Its cold load measured 12.4 s at fa0d8ca and 1.7 to 2.1 s in every run after (the held-out
+run included); the first run followed the download, and the operating system's file cache is
+the likely difference, not measured. A hook process pays somewhere in that range on every
+prompt.
 
 Most of these models were also run on the rarity-evidence base, the earlier design, and none
 beat EmbeddingGemma on the shared-word base. The best weight for each:
@@ -2101,9 +2109,9 @@ the best costs about 2.2 s. So the default stays model-free. The model arm is pr
 below as a second, exploratory treatment, for a process that keeps the model loaded.
 
 Two readings decide the design. Neither part works alone: triggers lift the governing lesson
-to first place for 70.7% of queries against 45.0%, but under the floor every query is still
-briefed twelve lessons and half the null prompts something; the decision without triggers
-abstains on two lessons in three. And the share-of-subject score cannot be used at all: a
+to first place for 70.7% of queries against 45.0%, but under the floor a query is still
+briefed 11.8 lessons on average and half the null prompts something; the decision without
+triggers misses the governing lesson on two queries in three. And the share-of-subject score cannot be used at all: a
 one-word prompt covered by a title scores 1.0, so the line saturates.
 
 **The selection rule**, stated plainly as written after the grid was read: the highest recall
@@ -2177,22 +2185,23 @@ the judged-precision run on real prompts is the check, not a cure. The null prom
 line's guarantee are one developer's: the guarantee holds for prompts exchangeable with those,
 and another team's line is its own calibration. The corpus is the 183-record seed set; a live
 store holds recorded lessons that have no triggers until someone writes them, and the scan that
-computes rarity runs per check (12 ms at this size), which a full-text vocabulary count replaces
-on a store that makes it matter.
+computes rarity runs per check (the whole calibrated check takes 12 ms, median, at this size),
+which a full-text vocabulary count replaces on a store that makes it matter.
 
 **Cost.** Ten trigger lines per lesson in the packs; per check, the rarity scan; no model.
 
 ### Result (2026-10-26)
 
-Run at cd04216 from a clean worktree, in one sitting (receipts
+Run at cd04216 from a fresh worktree, in one sitting (receipts
 `evals/results/bench-20261026-heldout-*.txt`; judged precision in
-`bench-20261026-precision.txt`).
+`bench-20261026-precision.txt`, whose tally prints no commit: it ran in the same worktree at
+cd04216, and the detail receipt beside it names 7e7aa2f).
 
 | held out: 270 queries, 90 lessons | control: floor, no triggers | floor, triggers | **treatment: calibrated, triggers** | model arm, W = 0 | model arm, W = 8 |
 |---|---|---|---|---|---|
 | recall [95%] | 74.4% [68.5, 80.4] | 84.1% [79.3, 88.5] | **90.0% [86.7, 93.3]** | 90.0% [86.7, 93.3] | 95.2% [93.0, 97.4] |
 | bug report / paraphrase / ticket, of 90 each | 78 / 52 / 71 | 84 / 63 / 80 | **86 / 73 / 84** | 86 / 73 / 84 | 81 paraphrases |
-| governing lesson first (hit@1) · MRR | 40.4% · 0.515 | 68.1% · 0.780 | 68.1% · 0.780 | | |
+| governing lesson first in the search's order, before the decision (hit@1) · MRR | 40.4% · 0.515 | 68.1% · 0.780 | 68.1% · 0.780 | | |
 | lessons briefed per query | 11.8 | 11.8 | **4.7** | 4.69 | 4.52 |
 | unseen null prompts briefed anything | 149 of 268 | 149 of 268 | **9 of 268** | 9 of 268 | 12 of 268 |
 
@@ -2225,7 +2234,9 @@ instruction. One batch's judge wrote only the pairs it labelled APPLIES or UNSUR
 script mark the rest DOES_NOT_APPLY, against the instruction to write every label. A fresh
 judge re-judged that batch before any tally was run, and its labels are the ones counted. The
 two labellings of that batch agree on 131 of 143 pairs (Cohen's kappa 0.69). With the first
-labelling in place, precision is 8.4% and 24.2% (`bench-20261026-precision-detail.txt`).
+judge's labels in place (`judge-out-3-listdefault`, which the detail receipt calls the second
+labelling because it is passed second), precision is 8.4% and 24.2%
+(`bench-20261026-precision-detail.txt`).
 
 **What it costs on real prompts.** This analysis is exploratory, not pre-registered, and was
 written after the tally was read (`-precision-detail`).
@@ -2248,9 +2259,10 @@ briefs is nearly three times as likely to apply. Real prompts are terser than th
 queries, and the line asks for three shared subject words, or two rare ones.
 
 **How the parts divide the work.** Triggers did the ranking: the governing lesson came first
-for 68.1% of queries against 40.4%. Under the floor, that bought 9.7 points of recall and
-nothing else; every query was still briefed twelve lessons, and more than half the null
-prompts something. The decision keeps the same order and cuts it at the calibrated line. That added
+for 68.1% of queries against 40.4%. Under the floor, that bought 9.6 points of recall (201 to
+227 of 270) and nothing else; a query was still briefed 11.8 lessons on average, and more than
+half the null prompts something. The decision cuts the search's candidates at the calibrated
+line and orders what clears it by shared subject words, then by the search's rank. That added
 5.9 more points, took the briefing from 11.8 lessons to 4.7, and took the null prompts from
 149 briefed to 9. Held-out recall (90.0%) came in above selection's (88.0%), inside each
 other's intervals: no sign that the choice fitted the selection split.
@@ -2269,6 +2281,29 @@ pre-registered when it is built (#291):
 - **The model arm, in a process that keeps the model loaded.** On the bench it recovered much of
   what words miss (paraphrases 73 to 81 of 90). Its judged precision and its recall on real
   prompts are not yet measured.
+
+**Corrections to this section (2026-10-26).** After the result was written, an independent
+agent checked about 300 figures and claims in this section and in `docs/RETRIEVAL.md` against
+the receipts and the code. Every measured figure matched. It found descriptive errors, now
+corrected above; none touches a prediction, a falsifier or a number a decision rests on:
+
+- the paraphrase rule excludes the title's content words, not every word, and only the
+  structural rules are checked mechanically;
+- a briefed null prompt's 5.1 lessons is an average over all 550, not over the unseen half;
+- bge-small and potion ran at 2993368, with the decision arms;
+- the models were measured in up to three ways, not each in all three;
+- the Qwen3 reranker's ONNX file is quantized; int8 is confirmed only for gte-modernbert's;
+- EmbeddingGemma's cold-load range now includes the held-out run's 1.74 s, and the first run's
+  12.4 s is put down to the file cache as likely, not measured;
+- "every query briefed twelve lessons" was an average of 11.8;
+- "abstains on two lessons in three" was "misses the governing lesson on two queries in three";
+- the 12 ms is the whole calibrated check, not the rarity scan alone;
+- in the result, the floor's gain from triggers is 9.6 points, not 9.7;
+- the hit@1 and MRR rows describe the search's order before the decision, and the decision
+  re-sorts what clears the line rather than keeping the search's order.
+
+The same check found §4q giving the aliases' gain on the bug-report row to symptoms; that
+sentence is corrected in place.
 
 ## 5. Findings
 

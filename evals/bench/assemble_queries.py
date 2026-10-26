@@ -3,10 +3,12 @@
 
     python3 evals/bench/assemble_queries.py <dir holding queries-*.jsonl> --generator <model>
 
-Every rule the protocol states is checked here, mechanically, and a batch that breaks one is
+The protocol's structural rules are checked here, mechanically, and a batch that breaks one is
 refused with the reason: three queries per advice lesson (one per register), 6 to 40 words,
 lesson ids that exist in the seed packs, and no content word of the lesson's title in its
-paraphrase (the same stopword list the writers were given). Ids are stable (lesson key and
+paraphrase (the same stopword list the writers were given). Its rules about content (never
+naming the lesson or its advice, a bug report never naming the cause or the fix) were
+instructions to the writer; no script checks them. Ids are stable (lesson key and
 register), and the split is the parity of the SHA-256 of the lesson id, so a lesson's three
 queries always share it.
 """

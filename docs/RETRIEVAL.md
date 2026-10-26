@@ -36,9 +36,9 @@ them applied.
    the best trigger of all.
 2. **When a prompt arrives**, okl searches every lesson's text, triggers included.
 3. **Then it decides**: a lesson is briefed only when what it says it is about shares enough of
-   the prompt's subject: three subject words, or two rare ones. That line was set on the 550
-   real prompts that should get nothing, so that at most about one in twenty of them gets
-   anything. Never more than five lessons. And a message the agent's harness wrote (a task
+   the prompt's subject: three subject words, or two rare ones. That line was set on 282 real
+   prompts that should get nothing, so that at most about one in twenty such prompts gets
+   anything; 268 more, which the line never saw, test it. Never more than five lessons. And a message the agent's harness wrote (a task
    notification, a sub-agent's report) is never briefed: nobody typed it.
 
 **What it bought** (the benchmark below, numbers from committed receipts):
@@ -48,7 +48,7 @@ them applied.
 | the lesson that applies is briefed (held-out queries) | 74.4% [68.5, 80.4] | **90.0% [86.7, 93.3]** |
 | lessons briefed per query | 11.8 | **4.7** |
 | real prompts with no subject that got anything | 149 of 268 (55.6%) | **9 of 268 (3.4%)** |
-| work per prompt | a full-text search | the same search and a word count; no model |
+| work per prompt | a full-text search | the same search, a word count and a rarity scan of the store; no model |
 
 **What comes next.** A small embedding model (EmbeddingGemma-300m), added to the word count
 rather than replacing it, took held-out recall from 90.0% to **95.2%**, most of it on
@@ -97,9 +97,10 @@ lost is under [What is not in the pipeline](#what-is-not-in-the-pipeline-and-why
 
 ### 1. Triggers: index the moments, not only the lesson
 
-The single largest gain in okl's retrieval history came from writing down, for each lesson, the
-words people use when it bites: a *symptom* line per lesson took the probe's bug-report row
-from 3 to 8 of 8 (REPORT §4o), and aliases added more (§4p). Triggers generalise that. Each
+The largest gains in okl's retrieval history came from writing down, for each lesson, the
+words people use when it bites. A *symptom* line on twenty lessons took the probe's bug-report
+row from 2 to 3 of 8 (REPORT §4o); *aliases* on every advice lesson took it from 3 to 8 of 8
+(§4p). Triggers generalise that. Each
 lesson carries a handful of whole phrasings, of three kinds: the work you would be doing when
 it matters, what you would observe once it had already gone wrong, and the other words people
 use for the same situation.
@@ -194,11 +195,13 @@ Such a prompt is now briefed nothing, under either decision.
 - **Corpus**: the twelve committed seed packs, 183 records, rebuilt on every run so anyone can
   reproduce a receipt.
 - **Queries**: 519 (a ticket, a paraphrase and a bug report per advice lesson), written by one
-  model from the lesson alone, under a protocol written before any query existed and checked
-  mechanically. The paraphrase may not use any word from the lesson's title.
+  model from the lesson alone, under a protocol written before any query existed. Its
+  structural rules are checked mechanically; the paraphrase may not use any content word from
+  the lesson's title.
 - **Prompts that should get nothing**: 550 real prompts with no subject of their own, from one
-  developer's Claude Code sessions. They are never committed, published or quoted (Claude
-  sub-agents labelled them and judge the sampled ones); receipts carry counts and a hash.
+  developer's Claude Code sessions, labelled by a Claude sub-agent among 1,367. They, and the
+  real task prompts sampled for judging, are never committed, published or quoted; receipts
+  carry counts and a hash.
 - **Splits**: queries divided by lesson into a selection half (249) for choosing and a held-out
   half (270) run once; null prompts halved into a calibration half and an unseen half.
 - **Intervals**: 95% bootstrap intervals over lessons for recall, Wilson intervals for rates.
@@ -209,7 +212,7 @@ Such a prompt is now briefed nothing, under either decision.
 |---|---|---|---|---|
 | the lesson that applies is briefed [95%] | 74.4% [68.5, 80.4] | 84.1% [79.3, 88.5] | **90.0% [86.7, 93.3]** | 95.2% [93.0, 97.4] |
 | bug reports / paraphrases / tickets, of 90 each | 78 / 52 / 71 | 84 / 63 / 80 | **86 / 73 / 84** | paraphrases 81 |
-| that lesson ranked first | 40.4% | 68.1% | 68.1% | |
+| that lesson ranked first by the search, before the decision | 40.4% | 68.1% | 68.1% | |
 | lessons briefed per query | 11.8 | 11.8 | **4.7** | 4.5 |
 | prompts with no subject that got anything | 149 of 268 | 149 of 268 | **9 of 268** | 12 of 268 |
 
@@ -256,8 +259,9 @@ first judge filled in labels by default, and the two labellings agreed on 92% of
   prompts is the check, not a cure; observed triggers from real sessions are the long-term one.
 - **One developer's prompts calibrated the line.** The guarantee holds for prompts like those.
   Another team's line is its own calibration; the procedure is in `evals/bench/run_v2.py`.
-- **The corpus is 183 lessons.** A live store holds lessons recorded without triggers, and the
-  decision needs triggers to work well; `okl record` now asks for them.
+- **The corpus is 183 records** (173 advice lessons). A live store holds lessons recorded
+  without triggers, and the decision needs triggers to work well; `okl record` now asks for
+  them.
 - **On real prompts the new decision trades recall for precision.** It finds about a quarter
   fewer of the lessons that apply, while each lesson it briefs is nearly three times as likely
   to apply (above). That analysis was not pre-registered.

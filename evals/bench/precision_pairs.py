@@ -22,6 +22,7 @@ from __future__ import annotations
 import argparse
 import json
 import random
+import subprocess
 import sys
 import tempfile
 from collections import defaultdict
@@ -75,8 +76,10 @@ def tally() -> None:
                                                      if x.strip())}
     pair_label = {(pid, lid): labels.get(i) for i, (pid, lid) in enumerate(meta["pairs"])}
     missing = sum(1 for v in pair_label.values() if v is None)
+    commit = subprocess.run(["git", "rev-parse", "--short=12", "HEAD"], capture_output=True, text=True,
+                            cwd=bench.ROOT, check=False).stdout.strip()
     print(f"bench judged precision · {len(meta['sample'])} real TASK prompts (seed {meta['seed']}) · "
-          f"{len(meta['pairs'])} pairs · judge labels missing: {missing}")
+          f"{len(meta['pairs'])} pairs · judge labels missing: {missing} · code {commit}")
     print("control: --decision floor, no triggers (today's default) · treatment: --decision calibrated, triggers")
     print()
     applies_only: dict[str, int] = defaultdict(int)
