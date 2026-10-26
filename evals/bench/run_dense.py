@@ -37,33 +37,55 @@ CAPS = (3, 5)
 ALPHA = 0.05
 
 
+LATE = ("lightonai/LateOn", "answerdotai/answerai-colbert-small-v1", "jinaai/jina-colbert-v2",
+        "colbert-ir/colbertv2.0")
+
+
+def _unit(v: list[float]) -> list[float]:
+    n = sum(x * x for x in v) ** 0.5 or 1.0
+    return [x / n for x in v]
+
+
 class Encoder:
-    """One model behind one call: fastembed's TextEmbedding, or model2vec for potion models."""
+    """One model behind one call: fastembed's TextEmbedding (its query and passage forms, so a
+    model that wants instruction prefixes, EmbeddingGemma or Qwen3, gets them), its late
+    interaction models, or model2vec for potion models."""
 
     def __init__(self, model_id: str) -> None:
         self.model_id = model_id
+        self.late = model_id in LATE
         t0 = time.perf_counter()
         if model_id.startswith("minishlab/"):
             from model2vec import StaticModel
             self._m = StaticModel.from_pretrained(model_id)
             self._kind = "m2v"
+        elif self.late:
+            from fastembed import LateInteractionTextEmbedding
+            self._m = LateInteractionTextEmbedding(model_name=model_id, cache_dir=str(hub.model_cache_dir()))
+            self._kind = "late"
         else:
             from fastembed import TextEmbedding
             self._m = TextEmbedding(model_name=model_id, cache_dir=str(hub.model_cache_dir()))
             self._kind = "fe"
         self.load_s = time.perf_counter() - t0
 
-    def encode(self, texts: list[str]) -> list[list[float]]:
-        """Unit-length vectors, so a dot product is a cosine."""
+    def encode(self, texts: list[str], *, query: bool = False) -> list:
+        """Unit-length vectors (a dot product is a cosine); for a late-interaction model, one
+        unit-length vector per token of each text."""
         if self._kind == "m2v":
-            raw = [list(map(float, v)) for v in self._m.encode(texts)]
-        else:
-            raw = [list(map(float, v)) for v in self._m.embed(texts)]
-        out = []
-        for v in raw:
-            n = sum(x * x for x in v) ** 0.5 or 1.0
-            out.append([x / n for x in v])
-        return out
+            return [_unit(list(map(float, v))) for v in self._m.encode(texts)]
+        if self._kind == "late":
+            embed = self._m.query_embed if query else self._m.passage_embed
+            return [[_unit(list(map(float, t))) for t in m] for m in embed(texts)]
+        embed = self._m.query_embed if query else self._m.passage_embed
+        return [_unit(list(map(float, v))) for v in embed(texts)]
+
+
+def maxsim(q_tokens: list[list[float]], d_tokens: list[list[float]]) -> float:
+    """ColBERT's late-interaction score, averaged over the query's tokens so it is comparable
+    across prompts of different lengths: each query token's best match in the document."""
+    return sum(max(sum(a * b for a, b in zip(qt, dt, strict=True)) for dt in d_tokens)
+               for qt in q_tokens) / max(len(q_tokens), 1)
 
 
 def cold_load_seconds(model_id: str) -> float:
@@ -102,6 +124,10 @@ def main() -> None:
             parts = [". ".join(x for x in (n.title, n.symptom) if x)]
             parts += [a.strip() for a in (n.aliases or "").split(";") if a.strip()]
             parts += [t.strip() for t in (n.triggers or "").splitlines() if t.strip()]
+            if enc.late:
+                # One document per lesson: its about-text, every phrasing in one token set,
+                # which late interaction matches token by token.
+                parts = [". ".join(parts)]
             for p in parts:
                 owner.append(n.id)
                 texts.append(p)
@@ -118,11 +144,11 @@ def main() -> None:
                 return []
             visible = {n.id for n in nodes if v2.core._in_scope(n, f"repo:{repo}", None)}
             t1 = time.perf_counter()
-            q = enc.encode([task])[0]
+            q = enc.encode([task], query=True)[0]
             encode_ms.append((time.perf_counter() - t1) * 1000)
             best: dict[str, float] = {}
             for nid, v in zip(owner, vecs, strict=True):
-                c = sum(a * b for a, b in zip(q, v, strict=True))
+                c = maxsim(q, v) if enc.late else sum(a * b for a, b in zip(q, v, strict=True))
                 if c > best.get(nid, -1.0):
                     best[nid] = c
             dense = [k for k in sorted(best, key=lambda k: -best[k]) if k in visible][:36]
