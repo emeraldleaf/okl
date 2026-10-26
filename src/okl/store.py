@@ -99,7 +99,7 @@ class Node:
     # every read of that lesson (review of okl R1). Checked in validate, every write path is.
     _TEXT_FIELDS = ("type", "title", "scope", "repo", "body", "status", "found_by", "owner",
                     "files", "symptom", "fix", "tags", "applies_to", "verified_by",
-                    "verified_commit", "aliases")
+                    "verified_commit", "aliases", "triggers")
 
     type: str
     title: str
@@ -116,6 +116,10 @@ class Node:
     aliases: str | None = None           # the words a developer uses when it bites, "; "-separated
                                          # ("logged out on refresh; session lost"); indexed with the
                                          # symptom; a one-word alias is the record's subject (#258)
+    triggers: str | None = None          # whole phrasings of the moments it applies, one per line:
+                                         # the tasks, symptoms and other words a developer would use
+                                         # before knowing the lesson exists. Write-time expansion
+                                         # (doc2query, HyPE), indexed in their own column (#291)
     fix: str | None = None
     tags: str | None = None              # comma-sep subject labels ("react,security"); orthogonal to scope
     applies_to: str | None = None        # comma-sep stacks this lesson is VALID for; None/"any" = everywhere
@@ -476,10 +480,16 @@ class _Backend(Protocol):
     def close(self) -> None: ...
 
 
+# The full-text weight of the triggers column against the others (title 8, body, symptom and
+# aliases 4, fix 2, tags 1). Provisional at the symptom's weight until the retrieval bench
+# (evals/bench/) chooses it on the selection split (#291). The Postgres backend gives the
+# column the symptom's 'B' class.
+TRIGGERS_WEIGHT = 4.0
+
 _NODE_COLS = ["id", "type", "scope", "repo", "title", "body", "status",
               "found_by", "verified_at", "ttl_days", "owner", "files",
               "symptom", "fix", "tags", "verified_by", "applies_to", "verified_commit",
-              "aliases", "created_at"]
+              "aliases", "triggers", "created_at"]
 
 
 def _row_to_check(r: dict) -> CheckRun:
@@ -543,11 +553,12 @@ class _SQLiteBackend(_Backend):
             title TEXT NOT NULL, body TEXT, status TEXT, found_by TEXT,
             verified_at INTEGER, ttl_days INTEGER, owner TEXT,
             files TEXT, symptom TEXT, fix TEXT, tags TEXT, verified_by TEXT,
-            applies_to TEXT, verified_commit TEXT, aliases TEXT, created_at INTEGER NOT NULL)""")
+            applies_to TEXT, verified_commit TEXT, aliases TEXT, triggers TEXT,
+            created_at INTEGER NOT NULL)""")
         # Idempotent migration: add columns introduced after v0.1 to pre-existing DBs.
         existing = {r[1] for r in c.execute("PRAGMA table_info(node)").fetchall()}
         for col in ("files", "symptom", "fix", "tags", "verified_by", "applies_to",
-                    "verified_commit", "aliases"):
+                    "verified_commit", "aliases", "triggers"):
             if col not in existing:
                 c.execute(f"ALTER TABLE node ADD COLUMN {col} TEXT")
         c.execute("""CREATE TABLE IF NOT EXISTS edge(
@@ -584,19 +595,19 @@ class _SQLiteBackend(_Backend):
             # happened to repeat in the title. Found by seeding a record from a spec and
             # watching `check` return nothing for a task quoting its symptom verbatim.
             c.execute("""CREATE VIRTUAL TABLE IF NOT EXISTS node_fts
-                         USING fts5(id UNINDEXED, title, body, symptom, fix, tags, aliases)""")
+                         USING fts5(id UNINDEXED, title, body, symptom, fix, tags, aliases, triggers)""")
             # FTS5 cannot ALTER in new columns, so a store built before this rebuilds its
             # index once. The node table is the source of truth; the index is derived.
             fts_cols = {r[1] for r in c.execute("PRAGMA table_info(node_fts)").fetchall()}
-            if not {"symptom", "tags", "aliases"} <= fts_cols:
+            if not {"symptom", "tags", "aliases", "triggers"} <= fts_cols:
                 c.execute("DROP TABLE node_fts")
                 c.execute("""CREATE VIRTUAL TABLE node_fts
-                             USING fts5(id UNINDEXED, title, body, symptom, fix, tags, aliases)""")
-                c.execute("""INSERT INTO node_fts(id, title, body, symptom, fix, tags, aliases)
+                             USING fts5(id UNINDEXED, title, body, symptom, fix, tags, aliases, triggers)""")
+                c.execute("""INSERT INTO node_fts(id, title, body, symptom, fix, tags, aliases, triggers)
                              SELECT id, coalesce(title,''), coalesce(body,''),
                                     coalesce(symptom,''), coalesce(fix,''),
                                     replace(coalesce(tags,''), ',', ' '),
-                                    coalesce(aliases,'') FROM node""")
+                                    coalesce(aliases,''), coalesce(triggers,'') FROM node""")
         except self._sqlite3.OperationalError:
             self._has_fts = False   # FTS5 not compiled in — fall back to LIKE
         c.commit()
@@ -613,11 +624,12 @@ class _SQLiteBackend(_Backend):
             if self._has_fts:
                 self.conn.execute("DELETE FROM node_fts WHERE id=?", (node.id,))
                 self.conn.execute(
-                    "INSERT INTO node_fts(id,title,body,symptom,fix,tags,aliases) VALUES(?,?,?,?,?,?,?)",
+                    "INSERT INTO node_fts(id,title,body,symptom,fix,tags,aliases,triggers) "
+                    "VALUES(?,?,?,?,?,?,?,?)",
                     (node.id, node.title or "", node.body or "",
                      node.symptom or "", node.fix or "",
                      # comma-separated -> space-separated so FTS tokenises each tag
-                     (node.tags or "").replace(",", " "), node.aliases or ""))
+                     (node.tags or "").replace(",", " "), node.aliases or "", node.triggers or ""))
             self.conn.commit()
 
     def upsert_edge(self, edge: Edge) -> None:
@@ -641,8 +653,8 @@ class _SQLiteBackend(_Backend):
                 params.append(_fts_query(q))
             else:
                 sql = ("SELECT * FROM node n WHERE (title LIKE ? OR body LIKE ? "
-                       "OR symptom LIKE ? OR fix LIKE ? OR aliases LIKE ?)")
-                params += [f"%{q}%"] * 5
+                       "OR symptom LIKE ? OR fix LIKE ? OR aliases LIKE ? OR triggers LIKE ?)")
+                params += [f"%{q}%"] * 6
             if scope:
                 sql += " AND n.scope=?" if "node_fts" in sql else " AND scope=?"
                 params.append(scope)
@@ -660,7 +672,8 @@ class _SQLiteBackend(_Backend):
                 # each column's BM25 term score, which saturates in term frequency, so the
                 # effective per-hit ratios are nearer 1.9 : 1.7 : 1.7 : 1.4 : 1.0 than
                 # 8 : 4 : 4 : 2 : 1 (independent verification, 2026-10-22): the order is
-                # what the weights buy, not the magnitudes. aliases ranks with symptom (#258).
+                # what the weights buy, not the magnitudes. aliases ranks with symptom (#258);
+                # triggers carry TRIGGERS_WEIGHT, measured on the retrieval bench (#291).
                 #
                 # Content matches ALWAYS sort ahead of tag-only matches; bm25 orders within
                 # each tier. The weights alone could not guarantee that: FTS5 normalises by
@@ -671,9 +684,10 @@ class _SQLiteBackend(_Backend):
                 # real store, tiering keeps every gain tag indexing bought, because the
                 # records tags lifted already matched on content — the tag was reordering
                 # within that tier, which is all it is now allowed to do.
-                sql += (" ORDER BY (f.id NOT IN (SELECT id FROM node_fts WHERE node_fts MATCH ?)),"
-                        " bm25(node_fts, 0.0, 8.0, 4.0, 4.0, 2.0, 1.0, 4.0)")
-                params.append("{title body symptom fix aliases} : (" + params[0] + ")")
+                # The one interpolated value is this module's float weight, never input.
+                sql += (" ORDER BY (f.id NOT IN (SELECT id FROM node_fts WHERE node_fts MATCH ?)),"  # noqa: S608
+                        f" bm25(node_fts, 0.0, 8.0, 4.0, 4.0, 2.0, 1.0, 4.0, {TRIGGERS_WEIGHT})")
+                params.append("{title body symptom fix aliases triggers} : (" + params[0] + ")")
             sql += " LIMIT ?"
             params.append(limit)
             rows = self.conn.execute(sql, params).fetchall()
@@ -799,6 +813,7 @@ _PG_TSV = ("setweight(to_tsvector('english', coalesce(title,'')), 'A') || "
            "setweight(to_tsvector('english', coalesce(body,'')), 'B') || "
            "setweight(to_tsvector('english', coalesce(symptom,'')), 'B') || "
            "setweight(to_tsvector('english', coalesce(aliases,'')), 'B') || "
+           "setweight(to_tsvector('english', coalesce(triggers,'')), 'B') || "
            "setweight(to_tsvector('english', coalesce(fix,'')), 'C') || "
            "setweight(to_tsvector('english', replace(coalesce(tags,''), ',', ' ')), 'D')")
 # The same vector minus tags: what a record says, as opposed to how it is labelled. Used
@@ -807,6 +822,7 @@ _PG_TSV_CONTENT = ("setweight(to_tsvector('english', coalesce(title,'')), 'A') |
            "setweight(to_tsvector('english', coalesce(body,'')), 'B') || "
            "setweight(to_tsvector('english', coalesce(symptom,'')), 'B') || "
            "setweight(to_tsvector('english', coalesce(aliases,'')), 'B') || "
+           "setweight(to_tsvector('english', coalesce(triggers,'')), 'B') || "
            "setweight(to_tsvector('english', coalesce(fix,'')), 'C')")
 
 
@@ -837,10 +853,11 @@ class _PostgresBackend(_Backend):
                 title TEXT NOT NULL, body TEXT, status TEXT, found_by TEXT,
                 verified_at BIGINT, ttl_days INTEGER, owner TEXT,
                 files TEXT, symptom TEXT, fix TEXT, tags TEXT, verified_by TEXT,
-                applies_to TEXT, verified_commit TEXT, aliases TEXT, created_at BIGINT NOT NULL)""")
+                applies_to TEXT, verified_commit TEXT, aliases TEXT, triggers TEXT,
+                created_at BIGINT NOT NULL)""")
             # Idempotent migration for pre-existing tables.
             for col in ("files", "symptom", "fix", "tags", "verified_by", "applies_to",
-                    "verified_commit", "aliases"):
+                    "verified_commit", "aliases", "triggers"):
                 cur.execute(f"ALTER TABLE node ADD COLUMN IF NOT EXISTS {col} TEXT")
             cur.execute("""CREATE TABLE IF NOT EXISTS edge(
                 src TEXT NOT NULL, rel TEXT NOT NULL, dst TEXT NOT NULL, created_at BIGINT NOT NULL,
@@ -871,7 +888,7 @@ class _PostgresBackend(_Backend):
             # migration. A condition naming a single column goes stale the next time the
             # vector grows, and the failure is silent: the index still exists, Postgres just
             # stops using it and every search becomes a sequential scan.
-            if row and not all(col in row[0] for col in ("symptom", "fix", "tags", "aliases")):
+            if row and not all(col in row[0] for col in ("symptom", "fix", "tags", "aliases", "triggers")):
                 cur.execute("DROP INDEX node_tsv_idx")
             cur.execute(f"CREATE INDEX IF NOT EXISTS node_tsv_idx ON node USING GIN (({_PG_TSV}))")
 

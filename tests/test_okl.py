@@ -1872,11 +1872,13 @@ def test_tags_are_searchable_but_never_outrank_content(store):
     # cannot do this: FTS5 MATCH finds by presence and bm25 weights only ORDER, so setting
     # the tags weight to 0.0 leaves the record findable and both assertions green while the
     # feature is silently off. Verified by setting it to 0.0 and watching them pass.
+    from okl import store as store_module
     src = (Path(__file__).resolve().parents[1] / "src" / "okl" / "store.py").read_text()
-    weights = [float(w) for w in
+    weights = [float(w.replace("{TRIGGERS_WEIGHT}", str(store_module.TRIGGERS_WEIGHT))) for w in
                src.split("bm25(node_fts, ")[1].split(")")[0].split(", ")]
-    _id_w, title_w, _body_w, symptom_w, fix_w, tags_w, aliases_w = weights
+    _id_w, title_w, _body_w, symptom_w, fix_w, tags_w, aliases_w, triggers_w = weights
     assert aliases_w == symptom_w, "aliases are indexed with the symptom, at its weight (#258)"
+    assert 0 < triggers_w <= title_w, "triggers rank, and never above a title match (#291)"
     assert tags_w > 0, "a zero weight indexes tags and then ignores them when ranking"
     assert tags_w <= fix_w, "tags is a two-word field; weight it below the prose fields"
     assert tags_w * 4 <= title_w, "a tag must stay well under a title match"

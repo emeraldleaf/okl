@@ -24,3 +24,6 @@ okl.db-shm
 
 # test output
 .coverage
+
+# Private benchmark inputs (real session prompts); never committed
+evals/bench/private/
