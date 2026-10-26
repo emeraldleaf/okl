@@ -47,6 +47,13 @@ REPO = "bench"
 BOOT = 2000
 
 
+def is_calibration(prompt: dict) -> bool:
+    """Whether a null prompt is in the half that sets lines (even SHA-256 parity of its id); the
+    other half tests them. One rule for every runner, so none calibrates on prompts another
+    treats as unseen."""
+    return int(hashlib.sha256(prompt["id"].encode()).hexdigest(), 16) % 2 == 0
+
+
 def build_corpus(where: Path) -> Store:
     """A store holding every seed pack, built in `where`, without triggers.
 
@@ -119,7 +126,7 @@ def boot_ci(per_lesson: dict[str, list[float]], seed: int = 7) -> tuple[float, f
     """Mean over queries and its 95% interval, resampling lessons."""
     lessons = list(per_lesson)
     flat = [v for vs in per_lesson.values() for v in vs]
-    rng = random.Random(seed)  # noqa: S311 - a seeded bootstrap, reproducible on purpose
+    rng = random.Random(seed)  # noqa: S311 - a seeded bootstrap, reproducible on purpose (NOSONAR: nothing secret)
     means = []
     for _ in range(BOOT):
         sample = [v for lesson in rng.choices(lessons, k=len(lessons)) for v in per_lesson[lesson]]
@@ -192,8 +199,7 @@ def main() -> None:
             latencies.append((time.perf_counter() - t0) * 1000)
             null_counts.append(len(core.briefed_ids(res)))
             # The half that set decide.CALIBRATED_LINE (even hash parity) and the half that did not.
-            null_half.append("calibration" if int(hashlib.sha256(p["id"].encode()).hexdigest(), 16) % 2 == 0
-                             else "unseen")
+            null_half.append("calibration" if is_calibration(p) else "unseen")
 
     print(f"bench · label {args.label} · split {args.split} · code {commit}{' (DIRTY: uncommitted src/seed/bench changes)' if dirty else ''}")
     print(f"corpus: {n_all} records from {len(list((ROOT / 'seed').glob('*.json')))} seed packs (sha {digest(sorted((ROOT / 'seed').glob('*.json')))}) · "
@@ -227,7 +233,8 @@ def main() -> None:
             sub = [c for c, h in zip(null_counts, null_half, strict=True) if h == half]
             hit = sum(1 for c in sub if c)
             hlo, hhi = wilson(hit, len(sub))
-            print(f"  {half} half (sets the calibrated line{'' if half == 'calibration' else ': never seen by it'}): "
+            role = "sets the calibrated line" if half == "calibration" else "never seen by the calibrated line"
+            print(f"  {half} half ({role}): "
                   f"briefed anything {hit} of {len(sub)} ({hit / len(sub):.1%}, 95% [{hlo:.1%}, {hhi:.1%}])")
     else:
         print("\nnull prompts: none on this machine (evals/bench/private/null_prompts.jsonl absent)")

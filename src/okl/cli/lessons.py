@@ -89,10 +89,10 @@ def cmd_check(args: argparse.Namespace) -> int:
         out: dict[str, Any] = {"hookSpecificOutput": {
             "hookEventName": "UserPromptSubmit",
             "additionalContext": _briefing_text(result, args)}}
-        notice = None if os.environ.get("OKL_QUIET") == "1" else core.briefing_notice(result)
-        stale = None if os.environ.get("OKL_QUIET") == "1" else _packs_behind(result)
-        if notice or stale:
-            out["systemMessage"] = " · ".join(x for x in (notice, stale) if x)
+        quiet = os.environ.get("OKL_QUIET") == "1"
+        lines = [] if quiet else [x for x in (core.briefing_notice(result), *_person_notes(result)) if x]
+        if lines:
+            out["systemMessage"] = " · ".join(lines)
         print(json.dumps(out))
         return 0
     if args.format == "json":
@@ -108,21 +108,26 @@ def cmd_check(args: argparse.Namespace) -> int:
     if args.format != "json" and result.get("store_records") == 0:
         for line in _empty_store_guidance(client):
             print(line, file=sys.stderr)
-    if args.format != "json" and (stale := _packs_behind(result)):
-        print(stale, file=sys.stderr)
+    if args.format != "json":
+        for line in _person_notes(result):
+            print(line, file=sys.stderr)
     return 0
 
 
-def _packs_behind(result: dict[str, Any]) -> str | None:
-    """One line for the person when bundled packs in this store predate their triggers, which
-    the calibrated decision reads (REPORT §4w); a pack of the repo's own is not bundled, so it
-    never prompts this."""
+def _person_notes(result: dict[str, Any]) -> list[str]:
+    """Lines for the person about how this briefing was made: bundled packs in this store that
+    predate their triggers, which the calibrated decision reads (REPORT §4w; a pack of the
+    repo's own is not bundled, so it never prompts this), and a service that answered by a
+    decision other than the one asked for."""
+    notes = []
     bundled = {f.stem for f in _bundled_seed_dir().glob("*.json")}
     behind = [p for p in result.get("packs_without_triggers") or [] if p in bundled]
-    if not behind:
-        return None
-    return (f"okl · {len(behind)} bundled pack(s) here predate their triggers, so their lessons "
-            "are briefed less often: run `okl seed --refresh`")
+    if behind:
+        notes.append(f"okl · {len(behind)} bundled pack(s) here predate their triggers, so their lessons "
+                     "are briefed less often: run `okl seed --refresh`")
+    if result.get("decision_unavailable"):
+        notes.append(f"okl · {result['decision_unavailable']}")
+    return notes
 
 
 def cmd_record(args: argparse.Namespace) -> int:

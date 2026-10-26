@@ -284,6 +284,15 @@ class Client:
                 # A missing key and a null are the same answer: not the list that was asked for.
                 if wanted and not isinstance(result.get(key), list):
                     raise OKLRejectedError(_TOO_OLD.format(what=f"answers `{key}` on /check"), status=404)
+            # An older service drops `decision` too, and answers by the floor. Every client sends
+            # a decision, so refusing as above would refuse every check in every repo until the
+            # service is upgraded; a briefing must not fail on what the service cannot run (the
+            # hybrid arm's rule), so the result says which decision answered (review on #292).
+            answered = result.get("decision") or "floor"
+            if answered != self.decision:
+                result["decision_unavailable"] = (f"the service answered by the {answered} decision, not "
+                                                  f"{self.decision}: it predates it; upgrade the service")
+            result["decision"] = answered
         else:
             kw: dict[str, Any] = {"interests": self.interests, "hybrid": self.hybrid, "index": self.index,
                                   "near_misses": self.near_misses, "rerank": self.rerank,

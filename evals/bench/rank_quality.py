@@ -15,7 +15,6 @@ badly; then it belongs after the decision, ordering what the decision lets throu
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import statistics
 import subprocess
@@ -57,7 +56,7 @@ def main() -> None:
     if args.split != "all":
         queries = [q for q in queries if q["split"] == args.split]
     nulls = [json.loads(x) for x in bench.NULLS.read_text().splitlines() if x.strip()]
-    calib = [p for p in nulls if int(hashlib.sha256(p["id"].encode()).hexdigest(), 16) % 2 == 0]
+    calib = [p for p in nulls if bench.is_calibration(p)]
     enc = run_dense.Encoder(args.model, prompts=not args.no_prompts)
     with tempfile.TemporaryDirectory() as tmp:
         store = bench.build_corpus(Path(tmp))

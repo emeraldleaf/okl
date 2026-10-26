@@ -43,7 +43,7 @@ ARMS_FILE = PRIVATE / "judge-arms.json"
 def make_pairs(sample: int, seed: int) -> None:
     """Brief the sampled prompts under both arms and write the blind, shuffled judging file."""
     prompts = [json.loads(x) for x in TASKS.read_text().splitlines() if x.strip()]
-    rng = random.Random(seed)  # noqa: S311 - a reproducible sample, not a secret
+    rng = random.Random(seed)  # noqa: S311 - a reproducible sample, not a secret (NOSONAR)
     chosen = rng.sample(prompts, min(sample, len(prompts)))
     arms: dict[str, dict[str, list[str]]] = {"control": {}, "treatment": {}}
     with tempfile.TemporaryDirectory() as a, tempfile.TemporaryDirectory() as b:
@@ -57,7 +57,7 @@ def make_pairs(sample: int, seed: int) -> None:
             arms["treatment"][p["id"]] = core.briefed_ids(core.check(expanded, repo=bench.REPO, task=p["text"],
                                                                      interests=None, decision="calibrated"))
     pairs = sorted({(pid, lid) for arm in arms.values() for pid, ids in arm.items() for lid in ids})
-    rng.shuffle(pairs)
+    rng.shuffle(pairs)  # NOSONAR - the seeded order the judge reads, reproducible on purpose; nothing secret
     text = {p["id"]: p["text"] for p in chosen}
     with JUDGE_IN.open("w") as f:
         for i, (pid, lid) in enumerate(pairs):

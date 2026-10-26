@@ -69,7 +69,7 @@ def _store_with(lessons: list[dict]) -> Store:
 def test_the_calibrated_decision_briefs_what_shares_the_subject_and_nothing_else():
     """A lesson whose about-text holds three of the prompt's subject words is briefed; one
     sharing a single word is not; a prompt with no subject, and one a harness wrote, get
-    nothing; the floor stays the default."""
+    nothing; the calibrated decision is the default."""
     s = _store_with([
         {"title": "retry the uploader with backoff",
          "triggers": ["uploads to the bucket fail intermittently and the job gives up"]},
@@ -206,3 +206,34 @@ def test_a_store_whose_bundled_packs_predate_triggers_is_told_to_refresh(tmp_pat
                                            "found_by": "a review"}]}))
     assert _okl(tmp_path, "seed", str(own)).returncode == 0
     assert "okl seed --refresh" not in hook_line(task)
+
+
+def test_accented_words_count_toward_the_line():
+    """The decision splits words as the task tokenizer does, Unicode letters included: an
+    ASCII-only pattern cut "café" to "caf", so an accented task word never counted (review on
+    #292)."""
+    assert decide.words("Le café résumé, naïve parser") == {"le", "café", "résumé", "naïve", "parser"}
+    s = _store_with([{"title": "résumé parser for the café menu"}])
+    try:
+        node = s.all_nodes()[0]
+        rarity = decide.Rarity(s.all_nodes())
+        sc, shared = decide.score(core.briefing_terms("fix the résumé parser on the café menu"), node, rarity)
+        assert set(shared) == {"résumé", "parser", "café", "menu"} and sc >= decide.CALIBRATED_LINE
+    finally:
+        s.close()
+
+
+def test_a_remote_check_says_which_decision_answered(monkeypatch):
+    """A service that predates `decision` answers by the floor. The briefing is not refused,
+    since every client asks for a decision and refusing would block every prompt until the
+    service is upgraded; the result says which decision answered, and why (review on #292)."""
+    from okl.client import Client
+    c = Client(config={"repo": "r", "service_url": "http://service.invalid"})
+    monkeypatch.setattr("okl.client.drift.annotate_briefing", lambda *a, **k: None)
+    monkeypatch.setattr(c, "_post", lambda path, body: {"repo": "r", "task": body["task"], "rules": [], "match_count": 0})
+    old = c.check("a task")
+    assert old["decision"] == "floor" and "upgrade the service" in old["decision_unavailable"]
+    monkeypatch.setattr(c, "_post", lambda path, body: {"repo": "r", "task": body["task"], "rules": [],
+                                                         "match_count": 0, "decision": body["decision"]})
+    new = c.check("a task")
+    assert new["decision"] == "calibrated" and "decision_unavailable" not in new

@@ -34,7 +34,10 @@ from okl.store import Node, Store
 HARNESS_PREFIXES = ("<task-notification", "<agent-message", "<system-reminder", "<local-command",
                     "<command-name", "<command-message", "<bash-input", "<bash-stdout", "<user-prompt-submit-hook")
 
-_WORD = re.compile(r"[a-z0-9]+")
+# Unicode letters and digits, split as core.briefing_terms splits the task (str.isalnum):
+# an ASCII-only pattern cut "café" to "caf", so a task word with an accent never counted
+# (review on #292).
+_WORD = re.compile(r"[^\W_]+")
 
 
 def from_harness(task: str) -> bool:
@@ -43,7 +46,7 @@ def from_harness(task: str) -> bool:
 
 
 def words(text: str) -> set[str]:
-    """Lower-cased runs of letters and digits, as FTS5's unicode61 tokenizer splits them."""
+    """Lower-cased runs of Unicode letters and digits, the task's tokenization (core.briefing_terms)."""
     return set(_WORD.findall(text.lower()))
 
 
