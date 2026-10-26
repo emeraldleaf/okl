@@ -58,6 +58,7 @@ okl record --type Rule --scope repo --id order_scope --files app/orders.py --tag
   --title "Order lookups are scoped to the signed-in customer" \
   --symptom "an order is fetched by id with no check that it belongs to the caller" \
   --fix "filter the lookup by the caller's id; another customer's order is a 404, not a 403" \
+  --trigger "a customer could read someone else's order by changing the id in the URL" \
   --body "Without the owner check, any signed-in user can read any order by trying ids (IDOR, CWE-639)."
 
 step "3 verify"

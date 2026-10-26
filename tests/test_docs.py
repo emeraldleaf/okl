@@ -62,9 +62,10 @@ def test_quoted_briefing_sizes_match_the_receipt_the_readme_cites():
     assert len(cited) == 1, f"the README should cite exactly one briefing-size receipt, found {sorted(cited)}"
     receipt = json.loads((ROOT / "evals" / "results" / cited.pop()).read_text())
     tokens = {name: size["tokens"] for name, size in receipt["briefings"].items()}
-    full = tokens["full (agent format, default --limit 12)"]
+    full = tokens["full (agent format, default decision: calibrated, at most 5)"]
+    floor = tokens["full (agent format, --decision floor, --limit 12)"]
     actions = {n: tokens[f"--format actions --limit {n}"] for n in (3, 5, 8, 12)}
-    compact5 = tokens["compact, --limit 5"]
+    compact3 = tokens["compact, --limit 3"]
     measured = int(re.search(r"(\d+) records", receipt["store"]).group(1))
     total, _ = _seed_counts()
 
@@ -75,17 +76,21 @@ def test_quoted_briefing_sizes_match_the_receipt_the_readme_cites():
     # (2) the README quotes that receipt's figures, wherever it states one.
     for claim in (
         f"every bundled seed pack, {measured} records",
-        f"**~{full:,} tokens** at the default `--limit 12`, down to **~{actions[3]}** for only the action list",
+        f"**~{full:,} tokens** by default (at most five lessons; ~{floor:,} under `--decision floor` at "
+        f"`--limit 12`), down to **~{actions[3]}** for only the action list",
         f"~{actions[3]}-token version",
-        f"A full briefing costs roughly **{full:,} tokens**",
+        f"A full briefing costs roughly **{full:,} tokens** on the measurement above (~{floor:,} under the floor's",
         f"every bundled seed pack ({measured} records)",
-        f"~{actions[3]} tokens at `--limit 3`, ~{actions[5]} at `--limit 5`, ~{actions[8]} at "
-        f"`--limit 8` and ~{actions[12]} at `--limit 12`, against ~{full:,} for the full briefing",
-        f"Together that is ~{compact5} tokens instead of ~{full:,}",
+        f"the action list alone is ~{actions[3]} tokens at `--limit 3` and ~{actions[5]} at `--limit 5` or more "
+        f"(the decision briefs at most five), against ~{full:,} for the full briefing",
+        f"Together that is ~{compact3} tokens instead of ~{full:,}",
     ):
         assert claim in readme, f"README.md no longer says: {claim}"
     # (3) so does the MCP tool description an agent reads.
-    mcp = f"roughly {actions[3]} tokens at limit=3 and {actions[12]} at the default limit of 12, versus ~{full:,}"
+    # The decision briefs at most five, so every limit from five up measures the same.
+    assert actions[5] == actions[8] == actions[12], actions
+    mcp = (f"roughly {actions[3]} tokens at limit=3 and {actions[5]} at limit=5 or more (the default "
+           f"decision briefs at most five), versus ~{full:,} for the full briefing")
     assert mcp in _flat("src/okl/mcp_server.py"), f"the okl_check description no longer says: {mcp}"
     # (4) and so does the anatomy sheet's "Under the hood" panel.
     sheet = "docs/overview/okl-anatomy.html"
