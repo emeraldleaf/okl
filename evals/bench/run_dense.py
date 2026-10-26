@@ -25,6 +25,9 @@ import tempfile
 import time
 from collections import defaultdict
 from pathlib import Path
+from typing import Any
+
+import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import run as bench
@@ -39,11 +42,6 @@ ALPHA = 0.05
 
 LATE = ("lightonai/LateOn", "answerdotai/answerai-colbert-small-v1", "jinaai/jina-colbert-v2",
         "colbert-ir/colbertv2.0")
-
-
-def _unit(v: list[float]) -> list[float]:
-    n = sum(x * x for x in v) ** 0.5 or 1.0
-    return [x / n for x in v]
 
 
 class Encoder:
@@ -70,22 +68,24 @@ class Encoder:
         self.load_s = time.perf_counter() - t0
 
     def encode(self, texts: list[str], *, query: bool = False) -> list:
-        """Unit-length vectors (a dot product is a cosine); for a late-interaction model, one
-        unit-length vector per token of each text."""
+        """Unit-length numpy rows (a dot product is a cosine); for a late-interaction model, a
+        (tokens x dims) array of unit rows per text."""
+        def rows(m: Any) -> Any:
+            a = np.asarray(m, dtype=np.float32)
+            return a / np.maximum(np.linalg.norm(a, axis=-1, keepdims=True), 1e-12)
         if self._kind == "m2v":
-            return [_unit(list(map(float, v))) for v in self._m.encode(texts)]
-        if self._kind == "late":
-            embed = self._m.query_embed if query else self._m.passage_embed
-            return [[_unit(list(map(float, t))) for t in m] for m in embed(texts)]
+            return list(rows(self._m.encode(texts)))
         embed = self._m.query_embed if query else self._m.passage_embed
-        return [_unit(list(map(float, v))) for v in embed(texts)]
+        if self._kind == "late":
+            return [rows(m) for m in embed(texts)]
+        return list(rows(np.stack([np.asarray(v) for v in embed(texts)])))
 
 
-def maxsim(q_tokens: list[list[float]], d_tokens: list[list[float]]) -> float:
+def maxsim(q_tokens: Any, d_tokens: Any) -> float:
     """ColBERT's late-interaction score, averaged over the query's tokens so it is comparable
-    across prompts of different lengths: each query token's best match in the document."""
-    return sum(max(sum(a * b for a, b in zip(qt, dt, strict=True)) for dt in d_tokens)
-               for qt in q_tokens) / max(len(q_tokens), 1)
+    across prompts of different lengths: each query token's best match in the document.
+    Both are (tokens x dims) numpy arrays of unit rows."""
+    return float((q_tokens @ d_tokens.T).max(axis=1).mean())
 
 
 def cold_load_seconds(model_id: str) -> float:
@@ -134,6 +134,7 @@ def main() -> None:
         t0 = time.perf_counter()
         vecs = enc.encode(texts)
         index_s = time.perf_counter() - t0
+        matrix = None if enc.late else np.stack(vecs)
 
         encode_ms: list[float] = []
 
@@ -147,8 +148,8 @@ def main() -> None:
             q = enc.encode([task], query=True)[0]
             encode_ms.append((time.perf_counter() - t1) * 1000)
             best: dict[str, float] = {}
-            for nid, v in zip(owner, vecs, strict=True):
-                c = maxsim(q, v) if enc.late else sum(a * b for a, b in zip(q, v, strict=True))
+            sims = [maxsim(q, v) for v in vecs] if enc.late else (matrix @ q).tolist()
+            for nid, c in zip(owner, sims, strict=True):
                 if c > best.get(nid, -1.0):
                     best[nid] = c
             dense = [k for k in sorted(best, key=lambda k: -best[k]) if k in visible][:36]
