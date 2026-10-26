@@ -13,8 +13,9 @@ today's default) and the treatment (`--decision calibrated` with triggers), each
 the bench's repo against the seed corpus. Every (prompt, lesson) pair either arm briefed goes
 to the judge once, shuffled, with no mark of which arm briefed it. The tally reports, per arm,
 the share of its briefed lessons the judge said apply, the prompts it briefed anything, and
-lessons per prompt; and the lessons that apply which only one arm briefed. The prompts stay on
-the machine that holds them: the files are under private/, and the receipt carries counts.
+lessons per prompt; and the lessons that apply which only one arm briefed. The prompts are
+never committed or quoted: the files are under private/ (gitignored), and the receipt carries
+counts.
 """
 from __future__ import annotations
 

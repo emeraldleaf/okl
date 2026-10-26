@@ -1,0 +1,16 @@
+bench dense arm · model ibm-granite/granite-embedding-small-english-r2 · split selection · code fa0d8cafb35c
+corpus: 182 live records, 2604 vectors (title+symptom, aliases, triggers on 173 lessons) · queries sha 97ecbcb5d681 · nulls 550: 282 calibrate, 268 test
+cost: cold load in a fresh process 1.41 s · load here 2.63 s · index 122.2 s · encode per prompt median 75.1 ms
+decision score = evidence + W * maxsim; line at alpha 0.05 by split conformal
+
+    W    line cap |           recall [95%] briefed/q | null test briefed anything [95%] | paraphrase
+  0.0   8.250   3 |   83.9% [79.1%, 88.4%]      2.57 | 6 of 268 (2.2%, [1.0%, 4.8%]) | 60/83
+  0.0   8.250   5 |   84.3% [79.5%, 88.8%]      3.59 | 6 of 268 (2.2%, [1.0%, 4.8%]) | 60/83
+  5.0  12.345   3 |   84.7% [80.3%, 89.2%]      2.59 | 9 of 268 (3.4%, [1.8%, 6.3%]) | 60/83
+  5.0  12.345   5 |   85.1% [80.7%, 89.6%]      3.61 | 9 of 268 (3.4%, [1.8%, 6.3%]) | 60/83
+ 10.0  16.441   3 |   85.9% [81.5%, 90.4%]      2.60 | 9 of 268 (3.4%, [1.8%, 6.3%]) | 62/83
+ 10.0  16.441   5 |   87.1% [83.1%, 90.8%]      3.64 | 9 of 268 (3.4%, [1.8%, 6.3%]) | 64/83
+ 20.0  24.653   3 |   86.7% [82.3%, 91.2%]      2.64 | 11 of 268 (4.1%, [2.3%, 7.2%]) | 63/83
+ 20.0  24.653   5 |   88.8% [84.7%, 92.4%]      3.69 | 11 of 268 (4.1%, [2.3%, 7.2%]) | 65/83
+ 40.0  41.491   3 |   87.6% [83.1%, 91.6%]      2.58 | 22 of 268 (8.2%, [5.5%, 12.1%]) | 64/83
+ 40.0  41.491   5 |   88.8% [84.7%, 92.4%]      3.48 | 22 of 268 (8.2%, [5.5%, 12.1%]) | 65/83

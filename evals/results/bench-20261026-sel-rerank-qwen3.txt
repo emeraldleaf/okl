@@ -1,0 +1,7 @@
+bench reranker decision · model onnx-community/Qwen3-Reranker-0.6B-ONNX (onnx/model_quantized.onnx) · split selection · code fa0d8cafb35c
+pool 8 in-scope full-text candidates · triggers on 173 lessons · nulls 550: 282 calibrate, 268 test
+cost: load 8.33 s (includes download on a first run) · scoring a pool, median 2533 ms, p95 11654 ms (measured while other bench runs shared the machine)
+line at alpha 0.05: 0.1627
+
+cap 3: recall 31.3% [24.5%, 38.2%] · 0.62 lessons a query · unseen nulls briefed 13 of 268 (4.9%, [2.9%, 8.1%]) · bug-report 31/83 · paraphrase 17/83 · ticket 30/83
+cap 5: recall 31.3% [24.5%, 38.2%] · 0.63 lessons a query · unseen nulls briefed 13 of 268 (4.9%, [2.9%, 8.1%]) · bug-report 31/83 · paraphrase 17/83 · ticket 30/83

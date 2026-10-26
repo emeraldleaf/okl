@@ -1,0 +1,7 @@
+bench reranker decision · model Alibaba-NLP/gte-reranker-modernbert-base (onnx/model_int8.onnx) · split selection · code fa0d8cafb35c
+pool 24 in-scope full-text candidates · triggers on 173 lessons · nulls 550: 282 calibrate, 268 test
+cost: load 1.12 s (includes download on a first run) · scoring a pool, median 1165 ms, p95 2522 ms (measured while other bench runs shared the machine)
+line at alpha 0.05: 1.6784
+
+cap 3: recall 22.1% [16.5%, 28.1%] · 0.48 lessons a query · unseen nulls briefed 16 of 268 (6.0%, [3.7%, 9.5%]) · bug-report 22/83 · paraphrase 24/83 · ticket 9/83
+cap 5: recall 22.5% [16.9%, 28.5%] · 0.54 lessons a query · unseen nulls briefed 16 of 268 (6.0%, [3.7%, 9.5%]) · bug-report 22/83 · paraphrase 25/83 · ticket 9/83

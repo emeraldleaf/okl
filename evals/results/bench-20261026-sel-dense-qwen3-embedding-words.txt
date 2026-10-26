@@ -1,0 +1,16 @@
+bench dense arm · model Qwen/Qwen3-Embedding-0.6B-Q · split selection · code 2077f098670a · prompts "Instruct: Given a developer's task, question or bug report, retrieve the engineering lesson that applies to it\nQuery:{}" / '{}'
+corpus: 182 live records, 2604 vectors (title+symptom, aliases, triggers on 173 lessons) · queries sha 97ecbcb5d681 · nulls 550: 282 calibrate, 268 test
+cost: cold load in a fresh process 2.44 s · load here 1.13 s · index 1187.4 s · encode per prompt median 939.8 ms
+decision score = shared_words + W * maxsim; line at alpha 0.05 by split conformal
+
+    W    line cap |           recall [95%] briefed/q | null test briefed anything [95%] | paraphrase
+  0.0   2.002   3 |   86.3% [81.9%, 90.4%]      2.89 | 9 of 268 (3.4%, [1.8%, 6.3%]) | 63/83
+  0.0   2.002   5 |   88.0% [83.9%, 91.6%]      4.66 | 9 of 268 (3.4%, [1.8%, 6.3%]) | 64/83
+  1.0   2.611   3 |   89.6% [85.5%, 93.2%]      2.91 | 10 of 268 (3.7%, [2.0%, 6.7%]) | 68/83
+  1.0   2.611   5 |   91.2% [87.6%, 94.8%]      4.69 | 10 of 268 (3.7%, [2.0%, 6.7%]) | 69/83
+  2.0   3.222   3 |   89.6% [85.5%, 93.2%]      2.91 | 10 of 268 (3.7%, [2.0%, 6.7%]) | 68/83
+  2.0   3.222   5 |   91.2% [87.6%, 94.8%]      4.69 | 10 of 268 (3.7%, [2.0%, 6.7%]) | 69/83
+  4.0   4.443   3 |   89.6% [85.5%, 93.2%]      2.90 | 10 of 268 (3.7%, [2.0%, 6.7%]) | 68/83
+  4.0   4.443   5 |   91.6% [88.0%, 95.2%]      4.65 | 10 of 268 (3.7%, [2.0%, 6.7%]) | 70/83
+  8.0   6.858   3 |   90.4% [86.3%, 94.0%]      2.81 | 10 of 268 (3.7%, [2.0%, 6.7%]) | 69/83
+  8.0   6.858   5 |   91.6% [88.0%, 95.2%]      4.34 | 10 of 268 (3.7%, [2.0%, 6.7%]) | 70/83

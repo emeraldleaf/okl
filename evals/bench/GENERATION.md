@@ -44,7 +44,8 @@ Real prompts typed in Claude Code sessions on the machine that holds them, colle
 `extract_prompts.py`, labelled by a Sonnet sub-agent as NULL (it names no software task,
 question, error or artifact of its own: acknowledgements, approvals, continuations, questions
 about the conversation, references that only make sense with the previous turn) or TASK.
-Only NULL prompts enter the null set. They never leave that machine; receipts carry their count,
+Only NULL prompts enter the null set. Beyond the Claude sub-agents that label or judge them, they
+never leave that machine: nothing commits, publishes or quotes them; receipts carry their count,
 a hash of the set, and how many were briefed anything.
 
 ## Known limits

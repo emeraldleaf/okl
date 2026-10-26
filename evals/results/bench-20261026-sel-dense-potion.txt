@@ -1,0 +1,16 @@
+bench dense arm · model minishlab/potion-retrieval-32M · split selection · code 29933681bc47
+corpus: 182 live records, 2604 vectors (title+symptom, aliases, triggers on 173 lessons) · queries sha 97ecbcb5d681 · nulls 550: 282 calibrate, 268 test
+cost: cold load in a fresh process 0.97 s · load here 0.90 s · index 0.2 s · encode per prompt median 0.3 ms
+decision score = evidence + W * maxsim; line at alpha 0.05 by split conformal
+
+    W    line cap |           recall [95%] briefed/q | null test briefed anything [95%] | paraphrase
+  0.0   8.250   3 |   83.9% [79.1%, 88.4%]      2.57 | 6 of 268 (2.2%, [1.0%, 4.8%]) | 60/83
+  0.0   8.250   5 |   84.3% [79.5%, 88.8%]      3.59 | 6 of 268 (2.2%, [1.0%, 4.8%]) | 60/83
+  5.0   9.202   3 |   86.3% [82.3%, 90.4%]      2.74 | 12 of 268 (4.5%, [2.6%, 7.7%]) | 62/83
+  5.0   9.202   5 |   88.0% [83.9%, 91.6%]      3.98 | 12 of 268 (4.5%, [2.6%, 7.7%]) | 63/83
+ 10.0  10.630   3 |   87.1% [83.1%, 90.8%]      2.77 | 18 of 268 (6.7%, [4.3%, 10.4%]) | 64/83
+ 10.0  10.630   5 |   89.6% [85.5%, 93.2%]      4.07 | 18 of 268 (6.7%, [4.3%, 10.4%]) | 65/83
+ 20.0  14.729   3 |   87.6% [83.5%, 91.2%]      2.61 | 15 of 268 (5.6%, [3.4%, 9.0%]) | 63/83
+ 20.0  14.729   5 |   88.8% [85.1%, 92.4%]      3.60 | 15 of 268 (5.6%, [3.4%, 9.0%]) | 64/83
+ 40.0  26.074   3 |   79.5% [75.1%, 83.9%]      1.73 | 13 of 268 (4.9%, [2.9%, 8.1%]) | 51/83
+ 40.0  26.074   5 |   79.5% [75.1%, 83.9%]      1.98 | 13 of 268 (4.9%, [2.9%, 8.1%]) | 51/83
