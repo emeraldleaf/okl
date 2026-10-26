@@ -2336,6 +2336,15 @@ corrected above; none touches a prediction, a falsifier or a number a decision r
 The same check found §4q giving the aliases' gain on the bug-report row to symptoms; that
 sentence is corrected in place.
 
+**A further correction (2026-10-26, found building §4x).** The prompt labels came from every
+project folder on this machine. That includes the A/B harness's temporary repos and the e2e
+scratch repos, whose prompts are authored eval tasks the harness typed, not anything a person
+typed. 15 of the 100 TASK prompts in the judged-precision sample came from those folders, and
+2 of the 550 null prompts did. So "real prompts" overstates that sample. The figures stand as
+measured on it, but its judge labels were deleted with the run's worktree, so they cannot be
+re-tallied without the 15. §4x re-measures the floor against the calibrated decision on
+person-typed prompts only, with their context.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
