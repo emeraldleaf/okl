@@ -1,0 +1,7 @@
+bench judged precision · 100 real TASK prompts (seed 7) · 861 pairs · judge labels missing: 0
+control: --decision floor, no triggers (today's default) · treatment: --decision calibrated, triggers
+
+control   briefed  770 lessons on  90 of 100 prompts (7.7 a prompt) · judged apply 67 of 751 (8.9%, 95% [7.1%, 11.2%]) · unsure 19
+treatment briefed  211 lessons on  55 of 100 prompts (2.1 a prompt) · judged apply 51 of 208 (24.5%, 95% [19.2%, 30.8%]) · unsure 3
+
+lessons judged to apply that only one arm briefed: control 29, treatment 13

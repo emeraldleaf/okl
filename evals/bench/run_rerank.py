@@ -4,8 +4,8 @@
     PYTHONPATH=src python3 evals/bench/run_rerank.py --model gte-modernbert \\
         --triggers evals/bench/triggers.jsonl > evals/results/bench-<date>-sel-rerank-<name>.txt
 
-The candidates are the in-scope full-text window (24, triggers indexed) that the calibrated
-decision reads. A reranker scores each (prompt, lesson) pair, the lesson as its title, symptom
+The candidates are the first of the in-scope full-text window (triggers indexed) that the
+calibrated decision reads: --pool of them, 24 by default. A reranker scores each (prompt, lesson) pair, the lesson as its title, symptom
 and fix (the unexpanded text: expansion helps weak first stages and can hurt strong scorers,
 Weller et al., EACL 2024). The decision is the same procedure as everywhere else on the bench:
 brief the candidates at or above a line set by split conformal at alpha 0.05 over the

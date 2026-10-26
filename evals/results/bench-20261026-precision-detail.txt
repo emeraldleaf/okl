@@ -1,0 +1,9 @@
+bench judged precision, detail (exploratory, not pre-registered) · 100 real TASK prompts · 861 pairs · code 7e7aa2ffbb1e
+prompts where a lesson either arm briefed was judged to apply: 35 of 100
+
+control   briefed an applying lesson on 32 of those 35 prompts · found 67 of the 80 applying lessons either arm found · silent on 10 prompts, 0 of them with an applying lesson the other arm found · 6.8 lessons that do not apply, per prompt
+treatment briefed an applying lesson on 28 of those 35 prompts · found 51 of the 80 applying lessons either arm found · silent on 45 prompts, 6 of them with an applying lesson the other arm found · 1.6 lessons that do not apply, per prompt
+
+second labelling (judge-out-3-listdefault.jsonl) of 143 pairs: agree on 131 (91.6%) · Cohen's kappa 0.69 · APPLIES 20 here, 15 there
+  control   precision with the second labelling in place: 63 of 753 (8.4%)
+  treatment precision with the second labelling in place: 50 of 207 (24.2%)

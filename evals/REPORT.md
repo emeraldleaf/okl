@@ -2182,6 +2182,94 @@ on a store that makes it matter.
 
 **Cost.** Ten trigger lines per lesson in the packs; per check, the rarity scan; no model.
 
+### Result (2026-10-26)
+
+Run at cd04216 from a clean worktree, in one sitting (receipts
+`evals/results/bench-20261026-heldout-*.txt`; judged precision in
+`bench-20261026-precision.txt`).
+
+| held out: 270 queries, 90 lessons | control: floor, no triggers | floor, triggers | **treatment: calibrated, triggers** | model arm, W = 0 | model arm, W = 8 |
+|---|---|---|---|---|---|
+| recall [95%] | 74.4% [68.5, 80.4] | 84.1% [79.3, 88.5] | **90.0% [86.7, 93.3]** | 90.0% [86.7, 93.3] | 95.2% [93.0, 97.4] |
+| bug report / paraphrase / ticket, of 90 each | 78 / 52 / 71 | 84 / 63 / 80 | **86 / 73 / 84** | 86 / 73 / 84 | 81 paraphrases |
+| governing lesson first (hit@1) · MRR | 40.4% · 0.515 | 68.1% · 0.780 | 68.1% · 0.780 | | |
+| lessons briefed per query | 11.8 | 11.8 | **4.7** | 4.69 | 4.52 |
+| unseen null prompts briefed anything | 149 of 268 | 149 of 268 | **9 of 268** | 9 of 268 | 12 of 268 |
+
+The model arm's receipt prints only the paraphrase register; its W = 0 by register is the
+prototype's (`-heldout-v2-shared_words`), whose figures it matches.
+
+**Predictions 1 to 4 and 6 held, and no falsifier fired.**
+
+1. Recall rose 15.6 points, from 74.4% to 90.0%. Every register rose: bug reports by 8 queries,
+   paraphrases by 21 and tickets by 13.
+2. The treatment briefed 4.7 lessons per query, against 11.8.
+3. The check passed. The null figures were the selection figures exactly: 9 of 268 for the
+   treatment and 149 of 268 for the control.
+4. Production and the prototype agree everywhere their receipts can be compared: recall 90.0%,
+   86 / 73 / 84 by register, and 9 of 268 null prompts. The prototype's runner prints no
+   outcome per query, so per-query agreement is not shown. Equal counts in every register would
+   need disagreements that cancel exactly within each register.
+6. At W = 8 the model arm reached 95.2% against its own W = 0's 90.0%, 14 more queries. Eight
+   of them were paraphrases (73 to 81). At W = 0 bug reports and tickets had only 4 and 6 queries
+   left to gain, so neither can account for as much. The gain was larger held out than on
+   selection (5.2 points against 4.4).
+
+**Prediction 5 held.** On 100 real TASK prompts, judged precision rose from 8.9% [7.1, 11.2] to
+24.5% [19.2, 30.8] (`bench-20261026-precision.txt`). Of the 770 lessons the control briefed,
+751 were judged either way and 67 of them applied. Of the treatment's 211, 208 were judged
+and 51 applied.
+
+**The judging.** Six Sonnet sub-agents judged the 861 pairs, in six batches, under one
+instruction. One batch's judge wrote only the pairs it labelled APPLIES or UNSURE and let a
+script mark the rest DOES_NOT_APPLY, against the instruction to write every label. A fresh
+judge re-judged that batch before any tally was run, and its labels are the ones counted. The
+two labellings of that batch agree on 131 of 143 pairs (Cohen's kappa 0.69). With the first
+labelling in place, precision is 8.4% and 24.2% (`bench-20261026-precision-detail.txt`).
+
+**What it costs on real prompts.** This analysis is exploratory, not pre-registered, and was
+written after the tally was read (`-precision-detail`).
+
+- **Most real prompts had nothing to brief.** Only 35 of the 100 TASK prompts had any briefed
+  lesson the judge said applied. Most of one developer's prompts concern work the seed packs
+  know nothing about, and there silence is right.
+- **Where something applied, the treatment found less of it.** On those 35 prompts the control
+  briefed an applying lesson on 32, the treatment on 28. Of the 80 applying lessons either arm
+  found, the control found 67 and the treatment 51.
+- **The treatment's silences were mostly right.** It was silent on 45 prompts; on 6 of them the
+  control found an applying lesson.
+- **The control's extra finds cost noise.** It found 16 more applying lessons by briefing 6.8
+  lessons that do not apply on every prompt, against the treatment's 1.6.
+
+This is the cost §4w named under the lessons at risk, and it is the first measure where the
+decision gives something up. Held-out recall on the bench's queries rose 15.6 points. On real
+prompts, the treatment surfaces about a quarter fewer of the applying lessons, while a lesson it
+briefs is nearly three times as likely to apply. Real prompts are terser than the bench's
+queries, and the line asks for three shared subject words, or two rare ones.
+
+**How the parts divide the work.** Triggers did the ranking: the governing lesson came first
+for 68.1% of queries against 40.4%. Under the floor, that bought 9.7 points of recall and
+nothing else; every query was still briefed twelve lessons, and more than half the null
+prompts something. The decision keeps the same order and cuts it at the calibrated line. That added
+5.9 more points, took the briefing from 11.8 lessons to 4.7, and took the null prompts from
+149 briefed to 9. Held-out recall (90.0%) came in above selection's (88.0%), inside each
+other's intervals: no sign that the choice fitted the selection split.
+
+**The strongest number measured is the model arm's.** It reached 95.2% [93.0, 97.4], with 12
+of 268 null prompts briefed, on prompts no choice saw. It needs EmbeddingGemma loaded, which a
+prompt hook cannot afford.
+
+**What follows.** No falsifier fired, so, as pre-registered, the next release makes
+`calibrated` the default decision, ships the seed packs with their triggers, and has
+`okl record` ask for triggers. The cost on real prompts points to two next steps, each to be
+pre-registered when it is built (#291):
+
+- **Observed triggers**: the words of the prompt or error that led to a lesson. No model has to
+  imagine them, and real prompts share them.
+- **The model arm, in a process that keeps the model loaded.** On the bench it recovered much of
+  what words miss (paraphrases 73 to 81 of 90). Its judged precision and its recall on real
+  prompts are not yet measured.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
