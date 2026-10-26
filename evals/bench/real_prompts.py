@@ -322,7 +322,10 @@ def cmd_pool(args: argparse.Namespace) -> None:
             items.append(_item(i, p, fresh, nodes, first_n=len(seen)))
             meta["pooled"][str(i)] = seen + fresh
         rng.shuffle(items)  # NOSONAR - prompts in a seeded order, reproducible on purpose
-        files = _write_batches(items, f"real-judge-{args.split}-x")
+        # Each extension writes its own family of files: the sweep's first run numbered from x0
+        # again and overwrote the fix arms' inputs, whose labels were moved aside by hand.
+        meta["extensions"] = meta.get("extensions", 0) + 1
+        files = _write_batches(items, f"real-judge-{args.split}-e{meta['extensions']}-")
         meta_path.write_text(json.dumps(meta))
         print(f"extended with {', '.join(new_arms)} · {sum(len(it['_ids']) for it in items)} new pairs on "
               f"{len(items)} prompts · {files} batches", file=sys.stderr)
