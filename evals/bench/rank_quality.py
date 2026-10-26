@@ -51,13 +51,14 @@ def main() -> None:
     ap.add_argument("--model", required=True)
     ap.add_argument("--triggers", type=Path)
     ap.add_argument("--split", choices=["selection", "heldout", "all"], default="selection")
+    ap.add_argument("--no-prompts", action="store_true", help="skip the model card's retrieval prompts")
     args = ap.parse_args()
     queries = [json.loads(x) for x in bench.QUERIES.read_text().splitlines() if x.strip()]
     if args.split != "all":
         queries = [q for q in queries if q["split"] == args.split]
     nulls = [json.loads(x) for x in bench.NULLS.read_text().splitlines() if x.strip()]
     calib = [p for p in nulls if int(hashlib.sha256(p["id"].encode()).hexdigest(), 16) % 2 == 0]
-    enc = run_dense.Encoder(args.model)
+    enc = run_dense.Encoder(args.model, prompts=not args.no_prompts)
     with tempfile.TemporaryDirectory() as tmp:
         store = bench.build_corpus(Path(tmp))
         n_trig = bench.load_triggers(store, args.triggers) if args.triggers else 0
@@ -98,7 +99,8 @@ def main() -> None:
     commit = subprocess.run(["git", "rev-parse", "--short=12", "HEAD"], capture_output=True, text=True,
                             cwd=bench.ROOT, check=False).stdout.strip()
     print(f"bench rank quality · model {args.model} ({'late interaction' if enc.late else 'dense, best of the about-text parts'}) · "
-          f"split {args.split} · code {commit}")
+          f"split {args.split} · code {commit}"
+          + (f" · prompts {enc.prompts[0]!r} / {enc.prompts[1]!r}" if enc.prompts else ""))
     print(f"{len(queries)} queries · {len(nodes)} live records · triggers on {n_trig} lessons · "
           f"{len(calib)} calibration-half null prompts")
     print(f"ordering, the model:                          {summary(model_ranks)}")

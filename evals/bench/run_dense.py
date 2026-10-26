@@ -45,15 +45,25 @@ ALPHA = 0.05
 LATE = ("lightonai/LateOn", "answerdotai/answerai-colbert-small-v1", "jinaai/jina-colbert-v2",
         "colbert-ir/colbertv2.0")
 
+# The model cards' retrieval prompts, as (query, document) templates. fastembed 0.9 names
+# these in its model descriptions, but its query_embed and passage_embed call plain embed()
+# and apply none of them, so the encoder applies them itself. Qwen3's card asks for an
+# instruction written for the task; this one is the reranker's (run_rerank.py).
+TASK = "Given a developer's task, question or bug report, retrieve the engineering lesson that applies to it"
+PROMPTS = {"google/embeddinggemma-300m": ("task: search result | query: {}", "title: none | text: {}"),
+           "Qwen/Qwen3-Embedding-0.6B": (f"Instruct: {TASK}\nQuery:{{}}", "{}"),
+           "Qwen/Qwen3-Embedding-0.6B-Q": (f"Instruct: {TASK}\nQuery:{{}}", "{}")}
+
 
 class Encoder:
-    """One model behind one call: fastembed's TextEmbedding (its query and passage forms, so a
-    model that wants instruction prefixes, EmbeddingGemma or Qwen3, gets them), its late
-    interaction models, or model2vec for potion models."""
+    """One model behind one call: fastembed's TextEmbedding, its late-interaction models, or
+    model2vec for potion models. A model with retrieval prompts in PROMPTS gets them unless
+    prompts=False (the ablation; receipts at fa0d8ca ran EmbeddingGemma without them)."""
 
-    def __init__(self, model_id: str) -> None:
+    def __init__(self, model_id: str, *, prompts: bool = True) -> None:
         self.model_id = model_id
         self.late = model_id in LATE
+        self.prompts = PROMPTS.get(model_id) if prompts else None
         t0 = time.perf_counter()
         if model_id.startswith("minishlab/"):
             from model2vec import StaticModel
@@ -75,6 +85,8 @@ class Encoder:
         def rows(m: Any) -> Any:
             a = np.asarray(m, dtype=np.float32)
             return a / np.maximum(np.linalg.norm(a, axis=-1, keepdims=True), 1e-12)
+        if self.prompts:
+            texts = [self.prompts[0 if query else 1].format(t) for t in texts]
         if self._kind == "m2v":
             return list(rows(self._m.encode(texts)))
         embed = self._m.query_embed if query else self._m.passage_embed
@@ -110,6 +122,7 @@ def main() -> None:
     ap.add_argument("--base", choices=sorted(v2.SCORES), default="evidence")
     ap.add_argument("--weights", type=lambda s: tuple(float(w) for w in s.split(",")), default=WEIGHTS,
                     help="comma-separated W grid (default 0,5,10,20,40, on the evidence scale)")
+    ap.add_argument("--no-prompts", action="store_true", help="skip the model card's retrieval prompts")
     args = ap.parse_args()
     base = v2.SCORES[args.base]
     queries = [json.loads(x) for x in bench.QUERIES.read_text().splitlines() if x.strip()]
@@ -118,7 +131,7 @@ def main() -> None:
     nulls = [json.loads(x) for x in bench.NULLS.read_text().splitlines() if x.strip()]
     calib = [p for p in nulls if int(hashlib.sha256(p["id"].encode()).hexdigest(), 16) % 2 == 0]
     test = [p for p in nulls if p not in calib]
-    enc = Encoder(args.model)
+    enc = Encoder(args.model, prompts=not args.no_prompts)
 
     with tempfile.TemporaryDirectory() as tmp:
         store = bench.build_corpus(Path(tmp))
@@ -169,7 +182,8 @@ def main() -> None:
 
     commit = subprocess.run(["git", "rev-parse", "--short=12", "HEAD"], capture_output=True, text=True,
                             cwd=bench.ROOT, check=False).stdout.strip()
-    print(f"bench dense arm · model {args.model} · split {args.split} · code {commit}")
+    print(f"bench dense arm · model {args.model} · split {args.split} · code {commit}"
+          + (f" · prompts {enc.prompts[0]!r} / {enc.prompts[1]!r}" if enc.prompts else ""))
     print(f"corpus: {index.n} live records, {len(texts)} vectors (title+symptom, aliases, triggers on {n_trig} lessons) · "
           f"queries sha {bench.digest([bench.QUERIES])} · nulls {len(nulls)}: {len(calib)} calibrate, {len(test)} test")
     print(f"cost: cold load in a fresh process {cold_load_seconds(args.model):.2f} s · load here {enc.load_s:.2f} s · "
