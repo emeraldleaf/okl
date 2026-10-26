@@ -8,9 +8,9 @@
       "title": "The README's stated check defaults (limit 12; formats agent, actions, json, hook) match the code",
       "scope": "repo:okl",
       "files": "README.md,src/okl/core.py,src/okl/cli/",
-      "verified_at": 1792934132382,
-      "verified_by": "`PYTHONPATH=src python3 -c \"import inspect,re,subprocess,sys; from okl import core; d=inspect.signature(core.check).parameters[\\\"limit\\\"].default; h=subprocess.run([sys.executable,\\\"-m\\\",\\\"okl\\\",\\\"check\\\",\\\"--help\\\"],capture_output=True,text=True).stdout; fmts=re.search(r\\\"--format \\{([a-z,]+)\\}\\\",h).group(1).split(\\\",\\\"); r=open(\\\"README.md\\\").read(); missing=[f for f in fmts if f!=\\\"agent\\\" and \\\"--format \\\"+f not in r]; ok=d==12 and \\\"--limit 12\\\" in r and not missing; sys.exit(\\\"limit=%s, formats undocumented: %s\\\" % (d, missing)) if not ok else print(\\\"CHECK DEFAULTS MATCH\\\", fmts)\"` exit 0, matched 'CHECK DEFAULTS MATCH' on commit 9062f1a348e3 @ 2026-10-25T13:15Z",
-      "verified_commit": "9062f1a348e3832018a3af18f4d23733b9637d55"
+      "verified_at": 1792984572988,
+      "verified_by": "`PYTHONPATH=src python3 -c \"import inspect,re,subprocess,sys; from okl import core; d=inspect.signature(core.check).parameters[\\\"limit\\\"].default; h=subprocess.run([sys.executable,\\\"-m\\\",\\\"okl\\\",\\\"check\\\",\\\"--help\\\"],capture_output=True,text=True).stdout; fmts=re.search(r\\\"--format \\{([a-z,]+)\\}\\\",h).group(1).split(\\\",\\\"); r=open(\\\"README.md\\\").read(); missing=[f for f in fmts if f!=\\\"agent\\\" and \\\"--format \\\"+f not in r]; ok=d==12 and \\\"--limit 12\\\" in r and not missing; sys.exit(\\\"limit=%s, formats undocumented: %s\\\" % (d, missing)) if not ok else print(\\\"CHECK DEFAULTS MATCH\\\", fmts)\"` exit 0, matched 'CHECK DEFAULTS MATCH' on commit 6514de6fd468 @ 2026-10-26T03:16Z",
+      "verified_commit": "6514de6fd46810b632db6c20534cd57580a5b93e"
     },
     {
       "id": "doc-init-flags",
@@ -18,9 +18,9 @@
       "title": "Every okl init flag the README and guide document exists in the CLI",
       "scope": "repo:okl",
       "files": "README.md,docs/GETTING-STARTED.md,src/okl/cli/",
-      "verified_at": 1792948631422,
-      "verified_by": "`PYTHONPATH=src python3 ci/check-init-flags.py` exit 0, matched 'INIT FLAGS EXIST' on commit b4b640c77cea @ 2026-10-25T17:17Z",
-      "verified_commit": "b4b640c77cea495f4fe25348e0ff879d0e591f74"
+      "verified_at": 1792984573527,
+      "verified_by": "`PYTHONPATH=src python3 ci/check-init-flags.py` exit 0, matched 'INIT FLAGS EXIST' on commit 6514de6fd468 @ 2026-10-26T03:16Z",
+      "verified_commit": "6514de6fd46810b632db6c20534cd57580a5b93e"
     },
     {
       "id": "doc-install-name",
@@ -28,9 +28,9 @@
       "title": "The install command in the README and guide names the real PyPI distribution",
       "scope": "repo:okl",
       "files": "README.md,docs/GETTING-STARTED.md,pyproject.toml",
-      "verified_at": 1792948631006,
-      "verified_by": "`python3 -c \"import tomllib,sys; n=tomllib.load(open(\\\"pyproject.toml\\\",\\\"rb\\\"))[\\\"project\\\"][\\\"name\\\"]; line=\\\"pipx install '\\\"+n+\\\"[mcp]'\\\"; bad=[f for f in (\\\"README.md\\\",\\\"docs/GETTING-STARTED.md\\\") if line not in open(f).read()]; sys.exit(\\\"install line missing in %s\\\" % bad) if bad else print(\\\"INSTALL LINE MATCHES\\\", n)\"` exit 0, matched 'INSTALL LINE MATCHES' on commit b4b640c77cea @ 2026-10-25T17:17Z",
-      "verified_commit": "b4b640c77cea495f4fe25348e0ff879d0e591f74"
+      "verified_at": 1792984573135,
+      "verified_by": "`python3 -c \"import tomllib,sys; n=tomllib.load(open(\\\"pyproject.toml\\\",\\\"rb\\\"))[\\\"project\\\"][\\\"name\\\"]; line=\\\"pipx install '\\\"+n+\\\"[mcp]'\\\"; bad=[f for f in (\\\"README.md\\\",\\\"docs/GETTING-STARTED.md\\\") if line not in open(f).read()]; sys.exit(\\\"install line missing in %s\\\" % bad) if bad else print(\\\"INSTALL LINE MATCHES\\\", n)\"` exit 0, matched 'INSTALL LINE MATCHES' on commit 6514de6fd468 @ 2026-10-26T03:16Z",
+      "verified_commit": "6514de6fd46810b632db6c20534cd57580a5b93e"
     },
     {
       "id": "doc-verified-refused",
@@ -38,9 +38,9 @@
       "title": "The docs' claim that okl record --verified is refused is true",
       "scope": "repo:okl",
       "files": "README.md,docs/GETTING-STARTED.md,src/okl/cli/",
-      "verified_at": 1792948631291,
-      "verified_by": "`R=$PWD; d=$(mktemp -d) && cd $d && git init -q && env -u OKL_DATABASE_URL -u OKL_SERVICE_URL PYTHONPATH=$R/src python3 -m okl init --repo z --no-claude >/dev/null 2>&1; env -u OKL_DATABASE_URL -u OKL_SERVICE_URL PYTHONPATH=$R/src python3 -m okl record --type Rule --scope repo --title x --verified >/dev/null 2>&1; rc=$?; cd $R; rm -rf $d; [ $rc -eq 2 ] && python3 -c \"import sys; t=lambda f: \\\" \\\".join(open(f).read().split()); sys.exit(0 if \\\"exits 2\\\" in t(\\\"README.md\\\") and \\\"okl record --verified\\` is refused\\\" in t(\\\"docs/GETTING-STARTED.md\\\") else 1)\" && echo VERIFIED FLAG REFUSED` exit 0, matched 'VERIFIED FLAG REFUSED' on commit b4b640c77cea @ 2026-10-25T17:17Z",
-      "verified_commit": "b4b640c77cea495f4fe25348e0ff879d0e591f74"
+      "verified_at": 1792984573389,
+      "verified_by": "`R=$PWD; d=$(mktemp -d) && cd $d && git init -q && env -u OKL_DATABASE_URL -u OKL_SERVICE_URL PYTHONPATH=$R/src python3 -m okl init --repo z --no-claude >/dev/null 2>&1; env -u OKL_DATABASE_URL -u OKL_SERVICE_URL PYTHONPATH=$R/src python3 -m okl record --type Rule --scope repo --title x --verified >/dev/null 2>&1; rc=$?; cd $R; rm -rf $d; [ $rc -eq 2 ] && python3 -c \"import sys; t=lambda f: \\\" \\\".join(open(f).read().split()); sys.exit(0 if \\\"exits 2\\\" in t(\\\"README.md\\\") and \\\"okl record --verified\\` is refused\\\" in t(\\\"docs/GETTING-STARTED.md\\\") else 1)\" && echo VERIFIED FLAG REFUSED` exit 0, matched 'VERIFIED FLAG REFUSED' on commit 6514de6fd468 @ 2026-10-26T03:16Z",
+      "verified_commit": "6514de6fd46810b632db6c20534cd57580a5b93e"
     },
     {
       "id": "docs-agent-neutral",
@@ -68,9 +68,9 @@
       "title": "Dependency direction is one-way: store imports nothing, core imports store, adapters import client",
       "scope": "repo:okl",
       "files": "src/okl/store.py,src/okl/core.py,src/okl/client.py",
-      "verified_at": 1792983478908,
-      "verified_by": "`lint-imports` exit 0, matched '1 kept, 0 broken' on commit 74deb8c3392d @ 2026-10-26T02:57Z",
-      "verified_commit": "74deb8c3392db127544bd340953eab18acdbaef4"
+      "verified_at": 1792984573717,
+      "verified_by": "`lint-imports` exit 0, matched '1 kept, 0 broken' on commit 6514de6fd468 @ 2026-10-26T03:16Z",
+      "verified_commit": "6514de6fd46810b632db6c20534cd57580a5b93e"
     },
     {
       "id": "n_7e50e3588bcd",
@@ -78,9 +78,9 @@
       "title": "A test that imports an undeclared package passes only where that package happens to be installed",
       "scope": "org",
       "files": "tests/",
-      "verified_at": 1792983479218,
-      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' on commit 74deb8c3392d @ 2026-10-26T02:57Z",
-      "verified_commit": "74deb8c3392db127544bd340953eab18acdbaef4"
+      "verified_at": 1792984573868,
+      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' on commit 6514de6fd468 @ 2026-10-26T03:16Z",
+      "verified_commit": "6514de6fd46810b632db6c20534cd57580a5b93e"
     },
     {
       "id": "n_9ba48d85ed19",
@@ -148,9 +148,9 @@
       "title": "PyPI rejects a package name as 'too similar' to an existing one — with a bare 400 that hides the reason",
       "scope": "org",
       "files": "pyproject.toml",
-      "verified_at": 1792948630940,
-      "verified_by": "`python3 -c \"import tomllib;p=tomllib.load(open('pyproject.toml','rb'))['project'];assert p['name']!='okl';assert p['scripts'].get('okl');print('NAME OK',p['name'])\"` exit 0, matched 'NAME OK' on commit b4b640c77cea @ 2026-10-25T17:17Z",
-      "verified_commit": "b4b640c77cea495f4fe25348e0ff879d0e591f74"
+      "verified_at": 1792984573068,
+      "verified_by": "`python3 -c \"import tomllib;p=tomllib.load(open('pyproject.toml','rb'))['project'];assert p['name']!='okl';assert p['scripts'].get('okl');print('NAME OK',p['name'])\"` exit 0, matched 'NAME OK' on commit 6514de6fd468 @ 2026-10-26T03:16Z",
+      "verified_commit": "6514de6fd46810b632db6c20534cd57580a5b93e"
     },
     {
       "id": "n_ead8e0a2b43d",
