@@ -17,6 +17,7 @@ from .lessons import (
     cmd_retire,
     cmd_search,
     cmd_show,
+    cmd_triggers,
     cmd_update,
 )
 from .packs import cmd_seed
@@ -204,6 +205,11 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
     psh.add_argument("node_id")
     psh.add_argument("--format", choices=["text", "json"], default="text")
     psh.set_defaults(func=cmd_show)
+
+    ptg = sub.add_parser("triggers", help="list this store's own lessons that have no triggers, for an agent "
+                                          "to draft them (REPORT §4x)")
+    ptg.add_argument("--format", choices=["text", "json"], default="text")
+    ptg.set_defaults(func=cmd_triggers)
 
     prc = sub.add_parser(
         "recap", help="the lessons a session touched: briefed on, or whose files it changed",

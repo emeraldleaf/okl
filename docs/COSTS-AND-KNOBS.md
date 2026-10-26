@@ -38,9 +38,11 @@ okl init --interests "python,security"    # drop records tagged for stacks you d
 - **`--decision`** is how candidates become a briefing. The default, `calibrated`, briefs at
   most five lessons that share three subject words with the task (or two rare ones) in their
   title, symptom, aliases and triggers, and nothing when none do; `floor` briefs up to
-  `--limit` that share two. The default is about 730 tokens a briefing against about 1,730,
-  and on real prompts a lesson it briefs is about three times as likely to apply, while it
-  surfaces about a quarter fewer of the lessons that do ([RETRIEVAL.md](RETRIEVAL.md)).
+  `--limit` that share two. The default is about 730 tokens a briefing against about 1,730.
+  On real prompts against a real store, a lesson it briefs is about 1.7 times as likely to
+  apply, but it surfaces a quarter to a third of the applying lessons the floor does
+  ([RETRIEVAL.md](RETRIEVAL.md)). Give your own lessons triggers (`okl triggers`, `/triggers`)
+  so it can find them.
   `"decision"` in `.okl/config.json` or `OKL_DECISION` sets it for every check.
 - **The prompt hook takes two of these from the environment**: `OKL_BRIEFING_LIMIT=N`
   becomes `--limit N`, and `OKL_BRIEFING_COMPACT=1` sends only the action list. They are

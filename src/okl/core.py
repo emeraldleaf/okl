@@ -229,8 +229,9 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     # briefing says how many weak matches it left out.
     candidates = hits
     untriggered: list[str] = []
+    own_untriggered = 0
     if decision == "calibrated":
-        hits, matched, weak, limit, untriggered = _calibrated(store, hits, query, limit)
+        hits, matched, weak, limit, untriggered, own_untriggered = _calibrated(store, hits, query, limit)
     else:
         candidates, hits, matched, weak, replaced, cand = _floor_widened(
             store, query, limit, repo_scope, interests, hybrid=hybrid, rerank=rerank,
@@ -268,6 +269,7 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
            **buckets, "replaced": replaced[:3]}
     out.update({"skipped": "harness"} if harness else {})
     out.update({"packs_without_triggers": untriggered} if untriggered else {})
+    out.update({"lessons_without_triggers": own_untriggered} if own_untriggered else {})
     if hybrid and cand.note:
         # Asked for and not possible here: the briefing above is the full-text one. Said in
         # the result rather than raised, because a briefing must never fail on an optional arm.
@@ -606,14 +608,28 @@ def _floor_widened(store: Store, query: str, limit: int, repo_scope: str, intere
     return candidates, hits, matched, weak, replaced, cand
 
 
+# The lesson types triggers are written for (the advice the seed packs carry them on).
+TRIGGER_TYPES = frozenset({"Rule", "Defect", "Gate", "Decision"})
+
+
+def lessons_without_triggers(nodes: list[Node]) -> list[Node]:
+    """The store's own live advice lessons that carry no triggers. The calibrated decision reads
+    triggers, and on a real store it found 3 of the 55 applying recorded lessons without them
+    (REPORT §4x); a pack's lessons are left out, since packs ship their own."""
+    return [n for n in nodes if n.status not in RETIRED_STATUSES and n.type in TRIGGER_TYPES
+            and not n.id.startswith("seed:") and not n.triggers]
+
+
 def _calibrated(store: Store, hits: list[Node], query: str,
-                limit: int) -> tuple[list[Node], dict[str, list[str]], int, int, list[str]]:
+                limit: int) -> tuple[list[Node], dict[str, list[str]], int, int, list[str], int]:
     """The calibrated decision (decide.py) in place of the floor and its widening: what clears
     the line, best first; each record's shared words; how many fell below the line; the limit
-    the cutoff then applies (at most CALIBRATED_CAP); and the packs that predate triggers."""
+    the cutoff then applies (at most CALIBRATED_CAP); the packs that predate triggers; and how
+    many of the store's own lessons have none."""
     live_all = [n for n in store.all_nodes() if n.status not in RETIRED_STATUSES]
     kept, matched, weak = decide.select(hits, briefing_terms(query), decide.Rarity(live_all))
-    return kept, matched, weak, min(limit, decide.CALIBRATED_CAP), _packs_without_triggers(live_all)
+    return (kept, matched, weak, min(limit, decide.CALIBRATED_CAP), _packs_without_triggers(live_all),
+            len(lessons_without_triggers(live_all)))
 
 
 def _packs_without_triggers(live: list[Node]) -> list[str]:

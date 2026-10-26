@@ -237,3 +237,30 @@ def test_a_remote_check_says_which_decision_answered(monkeypatch):
                                                          "match_count": 0, "decision": body["decision"]})
     new = c.check("a task")
     assert new["decision"] == "calibrated" and "decision_unavailable" not in new
+
+
+def test_okl_triggers_lists_own_advice_lessons_without_triggers_and_the_briefing_names_them(tmp_path):
+    """`okl triggers` lists the store's own advice lessons with no triggers (a pack's lessons,
+    Vocabulary and lessons with triggers left out), and the hook's line for the person names
+    how many once there are at least three (REPORT §4x)."""
+    def hook_line() -> str:
+        out = _okl(tmp_path, "check", "--repo", "r", "--interests", "", "--format", "hook",
+                   "--task", "rotate the signing keys for the token service")
+        assert out.returncode == 0, out.stdout + out.stderr
+        return json.loads(out.stdout).get("systemMessage", "")
+
+    for i in range(2):
+        assert _okl(tmp_path, "record", "--type", "Rule", "--scope", "org", "--id", f"own{i}",
+                    "--title", f"own lesson {i}").returncode == 0
+    assert _okl(tmp_path, "record", "--type", "Rule", "--scope", "org", "--id", "with", "--title", "has triggers",
+                "--trigger", "rotate the signing keys without downtime").returncode == 0
+    assert _okl(tmp_path, "record", "--type", "Vocabulary", "--scope", "org", "--title", "golang").returncode == 0
+    assert _okl(tmp_path, "seed", "react-defects").returncode == 0
+    listed = json.loads(_okl(tmp_path, "triggers", "--format", "json").stdout)
+    assert sorted(x["id"] for x in listed) == ["own0", "own1"]
+    assert "have no triggers" not in hook_line()            # two: below the notice's threshold
+    assert _okl(tmp_path, "record", "--type", "Defect", "--scope", "org", "--id", "own2",
+                "--title", "own lesson 2").returncode == 0
+    assert "3 of this store's own lessons have no triggers" in hook_line()
+    assert _okl(tmp_path, "update", "own2", "--trigger", "a third lesson finally gets its words").returncode == 0
+    assert "have no triggers" not in hook_line()
