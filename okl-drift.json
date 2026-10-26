@@ -58,9 +58,9 @@
       "title": "Read a record's own body before gating it — it may already declare its portability",
       "scope": "org",
       "files": "seed/,src/okl/store.py",
-      "verified_at": 1792720076587,
-      "verified_by": "`python3 -c \"import json;n=[x for x in json.load(open('seed/geospatial-defects.json'))['nodes'] if x.get('key')=='g_classpath'][0];assert not n.get('applies_to'),'g_classpath gated again';print('PORTABLE GATE UNGATED')\"` exit 0, matched 'PORTABLE GATE UNGATED' on commit c68226b4fb64 @ 2026-10-23T01:47Z",
-      "verified_commit": "c68226b4fb64debbcc9b39a3ed73313a33a7946a"
+      "verified_at": 1792983467941,
+      "verified_by": "`python3 -c \"import json;n=[x for x in json.load(open('seed/geospatial-defects.json'))['nodes'] if x.get('key')=='g_classpath'][0];assert not n.get('applies_to'),'g_classpath gated again';print('PORTABLE GATE UNGATED')\"` exit 0, matched 'PORTABLE GATE UNGATED' on commit 74deb8c3392d @ 2026-10-26T02:57Z",
+      "verified_commit": "74deb8c3392db127544bd340953eab18acdbaef4"
     },
     {
       "id": "n_71c09abf3f37",
@@ -68,9 +68,9 @@
       "title": "Dependency direction is one-way: store imports nothing, core imports store, adapters import client",
       "scope": "repo:okl",
       "files": "src/okl/store.py,src/okl/core.py,src/okl/client.py",
-      "verified_at": 1792934132697,
-      "verified_by": "`lint-imports` exit 0, matched '1 kept, 0 broken' on commit 9062f1a348e3 @ 2026-10-25T13:15Z",
-      "verified_commit": "9062f1a348e3832018a3af18f4d23733b9637d55"
+      "verified_at": 1792983478908,
+      "verified_by": "`lint-imports` exit 0, matched '1 kept, 0 broken' on commit 74deb8c3392d @ 2026-10-26T02:57Z",
+      "verified_commit": "74deb8c3392db127544bd340953eab18acdbaef4"
     },
     {
       "id": "n_7e50e3588bcd",
@@ -78,9 +78,9 @@
       "title": "A test that imports an undeclared package passes only where that package happens to be installed",
       "scope": "org",
       "files": "tests/",
-      "verified_at": 1792945108040,
-      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' on commit f05eafeef87e @ 2026-10-25T16:18Z",
-      "verified_commit": "f05eafeef87ecb89a16346cc445f49149a60ad4c"
+      "verified_at": 1792983479218,
+      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' on commit 74deb8c3392d @ 2026-10-26T02:57Z",
+      "verified_commit": "74deb8c3392db127544bd340953eab18acdbaef4"
     },
     {
       "id": "n_9ba48d85ed19",
@@ -108,9 +108,9 @@
       "title": "A port is defined by behaviour, not by its signatures — state the contract and test every adapter against one body",
       "scope": "org",
       "files": "src/okl/store.py,tests/test_okl.py",
-      "verified_at": 1792927098739,
-      "verified_by": "`python3 -m pytest -q -k 'backend_conformance'` exit 0, matched 'passed' on commit 58e9e6e0a218 @ 2026-10-25T11:18Z",
-      "verified_commit": "58e9e6e0a218c257e64b0c0b8fd0127ef9f6cdff"
+      "verified_at": 1792983478653,
+      "verified_by": "`python3 -m pytest -q -k 'backend_conformance'` exit 0, matched 'passed' on commit 74deb8c3392d @ 2026-10-26T02:57Z",
+      "verified_commit": "74deb8c3392db127544bd340953eab18acdbaef4"
     },
     {
       "id": "n_be9f13d587b1",
@@ -118,9 +118,9 @@
       "title": "A swappable backend must match on quality, not just interface — the Postgres path had no ranking at all",
       "scope": "org",
       "files": "src/okl/store.py",
-      "verified_at": 1792720079685,
-      "verified_by": "`python3 -m pytest -q -k 'postgres_search_is_ranked_fulltext or backend_conformance or tsvector_covers_tags'` exit 0, matched 'passed' on commit c68226b4fb64 @ 2026-10-23T01:47Z",
-      "verified_commit": "c68226b4fb64debbcc9b39a3ed73313a33a7946a"
+      "verified_at": 1792983473548,
+      "verified_by": "`python3 -m pytest -q -k 'postgres_search_is_ranked_fulltext or backend_conformance or tsvector_covers_tags'` exit 0, matched 'passed' on commit 74deb8c3392d @ 2026-10-26T02:57Z",
+      "verified_commit": "74deb8c3392db127544bd340953eab18acdbaef4"
     },
     {
       "id": "n_bf6a2aee2f12",
