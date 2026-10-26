@@ -126,7 +126,7 @@ def boot_ci(per_lesson: dict[str, list[float]], seed: int = 7) -> tuple[float, f
     """Mean over queries and its 95% interval, resampling lessons."""
     lessons = list(per_lesson)
     flat = [v for vs in per_lesson.values() for v in vs]
-    rng = random.Random(seed)  # noqa: S311 - a seeded bootstrap, reproducible on purpose (NOSONAR: nothing secret)
+    rng = random.Random(seed)  # NOSONAR - a seeded bootstrap, reproducible on purpose  # noqa: S311
     means = []
     for _ in range(BOOT):
         sample = [v for lesson in rng.choices(lessons, k=len(lessons)) for v in per_lesson[lesson]]
