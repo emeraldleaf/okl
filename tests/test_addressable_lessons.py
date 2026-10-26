@@ -197,9 +197,10 @@ def test_every_briefed_lesson_carries_its_id(repo, capsys):
     capsys.readouterr()
 
     # ACT — the full briefing and the compact one
-    assert main(["check", "--task", "add a refund endpoint to the ledger"]) == 0
+    task = "refund endpoint: require an idempotency key, and post refunds to the ledger first"
+    assert main(["check", "--task", task]) == 0
     full = capsys.readouterr().out
-    assert main(["check", "--task", "add a refund endpoint to the ledger", "--compact"]) == 0
+    assert main(["check", "--task", task, "--compact"]) == 0
     compact = capsys.readouterr().out
 
     # ASSERT — each lesson's line names its id, in both forms

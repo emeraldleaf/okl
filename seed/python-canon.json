@@ -4,6 +4,7 @@
     {
       "key": "py_layers_contract",
       "aliases": ["circular import", "lower layer imports the upper layer", "architecture test in Python", "import-linter", "dependency direction"],
+      "triggers": ["Adding an architecture check so the storage layer can never import from the CLI or client", "Setting up layered architecture rules for a Python package without splitting it into separate packages", "Reviewing a PR where a low-level module now imports something from the higher-level service", "Adding a new module to the package and deciding which layer it belongs in", "The store module imports the client and nothing in CI complained", "Circular import appeared because a core module reached up into the command layer", "Our import-linter contract passes but a new module isn't listed in any layer", "Python equivalent of ArchUnit tests for dependency direction", "Enforcing clean architecture or hexagonal boundaries between modules in CI", "Dependency direction between modules: which layer is allowed to import which"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -19,6 +20,7 @@
     {
       "key": "py_docstrings",
       "aliases": ["missing docstring", "D100", "what does this function do", "pydocstyle", "document the public API"],
+      "triggers": ["Writing a new public function in the library module that other code will call", "Reviewing a PR that adds exported helpers with no documentation at all", "Turning on docstring linting for a Python package that currently has none", "Documenting what a CLI command returns and what its exit codes mean", "I had to read the whole function body to figure out what None means for that argument", "Ruff reports missing docstring in public function across dozens of files after enabling the D rules", "Nobody knows what this exported helper raises or returns without stepping through it", "API docs, function doc comments, PEP 257 documentation for modules and classes", "Google-style vs NumPy-style docstrings: how much Args and Returns to write", "Self-documenting functions so callers don't need to read the implementation"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -34,6 +36,7 @@
     {
       "key": "py_comments_why",
       "aliases": ["comment restates the code", "obvious comment", "why not what", "uncommented tricky line", "commenting style"],
+      "triggers": ["Reviewing a PR full of comments that just restate each line of code", "Writing a tricky workaround for a library bug and deciding what to leave in the code", "Cleaning up comments in an old module before onboarding a new teammate", "Adding explanation to a non-obvious retry loop someone will question in review", "Comment says increment counter right above the line that increments the counter", "This weird line has no explanation and nobody remembers why it's there", "Comments are out of date and contradict what the code actually does now", "Code comments explaining intent and rationale rather than mechanics", "Noise comments, redundant comments, stale inline comments", "Commenting guidelines: what versus why, and self-documenting code"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -48,6 +51,7 @@
     {
       "key": "py_type_hints_gradual",
       "aliases": ["mypy passes but the code is untyped", "add type hints", "untyped function", "tighten mypy", "disallow-untyped-defs"],
+      "triggers": ["Introducing mypy to an existing untyped Python codebase without a giant big-bang change", "Adding type annotations to the public functions in the store and CLI modules", "Tightening the mypy config toward strict mode in the pyproject file", "Reviewing a PR that adds a blanket type ignore to silence mypy errors", "mypy says success but an obvious type bug in an unannotated function slipped through", "Turned on stricter mypy flags and got hundreds of errors at once", "Lots of bare type ignore comments and nobody knows which error each one hides", "Gradual typing adoption plan for a legacy Python project", "Static type checking coverage and type annotations on function signatures", "mypy strictness ladder from check_untyped_defs up to full strict mode"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -63,6 +67,7 @@
     {
       "key": "py_typing_syntax_floor",
       "aliases": ["Optional vs | None", "List vs list", "old typing syntax", "UP rules", "PEP 604", "target-version"],
+      "triggers": ["Writing a generic helper function in a package whose requires-python is 3.12", "Raising the minimum Python version and modernising type hints across the codebase", "Reviewing new code that still imports Optional and List from the typing module", "Enabling ruff pyupgrade rules on a codebase written in the older typing style", "Ruff isn't flagging the old Union syntax even though we bumped the Python floor", "Ruff's autofix for the new generic type parameter syntax is marked unsafe and won't apply", "Got a deprecation warning about typing.AnyStr after upgrading Python", "Modern Python type hint syntax: pipe unions, builtin generics, new type parameter syntax", "PEP 604 and PEP 695 replacing the old typing module boilerplate", "pyupgrade-style rewrites of type annotations for the target Python version"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -78,6 +83,7 @@
     {
       "key": "py_strict_pytest",
       "aliases": ["deprecation warning in CI", "warnings as errors in pytest", "filterwarnings", "ignored warning broke the upgrade", "strict pytest"],
+      "triggers": ["Configuring pytest in pyproject for a brand new Python project", "Upgrading a dependency and checking whether our tests catch its deprecations", "Reviewing a PR that adds a broad filter to hide warnings in the test run", "Tightening the test suite so typos in markers and config get caught", "DeprecationWarning lines scroll by in every CI run and nobody looks at them", "Upgrade broke code that had been emitting warnings in the tests for months", "A misspelled pytest marker silently did nothing and the test ran anyway", "Warnings policy for the Python test suite: ignore them, show them, or fail?", "Pytest strict mode, unknown marker typos, and warnings filter configuration", "Warnings hygiene: catching deprecations before a library upgrade bites"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -93,6 +99,7 @@
     {
       "key": "py_test_every_version",
       "aliases": ["supported Python versions", "CI matrix", "only tested on one Python", "requires-python", "drop Python 3.9"],
+      "triggers": ["Setting up a GitHub Actions matrix for a Python library that supports several versions", "Bumping requires-python or deciding whether to drop support for an end-of-life Python", "Reviewing a CI config that tests only the latest Python while the package claims older ones", "Releasing a package with a broad Python version range declared in pyproject", "A user on Python 3.13 hit a failure we never saw because CI only runs 3.12", "Bug report from someone on an older Python that our package says it supports", "Matrix job for one Python version cancelled all the others when it failed", "Python version support policy, end-of-life schedule and deprecation announcements", "Multi-version CI with tox or nox environments across interpreters", "Compatibility testing across supported Python minor releases"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -108,6 +115,7 @@
     {
       "key": "py_unclosed_sqlite",
       "aliases": ["ResourceWarning unclosed database", "random test failures on 3.13", "sqlite connection not closed", "flaky tests after a Python upgrade", "weakref.finalize"],
+      "triggers": ["Upgrading the project's CI to run on Python 3.13", "Writing a CLI command that opens a SQLite database on each invocation", "Adding a store class that opens a database connection without a clear owner", "Turning warnings into errors in pytest for a project that uses sqlite3", "ResourceWarning: unclosed database shows up only on newer Python versions", "Different tests fail on every run, and which ones fail changes randomly", "Flaky test failures on 3.13 that never happen on 3.12, seemingly tied to garbage collection", "Leaked database connection, resource leak, missing close on a DB handle", "Flaky tests caused by garbage collector timing and finalizers", "Connection lifecycle management and context managers for SQLite"],
       "type": "Defect",
       "scope": "org",
       "repo": "okl",
@@ -123,6 +131,7 @@
     {
       "key": "py_starlette_httpx2",
       "aliases": ["StarletteDeprecationWarning", "TestClient warning", "install httpx2", "service tests started failing", "Starlette upgrade"],
+      "triggers": ["Writing API tests for a FastAPI service using the TestClient", "Refreshing the lockfile or doing a fresh install of the web service's dependencies", "Upgrading FastAPI and Starlette in a project that runs tests with strict warnings", "Setting up the test dependencies for a new ASGI service", "Service tests that passed for months now fail with a StarletteDeprecationWarning about httpx", "Every test that builds a test client suddenly fails after a fresh install, with no code change", "Pinning Starlette to an older version didn't make the httpx deprecation go away", "FastAPI test client HTTP library deprecation", "Transitive dependency bump through an open version range broke the test suite", "Successor package to httpx for ASGI testing"],
       "type": "Defect",
       "scope": "org",
       "repo": "okl",
@@ -138,6 +147,7 @@
     {
       "key": "py_size_limits",
       "aliases": ["function too long", "too many branches", "too many return statements", "PLR0911", "PLR0912", "PLR0915", "split the module", "scrolling to follow a function"],
+      "triggers": ["Refactoring a huge CLI module that has grown past a thousand lines", "Adding another branch to a function that already has a dozen if statements", "Configuring ruff complexity rules for function length, returns and branches", "Reviewing a PR that adds a function taking seven positional arguments", "Ruff complains about too many branches and too many statements in one function", "I have to scroll three screens to follow what this one function does", "Nobody on the team can read this module end to end anymore", "God function, god module, long method code smell", "Cyclomatic complexity and function length limits in Python linting", "Breaking a giant file into a package of smaller modules"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -153,6 +163,7 @@
     {
       "key": "py_no_power_features",
       "aliases": ["metaclass", "getattr magic", "__del__", "clever code", "reflection", "hard to find where behaviour comes from"],
+      "triggers": ["Implementing a plugin system that dispatches commands by their name", "Adding cleanup logic that runs when an object is destroyed", "Reviewing a PR that introduces a custom metaclass to register subclasses automatically", "Writing a base class that builds its attributes dynamically at runtime", "Can't find where this method is defined; it's resolved through getattr at runtime", "Grep finds no caller but the handler still runs somehow", "Cleanup in __del__ runs at unpredictable times or not at all", "Python magic, metaprogramming, reflection and too-clever code", "Implicit behaviour, dynamic dispatch and monkeypatching classes", "Readable code over clever tricks in a Python codebase"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -168,6 +179,7 @@
     {
       "key": "py_exceptions_canon",
       "aliases": ["except Exception", "bare except", "swallowed error", "BLE001", "exit code for errors", "catch-all"],
+      "triggers": ["Designing error handling for a CLI and choosing what exit codes to return", "Adding a REST endpoint and mapping validation problems to client errors", "Reviewing a PR that wraps a whole function in a broad try/except", "Deciding whether functions should return error values or raise", "An exception got swallowed and the command reported success when it actually failed", "A bad user input came back as a 500 internal server error", "Ruff flags BLE001 blind except on our catch-all handler", "Error propagation strategy, exception hierarchy, Result types in Python", "Pokemon exception handling, catch-all except, silent failures", "Turning domain errors into HTTP status codes or process exit codes at the boundary"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -183,6 +195,7 @@
     {
       "key": "py_dont_mock_what_you_dont_own",
       "aliases": ["mock requests.get", "patch a library internal", "tests pass but the real call is broken", "adapter for a third-party API", "fake the client"],
+      "triggers": ["Writing unit tests for code that calls a third-party HTTP SDK", "Mocking the boto3 client in tests for an S3 upload function", "Reviewing a test that patches internals of an external library", "Upgrading a library our code wraps and checking whether the tests still mean anything", "All tests pass but the real API call is broken in production", "The library changed its response format and our mocked tests never noticed", "Test setup is a giant stack of patch decorators on library internals", "Mocking external libraries with unittest.mock in Python tests", "Anti-corruption layer, gateway or wrapper around a vendor API", "Fakes vs mocks vs stubs for third-party integrations"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -197,6 +210,7 @@
     {
       "key": "py_classes_earn_place",
       "aliases": ["class with one method", "do I need a class", "Protocol with one implementation", "abstract base class", "just a function"],
+      "triggers": ["Designing a new module and deciding whether to start with a class hierarchy", "Adding a repository layer over a simple CRUD database app", "Reviewing a PR that introduces an abstract base class with a single implementation", "Refactoring a service class that has only an init and one method", "This interface has exactly one implementation and nothing ever swaps it", "Too many layers of indirection; hard to find where the actual work happens", "Class only stores its constructor arguments so it can call a single method", "Over-engineering, premature abstraction, Java-style OOP in Python", "Interface vs function vs dataclass in Python design", "YAGNI for base classes, ABCs and the repository pattern"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -212,6 +226,7 @@
     {
       "key": "py_protocol_isinstance_names_only",
       "aliases": ["isinstance with a Protocol", "runtime_checkable", "structural typing check", "Pydantic field typed as a Protocol", "signature mismatch not caught"],
+      "triggers": ["Adding a runtime check that a plugin implements our Protocol before using it", "Using a Pydantic model field typed with a Protocol to validate injected dependencies", "Wiring a LangChain chat model into a pipeline that expects our LLM interface", "Writing tests to make sure every implementation of an interface behaves the same", "isinstance against the Protocol returned True but the method has the wrong signature", "Object passed the runtime check but returned a message object where a string was promised", "Pydantic accepted an arbitrary type that doesn't actually fit the interface", "Structural typing, duck typing and runtime interface checks in Python", "runtime_checkable protocol validation versus static type checking", "Interface conformance or contract tests for multiple implementations"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -227,6 +242,7 @@
     {
       "key": "py_composition_root",
       "aliases": ["client created inside business logic", "os.environ in a service class", "where to construct dependencies", "bootstrap function", "dependency injection in Python", "pass the connection in"],
+      "triggers": ["Adding a Postgres repository to the order service and deciding where its connection gets created", "Refactoring the FastAPI app so request handlers stop creating their own Redis clients", "Wiring a new OpenAI client into the summarisation service in a way tests can swap out", "Reviewing a PR where a domain class reads env vars and opens a database connection itself", "Can't unit test this handler without a real database because it builds the engine in its constructor", "Every module imports boto3 directly and mocking S3 means patching a dozen different places", "Our import-linter forbidden contract fails even though only main imports the wiring module", "Where should the dependency injection setup live in a plain Python app with no DI container?", "bootstrap script versus service locator for creating clients in a Python service", "the startup code where all the dependencies get newed up and handed around"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -242,6 +258,7 @@
     {
       "key": "py_value_objects_at_seams",
       "aliases": ["raw provider response leaking", "frozen dataclass", "provider payload fields used everywhere", "translate at the adapter", "immutable value object", "frozen but the list changed"],
+      "triggers": ["Wrapping the vector store client so search results come back as our own types", "Swapping the LLM SDK from one vendor to another and finding every caller that reads the response", "Designing the return type for an HTTP API adapter that fetches supplier pricing", "Reviewing code that passes raw provider response dicts deep into the business logic", "TypeError: unhashable type: 'list' when putting a frozen dataclass into a set", "A supposedly immutable result object changed after some other function appended to its list", "Changing embedding providers broke twenty files that read the old response field names", "anti-corruption layer around a third-party SDK in a Python codebase", "DTO mapping at the integration boundary so vendor models don't leak everywhere", "immutable record types for data that comes back from an external API"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -257,6 +274,7 @@
     {
       "key": "py_contract_tests",
       "aliases": ["fake behaves differently from the real adapter", "shared test for every implementation", "parametrize over implementations", "contract test", "two backends disagree"],
+      "triggers": ["Writing an in-memory fake of the repository so the service tests run fast", "Adding a second storage backend that implements the same Protocol as the SQLite one", "Setting up integration tests for the Postgres adapter in CI using a container", "Reviewing a test suite where every logic test runs against a stub of the payment gateway", "All unit tests are green but the new backend returns unranked search results in production", "The fake and the real client return different results for the same call and nobody noticed", "mypy passes on both implementations, yet one of them behaves differently at runtime", "How do I know my mock still behaves like the real API does?", "test doubles slowly drifting away from the real service's behaviour", "conformance testing across several implementations of one interface or port"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -271,6 +289,7 @@
     {
       "key": "py_print_at_edges",
       "aliases": ["print in a library module", "T201", "G004", "logging vs print", "output from library code", "print statements in imported modules"],
+      "triggers": ["Adding progress output to a function in the core package that the CLI also calls", "Exposing our Python library as an MCP server that talks over stdio", "Setting up logging for a reusable package we publish to PyPI", "Reviewing a PR that adds debug prints inside the storage module", "Stray text on stdout is corrupting the MCP server's JSON-RPC stream", "pytest output is cluttered with lines printed by a module we import", "Our service logs show messages from a library we never configured to log anything", "console output from library code versus the application layer", "stdout pollution coming from imported modules in a Python project", "should a helper module echo messages to the terminal or leave that to the caller?"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -286,6 +305,7 @@
     {
       "key": "py_pyproject_versions",
       "aliases": ["version pinned in the workflow file", "dev dependencies as an extra", "where do versions live", "dependency-groups", "pin tool versions"],
+      "triggers": ["Adding pytest and ruff to the project's development dependencies", "Bumping the mypy version used by the GitHub Actions workflow", "Publishing the package to PyPI and choosing version constraints for requests", "Setting up reproducible installs for the deployed Python application", "CI broke overnight on a branch nobody touched because the linter shipped a new release", "Users can pip install our package with a dev extra that drags in pytest", "The workflow installs a different black version than the one listed in pyproject", "where should dependency version pins live in a Python project?", "requirements-dev.txt versus extras versus dependency groups for tooling", "central package version management, like Directory.Packages.props but for Python"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -301,6 +321,7 @@
     {
       "key": "py_one_type_checker",
       "aliases": ["mypy vs pyright", "two type checkers", "switch type checker", "which checker gates CI"],
+      "triggers": ["Trying pyright alongside mypy to see whether it catches more bugs", "Evaluating Astral's ty as the type checker for our CI pipeline", "Adding static type checking to the CI workflow of a new Python repo", "Writing up the team decision on which Python type checker we standardise on", "mypy passes but pyright reports errors on the same file in CI", "A teammate's editor shows type errors that the CI check never flags", "Someone opened a PR switching us to pyrefly just because it is faster", "mypy vs pyright vs pyrefly, which static analyzer should block merges?", "choosing a typing tool for a Python codebase when they all disagree", "running several typecheckers in the pipeline and getting conflicting verdicts"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",
@@ -316,6 +337,7 @@
     {
       "key": "py_one_docstring_format",
       "aliases": ["google vs numpy docstrings", "docstring sections", "enforce Args and Returns", "pydocstyle convention", "docstring format"],
+      "triggers": ["Turning on ruff's pydocstyle rules for the whole repository", "Setting up Sphinx to generate API reference docs for the package", "Writing docstrings for the public functions in the client module", "Reviewing a PR that rewrites every docstring in the codebase to NumPy style", "ruff reports thousands of docstring section errors right after enabling linting", "Half our docstrings are Google style and the other half are reST", "Lots of public functions have no docstring at all, yet we're arguing about Args sections", "Google vs NumPy vs Sphinx docstring style for a Python project", "PEP 257 enforcement and documentation comment conventions", "doc comment linting rules, like JSDoc or XML doc requirements in other languages"],
       "type": "Rule",
       "scope": "org",
       "repo": "okl",

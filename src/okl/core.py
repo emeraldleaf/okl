@@ -164,7 +164,7 @@ COMMON_WORD_MIN_RECORDS = 5
 def check(store: Store, repo: str, task: str, limit: int = 12,
           interests: list[str] | None = None, *, hybrid: str | None = None,
           index: bool = False, near_misses: bool = False, rerank: bool = False,
-          decision: str = "floor") -> dict[str, Any]:
+          decision: str = decide.DEFAULT) -> dict[str, Any]:
     """Return the slice of the encoded body relevant to starting `task` in `repo`.
 
     Matches on the task text across all node types, then buckets by type so the
@@ -186,12 +186,12 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     asked for and not possible here, the first-stage order stands and `rerank_unavailable`
     says why. Off by default.
 
-    `decision` is how candidates become a briefing: "floor" keeps a candidate that shares
-    enough words with the task (REPORT §4n, §4v) and briefs up to `limit`; "calibrated"
-    briefs the candidates whose about-text (title, symptom, aliases, triggers) holds enough of
-    the task's subject words to clear a line calibrated on real subjectless prompts, at most
-    decide.CALIBRATED_CAP of them (#291, REPORT §4w). In both, a prompt a harness wrote (a
-    task notification, a sub-agent report) is briefed nothing.
+    `decision` is how candidates become a briefing: "calibrated", the default, briefs the
+    candidates whose about-text (title, symptom, aliases, triggers) holds enough of the task's
+    subject words to clear a line calibrated on real subjectless prompts, at most
+    decide.CALIBRATED_CAP of them (#291, REPORT §4w); "floor" keeps a candidate that shares
+    enough words with the task (REPORT §4n, §4v) and briefs up to `limit`. In both, a prompt a
+    harness wrote (a task notification, a sub-agent report) is briefed nothing.
 
     `index` adds every other live lesson this repo may see, as id and title, so an agent
     can fetch one by id when the briefing did not select it (#258's first vectorless arm,
@@ -229,11 +229,11 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     # briefing says how many weak matches it left out.
     candidates = hits
     if decision == "calibrated":
-        # The calibrated decision (decide.py) replaces the floor, its widening and the cutoff:
-        # what clears the line is briefed, best first, at most CALIBRATED_CAP.
+        # The calibrated decision (decide.py) replaces the floor and its widening: what clears
+        # the line goes on, best first, and the cutoff below keeps at most CALIBRATED_CAP.
         rarity = decide.Rarity(n for n in store.all_nodes() if n.status not in RETIRED_STATUSES)
-        hits, matched, weak = decide.select(hits, briefing_terms(query), rarity,
-                                            cap=min(limit, decide.CALIBRATED_CAP))
+        hits, matched, weak = decide.select(hits, briefing_terms(query), rarity)
+        limit = min(limit, decide.CALIBRATED_CAP)
     else:
         candidates, hits, matched, weak, replaced, cand = _floor_widened(
             store, query, limit, repo_scope, interests, hybrid=hybrid, rerank=rerank,

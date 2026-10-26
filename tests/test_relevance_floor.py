@@ -24,7 +24,7 @@ def test_one_shared_word_outside_the_title_is_left_out_and_counted():
     """A generic task sharing one body word with a record briefs nothing and says what it left out."""
     s = _store()
     # "point" occurs in the docs rule's body only; "major" and "scrutinize" occur nowhere.
-    res = core.check(s, repo="r", task="this seems like a major point to scrutinize")
+    res = core.check(s, decision="floor", repo="r", task="this seems like a major point to scrutinize")
     assert res["match_count"] == 0
     assert res["weak_matches"] == 1
     assert "1 record(s) sharing a single word" in core.render_check_for_agent(res)
@@ -35,7 +35,7 @@ def test_one_shared_word_outside_the_title_is_left_out_and_counted():
 def test_two_shared_words_pass_and_the_words_travel_in_the_json():
     """Two shared subject words clear the floor, and the JSON names them per record."""
     s = _store()
-    res = core.check(s, repo="r", task="add a CI step that installs a linter")
+    res = core.check(s, decision="floor", repo="r", task="add a CI step that installs a linter")
     titles = [r["title"] for r in res["rules"]]
     assert "Pin every tool that gates CI" in titles
     pinned = next(r for r in res["rules"] if r["title"].startswith("Pin"))
@@ -46,14 +46,14 @@ def test_two_shared_words_pass_and_the_words_travel_in_the_json():
 def test_one_shared_word_in_the_title_is_enough():
     """One shared word is enough when it is the record's subject: in its title or symptom."""
     s = _store()
-    res = core.check(s, repo="r", task="add endpoint that sets a price")
+    res = core.check(s, decision="floor", repo="r", task="add endpoint that sets a price")
     assert [d["title"] for d in res["relevant_defects"]] == ["price tamper"]
 
 
 def test_a_one_word_task_needs_one_shared_word():
     """A one-word task lowers the floor to one word."""
     s = _store()
-    res = core.check(s, repo="r", task="price")
+    res = core.check(s, decision="floor", repo="r", task="price")
     assert [d["title"] for d in res["relevant_defects"]] == ["price tamper"]
 
 
@@ -63,7 +63,7 @@ def test_a_weak_hit_linked_to_a_kept_hit_stays():
     d = core.record(s, type="Defect", title="temporal decoder axes", scope="org")
     g = core.record(s, type="Gate", title="laptop dry-run decoder shapes", scope="org")
     core.link(s, g, "CATCHES", d)
-    res = core.check(s, repo="r", task="temporal segmentation decoder axes")
+    res = core.check(s, decision="floor", repo="r", task="temporal segmentation decoder axes")
     assert [x["title"] for x in res["armed_gates"]] == ["laptop dry-run decoder shapes"]
     assert res["weak_matches"] == 0
 
@@ -93,7 +93,7 @@ def test_the_floor_keeps_every_eval_task_governing_record(tmp_path, monkeypatch)
     for t in tasks:
         if t["id"] == "exit_code_trust":
             continue   # the accepted gap: below the cutoff for its own wording (REPORT §4b)
-        res = core.check(s, repo="okl", task=t["task"], interests=None)
+        res = core.check(s, decision="floor", repo="okl", task=t["task"], interests=None)
         ids = {r["id"] for b in ("rules", "relevant_defects", "armed_gates") for r in res[b]}
         if t["defect_node"] not in ids:
             missing.append(t["id"])
@@ -118,7 +118,7 @@ def test_the_fetch_widens_when_the_floor_empties_a_full_window():
     wanted = core.record(s, type="Rule", title="money handling", scope="org",
                          body="the catalogue sets the price")
     assert wanted not in {n.id for n in s.search("price catalogue", limit=36)}
-    res = core.check(s, repo="r", task="price catalogue")
+    res = core.check(s, decision="floor", repo="r", task="price catalogue")
     assert wanted in {r["id"] for r in res["rules"]}
     assert res["match_count"] == 1
 
@@ -142,11 +142,17 @@ def test_the_floor_changes_no_eval_briefing(tmp_path, monkeypatch):
     for pack in sorted((root / "seed").glob("*.json")):
         seed_from_file(client, str(pack))
     s = client._local_store()
+    # §4n measured the packs before they carried triggers (they do since §4w); the claim
+    # under test is that one, so the store is that one.
+    import dataclasses
+    for node in s.all_nodes():
+        if node.triggers:
+            s.add_node(dataclasses.replace(node, triggers=None))
     tasks = [json.loads(line) for line in (root / "evals" / "tasks.jsonl").read_text().splitlines()
              if line.strip()]
     changed = {}
     for t in tasks:
-        with_floor = core.briefed_ids(core.check(s, repo="okl", task=t["task"], interests=None))
+        with_floor = core.briefed_ids(core.check(s, decision="floor", repo="okl", task=t["task"], interests=None))
         hits, _, _, _ = core._live_hits(s, t["task"], 12, "repo:okl", None)
         without = [n.id for n in hits[:12]]
         # briefed_ids reads bucket order, _live_hits rank order: compare the sets.
@@ -166,7 +172,7 @@ def test_no_neighbour_lookup_when_nothing_clears_the_floor():
     s = NoNeighbours("sqlite:///:memory:")
     for i in range(3):
         core.record(s, type="Rule", title=f"filler {i}", scope="org", body="the price is set")
-    res = core.check(s, repo="r", task="price catalogue")
+    res = core.check(s, decision="floor", repo="r", task="price catalogue")
     assert res["match_count"] == 0 and res["weak_matches"] == 3
 
 

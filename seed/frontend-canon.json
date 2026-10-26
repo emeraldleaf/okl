@@ -4,6 +4,7 @@
   {
    "key": "rxc_feature_boundaries",
    "aliases": ["import from another feature", "deep import", "cross-module import", "folder structure by feature", "restricted paths lint"],
+   "triggers": ["Creating a new checkout feature folder in our React app with its own components and hooks.", "Using the cart feature's hook from inside the product details feature.", "Setting up ESLint rules for the folder structure of a growing frontend codebase.", "Reviewing a PR that adds an index.ts re-exporting everything in the components folder.", "A component imports OrderRow straight from another feature's internal components folder.", "The shared folder imports a hook from a feature and now we have a circular dependency.", "Bundle size jumped after someone added an export-everything barrel file at the top of utils.", "modular frontend architecture, feature-sliced design, public API per module", "deep imports, reaching into another module's internals from a sibling folder", "barrel files, re-exports, tree-shaking problems in Vite or webpack"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "frontend/CLAUDE.md 'Architecture rules'",
    "tags": "react",
@@ -15,6 +16,7 @@
   {
    "key": "rxc_shared_promotion",
    "aliases": ["move it to shared", "common utils folder", "when to extract a shared component", "premature reuse"],
+   "triggers": ["Writing a date formatting helper for the orders page and wondering where it should live.", "Extracting a component out of the checkout feature because something else might need it someday.", "Reviewing a PR that moves a hook from a feature folder into the common folder.", "Organizing the shared directory of our React app during a frontend cleanup.", "Half of the shared/ folder is used by exactly one feature.", "Our shared components have a dozen props for cases nobody actually uses.", "We have a generic table wrapper in shared that only the admin page imports.", "premature abstraction, YAGNI, generic components nobody else needs yet", "common or utils folder becoming a dumping ground in a frontend repo", "when to make something reusable, extracting to a shared library too early"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "frontend/CLAUDE.md 'Architecture rules'",
    "tags": "react,method",
@@ -26,6 +28,7 @@
   {
    "key": "rxc_query_keys",
    "aliases": ["query key strings", "cache key for react-query", "invalidate the wrong key", "key factory", "TanStack Query keys"],
+   "triggers": ["Adding a TanStack Query hook to fetch a product list with filters and pagination.", "Invalidating the orders list after creating a new order from a different component.", "Refactoring how our React app names its React Query caches.", "Reviewing a PR that adds useQuery calls with inline string keys in several components.", "invalidateQueries did not refresh the list because the key in the component was spelled differently.", "Two components cache the same data under different keys and show different results.", "Cannot figure out which query key to invalidate since every component builds its own array.", "cache keys for SWR or React Query, key naming convention", "queryKey arrays built inline, cache identity for server state in a frontend app", "cache invalidation guesswork on the client, stale data after writes"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "frontend/CLAUDE.md 'Server state'",
    "tags": "react",
@@ -37,6 +40,7 @@
   {
    "key": "rxc_mutation_invalidate",
    "aliases": ["list does not refresh after saving", "stale data after a mutation", "refetch after update", "invalidateQueries", "onSuccess refresh"],
+   "triggers": ["Adding a useMutation to update a user's profile on the settings page.", "Building an add-to-cart button that should update the cart badge immediately.", "Reviewing a PR where the list refreshes via an effect after a saved flag flips.", "Implementing delete for comments with React Query and the comment list view.", "After saving, the list still shows the old value until I switch tabs and come back.", "The UI only sometimes updates after a mutation, depending on whether a refetch happens to run.", "Deleted items stay on screen and only vanish when the window regains focus.", "stale cache after a POST, refetch-on-focus masking a bug", "keeping the client cache in sync after a write, optimistic updates", "SWR revalidation, Apollo refetch after mutation, RTK Query tag invalidation"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "frontend/CLAUDE.md 'Server state'",
    "tags": "react",
@@ -48,6 +52,7 @@
   {
    "key": "rxc_no_state_copy",
    "aliases": ["copy the API response into state", "useState from a query", "state out of sync with the server", "derived state", "sync state with props"],
+   "triggers": ["Building an edit form prefilled with data fetched from the API.", "Filtering and sorting a fetched product list inside a React component.", "Reviewing a component that keeps the fetched user in local state and updates it in an effect.", "Converting a component from fetch-in-useEffect to React Query.", "The component keeps showing old data after the query refetches.", "After a mutation the cache updates in devtools but the screen does not change.", "Two parts of the page show different values for the same record.", "single source of truth, duplicated state, derived state in React", "syncing props or fetched data into local state with an effect, derived state anti-pattern", "mirroring server state in local component state, stale copies of API data"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "frontend/CLAUDE.md 'Server state'",
    "tags": "react",
@@ -60,6 +65,7 @@
   {
    "key": "rxc_effects_discipline",
    "aliases": ["useEffect for business logic", "missing dependency warning", "disable exhaustive-deps", "effect runs twice", "when to use an effect"],
+   "triggers": ["Submitting a form and navigating to the confirmation page after the POST succeeds.", "Resetting a component's state when the selected user ID prop changes.", "Subscribing a component to window resize or a third-party store.", "Reviewing a PR that silences the exhaustive-deps lint warning on an effect to stop it re-running.", "My effect runs in an infinite loop because it sets state that is in its own deps.", "The analytics event fires twice in dev and also whenever unrelated props change.", "ESLint says React Hook useEffect has a missing dependency, and adding it breaks things.", "you might not need an effect, useEffect overuse in React components", "stale closures, dependency array confusion, chains of effects setting state", "side effects in React, lifecycle methods replacement, componentDidUpdate equivalent"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "frontend/CLAUDE.md 'Effects discipline' (distilled from react.dev You Might Not Need an Effect)",
    "tags": "react",
@@ -72,6 +78,7 @@
   {
    "key": "rxc_no_waterfalls",
    "aliases": ["spinner after spinner", "sequential fetches", "child waits for parent data", "slow page load from chained requests", "parallel data loading", "route loader"],
+   "triggers": ["Building a dashboard page that loads user, projects and notifications data.", "Adding a nested route whose component fetches its own data on mount.", "Moving our app to React Router data loaders or Next.js server components.", "Reviewing a PR where a child component fetches details only after the parent's list loads.", "The network tab shows requests going one after another in a staircase.", "The page takes three seconds to load even though each API call is only 300ms.", "Spinners appear in sequence: parent loads, then a child spinner, then a grandchild spinner.", "request waterfall, sequential fetches, fetch-on-render slowing pages", "client-side N+1, chained API calls on page load", "cascading loading spinners, slow first paint from nested component data fetching"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "frontend/CLAUDE.md 'Render & bundle performance'",
    "tags": "react",
@@ -83,6 +90,7 @@
   {
    "key": "rxc_bundle_budget",
    "aliases": ["bundle too big", "code splitting", "lazy load a route", "long list is slow", "virtualize the list", "initial load time"],
+   "triggers": ["Adding a rich text editor and a charting library to the admin route.", "Building an order history page that can show thousands of past orders.", "Implementing search-as-you-type over the product catalog.", "Setting up performance checks in the frontend CI pipeline.", "Lighthouse says our main JS bundle is 900 KB and time to interactive is terrible.", "Scrolling the product grid lags badly once it has a few hundred items.", "Typing in the search box feels sluggish because every keystroke re-renders the whole list.", "JS bundle too big, slow first load, chunk size warning from the Vite build", "big list rendering slow, too many DOM nodes, infinite scroll janky", "web vitals regression, performance budget, INP and LCP getting worse on mobile"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "frontend/CLAUDE.md 'Render & bundle performance'",
    "tags": "react",
@@ -94,6 +102,7 @@
   {
    "key": "rxc_spa_auth_bff",
    "aliases": ["login flow for a SPA", "implicit flow", "PKCE", "refresh token in the browser", "backend for frontend", "where to keep auth tokens"],
+   "triggers": ["Adding login with Auth0 to our React single-page app.", "Choosing where to store access tokens in the browser for our SPA.", "Reviewing the OIDC client configuration for our frontend before launch.", "Moving our demo storefront to real customers and real payment data.", "Our identity provider warns that response_type=token is deprecated for this client.", "Security review flagged access tokens sitting in localStorage, readable by any script on the page.", "Refresh tokens issued to the browser never expire and can be reused indefinitely.", "OAuth implicit grant for a browser app, access token in the URL fragment", "JWT in localStorage versus cookies, XSS stealing tokens from a React app", "OIDC config for a public client SPA using MSAL or oidc-client"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "frontend/CLAUDE.md 'Security' (OAuth Browser-Based Apps BCP)",
    "tags": "react,security",
@@ -105,6 +114,7 @@
   {
    "key": "rxc_no_client_money",
    "aliases": ["calculate the total in the frontend", "price computed in the browser", "secret in the frontend bundle", "trust the client total", "VITE_ env secret"],
+   "triggers": ["Building the checkout page in React, need the cart total to update live as items and coupons change", "Adding a discount code field to the cart and sending the order through to the payments API", "Wiring a Stripe key and an internal API token into the Vite env config for the frontend", "Reviewing a PR where the mobile app posts price and an isAdmin flag along with the order payload", "Customer got charged a different amount than the total the cart page showed them", "Someone edited the request in devtools and placed an order for one cent", "Security scan found a private API key sitting in the minified production JS bundle", "trusting client-side pricing math in the SPA", "putting private keys in NEXT_PUBLIC env vars so the frontend can call the service", "frontend sends the order total and role in the request body and the backend just accepts it"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "frontend/CLAUDE.md 'Security'",
    "tags": "react,security",
@@ -116,6 +126,7 @@
   {
    "key": "rxc_test_behavior",
    "aliases": ["test implementation details", "mock fetch", "MSW", "testing hooks directly", "missing error state test", "loading state test"],
+   "triggers": ["Writing tests for a new React search form component that fetches results from our API", "Refactoring a custom data-fetching hook and the component tests keep breaking", "Setting up API mocking for the frontend test suite instead of stubbing fetch in every file", "Reviewing a feature PR to decide whether its tests cover enough before merge", "Renamed a piece of state in a hook and twenty tests failed though the UI still works fine", "Production showed a blank screen when the API returned 500 but all our tests were green", "The spinner never goes away when the list comes back empty and no test caught it", "react testing library versus enzyme-style shallow rendering and implementation detail tests", "mock service worker handlers for component tests that fake the backend responses", "frontend coverage for sad paths and empty states, not just the golden path"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "frontend/CLAUDE.md 'Testing'",
    "tags": "react,method",

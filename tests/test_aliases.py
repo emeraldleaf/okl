@@ -30,6 +30,7 @@ def test_record_update_and_show_carry_aliases(tmp_path):
     assert shown["aliases"] == "logged out on refresh; session lost; JWT"
     assert "  aliases: logged out on refresh; session lost; JWT" in _okl(tmp_path, "show", "t1").stdout
     briefed = json.loads(_okl(tmp_path, "check", "--repo", "r", "--interests", "", "--format", "json",
+                              "--decision", "floor",   # one shared alias word briefs only under the floor
                               "--task", "where should the JWT live in this app").stdout)
     assert [x["id"] for x in briefed["rules"]] == ["t1"]
 

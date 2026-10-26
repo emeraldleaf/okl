@@ -18,6 +18,14 @@ from okl import core
 from okl.store import Node, Store
 
 
+def check_floor(*args, **kwargs):
+    """`core.check` under the word floor (REPORT §4n, §4v). The default decision is calibrated
+    since §4w; the tests that call this exercise what the floor does on few-word fixtures (one
+    shared word briefs, a gate linked to a briefed defect stays), which the calibrated line
+    does by design not do."""
+    return core.check(*args, decision="floor", **kwargs)
+
+
 @pytest.fixture
 def store():
     """A throwaway store per test.
@@ -77,7 +85,7 @@ def test_check_buckets_gate_with_catches(store):
     core.link(store, g, "CATCHES", d)
 
     # ACT — a task whose words overlap both records
-    res = core.check(store, repo="new-repo", task="scaffold rslearn model class_path")
+    res = check_floor(store, repo="new-repo", task="scaffold rslearn model class_path")
 
     # ASSERT (1) — the gate was routed into the armed_gates bucket, not lost among rules
     assert res["armed_gates"], "gate should surface for a matching task"
@@ -237,7 +245,8 @@ def test_service_check(tmp_path, monkeypatch):
     # ACT / ASSERT (2) — a check over HTTP returns the same briefing shape as local mode.
     # Remote and local must not diverge, or a repo's behaviour would change when it
     # connects to the shared store.
-    r = client.post("/check", json={"repo": "x", "task": "temporal segmentation decoder axes"})
+    r = client.post("/check", json={"repo": "x", "task": "temporal segmentation decoder axes",
+                                    "decision": "floor"})   # the floor keeps the gate linked to the defect
     assert r.status_code == 200 and r.json()["armed_gates"]
     # ASSERT (3) — the service logs each briefing it answers and reports exposure (#129):
     # over a shared store it is the only party that sees every client's briefings.
@@ -473,7 +482,7 @@ def test_check_router_actions(store):
                 fix="compute server-side", verified=True)
 
     # ACT — ask about a task the record covers
-    res = core.check(store, repo="r", task="add endpoint that sets a price")
+    res = check_floor(store, repo="r", task="add endpoint that sets a price")
 
     # ASSERT (1) — it was routed as an action to apply, not merely listed as background
     kinds = {a["kind"] for a in res["next_actions"]}
@@ -818,7 +827,7 @@ def test_check_filters_org_nodes_by_declared_interests(store):
     core.record(store, type="Defect", title="local eval quirk", scope="repo:r",
                 tags="react")  # own repo, off-interest tag
     # ACT — a repo that declares two interests asks a question touching all four
-    res = core.check(store, repo="r", task="eval judge localStorage budget quirk",
+    res = check_floor(store, repo="r", task="eval judge localStorage budget quirk",
                      interests=["eval-integrity", "python-rag"])
     titles = {d["title"] for d in res["relevant_defects"]} | {r["title"] for r in res["rules"]}
     assert "judge crash on eval run" in titles, "matching-tag org node must pass"
@@ -827,7 +836,7 @@ def test_check_filters_org_nodes_by_declared_interests(store):
     assert "localStorage tokens on eval page" not in titles, "off-interest org node must be dropped"
     # ACT / ASSERT — with no interests declared, nothing is filtered: a repo that has
     # not opted in gets everything rather than silently getting less.
-    res2 = core.check(store, repo="r", task="eval judge localStorage budget quirk")
+    res2 = check_floor(store, repo="r", task="eval judge localStorage budget quirk")
     titles2 = {d["title"] for d in res2["relevant_defects"]}
     assert "localStorage tokens on eval page" in titles2
 
@@ -1008,7 +1017,7 @@ def test_actions_format_fits_a_small_context_budget(store):
                     body="cause: " + ("prose that would bloat a full briefing. " * 20),
                     symptom=f"symptom {i} appears in the orders endpoint",
                     fix=f"apply fix {i}")
-    res = core.check(store, repo="r", task="orders endpoint defect symptom")
+    res = check_floor(store, repo="r", task="orders endpoint defect symptom")
     full = core.render_check_for_agent(res)
     compact = core.render_actions_only(res, limit=3)
 
@@ -1196,7 +1205,8 @@ def test_mcp_server_builds_and_its_tools_actually_run(tmp_path, monkeypatch):
 
         # ASSERT (2) — the read path returns a real briefing, compact form included
         out = unwrap(await mcp.call_tool("okl_check", {
-            "task": "add an endpoint that accepts a price", "compact": True, "limit": 2}))
+            "task": "add an endpoint that accepts a price the client supplies in the request body",
+            "compact": True, "limit": 2}))
         assert "price" in out.lower()
 
         # ASSERT (3) — scope="repo" resolves to repo:<name>. The tool layer passes every
@@ -1343,7 +1353,7 @@ def test_symptom_and_fix_are_searchable(store):
     assert store.search("pagination", limit=5)[0].title == "pagination"
 
     # ASSERT (4) — and the whole point, end to end: a briefing surfaces it
-    res = core.check(store, repo="any", task="add an endpoint that takes a price")
+    res = check_floor(store, repo="any", task="add an endpoint that takes a price")
     assert any("money handling" in r["title"] for r in res["rules"])
 
 
@@ -1398,15 +1408,15 @@ def test_aliases_are_searchable_and_count_as_the_records_subject(store):
     assert [n.title for n in store.search("logged out refresh", limit=5)] == ["token storage"]
     # ASSERT (2) — two task words found in the aliases clear the floor, and the briefing
     # carries the field and the words that matched
-    res = core.check(store, repo="r", task="users get logged out after every refresh of the page")
+    res = check_floor(store, repo="r", task="users get logged out after every refresh of the page")
     assert [r["title"] for r in res["rules"]] == ["token storage"]
     assert res["rules"][0]["aliases"] == "logged out on refresh; session lost; JWT"
     assert {"logged", "refresh"} <= set(res["rules"][0]["matched_terms"])
     # ASSERT (3) — one word is the subject only as a one-word alias matched whole ...
-    res = core.check(store, repo="r", task="where should the JWT live in this app")
+    res = check_floor(store, repo="r", task="where should the JWT live in this app")
     assert [r["title"] for r in res["rules"]] == ["token storage"]
     # ... and one word from inside a longer alias is a weak match, counted and left out
-    res = core.check(store, repo="r", task="a session that does not survive a browser reload")
+    res = check_floor(store, repo="r", task="a session that does not survive a browser reload")
     assert res["rules"] == [] and res["weak_matches"] == 1
 
 
@@ -1691,7 +1701,7 @@ def test_a_shared_subject_keeps_an_off_stack_record_in_the_briefing(store):
                 scope="org", tags="security", body="pattern discipline")
 
     # ACT — a repo that wants `security` but does no .NET
-    res = core.check(store, repo="okl", task="rate limiters pattern discipline",
+    res = check_floor(store, repo="okl", task="rate limiters pattern discipline",
                      interests=["python", "security"])
     titles = [r["title"] for r in res["rules"]]
 
@@ -1704,7 +1714,7 @@ def test_a_shared_subject_keeps_an_off_stack_record_in_the_briefing(store):
     assert any("expensive endpoints" in t for t in titles), titles
 
     # ASSERT (3) — declaring no interests still disables filtering entirely
-    assert len(core.check(store, repo="x", task="rate limiters pattern discipline",
+    assert len(check_floor(store, repo="x", task="rate limiters pattern discipline",
                           interests=None)["rules"]) == 2
 
 
@@ -1775,19 +1785,19 @@ def test_applies_to_excludes_where_tags_must_not(store):
 
     # ASSERT (1) — the portable lesson reaches a repo that does no .NET. This is the
     # assertion the reverted stack filter broke, and the one the A/B caught.
-    py = titles(core.check(store, repo="okl", task=q, interests=["python", "security", "messaging"]))
+    py = titles(check_floor(store, repo="okl", task=q, interests=["python", "security", "messaging"]))
     assert any("rate limiters" in t for t in py), py
 
     # ASSERT (2) — the framework-specific one does not
     assert not any("wolverine" in t for t in py), py
 
     # ASSERT (3) — but it does reach a repo that declares that stack
-    dn = titles(core.check(store, repo="svc", task=q, interests=["dotnet", "messaging"]))
+    dn = titles(check_floor(store, repo="svc", task=q, interests=["dotnet", "messaging"]))
     assert any("wolverine" in t for t in dn), dn
 
     # ASSERT (4) — THE SAFETY PROPERTY: with no interests declared nothing is excluded,
     # so a repo that has not opted into filtering is unaffected by any curation.
-    assert len(titles(core.check(store, repo="any", task=q, interests=None))) == 2
+    assert len(titles(check_floor(store, repo="any", task=q, interests=None))) == 2
 
     # ASSERT (5) — the two filters compose and do not override each other. An explicit
     # `applies_to="any"` says "valid everywhere"; it does NOT force a record past the tag
@@ -1796,11 +1806,11 @@ def test_applies_to_excludes_where_tags_must_not(store):
     # them — asserting a dotnet-only-tagged record should reach a python-only repo.
     core.record(store, type="Rule", title="explicitly portable pipeline lesson", scope="org",
                 tags="dotnet,security", body="pipeline discipline", applies_to="any")
-    shared = titles(core.check(store, repo="okl", task=q, interests=["python", "security"]))
+    shared = titles(check_floor(store, repo="okl", task=q, interests=["python", "security"]))
     assert any("explicitly portable" in t for t in shared), shared
     # and with no shared subject, the tag filter still excludes it
     assert not any("explicitly portable" in t
-                   for t in titles(core.check(store, repo="okl", task=q, interests=["python"])))
+                   for t in titles(check_floor(store, repo="okl", task=q, interests=["python"])))
 
 
 def test_applies_to_rejects_a_value_that_is_not_a_stack(store):
@@ -2579,7 +2589,7 @@ def test_briefing_names_each_record_once_and_loses_nothing(store):
     core.record(store, type="Rule", title="plain-rule-title", scope="org", body="plain-cause")
     core.record(store, type="Retraction", title="retraction-title", scope="org",
                 body="retraction-cause")
-    text = core.render_check_for_agent(core.check(store, "r", "title cause fix symptom"))
+    text = core.render_check_for_agent(check_floor(store, "r", "title cause fix symptom"))
     titles = ["gate-title", "defect-title", "rule-title", "plain-rule-title", "retraction-title"]
     entries = [ln for ln in text.splitlines() if ln.startswith("- **")]
     for t in titles:
@@ -2588,7 +2598,7 @@ def test_briefing_names_each_record_once_and_loses_nothing(store):
     # When every match was routed into an action the sections are empty, and the briefing
     # said "No encoded rule matched" under a list of actions (seen live, the first prompt
     # after the change). Emptiness is judged on the whole briefing, not on its sections.
-    only = core.check(store, "r", "symptom")
+    only = check_floor(store, "r", "symptom")
     only_text = core.render_check_for_agent(only)
     assert only["next_actions"] and "No encoded rule matched" not in only_text, only_text
     for kept in ("gate-cause", "defect-cause", "rule-cause", "plain-cause", "retraction-cause",
@@ -2892,7 +2902,7 @@ def test_a_retracted_record_of_any_type_is_briefed_as_withdrawn(tmp_path):
                 title="the ledger always uses Google-style docstrings")
 
     # ACT
-    result = core.check(s, repo="r", task="decide how the ledger is kept and typed")
+    result = check_floor(s, repo="r", task="decide how the ledger is kept and typed")
 
     # ASSERT (1) — the withdrawn records are retractions, not decisions or rules.
     def titles(bucket: str) -> set[str]:
@@ -3718,7 +3728,7 @@ def test_every_record_that_wins_a_slot_is_shown(tmp_path):
             continue
         ids[t] = core.record(s, type=t, scope="org", title=f"zebra ledger {t} record",
                              body="zebra ledger body")
-    r = core.check(s, repo="r", task="zebra ledger")
+    r = check_floor(s, repo="r", task="zebra ledger")
     shown = {it["id"] for k, v in r.items() if isinstance(v, list) and k != "next_actions"
              for it in v if isinstance(it, dict) and "id" in it}
     missing = sorted(t for t, i in ids.items() if i not in shown)

@@ -163,6 +163,13 @@ def cmd_record(args: argparse.Namespace) -> int:
         print(f"NOT RECORDED — {e}", file=sys.stderr)
         return 2
     print(node_id)
+    if not kwargs["triggers"] and args.type != "Vocabulary":
+        # The default decision (REPORT §4w) briefs a lesson only when a prompt shares enough of
+        # its title, symptom, aliases and triggers; a lesson recorded without triggers is the
+        # one it misses. stdout stays the bare id, for scripts.
+        print(f"okl: no --trigger. A lesson is briefed when a prompt shares three subject words (or "
+              f"two rare ones) with its title, symptom, aliases and triggers. Add the request or error "
+              f"that led here: okl update {node_id} --trigger \"...\" (repeatable).", file=sys.stderr)
     return 0
 
 

@@ -103,18 +103,20 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                          "or rrf); 'off' for full-text "
                          "only. Omit it to follow the config's `hybrid` or OKL_HYBRID. Needs `okl "
                          "embed` to have run once; otherwise the briefing is the full-text one and "
-                         "the JSON says so (#258).")
+                         "the JSON says so (#258). A record found by meaning alone shares no word with "
+                         "the task, so only `--decision floor` can brief it; under the calibrated "
+                         "default the arm can only reorder what clears the line (REPORT §4w).")
     pk.add_argument("--rerank", nargs="?", const="on", choices=["on", "off"], default=None,
                     help="run a local cross-encoder over the first candidates and reorder them before "
                          "the gates (REPORT §4t); 'off' for the first-stage order. Omit it to follow the "
                          "config's `rerank` or OKL_RERANK. Needs the rerank extra and `okl embed` once "
                          "online; otherwise the first-stage order stands and the JSON says why.")
     pk.add_argument("--decision", choices=["floor", "calibrated"], default=None,
-                    help="how candidates become a briefing: 'floor' keeps those sharing enough words "
-                         "with the task, up to the limit; 'calibrated' briefs those whose title, "
-                         "symptom, aliases and triggers hold enough of the task's subject to clear a "
-                         "line set on real subjectless prompts, at most five (#291). Omit it to follow "
-                         "the config's `decision` or OKL_DECISION.")
+                    help="how candidates become a briefing: 'calibrated' (the default) briefs those "
+                         "whose title, symptom, aliases and triggers hold enough of the task's subject "
+                         "to clear a line set on real subjectless prompts, at most five; 'floor' keeps "
+                         "those sharing enough words with the task, up to the limit (#291, REPORT "
+                         "§4w). Omit it to follow the config's `decision` or OKL_DECISION.")
     pk.add_argument("--near-misses", action="store_true", dest="near_misses",
                     help="append the records that matched the task and were left out (by the floor or "
                          "the cutoff) as id and title, at most twelve. A treatment under measurement "

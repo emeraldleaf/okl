@@ -89,9 +89,9 @@ def test_a_paraphrase_with_no_shared_word_is_briefed_through_the_semantic_arm(st
     a, _ = _seed(store)
     semantic.build_index(store)
     task = "the signed-in credential is lost on every reload"
-    assert core.check(store, repo="r", task=task)["rules"] == []            # full-text only
+    assert core.check(store, decision="floor", repo="r", task=task)["rules"] == []            # full-text only
     for method in ("rrf", "linear"):
-        res = core.check(store, repo="r", task=task, hybrid=method)
+        res = core.check(store, decision="floor", repo="r", task=task, hybrid=method)
         assert [r["id"] for r in res["rules"]] == [a], method
         assert res["rules"][0]["matched_terms"] == [] and res["rules"][0]["semantic_score"] >= semantic.SUBJECT_SIMILARITY
         assert res["hybrid"] == method and "hybrid_unavailable" not in res
@@ -106,7 +106,7 @@ def test_a_record_only_the_semantic_arm_found_is_on_the_subject_only_by_meaning(
     # make it the subject; the stub gives it a low cosine for this task.
     task = "paginate the admin screen without a credential leak on reload"
     semantic.build_index(store)
-    res = core.check(store, repo="r", task=task, hybrid="linear")
+    res = core.check(store, decision="floor", repo="r", task=task, hybrid="linear")
     titles = [r["title"] for r in res["rules"]]
     assert "pagination" not in titles, titles
     assert res["weak_matches"] >= 1
@@ -116,7 +116,7 @@ def test_hybrid_falls_back_to_full_text_and_says_why_when_the_model_is_missing(s
     """A briefing never fails on the optional arm: no extra or no cached model means the
     full-text briefing, with the reason in the result for the person to act on."""
     a, _ = _seed(store)
-    res = core.check(store, repo="r", task="an access token written to web storage", hybrid="rrf")
+    res = core.check(store, decision="floor", repo="r", task="an access token written to web storage", hybrid="rrf")
     assert [r["id"] for r in res["rules"]] == [a]
     assert res["hybrid"] is None and "okl embed" in res["hybrid_unavailable"]   # no vectors yet
 
@@ -124,7 +124,7 @@ def test_hybrid_falls_back_to_full_text_and_says_why_when_the_model_is_missing(s
         raise semantic.SemanticUnavailableError("the hybrid extra is not installed")
     monkeypatch.setattr(semantic, "load_model", missing)
     store.put_embedding(a, semantic.MODEL_ID, "h", semantic.pack([1.0]))
-    res = core.check(store, repo="r", task="an access token written to web storage", hybrid="rrf")
+    res = core.check(store, decision="floor", repo="r", task="an access token written to web storage", hybrid="rrf")
     assert [r["id"] for r in res["rules"]] == [a] and "extra" in res["hybrid_unavailable"]
 
 
@@ -133,7 +133,7 @@ def test_a_task_with_no_subject_words_does_not_report_the_arm_as_on(store, fake_
     run rather than reporting hybrid as on (review on #267)."""
     _seed(store)
     semantic.build_index(store)
-    res = core.check(store, repo="r", task="ok go", hybrid="linear")
+    res = core.check(store, decision="floor", repo="r", task="ok go", hybrid="linear")
     assert res["hybrid"] is None and "subject words" in res["hybrid_unavailable"]
     assert res["match_count"] == 0
 

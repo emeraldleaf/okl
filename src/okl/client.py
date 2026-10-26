@@ -17,7 +17,7 @@ from urllib import request as _req
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode
 
-from . import core, drift
+from . import core, decide, drift
 from .store import Node, Store
 
 CONFIG_DIR = ".okl"
@@ -124,11 +124,11 @@ def rerank_setting(env: str | None, configured: Any) -> bool:
 
 def decision_setting(env: str | None, configured: Any) -> str:
     """How `check` turns candidates into a briefing (#291, REPORT §4w): OKL_DECISION wins over
-    the config's `decision`; "floor" (the word floor, REPORT §4n) unless one says
-    "calibrated" (the line calibrated on subjectless prompts, decide.py)."""
+    the config's `decision`; decide.DEFAULT ("calibrated", the line calibrated on subjectless
+    prompts) unless one says "floor" (the word floor, REPORT §4n)."""
     raw = env if env not in (None, "") else configured
     if raw in (None, ""):
-        return "floor"
+        return decide.DEFAULT
     raw = str(raw).strip().lower()
     if raw not in ("floor", "calibrated"):
         raise ValueError(f"decision must be floor or calibrated, not {raw!r}")

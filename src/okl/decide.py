@@ -1,7 +1,8 @@
 """The calibrated briefing decision: which candidates a prompt is briefed, or none (#291).
 
 The full-text search finds candidates; this decides. It replaces the word floor (REPORT §4n,
-§4v) when `decision` is "calibrated", and it answers three questions in order:
+§4v) when `decision` is "calibrated", the default (DEFAULT), and it answers three questions in
+order:
 
 1. Did a person write this prompt? A message a harness delivers as a user turn (a task
    notification, a sub-agent's report, a system reminder) is briefed nothing. Briefing them
@@ -37,6 +38,7 @@ from __future__ import annotations
 import math
 import re
 from collections.abc import Iterable
+from typing import Final
 
 from .store import Node
 
@@ -55,6 +57,11 @@ _WORD = re.compile(r"[a-z0-9]+")
 
 
 SETTINGS = ("floor", "calibrated")
+# The default since §4w's held-out result (REPORT §4w): recall 74.4% to 90.0% on held-out
+# queries, 11.8 lessons a query to 4.7, and judged precision on real prompts 8.9% to 24.5%.
+# "floor" stays available; on real prompts it finds more of the lessons that apply, at 6.8
+# that do not on every prompt.
+DEFAULT: Final = "calibrated"
 
 
 def check_setting(decision: str) -> None:
@@ -106,15 +113,16 @@ def score(terms: list[str], node: Node, rarity: Rarity) -> tuple[float, list[str
     return len(shared) + sum(rarity.relative(t) for t in shared) / 1000, shared
 
 
-def select(candidates: list[Node], task_terms: list[str], rarity: Rarity, *,
-           cap: int) -> tuple[list[Node], dict[str, list[str]], int]:
-    """The candidates to brief, best first, the subject words each shares, and how many
-    candidates fell below the line."""
+def select(candidates: list[Node], task_terms: list[str],
+           rarity: Rarity) -> tuple[list[Node], dict[str, list[str]], int]:
+    """The candidates that clear the line, best first, the subject words each shares, and how
+    many fell below the line. The cap is the caller's cutoff (core.check keeps at most
+    CALIBRATED_CAP), so what it trims is counted as trimmed, not as below the line."""
     terms = [t.lower() for t in task_terms]
     scored = []
     for rank, node in enumerate(candidates):
         s, shared = score(terms, node, rarity)
         scored.append((s, rank, node, shared))
-    kept = sorted((x for x in scored if x[0] >= CALIBRATED_LINE), key=lambda x: (-x[0], x[1]))[:cap]
+    kept = sorted((x for x in scored if x[0] >= CALIBRATED_LINE), key=lambda x: (-x[0], x[1]))
     matched = {node.id: shared for _s, _r, node, shared in scored}
     return [node for _s, _r, node, _shared in kept], matched, len(scored) - len(kept)

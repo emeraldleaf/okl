@@ -48,7 +48,12 @@ BOOT = 2000
 
 
 def build_corpus(where: Path) -> Store:
-    """A store holding every seed pack, built in `where`."""
+    """A store holding every seed pack, built in `where`, without triggers.
+
+    The packs carry the bench's triggers since §4w passed; every receipt before that ran on
+    packs without them. Dropping them here keeps each arm's meaning fixed: an arm has
+    triggers only when it loads them (load_triggers, --triggers)."""
+    import dataclasses
     (where / ".okl").mkdir(parents=True, exist_ok=True)
     (where / ".okl" / "config.json").write_text(json.dumps({"repo": REPO}))
     here = Path.cwd()
@@ -57,7 +62,11 @@ def build_corpus(where: Path) -> Store:
         client = Client()
         for pack in sorted((ROOT / "seed").glob("*.json")):
             seed_from_file(client, str(pack))
-        return client._local_store()
+        store = client._local_store()
+        for node in store.all_nodes():
+            if node.triggers:
+                store.add_node(dataclasses.replace(node, triggers=None))
+        return store
     finally:
         os.chdir(here)
 

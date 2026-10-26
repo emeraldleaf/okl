@@ -4,6 +4,7 @@
   {
    "key": "rx_useeffect_fetch",
    "aliases": ["fetch in useEffect", "load data on mount", "setState after fetch", "race condition between requests", "duplicate requests", "refetch on every render", "stale response overwrites a newer one"],
+   "triggers": ["Building a React page that loads the user's orders from the API", "Adding pagination to a list component that calls the backend", "Reviewing a component that fetches its data on mount", "Refactoring a dashboard where several components request the same endpoint", "Stale data shows when switching quickly between items because the older response wins", "The same API request fires twice on mount in StrictMode", "Can't perform a React state update on an unmounted component, right after a fetch", "data loading in a React hook with fetch and setState", "server state versus client state in a React app", "client-side caching and request deduplication for a React frontend"],
    "type": "Defect",
    "scope": "org",
    "repo": "dotnet-microservices",
@@ -19,6 +20,7 @@
   {
    "key": "rx_tokens_localstorage",
    "aliases": ["store the JWT in localStorage", "where to keep the access token", "stay logged in after a refresh", "token persistence in the browser", "XSS steals the token", "sessionStorage"],
+   "triggers": ["Implementing login in the React SPA against Keycloak", "Keeping the user signed in across page reloads in the frontend", "Adding an Axios interceptor that attaches the bearer token to requests", "Security review of the single page app's authentication flow", "Our API client reads the bearer token from localStorage on every request", "The pen test flagged that one XSS could steal a user's session", "Found the refresh token sitting in sessionStorage while poking around devtools", "where to store a JWT in the browser", "SPA token storage: cookies, web storage or memory", "OIDC session persistence in a single page application"],
    "type": "Defect",
    "scope": "org",
    "repo": "dotnet-microservices",
@@ -33,6 +35,7 @@
   {
    "key": "rx_fight_compiler",
    "aliases": ["useMemo everywhere", "useCallback for performance", "React.memo", "React Compiler", "manual memoization"],
+   "triggers": ["Optimizing a slow React list that rerenders on every keystroke", "Enabling the React Compiler in the Vite build", "Reviewing a PR that wraps every event handler in useCallback", "Upgrading to React 19 and tidying up the performance code", "Profiler shows no improvement after adding memoization everywhere", "Components full of useMemo still rerender and the code is harder to read", "Render count went up after we added memo wrappers around child components", "memoization in React when an auto-memoizing compiler is turned on", "React Forget and hand-written memo hooks together", "premature optimization with React memo hooks"],
    "type": "Rule",
    "scope": "org",
    "repo": "dotnet-microservices",

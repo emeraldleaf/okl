@@ -2282,6 +2282,37 @@ pre-registered when it is built (#291):
   what words miss (paraphrases 73 to 81 of 90). Its judged precision and its recall on real
   prompts are not yet measured.
 
+**Shipping it (2026-10-26).** The pre-registered consequences have landed:
+
+- `calibrated` is the default decision (`decide.DEFAULT`); `--decision floor` or
+  `OKL_DECISION=floor` keeps the floor;
+- the twelve seed packs carry the 1,730 triggers this section measured, and a test holds
+  them equal to `evals/bench/triggers.jsonl`;
+- `okl record`, the Stop hook, `/record` and the encoding-loop skill ask for triggers.
+
+The bench's corpus drops the packs' triggers on import, so every arm keeps the meaning its
+receipt gives it. On the new packs, the held-out control and treatment reproduce their
+receipts query for query.
+
+Three consequences the bench did not measure are recorded here, so they are not discovered
+later:
+
+- **The agent harness's pre-flight (§4s) under the new default.** Seven of eight tasks are
+  briefed their governing record. `ci_linter`'s rule clears the line, with four shared subject
+  words, and ranks sixth behind the cap. `d_unpinned_linter`, the defect it generalizes, is
+  briefed in its place with the same fix, so `ci_linter` is an accepted gap in
+  `evals/preflight.py`. Folding a rule and its defect into one slot is the typed-edges
+  follow-up.
+- **Linked gates.** The floor kept a gate that catches a briefed defect, even when the gate's
+  own words were weak. The calibrated decision has no such rule: a gate is briefed only when it
+  clears the line itself. Whether linked gates should ride along is unmeasured.
+- **The semantic arm.** `--hybrid` can brief a record found by meaning alone only under the
+  floor. Under the calibrated decision it can only reorder what clears the line.
+
+One reporting fix: the decision counted the lessons the cap of five cut as weak matches. They
+are now counted as cut (`dropped_by_cutoff`). What is briefed does not change, and the
+held-out receipts reproduce exactly.
+
 **Corrections to this section (2026-10-26).** After the result was written, an independent
 agent checked about 300 figures and claims in this section and in `docs/RETRIEVAL.md` against
 the receipts and the code. Every measured figure matched. It found descriptive errors, now

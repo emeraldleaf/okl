@@ -68,7 +68,7 @@ def test_check_reranks_the_candidates_and_records_the_scores(store, monkeypatch)
     core.record(store, type="Rule", title="token storage", scope="org",
                 symptom="a refresh token kept in web storage")
     task = "rotate the refresh token"
-    plain = core.check(store, repo="r", task=task)
+    plain = core.check(store, decision="floor", repo="r", task=task)
     first, second = [r["id"] for r in plain["rules"]]
     assert "rerank" not in plain
     preferred = store.get_node(second).title
@@ -78,14 +78,14 @@ def test_check_reranks_the_candidates_and_records_the_scores(store, monkeypatch)
             return [1.0 if preferred in d else -1.0 for d in documents]
 
     monkeypatch.setattr(rerank, "load_model", lambda *a, **k: Prefers())
-    res = core.check(store, repo="r", task=task, rerank=True)
+    res = core.check(store, decision="floor", repo="r", task=task, rerank=True)
     assert [r["id"] for r in res["rules"]] == [second, first] and res["rerank"] is True
     assert res["rules"][0]["rerank_score"] == 1.0 and res["rules"][1]["rerank_score"] == -1.0
 
     def missing(*a, **k):
         raise rerank.RerankUnavailableError("the rerank extra is not installed")
     monkeypatch.setattr(rerank, "load_model", missing)
-    res = core.check(store, repo="r", task=task, rerank=True)
+    res = core.check(store, decision="floor", repo="r", task=task, rerank=True)
     assert [r["id"] for r in res["rules"]] == [first, second] and res["rerank"] is False
     assert "extra" in res["rerank_unavailable"]
 
@@ -103,7 +103,7 @@ def test_check_reports_the_reranker_off_when_the_task_has_no_subject_words(store
     """A task with nothing to search on runs no stage; the result must not say the second
     stage ran (review on #271)."""
     monkeypatch.setattr(rerank, "load_model", lambda *a, **k: FakeEncoder())
-    res = core.check(store, repo="r", task="the of and", rerank=True)
+    res = core.check(store, decision="floor", repo="r", task="the of and", rerank=True)
     assert res["rerank"] is False and "no subject words" in res["rerank_unavailable"]
 
 
