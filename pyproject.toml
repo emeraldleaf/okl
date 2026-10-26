@@ -160,7 +160,7 @@ layers = [
   "okl.client",
   "okl.recap",
   "okl.core | okl.drift",
-  "okl.semantic | okl.rerank",
+  "okl.semantic | okl.rerank | okl.decide",
   "okl.store | okl.hub",
 ]
 

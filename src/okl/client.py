@@ -122,6 +122,19 @@ def rerank_setting(env: str | None, configured: Any) -> bool:
     raise ValueError(f"rerank must be on or off, not {raw!r}")
 
 
+def decision_setting(env: str | None, configured: Any) -> str:
+    """How `check` turns candidates into a briefing (#291, REPORT §4w): OKL_DECISION wins over
+    the config's `decision`; "floor" (the word floor, REPORT §4n) unless one says
+    "calibrated" (the line calibrated on subjectless prompts, decide.py)."""
+    raw = env if env not in (None, "") else configured
+    if raw in (None, ""):
+        return "floor"
+    raw = str(raw).strip().lower()
+    if raw not in ("floor", "calibrated"):
+        raise ValueError(f"decision must be floor or calibrated, not {raw!r}")
+    return raw
+
+
 class Client:
     """Uniform surface over local-store and remote-service modes."""
 
@@ -134,6 +147,7 @@ class Client:
         self.index = False   # the index arm (REPORT §4r): set per call by `okl check --index`
         self.near_misses = False   # the near-miss arm (REPORT §4s): `okl check --near-misses`
         self.rerank = rerank_setting(os.environ.get("OKL_RERANK"), self.config.get("rerank"))
+        self.decision = decision_setting(os.environ.get("OKL_DECISION"), self.config.get("decision"))
         self._store: Store | None = None
 
     @property
@@ -258,7 +272,7 @@ class Client:
         repo = repo or self.repo
         payload = {"repo": repo, "task": task, "interests": self.interests or None,
                    "hybrid": self.hybrid, "index": self.index, "near_misses": self.near_misses,
-                   "rerank": self.rerank}
+                   "rerank": self.rerank, "decision": self.decision}
         if limit is not None:
             payload["limit"] = limit
         if self.mode == "remote":
@@ -272,7 +286,8 @@ class Client:
                     raise OKLRejectedError(_TOO_OLD.format(what=f"answers `{key}` on /check"), status=404)
         else:
             kw: dict[str, Any] = {"interests": self.interests, "hybrid": self.hybrid, "index": self.index,
-                                  "near_misses": self.near_misses, "rerank": self.rerank}
+                                  "near_misses": self.near_misses, "rerank": self.rerank,
+                                  "decision": self.decision}
             if limit is not None:
                 kw["limit"] = limit
             store = self._local_store()

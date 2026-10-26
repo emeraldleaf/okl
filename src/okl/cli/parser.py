@@ -109,6 +109,12 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                          "the gates (REPORT §4t); 'off' for the first-stage order. Omit it to follow the "
                          "config's `rerank` or OKL_RERANK. Needs the rerank extra and `okl embed` once "
                          "online; otherwise the first-stage order stands and the JSON says why.")
+    pk.add_argument("--decision", choices=["floor", "calibrated"], default=None,
+                    help="how candidates become a briefing: 'floor' keeps those sharing enough words "
+                         "with the task, up to the limit; 'calibrated' briefs those whose title, "
+                         "symptom, aliases and triggers hold enough of the task's subject to clear a "
+                         "line set on real subjectless prompts, at most five (#291). Omit it to follow "
+                         "the config's `decision` or OKL_DECISION.")
     pk.add_argument("--near-misses", action="store_true", dest="near_misses",
                     help="append the records that matched the task and were left out (by the floor or "
                          "the cutoff) as id and title, at most twelve. A treatment under measurement "
@@ -137,6 +143,11 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                     help="the words a developer uses when this bites, repeatable (--alias 'logged out "
                          "on refresh' --alias 'session lost'); indexed like the symptom, so a prompt "
                          "in those words finds the lesson")
+    pr.add_argument("--trigger", action="append", dest="triggers", metavar="PHRASING",
+                    help="a whole phrasing of a moment the lesson applies, repeatable: the task you "
+                         "were doing, the error you saw, other words for it, as typed before knowing "
+                         "the lesson. The prompt or error that led to the lesson is the best one. "
+                         "The calibrated briefing decision reads these (#291)")
     pr.add_argument("--fix", help="Symptom→Cause→Fix: the fix to apply")
     pr.add_argument("--applies-to", dest="applies_to", default=None,
                     help="stacks this lesson is VALID for (comma-sep), or 'any'. Leave unset "
@@ -163,6 +174,8 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
     pu.add_argument("--found-by", dest="found_by")
     pu.add_argument("--alias", action="append", dest="aliases", metavar="PHRASE",
                     help="replace the lesson's aliases (repeatable); --alias \"\" clears them")
+    pu.add_argument("--trigger", action="append", dest="triggers", metavar="PHRASING",
+                    help="replace the lesson's triggers (repeatable); --trigger \"\" clears them")
     pu.add_argument("--ttl-days", dest="ttl_days", type=_days_or_blank)
     pu.add_argument("--applies-to", dest="applies_to")
     pu.add_argument("--files", help="changing the governed files clears the proof: a check of "

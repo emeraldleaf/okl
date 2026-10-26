@@ -19,8 +19,8 @@ from typing import Any
 # STACK_TAGS is re-exported, not used here: adapters may import core and client but
 # never store (dependency direction is one-way), and the CLI needs the stack list to
 # judge which bundled seed packs fit a repo.
+from . import decide, semantic
 from . import rerank as rerank_stage
-from . import semantic
 from .store import RETIRED_STATUSES, Edge, Node, Store, _now_ms, split_tags
 from .store import STACK_TAGS as STACK_TAGS
 
@@ -163,7 +163,8 @@ COMMON_WORD_MIN_RECORDS = 5
 
 def check(store: Store, repo: str, task: str, limit: int = 12,
           interests: list[str] | None = None, *, hybrid: str | None = None,
-          index: bool = False, near_misses: bool = False, rerank: bool = False) -> dict[str, Any]:
+          index: bool = False, near_misses: bool = False, rerank: bool = False,
+          decision: str = "floor") -> dict[str, Any]:
     """Return the slice of the encoded body relevant to starting `task` in `repo`.
 
     Matches on the task text across all node types, then buckets by type so the
@@ -185,6 +186,13 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     asked for and not possible here, the first-stage order stands and `rerank_unavailable`
     says why. Off by default.
 
+    `decision` is how candidates become a briefing: "floor" keeps a candidate that shares
+    enough words with the task (REPORT §4n, §4v) and briefs up to `limit`; "calibrated"
+    briefs the candidates whose about-text (title, symptom, aliases, triggers) holds enough of
+    the task's subject words to clear a line calibrated on real subjectless prompts, at most
+    decide.CALIBRATED_CAP of them (#291, REPORT §4w). In both, a prompt a harness wrote (a
+    task notification, a sub-agent report) is briefed nothing.
+
     `index` adds every other live lesson this repo may see, as id and title, so an agent
     can fetch one by id when the briefing did not select it (#258's first vectorless arm,
     REPORT §4r: measured, the agent did not fetch). `near_misses` adds instead only the
@@ -205,8 +213,12 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     #   3. BUCKET   — sort survivors by type, so the briefing can lead with gates and
     #                 defects rather than emitting one undifferentiated list.
     #   4. ROUTE    — turn the buckets into an ordered list of imperatives.
+    decide.check_setting(decision)
     repo_scope = f"repo:{repo}"
-    hits, replaced, exhausted, cand = _live_hits(store, task, limit, repo_scope, interests, hybrid=hybrid,
+    # A message a harness delivers as a user turn searches as an empty task: nothing.
+    harness = decide.from_harness(task)
+    query = "" if harness else task
+    hits, replaced, exhausted, cand = _live_hits(store, query, limit, repo_scope, interests, hybrid=hybrid,
                                                  rerank=rerank)
     # THE FLOOR. The search is an OR of the task's subject words, so on a short or generic
     # task every slot fills with records that share one word with it ("point", "doc"):
@@ -216,18 +228,16 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     # (or is a one-word alias), or one when the task has only one word. Trimmed records are counted, not hidden: the
     # briefing says how many weak matches it left out.
     candidates = hits
-    hits, matched, weak = _apply_floor(store, hits, briefing_terms(task), cand)
-    # The floor can empty a full window: when every fetched record was weak, a qualifying
-    # one ranked just past the window would read as "no close match". Widen the fetch,
-    # bounded, while the window was full and the floor left fewer than the limit
-    # (review on #259; the same shape as the retired-lesson widening in _live_hits).
-    window = limit
-    while len(hits) < limit and not exhausted and window < limit * 27:
-        window *= 3
-        wider, replaced, exhausted, cand = _live_hits(store, task, window, repo_scope, interests, hybrid=hybrid,
-                                                      rerank=rerank)
-        candidates = wider
-        hits, matched, weak = _apply_floor(store, wider, briefing_terms(task), cand)
+    if decision == "calibrated":
+        # The calibrated decision (decide.py) replaces the floor, its widening and the cutoff:
+        # what clears the line is briefed, best first, at most CALIBRATED_CAP.
+        rarity = decide.Rarity(n for n in store.all_nodes() if n.status not in RETIRED_STATUSES)
+        hits, matched, weak = decide.select(hits, briefing_terms(query), rarity,
+                                            cap=min(limit, decide.CALIBRATED_CAP))
+    else:
+        candidates, hits, matched, weak, replaced, cand = _floor_widened(
+            store, query, limit, repo_scope, interests, hybrid=hybrid, rerank=rerank,
+            first=(hits, replaced, exhausted, cand))
     # THE CUTOFF. store.search returns BM25-ranked results, but full-text matching is
     # permissive: on a mature store a plausible task matches most of it, so without a
     # cap the "briefing" becomes the library. Ranking already put the best first, so
@@ -257,8 +267,9 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     total = sum(len(v) for k, v in buckets.items() if k != "stale_warnings")
     out = {"repo": repo, "task": task, "match_count": total,
            "next_actions": actions, "dropped_by_cutoff": dropped, "weak_matches": weak,
-           "hybrid": hybrid if hybrid and cand.note is None else None,
+           "hybrid": hybrid if hybrid and cand.note is None else None, "decision": decision,
            **buckets, "replaced": replaced[:3]}
+    out.update({"skipped": "harness"} if harness else {})
     if hybrid and cand.note:
         # Asked for and not possible here: the briefing above is the full-text one. Said in
         # the result rather than raised, because a briefing must never fail on an optional arm.
@@ -572,6 +583,31 @@ def _live_replacement(store: Store, n: Node, repo_scope: str,
     return None
 
 
+def _floor_widened(store: Store, query: str, limit: int, repo_scope: str, interests: list[str] | None, *,
+                   hybrid: str | None, rerank: bool,
+                   first: tuple[list[Node], list[dict[str, Any]], bool, Candidates],
+                   ) -> tuple[list[Node], list[Node], dict[str, list[str]], int, list[dict[str, Any]], Candidates]:
+    """The floor over the first window, widened while it leaves fewer than `limit`: the
+    candidates seen, the records kept, each one's matched words, the weak count, the
+    replaced pointers and the last window's Candidates.
+
+    The floor can empty a full window: when every fetched record was weak, a qualifying
+    one ranked just past the window would read as "no close match". Widen the fetch,
+    bounded, while the window was full and the floor left fewer than the limit
+    (review on #259; the same shape as the retired-lesson widening in _live_hits).
+    """
+    hits, replaced, exhausted, cand = first
+    candidates = hits
+    hits, matched, weak = _apply_floor(store, hits, briefing_terms(query), cand)
+    window = limit
+    while len(hits) < limit and not exhausted and window < limit * 27:
+        window *= 3
+        candidates, replaced, exhausted, cand = _live_hits(store, query, window, repo_scope, interests,
+                                                           hybrid=hybrid, rerank=rerank)
+        hits, matched, weak = _apply_floor(store, candidates, briefing_terms(query), cand)
+    return candidates, hits, matched, weak, replaced, cand
+
+
 def _bucket_by_type(hits: list[Node]) -> dict[str, list[dict]]:
     """Step 3 — sort matched records into the buckets a briefing is organised around.
 
@@ -667,7 +703,7 @@ def record(store: Store, *, type: str, title: str, scope: str, repo: str | None 
            ttl_days: int | None = None, owner: str | None = None,
            files: str | None = None, symptom: str | None = None,
            applies_to: str | None = None, fix: str | None = None,
-           tags: str | None = None, aliases: str | None = None,
+           tags: str | None = None, aliases: str | None = None, triggers: Any = None,
            verified: bool = False, id: str | None = None,
            keep_verification: bool = False, replace: bool = False,
            ) -> str:
@@ -685,6 +721,9 @@ def record(store: Store, *, type: str, title: str, scope: str, repo: str | None 
     bites ("logged out on refresh; session lost"); it is indexed with the symptom, its words
     count toward the relevance floor, and a one-word alias matched whole counts as the
     record's subject (#258).
+    `triggers` are whole phrasings of the moments the lesson applies, one per line (or a
+    list): the tasks, symptoms and other words a developer would use before knowing the lesson
+    exists. They are indexed in their own column and read by the calibrated decision (#291).
     `tags` is a comma-separated subject list from the controlled vocabulary
     (store.KNOWN_TAGS); repos declare interest tags so `check` can filter by subject.
 
@@ -718,6 +757,7 @@ def record(store: Store, *, type: str, title: str, scope: str, repo: str | None 
         "status": status, "found_by": found_by, "ttl_days": ttl_days, "owner": owner,
         "files": files, "symptom": symptom, "fix": fix, "tags": tags,
         "applies_to": applies_to, "aliases": join_aliases(aliases) or None,
+        "triggers": join_triggers(triggers) or None,
         "verified_at": _now_ms() if verified else None,
     }
     # An explicit id names the lesson; omit it and the store mints a fresh random one.
@@ -780,9 +820,17 @@ def join_aliases(aliases: Any) -> str | None:
     return aliases
 
 
+def join_triggers(triggers: Any) -> str | None:
+    """The stored form of `triggers`: one phrasing per line. A list is joined; a string passes
+    as is; an empty list is "", which clears in `update` and is stored as none by `record`."""
+    if isinstance(triggers, (list, tuple)):
+        return "\n".join(" ".join(str(t).split()) for t in triggers if str(t).strip())
+    return triggers
+
+
 # The fields `update` may change, and those it may not leave empty.
 UPDATABLE_FIELDS = ("type", "title", "scope", "body", "status", "found_by", "ttl_days",
-                    "owner", "files", "symptom", "fix", "tags", "applies_to", "aliases")
+                    "owner", "files", "symptom", "fix", "tags", "applies_to", "aliases", "triggers")
 _REQUIRED = ("type", "title", "scope")
 
 
@@ -804,6 +852,8 @@ def update(store: Store, node_id: str, repo: str | None = None,
     """
     if "aliases" in fields:
         fields["aliases"] = join_aliases(fields["aliases"])
+    if "triggers" in fields:
+        fields["triggers"] = join_triggers(fields["triggers"])
     n = store.get_node(node_id)
     if n is None:
         raise ValueError(f"no lesson with id {node_id!r}")

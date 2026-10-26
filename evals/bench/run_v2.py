@@ -65,14 +65,11 @@ def main() -> None:
 
         calib_best = [run(p["text"]).best for p in calib]
         # Every candidate with its score, once per prompt; each (alpha, cap) cell is a filter on it.
-        def scored(task: str) -> list[tuple[str, float]]:
-            terms = v2.subject(task)
-            if v2.from_harness(task) or not terms:
-                return []
-            found = store.search(" ".join(terms), limit=36)
+        def scored(task: str, repo: str = bench.REPO) -> list[tuple[str, float]]:
+            terms, found = v2.candidates(store, task, repo)
             out = [(n.id, score(index, terms, n.id)) for n in found]
             return sorted(out, key=lambda t: -t[1])
-        q_scored = [(q, scored(q["text"])) for q in queries]
+        q_scored = [(q, scored(q["text"], bench.repo_for(store, q["lesson"]))) for q in queries]
         t_scored = [scored(p["text"]) for p in test]
         for q in queries:
             run(q["text"])

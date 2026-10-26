@@ -103,9 +103,13 @@ def evidence_full(index: Index, terms: list[str], node_id: str) -> float:
 
 
 def shared_words(index: Index, terms: list[str], node_id: str) -> float:
-    """How many of the prompt's subject words the about-text holds, ties broken by evidence."""
+    """How many of the prompt's subject words the about-text holds, ties broken by their
+    rarity relative to the store (each word's IDF over the largest a word in the store can
+    have), so the tie-break means the same at 30 records and at 30,000."""
     about = index.about.get(node_id, ())
-    return sum(1 for t in terms if t in about) + evidence(index, terms, node_id) / 1000
+    top = math.log((index.n + 1) / 1.5)
+    shared = [t for t in terms if t in about]
+    return len(shared) + sum(index.idf(t) / top for t in shared) / 1000
 
 
 SCORES = {"coverage": coverage, "evidence": evidence, "evidence_full": evidence_full,
@@ -121,16 +125,25 @@ class Decision:
     reason: str | None = None
 
 
-def decide(store: Store, index: Index, task: str, *, line: float, cap: int, fetch: int = 36,
-           score: Callable[[Index, list[str], str], float] = coverage) -> Decision:
+def candidates(store: Store, task: str, repo: str, fetch: int = 36) -> tuple[list[str], list[Node]]:
+    """The prompt's subject words and the live, in-scope candidates the full-text search finds
+    for them, by okl's own scope rule; ([], []) when the prompt is gated."""
+    terms = subject(task)
+    if from_harness(task) or not terms:
+        return [], []
+    found = store.search(" ".join(terms), limit=fetch)
+    return terms, [n for n in found if n.status not in core.RETIRED_STATUSES
+                   and core._in_scope(n, f"repo:{repo}", None)]
+
+
+def decide(store: Store, index: Index, task: str, *, line: float, cap: int, repo: str = "bench",
+           fetch: int = 36, score: Callable[[Index, list[str], str], float] = coverage) -> Decision:
     """Gate, fetch, score and keep the candidates at or above `line`, best first, at most `cap`."""
     if from_harness(task):
         return Decision([], 0.0, "harness")
-    terms = subject(task)
+    terms, live = candidates(store, task, repo, fetch)
     if not terms:
         return Decision([], 0.0, "no subject")
-    found = store.search(" ".join(terms), limit=fetch)
-    live = [n for n in found if n.status not in core.RETIRED_STATUSES]
     scored = sorted(((score(index, terms, n.id), i, n.id) for i, n in enumerate(live)),
                     key=lambda t: (-t[0], t[1]))
     best = scored[0][0] if scored else 0.0

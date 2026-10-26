@@ -111,11 +111,12 @@ def main() -> None:
 
         encode_ms: list[float] = []
 
-        def score_all(task: str) -> list[tuple[str, float, float]]:
-            """(lesson, evidence, maxsim) for the union of both windows; [] when gated."""
-            terms = v2.subject(task)
-            if v2.from_harness(task) or not terms:
+        def score_all(task: str, repo: str = bench.REPO) -> list[tuple[str, float, float]]:
+            """(lesson, evidence, maxsim) for the union of both windows, in scope; [] when gated."""
+            terms, found = v2.candidates(store, task, repo)
+            if not terms:
                 return []
+            visible = {n.id for n in nodes if v2.core._in_scope(n, f"repo:{repo}", None)}
             t1 = time.perf_counter()
             q = enc.encode([task])[0]
             encode_ms.append((time.perf_counter() - t1) * 1000)
@@ -124,12 +125,12 @@ def main() -> None:
                 c = sum(a * b for a, b in zip(q, v, strict=True))
                 if c > best.get(nid, -1.0):
                     best[nid] = c
-            dense = sorted(best, key=lambda k: -best[k])[:36]
-            lex = [n.id for n in store.search(" ".join(terms), limit=36)]
+            dense = [k for k in sorted(best, key=lambda k: -best[k]) if k in visible][:36]
+            lex = [n.id for n in found]
             ids = list(dict.fromkeys(lex + dense))
             return [(nid, v2.evidence(index, terms, nid), best.get(nid, 0.0)) for nid in ids]
 
-        q_sc = [(q, score_all(q["text"])) for q in queries]
+        q_sc = [(q, score_all(q["text"], bench.repo_for(store, q["lesson"]))) for q in queries]
         c_sc = [score_all(p["text"]) for p in calib]
         t_sc = [score_all(p["text"]) for p in test]
 

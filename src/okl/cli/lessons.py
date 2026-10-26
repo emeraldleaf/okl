@@ -47,6 +47,9 @@ def _apply_check_flags(client: Client, args: argparse.Namespace) -> None:
     second = getattr(args, "rerank", None)
     if second is not None:
         client.rerank = second == "on"
+    chosen = getattr(args, "decision", None)
+    if chosen is not None:
+        client.decision = chosen
 
 
 def cmd_check(args: argparse.Namespace) -> int:
@@ -135,6 +138,7 @@ def cmd_record(args: argparse.Namespace) -> int:
                   ttl_days=args.ttl_days, owner=args.owner,
                   files=args.files, symptom=args.symptom, fix=args.fix, tags=args.tags,
                   aliases=_join_aliases(getattr(args, "aliases", None)),
+                  triggers=getattr(args, "triggers", None),
                   id=args.id, replace=getattr(args, "replace", False) or None)
     if args.repo:
         kwargs["repo"] = args.repo
@@ -321,6 +325,9 @@ def _render_lesson(n: dict[str, Any]) -> str:
               ("files", "governs"), ("status", "status"), ("found_by", "found by"),
               ("owner", "owner"), ("ttl_days", "ttl days"))
     out += [f"  {label}: {n[key]}" for key, label in labels if n.get(key) not in (None, "")]
+    if n.get("triggers"):
+        out.append("  triggers:")
+        out += [f"    - {t}" for t in n["triggers"].splitlines() if t.strip()]
     if n.get("verified_at"):
         on = f" on commit {n['verified_commit'][:12]}" if n.get("verified_commit") else ""
         evidence = n.get("verified_by") or "(no evidence recorded)"

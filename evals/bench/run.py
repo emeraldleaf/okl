@@ -86,14 +86,23 @@ def digest(paths: list[Path]) -> str:
     return h.hexdigest()[:12]
 
 
-def rank_of(store: Store, task: str, nid: str, *, hybrid: str | None, rerank: bool, n_all: int) -> int | None:
+def repo_for(store: Store, lesson: str) -> str:
+    """The repo a query about `lesson` is asked from: the lesson's own repo when it is
+    repo-scoped (a seed pack keeps eighteen lessons to the project they came from, and check
+    rightly shows them nowhere else), the bench's repo otherwise."""
+    node = store.get_node(lesson)
+    return node.scope[len("repo:"):] if node and node.scope.startswith("repo:") else REPO
+
+
+def rank_of(store: Store, task: str, nid: str, *, repo: str, hybrid: str | None, rerank: bool,
+            n_all: int) -> int | None:
     """The lesson's position in check's candidate order, in scope and live (the probe's rule)."""
     found = core.ranked_candidates(store, task, n_all, hybrid).nodes
     if rerank:
         window = core.ranked_candidates(store, task, 36, hybrid, rerank=True).nodes
         seen = {n.id for n in window}
         found = window + [n for n in found if n.id not in seen]
-    ids = [n.id for n in found if core._in_scope(n, f"repo:{REPO}", None) and n.status not in core.RETIRED_STATUSES]
+    ids = [n.id for n in found if core._in_scope(n, f"repo:{repo}", None) and n.status not in core.RETIRED_STATUSES]
     return ids.index(nid) + 1 if nid in ids else None
 
 
@@ -130,6 +139,8 @@ def main() -> None:
     ap.add_argument("--limit", type=int, default=12)
     ap.add_argument("--queries", type=Path, default=QUERIES)
     ap.add_argument("--triggers", type=Path, help="load write-time triggers onto the corpus first")
+    ap.add_argument("--decision", choices=["floor", "calibrated"], default="floor",
+                    help="core.check's decision: the word floor, or the calibrated line (#291)")
     args = ap.parse_args()
     hybrid = None if args.hybrid == "off" else args.hybrid
 
@@ -153,28 +164,32 @@ def main() -> None:
         rows, latencies = [], []
         for q in queries:
             t0 = time.perf_counter()
-            res = core.check(store, repo=REPO, task=q["text"], interests=None, limit=args.limit,
-                             hybrid=hybrid, rerank=args.rerank)
+            repo = repo_for(store, q["lesson"])
+            res = core.check(store, repo=repo, task=q["text"], interests=None, limit=args.limit,
+                             hybrid=hybrid, rerank=args.rerank, decision=args.decision)
             latencies.append((time.perf_counter() - t0) * 1000)
             if hybrid and res.get("hybrid_unavailable"):
                 sys.exit(f"bench: {res['hybrid_unavailable']}")
             if args.rerank and res.get("rerank_unavailable"):
                 sys.exit(f"bench: {res['rerank_unavailable']}")
             briefed = core.briefed_ids(res)
-            rk = rank_of(store, q["text"], q["lesson"], hybrid=hybrid, rerank=args.rerank, n_all=n_all)
+            rk = rank_of(store, q["text"], q["lesson"], repo=repo, hybrid=hybrid, rerank=args.rerank, n_all=n_all)
             rows.append({**q, "briefed": q["lesson"] in briefed, "rank": rk, "count": len(briefed)})
-        null_counts = []
+        null_counts, null_half = [], []
         for p in nulls:
             t0 = time.perf_counter()
             res = core.check(store, repo=REPO, task=p["text"], interests=None, limit=args.limit,
-                             hybrid=hybrid, rerank=args.rerank)
+                             hybrid=hybrid, rerank=args.rerank, decision=args.decision)
             latencies.append((time.perf_counter() - t0) * 1000)
             null_counts.append(len(core.briefed_ids(res)))
+            # The half that set decide.CALIBRATED_LINE (even hash parity) and the half that did not.
+            null_half.append("calibration" if int(hashlib.sha256(p["id"].encode()).hexdigest(), 16) % 2 == 0
+                             else "unseen")
 
     print(f"bench · label {args.label} · split {args.split} · code {commit}{' (DIRTY: uncommitted src/seed/bench changes)' if dirty else ''}")
     print(f"corpus: {n_all} records from {len(list((ROOT / 'seed').glob('*.json')))} seed packs (sha {digest(sorted((ROOT / 'seed').glob('*.json')))}) · "
           f"queries {args.queries.name} sha {digest([args.queries])} · nulls {len(nulls)} (sha {digest([NULLS]) if NULLS.exists() else '-'})")
-    print(f"arm: hybrid {args.hybrid} · rerank {'on' if args.rerank else 'off'} · limit {args.limit} · "
+    print(f"arm: decision {args.decision} · hybrid {args.hybrid} · rerank {'on' if args.rerank else 'off'} · limit {args.limit} · "
           f"common-word share {core.COMMON_WORD_SHARE} · interests none · triggers on {n_trig} lessons"
           + (f" ({args.triggers.name}, sha {digest([args.triggers])})" if args.triggers else ""))
     print()
@@ -199,6 +214,12 @@ def main() -> None:
         given = [c for c in null_counts if c]
         print(f"\nnull prompts briefed nothing: {quiet} of {len(null_counts)} ({quiet / len(null_counts):.1%}, 95% "
               f"[{lo:.1%}, {hi:.1%}]) · the rest got {statistics.mean(given) if given else 0:.1f} lessons on average")
+        for half in ("calibration", "unseen"):
+            sub = [c for c, h in zip(null_counts, null_half, strict=True) if h == half]
+            hit = sum(1 for c in sub if c)
+            hlo, hhi = wilson(hit, len(sub))
+            print(f"  {half} half (sets the calibrated line{'' if half == 'calibration' else ': never seen by it'}): "
+                  f"briefed anything {hit} of {len(sub)} ({hit / len(sub):.1%}, 95% [{hlo:.1%}, {hhi:.1%}])")
     else:
         print("\nnull prompts: none on this machine (evals/bench/private/null_prompts.jsonl absent)")
     lat = sorted(latencies)

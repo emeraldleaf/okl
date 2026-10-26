@@ -103,7 +103,7 @@ def _build() -> Any:  # noqa: C901, PLR0915 - a declarative table of tool defini
                    status: str | None = None, found_by: str | None = None,
                    ttl_days: int | None = None, repo: str | None = None,
                    symptom: str | None = None, fix: str | None = None,
-                   aliases: str | None = None,
+                   aliases: str | None = None, triggers: str | None = None,
                    files: str | None = None, tags: str | None = None,
                    id: str | None = None, applies_to: str | None = None) -> str:
         """Record a NEW lesson. To change an existing one, use okl_update.
@@ -115,7 +115,10 @@ def _build() -> Any:  # noqa: C901, PLR0915 - a declarative table of tool defini
         Rule, Claim, Retraction, Tombstone, Decision, PriorArt, Vocabulary, Entity.
         symptom/fix make the lesson actionable ("when you see X → do Z"; cause
         goes in body). aliases: the words a developer uses when it bites, "; "-separated
-        ("logged out on refresh; session lost"), indexed like the symptom. files
+        ("logged out on refresh; session lost"), indexed like the symptom. triggers: whole
+        phrasings of the moments it applies, one per line: the task you were doing, the error
+        you saw, other words for it, as you would have typed them before knowing the lesson.
+        The prompt or error that led to the lesson is the best one. files
         (comma-sep globs) enrolls it in drift detection.
         tags (comma-sep, controlled vocabulary — e.g. react, security,
         eval-integrity) categorize the subject so `check` can filter by interest.
@@ -128,7 +131,7 @@ def _build() -> Any:  # noqa: C901, PLR0915 - a declarative table of tool defini
             node_id = client.record(type=type, title=title, scope=scope, body=body,
                                     status=status, found_by=found_by, ttl_days=ttl_days,
                                     repo=repo, symptom=symptom, fix=fix, files=files, tags=tags,
-                                    aliases=aliases,
+                                    aliases=aliases, triggers=triggers,
                                     id=id, applies_to=applies_to)
         except OKLNoAnswerError as e:
             # Sent, and no usable answer: the service may have stored it, and recording it
@@ -177,7 +180,7 @@ def _build() -> Any:  # noqa: C901, PLR0915 - a declarative table of tool defini
                    scope: str | None = None, body: str | None = None,
                    status: str | None = None, found_by: str | None = None,
                    symptom: str | None = None, fix: str | None = None,
-                   aliases: str | None = None,
+                   aliases: str | None = None, triggers: str | None = None,
                    files: str | None = None, tags: str | None = None,
                    applies_to: str | None = None, ttl_days: int | None = None,
                    owner: str | None = None) -> str:
@@ -194,7 +197,7 @@ def _build() -> Any:  # noqa: C901, PLR0915 - a declarative table of tool defini
         try:
             node = client.update(id, type=type, title=title, scope=scope, body=body,
                                  status=status, found_by=found_by, symptom=symptom, fix=fix,
-                                 aliases=aliases,
+                                 aliases=aliases, triggers=triggers,
                                  files=files, tags=tags, applies_to=applies_to,
                                  ttl_days=ttl_days, owner=owner)
         except OKLNoAnswerError as e:
