@@ -13,7 +13,7 @@ from typing import Any
 from .. import core
 from ..client import Client, OKLNoAnswerError, OKLUnreachableError
 from .common import _print_json
-from .packs import _empty_store_guidance
+from .packs import _bundled_seed_dir, _empty_store_guidance
 from .verification import _refresh_snapshot
 
 
@@ -90,8 +90,9 @@ def cmd_check(args: argparse.Namespace) -> int:
             "hookEventName": "UserPromptSubmit",
             "additionalContext": _briefing_text(result, args)}}
         notice = None if os.environ.get("OKL_QUIET") == "1" else core.briefing_notice(result)
-        if notice:
-            out["systemMessage"] = notice
+        stale = None if os.environ.get("OKL_QUIET") == "1" else _packs_behind(result)
+        if notice or stale:
+            out["systemMessage"] = " · ".join(x for x in (notice, stale) if x)
         print(json.dumps(out))
         return 0
     if args.format == "json":
@@ -107,7 +108,21 @@ def cmd_check(args: argparse.Namespace) -> int:
     if args.format != "json" and result.get("store_records") == 0:
         for line in _empty_store_guidance(client):
             print(line, file=sys.stderr)
+    if args.format != "json" and (stale := _packs_behind(result)):
+        print(stale, file=sys.stderr)
     return 0
+
+
+def _packs_behind(result: dict[str, Any]) -> str | None:
+    """One line for the person when bundled packs in this store predate their triggers, which
+    the calibrated decision reads (REPORT §4w); a pack of the repo's own is not bundled, so it
+    never prompts this."""
+    bundled = {f.stem for f in _bundled_seed_dir().glob("*.json")}
+    behind = [p for p in result.get("packs_without_triggers") or [] if p in bundled]
+    if not behind:
+        return None
+    return (f"okl · {len(behind)} bundled pack(s) here predate their triggers, so their lessons "
+            "are briefed less often: run `okl seed --refresh`")
 
 
 def cmd_record(args: argparse.Namespace) -> int:

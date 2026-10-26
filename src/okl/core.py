@@ -228,12 +228,9 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     # (or is a one-word alias), or one when the task has only one word. Trimmed records are counted, not hidden: the
     # briefing says how many weak matches it left out.
     candidates = hits
+    untriggered: list[str] = []
     if decision == "calibrated":
-        # The calibrated decision (decide.py) replaces the floor and its widening: what clears
-        # the line goes on, best first, and the cutoff below keeps at most CALIBRATED_CAP.
-        rarity = decide.Rarity(n for n in store.all_nodes() if n.status not in RETIRED_STATUSES)
-        hits, matched, weak = decide.select(hits, briefing_terms(query), rarity)
-        limit = min(limit, decide.CALIBRATED_CAP)
+        hits, matched, weak, limit, untriggered = _calibrated(store, hits, query, limit)
     else:
         candidates, hits, matched, weak, replaced, cand = _floor_widened(
             store, query, limit, repo_scope, interests, hybrid=hybrid, rerank=rerank,
@@ -265,11 +262,12 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     # stale_warnings is excluded from the count because those records are already
     # counted inside their own type bucket; including them would double-count.
     total = sum(len(v) for k, v in buckets.items() if k != "stale_warnings")
-    out = {"repo": repo, "task": task, "match_count": total,
+    out: dict[str, Any] = {"repo": repo, "task": task, "match_count": total,
            "next_actions": actions, "dropped_by_cutoff": dropped, "weak_matches": weak,
            "hybrid": hybrid if hybrid and cand.note is None else None, "decision": decision,
            **buckets, "replaced": replaced[:3]}
     out.update({"skipped": "harness"} if harness else {})
+    out.update({"packs_without_triggers": untriggered} if untriggered else {})
     if hybrid and cand.note:
         # Asked for and not possible here: the briefing above is the full-text one. Said in
         # the result rather than raised, because a briefing must never fail on an optional arm.
@@ -606,6 +604,28 @@ def _floor_widened(store: Store, query: str, limit: int, repo_scope: str, intere
                                                            hybrid=hybrid, rerank=rerank)
         hits, matched, weak = _apply_floor(store, candidates, briefing_terms(query), cand)
     return candidates, hits, matched, weak, replaced, cand
+
+
+def _calibrated(store: Store, hits: list[Node], query: str,
+                limit: int) -> tuple[list[Node], dict[str, list[str]], int, int, list[str]]:
+    """The calibrated decision (decide.py) in place of the floor and its widening: what clears
+    the line, best first; each record's shared words; how many fell below the line; the limit
+    the cutoff then applies (at most CALIBRATED_CAP); and the packs that predate triggers."""
+    live_all = [n for n in store.all_nodes() if n.status not in RETIRED_STATUSES]
+    kept, matched, weak = decide.select(hits, briefing_terms(query), decide.Rarity(live_all))
+    return kept, matched, weak, min(limit, decide.CALIBRATED_CAP), _packs_without_triggers(live_all)
+
+
+def _packs_without_triggers(live: list[Node]) -> list[str]:
+    """The packs (by the `seed:<pack>:<key>` ids `okl seed` gives) none of whose live lessons
+    here carry triggers. The calibrated decision reads triggers, and a store seeded before the
+    packs carried them briefs those lessons worse until `okl seed --refresh` brings them in."""
+    seen: dict[str, bool] = {}
+    for n in live:
+        parts = n.id.split(":")
+        if len(parts) >= 3 and parts[0] == "seed" and n.type != "Vocabulary":
+            seen[parts[1]] = seen.get(parts[1], False) or bool(n.triggers)
+    return sorted(pack for pack, any_triggers in seen.items() if not any_triggers)
 
 
 def _bucket_by_type(hits: list[Node]) -> dict[str, list[dict]]:
@@ -1057,8 +1077,11 @@ def briefing_notice(result: dict[str, Any], shown: int = 3) -> str | None:
         if result.get("store_records") == 0:
             return "okl · the store is empty, so nothing was briefed — see docs/GETTING-STARTED.md"
         if result.get("weak_matches"):
-            # Not silence: okl ran and found only single-word matches, which is a different
-            # fact from an empty store and from a task with no subject words.
+            # Not silence: okl ran and found only weak matches, which is a different fact
+            # from an empty store and from a task with no subject words.
+            if result.get("decision") == "calibrated":
+                return (f"okl · nothing briefed: {result['weak_matches']} candidate(s) shared too "
+                        "little of the task's subject to clear the line")
             return (f"okl · nothing briefed: {result['weak_matches']} weak match(es) on a "
                     "single word were left out")
         return None

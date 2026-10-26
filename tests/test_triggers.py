@@ -180,3 +180,29 @@ def test_every_pack_lesson_carries_the_triggers_the_bench_measured():
                for pack in sorted((ROOT / "seed").glob("*.json"))
                for n in json.loads(pack.read_text())["nodes"] if "triggers" in n}
     assert shipped == dict(measured)
+
+
+def test_a_store_whose_bundled_packs_predate_triggers_is_told_to_refresh(tmp_path):
+    """A store seeded before the packs carried triggers briefs their lessons less often under
+    the calibrated default; the hook's line for the person says so and names `okl seed
+    --refresh`, which clears it. A pack of the repo's own, not bundled, never prompts it."""
+    def hook_line(task: str) -> str:
+        out = _okl(tmp_path, "check", "--repo", "r", "--interests", "", "--format", "hook", "--task", task)
+        assert out.returncode == 0, out.stdout + out.stderr
+        return json.loads(out.stdout).get("systemMessage", "")
+
+    assert _okl(tmp_path, "seed", "react-defects").returncode == 0
+    for n in json.loads((ROOT / "seed" / "react-defects.json").read_text())["nodes"]:
+        assert _okl(tmp_path, "update", f"seed:react-defects:{n['key']}", "--trigger", "").returncode == 0
+    task = "where should the SPA keep the access token so users stay logged in after a refresh"
+    assert "okl seed --refresh" in hook_line(task)
+
+    assert _okl(tmp_path, "seed", "--refresh").returncode == 0
+    assert "okl seed --refresh" not in hook_line(task)
+
+    own = tmp_path / "team-rules.json"
+    own.write_text(json.dumps({"nodes": [{"key": "k1", "type": "Rule", "scope": "org", "repo": "r",
+                                           "title": "token refresh goes through the auth client",
+                                           "found_by": "a review"}]}))
+    assert _okl(tmp_path, "seed", str(own)).returncode == 0
+    assert "okl seed --refresh" not in hook_line(task)
