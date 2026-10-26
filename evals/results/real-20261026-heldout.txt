@@ -1,0 +1,24 @@
+real prompts · split heldout (seed 11) · store ee5406f19cf9 · code 4e951c04081a
+1283 pooled pairs, labels missing 0
+
+task prompts: 120 person-typed · 43 with an applying lesson · 101 applying lessons in the pool
+  arm                precision [95%]  applying found  prompts hit  briefed any  lessons/prompt  off-topic/prompt  repeat
+  floor           9.8% [8.0%, 11.8%]      90 of 101      41 of 43     112 of 120             7.69              6.94      2%
+  calibrated    16.5% [11.9%, 22.5%]      31 of 101      17 of 43      52 of 120             1.57              1.31      5%
+  fallback      16.0% [11.6%, 21.7%]      32 of 101      19 of 43      58 of 120             1.67              1.40      4%
+  backfill      17.8% [13.3%, 23.5%]      38 of 101      20 of 43      59 of 120             1.77              1.46      4%
+  floor-3        12.1% [8.9%, 16.2%]      38 of 101      26 of 43     112 of 120             2.62              2.30      3%
+
+null prompts: 60 person-typed · 12 with an applying lesson · 20 applying lessons in the pool
+  arm                precision [95%]  applying found  prompts hit  briefed any  lessons/prompt  off-topic/prompt  repeat
+  floor           8.8% [5.8%, 13.3%]      20 of 20       12 of 12      43 of 60              4.17              3.43      0%
+  calibrated      0.0% [0.0%, 49.0%]       0 of 20        0 of 12       2 of 60              0.07              0.07      0%
+  fallback       16.7% [3.0%, 56.4%]       1 of 20        1 of 12       4 of 60              0.13              0.08      0%
+  backfill      40.0% [11.8%, 76.9%]       2 of 20        2 of 12       4 of 60              0.12              0.05      0%
+  floor-3        12.4% [7.4%, 20.0%]      13 of 20        9 of 12      43 of 60              1.95              1.53      1%
+
+F1 on task prompts (judged precision, pooled recall): floor 0.176 · calibrated 0.215 · fallback 0.213 · backfill 0.242 · floor-3 0.183
+
+fix rule: backfill (most applying lessons found on task prompts among the fix arms at least as precise as calibrated)
+
+sweep rule: backfill (highest F1 on task prompts among arms briefing at most five lessons a prompt)

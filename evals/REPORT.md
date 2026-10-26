@@ -2442,6 +2442,52 @@ Then the release.
 - Pooled recall is relative to the pool, and the floor's seven lessons a prompt dominate it.
 - Whether briefing changes what the agent writes stays a question for the agent harness.
 
+### Result (2026-10-26)
+
+The held-out half was pooled at 4e951c0 under the five arms, 1,283 pairs, every one judged per
+lesson with no label missing (receipt `real-20261026-heldout.txt`).
+
+| task prompts, held out (120) | precision [95%] | applying found, of the pool's 101 | lessons/prompt | null prompts briefed (of 60) | F1 |
+|---|---|---|---|---|---|
+| floor | 9.8% [8.0, 11.8] | 90 | 7.69 | 43 | 0.176 |
+| floor-3 | 12.1% [8.9, 16.2] | 38 | 2.62 | 43 | 0.183 |
+| calibrated | 16.5% [11.9, 22.5] | 31 | 1.57 | 2 | 0.215 |
+| fallback | 16.0% [11.6, 21.7] | 32 | 1.67 | 4 | 0.213 |
+| **backfill** | **17.8% [13.3, 23.5]** | **38** | **1.77** | **4** | **0.242** |
+
+**Predictions 1 to 4 held; prediction 5 failed.**
+
+1. Backfill found more applying lessons than calibrated: 38 against 31.
+2. Backfill's precision, 17.8%, was above the floor's 9.8% and floor-3's 12.1%.
+3. Backfill had the highest F1 of the five arms.
+4. Backfill briefed something on 4 of the 60 null prompts.
+5. Fallback found one lesson more than calibrated, but its precision was 16.0% against 16.5%.
+   So fallback does not ship, as the falsifier says.
+
+**The gain is smaller held out than on tuning.** Backfill added 7 applying lessons over
+calibrated here, against 20 on tuning. Its precision was 1.3 points above calibrated's, inside
+both intervals; on tuning the gap was 9.8 points. Some of that is the calibrated arm doing
+better held out (31 found, against 21). The choice holds, but the size of the step does not:
+backfill lifted what the calibrated decision finds by 23% held out and 95% on tuning, and the
+held-out figure is the one to plan on.
+
+**What this says about the default, on a real store and real prompts.** Both halves agree:
+
+- the calibrated decision briefs 15% to 20% as many lessons as the floor (1.07 against 7.23 a
+  prompt on tuning, 1.57 against 7.69 held out);
+- a lesson it briefs is about 1.7 times as likely to apply (16.5% against 9.8% in both halves);
+- it surfaces a quarter to a third of the applying lessons the floor surfaces (21 of the
+  floor's 85 on tuning, 31 of its 90 held out). §4w's "about a quarter fewer", measured on
+  the seed corpus alone, understated that loss.
+
+On F1 it beats the floor in both halves, which is the criterion this section fixed in advance.
+A team that wants recall over precision has `--decision floor`.
+
+**What follows.** As pre-registered, the calibrated default stays, without fallback. Recorded
+lessons get triggers through a command an agent runs, and the briefing names how many of a
+store's own lessons lack them. This machine's store gets the 1,390 triggers this section
+measured.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
