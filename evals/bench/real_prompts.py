@@ -60,6 +60,21 @@ judges only the pairs no arm had briefed. The fix rule, fixed before any fix arm
 judged: the fix arm that finds the most applying lessons on the tuning half's task prompts,
 among those whose judged precision there is at least the calibrated arm's; ties go to fewer
 lessons per prompt.
+
+Sweep arms, added after the fix arms showed the binding constraint is the line itself (they
+moved the calibrated arm from 1.07 to at most 1.37 lessons per task prompt): a terse real
+prompt rarely shares three words with the lesson that applies.
+
+- `floor-3`, `floor-5`: the word floor, at most 3 or 5 lessons;
+- `line2`, `line2+backfill`: the calibrated decision with a line of two shared words (any
+  rarity), on the store as it is and with the recorded lessons' written triggers;
+- `line1+backfill`: one shared word, at most five, with the written triggers.
+
+The sweep rule, written before any sweep arm's pair was judged and applied over every arm
+measured on the tuning half: the highest F1 of judged precision and pooled recall on task
+prompts, among arms briefing at most five lessons per prompt; ties go to fewer lessons per
+prompt. The sweep is a choice made on the tuning half after reading its earlier results, so
+only the held-out half can say whether it holds.
 """
 from __future__ import annotations
 
@@ -90,7 +105,8 @@ HARNESS_PROJECTS = ("okl-ab-", "okl-e2e")
 BACKFILL = PRIVATE / "backfill-triggers.jsonl"
 CONTEXT_ARMS = ("prev", "prev-own", "reply-own")
 FIX_ARMS = ("fallback", "backfill", "backfill+fallback")
-ARMS = ("floor", "calibrated", *CONTEXT_ARMS, *FIX_ARMS)
+SWEEP_ARMS = ("floor-3", "floor-5", "line2", "line2+backfill", "line1+backfill")
+ARMS = ("floor", "calibrated", *CONTEXT_ARMS, *FIX_ARMS, *SWEEP_ARMS)
 
 
 def _rows(name: str) -> list[dict]:
@@ -164,7 +180,7 @@ class Stores:
 
     def for_arm(self, prompt: dict, arm: str) -> Store:
         """The store an arm checks a prompt against."""
-        return self.as_of(millis(prompt["at"]), backfilled=arm.startswith("backfill"))
+        return self.as_of(millis(prompt["at"]), backfilled="backfill" in arm)
 
 
 def context_text(prompt: dict, arm: str) -> str:
@@ -217,6 +233,16 @@ def _fallback(on: bool) -> Iterator[None]:
 def brief(store: Store, prompt: dict, arm: str) -> list[str]:
     """The lesson ids an arm briefs for a prompt, checked against `store` (Stores.for_arm)."""
     repo = repo_of(prompt)
+    if arm.startswith("floor-"):
+        return core.briefed_ids(core.check(store, repo, prompt["text"], limit=int(arm.split("-")[1]), interests=None,
+                                           decision="floor"))
+    if arm.startswith("line"):
+        saved = decide.CALIBRATED_LINE
+        decide.CALIBRATED_LINE = float(arm[4])
+        try:
+            return core.briefed_ids(core.check(store, repo, prompt["text"], interests=None, decision="calibrated"))
+        finally:
+            decide.CALIBRATED_LINE = saved
     if arm in FIX_ARMS:
         with _fallback(arm.endswith("fallback")):
             return core.briefed_ids(core.check(store, repo, prompt["text"], interests=None, decision="calibrated"))
@@ -389,7 +415,11 @@ def cmd_tally(args: argparse.Namespace) -> None:
             print(f"  {arm:11} {prec:>22} {r['found']:>7} of {total:<5} {r['hit']:>5} of {with_any:<4} "
                   f"{r['any']:>5} of {len(ids):<4} {r['per']:>15.2f} {r['off']:>17.2f} {r['repeat']:>7.0%}")
             if kind == "task":
-                stats[arm] = (r["yes"] / r["judged"] if r["judged"] else 0.0, r["found"], r["per"])
+                stats[arm] = (r["yes"] / r["judged"] if r["judged"] else 0.0, r["found"], r["per"], total)
+    # F1 of judged precision and pooled recall, the sweep rule's measure.
+    f1 = {a: (2 * p * (f / t) / (p + f / t) if p and t and f else 0.0) for a, (p, f, _per, t) in stats.items()}
+    print("\nF1 on task prompts (judged precision, pooled recall): "
+          + " · ".join(f"{a} {v:.3f}" for a, v in f1.items()))
     # The selection rules, each fixed before its arms' pairs were judged (module docstring).
     for name, family in (("context", CONTEXT_ARMS), ("fix", FIX_ARMS)):
         present = [a for a in family if a in stats]
@@ -400,6 +430,10 @@ def cmd_tally(args: argparse.Namespace) -> None:
         print(f"\n{name} rule: {pick or f'no {name} arm'} "
               + (f"(most applying lessons found on task prompts among the {name} arms at least as precise as "
                  "calibrated)" if pick else "(none is at least as precise as calibrated on task prompts)"))
+    if any(a in stats for a in SWEEP_ARMS):
+        eligible = [a for a in stats if stats[a][2] <= 5]
+        pick = min(eligible, key=lambda a: (-f1[a], stats[a][2]))
+        print(f"\nsweep rule: {pick} (highest F1 on task prompts among arms briefing at most five lessons a prompt)")
 
 
 def main() -> None:
