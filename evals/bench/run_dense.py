@@ -8,7 +8,9 @@ Each lesson is embedded as several texts: its title with its symptom, each alias
 trigger. A prompt's score for a lesson is its best cosine over those vectors (max-sim, the
 multi-vector form Doc2Query++ and HyPE found to beat appending generated text to one
 document). Candidates are the union of the full-text window and the dense window (36 each).
-The decision score is evidence + W * maxsim, with W from a grid on this split; the line is
+The decision score is a v2 base score (evidence by default; --base shared_words is the
+production decision's count of shared subject words) + W * maxsim, with W from a grid on this
+split (--weights, for a base on another scale); the line is
 set by split conformal on half the null prompts and tested on the other half, as in
 run_v2.py. Also recorded: the model's load time in a fresh process (what a prompt hook pays
 on every prompt) and the per-prompt encode time.
@@ -105,7 +107,11 @@ def main() -> None:
     ap.add_argument("--model", required=True)
     ap.add_argument("--triggers", type=Path)
     ap.add_argument("--split", choices=["selection", "heldout", "all"], default="selection")
+    ap.add_argument("--base", choices=sorted(v2.SCORES), default="evidence")
+    ap.add_argument("--weights", type=lambda s: tuple(float(w) for w in s.split(",")), default=WEIGHTS,
+                    help="comma-separated W grid (default 0,5,10,20,40, on the evidence scale)")
     args = ap.parse_args()
+    base = v2.SCORES[args.base]
     queries = [json.loads(x) for x in bench.QUERIES.read_text().splitlines() if x.strip()]
     if args.split != "all":
         queries = [q for q in queries if q["split"] == args.split]
@@ -155,7 +161,7 @@ def main() -> None:
             dense = [k for k in sorted(best, key=lambda k: -best[k]) if k in visible][:36]
             lex = [n.id for n in found]
             ids = list(dict.fromkeys(lex + dense))
-            return [(nid, v2.evidence(index, terms, nid), best.get(nid, 0.0)) for nid in ids]
+            return [(nid, base(index, terms, nid), best.get(nid, 0.0)) for nid in ids]
 
         q_sc = [(q, score_all(q["text"], bench.repo_for(store, q["lesson"]))) for q in queries]
         c_sc = [score_all(p["text"]) for p in calib]
@@ -168,9 +174,9 @@ def main() -> None:
           f"queries sha {bench.digest([bench.QUERIES])} · nulls {len(nulls)}: {len(calib)} calibrate, {len(test)} test")
     print(f"cost: cold load in a fresh process {cold_load_seconds(args.model):.2f} s · load here {enc.load_s:.2f} s · "
           f"index {index_s:.1f} s · encode per prompt median {statistics.median(encode_ms):.1f} ms")
-    print(f"decision score = evidence + W * maxsim; line at alpha {ALPHA} by split conformal\n")
+    print(f"decision score = {args.base} + W * maxsim; line at alpha {ALPHA} by split conformal\n")
     print(f"{'W':>5} {'line':>7} {'cap':>3} | {'recall [95%]':>22} {'briefed/q':>9} | null test briefed anything [95%] | paraphrase")
-    for w in WEIGHTS:
+    for w in args.weights:
         def top(sc: list[tuple[str, float, float]], w: float = w) -> list[tuple[str, float]]:
             return sorted(((nid, e + w * m) for nid, e, m in sc), key=lambda t: -t[1])
         line = v2.conformal_line([max((s for _n, s in top(sc)), default=0.0) for sc in c_sc], ALPHA)
