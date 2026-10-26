@@ -43,8 +43,8 @@ ARMS_FILE = PRIVATE / "judge-arms.json"
 def make_pairs(sample: int, seed: int) -> None:
     """Brief the sampled prompts under both arms and write the blind, shuffled judging file."""
     prompts = [json.loads(x) for x in TASKS.read_text().splitlines() if x.strip()]
-    rng = random.Random(seed)  # NOSONAR - a reproducible sample, not a secret  # noqa: S311
-    chosen = rng.sample(prompts, min(sample, len(prompts)))
+    rng = random.Random(seed)  # noqa: S311 - a reproducible sample, not a secret
+    chosen = rng.sample(prompts, min(sample, len(prompts)))  # NOSONAR - a seeded sample, reproducible on purpose
     arms: dict[str, dict[str, list[str]]] = {"control": {}, "treatment": {}}
     with tempfile.TemporaryDirectory() as a, tempfile.TemporaryDirectory() as b:
         plain = bench.build_corpus(Path(a))
