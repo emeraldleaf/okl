@@ -88,8 +88,11 @@ add back the search okl already runs, then pay for a triple store on every promp
 - **okl's precise questions are already one line of SQL.** Which gate catches which defect,
   and what recurred where, are lookups. The RAG seed pack records the general rule: "Don't
   infer by resemblance what you can look up", because a corpus-wide question is a GROUP BY.
-- **Graph machinery is not free and does not automatically win.** Mem0 removed its graph
-  layer after its own benchmarks, as the flat-retrieval ADR records.
+- **Graph machinery is not free and does not automatically win.** Mem0's own graph variant
+  retrieved twice the tokens at three times the search latency and scored lower on single- and
+  multi-hop questions (vendor-run), and Mem0 v3 dropped the external graph stores from its
+  open-source SDK without a stated reason; the flat-retrieval ADR has the figures. (Corrected
+  2026-10-25: this said Mem0 removed the graph after its own benchmarks, which Mem0 never stated.)
 
 ## Revisit when
 
