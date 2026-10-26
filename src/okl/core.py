@@ -9,11 +9,13 @@ search(query, ...)  -> targeted retrieval (progressive disclosure).
 """
 from __future__ import annotations
 
+import functools
 import os
 import re
 from collections import Counter
 from collections.abc import Callable
 from dataclasses import asdict, dataclass, field, replace
+from pathlib import Path
 from typing import Any
 
 # STACK_TAGS is re-exported, not used here: adapters may import core and client but
@@ -612,12 +614,31 @@ def _floor_widened(store: Store, query: str, limit: int, repo_scope: str, intere
 TRIGGER_TYPES = frozenset({"Rule", "Defect", "Gate", "Decision"})
 
 
+def bundled_seed_dir() -> Path:
+    """Where the shipped seed packs live: the repo's seed/ in a checkout, or inside the
+    installed package. Checked in that order so a clone exercises its own files."""
+    repo_seed = Path(__file__).resolve().parent.parent.parent / "seed"
+    return repo_seed if repo_seed.exists() else Path(__file__).resolve().parent / "seed"
+
+
+@functools.cache
+def bundled_packs() -> frozenset[str]:
+    """The bundled packs' names, the `<pack>` in the `seed:<pack>:<key>` ids `okl seed` gives."""
+    return frozenset(f.stem for f in bundled_seed_dir().glob("*.json"))
+
+
 def lessons_without_triggers(nodes: list[Node]) -> list[Node]:
     """The store's own live advice lessons that carry no triggers. The calibrated decision reads
     triggers, and on a real store it found 3 of the 55 applying recorded lessons without them
-    (REPORT §4x); a pack's lessons are left out, since packs ship their own."""
+    (REPORT §4x). A bundled pack's lessons are left out, since the bundled packs ship their
+    own (a store seeded before they did is told by packs_without_triggers); a team's own pack
+    is the team's to give triggers, so its lessons count (review on #298)."""
+    bundled = bundled_packs()
+    def own(n: Node) -> bool:
+        parts = n.id.split(":")
+        return not (len(parts) >= 3 and parts[0] == "seed" and parts[1] in bundled)
     return [n for n in nodes if n.status not in RETIRED_STATUSES and n.type in TRIGGER_TYPES
-            and not n.id.startswith("seed:") and not n.triggers]
+            and own(n) and not n.triggers]
 
 
 def _calibrated(store: Store, hits: list[Node], query: str,

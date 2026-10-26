@@ -52,7 +52,7 @@ def main() -> None:
     seen: set[str] = set()
     rows = []
     for path in sorted(Path(args.projects).glob("*/*.jsonl")):
-        for line in path.open(errors="ignore"):
+        for line in path.open(encoding="utf-8", errors="ignore"):
             try:
                 entry = json.loads(line)
             except ValueError:

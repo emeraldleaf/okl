@@ -38,9 +38,11 @@ decide (REPORT §4w; the design and its evidence: [docs/RETRIEVAL.md](docs/RETRI
   are done, the hook's line says so.
 - **`okl triggers` and `/triggers`.** `okl triggers` lists a store's own advice lessons that
   have no triggers. `/triggers` (Claude Code) drafts ten for each from the lesson itself and
-  applies them once you confirm. When three or more of a store's own lessons lack triggers, the
-  hook's line names how many. On a real store, giving recorded lessons triggers raised what the
-  briefing found (REPORT §4x).
+  applies them once you confirm. Under the calibrated decision, the hook's line names how many
+  of a store's own lessons lack triggers once there are three or more. One or two are not
+  named, and the floor decision does not count them, so a quiet line does not mean every
+  lesson has triggers: `okl triggers` lists them all. On a real store, giving recorded lessons
+  triggers raised what the briefing found (REPORT §4x).
 - **Smaller briefings.** A full briefing is about 730 tokens by default, against about 1,730
   under the floor's twelve
   ([receipt](evals/results/briefing-size-20261026-0828.json)).

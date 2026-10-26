@@ -264,3 +264,19 @@ def test_okl_triggers_lists_own_advice_lessons_without_triggers_and_the_briefing
     assert "3 of this store's own lessons have no triggers" in hook_line()
     assert _okl(tmp_path, "update", "own2", "--trigger", "a third lesson finally gets its words").returncode == 0
     assert "have no triggers" not in hook_line()
+
+
+def test_a_teams_own_pack_counts_and_a_bundled_pack_does_not(tmp_path):
+    """Only the bundled packs ship triggers, so only their lessons are left out of `okl
+    triggers`: a team's own pack, seeded from its own file, is the team's to give triggers
+    (review on #298)."""
+    own = tmp_path / "team-rules.json"
+    own.write_text(json.dumps({"nodes": [{"key": "k1", "type": "Rule", "scope": "org", "repo": "r",
+                                           "title": "token refresh goes through the auth client",
+                                           "found_by": "a review"}]}))
+    assert _okl(tmp_path, "seed", str(own)).returncode == 0
+    assert _okl(tmp_path, "seed", "react-defects").returncode == 0
+    for n in json.loads((ROOT / "seed" / "react-defects.json").read_text())["nodes"]:
+        assert _okl(tmp_path, "update", f"seed:react-defects:{n['key']}", "--trigger", "").returncode == 0
+    listed = [x["id"] for x in json.loads(_okl(tmp_path, "triggers", "--format", "json").stdout)]
+    assert listed == ["seed:team-rules:k1"]
