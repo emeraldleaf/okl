@@ -38,10 +38,17 @@ REPO = Path(__file__).resolve().parent.parent
 # is an admission recorded in REPORT.md, not a way to make the check quiet: the task still
 # runs, and its result is read as "the briefing without this rule", which is a different
 # question from the one the task was written to ask.
-# Empty since 2026-10-22. `exit_code_trust` sat here from the §4b correction (its lesson
-# ranked 54th for the task's own wording) until the lesson gained a symptom written in the
-# words a developer would use; it now ranks 4th (REPORT.md §4o).
-ACCEPTED_GAPS: dict[str, str] = {}
+# `exit_code_trust` sat here from the §4b correction (its lesson ranked 54th for the task's
+# own wording) until the lesson gained a symptom written in the words a developer would use;
+# it now ranks 4th (REPORT.md §4o). `ci_linter` since the calibrated decision became the
+# default (REPORT.md §4w): its rule clears the line and ranks sixth behind the cap of five,
+# and the defect it generalizes, briefed in its place, carries the same fix.
+ACCEPTED_GAPS: dict[str, str] = {
+    "ci_linter": "under the calibrated default (REPORT §4w) r_pin_gating_tools clears the line "
+                 "(four shared subject words) and ranks sixth, behind the cap of five; "
+                 "d_unpinned_linter, the defect it generalizes, is briefed with the same fix "
+                 "(pin the exact tool version), so the task still measures pinning",
+}
 
 
 def main() -> int:

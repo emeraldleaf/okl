@@ -4,6 +4,7 @@
     {
       "key": "r_resubstitution_not_validation",
       "aliases": ["validated on the training data", "accuracy matches the labels", "in-sample", "holdout set", "test on training labels"],
+      "triggers": ["Writing up the results section saying the land cover model is validated against our labels", "Comparing the predicted wetland fraction to the labelled fraction for the accuracy report", "Preparing a slide claiming the classifier reproduces the observed class proportions", "Reviewing a paper draft where model accuracy was computed on the training polygons", "Reviewer pushed back that our validation is circular because it used the training data", "Model hits 98% agreement on our labelled set but falls apart on a new region", "Predicted proportion matches the ground truth almost exactly, is that too good to be true?", "training accuracy reported as validation accuracy", "evaluating on the same samples you fit on, no separate test set", "in-sample fit presented as out-of-sample performance in the write-up"],
       "type": "Rule", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
       "found_by": "CodeRabbit caught a map calling a 23% figure 'validated' when the model was trained on those labels",
       "title": "A prediction reproducing its own training labels' proportions is IN-SAMPLE CALIBRATION, not validation",
@@ -15,6 +16,7 @@
     {
       "key": "d_cross_domain_recipe_dependence",
       "aliases": ["result changes with preprocessing", "trend depends on the window size", "out of distribution", "historical imagery", "normalization changes the answer", "fragile trend"],
+      "triggers": ["Applying our 2023-trained land cover model to 1990s Landsat 5 imagery to reconstruct change", "Back-casting a forest loss trajectory from a model trained on current Sentinel-2 data", "Tweaking the compositing window and normalization for the historical scenes before inference", "Transferring a segmentation model trained on one sensor to imagery from an older satellite", "Historical trend goes up with a 5-year window and down with a 3-year window", "The deep-time trajectory looks totally different every time I change the scene count", "Older epochs give wildly unstable predictions while the training year stays rock solid", "domain shift when hindcasting decades back with a modern model", "out-of-distribution inference on legacy sensor archives", "covariate shift across satellites makes the time series swing with pipeline choices"],
       "type": "Defect", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
       "found_by": "the invasive-over-time trajectory changed shape (5×-growth / flat-then-jump / decline-then-jump) across compositing recipes",
       "title": "A present-day-trained model applied to out-of-distribution history yields a trajectory whose shape depends on the preprocessing recipe",
@@ -26,6 +28,7 @@
     {
       "key": "g_multi_recipe_robustness",
       "aliases": ["robustness check", "re-run with different settings", "sensitivity to preprocessing", "one recipe", "publish a trend"],
+      "triggers": ["About to publish a 30-year land cover change trajectory from our transfer-learned model", "Finalizing the deep-time trend figure for the paper from a single preprocessing run", "Choosing compositing window length and number of scenes for the historical reconstruction", "Reviewing a colleague's change-detection chart before it goes into the report", "Reviewer asked whether the trend survives a different compositing setup and we have no answer", "Rerunning with twice the scenes moved the points more than the effect we reported", "We shipped a trend line and a rerun with other settings no longer shows it", "sensitivity analysis on preprocessing parameters for a time-series result", "ablation over pipeline settings before claiming a long-term trend", "is this trend real or an artifact of my processing choices"],
       "type": "Gate", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
       "found_by": "bracket + multi-recipe re-runs turned a spurious '5× trajectory' into an honest not-reconstructable verdict",
       "title": "Prove a cross-domain trend robust by re-running under ≥2 reasonable recipes before publishing it",
@@ -37,6 +40,7 @@
     {
       "key": "r_mask_hierarchical_classifier",
       "aliases": ["classifier applied outside its training domain", "positive fraction over the whole scene", "hierarchical classification", "subset classifier", "mask predictions to the parent class"],
+      "triggers": ["Running a crop-type classifier trained only on cropland pixels across the whole satellite scene", "Computing what fraction of the forest is conifer using two separately trained models", "Building a two-stage pipeline: first detect wetlands, then classify the wetland type", "Reporting the share of irrigated fields from a model trained only on agricultural samples", "Subtype classifier flags pixels in the ocean and the city as positive", "Our estimated proportion came out 65% when field surveys say around 23%", "Second-stage predictions don't line up spatially with the first-stage class map", "hierarchical classification where the child model runs everywhere, not just inside the parent class", "conditional classifier applied wall-to-wall across the whole map", "nested classes: subclass predictions showing up outside the superclass region"],
       "type": "Rule", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
       "found_by": "an invasive-vs-native (within-woody) classifier fired on non-woody pixels; raw fraction was 65%, masked to the corridor it was 23%",
       "title": "A classifier trained to separate A-vs-B only within parent class C is undefined outside C — mask it to a C-predictor",
@@ -48,6 +52,7 @@
     {
       "key": "g_multiyear_window_composite",
       "aliases": ["noisy yearly values", "one odd year", "annual composite", "multi-year composite", "time series outlier", "smooth the trend"],
+      "triggers": ["Building annual Sentinel-2 growing-season composites for a land cover time series", "Generating a per-year NDVI median mosaic in Earth Engine to chart vegetation change", "Picking which scenes go into each year's composite for the change trend", "Investigating one odd year in our satellite-derived forest cover chart", "One year in the time series dips sharply and then recovers the next year", "Year-to-year values bounce around half a percentage point, burying any trend", "Is the 2019 drop real or just a cloudy season in the imagery?", "single-year mosaic noisy from clouds, haze and phenology differences", "temporal compositing for remote sensing trend analysis", "annual satellite snapshots too noisy to see the long-term signal"],
       "type": "Gate", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
       "found_by": "single-year composites swung ±0.5 pp (1999/2000/2001 = 2.1/1.7/1.2%); 5-year windows collapsed the noise",
       "title": "Composite over multi-year windows, not single years, for a time-series remote-sensing trend",

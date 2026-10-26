@@ -1,0 +1,16 @@
+bench dense arm · model lightonai/LateOn · split selection · code fa0d8cafb35c
+corpus: 182 live records, 182 vectors (title+symptom, aliases, triggers on 173 lessons) · queries sha 97ecbcb5d681 · nulls 550: 282 calibrate, 268 test
+cost: cold load in a fresh process 1.99 s · load here 14.51 s · index 70.9 s · encode per prompt median 119.7 ms
+decision score = evidence + W * maxsim; line at alpha 0.05 by split conformal
+
+    W    line cap |           recall [95%] briefed/q | null test briefed anything [95%] | paraphrase
+  0.0   8.250   3 |   83.9% [79.1%, 88.4%]      2.57 | 6 of 268 (2.2%, [1.0%, 4.8%]) | 60/83
+  0.0   8.250   5 |   84.3% [79.5%, 88.8%]      3.59 | 6 of 268 (2.2%, [1.0%, 4.8%]) | 60/83
+  5.0  13.015   3 |   83.9% [79.1%, 88.4%]      2.54 | 10 of 268 (3.7%, [2.0%, 6.7%]) | 60/83
+  5.0  13.015   5 |   84.3% [79.5%, 88.8%]      3.53 | 10 of 268 (3.7%, [2.0%, 6.7%]) | 60/83
+ 10.0  17.779   3 |   83.9% [79.1%, 88.4%]      2.52 | 10 of 268 (3.7%, [2.0%, 6.7%]) | 60/83
+ 10.0  17.779   5 |   84.3% [79.5%, 88.8%]      3.46 | 10 of 268 (3.7%, [2.0%, 6.7%]) | 60/83
+ 20.0  27.308   3 |   83.9% [79.1%, 88.4%]      2.46 | 10 of 268 (3.7%, [2.0%, 6.7%]) | 60/83
+ 20.0  27.308   5 |   84.3% [79.5%, 88.8%]      3.35 | 10 of 268 (3.7%, [2.0%, 6.7%]) | 60/83
+ 40.0  46.367   3 |   82.7% [77.5%, 87.6%]      2.34 | 10 of 268 (3.7%, [2.0%, 6.7%]) | 59/83
+ 40.0  46.367   5 |   83.1% [77.9%, 87.6%]      3.05 | 10 of 268 (3.7%, [2.0%, 6.7%]) | 59/83

@@ -13,7 +13,7 @@ from typing import Any
 from .. import core
 from ..client import Client, OKLNoAnswerError, OKLUnreachableError
 from .common import _print_json
-from .packs import _empty_store_guidance
+from .packs import _bundled_seed_dir, _empty_store_guidance
 from .verification import _refresh_snapshot
 
 
@@ -47,6 +47,9 @@ def _apply_check_flags(client: Client, args: argparse.Namespace) -> None:
     second = getattr(args, "rerank", None)
     if second is not None:
         client.rerank = second == "on"
+    chosen = getattr(args, "decision", None)
+    if chosen is not None:
+        client.decision = chosen
 
 
 def cmd_check(args: argparse.Namespace) -> int:
@@ -86,9 +89,10 @@ def cmd_check(args: argparse.Namespace) -> int:
         out: dict[str, Any] = {"hookSpecificOutput": {
             "hookEventName": "UserPromptSubmit",
             "additionalContext": _briefing_text(result, args)}}
-        notice = None if os.environ.get("OKL_QUIET") == "1" else core.briefing_notice(result)
-        if notice:
-            out["systemMessage"] = notice
+        quiet = os.environ.get("OKL_QUIET") == "1"
+        lines = [] if quiet else [x for x in (core.briefing_notice(result), *_person_notes(result)) if x]
+        if lines:
+            out["systemMessage"] = " · ".join(lines)
         print(json.dumps(out))
         return 0
     if args.format == "json":
@@ -104,7 +108,26 @@ def cmd_check(args: argparse.Namespace) -> int:
     if args.format != "json" and result.get("store_records") == 0:
         for line in _empty_store_guidance(client):
             print(line, file=sys.stderr)
+    if args.format != "json":
+        for line in _person_notes(result):
+            print(line, file=sys.stderr)
     return 0
+
+
+def _person_notes(result: dict[str, Any]) -> list[str]:
+    """Lines for the person about how this briefing was made: bundled packs in this store that
+    predate their triggers, which the calibrated decision reads (REPORT §4w; a pack of the
+    repo's own is not bundled, so it never prompts this), and a service that answered by a
+    decision other than the one asked for."""
+    notes = []
+    bundled = {f.stem for f in _bundled_seed_dir().glob("*.json")}
+    behind = [p for p in result.get("packs_without_triggers") or [] if p in bundled]
+    if behind:
+        notes.append(f"okl · {len(behind)} bundled pack(s) here predate their triggers, so their lessons "
+                     "are briefed less often: run `okl seed --refresh`")
+    if result.get("decision_unavailable"):
+        notes.append(f"okl · {result['decision_unavailable']}")
+    return notes
 
 
 def cmd_record(args: argparse.Namespace) -> int:
@@ -135,6 +158,7 @@ def cmd_record(args: argparse.Namespace) -> int:
                   ttl_days=args.ttl_days, owner=args.owner,
                   files=args.files, symptom=args.symptom, fix=args.fix, tags=args.tags,
                   aliases=_join_aliases(getattr(args, "aliases", None)),
+                  triggers=getattr(args, "triggers", None),
                   id=args.id, replace=getattr(args, "replace", False) or None)
     if args.repo:
         kwargs["repo"] = args.repo
@@ -159,6 +183,13 @@ def cmd_record(args: argparse.Namespace) -> int:
         print(f"NOT RECORDED — {e}", file=sys.stderr)
         return 2
     print(node_id)
+    if not kwargs["triggers"] and args.type != "Vocabulary":
+        # The default decision (REPORT §4w) briefs a lesson only when a prompt shares enough of
+        # its title, symptom, aliases and triggers; a lesson recorded without triggers is the
+        # one it misses. stdout stays the bare id, for scripts.
+        print(f"okl: no --trigger. A lesson is briefed when a prompt shares three subject words (or "
+              f"two rare ones) with its title, symptom, aliases and triggers. Add the request or error "
+              f"that led here: okl update {node_id} --trigger \"...\" (repeatable).", file=sys.stderr)
     return 0
 
 
@@ -321,6 +352,9 @@ def _render_lesson(n: dict[str, Any]) -> str:
               ("files", "governs"), ("status", "status"), ("found_by", "found by"),
               ("owner", "owner"), ("ttl_days", "ttl days"))
     out += [f"  {label}: {n[key]}" for key, label in labels if n.get(key) not in (None, "")]
+    if n.get("triggers"):
+        out.append("  triggers:")
+        out += [f"    - {t}" for t in n["triggers"].splitlines() if t.strip()]
     if n.get("verified_at"):
         on = f" on commit {n['verified_commit'][:12]}" if n.get("verified_commit") else ""
         evidence = n.get("verified_by") or "(no evidence recorded)"

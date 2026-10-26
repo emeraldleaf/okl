@@ -1,0 +1,17 @@
+bench v2 prototype · label evidence-triggers · split selection · code 29933681bc47
+corpus: 182 live records · triggers on 173 lessons (triggers.jsonl, sha 814c7bb5aa68) · queries sha 97ecbcb5d681 · nulls 550 (sha 6e100bad522c): 282 calibrate the line, 268 test it
+score: evidence (Rare-word evidence: the summed IDF of the prompt's subject words the lesson's)
+
+alpha   line cap |           recall [95%] briefed/q | null test: briefed anything [95%]
+ 0.01 10.501   3 |   79.9% [74.7%, 84.7%]      1.90 | 4 of 268 (1.5%, [0.6%, 3.8%])
+ 0.01 10.501   5 |   79.9% [74.7%, 84.7%]      2.14 | 4 of 268 (1.5%, [0.6%, 3.8%])
+ 0.01 10.501   8 |   79.9% [74.7%, 84.7%]      2.23 | 4 of 268 (1.5%, [0.6%, 3.8%])
+ 0.05  8.250   3 |   83.9% [79.1%, 88.4%]      2.57 | 6 of 268 (2.2%, [1.0%, 4.8%])
+ 0.05  8.250   5 |   84.3% [79.5%, 88.8%]      3.59 | 6 of 268 (2.2%, [1.0%, 4.8%])
+ 0.05  8.250   8 |   85.1% [80.7%, 89.6%]      4.24 | 6 of 268 (2.2%, [1.0%, 4.8%])
+  0.1  7.662   3 |   85.5% [80.7%, 90.0%]      2.76 | 22 of 268 (8.2%, [5.5%, 12.1%])
+  0.1  7.662   5 |   86.7% [82.3%, 90.8%]      4.02 | 22 of 268 (8.2%, [5.5%, 12.1%])
+  0.1  7.662   8 |   88.0% [83.9%, 91.6%]      5.03 | 22 of 268 (8.2%, [5.5%, 12.1%])
+
+at alpha 0.05, cap 5, by register: bug-report 79/83 · paraphrase 60/83 · ticket 71/83
+latency per decision: median 1.0 ms · p95 1.8 ms

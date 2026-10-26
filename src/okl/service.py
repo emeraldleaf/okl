@@ -11,9 +11,9 @@ from __future__ import annotations
 
 import os
 import threading
-from typing import Any
+from typing import Any, Literal
 
-from . import core
+from . import core, decide
 from .store import Store
 
 
@@ -43,6 +43,9 @@ class CheckReq(BaseModel):
     index: bool = False                  # the index arm (REPORT §4r)
     near_misses: bool = False            # the near-miss arm (REPORT §4s)
     rerank: bool = False                 # the cross-encoder second stage (REPORT §4t); the service's own model
+    # How candidates become a briefing (#291, REPORT §4w); a closed set, so an unknown value is a
+    # 422 from validation rather than a 500 from inside check.
+    decision: Literal["floor", "calibrated"] = decide.DEFAULT
 
 
 class RecordReq(BaseModel):
@@ -64,6 +67,9 @@ class RecordReq(BaseModel):
     # A pack writes aliases as a list and `okl seed` against a service forwards it as one;
     # core.record joins either form (review on #266).
     aliases: str | list[str] | None = None
+    # Phrasings of the moments the lesson applies, one per line or a list (#291); a pack
+    # forwarded by `okl seed` sends a list, as it does for aliases.
+    triggers: str | list[str] | None = None
     # Was missing, and pydantic drops unknown fields silently: `okl record --applies-to`
     # against a shared service stored the lesson as valid on every stack (docs audit).
     applies_to: str | None = None
@@ -115,6 +121,7 @@ class UpdateFields(BaseModel):
     tags: str | None = None
     applies_to: str | None = None
     aliases: str | list[str] | None = None   # a list clears when empty, as core.update reads it
+    triggers: str | list[str] | None = None  # likewise (#291)
 
 
 class UpdateReq(BaseModel):
@@ -208,7 +215,7 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901, PLR0915 - 
         _auth(authorization)
         result = core.check(_store, req.repo, req.task, limit=req.limit,
                             interests=req.interests, hybrid=req.hybrid, index=req.index,
-                            near_misses=req.near_misses, rerank=req.rerank)
+                            near_misses=req.near_misses, rerank=req.rerank, decision=req.decision)
         # The service is the only party that sees every client's briefings (#129).
         core.record_briefing(_store, req.repo, result)
         return result

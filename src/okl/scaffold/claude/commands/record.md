@@ -28,6 +28,10 @@ Then fill in, from evidence in this session only:
   If unsure, `repo`.
 - **files** — the files the lesson governs, if it governs specific code. This is what
   makes `okl drift` notice when that code changes. Omit for pure decisions.
+- **triggers** — two or three phrasings of the moments this lesson applies, in a developer's
+  own words. The first is the request or error from this session that led here, as it was
+  said. A lesson is briefed only when a prompt shares three subject words (or two rare ones)
+  with its title, symptom, aliases and triggers, so one without triggers is easy to miss.
 - **tags** — only from the vocabulary `okl_record` names; omit if none fits.
 - **applies_to** — leave unset. Only set it if the lesson is *false* off one stack.
 
@@ -35,7 +39,7 @@ Do not invent a cause, a number or a file you have not seen in this session.
 
 ## 2. Show it, then record it
 
-Show the draft as a short block (type, id, scope, title, symptom → fix, files) and ask
+Show the draft as a short block (type, id, scope, title, symptom → fix, triggers, files) and ask
 the person to confirm or correct it. On a yes, record it with the `okl_record` MCP tool.
 If that tool is not available, run the equivalent `okl record --type … --id … --scope …`
 command instead. To refine an existing lesson, use `okl_update` (or

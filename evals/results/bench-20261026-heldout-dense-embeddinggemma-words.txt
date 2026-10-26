@@ -1,0 +1,10 @@
+bench dense arm · model google/embeddinggemma-300m · split heldout · code cd04216662a0 · prompts 'task: search result | query: {}' / 'title: none | text: {}'
+corpus: 182 live records, 2604 vectors (title+symptom, aliases, triggers on 173 lessons) · queries sha 97ecbcb5d681 · nulls 550: 282 calibrate, 268 test
+cost: cold load in a fresh process 1.74 s · load here 1.45 s · index 172.1 s · encode per prompt median 162.5 ms
+decision score = shared_words + W * maxsim; line at alpha 0.05 by split conformal
+
+    W    line cap |           recall [95%] briefed/q | null test briefed anything [95%] | paraphrase
+  0.0   2.002   3 |   86.3% [81.9%, 90.4%]      2.92 | 9 of 268 (3.4%, [1.8%, 6.3%]) | 67/90
+  0.0   2.002   5 |   90.0% [86.7%, 93.3%]      4.69 | 9 of 268 (3.4%, [1.8%, 6.3%]) | 73/90
+  8.0   5.755   3 |   91.5% [88.1%, 94.8%]      2.87 | 12 of 268 (4.5%, [2.6%, 7.7%]) | 76/90
+  8.0   5.755   5 |   95.2% [93.0%, 97.4%]      4.52 | 12 of 268 (4.5%, [2.6%, 7.7%]) | 81/90

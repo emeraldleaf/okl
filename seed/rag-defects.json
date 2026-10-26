@@ -4,6 +4,7 @@
   {
    "key": "qz_judge_crash",
    "aliases": ["perfect score but everything crashed", "eval summary hides failures", "report the failure rate first", "exceptions skipped in the eval", "misleading average"],
+   "triggers": ["Writing the summary report for our LLM-as-judge eval harness", "Adding exception handling to the eval loop so one bad case doesn't stop the run", "Reviewing an eval script that averages judge scores across test cases", "Building a benchmark dashboard that shows the mean score per run", "The eval reported a perfect 5.0 but most of the test cases threw exceptions", "Score jumped way up after a change that should have made things worse", "Only one row made it into the results file but the summary looks great", "silent failures during an evaluation run skewing the average", "survivorship bias in benchmark scoring when cases error out", "error rate hidden behind the aggregate metric in a test report"],
    "type": "Defect",
    "scope": "org",
    "repo": "python-rag-service",
@@ -18,6 +19,7 @@
   {
    "key": "qz_judge_self",
    "aliases": ["judge is the same model", "grading its own homework", "judge equals generator", "blind judge", "evaluator model choice"],
+   "triggers": ["Configuring which model acts as the judge for our RAG evaluation", "Setting the default models in the eval harness config file", "Running an A/B eval where the same assistant both writes and grades the answers", "Reviewing the eval CLI's default value for --judge-model", "Judge scores look suspiciously high and it agrees with every generated answer", "The judge call fails because its default model is an embedding model", "Judge and generator environment variables both resolve to the same model name", "self-preference bias when using LLM-as-a-judge", "a model grading its own outputs in an evaluation", "evaluator model and candidate model being identical in the benchmark"],
    "type": "Defect",
    "scope": "org",
    "repo": "python-rag-service",
@@ -32,6 +34,7 @@
   {
    "key": "qz_crosstab",
    "aliases": ["is retrieval or generation failing", "one average score", "break down the eval by retrieval hit", "tuning the wrong component", "cross-tab"],
+   "triggers": ["Planning a week of retrieval tuning because RAG answer quality is low", "Writing up eval results comparing agentic retrieval with the classic pipeline", "Designing the metrics our RAG eval run prints at the end", "Deciding whether to swap the embedding model or rework the generator prompt next", "We improved recall a lot but the judge score barely moved", "The eval prints one average score and we can't tell which part is broken", "Our conclusion that one retrieval architecture is weaker later turned out backwards", "which stage of the RAG pipeline is to blame for wrong answers?", "is it the retriever or the LLM that's getting these questions wrong", "root-causing low eval scores: the search step or the answer step"],
    "symptom": "an eval run reports one average score with no breakdown of whether the retrieval hit before generation failed, and a whole session goes into tuning the wrong component",
    "type": "Rule",
    "scope": "org",
@@ -45,6 +48,7 @@
   {
    "key": "qz_fixtures",
    "aliases": ["hand-written test fixtures", "tests pass but production data is wrong", "fixture shares the author's assumptions", "test against the live index", "invented examples"],
+   "triggers": ["Writing unit tests for the SEC filing parser", "Creating test fixtures for the entity extraction step of ingestion", "Reviewing a PR that adds sample HTML documents the author wrote by hand", "Adding regression tests for the document ingestion pipeline before a refactor", "Parser tests pass at 100% but the live index has exhibit numbers stored as company names", "Extraction works on our test files and fails on real documents from the corpus", "Bad entities keep showing up in production even though test coverage is high", "synthetic test data versus real-world samples for a parser", "golden files the developer invented instead of pulling from production", "mock documents that share the same blind spots as the code under test"],
    "symptom": "entity or parser tests pass at 100% on hand-written fixture files while the live index holds a wrong value, such as an exhibit number indexed as a company",
    "type": "Defect",
    "scope": "org",
@@ -58,6 +62,7 @@
   {
    "key": "qz_identity",
    "aliases": ["how many documents mention X", "count with similarity search", "answer changes with top-k", "metadata filter instead of ranking", "which documents share a property", "aggregate question over chunks"],
+   "triggers": ["Adding a feature that answers which contracts mention the same counterparty", "Designing the retrieval tool an agent uses to pull up one specific filing", "Answering how many documents in the corpus belong to a given company", "Reviewing a chatbot that answers corpus-wide counting questions from vector search", "The answer to 'how many docs share a company' changes when I raise top-k", "Search returns termination clauses from the wrong contract", "Asking for a specific document by name returns similar-looking chunks from other documents", "using embeddings to figure out which document is which", "GROUP BY style questions asked of a RAG system", "entity or ID lookup going through a ranked semantic retriever"],
    "symptom": "a question about which documents share a property, or how many there are, answered by similarity search over chunks, so the answer changes with top-k",
    "type": "Rule",
    "scope": "org",
@@ -70,6 +75,7 @@
   },
   {
    "key": "qz_wrong_corpus",
+   "triggers": ["Re-indexing the documents into a fresh Qdrant collection", "Running a before-and-after eval comparing two retrieval configurations", "Changing the collection name in config.py for the hybrid index", "Spinning up the RAG service container for a benchmark run", "Two eval runs of the same commit give very different scores", "One of our Qdrant collections turns out to have zero entities in it", "The container's env var points at a different collection than the config file", "a stale vector index being queried by mistake", "which index is the service actually hitting during the eval?", "several near-duplicate vector collections and configuration drift between them"],
    "symptom": "two eval runs of the same code disagree, and the container and the config file name different vector collections, or several similarly named collections exist and one is empty",
    "type": "Defect",
    "scope": "repo",
@@ -83,6 +89,7 @@
   {
    "key": "qz_broken_tool",
    "aliases": ["tool throws on every call", "agent retries until the step budget runs out", "broken tool blamed on the architecture", "tool error loop"],
+   "triggers": ["Adding a reranker option to the agent's search tool", "Benchmarking an agentic RAG approach against the classic retrieval pipeline", "Writing the error messages the agent's tools return when something fails", "Wiring a paid reranking API into the default tool configuration", "The agent hits its max steps calling search_filtered over and over", "Every tool call errors with a missing API key and the agent just keeps retrying", "The agentic arm scored terribly so we concluded the architecture itself is worse", "agent stuck in a retry loop on a tool that always fails", "unhelpful tool error messages handed back to an LLM agent", "tool misconfiguration masquerading as a model or architecture failure"],
    "symptom": "an agent retries the same tool call until its step budget is gone because every call throws, and the comparison then blames the agent architecture",
    "type": "Defect",
    "scope": "org",
@@ -96,6 +103,7 @@
   {
    "key": "qz_unequal_budget",
    "aliases": ["different top-k between arms", "unfair comparison", "token budget differs", "step budget", "apples to oranges"],
+   "triggers": ["Setting up an A/B between agentic search and a fixed retrieval pipeline", "Choosing top_k defaults for each question type in the search tool", "Writing up why the agent underperforms on comparison questions", "Reviewing an experiment that compares two RAG system designs", "The agent arm got 3 chunks while the baseline got 8, and it lost", "One arm used far more tokens than the other in the head-to-head", "The comparison favoured the pipeline but the two step limits were different", "is this an apples-to-apples comparison between retrieval methods?", "confounded experiment between two system variants", "an uncontrolled variable sneaking into a head-to-head eval"],
    "symptom": "two retrieval arms compared with different top-k, token or step budgets, and the gap attributed to their design",
    "type": "Defect",
    "scope": "org",
@@ -109,6 +117,7 @@
   {
    "key": "qz_agent_contract",
    "aliases": ["model invents a tool name", "unknown tool call", "tool allowlist", "mutating tool without approval", "max steps", "tool timeout"],
+   "triggers": ["Adding the first tool to our agent that writes to the database", "Building the tool-dispatch loop for an LLM agent from scratch", "Giving the assistant a tool that sends emails on the user's behalf", "Setting step and token limits for the agent runner", "The model called a tool name that doesn't exist and the loop tried to run it", "The agent deleted records and nothing asked anyone first", "Agent run never terminates because there's no step cap or clear finish", "function calling safety and the tool registry", "agent with write access to production systems", "permissions for agent tools that change state"],
    "symptom": "an agent loop that will call a tool name the model invented, or a mutating tool shipped without argument validation, an approval mode or alerting",
    "type": "Rule",
    "scope": "org",

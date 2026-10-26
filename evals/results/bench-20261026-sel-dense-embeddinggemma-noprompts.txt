@@ -1,0 +1,16 @@
+bench dense arm · model google/embeddinggemma-300m · split selection · code fa0d8cafb35c
+corpus: 182 live records, 2604 vectors (title+symptom, aliases, triggers on 173 lessons) · queries sha 97ecbcb5d681 · nulls 550: 282 calibrate, 268 test
+cost: cold load in a fresh process 12.38 s · load here 15.00 s · index 170.2 s · encode per prompt median 150.4 ms
+decision score = evidence + W * maxsim; line at alpha 0.05 by split conformal
+
+    W    line cap |           recall [95%] briefed/q | null test briefed anything [95%] | paraphrase
+  0.0   8.250   3 |   83.9% [79.1%, 88.4%]      2.57 | 6 of 268 (2.2%, [1.0%, 4.8%]) | 60/83
+  0.0   8.250   5 |   84.3% [79.5%, 88.8%]      3.59 | 6 of 268 (2.2%, [1.0%, 4.8%]) | 60/83
+  5.0   9.965   3 |   87.1% [82.7%, 91.2%]      2.75 | 9 of 268 (3.4%, [1.8%, 6.3%]) | 64/83
+  5.0   9.965   5 |   88.8% [84.7%, 92.4%]      4.02 | 9 of 268 (3.4%, [1.8%, 6.3%]) | 66/83
+ 10.0  12.011   3 |   88.8% [84.7%, 92.4%]      2.79 | 13 of 268 (4.9%, [2.9%, 8.1%]) | 66/83
+ 10.0  12.011   5 |   90.4% [86.7%, 93.6%]      4.22 | 13 of 268 (4.9%, [2.9%, 8.1%]) | 68/83
+ 20.0  17.317   3 |   89.6% [85.5%, 93.2%]      2.71 | 14 of 268 (5.2%, [3.1%, 8.6%]) | 67/83
+ 20.0  17.317   5 |   91.6% [88.0%, 94.8%]      3.96 | 14 of 268 (5.2%, [3.1%, 8.6%]) | 71/83
+ 40.0  30.222   3 |   85.9% [80.7%, 90.4%]      2.17 | 20 of 268 (7.5%, [4.9%, 11.2%]) | 62/83
+ 40.0  30.222   5 |   87.1% [82.3%, 91.6%]      2.68 | 20 of 268 (7.5%, [4.9%, 11.2%]) | 64/83

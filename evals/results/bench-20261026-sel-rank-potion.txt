@@ -1,0 +1,5 @@
+bench rank quality · model minishlab/potion-retrieval-32M (dense, best of the about-text parts) · split selection · code 2077f098670a
+249 queries · 182 live records · triggers on 173 lessons · 282 calibration-half null prompts
+ordering, the model:                          hit@1 59.8% · hit@3 77.1% · hit@12 91.2% · MRR 0.704
+ordering, full-text with triggers (no model): hit@1 70.7% · hit@3 85.5% · hit@12 94.8% · MRR 0.793  (a lesson the search never returns counts as last)
+deciding: governing-lesson score median 0.469 · null prompts' best median 0.318 · AUC 0.767

@@ -1,0 +1,17 @@
+bench v2 prototype · label evidence-notriggers · split selection · code 29933681bc47
+corpus: 182 live records · triggers on 0 lessons · queries sha 97ecbcb5d681 · nulls 550 (sha 6e100bad522c): 282 calibrate the line, 268 test it
+score: evidence (Rare-word evidence: the summed IDF of the prompt's subject words the lesson's)
+
+alpha   line cap |           recall [95%] briefed/q | null test: briefed anything [95%]
+ 0.01  7.798   3 |   30.1% [24.1%, 36.5%]      0.86 | 2 of 268 (0.7%, [0.2%, 2.7%])
+ 0.01  7.798   5 |   30.1% [24.1%, 36.5%]      0.89 | 2 of 268 (0.7%, [0.2%, 2.7%])
+ 0.01  7.798   8 |   30.1% [24.1%, 36.5%]      0.90 | 2 of 268 (0.7%, [0.2%, 2.7%])
+ 0.05  7.798   3 |   30.1% [24.1%, 36.5%]      0.86 | 2 of 268 (0.7%, [0.2%, 2.7%])
+ 0.05  7.798   5 |   30.1% [24.1%, 36.5%]      0.89 | 2 of 268 (0.7%, [0.2%, 2.7%])
+ 0.05  7.798   8 |   30.1% [24.1%, 36.5%]      0.90 | 2 of 268 (0.7%, [0.2%, 2.7%])
+  0.1  7.798   3 |   30.1% [24.1%, 36.5%]      0.86 | 2 of 268 (0.7%, [0.2%, 2.7%])
+  0.1  7.798   5 |   30.1% [24.1%, 36.5%]      0.89 | 2 of 268 (0.7%, [0.2%, 2.7%])
+  0.1  7.798   8 |   30.1% [24.1%, 36.5%]      0.90 | 2 of 268 (0.7%, [0.2%, 2.7%])
+
+at alpha 0.05, cap 5, by register: bug-report 40/83 · paraphrase 15/83 · ticket 20/83
+latency per decision: median 1.0 ms · p95 1.7 ms

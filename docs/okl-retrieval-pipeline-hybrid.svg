@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="980" height="1378" viewBox="0 0 980 1378" font-family="ui-sans-serif,-apple-system,Segoe UI,Helvetica,Arial,sans-serif">
 <rect width="980" height="1378" fill="#F5F3F0"/>
-<text x="28" y="46" font-size="27" font-weight="700" fill="#1E1B18">How an okl briefing gets built with the semantic arm on</text>
-<text x="28" y="72" font-size="14" fill="#4E4740">183 records and one task sentence become the 12 an agent reads. A local embedding adds candidates by meaning; five stages then narrow them.</text>
+<text x="28" y="46" font-size="27" font-weight="700" fill="#1E1B18">How an okl briefing gets built with the semantic arm on, under the word floor</text>
+<text x="28" y="72" font-size="14" fill="#4E4740">183 records and one task sentence become the 12 or fewer an agent reads. A local embedding adds candidates by meaning; five stages then narrow them.</text>
 <text x="28" y="96" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A">GENERATED from the live pipeline - docs/render_pipeline_diagram.py</text>
 <text x="28" y="112" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A">traced task: "Add an endpoint that returns a single order by id for the signed-in user."</text>
 <text x="28" y="128" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A">searched as: "Add endpoint returns single order id signed user"</text>
@@ -21,7 +21,7 @@
 <text x="65" y="306" font-size="9" fill="#7C736A" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle" letter-spacing="1">QUERY</text>
 <text x="120" y="275" font-size="15" font-weight="600" fill="#1E1B18">The task's subject words, not the sentence</text>
 <text x="120" y="294" font-size="12" fill="#4E4740">Function words, chat filler and single characters drop out; each word counts once, up to 40.</text>
-<text x="120" y="309" font-size="12" fill="#4E4740">A prompt with no subject word is briefed nothing.</text>
+<text x="120" y="309" font-size="12" fill="#4E4740">No subject word, or a message a harness wrote, is briefed nothing.</text>
 <text x="120" y="320" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">8 words</text>
 <text x="938" y="320" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A" text-anchor="end">searched</text>
 <rect x="28" y="346" width="924" height="90" fill="#FFFFFF" stroke="#DCD6CE"/>
@@ -29,11 +29,11 @@
 <text x="65" y="384" font-size="26" font-weight="700" fill="#B4531F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle">2</text>
 <text x="65" y="402" font-size="9" fill="#7C736A" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle" letter-spacing="1">RANK</text>
 <text x="120" y="371" font-size="15" font-weight="600" fill="#1E1B18">Full text: fetch 3x more candidates than needed</text>
-<text x="120" y="390" font-size="12" fill="#4E4740">SQLite FTS5, weighted title x8, body x4, symptom x4, aliases x4, fix x2, tags x1. A record</text>
-<text x="120" y="405" font-size="12" fill="#4E4740">found only by its tag ranks after every content match.</text>
-<text x="120" y="416" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">36 fetched</text>
-<text x="938" y="416" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A" text-anchor="end">limit x 3</text>
-<rect x="120" y="422" width="818" height="9" rx="2" fill="#EBE7E1"/><rect x="120" y="422" width="535" height="9" rx="2" fill="#B4531F"/>
+<text x="120" y="390" font-size="12" fill="#4E4740">SQLite FTS5, weighted title x8, body x4, symptom x4, aliases x4, triggers x4, fix x2, tags</text>
+<text x="120" y="405" font-size="12" fill="#4E4740">x1. A record found only by its tag ranks after every content match.</text>
+<text x="120" y="416" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">108 fetched</text>
+<text x="938" y="416" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A" text-anchor="end">limit x 3, widened x3 by the floor</text>
+<rect x="120" y="422" width="818" height="9" rx="2" fill="#EBE7E1"/><rect x="120" y="422" width="627" height="9" rx="2" fill="#B4531F"/>
 <rect x="28" y="442" width="924" height="90" fill="#FFFFFF" stroke="#DCD6CE"/>
 <rect x="28" y="442" width="74" height="90" fill="#EBE7E1" stroke="#DCD6CE"/>
 <text x="65" y="480" font-size="26" font-weight="700" fill="#B4531F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle">2b</text>
@@ -41,9 +41,9 @@
 <text x="120" y="467" font-size="15" font-weight="600" fill="#1E1B18">The task as one 512-dimension vector; the nearest records by cosine</text>
 <text x="120" y="486" font-size="12" fill="#4E4740">A local static model (potion-retrieval-32M) read from the cache, never the network; the</text>
 <text x="120" y="501" font-size="12" fill="#4E4740">vectors come from `okl embed`. One matrix product over every record.</text>
-<text x="120" y="512" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">36 nearest</text>
-<text x="938" y="512" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A" text-anchor="end">19 not in the full-text list</text>
-<rect x="120" y="518" width="818" height="9" rx="2" fill="#EBE7E1"/><rect x="120" y="518" width="535" height="9" rx="2" fill="#B4531F"/>
+<text x="120" y="512" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">108 nearest</text>
+<text x="938" y="512" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A" text-anchor="end">33 not in the full-text list</text>
+<rect x="120" y="518" width="818" height="9" rx="2" fill="#EBE7E1"/><rect x="120" y="518" width="627" height="9" rx="2" fill="#B4531F"/>
 <rect x="28" y="538" width="924" height="90" fill="#FFFFFF" stroke="#DCD6CE"/>
 <rect x="28" y="538" width="74" height="90" fill="#EBE7E1" stroke="#DCD6CE"/>
 <text x="65" y="576" font-size="26" font-weight="700" fill="#B4531F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle">2c</text>
@@ -51,7 +51,7 @@
 <text x="120" y="563" font-size="15" font-weight="600" fill="#1E1B18">Two orders become one: linear fusion</text>
 <text x="120" y="582" font-size="12" fill="#4E4740">linear: a convex combination of a rank-normalised full-text score and the min-max cosine</text>
 <text x="120" y="597" font-size="12" fill="#4E4740">(alpha 0.5). rrf: reciprocal ranks summed (k = 60). Measured in REPORT 4q.</text>
-<text x="120" y="608" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">55 candidates</text>
+<text x="120" y="608" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">141 candidates</text>
 <rect x="120" y="614" width="818" height="9" rx="2" fill="#EBE7E1"/><rect x="120" y="614" width="818" height="9" rx="2" fill="#B4531F"/>
 <rect x="28" y="634" width="924" height="90" fill="#FFFFFF" stroke="#DCD6CE"/>
 <rect x="28" y="634" width="74" height="90" fill="#EBE7E1" stroke="#DCD6CE"/>
@@ -61,9 +61,9 @@
 <text x="120" y="678" font-size="12" fill="#4E4740">A repo's own records pass first and unconditionally. org records continue. Another repo's</text>
 <text x="120" y="693" font-size="12" fill="#4E4740">records stop here: the curation boundary.</text>
 <text x="938" y="659" font-size="9.5" fill="#9B3B3B" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="700" text-anchor="end" letter-spacing="0.8">DROPS</text>
-<text x="120" y="704" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">48 survive</text>
-<text x="938" y="704" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A" text-anchor="end">7 dropped: other repos</text>
-<rect x="120" y="710" width="818" height="9" rx="2" fill="#EBE7E1"/><rect x="120" y="710" width="714" height="9" rx="2" fill="#B4531F"/><rect x="834" y="710" width="104" height="9" rx="2" fill="#9B3B3B" opacity="0.4"/>
+<text x="120" y="704" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">124 survive</text>
+<text x="938" y="704" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A" text-anchor="end">17 dropped: other repos</text>
+<rect x="120" y="710" width="818" height="9" rx="2" fill="#EBE7E1"/><rect x="120" y="710" width="719" height="9" rx="2" fill="#B4531F"/><rect x="839" y="710" width="99" height="9" rx="2" fill="#9B3B3B" opacity="0.4"/>
 <rect x="28" y="730" width="924" height="90" fill="#FFFFFF" stroke="#DCD6CE"/>
 <rect x="28" y="730" width="74" height="90" fill="#EBE7E1" stroke="#DCD6CE"/>
 <text x="65" y="768" font-size="26" font-weight="700" fill="#B4531F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle">4</text>
@@ -72,9 +72,9 @@
 <text x="120" y="774" font-size="12" fill="#4E4740">EXCLUSIVE. Set by hand on 50 of 183 records, only where a lesson is false off-stack. Unset</text>
 <text x="120" y="789" font-size="12" fill="#4E4740">means anywhere, which is why it is safe.</text>
 <text x="938" y="755" font-size="9.5" fill="#9B3B3B" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="700" text-anchor="end" letter-spacing="0.8">DROPS</text>
-<text x="120" y="800" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">43 survive</text>
-<text x="938" y="800" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A" text-anchor="end">5 dropped: off-stack</text>
-<rect x="120" y="806" width="818" height="9" rx="2" fill="#EBE7E1"/><rect x="120" y="806" width="640" height="9" rx="2" fill="#B4531F"/><rect x="760" y="806" width="74" height="9" rx="2" fill="#9B3B3B" opacity="0.4"/>
+<text x="120" y="800" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">108 survive</text>
+<text x="938" y="800" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A" text-anchor="end">16 dropped: off-stack</text>
+<rect x="120" y="806" width="818" height="9" rx="2" fill="#EBE7E1"/><rect x="120" y="806" width="627" height="9" rx="2" fill="#B4531F"/><rect x="747" y="806" width="93" height="9" rx="2" fill="#9B3B3B" opacity="0.4"/>
 <rect x="28" y="826" width="924" height="90" fill="#FFFFFF" stroke="#DCD6CE"/>
 <rect x="28" y="826" width="74" height="90" fill="#EBE7E1" stroke="#DCD6CE"/>
 <text x="65" y="864" font-size="26" font-weight="700" fill="#B4531F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle">5</text>
@@ -83,9 +83,9 @@
 <text x="120" y="870" font-size="12" fill="#4E4740">INCLUSIVE. Untagged always passes. The exclusive version was reverted (REPORT 4d): it hid 35</text>
 <text x="120" y="885" font-size="12" fill="#4E4740">of 172 records and the briefed arm then reproduced a defect it dropped.</text>
 <text x="938" y="851" font-size="9.5" fill="#4A6B3D" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="700" text-anchor="end" letter-spacing="0.8">ANY-MATCH</text>
-<text x="120" y="896" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">35 survive</text>
-<text x="938" y="896" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A" text-anchor="end">8 dropped: no shared subject</text>
-<rect x="120" y="902" width="818" height="9" rx="2" fill="#EBE7E1"/><rect x="120" y="902" width="521" height="9" rx="2" fill="#B4531F"/><rect x="641" y="902" width="119" height="9" rx="2" fill="#9B3B3B" opacity="0.4"/>
+<text x="120" y="896" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">78 survive</text>
+<text x="938" y="896" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A" text-anchor="end">30 dropped: no shared subject</text>
+<rect x="120" y="902" width="818" height="9" rx="2" fill="#EBE7E1"/><rect x="120" y="902" width="453" height="9" rx="2" fill="#B4531F"/><rect x="573" y="902" width="174" height="9" rx="2" fill="#9B3B3B" opacity="0.4"/>
 <rect x="28" y="922" width="924" height="90" fill="#FFFFFF" stroke="#DCD6CE"/>
 <rect x="28" y="922" width="74" height="90" fill="#EBE7E1" stroke="#DCD6CE"/>
 <text x="65" y="960" font-size="26" font-weight="700" fill="#B4531F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle">6</text>
@@ -94,9 +94,9 @@
 <text x="120" y="966" font-size="12" fill="#4E4740">Only-by-embedding records count by meaning alone (0 kept so). A title or symptom word counts</text>
 <text x="120" y="981" font-size="12" fill="#4E4740">alone if at most 5%, or 5, of records hold it; others need two words.</text>
 <text x="938" y="947" font-size="9.5" fill="#9B3B3B" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="700" text-anchor="end" letter-spacing="0.8">DROPS</text>
-<text x="120" y="992" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">14 survive</text>
-<text x="938" y="992" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A" text-anchor="end">21 dropped: one shared word, 0 retired</text>
-<rect x="120" y="998" width="818" height="9" rx="2" fill="#EBE7E1"/><rect x="120" y="998" width="208" height="9" rx="2" fill="#B4531F"/><rect x="328" y="998" width="312" height="9" rx="2" fill="#9B3B3B" opacity="0.4"/>
+<text x="120" y="992" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">16 survive</text>
+<text x="938" y="992" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A" text-anchor="end">62 dropped: one shared word, 0 retired</text>
+<rect x="120" y="998" width="818" height="9" rx="2" fill="#EBE7E1"/><rect x="120" y="998" width="93" height="9" rx="2" fill="#B4531F"/><rect x="213" y="998" width="360" height="9" rx="2" fill="#9B3B3B" opacity="0.4"/>
 <rect x="28" y="1018" width="924" height="90" fill="#FFFFFF" stroke="#DCD6CE"/>
 <rect x="28" y="1018" width="74" height="90" fill="#EBE7E1" stroke="#DCD6CE"/>
 <text x="65" y="1056" font-size="26" font-weight="700" fill="#B4531F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle">7</text>
@@ -106,8 +106,8 @@
 <text x="120" y="1077" font-size="12" fill="#4E4740">with the result.</text>
 <text x="938" y="1043" font-size="9.5" fill="#9B3B3B" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="700" text-anchor="end" letter-spacing="0.8">TRUNCATES</text>
 <text x="120" y="1088" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">12 delivered</text>
-<text x="938" y="1088" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A" text-anchor="end">2 trimmed</text>
-<rect x="120" y="1094" width="818" height="9" rx="2" fill="#EBE7E1"/><rect x="120" y="1094" width="178" height="9" rx="2" fill="#B4531F"/><rect x="298" y="1094" width="30" height="9" rx="2" fill="#9B3B3B" opacity="0.4"/>
+<text x="938" y="1088" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A" text-anchor="end">4 trimmed</text>
+<rect x="120" y="1094" width="818" height="9" rx="2" fill="#EBE7E1"/><rect x="120" y="1094" width="70" height="9" rx="2" fill="#B4531F"/><rect x="190" y="1094" width="23" height="9" rx="2" fill="#9B3B3B" opacity="0.4"/>
 <rect x="28" y="1114" width="924" height="90" fill="#FFFFFF" stroke="#DCD6CE"/>
 <rect x="28" y="1114" width="74" height="90" fill="#EBE7E1" stroke="#DCD6CE"/>
 <text x="65" y="1152" font-size="26" font-weight="700" fill="#B4531F" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" text-anchor="middle">8</text>
@@ -125,6 +125,6 @@
 <text x="120" y="1254" font-size="12" fill="#4E4740">agent | actions | json. A zero-match result carries the store size, so 'no rules apply' can</text>
 <text x="120" y="1269" font-size="12" fill="#4E4740">never be confused with 'the store is empty'.</text>
 <text x="120" y="1280" font-size="11.5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#1E1B18" font-weight="500">hook | MCP | CI</text>
-<text x="28" y="1338" font-size="11" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A">src/okl/core.py briefing_terms() / ranked_candidates() / _live_hits() / _in_scope() / _apply_floor() . src/okl/store.py search() . src/okl/semantic.py search()</text>
+<text x="28" y="1338" font-size="11" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A">src/okl/core.py briefing_terms() / ranked_candidates() / _live_hits() / _in_scope() . _apply_floor() . src/okl/store.py search() . src/okl/semantic.py search()</text>
 <text x="28" y="1352" font-size="11" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" fill="#7C736A">regenerate: python3 docs/render_pipeline_diagram.py --hybrid linear</text>
 </svg>

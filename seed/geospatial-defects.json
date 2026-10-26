@@ -4,6 +4,7 @@
     {
       "key": "d14",
       "aliases": ["class_path import error", "config written from memory", "fails on the GPU box", "module not found at training start", "wrong import path in the config"],
+      "triggers": ["Scaffolding a new rslearn model config for an OlmoEarth fine-tuning run", "Writing the model.yaml entries for the encoder, decoder and data module classes", "Having the assistant generate a LightningCLI config from the spec before renting a GPU", "Reviewing a spec that lists the module paths for our training config as correct", "Runner crashes at startup with ModuleNotFoundError on a config entry, right after the GPU booted", "Paid for a GPU instance and the job died in phase 1 because a module path doesn't exist", "The class name is right but the import path in the yaml is wrong", "hallucinated import paths in a Lightning yaml config", "dotted module paths typed from memory in the training config", "AI-generated config references classes in modules where they don't actually live"],
       "symptom": "a model or scaffold config whose class_path entries fail to import at runner startup, often on a rented GPU, after a spec said they were correct",
       "type": "Defect",
       "scope": "org",
@@ -18,6 +19,7 @@
     {
       "key": "g_classpath",
       "aliases": ["check the config imports", "import every class_path", "config validation", "dry run the scaffold"],
+      "triggers": ["Adding a CI check for our model YAML configs before training jobs launch", "Setting up pre-flight validation for a new rslearn project scaffold", "Generating Hydra or Lightning configs that reference classes by dotted string", "Reviewing a PR that adds new class_path entries to a training config", "Typo in a config module string only shows up when the training run starts", "Nothing catches a bad import path in our yaml until we're on the cluster", "Config passed review and lint but failed to resolve a class at launch", "static validation of _target_ strings in Hydra configs", "smoke test that every dotted import path in the config resolves", "late-binding string references to classes, like plugin entry points declared in config"],
       "symptom": "a config file that declares class_path or module strings nothing imports until the training run starts",
       "type": "Gate",
       "scope": "org",
@@ -31,6 +33,7 @@
     {
       "key": "d15",
       "aliases": ["job succeeded but nothing was written", "empty output directory", "exit code 0 but no files", "silent failure in a worker pool", "swallowed exception", "pipeline said success"],
+      "triggers": ["Running rslearn dataset materialize on Sentinel-2 from Planetary Computer with ingest disabled", "Writing a batch job that processes windows in a multiprocessing worker pool", "Kicking off an overnight data prep pipeline before the training run", "Wrapping a satellite data download step in a shell script for the training pipeline", "Pipeline said success with exit code 0 but the output folder is empty", "Training fails because the dataset has no files even though materialize finished cleanly", "Found a NotImplementedError buried in worker logs but the command still returned zero", "silent failure with exceptions swallowed inside a process pool", "job reported green but produced nothing", "batch step completes successfully with no output artifacts"],
       "symptom": "a pipeline or batch step exits 0 and reports success while its output directory is empty or far smaller than expected",
       "type": "Defect",
       "scope": "org",
@@ -44,6 +47,7 @@
     {
       "key": "g_verify_outputs",
       "aliases": ["check the outputs exist", "assert files were written", "don't trust the exit code", "verify after the batch step", "count the output files"],
+      "triggers": ["Writing the orchestration script that chains download, preprocess and train steps", "Adding post-step checks to our ETL pipeline in Airflow", "Building a Makefile target that runs a data export and then uploads the results", "Reviewing a pipeline script that moves on as soon as each step exits", "Downstream step crashed because the previous stage wrote zero-byte files", "Our pipeline marked the run complete but the bucket has no outputs", "Script checks the return code only and missed that nothing was written", "trusting $? as proof the job worked", "postcondition checks after each batch stage of a data pipeline", "sanity check that the artifacts actually landed on disk"],
       "symptom": "a script that treats exit code 0 from a batch step as proof the outputs exist",
       "type": "Gate",
       "scope": "org",
@@ -57,6 +61,7 @@
     {
       "key": "d16",
       "aliases": ["disk full", "root filesystem filling up", "temp files on the boot disk", "GDAL temp directory", "TMPDIR ignored", "no space left on device"],
+      "triggers": ["Running a big raster processing job on a cloud VM with a separate data volume", "Configuring temp directories for a GDAL-heavy pipeline on a machine with a small root disk", "Estimating disk space needed for ingesting satellite tiles on the GPU box", "Setting up a Docker container for geospatial processing with a mounted scratch volume", "Root filesystem hit 100% mid-run even though I set TMPDIR to the big drive", "No space left on device on / during raster materialization", "Mystery gigabytes of temp files showing up on the boot disk from the processing job", "library ignores TMPDIR and uses its own scratch location", "rasterio and GDAL scratch files filling up the OS disk", "temp dir environment variable not respected by a native dependency"],
       "symptom": "the boot disk fills during a data run even though TMPDIR points at the data drive; files appear under / from a library's own temp setting",
       "type": "Defect",
       "scope": "org",
@@ -71,6 +76,7 @@
     {
       "key": "d18",
       "aliases": ["target out of bounds", "off by one in the class count", "class 0 is ignore", "num_classes", "highest class never predicted", "CUDA assert on labels"],
+      "triggers": ["Setting num_classes in the segmentation model config for our land cover labels", "Writing the label crosswalk that maps source classes to ids with 0 as nodata", "Adding a new class to the training labels and updating the model head", "Configuring a PyTorch cross-entropy loss with an ignore index for the background class", "Training crashes with 'Target 4 is out of bounds' in cross entropy", "CUDA device-side assert triggered as soon as the loss is computed", "The model never predicts the highest class id, even on obvious examples", "off-by-one in the number of output classes with a reserved background label", "nodata class zero not counted when sizing the classifier head", "label ids exceed the size of the output logits dimension"],
       "symptom": "training crashes with 'Target N is out of bounds' where N equals num_classes, or predictions never include the highest class id",
       "type": "Defect",
       "scope": "org",
@@ -85,6 +91,7 @@
     {
       "key": "d19",
       "aliases": ["wrong output shape", "temporal dimension mistaken for spatial", "decoder shape mismatch", "time-series input tensor", "12x2 instead of 2x2"],
+      "triggers": ["Training a segmentation model on a Sentinel-2 time series stacked as a 4-D tensor", "Adding a temporal dimension to the input of an existing rslearn segmentation task", "Swapping in a pooling decoder for a multi-timestep remote sensing model", "Dry-running a new model config on a laptop before renting a GPU for the full run", "Shape mismatch: output is 12x2 but the target is 2x2", "Decoder output size equals the number of timesteps instead of the image height", "Loss errors on predicted versus target shape only when I feed in multiple dates", "wrong axes picked from a [C, T, H, W] tensor", "spatial dimensions confused with the time axis in the prediction head", "channels-time-height-width layout breaks a decoder expecting 3-D images"],
       "symptom": "a segmentation decoder predicts the wrong spatial shape on a time-series input, such as 12x2 against a 2x2 target, when the input is [bands, timesteps, H, W]",
       "type": "Defect",
       "scope": "org",
@@ -122,6 +129,7 @@
     {
       "key": "d12",
       "aliases": ["points in the wrong place on the map", "lat lon swapped", "coordinates transposed", "samples in the ocean", "x y order"],
+      "triggers": ["Loading a public field-survey CSV of sample points to use as training labels", "Joining an open government dataset of site coordinates to our raster stack", "Importing a downloaded GeoJSON of observations into the labeling pipeline", "Converting a third-party shapefile's coordinates into a GeoDataFrame for sampling", "Half the sample sites plot in the ocean off Antarctica", "Points show up in the wrong hemisphere when I put them on a map", "Raster sampling returns nodata for a whole chunk of rows from the public dataset", "lat/lon swapped, x and y columns flipped", "axis order confusion between longitude-latitude and latitude-longitude", "EPSG:4326 axis order issue in an open data download"],
       "symptom": "sample points from a public dataset plot in the wrong hemisphere or in the ocean when mapped; latitude and longitude columns look swapped",
       "type": "Defect",
       "scope": "org",
@@ -135,6 +143,7 @@
     {
       "key": "d11",
       "aliases": ["AUC below 0.5", "model worse than random", "cross-validation on spatial data", "spatial leakage", "unshuffled folds", "grouped CV", "suspiciously bad score"],
+      "triggers": ["Setting up cross-validation for a model trained on geospatial grid cells", "Evaluating a new encoder's embeddings with a linear probe across tiles", "Splitting spatially clustered samples into train and test folds", "Investigating whether our pretrained encoder is broken after a terrible eval score", "Cross-validated AUC is 0.23, way worse than random guessing", "Model scores far below chance in CV but looks fine on visual inspection", "Each fold has wildly different scores, one of them near zero", "scikit-learn KFold without shuffle on spatially ordered rows", "spatial autocorrelation biasing the train/test splits", "geographically contiguous folds giving an inverted ROC result"],
       "symptom": "a cross-validated AUC far below chance, around 0.2 to 0.3, on spatially clustered data with an unshuffled or ungrouped KFold",
       "type": "Defect",
       "scope": "org",

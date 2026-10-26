@@ -1,0 +1,5 @@
+bench rank quality · model google/embeddinggemma-300m (dense, best of the about-text parts) · split selection · code 2077f098670a
+249 queries · 182 live records · triggers on 173 lessons · 282 calibration-half null prompts
+ordering, the model:                          hit@1 68.7% · hit@3 88.4% · hit@12 98.0% · MRR 0.799
+ordering, full-text with triggers (no model): hit@1 70.7% · hit@3 85.5% · hit@12 94.8% · MRR 0.793  (a lesson the search never returns counts as last)
+deciding: governing-lesson score median 0.629 · null prompts' best median 0.561 · AUC 0.739

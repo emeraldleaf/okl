@@ -4,6 +4,7 @@
   {
    "key": "r_dbcontext_direct",
    "aliases": ["repository pattern", "repository wrapper around the ORM", "mocking the database in tests", "generic repository"],
+   "triggers": ["Adding a repository layer for the Orders feature so the MediatR handlers stop touching EF Core directly", "Setting up unit tests for a command handler that saves a new customer through Entity Framework", "Reviewing a PR that introduces IProductRepository with GetById, Add and Save methods over the context", "Refactoring the data access code in our ASP.NET Core API so it is easier to mock", "Mocked DbSet blows up on ToListAsync saying the source does not implement an async query provider", "Handler unit tests pass with Moq but the real query fails on SQL Server because the LINQ cannot be translated", "Every new entity needs another repository interface and class that just forwards calls to the context", "generic repository pattern on top of Entity Framework, is a unit of work wrapper worth it", "data access object layer or DAO wrapper around the ORM session for testability", "persistence abstraction or data access port in front of EF Core for the application layer"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Data access' + the simplicity refactor (five repositories deleted)",
    "tags": "dotnet",
@@ -15,6 +16,7 @@
   {
    "key": "r_arch_enforcement_ladder",
    "aliases": ["split the solution into layer projects", "clean architecture projects", "enforce layering", "architecture tests"],
+   "triggers": ["Planning to split our .NET solution into separate Domain, Application and Infrastructure projects", "Setting up Clean Architecture for a new service and deciding how many csproj files it needs", "Reviewing a PR where someone added an Infrastructure using directive inside a domain entity", "Restructuring a single-project web API into layers because domain logic keeps leaking into persistence code", "Found our domain entities referencing EF Core attributes and the Infrastructure namespace again despite the agreed layering", "Nothing stopped a developer importing the email sender into the Domain folder, we only caught it in review", "Our solution has nine projects for a small CRUD service and every feature touches four of them", "onion architecture or hexagonal layering, keeping the core free of infrastructure dependencies", "dependency rule enforcement in C#, something like ArchUnit but for .NET", "layer boundary checks, module boundaries, forbidden references between namespaces in one assembly"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Promotion signal' + docs/vsa-vs-clean-architecture.md",
    "tags": "dotnet,method",
@@ -26,6 +28,7 @@
   {
    "key": "r_rate_limiter_scaleout",
    "aliases": ["throttling", "rate limit not working with multiple replicas", "too many requests get through", "requests per second per client", "horizontal scaling breaks the limiter"],
+   "triggers": ["Scaling the public API from one pod to three replicas behind the load balancer", "Adding per-client throttling to the login endpoint with the built-in ASP.NET Core rate limiting middleware", "Turning on horizontal autoscaling for the service that enforces our partner API quota", "Reviewing a deployment change that bumps the instance count on an app with fixed window limits", "Clients get through about twice the requests per minute we configured since we added a second instance", "Load test shows no 429s until well past the limit, but locally throttling kicks in exactly on time", "Rate limit works on my machine but in production a partner blew past their quota with no rejections", "distributed throttling, enforcing request quotas across a cluster of web servers", "token bucket or sliding window limits when the app runs in a server farm or Kubernetes", "per-user request cap when the service runs on several instances behind a load balancer"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Rate Limiting'",
    "tags": "security,dotnet",
@@ -37,6 +40,7 @@
   {
    "key": "r_request_naming",
    "aliases": ["Dto naming", "name the request class", "command vs query naming", "what to call the input model"],
+   "triggers": ["Adding a new endpoint to create an order and naming the input model for the POST body", "Writing MediatR handlers for the invoicing feature and deciding what to call the message classes", "Reviewing a PR that adds UpdateCustomerDto as the input to a write handler", "Defining the gRPC contracts between the catalog and ordering services", "Cannot tell from the type name whether CreateOrderDto is something we send in or something we return", "Our Dtos folder has hundreds of classes mixing commands, query results and API inputs", "Confused which pipeline behavior applies because the request type names do not say read or write", "naming conventions for commands, queries, view models and data transfer objects", "what suffix to use for request payload classes, input model vs DTO vs message", "CQRS message naming, the DTO suffix on everything, payload and contract class names"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Coding Standards'",
    "tags": "dotnet,method",
@@ -48,6 +52,7 @@
   {
    "key": "r_comments_durable_docs",
    "aliases": ["comment links to a TODO file", "comment points at a status document", "link in a code comment"],
+   "triggers": ["Adding a TODO comment in the test factory explaining why we skip a check for now", "Writing code comments that tell readers where the design decision is written up", "Reviewing a PR whose comments say see STATUS.md for the explanation", "Cleaning up sprint notes and the progress tracker file at the end of the iteration", "The comment says see the note in the status doc but that entry no longer exists", "Followed a code comment to a planning file and the section it mentions was rewritten weeks ago", "Dead reference in a source comment, the heading it points to in the progress notes is gone", "comment links to a changelog, roadmap or standup notes file", "code comments that cross-reference the current sprint doc or tracking notes", "stale breadcrumbs in source comments pointing at working notes or a scratch doc"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Commenting Convention' (the STATUS.md dangling-pointer incident)",
    "tags": "method",
@@ -59,6 +64,7 @@
   {
    "key": "r_surprise_in_writing",
    "aliases": ["write down the gotcha", "debugging insight lost", "document the workaround", "lesson only in the commit message"],
+   "triggers": ["Just finished a long debugging session on a config value being silently overridden, wrapping up the PR", "Fixing a bug caused by a framework version incompatibility and about to close the ticket", "Writing the commit message for a fix where the library behaves differently than its documentation says", "Wrapping up an incident where middleware ordering broke authentication in a subtle way", "A teammate just hit the same weird startup failure I fixed last month and had to rediscover it", "The only explanation for this odd workaround is buried in a two-year-old commit message", "Spent a day debugging something a colleague already solved, but nobody wrote it down anywhere", "gotchas, tribal knowledge, lessons learned, footguns we found the hard way", "post-debugging knowledge capture, TIL notes, a known pitfalls list for the team", "documenting non-obvious bugs, the here-be-dragons stuff nobody would guess"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Debugging Discipline'",
    "tags": "method",
@@ -70,6 +76,7 @@
   {
    "key": "r_file_move_discipline",
    "aliases": ["rename a file", "move a file", "delete a file", "broken reference after a rename", "stale path"],
+   "triggers": ["Renaming a project folder in the solution and updating the sln file", "Deleting an old script that I think nothing uses anymore", "Moving a service's source into a new directory as part of a monorepo reorganization", "Reviewing a PR that relocates a config file to a different path", "Docker build fails with COPY failed: file not found after a folder rename merged weeks ago", "CI step cannot find the script anymore, the workflow still uses the old path", "README links return 404 after we reorganized the docs folder", "git mv, restructuring directories, relocating files, path changes", "dangling path references and broken links after moving things around", "folder rename fallout, stale paths in Dockerfiles, pipelines and docs"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'File-move discipline' (Dockerfile.catalog broken for months after PR #31)",
    "tags": "method",
@@ -81,6 +88,7 @@
   {
    "key": "r_grep_to_zero",
    "aliases": ["remove a public method", "rename an identifier everywhere", "leftover references", "search the codebase for old names"],
+   "triggers": ["Removing a deprecated message transport from the codebase and updating the documentation", "Renaming a public config key and the metric that goes with it across the project", "Retiring an old feature flag and cleaning up everything that mentions it", "Reviewing a PR that deletes an API and updates the two docs the author remembered", "Docs still describe the old transport as current even though we removed it last quarter", "The runbook says to alert on a metric that nothing emits anymore", "New hire followed the setup guide and configured a setting we deleted months ago", "repo-wide find and replace, cleanup after removing an identifier", "deprecation sweep, dead references, removed names lingering in prose", "leftover mentions of a deleted class in markdown, comments and shell scripts"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Identifier-move discipline' (15+ docs taught Azure Service Bus as current after the RabbitMQ swap)",
    "tags": "method",
@@ -92,6 +100,7 @@
   {
    "key": "r_docs_review_surface",
    "aliases": ["update the diagram", "stale architecture diagram", "docs out of date after a refactor", "keep docs in sync"],
+   "triggers": ["Replacing synchronous HTTP calls between two services with a message queue", "Adding a new service to the system and wiring it into the existing topology", "Reviewing a PR that changes how services communicate but does not touch the architecture docs", "Editing the Excalidraw source for the system overview diagram", "The architecture diagram still shows a database call we replaced with an event months ago", "Review bot approved a change that contradicts the documented design because the doc was outdated", "The exported PNG of the diagram no longer matches its editable source", "architecture doc drift, outdated C4 diagrams, design docs lagging the code", "keeping system design documents in sync with the implementation", "living documentation, diagrams as code, doc rot"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Doc-and-diagram discipline'",
    "tags": "method",
@@ -103,6 +112,7 @@
   {
    "key": "r_presence_in_loop",
    "aliases": ["review an AI-generated PR", "big refactor by the agent", "pairing with the agent", "architecture change unsupervised"],
+   "triggers": ["Handing the coding agent a multi-step refactor of our messaging layer and checking back tomorrow", "Asking the AI assistant to design and build a new authorization model for the API", "Delegating a new bounded context for payments to an autonomous coding agent", "Reviewing a 3000-line pull request an AI agent produced for a new transport integration", "The agent's diff is huge and made assumptions I never agreed to, now we are reworking days of output", "Only noticed at PR review that the AI invented its own error handling pattern across the whole feature", "The agent finished the refactor but went in a direction I would have stopped on day one", "human in the loop for agentic coding, supervising AI pair programming", "vibe coding a new subsystem, AI autopilot, babysitting the agent", "oversight of LLM-generated code on long autonomous agent runs"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Presence in the loop, not approval at the gate'",
    "tags": "method,agent-safety",
@@ -114,6 +124,7 @@
   {
    "key": "r_experiment_sunset",
    "aliases": ["spike", "prototype with no deadline", "proof of concept dragging on", "time-box the experiment"],
+   "triggers": ["Starting a weekend spike to try a vector database for search", "Kicking off a prototype with an AI agent to see if we can auto-generate reports", "Planning a proof of concept for a new internal tool", "Deciding whether to keep extending the hackathon project into next sprint", "This prototype from three months ago is now in production and nobody owns it", "The experimental branch keeps getting one more feature and the API bill keeps growing", "We are patching security issues in a demo tool that nobody actually needed", "POC, spike, skunkworks, side project scope creep", "prototype creeping into a product, sunk cost on a hack project", "exploratory branch, throwaway code that never got thrown away"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Continue is the verb that gets you in trouble'",
    "tags": "method",
@@ -125,6 +136,7 @@
   {
    "key": "r_encoding_loop",
    "aliases": ["same bug again", "recurring mistake", "add a lint rule for the fix", "prevent the regression", "never again"],
+   "triggers": ["Fixing the same null-handling bug that code review flagged twice before", "Addressing review bot comments on a PR that found a recurring antipattern", "Closing out an audit finding by patching the affected code", "Writing the fix PR after a postmortem identified a mistake we keep making", "The same review comment keeps coming up on different PRs every few weeks", "We fixed this exact antipattern last month and it is back in a new file", "The review bot flags the same issue again even though we merged a fix for it", "recurring review findings, repeat offenders, lessons that never stick", "institutional memory for code review, never-again moments", "regressions of known antipatterns, whack-a-mole bug fixing"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Continuous Rule Encoding'",
    "tags": "method",
@@ -136,6 +148,7 @@
   {
    "key": "r_durability_not_replay",
    "aliases": ["use Kafka", "event streaming", "message loss", "do we need a stream", "durable queue"],
+   "triggers": ["Designing order events between services and choosing between RabbitMQ and Kafka", "Migrating off Redis Pub/Sub because we lost events when a consumer restarted", "Writing an architecture proposal for event-driven integration between billing and shipping", "Reviewing a design doc that introduces Event Hubs for internal notifications", "Someone proposed adding Kafka purely so we stop losing messages", "Messages vanish when the subscriber is down during a deploy", "Consumer processed the same event twice after a redelivery and double-charged a customer", "message queue vs event streaming, log-based broker vs traditional broker", "guaranteed delivery, persistent subscriptions, at-least-once messaging", "picking an event bus for reliability, Service Bus topics vs SNS and SQS vs Kafka"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Durability ≠ replay' + docs/messaging-transport-selection.md",
    "tags": "messaging",
@@ -147,6 +160,7 @@
   {
    "key": "r_batch_beats_whenall",
    "aliases": ["Task.WhenAll in a loop", "many calls to the same service", "fan out requests", "batch API", "N calls to one downstream"],
+   "triggers": ["Speeding up an endpoint that validates each cart line by calling the inventory service", "Refactoring sequential awaits in the checkout handler to run concurrently", "Adding a loop that reserves stock for every order line over HTTP", "Reviewing code that uses Task.WhenAll over a list of items calling the same API", "Checkout latency grows linearly with the number of items in the cart", "The downstream service gets hammered with hundreds of parallel requests from a single call", "A second operation was started on this context before a previous operation completed", "fan-out, scatter-gather, parallel HTTP calls, the Promise.all equivalent in C#", "chatty service-to-service calls, too many round trips per request", "concurrent async calls to one microservice in a loop, N calls per request"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Performance Rules' (PlaceOrder fan-out superseded by batch gRPC, issue #71)",
    "tags": "dotnet,messaging",
@@ -158,6 +172,7 @@
   {
    "key": "r_202_long_running",
    "aliases": ["slow endpoint", "request takes several seconds", "background job", "async processing", "return 202 Accepted", "timeout on a long request"],
+   "triggers": ["Building an endpoint that generates a large PDF report when the user clicks export", "Adding a notify-all-subscribers action to the admin API", "Implementing a message handler that calls a slow third-party API for each record", "Writing a POST endpoint that provisions a new tenant with several setup steps", "Requests time out at 30 seconds on the import endpoint under load", "Gateway returns 504 because the handler is still processing the upload", "Message handler exceeds the broker lock duration and the message gets redelivered mid-processing", "async request-reply pattern, background jobs, fire and poll", "long-running HTTP requests, slow synchronous API calls, request timeouts", "bulk email sending from a controller, a blocking web request doing heavy work"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Performance Rules'",
    "tags": "messaging,method",
@@ -169,6 +184,7 @@
   {
    "key": "r_guid_v7",
    "aliases": ["Guid primary key", "random ids fragment the index", "sequential guid", "id leaks creation time"],
+   "triggers": ["Designing the primary key strategy for a new Orders table in SQL Server", "Adding a factory method for a new aggregate that assigns its ID", "Generating password reset tokens and invite links for users", "Migrating from int identity columns to GUID keys in EF Core", "Index fragmentation on the primary key is high and inserts slow down as the table grows", "Lots of page splits on a clustered index with uniqueidentifier keys", "Security review noted you can decode the creation timestamp from our resource IDs", "UUID v4 vs UUIDv7, sequential GUIDs, COMB GUIDs, ULIDs", "random primary keys and B-tree insert performance", "time-sortable identifiers, Snowflake IDs, ordered keys for databases"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Performance Rules'",
    "tags": "dotnet",
@@ -180,6 +196,7 @@
   {
    "key": "r_secret_fakes",
    "aliases": ["fake API key in a test", "secret scanner false positive", "gitleaks flagged a test", "placeholder credentials"],
+   "triggers": ["Adding a connection string with a password to a test fixture for the integration tests", "Writing a unit test that needs a JWT signing key to parse tokens", "Configuring gitleaks for the repo and adding allowlist entries for test data", "Documenting example API keys in the setup guide", "Secret scanning blocks my PR on a fake password in a test file", "Pushed a commit removing the fake key but the scanner still fails the PR", "Our .gitleaks.toml allowlist keeps growing with test paths", "dummy credentials, placeholder API keys, fake tokens in tests", "secret detection false positive, trufflehog or push protection flagging test data", "high-entropy string flagged in fixtures, silencing scanner warnings"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Testing' (gitleaks 8.24.x allowlist attempt, tried and removed)",
    "tags": "security,method",
@@ -191,6 +208,7 @@
   {
    "key": "r_aspire_waitfor",
    "aliases": ["connection refused on startup", "service starts before the database is ready", "container not ready", "startup race with dependencies"],
+   "triggers": ["Adding RabbitMQ and SQL Server containers to the Aspire AppHost", "Wiring a new microservice into the AppHost so it gets the database connection string", "Writing a docker-compose file with an API that depends on Postgres", "Setting up local orchestration for the dev environment with a message broker and identity server", "Service crashes on first run with connection refused to RabbitMQ, works after a restart", "SocketException on startup because the SQL Server container is not ready yet", "Aspire dashboard shows the API exited while the broker container is still starting", "service startup ordering, depends_on, race between the app and its database container", "container readiness vs liveness, init containers, Kubernetes startup races", "dev orchestrator wiring, resource references, cold start of infrastructure containers"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Package Management' (services showing 'Finished' instead of 'Running')",
    "tags": "dotnet",
@@ -202,6 +220,7 @@
   },
   {
    "key": "r_wolverine_lockstep",
+   "triggers": ["Adding the WolverineFx RabbitMQ transport package to an existing service", "Merging a dependabot grouped update for the messaging packages", "Upgrading Wolverine core to the latest minor version", "Reviewing changes to Directory.Packages.props after adding a new transport", "Wolverine core is on one version and the Azure Service Bus transport is several minors behind", "MissingMethodException at runtime from a transport package after a NuGet update", "Dependabot group PR updated most Wolverine packages but skipped the one I added yesterday", "NuGet package family version alignment, central package management", "Renovate or dependabot grouping, mixed versions within one library family", "version skew between a framework core and its plugins"],
    "type": "Rule", "scope": "repo", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Package Management' (WolverineFx.RabbitMQ stranded at 6.8.0 by #175)",
    "tags": "dotnet,messaging",
@@ -213,6 +232,7 @@
   },
   {
    "key": "r_wolverine_inbox",
+   "triggers": ["Adding a new RabbitMQ queue listener to the shipping service with Wolverine", "Configuring message durability for a service that has no database", "Setting up the outbox for a new Wolverine service and assuming that covers consumers too", "Reviewing a PR that adds ListenToRabbitQueue in Program.cs", "Messages were lost when the consumer pod crashed mid-processing", "Broker shows messages acked but the handler never finished", "After a deploy killed the service, in-flight orders disappeared from the queue", "inbox pattern, consumer-side durability, ack before processing", "auto-ack vs manual ack, buffered listeners, prefetch loss", "transactional inbox, at-least-once on the receive side, message loss on crash"],
    "type": "Rule", "scope": "repo", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Package Management' (fixed in #169)",
    "tags": "dotnet,messaging",
@@ -224,6 +244,7 @@
   },
   {
    "key": "r_aspire_versions",
+   "triggers": ["Upgrading .NET Aspire to the latest release", "Bumping the Aspire.Hosting.RabbitMQ package to get a new feature", "Merging a dependabot PR that updates only some of the Aspire packages", "Updating the AppHost project's SDK version in the csproj", "TypeLoadException on an internal type when starting the AppHost", "DCP fails to start saying a newer version of the AppHost package is required", "AppHost builds fine but nothing launches after a partial package update", "Aspire version mismatch, SDK vs hosting package versions", "orchestrator SDK and integration package drift, NuGet version skew", "local dev host upgrade breaking things, mismatched workload and packages"],
    "type": "Rule", "scope": "repo", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Package Management'",
    "tags": "dotnet",
@@ -236,6 +257,7 @@
   {
    "key": "r_no_nplus1",
    "aliases": ["query in a loop", "N+1 queries", "lazy loading in a loop", "too many database round trips"],
+   "triggers": ["Building an orders list endpoint that shows each order's customer name and line count", "Writing a report that loops over invoices and loads their payments", "Reviewing a PR with a foreach that calls the database for each parent row", "Optimizing a slow dashboard page that lists projects with their tasks", "SQL profiler shows hundreds of nearly identical queries for one page load", "Endpoint is fast in tests but takes seconds in production with real data volumes", "EF Core logs flood with the same SELECT executed once per row", "N+1 select problem, lazy loading in loops, chatty database access", "ORM query per row, the same thing as missing select_related in Django", "database round trips per item, ActiveRecord or Hibernate lazy loading performance"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Performance Rules'",
    "tags": "dotnet",
@@ -247,6 +269,7 @@
   {
    "key": "r_sargable",
    "aliases": ["index not used", "LIKE with a leading wildcard", "case-insensitive search is slow", "function on a column in WHERE", "full table scan"],
+   "triggers": ["adding a case-insensitive email lookup to the user repository for the login flow", "building a search box that finds customers whose name contains whatever the user types", "reviewing a PR that filters on a trimmed, uppercased product code in the WHERE clause", "writing a LINQ query that filters orders by the year part of their created date", "query plan shows a sequential scan on users even though email has an index", "login lookup got slower as the users table grew, the index exists but is never used", "why does EXPLAIN show a seq scan when I filter with lower() on an indexed column", "index not being hit because the column is wrapped in a function call", "case-insensitive matching in Postgres or SQL Server without killing query performance", "contains search with a leading wildcard versus a plain btree index"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Performance Rules' + SearchProducts.cs documented trade-off",
    "tags": "dotnet,data-quality",
@@ -258,6 +281,7 @@
   {
    "key": "r_pagination_cap",
    "aliases": ["list endpoint returns everything", "page size unbounded", "offset pagination slow on page 1000", "cursor pagination", "paging"],
+   "triggers": ["adding a GET endpoint that returns all orders for the admin dashboard", "building an infinite-scroll feed API over a table with millions of rows", "reviewing a controller where the client's pageSize goes straight into the query", "exposing audit log entries to the frontend through a new REST collection endpoint", "a client asked for pageSize=100000 and the API timed out with a memory spike", "page 5000 of the results takes seconds while the first page is instant", "list endpoint returns the entire table and the JSON response is tens of megabytes", "limit/offset paging versus cursor-based paging on very large tables", "unbounded result set coming back from a collection endpoint", "seek method, continuation tokens and maximum page size for list APIs"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Performance Rules'",
    "tags": "dotnet",
@@ -269,6 +293,7 @@
   {
    "key": "r_bulk_ops",
    "aliases": ["update thousands of rows", "loop over entities to delete", "mass update", "bulk delete", "ExecuteUpdate"],
+   "triggers": ["writing a nightly job that marks every expired subscription as inactive", "implementing a purge of soft-deleted records older than ninety days", "adding an admin action that reassigns all of one user's tickets to another user", "reviewing a data fix script that loops through products to raise prices five percent", "the cleanup job runs out of memory and takes hours against the production table", "SaveChanges crawls with thousands of tracked entities and change tracking dominates the profile", "batch update shows one database round trip per row in the SQL logs", "mass update or delete in Entity Framework without fetching the rows first", "set-based SQL versus row-by-row processing, the RBAR problem", "how do I do a bulk delete or bulk update in EF Core"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Performance Rules'",
    "tags": "dotnet",
@@ -280,6 +305,7 @@
   {
    "key": "r_optimistic_concurrency",
    "aliases": ["lost update", "two users edit the same record", "last write wins", "row version", "concurrency conflict"],
+   "triggers": ["adding an edit form where two support agents can update the same ticket", "designing the update endpoint for an inventory item that several warehouses adjust", "creating a new EF Core entity that users can modify after it is created", "reviewing a PUT handler that loads an order, changes it and saves it back", "one user's changes vanished after a colleague saved the same record a second later", "DbUpdateConcurrencyException bubbled up unhandled and the request returned a 500", "stock count is wrong after two simultaneous adjustments and nothing in the logs explains it", "the lost update problem when two people edit the same row", "optimistic locking with a rowversion column or ETag on updates", "last write wins silently overwriting concurrent edits to a record"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Performance Rules' + docs/performance-and-data-correctness.md",
    "tags": "dotnet,data-quality",
@@ -291,6 +317,7 @@
   {
    "key": "r_logging_hygiene",
    "aliases": ["string interpolation in log messages", "logging inside a loop", "log noise", "structured logs", "log scope null key"],
+   "triggers": ["adding logging to the order import loop that processes thousands of lines", "instrumenting the auth flow so we can search the logs by user id", "reviewing a PR that adds log statements built with string interpolation", "setting up a logging scope with tenant and request properties for every message", "can't filter by UserId in Seq because the value is baked into the message text", "log volume exploded after the batch job ran, millions of near-identical lines", "exception thrown when beginning a log scope because the tenant value was null", "structured logging versus formatted strings with ILogger in .NET", "semantic logging with message templates and named properties instead of plain text", "log spam from logging every record inside a loop"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Performance Rules' + 'Observability' (MA0002)",
    "tags": "dotnet,method",
@@ -302,6 +329,7 @@
   {
    "key": "r_connection_hold",
    "aliases": ["connection pool exhausted", "too many open connections", "await an HTTP call while the transaction is open", "holding the db connection"],
+   "triggers": ["writing a handler that reads an order, calls the payment API, then saves the result", "adding an event publish inside the same using block that runs a database query", "refactoring a repository method so it also notifies a webhook after loading data", "reviewing async code where the DbContext stays open across an external HTTP call", "timeout expired while obtaining a connection from the pool under load", "connection pool exhausted errors show up in unrelated endpoints during traffic spikes", "database connection timeouts everywhere while the database server itself is mostly idle", "connection starvation from holding database connections during slow network I/O", "max pool size reached, too many open connections to Postgres", "keeping the database session open while waiting on another service to respond"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Performance Rules'",
    "tags": "dotnet",
@@ -313,6 +341,7 @@
   {
    "key": "r_cache_write_path",
    "aliases": ["stale cache after an update", "cache not invalidated", "users see old data", "cache TTL", "when to clear the cache"],
+   "triggers": ["adding Redis caching for product details that admins can edit", "writing the update handler for a user profile that is also cached", "reviewing a change that caches tenant settings with a ten-minute expiry", "adding a delete endpoint for an entity the read side serves from cache", "users still see the old price for several minutes after it was updated", "after editing a record the detail page keeps showing stale data until expiry", "React Query list still shows old data after a mutation until I refresh", "cache busting when the underlying data changes", "stale reads from a distributed cache right after a write", "keeping the cache and the database consistent after updates and deletes"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Performance Rules'",
    "tags": "dotnet",
@@ -324,6 +353,7 @@
   {
    "key": "r_migrations_immutable",
    "aliases": ["edit a migration", "fix a migration that already ran", "drop a column safely", "schema change breaks production", "migration rollback"],
+   "triggers": ["fixing a typo in a column name inside a migration that already went to staging", "renaming a column on a table that is live in production", "making an existing nullable column required on a populated table", "reviewing a PR that modifies an old migration file rather than adding one", "staging schema doesn't match the model even though every migration says applied", "deploy failed because the new release dropped a column the old instances still read", "Flyway reports a checksum mismatch for a migration that was already applied", "rewriting migration history after it already ran on other environments", "zero-downtime column rename or drop on a live database", "breaking schema change, editing EF Core or Alembic migrations after the fact"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Performance Rules'",
    "tags": "dotnet,data-quality",
@@ -335,6 +365,7 @@
   {
    "key": "r_measure_first",
    "aliases": ["add caching for performance", "premature optimization", "it feels slow", "optimize without profiling", "benchmark first"],
+   "triggers": ["speeding up the product search endpoint because it feels slow", "adding caching to a service method we think is expensive", "reviewing a PR that switches async return types to ValueTask everywhere", "converting EF queries to compiled or split queries for performance", "shipped the optimization but nobody can say whether it actually made anything faster", "code got harder to read after a performance refactor with no numbers behind it", "reviewer asks how much the perf PR helps and there are no benchmark results", "is this premature optimization or a real performance win", "micro-optimizations like Span instead of Substring in string parsing", "performance tuning by gut feeling instead of profiling or BenchmarkDotNet"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Performance Rules'",
    "tags": "method,dotnet",
@@ -346,6 +377,7 @@
   {
    "key": "r_dapper_escape",
    "aliases": ["raw SQL", "Dapper alongside EF", "hand-written query", "bypass the ORM", "its own connection"],
+   "triggers": ["adding a reporting query with window functions that LINQ can't express", "replacing an EF query with Dapper because the SQL seems simpler", "writing a raw SQL read path in a handler that also saves through the DbContext", "reviewing a repository that opens its own SqlConnection for a quick query", "raw SQL query doesn't see rows written earlier in the same transaction", "two data access styles in the codebase and nobody knows which one to use", "transaction escalation error after mixing Dapper and EF in the same request", "dropping down to raw SQL from the ORM for a tricky query", "using a micro-ORM alongside Entity Framework in one service", "ad-hoc SQL or FromSql that bypasses the ORM for reads"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Performance Rules'",
    "tags": "dotnet",
@@ -357,6 +389,7 @@
   {
    "key": "r_exceptions_canon",
    "aliases": ["Result type", "return errors instead of throwing", "error handling style", "exceptions vs result objects", "railway oriented"],
+   "triggers": ["adding validation and not-found errors to a new command handler", "introducing a Result type for a new feature module", "designing how the API reports not-found and conflict errors to callers", "reviewing a PR that mixes thrown exceptions with returned error objects", "some handlers throw and others return failure objects, so error handling is inconsistent", "callers forgot to check the returned error and the failure was silently ignored", "the exceptions versus result types debate keeps coming back in code review", "railway-oriented programming with OneOf or ErrorOr in C#", "exceptions as control flow versus returning error values", "Either monad style errors versus throwing and a global exception handler"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Key Conventions' (Anton Martyniuk VSA audit, .claude/audits/2026-06-08)",
    "tags": "dotnet,method",
@@ -368,6 +401,7 @@
   {
    "key": "r_problemdetails_traceid",
    "aliases": ["error response leaks details", "stack trace in the API response", "correlation id in errors", "what to return on 500", "traceparent in the body"],
+   "triggers": ["building the global exception handler that formats API error responses", "adding a correlation id to error responses so support can find the logs", "reviewing what a 500 response body contains for external clients", "configuring ProblemDetails output for a public-facing API", "error response includes a full stack trace and internal entity ids", "clients receive a traceparent string with span ids in error payloads", "pen test flagged information disclosure in our API error messages", "leaking internals and exception details in HTTP error messages", "RFC 7807 problem+json responses with a request id for support", "which trace id to put in the error body, the W3C one or the short one"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Security Requirements' (GlobalExceptionHandler)",
    "tags": "security,dotnet",
@@ -379,6 +413,7 @@
   {
    "key": "r_https_metadata_failclosed",
    "aliases": ["http authority", "OIDC discovery over http", "insecure identity provider URL", "RequireHttpsMetadata false"],
+   "triggers": ["configuring JWT bearer authentication against Keycloak running in docker compose", "setting up OIDC for an internal service that reaches the identity server over http", "reviewing auth setup that derives RequireHttpsMetadata from the authority URL scheme", "deploying the API to a new environment with a different identity provider address", "The MetadataAddress or Authority must use HTTPS unless disabled for development", "token validation quietly works against an http authority in staging and nobody noticed", "security review asks why the JWKS signing keys are fetched over plain http", "plaintext OpenID Connect discovery document fetch and signing key injection", "insecure OIDC metadata endpoint allowed outside local development", "turning off the https requirement for the identity server in non-dev environments"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Security Requirements' (JWT validation)",
    "tags": "security,dotnet",
@@ -390,6 +425,7 @@
   {
    "key": "r_idp_policy_pinned",
    "aliases": ["token lifetime changed", "sessions expire too early", "Keycloak realm defaults", "access token expiry", "refresh token lifespan"],
+   "triggers": ["setting up a new Keycloak realm for the platform", "changing the access token lifetime to cut down on refresh traffic", "configuring token and session settings for an Azure AD B2C or Auth0 tenant", "upgrading the identity provider to a new major version", "sessions time out differently in staging and prod with the same realm name", "after the IdP upgrade refresh tokens could suddenly be reused more than once", "tokens rejected a few seconds early after we shortened the access token lifespan", "realm export and identity tenant configuration as code", "token TTLs, refresh token rotation and session timeouts in the identity server", "JWT clock skew tolerance relative to access token expiry"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Security Requirements' (Keycloak realm) + docs/project-decisions.md §7",
    "tags": "security",
@@ -401,6 +437,7 @@
   {
    "key": "r_idempotent_handlers",
    "aliases": ["duplicate messages", "message processed twice", "at-least-once delivery", "redelivery", "handler runs again on retry", "double charge"],
+   "triggers": ["writing a consumer that charges a card when an OrderPlaced message arrives", "adding a transactional outbox for publishing integration events", "reviewing a message handler that increments an account balance", "building a handler that sends a welcome email when a user registers", "customer was charged twice after the broker redelivered the message", "duplicate rows were inserted when the consumer restarted mid-batch", "inventory got decremented twice for one order after a retry", "exactly-once processing with a message queue", "deduplicating redelivered messages, the inbox pattern", "at-least-once delivery semantics with RabbitMQ, Kafka or Service Bus"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Key Conventions' + 'Durability ≠ replay'",
    "tags": "messaging",
@@ -412,6 +449,7 @@
   {
    "key": "r_rich_domain_when_observed",
    "aliases": ["DDD boilerplate", "aggregate for a simple object", "private setters everywhere", "over-engineered domain model", "anemic vs rich model"],
+   "triggers": ["modelling a request object that gets validated and then thrown away", "scaffolding a notification microservice with Domain, Application and Infrastructure projects", "adding a factory and private setters to a type used only inside one handler", "reviewing a PR that introduces DDD aggregates for a stateless email sender", "lots of boilerplate for an object that nothing saves or reads back", "a Domain project that contains only interfaces and no entities", "reviewer asks why a throwaway class has a status enum and guarded methods", "anemic versus rich domain model for a simple service", "DDD ceremony and over-engineering with aggregate roots everywhere", "is a full clean architecture layering overkill for this tiny service"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Domain-Driven Design' (NotificationService precedent)",
    "tags": "dotnet,method",
@@ -423,6 +461,7 @@
   {
    "key": "r_aaa_narrative",
    "aliases": ["test is hard to read", "what does this assert prove", "arrange act assert", "test comments", "unclear test failure"],
+   "triggers": ["writing tests for the authorization check on the document download endpoint", "adding a test for the duplicate-message guard in a consumer", "reviewing a concurrency test that asserts several things with no explanation", "writing an integration test for the concurrency conflict retry path", "a test failed and nobody could tell what behaviour it was protecting", "new hire can't understand the security test without reading the implementation", "test has five asserts in a row and no hint which one matters", "how to structure tests with Arrange Act Assert", "given when then comments in unit and integration tests", "readable tests as living documentation of the contract"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Testing'",
    "tags": "method",
@@ -434,6 +473,7 @@
   {
    "key": "r_authz_test_required",
    "aliases": ["authorization test", "can another user read my data", "test the forbidden path", "access denied test", "cross-tenant access"],
+   "triggers": ["adding a GET endpoint that fetches a user's invoice by id", "building an update endpoint for documents owned by a tenant", "reviewing a PR that adds a resource endpoint with only happy-path tests", "writing integration tests for a new multi-tenant API", "a user could view another customer's order by changing the id in the URL", "pen test found an insecure direct object reference despite a fully green CI", "cross-tenant data was visible in production and no test caught it", "IDOR, broken object level authorization, BOLA in the OWASP API list", "testing for horizontal privilege escalation between users", "ownership checks and resource-based authorization test coverage"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Testing' (the original GET /orders/{id} IDOR survived the codebase lifetime)",
    "tags": "security,method",
@@ -445,6 +485,7 @@
   {
    "key": "r_feature_file_cap",
    "aliases": ["file too long", "split a large file", "giant handler file", "organise by layer or by feature", "thousand-line file"],
+   "triggers": ["adding another branch of logic to the CreateOrder feature file", "reviewing a vertical slice file that has grown past several hundred lines", "refactoring a large feature file holding the command, validator and handler together", "proposing to move all validators into a separate Validators folder", "the feature file is 800 lines long and painful to navigate", "teammate argues vertical slices don't scale because the files get huge", "merge conflicts keep landing in the same giant use-case file", "file size limits in a vertical slice architecture", "one file per use case getting too big to read", "going back to Controllers, Services and Repositories folders"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Project Structure' (Anton Martyniuk VSA audit)",
    "tags": "dotnet,method",
@@ -455,6 +496,7 @@
   },
   {
    "key": "r_middleware_order",
+   "triggers": ["adding a correlation id middleware to the ASP.NET Core pipeline", "reordering the middleware registrations in Program.cs for a new service", "moving authentication setup into a shared startup extension method", "reviewing a service that registers authorization before authentication", "403 denial logs don't show which user was denied", "UserId is always empty in the correlation log entries", "logs lost the user identity after we refactored startup code", "ASP.NET Core request pipeline ordering for auth and logging", "order of UseAuthentication and authorization in the request pipeline", "middleware sequence, like filter chain order in Spring Security"],
    "type": "Rule", "scope": "repo", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Observability' (MapDefaultEndpoints canonical order)",
    "tags": "dotnet",
@@ -465,6 +507,7 @@
   },
   {
    "key": "r_wolverine_instance_middleware",
+   "triggers": ["adding a logging middleware to Wolverine message handlers", "writing a Before method for validation in a Wolverine middleware class", "cleaning up analyzer warnings that a middleware method should be static", "registering custom middleware with AddMiddleware for message handlers", "InvalidWolverineMiddlewareException thrown at host startup", "the host fails to start right after I added middleware to the message bus", "Sonar told me to make the method static, and now the app won't boot", "Wolverine handler middleware discovery rules", "S2325 make this method static warning in a middleware class", "message bus interceptors or pipeline behaviors, like MediatR behaviors, in Wolverine"],
    "type": "Rule", "scope": "repo", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Observability'",
    "tags": "dotnet,messaging",
@@ -476,6 +519,7 @@
   },
   {
    "key": "r_aspire_azure_fallback",
+   "triggers": ["adding Application Insights to the .NET Aspire AppHost", "wiring an Azure-only resource into the Aspire app model", "getting the Aspire solution running locally for a new developer", "reviewing the AppHost after someone added Azure resources to it", "Missing subscription configuration in the Aspire dashboard resource pane", "services that reference App Insights fail to start when run locally", "AppHost deploys fine to Azure but won't start on my laptop", "local development without an Azure subscription in .NET Aspire", "publish mode versus run mode in an Aspire AppHost", "cloud-only resource with no local emulator during development"],
    "type": "Rule", "scope": "repo", "repo": "dotnet-microservices", "verified": true,
    "found_by": "CLAUDE.md 'Package Management'",
    "tags": "dotnet",
@@ -487,6 +531,7 @@
   },
   {
    "key": "dec_sixth_surface",
+   "triggers": ["Designing how our coding agents share lessons learned across a dozen service repos instead of each starting cold", "Adding trigger-loaded microagent files to this repo's agent config so the AI picks up our conventions", "Reviewing a proposal to paste the same engineering rules into every repo's agent instructions file", "Planning where org-wide conventions should live so a brand new repo inherits them on day one", "I fixed this exact bug in the orders repo last month and the agent just made it again in billing", "Every repo's agent instructions say something slightly different about the same convention, which one is right?", "The agent ignored our optional context doc entirely and nothing stopped the bad change from merging", "Org-wide memory for AI coding assistants, one shared rules layer spanning many codebases", "Cross-repo knowledge base versus per-project prompt files and microagents for the coding agent", "Institutional memory problem: every team keeps relearning the same gotchas, repo by repo"],
    "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true, "status": "live",
    "found_by": "docs/decisions/2026-07-17-sixth-surface-okl.md",
    "tags": "method,retrieval-design",
@@ -495,6 +540,7 @@
   },
   {
    "key": "dec_asb_removed",
+   "triggers": ["Adding Azure Service Bus support next to RabbitMQ so we're ready if we ever move to Azure", "Choosing which message broker our Wolverine services use for local dev and for production", "Setting up the Service Bus emulator in docker compose so the order saga runs locally", "Reviewing a PR that keeps two transport configurations per service behind a config switch", "Service Bus emulator returns HTTP 500 when the saga tries to create its subscriptions", "Wolverine can't auto-provision its system queues against the local Azure Service Bus emulator", "Saga works on RabbitMQ but won't start when I flip the service to the Azure transport locally", "ASB versus RabbitMQ, which broker do we actually ship on", "Dropping a second messaging backend we never deploy anywhere, keeping dev and prod on the same bus", "Swapping the queueing transport underneath our messaging library, AMQP versus Azure cloud messaging"],
    "type": "Decision", "scope": "repo", "repo": "dotnet-microservices", "verified": true, "status": "live",
    "found_by": "docs/full-saga-deployment-plan.md (D3) + #148/#159",
    "tags": "dotnet,messaging",

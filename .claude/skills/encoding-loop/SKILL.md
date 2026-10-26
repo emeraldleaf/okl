@@ -26,7 +26,8 @@ Most rules never leave tier 1, and that is fine.
 
 ```
 okl record --type <Defect|Gate|Rule|Claim|Retraction|Tombstone|Decision|PriorArt> \
-  --id "<stable-key>" --title "..." --body "..." --scope <org|repo>
+  --id "<stable-key>" --title "..." --body "..." --scope <org|repo> \
+  --trigger "<the request or error that surfaced it>" --trigger "<another moment it applies>"
 okl verify <stable-key> --run "<a check that fails if the lesson is broken>" --expect "<its success signal>"
 ```
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:1377c6aebad857f2fa59b370420c902b8d9c0b5f27bc3fe9f50783c45f5239b2
+# okl-fingerprint: sha256:1c9a0d7738f309a2f0e77cd19db3f58dbd0fea687f4c1e5b0be7c9704fef4cc4
 # Stop hook — the write-side mechanical catch for the encoding loop.
 #
 # The read side (okl check) is enforced by the UserPromptSubmit hook; nothing enforced the WRITE
@@ -145,7 +145,12 @@ silently reversed? If yes, record it now. Three independent axes, each chosen de
 
   okl record --type Defect|Rule|Decision --scope org|repo --tags "<subjects>" \
     --id "<stable-key>" --title "..." --symptom "..." --body "cause: ..." --fix "..." \
+    --trigger "<the request or error that led here, as said>" --trigger "<another moment>" \
     [--applies-to <stack>]   # ONLY for a genuinely framework-bound lesson
+
+  Triggers decide whether it is ever briefed: a prompt must share three subject words (or
+  two rare ones) with the title, symptom, aliases and triggers. Give two or three, in a
+  developer's own words, this session's request or error first.
 
   Then decide how hard it must be enforced (softest that holds):
   - Every lesson reaches the per-task briefing; most need nothing more.

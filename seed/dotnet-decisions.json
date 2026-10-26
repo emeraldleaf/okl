@@ -3,6 +3,7 @@
  "nodes": [
   {
    "key": "pd_microservices_vs_modular_monolith",
+   "triggers": ["Starting a greenfield product and deciding whether to split it into separate services from day one", "Writing the architecture proposal for a new system where the domain boundaries are still fuzzy", "Reviewing a design that gives every bounded context its own database and its own deployable", "Thinking about extracting the payments module out of our monolith into its own service", "Three developers, six services, and every small feature needs coordinated deploys across repos", "A simple feature now needs a saga and eventual consistency across two databases, is this worth it?", "Local dev needs ten containers running just to test one change to checkout", "Monolith first or microservices, how should we carve up the backend", "Modulith with schema-per-module in one process versus independently deployed services", "One deployable or many, and are we building a distributed monolith by accident"],
    "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §2",
    "tags": "method",
@@ -11,6 +12,7 @@
   },
   {
    "key": "pd_minimal_apis_over_controllers",
+   "triggers": ["Adding a new HTTP endpoint to the catalog service in ASP.NET Core", "Scaffolding a new .NET web API project and picking which endpoint style to use", "Building a file upload endpoint that takes multipart form data with a custom model binder", "Migrating an older controller-based API over to the newer lightweight endpoint style", "Business logic keeps creeping into our endpoint classes and some are hundreds of lines long", "Struggling to get complex form model binding working inside a MapPost lambda", "Our controllers carry a tangle of attribute filters and nobody can follow the auth conventions", "Minimal APIs versus MVC controllers, which should new endpoints in this service use", "Lambda-style route handlers or classic controller action methods for a .NET REST service", "How much endpoint ceremony do we want: route groups and delegates or attribute-routed classes"],
    "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §4",
    "tags": "dotnet",
@@ -20,6 +22,7 @@
   },
   {
    "key": "pd_url_segment_versioning",
+   "triggers": ["Adding versioning to our public REST API before we make the first breaking change", "Shipping v2 of the orders endpoint with a different response shape while v1 keeps working", "Designing the API versioning strategy for a new set of backend services", "Configuring CDN caching for API responses that differ depending on the client's version", "The CDN served v1 responses to v2 clients because the cache ignored the version header", "Can't tell from the raw access logs which API version a client was actually calling", "Can't reproduce a client's bug with curl because the version is hidden in a custom header", "Path versioning like /v1/ versus header or media-type versioning", "Is Accept-header content negotiation for API versions really more RESTful than a route prefix", "Version in the URL, a query string parameter, or a request header, what do big public APIs do"],
    "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §5",
    "tags": "dotnet",
@@ -29,6 +32,7 @@
   {
    "key": "pd_require_explicit_api_version",
    "aliases": ["API versioning", "default API version", "unversioned route", "v1 in the URL"],
+   "triggers": ["Configuring the API versioning options for our services before the first public release", "Rolling out v2 of an endpoint with a behaviour change while v1 clients are still around", "Adding versioning to an existing API that clients already call without any version", "Reviewing the versioning setup in Program.cs and the default version settings", "After v2 shipped, older clients started getting the new behaviour without changing anything", "Requests with no version in the path quietly land on v1 and we can't tell which clients do that", "A client calling /api/orders with no version got the new response shape and broke", "Default API version fallback when the client doesn't specify one", "Implicit current version for unversioned requests, the assume-default-version setting", "Should calls that leave out the API version be allowed through or rejected"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §5",
    "tags": "dotnet",
@@ -40,6 +44,7 @@
   {
    "key": "pd_openapi_dev_only",
    "aliases": ["Swagger in production", "swagger UI exposed", "OpenAPI spec public", "hide the API docs"],
+   "triggers": ["Adding interactive API docs to the service so frontend devs can try endpoints out", "Preparing the API service for its first production deployment", "Reviewing the startup code where the OpenAPI document endpoint gets mapped", "Setting up an API reference page that partners can browse on the production host", "The pen test report flags our openapi.json as publicly reachable on the production host", "The interactive API docs UI loads just fine on the staging and production URLs", "Security scanner found an exposed swagger endpoint on the internet-facing load balancer", "Exposing swagger publicly, the API schema leaks every endpoint and its auth requirements", "Public API documentation endpoint as an attack surface and information disclosure risk", "Docs UI and spec JSON available outside the development environment"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §6",
    "tags": "security,dotnet",
@@ -50,6 +55,7 @@
   },
   {
    "key": "pd_scalar_over_swagger",
+   "triggers": ["Adding an API docs UI to a new .NET 9 web service", "Removing Swashbuckle now that the framework ships its own OpenAPI document generator", "Feeding our API spec into Spectral linting, which would rather have YAML", "Picking the interactive try-it-out docs page for all our backend services", "Swashbuckle isn't in the new web API template anymore, so what generates the OpenAPI doc now?", "Spectral and the docs site want the spec as YAML but the service only serves JSON", "Swagger UI's try-it-out feels clunky, uses iframes, and has no dark mode", "Swagger UI versus Scalar versus Redoc for our API reference pages", "Built-in OpenAPI generation in ASP.NET Core versus third-party spec packages", "API explorer page, interactive docs, spec viewer for the backend endpoints"],
    "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §6",
    "tags": "dotnet",
@@ -59,6 +65,7 @@
   },
   {
    "key": "pd_established_idp_never_handroll_auth",
+   "triggers": ["Adding login and access token issuance to our new backend", "Choosing between Cognito, Keycloak, Auth0 and Duende for identity", "Implementing JWT generation with a signing key inside our user service", "Setting up multi-tenant authentication for several customer organisations", "Our custom token endpoint signs JWTs with a symmetric key from appsettings, is that okay?", "IdentityServer now needs a commercial license, what do we do about our auth server", "Auth works locally with a fake issuer but prod uses a completely different identity provider", "Rolling our own auth versus using an OAuth2 and OIDC provider", "Identity provider, SSO server, authorization server for issuing access tokens", "Homegrown login service that mints its own bearer tokens"],
    "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §7",
    "tags": "security,dotnet",
@@ -67,6 +74,7 @@
   },
   {
    "key": "pd_keycloak_realm_reimport",
+   "triggers": ["Changing the access token lifetime in our Keycloak realm export", "Adding a new client with redirect URIs to the auth realm JSON", "Updating the realm config used by the local docker compose auth setup", "Tweaking token policy settings in the realm file to test refresh token flows", "I edited the realm JSON but Keycloak still issues tokens with the old five-minute expiry", "New client doesn't show up in the Keycloak admin console after I added it to the realm file", "Restarted the Keycloak container and my realm changes still aren't applied", "Keycloak realm import on startup, config changes not reloading", "Identity server config file edits not picked up, stale realm state kept in a docker volume", "IdP realm settings drifting between the JSON in git and the running instance"],
    "type": "Rule", "scope": "repo", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §7",
    "tags": "security",
@@ -78,6 +86,7 @@
   {
    "key": "pd_authz_adapts_at_endpoint_boundary",
    "aliases": ["HttpContext in a handler", "read claims in business logic", "current user in the service layer", "who is the caller"],
+   "triggers": ["Adding a check that users can only view their own orders", "Writing a command handler that needs to know who the current user is", "Reviewing a PR where the application layer injects IHttpContextAccessor", "Implementing a resource ownership check for the update profile endpoint", "Handler unit tests need a fake HttpContext full of claims just to run", "Can't reuse the handler from a message consumer because it reads the user off the HTTP request", "The application layer project now references ASP.NET Core just to read the user's claims", "Where should authorization live, at the endpoint or down in the service layer", "Owner check, IDOR protection, making sure a user can only touch their own resources", "Leaking web concerns into the domain, keeping business logic transport-agnostic"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §8",
    "tags": "security,dotnet",
@@ -88,6 +97,7 @@
   },
   {
    "key": "pd_three_validation_layers",
+   "triggers": ["Adding validation to the create order command", "Reviewing code that validates the same field both in a validator and in the entity constructor", "Implementing a cancel order method that's only allowed in certain order statuses", "Refactoring our validation code to remove what looks like duplicate checks", "FluentValidation passed but the entity factory still threw on construction, why validate twice?", "An invalid order reached the database because one code path skipped the request validator", "Shipping an already-cancelled order succeeded because only the input shape was checked", "Input validation versus domain invariants versus business rules", "Defense in depth for validation, guard clauses inside entities and value objects", "Request validation versus state machine transition checks on the aggregate"],
    "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §9",
    "tags": "dotnet",
@@ -96,6 +106,7 @@
   },
   {
    "key": "pd_wolverine_middleware_order",
+   "triggers": ["Adding a new middleware to the Wolverine handler pipeline", "Registering FluentValidation middleware in the Wolverine options", "Reordering the Wolverine policy setup in Program.cs during a cleanup", "Adding a correlation ID logging scope around message handling", "Rejected 400 commands are cluttering our logger scopes and traces", "Handler logs are missing the correlation ID even though the incoming request had one", "Logs written inside the handler's transaction have no correlation or user IDs attached", "Middleware ordering in the message pipeline, like MediatR pipeline behaviors order", "Does the order of Wolverine policies and middleware registrations actually matter", "Interceptor chain sequence in the handler bus: validation, logging scope, transactions"],
    "type": "Rule", "scope": "repo", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §9",
    "tags": "dotnet,messaging",
@@ -107,6 +118,7 @@
   },
   {
    "key": "pd_rfc7807_global_handler_traceid",
+   "triggers": ["Adding error handling to a new set of endpoints", "Mapping a new custom domain exception to an HTTP status code", "Standardising the error response format for the frontend team", "Reviewing endpoints that each wrap their logic in their own try/catch", "A user sent a screenshot of an error and we can't find the matching server logs", "A concurrency conflict comes back as a generic 500 instead of a conflict status", "Every endpoint returns a different error JSON shape and the frontend can't parse them", "Problem Details error responses with the application/problem+json content type", "Global exception middleware, central error envelope, one error contract for the API", "Correlation or reference ID in error responses so support can look the failure up"],
    "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §10",
    "tags": "dotnet",
@@ -116,6 +128,7 @@
   {
    "key": "pd_rate_limit_expensive_endpoints",
    "aliases": ["expensive search endpoint", "protect the database from abuse", "unauthenticated endpoint hammered", "throttle search", "DoS through a slow query"],
+   "triggers": ["Adding a product search endpoint with a contains filter on the name column", "Exposing a public unauthenticated endpoint that queries the database", "Hardening the login and payment endpoints before launch", "Setting up the ASP.NET Core rate limiting middleware for our APIs", "One scraper hammering the search endpoint drove database CPU to 100%", "The database slows to a crawl whenever a bot pages through search results", "Brute-force attempts against the login endpoint aren't throttled at all", "Throttling, request quotas, returning 429 Too Many Requests", "Fixed window or token bucket limiter applied per endpoint", "Protecting the database from abusive clients running wildcard LIKE full scans"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §11",
    "tags": "security,dotnet",
@@ -126,6 +139,7 @@
   },
   {
    "key": "pd_transport_decision_tree",
+   "triggers": ["The order service needs to check stock in inventory before confirming a purchase", "Adding a call from one microservice to another to fetch customer details", "Notifying shipping, email and analytics whenever an order is placed", "Designing how a handful of new services will talk to each other", "Services are calling each other's public REST endpoints and the JSON payloads are huge", "Inter-service calls hang with no deadline whenever a downstream service is slow", "A downstream service was down and the notification was lost because it was a direct HTTP call", "Sync versus async communication between services, request/response versus pub/sub", "gRPC versus REST versus a message bus for service-to-service calls", "East-west traffic protocol choice, internal APIs versus domain events"],
    "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §12",
    "tags": "dotnet,messaging",
@@ -134,6 +148,7 @@
   },
   {
    "key": "pd_wolverine_over_mediatr_masstransit",
+   "triggers": ["Picking a mediator and message bus library for a new .NET solution", "Planning our upgrade path now that MassTransit v9 is going commercial", "Evaluating whether to replace MediatR in an existing project", "Adding a transactional outbox to our .NET services", "MediatR is now printing a license warning in our startup logs", "Finance is asking why we need two paid licenses for in-process dispatch and messaging", "Can't find a single StackOverflow answer for this Wolverine error, is anyone else using it?", "CQRS mediator library for in-process command and query dispatch", "Service bus abstraction for .NET, alternatives to NServiceBus and MassTransit", "Open source licensing changes across the .NET messaging ecosystem"],
    "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §13",
    "tags": "dotnet,messaging",
@@ -143,6 +158,7 @@
   },
   {
    "key": "pd_wolverine6_runtime_compilation_split",
+   "triggers": ["Upgrading WolverineFx from 5.x to 6.x across all services", "Creating a brand new service on Wolverine 6", "Looking into AOT and faster cold starts for our Wolverine services", "Merging a Dependabot PR that bumps NuGet package versions across every service", "Host throws at startup saying no assembly generator is registered", "After the Wolverine upgrade every service crashes before it handles a single message", "TypeLoadMode Dynamic fails right after the package update", "Roslyn runtime code generation missing in Wolverine", "Pre-generated versus dynamic handler code generation in Wolverine", "Wolverine major version breaking change around how handler code gets compiled"],
    "type": "Defect", "scope": "repo", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §13 Wolverine 5→6 upgrade notes (GH-2876)",
    "tags": "dotnet,messaging",
@@ -154,6 +170,7 @@
   },
   {
    "key": "pd_wolverine6_service_location_policy",
+   "triggers": ["Upgrading Wolverine to 6 in services whose handlers use pooled DbContexts", "Registering a handler dependency through a factory lambda in the DI container", "Switching a service to AddDbContextPool when its Wolverine handlers inject the context", "Reviewing the shared service defaults setup after a Wolverine major version bump", "Wolverine startup fails saying it can't inline a dependency and service location is not allowed", "A handler whose interface is registered via a factory breaks the app at boot after upgrading", "Codegen error at startup mentioning ServiceLocationPolicy right after the 6.0 bump", "Service locator fallback inside generated handler code", "DI container lookup versus inlined constructor calls in Wolverine code generation", "Wolverine 6 being stricter about how handler dependencies get resolved"],
    "type": "Defect", "scope": "repo", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §13 Wolverine 5→6 upgrade notes",
    "tags": "dotnet,messaging",
@@ -165,6 +182,7 @@
   },
   {
    "key": "pd_nonhandler_outbox_idbcontextoutbox",
+   "triggers": ["Writing a background recovery job that saves an entity and publishes an event", "Publishing a message from a hosted service outside of any Wolverine handler", "Upgrading to Wolverine 6 with code that manually wraps a transaction around publish", "Reviewing a scheduled job that calls BeginTransaction and then publishes", "The background job's database write rolled back but its event was already sent", "Consumers received an event for an order that doesn't exist in the database", "Messages published from a BackgroundService don't seem to go through the outbox", "Dual-write problem outside the message handler pipeline", "Transactional outbox from non-handler code with EF Core and the message bus", "Atomic save-and-publish from a worker or cron job"],
    "type": "Defect", "scope": "repo", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §13 (PaymentRecoveryJob; proven by PaymentRecoveryAtomicityTests)",
    "tags": "dotnet,messaging",
@@ -185,6 +203,7 @@
   {
    "key": "pd_rollback_test_write_then_publish",
    "aliases": ["event published but the write rolled back", "outbox", "save and publish atomically", "phantom event", "dual write"],
+   "triggers": ["Writing integration tests for the order placement flow that saves and publishes", "Reviewing a PR that claims the outbox makes this publish atomic", "Adding a new code path that writes to the database and emits an integration event", "Checking the outbox configuration still holds after upgrading the messaging library", "Config looked right but production shows events for rows that never committed", "We reasoned about outbox atomicity three times in review and still shipped a ghost event", "Tests only cover the happy path, no idea what happens if SaveChanges fails", "Testing transactional outbox guarantees with failure injection", "Phantom events, ghost messages sent after a database rollback", "Write-then-publish consistency test using an EF Core interceptor to inject faults"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §13 (the test that caught the Wolverine 6 non-enlistment bug)",
    "tags": "messaging,method",
@@ -195,6 +214,7 @@
   },
   {
    "key": "pd_context_propagation_sync_and_async",
+   "triggers": ["Adding correlation IDs to the logs across all our services", "Instrumenting OpenTelemetry tracing for the order saga as it crosses RabbitMQ", "Writing middleware that reads user and session IDs from incoming request headers", "Adding a new message consumer to a service and making its logs searchable", "The trace stops at the queue and the consumer's spans show up as a separate trace", "Logs from message handlers have no correlation ID while the HTTP request logs do", "Can't follow a single request through the system once it hits the event bus", "Distributed tracing context, W3C traceparent and baggage carried over messages", "Request ID, correlation ID and causation ID propagation between services", "MDC or log context lost across async boundaries and queue hops"],
    "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §14",
    "tags": "dotnet,messaging",
@@ -203,6 +223,7 @@
   },
   {
    "key": "pd_otel_vendor_neutral",
+   "triggers": ["Adding distributed tracing and metrics to our new ASP.NET Core service before it goes to staging", "We're switching from Datadog to Grafana Cloud, how much of the app code has to change?", "Wiring up the shared observability bootstrap so every microservice emits traces, metrics and logs the same way", "Reviewing a PR that adds the New Relic agent package directly to the orders API", "Our trace explorer is full of thousands of health check spans and I can't find real requests", "Local runs spam connection refused errors from the telemetry exporter because no collector is running", "Migrating monitoring vendors turned into rewriting instrumentation calls in every single service", "APM vendor lock-in for tracing, metrics and logs, how do we stay portable between backends", "o11y setup: spans, exporters, collector, liveness probe noise cluttering Jaeger", "telemetry instrumentation choice: App Insights vs Honeycomb vs Tempo, which SDK do we bake into the app"],
    "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §14",
    "tags": "dotnet",
@@ -211,6 +232,7 @@
   },
   {
    "key": "pd_melogging_over_serilog",
+   "triggers": ["Setting up structured logging for a new .NET 8 web API and picking a logging library", "Someone proposed adding Serilog with file and console sinks to our background worker service", "Connecting application logs to the same OpenTelemetry pipeline that already carries our traces", "Reviewing a PR that pulls in four logging packages and a custom enricher for request context", "Logs show up twice in the backend, once through the Serilog sink and once through the OTel exporter", "Log scopes and correlation ids get lost somewhere between the logging adapter and the collector", "Upgrading the logging packages broke startup because the sink version no longer matches the hosting extension", "ILogger vs Serilog vs NLog in modern .NET, which logger should the team standardize on", "log sinks, enrichers, message templates and structured log shipping to our observability backend", "the team likes Seq for local log search, is a second logging pipeline worth running"],
    "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §15",
    "tags": "dotnet",
@@ -220,6 +242,7 @@
   },
   {
    "key": "pd_hybridcache_over_handrolled",
+   "triggers": ["Adding an in-memory cache in front of Redis for the product catalog lookups", "Building a two-level cache layer for user profile reads that currently hammer Postgres", "Reviewing a cache helper that checks process memory first, then Redis, then falls back to the database", "Need to invalidate cached pricing data across all replicas when an admin edits a product", "When a hot key expires the database CPU spikes because dozens of requests rebuild it at once", "Users see stale data on one pod for minutes after an update even though Redis was cleared", "Deserialization exceptions on cache entries written by another service version keep failing requests", "cache stampede, thundering herd, dogpile effect on a cache miss", "L1/L2 cache, near cache plus distributed cache, read-through caching in .NET", "cache-aside with local memory and Redis, keeping both tiers in sync on writes"],
    "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §16",
    "tags": "dotnet",
@@ -240,6 +263,7 @@
   },
   {
    "key": "pd_standard_resilience_handler",
+   "triggers": ["Adding retries and a circuit breaker to the HttpClient that calls the payment provider", "Creating a new typed HTTP client for the inventory service in our ASP.NET Core app", "Reviewing a PR that builds a custom Polly retry policy with jitter for one downstream API", "Standardizing how all our microservices handle transient failures on outbound REST calls", "A slow downstream service made our requests hang for minutes because nothing capped the total time", "When the recommendations API came back up, our retries hammered it straight back down", "Each service retries HTTP failures differently and one of them has no backoff at all", "transient fault handling, retry with exponential backoff, circuit breaker for outbound calls", "Polly policies for HttpClient, retry and timeout configuration in .NET services", "making HTTP calls fault tolerant, bulkheads and timeouts like Hystrix or resilience4j in Java"],
    "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §17 (+ .claude/audits/2026-06-03-circuit-breaker verdict)",
    "tags": "dotnet",
@@ -249,6 +273,7 @@
   },
   {
    "key": "pd_license_driven_test_lib_forks",
+   "triggers": ["Choosing a mocking library for the new unit test project in our .NET solution", "Legal flagged that our assertion library's new major version needs a paid commercial license", "Planning the upgrade of our test dependencies and checking what the latest FluentAssertions release changes", "Reviewing an audit recommendation to standardize every test project on Moq", "After bumping Moq, the build started doing some sponsorship telemetry check on developer machines", "Upgrading our assertions package to v8 now prints a license notice in the test output", "Security asked why our test project collects hashed developer emails during the build", "open source license change, relicensing, a rug pull on a dependency we rely on", "mocking framework and fluent assertion library alternatives that stay permissively licensed", "a library went commercial, swapping packages without rewriting thousands of tests"],
    "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §18 (commit 3fd6aee; + audits/2026-06-05-harmful-dotnet-packages)",
    "tags": "dotnet,method",
@@ -257,6 +282,7 @@
   },
   {
    "key": "pd_testcontainers_real_providers",
+   "triggers": ["Writing integration tests for the orders repository that uses EF Core with Postgres", "Setting up a test harness for the API so CI can run real end-to-end requests", "Reviewing a PR that swaps the test database to SQLite to make the suite run faster", "Testing our Redis-backed rate limiter and session store in an automated test", "All tests pass but production throws a concurrency exception that never happened in tests", "A migration worked in the test suite but failed against the real Postgres database on deploy", "Our tests on the in-memory provider never caught a unique constraint violation that prod hit", "UseInMemoryDatabase vs a real database engine in integration tests", "test doubles, fakes and mocks for the data layer versus dockerized dependencies", "test database strategy for EF Core: in-memory provider, SQLite, or something closer to production"],
    "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §18",
    "tags": "dotnet",
@@ -266,6 +292,7 @@
   {
    "key": "pd_macos_docker_host_testcontainers",
    "aliases": ["Testcontainers cannot connect to Docker", "Docker not found on Mac", "DOCKER_HOST", "docker socket on macOS", "integration tests fail locally on a Mac"],
+   "triggers": ["Running the integration test suite locally on my new MacBook for the first time", "Onboarding a new developer on macOS who needs to run the container-based database tests", "Writing a local dev setup script for Mac users who run containerized integration tests", "Switching my Mac from Colima back to Docker Desktop and rerunning the database tests", "DockerUnavailableException in tests even though Docker Desktop is running and docker ps works fine", "Testcontainers says it can't find a Docker environment on my Mac", "Integration tests pass in CI on Linux but fail instantly on every Mac on the team", "docker socket path on macOS, the default /var/run/docker.sock is missing", "container runtime not detected by the test library on an Apple silicon laptop", "Docker daemon unreachable from the test runner, socket not found on Mac"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §18",
    "tags": "dotnet,method",
@@ -277,6 +304,7 @@
   {
    "key": "pd_central_package_management",
    "aliases": ["package versions in every csproj", "NuGet version drift", "Directory.Packages.props", "upgrade a package everywhere"],
+   "triggers": ["Adding a new class library project to the solution and referencing a few NuGet packages", "Bumping Newtonsoft.Json across all twenty projects in the repo after a security advisory", "Reviewing a PR that pins a package version directly in one project file", "Laying out the solution structure for a new .NET monorepo with many services", "Two projects in the same solution reference different versions of one package and we get assembly binding errors", "NU1605 package downgrade warnings appear after updating a dependency in only one project", "Dependabot opened fifteen separate PRs to update the same package in each project", "NuGet version pinning across many projects in one solution", "keeping dependency versions in sync across projects, like a Gradle version catalog or Maven BOM", "version drift between services, mismatched package versions, dependency hell in a monorepo"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §19",
    "tags": "dotnet",
@@ -288,6 +316,7 @@
   {
    "key": "pd_zero_warning_build",
    "aliases": ["warnings as errors", "analyzer warnings ignored", "TreatWarningsAsErrors", "banned API", "Thread.Sleep in production code"],
+   "triggers": ["Setting up Directory.Build.props for a new .NET solution and choosing which analyzers to enable", "Reviewing a PR that uses Thread.Sleep inside a background retry loop", "Adding a batch job that processes uploads in parallel with Parallel.For", "Cleaning up compiler warnings before a release and deciding which ones to suppress", "Build succeeds but the output has 300 warnings that nobody reads anymore", "Task.WaitAll in a request handler compiled fine and now we see thread pool starvation", "A missing cancellation token pass-through slipped past review and the build never complained", "Roslyn analyzers, compiler warning policy, static analysis as part of the .NET build", "lint rules for C#, like eslint for .NET, blocking forbidden APIs at compile time", "banned API list, code quality gate, Sonar and Roslynator rules in the compile step"],
    "symptom": "a build that passes with analyzer warnings in its output, or a banned API such as Task.WaitAll, Parallel.For or Thread.Sleep compiling without complaint",
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §19",
@@ -298,6 +327,7 @@
   {
    "key": "pd_ci_grep_unanalyzable_hazards",
    "aliases": ["grep in CI", "no analyzer rule for this", "forbid a pattern in the codebase", "custom lint via shell", "convention nobody checks"],
+   "triggers": ["We agreed never to use static mutable collections, how do we stop them creeping back in", "Our linter has no rule for a pattern we want banned, figuring out how to catch it", "Writing up team conventions for thread safety of shared state across requests", "Reviewing a PR that adds a static Dictionary cache field on a service class", "Someone added a static list again even though the wiki says not to", "Intermittent race conditions in production traced back to a shared static collection", "No analyzer in our stack flags this, so the convention keeps getting broken in new code", "team convention with no linter rule behind it, policed only in code review", "shared mutable static state, global collections, thread-unsafe singletons in C#", "an architecture rule that no static analysis tool can express, how do we guard it"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §19",
    "tags": "method",
@@ -308,6 +338,7 @@
   },
   {
    "key": "pd_dapr_considered_not_adopted",
+   "triggers": ["Evaluating whether to adopt Dapr for service invocation and pub/sub in our .NET microservices", "Architecture review: someone pitched a sidecar runtime to replace our messaging, secrets and caching SDKs", "Designing service-to-service calls and choosing between typed gRPC clients and a generic invoke API", "Writing an ADR on whether a distributed application runtime fits our single-language stack", "Latency on the hot path went up after routing every call through a localhost sidecar", "Service calls became app id and method name strings, and our compile-time contract checks disappeared", "Using the runtime's outbox forced us to persist data in its state store format", "sidecar pattern, building blocks API, portable microservice runtime", "Dapr vs MassTransit or Wolverine plus Aspire for a .NET-only system", "multi-cloud portability abstraction layer for pub/sub, state stores and secrets"],
    "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §22 (+ audits 2026-06-01 sidecar, 2026-06-12 Dapr Workflows)",
    "tags": "dotnet,messaging",
@@ -324,6 +355,7 @@
   },
   {
    "key": "pd_choreography_with_flip_trigger",
+   "triggers": ["Designing the checkout saga across payment, inventory and shipping services", "Adding a compensation step when payment fails after stock was already reserved", "Writing an ADR on whether our event-driven order workflow needs a workflow engine", "Adding a manual approval step for high-value orders to the existing event flow", "Support asks where order 1234 is stuck and nobody can answer from the logs", "The flow is scattered across five handlers and I can't read the process top to bottom", "Our saga now needs multi-day timeouts and retries and the event handlers are getting tangled", "choreography vs orchestration for distributed transactions", "Temporal, Durable Functions, Dapr Workflow or Step Functions, do we actually need one", "process manager, long-running workflow, event-driven saga coordination"],
    "type": "Decision", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §22",
    "tags": "messaging,method",
@@ -333,6 +365,7 @@
   {
    "key": "pd_db_primitives_before_distributed_locks",
    "aliases": ["distributed lock", "Redis lock", "only one instance should run this", "leader election", "prevent two workers doing the same job", "unique constraint instead of a lock"],
+   "triggers": ["Preventing two users from booking the same seat at the same moment", "Making our event consumer process each message only once even with broker redeliveries", "Holding inventory for ten minutes while the customer completes checkout", "Running a nightly scheduled job on a service that now has three replicas", "Concurrent updates to the same order row overwrote each other and we lost a change", "Duplicate accounts got created when the signup button was double-clicked", "Someone proposed adding Redlock to fix a race condition in the payment service", "distributed mutex, Redis lock, ZooKeeper or etcd lease for cross-instance coordination", "race condition, lost update, double booking, exactly-once processing", "mutual exclusion across pods, leader election for a cron job"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "project-decisions.md §22",
    "tags": "method,data-quality",

@@ -4,6 +4,7 @@
     {
       "key": "d_invoked_by_nothing",
       "aliases": ["nothing runs the check", "review agent only on demand", "rule nobody triggers", "manual enforcement", "automatic vs on request"],
+      "triggers": ["Documenting our repo's enforcement surfaces in CLAUDE.md for the agent workflow", "Adding an architecture-review subagent to the repo's quality process", "Writing a PR checklist and listing it as one of our quality gates", "Auditing which of our code-quality rules actually catch anything", "Our review agent has existed for months and nobody can recall it ever running", "A violation the reviewer should have caught shipped; turns out the reviewer never runs", "The rules doc says this is enforced, but I can't find any hook or job that calls it", "a slash command that only runs when somebody remembers to type it", "paper control: policy on the wiki with no automation behind it", "manual-only check counted as coverage"],
       "type": "Defect", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
       "found_by": "auditing the encoding-loop surfaces — the arch-reviewer, once actually run, caught a must-fix an automatic surface missed",
       "title": "An 'enforcement surface' that only runs on-demand runs never",
@@ -15,6 +16,7 @@
     {
       "key": "g_review_agent_in_ci",
       "aliases": ["run the review agent in CI", "headless review on every PR", "architecture check in the pipeline", "automated review job"],
+      "triggers": ["Setting up a GitHub Actions job to run our AI code reviewer on every pull request", "Making architecture checks block merges instead of relying on human reviewers", "Adding an LLM review step to CI that reads the PR diff", "Replacing a paid review SaaS with our own review agent in the pipeline", "Architecture rules keep getting violated because nobody runs the checklist", "New CI job fails every PR because the API key secret isn't configured yet", "Reviewers forget to invoke the architecture agent before approving", "headless Claude Code review in a workflow triggered on pull_request", "automated design review gate in the PR pipeline", "bot reviewer as a required status check"],
       "type": "Gate", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
       "found_by": "architecture-review.yml — runs the reviewer agent headless on every PR diff",
       "title": "Run the architecture/review agent headless in CI on every PR diff",
@@ -26,6 +28,7 @@
     {
       "key": "r_surface_needs_trigger",
       "aliases": ["which checks actually run", "ledger of gates", "enforcement list", "hook or CI job", "is this rule enforced"],
+      "triggers": ["Writing the section of CLAUDE.md that lists our guardrails and checks", "Adding a new pre-commit hook and updating the docs that describe our gates", "Removing a CI job and checking what the docs still claim it covers", "Writing an onboarding doc explaining which quality checks run on a PR", "Our docs list eight checks but only three actually run in CI", "Team assumed something was covered because the rules doc said so, and it wasn't", "Can't tell from the README which checks are automatic and which are manual", "control inventory of automated versus manual controls", "coverage matrix of hooks, CI jobs and human-run checklists", "which guardrails are actually wired up versus aspirational"],
       "type": "Rule", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
       "found_by": "CLAUDE.md 'What is AUTOMATIC vs what you must RUN' ledger",
       "title": "Every enforcement surface needs a mechanical trigger and an honest AUTOMATIC-vs-RUN ledger",
@@ -37,6 +40,7 @@
     {
       "key": "d_unpinned_linter",
       "aliases": ["CI failed with no code change", "lint fails after a tool update", "new ruff rule broke the build", "unpinned tool", "RUF012", "formatter version drift"],
+      "triggers": ["Adding a ruff step to our GitHub Actions workflow", "Setting up eslint and prettier in the CI pipeline for the frontend", "Rebasing a stale branch that was green last week and pushing again", "Reviewing a CI workflow that installs mypy with a plain pip install", "CI lint failing on files my PR never touched", "Branch was green yesterday and red today with no code changes, new rule codes showing up", "Ruff suddenly flags new rule codes all over code nobody touched this week", "floating tool versions in CI broke the build", "linter upgrade introduced new default rules overnight", "latest version of the formatter gets installed on each run"],
       "type": "Defect", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
       "found_by": "ci-python.yml lint gate failing a branch that changed no linted code",
       "title": "Unpinned linter/formatter in CI retro-fails a branch that changed nothing",
@@ -48,6 +52,7 @@
     {
       "key": "r_pin_gating_tools",
       "aliases": ["pin the linter version", "pip install without a version", "tool version in CI", "npm install -g latest", "reproducible CI"],
+      "triggers": ["Writing a new CI workflow that runs black, mypy and pytest", "Adding a SonarQube scanner Docker image to the pipeline", "Installing a global npm CLI tool in the build step for type checking", "Reviewing the requirements-dev file used by our CI lint job", "Type checker in CI started failing after its new release without any code change", "Builds are nondeterministic: the same commit passes one day and fails the next", "Sonar scan started failing on the main branch with no code changes", "using the latest docker tag for build tooling", "dev dependency versions not locked for the lint job", "npm i -g with no version in the workflow"],
       "type": "Rule", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
       "found_by": "the 0.15→0.16 ruff incident above",
       "title": "Pin every tool that gates CI; an unpinned linter is a time-bomb",
@@ -59,6 +64,7 @@
     {
       "key": "d_ungated_zone",
       "aliases": ["folder not linted", "code outside the lint paths", "scripts directory skipped by CI", "no type check on this directory", "unchecked code"],
+      "triggers": ["Adding a new scripts folder of Python helpers outside the main package", "Setting up ruff and mypy paths in the CI config for a monorepo", "Configuring sonar.sources and CodeRabbit path instructions for the repo", "Moving some data-prep code from the package into a top-level directory", "Bare except and untyped functions slipped through review in the data folder", "Changing files in the docs examples doesn't trigger any CI workflow at all", "Why didn't the linter flag this obvious issue in the tools directory?", "blind spots in lint and static analysis coverage across directories", "CI paths filter excludes some source folders", "code living outside the src root that nobody checks"],
       "type": "Defect", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
       "found_by": "the arch-reviewer's 'ungated zone' checklist section — code outside the source roots",
       "title": "Code outside the linter/type/scan source-roots is gated by nothing",
@@ -70,6 +76,7 @@
     {
       "key": "g_gate_every_dir",
       "aliases": ["import order differs between local and CI", "lint every directory", "ruff from a subfolder", "CI trigger paths", "I001 in CI only"],
+      "triggers": ["Adding a new scripts folder of Python jobs that will ship alongside the main package in this repo", "Setting up the GitHub Actions workflow for a monorepo with several Python subprojects that each have their own imports", "Moving the ETL code into its own subdirectory and updating the lint and test steps in CI", "Reviewing the CI config to make sure every deployable directory is actually linted, type-checked and scanned", "Ruff says import order is fine on my machine but CI fails with I001 on the same files", "Just noticed the tools directory has never been linted or type-checked in CI at all", "Pushing changes only under the worker folder doesn't even trigger the pipeline", "CI coverage gaps: some folders in the monorepo slip past the quality gates entirely", "Per-package lint jobs in a multi-root Python repo, each with its own working directory", "Path filters on the workflow trigger miss a subproject so its changes go unchecked"],
       "type": "Gate", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
       "found_by": "ci-python.yml — added olmoearth_run_data to triggers + a dedicated repo-root lint step",
       "title": "Gate every executable directory; lint each import-tree from its own root",
@@ -81,6 +88,7 @@
     {
       "key": "d_cwd_isort",
       "aliases": ["import sorting fails in CI", "isort differs by working directory", "I001", "sibling import order", "ruff passes locally"],
+      "triggers": ["Running ruff from inside a subpackage folder against a sibling directory with a relative path", "Reproducing a CI lint failure locally before pushing a fix for import sorting", "Writing a CI step that lints a second Python tree from inside the first project's directory", "Configuring ruff isort first-party detection for a repo with multiple top-level Python packages", "Import sorting passes when I run ruff from the repo root but fails in the pipeline", "Ruff suddenly treats my own sibling modules as third-party and wants them in a different import block", "Why does ruff demand a different import grouping depending on which folder I run it from?", "isort first-party versus third-party classification changing with the working directory", "Works on my machine, import-order lint red in GitHub Actions", "Linter results differ between my local shell and the CI runner because of the cwd"],
       "type": "Defect", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
       "found_by": "reproducing the CI I001 locally by matching the working directory",
       "title": "ruff isort is CWD-anchored: sibling imports sort differently from a subdir vs the repo root",
@@ -92,6 +100,7 @@
     {
       "key": "d_masked_gate_order",
       "aliases": ["fix one CI failure and another appears", "hidden failure behind an earlier step", "gate order", "always broken but never seen", "independent CI jobs"],
+      "triggers": ["Fixing the lint failure that has been blocking the Python CI job for a week", "Designing a CI pipeline where lint, type check and tests run as steps in one job", "Bumping the formatter version and cleaning up the new lint errors so the build goes green", "Reviewing a PR that only fixes the first failing CI step and claims the build is fixed", "Fixed the ruff errors and now pytest fails on something that has nothing to do with my change", "As soon as one CI failure was resolved, a totally different test failure appeared", "Tests never ran in CI because the job stopped at the lint step", "Fail-fast pipeline short-circuits so later checks are skipped and their failures stay hidden", "Whack-a-mole red builds: each fix uncovers another pre-existing breakage", "Sequential steps in a single workflow job versus separate parallel jobs for each check"],
       "type": "Defect", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
       "found_by": "a test failure that only appeared once the lint step ahead of it went green",
       "title": "A failing early gate step masks a later gate's failure in the same job",
@@ -103,6 +112,7 @@
     {
       "key": "r_single_source_sets",
       "aliases": ["duplicated constant", "class list copied", "same set defined twice", "restated literal", "single source of truth for a list"],
+      "triggers": ["Adding a new label filter in the training script that needs the list of invasive species classes", "Writing another analysis module that uses the imagery year and the peak-season months", "Refactoring scripts that each define their own class-index mapping for the classifier", "Reviewing a PR that adds a local set of label names in a new pipeline stage", "Two scripts disagree about which classes count as positive because one has an outdated set", "Changed the imagery year in the config but half the scripts still use the old one", "Found the same frozenset of labels copy-pasted in four modules with slightly different contents", "Magic numbers and duplicated constants scattered across the codebase", "DRY violation for configuration values, enum-like lists and class mappings", "Single source of truth for label sets, vintages and lookup tables"],
       "type": "Rule", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
       "found_by": "architecture-reviewer must-fix: hardcoded 2020 in 5 places + a re-defined label frozenset",
       "title": "Single-source a derived fact — including SETS and class schemes, not just scalars",
@@ -114,6 +124,7 @@
     {
       "key": "d_month_range_28",
       "aliases": ["missing the end of the month", "date range ends on the 28th", "days 29 to 31 dropped", "monthly STAC search", "month end rollover", "December to January"],
+      "triggers": ["Writing a per-month Sentinel-2 scene search to pick the least cloudy image each month", "Building monthly composites from a STAC catalog using date range strings", "Copying the monthly imagery download loop into a new script for another region", "Generating start and end dates for each calendar month in a time-series query", "Monthly scene search returns fewer candidate images than expected for months with 31 days", "Imagery from the 29th, 30th and 31st never shows up in our monthly composites", "Least-cloudy pick for January looks worse than it should; late-month scenes seem to be missing", "End-of-month date boundary bug in a satellite imagery datetime filter", "Off-by-a-few-days month range when querying the catalog by date interval", "Hard-coded last day of the month in a temporal filter for remote sensing searches"],
       "type": "Defect", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
       "found_by": "CodeRabbit review of a monthly-composite date range",
       "title": "Monthly STAC query ending at day-28 drops days 29-31 of imagery",

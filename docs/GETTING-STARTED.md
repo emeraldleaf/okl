@@ -212,8 +212,14 @@ okl record --type Rule --scope repo --id discount-server-side \
   --symptom "a request body carries a discount, amount or total field" \
   --body "cause: a client can send any amount it likes" \
   --fix "accept only the code; look the discount up and compute totals on the server" \
+  --trigger "the order total is wrong when the client sends its own discount" \
+  --trigger "add a promo code field to checkout" \
   --files "app/checkout.py"
 ```
+
+`--trigger` (repeatable) is a phrasing of a moment the lesson applies, in a developer's own
+words: the request or error that led to it first. The briefing finds a lesson by its title,
+symptom, aliases and triggers ([how](RETRIEVAL.md)), so `okl record` says so when you give none.
 
 The same record from a Decision needs only `--type Decision`, `--title` and a `--body`
 starting `why:`. To correct a lesson later, change only what is wrong:

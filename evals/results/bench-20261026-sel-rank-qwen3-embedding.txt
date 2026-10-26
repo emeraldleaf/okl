@@ -1,0 +1,5 @@
+bench rank quality · model Qwen/Qwen3-Embedding-0.6B-Q (dense, best of the about-text parts) · split selection · code 2077f098670a · prompts "Instruct: Given a developer's task, question or bug report, retrieve the engineering lesson that applies to it\nQuery:{}" / '{}'
+249 queries · 182 live records · triggers on 173 lessons · 282 calibration-half null prompts
+ordering, the model:                          hit@1 62.7% · hit@3 85.5% · hit@12 98.8% · MRR 0.755
+ordering, full-text with triggers (no model): hit@1 70.7% · hit@3 85.5% · hit@12 94.8% · MRR 0.793  (a lesson the search never returns counts as last)
+deciding: governing-lesson score median 0.653 · null prompts' best median 0.563 · AUC 0.813

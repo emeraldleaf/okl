@@ -4,6 +4,7 @@
     {
       "key": "r_preregistered_control_vetoes",
       "aliases": ["negative control", "small sample shows the effect we hoped for", "transfer result", "confounded experiment", "effect smaller than the control", "report a null"],
+      "triggers": ["Designing an experiment comparing model outputs before and after an event across two eras of imagery", "Planning a cross-sensor transfer evaluation with only a small labelled sample", "Writing up a result that shows a modest effect in the direction we hoped for", "Setting up an analysis of whether a biocontrol release changed the vegetation signal over time", "The effect is there but tiny, and I'm not sure if it's real or just noise between eras", "Our comparison class that shouldn't have changed moved more than the class we care about", "Reviewer asks how we know the shift isn't just sensor or calibration differences", "Negative control, placebo test or falsification check for an observational comparison", "Pre-registration of the analysis plan to avoid p-hacking and post hoc rationalisation", "Domain shift baseline: how much does a variable move when nothing should have happened?"],
       "type": "Rule", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
       "found_by": "phase3c beetle-inversion — the Russian-olive control dropped 0.285 where it should be flat",
       "title": "A pre-registered negative control can VETO a transfer/cross-era result the sample is too small or confounded to support",
@@ -15,6 +16,7 @@
     {
       "key": "d_loo_group_single_class",
       "aliases": ["IndexError in predict_proba", "fold with one class", "leave one group out", "GroupKFold crash", "single-class fold", "spatial block folds"],
+      "triggers": ["Setting up grouped cross-validation by field trip for a vegetation classifier", "Evaluating a model on geographically clustered survey points with leave-one-site-out", "Writing code that pulls the positive-class probability out of a scikit-learn classifier", "Building cross-validation folds for field data collected in only a few campaigns", "IndexError: index 1 is out of bounds for axis 1 with size 1 when taking the probability column", "One CV fold's training set contains only a single class and the metrics are nonsense", "LeaveOneGroupOut fold crashes because the classifier only ever saw one label", "Spatial block cross-validation versus grouping by site for spatially autocorrelated samples", "Degenerate fold in group k-fold where a class is entirely missing", "Positive-class probability column lookup for a binary classifier in sklearn"],
       "type": "Defect", "scope": "org", "repo": "geospatial-ml-pipeline", "verified": true,
       "found_by": "phase3c IndexError: predict_proba(...)[:, 1] out of bounds — a leave-one-trip-out fold was single-class",
       "title": "Leave-one-group-out CV crashes or degenerates when a group can be single-class (one-cluster field data)",

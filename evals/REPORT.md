@@ -1446,8 +1446,9 @@ arm's configuration when it is on, and the arm does not become the default.
 the probe's own (1 → 2); nothing on tickets or bug reports; one record more on two of six
 short prompts; 0.8 s per prompt for the model load (the search itself is under a millisecond
 with numpy) and a 249 MB model on disk. The two vectorless arms bought more: symptoms took the
-probe's own bug-report row from 3 to 8 of 8 (§4o), and aliases one held-out ticket and one
-held-out paraphrase (§4p). The static model's cosines sit in a narrow band (true pairs 0.30
+probe's own bug-report row from 2 to 3 of 8 (§4o), and aliases took it from 3 to 8 of 8 and
+added one held-out ticket and one held-out paraphrase (§4p; corrected 2026-10-26, this sentence
+had given the alias gain to symptoms). The static model's cosines sit in a narrow band (true pairs 0.30
 to 0.55, chat filler up to 0.42), which is why no line separates meaning from filler cleanly;
 a stronger local model (bge-small through ONNX at about 130 MB) or a reranker over the fused
 top 36 is the next experiment, on this same held-out set, before the semantic arm can earn
@@ -1946,6 +1947,394 @@ store makes it matter; §4q's ADR amendment carries the same tier logic for vect
 the diagram's floor text and both renders, the README's floor sentence and alt text; the
 grid and probe receipts; the probe's `--common-share`. The rejection line in `evals/README`'s
 standing table reads 3 of 6 once #278 and this land.
+
+## 4w. PRE-REGISTERED: a calibrated briefing decision over write-time triggers, on a benchmark built to decide (2026-10-26)
+
+Written before the held-out split was run, per §2b, for #291. The selection split was used to
+choose, and was run first; its receipts are named below. No run has touched the held-out
+queries. The null prompts are not held out in the same way, because they are not divided by
+query: every selection run printed the unseen half's rate (the tables below), and a held-out run
+scores those same prompts against the same line, so it reproduces those figures by
+construction. The unseen half was never part of a selection rule, but it was seen. The fresh
+test on real prompts is the judged-precision run on TASK prompts, which no selection run used.
+
+**Why a new instrument.** §4n through §4v were measured on eight authored tasks, three
+rephrasings each and six chat prompts: one lesson moves a row by 12.5 points, and a paired test
+at that size needs about six discordant tasks in one direction before it can see anything.
+`evals/bench/` is built to decide:
+
+- **Corpus**: the twelve committed seed packs, 183 records, imported fresh on every run.
+- **Queries**: 519, three per advice lesson (a ticket, a paraphrase sharing no content word
+  with the lesson's title, a bug report), written by Claude Sonnet from the lesson alone under
+  `evals/bench/GENERATION.md`, which was written before any query existed. Its structural rules
+  are checked mechanically (`assemble_queries.py`: three registers per lesson, 6 to 40 words,
+  no title word in a paraphrase other than a stopword or a single character). Its rules about
+  content (never naming the lesson or its advice, a bug report never naming the cause or the
+  fix) were instructions to the writer and are not checked. Split by lesson, by the parity of a
+  hash of its id: 249 selection, 270 held out.
+- **Null prompts**: 550 real prompts with no subject of their own, the NULL label given by a
+  Sonnet sub-agent to 1,367 distinct prompts typed in one developer's Claude Code sessions (577
+  were TASK, 240 UNCLEAR). Beyond the Claude sub-agents that label and judge them, they never
+  leave that machine: nothing commits, publishes or quotes them, and receipts carry counts and
+  a hash. They are halved by the parity of a hash of their id: the calibration half sets lines,
+  the unseen half tests them.
+- **Scope**: each query is asked from a repo where its lesson is in scope. Eighteen seed lessons
+  are repo-scoped, and `check` rightly shows them nowhere else; the first runs asked every query
+  from one repo and so scored 54 queries no arm could win, and the prototype runners, which
+  ignored scope, looked better than production for it. Fixed before any receipt below.
+- **Statistics**: recall carries a 95% percentile bootstrap that resamples lessons (2,000
+  draws), because a lesson's three queries are not independent; rates on the null prompts carry
+  Wilson intervals. The bench is deterministic for a store and a commit, so §2b's 21-point noise
+  floor, which is about the agent harness, does not apply to it; sampling error does, and the
+  intervals are that.
+
+**What it found about today's default (selection, receipts at 2993368).** Recall 75.1% [69.1,
+80.7]; 11.8 lessons briefed per query; and 149 of 268 unseen null prompts (55.6%) briefed
+something; a briefed null prompt got 5.1 lessons on average, over all 550. The briefing also
+treats prompts a harness wrote (task notifications, sub-agent reports) as typed by a person: in
+the session that built the bench, they were briefed repeatedly, up to twelve lessons each.
+
+**The design, two parts measured apart.**
+
+1. **Triggers**: write-time phrasings of the moments a lesson applies (the doc2query and HyPE
+   idea: index the questions a document answers, not only the document). Ten per advice lesson,
+   1,730 in all (4 task, 3 symptom, 3 vocabulary), written by Claude Opus from the lesson alone,
+   in a folder that held only the lessons, never shown a query (`evals/bench/triggers.jsonl`,
+   checked by `assemble_triggers.py`). Their overlap with the queries for the same lesson: a
+   median 10.3% of a query's word bigrams appear somewhere in its lesson's triggers, 25.0% at the
+   90th percentile; the closest single query-trigger pair has bigram Jaccard 0.40. Stored in
+   their own full-text column at the symptom's weight.
+2. **The calibrated decision** (`src/okl/decide.py`, `okl check --decision calibrated`). A
+   prompt a harness wrote is briefed nothing; a prompt with no subject word is briefed nothing; a
+   candidate's score is how many of the prompt's subject words its about-text (title, symptom,
+   aliases, triggers) holds, ties broken by their rarity relative to the store; a candidate is
+   briefed at or above a line set by split conformal at alpha 0.05 over the calibration half
+   (2.0017173: three shared subject words, or two nearly as rare as a word in one record), best
+   first, at most five.
+
+**Selection, on the selection split** (receipts `evals/results/bench-20261026-sel-*.txt`, each
+naming its commit: the decision arms and the first two dense runs (bge-small, potion) at
+2993368, the other model arms at fa0d8ca, cb73568 and 2077f09):
+
+| arm (alpha 0.05, cap 5 where it applies) | recall [95%] | lessons per query | unseen null prompts briefed |
+|---|---|---|---|
+| today: floor, full-text | 75.1% [69.1, 80.7] | 11.8 | 149 of 268 (55.6%) |
+| floor, full-text, with triggers | 80.3% [75.1, 85.5] | 11.8 | 149 of 268 (55.6%) |
+| floor, with the semantic arm | 78.3% [72.7, 83.5] | 11.9 | 150 of 268 (56.0%) |
+| decision: share of the subject covered, with triggers | 0.0% | 0.0 | 0 of 268 |
+| decision: rarity evidence in the about-text, with triggers | 84.3% [79.5, 88.8] | 3.6 | 6 of 268 (2.2%) |
+| decision: rarity evidence in the whole text, with triggers | 86.3% [81.9, 90.4] | 4.3 | 7 of 268 (2.6%) |
+| **decision: shared subject words, with triggers (production)** | **88.0% [83.9, 91.6]** | **4.7** | **9 of 268 (3.4%)** |
+| decision: rarity evidence, without triggers | 30.1% [24.1, 36.5] | 0.9 | 2 of 268 (0.7%) |
+
+**Models, on the same split.** Each recent local model tried on this machine's CPU was
+measured in up to three ways (receipts `-rerank-*`, `-rank-*` and `-dense-*`; the rerankers
+have only the first, bge-small, granite and answerai-colbert-small only the last). The runner applies each
+model card's retrieval prompts itself. fastembed 0.9 names them in its model descriptions, but
+its `query_embed` and `passage_embed` apply none of them, and the first EmbeddingGemma receipt
+ran without them. That receipt is kept, renamed `-noprompts`, as an ablation.
+
+*A model as the decision.* A cross-encoder scores each prompt's full-text candidates. The line
+is set by the same split conformal procedure.
+
+| reranker (quantized ONNX) | candidates scored | recall [95%] | lessons per query | unseen null prompts briefed | scoring one prompt, median, other runs sharing the machine |
+|---|---|---|---|---|---|
+| gte-reranker-modernbert-base | 24 | 22.5% [16.9, 28.5] | 0.54 | 16 of 268 (6.0%) | 1.2 s |
+| Qwen3-Reranker-0.6B, P(yes) | 8 | 31.3% [24.5, 38.2] | 0.63 | 13 of 268 (4.9%) | 2.5 s |
+
+A reranker's score orders the candidates for one prompt; it is not calibrated across prompts.
+So the line that holds the null prompts near 5% refuses most real queries as well. In the
+abstention literature (Gisserot-Boukhlef et al., TMLR 2024, arXiv 2402.12997), a function
+fitted on labelled queries over the sorted scores abstained better than heuristics on the raw
+scores.
+
+*How well a model orders, and how well it separates* (`rank_quality.py`). Every in-scope lesson
+is ranked by the model alone. AUC is the governing lesson's score against each calibration-half
+null prompt's best.
+
+| | hit@1 | hit@3 | hit@12 | MRR | AUC against null prompts |
+|---|---|---|---|---|---|
+| full-text with triggers, no model | 70.7% | 85.5% | 94.8% | 0.793 | |
+| LateOn (late interaction) | 78.7% | 91.2% | 97.2% | 0.855 | 0.831 |
+| EmbeddingGemma-300m, with its prompts | 65.5% | 88.4% | 97.6% | 0.778 | 0.869 |
+| EmbeddingGemma-300m, without | 68.7% | 88.4% | 98.0% | 0.799 | 0.739 |
+| Qwen3-Embedding-0.6B (int8), with its prompt | 62.7% | 85.5% | 98.8% | 0.755 | 0.813 |
+| potion-retrieval-32M (static) | 59.8% | 77.1% | 91.2% | 0.704 | 0.767 |
+
+LateOn orders best of anything measured. But its MaxSim has a median of 0.938 for the governing
+lesson and 0.865 for a null prompt's best, too narrow a band to draw a line in. EmbeddingGemma's
+prompts cost it a little order (hit@1 68.7% to 65.5%) and buy most of its separation (AUC 0.739
+to 0.869), the best of any model.
+
+*A model added to the decision.* The score is the shared subject words plus W times the model's
+best cosine over the lesson's about-text phrasings (for late interaction, MaxSim over one
+about-text document). The candidates are the full-text window plus the model's own 36 nearest.
+The line is recalibrated for every W. At W = 0 every one of these runs reproduces production
+exactly (88.0%, 9 of 268).
+
+| added to the shared-word decision, cap 5 | W, best on this split | recall [95%] | lessons per query | unseen null prompts briefed | paraphrases briefed | a new process pays: load, then per prompt |
+|---|---|---|---|---|---|---|
+| nothing (production) | | 88.0% [83.9, 91.6] | 4.66 | 9 of 268 (3.4%) | 64 of 83 | no model |
+| potion-retrieval-32M | 1 and 2 | 90.0% [86.3, 93.6] | 4.67 | 8 of 268 (3.0%) | 66 | 0.8 s, 0.3 ms |
+| LateOn | 1 to 8 | 88.8% [84.7, 92.4] | 4.65 | 10 of 268 (3.7%) | 65 | 1.6 s, 150 ms |
+| Qwen3-Embedding-0.6B (int8) | 4 and 8 | 91.6% [88.0, 95.2] | 4.65 | 10 of 268 (3.7%) | 70 | 2.4 s, 0.9 s |
+| EmbeddingGemma-300m | 8 | 92.4% [88.8, 95.6] | 4.39 | 12 of 268 (4.5%) | 72 | 2.0 s, 0.17 s |
+
+EmbeddingGemma's W = 8 is the top of a broad rise, not a lone spike (`-words` and `-words-wide`).
+Recall at each W:
+
+| W | 1 to 4 | 8 | 12 | 16 | 24 | 32 |
+|---|---|---|---|---|---|---|
+| recall | 90.8% | 92.4% | 91.2% | 89.6% | 86.3% | 83.9% |
+
+Its cold load measured 12.4 s at fa0d8ca and 1.7 to 2.1 s in every run after (the held-out
+run included); the first run followed the download, and the operating system's file cache is
+the likely difference, not measured. A hook process pays somewhere in that range on every
+prompt.
+
+Most of these models were also run on the rarity-evidence base, the earlier design, and none
+beat EmbeddingGemma on the shared-word base. The best weight for each:
+
+- potion: 89.6%, with 18 of 268 null prompts briefed;
+- granite-embedding-small-english-r2: 88.8% at 11;
+- bge-small-en-v1.5: 85.5% at 9;
+- EmbeddingGemma: 90.8% at 13 with its prompts, 91.6% at 14 without;
+- Qwen3-Embedding: 91.2% at 8;
+- answerai-colbert-small and LateOn: flat at the base's 84.3%.
+
+**What the models add.** They help where shared words fail, on paraphrases. EmbeddingGemma
+briefs 8 more of 83 paraphrases, at the cost of 3 more null prompts briefed. But the hook is a
+new process on every prompt. The cheapest model that helps costs 0.8 s there for 2 points, and
+the best costs about 2.2 s. So the default stays model-free. The model arm is pre-registered
+below as a second, exploratory treatment, for a process that keeps the model loaded.
+
+Two readings decide the design. Neither part works alone: triggers lift the governing lesson
+to first place for 70.7% of queries against 45.0%, but under the floor a query is still
+briefed 11.8 lessons on average and half the null prompts something; the decision without
+triggers misses the governing lesson on two queries in three. And the share-of-subject score cannot be used at all: a
+one-word prompt covered by a title scores 1.0, so the line saturates.
+
+**The selection rule**, stated plainly as written after the grid was read: the highest recall
+at alpha 0.05 among configurations that load no model at prompt time (the hook is a new process
+per prompt) and brief at most five lessons on average. That is the shared-words decision with
+triggers, cap five, which production reproduces exactly (`bench-20261026-sel-calibrated.txt`
+against `bench-20261026-sel-v2-shared_words-triggers.txt`: the same 88.0% and the same 9 of 268).
+
+**The rule for the exploratory model arm**, also written after the grid was read: the highest
+recall at alpha 0.05 and cap five among the models that encode a prompt in under 250 ms once
+loaded. That rule leaves out Qwen3-Embedding, at 0.9 s. It picks EmbeddingGemma-300m with its
+prompts, added to the shared-word decision at W = 8.
+
+**The measure.** At the commit that carries this section, from a clean worktree, in one
+sitting, on the held-out split and the unseen half of the null prompts:
+
+- `evals/bench/run.py --split heldout`, three ways:
+  - with `--decision floor`: the control, today's default;
+  - with `--decision floor --triggers`: triggers alone;
+  - with `--decision calibrated --triggers`: the treatment.
+- `evals/bench/run_v2.py --split heldout --score shared_words --triggers`: the implementation
+  check.
+- `evals/bench/run_dense.py --split heldout --model google/embeddinggemma-300m --base
+  shared_words --weights 0,8 --triggers`: the exploratory model arm, with W = 0 as its
+  same-run control.
+- Judged precision on real prompts (`evals/bench/precision_pairs.py`). 100 TASK prompts are
+  drawn with seed 7 and briefed by the control and by the treatment. Every (prompt, lesson) pair
+  is judged once by a Claude Sonnet sub-agent as APPLIES, DOES_NOT_APPLY or UNSURE. The pairs
+  are shuffled and do not say which arm briefed them.
+
+**Predictions** (each against the same-sitting control):
+
+1. The treatment's held-out recall is at least 10 points above the control's, and no register
+   is lower than the control's.
+2. The treatment briefs at most five lessons per query on average (the control about twelve).
+3. A check, not a prediction: the unseen null prompts reproduce their selection figures, 9 of
+   268 for the treatment and 149 of 268 for the control. They are the same prompts against the
+   same line, so any other figure means the code changed.
+4. Production and the prototype agree on whether each held-out query's lesson is briefed.
+5. On real TASK prompts, the treatment's judged precision (the share of the lessons it briefs
+   that the judge says apply) is higher than the control's.
+6. Exploratory: the model arm's held-out recall at W = 8 is above its own W = 0, and more of the
+   gain comes from paraphrases than from either other register.
+
+**Falsifiers.** Any one of these and `calibrated` stays opt-in, with the receipts kept:
+
+- the treatment's held-out recall below the control's;
+- any register more than five points below the control's;
+- a null-prompt figure other than the selection one;
+- any disagreement between production and the prototype;
+- a judged precision below the control's.
+
+Prediction 6 gates nothing in this release. If W = 8 is not above W = 0 on held-out, no
+loaded-model tier is built on this evidence.
+
+**The lessons at risk**, per §2b: a lesson whose only route to a query is one word in its
+title, which the floor admitted and the decision will not (its about-text must share three
+subject words, or two rare ones); and paraphrases in general, the weakest register on selection
+(77.1% against 96.4% for bug reports).
+
+**What a pass earns.** `calibrated` becomes the default decision in the next release, the seed
+packs carry their triggers, and `okl record` asks for triggers. A pass of prediction 6 earns the
+model arm a production implementation in a process that keeps the model loaded (the MCP server
+or a daemon), measured again there, judged precision included. It does not settle whether
+briefing fewer, better-chosen lessons changes what an agent writes: that is a question for the
+agent harness, pre-registered separately (§4n's rule).
+
+**What this cannot settle.** The queries and the triggers were written by two models of one
+family, which can flatter the trigger arm on synthetic queries (CIKM 2025, arXiv 2506.10301);
+the judged-precision run on real prompts is the check, not a cure. The null prompts and the
+line's guarantee are one developer's: the guarantee holds for prompts exchangeable with those,
+and another team's line is its own calibration. The corpus is the 183-record seed set; a live
+store holds recorded lessons that have no triggers until someone writes them, and the scan that
+computes rarity runs per check (the whole calibrated check takes 12 ms, median, at this size),
+which a full-text vocabulary count replaces on a store that makes it matter.
+
+**Cost.** Ten trigger lines per lesson in the packs; per check, the rarity scan; no model.
+
+### Result (2026-10-26)
+
+Run at cd04216 from a fresh worktree, in one sitting (receipts
+`evals/results/bench-20261026-heldout-*.txt`; judged precision in
+`bench-20261026-precision.txt`, whose tally prints no commit: it ran in the same worktree at
+cd04216, and the detail receipt beside it names 7e7aa2f).
+
+| held out: 270 queries, 90 lessons | control: floor, no triggers | floor, triggers | **treatment: calibrated, triggers** | model arm, W = 0 | model arm, W = 8 |
+|---|---|---|---|---|---|
+| recall [95%] | 74.4% [68.5, 80.4] | 84.1% [79.3, 88.5] | **90.0% [86.7, 93.3]** | 90.0% [86.7, 93.3] | 95.2% [93.0, 97.4] |
+| bug report / paraphrase / ticket, of 90 each | 78 / 52 / 71 | 84 / 63 / 80 | **86 / 73 / 84** | 86 / 73 / 84 | 81 paraphrases |
+| governing lesson first in the search's order, before the decision (hit@1) · MRR | 40.4% · 0.515 | 68.1% · 0.780 | 68.1% · 0.780 | | |
+| lessons briefed per query | 11.8 | 11.8 | **4.7** | 4.69 | 4.52 |
+| unseen null prompts briefed anything | 149 of 268 | 149 of 268 | **9 of 268** | 9 of 268 | 12 of 268 |
+
+The model arm's receipt prints only the paraphrase register; its W = 0 by register is the
+prototype's (`-heldout-v2-shared_words`), whose figures it matches.
+
+**Predictions 1 to 4 and 6 held, and no falsifier fired.**
+
+1. Recall rose 15.6 points, from 74.4% to 90.0%. Every register rose: bug reports by 8 queries,
+   paraphrases by 21 and tickets by 13.
+2. The treatment briefed 4.7 lessons per query, against 11.8.
+3. The check passed. The null figures were the selection figures exactly: 9 of 268 for the
+   treatment and 149 of 268 for the control.
+4. Production and the prototype agree everywhere their receipts can be compared: recall 90.0%,
+   86 / 73 / 84 by register, and 9 of 268 null prompts. The prototype's runner prints no
+   outcome per query, so per-query agreement is not shown. Equal counts in every register would
+   need disagreements that cancel exactly within each register.
+6. At W = 8 the model arm reached 95.2% against its own W = 0's 90.0%, 14 more queries. Eight
+   of them were paraphrases (73 to 81). At W = 0 bug reports and tickets had only 4 and 6 queries
+   left to gain, so neither can account for as much. The gain was larger held out than on
+   selection (5.2 points against 4.4).
+
+**Prediction 5 held.** On 100 real TASK prompts, judged precision rose from 8.9% [7.1, 11.2] to
+24.5% [19.2, 30.8] (`bench-20261026-precision.txt`). Of the 770 lessons the control briefed,
+751 were judged either way and 67 of them applied. Of the treatment's 211, 208 were judged
+and 51 applied.
+
+**The judging.** Six Sonnet sub-agents judged the 861 pairs, in six batches, under one
+instruction. One batch's judge wrote only the pairs it labelled APPLIES or UNSURE and let a
+script mark the rest DOES_NOT_APPLY, against the instruction to write every label. A fresh
+judge re-judged that batch before any tally was run, and its labels are the ones counted. The
+two labellings of that batch agree on 131 of 143 pairs (Cohen's kappa 0.69). With the first
+judge's labels in place (`judge-out-3-listdefault`, which the detail receipt calls the second
+labelling because it is passed second), precision is 8.4% and 24.2%
+(`bench-20261026-precision-detail.txt`).
+
+**What it costs on real prompts.** This analysis is exploratory, not pre-registered, and was
+written after the tally was read (`-precision-detail`).
+
+- **Most real prompts had nothing to brief.** Only 35 of the 100 TASK prompts had any briefed
+  lesson the judge said applied. Most of one developer's prompts concern work the seed packs
+  know nothing about, and there silence is right.
+- **Where something applied, the treatment found less of it.** On those 35 prompts the control
+  briefed an applying lesson on 32, the treatment on 28. Of the 80 applying lessons either arm
+  found, the control found 67 and the treatment 51.
+- **The treatment's silences were mostly right.** It was silent on 45 prompts; on 6 of them the
+  control found an applying lesson.
+- **The control's extra finds cost noise.** It found 16 more applying lessons by briefing 6.8
+  lessons that do not apply on every prompt, against the treatment's 1.6.
+
+This is the cost §4w named under the lessons at risk, and it is the first measure where the
+decision gives something up. Held-out recall on the bench's queries rose 15.6 points. On real
+prompts, the treatment surfaces about a quarter fewer of the applying lessons, while a lesson it
+briefs is nearly three times as likely to apply. Real prompts are terser than the bench's
+queries, and the line asks for three shared subject words, or two rare ones.
+
+**How the parts divide the work.** Triggers did the ranking: the governing lesson came first
+for 68.1% of queries against 40.4%. Under the floor, that bought 9.6 points of recall (201 to
+227 of 270) and nothing else; a query was still briefed 11.8 lessons on average, and more than
+half the null prompts something. The decision cuts the search's candidates at the calibrated
+line and orders what clears it by shared subject words, then by the search's rank. That added
+5.9 more points, took the briefing from 11.8 lessons to 4.7, and took the null prompts from
+149 briefed to 9. Held-out recall (90.0%) came in above selection's (88.0%), inside each
+other's intervals: no sign that the choice fitted the selection split.
+
+**The strongest number measured is the model arm's.** It reached 95.2% [93.0, 97.4], with 12
+of 268 null prompts briefed, on prompts no choice saw. It needs EmbeddingGemma loaded, which a
+prompt hook cannot afford.
+
+**What follows.** No falsifier fired, so, as pre-registered, the next release makes
+`calibrated` the default decision, ships the seed packs with their triggers, and has
+`okl record` ask for triggers. The cost on real prompts points to two next steps, each to be
+pre-registered when it is built (#291):
+
+- **Observed triggers**: the words of the prompt or error that led to a lesson. No model has to
+  imagine them, and real prompts share them.
+- **The model arm, in a process that keeps the model loaded.** On the bench it recovered much of
+  what words miss (paraphrases 73 to 81 of 90). Its judged precision and its recall on real
+  prompts are not yet measured.
+
+**Shipping it (2026-10-26).** The pre-registered consequences have landed:
+
+- `calibrated` is the default decision (`decide.DEFAULT`); `--decision floor` or
+  `OKL_DECISION=floor` keeps the floor;
+- the twelve seed packs carry the 1,730 triggers this section measured, and a test holds
+  them equal to `evals/bench/triggers.jsonl`;
+- `okl record`, the Stop hook, `/record` and the encoding-loop skill ask for triggers.
+
+The bench's corpus drops the packs' triggers on import, so every arm keeps the meaning its
+receipt gives it. On the new packs, the held-out control and treatment reproduce their
+receipts query for query.
+
+Three consequences the bench did not measure are recorded here, so they are not discovered
+later:
+
+- **The agent harness's pre-flight (§4s) under the new default.** Seven of eight tasks are
+  briefed their governing record. `ci_linter`'s rule clears the line, with four shared subject
+  words, and ranks sixth behind the cap. `d_unpinned_linter`, the defect it generalizes, is
+  briefed in its place with the same fix, so `ci_linter` is an accepted gap in
+  `evals/preflight.py`. Folding a rule and its defect into one slot is the typed-edges
+  follow-up.
+- **Linked gates.** The floor kept a gate that catches a briefed defect, even when the gate's
+  own words were weak. The calibrated decision has no such rule: a gate is briefed only when it
+  clears the line itself. Whether linked gates should ride along is unmeasured.
+- **The semantic arm.** `--hybrid` can brief a record found by meaning alone only under the
+  floor. Under the calibrated decision it can only reorder what clears the line.
+
+One reporting fix: the decision counted the lessons the cap of five cut as weak matches. They
+are now counted as cut (`dropped_by_cutoff`). What is briefed does not change, and the
+held-out receipts reproduce exactly.
+
+**Corrections to this section (2026-10-26).** After the result was written, an independent
+agent checked about 300 figures and claims in this section and in `docs/RETRIEVAL.md` against
+the receipts and the code. Every measured figure matched. It found descriptive errors, now
+corrected above; none touches a prediction, a falsifier or a number a decision rests on:
+
+- the paraphrase rule excludes the title's content words, not every word, and only the
+  structural rules are checked mechanically;
+- a briefed null prompt's 5.1 lessons is an average over all 550, not over the unseen half;
+- bge-small and potion ran at 2993368, with the decision arms;
+- the models were measured in up to three ways, not each in all three;
+- the Qwen3 reranker's ONNX file is quantized; int8 is confirmed only for gte-modernbert's;
+- EmbeddingGemma's cold-load range now includes the held-out run's 1.74 s, and the first run's
+  12.4 s is put down to the file cache as likely, not measured;
+- "every query briefed twelve lessons" was an average of 11.8;
+- "abstains on two lessons in three" was "misses the governing lesson on two queries in three";
+- the 12 ms is the whole calibrated check, not the rarity scan alone;
+- in the result, the floor's gain from triggers is 9.6 points, not 9.7;
+- the hit@1 and MRR rows describe the search's order before the decision, and the decision
+  re-sorts what clears the line rather than keeping the search's order.
+
+The same check found §4q giving the aliases' gain on the bug-report row to symptoms; that
+sentence is corrected in place.
 
 ## 5. Findings
 

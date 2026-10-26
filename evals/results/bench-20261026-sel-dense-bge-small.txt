@@ -1,0 +1,16 @@
+bench dense arm · model BAAI/bge-small-en-v1.5 · split selection · code 29933681bc47
+corpus: 182 live records, 2604 vectors (title+symptom, aliases, triggers on 173 lessons) · queries sha 97ecbcb5d681 · nulls 550: 282 calibrate, 268 test
+cost: cold load in a fresh process 0.68 s · load here 0.56 s · index 38.0 s · encode per prompt median 7.2 ms
+decision score = evidence + W * maxsim; line at alpha 0.05 by split conformal
+
+    W    line cap |           recall [95%] briefed/q | null test briefed anything [95%] | paraphrase
+  0.0   8.250   3 |   83.9% [79.1%, 88.4%]      2.57 | 6 of 268 (2.2%, [1.0%, 4.8%]) | 60/83
+  0.0   8.250   5 |   84.3% [79.5%, 88.8%]      3.59 | 6 of 268 (2.2%, [1.0%, 4.8%]) | 60/83
+  5.0  11.632   3 |   85.1% [80.7%, 89.6%]      2.55 | 9 of 268 (3.4%, [1.8%, 6.3%]) | 60/83
+  5.0  11.632   5 |   85.5% [81.1%, 90.0%]      3.54 | 9 of 268 (3.4%, [1.8%, 6.3%]) | 61/83
+ 10.0  15.543   3 |   84.7% [80.3%, 89.2%]      2.43 | 12 of 268 (4.5%, [2.6%, 7.7%]) | 60/83
+ 10.0  15.543   5 |   85.5% [81.1%, 90.0%]      3.22 | 12 of 268 (4.5%, [2.6%, 7.7%]) | 61/83
+ 20.0  23.394   3 |   83.5% [78.7%, 88.0%]      2.18 | 18 of 268 (6.7%, [4.3%, 10.4%]) | 59/83
+ 20.0  23.394   5 |   83.9% [79.1%, 88.4%]      2.61 | 18 of 268 (6.7%, [4.3%, 10.4%]) | 59/83
+ 40.0  39.157   3 |   79.9% [74.7%, 84.7%]      1.72 | 17 of 268 (6.3%, [4.0%, 9.9%]) | 57/83
+ 40.0  39.157   5 |   79.9% [74.7%, 84.7%]      1.92 | 17 of 268 (6.3%, [4.0%, 9.9%]) | 57/83

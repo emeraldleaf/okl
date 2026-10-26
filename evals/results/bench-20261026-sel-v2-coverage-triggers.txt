@@ -1,0 +1,17 @@
+bench v2 prototype · label coverage-triggers · split selection · code 29933681bc47
+corpus: 182 live records · triggers on 173 lessons (triggers.jsonl, sha 814c7bb5aa68) · queries sha 97ecbcb5d681 · nulls 550 (sha 6e100bad522c): 282 calibrate the line, 268 test it
+score: coverage (IDF-weighted share of the prompt's subject words that the lesson's about-text holds.)
+
+alpha   line cap |           recall [95%] briefed/q | null test: briefed anything [95%]
+ 0.01  1.000   3 |    0.0% [ 0.0%,  0.0%]      0.00 | 0 of 268 (0.0%, [0.0%, 1.4%])
+ 0.01  1.000   5 |    0.0% [ 0.0%,  0.0%]      0.00 | 0 of 268 (0.0%, [0.0%, 1.4%])
+ 0.01  1.000   8 |    0.0% [ 0.0%,  0.0%]      0.00 | 0 of 268 (0.0%, [0.0%, 1.4%])
+ 0.05  1.000   3 |    0.0% [ 0.0%,  0.0%]      0.00 | 0 of 268 (0.0%, [0.0%, 1.4%])
+ 0.05  1.000   5 |    0.0% [ 0.0%,  0.0%]      0.00 | 0 of 268 (0.0%, [0.0%, 1.4%])
+ 0.05  1.000   8 |    0.0% [ 0.0%,  0.0%]      0.00 | 0 of 268 (0.0%, [0.0%, 1.4%])
+  0.1  1.000   3 |    0.0% [ 0.0%,  0.0%]      0.00 | 0 of 268 (0.0%, [0.0%, 1.4%])
+  0.1  1.000   5 |    0.0% [ 0.0%,  0.0%]      0.00 | 0 of 268 (0.0%, [0.0%, 1.4%])
+  0.1  1.000   8 |    0.0% [ 0.0%,  0.0%]      0.00 | 0 of 268 (0.0%, [0.0%, 1.4%])
+
+at alpha 0.05, cap 5, by register: bug-report 0/83 · paraphrase 0/83 · ticket 0/83
+latency per decision: median 1.1 ms · p95 1.9 ms

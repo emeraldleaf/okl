@@ -3,6 +3,7 @@
  "nodes": [
   {
    "key": "rs_endpoint_group_hygiene",
+   "triggers": ["Adding a new minimal API endpoint for listing customer orders in the Ordering service.", "Spinning up a new microservice and wiring up its HTTP routes with API versioning.", "Reviewing a PR that adds an admin-only group of endpoints to the catalog API.", "Refactoring how each service sets up its /api/v1 route prefixes, since every one does it slightly differently.", "Pen test found an internal endpoint answering requests with no bearer token at all.", "A list endpoint returned 50,000 rows when someone passed pageSize=100000 in the query string.", "One service's endpoints show up under the wrong version in Swagger while the other services look fine.", "route group conventions for ASP.NET Core minimal APIs, MapGroup with versioning and authorization", "pagination limits, max page size, cap on results per request for REST list endpoints", "anonymous access by accident, missing [Authorize] on an endpoint, unauthenticated API route"],
    "type": "Rule", "scope": "repo", "repo": "dotnet-microservices", "verified": true,
    "found_by": "architecture-reviewer.md pattern checklist; .coderabbit.yaml **/Endpoints/**/*.cs",
    "tags": "dotnet,security",
@@ -14,6 +15,7 @@
   {
    "key": "rs_read_projection_axes",
    "aliases": ["cartesian explosion", "Include duplicates rows", "slow read with many joins", "AsNoTracking is not enough", "project to a DTO", "split query"],
+   "triggers": ["Writing an EF Core query that loads orders with their line items and shipments for a details page.", "Optimizing a slow read endpoint that eager-loads several child collections of an aggregate.", "Reviewing a PR that adds AsNoTracking to every read query to speed them up.", "Building the read side for an order history screen backed by Entity Framework.", "The SQL for this query returns thousands of rows for one order with twenty items and ten payments.", "Getting duplicate parent objects in the result, one per child row, after adding another Include.", "EF Core logs a warning about loading multiple collection navigations in a single query.", "cartesian product blow-up when joining several one-to-many relations in an ORM", "eager loading related data, N+1 versus one giant join, Hibernate fetch join duplicates", "row explosion from JOINs, duplicated entities, identity resolution with no-tracking queries"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "architecture-reviewer.md; docs/cqrs-data-access.md; audits/2026-05-31-ef-core-read-performance",
    "tags": "dotnet,data-quality",
@@ -25,6 +27,7 @@
   {
    "key": "rs_fanout_per_recipient",
    "aliases": ["send to every user", "broadcast notification", "loop sending emails", "fan out to recipients", "await in a foreach"],
+   "triggers": ["Implementing a feature that emails every subscriber when a new product drops.", "Writing a message handler that pushes notifications to all members of a team when a project changes.", "Reviewing a handler that loops over recipients and sends an SMS to each one inline.", "Adding an endpoint that broadcasts an announcement to the admins of every tenant.", "The send-announcement request times out once the mailing list grows past a few thousand people.", "Whenever marketing sends a blast, CPU on one pod pegs and the rest of the system slows down.", "The notify-all API call takes minutes to return because it waits for every email to go out.", "fan-out to many users, mass notification, bulk send from a single handler", "await inside a foreach loop, sequential sends, latency multiplied by the number of recipients", "notification storm, sending to a big distribution list straight from an API call"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "architecture-reviewer.md; .coderabbit.yaml **/Features/**/*.cs",
    "tags": "messaging",
@@ -36,6 +39,7 @@
   {
    "key": "rs_meter_wildcard_registration",
    "aliases": ["metrics disappeared", "meter not collected", "renamed the meter and lost the dashboard", "OpenTelemetry meter registration"],
+   "triggers": ["Setting up OpenTelemetry metrics for our Wolverine-based messaging services.", "Cleaning up the telemetry configuration and tidying the meter names in Program.cs.", "Building a Grafana dashboard for dead-letter queue depth and message execution failures.", "Adding custom counters for messages sent and received in our messaging handlers.", "Messaging metrics disappeared from the dashboard after a small refactor of the OTel setup, no errors anywhere.", "Prometheus shows zero series from our message framework even though the meter is registered.", "ASP.NET request metrics show up fine but nothing from the messaging library ever reaches the collector.", "OpenTelemetry meter name mismatch, instrumentation not exported, metrics silently missing", "AddMeter not picking up a library's instruments, meter naming in .NET metrics", "telemetry pipeline collecting nothing for one library, empty metrics with no error"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "architecture-reviewer.md; .coderabbit.yaml ServiceDefaults/Extensions.cs",
    "tags": "dotnet,messaging,data-quality",
@@ -47,6 +51,7 @@
   {
    "key": "rs_sweeper_hygiene",
    "aliases": ["background sweeper", "scheduled cleanup job", "memory grows in a hosted service", "duplicate work across replicas", "one bad row stops the batch", "polling job"],
+   "triggers": ["Writing a BackgroundService that expires stale reservations every five minutes.", "Adding a hosted job to purge old outbox rows, running on three replicas in Kubernetes.", "Writing unit tests for a cleanup job whose behaviour depends on the current time.", "Reviewing a cron-style worker that retries failed payments in a loop.", "The nightly cleanup job's memory keeps growing until the pod gets OOMKilled.", "Every replica ran the same expiry job and customers got the reminder email three times.", "One malformed row threw an exception and the whole sweep stopped processing the rest.", "background worker, hosted service, scheduled task, periodic job in .NET", "DbContext lifetime in a long-running worker, scoped services captured by a singleton", "cron job running on every replica, one-instance-only job in a scaled-out deployment"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "architecture-reviewer.md; .coderabbit.yaml **/*RecoveryJob*.cs",
    "tags": "dotnet,method",
@@ -58,6 +63,7 @@
   {
    "key": "rs_rich_aggregate_shape",
    "aliases": ["public setters on an entity", "mutate the entity from the handler", "exposed List on a domain object", "domain model shape", "infrastructure reference in Domain"],
+   "triggers": ["Modeling an Order entity with paid, shipped and cancelled states in the domain layer.", "Refactoring an anemic domain model where command handlers set entity properties directly.", "Reviewing a PR that exposes the order's line items as a public list on the entity.", "Setting up the Domain project for a new bounded context and deciding what it may reference.", "A handler set an order's status straight to Shipped even though it was never paid.", "Someone added items to the cart's collection from outside and skipped the total recalculation.", "The Domain project now references EF Core because someone added a RowVersion attribute.", "DDD aggregate root design, encapsulation, rich domain model versus anemic model", "state machine on an entity, guarded status changes, invariants enforced inside the entity", "persistence ignorance, clean architecture domain layer free of infrastructure packages"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "architecture-reviewer.md; .coderabbit.yaml domain-invariant path rules",
    "tags": "dotnet",
@@ -69,6 +75,7 @@
   {
    "key": "rs_handler_idempotency_guard",
    "aliases": ["dead letter queue filling up", "duplicate message throws", "late message", "already processed", "status check at the top of the handler"],
+   "triggers": ["Writing a consumer for PaymentCompleted that marks the order as paid.", "Handling at-least-once delivery from RabbitMQ in our order status message handlers.", "Writing tests for a message handler that receives the same event twice.", "Reviewing a consumer that relies on the entity throwing when a status change is invalid.", "The dead-letter queue is full of messages that were just harmless redeliveries.", "Duplicate events throw InvalidOperationException in the aggregate, get retried, then dead-lettered.", "A late-arriving shipment event lands in the DLQ because the order is already completed.", "idempotent consumer, dedupe, at-least-once semantics for message handlers", "poison messages that are not really poison, false alarms on the dead letter queue", "redelivery, duplicate delivery and out-of-order messages in an event-driven system"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "architecture-reviewer.md; audits/2026-05-31-idempotent-consumer",
    "tags": "messaging",
@@ -80,6 +87,7 @@
   {
    "key": "rs_keyed_services_over_factories",
    "aliases": ["multiple implementations of one interface", "pick an implementation at runtime", "strategy selection by a field", "factory for DI", "keyed services", "wrong implementation resolved"],
+   "triggers": ["Adding an SMS sender alongside the existing email sender behind the same notification interface.", "Registering two payment gateway implementations of one port and picking one per request.", "Reviewing a PR that introduces a factory class for a storage service with a single implementation.", "Wiring up dependency injection for a new notification channel in Program.cs.", "Every notification goes out as SMS regardless of the Channel field on the message.", "DI always resolves the last registered implementation and the other one is never called.", "There is a SenderFactory with a switch statement that only ever returns one class.", "strategy pattern with dependency injection, multiple implementations of one interface", "service locator, factory pattern for choosing an implementation, abstract factory over the container", "IEnumerable of services, picking an implementation at runtime, Autofac named registrations"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "architecture-reviewer.md; .coderabbit.yaml **/Infrastructure/DependencyInjection.cs",
    "tags": "dotnet",
@@ -91,6 +99,7 @@
   {
    "key": "rs_integration_tests_default",
    "aliases": ["mock the repository", "verify the method was called", "unit test vs integration test", "test the handler against a real database", "untested branch"],
+   "triggers": ["Writing tests for a new command handler that saves an order and publishes an event.", "Deciding the test strategy for a service: what belongs in unit tests versus integration tests.", "Reviewing a PR whose handler tests mock the repository and check that Save was called once.", "Adding coverage for a handler with an authorization check and an idempotency short-circuit.", "All tests pass with mocks but the handler fails against the real database.", "Our handler has three branches but there is only one test, for the happy path.", "Tests break every time we refactor because they assert on mock call counts.", "Testcontainers, WebApplicationFactory, API tests against a real Postgres in Docker", "mocking the repository with Moq and verifying it was called once, interaction-based tests", "test pyramid versus testing trophy, which tier should cover command handlers"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "architecture-reviewer.md; .coderabbit.yaml **/*Test*.cs",
    "tags": "dotnet,method",
@@ -102,6 +111,7 @@
   {
    "key": "rs_workflow_hardening_baseline",
    "aliases": ["GitHub Actions security", "pipefail", "persist-credentials", "workflow permissions", "pin actions to a SHA", "concurrency group"],
+   "triggers": ["Adding a new GitHub Actions workflow to build and test the API on pull requests.", "Writing a deploy workflow with several bash steps that pipe output through grep and tee.", "Reviewing a PR that SHA-pins the actions in just one of our workflow files.", "Hardening our CI pipelines after a supply-chain security review.", "The CI step passed even though the test command inside the pipe failed.", "A security scanner flagged that our checkout step leaves the GITHUB_TOKEN in the git config.", "Old workflow runs keep going after I push new commits, wasting minutes and racing deploys.", "GitHub Actions security best practices, token permissions scoped per workflow", "bash strict mode in CI scripts, exit on error, pipe failures swallowed silently", "unpinned third-party actions flagged by a scanner, superseded runs piling up in the queue"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": "architecture-reviewer.md; .coderabbit.yaml .github/workflows/*.yml",
    "tags": "security,method",
@@ -113,6 +123,7 @@
   {
    "key": "rs_event_carries_recipient_id",
    "aliases": ["notification never arrives", "consumer drops the message", "cannot find who to notify", "event has no user id", "resolve the recipient"],
+   "triggers": ["Adding an OrderShipped integration event so the notification service can email the buyer.", "Building a notification consumer that sends emails when orders change state.", "Reviewing a change to an event contract that renames a field consumers use.", "Designing cross-service event payloads for a new fulfilment service.", "Order Shipped emails stopped going out, but the event is published and consumed without errors.", "The notification handler only has an order ID and cannot work out which user to notify.", "One event type is missing the BuyerId that all of its sibling events carry.", "fat events versus thin events, what data an integration event payload should include", "message contract versioning, backward compatible schema changes, breaking downstream consumers", "push or email notification targeting, looking up who to notify from a domain event"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": ".coderabbit.yaml App.Contracts/**/*.cs (precedent: issue #99, ShipmentDispatchedEvent)",
    "tags": "messaging,data-quality",
@@ -124,6 +135,7 @@
   {
    "key": "rs_transport_removal_orphans",
    "aliases": ["removed RabbitMQ", "swap the message broker", "traces missing after the migration", "leftover package versions", "dead telemetry source"],
+   "triggers": ["Removing the Azure Service Bus package now that everything runs on RabbitMQ.", "Swapping out our message broker library and updating the OpenTelemetry tracing setup.", "Cleaning up Directory.Packages.props after dropping a dependency from the solution.", "Reviewing a PR that deletes the NuGet package reference for the old transport.", "After the broker swap, messaging spans no longer show up in Jaeger, but HTTP spans are fine.", "The central package versions file still lists packages that no project references anymore.", "Tracing config still registers the old transport's activity source and nothing complains.", "dead dependency cleanup, leftover config after removing a library", "ActivitySource registration for distributed tracing, missing spans after a library change", "Central Package Management leftovers, unused package versions in NuGet"],
    "type": "Rule", "scope": "org", "repo": "dotnet-microservices", "verified": true,
    "found_by": ".coderabbit.yaml ServiceDefaults/Extensions.cs (both bit the ASB→RabbitMQ swap, PR #159)",
    "tags": "dotnet,messaging",

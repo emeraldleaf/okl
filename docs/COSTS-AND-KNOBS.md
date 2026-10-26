@@ -26,6 +26,7 @@ okl check --task "..." --format json      # the raw result, for scripts
 okl check --task "..." --format hook      # what the Claude Code hook prints: the briefing plus
                                             #   the one-line notice you see (OKL_QUIET=1 drops it)
 okl check --task "..." --limit 3          # fewer records; the briefing says how many it trimmed
+okl check --task "..." --decision floor   # the word floor, up to --limit, instead of the line
 okl init --interests "python,security"    # drop records tagged for stacks you do not use
 ```
 
@@ -34,6 +35,13 @@ okl init --interests "python,security"    # drop records tagged for stacks you d
 - **`--limit N`** caps how many records are drawn on. The full briefing reports how many
   it trimmed; `--format actions` does not, so a short actions list can hide a miss
   without saying so.
+- **`--decision`** is how candidates become a briefing. The default, `calibrated`, briefs at
+  most five lessons that share three subject words with the task (or two rare ones) in their
+  title, symptom, aliases and triggers, and nothing when none do; `floor` briefs up to
+  `--limit` that share two. The default is about 730 tokens a briefing against about 1,730,
+  and on real prompts a lesson it briefs is about three times as likely to apply, while it
+  surfaces about a quarter fewer of the lessons that do ([RETRIEVAL.md](RETRIEVAL.md)).
+  `"decision"` in `.okl/config.json` or `OKL_DECISION` sets it for every check.
 - **The prompt hook takes two of these from the environment**: `OKL_BRIEFING_LIMIT=N`
   becomes `--limit N`, and `OKL_BRIEFING_COMPACT=1` sends only the action list. They are
   for a model with a small context window; see
@@ -125,7 +133,8 @@ per record in the store, refreshed by `okl embed` after the records change. It b
 paraphrased task in eight finding its lesson on the held-out set, nothing on tickets or bug
 reports, and one record more on two of six short prompts. Before it, the two free arms did
 more: a `symptom` on every lesson and `aliases` in your team's words (`docs/LOAD-YOUR-RULES.md`,
-items 7 and 8). Past roughly 100,000 vectors the search needs an approximate index; the
+items 7 and 8). It briefs a record found by meaning alone only under `--decision floor`; under
+the default it can only reorder what clears the line. Past roughly 100,000 vectors the search needs an approximate index; the
 retrieval ADR names that tier and its trigger.
 
 ## The second stage (`--rerank`), off by default

@@ -1,5 +1,51 @@
 # Changelog
 
+## Unreleased
+
+The briefing now decides by a line set on real prompts that should get nothing, read over
+write-time *triggers*, instead of the word floor. It was measured on a benchmark built to
+decide (REPORT §4w; the design and its evidence: [docs/RETRIEVAL.md](docs/RETRIEVAL.md)):
+
+- held-out recall rose from 74.4% to 90.0%;
+- lessons briefed per query fell from 11.8 to 4.7;
+- prompts with no subject that got a briefing fell from 149 of 268 to 9;
+- on real task prompts, the share of briefed lessons that apply rose from 8.9% to 24.5%. It
+  also surfaces about a quarter fewer of the lessons that apply.
+
+- **The calibrated decision is the default** (#291). A lesson is briefed when its title,
+  symptom, aliases and triggers hold three of the task's subject words, or two nearly as rare
+  as a word in one record; at most five clear it. A message a harness wrote (a task
+  notification, a sub-agent's report) is briefed nothing, under either decision.
+  `--decision floor`, `OKL_DECISION=floor` or `"decision": "floor"` in `.okl/config.json`
+  keeps the floor.
+- **Lessons carry `triggers`**: whole phrasings of the moments a lesson applies, the request or
+  error that led to it first. Set them with:
+  - `okl record --trigger "..."` (repeatable);
+  - `okl update <id> --trigger "..."` (an empty value clears them);
+  - `okl_record` and `okl_update` over MCP;
+  - a `triggers` list in a pack.
+
+  `okl show` lists them. The bundled packs carry 1,730. `okl record` without one says on
+  stderr what triggers do; the Stop hook, `/record` and the encoding-loop skill ask for them.
+- **Upgrading: run `okl seed --refresh`.** It brings the bundled packs' triggers into a store
+  seeded before them, without importing the rest of each pack; until then, the hook's line
+  says so on every prompt. Lessons you recorded have no triggers until you add them
+  (`okl update <id> --trigger "..."`), and the default briefs them only when a prompt shares
+  three words with their title, symptom or aliases.
+- **Smaller briefings.** A full briefing is about 730 tokens by default, against about 1,730
+  under the floor's twelve
+  ([receipt](evals/results/briefing-size-20261026-0828.json)).
+- **Three behaviours that change with the default:**
+  - a gate that catches a briefed defect is briefed only when it clears the line itself (the
+    floor kept it);
+  - `--hybrid` briefs a record found by meaning alone only under `--decision floor`;
+  - what the cap of five cuts is counted in `dropped_by_cutoff`.
+- **A retrieval benchmark, `evals/bench/`.** It covers the seed corpus, 519 generated queries
+  and real prompts kept local, with a split held out until the choice was written down. Every
+  alternative measured on it is in REPORT §4w, the ones that lost included: two current
+  cross-encoder rerankers as the decision, five embedding models and two late-interaction
+  models.
+
 ## 0.9.0
 
 okl now needs Python 3.11 or newer: 3.10 is past end of life, and no filelock or pillow

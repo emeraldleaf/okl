@@ -36,10 +36,11 @@ from xml.sax.saxutils import escape
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src"))
 
-from okl import semantic  # noqa: E402
+from okl import decide, semantic  # noqa: E402
 from okl.core import (  # noqa: E402
     COMMON_WORD_MIN_RECORDS,
     COMMON_WORD_SHARE,
+    RETIRED_STATUSES,
     _apply_floor,
     _in_scope,
     _live_hits,
@@ -94,43 +95,39 @@ def _seeded_store(tmpdir: str) -> Store:
     return store
 
 
-def trace(store: Store | None = None, hybrid: str | None = None) -> dict:
-    """Run the real pipeline against the seeded corpus, recording each stage's survivors.
+def _decide(store: Store, live: list[Node], terms: list[str], cand, decision: str) -> tuple[list[Node], int, int]:  # noqa: ANN001
+    """The decision stage as check() runs it: (kept, how many fell below it, the cap the cutoff applies)."""
+    if decision == "calibrated":
+        # The line: shared subject words in the title, symptom, aliases and triggers, ties broken
+        # by relative rarity (decide.select); the cutoff then keeps at most CALIBRATED_CAP.
+        rarity = decide.Rarity(n for n in store.all_nodes() if n.status not in RETIRED_STATUSES)
+        kept, _matched, weak = decide.select(live, terms, rarity)
+        return kept, weak, min(LIMIT, decide.CALIBRATED_CAP)
+    # The floor: two shared subject words, or one when the task has only one; a hit below
+    # it stays only through a one-step link to a hit above it (core._apply_floor).
+    kept, _matched, weak = _apply_floor(store, live, terms, cand)
+    return kept, weak, LIMIT
 
-    With `hybrid`, the seeded corpus is embedded from the locally cached model first and the
-    candidates come from the fused order check() uses; the trace aborts if the semantic arm
-    cannot run here, rather than drawing a full-text pipeline under a hybrid title.
-    """
-    tmp = None
-    if store is None:
-        tmp = tempfile.TemporaryDirectory()
-        store = _seeded_store(tmp.name)
-    interests = list(SEED_INTERESTS)
+
+def _window(store: Store, window: int, hybrid: str | None, interests: list[str], decision: str) -> dict:
+    """Trace every stage for one search window (check() fetches 3 x `window` candidates)."""
     wanted = set(interests)
     repo_scope = f"repo:{TRACE_REPO}"
-
-    total = len(store.all_nodes())
+    terms = briefing_terms(TRACE_TASK)
     # Stage 1: the search runs on the task's subject words, as check() does (core._live_hits),
     # through the same candidate function, so a fused order is traced the way it is served.
-    terms = briefing_terms(TRACE_TASK)
-    query = " ".join(terms)
-    if hybrid:
-        semantic.build_index(store, offline=True)
-    cand = ranked_candidates(store, TRACE_TASK, LIMIT * 3, hybrid)
+    cand = ranked_candidates(store, TRACE_TASK, window * 3, hybrid)
     if hybrid and cand.note:
         raise SystemExit(f"ABORT: the semantic arm did not run: {cand.note}")
     fetched = cand.nodes
-
     own = [n for n in fetched if n.scope == repo_scope]
     org = [n for n in fetched if n.scope == "org"]
-    after_scope = own + org
 
     # Stage 3 — applies_to, the only EXCLUSIVE filter. Own-repo records never reach it.
     def gated(n: Node) -> bool:
         a = split_tags(n.applies_to) - {"any"}
         return bool(a and wanted and not (a & wanted))
 
-    dropped_applies = [n for n in org if gated(n)]
     after_applies = own + [n for n in org if not gated(n)]
 
     # Stage 4 — tags, INCLUSIVE: untagged always passes, one shared subject is enough.
@@ -138,56 +135,82 @@ def trace(store: Store | None = None, hybrid: str | None = None) -> dict:
         t = split_tags(n.tags)
         return bool(t and wanted and not (t & wanted))
 
-    dropped_tags = [n for n in after_applies if n.scope == "org" and off_subject(n)]
-    after_tags = [n for n in after_applies if n not in dropped_tags]
+    after_tags = [n for n in after_applies if not (n.scope == "org" and off_subject(n))]
 
     # Cross-check the hand-rolled trace against the real predicate. If these ever disagree,
     # the diagram is depicting a pipeline the code does not run — the exact failure mode
     # this file exists to prevent, so it aborts rather than rendering a plausible fiction.
-    truth = [n for n in fetched if _in_scope(n, repo_scope, interests)]
-    if {n.id for n in truth} != {n.id for n in after_tags}:
+    if {n.id for n in fetched if _in_scope(n, repo_scope, interests)} != {n.id for n in after_tags}:
         raise SystemExit("ABORT: traced stages disagree with core._in_scope — fix the trace "
                          "before rendering, or the diagram depicts a pipeline nobody runs.")
 
     # Retired lessons (obsolete, or superseded by a live one this repo can see) leave before
     # the cut. Take the survivors from _live_hits itself, the function check() calls; if it had
-    # to widen its window, this trace's single fetch no longer matches it, so stop.
-    live, _, _, _ = _live_hits(store, TRACE_TASK, LIMIT, repo_scope, interests, hybrid=hybrid)
+    # to widen its window past this one, this trace no longer matches it, so stop.
+    live, _, exhausted, _ = _live_hits(store, TRACE_TASK, window, repo_scope, interests, hybrid=hybrid)
     live_ids = {n.id for n in live}
     if not live_ids <= {n.id for n in after_tags}:
         raise SystemExit("ABORT: _live_hits widened its search past this trace's window — "
                          "trace the wider fetch before rendering.")
-    retired = [n for n in after_tags if n.id not in live_ids]
+    kept, weak, cap = _decide(store, live, terms, cand, decision)
+    return {"cand": cand, "fetched": fetched, "own": own, "org": org, "after_applies": after_applies,
+            "after_tags": after_tags, "live": live, "exhausted": exhausted,
+            "retired": [n for n in after_tags if n.id not in live_ids], "kept": kept, "weak": weak, "cap": cap}
 
-    # The floor: two shared subject words, or one when the task has only one; a hit below
-    # it stays only through a one-step link to a hit above it (core._apply_floor).
-    kept, _matched, weak = _apply_floor(store, live, terms, cand)
-    # check() widens the fetch when a full window leaves fewer than the limit above the
-    # floor. This trace applies the floor to one window, so it asks check() itself and stops
-    # if the briefing it would deliver differs from the counts traced here.
-    delivered_by_check = check(store, TRACE_REPO, TRACE_TASK, LIMIT, interests, hybrid=hybrid)
-    if (delivered_by_check["match_count"] != min(LIMIT, len(kept))
-            or delivered_by_check["weak_matches"] != weak):
+
+def trace(store: Store | None = None, hybrid: str | None = None) -> dict:
+    """Run the real pipeline against the seeded corpus, recording each stage's survivors.
+
+    The default render traces the default decision, the calibrated line (decide.py, REPORT
+    §4w). With `hybrid`, the seeded corpus is embedded from the locally cached model first and
+    the candidates come from the fused order check() uses, under the word floor: a record the
+    semantic arm finds by meaning alone shares no word with the task, so only the floor can
+    brief it. The trace aborts if the semantic arm cannot run here, rather than drawing a
+    full-text pipeline under a hybrid title.
+    """
+    decision = "floor" if hybrid else decide.DEFAULT
+    tmp = None
+    if store is None:
+        tmp = tempfile.TemporaryDirectory()
+        store = _seeded_store(tmp.name)
+    interests = list(SEED_INTERESTS)
+    terms = briefing_terms(TRACE_TASK)
+    if hybrid:
+        semantic.build_index(store, offline=True)
+    # The floor widens its window while fewer than the limit clear it (core._floor_widened);
+    # the trace widens the same way, so every stage is counted at the window check() used.
+    window = LIMIT
+    w = _window(store, window, hybrid, interests, decision)
+    while (decision == "floor" and len(w["kept"]) < LIMIT and not w["exhausted"]
+           and window < LIMIT * 27):
+        window *= 3
+        w = _window(store, window, hybrid, interests, decision)
+    kept, weak, cap, cand, fetched = w["kept"], w["weak"], w["cap"], w["cand"], w["fetched"]
+    # Ask check() itself, and stop if the briefing it delivers differs from the counts traced.
+    delivered_by_check = check(store, TRACE_REPO, TRACE_TASK, LIMIT, interests, hybrid=hybrid,
+                               decision=decision)
+    if (delivered_by_check["match_count"] != min(cap, len(kept))
+            or delivered_by_check["weak_matches"] != weak
+            or delivered_by_check["dropped_by_cutoff"] != max(0, len(kept) - cap)):
         raise SystemExit("ABORT: check() widened past this trace's window (its briefing holds "
-                         f"{delivered_by_check['match_count']} records, the trace {min(LIMIT, len(kept))}); "
+                         f"{delivered_by_check['match_count']} records, the trace {min(cap, len(kept))}); "
                          "trace the wider fetch before rendering.")
 
+    after_scope = len(w["own"]) + len(w["org"])
     applies_set = sum(1 for n in store.all_nodes()
                       if (n.applies_to or "").strip() and n.applies_to.strip().lower() != "any")
     out = {
-        "task": TRACE_TASK, "query": query, "terms": len(terms), "repo": TRACE_REPO, "limit": LIMIT,
-        "interests": interests,
-        "corpus": total,
-        "applies_to_set": applies_set,
-        "fetched": len(fetched),
-        "after_scope": len(after_scope), "dropped_scope": len(fetched) - len(after_scope),
-        "after_applies": len(after_applies), "dropped_applies": len(dropped_applies),
-        "after_tags": len(after_tags), "dropped_tags": len(dropped_tags),
-        "retired": len(retired), "live": len(live),
+        "task": TRACE_TASK, "query": " ".join(terms), "terms": len(terms), "repo": TRACE_REPO,
+        "limit": LIMIT, "interests": interests, "corpus": len(store.all_nodes()),
+        "applies_to_set": applies_set, "widened": window // LIMIT,
+        "fetched": len(fetched), "after_scope": after_scope, "dropped_scope": len(fetched) - after_scope,
+        "after_applies": len(w["after_applies"]), "dropped_applies": after_scope - len(w["after_applies"]),
+        "after_tags": len(w["after_tags"]), "dropped_tags": len(w["after_applies"]) - len(w["after_tags"]),
+        "retired": len(w["retired"]), "live": len(w["live"]),
         "after_floor": len(kept), "weak": weak,
-        "delivered": min(LIMIT, len(kept)),
-        "trimmed": max(0, len(kept) - LIMIT),
-        "hybrid": hybrid,
+        "delivered": min(cap, len(kept)),
+        "trimmed": max(0, len(kept) - cap),
+        "hybrid": hybrid, "decision": decision, "cap": cap,
     }
     if hybrid:
         vectors = store.embeddings(semantic.MODEL_ID)
@@ -229,6 +252,51 @@ def _bar(x: int, y: int, w: int, keep_frac: float, cut_frac: float) -> str:
     return "".join(out)
 
 
+def _adjust_stages(d: dict, stages: list, f: int) -> None:
+    """Swap in the stages the traced configuration runs: the calibrated line and its cap, or the
+    semantic arm's embed and fuse steps and the floor's cosine line."""
+    if d["decision"] == "calibrated":
+        # The default decision (decide.py, REPORT 4w) in place of the floor and the top twelve.
+        line = next(i for i, st in enumerate(stages) if st[1] == "FLOOR")
+        stages[line] = (
+            "6", "LINE", "Three shared subject words, or two nearly as rare as a word in one record",
+            "Counted in the title, symptom, aliases and triggers. Set on 282 real prompts with no "
+            "subject, so about 1 in 20 such prompts gets anything (REPORT 4w).",
+            f'{d["after_floor"]} clear the line', f'{d["weak"]} below it, {d["retired"]} retired',
+            d["after_floor"] / f, (d["weak"] + d["retired"]) / f, "DROPS")
+        stages[line + 1] = (
+            "7", "CUTOFF", f"The best {d['cap']}",
+            "What clears the line is ordered by shared words, then by search rank; the cap keeps "
+            "the briefing short. The number cut travels with the result.",
+            f'{d["delivered"]} delivered', f'{d["trimmed"]} trimmed',
+            d["delivered"] / f, d["trimmed"] / f, "TRUNCATES")
+    if d.get("hybrid"):
+        # The semantic arm: a second candidate source and the fusion, drawn between RANK and
+        # SCOPE because that is where ranked_candidates() puts them; the floor gains its line.
+        rank = next(i for i, st in enumerate(stages) if st[1] == "RANK")
+        stages[rank] = ("2", "RANK", "Full text: fetch 3x more candidates than needed", stages[rank][3],
+                        f'{d["lexical"]} fetched', stages[rank][5], d["lexical"] / f, 0.0, "")
+        stages.insert(rank + 1, (
+            "2b", "EMBED", f"The task as one {d['dim']}-dimension vector; the nearest records by cosine",
+            "A local static model (potion-retrieval-32M) read from the cache, never the network; "
+            "the vectors come from `okl embed`. One matrix product over every record.",
+            f'{d["nearest"]} nearest', f'{d["semantic_only"]} not in the full-text list',
+            d["nearest"] / f, 0.0, ""))
+        stages.insert(rank + 2, (
+            "2c", "FUSE", f"Two orders become one: {d['hybrid']} fusion",
+            "linear: a convex combination of a rank-normalised full-text score and the min-max "
+            "cosine (alpha 0.5). rrf: reciprocal ranks summed (k = 60). Measured in REPORT 4q.",
+            f'{d["fetched"]} candidates', "", 1.0, 0.0, ""))
+        floor = next(i for i, st in enumerate(stages) if st[1] == "FLOOR")
+        st = list(stages[floor])
+        st[2] = (f"Two shared words, one in the title or symptom that at most {COMMON_WORD_SHARE:.0%} of records "
+                 f"share, a one-word alias, or a cosine at or above {d['line']:.2f}")
+        st[3] = (f"Only-by-embedding records count by meaning alone ({d['by_meaning']} kept so). A title or symptom "
+                 f"word counts alone if at most {COMMON_WORD_SHARE:.0%}, or {COMMON_WORD_MIN_RECORDS}, of records "
+                 "hold it; others need two words.")
+        stages[floor] = tuple(st)
+
+
 def render(d: dict) -> str:
     """Turn the counts from `trace()` into the complete SVG document text."""
     f = d["fetched"] or 1
@@ -238,12 +306,13 @@ def render(d: dict) -> str:
          f'{d["corpus"]} records', "", 1.0, 0.0, ""),
         ("1", "QUERY", "The task's subject words, not the sentence",
          "Function words, chat filler and single characters drop out; each word counts once, "
-         "up to 40. A prompt with no subject word is briefed nothing.",
+         "up to 40. No subject word, or a message a harness wrote, is briefed nothing.",
          f'{d["terms"]} words', "searched", 0.0, 0.0, ""),
         ("2", "RANK", "Fetch 3x more candidates than needed",
-         "SQLite FTS5, weighted title x8, body x4, symptom x4, aliases x4, fix x2, tags x1. A record found "
-         "only by its tag ranks after every content match.",
-         f'{d["fetched"]} fetched', "limit x 3", d["fetched"] / f, 0.0, ""),
+         "SQLite FTS5, weighted title x8, body x4, symptom x4, aliases x4, triggers x4, fix x2, tags x1. "
+         "A record found only by its tag ranks after every content match.",
+         f'{d["fetched"]} fetched', "limit x 3" + (f', widened x{d["widened"]} by the floor' if d["widened"] > 1 else ""),
+         d["fetched"] / f, 0.0, ""),
         ("3", "SCOPE", "Permission - who may see this",
          "A repo's own records pass first and unconditionally. org records continue. Another "
          "repo's records stop here: the curation boundary.",
@@ -280,39 +349,16 @@ def render(d: dict) -> str:
          "apply' can never be confused with 'the store is empty'.",
          "hook | MCP | CI", "", 0.0, 0.0, ""),
     ]
-    if d.get("hybrid"):
-        # The semantic arm: a second candidate source and the fusion, drawn between RANK and
-        # SCOPE because that is where ranked_candidates() puts them; the floor gains its line.
-        rank = next(i for i, st in enumerate(stages) if st[1] == "RANK")
-        stages[rank] = ("2", "RANK", "Full text: fetch 3x more candidates than needed", stages[rank][3],
-                        f'{d["lexical"]} fetched', "limit x 3", d["lexical"] / f, 0.0, "")
-        stages.insert(rank + 1, (
-            "2b", "EMBED", f"The task as one {d['dim']}-dimension vector; the nearest records by cosine",
-            "A local static model (potion-retrieval-32M) read from the cache, never the network; "
-            "the vectors come from `okl embed`. One matrix product over every record.",
-            f'{d["nearest"]} nearest', f'{d["semantic_only"]} not in the full-text list',
-            d["nearest"] / f, 0.0, ""))
-        stages.insert(rank + 2, (
-            "2c", "FUSE", f"Two orders become one: {d['hybrid']} fusion",
-            "linear: a convex combination of a rank-normalised full-text score and the min-max "
-            "cosine (alpha 0.5). rrf: reciprocal ranks summed (k = 60). Measured in REPORT 4q.",
-            f'{d["fetched"]} candidates', "", 1.0, 0.0, ""))
-        floor = next(i for i, st in enumerate(stages) if st[1] == "FLOOR")
-        st = list(stages[floor])
-        st[2] = (f"Two shared words, one in the title or symptom that at most {COMMON_WORD_SHARE:.0%} of records "
-                 f"share, a one-word alias, or a cosine at or above {d['line']:.2f}")
-        st[3] = (f"Only-by-embedding records count by meaning alone ({d['by_meaning']} kept so). A title or symptom "
-                 f"word counts alone if at most {COMMON_WORD_SHARE:.0%}, or {COMMON_WORD_MIN_RECORDS}, of records "
-                 "hold it; others need two words.")
-        stages[floor] = tuple(st)
+    _adjust_stages(d, stages, f)
     h = 166 + len(stages) * ROW_H + 60
     o = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{h}" '
          f'viewBox="0 0 {W} {h}" font-family="{FONT}">',
          f'<rect width="{W}" height="{h}" fill="{PAPER}"/>']
-    title = "How an okl briefing gets built" + (" with the semantic arm on" if d.get("hybrid") else "")
+    title = "How an okl briefing gets built" + (" with the semantic arm on, under the word floor"
+                                                 if d.get("hybrid") else "")
     o.append(f'<text x="{PAD}" y="46" font-size="27" font-weight="700" fill="{INK}">'
              f'{escape(title)}</text>')
-    sub = (f'{d["corpus"]} records and one task sentence become the {d["limit"]} an agent reads. '
+    sub = (f'{d["corpus"]} records and one task sentence become the {d["cap"]} or fewer an agent reads. '
            + ("A local embedding adds candidates by meaning; five stages then narrow them."
               if d.get("hybrid") else "Five stages narrow it; only applies_to may exclude on validity."))
     o.append(f'<text x="{PAD}" y="72" font-size="14" fill="{INK2}">{escape(sub)}</text>')
@@ -370,7 +416,8 @@ def render(d: dict) -> str:
         if keep > 0:
             o.append(_bar(tx, y + ROW_H - 20, W - PAD - tx - 14, keep, cut))
         y += ROW_H
-    fns = ["src/okl/core.py briefing_terms() / ranked_candidates() / _live_hits() / _in_scope() / _apply_floor() . "
+    decides = "src/okl/decide.py select()" if d["decision"] == "calibrated" else "_apply_floor()"
+    fns = [f"src/okl/core.py briefing_terms() / ranked_candidates() / _live_hits() / _in_scope() . {decides} . "
            "src/okl/store.py search()" + (" . src/okl/semantic.py search()" if d.get("hybrid") else ""),
            "regenerate: python3 docs/render_pipeline_diagram.py" + (f" --hybrid {d['hybrid']}" if d.get("hybrid") else "")]
     for i, ln in enumerate(fns):

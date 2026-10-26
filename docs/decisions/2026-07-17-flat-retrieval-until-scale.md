@@ -13,9 +13,15 @@ standing rule is: *refuse to start as a graph; add complexity when a symptom dem
 
 Two external data points support staying flat **at current scale**:
 
-1. **Mem0 removed its graph layer in v3** after its own benchmarks showed the graph lost on recall, ran
-   ~3× slower, and cost ~2× tokens versus the flat store. Graph/semantic machinery is not free and does
-   not automatically win.
+1. **Mem0's graph variant cost more and won little.** In Mem0's own paper (arXiv 2504.19413, Tables 1
+   and 2, vendor-run), the graph variant scored 68.44 against 66.88 overall but lower on single-hop
+   (65.71 against 67.13) and multi-hop questions (47.19 against 51.15), retrieved about twice the memory
+   tokens (3,616 against 1,764) and took about three times the search p95 (0.657 s against 0.200 s).
+   Mem0 v3 later removed the external graph stores from its open-source SDK (PR #4805, April 2026) in
+   favour of entity matching as a third hybrid-search signal; it stated no reason, and graph memory
+   remains on its paid platform. Graph/semantic machinery is not free and does not automatically win.
+   (Corrected 2026-10-25: this item first said Mem0 removed the graph "after its own benchmarks", an
+   inference Mem0 never stated; the figures above were read from the paper's tables.)
 2. Codified Context ran a **283-session** single project whose keyword-indexed corpus was its Tier-3
    knowledge base — **~16,250 lines across 34 specification docs** (the MCP server's substring matching
    indexes only the specs, per §3.3.1; the ~26.2K total-context figure also counts the always-loaded

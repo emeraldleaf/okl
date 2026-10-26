@@ -4,6 +4,7 @@
   {
    "key": "nc_idor",
    "aliases": ["user can see another user's record", "change the id in the URL", "missing ownership check", "insecure direct object reference", "any id works", "access control on GET by id"],
+   "triggers": ["Adding a GET endpoint that returns an invoice by its id", "Building a multi-tenant API where each customer must see only their own projects", "Reviewing a PR that adds update and delete endpoints for user documents", "Writing integration tests for the orders API ahead of a security audit", "Pentest report says changing the id in the URL returns another customer's order", "A user could see someone else's profile by incrementing the number in the request", "The handler loads the entity with FindAsync(id) and returns it straight back to whoever asked", "insecure direct object reference, broken object level authorization, BOLA", "tenant isolation, row-level authorization, data leaking between customer accounts", "authorization bypass by guessing ids, horizontal privilege escalation"],
    "type": "Defect",
    "scope": "org",
    "repo": "dotnet-microservices",
@@ -17,6 +18,7 @@
   },
   {
    "key": "nc_jwt_clockskew",
+   "triggers": ["Configuring JWT bearer authentication in ASP.NET Core against our Keycloak realm", "Shortening access token lifetime to five minutes for the internal API", "Reviewing the JWT bearer setup in Program.cs before the security review", "Writing a test that an expired token gets rejected by the API", "Tokens are still accepted several minutes after their exp claim has passed", "Our test expecting a 401 for an expired token gets a 200 instead", "Revoked sessions keep working for almost ten minutes even though tokens only last five", "token expiry tolerance, clock drift allowance, leeway in JWT validation", "TokenValidationParameters defaults, lifetime validation, access token TTL", "bearer token expiration not enforced on time, grace period on exp and nbf"],
    "type": "Defect",
    "scope": "repo",
    "repo": "dotnet-microservices",
@@ -31,6 +33,7 @@
   {
    "key": "nc_price_tamper",
    "aliases": ["client sends the price", "trust the request body", "user sets their own role", "edit the request in devtools", "server-side pricing", "isAdmin from the client"],
+   "triggers": ["Building the create-order endpoint that takes cart items and totals from the frontend", "Adding a user profile update API with a request DTO", "Reviewing a PR whose request model includes a Status field for order updates", "Implementing checkout where the client sends product ids, quantities and prices", "A customer ordered a $999 item and was only charged one cent", "Someone flipped IsAdmin to true in the JSON payload and got admin access", "Order status jumped from pending to shipped because the client sent it in the body", "mass assignment, over-posting, parameter tampering", "trusting client-side values, request body manipulation, edited the price in Burp Suite", "binding request JSON straight onto the entity, untrusted input in the model"],
    "type": "Defect",
    "scope": "org",
    "repo": "dotnet-microservices",
@@ -44,6 +47,7 @@
   },
   {
    "key": "nc_outbox_atomicity",
+   "triggers": ["Publishing an OrderPlaced event after saving the order in a Wolverine handler", "Refactoring a handler to inject the event publisher through the constructor for cleaner code", "Reviewing a service class outside the handlers that writes to the DbContext and sends messages", "Upgrading to Wolverine 6 and checking that transactional messaging still holds", "Consumers receive events for orders that were never saved because the transaction rolled back", "The downstream service gets the message before the row exists in the database", "Our outbox table stays empty but messages still go out immediately", "transactional outbox, atomic write and publish, the dual write problem", "message sent before commit, ghost events, phantom messages after a rollback", "IMessageBus injection scope, enlisting outgoing messages in the database transaction"],
    "symptom": "an event arrives at a consumer for an entity write that was rolled back, or appears before the row it describes is committed; the publisher was injected through the constructor rather than taken from the handler's message context",
    "type": "Defect",
    "scope": "repo",
@@ -57,6 +61,7 @@
   },
   {
    "key": "nc_handler_di",
+   "triggers": ["Writing a unit test that resolves a Wolverine message handler from the service provider", "Setting up the test host for our message handlers with WebApplicationFactory", "Moving handlers into a separate assembly and registering it for discovery", "Reviewing a test fixture that pulls handlers out of the DI container directly", "GetRequiredService throws no service registered for my handler, but it runs fine in production", "No service for type 'OrderPlacedHandler' has been registered, thrown from my test setup", "The handler runs when a message is sent but can't be resolved in the integration test", "handler discovery vs dependency injection registration in the message bus", "assembly scanning that doesn't add types to IServiceCollection", "IoC container can't resolve a convention-discovered handler, MediatR-style handler lookup confusion"],
    "symptom": "a test resolving a message handler from the service provider throws 'no service registered' although Wolverine discovers and runs the handler in production",
    "type": "Defect",
    "scope": "repo",
@@ -70,6 +75,7 @@
   },
   {
    "key": "nc_topology_race",
+   "triggers": ["Adding a new consumer service that subscribes to OrderPlaced events over RabbitMQ", "Deploying a fresh environment where publishers start up before consumers", "Configuring exchange and queue names for a new event in the messaging setup", "Reviewing a PR that hardcodes a queue name string in the listener configuration", "Events published right after deploy never reached the new service but the outbox says delivered", "The consumer gets nothing and the RabbitMQ admin shows an empty exchange with a typo in its name", "Messages vanished during the first startup of the billing service", "unroutable messages dropped by a fanout exchange with no queue bound", "broker topology provisioning, declaring exchanges, queues and bindings", "auto-provision race on startup, lost AMQP messages, publish before subscribe"],
    "symptom": "an event published during a consumer's first boot is marked delivered in the outbox but never reaches the queue; the consumer's exchange or binding did not exist yet, or a misspelled name was auto-provisioned as an empty exchange",
    "type": "Defect",
    "scope": "repo",
@@ -83,6 +89,7 @@
   {
    "key": "nc_dead_metric",
    "aliases": ["metric always zero", "alert never fires", "counter never increments", "dashboard shows nothing", "dead gauge"],
+   "triggers": ["Adding Prometheus counters for dead-letter queue messages and failed jobs", "Setting up Grafana alert rules on our custom application metrics", "Reviewing a PR that adds a metrics class with several counters", "Writing the runbook section about which metric pages on-call", "The DLQ alarm never fired even though messages piled up in the dead-letter queue", "Our counter has sat at zero on the dashboard since the day it was deployed", "The metrics class is registered in DI but nothing ever calls it", "instrumentation that is never emitted, dead counters, phantom telemetry", "silent alerting gap, monitoring that looks wired up but isn't", "custom meters and gauges in OpenTelemetry, a metric that is never incremented"],
    "symptom": "a counter or gauge that a dashboard or runbook names as the alarm, whose value has never moved; a metrics class registered but never injected",
    "type": "Defect",
    "scope": "org",
@@ -96,6 +103,7 @@
   {
    "key": "nc_speculative_interface",
    "aliases": ["interface with one implementation", "IFoo for everything", "abstraction for a future swap", "unnecessary interface", "factory that returns one class"],
+   "triggers": ["Creating a repository interface for the new storage class in case we swap databases later", "Refactoring the payment client into a port and adapter for hexagonal architecture", "Reviewing a PR that adds an IEmailSender interface with a single SMTP implementation", "Adding a factory that picks the notification provider based on configuration", "Every class here has an interface with exactly one implementation and none of them are mocked", "Go to definition always lands on an interface and I have to hop again to the only implementation", "This factory returns the same class no matter what input it gets", "YAGNI abstraction, premature abstraction, one interface per class", "ports and adapters, clean architecture boilerplate, abstracting for a future swap", "header interfaces, speculative generality, over-engineering with dependency injection"],
    "symptom": "an interface with one implementation that no test substitutes and no roadmap item will; a factory that returns the same class for every input",
    "type": "Rule",
    "scope": "org",
@@ -109,6 +117,7 @@
   {
    "key": "nc_arch_reviewer",
    "aliases": ["review step nobody runs", "checklist nobody follows", "manual gate", "enforcement that is only documentation", "no hook triggers it"],
+   "triggers": ["Writing a review agent prompt that enforces our architecture rules on pull requests", "Documenting our code quality gates and enforcement tiers in the contributing guide", "Adding a custom linter config to the repo to police layer boundaries", "Auditing which of our documented checks actually run on every change", "The docs say the architecture reviewer blocks bad changes, but violations keep landing on main", "We found a lint script in the repo that no workflow or hook ever calls", "The pre-commit hook described in the README isn't actually installed for anyone", "paper rules, documentation-only enforcement, shelfware quality checks", "a guardrail that is never invoked, dead CI gate, unused review bot", "rules that live only in markdown, governance docs that nothing executes"],
    "symptom": "a review agent, linter or gate described in the docs as enforcement that no hook, CI job or command ever invokes",
    "type": "Defect",
    "scope": "org",
@@ -122,6 +131,7 @@
   {
    "key": "g_tombstones_nc",
    "aliases": ["old name still in the docs", "removed service still referenced", "stale identifier", "tombstone", "retired term reappears"],
+   "triggers": ["We just swapped Azure Service Bus for RabbitMQ in the code; wrapping up the migration PR now.", "Adding a CI check that greps the repo for names of services and classes we have removed.", "Retiring an old feature flag and its config key across the solution after the rollout finished.", "Reviewing a PR that adds an allowlist of files exempt from the removed-identifier scan for an old migration.", "The onboarding docs still tell new devs to configure Service Bus even though we ripped it out months ago.", "Our grep audit has passed for weeks, and it turns out a typo in its pattern meant it matched nothing.", "A doc we exempted for the last removal now mentions a newly retired service and nobody flagged it.", "dead names lingering in markdown, code comments and appsettings after a migration", "deprecated identifier sweep, banned-terms lint, forbidden words check across docs and config", "documentation rot after a tech swap, like the wiki still describing the old message broker"],
    "symptom": "a retired identifier, service name or transport still taught as current in docs, comments or config after the code dropped it",
    "type": "Gate",
    "scope": "org",
