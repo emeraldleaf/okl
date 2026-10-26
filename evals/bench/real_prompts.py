@@ -45,10 +45,26 @@ context, the lessons shuffled and unmarked by arm. Recall is pooled: of the appl
 any arm found. The selection rule, fixed before any judging: the context arm that finds the
 most applying lessons on the tuning half's task prompts, among those whose judged precision
 there is at least the calibrated arm's; ties go to fewer lessons per prompt.
+
+Fix arms, added after the tuning half showed the calibrated decision found 3 of the 55 applying
+recorded lessons (they carry no triggers, and the decision reads only title, symptom, aliases
+and triggers):
+
+- `fallback`: a lesson without triggers is scored on its body and fix as well;
+- `backfill`: the recorded advice lessons carry triggers written from each lesson alone by a
+  model that never saw a prompt (private/backfill-triggers.jsonl), as the seed packs' were;
+- `backfill+fallback`: both.
+
+`pool --extend` briefs the already-sampled prompts with the arms a split's pool lacks and
+judges only the pairs no arm had briefed. The fix rule, fixed before any fix arm's pair was
+judged: the fix arm that finds the most applying lessons on the tuning half's task prompts,
+among those whose judged precision there is at least the calibrated arm's; ties go to fewer
+lessons per prompt.
 """
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import hashlib
 import json
 import random
@@ -71,8 +87,10 @@ PRIVATE = bench.ROOT / "evals" / "bench" / "private"
 SNAPSHOT = PRIVATE / "real-store.db"
 PER_BATCH = 15
 HARNESS_PROJECTS = ("okl-ab-", "okl-e2e")
+BACKFILL = PRIVATE / "backfill-triggers.jsonl"
 CONTEXT_ARMS = ("prev", "prev-own", "reply-own")
-ARMS = ("floor", "calibrated", *CONTEXT_ARMS)
+FIX_ARMS = ("fallback", "backfill", "backfill+fallback")
+ARMS = ("floor", "calibrated", *CONTEXT_ARMS, *FIX_ARMS)
 
 
 def _rows(name: str) -> list[dict]:
@@ -115,22 +133,38 @@ class Stores:
         self.nodes = self.full.all_nodes()
         self.recorded = sorted((n for n in self.nodes if not n.id.startswith("seed:")), key=lambda n: n.created_at)
         self.edges = self.full.edges(sorted(EDGE_RELS))
-        self._cache: dict[int, Store] = {}
+        self._cache: dict[tuple[int, bool], Store] = {}
+        self._backfill: dict[str, str] | None = None
 
-    def as_of(self, ms: int) -> Store:
-        """The store a prompt at `ms` was checked against, built once per distinct moment."""
+    def backfill(self) -> dict[str, str]:
+        """The written triggers for recorded lessons that have none, by lesson id."""
+        if self._backfill is None:
+            by: dict[str, list[str]] = defaultdict(list)
+            for r in _rows(BACKFILL.name):
+                by[r["lesson"]].append(r["text"])
+            self._backfill = {k: "\n".join(v) for k, v in by.items()}
+        return self._backfill
+
+    def as_of(self, ms: int, *, backfilled: bool = False) -> Store:
+        """The store a prompt at `ms` was checked against, built once per distinct moment; with
+        `backfilled`, its recorded lessons carry the written triggers."""
         k = sum(1 for n in self.recorded if n.created_at < ms)
-        if k not in self._cache:
+        if (k, backfilled) not in self._cache:
             keep = {n.id for n in self.nodes if n.id.startswith("seed:")} | {n.id for n in self.recorded[:k]}
+            extra = self.backfill() if backfilled else {}
             s = Store("sqlite:///:memory:")
             # Copied as stored: these nodes passed validation when they were written.
             for n in sorted((n for n in self.nodes if n.id in keep), key=lambda n: n.type != "Vocabulary"):
-                s._impl.upsert_node(n)
+                s._impl.upsert_node(dataclasses.replace(n, triggers=extra[n.id]) if n.id in extra else n)
             for e in self.edges:
                 if e.src in keep and e.dst in keep:
                     s._impl.upsert_edge(e)
-            self._cache[k] = s
-        return self._cache[k]
+            self._cache[(k, backfilled)] = s
+        return self._cache[(k, backfilled)]
+
+    def for_arm(self, prompt: dict, arm: str) -> Store:
+        """The store an arm checks a prompt against."""
+        return self.as_of(millis(prompt["at"]), backfilled=arm.startswith("backfill"))
 
 
 def context_text(prompt: dict, arm: str) -> str:
@@ -164,9 +198,28 @@ def _own_words(own: list[str] | None) -> Iterator[None]:
         decide.select = saved_select
 
 
+@contextmanager
+def _fallback(on: bool) -> Iterator[None]:
+    """Score a lesson without triggers on its body and fix as well as its about-text."""
+    saved = decide.about_text
+
+    def about_text(n: Node) -> str:
+        return saved(n) if n.triggers else " ".join(x or "" for x in (saved(n), n.body, n.fix))
+
+    if on:
+        decide.about_text = about_text
+    try:
+        yield
+    finally:
+        decide.about_text = saved
+
+
 def brief(store: Store, prompt: dict, arm: str) -> list[str]:
-    """The lesson ids an arm briefs for a prompt."""
+    """The lesson ids an arm briefs for a prompt, checked against `store` (Stores.for_arm)."""
     repo = repo_of(prompt)
+    if arm in FIX_ARMS:
+        with _fallback(arm.endswith("fallback")):
+            return core.briefed_ids(core.check(store, repo, prompt["text"], interests=None, decision="calibrated"))
     if arm == "floor":
         return core.briefed_ids(core.check(store, repo, prompt["text"], interests=None, decision="floor"))
     if arm == "calibrated":
@@ -202,9 +255,52 @@ def cmd_snapshot(_args: argparse.Namespace) -> None:
     print(f"snapshot {SNAPSHOT.name}: sha {bench.digest([SNAPSHOT])}", file=sys.stderr)
 
 
+def _write_batches(items: list[dict], stem: str) -> int:
+    """Write judging items, PER_BATCH a file, without the lesson ids; return the file count."""
+    for b in range(0, len(items), PER_BATCH):
+        with (PRIVATE / f"{stem}{b // PER_BATCH}.jsonl").open("w") as f:
+            for it in items[b:b + PER_BATCH]:
+                f.write(json.dumps({k: v for k, v in it.items() if k != "_ids"}) + "\n")
+    return -(-len(items) // PER_BATCH)
+
+
+def _item(i: int, p: dict, lessons: list[str], nodes: dict[str, Node], first_n: int = 0) -> dict:
+    """One judging item: a prompt with its context and the lessons to judge, numbered from first_n."""
+    return {"item": i, "prompt": p["text"], "previous": p["previous"], "reply": p.get("reply", ""),
+            "lessons": [{"n": first_n + j, "title": nodes[lid].title, "symptom": nodes[lid].symptom or "",
+                         "fix": nodes[lid].fix or ""} for j, lid in enumerate(lessons)], "_ids": lessons}
+
+
 def cmd_pool(args: argparse.Namespace) -> None:
-    """Brief the sampled task and null prompts under every arm and write the blind judging batches."""
+    """Brief the sampled task and null prompts under the arms and write the blind judging batches;
+    with --extend, add the arms a split's pool lacks and judge only the pairs it has not seen."""
     stores = Stores()
+    nodes = {n.id: n for n in stores.nodes}
+    arms = args.arms or list(ARMS)
+    meta_path = PRIVATE / f"real-arms-{args.split}.json"
+    if args.extend:
+        meta = json.loads(meta_path.read_text())
+        by_id = {p["id"]: p for label in ("task", "null") for p in prompts(label)}
+        chosen = [(label, by_id[pid]) for label, pid in meta["chosen"]]
+        new_arms = [a for a in arms if a not in meta["briefed"]]
+        for arm in new_arms:
+            meta["briefed"][arm] = {p["id"]: brief(stores.for_arm(p, arm), p, arm) for _l, p in chosen}
+        rng = random.Random(f"{meta['seed']}:{args.split}:extend")  # noqa: S311 - a reproducible shuffle
+        items = []
+        for i, (_label, p) in enumerate(chosen):
+            seen = meta["pooled"].get(str(i), [])
+            fresh = sorted({lid for arm in new_arms for lid in meta["briefed"][arm][p["id"]]} - set(seen))
+            if not fresh:
+                continue
+            rng.shuffle(fresh)  # NOSONAR - the seeded order the judge reads, reproducible on purpose
+            items.append(_item(i, p, fresh, nodes, first_n=len(seen)))
+            meta["pooled"][str(i)] = seen + fresh
+        rng.shuffle(items)  # NOSONAR - prompts in a seeded order, reproducible on purpose
+        files = _write_batches(items, f"real-judge-{args.split}-x")
+        meta_path.write_text(json.dumps(meta))
+        print(f"extended with {', '.join(new_arms)} · {sum(len(it['_ids']) for it in items)} new pairs on "
+              f"{len(items)} prompts · {files} batches", file=sys.stderr)
+        return
     # A copy faithful to the snapshot briefs what the snapshot briefs; check before trusting it.
     full = stores.as_of(10**15)
     for p in sample("task", args.split, 20, args.seed):
@@ -214,40 +310,31 @@ def cmd_pool(args: argparse.Namespace) -> None:
                 sys.exit("ABORT: the rebuilt store briefs differently from the snapshot; fix Stores first")
     chosen = ([("task", p) for p in sample("task", args.split, args.sample, args.seed)]
               + [("null", p) for p in sample("null", args.split, args.nulls, args.seed)])
-    briefed: dict[str, dict[str, list[str]]] = {arm: {} for arm in ARMS}
+    briefed: dict[str, dict[str, list[str]]] = {arm: {} for arm in arms}
     before: dict[str, list[str]] = {}
     for _label, p in chosen:
-        store = stores.as_of(millis(p["at"]))
-        for arm in ARMS:
-            briefed[arm][p["id"]] = brief(store, p, arm)
-        before[p["id"]] = previous_briefing(store, p)
+        for arm in arms:
+            briefed[arm][p["id"]] = brief(stores.for_arm(p, arm), p, arm)
+        before[p["id"]] = previous_briefing(stores.as_of(millis(p["at"])), p)
     rng = random.Random(f"{args.seed}:{args.split}")  # noqa: S311 - a reproducible shuffle, not a secret
-    nodes = {n.id: n for n in stores.nodes}
     items = []
     order = list(range(len(chosen)))
     rng.shuffle(order)  # NOSONAR - task and null prompts interleaved for the judge, reproducibly
     for i in order:
         _label, p = chosen[i]
-        pooled = sorted({lid for arm in ARMS for lid in briefed[arm][p["id"]]})
+        pooled = sorted({lid for arm in arms for lid in briefed[arm][p["id"]]})
         if not pooled:
             continue
         rng.shuffle(pooled)  # NOSONAR - the seeded order the judge reads, reproducible on purpose
-        items.append({"item": i, "prompt": p["text"], "previous": p["previous"], "reply": p.get("reply", ""),
-                      "lessons": [{"n": j, "title": nodes[lid].title, "symptom": nodes[lid].symptom or "",
-                                   "fix": nodes[lid].fix or ""} for j, lid in enumerate(pooled)],
-                      "_ids": pooled})
-    for b in range(0, len(items), PER_BATCH):
-        with (PRIVATE / f"real-judge-{args.split}-{b // PER_BATCH}.jsonl").open("w") as f:
-            for it in items[b:b + PER_BATCH]:
-                f.write(json.dumps({k: v for k, v in it.items() if k != "_ids"}) + "\n")
+        items.append(_item(i, p, pooled, nodes))
+    files = _write_batches(items, f"real-judge-{args.split}-")
     meta = {"split": args.split, "seed": args.seed, "chosen": [[label, p["id"]] for label, p in chosen],
             "briefed": briefed, "before": before, "pooled": {str(it["item"]): it["_ids"] for it in items},
             "store": bench.digest([SNAPSHOT])}
-    (PRIVATE / f"real-arms-{args.split}.json").write_text(json.dumps(meta))
+    meta_path.write_text(json.dumps(meta))
     pairs = sum(len(it["_ids"]) for it in items)
     print(f"{sum(1 for x in chosen if x[0] == 'task')} task and {sum(1 for x in chosen if x[0] == 'null')} null "
-          f"prompts · {pairs} (prompt, lesson) pairs on {len(items)} prompts · {-(-len(items) // PER_BATCH)} batches",
-          file=sys.stderr)
+          f"prompts · {pairs} (prompt, lesson) pairs on {len(items)} prompts · {files} batches", file=sys.stderr)
 
 
 def _arm_row(ids: list[str], b: dict[str, list[str]], before: dict[str, list[str]],
@@ -295,7 +382,7 @@ def cmd_tally(args: argparse.Namespace) -> None:
               f"{total} applying lessons in the pool")
         print(f"  {'arm':11} {'precision [95%]':>22} {'applying found':>15} {'prompts hit':>12} {'briefed any':>12} "
               f"{'lessons/prompt':>15} {'off-topic/prompt':>17} {'repeat':>7}")
-        for arm in ARMS:
+        for arm in [a for a in ARMS if a in meta["briefed"]]:
             r = _arm_row(ids, meta["briefed"][arm], meta["before"], verdict, applies)
             lo, hi = bench.wilson(r["yes"], r["judged"]) if r["judged"] else (0.0, 0.0)
             prec = f"{r['yes'] / r['judged']:.1%} [{lo:.1%}, {hi:.1%}]" if r["judged"] else "n/a"
@@ -303,12 +390,16 @@ def cmd_tally(args: argparse.Namespace) -> None:
                   f"{r['any']:>5} of {len(ids):<4} {r['per']:>15.2f} {r['off']:>17.2f} {r['repeat']:>7.0%}")
             if kind == "task":
                 stats[arm] = (r["yes"] / r["judged"] if r["judged"] else 0.0, r["found"], r["per"])
-    # The selection rule, fixed before any judging (module docstring).
-    eligible = [a for a in CONTEXT_ARMS if stats[a][0] >= stats["calibrated"][0]]
-    pick = min(eligible, key=lambda a: (-stats[a][1], stats[a][2])) if eligible else None
-    print(f"\nselection rule: {pick or 'no context arm'} "
-          + ("(most applying lessons found on task prompts among the context arms at least as precise as calibrated)"
-             if pick else "(none is at least as precise as calibrated on task prompts)"))
+    # The selection rules, each fixed before its arms' pairs were judged (module docstring).
+    for name, family in (("context", CONTEXT_ARMS), ("fix", FIX_ARMS)):
+        present = [a for a in family if a in stats]
+        if not present or "calibrated" not in stats:
+            continue
+        eligible = [a for a in present if stats[a][0] >= stats["calibrated"][0]]
+        pick = min(eligible, key=lambda a: (-stats[a][1], stats[a][2])) if eligible else None
+        print(f"\n{name} rule: {pick or f'no {name} arm'} "
+              + (f"(most applying lessons found on task prompts among the {name} arms at least as precise as "
+                 "calibrated)" if pick else "(none is at least as precise as calibrated on task prompts)"))
 
 
 def main() -> None:
@@ -321,6 +412,9 @@ def main() -> None:
     pp.add_argument("--sample", type=int, default=120, help="task prompts")
     pp.add_argument("--nulls", type=int, default=60, help="null prompts, from the unseen half")
     pp.add_argument("--seed", type=int, default=11)
+    pp.add_argument("--arms", nargs="+", choices=ARMS, help="the arms to brief (default: every arm)")
+    pp.add_argument("--extend", action="store_true",
+                    help="add the given arms to the split's existing pool and judge only their new pairs")
     pt = sub.add_parser("tally")
     pt.add_argument("--split", choices=["tuning", "heldout"], required=True)
     args = ap.parse_args()
