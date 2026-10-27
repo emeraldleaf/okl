@@ -23,6 +23,7 @@ from .lessons import (
 from .packs import cmd_seed
 from .servers import cmd_mcp, cmd_serve
 from .verification import cmd_drift, cmd_export, cmd_reverify, cmd_verify
+from .warm import cmd_warm
 
 
 def _days_or_blank(value: str) -> int | str:
@@ -120,6 +121,11 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                          "briefs what 'calibrated' briefs and lists the rest of what matched, one line "
                          "each, up to the limit (#291, REPORT §4w, §4y). Omit it to follow the "
                          "config's `decision` or OKL_DECISION.")
+    pk.add_argument("--warm", choices=["on", "off"], default=None,
+                    help="add what a lesson means to the calibrated line's score, from the local warm "
+                         "model (`okl warm start`; REPORT §4z). When it does not answer, the briefing is "
+                         "the model-free one and the JSON says why. Omit it to follow the config's `warm` "
+                         "or OKL_WARM.")
     pk.add_argument("--near-misses", action="store_true", dest="near_misses",
                     help="append the records that matched the task and were left out (by the floor or "
                          "the cutoff) as id and title, at most twelve. A treatment under measurement "
@@ -135,6 +141,15 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                                        f"downloads {semantic.MODEL_ID} once). The model is fixed: "
                                        "check searches the vectors of that one model")
     pe.set_defaults(func=cmd_embed)
+
+    pw = sub.add_parser("warm", help="the local process that keeps the briefing's model loaded, so a "
+                                     "prompt can be briefed by meaning as well as words (needs the warm "
+                                     "extra; REPORT §4z)")
+    pw.add_argument("action", choices=["start", "stop", "status", "index", "serve"],
+                    help="start it in the background, stop it, say whether it runs, embed this store's "
+                         "lessons through it, or run it in the foreground")
+    pw.add_argument("--wait", type=float, default=0.0, help="with start: seconds to wait for it to load")
+    pw.set_defaults(func=cmd_warm)
 
     pr = sub.add_parser("record", help="record a node (defect/gate/claim/...)")
     pr.add_argument("--type", required=True); pr.add_argument("--title", required=True)

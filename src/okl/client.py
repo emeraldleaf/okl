@@ -17,7 +17,7 @@ from urllib import request as _req
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode
 
-from . import core, decide, drift
+from . import core, decide, drift, warm
 from .store import Node, Store
 
 CONFIG_DIR = ".okl"
@@ -122,6 +122,17 @@ def rerank_setting(env: str | None, configured: Any) -> bool:
     raise ValueError(f"rerank must be on or off, not {raw!r}")
 
 
+def warm_setting(env: str | None, configured: Any) -> bool:
+    """Whether `check` asks the warm model (REPORT §4z): OKL_WARM wins over the config's `warm`;
+    off/0/empty mean no, on/1/true mean yes."""
+    raw = env if env is not None else configured
+    if raw in (None, False, "", "0", "off", "false", "none", "no"):
+        return False
+    if raw in (True, "1", "on", "true", "yes"):
+        return True
+    raise ValueError(f"warm must be on or off, not {raw!r}")
+
+
 def decision_setting(env: str | None, configured: Any) -> str:
     """How `check` turns candidates into a briefing (#291, REPORT §4w, §4y): OKL_DECISION wins
     over the config's `decision`; decide.DEFAULT ("tiered": the calibrated line's lessons in
@@ -147,6 +158,7 @@ class Client:
         self.near_misses = False   # the near-miss arm (REPORT §4s): `okl check --near-misses`
         self.rerank = rerank_setting(os.environ.get("OKL_RERANK"), self.config.get("rerank"))
         self.decision = decision_setting(os.environ.get("OKL_DECISION"), self.config.get("decision"))
+        self.warm = warm_setting(os.environ.get("OKL_WARM"), self.config.get("warm"))
         self._store: Store | None = None
 
     @property
@@ -295,11 +307,15 @@ class Client:
         else:
             kw: dict[str, Any] = {"interests": self.interests, "hybrid": self.hybrid, "index": self.index,
                                   "near_misses": self.near_misses, "rerank": self.rerank,
-                                  "decision": self.decision}
+                                  "decision": self.decision, "warm": self.warm}
             if limit is not None:
                 kw["limit"] = limit
             store = self._local_store()
             result = core.check(store, repo, task, **kw)
+            if "not running" in str(result.get("warm_unavailable", "")):
+                # Started now, in the background, so the next prompt is briefed by meaning too;
+                # this one does not wait for a model to load (REPORT §4z).
+                warm.start()
         # Mark briefed lessons whose code changed since their last check (#93). Done here,
         # not in core, because only the client has this repo's checkout: a shared service
         # answering /check has no git history to compare against.
