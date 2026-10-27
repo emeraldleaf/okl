@@ -325,7 +325,7 @@ class Client:
                 kw["limit"] = limit
             store = self._local_store()
             result = core.check(store, repo, task, **kw)
-            if "not running" in str(result.get("warm_unavailable", "")):
+            if "not running" in str(result.get("warm_unavailable", "")) and warm.installed():
                 # Started now, in the background, so the next prompt is briefed by meaning too;
                 # this one does not wait for a model to load (REPORT §4z).
                 warm.start()

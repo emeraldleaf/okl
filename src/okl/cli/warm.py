@@ -35,7 +35,11 @@ def _status(_args: argparse.Namespace) -> int:
 
 
 def _start(args: argparse.Namespace) -> int:
-    up = warm.start(wait_s=args.wait)
+    try:
+        up = warm.start(wait_s=args.wait)
+    except warm.WarmUnavailableError as e:
+        print(f"NOT STARTED — {e}", file=sys.stderr)
+        return 2
     print(f"running · {up['model']} · pid {up['pid']}" if up
           else f"starting in the background · log {warm.socket_path().with_suffix('.log')}")
     return 0
@@ -47,7 +51,12 @@ def _index(_args: argparse.Namespace) -> int:
     if not client.configured or client.mode == "remote":
         print("okl warm index embeds the LOCAL store's lessons; run it where `okl init` ran.", file=sys.stderr)
         return 2
-    if not warm.start(wait_s=120):
+    try:
+        up = warm.start(wait_s=120)
+    except warm.WarmUnavailableError as e:
+        print(f"NOT INDEXED — {e}", file=sys.stderr)
+        return 2
+    if not up:
         print(f"NOT INDEXED — the warm model did not start; see {warm.socket_path().with_suffix('.log')}",
               file=sys.stderr)
         return 2
