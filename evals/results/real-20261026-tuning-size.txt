@@ -1,13 +1,13 @@
-briefing size · split tuning · store ee5406f19cf9 · code fd96d792cd6f · characters / 4 = tokens, a rough rule
+briefing size · split tuning · store ee5406f19cf9 · code e17cfe763aab · characters / 4 = tokens, a rough rule
 
 task prompts: 120
   arm         median     mean      p90      max   (tokens)
   floor         1133     1166     2036     2624
   backfill        96      287      852     1447
-  tiered         614      732     1552     2255
+  tiered         610      752     1583     2255
 
 null prompts: 60
   arm         median     mean      p90      max   (tokens)
   floor          576      760     1965     2408
   backfill        71      119      196     1120
-  tiered         326      412      929     1903
+  tiered         330      420      947     1904

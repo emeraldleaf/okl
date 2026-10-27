@@ -1,0 +1,7 @@
+real prompts · split tuning · arm backfill · labels before e1, e2 · store ee5406f19cf9
+task prompts: 117 applying lessons in the pool; backfill found 41, missed 76
+    34  among the candidates, below the line: 1 shared about-word(s)
+    23  among the candidates, below the line: 2+ shared about-word(s)
+    14  cleared the line, cut by the cap
+     3  not among the candidates
+     2  among the candidates, below the line: 0 shared about-word(s)

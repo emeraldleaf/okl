@@ -389,7 +389,7 @@ lessons the earlier rule did. That is why the default names the rest in a line e
 | real prompts, a real store, held out | earlier rule (floor) | the line alone | **the default: two tiers** |
 |---|---|---|---|
 | applying lessons named, of 115 | 90 | 38 | **102** (38 in full, 64 in a line) |
-| lessons shown in full per prompt | 7.7 | 1.8 | **1.8**, plus 7.3 in a line |
+| lessons shown in full per prompt | 7.7 | 1.8 | **1.8**, plus 7.6 in a line |
 | share of the lessons shown in full that apply | 9.8% | 17.8% | **17.8%** |
 | median briefing, tokens | 1,424 | 113 | **721** |
 

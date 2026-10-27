@@ -2506,13 +2506,14 @@ ranks a missed lesson as the worse error. **This section therefore changes the c
 the briefing's size as the cost.
 
 **Where the misses are.** On the tuning half's task prompts, backfill missed 76 of the 117
-applying lessons. A count of where each one stopped (no labels used beyond §4x's):
+applying lessons. A count of where each one stopped (no labels used beyond §4x's; receipt
+`real-20261026-tuning-misses.txt`, from `real_prompts.py misses`):
 
 | where the missed lesson stopped | lessons |
 |---|---|
 | among the candidates, below the line: one shared about-word | 34 |
 | among the candidates, below the line: two shared about-words, both common | 23 |
-| cleared the line, cut by the cap of five | 17 |
+| cleared the line, cut by the cap of five | 14 |
 | among the candidates, no shared about-word | 2 |
 | not among the candidates | 3 |
 
@@ -2563,11 +2564,12 @@ measurement. It will be pre-registered separately, before any agent runs.
 
 ### Result (2026-10-26)
 
-Receipts, all at fd96d79: `real-20261026-heldout-tiers.txt` and `real-20261026-tuning-tiers.txt`
-(the tallies; the tier arms' new pairs, 192 held out and 139 on tuning, judged per lesson by
-Sonnet sub-agents with no label missing), `real-20261026-heldout-size.txt` and
-`real-20261026-tuning-size.txt` (the sizes), and `briefing-size-20261027-0132.json` (the one
-representative task the docs quote).
+Receipts: `real-20261026-heldout-tiers.txt` and `real-20261026-tuning-tiers.txt` (the
+tallies; the tier arms' new pairs, 217 held out and 165 on tuning, judged per lesson by Sonnet
+sub-agents with no label missing), `real-20261026-heldout-size.txt` and
+`real-20261026-tuning-size.txt` (the sizes), all at e17cfe7, and
+`briefing-size-20261027-0132.json` (the one representative task the docs quote). The first
+measurement ran at fd96d79; a review fix measured the tier arms again (the correction below).
 
 **All three predictions held.**
 
@@ -2582,7 +2584,7 @@ representative task the docs quote).
 |---|---|---|---|---|---|---|
 | floor | 90 | 90 | 0 | 7.69 | 7.69 | 1,424 |
 | backfill (the calibrated decision, with triggers) | 38 | 38 | 0 | 1.77 | 1.77 | 113 |
-| **tiered** | **102** | 38 | 64 | 9.08 | 1.77 | 721 |
+| **tiered** | **102** | 38 | 64 | 9.35 | 1.77 | 721 |
 
 **The pool grew.** The tier arms found 14 applying lessons that no §4x arm had found. The
 floor inside tiered runs on the store with the written triggers, which re-rank the full-text
@@ -2594,15 +2596,33 @@ from the packs) were among the floor's lessons on the store without triggers. Th
 re-ranking moved them out of the twelve the second tier draws from. A larger second tier would
 reach some of them; that is a choice to make on the tuning half, with its size measured.
 
-**Precision and size.** Of everything tiered names, 9.4% applies, about the floor's 9.8%. Of
+**Precision and size.** Of everything tiered names, 9.1% applies, about the floor's 9.8%. Of
 what it shows in full, 17.8% applies, exactly backfill's. The floor's noise now sits in the
-one-line tier. A line costs about 64 tokens (from the size receipts' means: (816 − 351) / 7.31),
+one-line tier. A line costs about 64 tokens (from the size receipts' means: (837 − 351) / 7.58),
 against about 160 for a lesson in full under the floor.
 
 **Null prompts.** Held out, tiered names something on 43 of 60 null prompts, the same 43 the
 floor briefs, and shows a lesson in full on 4, as backfill does. A median null prompt costs 362
 tokens under tiered, 629 under the floor and 72 under backfill. That is the price of naming
 everything that matched: one-line entries on prompts that ask for no work.
+
+**A correction (review on #299).** Three faults, found after the first measurement.
+
+- The table of where the misses stopped said 17 were cut by the cap. The count is 14, and the
+  rows now total the 76.
+- The second tier took the floor's first twelve before dropping the lessons shown in full, so
+  at a small `--limit` the overlap could leave it empty while other lessons matched. Fixed at
+  e17cfe7: the floor is asked for the limit beyond what is shown. The tier arms were briefed
+  again (`pool --rebrief`). The second tier grew on 18 of 180 held-out prompts and 16 on
+  tuning, and lost a lesson on none. The 51 new pairs were judged as before; none applies.
+  Reach is unchanged (102 held out, 95 on tuning); held out, tiered names 9.35 lessons a
+  prompt where it named 9.08, and the median size is unchanged. The predictions hold at both
+  commits.
+- The second tier listed a withdrawn lesson or a retired identifier with its old fix, as if it
+  were advice. It happened: 16 second-tier entries held out and 25 on tuning, from 6 such
+  records in the store. They are now listed as AVOID (retracted, or retired identifier), as the
+  full briefing routes them. A label says whether a lesson bears on the work, not how its line
+  reads, so the tallies do not change.
 
 **What follows.** As pre-registered, tiered becomes the default. `calibrated` stays available for
 the smallest briefing, and `floor` for every match in full. Whether an agent acts on a one-line

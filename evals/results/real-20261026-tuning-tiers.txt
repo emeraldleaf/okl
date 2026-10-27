@@ -1,5 +1,5 @@
-real prompts · split tuning (seed 11) · store ee5406f19cf9 · code fd96d792cd6f
-2178 pooled pairs, labels missing 0
+real prompts · split tuning (seed 11) · store ee5406f19cf9 · code e17cfe763aab
+2204 pooled pairs, labels missing 0
 
 task prompts: 120 person-typed · 48 with an applying lesson · 124 applying lessons in the pool
   arm                precision [95%]  applying found  prompts hit  briefed any  lessons/prompt  off-topic/prompt  repeat
@@ -16,7 +16,7 @@ task prompts: 120 person-typed · 48 with an applying lesson · 124 applying les
   line2           9.7% [7.0%, 13.4%]      32 of 124      25 of 48      83 of 120             2.75              2.48      2%
   line2+backfill   14.4% [11.2%, 18.5%]      52 of 124      32 of 48      90 of 120             3.02              2.57      1%
   line1+backfill    10.7% [8.5%, 13.5%]      62 of 124      40 of 48     120 of 120             4.84              4.30      1%
-  tiered          9.7% [8.0%, 11.7%]      95 of 124      40 of 48     110 of 120             8.19              7.37      1%
+  tiered          9.4% [7.7%, 11.4%]      95 of 124      40 of 48     110 of 120             8.46              7.63      1%
   tiered-full   26.3% [20.0%, 33.7%]      41 of 124      25 of 48      48 of 120             1.32              0.96      1%
 
 null prompts: 60 person-typed · 11 with an applying lesson · 15 applying lessons in the pool
@@ -34,10 +34,10 @@ null prompts: 60 person-typed · 11 with an applying lesson · 15 applying lesso
   line2            1.9% [0.3%, 9.9%]       1 of 15        1 of 11      21 of 60              0.97              0.87      0%
   line2+backfill      1.8% [0.3%, 9.4%]       1 of 15        1 of 11      23 of 60              1.08              0.92      0%
   line1+backfill      3.3% [1.6%, 6.7%]       7 of 15        5 of 11      48 of 60              3.78              3.38      1%
-  tiered           1.9% [0.8%, 4.4%]       5 of 15        5 of 11      44 of 60              4.75              4.32      0%
+  tiered           1.9% [0.8%, 4.3%]       5 of 15        5 of 11      44 of 60              4.83              4.37      0%
   tiered-full     0.0% [0.0%, 20.4%]       0 of 15        0 of 11       7 of 60              0.30              0.25      0%
 
-F1 on task prompts (judged precision, pooled recall): floor 0.172 · calibrated 0.167 · prev 0.140 · prev-own 0.144 · reply-own 0.137 · fallback 0.245 · backfill 0.293 · backfill+fallback 0.270 · floor-3 0.197 · floor-5 0.182 · line2 0.141 · line2+backfill 0.215 · line1+backfill 0.177 · tiered 0.172 · tiered-full 0.293
+F1 on task prompts (judged precision, pooled recall): floor 0.172 · calibrated 0.167 · prev 0.140 · prev-own 0.144 · reply-own 0.137 · fallback 0.245 · backfill 0.293 · backfill+fallback 0.270 · floor-3 0.197 · floor-5 0.182 · line2 0.141 · line2+backfill 0.215 · line1+backfill 0.177 · tiered 0.167 · tiered-full 0.293
 
 context rule: no context arm (none is at least as precise as calibrated on task prompts)
 

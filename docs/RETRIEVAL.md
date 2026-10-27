@@ -61,7 +61,7 @@ packs):
 | | the original pipeline | the line alone | + triggers on recorded lessons | **the default: two tiers** |
 |---|---|---|---|---|
 | applying lessons named (of 115 any version found) | 90 | 31 | 38 | **102** |
-| lessons shown in full per prompt | 7.7 | 1.6 | 1.8 | **1.8**, and 7.3 named in a line |
+| lessons shown in full per prompt | 7.7 | 1.6 | 1.8 | **1.8**, and 7.6 named in a line |
 | share of the lessons shown in full that apply | 9.8% | 16.5% | 17.8% | **17.8%** |
 
 (REPORT §4x and §4y, receipt `real-20261026-heldout-tiers.txt`.) The benchmark's queries are
@@ -201,7 +201,7 @@ adds a guarantee to it [15, 16].
 
 On real prompts the line was too selective. Of the 76 applying lessons it missed on the tuning
 half, 73 were among the 36 candidates: 57 fell below the line, sharing one word with what the
-lesson says it is about, or two common ones, and 17 cleared it but were cut by the cap of five
+lesson says it is about, or two common ones, and 14 cleared it but were cut by the cap of five
 (REPORT §4y). A cross-encoder can reorder such candidates but cannot say which belong (§4t).
 So the decision keeps its line for what is shown in full and names the rest:
 
@@ -323,7 +323,7 @@ the A/B harness's own tasks; §4x supersedes it.
   them, `okl triggers` lists the lessons that lack them, and the briefing says how many do.
 - **The second tier is named, not shown.** Reach counts a lesson named in a line; whether an
   agent opens it, or acts on the line alone, is the next measurement. Its noise is the
-  original's: 9.4% of everything named applies (REPORT §4y).
+  original's: 9.1% of everything named applies (REPORT §4y).
 - **The benchmark measures retrieval, not behaviour.** Whether an agent writes better code with
   fewer, better-chosen lessons is a separate experiment on okl's agent harness.
 

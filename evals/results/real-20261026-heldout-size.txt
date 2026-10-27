@@ -1,13 +1,13 @@
-briefing size · split heldout · store ee5406f19cf9 · code fd96d792cd6f · characters / 4 = tokens, a rough rule
+briefing size · split heldout · store ee5406f19cf9 · code e17cfe763aab · characters / 4 = tokens, a rough rule
 
 task prompts: 120
   arm         median     mean      p90      max   (tokens)
   floor         1424     1229     2014     2417
   backfill       113      351      900     1106
-  tiered         721      816     1637     1916
+  tiered         721      837     1637     1916
 
 null prompts: 60
   arm         median     mean      p90      max   (tokens)
   floor          629      688     1840     2254
   backfill        72       92       95      504
-  tiered         362      362      828     1078
+  tiered         362      370      853     1244
