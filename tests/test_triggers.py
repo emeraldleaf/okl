@@ -191,6 +191,36 @@ def test_the_action_list_does_not_deny_a_lesson_shown_in_full_when_nothing_else_
         s.close()
 
 
+def test_a_service_that_predates_tiered_answers_by_calibrated_instead_of_refusing(monkeypatch):
+    """A service that knows `decision` but not "tiered" refuses it with a 422; the client asks
+    again with the previous default and says which decision answered, rather than block every
+    prompt. Any other refusal stands (review on #299)."""
+    from okl.client import Client, OKLRejectedError
+    c = Client(config={"repo": "r", "service_url": "http://service.invalid"})
+    monkeypatch.setattr("okl.client.drift.annotate_briefing", lambda *a, **k: None)
+    sent = []
+
+    def older_service(path, body):
+        sent.append(body["decision"])
+        if body["decision"] == "tiered":
+            raise OKLRejectedError("OKL service rejected the request (422): [{'loc': ['body', 'decision'], "
+                                   "'msg': \"Input should be 'floor' or 'calibrated'\", 'input': 'tiered'}]", status=422)
+        return {"repo": "r", "task": body["task"], "rules": [], "match_count": 0, "decision": body["decision"]}
+
+    monkeypatch.setattr(c, "_post", older_service)
+    res = c.check("a task")
+    assert sent == ["tiered", "calibrated"]
+    assert res["decision"] == "calibrated"
+    assert "upgrade the service" in res["decision_unavailable"]
+
+    def refuses(path, body):
+        raise OKLRejectedError("OKL service rejected the request (401): missing token", status=401)
+
+    monkeypatch.setattr(c, "_post", refuses)
+    with pytest.raises(OKLRejectedError, match="401"):
+        c.check("a task")
+
+
 def test_a_stale_lesson_in_the_second_tier_is_marked_for_re_verification():
     """A lesson past its TTL is named with the full briefing's stale tag, so its fix is not
     read as current (review on #299)."""

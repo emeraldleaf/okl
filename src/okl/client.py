@@ -260,6 +260,19 @@ class Client:
         return _json_reply(url, body)
 
     # -- operations ---------------------------------------------------------
+    def _post_check(self, payload: dict[str, Any]) -> dict:
+        """POST /check, once more with the previous default when a service that knows `decision`
+        but not "tiered" refuses it (a 422 naming both): a briefing must not fail on what the
+        service cannot run, and the answer then says which decision ran (review on #299). Any
+        other refusal stands."""
+        try:
+            return self._post("/check", payload)
+        except OKLRejectedError as e:
+            if payload.get("decision") != "tiered" or e.status != 422 or "decision" not in str(e) \
+                    or "tiered" not in str(e):
+                raise
+            return self._post("/check", {**payload, "decision": "calibrated"})
+
     def check(self, task: str, repo: str | None = None, limit: int | None = None) -> dict:
         """The briefing for starting `task` in `repo` (default: this repo), as core.check returns it.
 
@@ -275,7 +288,7 @@ class Client:
         if limit is not None:
             payload["limit"] = limit
         if self.mode == "remote":
-            result = self._post("/check", payload)
+            result = self._post_check(payload)
             # An older service drops a request field it does not know and answers an ordinary
             # briefing; a caller who asked for the index or the near misses must not read
             # that as "none" (review on #270).
