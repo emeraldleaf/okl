@@ -68,9 +68,9 @@
       "title": "Dependency direction is one-way: store imports nothing, core imports store, adapters import client",
       "scope": "repo:okl",
       "files": "src/okl/store.py,src/okl/core.py,src/okl/client.py",
-      "verified_at": 1793080649478,
-      "verified_by": "`lint-imports` exit 0, matched '1 kept, 0 broken' on commit d5fe4c66633d @ 2026-10-27T05:57Z",
-      "verified_commit": "d5fe4c66633d55b241809a421efe8a850c6feb8d"
+      "verified_at": 1793086864410,
+      "verified_by": "`lint-imports` exit 0, matched '1 kept, 0 broken' on commit e1b250d93b6e @ 2026-10-27T07:41Z",
+      "verified_commit": "e1b250d93b6ebd6669334d8d09361b15ec0722fe"
     },
     {
       "id": "n_7e50e3588bcd",
@@ -78,9 +78,9 @@
       "title": "A test that imports an undeclared package passes only where that package happens to be installed",
       "scope": "org",
       "files": "tests/",
-      "verified_at": 1793080649335,
-      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' on commit d5fe4c66633d @ 2026-10-27T05:57Z",
-      "verified_commit": "d5fe4c66633d55b241809a421efe8a850c6feb8d"
+      "verified_at": 1793086864267,
+      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' on commit e1b250d93b6e @ 2026-10-27T07:41Z",
+      "verified_commit": "e1b250d93b6ebd6669334d8d09361b15ec0722fe"
     },
     {
       "id": "n_9ba48d85ed19",
