@@ -59,12 +59,12 @@ HARNESS_PREFIXES = ("<task-notification", "<agent-message", "<system-reminder", 
 _WORD = re.compile(r"[^\W_]+")
 
 
-SETTINGS = ("floor", "calibrated")
-# The default since §4w's held-out result (REPORT §4w): recall 74.4% to 90.0% on held-out
-# queries, 11.8 lessons a query to 4.7, and judged precision on real prompts 8.9% to 24.5%.
-# "floor" stays available; on real prompts it finds more of the lessons that apply, at 6.8
-# that do not on every prompt.
-DEFAULT: Final = "calibrated"
+SETTINGS = ("floor", "calibrated", "tiered")
+# "tiered" shows what clears the calibrated line in full and lists everything else that
+# matched, one line each, so a lesson the line misses is still named (REPORT §4y). On real
+# prompts "calibrated" alone reached 38 of the 101 applying lessons the floor's 90 came from
+# (§4x); "floor" shows all of its matches in full, about 7.7 a prompt.
+DEFAULT: Final = "tiered"
 
 
 def check_setting(decision: str) -> None:

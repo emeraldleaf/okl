@@ -188,11 +188,13 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     asked for and not possible here, the first-stage order stands and `rerank_unavailable`
     says why. Off by default.
 
-    `decision` is how candidates become a briefing: "calibrated", the default, briefs the
-    candidates whose about-text (title, symptom, aliases, triggers) holds enough of the task's
-    subject words to clear a line calibrated on real subjectless prompts, at most
-    decide.CALIBRATED_CAP of them (#291, REPORT §4w); "floor" keeps a candidate that shares
-    enough words with the task (REPORT §4n, §4v) and briefs up to `limit`. In both, a prompt a
+    `decision` is how candidates become a briefing: "calibrated" briefs the candidates whose
+    about-text (title, symptom, aliases, triggers) holds enough of the task's subject words to
+    clear a line calibrated on real subjectless prompts, at most decide.CALIBRATED_CAP of them
+    (#291, REPORT §4w); "floor" keeps a candidate that shares enough words with the task
+    (REPORT §4n, §4v) and briefs up to `limit`; "tiered", the default, briefs what
+    "calibrated" briefs and lists in `also_matched`, one line each, what else cleared the
+    line and what the floor keeps, up to `limit` (REPORT §4y). In all three, a prompt a
     harness wrote (a task notification, a sub-agent report) is briefed nothing.
 
     `index` adds every other live lesson this repo may see, as id and title, so an agent
@@ -232,7 +234,8 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     candidates = hits
     untriggered: list[str] = []
     own_untriggered = 0
-    if decision == "calibrated":
+    asked, first = limit, (hits, replaced, exhausted, cand)
+    if decision in ("calibrated", "tiered"):
         hits, matched, weak, limit, untriggered, own_untriggered = _calibrated(store, hits, query, limit)
     else:
         candidates, hits, matched, weak, replaced, cand = _floor_widened(
@@ -249,6 +252,12 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     # What matched and was left out, in rank order: the cutoff's tail first (it passed the
     # floor), then the floor's weak matches. The near-miss list (REPORT §4s) is drawn from it.
     left_out = [n for n in candidates if n.id not in kept_ids and n.status not in RETIRED_STATUSES]
+    also: list[Node] = []
+    if decision == "tiered" and query:
+        also, dropped = _also_matched(store, query, asked, repo_scope, interests, hybrid=hybrid, rerank=rerank,
+                                      first=first, overflow=hits[limit:], shown=kept_ids)
+        listed = kept_ids | {n.id for n in also}
+        weak = sum(1 for n in candidates if n.id not in listed)
     hits = hits[:limit]
 
     buckets = _bucket_by_type(hits)
@@ -286,16 +295,28 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     # with the result. Only computed on the (rare) empty-result path.
     if total == 0:
         out["store_records"] = len(store.all_nodes())
-    if near_misses:
-        out["near_misses"] = [{"id": n.id, "title": n.title} for n in left_out[:NEAR_MISSES]]
-    if index:
+    _attach_named(out, store, buckets, also=also if decision == "tiered" else None,
+                  near=left_out[:NEAR_MISSES] if near_misses else None,
+                  index_scope=(repo_scope, interests) if index else None)
+    return out
+
+
+def _attach_named(out: dict[str, Any], store: Store, buckets: dict[str, list[dict]], *, also: list[Node] | None,
+                  near: list[Node] | None, index_scope: tuple[str, list[str] | None] | None) -> None:
+    """Add the lists that name lessons by id without showing them, each when asked for: the
+    tiered decision's second tier (REPORT §4y), the near misses (§4s) and the index (§4r)."""
+    if also is not None:
+        out["also_matched"] = [_also_entry(n) for n in also]
+    if near is not None:
+        out["near_misses"] = [{"id": n.id, "title": n.title} for n in near]
+    if index_scope is not None:
+        repo_scope, interests = index_scope
         briefed = {pub["id"] for recs in buckets.values() for pub in recs}
         out["index"] = sorted(
             ({"id": n.id, "title": n.title} for n in store.all_nodes()
              if n.id not in briefed and n.status not in RETIRED_STATUSES
              and _in_scope(n, repo_scope, interests)),
             key=lambda e: e["title"].lower())
-    return out
 
 
 def _matched_terms(terms: list[str], n: Node) -> list[str]:
@@ -651,6 +672,57 @@ def _calibrated(store: Store, hits: list[Node], query: str,
     kept, matched, weak = decide.select(hits, briefing_terms(query), decide.Rarity(live_all))
     return (kept, matched, weak, min(limit, decide.CALIBRATED_CAP), _packs_without_triggers(live_all),
             len(lessons_without_triggers(live_all)))
+
+
+def _also_matched(store: Store, query: str, limit: int, repo_scope: str, interests: list[str] | None, *,
+                  hybrid: str | None, rerank: bool,
+                  first: tuple[list[Node], list[dict[str, Any]], bool, Candidates],
+                  overflow: list[Node], shown: set[str]) -> tuple[list[Node], int]:
+    """The tiered decision's second tier: what cleared the calibrated line past its cap, then
+    what the floor keeps, each once and not already shown, at most `limit`; and how many more
+    there were. On real prompts the line alone left out most of the lessons that applied, and
+    nearly all of them were among the floor's (REPORT §4x, §4y).
+
+    The floor is asked for `limit` beyond what is shown, so the lessons shown in full never use
+    up the second tier's places: a `--limit 3` whose three shown lessons were the floor's first
+    three named nothing else (review on #299)."""
+    _cands, kept, _matched, _weak, _replaced, _cand = _floor_widened(
+        store, query, limit + len(shown), repo_scope, interests, hybrid=hybrid, rerank=rerank, first=first)
+    seen = set(shown)
+    also = []
+    for n in (*overflow, *kept):
+        if n.id not in seen:
+            seen.add(n.id)
+            also.append(n)
+    return also[:limit], max(0, len(also) - limit)
+
+
+# The most characters of a lesson's fix its one line in the second tier carries.
+ALSO_FIX_CHARS = 160
+
+
+def _also_entry(n: Node) -> dict[str, Any]:
+    """A lesson in the second tier: id, type, title, and the first sentence of its fix, cut at
+    a word to ALSO_FIX_CHARS, so the line says what to do and `okl show <id>` has the rest.
+
+    A withdrawn record or a retired identifier is a warning, never an action: it carries what
+    to avoid instead of a fix, as the full briefing routes it (review on #299)."""
+    stale = {"stale": True} if n.is_stale() else {}   # past its TTL: marked, as in the full briefing
+    avoid = _avoid_kind(n)
+    if avoid:
+        return {"id": n.id, "type": n.type, "title": n.title, "fix": "", "avoid": avoid, **stale}
+    fix = re.split(r"(?<=[.!?])\s", (n.fix or "").strip(), maxsplit=1)[0]
+    if len(fix) > ALSO_FIX_CHARS:
+        fix = fix[:ALSO_FIX_CHARS].rsplit(" ", 1)[0].rstrip(",;:") + "…"
+    return {"id": n.id, "type": n.type, "title": n.title, "fix": fix, **stale}
+
+
+def _avoid_kind(n: Node) -> str:
+    """'retracted' for a withdrawn record of any type, 'retired identifier' for a Tombstone, and
+    '' for guidance, the split _bucket_by_type makes."""
+    if n.type == "Retraction" or n.status == "retracted":
+        return "retracted"
+    return "retired identifier" if n.type == "Tombstone" else ""
 
 
 def _packs_without_triggers(live: list[Node]) -> list[str]:
@@ -1110,9 +1182,14 @@ def briefing_notice(result: dict[str, Any], shown: int = 3) -> str | None:
     matched (a line on every prompt saying "nothing" is noise). The briefing itself goes to
     the model's context and is invisible in the UI, so without this a user never sees okl
     work and cannot tell a helping tool from a dead one."""
+    also = result.get("also_matched") or []
+    listed = f"{len(also)} more listed by title" if also else ""
     if not result.get("match_count"):
         if result.get("store_records") == 0:
             return "okl · the store is empty, so nothing was briefed — see docs/GETTING-STARTED.md"
+        if also:
+            # The second tier named them: "nothing briefed" would hide that (REPORT §4y).
+            return f"okl · nothing matched closely enough to show in full; {listed}"
         if result.get("weak_matches"):
             # Not silence: okl ran and found only weak matches, which is a different fact
             # from an empty store and from a task with no subject words.
@@ -1133,6 +1210,7 @@ def briefing_notice(result: dict[str, Any], shown: int = 3) -> str | None:
     more = result["match_count"] - len(short)
     return (f"okl · briefed {result['match_count']} lesson(s): " + "; ".join(short)
             + (f" (+{more} more)" if more > 0 else "")
+            + (f" · {listed}" if also else "")
             + (f" · {result['drifted']} need re-checking" if result.get("drifted") else ""))
 
 
@@ -1147,11 +1225,23 @@ def render_actions_only(result: dict[str, Any], limit: int | None = None) -> str
     actions = result.get("next_actions") or []
     if limit is not None:
         actions = actions[:limit]
+    also = [_also_line(e) for e in result.get("also_matched") or []]
+    tail = [f"Also matched ({len(also)}), one line each; `okl show <id>` reads the whole lesson:", *also] if also else []
     if not actions:
         if result.get("store_records") == 0:
             return ("OKL: the store is EMPTY (0 records). This is not 'no rules apply' — "
                     "nothing has been recorded yet, so this check proves nothing. "
                     "Run `okl seed` or record your first rule.")
+        shown = result.get("match_count") or 0
+        if also or shown:
+            # Not "no rule applies": the second tier named lessons that matched (REPORT §4y), or a
+            # lesson shown in full routes no action (a rule with no fix) and still matched closely;
+            # the line says so rather than contradict the full briefing, and keeps the pointers
+            # past replaced lessons (reviews on #299).
+            head = (f"OKL: {shown} lesson(s) matched with no action to route; the full briefing shows "
+                    f"them ({result['repo']})." if shown else
+                    f"OKL: no rule matched this task closely ({result['repo']}).")
+            return "\n".join([head, *tail, *_replaced_lines(result)])
         if result.get("replaced"):
             return "\n".join([f"OKL: no live rule applies to this task ({result['repo']}); "
                               "a lesson it matched was replaced:", *_replaced_lines(result)])
@@ -1163,7 +1253,16 @@ def render_actions_only(result: dict[str, Any], limit: int | None = None) -> str
         sym = f" [when: {a['symptom']}]" if a.get("symptom") else ""
         out.append(f"- {verb.get(a['kind'], 'DO')}: {a['target']}{_id_tag(a)}{_drift_tag(a)}{sym}")
         out.append(f"  -> {a['how']}")
-    return "\n".join(out + _replaced_lines(result))
+    return "\n".join(out + _replaced_lines(result) + tail)
+
+
+def _also_line(e: dict[str, Any]) -> str:
+    """One second-tier lesson: id, title and the start of its fix (REPORT §4y); a withdrawn
+    record or a retired identifier as what to avoid."""
+    stale = " *(STALE — re-verify)*" if e.get("stale") else ""
+    if e.get("avoid"):
+        return f"- [{e['id']}] AVOID ({e['avoid']}): {e['title']}{stale}"
+    return f"- [{e['id']}] {e['title']}{stale}" + (f" — {e['fix']}" if e.get("fix") else "")
 
 
 def _replaced_lines(result: dict[str, Any]) -> list[str]:
@@ -1174,8 +1273,10 @@ def _replaced_lines(result: dict[str, Any]) -> list[str]:
 
 def render_check_for_agent(result: dict[str, Any]) -> str:
     """Format a check() result as compact markdown for injection into agent context."""
+    also = result.get("also_matched") or []
+    more = f", and {len(also)} more listed by title" if also else ""
     lines = [f"## OKL briefing — {result['repo']} · task: {result['task']}",
-             f"_{result['match_count']} relevant node(s) from the org's encoded body._", ""]
+             f"_{result['match_count']} relevant node(s) from the org's encoded body{more}._", ""]
 
     actions = result.get("next_actions") or []
     lines += _render_actions(actions)
@@ -1216,6 +1317,45 @@ def render_check_for_agent(result: dict[str, Any]) -> str:
     if result.get("dropped_by_cutoff"):
         lines.append(f"> {result['dropped_by_cutoff']} lower-ranked record(s) were trimmed to keep this "
                      "briefing short. Raise --limit or narrow the task if you expected more.")
+    lines += _named_lines(result, also)
+    if not any_hit:
+        if result.get("store_records") == 0:
+            lines.append("> **The store is EMPTY (0 records).** This check proves nothing: there is "
+                         "no encoded knowledge to match against yet. That is different from "
+                         "\"no rule applies here\". Run `okl seed`, or record your first rule "
+                         "with `okl record`.")
+        elif also:
+            # The second tier named lessons; "clean slate" would contradict it (REPORT §4y).
+            lines.append(f"_Nothing matched this task closely enough to show in full; the {len(also)} above "
+                         "also matched. Read any that fits before you proceed, and record anything you "
+                         "learn with `okl record`._")
+        elif result.get("near_misses"):
+            # The near-miss list above offers records to inspect; "clean slate" would contradict it.
+            lines.append(f"_No encoded rule matched this task closely; the {len(result['near_misses'])} "
+                         "near miss(es) above are what came closest. Read any that fits before you "
+                         "proceed, and record anything you learn with `okl record`._")
+        elif result.get("weak_matches"):
+            lines.append(f"_No encoded rule matched this task closely: {result['weak_matches']} "
+                         "record(s) sharing a single word with it were left out. Proceeding with "
+                         "a clean slate — record anything you learn with `okl record`._")
+        else:
+            lines.append("_No encoded rule matched this task. Proceeding with a clean slate — "
+                         "record anything you learn with `okl record`._")
+    return "\n".join(lines)
+
+
+def _named_lines(result: dict[str, Any], also: list[dict]) -> list[str]:
+    """The briefing's lists that name lessons by id and title without showing them: the second
+    tier (REPORT §4y), the near misses (§4s) and the index (§4r), each when present."""
+    lines: list[str] = []
+    if also:
+        # The second tier (REPORT §4y): everything else that matched, one line each, so a
+        # lesson the line left out is still named and the agent can read it by id.
+        lines.append("")
+        lines.append(f"### Also matched ({len(also)}), one line each. If one fits this task, read it with "
+                     "`okl show <id>` (the okl_get tool) before you write code.")
+        lines += [_also_line(e) for e in also]
+        lines.append("")
     if result.get("near_misses"):
         # The near-miss arm (REPORT §4s): what matched and was left out, one line each, so a
         # title can carry its lesson and the agent can fetch the record if it fits.
@@ -1232,25 +1372,7 @@ def render_check_for_agent(result: dict[str, Any]) -> str:
                      "task, read it with `okl show <id>` before you write code.")
         lines += [f"- [{e['id']}] {e['title']}" for e in result["index"]]
         lines.append("")
-    if not any_hit:
-        if result.get("store_records") == 0:
-            lines.append("> **The store is EMPTY (0 records).** This check proves nothing: there is "
-                         "no encoded knowledge to match against yet. That is different from "
-                         "\"no rule applies here\". Run `okl seed`, or record your first rule "
-                         "with `okl record`.")
-        elif result.get("near_misses"):
-            # The near-miss list above offers records to inspect; "clean slate" would contradict it.
-            lines.append(f"_No encoded rule matched this task closely; the {len(result['near_misses'])} "
-                         "near miss(es) above are what came closest. Read any that fits before you "
-                         "proceed, and record anything you learn with `okl record`._")
-        elif result.get("weak_matches"):
-            lines.append(f"_No encoded rule matched this task closely: {result['weak_matches']} "
-                         "record(s) sharing a single word with it were left out. Proceeding with "
-                         "a clean slate — record anything you learn with `okl record`._")
-        else:
-            lines.append("_No encoded rule matched this task. Proceeding with a clean slate — "
-                         "record anything you learn with `okl record`._")
-    return "\n".join(lines)
+    return lines
 
 
 # ---------------------------------------------------------------------------
@@ -1563,18 +1685,23 @@ def recurrence_rows(report: dict[str, Any]) -> list[dict[str, Any]]:
 # advice, so going unseen says nothing about whether to keep it.
 _NOT_ADVICE = frozenset({"Vocabulary"})
 
+# Result keys whose lists are not the lessons a briefing showed: two repeat records already
+# counted, one points past superseded lessons, and the rest name lessons by id and title
+# without showing them (#269, §4s, §4y).
+_NAMED_NOT_SHOWN = frozenset({"next_actions", "stale_warnings", "replaced", "index", "near_misses",
+                              "also_matched"})
+
 
 def briefed_ids(result: dict[str, Any]) -> list[str]:
     """The ids of the lessons a briefing showed, in the order it showed them, each once.
 
-    Read from the type buckets, where every briefed record sits exactly once.
-    next_actions and stale_warnings are skipped: both repeat records already counted; so is
-    "index" and "near_misses", which name lessons by id and title without showing them (#269, §4s).
+    Read from the type buckets, where every briefed record sits exactly once, skipping the
+    keys in _NAMED_NOT_SHOWN.
     """
     ids: dict[str, None] = {}
     for key, items in result.items():
         # "replaced" holds superseded lessons the briefing pointed past, not ones it showed.
-        if key in ("next_actions", "stale_warnings", "replaced", "index", "near_misses") or not isinstance(items, list):
+        if key in _NAMED_NOT_SHOWN or not isinstance(items, list):
             continue
         for item in items:
             if isinstance(item, dict) and item.get("id"):
@@ -1607,7 +1734,7 @@ def drifted_ids(result: dict[str, Any]) -> list[str]:
     """
     ids: dict[str, None] = {}
     for key, items in result.items():
-        if key in ("next_actions", "stale_warnings", "replaced", "index", "near_misses") or not isinstance(items, list):
+        if key in _NAMED_NOT_SHOWN or not isinstance(items, list):
             continue
         for item in items:
             if isinstance(item, dict) and item.get("id") and item.get("drift"):

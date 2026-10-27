@@ -123,15 +123,14 @@ def rerank_setting(env: str | None, configured: Any) -> bool:
 
 
 def decision_setting(env: str | None, configured: Any) -> str:
-    """How `check` turns candidates into a briefing (#291, REPORT §4w): OKL_DECISION wins over
-    the config's `decision`; decide.DEFAULT ("calibrated", the line calibrated on subjectless
-    prompts) unless one says "floor" (the word floor, REPORT §4n)."""
+    """How `check` turns candidates into a briefing (#291, REPORT §4w, §4y): OKL_DECISION wins
+    over the config's `decision`; decide.DEFAULT ("tiered": the calibrated line's lessons in
+    full and the rest of what matched one line each) unless one names another setting."""
     raw = env if env not in (None, "") else configured
     if raw in (None, ""):
         return decide.DEFAULT
     raw = str(raw).strip().lower()
-    if raw not in ("floor", "calibrated"):
-        raise ValueError(f"decision must be floor or calibrated, not {raw!r}")
+    decide.check_setting(raw)
     return raw
 
 
@@ -261,6 +260,19 @@ class Client:
         return _json_reply(url, body)
 
     # -- operations ---------------------------------------------------------
+    def _post_check(self, payload: dict[str, Any]) -> dict:
+        """POST /check, once more with the previous default when a service that knows `decision`
+        but not "tiered" refuses it (a 422 naming both): a briefing must not fail on what the
+        service cannot run, and the answer then says which decision ran (review on #299). Any
+        other refusal stands."""
+        try:
+            return self._post("/check", payload)
+        except OKLRejectedError as e:
+            if payload.get("decision") != "tiered" or e.status != 422 or "decision" not in str(e) \
+                    or "tiered" not in str(e):
+                raise
+            return self._post("/check", {**payload, "decision": "calibrated"})
+
     def check(self, task: str, repo: str | None = None, limit: int | None = None) -> dict:
         """The briefing for starting `task` in `repo` (default: this repo), as core.check returns it.
 
@@ -276,7 +288,7 @@ class Client:
         if limit is not None:
             payload["limit"] = limit
         if self.mode == "remote":
-            result = self._post("/check", payload)
+            result = self._post_check(payload)
             # An older service drops a request field it does not know and answers an ordinary
             # briefing; a caller who asked for the index or the near misses must not read
             # that as "none" (review on #270).

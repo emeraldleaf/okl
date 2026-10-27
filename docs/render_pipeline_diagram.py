@@ -41,6 +41,7 @@ from okl.core import (  # noqa: E402
     COMMON_WORD_MIN_RECORDS,
     COMMON_WORD_SHARE,
     RETIRED_STATUSES,
+    _also_matched,
     _apply_floor,
     _in_scope,
     _live_hits,
@@ -97,7 +98,7 @@ def _seeded_store(tmpdir: str) -> Store:
 
 def _decide(store: Store, live: list[Node], terms: list[str], cand, decision: str) -> tuple[list[Node], int, int]:  # noqa: ANN001
     """The decision stage as check() runs it: (kept, how many fell below it, the cap the cutoff applies)."""
-    if decision == "calibrated":
+    if decision in ("calibrated", "tiered"):
         # The line: shared subject words in the title, symptom, aliases and triggers, ties broken
         # by relative rarity (decide.select); the cutoff then keeps at most CALIBRATED_CAP.
         rarity = decide.Rarity(n for n in store.all_nodes() if n.status not in RETIRED_STATUSES)
@@ -161,8 +162,9 @@ def _window(store: Store, window: int, hybrid: str | None, interests: list[str],
 def trace(store: Store | None = None, hybrid: str | None = None) -> dict:
     """Run the real pipeline against the seeded corpus, recording each stage's survivors.
 
-    The default render traces the default decision, the calibrated line (decide.py, REPORT
-    §4w). With `hybrid`, the seeded corpus is embedded from the locally cached model first and
+    The default render traces the default decision, tiered: the calibrated line (decide.py,
+    REPORT §4w) for what is shown in full, and the rest of what matched one line each (§4y).
+    With `hybrid`, the seeded corpus is embedded from the locally cached model first and
     the candidates come from the fused order check() uses, under the word floor: a record the
     semantic arm finds by meaning alone shares no word with the task, so only the floor can
     brief it. The trace aborts if the semantic arm cannot run here, rather than drawing a
@@ -186,12 +188,23 @@ def trace(store: Store | None = None, hybrid: str | None = None) -> dict:
         window *= 3
         w = _window(store, window, hybrid, interests, decision)
     kept, weak, cap, cand, fetched = w["kept"], w["weak"], w["cap"], w["cand"], w["fetched"]
+    # The second tier (REPORT 4y): what cleared the line past the cap, then what the floor
+    # keeps, one line each; what neither tier names is left out.
+    also: list[Node] = []
+    left_out, trimmed = weak, max(0, len(kept) - cap)
+    if decision == "tiered":
+        shown = {n.id for n in kept[:cap]}
+        also, trimmed = _also_matched(store, TRACE_TASK, LIMIT, f"repo:{TRACE_REPO}", interests, hybrid=hybrid,
+                                      rerank=False, first=(w["live"], [], w["exhausted"], cand),
+                                      overflow=kept[cap:], shown=shown)
+        left_out = sum(1 for n in w["live"] if n.id not in shown | {m.id for m in also})
     # Ask check() itself, and stop if the briefing it delivers differs from the counts traced.
     delivered_by_check = check(store, TRACE_REPO, TRACE_TASK, LIMIT, interests, hybrid=hybrid,
                                decision=decision)
     if (delivered_by_check["match_count"] != min(cap, len(kept))
-            or delivered_by_check["weak_matches"] != weak
-            or delivered_by_check["dropped_by_cutoff"] != max(0, len(kept) - cap)):
+            or delivered_by_check["weak_matches"] != left_out
+            or delivered_by_check["dropped_by_cutoff"] != trimmed
+            or len(delivered_by_check.get("also_matched") or []) != len(also)):
         raise SystemExit("ABORT: check() widened past this trace's window (its briefing holds "
                          f"{delivered_by_check['match_count']} records, the trace {min(cap, len(kept))}); "
                          "trace the wider fetch before rendering.")
@@ -210,6 +223,7 @@ def trace(store: Store | None = None, hybrid: str | None = None) -> dict:
         "after_floor": len(kept), "weak": weak,
         "delivered": min(cap, len(kept)),
         "trimmed": max(0, len(kept) - cap),
+        "also": len(also), "left_out": left_out,
         "hybrid": hybrid, "decision": decision, "cap": cap,
     }
     if hybrid:
@@ -253,10 +267,11 @@ def _bar(x: int, y: int, w: int, keep_frac: float, cut_frac: float) -> str:
 
 
 def _adjust_stages(d: dict, stages: list, f: int) -> None:
-    """Swap in the stages the traced configuration runs: the calibrated line and its cap, or the
-    semantic arm's embed and fuse steps and the floor's cosine line."""
-    if d["decision"] == "calibrated":
-        # The default decision (decide.py, REPORT 4w) in place of the floor and the top twelve.
+    """Swap in the stages the traced configuration runs: the calibrated line and its cap (and,
+    tiered, the one-line tier), or the semantic arm's embed and fuse steps and the floor's
+    cosine line."""
+    if d["decision"] in ("calibrated", "tiered"):
+        # The calibrated line (decide.py, REPORT 4w) in place of the floor and the top twelve.
         line = next(i for i, st in enumerate(stages) if st[1] == "FLOOR")
         stages[line] = (
             "6", "LINE", "Three shared subject words, or two nearly as rare as a word in one record",
@@ -270,6 +285,16 @@ def _adjust_stages(d: dict, stages: list, f: int) -> None:
             "the briefing short. The number cut travels with the result.",
             f'{d["delivered"]} delivered', f'{d["trimmed"]} trimmed',
             d["delivered"] / f, d["trimmed"] / f, "TRUNCATES")
+    if d["decision"] == "tiered":
+        # The default (REPORT 4y): nothing that matched is hidden; the line decides what is in full.
+        cut = next(i for i, st in enumerate(stages) if st[1] == "CUTOFF")
+        stages[cut] = stages[cut][:2] + (f"The best {d['cap']} in full", stages[cut][3], stages[cut][4],
+                                         "the rest to the list below") + stages[cut][6:7] + (0.0, "")
+        stages.insert(cut + 1, (
+            "7b", "ALSO", f"Everything else that matched, one line each, up to {d['limit']}",
+            "What cleared the line past the cap, then what the word floor keeps: id, title and the "
+            "start of the fix, so a lesson the line misses is still named (REPORT 4y).",
+            f'{d["also"]} listed', f'{d["left_out"]} left out', d["also"] / f, d["left_out"] / f, "NAMES"))
     if d.get("hybrid"):
         # The semantic arm: a second candidate source and the fusion, drawn between RANK and
         # SCOPE because that is where ranked_candidates() puts them; the floor gains its line.
@@ -295,6 +320,16 @@ def _adjust_stages(d: dict, stages: list, f: int) -> None:
                  f"word counts alone if at most {COMMON_WORD_SHARE:.0%}, or {COMMON_WORD_MIN_RECORDS}, of records "
                  "hold it; others need two words.")
         stages[floor] = tuple(st)
+
+
+def _subtitle(d: dict) -> str:
+    """The line under the title: what the corpus becomes under the traced decision."""
+    if d["decision"] == "tiered":
+        return (f'{d["corpus"]} records and one task sentence become {d["cap"]} or fewer lessons in full and up '
+                f'to {d["limit"]} named in a line. Only applies_to may exclude on validity.')
+    return (f'{d["corpus"]} records and one task sentence become the {d["cap"]} or fewer an agent reads. '
+            + ("A local embedding adds candidates by meaning; five stages then narrow them."
+               if d.get("hybrid") else "Five stages narrow it; only applies_to may exclude on validity."))
 
 
 def render(d: dict) -> str:
@@ -358,10 +393,7 @@ def render(d: dict) -> str:
                                                  if d.get("hybrid") else "")
     o.append(f'<text x="{PAD}" y="46" font-size="27" font-weight="700" fill="{INK}">'
              f'{escape(title)}</text>')
-    sub = (f'{d["corpus"]} records and one task sentence become the {d["cap"]} or fewer an agent reads. '
-           + ("A local embedding adds candidates by meaning; five stages then narrow them."
-              if d.get("hybrid") else "Five stages narrow it; only applies_to may exclude on validity."))
-    o.append(f'<text x="{PAD}" y="72" font-size="14" fill="{INK2}">{escape(sub)}</text>')
+    o.append(f'<text x="{PAD}" y="72" font-size="14" fill="{INK2}">{escape(_subtitle(d))}</text>')
     for i, ln in enumerate([
         "GENERATED from the live pipeline - docs/render_pipeline_diagram.py",
         f'traced task: "{d["task"]}"',
@@ -416,12 +448,14 @@ def render(d: dict) -> str:
         if keep > 0:
             o.append(_bar(tx, y + ROW_H - 20, W - PAD - tx - 14, keep, cut))
         y += ROW_H
-    decides = "src/okl/decide.py select()" if d["decision"] == "calibrated" else "_apply_floor()"
-    fns = [f"src/okl/core.py briefing_terms() / ranked_candidates() / _live_hits() / _in_scope() . {decides} . "
-           "src/okl/store.py search()" + (" . src/okl/semantic.py search()" if d.get("hybrid") else ""),
+    decides = {"calibrated": "src/okl/decide.py select()",
+               "tiered": "src/okl/decide.py select() . src/okl/core.py _also_matched()"}.get(d["decision"],
+                                                                                           "_apply_floor()")
+    fns = ["src/okl/core.py briefing_terms() / ranked_candidates() / _live_hits() / _in_scope()",
+           f"{decides} . src/okl/store.py search()" + (" . src/okl/semantic.py search()" if d.get("hybrid") else ""),
            "regenerate: python3 docs/render_pipeline_diagram.py" + (f" --hybrid {d['hybrid']}" if d.get("hybrid") else "")]
     for i, ln in enumerate(fns):
-        o.append(f'<text x="{PAD}" y="{h - 40 + i * 14}" font-size="11" font-family="{MONO}" fill="{INK3}">{escape(ln)}</text>')
+        o.append(f'<text x="{PAD}" y="{h - 52 + i * 14}" font-size="11" font-family="{MONO}" fill="{INK3}">{escape(ln)}</text>')
     o.append("</svg>")
     return "\n".join(o) + "\n"
 

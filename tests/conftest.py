@@ -11,11 +11,15 @@ import json
 import pytest
 
 STORE_VARS = ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN")
+# The settings that change what a briefing holds or says. A developer's shell may set any of
+# them, and a test that asserts a default must see the default (review on #299).
+BRIEFING_VARS = ("OKL_DECISION", "OKL_HYBRID", "OKL_RERANK", "OKL_WARM", "OKL_QUIET",
+                 "OKL_BRIEFING_LIMIT", "OKL_BRIEFING_COMPACT")
 
 
 @pytest.fixture(autouse=True)
 def _no_real_store(monkeypatch):
-    for var in STORE_VARS:
+    for var in (*STORE_VARS, *BRIEFING_VARS):
         monkeypatch.delenv(var, raising=False)
 
 

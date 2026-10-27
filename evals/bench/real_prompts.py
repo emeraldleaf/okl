@@ -75,6 +75,19 @@ measured on the tuning half: the highest F1 of judged precision and pooled recal
 prompts, among arms briefing at most five lessons per prompt; ties go to fewer lessons per
 prompt. The sweep is a choice made on the tuning half after reading its earlier results, so
 only the held-out half can say whether it holds.
+
+Tier arms, added after the held-out half showed every arm that briefs at most five lessons
+reaching under half of the applying lessons the floor reached (REPORT §4y): the default should
+not hide a lesson that matched.
+
+- `tiered`: core.check's tiered decision on the store with the written triggers, counting
+  every lesson it names: those it shows in full and those it lists one line each;
+- `tiered-full`: the same check, counting only the lessons it shows in full.
+
+The tier rule, written before any tier arm's pair was judged: tiered becomes the default if, on
+the held-out half's task prompts, it reaches at least as many applying lessons as the floor.
+`size` renders each sampled prompt's briefing under the floor, backfill and tiered arms and
+prints its size; the rule for the line's content is in REPORT §4y.
 """
 from __future__ import annotations
 
@@ -84,6 +97,7 @@ import hashlib
 import json
 import random
 import sqlite3
+import statistics
 import subprocess
 import sys
 from collections import defaultdict
@@ -106,7 +120,8 @@ BACKFILL = PRIVATE / "backfill-triggers.jsonl"
 CONTEXT_ARMS = ("prev", "prev-own", "reply-own")
 FIX_ARMS = ("fallback", "backfill", "backfill+fallback")
 SWEEP_ARMS = ("floor-3", "floor-5", "line2", "line2+backfill", "line1+backfill")
-ARMS = ("floor", "calibrated", *CONTEXT_ARMS, *FIX_ARMS, *SWEEP_ARMS)
+TIER_ARMS = ("tiered", "tiered-full")
+ARMS = ("floor", "calibrated", *CONTEXT_ARMS, *FIX_ARMS, *SWEEP_ARMS, *TIER_ARMS)
 
 
 def _rows(name: str) -> list[dict]:
@@ -180,7 +195,7 @@ class Stores:
 
     def for_arm(self, prompt: dict, arm: str) -> Store:
         """The store an arm checks a prompt against."""
-        return self.as_of(millis(prompt["at"]), backfilled="backfill" in arm)
+        return self.as_of(millis(prompt["at"]), backfilled="backfill" in arm or arm in TIER_ARMS)
 
 
 def context_text(prompt: dict, arm: str) -> str:
@@ -233,6 +248,10 @@ def _fallback(on: bool) -> Iterator[None]:
 def brief(store: Store, prompt: dict, arm: str) -> list[str]:
     """The lesson ids an arm briefs for a prompt, checked against `store` (Stores.for_arm)."""
     repo = repo_of(prompt)
+    if arm in TIER_ARMS:
+        res = core.check(store, repo, prompt["text"], interests=None, decision="tiered")
+        named = [e["id"] for e in res["also_matched"]] if arm == "tiered" else []
+        return core.briefed_ids(res) + named
     if arm.startswith("floor-"):
         return core.briefed_ids(core.check(store, repo, prompt["text"], limit=int(arm.split("-")[1]), interests=None,
                                            decision="floor"))
@@ -246,10 +265,8 @@ def brief(store: Store, prompt: dict, arm: str) -> list[str]:
     if arm in FIX_ARMS:
         with _fallback(arm.endswith("fallback")):
             return core.briefed_ids(core.check(store, repo, prompt["text"], interests=None, decision="calibrated"))
-    if arm == "floor":
-        return core.briefed_ids(core.check(store, repo, prompt["text"], interests=None, decision="floor"))
-    if arm == "calibrated":
-        return core.briefed_ids(core.check(store, repo, prompt["text"], interests=None, decision="calibrated"))
+    if arm in ("floor", "calibrated"):
+        return core.briefed_ids(core.check(store, repo, prompt["text"], interests=None, decision=arm))
     task = "\n".join(x for x in (prompt["text"], context_text(prompt, arm)) if x)
     own = core.briefing_terms(prompt["text"]) if arm.endswith("-own") else None
     with _own_words(own):
@@ -308,7 +325,9 @@ def cmd_pool(args: argparse.Namespace) -> None:
         meta = json.loads(meta_path.read_text())
         by_id = {p["id"]: p for label in ("task", "null") for p in prompts(label)}
         chosen = [(label, by_id[pid]) for label, pid in meta["chosen"]]
-        new_arms = [a for a in arms if a not in meta["briefed"]]
+        # --rebrief briefs arms already pooled again, after a change to the code they run (the
+        # tier arms after the review on #299); only pairs no arm had briefed are judged.
+        new_arms = [a for a in arms if a not in meta["briefed"] or args.rebrief]
         for arm in new_arms:
             meta["briefed"][arm] = {p["id"]: brief(stores.for_arm(p, arm), p, arm) for _l, p in chosen}
         rng = random.Random(f"{meta['seed']}:{args.split}:extend")  # noqa: S311 - a reproducible shuffle
@@ -433,10 +452,92 @@ def cmd_tally(args: argparse.Namespace) -> None:
         print(f"\n{name} rule: {pick or f'no {name} arm'} "
               + (f"(most applying lessons found on task prompts among the {name} arms at least as precise as "
                  "calibrated)" if pick else "(none is at least as precise as calibrated on task prompts)"))
+    if "tiered" in stats and "floor" in stats:
+        holds = stats["tiered"][1] >= stats["floor"][1]
+        print(f"\ntier rule: {'tiered' if holds else 'not tiered'} (it reaches {stats['tiered'][1]} applying lessons "
+              f"on task prompts, the floor {stats['floor'][1]}; the rule asks at least as many)")
     if any(a in stats for a in SWEEP_ARMS):
         eligible = [a for a in stats if stats[a][2] <= 5]
         pick = min(eligible, key=lambda a: (-f1[a], stats[a][2]))
         print(f"\nsweep rule: {pick} (highest F1 on task prompts among arms briefing at most five lessons a prompt)")
+
+
+def cmd_misses(args: argparse.Namespace) -> None:
+    """Where each applying lesson an arm missed on task prompts stopped inside core.check: not
+    among the candidates, below the line by how many about-words it shares, or cut by the cap
+    (REPORT §4y). Labels as the pool stood before the extension families named by --before.
+    Counts only: no prompt, no lesson."""
+    meta = json.loads((PRIVATE / f"real-arms-{args.split}.json").read_text())
+    label: dict[tuple[int, int], str] = {}
+    for f in sorted(PRIVATE.glob(f"real-judge-{args.split}-*-out.jsonl")):
+        if not any(f"-{family}-" in f.name for family in args.before):
+            for o in _rows(f.name):
+                label[(int(o["item"]), int(o["n"]))] = o["label"]
+    chosen = meta["chosen"]
+    applies: dict[str, set[str]] = defaultdict(set)
+    for item, ids in meta["pooled"].items():
+        for n, lid in enumerate(ids):
+            if label.get((int(item), n)) == "APPLIES":
+                applies[chosen[int(item)][1]].add(lid)
+    by_id = {p["id"]: p for p in prompts("task")}
+    stores = Stores()
+    stopped: dict[str, int] = defaultdict(int)
+    total = 0
+    for kind, pid in chosen:
+        if kind != "task":
+            continue
+        total += len(applies[pid])
+        missed = applies[pid] - set(meta["briefed"][args.arm][pid])
+        if not missed:
+            continue
+        p = by_id[pid]
+        store = stores.for_arm(p, args.arm)
+        hits, *_ = core._live_hits(store, p["text"], 12, f"repo:{repo_of(p)}", None)
+        live = [n for n in store.all_nodes() if n.status not in core.RETIRED_STATUSES]
+        terms = [w.lower() for w in core.briefing_terms(p["text"])]
+        kept, matched, _weak = decide.select(hits, terms, decide.Rarity(live))
+        kept_ids, hit_ids = {n.id for n in kept}, {n.id for n in hits}
+        for lid in missed:
+            if lid not in hit_ids:
+                stopped["not among the candidates"] += 1
+            elif lid in kept_ids:
+                stopped["cleared the line, cut by the cap"] += 1
+            else:
+                shared = len(matched.get(lid, []))
+                stopped[f"among the candidates, below the line: {min(shared, 2)}{'+' if shared >= 2 else ''} "
+                        "shared about-word(s)"] += 1
+    found = total - sum(stopped.values())
+    print(f"real prompts · split {args.split} · arm {args.arm} · labels before {', '.join(args.before) or 'none'} · "
+          f"store {meta['store']}")
+    print(f"task prompts: {total} applying lessons in the pool; {args.arm} found {found}, missed {total - found}")
+    for k, v in sorted(stopped.items(), key=lambda kv: -kv[1]):
+        print(f"  {v:4}  {k}")
+
+
+SIZE_ARMS = ("floor", "backfill", "tiered")
+
+
+def cmd_size(args: argparse.Namespace) -> None:
+    """The briefing each arm hands the agent (the hook's additionalContext) for every sampled
+    prompt of a split, in characters and in tokens at four characters each (REPORT §4y)."""
+    meta = json.loads((PRIVATE / f"real-arms-{args.split}.json").read_text())
+    by_id = {p["id"]: p for label in ("task", "null") for p in prompts(label)}
+    stores = Stores()
+    decision = {"floor": "floor", "backfill": "calibrated", "tiered": "tiered"}
+    commit = subprocess.run(["git", "rev-parse", "--short=12", "HEAD"], capture_output=True, text=True,
+                            cwd=bench.ROOT, check=False).stdout.strip()
+    print(f"briefing size · split {args.split} · store {meta['store']} · code {commit} · "
+          "characters / 4 = tokens, a rough rule")
+    for kind in ("task", "null"):
+        ids = [pid for k, pid in meta["chosen"] if k == kind]
+        print(f"\n{kind} prompts: {len(ids)}")
+        print(f"  {'arm':9} {'median':>8} {'mean':>8} {'p90':>8} {'max':>8}   (tokens)")
+        for arm in SIZE_ARMS:
+            sizes = sorted(len(core.render_check_for_agent(core.check(
+                stores.for_arm(by_id[pid], arm), repo_of(by_id[pid]), by_id[pid]["text"], interests=None,
+                decision=decision[arm]))) // 4 for pid in ids)
+            print(f"  {arm:9} {statistics.median(sizes):>8.0f} {statistics.mean(sizes):>8.0f} "
+                  f"{sizes[9 * len(sizes) // 10]:>8} {sizes[-1]:>8}")
 
 
 def main() -> None:
@@ -452,10 +553,21 @@ def main() -> None:
     pp.add_argument("--arms", nargs="+", choices=ARMS, help="the arms to brief (default: every arm)")
     pp.add_argument("--extend", action="store_true",
                     help="add the given arms to the split's existing pool and judge only their new pairs")
+    pp.add_argument("--rebrief", action="store_true",
+                    help="with --extend: brief the given arms again even if pooled, after a code change")
     pt = sub.add_parser("tally")
     pt.add_argument("--split", choices=["tuning", "heldout"], required=True)
+    ps = sub.add_parser("size")
+    ps.add_argument("--split", choices=["tuning", "heldout"], required=True)
+    pm = sub.add_parser("misses")
+    pm.add_argument("--split", choices=["tuning", "heldout"], required=True)
+    # Only the arms that run the calibrated line as it is: the classifier rebuilds that decision,
+    # so for any other arm it would name the wrong cause (review on #299).
+    pm.add_argument("--arm", choices=["calibrated", "backfill"], default="backfill")
+    pm.add_argument("--before", nargs="*", default=[], help="label families to leave out, such as e1")
     args = ap.parse_args()
-    {"snapshot": cmd_snapshot, "pool": cmd_pool, "tally": cmd_tally}[args.cmd](args)
+    {"snapshot": cmd_snapshot, "pool": cmd_pool, "tally": cmd_tally, "size": cmd_size,
+     "misses": cmd_misses}[args.cmd](args)
 
 
 if __name__ == "__main__":
