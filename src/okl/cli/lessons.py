@@ -157,8 +157,8 @@ def cmd_triggers(args: argparse.Namespace) -> int:
 def _person_notes(result: dict[str, Any]) -> list[str]:
     """Lines for the person about how this briefing was made: bundled packs in this store that
     predate their triggers, which the calibrated decision reads (REPORT §4w; a pack of the
-    repo's own is not bundled, so it never prompts this), and a service that answered by a
-    decision other than the one asked for."""
+    repo's own is not bundled, so it never prompts this), a service that answered by a
+    decision other than the one asked for, and a warm model that was asked for and did not run."""
     notes = []
     bundled = {f.stem for f in _bundled_seed_dir().glob("*.json")}
     behind = [p for p in result.get("packs_without_triggers") or [] if p in bundled]
@@ -167,6 +167,9 @@ def _person_notes(result: dict[str, Any]) -> list[str]:
                      "are briefed less often: run `okl seed --refresh`")
     if result.get("decision_unavailable"):
         notes.append(f"okl · {result['decision_unavailable']}")
+    if result.get("warm_unavailable"):
+        # Asked for and not used: said where the person looks, not only in the JSON (review on #300).
+        notes.append(f"okl · briefed without the warm model: {result['warm_unavailable']}")
     own = result.get("lessons_without_triggers", 0)
     if own >= OWN_UNTRIGGERED_NOTICE:
         notes.append(f"okl · {own} of this store's own lessons have no triggers, so they are briefed less "

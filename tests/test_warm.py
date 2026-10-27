@@ -244,3 +244,24 @@ def test_a_failed_start_is_said_not_raised(monkeypatch, tmp_path):
     monkeypatch.setattr(warm, "start", broken_start)
     res = c.check("the session token disappears after a refresh")
     assert "starting it failed: no room to start" in res["warm_unavailable"]
+
+
+def test_without_flock_start_still_starts_one(monkeypatch):
+    """Where flock does not exist the lock is a no-op context, which has no close(); start() raised
+    AttributeError into the briefing instead of starting the server (review on #300)."""
+    monkeypatch.setenv("OKL_WARM_SOCKET", str(Path(tempfile.mkdtemp(prefix="okl", dir="/tmp")) / "w.sock"))
+    monkeypatch.setattr(warm, "fcntl", None)
+    monkeypatch.setattr(warm, "installed", lambda: True)
+    spawned = []
+    monkeypatch.setattr(warm.subprocess, "Popen", lambda *a, **k: spawned.append(a))
+    assert warm.start() is None
+    assert len(spawned) == 1
+
+
+def test_the_person_is_told_when_the_warm_model_did_not_run():
+    """The reason was only in the JSON; the line the person sees says it too, and it is the
+    check's own word on whether the model ran (review on #300)."""
+    from okl.cli.lessons import _person_notes
+    notes = _person_notes({"warm_unavailable": "the warm model is not running: `okl warm start`"})
+    assert "okl · briefed without the warm model: the warm model is not running: `okl warm start`" in notes
+    assert not [n for n in _person_notes({"warm": True}) if "warm" in n]

@@ -37,23 +37,24 @@ def main() -> int:
     by_id = {json.loads(x)["id"]: json.loads(x)["text"]
              for x in (REPO / "evals" / "bench" / "private" / "prompts.jsonl").read_text().splitlines() if x.strip()}
     texts = [by_id[pid] for kind, pid in meta["chosen"] if kind == "task"]
-    env = {**os.environ, "OKL_BRIEFING_LOG": "0", "OKL_QUIET": "1", "PYTHONPATH": str(REPO / "src")}
-    env.pop("OKL_DATABASE_URL", None)
+    # Not OKL_QUIET: the person's line is the check's own word on whether the model ran.
+    env = {**os.environ, "OKL_BRIEFING_LOG": "0", "PYTHONPATH": str(REPO / "src")}
+    for name in ("OKL_DATABASE_URL", "OKL_QUIET"):
+        env.pop(name, None)
     times: dict[str, list[float]] = {"off": [], "on": []}
     for text in texts:
         for setting in ("off", "on"):
-            served = warm.ping()
             t0 = time.perf_counter()
             r = subprocess.run([sys.executable, "-m", "okl", "check", "--format", "hook", "--warm", setting,
                                 "--task", text], cwd=REPO, env=env, capture_output=True, text=True, check=False)
             times[setting].append((time.perf_counter() - t0) * 1000)
             if r.returncode != 0:
                 sys.exit(f"ABORT: okl check exited {r.returncode}")
-            # A check that falls back exits 0 too, so an "on" timing counts only if the server
-            # answered its query; a prompt with no subject asks nothing (review on #300).
-            after = warm.ping()
-            if setting == "on" and core.briefing_terms(text) and (
-                    not served or not after or after["served"] <= served["served"]):
+            # A check that falls back exits 0 too, so an "on" timing counts only when the check
+            # itself did not say it ran without the model (its line for the person); a prompt with
+            # no subject asks nothing (reviews on #300).
+            said = json.loads(r.stdout).get("systemMessage", "")
+            if setting == "on" and core.briefing_terms(text) and "without the warm model" in said:
                 sys.exit("ABORT: a check with the model on was briefed without it; the receipt would time a fallback")
     rss = subprocess.run(["ps", "-o", "rss=", "-p", str(up["pid"])], capture_output=True, text=True,
                          check=False).stdout.strip()

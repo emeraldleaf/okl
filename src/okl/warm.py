@@ -19,6 +19,8 @@ from __future__ import annotations
 import base64
 import contextlib
 import hashlib
+import importlib
+import importlib.util
 import json
 import os
 import socket
@@ -32,6 +34,9 @@ from typing import Any
 
 from . import hub
 from .store import RETIRED_STATUSES, Node, Store
+
+# The one-server lock's flock; where it does not exist (Windows), nothing is locked.
+fcntl: Any = importlib.import_module("fcntl") if importlib.util.find_spec("fcntl") else None
 
 BASE_MODEL = "google/embeddinggemma-300m"
 # The int8 file of the same model: 92.0% recall on the benchmark's selection split against full
@@ -225,9 +230,7 @@ def _take_lock(path: Path) -> Any:
     this process holds it, None while another server does. A server still loading answers no
     ping, so without it every prompt in that second started another (review on #300). Where
     flock does not exist, nothing is locked."""
-    try:
-        import fcntl
-    except ImportError:
+    if fcntl is None:
         return contextlib.nullcontext()
     lock = path.with_suffix(".lock")
     lock.parent.mkdir(parents=True, exist_ok=True)
@@ -289,7 +292,8 @@ def _serve(path: Path, idle_exit_s: float) -> int:
 
 def _handle(conn: socket.socket, encode: Encoder, state: dict[str, Any]) -> str | None:
     """Answer one connection; return "stop" when asked to. `state` holds the load time and how
-    many embed requests were answered, which ping reports."""
+    many embed requests were answered, which ping reports: answered, not necessarily received,
+    since a check that gave up has closed its end (review on #300)."""
     conn.settimeout(30)
     buf = b""
     while not buf.endswith(b"\n"):
@@ -318,7 +322,6 @@ def _handle(conn: socket.socket, encode: Encoder, state: dict[str, Any]) -> str 
 
 def installed() -> bool:
     """Whether this environment can load the model at all (the warm extra is installed)."""
-    import importlib.util
     return importlib.util.find_spec("fastembed") is not None
 
 
@@ -333,7 +336,8 @@ def start(*, wait_s: float = 0.0) -> dict[str, Any] | None:
     probe = _take_lock(socket_path())
     if probe is None:
         return _wait(wait_s)   # one is loading already: do not start another
-    probe.close()
+    with probe:   # released at once, for the server to take; the fallback has no close() (review on #300)
+        pass
     log = socket_path().with_suffix(".log")
     log.parent.mkdir(parents=True, exist_ok=True)
     with log.open("ab") as out:
