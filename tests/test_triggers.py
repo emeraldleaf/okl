@@ -160,6 +160,22 @@ def test_a_withdrawn_lesson_in_the_second_tier_is_a_warning_not_a_fix():
         s.close()
 
 
+def test_the_action_list_does_not_deny_a_lesson_shown_in_full():
+    """A rule shown in full with no fix routes no action; with the second tier non-empty the
+    action list said "no rule matched closely", against the full briefing (review on #299)."""
+    s = _store_with([{"title": "webhook signature verification replay window"},
+                     {"title": "rotate the webhook secret", "fix": "Rotate it every ninety days."}])
+    try:
+        res = core.check(s, repo="r", task="verify the webhook signature and the replay window")
+        assert res["match_count"] == 1
+        assert res["also_matched"]
+        compact = core.render_actions_only(res)
+        assert "no rule matched" not in compact
+        assert compact.startswith("OKL: 1 lesson(s) matched with no action to route")
+    finally:
+        s.close()
+
+
 def test_a_stale_lesson_in_the_second_tier_is_marked_for_re_verification():
     """A lesson past its TTL is named with the full briefing's stale tag, so its fix is not
     read as current (review on #299)."""

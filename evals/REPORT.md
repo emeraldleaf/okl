@@ -2578,7 +2578,7 @@ measurement ran at fd96d79; a review fix measured the tier arms again (the corre
 2. Tiered-full briefed exactly what backfill briefed, in the same order, on all 180 sampled
    prompts of each half.
 3. The median tiered briefing on held-out task prompts was 721 tokens, 51% of the floor's
-   1,424. On tuning: 614, 54% of 1,133.
+   1,424. On tuning: 610, 54% of 1,133.
 
 | held-out task prompts (120) | applying reached, of 115 | in full | by line | named per prompt | in full per prompt | median tokens |
 |---|---|---|---|---|---|---|
