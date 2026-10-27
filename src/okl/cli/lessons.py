@@ -50,6 +50,9 @@ def _apply_check_flags(client: Client, args: argparse.Namespace) -> None:
     chosen = getattr(args, "decision", None)
     if chosen is not None:
         client.decision = chosen
+    meaning = getattr(args, "warm", None)
+    if meaning is not None:
+        client.warm = meaning == "on"
 
 
 def cmd_check(args: argparse.Namespace) -> int:
