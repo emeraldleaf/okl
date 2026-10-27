@@ -408,8 +408,10 @@ candidate source joins before the gates: the task as one vector, its nearest rec
 cosine, and a fusion of the two orders. It needs the floor: a record found by meaning alone
 shares no word with the task, so the calibrated line cannot brief it. Meaning measured best
 added to the word count instead. EmbeddingGemma-300m took held-out recall from 90.0% to
-95.2% that way, but a prompt hook would pay about two seconds to load it on every prompt, so
-it waits for a process that keeps the model loaded ([REPORT §4w](evals/REPORT.md)). The same generator draws it from the same code path, and REPORT §4q says what it
+95.2% that way. A prompt hook would pay a second or two to load it on every prompt, so `okl
+warm` keeps it loaded in a local process: opt-in, about 1.3 to 1.6 GB of memory, a median of
+109 ms a prompt, and on real held-out prompts 46 applying lessons shown in full against 38
+([REPORT §4z](evals/REPORT.md)). The same generator draws it from the same code path, and REPORT §4q says what it
 buys and costs. A local cross-encoder over those candidates (`okl check --rerank`) was measured
 next ([REPORT §4t](evals/REPORT.md)): one held-out paraphrase in, one bug report out, so it
 ships as a flag, off.

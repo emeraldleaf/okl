@@ -2688,6 +2688,53 @@ opt-in, off, and this section records which.
 **Budget and stop.** This session's work and the judging of the warm arms' new pairs. If the
 result is not in by 2026-10-28, the model ships off and this section says why.
 
+### Result (2026-10-27)
+
+Receipts:
+- `real-20261027-heldout-warm.txt` and `real-20261027-tuning-warm.txt`: the tallies, at 815a148.
+  The warm arms' new pairs, 72 held out and 65 on tuning, were judged per lesson by Sonnet
+  sub-agents, with no label missing. The arms were briefed at c1f340b, the same code before a
+  rebase onto #299's review fixes, none of which changes which lessons a check names.
+- `warm-latency-20261027-0405.txt`: the hook's command over the 120 held-out task prompts.
+- `warm-memory-20261027-0530.txt`: memory, prompt by prompt.
+- `real-20261027-heldout-size-warm.txt`: the briefing's size.
+
+**The retrieval predictions held. The memory prediction failed, so by the rule the warm model
+ships off.**
+
+| held-out task prompts (120) | applying in full | precision in full [95%] | applying named, of 122 | null prompts with one in full (of 60) | median tokens |
+|---|---|---|---|---|---|
+| tiered | 38 | 17.8% [13.3, 23.5] | 102 | 4 | 721 |
+| **warm** | **46** | **23.0% [17.7, 29.3]** | **107** | 5 | 711 |
+
+1. Warm-full showed 46 applying lessons in full against tiered-full's 38, while showing fewer
+   lessons in full per prompt (1.67 against 1.77). Held.
+2. Its precision, 23.0%, is above the 13.3% bound. Held.
+3. Warm reached 107 applying lessons against tiered's 102. The pool grew from 115 to 122: the
+   warm arms found 7 applying lessons no other arm had. Held.
+4. It showed a lesson in full on 5 of 60 null prompts, within the bound of 8. Held.
+5. **Failed on memory.** The model added a median of 109 ms to the hook's command (bound 150;
+   138 ms off against 249 ms on, p95 282 ms added). But the server held 1,410 MB, against a
+   bound of 700 MB.
+
+The tuning half agrees on retrieval: 42 applying lessons in full against 41, at 23.9% precision
+against 26.3% (above its bound of 20.0%), 104 named against 95, and 6 null prompts with a lesson
+in full against 7.
+
+**Why the memory bound was wrong.** It came from a reading taken just after the model loaded
+(about 500 MB), before it had encoded anything. Prompt by prompt, resident memory is 559 MB
+after loading, about 1.66 GB after the first prompt, and 1.58 GB after 300. That is a one-time
+cost of the first inference, not growth. Turning off ONNX Runtime's CPU memory arena lowers it
+to about 1.3 GB, still far above the bound. The prediction was a planning error, recorded as it
+was written.
+
+**What follows.** As pre-registered, `okl warm` ships as an opt-in (`--warm on`, `"warm": true`,
+`OKL_WARM=1`), off by default, and the default briefing stays §4y's two tiers. A smaller
+footprint is the next measurement, pre-registered before it runs, if the person who uses okl
+wants the model on by default. Candidates are the arena off with a model kept loaded, or the
+4-bit file (197 MB), and either needs its retrieval measured again. Whether about 1.3 to 1.6 GB
+resident is acceptable for a machine that opts in is that person's decision, not this section's.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
