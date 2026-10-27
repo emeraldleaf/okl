@@ -48,6 +48,7 @@ LINE = 5.767926
 NEAREST = 36       # the model's own candidates, as many as the full-text window
 TIMEOUT_S = 0.5    # what a prompt waits for the prompt's vector before briefing without it
 IDLE_EXIT_S = 4 * 3600
+INDEX_BATCH = 32   # lessons a request when indexing
 EXTRA = "observed-knowledge-ledger[warm]"
 
 Encoder = Callable[[list[str], str], list[list[float]]]
@@ -177,8 +178,13 @@ def index(store: Store, *, timeout: float = 120.0) -> dict[str, Any]:
     have = {node_id: digest for node_id, digest, _ in store.embeddings(MODEL_ID)}
     live = [n for n in store.all_nodes() if n.status not in RETIRED_STATUSES and phrasings(n)]
     todo = [n for n in live if have.get(n.id) != phrasings_hash(n)]
-    for n in todo:
-        store.put_embedding(n.id, MODEL_ID, phrasings_hash(n), _pack(embed(phrasings(n), "doc", timeout=timeout)))
+    # A few dozen lessons a request: one request a lesson spent most of its time on the round trip.
+    for i in range(0, len(todo), INDEX_BATCH):
+        batch = todo[i:i + INDEX_BATCH]
+        texts = [p for n in batch for p in phrasings(n)]
+        rows = iter(embed(texts, "doc", timeout=timeout))
+        for n in batch:
+            store.put_embedding(n.id, MODEL_ID, phrasings_hash(n), _pack([next(rows) for _ in phrasings(n)]))
     gone = sorted(set(have) - {n.id for n in live})
     for node_id in gone:
         store.delete_embedding(node_id, MODEL_ID)
@@ -274,12 +280,20 @@ def _handle(conn: socket.socket, encode: Encoder, loaded_s: float) -> str | None
     return "stop" if op == "stop" else None
 
 
+def installed() -> bool:
+    """Whether this environment can load the model at all (the warm extra is installed)."""
+    import importlib.util
+    return importlib.util.find_spec("fastembed") is not None
+
+
 def start(*, wait_s: float = 0.0) -> dict[str, Any] | None:
     """Start the server in the background unless one answers; with `wait_s`, wait that long
     for it to load. Returns its ping, or None while it is still loading."""
     running = ping()
     if running:
         return running
+    if not installed():
+        raise WarmUnavailableError(f"the warm model needs its extra: pip install '{EXTRA}'")
     log = socket_path().with_suffix(".log")
     log.parent.mkdir(parents=True, exist_ok=True)
     with log.open("ab") as out:

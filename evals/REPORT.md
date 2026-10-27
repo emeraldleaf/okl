@@ -2629,6 +2629,65 @@ the smallest briefing, and `floor` for every match in full. Whether an agent act
 entry as it does on a full lesson is the next measurement, to be pre-registered before it runs.
 The release waits for it.
 
+## 4z. PRE-REGISTERED: a warm model adds meaning to the line (2026-10-27)
+
+Written before any warm arm was pooled, judged or sized on real prompts (#293).
+
+**Why.** §4w added EmbeddingGemma-300m's similarity to the shared-word score (W = 8) and measured
+held-out recall at 95.2% against 90.0%, mostly on paraphrases, with 12 rather than 9 of 268
+subject-less prompts briefed. It did not ship: the prompt hook is a new process on every prompt,
+and the model took 1.7 to 2.1 s to load there. §4y's second tier names what the line misses, but
+a lesson named in a line is not shown.
+
+**The treatment.**
+
+- **`okl warm`.** A local server on a Unix socket in the user's cache directory loads the model
+  once. `okl check --warm on` (or `"warm": true`, `OKL_WARM=1`) asks it for the prompt's vector
+  within 0.5 s. When nothing answers, the briefing is the model-free one and the result says
+  why. Off by default until this section's rule says otherwise.
+- **The model** is EmbeddingGemma-300m's int8 ONNX file from the same repository fastembed
+  uses. On the benchmark's selection split, at W = 8 and a cap of five, it measured 92.0%
+  recall against full precision's 92.4%, 12 of 268 null prompts briefed in both, 71 paraphrases
+  against 72, and 95 ms a prompt against 174 (`bench-20261027-sel-dense-embeddinggemma-int8-words.txt`
+  against `bench-20261026-sel-dense-embeddinggemma-words.txt`). That chose the file, not the
+  weight or the line.
+- **The score** is decide.score plus 8 times the best cosine between the prompt and any of a
+  lesson's phrasings (title and symptom, each alias, each trigger), over the full-text
+  candidates and the model's own 36 nearest in scope. The line is 5.767926, the selection
+  split's conformal line at alpha 0.05 for that score, from the same receipt (whose W = 0 line
+  is decide.CALIBRATED_LINE). What clears it is shown in full; the second tier is §4y's.
+- **Lesson vectors** live in the store, one row per phrasing (`okl warm index`).
+
+**What was seen before this was written.** The int8 receipt above, the model's nearest five on
+one task against this repo's store (they changed), and its added cost in one ad hoc run on this
+machine, about 95 ms end to end. Nothing about the real-prompt arms.
+
+**Instrument.** `evals/bench/real_prompts.py` gains two arms through `pool --extend`: `warm`
+(every lesson it names) and `warm-full` (those shown in full). Both run on the store with the
+written triggers and the lessons' vectors, the prompt encoded by the same model in-process. New
+pairs are judged as in §4x. `size` adds the warm arm. `evals/warm_latency.py` times the hook's
+own command, `okl check --format hook`, with the model off and on over the 120 held-out task
+prompts against this repo's store, and reads the server's memory.
+
+**Predictions, on the held-out half unless said.**
+
+1. Warm-full shows more applying lessons in full than tiered-full (38).
+2. Warm-full's precision is at least tiered-full's lower 95% bound (13.3%).
+3. Warm reaches at least as many applying lessons as tiered (102). It can fall only if the
+   first tier's overflow pushes the floor's lessons out of the second tier's twelve.
+4. Warm-full shows a lesson in full on at most twice as many null prompts as tiered-full (4 of
+   60, so at most 8).
+5. The model adds at most 150 ms to the hook's command at the median, and the server holds at
+   most 700 MB.
+
+**Rule and falsifiers.** Predictions 1 to 4 are the tally's warm rule. If they and 5 hold, `warm`
+turns on by default wherever the warm extra is installed: the first prompt starts the server and
+is briefed without it, and later prompts with it. If any fails, the warm model ships as an
+opt-in, off, and this section records which.
+
+**Budget and stop.** This session's work and the judging of the warm arms' new pairs. If the
+result is not in by 2026-10-28, the model ships off and this section says why.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
