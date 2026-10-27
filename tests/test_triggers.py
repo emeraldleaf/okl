@@ -128,6 +128,38 @@ def test_the_tiered_decision_names_what_the_cap_cuts_and_what_the_floor_keeps():
         s.close()
 
 
+def test_the_lessons_shown_in_full_do_not_use_up_the_second_tiers_places():
+    """At --limit 3, three lessons shown in full that are also the floor's first three left the
+    second tier empty while a fourth matched; the floor is now asked for the limit beyond what
+    is shown (review on #299)."""
+    s = _store_with([*({"title": f"webhook signature verification replay window {i}"} for i in range(3)),
+                     {"title": "rotate the webhook secret"}])
+    try:
+        res = core.check(s, repo="r", task="verify the webhook signature and the replay window", limit=3)
+        assert len(core.briefed_ids(res)) == 3
+        assert [e["id"] for e in res["also_matched"]] == ["r3"]
+    finally:
+        s.close()
+
+
+def test_a_withdrawn_lesson_in_the_second_tier_is_a_warning_not_a_fix():
+    """A retracted rule the floor keeps is named as something to avoid, without its old fix,
+    as the full briefing routes it (review on #299)."""
+    s = Store("sqlite:///:memory:")
+    core.record(s, type="Rule", scope="org", id="old", title="cache the session token in local storage",
+                fix="Write the token to localStorage on login.", status="retracted")
+    try:
+        res = core.check(s, repo="r", task="where should the session token live")
+        entry = next(e for e in res["also_matched"] if e["id"] == "old")
+        assert entry["avoid"] == "retracted"
+        assert entry["fix"] == ""
+        line = core._also_line(entry)
+        assert line == "- [old] AVOID (retracted): cache the session token in local storage"
+        assert "localStorage" not in core.render_check_for_agent(res)
+    finally:
+        s.close()
+
+
 def test_a_second_tier_line_carries_the_first_sentence_of_the_fix_cut_at_a_word():
     """A line is the title and the first sentence of the fix, at most ALSO_FIX_CHARS of it,
     cut at a word; a lesson with no fix is its title alone."""

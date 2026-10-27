@@ -325,7 +325,9 @@ def cmd_pool(args: argparse.Namespace) -> None:
         meta = json.loads(meta_path.read_text())
         by_id = {p["id"]: p for label in ("task", "null") for p in prompts(label)}
         chosen = [(label, by_id[pid]) for label, pid in meta["chosen"]]
-        new_arms = [a for a in arms if a not in meta["briefed"]]
+        # --rebrief briefs arms already pooled again, after a change to the code they run (the
+        # tier arms after the review on #299); only pairs no arm had briefed are judged.
+        new_arms = [a for a in arms if a not in meta["briefed"] or args.rebrief]
         for arm in new_arms:
             meta["briefed"][arm] = {p["id"]: brief(stores.for_arm(p, arm), p, arm) for _l, p in chosen}
         rng = random.Random(f"{meta['seed']}:{args.split}:extend")  # noqa: S311 - a reproducible shuffle
@@ -460,6 +462,58 @@ def cmd_tally(args: argparse.Namespace) -> None:
         print(f"\nsweep rule: {pick} (highest F1 on task prompts among arms briefing at most five lessons a prompt)")
 
 
+def cmd_misses(args: argparse.Namespace) -> None:
+    """Where each applying lesson an arm missed on task prompts stopped inside core.check: not
+    among the candidates, below the line by how many about-words it shares, or cut by the cap
+    (REPORT §4y). Labels as the pool stood before the extension families named by --before.
+    Counts only: no prompt, no lesson."""
+    meta = json.loads((PRIVATE / f"real-arms-{args.split}.json").read_text())
+    label: dict[tuple[int, int], str] = {}
+    for f in sorted(PRIVATE.glob(f"real-judge-{args.split}-*-out.jsonl")):
+        if not any(f"-{family}-" in f.name for family in args.before):
+            for o in _rows(f.name):
+                label[(int(o["item"]), int(o["n"]))] = o["label"]
+    chosen = meta["chosen"]
+    applies: dict[str, set[str]] = defaultdict(set)
+    for item, ids in meta["pooled"].items():
+        for n, lid in enumerate(ids):
+            if label.get((int(item), n)) == "APPLIES":
+                applies[chosen[int(item)][1]].add(lid)
+    by_id = {p["id"]: p for p in prompts("task")}
+    stores = Stores()
+    stopped: dict[str, int] = defaultdict(int)
+    total = 0
+    for kind, pid in chosen:
+        if kind != "task":
+            continue
+        total += len(applies[pid])
+        missed = applies[pid] - set(meta["briefed"][args.arm][pid])
+        if not missed:
+            continue
+        p = by_id[pid]
+        store = stores.for_arm(p, args.arm)
+        hits, *_ = core._live_hits(store, p["text"], 12, f"repo:{repo_of(p)}", None)
+        live = [n for n in store.all_nodes() if n.status not in core.RETIRED_STATUSES]
+        terms = [w.lower() for w in core.briefing_terms(p["text"])]
+        kept, matched, _weak = decide.select(hits, terms, decide.Rarity(live))
+        kept_ids, hit_ids = {n.id for n in kept}, {n.id for n in hits}
+        for lid in missed:
+            if lid not in hit_ids:
+                stopped["not among the candidates"] += 1
+            elif lid in kept_ids:
+                stopped["cleared the line, cut by the cap"] += 1
+            else:
+                shared = len(matched.get(lid, []))
+                stopped[f"among the candidates, below the line: {min(shared, 2)}{'+' if shared >= 2 else ''} "
+                        "shared about-word(s)"] += 1
+    found = total - sum(stopped.values())
+    print(f"real prompts · split {args.split} · arm {args.arm} · labels before {', '.join(args.before) or 'none'} · "
+          f"store {meta['store']}")
+    print(f"task prompts: {total} applying lessons in the pool; {args.arm} found {found}, missed {total - found}")
+    for k, v in sorted(stopped.items(), key=lambda kv: -kv[1]):
+        print(f"  {v:4}  {k}")
+
+
 SIZE_ARMS = ("floor", "backfill", "tiered")
 
 
@@ -499,12 +553,19 @@ def main() -> None:
     pp.add_argument("--arms", nargs="+", choices=ARMS, help="the arms to brief (default: every arm)")
     pp.add_argument("--extend", action="store_true",
                     help="add the given arms to the split's existing pool and judge only their new pairs")
+    pp.add_argument("--rebrief", action="store_true",
+                    help="with --extend: brief the given arms again even if pooled, after a code change")
     pt = sub.add_parser("tally")
     pt.add_argument("--split", choices=["tuning", "heldout"], required=True)
     ps = sub.add_parser("size")
     ps.add_argument("--split", choices=["tuning", "heldout"], required=True)
+    pm = sub.add_parser("misses")
+    pm.add_argument("--split", choices=["tuning", "heldout"], required=True)
+    pm.add_argument("--arm", choices=ARMS, default="backfill")
+    pm.add_argument("--before", nargs="*", default=[], help="label families to leave out, such as e1")
     args = ap.parse_args()
-    {"snapshot": cmd_snapshot, "pool": cmd_pool, "tally": cmd_tally, "size": cmd_size}[args.cmd](args)
+    {"snapshot": cmd_snapshot, "pool": cmd_pool, "tally": cmd_tally, "size": cmd_size,
+     "misses": cmd_misses}[args.cmd](args)
 
 
 if __name__ == "__main__":

@@ -681,12 +681,16 @@ def _also_matched(store: Store, query: str, limit: int, repo_scope: str, interes
     """The tiered decision's second tier: what cleared the calibrated line past its cap, then
     what the floor keeps, each once and not already shown, at most `limit`; and how many more
     there were. On real prompts the line alone left out most of the lessons that applied, and
-    nearly all of them were among the floor's (REPORT §4x, §4y)."""
+    nearly all of them were among the floor's (REPORT §4x, §4y).
+
+    The floor is asked for `limit` beyond what is shown, so the lessons shown in full never use
+    up the second tier's places: a `--limit 3` whose three shown lessons were the floor's first
+    three named nothing else (review on #299)."""
     _cands, kept, _matched, _weak, _replaced, _cand = _floor_widened(
-        store, query, limit, repo_scope, interests, hybrid=hybrid, rerank=rerank, first=first)
+        store, query, limit + len(shown), repo_scope, interests, hybrid=hybrid, rerank=rerank, first=first)
     seen = set(shown)
     also = []
-    for n in (*overflow, *kept[:limit]):
+    for n in (*overflow, *kept):
         if n.id not in seen:
             seen.add(n.id)
             also.append(n)
@@ -699,11 +703,25 @@ ALSO_FIX_CHARS = 160
 
 def _also_entry(n: Node) -> dict[str, str]:
     """A lesson in the second tier: id, type, title, and the first sentence of its fix, cut at
-    a word to ALSO_FIX_CHARS, so the line says what to do and `okl show <id>` has the rest."""
+    a word to ALSO_FIX_CHARS, so the line says what to do and `okl show <id>` has the rest.
+
+    A withdrawn record or a retired identifier is a warning, never an action: it carries what
+    to avoid instead of a fix, as the full briefing routes it (review on #299)."""
+    avoid = _avoid_kind(n)
+    if avoid:
+        return {"id": n.id, "type": n.type, "title": n.title, "fix": "", "avoid": avoid}
     fix = re.split(r"(?<=[.!?])\s", (n.fix or "").strip(), maxsplit=1)[0]
     if len(fix) > ALSO_FIX_CHARS:
         fix = fix[:ALSO_FIX_CHARS].rsplit(" ", 1)[0].rstrip(",;:") + "…"
     return {"id": n.id, "type": n.type, "title": n.title, "fix": fix}
+
+
+def _avoid_kind(n: Node) -> str:
+    """'retracted' for a withdrawn record of any type, 'retired identifier' for a Tombstone, and
+    '' for guidance, the split _bucket_by_type makes."""
+    if n.type == "Retraction" or n.status == "retracted":
+        return "retracted"
+    return "retired identifier" if n.type == "Tombstone" else ""
 
 
 def _packs_without_triggers(live: list[Node]) -> list[str]:
@@ -1231,7 +1249,10 @@ def render_actions_only(result: dict[str, Any], limit: int | None = None) -> str
 
 
 def _also_line(e: dict[str, str]) -> str:
-    """One second-tier lesson: id, title and the start of its fix (REPORT §4y)."""
+    """One second-tier lesson: id, title and the start of its fix (REPORT §4y); a withdrawn
+    record or a retired identifier as what to avoid."""
+    if e.get("avoid"):
+        return f"- [{e['id']}] AVOID ({e['avoid']}): {e['title']}"
     return f"- [{e['id']}] {e['title']}" + (f" — {e['fix']}" if e.get("fix") else "")
 
 

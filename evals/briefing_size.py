@@ -53,10 +53,12 @@ def main() -> int:
                                 capture_output=True, text=True, check=True).stdout.strip())
     with tempfile.TemporaryDirectory() as tmp:
         where = Path(tmp)
-        # Only what a fresh install has: no shared service, no inherited database, and a
-        # HOME of its own so nothing from this machine's config reaches the store.
+        # Only what a fresh install has: no shared service, no inherited database, a HOME of its
+        # own so nothing from this machine's config reaches the store, and none of the settings
+        # that would change a briefing from the decision its label names (review on #299).
         env = {k: v for k, v in os.environ.items()
-               if k not in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN")}
+               if k not in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN",
+                            "OKL_DECISION", "OKL_HYBRID", "OKL_RERANK", "OKL_WARM")}
         env.update(HOME=str(where), PYTHONPATH=str(REPO / "src"))
         subprocess.run(["git", "init", "-q", "."], cwd=where, check=True)
         _okl(["init", "--repo", "measure", "--no-claude", "--no-seed", "--no-ci"], where, env)
