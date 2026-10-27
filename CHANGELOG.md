@@ -2,24 +2,30 @@
 
 ## Unreleased
 
-The briefing now decides by a line set on real prompts that should get nothing, read over
-write-time *triggers*, instead of the word floor. It was measured on a benchmark built to
-decide (REPORT §4w; the design and its evidence: [docs/RETRIEVAL.md](docs/RETRIEVAL.md)):
+The briefing now shows in full what clears a line set on real prompts that should get
+nothing, read over write-time *triggers*, and names everything else that matched in a line
+each, instead of showing up to twelve lessons by the word floor. The line was measured on a
+benchmark built to decide (REPORT §4w; the design and its evidence:
+[docs/RETRIEVAL.md](docs/RETRIEVAL.md)):
 
 - held-out recall rose from 74.4% to 90.0%;
 - lessons briefed per query fell from 11.8 to 4.7;
 - prompts with no subject that got a briefing fell from 149 of 268 to 9;
-- on prompts a person typed, against a real store of recorded lessons (REPORT §4x, held out),
-  the share of briefed lessons that apply rose from 9.8% to 16.5%, or 17.8% once the recorded
-  lessons have triggers. It also surfaces a quarter to a third of the applying lessons the floor
-  did (31 of 90; 38 with triggers), briefing 1.6 lessons a prompt instead of 7.7.
+- on prompts a person typed, against a real store of recorded lessons (REPORT §4x and §4y,
+  held out), the line alone surfaced about a third of the applying lessons the floor did. So
+  the default names the rest: it reaches 102 of the 115 applying lessons any version found,
+  against the floor's 90. It shows 1.8 lessons a prompt in full instead of 7.7, 17.8% of which
+  apply against 9.8%, and costs a median of 721 tokens a prompt against 1,424.
 
-- **The calibrated decision is the default** (#291). A lesson is briefed when its title,
+- **Two tiers are the default** (#291, REPORT §4y). A lesson is shown in full when its title,
   symptom, aliases and triggers hold three of the task's subject words, or two nearly as rare
-  as a word in one record; at most five clear it. A message a harness wrote (a task
-  notification, a sub-agent's report) is briefed nothing, under either decision.
-  `--decision floor`, `OKL_DECISION=floor` or `"decision": "floor"` in `.okl/config.json`
-  keeps the floor.
+  as a word in one record; at most five are. Everything else that matched (what cleared the
+  line past five, and what the word floor keeps) is listed under "Also matched", one line each:
+  id, title and the start of the fix, up to `--limit`. The agent reads any of them with `okl
+  show <id>`. A listed lesson is not logged as briefed. A message a harness wrote (a task
+  notification, a sub-agent's report) is briefed nothing, under every decision.
+  `--decision calibrated` gives the first tier alone; `--decision floor` shows every match in
+  full. `OKL_DECISION` or `"decision"` in `.okl/config.json` sets either for every check.
 - **Lessons carry `triggers`**: whole phrasings of the moments a lesson applies, the request or
   error that led to it first. Set them with:
   - `okl record --trigger "..."` (repeatable);
@@ -38,19 +44,25 @@ decide (REPORT §4w; the design and its evidence: [docs/RETRIEVAL.md](docs/RETRI
   are done, the hook's line says so.
 - **`okl triggers` and `/triggers`.** `okl triggers` lists a store's own advice lessons that
   have no triggers. `/triggers` (Claude Code) drafts ten for each from the lesson itself and
-  applies them once you confirm. Under the calibrated decision, the hook's line names how many
-  of a store's own lessons lack triggers once there are three or more. One or two are not
-  named, and the floor decision does not count them, so a quiet line does not mean every
+  applies them once you confirm. Under the default and calibrated decisions, the hook's line
+  names how many of a store's own lessons lack triggers once there are three or more. One or
+  two are not named, and the floor decision does not count them, so a quiet line does not mean every
   lesson has triggers: `okl triggers` lists them all. On a real store, giving recorded lessons
   triggers raised what the briefing found (REPORT §4x).
-- **Smaller briefings.** A full briefing is about 730 tokens by default, against about 1,730
-  under the floor's twelve
-  ([receipt](evals/results/briefing-size-20261026-0828.json)).
+- **Briefing size.** On real prompts the median briefing is 721 tokens, against 1,424 under the
+  floor (REPORT §4y). On one representative task it is about 1,390 tokens, against 730 for the
+  first tier alone and 1,730 under the floor's twelve
+  ([receipt](evals/results/briefing-size-20261027-0132.json)). The action list (`--format
+  actions`, `--compact`) carries the one-line entries too: about 350 tokens at `--limit 3`.
+  On a prompt that asks for no work, the second tier names something about as often as the
+  floor briefed.
 - **Three behaviours that change with the default:**
-  - a gate that catches a briefed defect is briefed only when it clears the line itself (the
-    floor kept it);
-  - `--hybrid` briefs a record found by meaning alone only under `--decision floor`;
-  - what the cap of five cuts is counted in `dropped_by_cutoff`.
+  - a gate that catches a briefed defect is shown in full only when it clears the line itself;
+    otherwise it can be named in a line (the floor keeps it);
+  - `--hybrid`: a record found by meaning alone is shown in full only under `--decision
+    floor`; under the default it can be named in a line;
+  - what the cap of five cuts is named in a line, and `dropped_by_cutoff` counts what the
+    second tier's limit cut.
 - **A retrieval benchmark, `evals/bench/`.** It covers the seed corpus, 519 generated queries
   and real prompts kept local, with a split held out until the choice was written down. Every
   alternative measured on it is in REPORT §4w, the ones that lost included: two current

@@ -26,7 +26,8 @@ okl check --task "..." --format json      # the raw result, for scripts
 okl check --task "..." --format hook      # what the Claude Code hook prints: the briefing plus
                                             #   the one-line notice you see (OKL_QUIET=1 drops it)
 okl check --task "..." --limit 3          # fewer records; the briefing says how many it trimmed
-okl check --task "..." --decision floor   # the word floor, up to --limit, instead of the line
+okl check --task "..." --decision calibrated  # only what is shown in full: no one-line list
+okl check --task "..." --decision floor   # every match by the word floor, in full, up to --limit
 okl init --interests "python,security"    # drop records tagged for stacks you do not use
 ```
 
@@ -35,14 +36,14 @@ okl init --interests "python,security"    # drop records tagged for stacks you d
 - **`--limit N`** caps how many records are drawn on. The full briefing reports how many
   it trimmed; `--format actions` does not, so a short actions list can hide a miss
   without saying so.
-- **`--decision`** is how candidates become a briefing. The default, `calibrated`, briefs at
-  most five lessons that share three subject words with the task (or two rare ones) in their
-  title, symptom, aliases and triggers, and nothing when none do; `floor` briefs up to
-  `--limit` that share two. The default is about 730 tokens a briefing against about 1,730.
-  On real prompts against a real store, a lesson it briefs is about 1.7 times as likely to
-  apply, but it surfaces a quarter to a third of the applying lessons the floor does
-  ([RETRIEVAL.md](RETRIEVAL.md)). Give your own lessons triggers (`okl triggers`, `/triggers`)
-  so it can find them.
+- **`--decision`** is how candidates become a briefing. The default, `tiered`, shows in full
+  at most five lessons that share three subject words with the task (or two rare ones) in
+  their title, symptom, aliases and triggers, and names the rest of what matched in a line
+  each, up to `--limit`. `calibrated` is the first tier alone, the smallest briefing; `floor`
+  shows up to `--limit` that share two words, all in full. On real prompts against a real
+  store, the default reached 102 of 115 applying lessons, the floor 90 and `calibrated` 38,
+  at a median of 721, 1,424 and 113 tokens a prompt ([RETRIEVAL.md](RETRIEVAL.md)). Give your
+  own lessons triggers (`okl triggers`, `/triggers`) so they reach the first tier.
   `"decision"` in `.okl/config.json` or `OKL_DECISION` sets it for every check.
 - **The prompt hook takes two of these from the environment**: `OKL_BRIEFING_LIMIT=N`
   becomes `--limit N`, and `OKL_BRIEFING_COMPACT=1` sends only the action list. They are

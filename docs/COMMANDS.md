@@ -63,11 +63,13 @@ okl check --rerank   # reorder the first 24 candidates (fused when --hybrid is o
                      #   80 MB ONNX model). Measured and shipped off (REPORT §4t): one held-out
                      #   paraphrase in, one bug report out, 0.5 s a check.
 okl check --decision floor
-                     # brief by the word floor (two shared subject words, up to --limit) instead
-                     #   of the default calibrated line (three shared subject words in the title,
+                     # how candidates become a briefing. The default, tiered, shows in full what
+                     #   clears the calibrated line (three shared subject words in the title,
                      #   symptom, aliases and triggers, or two rare ones; at most five; REPORT
-                     #   §4w). `"decision": "floor"` in .okl/config.json or OKL_DECISION=floor
-                     #   for every check.
+                     #   §4w) and lists the rest of what matched, one line each, up to --limit
+                     #   (§4y). `calibrated` is the first tier alone; `floor` shows every match by
+                     #   the word floor in full, up to --limit. `"decision"` in .okl/config.json
+                     #   or OKL_DECISION sets it for every check.
 okl check --index    # append every other lesson in scope as `- [id] title`, so an agent can
                      #   fetch one with `okl show <id>` when the briefing did not select it.
                      #   A treatment under measurement (REPORT §4r); about 120 characters a lesson.

@@ -2561,6 +2561,54 @@ names lessons on about as many of them as the floor briefs, by design.
 followed. Whether an agent acts on a one-line mention as it does on a full lesson is the next
 measurement. It will be pre-registered separately, before any agent runs.
 
+### Result (2026-10-26)
+
+Receipts, all at fd96d79: `real-20261026-heldout-tiers.txt` and `real-20261026-tuning-tiers.txt`
+(the tallies; the tier arms' new pairs, 192 held out and 139 on tuning, judged per lesson by
+Sonnet sub-agents with no label missing), `real-20261026-heldout-size.txt` and
+`real-20261026-tuning-size.txt` (the sizes), and `briefing-size-20261027-0132.json` (the one
+representative task the docs quote).
+
+**All three predictions held.**
+
+1. Held out, tiered reached 102 of the pool's 115 applying lessons; the floor reached 90. On
+   tuning: 95 of 124 against 85.
+2. Tiered-full briefed exactly what backfill briefed, in the same order, on all 180 sampled
+   prompts of each half.
+3. The median tiered briefing on held-out task prompts was 721 tokens, 51% of the floor's
+   1,424. On tuning: 614, 54% of 1,133.
+
+| held-out task prompts (120) | applying reached, of 115 | in full | by line | named per prompt | in full per prompt | median tokens |
+|---|---|---|---|---|---|---|
+| floor | 90 | 90 | 0 | 7.69 | 7.69 | 1,424 |
+| backfill (the calibrated decision, with triggers) | 38 | 38 | 0 | 1.77 | 1.77 | 113 |
+| **tiered** | **102** | 38 | 64 | 9.08 | 1.77 | 721 |
+
+**The pool grew.** The tier arms found 14 applying lessons that no §4x arm had found. The
+floor inside tiered runs on the store with the written triggers, which re-rank the full-text
+candidates, so it keeps a different twelve. §4x's figures stand on their pool of 101. On this
+pool of 115, every arm's share reads lower: the floor's 90 is 78% here and was 89% there.
+
+**Where tiered still misses.** All 13 applying lessons it did not name (held out; 8 recorded, 5
+from the packs) were among the floor's lessons on the store without triggers. The same
+re-ranking moved them out of the twelve the second tier draws from. A larger second tier would
+reach some of them; that is a choice to make on the tuning half, with its size measured.
+
+**Precision and size.** Of everything tiered names, 9.4% applies, about the floor's 9.8%. Of
+what it shows in full, 17.8% applies, exactly backfill's. The floor's noise now sits in the
+one-line tier. A line costs about 64 tokens (from the size receipts' means: (816 − 351) / 7.31),
+against about 160 for a lesson in full under the floor.
+
+**Null prompts.** Held out, tiered names something on 43 of 60 null prompts, the same 43 the
+floor briefs, and shows a lesson in full on 4, as backfill does. A median null prompt costs 362
+tokens under tiered, 629 under the floor and 72 under backfill. That is the price of naming
+everything that matched: one-line entries on prompts that ask for no work.
+
+**What follows.** As pre-registered, tiered becomes the default. `calibrated` stays available for
+the smallest briefing, and `floor` for every match in full. Whether an agent acts on a one-line
+entry as it does on a full lesson is the next measurement, to be pre-registered before it runs.
+The release waits for it.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

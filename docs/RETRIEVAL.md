@@ -40,6 +40,10 @@ them applied.
    prompts that should get nothing, so that at most about one in twenty such prompts gets
    anything; 268 more, which the line never saw, test it. Never more than five lessons. And a message the agent's harness wrote (a task
    notification, a sub-agent's report) is never briefed: nobody typed it.
+4. **Nothing that matched is hidden.** What clears the line is shown in full. Everything else
+   that matched (what cleared the line past five, and what the original word floor keeps)
+   gets one line each: its id, title and the start of its fix, up to twelve. The agent can
+   read any of them with `okl show <id>`.
 
 **What it bought** (the benchmark below, numbers from committed receipts):
 
@@ -54,19 +58,24 @@ them applied.
 person typed, judged with their context, against a store of 143 recorded lessons and the seed
 packs):
 
-| | the original pipeline | the calibrated decision | + triggers on recorded lessons |
-|---|---|---|---|
-| share of briefed lessons that apply | 9.8% | 16.5% | **17.8%** |
-| lessons briefed per prompt | 7.7 | 1.6 | 1.8 |
-| applying lessons surfaced (of 101 any version found) | **90** | 31 | 38 |
+| | the original pipeline | the line alone | + triggers on recorded lessons | **the default: two tiers** |
+|---|---|---|---|---|
+| applying lessons named (of 115 any version found) | 90 | 31 | 38 | **102** |
+| lessons shown in full per prompt | 7.7 | 1.6 | 1.8 | **1.8**, and 7.3 named in a line |
+| share of the lessons shown in full that apply | 9.8% | 16.5% | 17.8% | **17.8%** |
 
-The benchmark's queries are fuller than what people type, so on real prompts the new
-decision trades recall for precision. It briefs a fifth as much or less, and a lesson it
-briefs is about 1.7 times as likely to apply, but it surfaces a quarter to a third of what the
-original did. A
-team's own lessons need triggers to be found at all: `okl triggers` lists the ones that
+(REPORT §4x and §4y, receipt `real-20261026-heldout-tiers.txt`.) The benchmark's queries are
+fuller than what people type, so on real prompts the line alone trades recall for precision: a
+lesson it shows is about 1.7 times as likely to apply, but it surfaced about a third of what
+the original did. So the default names the rest in a line each. It reaches more applying
+lessons than the original, at about half its size: a median of 721 tokens a prompt against
+1,424 (`real-20261026-heldout-size.txt`). Whether an agent acts on a one-line entry as it does
+on a lesson shown in full is not yet measured.
+
+A team's own lessons need triggers to reach the first tier: `okl triggers` lists the ones that
 have none, `/triggers` drafts them in Claude Code, and the briefing says how many are missing.
-`--decision floor` keeps the original rule for a team that prefers recall.
+`--decision calibrated` gives the line alone, the smallest briefing; `--decision floor` keeps
+the original rule, every match in full.
 
 **What comes next.** A small embedding model (EmbeddingGemma-300m), added to the word count
 rather than replacing it, took held-out recall from 90.0% to **95.2%**, most of it on
@@ -188,7 +197,28 @@ reranker scores abstained better on average than reference-free heuristics, from
 labelled queries, though it did not hold up under a change of domain [6]. Conformal prediction
 adds a guarantee to it [15, 16].
 
-### 4. The gate: prompts nobody typed
+### 4. The second tier: name what the line leaves out
+
+On real prompts the line was too selective. Of the 76 applying lessons it missed on the tuning
+half, 73 were among the 36 candidates: 57 fell below the line, sharing one word with what the
+lesson says it is about, or two common ones, and 17 cleared it but were cut by the cap of five
+(REPORT §4y). A cross-encoder can reorder such candidates but cannot say which belong (§4t).
+So the decision keeps its line for what is shown in full and names the rest:
+
+- **What is named.** What cleared the line past the cap, then what the original word floor
+  keeps (two shared subject words, or one in the title or symptom that few lessons share), each
+  once, up to twelve.
+- **How.** One line each: the id, the title, and the first sentence of the fix, cut at a word
+  to 160 characters, under "Also matched (N)". The agent reads the whole lesson with `okl show
+  <id>` or the `okl_get` tool.
+- **What it costs.** About 64 tokens a line, against about 160 for a lesson shown in full. On
+  prompts that ask for no work it names something about as often as the original pipeline
+  briefed (43 of 60 held out), so a median such prompt costs 362 tokens instead of 72.
+
+A listed lesson is not logged as briefed, so `okl metric` and `okl recap` count only what was
+shown in full.
+
+### 5. The gate: prompts nobody typed
 
 Claude Code delivers task notifications, sub-agent reports and system reminders as user turns,
 and the prompt hook saw each one as a prompt to brief. In the session that built the benchmark
@@ -266,6 +296,9 @@ held-out half was run. Its findings:
 - **The calibrated decision is more precise and finds less.** It briefs a fifth as many
   lessons as the original or fewer, each about 1.7 times as likely to apply, and surfaces a
   quarter to a third of the applying lessons the original did.
+- **Two tiers find the most.** Showing the line's lessons in full and naming the rest reached
+  102 of 115 applying lessons held out, against the original's 90, at about half its size
+  (REPORT §4y, pre-registered).
 - **Recorded lessons need triggers.** Without them, the decision found 3 of the 55 applying
   recorded lessons on the tuning half. With triggers written for them (blind to every prompt),
   it found more and more precisely: on the held-out half, 38 applying lessons at 17.8%, against
@@ -288,9 +321,9 @@ the A/B harness's own tasks; §4x supersedes it.
 - **The benchmark's corpus is 183 records** (173 advice lessons), all with triggers. A live
   store holds lessons recorded without them, and the decision needs them: `okl record` asks for
   them, `okl triggers` lists the lessons that lack them, and the briefing says how many do.
-- **On real prompts the new decision trades recall for precision.** Against a real store it
-  surfaces a quarter to a third of the applying lessons the original did, while each lesson it
-  briefs is about 1.7 times as likely to apply (REPORT §4x, pre-registered).
+- **The second tier is named, not shown.** Reach counts a lesson named in a line; whether an
+  agent opens it, or acts on the line alone, is the next measurement. Its noise is the
+  original's: 9.4% of everything named applies (REPORT §4y).
 - **The benchmark measures retrieval, not behaviour.** Whether an agent writes better code with
   fewer, better-chosen lessons is a separate experiment on okl's agent harness.
 

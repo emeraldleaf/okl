@@ -470,7 +470,10 @@ def cmd_size(args: argparse.Namespace) -> None:
     by_id = {p["id"]: p for label in ("task", "null") for p in prompts(label)}
     stores = Stores()
     decision = {"floor": "floor", "backfill": "calibrated", "tiered": "tiered"}
-    print(f"briefing size · split {args.split} · store {meta['store']} · characters / 4 = tokens, a rough rule")
+    commit = subprocess.run(["git", "rev-parse", "--short=12", "HEAD"], capture_output=True, text=True,
+                            cwd=bench.ROOT, check=False).stdout.strip()
+    print(f"briefing size · split {args.split} · store {meta['store']} · code {commit} · "
+          "characters / 4 = tokens, a rough rule")
     for kind in ("task", "null"):
         ids = [pid for k, pid in meta["chosen"] if k == kind]
         print(f"\n{kind} prompts: {len(ids)}")

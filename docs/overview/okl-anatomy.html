@@ -246,7 +246,7 @@ footer b { color: var(--text); font-weight: 600; }
       <article class="panel runs" style="flex: none">
         <div class="ph"><span class="num">4</span><h3>Briefed before each task</h3><svg class="ic"><use href="#i-bot"/></svg></div>
         <p class="who">okl runs it, in Claude Code</p>
-        <p class="lede">okl picks at most five lessons that share enough of the task's subject, or none, and puts them in the agent's context before it starts.</p>
+        <p class="lede">okl shows up to five lessons that share enough of the task's subject, lists the rest that matched in a line each, and puts them in the agent's context first.</p>
         <p class="mech"><span class="cc">Claude Code</span> A hook runs on every prompt; if okl can't brief, the prompt is blocked or told so. Other MCP agents can call <code>okl_check</code>; nothing calls it for them.</p>
       </article>
     </div>
@@ -287,7 +287,7 @@ footer b { color: var(--text); font-weight: 600; }
 <span class="t-m">…</span></pre></div>
       <div class="step"><div class="g runs"><b>4</b></div><pre><span class="t-p">$</span> <span class="t-c">okl check --task "Add an endpoint that returns one order by id for the signed-in customer"</span>
 ## OKL briefing — orders-api · task: Add an endpoint that returns one order by id for the signed-in customer
-_4 relevant node(s) from the org's encoded body._
+_4 relevant node(s) from the org's encoded body, and 4 more listed by title._
 <span class="t-m">…</span>
 <span class="t-note"># third of four, all on point: an IDOR rule and a tampering rule from a .NET pack, this one, and the test it needs:</span>
 - **FIX: Order lookups are scoped to the signed-in customer** [<span class="t-id">order_scope</span>] — when you see: an order is fetched by id …
@@ -296,7 +296,7 @@ _4 relevant node(s) from the org's encoded body._
 <span class="t-m">…</span>
 <span class="t-note"># in Claude Code, a prompt hook puts this briefing in the agent's context before every turn, and shows the person:</span>
 <span class="t-m">okl · briefed 4 lesson(s): Missing ownership scope check is an IDOR…; Server-controlled fields trusted from the…;
-  Order lookups are scoped to the signed-in… (+1 more)</span></pre></div>
+  Order lookups are scoped to the signed-in… (+1 more) · 4 more listed by title</span></pre></div>
       <div class="step"><div class="g runs"><b>5</b></div><pre><span class="t-note"># later, someone "simplifies" app/orders.py:</span>
 <span class="t-del">-    return order if order and order["owner"] == user else None</span>
 <span class="t-add">+    return order</span>
@@ -348,14 +348,14 @@ OKL drift: <span class="t-ok">OK</span> — 1 rule(s) checked, no encoded rule's
       <p class="kicker">Under the hood</p>
       <h3>How it ranks, what it costs</h3>
       <dl class="spec">
-        <dt>Rank</dt><dd>the prompt's subject words, up to 40 → BM25 in SQLite full-text search (title 8, body, symptom, aliases and triggers 4, fix 2, tags 1) → 36 fetched → filtered by scope, and org lessons by <code>applies_to</code> and the repo's interests → briefed if three subject words, or two rare ones, are in its title, symptom, aliases or triggers → at most 5</dd>
-        <dt>Cost</dt><dd>about 730 tokens for a full briefing of five, and about 0.1 s for <code>okl check</code>; no embeddings, no model calls</dd>
+        <dt>Rank</dt><dd>the prompt's subject words, up to 40 → BM25 in SQLite full-text search (title 8, body, symptom, aliases and triggers 4, fix 2, tags 1) → 36 fetched → filtered by scope, and org lessons by <code>applies_to</code> and the repo's interests → shown in full if three subject words, or two rare ones, are in its title, symptom, aliases or triggers, at most 5 → the rest that matched named in a line each, up to 12</dd>
+        <dt>Cost</dt><dd>about 1,390 tokens for a full briefing, a median of about 720 on real prompts, and about 0.1 s for <code>okl check</code>; no embeddings, no model calls</dd>
         <dt>Stale</dt><dd>the committed content of the lesson's files differs from the proven commit (commit times, if that commit is missing); a lesson with files and no observed pass holds the push too</dd>
       </dl>
       <p class="kicker" style="margin-top: 12px">Where it breaks</p>
       <ul class="ul">
         <li>A task that shares no exact word with a lesson misses it: no stemming, so "orders" won't match "order".</li>
-        <li>A terse prompt can miss: on real prompts it surfaces a quarter to a third of what the old rule did, at 1.7 times its precision.</li>
+        <li>A lesson named in a line is not shown: whether an agent opens it is not yet measured.</li>
         <li>A file is watched whole: any edit needs a re-run.</li>
         <li>A check proves what it tests, and nothing more.</li>
       </ul>

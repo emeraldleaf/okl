@@ -70,11 +70,13 @@ def main() -> int:
                 return str(json.loads(out)["hookSpecificOutput"]["additionalContext"])
             return out
 
-        # The default decision is calibrated since REPORT §4w: at most five records. The floor,
-        # the default before it, briefs up to --limit 12; both are measured so either can be quoted.
+        # The default decision is tiered since REPORT §4y: at most five records in full and the
+        # rest of what matched one line each. Calibrated (§4w) is the first tier alone; the floor,
+        # the default before both, briefs up to --limit 12. All three are measured so any can be quoted.
         sizes = {
-            "full (agent format, default decision: calibrated, at most 5)": brief(),
+            "full (agent format, default decision: tiered, at most 5 in full)": brief(),
             "hook format, default decision": brief("--format", "hook"),
+            "full (agent format, --decision calibrated, at most 5)": brief("--decision", "calibrated"),
             "full (agent format, --decision floor, --limit 12)": brief("--decision", "floor"),
             "hook format, --decision floor, --limit 12": brief("--format", "hook", "--decision", "floor"),
             **{f"compact, --limit {n}": brief("--format", "hook", "--compact", "--limit", str(n))

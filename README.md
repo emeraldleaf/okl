@@ -357,7 +357,8 @@ throwaway repo.
 ### How a briefing is actually built
 
 `okl check` is a retrieval pipeline: it searches the task's subject words, then narrows the
-whole corpus to the five or fewer records an agent reads. Two stages can drop a record on what
+whole corpus to the five or fewer records an agent reads in full, and names the rest of what
+matched in a line each. Two stages can drop a record on what
 it is about, and only one of them is entitled to: the distinction that this project got wrong
 once and measured its way out of ([REPORT §4d](evals/REPORT.md)).
 
@@ -365,31 +366,42 @@ Then the decision. A record is briefed only when its title, symptom, aliases and
 hold three of the task's subject words, or two nearly as rare as a word in one record.
 Triggers are phrasings of the moments a lesson applies, written when it is recorded. The line
 was set on 282 real prompts with no subject of their own, so that about one in twenty such
-prompts gets anything; at most five records clear it.
+prompts gets anything; at most five records clear it. Nothing else that matched is hidden:
+what cleared the line past the five, and what the earlier word floor keeps, follow one line
+each (id, title and the start of the fix, up to twelve), so the agent can read any of them
+with `okl show <id>` ([REPORT §4y](evals/REPORT.md)).
 
 It was measured on a benchmark built to decide: 519 generated queries, 550 real prompts with
 no subject, and a held-out half run once after the choice was written down. Against the
 previous pipeline:
 
-| | previous pipeline | the decision, with triggers |
+| | previous pipeline | the line, with triggers |
 |---|---|---|
 | held-out recall | 74.4% | **90.0%** |
 | lessons per query | 11.8 | **4.7** |
 | prompts with no subject that got a briefing | 149 of 268 | **9 of 268** |
-| real prompts against a real store: share of briefed lessons that apply | 9.8% | **16.5%** (17.8% with triggers on recorded lessons) |
-| real prompts against a real store: applying lessons surfaced, of 101 | **90** | 31 (38 with triggers) |
 
-Real prompts are terser than the benchmark's queries. So on prompts a person typed, against a
-store of recorded lessons (REPORT §4x, held out), the decision trades recall for precision. It
-briefs about a fifth as much and surfaces a quarter to a third of what the earlier rule did. A
-team's own lessons need triggers to be found: `okl record` asks for them, `okl triggers` lists
+Real prompts are terser than the benchmark's queries. On prompts a person typed, against a
+store of recorded lessons (REPORT §4x), the line alone surfaced about a third of the applying
+lessons the earlier rule did. That is why the default names the rest in a line each (REPORT
+§4y, held out):
+
+| real prompts, a real store, held out | earlier rule (floor) | the line alone | **the default: two tiers** |
+|---|---|---|---|
+| applying lessons named, of 115 | 90 | 38 | **102** (38 in full, 64 in a line) |
+| lessons shown in full per prompt | 7.7 | 1.8 | **1.8**, plus 7.3 in a line |
+| share of the lessons shown in full that apply | 9.8% | 17.8% | **17.8%** |
+| median briefing, tokens | 1,424 | 113 | **721** |
+
+A team's own lessons need triggers to reach the first tier: `okl record` asks for them, `okl triggers` lists
 those that lack them, and `/triggers` drafts them in Claude Code. The evidence, the
 alternatives that lost (rerankers, graphs, query-time generation, conversation context) and
 that cost are in [docs/RETRIEVAL.md](docs/RETRIEVAL.md) and REPORT [§4w](evals/REPORT.md) and
-§4x.
-`--decision floor` keeps the earlier rule (two shared subject words, up to twelve records).
+§4x and §4y.
+`--decision calibrated` gives the line alone, the smallest briefing; `--decision floor` the
+earlier rule (two shared subject words, every match in full, up to twelve records).
 
-<img src="docs/okl-retrieval-pipeline.svg" alt="The corpus; the task's subject words, with messages a harness wrote briefed nothing; a BM25 fetch of three times the limit, triggers weighted like the symptom; a scope gate; the exclusive applies_to filter; the inclusive tags-times-interests filter; the calibrated line of three shared subject words in the title, symptom, aliases and triggers, or two nearly as rare as a word in one record, with retired lessons out; the best five; bucketing by type; and rendering. Each stage shows how many records survive it." width="100%">
+<img src="docs/okl-retrieval-pipeline.svg" alt="The corpus; the task's subject words, with messages a harness wrote briefed nothing; a BM25 fetch of three times the limit, triggers weighted like the symptom; a scope gate; the exclusive applies_to filter; the inclusive tags-times-interests filter; the calibrated line of three shared subject words in the title, symptom, aliases and triggers, or two nearly as rare as a word in one record, with retired lessons out; the best five in full; the rest of what matched, what cleared the line past five and what the word floor keeps, named one line each, up to twelve; bucketing by type; and rendering. Each stage shows how many records survive it." width="100%">
 
 With the optional semantic arm on (`okl check --hybrid --decision floor`), a second
 candidate source joins before the gates: the task as one vector, its nearest records by
@@ -453,7 +465,7 @@ repos at a shared service when you want one store ([docs/SCAFFOLD.md](docs/SCAFF
 ```bash
 # 1. READ the relevant lessons before starting a task (the load-bearing move)
 okl check --task "add an endpoint that returns an order for the logged-in user"
-#   add --format actions --limit 3 for a ~160-token version (subagents, CI)
+#   add --format actions --limit 3 for a ~350-token version (subagents, CI)
 
 # 2. RECORD a lesson after you learn it, with an actionable symptom/cause/fix
 okl record --type Defect --scope org --tags "security" \
@@ -489,7 +501,7 @@ before you wire it into every prompt. Every number below was measured rather tha
 estimated, with one representative task ("add an endpoint that returns an order for the
 logged-in user"; tokens ≈ characters ÷ 4). The sizes come from a fresh store holding every
 bundled seed pack, 183 records (`python3 evals/briefing_size.py`, receipt
-[`evals/results/briefing-size-20261026-0828.json`](evals/results/briefing-size-20261026-0828.json)); the latency from the 161 seed records bundled before that.
+[`evals/results/briefing-size-20261027-0132.json`](evals/results/briefing-size-20261027-0132.json)); the latency from the 161 seed records bundled before that.
 Your store and your tasks will differ.
 
 **Per prompt, once the hook is installed:**
@@ -497,7 +509,7 @@ Your store and your tasks will differ.
 | | |
 |---|---|
 | Latency | **~0.1s** for the whole `okl check` process (0.07s median warm) — one local SQLite query, no network in local mode |
-| Context | **~730 tokens** by default (at most five lessons; ~1,730 under `--decision floor` at `--limit 12`), down to **~160** for only the action list at `--limit 3` |
+| Context | **~1,390 tokens** by default on one representative task (five lessons in full, twelve named in a line; ~730 under `--decision calibrated`, ~1,730 under `--decision floor`); on real prompts the median is **~720** ([REPORT §4y](evals/REPORT.md)). Down to **~350** for only the action list at `--limit 3` |
 
 
 **Per session:** the Stop hook interrupts once at the end to ask what was learned. It
@@ -511,22 +523,23 @@ a change in one line and makes it once you agree. To read the whole session back
 briefings, the lessons recorded and retired, the checks run and failed, the commits, and what
 is stale now, from the store's own logs.
 
-A full briefing costs roughly **730 tokens** on the measurement above (~1,730 under the floor's
-twelve), fine for a main session with a large window and still a real share for a subagent
+A full briefing costs roughly **1,390 tokens** on the measurement above (~730 for the line
+alone, ~1,730 under the floor's twelve), fine for a main session with a large window and still a real share for a subagent
 working in a few thousand. That asymmetry matters
 because subagents are exactly where org rules get lost: a focused worker handling one
 subtask has the least context and the most need for "here is the mistake this codebase
 already made."
 
 **Measured on every bundled seed pack (183 records), one representative task**
-([receipt](evals/results/briefing-size-20261026-0828.json)): the action list alone is ~160
-tokens at `--limit 3` and ~330 at `--limit 5` or more (the decision briefs at most five),
-against ~730 for the full briefing. Cheap enough to call per subtask.
+([receipt](evals/results/briefing-size-20261027-0132.json)): the action list alone is ~350
+tokens at `--limit 3`, ~580 at `--limit 5` and ~1,010 at `--limit 12` (its one-line entries
+follow the limit), against ~1,390 for the full briefing. Cheap enough to call per subtask;
+`--decision calibrated` drops the one-line entries for the smallest list.
 
 The same holds for a main session on a model with a small context window, where the
 briefing arrives with every prompt. Set `OKL_BRIEFING_COMPACT=1` and the prompt hook sends
-only the action list (`okl check --compact`); set `OKL_BRIEFING_LIMIT=3` and it draws on
-three records instead of five. Together that is ~160 tokens instead of ~730 on the
+only the action list (`okl check --compact`); set `OKL_BRIEFING_LIMIT=3` and it shows three
+records and names three more, instead of five and twelve. Together that is ~350 tokens instead of ~1,390 on the
 measurement above. Set them where the agent starts: hooks inherit its environment. A
 limit that is not a whole number above zero is ignored, and an okl too old for
 `--compact` briefs in full rather than blocking the prompt. Like `--format actions`, the
