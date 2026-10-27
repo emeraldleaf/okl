@@ -1232,15 +1232,16 @@ def render_actions_only(result: dict[str, Any], limit: int | None = None) -> str
             return ("OKL: the store is EMPTY (0 records). This is not 'no rules apply' — "
                     "nothing has been recorded yet, so this check proves nothing. "
                     "Run `okl seed` or record your first rule.")
-        if also:
-            # Not "no rule applies": the second tier named lessons that matched (REPORT §4y). A
-            # lesson shown in full that routes no action (a rule with no fix) still matched closely,
-            # so the line says so rather than contradict the full briefing (review on #299).
-            shown = result.get("match_count") or 0
+        shown = result.get("match_count") or 0
+        if also or shown:
+            # Not "no rule applies": the second tier named lessons that matched (REPORT §4y), or a
+            # lesson shown in full routes no action (a rule with no fix) and still matched closely;
+            # the line says so rather than contradict the full briefing, and keeps the pointers
+            # past replaced lessons (reviews on #299).
             head = (f"OKL: {shown} lesson(s) matched with no action to route; the full briefing shows "
                     f"them ({result['repo']})." if shown else
                     f"OKL: no rule matched this task closely ({result['repo']}).")
-            return "\n".join([head, *tail])
+            return "\n".join([head, *tail, *_replaced_lines(result)])
         if result.get("replaced"):
             return "\n".join([f"OKL: no live rule applies to this task ({result['repo']}); "
                               "a lesson it matched was replaced:", *_replaced_lines(result)])
