@@ -22,6 +22,10 @@ from pathlib import Path
 
 OUT = Path(__file__).resolve().parent / "private" / "prompts.jsonl"
 MAX_CHARS = 1500
+# Project folders the A/B harness and the e2e runs create: their prompts are authored tasks, not
+# a person's. Skipped before deduplicating, or a harness copy read first would drop a person's
+# identical prompt (review on #298: 7 labelled prompts were attributed to a harness folder).
+HARNESS_PROJECTS = ("okl-ab-", "okl-e2e")
 # Harness text that arrives as a user turn but was not typed by the person.
 WRAPPERS = ("<command-", "<local-command", "<task-notification", "<system-reminder", "<user-prompt-submit-hook",
             "[Request interrupted", "Caveat:", "This session is being continued", "<bash-", "<ide_")
@@ -52,6 +56,8 @@ def main() -> None:
     seen: set[str] = set()
     rows = []
     for path in sorted(Path(args.projects).glob("*/*.jsonl")):
+        if any(k in path.parent.name for k in HARNESS_PROJECTS):
+            continue
         for line in path.open(encoding="utf-8", errors="ignore"):
             try:
                 entry = json.loads(line)

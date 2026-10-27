@@ -12,9 +12,9 @@ writing them for the recorded lessons raised what the briefing found (REPORT §4
 
 ## 1. List the lessons that need them
 
-Run `okl triggers --format json`. It lists this store's own advice lessons with no triggers:
-id, type, title, symptom, body, fix and aliases. If `$ARGUMENTS` names one id, do only that
-one. If the list is empty, say so and stop.
+Run `okl triggers --format json`, or `okl triggers <id> --format json` when `$ARGUMENTS` names
+one lesson. It lists this store's own advice lessons with no triggers (only that one, given an
+id): id, type, title, symptom, body, fix and aliases. If the list is empty, say so and stop.
 
 ## 2. Draft ten per lesson, from the lesson alone
 

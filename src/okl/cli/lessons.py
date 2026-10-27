@@ -132,6 +132,8 @@ def cmd_triggers(args: argparse.Namespace) -> int:
     except (OKLUnreachableError, ValueError) as e:
         print(f"COULD NOT LIST — {e}", file=sys.stderr)
         return 2
+    if getattr(args, "node_id", None):
+        missing = [n for n in missing if n.id == args.node_id]
     if args.format == "json":
         _print_json([{"id": n.id, "type": n.type, "title": n.title, "symptom": n.symptom or "",
                       "body": n.body or "", "fix": n.fix or "", "aliases": n.aliases or ""} for n in missing])

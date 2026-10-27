@@ -2483,6 +2483,13 @@ held-out figure is the one to plan on.
 On F1 it beats the floor in both halves, which is the criterion this section fixed in advance.
 A team that wants recall over precision has `--decision floor`.
 
+**A correction (review on #298).** The prompt extractors removed duplicates before they left
+out the harness's folders. Nine prompt texts were typed both in a harness session and by a
+person; for seven, the harness copy was read first, so those labelled prompts were attributed
+to a harness folder and left out of both pools: 7 of about 1,000. The extractors now skip
+harness folders before removing duplicates. The receipts above stand on the files as
+extracted; re-extracting would change the seeded samples.
+
 **What follows.** As pre-registered, the calibrated default stays, without fallback. Recorded
 lessons get triggers through a command an agent runs, and the briefing names how many of a
 store's own lessons lack them. This machine's store gets the 1,390 triggers this section

@@ -208,6 +208,7 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
 
     ptg = sub.add_parser("triggers", help="list this store's own lessons that have no triggers, for an agent "
                                           "to draft them (REPORT §4x)")
+    ptg.add_argument("node_id", nargs="?", help="only this lesson, if it has no triggers")
     ptg.add_argument("--format", choices=["text", "json"], default="text")
     ptg.set_defaults(func=cmd_triggers)
 

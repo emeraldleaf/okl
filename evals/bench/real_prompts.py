@@ -94,6 +94,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import run as bench
+from extract_prompts import HARNESS_PROJECTS
 
 from okl import core, decide
 from okl.store import EDGE_RELS, Node, Store
@@ -101,7 +102,6 @@ from okl.store import EDGE_RELS, Node, Store
 PRIVATE = bench.ROOT / "evals" / "bench" / "private"
 SNAPSHOT = PRIVATE / "real-store.db"
 PER_BATCH = 15
-HARNESS_PROJECTS = ("okl-ab-", "okl-e2e")
 BACKFILL = PRIVATE / "backfill-triggers.jsonl"
 CONTEXT_ARMS = ("prev", "prev-own", "reply-own")
 FIX_ARMS = ("fallback", "backfill", "backfill+fallback")

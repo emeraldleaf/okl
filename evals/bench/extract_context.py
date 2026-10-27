@@ -21,7 +21,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from extract_prompts import user_text
+from extract_prompts import HARNESS_PROJECTS, user_text
 
 OUT = Path(__file__).resolve().parent / "private" / "context.jsonl"
 MAX_REPLY = 1500
@@ -46,6 +46,8 @@ def main() -> None:
     seen: set[str] = set()
     rows = []
     for path in sorted(Path(args.projects).glob("*/*.jsonl")):
+        if any(k in path.parent.name for k in HARNESS_PROJECTS):
+            continue
         prev: list[str] = []
         reply = ""
         for line in path.open(encoding="utf-8", errors="ignore"):

@@ -258,6 +258,9 @@ def test_okl_triggers_lists_own_advice_lessons_without_triggers_and_the_briefing
     assert _okl(tmp_path, "seed", "react-defects").returncode == 0
     listed = json.loads(_okl(tmp_path, "triggers", "--format", "json").stdout)
     assert sorted(x["id"] for x in listed) == ["own0", "own1"]
+    # One lesson by id, for /triggers <id> (review on #298); one with triggers lists nothing.
+    assert [x["id"] for x in json.loads(_okl(tmp_path, "triggers", "own1", "--format", "json").stdout)] == ["own1"]
+    assert json.loads(_okl(tmp_path, "triggers", "with", "--format", "json").stdout) == []
     assert "have no triggers" not in hook_line()            # two: below the notice's threshold
     assert _okl(tmp_path, "record", "--type", "Defect", "--scope", "org", "--id", "own2",
                 "--title", "own lesson 2").returncode == 0
