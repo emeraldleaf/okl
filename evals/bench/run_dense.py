@@ -50,8 +50,25 @@ LATE = ("lightonai/LateOn", "answerdotai/answerai-colbert-small-v1", "jinaai/jin
 # instruction written for the task; this one is the reranker's (run_rerank.py).
 TASK = "Given a developer's task, question or bug report, retrieve the engineering lesson that applies to it"
 PROMPTS = {"google/embeddinggemma-300m": ("task: search result | query: {}", "title: none | text: {}"),
+           "google/embeddinggemma-300m-quantized": ("task: search result | query: {}", "title: none | text: {}"),
            "Qwen/Qwen3-Embedding-0.6B": (f"Instruct: {TASK}\nQuery:{{}}", "{}"),
            "Qwen/Qwen3-Embedding-0.6B-Q": (f"Instruct: {TASK}\nQuery:{{}}", "{}")}
+
+
+def _register_quantized(model_id: str) -> None:
+    """Register the int8 ONNX file of a built-in fastembed model as a model of its own, read the
+    same way (the model's pooled, normalised output): `<model>-quantized` is the base model's
+    onnx/model_quantized.onnx from the same repository (REPORT §4z)."""
+    from fastembed.common.model_description import DenseModelDescription
+    from fastembed.text import builtin_sentence_embedding as builtin
+    known = builtin.supported_builtin_sentence_embedding_models
+    if any(m.model == model_id for m in known):
+        return
+    base = next(m for m in known if m.model == model_id.removesuffix("-quantized"))
+    known.append(DenseModelDescription(
+        model=model_id, dim=base.dim, description=f"{base.description} int8.", license=base.license,
+        size_in_GB=0.31, sources=base.sources, model_file="onnx/model_quantized.onnx",
+        additional_files=["onnx/model_quantized.onnx_data"]))
 
 
 class Encoder:
@@ -74,6 +91,8 @@ class Encoder:
             self._kind = "late"
         else:
             from fastembed import TextEmbedding
+            if model_id.endswith("-quantized"):
+                _register_quantized(model_id)
             self._m = TextEmbedding(model_name=model_id, cache_dir=str(hub.model_cache_dir()))
             self._kind = "fe"
         self.load_s = time.perf_counter() - t0
