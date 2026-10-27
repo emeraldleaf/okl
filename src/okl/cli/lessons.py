@@ -114,6 +114,43 @@ def cmd_check(args: argparse.Namespace) -> int:
     return 0
 
 
+# Below this, a handful of new lessons recorded without triggers do not earn a line on every prompt;
+# `okl record` already asks for them one at a time.
+OWN_UNTRIGGERED_NOTICE = 3
+
+
+def cmd_triggers(args: argparse.Namespace) -> int:
+    """List the store's own advice lessons that carry no triggers, with the text to draft them from.
+
+    The calibrated decision reads a lesson's title, symptom, aliases and triggers; on a real
+    store, giving recorded lessons triggers raised what it found (REPORT §4x). okl calls no
+    model, so the drafting is the agent's: /triggers in Claude Code, or `okl update <id>
+    --trigger "..."` by hand.
+    """
+    try:
+        missing = core.lessons_without_triggers(Client().all_nodes())
+    except (OKLUnreachableError, ValueError) as e:
+        print(f"COULD NOT LIST — {e}", file=sys.stderr)
+        return 2
+    if getattr(args, "node_id", None):
+        missing = [n for n in missing if n.id == args.node_id]
+    if args.format == "json":
+        _print_json([{"id": n.id, "type": n.type, "title": n.title, "symptom": n.symptom or "",
+                      "body": n.body or "", "fix": n.fix or "", "aliases": n.aliases or ""} for n in missing])
+        return 0
+    if not missing:
+        # Asked about one lesson, answer for that one, not for the store (review on #298).
+        print(f"{args.node_id} needs no triggers: it has them, or it is not one of this store's own advice lessons"
+              if getattr(args, "node_id", None) else "every advice lesson recorded in this store has triggers")
+        return 0
+    for n in missing:
+        print(f"[{n.id}] {n.type} · {n.title}")
+    print(f"\n{len(missing)} lesson(s) without triggers. For each, write about ten phrasings of the moments it "
+          "applies, in a developer's own words, and add them with `okl update <id> --trigger \"...\"` "
+          "(repeatable); /triggers in Claude Code drafts them.", file=sys.stderr)
+    return 0
+
+
 def _person_notes(result: dict[str, Any]) -> list[str]:
     """Lines for the person about how this briefing was made: bundled packs in this store that
     predate their triggers, which the calibrated decision reads (REPORT §4w; a pack of the
@@ -127,6 +164,10 @@ def _person_notes(result: dict[str, Any]) -> list[str]:
                      "are briefed less often: run `okl seed --refresh`")
     if result.get("decision_unavailable"):
         notes.append(f"okl · {result['decision_unavailable']}")
+    own = result.get("lessons_without_triggers", 0)
+    if own >= OWN_UNTRIGGERED_NOTICE:
+        notes.append(f"okl · {own} of this store's own lessons have no triggers, so they are briefed less "
+                     "often: `okl triggers` lists them for your agent to draft (/triggers in Claude Code)")
     return notes
 
 

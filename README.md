@@ -376,11 +376,17 @@ previous pipeline:
 | held-out recall | 74.4% | **90.0%** |
 | lessons per query | 11.8 | **4.7** |
 | prompts with no subject that got a briefing | 149 of 268 | **9 of 268** |
-| real task prompts: share of briefed lessons a judge said apply | 8.9% | **24.5%** |
+| real prompts against a real store: share of briefed lessons that apply | 9.8% | **16.5%** (17.8% with triggers on recorded lessons) |
+| real prompts against a real store: applying lessons surfaced, of 101 | **90** | 31 (38 with triggers) |
 
-On those real prompts it also surfaced about a quarter fewer of the lessons that apply. The
-evidence, the alternatives that lost (rerankers, graphs, query-time generation) and that cost
-are in [docs/RETRIEVAL.md](docs/RETRIEVAL.md) and [REPORT §4w](evals/REPORT.md).
+Real prompts are terser than the benchmark's queries. So on prompts a person typed, against a
+store of recorded lessons (REPORT §4x, held out), the decision trades recall for precision. It
+briefs about a fifth as much and surfaces a quarter to a third of what the earlier rule did. A
+team's own lessons need triggers to be found: `okl record` asks for them, `okl triggers` lists
+those that lack them, and `/triggers` drafts them in Claude Code. The evidence, the
+alternatives that lost (rerankers, graphs, query-time generation, conversation context) and
+that cost are in [docs/RETRIEVAL.md](docs/RETRIEVAL.md) and REPORT [§4w](evals/REPORT.md) and
+§4x.
 `--decision floor` keeps the earlier rule (two shared subject words, up to twelve records).
 
 <img src="docs/okl-retrieval-pipeline.svg" alt="The corpus; the task's subject words, with messages a harness wrote briefed nothing; a BM25 fetch of three times the limit, triggers weighted like the symptom; a scope gate; the exclusive applies_to filter; the inclusive tags-times-interests filter; the calibrated line of three shared subject words in the title, symptom, aliases and triggers, or two nearly as rare as a word in one record, with retired lessons out; the best five; bucketing by type; and rendering. Each stage shows how many records survive it." width="100%">

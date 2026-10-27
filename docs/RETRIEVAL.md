@@ -50,6 +50,24 @@ them applied.
 | real prompts with no subject that got anything | 149 of 268 (55.6%) | **9 of 268 (3.4%)** |
 | work per prompt | a full-text search | the same search, a word count and a rarity scan of the store; no model |
 
+**And what it costs, on real prompts and a real store** (REPORT §4x, held out: 120 prompts a
+person typed, judged with their context, against a store of 143 recorded lessons and the seed
+packs):
+
+| | the original pipeline | the calibrated decision | + triggers on recorded lessons |
+|---|---|---|---|
+| share of briefed lessons that apply | 9.8% | 16.5% | **17.8%** |
+| lessons briefed per prompt | 7.7 | 1.6 | 1.8 |
+| applying lessons surfaced (of 101 any version found) | **90** | 31 | 38 |
+
+The benchmark's queries are fuller than what people type, so on real prompts the new
+decision trades recall for precision. It briefs a fifth as much or less, and a lesson it
+briefs is about 1.7 times as likely to apply, but it surfaces a quarter to a third of what the
+original did. A
+team's own lessons need triggers to be found at all: `okl triggers` lists the ones that
+have none, `/triggers` drafts them in Claude Code, and the briefing says how many are missing.
+`--decision floor` keeps the original rule for a team that prefers recall.
+
 **What comes next.** A small embedding model (EmbeddingGemma-300m), added to the word count
 rather than replacing it, took held-out recall from 90.0% to **95.2%**, most of it on
 paraphrases. But the prompt hook starts a new process for every prompt, and loading the model
@@ -227,31 +245,39 @@ Read across the columns:
 Every alternative measured on the selection split, the ones that lost included, is in §4w with
 its receipt.
 
-**Judged precision on real prompts.** Synthetic queries can flatter a system built from text the
-same model family wrote. In one study, systems scored higher on synthetic than on real queries,
-with a bias toward systems that match the generator's model, significant for MAP though not for
-NDCG, on 82 queries [14]. Both the queries and the triggers here came from Claude models. So 100
-real task prompts were briefed by the original pipeline and by the new one, and every lesson
-either briefed was judged as applying or not, blind to which version briefed it.
-The new decision's briefings were judged to apply **24.5%** of the time [19.2, 30.8], against
-**8.9%** [7.1, 11.2] for the original's. In plain terms, the original briefed 6.8 lessons that
-did not apply on every prompt, and the new one briefs 1.6.
+**On real prompts, against a real store** (REPORT §4x). Synthetic queries can flatter a system
+built from text the same model family wrote. In one study, systems scored higher on synthetic
+than on real queries, with a bias toward systems that match the generator's model, significant
+for MAP though not for NDCG, on 82 queries [14]. Both the queries and the triggers here came
+from Claude models.
 
-That has a cost, and it is the first place this design gives something up:
+A second instrument (`evals/bench/real_prompts.py`) measures what the benchmark cannot:
 
-- **Most real prompts had nothing to brief.** Only 35 of the 100 had any lesson the judge said
-  applied; the seed packs know nothing about most of one developer's work, and there silence
-  is right.
-- **Where something applied, the new decision found less of it.** On those 35 prompts it found
-  51 of the 80 applying lessons either version found; the original found 67.
-- **Real prompts are terser than the benchmark's queries.** The line asks for three shared
-  subject words, or two rare ones.
+- **Prompts.** Prompts a person actually typed, each with the turns before it.
+- **Store.** A real store, as it stood at each prompt.
+- **Judging.** Every lesson any version briefs is judged, with the prompt's context, as
+  applying or not, blind to which version briefed it.
 
-Two next steps target exactly that gap: triggers taken from the real prompt or error that led
-to a lesson, and the embedding model in a process that keeps it loaded. Both will be measured
-on real prompts. Six Sonnet judges labelled the pairs; one batch was re-judged because its
-first judge filled in labels by default, and the two labellings agreed on 92% of pairs
-(REPORT §4w).
+It also has a tuning half and a held-out half, with predictions written down before the
+held-out half was run. Its findings:
+
+- **Most real prompts have nothing to brief.** Only a third to two fifths of task prompts had
+  any lesson the judge said applied.
+- **The calibrated decision is more precise and finds less.** It briefs a fifth as many
+  lessons as the original or fewer, each about 1.7 times as likely to apply, and surfaces a
+  quarter to a third of the applying lessons the original did.
+- **Recorded lessons need triggers.** Without them, the decision found 3 of the 55 applying
+  recorded lessons on the tuning half. With triggers written for them (blind to every prompt),
+  it found more and more precisely: on the held-out half, 38 applying lessons at 17.8%, against
+  31 at 16.5%. That is the best balance of precision and recall of every option measured,
+  lower lines and a capped floor included.
+- **Conversation context did not help.** Adding the previous prompt, or the agent's last
+  reply, to the search made the briefing less precise than the calibrated decision alone.
+- **A code-only fallback did not earn a place.** Scoring a lesson without triggers on its body
+  too found one more lesson held out, at slightly lower precision.
+
+An earlier, smaller judged run (REPORT §4w) sampled 100 prompts, 15 of which turned out to be
+the A/B harness's own tasks; §4x supersedes it.
 
 ## Threats to validity
 
@@ -259,12 +285,12 @@ first judge filled in labels by default, and the two labellings agreed on 92% of
   prompts is the check, not a cure; observed triggers from real sessions are the long-term one.
 - **One developer's prompts calibrated the line.** The guarantee holds for prompts like those.
   Another team's line is its own calibration; the procedure is in `evals/bench/run_v2.py`.
-- **The corpus is 183 records** (173 advice lessons). A live store holds lessons recorded
-  without triggers, and the decision needs triggers to work well; `okl record` now asks for
-  them.
-- **On real prompts the new decision trades recall for precision.** It finds about a quarter
-  fewer of the lessons that apply, while each lesson it briefs is nearly three times as likely
-  to apply (above). That analysis was not pre-registered.
+- **The benchmark's corpus is 183 records** (173 advice lessons), all with triggers. A live
+  store holds lessons recorded without them, and the decision needs them: `okl record` asks for
+  them, `okl triggers` lists the lessons that lack them, and the briefing says how many do.
+- **On real prompts the new decision trades recall for precision.** Against a real store it
+  surfaces a quarter to a third of the applying lessons the original did, while each lesson it
+  briefs is about 1.7 times as likely to apply (REPORT §4x, pre-registered).
 - **The benchmark measures retrieval, not behaviour.** Whether an agent writes better code with
   fewer, better-chosen lessons is a separate experiment on okl's agent harness.
 

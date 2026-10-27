@@ -296,6 +296,7 @@ def test_mirror_files_identical():
     scaffold_claude = root / "src" / "okl" / "scaffold" / "claude"
     pairs.extend((h, root / ".claude" / "hooks" / h.name) for h in (root / "hooks").glob("*.sh"))
     pairs.append((scaffold_claude / "commands" / "record.md", root / ".claude" / "commands" / "record.md"))
+    pairs.append((scaffold_claude / "commands" / "triggers.md", root / ".claude" / "commands" / "triggers.md"))
     pairs.append((scaffold_claude / "skills" / "encoding-loop" / "SKILL.md",
                   root / ".claude" / "skills" / "encoding-loop" / "SKILL.md"))
     assert pairs, "expected mirrored files to exist"

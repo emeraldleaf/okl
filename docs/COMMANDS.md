@@ -71,6 +71,10 @@ okl check --decision floor
 okl check --index    # append every other lesson in scope as `- [id] title`, so an agent can
                      #   fetch one with `okl show <id>` when the briefing did not select it.
                      #   A treatment under measurement (REPORT §4r); about 120 characters a lesson.
+okl triggers         # list this store's own advice lessons that have no triggers (--format json
+                     #   carries their text, for an agent to draft from: /triggers in Claude Code).
+                     #   The default briefing finds a lesson by its title, symptom, aliases and
+                     #   triggers; recorded lessons without them are found far less (REPORT §4x).
 okl seed --refresh   # re-import only the records this store already holds, from the packs
                      #   they came from (newer symptoms, aliases, triggers, text; verification kept),
                      #   without importing the rest of each pack. No path: the bundled packs

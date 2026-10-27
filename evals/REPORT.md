@@ -2336,6 +2336,165 @@ corrected above; none touches a prediction, a falsifier or a number a decision r
 The same check found §4q giving the aliases' gain on the bug-report row to symptoms; that
 sentence is corrected in place.
 
+**A further correction (2026-10-26, found building §4x).** The prompt labels came from every
+project folder on this machine. That includes the A/B harness's temporary repos and the e2e
+scratch repos, whose prompts are authored eval tasks the harness typed, not anything a person
+typed. 15 of the 100 TASK prompts in the judged-precision sample came from those folders, and
+2 of the 550 null prompts did. So "real prompts" overstates that sample. The figures stand as
+measured on it, but its judge labels were deleted with the run's worktree, so they cannot be
+re-tallied without the 15. §4x re-measures the floor against the calibrated decision on
+person-typed prompts only, with their context.
+
+## 4x. PRE-REGISTERED: real prompts and a real store decide what the briefing needs (2026-10-26)
+
+Written before the held-out half was pooled, for the question "how do we get real prompts to
+improve too?" (follow-up to §4w and #294). The tuning half was used to choose, and its
+receipts are named below.
+
+**Why a new instrument.** §4w tuned on generated queries over the seed packs. It judged real
+prompts only at the end, 15 of those 100 were not real (§4w, a further correction), and every
+lesson in its corpus had triggers. A team's store is mostly its own recorded lessons, and a
+person's prompts are terse. `evals/bench/real_prompts.py` measures exactly that:
+
+- **Prompts.** The TASK-labelled prompts from project folders a person typed in (486), and the
+  null prompts from the unseen half (548 person-typed). Each comes with what the prompt hook
+  could have read before it (`extract_context.py`): the two typed prompts before it and the
+  assistant's last reply. The prompts split into a tuning half and a held-out half by a
+  salted hash. Each half pools a seeded sample of 120 task prompts and 60 null prompts.
+- **Store.** A snapshot of this machine's store (ee5406f19cf9: 183 seed records, 143 recorded
+  lessons without triggers), as of each prompt. A lesson recorded after a prompt is not in its
+  store; the seed packs always are.
+- **Judging.** Every lesson any arm briefs is pooled and judged once, by Sonnet sub-agents,
+  per lesson. The judge sees the prompt with its context, shuffled, with no mark of which arm
+  briefed it. One tuning batch was re-judged because its judge had decided six items whole;
+  the redo agreed with the first labelling on 162 of 165 pairs. Recall is pooled: the share of
+  the applying lessons any arm found.
+- **Privacy.** The prompts, the store snapshot and the labels stay in
+  `evals/bench/private/`; receipts carry counts and hashes.
+
+**What the tuning half found** (receipts `real-20261026-tuning.txt`, `-tuning-fix.txt`,
+`-tuning-sweep.txt`; the last holds every arm):
+
+| task prompts, tuning (120) | precision [95%] | applying found, of the pool's 117 | lessons/prompt | null prompts briefed (of 60) | F1 |
+|---|---|---|---|---|---|
+| floor (the default before §4w) | 9.8% [8.0, 12.0] | 85 | 7.23 | 44 | 0.173 |
+| floor-3 | 13.9% [10.5, 18.3] | 42 | 2.53 | 44 | 0.200 |
+| calibrated (the default since §4w) | 16.5% [11.1, 24.0] | 21 | 1.07 | 6 | 0.172 |
+| calibrated with context: prev / prev-own / reply-own | 10.5% / 10.9% / 8.6% | 26 / 26 / 42 | 2.08 / 1.99 / 4.11 | 17 / 11 / 39 | 0.14 |
+| fallback | 21.6% [16.0, 28.6] | 35 | 1.37 | 7 | 0.251 |
+| **backfill** | **26.3% [20.0, 33.7]** | **41** | **1.32** | **7** | **0.300** |
+| line2+backfill | 14.4% [11.2, 18.5] | 52 | 3.02 | 23 | 0.218 |
+
+Four findings, in the order they were reached:
+
+1. **Conversation context did not help.** The first design re-set each context arm's line on
+   null prompts with their context. It was self-defeating, measured before any judging: a
+   continuation prompt ("ok, do it") carries its previous turn's subject, so the lines rose to
+   4 to 9 shared words and the arms briefed less than the calibrated one. With the calibrated
+   line kept, every context arm was less precise than the calibrated arm. The context rule,
+   fixed before judging, selects none.
+2. **The calibrated default misses recorded lessons.** Of the 55 applying lessons that were
+   recorded lessons, it found 3, because it reads only title, symptom, aliases and triggers,
+   and recorded lessons have no triggers. Of the 67 applying lessons the floor briefs and the
+   calibrated arm does not, 51 are recorded lessons.
+3. **Backfilling triggers fixes most of it.** The recorded advice lessons were given triggers:
+   1,390 of them, ten per lesson, written by Claude Opus from each lesson alone, blind to every
+   prompt, under the seed packs' protocol (`backfill-triggers.jsonl`, private). With them, the
+   calibrated decision found 41 applying lessons at 26.3% precision. The fix rule, fixed
+   before the fix arms were judged, selects backfill. Fallback (a lesson without triggers is
+   also scored on its body and fix) found 35 at 21.6%.
+4. **Lowering the line loses more precision than it gains recall.** The sweep rule, written
+   before its pairs were judged, takes the highest F1 among arms briefing at most five lessons;
+   it selects backfill over the floor capped at 3 or 5 and over lines of one or two words.
+
+**The measure.** At the commit that carries this section, the held-out half is pooled under
+five arms: floor, floor-3, calibrated, fallback and backfill. That is 120 task prompts and 60
+null prompts, seed 11, every new pair judged per lesson as above, then
+`real_prompts.py tally --split heldout`.
+
+**Predictions** (held-out task prompts unless named):
+
+1. Backfill finds more applying lessons than calibrated.
+2. Backfill's judged precision is higher than both the floor's and floor-3's.
+3. Backfill has the highest F1 of the five arms.
+4. Backfill briefs anything on at most 10 of the 60 null prompts.
+5. Fallback, the path that needs no triggers written, finds more applying lessons than
+   calibrated, and its precision is not below calibrated's.
+
+**Falsifiers.** If prediction 1, 2 or 3 fails, backfill does not ship as the fix, and the
+default is reconsidered: the floor capped at 3 is the measured alternative. If prediction 5
+fails, fallback does not ship.
+
+**What a pass earns.** The calibrated default stays, with three additions:
+
+- recorded lessons get triggers through a command an agent runs, which drafts them from each
+  lesson, as `/record` does now;
+- the briefing names how many of a store's own lessons lack triggers, as it names packs that
+  predate them;
+- fallback is the default's safety net for a lesson that still has none, if prediction 5 holds.
+
+Then the release.
+
+**What this cannot settle.**
+
+- One developer's prompts and one store.
+- The judges are Claude models, as were the trigger writers.
+- Pooled recall is relative to the pool, and the floor's seven lessons a prompt dominate it.
+- Whether briefing changes what the agent writes stays a question for the agent harness.
+
+### Result (2026-10-26)
+
+The held-out half was pooled at 4e951c0 under the five arms, 1,283 pairs, every one judged per
+lesson with no label missing (receipt `real-20261026-heldout.txt`).
+
+| task prompts, held out (120) | precision [95%] | applying found, of the pool's 101 | lessons/prompt | null prompts briefed (of 60) | F1 |
+|---|---|---|---|---|---|
+| floor | 9.8% [8.0, 11.8] | 90 | 7.69 | 43 | 0.176 |
+| floor-3 | 12.1% [8.9, 16.2] | 38 | 2.62 | 43 | 0.183 |
+| calibrated | 16.5% [11.9, 22.5] | 31 | 1.57 | 2 | 0.215 |
+| fallback | 16.0% [11.6, 21.7] | 32 | 1.67 | 4 | 0.213 |
+| **backfill** | **17.8% [13.3, 23.5]** | **38** | **1.77** | **4** | **0.242** |
+
+**Predictions 1 to 4 held; prediction 5 failed.**
+
+1. Backfill found more applying lessons than calibrated: 38 against 31.
+2. Backfill's precision, 17.8%, was above the floor's 9.8% and floor-3's 12.1%.
+3. Backfill had the highest F1 of the five arms.
+4. Backfill briefed something on 4 of the 60 null prompts.
+5. Fallback found one lesson more than calibrated, but its precision was 16.0% against 16.5%.
+   So fallback does not ship, as the falsifier says.
+
+**The gain is smaller held out than on tuning.** Backfill added 7 applying lessons over
+calibrated here, against 20 on tuning. Its precision was 1.3 points above calibrated's, inside
+both intervals; on tuning the gap was 9.8 points. Some of that is the calibrated arm doing
+better held out (31 found, against 21). The choice holds, but the size of the step does not:
+backfill lifted what the calibrated decision finds by 23% held out and 95% on tuning, and the
+held-out figure is the one to plan on.
+
+**What this says about the default, on a real store and real prompts.** Both halves agree:
+
+- the calibrated decision briefs 15% to 20% as many lessons as the floor (1.07 against 7.23 a
+  prompt on tuning, 1.57 against 7.69 held out);
+- a lesson it briefs is about 1.7 times as likely to apply (16.5% against 9.8% in both halves);
+- it surfaces a quarter to a third of the applying lessons the floor surfaces (21 of the
+  floor's 85 on tuning, 31 of its 90 held out). §4w's "about a quarter fewer", measured on
+  the seed corpus alone, understated that loss.
+
+On F1 it beats the floor in both halves, which is the criterion this section fixed in advance.
+A team that wants recall over precision has `--decision floor`.
+
+**A correction (review on #298).** The prompt extractors removed duplicates before they left
+out the harness's folders. Nine prompt texts were typed both in a harness session and by a
+person; for seven, the harness copy was read first, so those labelled prompts were attributed
+to a harness folder and left out of both pools: 7 of about 1,000. The extractors now skip
+harness folders before removing duplicates. The receipts above stand on the files as
+extracted; re-extracting would change the seeded samples.
+
+**What follows.** As pre-registered, the calibrated default stays, without fallback. Recorded
+lessons get triggers through a command an agent runs, and the briefing names how many of a
+store's own lessons lack them. This machine's store gets the 1,390 triggers this section
+measured.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

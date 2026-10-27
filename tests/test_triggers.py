@@ -237,3 +237,53 @@ def test_a_remote_check_says_which_decision_answered(monkeypatch):
                                                          "match_count": 0, "decision": body["decision"]})
     new = c.check("a task")
     assert new["decision"] == "calibrated" and "decision_unavailable" not in new
+
+
+def test_okl_triggers_lists_own_advice_lessons_without_triggers_and_the_briefing_names_them(tmp_path):
+    """`okl triggers` lists the store's own advice lessons with no triggers (a pack's lessons,
+    Vocabulary and lessons with triggers left out), and the hook's line for the person names
+    how many once there are at least three (REPORT §4x)."""
+    def hook_line() -> str:
+        out = _okl(tmp_path, "check", "--repo", "r", "--interests", "", "--format", "hook",
+                   "--task", "rotate the signing keys for the token service")
+        assert out.returncode == 0, out.stdout + out.stderr
+        return json.loads(out.stdout).get("systemMessage", "")
+
+    for i in range(2):
+        assert _okl(tmp_path, "record", "--type", "Rule", "--scope", "org", "--id", f"own{i}",
+                    "--title", f"own lesson {i}").returncode == 0
+    assert _okl(tmp_path, "record", "--type", "Rule", "--scope", "org", "--id", "with", "--title", "has triggers",
+                "--trigger", "rotate the signing keys without downtime").returncode == 0
+    assert _okl(tmp_path, "record", "--type", "Vocabulary", "--scope", "org", "--title", "golang").returncode == 0
+    assert _okl(tmp_path, "seed", "react-defects").returncode == 0
+    listed = json.loads(_okl(tmp_path, "triggers", "--format", "json").stdout)
+    assert sorted(x["id"] for x in listed) == ["own0", "own1"]
+    # One lesson by id, for /triggers <id> (review on #298); one with triggers lists nothing.
+    assert [x["id"] for x in json.loads(_okl(tmp_path, "triggers", "own1", "--format", "json").stdout)] == ["own1"]
+    assert json.loads(_okl(tmp_path, "triggers", "with", "--format", "json").stdout) == []
+    # In text, it answers for the lesson asked about, while others still lack triggers.
+    text = _okl(tmp_path, "triggers", "with").stdout
+    assert "with needs no triggers" in text
+    assert "every advice lesson" not in text
+    assert "have no triggers" not in hook_line()            # two: below the notice's threshold
+    assert _okl(tmp_path, "record", "--type", "Defect", "--scope", "org", "--id", "own2",
+                "--title", "own lesson 2").returncode == 0
+    assert "3 of this store's own lessons have no triggers" in hook_line()
+    assert _okl(tmp_path, "update", "own2", "--trigger", "a third lesson finally gets its words").returncode == 0
+    assert "have no triggers" not in hook_line()
+
+
+def test_a_teams_own_pack_counts_and_a_bundled_pack_does_not(tmp_path):
+    """Only the bundled packs ship triggers, so only their lessons are left out of `okl
+    triggers`: a team's own pack, seeded from its own file, is the team's to give triggers
+    (review on #298)."""
+    own = tmp_path / "team-rules.json"
+    own.write_text(json.dumps({"nodes": [{"key": "k1", "type": "Rule", "scope": "org", "repo": "r",
+                                           "title": "token refresh goes through the auth client",
+                                           "found_by": "a review"}]}))
+    assert _okl(tmp_path, "seed", str(own)).returncode == 0
+    assert _okl(tmp_path, "seed", "react-defects").returncode == 0
+    for n in json.loads((ROOT / "seed" / "react-defects.json").read_text())["nodes"]:
+        assert _okl(tmp_path, "update", f"seed:react-defects:{n['key']}", "--trigger", "").returncode == 0
+    listed = [x["id"] for x in json.loads(_okl(tmp_path, "triggers", "--format", "json").stdout)]
+    assert listed == ["seed:team-rules:k1"]

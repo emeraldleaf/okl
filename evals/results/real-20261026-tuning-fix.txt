@@ -1,0 +1,30 @@
+real prompts · split tuning (seed 11) · store ee5406f19cf9 · code ce0316146d37
+1718 pooled pairs, labels missing 0
+
+task prompts: 120 person-typed · 48 with an applying lesson · 114 applying lessons in the pool
+  arm                precision [95%]  applying found  prompts hit  briefed any  lessons/prompt  off-topic/prompt  repeat
+  floor           9.8% [8.0%, 12.0%]      85 of 114      40 of 48     110 of 120             7.23              6.49      1%
+  calibrated    16.5% [11.1%, 24.0%]      21 of 114      17 of 48      42 of 120             1.07              0.88      2%
+  prev           10.5% [7.3%, 14.9%]      26 of 114      21 of 48      69 of 120             2.08              1.85     20%
+  prev-own       10.9% [7.6%, 15.5%]      26 of 114      21 of 48      68 of 120             1.99              1.77     11%
+  reply-own       8.6% [6.4%, 11.4%]      42 of 114      31 of 48     114 of 120             4.11              3.73      5%
+  fallback      21.6% [16.0%, 28.6%]      35 of 114      22 of 48      53 of 120             1.37              1.06      1%
+  backfill      26.3% [20.0%, 33.7%]      41 of 114      25 of 48      48 of 120             1.32              0.96      1%
+  backfill+fallback   24.2% [18.2%, 31.5%]      38 of 114      24 of 48      48 of 120             1.32              0.99      1%
+
+null prompts: 60 person-typed · 9 with an applying lesson · 11 applying lessons in the pool
+  arm                precision [95%]  applying found  prompts hit  briefed any  lessons/prompt  off-topic/prompt  repeat
+  floor            2.0% [0.8%, 4.5%]       5 of 11        5 of 9       44 of 60              4.57              4.17      0%
+  calibrated      0.0% [0.0%, 17.6%]       0 of 11        0 of 9        6 of 60              0.30              0.30      0%
+  prev            7.3% [2.9%, 17.3%]       4 of 11        2 of 9       17 of 60              0.92              0.85     45%
+  prev-own         0.0% [0.0%, 9.6%]       0 of 11        0 of 9       11 of 60              0.60              0.60     11%
+  reply-own        3.2% [1.3%, 8.0%]       4 of 11        4 of 9       39 of 60              2.15              2.00      2%
+  fallback        0.0% [0.0%, 15.5%]       0 of 11        0 of 9        7 of 60              0.35              0.35      0%
+  backfill        0.0% [0.0%, 20.4%]       0 of 11        0 of 9        7 of 60              0.30              0.25      0%
+  backfill+fallback     0.0% [0.0%, 20.4%]       0 of 11        0 of 9        7 of 60              0.30              0.25      0%
+
+F1 on task prompts (judged precision, pooled recall): floor 0.174 · calibrated 0.174 · prev 0.144 · prev-own 0.148 · reply-own 0.139 · fallback 0.254 · backfill 0.304 · backfill+fallback 0.280
+
+context rule: no context arm (none is at least as precise as calibrated on task prompts)
+
+fix rule: backfill (most applying lessons found on task prompts among the fix arms at least as precise as calibrated)

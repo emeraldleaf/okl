@@ -9,8 +9,10 @@ decide (REPORT §4w; the design and its evidence: [docs/RETRIEVAL.md](docs/RETRI
 - held-out recall rose from 74.4% to 90.0%;
 - lessons briefed per query fell from 11.8 to 4.7;
 - prompts with no subject that got a briefing fell from 149 of 268 to 9;
-- on real task prompts, the share of briefed lessons that apply rose from 8.9% to 24.5%. It
-  also surfaces about a quarter fewer of the lessons that apply.
+- on prompts a person typed, against a real store of recorded lessons (REPORT §4x, held out),
+  the share of briefed lessons that apply rose from 9.8% to 16.5%, or 17.8% once the recorded
+  lessons have triggers. It also surfaces a quarter to a third of the applying lessons the floor
+  did (31 of 90; 38 with triggers), briefing 1.6 lessons a prompt instead of 7.7.
 
 - **The calibrated decision is the default** (#291). A lesson is briefed when its title,
   symptom, aliases and triggers hold three of the task's subject words, or two nearly as rare
@@ -27,11 +29,20 @@ decide (REPORT §4w; the design and its evidence: [docs/RETRIEVAL.md](docs/RETRI
 
   `okl show` lists them. The bundled packs carry 1,730. `okl record` without one says on
   stderr what triggers do; the Stop hook, `/record` and the encoding-loop skill ask for them.
-- **Upgrading: run `okl seed --refresh`.** It brings the bundled packs' triggers into a store
-  seeded before them, without importing the rest of each pack; until then, the hook's line
-  says so on every prompt. Lessons you recorded have no triggers until you add them
-  (`okl update <id> --trigger "..."`), and the default briefs them only when a prompt shares
-  three words with their title, symptom or aliases.
+- **Upgrading: run `okl seed --refresh`, then `/triggers`.** `okl seed --refresh` brings the
+  bundled packs' triggers into a store seeded before them, without importing the rest of each
+  pack. Lessons you recorded have no triggers until you add them, and the default briefs them
+  only when a prompt shares three words with their title, symptom or aliases. On a real store
+  it found 3 of 55 applying recorded lessons that way (REPORT §4x). `/triggers` drafts them
+  (`okl triggers` lists them; `okl update <id> --trigger "..."` adds one by hand). Until both
+  are done, the hook's line says so.
+- **`okl triggers` and `/triggers`.** `okl triggers` lists a store's own advice lessons that
+  have no triggers. `/triggers` (Claude Code) drafts ten for each from the lesson itself and
+  applies them once you confirm. Under the calibrated decision, the hook's line names how many
+  of a store's own lessons lack triggers once there are three or more. One or two are not
+  named, and the floor decision does not count them, so a quiet line does not mean every
+  lesson has triggers: `okl triggers` lists them all. On a real store, giving recorded lessons
+  triggers raised what the briefing found (REPORT §4x).
 - **Smaller briefings.** A full briefing is about 730 tokens by default, against about 1,730
   under the floor's twelve
   ([receipt](evals/results/briefing-size-20261026-0828.json)).

@@ -14,10 +14,8 @@ from ..client import Client, OKLUnreachableError, _find_config
 
 
 def _bundled_seed_dir() -> Path:
-    """Where the shipped seed packs live: the repo's seed/ in a checkout, or inside the
-    installed package. Checked in that order so a clone exercises its own files."""
-    repo_seed = Path(__file__).parent.parent.parent.parent / "seed"
-    return repo_seed if repo_seed.exists() else Path(__file__).parent.parent / "seed"
+    """Where the shipped seed packs live (core.bundled_seed_dir, which core needs too)."""
+    return core.bundled_seed_dir()
 
 
 def _pack_fits(pack_tags: set[str], interests: set[str]) -> bool:
