@@ -220,13 +220,42 @@ def load_model() -> Callable[[list[str], str], list[list[float]]]:
     return encode
 
 
+def _take_lock(path: Path) -> Any:
+    """The one-server lock next to the socket, taken without waiting: the open lock file while
+    this process holds it, None while another server does. A server still loading answers no
+    ping, so without it every prompt in that second started another (review on #300). Where
+    flock does not exist, nothing is locked."""
+    try:
+        import fcntl
+    except ImportError:
+        return contextlib.nullcontext()
+    lock = path.with_suffix(".lock")
+    lock.parent.mkdir(parents=True, exist_ok=True)
+    f = lock.open("a")
+    try:
+        fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        f.close()
+        return None
+    return f
+
+
 def serve(path: Path | None = None, *, idle_exit_s: float = IDLE_EXIT_S) -> int:
     """Load the model, then answer requests on the socket until stopped or idle for
-    `idle_exit_s`. One request per connection: ping, embed or stop."""
+    `idle_exit_s`. One request per connection: ping, embed or stop. A second server exits at
+    once while one holds the lock."""
     path = path or socket_path()
+    lock = _take_lock(path)
+    if lock is None:
+        return 0
+    with lock:
+        return _serve(path, idle_exit_s)
+
+
+def _serve(path: Path, idle_exit_s: float) -> int:
     started = time.perf_counter()
     encode = load_model()
-    loaded_s = time.perf_counter() - started
+    state: dict[str, Any] = {"loaded_s": round(time.perf_counter() - started, 2), "served": 0}
     path.parent.mkdir(parents=True, exist_ok=True)
     with contextlib.suppress(FileNotFoundError):
         path.unlink()
@@ -244,8 +273,13 @@ def serve(path: Path | None = None, *, idle_exit_s: float = IDLE_EXIT_S) -> int:
                 continue
             last = time.monotonic()
             with conn:
-                if _handle(conn, encode, loaded_s) == "stop":
-                    break
+                try:
+                    if _handle(conn, encode, state) == "stop":
+                        break
+                except Exception as e:  # noqa: BLE001 - one vanished or broken client must not end the server
+                    # A prompt gives up after TIMEOUT_S and closes its end, so a late answer
+                    # meets a broken pipe; that ended the server (review on #300).
+                    sys.stderr.write(f"okl warm: a request failed: {e!r}\n")
     finally:
         srv.close()
         with contextlib.suppress(FileNotFoundError):
@@ -253,8 +287,9 @@ def serve(path: Path | None = None, *, idle_exit_s: float = IDLE_EXIT_S) -> int:
     return 0
 
 
-def _handle(conn: socket.socket, encode: Encoder, loaded_s: float) -> str | None:
-    """Answer one connection; return "stop" when asked to."""
+def _handle(conn: socket.socket, encode: Encoder, state: dict[str, Any]) -> str | None:
+    """Answer one connection; return "stop" when asked to. `state` holds the load time and how
+    many embed requests were answered, which ping reports."""
     conn.settimeout(30)
     buf = b""
     while not buf.endswith(b"\n"):
@@ -266,10 +301,11 @@ def _handle(conn: socket.socket, encode: Encoder, loaded_s: float) -> str | None
         req = json.loads(buf)
         op = req.get("op")
         if op == "ping":
-            reply: dict[str, Any] = {"ok": True, "model": MODEL_ID, "pid": os.getpid(), "loaded_s": round(loaded_s, 2)}
+            reply: dict[str, Any] = {"ok": True, "model": MODEL_ID, "pid": os.getpid(), **state}
         elif op == "embed" and req.get("kind") in ("query", "doc") and isinstance(req.get("texts"), list):
             vectors = encode([str(t) for t in req["texts"]], req["kind"])
             reply = {"ok": True, "dim": DIM, "vectors": base64.b64encode(_pack(vectors)).decode()}
+            state["served"] += 1
         elif op == "stop":
             reply = {"ok": True}
         else:
@@ -294,11 +330,20 @@ def start(*, wait_s: float = 0.0) -> dict[str, Any] | None:
         return running
     if not installed():
         raise WarmUnavailableError(f"the warm model needs its extra: pip install '{EXTRA}'")
+    probe = _take_lock(socket_path())
+    if probe is None:
+        return _wait(wait_s)   # one is loading already: do not start another
+    probe.close()
     log = socket_path().with_suffix(".log")
     log.parent.mkdir(parents=True, exist_ok=True)
     with log.open("ab") as out:
         subprocess.Popen([sys.executable, "-m", "okl", "warm", "serve"], stdin=subprocess.DEVNULL,
                          stdout=out, stderr=subprocess.STDOUT, start_new_session=True, close_fds=True)
+    return _wait(wait_s)
+
+
+def _wait(wait_s: float) -> dict[str, Any] | None:
+    """Ping until the server answers or `wait_s` passes."""
     deadline = time.monotonic() + wait_s
     while time.monotonic() < deadline:
         time.sleep(0.25)

@@ -2715,7 +2715,11 @@ ships off.**
 4. It showed a lesson in full on 5 of 60 null prompts, within the bound of 8. Held.
 5. **Failed on memory.** The model added a median of 109 ms to the hook's command (bound 150;
    138 ms off against 249 ms on, p95 282 ms added). But the server held 1,410 MB, against a
-   bound of 700 MB.
+   bound of 700 MB. The latency run predates a check the review on #300 added: the script now
+   stops when a check with the model on was briefed without it. The same server process
+   answered before and after the run, so a check could have fallen back only by timing out,
+   which costs at least 0.5 s and would raise these figures, not lower them. A re-run with the
+   check waits for disk space on the machine that measured it.
 
 The tuning half agrees on retrieval: 42 applying lessons in full against 41, at 23.9% precision
 against 26.3% (above its bound of 20.0%), 104 named against 95, and 6 null prompts with a lesson
@@ -2732,7 +2736,7 @@ was written.
 `OKL_WARM=1`), off by default, and the default briefing stays §4y's two tiers. A smaller
 footprint is the next measurement, pre-registered before it runs, if the person who uses okl
 wants the model on by default. Candidates are the arena off with a model kept loaded, or the
-4-bit file (197 MB), and either needs its retrieval measured again. Whether about 1.3 to 1.6 GB
+4-bit file (197 MB), and either needs its retrieval measured again. Whether about 1.6 GB (about 1.3 GB with the arena off, not shipped)
 resident is acceptable for a machine that opts in is that person's decision, not this section's.
 
 ## 5. Findings

@@ -317,6 +317,10 @@ class Client:
                 result["decision_unavailable"] = (f"the service answered by the {answered} decision, not "
                                                   f"{self.decision}: it predates it; upgrade the service")
             result["decision"] = answered
+            if self.warm:
+                # The warm model is this machine's process; a shared service has none and its
+                # request has no such field, so say so rather than brief as if it ran (review on #300).
+                result.update(warm=False, warm_unavailable="a shared service does not run the warm model")
         else:
             kw: dict[str, Any] = {"interests": self.interests, "hybrid": self.hybrid, "index": self.index,
                                   "near_misses": self.near_misses, "rerank": self.rerank,
@@ -327,8 +331,12 @@ class Client:
             result = core.check(store, repo, task, **kw)
             if "not running" in str(result.get("warm_unavailable", "")) and warm.installed():
                 # Started now, in the background, so the next prompt is briefed by meaning too;
-                # this one does not wait for a model to load (REPORT §4z).
-                warm.start()
+                # this one does not wait for a model to load (REPORT §4z). A start that fails is
+                # said, never raised: the briefing is already made (review on #300).
+                try:
+                    warm.start()
+                except (OSError, warm.WarmUnavailableError) as e:
+                    result["warm_unavailable"] += f"; starting it failed: {e}"
         # Mark briefed lessons whose code changed since their last check (#93). Done here,
         # not in core, because only the client has this repo's checkout: a shared service
         # answering /check has no git history to compare against.

@@ -134,3 +134,113 @@ def test_the_warm_setting_reads_env_over_config():
     assert warm_setting("on", None) is True
     with pytest.raises(ValueError, match="warm"):
         warm_setting("maybe", None)
+
+
+def _serving(monkeypatch) -> tuple[Path, threading.Thread]:
+    """A stub-model server on a short socket path, answering ping before this returns."""
+    path = Path(tempfile.mkdtemp(prefix="okl", dir="/tmp")) / "w.sock"
+    monkeypatch.setenv("OKL_WARM_SOCKET", str(path))
+    monkeypatch.setattr(warm, "load_model", lambda: _stub)
+    server = threading.Thread(target=warm.serve, kwargs={"idle_exit_s": 30}, daemon=True)
+    server.start()
+    deadline = time.monotonic() + 5
+    while warm.ping() is None and time.monotonic() < deadline:
+        time.sleep(0.05)
+    return path, server
+
+
+def test_a_client_that_vanishes_does_not_end_the_server(monkeypatch):
+    """A prompt gives up after TIMEOUT_S and closes its socket; the late answer met a broken pipe
+    and ended the server, so the next prompt started another (review on #300)."""
+    import socket
+    path, server = _serving(monkeypatch)
+    for request in (b'{"op": "embed", "kind": "query", "texts": ["a session token"]}\n', b"", b"not json\n"):
+        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        s.connect(str(path))
+        if request:
+            s.sendall(request)
+        s.close()   # gone before the answer
+    time.sleep(0.2)
+    assert warm.ping()["served"] >= 0
+    assert server.is_alive()
+    warm.stop()
+    server.join(timeout=5)
+
+
+def test_one_server_at_a_time(monkeypatch):
+    """While one server holds the lock a second exits at once, and start() spawns nothing: a
+    server still loading answers no ping, and every prompt started another (review on #300)."""
+    path, server = _serving(monkeypatch)
+    assert warm.serve(path, idle_exit_s=1) == 0   # returns at once: the first holds the lock
+    assert warm.ping()["served"] == 0
+    spawned = []
+    monkeypatch.setattr(warm, "installed", lambda: True)
+    monkeypatch.setattr(warm, "ping", lambda timeout=warm.TIMEOUT_S: None)   # as while loading
+    monkeypatch.setattr(warm.subprocess, "Popen", lambda *a, **k: spawned.append(a))
+    assert warm.start() is None
+    assert spawned == []
+    monkeypatch.undo()
+    monkeypatch.setenv("OKL_WARM_SOCKET", str(path))
+    warm.stop()
+    server.join(timeout=5)
+
+
+def test_ping_counts_the_queries_it_answered(monkeypatch):
+    """evals/warm_latency.py tells a warm check from a fallback by this count (review on #300)."""
+    _path, server = _serving(monkeypatch)
+    before = warm.ping()["served"]
+    warm.embed(["a session token"], "query")
+    assert warm.ping()["served"] == before + 1
+    warm.stop()
+    server.join(timeout=5)
+
+
+def test_a_lesson_without_a_vector_answers_to_the_line_for_words(stub):
+    """A lesson recorded since the last index has no vector; held to the meaning line on words
+    alone, it lost a briefing the model-free decision gave it (review on #300)."""
+    s = _store()
+    try:
+        warm.index(s)
+        core.record(s, type="Rule", scope="org", id="fresh", title="rotate webhook signing secrets on schedule")
+        task = "rotate the webhook signing secrets"
+        assert core.briefed_ids(core.check(s, repo="r", task=task)) == ["fresh"]
+        on = core.check(s, repo="r", task=task, warm=True)
+        assert on["warm"] is True
+        assert "fresh" in core.briefed_ids(on)
+    finally:
+        s.close()
+
+
+def test_a_remote_check_says_the_warm_model_did_not_run(monkeypatch):
+    """A shared service has no warm model and no field for it; the answer says so rather than
+    read as briefed by meaning (review on #300)."""
+    from okl.client import Client
+    c = Client(config={"repo": "r", "service_url": "http://service.invalid"})
+    c.warm = True
+    monkeypatch.setattr("okl.client.drift.annotate_briefing", lambda *a, **k: None)
+    monkeypatch.setattr(c, "_post", lambda path, body: {"repo": "r", "task": body["task"], "rules": [],
+                                                         "match_count": 0, "decision": body["decision"]})
+    res = c.check("a task")
+    assert res["warm"] is False
+    assert "shared service" in res["warm_unavailable"]
+
+
+def test_a_failed_start_is_said_not_raised(monkeypatch, tmp_path):
+    """Starting the server in the background cannot fail the briefing it follows (review on #300)."""
+    from okl.client import Client
+    monkeypatch.setenv("OKL_WARM_SOCKET", str(Path(tempfile.mkdtemp(prefix="okl", dir="/tmp")) / "none.sock"))
+    s = _store()
+    warm.set_encoder(_stub)
+    warm.index(s)        # vectors present, so the only thing missing is the server
+    warm.set_encoder(None)
+    c = Client(config={"repo": "r"})
+    c.warm = True
+    monkeypatch.setattr(c, "_local_store", lambda: s)
+    monkeypatch.setattr("okl.client.drift.annotate_briefing", lambda *a, **k: None)
+    monkeypatch.setattr(warm, "installed", lambda: True)
+
+    def broken_start(**_k):
+        raise OSError("no room to start")
+    monkeypatch.setattr(warm, "start", broken_start)
+    res = c.check("the session token disappears after a refresh")
+    assert "starting it failed: no room to start" in res["warm_unavailable"]

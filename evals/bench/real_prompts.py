@@ -440,7 +440,7 @@ def _warm_rule(meta: dict, verdict: dict[tuple[str, str], str | None], applies: 
     shows more applying lessons in full than tiered-full at a precision no lower than
     tiered-full's lower 95% bound, reaches at least as many as tiered, and shows a lesson in
     full on at most twice as many null prompts."""
-    if "warm-full" not in stats or "tiered-full" not in stats:
+    if not {"warm", "warm-full", "tiered", "tiered-full"} <= set(stats):   # the rule reads all four
         return
     b = meta["briefed"]
     tasks = [pid for k, pid in meta["chosen"] if k == "task"]

@@ -127,11 +127,13 @@ def select(candidates: list[Node], task_terms: list[str], rarity: Rarity, *,
     adds `weight` times it and the line is `line`, set the same way for that score (§4w, §4z)."""
     terms = [t.lower() for t in task_terms]
     cos = meaning or {}
-    bar = CALIBRATED_LINE if line is None else line
     scored = []
     for rank, node in enumerate(candidates):
         s, shared = score(terms, node, rarity)
-        scored.append((s + weight * cos.get(node.id, 0.0), rank, node, shared))
-    kept = sorted((x for x in scored if x[0] >= bar), key=lambda x: (-x[0], x[1]))
-    matched = {node.id: shared for _s, _r, node, shared in scored}
-    return [node for _s, _r, node, _shared in kept], matched, len(scored) - len(kept)
+        # A lesson the model has no vector for (recorded since the last index) is scored on its
+        # words alone, so it answers to the line set for words alone (review on #300).
+        bar = line if line is not None and node.id in cos else CALIBRATED_LINE
+        scored.append((s + weight * cos.get(node.id, 0.0), rank, node, shared, bar))
+    kept = sorted((x for x in scored if x[0] >= x[4]), key=lambda x: (-x[0], x[1]))
+    matched = {x[2].id: x[3] for x in scored}
+    return [x[2] for x in kept], matched, len(scored) - len(kept)
