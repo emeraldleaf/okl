@@ -139,7 +139,9 @@ def cmd_triggers(args: argparse.Namespace) -> int:
                       "body": n.body or "", "fix": n.fix or "", "aliases": n.aliases or ""} for n in missing])
         return 0
     if not missing:
-        print("every advice lesson recorded in this store has triggers")
+        # Asked about one lesson, answer for that one, not for the store (review on #298).
+        print(f"{args.node_id} needs no triggers: it has them, or it is not one of this store's own advice lessons"
+              if getattr(args, "node_id", None) else "every advice lesson recorded in this store has triggers")
         return 0
     for n in missing:
         print(f"[{n.id}] {n.type} · {n.title}")
