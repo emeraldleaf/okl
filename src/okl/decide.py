@@ -116,16 +116,22 @@ def score(terms: list[str], node: Node, rarity: Rarity) -> tuple[float, list[str
     return len(shared) + sum(rarity.relative(t) for t in shared) / 1000, shared
 
 
-def select(candidates: list[Node], task_terms: list[str],
-           rarity: Rarity) -> tuple[list[Node], dict[str, list[str]], int]:
+def select(candidates: list[Node], task_terms: list[str], rarity: Rarity, *,
+           meaning: dict[str, float] | None = None, weight: float = 0.0,
+           line: float | None = None) -> tuple[list[Node], dict[str, list[str]], int]:
     """The candidates that clear the line, best first, the subject words each shares, and how
     many fell below the line. The cap is the caller's cutoff (core.check keeps at most
-    CALIBRATED_CAP), so what it trims is counted as trimmed, not as below the line."""
+    CALIBRATED_CAP), so what it trims is counted as trimmed, not as below the line.
+
+    With `meaning` (each lesson's best cosine with the prompt, from the warm model), the score
+    adds `weight` times it and the line is `line`, set the same way for that score (§4w, §4z)."""
     terms = [t.lower() for t in task_terms]
+    cos = meaning or {}
+    bar = CALIBRATED_LINE if line is None else line
     scored = []
     for rank, node in enumerate(candidates):
         s, shared = score(terms, node, rarity)
-        scored.append((s, rank, node, shared))
-    kept = sorted((x for x in scored if x[0] >= CALIBRATED_LINE), key=lambda x: (-x[0], x[1]))
+        scored.append((s + weight * cos.get(node.id, 0.0), rank, node, shared))
+    kept = sorted((x for x in scored if x[0] >= bar), key=lambda x: (-x[0], x[1]))
     matched = {node.id: shared for _s, _r, node, shared in scored}
     return [node for _s, _r, node, _shared in kept], matched, len(scored) - len(kept)
