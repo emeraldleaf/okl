@@ -112,12 +112,14 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                          "the gates (REPORT §4t); 'off' for the first-stage order. Omit it to follow the "
                          "config's `rerank` or OKL_RERANK. Needs the rerank extra and `okl embed` once "
                          "online; otherwise the first-stage order stands and the JSON says why.")
-    pk.add_argument("--decision", choices=["floor", "calibrated"], default=None,
-                    help="how candidates become a briefing: 'calibrated' (the default) briefs those "
-                         "whose title, symptom, aliases and triggers hold enough of the task's subject "
-                         "to clear a line set on real subjectless prompts, at most five; 'floor' keeps "
-                         "those sharing enough words with the task, up to the limit (#291, REPORT "
-                         "§4w). Omit it to follow the config's `decision` or OKL_DECISION.")
+    pk.add_argument("--decision", choices=["floor", "calibrated", "tiered"], default=None,
+                    help="how candidates become a briefing: 'calibrated' briefs those whose title, "
+                         "symptom, aliases and triggers hold enough of the task's subject to clear a "
+                         "line set on real subjectless prompts, at most five; 'floor' keeps those "
+                         "sharing enough words with the task, up to the limit; 'tiered' (the default) "
+                         "briefs what 'calibrated' briefs and lists the rest of what matched, one line "
+                         "each, up to the limit (#291, REPORT §4w, §4y). Omit it to follow the "
+                         "config's `decision` or OKL_DECISION.")
     pk.add_argument("--near-misses", action="store_true", dest="near_misses",
                     help="append the records that matched the task and were left out (by the floor or "
                          "the cutoff) as id and title, at most twelve. A treatment under measurement "

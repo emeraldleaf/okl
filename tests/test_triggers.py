@@ -69,7 +69,8 @@ def _store_with(lessons: list[dict]) -> Store:
 def test_the_calibrated_decision_briefs_what_shares_the_subject_and_nothing_else():
     """A lesson whose about-text holds three of the prompt's subject words is briefed; one
     sharing a single word is not; a prompt with no subject, and one a harness wrote, get
-    nothing; the calibrated decision is the default."""
+    nothing. The default, tiered, briefs the same lesson and names the one-word match in a line
+    (§4y)."""
     s = _store_with([
         {"title": "retry the uploader with backoff",
          "triggers": ["uploads to the bucket fail intermittently and the job gives up"]},
@@ -81,8 +82,9 @@ def test_the_calibrated_decision_briefs_what_shares_the_subject_and_nothing_else
         res = core.check(s, repo="r", task=task, decision="calibrated")
         assert core.briefed_ids(res) == ["r0"]
         assert res["decision"] == "calibrated" and res["weak_matches"] >= 1
-        # The default is still the floor, which keeps its own behaviour.
-        assert core.check(s, repo="r", task=task)["decision"] == "calibrated"   # the default (§4w)
+        tiered = core.check(s, repo="r", task=task)
+        assert tiered["decision"] == "tiered" and core.briefed_ids(tiered) == ["r0"]
+        assert [e["id"] for e in tiered["also_matched"]] == ["r1"]
         assert core.briefed_ids(core.check(s, repo="r", task="ok do it", decision="calibrated")) == []
         harness = core.check(s, repo="r", decision="calibrated",
                              task="<task-notification> uploader job bucket uploads fail </task-notification>")
@@ -107,6 +109,63 @@ def test_the_calibrated_decision_briefs_at_most_the_cap():
         s.close()
 
 
+def test_the_tiered_decision_names_what_the_cap_cuts_and_what_the_floor_keeps():
+    """Tiered shows what clears the line, at most the cap, and names the rest in one line each:
+    the two the cap cut first, then a lesson only the floor keeps; none is cut or counted weak,
+    and a lesson sharing no word is not named (REPORT §4y)."""
+    s = _store_with([*({"title": f"cache invalidation stale reads replica lag {i}"} for i in range(7)),
+                     {"title": "failover runbook for the primary"}, {"title": "pagination cursor format"}])
+    try:
+        res = core.check(s, repo="r", task="stale reads after cache invalidation with replica lag during failover")
+        shown = core.briefed_ids(res)
+        also = [e["id"] for e in res["also_matched"]]
+        assert len(shown) == decide.CALIBRATED_CAP
+        assert sorted(also[:2]) == sorted({f"r{i}" for i in range(7)} - set(shown))
+        assert also[2:] == ["r7"]
+        assert res["dropped_by_cutoff"] == 0
+        assert res["weak_matches"] == 0
+    finally:
+        s.close()
+
+
+def test_a_second_tier_line_carries_the_first_sentence_of_the_fix_cut_at_a_word():
+    """A line is the title and the first sentence of the fix, at most ALSO_FIX_CHARS of it,
+    cut at a word; a lesson with no fix is its title alone."""
+    from okl.store import Node
+    short = core._also_entry(Node(id="a", type="Rule", scope="org", title="t", fix="Do this. Then that."))
+    assert short["fix"] == "Do this."
+    long = core._also_entry(Node(id="b", type="Rule", scope="org", title="t", fix="word " * 60))
+    assert long["fix"].endswith("…")
+    assert len(long["fix"]) <= core.ALSO_FIX_CHARS + 1
+    assert core._also_line(core._also_entry(Node(id="c", type="Rule", scope="org", title="t"))) == "- [c] t"
+
+
+def test_the_second_tier_is_rendered_for_the_agent_and_the_person_and_not_logged_as_shown():
+    """The briefing, the compact action list and the person's line all name the second tier;
+    with nothing in full they say what matched instead of "clean slate"; briefed_ids, which
+    the exposure log reads, leaves the second tier out (REPORT §4y)."""
+    s = _store_with([{"title": "retry the uploader with backoff",
+                      "triggers": ["uploads to the bucket fail intermittently and the job gives up"],
+                      "fix": "Wrap the call in a bounded retry. Log each attempt."},
+                     {"title": "uploader logging format", "fix": "Use the structured logger."}])
+    try:
+        res = core.check(s, repo="r", task="the uploader job gives up when bucket uploads fail intermittently")
+        text = core.render_check_for_agent(res)
+        assert "### Also matched (1)" in text
+        assert "- [r1] uploader logging format — Use the structured logger." in text
+        assert "- [r1]" in core.render_actions_only(res)
+        assert "1 more listed by title" in core.briefing_notice(res)
+        assert core.briefed_ids(res) == ["r0"]
+        loose = core.check(s, repo="r", task="change the uploader logging")
+        assert loose["match_count"] == 0
+        assert loose["also_matched"]
+        assert "clean slate" not in core.render_check_for_agent(loose)
+        assert "no encoded rule applies" not in core.render_actions_only(loose)
+        assert core.briefing_notice(loose).startswith("okl · nothing matched closely enough to show in full")
+    finally:
+        s.close()
+
+
 def test_two_rare_shared_words_clear_the_line_and_two_common_ones_do_not():
     """The line is three shared words, or two nearly as rare as a word in one record: two
     words that are in nearly every record are not enough on their own."""
@@ -123,9 +182,10 @@ def test_two_rare_shared_words_clear_the_line_and_two_common_ones_do_not():
 
 
 def test_the_decision_setting_reads_env_over_config_and_refuses_unknown_values():
-    """Calibrated unless set (§4w); OKL_DECISION wins over the config, an empty value falls
+    """Tiered unless set (§4y); OKL_DECISION wins over the config, an empty value falls
     through, and an unknown one is refused."""
-    assert decision_setting(None, None) == "calibrated"
+    assert decision_setting(None, None) == "tiered"
+    assert decision_setting(None, "calibrated") == "calibrated"
     assert decision_setting(None, "floor") == "floor"
     assert decision_setting("floor", "calibrated") == "floor"
     assert decision_setting("", "floor") == "floor"
@@ -136,14 +196,14 @@ def test_the_decision_setting_reads_env_over_config_and_refuses_unknown_values()
 
 
 def test_check_follows_the_decision_flag_and_env(tmp_path):
-    """`okl check` briefs by the calibrated decision unless `--decision` or OKL_DECISION says
-    floor; both reach core.check."""
+    """`okl check` briefs by the tiered decision unless `--decision` or OKL_DECISION says
+    otherwise; both reach core.check."""
     r = _okl(tmp_path, "record", "--type", "Rule", "--title", "uploader retries with backoff", "--scope", "org",
              "--trigger", "uploads fail intermittently and the job gives up", "--id", "u1")
     assert r.returncode == 0, r.stdout + r.stderr
     default = json.loads(_okl(tmp_path, "check", "--repo", "r", "--interests", "", "--format", "json",
                               "--task", "the uploader job gives up on failed uploads").stdout)
-    assert default["decision"] == "calibrated" and [x["id"] for x in default["rules"]] == ["u1"]
+    assert default["decision"] == "tiered" and [x["id"] for x in default["rules"]] == ["u1"]
     flag = json.loads(_okl(tmp_path, "check", "--repo", "r", "--interests", "", "--format", "json",
                            "--decision", "floor", "--task", "the uploader job gives up on failed uploads").stdout)
     assert flag["decision"] == "floor"
@@ -236,7 +296,7 @@ def test_a_remote_check_says_which_decision_answered(monkeypatch):
     monkeypatch.setattr(c, "_post", lambda path, body: {"repo": "r", "task": body["task"], "rules": [],
                                                          "match_count": 0, "decision": body["decision"]})
     new = c.check("a task")
-    assert new["decision"] == "calibrated" and "decision_unavailable" not in new
+    assert new["decision"] == "tiered" and "decision_unavailable" not in new
 
 
 def test_okl_triggers_lists_own_advice_lessons_without_triggers_and_the_briefing_names_them(tmp_path):

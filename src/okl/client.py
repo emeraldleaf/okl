@@ -123,15 +123,14 @@ def rerank_setting(env: str | None, configured: Any) -> bool:
 
 
 def decision_setting(env: str | None, configured: Any) -> str:
-    """How `check` turns candidates into a briefing (#291, REPORT §4w): OKL_DECISION wins over
-    the config's `decision`; decide.DEFAULT ("calibrated", the line calibrated on subjectless
-    prompts) unless one says "floor" (the word floor, REPORT §4n)."""
+    """How `check` turns candidates into a briefing (#291, REPORT §4w, §4y): OKL_DECISION wins
+    over the config's `decision`; decide.DEFAULT ("tiered": the calibrated line's lessons in
+    full and the rest of what matched one line each) unless one names another setting."""
     raw = env if env not in (None, "") else configured
     if raw in (None, ""):
         return decide.DEFAULT
     raw = str(raw).strip().lower()
-    if raw not in ("floor", "calibrated"):
-        raise ValueError(f"decision must be floor or calibrated, not {raw!r}")
+    decide.check_setting(raw)
     return raw
 
 

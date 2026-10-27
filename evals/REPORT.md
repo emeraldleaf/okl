@@ -2495,6 +2495,72 @@ lessons get triggers through a command an agent runs, and the briefing names how
 store's own lessons lack them. This machine's store gets the 1,390 triggers this section
 measured.
 
+## 4y. PRE-REGISTERED: two tiers, so the default hides no lesson that matched (2026-10-26)
+
+Written before any tier arm was pooled, judged or sized.
+
+**Why.** §4x's held-out half put every arm that briefs at most five lessons at 38 or fewer of
+the 101 applying lessons in the pool, where the floor reached 90. The person who uses okl
+ranks a missed lesson as the worse error. **This section therefore changes the criterion:**
+§4x chose by F1, and this one chooses by reach, the applying lessons a briefing names, with
+the briefing's size as the cost.
+
+**Where the misses are.** On the tuning half's task prompts, backfill missed 76 of the 117
+applying lessons. A count of where each one stopped (no labels used beyond §4x's):
+
+| where the missed lesson stopped | lessons |
+|---|---|
+| among the candidates, below the line: one shared about-word | 34 |
+| among the candidates, below the line: two shared about-words, both common | 23 |
+| cleared the line, cut by the cap of five | 17 |
+| among the candidates, no shared about-word | 2 |
+| not among the candidates | 3 |
+
+The search found 73 of the 76; the decision dropped them. §4t already showed that a
+cross-encoder can order these candidates but cannot say which belong. So this section changes
+what the decision does with a candidate it does not show: it names it instead of hiding it.
+
+**The treatment: `decision: tiered`, the new default.** `core.check` runs the calibrated
+decision and shows its lessons in full, at most five, as §4x's backfill arm did. It then
+lists, in `also_matched`, what cleared the line past the cap, then what the word floor keeps,
+each once and not already shown, at most `limit` (12). Each is one line: id, title, and the
+first sentence of its fix, cut at a word to 160 characters. The list sits under "Also matched
+(N), one line each. If one fits this task, read it with `okl show <id>` (the okl_get tool)
+before you write code." The person's line names how many were listed. A listed lesson is not
+logged as shown, as with the near misses (§4s).
+
+**What was seen before this was written.** The composition "backfill in full, the floor's other
+lessons by line" was computed from §4x's labels before this section existed. It reaches 101 of
+the held-out pool's 101 applying lessons and 96 of tuning's 117, with 1.77 lessons in full and
+6.64 lines per held-out task prompt. The treatment as built differs: its floor runs on the
+store with the written triggers, which re-rank the full-text candidates, and it adds the cap's
+overflow. So the held-out half is not blind to reach; the predictions are about the treatment
+as built, and its new pairs are judged as before.
+
+**Instrument.** `evals/bench/real_prompts.py` gains two arms through `pool --extend`: `tiered`
+(every lesson it names, in full or by line) and `tiered-full` (only those in full). New pairs
+are judged by Sonnet sub-agents, per lesson, blind to arm, as in §4x. `size` renders each
+sampled prompt's briefing (the hook's text) under the floor, backfill and tiered, and reports
+its size in tokens at four characters each.
+
+**Predictions, on the held-out half's task prompts.**
+
+1. Tiered reaches at least as many applying lessons as the floor. (The tier rule.)
+2. Tiered-full briefs exactly what backfill briefs on every sampled prompt: the full tier is
+   the calibrated decision on the same store. This checks the build, not the idea.
+3. The median tiered briefing is at most 75% of the floor's. (An estimate from §4x's averages,
+   made before sizing, put it near 60%.)
+
+**Falsifiers and what follows.** If 1 fails, tiered is not the default: the floor is, since
+reach is the criterion. If 2 fails, the build is wrong, and nothing is decided until it is
+fixed. If 3 fails, the line drops its fix, as §4s's near misses did, and the size is measured
+again; reach does not change. The null prompts are reported, not predicted: the second tier
+names lessons on about as many of them as the floor briefs, by design.
+
+**What this cannot settle.** Reach counts a lesson that was named, not one that was read or
+followed. Whether an agent acts on a one-line mention as it does on a full lesson is the next
+measurement. It will be pre-registered separately, before any agent runs.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

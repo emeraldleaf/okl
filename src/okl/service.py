@@ -45,7 +45,7 @@ class CheckReq(BaseModel):
     rerank: bool = False                 # the cross-encoder second stage (REPORT §4t); the service's own model
     # How candidates become a briefing (#291, REPORT §4w); a closed set, so an unknown value is a
     # 422 from validation rather than a 500 from inside check.
-    decision: Literal["floor", "calibrated"] = decide.DEFAULT
+    decision: Literal["floor", "calibrated", "tiered"] = decide.DEFAULT
 
 
 class RecordReq(BaseModel):
