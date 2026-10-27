@@ -127,8 +127,11 @@ def test_the_server_answers_ping_embed_and_stop(monkeypatch):
 
 
 def test_the_warm_setting_reads_env_over_config():
-    """Off unless set; OKL_WARM wins over the config; an unknown value is refused."""
-    assert warm_setting(None, None) is False
+    """Unset is None, the automatic default; OKL_WARM wins over the config; an empty value falls
+    through; an unknown one is refused."""
+    assert warm_setting(None, None) is None
+    assert warm_setting("", False) is False
+    assert warm_setting(None, False) is False
     assert warm_setting(None, True) is True
     assert warm_setting("0", True) is False
     assert warm_setting("on", None) is True
@@ -265,3 +268,27 @@ def test_the_person_is_told_when_the_warm_model_did_not_run():
     notes = _person_notes({"warm_unavailable": "the warm model is not running: `okl warm start`"})
     assert "okl · briefed without the warm model: the warm model is not running: `okl warm start`" in notes
     assert not [n for n in _person_notes({"warm": True}) if "warm" in n]
+
+
+def test_by_default_the_model_runs_for_an_indexed_store_and_is_silent_otherwise(stub, monkeypatch):
+    """The decision recorded in §4z: unset, warm is on for a store `okl warm index` has embedded,
+    where the model can load, and says nothing for a store never indexed or a machine without
+    the extra; set off, it never runs."""
+    monkeypatch.setattr(warm, "installed", lambda: True)
+    task = "users get logged out whenever they reload the app"
+    s = _store()
+    try:
+        never = core.check(s, repo="r", task=task, warm=None)
+        assert "warm" not in never
+        assert "warm_unavailable" not in never
+        warm.index(s)
+        auto = core.check(s, repo="r", task=task, warm=None)
+        assert auto["warm"] is True
+        assert core.briefed_ids(auto) == ["tokens"]
+        assert core.briefed_ids(core.check(s, repo="r", task=task, warm=False)) == []
+        monkeypatch.setattr(warm, "installed", lambda: False)
+        elsewhere = core.check(s, repo="r", task=task, warm=None)
+        assert "warm_unavailable" not in elsewhere
+        assert core.briefed_ids(elsewhere) == []
+    finally:
+        s.close()

@@ -122,11 +122,14 @@ def rerank_setting(env: str | None, configured: Any) -> bool:
     raise ValueError(f"rerank must be on or off, not {raw!r}")
 
 
-def warm_setting(env: str | None, configured: Any) -> bool:
+def warm_setting(env: str | None, configured: Any) -> bool | None:
     """Whether `check` asks the warm model (REPORT §4z): OKL_WARM wins over the config's `warm`;
-    off/0/empty mean no, on/1/true mean yes."""
-    raw = env if env is not None else configured
-    if raw in (None, False, "", "0", "off", "false", "none", "no"):
+    on/1/true mean yes, off/0/false mean no, and unset (or empty) means None, the default: on
+    for a store `okl warm index` has embedded, where the model can load (§4z's decision)."""
+    raw = env if env not in (None, "") else configured
+    if raw in (None, ""):
+        return None
+    if raw in (False, "0", "off", "false", "none", "no"):
         return False
     if raw in (True, "1", "on", "true", "yes"):
         return True

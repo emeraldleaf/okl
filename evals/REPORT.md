@@ -2739,6 +2739,15 @@ wants the model on by default. Candidates are the arena off with a model kept lo
 4-bit file (197 MB), and either needs its retrieval measured again. Whether about 1.6 GB (about 1.3 GB with the arena off, not shipped)
 resident is acceptable for a machine that opts in is that person's decision, not this section's.
 
+**A decision after the result (2026-10-27).** The person who uses okl judged about 1.6 GB
+acceptable and leaned toward the model by default, leaving the form to the author. Chosen: when
+nothing sets `warm`, it is on for a store whose lessons `okl warm index` has embedded, on a
+machine where the model can load, and silent otherwise. `"warm": false` or `OKL_WARM=0` turns it
+off, and a shared service never runs it. The trigger is indexing, not installing the extra,
+because the `rerank` and `all` extras install fastembed too, and a 1.6 GB process should not
+start for someone who never asked for it. This is a decision, not a passed prediction:
+prediction 5 failed as written and stays failed.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

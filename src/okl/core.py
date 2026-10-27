@@ -166,7 +166,7 @@ COMMON_WORD_MIN_RECORDS = 5
 def check(store: Store, repo: str, task: str, limit: int = 12,
           interests: list[str] | None = None, *, hybrid: str | None = None,
           index: bool = False, near_misses: bool = False, rerank: bool = False,
-          decision: str = decide.DEFAULT, warm: bool = False) -> dict[str, Any]:
+          decision: str = decide.DEFAULT, warm: bool | None = False) -> dict[str, Any]:
     """Return the slice of the encoded body relevant to starting `task` in `repo`.
 
     Matches on the task text across all node types, then buckets by type so the
@@ -200,7 +200,9 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     `warm` adds what a lesson means to the calibrated line's score, when the warm model answers
     (warm.py, #293, REPORT §4z): its nearest lessons join the candidates, and the line is the
     one set for that score. When it does not answer, the briefing is the model-free one and
-    `warm_unavailable` says why; the floor decision does not use it.
+    `warm_unavailable` says why; the floor decision does not use it. None is the default the
+    client passes when nothing sets it: on for a store `okl warm index` has embedded, where the
+    model can load, and silent otherwise (§4z's decision).
 
     `index` adds every other live lesson this repo may see, as id and title, so an agent
     can fetch one by id when the briefing did not select it (#258's first vectorless arm,
@@ -241,7 +243,7 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     own_untriggered = 0
     asked, first = limit, (hits, replaced, exhausted, cand)
     meaning, hits, warm_note = _warm_candidates(store, query, hits, repo_scope, interests,
-                                                on=warm and decision != "floor")
+                                                on=warm is not False and decision != "floor", auto=warm is None)
     if decision in ("calibrated", "tiered"):
         hits, matched, weak, limit, untriggered, own_untriggered = _calibrated(store, hits, query, limit,
                                                                                meaning=meaning)
@@ -290,7 +292,7 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     out.update({"skipped": "harness"} if harness else {})
     out.update({"packs_without_triggers": untriggered} if untriggered else {})
     out.update({"lessons_without_triggers": own_untriggered} if own_untriggered else {})
-    out.update({"warm": bool(meaning)} if warm else {})
+    out.update({"warm": bool(meaning)} if warm or meaning or warm_note else {})
     out.update({"warm_unavailable": warm_note} if warm_note else {})
     if hybrid and cand.note:
         # Asked for and not possible here: the briefing above is the full-text one. Said in
@@ -692,14 +694,18 @@ def _calibrated(store: Store, hits: list[Node], query: str, limit: int, *,
 
 
 def _warm_candidates(store: Store, query: str, hits: list[Node], repo_scope: str, interests: list[str] | None,
-                     *, on: bool) -> tuple[dict[str, float], list[Node], str | None]:
+                     *, on: bool, auto: bool = False) -> tuple[dict[str, float], list[Node], str | None]:
     """With the warm model on and answering: each lesson's best cosine with the prompt, and the
     candidates with the model's own nearest added (REPORT §4z). Otherwise no scores, the
-    candidates as they were, and why (None when it was not asked for or there is no subject)."""
-    if not on or not briefing_terms(query):
+    candidates as they were, and why (None when it was not asked for or there is no subject).
+    With `auto` (nothing set it), a store never indexed, or a machine without the extra, has not
+    opted in, so nothing is said."""
+    if not on or not briefing_terms(query) or (auto and not warm.installed()):
         return {}, hits, None
     try:
         meaning = warm.cosines(store, query)
+    except warm.WarmNotIndexedError as e:
+        return {}, hits, None if auto else str(e)
     except warm.WarmUnavailableError as e:
         return {}, hits, str(e)
     seen = {n.id for n in hits}

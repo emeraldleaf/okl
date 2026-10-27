@@ -42,14 +42,15 @@ benchmark built to decide (REPORT §4w; the design and its evidence:
   it found 3 of 55 applying recorded lessons that way (REPORT §4x). `/triggers` drafts them
   (`okl triggers` lists them; `okl update <id> --trigger "..."` adds one by hand). Until both
   are done, the hook's line says so.
-- **`okl warm`, an opt-in model that briefs by meaning too** (#293, REPORT §4z). `okl warm
+- **`okl warm`, a local model that briefs by meaning too** (#293, REPORT §4z). `okl warm
   start` keeps EmbeddingGemma-300m (int8) loaded in a local process, `okl warm index` embeds a
-  store's lessons, and `okl check --warm on` (or `"warm": true`, `OKL_WARM=1`) adds 8 times a
+  store's lessons, and from then on a check (or `--warm on`) adds 8 times a
   lesson's best cosine with the prompt to the line's score. On real held-out prompts it showed
   46 applying lessons in full against 38, at 23.0% precision against 17.8%, adding a median of
   109 ms to a prompt. It holds about 1.6 GB of memory once it has answered a prompt, above the
-  bound set before measuring,
-  so it is off by default. The `warm` extra installs it.
+  bound set before measuring, so it runs only for a store you have indexed: `"warm": false` or
+  `OKL_WARM=0` turns it off there, and a store never indexed is briefed as before. The `warm`
+  extra installs it.
 - **`okl triggers` and `/triggers`.** `okl triggers` lists a store's own advice lessons that
   have no triggers. `/triggers` (Claude Code) drafts ten for each from the lesson itself and
   applies them once you confirm. Under the default and calibrated decisions, the hook's line

@@ -64,6 +64,11 @@ class WarmUnavailableError(RuntimeError):
     """The warm model could not answer: not started, still loading, too slow, or no vectors."""
 
 
+class WarmNotIndexedError(WarmUnavailableError):
+    """No lesson in this store has warm vectors: `okl warm index` has never run here. Asked for,
+    that is a reason to say; by default, it means the store has not opted in (§4z decision)."""
+
+
 def set_encoder(encoder: Encoder | None) -> None:
     """Encode in this process instead of asking the server: (texts, "query" | "doc") -> rows."""
     global _encoder
@@ -152,7 +157,7 @@ def cosines(store: Store, text: str) -> dict[str, float]:
     when the model does not answer or no lesson has vectors."""
     rows = store.embeddings(MODEL_ID)
     if not rows:
-        raise WarmUnavailableError("no lesson has warm vectors yet: `okl warm index`")
+        raise WarmNotIndexedError("no lesson has warm vectors yet: `okl warm index`")
     q = embed([text], "query")[0]
     try:
         import numpy as np
