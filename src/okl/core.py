@@ -701,19 +701,20 @@ def _also_matched(store: Store, query: str, limit: int, repo_scope: str, interes
 ALSO_FIX_CHARS = 160
 
 
-def _also_entry(n: Node) -> dict[str, str]:
+def _also_entry(n: Node) -> dict[str, Any]:
     """A lesson in the second tier: id, type, title, and the first sentence of its fix, cut at
     a word to ALSO_FIX_CHARS, so the line says what to do and `okl show <id>` has the rest.
 
     A withdrawn record or a retired identifier is a warning, never an action: it carries what
     to avoid instead of a fix, as the full briefing routes it (review on #299)."""
+    stale = {"stale": True} if n.is_stale() else {}   # past its TTL: marked, as in the full briefing
     avoid = _avoid_kind(n)
     if avoid:
-        return {"id": n.id, "type": n.type, "title": n.title, "fix": "", "avoid": avoid}
+        return {"id": n.id, "type": n.type, "title": n.title, "fix": "", "avoid": avoid, **stale}
     fix = re.split(r"(?<=[.!?])\s", (n.fix or "").strip(), maxsplit=1)[0]
     if len(fix) > ALSO_FIX_CHARS:
         fix = fix[:ALSO_FIX_CHARS].rsplit(" ", 1)[0].rstrip(",;:") + "…"
-    return {"id": n.id, "type": n.type, "title": n.title, "fix": fix}
+    return {"id": n.id, "type": n.type, "title": n.title, "fix": fix, **stale}
 
 
 def _avoid_kind(n: Node) -> str:
@@ -1248,12 +1249,13 @@ def render_actions_only(result: dict[str, Any], limit: int | None = None) -> str
     return "\n".join(out + _replaced_lines(result) + tail)
 
 
-def _also_line(e: dict[str, str]) -> str:
+def _also_line(e: dict[str, Any]) -> str:
     """One second-tier lesson: id, title and the start of its fix (REPORT §4y); a withdrawn
     record or a retired identifier as what to avoid."""
+    stale = " *(STALE — re-verify)*" if e.get("stale") else ""
     if e.get("avoid"):
-        return f"- [{e['id']}] AVOID ({e['avoid']}): {e['title']}"
-    return f"- [{e['id']}] {e['title']}" + (f" — {e['fix']}" if e.get("fix") else "")
+        return f"- [{e['id']}] AVOID ({e['avoid']}): {e['title']}{stale}"
+    return f"- [{e['id']}] {e['title']}{stale}" + (f" — {e['fix']}" if e.get("fix") else "")
 
 
 def _replaced_lines(result: dict[str, Any]) -> list[str]:

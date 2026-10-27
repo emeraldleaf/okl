@@ -561,7 +561,9 @@ def main() -> None:
     ps.add_argument("--split", choices=["tuning", "heldout"], required=True)
     pm = sub.add_parser("misses")
     pm.add_argument("--split", choices=["tuning", "heldout"], required=True)
-    pm.add_argument("--arm", choices=ARMS, default="backfill")
+    # Only the arms that run the calibrated line as it is: the classifier rebuilds that decision,
+    # so for any other arm it would name the wrong cause (review on #299).
+    pm.add_argument("--arm", choices=["calibrated", "backfill"], default="backfill")
     pm.add_argument("--before", nargs="*", default=[], help="label families to leave out, such as e1")
     args = ap.parse_args()
     {"snapshot": cmd_snapshot, "pool": cmd_pool, "tally": cmd_tally, "size": cmd_size,

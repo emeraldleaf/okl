@@ -160,6 +160,19 @@ def test_a_withdrawn_lesson_in_the_second_tier_is_a_warning_not_a_fix():
         s.close()
 
 
+def test_a_stale_lesson_in_the_second_tier_is_marked_for_re_verification():
+    """A lesson past its TTL is named with the full briefing's stale tag, so its fix is not
+    read as current (review on #299)."""
+    from okl.store import Node
+    old = Node(id="s", type="Rule", scope="org", title="pin the base image", fix="Pin it by digest.",
+               ttl_days=1, verified_at=1, created_at=1)
+    entry = core._also_entry(old)
+    assert entry["stale"] is True
+    assert core._also_line(entry) == "- [s] pin the base image *(STALE — re-verify)* — Pin it by digest."
+    fresh = core._also_entry(Node(id="f", type="Rule", scope="org", title="t", fix="Do it."))
+    assert "stale" not in fresh
+
+
 def test_a_second_tier_line_carries_the_first_sentence_of_the_fix_cut_at_a_word():
     """A line is the title and the first sentence of the fix, at most ALSO_FIX_CHARS of it,
     cut at a word; a lesson with no fix is its title alone."""
