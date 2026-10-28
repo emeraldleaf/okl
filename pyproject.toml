@@ -48,7 +48,7 @@ dev = [
   # plausible-looking guess: an invented version 404s the install step.
   # ruff and mypy moved to the versions Dependabot proposed in #139, run green here
   # on 2026-10-10.
-  "pytest==9.1.1", "pytest-cov==7.1.0", "ruff==0.17.1", "mypy==2.4.0",
+  "pytest==9.1.1", "pytest-cov==7.1.0", "ruff==0.17.2", "mypy==2.4.0",
   "import-linter==2.15",  # verified on PyPI 2026-10-04 (released 2026-09-04)
   # CI runs `uv lock --check`: uv.lock is what `uv sync` builds, and it drifted from this
   # file for weeks with nothing reading it (#285). Verified on PyPI 2026-10-25.
