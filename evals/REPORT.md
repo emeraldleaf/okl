@@ -2749,6 +2749,48 @@ series (no briefing against the live briefing), so `tests/test_docs.py` pools on
 arms are those two. This one moves none of the published figures, and neither does §4r's
 (`ab-20261023-1303.json`, the indexed arm), which the same rule now leaves out.
 
+## 4ac. PRE-REGISTERED: Porter stemming in the index and the line (2026-10-29)
+
+Written before any stemmed run. Issue #258 planned "stemming and a symptom rule first"; the
+symptom rule shipped (§4o), and stemming was never measured.
+
+**Why.** Every match okl makes locally is exact-word. SQLite's full-text index uses FTS5's
+default tokenizer, and the calibrated line counts the prompt's words that a lesson's about-text
+holds, as written. So "rotating the signing secrets" and a lesson about rotating a secret share
+"signing" alone. The Postgres backend already stems (`websearch_to_tsquery('english', ...)`),
+so the two backends match words differently today. FTS5 ships a Porter tokenizer, so stemming
+needs no new dependency.
+
+**Instrument.** `evals/bench/run_v2.py`, the bench the calibrated line was chosen on (§4w), with
+the shipped decision: `--score shared_words`, the bench's triggers, the cap of five, and a
+conformal line at alpha 0.05 set on the calibration half of the 550 null prompts and tested on
+the other half. Two arms:
+- **`words`** is the shipped decision as it is.
+- **`stem`** rebuilds the bench store's index with `tokenize='porter unicode61'`
+  (`run.porter_index`, as a migration would). It also stems the line's words on both sides with
+  FTS5's own stemmer, read back through `fts5vocab` (`v2.stem`), so the index and the line agree.
+  The search gets the words as typed, and the index stems them itself.
+
+Each arm sets its own line, so the cost of stemming (looser matches raise the line) and its gain
+are measured together, at the same guaranteed null rate. Both arms run on the selection split and
+the held-out split, in one sitting, at the commit that adds this section. No model call.
+
+**Predictions** (alpha 0.05, cap 5, against `words` in the same sitting):
+1. On the selection split, `stem` recall is at least 2 points higher, and at least 3 more
+   paraphrase queries find their lesson.
+2. The null test half is briefed anything in at most 5% of prompts in both arms. The conformal
+   line guarantees this; it is checked, not assumed.
+3. On the held-out split, `stem` recall is not lower than `words`.
+
+**What follows.** If predictions 1 and 3 hold, stemming goes to the product as one change:
+- the porter tokenizer, with the index rebuilt on open;
+- stemmed words in `decide`, and `CALIBRATED_LINE` recalibrated;
+- a measurement on real prompts, as §4x did, before the default changes.
+
+If either fails, the stemming half of #258 closes with this result.
+
+**Budget and stop.** Four runs of the bench, minutes each, no paid call.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
