@@ -317,9 +317,11 @@ def test_the_never_reproduced_sentence_counts_match_the_receipts():
 # said 170.7, and "249 MB" and "about 80 MB" were never what okl's loaders fetch (review on
 # #300). One string can stand for two measurements ("15 ms" is the read at 10,000 and the search
 # at 50,000), so both are held (CI reviewer on #307). A new figure fails until it is named
-# here; a name whose figure left the docs fails too.
+# here; a name whose figure left the docs fails too. A third element scales the receipt's number
+# to the doc's unit (a receipt in MB, a doc in GB).
 _SCALE = "semantic-scale-20261029-1206.txt"
 _MODELS = "model-files-20261029-1207.txt"
+_WARM_FILES = "warm-model-files-20261029.txt"
 DOC_FIGURES = {
     "131 MB": [(_MODELS, r"potion-retrieval-32M.*?([\d.]+) MB")],
     "92 MB": [(_MODELS, r"ms-marco-MiniLM-L-6-v2.*?([\d.]+) MB")],
@@ -329,11 +331,19 @@ DOC_FIGURES = {
     "92 ms": [(_SCALE, r"50,000 vectors: read\s+([\d.]+) ms")],
     "7 ms": [(_SCALE, r"300 vectors:.*?without numpy\s+([\d.]+) ms")],
     "232 ms": [(_SCALE, r"10,000 vectors:.*?without numpy\s+([\d.]+) ms")],
+    # The warm model (§4z): its int8 and full-precision files, an encode, the hook's added
+    # latency (the larger of the two checked runs, as §4z quotes it), and its memory once settled.
+    "309.5 MB": [(_WARM_FILES, r"int8\s+model_quantized.*?([\d.]+) MB")],
+    "1,235 MB": [(_WARM_FILES, r"full precision\s+model\.onnx.*?([\d.]+) MB")],
+    "170.7 ms": [("bench-20261027-sel-dense-embeddinggemma-int8-words.txt", r"encode per prompt median ([\d.]+) ms")],
+    "114 ms": [("warm-latency-20261029-0243.txt", r"added by the model, per prompt.*?median ([\d.]+) ms")],
+    "1.6 GB": [("warm-memory-20261027-0530.txt", r"default(?:\s+\d+){6}\s+(\d+)", 0.001)],
 }
 # Not measurements: a bound the docs set, or arithmetic, with why.
 THRESHOLDS = {
     "100 ms": "the retrieval ADR's trigger for the next index tier: a search slower than this",
     "200 MB": "100,000 vectors of 512 float32s: arithmetic, the size at which that tier is due",
+    "1.1 GB": "warm-memory-20261027-0530.txt: 1,659 MB after the first prompt less 559 after loading",
 }
 FIGURE = re.compile(r"(?<![\w.])(\d[\d,]*(?:\.\d+)?) ?(ms|MB|GB)\b")
 
@@ -361,10 +371,11 @@ def test_every_size_and_latency_the_docs_publish_is_its_receipts_number():
     for fig, lines in DOC_FIGURES.items():
         quoted = fig.split()[0].replace(",", "")
         places = len(quoted.split(".")[1]) if "." in quoted else 0
-        for receipt, pattern in lines:
+        for receipt, pattern, *scale in lines:
             m = re.search(pattern, (ROOT / "evals" / "results" / receipt).read_text())
             assert m, f"{receipt} has no line for {fig}"
-            assert round(float(m.group(1)), places) == float(quoted), f"{fig}: {receipt} says {m.group(1)}"
+            value = float(m.group(1)) * (scale[0] if scale else 1)
+            assert round(value, places) == float(quoted), f"{fig}: {receipt} says {m.group(1)}"
 
 
 # Verdicts whose own reason says the defect is absent while their boolean says reproduced: the
