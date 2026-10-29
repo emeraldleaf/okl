@@ -2793,6 +2793,47 @@ count.
 that tunes the wording or the description on these tasks. If the run cannot complete by
 2026-10-30, this section records why and nothing is concluded.
 
+### Result (2026-10-29)
+
+Receipt: `ab-20261029-0425.json`, at 5bd4cb4 from start to end, so the worktree did not move. 96
+runs, no failures. Both fetch paths passed the probe before the first sample.
+
+| arm | fetched the governing lesson | fetched anything | defect reproduced |
+|---|---|---|---|
+| `line` | 0 of 24 | 0 of 24 | 2 of 24 |
+| `titles` | 1 of 24 | 1 of 24 | 1 of 24 |
+| `when` | 0 of 24 | 0 of 24 | 2 of 24 |
+| `when-tool` | 1 of 24 | 1 of 24 | 2 of 24 |
+
+1. **Held.** `line` fetched it in none and `titles` in one, both at most 2.
+2. **Failed.** `when` fetched it in none, one fewer than `titles`, not three more.
+3. **Failed.** `when-tool` fetched it in one, one more than `when`, not three more.
+
+Every arm fetched in at most 2 of 24, so the reading registered for that case applies: a one-shot
+generator told to output only code opens no lesson, whatever the line says or the path is. Both
+fetches came from `spa_tokens`' first sample. In the `titles` arm the generator ran `okl show` on
+the governing lesson; in the `when-tool` arm it called `okl_get` on it and on one related lesson.
+Neither of those samples reproduced the defect. That is one sample each, so it is no rate.
+
+Every reproduction was in `spa_tokens` (`line` 2 of 3, `titles` 1, `when` 2, `when-tool` 2), and
+`ci_linter` was clean in every arm. No arm reproduced the defect in more than 3 of its 6
+informative samples, so the last falsifier did not fire. Here the title alone kept the effect, as
+the line did.
+
+**What it does not show.**
+- Whether an agent working over several turns opens a lesson. That is the test registered next.
+- Whether the line's wording matters for a lesson whose title does not carry its fix. These eight
+  titles mostly state it: "Access tokens in localStorage are XSS-exfiltratable", "Pin every tool
+  that gates CI; an unpinned linter is a time-bomb".
+- Differences of one or two samples in 24, which are noise.
+
+**What follows.** As registered:
+- The second tier keeps carrying the instruction itself: §4aa's line, the title and the first
+  sentence of the fix.
+- Neither the line format nor `okl_get`'s description changes.
+- The next test of fetching runs in a multi-turn session, under its own pre-registration.
+- §4aa's preflight counted a lesson named in one line as present. This run did not change that.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
