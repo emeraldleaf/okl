@@ -59,10 +59,17 @@ BRIEF_INTERESTS = os.environ.get("OKL_BRIEF_INTERESTS", "")
 # ran. When set, an `okl` shim on the generator's PATH logs each invocation, so the receipt
 # says which lessons each sample fetched. Stamped into the receipt: it is the instrument.
 GENERATOR_TOOLS = os.environ.get("GENERATOR_TOOLS", "")
-ARMS = ("baseline", "briefed", "indexed", "nearmiss", "full", "line")
+ARMS = ("baseline", "briefed", "indexed", "nearmiss", "full", "line", "titles", "when", "when-tool")
 # The tier arms (REPORT §4aa): the same briefing with the task's governing lesson shown in full,
-# or named only as the first one-line entry of the second tier; nothing else differs.
-TIER_ARMS = ("full", "line")
+# or named only as the first one-line entry of the second tier; nothing else differs. The line
+# arms differ only in what each second-tier line says (REPORT §4ab): the start of the fix
+# ("line"), the title alone ("titles"), or when the lesson applies ("when", "when-tool"). The
+# last offers the fetch as an MCP tool instead of `okl show` (FETCH_TOOL).
+TIER_ARMS = ("full", "line", "titles", "when", "when-tool")
+LINE_STYLES = {"line": "line", "titles": "titles", "when": "when", "when-tool": "when"}
+# The when-tool arm's only fetch path: okl_get from evals/fetch_tool.py, over MCP.
+FETCH_TOOL = "mcp__okl__okl_get"
+FETCH_SERVER = REPO / "evals" / "fetch_tool.py"
 BUCKETS = ("armed_gates", "relevant_defects", "live_retractions", "in_scope_tombstones",
            "threat_prior_art", "rules", "vocabulary", "decisions", "context", "stale_warnings")
 
@@ -128,11 +135,35 @@ def get_briefing(task: str, timeout: int, *, index: bool = False, near_misses: b
     return r.stdout
 
 
-def tier_briefings(task: str, governing: str, timeout: int) -> tuple[str, str]:
-    """The two tier arms' briefings for `task` (REPORT §4aa): one `okl check` result, rendered
-    twice by okl's own renderer, with the lesson `governing` shown in full ("full") or only as
-    the first one-line entry under "Also matched" ("line"). The routed actions are rebuilt by
-    okl's own router each time, and the second tier keeps its length. Fails closed."""
+def when_text(lesson: dict, cap: int) -> str:
+    """What a "when" line says a lesson applies to (REPORT §4ab): its symptom, else its first
+    trigger, cut at a word to `cap` characters as the fix's sentence is; "" when it has neither."""
+    triggers = [x.strip() for x in (lesson.get("triggers") or "").splitlines() if x.strip()]
+    text = (lesson.get("symptom") or "").strip() or (triggers[0] if triggers else "")
+    if len(text) > cap:
+        text = text[:cap].rsplit(" ", 1)[0].rstrip(",;:") + "…"
+    return text
+
+
+def restyled(also: list[dict], style: str, lessons: dict[str, dict], cap: int) -> list[dict]:
+    """The second tier's entries as a line arm words them (REPORT §4ab): unchanged ("line"), the
+    title alone ("titles"), or the title and when the lesson applies ("when"). An AVOID entry
+    stays a warning in every arm."""
+    if style == "line":
+        return also
+    out = []
+    for e in also:
+        when = "" if style == "titles" or e.get("avoid") else when_text(lessons[e["id"]], cap)
+        out.append(e if e.get("avoid") else {**e, "fix": f"when you see: {when}" if when else ""})
+    return out
+
+
+def tier_briefings(task: str, governing: str, timeout: int) -> dict[str, str]:
+    """The tier arms' briefings for `task`, by arm (REPORT §4aa, §4ab): one `okl check` result,
+    rendered by okl's own renderer with the lesson `governing` shown in full ("full") or as the
+    first one-line entry under "Also matched", worded as each line arm words it. The routed
+    actions are rebuilt by okl's own router each time, and the second tier keeps its length.
+    Fails closed."""
     sys.path.insert(0, str(REPO / "src"))
     import copy
     import dataclasses
@@ -150,8 +181,17 @@ def tier_briefings(task: str, governing: str, timeout: int) -> tuple[str, str]:
     result, shown = json.loads(r.stdout), json.loads(s.stdout)
     node = Node(**{f.name: shown[f.name] for f in dataclasses.fields(Node) if f.name in shown})
     limit = max(len(result.get("also_matched") or []), 1)
+    # Each second-tier lesson whole, for the "when" lines' symptoms.
+    lessons = {governing: shown}
+    for e in result.get("also_matched") or []:
+        if e["id"] not in lessons:
+            o = subprocess.run([sys.executable, "-m", "okl", "show", e["id"], "--format", "json"],
+                               capture_output=True, text=True, timeout=timeout, cwd=REPO, env=env)
+            if o.returncode != 0:
+                raise RuntimeError(f"okl show {e['id']} failed: {o.stderr.strip()[:200]}")
+            lessons[e["id"]] = json.loads(o.stdout)
 
-    def placed(in_full: bool) -> str:
+    def placed(in_full: bool, style: str = "line") -> str:
         out = copy.deepcopy(result)
         buckets = {k: [x for x in out.get(k) or [] if x.get("id") != governing] for k in BUCKETS}
         also = [e for e in out.get("also_matched") or [] if e.get("id") != governing]
@@ -159,11 +199,18 @@ def tier_briefings(task: str, governing: str, timeout: int) -> tuple[str, str]:
             for k, recs in core._bucket_by_type([node]).items():
                 buckets[k].extend(recs)
         else:
-            also = [core._also_entry(node), *also][:limit]
+            also = restyled([core._also_entry(node), *also][:limit], style, lessons, core.ALSO_FIX_CHARS)
         out.update(buckets, also_matched=also, next_actions=core._route_actions(buckets),
                    match_count=sum(len(v) for k, v in buckets.items() if k != "stale_warnings"))
         return core.render_check_for_agent(out)
-    return placed(True), placed(False)
+    return {"full": placed(True), **{arm: placed(False, style) for arm, style in LINE_STYLES.items()}}
+
+
+def unchanged_by_style(briefings: dict[str, str], arms: list[str]) -> list[str]:
+    """The line arms in `arms` whose briefing is the line arm's (REPORT §4ab): a restyle that
+    changed nothing measures nothing, so that task's tier arms fail closed (an experiment
+    cannot measure a change it never made)."""
+    return [a for a in ("titles", "when") if a in arms and briefings[a] == briefings["line"]]
 
 
 def parse_judge(raw: str) -> dict:
@@ -210,8 +257,35 @@ def generator_env(workdir: str, log: str) -> dict[str, str] | None:
     if not GENERATOR_TOOLS:
         return None
     return {**os.environ, "PATH": f"{Path(workdir) / 'bin'}{os.pathsep}{os.environ.get('PATH', '')}",
-            "OKL_SHIM_LOG": log, "OKL_BRIEFING_LOG": "0",
-            "OKL_DATABASE_URL": os.environ.get("OKL_DATABASE_URL") or f"sqlite:///{REPO / '.okl' / 'okl.db'}"}
+            "OKL_SHIM_LOG": log, "OKL_BRIEFING_LOG": "0", "OKL_DATABASE_URL": store_url()}
+
+
+def store_url() -> str:
+    """The store the generator's fetches read: the harness's own."""
+    return os.environ.get("OKL_DATABASE_URL") or f"sqlite:///{REPO / '.okl' / 'okl.db'}"
+
+
+def fetch_tool_description() -> str:
+    """The fetch tool's description, read from evals/fetch_tool.py, for the receipt's face."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("fetch_tool", FETCH_SERVER)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot load {FETCH_SERVER}")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.DESCRIPTION
+
+
+def write_fetch_tool_config(log: str) -> str:
+    """The when-tool arm's MCP config for one sample (REPORT §4ab), beside its log: the fetch
+    tool over stdio, logging to `log`, against the harness's store and okl code. Only the
+    variables the tool needs are written, never the environment, which can hold secrets."""
+    path = Path(log).with_suffix(".mcp.json")
+    path.write_text(json.dumps({"mcpServers": {"okl": {
+        "command": sys.executable, "args": [str(FETCH_SERVER)],
+        "env": {"OKL_SHIM_LOG": log, "OKL_BRIEFING_LOG": "0", "OKL_DATABASE_URL": store_url(),
+                "PYTHONPATH": str(REPO / "src")}}}}))
+    return str(path)
 
 
 def write_shim(workdir: str) -> None:
@@ -249,17 +323,64 @@ def parse_arms(spec: str) -> list[str]:
     if not arms or any(a not in ARMS for a in arms) or len(set(arms)) != len(arms):
         # A repeated arm would run and count twice (review on #269).
         raise argparse.ArgumentTypeError(f"--arms must name each of {','.join(ARMS)} at most once, not {spec!r}")
+    if "when-tool" in arms and not GENERATOR_TOOLS:
+        # Its fetch is a tool; without GENERATOR_TOOLS the other arms could fetch nothing (§4ab).
+        raise argparse.ArgumentTypeError("the when-tool arm needs GENERATOR_TOOLS set "
+                                         "(e.g. 'Bash(okl show:*)') so the other arms can fetch too")
     return arms
 
 
-def generator_cmd() -> str:
-    """The generator command, with the allowed tools when any (claude -p's flag; §4r)."""
-    return f"{GENERATOR_CMD} --allowedTools {shlex.quote(GENERATOR_TOOLS)}" if GENERATOR_TOOLS else GENERATOR_CMD
+def generator_cmd(arm: str = "", mcp_config: str = "") -> str:
+    """The generator command, with the allowed tools when any (claude -p's flag; §4r). With
+    tools on, only the MCP servers an arm names load (--strict-mcp-config), so a lesson can be
+    fetched only by the path the arm offers (REPORT §4ab): `okl show` through the shim, or, in
+    the when-tool arm, only the fetch tool whose config is `mcp_config`."""
+    if not GENERATOR_TOOLS:
+        return GENERATOR_CMD
+    if arm == "when-tool":
+        return (f"{GENERATOR_CMD} --strict-mcp-config --mcp-config {shlex.quote(mcp_config)} "
+                f"--allowedTools {FETCH_TOOL}")
+    return f"{GENERATOR_CMD} --strict-mcp-config --allowedTools {shlex.quote(GENERATOR_TOOLS)}"
+
+
+def startup_refusal(models: dict, arms: list[str], workdir: str, governing: str,
+                    timeout: int) -> tuple[int, str] | None:
+    """Why the run must not start, with its exit code, once the models are known; None to run.
+    3: the judge resolves to the generator's model. 6: a fetch path the arms offer did not work
+    when the generator was asked to use it (probe_fetch)."""
+    if judge_is_generator(models):
+        return 3, (f"the judge resolves to the generator's model ({', '.join(models['judge'])}) "
+                   "— it must not grade its own homework (qz_judge_self).")
+    paths = {"okl show": False} if GENERATOR_TOOLS else {}
+    paths.update({"okl_get": True} if "when-tool" in arms else {})
+    for name, tool in paths.items():
+        why = probe_fetch(workdir, governing, timeout, tool=tool)
+        if why:
+            return 6, f"the generator could not fetch through {name} ({why})."
+        print(f"fetch path: the generator fetched through {name} and the fetch was logged")
+    return None
+
+
+def probe_fetch(workdir: str, governing: str, timeout: int, *, tool: bool) -> str:
+    """"" when the generator, run as the arms run it, can fetch `governing` and the fetch is
+    logged; otherwise why not. `tool` probes the when-tool arm's okl_get, else `okl show` through
+    the shim. One generation per path, spent before the run, so a path that never opened cannot
+    read as an agent that never fetched (REPORT §4ab)."""
+    log = str(Path(workdir) / f"probe-{'tool' if tool else 'shim'}.log")
+    ask = f"Call the okl_get tool with id {governing!r}" if tool else f"Run `okl show {governing}`"
+    env = generator_env(workdir, log)
+    try:
+        call(generator_cmd("when-tool" if tool else "", write_fetch_tool_config(log) if tool else ""),
+             f"{ask}, then reply with the lesson's title only.", timeout, workdir,
+             **({"env": env} if env else {}))
+    except Exception as e:  # noqa: BLE001 - any failure is the answer
+        return f"the probe call failed: {str(e)[:200]}"
+    return "" if governing in fetched_ids(log) else "the probe asked for a fetch and none was logged"
 
 
 def run_one(t: dict, arm: str, s: int, *, briefed_header: str | None, brief_err: str,
             timeout: int, workdir: str, indexed_header: str | None = None,
-            nearmiss_header: str | None = None, tier_headers: tuple[str, str] | None = None,
+            nearmiss_header: str | None = None, tier_headers: dict[str, str] | None = None,
             ) -> tuple[dict, bool]:
     """Generate and judge one (task, arm, sample). Returns the record and whether it is a result.
 
@@ -273,14 +394,14 @@ def run_one(t: dict, arm: str, s: int, *, briefed_header: str | None, brief_err:
     log = str(Path(workdir) / f"shim-{t['id'].replace('/', '_')}-{arm}-{s}.log")
     try:
         header = {"baseline": "", "briefed": briefed_header, "indexed": indexed_header,
-                  "nearmiss": nearmiss_header, "full": tier_headers and tier_headers[0],
-                  "line": tier_headers and tier_headers[1]}[arm]
+                  "nearmiss": nearmiss_header, **{a: (tier_headers or {}).get(a) for a in TIER_ARMS}}[arm]
         if header is None:
             raise RuntimeError(f"briefing unavailable (fail closed): {brief_err}")
         env = generator_env(workdir, log)
+        mcp_config = write_fetch_tool_config(log) if GENERATOR_TOOLS and arm == "when-tool" else ""
         # The environment is passed only when tools are on, so the one-shot path is byte for
         # byte the call every section through §4q made (and its tests' fakes still fit).
-        code = call(generator_cmd(), GEN_PROMPT.format(briefing=header, task=t["task"]),
+        code = call(generator_cmd(arm, mcp_config), GEN_PROMPT.format(briefing=header, task=t["task"]),
                     timeout, workdir, **({"env": env} if env else {}))
         if GENERATOR_TOOLS:
             rec["fetched"] = fetched_ids(log)
@@ -620,7 +741,9 @@ def main() -> int:
         print(f"\n{len(tasks)} task(s) × {len(arms)} arm(s) ({', '.join(arms)}) × {args.samples} sample(s) = "
               f"{n_runs} generations + {n_runs} judgments")
         print(f"generator: {generator_cmd()}\njudge:     {JUDGE_CMD}"
-              + (f"\ntools:     {GENERATOR_TOOLS} (an okl shim logs each fetch)" if GENERATOR_TOOLS else ""))
+              + (f"\ntools:     {GENERATOR_TOOLS} (an okl shim logs each fetch)" if GENERATOR_TOOLS else "")
+              + (f"\nwhen-tool: {generator_cmd('when-tool', '<per-sample config>')}"
+                 if GENERATOR_TOOLS and "when-tool" in arms else ""))
         return 0
 
     results, failures = [], []
@@ -632,20 +755,23 @@ def main() -> int:
         models = {"generator": resolved_model(GENERATOR_CMD, args.timeout, clean_cwd),
                   "judge": resolved_model(JUDGE_CMD, args.timeout, clean_cwd)}
         print(f"resolved models: generator {models['generator']}, judge {models['judge']}")
-        if judge_is_generator(models):
-            print(f"REFUSING TO RUN: the judge resolves to the generator's model "
-                  f"({', '.join(models['judge'])}) — it must not grade its own homework "
-                  "(qz_judge_self).", file=sys.stderr)
-            return 3
+        refused = startup_refusal(models, arms, clean_cwd, tasks[0]["defect_node"], args.timeout)
+        if refused:
+            print(f"REFUSING TO RUN: {refused[1]}", file=sys.stderr)
+            return refused[0]
         for t in tasks:
             # The briefing is deterministic per task — fetch once, reuse across samples.
             brief_err = ""
             briefed_header = indexed_header = nearmiss_header = None
-            tier_headers: tuple[str, str] | None = None
+            tier_headers: dict[str, str] | None = None
             try:
                 if set(arms) & set(TIER_ARMS):
-                    full, line = tier_briefings(t["task"], t["defect_node"], args.timeout)
-                    tier_headers = (BRIEFING_HEADER.format(briefing=full), BRIEFING_HEADER.format(briefing=line))
+                    tiers = tier_briefings(t["task"], t["defect_node"], args.timeout)
+                    same = unchanged_by_style(tiers, arms)
+                    if same:   # fails this task's tier arms closed: nothing to measure
+                        raise RuntimeError(f"the {', '.join(same)} briefing is the line arm's; "
+                                           "the restyle changed nothing")
+                    tier_headers = {a: BRIEFING_HEADER.format(briefing=b) for a, b in tiers.items()}
                 if "briefed" in arms:
                     briefed_header = BRIEFING_HEADER.format(briefing=get_briefing(t["task"], args.timeout))
                 if "nearmiss" in arms:
@@ -724,6 +850,11 @@ def main() -> int:
         "generator": GENERATOR_CMD, "judge": JUDGE_CMD, "brief_interests": BRIEF_INTERESTS,
         # §4r: which arms ran, what the generator could do, and what the index cost per prompt.
         "arms": arms, "generator_tools": GENERATOR_TOOLS, "tasks_file": str(args.tasks),
+        # §4ab: the command the arms ran (with tools on, only the MCP servers an arm names
+        # load); the when-tool arm's command and the fetch tool's description are its treatment.
+        "generator_cmd": generator_cmd(),
+        **({"when_tool_generator": generator_cmd("when-tool", "<per-sample config>"),
+            "fetch_tool_description": fetch_tool_description()} if "when-tool" in arms else {}),
         **({"preflight_missing": lacking} if args.accept_missing_lessons else {}),
         **({"index_chars": index_chars} if index_chars is not None else {}),
         # How much of each submission the judge read (#182): part of the instrument.

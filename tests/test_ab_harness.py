@@ -367,3 +367,125 @@ def test_tree_state_fails_closed_when_an_untracked_file_vanishes_mid_read(ab, tm
     one, two = ab.tree_state(), ab.tree_state()
     assert one[0].endswith("+unknown") and one[1] != two[1]
     assert ab.head_moved(one, two) is not None
+
+
+# ---- §4ab: what each line arm says, and the path each arm can fetch by (#304) ----
+
+ALSO = [{"id": "g", "type": "Defect", "title": "Tokens in localStorage", "fix": "hold them in memory."},
+        {"id": "o", "type": "Rule", "title": "Pin the IdP policy", "fix": "pin it in config."},
+        {"id": "w", "type": "Rule", "title": "Withdrawn", "fix": "", "avoid": "withdrawn"}]
+LESSONS = {"g": {"symptom": "tokens written to localStorage", "triggers": "Adding login"},
+           "o": {"symptom": "", "triggers": "\nScaling the IdP\nSecond trigger"},
+           "w": {"symptom": "anything"}}
+
+
+def test_a_when_line_says_the_symptom_else_the_first_trigger_cut_at_a_word(ab):
+    """As the fix's sentence is cut, so a when line costs what a line costs."""
+    assert ab.when_text(LESSONS["g"], 160) == "tokens written to localStorage"
+    assert ab.when_text(LESSONS["o"], 160) == "Scaling the IdP"
+    assert ab.when_text({}, 160) == ""
+    assert ab.when_text({"symptom": "one two three four"}, 12) == "one two…"
+
+
+def test_the_line_arms_differ_only_in_what_each_line_says(ab):
+    """`line` is §4aa's line untouched; `titles` drops the fix; `when` says when the lesson
+    applies instead. An AVOID entry is the same warning in every arm."""
+    assert ab.restyled(ALSO, "line", LESSONS, 160) is ALSO
+    titles = ab.restyled(ALSO, "titles", LESSONS, 160)
+    when = ab.restyled(ALSO, "when", LESSONS, 160)
+    assert [e["fix"] for e in titles] == ["", "", ""]
+    assert [e["fix"] for e in when] == ["when you see: tokens written to localStorage",
+                                        "when you see: Scaling the IdP", ""]
+    for arm in (titles, when):
+        assert [(e["id"], e["title"]) for e in arm] == [(e["id"], e["title"]) for e in ALSO]
+        assert arm[2] == ALSO[2]
+    assert ALSO[0]["fix"] == "hold them in memory."     # the check result is not changed in place
+    assert ab.LINE_STYLES["when-tool"] == "when"         # the tool arm reads the when arm's lines
+
+
+def test_a_restyle_that_changed_nothing_is_named_so_the_task_fails_closed(ab):
+    """An experiment cannot measure a change it never made."""
+    same = {"line": "x", "titles": "x", "when": "y"}
+    assert ab.unchanged_by_style(same, ["line", "titles", "when"]) == ["titles"]
+    assert ab.unchanged_by_style(same, ["line", "when"]) == []
+
+
+def test_each_arm_can_fetch_only_by_the_path_it_offers(ab, monkeypatch):
+    """With tools on only the named MCP servers load, so the Bash arms cannot reach okl_get and
+    the when-tool arm can reach nothing else; with tools off the one-shot command is unchanged."""
+    assert ab.generator_cmd("when-tool", "/x/c.json") == ab.GENERATOR_CMD == ab.generator_cmd()
+    monkeypatch.setattr(ab, "GENERATOR_TOOLS", "Bash(okl show:*)")
+    bash, tool = ab.generator_cmd("line"), ab.generator_cmd("when-tool", "/x/c.json")
+    assert "--strict-mcp-config" in bash and "'Bash(okl show:*)'" in bash and "--mcp-config" not in bash
+    assert tool.endswith("--strict-mcp-config --mcp-config /x/c.json --allowedTools mcp__okl__okl_get")
+    assert "Bash" not in tool
+
+
+def test_the_tool_config_carries_only_what_the_tool_needs(ab, monkeypatch, tmp_path):
+    """The config file is written per sample; the environment can hold secrets, so it is never
+    copied in."""
+    monkeypatch.setenv("SOME_API_KEY", "do-not-write")
+    path = ab.write_fetch_tool_config(str(tmp_path / "shim-t-when-tool-0.log"))
+    text = Path(path).read_text()
+    server = json.loads(text)["mcpServers"]["okl"]
+    assert "do-not-write" not in text
+    assert set(server["env"]) == {"OKL_SHIM_LOG", "OKL_BRIEFING_LOG", "OKL_DATABASE_URL", "PYTHONPATH"}
+    assert server["args"] == [str(ab.FETCH_SERVER)]
+
+
+def test_a_fetch_through_the_tool_counts_as_a_shim_fetch_does(ab, monkeypatch, tmp_path):
+    """Only a fetch that returned a lesson counts, by either path (review on #269)."""
+    import okl.client
+    spec = importlib.util.spec_from_file_location("fetch_tool", ab.FETCH_SERVER)
+    tool = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(tool)
+
+    class Store:
+        def get(self, id):
+            return {"id": id, "title": "T"} if id == "g" else None
+    monkeypatch.setattr(okl.client, "Client", Store)
+    log = tmp_path / "shim.log"
+    monkeypatch.setenv("OKL_SHIM_LOG", str(log))
+    assert json.loads(tool.okl_get("g"))["title"] == "T"
+    assert tool.okl_get("nope") == "no lesson with id 'nope'"
+    assert ab.fetched_ids(str(log)) == ["g"]
+    assert ab.fetch_tool_description() == tool.DESCRIPTION
+
+
+def test_the_when_tool_arm_runs_its_own_briefing_and_command(ab, monkeypatch, tmp_path):
+    """Its briefing from the tier headers, its command with a per-sample tool config."""
+    seen = {}
+
+    def fake_call(cmd, prompt, timeout, workdir, env=None):
+        if cmd == ab.JUDGE_CMD:
+            return json.dumps({"implemented": True, "defect_reproduced": False, "reason": "r"})
+        seen.update(cmd=cmd, prompt=prompt)
+        return "code"
+    monkeypatch.setattr(ab, "call", fake_call)
+    monkeypatch.setattr(ab, "GENERATOR_TOOLS", "Bash(okl show:*)")
+    headers = {a: f"BRIEFING {a}\n" for a in ab.TIER_ARMS}
+    rec, ok = ab.run_one(TASK, "when-tool", 0, briefed_header=None, brief_err="", timeout=5,
+                         workdir=str(tmp_path), tier_headers=headers)
+    assert ok and rec["fetched"] == [] and rec["fetched_governing"] is False
+    assert "BRIEFING when-tool" in seen["prompt"]
+    assert "--mcp-config" in seen["cmd"] and ".mcp.json" in seen["cmd"]
+
+
+def test_the_when_tool_arm_needs_tools_on(ab, monkeypatch):
+    """Without GENERATOR_TOOLS the other arms could fetch nothing, so the arms are refused."""
+    import argparse
+    with pytest.raises(argparse.ArgumentTypeError, match="GENERATOR_TOOLS"):
+        ab.parse_arms("line,when-tool")
+    monkeypatch.setattr(ab, "GENERATOR_TOOLS", "Bash(okl show:*)")
+    assert ab.parse_arms("line,titles,when,when-tool") == ["line", "titles", "when", "when-tool"]
+
+
+def test_a_fetch_path_that_did_not_open_refuses_the_run(ab, monkeypatch):
+    """A tool that never loaded would read as an agent that never fetched (§4ab)."""
+    asked = []
+    monkeypatch.setattr(ab, "GENERATOR_TOOLS", "Bash(okl show:*)")
+    monkeypatch.setattr(ab, "probe_fetch", lambda w, g, t, *, tool: asked.append(tool) or ("" if not tool else "no fetch"))
+    models = {"generator": None, "judge": None}
+    code, why = ab.startup_refusal(models, ["line", "when-tool"], ".", "g", 5)
+    assert code == 6 and "okl_get" in why and asked == [False, True]
+    assert ab.startup_refusal(models, ["line"], ".", "g", 5) is None
