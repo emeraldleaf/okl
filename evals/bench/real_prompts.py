@@ -92,6 +92,7 @@ prints its size; the rule for the line's content is in REPORT §4y.
 from __future__ import annotations
 
 import argparse
+import base64
 import dataclasses
 import hashlib
 import json
@@ -110,7 +111,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import run as bench
 from extract_prompts import HARNESS_PROJECTS
 
-from okl import core, decide
+from okl import core, decide, warm
 from okl.store import EDGE_RELS, Node, Store
 
 PRIVATE = bench.ROOT / "evals" / "bench" / "private"
@@ -121,7 +122,9 @@ CONTEXT_ARMS = ("prev", "prev-own", "reply-own")
 FIX_ARMS = ("fallback", "backfill", "backfill+fallback")
 SWEEP_ARMS = ("floor-3", "floor-5", "line2", "line2+backfill", "line1+backfill")
 TIER_ARMS = ("tiered", "tiered-full")
-ARMS = ("floor", "calibrated", *CONTEXT_ARMS, *FIX_ARMS, *SWEEP_ARMS, *TIER_ARMS)
+WARM_ARMS = ("warm", "warm-full")
+ARMS = ("floor", "calibrated", *CONTEXT_ARMS, *FIX_ARMS, *SWEEP_ARMS, *TIER_ARMS, *WARM_ARMS)
+WARM_VECTORS = PRIVATE / "warm-vectors.json"
 
 
 def _rows(name: str) -> list[dict]:
@@ -176,11 +179,39 @@ class Stores:
             self._backfill = {k: "\n".join(v) for k, v in by.items()}
         return self._backfill
 
-    def as_of(self, ms: int, *, backfilled: bool = False) -> Store:
+    def warm_vectors(self) -> dict[str, tuple[str, str]]:
+        """Every snapshot lesson's warm vectors with the written triggers in place, by id, as
+        (phrasings hash, base64 rows): embedded once by the model in this process and kept in
+        private/, re-embedded only where a lesson's phrasings changed."""
+        # Keyed on the model and its revision too: new model files with unchanged phrasings would
+        # otherwise reuse vectors the old model made (review on #300).
+        identity = {"model": warm.MODEL_ID, "revision": warm.model_revision()}
+        saved = json.loads(WARM_VECTORS.read_text()) if WARM_VECTORS.exists() else {}
+        cached = saved.get("vectors", {}) if saved.get("identity") == identity else {}
+        extra = self.backfill()
+        out: dict[str, tuple[str, str]] = {}
+        todo = []
+        for n in self.nodes:
+            m = dataclasses.replace(n, triggers=extra[n.id]) if n.id in extra else n
+            if not warm.phrasings(m):
+                continue
+            h = warm.phrasings_hash(m)
+            if cached.get(n.id, [None])[0] == h:
+                out[n.id] = (h, cached[n.id][1])
+            else:
+                todo.append((n.id, h, warm.phrasings(m)))
+        for node_id, h, texts in todo:
+            out[node_id] = (h, base64.b64encode(warm._pack(warm.embed(texts, "doc"))).decode())
+        if todo or saved.get("identity") != identity:
+            WARM_VECTORS.write_text(json.dumps({"identity": identity, "vectors": {k: list(v) for k, v in out.items()}}))
+        return out
+
+    def as_of(self, ms: int, *, backfilled: bool = False, vectors: bool = False) -> Store:
         """The store a prompt at `ms` was checked against, built once per distinct moment; with
-        `backfilled`, its recorded lessons carry the written triggers."""
+        `backfilled`, its recorded lessons carry the written triggers; with `vectors`, its
+        lessons carry their warm vectors (REPORT §4z)."""
         k = sum(1 for n in self.recorded if n.created_at < ms)
-        if (k, backfilled) not in self._cache:
+        if (k, backfilled, vectors) not in self._cache:
             keep = {n.id for n in self.nodes if n.id.startswith("seed:")} | {n.id for n in self.recorded[:k]}
             extra = self.backfill() if backfilled else {}
             s = Store("sqlite:///:memory:")
@@ -190,12 +221,16 @@ class Stores:
             for e in self.edges:
                 if e.src in keep and e.dst in keep:
                     s._impl.upsert_edge(e)
-            self._cache[(k, backfilled)] = s
-        return self._cache[(k, backfilled)]
+            for node_id, (h, rows) in (self.warm_vectors().items() if vectors else ()):
+                if node_id in keep:
+                    s.put_embedding(node_id, warm.MODEL_ID, h, base64.b64decode(rows))
+            self._cache[(k, backfilled, vectors)] = s
+        return self._cache[(k, backfilled, vectors)]
 
     def for_arm(self, prompt: dict, arm: str) -> Store:
         """The store an arm checks a prompt against."""
-        return self.as_of(millis(prompt["at"]), backfilled="backfill" in arm or arm in TIER_ARMS)
+        return self.as_of(millis(prompt["at"]), backfilled="backfill" in arm or arm in (*TIER_ARMS, *WARM_ARMS),
+                          vectors=arm in WARM_ARMS)
 
 
 def context_text(prompt: dict, arm: str) -> str:
@@ -248,9 +283,11 @@ def _fallback(on: bool) -> Iterator[None]:
 def brief(store: Store, prompt: dict, arm: str) -> list[str]:
     """The lesson ids an arm briefs for a prompt, checked against `store` (Stores.for_arm)."""
     repo = repo_of(prompt)
-    if arm in TIER_ARMS:
-        res = core.check(store, repo, prompt["text"], interests=None, decision="tiered")
-        named = [e["id"] for e in res["also_matched"]] if arm == "tiered" else []
+    if arm in (*TIER_ARMS, *WARM_ARMS):
+        res = core.check(store, repo, prompt["text"], interests=None, decision="tiered", warm=arm in WARM_ARMS)
+        if arm in WARM_ARMS and not res.get("warm") and core.briefing_terms(prompt["text"]):
+            sys.exit(f"ABORT: the warm arm ran without its model: {res.get('warm_unavailable')}")
+        named = [e["id"] for e in res["also_matched"]] if arm in ("tiered", "warm") else []
         return core.briefed_ids(res) + named
     if arm.startswith("floor-"):
         return core.briefed_ids(core.check(store, repo, prompt["text"], limit=int(arm.split("-")[1]), interests=None,
@@ -320,6 +357,7 @@ def cmd_pool(args: argparse.Namespace) -> None:
     stores = Stores()
     nodes = {n.id: n for n in stores.nodes}
     arms = args.arms or list(ARMS)
+    _model_for(arms)
     meta_path = PRIVATE / f"real-arms-{args.split}.json"
     if args.extend:
         meta = json.loads(meta_path.read_text())
@@ -400,6 +438,32 @@ def _arm_row(ids: list[str], b: dict[str, list[str]], before: dict[str, list[str
             "repeat": sum(len(set(b[pid]) & set(before[pid])) for pid in ids) / shown if shown else 0.0}
 
 
+def _warm_rule(meta: dict, verdict: dict[tuple[str, str], str | None], applies: dict[str, set[str]],
+               stats: dict[str, tuple[float, int, float, int]]) -> None:
+    """§4z's rule, written before any warm arm's pair was judged: the warm arm ships on when it
+    shows more applying lessons in full than tiered-full at a precision no lower than
+    tiered-full's lower 95% bound, reaches at least as many as tiered, and shows a lesson in
+    full on at most twice as many null prompts."""
+    if not {"warm", "warm-full", "tiered", "tiered-full"} <= set(stats):   # the rule reads all four
+        return
+    b = meta["briefed"]
+    tasks = [pid for k, pid in meta["chosen"] if k == "task"]
+    nulls = [pid for k, pid in meta["chosen"] if k == "null"]
+    full = {a: _arm_row(tasks, b[a], meta["before"], verdict, applies) for a in ("tiered-full", "warm-full")}
+    lo, _hi = bench.wilson(full["tiered-full"]["yes"], full["tiered-full"]["judged"])
+    null_any = {a: sum(1 for pid in nulls if b[a][pid]) for a in ("tiered-full", "warm-full")}
+    checks = {
+        "more in full": full["warm-full"]["found"] > full["tiered-full"]["found"],
+        f"in-full precision at least {lo:.1%}": stats["warm-full"][0] >= lo,
+        "reach at least tiered's": stats["warm"][1] >= stats["tiered"][1],
+        "null prompts at most twice tiered-full's": null_any["warm-full"] <= 2 * null_any["tiered-full"],
+    }
+    print(f"\nwarm rule: {'warm' if all(checks.values()) else 'not warm'} ("
+          + "; ".join(f"{k}: {'yes' if v else 'NO'}" for k, v in checks.items())
+          + f"; in full {full['warm-full']['found']} against {full['tiered-full']['found']}, "
+          f"null prompts {null_any['warm-full']} against {null_any['tiered-full']})")
+
+
 def cmd_tally(args: argparse.Namespace) -> None:
     """Join the judges' labels to the arms and print the receipt."""
     meta = json.loads((PRIVATE / f"real-arms-{args.split}.json").read_text())
@@ -456,6 +520,7 @@ def cmd_tally(args: argparse.Namespace) -> None:
         holds = stats["tiered"][1] >= stats["floor"][1]
         print(f"\ntier rule: {'tiered' if holds else 'not tiered'} (it reaches {stats['tiered'][1]} applying lessons "
               f"on task prompts, the floor {stats['floor'][1]}; the rule asks at least as many)")
+    _warm_rule(meta, verdict, applies, stats)
     if any(a in stats for a in SWEEP_ARMS):
         eligible = [a for a in stats if stats[a][2] <= 5]
         pick = min(eligible, key=lambda a: (-f1[a], stats[a][2]))
@@ -514,7 +579,14 @@ def cmd_misses(args: argparse.Namespace) -> None:
         print(f"  {v:4}  {k}")
 
 
-SIZE_ARMS = ("floor", "backfill", "tiered")
+SIZE_ARMS = ("floor", "backfill", "tiered", "warm")
+
+
+def _model_for(arms: list[str] | tuple[str, ...]) -> None:
+    """Load the warm model into this process once when an arm needs it (REPORT §4z): the arms
+    run core.check's own warm path, with the encoder here instead of the server."""
+    if any(a in WARM_ARMS or a == "warm" for a in arms):
+        warm.set_encoder(warm.load_model())
 
 
 def cmd_size(args: argparse.Namespace) -> None:
@@ -523,7 +595,8 @@ def cmd_size(args: argparse.Namespace) -> None:
     meta = json.loads((PRIVATE / f"real-arms-{args.split}.json").read_text())
     by_id = {p["id"]: p for label in ("task", "null") for p in prompts(label)}
     stores = Stores()
-    decision = {"floor": "floor", "backfill": "calibrated", "tiered": "tiered"}
+    _model_for(SIZE_ARMS)
+    decision = {"floor": "floor", "backfill": "calibrated", "tiered": "tiered", "warm": "tiered"}
     commit = subprocess.run(["git", "rev-parse", "--short=12", "HEAD"], capture_output=True, text=True,
                             cwd=bench.ROOT, check=False).stdout.strip()
     print(f"briefing size · split {args.split} · store {meta['store']} · code {commit} · "
@@ -535,7 +608,7 @@ def cmd_size(args: argparse.Namespace) -> None:
         for arm in SIZE_ARMS:
             sizes = sorted(len(core.render_check_for_agent(core.check(
                 stores.for_arm(by_id[pid], arm), repo_of(by_id[pid]), by_id[pid]["text"], interests=None,
-                decision=decision[arm]))) // 4 for pid in ids)
+                decision=decision[arm], warm=arm == "warm"))) // 4 for pid in ids)
             print(f"  {arm:9} {statistics.median(sizes):>8.0f} {statistics.mean(sizes):>8.0f} "
                   f"{sizes[9 * len(sizes) // 10]:>8} {sizes[-1]:>8}")
 

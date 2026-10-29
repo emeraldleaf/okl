@@ -1,0 +1,4 @@
+warm memory · 2026-10-27T05:29Z · code ada6f2abf336 · resident MB in a fresh process, after loading and after the n-th real prompt
+  arena     load      1      2      5     20    100    300
+  default    559   1659   1699   1628   1567   1576   1579
+  off        559   1678    628   1237   1254   1280   1312
