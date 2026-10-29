@@ -84,13 +84,14 @@ benchmark built to decide (REPORT §4w; the design and its evidence:
   rewrote every field and blanked those the pack does not set, so `files` and triggers added
   with `okl update` went, and with the files their proof, leaving drift nothing to check. After
   a re-seed that changed a lesson's files, the next one also dropped its stored check. Now the
-  pack owns what it says and its silence keeps the store's value; the stored check stays while
-  the files do; and a pack's `"verified": true` stamps only a lesson new to the store.
+  pack owns what it says, a field it sets empty (`"files": ""`) is cleared, and its silence keeps
+  the store's value, a status included; the stored check stays while the files do; and a pack's `"verified": true` stamps only a lesson new to the store.
 - **The drift snapshot refuses to lose rules** (#213). The store is per clone, so a teammate's
   `okl verify` rewrote `okl-drift.json` without the rules only another clone held, and they
   left CI's gate unannounced; a worktree with no `.okl/config.json` wrote one for a repo named
   after its folder. Every refresh now compares with the committed snapshot and refuses to drop
-  a rule this store does not hold, or to change its repo, naming them. Retiring a lesson still
+  a rule this store does not hold, or to change its repo, naming them; a committed snapshot it
+  cannot read is refused too, not read as none. Retiring a lesson still
   takes it out. `okl export --drift --allow-shrink` writes it anyway.
 - **The okl MCP server starts without your shell's PATH** (#206). `.mcp.json` named a bare
   `okl`, so a Claude Code session launched from an IDE had no okl tools ("Executable not found

@@ -769,6 +769,32 @@ def test_reseeding_keeps_what_the_pack_leaves_out_and_the_stored_check(store, tm
     assert store.get_node(nid).verified_at is None
 
 
+def test_a_pack_clears_what_it_sets_empty_and_keeps_what_it_leaves_out(store, tmp_path):
+    """#214, review on #310: keeping every empty field meant a pack could not stop governing
+    a file ("files": "") or drop triggers ([]), and the old stamp stayed with the restored
+    files. Left out keeps the store's value, a status included; set empty clears."""
+    from okl.seed import seed_from_file
+    class _C:  # minimal client shim over the in-memory store
+        repo = "r"
+        def record(self, **k): return core.record(store, **k)
+        def link(self, s, r, d): return core.link(store, s, r, d)
+    pack = tmp_path / "team.json"
+    nid = "seed:team:k"
+    def seed(**fields):
+        pack.write_text(json.dumps({"nodes": [{"key": "k", "type": "Rule", "scope": "org", "repo": "r",
+                                               "title": "Pin the linter", **fields}]}))
+        seed_from_file(_C(), str(pack))
+    seed(files="ci.yml", triggers=["the lint step fails after a release"])
+    core.verify(store, nid, "`true` exit 0 on commit abc123def456 @ 2026-10-29T03:00Z", commit="abc123def456" * 3 + "abcd")
+    core.update(store, nid, status="narrowed")
+
+    seed(files="ci.yml", triggers=["the lint step fails after a release"])   # status left out
+    assert store.get_node(nid).status == "narrowed"
+    seed(files="", triggers=[])                                                # set empty: cleared
+    n = store.get_node(nid)
+    assert not n.files and not n.triggers and n.verified_at is None
+
+
 def test_reseeding_keeps_verification_unless_the_governed_files_change(store, tmp_path):
     """#110: okl seed went through record(), which replaced the row, so every re-seed
     re-stamped each lesson as verified now and wiped its evidence and commit. A repo that
@@ -2481,6 +2507,29 @@ def test_a_snapshot_refresh_refuses_to_drop_rules_this_store_does_not_hold(tmp_p
     # Asked for, the rule leaves the gate.
     assert okl("export", "--drift", "--allow-shrink").returncode == 0
     assert "teammates-rule" not in snap_file.read_text()
+
+
+def test_a_snapshot_that_cannot_be_read_is_refused_not_read_as_none(tmp_path, monkeypatch):
+    """Review on #310: an unreadable committed snapshot read as no snapshot, so a refresh
+    from a partial store replaced it with no guard at all. Only an absent one is none."""
+    import subprocess
+
+    import pytest as _pytest
+
+    from okl.cli.verification import SnapshotShrinkError, _committed_snapshot
+    monkeypatch.chdir(tmp_path)
+    git = ["git", "-c", "user.email=t@t", "-c", "user.name=t"]
+    subprocess.run(["git", "init", "-q", "."], check=True)
+    snap = tmp_path / "okl-drift.json"
+    assert _committed_snapshot(snap) is None                       # none anywhere, no commits yet
+    snap.write_text('{"repo": "r", "rules": []}')
+    assert _committed_snapshot(snap) == {"repo": "r", "rules": []}   # on disk, not committed
+    snap.write_text("{ not json")
+    subprocess.run(["git", "add", "okl-drift.json"], check=True)
+    subprocess.run([*git, "commit", "-qm", "broken"], check=True)
+    snap.write_text('{"repo": "r", "rules": []}')                  # disk fixed, the commit is not
+    with _pytest.raises(SnapshotShrinkError, match="not valid JSON"):
+        _committed_snapshot(snap)
 
 
 def test_the_shrink_guard_reads_the_repo_and_the_rules_the_store_holds():

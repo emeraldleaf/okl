@@ -920,6 +920,9 @@ def record(store: Store, *, type: str, title: str, scope: str, repo: str | None 
     way to refine a lesson (okl review R1); `update` is that way now. An overwrite keeps
     the lesson's first creation date.
     """
+    # The fields the caller set, before normalising: a re-import keeps what its pack leaves
+    # out, and an explicit "" or [] is the pack clearing the field (#214, review on #310).
+    given = {k for k, v in locals().items() if k in _KEPT_ON_SILENCE and v is not None}
     if scope == "repo" and repo:
         scope = f"repo:{repo}"
     if status in ("superseded", "obsolete"):
@@ -944,7 +947,7 @@ def record(store: Store, *, type: str, title: str, scope: str, repo: str | None 
     # An explicit id names the lesson; omit it and the store mints a fresh random one.
     if id is not None:
         kw["id"] = id
-        _carry_over(store, kw, id, replace=replace, keep_verification=keep_verification)
+        _carry_over(store, kw, id, replace=replace, keep_verification=keep_verification, given=given)
     n = Node(**kw)
     return store.add_node(n)
 
@@ -958,12 +961,12 @@ class LessonExistsError(ValueError):
 
 
 # The fields a re-import keeps from the store when the pack leaves them out (#214).
-_KEPT_ON_SILENCE = ("body", "found_by", "ttl_days", "owner", "files", "symptom", "fix", "tags",
+_KEPT_ON_SILENCE = ("body", "status", "found_by", "ttl_days", "owner", "files", "symptom", "fix", "tags",
                     "applies_to", "aliases", "triggers")
 
 
 def _carry_over(store: Store, kw: dict[str, Any], node_id: str, *,
-                replace: bool, keep_verification: bool) -> None:
+                replace: bool, keep_verification: bool, given: frozenset[str] | set[str] = frozenset()) -> None:
     """Decide what a write to an existing id keeps from the lesson it overwrites.
 
     Refuses unless the overwrite is meant. Always keeps the first creation date. Keeps
@@ -991,10 +994,11 @@ def _carry_over(store: Store, kw: dict[str, Any], node_id: str, *,
         return
     # A re-import (okl seed, --refresh): the pack owns what it says, and its silence is not a
     # deletion. A field it leaves out that the store holds was set here (okl update --files, a
-    # /triggers draft), so it stays; re-seeding used to blank it, and files added locally went
-    # with their proof, leaving drift nothing to check (#214).
+    # /triggers draft, a status), so it stays; re-seeding used to blank it, and files added
+    # locally went with their proof, leaving drift nothing to check (#214). Left out, not
+    # empty: a pack that says "files": "" stops governing them (review on #310).
     for name in _KEPT_ON_SILENCE:
-        if kw.get(name) in (None, "") and getattr(old, name) not in (None, ""):
+        if name not in given and getattr(old, name) not in (None, ""):
             kw[name] = getattr(old, name)
     if not _same_files(old.files, kw.get("files")):
         kw.update(verified_at=None, verified_commit=None, verified_by=old.verified_by)

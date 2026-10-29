@@ -414,20 +414,36 @@ class SnapshotShrinkError(Exception):
 
 
 def _committed_snapshot(path: Path) -> dict | None:
-    """The snapshot CI reads: the committed copy when git tracks it (an earlier refresh may
-    already have changed the file on disk), else the file itself; None when there is neither."""
+    """The snapshot CI reads: the committed copy (an earlier refresh may already have changed
+    the file on disk), else the file itself when HEAD has none or there is no git; None only
+    when there is no snapshot at all. One that exists and cannot be read raises
+    SnapshotShrinkError: read as none, it let a partial store overwrite it (review on #310)."""
     import json
     import subprocess
     try:
         r = subprocess.run(["git", "-C", str(path.parent), "show", f"HEAD:./{path.name}"],
                            capture_output=True, text=True, timeout=10)
-        text = r.stdout if r.returncode == 0 else (path.read_text() if path.exists() else None)
-    except (OSError, subprocess.TimeoutExpired):
-        text = path.read_text() if path.exists() else None
+    except subprocess.TimeoutExpired as e:
+        raise SnapshotShrinkError(f"git did not answer for the committed {path.name}") from e
+    except OSError:
+        r = None   # no git here: the file on disk is all there is
+    absent = ("does not exist in", "exists on disk, but not in", "not a git repository",
+              "invalid object name", "bad revision")
+    if r is not None and r.returncode == 0:
+        text, where = r.stdout, "committed"
+    elif r is None or any(a in r.stderr for a in absent):
+        if not path.exists():
+            return None
+        text, where = path.read_text(), "on disk"
+    else:
+        raise SnapshotShrinkError(f"the committed {path.name} could not be read ({r.stderr.strip()[:120]})")
     try:
-        return json.loads(text) if text else None
-    except ValueError:
-        return None
+        snap = json.loads(text)
+    except ValueError as e:
+        raise SnapshotShrinkError(f"the {where} {path.name} is not valid JSON") from e
+    if not isinstance(snap, dict):
+        raise SnapshotShrinkError(f"the {where} {path.name} is not a snapshot")
+    return snap
 
 
 def _shrink_problem(old: dict | None, new: dict, held: set[str]) -> str | None:

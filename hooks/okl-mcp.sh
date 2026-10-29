@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:38feeeb18bdd489b32df87bb790cfc17aa4e16c2c36f65d696f4f74577665e1f
+# okl-fingerprint: sha256:a571cf449aab5e2fe5b1e003877f4ed67996a0b862aa0a53948252835e8d5fac
 # The okl MCP server, started the way the hooks start okl (#206). `.mcp.json` named a bare
 # `okl`, so a Claude Code session launched from an IDE, with PATH=/usr/bin:/bin and none of
 # the directories uv tool or pipx install into, failed with "Executable not found in $PATH:
@@ -21,6 +21,7 @@ fi
 # A layer counts only if its command can run; a pinned value is a path, or a python path
 # followed by " -m okl" whose python can still import okl.
 OKL=()
+okl_layer=0
 resolve_note=""
 try_pinned() {
   case "$1" in
@@ -29,33 +30,42 @@ try_pinned() {
     *) command -v "$1" >/dev/null 2>&1 && OKL=("$1") ;;
   esac
 }
+# Sets OKL and okl_layer to the first layer from $1 on whose command exists.
 resolve_okl() {
-  if [ -n "${OKL_BIN:-}" ]; then
-    try_pinned "$OKL_BIN" && return 0
+  local from="${1:-1}"
+  OKL=()
+  if [ "$from" -le 1 ] && [ -n "${OKL_BIN:-}" ]; then
+    if try_pinned "$OKL_BIN"; then okl_layer=1; return 0; fi
     resolve_note="OKL_BIN=$OKL_BIN cannot be run; "
   fi
   local d="$PWD"
-  while [ "$d" != "/" ]; do
+  while [ "$from" -le 2 ] && [ "$d" != "/" ]; do
     if [ -f "$d/.okl/config.json" ]; then
       local bin
       bin=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("okl_bin") or "")' \
             "$d/.okl/config.json" 2>/dev/null || true)
       if [ -n "$bin" ]; then
-        try_pinned "$bin" && return 0
+        if try_pinned "$bin"; then okl_layer=2; return 0; fi
         resolve_note="${resolve_note}the okl_bin pinned in $d/.okl/config.json ($bin) cannot be run; "
       fi
       break
     fi
     d=$(dirname "$d")
   done
-  if command -v okl >/dev/null 2>&1; then OKL=(okl); return 0; fi
-  if python3 -c "import okl" >/dev/null 2>&1; then OKL=(python3 -m okl); return 0; fi
+  if [ "$from" -le 3 ] && command -v okl >/dev/null 2>&1; then OKL=(okl); okl_layer=3; return 0; fi
+  if [ "$from" -le 4 ] && python3 -c "import okl" >/dev/null 2>&1; then OKL=(python3 -m okl); okl_layer=4; return 0; fi
   return 1
 }
 
-if ! resolve_okl; then
-  echo "okl MCP server: no okl to run (${resolve_note}none on PATH, and python3 cannot import okl)." >&2
-  echo "Run \`okl init\` from a shell where okl works, which pins its path, or set OKL_BIN." >&2
-  exit 1
-fi
-exec "${OKL[@]}" mcp
+# A command can exist and still not start: a pinned script whose interpreter was removed with
+# its venv. exec cannot come back to try another, so each is started once first, and one
+# that fails gives way to the next layer, as in the prompt hook (review on #310).
+while resolve_okl $((okl_layer + 1)); do
+  if "${OKL[@]}" --version >/dev/null 2>&1; then
+    exec "${OKL[@]}" mcp
+  fi
+  resolve_note="${resolve_note}${OKL[*]} did not start; "
+done
+echo "okl MCP server: no okl to run (${resolve_note}none on PATH, and python3 cannot import okl)." >&2
+echo "Run \`okl init\` from a shell where okl works, which pins its path, or set OKL_BIN." >&2
+exit 1

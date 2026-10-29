@@ -1064,9 +1064,9 @@ def test_the_mcp_server_starts_without_the_shells_path(tmp_path):
     (proj / ".okl").mkdir(parents=True); elsewhere.mkdir()
     (proj / ".claude" / "hooks").mkdir(parents=True)
     shutil.copy2(root / "src" / "okl" / "scaffold" / "hooks" / "okl-mcp.sh", proj / ".claude" / "hooks")
-    # An okl that is on no PATH: it says what it was asked and from where.
+    # An okl that is on no PATH: it starts (--version), and says what it was asked and from where.
     fake = tmp_path / "bin" / "okl"; fake.parent.mkdir()
-    fake.write_text('#!/bin/sh\necho "args=$* cwd=$PWD"\n'); fake.chmod(0o755)
+    fake.write_text('#!/bin/sh\n[ "$1" = --version ] && exit 0\necho "args=$* cwd=$PWD"\n'); fake.chmod(0o755)
     (proj / ".okl" / "config.json").write_text(json.dumps({"repo": "p", "okl_bin": str(fake)}))
     env = {"HOME": str(tmp_path), "PATH": "/usr/bin:/bin", "CLAUDE_PROJECT_DIR": str(proj)}
 
@@ -1076,6 +1076,13 @@ def test_the_mcp_server_starts_without_the_shells_path(tmp_path):
 
     # The entry okl init writes, as Claude Code spawns it: the pinned okl, in the project.
     r = start(MCP_ENTRY)
+    assert r.returncode == 0 and r.stdout.strip() == f"args=mcp cwd={proj}", (r.stdout, r.stderr)
+    # A pin that exists but cannot start (its interpreter went with its venv) gives way to the
+    # next layer, here okl on PATH, as in the prompt hook (review on #310).
+    stale = tmp_path / "old-venv" / "okl"; stale.parent.mkdir()
+    stale.write_text("#!/gone/python\n"); stale.chmod(0o755)
+    (proj / ".okl" / "config.json").write_text(json.dumps({"repo": "p", "okl_bin": str(stale)}))
+    r = start(MCP_ENTRY, PATH=f"/usr/bin:/bin:{fake.parent}")
     assert r.returncode == 0 and r.stdout.strip() == f"args=mcp cwd={proj}", (r.stdout, r.stderr)
     # No okl anywhere: it fails, and says how to fix it.
     (proj / ".okl" / "config.json").write_text(json.dumps({"repo": "p"}))
