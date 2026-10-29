@@ -78,9 +78,9 @@
       "title": "A test that imports an undeclared package passes only where that package happens to be installed",
       "scope": "org",
       "files": "tests/",
-      "verified_at": 1793277034447,
-      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' on commit deb200f8c840 @ 2026-10-29T12:30Z",
-      "verified_commit": "deb200f8c840fdf076773825e3d6cedd8ee0e34b"
+      "verified_at": 1793277844950,
+      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' on commit 944de5f32fee @ 2026-10-29T12:44Z",
+      "verified_commit": "944de5f32fee20ee622f9976d7b2fbedf02e5d70"
     },
     {
       "id": "n_9ba48d85ed19",
