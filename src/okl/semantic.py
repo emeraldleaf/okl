@@ -14,8 +14,8 @@ comes with the model). After reading the vectors out of the store (15 ms at 10,0
 92 ms at 50,000), joining them into the matrix and the product take about 4 ms at 10,000 and
 15 ms at 50,000. The pure-Python fallback below exists for a process without numpy (the test
 suite's stub model) and costs 7 ms at 300 records and 232 ms at 10,000; it is not the path a
-hybrid install runs. The figures first quoted here (2026-10-23: under a millisecond and 3 ms)
-timed the product alone, not the search a check runs (review on #300). Per process the model load is the fixed cost, 0.8 s
+hybrid install runs. The figures first quoted here (2026-10-23) timed the product alone, not
+the search a check runs (REPORT §4q's erratum). Per process the model load is the fixed cost, 0.8 s
 from the local cache, paid once per `okl check` because a hook is a new process each prompt.
 Past roughly 100,000 vectors (a 200 MB matrix) the next tier is an approximate index on the
 same table's data, sqlite-vec locally and pgvector on the shared service; that is the

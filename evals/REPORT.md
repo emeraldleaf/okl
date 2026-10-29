@@ -1445,7 +1445,7 @@ arm's configuration when it is on, and the arm does not become the default.
 **What the arm buys.** One more held-out paraphrase found of eight (2 → 3) and one more of
 the probe's own (1 → 2); nothing on tickets or bug reports; one record more on two of six
 short prompts; 0.8 s per prompt for the model load (the search itself is under a millisecond
-with numpy) and a 249 MB model on disk. The two vectorless arms bought more: symptoms took the
+with numpy) and a 249 MB model on disk (both corrected in the erratum below). The two vectorless arms bought more: symptoms took the
 probe's own bug-report row from 2 to 3 of 8 (§4o), and aliases took it from 3 to 8 of 8 and
 added one held-out ticket and one held-out paraphrase (§4p; corrected 2026-10-26, this sentence
 had given the alias gain to symptoms). The static model's cosines sit in a narrow band (true pairs 0.30
@@ -1458,7 +1458,7 @@ the default.
 ticket and bug report held under linear and fell under RRF, which was not predicted; the
 probe's own paraphrase row rose under linear, as predicted; precision rose by one on two
 prompts, which the falsifier allowed. The pre-registration's "about 30 MB" was another model's
-figure: this one is 249 MB on disk.
+figure: this one is 249 MB on disk (131 MB as okl fetches it: the erratum below).
 
 **What ships.** `okl embed`; `okl check --hybrid` (linear fusion at the 0.40 line when the
 flag is bare; `rrf` stays selectable for measurement), off by default; a numpy matrix product

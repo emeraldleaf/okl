@@ -85,15 +85,13 @@ jobs:
       - name: Architecture — import-linter
         run: lint-imports
 
-      # A Postgres test that skips here is a failure: the server above exists so they run.
+      # A Postgres test without the server's URL fails here rather than skips: the server
+      # above exists so they run (tests/test_okl.py's _postgres_url).
       - name: Tests (with the coverage ratchet, and Postgres)
         env:
           OKL_TEST_POSTGRES_URL: postgresql://postgres@localhost:5432/okl
-        run: |
-          pytest -q -rs --cov=okl | tee "$RUNNER_TEMP/pytest.log"
-          if grep -q "to run against a real Postgres" "$RUNNER_TEMP/pytest.log"; then
-            echo "a Postgres test skipped" >&2; exit 1
-          fi
+          OKL_TEST_POSTGRES_REQUIRED: "1"
+        run: pytest -q --cov=okl
 
       - name: Diagram figures trace to committed receipts
         run: ./ci/check-diagram-figures.sh
@@ -142,7 +140,13 @@ jobs:
               "@anthropic-ai/claude-code-linux-x64@$CLAUDE_CODE_VERSION"
             CLAUDE_BIN="$RUNNER_TEMP/claude/node_modules/@anthropic-ai/claude-code-linux-x64/claude"
             chmod +x "$CLAUDE_BIN"
-            REVIEW_CMD="$CLAUDE_BIN -p --model sonnet --max-turns 40 --tools Read,Grep,Glob --add-dir $GITHUB_WORKSPACE"
+            # Read-only git, so it can check that a receipt's commit is reachable: allowed by a
+            # settings file, since the command line is word-split; GIT_DIR points the clean
+            # room's git at the checkout. Any other shell command is refused in -p mode.
+            printf '%s' '{"permissions":{"allow":["Bash(git log:*)","Bash(git show:*)","Bash(git merge-base:*)","Bash(git branch:*)","Bash(git tag:*)","Bash(git rev-parse:*)"]}}' \
+              > "$RUNNER_TEMP/review-settings.json"
+            export GIT_DIR="$GITHUB_WORKSPACE/.git" GIT_WORK_TREE="$GITHUB_WORKSPACE"
+            REVIEW_CMD="$CLAUDE_BIN -p --model sonnet --max-turns 40 --tools Read,Grep,Glob,Bash --settings $RUNNER_TEMP/review-settings.json --add-dir $GITHUB_WORKSPACE"
           fi
           # The knowledge layer's briefing for this change, from the seed packs in a store that
           # lives for this step; this repo's own recorded lessons stay on the maintainer's

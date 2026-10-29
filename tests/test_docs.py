@@ -312,20 +312,28 @@ def test_the_never_reproduced_sentence_counts_match_the_receipts():
             f"README should quote {_PROSE[task]} as {bh} of {bn} unbriefed and {rh} of {rn} briefed"
 
 
-# Every size or latency the docs publish, with the receipt line that holds it: the figure is
-# the receipt's number at the precision the doc quotes. "95 ms" once cited a receipt that said
-# 170.7, and "249 MB" and "about 80 MB" were never what okl's loaders fetch (review on #300).
-# A new figure fails until it is named here; a name whose figure left the docs fails too.
+# Every size or latency the docs publish, with each receipt line it stands for: the figure is
+# every such line's number at the precision the doc quotes. "95 ms" once cited a receipt that
+# said 170.7, and "249 MB" and "about 80 MB" were never what okl's loaders fetch (review on
+# #300). One string can stand for two measurements ("15 ms" is the read at 10,000 and the search
+# at 50,000), so both are held (CI reviewer on #307). A new figure fails until it is named
+# here; a name whose figure left the docs fails too.
+_SCALE = "semantic-scale-20261029-1206.txt"
+_MODELS = "model-files-20261029-1207.txt"
 DOC_FIGURES = {
-    "131 MB": ("model-files-20261029-1207.txt", r"potion-retrieval-32M.*?([\d.]+) MB"),
-    "92 MB": ("model-files-20261029-1207.txt", r"ms-marco-MiniLM-L-6-v2.*?([\d.]+) MB"),
-    "4 ms": ("semantic-scale-20261029-1206.txt", r"10,000 vectors:.*?search after the read\s+([\d.]+) ms"),
-    "15 ms": ("semantic-scale-20261029-1206.txt", r"50,000 vectors:.*?search after the read\s+([\d.]+) ms"),
-    "92 ms": ("semantic-scale-20261029-1206.txt", r"50,000 vectors: read\s+([\d.]+) ms"),
+    "131 MB": [(_MODELS, r"potion-retrieval-32M.*?([\d.]+) MB")],
+    "92 MB": [(_MODELS, r"ms-marco-MiniLM-L-6-v2.*?([\d.]+) MB")],
+    "4 ms": [(_SCALE, r"10,000 vectors:.*?search after the read\s+([\d.]+) ms")],
+    "15 ms": [(_SCALE, r"10,000 vectors: read\s+([\d.]+) ms"),
+              (_SCALE, r"50,000 vectors:.*?search after the read\s+([\d.]+) ms")],
+    "92 ms": [(_SCALE, r"50,000 vectors: read\s+([\d.]+) ms")],
+    "7 ms": [(_SCALE, r"300 vectors:.*?without numpy\s+([\d.]+) ms")],
+    "232 ms": [(_SCALE, r"10,000 vectors:.*?without numpy\s+([\d.]+) ms")],
 }
-# Bounds, not measurements: a figure the docs set as a limit or a trigger, with why.
+# Not measurements: a bound the docs set, or arithmetic, with why.
 THRESHOLDS = {
     "100 ms": "the retrieval ADR's trigger for the next index tier: a search slower than this",
+    "200 MB": "100,000 vectors of 512 float32s: arithmetic, the size at which that tier is due",
 }
 FIGURE = re.compile(r"(?<![\w.])(\d[\d,]*(?:\.\d+)?) ?(ms|MB|GB)\b")
 
@@ -335,7 +343,9 @@ def _published_docs() -> list[Path]:
     found the ADR still quoting a retracted figure, #307) and the overview sheets. docs/posts/
     are dated write-ups and the REPORT is the receipts' own narrative, so neither is held here."""
     docs = [p for p in sorted((ROOT / "docs").rglob("*.md")) if "posts" not in p.parts]
-    return [ROOT / "README.md", *docs, *sorted((ROOT / "docs" / "overview").glob("*.html"))]
+    # The package's docstrings and comments too: they cite receipts as the docs do (#307).
+    return [ROOT / "README.md", *docs, *sorted((ROOT / "docs" / "overview").glob("*.html")),
+            *sorted((ROOT / "src" / "okl").rglob("*.py"))]
 
 
 def test_every_size_and_latency_the_docs_publish_is_its_receipts_number():
@@ -348,12 +358,13 @@ def test_every_size_and_latency_the_docs_publish_is_its_receipts_number():
     unnamed = {fig: doc for fig, doc in found.items() if fig not in DOC_FIGURES and fig not in THRESHOLDS}
     assert not unnamed, f"name each figure's receipt line in DOC_FIGURES: {unnamed}"
     assert set(DOC_FIGURES) <= set(found), f"no longer in the docs: {set(DOC_FIGURES) - set(found)}"
-    for fig, (receipt, pattern) in DOC_FIGURES.items():
-        m = re.search(pattern, (ROOT / "evals" / "results" / receipt).read_text())
-        assert m, f"{receipt} has no line for {fig}"
+    for fig, lines in DOC_FIGURES.items():
         quoted = fig.split()[0].replace(",", "")
         places = len(quoted.split(".")[1]) if "." in quoted else 0
-        assert round(float(m.group(1)), places) == float(quoted), f"{fig}: {receipt} says {m.group(1)}"
+        for receipt, pattern in lines:
+            m = re.search(pattern, (ROOT / "evals" / "results" / receipt).read_text())
+            assert m, f"{receipt} has no line for {fig}"
+            assert round(float(m.group(1)), places) == float(quoted), f"{fig}: {receipt} says {m.group(1)}"
 
 
 # Verdicts whose own reason says the defect is absent while their boolean says reproduced: the
