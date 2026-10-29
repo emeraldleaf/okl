@@ -1463,7 +1463,7 @@ figure: this one is 249 MB on disk (131 MB as okl fetches it: the erratum below)
 **What ships.** `okl embed`; `okl check --hybrid` (linear fusion at the 0.40 line when the
 flag is bare; `rrf` stays selectable for measurement), off by default; a numpy matrix product
 over every vector that holds to roughly 100,000 of them (under a millisecond at 10,000, 3 ms
-at 50,000, plus 14 and 49 ms to read them; `okl.semantic`'s docstring has the measurements
+at 50,000, plus 14 and 49 ms to read them, all corrected in the erratum below; `okl.semantic`'s docstring has the measurements
 and the next tier); and the ADR amendment. The hook never reaches the network for any of it.
 
 *Erratum (2026-10-29, review of #300).* Two of these figures were not what okl does:
