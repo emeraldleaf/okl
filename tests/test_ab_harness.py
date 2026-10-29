@@ -401,6 +401,29 @@ def test_the_tier_arms_differ_only_in_where_the_governing_lesson_is(ab, monkeypa
     assert "rotate webhook signing secrets" not in line.split("### Also matched")[0]
 
 
+def test_the_full_arm_keeps_the_natural_order_when_the_lesson_is_already_in_full(ab, monkeypatch):
+    """Moving the governing lesson to the end of its section reordered the routed actions, so
+    the full arm was not the natural briefing for three of §4aa's tasks (review on #303)."""
+    import dataclasses
+    from types import SimpleNamespace
+
+    from okl import core
+    from okl.store import Store
+    s = Store("sqlite:///:memory:")
+    core.record(s, type="Rule", scope="org", id="g", title="rotate webhook signing secrets on schedule")
+    core.record(s, type="Rule", scope="org", id="h", title="webhook signing secrets rotate with a grace window")
+    task = "rotate the webhook signing secrets"
+    natural = core.check(s, repo="r", task=task, decision="tiered")
+    assert core.briefed_ids(natural)[:2] == ["g", "h"]
+
+    def fake_run(cmd, **_kw):
+        out = natural if "check" in cmd else dataclasses.asdict(s.get_node("g"))
+        return SimpleNamespace(returncode=0, stdout=json.dumps(out), stderr="")
+    monkeypatch.setattr(ab.subprocess, "run", fake_run)
+    full, _line = ab.tier_briefings(task, "g", 5)
+    assert full == core.render_check_for_agent(natural)
+
+
 def test_the_run_refuses_to_measure_another_checkouts_code(ab, monkeypatch, tmp_path):
     """An editable install points `python -m okl` at the checkout it was installed from, so a run
     from a worktree without PYTHONPATH measured another tree's code (review on #303). It passes

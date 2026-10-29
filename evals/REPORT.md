@@ -2732,7 +2732,8 @@ prediction 2. All three predictions hold both as recorded and as corrected.
 - **Full is not always the natural briefing.** For `idor_endpoint`, `judge_summary` and
   `rate_limiter`, whose lesson the natural briefing already shows in full, the full arm moved it
   to the end of its section, so their full briefing is not the natural one. For `spa_tokens`,
-  `react_fetch` and `exit_code_trust` the two are the same.
+  `react_fetch` and `exit_code_trust` the two are the same. The harness now keeps the natural
+  briefing whenever the lesson is already in full.
 - **Line against full is noise:** 1 against 0 corrected (1 against 2 as recorded). The run
   supports "a lesson named in one line kept its effect here", not "a line works as well as the
   lesson in full".

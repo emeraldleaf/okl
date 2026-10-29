@@ -152,7 +152,12 @@ def tier_briefings(task: str, governing: str, timeout: int) -> tuple[str, str]:
     def placed(in_full: bool) -> str:
         out = copy.deepcopy(result)
         # Every bucket okl has, from okl itself: a copied list would skip a new one (review on #303).
-        buckets = {k: [x for x in out.get(k) or [] if x.get("id") != governing] for k in core._bucket_by_type([])}
+        keys = core._bucket_by_type([])
+        if in_full and any(x.get("id") == governing for k in keys for x in out.get(k) or []):
+            # Already in full: the natural briefing as okl rendered it. Moving the lesson to the
+            # end of its section reordered the routed actions too (review on #303).
+            return core.render_check_for_agent(out)
+        buckets = {k: [x for x in out.get(k) or [] if x.get("id") != governing] for k in keys}
         also = [e for e in out.get("also_matched") or [] if e.get("id") != governing]
         if in_full:
             for k, recs in core._bucket_by_type([node]).items():
