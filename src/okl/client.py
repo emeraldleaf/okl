@@ -17,7 +17,7 @@ from urllib import request as _req
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode
 
-from . import core, decide, drift
+from . import core, decide, drift, warm
 from .store import Node, Store
 
 CONFIG_DIR = ".okl"
@@ -122,6 +122,39 @@ def rerank_setting(env: str | None, configured: Any) -> bool:
     raise ValueError(f"rerank must be on or off, not {raw!r}")
 
 
+def warm_setting(env: str | None, configured: Any) -> bool | None:
+    """Whether `check` asks the warm model (REPORT §4z): OKL_WARM wins over the config's `warm`;
+    on/1/true mean yes, off/0/false mean no, and unset (or empty) means None, the default: on
+    for a store `okl warm index` has embedded, where the model can load (§4z's decision)."""
+    raw = env if env not in (None, "") else configured
+    if raw in (None, ""):
+        return None
+    if raw in (False, "0", "off", "false", "none", "no"):
+        return False
+    if raw in (True, "1", "on", "true", "yes"):
+        return True
+    raise ValueError(f"warm must be on or off, not {raw!r}")
+
+
+def _revive_warm(note: str) -> str:
+    """What the person is told after a prompt found no warm server, having started one for the
+    next prompt when it should; this one does not wait for a model to load (REPORT §4z). A
+    stopped server stays stopped, one loading or failing is not started again, and a start that
+    fails is said, never raised: the briefing is already made (review on #300)."""
+    if warm.stopped():
+        return "stopped with `okl warm stop`; `okl warm start` resumes it"
+    if not warm.installed():
+        return f"it needs its extra: pip install '{warm.EXTRA}'"
+    try:
+        state = warm.revive()
+    except (OSError, warm.WarmUnavailableError) as e:
+        return f"{note}; starting it failed: {e}"
+    return {"started": "it was not running, and is starting now for the next prompt",
+            "loading": "it is still loading (the first start downloads it); the next prompt uses it",
+            "failed": f"it did not come up after its last start; see {warm.log_path()}, "
+                      "or run `okl warm start --wait 60`"}[state]
+
+
 def decision_setting(env: str | None, configured: Any) -> str:
     """How `check` turns candidates into a briefing (#291, REPORT §4w, §4y): OKL_DECISION wins
     over the config's `decision`; decide.DEFAULT ("tiered": the calibrated line's lessons in
@@ -147,6 +180,7 @@ class Client:
         self.near_misses = False   # the near-miss arm (REPORT §4s): `okl check --near-misses`
         self.rerank = rerank_setting(os.environ.get("OKL_RERANK"), self.config.get("rerank"))
         self.decision = decision_setting(os.environ.get("OKL_DECISION"), self.config.get("decision"))
+        self.warm = warm_setting(os.environ.get("OKL_WARM"), self.config.get("warm"))
         self._store: Store | None = None
 
     @property
@@ -305,14 +339,20 @@ class Client:
                 result["decision_unavailable"] = (f"the service answered by the {answered} decision, not "
                                                   f"{self.decision}: it predates it; upgrade the service")
             result["decision"] = answered
+            if self.warm:
+                # The warm model is this machine's process; a shared service has none and its
+                # request has no such field, so say so rather than brief as if it ran (review on #300).
+                result.update(warm=False, warm_unavailable="a shared service does not run the warm model")
         else:
             kw: dict[str, Any] = {"interests": self.interests, "hybrid": self.hybrid, "index": self.index,
                                   "near_misses": self.near_misses, "rerank": self.rerank,
-                                  "decision": self.decision}
+                                  "decision": self.decision, "warm": self.warm}
             if limit is not None:
                 kw["limit"] = limit
             store = self._local_store()
             result = core.check(store, repo, task, **kw)
+            if result.get("warm_reason") == "not_running":
+                result["warm_unavailable"] = _revive_warm(result["warm_unavailable"])
         # Mark briefed lessons whose code changed since their last check (#93). Done here,
         # not in core, because only the client has this repo's checkout: a shared service
         # answering /check has no git history to compare against.

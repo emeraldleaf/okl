@@ -69,18 +69,27 @@ fuller than what people type, so on real prompts the line alone trades recall fo
 lesson it shows is about 1.7 times as likely to apply, but it surfaced about a third of what
 the original did. So the default names the rest in a line each. It reaches more applying
 lessons than the original, at about half its size: a median of 721 tokens a prompt against
-1,424 (`real-20261026-heldout-size.txt`). Whether an agent acts on a one-line entry as it does
-on a lesson shown in full is not yet measured.
+1,424 (`real-20261026-heldout-size.txt`). An agent acted on a lesson named in one line about as
+it did on the lesson in full, without opening it (REPORT §4aa). That rests on the one task where
+nothing else showed the same fix, so it is a small result, not a settled one.
 
 A team's own lessons need triggers to reach the first tier: `okl triggers` lists the ones that
 have none, `/triggers` drafts them in Claude Code, and the briefing says how many are missing.
 `--decision calibrated` gives the line alone, the smallest briefing; `--decision floor` keeps
 the original rule, every match in full.
 
-**What comes next.** A small embedding model (EmbeddingGemma-300m), added to the word count
-rather than replacing it, took held-out recall from 90.0% to **95.2%**, most of it on
-paraphrases. But the prompt hook starts a new process for every prompt, and loading the model
-there costs about two seconds each time. So it waits for a process that keeps the model loaded.
+**A warm model, once you index a store.** A small embedding model (EmbeddingGemma-300m), added to the word
+count rather than replacing it, took held-out recall from 90.0% to **95.2%** on the benchmark
+(at full precision; the int8 file `okl warm` runs measured 92.0% against 92.4% on the selection split),
+most of it on paraphrases. The prompt hook starts a new process for every prompt, and loading
+the model there costs a second or two, so `okl warm` keeps it loaded in a local process instead
+(int8, a 309 MB file). On real held-out prompts it showed 46 applying lessons in full against 38,
+at 23.0% precision against 17.8%, and named 107 against 102, adding a median of 114 ms to a prompt
+(REPORT §4z). It holds about 1.6 GB of memory from startup (it runs one inference before it serves), more than the
+bound set before measuring. So it runs only where you ask for it: once `okl warm index` has
+embedded a local store's lessons (the `warm` extra), its briefings use it, and `"warm": false` in
+`.okl/config.json` or `OKL_WARM=0` turns it off. That default is a decision recorded in §4z, not a
+passed prediction.
 
 **What did not earn a place**, each measured on the same benchmark or settled by the research
 read for it: a cross-encoder reranker, a knowledge graph or ontology, generating text at query
@@ -229,7 +238,7 @@ Such a prompt is now briefed nothing, under either decision.
 
 | candidate | what was measured or read | verdict |
 |---|---|---|
-| an embedding model in the hook | seven local models (REPORT §4w). Added to the word count, the best, EmbeddingGemma-300m, took held-out recall from 90.0% to 95.2%, mostly paraphrases. Loading it in a new process costs about 2 s, on every prompt | a measured win kept out of the hook: it waits for a process that keeps the model loaded |
+| an embedding model in the hook | seven local models (REPORT §4w). Added to the word count, the best, EmbeddingGemma-300m, took held-out recall from 90.0% to 95.2%, mostly paraphrases. Loading it in a new process costs about 2 s, on every prompt | on once a store is indexed: `okl warm` keeps it loaded in a local process, about 1.6 GB (REPORT §4z) |
 | a cross-encoder reranker | two current cross-encoders as the decision: 22.5% and 31.3% recall at the line that holds subject-less prompts near 5%, at 1.2 and 2.5 s a prompt (REPORT §4w). A reranker's scores rank one prompt's candidates; they are not comparable across prompts | off: it cannot tell when to brief nothing, and costs over a second per prompt |
 | a knowledge graph or ontology | independent evaluations find graph retrieval ties or loses on single-hop lookups and abstains worse on queries with no answer (on MultiHop-RAG's queries with no answer in the corpus, plain RAG was right 96.01% of the time against 85.71% for HippoRAG 2 and 19.27% for community GraphRAG's global mode, and on NQ plain RAG scored 64.78 F1 against HippoRAG 2's 61.03 [7]; HippoRAG 2's own gains concentrate on multi-hop sets (2Wiki recall@5 90.4 against 76.5; NQ 78.0 against 75.4) [8]; on MemoryAgentBench's accurate-retrieval tasks BM25 averaged 60.5, above GraphRAG 40.9, Zep 37.5 and Mem0 32.6 [9]); okl's own stack-tag classification hid relevant lessons and measured worse (REPORT §4d) | not built; okl's typed relations (a gate *catches* a defect, a rule *supersedes* another) are used after ranking, never to find lessons |
 | query-time generation (HyDE, rewriting) | needs a language model on every prompt, seconds on a laptop; HyPE's comparison found query-time HyDE gained nothing where write-time expansion gained a lot (on a single-topic corpus of 1,324 chunks and 80 questions, its retriever's claim recall at 10 went from 36.8 to 81.4, while generating a hypothetical answer at query time (HyDE) gave 36.4; across its six datasets the gains did not reach significance at 0.05 [1]) | not built |

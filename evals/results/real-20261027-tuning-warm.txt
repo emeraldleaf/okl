@@ -1,0 +1,54 @@
+real prompts · split tuning (seed 11) · store ee5406f19cf9 · code 815a148bf124
+2269 pooled pairs, labels missing 0
+
+task prompts: 120 person-typed · 48 with an applying lesson · 132 applying lessons in the pool
+  arm                precision [95%]  applying found  prompts hit  briefed any  lessons/prompt  off-topic/prompt  repeat
+  floor           9.8% [8.0%, 12.0%]      85 of 132      40 of 48     110 of 120             7.23              6.49      1%
+  calibrated    16.5% [11.1%, 24.0%]      21 of 132      17 of 48      42 of 120             1.07              0.88      2%
+  prev           10.5% [7.3%, 14.9%]      26 of 132      21 of 48      69 of 120             2.08              1.85     20%
+  prev-own       10.9% [7.6%, 15.5%]      26 of 132      21 of 48      68 of 120             1.99              1.77     11%
+  reply-own       8.6% [6.4%, 11.4%]      42 of 132      31 of 48     114 of 120             4.11              3.73      5%
+  fallback      21.6% [16.0%, 28.6%]      35 of 132      22 of 48      53 of 120             1.37              1.06      1%
+  backfill      26.3% [20.0%, 33.7%]      41 of 132      25 of 48      48 of 120             1.32              0.96      1%
+  backfill+fallback   24.2% [18.2%, 31.5%]      38 of 132      24 of 48      48 of 120             1.32              0.99      1%
+  floor-3       13.9% [10.5%, 18.3%]      42 of 132      32 of 48     110 of 120             2.53              2.17      1%
+  floor-5        11.5% [8.9%, 14.7%]      54 of 132      32 of 48     110 of 120             3.92              3.46      1%
+  line2           9.7% [7.0%, 13.4%]      32 of 132      25 of 48      83 of 120             2.75              2.48      2%
+  line2+backfill   14.4% [11.2%, 18.5%]      52 of 132      32 of 48      90 of 120             3.02              2.57      1%
+  line1+backfill    10.7% [8.5%, 13.5%]      62 of 132      40 of 48     120 of 120             4.84              4.30      1%
+  tiered          9.4% [7.7%, 11.4%]      95 of 132      40 of 48     110 of 120             8.46              7.63      1%
+  tiered-full   26.3% [20.0%, 33.7%]      41 of 132      25 of 48      48 of 120             1.32              0.96      1%
+  warm           10.2% [8.5%, 12.3%]     104 of 132      40 of 48     111 of 120             8.50              7.60      1%
+  warm-full     23.9% [18.2%, 30.7%]      42 of 132      30 of 48      55 of 120             1.48              1.12      2%
+
+null prompts: 60 person-typed · 11 with an applying lesson · 15 applying lessons in the pool
+  arm                precision [95%]  applying found  prompts hit  briefed any  lessons/prompt  off-topic/prompt  repeat
+  floor            2.0% [0.8%, 4.5%]       5 of 15        5 of 11      44 of 60              4.57              4.17      0%
+  calibrated      0.0% [0.0%, 17.6%]       0 of 15        0 of 11       6 of 60              0.30              0.30      0%
+  prev            7.3% [2.9%, 17.3%]       4 of 15        2 of 11      17 of 60              0.92              0.85     45%
+  prev-own         0.0% [0.0%, 9.6%]       0 of 15        0 of 11      11 of 60              0.60              0.60     11%
+  reply-own        3.2% [1.3%, 8.0%]       4 of 15        4 of 11      39 of 60              2.15              2.00      2%
+  fallback        0.0% [0.0%, 15.5%]       0 of 15        0 of 11       7 of 60              0.35              0.35      0%
+  backfill        0.0% [0.0%, 20.4%]       0 of 15        0 of 11       7 of 60              0.30              0.25      0%
+  backfill+fallback     0.0% [0.0%, 20.4%]       0 of 15        0 of 11       7 of 60              0.30              0.25      0%
+  floor-3          2.8% [1.0%, 7.9%]       3 of 15        3 of 11      44 of 60              1.93              1.73      1%
+  floor-5          3.1% [1.3%, 7.0%]       5 of 15        5 of 11      44 of 60              2.97              2.63      1%
+  line2            1.9% [0.3%, 9.9%]       1 of 15        1 of 11      21 of 60              0.97              0.87      0%
+  line2+backfill      1.8% [0.3%, 9.4%]       1 of 15        1 of 11      23 of 60              1.08              0.92      0%
+  line1+backfill      3.3% [1.6%, 6.7%]       7 of 15        5 of 11      48 of 60              3.78              3.38      1%
+  tiered           1.9% [0.8%, 4.3%]       5 of 15        5 of 11      44 of 60              4.83              4.37      0%
+  tiered-full     0.0% [0.0%, 20.4%]       0 of 15        0 of 11       7 of 60              0.30              0.25      0%
+  warm             1.9% [0.8%, 4.3%]       5 of 15        5 of 11      44 of 60              4.77              4.33      0%
+  warm-full       0.0% [0.0%, 22.8%]       0 of 15        0 of 11       6 of 60              0.23              0.22      0%
+
+F1 on task prompts (judged precision, pooled recall): floor 0.171 · calibrated 0.162 · prev 0.137 · prev-own 0.141 · reply-own 0.135 · fallback 0.238 · backfill 0.285 · backfill+fallback 0.263 · floor-3 0.194 · floor-5 0.180 · line2 0.139 · line2+backfill 0.211 · line1+backfill 0.175 · tiered 0.166 · tiered-full 0.285 · warm 0.181 · warm-full 0.273
+
+context rule: no context arm (none is at least as precise as calibrated on task prompts)
+
+fix rule: backfill (most applying lessons found on task prompts among the fix arms at least as precise as calibrated)
+
+tier rule: tiered (it reaches 95 applying lessons on task prompts, the floor 85; the rule asks at least as many)
+
+warm rule: warm (more in full: yes; in-full precision at least 20.0%: yes; reach at least tiered's: yes; null prompts at most twice tiered-full's: yes; in full 42 against 41, null prompts 6 against 7)
+
+sweep rule: backfill (highest F1 on task prompts among arms briefing at most five lessons a prompt)

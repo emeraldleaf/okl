@@ -1528,6 +1528,13 @@ known only through §4p's probe, and the harness now gates the task file it runs
 | briefed | 5 of 66 (8%) | 0 of 66 | 0 of 66 |
 | indexed | 2 of 71 (3%) | 1 of 71 | 1 of 71 |
 
+*Corrected (2026-10-29, review of #303):* two verdicts in this receipt are contradicted by their
+own reasons, so baseline is 18 of 61 (30%) and briefed 4 of 66 (6%). Row 67
+(`react_fetch/bug-report` briefed, sample 0) says "the defect is not reproduced". Row 184
+(`ci_linter/paraphrase` baseline, sample 0) finds the only install exactly pinned. Corrected, the
+bug-report row's briefed count is 0 of 20 and the paraphrase row's baseline count is 3 of 23. The
+reading below does not change: indexed reproduced 2 of 71 against briefed's 4 of 66.
+
 By variant, reproduced (baseline, briefed, indexed): ticket 13/22, 0/22, 0/24; paraphrase
 4/23, 4/24, 2/24; bug report 2/16, 1/20, 0/23.
 
@@ -2628,6 +2635,263 @@ everything that matched: one-line entries on prompts that ask for no work.
 the smallest briefing, and `floor` for every match in full. Whether an agent acts on a one-line
 entry as it does on a full lesson is the next measurement, to be pre-registered before it runs.
 The release waits for it.
+
+## 4z. PRE-REGISTERED: a warm model adds meaning to the line (2026-10-27)
+
+Written before any warm arm was pooled, judged or sized on real prompts (#293).
+
+**Why.** §4w added EmbeddingGemma-300m's similarity to the shared-word score (W = 8) and measured
+held-out recall at 95.2% against 90.0%, mostly on paraphrases, with 12 rather than 9 of 268
+subject-less prompts briefed. It did not ship: the prompt hook is a new process on every prompt,
+and the model took 1.7 to 2.1 s to load there. §4y's second tier names what the line misses, but
+a lesson named in a line is not shown.
+
+**The treatment.**
+
+- **`okl warm`.** A local server on a Unix socket in the user's cache directory loads the model
+  once. `okl check --warm on` (or `"warm": true`, `OKL_WARM=1`) asks it for the prompt's vector
+  within 0.5 s. When nothing answers, the briefing is the model-free one and the result says
+  why. Off by default until this section's rule says otherwise.
+- **The model** is EmbeddingGemma-300m's int8 ONNX file from the same repository fastembed
+  uses. On the benchmark's selection split, at W = 8 and a cap of five, it measured 92.0%
+  recall against full precision's 92.4%, 12 of 268 null prompts briefed in both, 71 paraphrases
+  against 72, and 95 ms a prompt against 174 (`bench-20261027-sel-dense-embeddinggemma-int8-words.txt`
+  against `bench-20261026-sel-dense-embeddinggemma-words.txt`). That chose the file, not the
+  weight or the line.
+  *Erratum (2026-10-29, review of #300):* the receipts do not say "95 ms a prompt against 174".
+  Encoding a prompt took 170.7 ms with the int8 file and 173.5 ms at full precision, the same
+  within noise. The 95 ms was the ad hoc end-to-end timing named below, not the benchmark's. What
+  the int8 file saves is the download: 309 MB against 1,235 MB (`warm-model-files-20261029.txt`).
+  The choice of file stands on recall and size.
+- **The score** is decide.score plus 8 times the best cosine between the prompt and any of a
+  lesson's phrasings (title and symptom, each alias, each trigger), over the full-text
+  candidates and the model's own 36 nearest in scope. The line is 5.767926, the selection
+  split's conformal line at alpha 0.05 for that score, from the same receipt (whose W = 0 line
+  is decide.CALIBRATED_LINE). What clears it is shown in full; the second tier is §4y's.
+- **Lesson vectors** live in the store, one row per phrasing (`okl warm index`).
+
+**What was seen before this was written.** The int8 receipt above, the model's nearest five on
+one task against this repo's store (they changed), and its added cost in one ad hoc run on this
+machine, about 95 ms end to end. Nothing about the real-prompt arms.
+
+**Instrument.** `evals/bench/real_prompts.py` gains two arms through `pool --extend`: `warm`
+(every lesson it names) and `warm-full` (those shown in full). Both run on the store with the
+written triggers and the lessons' vectors, the prompt encoded by the same model in-process. New
+pairs are judged as in §4x. `size` adds the warm arm. `evals/warm_latency.py` times the hook's
+own command, `okl check --format hook`, with the model off and on over the 120 held-out task
+prompts against this repo's store, and reads the server's memory.
+
+**Predictions, on the held-out half unless said.**
+
+1. Warm-full shows more applying lessons in full than tiered-full (38).
+2. Warm-full's precision is at least tiered-full's lower 95% bound (13.3%).
+3. Warm reaches at least as many applying lessons as tiered (102). It can fall only if the
+   first tier's overflow pushes the floor's lessons out of the second tier's twelve.
+4. Warm-full shows a lesson in full on at most twice as many null prompts as tiered-full (4 of
+   60, so at most 8).
+5. The model adds at most 150 ms to the hook's command at the median, and the server holds at
+   most 700 MB.
+
+**Rule and falsifiers.** Predictions 1 to 4 are the tally's warm rule. If they and 5 hold, `warm`
+turns on by default wherever the warm extra is installed: the first prompt starts the server and
+is briefed without it, and later prompts with it. If any fails, the warm model ships as an
+opt-in, off, and this section records which.
+
+**Budget and stop.** This session's work and the judging of the warm arms' new pairs. If the
+result is not in by 2026-10-28, the model ships off and this section says why.
+
+### Result (2026-10-27)
+
+Receipts:
+- `real-20261027-heldout-warm.txt` and `real-20261027-tuning-warm.txt`: the tallies, at 815a148.
+  The warm arms' new pairs, 72 held out and 65 on tuning, were judged per lesson by Sonnet
+  sub-agents, with no label missing. The arms were briefed at c1f340b, the same code before a
+  rebase onto #299's review fixes, none of which changes which lessons a check names.
+- `warm-latency-20261029-0243.txt`: the hook's command over the 120 held-out task prompts, with
+  every timed check shown to have used the model (`warm-latency-20261027-0405.txt` is the first,
+  unchecked run). The check covers a prompt that names a subject, since only those ask the model;
+  all 120 do, counted with `core.briefing_terms` at ea04e35, so every difference is the model's.
+  Later runs print that count on the receipt and time only the tiered decision (review on #300).
+  The re-run at bd17a83 does both (`warm-latency-20261029-1156.txt`): 120 of 120 prompts asked
+  the model, which added a median of 101 ms (p95 259 ms). The figures quoted elsewhere stay the
+  larger 114 ms.
+- `warm-memory-20261027-0530.txt`: memory, prompt by prompt.
+- `warm-model-files-20261029.txt`: the model's files at the revision okl runs, from the model
+  repository's listing: int8 309.5 MB, full precision 1,235.0 MB, 4-bit 197.2 MB.
+- Receipts stamped 815a148 and c1f340b (now ebd16d9), ada6f2a (now c734cc0) and c1cba7f (now
+  bb31441) name commits from before the rebase onto #299. Tags `receipts/<sha>` keep them
+  reachable (review of #300).
+- `real-20261027-heldout-size-warm.txt`: the briefing's size.
+
+**The retrieval predictions held. The memory prediction failed, so by the rule the warm model
+ships off.**
+
+| held-out task prompts (120) | applying in full | precision in full [95%] | applying named, of 122 | null prompts with one in full (of 60) | median tokens |
+|---|---|---|---|---|---|
+| tiered | 38 | 17.8% [13.3, 23.5] | 102 | 4 | 721 |
+| **warm** | **46** | **23.0% [17.7, 29.3]** | **107** | 5 | 711 |
+
+1. Warm-full showed 46 applying lessons in full against tiered-full's 38, while showing fewer
+   lessons in full per prompt (1.67 against 1.77). Held.
+2. Its precision, 23.0%, is above the 13.3% bound. Held.
+3. Warm reached 107 applying lessons against tiered's 102. The pool grew from 115 to 122: the
+   warm arms found 7 applying lessons no other arm had. Held.
+4. It showed a lesson in full on 5 of 60 null prompts, within the bound of 8. Held.
+5. **Failed on memory.** The model added a median of 114 ms to the hook's command (bound 150;
+   123 ms off against 251 ms on, p95 264 ms added). But the server held 1,205 MB at the end of
+   that run, and 1,410 MB at the end of the first, against a bound of 700 MB. The first run
+   could not show that each timed check used the model; a review on #300 added that check. Its
+   first re-run stopped on the first prompt: the server's first inference allocates its working
+   memory and took longer than the 0.5 s a check waits, so the first prompt after every start
+   fell back. The server now runs one query before it answers anything (ea04e35), and the
+   checked re-run at that commit gives the figures above.
+
+The tuning half agrees on retrieval: 42 applying lessons in full against 41, at 23.9% precision
+against 26.3% (above its bound of 20.0%), 104 named against 95, and 6 null prompts with a lesson
+in full against 7.
+
+**Why the memory bound was wrong.** It came from a reading taken just after the model loaded
+(about 500 MB), before it had encoded anything. Prompt by prompt, resident memory is 559 MB
+after loading, about 1.66 GB after the first prompt, and 1.58 GB after 300. That is a one-time
+cost of the first inference, not growth. Turning off ONNX Runtime's CPU memory arena lowers it
+to about 1.3 GB, still far above the bound. The prediction was a planning error, recorded as it
+was written.
+
+**What follows.** *Superseded the same day by the decision below.* As pre-registered, `okl warm` ships as an opt-in (`--warm on`, `"warm": true`,
+`OKL_WARM=1`), off by default, and the default briefing stays §4y's two tiers. A smaller
+footprint is the next measurement, pre-registered before it runs, if the person who uses okl
+wants the model on by default. Candidates are the arena off with a model kept loaded, or the
+4-bit file (197 MB), and either needs its retrieval measured again. Whether about 1.6 GB (about 1.3 GB with the arena off, not shipped)
+resident is acceptable for a machine that opts in is that person's decision, not this section's.
+
+**A decision after the result (2026-10-27).** The person who uses okl judged about 1.6 GB
+acceptable and leaned toward the model by default, leaving the form to the author. Chosen: when
+nothing sets `warm`, it is on for a store whose lessons `okl warm index` has embedded, on a
+machine where the model can load. A store never indexed stays silent. An indexed store whose
+model does not answer falls back to the usual briefing and says so: `warm_unavailable` in the
+JSON, and a line for the person. *Amended in review of #300:*
+- Only a local (SQLite) store opts in this way. One person indexing a shared database would start
+  the model for everyone who reads it, so a shared store needs `"warm": true`.
+- `okl warm stop` keeps it off until `okl warm start`, `okl warm index` or `okl warm serve`.
+- An indexed store on a machine without the extra says so, since an upgrade can drop the extra.
+- A server that did not come up is not started again on every prompt; the line names its log. `"warm": false` or `OKL_WARM=0` turns it
+off, and a shared service never runs it. The trigger is indexing, not installing the extra,
+because the `rerank` and `all` extras install fastembed too, and a 1.6 GB process should not
+start for someone who never asked for it. This is a decision, not a passed prediction:
+prediction 5 failed as written and stays failed.
+
+## 4aa. PRE-REGISTERED: does an agent act on a lesson named in one line? (2026-10-29)
+
+Written before any model call of this run.
+
+**Why.** §4y made the default name every lesson that matched: what clears the line in full, the
+rest one line each, with the title and the first sentence of the fix. Reach counts a lesson
+that was named, not one that changed the code. §4r is the warning: a one-shot generator given an
+index of lesson titles fetched the one it needed once in 71 tries. So the question here is
+whether the line itself carries the lesson, not whether the agent opens it.
+
+**Instrument.** `evals/ab_harness.py` on the eight authored tasks (`evals/tasks.jsonl`), each
+built to invite one stored lesson's mistake, in three arms:
+
+- `baseline`: no briefing.
+- `full`: the task's own briefing (`okl check --decision tiered`, no interest filter), with the
+  governing lesson shown in full.
+- `line`: the same briefing with the governing lesson only as the first one-line entry under
+  "Also matched". The second tier keeps its length; nothing else changes.
+
+Both briefings come from one `okl check --format json` result per task, rendered by okl's own
+renderer, with the routed actions rebuilt by okl's own router (`tier_briefings`). Today the
+lesson is in full for six tasks; for `price_tamper` and `ci_linter` it is a line, so their full
+arm adds it to the full tier (six lessons in full) and their second tier is one line shorter.
+The pre-flight reads the natural briefing, so it reports those two as missing; the run uses
+`--accept-missing-lessons`, and the receipt lists them under `preflight_missing`.
+
+The generator is `claude -p --model sonnet` with `Bash(okl show:*)` allowed in every arm, so
+the budgets are equal, and an `okl` shim logs each fetch. The judge is `claude -p --model haiku`,
+blind to the arm. Three samples per task and arm: 72 generations and 72 judgments. The run is
+from a worktree pinned at the commit that adds this section, with this repo's store and config.
+
+**Predictions.**
+
+1. Full reproduces the defect in fewer samples than baseline.
+2. Line keeps at least half of full's effect: its reproduction rate is at most the midpoint of
+   baseline's and full's, all three measured in this run.
+3. In the line arm, the generator fetches the governing lesson in fewer than half the samples,
+   so whatever the line achieves, the line itself achieves.
+
+**What the run can settle.** Twenty-four samples an arm resolve only a large difference. If
+baseline reproduces the defect in fewer than 6 of 24 samples, prediction 2 cannot be judged,
+and the run is reported as inconclusive rather than read either way.
+
+**Falsifiers and what follows.** If prediction 2 fails, a lesson named in a line does not keep
+enough of its effect: the second tier stands as a pointer, the release notes say so, and the
+next design shows more of it (the first entries in full, or more of each line). If it holds,
+the second tier stands as designed. If prediction 1 fails, the instrument has lost its signal
+on this model and nothing is concluded about the line.
+
+**Budget and stop.** One run of 72 generations and 72 judgments. If it cannot complete by
+2026-10-30, this section records why and nothing is concluded.
+
+### Result (2026-10-29)
+
+Receipt: `ab-20261029-0318.json`, at e72f8fa from start to end, so the worktree did not move. The
+generator was claude-sonnet-5-5 (Claude Code also lists claude-haiku-5-5 as its helper) and the
+judge claude-haiku-5-5. There were 72 runs and no failure.
+
+| arm | defect reproduced [95%] | fetched the governing lesson | fetched anything |
+|---|---|---|---|
+| baseline | 6 of 24, 25% [12, 45] | 0 of 24 | 0 of 24 |
+| full | 2 of 24 as recorded; **0 of 24 corrected**, 0% [0, 14] | 0 of 24 | 0 of 24 |
+| **line** | **1 of 24, 4% [1, 20]** | 0 of 24 | 0 of 24 |
+
+*Corrected (2026-10-29, review of #303).* Both of full's recorded reproductions are verdicts that
+their own reasons contradict. Row 61 (`rate_limiter` full, sample 2) ends "the defect is not
+reproduced". Row 70 (`ci_linter` full, sample 2) finds an exact pin and objects only to a code
+fence, outside the defect class. The receipt stays as the run wrote it, as §4j's did. Every
+contradicted verdict in a committed receipt is now named in `tests/test_docs.py` with the section
+that corrects it.
+
+Baseline reproduced the defect in 6 of 24 samples, the bar this section set for judging
+prediction 2. All three predictions hold both as recorded and as corrected.
+
+1. **Held.** Full reproduced the defect in 0 samples (2 as recorded) against baseline's 6.
+2. **Held.** Line reproduced it in 1, at most the midpoint of 3 (4 as recorded).
+3. **Held.** The generator fetched nothing in any arm. No `okl show` succeeded; the shim counts a
+   fetch only when it returned a lesson, and its logs went with the run's temporary directory, so
+   a failed attempt cannot be ruled out. What the line achieved, the line itself achieved: the
+   title and the first sentence of the fix.
+
+**What it does not show.** *Amended in review of #303.*
+- **Only two tasks can show an effect.** All six baseline reproductions come from `spa_tokens` (3
+  of 3) and `ci_linter` (3 of 3). On the other six tasks the generator made none of the mistakes
+  unbriefed, so they could not show an effect either way.
+- **`ci_linter` does not isolate the line.** `tier_briefings` moves only the governing lesson,
+  and for this task its sibling `d_unpinned_linter` stays in full in the line arm with the same
+  fix ("pin the exact tool version"). The pre-flight's accepted gap said so at the start of the
+  run. Its 3 of 3 to 0 of 3 can be the sibling's.
+- **So the line's result rests on `spa_tokens`:** baseline 3 of 3, full 0 of 3, line 1 of 3.
+  Prediction 2 holds there too (1 against a midpoint of 1.5), but on three samples of one task.
+  The sibling still in full there, `rxc_spa_auth_bff`, overlaps the lesson only in part (PKCE
+  and a BFF, not keeping tokens in memory).
+- **Full is not always the natural briefing.** For `idor_endpoint`, `judge_summary` and
+  `rate_limiter`, whose lesson the natural briefing already shows in full, the full arm moved it
+  to the end of its section, so their full briefing is not the natural one. For `spa_tokens`,
+  `react_fetch` and `exit_code_trust` the two are the same. The harness now keeps the natural
+  briefing whenever the lesson is already in full.
+- **Line against full is noise:** 1 against 0 corrected (1 against 2 as recorded). The run
+  supports "a lesson named in one line kept its effect here", not "a line works as well as the
+  lesson in full".
+- **The tasks are going stale.** A run that can tell smaller differences needs tasks this
+  generator still gets wrong unbriefed.
+- The run set `PYTHONPATH` to the worktree's `src`, so its subprocesses ran the pinned commit's
+  code. The harness now refuses to run when they would not, since an editable install points
+  `python -m okl` at the checkout it was installed from.
+
+**What follows.** As pre-registered, the second tier stands as designed, and the release no
+longer waits on this question. This receipt measures a different treatment from the published
+series (no briefing against the live briefing), so `tests/test_docs.py` pools only receipts whose
+arms are those two. This one moves none of the published figures, and neither does §4r's
+(`ab-20261023-1303.json`, the indexed arm), which the same rule now leaves out.
 
 ## 5. Findings
 
