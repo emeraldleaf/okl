@@ -192,7 +192,12 @@ def tier_briefings(task: str, governing: str, timeout: int) -> dict[str, str]:
     def placed(in_full: bool, style: str = "line") -> str:
         out = copy.deepcopy(result)
         # Every bucket okl has, from okl itself: a copied list would skip a new one (review on #303).
-        buckets = {k: [x for x in out.get(k) or [] if x.get("id") != governing] for k in core._bucket_by_type([])}
+        keys = core._bucket_by_type([])
+        if in_full and any(x.get("id") == governing for k in keys for x in out.get(k) or []):
+            # Already in full: the natural briefing as okl rendered it. Moving the lesson to the
+            # end of its section reordered the routed actions too (review on #303).
+            return core.render_check_for_agent(out)
+        buckets = {k: [x for x in out.get(k) or [] if x.get("id") != governing] for k in keys}
         also = [e for e in out.get("also_matched") or [] if e.get("id") != governing]
         if in_full:
             for k, recs in core._bucket_by_type([node]).items():
@@ -484,11 +489,14 @@ def code_outside_checkout() -> str:
     here = Path(okl.__file__).resolve()
     if not here.is_relative_to(src):
         return f"this process imports okl from {here.parent}, not {src}"
-    r = subprocess.run([sys.executable, "-c", "import okl; print(okl.__file__)"], cwd=REPO,
-                       capture_output=True, text=True)
-    there = Path(r.stdout.strip()).resolve() if r.returncode == 0 and r.stdout.strip() else None
-    if there is None or not there.is_relative_to(src):
-        return f"`python -m okl` loads okl from {there.parent if there else 'nowhere'}, not {src}"
+    # From the checkout, as the briefings are rendered, and from elsewhere, as the generator's
+    # shim runs: a relative PYTHONPATH holds in one and not the other (review on #303).
+    for cwd in (REPO, Path(tempfile.gettempdir())):
+        r = subprocess.run([sys.executable, "-c", "import okl; print(okl.__file__)"], cwd=cwd,
+                           capture_output=True, text=True)
+        there = Path(r.stdout.strip()).resolve() if r.returncode == 0 and r.stdout.strip() else None
+        if there is None or not there.is_relative_to(src):
+            return f"`python -m okl` run from {cwd} loads okl from {there.parent if there else 'nowhere'}, not {src}"
     return ""
 
 
