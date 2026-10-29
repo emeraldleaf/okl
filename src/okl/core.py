@@ -332,15 +332,25 @@ def _attach_named(out: dict[str, Any], store: Store, buckets: dict[str, list[dic
             key=lambda e: e["title"].lower())
 
 
+@functools.lru_cache(maxsize=4096)
+def _words_in(text: str, stemmed: bool) -> frozenset[str]:
+    """decide.words, cached: the floor asks it of every live record for every subject word.
+    `stemmed` is part of the key because decide.words reads the setting when called."""
+    return frozenset(decide.words(text))
+
+
 def _matched_terms(terms: list[str], n: Node) -> list[str]:
     """The task's lower-cased subject words that occur whole in the record's prose.
 
-    Whole-word, with letters and digits as word characters, which is how the FTS5
-    `unicode61` tokenizer splits text: `OKL_DATABASE_URL` is three words to both.
+    Whole-word, with letters and digits as word characters, which is how the FTS5 tokenizer
+    splits text: `OKL_DATABASE_URL` is three words to both. A word matches another form of
+    itself when the index stems (decide.keys): a lesson the search found by "migration" for
+    "migrations" shares that word, rather than being counted weak (REPORT §4ad).
     """
-    text = " ".join(x or "" for x in (n.title, n.symptom, n.aliases, n.body, n.fix, n.tags)).lower()
-    return [t for t in terms
-            if re.search(r"(?<![a-z0-9])" + re.escape(t) + r"(?![a-z0-9])", text)]
+    have = _words_in(" ".join(x or "" for x in (n.title, n.symptom, n.aliases, n.body, n.fix, n.tags)),
+                     decide.stemmed())
+    k = decide.keys(terms)
+    return [t for t in terms if k[t] in have]
 
 
 def _in_subject(words: list[str], n: Node) -> bool:
@@ -360,14 +370,19 @@ def _in_subject(words: list[str], n: Node) -> bool:
 
 def _subject_words(words: list[str], n: Node) -> list[str]:
     """The words among `words` that occur whole in the record's title or symptom."""
-    subject = " ".join(x or "" for x in (n.title, n_symptom(n))).lower()
-    return [w for w in words if re.search(r"(?<![a-z0-9])" + re.escape(w) + r"(?![a-z0-9])", subject)]
+    have = _words_in(f"{n.title or ''} {n_symptom(n)}", decide.stemmed())
+    k = decide.keys(words)
+    return [w for w in words if k[w] in have]
 
 
 def _alias_words(words: list[str], n: Node) -> list[str]:
-    """The words among `words` that are one of the record's one-word aliases."""
+    """The words among `words` that are one of the record's one-word aliases (by stem, when the
+    index stems; an alias with punctuation in it is never one word)."""
     single = {a.strip().lower() for a in (n.aliases or "").split(";") if a.strip() and " " not in a.strip()}
-    return [w for w in words if w in single]
+    ka = decide.keys(a for a in single if a.isalnum())
+    aliases = {ka.get(a, a) for a in single}
+    k = decide.keys(words)
+    return [w for w in words if k[w] in aliases]
 
 
 def _subject_admits(words: list[str], n: Node, is_common: Callable[[str], bool]) -> bool:

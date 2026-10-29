@@ -27,6 +27,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from okl import core
+from okl import store as okl_store
 from okl.store import Node, Store
 
 # Text a harness wraps around a message it delivers as a user turn. A prompt that starts with
@@ -46,10 +47,19 @@ def from_harness(task: str) -> bool:
     return task.lstrip().startswith(HARNESS_PREFIXES)
 
 
-# Stemming (REPORT §4ac): off unless an arm turns it on (run_v2.py --stem). When on, the line's
-# word matching stems each word with FTS5's own Porter tokenizer, so it agrees with an index
-# built with that tokenizer (run.porter_index) rather than with a second stemmer's opinion.
+# Stemming (REPORT §4ac): off unless an arm turns it on (set_stem). When on, the line's word
+# matching stems each word with FTS5's own Porter tokenizer, so it agrees with an index built
+# with that tokenizer rather than with a second stemmer's opinion.
 STEM = False
+
+
+def set_stem(on: bool) -> None:
+    """Stem the line's words, and build the corpus store's index with the Porter tokenizer, or
+    neither. The product stems by default (store.FTS_TOKENIZE, REPORT §4ad), so an unstemmed arm
+    has to say so before its store is built."""
+    global STEM
+    STEM = on
+    okl_store.FTS_TOKENIZE = "porter unicode61" if on else "unicode61"
 _STEMS: dict[str, str] = {}
 _PORTER: sqlite3.Connection | None = None
 

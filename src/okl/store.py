@@ -13,6 +13,7 @@ from __future__ import annotations
 import contextlib
 import json
 import os
+import re
 import time
 import uuid
 import weakref
@@ -495,8 +496,14 @@ class _Backend(Protocol):
 # (evals/bench/) chooses it on the selection split (#291). The Postgres backend gives the
 # column the symptom's 'B' class.
 TRIGGERS_WEIGHT = 4.0
+# The SQLite full-text index's tokenizer. Porter stemming lets "migrations" find a lesson about
+# a "migration", as Postgres's 'english' configuration always has; on the retrieval bench it
+# raised recall on paraphrased prompts (REPORT §4ac, §4ad). A store whose index was built with
+# another tokenizer rebuilds it once when opened. decide.STEM stems the line's words to match.
+FTS_TOKENIZE = "porter unicode61"
+_FTS_COLS = "id UNINDEXED, title, body, symptom, fix, tags, aliases, triggers"
 
-_NODE_COLS = ["id", "type", "scope", "repo", "title", "body", "status",
+_NODE_COLS =["id", "type", "scope", "repo", "title", "body", "status",
               "found_by", "verified_at", "ttl_days", "owner", "files",
               "symptom", "fix", "tags", "verified_by", "applies_to", "verified_commit",
               "aliases", "triggers", "created_at"]
@@ -604,23 +611,35 @@ class _SQLiteBackend(_Backend):
             # distinguishing words in symptom/fix) was unretrievable unless those words
             # happened to repeat in the title. Found by seeding a record from a spec and
             # watching `check` return nothing for a task quoting its symptom verbatim.
-            c.execute("""CREATE VIRTUAL TABLE IF NOT EXISTS node_fts
-                         USING fts5(id UNINDEXED, title, body, symptom, fix, tags, aliases, triggers)""")
-            # FTS5 cannot ALTER in new columns, so a store built before this rebuilds its
-            # index once. The node table is the source of truth; the index is derived.
-            fts_cols = {r[1] for r in c.execute("PRAGMA table_info(node_fts)").fetchall()}
-            if not {"symptom", "tags", "aliases", "triggers"} <= fts_cols:
-                c.execute("DROP TABLE node_fts")
-                c.execute("""CREATE VIRTUAL TABLE node_fts
-                             USING fts5(id UNINDEXED, title, body, symptom, fix, tags, aliases, triggers)""")
-                c.execute("""INSERT INTO node_fts(id, title, body, symptom, fix, tags, aliases, triggers)
-                             SELECT id, coalesce(title,''), coalesce(body,''),
-                                    coalesce(symptom,''), coalesce(fix,''),
-                                    replace(coalesce(tags,''), ',', ' '),
-                                    coalesce(aliases,''), coalesce(triggers,'') FROM node""")
+            c.execute(f"CREATE VIRTUAL TABLE IF NOT EXISTS node_fts USING fts5({_FTS_COLS}, "
+                      f"tokenize='{FTS_TOKENIZE}')")
+            # FTS5 cannot ALTER in new columns or a new tokenizer, so a store built before
+            # either rebuilds its index once. The node table is the source of truth; the index
+            # is derived. In one write transaction, checked again once it is held: a hook
+            # reading between the DROP and the CREATE would find no index, and a second
+            # process opening the store at the same moment would rebuild it twice.
+            if self._fts_stale():
+                c.execute("BEGIN IMMEDIATE")
+                if self._fts_stale():
+                    c.execute("DROP TABLE node_fts")
+                    c.execute(f"CREATE VIRTUAL TABLE node_fts USING fts5({_FTS_COLS}, tokenize='{FTS_TOKENIZE}')")
+                    c.execute("""INSERT INTO node_fts(id, title, body, symptom, fix, tags, aliases, triggers)
+                                 SELECT id, coalesce(title,''), coalesce(body,''),
+                                        coalesce(symptom,''), coalesce(fix,''),
+                                        replace(coalesce(tags,''), ',', ' '),
+                                        coalesce(aliases,''), coalesce(triggers,'') FROM node""")
         except self._sqlite3.OperationalError:
             self._has_fts = False   # FTS5 not compiled in — fall back to LIKE
         c.commit()
+
+    def _fts_stale(self) -> bool:
+        """Whether the full-text index lacks a column or was built with another tokenizer than
+        FTS_TOKENIZE (one built before the setting existed has none, so unicode61)."""
+        cols = {r[1] for r in self.conn.execute("PRAGMA table_info(node_fts)").fetchall()}
+        row = self.conn.execute("SELECT sql FROM sqlite_master WHERE name='node_fts'").fetchone()
+        built = re.search(r"tokenize\s*=\s*'([^']*)'", row[0] if row else "")
+        return (not {"symptom", "tags", "aliases", "triggers"} <= cols
+                or (built.group(1) if built else "unicode61") != FTS_TOKENIZE)
 
     def upsert_node(self, node: Node) -> None:
         with self._lock:

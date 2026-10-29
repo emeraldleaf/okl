@@ -35,11 +35,14 @@ procedure (the guarantee is per population).
 """
 from __future__ import annotations
 
+import contextlib
 import math
 import re
+import sqlite3
 from collections.abc import Iterable
 from typing import Final
 
+from . import store
 from .store import Node
 
 # The bench's conformal line (evals/bench/, REPORT §4w): the 269th of 282 calibration nulls'
@@ -78,9 +81,54 @@ def from_harness(task: str) -> bool:
     return task.lstrip().startswith(HARNESS_PREFIXES)
 
 
+def stemmed() -> bool:
+    """Whether the line's words are stemmed: whenever the full-text index stems them
+    (store.FTS_TOKENIZE), so a lesson the search found by another form of a word scores it too."""
+    return store.FTS_TOKENIZE.split()[0] == "porter"
+
+
+_STEMS: dict[str, str] = {}
+
+
+def stems(found: Iterable[str]) -> dict[str, str]:
+    """Each word as FTS5's porter tokenizer indexes it, read back through fts5vocab, so the line
+    and the index agree on what a word is rather than a second stemmer having its own opinion;
+    the word itself where this Python's SQLite has no FTS5. Cached for the process, with every
+    word not yet seen stemmed in one pass: a check stems every word of the store's records."""
+    todo = [w for w in dict.fromkeys(found) if w not in _STEMS]
+    if todo:
+        got: dict[int, str] = {}
+        with contextlib.suppress(sqlite3.OperationalError), contextlib.closing(sqlite3.connect(":memory:")) as c:
+            c.execute("CREATE VIRTUAL TABLE s USING fts5(x, tokenize='porter unicode61')")
+            c.execute("CREATE VIRTUAL TABLE v USING fts5vocab(s, 'instance')")
+            # Every word in one row, read back in order: under half the time of a row each. A
+            # word is letters and digits, so one token; if a tokenizer ever split one, the count
+            # would differ and each word gets its own row.
+            c.execute("INSERT INTO s(rowid, x) VALUES (0, ?)", (" ".join(todo),))
+            terms = [t for (t,) in c.execute("SELECT term FROM v WHERE doc = 0 ORDER BY offset")]
+            if len(terms) == len(todo):
+                got = dict(enumerate(terms, 1))
+            else:
+                c.executemany("INSERT INTO s(rowid, x) VALUES (?, ?)", enumerate(todo, 1))
+                got = dict(c.execute("SELECT doc, term FROM v WHERE doc > 0 AND offset = 0"))
+        for i, w in enumerate(todo, 1):
+            _STEMS[w] = got.get(i, w)
+    return _STEMS
+
+
+def keys(found: Iterable[str]) -> dict[str, str]:
+    """Each lower-cased word as okl matches it: its stem when the index stems, else the word."""
+    ws = list(found)
+    if not stemmed():
+        return {w: w for w in ws}
+    m = stems(ws)
+    return {w: m[w] for w in ws}
+
+
 def words(text: str) -> set[str]:
-    """Lower-cased runs of Unicode letters and digits, the task's tokenization (core.briefing_terms)."""
-    return set(_WORD.findall(text.lower()))
+    """Lower-cased runs of Unicode letters and digits, the task's tokenization (core.briefing_terms),
+    each as okl matches it (keys)."""
+    return set(keys(set(_WORD.findall(text.lower()))).values())
 
 
 def about_text(n: Node) -> str:
@@ -92,11 +140,15 @@ class Rarity:
     """Inverse document frequencies over a store's live records' whole text."""
 
     def __init__(self, nodes: Iterable[Node]) -> None:
+        found = [set(_WORD.findall(" ".join(x or "" for x in (about_text(node), node.body, node.fix)).lower()))
+                 for node in nodes]
+        if stemmed():   # the whole store's words stemmed in one pass, not a record at a time
+            m = stems(w for f in found for w in f)
+            found = [{m[w] for w in f} for f in found]
         self.df: dict[str, int] = {}
-        self.n = 0
-        for node in nodes:
-            self.n += 1
-            for w in words(" ".join(x or "" for x in (about_text(node), node.body, node.fix))):
+        self.n = len(found)
+        for f in found:
+            for w in f:
                 self.df[w] = self.df.get(w, 0) + 1
         self.top = math.log((self.n + 1) / 1.5)   # the IDF of a word in exactly one record
 
@@ -110,10 +162,19 @@ class Rarity:
 
 
 def score(terms: list[str], node: Node, rarity: Rarity) -> tuple[float, list[str]]:
-    """The candidate's score and the subject words its about-text holds."""
+    """The candidate's score and the subject words its about-text holds, as the prompt has them.
+    Stemmed, a stem counts once however many of the prompt's words share it, as on the bench
+    that set the line (REPORT §4ac)."""
     about = words(about_text(node))
-    shared = [t for t in terms if t in about]
-    return len(shared) + sum(rarity.relative(t) for t in shared) / 1000, shared
+    k = keys(t.lower() for t in terms)
+    seen: set[str] = set()
+    shared = []
+    for t in terms:
+        key = k[t.lower()]
+        if key in about and key not in seen:
+            seen.add(key)
+            shared.append(t)
+    return len(shared) + sum(rarity.relative(k[t.lower()]) for t in shared) / 1000, shared
 
 
 def select(candidates: list[Node], task_terms: list[str], rarity: Rarity, *,
