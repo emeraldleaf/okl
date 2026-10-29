@@ -49,7 +49,9 @@ benchmark built to decide (REPORT §4w; the design and its evidence:
   46 applying lessons in full against 38, at 23.0% precision against 17.8%, adding a median of
   114 ms to a prompt. It holds about 1.6 GB of memory from startup (it runs one inference before
   it serves), above the bound set before measuring, so by default it runs only for a local store
-  you have indexed; an indexed shared database can use it with `"warm": true`. `"warm": false` or
+  you have indexed; an indexed shared database can use it with `"warm": true`. It applies to
+  checks okl runs locally under the calibrated and tiered decisions: not to `--decision floor`,
+  and not through a shared service, which answers with `warm_unavailable`. `"warm": false` or
   `OKL_WARM=0` turns it off, `okl warm stop` keeps it off until `okl warm start`, `index` or
   `serve`, and a store never indexed is briefed as before. The `warm` extra installs it.
 - **`okl triggers` and `/triggers`.** `okl triggers` lists a store's own advice lessons that
