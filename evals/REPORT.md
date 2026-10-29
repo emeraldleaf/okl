@@ -2681,6 +2681,38 @@ on this model and nothing is concluded about the line.
 **Budget and stop.** One run of 72 generations and 72 judgments. If it cannot complete by
 2026-10-30, this section records why and nothing is concluded.
 
+### Result (2026-10-29)
+
+Receipt: `ab-20261029-0318.json`, at e72f8fa from start to end, so the worktree did not move. The
+generator was claude-sonnet-5-5 (Claude Code also lists claude-haiku-5-5 as its helper) and the
+judge claude-haiku-5-5. There were 72 runs and no failure.
+
+| arm | defect reproduced [95%] | fetched the governing lesson | fetched anything |
+|---|---|---|---|
+| baseline | 6 of 24, 25% [12, 45] | 0 of 24 | 0 of 24 |
+| full | 2 of 24, 8% [2, 26] | 0 of 24 | 0 of 24 |
+| **line** | **1 of 24, 4% [1, 20]** | 0 of 24 | 0 of 24 |
+
+Baseline reproduced the defect in 6 of 24 samples, the bar this section set for judging
+prediction 2.
+
+1. **Held.** Full reproduced the defect in 2 samples against baseline's 6.
+2. **Held.** Line reproduced it in 1, at most the midpoint of 4.
+3. **Held.** The generator fetched nothing in any arm. It never ran `okl show`, so what the line
+   achieved, the line itself achieved: the title and the first sentence of the fix.
+
+**What it does not show.** All six baseline reproductions come from two tasks: `spa_tokens` (3 of
+3) and `ci_linter` (3 of 3). On the other six tasks the generator made none of the mistakes
+unbriefed, so they could not show an effect either way. Line against full, 1 against 2, is
+within noise. The run supports "a lesson named in one line kept its effect here", not "a line
+works better than the lesson in full". The authored tasks are going stale against newer models:
+a run that can tell smaller differences needs tasks this generator still gets wrong unbriefed.
+
+**What follows.** As pre-registered, the second tier stands as designed, and the release no
+longer waits on this question. This receipt measures a different treatment from the published
+series (no briefing against the live briefing), so `tests/test_docs.py` pools only receipts whose
+arms are those two, and this one moves none of the published figures.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
