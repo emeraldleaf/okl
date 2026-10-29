@@ -78,7 +78,9 @@ wins on that measurement — mirroring Mem0's mistake in reverse.
   record more on two of six short prompts, and 0.8 s per prompt for the model load. It ships
   optional (`okl embed`, `okl check --hybrid`, `"hybrid": "linear"` in `.okl/config.json`),
   off by default, and the README's "no embeddings" line says so. Scale: the search is a numpy
-  matrix product over every stored vector (3 ms at 50,000 records); the next tier, an
+  matrix product over every stored vector (15 ms at 50,000 records after a 92 ms read,
+  `semantic-scale-20261029-1206.txt`; the figure first written here timed the product alone,
+  corrected per REPORT §4q's erratum); the next tier, an
   approximate index over the same table (sqlite-vec locally, pgvector on the service), is the
   amendment to make when a store crosses about 100,000 vectors or a search exceeds 100 ms.
   The next retrieval experiment is a stronger local model or a reranker on the held-out set;

@@ -323,14 +323,19 @@ DOC_FIGURES = {
     "15 ms": ("semantic-scale-20261029-1206.txt", r"50,000 vectors:.*?search after the read\s+([\d.]+) ms"),
     "92 ms": ("semantic-scale-20261029-1206.txt", r"50,000 vectors: read\s+([\d.]+) ms"),
 }
+# Bounds, not measurements: a figure the docs set as a limit or a trigger, with why.
+THRESHOLDS = {
+    "100 ms": "the retrieval ADR's trigger for the next index tier: a search slower than this",
+}
 FIGURE = re.compile(r"(?<![\w.])(\d[\d,]*(?:\.\d+)?) ?(ms|MB|GB)\b")
 
 
 def _published_docs() -> list[Path]:
-    """What a reader is told: the README, the docs and the overview sheets. docs/posts/ are
-    dated write-ups and the REPORT is the receipts' own narrative, so neither is held here."""
-    return [ROOT / "README.md", *sorted((ROOT / "docs").glob("*.md")),
-            *sorted((ROOT / "docs" / "overview").glob("*.html"))]
+    """What a reader is told: the README, every doc (decision records too: the CI reviewer
+    found the ADR still quoting a retracted figure, #307) and the overview sheets. docs/posts/
+    are dated write-ups and the REPORT is the receipts' own narrative, so neither is held here."""
+    docs = [p for p in sorted((ROOT / "docs").rglob("*.md")) if "posts" not in p.parts]
+    return [ROOT / "README.md", *docs, *sorted((ROOT / "docs" / "overview").glob("*.html"))]
 
 
 def test_every_size_and_latency_the_docs_publish_is_its_receipts_number():
@@ -340,7 +345,7 @@ def test_every_size_and_latency_the_docs_publish_is_its_receipts_number():
     for doc in _published_docs():
         for m in FIGURE.finditer(doc.read_text()):
             found.setdefault(f"{m.group(1)} {m.group(2)}", doc.name)
-    unnamed = {fig: doc for fig, doc in found.items() if fig not in DOC_FIGURES}
+    unnamed = {fig: doc for fig, doc in found.items() if fig not in DOC_FIGURES and fig not in THRESHOLDS}
     assert not unnamed, f"name each figure's receipt line in DOC_FIGURES: {unnamed}"
     assert set(DOC_FIGURES) <= set(found), f"no longer in the docs: {set(DOC_FIGURES) - set(found)}"
     for fig, (receipt, pattern) in DOC_FIGURES.items():
