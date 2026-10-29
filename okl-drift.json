@@ -128,9 +128,9 @@
       "title": "Dependabot alerts reach no one unless a step reads them",
       "scope": "org",
       "files": "docs/DEVELOPING.md",
-      "verified_at": 1792945101761,
-      "verified_by": "`awk '/^## Releasing/{r=1;next} r&&/^(## |2\\. )/{exit} r&&/^1\\. /{s=1} s{print}' docs/DEVELOPING.md | tr '\\n' ' ' | grep -o 'dependabot/alerts?state=open.*--jq length.*should print 0'` exit 0, matched 'should print 0' on commit 444dba012971 @ 2026-10-25T16:18Z",
-      "verified_commit": "444dba012971f716c2f80d481d256063f7049d26"
+      "verified_at": 1793279824749,
+      "verified_by": "`awk '/^## Releasing/{r=1;next} r&&/^(## |2\\. )/{exit} r&&/^1\\. /{s=1} s{print}' docs/DEVELOPING.md | tr '\\n' ' ' | grep -o 'dependabot/alerts?state=open.*--jq length.*should print 0'` exit 0, matched 'should print 0' on commit 8cc509be3b1e @ 2026-10-29T13:17Z",
+      "verified_commit": "8cc509be3b1e0c36b40d19c07de8bbf834121a34"
     },
     {
       "id": "n_d45d7bf64896",
