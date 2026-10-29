@@ -80,7 +80,7 @@ okl check --warm on  # add what a lesson means to the words it shares, from the 
 okl warm start       # start the local process that keeps EmbeddingGemma (int8) loaded; needs the
                      #   warm extra; --wait N waits for it to load. stop, status, and serve (the
                      #   process itself, in the foreground) too; after `okl warm stop` the default
-                     #   leaves it off until `okl warm start`. About 1.6 GB once it has answered a
+                     #   leaves it off until `okl warm start`, `index` or `serve`. About 1.6 GB once it has answered a
                      #   prompt. One runs at a time; its log is ~/.cache/okl/warm.log.
 okl warm index       # embed this store's lessons for it, one vector per phrasing; again after
                      #   lessons change (only changed ones are embedded)

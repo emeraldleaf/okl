@@ -15,6 +15,7 @@ def cmd_warm(args: argparse.Namespace) -> int:
 
 
 def _serve(_args: argparse.Namespace) -> int:
+    warm.resume()
     try:
         return warm.serve()
     except warm.WarmUnavailableError as e:
@@ -23,8 +24,8 @@ def _serve(_args: argparse.Namespace) -> int:
 
 
 def _stop(_args: argparse.Namespace) -> int:
-    print(("stopped" if warm.stop() else "not running")
-          + "; it stays off until `okl warm start` (`\"warm\": false` keeps it off for good)")
+    print(("stopped" if warm.stop() else "no server answered; one still loading or busy exits when it sees the stop")
+          + "; it stays off until `okl warm start` or `okl warm index` (`\"warm\": false` keeps it off for good)")
     return 0
 
 
@@ -36,6 +37,7 @@ def _status(_args: argparse.Namespace) -> int:
 
 
 def _start(args: argparse.Namespace) -> int:
+    warm.resume()
     try:
         up = warm.start(wait_s=args.wait)
     except warm.WarmUnavailableError as e:
@@ -52,6 +54,7 @@ def _index(_args: argparse.Namespace) -> int:
     if not client.configured or client.mode == "remote":
         print("okl warm index embeds the LOCAL store's lessons; run it where `okl init` ran.", file=sys.stderr)
         return 2
+    warm.resume()
     try:
         up = warm.start(wait_s=120)
     except warm.WarmUnavailableError as e:
@@ -68,4 +71,7 @@ def _index(_args: argparse.Namespace) -> int:
         return 2
     print(f"✓ {report['embedded']} lesson(s) embedded, {report['unchanged']} unchanged, "
           f"{report['removed']} removed · {report['model']}")
+    if not client._local_store().local:
+        print("  this store is a shared database, so the default leaves the model off for it: "
+              "set \"warm\": true where you want it (review on #300)")
     return 0

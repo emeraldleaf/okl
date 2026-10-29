@@ -174,7 +174,7 @@ def test_one_server_at_a_time(monkeypatch):
     """While one server holds the lock a second exits at once, and start() spawns nothing: a
     server still loading answers no ping, and every prompt started another (review on #300)."""
     path, server = _serving(monkeypatch)
-    assert warm.serve(path, idle_exit_s=1) == 0   # returns at once: the first holds the lock
+    assert warm.serve(path, idle_exit_s=1) == 0   # gives up after a second: the first holds the lock
     assert warm.ping()["served"] == 0
     spawned = []
     monkeypatch.setattr(warm, "installed", lambda: True)
@@ -337,7 +337,12 @@ def test_a_prompt_that_finds_no_server_starts_one_and_not_one_per_prompt(monkeyp
     assert first["warm_reason"] == "not_running"
     assert "starting now for the next prompt" in first["warm_unavailable"]
     assert len(spawned) == 1
-    second = c.check("the session token disappears after a refresh")   # it never came up
+    soon = c.check("the session token disappears after a refresh")      # still coming up
+    assert "still loading" in soon["warm_unavailable"]
+    import os
+    old = time.time() - warm.STARTING_S - 1                            # and then it never came up
+    os.utime(warm._started_path(), (old, old))
+    second = c.check("the session token disappears after a refresh")
     assert "did not come up after its last start" in second["warm_unavailable"]
     assert str(warm.log_path()) in second["warm_unavailable"]
     assert len(spawned) == 1
@@ -359,8 +364,10 @@ def test_okl_warm_stop_is_not_undone_by_the_next_prompt(monkeypatch):
     asked = _client_on(monkeypatch, s, True).check("the session token disappears after a refresh")
     assert "stopped with `okl warm stop`" in asked["warm_unavailable"]
     assert spawned == []
-    warm.start()                                   # undoes the stop
-    assert not warm.stopped() and len(spawned) == 1
+    warm.start()                                   # the default's start for a prompt keeps the stop
+    assert warm.stopped() and len(spawned) == 1
+    warm.resume()                                  # the person's own start, index or serve undoes it
+    assert not warm.stopped()
 
 
 def test_the_server_is_started_detached_from_the_prompt_hook(monkeypatch):
@@ -429,3 +436,50 @@ def test_only_a_prompt_that_asked_the_model_counts_toward_what_it_added():
     (review on #300)."""
     times = {"on": [300.0, 130.0, 260.0], "off": [100.0, 120.0, 110.0]}
     assert _latency().model_diffs(times, [True, False, True]) == [150.0, 200.0]
+
+
+def test_a_stop_reaches_a_server_that_was_loading_or_busy(monkeypatch):
+    """A stop sent while the server loaded found no socket, and one that timed out while it was
+    busy was never read: 1.6 GB stayed up for hours (review on #300). The record it leaves is."""
+    path = Path(tempfile.mkdtemp(prefix="okl", dir="/tmp")) / "w.sock"
+    monkeypatch.setenv("OKL_WARM_SOCKET", str(path))
+    monkeypatch.setattr(warm, "load_model", lambda: _stub)
+    assert warm.stop() is False                    # nothing answers yet: it is still loading
+    assert warm.serve(path, idle_exit_s=30) == 0   # and exits once loaded, never serving
+    assert not path.exists()
+    warm.resume()
+    path, server = _serving(monkeypatch)
+    warm._stopped_path().touch()                   # a stop whose request was never answered
+    warm.ping()                                    # the next connection wakes the loop
+    server.join(timeout=5)
+    assert not server.is_alive()
+
+
+def test_a_start_still_coming_up_reads_as_loading_not_failed(monkeypatch):
+    """The new process has not taken the lock in its first seconds; a prompt then was told the
+    start had failed (review on #300)."""
+    import os
+    monkeypatch.setattr(warm, "installed", lambda: True)
+    spawned = []
+    monkeypatch.setattr(warm.subprocess, "Popen", lambda *a, **k: spawned.append(a))
+    warm._started_path().parent.mkdir(parents=True, exist_ok=True)
+    warm._started_path().touch()
+    assert warm.revive() == "loading" and spawned == []
+    old = time.time() - warm.STARTING_S - 1
+    os.utime(warm._started_path(), (old, old))
+    assert warm.revive() == "failed" and spawned == []
+    old = time.time() - warm.RESTART_AFTER_S - 1
+    os.utime(warm._started_path(), (old, old))
+    assert warm.revive() == "started" and len(spawned) == 1
+
+
+def test_a_server_that_cannot_take_the_lock_says_so(monkeypatch, capsys):
+    """A start's probe holds the lock for an instant, and a server meeting it exited with no
+    word, so the log a failed start points at was empty (review on #300)."""
+    path = Path(tempfile.mkdtemp(prefix="okl", dir="/tmp")) / "w.sock"
+    held = warm._take_lock(path)
+    try:
+        assert warm.serve(path, idle_exit_s=1) == 0
+    finally:
+        held.close()
+    assert "another server holds the lock" in capsys.readouterr().err

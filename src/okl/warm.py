@@ -59,6 +59,9 @@ IDLE_EXIT_S = 4 * 3600
 # a second, so a server that is not up by then failed, and starting another each prompt would
 # fail the same way (review on #300).
 RESTART_AFTER_S = 300
+# A start this recent is still coming up: the new process has not yet imported okl and taken
+# the lock, so a free lock does not mean it failed (review on #300).
+STARTING_S = 30
 INDEX_BATCH = 32   # lessons a request when indexing
 EXTRA = "observed-knowledge-ledger[warm]"
 
@@ -270,8 +273,14 @@ def serve(path: Path | None = None, *, idle_exit_s: float = IDLE_EXIT_S) -> int:
     `idle_exit_s`. One request per connection: ping, embed or stop. A second server exits at
     once while one holds the lock."""
     path = path or socket_path()
-    lock = _take_lock(path)
+    lock = None
+    for _ in range(20):   # a start's probe holds the lock for an instant; wait it out (review on #300)
+        lock = _take_lock(path)
+        if lock is not None:
+            break
+        time.sleep(0.05)
     if lock is None:
+        sys.stderr.write("okl warm: another server holds the lock; this one exits\n")
         return 0
     with lock:
         return _serve(path, idle_exit_s)
@@ -284,6 +293,10 @@ def _serve(path: Path, idle_exit_s: float) -> int:
     # took over TIMEOUT_S, so the first prompt after a start always fell back. Pay it here,
     # before the socket exists, so no prompt waits for it.
     encode(["warm up"], "query")
+    if stopped():
+        # `okl warm stop` while this was loading found no socket to ask (review on #300).
+        sys.stderr.write("okl warm: stopped with `okl warm stop` while loading; exiting\n")
+        return 0
     state: dict[str, Any] = {"loaded_s": round(time.perf_counter() - started, 2), "served": 0}
     path.parent.mkdir(parents=True, exist_ok=True)
     with contextlib.suppress(FileNotFoundError):
@@ -295,7 +308,9 @@ def _serve(path: Path, idle_exit_s: float) -> int:
     srv.settimeout(60)
     last = time.monotonic()
     try:
-        while time.monotonic() - last < idle_exit_s:
+        # A stop asked while this was busy can time out before its answer, so the record
+        # `okl warm stop` leaves is read here too (review on #300).
+        while time.monotonic() - last < idle_exit_s and not stopped():
             try:
                 conn, _ = srv.accept()
             except TimeoutError:
@@ -370,10 +385,15 @@ def stopped() -> bool:
     return _stopped_path().exists()
 
 
+def resume() -> None:
+    """Undo `okl warm stop`: what the person's own start, index or serve does first. The
+    default's start for a prompt never does (review on #300)."""
+    _stopped_path().unlink(missing_ok=True)
+
+
 def start(*, wait_s: float = 0.0) -> dict[str, Any] | None:
     """Start the server in the background unless one answers; with `wait_s`, wait that long
-    for it to load. Returns its ping, or None while it is still loading. Undoes `okl warm stop`."""
-    _stopped_path().unlink(missing_ok=True)
+    for it to load. Returns its ping, or None while it is still loading."""
     running = ping()
     if running:
         return running
@@ -407,8 +427,9 @@ def _wait(wait_s: float) -> dict[str, Any] | None:
 def revive() -> str:
     """For a prompt that found no server: start one for the next prompt, unless one is loading or
     the last start, under RESTART_AFTER_S ago, did not come up. Returns what it found: "started",
-    "loading" or "failed". Raises what start() raises (review on #300: a server that crashed while
-    loading was started again on every prompt)."""
+    "loading" (the lock is held, or the start is under STARTING_S old) or "failed". Raises what
+    start() raises (review on #300: a server that crashed while loading was started again on
+    every prompt)."""
     probe = _take_lock(socket_path())
     if probe is None:
         return "loading"
@@ -418,6 +439,8 @@ def revive() -> str:
         since = time.time() - _started_path().stat().st_mtime
     except OSError:
         since = None
+    if since is not None and since < STARTING_S:
+        return "loading"
     if since is not None and since < RESTART_AFTER_S:
         return "failed"
     start()
