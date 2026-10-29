@@ -403,7 +403,13 @@ def test_the_tier_arms_differ_only_in_where_the_governing_lesson_is(ab, monkeypa
 
 def test_the_run_refuses_to_measure_another_checkouts_code(ab, monkeypatch, tmp_path):
     """An editable install points `python -m okl` at the checkout it was installed from, so a run
-    from a worktree without PYTHONPATH measured another tree's code (review on #303)."""
+    from a worktree without PYTHONPATH measured another tree's code (review on #303). It passes
+    when both load this process's okl, which PYTHONPATH arranges here as a run arranges it; a
+    bare worktree's shell is exactly the mismatch it refuses."""
+    import okl
+    src = Path(okl.__file__).resolve().parents[1]
+    monkeypatch.setattr(ab, "REPO", src.parent)
+    monkeypatch.setenv("PYTHONPATH", str(src))
     assert ab.code_outside_checkout() == ""
     monkeypatch.setattr(ab, "REPO", tmp_path)
     assert str(tmp_path / "src") in ab.code_outside_checkout()

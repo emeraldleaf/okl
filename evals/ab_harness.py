@@ -359,11 +359,14 @@ def code_outside_checkout() -> str:
     here = Path(okl.__file__).resolve()
     if not here.is_relative_to(src):
         return f"this process imports okl from {here.parent}, not {src}"
-    r = subprocess.run([sys.executable, "-c", "import okl; print(okl.__file__)"], cwd=REPO,
-                       capture_output=True, text=True)
-    there = Path(r.stdout.strip()).resolve() if r.returncode == 0 and r.stdout.strip() else None
-    if there is None or not there.is_relative_to(src):
-        return f"`python -m okl` loads okl from {there.parent if there else 'nowhere'}, not {src}"
+    # From the checkout, as the briefings are rendered, and from elsewhere, as the generator's
+    # shim runs: a relative PYTHONPATH holds in one and not the other (review on #303).
+    for cwd in (REPO, Path(tempfile.gettempdir())):
+        r = subprocess.run([sys.executable, "-c", "import okl; print(okl.__file__)"], cwd=cwd,
+                           capture_output=True, text=True)
+        there = Path(r.stdout.strip()).resolve() if r.returncode == 0 and r.stdout.strip() else None
+        if there is None or not there.is_relative_to(src):
+            return f"`python -m okl` run from {cwd} loads okl from {there.parent if there else 'nowhere'}, not {src}"
     return ""
 
 
