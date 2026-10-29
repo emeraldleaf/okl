@@ -270,10 +270,11 @@ def test_the_person_is_told_when_the_warm_model_did_not_run():
     assert not [n for n in _person_notes({"warm": True}) if "warm" in n]
 
 
-def test_by_default_the_model_runs_for_an_indexed_store_and_is_silent_otherwise(stub, monkeypatch):
-    """The decision recorded in §4z: unset, warm is on for a store `okl warm index` has embedded,
-    where the model can load, and says nothing for a store never indexed or a machine without
-    the extra; set off, it never runs."""
+def test_by_default_the_model_runs_for_a_local_indexed_store_and_is_silent_otherwise(stub, monkeypatch):
+    """The decision recorded in §4z: unset, warm is on for a local store `okl warm index` has
+    embedded, where the model can load, and says nothing for a store never indexed, a shared
+    store, or one stopped with `okl warm stop`; set off, it never runs (review on #300)."""
+    from okl.store import Store as StoreClass
     monkeypatch.setattr(warm, "installed", lambda: True)
     task = "users get logged out whenever they reload the app"
     s = _store()
@@ -286,10 +287,122 @@ def test_by_default_the_model_runs_for_an_indexed_store_and_is_silent_otherwise(
         assert auto["warm"] is True
         assert core.briefed_ids(auto) == ["tokens"]
         assert core.briefed_ids(core.check(s, repo="r", task=task, warm=False)) == []
+        with monkeypatch.context() as m:   # a shared database: one person's index is not everyone's opt-in
+            m.setattr(StoreClass, "local", property(lambda self: False))
+            shared = core.check(s, repo="r", task=task, warm=None)
+            assert "warm" not in shared and core.briefed_ids(shared) == []
+        warm.stop()                        # no server answers; the record is what keeps it off
+        stopped = core.check(s, repo="r", task=task, warm=None)
+        assert "warm" not in stopped and "warm_unavailable" not in stopped
+    finally:
+        s.close()
+
+
+def test_an_indexed_store_that_lost_the_extra_says_so(stub, monkeypatch):
+    """An upgrade that reinstalls without the warm extra turned the model off with no word; the
+    store's own vectors say the person opted in (review on #300)."""
+    s = _store()
+    try:
+        warm.index(s)
         monkeypatch.setattr(warm, "installed", lambda: False)
-        elsewhere = core.check(s, repo="r", task=task, warm=None)
-        assert "warm_unavailable" not in elsewhere
-        assert core.briefed_ids(elsewhere) == []
+        res = core.check(s, repo="r", task="users get logged out whenever they reload the app", warm=None)
+        assert "extra is not installed" in res["warm_unavailable"]
+        assert res["warm_reason"] == "unavailable" and res["warm"] is False
+    finally:
+        s.close()
+
+
+def _client_on(monkeypatch, s, warm_setting=None):
+    """A local Client over `s`, with the warm setting given and drift marks off."""
+    from okl.client import Client
+    c = Client(config={"repo": "r"})
+    c.warm = warm_setting
+    monkeypatch.setattr(c, "_local_store", lambda: s)
+    monkeypatch.setattr("okl.client.drift.annotate_briefing", lambda *a, **k: None)
+    return c
+
+
+def test_a_prompt_that_finds_no_server_starts_one_and_not_one_per_prompt(monkeypatch):
+    """The default starts the server for the next prompt and says so; a server that did not come
+    up is not started again on every prompt, and the line names its log (review on #300)."""
+    s = _store()
+    warm.set_encoder(_stub)
+    warm.index(s)
+    warm.set_encoder(None)
+    monkeypatch.setattr(warm, "installed", lambda: True)
+    spawned = []
+    monkeypatch.setattr(warm.subprocess, "Popen", lambda *a, **k: spawned.append(a))
+    c = _client_on(monkeypatch, s)
+    first = c.check("the session token disappears after a refresh")
+    assert first["warm_reason"] == "not_running"
+    assert "starting now for the next prompt" in first["warm_unavailable"]
+    assert len(spawned) == 1
+    second = c.check("the session token disappears after a refresh")   # it never came up
+    assert "did not come up after its last start" in second["warm_unavailable"]
+    assert str(warm.log_path()) in second["warm_unavailable"]
+    assert len(spawned) == 1
+
+
+def test_okl_warm_stop_is_not_undone_by_the_next_prompt(monkeypatch):
+    """`okl warm stop` was undone at once: the next prompt found no server and started one
+    (review on #300). Asked for explicitly, the stopped model says how to resume it."""
+    s = _store()
+    warm.set_encoder(_stub)
+    warm.index(s)
+    warm.set_encoder(None)
+    monkeypatch.setattr(warm, "installed", lambda: True)
+    spawned = []
+    monkeypatch.setattr(warm.subprocess, "Popen", lambda *a, **k: spawned.append(a))
+    assert warm.stop() is False                     # none was running; it stays off anyway
+    auto = _client_on(monkeypatch, s).check("the session token disappears after a refresh")
+    assert "warm_unavailable" not in auto
+    asked = _client_on(monkeypatch, s, True).check("the session token disappears after a refresh")
+    assert "stopped with `okl warm stop`" in asked["warm_unavailable"]
+    assert spawned == []
+    warm.start()                                   # undoes the stop
+    assert not warm.stopped() and len(spawned) == 1
+
+
+def test_the_server_is_started_detached_from_the_prompt_hook(monkeypatch):
+    """The hook reads okl's output through $(...), which waits for every holder of the pipe: a
+    server that inherited it would hold the prompt to Claude Code's 30 s limit (review on #300)."""
+    import subprocess
+    monkeypatch.setattr(warm, "installed", lambda: True)
+    calls = []
+    monkeypatch.setattr(warm.subprocess, "Popen", lambda *a, **k: calls.append(k))
+    warm.start()
+    (k,) = calls
+    assert k["stdin"] is subprocess.DEVNULL and k["stderr"] is subprocess.STDOUT
+    assert k["stdout"] not in (None, subprocess.PIPE) and k["stdout"].name == str(warm.log_path())
+    assert k["start_new_session"] is True and k["close_fds"] is True
+
+
+def test_the_lines_are_the_receipts_and_just_above_them():
+    """Both briefing lines were copied by hand from a receipt, and a comment's copy slipped a
+    digit (review on #300): each constant is the receipt's line at alpha 0.05, just above it."""
+    import re
+
+    from okl import decide
+    text = (Path(__file__).resolve().parents[1] / "evals" / "results"
+            / "bench-20261027-sel-dense-embeddinggemma-int8-words.txt").read_text()
+    exact = next(ln for ln in text.splitlines() if ln.startswith("exact lines:"))
+    for weight, line in ((8, warm.LINE), (0, decide.CALIBRATED_LINE)):
+        m = re.search(rf"\bW {weight}: ([0-9.]+)", exact)
+        assert m, f"no W {weight} line in the receipt"
+        assert float(m.group(1)) < line <= float(m.group(1)) + 1e-6
+
+
+def test_meaning_only_neighbours_are_not_counted_as_weak_matches(stub):
+    """With the model on, the calibrated decision scored the model's own neighbours too, and the
+    briefing said they shared too little of the task's subject (review on #300)."""
+    s = _store()
+    try:
+        warm.index(s)
+        task = "users get logged out whenever they reload the app"
+        words = core.check(s, repo="r", task=task, decision="calibrated")
+        on = core.check(s, repo="r", task=task, decision="calibrated", warm=True)
+        assert core.briefed_ids(on) == ["tokens"]
+        assert on["weak_matches"] == words["weak_matches"] == 0
     finally:
         s.close()
 

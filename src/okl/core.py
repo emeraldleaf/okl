@@ -242,11 +242,11 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     untriggered: list[str] = []
     own_untriggered = 0
     asked, first = limit, (hits, replaced, exhausted, cand)
-    meaning, hits, warm_note = _warm_candidates(store, query, hits, repo_scope, interests,
-                                                on=warm is not False and decision != "floor", auto=warm is None)
+    meaning, hits, warm_err = _warm_candidates(store, query, hits, repo_scope, interests,
+                                               on=warm is not False and decision != "floor", auto=warm is None)
     if decision in ("calibrated", "tiered"):
         hits, matched, weak, limit, untriggered, own_untriggered = _calibrated(store, hits, query, limit,
-                                                                               meaning=meaning)
+                                                                               meaning=meaning, words=candidates)
     else:
         candidates, hits, matched, weak, replaced, cand = _floor_widened(
             store, query, limit, repo_scope, interests, hybrid=hybrid, rerank=rerank,
@@ -292,8 +292,8 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     out.update({"skipped": "harness"} if harness else {})
     out.update({"packs_without_triggers": untriggered} if untriggered else {})
     out.update({"lessons_without_triggers": own_untriggered} if own_untriggered else {})
-    out.update({"warm": bool(meaning)} if warm or meaning or warm_note else {})
-    out.update({"warm_unavailable": warm_note} if warm_note else {})
+    out.update({"warm": bool(meaning)} if warm or meaning or warm_err else {})
+    out.update({"warm_unavailable": str(warm_err), "warm_reason": warm_err.reason} if warm_err else {})
     if hybrid and cand.note:
         # Asked for and not possible here: the briefing above is the full-text one. Said in
         # the result rather than raised, because a briefing must never fail on an optional arm.
@@ -676,17 +676,21 @@ def lessons_without_triggers(nodes: list[Node]) -> list[Node]:
 
 
 def _calibrated(store: Store, hits: list[Node], query: str, limit: int, *,
-                meaning: dict[str, float] | None = None,
+                meaning: dict[str, float] | None = None, words: list[Node] | None = None,
                 ) -> tuple[list[Node], dict[str, list[str]], int, int, list[str], int]:
     """The calibrated decision (decide.py) in place of the floor and its widening: what clears
     the line, best first; each record's shared words; how many fell below the line; the limit
     the cutoff then applies (at most CALIBRATED_CAP); the packs that predate triggers; and how
     many of the store's own lessons have none. With `meaning` from the warm model, the score
-    and the line are §4z's."""
+    and the line are §4z's, and the count below the line is of `words`, the full-text
+    candidates: the model's own neighbours are scored too, and counting them told the person
+    that up to 36 more lessons shared too little of the task's subject (review on #300)."""
     live_all = [n for n in store.all_nodes() if n.status not in RETIRED_STATUSES]
     if meaning:
-        kept, matched, weak = decide.select(hits, briefing_terms(query), decide.Rarity(live_all),
-                                            meaning=meaning, weight=warm.WEIGHT, line=warm.LINE)
+        kept, matched, _weak = decide.select(hits, briefing_terms(query), decide.Rarity(live_all),
+                                             meaning=meaning, weight=warm.WEIGHT, line=warm.LINE)
+        shown = {n.id for n in kept}
+        weak = sum(1 for n in (hits if words is None else words) if n.id not in shown)
     else:
         kept, matched, weak = decide.select(hits, briefing_terms(query), decide.Rarity(live_all))
     return (kept, matched, weak, min(limit, decide.CALIBRATED_CAP), _packs_without_triggers(live_all),
@@ -694,20 +698,29 @@ def _calibrated(store: Store, hits: list[Node], query: str, limit: int, *,
 
 
 def _warm_candidates(store: Store, query: str, hits: list[Node], repo_scope: str, interests: list[str] | None,
-                     *, on: bool, auto: bool = False) -> tuple[dict[str, float], list[Node], str | None]:
+                     *, on: bool, auto: bool = False,
+                     ) -> tuple[dict[str, float], list[Node], warm.WarmUnavailableError | None]:
     """With the warm model on and answering: each lesson's best cosine with the prompt, and the
     candidates with the model's own nearest added (REPORT §4z). Otherwise no scores, the
     candidates as they were, and why (None when it was not asked for or there is no subject).
-    With `auto` (nothing set it), a store never indexed, or a machine without the extra, has not
-    opted in, so nothing is said."""
-    if not on or not briefing_terms(query) or (auto and not warm.installed()):
+
+    With `auto` (nothing set it), only a local store whose lessons `okl warm index` has embedded
+    has opted in, and `okl warm stop` keeps it off; otherwise nothing is said. A shared store
+    does not count: one person indexing it would start the model for everyone who reads it. An
+    opted-in store on a machine without the extra says so, since an upgrade can drop the extra
+    (review on #300)."""
+    if not on or not briefing_terms(query):
         return {}, hits, None
+    if auto and (warm.stopped() or not store.local or not store.has_embeddings(warm.MODEL_ID)):
+        return {}, hits, None
+    if auto and not warm.installed():
+        return {}, hits, warm.WarmUnavailableError(
+            "this store's lessons are indexed for the warm model, but its extra is not installed "
+            f"here: pip install '{warm.EXTRA}', or set \"warm\": false")
     try:
         meaning = warm.cosines(store, query)
-    except warm.WarmNotIndexedError as e:
-        return {}, hits, None if auto else str(e)
     except warm.WarmUnavailableError as e:
-        return {}, hits, str(e)
+        return {}, hits, e
     seen = {n.id for n in hits}
     near = warm.nearest(store, meaning, lambda n: _in_scope(n, repo_scope, interests))
     return meaning, hits + [n for n in near if n.id not in seen], None

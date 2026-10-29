@@ -136,6 +136,25 @@ def warm_setting(env: str | None, configured: Any) -> bool | None:
     raise ValueError(f"warm must be on or off, not {raw!r}")
 
 
+def _revive_warm(note: str) -> str:
+    """What the person is told after a prompt found no warm server, having started one for the
+    next prompt when it should; this one does not wait for a model to load (REPORT §4z). A
+    stopped server stays stopped, one loading or failing is not started again, and a start that
+    fails is said, never raised: the briefing is already made (review on #300)."""
+    if warm.stopped():
+        return "stopped with `okl warm stop`; `okl warm start` resumes it"
+    if not warm.installed():
+        return f"it needs its extra: pip install '{warm.EXTRA}'"
+    try:
+        state = warm.revive()
+    except (OSError, warm.WarmUnavailableError) as e:
+        return f"{note}; starting it failed: {e}"
+    return {"started": "it was not running, and is starting now for the next prompt",
+            "loading": "it is still loading (the first start downloads it); the next prompt uses it",
+            "failed": f"it did not come up after its last start; see {warm.log_path()}, "
+                      "or run `okl warm start --wait 60`"}[state]
+
+
 def decision_setting(env: str | None, configured: Any) -> str:
     """How `check` turns candidates into a briefing (#291, REPORT §4w, §4y): OKL_DECISION wins
     over the config's `decision`; decide.DEFAULT ("tiered": the calibrated line's lessons in
@@ -332,14 +351,8 @@ class Client:
                 kw["limit"] = limit
             store = self._local_store()
             result = core.check(store, repo, task, **kw)
-            if "not running" in str(result.get("warm_unavailable", "")) and warm.installed():
-                # Started now, in the background, so the next prompt is briefed by meaning too;
-                # this one does not wait for a model to load (REPORT §4z). A start that fails is
-                # said, never raised: the briefing is already made (review on #300).
-                try:
-                    warm.start()
-                except (OSError, warm.WarmUnavailableError) as e:
-                    result["warm_unavailable"] += f"; starting it failed: {e}"
+            if result.get("warm_reason") == "not_running":
+                result["warm_unavailable"] = _revive_warm(result["warm_unavailable"])
         # Mark briefed lessons whose code changed since their last check (#93). Done here,
         # not in core, because only the client has this repo's checkout: a shared service
         # answering /check has no git history to compare against.

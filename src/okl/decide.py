@@ -43,7 +43,7 @@ from typing import Final
 from .store import Node
 
 # The bench's conformal line (evals/bench/, REPORT §4w): the 269th of 282 calibration nulls'
-# best scores, 2.0017172944, and just above it.
+# best scores, 2.0017172954, and just above it (tests/test_warm.py reads it from the receipt).
 CALIBRATED_LINE = 2.0017173
 CALIBRATED_CAP = 5
 

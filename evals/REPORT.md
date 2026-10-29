@@ -2651,6 +2651,11 @@ a lesson named in a line is not shown.
   against 72, and 95 ms a prompt against 174 (`bench-20261027-sel-dense-embeddinggemma-int8-words.txt`
   against `bench-20261026-sel-dense-embeddinggemma-words.txt`). That chose the file, not the
   weight or the line.
+  *Erratum (2026-10-29, review of #300):* the receipts do not say "95 ms a prompt against 174".
+  Encoding a prompt took 170.7 ms with the int8 file and 173.5 ms at full precision, the same
+  within noise. The 95 ms was the ad hoc end-to-end timing named below, not the benchmark's. What
+  the int8 file saves is the download: 309 MB against 1,235 MB (`warm-model-files-20261029.txt`).
+  The choice of file stands on recall and size.
 - **The score** is decide.score plus 8 times the best cosine between the prompt and any of a
   lesson's phrasings (title and symptom, each alias, each trigger), over the full-text
   candidates and the model's own 36 nearest in scope. The line is 5.767926, the selection
@@ -2701,6 +2706,11 @@ Receipts:
   all 120 do, counted with `core.briefing_terms` at ea04e35, so every difference is the model's.
   Later runs print that count on the receipt and time only the tiered decision (review on #300).
 - `warm-memory-20261027-0530.txt`: memory, prompt by prompt.
+- `warm-model-files-20261029.txt`: the model's files at the revision okl runs, from the model
+  repository's listing: int8 309.5 MB, full precision 1,235.0 MB, 4-bit 197.2 MB.
+- Receipts stamped 815a148 and c1f340b (now ebd16d9), ada6f2a (now c734cc0) and c1cba7f (now
+  bb31441) name commits from before the rebase onto #299. Tags `receipts/<sha>` keep them
+  reachable (review of #300).
 - `real-20261027-heldout-size-warm.txt`: the briefing's size.
 
 **The retrieval predictions held. The memory prediction failed, so by the rule the warm model
@@ -2737,7 +2747,7 @@ cost of the first inference, not growth. Turning off ONNX Runtime's CPU memory a
 to about 1.3 GB, still far above the bound. The prediction was a planning error, recorded as it
 was written.
 
-**What follows.** As pre-registered, `okl warm` ships as an opt-in (`--warm on`, `"warm": true`,
+**What follows.** *Superseded the same day by the decision below.* As pre-registered, `okl warm` ships as an opt-in (`--warm on`, `"warm": true`,
 `OKL_WARM=1`), off by default, and the default briefing stays §4y's two tiers. A smaller
 footprint is the next measurement, pre-registered before it runs, if the person who uses okl
 wants the model on by default. Candidates are the arena off with a model kept loaded, or the
@@ -2747,9 +2757,14 @@ resident is acceptable for a machine that opts in is that person's decision, not
 **A decision after the result (2026-10-27).** The person who uses okl judged about 1.6 GB
 acceptable and leaned toward the model by default, leaving the form to the author. Chosen: when
 nothing sets `warm`, it is on for a store whose lessons `okl warm index` has embedded, on a
-machine where the model can load. A store never indexed, or a machine without the extra, stays
-silent. An indexed store whose model does not answer falls back to the usual briefing and says
-so: `warm_unavailable` in the JSON, and a line for the person. `"warm": false` or `OKL_WARM=0` turns it
+machine where the model can load. A store never indexed stays silent. An indexed store whose
+model does not answer falls back to the usual briefing and says so: `warm_unavailable` in the
+JSON, and a line for the person. *Amended in review of #300:*
+- Only a local (SQLite) store opts in this way. One person indexing a shared database would start
+  the model for everyone who reads it, so a shared store needs `"warm": true`.
+- `okl warm stop` keeps it off until `okl warm start`.
+- An indexed store on a machine without the extra says so, since an upgrade can drop the extra.
+- A server that did not come up is not started again on every prompt; the line names its log. `"warm": false` or `OKL_WARM=0` turns it
 off, and a shared service never runs it. The trigger is indexing, not installing the extra,
 because the `rerank` and `all` extras install fastembed too, and a 1.6 GB process should not
 start for someone who never asked for it. This is a decision, not a passed prediction:

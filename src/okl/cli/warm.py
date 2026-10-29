@@ -23,7 +23,8 @@ def _serve(_args: argparse.Namespace) -> int:
 
 
 def _stop(_args: argparse.Namespace) -> int:
-    print("stopped" if warm.stop() else "not running")
+    print(("stopped" if warm.stop() else "not running")
+          + "; it stays off until `okl warm start` (`\"warm\": false` keeps it off for good)")
     return 0
 
 
@@ -41,7 +42,7 @@ def _start(args: argparse.Namespace) -> int:
         print(f"NOT STARTED — {e}", file=sys.stderr)
         return 2
     print(f"running · {up['model']} · pid {up['pid']}" if up
-          else f"starting in the background · log {warm.socket_path().with_suffix('.log')}")
+          else f"starting in the background · log {warm.log_path()}")
     return 0
 
 
@@ -57,7 +58,7 @@ def _index(_args: argparse.Namespace) -> int:
         print(f"NOT INDEXED — {e}", file=sys.stderr)
         return 2
     if not up:
-        print(f"NOT INDEXED — the warm model did not start; see {warm.socket_path().with_suffix('.log')}",
+        print(f"NOT INDEXED — the warm model did not start; see {warm.log_path()}",
               file=sys.stderr)
         return 2
     try:

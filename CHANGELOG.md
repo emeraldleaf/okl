@@ -48,8 +48,9 @@ benchmark built to decide (REPORT §4w; the design and its evidence:
   lesson's best cosine with the prompt to the line's score. On real held-out prompts it showed
   46 applying lessons in full against 38, at 23.0% precision against 17.8%, adding a median of
   114 ms to a prompt. It holds about 1.6 GB of memory once it has answered a prompt, above the
-  bound set before measuring, so it runs only for a store you have indexed: `"warm": false` or
-  `OKL_WARM=0` turns it off there, and a store never indexed is briefed as before. The `warm`
+  bound set before measuring, so it runs only for a local store you have indexed: `"warm": false`
+  or `OKL_WARM=0` turns it off there, `okl warm stop` keeps it off until `okl warm start`, and a
+  store never indexed is briefed as before. The `warm`
   extra installs it.
 - **`okl triggers` and `/triggers`.** `okl triggers` lists a store's own advice lessons that
   have no triggers. `/triggers` (Claude Code) drafts ten for each from the lesson itself and

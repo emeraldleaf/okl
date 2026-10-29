@@ -40,7 +40,9 @@ fcntl: Any = importlib.import_module("fcntl") if importlib.util.find_spec("fcntl
 
 BASE_MODEL = "google/embeddinggemma-300m"
 # The int8 file of the same model: 92.0% recall on the benchmark's selection split against full
-# precision's 92.4%, a third of the download, half the time a prompt (REPORT §4z).
+# precision's 92.4%, and a quarter of the download, 309 MB against 1,235 MB
+# (warm-model-files-20261029.txt). Encoding a prompt takes about as long (170.7 ms against 173.5
+# in the benchmark's receipts; REPORT §4z's erratum).
 MODEL_ID = BASE_MODEL + "-quantized"
 DIM = 768
 QUERY = "task: search result | query: {}"     # the model card's retrieval prompts
@@ -53,6 +55,10 @@ LINE = 5.767926
 NEAREST = 36       # the model's own candidates, as many as the full-text window
 TIMEOUT_S = 0.5    # what a prompt waits for the prompt's vector before briefing without it
 IDLE_EXIT_S = 4 * 3600
+# How long after a start the default waits before starting the server again: loading takes about
+# a second, so a server that is not up by then failed, and starting another each prompt would
+# fail the same way (review on #300).
+RESTART_AFTER_S = 300
 INDEX_BATCH = 32   # lessons a request when indexing
 EXTRA = "observed-knowledge-ledger[warm]"
 
@@ -61,12 +67,23 @@ _encoder: Encoder | None = None   # tests and evals encode in-process; productio
 
 
 class WarmUnavailableError(RuntimeError):
-    """The warm model could not answer: not started, still loading, too slow, or no vectors."""
+    """The warm model could not answer: not started, still loading, too slow, or no vectors.
+    `reason` is the check result's `warm_reason`, so a caller can act on the cause rather than
+    its wording."""
+    reason = "unavailable"
+
+
+class WarmNotRunningError(WarmUnavailableError):
+    """Nothing answers on the socket: never started, stopped, idle past IDLE_EXIT_S, or crashed.
+    The one reason the client starts the server for, told by its type, not its words (review on
+    #300)."""
+    reason = "not_running"
 
 
 class WarmNotIndexedError(WarmUnavailableError):
     """No lesson in this store has warm vectors: `okl warm index` has never run here. Asked for,
     that is a reason to say; by default, it means the store has not opted in (§4z decision)."""
+    reason = "not_indexed"
 
 
 def set_encoder(encoder: Encoder | None) -> None:
@@ -122,11 +139,11 @@ def _ask(request: dict[str, Any], timeout: float) -> dict[str, Any]:
                     break
                 buf += chunk
     except FileNotFoundError:
-        raise WarmUnavailableError("the warm model is not running: `okl warm start`") from None
+        raise WarmNotRunningError("the warm model is not running: `okl warm start`") from None
     except TimeoutError:
         raise WarmUnavailableError(f"the warm model did not answer within {timeout:.1f} s") from None
     except OSError as e:
-        raise WarmUnavailableError(f"the warm model is not running ({e.strerror or e}): `okl warm start`") from None
+        raise WarmNotRunningError(f"the warm model is not running ({e.strerror or e}): `okl warm start`") from None
     try:
         reply = json.loads(buf)
     except json.JSONDecodeError:
@@ -334,9 +351,29 @@ def installed() -> bool:
     return importlib.util.find_spec("fastembed") is not None
 
 
+def log_path() -> Path:
+    """Where the server writes what it says, including why it failed to load."""
+    return socket_path().with_suffix(".log")
+
+
+def _stopped_path() -> Path:
+    return socket_path().with_suffix(".stopped")
+
+
+def _started_path() -> Path:
+    return socket_path().with_suffix(".started")
+
+
+def stopped() -> bool:
+    """Whether the person stopped the server with `okl warm stop` and has not started it since:
+    the default then leaves it off (review on #300: the next prompt started it again)."""
+    return _stopped_path().exists()
+
+
 def start(*, wait_s: float = 0.0) -> dict[str, Any] | None:
     """Start the server in the background unless one answers; with `wait_s`, wait that long
-    for it to load. Returns its ping, or None while it is still loading."""
+    for it to load. Returns its ping, or None while it is still loading. Undoes `okl warm stop`."""
+    _stopped_path().unlink(missing_ok=True)
     running = ping()
     if running:
         return running
@@ -347,8 +384,9 @@ def start(*, wait_s: float = 0.0) -> dict[str, Any] | None:
         return _wait(wait_s)   # one is loading already: do not start another
     with probe:   # released at once, for the server to take; the fallback has no close() (review on #300)
         pass
-    log = socket_path().with_suffix(".log")
+    log = log_path()
     log.parent.mkdir(parents=True, exist_ok=True)
+    _started_path().touch()
     with log.open("ab") as out:
         subprocess.Popen([sys.executable, "-m", "okl", "warm", "serve"], stdin=subprocess.DEVNULL,
                          stdout=out, stderr=subprocess.STDOUT, start_new_session=True, close_fds=True)
@@ -366,8 +404,31 @@ def _wait(wait_s: float) -> dict[str, Any] | None:
     return None
 
 
+def revive() -> str:
+    """For a prompt that found no server: start one for the next prompt, unless one is loading or
+    the last start, under RESTART_AFTER_S ago, did not come up. Returns what it found: "started",
+    "loading" or "failed". Raises what start() raises (review on #300: a server that crashed while
+    loading was started again on every prompt)."""
+    probe = _take_lock(socket_path())
+    if probe is None:
+        return "loading"
+    with probe:
+        pass
+    try:
+        since = time.time() - _started_path().stat().st_mtime
+    except OSError:
+        since = None
+    if since is not None and since < RESTART_AFTER_S:
+        return "failed"
+    start()
+    return "started"
+
+
 def stop() -> bool:
-    """Ask a running server to exit; False when none answered."""
+    """Ask a running server to exit, and keep the default from starting it again until `okl warm
+    start` (review on #300). False when none answered."""
+    _stopped_path().parent.mkdir(parents=True, exist_ok=True)
+    _stopped_path().touch()
     try:
         _ask({"op": "stop"}, TIMEOUT_S)
     except WarmUnavailableError:
