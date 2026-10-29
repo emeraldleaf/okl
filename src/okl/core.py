@@ -905,6 +905,11 @@ class LessonExistsError(ValueError):
     """
 
 
+# The fields a re-import keeps from the store when the pack leaves them out (#214).
+_KEPT_ON_SILENCE = ("body", "found_by", "ttl_days", "owner", "files", "symptom", "fix", "tags",
+                    "applies_to", "aliases", "triggers")
+
+
 def _carry_over(store: Store, kw: dict[str, Any], node_id: str, *,
                 replace: bool, keep_verification: bool) -> None:
     """Decide what a write to an existing id keeps from the lesson it overwrites.
@@ -932,11 +937,22 @@ def _carry_over(store: Store, kw: dict[str, Any], node_id: str, *,
         kw["status"] = old.status
     if not keep_verification:
         return
+    # A re-import (okl seed, --refresh): the pack owns what it says, and its silence is not a
+    # deletion. A field it leaves out that the store holds was set here (okl update --files, a
+    # /triggers draft), so it stays; re-seeding used to blank it, and files added locally went
+    # with their proof, leaving drift nothing to check (#214).
+    for field in _KEPT_ON_SILENCE:
+        if kw.get(field) in (None, "") and getattr(old, field) not in (None, ""):
+            kw[field] = getattr(old, field)
     if not _same_files(old.files, kw.get("files")):
         kw.update(verified_at=None, verified_commit=None, verified_by=old.verified_by)
-    elif old.verified_at is not None:
-        kw.update(verified_at=old.verified_at, verified_by=old.verified_by,
-                  verified_commit=old.verified_commit)
+    else:
+        # The stored check stays while the files do, stamp or not: after a re-seed that
+        # changed the files cleared the stamp, the next one dropped the check, and okl
+        # reverify had nothing to run (#214).
+        kw["verified_by"] = old.verified_by
+        if old.verified_at is not None:
+            kw.update(verified_at=old.verified_at, verified_commit=old.verified_commit)
 
 
 def join_aliases(aliases: Any) -> str | None:
@@ -1183,17 +1199,19 @@ def briefing_notice(result: dict[str, Any], shown: int = 3) -> str | None:
     the model's context and is invisible in the UI, so without this a user never sees okl
     work and cannot tell a helping tool from a dead one."""
     also = result.get("also_matched") or []
-    listed = f"{len(also)} more listed by title" if also else ""
+    # Said for the person, who never sees the list: it went to the agent (REPORT §4y).
+    listed = f"{len(also)} related listed for the agent" if also else ""
     if not result.get("match_count"):
         if result.get("store_records") == 0:
             return "okl · the store is empty, so nothing was briefed — see docs/GETTING-STARTED.md"
         if also:
             # The second tier named them: "nothing briefed" would hide that (REPORT §4y).
-            return f"okl · nothing matched closely enough to show in full; {listed}"
+            return f"okl · {len(also)} related lesson(s) listed for the agent; none close enough to show in full"
         if result.get("weak_matches"):
             # Not silence: okl ran and found only weak matches, which is a different fact
-            # from an empty store and from a task with no subject words.
-            if result.get("decision") == "calibrated":
+            # from an empty store and from a task with no subject words. Under the tiered
+            # default they are candidates below the line, not single-word matches.
+            if result.get("decision") in ("calibrated", "tiered"):
                 return (f"okl · nothing briefed: {result['weak_matches']} candidate(s) shared too "
                         "little of the task's subject to clear the line")
             return (f"okl · nothing briefed: {result['weak_matches']} weak match(es) on a "

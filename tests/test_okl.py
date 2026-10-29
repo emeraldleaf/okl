@@ -728,6 +728,42 @@ def test_seed_refresh_in_the_checkout_reads_its_own_seed_dir_as_bundled(tmp_path
     assert Client().get("seed:mine:k")["title"] == "pack wording"
 
 
+def test_reseeding_keeps_what_the_pack_leaves_out_and_the_stored_check(store, tmp_path):
+    """#214: a re-seed rewrote every field and blanked the ones the pack leaves out, so files
+    added with okl update went, with their proof, and drift checked nothing; and after a
+    re-seed that changed the files, the next one dropped the stored check. A pack's silence is
+    not a deletion, and the check stays while the files do. The pack still owns its text."""
+    from okl.seed import seed_from_file
+    class _C:  # minimal client shim over the in-memory store
+        repo = "r"
+        def record(self, **k): return core.record(store, **k)
+        def link(self, s, r, d): return core.link(store, s, r, d)
+    pack = tmp_path / "team.json"
+    def write_pack(title, files=None):
+        node = {"key": "k", "type": "Rule", "scope": "org", "repo": "r", "title": title}
+        node.update({"files": files} if files else {})
+        pack.write_text(json.dumps({"nodes": [node]}))
+    nid = "seed:team:k"
+
+    # Files and triggers added here, on a lesson whose pack has neither, and a check stored.
+    write_pack("Pin the linter"); seed_from_file(_C(), str(pack))
+    core.update(store, nid, files="ci.yml", triggers=["the lint step fails after a release"])
+    core.verify(store, nid, "`grep -q ruff== ci.yml` exit 0 on commit abc123def456 @ 2026-10-29T03:00Z",
+                commit="abc123def456" * 3 + "abcd")
+    write_pack("Pin every linter CI runs"); seed_from_file(_C(), str(pack))
+    n = store.get_node(nid)
+    assert n.title == "Pin every linter CI runs"
+    assert (n.files, n.triggers) == ("ci.yml", "the lint step fails after a release")
+    assert n.verified_at is not None
+    assert n.verified_by.startswith("`grep -q ruff== ci.yml`")
+
+    # The pack's own files change: the stamp goes, the check stays; the next re-seed keeps it.
+    write_pack("Pin every linter CI runs", files="ci/lint.yml"); seed_from_file(_C(), str(pack))
+    assert store.get_node(nid).verified_at is None
+    seed_from_file(_C(), str(pack))
+    assert store.get_node(nid).verified_by.startswith("`grep -q ruff== ci.yml`")
+
+
 def test_reseeding_keeps_verification_unless_the_governed_files_change(store, tmp_path):
     """#110: okl seed went through record(), which replaced the row, so every re-seed
     re-stamped each lesson as verified now and wiped its evidence and commit. A repo that
