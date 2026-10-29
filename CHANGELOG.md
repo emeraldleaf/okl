@@ -80,6 +80,13 @@ benchmark built to decide (REPORT §4w; the design and its evidence:
   alternative measured on it is in REPORT §4w, the ones that lost included: two current
   cross-encoder rerankers as the decision, five embedding models and two late-interaction
   models.
+- **Stemming, measured and not adopted** (REPORT §4ac, §4ad). With Porter stemming in the
+  full-text index and in the line's words, the benchmark's held-out recall rose from 90.0% to
+  94.4% at the same guaranteed rate on prompts with no subject. Built into the product and
+  measured on real prompts, it named 17.5% more lessons a prompt with the warm model on, past
+  the pre-registered 15%, and showed fewer in full without it, so the default stays unstemmed.
+  It stays as a setting, off (`store.FTS_TOKENIZE`): a store whose index was built with another
+  tokenizer rebuilds it once when opened.
 
 ## 0.9.0
 

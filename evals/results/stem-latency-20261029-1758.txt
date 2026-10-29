@@ -1,0 +1,5 @@
+stem latency · 2026-10-29T17:58Z · code be9c083bd39e · 120 held-out task prompts · `okl check --format hook --decision tiered --warm off`, a new process each, against a copy of the store (337 records)
+  setting      median      p95      max   (ms, end to end)
+  unstemmed       117      132      141
+  stemmed         130      149      161
+  added by stemming, per prompt: median 15 ms, p95 29 ms

@@ -3070,6 +3070,62 @@ records why.
 process) and the judging of the new pairs. If the result is not in by 2026-10-31, the default
 stays unstemmed.
 
+### Result (2026-10-29): the rule fails, so stemming stays off
+
+Receipts:
+- `real-20261029-heldout-stem.txt` and `real-20261029-tuning-stem.txt`: the tallies, at a3bf7b2.
+  The eight arms were briefed at ad43e72 in one sitting (held out 17:52Z, tuning 17:54Z).
+  Nothing they run changed after it: the later commits turned the setting off, and the stem arms
+  set it themselves. The pairs were not judged; see below.
+- `real-20261029-heldout-size-stem.txt`: the size of each arm's held-out briefings, at a3bf7b2.
+- `stem-latency-20261029-1758.txt`: the hook's command, at be9c083.
+
+**The controls reproduce.** Briefed again with stemming off, `tiered`, `tiered-full`, `warm` and
+`warm-full` named exactly what they had named in the pool on all 180 prompts of each half. The
+unstemmed path, the floor's cached word sets included, briefs what it did before this section.
+
+**The rule fails on its size check, for the warm arms.** Two of its five checks need no label:
+
+| held out, 120 task prompts | lessons named a prompt | change | null prompts with a lesson in full |
+|---|---|---|---|
+| `tiered` → `tiered-stem` | 9.35 → 10.43 | +11.6% | 4 → 3 |
+| `warm` → `warm-stem` | 9.20 → 10.81 | **+17.5%** | 5 → 5 |
+
+The rule allows 15% more. The warm arms fail it, so the rule cannot hold, whatever the judges
+would have said. In tokens the growth is larger: the median held-out task prompt's briefing is
+880 tokens against 721 for the tier arms (+22%), and 926 against 711 for the warm arms (+30%);
+a null prompt's is 524 against 362 and 370. The tuning half agrees: +13.5% for the tier arms and +17.3% for the warm arms.
+So the new pairs (729 held out, 624 on tuning) were not judged. `tally` now prints an arm with
+unjudged pairs without precision or reach, and its stem rule reads only the two checks that need
+no label.
+
+**Predictions.**
+1. *Tiered-stem reaches more:* not measured; its pairs are unjudged.
+2. *Tiered-stem-full shows at least as many in full:* not measured. What needs no label points
+   the other way: it shows 1.57 lessons in full a held-out task prompt against 1.77, on 47
+   prompts against 59. The line rose from two shared words to three, and real prompts are terse.
+3. *Warm-stem reaches as many as warm:* not measured.
+4. *The rule holds on both halves:* **failed** on both, on the warm arms' size.
+5. *At most 20 ms more at the hook's median:* **held.** Unstemmed 117 ms, stemmed 130 ms;
+   15 ms more at the median and 29 ms at p95 (120 held-out task prompts, a new process each).
+
+**How it reads.** Stemming widens every match: the index finds more candidates, and the floor
+behind the second tier keeps more of them. The second tier is where the size went. With the
+model on, the full tier grew as well (2.02 lessons a prompt against 1.67). On the bench, the
+model already matched the forms of a word, and stemming on top of it gained nothing (§4ad, seen
+before). So for the warm arms it adds lessons without, as far as the bench can say, adding
+reach.
+
+**What follows.** As registered, the default is unstemmed: `store.FTS_TOKENIZE` is `unicode61`,
+and the lines are §4w's 2.0017173 and §4z's 5.767926. The stemming code stays as a measured
+setting, off: the index rebuild when the tokenizer setting changes, `decide.keys`, and the
+floor's word matching by key. It is how §4ad's arms reproduce, and `tests/test_stem.py` keeps it
+working. The floor's per-record word cache stays on.
+
+**What is open.** Whether the extra size bought reach. Judging the 1,353 pairs would say. A
+stemmed setting with the line but not the floor, or with a size allowance, would need its own
+pre-registration. Nothing here asks for one.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
