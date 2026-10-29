@@ -8,9 +8,9 @@
       "title": "The README's stated check defaults (limit 12; formats agent, actions, json, hook) match the code",
       "scope": "repo:okl",
       "files": "README.md,src/okl/core.py,src/okl/cli/",
-      "verified_at": 1793284087513,
-      "verified_by": "`PYTHONPATH=src python3 -c \"import inspect,re,subprocess,sys; from okl import core; d=inspect.signature(core.check).parameters[\\\"limit\\\"].default; h=subprocess.run([sys.executable,\\\"-m\\\",\\\"okl\\\",\\\"check\\\",\\\"--help\\\"],capture_output=True,text=True).stdout; fmts=re.search(r\\\"--format \\{([a-z,]+)\\}\\\",h).group(1).split(\\\",\\\"); r=open(\\\"README.md\\\").read(); missing=[f for f in fmts if f!=\\\"agent\\\" and \\\"--format \\\"+f not in r]; ok=d==12 and \\\"--limit 12\\\" in r and not missing; sys.exit(\\\"limit=%s, formats undocumented: %s\\\" % (d, missing)) if not ok else print(\\\"CHECK DEFAULTS MATCH\\\", fmts)\"` exit 0, matched 'CHECK DEFAULTS MATCH' on commit 661e63cec68f @ 2026-10-29T14:28Z",
-      "verified_commit": "661e63cec68f8a98f33d04a47d3b35967303f01a"
+      "verified_at": 1793297212274,
+      "verified_by": "`PYTHONPATH=src python3 -c \"import inspect,re,subprocess,sys; from okl import core; d=inspect.signature(core.check).parameters[\\\"limit\\\"].default; h=subprocess.run([sys.executable,\\\"-m\\\",\\\"okl\\\",\\\"check\\\",\\\"--help\\\"],capture_output=True,text=True).stdout; fmts=re.search(r\\\"--format \\{([a-z,]+)\\}\\\",h).group(1).split(\\\",\\\"); r=open(\\\"README.md\\\").read(); missing=[f for f in fmts if f!=\\\"agent\\\" and \\\"--format \\\"+f not in r]; ok=d==12 and \\\"--limit 12\\\" in r and not missing; sys.exit(\\\"limit=%s, formats undocumented: %s\\\" % (d, missing)) if not ok else print(\\\"CHECK DEFAULTS MATCH\\\", fmts)\"` exit 0, matched 'CHECK DEFAULTS MATCH' on commit 88fd5528cd4a @ 2026-10-29T18:06Z",
+      "verified_commit": "88fd5528cd4a2c3b9ee8b284aa19ed4f1f865328"
     },
     {
       "id": "doc-init-flags",
@@ -58,9 +58,9 @@
       "title": "Read a record's own body before gating it — it may already declare its portability",
       "scope": "org",
       "files": "seed/,src/okl/store.py",
-      "verified_at": 1793284083904,
-      "verified_by": "`python3 -c \"import json;n=[x for x in json.load(open('seed/geospatial-defects.json'))['nodes'] if x.get('key')=='g_classpath'][0];assert not n.get('applies_to'),'g_classpath gated again';print('PORTABLE GATE UNGATED')\"` exit 0, matched 'PORTABLE GATE UNGATED' on commit 661e63cec68f @ 2026-10-29T14:28Z",
-      "verified_commit": "661e63cec68f8a98f33d04a47d3b35967303f01a"
+      "verified_at": 1793297209301,
+      "verified_by": "`python3 -c \"import json;n=[x for x in json.load(open('seed/geospatial-defects.json'))['nodes'] if x.get('key')=='g_classpath'][0];assert not n.get('applies_to'),'g_classpath gated again';print('PORTABLE GATE UNGATED')\"` exit 0, matched 'PORTABLE GATE UNGATED' on commit 88fd5528cd4a @ 2026-10-29T18:06Z",
+      "verified_commit": "88fd5528cd4a2c3b9ee8b284aa19ed4f1f865328"
     },
     {
       "id": "n_71c09abf3f37",
@@ -68,9 +68,9 @@
       "title": "Dependency direction is one-way: store imports nothing, core imports store, adapters import client",
       "scope": "repo:okl",
       "files": "src/okl/store.py,src/okl/core.py,src/okl/client.py",
-      "verified_at": 1793284086821,
-      "verified_by": "`lint-imports` exit 0, matched '1 kept, 0 broken' on commit 661e63cec68f @ 2026-10-29T14:28Z",
-      "verified_commit": "661e63cec68f8a98f33d04a47d3b35967303f01a"
+      "verified_at": 1793297212099,
+      "verified_by": "`lint-imports` exit 0, matched '1 kept, 0 broken' on commit 88fd5528cd4a @ 2026-10-29T18:06Z",
+      "verified_commit": "88fd5528cd4a2c3b9ee8b284aa19ed4f1f865328"
     },
     {
       "id": "n_7e50e3588bcd",
@@ -78,9 +78,9 @@
       "title": "A test that imports an undeclared package passes only where that package happens to be installed",
       "scope": "org",
       "files": "tests/",
-      "verified_at": 1793293165371,
-      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' on commit 351d21b666f1 @ 2026-10-29T16:59Z",
-      "verified_commit": "351d21b666f163d21dbdaba1862c6a0c5f33b2ce"
+      "verified_at": 1793297212385,
+      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' on commit 88fd5528cd4a @ 2026-10-29T18:06Z",
+      "verified_commit": "88fd5528cd4a2c3b9ee8b284aa19ed4f1f865328"
     },
     {
       "id": "n_9ba48d85ed19",
@@ -88,9 +88,9 @@
       "title": "Pre-flight the retrieval before spending on an eval — it is deterministic and answers in milliseconds",
       "scope": "org",
       "files": "evals/preflight.py,evals/ab_harness.py",
-      "verified_at": 1793293165887,
-      "verified_by": "`python3 evals/preflight.py` exit 0, matched 'PRE-FLIGHT OK' on commit 351d21b666f1 @ 2026-10-29T16:59Z",
-      "verified_commit": "351d21b666f163d21dbdaba1862c6a0c5f33b2ce"
+      "verified_at": 1793297201572,
+      "verified_by": "`python3 evals/preflight.py` exit 0, matched 'PRE-FLIGHT OK' on commit 88fd5528cd4a @ 2026-10-29T18:06Z",
+      "verified_commit": "88fd5528cd4a2c3b9ee8b284aa19ed4f1f865328"
     },
     {
       "id": "n_aa3e45a2ecd6",
@@ -98,9 +98,9 @@
       "title": "Provenance references rot precisely because nothing reads them — validate them at startup",
       "scope": "org",
       "files": "evals/ab_harness.py,evals/tasks.jsonl",
-      "verified_at": 1793293170390,
-      "verified_by": "`python3 evals/preflight.py && python3 -m pytest -q tests/test_ab_harness.py` exit 0, matched 'passed' on commit 351d21b666f1 @ 2026-10-29T16:59Z",
-      "verified_commit": "351d21b666f163d21dbdaba1862c6a0c5f33b2ce"
+      "verified_at": 1793297206069,
+      "verified_by": "`python3 evals/preflight.py && python3 -m pytest -q tests/test_ab_harness.py` exit 0, matched 'passed' on commit 88fd5528cd4a @ 2026-10-29T18:06Z",
+      "verified_commit": "88fd5528cd4a2c3b9ee8b284aa19ed4f1f865328"
     },
     {
       "id": "n_b74bad29fd87",
@@ -108,9 +108,9 @@
       "title": "A port is defined by behaviour, not by its signatures — state the contract and test every adapter against one body",
       "scope": "org",
       "files": "src/okl/store.py,tests/test_okl.py",
-      "verified_at": 1793284083669,
-      "verified_by": "`python3 -m pytest -q -k 'backend_conformance'` exit 0, matched 'passed' on commit 661e63cec68f @ 2026-10-29T14:28Z",
-      "verified_commit": "661e63cec68f8a98f33d04a47d3b35967303f01a"
+      "verified_at": 1793297209242,
+      "verified_by": "`python3 -m pytest -q -k 'backend_conformance'` exit 0, matched 'passed' on commit 88fd5528cd4a @ 2026-10-29T18:06Z",
+      "verified_commit": "88fd5528cd4a2c3b9ee8b284aa19ed4f1f865328"
     },
     {
       "id": "n_be9f13d587b1",
@@ -118,9 +118,9 @@
       "title": "A swappable backend must match on quality, not just interface — the Postgres path had no ranking at all",
       "scope": "org",
       "files": "src/okl/store.py",
-      "verified_at": 1793284086666,
-      "verified_by": "`python3 -m pytest -q -k 'postgres_search_is_ranked_fulltext or backend_conformance or tsvector_covers_tags'` exit 0, matched 'passed' on commit 661e63cec68f @ 2026-10-29T14:28Z",
-      "verified_commit": "661e63cec68f8a98f33d04a47d3b35967303f01a"
+      "verified_at": 1793297211957,
+      "verified_by": "`python3 -m pytest -q -k 'postgres_search_is_ranked_fulltext or backend_conformance or tsvector_covers_tags'` exit 0, matched 'passed' on commit 88fd5528cd4a @ 2026-10-29T18:06Z",
+      "verified_commit": "88fd5528cd4a2c3b9ee8b284aa19ed4f1f865328"
     },
     {
       "id": "n_bf6a2aee2f12",
