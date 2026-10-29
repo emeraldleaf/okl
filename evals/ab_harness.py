@@ -213,8 +213,10 @@ def tier_briefings(task: str, governing: str, timeout: int) -> dict[str, str]:
 def unchanged_by_style(briefings: dict[str, str], arms: list[str]) -> list[str]:
     """The line arms in `arms` whose briefing is the line arm's (REPORT §4ab): a restyle that
     changed nothing measures nothing, so that task's tier arms fail closed (an experiment
-    cannot measure a change it never made)."""
-    return [a for a in ("titles", "when") if a in arms and briefings[a] == briefings["line"]]
+    cannot measure a change it never made). when-tool counts too: its treatment is the when
+    wording and the tool together, so with the wording unchanged it would measure half of it
+    (review on #305)."""
+    return [a for a in ("titles", "when", "when-tool") if a in arms and briefings[a] == briefings["line"]]
 
 
 def parse_judge(raw: str) -> dict:
@@ -359,7 +361,9 @@ def startup_refusal(models: dict, arms: list[str], workdir: str, governing: str,
     elsewhere = code_outside_checkout()
     if elsewhere:
         return 7, f"{elsewhere}; set PYTHONPATH={REPO / 'src'} so the run measures this checkout."
-    paths = {"okl show": False} if GENERATOR_TOOLS else {}
+    # The when-tool arm is offered okl_get alone, so okl show is probed only for another arm
+    # that can use it (review on #305).
+    paths = {"okl show": False} if GENERATOR_TOOLS and any(a != "when-tool" for a in arms) else {}
     paths.update({"okl_get": True} if "when-tool" in arms else {})
     for name, tool in paths.items():
         why = probe_fetch(workdir, governing, timeout, tool=tool)

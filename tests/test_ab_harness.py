@@ -405,9 +405,12 @@ def test_the_line_arms_differ_only_in_what_each_line_says(ab):
 
 def test_a_restyle_that_changed_nothing_is_named_so_the_task_fails_closed(ab):
     """An experiment cannot measure a change it never made."""
-    same = {"line": "x", "titles": "x", "when": "y"}
+    same = {"line": "x", "titles": "x", "when": "y", "when-tool": "y"}
     assert ab.unchanged_by_style(same, ["line", "titles", "when"]) == ["titles"]
     assert ab.unchanged_by_style(same, ["line", "when"]) == []
+    # when-tool's briefing is the when wording; unchanged, the arm measures the tool alone.
+    flat = {"line": "x", "titles": "z", "when": "x", "when-tool": "x"}
+    assert ab.unchanged_by_style(flat, ["line", "when-tool"]) == ["when-tool"]
 
 
 def test_each_arm_can_fetch_only_by_the_path_it_offers(ab, monkeypatch):
@@ -489,6 +492,10 @@ def test_a_fetch_path_that_did_not_open_refuses_the_run(ab, monkeypatch):
     code, why = ab.startup_refusal(models, ["line", "when-tool"], ".", "g", 5)
     assert code == 6 and "okl_get" in why and asked == [False, True]
     assert ab.startup_refusal(models, ["line"], ".", "g", 5) is None
+    # A when-tool-only run is offered okl_get alone, so okl show is not probed (review on #305).
+    asked.clear()
+    ab.startup_refusal(models, ["when-tool"], ".", "g", 5)
+    assert asked == [True]
 
 
 def test_the_tier_arms_differ_only_in_where_the_governing_lesson_is(ab, monkeypatch):
