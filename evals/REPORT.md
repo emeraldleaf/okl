@@ -2972,6 +2972,104 @@ more per decision.
 - stemmed words in `decide`, with `CALIBRATED_LINE` set from this bench's stemmed calibration;
 - the real-prompt arms of §4x, before the default changes.
 
+## 4ad. PRE-REGISTERED: stemming on real prompts, before it becomes the default (2026-10-29)
+
+Written before any stem arm was pooled, judged or sized on real prompts.
+
+**Why.** §4ac found that Porter stemming raised the bench's recall at the same guaranteed null
+rate, and registered the next step: build it into the product and measure it on real prompts
+before the default changes. This section is that measurement.
+
+**The treatment, as built.**
+
+- **The index.** `store.FTS_TOKENIZE = "porter unicode61"`: SQLite's full-text index stems, as
+  the Postgres backend's `'english'` configuration always has. A store whose index was built
+  with another tokenizer rebuilds it once when opened, in one write transaction, and checks
+  again once it holds the lock. The backend contract gains the case, and the conformance suite
+  checks it on both backends.
+- **The line.** `decide` stems the line's words with that same tokenizer, read back through
+  `fts5vocab` (`decide.keys`), so the index and the line agree on what a word is. A stem counts
+  once however many of the prompt's words share it, as on the bench. `CALIBRATED_LINE` becomes
+  the stemmed bench's line, 3.0014486: four shared words, or three whose relative rarities sum
+  past 1.449.
+- **The floor.** Its shared words match by stem too (`core._matched_terms`, `_subject_words`,
+  `_alias_words`). §4ac did not register this, and it changes the second tier, which is the
+  floor's. Without it, a lesson the stemmed index finds only through another form of a word is
+  weak to the floor, so the second tier never names it, and the floor's widening loop runs
+  extra rounds over such candidates. Each record's words are cached for the check, which the
+  floor's per-word scans of the store had not been.
+- **The warm line.** `warm.LINE` becomes the stemmed dense bench's line at W = 8, 6.004063.
+- The words a briefing names as matched stay the prompt's own, not stems.
+
+**What was seen before this was written.**
+
+- §4ac's result.
+- The line-setting runs, `bench-20261029-sel-dense-embeddinggemma-int8-words-{stem,words}.txt`,
+  stemmed and unstemmed in one sitting (selection split, int8 model, cap 5). The receipts name
+  cdaaf93 and ca31cf8, the commits current when each finished; the bench's code is the same at
+  both. The unstemmed run reproduces §4z's receipt figure for figure:
+
+  | | words only (W = 0) | with the model (W = 8) |
+  |---|---|---|
+  | unstemmed: line, recall, paraphrase, nulls briefed | 2.002, 88.0%, 64 of 83, 9 of 268 | 5.768, 92.0%, 71 of 83, 12 of 268 |
+  | stemmed: line, recall, paraphrase, nulls briefed | 3.001, 90.8%, 68 of 83, 11 of 268 | 6.004, 91.6%, 70 of 83, 13 of 268 |
+
+  So on the bench the gain is in the words-only decision. With the model on, stemming adds
+  nothing: the model already matches the forms of a word. The warm arms below are a guard, not
+  a hope.
+- Timings in one process on a copy of this machine's store, four prompts seven times each, with
+  every cache cleared before each check: a tiered check took 64.1 ms before any of this change,
+  51.0 ms with the floor's cache and no stemming, and 65.0 ms with stemming. The calibrated
+  decision alone took 26.6, 26.8 and 38.6 ms. These have no receipt. The hook's own cost is
+  measured below.
+- Three tests asked for prompts that now share a stem with a lesson ("paginate" and
+  "pagination"), and one asked for the old line's two rare words. Their prompts were changed;
+  the behaviour each tests was not.
+
+**Instrument.** `evals/bench/real_prompts.py`, §4x's pool and judges, on both halves (seed 11,
+120 task and 60 null prompts each), against the store snapshot as of each prompt, with the
+written triggers. In one sitting, at the commit that adds this section, `pool --extend --rebrief`
+briefs eight arms:
+
+- **controls**, the unstemmed arms briefed again at this commit with stemming off (the unicode61
+  index and the §4w and §4z lines): `tiered`, `tiered-full`, `warm`, `warm-full`;
+- **treatments**, the product as built: `tiered-stem`, `tiered-stem-full`, `warm-stem`,
+  `warm-stem-full`.
+
+The pool's files before the re-brief are kept beside it (`real-arms-<split>.pre-4ad.json`). New
+pairs are judged per lesson by Sonnet sub-agents under §4x's instruction, blind to arm, at most
+three at once. `size` renders each arm's briefing. `evals/stem_latency.py` times the hook's
+command, `okl check --format hook --decision tiered --warm off`, a new process per prompt, over
+the 120 held-out task prompts, unstemmed and stemmed in turn, each against its own copy of this
+machine's store.
+
+**The rule** (`tally`'s `stem rule`), on the held-out half's prompts. Stemming becomes the
+default if, for the tier arms and for the warm arms alike, the stemmed arm:
+
+1. reaches at least as many applying lessons as its unstemmed namesake (reach, the criterion
+   since §4y);
+2. shows at least 90% as many applying lessons in full;
+3. at an in-full precision no lower than its namesake's lower 95% bound;
+4. shows a lesson in full on at most twice as many null prompts;
+5. names at most 15% more lessons a task prompt.
+
+The tuning half is reported beside it. If the rule fails on the held-out half, stemming does not
+ship: `FTS_TOKENIZE` returns to `unicode61`, the lines to §4w's and §4z's, and this section
+records why.
+
+**Predictions.**
+
+1. Held out, `tiered-stem` reaches more applying lessons than `tiered`.
+2. Held out, `tiered-stem-full` shows at least as many applying lessons in full as
+   `tiered-full`, as on the bench, despite the higher line.
+3. Held out, `warm-stem` reaches as many as `warm`, within two lessons either way.
+4. The rule holds on both halves.
+5. Stemming adds at most 20 ms to the hook's median, end to end.
+
+**Budget and stop.** One sitting of briefing (the warm model loads into the harness's own
+process) and the judging of the new pairs. If the result is not in by 2026-10-31, the default
+stays unstemmed.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
