@@ -71,8 +71,8 @@ okl check --decision floor
                      #   the word floor in full, up to --limit. `"decision"` in .okl/config.json
                      #   or OKL_DECISION sets it for every check.
 okl check --warm on  # add what a lesson means to the words it shares, from the model `okl warm`
-                     #   keeps loaded (REPORT §4z). On by default for a store `okl warm index` has
-                     #   embedded; --warm off, `"warm": false` or OKL_WARM=0 turns it off. When the
+                     #   keeps loaded (REPORT §4z). On by default once `okl warm index` has embedded
+                     #   the store's lessons; --warm off, `"warm": false` or OKL_WARM=0 turns it off. When the
                      #   model does not answer, the briefing is the usual one
                      #   and the JSON says why (`warm_unavailable`). Local stores only: a shared
                      #   service does not run it, and `--decision floor` does not use it.

@@ -2697,7 +2697,9 @@ Receipts:
   rebase onto #299's review fixes, none of which changes which lessons a check names.
 - `warm-latency-20261029-0243.txt`: the hook's command over the 120 held-out task prompts, with
   every timed check shown to have used the model (`warm-latency-20261027-0405.txt` is the first,
-  unchecked run).
+  unchecked run). The check covers a prompt that names a subject, since only those ask the model;
+  all 120 do, counted with `core.briefing_terms` at ea04e35, so every difference is the model's.
+  Later runs print that count on the receipt and time only the tiered decision (review on #300).
 - `warm-memory-20261027-0530.txt`: memory, prompt by prompt.
 - `real-20261027-heldout-size-warm.txt`: the briefing's size.
 
@@ -2745,7 +2747,9 @@ resident is acceptable for a machine that opts in is that person's decision, not
 **A decision after the result (2026-10-27).** The person who uses okl judged about 1.6 GB
 acceptable and leaned toward the model by default, leaving the form to the author. Chosen: when
 nothing sets `warm`, it is on for a store whose lessons `okl warm index` has embedded, on a
-machine where the model can load, and silent otherwise. `"warm": false` or `OKL_WARM=0` turns it
+machine where the model can load. A store never indexed, or a machine without the extra, stays
+silent. An indexed store whose model does not answer falls back to the usual briefing and says
+so: `warm_unavailable` in the JSON, and a line for the person. `"warm": false` or `OKL_WARM=0` turns it
 off, and a shared service never runs it. The trigger is indexing, not installing the extra,
 because the `rerank` and `all` extras install fastembed too, and a 1.6 GB process should not
 start for someone who never asked for it. This is a decision, not a passed prediction:

@@ -28,6 +28,20 @@ sys.path.insert(0, str(REPO / "evals" / "bench"))
 from okl import core, warm  # noqa: E402
 
 
+def check_cmd(setting: str, text: str) -> list[str]:
+    """The hook's command for one timing, with the decision pinned: the floor never asks the
+    model, so a caller's OKL_DECISION or the store's config would time no model (review on #300)."""
+    return [sys.executable, "-m", "okl", "check", "--format", "hook", "--warm", setting,
+            "--decision", "tiered", "--task", text]
+
+
+def model_diffs(times: dict[str, list[float]], asked: list[bool]) -> list[float]:
+    """The on-minus-off difference of each prompt that asked the model, sorted. Only a prompt
+    that names a subject asks it, so another prompt's difference is not the model's (review on
+    #300)."""
+    return sorted(on - off for on, off, a in zip(times["on"], times["off"], asked, strict=True) if a)
+
+
 def main() -> int:
     """Time both settings over the same prompts and write the receipt."""
     up = warm.ping()
@@ -41,12 +55,16 @@ def main() -> int:
     env = {**os.environ, "OKL_BRIEFING_LOG": "0", "PYTHONPATH": str(REPO / "src")}
     for name in ("OKL_DATABASE_URL", "OKL_QUIET"):
         env.pop(name, None)
+    # The receipt says how many prompts asked the model (model_diffs).
+    asked = [bool(core.briefing_terms(text)) for text in texts]
+    if not any(asked):
+        sys.exit("ABORT: no prompt names a subject, so none would ask the model")
     times: dict[str, list[float]] = {"off": [], "on": []}
     for text in texts:
         for setting in ("off", "on"):
             t0 = time.perf_counter()
-            r = subprocess.run([sys.executable, "-m", "okl", "check", "--format", "hook", "--warm", setting,
-                                "--task", text], cwd=REPO, env=env, capture_output=True, text=True, check=False)
+            r = subprocess.run(check_cmd(setting, text), cwd=REPO, env=env, capture_output=True, text=True,
+                               check=False)
             times[setting].append((time.perf_counter() - t0) * 1000)
             if r.returncode != 0:
                 sys.exit(f"ABORT: okl check exited {r.returncode}")
@@ -61,15 +79,16 @@ def main() -> int:
     commit = subprocess.run(["git", "rev-parse", "--short=12", "HEAD"], capture_output=True, text=True,
                             cwd=REPO, check=False).stdout.strip()
     lines = [f"warm latency · {datetime.now(UTC):%Y-%m-%dT%H:%MZ} · code {commit} · {up['model']} · "
-             f"{len(texts)} held-out task prompts · `okl check --format hook`, a new process each",
+             f"{len(texts)} held-out task prompts · `okl check --format hook --decision tiered`, "
+             "a new process each",
              f"server: loaded in {up['loaded_s']} s · resident memory {int(rss) / 1024:.0f} MB" if rss else "server: ?",
              f"  {'warm':5} {'median':>8} {'p95':>8} {'max':>8}   (ms, end to end)"]
     for setting, xs in times.items():
         xs = sorted(xs)
         lines.append(f"  {setting:5} {statistics.median(xs):>8.0f} {xs[int(len(xs) * .95)]:>8.0f} {xs[-1]:>8.0f}")
-    diffs = sorted(on - off for on, off in zip(times["on"], times["off"], strict=True))
-    lines.append(f"  added by the model, per prompt: median {statistics.median(diffs):.0f} ms, "
-                 f"p95 {diffs[int(len(diffs) * .95)]:.0f} ms")
+    diffs = model_diffs(times, asked)
+    lines.append(f"  added by the model, per prompt that asked it ({len(diffs)} of {len(texts)}): "
+                 f"median {statistics.median(diffs):.0f} ms, p95 {diffs[int(len(diffs) * .95)]:.0f} ms")
     out = REPO / "evals" / "results" / f"warm-latency-{datetime.now(UTC):%Y%m%d-%H%M}.txt"
     out.write_text("\n".join(lines) + "\n")
     print("\n".join(lines) + f"\nreceipt: {out.relative_to(REPO)}")

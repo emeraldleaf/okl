@@ -292,3 +292,27 @@ def test_by_default_the_model_runs_for_an_indexed_store_and_is_silent_otherwise(
         assert core.briefed_ids(elsewhere) == []
     finally:
         s.close()
+
+
+def _latency():
+    """evals/warm_latency.py as a module (a script, not part of the package)."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "warm_latency", Path(__file__).resolve().parents[1] / "evals" / "warm_latency.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_the_latency_receipt_times_the_decision_that_asks_the_model():
+    """The floor never asks the model, so OKL_DECISION=floor in the caller's environment would
+    time no model at all (review on #300)."""
+    cmd = _latency().check_cmd("on", "rotate the secrets")
+    assert cmd[cmd.index("--decision") + 1] == "tiered"
+
+
+def test_only_a_prompt_that_asked_the_model_counts_toward_what_it_added():
+    """A prompt that names no subject asks nothing, so its difference is not the model's
+    (review on #300)."""
+    times = {"on": [300.0, 130.0, 260.0], "off": [100.0, 120.0, 110.0]}
+    assert _latency().model_diffs(times, [True, False, True]) == [150.0, 200.0]
