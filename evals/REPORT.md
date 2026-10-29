@@ -1359,7 +1359,8 @@ vocabulary-mismatch trigger fires: add an embedding index beside FTS, fuse by re
 rank, measure against FTS-only on the same tasks, adopt only if it wins.
 
 **What changed.** `okl embed` writes one vector per record into the store from a local static
-embedding model (`minishlab/potion-retrieval-32M`: Model2Vec, 249 MB on disk, 512 dimensions;
+embedding model (`minishlab/potion-retrieval-32M`: Model2Vec, 249 MB on disk (131 MB as okl fetches it: the erratum
+below), 512 dimensions;
 its model card gives MTEB retrieval 35.1 against all-MiniLM-L6-v2's 42.9, at well under a
 millisecond per text). `okl check --hybrid` fetches the nearest records by cosine beside the
 full-text candidates and fuses the two orders: `rrf` sums reciprocal ranks (k = 60); `linear`
