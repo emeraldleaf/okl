@@ -64,11 +64,20 @@ if [ "$total_lines" -gt "$max_lines" ]; then
   echo "review-agent: diff is $total_lines lines; reviewing the first $max_lines."
 fi
 
+# With REVIEW_REPO_DIR, a reviewer that can read files (REVIEW_CMD's own tools, e.g. claude -p
+# with --add-dir) is told where the checkout is, so it can hold a figure to the receipt it
+# cites and a claim to the code: the findings a diff alone cannot show (review on #300).
+repo_note=""
+if [ -n "${REVIEW_REPO_DIR:-}" ]; then
+  repo_note="The repository is checked out at $REVIEW_REPO_DIR and you can read any file in it. Use that: open the receipt every published figure cites and compare the number, and open the code a claim is about."
+fi
+
 # The checklist lives in the agent file — one source of truth for the rules. Only the OUTPUT
 # CONTRACT is supplied here, because the agent is written for interactive use and returns
 # prose, which CI cannot act on.
 prompt="$(cat <<EOF
 You are the architecture reviewer defined below. Apply its checklist to the diff.
+$repo_note
 
 $(cat "$AGENT")
 

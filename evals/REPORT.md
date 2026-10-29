@@ -1466,6 +1466,15 @@ over every vector that holds to roughly 100,000 of them (under a millisecond at 
 at 50,000, plus 14 and 49 ms to read them; `okl.semantic`'s docstring has the measurements
 and the next tier); and the ADR amendment. The hook never reaches the network for any of it.
 
+*Erratum (2026-10-29, review of #300).* Two of these figures were not what okl does:
+- **The model's size.** What okl's loader fetches into an empty cache is 130.8 MB
+  (`model-files-20261029-1207.txt`). 249 MB was the model repository's listing in MiB,
+  including an ONNX copy model2vec never downloads.
+- **The search.** okl's own `search()` at 512 dimensions (`semantic-scale-20261029-1206.txt`)
+  takes 3.6 ms at 10,000 vectors and 15.2 ms at 50,000 after a read of 15.4 and 92.3 ms. The
+  "under a millisecond" and "3 ms" timed the product alone.
+The docs now quote the receipts. The ranking conclusions here do not depend on either figure.
+
 ## 4r. PRE-REGISTERED: the index arm, measured where it can act (2026-10-23)
 
 Written before the run, per §2b, for #258's first vectorless arm, on a new instrument.
@@ -1675,7 +1684,8 @@ with both on, since the probe measures recall and the harness measures what the 
 Neither becomes the default on the probe alone (§4n's rule).
 
 **Cost.** No paid call; about a minute per probe run; an 80 MB ONNX model on disk under the
-`rerank` extra, fetched once by `okl embed`.
+`rerank` extra, fetched once by `okl embed`. *Erratum (2026-10-29, review of #300):* what
+okl's loader fetches is 91.8 MB (`model-files-20261029-1207.txt`).
 
 **What this cannot settle.** Whether a better order changes what the agent writes; whether
 the first stage's recall, which bounds the pool, holds on a larger store (the pool is 24

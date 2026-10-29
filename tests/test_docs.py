@@ -297,3 +297,42 @@ def test_the_never_reproduced_sentence_counts_match_the_receipts():
         bh, bn, rh, rn = counts[task]
         assert f"{bh} of {bn}" in rest and f"{rh} of {rn}" in rest, \
             f"README should quote {_PROSE[task]} as {bh} of {bn} unbriefed and {rh} of {rn} briefed"
+
+
+# Every size or latency the docs publish, with the receipt line that holds it: the figure is
+# the receipt's number at the precision the doc quotes. "95 ms" once cited a receipt that said
+# 170.7, and "249 MB" and "about 80 MB" were never what okl's loaders fetch (review on #300).
+# A new figure fails until it is named here; a name whose figure left the docs fails too.
+DOC_FIGURES = {
+    "131 MB": ("model-files-20261029-1207.txt", r"potion-retrieval-32M.*?([\d.]+) MB"),
+    "92 MB": ("model-files-20261029-1207.txt", r"ms-marco-MiniLM-L-6-v2.*?([\d.]+) MB"),
+    "4 ms": ("semantic-scale-20261029-1206.txt", r"10,000 vectors:.*?search after the read\s+([\d.]+) ms"),
+    "15 ms": ("semantic-scale-20261029-1206.txt", r"50,000 vectors:.*?search after the read\s+([\d.]+) ms"),
+    "92 ms": ("semantic-scale-20261029-1206.txt", r"50,000 vectors: read\s+([\d.]+) ms"),
+}
+FIGURE = re.compile(r"(?<![\w.])(\d[\d,]*(?:\.\d+)?) ?(ms|MB|GB)\b")
+
+
+def _published_docs() -> list[Path]:
+    """What a reader is told: the README, the docs and the overview sheets. docs/posts/ are
+    dated write-ups and the REPORT is the receipts' own narrative, so neither is held here."""
+    return [ROOT / "README.md", *sorted((ROOT / "docs").glob("*.md")),
+            *sorted((ROOT / "docs" / "overview").glob("*.html"))]
+
+
+def test_every_size_and_latency_the_docs_publish_is_its_receipts_number():
+    """The architecture reviewer's most common finding was a published figure no receipt held
+    (#300); this is that check, run on every change for free."""
+    found: dict[str, str] = {}
+    for doc in _published_docs():
+        for m in FIGURE.finditer(doc.read_text()):
+            found.setdefault(f"{m.group(1)} {m.group(2)}", doc.name)
+    unnamed = {fig: doc for fig, doc in found.items() if fig not in DOC_FIGURES}
+    assert not unnamed, f"name each figure's receipt line in DOC_FIGURES: {unnamed}"
+    assert set(DOC_FIGURES) <= set(found), f"no longer in the docs: {set(DOC_FIGURES) - set(found)}"
+    for fig, (receipt, pattern) in DOC_FIGURES.items():
+        m = re.search(pattern, (ROOT / "evals" / "results" / receipt).read_text())
+        assert m, f"{receipt} has no line for {fig}"
+        quoted = fig.split()[0].replace(",", "")
+        places = len(quoted.split(".")[1]) if "." in quoted else 0
+        assert round(float(m.group(1)), places) == float(quoted), f"{fig}: {receipt} says {m.group(1)}"

@@ -94,15 +94,28 @@ jobs:
       # a new detection rule from retro-failing a branch that changed nothing.
       # The reviewer okl ships, run on okl. It was listed as a review surface with nothing
       # triggering it — the "enforcement surface that only runs on-demand runs never"
-      # failure this repo's own store names. Off unless REVIEW_CMD is set, so it costs
-      # nothing until someone decides it should.
-      - name: Architecture review (off unless REVIEW_CMD is set)
+      # failure this repo's own store names. It runs on the maintainer's Claude subscription:
+      # CLAUDE_CODE_OAUTH_TOKEN, from `claude setup-token`, bills the subscription and not the
+      # API (no ANTHROPIC_API_KEY here, which would outrank it; --bare would ignore it).
+      # Without that secret, and on a fork's PR, which gets no secrets, it soft-passes; the
+      # REVIEW_CMD variable swaps in any other CLI. The script runs it from a clean room, so
+      # this repo's hooks never fire on it, and --add-dir lets it read the checkout to hold
+      # each figure to its receipt. It fails the job on a must-fix finding only.
+      - name: Architecture review (on the maintainer's Claude subscription)
         if: github.event_name == 'pull_request'
         env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           REVIEW_CMD: ${{ vars.REVIEW_CMD }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           REVIEW_BASE_REF: origin/${{ github.base_ref }}
-        run: bash ci/review-agent.sh
+          # Pinned, as every tool that gates CI is: a release cannot change the gate unseen.
+          CLAUDE_CODE_VERSION: "2.1.302"
+        run: |
+          if [ -z "$REVIEW_CMD" ] && [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
+            npm install -g --no-fund --no-audit "@anthropic-ai/claude-code@$CLAUDE_CODE_VERSION"
+            REVIEW_CMD="claude -p --model sonnet --max-turns 40 --tools Read,Grep,Glob --add-dir $GITHUB_WORKSPACE"
+          fi
+          REVIEW_CMD="$REVIEW_CMD" REVIEW_REPO_DIR="$GITHUB_WORKSPACE" bash ci/review-agent.sh \
+            | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Secret scan — gitleaks
         env:
@@ -118,6 +131,44 @@ jobs:
   # rest of that claim was assumed rather than tested. This runs the suite on every
   # other version it covers. Lint, types, coverage and the gates stay in the job above:
   # they read the source, and the coverage ratchet was measured on that one version.
+  # The Postgres backend against a real server. Its conformance test skipped everywhere until
+  # this job (nothing set OKL_TEST_POSTGRES_URL), so Postgres changes reached main untested:
+  # the architecture reviewer's second sighting of that class (#300). Trust auth: the server
+  # lives for this job only, and no password-shaped string goes in the repo.
+  postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17.6
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: okl
+        ports: [ "5432:5432" ]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 2s
+          --health-timeout 5s --health-retries 15
+    env:
+      OKL_TEST_POSTGRES_URL: postgresql://postgres@localhost:5432/okl
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install (dev extras and the postgres extra)
+        run: |
+          python -m pip install "pip>=25.1"
+          pip install -e ".[postgres]" --group dev
+
+      # A skip here is a failure: the job exists so these run.
+      - name: Postgres tests, against the real server
+        run: |
+          pytest -q -rs tests/ -k postgres | tee postgres.log
+          if grep -q "SKIPPED" postgres.log; then echo "a Postgres test skipped" >&2; exit 1; fi
+
   tests-other-pythons:
     runs-on: ubuntu-latest
     strategy:
