@@ -501,7 +501,8 @@ def _stem_rule(meta: dict, verdict: dict[tuple[str, str], str | None], applies: 
     applying lessons as its unstemmed namesake and shows at least 90% as many in full, at an
     in-full precision no lower than the namesake's lower 95% bound, on at most twice as many
     null prompts, naming at most 15% more lessons a task prompt. The decision reads the held-out
-    half; the tuning half is reported beside it."""
+    half; the tuning half is reported beside it. While a stem arm's pairs are unjudged, only the
+    two checks that need no label are read: the rule can fail then, never hold."""
     pairs = (("tiered", "tiered-stem"), ("warm", "warm-stem"))
     if not all({a, f"{a}-full", st, f"{st}-full"} <= set(stats) for a, st in pairs):   # reads all eight
         return
@@ -514,20 +515,31 @@ def _stem_rule(meta: dict, verdict: dict[tuple[str, str], str | None], applies: 
         full = {a: _arm_row(tasks, b[a], meta["before"], verdict, applies) for a in (bf, sf)}
         lo, _hi = bench.wilson(full[bf]["yes"], full[bf]["judged"])
         null_any = {a: sum(1 for pid in nulls if b[a][pid]) for a in (bf, sf)}
+        unjudged = sum(1 for a in (stem, sf) for pid in tasks + nulls for lid in b[a][pid]
+                       if verdict.get((pid, lid)) is None)
         checks = {
-            f"reach at least {base}'s": stats[stem][1] >= stats[base][1],
-            f"in full at least 90% of {bf}'s": full[sf]["found"] >= 0.9 * full[bf]["found"],
-            f"in-full precision at least {lo:.1%}": stats[sf][0] >= lo,
             f"null prompts at most twice {bf}'s": null_any[sf] <= 2 * null_any[bf],
             "at most 15% more named a prompt": stats[stem][2] <= 1.15 * stats[base][2],
         }
-        held.append(all(checks.values()))
-        print(f"\nstem rule, {base}: {'holds' if held[-1] else 'fails'} ("
+        if not unjudged:
+            checks = {
+                f"reach at least {base}'s": stats[stem][1] >= stats[base][1],
+                f"in full at least 90% of {bf}'s": full[sf]["found"] >= 0.9 * full[bf]["found"],
+                f"in-full precision at least {lo:.1%}": stats[sf][0] >= lo,
+                **checks,
+            }
+        held.append(all(checks.values()) if not unjudged or not all(checks.values()) else None)
+        verdict_word = {True: "holds", False: "fails", None: "undecided"}[held[-1]]
+        print(f"\nstem rule, {base}: {verdict_word} ("
+              + (f"{unjudged} of its briefed pairs unjudged, so only the checks that need no label: "
+                 if unjudged else "")
               + "; ".join(f"{k}: {'yes' if v else 'NO'}" for k, v in checks.items())
-              + f"; reach {stats[stem][1]} against {stats[base][1]}, in full {full[sf]['found']} against "
-              f"{full[bf]['found']}, null prompts {null_any[sf]} against {null_any[bf]}, named a prompt "
-              f"{stats[stem][2]:.2f} against {stats[base][2]:.2f})")
-    print(f"stem rule: {'stemmed' if all(held) else 'not stemmed'} (on this half)")
+              + f"; null prompts {null_any[sf]} against {null_any[bf]}, named a prompt "
+              f"{stats[stem][2]:.2f} against {stats[base][2]:.2f}"
+              + ("" if unjudged else f", reach {stats[stem][1]} against {stats[base][1]}, "
+                 f"in full {full[sf]['found']} against {full[bf]['found']}") + ")")
+    overall = "not stemmed" if False in held else "stemmed" if all(held) else "undecided until judged"
+    print(f"stem rule: {overall} (on this half)")
 
 
 def cmd_tally(args: argparse.Namespace) -> None:
@@ -552,6 +564,7 @@ def cmd_tally(args: argparse.Namespace) -> None:
     print(f"real prompts · split {args.split} (seed {meta['seed']}) · store {meta['store']} · code {commit}")
     print(f"{len(verdict)} pooled pairs, labels missing {missing}")
     stats = {}
+    open_arms: set[str] = set()
     for kind in ("task", "null"):
         ids = [pid for k, pid in chosen if k == kind]
         total = sum(len(applies[pid]) for pid in ids)
@@ -564,12 +577,21 @@ def cmd_tally(args: argparse.Namespace) -> None:
             r = _arm_row(ids, meta["briefed"][arm], meta["before"], verdict, applies)
             lo, hi = bench.wilson(r["yes"], r["judged"]) if r["judged"] else (0.0, 0.0)
             prec = f"{r['yes'] / r['judged']:.1%} [{lo:.1%}, {hi:.1%}]" if r["judged"] else "n/a"
-            print(f"  {arm:11} {prec:>22} {r['found']:>7} of {total:<5} {r['hit']:>5} of {with_any:<4} "
-                  f"{r['any']:>5} of {len(ids):<4} {r['per']:>15.2f} {r['off']:>17.2f} {r['repeat']:>7.0%}")
+            # An arm with pairs no judge has seen has no precision or reach yet: a figure over
+            # the judged part alone would read as the arm's (§4ad stopped before judging).
+            unjudged = sum(1 for pid in ids for lid in meta["briefed"][arm][pid] if verdict.get((pid, lid)) is None)
+            if unjudged:
+                open_arms.add(arm)
+                print(f"  {arm:11} {f'{unjudged} unjudged':>22} {'-':>15} {'-':>12} "
+                      f"{r['any']:>5} of {len(ids):<4} {r['per']:>15.2f} {'-':>17} {r['repeat']:>7.0%}")
+            else:
+                print(f"  {arm:11} {prec:>22} {r['found']:>7} of {total:<5} {r['hit']:>5} of {with_any:<4} "
+                      f"{r['any']:>5} of {len(ids):<4} {r['per']:>15.2f} {r['off']:>17.2f} {r['repeat']:>7.0%}")
             if kind == "task":
                 stats[arm] = (r["yes"] / r["judged"] if r["judged"] else 0.0, r["found"], r["per"], total)
     # F1 of judged precision and pooled recall, the sweep rule's measure.
-    f1 = {a: (2 * p * (f / t) / (p + f / t) if p and t and f else 0.0) for a, (p, f, _per, t) in stats.items()}
+    f1 = {a: (2 * p * (f / t) / (p + f / t) if p and t and f else 0.0) for a, (p, f, _per, t) in stats.items()
+          if a not in open_arms}
     print("\nF1 on task prompts (judged precision, pooled recall): "
           + " · ".join(f"{a} {v:.3f}" for a, v in f1.items()))
     # The selection rules, each fixed before its arms' pairs were judged (module docstring).
@@ -589,7 +611,7 @@ def cmd_tally(args: argparse.Namespace) -> None:
     _warm_rule(meta, verdict, applies, stats)
     _stem_rule(meta, verdict, applies, stats)
     if any(a in stats for a in SWEEP_ARMS):
-        eligible = [a for a in stats if stats[a][2] <= 5]
+        eligible = [a for a in f1 if stats[a][2] <= 5]
         pick = min(eligible, key=lambda a: (-f1[a], stats[a][2]))
         print(f"\nsweep rule: {pick} (highest F1 on task prompts among arms briefing at most five lessons a prompt)")
 
