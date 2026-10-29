@@ -48,7 +48,7 @@ okl init --interests "python,security"    # drop records tagged for stacks you d
 - **`--warm on`** adds what a lesson means to the words it shares, from a model `okl warm start`
   keeps loaded in a local process (EmbeddingGemma-300m, int8; the `warm` extra; `okl warm index`
   once per store, again after lessons change). On real held-out prompts it showed 46 applying
-  lessons in full against 38 and added a median of 109 ms to a prompt. It holds
+  lessons in full against 38 and added a median of 114 ms to a prompt. It holds
   about 1.6 GB of memory once it has answered a prompt, so it runs only for a store whose
   lessons `okl warm index` has embedded; `"warm": false` or `OKL_WARM=0` turns it off there.
   It applies to a local store's calibrated and tiered checks,

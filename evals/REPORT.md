@@ -2695,7 +2695,9 @@ Receipts:
   The warm arms' new pairs, 72 held out and 65 on tuning, were judged per lesson by Sonnet
   sub-agents, with no label missing. The arms were briefed at c1f340b, the same code before a
   rebase onto #299's review fixes, none of which changes which lessons a check names.
-- `warm-latency-20261027-0405.txt`: the hook's command over the 120 held-out task prompts.
+- `warm-latency-20261029-0243.txt`: the hook's command over the 120 held-out task prompts, with
+  every timed check shown to have used the model (`warm-latency-20261027-0405.txt` is the first,
+  unchecked run).
 - `warm-memory-20261027-0530.txt`: memory, prompt by prompt.
 - `real-20261027-heldout-size-warm.txt`: the briefing's size.
 
@@ -2713,13 +2715,14 @@ ships off.**
 3. Warm reached 107 applying lessons against tiered's 102. The pool grew from 115 to 122: the
    warm arms found 7 applying lessons no other arm had. Held.
 4. It showed a lesson in full on 5 of 60 null prompts, within the bound of 8. Held.
-5. **Failed on memory.** The model added a median of 109 ms to the hook's command (bound 150;
-   138 ms off against 249 ms on, p95 282 ms added). But the server held 1,410 MB, against a
-   bound of 700 MB. The latency run predates a check the review on #300 added: the script now
-   stops when a check with the model on was briefed without it. The same server process
-   answered before and after the run, so a check could have fallen back only by timing out,
-   which costs at least 0.5 s and would raise these figures, not lower them. A re-run with the
-   check waits for disk space on the machine that measured it.
+5. **Failed on memory.** The model added a median of 114 ms to the hook's command (bound 150;
+   123 ms off against 251 ms on, p95 264 ms added). But the server held 1,205 MB at the end of
+   that run, and 1,410 MB at the end of the first, against a bound of 700 MB. The first run
+   could not show that each timed check used the model; a review on #300 added that check. Its
+   first re-run stopped on the first prompt: the server's first inference allocates its working
+   memory and took longer than the 0.5 s a check waits, so the first prompt after every start
+   fell back. The server now runs one query before it answers anything (ea04e35), and the
+   checked re-run at that commit gives the figures above.
 
 The tuning half agrees on retrieval: 42 applying lessons in full against 41, at 23.9% precision
 against 26.3% (above its bound of 20.0%), 104 named against 95, and 6 null prompts with a lesson

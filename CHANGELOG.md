@@ -47,7 +47,7 @@ benchmark built to decide (REPORT §4w; the design and its evidence:
   store's lessons, and from then on a check (or `--warm on`) adds 8 times a
   lesson's best cosine with the prompt to the line's score. On real held-out prompts it showed
   46 applying lessons in full against 38, at 23.0% precision against 17.8%, adding a median of
-  109 ms to a prompt. It holds about 1.6 GB of memory once it has answered a prompt, above the
+  114 ms to a prompt. It holds about 1.6 GB of memory once it has answered a prompt, above the
   bound set before measuring, so it runs only for a store you have indexed: `"warm": false` or
   `OKL_WARM=0` turns it off there, and a store never indexed is briefed as before. The `warm`
   extra installs it.

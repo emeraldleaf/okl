@@ -410,7 +410,7 @@ shares no word with the task, so the calibrated line cannot brief it. Meaning me
 added to the word count instead. EmbeddingGemma-300m took held-out recall from 90.0% to
 95.2% that way at full precision. A prompt hook would pay a second or two to load it on every
 prompt, so `okl warm` keeps its int8 file loaded in a local process: on once `okl warm index`
-has embedded a store's lessons, about 1.6 GB of memory, 109 ms added to a prompt at the median,
+has embedded a store's lessons, about 1.6 GB of memory, 114 ms added to a prompt at the median,
 and on real held-out prompts 46 applying
 lessons shown in full against 38
 ([REPORT §4z](evals/REPORT.md)). The same generator draws it from the same code path, and REPORT §4q says what it

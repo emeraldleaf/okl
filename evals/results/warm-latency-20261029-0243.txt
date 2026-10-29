@@ -1,0 +1,6 @@
+warm latency · 2026-10-29T02:43Z · code ea04e3514dad · google/embeddinggemma-300m-quantized · 120 held-out task prompts · `okl check --format hook`, a new process each
+server: loaded in 1.13 s · resident memory 1205 MB
+  warm    median      p95      max   (ms, end to end)
+  off        123      195      261
+  on         251      382      534
+  added by the model, per prompt: median 114 ms, p95 264 ms
