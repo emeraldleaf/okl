@@ -70,8 +70,6 @@ LINE_STYLES = {"line": "line", "titles": "titles", "when": "when", "when-tool": 
 # The when-tool arm's only fetch path: okl_get from evals/fetch_tool.py, over MCP.
 FETCH_TOOL = "mcp__okl__okl_get"
 FETCH_SERVER = REPO / "evals" / "fetch_tool.py"
-BUCKETS = ("armed_gates", "relevant_defects", "live_retractions", "in_scope_tombstones",
-           "threat_prior_art", "rules", "vocabulary", "decisions", "context", "stale_warnings")
 
 GEN_PROMPT = """You are implementing one task for an existing codebase. Output ONLY the code (or YAML/script), no explanation.
 
@@ -193,7 +191,8 @@ def tier_briefings(task: str, governing: str, timeout: int) -> dict[str, str]:
 
     def placed(in_full: bool, style: str = "line") -> str:
         out = copy.deepcopy(result)
-        buckets = {k: [x for x in out.get(k) or [] if x.get("id") != governing] for k in BUCKETS}
+        # Every bucket okl has, from okl itself: a copied list would skip a new one (review on #303).
+        buckets = {k: [x for x in out.get(k) or [] if x.get("id") != governing] for k in core._bucket_by_type([])}
         also = [e for e in out.get("also_matched") or [] if e.get("id") != governing]
         if in_full:
             for k, recs in core._bucket_by_type([node]).items():
@@ -346,11 +345,15 @@ def generator_cmd(arm: str = "", mcp_config: str = "") -> str:
 def startup_refusal(models: dict, arms: list[str], workdir: str, governing: str,
                     timeout: int) -> tuple[int, str] | None:
     """Why the run must not start, with its exit code, once the models are known; None to run.
-    3: the judge resolves to the generator's model. 6: a fetch path the arms offer did not work
-    when the generator was asked to use it (probe_fetch)."""
+    3: the judge resolves to the generator's model. 7: the okl that would run is not this
+    checkout's (code_outside_checkout); set PYTHONPATH to its src. 6: a fetch path the arms offer
+    did not work when the generator was asked to use it (probe_fetch)."""
     if judge_is_generator(models):
         return 3, (f"the judge resolves to the generator's model ({', '.join(models['judge'])}) "
                    "— it must not grade its own homework (qz_judge_self).")
+    elsewhere = code_outside_checkout()
+    if elsewhere:
+        return 7, f"{elsewhere}; set PYTHONPATH={REPO / 'src'} so the run measures this checkout."
     paths = {"okl show": False} if GENERATOR_TOOLS else {}
     paths.update({"okl_get": True} if "when-tool" in arms else {})
     for name, tool in paths.items():
@@ -469,6 +472,24 @@ def instrument_drift(prior: list[dict], current: dict) -> dict:
     if prior and was != current["judge_max_chars"]:
         modal["judge_max_chars"] = {"series": was, "runs": n}
     return modal
+
+
+def code_outside_checkout() -> str:
+    """"" when this harness imports okl from this checkout's src and `python -m okl`, run as its
+    subprocesses run it, does too; otherwise where one of them loads okl from. An editable install
+    points both at the checkout it was installed from, so a run from a worktree without
+    PYTHONPATH would measure another tree's code under this tree's commit (review on #303)."""
+    import okl
+    src = (REPO / "src").resolve()
+    here = Path(okl.__file__).resolve()
+    if not here.is_relative_to(src):
+        return f"this process imports okl from {here.parent}, not {src}"
+    r = subprocess.run([sys.executable, "-c", "import okl; print(okl.__file__)"], cwd=REPO,
+                       capture_output=True, text=True)
+    there = Path(r.stdout.strip()).resolve() if r.returncode == 0 and r.stdout.strip() else None
+    if there is None or not there.is_relative_to(src):
+        return f"`python -m okl` loads okl from {there.parent if there else 'nowhere'}, not {src}"
+    return ""
 
 
 def judge_is_generator(models: dict) -> bool:
@@ -703,6 +724,7 @@ def main() -> int:
     # reference missing while pointing at a database that never existed. Client walks up to
     # the configured .okl/ the way every other command does.
     lacking: list[str] = []
+    lined: list[str] = []
     if not args.dry_run:
         # Retrieval is deterministic, so whether each task still receives the rule it tests
         # is answerable in milliseconds. Checking it AFTER a 25-minute run is how §4d cost
@@ -721,6 +743,8 @@ def main() -> int:
             return 5
         # Which tasks measure the briefing without their lesson, for the receipt's face.
         lacking = [ln.split()[1] for ln in pf.stdout.splitlines() if ln.strip().startswith("[MISSING]")]
+        # And which receive it only as a one-line entry (REPORT §4aa; review on #303).
+        lined = [ln.split()[1] for ln in pf.stdout.splitlines() if ln.strip().startswith("[line]")]
 
         from okl.client import Client
         _client = Client()
@@ -856,6 +880,7 @@ def main() -> int:
         **({"when_tool_generator": generator_cmd("when-tool", "<per-sample config>"),
             "fetch_tool_description": fetch_tool_description()} if "when-tool" in arms else {}),
         **({"preflight_missing": lacking} if args.accept_missing_lessons else {}),
+        **({"preflight_line": lined} if lined else {}),
         **({"index_chars": index_chars} if index_chars is not None else {}),
         # How much of each submission the judge read (#182): part of the instrument.
         "judge_max_chars": JUDGE_MAX_CHARS,

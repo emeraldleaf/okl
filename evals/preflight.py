@@ -44,8 +44,10 @@ REPO = Path(__file__).resolve().parent.parent
 # default (REPORT.md §4w): its rule clears the line and ranks sixth behind the cap of five,
 # and the defect it generalizes, briefed in its place, carries the same fix.
 # ci_linter's gap under the calibrated default (§4w: its rule ranked sixth, behind the cap of
-# five) closed with §4y's second tier, which names it; §4aa measured a named line keeping its
-# effect, so the gap entry went with the evidence.
+# five) closed with §4y's second tier, which names it, and §4aa measured a named line keeping
+# its effect, so the entry went. Its sibling d_unpinned_linter is still shown in full with the
+# same fix, so ci_linter cannot tell the line's effect from the sibling's (§4aa, amended in
+# review of #303).
 ACCEPTED_GAPS: dict[str, str] = {}
 
 

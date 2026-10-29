@@ -112,9 +112,9 @@ def _authored_tasks() -> set[str]:
 
 def _series_receipts() -> list[Path]:
     """The A/B receipts of the series the docs describe: no briefing against the live briefing.
-    A receipt whose arms are anything else measures another treatment (REPORT §4aa's full and
-    line arms) and is pooled with nothing here; counting its arms as "briefed" would move the
-    published figures for a reason they do not describe."""
+    A receipt whose arms are anything else measures another treatment (§4r's indexed arm, §4aa's
+    full and line arms) and is pooled with nothing here; counting its arms as "briefed" would
+    move the published figures for a reason they do not describe."""
     out = []
     for receipt in sorted((ROOT / "evals" / "results").glob("ab-*.json")):
         arms = {row["arm"] for row in json.loads(receipt.read_text()).get("results", [])}
@@ -310,3 +310,28 @@ def test_the_never_reproduced_sentence_counts_match_the_receipts():
         bh, bn, rh, rn = counts[task]
         assert f"{bh} of {bn}" in rest and f"{rh} of {rn}" in rest, \
             f"README should quote {_PROSE[task]} as {bh} of {bn} unbriefed and {rh} of {rn} briefed"
+
+
+# Verdicts whose own reason says the defect is absent while their boolean says reproduced: the
+# judge answers the booleans before it reasons. Each is corrected in the REPORT section named
+# here, and the receipt stays as the run wrote it, as §4j's did (review on #303).
+CONTRADICTED = {("ab-20261023-1303.json", 67): "4r", ("ab-20261023-1303.json", 184): "4r",
+                ("ab-20261029-0318.json", 61): "4aa", ("ab-20261029-0318.json", 70): "4aa"}
+NEGATED = re.compile(r"(defect|it) (is|was) not (reproduced|present)|not reproduced|is not present"
+                     r"|does not reproduce|defect is absent", re.I)
+
+
+def test_every_verdict_its_own_reason_contradicts_is_corrected_in_the_report():
+    """A contradicted verdict counted as written moves a figure the wrong way; four sat in two
+    receipts, two of them quoted uncorrected, before a reviewer read the reasons (#303)."""
+    found = set()
+    for receipt in sorted((ROOT / "evals" / "results").glob("ab-*.json")):
+        for i, row in enumerate(json.loads(receipt.read_text()).get("results", [])):
+            if row.get("reproduced") and NEGATED.search(row.get("reason") or ""):
+                found.add((receipt.name, i))
+    assert found == set(CONTRADICTED), "name each contradicted verdict and correct it in the REPORT"
+    report = (ROOT / "evals" / "REPORT.md").read_text()
+    for (receipt, row), section in CONTRADICTED.items():
+        start = report.index(f"\n## {section}. ")
+        body = report[start:report.index("\n## ", start + 1)]
+        assert receipt in body and re.search(rf"\bRow {row}\b", body), f"§{section} does not correct {receipt} row {row}"
