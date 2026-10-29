@@ -87,7 +87,7 @@ benchmark built to decide (REPORT §4w; the design and its evidence:
   pack owns what it says, a field it sets empty (`"files": ""`) is cleared, and its silence keeps
   the store's value, a status included; the stored check stays while the files do; and a pack's `"verified": true` stamps only a lesson new to the store.
 - **The drift snapshot refuses to lose rules** (#213). The store is per clone, so a teammate's
-  `okl verify` rewrote `okl-drift.json` without the rules only another clone held, and they
+  `okl verify` rewrote `okl-drift.json` without the rules held only by another clone, and they
   left CI's gate unannounced; a worktree with no `.okl/config.json` wrote one for a repo named
   after its folder. Every refresh now compares with the committed snapshot and refuses to drop
   a rule this store does not hold, or to change its repo, naming them; a committed snapshot it

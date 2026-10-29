@@ -1084,6 +1084,19 @@ def test_the_mcp_server_starts_without_the_shells_path(tmp_path):
     (proj / ".okl" / "config.json").write_text(json.dumps({"repo": "p", "okl_bin": str(stale)}))
     r = start(MCP_ENTRY, PATH=f"/usr/bin:/bin:{fake.parent}")
     assert r.returncode == 0 and r.stdout.strip() == f"args=mcp cwd={proj}", (r.stdout, r.stderr)
+    # So does one that starts but cannot serve: an okl installed without the [mcp] extra.
+    bare = tmp_path / "no-extra" / "okl"; bare.parent.mkdir()
+    bare.write_text('#!/bin/sh\necho "OKL: the MCP SDK is not installed" >&2; exit 2\n'); bare.chmod(0o755)
+    (proj / ".okl" / "config.json").write_text(json.dumps({"repo": "p", "okl_bin": str(bare)}))
+    r = start(MCP_ENTRY, PATH=f"/usr/bin:/bin:{fake.parent}")
+    assert r.returncode == 0 and r.stdout.strip() == f"args=mcp cwd={proj}", (r.stdout, r.stderr)
+    # No python3 on the PATH: the pin is read without it, as okl init writes the config.
+    tools = tmp_path / "tools"; tools.mkdir()
+    for t in ("bash", "sed", "dirname"):
+        (tools / t).symlink_to(shutil.which(t))
+    (proj / ".okl" / "config.json").write_text(json.dumps({"repo": "p", "okl_bin": str(fake)}, indent=2))
+    r = start(MCP_ENTRY, PATH=str(tools), PYTHONPATH="")
+    assert r.returncode == 0 and r.stdout.strip() == f"args=mcp cwd={proj}", (r.stdout, r.stderr)
     # No okl anywhere: it fails, and says how to fix it.
     (proj / ".okl" / "config.json").write_text(json.dumps({"repo": "p"}))
     r = start(MCP_ENTRY, PYTHONPATH="")

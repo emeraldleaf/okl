@@ -422,7 +422,7 @@ def _committed_snapshot(path: Path) -> dict | None:
     import subprocess
     try:
         r = subprocess.run(["git", "-C", str(path.parent), "show", f"HEAD:./{path.name}"],
-                           capture_output=True, text=True, timeout=10)
+                           capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=10)
     except subprocess.TimeoutExpired as e:
         raise SnapshotShrinkError(f"git did not answer for the committed {path.name}") from e
     except OSError:
@@ -434,15 +434,16 @@ def _committed_snapshot(path: Path) -> dict | None:
     elif r is None or any(a in r.stderr for a in absent):
         if not path.exists():
             return None
-        text, where = path.read_text(), "on disk"
+        text, where = path.read_text(encoding="utf-8"), "on disk"
     else:
         raise SnapshotShrinkError(f"the committed {path.name} could not be read ({r.stderr.strip()[:120]})")
     try:
         snap = json.loads(text)
     except ValueError as e:
         raise SnapshotShrinkError(f"the {where} {path.name} is not valid JSON") from e
-    if not isinstance(snap, dict):
-        raise SnapshotShrinkError(f"the {where} {path.name} is not a snapshot")
+    if not isinstance(snap, dict) or not isinstance(snap.get("rules", []), list) \
+            or not all(isinstance(r, dict) and isinstance(r.get("id"), str) for r in snap.get("rules", [])):
+        raise SnapshotShrinkError(f"the {where} {path.name} is not a snapshot (each rule needs an id)")
     return snap
 
 
@@ -473,7 +474,7 @@ def _write_snapshot(client: Client, path: Path, *, allow_shrink: bool = False) -
     why = None if allow_shrink else _shrink_problem(_committed_snapshot(path), snap, {n.id for n in nodes})
     if why:
         raise SnapshotShrinkError(why)
-    path.write_text(drift.dump_snapshot(snap))
+    path.write_text(drift.dump_snapshot(snap), encoding="utf-8")
     return len(snap["rules"])
 
 

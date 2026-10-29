@@ -2530,6 +2530,11 @@ def test_a_snapshot_that_cannot_be_read_is_refused_not_read_as_none(tmp_path, mo
     snap.write_text('{"repo": "r", "rules": []}')                  # disk fixed, the commit is not
     with _pytest.raises(SnapshotShrinkError, match="not valid JSON"):
         _committed_snapshot(snap)
+    # A rule with no id would have crashed the comparison after the stamp was recorded.
+    snap.write_text('{"repo": "r", "rules": [null]}')
+    subprocess.run([*git, "commit", "-qam", "null rule"], check=True)
+    with _pytest.raises(SnapshotShrinkError, match="each rule needs an id"):
+        _committed_snapshot(snap)
 
 
 def test_the_shrink_guard_reads_the_repo_and_the_rules_the_store_holds():

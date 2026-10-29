@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:a571cf449aab5e2fe5b1e003877f4ed67996a0b862aa0a53948252835e8d5fac
+# okl-fingerprint: sha256:275a8587025902a5cf0ac29655f2c50ca96b1caf0faad1e84ceb89585ec0ec79
 # The okl MCP server, started the way the hooks start okl (#206). `.mcp.json` named a bare
 # `okl`, so a Claude Code session launched from an IDE, with PATH=/usr/bin:/bin and none of
 # the directories uv tool or pipx install into, failed with "Executable not found in $PATH:
@@ -41,9 +41,15 @@ resolve_okl() {
   local d="$PWD"
   while [ "$from" -le 2 ] && [ "$d" != "/" ]; do
     if [ -f "$d/.okl/config.json" ]; then
-      local bin
-      bin=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("okl_bin") or "")' \
-            "$d/.okl/config.json" 2>/dev/null || true)
+      local bin=""
+      if command -v python3 >/dev/null 2>&1; then
+        bin=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("okl_bin") or "")' \
+              "$d/.okl/config.json" 2>/dev/null || true)
+      else
+        # No python3 on the PATH an IDE gives, which is where the pinned path matters most, as in
+        # the pre-push hook. okl writes one key per line; a value holding a JSON escape is skipped.
+        bin=$(sed -n 's/^ *"okl_bin": *"\([^"\\]*\)",\{0,1\} *$/\1/p' "$d/.okl/config.json" 2>/dev/null || true)
+      fi
       if [ -n "$bin" ]; then
         if try_pinned "$bin"; then okl_layer=2; return 0; fi
         resolve_note="${resolve_note}the okl_bin pinned in $d/.okl/config.json ($bin) cannot be run; "
@@ -57,14 +63,16 @@ resolve_okl() {
   return 1
 }
 
-# A command can exist and still not start: a pinned script whose interpreter was removed with
-# its venv. exec cannot come back to try another, so each is started once first, and one
-# that fails gives way to the next layer, as in the prompt hook (review on #310).
+# A command can exist and still not serve: a pinned script whose interpreter went with its
+# venv, or an okl installed without the [mcp] extra. exec cannot come back to try another, so
+# each starts the server once on an empty stdin first (it builds, reads the end of input and
+# exits 0, about half a second; without the extra it exits 2), and one that fails gives way to
+# the next layer, as in the prompt hook (reviews on #310).
 while resolve_okl $((okl_layer + 1)); do
-  if "${OKL[@]}" --version >/dev/null 2>&1; then
+  if "${OKL[@]}" mcp </dev/null >/dev/null 2>&1; then
     exec "${OKL[@]}" mcp
   fi
-  resolve_note="${resolve_note}${OKL[*]} did not start; "
+  resolve_note="${resolve_note}${OKL[*]} could not serve MCP (not started, or no [mcp] extra); "
 done
 echo "okl MCP server: no okl to run (${resolve_note}none on PATH, and python3 cannot import okl)." >&2
 echo "Run \`okl init\` from a shell where okl works, which pins its path, or set OKL_BIN." >&2
