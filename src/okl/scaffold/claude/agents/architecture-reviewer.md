@@ -37,6 +37,12 @@ Needs the method kit that `okl scaffold .` installs (`registries/`, `.claude/rul
      Add checks specific to this stack (e.g. IDOR predicate in the SQL Where clause; N+1 queries;
      async-over-sync; mass-assignment of server-controlled fields). Keep each as one scan rule. -->
 
+## Before you report
+- Read the repository's own instructions (`CLAUDE.md`, `AGENTS.md`): a change that breaks a rule
+  they state is must-fix, the same as an encoded record.
+- Say what you checked and what you could not (no store, no shell, a receipt or file you could
+  not open, a diff cut short), so that silence never reads as a clean review.
+
 ## Memory
 Use your persistent memory dir to accumulate this repo's recurring findings and architectural
 decisions across reviews. When you see the same finding class a third time, propose promoting it to

@@ -769,6 +769,47 @@ def test_review_agent_soft_passes_until_it_is_configured(tmp_path, monkeypatch):
         assert p.returncode == expected, f"{payload} -> {p.returncode}: {p.stdout}{p.stderr}"
 
 
+def test_review_agent_gives_the_reviewer_what_the_diff_cannot_and_annotates_its_findings(tmp_path):
+    """The CI reviewer saw only its checklist and the diff: the repo's instructions, the knowledge
+    layer's briefing and the PR's own claim never reached it, it never said what it could not
+    check, and its findings sat in a log (review on #307). A stand-in reviewer records the
+    prompt it was given and answers with a must-fix."""
+    scaffold(target=str(tmp_path), repo="r", claude_dir="dotclaude")
+    (tmp_path / "CLAUDE.md").write_text("# rules\nRULE-MARKER: mirror files change together\n")
+
+    def git(*args: str) -> str:
+        return subprocess.run(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", *args],
+                              cwd=tmp_path, check=True, capture_output=True, text=True).stdout.strip()
+    git("init", "-q")
+    git("add", "-A")
+    git("commit", "-qm", "base")
+    base = git("rev-parse", "HEAD")
+    (tmp_path / "a.py").write_text("x = 1\ny = 2\nz = 3\n")
+    git("add", "a.py")
+    git("commit", "-qm", "change")
+    prompt = tmp_path / "prompt.txt"
+    fake = tmp_path / "fake-reviewer.sh"
+    fake.write_text("#!/bin/bash\ncat > \"$PROMPT_OUT\"\n"
+                    "echo '{\"findings\":[{\"severity\":\"must-fix\",\"file\":\"a.py\",\"line\":3,"
+                    "\"rule\":\"r1\",\"finding\":\"bad, really: 100%\"}],"
+                    "\"checked\":[\"c1\"],\"not_checked\":[\"n1\"]}'\n")
+    fake.chmod(0o755)
+    briefing = tmp_path / "briefing.md"
+    briefing.write_text("BRIEFING-MARKER: pin every tool that gates CI\n")
+    env = {"PATH": f"{Path(sys.executable).parent}:/usr/bin:/bin", "HOME": str(tmp_path),
+           "REVIEW_CMD": str(fake), "REVIEW_BASE_REF": base, "REVIEW_PR_TITLE": "TITLE-MARKER",
+           "REVIEW_PR_BODY": "what it claims", "REVIEW_BRIEFING_FILE": str(briefing),
+           "GITHUB_ACTIONS": "true", "PROMPT_OUT": str(prompt)}
+    r = subprocess.run(["bash", str(tmp_path / "ci" / "review-agent.sh")], capture_output=True,
+                       text=True, cwd=str(tmp_path), env=env)
+    assert r.returncode == 1, r.stdout + r.stderr          # must-fix blocks
+    seen = prompt.read_text()
+    for marker in ("RULE-MARKER", "BRIEFING-MARKER", "TITLE-MARKER", "A\ta.py", '"not_checked"'):
+        assert marker in seen, marker
+    assert "checked: c1" in r.stdout and "could not check: n1" in r.stdout
+    assert "::error file=a.py,line=3,title=architecture review%3A r1::bad, really: 100%25" in r.stdout
+
+
 def test_stored_data_never_reaches_a_shell():
     """Data from the store reaches subprocesses list-form; only a typed arg may be shelled.
 

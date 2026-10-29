@@ -128,6 +128,10 @@ jobs:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           REVIEW_CMD: ${{ vars.REVIEW_CMD }}
           REVIEW_BASE_REF: origin/${{ github.base_ref }}
+          # What the change says it does, passed as data: interpolated into the script, a PR
+          # title could run as shell. The reviewer is told it is a claim, not instructions.
+          REVIEW_PR_TITLE: ${{ github.event.pull_request.title }}
+          REVIEW_PR_BODY: ${{ github.event.pull_request.body }}
           # Pinned, as every tool that gates CI is: a release cannot change the gate unseen.
           CLAUDE_CODE_VERSION: "2.1.302"
         run: |
@@ -140,8 +144,19 @@ jobs:
             chmod +x "$CLAUDE_BIN"
             REVIEW_CMD="$CLAUDE_BIN -p --model sonnet --max-turns 40 --tools Read,Grep,Glob --add-dir $GITHUB_WORKSPACE"
           fi
-          REVIEW_CMD="$REVIEW_CMD" REVIEW_REPO_DIR="$GITHUB_WORKSPACE" bash ci/review-agent.sh \
-            | tee -a "$GITHUB_STEP_SUMMARY"
+          # The knowledge layer's briefing for this change, from the seed packs in a store that
+          # lives for this step; this repo's own recorded lessons stay on the maintainer's
+          # machine, so the reviewer is told the briefing is the packs' only.
+          export OKL_DATABASE_URL="sqlite:///$RUNNER_TEMP/review.db" OKL_BRIEFING_LOG=0
+          briefing="$RUNNER_TEMP/briefing.md"
+          if okl seed seed/ >/dev/null 2>&1 \
+             && okl check --task "$REVIEW_PR_TITLE. ${REVIEW_PR_BODY:0:600}" --format agent > "$briefing" 2>/dev/null; then
+            printf '\n(From the seed packs only: lessons recorded on the maintainer machine are not in CI.)\n' >> "$briefing"
+          else
+            briefing=""
+          fi
+          REVIEW_CMD="$REVIEW_CMD" REVIEW_REPO_DIR="$GITHUB_WORKSPACE" REVIEW_BRIEFING_FILE="$briefing" \
+            bash ci/review-agent.sh | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Secret scan — gitleaks
         env:
