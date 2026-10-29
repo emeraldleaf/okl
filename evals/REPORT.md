@@ -2629,6 +2629,58 @@ the smallest briefing, and `floor` for every match in full. Whether an agent act
 entry as it does on a full lesson is the next measurement, to be pre-registered before it runs.
 The release waits for it.
 
+## 4aa. PRE-REGISTERED: does an agent act on a lesson named in one line? (2026-10-29)
+
+Written before any model call of this run.
+
+**Why.** §4y made the default name every lesson that matched: what clears the line in full, the
+rest one line each, with the title and the first sentence of the fix. Reach counts a lesson
+that was named, not one that changed the code. §4r is the warning: a one-shot generator given an
+index of lesson titles fetched the one it needed once in 71 tries. So the question here is
+whether the line itself carries the lesson, not whether the agent opens it.
+
+**Instrument.** `evals/ab_harness.py` on the eight authored tasks (`evals/tasks.jsonl`), each
+built to invite one stored lesson's mistake, in three arms:
+
+- `baseline`: no briefing.
+- `full`: the task's own briefing (`okl check --decision tiered`, no interest filter), with the
+  governing lesson shown in full.
+- `line`: the same briefing with the governing lesson only as the first one-line entry under
+  "Also matched". The second tier keeps its length; nothing else changes.
+
+Both briefings come from one `okl check --format json` result per task, rendered by okl's own
+renderer, with the routed actions rebuilt by okl's own router (`tier_briefings`). Today the
+lesson is in full for six tasks; for `price_tamper` and `ci_linter` it is a line, so their full
+arm adds it to the full tier (six lessons in full) and their second tier is one line shorter.
+The pre-flight reads the natural briefing, so it reports those two as missing; the run uses
+`--accept-missing-lessons`, and the receipt lists them under `preflight_missing`.
+
+The generator is `claude -p --model sonnet` with `Bash(okl show:*)` allowed in every arm, so
+the budgets are equal, and an `okl` shim logs each fetch. The judge is `claude -p --model haiku`,
+blind to the arm. Three samples per task and arm: 72 generations and 72 judgments. The run is
+from a worktree pinned at the commit that adds this section, with this repo's store and config.
+
+**Predictions.**
+
+1. Full reproduces the defect in fewer samples than baseline.
+2. Line keeps at least half of full's effect: its reproduction rate is at most the midpoint of
+   baseline's and full's, all three measured in this run.
+3. In the line arm, the generator fetches the governing lesson in fewer than half the samples,
+   so whatever the line achieves, the line itself achieves.
+
+**What the run can settle.** Twenty-four samples an arm resolve only a large difference. If
+baseline reproduces the defect in fewer than 6 of 24 samples, prediction 2 cannot be judged,
+and the run is reported as inconclusive rather than read either way.
+
+**Falsifiers and what follows.** If prediction 2 fails, a lesson named in a line does not keep
+enough of its effect: the second tier stands as a pointer, the release notes say so, and the
+next design shows more of it (the first entries in full, or more of each line). If it holds,
+the second tier stands as designed. If prediction 1 fails, the instrument has lost its signal
+on this model and nothing is concluded about the line.
+
+**Budget and stop.** One run of 72 generations and 72 judgments. If it cannot complete by
+2026-10-30, this section records why and nothing is concluded.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
