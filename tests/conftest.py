@@ -7,6 +7,9 @@ briefing. okl has no delete on purpose, so the cleanup was direct SQL. This fixt
 the suite deaf to those variables. Tests that need a store name one explicitly.
 """
 import json
+import shutil
+import tempfile
+from pathlib import Path
 
 import pytest
 
@@ -21,6 +24,13 @@ BRIEFING_VARS = ("OKL_DECISION", "OKL_HYBRID", "OKL_RERANK", "OKL_WARM", "OKL_QU
 def _no_real_store(monkeypatch):
     for var in (*STORE_VARS, *BRIEFING_VARS):
         monkeypatch.delenv(var, raising=False)
+    # The warm model's socket and the records beside it (`okl warm stop`, the last start) are
+    # per user, in ~/.cache/okl: a test must neither reach a developer's running server nor read
+    # or write those records (review on #300). Under /tmp: a socket's path has a length limit.
+    warm_dir = tempfile.mkdtemp(prefix="okl", dir="/tmp")
+    monkeypatch.setenv("OKL_WARM_SOCKET", str(Path(warm_dir) / "warm.sock"))
+    yield
+    shutil.rmtree(warm_dir, ignore_errors=True)
 
 
 @pytest.fixture

@@ -50,8 +50,25 @@ LATE = ("lightonai/LateOn", "answerdotai/answerai-colbert-small-v1", "jinaai/jin
 # instruction written for the task; this one is the reranker's (run_rerank.py).
 TASK = "Given a developer's task, question or bug report, retrieve the engineering lesson that applies to it"
 PROMPTS = {"google/embeddinggemma-300m": ("task: search result | query: {}", "title: none | text: {}"),
+           "google/embeddinggemma-300m-quantized": ("task: search result | query: {}", "title: none | text: {}"),
            "Qwen/Qwen3-Embedding-0.6B": (f"Instruct: {TASK}\nQuery:{{}}", "{}"),
            "Qwen/Qwen3-Embedding-0.6B-Q": (f"Instruct: {TASK}\nQuery:{{}}", "{}")}
+
+
+def _register_quantized(model_id: str) -> None:
+    """Register the int8 ONNX file of a built-in fastembed model as a model of its own, read the
+    same way (the model's pooled, normalised output): `<model>-quantized` is the base model's
+    onnx/model_quantized.onnx from the same repository (REPORT §4z)."""
+    from fastembed.common.model_description import DenseModelDescription
+    from fastembed.text import builtin_sentence_embedding as builtin
+    known = builtin.supported_builtin_sentence_embedding_models
+    if any(m.model == model_id for m in known):
+        return
+    base = next(m for m in known if m.model == model_id.removesuffix("-quantized"))
+    known.append(DenseModelDescription(
+        model=model_id, dim=base.dim, description=f"{base.description} int8.", license=base.license,
+        size_in_GB=0.31, sources=base.sources, model_file="onnx/model_quantized.onnx",
+        additional_files=["onnx/model_quantized.onnx_data"]))
 
 
 class Encoder:
@@ -74,6 +91,8 @@ class Encoder:
             self._kind = "late"
         else:
             from fastembed import TextEmbedding
+            if model_id.endswith("-quantized"):
+                _register_quantized(model_id)
             self._m = TextEmbedding(model_name=model_id, cache_dir=str(hub.model_cache_dir()))
             self._kind = "fe"
         self.load_s = time.perf_counter() - t0
@@ -189,10 +208,12 @@ def main() -> None:
           f"index {index_s:.1f} s · encode per prompt median {statistics.median(encode_ms):.1f} ms")
     print(f"decision score = {args.base} + W * maxsim; line at alpha {ALPHA} by split conformal\n")
     print(f"{'W':>5} {'line':>7} {'cap':>3} | {'recall [95%]':>22} {'briefed/q':>9} | null test briefed anything [95%] | paraphrase")
+    exact: dict[float, float] = {}
     for w in args.weights:
         def top(sc: list[tuple[str, float, float]], w: float = w) -> list[tuple[str, float]]:
             return sorted(((nid, e + w * m) for nid, e, m in sc), key=lambda t: -t[1])
         line = v2.conformal_line([max((s for _n, s in top(sc)), default=0.0) for sc in c_sc], ALPHA)
+        exact[w] = line
         for cap in CAPS:
             by_lesson: dict[str, list[float]] = defaultdict(list)
             counts, para = [], [0, 0]
@@ -209,6 +230,8 @@ def main() -> None:
             wlo, whi = bench.wilson(briefed, len(t_sc))
             print(f"{w:>5} {line:>7.3f} {cap:>3} | {m:>7.1%} [{lo:5.1%}, {hi:5.1%}] {statistics.mean(counts):>9.2f} | "
                   f"{briefed} of {len(t_sc)} ({briefed / len(t_sc):.1%}, [{wlo:.1%}, {whi:.1%}]) | {para[0]}/{para[1]}")
+    # The lines as a constant would hold them (warm.LINE is read from here, REPORT §4z).
+    print("\nexact lines: " + " · ".join(f"W {w:g}: {line!r}" for w, line in exact.items()))
 
 
 if __name__ == "__main__":

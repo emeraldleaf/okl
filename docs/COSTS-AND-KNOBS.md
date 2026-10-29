@@ -45,6 +45,18 @@ okl init --interests "python,security"    # drop records tagged for stacks you d
   at a median of 721, 1,424 and 113 tokens a prompt ([RETRIEVAL.md](RETRIEVAL.md)). Give your
   own lessons triggers (`okl triggers`, `/triggers`) so they reach the first tier.
   `"decision"` in `.okl/config.json` or `OKL_DECISION` sets it for every check.
+- **`--warm on`** adds what a lesson means to the words it shares, from a model `okl warm start`
+  keeps loaded in a local process (EmbeddingGemma-300m, int8; the `warm` extra; `okl warm index`
+  once per store, again after lessons change). On real held-out prompts it showed 46 applying
+  lessons in full against 38 and added a median of 114 ms to a prompt. It holds
+  about 1.6 GB of memory from startup (it runs one inference before it serves), so by default it
+  runs only for a local store whose lessons `okl warm index` has embedded, and a shared database
+  uses it with `"warm": true`; `"warm": false` or `OKL_WARM=0` turns it off, and `okl warm stop`
+  keeps it off until `okl warm start`, `index` or `serve`.
+  It applies to a local store's calibrated and tiered checks,
+  not to a shared service or `--decision floor`. When the model does not answer, the briefing is
+  the usual one; `--format json` says why in `warm_unavailable`
+  ([REPORT §4z](../evals/REPORT.md)).
 - **The prompt hook takes two of these from the environment**: `OKL_BRIEFING_LIMIT=N`
   becomes `--limit N`, and `OKL_BRIEFING_COMPACT=1` sends only the action list. They are
   for a model with a small context window; see

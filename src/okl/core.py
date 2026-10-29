@@ -21,7 +21,7 @@ from typing import Any
 # STACK_TAGS is re-exported, not used here: adapters may import core and client but
 # never store (dependency direction is one-way), and the CLI needs the stack list to
 # judge which bundled seed packs fit a repo.
-from . import decide, semantic
+from . import decide, semantic, warm
 from . import rerank as rerank_stage
 from .store import RETIRED_STATUSES, Edge, Node, Store, _now_ms, split_tags
 from .store import STACK_TAGS as STACK_TAGS
@@ -166,7 +166,7 @@ COMMON_WORD_MIN_RECORDS = 5
 def check(store: Store, repo: str, task: str, limit: int = 12,
           interests: list[str] | None = None, *, hybrid: str | None = None,
           index: bool = False, near_misses: bool = False, rerank: bool = False,
-          decision: str = decide.DEFAULT) -> dict[str, Any]:
+          decision: str = decide.DEFAULT, warm: bool | None = False) -> dict[str, Any]:
     """Return the slice of the encoded body relevant to starting `task` in `repo`.
 
     Matches on the task text across all node types, then buckets by type so the
@@ -196,6 +196,13 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     "calibrated" briefs and lists in `also_matched`, one line each, what else cleared the
     line and what the floor keeps, up to `limit` (REPORT §4y). In all three, a prompt a
     harness wrote (a task notification, a sub-agent report) is briefed nothing.
+
+    `warm` adds what a lesson means to the calibrated line's score, when the warm model answers
+    (warm.py, #293, REPORT §4z): its nearest lessons join the candidates, and the line is the
+    one set for that score. When it does not answer, the briefing is the model-free one and
+    `warm_unavailable` says why; the floor decision does not use it. None is the default the
+    client passes when nothing sets it: on for a store `okl warm index` has embedded, where the
+    model can load, and silent otherwise (§4z's decision).
 
     `index` adds every other live lesson this repo may see, as id and title, so an agent
     can fetch one by id when the briefing did not select it (#258's first vectorless arm,
@@ -235,8 +242,11 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     untriggered: list[str] = []
     own_untriggered = 0
     asked, first = limit, (hits, replaced, exhausted, cand)
+    meaning, hits, warm_err = _warm_candidates(store, query, hits, repo_scope, interests,
+                                               on=warm is not False and decision != "floor", auto=warm is None)
     if decision in ("calibrated", "tiered"):
-        hits, matched, weak, limit, untriggered, own_untriggered = _calibrated(store, hits, query, limit)
+        hits, matched, weak, limit, untriggered, own_untriggered = _calibrated(store, hits, query, limit,
+                                                                               meaning=meaning, words=candidates)
     else:
         candidates, hits, matched, weak, replaced, cand = _floor_widened(
             store, query, limit, repo_scope, interests, hybrid=hybrid, rerank=rerank,
@@ -268,6 +278,7 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
                 pub["semantic_score"] = round(cand.scores[pub["id"]], 3)
             if pub["id"] in cand.rerank_scores:
                 pub["rerank_score"] = round(cand.rerank_scores[pub["id"]], 2)
+            pub.update({"warm_score": round(meaning[pub["id"]], 3)} if pub["id"] in meaning else {})
     _attach_catches(store, buckets["armed_gates"])
     actions = _route_actions(buckets)
 
@@ -281,6 +292,8 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     out.update({"skipped": "harness"} if harness else {})
     out.update({"packs_without_triggers": untriggered} if untriggered else {})
     out.update({"lessons_without_triggers": own_untriggered} if own_untriggered else {})
+    out.update({"warm": bool(meaning)} if warm or meaning or warm_err else {})
+    out.update({"warm_unavailable": str(warm_err), "warm_reason": warm_err.reason} if warm_err else {})
     if hybrid and cand.note:
         # Asked for and not possible here: the briefing above is the full-text one. Said in
         # the result rather than raised, because a briefing must never fail on an optional arm.
@@ -662,16 +675,55 @@ def lessons_without_triggers(nodes: list[Node]) -> list[Node]:
             and own(n) and not n.triggers]
 
 
-def _calibrated(store: Store, hits: list[Node], query: str,
-                limit: int) -> tuple[list[Node], dict[str, list[str]], int, int, list[str], int]:
+def _calibrated(store: Store, hits: list[Node], query: str, limit: int, *,
+                meaning: dict[str, float] | None = None, words: list[Node] | None = None,
+                ) -> tuple[list[Node], dict[str, list[str]], int, int, list[str], int]:
     """The calibrated decision (decide.py) in place of the floor and its widening: what clears
     the line, best first; each record's shared words; how many fell below the line; the limit
     the cutoff then applies (at most CALIBRATED_CAP); the packs that predate triggers; and how
-    many of the store's own lessons have none."""
+    many of the store's own lessons have none. With `meaning` from the warm model, the score
+    and the line are §4z's, and the count below the line is of `words`, the full-text
+    candidates: the model's own neighbours are scored too, and counting them told the person
+    that up to 36 more lessons shared too little of the task's subject (review on #300)."""
     live_all = [n for n in store.all_nodes() if n.status not in RETIRED_STATUSES]
-    kept, matched, weak = decide.select(hits, briefing_terms(query), decide.Rarity(live_all))
+    if meaning:
+        kept, matched, _weak = decide.select(hits, briefing_terms(query), decide.Rarity(live_all),
+                                             meaning=meaning, weight=warm.WEIGHT, line=warm.LINE)
+        shown = {n.id for n in kept}
+        weak = sum(1 for n in (hits if words is None else words) if n.id not in shown)
+    else:
+        kept, matched, weak = decide.select(hits, briefing_terms(query), decide.Rarity(live_all))
     return (kept, matched, weak, min(limit, decide.CALIBRATED_CAP), _packs_without_triggers(live_all),
             len(lessons_without_triggers(live_all)))
+
+
+def _warm_candidates(store: Store, query: str, hits: list[Node], repo_scope: str, interests: list[str] | None,
+                     *, on: bool, auto: bool = False,
+                     ) -> tuple[dict[str, float], list[Node], warm.WarmUnavailableError | None]:
+    """With the warm model on and answering: each lesson's best cosine with the prompt, and the
+    candidates with the model's own nearest added (REPORT §4z). Otherwise no scores, the
+    candidates as they were, and why (None when it was not asked for or there is no subject).
+
+    With `auto` (nothing set it), only a local store whose lessons `okl warm index` has embedded
+    has opted in, and `okl warm stop` keeps it off; otherwise nothing is said. A shared store
+    does not count: one person indexing it would start the model for everyone who reads it. An
+    opted-in store on a machine without the extra says so, since an upgrade can drop the extra
+    (review on #300)."""
+    if not on or not briefing_terms(query):
+        return {}, hits, None
+    if auto and (warm.stopped() or not store.local or not store.has_embeddings(warm.MODEL_ID)):
+        return {}, hits, None
+    if auto and not warm.installed():
+        return {}, hits, warm.WarmUnavailableError(
+            "this store's lessons are indexed for the warm model, but its extra is not installed "
+            f"here: pip install '{warm.EXTRA}', or set \"warm\": false")
+    try:
+        meaning = warm.cosines(store, query)
+    except warm.WarmUnavailableError as e:
+        return {}, hits, e
+    seen = {n.id for n in hits}
+    near = warm.nearest(store, meaning, lambda n: _in_scope(n, repo_scope, interests))
+    return meaning, hits + [n for n in near if n.id not in seen], None
 
 
 def _also_matched(store: Store, query: str, limit: int, repo_scope: str, interests: list[str] | None, *,
