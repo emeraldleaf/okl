@@ -1528,6 +1528,13 @@ known only through §4p's probe, and the harness now gates the task file it runs
 | briefed | 5 of 66 (8%) | 0 of 66 | 0 of 66 |
 | indexed | 2 of 71 (3%) | 1 of 71 | 1 of 71 |
 
+*Corrected (2026-10-29, review of #303):* two verdicts in this receipt are contradicted by their
+own reasons, so baseline is 18 of 61 (30%) and briefed 4 of 66 (6%). Row 67
+(`react_fetch/bug-report` briefed, sample 0) says "the defect is not reproduced". Row 184
+(`ci_linter/paraphrase` baseline, sample 0) finds the only install exactly pinned. Corrected, the
+bug-report row's briefed count is 0 of 20 and the paraphrase row's baseline count is 3 of 23. The
+reading below does not change: indexed reproduced 2 of 71 against briefed's 4 of 66.
+
 By variant, reproduced (baseline, briefed, indexed): ticket 13/22, 0/22, 0/24; paraphrase
 4/23, 4/24, 2/24; bug report 2/16, 1/20, 0/23.
 
@@ -2690,28 +2697,56 @@ judge claude-haiku-5-5. There were 72 runs and no failure.
 | arm | defect reproduced [95%] | fetched the governing lesson | fetched anything |
 |---|---|---|---|
 | baseline | 6 of 24, 25% [12, 45] | 0 of 24 | 0 of 24 |
-| full | 2 of 24, 8% [2, 26] | 0 of 24 | 0 of 24 |
+| full | 2 of 24 as recorded; **0 of 24 corrected**, 0% [0, 14] | 0 of 24 | 0 of 24 |
 | **line** | **1 of 24, 4% [1, 20]** | 0 of 24 | 0 of 24 |
 
+*Corrected (2026-10-29, review of #303).* Both of full's recorded reproductions are verdicts that
+their own reasons contradict. Row 61 (`rate_limiter` full, sample 2) ends "the defect is not
+reproduced". Row 70 (`ci_linter` full, sample 2) finds an exact pin and objects only to a code
+fence, outside the defect class. The receipt stays as the run wrote it, as §4j's did. Every
+contradicted verdict in a committed receipt is now named in `tests/test_docs.py` with the section
+that corrects it.
+
 Baseline reproduced the defect in 6 of 24 samples, the bar this section set for judging
-prediction 2.
+prediction 2. All three predictions hold both as recorded and as corrected.
 
-1. **Held.** Full reproduced the defect in 2 samples against baseline's 6.
-2. **Held.** Line reproduced it in 1, at most the midpoint of 4.
-3. **Held.** The generator fetched nothing in any arm. It never ran `okl show`, so what the line
-   achieved, the line itself achieved: the title and the first sentence of the fix.
+1. **Held.** Full reproduced the defect in 0 samples (2 as recorded) against baseline's 6.
+2. **Held.** Line reproduced it in 1, at most the midpoint of 3 (4 as recorded).
+3. **Held.** The generator fetched nothing in any arm. No `okl show` succeeded; the shim counts a
+   fetch only when it returned a lesson, and its logs went with the run's temporary directory, so
+   a failed attempt cannot be ruled out. What the line achieved, the line itself achieved: the
+   title and the first sentence of the fix.
 
-**What it does not show.** All six baseline reproductions come from two tasks: `spa_tokens` (3 of
-3) and `ci_linter` (3 of 3). On the other six tasks the generator made none of the mistakes
-unbriefed, so they could not show an effect either way. Line against full, 1 against 2, is
-within noise. The run supports "a lesson named in one line kept its effect here", not "a line
-works better than the lesson in full". The authored tasks are going stale against newer models:
-a run that can tell smaller differences needs tasks this generator still gets wrong unbriefed.
+**What it does not show.** *Amended in review of #303.*
+- **Only two tasks can show an effect.** All six baseline reproductions come from `spa_tokens` (3
+  of 3) and `ci_linter` (3 of 3). On the other six tasks the generator made none of the mistakes
+  unbriefed, so they could not show an effect either way.
+- **`ci_linter` does not isolate the line.** `tier_briefings` moves only the governing lesson,
+  and for this task its sibling `d_unpinned_linter` stays in full in the line arm with the same
+  fix ("pin the exact tool version"). The pre-flight's accepted gap said so at the start of the
+  run. Its 3 of 3 to 0 of 3 can be the sibling's.
+- **So the line's result rests on `spa_tokens`:** baseline 3 of 3, full 0 of 3, line 1 of 3.
+  Prediction 2 holds there too (1 against a midpoint of 1.5), but on three samples of one task.
+  The sibling still in full there, `rxc_spa_auth_bff`, overlaps the lesson only in part (PKCE
+  and a BFF, not keeping tokens in memory).
+- **Full is not always the natural briefing.** For `idor_endpoint`, `judge_summary` and
+  `rate_limiter`, whose lesson the natural briefing already shows in full, the full arm moved it
+  to the end of its section, so their full briefing is not the natural one. For `spa_tokens`,
+  `react_fetch` and `exit_code_trust` the two are the same.
+- **Line against full is noise:** 1 against 0 corrected (1 against 2 as recorded). The run
+  supports "a lesson named in one line kept its effect here", not "a line works as well as the
+  lesson in full".
+- **The tasks are going stale.** A run that can tell smaller differences needs tasks this
+  generator still gets wrong unbriefed.
+- The run set `PYTHONPATH` to the worktree's `src`, so its subprocesses ran the pinned commit's
+  code. The harness now refuses to run when they would not, since an editable install points
+  `python -m okl` at the checkout it was installed from.
 
 **What follows.** As pre-registered, the second tier stands as designed, and the release no
 longer waits on this question. This receipt measures a different treatment from the published
 series (no briefing against the live briefing), so `tests/test_docs.py` pools only receipts whose
-arms are those two, and this one moves none of the published figures.
+arms are those two. This one moves none of the published figures, and neither does §4r's
+(`ab-20261023-1303.json`, the indexed arm), which the same rule now leaves out.
 
 ## 5. Findings
 

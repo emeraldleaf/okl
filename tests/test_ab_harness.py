@@ -367,3 +367,45 @@ def test_tree_state_fails_closed_when_an_untracked_file_vanishes_mid_read(ab, tm
     one, two = ab.tree_state(), ab.tree_state()
     assert one[0].endswith("+unknown") and one[1] != two[1]
     assert ab.head_moved(one, two) is not None
+
+
+def test_the_tier_arms_differ_only_in_where_the_governing_lesson_is(ab, monkeypatch):
+    """§4aa's instrument: the line arm names the lesson as the first one-line entry and nowhere
+    in full, the full arm shows it in full and not as a line, and the second tier keeps its
+    length (review on #303: tier_briefings had no test)."""
+    import dataclasses
+    from types import SimpleNamespace
+
+    from okl import core
+    from okl.store import Store
+    s = Store("sqlite:///:memory:")
+    core.record(s, type="Rule", scope="org", id="g", title="rotate webhook signing secrets on schedule")
+    for i, title in enumerate(("webhook retries need idempotency keys", "log every webhook delivery",
+                               "webhook payloads are untrusted input")):
+        core.record(s, type="Rule", scope="org", id=f"o{i}", title=title)
+    task = "rotate the webhook signing secrets"
+    natural = core.check(s, repo="r", task=task, decision="tiered")
+    assert core.briefed_ids(natural) == ["g"] and len(natural["also_matched"]) == 3
+
+    def fake_run(cmd, **_kw):
+        out = natural if "check" in cmd else dataclasses.asdict(s.get_node("g"))
+        return SimpleNamespace(returncode=0, stdout=json.dumps(out), stderr="")
+    monkeypatch.setattr(ab.subprocess, "run", fake_run)
+    full, line = ab.tier_briefings(task, "g", 5)
+
+    def entries(text):
+        return [ln.split("]")[0][3:] for ln in text.splitlines() if ln.startswith("- [")]
+    assert full == core.render_check_for_agent(natural)
+    assert entries(line) == ["g", *entries(full)[:2]]
+    assert "rotate webhook signing secrets on schedule" in full.split("### Also matched")[0]
+    assert "rotate webhook signing secrets" not in line.split("### Also matched")[0]
+
+
+def test_the_run_refuses_to_measure_another_checkouts_code(ab, monkeypatch, tmp_path):
+    """An editable install points `python -m okl` at the checkout it was installed from, so a run
+    from a worktree without PYTHONPATH measured another tree's code (review on #303)."""
+    assert ab.code_outside_checkout() == ""
+    monkeypatch.setattr(ab, "REPO", tmp_path)
+    assert str(tmp_path / "src") in ab.code_outside_checkout()
+    code, why = ab.startup_refusal({"generator": None, "judge": None})
+    assert code == 7 and "PYTHONPATH" in why
