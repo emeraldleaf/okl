@@ -1,0 +1,19 @@
+warm model files · 2026-10-29T04:28Z · onnx-community/embeddinggemma-300m-ONNX at 5090578d9565bb06545b4552f76e6bc2c93e4a66 (the revision okl's model cache holds)
+source: https://huggingface.co/api/models/onnx-community/embeddinggemma-300m-ONNX/tree/5090578d9565bb06545b4552f76e6bc2c93e4a66/onnx (sizes as listed, bytes)
+        479,932  onnx/model.onnx
+  1,234,521,088  onnx/model.onnx_data
+        655,263  onnx/model_fp16.onnx
+    617,434,112  onnx/model_fp16.onnx_data
+        529,476  onnx/model_no_gather_q4.onnx
+    194,628,608  onnx/model_no_gather_q4.onnx_data
+        519,322  onnx/model_q4.onnx
+    196,725,760  onnx/model_q4.onnx_data
+        705,221  onnx/model_q4f16.onnx
+    175,410,176  onnx/model_q4f16.onnx_data
+        567,874  onnx/model_quantized.onnx
+    308,890,624  onnx/model_quantized.onnx_data
+totals, graph and weights (MB = 10^6 bytes):
+  full precision  model.onnx + model.onnx_data                    1235.0 MB
+  int8            model_quantized.*  (what okl warm runs)           309.5 MB  (0.25 of full precision)
+  4-bit           model_q4.*                                        197.2 MB
+local cache: model_quantized.onnx_data is 308,890,624 bytes, as listed

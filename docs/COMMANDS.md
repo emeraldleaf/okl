@@ -70,6 +70,21 @@ okl check --decision floor
                      #   (§4y). `calibrated` is the first tier alone; `floor` shows every match by
                      #   the word floor in full, up to --limit. `"decision"` in .okl/config.json
                      #   or OKL_DECISION sets it for every check.
+okl check --warm on  # add what a lesson means to the words it shares, from the model `okl warm`
+                     #   keeps loaded (REPORT §4z). On by default once `okl warm index` has embedded
+                     #   a local store's lessons (a shared database needs `"warm": true`); --warm off,
+                     #   `"warm": false` or OKL_WARM=0 turns it off. When the model does not answer,
+                     #   the briefing is the usual one and the JSON says why (`warm_unavailable`,
+                     #   `warm_reason`). A shared service does not run it, and `--decision floor`
+                     #   does not use it.
+okl warm start       # start the local process that keeps EmbeddingGemma (int8) loaded; needs the
+                     #   warm extra; --wait N waits for it to load. stop, status, and serve (the
+                     #   process itself, in the foreground) too; after `okl warm stop` the default
+                     #   leaves it off until `okl warm start`, `index` or `serve`. About 1.6 GB from
+                     #   startup (it runs one inference before it serves). One runs at a time; its
+                     #   log is ~/.cache/okl/warm.log.
+okl warm index       # embed this store's lessons for it, one vector per phrasing; again after
+                     #   lessons change (only changed ones are embedded)
 okl check --index    # append every other lesson in scope as `- [id] title`, so an agent can
                      #   fetch one with `okl show <id>` when the briefing did not select it.
                      #   A treatment under measurement (REPORT §4r); about 120 characters a lesson.

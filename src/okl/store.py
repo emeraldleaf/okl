@@ -397,6 +397,15 @@ class Store:
         """Every (node id, text hash, vector) stored under `model`, in no particular order."""
         return self._impl.embeddings(model)
 
+    def has_embeddings(self, model: str) -> bool:
+        """Whether any record has a vector under `model`, without reading the vectors."""
+        return self._impl.has_embeddings(model)
+
+    @property
+    def local(self) -> bool:
+        """Whether this store is a file on this machine (SQLite), not a database others share."""
+        return self.url.startswith("sqlite")
+
     def delete_embedding(self, node_id: str, model: str) -> None:
         """Drop one record's vector under `model`; nothing happens when there is none."""
         self._impl.delete_embedding(node_id, model)
@@ -476,6 +485,7 @@ class _Backend(Protocol):
     def checks(self, node_id: str) -> list[CheckRun]: ...
     def put_embedding(self, node_id: str, model: str, text_hash: str, vector: bytes) -> None: ...
     def embeddings(self, model: str) -> list[tuple[str, str, bytes]]: ...
+    def has_embeddings(self, model: str) -> bool: ...
     def delete_embedding(self, node_id: str, model: str) -> None: ...
     def close(self) -> None: ...
 
@@ -745,6 +755,10 @@ class _SQLiteBackend(_Backend):
                                      (model,)).fetchall()
             return [(r[0], r[1], bytes(r[2])) for r in rows]
 
+    def has_embeddings(self, model: str) -> bool:
+        with self._lock:
+            return self.conn.execute("SELECT 1 FROM embedding WHERE model=? LIMIT 1", (model,)).fetchone() is not None
+
     def delete_embedding(self, node_id: str, model: str) -> None:
         with self._lock:
             self.conn.execute("DELETE FROM embedding WHERE node_id=? AND model=?", (node_id, model))
@@ -987,6 +1001,9 @@ class _PostgresBackend(_Backend):
     def embeddings(self, model: str) -> list[tuple[str, str, bytes]]:
         return [(r["node_id"], r["text_hash"], bytes(r["vector"])) for r in
                 self._fetch("SELECT node_id, text_hash, vector FROM embedding WHERE model = %s", (model,))]
+
+    def has_embeddings(self, model: str) -> bool:
+        return bool(self._fetch("SELECT 1 AS one FROM embedding WHERE model = %s LIMIT 1", (model,)))
 
     def delete_embedding(self, node_id: str, model: str) -> None:
         with self.conn.cursor() as cur:
