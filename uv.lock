@@ -1709,6 +1709,9 @@ service = [
     { name = "pydantic" },
     { name = "uvicorn" },
 ]
+warm = [
+    { name = "fastembed" },
+]
 
 [package.dev-dependencies]
 dev = [
@@ -1733,6 +1736,7 @@ requires-dist = [
     { name = "fastapi", marker = "extra == 'service'", specifier = ">=0.110" },
     { name = "fastembed", marker = "extra == 'all'", specifier = ">=0.9" },
     { name = "fastembed", marker = "extra == 'rerank'", specifier = ">=0.9" },
+    { name = "fastembed", marker = "extra == 'warm'", specifier = ">=0.9" },
     { name = "mcp", marker = "extra == 'all'", specifier = ">=1.2" },
     { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.2" },
     { name = "model2vec", marker = "extra == 'all'", specifier = ">=0.10" },
@@ -1744,7 +1748,7 @@ requires-dist = [
     { name = "uvicorn", marker = "extra == 'all'", specifier = ">=0.29" },
     { name = "uvicorn", marker = "extra == 'service'", specifier = ">=0.29" },
 ]
-provides-extras = ["service", "postgres", "mcp", "hybrid", "rerank", "all"]
+provides-extras = ["service", "postgres", "mcp", "hybrid", "rerank", "warm", "all"]
 
 [package.metadata.requires-dev]
 dev = [
