@@ -57,3 +57,29 @@ def test_preflight_gates_the_task_file_it_is_given_and_can_accept_a_missing_less
     assert refused.returncode == 1 and "[MISSING] far/paraphrase" in refused.stdout, refused.stdout
     accepted = _run([sys.executable, script, "--tasks", str(tasks), "--accept-missing"], tmp_path)
     assert accepted.returncode == 0 and "accepted by --accept-missing: far/paraphrase" in accepted.stdout, accepted.stdout
+
+
+def test_a_lesson_named_in_the_second_tier_counts_as_present(tmp_path, monkeypatch, capsys):
+    """Under the tiered default a task's lesson can be a one-line entry; §4aa measured such a
+    line keeping its effect, so the gate reports it as `line` and passes (review on #303)."""
+    import runpy
+
+    import pytest
+
+    from okl import core
+    from okl.store import Store
+    db = tmp_path / "okl.db"
+    s = Store(f"sqlite:///{db}")
+    core.record(s, type="Rule", scope="org", id="n_line", title="a lesson the task names in a line")
+    s.close()
+    monkeypatch.setenv("OKL_DATABASE_URL", f"sqlite:///{db}")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(core, "check", lambda *a, **k: {"also_matched": [{"id": "n_line"}], "dropped_by_cutoff": 0})
+    tasks = tmp_path / "tasks.jsonl"
+    tasks.write_text(json.dumps({"id": "t1", "task": "x", "signal": "s", "defect_node": "n_line"}) + "\n")
+    monkeypatch.setattr(sys, "argv", ["preflight.py", "--tasks", str(tasks)])
+    with pytest.raises(SystemExit) as done:
+        runpy.run_path(str(ROOT / "evals" / "preflight.py"), run_name="__main__")
+    out = capsys.readouterr().out
+    assert done.value.code == 0, out
+    assert "[line] t1" in out and "PRE-FLIGHT OK" in out
