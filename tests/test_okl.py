@@ -124,8 +124,10 @@ def test_org_scope_visible_everywhere(store):
     core.record(store, type="PriorArt", title="Evangelista 2018 the study basin", scope="org",
                 status="live", body="THREAT: refutes novelty claim")
 
-    # ACT — a repo the record has never heard of asks a related question
-    res = core.check(store, repo="any-new-repo", task="the target species change mapping the study basin")
+    # ACT — a repo the record has never heard of asks a related question (the floor: this is
+    # about scope, not where the calibrated line sits)
+    res = core.check(store, repo="any-new-repo", task="the target species change mapping the study basin",
+                     decision="floor")
 
     # ASSERT — it arrives, routed to the prior-art bucket so it reads as a warning
     assert res["threat_prior_art"], "org-scope prior art should reach every repo"
@@ -2621,7 +2623,7 @@ def test_a_stale_record_stays_marked_when_it_becomes_an_action(store):
     core.record(store, type="Defect", title="aging-defect", scope="org", body="c",
                 symptom="s", fix="f", ttl_days=0)
     time.sleep(0.01)
-    text = core.render_check_for_agent(core.check(store, "r", "aging-defect"))
+    text = core.render_check_for_agent(core.check(store, "r", "aging-defect", decision="floor"))
     line = next(ln for ln in text.splitlines() if "aging-defect" in ln and ln.startswith("- **"))
     assert "STALE" in line, text
 
@@ -2988,7 +2990,7 @@ def test_briefing_log_reports_what_was_shown_and_what_never_was(monkeypatch):
     shown = core.record(s, type="Rule", scope="org", title="put the ownership predicate in the WHERE clause")
     unseen = core.record(s, type="Rule", scope="org", title="close every sqlite connection you open")
     private = core.record(s, type="Rule", scope="repo:other", repo="other", title="the other repo's own lesson")
-    result = core.check(s, "app", "add the ownership predicate to the query")
+    result = core.check(s, "app", "add the ownership predicate to the query", decision="floor")
     assert shown in core.briefed_ids(result) and unseen not in core.briefed_ids(result)
 
     # ACT — the same briefing twice, then one for another repo.

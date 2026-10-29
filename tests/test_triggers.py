@@ -272,16 +272,17 @@ def test_the_second_tier_is_rendered_for_the_agent_and_the_person_and_not_logged
         s.close()
 
 
-def test_two_rare_shared_words_clear_the_line_and_two_common_ones_do_not():
-    """The line is three shared words, or two nearly as rare as a word in one record: two
-    words that are in nearly every record are not enough on their own."""
+def test_three_rare_shared_words_clear_the_line_and_three_with_common_ones_do_not():
+    """The stemmed line (§4ad) is four shared words, or three whose relative rarities sum past
+    1.449: three words each in one record clear it; three of which two are in nearly every
+    record do not."""
     filler = [{"title": f"service config note {i}", "body": "service config"} for i in range(30)]
     s = _store_with([{"title": "pkce verifier for public clients"},
                      {"title": "service config for the gateway"}, *filler])
     try:
-        rare = core.check(s, repo="r", task="pkce verifier missing", decision="calibrated")
+        rare = core.check(s, repo="r", task="pkce verifier public question", decision="calibrated")
         assert "r0" in core.briefed_ids(rare)
-        common = core.check(s, repo="r", task="service config question", decision="calibrated")
+        common = core.check(s, repo="r", task="service config gateway question", decision="calibrated")
         assert core.briefed_ids(common) == []
     finally:
         s.close()
