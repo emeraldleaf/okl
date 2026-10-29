@@ -2705,6 +2705,9 @@ Receipts:
   unchecked run). The check covers a prompt that names a subject, since only those ask the model;
   all 120 do, counted with `core.briefing_terms` at ea04e35, so every difference is the model's.
   Later runs print that count on the receipt and time only the tiered decision (review on #300).
+  The re-run at bd17a83 does both (`warm-latency-20261029-1156.txt`): 120 of 120 prompts asked
+  the model, which added a median of 101 ms (p95 259 ms). The figures quoted elsewhere stay the
+  larger 114 ms.
 - `warm-memory-20261027-0530.txt`: memory, prompt by prompt.
 - `warm-model-files-20261029.txt`: the model's files at the revision okl runs, from the model
   repository's listing: int8 309.5 MB, full precision 1,235.0 MB, 4-bit 197.2 MB.
