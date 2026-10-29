@@ -168,6 +168,9 @@ def _refresh_snapshot(node: dict, why: str = "this verification") -> None:
             print(f"  {'refreshed' if existed else 'created'} {snap.name} — commit it so CI sees {why}")
         except OKLUnreachableError as e:
             print(f"  ! {snap.name} NOT refreshed: {e}", file=sys.stderr)
+        except SnapshotShrinkError as e:
+            print(f"  ! {snap.name} NOT refreshed: {e}. If that is meant, `okl export --drift "
+                  "--allow-shrink` writes it anyway.", file=sys.stderr)
 
 
 def _warn_off_branch(client: Client, skip: str | None = None) -> None:
@@ -406,9 +409,54 @@ def _no_ci_reads(snap: Path) -> bool:
     return not tracked
 
 
-def _write_snapshot(client: Client, path: Path) -> int:
+class SnapshotShrinkError(Exception):
+    """A refresh would take rules out of CI's gate that this store cannot account for (#213)."""
+
+
+def _committed_snapshot(path: Path) -> dict | None:
+    """The snapshot CI reads: the committed copy when git tracks it (an earlier refresh may
+    already have changed the file on disk), else the file itself; None when there is neither."""
+    import json
+    import subprocess
+    try:
+        r = subprocess.run(["git", "-C", str(path.parent), "show", f"HEAD:./{path.name}"],
+                           capture_output=True, text=True, timeout=10)
+        text = r.stdout if r.returncode == 0 else (path.read_text() if path.exists() else None)
+    except (OSError, subprocess.TimeoutExpired):
+        text = path.read_text() if path.exists() else None
+    try:
+        return json.loads(text) if text else None
+    except ValueError:
+        return None
+
+
+def _shrink_problem(old: dict | None, new: dict, held: set[str]) -> str | None:
+    """Why writing `new` over `old` would quietly weaken CI's gate, or None. The store is per
+    clone, so a teammate's refresh dropped every rule only another clone's store held, and a
+    worktree with no .okl/config.json wrote a snapshot for a repo named after its folder,
+    without the repo's own rules (#213). A rule this store holds may leave (retired, or no
+    longer governing files): that is the store's word. One it does not hold is a loss."""
+    if not old:
+        return None
+    if old.get("repo") and old["repo"] != new["repo"]:
+        return (f"it is for repo {old['repo']!r} and this store would write it for {new['repo']!r} "
+                "(a worktree or clone without .okl/config.json takes its folder's name)")
+    kept = {r["id"] for r in new["rules"]}
+    gone = sorted(r["id"] for r in old.get("rules", []) if r.get("id") not in kept and r.get("id") not in held)
+    if gone:
+        more = f" and {len(gone) - 8} more" if len(gone) > 8 else ""
+        return (f"it would drop {len(gone)} rule(s) this store does not hold: {', '.join(gone[:8])}{more} "
+                "(another clone's store has them)")
+    return None
+
+
+def _write_snapshot(client: Client, path: Path, *, allow_shrink: bool = False) -> int:
     from .. import drift
-    snap = drift.snapshot(client.all_nodes(), client.repo)
+    nodes = client.all_nodes()
+    snap = drift.snapshot(nodes, client.repo)
+    why = None if allow_shrink else _shrink_problem(_committed_snapshot(path), snap, {n.id for n in nodes})
+    if why:
+        raise SnapshotShrinkError(why)
     path.write_text(drift.dump_snapshot(snap))
     return len(snap["rules"])
 
@@ -422,9 +470,13 @@ def cmd_export(args: argparse.Namespace) -> int:
         return 2
     path = Path(args.output) if args.output else _snapshot_path()
     try:
-        n = _write_snapshot(client, path)
+        n = _write_snapshot(client, path, allow_shrink=getattr(args, "allow_shrink", False))
     except OKLUnreachableError as e:
         print(f"OKL UNREACHABLE — nothing exported.\n{e}", file=sys.stderr)
+        return 2
+    except SnapshotShrinkError as e:
+        print(f"NOT EXPORTED — {path.name} is CI's drift gate, and {e}. Run this from a store that "
+              "holds them, or pass --allow-shrink if they should leave the gate.", file=sys.stderr)
         return 2
     if n == 0:
         # An empty snapshot would make CI report NOTHING CHECKED, which is honest, but

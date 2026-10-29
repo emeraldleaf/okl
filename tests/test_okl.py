@@ -739,9 +739,10 @@ def test_reseeding_keeps_what_the_pack_leaves_out_and_the_stored_check(store, tm
         def record(self, **k): return core.record(store, **k)
         def link(self, s, r, d): return core.link(store, s, r, d)
     pack = tmp_path / "team.json"
-    def write_pack(title, files=None):
+    def write_pack(title, files=None, verified=False):
         node = {"key": "k", "type": "Rule", "scope": "org", "repo": "r", "title": title}
         node.update({"files": files} if files else {})
+        node.update({"verified": True} if verified else {})
         pack.write_text(json.dumps({"nodes": [node]}))
     nid = "seed:team:k"
 
@@ -762,6 +763,10 @@ def test_reseeding_keeps_what_the_pack_leaves_out_and_the_stored_check(store, tm
     assert store.get_node(nid).verified_at is None
     seed_from_file(_C(), str(pack))
     assert store.get_node(nid).verified_by.startswith("`grep -q ruff== ci.yml`")
+
+    # A pack that says "verified" does not stamp a lesson no check has passed since.
+    write_pack("Pin every linter CI runs", files="ci/lint.yml", verified=True); seed_from_file(_C(), str(pack))
+    assert store.get_node(nid).verified_at is None
 
 
 def test_reseeding_keeps_verification_unless_the_governed_files_change(store, tmp_path):
@@ -2435,6 +2440,59 @@ def test_drift_snapshot_gives_ci_a_store_it_cannot_clear_by_hand(tmp_path, monke
     commit("forged", "okl-drift.json")
     r = okl("drift", "--gate", "--snapshot", "okl-drift.json")
     assert r.returncode == 2 and "does not match the evidence stamp" in r.stderr
+
+
+def test_a_snapshot_refresh_refuses_to_drop_rules_this_store_does_not_hold(tmp_path, monkeypatch):
+    """#213: the store is per clone, so a teammate's verify rewrote okl-drift.json from a store
+    without the other clone's rules, and they left CI's gate with no warning. The committed
+    snapshot is the reference: a rule it holds that this store does not is refused, named,
+    and goes only when asked."""
+    import subprocess
+    import sys
+    monkeypatch.chdir(tmp_path)
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL"):
+        monkeypatch.delenv(k, raising=False)
+    git = ["git", "-c", "user.email=t@t", "-c", "user.name=t"]
+    subprocess.run(["git", "init", "-q", "."], check=True)
+
+    def okl(*a):
+        return subprocess.run([sys.executable, "-m", "okl", *a], capture_output=True, text=True)
+
+    def commit(msg, *paths):
+        subprocess.run(["git", "add", *paths], check=True)
+        subprocess.run([*git, "commit", "-qm", msg], check=True)
+
+    (tmp_path / "a.py").write_text("x = 1\n"); commit("a", "a.py")
+    okl("init", "--repo", "r", "--ci")
+    rid = okl("record", "--type", "Rule", "--scope", "repo", "--title", "t", "--files", "a.py").stdout.strip().splitlines()[-1]
+    assert okl("verify", rid, "--run", "true", "--expect", "").returncode == 0
+    snap_file = tmp_path / "okl-drift.json"
+    snap = json.loads(snap_file.read_text())
+    snap["rules"].append({**snap["rules"][0], "id": "teammates-rule"})   # only the other clone's store has it
+    snap_file.write_text(json.dumps(snap)); commit("snapshot", "okl-drift.json")
+
+    # ACT / ASSERT — export refuses and names the rule; the file is left as it was.
+    r = okl("export", "--drift")
+    assert r.returncode == 2 and "teammates-rule" in r.stderr and "--allow-shrink" in r.stderr
+    assert "teammates-rule" in snap_file.read_text()
+    # A verify still passes; it says the snapshot was not refreshed, and why.
+    r = okl("verify", rid, "--run", "true", "--expect", "")
+    assert r.returncode == 0 and "NOT refreshed" in r.stderr and "teammates-rule" in r.stderr
+    # Asked for, the rule leaves the gate.
+    assert okl("export", "--drift", "--allow-shrink").returncode == 0
+    assert "teammates-rule" not in snap_file.read_text()
+
+
+def test_the_shrink_guard_reads_the_repo_and_the_rules_the_store_holds():
+    """A rule this store holds may leave the snapshot (retired, or no longer governing files);
+    one it does not hold, or a snapshot written for another repo, is refused (#213). The second
+    is how a worktree without .okl/config.json wrote one named after its folder."""
+    from okl.cli.verification import _shrink_problem
+    old = {"repo": "okl", "rules": [{"id": "a"}, {"id": "b"}]}
+    assert _shrink_problem(None, {"repo": "okl", "rules": []}, set()) is None
+    assert _shrink_problem(old, {"repo": "okl", "rules": [{"id": "a"}]}, {"a", "b"}) is None
+    assert "1 rule(s) this store does not hold: b" in _shrink_problem(old, {"repo": "okl", "rules": [{"id": "a"}]}, {"a"})
+    assert "'wt-two-tiers'" in _shrink_problem(old, {"repo": "wt-two-tiers", "rules": old["rules"]}, {"a", "b"})
 
 
 def test_snapshot_entries_are_checked_before_they_are_trusted():

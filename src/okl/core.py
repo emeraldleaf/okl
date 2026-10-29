@@ -993,18 +993,18 @@ def _carry_over(store: Store, kw: dict[str, Any], node_id: str, *,
     # deletion. A field it leaves out that the store holds was set here (okl update --files, a
     # /triggers draft), so it stays; re-seeding used to blank it, and files added locally went
     # with their proof, leaving drift nothing to check (#214).
-    for field in _KEPT_ON_SILENCE:
-        if kw.get(field) in (None, "") and getattr(old, field) not in (None, ""):
-            kw[field] = getattr(old, field)
+    for name in _KEPT_ON_SILENCE:
+        if kw.get(name) in (None, "") and getattr(old, name) not in (None, ""):
+            kw[name] = getattr(old, name)
     if not _same_files(old.files, kw.get("files")):
         kw.update(verified_at=None, verified_commit=None, verified_by=old.verified_by)
     else:
-        # The stored check stays while the files do, stamp or not: after a re-seed that
-        # changed the files cleared the stamp, the next one dropped the check, and okl
-        # reverify had nothing to run (#214).
-        kw["verified_by"] = old.verified_by
-        if old.verified_at is not None:
-            kw.update(verified_at=old.verified_at, verified_commit=old.verified_commit)
+        # The stored check and the stamp stay while the files do, as the store has them: after
+        # a re-seed that changed the files cleared the stamp, the next one dropped the check and
+        # okl reverify had nothing to run; and a pack's "verified": true restamped a lesson no
+        # check had passed (#214). Only okl verify stamps a lesson the store already holds.
+        kw.update(verified_at=old.verified_at, verified_commit=old.verified_commit,
+                  verified_by=old.verified_by)
 
 
 def join_aliases(aliases: Any) -> str | None:
