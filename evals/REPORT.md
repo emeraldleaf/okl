@@ -2772,7 +2772,7 @@ model does not answer falls back to the usual briefing and says so: `warm_unavai
 JSON, and a line for the person. *Amended in review of #300:*
 - Only a local (SQLite) store opts in this way. One person indexing a shared database would start
   the model for everyone who reads it, so a shared store needs `"warm": true`.
-- `okl warm stop` keeps it off until `okl warm start`.
+- `okl warm stop` keeps it off until `okl warm start`, `okl warm index` or `okl warm serve`.
 - An indexed store on a machine without the extra says so, since an upgrade can drop the extra.
 - A server that did not come up is not started again on every prompt; the line names its log. `"warm": false` or `OKL_WARM=0` turns it
 off, and a shared service never runs it. The trigger is indexing, not installing the extra,

@@ -483,3 +483,47 @@ def test_a_server_that_cannot_take_the_lock_says_so(monkeypatch, capsys):
     finally:
         held.close()
     assert "another server holds the lock" in capsys.readouterr().err
+
+
+def test_a_platform_without_unix_sockets_is_unavailable_not_an_error(monkeypatch):
+    """Without AF_UNIX, _ask raised AttributeError past every caller (review on #300)."""
+    monkeypatch.delattr(warm.socket, "AF_UNIX")
+    assert warm.ping() is None
+    with pytest.raises(warm.WarmUnavailableError, match="Unix sockets") as err:
+        warm.embed(["a"], "query")
+    assert err.value.reason == "unavailable"     # not "not_running": nothing to start
+
+
+def test_only_a_held_lock_reads_as_another_server(monkeypatch, tmp_path):
+    """Every OSError from flock read as another server, so ENOLCK made start() skip spawning and
+    revive() report "loading" for ever (review on #300)."""
+    import errno
+    from types import SimpleNamespace
+
+    def flock_raising(exc):
+        def flock(*_a):
+            raise exc
+        return SimpleNamespace(flock=flock, LOCK_EX=2, LOCK_NB=4)
+    monkeypatch.setattr(warm, "fcntl", flock_raising(BlockingIOError(errno.EWOULDBLOCK, "held")))
+    assert warm._take_lock(tmp_path / "w.sock") is None
+    monkeypatch.setattr(warm, "fcntl", flock_raising(OSError(errno.ENOLCK, "No locks available")))
+    with pytest.raises(warm.WarmUnavailableError, match="lock could not be taken"):
+        warm._take_lock(tmp_path / "w.sock")
+
+
+def test_the_model_revision_is_the_cached_snapshot(monkeypatch, tmp_path):
+    """The real-prompt bench keys its document vectors on it, so new model files cannot meet
+    vectors the old ones made (review on #300)."""
+    monkeypatch.setenv("FASTEMBED_CACHE_PATH", str(tmp_path))
+    assert warm.model_revision() == ""
+    (tmp_path / "models--onnx-community--embeddinggemma-300m-ONNX" / "onnx_snapshots" / "abc123").mkdir(parents=True)
+    assert warm.model_revision() == "abc123"
+
+
+def test_a_harness_prompt_does_not_count_as_asking_the_model():
+    """core.check gates a harness-wrapped prompt before the model, but the latency receipt counted
+    its model-free timing as the model's (review on #300)."""
+    lat = _latency()
+    assert lat.asks_model("rotate the webhook signing secrets")
+    assert not lat.asks_model("<task-notification>rotate the webhook signing secrets</task-notification>")
+    assert not lat.asks_model("ok")

@@ -130,6 +130,8 @@ def _unpack(blob: bytes) -> list[list[float]]:
 def _ask(request: dict[str, Any], timeout: float) -> dict[str, Any]:
     """One request to the server, one JSON line each way."""
     path = socket_path()
+    if not hasattr(socket, "AF_UNIX"):   # Windows without it: say so, never an AttributeError (review on #300)
+        raise WarmUnavailableError("this platform has no Unix sockets, which the warm model needs")
     try:
         with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
             s.settimeout(timeout)
@@ -262,9 +264,12 @@ def _take_lock(path: Path) -> Any:
     f = lock.open("a")
     try:
         fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except OSError:
+    except BlockingIOError:   # another process holds it
         f.close()
         return None
+    except OSError as e:      # not contention (ENOLCK and the like): never read as a running server
+        f.close()
+        raise WarmUnavailableError(f"the warm model's lock could not be taken ({e.strerror or e})") from None
     return f
 
 
@@ -377,6 +382,14 @@ def _stopped_path() -> Path:
 
 def _started_path() -> Path:
     return socket_path().with_suffix(".started")
+
+
+def model_revision() -> str:
+    """The model's revision in okl's cache: the hub snapshot(s) its files came from, "" when none
+    is there. A cache of document vectors keys on it, so new model files cannot meet old vectors
+    (review on #300)."""
+    return ",".join(sorted(p.name for p in hub.model_cache_dir().glob("models--*embeddinggemma*/*snapshots/*")
+                           if p.is_dir()))
 
 
 def stopped() -> bool:

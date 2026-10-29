@@ -49,9 +49,10 @@ okl init --interests "python,security"    # drop records tagged for stacks you d
   keeps loaded in a local process (EmbeddingGemma-300m, int8; the `warm` extra; `okl warm index`
   once per store, again after lessons change). On real held-out prompts it showed 46 applying
   lessons in full against 38 and added a median of 114 ms to a prompt. It holds
-  about 1.6 GB of memory once it has answered a prompt, so it runs only for a local store whose
-  lessons `okl warm index` has embedded; `"warm": false` or `OKL_WARM=0` turns it off there, and
-  `okl warm stop` keeps it off until `okl warm start`.
+  about 1.6 GB of memory from startup (it runs one inference before it serves), so by default it
+  runs only for a local store whose lessons `okl warm index` has embedded, and a shared database
+  uses it with `"warm": true`; `"warm": false` or `OKL_WARM=0` turns it off, and `okl warm stop`
+  keeps it off until `okl warm start`, `index` or `serve`.
   It applies to a local store's calibrated and tiered checks,
   not to a shared service or `--decision floor`. When the model does not answer, the briefing is
   the usual one; `--format json` says why in `warm_unavailable`

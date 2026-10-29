@@ -183,7 +183,11 @@ class Stores:
         """Every snapshot lesson's warm vectors with the written triggers in place, by id, as
         (phrasings hash, base64 rows): embedded once by the model in this process and kept in
         private/, re-embedded only where a lesson's phrasings changed."""
-        cached = json.loads(WARM_VECTORS.read_text()) if WARM_VECTORS.exists() else {}
+        # Keyed on the model and its revision too: new model files with unchanged phrasings would
+        # otherwise reuse vectors the old model made (review on #300).
+        identity = {"model": warm.MODEL_ID, "revision": warm.model_revision()}
+        saved = json.loads(WARM_VECTORS.read_text()) if WARM_VECTORS.exists() else {}
+        cached = saved.get("vectors", {}) if saved.get("identity") == identity else {}
         extra = self.backfill()
         out: dict[str, tuple[str, str]] = {}
         todo = []
@@ -198,8 +202,8 @@ class Stores:
                 todo.append((n.id, h, warm.phrasings(m)))
         for node_id, h, texts in todo:
             out[node_id] = (h, base64.b64encode(warm._pack(warm.embed(texts, "doc"))).decode())
-        if todo:
-            WARM_VECTORS.write_text(json.dumps({k: list(v) for k, v in out.items()}))
+        if todo or saved.get("identity") != identity:
+            WARM_VECTORS.write_text(json.dumps({"identity": identity, "vectors": {k: list(v) for k, v in out.items()}}))
         return out
 
     def as_of(self, ms: int, *, backfilled: bool = False, vectors: bool = False) -> Store:

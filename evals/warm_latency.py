@@ -25,7 +25,7 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "src"))
 sys.path.insert(0, str(REPO / "evals" / "bench"))
 
-from okl import core, warm  # noqa: E402
+from okl import core, decide, warm  # noqa: E402
 
 
 def check_cmd(setting: str, text: str) -> list[str]:
@@ -33,6 +33,12 @@ def check_cmd(setting: str, text: str) -> list[str]:
     model, so a caller's OKL_DECISION or the store's config would time no model (review on #300)."""
     return [sys.executable, "-m", "okl", "check", "--format", "hook", "--warm", setting,
             "--decision", "tiered", "--task", text]
+
+
+def asks_model(text: str) -> bool:
+    """Whether a check of `text` asks the model: it names a subject and no harness wrote it,
+    the gates core.check applies (review on #300)."""
+    return bool(core.briefing_terms(text)) and not decide.from_harness(text)
 
 
 def model_diffs(times: dict[str, list[float]], asked: list[bool]) -> list[float]:
@@ -56,7 +62,7 @@ def main() -> int:
     for name in ("OKL_DATABASE_URL", "OKL_QUIET"):
         env.pop(name, None)
     # The receipt says how many prompts asked the model (model_diffs).
-    asked = [bool(core.briefing_terms(text)) for text in texts]
+    asked = [asks_model(text) for text in texts]
     if not any(asked):
         sys.exit("ABORT: no prompt names a subject, so none would ask the model")
     times: dict[str, list[float]] = {"off": [], "on": []}
