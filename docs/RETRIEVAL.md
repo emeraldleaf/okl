@@ -69,8 +69,9 @@ fuller than what people type, so on real prompts the line alone trades recall fo
 lesson it shows is about 1.7 times as likely to apply, but it surfaced about a third of what
 the original did. So the default names the rest in a line each. It reaches more applying
 lessons than the original, at about half its size: a median of 721 tokens a prompt against
-1,424 (`real-20261026-heldout-size.txt`). Whether an agent acts on a one-line entry as it does
-on a lesson shown in full is not yet measured.
+1,424 (`real-20261026-heldout-size.txt`). An agent acted on a lesson named in one line about as
+it did on the lesson in full, without opening it (REPORT §4aa). That rests on the one task where
+nothing else showed the same fix, so it is a small result, not a settled one.
 
 A team's own lessons need triggers to reach the first tier: `okl triggers` lists the ones that
 have none, `/triggers` drafts them in Claude Code, and the briefing says how many are missing.
