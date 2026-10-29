@@ -1,0 +1,17 @@
+bench v2 prototype · label stem-words · split selection · code 6f2a32cb7392
+corpus: 182 live records · triggers on 173 lessons (triggers.jsonl, sha 814c7bb5aa68) · queries sha 97ecbcb5d681 · nulls 550 (sha 6e100bad522c): 282 calibrate the line, 268 test it
+score: shared_words (How many of the prompt's subject words the about-text holds, ties broken by their)
+
+alpha   line cap |           recall [95%] briefed/q | null test: briefed anything [95%]
+ 0.01  4.002   3 |   79.5% [74.3%, 84.7%]      1.96 | 4 of 268 (1.5%, [0.6%, 3.8%])
+ 0.01  4.002   5 |   79.9% [74.7%, 84.7%]      2.37 | 4 of 268 (1.5%, [0.6%, 3.8%])
+ 0.01  4.002   8 |   79.9% [74.7%, 84.7%]      2.54 | 4 of 268 (1.5%, [0.6%, 3.8%])
+ 0.05  2.002   3 |   86.3% [81.9%, 90.4%]      2.89 | 9 of 268 (3.4%, [1.8%, 6.3%])
+ 0.05  2.002   5 |   88.0% [83.9%, 91.6%]      4.66 | 9 of 268 (3.4%, [1.8%, 6.3%])
+ 0.05  2.002   8 |   90.0% [86.3%, 93.6%]      6.90 | 9 of 268 (3.4%, [1.8%, 6.3%])
+  0.1  2.002   3 |   86.3% [81.9%, 90.4%]      2.89 | 9 of 268 (3.4%, [1.8%, 6.3%])
+  0.1  2.002   5 |   88.0% [83.9%, 91.6%]      4.66 | 9 of 268 (3.4%, [1.8%, 6.3%])
+  0.1  2.002   8 |   90.0% [86.3%, 93.6%]      6.90 | 9 of 268 (3.4%, [1.8%, 6.3%])
+
+at alpha 0.05, cap 5, by register: bug-report 80/83 · paraphrase 64/83 · ticket 75/83
+latency per decision: median 0.9 ms · p95 1.5 ms

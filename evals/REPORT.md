@@ -2791,6 +2791,43 @@ If either fails, the stemming half of #258 closes with this result.
 
 **Budget and stop.** Four runs of the bench, minutes each, no paid call.
 
+### Result (2026-10-29)
+
+Receipts: `bench-20261029-{sel,heldout}-v2-stem-{words,stem}.txt`, at 6f2a32c, all four in one
+sitting. A first sitting at the same commit was stamped DIRTY only because the bench's private
+prompts were linked into the worktree, and the git rule ignoring them matches a directory and not
+a link. They were copied in and the four runs repeated. Every figure was identical, and only the
+latency lines moved, by a tenth of a millisecond.
+
+| alpha 0.05, cap 5 | `words` | `stem` |
+|---|---|---|
+| line | 2.002 | 3.001 |
+| selection recall [95%] | 88.0% [83.9, 91.6] | **90.8%** [86.7, 94.4] |
+| selection paraphrase | 64 of 83 | **68 of 83** |
+| held-out recall [95%] | 90.0% [86.7, 93.3] | **94.4%** [91.9, 96.7] |
+| held-out paraphrase | 73 of 90 | **83 of 90** |
+| null test briefed anything | 9 of 268 (3.4%) | 11 of 268 (4.1%) |
+
+1. **Held.** On the selection split `stem` recalls 2.8 points more, and 4 more paraphrases.
+2. **Held.** The null test half is briefed in 3.4% and 4.1% of prompts, under 5% in both arms.
+3. **Held.** On the held-out split `stem` recalls 4.4 points more, 10 of them paraphrases. Ticket
+   and bug-report rows rise or hold on both splits.
+
+**How it reads.** Stemming makes more words match on both sides, so the conformal line rises
+from two shared words to three to keep the null rate. Even with that higher bar, more lessons
+clear it: a paraphrase's inflections ("refreshing" and "refresh", "rotating" and "rotate") now
+count. The gain sits in the paraphrase register, where §4w found the line weakest. The intervals
+overlap, so this is a bench result on 166 and 180 queries, not a settled one.
+
+**What it does not show.** Real prompts. The bench's queries were written for its lessons, and
+§4x showed the line behaving differently on what people type. Latency is under a millisecond
+more per decision.
+
+**What follows.** As registered, stemming goes to the product as one change, measured first:
+- the porter tokenizer, with the index rebuilt on open;
+- stemmed words in `decide`, with `CALIBRATED_LINE` set from this bench's stemmed calibration;
+- the real-prompt arms of §4x, before the default changes.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
