@@ -78,9 +78,9 @@
       "title": "A test that imports an undeclared package passes only where that package happens to be installed",
       "scope": "org",
       "files": "tests/",
-      "verified_at": 1793278887317,
-      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' on commit e1cd24f1c8f0 @ 2026-10-29T13:01Z",
-      "verified_commit": "e1cd24f1c8f0e1354147d692aac47712a73c6e46"
+      "verified_at": 1793279299468,
+      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' on commit 72213ab7ef25 @ 2026-10-29T13:08Z",
+      "verified_commit": "72213ab7ef25c323343be17b20eef045b26b0f74"
     },
     {
       "id": "n_9ba48d85ed19",
@@ -108,9 +108,9 @@
       "title": "A port is defined by behaviour, not by its signatures — state the contract and test every adapter against one body",
       "scope": "org",
       "files": "src/okl/store.py,tests/test_okl.py",
-      "verified_at": 1793277037285,
-      "verified_by": "`python3 -m pytest -q -k 'backend_conformance'` exit 0, matched 'passed' on commit deb200f8c840 @ 2026-10-29T12:30Z",
-      "verified_commit": "deb200f8c840fdf076773825e3d6cedd8ee0e34b"
+      "verified_at": 1793279299350,
+      "verified_by": "`python3 -m pytest -q -k 'backend_conformance'` exit 0, matched 'passed' on commit 72213ab7ef25 @ 2026-10-29T13:08Z",
+      "verified_commit": "72213ab7ef25c323343be17b20eef045b26b0f74"
     },
     {
       "id": "n_be9f13d587b1",
