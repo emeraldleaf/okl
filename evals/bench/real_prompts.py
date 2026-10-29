@@ -124,13 +124,14 @@ FIX_ARMS = ("fallback", "backfill", "backfill+fallback")
 SWEEP_ARMS = ("floor-3", "floor-5", "line2", "line2+backfill", "line1+backfill")
 TIER_ARMS = ("tiered", "tiered-full")
 WARM_ARMS = ("warm", "warm-full")
-# §4ad: the tier and warm arms stemmed, as the product is from §4ad on. Every other arm runs
-# unstemmed, as it was measured (_stemming).
+# §4ad: the tier and warm arms stemmed, as §4ad built and measured them. Every other arm runs
+# unstemmed, as it was measured and as the product ships (_stemming).
 STEM_ARMS = ("tiered-stem", "tiered-stem-full", "warm-stem", "warm-stem-full")
 ARMS = ("floor", "calibrated", *CONTEXT_ARMS, *FIX_ARMS, *SWEEP_ARMS, *TIER_ARMS, *WARM_ARMS, *STEM_ARMS)
-# The index's tokenizer and the two lines, set together: the product's (stemmed), and the
-# unstemmed ones §4w and §4z set (bench-20261027-sel-dense-embeddinggemma-int8-words.txt, W 0 and W 8).
-STEMMED = (okl_store.FTS_TOKENIZE, decide.CALIBRATED_LINE, warm.LINE)
+# The index's tokenizer and the two lines, set together, at W 0 and W 8 of each receipt: stemmed
+# (bench-20261029-sel-dense-embeddinggemma-int8-words-stem.txt), and unstemmed, as §4w and §4z set
+# them and the product ships (bench-20261027-sel-dense-embeddinggemma-int8-words.txt).
+STEMMED = ("porter unicode61", 3.0014486, 6.004063)
 UNSTEMMED = ("unicode61", 2.0017173, 5.767926)
 WARM_VECTORS = PRIVATE / "warm-vectors.json"
 
@@ -293,8 +294,8 @@ def _fallback(on: bool) -> Iterator[None]:
 
 @contextmanager
 def _stemming(on: bool) -> Iterator[None]:
-    """Run okl stemmed, as the product does from §4ad on, or unstemmed, as every arm before it
-    ran: the index's tokenizer and both lines change together."""
+    """Run okl stemmed, as §4ad measured it, or unstemmed, as every other arm ran: the index's
+    tokenizer and both lines change together."""
     saved = (okl_store.FTS_TOKENIZE, decide.CALIBRATED_LINE, warm.LINE)
     okl_store.FTS_TOKENIZE, decide.CALIBRATED_LINE, warm.LINE = STEMMED if on else UNSTEMMED
     try:

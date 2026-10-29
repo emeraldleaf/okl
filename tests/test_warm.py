@@ -391,7 +391,7 @@ def test_the_lines_are_the_receipts_and_just_above_them():
 
     from okl import decide
     text = (Path(__file__).resolve().parents[1] / "evals" / "results"
-            / "bench-20261029-sel-dense-embeddinggemma-int8-words-stem.txt").read_text()
+            / "bench-20261027-sel-dense-embeddinggemma-int8-words.txt").read_text()
     exact = next(ln for ln in text.splitlines() if ln.startswith("exact lines:"))
     for weight, line in ((8, warm.LINE), (0, decide.CALIBRATED_LINE)):
         m = re.search(rf"\bW {weight}: ([0-9.]+)", exact)

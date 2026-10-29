@@ -389,7 +389,7 @@ def test_retired_lessons_do_not_use_up_the_search_window():
     for i in range(3):
         core.retire(s, f"gone{i}", "gone", obsolete=True)
 
-    res = core.check(s, "r", "refund ledger", limit=1, decision="floor")   # the window, not the line
+    res = core.check(s, "r", "refund ledger", limit=1)
 
     assert [r["id"] for r in res["rules"]] == ["live"]
 

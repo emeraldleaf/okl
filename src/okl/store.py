@@ -438,8 +438,6 @@ class _Backend(Protocol):
         - OR-permissive across terms: a two-term query returns records matching either.
           (Postgres's websearch_to_tsquery ANDs by default, which silently tightens
           recall relative to SQLite.)
-        - Stemmed: a word finds another form of itself ("rotations" finds "rotation"),
-          by SQLite's porter tokenizer (FTS_TOKENIZE) and Postgres's 'english' configuration.
         - `limit` caps the rows returned; `scope` and `node_types` filter exactly.
 
       upsert_node / upsert_edge
@@ -498,11 +496,12 @@ class _Backend(Protocol):
 # (evals/bench/) chooses it on the selection split (#291). The Postgres backend gives the
 # column the symptom's 'B' class.
 TRIGGERS_WEIGHT = 4.0
-# The SQLite full-text index's tokenizer. Porter stemming lets "migrations" find a lesson about
-# a "migration", as Postgres's 'english' configuration always has; on the retrieval bench it
-# raised recall on paraphrased prompts (REPORT §4ac, §4ad). A store whose index was built with
-# another tokenizer rebuilds it once when opened. decide.STEM stems the line's words to match.
-FTS_TOKENIZE = "porter unicode61"
+# The SQLite full-text index's tokenizer. A store whose index was built with another rebuilds it
+# once when opened, and decide stems the line's and the floor's words whenever it is "porter
+# unicode61". Porter stemming raised the retrieval bench's recall (REPORT §4ac) and was measured
+# on real prompts (§4ad): with the warm model on, it named 17.5% more lessons a prompt, past the
+# rule's 15%, so it stays a setting, off.
+FTS_TOKENIZE = "unicode61"
 _FTS_COLS = "id UNINDEXED, title, body, symptom, fix, tags, aliases, triggers"
 
 _NODE_COLS =["id", "type", "scope", "repo", "title", "body", "status",

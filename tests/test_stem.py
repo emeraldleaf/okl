@@ -1,5 +1,6 @@
 """Stemming (REPORT §4ac, §4ad): a word matches another form of itself in the full-text index,
-in the calibrated line's shared words and in the floor's, one tokenizer deciding all three."""
+in the calibrated line's shared words and in the floor's, one tokenizer deciding all three. A
+measured setting, off by default (§4ad), so every test here turns it on."""
 from __future__ import annotations
 
 import contextlib
@@ -10,6 +11,13 @@ import pytest
 from okl import core, decide
 from okl import store as okl_store
 from okl.store import Store
+
+
+@pytest.fixture(autouse=True)
+def stemming(monkeypatch):
+    """The setting §4ad measured: the porter index and its stemmed line."""
+    monkeypatch.setattr(okl_store, "FTS_TOKENIZE", "porter unicode61")
+    monkeypatch.setattr(decide, "CALIBRATED_LINE", 3.0014486)
 
 
 @pytest.fixture
@@ -29,7 +37,7 @@ def test_an_index_built_unstemmed_is_rebuilt_stemmed_once_when_opened(tmp_path, 
     nid = core.record(s, type="Rule", title="rotate the signing secret", scope="org")
     assert not s.search("rotating", limit=5)
     s.close()
-    monkeypatch.undo()
+    monkeypatch.setattr(okl_store, "FTS_TOKENIZE", "porter unicode61")
     s = Store(f"sqlite:///{db}")
     try:
         assert [n.id for n in s.search("rotating", limit=5)] == [nid]

@@ -8,9 +8,9 @@ unstemmed and stemmed in turn.
 
 Each setting runs against its own copy of the store, its index built for that setting before any
 timing, so no timed run rebuilds an index and the live store is only read through SQLite's
-backup, never opened by this code (opening it would rebuild its index under the installed
-release). The unstemmed setting is the index's unicode61 tokenizer with §4w's line, as before
-§4ad. The prompts are the held-out half's sampled task prompts (evals/bench/private/, kept
+backup, never opened by this code (opening it with another tokenizer would rebuild its index
+under the installed release). The unstemmed setting is the index's unicode61 tokenizer with
+§4w's line, as the product ships; the stemmed one is §4ad's. Both are set explicitly. The prompts are the held-out half's sampled task prompts (evals/bench/private/, kept
 local); the receipt holds timings only. Each run is a new process, as the hook's is.
 """
 from __future__ import annotations
@@ -34,7 +34,8 @@ RUN = "import runpy, sys; sys.argv[0] = 'okl'; runpy.run_module('okl', run_name=
 SETTINGS = {
     "unstemmed": "import okl.store, okl.decide; okl.store.FTS_TOKENIZE = 'unicode61'; "
                  "okl.decide.CALIBRATED_LINE = 2.0017173; " + RUN,
-    "stemmed": RUN,
+    "stemmed": "import okl.store, okl.decide; okl.store.FTS_TOKENIZE = 'porter unicode61'; "
+               "okl.decide.CALIBRATED_LINE = 3.0014486; " + RUN,
 }
 
 
