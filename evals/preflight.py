@@ -43,12 +43,12 @@ REPO = Path(__file__).resolve().parent.parent
 # it now ranks 4th (REPORT.md §4o). `ci_linter` since the calibrated decision became the
 # default (REPORT.md §4w): its rule clears the line and ranks sixth behind the cap of five,
 # and the defect it generalizes, briefed in its place, carries the same fix.
-ACCEPTED_GAPS: dict[str, str] = {
-    "ci_linter": "under the calibrated default (REPORT §4w) r_pin_gating_tools clears the line "
-                 "(four shared subject words) and ranks sixth, behind the cap of five; "
-                 "d_unpinned_linter, the defect it generalizes, is briefed with the same fix "
-                 "(pin the exact tool version), so the task still measures pinning",
-}
+# ci_linter's gap under the calibrated default (§4w: its rule ranked sixth, behind the cap of
+# five) closed with §4y's second tier, which names it, and §4aa measured a named line keeping
+# its effect, so the entry went. Its sibling d_unpinned_linter is still shown in full with the
+# same fix, so ci_linter cannot tell the line's effect from the sibling's (§4aa, amended in
+# review of #303).
+ACCEPTED_GAPS: dict[str, str] = {}
 
 
 def main() -> int:
@@ -92,15 +92,20 @@ def main() -> int:
             missing.append((t["id"], t["defect_node"], "record not in store"))
             continue
         res = core.check(store, repo=repo, task=t["task"], interests=interests)
-        present = any(r["id"] == node.id
+        in_full = any(r["id"] == node.id
                       for bucket in ("rules", "relevant_defects", "armed_gates",
                                      "live_retractions", "in_scope_tombstones",
                                      "threat_prior_art", "vocabulary")
                       for r in res.get(bucket, []))
-        mark = "ok " if present else "MISSING"
+        # A lesson the default names in its second tier is in the briefing too: REPORT §4aa
+        # measured a lesson named in one line keeping its effect (ab-20261029-0318.json).
+        in_line = any(e.get("id") == node.id for e in res.get("also_matched") or [])
+        present = in_full or in_line
+        mark = "ok  " if in_full else ("line" if in_line else "MISSING")
         trimmed = res.get("dropped_by_cutoff", 0)
         print(f"  [{mark}] {t['id']:17} tags={node.tags or '-':28} trimmed={trimmed}")
-        rows.append({"task": t["id"], "rule": node.id, "present": present, "trimmed": trimmed})
+        rows.append({"task": t["id"], "rule": node.id, "present": present,
+                     "where": "full" if in_full else ("line" if in_line else None), "trimmed": trimmed})
         if not present:
             missing.append((t["id"], node.id, f"not in briefing (tags={node.tags})"))
 

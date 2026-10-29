@@ -62,7 +62,10 @@ Before any model call, a live run refuses to start (a dry run skips these) if:
 - `evals/preflight.py` fails — some task would not receive the rule it tests: exit 5;
 - a task's `defect_node` is not a record in the store: exit 4.
 
-Judge == generator exits 3. A run whose failure rate is above 20% exits 1.
+Judge == generator exits 3. If this process or `python -m okl` would load okl from another
+checkout, it exits 7: an editable install points `python -m okl` at the checkout it was
+installed from. So from a worktree, set `PYTHONPATH` to the worktree's absolute `src`
+(`PYTHONPATH=$PWD/src`). A run whose failure rate is above 20% exits 1.
 
 Results land in `evals/results/ab-<timestamp>.json` — commit them; they're the receipts.
 

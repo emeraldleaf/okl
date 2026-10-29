@@ -110,6 +110,19 @@ def _authored_tasks() -> set[str]:
     return {json.loads(line)["id"] for line in (ROOT / "evals" / "tasks.jsonl").read_text().splitlines() if line.strip()}
 
 
+def _series_receipts() -> list[Path]:
+    """The A/B receipts of the series the docs describe: no briefing against the live briefing.
+    A receipt whose arms are anything else measures another treatment (§4r's indexed arm, §4aa's
+    full and line arms) and is pooled with nothing here; counting its arms as "briefed" would
+    move the published figures for a reason they do not describe."""
+    out = []
+    for receipt in sorted((ROOT / "evals" / "results").glob("ab-*.json")):
+        arms = {row["arm"] for row in json.loads(receipt.read_text()).get("results", [])}
+        if arms <= {"baseline", "briefed"}:
+            out.append(receipt)
+    return out
+
+
 def _baseline_hits(receipts: list[Path]) -> Counter[str]:
     """Baseline reproductions per authored task across the given A/B receipts."""
     hits = Counter[str]()
@@ -143,7 +156,7 @@ def test_the_defects_named_as_reproduced_all_reproduced_in_a_receipt():
     # ARRANGE — README's list speaks for every receipt; REPORT's sentence describes the
     # first sonnet run (ab-20260830-0003) only, so it is held to that run's rows.
     results = ROOT / "evals" / "results"
-    every = _baseline_hits(sorted(results.glob("ab-*.json")))
+    every = _baseline_hits(_series_receipts())
     first = _baseline_hits([results / "ab-20260830-0003.json"])
     never_any = {task for task, hits in every.items() if hits == 0}
     never_first = {task for task, hits in first.items() if hits == 0}
@@ -164,7 +177,7 @@ def test_the_spa_tokens_figures_report_quotes_match_the_receipts():
     """REPORT's 2026-10-10 notes quote pooled spa_tokens figures; a new receipt must update them."""
     # ARRANGE — pool spa_tokens over every receipt, and over the documented instrument.
     pooled = {"all": [0, 0, 0, 0], "documented": [0, 0, 0, 0]}  # base hits, base n, briefed hits, briefed n
-    for receipt in sorted((ROOT / "evals" / "results").glob("ab-*.json")):
+    for receipt in _series_receipts():
         data = json.loads(receipt.read_text())
         documented = "sonnet" in data.get("generator", "") and "haiku" in data.get("judge", "")
         for row in data.get("results", []):
@@ -226,7 +239,7 @@ def test_the_pooled_launch_figure_is_recomputed_from_its_receipts():
     # eight-run figure the launch posts quoted, and every receipt on the documented
     # instrument with eight tasks and three samples.
     documented = []
-    for receipt in sorted((ROOT / "evals" / "results").glob("ab-*.json")):
+    for receipt in _series_receipts():
         data = json.loads(receipt.read_text())
         rows = data.get("results", [])
         if ("sonnet" in data.get("generator", "") and "haiku" in data.get("judge", "")
@@ -281,7 +294,7 @@ def test_the_never_reproduced_sentence_counts_match_the_receipts():
     sample counts had passed 40 (found 2026-10-22 by an independent verification).
     """
     # ARRANGE — every task's arm counts over every receipt, and the sentence that states them.
-    counts = _arm_counts(sorted((ROOT / "evals" / "results").glob("ab-*.json")))
+    counts = _arm_counts(_series_receipts())
     never = {task for task, cell in counts.items() if cell[0] == 0}
     assert never <= set(_PROSE), f"give the task(s) a prose name in _PROSE: {never - set(_PROSE)}"
     sentence = _sentence_containing("README.md", "have never reproduced without the briefing")
@@ -336,3 +349,28 @@ def test_every_size_and_latency_the_docs_publish_is_its_receipts_number():
         quoted = fig.split()[0].replace(",", "")
         places = len(quoted.split(".")[1]) if "." in quoted else 0
         assert round(float(m.group(1)), places) == float(quoted), f"{fig}: {receipt} says {m.group(1)}"
+
+
+# Verdicts whose own reason says the defect is absent while their boolean says reproduced: the
+# judge answers the booleans before it reasons. Each is corrected in the REPORT section named
+# here, and the receipt stays as the run wrote it, as §4j's did (review on #303).
+CONTRADICTED = {("ab-20261023-1303.json", 67): "4r", ("ab-20261023-1303.json", 184): "4r",
+                ("ab-20261029-0318.json", 61): "4aa", ("ab-20261029-0318.json", 70): "4aa"}
+NEGATED = re.compile(r"(defect|it) (is|was) not (reproduced|present)|not reproduced|is not present"
+                     r"|does not reproduce|defect is absent", re.I)
+
+
+def test_every_verdict_its_own_reason_contradicts_is_corrected_in_the_report():
+    """A contradicted verdict counted as written moves a figure the wrong way; four sat in two
+    receipts, two of them quoted uncorrected, before a reviewer read the reasons (#303)."""
+    found = set()
+    for receipt in sorted((ROOT / "evals" / "results").glob("ab-*.json")):
+        for i, row in enumerate(json.loads(receipt.read_text()).get("results", [])):
+            if row.get("reproduced") and NEGATED.search(row.get("reason") or ""):
+                found.add((receipt.name, i))
+    assert found == set(CONTRADICTED), "name each contradicted verdict and correct it in the REPORT"
+    report = (ROOT / "evals" / "REPORT.md").read_text()
+    for (receipt, row), section in CONTRADICTED.items():
+        start = report.index(f"\n## {section}. ")
+        body = report[start:report.index("\n## ", start + 1)]
+        assert receipt in body and re.search(rf"\bRow {row}\b", body), f"§{section} does not correct {receipt} row {row}"

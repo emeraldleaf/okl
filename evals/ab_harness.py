@@ -59,7 +59,10 @@ BRIEF_INTERESTS = os.environ.get("OKL_BRIEF_INTERESTS", "")
 # ran. When set, an `okl` shim on the generator's PATH logs each invocation, so the receipt
 # says which lessons each sample fetched. Stamped into the receipt: it is the instrument.
 GENERATOR_TOOLS = os.environ.get("GENERATOR_TOOLS", "")
-ARMS = ("baseline", "briefed", "indexed", "nearmiss")
+ARMS = ("baseline", "briefed", "indexed", "nearmiss", "full", "line")
+# The tier arms (REPORT §4aa): the same briefing with the task's governing lesson shown in full,
+# or named only as the first one-line entry of the second tier; nothing else differs.
+TIER_ARMS = ("full", "line")
 
 GEN_PROMPT = """You are implementing one task for an existing codebase. Output ONLY the code (or YAML/script), no explanation.
 
@@ -121,6 +124,50 @@ def get_briefing(task: str, timeout: int, *, index: bool = False, near_misses: b
     if r.returncode != 0:
         raise RuntimeError(f"okl check failed: {r.stderr.strip()[:200]}")
     return r.stdout
+
+
+def tier_briefings(task: str, governing: str, timeout: int) -> tuple[str, str]:
+    """The two tier arms' briefings for `task` (REPORT §4aa): one `okl check` result, rendered
+    twice by okl's own renderer, with the lesson `governing` shown in full ("full") or only as
+    the first one-line entry under "Also matched" ("line"). The routed actions are rebuilt by
+    okl's own router each time, and the second tier keeps its length. Fails closed."""
+    sys.path.insert(0, str(REPO / "src"))
+    import copy
+    import dataclasses
+
+    from okl import core
+    from okl.store import Node
+    env = {**os.environ, "OKL_BRIEFING_LOG": "0"}
+    r = subprocess.run([sys.executable, "-m", "okl", "check", "--task", task, "--format", "json",
+                        "--interests", BRIEF_INTERESTS, "--decision", "tiered"],
+                       capture_output=True, text=True, timeout=timeout, cwd=REPO, env=env)
+    s = subprocess.run([sys.executable, "-m", "okl", "show", governing, "--format", "json"],
+                       capture_output=True, text=True, timeout=timeout, cwd=REPO, env=env)
+    if r.returncode != 0 or s.returncode != 0:
+        raise RuntimeError(f"okl failed: {(r.stderr or s.stderr).strip()[:200]}")
+    result, shown = json.loads(r.stdout), json.loads(s.stdout)
+    node = Node(**{f.name: shown[f.name] for f in dataclasses.fields(Node) if f.name in shown})
+    limit = max(len(result.get("also_matched") or []), 1)
+
+    def placed(in_full: bool) -> str:
+        out = copy.deepcopy(result)
+        # Every bucket okl has, from okl itself: a copied list would skip a new one (review on #303).
+        keys = core._bucket_by_type([])
+        if in_full and any(x.get("id") == governing for k in keys for x in out.get(k) or []):
+            # Already in full: the natural briefing as okl rendered it. Moving the lesson to the
+            # end of its section reordered the routed actions too (review on #303).
+            return core.render_check_for_agent(out)
+        buckets = {k: [x for x in out.get(k) or [] if x.get("id") != governing] for k in keys}
+        also = [e for e in out.get("also_matched") or [] if e.get("id") != governing]
+        if in_full:
+            for k, recs in core._bucket_by_type([node]).items():
+                buckets[k].extend(recs)
+        else:
+            also = [core._also_entry(node), *also][:limit]
+        out.update(buckets, also_matched=also, next_actions=core._route_actions(buckets),
+                   match_count=sum(len(v) for k, v in buckets.items() if k != "stale_warnings"))
+        return core.render_check_for_agent(out)
+    return placed(True), placed(False)
 
 
 def parse_judge(raw: str) -> dict:
@@ -216,7 +263,8 @@ def generator_cmd() -> str:
 
 def run_one(t: dict, arm: str, s: int, *, briefed_header: str | None, brief_err: str,
             timeout: int, workdir: str, indexed_header: str | None = None,
-            nearmiss_header: str | None = None) -> tuple[dict, bool]:
+            nearmiss_header: str | None = None, tier_headers: tuple[str, str] | None = None,
+            ) -> tuple[dict, bool]:
     """Generate and judge one (task, arm, sample). Returns the record and whether it is a result.
 
     False means a failure: anything that raised, including an Unevaluable sample, which is
@@ -229,7 +277,8 @@ def run_one(t: dict, arm: str, s: int, *, briefed_header: str | None, brief_err:
     log = str(Path(workdir) / f"shim-{t['id'].replace('/', '_')}-{arm}-{s}.log")
     try:
         header = {"baseline": "", "briefed": briefed_header, "indexed": indexed_header,
-                  "nearmiss": nearmiss_header}[arm]
+                  "nearmiss": nearmiss_header, "full": tier_headers and tier_headers[0],
+                  "line": tier_headers and tier_headers[1]}[arm]
         if header is None:
             raise RuntimeError(f"briefing unavailable (fail closed): {brief_err}")
         env = generator_env(workdir, log)
@@ -303,6 +352,40 @@ def instrument_drift(prior: list[dict], current: dict) -> dict:
     if prior and was != current["judge_max_chars"]:
         modal["judge_max_chars"] = {"series": was, "runs": n}
     return modal
+
+
+def code_outside_checkout() -> str:
+    """"" when this harness imports okl from this checkout's src and `python -m okl`, run as its
+    subprocesses run it, does too; otherwise where one of them loads okl from. An editable install
+    points both at the checkout it was installed from, so a run from a worktree without
+    PYTHONPATH would measure another tree's code under this tree's commit (review on #303)."""
+    import okl
+    src = (REPO / "src").resolve()
+    here = Path(okl.__file__).resolve()
+    if not here.is_relative_to(src):
+        return f"this process imports okl from {here.parent}, not {src}"
+    # From the checkout, as the briefings are rendered, and from elsewhere, as the generator's
+    # shim runs: a relative PYTHONPATH holds in one and not the other (review on #303).
+    for cwd in (REPO, Path(tempfile.gettempdir())):
+        r = subprocess.run([sys.executable, "-c", "import okl; print(okl.__file__)"], cwd=cwd,
+                           capture_output=True, text=True)
+        there = Path(r.stdout.strip()).resolve() if r.returncode == 0 and r.stdout.strip() else None
+        if there is None or not there.is_relative_to(src):
+            return f"`python -m okl` run from {cwd} loads okl from {there.parent if there else 'nowhere'}, not {src}"
+    return ""
+
+
+def startup_refusal(models: dict) -> tuple[int, str] | None:
+    """Why the run must not start, with its exit code, once the models are known; None to run.
+    3: the judge resolves to the generator's model. 7: the okl that would run is not this
+    checkout's (code_outside_checkout); set PYTHONPATH to its src."""
+    if judge_is_generator(models):
+        return 3, (f"the judge resolves to the generator's model ({', '.join(models['judge'])}) "
+                   "— it must not grade its own homework (qz_judge_self).")
+    elsewhere = code_outside_checkout()
+    if elsewhere:
+        return 7, f"{elsewhere}; set PYTHONPATH={REPO / 'src'} so the run measures this checkout."
+    return None
 
 
 def judge_is_generator(models: dict) -> bool:
@@ -465,8 +548,10 @@ def main() -> int:
                          "in the receipt. For an instrument where that absence is the condition under "
                          "study (§4r's held-out tasks), never for the authored series.")
     ap.add_argument("--arms", default="baseline,briefed", type=parse_arms,
-                    help="comma-separated subset of baseline,briefed,indexed (§4r adds indexed: the "
-                         "briefing plus every other lesson in scope, for a generator that may `okl show`)")
+                    help="comma-separated subset of baseline,briefed,indexed,nearmiss,full,line (§4r adds "
+                         "indexed: the briefing plus every other lesson in scope, for a generator that may "
+                         "`okl show`; §4aa adds full and line: the governing lesson in full, or only as the "
+                         "second tier's first line)")
     args = ap.parse_args()
     arms = args.arms
 
@@ -535,6 +620,7 @@ def main() -> int:
     # reference missing while pointing at a database that never existed. Client walks up to
     # the configured .okl/ the way every other command does.
     lacking: list[str] = []
+    lined: list[str] = []
     if not args.dry_run:
         # Retrieval is deterministic, so whether each task still receives the rule it tests
         # is answerable in milliseconds. Checking it AFTER a 25-minute run is how §4d cost
@@ -553,6 +639,8 @@ def main() -> int:
             return 5
         # Which tasks measure the briefing without their lesson, for the receipt's face.
         lacking = [ln.split()[1] for ln in pf.stdout.splitlines() if ln.strip().startswith("[MISSING]")]
+        # And which receive it only as a one-line entry (REPORT §4aa; review on #303).
+        lined = [ln.split()[1] for ln in pf.stdout.splitlines() if ln.strip().startswith("[line]")]
 
         from okl.client import Client
         _client = Client()
@@ -585,16 +673,19 @@ def main() -> int:
         models = {"generator": resolved_model(GENERATOR_CMD, args.timeout, clean_cwd),
                   "judge": resolved_model(JUDGE_CMD, args.timeout, clean_cwd)}
         print(f"resolved models: generator {models['generator']}, judge {models['judge']}")
-        if judge_is_generator(models):
-            print(f"REFUSING TO RUN: the judge resolves to the generator's model "
-                  f"({', '.join(models['judge'])}) — it must not grade its own homework "
-                  "(qz_judge_self).", file=sys.stderr)
-            return 3
+        refused = startup_refusal(models)
+        if refused:
+            print(f"REFUSING TO RUN: {refused[1]}", file=sys.stderr)
+            return refused[0]
         for t in tasks:
             # The briefing is deterministic per task — fetch once, reuse across samples.
             brief_err = ""
             briefed_header = indexed_header = nearmiss_header = None
+            tier_headers: tuple[str, str] | None = None
             try:
+                if set(arms) & set(TIER_ARMS):
+                    full, line = tier_briefings(t["task"], t["defect_node"], args.timeout)
+                    tier_headers = (BRIEFING_HEADER.format(briefing=full), BRIEFING_HEADER.format(briefing=line))
                 if "briefed" in arms:
                     briefed_header = BRIEFING_HEADER.format(briefing=get_briefing(t["task"], args.timeout))
                 if "nearmiss" in arms:
@@ -611,7 +702,7 @@ def main() -> int:
                 for arm in arms:
                     rec, ok = run_one(t, arm, s, briefed_header=briefed_header, brief_err=brief_err,
                                       timeout=args.timeout, workdir=clean_cwd, indexed_header=indexed_header,
-                                      nearmiss_header=nearmiss_header)
+                                      nearmiss_header=nearmiss_header, tier_headers=tier_headers)
                     if ok:
                         results.append(rec)
                         print(f"  {t['id']:16} {arm:8} s{s} → "
@@ -674,6 +765,7 @@ def main() -> int:
         # §4r: which arms ran, what the generator could do, and what the index cost per prompt.
         "arms": arms, "generator_tools": GENERATOR_TOOLS, "tasks_file": str(args.tasks),
         **({"preflight_missing": lacking} if args.accept_missing_lessons else {}),
+        **({"preflight_line": lined} if lined else {}),
         **({"index_chars": index_chars} if index_chars is not None else {}),
         # How much of each submission the judge read (#182): part of the instrument.
         "judge_max_chars": JUDGE_MAX_CHARS,
