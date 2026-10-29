@@ -263,6 +263,10 @@ def serve(path: Path | None = None, *, idle_exit_s: float = IDLE_EXIT_S) -> int:
 def _serve(path: Path, idle_exit_s: float) -> int:
     started = time.perf_counter()
     encode = load_model()
+    # The first inference allocates the runtime's working memory, about 1.1 GB once (§4z), and
+    # took over TIMEOUT_S, so the first prompt after a start always fell back. Pay it here,
+    # before the socket exists, so no prompt waits for it.
+    encode(["warm up"], "query")
     state: dict[str, Any] = {"loaded_s": round(time.perf_counter() - started, 2), "served": 0}
     path.parent.mkdir(parents=True, exist_ok=True)
     with contextlib.suppress(FileNotFoundError):
