@@ -32,6 +32,20 @@ defaults:
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
+    # The Postgres backend against a real server, for the test step below. Its tests skipped
+    # everywhere until this (nothing set OKL_TEST_POSTGRES_URL), so Postgres changes reached
+    # main untested: the architecture reviewer's second sighting of that class (#300). Trust
+    # auth: the server lives for this job only, and no password-shaped string is in the repo.
+    services:
+      postgres:
+        image: postgres:17.6
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: okl
+        ports: [ "5432:5432" ]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 2s
+          --health-timeout 5s --health-retries 15
     steps:
       # Actions pinned to a commit SHA, not a tag: a tag is mutable, so `@v5` is an
       # unpinned dependency with write access to the runner.
@@ -71,8 +85,15 @@ jobs:
       - name: Architecture — import-linter
         run: lint-imports
 
-      - name: Tests (with the coverage ratchet)
-        run: pytest -q --cov=okl
+      # A Postgres test that skips here is a failure: the server above exists so they run.
+      - name: Tests (with the coverage ratchet, and Postgres)
+        env:
+          OKL_TEST_POSTGRES_URL: postgresql://postgres@localhost:5432/okl
+        run: |
+          pytest -q -rs --cov=okl | tee "$RUNNER_TEMP/pytest.log"
+          if grep -q "to run against a real Postgres" "$RUNNER_TEMP/pytest.log"; then
+            echo "a Postgres test skipped" >&2; exit 1
+          fi
 
       - name: Diagram figures trace to committed receipts
         run: ./ci/check-diagram-figures.sh
@@ -110,9 +131,14 @@ jobs:
           # Pinned, as every tool that gates CI is: a release cannot change the gate unseen.
           CLAUDE_CODE_VERSION: "2.1.302"
         run: |
-          if [ -z "$REVIEW_CMD" ] && [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
-            npm install -g --no-fund --no-audit "@anthropic-ai/claude-code@$CLAUDE_CODE_VERSION"
-            REVIEW_CMD="claude -p --model sonnet --max-turns 40 --tools Read,Grep,Glob --add-dir $GITHUB_WORKSPACE"
+          if [[ -z "$REVIEW_CMD" && -n "$CLAUDE_CODE_OAUTH_TOKEN" ]]; then
+            # The platform package is the native binary itself and runs no install script,
+            # so npm can refuse lifecycle scripts outright.
+            npm install --ignore-scripts --no-fund --no-audit --prefix "$RUNNER_TEMP/claude" \
+              "@anthropic-ai/claude-code-linux-x64@$CLAUDE_CODE_VERSION"
+            CLAUDE_BIN="$RUNNER_TEMP/claude/node_modules/@anthropic-ai/claude-code-linux-x64/claude"
+            chmod +x "$CLAUDE_BIN"
+            REVIEW_CMD="$CLAUDE_BIN -p --model sonnet --max-turns 40 --tools Read,Grep,Glob --add-dir $GITHUB_WORKSPACE"
           fi
           REVIEW_CMD="$REVIEW_CMD" REVIEW_REPO_DIR="$GITHUB_WORKSPACE" bash ci/review-agent.sh \
             | tee -a "$GITHUB_STEP_SUMMARY"
@@ -131,44 +157,6 @@ jobs:
   # rest of that claim was assumed rather than tested. This runs the suite on every
   # other version it covers. Lint, types, coverage and the gates stay in the job above:
   # they read the source, and the coverage ratchet was measured on that one version.
-  # The Postgres backend against a real server. Its conformance test skipped everywhere until
-  # this job (nothing set OKL_TEST_POSTGRES_URL), so Postgres changes reached main untested:
-  # the architecture reviewer's second sighting of that class (#300). Trust auth: the server
-  # lives for this job only, and no password-shaped string goes in the repo.
-  postgres:
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:17.6
-        env:
-          POSTGRES_HOST_AUTH_METHOD: trust
-          POSTGRES_DB: okl
-        ports: [ "5432:5432" ]
-        options: >-
-          --health-cmd "pg_isready -U postgres" --health-interval 2s
-          --health-timeout 5s --health-retries 15
-    env:
-      OKL_TEST_POSTGRES_URL: postgresql://postgres@localhost:5432/okl
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-        with:
-          persist-credentials: false
-
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
-        with:
-          python-version: "3.12"
-
-      - name: Install (dev extras and the postgres extra)
-        run: |
-          python -m pip install "pip>=25.1"
-          pip install -e ".[postgres]" --group dev
-
-      # A skip here is a failure: the job exists so these run.
-      - name: Postgres tests, against the real server
-        run: |
-          pytest -q -rs tests/ -k postgres | tee postgres.log
-          if grep -q "SKIPPED" postgres.log; then echo "a Postgres test skipped" >&2; exit 1; fi
-
   tests-other-pythons:
     runs-on: ubuntu-latest
     strategy:

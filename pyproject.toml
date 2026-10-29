@@ -59,6 +59,9 @@ dev = [
   # warns when it falls back to httpx; the strict pytest config turns that into failures.
   # httpx stays for older Starlette, whose TestClient imports only httpx.
   "httpx2>=2.14.0",
+  # The Postgres backend's tests run against a real server in CI (ci.yml's service); without
+  # the driver they skip, as they did everywhere until 2026-10-29. Wheels for 3.10 to 3.15.
+  "psycopg[binary]>=3.3.6",
   # The MCP SDK, so CI runs the MCP server's own test: without it that test skips, and
   # the server reached CI untested (as Postgres did before, #35).
   "mcp>=1.2",

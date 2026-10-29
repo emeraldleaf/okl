@@ -68,7 +68,7 @@ fi
 # with --add-dir) is told where the checkout is, so it can hold a figure to the receipt it
 # cites and a claim to the code: the findings a diff alone cannot show (review on #300).
 repo_note=""
-if [ -n "${REVIEW_REPO_DIR:-}" ]; then
+if [[ -n "${REVIEW_REPO_DIR:-}" ]]; then
   repo_note="The repository is checked out at $REVIEW_REPO_DIR and you can read any file in it. Use that: open the receipt every published figure cites and compare the number, and open the code a claim is about."
 fi
 
