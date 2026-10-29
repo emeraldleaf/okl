@@ -1565,6 +1565,11 @@ def _backend_conformance(store, label):
     # ASSERT (6) — limit is honoured
     assert len(store.search("ownership OR pin OR cache", limit=1)) <= 1
 
+    # ASSERT (6b) — a word finds another form of itself: SQLite's porter tokenizer and
+    # Postgres's 'english' configuration both stem (REPORT §4ad).
+    rotated = core.record(store, type="Rule", title="stemming probe", scope="org", symptom="a rotation")
+    assert rotated in [n.id for n in store.search("rotations", limit=5)], f"{label}: search does not stem"
+
     # ASSERT (7) — upsert is idempotent AND keeps any derived index consistent with the
     # row. Re-writing a record with a changed symptom must change what finds it.
     # Distinctive single tokens, because search is OR-permissive: asserting the ABSENCE

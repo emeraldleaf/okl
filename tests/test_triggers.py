@@ -374,11 +374,14 @@ def test_a_store_whose_bundled_packs_predate_triggers_is_told_to_refresh(tmp_pat
     assert "okl seed --refresh" not in hook_line(task)
 
 
-def test_accented_words_count_toward_the_line():
+def test_accented_words_count_toward_the_line(monkeypatch):
     """The decision splits words as the task tokenizer does, Unicode letters included: an
     ASCII-only pattern cut "café" to "caf", so an accented task word never counted (review on
-    #292)."""
+    #292). Stemmed, each word is what the index makes of it, accents folded as it folds them."""
+    assert decide.words("Le café résumé, naïve parser") == {"le", "cafe", "resum", "naiv", "parser"}
+    monkeypatch.setattr("okl.store.FTS_TOKENIZE", "unicode61")
     assert decide.words("Le café résumé, naïve parser") == {"le", "café", "résumé", "naïve", "parser"}
+    monkeypatch.undo()
     s = _store_with([{"title": "résumé parser for the café menu"}])
     try:
         node = s.all_nodes()[0]

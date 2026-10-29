@@ -112,6 +112,7 @@ import run as bench
 from extract_prompts import HARNESS_PROJECTS
 
 from okl import core, decide, warm
+from okl import store as okl_store
 from okl.store import EDGE_RELS, Node, Store
 
 PRIVATE = bench.ROOT / "evals" / "bench" / "private"
@@ -123,7 +124,14 @@ FIX_ARMS = ("fallback", "backfill", "backfill+fallback")
 SWEEP_ARMS = ("floor-3", "floor-5", "line2", "line2+backfill", "line1+backfill")
 TIER_ARMS = ("tiered", "tiered-full")
 WARM_ARMS = ("warm", "warm-full")
-ARMS = ("floor", "calibrated", *CONTEXT_ARMS, *FIX_ARMS, *SWEEP_ARMS, *TIER_ARMS, *WARM_ARMS)
+# §4ad: the tier and warm arms stemmed, as the product is from §4ad on. Every other arm runs
+# unstemmed, as it was measured (_stemming).
+STEM_ARMS = ("tiered-stem", "tiered-stem-full", "warm-stem", "warm-stem-full")
+ARMS = ("floor", "calibrated", *CONTEXT_ARMS, *FIX_ARMS, *SWEEP_ARMS, *TIER_ARMS, *WARM_ARMS, *STEM_ARMS)
+# The index's tokenizer and the two lines, set together: the product's (stemmed), and the
+# unstemmed ones §4w and §4z set (bench-20261027-sel-dense-embeddinggemma-int8-words.txt, W 0 and W 8).
+STEMMED = (okl_store.FTS_TOKENIZE, decide.CALIBRATED_LINE, warm.LINE)
+UNSTEMMED = ("unicode61", 2.0017173, 5.767926)
 WARM_VECTORS = PRIVATE / "warm-vectors.json"
 
 
@@ -163,11 +171,12 @@ class Stores:
     """The snapshot as of a moment: every seed lesson, and the recorded lessons created before it."""
 
     def __init__(self) -> None:
-        self.full = Store(f"sqlite:///{SNAPSHOT}")
+        with _stemming(False):   # the snapshot is read as it was written, its index not rebuilt
+            self.full = Store(f"sqlite:///{SNAPSHOT}")
         self.nodes = self.full.all_nodes()
         self.recorded = sorted((n for n in self.nodes if not n.id.startswith("seed:")), key=lambda n: n.created_at)
         self.edges = self.full.edges(sorted(EDGE_RELS))
-        self._cache: dict[tuple[int, bool], Store] = {}
+        self._cache: dict[tuple[int, bool, bool, bool], Store] = {}
         self._backfill: dict[str, str] | None = None
 
     def backfill(self) -> dict[str, str]:
@@ -206,15 +215,16 @@ class Stores:
             WARM_VECTORS.write_text(json.dumps({"identity": identity, "vectors": {k: list(v) for k, v in out.items()}}))
         return out
 
-    def as_of(self, ms: int, *, backfilled: bool = False, vectors: bool = False) -> Store:
+    def as_of(self, ms: int, *, backfilled: bool = False, vectors: bool = False, stem: bool = False) -> Store:
         """The store a prompt at `ms` was checked against, built once per distinct moment; with
         `backfilled`, its recorded lessons carry the written triggers; with `vectors`, its
-        lessons carry their warm vectors (REPORT §4z)."""
+        lessons carry their warm vectors (REPORT §4z); with `stem`, its index stems (§4ad)."""
         k = sum(1 for n in self.recorded if n.created_at < ms)
-        if (k, backfilled, vectors) not in self._cache:
+        if (k, backfilled, vectors, stem) not in self._cache:
             keep = {n.id for n in self.nodes if n.id.startswith("seed:")} | {n.id for n in self.recorded[:k]}
             extra = self.backfill() if backfilled else {}
-            s = Store("sqlite:///:memory:")
+            with _stemming(stem):
+                s = Store("sqlite:///:memory:")
             # Copied as stored: these nodes passed validation when they were written.
             for n in sorted((n for n in self.nodes if n.id in keep), key=lambda n: n.type != "Vocabulary"):
                 s._impl.upsert_node(dataclasses.replace(n, triggers=extra[n.id]) if n.id in extra else n)
@@ -224,13 +234,14 @@ class Stores:
             for node_id, (h, rows) in (self.warm_vectors().items() if vectors else ()):
                 if node_id in keep:
                     s.put_embedding(node_id, warm.MODEL_ID, h, base64.b64decode(rows))
-            self._cache[(k, backfilled, vectors)] = s
-        return self._cache[(k, backfilled, vectors)]
+            self._cache[(k, backfilled, vectors, stem)] = s
+        return self._cache[(k, backfilled, vectors, stem)]
 
     def for_arm(self, prompt: dict, arm: str) -> Store:
         """The store an arm checks a prompt against."""
-        return self.as_of(millis(prompt["at"]), backfilled="backfill" in arm or arm in (*TIER_ARMS, *WARM_ARMS),
-                          vectors=arm in WARM_ARMS)
+        return self.as_of(millis(prompt["at"]),
+                          backfilled="backfill" in arm or arm in (*TIER_ARMS, *WARM_ARMS, *STEM_ARMS),
+                          vectors=arm.startswith("warm"), stem=arm in STEM_ARMS)
 
 
 def context_text(prompt: dict, arm: str) -> str:
@@ -280,8 +291,26 @@ def _fallback(on: bool) -> Iterator[None]:
         decide.about_text = saved
 
 
+@contextmanager
+def _stemming(on: bool) -> Iterator[None]:
+    """Run okl stemmed, as the product does from §4ad on, or unstemmed, as every arm before it
+    ran: the index's tokenizer and both lines change together."""
+    saved = (okl_store.FTS_TOKENIZE, decide.CALIBRATED_LINE, warm.LINE)
+    okl_store.FTS_TOKENIZE, decide.CALIBRATED_LINE, warm.LINE = STEMMED if on else UNSTEMMED
+    try:
+        yield
+    finally:
+        okl_store.FTS_TOKENIZE, decide.CALIBRATED_LINE, warm.LINE = saved
+
+
 def brief(store: Store, prompt: dict, arm: str) -> list[str]:
-    """The lesson ids an arm briefs for a prompt, checked against `store` (Stores.for_arm)."""
+    """The lesson ids an arm briefs for a prompt, checked against `store` (Stores.for_arm). A
+    stem arm is its unstemmed namesake run stemmed."""
+    with _stemming(arm in STEM_ARMS):
+        return _brief(store, prompt, arm.replace("-stem", ""))
+
+
+def _brief(store: Store, prompt: dict, arm: str) -> list[str]:
     repo = repo_of(prompt)
     if arm in (*TIER_ARMS, *WARM_ARMS):
         res = core.check(store, repo, prompt["text"], interests=None, decision="tiered", warm=arm in WARM_ARMS)
@@ -464,6 +493,42 @@ def _warm_rule(meta: dict, verdict: dict[tuple[str, str], str | None], applies: 
           f"null prompts {null_any['warm-full']} against {null_any['tiered-full']})")
 
 
+def _stem_rule(meta: dict, verdict: dict[tuple[str, str], str | None], applies: dict[str, set[str]],
+               stats: dict[str, tuple[float, int, float, int]]) -> None:
+    """§4ad's rule, written before any stem arm's pair was judged: stemming becomes the default
+    when, for the tier arms and for the warm arms, the stemmed arm reaches at least as many
+    applying lessons as its unstemmed namesake and shows at least 90% as many in full, at an
+    in-full precision no lower than the namesake's lower 95% bound, on at most twice as many
+    null prompts, naming at most 15% more lessons a task prompt. The decision reads the held-out
+    half; the tuning half is reported beside it."""
+    pairs = (("tiered", "tiered-stem"), ("warm", "warm-stem"))
+    if not all({a, f"{a}-full", st, f"{st}-full"} <= set(stats) for a, st in pairs):   # reads all eight
+        return
+    b = meta["briefed"]
+    tasks = [pid for k, pid in meta["chosen"] if k == "task"]
+    nulls = [pid for k, pid in meta["chosen"] if k == "null"]
+    held = []
+    for base, stem in pairs:
+        bf, sf = f"{base}-full", f"{stem}-full"
+        full = {a: _arm_row(tasks, b[a], meta["before"], verdict, applies) for a in (bf, sf)}
+        lo, _hi = bench.wilson(full[bf]["yes"], full[bf]["judged"])
+        null_any = {a: sum(1 for pid in nulls if b[a][pid]) for a in (bf, sf)}
+        checks = {
+            f"reach at least {base}'s": stats[stem][1] >= stats[base][1],
+            f"in full at least 90% of {bf}'s": full[sf]["found"] >= 0.9 * full[bf]["found"],
+            f"in-full precision at least {lo:.1%}": stats[sf][0] >= lo,
+            f"null prompts at most twice {bf}'s": null_any[sf] <= 2 * null_any[bf],
+            "at most 15% more named a prompt": stats[stem][2] <= 1.15 * stats[base][2],
+        }
+        held.append(all(checks.values()))
+        print(f"\nstem rule, {base}: {'holds' if held[-1] else 'fails'} ("
+              + "; ".join(f"{k}: {'yes' if v else 'NO'}" for k, v in checks.items())
+              + f"; reach {stats[stem][1]} against {stats[base][1]}, in full {full[sf]['found']} against "
+              f"{full[bf]['found']}, null prompts {null_any[sf]} against {null_any[bf]}, named a prompt "
+              f"{stats[stem][2]:.2f} against {stats[base][2]:.2f})")
+    print(f"stem rule: {'stemmed' if all(held) else 'not stemmed'} (on this half)")
+
+
 def cmd_tally(args: argparse.Namespace) -> None:
     """Join the judges' labels to the arms and print the receipt."""
     meta = json.loads((PRIVATE / f"real-arms-{args.split}.json").read_text())
@@ -521,6 +586,7 @@ def cmd_tally(args: argparse.Namespace) -> None:
         print(f"\ntier rule: {'tiered' if holds else 'not tiered'} (it reaches {stats['tiered'][1]} applying lessons "
               f"on task prompts, the floor {stats['floor'][1]}; the rule asks at least as many)")
     _warm_rule(meta, verdict, applies, stats)
+    _stem_rule(meta, verdict, applies, stats)
     if any(a in stats for a in SWEEP_ARMS):
         eligible = [a for a in stats if stats[a][2] <= 5]
         pick = min(eligible, key=lambda a: (-f1[a], stats[a][2]))
@@ -579,13 +645,13 @@ def cmd_misses(args: argparse.Namespace) -> None:
         print(f"  {v:4}  {k}")
 
 
-SIZE_ARMS = ("floor", "backfill", "tiered", "warm")
+SIZE_ARMS = ("floor", "backfill", "tiered", "warm", "tiered-stem", "warm-stem")
 
 
 def _model_for(arms: list[str] | tuple[str, ...]) -> None:
     """Load the warm model into this process once when an arm needs it (REPORT §4z): the arms
     run core.check's own warm path, with the encoder here instead of the server."""
-    if any(a in WARM_ARMS or a == "warm" for a in arms):
+    if any(a.startswith("warm") for a in arms):
         warm.set_encoder(warm.load_model())
 
 
@@ -596,7 +662,8 @@ def cmd_size(args: argparse.Namespace) -> None:
     by_id = {p["id"]: p for label in ("task", "null") for p in prompts(label)}
     stores = Stores()
     _model_for(SIZE_ARMS)
-    decision = {"floor": "floor", "backfill": "calibrated", "tiered": "tiered", "warm": "tiered"}
+    decision = {"floor": "floor", "backfill": "calibrated", "tiered": "tiered", "warm": "tiered",
+                "tiered-stem": "tiered", "warm-stem": "tiered"}
     commit = subprocess.run(["git", "rev-parse", "--short=12", "HEAD"], capture_output=True, text=True,
                             cwd=bench.ROOT, check=False).stdout.strip()
     print(f"briefing size · split {args.split} · store {meta['store']} · code {commit} · "
@@ -606,9 +673,10 @@ def cmd_size(args: argparse.Namespace) -> None:
         print(f"\n{kind} prompts: {len(ids)}")
         print(f"  {'arm':9} {'median':>8} {'mean':>8} {'p90':>8} {'max':>8}   (tokens)")
         for arm in SIZE_ARMS:
-            sizes = sorted(len(core.render_check_for_agent(core.check(
-                stores.for_arm(by_id[pid], arm), repo_of(by_id[pid]), by_id[pid]["text"], interests=None,
-                decision=decision[arm], warm=arm == "warm"))) // 4 for pid in ids)
+            with _stemming(arm in STEM_ARMS):
+                sizes = sorted(len(core.render_check_for_agent(core.check(
+                    stores.for_arm(by_id[pid], arm), repo_of(by_id[pid]), by_id[pid]["text"], interests=None,
+                    decision=decision[arm], warm=arm.startswith("warm")))) // 4 for pid in ids)
             print(f"  {arm:9} {statistics.median(sizes):>8.0f} {statistics.mean(sizes):>8.0f} "
                   f"{sizes[9 * len(sizes) // 10]:>8} {sizes[-1]:>8}")
 

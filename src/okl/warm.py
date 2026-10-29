@@ -48,10 +48,10 @@ DIM = 768
 QUERY = "task: search result | query: {}"     # the model card's retrieval prompts
 DOC = "title: none | text: {}"
 WEIGHT = 8.0       # §4w: the top of a broad rise on the selection split
-# The 269th of 282 calibration nulls' best scores at W = 8 with this model, 5.7679259776, and just
-# above it (bench-20261027-sel-dense-embeddinggemma-int8-words.txt; its W = 0 line is
-# decide.CALIBRATED_LINE's, so the two are set the same way).
-LINE = 5.767926
+# The 269th of 282 calibration nulls' best scores at W = 8 with this model and stemmed words,
+# 6.0040628382, and just above it (bench-20261029-sel-dense-embeddinggemma-int8-words-stem.txt,
+# REPORT §4ad; its W = 0 line is decide.CALIBRATED_LINE's, so the two are set the same way).
+LINE = 6.004063
 NEAREST = 36       # the model's own candidates, as many as the full-text window
 TIMEOUT_S = 0.5    # what a prompt waits for the prompt's vector before briefing without it
 IDLE_EXIT_S = 4 * 3600

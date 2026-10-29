@@ -102,9 +102,9 @@ def test_a_record_only_the_semantic_arm_found_is_on_the_subject_only_by_meaning(
     one-word title-or-symptom rule admitted records full-text would never have reached. A
     semantic-only candidate below the line stays out even when it shares a title word."""
     a, _ = _seed(store)
-    # "pagination" is in the record's title, so by the word rules alone one shared word would
-    # make it the subject; the stub gives it a low cosine for this task.
-    task = "paginate the admin screen without a credential leak on reload"
+    # Only the semantic arm reaches the "pagination" record ("page" and "pagination" share no
+    # stem, where "paginate" would, REPORT §4ad), and the stub gives it a low cosine here.
+    task = "page through the admin screen without a credential leak on reload"
     semantic.build_index(store)
     res = core.check(store, decision="floor", repo="r", task=task, hybrid="linear")
     titles = [r["title"] for r in res["rules"]]

@@ -438,6 +438,8 @@ class _Backend(Protocol):
         - OR-permissive across terms: a two-term query returns records matching either.
           (Postgres's websearch_to_tsquery ANDs by default, which silently tightens
           recall relative to SQLite.)
+        - Stemmed: a word finds another form of itself ("rotations" finds "rotation"),
+          by SQLite's porter tokenizer (FTS_TOKENIZE) and Postgres's 'english' configuration.
         - `limit` caps the rows returned; `scope` and `node_types` filter exactly.
 
       upsert_node / upsert_edge

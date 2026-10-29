@@ -28,10 +28,11 @@ AUC 0.96 on the selection split.
 Why this line: it is the split-conformal line at alpha 0.05 over half the bench's 550 real
 null prompts (prompts a person typed that name no subject of their own): at most 5 per cent
 of such prompts, exchangeable with those, are briefed anything. In words, a lesson is briefed
-when what it says it is about holds three of the prompt's subject words, or two that are both
-nearly as rare as a word in one record (relative rarities summing past 1.717). It was measured
-on one developer's prompts; a store calibrates its own line on its own prompts with the same
-procedure (the guarantee is per population).
+when what it says it is about holds four of the prompt's subject words, or three whose relative
+rarities sum past 1.449. Words are matched by stem (§4ac, §4ad): "rotating" and "rotate" are one
+word, which lets more words match on both sides and raised the line from two words to three. It
+was measured on one developer's prompts; a store calibrates its own line on its own prompts with
+the same procedure (the guarantee is per population).
 """
 from __future__ import annotations
 
@@ -45,9 +46,10 @@ from typing import Final
 from . import store
 from .store import Node
 
-# The bench's conformal line (evals/bench/, REPORT §4w): the 269th of 282 calibration nulls'
-# best scores, 2.0017172954, and just above it (tests/test_warm.py reads it from the receipt).
-CALIBRATED_LINE = 2.0017173
+# The bench's conformal line (evals/bench/, REPORT §4w) with stemmed words (§4ac, §4ad): the
+# 269th of 282 calibration nulls' best scores, 3.0014485960, and just above it (tests/test_warm.py
+# reads it from the receipt). Unstemmed, it was 2.0017173.
+CALIBRATED_LINE = 3.0014486
 CALIBRATED_CAP = 5
 
 # Text a harness wraps around a message it delivers as a user turn. Claude Code's task and

@@ -63,7 +63,8 @@ def test_near_misses_name_what_matched_and_was_left_out(store):
     res["near_misses"][0]["drift"] = {"reason": "never verified", "files": "x"}
     assert core.drifted_ids(res) == []
     # When nothing passed the floor, the briefing points at the near misses, not a clean slate.
-    none = core.check(store, repo="r", task="paginate the admin list", near_misses=True)
+    # ("paginate" would now share "pagination"'s stem and put that lesson on the subject.)
+    none = core.check(store, repo="r", task="sort the admin list", near_misses=True)
     assert none["rules"] == [] and none["near_misses"]
     assert "clean slate" not in core.render_check_for_agent(none) and "came closest" in core.render_check_for_agent(none)
 
