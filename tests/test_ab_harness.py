@@ -405,12 +405,19 @@ def test_the_line_arms_differ_only_in_what_each_line_says(ab):
 
 def test_a_restyle_that_changed_nothing_is_named_so_the_task_fails_closed(ab):
     """An experiment cannot measure a change it never made."""
-    same = {"line": "x", "titles": "x", "when": "y", "when-tool": "y"}
-    assert ab.unchanged_by_style(same, ["line", "titles", "when"]) == ["titles"]
-    assert ab.unchanged_by_style(same, ["line", "when"]) == []
-    # when-tool's briefing is the when wording; unchanged, the arm measures the tool alone.
-    flat = {"line": "x", "titles": "z", "when": "x", "when-tool": "x"}
-    assert ab.unchanged_by_style(flat, ["line", "when-tool"]) == ["when-tool"]
+    line = "- [g] Pin the linter — Pin ruff to an exact version.\n- [o] other — fix"
+    when = "- [g] Pin the linter — when you see: CI fails after a ruff release\n- [o] other — fix"
+    same = {"line": line, "titles": line, "when": when, "when-tool": when}
+    assert ab.unchanged_by_style(same, ["line", "titles", "when"], "g") == ["titles"]
+    assert ab.unchanged_by_style(same, ["line", "when", "when-tool"], "g") == []
+    # A governing lesson with no symptom or trigger: the when arms lose its fix and gain no
+    # "when you see", so they differ from the line arm and still carry no treatment.
+    bare = "- [g] Pin the linter\n- [o] other — fix"
+    flat = {"line": line, "titles": bare, "when": bare, "when-tool": bare}
+    assert ab.unchanged_by_style(flat, ["line", "titles", "when", "when-tool"], "g") == ["when", "when-tool"]
+    # The when wording on another lesson's line does not count for the governing one.
+    other = "- [g] Pin the linter\n- [o] other — when you see: x"
+    assert ab.unchanged_by_style({**flat, "when": other}, ["line", "when"], "g") == ["when"]
 
 
 def test_each_arm_can_fetch_only_by_the_path_it_offers(ab, monkeypatch):

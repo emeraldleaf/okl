@@ -210,13 +210,16 @@ def tier_briefings(task: str, governing: str, timeout: int) -> dict[str, str]:
     return {"full": placed(True), **{arm: placed(False, style) for arm, style in LINE_STYLES.items()}}
 
 
-def unchanged_by_style(briefings: dict[str, str], arms: list[str]) -> list[str]:
-    """The line arms in `arms` whose briefing is the line arm's (REPORT §4ab): a restyle that
-    changed nothing measures nothing, so that task's tier arms fail closed (an experiment
-    cannot measure a change it never made). when-tool counts too: its treatment is the when
-    wording and the tool together, so with the wording unchanged it would measure half of it
-    (review on #305)."""
-    return [a for a in ("titles", "when", "when-tool") if a in arms and briefings[a] == briefings["line"]]
+def unchanged_by_style(briefings: dict[str, str], arms: list[str], governing: str) -> list[str]:
+    """The line arms in `arms` that do not carry their treatment (REPORT §4ab), so that task's
+    tier arms fail closed: an experiment cannot measure a change it never made. titles must
+    differ from the line arm. when and when-tool (whose treatment is the when wording and the
+    tool together) must say when the governing lesson applies on its own line: a lesson with
+    no symptom or trigger lost its fix and gained no "when you see", and its briefing still
+    differed from the line arm's (reviews on #305)."""
+    said = re.compile(rf"^- \[{re.escape(governing)}\].*— when you see: \S", re.MULTILINE)
+    return [a for a in ("titles", "when", "when-tool") if a in arms
+            and (briefings[a] == briefings["line"] if a == "titles" else not said.search(briefings[a]))]
 
 
 def parse_judge(raw: str) -> dict:
@@ -803,10 +806,10 @@ def main() -> int:
             try:
                 if set(arms) & set(TIER_ARMS):
                     tiers = tier_briefings(t["task"], t["defect_node"], args.timeout)
-                    same = unchanged_by_style(tiers, arms)
+                    same = unchanged_by_style(tiers, arms, t["defect_node"])
                     if same:   # fails this task's tier arms closed: nothing to measure
-                        raise RuntimeError(f"the {', '.join(same)} briefing is the line arm's; "
-                                           "the restyle changed nothing")
+                        raise RuntimeError(f"the {', '.join(same)} briefing does not carry its treatment "
+                                           "(the restyle changed nothing, or the lesson has no symptom or trigger)")
                     tier_headers = {a: BRIEFING_HEADER.format(briefing=b) for a, b in tiers.items()}
                 if "briefed" in arms:
                     briefed_header = BRIEFING_HEADER.format(briefing=get_briefing(t["task"], args.timeout))
