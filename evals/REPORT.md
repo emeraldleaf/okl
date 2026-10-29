@@ -2817,7 +2817,7 @@ latency lines moved, by a tenth of a millisecond.
 from two shared words to three to keep the null rate. Even with that higher bar, more lessons
 clear it: a paraphrase's inflections ("refreshing" and "refresh", "rotating" and "rotate") now
 count. The gain sits in the paraphrase register, where §4w found the line weakest. The intervals
-overlap, so this is a bench result on 166 and 180 queries, not a settled one.
+overlap, so this is a bench result on 249 and 270 queries, not a settled one.
 
 **What it does not show.** Real prompts. The bench's queries were written for its lessons, and
 §4x showed the line behaving differently on what people type. Latency is under a millisecond
