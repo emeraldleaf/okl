@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import shlex
 from pathlib import Path
 
 import pytest
@@ -448,8 +449,11 @@ def test_each_arm_can_fetch_only_by_the_path_it_offers(ab, monkeypatch):
     monkeypatch.setattr(ab, "GENERATOR_TOOLS", "Bash(okl show:*)")
     bash, tool = ab.generator_cmd("line"), ab.generator_cmd("when-tool", "/x/c.json")
     assert "--strict-mcp-config" in bash and "'Bash(okl show:*)'" in bash and "--mcp-config" not in bash
-    assert tool.endswith("--strict-mcp-config --mcp-config /x/c.json --allowedTools mcp__okl__okl_get")
+    assert tool.endswith('--strict-mcp-config --mcp-config /x/c.json --tools "" --allowedTools mcp__okl__okl_get')
     assert "Bash" not in tool
+    # No built-in tool at all, so a Bash the user's settings allow cannot reach the shim (review on #305).
+    split = shlex.split(tool)
+    assert split[split.index("--tools") + 1] == ""
 
 
 def test_the_tool_config_carries_only_what_the_tool_needs(ab, monkeypatch, tmp_path):
@@ -507,6 +511,11 @@ def test_the_when_tool_arm_needs_tools_on(ab, monkeypatch):
     import argparse
     with pytest.raises(argparse.ArgumentTypeError, match="GENERATOR_TOOLS"):
         ab.parse_arms("line,when-tool")
+    # titles and when point at a fetch too: one-shot, nothing logs one (review on #305).
+    for arms in ("line,titles", "baseline,when"):
+        with pytest.raises(argparse.ArgumentTypeError, match="GENERATOR_TOOLS"):
+            ab.parse_arms(arms)
+    assert ab.parse_arms("baseline,line,full") == ["baseline", "line", "full"]
     monkeypatch.setattr(ab, "GENERATOR_TOOLS", "Bash(okl show:*)")
     assert ab.parse_arms("line,titles,when,when-tool") == ["line", "titles", "when", "when-tool"]
 

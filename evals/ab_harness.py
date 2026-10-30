@@ -348,10 +348,15 @@ def parse_arms(spec: str) -> list[str]:
     if not arms or any(a not in ARMS for a in arms) or len(set(arms)) != len(arms):
         # A repeated arm would run and count twice (review on #269).
         raise argparse.ArgumentTypeError(f"--arms must name each of {','.join(ARMS)} at most once, not {spec!r}")
-    if "when-tool" in arms and not GENERATOR_TOOLS:
-        # Its fetch is a tool; without GENERATOR_TOOLS the other arms could fetch nothing (§4ab).
-        raise argparse.ArgumentTypeError("the when-tool arm needs GENERATOR_TOOLS set "
-                                         "(e.g. 'Bash(okl show:*)') so the other arms can fetch too")
+    pointed = [a for a in ("titles", "when", "when-tool") if a in arms]
+    if pointed and not GENERATOR_TOOLS:
+        # These arms withhold the fix and point at a fetch (§4ab), and only a logged fetch counts.
+        # One-shot, nothing is logged and an MCP server from the user's own settings could fetch
+        # unseen (review on #305); refusing them keeps the one-shot command every earlier
+        # section ran unchanged.
+        raise argparse.ArgumentTypeError(f"the {', '.join(pointed)} arm(s) need GENERATOR_TOOLS set "
+                                         "(e.g. 'Bash(okl show:*)'): they point at a fetch, and only "
+                                         "a logged fetch counts")
     return arms
 
 
@@ -359,12 +364,14 @@ def generator_cmd(arm: str = "", mcp_config: str = "") -> str:
     """The generator command, with the allowed tools when any (claude -p's flag; §4r). With
     tools on, only the MCP servers an arm names load (--strict-mcp-config), so a lesson can be
     fetched only by the path the arm offers (REPORT §4ab): `okl show` through the shim, or, in
-    the when-tool arm, only the fetch tool whose config is `mcp_config`."""
+    the when-tool arm, only the fetch tool whose config is `mcp_config`. That arm also runs
+    with no built-in tools (`--tools ""`): the shim is on its PATH, so a Bash the user's own
+    settings allow could fetch through it and count as a tool fetch (review on #305)."""
     if not GENERATOR_TOOLS:
         return GENERATOR_CMD
     if arm == "when-tool":
         return (f"{GENERATOR_CMD} --strict-mcp-config --mcp-config {shlex.quote(mcp_config)} "
-                f"--allowedTools {FETCH_TOOL}")
+                f'--tools "" --allowedTools {FETCH_TOOL}')
     return f"{GENERATOR_CMD} --strict-mcp-config --allowedTools {shlex.quote(GENERATOR_TOOLS)}"
 
 
