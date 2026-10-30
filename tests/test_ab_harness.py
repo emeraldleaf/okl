@@ -523,6 +523,9 @@ def test_the_when_tool_arm_needs_tools_on(ab, monkeypatch):
 def test_a_fetch_path_that_did_not_open_refuses_the_run(ab, monkeypatch):
     """A tool that never loaded would read as an agent that never fetched (§4ab)."""
     asked = []
+    # The checkout guard (exit 7) runs first, and in a worktree whose okl is another checkout's
+    # it answered before the probe this test is about (review on #305).
+    monkeypatch.setattr(ab, "code_outside_checkout", lambda: "")
     monkeypatch.setattr(ab, "GENERATOR_TOOLS", "Bash(okl show:*)")
     monkeypatch.setattr(ab, "probe_fetch", lambda w, g, t, *, tool: asked.append(tool) or ("" if not tool else "no fetch"))
     models = {"generator": None, "judge": None}
