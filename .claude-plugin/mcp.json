@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "okl": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/hooks/okl-mcp.sh"
+    }
+  }
+}

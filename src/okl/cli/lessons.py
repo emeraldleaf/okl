@@ -271,10 +271,11 @@ def cmd_update(args: argparse.Namespace) -> int:
         # green in CI while the store said stale (review of okl R1).
         _refresh_snapshot(node, why="its governed files changed")
     if node["id"].startswith("seed:"):
-        # The pack owns this lesson's text: the next `okl seed` of it puts the pack's back.
+        # The pack owns what it says: the next `okl seed` of it puts that back. A field it leaves
+        # out keeps the store's value (#214).
         print(f"  note: {node['id']} comes from a seed pack, and the next `okl seed` of that "
-              "pack restores the pack's text. To keep this change, edit the pack too.",
-              file=sys.stderr)
+              "pack restores every field the pack sets (one it leaves out keeps this value). "
+              "To keep this change, edit the pack too.", file=sys.stderr)
     return 0
 
 
