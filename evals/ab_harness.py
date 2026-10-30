@@ -211,8 +211,8 @@ def tier_briefings(task: str, governing: str, timeout: int) -> dict[str, str]:
 
 
 def unchanged_by_style(briefings: dict[str, str], arms: list[str], governing: str) -> list[str]:
-    """The line arms in `arms` that do not carry their treatment (REPORT §4ab), so that task's
-    tier arms fail closed: an experiment cannot measure a change it never made. titles must
+    """The line arms in `arms` that do not carry their treatment (REPORT §4ab), so each fails
+    closed for that task: an experiment cannot measure a change it never made. titles must
     differ from the line arm. when and when-tool (whose treatment is the when wording and the
     tool together) must say when the governing lesson applies on its own line: a lesson with
     no symptom or trigger lost its fix and gained no "when you see", and its briefing still
@@ -220,6 +220,22 @@ def unchanged_by_style(briefings: dict[str, str], arms: list[str], governing: st
     said = re.compile(rf"^- \[{re.escape(governing)}\].*— when you see: \S", re.MULTILINE)
     return [a for a in ("titles", "when", "when-tool") if a in arms
             and (briefings[a] == briefings["line"] if a == "titles" else not said.search(briefings[a]))]
+
+
+def tier_headers_for(t: dict, arms: list[str], timeout: int) -> tuple[dict[str, str], str]:
+    """Task `t`'s headers for the tier arms in `arms`, and why any of them is missing. An arm
+    that does not carry its treatment fails closed on its own: one shared raise also failed
+    the tier arms that did, and the briefed arms built after it (review on #305)."""
+    if not set(arms) & set(TIER_ARMS):
+        return {}, ""
+    try:
+        tiers = tier_briefings(t["task"], t["defect_node"], timeout)
+    except Exception as e:  # noqa: BLE001 — fail closed: no briefing, no tier arm
+        return {}, str(e)[:300]
+    same = unchanged_by_style(tiers, arms, t["defect_node"])
+    err = (f"the {', '.join(same)} briefing does not carry its treatment "
+           "(the restyle changed nothing, or the lesson has no symptom or trigger)") if same else ""
+    return {a: BRIEFING_HEADER.format(briefing=b) for a, b in tiers.items() if a in arms and a not in same}, err
 
 
 def parse_judge(raw: str) -> dict:
@@ -802,15 +818,8 @@ def main() -> int:
             # The briefing is deterministic per task — fetch once, reuse across samples.
             brief_err = ""
             briefed_header = indexed_header = nearmiss_header = None
-            tier_headers: dict[str, str] | None = None
+            tier_headers, tier_err = tier_headers_for(t, arms, args.timeout)
             try:
-                if set(arms) & set(TIER_ARMS):
-                    tiers = tier_briefings(t["task"], t["defect_node"], args.timeout)
-                    same = unchanged_by_style(tiers, arms, t["defect_node"])
-                    if same:   # fails this task's tier arms closed: nothing to measure
-                        raise RuntimeError(f"the {', '.join(same)} briefing does not carry its treatment "
-                                           "(the restyle changed nothing, or the lesson has no symptom or trigger)")
-                    tier_headers = {a: BRIEFING_HEADER.format(briefing=b) for a, b in tiers.items()}
                 if "briefed" in arms:
                     briefed_header = BRIEFING_HEADER.format(briefing=get_briefing(t["task"], args.timeout))
                 if "nearmiss" in arms:
@@ -825,7 +834,8 @@ def main() -> int:
                 brief_err = str(e)[:300]
             for s in range(args.samples):
                 for arm in arms:
-                    rec, ok = run_one(t, arm, s, briefed_header=briefed_header, brief_err=brief_err,
+                    rec, ok = run_one(t, arm, s, briefed_header=briefed_header,
+                                      brief_err=tier_err if arm in TIER_ARMS else brief_err,
                                       timeout=args.timeout, workdir=clean_cwd, indexed_header=indexed_header,
                                       nearmiss_header=nearmiss_header, tier_headers=tier_headers)
                     if ok:

@@ -420,6 +420,27 @@ def test_a_restyle_that_changed_nothing_is_named_so_the_task_fails_closed(ab):
     assert ab.unchanged_by_style({**flat, "when": other}, ["line", "when"], "g") == ["when"]
 
 
+def test_a_tier_arm_without_its_treatment_fails_closed_alone(ab, monkeypatch, tmp_path):
+    """One shared raise failed every tier arm and the briefed arms with them (review on #305)."""
+    line = "- [g] Pin the linter — Pin ruff to an exact version."
+    bare = "- [g] Pin the linter"
+    monkeypatch.setattr(ab, "tier_briefings", lambda task, governing, timeout:
+                        {"full": "FULL", "line": line, "titles": bare, "when": bare, "when-tool": bare})
+    task = {**TASK, "defect_node": "g"}
+    headers, err = ab.tier_headers_for(task, ["baseline", "full", "line", "titles", "when"], 5)
+    assert sorted(headers) == ["full", "line", "titles"]
+    assert "the when briefing does not carry its treatment" in err
+    rec, ok = ab.run_one(task, "when", 0, briefed_header=None, brief_err=err, timeout=5,
+                         workdir=str(tmp_path), tier_headers=headers)
+    assert not ok and "does not carry its treatment" in rec["error"]
+    assert ab.tier_headers_for(task, ["baseline", "briefed"], 5) == ({}, "")
+
+    def broken(task, governing, timeout):
+        raise RuntimeError("okl check failed")
+    monkeypatch.setattr(ab, "tier_briefings", broken)
+    assert ab.tier_headers_for(task, ["line"], 5) == ({}, "okl check failed")
+
+
 def test_each_arm_can_fetch_only_by_the_path_it_offers(ab, monkeypatch):
     """With tools on only the named MCP servers load, so the Bash arms cannot reach okl_get and
     the when-tool arm can reach nothing else; with tools off the one-shot command is unchanged."""
