@@ -2139,15 +2139,25 @@ def test_the_hybrid_diagram_layout_fits_without_the_model():
     render() refuses a line that does not fit; this draws the hybrid stages from the default
     trace and the hybrid render's own counts, so CI runs that refusal on the hybrid layout."""
     import importlib.util
+    import re
     root = Path(__file__).resolve().parents[1]
     spec = importlib.util.spec_from_file_location("render_pipeline_diagram",
                                                   root / "docs" / "render_pipeline_diagram.py")
     r = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(r)
-    d = {**r.trace(), "hybrid": "linear", "decision": "floor", "cap": 12, "lexical": 108,
-         "nearest": 108, "semantic_only": 33, "by_meaning": 0, "line": 0.4, "dim": 512}
+    # The hybrid render's own counts, so each bar is drawn against the candidates it was counted
+    # from: the default trace fetched 36, and 108 of those ran a bar three tracks long (review on #311).
+    counts = {"fetched": 141, "lexical": 108, "nearest": 108, "semantic_only": 33, "widened": 3,
+              "after_scope": 124, "dropped_scope": 17, "after_applies": 108, "dropped_applies": 16,
+              "after_tags": 78, "dropped_tags": 30, "after_floor": 16, "weak": 62, "retired": 0,
+              "delivered": 12, "trimmed": 4, "by_meaning": 0}
+    d = {**r.trace(), **counts, "hybrid": "linear", "decision": "floor", "cap": 12, "line": 0.4, "dim": 512}
     svg = r.render(d)
     assert "with the semantic arm on" in svg and "a cosine &gt;= 0.40" in svg
+    ends = [float(x) + float(w) for x, w in re.findall(r'<rect x="([\d.]+)" y="[\d.]+" width="([\d.]+)"', svg)]
+    assert len(ends) > 30 and max(ends) <= r.W - r.PAD
+    with pytest.raises(SystemExit, match="ABORT: a bar's kept and dropped shares"):
+        r.render({**d, "lexical": 3 * d["fetched"]})
     # The refusal itself: a heading longer than its card aborts, never clips.
     with pytest.raises(SystemExit, match="ABORT: the title"):
         r._fit("How an okl briefing gets built " * 3, 27, r.W - 2 * r.PAD, "bold", "the title")

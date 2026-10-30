@@ -287,7 +287,12 @@ def _bar(x: int, y: int, w: int, keep_frac: float, cut_frac: float) -> str:
     """Draw one stage's bar: a track `w` wide, the kept share, then the dropped share.
 
     `keep_frac` and `cut_frac` are fractions of `w`; the SVG markup comes back as a string.
+    Shares that sum past the track are counts of something other than the candidates the bar is
+    drawn against, and would run off the card, so they abort (review on #311).
     """
+    if keep_frac + cut_frac > 1 + 1e-9:
+        raise SystemExit(f"ABORT: a bar's kept and dropped shares sum to {keep_frac + cut_frac:.2f} "
+                         "of its track; its counts are not of the candidates it is drawn against.")
     out = [f'<rect x="{x}" y="{y}" width="{w}" height="9" rx="2" fill="#EBE7E1"/>']
     kw = round(w * keep_frac)
     out.append(f'<rect x="{x}" y="{y}" width="{kw}" height="9" rx="2" fill="{FLOW}"/>')
