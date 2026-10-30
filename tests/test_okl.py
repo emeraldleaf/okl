@@ -2537,6 +2537,26 @@ def test_a_snapshot_that_cannot_be_read_is_refused_not_read_as_none(tmp_path, mo
         _committed_snapshot(snap)
 
 
+def test_the_gate_reads_the_committed_snapshot_as_utf8_in_any_locale(tmp_path):
+    """Review on #310: the snapshot is written as UTF-8, and the gate decoded git's output in
+    the locale's encoding, so under a Latin-1 locale a governed `café.py` read as `cafÃ©.py`
+    and the gate skipped that rule."""
+    import subprocess
+    import sys
+    git = ["git", "-c", "user.email=t@t", "-c", "user.name=t"]
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    (tmp_path / "okl-drift.json").write_text(json.dumps(
+        {"format": "okl-drift-snapshot/1", "repo": "r", "rules": [{"id": "x", "files": "café.py"}]}, ensure_ascii=False),
+        encoding="utf-8")
+    subprocess.run([*git, "-C", str(tmp_path), "add", "okl-drift.json"], check=True)
+    subprocess.run([*git, "-C", str(tmp_path), "commit", "-qm", "s"], check=True)
+    code = ("from okl import drift; import sys; "
+            "print(ascii(drift.read_committed_snapshot('okl-drift.json', sys.argv[1])['rules'][0]['files']))")
+    env = {**os.environ, "LC_ALL": "en_US.ISO8859-15", "LANG": "en_US.ISO8859-15", "PYTHONUTF8": "0"}
+    r = subprocess.run([sys.executable, "-c", code, str(tmp_path)], capture_output=True, text=True, env=env)
+    assert r.stdout.strip() == ascii("café.py"), (r.stdout, r.stderr)
+
+
 def test_the_shrink_guard_reads_the_repo_and_the_rules_the_store_holds():
     """A rule this store holds may leave the snapshot (retired, or no longer governing files);
     one it does not hold, or a snapshot written for another repo, is refused (#213). The second

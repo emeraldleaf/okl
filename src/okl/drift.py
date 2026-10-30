@@ -501,18 +501,20 @@ def read_committed_snapshot(path: str, repo_dir: str = ".") -> dict[str, Any]:
 
     An audit reads the repo, not the dirty tree (CLAUDE.md): an uncommitted edit must not
     pass a gate that main would fail. Raises ValueError, with the reason, when the file is
-    untracked or not a snapshot.
+    untracked or not a snapshot. Git's output is read as UTF-8, as the snapshot is written: in
+    the locale's encoding a governed `café.py` read as `cafÃ©.py`, and the gate skipped the
+    rule (review on #310); bytes that are not UTF-8 raise, a ValueError too.
     """
     top = subprocess.run(["git", "-C", repo_dir, "rev-parse", "--show-toplevel"],
-                         capture_output=True, text=True)
+                         capture_output=True, text=True, encoding="utf-8")
     if top.returncode != 0:
         raise ValueError(f"{repo_dir!r} is not a git repository")
     rel = subprocess.run(["git", "-C", repo_dir, "ls-files", "--full-name", "--", path],
-                         capture_output=True, text=True).stdout.strip()
+                         capture_output=True, text=True, encoding="utf-8").stdout.strip()
     if not rel:
         raise ValueError(f"{path} is not committed -- a gate reads committed files only")
     out = subprocess.run(["git", "-C", repo_dir, "show", f"HEAD:{rel}"],
-                         capture_output=True, text=True)
+                         capture_output=True, text=True, encoding="utf-8")
     if out.returncode != 0:
         raise ValueError(f"{path} is staged but not in HEAD -- commit it first")
     try:
