@@ -920,6 +920,9 @@ def record(store: Store, *, type: str, title: str, scope: str, repo: str | None 
     way to refine a lesson (okl review R1); `update` is that way now. An overwrite keeps
     the lesson's first creation date.
     """
+    # The fields the caller set, before normalising: a re-import keeps what its pack leaves
+    # out, and an explicit "" or [] is the pack clearing the field (#214, review on #310).
+    given = {k for k, v in locals().items() if k in _KEPT_ON_SILENCE and v is not None}
     if scope == "repo" and repo:
         scope = f"repo:{repo}"
     if status in ("superseded", "obsolete"):
@@ -944,7 +947,7 @@ def record(store: Store, *, type: str, title: str, scope: str, repo: str | None 
     # An explicit id names the lesson; omit it and the store mints a fresh random one.
     if id is not None:
         kw["id"] = id
-        _carry_over(store, kw, id, replace=replace, keep_verification=keep_verification)
+        _carry_over(store, kw, id, replace=replace, keep_verification=keep_verification, given=given)
     n = Node(**kw)
     return store.add_node(n)
 
@@ -957,8 +960,13 @@ class LessonExistsError(ValueError):
     """
 
 
+# The fields a re-import keeps from the store when the pack leaves them out (#214).
+_KEPT_ON_SILENCE = ("body", "status", "found_by", "ttl_days", "owner", "files", "symptom", "fix", "tags",
+                    "applies_to", "aliases", "triggers")
+
+
 def _carry_over(store: Store, kw: dict[str, Any], node_id: str, *,
-                replace: bool, keep_verification: bool) -> None:
+                replace: bool, keep_verification: bool, given: frozenset[str] | set[str] = frozenset()) -> None:
     """Decide what a write to an existing id keeps from the lesson it overwrites.
 
     Refuses unless the overwrite is meant. Always keeps the first creation date. Keeps
@@ -984,11 +992,23 @@ def _carry_over(store: Store, kw: dict[str, Any], node_id: str, *,
         kw["status"] = old.status
     if not keep_verification:
         return
+    # A re-import (okl seed, --refresh): the pack owns what it says, and its silence is not a
+    # deletion. A field it leaves out that the store holds was set here (okl update --files, a
+    # /triggers draft, a status), so it stays; re-seeding used to blank it, and files added
+    # locally went with their proof, leaving drift nothing to check (#214). Left out, not
+    # empty: a pack that says "files": "" stops governing them (review on #310).
+    for name in _KEPT_ON_SILENCE:
+        if name not in given and getattr(old, name) not in (None, ""):
+            kw[name] = getattr(old, name)
     if not _same_files(old.files, kw.get("files")):
         kw.update(verified_at=None, verified_commit=None, verified_by=old.verified_by)
-    elif old.verified_at is not None:
-        kw.update(verified_at=old.verified_at, verified_by=old.verified_by,
-                  verified_commit=old.verified_commit)
+    else:
+        # The stored check and the stamp stay while the files do, as the store has them: after
+        # a re-seed that changed the files cleared the stamp, the next one dropped the check and
+        # okl reverify had nothing to run; and a pack's "verified": true restamped a lesson no
+        # check had passed (#214). Only okl verify stamps a lesson the store already holds.
+        kw.update(verified_at=old.verified_at, verified_commit=old.verified_commit,
+                  verified_by=old.verified_by)
 
 
 def join_aliases(aliases: Any) -> str | None:
@@ -1235,17 +1255,19 @@ def briefing_notice(result: dict[str, Any], shown: int = 3) -> str | None:
     the model's context and is invisible in the UI, so without this a user never sees okl
     work and cannot tell a helping tool from a dead one."""
     also = result.get("also_matched") or []
-    listed = f"{len(also)} more listed by title" if also else ""
+    # Said for the person, who never sees the list: it went to the agent (REPORT §4y).
+    listed = f"{len(also)} related listed for the agent" if also else ""
     if not result.get("match_count"):
         if result.get("store_records") == 0:
             return "okl · the store is empty, so nothing was briefed — see docs/GETTING-STARTED.md"
         if also:
             # The second tier named them: "nothing briefed" would hide that (REPORT §4y).
-            return f"okl · nothing matched closely enough to show in full; {listed}"
+            return f"okl · {len(also)} related lesson(s) listed for the agent; none close enough to show in full"
         if result.get("weak_matches"):
             # Not silence: okl ran and found only weak matches, which is a different fact
-            # from an empty store and from a task with no subject words.
-            if result.get("decision") == "calibrated":
+            # from an empty store and from a task with no subject words. Under the tiered
+            # default they are candidates below the line, not single-word matches.
+            if result.get("decision") in ("calibrated", "tiered"):
                 return (f"okl · nothing briefed: {result['weak_matches']} candidate(s) shared too "
                         "little of the task's subject to clear the line")
             return (f"okl · nothing briefed: {result['weak_matches']} weak match(es) on a "

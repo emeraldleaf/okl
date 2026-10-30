@@ -160,6 +160,15 @@ def test_a_withdrawn_lesson_in_the_second_tier_is_a_warning_not_a_fix():
         s.close()
 
 
+def test_the_persons_line_says_what_the_default_did_not_what_the_floor_does():
+    """Under the tiered default, candidates below the line are not "weak matches on a single
+    word" (the floor's words); a first-run check printed that for "explain what this repo does"."""
+    res = {"repo": "r", "match_count": 0, "weak_matches": 12, "decision": "tiered"}
+    assert core.briefing_notice(res) == ("okl · nothing briefed: 12 candidate(s) shared too little of the "
+                                         "task's subject to clear the line")
+    assert "single word" in core.briefing_notice({**res, "decision": "floor"})
+
+
 def test_the_action_list_does_not_deny_a_lesson_shown_in_full():
     """A rule shown in full with no fix routes no action; with the second tier non-empty the
     action list said "no rule matched closely", against the full briefing (review on #299)."""
@@ -260,14 +269,14 @@ def test_the_second_tier_is_rendered_for_the_agent_and_the_person_and_not_logged
         assert "### Also matched (1)" in text
         assert "- [r1] uploader logging format — Use the structured logger." in text
         assert "- [r1]" in core.render_actions_only(res)
-        assert "1 more listed by title" in core.briefing_notice(res)
+        assert "1 related listed for the agent" in core.briefing_notice(res)
         assert core.briefed_ids(res) == ["r0"]
         loose = core.check(s, repo="r", task="change the uploader logging")
         assert loose["match_count"] == 0
         assert loose["also_matched"]
         assert "clean slate" not in core.render_check_for_agent(loose)
         assert "no encoded rule applies" not in core.render_actions_only(loose)
-        assert core.briefing_notice(loose).startswith("okl · nothing matched closely enough to show in full")
+        assert "related lesson(s) listed for the agent; none close enough to show in full" in core.briefing_notice(loose)
     finally:
         s.close()
 

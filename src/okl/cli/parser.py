@@ -293,6 +293,9 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
     pex.add_argument("--drift", action="store_true", required=True,
                      help="the drift snapshot (the only export today; named so others can follow)")
     pex.add_argument("-o", "--output", help="path (default: okl-drift.json at the project root)")
+    pex.add_argument("--allow-shrink", action="store_true",
+                     help="write even when the committed snapshot is for another repo or holds rules "
+                          "this store does not (refused otherwise, since they would leave CI's gate)")
     pex.set_defaults(func=cmd_export)
 
     pdoc = sub.add_parser("doctor", help="report other agent-memory tools installed beside okl, "

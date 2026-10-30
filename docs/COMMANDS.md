@@ -26,6 +26,9 @@ okl export --drift   # write okl-drift.json, the committed snapshot CI's drift g
                      #   CI reads the COMMITTED copy, and refuses an entry whose timestamp
                      #   does not match its verify evidence, so editing the timestamp alone
                      #   cannot clear it (editing both fields can; review is the guard).
+                     #   Every refresh refuses to drop a rule the committed copy holds and
+                     #   this store does not (another clone's), or to write one for another
+                     #   repo, and names them; --allow-shrink writes it anyway.
 okl doctor           # names other agent-memory tools installed beside okl (claude-mem,
                      #   agentmemory, ECC, beads) and how each collides with okl's hooks,
                      #   and whether the pre-push drift gate is installed and CI gates

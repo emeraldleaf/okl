@@ -1051,6 +1051,69 @@ def test_hooks_step_aside_in_a_repo_okl_was_never_set_up_in(tmp_path):
     assert r.returncode == 2, (r.returncode, r.stderr)
 
 
+def test_the_mcp_server_starts_without_the_shells_path(tmp_path):
+    """#206: .mcp.json named a bare `okl`, so a session launched from an IDE, with
+    PATH=/usr/bin:/bin, failed with ENOENT and had no okl tools, while its hooks worked. The
+    entry now starts the launcher, which finds okl in the hooks' layers from the project
+    Claude Code names, wherever the server was started."""
+    import shutil
+
+    from okl.cli.install import MCP_ENTRY
+    root = Path(__file__).resolve().parents[1]
+    proj, elsewhere = tmp_path / "proj", tmp_path / "elsewhere"
+    (proj / ".okl").mkdir(parents=True); elsewhere.mkdir()
+    (proj / ".claude" / "hooks").mkdir(parents=True)
+    shutil.copy2(root / "src" / "okl" / "scaffold" / "hooks" / "okl-mcp.sh", proj / ".claude" / "hooks")
+    # An okl that is on no PATH: it starts (--version), and says what it was asked and from where.
+    fake = tmp_path / "bin" / "okl"; fake.parent.mkdir()
+    fake.write_text('#!/bin/sh\n[ "$1" = --version ] && exit 0\necho "args=$* cwd=$PWD"\n'); fake.chmod(0o755)
+    (proj / ".okl" / "config.json").write_text(json.dumps({"repo": "p", "okl_bin": str(fake)}))
+    env = {"HOME": str(tmp_path), "PATH": "/usr/bin:/bin", "CLAUDE_PROJECT_DIR": str(proj)}
+
+    def start(entry, **extra):
+        return subprocess.run([entry["command"], *entry.get("args", [])], cwd=elsewhere, env={**env, **extra},
+                              capture_output=True, text=True, timeout=30)
+
+    # The entry okl init writes, as Claude Code spawns it: the pinned okl, in the project.
+    r = start(MCP_ENTRY)
+    assert r.returncode == 0 and r.stdout.strip() == f"args=mcp cwd={proj}", (r.stdout, r.stderr)
+    # A pin that exists but cannot start (its interpreter went with its venv) gives way to the
+    # next layer, here okl on PATH, as in the prompt hook (review on #310).
+    stale = tmp_path / "old-venv" / "okl"; stale.parent.mkdir()
+    stale.write_text("#!/gone/python\n"); stale.chmod(0o755)
+    (proj / ".okl" / "config.json").write_text(json.dumps({"repo": "p", "okl_bin": str(stale)}))
+    r = start(MCP_ENTRY, PATH=f"/usr/bin:/bin:{fake.parent}")
+    assert r.returncode == 0 and r.stdout.strip() == f"args=mcp cwd={proj}", (r.stdout, r.stderr)
+    # So does one that starts but cannot serve: an okl installed without the [mcp] extra.
+    bare = tmp_path / "no-extra" / "okl"; bare.parent.mkdir()
+    bare.write_text('#!/bin/sh\necho "OKL: the MCP SDK is not installed" >&2; exit 2\n'); bare.chmod(0o755)
+    (proj / ".okl" / "config.json").write_text(json.dumps({"repo": "p", "okl_bin": str(bare)}))
+    r = start(MCP_ENTRY, PATH=f"/usr/bin:/bin:{fake.parent}")
+    assert r.returncode == 0 and r.stdout.strip() == f"args=mcp cwd={proj}", (r.stdout, r.stderr)
+    # No python3 on the PATH: the pin is read without it, as okl init writes the config.
+    tools = tmp_path / "tools"; tools.mkdir()
+    for t in ("bash", "sed", "dirname"):
+        (tools / t).symlink_to(shutil.which(t))
+    (proj / ".okl" / "config.json").write_text(json.dumps({"repo": "p", "okl_bin": str(fake)}, indent=2))
+    r = start(MCP_ENTRY, PATH=str(tools), PYTHONPATH="")
+    assert r.returncode == 0 and r.stdout.strip() == f"args=mcp cwd={proj}", (r.stdout, r.stderr)
+    # No okl anywhere: it fails, and says how to fix it.
+    (proj / ".okl" / "config.json").write_text(json.dumps({"repo": "p"}))
+    r = start(MCP_ENTRY, PYTHONPATH="")
+    assert r.returncode == 1 and "okl init" in r.stderr and "OKL_BIN" in r.stderr, r.stderr
+
+    # With the extra installed, the real server answers `initialize` through the launcher.
+    if importlib.util.find_spec("mcp") is None:
+        return
+    (proj / ".okl" / "config.json").write_text(json.dumps({"repo": "p", "okl_bin": f"{sys.executable} -m okl"}))
+    hello = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {
+        "protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "t", "version": "0"}}})
+    r = subprocess.run([MCP_ENTRY["command"], *MCP_ENTRY["args"]], cwd=elsewhere, input=hello + "\n",
+                       env={**env, "PYTHONPATH": os.environ.get("PYTHONPATH", ""), "OKL_DATABASE_URL":
+                            f"sqlite:///{tmp_path / 'okl.db'}"}, capture_output=True, text=True, timeout=60)
+    assert '"serverInfo"' in r.stdout, (r.stdout[-400:], r.stderr[-400:])
+
+
 def test_hooks_anchor_to_the_project_not_the_sessions_cwd(tmp_path):
     """A hook runs in the session's CURRENT directory, and any `cd` in a command moves it.
 
@@ -1103,7 +1166,7 @@ def test_okl_owned_files_carry_a_current_fingerprint():
     (#49). Editing one without re-stamping would make okl treat its own file as yours."""
     from okl import ownership
     root = Path(__file__).resolve().parents[1] / "src" / "okl" / "scaffold"
-    for rel in ("hooks/userpromptsubmit-okl-check.sh", "hooks/stop-okl-encode.sh",
+    for rel in ("hooks/userpromptsubmit-okl-check.sh", "hooks/stop-okl-encode.sh", "hooks/okl-mcp.sh",
                 "ci/okl-verify.yml", "git-hooks/pre-push"):
         text = (root / rel).read_text()
         assert ownership.embedded(text) == ownership.digest(text), (
@@ -1142,6 +1205,12 @@ def test_init_never_clobbers_and_uninstall_removes_only_okls(tmp_path):
                           / "hooks" / "stop-okl-encode.sh").read_text()
     assert okl("init", "--repo", "r").returncode == 0
     assert hook.read_text() == shipped
+    # The bare "okl" entry an older init wrote is upgraded to start through the launcher (#206).
+    from okl.cli.install import MCP_ENTRY
+    launcher = repo / ".claude" / "hooks" / "okl-mcp.sh"
+    if importlib.util.find_spec("mcp"):
+        assert json.loads((repo / ".mcp.json").read_text())["mcpServers"]["okl"] == MCP_ENTRY
+        assert launcher.is_file() and os.access(launcher, os.X_OK)
 
     # An edit is kept on re-init, and replaced only with --force.
     hook.write_text(shipped + "echo my local tweak\n")
@@ -1178,6 +1247,7 @@ def test_init_never_clobbers_and_uninstall_removes_only_okls(tmp_path):
     assert settings["hooks"] == {"Stop": [{"hooks": [other]}]}, "only okl's entries removed"
     assert json.loads((repo / ".mcp.json").read_text())["mcpServers"] == {"other": {"command": "x"}}
     assert not hook.exists() and not (repo / ".github" / "workflows" / "okl-verify.yml").exists()
+    assert not launcher.exists()
     assert prompt.exists() and "kept" in r.stdout, "an edited okl file is never deleted"
     assert (repo / ".okl" / "config.json").exists(), "the store is never removed"
 
@@ -1798,8 +1868,14 @@ def test_plugin_manifest_points_at_real_files_and_the_shipped_version():
         assert (root / cmd.replace('"${CLAUDE_PLUGIN_ROOT}"/', "")).is_file(), cmd
     market = json.loads((root / ".claude-plugin" / "marketplace.json").read_text())
     assert [p["name"] for p in market["plugins"]] == ["okl"] and market["name"] == "okl"
-    mcp = json.loads((root / ".mcp.json").read_text())
-    assert mcp["mcpServers"]["okl"] == {"command": "okl", "args": ["mcp"]}
+    # The plugin starts its MCP server through the launcher (#206); the repo's own .mcp.json is
+    # the project form okl init writes, which a plugin's root variable would not resolve in.
+    from okl.cli.install import MCP_ENTRY
+    plugin_mcp = json.loads((root / manifest["mcpServers"]).read_text())["mcpServers"]["okl"]
+    assert plugin_mcp["command"] == "${CLAUDE_PLUGIN_ROOT}/hooks/okl-mcp.sh"
+    launcher = root / "hooks" / "okl-mcp.sh"
+    assert launcher.is_file() and os.access(launcher, os.X_OK)
+    assert json.loads((root / ".mcp.json").read_text())["mcpServers"]["okl"] == MCP_ENTRY
 
 
 def test_registry_entry_starts_the_server_it_lists():
