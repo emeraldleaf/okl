@@ -243,20 +243,56 @@ def trace(store: Store | None = None, hybrid: str | None = None) -> dict:
 # --- SVG ---------------------------------------------------------------------
 # Plain geometry and a system font stack: forges sanitise SVG, so no external font can load
 # and no script will run. An explicit light ground keeps it legible in either forge theme.
-W, ROW_H, PAD = 980, 96, 28
+W, ROW_H, PAD = 980, 104, 28
 MAX_BODY_LINES = 2   # what fits above the count line at this ROW_H
 FONT = "ui-sans-serif,-apple-system,Segoe UI,Helvetica,Arial,sans-serif"
 MONO = "ui-monospace,SFMono-Regular,Menlo,Consolas,monospace"
 INK, INK2, INK3 = "#1E1B18", "#4E4740", "#7C736A"
 FLOW, PASS, DROP = "#B4531F", "#4A6B3D", "#9B3B3B"
 PAPER, SURF, RULE = "#F5F3F0", "#FFFFFF", "#DCD6CE"
+# An SVG has no layout engine, so a line's width is estimated from its length: an em fraction
+# per face, above what Helvetica, Arial, Segoe UI and SF measure. A line that would not fit
+# aborts the render, as an over-long body does: the hybrid render ran its title, subtitle and
+# stage 6 heading off the page, and the freshness test, comparing a render with a render,
+# could not see it.
+EM = {"sans": 0.5, "bold": 0.58, "mono": 0.61}
+
+
+def _width(text: str, size: float, face: str = "sans") -> float:
+    """The estimated width of one line of text, in pixels."""
+    return len(text) * size * EM[face]
+
+
+def _wrap(text: str, size: float, room: float, face: str = "sans") -> list[str]:
+    """`text` packed into lines whose estimated width is at most `room`."""
+    lines, line = [], ""
+    for word in text.split():
+        trial = f"{line} {word}".strip()
+        if line and _width(trial, size, face) > room:
+            lines.append(line); line = word
+        else:
+            line = trial
+    return lines + [line]
+
+
+def _fit(text: str, size: float, room: float, face: str, what: str) -> str:
+    """`text`, or an abort naming it when it would run past `room`."""
+    if _width(text, size, face) > room:
+        raise SystemExit(f"ABORT: {what} is about {_width(text, size, face):.0f}px wide in "
+                         f"{room:.0f}px: {text!r}. Shorten it; the render does not clip.")
+    return text
 
 
 def _bar(x: int, y: int, w: int, keep_frac: float, cut_frac: float) -> str:
     """Draw one stage's bar: a track `w` wide, the kept share, then the dropped share.
 
     `keep_frac` and `cut_frac` are fractions of `w`; the SVG markup comes back as a string.
+    Shares that sum past the track are counts of something other than the candidates the bar is
+    drawn against, and would run off the card, so they abort (review on #311).
     """
+    if keep_frac + cut_frac > 1 + 1e-9:
+        raise SystemExit(f"ABORT: a bar's kept and dropped shares sum to {keep_frac + cut_frac:.2f} "
+                         "of its track; its counts are not of the candidates it is drawn against.")
     out = [f'<rect x="{x}" y="{y}" width="{w}" height="9" rx="2" fill="#EBE7E1"/>']
     kw = round(w * keep_frac)
     out.append(f'<rect x="{x}" y="{y}" width="{kw}" height="9" rx="2" fill="{FLOW}"/>')
@@ -314,8 +350,7 @@ def _adjust_stages(d: dict, stages: list, f: int) -> None:
             f'{d["fetched"]} candidates', "", 1.0, 0.0, ""))
         floor = next(i for i, st in enumerate(stages) if st[1] == "FLOOR")
         st = list(stages[floor])
-        st[2] = (f"Two shared words, one in the title or symptom that at most {COMMON_WORD_SHARE:.0%} of records "
-                 f"share, a one-word alias, or a cosine at or above {d['line']:.2f}")
+        st[2] = f"Two shared words, one rare word, a one-word alias, or a cosine >= {d['line']:.2f}"
         st[3] = (f"Only-by-embedding records count by meaning alone ({d['by_meaning']} kept so). A title or symptom "
                  f"word counts alone if at most {COMMON_WORD_SHARE:.0%}, or {COMMON_WORD_MIN_RECORDS}, of records "
                  "hold it; others need two words.")
@@ -327,7 +362,8 @@ def _subtitle(d: dict) -> str:
     if d["decision"] == "tiered":
         return (f'{d["corpus"]} records and one task sentence become {d["cap"]} or fewer lessons in full and up '
                 f'to {d["limit"]} named in a line. Only applies_to may exclude on validity.')
-    return (f'{d["corpus"]} records and one task sentence become the {d["cap"]} or fewer an agent reads. '
+    return (("Under the word floor, " if d.get("hybrid") else "")
+            + f'{d["corpus"]} records and one task sentence become the {d["cap"]} or fewer an agent reads. '
             + ("A local embedding adds candidates by meaning; five stages then narrow them."
                if d.get("hybrid") else "Five stages narrow it; only applies_to may exclude on validity."))
 
@@ -363,8 +399,7 @@ def render(d: dict) -> str:
          "it hid 35 of 172 records and the briefed arm then reproduced a defect it dropped.",
          f'{d["after_tags"]} survive', f'{d["dropped_tags"]} dropped: no shared subject',
          d["after_tags"] / f, d["dropped_tags"] / f, "ANY-MATCH"),
-        ("6", "FLOOR", f"Two shared subject words, one in the title or symptom that at most {COMMON_WORD_SHARE:.0%} "
-                       "of records share, or a one-word alias",
+        ("6", "FLOOR", "Two shared subject words, one rare title or symptom word, or a one-word alias",
          "One shared word outside title and symptom is left out and counted unless it links to a kept "
          f"record; a title or symptom word alone needs at most {COMMON_WORD_SHARE:.0%} of records, or "
          f"{COMMON_WORD_MIN_RECORDS}. Retired leave too.",
@@ -385,44 +420,45 @@ def render(d: dict) -> str:
          "hook | MCP | CI", "", 0.0, 0.0, ""),
     ]
     _adjust_stages(d, stages, f)
-    h = 166 + len(stages) * ROW_H + 60
-    o = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{h}" '
-         f'viewBox="0 0 {W} {h}" font-family="{FONT}">',
-         f'<rect width="{W}" height="{h}" fill="{PAPER}"/>']
-    title = "How an okl briefing gets built" + (" with the semantic arm on, under the word floor"
-                                                 if d.get("hybrid") else "")
-    o.append(f'<text x="{PAD}" y="46" font-size="27" font-weight="700" fill="{INK}">'
-             f'{escape(title)}</text>')
-    o.append(f'<text x="{PAD}" y="72" font-size="14" fill="{INK2}">{escape(_subtitle(d))}</text>')
-    for i, ln in enumerate([
+    page = W - 2 * PAD
+    title = "How an okl briefing gets built" + (" with the semantic arm on" if d.get("hybrid") else "")
+    subtitle = _wrap(_subtitle(d), 14, page)
+    meta = [_fit(ln, 11.5, page, "mono", "a header line") for ln in (
         "GENERATED from the live pipeline - docs/render_pipeline_diagram.py",
         f'traced task: "{d["task"]}"',
         f'searched as: "{d["query"]}"',
         f'repo interests: {", ".join(d["interests"])}',
-    ]):
-        o.append(f'<text x="{PAD}" y="{96 + i * 16}" font-size="11.5" font-family="{MONO}" '
+    )]
+    meta_y = 72 + 18 * (len(subtitle) - 1) + 24
+    y = meta_y + 16 * (len(meta) - 1) + 10
+    h = y + 12 + len(stages) * ROW_H + 60
+    o = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{h}" '
+         f'viewBox="0 0 {W} {h}" font-family="{FONT}">',
+         f'<rect width="{W}" height="{h}" fill="{PAPER}"/>']
+    o.append(f'<text x="{PAD}" y="46" font-size="27" font-weight="700" fill="{INK}">'
+             f'{escape(_fit(title, 27, page, "bold", "the title"))}</text>')
+    for i, ln in enumerate(subtitle):
+        o.append(f'<text x="{PAD}" y="{72 + i * 18}" font-size="14" fill="{INK2}">{escape(ln)}</text>')
+    for i, ln in enumerate(meta):
+        o.append(f'<text x="{PAD}" y="{meta_y + i * 16}" font-size="11.5" font-family="{MONO}" '
                  f'fill="{INK3}">{escape(ln)}</text>')
-    y = 154
     for n, lbl, title, body, c1, c2, keep, cut, verdict in stages:
         o.append(f'<rect x="{PAD}" y="{y}" width="{W - 2 * PAD}" height="{ROW_H - 6}" '
                  f'fill="{SURF}" stroke="{RULE}"/>')
         o.append(f'<rect x="{PAD}" y="{y}" width="74" height="{ROW_H - 6}" fill="#EBE7E1" '
                  f'stroke="{RULE}"/>')
-        o.append(f'<text x="{PAD + 37}" y="{y + 38}" font-size="26" font-weight="700" '
+        o.append(f'<text x="{PAD + 37}" y="{y + 42}" font-size="26" font-weight="700" '
                  f'fill="{FLOW}" font-family="{MONO}" text-anchor="middle">{n}</text>')
-        o.append(f'<text x="{PAD + 37}" y="{y + 56}" font-size="9" fill="{INK3}" '
+        o.append(f'<text x="{PAD + 37}" y="{y + 60}" font-size="9" fill="{INK3}" '
                  f'font-family="{MONO}" text-anchor="middle" letter-spacing="1">{lbl}</text>')
         tx = PAD + 92
+        room = W - PAD - 14 - tx
+        # The heading shares its line with the verdict tag (9.5px mono, 0.8px letter-spacing).
+        tag = _width(verdict, 9.5, "mono") + 0.8 * len(verdict) + 16 if verdict else 0
         o.append(f'<text x="{tx}" y="{y + 25}" font-size="15" font-weight="600" fill="{INK}">'
-                 f'{escape(title)}</text>')
-        # wrap the body at ~92 chars
-        words, line, lines = body.split(), "", []
-        for w_ in words:
-            if len(line) + len(w_) + 1 > 92:
-                lines.append(line); line = w_
-            else:
-                line = f"{line} {w_}".strip()
-        lines.append(line)
+                 f'{escape(_fit(title, 15, room - tag, "bold", f"stage {n} heading"))}</text>')
+        _fit(f"{c1}    {c2}", 11.5, room, "mono", f"stage {n} count line")
+        lines = _wrap(body, 12, room)
         # Truncating here silently dropped "(REPORT 4d)." from stage 4 for as long as
         # this file has existed, and nothing said so. A generator that quietly discards
         # content it was given is the same failure as a check that reports success having
@@ -455,6 +491,7 @@ def render(d: dict) -> str:
            f"{decides} . src/okl/store.py search()" + (" . src/okl/semantic.py search()" if d.get("hybrid") else ""),
            "regenerate: python3 docs/render_pipeline_diagram.py" + (f" --hybrid {d['hybrid']}" if d.get("hybrid") else "")]
     for i, ln in enumerate(fns):
+        _fit(ln, 11, page, "mono", "a footer line")
         o.append(f'<text x="{PAD}" y="{h - 52 + i * 14}" font-size="11" font-family="{MONO}" fill="{INK3}">{escape(ln)}</text>')
     o.append("</svg>")
     return "\n".join(o) + "\n"
