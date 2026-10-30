@@ -2133,6 +2133,26 @@ def test_hybrid_pipeline_diagram_is_current():
             "python3 docs/render_pipeline_diagram.py --hybrid linear")
 
 
+def test_the_hybrid_diagram_layout_fits_without_the_model():
+    """CI has no embedding model, so the hybrid freshness test skips there, and the hybrid
+    render ran its title, subtitle and stage 6 heading off the page with nothing to say so.
+    render() refuses a line that does not fit; this draws the hybrid stages from the default
+    trace and the hybrid render's own counts, so CI runs that refusal on the hybrid layout."""
+    import importlib.util
+    root = Path(__file__).resolve().parents[1]
+    spec = importlib.util.spec_from_file_location("render_pipeline_diagram",
+                                                  root / "docs" / "render_pipeline_diagram.py")
+    r = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(r)
+    d = {**r.trace(), "hybrid": "linear", "decision": "floor", "cap": 12, "lexical": 108,
+         "nearest": 108, "semantic_only": 33, "by_meaning": 0, "line": 0.4, "dim": 512}
+    svg = r.render(d)
+    assert "with the semantic arm on" in svg and "a cosine &gt;= 0.40" in svg
+    # The refusal itself: a heading longer than its card aborts, never clips.
+    with pytest.raises(SystemExit, match="ABORT: the title"):
+        r._fit("How an okl briefing gets built " * 3, 27, r.W - 2 * r.PAD, "bold", "the title")
+
+
 def test_naming_a_store_by_env_var_configures_both_reads_and_writes(tmp_path, monkeypatch):
     """`record` and `check` must agree on whether a store has been configured.
 

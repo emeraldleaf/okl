@@ -101,6 +101,10 @@ benchmark built to decide (REPORT §4w; the design and its evidence:
 - **The person's line says what the tiered default did.** It said "4 more listed by title" about
   a list only the agent sees; it says "4 related listed for the agent". With nothing in full, it
   no longer calls candidates below the line "weak matches on a single word", the floor's words.
+- **The pipeline diagrams fit their page.** The semantic-arm diagram ran its title, subtitle and
+  stage 6 heading past the right edge, and every stage's count sat against its text. The
+  generator now estimates each line's width and refuses one that would not fit, and a test
+  draws that layout where the embedding model is absent, as in CI.
 
 ## 0.9.0
 
