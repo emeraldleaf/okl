@@ -489,10 +489,24 @@ def failure_causes(failures: list[dict]) -> str:
             + (f", {too_long} longer than the judge's window" if too_long else ""))
 
 
+def ran_commands(receipt: dict) -> dict[str, str]:
+    """The generator and judge commands a receipt ran. The generator's includes its tools and
+    flags: comparing the base command alone let a tools-on run, or one with other flags, read as
+    the one-shot series (review on #305). Receipts before §4ab record the base and the tools
+    apart, and ran the base with --allowedTools (§4r)."""
+    gen, tools = receipt.get("generator", "").strip(), receipt.get("generator_tools", "")
+    if receipt.get("generator_cmd"):
+        gen = receipt["generator_cmd"].strip()
+    elif gen and tools:
+        gen = f"{gen} --allowedTools {shlex.quote(tools)}"
+    return {"generator": gen, "judge": receipt.get("judge", "").strip()}
+
+
 def instrument_drift(prior: list[dict], current: dict) -> dict:
     """Each part of the instrument this run changes, against the series it is quoted with.
 
-    The commands are compared with their mode across every receipt. The judge's window is
+    The commands, as each receipt ran them (ran_commands), are compared with their mode across
+    every receipt. The judge's window is
     compared with its mode across the receipts that record one, or with the 8,000
     characters every earlier receipt used when none do. Counting the unrecorded receipts as
     8,000 would flag every run of the 40,000-character series for as long as the older
@@ -500,8 +514,9 @@ def instrument_drift(prior: list[dict], current: dict) -> dict:
     (review of #198).
     """
     modal: dict = {}
+    ran = [ran_commands(r) for r in prior]
     for key in ("generator", "judge"):
-        seen = Counter(r[key].strip() for r in prior if r.get(key))
+        seen = Counter(r[key] for r in ran if r[key])
         if seen and seen.most_common(1)[0][0] != current[key]:
             was, n = seen.most_common(1)[0]
             modal[key] = {"series": was, "runs": n}
@@ -544,6 +559,14 @@ def judge_is_generator(models: dict) -> bool:
     """
     gen, judge = models.get("generator"), models.get("judge")
     return bool(gen) and gen == judge
+
+
+def resolved_models(timeout: int, workdir: str) -> dict:
+    """What the generator and judge resolve to, each from the command it runs. With tools on the
+    generator runs --restricted and reads no settings file, so the base command, which reads
+    them, could resolve to a model the settings map and the run never used (review on #305)."""
+    return {"generator": resolved_model(generator_cmd(), timeout, workdir),
+            "judge": resolved_model(JUDGE_CMD, timeout, workdir)}
 
 
 def resolved_model(cmd: str, timeout: int, workdir: str) -> list[str] | None:
@@ -733,7 +756,7 @@ def main() -> int:
         # handful of files once at startup — PERF203's hot-loop concern does not apply.
         except (OSError, ValueError):
             continue
-    current = {"generator": GENERATOR_CMD.strip(), "judge": JUDGE_CMD.strip(),
+    current = {"generator": generator_cmd().strip(), "judge": JUDGE_CMD.strip(),
                "judge_max_chars": JUDGE_MAX_CHARS}
     if prior:
         modal = instrument_drift(prior, current)
@@ -744,7 +767,7 @@ def main() -> int:
             for k, v in modal.items():
                 print(f"      {k}: series uses {v['series']} ({v['runs']} runs)  →  this run "
                       f"uses {current[k]}", file=sys.stderr)
-        elif (any(prior[-1].get(k, "").strip() != current[k] for k in ("generator", "judge"))
+        elif (any(ran_commands(prior[-1])[k] != current[k] for k in ("generator", "judge"))
               or prior[-1].get("judge_max_chars", HISTORICAL_JUDGE_MAX_CHARS) != JUDGE_MAX_CHARS):
             # On the series, but the run immediately before was not. Say so plainly: this
             # is the case that restores comparability, and it must not read as a warning.
@@ -817,8 +840,7 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="okl-ab-") as clean_cwd:
         if GENERATOR_TOOLS:
             write_shim(clean_cwd)
-        models = {"generator": resolved_model(GENERATOR_CMD, args.timeout, clean_cwd),
-                  "judge": resolved_model(JUDGE_CMD, args.timeout, clean_cwd)}
+        models = resolved_models(args.timeout, clean_cwd)
         print(f"resolved models: generator {models['generator']}, judge {models['judge']}")
         refused = startup_refusal(models, arms, clean_cwd, tasks[0]["defect_node"], args.timeout)
         if refused:

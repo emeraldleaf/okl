@@ -231,6 +231,33 @@ def test_a_changed_judge_command_is_still_drift(ab):
     assert drift == {"judge": {"series": "claude -p --model haiku", "runs": 3}}
 
 
+def test_the_generator_is_compared_as_it_ran(ab, monkeypatch):
+    """The base command alone let a tools-on run, and one run --restricted, read as the one-shot
+    series (review on #305)."""
+    one_shot = [_receipt(ab.JUDGE_MAX_CHARS)] * 3
+    monkeypatch.setattr(ab, "GENERATOR_TOOLS", "Bash(okl show:*)")
+    current = {"generator": ab.generator_cmd(), "judge": "claude -p --model haiku",
+               "judge_max_chars": ab.JUDGE_MAX_CHARS}
+    assert ab.instrument_drift(one_shot, current) == {"generator": {"series": "claude -p --model sonnet", "runs": 3}}
+    # Receipts before §4ab record the tools apart; they ran the base with --allowedTools (§4r).
+    legacy = {**_receipt(ab.JUDGE_MAX_CHARS), "generator_tools": "Bash(okl show:*)"}
+    assert ab.ran_commands(legacy)["generator"] == "claude -p --model sonnet --allowedTools 'Bash(okl show:*)'"
+    # §4ab's receipt records the command it ran, which this run's --restricted changes.
+    recorded = {**legacy, "generator_cmd": "claude -p --model sonnet --strict-mcp-config --allowedTools 'Bash(okl show:*)'"}
+    assert ab.instrument_drift([recorded] * 2, current)["generator"]["runs"] == 2
+    assert ab.instrument_drift([recorded] * 2, {**current, "generator": recorded["generator_cmd"]}) == {}
+
+
+def test_the_models_resolve_from_the_commands_the_run_uses(ab, monkeypatch):
+    """With tools on the generator runs --restricted, so its model is resolved that way too
+    (review on #305)."""
+    monkeypatch.setattr(ab, "resolved_model", lambda cmd, timeout, workdir: cmd)
+    assert ab.resolved_models(5, ".") == {"generator": ab.GENERATOR_CMD, "judge": ab.JUDGE_CMD}
+    monkeypatch.setattr(ab, "GENERATOR_TOOLS", "Bash(okl show:*)")
+    assert ab.resolved_models(5, ".")["generator"] == ab.generator_cmd()
+    assert "--restricted" in ab.generator_cmd()
+
+
 def test_a_run_whose_working_tree_moved_is_marked_not_usable(ab):
     """REPORT §4o: a branch switch during a run briefs the later samples with other code.
     The helper names both commits, and the banner says what to do instead."""

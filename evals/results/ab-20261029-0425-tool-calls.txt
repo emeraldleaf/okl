@@ -1,27 +1,35 @@
 Tool calls in the 196 Claude Code sessions of the §4ab run (receipt ab-20261029-0425.json)
-Counted 2026-10-30 for review on #305. Counts only: no prompt or reply is copied here.
+Counted 2026-10-30 for review on #305. No prompt or reply is copied here: each call's
+command or argument, and whether it ran, is.
 
 Source: ~/.claude/projects/<the run's okl-ab- temporary directory>/*.jsonl, the sessions
-Claude Code keeps per working directory. The run's directory was okl-ab-wv8169fz.
+Claude Code keeps per working directory. The run's directory was okl-ab-wv8169fz; its
+sessions run from 2026-10-29T03:53Z to 04:25Z, the receipt's stamp.
 
-sessions: 196
-  generations 96, judgments 96, model checks 2, okl show probe 1, okl_get probe 1
+Sessions, by how each one's prompt opens:
+  96 generations, 96 judgments, 2 model checks, 1 okl show probe, 1 okl_get probe
+  recipe: for f in <dir>/*.jsonl; do jq -r 'select(.type=="user" and (.message.content|type)=="string") | .message.content' "$f" | head -1 | cut -c1-24; done | sort | uniq -c
 
-tool calls by tool:
-  14 Bash
-  2 ToolSearch
-  3 mcp__okl__okl_get
+Every tool call, with whether it ran or was refused (count, status, tool, command or id):
+  3 ran	Bash	ls -la /private/var/folders/7t/n551m2kj4dv80_8wdhyvflrc0000gn/T/okl-ab-wv8169fz
+  1 ran	Bash	okl show seed:dotnet-defects:nc_idor
+  1 ran	Bash	okl show seed:react-defects:rx_tokens_localstorage 2>&1 | head -60
+  2 ran	ToolSearch	select:mcp__okl__okl_get
+  1 ran	mcp__okl__okl_get	seed:dotnet-defects:nc_idor
+  1 ran	mcp__okl__okl_get	seed:frontend-canon:rxc_spa_auth_bff
+  1 ran	mcp__okl__okl_get	seed:react-defects:rx_tokens_localstorage
+  1 refused	Bash	(ruff --version; pip index versions ruff 2>&1 | head -3) 2>&1 | head -5
+  1 refused	Bash	curl -s --max-time 10 https://pypi.org/pypi/ruff/json | python3 -I -c "import sys,json; d=json.load(sys.stdin); print(d['info']['version'])" 2>&1 | head -3
+  1 refused	Bash	curl -s --max-time 10 https://pypi.org/pypi/ruff/json | python3 -I -c "import sys,json; d=json.load(sys.stdin); print(d['info']['version']); print([v for v in d['releases'] if v.startswith('0.15') or v.startswith('0.16')][-8:])"
+  1 refused	Bash	pip index versions ruff
+  2 refused	Bash	pip index versions ruff 2>&1 | head -3
+  1 refused	Bash	pip index versions ruff 2>&1 | head -3; (ruff --version 2>&1 | head -1)
+  1 refused	Bash	pip index versions ruff 2>&1 | head -3; ls -a /private/var/folders/7t/n551m2kj4dv80_8wdhyvflrc0000gn/T/okl-ab-wv8169fz 2>&1 | head -30
+  1 refused	Bash	pip index versions ruff 2>&1 | head -3; ls -la /private/var/folders/7t/n551m2kj4dv80_8wdhyvflrc0000gn/T/okl-ab-wv8169fz | head
+  recipe: cat <dir>/*.jsonl | jq -rs '[.[] | select(.type=="assistant") | .message.content[]? | select(.type=="tool_use")] as $u | [.[] | select(.type=="user") | .message.content[]? | select(type=="object" and .type=="tool_result")] as $r | $u[] | . as $x | ([$r[] | select(.tool_use_id==$x.id)][0]) as $y | [(if $y == null then "no result" elif $y.is_error then "refused" else "ran" end), $x.name, ($x.input.command // $x.input.id // $x.input.query // ($x.input|tostring))] | @tsv' | sort | uniq -c
 
-Bash commands by what they did:
-  okl show (through the logging shim) 2
-  looked up ruff's version (pip index, curl to PyPI, ruff --version) 9
-  listed the working directory 3
-  anything else 0
-
-tool results refused or failed: 9
-
-Reading: the only calls that reached a lesson were the five the run logged (2 okl show,
-3 okl_get; one of each is the startup probe). No command read the store another way.
-
-Recipe (per tool name):
-  cat <dir>/*.jsonl | jq -r 'select(.type=="assistant") | .message.content[]? | select(.type=="tool_use") | .name' | sort | uniq -c
+Reading: the only calls that reached a lesson are the five fetches, which the run logged:
+two okl show through the shim and three okl_get, one of each the startup probe. The two
+ToolSearch calls loaded okl_get's schema. Of the other Bash commands, the three that ran
+listed the working directory, and the nine that looked up ruff's version were refused. No
+command read the store another way.

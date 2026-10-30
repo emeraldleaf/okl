@@ -2998,8 +2998,9 @@ Neither of those samples reproduced the defect. That is one sample each, so it i
 
 Every reproduction was in `spa_tokens` (`line` 2 of 3, `titles` 1, `when` 2, `when-tool` 2), and
 `ci_linter` was clean in every arm. No arm reproduced the defect in more than 3 of its 6
-informative samples, so the last falsifier did not fire. Here the title alone kept the effect, as
-the line did.
+informative samples, so the last falsifier did not fire. The run had no baseline arm, so this
+says only that dropping the fix's sentence did not cross the registered line, not that the title
+carries the effect.
 
 **What it does not show.**
 - Whether an agent working over several turns opens a lesson. That is the test registered next.
@@ -3020,11 +3021,14 @@ The generator also read the user's own settings files, as the receipt's command 
 approve commands such as `uv run …`, and the generator's environment carried `PYTHONPATH` and the
 store's URL, so a lesson could have been read by a command the shim never logs. The `when-tool`
 arm also kept the built-in tools. Claude Code kept the run's 196 sessions, and their tool calls
-settle it (`ab-20261029-0425-tool-calls.txt`). The only calls that reached a lesson were the five
-logged ones: two `okl show` and three `okl_get`, a probe of each path among them. The other 12
-were Bash commands that looked up ruff's version or listed the working directory. The harness now
-runs every tools-on generator `--restricted`, which reads no settings file, with Bash alone in the
-Bash arms and no built-in tool in `when-tool` (review on #305).
+settle it (`ab-20261029-0425-tool-calls.txt` lists every call). The only calls that reached a
+lesson were the five logged ones: two `okl show` and three `okl_get`, a probe of each path among
+them. Of the other 14, two loaded `okl_get`'s schema and 12 were Bash commands: the nine that
+looked up ruff's version were refused, and the three that ran listed the working directory. The
+harness now runs every tools-on generator `--restricted`, which reads no settings file, with Bash
+alone in the Bash arms and no built-in tool in `when-tool` (review on #305). The drift check now
+compares the generator as it ran, flags included, so a tools-on run is never quoted as the
+one-shot series.
 
 **What follows.** As registered:
 - The second tier keeps carrying the instruction itself: §4aa's line, the title and the first
