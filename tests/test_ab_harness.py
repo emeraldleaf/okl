@@ -14,8 +14,11 @@ TASK = {"id": "idor_endpoint", "task": "add GET /orders/{id}", "signal": "no own
 
 
 @pytest.fixture
-def ab():
-    """evals/ab_harness.py as a module (it is a script, not part of the package)."""
+def ab(monkeypatch):
+    """evals/ab_harness.py as a module (it is a script, not part of the package). It reads
+    GENERATOR_TOOLS at import, so every test starts one-shot whatever the shell sets (review on
+    #305); a test that wants tools on sets the attribute."""
+    monkeypatch.delenv("GENERATOR_TOOLS", raising=False)
     spec = importlib.util.spec_from_file_location("ab_harness", HARNESS)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
@@ -451,9 +454,11 @@ def test_each_arm_can_fetch_only_by_the_path_it_offers(ab, monkeypatch):
     assert "--strict-mcp-config" in bash and "'Bash(okl show:*)'" in bash and "--mcp-config" not in bash
     assert tool.endswith('--strict-mcp-config --mcp-config /x/c.json --tools "" --allowedTools mcp__okl__okl_get')
     assert "Bash" not in tool
-    # No built-in tool at all, so a Bash the user's settings allow cannot reach the shim (review on #305).
-    split = shlex.split(tool)
-    assert split[split.index("--tools") + 1] == ""
+    # No settings file is read, so the user's own allow rules add no way to the store, and the
+    # tools are only those named: Bash alone, or none at all in the when-tool arm (review on #305).
+    for cmd, tools in ((bash, "Bash"), (tool, "")):
+        split = shlex.split(cmd)
+        assert "--restricted" in split and split[split.index("--tools") + 1] == tools
 
 
 def test_the_tool_config_carries_only_what_the_tool_needs(ab, monkeypatch, tmp_path):

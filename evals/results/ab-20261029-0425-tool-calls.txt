@@ -1,0 +1,27 @@
+Tool calls in the 196 Claude Code sessions of the §4ab run (receipt ab-20261029-0425.json)
+Counted 2026-10-30 for review on #305. Counts only: no prompt or reply is copied here.
+
+Source: ~/.claude/projects/<the run's okl-ab- temporary directory>/*.jsonl, the sessions
+Claude Code keeps per working directory. The run's directory was okl-ab-wv8169fz.
+
+sessions: 196
+  generations 96, judgments 96, model checks 2, okl show probe 1, okl_get probe 1
+
+tool calls by tool:
+  14 Bash
+  2 ToolSearch
+  3 mcp__okl__okl_get
+
+Bash commands by what they did:
+  okl show (through the logging shim) 2
+  looked up ruff's version (pip index, curl to PyPI, ruff --version) 9
+  listed the working directory 3
+  anything else 0
+
+tool results refused or failed: 9
+
+Reading: the only calls that reached a lesson were the five the run logged (2 okl show,
+3 okl_get; one of each is the startup probe). No command read the store another way.
+
+Recipe (per tool name):
+  cat <dir>/*.jsonl | jq -r 'select(.type=="assistant") | .message.content[]? | select(.type=="tool_use") | .name' | sort | uniq -c

@@ -2990,8 +2990,9 @@ runs, no failures. Both fetch paths passed the probe before the first sample.
 3. **Failed.** `when-tool` fetched it in one, one more than `when`, not three more.
 
 Every arm fetched in at most 2 of 24, so the reading registered for that case applies: a one-shot
-generator told to output only code opens no lesson, whatever the line says or the path is. Both
-fetches came from `spa_tokens`' first sample. In the `titles` arm the generator ran `okl show` on
+generator told to output only code almost never opens a lesson, whatever the line says or the path
+is. Here it opened the governing lesson in at most one of 24 samples per arm. Both fetches came
+from `spa_tokens`' first sample. In the `titles` arm the generator ran `okl show` on
 the governing lesson; in the `when-tool` arm it called `okl_get` on it and on one related lesson.
 Neither of those samples reproduced the defect. That is one sample each, so it is no rate.
 
@@ -3014,6 +3015,16 @@ the line did.
 
 The run set `PYTHONPATH` to the worktree's `src`, so its subprocesses ran 5bd4cb4's code; the
 harness now refuses to run when they would not (exit 7).
+
+The generator also read the user's own settings files, as the receipt's command shows. Rules there
+approve commands such as `uv run …`, and the generator's environment carried `PYTHONPATH` and the
+store's URL, so a lesson could have been read by a command the shim never logs. The `when-tool`
+arm also kept the built-in tools. Claude Code kept the run's 196 sessions, and their tool calls
+settle it (`ab-20261029-0425-tool-calls.txt`). The only calls that reached a lesson were the five
+logged ones: two `okl show` and three `okl_get`, a probe of each path among them. The other 12
+were Bash commands that looked up ruff's version or listed the working directory. The harness now
+runs every tools-on generator `--restricted`, which reads no settings file, with Bash alone in the
+Bash arms and no built-in tool in `when-tool` (review on #305).
 
 **What follows.** As registered:
 - The second tier keeps carrying the instruction itself: §4aa's line, the title and the first

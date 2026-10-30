@@ -364,15 +364,18 @@ def generator_cmd(arm: str = "", mcp_config: str = "") -> str:
     """The generator command, with the allowed tools when any (claude -p's flag; §4r). With
     tools on, only the MCP servers an arm names load (--strict-mcp-config), so a lesson can be
     fetched only by the path the arm offers (REPORT §4ab): `okl show` through the shim, or, in
-    the when-tool arm, only the fetch tool whose config is `mcp_config`. That arm also runs
-    with no built-in tools (`--tools ""`): the shim is on its PATH, so a Bash the user's own
-    settings allow could fetch through it and count as a tool fetch (review on #305)."""
+    the when-tool arm, only the fetch tool whose config is `mcp_config`. Tools on also run
+    --restricted, which reads no settings file: --allowedTools only adds approvals, so a rule
+    in the user's own settings (`Bash(uv run *)`) could read the store by another command the
+    shim never logs. Restricted, the Bash arms keep Bash alone; the when-tool arm keeps no
+    built-in tool (`--tools ""`), since the shim is on its PATH too (review on #305)."""
     if not GENERATOR_TOOLS:
         return GENERATOR_CMD
     if arm == "when-tool":
-        return (f"{GENERATOR_CMD} --strict-mcp-config --mcp-config {shlex.quote(mcp_config)} "
+        return (f"{GENERATOR_CMD} --restricted --strict-mcp-config --mcp-config {shlex.quote(mcp_config)} "
                 f'--tools "" --allowedTools {FETCH_TOOL}')
-    return f"{GENERATOR_CMD} --strict-mcp-config --allowedTools {shlex.quote(GENERATOR_TOOLS)}"
+    return (f"{GENERATOR_CMD} --restricted --tools Bash --strict-mcp-config "
+            f"--allowedTools {shlex.quote(GENERATOR_TOOLS)}")
 
 
 def startup_refusal(models: dict, arms: list[str], workdir: str, governing: str,
