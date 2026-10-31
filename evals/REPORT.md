@@ -1359,7 +1359,8 @@ vocabulary-mismatch trigger fires: add an embedding index beside FTS, fuse by re
 rank, measure against FTS-only on the same tasks, adopt only if it wins.
 
 **What changed.** `okl embed` writes one vector per record into the store from a local static
-embedding model (`minishlab/potion-retrieval-32M`: Model2Vec, 249 MB on disk, 512 dimensions;
+embedding model (`minishlab/potion-retrieval-32M`: Model2Vec, 249 MB on disk (131 MB as okl fetches it: the erratum
+below), 512 dimensions;
 its model card gives MTEB retrieval 35.1 against all-MiniLM-L6-v2's 42.9, at well under a
 millisecond per text). `okl check --hybrid` fetches the nearest records by cosine beside the
 full-text candidates and fuses the two orders: `rrf` sums reciprocal ranks (k = 60); `linear`
@@ -1445,7 +1446,7 @@ arm's configuration when it is on, and the arm does not become the default.
 **What the arm buys.** One more held-out paraphrase found of eight (2 → 3) and one more of
 the probe's own (1 → 2); nothing on tickets or bug reports; one record more on two of six
 short prompts; 0.8 s per prompt for the model load (the search itself is under a millisecond
-with numpy) and a 249 MB model on disk. The two vectorless arms bought more: symptoms took the
+with numpy) and a 249 MB model on disk (both corrected in the erratum below). The two vectorless arms bought more: symptoms took the
 probe's own bug-report row from 2 to 3 of 8 (§4o), and aliases took it from 3 to 8 of 8 and
 added one held-out ticket and one held-out paraphrase (§4p; corrected 2026-10-26, this sentence
 had given the alias gain to symptoms). The static model's cosines sit in a narrow band (true pairs 0.30
@@ -1458,13 +1459,30 @@ the default.
 ticket and bug report held under linear and fell under RRF, which was not predicted; the
 probe's own paraphrase row rose under linear, as predicted; precision rose by one on two
 prompts, which the falsifier allowed. The pre-registration's "about 30 MB" was another model's
-figure: this one is 249 MB on disk.
+figure: this one is 249 MB on disk (131 MB as okl fetches it: the erratum below).
 
 **What ships.** `okl embed`; `okl check --hybrid` (linear fusion at the 0.40 line when the
 flag is bare; `rrf` stays selectable for measurement), off by default; a numpy matrix product
 over every vector that holds to roughly 100,000 of them (under a millisecond at 10,000, 3 ms
-at 50,000, plus 14 and 49 ms to read them; `okl.semantic`'s docstring has the measurements
+at 50,000, plus 14 and 49 ms to read them, all corrected in the erratum below; `okl.semantic`'s docstring has the measurements
 and the next tier); and the ADR amendment. The hook never reaches the network for any of it.
+
+*Erratum (2026-10-29, review of #300).* Two of these figures were not what okl does:
+- **The model's size.** What okl's loader fetches into an empty cache is 130.8 MB
+  (`model-files-20261029-1207.txt`). 249 MB was the model repository's listing in MiB,
+  including an ONNX copy model2vec never downloads.
+- **The search.** okl's own `search()` at 512 dimensions (`semantic-scale-20261029-1206.txt`)
+  takes 3.6 ms at 10,000 vectors and 15.2 ms at 50,000 after a read of 15.4 and 92.3 ms. The
+  "under a millisecond" and "3 ms" timed the product alone.
+The docs now quote the receipts. The ranking conclusions here do not depend on either figure.
+
+*Erratum (2026-10-31, review of #307).* Those search figures were one median less another,
+from separate calls. Each search now times its own read (`semantic-scale-20261031-0559.txt`):
+- **With numpy:** the search after the read takes 4.2 ms at 10,000 vectors and 23.8 ms at
+  50,000, after reads of 15.3 and 79.6 ms.
+- **The pure-Python fallback:** 6.3 ms at 300 vectors and 214.2 ms at 10,000.
+
+The ranking conclusions still do not depend on them.
 
 ## 4r. PRE-REGISTERED: the index arm, measured where it can act (2026-10-23)
 
@@ -1682,7 +1700,8 @@ with both on, since the probe measures recall and the harness measures what the 
 Neither becomes the default on the probe alone (§4n's rule).
 
 **Cost.** No paid call; about a minute per probe run; an 80 MB ONNX model on disk under the
-`rerank` extra, fetched once by `okl embed`.
+`rerank` extra, fetched once by `okl embed`. *Erratum (2026-10-29, review of #300):* what
+okl's loader fetches is 91.8 MB (`model-files-20261029-1207.txt`).
 
 **What this cannot settle.** Whether a better order changes what the agent writes; whether
 the first stage's recall, which bounds the pool, holds on a larger store (the pool is 24
@@ -2893,6 +2912,150 @@ series (no briefing against the live briefing), so `tests/test_docs.py` pools on
 arms are those two. This one moves none of the published figures, and neither does §4r's
 (`ab-20261023-1303.json`, the indexed arm), which the same rule now leaves out.
 
+## 4ab. PRE-REGISTERED: does a line that says when, or a tool that says to call it, get a lesson opened? (2026-10-29)
+
+Written before any model call of this run. Issue #304.
+
+**Why.** §4aa found that a lesson named in one line kept its effect, and that the generator never
+ran `okl show` in 72 samples. §4r found once in 71 for an index of titles. So a lesson the line
+cannot carry in a sentence has no working path to the agent. Agent Skills use the same
+progressive disclosure, and their documentation names two things okl's second tier does not do.
+Each listed description says what the skill is for and when to use it: "The `description` is
+what Claude matches your request against when determining whether to trigger the Skill, so it
+must say both what the Skill does and when to use it" ([overview](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview)).
+And in Claude Code a skill is opened through a tool of its own, whose description says to call
+it first when a listed skill covers the task. okl's fetch is a shell command named in a header.
+
+**Instrument.** `evals/ab_harness.py` on the eight authored tasks, as in §4aa: one
+`okl check --decision tiered` result per task, with the governing lesson as the first entry under
+"Also matched" in every arm. The arms differ only in what each second-tier line says, and in how
+a lesson can be fetched (`restyled`, `generator_cmd`):
+
+- `line`: §4aa's line arm unchanged, `- [id] title — <first sentence of the fix>`. Held constant,
+  so its fetch count is this run's noise floor.
+- `titles`: `- [id] title`.
+- `when`: `- [id] title — when you see: <symptom>`. The symptom is used, else the first trigger,
+  cut at a word to 160 characters as the fix's sentence is.
+- `when-tool`: the `when` lines. The fetch is offered only as an MCP tool `okl_get`
+  (`evals/fetch_tool.py`), and the tool's description is the treatment: "Read one lesson the
+  briefing names, in full: what to do, why, and its proof. Call this before you write code
+  whenever a listed lesson's 'when you see' matches what you are about to write."
+
+`titles` to `when` isolates the wording; `when` to `when-tool` isolates the path. The first three
+arms fetch with `Bash(okl show:*)` through the logging shim. Every arm runs with
+`--strict-mcp-config`, so the only MCP server any arm can reach is the fetch tool, in its own arm.
+That is the one change to §4aa's instrument, which loaded whatever MCP servers the user's own
+configuration names (one, here, that offers no lesson). The fetch tool logs in the shim's format, so a fetch counts by either path only
+when it returned a lesson.
+
+Before any sample, the harness asks the generator, run as the arms run it, to fetch once by each
+path, and refuses to run unless both fetches are logged (`startup_refusal`). Two generations,
+not counted. Both paths passed this probe while the arms were built.
+
+Across the eight tasks, the `titles` briefings are 80% of `line`'s length and `when` is 102%. The
+generator is `claude -p --model sonnet`; the judge is `claude -p --model haiku`, blind to the
+arm. Three samples per task and arm: 96 generations and 96 judgments. The run is from a worktree
+pinned at the commit that adds this section, with this repo's store and config. The pre-flight
+passes all eight tasks under the tiered default (two as `line`), so no lesson is accepted
+missing.
+
+**Predictions.** The primary outcome is the generator fetching the governing lesson in a sample.
+
+1. `line` fetches it in at most 2 of 24 samples (§4aa: 0 of 24), and so does `titles` (§4r: 1 in
+   71).
+2. `when` fetches it in at least 3 more samples than `titles`.
+3. `when-tool` fetches it in at least 3 more samples than `when`.
+
+Defects are secondary and carry no prediction. Only `spa_tokens` and `ci_linter` can show them
+(§4aa: every baseline reproduction came from those two), so each arm has six informative samples.
+
+**What the run can settle.** Twenty-four samples an arm resolve only a large difference, so a
+difference smaller than 3 is read as none. If `line` fetches in more than 2, the noise floor is
+higher than §4aa measured, and predictions 2 and 3 count only differences larger than `line`'s
+count.
+
+**Falsifiers and what follows.**
+- If `when-tool` fetches the governing lesson in at least 6 of 24 samples and prediction 3 holds,
+  the tool is what gets a lesson opened. A confirmation run on tasks this generator still gets
+  wrong follows. Then the product's `okl_get` takes this description, and the second tier's
+  header names the tool before `okl show`.
+- If prediction 2 holds, the "when you see" wording goes to a confirmation run in the same way.
+- If every arm fetches in at most 2 of 24, a one-shot generator told to output only code opens
+  no lesson, whatever the line says or the path is. The second tier then has to carry the
+  instruction itself, as §4aa found it does, and the next test of fetching runs in a multi-turn
+  session under its own pre-registration.
+- If `titles` or `when` reproduces a defect in more than 3 of its 6 informative samples (half of
+  §4aa's baseline, 6 of 6), the fix's sentence is carrying the effect, and no line format drops
+  it.
+
+**Budget and stop.** One run of 96 generations and 96 judgments, plus the two probes. No rerun
+that tunes the wording or the description on these tasks. If the run cannot complete by
+2026-10-30, this section records why and nothing is concluded.
+
+### Result (2026-10-29)
+
+Receipt: `ab-20261029-0425.json`, at 5bd4cb4 from start to end, so the worktree did not move. 96
+runs, no failures. Both fetch paths passed the probe before the first sample.
+
+| arm | fetched the governing lesson | fetched anything | defect reproduced |
+|---|---|---|---|
+| `line` | 0 of 24 | 0 of 24 | 2 of 24 |
+| `titles` | 1 of 24 | 1 of 24 | 1 of 24 |
+| `when` | 0 of 24 | 0 of 24 | 2 of 24 |
+| `when-tool` | 1 of 24 | 1 of 24 | 2 of 24 |
+
+1. **Held.** `line` fetched it in none and `titles` in one, both at most 2.
+2. **Failed.** `when` fetched it in none, one fewer than `titles`, not three more.
+3. **Failed.** `when-tool` fetched it in one, one more than `when`, not three more.
+
+Every arm fetched in at most 2 of 24, so the reading registered for that case applies: a one-shot
+generator told to output only code almost never opens a lesson, whatever the line says or the path
+is. Here it opened the governing lesson in at most one of 24 samples per arm. Both fetches came
+from `spa_tokens`' first sample. In the `titles` arm the generator ran `okl show` on
+the governing lesson; in the `when-tool` arm it called `okl_get` on it and on one related lesson.
+Neither of those samples reproduced the defect. That is one sample each, so it is no rate.
+
+Every reproduction was in `spa_tokens` (`line` 2 of 3, `titles` 1, `when` 2, `when-tool` 2), and
+`ci_linter` was clean in every arm. No arm reproduced the defect in more than 3 of its 6
+informative samples, so the last falsifier did not fire. The run had no baseline arm, so this
+says only that dropping the fix's sentence did not cross the registered line, not that the title
+carries the effect.
+
+**What it does not show.**
+- Whether an agent working over several turns opens a lesson. That is the test registered next.
+- Whether the line's wording matters for a lesson whose title does not carry its fix. These eight
+  titles mostly state it: "Access tokens in localStorage are XSS-exfiltratable", "Pin every tool
+  that gates CI; an unpinned linter is a time-bomb".
+- Differences of one or two samples in 24, which are noise.
+- That a fetch was never attempted. Both paths count a fetch only when it returned a lesson, and
+  the per-sample logs went with the run's temporary directory.
+- Anything about `ci_linter`'s line formats. Its sibling `d_unpinned_linter` stays in full in
+  every arm with the same fix (§4aa, amended in review of #303), so its clean row can be the
+  sibling's.
+
+The run set `PYTHONPATH` to the worktree's `src`, so its subprocesses ran 5bd4cb4's code; the
+harness now refuses to run when they would not (exit 7).
+
+The generator also read the user's own settings files, as the receipt's command shows. Rules there
+approve commands such as `uv run …`, and the generator's environment carried `PYTHONPATH` and the
+store's URL, so a lesson could have been read by a command the shim never logs. The `when-tool`
+arm also kept the built-in tools. Claude Code kept the run's 196 sessions, and their tool calls
+settle it (`ab-20261029-0425-tool-calls.txt` lists every call). The only calls that reached a
+lesson were the five logged ones: two `okl show` and three `okl_get`, a probe of each path among
+them. Of the other 14, two loaded `okl_get`'s schema and 12 were Bash commands: the nine that
+looked up ruff's version were refused, and the three that ran listed the working directory. The
+harness now runs every tools-on generator `--restricted`, which reads no settings file, with Bash
+alone in the Bash arms and no built-in tool in `when-tool` (review on #305). The drift check now
+compares the generator as it ran, flags included, so a tools-on run is never quoted as the
+one-shot series.
+
+**What follows.** As registered:
+- The second tier keeps carrying the instruction itself: §4aa's line, the title and the first
+  sentence of the fix.
+- Neither the line format nor `okl_get`'s description changes.
+- The next test of fetching runs in a multi-turn session, under its own pre-registration.
+- §4aa's preflight counted a lesson named in one line as present. This run did not change that.
+
 ## 4ac. PRE-REGISTERED: Porter stemming in the index and the line (2026-10-29)
 
 Written before any stemmed run. Issue #258 planned "stemming and a symptom rule first"; the
@@ -2954,6 +3117,10 @@ latency lines moved, by a tenth of a millisecond.
 
 1. **Held.** On the selection split `stem` recalls 2.8 points more, and 4 more paraphrases.
 2. **Held.** The null test half is briefed in 3.4% and 4.1% of prompts, under 5% in both arms.
+   *Note, 2026-10-31 (review on #308):* the registration overstated the guarantee, here and in
+   "the same guaranteed null rate" above. Under exchangeability, split conformal keeps the null
+   rate at or under 5% on average over calibration draws, not in any one test half, so this
+   check was the measurement, not a formality. The registered text stands as written.
 3. **Held.** On the held-out split `stem` recalls 4.4 points more, 10 of them paraphrases. Ticket
    and bug-report rows rise or hold on both splits.
 
@@ -2979,6 +3146,10 @@ Written before any stem arm was pooled, judged or sized on real prompts.
 **Why.** §4ac found that Porter stemming raised the bench's recall at the same guaranteed null
 rate, and registered the next step: build it into the product and measure it on real prompts
 before the default changes. This section is that measurement.
+
+*Note, 2026-10-31:* "guaranteed" overstates it (§4ac's note under prediction 2). The conformal
+line holds the null rate at or under 5% on average over calibration draws, not in one run, and
+each run checks its own.
 
 **The treatment, as built.**
 

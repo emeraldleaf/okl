@@ -51,7 +51,16 @@ HOOK_COMMANDS = {
 }
 
 
-MCP_ENTRY = {"command": "okl", "args": ["mcp"]}
+# The MCP server starts through .claude/hooks/okl-mcp.sh, which finds okl in the hooks'
+# layers (#206): a bare "okl" failed with ENOENT in a session launched without the shell's
+# PATH. Claude Code sets CLAUDE_PROJECT_DIR in the server's environment, not its own, so the
+# shell reads it at start; `$VAR` without braces, because .mcp.json expands `${VAR}` itself,
+# when loading, where it is unset.
+MCP_ENTRY = {"command": "/bin/sh",
+             "args": ["-c", 'd=$CLAUDE_PROJECT_DIR; [ -n "$d" ] || d=.; exec "$d/.claude/hooks/okl-mcp.sh"']}
+# What okl wrote before: init upgrades it, uninstall still recognises it.
+LEGACY_MCP_ENTRIES = ({"command": "okl", "args": ["mcp"]},)
+MCP_LAUNCHER = Path(".claude/hooks/okl-mcp.sh")
 
 # The GitHub Actions drift workflow: where init installs it, and the copy okl ships.
 WORKFLOW = Path(".github") / "workflows" / "okl-verify.yml"
@@ -142,6 +151,7 @@ def _uninstall_files(act: str, dry_run: bool) -> list[str]:
     owned = [(Path(".claude/hooks/userpromptsubmit-okl-check.sh"),
               scaffold / "hooks" / "userpromptsubmit-okl-check.sh"),
              (Path(".claude/hooks/stop-okl-encode.sh"), scaffold / "hooks" / "stop-okl-encode.sh"),
+             (MCP_LAUNCHER, scaffold / "hooks" / "okl-mcp.sh"),
              (WORKFLOW, WORKFLOW_SRC)]
     hooks, _ = _git_hooks_dir()
     if hooks is not None:
@@ -218,7 +228,7 @@ def _uninstall_mcp(act: str, dry_run: bool) -> list[str]:
     servers = cfg.get("mcpServers") if isinstance(cfg, dict) else None
     if not (isinstance(servers, dict) and "okl" in servers):
         return []
-    if servers["okl"] != MCP_ENTRY:
+    if servers["okl"] not in (MCP_ENTRY, *LEGACY_MCP_ENTRIES):
         return [f"{path} okl server (changed from what okl wrote)"]
     del servers["okl"]
     if not dry_run:
@@ -547,10 +557,17 @@ def _install_claude_wiring(claude: Path, force: bool = False) -> None:
         return
     mcp_cfg = json.loads(mcp_path.read_text()) if mcp_path.exists() else {}
     servers = mcp_cfg.setdefault("mcpServers", {})
+    _place_owned(claude / "hooks" / MCP_LAUNCHER.name, (scaffold_hooks / MCP_LAUNCHER.name).read_text(),
+                 "MCP server launcher", force)
     if "okl" not in servers:
         servers["okl"] = dict(MCP_ENTRY)
         mcp_path.write_text(json.dumps(mcp_cfg, indent=2) + "\n")
         print("✓ registered okl MCP server → .mcp.json (okl_check, okl_search, okl_get, okl_record, okl_update, okl_retire)")
+    elif servers["okl"] in LEGACY_MCP_ENTRIES:
+        servers["okl"] = dict(MCP_ENTRY)
+        mcp_path.write_text(json.dumps(mcp_cfg, indent=2) + "\n")
+        print("✓ upgraded the okl MCP server in .mcp.json: it starts okl the way the hooks do, so a "
+              "session without your shell's PATH still has the okl tools")
 
 
 def _wire_drift_gates(cfg: dict, force: bool) -> None:

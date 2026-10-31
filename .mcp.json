@@ -1,5 +1,11 @@
 {
   "mcpServers": {
-    "okl": { "command": "okl", "args": ["mcp"] }
+    "okl": {
+      "command": "/bin/sh",
+      "args": [
+        "-c",
+        "d=$CLAUDE_PROJECT_DIR; [ -n \"$d\" ] || d=.; exec \"$d/.claude/hooks/okl-mcp.sh\""
+      ]
+    }
   }
 }

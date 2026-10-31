@@ -26,6 +26,9 @@ okl export --drift   # write okl-drift.json, the committed snapshot CI's drift g
                      #   CI reads the COMMITTED copy, and refuses an entry whose timestamp
                      #   does not match its verify evidence, so editing the timestamp alone
                      #   cannot clear it (editing both fields can; review is the guard).
+                     #   Every refresh refuses to drop a rule the committed copy holds and
+                     #   this store does not (another clone's), or to write one for another
+                     #   repo, and names them; --allow-shrink writes it anyway.
 okl doctor           # names other agent-memory tools installed beside okl (claude-mem,
                      #   agentmemory, ECC, beads) and how each collides with okl's hooks,
                      #   and whether the pre-push drift gate is installed and CI gates
@@ -43,7 +46,7 @@ okl metric           # recurrence: defect classes that came back, split by wheth
                      #   whose title, symptom or fix names one repository's world),
                      #   each with its denominator and the lessons it flags
 okl embed            # build or refresh one local vector per record for --hybrid briefings
-                     #   (needs the `hybrid` extra; downloads a 249 MB static model once;
+                     #   (needs the `hybrid` extra; downloads a 131 MB static model once;
                      #   re-embeds only records whose text changed). Off by default: a check
                      #   never reaches the network for it, and without the extra, the model or
                      #   the vectors the briefing is the full-text one and the JSON says why.
@@ -59,8 +62,8 @@ okl check --near-misses
 okl check --rerank   # reorder the first 24 candidates (fused when --hybrid is on) by a local
                      #   cross-encoder's score for the (task, record) pair before the gates;
                      #   `"rerank": true` in .okl/config.json or OKL_RERANK=1 turns it on for
-                     #   every check. Needs the `rerank` extra and `okl embed` once online (an
-                     #   80 MB ONNX model). Measured and shipped off (REPORT §4t): one held-out
+                     #   every check. Needs the `rerank` extra and `okl embed` once online (a
+                     #   92 MB ONNX model). Measured and shipped off (REPORT §4t): one held-out
                      #   paraphrase in, one bug report out, 0.5 s a check.
 okl check --decision floor
                      # how candidates become a briefing. The default, tiered, shows in full what

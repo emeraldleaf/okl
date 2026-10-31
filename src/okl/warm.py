@@ -40,7 +40,7 @@ fcntl: Any = importlib.import_module("fcntl") if importlib.util.find_spec("fcntl
 
 BASE_MODEL = "google/embeddinggemma-300m"
 # The int8 file of the same model: 92.0% recall on the benchmark's selection split against full
-# precision's 92.4%, and a quarter of the download, 309 MB against 1,235 MB
+# precision's 92.4%, and a quarter of the download, 309.5 MB against 1,235 MB
 # (warm-model-files-20261029.txt). Encoding a prompt takes about as long (170.7 ms against 173.5
 # in the benchmark's receipts; REPORT §4z's erratum).
 MODEL_ID = BASE_MODEL + "-quantized"

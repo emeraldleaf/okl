@@ -504,7 +504,7 @@ TRIGGERS_WEIGHT = 4.0
 FTS_TOKENIZE = "unicode61"
 _FTS_COLS = "id UNINDEXED, title, body, symptom, fix, tags, aliases, triggers"
 
-_NODE_COLS =["id", "type", "scope", "repo", "title", "body", "status",
+_NODE_COLS = ["id", "type", "scope", "repo", "title", "body", "status",
               "found_by", "verified_at", "ttl_days", "owner", "files",
               "symptom", "fix", "tags", "verified_by", "applies_to", "verified_commit",
               "aliases", "triggers", "created_at"]

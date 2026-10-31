@@ -37,7 +37,7 @@ benchmark built to decide (REPORT §4w; the design and its evidence:
   stderr what triggers do; the Stop hook, `/record` and the encoding-loop skill ask for them.
 - **Upgrading: run `okl seed --refresh`, then `/triggers`.** `okl seed --refresh` brings the
   bundled packs' triggers into a store seeded before them, without importing the rest of each
-  pack. Lessons you recorded have no triggers until you add them, and the default briefs them
+  pack, and keeps what you added to those lessons (#214, below). Lessons you recorded have no triggers until you add them, and the default briefs them
   only when a prompt shares three words with their title, symptom or aliases. On a real store
   it found 3 of 55 applying recorded lessons that way (REPORT §4x). `/triggers` drafts them
   (`okl triggers` lists them; `okl update <id> --trigger "..."` adds one by hand). Until both
@@ -80,13 +80,38 @@ benchmark built to decide (REPORT §4w; the design and its evidence:
   alternative measured on it is in REPORT §4w, the ones that lost included: two current
   cross-encoder rerankers as the decision, five embedding models and two late-interaction
   models.
+- **`okl seed` keeps what a pack leaves out, and never stamps a lesson** (#214). A re-seed
+  rewrote every field and blanked those the pack does not set, so `files` and triggers added
+  with `okl update` went, and with the files their proof, leaving drift nothing to check. After
+  a re-seed that changed a lesson's files, the next one also dropped its stored check. Now the
+  pack owns what it says, a field it sets empty (`"files": ""`) is cleared, and its silence keeps
+  the store's value, a status included; the stored check stays while the files do; and a pack's `"verified": true` stamps only a lesson new to the store.
+- **The drift snapshot refuses to lose rules** (#213). The store is per clone, so a teammate's
+  `okl verify` rewrote `okl-drift.json` without the rules held only by another clone, and they
+  left CI's gate unannounced; a worktree with no `.okl/config.json` wrote one for a repo named
+  after its folder. Every refresh now compares with the committed snapshot and refuses to drop
+  a rule this store does not hold, or to change its repo, naming them; a committed snapshot it
+  cannot read is refused too, not read as none. Retiring a lesson still
+  takes it out. `okl export --drift --allow-shrink` writes it anyway.
+- **The okl MCP server starts without your shell's PATH** (#206). `.mcp.json` named a bare
+  `okl`, so a Claude Code session launched from an IDE had no okl tools ("Executable not found
+  in $PATH: okl") while its hooks worked. The server now starts through
+  `.claude/hooks/okl-mcp.sh`, which finds okl as the hooks do, from the path `okl init` pinned;
+  the plugin starts its copy. Re-run `okl init` to upgrade an existing `.mcp.json`.
+- **The person's line says what the tiered default did.** It said "4 more listed by title" about
+  a list only the agent sees; it says "4 related listed for the agent". With nothing in full, it
+  no longer calls candidates below the line "weak matches on a single word", the floor's words.
+- **The pipeline diagrams fit their page.** The semantic-arm diagram ran its title, subtitle and
+  stage 6 heading past the right edge, and every stage's count sat against its text. The
+  generator now estimates each line's width and refuses one that would not fit, and a test
+  draws that layout where the embedding model is absent, as in CI.
 - **Stemming, measured and not adopted** (REPORT §4ac, §4ad). With Porter stemming in the
   full-text index and in the line's words, the benchmark's held-out recall rose from 90.0% to
-  94.4% at the same guaranteed rate on prompts with no subject. Built into the product and
-  measured on real prompts, it named 17.5% more lessons a prompt with the warm model on, past
-  the pre-registered 15%, and showed fewer in full without it, so the default stays unstemmed.
-  It stays as a setting, off (`store.FTS_TOKENIZE`): a store whose index was built with another
-  tokenizer rebuilds it once when opened.
+  94.4%, each arm's line set for the same 5% rate on prompts with no subject. Built into the
+  product and measured on real prompts, it named 17.5% more lessons a prompt with the warm
+  model on, past the pre-registered 15%, and showed fewer in full without it, so the default
+  stays unstemmed. It stays as a setting, off (`store.FTS_TOKENIZE`): a store whose index was
+  built with another tokenizer rebuilds it once when opened.
 
 ## 0.9.0
 

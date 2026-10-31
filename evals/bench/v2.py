@@ -55,8 +55,8 @@ STEM = False
 
 def set_stem(on: bool) -> None:
     """Stem the line's words, and build the corpus store's index with the Porter tokenizer, or
-    neither. The product stems by default (store.FTS_TOKENIZE, REPORT §4ad), so an unstemmed arm
-    has to say so before its store is built."""
+    neither. The product's default is unstemmed (store.FTS_TOKENIZE, REPORT §4ad); each arm sets
+    it before its store is built, so the arm decides, not the default."""
     global STEM
     STEM = on
     okl_store.FTS_TOKENIZE = "porter unicode61" if on else "unicode61"
