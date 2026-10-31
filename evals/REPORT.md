@@ -2893,6 +2893,150 @@ series (no briefing against the live briefing), so `tests/test_docs.py` pools on
 arms are those two. This one moves none of the published figures, and neither does §4r's
 (`ab-20261023-1303.json`, the indexed arm), which the same rule now leaves out.
 
+## 4ab. PRE-REGISTERED: does a line that says when, or a tool that says to call it, get a lesson opened? (2026-10-29)
+
+Written before any model call of this run. Issue #304.
+
+**Why.** §4aa found that a lesson named in one line kept its effect, and that the generator never
+ran `okl show` in 72 samples. §4r found once in 71 for an index of titles. So a lesson the line
+cannot carry in a sentence has no working path to the agent. Agent Skills use the same
+progressive disclosure, and their documentation names two things okl's second tier does not do.
+Each listed description says what the skill is for and when to use it: "The `description` is
+what Claude matches your request against when determining whether to trigger the Skill, so it
+must say both what the Skill does and when to use it" ([overview](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview)).
+And in Claude Code a skill is opened through a tool of its own, whose description says to call
+it first when a listed skill covers the task. okl's fetch is a shell command named in a header.
+
+**Instrument.** `evals/ab_harness.py` on the eight authored tasks, as in §4aa: one
+`okl check --decision tiered` result per task, with the governing lesson as the first entry under
+"Also matched" in every arm. The arms differ only in what each second-tier line says, and in how
+a lesson can be fetched (`restyled`, `generator_cmd`):
+
+- `line`: §4aa's line arm unchanged, `- [id] title — <first sentence of the fix>`. Held constant,
+  so its fetch count is this run's noise floor.
+- `titles`: `- [id] title`.
+- `when`: `- [id] title — when you see: <symptom>`. The symptom is used, else the first trigger,
+  cut at a word to 160 characters as the fix's sentence is.
+- `when-tool`: the `when` lines. The fetch is offered only as an MCP tool `okl_get`
+  (`evals/fetch_tool.py`), and the tool's description is the treatment: "Read one lesson the
+  briefing names, in full: what to do, why, and its proof. Call this before you write code
+  whenever a listed lesson's 'when you see' matches what you are about to write."
+
+`titles` to `when` isolates the wording; `when` to `when-tool` isolates the path. The first three
+arms fetch with `Bash(okl show:*)` through the logging shim. Every arm runs with
+`--strict-mcp-config`, so the only MCP server any arm can reach is the fetch tool, in its own arm.
+That is the one change to §4aa's instrument, which loaded whatever MCP servers the user's own
+configuration names (one, here, that offers no lesson). The fetch tool logs in the shim's format, so a fetch counts by either path only
+when it returned a lesson.
+
+Before any sample, the harness asks the generator, run as the arms run it, to fetch once by each
+path, and refuses to run unless both fetches are logged (`startup_refusal`). Two generations,
+not counted. Both paths passed this probe while the arms were built.
+
+Across the eight tasks, the `titles` briefings are 80% of `line`'s length and `when` is 102%. The
+generator is `claude -p --model sonnet`; the judge is `claude -p --model haiku`, blind to the
+arm. Three samples per task and arm: 96 generations and 96 judgments. The run is from a worktree
+pinned at the commit that adds this section, with this repo's store and config. The pre-flight
+passes all eight tasks under the tiered default (two as `line`), so no lesson is accepted
+missing.
+
+**Predictions.** The primary outcome is the generator fetching the governing lesson in a sample.
+
+1. `line` fetches it in at most 2 of 24 samples (§4aa: 0 of 24), and so does `titles` (§4r: 1 in
+   71).
+2. `when` fetches it in at least 3 more samples than `titles`.
+3. `when-tool` fetches it in at least 3 more samples than `when`.
+
+Defects are secondary and carry no prediction. Only `spa_tokens` and `ci_linter` can show them
+(§4aa: every baseline reproduction came from those two), so each arm has six informative samples.
+
+**What the run can settle.** Twenty-four samples an arm resolve only a large difference, so a
+difference smaller than 3 is read as none. If `line` fetches in more than 2, the noise floor is
+higher than §4aa measured, and predictions 2 and 3 count only differences larger than `line`'s
+count.
+
+**Falsifiers and what follows.**
+- If `when-tool` fetches the governing lesson in at least 6 of 24 samples and prediction 3 holds,
+  the tool is what gets a lesson opened. A confirmation run on tasks this generator still gets
+  wrong follows. Then the product's `okl_get` takes this description, and the second tier's
+  header names the tool before `okl show`.
+- If prediction 2 holds, the "when you see" wording goes to a confirmation run in the same way.
+- If every arm fetches in at most 2 of 24, a one-shot generator told to output only code opens
+  no lesson, whatever the line says or the path is. The second tier then has to carry the
+  instruction itself, as §4aa found it does, and the next test of fetching runs in a multi-turn
+  session under its own pre-registration.
+- If `titles` or `when` reproduces a defect in more than 3 of its 6 informative samples (half of
+  §4aa's baseline, 6 of 6), the fix's sentence is carrying the effect, and no line format drops
+  it.
+
+**Budget and stop.** One run of 96 generations and 96 judgments, plus the two probes. No rerun
+that tunes the wording or the description on these tasks. If the run cannot complete by
+2026-10-30, this section records why and nothing is concluded.
+
+### Result (2026-10-29)
+
+Receipt: `ab-20261029-0425.json`, at 5bd4cb4 from start to end, so the worktree did not move. 96
+runs, no failures. Both fetch paths passed the probe before the first sample.
+
+| arm | fetched the governing lesson | fetched anything | defect reproduced |
+|---|---|---|---|
+| `line` | 0 of 24 | 0 of 24 | 2 of 24 |
+| `titles` | 1 of 24 | 1 of 24 | 1 of 24 |
+| `when` | 0 of 24 | 0 of 24 | 2 of 24 |
+| `when-tool` | 1 of 24 | 1 of 24 | 2 of 24 |
+
+1. **Held.** `line` fetched it in none and `titles` in one, both at most 2.
+2. **Failed.** `when` fetched it in none, one fewer than `titles`, not three more.
+3. **Failed.** `when-tool` fetched it in one, one more than `when`, not three more.
+
+Every arm fetched in at most 2 of 24, so the reading registered for that case applies: a one-shot
+generator told to output only code almost never opens a lesson, whatever the line says or the path
+is. Here it opened the governing lesson in at most one of 24 samples per arm. Both fetches came
+from `spa_tokens`' first sample. In the `titles` arm the generator ran `okl show` on
+the governing lesson; in the `when-tool` arm it called `okl_get` on it and on one related lesson.
+Neither of those samples reproduced the defect. That is one sample each, so it is no rate.
+
+Every reproduction was in `spa_tokens` (`line` 2 of 3, `titles` 1, `when` 2, `when-tool` 2), and
+`ci_linter` was clean in every arm. No arm reproduced the defect in more than 3 of its 6
+informative samples, so the last falsifier did not fire. The run had no baseline arm, so this
+says only that dropping the fix's sentence did not cross the registered line, not that the title
+carries the effect.
+
+**What it does not show.**
+- Whether an agent working over several turns opens a lesson. That is the test registered next.
+- Whether the line's wording matters for a lesson whose title does not carry its fix. These eight
+  titles mostly state it: "Access tokens in localStorage are XSS-exfiltratable", "Pin every tool
+  that gates CI; an unpinned linter is a time-bomb".
+- Differences of one or two samples in 24, which are noise.
+- That a fetch was never attempted. Both paths count a fetch only when it returned a lesson, and
+  the per-sample logs went with the run's temporary directory.
+- Anything about `ci_linter`'s line formats. Its sibling `d_unpinned_linter` stays in full in
+  every arm with the same fix (§4aa, amended in review of #303), so its clean row can be the
+  sibling's.
+
+The run set `PYTHONPATH` to the worktree's `src`, so its subprocesses ran 5bd4cb4's code; the
+harness now refuses to run when they would not (exit 7).
+
+The generator also read the user's own settings files, as the receipt's command shows. Rules there
+approve commands such as `uv run …`, and the generator's environment carried `PYTHONPATH` and the
+store's URL, so a lesson could have been read by a command the shim never logs. The `when-tool`
+arm also kept the built-in tools. Claude Code kept the run's 196 sessions, and their tool calls
+settle it (`ab-20261029-0425-tool-calls.txt` lists every call). The only calls that reached a
+lesson were the five logged ones: two `okl show` and three `okl_get`, a probe of each path among
+them. Of the other 14, two loaded `okl_get`'s schema and 12 were Bash commands: the nine that
+looked up ruff's version were refused, and the three that ran listed the working directory. The
+harness now runs every tools-on generator `--restricted`, which reads no settings file, with Bash
+alone in the Bash arms and no built-in tool in `when-tool` (review on #305). The drift check now
+compares the generator as it ran, flags included, so a tools-on run is never quoted as the
+one-shot series.
+
+**What follows.** As registered:
+- The second tier keeps carrying the instruction itself: §4aa's line, the title and the first
+  sentence of the fix.
+- Neither the line format nor `okl_get`'s description changes.
+- The next test of fetching runs in a multi-turn session, under its own pre-registration.
+- §4aa's preflight counted a lesson named in one line as present. This run did not change that.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

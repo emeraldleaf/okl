@@ -8,6 +8,7 @@ the suite deaf to those variables. Tests that need a store name one explicitly.
 """
 import json
 import shutil
+import subprocess
 import tempfile
 from pathlib import Path
 
@@ -18,11 +19,16 @@ STORE_VARS = ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN")
 # them, and a test that asserts a default must see the default (review on #299).
 BRIEFING_VARS = ("OKL_DECISION", "OKL_HYBRID", "OKL_RERANK", "OKL_WARM", "OKL_QUIET",
                  "OKL_BRIEFING_LIMIT", "OKL_BRIEFING_COMPACT")
+# The variables that locate a git repository, as git names them. Run from inside a git hook
+# they are set, and a test that makes a repository under tmp_path would commit to and read the
+# caller's instead (review on #305).
+GIT_REPO_VARS = tuple(subprocess.run(["git", "rev-parse", "--local-env-vars"], capture_output=True,
+                                     text=True).stdout.split())
 
 
 @pytest.fixture(autouse=True)
 def _no_real_store(monkeypatch):
-    for var in (*STORE_VARS, *BRIEFING_VARS):
+    for var in (*STORE_VARS, *BRIEFING_VARS, *GIT_REPO_VARS):
         monkeypatch.delenv(var, raising=False)
     # The warm model's socket and the records beside it (`okl warm stop`, the last start) are
     # per user, in ~/.cache/okl: a test must neither reach a developer's running server nor read
