@@ -40,7 +40,7 @@ def main() -> None:
     ap.add_argument("--stem", action="store_true",
                     help="Porter stemming in the index and in the line's word matching (REPORT §4ac)")
     args = ap.parse_args()
-    v2.STEM = args.stem
+    v2.set_stem(args.stem)
     score = v2.SCORES[args.score]
     queries = [json.loads(x) for x in bench.QUERIES.read_text().splitlines() if x.strip()]
     if args.split != "all":
@@ -51,8 +51,6 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory() as tmp:
         store = bench.build_corpus(Path(tmp))
-        if args.stem:
-            bench.porter_index(store)
         n_trig = bench.load_triggers(store, args.triggers) if args.triggers else 0
         index = v2.build_index(store)
         commit = subprocess.run(["git", "rev-parse", "--short=12", "HEAD"], capture_output=True, text=True,

@@ -54,19 +54,6 @@ def is_calibration(prompt: dict) -> bool:
     return int(hashlib.sha256(prompt["id"].encode()).hexdigest(), 16) % 2 == 0
 
 
-def porter_index(store: Store) -> None:
-    """Rebuild the corpus store's full-text index with FTS5's Porter tokenizer (REPORT §4ac): the
-    change the product would make, as a migration would make it, on the bench's own store."""
-    c = store._impl.conn
-    c.execute("DROP TABLE node_fts")
-    c.execute("CREATE VIRTUAL TABLE node_fts USING fts5(id UNINDEXED, title, body, symptom, fix, "
-              "tags, aliases, triggers, tokenize='porter unicode61')")
-    c.execute("INSERT INTO node_fts(id, title, body, symptom, fix, tags, aliases, triggers) "
-              "SELECT id, coalesce(title,''), coalesce(body,''), coalesce(symptom,''), coalesce(fix,''), "
-              "replace(coalesce(tags,''), ',', ' '), coalesce(aliases,''), coalesce(triggers,'') FROM node")
-    c.commit()
-
-
 def build_corpus(where: Path) -> Store:
     """A store holding every seed pack, built in `where`, without triggers.
 

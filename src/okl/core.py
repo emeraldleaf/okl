@@ -332,15 +332,31 @@ def _attach_named(out: dict[str, Any], store: Store, buckets: dict[str, list[dic
             key=lambda e: e["title"].lower())
 
 
+@functools.lru_cache(maxsize=4096)
+def _words_in(text: str, stemmed: bool) -> frozenset[str]:
+    """decide.words, cached: the floor asks it of every live record for every subject word.
+    `stemmed` is part of the key because decide.words reads the setting when called."""
+    return frozenset(decide.words(text))
+
+
 def _matched_terms(terms: list[str], n: Node) -> list[str]:
     """The task's lower-cased subject words that occur whole in the record's prose.
 
-    Whole-word, with letters and digits as word characters, which is how the FTS5
-    `unicode61` tokenizer splits text: `OKL_DATABASE_URL` is three words to both.
+    Whole-word, with letters and digits as word characters, which is how the FTS5 tokenizer
+    splits text: `OKL_DATABASE_URL` is three words to both. A word matches another form of
+    itself when the index stems (decide.keys): a lesson the search found by "migration" for
+    "migrations" shares that word, rather than being counted weak (REPORT §4ad).
     """
-    text = " ".join(x or "" for x in (n.title, n.symptom, n.aliases, n.body, n.fix, n.tags)).lower()
-    return [t for t in terms
-            if re.search(r"(?<![a-z0-9])" + re.escape(t) + r"(?![a-z0-9])", text)]
+    have = _words_in(" ".join(x or "" for x in (n.title, n.symptom, n.aliases, n.body, n.fix, n.tags)),
+                     decide.stemmed())
+    k = decide.keys(terms)
+    return [t for t in terms if k[t] in have]
+
+
+def _distinct(words: list[str]) -> int:
+    """How many words `words` are as okl matches them: two forms of one stem are one word, as the
+    line counts them (decide.score), so "migrate" and "migrations" are not two (review on #309)."""
+    return len(set(decide.keys(words).values()))
 
 
 def _in_subject(words: list[str], n: Node) -> bool:
@@ -360,14 +376,19 @@ def _in_subject(words: list[str], n: Node) -> bool:
 
 def _subject_words(words: list[str], n: Node) -> list[str]:
     """The words among `words` that occur whole in the record's title or symptom."""
-    subject = " ".join(x or "" for x in (n.title, n_symptom(n))).lower()
-    return [w for w in words if re.search(r"(?<![a-z0-9])" + re.escape(w) + r"(?![a-z0-9])", subject)]
+    have = _words_in(f"{n.title or ''} {n_symptom(n)}", decide.stemmed())
+    k = decide.keys(words)
+    return [w for w in words if k[w] in have]
 
 
 def _alias_words(words: list[str], n: Node) -> list[str]:
-    """The words among `words` that are one of the record's one-word aliases."""
+    """The words among `words` that are one of the record's one-word aliases (by stem, when the
+    index stems; an alias with punctuation in it is never one word)."""
     single = {a.strip().lower() for a in (n.aliases or "").split(";") if a.strip() and " " not in a.strip()}
-    return [w for w in words if w in single]
+    ka = decide.keys(a for a in single if a.isalnum())
+    aliases = {ka.get(a, a) for a in single}
+    k = decide.keys(words)
+    return [w for w in words if k[w] in aliases]
 
 
 def _subject_admits(words: list[str], n: Node, is_common: Callable[[str], bool]) -> bool:
@@ -414,7 +435,7 @@ def _apply_floor(store: Store, hits: list[Node], terms: list[str],
     # A one-word task keeps §4n's rule: its word is the whole subject and admits on its own,
     # common or not. §4v's common-word weighting covers the one-word match inside a longer
     # task only; no probe prompt has one subject word, so extending it is unmeasured (#282).
-    floor = 2 if len(words) >= 2 else 1
+    floor = 2 if _distinct(words) >= 2 else 1
     near = cand.scores if cand else {}
     lexical = cand.lexical if cand else frozenset(n.id for n in hits)
     matched = {n.id: _matched_terms(words, n) for n in hits}
@@ -422,10 +443,10 @@ def _apply_floor(store: Store, hits: list[Node], terms: list[str],
     is_common = _common_word_test(store, share) if share is not None else (lambda _w: False)
     strong = {n.id for n in hits
               if near.get(n.id, 0.0) >= semantic.SUBJECT_SIMILARITY
-              or (n.id in lexical and (len(matched[n.id]) >= floor
+              or (n.id in lexical and (_distinct(matched[n.id]) >= floor
                                        or bool(matched[n.id]) and _subject_admits(matched[n.id], n, is_common)))
               or (n.id not in lexical and SEMANTIC_WORD_FLOOR is not None
-                  and len(matched[n.id]) >= max(SEMANTIC_WORD_FLOOR, floor))}
+                  and _distinct(matched[n.id]) >= max(SEMANTIC_WORD_FLOOR, floor))}
     if not strong:
         # No hit to link to, so no neighbour lookup can rescue one (review on #259).
         return [], matched, len(hits)
