@@ -3243,6 +3243,108 @@ lessons (three excluded, one with no event) logged 11 more.
 
   Each of those needs its own pre-registration.
 
+## 4af. PRE-REGISTERED: what does drift catch? Each watched lesson broken on purpose (2026-10-31)
+
+Written before any patch is generated and before any check of this run. Follows §4ae, which
+measured drift's precision and could not measure its recall: committed history held one break.
+
+**Why.** §4ae found that drift's red almost never meant a broken commit (4 of 1,854 events). The
+question left is the one that would justify its cost: when a lesson is broken, does drift say so,
+and would CI have said so anyway? History cannot answer it, so this run breaks the lessons on
+purpose.
+
+**Population.** The 16 lessons in `okl-drift.json` at the commit that adds this section (BASE).
+The same three as in §4ae answer from outside the commit: one reads live GitHub settings, and two
+run the preflight, which reads the lesson store. That leaves 13 lessons. Each one's check must
+pass at BASE, run as below; a lesson whose check does not is reported and left out.
+
+**Patches.** Six per lesson, 78 in all, each a change to the repository at BASE:
+- **Four breaking.** `claude -p --model sonnet --restricted` runs in a scratch worktree at BASE,
+  with the tools Read, Grep, Glob and Edit, and edits confined to that worktree. It is given the
+  lesson's title, symptom and fix. It is asked for one realistic change a contributor might make
+  in the course of other work, after which the lesson's claim is no longer true of the
+  repository. It is not given the lesson's check or its governed files, and `okl-drift.json` is
+  removed from its worktree, so it cannot read them there. Each of the four is told the files the
+  earlier ones changed and asked for a different change.
+- **Two harmless, the negative control.** The same, except that it is told the lesson's governed
+  files and asked for a realistic change to one of them that keeps the claim true.
+
+Every patch is committed with the receipt, as a diff.
+
+**Ground truth.** `claude -p --model opus --restricted --tools ""` judges each patch. It sees the
+lesson's title, symptom and fix and the patch's diff, never the check or any verdict, and answers
+whether the lesson's claim is false of the repository after the change: broken, intact or unsure.
+A breaking patch counts as a break only when the judge says broken. A harmless patch counts as a
+control only when it says intact. The rest are reported and not used.
+
+**Per patch.** One scratch worktree at BASE with the patch applied. Everything runs as §4ae runs
+a check: through a shell, passing on exit 0 with the expected text, with that tree's `src` first on
+`PYTHONPATH` and no `OKL_` or git-location variable set.
+- **Red:** the patch changes a file the lesson governs, so drift goes red.
+- **Check:** the lesson's check passes or fails.
+- **CI:** the mechanical steps of `ci.yml`'s lint-and-test job. They are `ruff check .`,
+  `mypy src/okl`, `lint-imports`, `pytest -q`, `ci/check-diagram-figures.sh` and
+  `bash gates/run-gates.sh`, and CI fails when any of them does. Run for breaking patches only.
+
+A break is **caught by drift** when it is red and its check fails. A miss is a **coverage miss**
+when drift stays green (the break is outside the governed files), and a **sensitivity miss** when
+drift is red and the check passes.
+
+**Measures.**
+1. **Catch rate:** caught / breaks. It has a Wilson 95% interval and a 95% bootstrap that
+   resamples lessons, since one lesson's patches are not independent.
+2. **Misses,** coverage and sensitivity, counted.
+3. **Against CI,** reported separately for two groups: the three lessons whose check CI already
+   runs (`lint-imports` and two `pytest -k` selections), and the other ten. For each group, the
+   breaks drift catches and CI does not (*drift only*), both, CI only, and neither.
+4. **The control's false failures:** harmless patches whose check fails, of the controls.
+5. **Per lesson,** all of the above in one table.
+
+**Predictions.**
+1. The catch rate is at least 0.5.
+2. Sensitivity misses outnumber coverage misses. Where drift misses, the check is narrower than
+   the lesson more often than the break lies outside its files.
+3. For the three lessons CI runs, CI fails on every break drift catches.
+4. For the other ten, CI fails on fewer than half of the breaks drift catches.
+5. At most 2 of the 26 harmless patches fail their check.
+
+**What the run can settle, and what it cannot.**
+- **The breaks are aimed.** Each is written to break one lesson, while a real break is incidental.
+  So the catch rate answers "when a lesson is broken, does drift say so". It does not say how
+  often lessons break, or what a typical break looks like.
+- **The judge stands in for the truth.** §4ae found it weaker than a check on one kind of break,
+  a deletion inside a long diff. These patches are small, and every judgment is in the receipt.
+- **CI here is this Mac.** It runs Python 3.11, without the Postgres service CI tests against
+  (those tests skip), the model-run architecture review or the secret scan.
+- **One breaker model, one repository, 13 lessons.**
+
+**Falsifiers and what follows.**
+- **If prediction 3 holds,** drift adds nothing to CI for those three lessons. Following the
+  repo's own rule (#39), their governed files are dropped, filed with this receipt.
+- **If the catch rate is at least 0.5 and drift only is at least a quarter of the ten lessons'
+  breaks,** drift catches what nothing else does. The follow-up is the alarm change: re-check
+  automatically on red, and alarm only on a failed check. It is filed with this receipt.
+- **If the catch rate is below 0.5,** the table names each miss's cause. Sensitivity misses go
+  to the lessons' checks (#189), and coverage misses to their governed files. Until a re-run
+  after those fixes reaches 0.5, the docs describe drift as bookkeeping, not detection.
+- **If drift only is under a tenth of the ten lessons' breaks,** CI already catches what drift
+  catches. The drift gate is then proposed for removal, in favour of a scheduled re-run of the
+  checks (#231 is the clock half of it).
+- **Otherwise,** no follow-up fires, and the result is reported as it stands.
+- **Counts only, no rate:** if the judge confirms fewer than half of the 52 breaking patches, or
+  more than 20% of patches do not apply or time out.
+- **If more than 2 controls fail their check,** a failed check is not evidence of a break for
+  those lessons, and their catches are reported apart.
+
+**Budget and stop.**
+- **Runs:** 78 breaker sessions of at most 300 seconds each, 78 judge calls, one check per
+  patch, and about 52 local CI runs of a few minutes each.
+- **The instrument,** `evals/drift_mutate.py`, is committed before any patch is generated. The
+  receipt names its commit, and any difference from this section is reported as a deviation.
+- **Fixed once a verdict is read:** the population, the prompts and the rules.
+- **Deadline:** if the run cannot complete by 2026-11-14, this section records why, and nothing
+  is concluded.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
