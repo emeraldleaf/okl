@@ -503,6 +503,17 @@ TRIGGERS_WEIGHT = 4.0
 # rule's 15%, so it stays a setting, off.
 FTS_TOKENIZE = "unicode61"
 _FTS_COLS = "id UNINDEXED, title, body, symptom, fix, tags, aliases, triggers"
+_TOKENIZE = re.compile(r"""tokenize\s*=\s*(?:'([^']*)'|"([^"]*)"|(\w+)\s*[,)])""", re.I)
+
+
+def fts_tokenizer(sql: str) -> str | None:
+    """The tokenizer a full-text table's definition names: unicode61 when it names none (FTS5's
+    default), None when it names one in a form this cannot read. SQLite takes the value
+    single-quoted, double-quoted or bare (review on #309)."""
+    if not re.search(r"\btokenize\b", sql, re.I):
+        return "unicode61"
+    m = _TOKENIZE.search(sql)
+    return next(g for g in m.groups() if g is not None).strip() if m else None
 
 _NODE_COLS = ["id", "type", "scope", "repo", "title", "body", "status",
               "found_by", "verified_at", "ttl_days", "owner", "files",
@@ -640,12 +651,12 @@ class _SQLiteBackend(_Backend):
 
     def _fts_stale(self) -> bool:
         """Whether the full-text index lacks a column or was built with another tokenizer than
-        FTS_TOKENIZE (one built before the setting existed has none, so unicode61)."""
+        FTS_TOKENIZE (one built before the setting existed has none, so unicode61). A tokenizer
+        this cannot read counts as another, so the index is rebuilt rather than trusted."""
         cols = {r[1] for r in self.conn.execute("PRAGMA table_info(node_fts)").fetchall()}
         row = self.conn.execute("SELECT sql FROM sqlite_master WHERE name='node_fts'").fetchone()
-        built = re.search(r"tokenize\s*=\s*'([^']*)'", row[0] if row else "")
         return (not {"symptom", "tags", "aliases", "triggers"} <= cols
-                or (built.group(1) if built else "unicode61") != FTS_TOKENIZE)
+                or fts_tokenizer(row[0] if row else "") != FTS_TOKENIZE)
 
     def upsert_node(self, node: Node) -> None:
         with self._lock:

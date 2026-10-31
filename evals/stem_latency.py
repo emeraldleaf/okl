@@ -18,7 +18,6 @@ from __future__ import annotations
 import contextlib
 import json
 import os
-import re
 import sqlite3
 import statistics
 import subprocess
@@ -30,6 +29,9 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 PRIVATE = REPO / "evals" / "bench" / "private"
+sys.path.insert(0, str(REPO / "src"))
+from okl.client import _find_config  # noqa: E402 - the client's own rule for which config applies
+from okl.store import fts_tokenizer  # noqa: E402
 
 # Each setting enters the CLI through the same `python -c`, so both pay the same start-up.
 RUN = "import runpy, sys; sys.argv[0] = 'okl'; runpy.run_module('okl', run_name='__main__', alter_sys=True)"
@@ -45,10 +47,7 @@ def index_tokenizer(db: Path) -> str | None:
     and its timings would measure neither setting (review on #309)."""
     with contextlib.closing(sqlite3.connect(db)) as c:
         row = c.execute("SELECT sql FROM sqlite_master WHERE name = 'node_fts'").fetchone()
-    if not row:
-        return None
-    built = re.search(r"tokenize\s*=\s*'([^']*)'", row[0])
-    return built.group(1) if built else "unicode61"
+    return fts_tokenizer(row[0]) if row else None
 
 
 def store_copy(live: Path, where: Path, setting: str, env: dict[str, str]) -> Path:
@@ -73,15 +72,30 @@ def store_copy(live: Path, where: Path, setting: str, env: dict[str, str]) -> Pa
 def child_env(repo: Path = REPO) -> dict[str, str]:
     """The environment every run gets: this checkout's code, no briefing log, and nothing that
     picks a store or a service, so each run reads only the copy it is handed. A service named in
-    the environment or the checkout's config makes the client go remote whatever OKL_DATABASE_URL
+    the environment or the config the client finds makes it go remote whatever OKL_DATABASE_URL
     says, and both arms would time the service (review on #309)."""
-    cfg = repo / ".okl" / "config.json"
-    if cfg.exists() and json.loads(cfg.read_text()).get("service_url"):
+    cfg = _find_config(repo)
+    if cfg and json.loads(cfg.read_text()).get("service_url"):
         sys.exit(f"ABORT: {cfg} names a service, so the runs would time it, not the store copies")
     env = {**os.environ, "OKL_BRIEFING_LOG": "0", "PYTHONPATH": str(repo / "src")}
     for name in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_QUIET", "OKL_DECISION"):
         env.pop(name, None)
     return env
+
+
+def source_store(repo: Path = REPO) -> Path:
+    """The store the CLI would open here: the SQLite file OKL_DATABASE_URL names, else the one
+    beside the nearest .okl/config.json, found as the client finds it. A URL that is not SQLite,
+    or no config at all, stops the run: this copies SQLite files only (review on #309)."""
+    url = os.environ.get("OKL_DATABASE_URL", "")
+    if url:
+        if not url.startswith("sqlite:///"):
+            sys.exit("ABORT: OKL_DATABASE_URL names a store that is not SQLite; this copies only SQLite files")
+        return Path(url.removeprefix("sqlite:///"))
+    cfg = _find_config(repo)
+    if cfg is None:
+        sys.exit(f"ABORT: no .okl/config.json at or above {repo}, so there is no store to copy")
+    return cfg.parent / "okl.db"
 
 
 def main() -> int:
@@ -90,8 +104,7 @@ def main() -> int:
     by_id = {json.loads(x)["id"]: json.loads(x)["text"]
              for x in (PRIVATE / "prompts.jsonl").read_text().splitlines() if x.strip()}
     texts = [by_id[pid] for kind, pid in meta["chosen"] if kind == "task"]
-    url = os.environ.get("OKL_DATABASE_URL", "")
-    live = Path(url.removeprefix("sqlite:///")) if url.startswith("sqlite:///") else REPO / ".okl" / "okl.db"
+    live = source_store()
     env = child_env()
     times: dict[str, list[float]] = {s: [] for s in SETTINGS}
     with tempfile.TemporaryDirectory() as tmp:

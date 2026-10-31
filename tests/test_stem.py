@@ -153,3 +153,45 @@ def test_the_latency_runs_read_back_each_copys_index(tmp_path):
     with contextlib.closing(sqlite3.connect(tmp_path / "none.db")) as c:
         c.execute("CREATE TABLE node(id TEXT)")
     assert lat.index_tokenizer(tmp_path / "none.db") is None
+
+
+def test_a_tokenizer_is_read_in_every_form_sqlite_takes():
+    """Single-quoted, double-quoted or bare; none named is unicode61; a form this cannot read is
+    None, so the store rebuilds rather than trusts it (review on #309)."""
+    cols = "CREATE VIRTUAL TABLE node_fts USING fts5(id UNINDEXED, title"
+    assert okl_store.fts_tokenizer(f"{cols}, tokenize='porter unicode61')") == "porter unicode61"
+    assert okl_store.fts_tokenizer(f'{cols}, tokenize = "porter")') == "porter"
+    assert okl_store.fts_tokenizer(f"{cols}, tokenize=porter)") == "porter"
+    assert okl_store.fts_tokenizer(f"{cols})") == "unicode61"
+    assert okl_store.fts_tokenizer(f"{cols}, tokenize=[porter])") is None
+
+
+def test_an_index_whose_tokenizer_is_named_bare_is_rebuilt_when_it_differs(tmp_path, monkeypatch):
+    """An index declared `tokenize=porter`, unquoted, is a Porter index; read as unicode61 it would
+    survive into an unstemmed store (review on #309)."""
+    db = tmp_path / "okl.db"
+    monkeypatch.setattr(okl_store, "FTS_TOKENIZE", "unicode61")
+    Store(f"sqlite:///{db}").close()
+    with contextlib.closing(sqlite3.connect(db)) as c:
+        c.execute("DROP TABLE node_fts")
+        c.execute(f"CREATE VIRTUAL TABLE node_fts USING fts5({okl_store._FTS_COLS}, tokenize=porter)")
+        c.commit()
+    Store(f"sqlite:///{db}").close()
+    with contextlib.closing(sqlite3.connect(db)) as c:
+        sql = c.execute("SELECT sql FROM sqlite_master WHERE name='node_fts'").fetchone()[0]
+    assert okl_store.fts_tokenizer(sql) == "unicode61"
+
+
+def test_the_latency_runs_copy_the_store_the_cli_would_open(tmp_path, monkeypatch):
+    """The nearest config's store, found from an ancestor as the client finds it; a URL that is
+    not SQLite stops the run rather than timing some other file (review on #309)."""
+    lat = _latency()
+    (tmp_path / ".okl").mkdir()
+    (tmp_path / ".okl" / "config.json").write_text('{"repo": "r"}')
+    (tmp_path / "sub").mkdir()
+    assert lat.source_store(tmp_path / "sub") == tmp_path / ".okl" / "okl.db"
+    monkeypatch.setenv("OKL_DATABASE_URL", f"sqlite:///{tmp_path / 'other.db'}")
+    assert lat.source_store(tmp_path / "sub") == tmp_path / "other.db"
+    monkeypatch.setenv("OKL_DATABASE_URL", "postgresql://h/db")
+    with pytest.raises(SystemExit, match="not SQLite"):
+        lat.source_store(tmp_path / "sub")
