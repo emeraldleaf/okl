@@ -113,6 +113,38 @@ def test_a_replayed_event_is_needed_only_when_the_check_failed_at_a_change(dr, h
     assert len(_git(repo, "worktree", "list").splitlines()) == 1    # the scratch worktree is gone
 
 
+def test_a_merge_that_brings_a_governed_change_is_replayed(dr, tmp_path):
+    """The first §4ae run listed an event's commits with `git rev-list -- <files>`, which drops a
+    merge whose governed files match one parent. Here main changes a.txt harmlessly, the branch
+    breaks u.txt (which the check reads but the lesson does not govern), and only the merge
+    holds both; the branch then mends u.txt and re-verifies."""
+    cmd = "grep -q ok a.txt && ! grep -q bad u.txt && echo FINE"
+    repo = tmp_path / "r"
+    repo.mkdir()
+    _git(repo, "init", "-q", "-b", "main")
+    c0 = _commit(repo, {"a.txt": "ok\n", "u.txt": "fine\n"})
+    _commit(repo, {}, stamp=c0, cmd=cmd)
+    _git(repo, "checkout", "-q", "-b", "br")
+    _commit(repo, {"u.txt": "bad\n"})
+    _git(repo, "checkout", "-q", "main")
+    main_change = _commit(repo, {"a.txt": "ok 2\n"})
+    _git(repo, "checkout", "-q", "br")
+    _git(repo, "merge", "-q", "--no-edit", "main")
+    merge = _git(repo, "rev-parse", "HEAD")
+    mended = _commit(repo, {"u.txt": "fine\n"})
+    _commit(repo, {}, stamp=mended, cmd=cmd)
+    simplified = _git(repo, "rev-list", "--reverse", f"{c0}..{mended}", "--", "a.txt").split()
+    assert merge not in simplified                       # what the first run would have tried
+    e = next(e for e in dr.events(dr.snapshot("HEAD", repo), "HEAD", repo) if e.v == mended)
+    assert e.kind == "drift-red" and e.touched == [main_change, merge]
+    r = dr.Replayer(tmp_path / "scratch", repo)
+    try:
+        dr.replay_event(r, e)
+    finally:
+        r.close()
+    assert (e.outcome, e.first_fail) == ("needed", merge)
+
+
 def test_pairs_are_red_where_the_governed_files_left_their_stamp(dr, history, tmp_path):
     """Red or green by the commit's own snapshot, then broken or intact by the check."""
     repo, c = history
@@ -152,10 +184,13 @@ def test_the_sample_is_redrawn_the_same_and_the_rates_add_up(dr):
     assert (lo, hi) == (0.0215, 0.1118)
     evs = [dr.Event("L", "p", "v", "c", "drift-red", outcome=o) for o in ("needed", "unneeded", "unneeded",
                                                                           "not reproducible")]
+    # The same verification seen twice (on its branch and at the merge) counts once.
+    evs[1].v = evs[2].v = "v2"
     red = [dr.Pair("L", "x", "s", True, "", "", "broken"), dr.Pair("L", "y", "s", True, "", "", "intact")]
     green = [dr.Pair("L", "z", "s", False, "", "", "intact")] * 3 + [dr.Pair("L", "w", "s", False, "", "", "broken")]
     s = dr.summary(evs, red, green, n_red=100, n_green=400)
     assert s["event_precision"]["rate"] == round(1 / 3, 4) and s["not_reproducible"]["events"] == 1
+    assert (s["verification_precision"]["needed"], s["verification_precision"]["decided"]) == (1, 2)
     # 100 red pairs half broken, 400 green pairs a quarter broken: 50 of 150 breaks flagged.
     assert s["red_break_rate"]["rate"] == 0.5 and s["green_miss_rate"]["rate"] == 0.25
     assert s["recall_estimate"] == round(50 / 150, 4)

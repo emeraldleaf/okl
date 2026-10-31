@@ -98,6 +98,19 @@ def differs(a: str, b: str, files: list[str], repo: Path = REPO) -> bool:
                           capture_output=True).returncode == 1
 
 
+def changed_commits(span: str, files: list[str], repo: Path = REPO) -> list[str]:
+    """The commits in `span`, oldest first, whose `files` differ from their first parent's. Not
+    `git rev-list <span> -- <files>`: its history simplification leaves out a merge whose files
+    match one parent, though the merged tree can fail a check that reads other files. The first
+    §4ae run used it, and its census missed 563 such merges."""
+    out = []
+    for x in git("rev-list", "--reverse", span, repo=repo).split():
+        parent = git("rev-parse", "--verify", "-q", f"{x}^1", repo=repo).strip()
+        if parent and differs(parent, x, files, repo):
+            out.append(x)
+    return out
+
+
 @dataclass
 class Event:
     """One replaced stamp: the check last passed at `p`, was re-verified at `v`, and the
@@ -119,10 +132,8 @@ def events(watched: dict[str, dict], until: str, repo: Path = REPO) -> list[Even
     """Every replaced stamp of a watched lesson in the snapshot history reachable from `until`,
     classified; only kind "drift-red" is replayed."""
     out = []
-    for c in git("log", "--format=%H", until, "--", "okl-drift.json", repo=repo).split():
+    for c in changed_commits(until, ["okl-drift.json"], repo):
         parent = git("rev-parse", "--verify", "-q", f"{c}^1", repo=repo).strip()
-        if not parent:
-            continue
         now, before = snapshot(c, repo), snapshot(parent, repo)
         for lid, rule in watched.items():
             if lid not in now:
@@ -150,7 +161,7 @@ def events(watched: dict[str, dict], until: str, repo: Path = REPO) -> list[Even
             else:
                 e.kind = "drift-red"
                 e.cmd, e.expect = check
-                e.touched = git("rev-list", "--reverse", f"{p}..{v}", "--", *files, repo=repo).split()
+                e.touched = changed_commits(f"{p}..{v}", files, repo)
             out.append(e)
     return out
 
@@ -291,6 +302,13 @@ def wilson(k: int, n: int, z: float = 1.96) -> list[float]:
     return [round((c - h) / d, 4), round((c + h) / d, 4)]
 
 
+def main_store() -> Path:
+    """The main checkout's store. A worktree has none of its own, and the first §4ae run read
+    its check log from the worktree's path, so it recorded none."""
+    common = git("rev-parse", "--git-common-dir").strip()
+    return (REPO / common).resolve().parent / ".okl" / "okl.db"
+
+
 @contextlib.contextmanager
 def store_copy(db: Path) -> Iterator[Store]:
     """The lesson store at `db`, opened from a copy, so nothing this run does can touch it."""
@@ -315,6 +333,14 @@ def summary(evs: list[Event], red: list[Pair], green: list[Pair], n_red: int, n_
     """The rates the section registers, each with its count and Wilson interval."""
     needed = sum(e.outcome == "needed" for e in evs)
     decided = sum(e.outcome in ("needed", "unneeded") for e in evs)
+    # A PR's merge replaces main's stamp with the one its branch already recorded, so one
+    # verification can be two events. Counted once per (lesson, V), needed if any event was:
+    # declared before the corrected run, as §4ae's threat on the unit asks.
+    per_v: dict[tuple[str, str], bool] = {}
+    for e in evs:
+        if e.outcome in ("needed", "unneeded"):
+            per_v[(e.lesson, e.v)] = per_v.get((e.lesson, e.v), False) or e.outcome == "needed"
+    v_needed = sum(per_v.values())
     br = [q for q in red if q.outcome in ("broken", "intact")]
     bg = [q for q in green if q.outcome in ("broken", "intact")]
     kr, kg = sum(q.outcome == "broken" for q in br), sum(q.outcome == "broken" for q in bg)
@@ -324,6 +350,9 @@ def summary(evs: list[Event], red: list[Pair], green: list[Pair], n_red: int, n_
         "event_precision": {"needed": needed, "decided": decided,
                             "rate": round(needed / decided, 4) if decided else None,
                             "wilson95": wilson(needed, decided)},
+        "verification_precision": {"needed": v_needed, "decided": len(per_v),
+                                   "rate": round(v_needed / len(per_v), 4) if per_v else None,
+                                   "wilson95": wilson(v_needed, len(per_v))},
         "red_break_rate": {"broken": kr, "decided": len(br), "rate": round(b_red, 4), "wilson95": wilson(kr, len(br))},
         "green_miss_rate": {"broken": kg, "decided": len(bg), "rate": round(b_green, 4), "wilson95": wilson(kg, len(bg))},
         "recall_estimate": (round(broken_red / (broken_red + broken_green), 4)
@@ -337,7 +366,7 @@ def main() -> int:
     """Count, and unless --dry-run replay, the events and samples; or judge a receipt."""
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--until", default=UNTIL)
-    ap.add_argument("--store", type=Path, default=REPO / ".okl" / "okl.db",
+    ap.add_argument("--store", type=Path, default=main_store(),
                     help="the store whose check log and lesson text are read, from a copy")
     ap.add_argument("--dry-run", action="store_true", help="count events and pairs; run no check")
     ap.add_argument("--judge", metavar="RECEIPT", help="judge a sample of a receipt's events (§4ae step 3)")
