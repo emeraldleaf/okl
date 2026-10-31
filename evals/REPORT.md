@@ -3117,6 +3117,10 @@ latency lines moved, by a tenth of a millisecond.
 
 1. **Held.** On the selection split `stem` recalls 2.8 points more, and 4 more paraphrases.
 2. **Held.** The null test half is briefed in 3.4% and 4.1% of prompts, under 5% in both arms.
+   *Note, 2026-10-31 (review on #308):* the registration overstated the guarantee, here and in
+   "the same guaranteed null rate" above. Under exchangeability, split conformal keeps the null
+   rate at or under 5% on average over calibration draws, not in any one test half, so this
+   check was the measurement, not a formality. The registered text stands as written.
 3. **Held.** On the held-out split `stem` recalls 4.4 points more, 10 of them paraphrases. Ticket
    and bug-report rows rise or hold on both splits.
 
