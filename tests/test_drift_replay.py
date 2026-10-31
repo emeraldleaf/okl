@@ -213,3 +213,28 @@ def test_a_lesson_is_classed_by_what_could_rerun_its_check(monkeypatch):
     assert lc.classify(node(files="a.py")) == "unverified"
     assert lc.classify(node(verified_by=stamp)) == "checked"
     assert lc.classify(node(verified_by="stamped by hand")) == "unchecked"
+
+
+def test_the_stale_lesson_judge_reads_only_a_valid_verdict_and_counts_by_role(monkeypatch):
+    """§4ag: a planted fact replaces whole tokens only; an answer without a valid verdict is no
+    verdict; the stale rate is stale / (current + stale) among the population alone."""
+    monkeypatch.setattr(sys, "path", list(sys.path))
+    spec = importlib.util.spec_from_file_location("lesson_census", HERE / "evals" / "lesson_census.py")
+    lc = importlib.util.module_from_spec(spec)
+    monkeypatch.setitem(sys.modules, "lesson_census", lc)
+    spec.loader.exec_module(lc)
+    assert lc.plant("edit store.py, not okl-store.py or store.pyc", "store.py", "storage.py") \
+        == "edit storage.py, not okl-store.py or store.pyc"
+    assert lc.plant("pass --repo, not --repo-name", "--repo", "--name") == "pass --name, not --repo-name"
+    assert lc.parse_verdict('Here: {"verdict": "stale", "checkable": true}')["verdict"] == "stale"
+    assert lc.parse_verdict('{"verdict": "probably"}') is None and lc.parse_verdict("no json") is None
+    assert lc.drawn(["a", "b", "c"]) == lc.drawn(["c", "a", "b"])
+    items = ([{"role": "population", "verdict": v, "type": "Rule", "scope": "org", "checkable": True}
+              for v in ("stale", "current", "current", "no claim")]
+             + [{"role": "population", "type": "Rule", "scope": "org", "error": "timed out"},
+                {"role": "negative", "verdict": "stale"}, {"role": "positive", "verdict": "stale"},
+                {"role": "positive", "verdict": "current"}])
+    s = lc.summarize(items)
+    assert s["stale_rate"]["stale"] == 1 and s["stale_rate"]["decided"] == 3
+    assert s["claim_share"] == {"claims": 3, "of": 5} and s["invalid_share"] == 0.2
+    assert (s["negatives_called_stale"], s["positives_called_stale"], s["stale_checkable"]) == (1, 1, 1)
