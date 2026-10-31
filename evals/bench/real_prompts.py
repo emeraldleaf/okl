@@ -528,8 +528,9 @@ def _stem_rule(meta: dict, verdict: dict[tuple[str, str], str | None], applies: 
         lo, _hi = bench.wilson(full[bf]["yes"], full[bf]["judged"])
         null_any = {a: sum(1 for pid in nulls if b[a][pid]) for a in (bf, sf)}
         # The label checks compare the stemmed arms with their baselines, so the baselines'
-        # pairs must be judged too (review on #309).
-        unjudged = sum(1 for a in (base, bf, stem, sf) for pid in tasks + nulls for lid in b[a][pid]
+        # pairs must be judged too; they read task prompts only, so a null pair waits for
+        # nothing (reviews on #309).
+        unjudged = sum(1 for a in (base, bf, stem, sf) for pid in tasks for lid in b[a][pid]
                        if verdict.get((pid, lid)) is None)
         checks = {
             f"null prompts at most twice {bf}'s": null_any[sf] <= 2 * null_any[bf],

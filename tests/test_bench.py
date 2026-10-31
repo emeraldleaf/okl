@@ -102,3 +102,18 @@ def test_the_stem_rule_waits_for_its_baselines_labels_too(monkeypatch, capsys):
     rp._stem_rule(meta, {("t1", "a"): "APPLIES", ("t1", "z"): None}, applies, {a: (1.0, 1, 1.0, 1) for a in arms})
     out = capsys.readouterr().out
     assert "stem rule, tiered: undecided" in out and "stem rule: undecided until judged" in out, out
+
+
+def test_the_stem_rule_does_not_wait_for_null_pairs(monkeypatch, capsys):
+    """Its label checks read task prompts only, and its null check counts briefings, so a null
+    pair no judge has seen leaves the rule free to decide (review on #309)."""
+    from collections import defaultdict
+    rp = _real_prompts(monkeypatch)
+    arms = ("tiered", "tiered-full", "tiered-stem", "tiered-stem-full",
+            "warm", "warm-full", "warm-stem", "warm-stem-full")
+    briefed = {a: {"t1": ["a"], "n1": ["q"]} for a in arms}       # q on n1: no judge has seen it
+    meta = {"chosen": [["task", "t1"], ["null", "n1"]], "briefed": briefed, "before": {"t1": [], "n1": []}}
+    applies = defaultdict(set, {"t1": {"a"}})
+    rp._stem_rule(meta, {("t1", "a"): "APPLIES", ("n1", "q"): None}, applies, {a: (1.0, 1, 1.0, 1) for a in arms})
+    out = capsys.readouterr().out
+    assert "stem rule, tiered: holds" in out and "stem rule: stemmed" in out, out
