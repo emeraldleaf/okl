@@ -285,6 +285,10 @@ def test_a_judge_reads_each_lesson_as_its_receipt_recorded_it(dr):
     dr.as_recorded({"L": node}, recorded)
     with pytest.raises(SystemExit, match="no lesson hashes"):
         dr.as_recorded({"L": node}, None)
+    with pytest.raises(SystemExit, match="missing from the store or the receipt: M"):
+        dr.as_recorded({"M": None}, {"M": None})                          # absent then and now
+    with pytest.raises(SystemExit, match="missing from the store or the receipt: L"):
+        dr.as_recorded({"L": node}, {})                                    # absent when recorded
     node.fix = "another fix"
     with pytest.raises(SystemExit, match="changed since the receipt was written: L"):
         dr.as_recorded({"L": node}, recorded)

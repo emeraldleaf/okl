@@ -342,6 +342,12 @@ def as_recorded(nodes: dict[str, Node | None], recorded: dict[str, str | None] |
     if recorded is None:
         sys.exit("ABORT: this receipt records no lesson hashes, so its lessons cannot be read as "
                  "they were; run it again to judge it")
+    # A lesson the store did not hold, then or now, has no text to judge: None matching None is
+    # not the lesson read as it was (review on #312).
+    missing = sorted(i for i, n in nodes.items() if n is None or recorded.get(i) is None)
+    if missing:
+        sys.exit(f"ABORT: {len(missing)} lesson(s) missing from the store or the receipt: "
+                 + ", ".join(missing[:5]))
     moved = sorted(i for i, n in nodes.items() if text_sha(n) != recorded.get(i))
     if moved:
         sys.exit(f"ABORT: {len(moved)} lesson(s) changed since the receipt was written: "
