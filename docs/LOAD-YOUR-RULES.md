@@ -280,10 +280,10 @@ okl retire seed:okl-lessons:log_4xx_at_info --obsolete --reason "removed from CL
 
 **Habits:**
 
-- Correct lessons in the file, then re-seed. A re-seed rewrites every field from the file, and blanks any field the file leaves out.
+- Correct lessons in the file, then re-seed. A re-seed rewrites every field the file sets. A field the file leaves out keeps the store's value, so `files` or triggers added with `okl update` stay.
 - Never rename the file or a key.
 - Line numbers in `found_by` go stale as the doc is edited. The heading you added after them helps a reviewer find the line.
-- After you change a lesson's `files` and re-seed, run `okl reverify` before the next re-seed. A second re-seed can drop the stored check. If `okl reverify` then says there is none, prove the lesson again with `okl verify --run`.
+- After you change a lesson's `files` and re-seed, run `okl reverify`: the re-seed cleared the lesson's stamp and kept its stored check. A re-seed never stamps a lesson, even when the file says `"verified": true`; only `okl verify` does.
 - A bundled pack updated in a new okl release reaches your store only when you run `okl seed <pack>`. `okl init` seeds only an empty store.
 
 ## 10. On a team
@@ -292,7 +292,7 @@ The store is one gitignored file per clone. Three things follow:
 
 - A teammate's clone has none of your lessons, proofs or retirements.
 - No okl command writes a store's lessons out to a file.
-- `okl-drift.json` is rebuilt from the store of whoever last ran `okl verify` or `okl reverify`. So when a teammate commits it, rules that only you hold drop out of CI's gate.
+- `okl-drift.json` is rebuilt from the store of whoever last ran `okl verify` or `okl reverify`. okl refuses to drop a rule the committed file holds and that store does not: the snapshot is not refreshed, and the rules are named, until that store holds them too. `okl export --drift --allow-shrink` drops them on purpose.
 
 What works today, with no server: the lessons live in a file in git, reviewed by pull request like any other change, and each clone loads and proves them with a setup script.
 
@@ -441,13 +441,13 @@ What the trial suggests:
 | On a re-import, every record "resembles" itself at 1.00 | A known false alarm in the near-duplicate report | Ignore the self-matches |
 | A correction disappeared after `okl seed` | The file owns a seeded lesson's text | Make the correction in the file |
 | `okl drift` checks nothing after a re-seed | The file lacked `files` that `okl update` had added | Add `files` to the file, re-seed, run `okl reverify` |
-| `okl reverify` says a lesson has no stored check | It lost its check after two re-seeds, or this clone never ran it | `okl verify <id> --run ... --expect ...` |
+| `okl reverify` says a lesson has no stored check | This clone never ran it: checks do not travel with the file | `okl verify <id> --run ... --expect ...` |
 | A rule deleted from the file is still briefed | Seeding never removes lessons | `okl retire <id> --obsolete --reason "..."` |
 | The same lesson appears twice | A key or the file was renamed | `okl retire <old-id> --by <new-id> --reason "..."` |
 | Push blocked: a lesson is "stamped ..., unverified" | The file had `"verified": true` | Remove it, and prove the lesson with `okl verify` |
 | Push blocked right after seeding: lessons "never verified" | Proofs do not travel with the file | Run the setup script (step 10) |
 | Push blocked after importing `okl-bootstrap.json` | Its doc pointers carry `files` that nothing can verify | Remove their `files`, or delete them. Each `okl bootstrap` run makes new keys, so importing two runs duplicates them |
-| CI's drift gate lost rules after a teammate's commit | `okl-drift.json` was rebuilt from their store | They run the setup script and verify again, or one person owns the file |
+| `okl verify` says `okl-drift.json` was NOT refreshed: it would drop rules this store does not hold | The committed file holds rules from another clone's store | Run the setup script and verify again. `okl export --drift --allow-shrink` if they should leave the gate |
 | The tombstone gate fails on a CHANGELOG or an old ADR | The gate skips only `registries/` | Reword, or add an exclusion to your copy of the script |
 | A tombstone never matches | The line uses spaces, not TABs | Separate the fields with TABs |
 | All gates are green, but a stale name remains in a `.js` or `.rst` file | The gate does not scan that file type | Add `--include` lines to your copy of the script |

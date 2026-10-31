@@ -3,7 +3,7 @@
 Off unless asked for. The first stage, full text fused with the embedding's nearest records,
 orders candidates by what they share with the task; a cross-encoder reads each (task, record)
 pair together and scores whether the record answers it, which is a different and sharper
-question. The model (`Xenova/ms-marco-MiniLM-L-6-v2`, an ONNX cross-encoder of about 80 MB,
+question. The model (`Xenova/ms-marco-MiniLM-L-6-v2`, an ONNX cross-encoder of 92 MB (model-files-20261029-1207.txt),
 installed with the `rerank` extra, downloaded once by `okl embed`, kept under `okl.hub.model_cache_dir()`, not the temp directory fastembed
 would use) scores the first RERANK_POOL candidates against a short text per record (title, symptom, aliases; the cause
 paragraph slows the model five-fold and buys nothing, measured in §4t's spike) and reorders

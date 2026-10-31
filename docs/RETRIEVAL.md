@@ -83,7 +83,7 @@ count rather than replacing it, took held-out recall from 90.0% to **95.2%** on 
 (at full precision; the int8 file `okl warm` runs measured 92.0% against 92.4% on the selection split),
 most of it on paraphrases. The prompt hook starts a new process for every prompt, and loading
 the model there costs a second or two, so `okl warm` keeps it loaded in a local process instead
-(int8, a 309 MB file). On real held-out prompts it showed 46 applying lessons in full against 38,
+(int8, a 309.5 MB file). On real held-out prompts it showed 46 applying lessons in full against 38,
 at 23.0% precision against 17.8%, and named 107 against 102, adding a median of 114 ms to a prompt
 (REPORT §4z). It holds about 1.6 GB of memory from startup (it runs one inference before it serves), more than the
 bound set before measuring. So it runs only where you ask for it: once `okl warm index` has

@@ -1,0 +1,3 @@
+model files · 2026-10-29T12:07Z · code a81561fb653a · what each loader fetches into an empty cache (MB = 10^6 bytes)
+  minishlab/potion-retrieval-32M (hybrid, okl.semantic)      130.8 MB (124.7 MiB) in 16 files
+  Xenova/ms-marco-MiniLM-L-6-v2 (rerank, okl.rerank)          91.8 MB (87.5 MiB) in 19 files
