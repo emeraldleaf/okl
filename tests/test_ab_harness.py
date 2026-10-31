@@ -315,6 +315,24 @@ def test_tree_state_fingerprints_uncommitted_code(ab, tmp_path, monkeypatch):
     assert fp1 != fp2
 
 
+def test_tree_state_follows_the_fetch_tool_too(ab, tmp_path, monkeypatch):
+    """Each when-tool sample starts the fetch tool from disk, so an edit to it mid-run changes
+    that arm's treatment as surely as one to src/okl (review on #305)."""
+    import subprocess
+    repo = tmp_path / "r"
+    (repo / "evals").mkdir(parents=True)
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    subprocess.run(["git", "-C", str(repo), "-c", "user.email=t@t", "-c", "user.name=t",
+                    "commit", "-q", "--allow-empty", "-m", "base"], check=True)
+    monkeypatch.setattr(ab, "REPO", repo)
+    start = ab.tree_state()
+    (repo / "evals" / "fetch_tool.py").write_text("DESCRIPTION = 'call this first'\n")
+    end = ab.tree_state()
+    assert end[0].endswith("+dirty") and ab.head_moved(start, end)["working_tree_moved"] is True
+    (repo / "evals" / "other.py").write_text("x = 1\n")
+    assert ab.tree_state() == end
+
+
 def test_tree_state_hashes_each_untracked_file_separately(ab, tmp_path, monkeypatch):
     """Two untracked files whose contents shift a boundary must not fingerprint alike, and a
     path git would quote still reaches the manifest."""

@@ -70,9 +70,10 @@ installed from. So from a worktree, set `PYTHONPATH` to the worktree's absolute 
 Results land in `evals/results/ab-<timestamp>.json` — commit them; they're the receipts.
 
 The receipt names the commit the tree stood at when the run began (`okl_commit_at_start`)
-and at the end (`okl_commit`). The briefed arm renders from this checkout's `src/`, so a
-branch switch during a run briefs the later samples with other code; a receipt whose tree
-moved carries `working_tree_moved` and is not usable (REPORT §4o is the run that taught
+and at the end (`okl_commit`). The briefed arm renders from this checkout's `src/`, and each
+`when-tool` sample starts `evals/fetch_tool.py` from disk, so a branch switch or an edit to
+either during a run treats the later samples differently; a receipt whose tree moved carries
+`working_tree_moved` and is not usable (REPORT §4o is the run that taught
 this). Run the harness from a pinned git worktree, never from the checkout other work uses.
 
 Two cheaper checks run with no model at all. `evals/preflight.py` asks whether each task's

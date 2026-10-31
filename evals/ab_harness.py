@@ -71,6 +71,10 @@ LINE_STYLES = {"line": "line", "titles": "titles", "when": "when", "when-tool": 
 FETCH_TOOL = "mcp__okl__okl_get"
 FETCH_SERVER = REPO / "evals" / "fetch_tool.py"
 WHEN_TOOL_INSTRUMENT = ("when_tool_generator", "fetch_tool_description")
+# What a run reads from disk while it runs, so what tree_state fingerprints: okl's code, which
+# renders the briefings and serves every fetch, and the fetch tool, which each when-tool sample
+# starts afresh (review on #305). The harness and the tasks are read once, at the start.
+RUN_READS = ("src/okl", "evals/fetch_tool.py")
 
 GEN_PROMPT = """You are implementing one task for an existing codebase. Output ONLY the code (or YAML/script), no explanation.
 
@@ -667,11 +671,11 @@ def _head(git: list[str]) -> tuple[str, str] | None:
 
 
 def tree_state() -> tuple[str | None, str]:
-    """The receipt's commit label for okl's code, and a fingerprint of that code.
+    """The receipt's commit label for the code a run reads (RUN_READS), and a fingerprint of it.
 
-    The label is the short HEAD, `+dirty` when `src/okl` has uncommitted edits. The
+    The label is the short HEAD, `+dirty` when RUN_READS has uncommitted edits. The
     fingerprint is the full HEAD plus a hash of the uncommitted diff and the untracked
-    files under `src/okl`, so two dirty trees with different content do not compare equal.
+    files under RUN_READS, so two dirty trees with different content do not compare equal.
     """
     git = ["git", "-C", str(REPO)]
     heads = _head(git)
@@ -684,7 +688,7 @@ def tree_state() -> tuple[str | None, str]:
     # --untracked-files=all: a wholly untracked directory is otherwise one "?? dir/" entry,
     # and its files' content would never reach the fingerprint. -z: NUL-delimited entries
     # with unquoted paths, so a name git would quote still resolves to its file.
-    probe = subprocess.run([*git, "status", "--porcelain", "-z", "--untracked-files=all", "--", "src/okl"],
+    probe = subprocess.run([*git, "status", "--porcelain", "-z", "--untracked-files=all", "--", *RUN_READS],
                            capture_output=True)
     if probe.returncode != 0:
         # Fail closed: a probe that cannot say what the tree holds must not compare equal
@@ -693,7 +697,7 @@ def tree_state() -> tuple[str | None, str]:
     entries = [e for e in probe.stdout.decode("utf-8", "surrogateescape").split("\0") if e]
     if not entries:
         return head, full
-    diffed = subprocess.run([*git, "diff", "HEAD", "--", "src/okl"], capture_output=True)
+    diffed = subprocess.run([*git, "diff", "HEAD", "--", *RUN_READS], capture_output=True)
     if diffed.returncode != 0:
         # Same rule as the status probe: a diff that cannot be read must not compare equal.
         return f"{head}+unknown", f"{full}+diff-failed-{os.urandom(4).hex()}"
