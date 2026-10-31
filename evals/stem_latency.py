@@ -15,8 +15,10 @@ local); the receipt holds timings only. Each run is a new process, as the hook's
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import os
+import re
 import sqlite3
 import statistics
 import subprocess
@@ -31,12 +33,22 @@ PRIVATE = REPO / "evals" / "bench" / "private"
 
 # Each setting enters the CLI through the same `python -c`, so both pay the same start-up.
 RUN = "import runpy, sys; sys.argv[0] = 'okl'; runpy.run_module('okl', run_name='__main__', alter_sys=True)"
-SETTINGS = {
-    "unstemmed": "import okl.store, okl.decide; okl.store.FTS_TOKENIZE = 'unicode61'; "
-                 "okl.decide.CALIBRATED_LINE = 2.0017173; " + RUN,
-    "stemmed": "import okl.store, okl.decide; okl.store.FTS_TOKENIZE = 'porter unicode61'; "
-               "okl.decide.CALIBRATED_LINE = 3.0014486; " + RUN,
-}
+TOKENIZE = {"unstemmed": "unicode61", "stemmed": "porter unicode61"}
+LINE = {"unstemmed": 2.0017173, "stemmed": 3.0014486}
+SETTINGS = {s: f"import okl.store, okl.decide; okl.store.FTS_TOKENIZE = {TOKENIZE[s]!r}; "
+               f"okl.decide.CALIBRATED_LINE = {LINE[s]}; " + RUN for s in TOKENIZE}
+
+
+def index_tokenizer(db: Path) -> str | None:
+    """The tokenizer `db`'s full-text index was built with (none named is unicode61, as the store
+    reads it), or None when it has no full-text index: a SQLite without FTS5 searches by LIKE,
+    and its timings would measure neither setting (review on #309)."""
+    with contextlib.closing(sqlite3.connect(db)) as c:
+        row = c.execute("SELECT sql FROM sqlite_master WHERE name = 'node_fts'").fetchone()
+    if not row:
+        return None
+    built = re.search(r"tokenize\s*=\s*'([^']*)'", row[0])
+    return built.group(1) if built else "unicode61"
 
 
 def store_copy(live: Path, where: Path, setting: str, env: dict[str, str]) -> Path:
@@ -52,6 +64,9 @@ def store_copy(live: Path, where: Path, setting: str, env: dict[str, str]) -> Pa
     # One untimed check builds the index the setting wants.
     subprocess.run([sys.executable, "-c", SETTINGS[setting], "check", "--task", "warm up the index", "--warm", "off"],
                    env={**env, "OKL_DATABASE_URL": f"sqlite:///{dst}"}, cwd=REPO, capture_output=True, check=True)
+    if index_tokenizer(dst) != TOKENIZE[setting]:
+        sys.exit(f"ABORT: the {setting} copy's index is not built with {TOKENIZE[setting]!r}, so its timings "
+                 "would not measure that setting")
     return dst
 
 

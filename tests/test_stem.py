@@ -121,13 +121,19 @@ def test_without_fts5_a_word_is_its_own_stem(monkeypatch):
     assert decide.stems(["rotating"]) == {"rotating": "rotating"}
 
 
+def _latency():
+    """evals/stem_latency.py as a module (it is a script, not part of the package)."""
+    script = Path(__file__).resolve().parents[1] / "evals" / "stem_latency.py"
+    spec = importlib.util.spec_from_file_location("stem_latency", script)
+    lat = importlib.util.module_from_spec(spec); spec.loader.exec_module(lat)
+    return lat
+
+
 def test_the_latency_runs_never_reach_a_service(tmp_path, monkeypatch):
     """A service named in the environment or the checkout's config sends both timed arms to it,
     whatever OKL_DATABASE_URL says: the variable is dropped, and a config naming one refuses the
     run (review on #309)."""
-    script = Path(__file__).resolve().parents[1] / "evals" / "stem_latency.py"
-    spec = importlib.util.spec_from_file_location("stem_latency", script)
-    lat = importlib.util.module_from_spec(spec); spec.loader.exec_module(lat)
+    lat = _latency()
     monkeypatch.setenv("OKL_SERVICE_URL", "http://127.0.0.1:9")
     (tmp_path / ".okl").mkdir()
     (tmp_path / ".okl" / "config.json").write_text('{"repo": "r"}')
@@ -135,3 +141,15 @@ def test_the_latency_runs_never_reach_a_service(tmp_path, monkeypatch):
     (tmp_path / ".okl" / "config.json").write_text('{"repo": "r", "service_url": "http://127.0.0.1:9"}')
     with pytest.raises(SystemExit, match="names a service"):
         lat.child_env(tmp_path)
+
+
+def test_the_latency_runs_read_back_each_copys_index(tmp_path):
+    """A copy whose index another tokenizer built, or with none at all (a SQLite without FTS5
+    searches by LIKE), would time the wrong thing, so each copy's index is read back (review on
+    #309)."""
+    lat = _latency()
+    Store(f"sqlite:///{tmp_path / 'stemmed.db'}").close()
+    assert lat.index_tokenizer(tmp_path / "stemmed.db") == "porter unicode61"
+    with contextlib.closing(sqlite3.connect(tmp_path / "none.db")) as c:
+        c.execute("CREATE TABLE node(id TEXT)")
+    assert lat.index_tokenizer(tmp_path / "none.db") is None
