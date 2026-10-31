@@ -1,0 +1,15 @@
+diff --git a/src/okl/warm.py b/src/okl/warm.py
+index 46a8184..2d9138f 100644
+--- a/src/okl/warm.py
++++ b/src/okl/warm.py
+@@ -98,7 +98,9 @@ def set_encoder(encoder: Encoder | None) -> None:
+ def socket_path() -> Path:
+     """The server's socket: OKL_WARM_SOCKET, else okl's cache directory. One per user, since the
+     model is the same for every store; each store keeps its own lesson vectors."""
+-    override = os.environ.get("OKL_WARM_SOCKET")
++    from .client import load_config
++
++    override = os.environ.get("OKL_WARM_SOCKET") or load_config().get("warm_socket")
+     if override:
+         return Path(override).expanduser()
+     return Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "okl" / "warm.sock"

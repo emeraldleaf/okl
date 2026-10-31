@@ -1,0 +1,13 @@
+diff --git a/src/okl/core.py b/src/okl/core.py
+index a96f853..6c0f001 100644
+--- a/src/okl/core.py
++++ b/src/okl/core.py
+@@ -83,7 +83,7 @@ def _in_scope(n: Node, repo_scope: str, interests: list[str] | None) -> bool:
+     if not interests:
+         return True
+     tags = split_tags(n.tags)
+-    return not tags or bool(tags & {t.strip().lower() for t in interests if t.strip()})
++    return not tags or bool(tags & wanted)
+ 
+ 
+ # Words that carry no subject, so they never reach a briefing's search (okl review R7,

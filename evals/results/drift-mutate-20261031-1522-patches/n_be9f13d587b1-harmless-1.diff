@@ -1,0 +1,17 @@
+diff --git a/src/okl/store.py b/src/okl/store.py
+index 31b9aed..b509ece 100644
+--- a/src/okl/store.py
++++ b/src/okl/store.py
+@@ -414,6 +414,12 @@ class Store:
+         """Close the database connection; calling it again does nothing."""
+         self._impl.close()
+ 
++    def __enter__(self) -> Store:
++        return self
++
++    def __exit__(self, *exc: object) -> None:
++        self.close()
++
+ 
+ @runtime_checkable
+ class _Backend(Protocol):

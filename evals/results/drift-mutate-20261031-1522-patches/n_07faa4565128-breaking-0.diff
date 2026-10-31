@@ -1,0 +1,14 @@
+diff --git a/seed/rag-defects.json b/seed/rag-defects.json
+index 3c17903..d099ea7 100644
+--- a/seed/rag-defects.json
++++ b/seed/rag-defects.json
+@@ -43,7 +43,8 @@
+    "verified": true,
+    "title": "Run the retrieval_hit × judge_score cross-tab — it names which component is actually failing",
+    "body": "A whole session optimized retrieval; the cross-tab revealed generation was the dominant failure mode. The conclusion 'agentic retrieval is architecturally weaker' was exactly backwards, and that eval-results doc was retracted. Portable: bake the precondition×outcome cross-tab into every eval run, not as a one-off.",
+-   "tags": "eval-integrity"
++   "tags": "eval-integrity",
++   "applies_to": "python"
+   },
+   {
+    "key": "qz_fixtures",

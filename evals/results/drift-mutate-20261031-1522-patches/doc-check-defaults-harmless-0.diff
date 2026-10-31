@@ -1,0 +1,14 @@
+diff --git a/src/okl/cli/parser.py b/src/okl/cli/parser.py
+index 09d0bb3..d36bac1 100644
+--- a/src/okl/cli/parser.py
++++ b/src/okl/cli/parser.py
+@@ -272,7 +272,8 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
+     ps.add_argument("query")
+     ps.add_argument("--scope", help="'org', 'repo:<name>', or 'repo' for this repo "
+                                     "(anything else is refused, not silently empty)")
+-    ps.add_argument("--type", nargs="*"); ps.add_argument("--limit", type=int, default=25)
++    ps.add_argument("--type", nargs="*", help="only records of these types")
++    ps.add_argument("--limit", type=int, default=25, help="most results to return (default 25)")
+     ps.add_argument("--format", choices=["text", "json"], default="text")
+     ps.set_defaults(func=cmd_search)
+ 

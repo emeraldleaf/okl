@@ -1,0 +1,16 @@
+diff --git a/pyproject.toml b/pyproject.toml
+index 4c19eb6..25e2297 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -68,11 +68,6 @@ dev = [
+ ]
+ 
+ [project.scripts]
+-okl = "okl.cli:main"
+-# The same CLI under the distribution's name, for the MCP Registry (server.json). Its
+-# clients start a PyPI server as `uvx <package> <args>`, and uvx runs the command named
+-# after the package; with only `okl` that failed: "An executable named
+-# `observed-knowledge-ledger` is not provided by package `observed-knowledge-ledger`".
+ observed-knowledge-ledger = "okl.cli:main"
+ 
+ [tool.hatch.build.targets.wheel]

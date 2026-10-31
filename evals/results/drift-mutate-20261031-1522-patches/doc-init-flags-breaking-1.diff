@@ -1,0 +1,12 @@
+diff --git a/docs/GETTING-STARTED.md b/docs/GETTING-STARTED.md
+index 0089de2..43a6b11 100644
+--- a/docs/GETTING-STARTED.md
++++ b/docs/GETTING-STARTED.md
+@@ -441,6 +441,7 @@ store before every push. It is the default wherever okl's GitHub workflow is not
+ okl init                     # the pre-push hook, and no GitHub workflow
+ okl init --ci --git-hook     # both: the hook warns early, CI is the gate nobody can skip
+ okl init --no-git-hook       # neither, if you gate drift some other way
++okl init --ci --branch main  # CI gate on pushes to main only
+ ```
+ 
+ The hook runs `okl drift --gate` and blocks the push only when lessons have drifted (exit 1).

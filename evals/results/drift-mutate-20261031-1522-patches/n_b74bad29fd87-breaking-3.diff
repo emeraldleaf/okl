@@ -1,0 +1,29 @@
+diff --git a/tests/test_check_log.py b/tests/test_check_log.py
+index 577ca6b..d8299d9 100644
+--- a/tests/test_check_log.py
++++ b/tests/test_check_log.py
+@@ -14,7 +14,7 @@ import pytest
+ from okl import core
+ from okl.cli import main
+ from okl.client import Client
+-from okl.store import Store
++from okl.store import Node, Store
+ 
+ 
+ @pytest.fixture
+@@ -31,6 +31,15 @@ def _checks(node_id: str = "les") -> list:
+     return Client()._local_store().checks(node_id)
+ 
+ 
++def test_sqlite_search_matches_either_term():
++    """A two-term query returns records matching either term, on the SQLite backend."""
++    store = Store(":memory:")
++    store.add_node(Node(type="Rule", title="refunds post late", id="a", scope="org"))
++    store.add_node(Node(type="Rule", title="invoices round up", id="b", scope="org"))
++
++    assert {n.id for n in store.search("refunds invoices", limit=10)} == {"a", "b"}
++
++
+ def test_a_failed_check_is_kept(repo, capsys):
+     """A failing check used to leave nothing behind but a line on stderr."""
+     rc = main(["verify", "les", "--run", "exit 3"])

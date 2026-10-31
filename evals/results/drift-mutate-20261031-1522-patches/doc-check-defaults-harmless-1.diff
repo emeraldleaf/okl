@@ -1,0 +1,13 @@
+diff --git a/README.md b/README.md
+index 41ac406..37da404 100644
+--- a/README.md
++++ b/README.md
+@@ -551,7 +551,7 @@ compact briefing does not say how many records it trimmed.
+ 
+ `okl check --format actions` is the imperatives only, about half the size; `--format json` is
+ the raw result for scripts; `--format hook` is what the Claude Code hook prints; `--limit N`
+-draws on fewer records and says how many it trimmed.
++(default 12) draws on fewer records and says how many it trimmed.
+ 
+ Every knob, what `okl init` writes, how to turn parts off, and the opt-in architecture review:
+ [Costs and knobs](docs/COSTS-AND-KNOBS.md). Subagents and small windows: [docs/SUBAGENTS.md](docs/SUBAGENTS.md).

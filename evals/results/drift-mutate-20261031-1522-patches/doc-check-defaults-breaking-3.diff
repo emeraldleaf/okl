@@ -1,0 +1,24 @@
+diff --git a/src/okl/client.py b/src/okl/client.py
+index e65bd14..726524d 100644
+--- a/src/okl/client.py
++++ b/src/okl/client.py
+@@ -319,8 +319,7 @@ class Client:
+         payload = {"repo": repo, "task": task, "interests": self.interests or None,
+                    "hybrid": self.hybrid, "index": self.index, "near_misses": self.near_misses,
+                    "rerank": self.rerank, "decision": self.decision}
+-        if limit is not None:
+-            payload["limit"] = limit
++        payload["limit"] = 10 if limit is None else limit
+         if self.mode == "remote":
+             result = self._post_check(payload)
+             # An older service drops a request field it does not know and answers an ordinary
+@@ -347,8 +346,7 @@ class Client:
+             kw: dict[str, Any] = {"interests": self.interests, "hybrid": self.hybrid, "index": self.index,
+                                   "near_misses": self.near_misses, "rerank": self.rerank,
+                                   "decision": self.decision, "warm": self.warm}
+-            if limit is not None:
+-                kw["limit"] = limit
++            kw["limit"] = payload["limit"]
+             store = self._local_store()
+             result = core.check(store, repo, task, **kw)
+             if result.get("warm_reason") == "not_running":

@@ -1,0 +1,12 @@
+diff --git a/README.md b/README.md
+index 41ac406..9a7841b 100644
+--- a/README.md
++++ b/README.md
+@@ -649,6 +649,7 @@ src/okl/
+   scaffold_cmd.py # the `okl scaffold` starter-files stamper
+ seed/             # starter lesson files (examples + genuinely useful defects)
+ docs/decisions/   # design decision records
++docs/             # longer guides: commands, retrieval, verification, deployment, related work
+ tests/            # end-to-end tests
+ ```
+ 

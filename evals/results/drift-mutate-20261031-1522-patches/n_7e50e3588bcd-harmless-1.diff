@@ -1,0 +1,57 @@
+diff --git a/tests/test_retire.py b/tests/test_retire.py
+index ee47a88..bd56777 100644
+--- a/tests/test_retire.py
++++ b/tests/test_retire.py
+@@ -282,6 +282,16 @@ def test_a_retirement_survives_an_older_okl_rewriting_the_lesson(repo):
+     assert [r.reason for r in store.retirements("refund-old")] == ["wrong"]
+ 
+ 
++def _tool_text(res) -> str:
++    """The text of an MCP tool result, whichever shape the SDK returns it in."""
++    if isinstance(res, tuple):
++        res = res[0]
++    c = getattr(res, "content", res)
++    if isinstance(c, list | tuple):
++        c = c[0]
++    return getattr(c, "text", str(c))
++
++
+ def test_mcp_and_a_service_can_retire(remote):
+     """Agents on MCP and repos on a service get the same verb, through the real client."""
+     import asyncio
+@@ -292,16 +302,8 @@ def test_mcp_and_a_service_can_retire(remote):
+     core.record(remote.store, id="a", type="Rule", title="old", scope="org")
+     core.record(remote.store, id="b", type="Rule", title="new", scope="org")
+ 
+-    def text(res):
+-        if isinstance(res, tuple):
+-            res = res[0]
+-        c = getattr(res, "content", res)
+-        if isinstance(c, list | tuple):
+-            c = c[0]
+-        return getattr(c, "text", str(c))
+-
+     # ACT
+-    out = text(asyncio.run(_build().call_tool("okl_retire", {
++    out = _tool_text(asyncio.run(_build().call_tool("okl_retire", {
+         "id": "a", "reason": "replaced", "by": "b"})))
+ 
+     # ASSERT
+@@ -539,15 +541,7 @@ def test_mcp_retire_says_to_refresh_the_snapshot_when_the_lesson_governs_files(r
+     from okl.mcp_server import _build
+     _lessons(Client())
+ 
+-    def text(res):
+-        if isinstance(res, tuple):
+-            res = res[0]
+-        c = getattr(res, "content", res)
+-        if isinstance(c, list | tuple):
+-            c = c[0]
+-        return getattr(c, "text", str(c))
+-
+-    governs = text(asyncio.run(_build().call_tool("okl_retire", {"id": "refund-old", "reason": "x"})))
+-    plain = text(asyncio.run(_build().call_tool("okl_retire", {"id": "refund-new", "reason": "x"})))
++    governs = _tool_text(asyncio.run(_build().call_tool("okl_retire", {"id": "refund-old", "reason": "x"})))
++    plain = _tool_text(asyncio.run(_build().call_tool("okl_retire", {"id": "refund-new", "reason": "x"})))
+     assert "okl export --drift" in governs, governs
+     assert "okl export" not in plain, plain

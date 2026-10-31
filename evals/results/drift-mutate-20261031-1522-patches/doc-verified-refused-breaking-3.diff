@@ -1,0 +1,15 @@
+diff --git a/README.md b/README.md
+index 41ac406..b827aa0 100644
+--- a/README.md
++++ b/README.md
+@@ -489,8 +489,8 @@ okl search "price tampering"
+ okl link <gate_id> CATCHES <defect_id>
+ ```
+ 
+-`okl record --verified` is refused: it exits 2 and points at `okl verify`, because a stamp is
+-evidence of a run, not a claim. Every other command, with its exit codes: [docs/COMMANDS.md](docs/COMMANDS.md).
++`okl record --verified` stamps the lesson as verified at once, without running a check; use
++`okl verify` when you want the stamp backed by a run. Every other command, with its exit codes: [docs/COMMANDS.md](docs/COMMANDS.md).
+ Why a step never grades itself, and the four rungs okl applies to its own stamps:
+ [docs/VERIFICATION.md](docs/VERIFICATION.md).
+ 

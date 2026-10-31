@@ -1,0 +1,55 @@
+diff --git a/src/okl/store.py b/src/okl/store.py
+index 31b9aed..121d02c 100644
+--- a/src/okl/store.py
++++ b/src/okl/store.py
+@@ -424,48 +424,8 @@ class _Backend(Protocol):
+     inherit. `runtime_checkable` lets the conformance test assert a backend satisfies
+     this without importing a driver it may not have.
+ 
+-    THE SIGNATURES ARE NOT THE CONTRACT. This interface was satisfied in full while the
+-    Postgres backend ran an unranked substring match against SQLite's BM25 — same method
+-    names, same types, silently worse retrieval for anyone who promoted their store
+-    (recorded as "a swappable backend must match on quality, not just interface"). The
+-    behavioural half of the contract is stated here and enforced by the parity tests:
+-
+-      search(q, scope, node_types, limit)
+-        - RANKED, best first. Not insertion order, not arbitrary.
+-        - Matches title, body, symptom, aliases and fix — every field the design treats
+-          as matchable — with title weighted highest.
+-        - OR-permissive across terms: a two-term query returns records matching either.
+-          (Postgres's websearch_to_tsquery ANDs by default, which silently tightens
+-          recall relative to SQLite.)
+-        - `limit` caps the rows returned; `scope` and `node_types` filter exactly.
+-
+-      upsert_node / upsert_edge
+-        - Idempotent on the primary key: writing the same id twice replaces, never
+-          duplicates, and leaves any derived index consistent with the row.
+-
+-      edges(rels)
+-        - Exactly the edges whose relation is in `rels`, each stored edge once.
+-        - Returns an edge even when its far end is NOT a node. The seed packs write
+-          `defect RECURS_IN <repo name>`; a backend that joined edges to nodes would
+-          drop every one of them silently -- the second half of issue #31.
+-        - Empty `rels` returns []. (SQLite and Postgres take different paths here:
+-          `IN ()` against `= ANY('{}')`.)
+-        - Interprets nothing. What an edge means is decided once, in core, so two
+-          backends cannot compute two different metrics from the same store.
+-
+-      log_retirement(r) / retirements(node_id)
+-        - Append-only, oldest first, filtered exactly by node id.
+-
+-      log_check(run) / checks(node_id)
+-        - Append-only, oldest first, filtered exactly by node id; `passed` reads back as
+-          a bool on every backend (SQLite stores 0/1). A rewrite of the lesson's row
+-          leaves its runs alone.
+-
+-      log_briefing(b) / briefings(repo)
+-        - Append-only: logging the same briefing twice stores two rows.
+-        - briefings returns every row oldest first, `repo` filtering exactly, with each
+-          row's node ids in the order they were logged, and its drifted ids (empty for a
+-          row logged before that column existed).
++    Methods take and return the `Node`, `Edge`, `Briefing` and related record types
++    defined in this package.
+     """
+ 
+     def init_schema(self) -> None: ...

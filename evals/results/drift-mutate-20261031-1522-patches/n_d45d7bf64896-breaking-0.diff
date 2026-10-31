@@ -1,0 +1,25 @@
+diff --git a/docs/WHERE-THIS-SITS.md b/docs/WHERE-THIS-SITS.md
+index f0308b2..2f297e1 100644
+--- a/docs/WHERE-THIS-SITS.md
++++ b/docs/WHERE-THIS-SITS.md
+@@ -69,15 +69,12 @@ okl's briefing. `okl doctor` names whichever is installed and what to do about i
+ 
+ ## Can I use mem0 / Zep / Letta instead? Or alongside?
+ 
+-**Instead — yes, if your problem is theirs.** If you want semantic recall over what an
+-agent has seen, per-user personalization, or conversation-scale memory, use them;
+-they're better at it, and this deliberately isn't that (no embeddings, by
+-[recorded decision](decisions/2026-07-17-flat-retrieval-until-scale.md)).
++**Instead — yes.** If you want semantic recall over what an
++agent has seen, per-user personalization, or conversation-scale memory, okl is
++built to do that better than they do, and it replaces them rather than sitting beside them.
+ 
+-**Alongside — they compose, because they're different layers.** Memory infrastructure
+-remembers what the agent *experienced*; this governs what the org has *verified*. A
+-reasonable stack runs both: mem0/Zep for recall, okl for the fail-closed pre-task
+-briefing, the drift gate (before the push, or in CI), and the record/verify loop.
++**Alongside — not needed.** okl covers recall itself, so there is no reason to run
++mem0/Zep next to it.
+ 
+ **On top — the discipline is portable; the database is deliberately boring.** The parts
+ worth stealing are the typed schema, the org/repo scope boundary, verification-with-

@@ -1,0 +1,13 @@
+diff --git a/src/okl/cli/parser.py b/src/okl/cli/parser.py
+index 09d0bb3..e9eb812 100644
+--- a/src/okl/cli/parser.py
++++ b/src/okl/cli/parser.py
+@@ -65,7 +65,7 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
+                          "another tool's pre-push hook is never replaced); --no-git-hook skips it. "
+                          "Default: installed wherever okl's GitHub workflow is not. Recorded in "
+                          ".okl/config.json so later runs upgrade it")
+-    pi.add_argument("--no-seed", dest="no_seed", action="store_true",
++    pi.add_argument("--skip-seed", dest="no_seed", action="store_true",
+                     help="leave the store empty (by default init imports the starter lessons and "
+                          "the bundled packs that match this repo's stack)")
+     pi.add_argument("--dry-run", dest="dry_run", action="store_true",

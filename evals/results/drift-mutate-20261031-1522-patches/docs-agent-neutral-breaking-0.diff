@@ -1,0 +1,13 @@
+diff --git a/README.md b/README.md
+index 41ac406..2ba3cc8 100644
+--- a/README.md
++++ b/README.md
+@@ -133,7 +133,7 @@ Setting up another agent: [Getting started](docs/GETTING-STARTED.md#using-anothe
+   *okl · briefed 9 lesson(s): …* — so you can see it working (`OKL_QUIET=1` hides it).
+ - **When you learn something worth keeping** — a decision, a convention the agent broke,
+   a bug you fixed — say so and the agent records it (`okl_record`, or `okl record`), with
+-  the files it governs. In Claude Code the Stop hook also asks once, at the end of a
++  the files it governs. The Stop hook also asks once, at the end of a
+   session that changed files, what was learned, and names the lessons the session was
+   briefed on and those whose files it changed, so the agent can propose correcting or
+   retiring one (you approve).

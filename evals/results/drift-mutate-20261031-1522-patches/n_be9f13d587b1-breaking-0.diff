@@ -1,0 +1,19 @@
+diff --git a/src/okl/store.py b/src/okl/store.py
+index 31b9aed..0ab51e7 100644
+--- a/src/okl/store.py
++++ b/src/okl/store.py
+@@ -952,14 +952,6 @@ class _PostgresBackend(_Backend):
+             sql += " AND scope=%s"; params.append(scope)
+         if node_types:
+             sql += " AND type = ANY(%s)"; params.append(list(node_types))
+-        if tsq:
+-            # Same tiering as the FTS5 path, for parity of the GUARANTEE rather than of an
+-            # accident: ts_rank's default normalisation ignores document length, so Postgres
+-            # does not exhibit the inversion today, but a normalisation flag would bring it
+-            # back and the two backends must agree on what "tags never outrank content" means.
+-            sql += (f" ORDER BY (({_PG_TSV_CONTENT}) @@ websearch_to_tsquery('english', %s)) DESC,"
+-                    f" ts_rank(({_PG_TSV}), websearch_to_tsquery('english', %s)) DESC")
+-            params += [tsq, tsq]
+         sql += " LIMIT %s"; params.append(limit)
+         return [_row_to_node(r) for r in self._fetch(sql, params)]
+ 

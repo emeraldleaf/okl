@@ -1,0 +1,26 @@
+diff --git a/README.md b/README.md
+index 41ac406..bdf07fd 100644
+--- a/README.md
++++ b/README.md
+@@ -610,16 +610,16 @@ The core (local + client + CLI) is **stdlib-only** — zero required dependencie
+ Extras are opt-in:
+ 
+ ```bash
+-pip install "observed-knowledge-ledger[service]"    # FastAPI shared service
+-pip install "observed-knowledge-ledger[postgres]"   # Postgres backend (psycopg)
+-pip install "observed-knowledge-ledger[mcp]"        # MCP server for Claude Code / Cursor / Copilot
+-pip install "observed-knowledge-ledger[all]"
++pip install "okl-ledger[service]"    # FastAPI shared service
++pip install "okl-ledger[postgres]"   # Postgres backend (psycopg)
++pip install "okl-ledger[mcp]"        # MCP server for Claude Code / Cursor / Copilot
++pip install "okl-ledger[all]"
+ ```
+ 
+ ## Agent integration (MCP)
+ 
+ ```bash
+-pip install "observed-knowledge-ledger[mcp]"
++pip install "okl-ledger[mcp]"
+ okl mcp     # register in your coding agent's tool config
+ ```
+ 

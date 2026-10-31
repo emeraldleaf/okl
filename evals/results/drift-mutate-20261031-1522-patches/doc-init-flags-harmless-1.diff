@@ -1,0 +1,13 @@
+diff --git a/README.md b/README.md
+index 41ac406..1d289af 100644
+--- a/README.md
++++ b/README.md
+@@ -74,7 +74,7 @@ pipx install 'observed-knowledge-ledger[mcp]'
+ **2. Wire your repo**, from its root:
+ 
+ ```bash
+-okl init --repo my-repo --dry-run   # lists every file it would write; writes nothing
++okl init --repo my-repo --dry-run   # lists every file it would write; writes nothing (safe to run first)
+ okl init --repo my-repo             # config, Claude Code hooks, MCP server, pre-push drift gate, starter lessons
+ ```
+ 
