@@ -468,13 +468,25 @@ def _arm_row(ids: list[str], b: dict[str, list[str]], before: dict[str, list[str
             "repeat": sum(len(set(b[pid]) & set(before[pid])) for pid in ids) / shown if shown else 0.0}
 
 
+def _undecided(rule: str, arms: tuple[str, ...] | list[str], judged: set[str]) -> bool:
+    """Say that `rule` is undecided while an arm it reads has a task pair no judge has seen, and
+    return whether it is: a rule read from part of its arms' labels picks on partial data
+    (review on #309)."""
+    waiting = [a for a in arms if a not in judged]
+    if waiting:
+        print(f"\n{rule} rule: undecided until every task pair of {', '.join(waiting)} is judged")
+    return bool(waiting)
+
+
 def _warm_rule(meta: dict, verdict: dict[tuple[str, str], str | None], applies: dict[str, set[str]],
-               stats: dict[str, tuple[float, int, float, int]]) -> None:
+               stats: dict[str, tuple[float, int, float, int]], judged: set[str]) -> None:
     """§4z's rule, written before any warm arm's pair was judged: the warm arm ships on when it
     shows more applying lessons in full than tiered-full at a precision no lower than
     tiered-full's lower 95% bound, reaches at least as many as tiered, and shows a lesson in
     full on at most twice as many null prompts."""
     if not {"warm", "warm-full", "tiered", "tiered-full"} <= set(stats):   # the rule reads all four
+        return
+    if _undecided("warm", ("warm", "warm-full", "tiered", "tiered-full"), judged):
         return
     b = meta["briefed"]
     tasks = [pid for k, pid in meta["chosen"] if k == "task"]
@@ -515,7 +527,9 @@ def _stem_rule(meta: dict, verdict: dict[tuple[str, str], str | None], applies: 
         full = {a: _arm_row(tasks, b[a], meta["before"], verdict, applies) for a in (bf, sf)}
         lo, _hi = bench.wilson(full[bf]["yes"], full[bf]["judged"])
         null_any = {a: sum(1 for pid in nulls if b[a][pid]) for a in (bf, sf)}
-        unjudged = sum(1 for a in (stem, sf) for pid in tasks + nulls for lid in b[a][pid]
+        # The label checks compare the stemmed arms with their baselines, so the baselines'
+        # pairs must be judged too (review on #309).
+        unjudged = sum(1 for a in (base, bf, stem, sf) for pid in tasks + nulls for lid in b[a][pid]
                        if verdict.get((pid, lid)) is None)
         checks = {
             f"null prompts at most twice {bf}'s": null_any[sf] <= 2 * null_any[bf],
@@ -572,14 +586,15 @@ def cmd_tally(args: argparse.Namespace) -> None:
     print(f"real prompts · split {args.split} (seed {meta['seed']}) · store {meta['store']} · code {commit}")
     print(f"{len(verdict)} pooled pairs, labels missing {missing}")
     stats = {}
-    open_arms: set[str] = set()
+    judged_task: set[str] = set()   # arms with every task pair judged: all a rule or F1 may read
     task_open = pool_open(verdict, [pid for k, pid in chosen if k == "task"])
     for kind in ("task", "null"):
         ids = [pid for k, pid in chosen if k == kind]
         total = sum(len(applies[pid]) for pid in ids)
         with_any = sum(1 for pid in ids if applies[pid])
         is_open = pool_open(verdict, ids)
-        shown = "-" if is_open else total
+        # Both denominators come from the pool's labels, so both are floors while it is open.
+        shown, shown_any = ("-", "-") if is_open else (total, with_any)
         print(f"\n{kind} prompts: {len(ids)} person-typed · {with_any} with an applying lesson · "
               + (f"at least {total} applying lessons in the pool, some pairs unjudged" if is_open
                  else f"{total} applying lessons in the pool"))
@@ -592,18 +607,19 @@ def cmd_tally(args: argparse.Namespace) -> None:
             # An arm with pairs no judge has seen has no precision or reach yet: a figure over
             # the judged part alone would read as the arm's (§4ad stopped before judging).
             unjudged = sum(1 for pid in ids for lid in meta["briefed"][arm][pid] if verdict.get((pid, lid)) is None)
+            if kind == "task" and not unjudged:
+                judged_task.add(arm)
             if unjudged:
-                open_arms.add(arm)
                 print(f"  {arm:11} {f'{unjudged} unjudged':>22} {'-':>15} {'-':>12} "
                       f"{r['any']:>5} of {len(ids):<4} {r['per']:>15.2f} {'-':>17} {r['repeat']:>7.0%}")
             else:
-                print(f"  {arm:11} {prec:>22} {r['found']:>7} of {shown!s:<5} {r['hit']:>5} of {with_any:<4} "
+                print(f"  {arm:11} {prec:>22} {r['found']:>7} of {shown!s:<5} {r['hit']:>5} of {shown_any!s:<4} "
                       f"{r['any']:>5} of {len(ids):<4} {r['per']:>15.2f} {r['off']:>17.2f} {r['repeat']:>7.0%}")
             if kind == "task":
                 stats[arm] = (r["yes"] / r["judged"] if r["judged"] else 0.0, r["found"], r["per"], total)
     # F1 of judged precision and pooled recall, the sweep rule's measure.
     f1 = {a: (2 * p * (f / t) / (p + f / t) if p and t and f else 0.0) for a, (p, f, _per, t) in stats.items()
-          if a not in open_arms}
+          if a in judged_task}
     print("\nF1 on task prompts (judged precision, pooled recall): "
           + ("n/a until every task pair is judged" if task_open
              else " · ".join(f"{a} {v:.3f}" for a, v in f1.items())))
@@ -612,21 +628,28 @@ def cmd_tally(args: argparse.Namespace) -> None:
         present = [a for a in family if a in stats]
         if not present or "calibrated" not in stats:
             continue
+        if _undecided(name, ["calibrated", *present], judged_task):
+            continue
         eligible = [a for a in present if stats[a][0] >= stats["calibrated"][0]]
         pick = min(eligible, key=lambda a: (-stats[a][1], stats[a][2])) if eligible else None
         print(f"\n{name} rule: {pick or f'no {name} arm'} "
               + (f"(most applying lessons found on task prompts among the {name} arms at least as precise as "
                  "calibrated)" if pick else "(none is at least as precise as calibrated on task prompts)"))
-    if "tiered" in stats and "floor" in stats:
+    if "tiered" in stats and "floor" in stats and not _undecided("tier", ("tiered", "floor"), judged_task):
         holds = stats["tiered"][1] >= stats["floor"][1]
         print(f"\ntier rule: {'tiered' if holds else 'not tiered'} (it reaches {stats['tiered'][1]} applying lessons "
               f"on task prompts, the floor {stats['floor'][1]}; the rule asks at least as many)")
-    _warm_rule(meta, verdict, applies, stats)
+    _warm_rule(meta, verdict, applies, stats, judged_task)
     _stem_rule(meta, verdict, applies, stats)
-    if any(a in stats for a in SWEEP_ARMS) and not task_open:
-        eligible = [a for a in f1 if stats[a][2] <= 5]
-        pick = min(eligible, key=lambda a: (-f1[a], stats[a][2]))
-        print(f"\nsweep rule: {pick} (highest F1 on task prompts among arms briefing at most five lessons a prompt)")
+    if any(a in stats for a in SWEEP_ARMS):
+        eligible = [a for a in f1 if stats[a][2] <= 5] if not task_open else []
+        if eligible:
+            pick = min(eligible, key=lambda a: (-f1[a], stats[a][2]))
+            print(f"\nsweep rule: {pick} (highest F1 on task prompts among arms briefing at most five lessons "
+                  "a prompt)")
+        else:
+            print("\nsweep rule: undecided (no arm with every task pair judged briefs at most five lessons a "
+                  "prompt, or a task pair is unjudged)")
 
 
 def cmd_misses(args: argparse.Namespace) -> None:
