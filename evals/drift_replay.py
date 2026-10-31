@@ -465,8 +465,11 @@ def judge(receipt: Path, db: Path) -> int:
         prompt = JUDGE_PROMPT.format(title=node.title if node else e["lesson"],
                                      symptom=(node and node.symptom) or "-", fix=(node and node.fix) or "-",
                                      diff=diff)
-        r = subprocess.run(["claude", "-p", "--model", "sonnet", "--restricted", "--tools", ""],
-                           input=prompt, capture_output=True, text=True, timeout=TIMEOUT)
+        # From an empty directory: run in the checkout it would read this repo's CLAUDE.md, which
+        # --restricted does not skip, and the judge must see only the lesson and the diffs.
+        with tempfile.TemporaryDirectory(prefix="okl-judge-") as room:
+            r = subprocess.run(["claude", "-p", "--model", "sonnet", "--restricted", "--tools", ""],
+                               input=prompt, capture_output=True, text=True, timeout=TIMEOUT, cwd=room)
         m = re.search(r"\{.*\}", r.stdout, re.S)
         try:
             said = json.loads(m.group(0)) if m else {}
