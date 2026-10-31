@@ -1,16 +1,66 @@
 {
- "_provenance": "REPORT §4ag's positive controls, written before any judgment. The lessons are the census's checked lessons in seed-189 draw order after the ten negative controls, taking each one whose fix, symptom, body or title (in that order) names a path, an okl flag or a defined function that exists at f645d81, the first such token; flags following a git command are not okl's and are skipped. Each token is replaced, everywhere in the lesson, by a name that exists nowhere in the repository at f645d81 (checked with git grep, ls-tree and the flags under src/okl).",
+ "_provenance": "REPORT §4ag's positive controls, written before any judgment. The lessons are the census's checked lessons in seed-189 draw order after the ten negative controls, taking each one whose fix, symptom, body or title (in that order) names a path, an okl flag or a defined function that exists at f645d81, the first such token; flags following a git command are not okl's and are skipped. Each token is replaced, everywhere in the lesson, by a name that exists nowhere in the repository at f645d81 (checked with git grep, ls-tree and the flags under src/okl). Before any judgment, the instrument's own guard refused '--name' for n_f215b68b925c, because '--name-only' holds it as a substring; it became '--slug'.",
  "rev": "f645d81",
  "lessons": [
-  {"id": "n_119528a07fa5", "field": "body", "old": "drift_banner()", "new": "stale_banner()"},
-  {"id": "n_f215b68b925c", "field": "fix", "old": "--repo", "new": "--name"},
-  {"id": "n_f6d01e368155", "field": "fix", "old": "src/okl/__init__.py", "new": "src/okl/_package.py"},
-  {"id": "n_110bb4fb7112", "field": "body", "old": ".github/workflows", "new": ".github/actions"},
-  {"id": "n_5ddb0776a863", "field": "fix", "old": "--report", "new": "--summary"},
-  {"id": "n_8519bf0f71c6", "field": "fix", "old": "stop-okl-encode.sh", "new": "stop-okl-learn.sh"},
-  {"id": "n_4a398f2f8095", "field": "symptom", "old": "store.py", "new": "storage.py"},
-  {"id": "order-from-log-not-edges", "field": "body", "old": "--by", "new": "--via"},
-  {"id": "n_b4050b826687", "field": "symptom", "old": "--run", "new": "--exec"},
-  {"id": "n_1fe5ef1aaca5", "field": "body", "old": "ci/okl-verify.yml", "new": "ci/okl-gate.yml"}
+  {
+   "id": "n_119528a07fa5",
+   "field": "body",
+   "old": "drift_banner()",
+   "new": "stale_banner()"
+  },
+  {
+   "id": "n_f215b68b925c",
+   "field": "fix",
+   "old": "--repo",
+   "new": "--slug"
+  },
+  {
+   "id": "n_f6d01e368155",
+   "field": "fix",
+   "old": "src/okl/__init__.py",
+   "new": "src/okl/_package.py"
+  },
+  {
+   "id": "n_110bb4fb7112",
+   "field": "body",
+   "old": ".github/workflows",
+   "new": ".github/actions"
+  },
+  {
+   "id": "n_5ddb0776a863",
+   "field": "fix",
+   "old": "--report",
+   "new": "--summary"
+  },
+  {
+   "id": "n_8519bf0f71c6",
+   "field": "fix",
+   "old": "stop-okl-encode.sh",
+   "new": "stop-okl-learn.sh"
+  },
+  {
+   "id": "n_4a398f2f8095",
+   "field": "symptom",
+   "old": "store.py",
+   "new": "storage.py"
+  },
+  {
+   "id": "order-from-log-not-edges",
+   "field": "body",
+   "old": "--by",
+   "new": "--via"
+  },
+  {
+   "id": "n_b4050b826687",
+   "field": "symptom",
+   "old": "--run",
+   "new": "--exec"
+  },
+  {
+   "id": "n_1fe5ef1aaca5",
+   "field": "body",
+   "old": "ci/okl-verify.yml",
+   "new": "ci/okl-gate.yml"
+  }
  ]
 }
