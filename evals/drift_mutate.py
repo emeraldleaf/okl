@@ -19,6 +19,13 @@ patch is committed on BASE in a scratch worktree, and there:
   already fails at BASE is reported and not counted.
 
 Patches are kept as they arrive, so a run that stops resumes where it stopped.
+
+    PYTHONPATH=src python3 evals/drift_mutate.py --rejudge evals/results/drift-mutate-<stamp>.json
+        # writes drift-mutate-<stamp>-rejudge.json beside it
+
+--rejudge asks the judge once more, with the same prompt and model, about each patch whose judge
+call gave no verdict (in the first run, time-outs while other model sessions ran), and recomputes
+the measures. The registered receipt is left as it is; this one is reported beside it.
 """
 from __future__ import annotations
 
@@ -186,11 +193,47 @@ def run_ci(r: dr.Replayer, commit: str, skip: set[str]) -> tuple[str, list[str]]
     return ("fail" if failed else "pass"), failed
 
 
+def rejudge(receipt: Path) -> int:
+    """Judge again each patch of `receipt` that has no verdict, and write the measures beside it."""
+    rec = json.loads(receipt.read_text())
+    with dr.store_copy(dr.main_store()) as store:
+        nodes = {lid: store.get_node(lid) for lid in rec["lessons"]}
+        store.close()
+    room = Path(tempfile.mkdtemp(prefix="okl-rejudge-"))
+    patches, redone = rec["patches"], []
+    for p in patches:
+        if p.get("patch"):
+            p["diff"] = (dr.RESULTS / p["patch"]).read_text()
+        if p.get("judge") is None and p.get("diff"):
+            n = nodes[p["lesson"]]
+            text = LESSON.format(title=n.title, symptom=n.symptom or "", fix=n.fix or "")
+            j = claude(JUDGE, JUDGE_PROMPT.format(lesson=text, diff=p["diff"][:12000]), room)
+            p.update(judge_first=p.get("judge_said"), judge=judged(j.get("result") or ""),
+                     judge_cost=j.get("cost_usd", 0.0), judge_said=(j.get("result") or j.get("error") or "")[-300:],
+                     rejudged=True)
+            redone.append(f'{p["lesson"]}-{p["kind"]}-{p["k"]}')
+            print(f'{redone[-1]:40} judge={p["judge"]}', flush=True)
+    out = receipt.with_name(f"{receipt.stem}-rejudge.json")
+    out.write_text(json.dumps({
+        "what": "drift catch rate, patches without a verdict judged once more (REPORT §4af)",
+        "at": f"{datetime.now(UTC):%Y-%m-%dT%H:%MZ}", "receipt": receipt.name,
+        "code": dr.git("rev-parse", "--short=12", "HEAD").strip(), "judge": " ".join(JUDGE), "rejudged": redone,
+        "cost_usd": round(sum(p.get("judge_cost", 0) for p in patches if p.get("rejudged")), 2),
+        "summary": summarize(patches),
+        "patches": [{k: v for k, v in p.items() if k != "diff"} for p in patches],
+    }, indent=1) + "\n")
+    print(f"receipt: {out.relative_to(dr.REPO)}")
+    return 0
+
+
 def main() -> int:
     """Break each lesson, judge and evaluate every patch, and write the receipt."""
     ap = argparse.ArgumentParser()
     ap.add_argument("--workers", type=int, default=3, help="lessons worked at once")
+    ap.add_argument("--rejudge", type=Path, help="judge again the patches of this receipt that have no verdict")
     args = ap.parse_args()
+    if args.rejudge:
+        return rejudge(args.rejudge.resolve())
     base = dr.git("rev-parse", BASE).strip()
     rules = dr.snapshot(base)
     with dr.store_copy(dr.main_store()) as store:
