@@ -72,12 +72,12 @@ fi
 # cites and a claim to the code: the findings a diff alone cannot show (review on #300).
 repo_note=""
 if [[ -n "${REVIEW_REPO_DIR:-}" ]]; then
-  repo_note="The repository is checked out at $REVIEW_REPO_DIR and you can read any file in it. Use that: open the receipt every published figure cites and compare the number, and open the code a claim is about. Where your tools allow read-only git (log, show, merge-base), use it to check that a commit a receipt names is reachable."
+  repo_note="The repository is checked out at $REVIEW_REPO_DIR and you can read any file in it. Use that: open the receipt every published figure cites and compare the number, and open the code a claim is about. Where your tools allow read-only git (merge-base, rev-parse), use it to check that a commit a receipt names is reachable: git merge-base --is-ancestor <sha> HEAD."
   # A coding agent refuses `cd <dir> && git ...` (git in a new directory can run its hooks) and
   # `git -C <dir> ...` matches no allow rule, so a reviewer told only the path never ran git
   # (CI reviewer on #307). GIT_DIR already points git at the checkout: say so.
   if [[ -n "${GIT_DIR:-}" ]]; then
-    repo_note+=" git already points at the checkout: run git log, git show and git merge-base exactly as they are, with no cd and no -C (both are refused)."
+    repo_note+=" git already points at the checkout: run git merge-base and git rev-parse exactly as they are, with no cd and no -C (both are refused)."
   fi
 fi
 

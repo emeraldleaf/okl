@@ -345,7 +345,31 @@ THRESHOLDS = {
     "200 MB": "100,000 vectors of 512 float32s: arithmetic, the size at which that tier is due",
     "1.1 GB": "warm-memory-20261027-0530.txt: 1,659 MB after the first prompt less 559 after loading",
 }
-FIGURE = re.compile(r"(?<![\w.])(\d[\d,]*(?:\.\d+)?) ?(ms|MB|GB)\b")
+# A number and its unit can sit on two lines: Markdown renders "131\nMB" as "131 MB" (#307).
+FIGURE = re.compile(r"(?<![\w.])(\d[\d,]*(?:\.\d+)?)\s?(ms|MB|GB)\b")
+# What each figure measures, as words that must stand near every place it is published. The
+# check above holds the set of strings, so a figure moved to another measurement (the hybrid
+# model's size written as the reranker's 92 MB) kept a string some doc still used and passed
+# (CodeRabbit on #307). Near: 160 characters before the figure and 60 after.
+NEAR = {
+    "131 MB": r"potion|hybrid|semantic",
+    "92 MB": r"rerank|MiniLM|cross-encoder|second stage",
+    "4 ms": r"search|product",
+    "15 ms": r"search|read|product",
+    "92 ms": r"read",
+    "7 ms": r"without numpy|pure-Python|fallback",
+    "232 ms": r"without numpy|pure-Python|fallback",
+    "309.5 MB": r"int8",
+    "1,235 MB": r"full precision|precision's",
+    "170.7 ms": r"[Ee]ncod",
+    "114 ms": r"prompt",
+    "1.6 GB": r"memory|holds|warm",
+}
+
+
+def _near(text: str, start: int, end: int) -> str:
+    """The words around a figure, on one line."""
+    return " ".join(text[max(0, start - 160):end + 60].split())
 
 
 def _published_docs() -> list[Path]:
@@ -362,9 +386,16 @@ def test_every_size_and_latency_the_docs_publish_is_its_receipts_number():
     """The architecture reviewer's most common finding was a published figure no receipt held
     (#300); this is that check, run on every change for free."""
     found: dict[str, str] = {}
+    misplaced = []
     for doc in _published_docs():
-        for m in FIGURE.finditer(doc.read_text()):
-            found.setdefault(f"{m.group(1)} {m.group(2)}", doc.name)
+        text = doc.read_text()
+        for m in FIGURE.finditer(text):
+            fig = f"{m.group(1)} {m.group(2)}"
+            found.setdefault(fig, doc.name)
+            if fig in NEAR and not re.search(NEAR[fig], _near(text, m.start(), m.end())):
+                misplaced.append(f"{doc.name}: {fig} near {_near(text, m.start(), m.end())!r}")
+    assert set(NEAR) == set(DOC_FIGURES), "each figure names what it measures in NEAR"
+    assert not misplaced, f"a figure published beside another measurement's words: {misplaced}"
     unnamed = {fig: doc for fig, doc in found.items() if fig not in DOC_FIGURES and fig not in THRESHOLDS}
     assert not unnamed, f"name each figure's receipt line in DOC_FIGURES: {unnamed}"
     assert set(DOC_FIGURES) <= set(found), f"no longer in the docs: {set(DOC_FIGURES) - set(found)}"
@@ -385,6 +416,16 @@ CONTRADICTED = {("ab-20261023-1303.json", 67): "4r", ("ab-20261023-1303.json", 1
                 ("ab-20261029-0318.json", 61): "4aa", ("ab-20261029-0318.json", 70): "4aa"}
 NEGATED = re.compile(r"(defect|it) (is|was) not (reproduced|present)|not reproduced|is not present"
                      r"|does not reproduce|defect is absent", re.I)
+
+
+def test_a_figure_moved_to_another_measurement_fails():
+    """The hybrid model's size written as the reranker's: the string is still a named figure,
+    and only its surroundings say it is the wrong one (CodeRabbit on #307)."""
+    text = "Turning it on costs a\n92 MB model download (`minishlab/potion-retrieval-32M`)"
+    m = FIGURE.search(text)
+    assert m and f"{m.group(1)} {m.group(2)}" == "92 MB"
+    assert not re.search(NEAR["92 MB"], _near(text, m.start(), m.end()))
+    assert re.search(NEAR["131 MB"], _near(text, m.start(), m.end()))
 
 
 def test_every_verdict_its_own_reason_contradicts_is_corrected_in_the_report():

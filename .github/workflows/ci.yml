@@ -142,10 +142,11 @@ jobs:
             chmod +x "$CLAUDE_BIN"
             # Read-only git, so it can check that a receipt's commit is reachable: allowed by a
             # settings file, since the command line is word-split; GIT_DIR points the clean
-            # room's git at the checkout. Only forms that cannot write: not branch or tag, which
-            # can create and delete refs while the token is in the environment and the model
-            # reads PR text (CI reviewer on #307). Any other shell command is refused in -p mode.
-            printf '%s' '{"permissions":{"allow":["Bash(git log:*)","Bash(git show:*)","Bash(git merge-base:*)","Bash(git rev-parse:*)"]}}' \
+            # room's git at the checkout. Only forms that cannot write, while the token is in the
+            # environment and the model reads PR text: not branch or tag, which create and delete
+            # refs (CI reviewer on #307), and not log or show, whose --output writes a file
+            # (CodeRabbit on #307). Any other shell command is refused in -p mode.
+            printf '%s' '{"permissions":{"allow":["Bash(git merge-base:*)","Bash(git rev-parse:*)"]}}' \
               > "$RUNNER_TEMP/review-settings.json"
             export GIT_DIR="$GITHUB_WORKSPACE/.git" GIT_WORK_TREE="$GITHUB_WORKSPACE"
             REVIEW_CMD="$CLAUDE_BIN -p --model sonnet --max-turns 40 --tools Read,Grep,Glob,Bash --settings $RUNNER_TEMP/review-settings.json --add-dir $GITHUB_WORKSPACE"

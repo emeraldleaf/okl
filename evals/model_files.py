@@ -50,8 +50,11 @@ def measure(code: str) -> str:
     """The loader run in a fresh process (the hub reads its cache path at import) against an
     empty cache; what it left there."""
     root = Path(tempfile.mkdtemp(prefix="okl-models-"))
-    env = {**os.environ, "HF_HOME": str(root / "hf"), "FASTEMBED_CACHE_PATH": str(root / "fastembed"),
-           "PYTHONPATH": str(REPO / "src")}
+    # HF_HUB_CACHE and its older name outrank HF_HOME, so a shell that sets either would send
+    # the download elsewhere and the receipt would weigh an empty root (review on #307).
+    hub = str(root / "hf" / "hub")
+    env = {**os.environ, "HF_HOME": str(root / "hf"), "HF_HUB_CACHE": hub, "HUGGINGFACE_HUB_CACHE": hub,
+           "FASTEMBED_CACHE_PATH": str(root / "fastembed"), "PYTHONPATH": str(REPO / "src")}
     try:
         r = subprocess.run([sys.executable, "-c", code], env=env, capture_output=True, text=True,
                            timeout=900, check=False)
