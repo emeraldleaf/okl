@@ -28,9 +28,9 @@
       "title": "The install command in the README and guide names the real PyPI distribution",
       "scope": "repo:okl",
       "files": "README.md,docs/GETTING-STARTED.md,pyproject.toml",
-      "verified_at": 1793338402019,
-      "verified_by": "`python3 -c \"import tomllib,sys; n=tomllib.load(open(\\\"pyproject.toml\\\",\\\"rb\\\"))[\\\"project\\\"][\\\"name\\\"]; line=\\\"pipx install '\\\"+n+\\\"[mcp]'\\\"; bad=[f for f in (\\\"README.md\\\",\\\"docs/GETTING-STARTED.md\\\") if line not in open(f).read()]; sys.exit(\\\"install line missing in %s\\\" % bad) if bad else print(\\\"INSTALL LINE MATCHES\\\", n)\"` exit 0, matched 'INSTALL LINE MATCHES' on commit fd3e7c05efb4 @ 2026-10-30T05:33Z",
-      "verified_commit": "fd3e7c05efb4a79e4f7027d30de5ea1a5af18bd9"
+      "verified_at": 1793423047669,
+      "verified_by": "`python3 -c \"import tomllib,sys; n=tomllib.load(open(\\\"pyproject.toml\\\",\\\"rb\\\"))[\\\"project\\\"][\\\"name\\\"]; line=\\\"pipx install '\\\"+n+\\\"[mcp]'\\\"; bad=[f for f in (\\\"README.md\\\",\\\"docs/GETTING-STARTED.md\\\") if line not in open(f).read()]; sys.exit(\\\"install line missing in %s\\\" % bad) if bad else print(\\\"INSTALL LINE MATCHES\\\", n)\"` exit 0, matched 'INSTALL LINE MATCHES' on commit 8e91a08a52b6 @ 2026-10-31T05:04Z",
+      "verified_commit": "8e91a08a52b6374c68e501096a4ef967682c76df"
     },
     {
       "id": "doc-verified-refused",
@@ -78,9 +78,9 @@
       "title": "A test that imports an undeclared package passes only where that package happens to be installed",
       "scope": "org",
       "files": "tests/",
-      "verified_at": 1793416156860,
-      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' on commit 83bdb670da82 @ 2026-10-31T03:09Z",
-      "verified_commit": "83bdb670da82a41937723ab01f9dc111342135b8"
+      "verified_at": 1793423050987,
+      "verified_by": "`bash -c \"! grep -rnE '^\\s*(import yaml|from yaml)' tests/ && echo 'NO UNDECLARED IMPORT'\"` exit 0, matched 'NO UNDECLARED IMPORT' on commit 8e91a08a52b6 @ 2026-10-31T05:04Z",
+      "verified_commit": "8e91a08a52b6374c68e501096a4ef967682c76df"
     },
     {
       "id": "n_9ba48d85ed19",
@@ -108,9 +108,9 @@
       "title": "A port is defined by behaviour, not by its signatures — state the contract and test every adapter against one body",
       "scope": "org",
       "files": "src/okl/store.py,tests/test_okl.py",
-      "verified_at": 1793361010857,
-      "verified_by": "`python3 -m pytest -q -k 'backend_conformance'` exit 0, matched 'passed' on commit 6cd295503dce @ 2026-10-30T11:50Z",
-      "verified_commit": "6cd295503dce74dee4d264d4fc41b3cb7b181d1f"
+      "verified_at": 1793423050896,
+      "verified_by": "`python3 -m pytest -q -k 'backend_conformance'` exit 0, matched 'passed' on commit 8e91a08a52b6 @ 2026-10-31T05:04Z",
+      "verified_commit": "8e91a08a52b6374c68e501096a4ef967682c76df"
     },
     {
       "id": "n_be9f13d587b1",
@@ -128,9 +128,9 @@
       "title": "Dependabot alerts reach no one unless a step reads them",
       "scope": "org",
       "files": "docs/DEVELOPING.md",
-      "verified_at": 1793338398383,
-      "verified_by": "`awk '/^## Releasing/{r=1;next} r&&/^(## |2\\. )/{exit} r&&/^1\\. /{s=1} s{print}' docs/DEVELOPING.md | tr '\\n' ' ' | grep -o 'dependabot/alerts?state=open.*--jq length.*should print 0'` exit 0, matched 'should print 0' on commit fd3e7c05efb4 @ 2026-10-30T05:33Z",
-      "verified_commit": "fd3e7c05efb4a79e4f7027d30de5ea1a5af18bd9"
+      "verified_at": 1793423047594,
+      "verified_by": "`awk '/^## Releasing/{r=1;next} r&&/^(## |2\\. )/{exit} r&&/^1\\. /{s=1} s{print}' docs/DEVELOPING.md | tr '\\n' ' ' | grep -o 'dependabot/alerts?state=open.*--jq length.*should print 0'` exit 0, matched 'should print 0' on commit 8e91a08a52b6 @ 2026-10-31T05:04Z",
+      "verified_commit": "8e91a08a52b6374c68e501096a4ef967682c76df"
     },
     {
       "id": "n_d45d7bf64896",
@@ -148,9 +148,9 @@
       "title": "PyPI rejects a package name as 'too similar' to an existing one — with a bare 400 that hides the reason",
       "scope": "org",
       "files": "pyproject.toml",
-      "verified_at": 1793338398339,
-      "verified_by": "`python3 -c \"import tomllib;p=tomllib.load(open('pyproject.toml','rb'))['project'];assert p['name']!='okl';assert p['scripts'].get('okl');print('NAME OK',p['name'])\"` exit 0, matched 'NAME OK' on commit fd3e7c05efb4 @ 2026-10-30T05:33Z",
-      "verified_commit": "fd3e7c05efb4a79e4f7027d30de5ea1a5af18bd9"
+      "verified_at": 1793423047540,
+      "verified_by": "`python3 -c \"import tomllib;p=tomllib.load(open('pyproject.toml','rb'))['project'];assert p['name']!='okl';assert p['scripts'].get('okl');print('NAME OK',p['name'])\"` exit 0, matched 'NAME OK' on commit 8e91a08a52b6 @ 2026-10-31T05:04Z",
+      "verified_commit": "8e91a08a52b6374c68e501096a4ef967682c76df"
     },
     {
       "id": "n_ead8e0a2b43d",
