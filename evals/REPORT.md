@@ -3151,6 +3151,98 @@ it passed at; otherwise it is "not reproducible" and counted apart.
 the exclusions or the samples after any verdict is read. If the run cannot complete by
 2026-11-07, this section records why and nothing is concluded.
 
+### Result (2026-10-31)
+
+**Two runs, and why the first does not count.**
+- **Run 1** (`drift-replay-20261031-0519.json`, from e12485e) listed an event's commits, and the
+  snapshot's history, with git's path-limited history. Its simplification drops a merge whose
+  files match one parent. In 450 of its 862 events, 563 merges that changed the governed files
+  went unchecked, 352 of them on the branch's own line. So run 1 did not measure the registered
+  definition.
+- **How it was found:** the red sample, which never used path-limited history, found a break at
+  a merge the census had no event for.
+- **The correction:** every commit whose files differ from its first parent's, with a test that
+  reproduces the merge case. Its corrected counts replace the ones above: 3,494 replaced stamps,
+  of which 1,859 are drift-red events holding 4,751 commits that changed governed files.
+- **Run 2** (`drift-replay-20261031-0558.json`, from 25c8f51, 2,713 check runs in 16 minutes) is
+  the one this section reads. The pins, exclusions and samples did not change, and both runs
+  gave the samples the same verdicts. Run 1's census found 2 needed events in 860.
+- **Declared before run 2:** a PR's merge into main replaces main's stamp with the one its branch
+  already recorded, so a per-verification figure (each lesson and V counted once) is reported
+  beside the per-event one.
+
+| measure | result | 95% interval |
+|---|---|---|
+| event precision | 4 needed of 1,854 decided (0.22%) | 0.08%–0.55% |
+| per verification | 4 of 1,317 (0.30%) | 0.12%–0.78% |
+| red break rate | 1 of 298 (0.34%) | 0.06%–1.88% |
+| green miss rate | 0 of 299 | 0%–1.27% |
+| recall estimate | 1.0, from one break (below) | — |
+| not reproducible | 5 of 1,859 events, 3 of 600 pairs | — |
+| judge agrees with the check | 35 of 40 | 74%–95% |
+
+**Predictions.**
+1. **Held.** Event precision is 0.22%, against a registered bound of 10%.
+2. **Not read.** The run found 4 needed events, below the 5 the registration requires.
+3. **Held.** No green pair of 299 was broken; the interval's top is 1.27%.
+4. **Held as registered, and not informative.** The estimate of 1.0 rests on the red sample's one
+   break and the green sample's none. Within the two intervals, recall could be as low as about
+   0.01. This run measures precision and bounds misses; it does not measure recall.
+
+**What the needed events are.** All four are one commit, 198fc81, "README: the short version,
+with the essays moved to docs/". It took two documented facts out of the README: the check
+command's formats, and the refused `--verified` line. The next commit restored both before
+re-verification. Each lesson's event is counted on its branch and again at the merge into main.
+So across 12 lessons, drift went red 1,859 times, and the code it governs was committed broken,
+by the check's verdict, once.
+
+**What does not reproduce.**
+- **Three `doc-init-flags` events.** Their stamp names a commit, 96da803, at which the check's
+  script `ci/check-init-flags.py` does not exist. The stamp recorded a commit its check could
+  not have run at.
+- **Two `n_7e50e3588bcd` events.** The check itself was rewritten at re-verification: its ban
+  on `import tomllib` was dropped when okl dropped Python 3.10. The old check fails at V by
+  design. These are re-verifications that changed the lesson on purpose, an outcome the
+  registration did not name. Counted as needed, precision would be 6 of 1,856 (0.32%).
+- **The red sample's one break** is the same rewrite, at the merge d374bd4, judged by main's
+  older stamp.
+
+**The judge.** It agrees on 35 of 40 answered events, above the registered 80%, so precision
+stands as the check's verdict.
+- Its agreement is all on the unneeded side: 35 of 36. Its one dissent there reads a README
+  conceding a recall loss as breaking a rule against claiming better recall, which it does not.
+- On the needed side it disagreed on all 4. The break was a deletion inside a 735-line README
+  rewrite, and the judge, given each commit's diff cut to 12,000 characters, reported that no
+  format line was added. The check is right there: at 198fc81 it prints
+  `formats undocumented: ['json', 'hook']`.
+- So on this kind of break the judge is the weaker instrument. It does not show that a check
+  passed on a lesson that had gone wrong.
+
+**Context: catches before a commit.** On this machine, since the check log began (okl review
+R3), the 12 lessons logged 4 failed runs among 1,180. These are the catches drift's red led to
+while the author was still working, which committed history cannot show. The other four watched
+lessons (three excluded, one with no event) logged 11 more.
+
+**Falsifiers.**
+- **Precision is below 10%, but prediction 2 was not read,** so the registered follow-up, narrowing
+  the directory globs, does not fire.
+- **The green miss rate is below 2%, and the recall estimate is not below 0.8 as registered,** so
+  this run files no scheduled re-run of the checks.
+- **Not-reproducible counts stay far under 20%,** so the rates stand.
+- **The judge is above 80%,** so precision stands as the check's verdict.
+
+**What it shows, and what it does not.**
+- **Shown:** in committed history, drift's red was almost never a broken commit. One commit in
+  1,859 red events was, and the author had already fixed it before re-verifying. Its cost is a
+  re-run of a check that passes; its value lands before the commit, where the check log is the
+  only record.
+- **Not shown:**
+  - recall, which needs breaks that are not there;
+  - whether narrower governed files would cut the cost without missing a break;
+  - any repository but this one.
+
+  Each of those needs its own pre-registration.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

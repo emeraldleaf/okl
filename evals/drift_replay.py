@@ -447,6 +447,7 @@ advice wrong for the project? Answer with JSON only: {{"broken": true or false, 
 def judge(receipt: Path, db: Path) -> int:
     """§4ae step 3: a second judge, not the check, on a seeded sample of the replayed events,
     half needed and half unneeded where there are enough, blind to the check's verdict."""
+    receipt = receipt.resolve()
     data = json.loads(receipt.read_text())
     evs = [e for e in data["events"] if e["outcome"] in ("needed", "unneeded")]
     def key(e: dict) -> str:
