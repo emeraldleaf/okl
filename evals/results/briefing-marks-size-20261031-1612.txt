@@ -1,0 +1,17 @@
+briefing marks size (#222) · 2026-10-31T16:12Z · code 31dcc0adb0ea · 14 prompts (8 eval tasks, 6 probe prompts) · a copy of the store (343 records), repo okl with its interests
+  kind    full  listed  unchecked   chars  added
+  task       5      12         10    6915    288
+  task       5      12         10    6946    288
+  task       5      12         14    7190    344
+  task       5      12          9    7132    273
+  task       5      12         13    7476    330
+  task       5      12         14    6412    344
+  task       5      12         10    7231    288
+  task       5      12         12    6287    316
+  probe      0       1          1     632    161
+  probe      1      10         11    3778    302
+  probe      0       0          0     313      0
+  probe      0       2          0     982      0
+  probe      0      12          8    4023    259
+  probe      0       8          6    2945    231
+  briefed prompts 13: 118 of 170 lessons marked unchecked; the marks add 3424 characters to 67949 (5.0%)
