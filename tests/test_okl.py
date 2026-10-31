@@ -728,6 +728,73 @@ def test_seed_refresh_in_the_checkout_reads_its_own_seed_dir_as_bundled(tmp_path
     assert Client().get("seed:mine:k")["title"] == "pack wording"
 
 
+def test_reseeding_keeps_what_the_pack_leaves_out_and_the_stored_check(store, tmp_path):
+    """#214: a re-seed rewrote every field and blanked the ones the pack leaves out, so files
+    added with okl update went, with their proof, and drift checked nothing; and after a
+    re-seed that changed the files, the next one dropped the stored check. A pack's silence is
+    not a deletion, and the check stays while the files do. The pack still owns its text."""
+    from okl.seed import seed_from_file
+    class _C:  # minimal client shim over the in-memory store
+        repo = "r"
+        def record(self, **k): return core.record(store, **k)
+        def link(self, s, r, d): return core.link(store, s, r, d)
+    pack = tmp_path / "team.json"
+    def write_pack(title, files=None, verified=False):
+        node = {"key": "k", "type": "Rule", "scope": "org", "repo": "r", "title": title}
+        node.update({"files": files} if files else {})
+        node.update({"verified": True} if verified else {})
+        pack.write_text(json.dumps({"nodes": [node]}))
+    nid = "seed:team:k"
+
+    # Files and triggers added here, on a lesson whose pack has neither, and a check stored.
+    write_pack("Pin the linter"); seed_from_file(_C(), str(pack))
+    core.update(store, nid, files="ci.yml", triggers=["the lint step fails after a release"])
+    core.verify(store, nid, "`grep -q ruff== ci.yml` exit 0 on commit abc123def456 @ 2026-10-29T03:00Z",
+                commit="abc123def456" * 3 + "abcd")
+    write_pack("Pin every linter CI runs"); seed_from_file(_C(), str(pack))
+    n = store.get_node(nid)
+    assert n.title == "Pin every linter CI runs"
+    assert (n.files, n.triggers) == ("ci.yml", "the lint step fails after a release")
+    assert n.verified_at is not None
+    assert n.verified_by.startswith("`grep -q ruff== ci.yml`")
+
+    # The pack's own files change: the stamp goes, the check stays; the next re-seed keeps it.
+    write_pack("Pin every linter CI runs", files="ci/lint.yml"); seed_from_file(_C(), str(pack))
+    assert store.get_node(nid).verified_at is None
+    seed_from_file(_C(), str(pack))
+    assert store.get_node(nid).verified_by.startswith("`grep -q ruff== ci.yml`")
+
+    # A pack that says "verified" does not stamp a lesson no check has passed since.
+    write_pack("Pin every linter CI runs", files="ci/lint.yml", verified=True); seed_from_file(_C(), str(pack))
+    assert store.get_node(nid).verified_at is None
+
+
+def test_a_pack_clears_what_it_sets_empty_and_keeps_what_it_leaves_out(store, tmp_path):
+    """#214, review on #310: keeping every empty field meant a pack could not stop governing
+    a file ("files": "") or drop triggers ([]), and the old stamp stayed with the restored
+    files. Left out keeps the store's value, a status included; set empty clears."""
+    from okl.seed import seed_from_file
+    class _C:  # minimal client shim over the in-memory store
+        repo = "r"
+        def record(self, **k): return core.record(store, **k)
+        def link(self, s, r, d): return core.link(store, s, r, d)
+    pack = tmp_path / "team.json"
+    nid = "seed:team:k"
+    def seed(**fields):
+        pack.write_text(json.dumps({"nodes": [{"key": "k", "type": "Rule", "scope": "org", "repo": "r",
+                                               "title": "Pin the linter", **fields}]}))
+        seed_from_file(_C(), str(pack))
+    seed(files="ci.yml", triggers=["the lint step fails after a release"])
+    core.verify(store, nid, "`true` exit 0 on commit abc123def456 @ 2026-10-29T03:00Z", commit="abc123def456" * 3 + "abcd")
+    core.update(store, nid, status="narrowed")
+
+    seed(files="ci.yml", triggers=["the lint step fails after a release"])   # status left out
+    assert store.get_node(nid).status == "narrowed"
+    seed(files="", triggers=[])                                                # set empty: cleared
+    n = store.get_node(nid)
+    assert not n.files and not n.triggers and n.verified_at is None
+
+
 def test_reseeding_keeps_verification_unless_the_governed_files_change(store, tmp_path):
     """#110: okl seed went through record(), which replaced the row, so every re-seed
     re-stamped each lesson as verified now and wiped its evidence and commit. A repo that
@@ -2075,6 +2142,36 @@ def test_hybrid_pipeline_diagram_is_current():
             "python3 docs/render_pipeline_diagram.py --hybrid linear")
 
 
+def test_the_hybrid_diagram_layout_fits_without_the_model():
+    """CI has no embedding model, so the hybrid freshness test skips there, and the hybrid
+    render ran its title, subtitle and stage 6 heading off the page with nothing to say so.
+    render() refuses a line that does not fit; this draws the hybrid stages from the default
+    trace and the hybrid render's own counts, so CI runs that refusal on the hybrid layout."""
+    import importlib.util
+    import re
+    root = Path(__file__).resolve().parents[1]
+    spec = importlib.util.spec_from_file_location("render_pipeline_diagram",
+                                                  root / "docs" / "render_pipeline_diagram.py")
+    r = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(r)
+    # The hybrid render's own counts, so each bar is drawn against the candidates it was counted
+    # from: the default trace fetched 36, and 108 of those ran a bar three tracks long (review on #311).
+    counts = {"fetched": 141, "lexical": 108, "nearest": 108, "semantic_only": 33, "widened": 3,
+              "after_scope": 124, "dropped_scope": 17, "after_applies": 108, "dropped_applies": 16,
+              "after_tags": 78, "dropped_tags": 30, "after_floor": 16, "weak": 62, "retired": 0,
+              "delivered": 12, "trimmed": 4, "by_meaning": 0}
+    d = {**r.trace(), **counts, "hybrid": "linear", "decision": "floor", "cap": 12, "line": 0.4, "dim": 512}
+    svg = r.render(d)
+    assert "with the semantic arm on" in svg and "a cosine &gt;= 0.40" in svg
+    ends = [float(x) + float(w) for x, w in re.findall(r'<rect x="([\d.]+)" y="[\d.]+" width="([\d.]+)"', svg)]
+    assert len(ends) > 30 and max(ends) <= r.W - r.PAD
+    with pytest.raises(SystemExit, match="ABORT: a bar's kept and dropped shares"):
+        r.render({**d, "lexical": 3 * d["fetched"]})
+    # The refusal itself: a heading longer than its card aborts, never clips.
+    with pytest.raises(SystemExit, match="ABORT: the title"):
+        r._fit("How an okl briefing gets built " * 3, 27, r.W - 2 * r.PAD, "bold", "the title")
+
+
 def test_naming_a_store_by_env_var_configures_both_reads_and_writes(tmp_path, monkeypatch):
     """`record` and `check` must agree on whether a store has been configured.
 
@@ -2408,6 +2505,107 @@ def test_drift_snapshot_gives_ci_a_store_it_cannot_clear_by_hand(tmp_path, monke
     commit("forged", "okl-drift.json")
     r = okl("drift", "--gate", "--snapshot", "okl-drift.json")
     assert r.returncode == 2 and "does not match the evidence stamp" in r.stderr
+
+
+def test_a_snapshot_refresh_refuses_to_drop_rules_this_store_does_not_hold(tmp_path, monkeypatch):
+    """#213: the store is per clone, so a teammate's verify rewrote okl-drift.json from a store
+    without the other clone's rules, and they left CI's gate with no warning. The committed
+    snapshot is the reference: a rule it holds that this store does not is refused, named,
+    and goes only when asked."""
+    import subprocess
+    import sys
+    monkeypatch.chdir(tmp_path)
+    for k in ("OKL_DATABASE_URL", "OKL_SERVICE_URL"):
+        monkeypatch.delenv(k, raising=False)
+    git = ["git", "-c", "user.email=t@t", "-c", "user.name=t"]
+    subprocess.run(["git", "init", "-q", "."], check=True)
+
+    def okl(*a):
+        return subprocess.run([sys.executable, "-m", "okl", *a], capture_output=True, text=True)
+
+    def commit(msg, *paths):
+        subprocess.run(["git", "add", *paths], check=True)
+        subprocess.run([*git, "commit", "-qm", msg], check=True)
+
+    (tmp_path / "a.py").write_text("x = 1\n"); commit("a", "a.py")
+    okl("init", "--repo", "r", "--ci")
+    rid = okl("record", "--type", "Rule", "--scope", "repo", "--title", "t", "--files", "a.py").stdout.strip().splitlines()[-1]
+    assert okl("verify", rid, "--run", "true", "--expect", "").returncode == 0
+    snap_file = tmp_path / "okl-drift.json"
+    snap = json.loads(snap_file.read_text())
+    snap["rules"].append({**snap["rules"][0], "id": "teammates-rule"})   # only the other clone's store has it
+    snap_file.write_text(json.dumps(snap)); commit("snapshot", "okl-drift.json")
+
+    # ACT / ASSERT — export refuses and names the rule; the file is left as it was.
+    r = okl("export", "--drift")
+    assert r.returncode == 2 and "teammates-rule" in r.stderr and "--allow-shrink" in r.stderr
+    assert "teammates-rule" in snap_file.read_text()
+    # A verify still passes; it says the snapshot was not refreshed, and why.
+    r = okl("verify", rid, "--run", "true", "--expect", "")
+    assert r.returncode == 0 and "NOT refreshed" in r.stderr and "teammates-rule" in r.stderr
+    # Asked for, the rule leaves the gate.
+    assert okl("export", "--drift", "--allow-shrink").returncode == 0
+    assert "teammates-rule" not in snap_file.read_text()
+
+
+def test_a_snapshot_that_cannot_be_read_is_refused_not_read_as_none(tmp_path, monkeypatch):
+    """Review on #310: an unreadable committed snapshot read as no snapshot, so a refresh
+    from a partial store replaced it with no guard at all. Only an absent one is none."""
+    import subprocess
+
+    import pytest as _pytest
+
+    from okl.cli.verification import SnapshotShrinkError, _committed_snapshot
+    monkeypatch.chdir(tmp_path)
+    git = ["git", "-c", "user.email=t@t", "-c", "user.name=t"]
+    subprocess.run(["git", "init", "-q", "."], check=True)
+    snap = tmp_path / "okl-drift.json"
+    assert _committed_snapshot(snap) is None                       # none anywhere, no commits yet
+    snap.write_text('{"repo": "r", "rules": []}')
+    assert _committed_snapshot(snap) == {"repo": "r", "rules": []}   # on disk, not committed
+    snap.write_text("{ not json")
+    subprocess.run(["git", "add", "okl-drift.json"], check=True)
+    subprocess.run([*git, "commit", "-qm", "broken"], check=True)
+    snap.write_text('{"repo": "r", "rules": []}')                  # disk fixed, the commit is not
+    with _pytest.raises(SnapshotShrinkError, match="not valid JSON"):
+        _committed_snapshot(snap)
+    # A rule with no id would have crashed the comparison after the stamp was recorded.
+    snap.write_text('{"repo": "r", "rules": [null]}')
+    subprocess.run([*git, "commit", "-qam", "null rule"], check=True)
+    with _pytest.raises(SnapshotShrinkError, match="each rule needs an id"):
+        _committed_snapshot(snap)
+
+
+def test_the_gate_reads_the_committed_snapshot_as_utf8_in_any_locale(tmp_path):
+    """Review on #310: the snapshot is written as UTF-8, and the gate decoded git's output in
+    the locale's encoding, so under a Latin-1 locale a governed `café.py` read as `cafÃ©.py`
+    and the gate skipped that rule."""
+    import subprocess
+    import sys
+    git = ["git", "-c", "user.email=t@t", "-c", "user.name=t"]
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    (tmp_path / "okl-drift.json").write_text(json.dumps(
+        {"format": "okl-drift-snapshot/1", "repo": "r", "rules": [{"id": "x", "files": "café.py"}]}, ensure_ascii=False),
+        encoding="utf-8")
+    subprocess.run([*git, "-C", str(tmp_path), "add", "okl-drift.json"], check=True)
+    subprocess.run([*git, "-C", str(tmp_path), "commit", "-qm", "s"], check=True)
+    code = ("from okl import drift; import sys; "
+            "print(ascii(drift.read_committed_snapshot('okl-drift.json', sys.argv[1])['rules'][0]['files']))")
+    env = {**os.environ, "LC_ALL": "en_US.ISO8859-15", "LANG": "en_US.ISO8859-15", "PYTHONUTF8": "0"}
+    r = subprocess.run([sys.executable, "-c", code, str(tmp_path)], capture_output=True, text=True, env=env)
+    assert r.stdout.strip() == ascii("café.py"), (r.stdout, r.stderr)
+
+
+def test_the_shrink_guard_reads_the_repo_and_the_rules_the_store_holds():
+    """A rule this store holds may leave the snapshot (retired, or no longer governing files);
+    one it does not hold, or a snapshot written for another repo, is refused (#213). The second
+    is how a worktree without .okl/config.json wrote one named after its folder."""
+    from okl.cli.verification import _shrink_problem
+    old = {"repo": "okl", "rules": [{"id": "a"}, {"id": "b"}]}
+    assert _shrink_problem(None, {"repo": "okl", "rules": []}, set()) is None
+    assert _shrink_problem(old, {"repo": "okl", "rules": [{"id": "a"}]}, {"a", "b"}) is None
+    assert "1 rule(s) this store does not hold: b" in _shrink_problem(old, {"repo": "okl", "rules": [{"id": "a"}]}, {"a"})
+    assert "'wt-two-tiers'" in _shrink_problem(old, {"repo": "wt-two-tiers", "rules": old["rules"]}, {"a", "b"})
 
 
 def test_snapshot_entries_are_checked_before_they_are_trusted():
