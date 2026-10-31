@@ -50,7 +50,8 @@ DOC = "title: none | text: {}"
 WEIGHT = 8.0       # §4w: the top of a broad rise on the selection split
 # The 269th of 282 calibration nulls' best scores at W = 8 with this model, 5.7679259776, and just
 # above it (bench-20261027-sel-dense-embeddinggemma-int8-words.txt; its W = 0 line is
-# decide.CALIBRATED_LINE's, so the two are set the same way).
+# decide.CALIBRATED_LINE's, so the two are set the same way). With stemmed words it is 6.004063
+# (REPORT §4ad).
 LINE = 5.767926
 NEAREST = 36       # the model's own candidates, as many as the full-text window
 TIMEOUT_S = 0.5    # what a prompt waits for the prompt's vector before briefing without it
