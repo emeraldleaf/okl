@@ -3642,6 +3642,17 @@ beside it. It ran from 07cd1c4 on BASE eb93b16 and cost $5.20.
 4. **Held.** For the other ten, CI failed on 4 of the 9 breaks drift caught, under half.
 5. **Held.** No control failed its check.
 
+*Corrections, 2026-10-31 (review on #312).* Two of the judge's answers were read wrong. Neither
+changes a registered result, and the receipts stay as the run wrote them.
+- **One more harmless patch is a control.** The judge called `doc-init-flags-harmless-0`
+  broken because, it said, `okl init` has no `--force` flag. At BASE it has one
+  (`src/okl/cli/parser.py`), so the patch documents what the code does. Counted as a control,
+  the controls are 26, and none failed its check: 0 of 26. Prediction 5 reads the same.
+- **The answer that was not valid was the parser's error.** It was `n_71c09abf3f37-breaking-3`.
+  Its answer ended in a valid verdict, broken, after an earlier brace, and the parser's greedy
+  match read the whole span as invalid JSON. The re-judge below counts it as broken. The parser
+  now keeps the last valid verdict object, here and in the other two judges.
+
 **Where the misses are.** Each lesson's governed files are narrower than what the lesson claims:
 - **`doc-check-defaults`:** two breaks changed the defaults in `client.py` and `service.py`. The
   lesson governs `core.py` and `cli/`.
@@ -3670,8 +3681,9 @@ misses rests on four judgments, so the registered result stands, and neither cla
 
 **What follows, as registered.**
 - **Prediction 3 held,** so the three lessons whose check CI runs (`n_71c09abf3f37`,
-  `n_b74bad29fd87`, `n_be9f13d587b1`) lose their governed files, by the repo's own rule (#39).
-  This is filed with this receipt.
+  `n_b74bad29fd87`, `n_be9f13d587b1`) are to lose their governed files, by the repo's own rule
+  (#39). That is filed as #318. At this commit they still govern files, and drift still watches
+  them.
 - **The catch rate is below 0.5,** so each miss goes to its cause:
   - sensitivity misses to the lessons' checks (#189);
   - coverage misses to their governed files.

@@ -94,13 +94,8 @@ def plant(text: str, old: str, new: str) -> str:
 
 
 def parse_verdict(result: str) -> dict | None:
-    """The judge's JSON object, or None when its answer holds no valid one."""
-    m = re.search(r"\{.*\}", result, re.S)
-    try:
-        got = json.loads(m.group(0)) if m else None
-    except ValueError:
-        return None
-    return got if isinstance(got, dict) and got.get("verdict") in VERDICTS else None
+    """The judge's last valid JSON object, or None when its answer holds none."""
+    return dr.last_object(result, lambda o: o.get("verdict") in VERDICTS)
 
 
 def summarize(items: list[dict]) -> dict:
@@ -133,9 +128,10 @@ def judge(census_path: Path, workers: int) -> int:
         if subprocess.run(["git", "-C", str(dr.REPO), "grep", "-q", "-F", "-e", p["new"].rstrip("()"), rev]).returncode == 0:
             sys.exit(f"ABORT: planted name {p['new']!r} exists at {rev[:12]}")
     rows = {x["id"]: x for x in census["lessons"]}
+    recorded = {i: x["sha"] for i, x in rows.items()} if all("sha" in x for x in rows.values()) else None
+    dr.as_recorded({}, recorded)   # an old receipt is refused before any check runs
     with dr.store_copy(dr.main_store()) as store:
         nodes = {i: store.get_node(i) for i in rows}
-        store.close()
     for i, p in planted.items():   # and each planted fact must be in its lesson to be changed
         if plant(getattr(nodes[i], p["field"]) or "", p["old"], p["new"]) == (getattr(nodes[i], p["field"]) or ""):
             sys.exit(f"ABORT: {p['old']!r} is not in {i}'s {p['field']}")
@@ -148,7 +144,7 @@ def judge(census_path: Path, workers: int) -> int:
             for i in checked:
                 if len(negatives) == CONTROLS:
                     break
-                check = dr.parse_check(nodes[i].verified_by)
+                check = rows[i].get("check")   # as the census read it, not as the store holds it now
                 if i not in planted and check and r.verdict(rev, *check) == "pass":
                     negatives.append(i)
         finally:
@@ -158,6 +154,7 @@ def judge(census_path: Path, workers: int) -> int:
              + [{"id": i, "role": "positive", "planted": planted[i]} for i in planted])
     for x in items:
         x["type"], x["scope"] = rows[x["id"]]["type"], rows[x["id"]]["scope"]
+    dr.as_recorded({x["id"]: nodes[x["id"]] for x in items}, recorded)
     order = {i: k for k, i in enumerate(drawn([x["id"] for x in items], salt="order:"))}
     items.sort(key=lambda x: order[x["id"]])
 
@@ -228,7 +225,9 @@ def main() -> int:
         live = [n for n in store.all_nodes() if n.status not in RETIRED_STATUSES]
         store.close()
     nodes = [n for n in live if not n.id.startswith("seed:")]
-    rows = [{"id": n.id, "class": classify(n), "type": n.type, "scope": n.scope} for n in nodes]
+    # Each lesson's text hash and check, so a judge run later reads them as this census did.
+    rows = [{"id": n.id, "class": classify(n), "type": n.type, "scope": n.scope, "sha": dr.text_sha(n),
+             "check": dr.parse_check(n.verified_by)} for n in nodes]
     if args.run_checks:
         with tempfile.TemporaryDirectory() as tmp:
             r = dr.Replayer(Path(tmp))

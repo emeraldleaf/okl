@@ -39,7 +39,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, TypeVar
 
 if TYPE_CHECKING:
-    from okl.store import Store
+    from okl.store import Node, Store
 
 T = TypeVar("T")
 REPO = Path(__file__).resolve().parent.parent
@@ -316,7 +316,59 @@ def store_copy(db: Path) -> Iterator[Store]:
     with tempfile.TemporaryDirectory() as d:
         copy = Path(d) / "okl.db"
         shutil.copy2(db, copy)
-        yield Store(f"sqlite:///{copy}")
+        store = Store(f"sqlite:///{copy}")
+        try:
+            yield store
+        finally:
+            store.close()   # closing twice does nothing, so a caller's own close is harmless
+
+
+# The lesson fields a judge reads. Each run records their hash per lesson, and a judge run later
+# checks it: given today's text beside the run's code, a judge can call a lesson stale, or a break
+# intact, for a change made since (review on #312).
+JUDGED_FIELDS = ("title", "symptom", "fix", "body")
+
+
+def text_sha(node: Node | None) -> str | None:
+    """A hash of the fields a judge reads, or None for a lesson the store no longer holds."""
+    if node is None:
+        return None
+    text = json.dumps({f: getattr(node, f) or "" for f in JUDGED_FIELDS}, sort_keys=True)
+    return hashlib.sha256(text.encode()).hexdigest()[:16]
+
+
+def as_recorded(nodes: dict[str, Node | None], recorded: dict[str, str | None] | None) -> None:
+    """Abort unless each lesson reads as the receipt recorded it."""
+    if recorded is None:
+        sys.exit("ABORT: this receipt records no lesson hashes, so its lessons cannot be read as "
+                 "they were; run it again to judge it")
+    moved = sorted(i for i, n in nodes.items() if text_sha(n) != recorded.get(i))
+    if moved:
+        sys.exit(f"ABORT: {len(moved)} lesson(s) changed since the receipt was written: "
+                 + ", ".join(moved[:5]))
+
+
+def last_object(text: str, ok: Callable[[dict], bool]) -> dict | None:
+    """The last JSON object in `text` that `ok` accepts. A judge may write braces before its
+    verdict, and a greedy match from the first brace to the last then reads invalid JSON and
+    loses the verdict (review on #312)."""
+    dec, found = json.JSONDecoder(), None
+    for m in re.finditer(r"\{", text):
+        try:
+            obj, _end = dec.raw_decode(text, m.start())
+        except ValueError:
+            continue
+        if isinstance(obj, dict) and ok(obj):
+            found = obj
+    return found
+
+
+def lesson_sha(watched: dict[str, dict], db: Path) -> dict[str, str | None]:
+    """Each watched lesson's text hash, as the judge will need it read."""
+    if not db.exists():
+        return {}
+    with store_copy(db) as s:
+        return {lid: text_sha(s.get_node(lid)) for lid in watched}
 
 
 def check_log(watched: dict[str, dict], db: Path) -> dict[str, dict[str, int]]:
@@ -419,6 +471,7 @@ def main() -> int:
                             for o in ("needed", "unneeded", "not reproducible", "timed out")}
                       for lid in lessons},
         "check_log": check_log(watched, args.store),
+        "lesson_sha": lesson_sha(watched, args.store),
         "events": [asdict(e) for e in evs],
         "red_sample": [asdict(q) for q in red], "green_sample": [asdict(q) for q in green],
     }
@@ -458,6 +511,7 @@ def judge(receipt: Path, db: Path) -> int:
     rules = snapshot(data["until"])
     with store_copy(db) as s:
         nodes = {e["lesson"]: s.get_node(e["lesson"]) for e in chosen}
+    as_recorded(nodes, data.get("lesson_sha"))
     out = []
     for e in chosen:
         node = nodes[e["lesson"]]
@@ -469,13 +523,12 @@ def judge(receipt: Path, db: Path) -> int:
         # From an empty directory: run in the checkout it would read this repo's CLAUDE.md, which
         # --restricted does not skip, and the judge must see only the lesson and the diffs.
         with tempfile.TemporaryDirectory(prefix="okl-judge-") as room:
-            r = subprocess.run(["claude", "-p", "--model", "sonnet", "--restricted", "--tools", ""],
-                               input=prompt, capture_output=True, text=True, timeout=TIMEOUT, cwd=room)
-        m = re.search(r"\{.*\}", r.stdout, re.S)
-        try:
-            said = json.loads(m.group(0)) if m else {}
-        except ValueError:
-            said = {}
+            try:
+                r = subprocess.run(["claude", "-p", "--model", "sonnet", "--restricted", "--tools", ""],
+                                   input=prompt, capture_output=True, text=True, timeout=TIMEOUT, cwd=room)
+                said = last_object(r.stdout, lambda o: "broken" in o) or {}
+            except subprocess.TimeoutExpired:   # no verdict for this one; the rest still count (review on #312)
+                said = {}
         out.append({"lesson": e["lesson"], "p": e["p"], "v": e["v"], "check": e["outcome"],
                     "judge": said.get("broken"), "why": said.get("why", "")})
     agree = sum((o["judge"] is True) == (o["check"] == "needed") for o in out if o["judge"] is not None)

@@ -99,13 +99,9 @@ def ci_run_lesson(cmd: str) -> bool:
 
 
 def judged(result: str) -> str | None:
-    """The judge's verdict from its answer, or None when it gave no valid one."""
-    m = re.search(r"\{.*\}", result, re.S)
-    try:
-        got = json.loads(m.group(0)) if m else None
-    except ValueError:
-        return None
-    return got["verdict"] if isinstance(got, dict) and got.get("verdict") in ("broken", "intact", "unsure") else None
+    """The judge's last valid verdict from its answer, or None when it gave none."""
+    got = dr.last_object(result, lambda o: o.get("verdict") in ("broken", "intact", "unsure"))
+    return got["verdict"] if got else None
 
 
 def changed_files(diff: str) -> list[str]:
@@ -198,7 +194,8 @@ def rejudge(receipt: Path) -> int:
     rec = json.loads(receipt.read_text())
     with dr.store_copy(dr.main_store()) as store:
         nodes = {lid: store.get_node(lid) for lid in rec["lessons"]}
-        store.close()
+    waiting = {p["lesson"] for p in rec["patches"] if p.get("judge") is None}
+    dr.as_recorded({lid: nodes[lid] for lid in waiting}, rec.get("lesson_sha"))
     room = Path(tempfile.mkdtemp(prefix="okl-rejudge-"))
     patches, redone = rec["patches"], []
     for p in patches:
@@ -345,6 +342,7 @@ def main() -> int:
         "breaker": " ".join(BREAKER), "judge": " ".join(JUDGE), "ci_steps": CI_STEPS,
         "ci_at_base": {"verdict": ci_base, "failed": ci_base_failed}, "left_out": left_out,
         "lessons": [lid for lid, _r, _c in lessons], "main_checkout_changed": moved,
+        "lesson_sha": {lid: dr.text_sha(nodes[lid]) for lid, _r, _c in lessons},
         "cost_usd": round(sum(p.get("breaker_cost", 0) + p.get("judge_cost", 0) for p in patches), 2),
         "summary": summarize(patches),
         "patches": [{k: v for k, v in p.items() if k != "diff"} for p in patches],

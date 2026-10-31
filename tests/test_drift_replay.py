@@ -228,6 +228,8 @@ def test_the_stale_lesson_judge_reads_only_a_valid_verdict_and_counts_by_role(mo
     assert lc.plant("pass --repo, not --repo-name", "--repo", "--name") == "pass --name, not --repo-name"
     assert lc.parse_verdict('Here: {"verdict": "stale", "checkable": true}')["verdict"] == "stale"
     assert lc.parse_verdict('{"verdict": "probably"}') is None and lc.parse_verdict("no json") is None
+    # A brace before the verdict made the greedy match invalid JSON (review on #312).
+    assert lc.parse_verdict('It says {repo} twice. {"verdict": "current"}')["verdict"] == "current"
     assert lc.drawn(["a", "b", "c"]) == lc.drawn(["c", "a", "b"])
     items = ([{"role": "population", "verdict": v, "type": "Rule", "scope": "org", "checkable": True}
               for v in ("stale", "current", "current", "no claim")]
@@ -252,6 +254,7 @@ def test_the_mutation_run_counts_catches_misses_and_ci_by_group(monkeypatch):
     assert dm.ci_run_lesson("lint-imports") and dm.ci_run_lesson("python3 -m pytest -q -k x")
     assert not dm.ci_run_lesson("bash -c \"grep -q x README.md\"")
     assert dm.judged('so: {"verdict": "broken", "reason": "r"}') == "broken" and dm.judged('{"verdict": "maybe"}') is None
+    assert dm.judged('core imports {client}, so:\n\n{"verdict": "broken", "reason": "r"}') == "broken"
     assert dm.changed_files("+++ b/a.py\n--- a/a.py\n+++ b/README.md\n") == ["README.md", "a.py"]
 
     def p(*row, ci_run=False):
@@ -269,3 +272,54 @@ def test_the_mutation_run_counts_catches_misses_and_ci_by_group(monkeypatch):
     assert s["against_ci"]["other_lessons"] == {"drift_only": 1, "both": 0, "ci_only": 1, "neither": 1, "breaks": 3}
     assert s["against_ci"]["ci_run_lessons"]["both"] == 1
     assert s["controls"] == {"n": 1, "check_failed": 1}
+
+
+def test_a_judge_reads_each_lesson_as_its_receipt_recorded_it(dr):
+    """A judge run after the store moved on would read today's lesson beside the run's code, so a
+    receipt without hashes, or a lesson whose text changed, is refused (review on #312)."""
+    from okl.store import Node
+    node = Node(type="Rule", title="t", scope="org", symptom="s", fix="f")
+    recorded = {"L": dr.text_sha(node)}
+    dr.as_recorded({"L": node}, recorded)                                   # unchanged: reads on
+    node.verified_by = "`x` exit 0, matched 'y' on commit abc"              # a re-verify is not a change
+    dr.as_recorded({"L": node}, recorded)
+    with pytest.raises(SystemExit, match="no lesson hashes"):
+        dr.as_recorded({"L": node}, None)
+    node.fix = "another fix"
+    with pytest.raises(SystemExit, match="changed since the receipt was written: L"):
+        dr.as_recorded({"L": node}, recorded)
+
+
+def test_a_judge_that_times_out_gives_no_verdict_and_the_rest_still_count(dr, tmp_path, monkeypatch):
+    """One time-out raised out of the replay's judge and lost every judgment made before it
+    (review on #312)."""
+    import contextlib
+
+    from okl.store import Node
+    node = Node(type="Rule", title="t", scope="org", symptom="s", fix="f")
+    receipt = tmp_path / "drift-replay-x.json"
+    events = [{"lesson": "L", "p": f"p{i}", "v": f"v{i}", "outcome": o} for i, o in enumerate(("needed", "unneeded"))]
+    receipt.write_text(json.dumps({"until": "u", "events": events, "lesson_sha": {"L": dr.text_sha(node)}}))
+
+    class Copy:
+        def get_node(self, _i):
+            return node
+    monkeypatch.setattr(dr, "store_copy", lambda _db: contextlib.nullcontext(Copy()))
+    monkeypatch.setattr(dr, "snapshot", lambda _u: {"L": {}})
+    monkeypatch.setattr(dr, "governs", lambda _r: ["a.py"])
+    monkeypatch.setattr(dr, "git", lambda *_a, **_k: "diff")
+    monkeypatch.setattr(dr, "REPO", tmp_path)
+    calls = iter([subprocess.TimeoutExpired("claude", 1),
+                  subprocess.CompletedProcess([], 0, stdout='a {b} then {"broken": true, "why": "w"}')])
+
+    def run(*_a, **_k):
+        got = next(calls)
+        if isinstance(got, Exception):
+            raise got
+        return got
+    monkeypatch.setattr(dr.subprocess, "run", run)
+    assert dr.judge(receipt, tmp_path / "okl.db") == 0
+    out = json.loads((tmp_path / "drift-replay-x-judge.json").read_text())
+    assert sorted(o["judge"] is None for o in out["judged"]) == [False, True]
+    assert out["answered"] == 1
+
