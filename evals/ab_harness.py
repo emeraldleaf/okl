@@ -70,6 +70,7 @@ LINE_STYLES = {"line": "line", "titles": "titles", "when": "when", "when-tool": 
 # The when-tool arm's only fetch path: okl_get from evals/fetch_tool.py, over MCP.
 FETCH_TOOL = "mcp__okl__okl_get"
 FETCH_SERVER = REPO / "evals" / "fetch_tool.py"
+WHEN_TOOL_INSTRUMENT = ("when_tool_generator", "fetch_tool_description")
 
 GEN_PROMPT = """You are implementing one task for an existing codebase. Output ONLY the code (or YAML/script), no explanation.
 
@@ -511,7 +512,9 @@ def instrument_drift(prior: list[dict], current: dict) -> dict:
     characters every earlier receipt used when none do. Counting the unrecorded receipts as
     8,000 would flag every run of the 40,000-character series for as long as the older
     receipts outnumber it: the guard telling you to discard the runs that fixed the problem
-    (review of #198).
+    (review of #198). A run of the when-tool arm also compares that arm's command and its
+    tool's description with their mode across the receipts that ran the arm; the arm's MCP
+    config holds only this run's paths, and the tool's code is the commit's (review on #305).
     """
     modal: dict = {}
     ran = [ran_commands(r) for r in prior]
@@ -524,7 +527,21 @@ def instrument_drift(prior: list[dict], current: dict) -> dict:
     was, n = windows.most_common(1)[0] if windows else (HISTORICAL_JUDGE_MAX_CHARS, len(prior))
     if prior and was != current["judge_max_chars"]:
         modal["judge_max_chars"] = {"series": was, "runs": n}
+    for key in WHEN_TOOL_INSTRUMENT:
+        seen = Counter(r[key] for r in prior if r.get(key))
+        if current.get(key) and seen and seen.most_common(1)[0][0] != current[key]:
+            was, n = seen.most_common(1)[0]
+            modal[key] = {"series": was, "runs": n}
     return modal
+
+
+def when_tool_instrument(arms: list[str]) -> dict[str, str]:
+    """The when-tool arm's command and fetch-tool description, as the receipt records them, when
+    the arm runs: its treatment, and part of the instrument (REPORT §4ab)."""
+    if "when-tool" not in arms:
+        return {}
+    return {"when_tool_generator": generator_cmd("when-tool", "<per-sample config>"),
+            "fetch_tool_description": fetch_tool_description()}
 
 
 def code_outside_checkout() -> str:
@@ -757,7 +774,7 @@ def main() -> int:
         except (OSError, ValueError):
             continue
     current = {"generator": generator_cmd().strip(), "judge": JUDGE_CMD.strip(),
-               "judge_max_chars": JUDGE_MAX_CHARS}
+               "judge_max_chars": JUDGE_MAX_CHARS, **when_tool_instrument(arms)}
     if prior:
         modal = instrument_drift(prior, current)
         if modal:
@@ -934,8 +951,7 @@ def main() -> int:
         # §4ab: the command the arms ran (with tools on, only the MCP servers an arm names
         # load); the when-tool arm's command and the fetch tool's description are its treatment.
         "generator_cmd": generator_cmd(),
-        **({"when_tool_generator": generator_cmd("when-tool", "<per-sample config>"),
-            "fetch_tool_description": fetch_tool_description()} if "when-tool" in arms else {}),
+        **when_tool_instrument(arms),
         **({"preflight_missing": lacking} if args.accept_missing_lessons else {}),
         **({"preflight_line": lined} if lined else {}),
         **({"index_chars": index_chars} if index_chars is not None else {}),

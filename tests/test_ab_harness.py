@@ -248,6 +248,26 @@ def test_the_generator_is_compared_as_it_ran(ab, monkeypatch):
     assert ab.instrument_drift([recorded] * 2, {**current, "generator": recorded["generator_cmd"]}) == {}
 
 
+def test_the_when_tool_arm_is_compared_with_the_runs_of_that_arm(ab, monkeypatch):
+    """Its command and its tool's description are its treatment; the drift check compared only
+    the Bash arms' command (review on #305)."""
+    monkeypatch.setattr(ab, "GENERATOR_TOOLS", "Bash(okl show:*)")
+    base = {"generator": ab.generator_cmd(), "judge": "claude -p --model haiku",
+            "judge_max_chars": ab.JUDGE_MAX_CHARS}
+    tool = ab.when_tool_instrument(["line", "when-tool"])
+    assert ab.when_tool_instrument(["line"]) == {} and "--restricted" in tool["when_tool_generator"]
+    ran = {**_receipt(ab.JUDGE_MAX_CHARS, generator=""), "generator_cmd": ab.generator_cmd(), **tool}
+    # The same arm, run the same way: nothing differs.
+    assert ab.instrument_drift([ran] * 2, {**base, **tool}) == {}
+    # §4ab's when-tool command had no --restricted: a run of the arm now differs from it.
+    old = {**ran, "when_tool_generator": tool["when_tool_generator"].replace("--restricted ", "")}
+    assert ab.instrument_drift([old], {**base, **tool}) == {
+        "when_tool_generator": {"series": old["when_tool_generator"], "runs": 1}}
+    # A new description is a new treatment; a run without the arm compares neither.
+    assert "fetch_tool_description" in ab.instrument_drift([ran], {**base, **tool, "fetch_tool_description": "x"})
+    assert ab.instrument_drift([old], base) == {}
+
+
 def test_the_models_resolve_from_the_commands_the_run_uses(ab, monkeypatch):
     """With tools on the generator runs --restricted, so its model is resolved that way too
     (review on #305)."""
