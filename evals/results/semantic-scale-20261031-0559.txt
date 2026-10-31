@@ -1,0 +1,4 @@
+semantic search scale · 2026-10-31T05:59Z · code 1ccded407bca · 512 dimensions, okl.semantic.search with a stub encoder, medians, each search paired with its own read
+     300 vectors: read    0.2 ms · search after the read   0.07 ms · without numpy     6.3 ms
+  10,000 vectors: read   15.3 ms · search after the read   4.23 ms · without numpy   214.2 ms
+  50,000 vectors: read   79.6 ms · search after the read  23.79 ms

@@ -1155,8 +1155,19 @@ def test_check_limit_threads_through_the_client(tmp_path, monkeypatch):
 
 
 
-@pytest.mark.skipif(not os.environ.get("OKL_TEST_POSTGRES_URL"),
-                    reason="set OKL_TEST_POSTGRES_URL to run against a real Postgres")
+def _postgres_url() -> str:
+    """The real server's URL: skipped without one, and failed when OKL_TEST_POSTGRES_REQUIRED is
+    set, as CI sets it beside its Postgres service, so a lost URL cannot pass as a skip there.
+    CI used to grep pytest's output for this skip's reason instead, and a reworded reason would
+    have turned the guard off (CI reviewer on #307)."""
+    url = os.environ.get("OKL_TEST_POSTGRES_URL")
+    if not url:
+        if os.environ.get("OKL_TEST_POSTGRES_REQUIRED"):
+            pytest.fail("OKL_TEST_POSTGRES_REQUIRED is set, but OKL_TEST_POSTGRES_URL is not")
+        pytest.skip("set OKL_TEST_POSTGRES_URL to run against a real Postgres")
+    return url
+
+
 def test_postgres_matches_sqlite_ranking_on_a_real_server():
     """Both backends must rank the SAME record first for the same query.
 
@@ -1190,7 +1201,7 @@ def test_postgres_matches_sqlite_ranking_on_a_real_server():
         ("Rule", "ownership predicate belongs in the WHERE clause",
          "a non-owner row must never leave the database"),
     ]
-    url = os.environ["OKL_TEST_POSTGRES_URL"]
+    url = _postgres_url()
     schema = "okl_parity_test"
     # Create the scratch schema on a throwaway connection, then hand the Store a URL
     # whose search_path points at it. libpq passes `options` straight through, so the
@@ -1721,12 +1732,10 @@ def test_sqlite_backend_conformance(store):
     _backend_conformance(store, "sqlite")
 
 
-@pytest.mark.skipif(not os.environ.get("OKL_TEST_POSTGRES_URL"),
-                    reason="set OKL_TEST_POSTGRES_URL to run against a real Postgres")
 def test_postgres_backend_conformance():
     """The Postgres backend meets the SAME contract, asserted by the same code."""
+    url = _postgres_url()
     import psycopg
-    url = os.environ["OKL_TEST_POSTGRES_URL"]
     schema = "okl_conformance_test"
     with psycopg.connect(url, autocommit=True) as setup:
         setup.execute(f"DROP SCHEMA IF EXISTS {schema} CASCADE")

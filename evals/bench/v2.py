@@ -22,10 +22,12 @@ from __future__ import annotations
 
 import math
 import re
+import sqlite3
 from collections.abc import Callable
 from dataclasses import dataclass
 
 from okl import core
+from okl import store as okl_store
 from okl.store import Node, Store
 
 # Text a harness wraps around a message it delivers as a user turn. A prompt that starts with
@@ -45,9 +47,43 @@ def from_harness(task: str) -> bool:
     return task.lstrip().startswith(HARNESS_PREFIXES)
 
 
+# Stemming (REPORT §4ac): off unless an arm turns it on (set_stem). When on, the line's word
+# matching stems each word with FTS5's own Porter tokenizer, so it agrees with an index built
+# with that tokenizer rather than with a second stemmer's opinion.
+STEM = False
+
+
+def set_stem(on: bool) -> None:
+    """Stem the line's words, and build the corpus store's index with the Porter tokenizer, or
+    neither. The product's default is unstemmed (store.FTS_TOKENIZE, REPORT §4ad); each arm sets
+    it before its store is built, so the arm decides, not the default."""
+    global STEM
+    STEM = on
+    okl_store.FTS_TOKENIZE = "porter unicode61" if on else "unicode61"
+_STEMS: dict[str, str] = {}
+_PORTER: sqlite3.Connection | None = None
+
+
+def stem(word: str) -> str:
+    """`word` as FTS5's porter tokenizer indexes it, read back through fts5vocab."""
+    global _PORTER
+    if word not in _STEMS:
+        if _PORTER is None:
+            _PORTER = sqlite3.connect(":memory:")
+            _PORTER.execute("CREATE VIRTUAL TABLE s USING fts5(x, tokenize='porter unicode61')")
+            _PORTER.execute("CREATE VIRTUAL TABLE v USING fts5vocab(s, 'instance')")
+        _PORTER.execute("DELETE FROM s")
+        _PORTER.execute("INSERT INTO s VALUES (?)", (word,))
+        row = _PORTER.execute("SELECT term FROM v ORDER BY offset LIMIT 1").fetchone()
+        _STEMS[word] = row[0] if row else word
+    return _STEMS[word]
+
+
 def words(text: str) -> set[str]:
-    """Lower-cased runs of Unicode letters and digits, the task's tokenization (core.briefing_terms)."""
-    return set(_WORD.findall(text.lower()))
+    """Lower-cased runs of Unicode letters and digits, the task's tokenization (core.briefing_terms);
+    stemmed when STEM is on."""
+    found = set(_WORD.findall(text.lower()))
+    return {stem(w) for w in found} if STEM else found
 
 
 def about_text(n: Node) -> str:
@@ -134,7 +170,11 @@ def candidates(store: Store, task: str, repo: str, fetch: int = 36) -> tuple[lis
     terms = subject(task)
     if from_harness(task) or not terms:
         return [], []
+    # The search gets the words as typed (a porter index stems them itself; stemming twice can
+    # differ); the scores get them stemmed, once each, to match the stemmed about-text.
     found = store.search(" ".join(terms), limit=fetch)
+    if STEM:
+        terms = list(dict.fromkeys(stem(t) for t in terms))
     return terms, [n for n in found if n.status not in core.RETIRED_STATUSES
                    and core._in_scope(n, f"repo:{repo}", None)]
 

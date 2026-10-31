@@ -105,11 +105,21 @@ benchmark built to decide (REPORT §4w; the design and its evidence:
   stage 6 heading past the right edge, and every stage's count sat against its text. The
   generator now estimates each line's width and refuses one that would not fit, and a test
   draws that layout where the embedding model is absent, as in CI.
+- **Stemming, measured and not adopted** (REPORT §4ac, §4ad). With Porter stemming in the
+  full-text index and in the line's words, the benchmark's held-out recall rose from 90.0% to
+  94.4%, each arm's line set for the same 5% rate on prompts with no subject. Built into the
+  product and measured on real prompts, it named 17.5% more lessons a prompt with the warm
+  model on, past the pre-registered 15%, and showed fewer in full without it, so the default
+  stays unstemmed. It stays as a setting, off (`store.FTS_TOKENIZE`): a store whose index was
+  built with another tokenizer rebuilds it once when opened. A rebuild that fails, for instance
+  kept waiting past the timeout by another writer, now fails the open and is retried by the
+  next. Before, the store fell back to plain substring search, which cannot see tags.
 - **The README's headline is now the thesis,** and the thesis has its own page (#317). The new
   headline reads "Keeps your coding agent true to your rules, specs and docs, and keeps them true
   to the code." [docs/THESIS.md](docs/THESIS.md) says which parts of that claim hold today and
   which are still direction, gives the measured baseline with each receipt, and records how the
   claim has changed. A test fails when the README's headline and the page's claim stop matching.
+  The overview and anatomy sheets in `docs/overview/` carry the claim too, re-rendered.
 - **Drift is described as what it measured to be: a prompt to re-check.** In REPORT §4af it
   caught 14 of 36 deliberate breaks of the lessons it watched, and most of the misses changed a
   file one step from the ones the lesson watched. The README says so, and the docs no longer call

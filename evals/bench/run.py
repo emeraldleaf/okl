@@ -59,14 +59,21 @@ def build_corpus(where: Path) -> Store:
 
     The packs carry the bench's triggers since §4w passed; every receipt before that ran on
     packs without them. Dropping them here keeps each arm's meaning fixed: an arm has
-    triggers only when it loads them (load_triggers, --triggers)."""
+    triggers only when it loads them (load_triggers, --triggers).
+
+    The store is pinned to a file in `where` whatever the environment names: OKL_DATABASE_URL
+    would win in the client, and OKL_SERVICE_URL would send the seeds to a service, so a run
+    with either set seeded a real store, stripped its triggers and rebuilt its index (review on
+    #308; compare_seed_briefings.py pins its stores for the same reason)."""
     import dataclasses
     (where / ".okl").mkdir(parents=True, exist_ok=True)
     (where / ".okl" / "config.json").write_text(json.dumps({"repo": REPO}))
     here = Path.cwd()
     os.chdir(where)
     try:
-        client = Client()
+        client = Client(config={"repo": REPO})
+        client.service_url = None
+        client._store = Store(f"sqlite:///{where / '.okl' / 'okl.db'}")
         for pack in sorted((ROOT / "seed").glob("*.json")):
             seed_from_file(client, str(pack))
         store = client._local_store()

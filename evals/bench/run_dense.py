@@ -141,7 +141,10 @@ def main() -> None:
     ap.add_argument("--weights", type=lambda s: tuple(float(w) for w in s.split(",")), default=WEIGHTS,
                     help="comma-separated W grid (default 0,5,10,20,40, on the evidence scale)")
     ap.add_argument("--no-prompts", action="store_true", help="skip the model card's retrieval prompts")
+    ap.add_argument("--stem", action="store_true",
+                    help="Porter stemming in the index and in the base score's words (REPORT §4ac, §4ad)")
     args = ap.parse_args()
+    v2.set_stem(args.stem)
     base = v2.SCORES[args.base]
     queries = [json.loads(x) for x in bench.QUERIES.read_text().splitlines() if x.strip()]
     if args.split != "all":
@@ -206,7 +209,8 @@ def main() -> None:
           f"queries sha {bench.digest([bench.QUERIES])} · nulls {len(nulls)}: {len(calib)} calibrate, {len(test)} test")
     print(f"cost: cold load in a fresh process {cold_load_seconds(args.model):.2f} s · load here {enc.load_s:.2f} s · "
           f"index {index_s:.1f} s · encode per prompt median {statistics.median(encode_ms):.1f} ms")
-    print(f"decision score = {args.base} + W * maxsim; line at alpha {ALPHA} by split conformal\n")
+    print(f"decision score = {args.base} + W * maxsim; line at alpha {ALPHA} by split conformal"
+          + (" · stemmed: FTS5 porter in the index and the base score's words" if args.stem else "") + "\n")
     print(f"{'W':>5} {'line':>7} {'cap':>3} | {'recall [95%]':>22} {'briefed/q':>9} | null test briefed anything [95%] | paraphrase")
     exact: dict[float, float] = {}
     for w in args.weights:

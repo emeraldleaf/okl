@@ -32,6 +32,20 @@ defaults:
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
+    # The Postgres backend against a real server, for the test step below. Its tests skipped
+    # everywhere until this (nothing set OKL_TEST_POSTGRES_URL), so Postgres changes reached
+    # main untested: the architecture reviewer's second sighting of that class (#300). Trust
+    # auth: the server lives for this job only, and no password-shaped string is in the repo.
+    services:
+      postgres:
+        image: postgres:17.6
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: okl
+        ports: [ "5432:5432" ]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 2s
+          --health-timeout 5s --health-retries 15
     steps:
       # Actions pinned to a commit SHA, not a tag: a tag is mutable, so `@v5` is an
       # unpinned dependency with write access to the runner.
@@ -71,7 +85,12 @@ jobs:
       - name: Architecture — import-linter
         run: lint-imports
 
-      - name: Tests (with the coverage ratchet)
+      # A Postgres test without the server's URL fails here rather than skips: the server
+      # above exists so they run (tests/test_okl.py's _postgres_url).
+      - name: Tests (with the coverage ratchet, and Postgres)
+        env:
+          OKL_TEST_POSTGRES_URL: postgresql://postgres@localhost:5432/okl
+          OKL_TEST_POSTGRES_REQUIRED: "1"
         run: pytest -q --cov=okl
 
       - name: Diagram figures trace to committed receipts
@@ -94,15 +113,57 @@ jobs:
       # a new detection rule from retro-failing a branch that changed nothing.
       # The reviewer okl ships, run on okl. It was listed as a review surface with nothing
       # triggering it — the "enforcement surface that only runs on-demand runs never"
-      # failure this repo's own store names. Off unless REVIEW_CMD is set, so it costs
-      # nothing until someone decides it should.
-      - name: Architecture review (off unless REVIEW_CMD is set)
+      # failure this repo's own store names. It runs on the maintainer's Claude subscription:
+      # CLAUDE_CODE_OAUTH_TOKEN, from `claude setup-token`, bills the subscription and not the
+      # API (no ANTHROPIC_API_KEY here, which would outrank it; --bare would ignore it).
+      # Without that secret, and on a fork's PR, which gets no secrets, it soft-passes; the
+      # REVIEW_CMD variable swaps in any other CLI. The script runs it from a clean room, so
+      # this repo's hooks never fire on it, and --add-dir lets it read the checkout to hold
+      # each figure to its receipt. It fails the job on a must-fix finding only.
+      - name: Architecture review (on the maintainer's Claude subscription)
         if: github.event_name == 'pull_request'
         env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           REVIEW_CMD: ${{ vars.REVIEW_CMD }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           REVIEW_BASE_REF: origin/${{ github.base_ref }}
-        run: bash ci/review-agent.sh
+          # What the change says it does, passed as data: interpolated into the script, a PR
+          # title could run as shell. The reviewer is told it is a claim, not instructions.
+          REVIEW_PR_TITLE: ${{ github.event.pull_request.title }}
+          REVIEW_PR_BODY: ${{ github.event.pull_request.body }}
+          # Pinned, as every tool that gates CI is: a release cannot change the gate unseen.
+          CLAUDE_CODE_VERSION: "2.1.302"
+        run: |
+          if [[ -z "$REVIEW_CMD" && -n "$CLAUDE_CODE_OAUTH_TOKEN" ]]; then
+            # The platform package is the native binary itself and runs no install script,
+            # so npm can refuse lifecycle scripts outright.
+            npm install --ignore-scripts --no-fund --no-audit --prefix "$RUNNER_TEMP/claude" \
+              "@anthropic-ai/claude-code-linux-x64@$CLAUDE_CODE_VERSION"
+            CLAUDE_BIN="$RUNNER_TEMP/claude/node_modules/@anthropic-ai/claude-code-linux-x64/claude"
+            chmod +x "$CLAUDE_BIN"
+            # Read-only git, so it can check that a receipt's commit is reachable: allowed by a
+            # settings file, since the command line is word-split; GIT_DIR points the clean
+            # room's git at the checkout. Only forms that cannot write, while the token is in the
+            # environment and the model reads PR text: not branch or tag, which create and delete
+            # refs (CI reviewer on #307), and not log or show, whose --output writes a file
+            # (CodeRabbit on #307). Any other shell command is refused in -p mode.
+            printf '%s' '{"permissions":{"allow":["Bash(git merge-base:*)","Bash(git rev-parse:*)"]}}' \
+              > "$RUNNER_TEMP/review-settings.json"
+            export GIT_DIR="$GITHUB_WORKSPACE/.git" GIT_WORK_TREE="$GITHUB_WORKSPACE"
+            REVIEW_CMD="$CLAUDE_BIN -p --model sonnet --max-turns 40 --tools Read,Grep,Glob,Bash --settings $RUNNER_TEMP/review-settings.json --add-dir $GITHUB_WORKSPACE"
+          fi
+          # The knowledge layer's briefing for this change, from the seed packs in a store that
+          # lives for this step; this repo's own recorded lessons stay on the maintainer's
+          # machine, so the reviewer is told the briefing is the packs' only.
+          export OKL_DATABASE_URL="sqlite:///$RUNNER_TEMP/review.db" OKL_BRIEFING_LOG=0
+          briefing="$RUNNER_TEMP/briefing.md"
+          if okl seed seed/ >/dev/null 2>&1 \
+             && okl check --task "$REVIEW_PR_TITLE. ${REVIEW_PR_BODY:0:600}" --format agent > "$briefing" 2>/dev/null; then
+            printf '\n(From the seed packs only: lessons recorded on the maintainer machine are not in CI.)\n' >> "$briefing"
+          else
+            briefing=""
+          fi
+          REVIEW_CMD="$REVIEW_CMD" REVIEW_REPO_DIR="$GITHUB_WORKSPACE" REVIEW_BRIEFING_FILE="$briefing" \
+            bash ci/review-agent.sh | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Secret scan — gitleaks
         env:

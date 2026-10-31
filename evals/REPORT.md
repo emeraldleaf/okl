@@ -1359,7 +1359,8 @@ vocabulary-mismatch trigger fires: add an embedding index beside FTS, fuse by re
 rank, measure against FTS-only on the same tasks, adopt only if it wins.
 
 **What changed.** `okl embed` writes one vector per record into the store from a local static
-embedding model (`minishlab/potion-retrieval-32M`: Model2Vec, 249 MB on disk, 512 dimensions;
+embedding model (`minishlab/potion-retrieval-32M`: Model2Vec, 249 MB on disk (131 MB as okl fetches it: the erratum
+below), 512 dimensions;
 its model card gives MTEB retrieval 35.1 against all-MiniLM-L6-v2's 42.9, at well under a
 millisecond per text). `okl check --hybrid` fetches the nearest records by cosine beside the
 full-text candidates and fuses the two orders: `rrf` sums reciprocal ranks (k = 60); `linear`
@@ -1445,7 +1446,7 @@ arm's configuration when it is on, and the arm does not become the default.
 **What the arm buys.** One more held-out paraphrase found of eight (2 → 3) and one more of
 the probe's own (1 → 2); nothing on tickets or bug reports; one record more on two of six
 short prompts; 0.8 s per prompt for the model load (the search itself is under a millisecond
-with numpy) and a 249 MB model on disk. The two vectorless arms bought more: symptoms took the
+with numpy) and a 249 MB model on disk (both corrected in the erratum below). The two vectorless arms bought more: symptoms took the
 probe's own bug-report row from 2 to 3 of 8 (§4o), and aliases took it from 3 to 8 of 8 and
 added one held-out ticket and one held-out paraphrase (§4p; corrected 2026-10-26, this sentence
 had given the alias gain to symptoms). The static model's cosines sit in a narrow band (true pairs 0.30
@@ -1458,13 +1459,30 @@ the default.
 ticket and bug report held under linear and fell under RRF, which was not predicted; the
 probe's own paraphrase row rose under linear, as predicted; precision rose by one on two
 prompts, which the falsifier allowed. The pre-registration's "about 30 MB" was another model's
-figure: this one is 249 MB on disk.
+figure: this one is 249 MB on disk (131 MB as okl fetches it: the erratum below).
 
 **What ships.** `okl embed`; `okl check --hybrid` (linear fusion at the 0.40 line when the
 flag is bare; `rrf` stays selectable for measurement), off by default; a numpy matrix product
 over every vector that holds to roughly 100,000 of them (under a millisecond at 10,000, 3 ms
-at 50,000, plus 14 and 49 ms to read them; `okl.semantic`'s docstring has the measurements
+at 50,000, plus 14 and 49 ms to read them, all corrected in the erratum below; `okl.semantic`'s docstring has the measurements
 and the next tier); and the ADR amendment. The hook never reaches the network for any of it.
+
+*Erratum (2026-10-29, review of #300).* Two of these figures were not what okl does:
+- **The model's size.** What okl's loader fetches into an empty cache is 130.8 MB
+  (`model-files-20261029-1207.txt`). 249 MB was the model repository's listing in MiB,
+  including an ONNX copy model2vec never downloads.
+- **The search.** okl's own `search()` at 512 dimensions (`semantic-scale-20261029-1206.txt`)
+  takes 3.6 ms at 10,000 vectors and 15.2 ms at 50,000 after a read of 15.4 and 92.3 ms. The
+  "under a millisecond" and "3 ms" timed the product alone.
+The docs now quote the receipts. The ranking conclusions here do not depend on either figure.
+
+*Erratum (2026-10-31, review of #307).* Those search figures were one median less another,
+from separate calls. Each search now times its own read (`semantic-scale-20261031-0559.txt`):
+- **With numpy:** the search after the read takes 4.2 ms at 10,000 vectors and 23.8 ms at
+  50,000, after reads of 15.3 and 79.6 ms.
+- **The pure-Python fallback:** 6.3 ms at 300 vectors and 214.2 ms at 10,000.
+
+The ranking conclusions still do not depend on them.
 
 ## 4r. PRE-REGISTERED: the index arm, measured where it can act (2026-10-23)
 
@@ -1682,7 +1700,8 @@ with both on, since the probe measures recall and the harness measures what the 
 Neither becomes the default on the probe alone (§4n's rule).
 
 **Cost.** No paid call; about a minute per probe run; an 80 MB ONNX model on disk under the
-`rerank` extra, fetched once by `okl embed`.
+`rerank` extra, fetched once by `okl embed`. *Erratum (2026-10-29, review of #300):* what
+okl's loader fetches is 91.8 MB (`model-files-20261029-1207.txt`).
 
 **What this cannot settle.** Whether a better order changes what the agent writes; whether
 the first stage's recall, which bounds the pool, holds on a larger store (the pool is 24
@@ -3036,6 +3055,250 @@ one-shot series.
 - Neither the line format nor `okl_get`'s description changes.
 - The next test of fetching runs in a multi-turn session, under its own pre-registration.
 - §4aa's preflight counted a lesson named in one line as present. This run did not change that.
+
+## 4ac. PRE-REGISTERED: Porter stemming in the index and the line (2026-10-29)
+
+Written before any stemmed run. Issue #258 planned "stemming and a symptom rule first"; the
+symptom rule shipped (§4o), and stemming was never measured.
+
+**Why.** Every match okl makes locally is exact-word. SQLite's full-text index uses FTS5's
+default tokenizer, and the calibrated line counts the prompt's words that a lesson's about-text
+holds, as written. So "rotating the signing secrets" and a lesson about rotating a secret share
+"signing" alone. The Postgres backend already stems (`websearch_to_tsquery('english', ...)`),
+so the two backends match words differently today. FTS5 ships a Porter tokenizer, so stemming
+needs no new dependency.
+
+**Instrument.** `evals/bench/run_v2.py`, the bench the calibrated line was chosen on (§4w), with
+the shipped decision: `--score shared_words`, the bench's triggers, the cap of five, and a
+conformal line at alpha 0.05 set on the calibration half of the 550 null prompts and tested on
+the other half. Two arms:
+- **`words`** is the shipped decision as it is.
+- **`stem`** rebuilds the bench store's index with `tokenize='porter unicode61'`
+  (`run.porter_index`, as a migration would). It also stems the line's words on both sides with
+  FTS5's own stemmer, read back through `fts5vocab` (`v2.stem`), so the index and the line agree.
+  The search gets the words as typed, and the index stems them itself.
+
+Each arm sets its own line, so the cost of stemming (looser matches raise the line) and its gain
+are measured together, at the same guaranteed null rate. Both arms run on the selection split and
+the held-out split, in one sitting, at the commit that adds this section. No model call.
+
+**Predictions** (alpha 0.05, cap 5, against `words` in the same sitting):
+1. On the selection split, `stem` recall is at least 2 points higher, and at least 3 more
+   paraphrase queries find their lesson.
+2. The null test half is briefed anything in at most 5% of prompts in both arms. The conformal
+   line guarantees this; it is checked, not assumed.
+3. On the held-out split, `stem` recall is not lower than `words`.
+
+**What follows.** If predictions 1 and 3 hold, stemming goes to the product as one change:
+- the porter tokenizer, with the index rebuilt on open;
+- stemmed words in `decide`, and `CALIBRATED_LINE` recalibrated;
+- a measurement on real prompts, as §4x did, before the default changes.
+
+If either fails, the stemming half of #258 closes with this result.
+
+**Budget and stop.** Four runs of the bench, minutes each, no paid call.
+
+### Result (2026-10-29)
+
+Receipts: `bench-20261029-{sel,heldout}-v2-stem-{words,stem}.txt`, at 6f2a32c, all four in one
+sitting. A first sitting at the same commit was stamped DIRTY only because the bench's private
+prompts were linked into the worktree, and the git rule ignoring them matches a directory and not
+a link. They were copied in and the four runs repeated. Every figure was identical, and only the
+latency lines moved, by a tenth of a millisecond.
+
+| alpha 0.05, cap 5 | `words` | `stem` |
+|---|---|---|
+| line | 2.002 | 3.001 |
+| selection recall [95%] | 88.0% [83.9, 91.6] | **90.8%** [86.7, 94.4] |
+| selection paraphrase | 64 of 83 | **68 of 83** |
+| held-out recall [95%] | 90.0% [86.7, 93.3] | **94.4%** [91.9, 96.7] |
+| held-out paraphrase | 73 of 90 | **83 of 90** |
+| null test briefed anything | 9 of 268 (3.4%) | 11 of 268 (4.1%) |
+
+1. **Held.** On the selection split `stem` recalls 2.8 points more, and 4 more paraphrases.
+2. **Held.** The null test half is briefed in 3.4% and 4.1% of prompts, under 5% in both arms.
+   *Note, 2026-10-31 (review on #308):* the registration overstated the guarantee, here and in
+   "the same guaranteed null rate" above. Under exchangeability, split conformal keeps the null
+   rate at or under 5% on average over calibration draws, not in any one test half, so this
+   check was the measurement, not a formality. The registered text stands as written.
+3. **Held.** On the held-out split `stem` recalls 4.4 points more, 10 of them paraphrases. Ticket
+   and bug-report rows rise or hold on both splits.
+
+**How it reads.** Stemming makes more words match on both sides, so the conformal line rises
+from two shared words to three to keep the null rate. Even with that higher bar, more lessons
+clear it: a paraphrase's inflections ("refreshing" and "refresh", "rotating" and "rotate") now
+count. The gain sits in the paraphrase register, where §4w found the line weakest. The intervals
+overlap, so this is a bench result on 249 and 270 queries, not a settled one.
+
+**What it does not show.** Real prompts. The bench's queries were written for its lessons, and
+§4x showed the line behaving differently on what people type. Latency is under a millisecond
+more per decision.
+
+**What follows.** As registered, stemming goes to the product as one change, measured first:
+- the porter tokenizer, with the index rebuilt on open;
+- stemmed words in `decide`, with `CALIBRATED_LINE` set from this bench's stemmed calibration;
+- the real-prompt arms of §4x, before the default changes.
+
+## 4ad. PRE-REGISTERED: stemming on real prompts, before it becomes the default (2026-10-29)
+
+Written before any stem arm was pooled, judged or sized on real prompts.
+
+**Why.** §4ac found that Porter stemming raised the bench's recall at the same guaranteed null
+rate, and registered the next step: build it into the product and measure it on real prompts
+before the default changes. This section is that measurement.
+
+*Note, 2026-10-31:* "guaranteed" overstates it (§4ac's note under prediction 2). The conformal
+line holds the null rate at or under 5% on average over calibration draws, not in one run, and
+each run checks its own.
+
+**The treatment, as built.**
+
+- **The index.** `store.FTS_TOKENIZE = "porter unicode61"`: SQLite's full-text index stems, as
+  the Postgres backend's `'english'` configuration always has. A store whose index was built
+  with another tokenizer rebuilds it once when opened, in one write transaction, and checks
+  again once it holds the lock. The backend contract gains the case, and the conformance suite
+  checks it on both backends.
+  *Note, 2026-10-31 (review on #309):* neither happened. The contract and the conformance suite
+  did not change, and the rebuild is tested on SQLite alone (`tests/test_stem.py`). Postgres has
+  no index to rebuild: its `'english'` configuration has always stemmed.
+- **The line.** `decide` stems the line's words with that same tokenizer, read back through
+  `fts5vocab` (`decide.keys`), so the index and the line agree on what a word is. A stem counts
+  once however many of the prompt's words share it, as on the bench. `CALIBRATED_LINE` becomes
+  the stemmed bench's line, 3.0014486: four shared words, or three whose relative rarities sum
+  past 1.449.
+- **The floor.** Its shared words match by stem too (`core._matched_terms`, `_subject_words`,
+  `_alias_words`). §4ac did not register this, and it changes the second tier, which is the
+  floor's. Without it, a lesson the stemmed index finds only through another form of a word is
+  weak to the floor, so the second tier never names it, and the floor's widening loop runs
+  extra rounds over such candidates. Each record's words are cached for the check, which the
+  floor's per-word scans of the store had not been.
+- **The warm line.** `warm.LINE` becomes the stemmed dense bench's line at W = 8, 6.004063.
+- The words a briefing names as matched stay the prompt's own, not stems.
+
+**What was seen before this was written.**
+
+- §4ac's result.
+- The line-setting runs, `bench-20261029-sel-dense-embeddinggemma-int8-words-{stem,words}.txt`,
+  stemmed and unstemmed in one sitting (selection split, int8 model, cap 5). The receipts name
+  cdaaf93 and ca31cf8, the commits current when each finished; the bench's code is the same at
+  both. The unstemmed run reproduces §4z's receipt figure for figure:
+
+  | | words only (W = 0) | with the model (W = 8) |
+  |---|---|---|
+  | unstemmed: line, recall, paraphrase, nulls briefed | 2.002, 88.0%, 64 of 83, 9 of 268 | 5.768, 92.0%, 71 of 83, 12 of 268 |
+  | stemmed: line, recall, paraphrase, nulls briefed | 3.001, 90.8%, 68 of 83, 11 of 268 | 6.004, 91.6%, 70 of 83, 13 of 268 |
+
+  So on the bench the gain is in the words-only decision. With the model on, stemming adds
+  nothing: the model already matches the forms of a word. The warm arms below are a guard, not
+  a hope.
+- Timings in one process on a copy of this machine's store, four prompts seven times each, with
+  every cache cleared before each check: a tiered check took 64.1 ms before any of this change,
+  51.0 ms with the floor's cache and no stemming, and 65.0 ms with stemming. The calibrated
+  decision alone took 26.6, 26.8 and 38.6 ms. These have no receipt. The hook's own cost is
+  measured below.
+- Three tests asked for prompts that now share a stem with a lesson ("paginate" and
+  "pagination"), and one asked for the old line's two rare words. Their prompts were changed;
+  the behaviour each tests was not.
+
+**Instrument.** `evals/bench/real_prompts.py`, §4x's pool and judges, on both halves (seed 11,
+120 task and 60 null prompts each), against the store snapshot as of each prompt, with the
+written triggers. In one sitting, at the commit that adds this section, `pool --extend --rebrief`
+briefs eight arms:
+
+- **controls**, the unstemmed arms briefed again at this commit with stemming off (the unicode61
+  index and the §4w and §4z lines): `tiered`, `tiered-full`, `warm`, `warm-full`;
+- **treatments**, the product as built: `tiered-stem`, `tiered-stem-full`, `warm-stem`,
+  `warm-stem-full`.
+
+The pool's files before the re-brief are kept beside it (`real-arms-<split>.pre-4ad.json`). New
+pairs are judged per lesson by Sonnet sub-agents under §4x's instruction, blind to arm, at most
+three at once. `size` renders each arm's briefing. `evals/stem_latency.py` times the hook's
+command, `okl check --format hook --decision tiered --warm off`, a new process per prompt, over
+the 120 held-out task prompts, unstemmed and stemmed in turn, each against its own copy of this
+machine's store.
+
+**The rule** (`tally`'s `stem rule`), on the held-out half's prompts. Stemming becomes the
+default if, for the tier arms and for the warm arms alike, the stemmed arm:
+
+1. reaches at least as many applying lessons as its unstemmed namesake (reach, the criterion
+   since §4y);
+2. shows at least 90% as many applying lessons in full;
+3. at an in-full precision no lower than its namesake's lower 95% bound;
+4. shows a lesson in full on at most twice as many null prompts;
+5. names at most 15% more lessons a task prompt.
+
+The tuning half is reported beside it. If the rule fails on the held-out half, stemming does not
+ship: `FTS_TOKENIZE` returns to `unicode61`, the lines to §4w's and §4z's, and this section
+records why.
+
+**Predictions.**
+
+1. Held out, `tiered-stem` reaches more applying lessons than `tiered`.
+2. Held out, `tiered-stem-full` shows at least as many applying lessons in full as
+   `tiered-full`, as on the bench, despite the higher line.
+3. Held out, `warm-stem` reaches as many as `warm`, within two lessons either way.
+4. The rule holds on both halves.
+5. Stemming adds at most 20 ms to the hook's median, end to end.
+
+**Budget and stop.** One sitting of briefing (the warm model loads into the harness's own
+process) and the judging of the new pairs. If the result is not in by 2026-10-31, the default
+stays unstemmed.
+
+### Result (2026-10-29): the rule fails, so stemming stays off
+
+Receipts:
+- `real-20261029-heldout-stem.txt` and `real-20261029-tuning-stem.txt`: the tallies, at a3bf7b2.
+  The eight arms were briefed at ad43e72 in one sitting (held out 17:52Z, tuning 17:54Z).
+  Nothing they run changed after it: the later commits turned the setting off, and the stem arms
+  set it themselves. The pairs were not judged; see below.
+- `real-20261029-heldout-size-stem.txt`: the size of each arm's held-out briefings, at a3bf7b2.
+- `stem-latency-20261029-1758.txt`: the hook's command, at be9c083.
+
+**The controls reproduce.** Briefed again with stemming off, `tiered`, `tiered-full`, `warm` and
+`warm-full` named exactly what they had named in the pool on all 180 prompts of each half. The
+unstemmed path, the floor's cached word sets included, briefs what it did before this section.
+
+**The rule fails on its size check, for the warm arms.** Two of its five checks need no label:
+
+| held out, 120 task prompts | lessons named a prompt | change | null prompts with a lesson in full |
+|---|---|---|---|
+| `tiered` → `tiered-stem` | 9.35 → 10.43 | +11.6% | 4 → 3 |
+| `warm` → `warm-stem` | 9.20 → 10.81 | **+17.5%** | 5 → 5 |
+
+The rule allows 15% more. The warm arms fail it, so the rule cannot hold, whatever the judges
+would have said. In tokens the growth is larger: the median held-out task prompt's briefing is
+880 tokens against 721 for the tier arms (+22%), and 926 against 711 for the warm arms (+30%);
+a null prompt's is 524 against 362 and 370. The tuning half agrees: +13.5% for the tier arms and +17.3% for the warm arms.
+So the new pairs (729 held out, 624 on tuning) were not judged. `tally` now prints an arm with
+unjudged pairs without precision or reach, and its stem rule reads only the two checks that need
+no label.
+
+**Predictions.**
+1. *Tiered-stem reaches more:* not measured; its pairs are unjudged.
+2. *Tiered-stem-full shows at least as many in full:* not measured. What needs no label points
+   the other way: it shows 1.57 lessons in full a held-out task prompt against 1.77, on 47
+   prompts against 59. The line rose from two shared words to three, and real prompts are terse.
+3. *Warm-stem reaches as many as warm:* not measured.
+4. *The rule holds on both halves:* **failed** on both, on the warm arms' size.
+5. *At most 20 ms more at the hook's median:* **held.** Unstemmed 117 ms, stemmed 130 ms;
+   15 ms more at the median and 29 ms at p95 (120 held-out task prompts, a new process each).
+
+**How it reads.** Stemming widens every match: the index finds more candidates, and the floor
+behind the second tier keeps more of them. The second tier is where the size went. With the
+model on, the full tier grew as well (2.02 lessons a prompt against 1.67). On the bench, the
+model already matched the forms of a word, and stemming on top of it gained nothing (§4ad, seen
+before). So for the warm arms it adds lessons without, as far as the bench can say, adding
+reach.
+
+**What follows.** As registered, the default is unstemmed: `store.FTS_TOKENIZE` is `unicode61`,
+and the lines are §4w's 2.0017173 and §4z's 5.767926. The stemming code stays as a measured
+setting, off: the index rebuild when the tokenizer setting changes, `decide.keys`, and the
+floor's word matching by key. It is how §4ad's arms reproduce, and `tests/test_stem.py` keeps it
+working. The floor's per-record word cache stays on.
+
+**What is open.** Whether the extra size bought reach. Judging the 1,353 pairs would say. A
+stemmed setting with the line but not the floor, or with a size allowance, would need its own
+pre-registration. Nothing here asks for one.
 
 ## 4ae. PRE-REGISTERED: how good is drift at its job? A replay of this repo's history (2026-10-31)
 
