@@ -8,12 +8,13 @@ store. At check time the model is loaded from the local cache only, so the hook 
 reaches the network; when the model or the vectors are missing the briefing is the full-text
 one and the result says why.
 
-How it scales (evals/semantic_scale.py, receipt semantic-scale-20261029-1206.txt): the search
+How it scales (evals/semantic_scale.py, receipt semantic-scale-20261031-0559.txt): the search
 is one matrix product over every stored vector, in numpy when the extra is installed (numpy
 comes with the model). After reading the vectors out of the store (15 ms at 10,000 records,
-92 ms at 50,000), joining them into the matrix and the product take about 4 ms at 10,000 and
-15 ms at 50,000. The pure-Python fallback below exists for a process without numpy (the test
-suite's stub model) and costs 7 ms at 300 records and 232 ms at 10,000; it is not the path a
+80 ms at 50,000), joining them into the matrix and the product take about 4 ms at 10,000 and
+24 ms at 50,000, each search timed with its own read. The pure-Python fallback below exists for
+a process without numpy (the test suite's stub model) and costs 6 ms at 300 records and 214 ms
+at 10,000; it is not the path a
 hybrid install runs. The figures first quoted here (2026-10-23) timed the product alone, not
 the search a check runs (REPORT §4q's erratum). Per process the model load is the fixed cost, 0.8 s
 from the local cache, paid once per `okl check` because a hook is a new process each prompt.

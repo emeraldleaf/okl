@@ -1476,6 +1476,14 @@ and the next tier); and the ADR amendment. The hook never reaches the network fo
   "under a millisecond" and "3 ms" timed the product alone.
 The docs now quote the receipts. The ranking conclusions here do not depend on either figure.
 
+*Erratum (2026-10-31, review of #307).* Those search figures were one median less another,
+from separate calls. Each search now times its own read (`semantic-scale-20261031-0559.txt`):
+- **With numpy:** the search after the read takes 4.2 ms at 10,000 vectors and 23.8 ms at
+  50,000, after reads of 15.3 and 79.6 ms.
+- **The pure-Python fallback:** 6.3 ms at 300 vectors and 214.2 ms at 10,000.
+
+The ranking conclusions still do not depend on them.
+
 ## 4r. PRE-REGISTERED: the index arm, measured where it can act (2026-10-23)
 
 Written before the run, per §2b, for #258's first vectorless arm, on a new instrument.

@@ -143,8 +143,8 @@ one that is opt-in.
 Measured in REPORT §4q and not made the default. Turning it on costs a 131 MB static model on
 disk (`pip install 'observed-knowledge-ledger[hybrid]'`, then `okl embed` once online), about
 0.8 s per prompt for the model load (the hook runs `okl check` as a new process each time; with
-numpy the search takes about 4 ms at 10,000 records and 15 ms at 50,000, after reading the
-vectors out of the store in 15 ms and 92 ms), and one vector
+numpy the search takes about 4 ms at 10,000 records and 24 ms at 50,000, after reading the
+vectors out of the store in 15 ms and 80 ms), and one vector
 per record in the store, refreshed by `okl embed` after the records change. It buys one more
 paraphrased task in eight finding its lesson on the held-out set, nothing on tickets or bug
 reports, and one record more on two of six short prompts. Before it, the two free arms did

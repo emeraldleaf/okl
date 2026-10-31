@@ -315,22 +315,22 @@ def test_the_never_reproduced_sentence_counts_match_the_receipts():
 # Every size or latency the docs publish, with each receipt line it stands for: the figure is
 # every such line's number at the precision the doc quotes. "95 ms" once cited a receipt that
 # said 170.7, and "249 MB" and "about 80 MB" were never what okl's loaders fetch (review on
-# #300). One string can stand for two measurements ("15 ms" is the read at 10,000 and the search
-# at 50,000), so both are held (CI reviewer on #307). A new figure fails until it is named
+# #300). One string can stand for two measurements, so a figure lists every receipt line it
+# quotes, and each is held (CI reviewer on #307). A new figure fails until it is named
 # here; a name whose figure left the docs fails too. A third element scales the receipt's number
 # to the doc's unit (a receipt in MB, a doc in GB).
-_SCALE = "semantic-scale-20261029-1206.txt"
+_SCALE = "semantic-scale-20261031-0559.txt"
 _MODELS = "model-files-20261029-1207.txt"
 _WARM_FILES = "warm-model-files-20261029.txt"
 DOC_FIGURES = {
     "131 MB": [(_MODELS, r"potion-retrieval-32M.*?([\d.]+) MB")],
     "92 MB": [(_MODELS, r"ms-marco-MiniLM-L-6-v2.*?([\d.]+) MB")],
     "4 ms": [(_SCALE, r"10,000 vectors:.*?search after the read\s+([\d.]+) ms")],
-    "15 ms": [(_SCALE, r"10,000 vectors: read\s+([\d.]+) ms"),
-              (_SCALE, r"50,000 vectors:.*?search after the read\s+([\d.]+) ms")],
-    "92 ms": [(_SCALE, r"50,000 vectors: read\s+([\d.]+) ms")],
-    "7 ms": [(_SCALE, r"300 vectors:.*?without numpy\s+([\d.]+) ms")],
-    "232 ms": [(_SCALE, r"10,000 vectors:.*?without numpy\s+([\d.]+) ms")],
+    "15 ms": [(_SCALE, r"10,000 vectors: read\s+([\d.]+) ms")],
+    "24 ms": [(_SCALE, r"50,000 vectors:.*?search after the read\s+([\d.]+) ms")],
+    "80 ms": [(_SCALE, r"50,000 vectors: read\s+([\d.]+) ms")],
+    "6 ms": [(_SCALE, r"300 vectors:.*?without numpy\s+([\d.]+) ms")],
+    "214 ms": [(_SCALE, r"10,000 vectors:.*?without numpy\s+([\d.]+) ms")],
     # The warm model (§4z): its int8 and full-precision files, an encode, the hook's added
     # latency (the larger of the two checked runs, as §4z quotes it), and its memory once settled.
     "309.5 MB": [(_WARM_FILES, r"int8\s+model_quantized.*?([\d.]+) MB")],
@@ -355,10 +355,11 @@ NEAR = {
     "131 MB": r"potion|hybrid|semantic",
     "92 MB": r"rerank|MiniLM|cross-encoder|second stage",
     "4 ms": r"search|product",
-    "15 ms": r"search|read|product",
-    "92 ms": r"read",
-    "7 ms": r"without numpy|pure-Python|fallback",
-    "232 ms": r"without numpy|pure-Python|fallback",
+    "15 ms": r"read",
+    "24 ms": r"search|product",
+    "80 ms": r"read",
+    "6 ms": r"without numpy|pure-Python|fallback",
+    "214 ms": r"without numpy|pure-Python|fallback",
     "309.5 MB": r"int8",
     "1,235 MB": r"full precision|precision's",
     "170.7 ms": r"[Ee]ncod",
