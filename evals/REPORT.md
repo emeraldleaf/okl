@@ -3345,6 +3345,91 @@ drift is red and the check passes.
 - **Deadline:** if the run cannot complete by 2026-11-14, this section records why, and nothing
   is concluded.
 
+### Result (2026-10-31)
+
+**The run.** Receipt `drift-mutate-20261031-1522.json`, with its 78 patches in the directory
+beside it. It ran from 07cd1c4 on BASE eb93b16 and cost $5.20.
+- **All 13 lessons' checks passed at BASE,** and so did every CI step.
+- **No breaker failed,** every patch applied, and no check timed out. The main checkout was
+  untouched.
+- **The judge gave no verdict on 11 patches.** Ten calls timed out at 300 seconds, and one gave
+  no valid answer. That is 14% of the 78, under the registered 20%, so the registered result
+  reads the 36 judged breaks. The 11 were judged once more, apart from the result (below).
+- **Contention does not explain the time-outs.** §4ag's judge sessions ran beside the first ten.
+  Judged again with nothing else running, six timed out again. One of those had answered in four
+  seconds when run by hand between the two runs. Another answered with a call to a tool it did
+  not have. These judgments are flaky, and why is not known.
+- **The judge confirmed 36 of the 52 breaking patches as breaks,** above the registered half. It
+  called 5 intact. Of the 26 harmless patches it called 25 intact, and those 25 are the controls.
+
+| | result |
+|---|---|
+| catch rate | 14 of 36 (38.9%), Wilson 24.8–55.1%, lesson bootstrap 20.0–59.5% |
+| misses: the break changed a file the lesson does not govern | 14 |
+| misses: drift was red and the check passed | 8 |
+| the three lessons CI runs: drift only / both / CI only / neither | 0 / 5 / 3 / 3 of 11 |
+| the other ten lessons: drift only / both / CI only / neither | 5 / 4 / 6 / 10 of 25 |
+| controls whose check failed | 0 of 25 |
+
+**Predictions.**
+1. **Failed.** Drift caught 38.9% of the breaks, not at least half.
+2. **Failed.** Coverage misses (14) outnumber sensitivity misses (8). Breaks fall outside the
+   governed files more often than checks are too narrow.
+3. **Held.** For the three lessons CI runs, CI failed on all 5 breaks drift caught.
+4. **Held.** For the other ten, CI failed on 4 of the 9 breaks drift caught, under half.
+5. **Held.** No control failed its check.
+
+**Where the misses are.** Each lesson's governed files are narrower than what the lesson claims:
+- **`doc-check-defaults`:** two breaks changed the defaults in `client.py` and `service.py`. The
+  lesson governs `core.py` and `cli/`.
+- **`docs-agent-neutral`:** three breaks were in docs the lesson does not govern (`COMMANDS.md`,
+  `COSTS-AND-KNOBS.md`, `RETRIEVAL.md`). It governs two files, while its claim covers every doc.
+- **`n_d45d7bf64896`** (no superiority claims): two breaks were in an essay and `RELATED-WORK.md`.
+- **`n_e635fd921086`** (the package name): one break was in the second `pyproject.toml` under
+  `packaging/`.
+- **Elsewhere:** the rest changed tests, configuration, a shipped hook, or a module beside the
+  governed ones.
+
+Where drift was red and the check passed, the check reads less than the lesson says:
+- **`n_07faa4565128`, all four breaks:** its check reads one record in one seed file, and the
+  breaks were in other records of the same kind.
+- **`n_d45d7bf64896`:** its grep looks for a fixed list of phrases, and a reworded claim passed it.
+
+**Re-judged, apart from the result.** Receipt `drift-mutate-20261031-1522-rejudge.json`, from
+32ce990, $0.23. The four new verdicts were all broken, which makes 40 breaks:
+- **Catch rate:** 17 of 40 (42.5%), Wilson 28.5–57.8%, lesson bootstrap 23.9–64.3%.
+- **Misses:** 15 changed a file the lesson does not govern, and 8 passed a check too narrow.
+- **The other ten lessons:** drift only 5, both 7, CI only 6, neither 10, of 28.
+
+Predictions 1, 2, 3 and 5 read the same. Prediction 4 turns: CI failed on 7 of the 12 breaks
+drift caught in the other ten lessons, more than half. Whether drift mostly catches what CI
+misses rests on four judgments, so the registered result stands, and neither claim is made.
+
+**What follows, as registered.**
+- **Prediction 3 held,** so the three lessons whose check CI runs (`n_71c09abf3f37`,
+  `n_b74bad29fd87`, `n_be9f13d587b1`) lose their governed files, by the repo's own rule (#39).
+  This is filed with this receipt.
+- **The catch rate is below 0.5,** so each miss goes to its cause:
+  - sensitivity misses to the lessons' checks (#189);
+  - coverage misses to their governed files.
+
+  The store's `watch-what-the-rule-depends-on` lesson already names the second. Until a re-run
+  after those fixes reaches 0.5, the docs describe drift as bookkeeping, not detection.
+- **Drift-only is 5 of 25,** at least a tenth, so the gate stays. It is under a quarter, so the
+  alarm change does not fire from this result.
+
+**What it shows, and what it does not.**
+- **Shown:**
+  - When a watched lesson is broken on purpose, drift says so about two times in five.
+  - What it misses is mostly a break one file away from what the lesson watches.
+  - For the three lessons CI already runs, drift added nothing.
+  - For the other ten, it caught breaks CI passed: 5 of 25.
+- **Not shown:**
+  - How often lessons break by accident.
+  - Any lesson outside the 13.
+  - Whether wider file lists would cost more re-checks than they catch. §4ae's replay can count
+    that on the history without new checks.
+
 ## 4ag. PRE-REGISTERED: the lessons nothing re-checks. How many have gone stale? (2026-10-31)
 
 Written before any lesson is judged. §4ae and §4af measure drift inside its scope; this measures
@@ -3440,6 +3525,79 @@ There is one judgment per lesson, 104 in all, in a seeded order.
 - **Fixed once a verdict is read:** everything above.
 - **Deadline:** 2026-11-14, with §4af. If the run cannot happen by then, this section says why,
   and nothing is concluded.
+
+### Result (2026-10-31)
+
+**The run.** Receipt `stale-lessons-20261031-1527.json`: the repository at f645d81, 104
+judgments, none invalid, $7.81.
+- **Started from f502559.** The receipt names 07cd1c4, the branch head when the run ended,
+  because §4af's instrument was committed while it ran. `evals/lesson_census.py` and its planted
+  file are identical at the two commits.
+- **One planted name replaced before any judgment.** The instrument's own guard refused
+  `--name`, which occurs inside `--name-only`, and it became `--slug` (f502559).
+
+| | count |
+|---|---|
+| the 84: current | 63 |
+| the 84: stale | 2 |
+| the 84: no claim | 17 |
+| the 84: unsure | 2 |
+| negative controls called stale | 0 of 10 |
+| positive controls called stale | 5 of 10 |
+
+**Predictions.**
+1. **Not read.** A control failed (below), so the run reports no rate. The count is 2 stale of
+   the 65 lessons that made a claim it could decide.
+2. **Failed.** 17 of the 84 make no claim about this repository: one in five, not one in three.
+3. **Held.** The judge called no negative control stale.
+4. **Failed.** The judge called 5 of the 10 planted facts stale, against the 8 registered.
+5. **Held, on two lessons.** The judge says both stale lessons could carry a check.
+
+**Why the positive control failed.** In four of its five misses, the judge named the planted
+fact in its reason and still answered current. Two examples: "the lesson's 'storage.py' is
+actually named store.py", and "the only mismatch is that the flag is now `--by`, not the `--via`".
+- **It read stale as "the lesson's point no longer holds",** not as "a detail in it is false".
+  The registered wording, "something it says … no longer holds, so following it would mislead",
+  left that open.
+- **So it sees wrong details, and its verdict does not count them.**
+- **One of its five catches may have another cause.** For `n_f215b68b925c`, its reason cites the
+  fix that has since landed in `okl init`. That fix makes the lesson's interim advice out of date,
+  planted flag or not.
+
+**What follows, as registered.** The judge is not trusted for a rate, so the run reports counts,
+and the two stale verdicts went to the person, who confirmed both on 2026-10-31. Both lessons
+were updated in the store:
+- **`n_9a8b5215da32`,** an article review recorded as a Claim. It said src held one broad
+  exception handler. src holds five, each with its reason. Its "no NumPy" point now has to name
+  the optional extras that import NumPy.
+- **`snapshot-from-worktree-drops-repo-rules`.** Its symptom, a snapshot that silently drops the
+  repo's rules, cannot happen since #213, which refuses a snapshot that would shrink. Its fix,
+  copying the config into a worktree, is still the working practice.
+
+The two unsure verdicts go nowhere. One lesson is about a GitHub setting no file records. The
+other was recorded today about a branch that main does not yet hold.
+
+**Exploratory, not registered.** In 14 of the 63 current verdicts, the judge's reason qualifies
+the verdict:
+- **Most** say that a fix has since landed, or that a detail has grown.
+- **Two** say that part of the lesson's advice predates its fix:
+  - `harness-reads-a-moving-working-tree`: "only the 'until that lands' interim advice is out of
+    date";
+  - `fastembed-cache-in-tmpdir`: one line "describes the state before the fix".
+
+With `n_f215b68b925c` above, that is a kind of staleness the registered scale has no word for: a
+lesson whose fix has landed still advises the workaround.
+
+**What it shows, and what it does not.**
+- **Shown:** among the lessons nothing re-checks, the point a lesson makes almost always still
+  holds of this repository. The judge never called a known-current lesson stale. Two of 65 did
+  not hold, and the person confirmed both.
+- **Not shown:**
+  - How many carry a wrong detail. The judge saw planted wrong details and let them pass, so this
+    run cannot count them. A scale that separates "the point holds, a detail is wrong" from
+    "current" would.
+  - How many lessons whose fix has landed still advise the workaround. Neither drift nor this
+    judge flags them.
 
 ## 5. Findings
 
