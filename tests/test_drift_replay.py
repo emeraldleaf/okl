@@ -194,3 +194,22 @@ def test_the_sample_is_redrawn_the_same_and_the_rates_add_up(dr):
     # 100 red pairs half broken, 400 green pairs a quarter broken: 50 of 150 breaks flagged.
     assert s["red_break_rate"]["rate"] == 0.5 and s["green_miss_rate"]["rate"] == 0.25
     assert s["recall_estimate"] == round(50 / 150, 4)
+
+
+def test_a_lesson_is_classed_by_what_could_rerun_its_check(monkeypatch):
+    """evals/lesson_census.py (REPORT §4ag): drift watches a lesson with files and a check, CI a
+    check alone, and nothing a lesson with neither; a hand stamp is not a check."""
+    from okl.store import Node
+    monkeypatch.setattr(sys, "path", list(sys.path))     # the script puts evals/ on the path
+    spec = importlib.util.spec_from_file_location("lesson_census", HERE / "evals" / "lesson_census.py")
+    lc = importlib.util.module_from_spec(spec)
+    monkeypatch.setitem(sys.modules, "lesson_census", lc)
+    spec.loader.exec_module(lc)
+    stamp = "`pytest -q -k x` exit 0, matched 'passed' on commit abc"
+
+    def node(**kw):
+        return Node(type="Rule", title="t", scope="org", **kw)
+    assert lc.classify(node(files="a.py", verified_by=stamp)) == "watched"
+    assert lc.classify(node(files="a.py")) == "unverified"
+    assert lc.classify(node(verified_by=stamp)) == "checked"
+    assert lc.classify(node(verified_by="stamped by hand")) == "unchecked"
