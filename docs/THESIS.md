@@ -60,5 +60,7 @@ call:
 - `pyproject.toml`'s description, which PyPI shows;
 - `server.json`, which the MCP Registry shows; `tests/test_scaffold.py` pins its first words;
 - `.claude-plugin/plugin.json`;
-- the CLI's `--help` description;
-- the overview and anatomy renders in `docs/overview/`.
+- the CLI's `--help` description.
+
+The overview and anatomy sheets in `docs/overview/` carry the claim since 2026-10-31, as does
+the okl page on emeraldleaf.dev.
