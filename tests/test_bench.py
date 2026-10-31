@@ -2,6 +2,7 @@
 import contextlib
 import importlib.util
 import sqlite3
+import sys
 from pathlib import Path
 
 from okl import store
@@ -33,3 +34,17 @@ def test_the_corpus_ignores_the_store_and_service_the_environment_names(tmp_path
     assert real.read_bytes() == before
     with contextlib.closing(sqlite3.connect(real)) as c:
         assert c.execute("SELECT count(*) FROM node").fetchone() == (0,)
+
+
+def test_pooled_recall_waits_until_every_pair_is_judged(monkeypatch):
+    """real_prompts.tally: a pair no judge has seen may apply, so while one is open the pool's
+    count of applying lessons is a floor, and recall and F1 over it would read high (review on
+    #309). Only the prompts asked about count."""
+    monkeypatch.setattr(sys, "path", list(sys.path))     # the script puts evals/bench on the path
+    spec = importlib.util.spec_from_file_location("real_prompts", ROOT / "evals" / "bench" / "real_prompts.py")
+    rp = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(rp)
+    verdict = {("t1", "a"): "APPLIES", ("t1", "b"): None, ("n1", "a"): "DOES_NOT_APPLY"}
+    assert rp.pool_open(verdict, ["t1"])
+    assert not rp.pool_open(verdict, ["n1"])
+    assert not rp.pool_open({("t1", "a"): "APPLIES"}, ["t1"])

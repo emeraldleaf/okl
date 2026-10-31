@@ -542,6 +542,14 @@ def _stem_rule(meta: dict, verdict: dict[tuple[str, str], str | None], applies: 
     print(f"stem rule: {overall} (on this half)")
 
 
+def pool_open(verdict: dict[tuple[str, str], str | None], ids: list[str]) -> bool:
+    """Whether a pooled pair of `ids` has no judge's label yet. Such a pair may apply, so the
+    pool's count of applying lessons, the recall denominator every arm shares, is a floor
+    until every pair is judged, and recall and F1 over it would read high (review on #309)."""
+    keep = set(ids)
+    return any(v is None for (pid, _lid), v in verdict.items() if pid in keep)
+
+
 def cmd_tally(args: argparse.Namespace) -> None:
     """Join the judges' labels to the arms and print the receipt."""
     meta = json.loads((PRIVATE / f"real-arms-{args.split}.json").read_text())
@@ -565,12 +573,16 @@ def cmd_tally(args: argparse.Namespace) -> None:
     print(f"{len(verdict)} pooled pairs, labels missing {missing}")
     stats = {}
     open_arms: set[str] = set()
+    task_open = pool_open(verdict, [pid for k, pid in chosen if k == "task"])
     for kind in ("task", "null"):
         ids = [pid for k, pid in chosen if k == kind]
         total = sum(len(applies[pid]) for pid in ids)
         with_any = sum(1 for pid in ids if applies[pid])
+        is_open = pool_open(verdict, ids)
+        shown = "-" if is_open else total
         print(f"\n{kind} prompts: {len(ids)} person-typed · {with_any} with an applying lesson · "
-              f"{total} applying lessons in the pool")
+              + (f"at least {total} applying lessons in the pool, some pairs unjudged" if is_open
+                 else f"{total} applying lessons in the pool"))
         print(f"  {'arm':11} {'precision [95%]':>22} {'applying found':>15} {'prompts hit':>12} {'briefed any':>12} "
               f"{'lessons/prompt':>15} {'off-topic/prompt':>17} {'repeat':>7}")
         for arm in [a for a in ARMS if a in meta["briefed"]]:
@@ -585,7 +597,7 @@ def cmd_tally(args: argparse.Namespace) -> None:
                 print(f"  {arm:11} {f'{unjudged} unjudged':>22} {'-':>15} {'-':>12} "
                       f"{r['any']:>5} of {len(ids):<4} {r['per']:>15.2f} {'-':>17} {r['repeat']:>7.0%}")
             else:
-                print(f"  {arm:11} {prec:>22} {r['found']:>7} of {total:<5} {r['hit']:>5} of {with_any:<4} "
+                print(f"  {arm:11} {prec:>22} {r['found']:>7} of {shown!s:<5} {r['hit']:>5} of {with_any:<4} "
                       f"{r['any']:>5} of {len(ids):<4} {r['per']:>15.2f} {r['off']:>17.2f} {r['repeat']:>7.0%}")
             if kind == "task":
                 stats[arm] = (r["yes"] / r["judged"] if r["judged"] else 0.0, r["found"], r["per"], total)
@@ -593,7 +605,8 @@ def cmd_tally(args: argparse.Namespace) -> None:
     f1 = {a: (2 * p * (f / t) / (p + f / t) if p and t and f else 0.0) for a, (p, f, _per, t) in stats.items()
           if a not in open_arms}
     print("\nF1 on task prompts (judged precision, pooled recall): "
-          + " · ".join(f"{a} {v:.3f}" for a, v in f1.items()))
+          + ("n/a until every task pair is judged" if task_open
+             else " · ".join(f"{a} {v:.3f}" for a, v in f1.items())))
     # The selection rules, each fixed before its arms' pairs were judged (module docstring).
     for name, family in (("context", CONTEXT_ARMS), ("fix", FIX_ARMS)):
         present = [a for a in family if a in stats]
@@ -610,7 +623,7 @@ def cmd_tally(args: argparse.Namespace) -> None:
               f"on task prompts, the floor {stats['floor'][1]}; the rule asks at least as many)")
     _warm_rule(meta, verdict, applies, stats)
     _stem_rule(meta, verdict, applies, stats)
-    if any(a in stats for a in SWEEP_ARMS):
+    if any(a in stats for a in SWEEP_ARMS) and not task_open:
         eligible = [a for a in f1 if stats[a][2] <= 5]
         pick = min(eligible, key=lambda a: (-f1[a], stats[a][2]))
         print(f"\nsweep rule: {pick} (highest F1 on task prompts among arms briefing at most five lessons a prompt)")
