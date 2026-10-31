@@ -238,3 +238,34 @@ def test_the_stale_lesson_judge_reads_only_a_valid_verdict_and_counts_by_role(mo
     assert s["stale_rate"]["stale"] == 1 and s["stale_rate"]["decided"] == 3
     assert s["claim_share"] == {"claims": 3, "of": 5} and s["invalid_share"] == 0.2
     assert (s["negatives_called_stale"], s["positives_called_stale"], s["stale_checkable"]) == (1, 1, 1)
+
+
+def test_the_mutation_run_counts_catches_misses_and_ci_by_group(monkeypatch):
+    """§4af: a break is caught when drift is red and the check fails; a miss is coverage when
+    drift stayed green and sensitivity when it was red; only judged breaks and judged-intact
+    controls count."""
+    monkeypatch.setattr(sys, "path", list(sys.path))
+    spec = importlib.util.spec_from_file_location("drift_mutate", HERE / "evals" / "drift_mutate.py")
+    dm = importlib.util.module_from_spec(spec)
+    monkeypatch.setitem(sys.modules, "drift_mutate", dm)
+    spec.loader.exec_module(dm)
+    assert dm.ci_run_lesson("lint-imports") and dm.ci_run_lesson("python3 -m pytest -q -k x")
+    assert not dm.ci_run_lesson("bash -c \"grep -q x README.md\"")
+    assert dm.judged('so: {"verdict": "broken", "reason": "r"}') == "broken" and dm.judged('{"verdict": "maybe"}') is None
+    assert dm.changed_files("+++ b/a.py\n--- a/a.py\n+++ b/README.md\n") == ["README.md", "a.py"]
+
+    def p(*row, ci_run=False):
+        return {**dict(zip(("lesson", "kind", "red", "check", "ci", "judge"), row, strict=True)),
+                "k": 0, "diff": "d", "ci_run": ci_run}
+    s = dm.summarize([p("A", "breaking", True, "fail", "pass", "broken"),     # drift only
+                      p("A", "breaking", True, "pass", "fail", "broken"),     # a sensitivity miss CI caught
+                      p("B", "breaking", False, "pass", "pass", "broken"),    # a coverage miss nobody caught
+                      p("B", "breaking", True, "fail", "fail", "intact"),     # the judge says intact: no break
+                      p("C", "breaking", True, "fail", "fail", "broken", ci_run=True),
+                      p("A", "harmless", True, "fail", None, "intact"),       # a control whose check failed
+                      p("B", "harmless", True, "pass", None, "broken")])      # judged broken: no control
+    assert s["breaks"] == 4 and s["catch"]["caught"] == 2
+    assert (s["coverage_misses"], s["sensitivity_misses"]) == (1, 1)
+    assert s["against_ci"]["other_lessons"] == {"drift_only": 1, "both": 0, "ci_only": 1, "neither": 1, "breaks": 3}
+    assert s["against_ci"]["ci_run_lessons"]["both"] == 1
+    assert s["controls"] == {"n": 1, "check_failed": 1}
