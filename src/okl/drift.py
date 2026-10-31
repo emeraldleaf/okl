@@ -305,6 +305,37 @@ def _record_drift(rec: dict[str, Any], repo_scope: str, repo_dir: str) -> dict[s
     return out
 
 
+# The lists of a check result that brief lessons: core's buckets and its second tier. The index
+# (§4r) and near-miss (§4s) arms name lessons without briefing them, and are left as they are.
+_BRIEFED = ("armed_gates", "relevant_defects", "rules", "decisions", "live_retractions",
+            "in_scope_tombstones", "threat_prior_art", "context", "also_matched")
+
+
+def _record_proof(rec: dict[str, Any], verdict: dict[str, Any] | None) -> str | None:
+    """"unchecked" for a briefed lesson that no observed check backs and drift has no verdict
+    on, or None (#222).
+
+    Drift marks only lessons whose governed files are in this checkout, so a lesson with no
+    files, or with files elsewhere, was briefed exactly like a proven one whether or not a check
+    had ever run: 139 of the 155 lessons recorded in okl's own repo on 2026-10-31. A stamp with
+    no `okl verify` evidence is no check, by the gate's own predicate. A withdrawn record or a
+    retired identifier is a warning, not advice, and is not marked."""
+    if (verdict or rec.get("avoid") or rec.get("type") == "Tombstone"
+            or rec.get("status") in RETIRED_STATUSES):
+        return None
+    if rec.get("verified_at") is not None and stamp_problem(rec) is None:
+        return None
+    return "unchecked"
+
+
+def _mark(rec: dict[str, Any], verdict: dict[str, Any] | None, proof: str | None) -> None:
+    """Put drift's verdict and the proof mark on one briefed record, where there are any."""
+    if verdict:
+        rec["drift"] = verdict
+    if proof:
+        rec["proof"] = proof
+
+
 def annotate_briefing(result: dict[str, Any], repo: str, repo_dir: str = ".") -> int:
     """Mark the briefed lessons whose governed code changed after their last check (#93).
 
@@ -313,26 +344,34 @@ def annotate_briefing(result: dict[str, Any], repo: str, repo_dir: str = ".") ->
     hold. Copilot Memory re-checks citations before using a fact for the same reason.
     Only the briefed records are checked (one `git log` each), and it runs on the client
     because a shared service has no checkout of this repo. Returns how many were marked.
+
+    Every other briefed lesson that no observed check backs is marked unchecked (#222), and
+    counted apart: drift's count is still what the gate would say.
     """
     repo_scope = f"repo:{repo}"
     verdicts: dict[str, dict[str, Any] | None] = {}
+    proofs: dict[str, str | None] = {}
     for key, value in result.items():
         if key == "next_actions" or not isinstance(value, list):
             continue
+        briefed = key in _BRIEFED
         for rec in value:
             if not isinstance(rec, dict) or not rec.get("id"):
                 continue
             if rec["id"] not in verdicts:
                 verdicts[rec["id"]] = _record_drift(rec, repo_scope, repo_dir)
-            if verdicts[rec["id"]]:
-                rec["drift"] = verdicts[rec["id"]]
-    # A routed action is the same record, shown once at the top; it carries the mark too.
+            if briefed and rec["id"] not in proofs:
+                proofs[rec["id"]] = _record_proof(rec, verdicts[rec["id"]])
+            _mark(rec, verdicts[rec["id"]], proofs.get(rec["id"]) if briefed else None)
+    # A routed action is the same record, shown once at the top; it carries the marks too.
     for action in result.get("next_actions") or []:
-        if verdicts.get(action.get("id")):
-            action["drift"] = verdicts[action["id"]]
+        _mark(action, verdicts.get(action.get("id")), proofs.get(action.get("id")))
     marked = sum(1 for v in verdicts.values() if v)
     if marked:
         result["drifted"] = marked
+    unchecked = sum(1 for p in proofs.values() if p)
+    if unchecked:
+        result["unchecked"] = unchecked
     return marked
 
 

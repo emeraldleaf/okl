@@ -105,6 +105,13 @@ benchmark built to decide (REPORT §4w; the design and its evidence:
   stage 6 heading past the right edge, and every stage's count sat against its text. The
   generator now estimates each line's width and refuses one that would not fit, and a test
   draws that layout where the embedding model is absent, as in CI.
+- **The briefing marks the lessons no check backs** (#222). Only lessons whose governed files
+  are in the checkout were marked (*STALE*, *UNVERIFIED*, *UNPROVEN*), so every other lesson
+  was briefed exactly like a proven one. In okl's own store that was 139 of 155. A lesson that
+  governs no files here and was never verified, or whose stamp has no `okl verify` run behind
+  it, is now marked *UNCHECKED*, in the full briefing and the one-line tier. One line under the
+  briefing says how many there are, and the person's line counts them. The test is the one the
+  CI gate applies to a stamp.
 
 ## 0.9.0
 

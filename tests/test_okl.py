@@ -3553,6 +3553,66 @@ def test_unverified_mark_covers_uncommitted_files_and_skips_other_repos(tmp_path
     assert result["drifted"] == 2
 
 
+def test_a_lesson_no_observed_check_backs_is_marked_unchecked_in_every_tier(tmp_path):
+    """#222: drift marks only lessons whose governed files are here, so a lesson with no files,
+    or files elsewhere, was briefed like a proven one whether or not any check had run. It is
+    marked unchecked, counted apart from drift's count; an observed check, a warning to avoid
+    and drift's own verdict are not marked."""
+    import datetime as dt
+    import subprocess
+
+    from okl import drift
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    (tmp_path / "new_module.py").write_text("x = 1\n")
+    at = int(dt.datetime(2026, 10, 31, 12, 0, tzinfo=dt.UTC).timestamp() * 1000)
+    evidence = "`pytest -q -k x` exit 0, matched 'passed' on commit abcdef1 @ 2026-10-31T12:00Z"
+    result = {
+        "rules": [
+            {"id": "note", "scope": "org", "files": None, "verified_at": None},
+            {"id": "proven", "scope": "org", "files": None, "verified_at": at, "verified_by": evidence,
+             "verified_commit": "abcdef1"},
+            {"id": "bare-stamp", "scope": "org", "files": None, "verified_at": at, "verified_by": None},
+            {"id": "elsewhere", "scope": "org", "files": "src/**/*.cs", "verified_at": None},
+            {"id": "new", "scope": "repo:s", "files": "new_module.py", "verified_at": None},
+        ],
+        "live_retractions": [{"id": "gone", "scope": "org", "status": "retracted", "verified_at": None}],
+        "also_matched": [{"id": "listed", "title": "t", "fix": "f", "scope": "org", "files": None,
+                          "verified_at": None}],
+        "next_actions": [{"id": "note"}],
+    }
+    assert drift.annotate_briefing(result, "s", str(tmp_path)) == 1   # drift's count: "new" alone
+    unchecked = {r["id"] for key in ("rules", "also_matched", "live_retractions") for r in result[key]
+                 if r.get("proof") == "unchecked"}
+    assert unchecked == {"note", "bare-stamp", "elsewhere", "listed"}, unchecked
+    assert result["unchecked"] == 4 and result["drifted"] == 1
+    assert result["next_actions"][0]["proof"] == "unchecked"
+
+
+def test_the_briefing_says_which_lessons_no_check_backs(store, tmp_path):
+    """#222 end to end: the mark on the lesson's line, one footer that says what it means, and
+    the count in the person's line; a lesson that passed a check is not marked."""
+    import datetime as dt
+    import subprocess
+
+    from okl import drift
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    nid = core.record(store, type="Rule", title="rotate the webhook signing secret every quarter",
+                      scope="org", fix="rotate the webhook signing secret before it expires")
+    res = core.check(store, repo="s", task="rotate the webhook signing secret")
+    drift.annotate_briefing(res, "s", str(tmp_path))
+    text = core.render_check_for_agent(res)
+    assert f"[{nid}] *(UNCHECKED)*" in text, text
+    assert "1 lesson(s) marked UNCHECKED have no observed check behind them" in text, text
+    assert "1 unchecked" in core.briefing_notice(res)
+    # Once a check is observed, as okl verify stamps it, the mark and the footer go.
+    minute = dt.datetime.now(dt.UTC).strftime("%Y-%m-%dT%H:%MZ")
+    core.verify(store, nid, f"`true` exit 0, matched '' on commit abcdef1 @ {minute}", commit="abcdef1")
+    res = core.check(store, repo="s", task="rotate the webhook signing secret")
+    drift.annotate_briefing(res, "s", str(tmp_path))
+    text = core.render_check_for_agent(res)
+    assert "UNCHECKED" not in text and "unchecked" not in (core.briefing_notice(res) or ""), text
+
+
 def test_drift_compares_the_commit_a_check_passed_at_not_the_clock(store, tmp_path, monkeypatch, capsys):
     """#102: drift compared a governed file's last commit TIME with verified_at. Git keeps
     commit time to the second, so a change committed in the same second as the check was

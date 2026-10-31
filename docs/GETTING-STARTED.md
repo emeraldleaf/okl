@@ -480,6 +480,7 @@ a CI gate as well.
 | `git push` stops with "okl pre-push: lessons drifted" | the pre-push hook found drift | `okl reverify`, commit, push again; `git push --no-verify` skips the check once |
 | `okl drift` reports a lesson "stamped …, unverified" | its stamp has no observed check behind it, often from a seed file that marked it verified | prove it with `okl verify <id> --run …`, or drop its `files` if nothing should gate it |
 | A briefed lesson is marked *STALE*, *UNVERIFIED* or *UNPROVEN* | its governed files changed after its last check, no check has passed yet, or its stamp has no observed check behind it | `okl reverify` re-runs stored checks; a lesson with none needs one first: ask your agent to re-check it, or run `okl verify <id>` to see what to run |
+| A briefed lesson is marked *UNCHECKED* | no observed check backs it: it governs no files here and was never verified, or its stamp has no `okl verify` run behind it | give it a check with `okl verify <id> --run …` (add `--files` if code should gate it); until then the agent treats it as advice |
 | `okl drift` lists lessons "last verified on a commit outside this branch's history" | one local store serves every branch, and those lessons were checked on another one | `okl reverify` re-checks them on this branch; until then their evidence depends on that branch still existing |
 | Every lesson is drifted in CI, but `okl drift` is clean locally | the CI checkout is shallow, so every file looks freshly changed | fetch full history (section 4) |
 

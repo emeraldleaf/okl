@@ -160,6 +160,9 @@ Setting up another agent: [Getting started](docs/GETTING-STARTED.md#using-anothe
   with `--files` is also red until its first `okl verify`). The briefing says so too:
   such a lesson is marked *STALE* (or *UNVERIFIED*, or *UNPROVEN*) with the file
   that changed, so the agent confirms it against the code instead of trusting it blindly.
+  A lesson no check backs at all is marked *UNCHECKED*: one that governs no files here and
+  was never verified, or whose stamp has no `okl verify` run behind it. The agent treats it
+  as advice, and one line under the briefing says how many there are.
   `okl reverify` re-runs each drifted lesson's stored check after you confirm. With the
   GitHub workflow (`okl init --ci`), CI reads a committed snapshot, `okl-drift.json`, which
   `okl verify` creates the first time a lesson with `--files` is verified and keeps current

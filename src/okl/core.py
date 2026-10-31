@@ -766,7 +766,11 @@ def _also_entry(n: Node) -> dict[str, Any]:
     fix = re.split(r"(?<=[.!?])\s", (n.fix or "").strip(), maxsplit=1)[0]
     if len(fix) > ALSO_FIX_CHARS:
         fix = fix[:ALSO_FIX_CHARS].rsplit(" ", 1)[0].rstrip(",;:") + "…"
-    return {"id": n.id, "type": n.type, "title": n.title, "fix": fix, **stale}
+    # What the client's drift and proof marks read, so a listed lesson is judged as a briefed
+    # one is (#222): a second-tier line said nothing about whether any check backed it.
+    proof = {"scope": n.scope, "files": n.files, "verified_at": n.verified_at,
+             "verified_by": n.verified_by, "verified_commit": n.verified_commit}
+    return {"id": n.id, "type": n.type, "title": n.title, "fix": fix, **proof, **stale}
 
 
 def _avoid_kind(n: Node) -> str:
@@ -1285,7 +1289,8 @@ def briefing_notice(result: dict[str, Any], shown: int = 3) -> str | None:
     return (f"okl · briefed {result['match_count']} lesson(s): " + "; ".join(short)
             + (f" (+{more} more)" if more > 0 else "")
             + (f" · {listed}" if also else "")
-            + (f" · {result['drifted']} need re-checking" if result.get("drifted") else ""))
+            + (f" · {result['drifted']} need re-checking" if result.get("drifted") else "")
+            + (f" · {result['unchecked']} unchecked" if result.get("unchecked") else ""))
 
 
 def render_actions_only(result: dict[str, Any], limit: int | None = None) -> str:
@@ -1325,7 +1330,7 @@ def render_actions_only(result: dict[str, Any], limit: int | None = None) -> str
     out = [f"OKL — {len(actions)} rule(s) apply before you start:"]
     for a in actions:
         sym = f" [when: {a['symptom']}]" if a.get("symptom") else ""
-        out.append(f"- {verb.get(a['kind'], 'DO')}: {a['target']}{_id_tag(a)}{_drift_tag(a)}{sym}")
+        out.append(f"- {verb.get(a['kind'], 'DO')}: {a['target']}{_id_tag(a)}{_drift_tag(a)}{_proof_tag(a)}{sym}")
         out.append(f"  -> {a['how']}")
     return "\n".join(out + _replaced_lines(result) + tail)
 
@@ -1336,7 +1341,8 @@ def _also_line(e: dict[str, Any]) -> str:
     stale = " *(STALE — re-verify)*" if e.get("stale") else ""
     if e.get("avoid"):
         return f"- [{e['id']}] AVOID ({e['avoid']}): {e['title']}{stale}"
-    return f"- [{e['id']}] {e['title']}{stale}" + (f" — {e['fix']}" if e.get("fix") else "")
+    return (f"- [{e['id']}] {e['title']}{stale}{_short_drift_tag(e)}{_proof_tag(e)}"
+            + (f" — {e['fix']}" if e.get("fix") else ""))
 
 
 def _replaced_lines(result: dict[str, Any]) -> list[str]:
@@ -1388,6 +1394,9 @@ def render_check_for_agent(result: dict[str, Any]) -> str:
     if result.get("drifted"):
         lines.append(f"> {result['drifted']} lesson(s) govern code that changed after their last check, "
                      "or were never checked: confirm them against the code before relying on them.")
+    if result.get("unchecked"):
+        lines.append(f"> {result['unchecked']} lesson(s) marked UNCHECKED have no observed check behind "
+                     "them: treat them as advice, and confirm them against the code before relying on them.")
     if result.get("dropped_by_cutoff"):
         lines.append(f"> {result['dropped_by_cutoff']} lower-ranked record(s) were trimmed to keep this "
                      "briefing short. Raise --limit or narrow the task if you expected more.")
@@ -1632,6 +1641,21 @@ def _drift_tag(item: dict) -> str:
             f"{d['verified']}; {lead})*")
 
 
+def _short_drift_tag(item: dict) -> str:
+    """_drift_tag in one word, for a second-tier line: the full reason is a `okl show` away."""
+    d = item.get("drift")
+    if not d:
+        return ""
+    word = {"never verified": "UNVERIFIED", "verified with no observed check": "UNPROVEN"}
+    return f" *({word.get(d['reason'], 'STALE')})*"
+
+
+def _proof_tag(item: dict) -> str:
+    """The mark for a lesson no observed check backs and drift has no verdict on (#222); the
+    briefing's footer says once what it means, so each mark stays one word."""
+    return " *(UNCHECKED)*" if item.get("proof") == "unchecked" else ""
+
+
 def _id_tag(item: dict) -> str:
     """The lesson's id in brackets, so an agent can update, retire, link or verify the
     lesson it was just shown without searching for it first (okl review R1)."""
@@ -1654,7 +1678,7 @@ def _render_actions(actions: list[dict]) -> list[str]:
         sym = f" — when you see: {a['symptom']}" if a.get("symptom") else ""
         # The per-record stale marker lives here now that a routed record has no section
         # entry of its own (#52 review); a bare count cannot say which action to distrust.
-        tag = (" *(STALE — re-verify)*" if a.get("stale") else "") + _drift_tag(a)
+        tag = (" *(STALE — re-verify)*" if a.get("stale") else "") + _drift_tag(a) + _proof_tag(a)
         out.append(f"- **{verb.get(a['kind'], 'DO')}: {a['target']}**{_id_tag(a)}{tag}{sym}")
         out.append(f"    → {a['how']}")
         if a.get("why"):
@@ -1675,7 +1699,7 @@ def _render_records(items: list[dict], show_catches: bool = False) -> list[str]:
     for it in items:
         suffix = (f"  ← catches: {', '.join(it['catches'])}"
                   if show_catches and it.get("catches") else "")
-        tag = (" *(STALE — re-verify)*" if it.get("stale") else "") + _drift_tag(it)
+        tag = (" *(STALE — re-verify)*" if it.get("stale") else "") + _drift_tag(it) + _proof_tag(it)
         out.append(f"- **{it['title']}**{_id_tag(it)}{tag}{suffix}")
         if it.get("symptom"):
             out.append(f"  symptom: {it['symptom'][:160]}")
