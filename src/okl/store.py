@@ -268,7 +268,11 @@ class Store:
             self._impl = _SQLiteBackend(path)
         else:
             raise ValueError(f"unsupported OKL_DATABASE_URL scheme: {url!r}")
-        self._impl.init_schema()
+        try:
+            self._impl.init_schema()
+        except Exception:
+            self._impl.close()   # a store that fails to open leaves no connection behind
+            raise
         self._declared: set[str] | None = None
 
     # -- writes -------------------------------------------------------------
@@ -640,13 +644,18 @@ class _SQLiteBackend(_Backend):
                                         coalesce(symptom,''), coalesce(fix,''),
                                         replace(coalesce(tags,''), ',', ' '),
                                         coalesce(aliases,''), coalesce(triggers,'') FROM node""")
-        except self._sqlite3.OperationalError:
+        except self._sqlite3.OperationalError as e:
             # A rebuild that fails after its DROP is undone, not committed: the next open would
             # create an empty index that looks current, and search would miss every lesson
             # (review on #309).
             if c.in_transaction:
                 c.rollback()
-            self._has_fts = False   # FTS5 not compiled in, or the rebuild failed — fall back to LIKE
+            # Only a SQLite without FTS5 falls back to LIKE. A rebuild that failed (a writer
+            # holding the lock past the timeout, a tokenizer SQLite lacks) raises instead: the
+            # fallback cannot see tags, and while it is on, writes skip the index (review on #309).
+            if "no such module: fts5" not in str(e):
+                raise
+            self._has_fts = False
         c.commit()
 
     def _fts_stale(self) -> bool:

@@ -60,11 +60,37 @@ def test_a_rebuild_that_fails_leaves_the_index_it_found(tmp_path, monkeypatch):
     nid = core.record(s, type="Rule", title="rotate the signing secret", scope="org")
     s.close()
     monkeypatch.setattr(okl_store, "FTS_TOKENIZE", "no_such_tokenizer")
-    Store(f"sqlite:///{db}").close()   # the CREATE after the DROP fails
+    with pytest.raises(sqlite3.OperationalError, match="tokenizer"):
+        Store(f"sqlite:///{db}")   # the CREATE after the DROP fails
     monkeypatch.setattr(okl_store, "FTS_TOKENIZE", "unicode61")
     s = Store(f"sqlite:///{db}")
     try:
         assert [n.id for n in s.search("signing", limit=5)] == [nid]
+    finally:
+        s.close()
+
+
+def test_a_rebuild_kept_waiting_raises_rather_than_search_without_its_index(tmp_path, monkeypatch):
+    """A writer holding the lock past the timeout used to leave the store on the LIKE fallback,
+    which cannot see tags, with writes skipping the index. Now the open fails, and the next one
+    rebuilds and finds a lesson by its tag alone (review on #309)."""
+    db = tmp_path / "okl.db"
+    monkeypatch.setattr(okl_store, "FTS_TOKENIZE", "unicode61")
+    s = Store(f"sqlite:///{db}")
+    nid = core.record(s, type="Rule", title="rotate the signing secret", scope="org", tags="security")
+    s.close()
+    real = sqlite3.connect
+    with contextlib.closing(real(db)) as writer:
+        writer.execute("BEGIN IMMEDIATE")
+        monkeypatch.setattr(sqlite3, "connect", lambda *a, **k: real(*a, **{**k, "timeout": 0.05}))
+        monkeypatch.setattr(okl_store, "FTS_TOKENIZE", "porter unicode61")
+        with pytest.raises(sqlite3.OperationalError, match="locked"):
+            Store(f"sqlite:///{db}")
+        writer.rollback()
+    s = Store(f"sqlite:///{db}")
+    try:
+        assert "porter" in s._impl.conn.execute("SELECT sql FROM sqlite_master WHERE name='node_fts'").fetchone()[0]
+        assert [n.id for n in s.search("security", limit=5)] == [nid]
     finally:
         s.close()
 

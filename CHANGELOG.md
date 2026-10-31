@@ -111,7 +111,9 @@ benchmark built to decide (REPORT §4w; the design and its evidence:
   product and measured on real prompts, it named 17.5% more lessons a prompt with the warm
   model on, past the pre-registered 15%, and showed fewer in full without it, so the default
   stays unstemmed. It stays as a setting, off (`store.FTS_TOKENIZE`): a store whose index was
-  built with another tokenizer rebuilds it once when opened.
+  built with another tokenizer rebuilds it once when opened. A rebuild that fails, for instance
+  kept waiting past the timeout by another writer, now fails the open and is retried by the
+  next. Before, the store fell back to plain substring search, which cannot see tags.
 
 ## 0.9.0
 
