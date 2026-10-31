@@ -630,7 +630,12 @@ class _SQLiteBackend(_Backend):
                                         replace(coalesce(tags,''), ',', ' '),
                                         coalesce(aliases,''), coalesce(triggers,'') FROM node""")
         except self._sqlite3.OperationalError:
-            self._has_fts = False   # FTS5 not compiled in — fall back to LIKE
+            # A rebuild that fails after its DROP is undone, not committed: the next open would
+            # create an empty index that looks current, and search would miss every lesson
+            # (review on #309).
+            if c.in_transaction:
+                c.rollback()
+            self._has_fts = False   # FTS5 not compiled in, or the rebuild failed — fall back to LIKE
         c.commit()
 
     def _fts_stale(self) -> bool:

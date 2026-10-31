@@ -4,7 +4,9 @@ measured setting, off by default (§4ad), so every test here turns it on."""
 from __future__ import annotations
 
 import contextlib
+import importlib.util
 import sqlite3
+from pathlib import Path
 
 import pytest
 
@@ -48,6 +50,25 @@ def test_an_index_built_unstemmed_is_rebuilt_stemmed_once_when_opened(tmp_path, 
         assert "porter" in c.execute("SELECT sql FROM sqlite_master WHERE name='node_fts'").fetchone()[0]
 
 
+def test_a_rebuild_that_fails_leaves_the_index_it_found(tmp_path, monkeypatch):
+    """A rebuild that fails after dropping the index is rolled back. Committed, the next open
+    would create an empty index that looks current, and search would miss every lesson (review on
+    #309)."""
+    db = tmp_path / "okl.db"
+    monkeypatch.setattr(okl_store, "FTS_TOKENIZE", "unicode61")
+    s = Store(f"sqlite:///{db}")
+    nid = core.record(s, type="Rule", title="rotate the signing secret", scope="org")
+    s.close()
+    monkeypatch.setattr(okl_store, "FTS_TOKENIZE", "no_such_tokenizer")
+    Store(f"sqlite:///{db}").close()   # the CREATE after the DROP fails
+    monkeypatch.setattr(okl_store, "FTS_TOKENIZE", "unicode61")
+    s = Store(f"sqlite:///{db}")
+    try:
+        assert [n.id for n in s.search("signing", limit=5)] == [nid]
+    finally:
+        s.close()
+
+
 def test_the_line_and_the_floor_count_another_form_of_a_word(store):
     """"rotate the webhook signing secrets" shares four words with a lesson about "rotating the
     webhook signing secret": the line briefs it, the floor keeps it, and both name the words as
@@ -58,6 +79,16 @@ def test_the_line_and_the_floor_count_another_form_of_a_word(store):
         res = core.check(store, repo="r", task=task, decision=decision)
         assert core.briefed_ids(res) == [nid], decision
         assert res["rules"][0]["matched_terms"] == ["rotate", "webhook", "signing", "secrets"], decision
+
+
+def test_the_floor_counts_two_forms_of_one_word_once(store):
+    """"migrate" and "migrations" are one word shared with a lesson that says "migration" only in
+    its body, as the line counts them, so the two-word floor does not keep it on that alone
+    (review on #309)."""
+    core.record(store, type="Rule", title="keep schema changes reversible",
+                body="a migration that never finished", scope="org")
+    res = core.check(store, repo="r", task="migrate the migrations before deploy", decision="floor")
+    assert not core.briefed_ids(res)
 
 
 def test_a_stem_counts_once_however_many_words_share_it(store):
@@ -88,3 +119,19 @@ def test_without_fts5_a_word_is_its_own_stem(monkeypatch):
     monkeypatch.setattr(decide.sqlite3, "connect", lambda *_a: NoFts())
     monkeypatch.setattr(decide, "_STEMS", {})
     assert decide.stems(["rotating"]) == {"rotating": "rotating"}
+
+
+def test_the_latency_runs_never_reach_a_service(tmp_path, monkeypatch):
+    """A service named in the environment or the checkout's config sends both timed arms to it,
+    whatever OKL_DATABASE_URL says: the variable is dropped, and a config naming one refuses the
+    run (review on #309)."""
+    script = Path(__file__).resolve().parents[1] / "evals" / "stem_latency.py"
+    spec = importlib.util.spec_from_file_location("stem_latency", script)
+    lat = importlib.util.module_from_spec(spec); spec.loader.exec_module(lat)
+    monkeypatch.setenv("OKL_SERVICE_URL", "http://127.0.0.1:9")
+    (tmp_path / ".okl").mkdir()
+    (tmp_path / ".okl" / "config.json").write_text('{"repo": "r"}')
+    assert "OKL_SERVICE_URL" not in lat.child_env(tmp_path)
+    (tmp_path / ".okl" / "config.json").write_text('{"repo": "r", "service_url": "http://127.0.0.1:9"}')
+    with pytest.raises(SystemExit, match="names a service"):
+        lat.child_env(tmp_path)

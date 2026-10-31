@@ -3158,6 +3158,9 @@ each run checks its own.
   with another tokenizer rebuilds it once when opened, in one write transaction, and checks
   again once it holds the lock. The backend contract gains the case, and the conformance suite
   checks it on both backends.
+  *Note, 2026-10-31 (review on #309):* neither happened. The contract and the conformance suite
+  did not change, and the rebuild is tested on SQLite alone (`tests/test_stem.py`). Postgres has
+  no index to rebuild: its `'english'` configuration has always stemmed.
 - **The line.** `decide` stems the line's words with that same tokenizer, read back through
   `fts5vocab` (`decide.keys`), so the index and the line agree on what a word is. A stem counts
   once however many of the prompt's words share it, as on the bench. `CALIBRATED_LINE` becomes

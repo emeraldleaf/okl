@@ -55,6 +55,20 @@ def store_copy(live: Path, where: Path, setting: str, env: dict[str, str]) -> Pa
     return dst
 
 
+def child_env(repo: Path = REPO) -> dict[str, str]:
+    """The environment every run gets: this checkout's code, no briefing log, and nothing that
+    picks a store or a service, so each run reads only the copy it is handed. A service named in
+    the environment or the checkout's config makes the client go remote whatever OKL_DATABASE_URL
+    says, and both arms would time the service (review on #309)."""
+    cfg = repo / ".okl" / "config.json"
+    if cfg.exists() and json.loads(cfg.read_text()).get("service_url"):
+        sys.exit(f"ABORT: {cfg} names a service, so the runs would time it, not the store copies")
+    env = {**os.environ, "OKL_BRIEFING_LOG": "0", "PYTHONPATH": str(repo / "src")}
+    for name in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_QUIET", "OKL_DECISION"):
+        env.pop(name, None)
+    return env
+
+
 def main() -> int:
     """Time both settings over the same prompts, alternating which runs first, and write the receipt."""
     meta = json.loads((PRIVATE / "real-arms-heldout.json").read_text())
@@ -63,9 +77,7 @@ def main() -> int:
     texts = [by_id[pid] for kind, pid in meta["chosen"] if kind == "task"]
     url = os.environ.get("OKL_DATABASE_URL", "")
     live = Path(url.removeprefix("sqlite:///")) if url.startswith("sqlite:///") else REPO / ".okl" / "okl.db"
-    env = {**os.environ, "OKL_BRIEFING_LOG": "0", "PYTHONPATH": str(REPO / "src")}
-    for name in ("OKL_DATABASE_URL", "OKL_QUIET", "OKL_DECISION"):
-        env.pop(name, None)
+    env = child_env()
     times: dict[str, list[float]] = {s: [] for s in SETTINGS}
     with tempfile.TemporaryDirectory() as tmp:
         dbs = {s: store_copy(live, Path(tmp), s, env) for s in SETTINGS}

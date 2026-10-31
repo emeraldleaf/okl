@@ -353,6 +353,12 @@ def _matched_terms(terms: list[str], n: Node) -> list[str]:
     return [t for t in terms if k[t] in have]
 
 
+def _distinct(words: list[str]) -> int:
+    """How many words `words` are as okl matches them: two forms of one stem are one word, as the
+    line counts them (decide.score), so "migrate" and "migrations" are not two (review on #309)."""
+    return len(set(decide.keys(words).values()))
+
+
 def _in_subject(words: list[str], n: Node) -> bool:
     """Whether any of `words` occurs whole in the record's title or symptom, or is one of
     its one-word aliases (the union of _subject_words and _alias_words).
@@ -429,7 +435,7 @@ def _apply_floor(store: Store, hits: list[Node], terms: list[str],
     # A one-word task keeps §4n's rule: its word is the whole subject and admits on its own,
     # common or not. §4v's common-word weighting covers the one-word match inside a longer
     # task only; no probe prompt has one subject word, so extending it is unmeasured (#282).
-    floor = 2 if len(words) >= 2 else 1
+    floor = 2 if _distinct(words) >= 2 else 1
     near = cand.scores if cand else {}
     lexical = cand.lexical if cand else frozenset(n.id for n in hits)
     matched = {n.id: _matched_terms(words, n) for n in hits}
@@ -437,10 +443,10 @@ def _apply_floor(store: Store, hits: list[Node], terms: list[str],
     is_common = _common_word_test(store, share) if share is not None else (lambda _w: False)
     strong = {n.id for n in hits
               if near.get(n.id, 0.0) >= semantic.SUBJECT_SIMILARITY
-              or (n.id in lexical and (len(matched[n.id]) >= floor
+              or (n.id in lexical and (_distinct(matched[n.id]) >= floor
                                        or bool(matched[n.id]) and _subject_admits(matched[n.id], n, is_common)))
               or (n.id not in lexical and SEMANTIC_WORD_FLOOR is not None
-                  and len(matched[n.id]) >= max(SEMANTIC_WORD_FLOOR, floor))}
+                  and _distinct(matched[n.id]) >= max(SEMANTIC_WORD_FLOOR, floor))}
     if not strong:
         # No hit to link to, so no neighbour lookup can rescue one (review on #259).
         return [], matched, len(hits)
