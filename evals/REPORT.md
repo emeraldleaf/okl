@@ -3345,6 +3345,102 @@ drift is red and the check passes.
 - **Deadline:** if the run cannot complete by 2026-11-14, this section records why, and nothing
   is concluded.
 
+## 4ag. PRE-REGISTERED: the lessons nothing re-checks. How many have gone stale? (2026-10-31)
+
+Written before any lesson is judged. §4ae and §4af measure drift inside its scope; this measures
+what lies outside it.
+
+**Why.** Drift re-runs a lesson's check only when the lesson has governed files and a check. A
+census of the store (`lesson-census-20261031-1409.json`, `evals/lesson_census.py` at b44bd81,
+checks run at f645d81) classes the 155 lessons recorded in this repository:
+
+| class | lessons | what re-checks them |
+|---|---|---|
+| watched: governed files and a check | 16 | drift; all pass its gate at f645d81 |
+| checked: a check, no governed files | 55 | CI, by the repo's rule (#39); all 55 checks pass at f645d81 |
+| unchecked: neither | 84 | nothing |
+
+The 182 seed lessons are about other projects and are left out. So every lesson with a check
+holds, and for 84 lessons nothing in okl can say whether they still do: 39 defects, 34 rules, 8
+decisions and 3 claims, 69 of them org-scoped. A stale lesson in a briefing tells an agent
+something false, the harm #189 names. This run measures how often that has happened.
+
+**Population.** The 84 unchecked lessons in the census receipt, by id.
+
+**Controls,** mixed in blind. Both are drawn by seeded hash (seed 189) from the 55 checked
+lessons, whose checks appear nowhere in the repository the judge reads:
+- **Negative, 10:** checked lessons as they are, their checks re-run at the run's commit. One
+  that fails there is replaced by the next in the draw. A judge that calls these stale
+  over-calls staleness.
+- **Positive, 10:** ten more, from those whose text names a concrete fact of this repository.
+  Each has one such fact changed to a false one: a path, a command, a flag, a default or a
+  function that does not exist at the run's commit. A judge that calls these current misses
+  staleness. The changes are written before any judgment and committed with the instrument.
+
+**The judge.** `claude -p --model opus --restricted --tools Read,Grep,Glob` runs in a scratch
+worktree at the main commit the run starts from, which the receipt names. That worktree holds no
+`okl-drift.json` and no store, and `--restricted` ignores settings files, so no okl hook briefs
+the judge. It sees one lesson's title, symptom, fix and body, never its class, check, age or
+control status, and answers in JSON:
+- **verdict,** one of four:
+  - *current:* what the lesson says about this repository still holds;
+  - *stale:* something it says about this repository no longer holds, because a file, command,
+    behaviour or decision has changed, so following it would mislead;
+  - *no claim:* it says nothing this repository can confirm or contradict, such as advice in
+    general or a fact about another project;
+  - *unsure.*
+- **evidence:** the paths and lines it read.
+- **checkable:** whether a command could check the lesson, yes or no.
+
+There is one judgment per lesson, 104 in all, in a seeded order.
+
+**Measures.**
+1. **Stale rate:** stale / (current + stale) among the 84, with a Wilson 95% interval.
+2. **Claim share:** how many of the 84 say anything about this repository (current, stale or
+   unsure).
+3. **Controls:** negatives called stale, and positives called stale.
+4. **Checkable:** of the stale lessons, how many the judge says a command could check.
+5. **By type and scope,** counts only.
+
+**Predictions.**
+1. At least 1 in 10 of the 84 that make a claim is stale.
+2. At least a third of the 84 make no claim about this repository.
+3. At most 1 of the 10 negative controls is called stale.
+4. At least 8 of the 10 positive controls are called stale.
+5. At least half of the stale lessons could carry a check.
+
+**What the run can settle, and what it cannot.**
+- **Disagreement, not harm.** A judge reading the code can say a lesson disagrees with the
+  repository, not that following it would have caused harm.
+- **No-claim lessons are untested.** They cannot go stale against this repository, yet they can
+  still be wrong; this run says nothing about them.
+- **The positive controls are easy.** Each is one planted fact, while real staleness can be
+  subtler. Their catch rate is a ceiling on the judge's sensitivity, not a measure of it.
+- **One store, one repository, one judge model.** The seed lessons are left out.
+
+**Falsifiers and what follows.**
+- **If a control fails** (more than 1 negative called stale, or fewer than 8 positives), the
+  judge is not trusted for a rate. The run reports counts only, and each stale verdict goes to
+  the person to confirm before it counts.
+- **If the stale rate is at least 10%,** unchecked lessons go stale often enough to mislead a
+  briefing. The follow-ups are filed with this receipt:
+  - each stale lesson is updated or retired, by the person's decision;
+  - each checkable one gets a check;
+  - a periodic staleness review of unchecked lessons is proposed under #189.
+- **If it is under 5%,** unchecked lessons hold, and drift's narrow scope costs little here. The
+  few stale lessons are fixed, and nothing else follows.
+- **Otherwise,** the stale lessons are fixed, and the rate is reported as it stands.
+- **Counts only, no rate:** if more than a fifth of the 84 time out or return no valid answer.
+
+**Budget and stop.**
+- **Runs:** 104 judge sessions of at most 300 seconds each, read-only.
+- **The instrument** is `evals/lesson_census.py --judge`, with the positive controls' changes. It
+  is committed before any judgment. The receipt names its commit, and any difference from this
+  section is reported as a deviation.
+- **Fixed once a verdict is read:** everything above.
+- **Deadline:** 2026-11-14, with §4af. If the run cannot happen by then, this section says why,
+  and nothing is concluded.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

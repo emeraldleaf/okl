@@ -107,7 +107,9 @@ three lessons (#179), the abstention measure a recall set cannot give.
 `evals/drift_replay.py` measures drift itself (REPORT §4ae). It replays this repo's history
 and re-runs each watched lesson's check where drift was red and on a sample of commits where it
 was green, in a scratch worktree with no store variable set. `--dry-run` counts the events and
-the samples and runs no check.
+the samples and runs no check. `evals/lesson_census.py` classes each lesson recorded here by what
+re-checks it (REPORT §4ag): drift (governed files and a check), CI (a check alone, #39), or
+nothing. `--run-checks` runs every check left to CI at a commit, the same way.
 
 ## What working means: the standing measures
 
