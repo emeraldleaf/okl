@@ -1359,7 +1359,8 @@ vocabulary-mismatch trigger fires: add an embedding index beside FTS, fuse by re
 rank, measure against FTS-only on the same tasks, adopt only if it wins.
 
 **What changed.** `okl embed` writes one vector per record into the store from a local static
-embedding model (`minishlab/potion-retrieval-32M`: Model2Vec, 249 MB on disk, 512 dimensions;
+embedding model (`minishlab/potion-retrieval-32M`: Model2Vec, 249 MB on disk (131 MB as okl fetches it: the erratum
+below), 512 dimensions;
 its model card gives MTEB retrieval 35.1 against all-MiniLM-L6-v2's 42.9, at well under a
 millisecond per text). `okl check --hybrid` fetches the nearest records by cosine beside the
 full-text candidates and fuses the two orders: `rrf` sums reciprocal ranks (k = 60); `linear`
@@ -1445,7 +1446,7 @@ arm's configuration when it is on, and the arm does not become the default.
 **What the arm buys.** One more held-out paraphrase found of eight (2 → 3) and one more of
 the probe's own (1 → 2); nothing on tickets or bug reports; one record more on two of six
 short prompts; 0.8 s per prompt for the model load (the search itself is under a millisecond
-with numpy) and a 249 MB model on disk. The two vectorless arms bought more: symptoms took the
+with numpy) and a 249 MB model on disk (both corrected in the erratum below). The two vectorless arms bought more: symptoms took the
 probe's own bug-report row from 2 to 3 of 8 (§4o), and aliases took it from 3 to 8 of 8 and
 added one held-out ticket and one held-out paraphrase (§4p; corrected 2026-10-26, this sentence
 had given the alias gain to symptoms). The static model's cosines sit in a narrow band (true pairs 0.30
@@ -1458,13 +1459,30 @@ the default.
 ticket and bug report held under linear and fell under RRF, which was not predicted; the
 probe's own paraphrase row rose under linear, as predicted; precision rose by one on two
 prompts, which the falsifier allowed. The pre-registration's "about 30 MB" was another model's
-figure: this one is 249 MB on disk.
+figure: this one is 249 MB on disk (131 MB as okl fetches it: the erratum below).
 
 **What ships.** `okl embed`; `okl check --hybrid` (linear fusion at the 0.40 line when the
 flag is bare; `rrf` stays selectable for measurement), off by default; a numpy matrix product
 over every vector that holds to roughly 100,000 of them (under a millisecond at 10,000, 3 ms
-at 50,000, plus 14 and 49 ms to read them; `okl.semantic`'s docstring has the measurements
+at 50,000, plus 14 and 49 ms to read them, all corrected in the erratum below; `okl.semantic`'s docstring has the measurements
 and the next tier); and the ADR amendment. The hook never reaches the network for any of it.
+
+*Erratum (2026-10-29, review of #300).* Two of these figures were not what okl does:
+- **The model's size.** What okl's loader fetches into an empty cache is 130.8 MB
+  (`model-files-20261029-1207.txt`). 249 MB was the model repository's listing in MiB,
+  including an ONNX copy model2vec never downloads.
+- **The search.** okl's own `search()` at 512 dimensions (`semantic-scale-20261029-1206.txt`)
+  takes 3.6 ms at 10,000 vectors and 15.2 ms at 50,000 after a read of 15.4 and 92.3 ms. The
+  "under a millisecond" and "3 ms" timed the product alone.
+The docs now quote the receipts. The ranking conclusions here do not depend on either figure.
+
+*Erratum (2026-10-31, review of #307).* Those search figures were one median less another,
+from separate calls. Each search now times its own read (`semantic-scale-20261031-0559.txt`):
+- **With numpy:** the search after the read takes 4.2 ms at 10,000 vectors and 23.8 ms at
+  50,000, after reads of 15.3 and 79.6 ms.
+- **The pure-Python fallback:** 6.3 ms at 300 vectors and 214.2 ms at 10,000.
+
+The ranking conclusions still do not depend on them.
 
 ## 4r. PRE-REGISTERED: the index arm, measured where it can act (2026-10-23)
 
@@ -1682,7 +1700,8 @@ with both on, since the probe measures recall and the harness measures what the 
 Neither becomes the default on the probe alone (§4n's rule).
 
 **Cost.** No paid call; about a minute per probe run; an 80 MB ONNX model on disk under the
-`rerank` extra, fetched once by `okl embed`.
+`rerank` extra, fetched once by `okl embed`. *Erratum (2026-10-29, review of #300):* what
+okl's loader fetches is 91.8 MB (`model-files-20261029-1207.txt`).
 
 **What this cannot settle.** Whether a better order changes what the agent writes; whether
 the first stage's recall, which bounds the pool, holds on a larger store (the pool is 24
