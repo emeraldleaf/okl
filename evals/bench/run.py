@@ -54,19 +54,39 @@ def is_calibration(prompt: dict) -> bool:
     return int(hashlib.sha256(prompt["id"].encode()).hexdigest(), 16) % 2 == 0
 
 
+def porter_index(store: Store) -> None:
+    """Rebuild the corpus store's full-text index with FTS5's Porter tokenizer (REPORT §4ac): the
+    change the product would make, as a migration would make it, on the bench's own store."""
+    c = store._impl.conn
+    c.execute("DROP TABLE node_fts")
+    c.execute("CREATE VIRTUAL TABLE node_fts USING fts5(id UNINDEXED, title, body, symptom, fix, "
+              "tags, aliases, triggers, tokenize='porter unicode61')")
+    c.execute("INSERT INTO node_fts(id, title, body, symptom, fix, tags, aliases, triggers) "
+              "SELECT id, coalesce(title,''), coalesce(body,''), coalesce(symptom,''), coalesce(fix,''), "
+              "replace(coalesce(tags,''), ',', ' '), coalesce(aliases,''), coalesce(triggers,'') FROM node")
+    c.commit()
+
+
 def build_corpus(where: Path) -> Store:
     """A store holding every seed pack, built in `where`, without triggers.
 
     The packs carry the bench's triggers since §4w passed; every receipt before that ran on
     packs without them. Dropping them here keeps each arm's meaning fixed: an arm has
-    triggers only when it loads them (load_triggers, --triggers)."""
+    triggers only when it loads them (load_triggers, --triggers).
+
+    The store is pinned to a file in `where` whatever the environment names: OKL_DATABASE_URL
+    would win in the client, and OKL_SERVICE_URL would send the seeds to a service, so a run
+    with either set seeded a real store, stripped its triggers and rebuilt its index (review on
+    #308; compare_seed_briefings.py pins its stores for the same reason)."""
     import dataclasses
     (where / ".okl").mkdir(parents=True, exist_ok=True)
     (where / ".okl" / "config.json").write_text(json.dumps({"repo": REPO}))
     here = Path.cwd()
     os.chdir(where)
     try:
-        client = Client()
+        client = Client(config={"repo": REPO})
+        client.service_url = None
+        client._store = Store(f"sqlite:///{where / '.okl' / 'okl.db'}")
         for pack in sorted((ROOT / "seed").glob("*.json")):
             seed_from_file(client, str(pack))
         store = client._local_store()

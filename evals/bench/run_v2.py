@@ -37,7 +37,10 @@ def main() -> None:
     ap.add_argument("--triggers", type=Path)
     ap.add_argument("--split", choices=["selection", "heldout", "all"], default="selection")
     ap.add_argument("--score", choices=sorted(v2.SCORES), default="evidence")
+    ap.add_argument("--stem", action="store_true",
+                    help="Porter stemming in the index and in the line's word matching (REPORT §4ac)")
     args = ap.parse_args()
+    v2.STEM = args.stem
     score = v2.SCORES[args.score]
     queries = [json.loads(x) for x in bench.QUERIES.read_text().splitlines() if x.strip()]
     if args.split != "all":
@@ -48,6 +51,8 @@ def main() -> None:
 
     with tempfile.TemporaryDirectory() as tmp:
         store = bench.build_corpus(Path(tmp))
+        if args.stem:
+            bench.porter_index(store)
         n_trig = bench.load_triggers(store, args.triggers) if args.triggers else 0
         index = v2.build_index(store)
         commit = subprocess.run(["git", "rev-parse", "--short=12", "HEAD"], capture_output=True, text=True,
@@ -78,7 +83,8 @@ def main() -> None:
           f"{f' ({args.triggers.name}, sha {bench.digest([args.triggers])})' if args.triggers else ''} · "
           f"queries sha {bench.digest([bench.QUERIES])} · nulls {len(nulls)} (sha {bench.digest([bench.NULLS])}): "
           f"{len(calib)} calibrate the line, {len(test)} test it")
-    print(f"score: {args.score} ({(score.__doc__ or '').split(chr(10))[0].strip()})")
+    print(f"score: {args.score} ({(score.__doc__ or '').split(chr(10))[0].strip()})"
+          + (" · stemmed: FTS5 porter in the index and the line's words" if args.stem else ""))
     print()
     print(f"{'alpha':>5} {'line':>6} {'cap':>3} | {'recall [95%]':>22} {'briefed/q':>9} | null test: briefed anything [95%]")
     for alpha in ALPHAS:
