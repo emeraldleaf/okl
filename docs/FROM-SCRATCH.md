@@ -15,6 +15,7 @@ package with a known vulnerability. The versions run were:
 - Node 22.22 with pnpm 11.3.
 
 The CI workflows and the SonarQube steps were not run; they follow each tool's own documentation.
+What each command printed is in [the receipt](FROM-SCRATCH-RECEIPT.md).
 Every tool choice cites its sources at the end. Versions move: pin the current release of each
 tool when you start, and let Dependabot move the pins.
 
