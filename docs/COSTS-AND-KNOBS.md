@@ -43,7 +43,7 @@ okl init --interests "python,security"    # drop records tagged for stacks you d
   shows up to `--limit` that share two words, all in full. On real prompts against a real
   store, the default reached 102 of 115 applying lessons, the floor 90 and `calibrated` 38,
   at a median of 721, 1,424 and 113 tokens a prompt ([RETRIEVAL.md](RETRIEVAL.md)). Give your
-  own lessons triggers (`okl triggers`, `/triggers`) so they reach the first tier.
+  own lessons triggers (`okl triggers`, or `/triggers` in Claude Code) so they reach the first tier.
   `"decision"` in `.okl/config.json` or `OKL_DECISION` sets it for every check.
 - **`--warm on`** adds what a lesson means to the words it shares, from a model `okl warm start`
   keeps loaded in a local process (EmbeddingGemma-300m, int8; the `warm` extra; `okl warm index`
@@ -57,7 +57,7 @@ okl init --interests "python,security"    # drop records tagged for stacks you d
   not to a shared service or `--decision floor`. When the model does not answer, the briefing is
   the usual one; `--format json` says why in `warm_unavailable`
   ([REPORT §4z](../evals/REPORT.md)).
-- **The prompt hook takes two of these from the environment**: `OKL_BRIEFING_LIMIT=N`
+- **The Claude Code prompt hook takes two of these from the environment**: `OKL_BRIEFING_LIMIT=N`
   becomes `--limit N`, and `OKL_BRIEFING_COMPACT=1` sends only the action list. They are
   for a model with a small context window; see
   [Small context budgets](SUBAGENTS.md).

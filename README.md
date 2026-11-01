@@ -57,7 +57,7 @@ sample, one-shot code on bait tasks; [what it does and does not show](#measured-
 | A lesson turns out to be wrong | `okl retire --reason` keeps it, briefed as AVOID so nobody restates it; nothing is deleted |
 | A lesson is replaced | `okl retire --by <new-id>`; the briefing points to the replacement |
 | The store cannot be reached | the Claude Code hook blocks the prompt and says why; the MCP tool says it was not briefed. Never a clean "no rules apply" |
-| A session changed files and recorded nothing | the Stop hook asks once what was learned, and names the lessons the session touched |
+| A session changed files and recorded nothing | the Claude Code Stop hook asks once what was learned, and names the lessons the session touched |
 
 ## Quickstart
 
@@ -131,7 +131,7 @@ Setting up another agent: [Getting started](docs/GETTING-STARTED.md#using-anothe
 
 ## What a normal day looks like
 
-- **You prompt as usual.** The pre-task hook runs `okl check` on what you typed and puts
+- **You prompt as usual.** In Claude Code, the pre-task hook runs `okl check` on what you typed and puts
   the relevant lessons in the agent's context before it starts, and shows you one line —
   *okl · briefed 9 lesson(s): …* — so you can see it working (`OKL_QUIET=1` hides it).
 - **When you learn something worth keeping** — a decision, a convention the agent broke,
@@ -420,7 +420,7 @@ candidate source joins before the gates: the task as one vector, its nearest rec
 cosine, and a fusion of the two orders. It needs the floor: a record found by meaning alone
 shares no word with the task, so the calibrated line cannot brief it. Meaning measured best
 added to the word count instead. EmbeddingGemma-300m took held-out recall from 90.0% to
-95.2% that way at full precision. A prompt hook would pay a second or two to load it on every
+95.2% that way at full precision. The Claude Code prompt hook would pay a second or two to load it on every
 prompt, so `okl warm` keeps its int8 file loaded in a local process: on once `okl warm index`
 has embedded a local store's lessons, about 1.6 GB of memory, 114 ms added to a prompt at the median,
 and on real held-out prompts 46 applying
@@ -528,7 +528,7 @@ Your store and your tasks will differ.
 | Context | **~1,390 tokens** by default on one representative task (five lessons in full, twelve named in a line; ~730 under `--decision calibrated`, ~1,730 under `--decision floor`); on real prompts the median is **~720** ([REPORT §4y](evals/REPORT.md)). Down to **~350** for only the action list at `--limit 3` |
 
 
-**Per session:** the Stop hook interrupts once at the end to ask what was learned. It
+**Per session:** in Claude Code, the Stop hook interrupts once at the end to ask what was learned. It
 blocks the first stop only, and answering it is the whole write side of the loop. With
 the question it lists up to five commands that failed during the session, read from the
 session's own transcript — candidates, not records: no hook runs on every tool call, and
@@ -553,7 +553,7 @@ follow the limit), against ~1,390 for the full briefing. Cheap enough to call pe
 `--decision calibrated` drops the one-line entries for the smallest list.
 
 The same holds for a main session on a model with a small context window, where the
-briefing arrives with every prompt. Set `OKL_BRIEFING_COMPACT=1` and the prompt hook sends
+briefing arrives with every prompt. Set `OKL_BRIEFING_COMPACT=1` and the Claude Code prompt hook sends
 only the action list (`okl check --compact`); set `OKL_BRIEFING_LIMIT=3` and it shows three
 records and names three more, instead of five and twelve. Together that is ~350 tokens instead of ~1,390 on the
 measurement above. Set them where the agent starts: hooks inherit its environment. A
@@ -584,7 +584,7 @@ six MCP tools do. The briefing on every prompt and the session-end question are 
 hooks; other agents call `okl_check` ([how](docs/GETTING-STARTED.md#using-another-agent)).
 
 **Does it capture my sessions automatically?** No. A lesson is written on purpose, by you or
-by the agent when you say so; the Stop hook asks once. Nothing records tool calls, and no
+by the agent when you say so; in Claude Code, the Stop hook asks once. Nothing records tool calls, and no
 model is called in the loop.
 
 **Can I run it beside claude-mem, mem0 or another memory tool?** Yes; they are different

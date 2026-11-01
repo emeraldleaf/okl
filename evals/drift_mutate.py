@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """What drift catches (REPORT §4af): each replayable watched lesson broken on purpose.
 
-    PYTHONPATH=src python3 evals/drift_mutate.py [--workers 3]
+    PYTHONPATH=src python3 evals/drift_mutate.py [--workers 3] [--base <commit> --blind]
         # writes evals/results/drift-mutate-<stamp>.json and drift-mutate-<stamp>-patches/
 
-BASE is the commit that adds §4af. Its okl-drift.json names the watched lessons; the three whose
-check answers from outside the commit are left out (drift_replay.OUTSIDE), and a lesson whose
-check does not pass at BASE is reported and left out too.
+BASE is the commit that adds §4af; `--base` names another, as §4ah's re-run does. Its
+okl-drift.json names the watched lessons; the three whose check answers from outside the commit
+are left out (drift_replay.OUTSIDE), and a lesson whose check does not pass at BASE is reported
+and left out too.
 
 Per lesson, a breaker model makes four changes meant to break it, blind to its check and its
 governed files (okl-drift.json is removed from its worktree), each told the files the earlier
@@ -30,9 +31,11 @@ the measures. The registered receipt is left as it is; this one is reported besi
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import json
 import random
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -58,6 +61,11 @@ BREAKER = ["claude", "-p", "--model", "sonnet", "--restricted", "--strict-mcp-co
 JUDGE = ["claude", "-p", "--model", "opus", "--restricted", "--strict-mcp-config", "--output-format", "json",
          "--tools", ""]
 LESSON = "Title: {title}\nSymptom: {symptom}\nFix: {fix}"
+# What tells a breaker how the lessons are checked, kept out of its worktree with --blind (§4ah).
+# At §4af's BASE only the snapshot did; since then six checks became scripts, and the run left
+# receipts, patches and a write-up of every miss. The lesson's own check files are added per lesson.
+BLIND = ("okl-drift.json", "evals/REPORT.md", "evals/results", "evals/drift_widen_cost.py", "CHANGELOG.md",
+         ".claude/agent-memory", "tests/test_ci_checks.py")
 BREAK_PROMPT = """You are working in a software repository, your working directory. The project keeps this
 lesson about itself:
 
@@ -156,8 +164,41 @@ def summarize(patches: list[dict]) -> dict:
     }
 
 
+def overlaps(path: str, governed: list[str]) -> bool:
+    """Whether `path` is, holds or sits under one of `governed`'s pathspecs (a file, a directory
+    with or without its slash, or a glob)."""
+    path = path.rstrip("/")
+    return any(path == g.rstrip("/") or path.startswith(g.rstrip("/") + "/") or g.startswith(path + "/")
+               or fnmatch.fnmatch(path, g) for g in governed)
+
+
+def resumable(partial: Path, shas: dict[str, str | None]) -> dict[tuple, dict]:
+    """The patches a stopped run already made, by (lesson, kind, k), kept only where the lesson text
+    they were judged against is still the lesson's: one edited in the store between the runs
+    would be judged against old words and recorded under the new hash (review on #318)."""
+    done: dict[tuple, dict] = {}
+    if partial.exists():
+        for line in partial.read_text().splitlines():
+            got = json.loads(line)
+            if got.get("lesson_sha") is not None and got.get("lesson_sha") == shas.get(got["lesson"]):
+                done[(got["lesson"], got["kind"], got["k"])] = got
+    return done
+
+
+def hidden(wt: Path, cmd: str, governed: list[str], blind: bool) -> list[str]:
+    """The paths kept from the breaker: the snapshot, and with `blind` the rest of BLIND and the
+    check scripts (under ci/ or evals/) the lesson's check command names. A governed file is never
+    hidden: an inline check names the very files its lesson governs, and the breaker must read
+    and edit those (review on #318)."""
+    if not blind:
+        return ["okl-drift.json"]
+    named = [t for t in re.findall(r"[\w./-]+", cmd) if t.startswith(("ci/", "evals/")) and (wt / t).is_file()]
+    keep = [x for x in dict.fromkeys((*BLIND, *named)) if (wt / x).exists()]
+    return [x for x in keep if not overlaps(x, governed)]
+
+
 def claude(cmd: list[str], prompt: str, cwd: Path) -> dict:
-    """One headless session: its result text and cost, or the error."""
+    """One headless session: its result text, cost and the models it ran on, or the error."""
     try:
         p = subprocess.run(cmd, input=prompt, capture_output=True, text=True, timeout=TIMEOUT, cwd=cwd)
     except subprocess.TimeoutExpired:
@@ -167,6 +208,7 @@ def claude(cmd: list[str], prompt: str, cwd: Path) -> dict:
     except ValueError:
         return {"error": (p.stderr or p.stdout or "no output")[-300:]}
     return {"result": env.get("result") or "", "cost_usd": env.get("total_cost_usd") or 0.0,
+            "models": sorted(env.get("modelUsage") or {}),
             **({"error": (env.get("result") or "")[-300:]} if env.get("is_error") else {})}
 
 
@@ -228,21 +270,21 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--workers", type=int, default=3, help="lessons worked at once")
     ap.add_argument("--rejudge", type=Path, help="judge again the patches of this receipt that have no verdict")
+    ap.add_argument("--base", default=BASE, help="the commit to break: §4af's by default, §4ah's re-run names its own")
+    ap.add_argument("--blind", action="store_true", help="keep BLIND and the check's own files from the breaker (§4ah)")
     args = ap.parse_args()
     if args.rejudge:
         return rejudge(args.rejudge.resolve())
-    base = dr.git("rev-parse", BASE).strip()
+    base = dr.git("rev-parse", args.base).strip()
     rules = dr.snapshot(base)
     with dr.store_copy(dr.main_store()) as store:
         nodes = {i: store.get_node(i) for i in rules}
         store.close()
     stamp = f"{datetime.now(UTC):%Y%m%d-%H%M}"
-    partial = Path(tempfile.gettempdir()) / f"okl-drift-mutate-{base[:12]}.jsonl"
-    done: dict[tuple, dict] = {}
-    if partial.exists():
-        for line in partial.read_text().splitlines():
-            got = json.loads(line)
-            done[(got["lesson"], got["kind"], got["k"])] = got
+    # Keyed by mode too: a blind run must never resume patches a breaker wrote seeing the checks.
+    partial = Path(tempfile.gettempdir()) / f"okl-drift-mutate-{base[:12]}{'-blind' if args.blind else ''}.jsonl"
+    shas = {i: dr.text_sha(n) for i, n in nodes.items()}
+    done = resumable(partial, shas)
     main_status = dr.git("status", "--porcelain", repo=dr.main_store().parent.parent)
     lessons, left_out = [], {}
     for lid, rule in rules.items():
@@ -289,16 +331,19 @@ def main() -> int:
                         continue
                     dr.git("checkout", "-q", "-f", "--detach", base, repo=wt)
                     dr.git("clean", "-fdxq", repo=wt)
-                    (wt / "okl-drift.json").unlink(missing_ok=True)
+                    kept_out = hidden(wt, cmd, files, args.blind)
+                    for x in kept_out:
+                        (shutil.rmtree if (wt / x).is_dir() else Path.unlink)(wt / x)
                     avoid = (f"\n\nEarlier changes for this lesson edited {', '.join(sorted(set(earlier)))}; make a "
                              "different change." if earlier else "")
                     prompt = (BREAK_PROMPT.format(lesson=text, avoid=avoid) if kind == "breaking" else
                               HARMLESS_PROMPT.format(lesson=text, files=", ".join(files), avoid=avoid))
                     s = claude(BREAKER, prompt, wt)
-                    dr.git("checkout", "-q", "HEAD", "--", "okl-drift.json", repo=wt)
+                    dr.git("checkout", "-q", "HEAD", "--", *kept_out, repo=wt)
                     diff = dr.git("diff", "HEAD", repo=wt)
-                    p = {"lesson": lid, "kind": kind, "k": k, "ci_run": ci_run_lesson(cmd), "diff": diff,
-                         "said": (s.get("result") or "")[-300:], "breaker_cost": s.get("cost_usd", 0.0)}
+                    p = {"lesson": lid, "lesson_sha": shas[lid], "kind": kind, "k": k, "ci_run": ci_run_lesson(cmd), "diff": diff,
+                         "said": (s.get("result") or "")[-300:], "breaker_cost": s.get("cost_usd", 0.0),
+                         "breaker_models": s.get("models", [])}
                     if s.get("error"):
                         p["error"] = s["error"]
                     if diff:
@@ -314,6 +359,7 @@ def main() -> int:
                             p["ci"], p["ci_failed"] = run_ci(r, commit, skip)
                         j = claude(JUDGE, JUDGE_PROMPT.format(lesson=text, diff=diff[:12000]), room)
                         p["judge"], p["judge_cost"] = judged(j.get("result") or ""), j.get("cost_usd", 0.0)
+                        p["judge_models"] = j.get("models", [])
                         p["judge_said"] = (j.get("result") or j.get("error") or "")[-300:]
                     earlier += changed_files(diff)
                     with partial.open("a") as f:
@@ -337,9 +383,11 @@ def main() -> int:
             (patch_dir / name).write_text(p["diff"])
             p["patch"] = f"{patch_dir.name}/{name}"
     receipt = {
-        "what": "drift catch rate (REPORT §4af)", "at": f"{datetime.now(UTC):%Y-%m-%dT%H:%MZ}",
-        "code": dr.git("rev-parse", "--short=12", "HEAD").strip(), "base": base[:12],
+        "what": f"drift catch rate (REPORT {'§4ah, the re-run' if args.base != BASE else '§4af'})",
+        "at": f"{datetime.now(UTC):%Y-%m-%dT%H:%MZ}",
+        "code": dr.git("rev-parse", "--short=12", "HEAD").strip(), "base": base[:12], "blind": args.blind,
         "breaker": " ".join(BREAKER), "judge": " ".join(JUDGE), "ci_steps": CI_STEPS,
+        "models": {who: sorted({m for p in patches for m in p.get(f"{who}_models", [])}) for who in ("breaker", "judge")},
         "ci_at_base": {"verdict": ci_base, "failed": ci_base_failed}, "left_out": left_out,
         "lessons": [lid for lid, _r, _c in lessons], "main_checkout_changed": moved,
         "lesson_sha": {lid: dr.text_sha(nodes[lid]) for lid, _r, _c in lessons},

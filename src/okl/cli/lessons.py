@@ -553,7 +553,8 @@ def cmd_bootstrap(args: argparse.Namespace) -> int:
         print("  comes up empty on young repos and on ones whose history is uninformative.")
     print("  Review + edit (set scope, add symptom/cause/fix, delete noise), then:")
     print(f"    okl seed {out}")
-    print("\n  Better: ask your coding agent to run /seed-from-codebase (stamped by")
-    print("  `okl scaffold`). It reads the code itself — the guard rails, the CI config,")
-    print("  the fix commits — and proposes records with a file:line citation each.")
+    print("\n  Better: in Claude Code, run /seed-from-codebase (stamped by `okl scaffold`;")
+    print("  another agent can follow .claude/commands/seed-from-codebase.md). It reads the")
+    print("  code itself — the guard rails, the CI config, the fix commits — and proposes")
+    print("  records with a file:line citation each.")
     return 0
