@@ -348,12 +348,14 @@ page for CA1707 says it is safe to suppress for test code, so add `tests/.editor
 dotnet_diagnostic.CA1707.severity = none
 ```
 
-An architecture rule is an ordinary test in its own project:
+An architecture rule is an ordinary test in its own project. The editorconfig template separates
+`using` groups with a blank line, so `dotnet format` wants one before `using static`:
 
 ```csharp
 using ArchUnitNET.Domain;
 using ArchUnitNET.Loader;
 using ArchUnitNET.xUnitV3;
+
 using static ArchUnitNET.Fluent.ArchRuleDefinition;
 
 namespace App.ArchitectureTests;
