@@ -3426,19 +3426,34 @@ the exclusions or the samples after any verdict is read. If the run cannot compl
   a merge the census had no event for.
 - **The correction:** every commit whose files differ from its first parent's, with a test that
   reproduces the merge case. Its corrected counts replace the ones above: 3,494 replaced stamps,
-  of which 1,859 are drift-red events holding 4,751 commits that changed governed files.
+  of which 1,859 are drift-red events holding 4,751 commits that changed governed files (run 2's;
+  run 3's follow).
 - **Run 2** (`drift-replay-20261031-0558.json`, from 25c8f51, 2,713 check runs in 16 minutes)
   was the one this section read until 2026-11-01. The pins, exclusions and samples did not
   change, and both runs gave the samples the same verdicts. Run 1's census found 2 needed events
   in 860.
 - **Run 3** (`drift-replay-20261101-0143.json`, from 3f0d43e, 2,718 check runs in 16 minutes) is
   the one this section reads. Run 2 compared every commit with each lesson's final governed
-  paths. Four replayed lessons had changed theirs in the window: three from `src/okl/cli.py` to
-  `src/okl/cli/`, and one dropped `docs/WHERE-THIS-SITS.md`. So 11 drift-red events read as
-  "governed content unchanged", and 13 red pairs as green. Each side is now read by the snapshot
-  the gate read there, with a test (review on #312). Run 3 found 1,870 drift-red events. The
-  needed events, the samples' breaks and every prediction read as in run 2, whose figures were
-  4 of 1,854 (0.22%) and a judge at 35 of 40.
+  paths, and four watched lessons had changed theirs in the window: three from `src/okl/cli.py`
+  to `src/okl/cli/`, and one added `docs/WHERE-THIS-SITS.md`. The three CLI lessons account for
+  every difference (review on #312):
+  - 11 more drift-red events, all unneeded, had read as "governed content unchanged"
+    (`doc-check-defaults` 7, `doc-init-flags` 2, `doc-verified-refused` 2);
+  - 8 other events gained 11 changed commits, and the new events hold 24, so 1,870 events hold
+    4,786;
+  - 13 red pairs had read as green.
+
+  Each side is now read by the snapshot the gate read there, and each event records those paths,
+  with tests. A dry run at 8c6ad3c, which also sets apart paths that move between two stamps and
+  rules that govern nothing, gives the same counts: neither occurs in the window.
+- **The samples changed with the pools.** The registration fixes the samples once a verdict is
+  read, but the corrected pools moved the seeded draw by 2 red pairs and 1 green pair:
+  - out of the red sample, `doc-verified-refused` at f7beee3 and `n_d45d7bf64896` at ec32dc2;
+  - into it, `doc-init-flags` at b2c94dc and `doc-check-defaults` at 8a1a547;
+  - in the green sample, `doc-init-flags` at b2c94dc out and `docs-agent-neutral` at 566a855 in.
+
+  All six were intact, so the samples' figures are unchanged. Every prediction reads as in run 2,
+  whose figure was 4 of 1,854 (0.22%).
 - **Declared before run 2:** a PR's merge into main replaces main's stamp with the one its branch
   already recorded, so a per-verification figure (each lesson and V counted once) is reported
   beside the per-event one.
@@ -3451,7 +3466,7 @@ the exclusions or the samples after any verdict is read. If the run cannot compl
 | green miss rate | 0 of 299 | 0%–1.27% |
 | recall estimate | 1.0, from one break (below) | — |
 | not reproducible | 5 of 1,870 events, 3 of 600 pairs | — |
-| judge agrees with the check | 34 of 40 | 71%–93% |
+| judge agrees with the check | 32 of 40 | 65%–90% |
 
 **Predictions.**
 1. **Held.** Event precision is 0.21%, against a registered bound of 10%.
@@ -3479,12 +3494,22 @@ by the check's verdict, once.
 - **The red sample's one break** is the same rewrite, at the merge d374bd4, judged by main's
   older stamp.
 
-**The judge.** It agrees on 34 of 40 answered events, above the registered 80%, so precision
-stands as the check's verdict.
-- Its agreement is all on the unneeded side: 34 of 36. One dissent there reads a README
-  conceding a recall loss as breaking a rule against claiming better recall, which it does not.
-  The other reads a new default decision as leaving the README behind; at V the README describes
-  that default, in a part of the change the 12,000-character diff cut off.
+**The judge.** It agrees on 32 of 40 answered events, at the registered 80% and not below it,
+so precision stands as the check's verdict, with no margin. Receipt
+`drift-replay-20261101-0143-judge-2.json`, from 8c6ad3c, with each event's diff by the paths the
+gate read.
+- **Three passes, one read.** Two earlier passes diffed every event by the lesson's final paths,
+  the instrument's defect: run 2's at 35 of 40, and one on run 3 at 34 of 40, on input identical
+  to it. So the judge moves by one between passes on the same prompts, and of the two verdicts
+  that changed in the pass read here, one had identical input too. At 40 events its agreement
+  varies across the registered line.
+- **Every dissent on the unneeded side is the judge's error** (it agrees on 32 of 36):
+  - twice, on one event counted on its branch and again at its merge, it reads a README
+    conceding a recall loss as breaking a rule against claiming better recall, which it does not;
+  - it reads a new default decision as leaving the README behind, while at V the README
+    describes that default, in a part of the change the 12,000-character diff cut off;
+  - it reads `core` importing `warm` as breaking the one-way layers, while the import contract
+    puts `warm` below `core`, and `lint-imports` passed.
 - On the needed side it disagreed on all 4. The break was a deletion inside a 735-line README
   rewrite, and the judge, given each commit's diff cut to 12,000 characters, reported that no
   format line was added. The check is right there: at 198fc81 it prints
@@ -3503,7 +3528,8 @@ lessons (three excluded, one with no event) logged 11 more.
 - **The green miss rate is below 2%, and the recall estimate is not below 0.8 as registered,** so
   this run files no scheduled re-run of the checks.
 - **Not-reproducible counts stay far under 20%,** so the rates stand.
-- **The judge is above 80%,** so precision stands as the check's verdict.
+- **The judge is at 80%, not below,** so precision stands as the check's verdict. Its variance
+  between passes spans the line, so at this size the falsifier is not informative.
 
 **What it shows, and what it does not.**
 - **Shown:** in committed history, drift's red was almost never a broken commit. One commit in
