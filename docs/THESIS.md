@@ -16,8 +16,9 @@ asking first. Each session's lessons are recorded, so the next starts from more.
 backed by a check you choose, or marked unchecked.
 
 Two rules hold throughout:
-- **okl itself makes no model calls in its loop.** It notices mechanically, and the agent in the
-  session does the work.
+- **okl calls no generative model.** It notices mechanically, and the agent in the session does
+  the work. By default it runs no model at all; three local models, off until you turn them on,
+  can help choose what the briefing shows.
 - **Nothing is written to the store without you knowing.**
 
 ## What holds today, and what is still direction
