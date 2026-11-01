@@ -1,0 +1,13 @@
+diff --git a/pyproject.toml b/pyproject.toml
+index 4c19eb6..dabec5d 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
+ [project]
+ # Distribution name only. The CLI command, the import package, and the repo are all `okl`;
+ # PyPI rejects `okl` as too similar to the existing `oki` (l/i are treated as confusable).
+-name = "observed-knowledge-ledger"
++name = "okl-ledger"
+ version = "0.9.0"
+ description = "Observed Knowledge Ledger — verified memory for coding agents: rules, decisions and past defects, briefed when they apply, proven by checks, gated when the code they cover changes, shared across repos when you want."
+ readme = "README.md"

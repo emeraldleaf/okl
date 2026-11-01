@@ -929,6 +929,9 @@ def test_the_old_distribution_name_is_swept_and_still_installable():
     }
     tracked = subprocess.run(["git", "-C", str(root), "grep", "-l", "org-knowledge-layer"],
                              capture_output=True, text=True).stdout.split()
+    # Eval receipts are history too: a record of what a run saw. REPORT §4af's breaks of the
+    # package-name lessons wrote the old name on purpose, and its judges quote them.
+    tracked = [f for f in tracked if not f.startswith("evals/results/")]
     assert set(tracked) <= allowed, f"old name outside the allowlist: {set(tracked) - allowed}"
 
     new = tomllib.loads((root / "pyproject.toml").read_text())["project"]

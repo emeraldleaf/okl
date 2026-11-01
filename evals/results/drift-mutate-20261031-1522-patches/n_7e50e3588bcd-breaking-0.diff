@@ -1,0 +1,18 @@
+diff --git a/tests/test_recap.py b/tests/test_recap.py
+index 66cb67a..8216e88 100644
+--- a/tests/test_recap.py
++++ b/tests/test_recap.py
+@@ -317,3 +317,13 @@ def test_a_lesson_stale_again_after_its_recheck_is_open_again(monkeypatch):
+     assert [x["id"] for x in r["stale_not_rechecked"]] == ["x"] and r["stale_not_rechecked_total"] == 1
+     assert r["shown_then_quiet"] == 0                     # the broad count still sees the check
+     s.close()
++
++
++def test_the_report_dict_survives_a_yaml_round_trip():
++    """The report holds only plain values, so a YAML dump and load gives back the same dict."""
++    import yaml
++    from okl.store import Store
++    s = Store("sqlite:///:memory:")
++    r = recap.report(s, "r", str(Path(__file__).parent), since_ms=0, now_ms=10_000)
++    assert yaml.safe_load(yaml.safe_dump(r)) == r
++    s.close()

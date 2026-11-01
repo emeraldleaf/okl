@@ -1,0 +1,22 @@
+diff --git a/docs/GETTING-STARTED.md b/docs/GETTING-STARTED.md
+index 0089de2..59d46f3 100644
+--- a/docs/GETTING-STARTED.md
++++ b/docs/GETTING-STARTED.md
+@@ -405,7 +405,7 @@ okl-drift:
+     GIT_DEPTH: 0
+     OKL_VERSION: "0.9.0"   # the version you run locally
+   script:
+-    - pip install "observed-knowledge-ledger==$OKL_VERSION"
++    - pip install "okl-ledger==$OKL_VERSION"
+     - okl drift --gate --snapshot okl-drift.json
+ ```
+ 
+@@ -419,7 +419,7 @@ steps:
+     inputs:
+       versionSpec: "3.13"
+   - script: |
+-      pip install "observed-knowledge-ledger==0.9.0"
++      pip install "okl-ledger==0.9.0"
+       okl drift --gate --snapshot okl-drift.json
+     displayName: okl drift gate
+ ```

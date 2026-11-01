@@ -1,0 +1,21 @@
+diff --git a/tests/test_check_log.py b/tests/test_check_log.py
+index 577ca6b..c8ffde6 100644
+--- a/tests/test_check_log.py
++++ b/tests/test_check_log.py
+@@ -10,6 +10,7 @@ from __future__ import annotations
+ import json
+ 
+ import pytest
++import yaml
+ 
+ from okl import core
+ from okl.cli import main
+@@ -22,7 +23,7 @@ def repo(tmp_path, monkeypatch):
+     """A configured repo with a local store and one lesson to check."""
+     monkeypatch.chdir(tmp_path)
+     (tmp_path / ".okl").mkdir()
+-    (tmp_path / ".okl" / "config.json").write_text(json.dumps({"repo": "r"}))
++    (tmp_path / ".okl" / "config.json").write_text(json.dumps(yaml.safe_load("repo: r")))
+     Client().record(id="les", type="Rule", title="refunds post after the charge", scope="repo")
+     return tmp_path
+ 

@@ -3300,6 +3300,629 @@ working. The floor's per-record word cache stays on.
 stemmed setting with the line but not the floor, or with a size allowance, would need its own
 pre-registration. Nothing here asks for one.
 
+## 4ae. PRE-REGISTERED: how good is drift at its job? A replay of this repo's history (2026-10-31)
+
+Written before any check of this run. Issue #264, step 3.
+
+**Why.** Drift is okl's claim that a lesson's proof goes stale when the code it governs moves.
+Nothing has measured how often its red is right, or what it misses. Papers named in #264
+measure stale detection for their own systems; this measures okl's. A reader's design that
+marks extracted facts stale on an amendment depends on the same figure.
+
+**What drift flags** (`scan_drift`, src/okl/drift.py). Among lessons in scope, not retired, and
+governing files git has history for, it flags:
+- a lesson whose governed files' committed content differs from the commit its check last
+  passed at;
+- a lesson never verified;
+- a lesson stamped without an observed check.
+
+A TTL expiry never reaches it (#231). At a commit, CI's gate reads the stamp in that commit's
+own `okl-drift.json`, so that is the stamp this replay reads.
+
+**Population.** The 16 lessons in `okl-drift.json` at 485f0ed, the merge of #305. None of the
+183 seed records declares governed files, so drift watches none of them (#222). Three lessons'
+checks answer from outside the commit under test, so a replay would ask today: one reads live
+GitHub settings, and two run `evals/preflight.py`, which reads the lesson store. One more has no
+event in this history. That leaves 12 lessons with replayable events.
+
+**Instrument.** `evals/drift_replay.py`, run once, with the script exactly as committed with this
+section; the receipt records the commit it ran from. Its pins:
+- the history reachable from 485f0ed;
+- seed 264, with samples drawn by a seeded hash so anyone can redraw them from the receipt;
+- 300 pairs from each pool;
+- a 300-second timeout per check.
+
+Each check runs as `okl verify` runs it: through a shell, passing on exit 0 with the expected
+text in its output. It runs in one scratch worktree checked out at the commit under test, with
+that commit's `src` first on `PYTHONPATH` and no `OKL_` or git-location variable set. A
+verdict counts only when the same check also passes, here and now, at the commits history says
+it passed at; otherwise it is "not reproducible" and counted apart.
+
+**Counts, read before any check ran** (`--dry-run`):
+- **Replaced stamps, 1,335.** Of these, 862 are drift-red events, holding 1,315 commits that
+  changed governed files. The rest are left out, by kind:
+
+  | kind | count |
+  |---|---|
+  | re-verified with governed content unchanged | 331 |
+  | the preflight reads the store | 49 |
+  | previous stamp not an ancestor | 39 |
+  | first stamp | 23 |
+  | no commit recorded | 15 |
+  | live GitHub settings | 12 |
+  | verified before its code commit | 4 |
+- **(lesson, commit) pairs.** Drift was red for 1,595 and green for 7,805.
+
+**Measures.**
+1. **Event precision.** An event is a snapshot commit that replaced a lesson's stamp. The check
+   last passed at P and was re-verified at V. The replay runs the check at P and at V (the
+   controls), then at each commit in P..V that changed the governed files, oldest first.
+   - *Needed:* it fails at one of them.
+   - *Unneeded:* it passes at all of them.
+
+   Precision is needed / (needed + unneeded), with a Wilson 95% interval, overall and per lesson.
+2. **Breaks at red and green commits.** For each sampled pair, the check runs at the stamp's
+   commit (the control), then at the pair's commit, giving *broken* or *intact*.
+   - **Red break rate:** broken / decided among the red pairs.
+   - **Green miss rate:** the same among the green pairs.
+   - **Recall estimate:** the red pairs' share of all estimated broken pairs. Each pool's broken
+     count is its size times its sample's rate.
+3. **A second judge.** `--judge` gives 40 events, half needed and half unneeded where there are
+   enough, to `claude -p --model sonnet --restricted`. The judge sees the lesson's title,
+   symptom and fix, and each commit's diff of the governed files, but not the check's verdict.
+   It reports agreement with the check, with its interval.
+4. **Context, not a measure.** Each lesson's logged check runs on this machine, read from a copy
+   of the store. A logged failure is a catch that may never have reached a commit.
+
+**Predictions.**
+1. Event precision is below 0.10.
+2. Precision is lower for the five lessons that govern a directory (`src/okl/cli/`, `tests/`,
+   `seed/`) than for the seven that govern named files. Read only if the run finds at least 5
+   needed events.
+3. The green miss rate is below 0.02: fewer than 6 of the 300 green pairs broken.
+4. The recall estimate is at least 0.8.
+
+**What the run can settle, and what it cannot.**
+- **It sees only committed breakage.** A break that drift flagged and the author fixed before
+  committing never reaches history. That is drift working as built, yet it reads here as an
+  unneeded event. So event precision is a floor on how often drift's red was worth acting on.
+  Measure 4 shows those catches where this machine logged them.
+- **It runs today's tools on old code.** The controls catch a check that no longer runs; a subtler
+  difference could remain.
+- **It covers 12 lessons in one repository**, whose CI gate forces re-verification at every pull
+  request head.
+- **The event unit can count one verification twice:** once on its branch, and again at a merge
+  that resolved the snapshot.
+- **A check is not the truth.** Advice that went wrong while its check still passed is visible
+  only to the judge, and only in its sample.
+
+**Falsifiers and what follows.**
+- **If precision is below 0.10 and prediction 2 holds,** the directory globs are where the
+  cost is. Narrowing each of the five to the files its check reads is the follow-up, counted by
+  re-running `--dry-run` on this history with the narrowed sets. That needs no new check runs.
+- **If precision is at least 0.10,** drift's red is worth acting on as it stands, and the
+  governed sets stay.
+- **If the green miss rate is at least 0.02, or the recall estimate is below 0.8,** drift misses
+  a share of breaks large enough to act on. The follow-up is a scheduled run of every check
+  (#231 is the clock half of it), filed with this receipt.
+- **If more than 20% of the events, or of either sample, are not reproducible,** that measure
+  reports counts only, no rate.
+- **If the judge agrees with the check on fewer than 80% of the answered events,** precision is
+  reported as the check's verdict only, and the checks themselves go to #189.
+
+**Budget and stop.** One replay and one judge pass of 40 model calls. No change to the pins,
+the exclusions or the samples after any verdict is read. If the run cannot complete by
+2026-11-07, this section records why and nothing is concluded.
+
+### Result (2026-10-31)
+
+**Three runs, and why the first two do not count.**
+- **Run 1** (`drift-replay-20261031-0519.json`, from e12485e) listed an event's commits, and the
+  snapshot's history, with git's path-limited history. Its simplification drops a merge whose
+  files match one parent. In 450 of its 862 events, 563 merges that changed the governed files
+  went unchecked, 352 of them on the branch's own line. So run 1 did not measure the registered
+  definition.
+- **How it was found:** the red sample, which never used path-limited history, found a break at
+  a merge the census had no event for.
+- **The correction:** every commit whose files differ from its first parent's, with a test that
+  reproduces the merge case. Its corrected counts replace the ones above: 3,494 replaced stamps,
+  of which 1,859 are drift-red events holding 4,751 commits that changed governed files (run 2's;
+  run 3's follow).
+- **Run 2** (`drift-replay-20261031-0558.json`, from 25c8f51, 2,713 check runs in 16 minutes)
+  was the one this section read until 2026-11-01. The pins, exclusions and samples did not
+  change, and both runs gave the samples the same verdicts. Run 1's census found 2 needed events
+  in 860.
+- **Run 3** (`drift-replay-20261101-0143.json`, from 3f0d43e, 2,718 check runs in 16 minutes) is
+  the one this section reads. Run 2 compared every commit with each lesson's final governed
+  paths, and four watched lessons had changed theirs in the window: three from `src/okl/cli.py`
+  to `src/okl/cli/`, and one added `docs/WHERE-THIS-SITS.md`. The three CLI lessons account for
+  every difference (review on #312):
+  - 11 more drift-red events, all unneeded, had read as "governed content unchanged"
+    (`doc-check-defaults` 7, `doc-init-flags` 2, `doc-verified-refused` 2);
+  - 8 other events gained 11 changed commits, and the new events hold 24, so 1,870 events hold
+    4,786;
+  - 13 red pairs had read as green.
+
+  Each side is now read by the snapshot the gate read there, and each event records those paths,
+  with tests. Dry runs at 8c6ad3c and 7bd33ff, which also set apart paths that move between two
+  stamps (found after every snapshot is read, so the walk's order cannot hide one) and rules that
+  govern nothing, give the same counts: neither occurs in the window.
+- **Departures from the registration.** It allowed one replay and one judge pass of 40 calls,
+  and no change to the pins, the exclusions or the samples after any verdict was read. This
+  section ran three replays and three judge passes. Each later one corrects a defect in the
+  instrument found after verdicts were read, and the samples and two new exclusion kinds (none
+  occurs in the window) changed with it. The judge pass read is the one with the corrected
+  instrument, and the lowest of the three.
+- **The samples changed with the pools.** The registration fixes the samples once a verdict is
+  read, but the corrected pools moved the seeded draw by 2 red pairs and 1 green pair:
+  - out of the red sample, `doc-verified-refused` at f7beee3 and `n_d45d7bf64896` at ec32dc2;
+  - into it, `doc-init-flags` at b2c94dc and `doc-check-defaults` at 8a1a547;
+  - in the green sample, `doc-init-flags` at b2c94dc out and `docs-agent-neutral` at 566a855 in.
+
+  All six were intact, so the samples' figures are unchanged. Every prediction reads as in run 2,
+  whose figure was 4 of 1,854 (0.22%).
+- **Declared before run 2:** a PR's merge into main replaces main's stamp with the one its branch
+  already recorded, so a per-verification figure (each lesson and V counted once) is reported
+  beside the per-event one.
+
+| measure | result | 95% interval |
+|---|---|---|
+| event precision | 4 needed of 1,865 decided (0.21%) | 0.08%–0.55% |
+| per verification | 4 of 1,323 (0.30%) | 0.12%–0.77% |
+| red break rate | 1 of 298 (0.34%) | 0.06%–1.88% |
+| green miss rate | 0 of 299 | 0%–1.27% |
+| recall estimate | 1.0, from one break (below) | — |
+| not reproducible | 5 of 1,870 events, 3 of 600 pairs | — |
+| judge agrees with the check | 32 of 40 | 65%–90% |
+
+**Predictions.**
+1. **Held.** Event precision is 0.21%, against a registered bound of 10%.
+2. **Not read.** The run found 4 needed events, below the 5 the registration requires.
+3. **Held.** No green pair of 299 was broken; the interval's top is 1.27%.
+4. **Held as registered, and not informative.** The estimate of 1.0 rests on the red sample's one
+   break and the green sample's none. Within the two intervals, recall could be as low as about
+   0.01. This run measures precision and bounds misses; it does not measure recall.
+
+**What the needed events are.** All four are one commit, 198fc81, "README: the short version,
+with the essays moved to docs/". It took two documented facts out of the README: the check
+command's formats, and the refused `--verified` line. The next commit restored both before
+re-verification. Each lesson's event is counted on its branch and again at the merge into main.
+So across 12 lessons, drift went red 1,870 times, and the code it governs was committed broken,
+by the check's verdict, once.
+
+**What does not reproduce.**
+- **Three `doc-init-flags` events.** Their stamp names a commit, 96da803, at which the check's
+  script `ci/check-init-flags.py` does not exist. The stamp recorded a commit its check could
+  not have run at.
+- **Two `n_7e50e3588bcd` events.** The check itself was rewritten at re-verification: its ban
+  on `import tomllib` was dropped when okl dropped Python 3.10. The old check fails at V by
+  design. These are re-verifications that changed the lesson on purpose, an outcome the
+  registration did not name. Counted as needed, precision would be 6 of 1,867 (0.32%).
+- **The red sample's one break** is the same rewrite, at the merge d374bd4, judged by main's
+  older stamp.
+
+**The judge.** It agrees on 32 of 40 answered events, at the registered 80% and not below it by
+one verdict, so precision is the check's verdict either way (falsifiers, below). Receipt
+`drift-replay-20261101-0143-judge-2.json`, from 8c6ad3c, with each event's diff by the paths the
+gate read.
+- **Three passes, one read, and the judge's noise.** Two earlier passes diffed every event by
+  the lesson's final paths, the instrument's defect: run 2's at 35 of 40, and one on run 3 at 34
+  of 40, on identical input. Between those two, 3 of the 40 verdicts changed. Between the second
+  and the pass read here, 2 more changed, both on input the fix left identical: the fix changed
+  the input of one judged event, whose verdict did not move. So the fall from 35 to 32 is the
+  judge, not the instrument. On the same prompts it changes 2 or 3 of 40 verdicts a pass, which
+  spans the registered line.
+- **Every dissent on the unneeded side is the judge's error** (it agrees on 32 of 36):
+  - twice, on one event counted on its branch and again at its merge, it reads a README
+    conceding a recall loss as breaking a rule against claiming better recall, which it does not;
+  - it reads a new default decision as leaving the README behind, while at V the README
+    describes that default, in a part of the change the 12,000-character diff cut off;
+  - it reads `core` importing `warm` as breaking the one-way layers, while the import contract
+    puts `warm` below `core`, and `lint-imports` passed.
+- On the needed side it disagreed on all 4. The break was a deletion inside a 735-line README
+  rewrite, and the judge, given each commit's diff cut to 12,000 characters, reported that no
+  format line was added. The check is right there: at 198fc81 it prints
+  `formats undocumented: ['json', 'hook']`.
+- So on this kind of break the judge is the weaker instrument. It does not show that a check
+  passed on a lesson that had gone wrong.
+
+**Context: catches before a commit.** On this machine, since the check log began (okl review R3),
+the 12 lessons logged 4 failed runs among 1,332 (run 3's copy of the log). These are the catches
+drift's red led to while the author was still working, which committed history cannot show. The
+other four watched lessons (three excluded, one with no event) logged 11 more.
+
+**Falsifiers.**
+- **Precision is below 10%, but prediction 2 was not read,** so the registered follow-up, narrowing
+  the directory globs, does not fire.
+- **The green miss rate is below 2%, and the recall estimate is not below 0.8 as registered,** so
+  this run files no scheduled re-run of the checks.
+- **Not-reproducible counts stay far under 20%,** so the rates stand.
+- **The judge is at 80%, not below, by one verdict,** and its noise between passes spans the
+  line. Precision is the check's verdict either way, so the branch for a judge below 80% is
+  taken too: precision is reported as the check's verdict only, and the checks go to #189, where
+  §4af already sends them.
+
+**What it shows, and what it does not.**
+- **Shown:** in committed history, drift's red was almost never a broken commit. One commit in
+  1,870 red events was, and the author had already fixed it before re-verifying. Its cost is a
+  re-run of a check that passes; its value lands before the commit, where the check log is the
+  only record.
+- **Not shown:**
+  - recall, which needs breaks that are not there;
+  - whether narrower governed files would cut the cost without missing a break;
+  - any repository but this one.
+
+  Each of those needs its own pre-registration.
+
+## 4af. PRE-REGISTERED: what does drift catch? Each watched lesson broken on purpose (2026-10-31)
+
+Written before any patch is generated and before any check of this run. Follows §4ae, which
+measured drift's precision and could not measure its recall: committed history held one break.
+
+**Why.** §4ae found that drift's red almost never meant a broken commit (4 of 1,865 events). The
+question left is the one that would justify its cost: when a lesson is broken, does drift say so,
+and would CI have said so anyway? History cannot answer it, so this run breaks the lessons on
+purpose.
+
+**Population.** The 16 lessons in `okl-drift.json` at the commit that adds this section (BASE).
+The same three as in §4ae answer from outside the commit: one reads live GitHub settings, and two
+run the preflight, which reads the lesson store. That leaves 13 lessons. Each one's check must
+pass at BASE, run as below; a lesson whose check does not is reported and left out.
+
+**Patches.** Six per lesson, 78 in all, each a change to the repository at BASE:
+- **Four breaking.** `claude -p --model sonnet --restricted` runs in a scratch worktree at BASE,
+  with the tools Read, Grep, Glob and Edit, and edits confined to that worktree. It is given the
+  lesson's title, symptom and fix. It is asked for one realistic change a contributor might make
+  in the course of other work, after which the lesson's claim is no longer true of the
+  repository. It is not given the lesson's check or its governed files, and `okl-drift.json` is
+  removed from its worktree, so it cannot read them there. Each of the four is told the files the
+  earlier ones changed and asked for a different change.
+- **Two harmless, the negative control.** The same, except that it is told the lesson's governed
+  files and asked for a realistic change to one of them that keeps the claim true.
+
+Every patch is committed with the receipt, as a diff.
+
+**Ground truth.** `claude -p --model opus --restricted --tools ""` judges each patch. It sees the
+lesson's title, symptom and fix and the patch's diff, never the check or any verdict, and answers
+whether the lesson's claim is false of the repository after the change: broken, intact or unsure.
+A breaking patch counts as a break only when the judge says broken. A harmless patch counts as a
+control only when it says intact. The rest are reported and not used.
+
+**Per patch.** One scratch worktree at BASE with the patch applied. Everything runs as §4ae runs
+a check: through a shell, passing on exit 0 with the expected text, with that tree's `src` first on
+`PYTHONPATH` and no `OKL_` or git-location variable set.
+- **Red:** the patch changes a file the lesson governs, so drift goes red.
+- **Check:** the lesson's check passes or fails.
+- **CI:** the mechanical steps of `ci.yml`'s lint-and-test job. They are `ruff check .`,
+  `mypy src/okl`, `lint-imports`, `pytest -q`, `ci/check-diagram-figures.sh` and
+  `bash gates/run-gates.sh`, and CI fails when any of them does. Run for breaking patches only.
+
+A break is **caught by drift** when it is red and its check fails. A miss is a **coverage miss**
+when drift stays green (the break is outside the governed files), and a **sensitivity miss** when
+drift is red and the check passes.
+
+**Measures.**
+1. **Catch rate:** caught / breaks. It has a Wilson 95% interval and a 95% bootstrap that
+   resamples lessons, since one lesson's patches are not independent.
+2. **Misses,** coverage and sensitivity, counted.
+3. **Against CI,** reported separately for two groups: the three lessons whose check CI already
+   runs (`lint-imports` and two `pytest -k` selections), and the other ten. For each group, the
+   breaks drift catches and CI does not (*drift only*), both, CI only, and neither.
+4. **The control's false failures:** harmless patches whose check fails, of the controls.
+5. **Per lesson,** all of the above in one table.
+
+**Predictions.**
+1. The catch rate is at least 0.5.
+2. Sensitivity misses outnumber coverage misses. Where drift misses, the check is narrower than
+   the lesson more often than the break lies outside its files.
+3. For the three lessons CI runs, CI fails on every break drift catches.
+4. For the other ten, CI fails on fewer than half of the breaks drift catches.
+5. At most 2 of the 26 harmless patches fail their check.
+
+**What the run can settle, and what it cannot.**
+- **The breaks are aimed.** Each is written to break one lesson, while a real break is incidental.
+  So the catch rate answers "when a lesson is broken, does drift say so". It does not say how
+  often lessons break, or what a typical break looks like.
+- **The judge stands in for the truth.** §4ae found it weaker than a check on one kind of break,
+  a deletion inside a long diff. These patches are small, and every judgment is in the receipt.
+- **CI here is this Mac.** It runs Python 3.11, without the Postgres service CI tests against
+  (those tests skip), the model-run architecture review or the secret scan.
+- **One breaker model, one repository, 13 lessons.**
+
+**Falsifiers and what follows.**
+- **If prediction 3 holds,** drift adds nothing to CI for those three lessons. Following the
+  repo's own rule (#39), their governed files are dropped, filed with this receipt.
+- **If the catch rate is at least 0.5 and drift only is at least a quarter of the ten lessons'
+  breaks,** drift catches what nothing else does. The follow-up is the alarm change: re-check
+  automatically on red, and alarm only on a failed check. It is filed with this receipt.
+- **If the catch rate is below 0.5,** the table names each miss's cause. Sensitivity misses go
+  to the lessons' checks (#189), and coverage misses to their governed files. Until a re-run
+  after those fixes reaches 0.5, the docs describe drift as bookkeeping, not detection.
+- **If drift only is under a tenth of the ten lessons' breaks,** CI already catches what drift
+  catches. The drift gate is then proposed for removal, in favour of a scheduled re-run of the
+  checks (#231 is the clock half of it).
+- **Otherwise,** no follow-up fires, and the result is reported as it stands.
+- **Counts only, no rate:** if the judge confirms fewer than half of the 52 breaking patches, or
+  more than 20% of patches do not apply or time out.
+- **If more than 2 controls fail their check,** a failed check is not evidence of a break for
+  those lessons, and their catches are reported apart.
+
+**Budget and stop.**
+- **Runs:** 78 breaker sessions of at most 300 seconds each, 78 judge calls, one check per
+  patch, and about 52 local CI runs of a few minutes each.
+- **The instrument,** `evals/drift_mutate.py`, is committed before any patch is generated. The
+  receipt names its commit, and any difference from this section is reported as a deviation.
+- **Fixed once a verdict is read:** the population, the prompts and the rules.
+- **Deadline:** if the run cannot complete by 2026-11-14, this section records why, and nothing
+  is concluded.
+
+### Result (2026-10-31)
+
+**The run.** Receipt `drift-mutate-20261031-1522.json`, with its 78 patches in the directory
+beside it. It ran from 07cd1c4 on BASE eb93b16 and cost $5.20.
+- **All 13 lessons' checks passed at BASE,** and so did every CI step.
+- **No breaker failed,** every patch applied, and no check timed out. The main checkout was
+  untouched.
+- **The judge gave no verdict on 11 patches.** Ten calls timed out at 300 seconds, and one gave
+  no valid answer. That is 14% of the 78, under the registered 20%, so the registered result
+  reads the 36 judged breaks. The 11 were judged once more, apart from the result (below).
+- **Contention does not explain the time-outs.** §4ag's judge sessions ran beside the first ten.
+  Judged again with nothing else running, six timed out again. One of those had answered in four
+  seconds when run by hand between the two runs. Another answered with a call to a tool it did
+  not have. These judgments are flaky, and why is not known.
+- **The judge confirmed 36 of the 52 breaking patches as breaks,** above the registered half. It
+  called 5 intact. Of the 26 harmless patches it called 25 intact, and those 25 are the controls.
+
+| | result |
+|---|---|
+| catch rate | 14 of 36 (38.9%), Wilson 24.8–55.1%, lesson bootstrap 20.0–59.5% |
+| misses: the break changed a file the lesson does not govern | 14 |
+| misses: drift was red and the check passed | 8 |
+| the three lessons CI runs: drift only / both / CI only / neither | 0 / 5 / 3 / 3 of 11 |
+| the other ten lessons: drift only / both / CI only / neither | 5 / 4 / 6 / 10 of 25 |
+| controls whose check failed | 0 of 25 |
+
+**Predictions.**
+1. **Failed.** Drift caught 38.9% of the breaks, not at least half.
+2. **Failed.** Coverage misses (14) outnumber sensitivity misses (8). Breaks fall outside the
+   governed files more often than checks are too narrow.
+3. **Held.** For the three lessons CI runs, CI failed on all 5 breaks drift caught.
+4. **Held.** For the other ten, CI failed on 4 of the 9 breaks drift caught, under half.
+5. **Held.** No control failed its check.
+
+*Corrections, 2026-10-31 (review on #312).* Two of the judge's answers were read wrong. Neither
+changes a registered result, and the receipts stay as the run wrote them.
+- **One more harmless patch is a control.** The judge called `doc-init-flags-harmless-0`
+  broken because, it said, `okl init` has no `--force` flag. At BASE it has one
+  (`src/okl/cli/parser.py`), so the patch documents what the code does. Counted as a control,
+  the controls are 26, and none failed its check: 0 of 26. Prediction 5 reads the same.
+- **The answer that was not valid was the parser's error.** It was `n_71c09abf3f37-breaking-3`.
+  Its answer ended in a valid verdict, broken, after an earlier brace, and the parser's greedy
+  match read the whole span as invalid JSON. The re-judge below counts it as broken. The parser
+  now keeps the last valid verdict object, here and in the other two judges.
+
+**Where the misses are.** Each lesson's governed files are narrower than what the lesson claims:
+- **`doc-check-defaults`:** two breaks changed the defaults in `client.py` and `service.py`. The
+  lesson governs `core.py` and `cli/`.
+- **`docs-agent-neutral`:** three breaks were in docs the lesson does not govern (`COMMANDS.md`,
+  `COSTS-AND-KNOBS.md`, `RETRIEVAL.md`). It governs two files, while its claim covers every doc.
+- **`n_d45d7bf64896`** (no superiority claims): two breaks were in an essay and `RELATED-WORK.md`.
+- **`n_e635fd921086`** (the package name): two breaks were outside its files, one in the second
+  `pyproject.toml` under `packaging/` and one in the shipped prompt hook,
+  `src/okl/scaffold/hooks/userpromptsubmit-okl-check.sh` (review on #312).
+- **Elsewhere:** the rest changed tests, configuration, or a module beside the
+  governed ones.
+
+Where drift was red and the check passed, the check reads less than the lesson says:
+- **`n_07faa4565128`, all four breaks:** its check reads one record in one seed file, and the
+  breaks were in other records of the same kind.
+- **`n_d45d7bf64896`:** its grep looks for a fixed list of phrases, and a reworded claim passed it.
+
+**Re-judged, apart from the result.** Receipt `drift-mutate-20261031-1522-rejudge.json`, from
+32ce990, $0.23. The four new verdicts were all broken, which makes 40 breaks:
+- **Catch rate:** 17 of 40 (42.5%), Wilson 28.5–57.8%, lesson bootstrap 23.9–64.3%.
+- **Misses:** 15 changed a file the lesson does not govern, and 8 passed a check too narrow.
+- **The other ten lessons:** drift only 5, both 7, CI only 6, neither 10, of 28.
+
+Predictions 1, 2, 3 and 5 read the same. Prediction 4 turns: CI failed on 7 of the 12 breaks
+drift caught in the other ten lessons, more than half. Whether drift mostly catches what CI
+misses rests on four judgments, so the registered result stands, and neither claim is made.
+
+**What follows, as registered.**
+- **Prediction 3 held,** so the three lessons whose check CI runs (`n_71c09abf3f37`,
+  `n_b74bad29fd87`, `n_be9f13d587b1`) are to lose their governed files, by the repo's own rule
+  (#39). That is filed as #318. At this commit they still govern files, and drift still watches
+  them.
+- **The catch rate is below 0.5,** so each miss goes to its cause:
+  - sensitivity misses to the lessons' checks (#189);
+  - coverage misses to their governed files.
+
+  The store's `watch-what-the-rule-depends-on` lesson already names the second. Until a re-run
+  after those fixes reaches 0.5, the docs describe drift as bookkeeping, not detection.
+- **Drift-only is 5 of 25,** at least a tenth, so the gate stays. It is under a quarter, so the
+  alarm change does not fire from this result.
+
+**What it shows, and what it does not.**
+- **Shown:**
+  - When a watched lesson is broken on purpose, drift says so about two times in five.
+  - What it misses is mostly a break one file away from what the lesson watches.
+  - For the three lessons CI already runs, drift added nothing.
+  - For the other ten, it caught breaks CI passed: 5 of 25.
+- **Not shown:**
+  - How often lessons break by accident.
+  - Any lesson outside the 13.
+  - Whether wider file lists would cost more re-checks than they catch. §4ae's replay can count
+    that on the history without new checks.
+
+## 4ag. PRE-REGISTERED: the lessons nothing re-checks. How many have gone stale? (2026-10-31)
+
+Written before any lesson is judged. §4ae and §4af measure drift inside its scope; this measures
+what lies outside it.
+
+**Why.** Drift re-runs a lesson's check only when the lesson has governed files and a check. A
+census of the store (`lesson-census-20261031-1409.json`, `evals/lesson_census.py` at b44bd81,
+checks run at f645d81) classes the 155 lessons recorded in this repository:
+
+| class | lessons | what re-checks them |
+|---|---|---|
+| watched: governed files and a check | 16 | drift; all pass its gate at f645d81 |
+| checked: a check, no governed files | 55 | CI, by the repo's rule (#39); all 55 checks pass at f645d81 |
+| unchecked: neither | 84 | nothing |
+
+The 182 seed lessons are about other projects and are left out. So every lesson with a check
+holds, and for 84 lessons nothing in okl can say whether they still do: 39 defects, 34 rules, 8
+decisions and 3 claims, 69 of them org-scoped. A stale lesson in a briefing tells an agent
+something false, the harm #189 names. This run measures how often that has happened.
+
+**Population.** The 84 unchecked lessons in the census receipt, by id.
+
+**Controls,** mixed in blind. Both are drawn by seeded hash (seed 189) from the 55 checked
+lessons, whose checks appear nowhere in the repository the judge reads:
+- **Negative, 10:** checked lessons as they are, their checks re-run at the run's commit. One
+  that fails there is replaced by the next in the draw. A judge that calls these stale
+  over-calls staleness.
+- **Positive, 10:** ten more, from those whose text names a concrete fact of this repository.
+  Each has one such fact changed to a false one: a path, a command, a flag, a default or a
+  function that does not exist at the run's commit. A judge that calls these current misses
+  staleness. The changes are written before any judgment and committed with the instrument.
+
+**The judge.** `claude -p --model opus --restricted --tools Read,Grep,Glob` runs in a scratch
+worktree at the main commit the run starts from, which the receipt names. That worktree holds no
+`okl-drift.json` and no store, and `--restricted` ignores settings files, so no okl hook briefs
+the judge. It sees one lesson's title, symptom, fix and body, never its class, check, age or
+control status, and answers in JSON:
+- **verdict,** one of four:
+  - *current:* what the lesson says about this repository still holds;
+  - *stale:* something it says about this repository no longer holds, because a file, command,
+    behaviour or decision has changed, so following it would mislead;
+  - *no claim:* it says nothing this repository can confirm or contradict, such as advice in
+    general or a fact about another project;
+  - *unsure.*
+- **evidence:** the paths and lines it read.
+- **checkable:** whether a command could check the lesson, yes or no.
+
+There is one judgment per lesson, 104 in all, in a seeded order.
+
+**Measures.**
+1. **Stale rate:** stale / (current + stale) among the 84, with a Wilson 95% interval.
+2. **Claim share:** how many of the 84 say anything about this repository (current, stale or
+   unsure).
+3. **Controls:** negatives called stale, and positives called stale.
+4. **Checkable:** of the stale lessons, how many the judge says a command could check.
+5. **By type and scope,** counts only.
+
+**Predictions.**
+1. At least 1 in 10 of the 84 that make a claim is stale.
+2. At least a third of the 84 make no claim about this repository.
+3. At most 1 of the 10 negative controls is called stale.
+4. At least 8 of the 10 positive controls are called stale.
+5. At least half of the stale lessons could carry a check.
+
+**What the run can settle, and what it cannot.**
+- **Disagreement, not harm.** A judge reading the code can say a lesson disagrees with the
+  repository, not that following it would have caused harm.
+- **No-claim lessons are untested.** They cannot go stale against this repository, yet they can
+  still be wrong; this run says nothing about them.
+- **The positive controls are easy.** Each is one planted fact, while real staleness can be
+  subtler. Their catch rate is a ceiling on the judge's sensitivity, not a measure of it.
+- **One store, one repository, one judge model.** The seed lessons are left out.
+
+**Falsifiers and what follows.**
+- **If a control fails** (more than 1 negative called stale, or fewer than 8 positives), the
+  judge is not trusted for a rate. The run reports counts only, and each stale verdict goes to
+  the person to confirm before it counts.
+- **If the stale rate is at least 10%,** unchecked lessons go stale often enough to mislead a
+  briefing. The follow-ups are filed with this receipt:
+  - each stale lesson is updated or retired, by the person's decision;
+  - each checkable one gets a check;
+  - a periodic staleness review of unchecked lessons is proposed under #189.
+- **If it is under 5%,** unchecked lessons hold, and drift's narrow scope costs little here. The
+  few stale lessons are fixed, and nothing else follows.
+- **Otherwise,** the stale lessons are fixed, and the rate is reported as it stands.
+- **Counts only, no rate:** if more than a fifth of the 84 time out or return no valid answer.
+
+**Budget and stop.**
+- **Runs:** 104 judge sessions of at most 300 seconds each, read-only.
+- **The instrument** is `evals/lesson_census.py --judge`, with the positive controls' changes. It
+  is committed before any judgment. The receipt names its commit, and any difference from this
+  section is reported as a deviation.
+- **Fixed once a verdict is read:** everything above.
+- **Deadline:** 2026-11-14, with §4af. If the run cannot happen by then, this section says why,
+  and nothing is concluded.
+
+### Result (2026-10-31)
+
+**The run.** Receipt `stale-lessons-20261031-1527.json`: the repository at f645d81, 104
+judgments, none invalid, $7.81.
+- **Started from f502559.** The receipt names 07cd1c4, the branch head when the run ended,
+  because §4af's instrument was committed while it ran. `evals/lesson_census.py` and its planted
+  file are identical at the two commits.
+- **One planted name replaced before any judgment.** The instrument's own guard refused
+  `--name`, which occurs inside `--name-only`, and it became `--slug` (f502559).
+
+| | count |
+|---|---|
+| the 84: current | 63 |
+| the 84: stale | 2 |
+| the 84: no claim | 17 |
+| the 84: unsure | 2 |
+| negative controls called stale | 0 of 10 |
+| positive controls called stale | 5 of 10 |
+
+**Predictions.**
+1. **Not read.** A control failed (below), so the run reports no rate. The count is 2 stale of
+   the 65 lessons that made a claim it could decide.
+2. **Failed.** 17 of the 84 make no claim about this repository: one in five, not one in three.
+3. **Held.** The judge called no negative control stale.
+4. **Failed.** The judge called 5 of the 10 planted facts stale, against the 8 registered.
+5. **Held, on two lessons.** The judge says both stale lessons could carry a check.
+
+**Why the positive control failed.** In four of its five misses, the judge named the planted
+fact in its reason and still answered current. Two examples: "the lesson's 'storage.py' is
+actually named store.py", and "the only mismatch is that the flag is now `--by`, not the `--via`".
+- **It read stale as "the lesson's point no longer holds",** not as "a detail in it is false".
+  The registered wording, "something it says … no longer holds, so following it would mislead",
+  left that open.
+- **So it sees wrong details, and its verdict does not count them.**
+- **One of its five catches may have another cause.** For `n_f215b68b925c`, its reason cites the
+  fix that has since landed in `okl init`. That fix makes the lesson's interim advice out of date,
+  planted flag or not.
+
+**What follows, as registered.** The judge is not trusted for a rate, so the run reports counts,
+and the two stale verdicts went to the person, who confirmed both on 2026-10-31. Both lessons
+were updated in the store:
+- **`n_9a8b5215da32`,** an article review recorded as a Claim. It said src held one broad
+  exception handler. src holds five, each with its reason. Its "no NumPy" point now has to name
+  the optional extras that import NumPy.
+- **`snapshot-from-worktree-drops-repo-rules`.** Its symptom, a snapshot that silently drops the
+  repo's rules, cannot happen since #213, which refuses a snapshot that would shrink. Its fix,
+  copying the config into a worktree, is still the working practice.
+
+The two unsure verdicts go nowhere. One lesson is about a GitHub setting no file records. The
+other was recorded today about a branch that main does not yet hold.
+
+**Exploratory, not registered.** In 14 of the 63 current verdicts, the judge's reason qualifies
+the verdict:
+- **Most** say that a fix has since landed, or that a detail has grown.
+- **Two** say that part of the lesson's advice predates its fix:
+  - `harness-reads-a-moving-working-tree`: "only the 'until that lands' interim advice is out of
+    date";
+  - `fastembed-cache-in-tmpdir`: one line "describes the state before the fix".
+
+With `n_f215b68b925c` above, that is a kind of staleness the registered scale has no word for: a
+lesson whose fix has landed still advises the workaround.
+
+**What it shows, and what it does not.**
+- **Shown:** among the lessons nothing re-checks, the point a lesson makes almost always still
+  holds of this repository. The judge never called a known-current lesson stale. Two of 65 did
+  not hold, and the person confirmed both.
+- **Not shown:**
+  - How many carry a wrong detail. The judge saw planted wrong details and let them pass, so this
+    run cannot count them. A scale that separates "the point holds, a detail is wrong" from
+    "current" would.
+  - How many lessons whose fix has landed still advise the workaround. Neither drift nor this
+    judge flags them.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

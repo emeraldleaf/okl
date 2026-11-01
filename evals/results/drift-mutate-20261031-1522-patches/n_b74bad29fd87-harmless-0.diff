@@ -1,0 +1,15 @@
+diff --git a/src/okl/store.py b/src/okl/store.py
+index 31b9aed..1f981b2 100644
+--- a/src/okl/store.py
++++ b/src/okl/store.py
+@@ -258,6 +258,10 @@ class Store:
+     """Facade over whichever backend the environment selects."""
+ 
+     def __init__(self, url: str | None = None) -> None:
++        """Open the store at `url`, else `OKL_DATABASE_URL`, else `sqlite:///okl.db`.
++
++        Raises ValueError for a scheme that is neither sqlite nor postgres.
++        """
+         url = url or os.environ.get("OKL_DATABASE_URL") or "sqlite:///okl.db"
+         self.url = url
+         if url.startswith("postgres"):

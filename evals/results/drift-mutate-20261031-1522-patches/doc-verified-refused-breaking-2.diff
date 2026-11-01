@@ -1,0 +1,13 @@
+diff --git a/src/okl/cli/__init__.py b/src/okl/cli/__init__.py
+index 3113a1d..087fbe0 100644
+--- a/src/okl/cli/__init__.py
++++ b/src/okl/cli/__init__.py
+@@ -37,6 +37,8 @@ def main(argv: list[str] | None = None) -> int:
+     rejected or unreachable store with a traceback and a zero exit.
+     """
+     args = build_parser().parse_args(argv)
++    if args.cmd == "record":
++        args.verified = False
+     try:
+         return args.func(args)
+     except (ValueError, OKLUnreachableError) as e:

@@ -1,0 +1,14 @@
+diff --git a/src/okl/store.py b/src/okl/store.py
+index 31b9aed..41da4dc 100644
+--- a/src/okl/store.py
++++ b/src/okl/store.py
+@@ -346,7 +346,8 @@ class Store:
+         return self._impl.edges(list(rels))
+ 
+     def all_nodes(self) -> list[Node]:
+-        """Return every node in the store, in no particular order."""
++        """Return every node in the store, in no particular order. Reads the whole table, so
++        prefer `search` or `neighbors` when you only need a few."""
+         return self._impl.all_nodes()
+ 
+     # -- the exposure log (#129) ---------------------------------------------

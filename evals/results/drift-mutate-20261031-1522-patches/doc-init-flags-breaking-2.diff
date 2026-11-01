@@ -1,0 +1,12 @@
+diff --git a/docs/COSTS-AND-KNOBS.md b/docs/COSTS-AND-KNOBS.md
+index 1162902..f863feb 100644
+--- a/docs/COSTS-AND-KNOBS.md
++++ b/docs/COSTS-AND-KNOBS.md
+@@ -29,6 +29,7 @@ okl check --task "..." --limit 3          # fewer records; the briefing says how
+ okl check --task "..." --decision calibrated  # only what is shown in full: no one-line list
+ okl check --task "..." --decision floor   # every match by the word floor, in full, up to --limit
+ okl init --interests "python,security"    # drop records tagged for stacks you do not use
++okl init --max-records 20                 # cap how many starter lessons init imports
+ ```
+ 
+ - **`--format actions`** is the single biggest saving and loses the least: you keep every

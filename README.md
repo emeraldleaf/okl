@@ -8,7 +8,9 @@
 
 # okl — Observed Knowledge Ledger
 
-**Verified memory for coding agents, and the loop that keeps it true.**<br>
+**Keeps your coding agent true to your rules, specs and docs. Keeps them true to the code. Keeps learning as you build.**<br>
+It guards against drift both ways: your agent drifting from your rules, and your rules, specs
+and docs drifting from the code.<br>
 Your rules, architecture decisions, past defects, documentation and diagrams: recorded once,
 briefed to your agent before every task (by a hook in Claude Code; any MCP agent can ask for
 the same briefing), each proven by a check you choose, flagged before you push (or in CI) when
@@ -17,7 +19,8 @@ enforces. Use it in one repo, or share one store across every repo your team run
 Under the hood: typed records, keyword search and one-step links. No embeddings by default,
 no model calls in the loop, no automatic capture; an optional local embedding arm exists,
 measured and off until you turn it on ([REPORT §4q](evals/REPORT.md)). A lesson is written
-on purpose and proven by a check.
+on purpose and proven by a check. The claim in full, how much of it holds today and how it
+has changed: [docs/THESIS.md](docs/THESIS.md).
 
 [![PyPI](https://img.shields.io/pypi/v/observed-knowledge-ledger?color=blue&label=PyPI)](https://pypi.org/project/observed-knowledge-ledger/)
 [![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
@@ -160,7 +163,12 @@ Setting up another agent: [Getting started](docs/GETTING-STARTED.md#using-anothe
   with `--files` is also red until its first `okl verify`). The briefing says so too:
   such a lesson is marked *STALE* (or *UNVERIFIED*, or *UNPROVEN*) with the file
   that changed, so the agent confirms it against the code instead of trusting it blindly.
-  `okl reverify` re-runs each drifted lesson's stored check after you confirm. With the
+  `okl reverify` re-runs each drifted lesson's stored check after you confirm. Drift notices
+  that what a lesson watches changed; it does not find every break. Of 52 patches written to
+  break the lessons it watched in this repo, a judge confirmed 36 as breaks, and drift caught 14
+  of those 36; most of the misses changed a file one step from the ones the lesson watches
+  (REPORT §4af). So list every file a lesson's claim
+  depends on, and read a green drift as "nothing it watches moved". With the
   GitHub workflow (`okl init --ci`), CI reads a committed snapshot, `okl-drift.json`, which
   `okl verify` creates the first time a lesson with `--files` is verified and keeps current
   after that: commit it after the code change it verifies. Until then CI warns "Drift not
@@ -351,7 +359,7 @@ throwaway repo.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/emeraldleaf/okl/main/docs/overview/okl-anatomy-dark.png">
-  <img src="https://raw.githubusercontent.com/emeraldleaf/okl/main/docs/overview/okl-anatomy-light.png" alt="Anatomy of okl, verified memory and the loop that keeps it true: load your rules, hold your agent to them, keep learning as you build. A ring around the store runs through six steps: lessons come in, up front from your rules, ADRs, standards and specs plus starter lessons for your stack, and as you build from new rules, mistakes, drift the gate finds, failing tests and reviews; each is written down as a lesson; okl proves it with a check you choose; it is briefed before each task (by a Claude Code hook; other MCP agents can call okl_check); when a file it covers changes, the pre-push hook holds the push until the check passes again or the code is back to what passed; then it is re-checked, fixed or retired. Below, real okl output follows the lesson 'order lookups are scoped to the signed-in customer' from okl record to a blocked push, where re-running its check caught a change that dropped the owner check. Then where a lesson lives (briefing only, watched for drift, build-breaking); what the briefing did (78 of 186 unbriefed attempts repeated a known defect against 13 of 188 briefed, over eight A/B runs on tasks built to invite one); and how it ranks, what it costs and where it breaks." width="100%">
+  <img src="https://raw.githubusercontent.com/emeraldleaf/okl/main/docs/overview/okl-anatomy-light.png" alt="Anatomy of okl. Keeps your coding agent true to your rules, specs and docs. Keeps them true to the code. Keeps learning as you build. load your rules, hold your agent to them, keep learning as you build. A ring around the store runs through six steps: lessons come in, up front from your rules, ADRs, standards and specs plus starter lessons for your stack, and as you build from new rules, mistakes, drift the gate finds, failing tests and reviews; each is written down as a lesson; okl proves it with a check you choose; it is briefed before each task (by a Claude Code hook; other MCP agents can call okl_check); when a file it covers changes, the pre-push hook holds the push until the check passes again or the code is back to what passed; then it is re-checked, fixed or retired. Below, real okl output follows the lesson 'order lookups are scoped to the signed-in customer' from okl record to a blocked push, where re-running its check caught a change that dropped the owner check. Then where a lesson lives (briefing only, watched for drift, build-breaking); what the briefing did (68 of 163 unbriefed attempts repeated a known defect against 11 of 164 briefed, over seven A/B runs on tasks built to invite one); and how it ranks, what it costs and where it breaks." width="100%">
 </picture>
 
 ### How a briefing is actually built
@@ -496,7 +504,7 @@ Why a step never grades itself, and the four rungs okl applies to its own stamps
 
 `--symptom`/`--fix` are what make `check` emit a leading **"Do this"** action list
 (*"FIX: … — when you see: …"*) instead of a wall of prose. `--files` tells `okl` which
-source files a lesson governs, which powers drift detection (below).
+source files a lesson governs, which is what drift watches (below).
 
 ## What it costs
 
@@ -639,7 +647,7 @@ src/okl/
   core.py         # check / record / search / link — the logic, independent of transport
   client.py       # resolves local-file vs. shared-service; fails closed
   cli/            # the `okl` command, one module per command group (cli/__init__.py maps them)
-  drift.py        # source-vs-spec drift detection
+  drift.py        # drift: lessons whose governed files changed since their check
   ownership.py    # okl-fingerprint lines: which installed files are okl's, and untouched
   coexist.py      # `okl doctor`: detects other agent-memory plugins and double wiring
   bootstrap.py    # propose starter lessons from a repo's git history + docs

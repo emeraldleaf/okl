@@ -1,0 +1,18 @@
+diff --git a/src/okl/store.py b/src/okl/store.py
+index 31b9aed..a7a3e8e 100644
+--- a/src/okl/store.py
++++ b/src/okl/store.py
+@@ -368,8 +368,11 @@ class Store:
+     def log_retirement(self, node_id: str, kind: str, reason: str,
+                        by: str | None = None) -> None:
+         """Append why and how a lesson was retired. Append-only, like the exposure log."""
+-        self._impl.log_retirement(Retirement(at=_now_ms(), node_id=node_id, kind=kind,
+-                                             reason=reason, by=by))
++        from .drift import _utc_day
++        now = _now_ms()
++        self._impl.log_retirement(Retirement(at=now, node_id=node_id, kind=kind,
++                                             reason=reason or f"retired {_utc_day(now)}",
++                                             by=by))
+ 
+     def retirements(self, node_id: str) -> list[Retirement]:
+         """Every retirement logged for `node_id`, oldest first."""

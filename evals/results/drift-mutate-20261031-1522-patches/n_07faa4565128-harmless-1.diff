@@ -1,0 +1,13 @@
+diff --git a/seed/python-canon.json b/seed/python-canon.json
+index 1bf19a7..c04589c 100644
+--- a/seed/python-canon.json
++++ b/seed/python-canon.json
+@@ -19,7 +19,7 @@
+     },
+     {
+       "key": "py_docstrings",
+-      "aliases": ["missing docstring", "D100", "what does this function do", "pydocstyle", "document the public API"],
++      "aliases": ["missing docstring", "D100", "what does this function do", "pydocstyle", "document the public API", "missing return docs"],
+       "triggers": ["Writing a new public function in the library module that other code will call", "Reviewing a PR that adds exported helpers with no documentation at all", "Turning on docstring linting for a Python package that currently has none", "Documenting what a CLI command returns and what its exit codes mean", "I had to read the whole function body to figure out what None means for that argument", "Ruff reports missing docstring in public function across dozens of files after enabling the D rules", "Nobody knows what this exported helper raises or returns without stepping through it", "API docs, function doc comments, PEP 257 documentation for modules and classes", "Google-style vs NumPy-style docstrings: how much Args and Returns to write", "Self-documenting functions so callers don't need to read the implementation"],
+       "type": "Rule",
+       "scope": "org",

@@ -1,0 +1,11 @@
+diff --git a/README.md b/README.md
+index 41ac406..09037b9 100644
+--- a/README.md
++++ b/README.md
+@@ -671,5 +671,5 @@ MIT.
+ See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, the repo's own rules (mirror files,
+ drift, evidence-based verification), and where help is most useful.
+ [docs/DEVELOPING.md](docs/DEVELOPING.md) walks through how okl is developed end to end: the
+-everyday loop, CI, pull requests, releases, the evaluations and what you can observe.
++everyday loop, CI, pull requests, the evaluations and what you can observe.
+ Security policy and the deployment threat model: [SECURITY.md](SECURITY.md).

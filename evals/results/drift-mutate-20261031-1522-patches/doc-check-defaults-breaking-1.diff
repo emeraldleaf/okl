@@ -1,0 +1,13 @@
+diff --git a/src/okl/service.py b/src/okl/service.py
+index 0627094..91c2d41 100644
+--- a/src/okl/service.py
++++ b/src/okl/service.py
+@@ -37,7 +37,7 @@ class CheckReq(BaseModel):
+ 
+     repo: str
+     task: str
+-    limit: int = 12
++    limit: int = 8
+     interests: list[str] | None = None   # the calling repo's declared subject tags
+     hybrid: str | None = None            # None, "rrf" or "linear" (#258); the service's own vectors
+     index: bool = False                  # the index arm (REPORT §4r)

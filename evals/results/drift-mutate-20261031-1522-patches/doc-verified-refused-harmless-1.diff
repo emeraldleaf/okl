@@ -1,0 +1,13 @@
+diff --git a/README.md b/README.md
+index 41ac406..6d09499 100644
+--- a/README.md
++++ b/README.md
+@@ -482,7 +482,7 @@ okl record --type Defect --scope org --tags "security" \
+ # ...then prove it with a check, rather than asserting it
+ okl verify <id> --run "pytest -q tests/test_orders.py" --expect "passed"
+ 
+-# 3. SEARCH the stored lessons directly
++# 3. SEARCH the stored lessons directly (plain-text query, quoted)
+ okl search "price tampering"
+ 
+ # 4. LINK a check to the defect it catches (so a lookup pulls in both)

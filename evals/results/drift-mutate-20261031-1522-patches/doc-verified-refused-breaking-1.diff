@@ -1,0 +1,13 @@
+diff --git a/src/okl/cli/parser.py b/src/okl/cli/parser.py
+index 09d0bb3..fb86524 100644
+--- a/src/okl/cli/parser.py
++++ b/src/okl/cli/parser.py
+@@ -182,7 +182,7 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
+     pr.add_argument("--replace", action="store_true",
+                     help="overwrite the lesson with this --id entirely, proof included (it keeps "
+                          "only its first creation date); to refine one, use `okl update`")
+-    pr.add_argument("--verified", action="store_true",
++    pr.add_argument("--verified", action="store_const", const=False, default=False,
+                     help="refused: verify with `okl verify <id> --run ... --expect ...` instead")
+     pr.set_defaults(func=cmd_record)
+ 

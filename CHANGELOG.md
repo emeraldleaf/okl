@@ -114,6 +114,16 @@ benchmark built to decide (REPORT §4w; the design and its evidence:
   built with another tokenizer rebuilds it once when opened. A rebuild that fails, for instance
   kept waiting past the timeout by another writer, now fails the open and is retried by the
   next. Before, the store fell back to plain substring search, which cannot see tags.
+- **The README's headline is now the thesis,** and the thesis has its own page (#317). The new
+  headline reads "Keeps your coding agent true to your rules, specs and docs. Keeps them true to
+  the code. Keeps learning as you build." [docs/THESIS.md](docs/THESIS.md) says which parts of that claim hold today and
+  which are still direction, gives the measured baseline with each receipt, and records how the
+  claim has changed. A test fails when the README's headline and the page's claim stop matching.
+  The overview and anatomy sheets in `docs/overview/` carry the claim too, re-rendered.
+- **Drift is described as what it measured to be: a prompt to re-check.** In REPORT §4af it
+  caught 14 of the 36 breaks a judge confirmed among 52 patches written to break the lessons it
+  watched, and most of the misses changed a file one step from the ones the lesson watched. The README says so, and the docs no longer call
+  drift detection. #318 widens the lessons it missed.
 
 ## 0.9.0
 

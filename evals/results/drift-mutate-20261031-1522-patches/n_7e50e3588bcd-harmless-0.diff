@@ -1,0 +1,21 @@
+diff --git a/tests/test_aliases.py b/tests/test_aliases.py
+index f905e4f..c2fa3c3 100644
+--- a/tests/test_aliases.py
++++ b/tests/test_aliases.py
+@@ -60,6 +60,16 @@ def test_an_empty_alias_list_clears_on_update_and_a_list_records():
+         s.close()
+ 
+ 
++def test_a_single_alias_is_stored_without_a_separator(tmp_path):
++    """One `--alias` is stored as-is, with no stray `; ` joiner."""
++    r = _okl(tmp_path, "record", "--type", "Rule", "--title", "token storage", "--scope", "org",
++             "--symptom", "an access token written to web storage", "--fix", "keep it in memory",
++             "--alias", "session lost", "--id", "t1")
++    assert r.returncode == 0, r.stdout + r.stderr
++    shown = json.loads(_okl(tmp_path, "show", "t1", "--format", "json").stdout)
++    assert shown["aliases"] == "session lost"
++
++
+ def test_a_seed_pack_may_write_aliases_as_a_list(tmp_path):
+     """Packs write `aliases` as a JSON list; the loader joins it the way the CLI does."""
+     pack = tmp_path / "my-pack.json"

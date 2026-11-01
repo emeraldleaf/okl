@@ -1,0 +1,13 @@
+diff --git a/src/okl/store.py b/src/okl/store.py
+index 31b9aed..44c8119 100644
+--- a/src/okl/store.py
++++ b/src/okl/store.py
+@@ -845,7 +845,7 @@ def _pg_ts_query(q: str) -> str:
+     (websearch_to_tsquery ANDs terms by default, which would silently tighten recall vs
+     the SQLite backend)."""
+     terms = [t for t in "".join(ch if ch.isalnum() else " " for ch in q).split() if t]
+-    return " OR ".join(terms)
++    return " ".join(terms)
+ 
+ 
+ class _PostgresBackend(_Backend):

@@ -1,0 +1,92 @@
+diff --git a/tests/conftest.py b/tests/conftest.py
+index 75fcbbe..9539431 100644
+--- a/tests/conftest.py
++++ b/tests/conftest.py
+@@ -39,6 +39,87 @@ def _no_real_store(monkeypatch):
+     shutil.rmtree(warm_dir, ignore_errors=True)
+ 
+ 
++class MemoryBackend:
++    """A dict-backed backend, so tests that only need a store skip the SQLite file."""
++
++    def __init__(self):
++        self.nodes, self.edge_map = {}, {}
++        self.retired, self.runs, self.exposures = [], [], []
++        self.vectors = {}
++
++    def init_schema(self):
++        pass
++
++    def upsert_node(self, node):
++        self.nodes[node.id] = node
++
++    def upsert_edge(self, edge):
++        self.edge_map[(edge.src, edge.rel, edge.dst)] = edge
++
++    def get_node(self, node_id):
++        return self.nodes.get(node_id)
++
++    def search(self, q, scope, node_types, limit):
++        terms = q.lower().split()
++        hits = [n for n in self.nodes.values()
++                if (scope is None or n.scope == scope)
++                and (not node_types or n.type in node_types)
++                and any(t in f"{n.title} {n.body} {n.symptom} {n.fix}".lower() for t in terms)]
++        return hits[:limit]
++
++    def neighbors(self, node_id, rels):
++        return [(e, self.nodes[e.dst]) for e in self.edge_map.values()
++                if e.src == node_id and e.dst in self.nodes and (rels is None or e.rel in rels)]
++
++    def edges(self, rels):
++        return [e for e in self.edge_map.values() if e.rel in rels]
++
++    def all_nodes(self):
++        return list(self.nodes.values())
++
++    def log_briefing(self, briefing):
++        self.exposures.append(briefing)
++
++    def briefings(self, repo):
++        return [b for b in self.exposures if repo is None or b.repo == repo]
++
++    def log_retirement(self, retirement):
++        self.retired.append(retirement)
++
++    def retirements(self, node_id):
++        return [r for r in self.retired if r.node_id == node_id]
++
++    def log_check(self, run):
++        self.runs.append(run)
++
++    def checks(self, node_id):
++        return [r for r in self.runs if r.node_id == node_id]
++
++    def put_embedding(self, node_id, model, text_hash, vector):
++        self.vectors[(node_id, model)] = (text_hash, vector)
++
++    def embeddings(self, model):
++        return [(i, h, v) for (i, m), (h, v) in self.vectors.items() if m == model]
++
++    def has_embeddings(self, model):
++        return any(m == model for _, m in self.vectors)
++
++    def delete_embedding(self, node_id, model):
++        self.vectors.pop((node_id, model), None)
++
++    def close(self):
++        pass
++
++
++@pytest.fixture
++def memory_store():
++    from okl.store import Store
++
++    store = Store("sqlite:///:memory:")
++    store._impl = MemoryBackend()
++    return store
++
++
+ @pytest.fixture
+ def remote(tmp_path, monkeypatch):
+     """A repo connected to an okl service served in-process: the Client's real remote code

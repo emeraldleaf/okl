@@ -1,0 +1,1015 @@
+{
+ "what": "lesson census (REPORT \u00a74ag)",
+ "at": "2026-10-31T14:09Z",
+ "code": "b44bd81dc7d9",
+ "rev": "f645d81d6b30",
+ "store": {
+  "recorded": 155,
+  "seed": 182
+ },
+ "classes": {
+  "unchecked": 84,
+  "checked": 55,
+  "watched": 16
+ },
+ "unchecked_by_type": {
+  "Claim": 3,
+  "Defect": 39,
+  "Rule": 34,
+  "Decision": 8
+ },
+ "unchecked_by_scope": {
+  "org": 69,
+  "repo:okl": 15
+ },
+ "checks_at_rev": {
+  "pass": 55
+ },
+ "lessons": [
+  {
+   "id": "n_0aefd5072428",
+   "class": "unchecked",
+   "type": "Claim",
+   "scope": "org"
+  },
+  {
+   "id": "n_1f2e2c211974",
+   "class": "checked",
+   "type": "Claim",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_9a8b5215da32",
+   "class": "unchecked",
+   "type": "Claim",
+   "scope": "org"
+  },
+  {
+   "id": "n_0adfbf18d9f7",
+   "class": "unchecked",
+   "type": "Claim",
+   "scope": "org"
+  },
+  {
+   "id": "n_f17868ded85d",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "n_b1e148e008d8",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "n_310e54bb09d5",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "break-test-masked-by-integrity-check",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "ca-distrust-every-trust-store",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org"
+  },
+  {
+   "id": "comparison-table-one-sitting-generated",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org"
+  },
+  {
+   "id": "diagnostic-on-stage-window",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org"
+  },
+  {
+   "id": "doc-claim-governs-doc-and-code",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org"
+  },
+  {
+   "id": "drift-verdict-paths-agree",
+   "class": "checked",
+   "type": "Rule",
+   "scope": "repo:okl",
+   "verdict": "pass"
+  },
+  {
+   "id": "empty-drift-snapshot-fails-ci",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "repo:okl",
+   "verdict": "pass"
+  },
+  {
+   "id": "eval-scripts-no-exposure",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "repo:okl"
+  },
+  {
+   "id": "falsifier-relative-to-control",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org"
+  },
+  {
+   "id": "fastembed-cache-in-tmpdir",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org"
+  },
+  {
+   "id": "filter-after-fetch-widens-window",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "fused-window-readmits-weak-matches",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "generated-diagram-traced-old-path",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "guarantee-holds-on-every-write-path",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org"
+  },
+  {
+   "id": "harness-reads-a-moving-working-tree",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "repo:okl"
+  },
+  {
+   "id": "heredoc-ends-the-chain",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org"
+  },
+  {
+   "id": "hook-cli-version-skew",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org"
+  },
+  {
+   "id": "idea-to-issue-through-review",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org"
+  },
+  {
+   "id": "importer-keeps-local-decision",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "index-in-context-not-fetched",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "mcp-docker-localhost",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "mcp-registry-publish-limits",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org"
+  },
+  {
+   "id": "mcp-registry-pypi-command-name",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "merge-needs-resolved-threads",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "repo:okl"
+  },
+  {
+   "id": "n_00985805cdbb",
+   "class": "checked",
+   "type": "Rule",
+   "scope": "repo:okl",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_02aa43137a2e",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "n_02cc84da158d",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_041a066035b2",
+   "class": "checked",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_0637c92c032f",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org"
+  },
+  {
+   "id": "n_09ba6adf0fdc",
+   "class": "unchecked",
+   "type": "Decision",
+   "scope": "org"
+  },
+  {
+   "id": "n_0e6928348b1d",
+   "class": "checked",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_110bb4fb7112",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_119528a07fa5",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_132265e9a9b5",
+   "class": "unchecked",
+   "type": "Decision",
+   "scope": "repo:okl"
+  },
+  {
+   "id": "n_1b3190127af3",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "n_1eaf9a5f24e2",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "n_1fe5ef1aaca5",
+   "class": "checked",
+   "type": "Rule",
+   "scope": "repo:okl",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_221da2fec863",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "n_22ad98216e87",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_2c95128f307d",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org"
+  },
+  {
+   "id": "n_31bde92d9003",
+   "class": "checked",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_37ea04a8a0ac",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org"
+  },
+  {
+   "id": "n_3dac3a1d8fba",
+   "class": "checked",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_428707b5e596",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_473aec369b25",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_48fd7d3e6c65",
+   "class": "unchecked",
+   "type": "Decision",
+   "scope": "repo:okl"
+  },
+  {
+   "id": "n_4a398f2f8095",
+   "class": "checked",
+   "type": "Rule",
+   "scope": "repo:okl",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_50f0ddf7ea19",
+   "class": "unchecked",
+   "type": "Decision",
+   "scope": "repo:okl"
+  },
+  {
+   "id": "n_57cc4b427f05",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org"
+  },
+  {
+   "id": "n_58119d0a63d9",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org"
+  },
+  {
+   "id": "n_5a9589af345f",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_5db37b759b1e",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_5ddb0776a863",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_5f36600f6c51",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org"
+  },
+  {
+   "id": "n_69244bb71160",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_696a70084e1a",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_69f673496137",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org"
+  },
+  {
+   "id": "n_6b65aa35593c",
+   "class": "checked",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_710e8dc6b757",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "repo:okl"
+  },
+  {
+   "id": "n_713b8c104f12",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_7e292a18d45d",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org"
+  },
+  {
+   "id": "n_805cf67e5cc5",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_849a5b0425ef",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_8519bf0f71c6",
+   "class": "checked",
+   "type": "Gate",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_8a6e1abce5cc",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_8b3345b90621",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "n_90066f354f1e",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "n_916330f61994",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org"
+  },
+  {
+   "id": "n_92398fae87c0",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "n_93f96eae7359",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_9464023070dd",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "n_967ef9825472",
+   "class": "checked",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_991d07b0549e",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_a4b40c96ede4",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org"
+  },
+  {
+   "id": "n_a5520510b99c",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org"
+  },
+  {
+   "id": "n_a7634ef53a8f",
+   "class": "unchecked",
+   "type": "Decision",
+   "scope": "org"
+  },
+  {
+   "id": "n_adea7f2c7373",
+   "class": "checked",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_b0457b37c65a",
+   "class": "checked",
+   "type": "Decision",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_b4050b826687",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_b40a468119f6",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_b550ba9c5c8a",
+   "class": "checked",
+   "type": "Rule",
+   "scope": "repo:okl",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_b578addf6269",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "n_b6cc6890ba26",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_b83c550a0ca4",
+   "class": "unchecked",
+   "type": "Decision",
+   "scope": "repo:okl"
+  },
+  {
+   "id": "n_c95bdc056620",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_ce6a27cc432f",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_d8166465591e",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "n_d8e5ee92ad8f",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_dc7429065f5d",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "repo:okl",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_e49be14d6207",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "n_e7988ff536fb",
+   "class": "checked",
+   "type": "Rule",
+   "scope": "repo:okl",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_e8b039f47ee1",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "n_e99ea322dee5",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "n_ea7633cd748c",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "n_ec568941f68a",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_ed7e782d12fd",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_f215b68b925c",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "repo:okl",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_f6d01e368155",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_fe26d1897041",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "n_fe4ced54e60f",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "repo:okl"
+  },
+  {
+   "id": "novelty-claims-expire",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org"
+  },
+  {
+   "id": "one-verb-owns-a-transition",
+   "class": "checked",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "optional-feature-shipped-text",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "order-from-log-not-edges",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "piped-python-output-reorders",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "pipeline-hides-test-status",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "pooled-receipts-miss-report-corrections",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "pretooluse-additionalcontext",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org"
+  },
+  {
+   "id": "readonly-agents-side-effects",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "refusal-offers-no-destructive-shortcut",
+   "class": "checked",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "remote-path-test-through-client",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "remote-timeout-not-a-deadline",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "rerank-ships-off",
+   "class": "unchecked",
+   "type": "Decision",
+   "scope": "repo:okl"
+  },
+  {
+   "id": "research-cited-products-not-named",
+   "class": "unchecked",
+   "type": "Decision",
+   "scope": "repo:okl"
+  },
+  {
+   "id": "review-bot-watch-matches-wrong-comment",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "scope-literature-gap-claims",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org"
+  },
+  {
+   "id": "stacked-pr-retarget-runs-no-ci",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "synthesis-copies-original-proposals",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "tall-sheet-screenshot-tiles",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "typed-closed-request-models",
+   "class": "checked",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "pass"
+  },
+  {
+   "id": "unclosed-sqlite-in-test-pr154",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "repo:okl"
+  },
+  {
+   "id": "watch-what-the-rule-depends-on",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org"
+  },
+  {
+   "id": "worktree-no-store-reverify",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "repo:okl"
+  },
+  {
+   "id": "snapshot-from-worktree-drops-repo-rules",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "repo:okl"
+  },
+  {
+   "id": "onnx-memory-after-first-inference",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "model-server-warm-up-before-serving",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "review-budget-one-push-per-round",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org"
+  },
+  {
+   "id": "docs-agent-neutral",
+   "class": "watched",
+   "type": "Decision",
+   "scope": "repo:okl"
+  },
+  {
+   "id": "n_d45d7bf64896",
+   "class": "watched",
+   "type": "Decision",
+   "scope": "repo:okl"
+  },
+  {
+   "id": "dev-code-migrates-live-store",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "repo:okl"
+  },
+  {
+   "id": "commit-wip-in-tmp-worktrees",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org"
+  },
+  {
+   "id": "gh-pr-needs-repo-in-scripts",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "n_ead8e0a2b43d",
+   "class": "watched",
+   "type": "Rule",
+   "scope": "org"
+  },
+  {
+   "id": "doc-init-flags",
+   "class": "watched",
+   "type": "Rule",
+   "scope": "repo:okl"
+  },
+  {
+   "id": "doc-verified-refused",
+   "class": "watched",
+   "type": "Rule",
+   "scope": "repo:okl"
+  },
+  {
+   "id": "n_9ba48d85ed19",
+   "class": "watched",
+   "type": "Gate",
+   "scope": "org"
+  },
+  {
+   "id": "n_aa3e45a2ecd6",
+   "class": "watched",
+   "type": "Rule",
+   "scope": "org"
+  },
+  {
+   "id": "threshold-transfer-is-a-hypothesis",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org"
+  },
+  {
+   "id": "git-path-history-drops-merges",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "n_e635fd921086",
+   "class": "watched",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "n_bf6a2aee2f12",
+   "class": "watched",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "doc-install-name",
+   "class": "watched",
+   "type": "Rule",
+   "scope": "repo:okl"
+  },
+  {
+   "id": "n_07faa4565128",
+   "class": "watched",
+   "type": "Rule",
+   "scope": "org"
+  },
+  {
+   "id": "n_be9f13d587b1",
+   "class": "watched",
+   "type": "Defect",
+   "scope": "org"
+  },
+  {
+   "id": "n_71c09abf3f37",
+   "class": "watched",
+   "type": "Rule",
+   "scope": "repo:okl"
+  },
+  {
+   "id": "doc-check-defaults",
+   "class": "watched",
+   "type": "Rule",
+   "scope": "repo:okl"
+  },
+  {
+   "id": "n_b74bad29fd87",
+   "class": "watched",
+   "type": "Rule",
+   "scope": "org"
+  },
+  {
+   "id": "n_7e50e3588bcd",
+   "class": "watched",
+   "type": "Defect",
+   "scope": "org"
+  }
+ ]
+}

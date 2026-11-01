@@ -1,0 +1,14 @@
+diff --git a/seed/geospatial-defects.json b/seed/geospatial-defects.json
+index 8fafda4..8dc75f7 100644
+--- a/seed/geospatial-defects.json
++++ b/seed/geospatial-defects.json
+@@ -56,7 +56,8 @@
+       "title": "verify_materialized() — assert output artifacts exist, never trust exit 0",
+       "body": "Portable pattern: after any batch/pipeline step, assert the expected files are on disk with non-zero size. Exit code 0 with zero outputs is a common swallowed-exception failure.",
+       "tags": "method,data-quality",
+-      "repo": "geospatial-ml-pipeline"
++      "repo": "geospatial-ml-pipeline",
++      "applies_to": "geospatial"
+     },
+     {
+       "key": "d16",

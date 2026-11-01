@@ -50,7 +50,7 @@ h1 .hl { color: var(--accent); }
 h1::after { content: ''; position: absolute; left: 0; bottom: 0; width: 84px; height: 5px; border-radius: 3px;
   background: linear-gradient(90deg, var(--accent), var(--secondary)); }
 .sub { font-size: 25px; color: var(--text-secondary); margin: 16px 0 0; }
-.by { display: flex; align-items: center; gap: 14px; }
+.by { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
 .by img { width: 64px; height: auto; }
 .by .who { display: flex; flex-direction: column; gap: 2px; font-size: 16px; color: var(--text-secondary); text-align: right; }
 .by .who b { font-family: 'Space Grotesk', sans-serif; font-size: 23px; color: var(--text); font-weight: 600; letter-spacing: -0.01em; }
@@ -183,7 +183,7 @@ h1::after { content: ''; position: absolute; left: 0; bottom: 0; width: 84px; he
 <main class="sheet" id="sheet">
   <header>
     <div class="top">
-      <div class="eyebrow">Verified memory for coding agents</div>
+      <div class="eyebrow">Keeps your coding agent true to your rules, specs and docs. Keeps them true to the code. Keeps learning as you build.</div>
       <div class="by">
         <div class="who"><b>Joshua Dell</b><span>emeraldleaf.dev · open source, MIT</span></div>
         <img class="logo-light" src="../brand/okl-logo-light.png" alt="">

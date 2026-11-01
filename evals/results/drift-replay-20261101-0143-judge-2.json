@@ -1,0 +1,333 @@
+{
+ "receipt": "drift-replay-20261101-0143.json",
+ "code": "8c6ad3c024a0",
+ "judge": "claude -p --model sonnet --restricted",
+ "agree": 32,
+ "answered": 40,
+ "wilson95": [
+  0.6524,
+  0.895
+ ],
+ "judged": [
+  {
+   "lesson": "n_07faa4565128",
+   "p": "96f50e3e542e5ecbb950d8ee3bb573da73425210",
+   "v": "9802773c280c820c6bc9dd132c90ceed2d7d3414",
+   "check": "unneeded",
+   "judge": false,
+   "why": "The only record touched is r_dbcontext_direct, which gains aliases and keeps its existing tags of 'dotnet'; no applies_to gating was added or changed, so no record was marked stack-specific against its own body."
+  },
+  {
+   "lesson": "n_07faa4565128",
+   "p": "96f50e3e542e5ecbb950d8ee3bb573da73425210",
+   "v": "9802773c280c820c6bc9dd132c90ceed2d7d3414",
+   "check": "unneeded",
+   "judge": false,
+   "why": "The changes add an aliases field and index it, and add aliases to a dotnet-canon record that is already tagged 'dotnet'; none sets applies_to on a record whose body declares itself portable, so no gating contradicts a record's own text."
+  },
+  {
+   "lesson": "n_71c09abf3f37",
+   "p": "389f3cd8e4b300ccba3086fd07e915c9c09912aa",
+   "v": "74ddbc5c478979f87f83aae6f83896d2ed3fbedc",
+   "check": "unneeded",
+   "judge": false,
+   "why": "The diffs only touch client.py, adding error classes and a config check inside the adapter itself; no import was added to store.py from another okl module, and core did not import client/cli/service."
+  },
+  {
+   "lesson": "doc-install-name",
+   "p": "e7f994e953a836522ad9666fcc56affbb61ec5fb",
+   "v": "c0280ad3804ff2bb452c0f8d87d3aafe7468c56f",
+   "check": "unneeded",
+   "judge": false,
+   "why": "The commit only edits prose about `okl update`/`reverify` behavior and does not rename the package or change any install line, so the docs still name the published distribution."
+  },
+  {
+   "lesson": "doc-check-defaults",
+   "p": "f7beee380160ddf480add2786b0f84ca4855f24f",
+   "v": "282165982337dd56c1be8e448e9dc4263a4c8727",
+   "check": "unneeded",
+   "judge": false,
+   "why": "The check default limit stays 12 (`limit: int = 12` in core.check is unchanged) and no output format was added or removed (the new `retire` command has no format option, and `show` keeps text/json), so the README's stated defaults still match the code."
+  },
+  {
+   "lesson": "doc-verified-refused",
+   "p": "14517fdc1a5ab1b0fffbf8cb8d2780d998101925",
+   "v": "84610195d4452742ad75c77797dca7112df24af3",
+   "check": "unneeded",
+   "judge": false,
+   "why": "None of the changes touch cmd_record, the --verified refusal, or any docs wording about self-stamping; they only add briefing-log/exposure reporting to okl metric and a design-principle note about records vs. an ontology store."
+  },
+  {
+   "lesson": "n_7e50e3588bcd",
+   "p": "6cb6348258e374ec004ceeb553c4c1fad0e04eb2",
+   "v": "9062f1a348e3832018a3af18f4d23733b9637d55",
+   "check": "unneeded",
+   "judge": false,
+   "why": "The new imports (`tomllib`, `datetime.UTC`) are standard library on Python 3.11, which the commit makes the minimum supported version, so no undeclared third-party package was added and the rule's advice still holds."
+  },
+  {
+   "lesson": "n_7e50e3588bcd",
+   "p": "6cb6348258e374ec004ceeb553c4c1fad0e04eb2",
+   "v": "9062f1a348e3832018a3af18f4d23733b9637d55",
+   "check": "unneeded",
+   "judge": false,
+   "why": "The only new imports are stdlib `tomllib` and `datetime.UTC`, both available on the new Python 3.11 minimum, so no undeclared third-party package was introduced and the rule's advice still holds."
+  },
+  {
+   "lesson": "n_d45d7bf64896",
+   "p": "39a8c3ba65b5b021751de04b06261285d233140d",
+   "v": "80667f2d0f2a48d8da9dd403a2e23ad81e211b77",
+   "check": "unneeded",
+   "judge": true,
+   "why": "The README change reports that the retrieval pipeline's recall on real prompts dropped sharply (90 to 31 applying lessons surfaced of 101) and concedes it 'trades recall for precision,' which means the project is now competing on recall (and losing) rather than differentiating on verification-of-memory."
+  },
+  {
+   "lesson": "n_d45d7bf64896",
+   "p": "39a8c3ba65b5b021751de04b06261285d233140d",
+   "v": "80667f2d0f2a48d8da9dd403a2e23ad81e211b77",
+   "check": "unneeded",
+   "judge": true,
+   "why": "The README change shows the project competing on recall (tuning retrieval and reporting recall figures, e.g. 'surfaces a quarter to a third of what the earlier rule did' and 'trades recall for precision'), rather than differentiating on verification-of-memory and composing with memory infra, so the rule's advice about never competing on recall no longer holds for this retrieval-focused work."
+  },
+  {
+   "lesson": "doc-verified-refused",
+   "p": "15c24eef4be5b527fbd8ba897ae1bbf2d78ec6e1",
+   "v": "27dcb385d88e5ef04c52de07079a51ed1830fb2e",
+   "check": "unneeded",
+   "judge": false,
+   "why": "The changes add an `okl recap --report` option and its docs without touching cmd_record, its refusal of `--verified` self-stamping, or any doc wording about that refusal."
+  },
+  {
+   "lesson": "doc-init-flags",
+   "p": "a55ccb4552b6062c0412e960eb4be8959a29db43",
+   "v": "b8091fcca6bd3c738a690b888a11ffcda3900a45",
+   "check": "unneeded",
+   "judge": false,
+   "why": "The changes only touch docs about OKL_OFFLINE and hook behavior; none add or document an `okl init` flag, so no documented init flag was left missing from the CLI."
+  },
+  {
+   "lesson": "doc-verified-refused",
+   "p": "3b52d66cd97993c55e6cbf6594d090cde6c380d0",
+   "v": "fac67dd9b41360d200f11df9eb529ed6e3bd1e28",
+   "check": "unneeded",
+   "judge": false,
+   "why": "The changes only touch README prose about eval-task lessons and the seed hygiene counting in cmd_seed; neither affects cmd_record's refusal of --verified or the docs' wording about self-stamping being refused."
+  },
+  {
+   "lesson": "n_71c09abf3f37",
+   "p": "fd96585e41bbc7b9d904961eb9ad38648aec7445",
+   "v": "529e5c92c519727477bedae8070c3a460868c519",
+   "check": "unneeded",
+   "judge": false,
+   "why": "The diff only changes how a note is built and passed to Candidates inside core.py's _live_hits, adding no imports, so core still doesn't import client/cli/service and store gains no okl imports."
+  },
+  {
+   "lesson": "n_71c09abf3f37",
+   "p": "cfa070fa7f5acf1fe078061cb1a5df404daf3a94",
+   "v": "7beb467d43322dabe831e114e849f5be847b1172",
+   "check": "unneeded",
+   "judge": false,
+   "why": "The commit only adds a stdlib `tempfile` import to client.py and changes how save_config writes the file, introducing no okl-module imports and no change in dependency direction between store, core, and client/cli/service."
+  },
+  {
+   "lesson": "doc-verified-refused",
+   "p": "01da8d1fc70fca1bef4a489e74687b4fc52d524c",
+   "v": "a383d6d63535451ffa7a512cd246eb4d1387203d",
+   "check": "unneeded",
+   "judge": false,
+   "why": "The change only rewords a competitor-comparison table row about Utopia's conflict handling and says nothing about `okl record --verified` or self-stamping, so the docs' refusal claim and cmd_record are unaffected."
+  },
+  {
+   "lesson": "doc-check-defaults",
+   "p": "d32fb07c1b449ee6a98de74e6764aed8d4d43ecf",
+   "v": "ebd6855dbffd95dac62170a75479ec984fa61a93",
+   "check": "unneeded",
+   "judge": true,
+   "why": "The commit adds a new default decision mode ('tiered') and a new `also_matched` output tier to the check, but the diff shows no README update, so any README description of the check's defaults (limit 12, formats, decision behaviour) is not changed alongside the code, and the diff is also truncated before showing any format changes, so it cannot be re-verified."
+  },
+  {
+   "lesson": "n_7e50e3588bcd",
+   "p": "75409bfd700082ed2f19b586642417e1bb87696c",
+   "v": "7f4cb3a68c33e27ab6a01898ac8837067fc21443",
+   "check": "unneeded",
+   "judge": false,
+   "why": "The new tests use only the standard library plus pytest, json, importlib, tempfile and Path, and the harness module under test is loaded from the repo, so no undeclared third-party package was imported."
+  },
+  {
+   "lesson": "doc-verified-refused",
+   "p": "6f6de231d866e019a157f9b5ab48e2d9e0bf4fa9",
+   "v": "df31a8f1822db1d5f0c193bdbb02a647ddddffed",
+   "check": "unneeded",
+   "judge": false,
+   "why": "The diffs only add check-logging and display of pass/fail counts; they never touch cmd_record's refusal of --verified or any doc wording about self-stamping being refused, so the claim stays true."
+  },
+  {
+   "lesson": "doc-verified-refused",
+   "p": "cf65ea9cdd1294eb4df9d94189d589da8dee485c",
+   "v": "2f51b62af522dcb8c15a9090b56edad93bf765f6",
+   "check": "unneeded",
+   "judge": false,
+   "why": "The diffs touch cmd_verify, README module comments, and the getting-started table, but none alter cmd_record's refusal of --verified or any doc wording about self-stamping being refused, so the claim remains true."
+  },
+  {
+   "lesson": "doc-check-defaults",
+   "p": "9e397731bef4fbffdb1fb04f42344bf634a78480",
+   "v": "733d815f4e2ece030bd3e1344a78324da3e4a21b",
+   "check": "unneeded",
+   "judge": false,
+   "why": "The changes only update record counts and receipt links in the README; the default limit (12) and the output formats (agent, actions, json, hook) are not altered in the README or described as changed in the code."
+  },
+  {
+   "lesson": "n_d45d7bf64896",
+   "p": "587e744aefdd119e130572ed6b9e98457e3a60ec",
+   "v": "939b0e04f53111bd5e53808bd268a14f852f90bf",
+   "check": "unneeded",
+   "judge": false,
+   "why": "The change only updates a latency figure in the README from 109 ms to 114 ms for a retrieval-side warm embedding feature, which neither competes on memory recall nor changes the project's verification-of-memory positioning."
+  },
+  {
+   "lesson": "doc-verified-refused",
+   "p": "fd96585e41bbc7b9d904961eb9ad38648aec7445",
+   "v": "529e5c92c519727477bedae8070c3a460868c519",
+   "check": "unneeded",
+   "judge": false,
+   "why": "The diff only changes cmd_embed's handling of embedding and reranker stages and does not touch cmd_record's --verified refusal or any docs about self-stamping."
+  },
+  {
+   "lesson": "n_d45d7bf64896",
+   "p": "00a86b59f7ce50841ba67c7c428cc5261dec3e31",
+   "v": "ea0e1f22918e859aa1ce408a06c72f85e86abaf3",
+   "check": "unneeded",
+   "judge": false,
+   "why": "The change only updates the alt text's tagline to 'verified memory and the loop that keeps it true', which reinforces the verification-of-memory differentiation and does not introduce any competition on recall."
+  },
+  {
+   "lesson": "n_71c09abf3f37",
+   "p": "b0c201d073adc5368f939192d82b0f718635d8db",
+   "v": "661e63cec68f8a98f33d04a47d3b35967303f01a",
+   "check": "unneeded",
+   "judge": true,
+   "why": "core.py now imports `warm` (`from . import decide, semantic, warm`), and the rule's own comment says core imports store only, with adapters (client/cli/service) above it; if warm.py is a client-side process manager (start/installed, a local server), core depends on it, which inverts the direction the rule sets \u2014 the rule's advice (pass what's needed as an argument) would have fit, e.g. client passing in the cosines."
+  },
+  {
+   "lesson": "n_b74bad29fd87",
+   "p": "9e397731bef4fbffdb1fb04f42344bf634a78480",
+   "v": "5257a52c42e4ad346fdcc23732295e93bde177a6",
+   "check": "unneeded",
+   "judge": false,
+   "why": "The commit extended the existing _Backend Protocol with a behavioural docstring for log_briefing/briefings and added the new assertions to the shared _backend_conformance function that both the SQLite and Postgres adapters run, which is exactly what the rule prescribes."
+  },
+  {
+   "lesson": "n_7e50e3588bcd",
+   "p": "d28256a7ef80288b5791ff55bad0b34b172571e5",
+   "v": "ca254c356d7107310bc1a215d09dc1d2c8c8474d",
+   "check": "unneeded",
+   "judge": false,
+   "why": "The new tests use only the standard library (subprocess, json, pathlib) plus pytest, which is already used by the existing tests in this file, and introduce no new third-party imports."
+  },
+  {
+   "lesson": "n_7e50e3588bcd",
+   "p": "d28256a7ef80288b5791ff55bad0b34b172571e5",
+   "v": "ca254c356d7107310bc1a215d09dc1d2c8c8474d",
+   "check": "unneeded",
+   "judge": false,
+   "why": "The new tests use only the standard library (subprocess, json, pathlib) and pytest, which the file already used, and add no imports from undeclared packages."
+  },
+  {
+   "lesson": "n_e635fd921086",
+   "p": "56435de5d449dfb9a82309fa8e833f5657566826",
+   "v": "1a17dea977b285b54f72136f0ffe93c55514efc0",
+   "check": "unneeded",
+   "judge": false,
+   "why": "The changes only bump the Python version floor, add a dev dependency, and adjust lint settings; the [project] name and console_scripts entry point are untouched, so the rule's advice about twine upload --verbose and renaming only the project name remains valid."
+  },
+  {
+   "lesson": "doc-install-name",
+   "p": "ec32dc2bce43fb5215e0ed0f3026a135b89b5777",
+   "v": "1b5478405988e64234115b1453f6fdf9f51634da",
+   "check": "unneeded",
+   "judge": false,
+   "why": "The package name in pyproject.toml remained \"observed-knowledge-ledger\" and the install lines in GETTING-STARTED.md still use that name, only bumping the version pin to match 0.8.8, so no doc names an unpublished package."
+  },
+  {
+   "lesson": "doc-install-name",
+   "p": "ec32dc2bce43fb5215e0ed0f3026a135b89b5777",
+   "v": "1b5478405988e64234115b1453f6fdf9f51634da",
+   "check": "unneeded",
+   "judge": false,
+   "why": "The distribution name stayed `observed-knowledge-ledger` in pyproject.toml and the install lines in GETTING-STARTED.md still use that name; only the version number was bumped, so no doc names an unpublished package."
+  },
+  {
+   "lesson": "docs-agent-neutral",
+   "p": "198fc8100c110eb4311abe72fcf076312d756a59",
+   "v": "e669b45bc9ba9523a57f7fc902c76c034eeac0a1",
+   "check": "unneeded",
+   "judge": false,
+   "why": "The added sentences describe okl commands neutrally, and the one Claude Code mention ('what the Claude Code hook prints' for `--format hook`) is explicitly labelled as Claude Code-specific, so agent-neutrality is preserved."
+  },
+  {
+   "lesson": "doc-verified-refused",
+   "p": "5dc33a350cf5327ab327e65047a9e1b39018e3e8",
+   "v": "da7b1be26d5f36db8ddc6767e81c0bf2a50d8ce9",
+   "check": "unneeded",
+   "judge": false,
+   "why": "The commit only changes cmd_serve and cmd_mcp in servers.py to exit 2 on missing extras; it does not touch cmd_record, its --verified refusal, or any docs wording about self-stamping."
+  },
+  {
+   "lesson": "n_71c09abf3f37",
+   "p": "8a1a547447fc6db503380aafa27043cbfe5921a0",
+   "v": "5932ddfe3b967e6cdf12607ef1c43f611118e1f4",
+   "check": "unneeded",
+   "judge": false,
+   "why": "The commit only changes docstrings in client.py and store.py, adding no imports, so the dependency direction between store, core, client, cli and service is unchanged."
+  },
+  {
+   "lesson": "n_71c09abf3f37",
+   "p": "8a1a547447fc6db503380aafa27043cbfe5921a0",
+   "v": "5932ddfe3b967e6cdf12607ef1c43f611118e1f4",
+   "check": "unneeded",
+   "judge": false,
+   "why": "The changes only edit docstrings in client.py and store.py and add no imports, so the dependency direction between store, core, client, cli and service is unchanged."
+  },
+  {
+   "lesson": "n_71c09abf3f37",
+   "p": "8a1a547447fc6db503380aafa27043cbfe5921a0",
+   "v": "5932ddfe3b967e6cdf12607ef1c43f611118e1f4",
+   "check": "unneeded",
+   "judge": false,
+   "why": "The commit only changes docstrings in client.py and store.py, adding no imports, so the dependency direction between store, core, client, cli and service is unchanged."
+  },
+  {
+   "lesson": "doc-verified-refused",
+   "p": "4cbf5bf3aa77401c58611091414d2234f5e208e6",
+   "v": "420e580e921c1b3706e81a62ce77c78918ba86e5",
+   "check": "needed",
+   "judge": false,
+   "why": "The README diff never states or changes any claim about `okl record --verified` being refused (it only shows plain `okl record` and a separate `okl verify` step), and it doesn't touch cmd_record, so the docs' wording and the CLI's refusal are not put out of sync."
+  },
+  {
+   "lesson": "doc-check-defaults",
+   "p": "4cbf5bf3aa77401c58611091414d2234f5e208e6",
+   "v": "420e580e921c1b3706e81a62ce77c78918ba86e5",
+   "check": "needed",
+   "judge": false,
+   "why": "The diff only restructures the README and shows no mention of the check default limit (12) or the output formats (agent, actions, json, hook) being changed, added, or contradicted, and no code changes are shown."
+  },
+  {
+   "lesson": "doc-check-defaults",
+   "p": "4cbf5bf3aa77401c58611091414d2234f5e208e6",
+   "v": "e669b45bc9ba9523a57f7fc902c76c034eeac0a1",
+   "check": "needed",
+   "judge": false,
+   "why": "The diff only restructures the README and never adds, removes, or changes a quoted check default (limit 12) or output format (agent, actions, json, hook), and the visible hunks don't show any mismatch with the code."
+  },
+  {
+   "lesson": "doc-verified-refused",
+   "p": "4cbf5bf3aa77401c58611091414d2234f5e208e6",
+   "v": "e669b45bc9ba9523a57f7fc902c76c034eeac0a1",
+   "check": "needed",
+   "judge": false,
+   "why": "The README diff shown never mentions `--verified` or a claim that self-stamping is refused, and it doesn't touch cmd_record, so no doc claim about refusal was introduced or left contradicting the CLI."
+  }
+ ]
+}

@@ -1,0 +1,16 @@
+diff --git a/docs/GETTING-STARTED.md b/docs/GETTING-STARTED.md
+index 0089de2..21da325 100644
+--- a/docs/GETTING-STARTED.md
++++ b/docs/GETTING-STARTED.md
+@@ -91,8 +91,9 @@ okl doctor
+ You should see a briefing that leads with **FIX:** lines, your own rule among them. In
+ Claude Code you will also see one line per prompt, like *okl · briefed 9 lesson(s): Missing
+ ownership scope check…; …* — that is okl telling you what it put in front of the agent
+-(`OKL_QUIET=1` turns it off). If the store is empty or nothing matched, see the step above. `okl doctor` reports other agent-memory tools that would collide with okl's hooks, and
+-flags okl wired twice (plugin and project hooks).
++(`OKL_QUIET=1` turns it off). If the store is empty or nothing matched, see the step
++above. `okl doctor` reports other agent-memory tools that would collide with okl's hooks,
++and flags okl wired twice (plugin and project hooks).
+ 
+ ### Commit the wiring
+ 

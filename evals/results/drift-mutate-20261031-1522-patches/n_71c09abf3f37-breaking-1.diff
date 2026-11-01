@@ -1,0 +1,16 @@
+diff --git a/src/okl/core.py b/src/okl/core.py
+index a96f853..343246d 100644
+--- a/src/okl/core.py
++++ b/src/okl/core.py
+@@ -651,6 +651,11 @@ TRIGGER_TYPES = frozenset({"Rule", "Defect", "Gate", "Decision"})
+ def bundled_seed_dir() -> Path:
+     """Where the shipped seed packs live: the repo's seed/ in a checkout, or inside the
+     installed package. Checked in that order so a clone exercises its own files."""
++    from .client import _find_config
++
++    cfg = _find_config()
++    if cfg is not None and (cfg.parent / "seed").is_dir():
++        return cfg.parent / "seed"
+     repo_seed = Path(__file__).resolve().parent.parent.parent / "seed"
+     return repo_seed if repo_seed.exists() else Path(__file__).resolve().parent / "seed"
+ 

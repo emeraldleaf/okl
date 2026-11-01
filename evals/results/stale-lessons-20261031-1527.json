@@ -1,0 +1,2019 @@
+{
+ "what": "stale lessons (REPORT \u00a74ag)",
+ "at": "2026-10-31T15:27Z",
+ "code": "07cd1c4c14f5",
+ "rev": "f645d81d6b30",
+ "census": "lesson-census-20261031-1409.json",
+ "judge": "claude -p --model opus --restricted --strict-mcp-config --output-format json --tools Read,Grep,Glob --allowedTools Read Grep Glob",
+ "seed": 189,
+ "negatives": [
+  "n_1f2e2c211974",
+  "filter-after-fetch-widens-window",
+  "n_5db37b759b1e",
+  "n_696a70084e1a",
+  "n_967ef9825472",
+  "n_0e6928348b1d",
+  "mcp-registry-pypi-command-name",
+  "n_93f96eae7359",
+  "n_428707b5e596",
+  "remote-timeout-not-a-deadline"
+ ],
+ "planted": "lesson_census_planted.json",
+ "cost_usd": 7.81,
+ "summary": {
+  "population": 84,
+  "verdicts": {
+   "current": 63,
+   "no claim": 17,
+   "stale": 2,
+   "unsure": 2
+  },
+  "stale_rate": {
+   "stale": 2,
+   "decided": 65,
+   "rate": 0.0308,
+   "wilson95": [
+    0.0085,
+    0.1054
+   ]
+  },
+  "claim_share": {
+   "claims": 67,
+   "of": 84
+  },
+  "negatives_called_stale": 0,
+  "negatives": {
+   "current": 10
+  },
+  "positives_called_stale": 5,
+  "positives": {
+   "stale": 5,
+   "current": 5
+  },
+  "stale_checkable": 2,
+  "stale_by_type": {
+   "Claim": 1,
+   "Defect": 1
+  },
+  "stale_by_scope": {
+   "org": 1,
+   "repo:okl": 1
+  },
+  "invalid_share": 0.0
+ },
+ "items": [
+  {
+   "id": "n_916330f61994",
+   "role": "population",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "src/okl/client.py:69",
+    "src/okl/client.py:75",
+    "src/okl/client.py:77",
+    "tests/test_okl.py:314",
+    "tests/test_okl.py:331",
+    "src/okl/cli/install.py:508"
+   ],
+   "reason": "The incident the lesson describes is recorded in the code: save_config now writes a .okl/.gitignore containing '*' before it stores the bearer token, and test_saving_config_keeps_the_service_token_out_of_git enforces this, though it checks the ignore file rather than literally asking git what it would stage. The comment '.okl/ is gitignored' at install.py:508 is now backed by that code.",
+   "checkable": true,
+   "cost_usd": 0.062976,
+   "secs": 8.4
+  },
+  {
+   "id": "n_2c95128f307d",
+   "role": "population",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "no claim",
+   "evidence": [
+    "docs/overview/ATTRIBUTION.md:22",
+    "src/okl/scaffold/claude/skills/RECOMMENDED-COMPANIONS.md:10"
+   ],
+   "reason": "The lesson is general advice about vendoring and attribution and names no file, directory or command in this repository; the repository does follow it (an ATTRIBUTION.md for the vendored fonts and icons, and a note choosing to reference skills rather than vendor them), but nothing here could prove the advice right or wrong.",
+   "checkable": false,
+   "cost_usd": 0.0589113,
+   "secs": 9.1
+  },
+  {
+   "id": "n_8519bf0f71c6",
+   "role": "positive",
+   "planted": {
+    "id": "n_8519bf0f71c6",
+    "field": "fix",
+    "old": "stop-okl-encode.sh",
+    "new": "stop-okl-learn.sh"
+   },
+   "type": "Gate",
+   "scope": "org",
+   "verdict": "stale",
+   "evidence": [
+    "src/okl/cli/install.py:50",
+    "src/okl/cli/install.py:541",
+    "src/okl/scaffold/hooks/stop-okl-encode.sh:3",
+    "src/okl/scaffold/hooks/stop-okl-encode.sh:10"
+   ],
+   "reason": "The Stop hook still works the way the lesson describes (it blocks the first stop, fires once per session using a marker file, and has a stop_hook_active guard), but the script is now called stop-okl-encode.sh, and no file named stop-okl-learn.sh exists anywhere in the repository, so the fix's install instruction names a file that isn't there.",
+   "checkable": true,
+   "cost_usd": 0.060036099999999995,
+   "secs": 10.7
+  },
+  {
+   "id": "n_a4b40c96ede4",
+   "role": "population",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "evals/REPORT.md:696",
+    "evals/REPORT.md:698",
+    "evals/REPORT.md:705",
+    "evals/REPORT.md:708",
+    "evals/REPORT.md:713",
+    "evals/REPORT.md:79",
+    "evals/REPORT.md:88"
+   ],
+   "reason": "REPORT.md \u00a74h still records the untouched baseline moving 36% to 50%, the 1-point difference between the briefed arms, the 'detectable is doing real work' reading and the retrospective calibration of per-task rows; \u00a72b has since raised the floor from 17 to 21 points by applying the same method, which extends the lesson rather than contradicting it.",
+   "checkable": true,
+   "cost_usd": 0.063857,
+   "secs": 7.9
+  },
+  {
+   "id": "onnx-memory-after-first-inference",
+   "role": "population",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "evals/REPORT.md:2759",
+    "evals/REPORT.md:2772",
+    "evals/REPORT.md:2773",
+    "evals/REPORT.md:2774",
+    "evals/REPORT.md:2775",
+    "evals/REPORT.md:2776",
+    "src/okl/warm.py:297",
+    "evals/warm_memory.py:22",
+    "evals/warm_memory.py:32"
+   ],
+   "reason": "REPORT \u00a74z still says the 700 MB bound was set from the roughly 500 MB post-load reading, that memory reaches about 1.6 GB after the first inference and stays there, that turning off the arena gives about 1.3 GB, and that the bound was a planning error; warm.py still cites the roughly 1.1 GB first-inference allocation, and warm_memory.py still measures after load and after prompts 1, 2, 100 and others in a fresh child process.",
+   "checkable": true,
+   "cost_usd": 0.07240390000000001,
+   "secs": 19.2
+  },
+  {
+   "id": "watch-what-the-rule-depends-on",
+   "role": "population",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "docs/LOAD-YOUR-RULES.md:219",
+    "docs/LOAD-YOUR-RULES.md:230",
+    "docs/LOAD-YOUR-RULES.md:232"
+   ],
+   "reason": "Step 8 of docs/LOAD-YOUR-RULES.md still tells you to add callers and the lockfile to a lesson's files, explains that drift re-opens a lesson only when one of its own files changes, and warns that every added file means more re-checks.",
+   "checkable": true,
+   "cost_usd": 0.048240200000000004,
+   "secs": 25.2
+  },
+  {
+   "id": "n_02aa43137a2e",
+   "role": "population",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "no claim",
+   "evidence": [
+    ".github/workflows/ci.yml:148",
+    "src/okl/mcp_server.py:175"
+   ],
+   "reason": "The lesson is about how CodeRabbit behaves (acknowledging requests, rate limits, plan limits) and about the history of PRs #84, #89, #132 and #134, but the repository has no review wait loop, re-request script or root .coderabbit.yaml to confirm or contradict it; it only cites CodeRabbit in code comments.",
+   "checkable": false,
+   "cost_usd": 0.059812500000000005,
+   "secs": 5.4
+  },
+  {
+   "id": "n_119528a07fa5",
+   "role": "positive",
+   "planted": {
+    "id": "n_119528a07fa5",
+    "field": "body",
+    "old": "drift_banner()",
+    "new": "stale_banner()"
+   },
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "stale",
+   "evidence": [
+    "evals/ab_harness.py:614",
+    "evals/ab_harness.py:617",
+    "evals/ab_harness.py:826",
+    "evals/ab_harness.py:828",
+    "tests/test_scaffold.py:485"
+   ],
+   "reason": "The pre-flight refusal with exit 5 is still there, and the report-time formatter was extracted so it can be tested directly, but it is called drift_banner(), not stale_banner(); stale_banner exists nowhere in the repository, so anyone looking for it by that name would come up empty.",
+   "checkable": true,
+   "cost_usd": 0.0827242,
+   "secs": 30.1
+  },
+  {
+   "id": "mcp-registry-publish-limits",
+   "role": "population",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "tests/test_scaffold.py:2261",
+    "tests/test_scaffold.py:2266",
+    "server.json:5",
+    "docs/DEVELOPING.md:143"
+   ],
+   "reason": "The named test still checks that server.json's description is at most 100 characters (the current description is about 95), and the release steps still run 'mcp-publisher login github && mcp-publisher publish' as one command.",
+   "checkable": true,
+   "cost_usd": 0.0551627,
+   "secs": 7.5
+  },
+  {
+   "id": "filter-after-fetch-widens-window",
+   "role": "negative",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "src/okl/core.py:150",
+    "src/okl/core.py:462-499",
+    "tests/test_retire.py:111-126"
+   ],
+   "reason": "_live_hits still fetches limit*FETCH_MULTIPLIER (3), drops obsolete and replaced-superseded lessons, then fetches again with the window widened by the number dropped (at most 3 tries), and a limit-1 test checks that a live lesson still gets the slot.",
+   "checkable": true,
+   "cost_usd": 0.08370330000000001,
+   "secs": 20.4
+  },
+  {
+   "id": "scope-literature-gap-claims",
+   "role": "population",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "docs/RELATED-WORK.md:26",
+    "docs/RELATED-WORK.md:35",
+    "docs/RELATED-WORK.md:36",
+    "docs/RELATED-WORK.md:39",
+    "docs/RELATED-WORK.md:40"
+   ],
+   "reason": "The related-work page still limits its 'none does X' claims to the seven papers it read, names how they were found (two web searches on 2026-10-20 plus the papers' related-work sections), records the 2026-10-22 independent verification that found counterexamples, and says a field-wide claim would need a documented search; one loosely worded line in the DreamBench row (line 19, 'What no benchmark reports') sits inside that scoped reading.",
+   "checkable": true,
+   "cost_usd": 0.10278979999999999,
+   "secs": 17.1
+  },
+  {
+   "id": "falsifier-relative-to-control",
+   "role": "population",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "evals/REPORT.md:1395",
+    "evals/REPORT.md:1407",
+    "evals/REPORT.md:1412",
+    "evals/REPORT.md:1437",
+    "evals/REPORT.md:1335",
+    "evals/hybrid_grid.py:7"
+   ],
+   "reason": "REPORT \u00a74q still records an absolute falsifier ('a precision prompt returning twelve records') that the full-text control already hit on the live store, so the grid had no cell that met the rule; it then applies the relative reading. \u00a74p is still noted as predicting against the wrong baseline, which matches the lesson.",
+   "checkable": true,
+   "cost_usd": 0.0764386,
+   "secs": 10.3
+  },
+  {
+   "id": "n_58119d0a63d9",
+   "role": "population",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "src/okl/cli/install.py:482",
+    "src/okl/cli/install.py:543",
+    "src/okl/cli/install.py:562",
+    "src/okl/cli/install.py:578",
+    "src/okl/cli/install.py:595"
+   ],
+   "reason": "`okl init` still does the wiring itself: it installs the hooks and registers them in `.claude/settings.json`, installs the CI workflow with `--ci` rather than printing a copy instruction, and adds itself to `.mcp.json` only if it is missing; it still warns loudly when there is no git repo (drift disabled), and the only printed steps left are for things it truly cannot do (MCP extra missing, a pre-push hook owned by another tool).",
+   "checkable": true,
+   "cost_usd": 0.1279647,
+   "secs": 13.8
+  },
+  {
+   "id": "mcp-docker-localhost",
+   "role": "population",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "no claim",
+   "evidence": [
+    ".mcp.json:1-11",
+    ".sonarcloud.properties:1"
+   ],
+   "reason": "The repository's only MCP entry is okl, started through a shell script, and no SonarQube Docker MCP entry or SONARQUBE_URL exists anywhere in it, so the lesson is general Docker networking advice about a session-level config the repository can neither confirm nor contradict.",
+   "checkable": false,
+   "cost_usd": 0.0608123,
+   "secs": 27.4
+  },
+  {
+   "id": "n_1eaf9a5f24e2",
+   "role": "population",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "src/okl/drift.py:141",
+    "src/okl/cli/verification.py:350",
+    "src/okl/cli/verification.py:470",
+    "src/okl/cli/verification.py:584",
+    "src/okl/core.py:1043",
+    "src/okl/cli/parser.py:285",
+    "tests/test_drift_branches.py:145"
+   ],
+   "reason": "The gate still fails with the quoted 'outside this branch's history' reason when a lesson's evidence commit is on another branch and its files differ; the snapshot is still written from every governed lesson in the one shared store; `okl update --files ''` still clears the files; and under --gate the exit code is still the verdict (1 drift, 2 nothing checked), so the cause and the fix still hold, though reverify now also re-checks off-branch lessons on the current branch.",
+   "cost_usd": 0.23701349999999996,
+   "secs": 43.5
+  },
+  {
+   "id": "n_5ddb0776a863",
+   "role": "positive",
+   "planted": {
+    "id": "n_5ddb0776a863",
+    "field": "fix",
+    "old": "--report",
+    "new": "--summary"
+   },
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "src/okl/drift.py:392-407",
+    "src/okl/cli/verification.py:579-586",
+    ".github/workflows/okl-verify.yml:82-115",
+    "src/okl/scaffold/ci/okl-verify.yml:83-111",
+    "src/okl/recap.py:323-327"
+   ],
+   "reason": "The fix is still in place: render_drift prints 'NOTHING CHECKED' when zero rules were checked, `okl drift --gate` exits 2 in that case, the shipped workflow turns exit 2 with no store into a warning annotation rather than a pass, and the recap summary says 'unknown' when drift checked nothing.",
+   "checkable": true,
+   "cost_usd": 0.10056059999999999,
+   "secs": 11.6
+  },
+  {
+   "id": "harness-reads-a-moving-working-tree",
+   "role": "population",
+   "type": "Defect",
+   "scope": "repo:okl",
+   "verdict": "current",
+   "evidence": [
+    "evals/ab_harness.py:632-647",
+    "evals/ab_harness.py:650-654",
+    "evals/ab_harness.py:968",
+    "evals/ab_harness.py:975-978"
+   ],
+   "reason": "The harness still briefs from this checkout's src/ and stamps okl_commit when the run ends, and the fix the lesson asks for is now in place: it records the tree's state at the start, compares it at the end, stamps both commits, sets usable=false when they differ and tells you to use a pinned worktree, so only the 'until that lands' interim advice is out of date.",
+   "checkable": true,
+   "cost_usd": 0.0612851,
+   "secs": 15.8
+  },
+  {
+   "id": "n_57cc4b427f05",
+   "role": "population",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "src/okl/scaffold/gates/check-links.sh:8",
+    "src/okl/scaffold/gates/check-links.sh:38",
+    "src/okl/scaffold/gates/check-diagram-pairs.sh:26",
+    "src/okl/scaffold/gates/check-doc-orphans.sh:23",
+    "src/okl/scaffold/gates/check-doc-orphans.sh:31",
+    "src/okl/scaffold/gates/check-tombstones.sh:12"
+   ],
+   "reason": "The repo's gates still follow the rule: check-links and check-diagram-pairs loop over `git ls-files` and check-doc-orphans reads HEAD through `git ls-tree`/`git grep`, while check-tombstones still runs `grep -R` on the working tree, so the risk the lesson describes is still live (the file list pasted into the lesson body looks like an old `git ls-files` output that got substituted in, not a claim about the repo).",
+   "checkable": true,
+   "cost_usd": 0.0634603,
+   "secs": 9.8
+  },
+  {
+   "id": "n_9464023070dd",
+   "role": "population",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "no claim",
+   "evidence": [
+    "src/okl/warm.py:286",
+    "src/okl/warm.py:433",
+    ".github/workflows/ci.yml"
+   ],
+   "reason": "The repository has no script that waits for a set time or posts CodeRabbit review requests (its only sleeps are short poll loops in warm.py and in tests), so the lesson is about a one-off background job outside this codebase plus general macOS sleep advice that the repository can neither confirm nor contradict.",
+   "checkable": false,
+   "cost_usd": 0.0494759,
+   "secs": 9.5
+  },
+  {
+   "id": "break-test-masked-by-integrity-check",
+   "role": "population",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "src/okl/scaffold/git-hooks/pre-push:2",
+    "src/okl/ownership.py:14",
+    "src/okl/ownership.py:85",
+    "src/okl/cli/install.py:111-124",
+    "tests/test_scaffold.py:2004",
+    "tests/test_scaffold.py:2009",
+    "tests/test_scaffold.py:2026",
+    "tests/test_scaffold.py:1214"
+   ],
+   "reason": "The pre-push hook still has an okl-fingerprint, `python -m okl.ownership --stamp` still exists, init still keeps an edited (MODIFIED) okl-owned file instead of replacing it, and the hook test still checks 'already current' before its push assertions, so an unstamped break would still fail early as the lesson says.",
+   "checkable": true,
+   "cost_usd": 0.0961831,
+   "secs": 10.3
+  },
+  {
+   "id": "fastembed-cache-in-tmpdir",
+   "role": "population",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "src/okl/hub.py:26",
+    "src/okl/hub.py:29",
+    "src/okl/hub.py:36",
+    "src/okl/rerank.py:7",
+    "src/okl/rerank.py:54",
+    "src/okl/warm.py:243",
+    "docs/COSTS-AND-KNOBS.md:161",
+    "tests/test_rerank.py:265"
+   ],
+   "reason": "The repo now does what the lesson recommends: hub.model_cache_dir() uses FASTEMBED_CACHE_PATH if set, otherwise $XDG_CACHE_HOME/okl/models or ~/.cache/okl/models, and the reranker and embedder loaders pass it as cache_dir; the lesson still explains why the code is built this way, though its line that the shipped reranker lives in the temp tree describes the state before the fix.",
+   "checkable": true,
+   "cost_usd": 0.059903399999999996,
+   "secs": 13.9
+  },
+  {
+   "id": "n_e49be14d6207",
+   "role": "population",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "tests/conftest.py:3",
+    "tests/conftest.py:17",
+    "tests/conftest.py:29",
+    "src/okl/client.py:217",
+    "docs/DEVELOPING.md:93",
+    "CHANGELOG.md:757"
+   ],
+   "reason": "The CLI's client still reads OKL_DATABASE_URL before anything else, and tests/conftest.py still has an autouse fixture that strips the storage variables (OKL_DATABASE_URL, OKL_SERVICE_URL, OKL_TOKEN) from every test and cites the 2026-09-27 incident; DEVELOPING.md still says to set the variable per command and never export it, and nothing is ever deleted from the store.",
+   "checkable": true,
+   "cost_usd": 0.0835964,
+   "secs": 9.9
+  },
+  {
+   "id": "dev-code-migrates-live-store",
+   "role": "population",
+   "type": "Defect",
+   "scope": "repo:okl",
+   "verdict": "current",
+   "evidence": [
+    "src/okl/store.py:607-620",
+    "evals/bench/run.py:57-67",
+    "evals/bench/run.py:77-79"
+   ],
+   "reason": "The store still migrates itself when it opens: Store setup drops and rebuilds node_fts in place when the index's columns differ (store.py:609-620), so branch code that opens the live store through OKL_DATABASE_URL still applies its migration there; the tokenizer-setting rebuild the lesson describes was on the stemming branch, which main has not merged (main has only the bench's porter_index on its own store, and no \u00a74ad), and nothing here contradicts the lesson.",
+   "checkable": true,
+   "cost_usd": 0.13519319999999999,
+   "secs": 12.7
+  },
+  {
+   "id": "stacked-pr-retarget-runs-no-ci",
+   "role": "population",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    ".github/workflows/ci.yml:13",
+    ".github/workflows/ci.yml:14",
+    ".github/workflows/okl-verify.yml:17"
+   ],
+   "reason": "ci.yml still runs only on pull_request into main, with the default activity types and no 'edited' type, while okl-verify runs on every PR, so a stacked PR retargeted to main still has okl-verify but not ci until a new synchronize event.",
+   "checkable": true,
+   "cost_usd": 0.0440416,
+   "secs": 9.9
+  },
+  {
+   "id": "n_a7634ef53a8f",
+   "role": "population",
+   "type": "Decision",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "seed/rag-defects.json:56",
+    "seed/dotnet-canon.json:322",
+    "seed/dotnet-canon.json:501",
+    "seed/python-canon.json:299",
+    "seed/rag-defects.json:26"
+   ],
+   "reason": "I searched every found_by value in the seed packs. They still cite only imported canon (CLAUDE.md sections, findings logs, tombstones), published docs, code review or tests, and none names a trace or metric from a deployed system, so runtime telemetry is still missing as a source of records.",
+   "checkable": true,
+   "cost_usd": 0.07371499999999999,
+   "secs": 16.9
+  },
+  {
+   "id": "n_48fd7d3e6c65",
+   "role": "population",
+   "type": "Decision",
+   "scope": "repo:okl",
+   "verdict": "no claim",
+   "evidence": [
+    "CONTRIBUTING.md:115",
+    "CONTRIBUTING.md:117",
+    "CONTRIBUTING.md:121"
+   ],
+   "reason": "The lesson is general advice on handling outside PRs plus history from GitHub (PRs #28 and #30, issue #27, the good-first-issue label) that no file in the repo records; CONTRIBUTING.md's pull-request rules (comment on the issue first, disclose AI use) neither confirm nor contradict it.",
+   "checkable": false,
+   "cost_usd": 0.0631964,
+   "secs": 8.0
+  },
+  {
+   "id": "tall-sheet-screenshot-tiles",
+   "role": "population",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "docs/overview/render.py:5",
+    "docs/overview/render.py:23",
+    "docs/overview/render.py:35",
+    "docs/overview/render.py:39",
+    "docs/overview/render.py:42",
+    "docs/overview/okl-anatomy.html"
+   ],
+   "reason": "docs/overview/render.py still uses a normal viewport. It scrolls in tile-sized steps, reads window.scrollY back to place the last tile, then crops each screenshot to the sheet's box and pastes it into one image, which is the fix the lesson describes.",
+   "checkable": true,
+   "cost_usd": 0.0332629,
+   "secs": 6.2
+  },
+  {
+   "id": "worktree-no-store-reverify",
+   "role": "population",
+   "type": "Rule",
+   "scope": "repo:okl",
+   "verdict": "current",
+   "evidence": [
+    ".gitignore:5",
+    "src/okl/client.py:36",
+    "src/okl/cli/parser.py:263",
+    "src/okl/cli/parser.py:264",
+    "src/okl/cli/parser.py:285",
+    "src/okl/cli/parser.py:287",
+    "src/okl/drift.py:437",
+    ".github/workflows/okl-verify.yml:95",
+    ".github/workflows/okl-verify.yml:100",
+    "src/okl/cli/verification.py:453"
+   ],
+   "reason": "The lesson still matches the code: `.okl/` is gitignored, and the config lookup only walks up parent directories without checking git's shared worktree directory, so a worktree has no store; `okl reverify --yes`, `okl drift --gate --snapshot` and `okl-drift.json` all exist, and the CI gate reads the committed `okl-drift.json`.",
+   "checkable": true,
+   "cost_usd": 0.0982245,
+   "secs": 11.5
+  },
+  {
+   "id": "n_4a398f2f8095",
+   "role": "positive",
+   "planted": {
+    "id": "n_4a398f2f8095",
+    "field": "symptom",
+    "old": "store.py",
+    "new": "storage.py"
+   },
+   "type": "Rule",
+   "scope": "repo:okl",
+   "verdict": "current",
+   "evidence": [
+    "pyproject.toml:16",
+    "pyproject.toml:28",
+    "pyproject.toml:29",
+    "pyproject.toml:30",
+    "src/okl/store.py:11",
+    "src/okl/core.py:12",
+    "src/okl/client.py:10",
+    "src/okl/drift.py:21",
+    "src/okl/cli/servers.py:5"
+   ],
+   "reason": "Core dependencies are empty and fastapi, uvicorn, psycopg and mcp are all optional extras; core.py, client.py, drift.py, store.py and every cli/ module have only stdlib or relative imports at top level, though the lesson's 'storage.py' is actually named store.py.",
+   "checkable": true,
+   "cost_usd": 0.0878363,
+   "secs": 12.6
+  },
+  {
+   "id": "n_1f2e2c211974",
+   "role": "negative",
+   "type": "Claim",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "src/okl/core.py:1557",
+    "src/okl/core.py:1558",
+    "src/okl/core.py:1560",
+    "src/okl/core.py:1574",
+    "src/okl/cli/lessons.py:485",
+    "src/okl/cli/parser.py:305",
+    "docs/decisions/2026-07-17-flat-retrieval-until-scale.md:38"
+   ],
+   "reason": "The dedup detector is still lexical, its 0.45 threshold is still set to over-report, the code still records the measured 0.43\u20130.51 paraphrase band against a closest distinct pair at 0.43 and points to the flat-retrieval ADR, and `okl dedup` still only reports pairs and never merges (the ADR's 2026-10-23 amendment adds optional embeddings for retrieval only, not for dedup).",
+   "checkable": true,
+   "cost_usd": 0.1299355,
+   "secs": 14.9
+  },
+  {
+   "id": "comparison-table-one-sitting-generated",
+   "role": "population",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "evals/standing_table.py:9",
+    "evals/standing_table.py:58",
+    "evals/standing_table.py:59",
+    "evals/standing_table.py:66",
+    "evals/standing_table.py:68",
+    "evals/README.md:113",
+    "evals/README.md:123"
+   ],
+   "reason": "evals/standing_table.py still builds the README's standing table from three receipts from one sitting, exits if they disagree on commit or store size, and labels the harness and hook configurations, and the README says the table is generated by that script and never typed.",
+   "checkable": true,
+   "cost_usd": 0.058113899999999996,
+   "secs": 6.7
+  },
+  {
+   "id": "n_0637c92c032f",
+   "role": "population",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "tests/test_okl.py:2085",
+    "tests/test_okl.py:2114",
+    "tests/test_okl.py:2140",
+    "src/okl/scaffold/gates/check-diagram-pairs.sh:7",
+    "docs/render_pipeline_diagram.py:2",
+    "docs/overview/render.py:1",
+    "tests/test_docs.py:259"
+   ],
+   "reason": "The repo still commits renders beside their sources and follows the lesson: the pipeline SVGs are regenerated and byte-diffed against the committed files; check-diagram-pairs.sh itself says it only proves a render exists, not that it matches; and the overview PNGs, rendered from HTML, are still not checked against their source, which is the gap the lesson describes.",
+   "checkable": true,
+   "cost_usd": 0.1129054,
+   "secs": 14.2
+  },
+  {
+   "id": "threshold-transfer-is-a-hypothesis",
+   "role": "population",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "evals/REPORT.md:2374",
+    "evals/REPORT.md:2389",
+    "evals/REPORT.md:2390",
+    "evals/REPORT.md:2524",
+    "src/okl/decide.py:66"
+   ],
+   "reason": "REPORT \u00a74x still says the relevance line was tuned on samples of 120 typed task prompts against a store of 183 seed records and 143 recorded lessons, \u00a74y still holds the two-tier briefing, and the repo still makes no claim to have measured either on a document corpus, so the transfer stays a hypothesis here as the lesson says.",
+   "checkable": true,
+   "cost_usd": 0.0654827,
+   "secs": 12.2
+  },
+  {
+   "id": "n_0e6928348b1d",
+   "role": "negative",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "src/okl/seed.py:65",
+    "src/okl/seed.py:143",
+    "src/okl/seed.py:152",
+    "src/okl/scaffold/claude/commands/seed-from-docs.md:110",
+    "tests/test_okl.py:1353"
+   ],
+   "reason": "The seed importer still checks for `_proposed_by` and refuses the whole pack if any node lacks a `found_by` citation, which is the mechanical counterpart the lesson describes, and a test covers this.",
+   "checkable": true,
+   "cost_usd": 0.0531977,
+   "secs": 7.7
+  },
+  {
+   "id": "n_92398fae87c0",
+   "role": "population",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "packaging/org-knowledge-layer/pyproject.toml:29",
+    "packaging/org-knowledge-layer/pyproject.toml:34",
+    "tests/test_scaffold.py:942",
+    "tests/test_scaffold.py:945",
+    "pyproject.toml:74"
+   ],
+   "reason": "The code-free redirect package org-knowledge-layer still declares okl = \"okl.cli:main\" with the pipx rationale in a comment, and a test checks that its okl script matches the real package's (only okl, since the second command is named for the new distribution).",
+   "checkable": true,
+   "cost_usd": 0.0585174,
+   "secs": 15.9
+  },
+  {
+   "id": "n_9a8b5215da32",
+   "role": "population",
+   "type": "Claim",
+   "scope": "org",
+   "verdict": "stale",
+   "evidence": [
+    "src/okl/client.py:284",
+    "src/okl/core.py:1798",
+    "src/okl/service.py:25",
+    "src/okl/warm.py:328",
+    "src/okl/cli/verification.py:67",
+    "src/okl/semantic.py:132",
+    "src/okl/warm.py:185",
+    "pyproject.toml:16",
+    "pyproject.toml:28"
+   ],
+   "reason": "The pydantic-in-service-extra and stdlib-only core decisions still hold, but src now has several broad noqa'd `except Exception` handlers rather than one, and okl now imports numpy (semantic.py, warm.py), so the 'one handler' and 'no NumPy' claims no longer hold.",
+   "checkable": true,
+   "cost_usd": 0.0478832,
+   "secs": 7.1
+  },
+  {
+   "id": "merge-needs-resolved-threads",
+   "role": "population",
+   "type": "Rule",
+   "scope": "repo:okl",
+   "verdict": "unsure",
+   "evidence": [
+    "src/okl/mcp_server.py:175",
+    ".github/workflows/ci.yml:148"
+   ],
+   "reason": "CodeRabbit still reviews this project's PRs (recent commits cite 'CodeRabbit on #307/#308'), but whether main's branch protection still has required_conversation_resolution is a GitHub server-side setting, and no file in the checkout records it.",
+   "checkable": true,
+   "cost_usd": 0.051734699999999995,
+   "secs": 8.1
+  },
+  {
+   "id": "n_a5520510b99c",
+   "role": "population",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    ".github/workflows/ci.yml:133",
+    ".github/workflows/ci.yml:134",
+    ".github/dependabot.yml:37"
+   ],
+   "reason": "The repository still has the rule the lesson builds on: CI says every gate tool is pinned (CLAUDE_CODE_VERSION \"2.1.302\"), and dependabot.yml confirms gate tools are pinned exactly, so the lesson's advice on how to pick a pin without registry access still applies.",
+   "checkable": true,
+   "cost_usd": 0.055905399999999994,
+   "secs": 8.1
+  },
+  {
+   "id": "unclosed-sqlite-in-test-pr154",
+   "role": "population",
+   "type": "Defect",
+   "scope": "repo:okl",
+   "verdict": "current",
+   "evidence": [
+    "tests/test_scaffold.py:380",
+    "tests/test_scaffold.py:406",
+    "tests/test_scaffold.py:408",
+    ".github/workflows/ci.yml:189",
+    "seed/python-canon.json:116"
+   ],
+   "reason": "The test named in the lesson still exists and now uses contextlib.closing(sqlite3.connect(db)), with a comment that sqlite3's own 'with' only commits; the CI matrix still runs 3.13 and 3.14, and the seed lesson py_unclosed_sqlite is still in the store.",
+   "checkable": true,
+   "cost_usd": 0.0554604,
+   "secs": 11.4
+  },
+  {
+   "id": "n_110bb4fb7112",
+   "role": "positive",
+   "planted": {
+    "id": "n_110bb4fb7112",
+    "field": "body",
+    "old": ".github/workflows",
+    "new": ".github/actions"
+   },
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    ".github/dependabot.yml:11",
+    ".github/dependabot.yml:22",
+    ".github/dependabot.yml:41",
+    "tests/test_scaffold.py:264",
+    "tests/test_scaffold.py:277",
+    "tests/test_scaffold.py:278"
+   ],
+   "reason": "The main claim still holds: Dependabot's github-actions entry has no groups and no note about the mirrors, and test_mirror_files_identical still requires ci/okl-verify.yml, src/okl/scaffold/ci/okl-verify.yml and .github/workflows/okl-verify.yml to be byte-identical, so a bot bump to one copy still fails CI; two details are off, though: the grouped ecosystem is now uv, not pip, and Dependabot scans .github/workflows/, not .github/actions/.",
+   "checkable": true,
+   "cost_usd": 0.0673365,
+   "secs": 10.4
+  },
+  {
+   "id": "n_b83c550a0ca4",
+   "role": "population",
+   "type": "Decision",
+   "scope": "repo:okl",
+   "verdict": "current",
+   "evidence": [
+    "docs/decisions/2026-10-05-records-not-an-ontology-store.md:1",
+    "src/okl/store.py:24",
+    "src/okl/store.py:28",
+    "src/okl/store.py:44",
+    "src/okl/store.py:608",
+    "evals/REPORT.md:333",
+    "docs/DESIGN-CHOICES.md:20"
+   ],
+   "reason": "The decision record exists, and the store still keeps typed records in SQLite FTS5 with 10 closed node types, 9 edge relations and a closed tag vocabulary; REPORT \u00a74d still records that exclusive tags hid 35 of 172 records, and there is no RDF, SPARQL or graph-store code anywhere.",
+   "checkable": true,
+   "cost_usd": 0.07698,
+   "secs": 18.4
+  },
+  {
+   "id": "guarantee-holds-on-every-write-path",
+   "role": "population",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "src/okl/cli/lessons.py:187",
+    "src/okl/seed.py:135",
+    "src/okl/seed.py:91",
+    "src/okl/starter.json",
+    "tests/test_okl.py:500",
+    "docs/overview/okl-overview.html:278",
+    "docs/overview/okl-overview.html:281"
+   ],
+   "reason": "The CLI still refuses `okl record --verified`, but seed and starter imports still record pack lessons with `keep_verification=True` (the bundled packs hold 160 `\"verified\": true` entries and starter.json lists 20 records), and the overview card now says a stamp with no run behind it is unproven, so the gap and how it is marked are as the lesson describes.",
+   "cost_usd": 0.1507908,
+   "secs": 20.6
+  },
+  {
+   "id": "heredoc-ends-the-chain",
+   "role": "population",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "no claim",
+   "evidence": [
+    "src/okl/cli/parser.py:263",
+    "src/okl/cli/parser.py:283"
+   ],
+   "reason": "The lesson is about how the shell treats a heredoc in an && chain and how to write commit chains, which is general workflow advice; the only repo details it uses, the `okl drift` and `okl reverify` commands, still exist, but nothing in the repository can confirm or contradict the lesson's actual point.",
+   "checkable": false,
+   "cost_usd": 0.041994199999999995,
+   "secs": 6.0
+  },
+  {
+   "id": "pooled-receipts-miss-report-corrections",
+   "role": "population",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "tests/test_docs.py:218",
+    "tests/test_docs.py:220",
+    "tests/test_docs.py:223-232",
+    "tests/test_docs.py:252-257",
+    "evals/REPORT.md:870-880",
+    "evals/REPORT.md:909",
+    "evals/ab_harness.py:475"
+   ],
+   "reason": "The pooling test still skips rows marked unevaluable and keeps a named PLAN_ONLY list holding the \u00a74j idor_endpoint briefed sample 1, citing the REPORT section that excludes it; it recomputes every quoted pool from that, and REPORT \u00a74j still counts the sample as unevaluable (briefed 0/23)",
+   "checkable": true,
+   "cost_usd": 0.08698990000000001,
+   "secs": 9.6
+  },
+  {
+   "id": "generated-diagram-traced-old-path",
+   "role": "population",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "docs/render_pipeline_diagram.py:11",
+    "docs/render_pipeline_diagram.py:117",
+    "docs/render_pipeline_diagram.py:151",
+    "docs/render_pipeline_diagram.py:153",
+    "src/okl/core.py:455",
+    "tests/test_okl.py:2084"
+   ],
+   "reason": "The generator now calls briefing_terms, ranked_candidates and core._live_hits, the same functions production uses, and stops with an error when its trace disagrees with _live_hits or _in_scope; test_pipeline_diagram_is_current still only compares the generator's output with the committed SVG, so the lesson's fix and its warning both still hold.",
+   "checkable": true,
+   "cost_usd": 0.0586923,
+   "secs": 7.7
+  },
+  {
+   "id": "remote-timeout-not-a-deadline",
+   "role": "negative",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "src/okl/client.py:290",
+    "src/okl/client.py:292",
+    "src/okl/client.py:593",
+    "hooks/userpromptsubmit-okl-check.sh:230",
+    "hooks/userpromptsubmit-okl-check.sh:252",
+    "tests/test_remote_failures.py:319",
+    "tests/test_remote_failures.py:366",
+    "tests/test_remote_failures.py:404"
+   ],
+   "reason": "The client still catches OSError and http.client.HTTPException after URLError and fails closed, the hook still stops retrying after a slow try, a test still reads the hook's retry numbers and checks that the worst case, budgeted at two stalled addresses, stays under 30 s, and the MCP record tool still answers 'MAYBE RECORDED'.",
+   "checkable": true,
+   "cost_usd": 0.10922549999999999,
+   "secs": 15.9
+  },
+  {
+   "id": "n_f6d01e368155",
+   "role": "positive",
+   "planted": {
+    "id": "n_f6d01e368155",
+    "field": "fix",
+    "old": "src/okl/__init__.py",
+    "new": "src/okl/_package.py"
+   },
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "stale",
+   "evidence": [
+    "src/okl/scaffold/ci/okl-verify.yml:66",
+    ".github/workflows/okl-verify.yml:63",
+    "tests/test_scaffold.py:310"
+   ],
+   "reason": "The lesson's fix says to detect a checkout by src/okl/_package.py, but no such file exists; the shipped okl-verify workflow now detects it with `[ -f src/okl/__init__.py ]`, so following the lesson would point to a missing file.",
+   "checkable": true,
+   "cost_usd": 0.051746999999999994,
+   "secs": 9.0
+  },
+  {
+   "id": "readonly-agents-side-effects",
+   "role": "population",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "evals/briefing_size.py:9",
+    "evals/briefing_size.py:100",
+    "evals/briefing_size.py:101",
+    "hooks/userpromptsubmit-okl-check.sh:222",
+    "src/okl/core.py:1786",
+    "src/okl/core.py:1794",
+    "src/okl/core.py:1797"
+   ],
+   "reason": "evals/briefing_size.py still writes a receipt into evals/results/, and the prompt hook still runs `okl check`, which logs briefing rows to the store's exposure log unless OKL_BRIEFING_LOG=0, so both side effects the lesson describes still exist.",
+   "checkable": true,
+   "cost_usd": 0.0756847,
+   "secs": 8.7
+  },
+  {
+   "id": "n_f17868ded85d",
+   "role": "population",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "evals/bench/run_dense.py:47",
+    "evals/bench/run_dense.py:52",
+    "evals/bench/run_dense.py:106",
+    "src/okl/warm.py:48",
+    "src/okl/warm.py:246",
+    "evals/results/bench-20261027-sel-dense-embeddinggemma-int8-words.txt:1",
+    "evals/REPORT.md:2060"
+   ],
+   "reason": "The bench Encoder and the warm server both fill in the model card's query and document templates themselves before calling fastembed, the run_dense.py comment repeats the finding about fastembed 0.9, and the bench receipts print the prompts they used, so the lesson still matches the code.",
+   "checkable": true,
+   "cost_usd": 0.0844916,
+   "secs": 9.5
+  },
+  {
+   "id": "n_5f36600f6c51",
+   "role": "population",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "tests/test_okl.py:1183",
+    "tests/test_okl.py:1204",
+    "tests/test_okl.py:1211",
+    "tests/test_okl.py:1215",
+    "tests/test_okl.py:1237",
+    "tests/test_okl.py:1241",
+    "tests/test_okl.py:1739",
+    "tests/test_okl.py:1744",
+    "tests/test_okl.py:1747",
+    "tests/test_okl.py:1750",
+    "CHANGELOG.md:1043"
+   ],
+   "reason": "Both Postgres tests that use OKL_TEST_POSTGRES_URL (parity and conformance) still create a scratch schema, pass it through options=-csearch_path, and drop it in a finally block, and the docstring records the original DELETE FROM node cause; the one gap is that no test plants a row in public and checks it survives, so that proof step is advice rather than something the repository does.",
+   "checkable": true,
+   "cost_usd": 0.07990690000000002,
+   "secs": 9.8
+  },
+  {
+   "id": "diagnostic-on-stage-window",
+   "role": "population",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "evals/probe_rephrase.py:113",
+    "evals/probe_rephrase.py:118",
+    "evals/probe_rephrase.py:120",
+    "evals/probe_rephrase.py:122",
+    "src/okl/rerank.py:25",
+    "src/okl/core.py:150",
+    "src/okl/core.py:476",
+    "src/okl/core.py:547",
+    "src/okl/core.py:558",
+    "evals/REPORT.md:1741"
+   ],
+   "reason": "The repository still matches the lesson: check reranks the first 24 (RERANK_POOL) of a fused window that is three times its limit per arm, and the probe has the fix applied, reranking that same 36-per-arm window and adding the whole-store ranking after it, while REPORT.md records the fused-position-35 lesson that was never scored.",
+   "checkable": true,
+   "cost_usd": 0.1279235,
+   "secs": 11.6
+  },
+  {
+   "id": "n_69f673496137",
+   "role": "population",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "no claim",
+   "evidence": [],
+   "reason": "The lesson is general advice about testing throwaway checks (the merge-tree grep loop and the jq/tr watcher were one-off scripts, not committed to the repo), so the repository has nothing that could confirm or contradict it; the only `tr '\\n' ' '` in the repo is an unrelated `one_line` helper in the okl-check hook.",
+   "checkable": false,
+   "cost_usd": 0.031005699999999997,
+   "secs": 6.6
+  },
+  {
+   "id": "n_310e54bb09d5",
+   "role": "population",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "evals/bench/real_prompts.py:327",
+    "evals/bench/precision_pairs.py:47",
+    "evals/bench/run.py:152",
+    "evals/bench/real_prompts.py:326"
+   ],
+   "reason": "In the repo, the NOSONAR marks for the seeded random generators sit on the call lines (rng.sample, rng.shuffle, rng.choices), and the random.Random(...) construction lines have only noqa comments, which matches the lesson's fix.",
+   "checkable": true,
+   "cost_usd": 0.0318166,
+   "secs": 3.3
+  },
+  {
+   "id": "n_90066f354f1e",
+   "role": "population",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "src/okl/client.py:211",
+    "src/okl/client.py:217",
+    "src/okl/client.py:196",
+    "CONTRIBUTING.md:126"
+   ],
+   "reason": "The one concrete thing the lesson says about this repo is that CLI commands once ignored OKL_DATABASE_URL and this was later fixed; `_local_store` now reads the variable first and its comment describes the old bug, which matches the lesson, and the rest is general advice about where a fix lives that nothing here contradicts.",
+   "checkable": true,
+   "cost_usd": 0.0568351,
+   "secs": 13.4
+  },
+  {
+   "id": "eval-scripts-no-exposure",
+   "role": "population",
+   "type": "Rule",
+   "scope": "repo:okl",
+   "verdict": "current",
+   "evidence": [
+    "src/okl/client.py:365",
+    "src/okl/core.py:1794",
+    "evals/ab_harness.py:135",
+    "evals/layout_preflight.py:75",
+    "evals/precision.py:112",
+    "evals/preflight.py:94",
+    "tests/test_scaffold.py:380"
+   ],
+   "reason": "Client.check still logs local briefings through core.record_briefing unless OKL_BRIEFING_LOG=0, the eval scripts that brief through Client (layout_preflight, precision, ab_harness) now set it, preflight.py still calls core.check directly, and the named test exists, so the lesson's past-tense account of the bug and its fix still matches the code.",
+   "checkable": true,
+   "cost_usd": 0.0979574,
+   "secs": 14.6
+  },
+  {
+   "id": "n_696a70084e1a",
+   "role": "negative",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "src/okl/seed.py:91",
+    "src/okl/core.py:945",
+    "src/okl/drift.py:429-435",
+    "src/okl/drift.py:499",
+    "src/okl/drift.py:529",
+    "src/okl/drift.py:474-489",
+    "src/okl/cli/parser.py:287"
+   ],
+   "reason": "okl seed still loads every record through record(), which ignores any recorded verified_at and sets it to now or to nothing (keep_verification only keeps a stamp the store already holds, and a fresh CI store holds none), while okl drift --snapshot still reads the committed HEAD copy straight into Node objects and refuses entries whose verified_at does not match their evidence stamp.",
+   "checkable": true,
+   "cost_usd": 0.1289642,
+   "secs": 24.4
+  },
+  {
+   "id": "doc-claim-governs-doc-and-code",
+   "role": "population",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "src/okl/scaffold/claude/skills/encoding-loop/SKILL.md:49",
+    "src/okl/scaffold/hooks/stop-okl-encode.sh:157",
+    "src/okl/scaffold/git-hooks/pre-push:64",
+    "tests/test_okl.py:2532"
+   ],
+   "reason": "The mechanism the lesson relies on still exists: `okl record --type Rule --files` plus `okl verify --run`, where a change to any listed file marks the rule stale until its check passes again; the rest of the lesson is general advice or a past audit finding.",
+   "checkable": true,
+   "cost_usd": 0.0485784,
+   "secs": 7.5
+  },
+  {
+   "id": "research-cited-products-not-named",
+   "role": "population",
+   "type": "Decision",
+   "scope": "repo:okl",
+   "verdict": "current",
+   "evidence": [
+    "docs/RELATED-WORK.md:1-10",
+    "docs/RELATED-WORK.md:14-22",
+    "README.md:277-288",
+    "docs/WHERE-THIS-SITS.md:43-54"
+   ],
+   "reason": "docs/RELATED-WORK.md is still a dated page (read 2026-10-21) listing TRACE, Phantom Guardrails, DreamBench-SWE and Memory Transfer Learning with affiliation, figures read from the PDF pages, code links and a 'where okl stands' column, and it says products are not compared and enter public copy only with a measured comparison and a receipt in evals/results/; the README links to it and keeps its category table generic, while the long-standing product table now sits in docs/WHERE-THIS-SITS.md as the README says it does.",
+   "checkable": true,
+   "cost_usd": 0.16109980000000002,
+   "secs": 21.7
+  },
+  {
+   "id": "n_428707b5e596",
+   "role": "negative",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "src/okl/scaffold/hooks/userpromptsubmit-okl-check.sh:3",
+    "src/okl/scaffold/hooks/userpromptsubmit-okl-check.sh:12",
+    "src/okl/scaffold/hooks/hooks.json:3",
+    "src/okl/cli/install.py:33",
+    "tests/test_scaffold.py:170",
+    "tests/test_okl.py:933",
+    "CONTRIBUTING.md:102",
+    "docs/WHAT-INIT-WRITES.md:48"
+   ],
+   "reason": "The briefing is still sent through a UserPromptSubmit hook that reads the real prompt from stdin and fails closed with exit 2, tests check that no PreToolUse briefing is registered, and CONTRIBUTING still requires a behavioral check against a bare control repo.",
+   "checkable": true,
+   "cost_usd": 0.0825732,
+   "secs": 9.2
+  },
+  {
+   "id": "n_967ef9825472",
+   "role": "negative",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "src/okl/store.py:609",
+    "src/okl/store.py:611",
+    "src/okl/store.py:612",
+    "src/okl/store.py:616",
+    "src/okl/store.py:895",
+    "src/okl/store.py:905",
+    "src/okl/store.py:906",
+    "src/okl/scaffold_cmd.py:5",
+    "src/okl/scaffold_cmd.py:60",
+    "src/okl/cli/install.py:101",
+    "src/okl/cli/install.py:117",
+    "src/okl/cli/install.py:122"
+   ],
+   "reason": "On open, the SQLite store spots an old FTS5 table that lacks the symptom/fix columns and rebuilds it from the node table, and Postgres drops the GIN index when its definition no longer matches. Scaffold never overwrites an existing file unless --force, and init keeps a file the user edited unless --force, so every mechanism the lesson names is still in the code.",
+   "checkable": true,
+   "cost_usd": 0.1169586,
+   "secs": 25.9
+  },
+  {
+   "id": "index-in-context-not-fetched",
+   "role": "population",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "evals/REPORT.md:1487",
+    "evals/REPORT.md:1536",
+    "evals/REPORT.md:1543",
+    "evals/REPORT.md:1559",
+    "evals/REPORT.md:1576",
+    "evals/REPORT.md:1581",
+    "src/okl/cli/parser.py:133",
+    "src/okl/cli/parser.py:221",
+    "evals/ab_harness.py:345"
+   ],
+   "reason": "REPORT \u00a74r and its receipt ab-20261023-1303.json still record 1 governing-lesson fetch in 71 indexed samples, none in the briefed or baseline arms, a 38,608-character index and the 'output only the code' caveat, and `okl check --index` and `okl show` still exist as a treatment under measurement that is off by default.",
+   "checkable": true,
+   "cost_usd": 0.08599580000000001,
+   "secs": 10.7
+  },
+  {
+   "id": "fused-window-readmits-weak-matches",
+   "role": "population",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "src/okl/core.py:150",
+    "src/okl/core.py:151",
+    "src/okl/core.py:156",
+    "src/okl/core.py:404",
+    "src/okl/core.py:417",
+    "src/okl/core.py:419",
+    "src/okl/core.py:423",
+    "src/okl/core.py:540",
+    "src/okl/core.py:544"
+   ],
+   "reason": "In _apply_floor, the word rules (two shared words, or one word in the title or symptom) apply only to candidates in cand.lexical (the full-text hits), while a candidate only the semantic arm found gets in only on its cosine (SEMANTIC_WORD_FLOOR is None, citing #258 and REPORT \u00a74q). Both arms fetch FETCH_MULTIPLIER (3) times the limit, so the fused window is up to 72, as the lesson describes.",
+   "checkable": true,
+   "cost_usd": 0.0924267,
+   "secs": 13.4
+  },
+  {
+   "id": "optional-feature-shipped-text",
+   "role": "population",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "src/okl/scaffold/hooks/stop-okl-encode.sh:159",
+    "src/okl/scaffold/claude/commands/record.md:63",
+    "src/okl/scaffold/claude/skills/encoding-loop/SKILL.md:50",
+    "CHANGELOG.md:427",
+    "CHANGELOG.md:438",
+    "src/okl/cli/parser.py:65"
+   ],
+   "reason": "The drift gate is still optional (pre-push hook by default, CI with --ci, none with --no-git-hook), and the Stop hook, /record and encoding-loop templates now use the reworded text the lesson calls for: the briefing and okl drift mark the lesson STALE, and a drift gate fails where the repo has one.",
+   "checkable": true,
+   "cost_usd": 0.0648338,
+   "secs": 9.7
+  },
+  {
+   "id": "commit-wip-in-tmp-worktrees",
+   "role": "population",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "no claim",
+   "evidence": [
+    "docs/DEVELOPING.md:38",
+    "evals/results/ab-20261029-0318.json:11"
+   ],
+   "reason": "The lesson is about how macOS clears /private/tmp at boot and how git stores a worktree's commits, plus general advice to commit often; no file, command or code in this repository can confirm or contradict any of that.",
+   "checkable": false,
+   "cost_usd": 0.0442898,
+   "secs": 6.0
+  },
+  {
+   "id": "n_93f96eae7359",
+   "role": "negative",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "src/okl/store.py:600-608",
+    "src/okl/store.py:609-620",
+    "src/okl/store.py:698-699",
+    "tests/test_okl.py:1441-1453"
+   ],
+   "reason": "The SQLite FTS5 index covers title, body, symptom, fix, tags, aliases and triggers, ranks them with explicit bm25 weights, and on open rebuilds any older index that lacks symptom, tags, aliases or triggers. That is exactly the fix the lesson describes, and the comment beside it records the same cause.",
+   "checkable": true,
+   "cost_usd": 0.0726819,
+   "secs": 5.7
+  },
+  {
+   "id": "order-from-log-not-edges",
+   "role": "positive",
+   "planted": {
+    "id": "order-from-log-not-edges",
+    "field": "body",
+    "old": "--by",
+    "new": "--via"
+   },
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "src/okl/core.py:600",
+    "src/okl/core.py:607",
+    "src/okl/core.py:608",
+    "src/okl/core.py:610",
+    "src/okl/store.py:335",
+    "tests/test_retire.py:356",
+    "tests/test_retire.py:360"
+   ],
+   "reason": "The lesson's fix is in place: `_live_replacement` takes the latest replacement from the retirement log and falls back only to sorted SUPERSEDES edges, and a test checks that a second retirement wins; the only mismatch is that the flag is now `--by`, not the `--via` named in the bug story.",
+   "checkable": true,
+   "cost_usd": 0.08692609999999999,
+   "secs": 11.2
+  },
+  {
+   "id": "mcp-registry-pypi-command-name",
+   "role": "negative",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "pyproject.toml:8",
+    "pyproject.toml:30",
+    "pyproject.toml:73-79",
+    "server.json:17-33",
+    "tests/test_scaffold.py:1922-1951"
+   ],
+   "reason": "pyproject.toml declares an `observed-knowledge-ledger` console script with the same `okl.cli:main` entry point as `okl`, server.json adds the `mcp>=1.2` extra's requirement as a `--with` runtimeArgument, and a test keeps server.json's command, arguments and version matched to pyproject, so the lesson's fix is in place.",
+   "checkable": true,
+   "cost_usd": 0.0677457,
+   "secs": 15.3
+  },
+  {
+   "id": "review-budget-one-push-per-round",
+   "role": "population",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "CLAUDE.md:25",
+    "CLAUDE.md:27",
+    "src/okl/cli/verification.py:38",
+    "src/okl/core.py:931",
+    "src/okl/scaffold/git-hooks/pre-push:72"
+   ],
+   "reason": "The repo parts still hold: PRs here are reviewed by CodeRabbit (code comments cite 'CodeRabbit on #N'), and each fix is still followed by a separate committed okl re-verify of okl-drift.json (CLAUDE.md:25-29, and recent commits such as d39647c). The rate limits and the #299/#300 history are about CodeRabbit and GitHub, so nothing in the repo contradicts them.",
+   "checkable": false,
+   "cost_usd": 0.0812467,
+   "secs": 20.0
+  },
+  {
+   "id": "piped-python-output-reorders",
+   "role": "population",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "src/okl/cli/verification.py:367",
+    "src/okl/cli/verification.py:45",
+    "src/okl/cli/verification.py:39"
+   ],
+   "reason": "okl reverify still prints its 'will run N stored check(s)' header to stdout without flushing, while the check FAILED line goes to stderr, and nothing under src/okl reconfigures or flushes stdout, so piped captures can still put the failure line above the header.",
+   "checkable": true,
+   "cost_usd": 0.0526007,
+   "secs": 7.7
+  },
+  {
+   "id": "git-path-history-drops-merges",
+   "role": "population",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "unsure",
+   "evidence": [
+    "evals/REPORT.md:3059",
+    "src/okl/drift.py:70"
+   ],
+   "reason": "At this commit, evals/REPORT.md stops at \u00a74ac, and I found no drift-replay code that uses `git rev-list P..V -- <files>` or the first-parent diff fix, so the repository can neither confirm nor contradict the replay and its counts; the general git behaviour the lesson describes is not specific to this repository.",
+   "checkable": true,
+   "cost_usd": 0.1027413,
+   "secs": 12.1
+  },
+  {
+   "id": "review-bot-watch-matches-wrong-comment",
+   "role": "population",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "no claim",
+   "evidence": [
+    "docs/DEVELOPING.md:117"
+   ],
+   "reason": "The lesson describes how the external CodeRabbit bot behaves and what happened on past PRs, and no file in the repository implements such a wait loop; the only related text, a DEVELOPING.md note that the bot's check shows passed when it hit its review limit, agrees with the lesson but cannot confirm the rest.",
+   "checkable": false,
+   "cost_usd": 0.0608021,
+   "secs": 13.6
+  },
+  {
+   "id": "snapshot-from-worktree-drops-repo-rules",
+   "role": "population",
+   "type": "Defect",
+   "scope": "repo:okl",
+   "verdict": "stale",
+   "evidence": [
+    "src/okl/cli/verification.py:450",
+    "src/okl/cli/verification.py:458",
+    "src/okl/cli/verification.py:470",
+    "src/okl/cli/verification.py:171",
+    "src/okl/client.py:176"
+   ],
+   "reason": "The lesson's cause still holds, since Client still falls back to the folder name (client.py:176), but the symptom no longer does: since #213 the snapshot write compares the new snapshot with the committed one and refuses with SnapshotShrinkError when the repo name changes or rules this store does not hold would be lost, so verify/reverify/export no longer silently rewrite okl-drift.json and the manual check after the refresh is now automated.",
+   "checkable": true,
+   "cost_usd": 0.10374530000000001,
+   "secs": 17.8
+  },
+  {
+   "id": "n_0adfbf18d9f7",
+   "role": "population",
+   "type": "Claim",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "CHANGELOG.md:559",
+    "CHANGELOG.md:566",
+    "src/okl/client.py:220",
+    "src/okl/service.py:247",
+    "tests/test_okl.py:2876",
+    "tests/test_okl.py:3025",
+    "tests/test_okl.py:2920",
+    "seed/python-canon.json:30"
+   ],
+   "reason": "The repo still records that the #118 docstring pass (50 docstrings) turned up the stray ./okl.db write (#117) and the /link 500 (#119), and the backend-disagreement test credits the #118 review; those bugs are fixed now, but the lesson only tells that history and the advice still holds.",
+   "checkable": true,
+   "cost_usd": 0.06971540000000001,
+   "secs": 13.8
+  },
+  {
+   "id": "n_b1e148e008d8",
+   "role": "population",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "no claim",
+   "evidence": [
+    "evals/bench/run_dense.py:4",
+    "evals/bench/rank_quality.py:29"
+   ],
+   "reason": "The lesson is about how `pgrep -f` behaves in a one-off zsh wait loop, and no script in the repository uses `pgrep`; the only repository detail it names is `run_dense.py`, which still exists only as the example process being waited on.",
+   "checkable": false,
+   "cost_usd": 0.0312753,
+   "secs": 5.6
+  },
+  {
+   "id": "gh-pr-needs-repo-in-scripts",
+   "role": "population",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "no claim",
+   "evidence": [
+    "docs/DEVELOPING.md:129"
+   ],
+   "reason": "The repository has no review-watcher script and no gh pr calls at all (the only gh use is a gh api call with an explicit repos/OWNER/REPO path), so the lesson is general advice about an ad-hoc session script that this repository can neither confirm nor contradict.",
+   "checkable": false,
+   "cost_usd": 0.032783,
+   "secs": 9.0
+  },
+  {
+   "id": "n_b4050b826687",
+   "role": "positive",
+   "planted": {
+    "id": "n_b4050b826687",
+    "field": "symptom",
+    "old": "--run",
+    "new": "--exec"
+   },
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "ci/check-diagram-figures.sh:2",
+    "ci/check-diagram-figures.sh:11",
+    "ci/check-diagram-figures.sh:37",
+    "ci/check-diagram-figures.sh:56",
+    "tests/test_docs.py:197",
+    "src/okl/cli/parser.py:256"
+   ],
+   "reason": "The repo's own diagram gate tells the same story (a drift stamp earned by grepping for expected strings, which let quarantined REPORT \u00a77 figures get published) and applies the fix: every receipt a diagram names must be committed, and the quarantined figures must be absent. The lesson's '--exec' is just a loose name for the verify check flag, which is actually `--run`.",
+   "checkable": true,
+   "cost_usd": 0.1211024,
+   "secs": 29.1
+  },
+  {
+   "id": "n_221da2fec863",
+   "role": "population",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "tests/test_scaffold.py:1676",
+    "tests/test_scaffold.py:1678",
+    "tests/test_okl.py:3305",
+    "tests/test_triggers.py:21",
+    "src/okl/__main__.py"
+   ],
+   "reason": "The package is still run as `python -m okl` from src/okl, and the okl init subprocess test that builds its env from scratch pins PYTHONPATH to the checkout's src with a comment saying 'this checkout, not an installed okl', which is the fix the lesson describes; other subprocess tests extend os.environ and pin PYTHONPATH the same way.",
+   "checkable": true,
+   "cost_usd": 0.0472714,
+   "secs": 6.5
+  },
+  {
+   "id": "n_1b3190127af3",
+   "role": "population",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "no claim",
+   "evidence": [],
+   "reason": "The lesson is general advice about git workflow when vetting an outside contributor's PR: fetch the PR head into a fresh ref and check its SHA before trusting it. It names no file, command, script or behaviour in this repository, and a search for its fetch-ref pattern found nothing here.",
+   "checkable": false,
+   "cost_usd": 0.0257967,
+   "secs": 4.8
+  },
+  {
+   "id": "ca-distrust-every-trust-store",
+   "role": "population",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "no claim",
+   "evidence": [
+    "uv.lock:117",
+    "uv.lock:120"
+   ],
+   "reason": "The lesson is about trust stores on one Mac and how pip, uv, Homebrew and macOS behave, none of which lives in this repository; the only related fact here, uv.lock pinning certifi 2026.10.19, agrees with it but is not something the lesson claims about the repo.",
+   "checkable": false,
+   "cost_usd": 0.034430499999999996,
+   "secs": 7.3
+  },
+  {
+   "id": "model-server-warm-up-before-serving",
+   "role": "population",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "src/okl/warm.py:294-312",
+    "src/okl/warm.py:56",
+    "evals/warm_latency.py:78-82"
+   ],
+   "reason": "`_serve` still runs a throwaway `encode([\"warm up\"], \"query\")` after `load_model()` and before it binds the socket, and its comment gives the same cause (about 1.1 GB allocated on the first inference, which took longer than the 0.5 s `TIMEOUT_S`); `evals/warm_latency.py` still aborts if a timed run with the model on was briefed without it.",
+   "checkable": true,
+   "cost_usd": 0.118094,
+   "secs": 8.4
+  },
+  {
+   "id": "idea-to-issue-through-review",
+   "role": "population",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "docs/DEVELOPING.md:158",
+    "evals/REPORT.md:65",
+    "evals/REPORT.md:730",
+    ".claude/agents/architecture-reviewer.md:47"
+   ],
+   "reason": "The one claim the repository can confirm still holds: experiments are pre-registered in evals/REPORT.md before any run, which DEVELOPING.md requires and REPORT's numbered PRE-REGISTERED sections show; the rest is workflow advice and issue numbers that only the GitHub tracker can confirm.",
+   "checkable": true,
+   "cost_usd": 0.0669507,
+   "secs": 8.2
+  },
+  {
+   "id": "n_e8b039f47ee1",
+   "role": "population",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "src/okl/scaffold/hooks/stop-okl-encode.sh:8",
+    "src/okl/scaffold/hooks/stop-okl-encode.sh:28",
+    "README.md:169",
+    "examples/dotnet-minimal-api/run_demo.sh:53",
+    "ci/review-agent.sh:147",
+    "tests/test_scaffold.py:1311"
+   ],
+   "reason": "The Stop hook still blocks with exit 2 and has an `OKL_DISABLED_HOOKS=encode` off-switch read from the environment; the README tells headless `claude -p` runs to set it, the demo script sets it, and no hook tries to detect print mode from the entrypoint field.",
+   "checkable": true,
+   "cost_usd": 0.0799995,
+   "secs": 8.1
+  },
+  {
+   "id": "n_5db37b759b1e",
+   "role": "negative",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "src/okl/scaffold/ci/okl-verify.yml:40",
+    "src/okl/scaffold/ci/okl-verify.yml:44",
+    "src/okl/client.py:175",
+    "src/okl/client.py:260",
+    "CHANGELOG.md:911",
+    "tests/test_okl.py:1797"
+   ],
+   "reason": "The shipped workflow still has no `okl connect --token` step and takes OKL_SERVICE_URL and OKL_TOKEN from the environment, the client does read both from the environment, and the test the lesson asks for now exists and describes this same incident, so the story and the fix both match the repo.",
+   "checkable": true,
+   "cost_usd": 0.09514429999999999,
+   "secs": 24.1
+  },
+  {
+   "id": "n_50f0ddf7ea19",
+   "role": "population",
+   "type": "Decision",
+   "scope": "repo:okl",
+   "verdict": "current",
+   "evidence": [
+    ".github/workflows/ci.yml:80",
+    ".github/workflows/ci.yml:81",
+    "pyproject.toml:54",
+    "pyproject.toml:123",
+    "pyproject.toml:139"
+   ],
+   "reason": "CI still runs `mypy src/okl` as a gate, mypy is pinned in the dev dependencies, disallow_untyped_defs is on, and no other type checker such as pyrefly or ty is configured, so the decision to stay on mypy still matches the repository.",
+   "checkable": true,
+   "cost_usd": 0.0401966,
+   "secs": 11.4
+  },
+  {
+   "id": "n_0aefd5072428",
+   "role": "population",
+   "type": "Claim",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "seed/rag-defects.json:90",
+    "seed/rag-defects.json:104",
+    "seed/rag-defects.json:118",
+    "seed/dotnet-canon.json:113",
+    "seed/dotnet-canon.json:125",
+    "src/okl/starter.json:74"
+   ],
+   "reason": "All four nodes the lesson cites as covering the article's framework (qz_agent_contract, qz_broken_tool, r_experiment_sunset, r_presence_in_loop) still exist as verified seed nodes, and so do related verifier-failure nodes such as qz_unequal_budget; the rest of the lesson is a judgement about an outside article.",
+   "checkable": true,
+   "cost_usd": 0.0719693,
+   "secs": 11.3
+  },
+  {
+   "id": "n_7e292a18d45d",
+   "role": "population",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "src/okl/scaffold/hooks/stop-okl-encode.sh:46",
+    "src/okl/scaffold/hooks/stop-okl-encode.sh:54",
+    "src/okl/scaffold/hooks/stop-okl-encode.sh:61",
+    "src/okl/scaffold/hooks/stop-okl-encode.sh:95",
+    "src/okl/scaffold/hooks/userpromptsubmit-okl-check.sh:51",
+    "src/okl/scaffold/hooks/userpromptsubmit-okl-check.sh:199",
+    "src/okl/scaffold/git-hooks/pre-push:19",
+    "src/okl/scaffold/hooks/okl-mcp.sh:28",
+    "src/okl/__main__.py:1",
+    "tests/test_scaffold.py:1537"
+   ],
+   "reason": "Every hook (prompt, stop, MCP, pre-push) still resolves okl in the order env, pinned config, PATH, then python3 -m okl; each holds the command in an OKL array, uses the ' -m okl' form only if that python can import okl, and comments on #140; __main__.py exists, and the stop reminder exits quietly when okl can't be found while the prompt hook blocks.",
+   "checkable": true,
+   "cost_usd": 0.0820901,
+   "secs": 18.4
+  },
+  {
+   "id": "n_e99ea322dee5",
+   "role": "population",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "no claim",
+   "evidence": [
+    "tests/test_docs.py:353",
+    ".github/workflows/ci.yml:148",
+    "src/okl/mcp_server.py:175"
+   ],
+   "reason": "The lesson describes how CodeRabbit behaves on GitHub for this repo (manual review by default, skip statuses, a fewer-than-10-stars rule), and none of that is stored in the repository: there is no .coderabbit.yaml, and the many 'CodeRabbit on #N' citations up to #307/#308 show reviews happened but not whether someone asked for them, so the files can neither confirm nor contradict it.",
+   "checkable": false,
+   "cost_usd": 0.0665543,
+   "secs": 10.6
+  },
+  {
+   "id": "pretooluse-additionalcontext",
+   "role": "population",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "src/okl/cli/install.py:33",
+    "src/okl/scaffold/hooks/userpromptsubmit-okl-check.sh:8",
+    "src/okl/scaffold/hooks/userpromptsubmit-okl-check.sh:146",
+    "tests/test_scaffold.py:170",
+    "tests/test_okl.py:933"
+   ],
+   "reason": "The repo still records that PreToolUse stdout never reaches the model and still briefs on UserPromptSubmit through hookSpecificOutput.additionalContext, so what the lesson says about this repo holds; its claims about Claude Code's current hooks reference are outside the repo and cannot be confirmed here.",
+   "checkable": true,
+   "cost_usd": 0.056483900000000004,
+   "secs": 5.2
+  },
+  {
+   "id": "n_fe4ced54e60f",
+   "role": "population",
+   "type": "Rule",
+   "scope": "repo:okl",
+   "verdict": "current",
+   "evidence": [
+    "examples/dotnet-minimal-api/run_demo.sh:53",
+    "examples/dotnet-minimal-api/run_demo.sh:54",
+    "examples/dotnet-minimal-api/run_demo.sh:6",
+    "examples/dotnet-minimal-api/run_demo.sh:24"
+   ],
+   "reason": "The repo's scripted claude -p driver still pipes the prompt in with printf '%s' \"$task\" |, limits the run with perl -e 'alarm 1200; exec @ARGV' -- claude -p, and prints the model-call budget before any call, exactly as the lesson says.",
+   "checkable": true,
+   "cost_usd": 0.076002,
+   "secs": 9.7
+  },
+  {
+   "id": "n_132265e9a9b5",
+   "role": "population",
+   "type": "Decision",
+   "scope": "repo:okl",
+   "verdict": "current",
+   "evidence": [
+    "pyproject.toml:192",
+    "pyproject.toml:212",
+    "pyproject.toml:213",
+    "pyproject.toml:214",
+    "pyproject.toml:215",
+    "pyproject.toml:216"
+   ],
+   "reason": "pyproject.toml still turns on only the docstring-presence rules D100-D104 under ruff, sets the pydocstyle convention to google, and says Args/Returns sections are only for parameters a name and a type do not explain.",
+   "checkable": true,
+   "cost_usd": 0.0429474,
+   "secs": 8.3
+  },
+  {
+   "id": "pipeline-hides-test-status",
+   "role": "population",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "no claim",
+   "evidence": [
+    ".github/workflows/ci.yml:28",
+    ".github/workflows/ci.yml:30",
+    "src/okl/scaffold/git-hooks/pre-push:14"
+   ],
+   "reason": "The lesson is about how shells work in general (a pipeline's exit status is its last command's unless pipefail is set) plus a past one-off incident, and no file in the repository confirms or contradicts it; the repo's own scripts and CI already use pipefail, which agrees with the advice.",
+   "checkable": false,
+   "cost_usd": 0.046717,
+   "secs": 8.8
+  },
+  {
+   "id": "n_710e8dc6b757",
+   "role": "population",
+   "type": "Rule",
+   "scope": "repo:okl",
+   "verdict": "no claim",
+   "evidence": [],
+   "reason": "The lesson is general advice about how the shell runs backticks inside double-quoted strings, and its only claim about this project (that branch protection blocks force-pushes) is a GitHub setting that nothing in the repository records, so the repository can neither confirm nor contradict it.",
+   "checkable": false,
+   "cost_usd": 0.028205499999999998,
+   "secs": 6.8
+  },
+  {
+   "id": "n_09ba6adf0fdc",
+   "role": "population",
+   "type": "Decision",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "src/okl/drift.py:429-438",
+    "src/okl/drift.py:451-463",
+    "src/okl/drift.py:499-504",
+    "src/okl/cli/parser.py:292",
+    ".github/workflows/okl-verify.yml:76-96",
+    "CONTRIBUTING.md:54-58"
+   ],
+   "reason": "okl-drift.json is still a sorted, derived export of the store, written by `okl export --drift`/`okl verify` and only read by CI (via read_committed_snapshot). No code path imports it back into the store, and drift.py:433-435 confirms that seeding through record() would re-stamp verified_at; the working-tree deletion of okl-drift.json is uncommitted, and the file is still committed at HEAD.",
+   "checkable": true,
+   "cost_usd": 0.0818029,
+   "secs": 11.1
+  },
+  {
+   "id": "synthesis-copies-original-proposals",
+   "role": "population",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "no claim",
+   "evidence": [
+    "tests/test_unbriefed_paths.py:235"
+   ],
+   "reason": "The lesson describes a one-off review-writing incident and gives general process advice; the repository has no synthesis document, vote data or reconcile tool that could confirm or contradict it, only a passing mention of 'both skeptics' in a test docstring.",
+   "checkable": false,
+   "cost_usd": 0.0370375,
+   "secs": 6.6
+  },
+  {
+   "id": "n_d8166465591e",
+   "role": "population",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "src/okl/cli/install.py:70",
+    "src/okl/cli/install.py:93",
+    "src/okl/cli/install.py:180",
+    "src/okl/cli/install.py:222",
+    "tests/test_scaffold.py:1408"
+   ],
+   "reason": "install.py still checks the destination and each parent up to the repo root for symlinks and refuses by naming the link. Uninstall's edits are guarded the same way, and a test uses a dangling hook link and a symlinked settings.json, then checks that the file outside the repo is byte-identical after uninstall.",
+   "checkable": true,
+   "cost_usd": 0.0662442,
+   "secs": 11.9
+  },
+  {
+   "id": "n_ea7633cd748c",
+   "role": "population",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "pyproject.toml:60",
+    "pyproject.toml:61",
+    "pyproject.toml:63",
+    "pyproject.toml:64",
+    "seed/python-canon.json:142",
+    "seed/python-canon.json:145"
+   ],
+   "reason": "The pyproject comment and the canon entry now credit the TestClient move to httpx2 to Starlette 1.2.0 (2026-05-28), not 1.7, which matches the lesson's account of the correction and its advice.",
+   "checkable": true,
+   "cost_usd": 0.0518784,
+   "secs": 4.1
+  },
+  {
+   "id": "novelty-claims-expire",
+   "role": "population",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "README.md:277",
+    "README.md:284",
+    "docs/WHERE-THIS-SITS.md:25",
+    "docs/WHERE-THIS-SITS.md:48",
+    "docs/WHERE-THIS-SITS.md:49",
+    "src/okl/drift.py:313"
+   ],
+   "reason": "The README no longer says 'nobody else had made' or 'nothing invalidates', and none of the phrases the lesson's grep targets (nobody else, no other tool, the only tool) appear there; instead it compares okl with rules files and memory layers and links to docs/WHERE-THIS-SITS.md, which names Copilot Memory and driftlint and narrows the claim to what still differs, so the fix is in place and the advice still applies.",
+   "checkable": true,
+   "cost_usd": 0.1101217,
+   "secs": 17.6
+  },
+  {
+   "id": "n_8b3345b90621",
+   "role": "population",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "hooks/userpromptsubmit-okl-check.sh:17",
+    "hooks/userpromptsubmit-okl-check.sh:21",
+    "hooks/userpromptsubmit-okl-check.sh:200",
+    "hooks/userpromptsubmit-okl-check.sh:325",
+    "hooks/userpromptsubmit-okl-check.sh:326",
+    "hooks/stop-okl-encode.sh:17",
+    ".claude/settings.json:18",
+    "tests/test_scaffold.py:1162",
+    "tests/test_scaffold.py:1197"
+   ],
+   "reason": "Both the UserPromptSubmit and Stop hooks (in hooks/, .claude/hooks/ and the scaffold copies) change into $CLAUDE_PROJECT_DIR at the top; when the prompt hook blocks, it shows okl's own stderr and the directory it ran from instead of a guessed 'UNREACHABLE', and a regression test covers this exact incident.",
+   "checkable": true,
+   "cost_usd": 0.15240579999999998,
+   "secs": 6.7
+  },
+  {
+   "id": "hook-cli-version-skew",
+   "role": "population",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "hooks/userpromptsubmit-okl-check.sh:239",
+    "hooks/userpromptsubmit-okl-check.sh:240",
+    "hooks/userpromptsubmit-okl-check.sh:245",
+    "tests/test_scaffold.py:1757",
+    "tests/test_scaffold.py:1802",
+    "tests/test_recap.py:212"
+   ],
+   "reason": "The prompt hook still checks for exit 2 with argparse's 'invalid choice' or 'unrecognized arguments' text, falls back to the older format and size, and has tests that use stub CLIs which reject the new arguments, so the lesson still matches the repository.",
+   "checkable": true,
+   "cost_usd": 0.045048500000000005,
+   "secs": 5.7
+  },
+  {
+   "id": "n_1fe5ef1aaca5",
+   "role": "positive",
+   "planted": {
+    "id": "n_1fe5ef1aaca5",
+    "field": "body",
+    "old": "ci/okl-verify.yml",
+    "new": "ci/okl-gate.yml"
+   },
+   "type": "Rule",
+   "scope": "repo:okl",
+   "verdict": "stale",
+   "evidence": [
+    "tests/test_scaffold.py:264",
+    "tests/test_scaffold.py:277",
+    "tests/test_scaffold.py:278",
+    "tests/test_scaffold.py:282"
+   ],
+   "reason": "The mirror test still exists and still requires byte-identical copies, but the workflow the lesson names, ci/okl-gate.yml, no longer exists: the mirrored workflow is now ci/okl-verify.yml, and the scaffold copies live under src/okl/scaffold/ rather than scaffold/.",
+   "checkable": true,
+   "cost_usd": 0.0417124,
+   "secs": 6.2
+  },
+  {
+   "id": "n_f215b68b925c",
+   "role": "positive",
+   "planted": {
+    "id": "n_f215b68b925c",
+    "field": "fix",
+    "old": "--repo",
+    "new": "--slug"
+   },
+   "type": "Defect",
+   "scope": "repo:okl",
+   "verdict": "stale",
+   "evidence": [
+    "src/okl/cli/install.py:357",
+    "src/okl/cli/install.py:365",
+    "src/okl/cli/install.py:370",
+    "src/okl/cli/install.py:494"
+   ],
+   "reason": "cmd_init and the dry run now get the name from _repo_name, which uses --repo, then the repo name already in this directory's .okl/config.json, and only then the folder name, so re-running init no longer renames the repo (the flag is also --repo, not --slug).",
+   "checkable": true,
+   "cost_usd": 0.0522329,
+   "secs": 6.6
+  },
+  {
+   "id": "n_37ea04a8a0ac",
+   "role": "population",
+   "type": "Rule",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "seed/geospatial-defects.json:11",
+    "seed/geospatial-defects.json:12",
+    "src/okl/seed.py"
+   ],
+   "reason": "The repository still has seed files whose entries carry `repo` and `found_by` provenance fields, which is the internal record the lesson says to leave untouched; the rest of the lesson is a rule about how to share content.",
+   "checkable": true,
+   "cost_usd": 0.0335496,
+   "secs": 8.2
+  },
+  {
+   "id": "n_b578addf6269",
+   "role": "population",
+   "type": "Defect",
+   "scope": "org",
+   "verdict": "current",
+   "evidence": [
+    "src/okl/core.py:80",
+    "evals/ab_harness.py:122",
+    "evals/ab_harness.py:132",
+    "evals/preflight.py:82",
+    "evals/preflight.py:89",
+    "evals/preflight.py:110",
+    "evals/REPORT.md:516"
+   ],
+   "reason": "The applies_to filter still reads 'if applies and wanted and not (applies & wanted)'; the harness still fetches with --interests set from OKL_BRIEF_INTERESTS, which defaults to empty, so the filter is still bypassed; and the pre-flight still only checks that each task's governing record is in the briefing, not that a change under test is active.",
+   "checkable": true,
+   "cost_usd": 0.0838121,
+   "secs": 9.3
+  },
+  {
+   "id": "rerank-ships-off",
+   "role": "population",
+   "type": "Decision",
+   "scope": "repo:okl",
+   "verdict": "current",
+   "evidence": [
+    "src/okl/client.py:114",
+    "src/okl/client.py:181",
+    "src/okl/cli/parser.py:111",
+    "src/okl/rerank.py:23",
+    "src/okl/rerank.py:25",
+    "src/okl/core.py:151",
+    "src/okl/core.py:156",
+    "evals/REPORT.md:1618",
+    "evals/REPORT.md:1724",
+    "evals/REPORT.md:1777",
+    "evals/REPORT.md:1857"
+   ],
+   "reason": "The --rerank flag, OKL_RERANK and the config key are all still off by default (the CLI default is None and rerank_setting treats None as off), the model is still MiniLM-L6 over a pool of 24 with the 538 ms figure in \u00a74t, and \u00a74u still records that no cosine-and-rank line separates lessons from filler and that SEMANTIC_WORD_FLOOR was put back to None because the cutoff dropped the lesson behind fifteen kept records.",
+   "checkable": true,
+   "cost_usd": 0.1442447,
+   "secs": 19.3
+  }
+ ]
+}
