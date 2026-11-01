@@ -25,7 +25,7 @@ Two rules hold throughout:
 | the claim says | today | evidence |
 |---|---|---|
 | it briefs the agent with what applies | built | 42% → 7% defects reproduced on eight bait tasks, pooled over seven A/B runs ([REPORT](../evals/REPORT.md) §5 finding 7) |
-| it notices when something you maintain falls out of step | built for lessons that govern files and carry a check; not yet for docs, diagrams, specs, reports or results (#317, #314) | 16 of the 155 lessons recorded here are watched (census below); of 52 patches written to break those lessons, a judge confirmed 36 as breaks, and drift caught 14 of them (§4af) |
+| it notices when something you maintain falls out of step | built for lessons that govern files and carry a check, including docs a lesson names (this README is one); not yet for docs, diagrams, specs, reports or results in general (#317, #314) | 16 of the 155 lessons recorded here are watched (census below); of 52 patches written to break those lessons, a judge confirmed 36 as breaks, and drift caught 14 of them (§4af) |
 | it has the agent bring it back, telling you or asking first | partly: a drifted lesson blocks the push or fails CI, and the briefing marks it STALE; telling or asking for other artifacts is #317 | §4ae, §4af |
 | each session's lessons are recorded | built: the Stop hook asks once a session what was learned | — |
 | every claim is backed by a check, or marked unchecked | 71 of 155 lessons have a check; the unchecked mark is #222, in review as #316 | census below |
