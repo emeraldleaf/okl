@@ -6,8 +6,8 @@ build-backend = "hatchling.build"
 # Distribution name only. The CLI command, the import package, and the repo are all `okl`;
 # PyPI rejects `okl` as too similar to the existing `oki` (l/i are treated as confusable).
 name = "observed-knowledge-ledger"
-version = "0.9.0"
-description = "Observed Knowledge Ledger — verified memory for coding agents: rules, decisions and past defects, briefed when they apply, proven by checks, gated when the code they cover changes, shared across repos when you want."
+version = "0.10.0"
+description = "Observed Knowledge Ledger: keeps your coding agent true to your rules, specs and docs, keeps them true to the code, and keeps learning as you build."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }

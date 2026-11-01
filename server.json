@@ -2,20 +2,20 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.emeraldleaf/okl",
   "title": "okl — Observed Knowledge Ledger",
-  "description": "Verified memory for coding agents: briefed before each task, proven by checks, gated on change.",
+  "description": "Keeps your agent true to your rules, specs and docs. Keeps them true to the code. Keeps learning.",
   "websiteUrl": "https://github.com/emeraldleaf/okl/blob/main/docs/GETTING-STARTED.md",
   "repository": {
     "url": "https://github.com/emeraldleaf/okl",
     "source": "github",
     "id": "1351779410"
   },
-  "version": "0.9.0",
+  "version": "0.10.0",
   "packages": [
     {
       "registryType": "pypi",
       "registryBaseUrl": "https://pypi.org",
       "identifier": "observed-knowledge-ledger",
-      "version": "0.9.0",
+      "version": "0.10.0",
       "runtimeHint": "uvx",
       "runtimeArguments": [
         {

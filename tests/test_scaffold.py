@@ -2267,4 +2267,4 @@ def test_server_json_description_fits_the_registry_limit():
     has no such limit, so the two may differ, and this is the check the publish lacked."""
     server = json.loads((Path(__file__).resolve().parents[1] / "server.json").read_text())
     assert len(server["description"]) <= 100, len(server["description"])
-    assert server["description"].startswith("Verified memory for coding agents")
+    assert server["description"].startswith("Keeps your agent true to your rules")   # the thesis claim, shortened

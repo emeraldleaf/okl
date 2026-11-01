@@ -58,12 +58,6 @@ when #316 merges.
 
 ## Still to align
 
-These still use the old tagline, and change with the next release, which is the maintainer's
-call:
-- `pyproject.toml`'s description, which PyPI shows;
-- `server.json`, which the MCP Registry shows; `tests/test_scaffold.py` pins its first words;
-- `.claude-plugin/plugin.json`;
-- the CLI's `--help` description.
-
-The overview and anatomy sheets in `docs/overview/` carry the claim since 2026-10-31, as does
-the okl page on emeraldleaf.dev.
+Nothing in okl's own files. Since 0.10.0 the claim is carried by PyPI's description, the MCP
+Registry's (shortened to its 100-character limit), the plugin's, `okl --help`, the overview and
+anatomy sheets in `docs/overview/`, and the okl page on emeraldleaf.dev.
