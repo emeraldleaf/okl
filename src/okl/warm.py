@@ -401,7 +401,8 @@ def stopped() -> bool:
 
 def resume() -> None:
     """Undo `okl warm stop`: what the person's own start, index or serve does first. The
-    default's start for a prompt never does (review on #300)."""
+    default's start for a prompt never does (review on #300), nor the server a start spawns
+    (review on #320)."""
     _stopped_path().unlink(missing_ok=True)
 
 
@@ -422,7 +423,7 @@ def start(*, wait_s: float = 0.0) -> dict[str, Any] | None:
     log.parent.mkdir(parents=True, exist_ok=True)
     _started_path().touch()
     with log.open("ab") as out:
-        subprocess.Popen([sys.executable, "-m", "okl", "warm", "serve"], stdin=subprocess.DEVNULL,
+        subprocess.Popen([sys.executable, "-m", "okl", "warm", "serve", "--spawned"], stdin=subprocess.DEVNULL,
                          stdout=out, stderr=subprocess.STDOUT, start_new_session=True, close_fds=True)
     return _wait(wait_s)
 

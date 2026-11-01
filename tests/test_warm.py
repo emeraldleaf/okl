@@ -458,8 +458,8 @@ def test_a_stop_reaches_a_server_that_was_loading_or_busy(monkeypatch):
 def test_a_stop_is_answered_when_the_server_looks_for_the_record_first(monkeypatch):
     """stop() left its record before asking, so a server that looked for the record between its
     last answer and the stop request exited unasked, and `okl warm stop` said none had answered
-    (#320: 4 of 200 stops under load, none of them a timeout). The server is held here after a
-    ping until the stop request is on its way, where a busy machine put it."""
+    (#320; not a timeout). The server is held here after a ping until the stop request is on its
+    way, where a busy machine put it."""
     _path, server = _serving(monkeypatch)
     sending, real_ask, real_handle = threading.Event(), warm._ask, warm._handle
 
@@ -480,6 +480,23 @@ def test_a_stop_is_answered_when_the_server_looks_for_the_record_first(monkeypat
     assert warm.stopped()                          # and it stays off
     server.join(timeout=5)
     assert not server.is_alive()
+
+
+def test_a_server_okl_starts_itself_does_not_undo_a_stop(monkeypatch):
+    """start() spawned `okl warm serve`, which undoes `okl warm stop` for a person who runs it,
+    so a prompt that found no server just as a stop landed brought the server back for good
+    (review on #320). The person's own start and index undo the stop before they spawn it."""
+    from okl.cli import main
+    monkeypatch.setattr(warm, "installed", lambda: True)
+    spawned = []
+    monkeypatch.setattr(warm.subprocess, "Popen", lambda cmd, **k: spawned.append(cmd))
+    monkeypatch.setattr(warm, "serve", lambda *a, **k: 0)   # no model is loaded here
+    warm.start()
+    warm.stop()                                    # lands before the spawned server runs
+    assert main(spawned[0][3:]) == 0               # the command after `python -m okl`
+    assert warm.stopped()
+    assert main(["warm", "serve"]) == 0            # a person's own serve still undoes it
+    assert not warm.stopped()
 
 
 def test_a_start_still_coming_up_reads_as_loading_not_failed(monkeypatch):

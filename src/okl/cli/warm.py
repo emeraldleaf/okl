@@ -14,8 +14,12 @@ def cmd_warm(args: argparse.Namespace) -> int:
     return {"serve": _serve, "stop": _stop, "status": _status, "start": _start, "index": _index}[args.action](args)
 
 
-def _serve(_args: argparse.Namespace) -> int:
-    warm.resume()
+def _serve(args: argparse.Namespace) -> int:
+    # A person's serve undoes `okl warm stop`; the one start() spawns does not, since the
+    # person's start and index undo it before spawning, and a prompt's start must keep it: one
+    # that found no server as a stop landed brought it back for good (review on #320).
+    if not args.spawned:
+        warm.resume()
     try:
         return warm.serve()
     except warm.WarmUnavailableError as e:
