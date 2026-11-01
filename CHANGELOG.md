@@ -3,9 +3,10 @@
 ## 0.10.0
 
 **Upgrading: run `okl seed --refresh`, then `/triggers`.** The briefing now reads each lesson's
-*triggers* (below). `okl seed --refresh` brings the bundled packs' 1,730 into a store seeded before
-them, and `/triggers` drafts them for the lessons you recorded, which are found far less often
-without them (REPORT §4x). okl's one-line description is now its thesis: "Keeps your coding agent
+*triggers* (below). `okl seed --refresh` gives the lessons your store already took from the
+bundled packs their triggers (the packs carry 1,730), and `/triggers` drafts them for the lessons
+you recorded, which are found far less often without them (REPORT §4x). On an agent other than
+Claude Code, `okl triggers` lists the lessons that need them. okl's one-line description is now its thesis: "Keeps your coding agent
 true to your rules, specs and docs. Keeps them true to the code. Keeps learning as you build."
 ([docs/THESIS.md](docs/THESIS.md)).
 

@@ -58,6 +58,8 @@ when #316 merges.
 
 ## Still to align
 
-Nothing in okl's own files. Since 0.10.0 the claim is carried by PyPI's description, the MCP
-Registry's (shortened to its 100-character limit), the plugin's, `okl --help`, the overview and
-anatomy sheets in `docs/overview/`, and the okl page on emeraldleaf.dev.
+Nothing in okl's own files. Since 0.10.0, PyPI's description, the plugin's and `okl --help` carry
+the claim word for word, and the MCP Registry's carries it shortened to fit its 100-character
+limit: "Keeps your agent true to your rules. Keeps them true to the code. Keeps learning as you
+build." The overview and anatomy sheets in `docs/overview/` and the okl page on emeraldleaf.dev
+carry it too.

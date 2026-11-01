@@ -132,7 +132,8 @@ That is expected; see CONTRIBUTING.
    in October 2026 and were noticed only because a `git push` printed them (#285).
 2. **On a `release-X.Y.Z` branch,** set the version in `pyproject.toml`, in `server.json`
    (twice), in `.claude-plugin/plugin.json` and in `docs/GETTING-STARTED.md` (twice).
-   Rename the CHANGELOG's `## Unreleased` to `## X.Y.Z`. Reinstall the editable package so
+   Rename the CHANGELOG's `## Unreleased` to `## X.Y.Z`. Run `uv lock`, so the lockfile's own
+   version follows (CI's `uv lock --check` fails otherwise). Reinstall the editable package so
    the version test passes: `pip install --no-deps -e .`.
 3. **Commit, re-verify, open the PR, merge.**
 4. **Tag the merge commit:**

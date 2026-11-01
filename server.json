@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.emeraldleaf/okl",
   "title": "okl — Observed Knowledge Ledger",
-  "description": "Keeps your agent true to your rules, specs and docs. Keeps them true to the code. Keeps learning.",
+  "description": "Keeps your agent true to your rules. Keeps them true to the code. Keeps learning as you build.",
   "websiteUrl": "https://github.com/emeraldleaf/okl/blob/main/docs/GETTING-STARTED.md",
   "repository": {
     "url": "https://github.com/emeraldleaf/okl",
