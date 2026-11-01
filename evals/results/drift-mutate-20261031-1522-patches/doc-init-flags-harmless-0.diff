@@ -1,0 +1,14 @@
+diff --git a/docs/GETTING-STARTED.md b/docs/GETTING-STARTED.md
+index 0089de2..e1cf3bb 100644
+--- a/docs/GETTING-STARTED.md
++++ b/docs/GETTING-STARTED.md
+@@ -52,7 +52,8 @@ okl init --repo shop
+   local store, gitignored), two hooks in `.claude/hooks/` registered in
+   `.claude/settings.json`, `.mcp.json`, and a git pre-push hook that gates drift
+   (`--ci` installs a GitHub Actions workflow instead, unless an earlier `init` already
+-  installed the hook, which stays; `--ci --git-hook` gives both).
++  installed the hook, which stays; `--ci --git-hook` gives both). A hook or file you have
++  edited is kept on later runs; `--force` replaces it with okl's version.
+ 
+ **Prefer the Claude Code plugin?** Install it *before* `init` — `/plugin marketplace add
+ emeraldleaf/okl`, then `/plugin install okl@okl` — and `init` leaves the hooks to the

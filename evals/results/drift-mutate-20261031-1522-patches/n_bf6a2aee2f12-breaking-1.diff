@@ -1,0 +1,16 @@
+diff --git a/CONTRIBUTING.md b/CONTRIBUTING.md
+index 838883b..902116c 100644
+--- a/CONTRIBUTING.md
++++ b/CONTRIBUTING.md
+@@ -4,8 +4,9 @@ Thanks for looking. This is a v0 project with one maintainer, so the most useful
+ contributions are small, verifiable, and self-contained.
+ Everyone taking part is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+ 
+-How okl is developed end to end (the everyday loop, CI, releases, evaluations and what
+-you can observe) is in [docs/DEVELOPING.md](docs/DEVELOPING.md). This file is the rules.
++How okl is developed end to end (the everyday loop, CI, evaluations and what you can
++observe) is in [docs/DEVELOPING.md](docs/DEVELOPING.md). This file is the rules.
++Releases are cut by pushing a `vX.Y.Z` tag, which runs `publish.yml`.
+ 
+ ## Setup
+ 

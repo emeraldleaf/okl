@@ -1,7 +1,7 @@
 {
   "name": "okl",
-  "version": "0.9.0",
-  "description": "Observed Knowledge Ledger: verified memory for coding agents. A pre-task briefing hook, an end-of-session 'what did we learn?' hook, the okl MCP tools, the /record and seeding commands, and the encoding-loop skill. Needs the okl CLI (pipx install 'observed-knowledge-ledger[mcp]'), and `okl init` in each repo to brief (or OKL_SERVICE_URL); repos without it are left alone.",
+  "version": "0.10.0",
+  "description": "Observed Knowledge Ledger. Keeps your coding agent true to your rules, specs and docs. Keeps them true to the code. Keeps learning as you build. A pre-task briefing hook, an end-of-session 'what did we learn?' hook, the okl MCP tools, the /record, /triggers and seeding commands, and the encoding-loop skill. Needs the okl CLI (pipx install 'observed-knowledge-ledger[mcp]'), and `okl init` in each repo to brief (or OKL_SERVICE_URL); repos without it are left alone.",
   "author": { "name": "Joshua Dell", "url": "https://github.com/emeraldleaf/okl" },
   "hooks": "./hooks/hooks.json",
   "mcpServers": "./.claude-plugin/mcp.json",

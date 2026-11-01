@@ -23,7 +23,7 @@ pipx install 'observed-knowledge-ledger[mcp]'
 The PyPI name differs (PyPI refuses `okl` as confusable with `oki`); everything you type
 afterwards is `okl`.
 
-Needs Python 3.11+ (and git for drift detection). Tested on macOS and Linux. **Windows is untested**: the core
+Needs Python 3.11+ (and git for drift). Tested on macOS and Linux. **Windows is untested**: the core
 should work, but the Claude Code hooks likely need fixes there
 ([#85](https://github.com/emeraldleaf/okl/issues/85)).
 
@@ -403,7 +403,7 @@ okl-drift:
   image: python:3.13
   variables:
     GIT_DEPTH: 0
-    OKL_VERSION: "0.9.0"   # the version you run locally
+    OKL_VERSION: "0.10.0"   # the version you run locally
   script:
     - pip install "observed-knowledge-ledger==$OKL_VERSION"
     - okl drift --gate --snapshot okl-drift.json
@@ -419,7 +419,7 @@ steps:
     inputs:
       versionSpec: "3.13"
   - script: |
-      pip install "observed-knowledge-ledger==0.9.0"
+      pip install "observed-knowledge-ledger==0.10.0"
       okl drift --gate --snapshot okl-drift.json
     displayName: okl drift gate
 ```

@@ -1,0 +1,13 @@
+diff --git a/src/okl/semantic.py b/src/okl/semantic.py
+index 0d2e9bc..dedec54 100644
+--- a/src/okl/semantic.py
++++ b/src/okl/semantic.py
+@@ -26,7 +26,7 @@ import hashlib
+ import struct
+ from typing import Any
+ 
+-from . import hub
++from . import client, hub
+ from .store import Node, Store
+ 
+ MODEL_ID = "minishlab/potion-retrieval-32M"

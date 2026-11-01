@@ -1,0 +1,15 @@
+diff --git a/docs/WHERE-THIS-SITS.md b/docs/WHERE-THIS-SITS.md
+index f0308b2..c54124b 100644
+--- a/docs/WHERE-THIS-SITS.md
++++ b/docs/WHERE-THIS-SITS.md
+@@ -65,7 +65,9 @@ what happened; okl keeps what must stay true, and proves it.
+ **Running one of them alongside okl** works, with three known collisions: okl's Stop hook
+ blocks the first stop, so their Stop hooks run twice; capture-everything tools record
+ `okl record` too, so a lesson lands in two stores; and each injects its own context beside
+-okl's briefing. `okl doctor` names whichever is installed and what to do about it.
++okl's briefing. `okl doctor` names whichever is installed and what to do about it. If you
++see duplicate lessons after a session, check which store each tool wrote to before deleting
++anything; `okl retire` keeps the record and its reason.
+ 
+ ## Can I use mem0 / Zep / Letta instead? Or alongside?
+ 

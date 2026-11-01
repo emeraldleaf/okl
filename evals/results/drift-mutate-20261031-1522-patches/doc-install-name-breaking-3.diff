@@ -1,0 +1,20 @@
+diff --git a/.github/workflows/publish.yml b/.github/workflows/publish.yml
+index 29b244c..f0697e9 100644
+--- a/.github/workflows/publish.yml
++++ b/.github/workflows/publish.yml
+@@ -54,14 +54,11 @@ jobs:
+       - name: Build
+         run: |
+           python -m pip install --upgrade build twine
+-          python -m build
++          python -m build packaging/org-knowledge-layer --outdir dist/
+           # The old distribution name's final release (packaging/org-knowledge-layer):
+           # built only on the tag that matches its version, so it is published exactly
+           # once. Its PyPI project already trusts this workflow.
+           shim="$(python -c "import tomllib,pathlib; print(tomllib.loads(pathlib.Path('packaging/org-knowledge-layer/pyproject.toml').read_text())['project']['version'])")"
+-          if [ "${GITHUB_REF_NAME#v}" = "$shim" ]; then
+-            python -m build packaging/org-knowledge-layer --outdir dist/
+-          fi
+           # `twine check` catches a malformed long_description, which PyPI rejects only
+           # after the upload has otherwise succeeded.
+           python -m twine check dist/*

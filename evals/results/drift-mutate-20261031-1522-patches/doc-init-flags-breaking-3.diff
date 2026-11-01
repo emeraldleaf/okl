@@ -1,0 +1,13 @@
+diff --git a/README.md b/README.md
+index 41ac406..d36473f 100644
+--- a/README.md
++++ b/README.md
+@@ -75,7 +75,7 @@ pipx install 'observed-knowledge-ledger[mcp]'
+ 
+ ```bash
+ okl init --repo my-repo --dry-run   # lists every file it would write; writes nothing
+-okl init --repo my-repo             # config, Claude Code hooks, MCP server, pre-push drift gate, starter lessons
++okl init --repo my-repo --yes       # config, Claude Code hooks, MCP server, pre-push drift gate, starter lessons
+ ```
+ 
+ `init` detects your stack (`*.csproj`, `package.json`, `pyproject.toml` …), sets the repo's

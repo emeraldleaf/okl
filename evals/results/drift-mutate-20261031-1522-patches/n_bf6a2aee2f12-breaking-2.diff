@@ -1,0 +1,12 @@
+diff --git a/.github/dependabot.yml b/.github/dependabot.yml
+index ddc3492..03eec41 100644
+--- a/.github/dependabot.yml
++++ b/.github/dependabot.yml
+@@ -24,6 +24,7 @@ updates:
+     schedule:
+       interval: weekly
+     labels: ["dependencies"]
++    open-pull-requests-limit: 0
+     commit-message:
+       prefix: "deps"
+     # Move a requirement only when the new release falls outside it. The extras users

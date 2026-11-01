@@ -1,0 +1,23 @@
+diff --git a/README.md b/README.md
+index 41ac406..2843f14 100644
+--- a/README.md
++++ b/README.md
+@@ -267,7 +267,8 @@ Three honest limits on that table:
+ ## How okl differs
+ 
+ - **From memory layers** (mem0, Zep, Letta, the Claude Code memory plugins): they recall what
+-  the agent experienced; okl keeps what must stay true, and proves it with a check you chose.
++  the agent experienced; okl replaces them with better recall of your team's lessons, and
++  is meant to be used instead of them.
+ - **From rules files** (`CLAUDE.md`, `AGENTS.md`): a briefing selects the few lessons that
+   match the task; a rules file loads whole, every time, and nothing re-checks it.
+ - **From instruction-file linters**: they check that a path or command a rules file names still
+@@ -277,7 +278,7 @@ Three honest limits on that table:
+ | | Best for | The trade |
+ |---|---|---|
+ | A rules file | the five rules every session needs | loaded whole; no proof, no per-task selection |
+-| A memory layer | recall over what an agent has seen | a model's judgment at use time; nothing tied to your check or your push |
++| A memory layer | recall over what an agent has seen | weaker recall than okl; nothing tied to your push |
+ | okl | lessons with a symptom, a fix and a check | you write them on purpose, and keep them proven |
+ 
+ The long version, with the comparison table and how to run okl beside another memory tool:

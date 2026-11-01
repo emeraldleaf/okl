@@ -1,0 +1,10 @@
+diff --git a/.github/workflows/publish.yml b/.github/workflows/publish.yml
+index 29b244c..23dbde6 100644
+--- a/.github/workflows/publish.yml
++++ b/.github/workflows/publish.yml
+@@ -97,3 +97,5 @@ jobs:
+           subject-path: "dist/*"
+ 
+       - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33  # release/v1
++        with:
++          verbose: true

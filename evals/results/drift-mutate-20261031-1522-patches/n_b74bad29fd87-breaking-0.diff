@@ -1,0 +1,18 @@
+diff --git a/tests/test_okl.py b/tests/test_okl.py
+index a8dfa42..e9fd36f 100644
+--- a/tests/test_okl.py
++++ b/tests/test_okl.py
+@@ -1734,7 +1734,12 @@ def test_postgres_backend_conformance():
+     sep = "&" if "?" in url else "?"
+     pg = Store(f"{url}{sep}options=-csearch_path%3D{schema}")
+     try:
+-        _backend_conformance(pg, "postgres")
++        core.record(pg, type="Rule", title="ownership predicate belongs in the WHERE clause",
++                    scope="org", symptom="a fetch by id with no owner column in the query",
++                    fix="add the caller id to the WHERE clause")
++        found = pg.search("ownership predicate", limit=3)
++        assert found and "ownership predicate" in found[0].title
++        assert pg.search("ownership", scope="repo:nope", limit=5) == []
+     finally:
+         pg.close()
+         with psycopg.connect(url, autocommit=True) as teardown:

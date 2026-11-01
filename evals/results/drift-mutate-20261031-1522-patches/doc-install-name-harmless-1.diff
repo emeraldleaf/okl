@@ -1,0 +1,13 @@
+diff --git a/pyproject.toml b/pyproject.toml
+index 4c19eb6..1bc3a08 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -12,7 +12,7 @@ readme = "README.md"
+ requires-python = ">=3.11"
+ license = { text = "MIT" }
+ authors = [{ name = "Joshua Dell" }]
+-keywords = ["ai-engineering", "knowledge-layer", "mcp", "agentic-coding", "encoding-loop"]
++keywords = ["ai-engineering", "knowledge-layer", "mcp", "agentic-coding", "encoding-loop", "agent-memory"]
+ dependencies = []  # local + client path is stdlib-only
+ 
+ [project.urls]

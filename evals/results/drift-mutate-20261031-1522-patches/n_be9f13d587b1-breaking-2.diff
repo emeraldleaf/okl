@@ -1,0 +1,18 @@
+diff --git a/src/okl/store.py b/src/okl/store.py
+index 31b9aed..2dae999 100644
+--- a/src/okl/store.py
++++ b/src/okl/store.py
+@@ -841,11 +841,9 @@ _PG_TSV_CONTENT = ("setweight(to_tsvector('english', coalesce(title,'')), 'A') |
+ 
+ 
+ def _pg_ts_query(q: str) -> str:
+-    """Free text -> an OR websearch query, mirroring _fts_query's permissive-OR semantics
+-    (websearch_to_tsquery ANDs terms by default, which would silently tighten recall vs
+-    the SQLite backend)."""
++    """Free text -> a websearch query of its alphanumeric terms."""
+     terms = [t for t in "".join(ch if ch.isalnum() else " " for ch in q).split() if t]
+-    return " OR ".join(terms)
++    return " ".join(terms)
+ 
+ 
+ class _PostgresBackend(_Backend):

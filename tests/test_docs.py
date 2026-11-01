@@ -443,3 +443,11 @@ def test_every_verdict_its_own_reason_contradicts_is_corrected_in_the_report():
         start = report.index(f"\n## {section}. ")
         body = report[start:report.index("\n## ", start + 1)]
         assert receipt in body and re.search(rf"\bRow {row}\b", body), f"§{section} does not correct {receipt} row {row}"
+
+
+def test_the_readme_headline_is_the_thesis_claim():
+    """docs/THESIS.md carries the claim the README's headline states, its baseline and its
+    history; when one moves without the other, the thesis has drifted (#317)."""
+    headline = re.search(r"^\*\*(.+?)\*\*<br>$", (ROOT / "README.md").read_text(), re.M).group(1)
+    claim = (ROOT / "docs" / "THESIS.md").read_text().split("## The claim", 1)[1]
+    assert re.search(r"^\*\*(.+?)\*\*$", claim, re.M).group(1) == headline

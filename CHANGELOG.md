@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+- **The briefing marks the lessons no check backs** (#222). Only lessons whose governed files
+  are in the checkout were marked (*STALE*, *UNVERIFIED*, *UNPROVEN*), so every other lesson
+  was briefed exactly like a proven one. In okl's own store that was 139 of 155. A lesson that
+  governs no files here and was never verified, or whose stamp has no `okl verify` run behind
+  it, is now marked *UNCHECKED*, in the full briefing and the one-line tier. One line under the
+  briefing says how many there are, the compact briefing says once what the mark means, and the
+  person's line counts them. The test is the one the CI gate applies to a stamp. Warnings
+  (retractions, retired identifiers) and tag declarations are not marked, and the one-line tier
+  carries no drift marks, so it costs no git call. `okl metric`'s "checked" now uses the same
+  test, so a stored check with no `okl verify` run behind it no longer counts as one.
+
+## 0.10.0
+
+**Upgrading: run `okl seed --refresh`, then `/triggers`.** The briefing now reads each lesson's
+*triggers* (below). `okl seed --refresh` gives the lessons your store already took from the
+bundled packs their triggers (the packs carry 1,730), and `/triggers` drafts them for the lessons
+you recorded, which are found far less often without them (REPORT §4x). On an agent other than
+Claude Code, `okl triggers` lists the lessons that need them. okl's one-line description is now its thesis: "Keeps your coding agent
+true to your rules, specs and docs. Keeps them true to the code. Keeps learning as you build."
+([docs/THESIS.md](docs/THESIS.md)).
+
 The briefing now shows in full what clears a line set on real prompts that should get
 nothing, read over write-time *triggers*, and names everything else that matched in a line
 each, instead of showing up to twelve lessons by the word floor. The line was measured on a
@@ -114,16 +135,18 @@ benchmark built to decide (REPORT §4w; the design and its evidence:
   built with another tokenizer rebuilds it once when opened. A rebuild that fails, for instance
   kept waiting past the timeout by another writer, now fails the open and is retried by the
   next. Before, the store fell back to plain substring search, which cannot see tags.
-- **The briefing marks the lessons no check backs** (#222). Only lessons whose governed files
-  are in the checkout were marked (*STALE*, *UNVERIFIED*, *UNPROVEN*), so every other lesson
-  was briefed exactly like a proven one. In okl's own store that was 139 of 155. A lesson that
-  governs no files here and was never verified, or whose stamp has no `okl verify` run behind
-  it, is now marked *UNCHECKED*, in the full briefing and the one-line tier. One line under the
-  briefing says how many there are, the compact briefing says once what the mark means, and the
-  person's line counts them. The test is the one the CI gate applies to a stamp. Warnings
-  (retractions, retired identifiers) and tag declarations are not marked, and the one-line tier
-  carries no drift marks, so it costs no git call. `okl metric`'s "checked" now uses the same
-  test, so a stored check with no `okl verify` run behind it no longer counts as one.
+- **The README's headline is now the thesis,** and the thesis has its own page (#317). The new
+  headline reads "Keeps your coding agent true to your rules, specs and docs. Keeps them true to
+  the code. Keeps learning as you build." [docs/THESIS.md](docs/THESIS.md) says which parts of that claim hold today and
+  which are still direction, gives the measured baseline with each receipt, and records how the
+  claim has changed. A test fails when the README's headline and the page's claim stop matching.
+  The overview and anatomy sheets in `docs/overview/` carry the claim too, re-rendered, and so
+  do PyPI's description, the MCP Registry's (shortened to its 100-character limit), the
+  plugin's and `okl --help`.
+- **Drift is described as what it measured to be: a prompt to re-check.** In REPORT §4af it
+  caught 14 of the 36 breaks a judge confirmed among 52 patches written to break the lessons it
+  watched, and most of the misses changed a file one step from the ones the lesson watched. The README says so, and the docs no longer call
+  drift detection. #318 widens the lessons it missed.
 
 ## 0.9.0
 

@@ -1,0 +1,13 @@
+diff --git a/src/okl/store.py b/src/okl/store.py
+index 31b9aed..4196876 100644
+--- a/src/okl/store.py
++++ b/src/okl/store.py
+@@ -155,7 +155,7 @@ class Node:
+         if unknown_stacks:
+             raise ValueError(
+                 f"applies_to must name stacks from {sorted(STACK_TAGS)} (or 'any'), "
+-                f"got {sorted(unknown_stacks)}")
++                f"got {sorted(unknown_stacks)}; leave it unset for a lesson that holds everywhere")
+         # The vocabulary is closed but not FIXED. KNOWN_TAGS is the floor shipped in the
+         # package; a store widens it by recording Vocabulary nodes, and Store.add_node
+         # passes the widened set in. Baking the whole vocabulary into the package meant a

@@ -1,0 +1,16 @@
+diff --git a/tests/test_okl.py b/tests/test_okl.py
+index a8dfa42..8d24e05 100644
+--- a/tests/test_okl.py
++++ b/tests/test_okl.py
+@@ -877,6 +877,11 @@ def test_tags_roundtrip_and_vocabulary_enforced(store):
+         core.record(store, type="Defect", title="x", scope="org", tags="not-a-real-tag")
+ 
+ 
++def test_unknown_id_reads_back_as_none(store):
++    """Asking for an id the store never assigned is a miss, not an error."""
++    assert store.get_node(987654) is None
++
++
+ def test_check_filters_org_nodes_by_declared_interests(store):
+     """Interests filter org-wide records by subject, with two deliberate escape hatches.
+ 

@@ -1,0 +1,14 @@
+diff --git a/docs/DEVELOPING.md b/docs/DEVELOPING.md
+index 6ce1f5d..ed54bd9 100644
+--- a/docs/DEVELOPING.md
++++ b/docs/DEVELOPING.md
+@@ -144,7 +144,8 @@ That is expected; see CONTRIBUTING.
+ 6. **Check what was published.** PyPI should list the version. Then launch the server the
+    way a registry client would,
+    `uvx --with 'mcp>=1.2' observed-knowledge-ledger==X.Y.Z mcp`, and confirm it answers
+-   `initialize` with `serverInfo.version` X.Y.Z and lists its tools.
++   `initialize` with `serverInfo.version` X.Y.Z and lists its tools. If `uvx` resolves a
++   cached older build, rerun it with `--refresh`.
+ 7. **If the hooks changed,** refresh them in repos set up with `okl init`: run
+    `okl init --repo <name> --no-seed`, or copy the scaffold hook byte for byte. Then
+    update the website's okl page.

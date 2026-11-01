@@ -1,0 +1,16 @@
+diff --git a/tests/test_hygiene.py b/tests/test_hygiene.py
+index 4a166d7..f677690 100644
+--- a/tests/test_hygiene.py
++++ b/tests/test_hygiene.py
+@@ -143,3 +143,11 @@ def test_the_deep_path_check_matches_the_pattern_and_stays_linear():
+     for run in ("-" * 40000, "." * 40000, "a." * 20000):
+         assert hygiene._has_deep_path(run) is False
+     assert time.perf_counter() - start < 1.0    # the direct search took about 18 s here
++
++
++def test_hygiene_findings_are_stable_across_a_yaml_round_trip():
++    """Records loaded from a YAML dump give the same findings as the original dicts."""
++    import yaml
++    recs = [{"key": k, "type": "Rule", "title": k, "scope": "org"} for k in ("a", "b", "c")]
++    loaded = yaml.safe_load(yaml.safe_dump(recs))
++    assert hygiene.hygiene_findings(loaded) == hygiene.hygiene_findings(recs)

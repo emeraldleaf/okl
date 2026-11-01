@@ -1,0 +1,14 @@
+diff --git a/seed/geospatial-enforcement-defects.json b/seed/geospatial-enforcement-defects.json
+index adbb949..f0b36b6 100644
+--- a/seed/geospatial-enforcement-defects.json
++++ b/seed/geospatial-enforcement-defects.json
+@@ -23,7 +23,8 @@
+       "body": "A CI job runs the review agent against `git diff origin/BASE...HEAD` on every PR and fails on any must-fix finding. Self-owned — does not depend on a third-party review SaaS. Soft-passes until its API-key secret is set so it never wedges merges before setup, then becomes a hard gate via branch protection. Portable to any repo that has a review agent or a written architecture checklist.",
+       "symptom": "architecture rules live only as an agent/checklist that a human must remember to run",
+       "fix": "add a CI job that runs the agent on the diff and fails on must-fix; soft-pass until the key is configured",
+-      "tags": "method,agent-safety"
++      "tags": "method,agent-safety",
++      "applies_to": "geospatial"
+     },
+     {
+       "key": "r_surface_needs_trigger",
