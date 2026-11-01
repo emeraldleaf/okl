@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """What drift catches (REPORT §4af): each replayable watched lesson broken on purpose.
 
-    PYTHONPATH=src python3 evals/drift_mutate.py [--workers 3]
+    PYTHONPATH=src python3 evals/drift_mutate.py [--workers 3] [--base <commit>]
         # writes evals/results/drift-mutate-<stamp>.json and drift-mutate-<stamp>-patches/
 
-BASE is the commit that adds §4af. Its okl-drift.json names the watched lessons; the three whose
-check answers from outside the commit are left out (drift_replay.OUTSIDE), and a lesson whose
-check does not pass at BASE is reported and left out too.
+BASE is the commit that adds §4af; `--base` names another, as §4ah's re-run does. Its
+okl-drift.json names the watched lessons; the three whose check answers from outside the commit
+are left out (drift_replay.OUTSIDE), and a lesson whose check does not pass at BASE is reported
+and left out too.
 
 Per lesson, a breaker model makes four changes meant to break it, blind to its check and its
 governed files (okl-drift.json is removed from its worktree), each told the files the earlier
@@ -228,10 +229,11 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--workers", type=int, default=3, help="lessons worked at once")
     ap.add_argument("--rejudge", type=Path, help="judge again the patches of this receipt that have no verdict")
+    ap.add_argument("--base", default=BASE, help="the commit to break: §4af's by default, §4ah's re-run names its own")
     args = ap.parse_args()
     if args.rejudge:
         return rejudge(args.rejudge.resolve())
-    base = dr.git("rev-parse", BASE).strip()
+    base = dr.git("rev-parse", args.base).strip()
     rules = dr.snapshot(base)
     with dr.store_copy(dr.main_store()) as store:
         nodes = {i: store.get_node(i) for i in rules}

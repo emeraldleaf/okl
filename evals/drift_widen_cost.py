@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""What #318's change to the watched lessons' files costs (REPORT §4ag): the re-verifications drift
+"""What #318's change to the watched lessons' files costs (REPORT §4ah): the re-verifications drift
 would have asked for on this repository's history, with each lesson's governed files as the
 snapshot had them and as #318 sets them, counted without running any check.
 
@@ -58,7 +58,7 @@ def main() -> int:
     total_b = sum(v["before"] for v in per.values())
     total_a = sum(v["after"] for v in per.values())
     receipt = {
-        "section": "§4ag", "what": "re-verifications drift asks for, governed files before and after #318",
+        "section": "§4ah", "what": "re-verifications drift asks for, governed files before and after #318",
         "at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%MZ"), "code": dr.git("rev-parse", "HEAD").strip(),
         "since": dr.git("rev-parse", SINCE).strip(), "until": dr.git("rev-parse", UNTIL).strip(),
         "merges": len(merges), "files": {"before": before, "after": after},
