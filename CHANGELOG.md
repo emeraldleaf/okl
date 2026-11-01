@@ -13,6 +13,10 @@
   (retractions, retired identifiers) and tag declarations are not marked, and the one-line tier
   carries no drift marks, so it costs no git call. `okl metric`'s "checked" now uses the same
   test, so a stored check with no `okl verify` run behind it no longer counts as one.
+- **`okl warm stop` no longer says no server answered when it stopped one** (#320). It left its
+  "stays off" record before sending the stop, and the server reads that record too, so a server
+  that saw it first exited without reading the request. On a loaded machine that happened in 4 of
+  200 stops, none of them a timeout. The stop is now sent first and the record left after it.
 
 ## 0.10.0
 

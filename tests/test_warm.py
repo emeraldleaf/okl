@@ -455,6 +455,33 @@ def test_a_stop_reaches_a_server_that_was_loading_or_busy(monkeypatch):
     assert not server.is_alive()
 
 
+def test_a_stop_is_answered_when_the_server_looks_for_the_record_first(monkeypatch):
+    """stop() left its record before asking, so a server that looked for the record between its
+    last answer and the stop request exited unasked, and `okl warm stop` said none had answered
+    (#320: 4 of 200 stops under load, none of them a timeout). The server is held here after a
+    ping until the stop request is on its way, where a busy machine put it."""
+    _path, server = _serving(monkeypatch)
+    sending, real_ask, real_handle = threading.Event(), warm._ask, warm._handle
+
+    def ask(request, timeout):
+        if request.get("op") == "stop":
+            sending.set()
+        return real_ask(request, timeout)
+
+    def handle(conn, encode, state):
+        answer = real_handle(conn, encode, state)
+        sending.wait(5)
+        return answer
+
+    monkeypatch.setattr(warm, "_ask", ask)
+    monkeypatch.setattr(warm, "_handle", handle)
+    assert warm.ping() is not None
+    assert warm.stop() is True
+    assert warm.stopped()                          # and it stays off
+    server.join(timeout=5)
+    assert not server.is_alive()
+
+
 def test_a_start_still_coming_up_reads_as_loading_not_failed(monkeypatch):
     """The new process has not taken the lock in its first seconds; a prompt then was told the
     start had failed (review on #300)."""

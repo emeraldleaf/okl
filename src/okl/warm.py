@@ -463,11 +463,14 @@ def revive() -> str:
 
 def stop() -> bool:
     """Ask a running server to exit, and keep the default from starting it again until `okl warm
-    start` (review on #300). False when none answered."""
-    _stopped_path().parent.mkdir(parents=True, exist_ok=True)
-    _stopped_path().touch()
+    start` (review on #300). False when none answered. The record is left after the request: the
+    server reads it too, and left first it could end the server before the request was read,
+    which then said none had answered (#320)."""
     try:
         _ask({"op": "stop"}, TIMEOUT_S)
     except WarmUnavailableError:
         return False
+    finally:
+        _stopped_path().parent.mkdir(parents=True, exist_ok=True)
+        _stopped_path().touch()
     return True
