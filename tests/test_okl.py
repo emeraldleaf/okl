@@ -3617,6 +3617,14 @@ def test_the_briefing_says_which_lessons_no_check_backs(store, tmp_path):
     assert "UNCHECKED" not in core.render_actions_only(res)
 
 
+def test_the_persons_line_counts_unchecked_lessons_listed_without_any_in_full():
+    """With nothing shown in full and one unchecked lesson listed, the line returned early and
+    never counted it (review of #316)."""
+    result = {"match_count": 0, "also_matched": [{"id": "a", "title": "t", "fix": "f", "proof": "unchecked"}],
+              "unchecked": 1}
+    assert core.briefing_notice(result).endswith("none close enough to show in full · 1 unchecked")
+
+
 def test_only_advice_is_marked_and_an_older_service_marks_nothing(tmp_path):
     """Review of #316: a Retraction record, whose status is None, was marked UNCHECKED, so a
     warning read as unproven advice; a tag declaration was marked in the second tier and not in

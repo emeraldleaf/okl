@@ -1288,7 +1288,8 @@ def briefing_notice(result: dict[str, Any], shown: int = 3) -> str | None:
             return "okl · the store is empty, so nothing was briefed — see docs/GETTING-STARTED.md"
         if also:
             # The second tier named them: "nothing briefed" would hide that (REPORT §4y).
-            return f"okl · {len(also)} related lesson(s) listed for the agent; none close enough to show in full"
+            return (f"okl · {len(also)} related lesson(s) listed for the agent; none close enough to show "
+                    f"in full{_notice_marks(result)}")
         if result.get("weak_matches"):
             # Not silence: okl ran and found only weak matches, which is a different fact
             # from an empty store and from a task with no subject words. Under the tiered
@@ -1310,8 +1311,13 @@ def briefing_notice(result: dict[str, Any], shown: int = 3) -> str | None:
     more = result["match_count"] - len(short)
     return (f"okl · briefed {result['match_count']} lesson(s): " + "; ".join(short)
             + (f" (+{more} more)" if more > 0 else "")
-            + (f" · {listed}" if also else "")
-            + (f" · {result['drifted']} need re-checking" if result.get("drifted") else "")
+            + (f" · {listed}" if also else "") + _notice_marks(result))
+
+
+def _notice_marks(result: dict[str, Any]) -> str:
+    """The person's line's counts of marked lessons, on every line that names a lesson: a listed
+    lesson can be unchecked while none is shown in full (review of #316)."""
+    return ((f" · {result['drifted']} need re-checking" if result.get("drifted") else "")
             + (f" · {result['unchecked']} unchecked" if result.get("unchecked") else ""))
 
 
