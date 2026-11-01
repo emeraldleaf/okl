@@ -3998,11 +3998,17 @@ commit, a ceiling.
   rather than becoming CI steps. On cost alone a CI step would serve them about as well. Whether
   a repeating shape should be a gate instead is #314's question.
 
-**Breaks nothing catches.** Three judged breaks of the cleared lessons were caught by neither drift
-nor CI: `n_b74bad29fd87-breaking-0` and `-1`, and `n_be9f13d587b1-breaking-1`. The first passed
-because the Postgres tests skip in CI. Clearing the files changes nothing for them, since drift
-was red and the check passed. They need a check, and CI needs a Postgres to run the ones that
-exist.
+**Breaks nothing caught.** Three judged breaks of the cleared lessons passed both drift's check
+and the harness's CI steps: `n_b74bad29fd87-breaking-0` and `-1`, and `n_be9f13d587b1-breaking-1`.
+Each weakens a test or a stated contract rather than code:
+- one makes the Postgres backend's test stop using the shared conformance body;
+- one replaces the backend contract's docstring;
+- one loosens the Postgres full-text test.
+
+A weakened test still passes, so no check that runs the tests can catch these. Clearing the files
+changes nothing for them: their checks passed. (The harness runs CI's steps
+with no Postgres, so the Postgres tests skip there, while real CI runs them, per `ci.yml`. For
+these three that changes nothing.) None of the nine re-run lessons touches Postgres.
 
 **The re-run, registered.** Written before any patch of it is generated.
 - **Instrument:** `PYTHONPATH=src python3 evals/drift_mutate.py --base <B> --blind`, where B is
