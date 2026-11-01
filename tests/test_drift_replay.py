@@ -300,6 +300,24 @@ def test_a_blind_breaker_cannot_read_how_its_lesson_is_checked(monkeypatch, tmp_
     assert "evals/results" not in dm.hidden(tmp_path, "true", ["evals/results/r.json"], blind=True)
 
 
+def test_a_stopped_run_resumes_only_patches_judged_against_the_lesson_as_it_is(monkeypatch, tmp_path):
+    """A lesson edited in the store between a stopped run and its resume: its old patches were
+    judged against other words, so they are made again; the rest are reused (review on #318)."""
+    import json as _json
+    monkeypatch.setattr(sys, "path", list(sys.path))
+    spec = importlib.util.spec_from_file_location("drift_mutate", HERE / "evals" / "drift_mutate.py")
+    dm = importlib.util.module_from_spec(spec)
+    monkeypatch.setitem(sys.modules, "drift_mutate", dm)
+    spec.loader.exec_module(dm)
+    partial = tmp_path / "partial.jsonl"
+    lines = [{"lesson": "a", "lesson_sha": "s1", "kind": "breaking", "k": 0},
+             {"lesson": "b", "lesson_sha": "old", "kind": "breaking", "k": 0},
+             {"lesson": "c", "kind": "breaking", "k": 0}]          # written before hashes were kept
+    partial.write_text("\n".join(_json.dumps(x) for x in lines) + "\n")
+    assert set(dm.resumable(partial, {"a": "s1", "b": "new", "c": "s3"})) == {("a", "breaking", 0)}
+    assert dm.resumable(tmp_path / "none.jsonl", {}) == {}
+
+
 def test_a_judge_reads_each_lesson_as_its_receipt_recorded_it(dr):
     """A judge run after the store moved on would read today's lesson beside the run's code, so a
     receipt without hashes, or a lesson whose text changed, is refused (review on #312)."""

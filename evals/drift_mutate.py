@@ -172,6 +172,19 @@ def overlaps(path: str, governed: list[str]) -> bool:
                or fnmatch.fnmatch(path, g) for g in governed)
 
 
+def resumable(partial: Path, shas: dict[str, str | None]) -> dict[tuple, dict]:
+    """The patches a stopped run already made, by (lesson, kind, k), kept only where the lesson text
+    they were judged against is still the lesson's: one edited in the store between the runs
+    would be judged against old words and recorded under the new hash (review on #318)."""
+    done: dict[tuple, dict] = {}
+    if partial.exists():
+        for line in partial.read_text().splitlines():
+            got = json.loads(line)
+            if got.get("lesson_sha") is not None and got.get("lesson_sha") == shas.get(got["lesson"]):
+                done[(got["lesson"], got["kind"], got["k"])] = got
+    return done
+
+
 def hidden(wt: Path, cmd: str, governed: list[str], blind: bool) -> list[str]:
     """The paths kept from the breaker: the snapshot, and with `blind` the rest of BLIND and the
     check scripts (under ci/ or evals/) the lesson's check command names. A governed file is never
@@ -270,11 +283,8 @@ def main() -> int:
     stamp = f"{datetime.now(UTC):%Y%m%d-%H%M}"
     # Keyed by mode too: a blind run must never resume patches a breaker wrote seeing the checks.
     partial = Path(tempfile.gettempdir()) / f"okl-drift-mutate-{base[:12]}{'-blind' if args.blind else ''}.jsonl"
-    done: dict[tuple, dict] = {}
-    if partial.exists():
-        for line in partial.read_text().splitlines():
-            got = json.loads(line)
-            done[(got["lesson"], got["kind"], got["k"])] = got
+    shas = {i: dr.text_sha(n) for i, n in nodes.items()}
+    done = resumable(partial, shas)
     main_status = dr.git("status", "--porcelain", repo=dr.main_store().parent.parent)
     lessons, left_out = [], {}
     for lid, rule in rules.items():
@@ -331,7 +341,7 @@ def main() -> int:
                     s = claude(BREAKER, prompt, wt)
                     dr.git("checkout", "-q", "HEAD", "--", *kept_out, repo=wt)
                     diff = dr.git("diff", "HEAD", repo=wt)
-                    p = {"lesson": lid, "kind": kind, "k": k, "ci_run": ci_run_lesson(cmd), "diff": diff,
+                    p = {"lesson": lid, "lesson_sha": shas[lid], "kind": kind, "k": k, "ci_run": ci_run_lesson(cmd), "diff": diff,
                          "said": (s.get("result") or "")[-300:], "breaker_cost": s.get("cost_usd", 0.0),
                          "breaker_models": s.get("models", [])}
                     if s.get("error"):
