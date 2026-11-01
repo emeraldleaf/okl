@@ -1,9 +1,10 @@
 {
  "section": "\u00a74ah",
  "what": "what the run's breaker and judge sessions saw and did, from their transcripts",
- "at": "2026-11-01T21:22Z",
+ "at": "2026-11-01T21:31Z",
  "run": "cefb1r8y",
  "rejudge": "fnt18zq9",
+ "code": "65fd747bbe6c",
  "breakers": {
   "sessions": 54,
   "status_cut": 54,
@@ -13,50 +14,60 @@
   },
   "hidden_asked": 1,
   "hidden_returned": 0,
+  "outside_worktree_calls": 4,
   "main_checkout_calls": 0,
   "named_per_lesson": {
-   "doc-check-defaults": [
-    "CHANGELOG.md",
-    "ci/check-check-defaults.py",
-    "evals/REPORT.md"
-   ],
-   "doc-init-flags": [
-    "CHANGELOG.md",
-    "ci/check-init-flags.py",
-    "evals/REPORT.md"
-   ],
-   "doc-install-name": [
-    "CHANGELOG.md",
-    "evals/REPORT.md"
-   ],
-   "doc-verified-refused": [
-    "CHANGELOG.md",
-    "evals/REPORT.md"
-   ],
-   "docs-agent-neutral": [
-    "CHANGELOG.md",
-    "ci/check-agent-neutral.py",
-    "evals/REPORT.md"
-   ],
-   "n_07faa4565128": [
-    "CHANGELOG.md",
-    "ci/check-portable-ungated.py",
-    "evals/REPORT.md"
-   ],
-   "n_7e50e3588bcd": [
-    "CHANGELOG.md",
-    "ci/check-test-imports.py",
-    "evals/REPORT.md"
-   ],
-   "n_bf6a2aee2f12": [
-    "CHANGELOG.md",
-    "evals/REPORT.md"
-   ],
-   "n_d45d7bf64896": [
-    "CHANGELOG.md",
-    "ci/check-positioning.py",
-    "evals/REPORT.md"
-   ]
+   "doc-check-defaults": {
+    "sessions": 6,
+    "CHANGELOG.md": 6,
+    "ci/check-check-defaults.py": 6,
+    "evals/REPORT.md": 6
+   },
+   "doc-init-flags": {
+    "sessions": 6,
+    "CHANGELOG.md": 6,
+    "ci/check-init-flags.py": 6,
+    "evals/REPORT.md": 6
+   },
+   "doc-install-name": {
+    "sessions": 6,
+    "CHANGELOG.md": 6,
+    "evals/REPORT.md": 6
+   },
+   "doc-verified-refused": {
+    "sessions": 6,
+    "CHANGELOG.md": 6,
+    "evals/REPORT.md": 6
+   },
+   "docs-agent-neutral": {
+    "sessions": 6,
+    "CHANGELOG.md": 6,
+    "ci/check-agent-neutral.py": 6,
+    "evals/REPORT.md": 6
+   },
+   "n_07faa4565128": {
+    "sessions": 6,
+    "CHANGELOG.md": 6,
+    "ci/check-portable-ungated.py": 6,
+    "evals/REPORT.md": 6
+   },
+   "n_7e50e3588bcd": {
+    "sessions": 6,
+    "CHANGELOG.md": 6,
+    "ci/check-test-imports.py": 6,
+    "evals/REPORT.md": 6
+   },
+   "n_bf6a2aee2f12": {
+    "sessions": 6,
+    "CHANGELOG.md": 6,
+    "evals/REPORT.md": 6
+   },
+   "n_d45d7bf64896": {
+    "sessions": 6,
+    "CHANGELOG.md": 6,
+    "ci/check-positioning.py": 6,
+    "evals/REPORT.md": 6
+   }
   }
  },
  "judges": {
