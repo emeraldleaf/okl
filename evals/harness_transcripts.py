@@ -71,9 +71,13 @@ def status_lines(evs: list[dict]) -> tuple[list[str], bool]:
     """The deleted files the session's git status named, and whether the status was cut short."""
     for e in evs:
         for b in blocks(e):
-            m = re.search(r"Status:\n(.*?)\n\s*Recent commits", str(b.get("text") or ""), re.S)
-            if m:
-                return re.findall(r"^ ?D (\S+)", m.group(1), re.M), "(truncated" in m.group(1)
+            # Found by search, not one regex: a lazy span before \s* backtracks on long contexts.
+            text = str(b.get("text") or "")
+            start = text.find("Status:\n")
+            end = text.find("Recent commits", start) if start >= 0 else -1
+            if end >= 0:
+                status = text[start + len("Status:\n"):end]
+                return re.findall(r"^ ?D (\S+)", status, re.M), "(truncated" in status
     return [], False
 
 
