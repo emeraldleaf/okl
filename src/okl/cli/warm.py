@@ -34,7 +34,7 @@ def _stop(_args: argparse.Namespace) -> int:
 
 
 def _status(_args: argparse.Namespace) -> int:
-    up = warm.ping()
+    up = warm.ping(warm.COMMAND_TIMEOUT_S)
     print(f"running · {up['model']} · pid {up['pid']} · loaded in {up['loaded_s']} s" if up
           else f"not running · `okl warm start` · socket {warm.socket_path()}")
     return 0 if up else 1

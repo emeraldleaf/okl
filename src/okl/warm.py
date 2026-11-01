@@ -55,6 +55,9 @@ WEIGHT = 8.0       # §4w: the top of a broad rise on the selection split
 LINE = 5.767926
 NEAREST = 36       # the model's own candidates, as many as the full-text window
 TIMEOUT_S = 0.5    # what a prompt waits for the prompt's vector before briefing without it
+# What a person's `okl warm stop` or `status` waits: nothing waits on them the way a prompt
+# does, and a server embedding a batch for `okl warm index` is busy for longer (#320).
+COMMAND_TIMEOUT_S = 5.0
 IDLE_EXIT_S = 4 * 3600
 # How long after a start the default waits before starting the server again: loading takes about
 # a second, so a server that is not up by then failed, and starting another each prompt would
@@ -468,7 +471,7 @@ def stop() -> bool:
     server reads it too, and left first it could end the server before the request was read,
     which then said none had answered (#320)."""
     try:
-        _ask({"op": "stop"}, TIMEOUT_S)
+        _ask({"op": "stop"}, COMMAND_TIMEOUT_S)
     except WarmUnavailableError:
         return False
     finally:

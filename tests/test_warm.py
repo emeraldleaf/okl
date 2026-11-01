@@ -482,6 +482,28 @@ def test_a_stop_is_answered_when_the_server_looks_for_the_record_first(monkeypat
     assert not server.is_alive()
 
 
+def test_a_person_s_status_and_stop_wait_for_a_busy_server(monkeypatch, capsys):
+    """`okl warm status` and `okl warm stop` waited TIMEOUT_S, the half second a prompt allows,
+    so a server busy for longer (embedding a batch for `okl warm index`) read as not running,
+    and a stop it obeyed said none had answered (#320)."""
+    from okl.cli import main
+    _path, server = _serving(monkeypatch)
+    real_handle = warm._handle
+
+    def busy(conn, encode, state):
+        time.sleep(warm.TIMEOUT_S + 0.5)
+        return real_handle(conn, encode, state)
+
+    monkeypatch.setattr(warm, "_handle", busy)
+    assert main(["warm", "status"]) == 0
+    assert main(["warm", "stop"]) == 0
+    status, stop = capsys.readouterr().out.splitlines()
+    assert status.startswith("running")
+    assert stop.startswith("stopped;")
+    server.join(timeout=5)
+    assert not server.is_alive()
+
+
 def test_a_server_okl_starts_itself_does_not_undo_a_stop(monkeypatch):
     """start() spawned `okl warm serve`, which undoes `okl warm stop` for a person who runs it,
     so a prompt that found no server just as a stop landed brought the server back for good
