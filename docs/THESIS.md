@@ -58,12 +58,8 @@ when #316 merges.
 
 ## Still to align
 
-These still use the old tagline, and change with the next release, which is the maintainer's
-call:
-- `pyproject.toml`'s description, which PyPI shows;
-- `server.json`, which the MCP Registry shows; `tests/test_scaffold.py` pins its first words;
-- `.claude-plugin/plugin.json`;
-- the CLI's `--help` description.
-
-The overview and anatomy sheets in `docs/overview/` carry the claim since 2026-10-31, as does
-the okl page on emeraldleaf.dev.
+Nothing in okl's own files. Since 0.10.0, PyPI's description, the plugin's and `okl --help` carry
+the claim word for word, and the MCP Registry's carries it shortened to fit its 100-character
+limit: "Keeps your agent true to your rules. Keeps them true to the code. Keeps learning as you
+build." The overview and anatomy sheets in `docs/overview/` and the okl page on emeraldleaf.dev
+carry it too.

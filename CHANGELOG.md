@@ -1,6 +1,14 @@
 # Changelog
 
-## Unreleased
+## 0.10.0
+
+**Upgrading: run `okl seed --refresh`, then `/triggers`.** The briefing now reads each lesson's
+*triggers* (below). `okl seed --refresh` gives the lessons your store already took from the
+bundled packs their triggers (the packs carry 1,730), and `/triggers` drafts them for the lessons
+you recorded, which are found far less often without them (REPORT §4x). On an agent other than
+Claude Code, `okl triggers` lists the lessons that need them. okl's one-line description is now its thesis: "Keeps your coding agent
+true to your rules, specs and docs. Keeps them true to the code. Keeps learning as you build."
+([docs/THESIS.md](docs/THESIS.md)).
 
 The briefing now shows in full what clears a line set on real prompts that should get
 nothing, read over write-time *triggers*, and names everything else that matched in a line
@@ -119,7 +127,9 @@ benchmark built to decide (REPORT §4w; the design and its evidence:
   the code. Keeps learning as you build." [docs/THESIS.md](docs/THESIS.md) says which parts of that claim hold today and
   which are still direction, gives the measured baseline with each receipt, and records how the
   claim has changed. A test fails when the README's headline and the page's claim stop matching.
-  The overview and anatomy sheets in `docs/overview/` carry the claim too, re-rendered.
+  The overview and anatomy sheets in `docs/overview/` carry the claim too, re-rendered, and so
+  do PyPI's description, the MCP Registry's (shortened to its 100-character limit), the
+  plugin's and `okl --help`.
 - **Drift is described as what it measured to be: a prompt to re-check.** In REPORT §4af it
   caught 14 of the 36 breaks a judge confirmed among 52 patches written to break the lessons it
   watched, and most of the misses changed a file one step from the ones the lesson watched. The README says so, and the docs no longer call
