@@ -3444,8 +3444,9 @@ the exclusions or the samples after any verdict is read. If the run cannot compl
   - 13 red pairs had read as green.
 
   Each side is now read by the snapshot the gate read there, and each event records those paths,
-  with tests. A dry run at 8c6ad3c, which also sets apart paths that move between two stamps and
-  rules that govern nothing, gives the same counts: neither occurs in the window.
+  with tests. Dry runs at 8c6ad3c and 7bd33ff, which also set apart paths that move between two
+  stamps (found after every snapshot is read, so the walk's order cannot hide one) and rules that
+  govern nothing, give the same counts: neither occurs in the window.
 - **Departures from the registration.** It allowed one replay and one judge pass of 40 calls,
   and no change to the pins, the exclusions or the samples after any verdict was read. This
   section ran three replays and three judge passes. Each later one corrects a defect in the
