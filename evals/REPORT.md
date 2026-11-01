@@ -4054,6 +4054,128 @@ these three that changes nothing.) None of the nine re-run lessons touches Postg
   the new checks were written against. `--blind` keeps it from reading the checks, not from
   repeating itself. Read the result as an upper bound on what a fresh kind of break would meet.
 
+### Result (2026-11-01)
+
+**The run.** Receipt `drift-mutate-20261101-1935.json`, with its 54 patches in the directory
+beside it. It ran from B, 0c35ead (the merge of #326), on B, with `--blind`, and cost $3.16. It
+ran two lessons at once, not three, because the disk had 10 GiB free; that changes only how
+long the run takes. The breaker resolved to sonnet and the judge to opus, each with haiku beside
+it.
+- **All nine lessons' checks passed at B,** and so did every CI step. The three that answer from
+  outside the commit were left out, as registered.
+- **No breaker failed,** every patch applied, no check timed out, and the main checkout was
+  untouched.
+- **The judge gave no verdict on 11 of the 54 patches,** 8 breaking and 3 harmless. Ten calls
+  timed out at 300 seconds, and one answered with a call to a tool it did not have. §4af counted
+  its 11 the same way, time-outs and the answer that was not valid together, against the
+  registered 20%. Here that is 20.4%, over it.
+- **So the registered result is counts only, with no rate.** Counting the time-outs alone, 10 of
+  54 (18.5%), would allow a rate. That reading is not taken: it was chosen after the counts were
+  read, and §4af read the rule the other way.
+
+**The counts,** from the first judge pass:
+- **The judge confirmed 24 of the 36 breaking patches as breaks,** more than half, and called 4
+  intact. Of the 18 harmless patches it called 15 intact, and those 15 are the controls.
+- **Drift caught 16 of the 24 breaks.** On the same nine lessons, §4af caught 8 of 22.
+- **The 8 misses:** 4 changed a file the lesson does not govern (coverage) and 4 passed a check
+  that read too little (sensitivity). §4af's 14 misses on the nine were 8 and 6.
+- **No control failed its check,** 0 of 15.
+- **Against the harness's CI steps,** of the 24 breaks: drift alone caught 13, both 3, CI alone
+  1, and neither 7.
+
+| lesson | §4af: breaks, caught, coverage, sensitivity | re-run: breaks, caught, coverage, sensitivity |
+|---|---|---|
+| `doc-check-defaults` | 4, 2, 2, 0 | 4, 4, 0, 0 |
+| `doc-init-flags` | 1, 1, 0, 0 | 1, 0, 1, 0 |
+| `doc-install-name` | 0, 0, 0, 0 | 1, 0, 0, 1 |
+| `doc-verified-refused` | 3, 3, 0, 0 | 2, 1, 0, 1 |
+| `docs-agent-neutral` | 4, 0, 3, 1 | 4, 3, 0, 1 |
+| `n_07faa4565128` | 4, 0, 0, 4 | 4, 1, 3, 0 |
+| `n_7e50e3588bcd` | 1, 0, 1, 0 | 3, 3, 0, 0 |
+| `n_bf6a2aee2f12` | 1, 1, 0, 0 | 1, 1, 0, 0 |
+| `n_d45d7bf64896` | 4, 1, 2, 1 | 4, 3, 0, 1 |
+| all nine | 22, 8, 8, 6 | 24, 16, 4, 4 |
+
+**Predictions.**
+1. **Not settled.** With counts only, no rate is quoted, so the bar of 0.5 is neither met nor
+   missed. As registered for a bar not shown met, the docs keep calling drift bookkeeping, a
+   prompt to re-check, and each miss goes to its cause (below).
+2. **Held, in counts.** 4 coverage misses among 24 breaks, against 8 among 22.
+3. **Held.** No control failed its check.
+
+**Each miss and its cause.** Coverage: the break changed a file the lesson does not govern.
+- **`doc-init-flags-breaking-3`:** `docs/DEPLOY.md` gained `okl init --server`, a flag `init`
+  does not have. The lesson governs the README, `GETTING-STARTED.md` and the CLI, and its check
+  reads those two docs.
+- **`n_07faa4565128-breaking-0`, `-1` and `-2`:** the guidance that tells an agent how to set
+  `applies_to` now says to gate by the stack in hand. The three are the scaffold's `/record`
+  command, the `okl_record` tool's description and `okl record --applies-to`'s help. The check
+  reads every gated seed record, so it sees what has been gated, not the guidance that gates the
+  next one. In §4af all four of this lesson's breaks gated a seed record. This breaker, unable to
+  read the new check, went to the guidance instead. Whether the guidance is inside the lesson's
+  claim is the lesson's to settle. Either its files and check extend to those three surfaces, or
+  it is reworded to be about the seed corpus. (CI's mirror test, `test_mirror_files_identical`,
+  failed on the first, which edited the scaffold copy alone.)
+
+Sensitivity: the lesson's files changed and its check passed.
+- **`doc-install-name-breaking-2`:** the README's `pipx install` and `[mcp]` lines named a
+  distribution the project does not publish. The check looks for one line,
+  `pipx install '<name>[mcp]'`, which another README section still held.
+- **`doc-verified-refused-breaking-2`:** `cli/__init__.py` now drops `--verified` when `--replace`
+  is given, so that pair is accepted. The check runs `okl record --verified` without `--replace`.
+- **`docs-agent-neutral-breaking-2`:** `docs/SCAFFOLD.md` dropped "Claude Code" from
+  `okl scaffold . --plugin`'s comment. The plugin manifest is a surface the check's list does not
+  name.
+- **`n_d45d7bf64896-breaking-3`:** a `RELATED-WORK.md` row recast a research system as "a direct
+  competitor on recall" whose memory okl's retrieval "is built to surface … more often than".
+  The check knows that comparison's shape, but its rivals are a list, and this one is not on it.
+
+The last two are the pattern checks meeting a fresh name, a new surface and a new rival, as
+their docstrings and the threat above said they would.
+
+**What `--blind` hid, read from the breakers' own transcripts.** Claude Code keeps each headless
+session, and all 54 were read.
+- **No breaker read a file outside its worktree, and none read a hidden file.** One asked for
+  `ci/check-agent-neutral.py` and was told it does not exist.
+- **Every breaker saw the hidden files' names.** A session's context carries the worktree's git
+  status, which lists each deleted file (` D ci/check-agent-neutral.py`, ` D evals/REPORT.md`).
+  All 78 of §4af's breakers saw ` D okl-drift.json` the same way. `--blind` hid contents, not
+  names: a breaker could know a check exists and what it is called, not what it reads.
+
+**Re-judged, apart from the result.** Receipt `drift-mutate-20261101-1935-rejudge.json`, from
+753437e, $0.51. The 11 patches without a verdict were judged once more, and 3 still have none:
+two timed out again, and one wrote tool calls out as text. Of the other eight:
+- **Six more breaks, all red, five failing their check.** The sixth,
+  `doc-verified-refused-breaking-3`, is the gap `-breaking-2` found: with `--replace`,
+  `--verified` goes through, and the check never passes `--replace`. With these, drift caught 21
+  of 30 breaks; the misses are 4 coverage and 5 sensitivity; and against CI, drift alone caught
+  16, both 5, CI alone 1, and neither 8.
+- **One harmless patch was called broken, wrongly.** `doc-init-flags-harmless-0` mentions
+  `okl init --uninstall`, which the CLI has (`src/okl/cli/parser.py`). The judge, with only the
+  diff, guessed otherwise, as §4af's did with `--force`. Its check passed. Counted as a control,
+  the controls are 17, and none failed.
+- **No rate is quoted from it.** The registered result is counts only, and a re-judge is not
+  the registered result.
+- **Why the judge stalls, from its saved sessions.** It runs with no tools in an empty
+  directory, and it tries to look at the repository anyway. It writes tool calls out as text,
+  says "every attempt to inspect the working directory returned empty output", or loops: one
+  answer counts `echo 29`, `echo 30` for 8,772 characters. Not seeing the repository is also
+  behind both wrong verdicts on harmless patches.
+
+**What follows.**
+- **The docs stay as they are.** CHANGELOG, `RELATED-WORK.md` and the thesis's baseline give
+  these counts beside §4af's, and no doc calls drift detection.
+- **The judge's time-outs decided this result.** Each run lost 11 verdicts (14% of §4af's 78,
+  20.4% of these 54), and §4af found them flaky for no known reason. The saved sessions now give
+  one: a judge with no repository trying to read one. A run that can settle prediction 1 needs a
+  judge that answers: one that can read the commit it judges, with the check's files still kept
+  from it, or one told it has only the diff, and a time-out rule registered before the run. Both
+  are filed as #327.
+- **Each miss goes to its cause,** filed with the same issue: `DEPLOY.md` for `doc-init-flags`,
+  every install line for `doc-install-name`, `--replace` for `doc-verified-refused`, the plugin
+  manifest and the rival for the two pattern checks, and the guidance question for
+  `n_07faa4565128`.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
