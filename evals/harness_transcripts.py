@@ -67,17 +67,32 @@ def blocks(e: dict) -> list[dict]:
     return content if isinstance(content, list) else []
 
 
+def parse_status(text: str) -> tuple[list[str], bool] | None:
+    """The deleted files a git status text names and whether it was cut short, or None if it
+    holds no status. Found by search, not one regex: a lazy span before \\s* backtracks."""
+    start = text.find("Status:\n")
+    end = text.find("Recent commits", start) if start >= 0 else -1
+    if end < 0:
+        return None
+    status = text[start + len("Status:\n"):end]
+    return re.findall(r"^ ?D (\S+)", status, re.M), "(truncated" in status
+
+
 def status_lines(evs: list[dict]) -> tuple[list[str], bool]:
-    """The deleted files the session's git status named, and whether the status was cut short."""
+    """The deleted files the session's git status named, and whether the status was cut short.
+    The status's own home is the session_context attachment's gitStatus; a copy inside a
+    message's text is the fallback, since not every transcript carries one (review on #328)."""
+    for e in evs:
+        att = e.get("attachment") or {}
+        if att.get("type") == "session_context" and isinstance(att.get("context"), dict):
+            found = parse_status(str(att["context"].get("gitStatus") or ""))
+            if found:
+                return found
     for e in evs:
         for b in blocks(e):
-            # Found by search, not one regex: a lazy span before \s* backtracks on long contexts.
-            text = str(b.get("text") or "")
-            start = text.find("Status:\n")
-            end = text.find("Recent commits", start) if start >= 0 else -1
-            if end >= 0:
-                status = text[start + len("Status:\n"):end]
-                return re.findall(r"^ ?D (\S+)", status, re.M), "(truncated" in status
+            found = parse_status(str(b.get("text") or ""))
+            if found:
+                return found
     return [], False
 
 
