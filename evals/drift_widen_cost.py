@@ -54,7 +54,10 @@ def main() -> int:
     ap.add_argument("--after", default="HEAD", help="the commit whose snapshot holds #318's files")
     args = ap.parse_args()
     before = {lid: dr.governs(rule) for lid, rule in dr.snapshot(BEFORE).items() if dr.governs(rule)}
-    now = dr.snapshot(args.after)
+    after_rev = dr.git("rev-parse", "--verify", "-q", f"{args.after}^{{commit}}").strip()
+    now = dr.snapshot(after_rev) if after_rev else {}
+    if not now:   # an unknown revision, or one with no snapshot, would read as every lesson cleared
+        sys.exit(f"drift_widen_cost: {args.after!r} is not a commit with an okl-drift.json")
     after = {lid: dr.governs(now.get(lid) or {}) for lid in before}
     lists = {"before": before, "after": after}
     merges = count(dr.git("rev-list", "--first-parent", f"{SINCE}..{BEFORE}").split(), lists)

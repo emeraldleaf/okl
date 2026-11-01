@@ -24,7 +24,9 @@ packs = subprocess.run(["git", "-C", str(REPO), "ls-files", "seed/*.json"], capt
 gated, contradicted = 0, []
 for pack in [REPO / f for f in packs.stdout.split()]:
     for node in json.loads(pack.read_text())["nodes"]:
-        if not node.get("applies_to"):
+        # As the briefing reads it (core.py): "any" gates nothing, so only a named stack counts.
+        stacks = {t.strip().lower() for t in str(node.get("applies_to") or "").split(",") if t.strip()} - {"any"}
+        if not stacks:
             continue
         gated += 1
         text = " ".join(str(node.get(k) or "") for k in ("title", "symptom", "body", "fix"))

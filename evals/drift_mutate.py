@@ -268,7 +268,8 @@ def main() -> int:
         nodes = {i: store.get_node(i) for i in rules}
         store.close()
     stamp = f"{datetime.now(UTC):%Y%m%d-%H%M}"
-    partial = Path(tempfile.gettempdir()) / f"okl-drift-mutate-{base[:12]}.jsonl"
+    # Keyed by mode too: a blind run must never resume patches a breaker wrote seeing the checks.
+    partial = Path(tempfile.gettempdir()) / f"okl-drift-mutate-{base[:12]}{'-blind' if args.blind else ''}.jsonl"
     done: dict[tuple, dict] = {}
     if partial.exists():
         for line in partial.read_text().splitlines():

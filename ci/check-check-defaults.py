@@ -74,7 +74,7 @@ client.drift.annotate_briefing = lambda *a, **k: None
 local = client.Client(config={"repo": "r"})
 local._local_store = lambda: None
 local.check("a task")
-remote = client.Client(config={"repo": "r", "service_url": "http://okl.invalid"})
+remote = client.Client(config={"repo": "r", "service_url": "https://okl.invalid"})
 remote._post_check = lambda payload: seen.setdefault("remote", payload) and {} or {}
 remote.check("a task")
 for path in ("local", "remote"):
