@@ -18,9 +18,9 @@
       "title": "Every okl init flag the README and guide document exists in the CLI",
       "scope": "repo:okl",
       "files": "README.md,docs/GETTING-STARTED.md,docs/FROM-SCRATCH.md,src/okl/cli/",
-      "verified_at": 1793574638598,
-      "verified_by": "`PYTHONPATH=src python3 ci/check-init-flags.py` exit 0, matched 'INIT FLAGS EXIST' on commit f4969e236c9f @ 2026-11-01T23:10Z",
-      "verified_commit": "f4969e236c9fbc24e3690e09f44f12a6680b0be0"
+      "verified_at": 1793576035312,
+      "verified_by": "`PYTHONPATH=src python3 ci/check-init-flags.py` exit 0, matched 'INIT FLAGS EXIST' on commit 0604671dadb9 @ 2026-11-01T23:33Z",
+      "verified_commit": "0604671dadb9b3be10218473c21e8b9186953fe6"
     },
     {
       "id": "doc-install-name",
@@ -48,9 +48,9 @@
       "title": "okl's docs are agent-neutral; Claude Code-only parts are labelled as such",
       "scope": "repo:okl",
       "files": "README.md,docs/",
-      "verified_at": 1793574639152,
-      "verified_by": "`python3 ci/check-agent-neutral.py` exit 0, matched 'AGENT NEUTRAL' on commit f4969e236c9f @ 2026-11-01T23:10Z",
-      "verified_commit": "f4969e236c9fbc24e3690e09f44f12a6680b0be0"
+      "verified_at": 1793576035429,
+      "verified_by": "`python3 ci/check-agent-neutral.py` exit 0, matched 'AGENT NEUTRAL' on commit 0604671dadb9 @ 2026-11-01T23:33Z",
+      "verified_commit": "0604671dadb9b3be10218473c21e8b9186953fe6"
     },
     {
       "id": "n_07faa4565128",
@@ -108,9 +108,9 @@
       "title": "Entered a crowded category deliberately: differentiate on verification-of-memory, compose with memory infra, never compete on recall",
       "scope": "repo:okl",
       "files": "README.md,docs/",
-      "verified_at": 1793574639326,
-      "verified_by": "`python3 ci/check-positioning.py` exit 0, matched 'POSITIONING OK' on commit f4969e236c9f @ 2026-11-01T23:10Z",
-      "verified_commit": "f4969e236c9fbc24e3690e09f44f12a6680b0be0"
+      "verified_at": 1793576035603,
+      "verified_by": "`python3 ci/check-positioning.py` exit 0, matched 'POSITIONING OK' on commit 0604671dadb9 @ 2026-11-01T23:33Z",
+      "verified_commit": "0604671dadb9b3be10218473c21e8b9186953fe6"
     },
     {
       "id": "n_ead8e0a2b43d",
