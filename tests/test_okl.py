@@ -5,6 +5,7 @@ can learn the contract being checked without opening the code under test. Where 
 guards a security boundary, an ordering rule, or a "silence is not safety" invariant,
 the assertions are numbered and each says which failure it prevents.
 """
+import dataclasses
 import importlib.util
 import json
 import os
@@ -3604,6 +3605,8 @@ def test_the_briefing_says_which_lessons_no_check_backs(store, tmp_path):
     assert f"[{nid}] *(UNCHECKED)*" in text, text
     assert "1 lesson(s) marked UNCHECKED have no observed check behind them" in text, text
     assert "1 unchecked" in core.briefing_notice(res)
+    # The compact path prints no footer, so it says once what the mark means (review of #316).
+    assert "UNCHECKED: no observed check backs that lesson" in core.render_actions_only(res)
     # Once a check is observed, as okl verify stamps it, the mark and the footer go.
     minute = dt.datetime.now(dt.UTC).strftime("%Y-%m-%dT%H:%MZ")
     core.verify(store, nid, f"`true` exit 0, matched '' on commit abcdef1 @ {minute}", commit="abcdef1")
@@ -3611,6 +3614,57 @@ def test_the_briefing_says_which_lessons_no_check_backs(store, tmp_path):
     drift.annotate_briefing(res, "s", str(tmp_path))
     text = core.render_check_for_agent(res)
     assert "UNCHECKED" not in text and "unchecked" not in (core.briefing_notice(res) or ""), text
+    assert "UNCHECKED" not in core.render_actions_only(res)
+
+
+def test_only_advice_is_marked_and_an_older_service_marks_nothing(tmp_path):
+    """Review of #316: a Retraction record, whose status is None, was marked UNCHECKED, so a
+    warning read as unproven advice; a tag declaration was marked in the second tier and not in
+    full; and a service older than the mark, which sends no proof fields, had every listed
+    lesson marked. The second tier carries no governed files, so drift spends no git call on
+    it."""
+    import subprocess
+
+    from okl import drift
+    from okl.store import Node
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    (tmp_path / "governed.py").write_text("x = 1\n")
+    entry = core._also_entry(Node(type="Rule", title="t", scope="org", files="governed.py", fix="f"))
+    assert "files" not in entry and entry["verified_at"] is None
+    result = {
+        "live_retractions": [{"id": "withdrawn", "type": "Retraction", "scope": "org", "verified_at": None}],
+        "in_scope_tombstones": [{"id": "old-name", "type": "Tombstone", "scope": "org", "verified_at": None}],
+        "also_matched": [
+            {"id": "a-tag", "type": "Vocabulary", "title": "t", "fix": "", "verified_at": None},
+            {"id": "a-claim", "type": "Retraction", "title": "t", "fix": "", "verified_at": None},
+            {"id": "from-0.9", "type": "Rule", "title": "t", "fix": "f"},         # no proof fields
+            {**entry, "id": "listed"},
+        ],
+    }
+    assert drift.annotate_briefing(result, "s", str(tmp_path)) == 0          # no drift on the second tier
+    marked = {r["id"] for v in result.values() if isinstance(v, list) for r in v if r.get("proof")}
+    assert marked == {"listed"} and result["unchecked"] == 1, marked
+
+
+def test_the_hygiene_report_counts_a_check_as_the_briefing_does(monkeypatch):
+    """A stored check with no `okl verify` evidence is no check: the briefing marks the lesson
+    UNCHECKED, and the report listed it as checked (review of #316)."""
+    import datetime as dt
+    monkeypatch.delenv("OKL_BRIEFING_LOG", raising=False)
+    s = Store("sqlite:///:memory:")
+    hand = core.record(s, type="Rule", scope="org", title="put the ownership predicate in the WHERE clause")
+    s.add_node(dataclasses.replace(s.get_node(hand), verified_by="checked by hand"))   # a seed-style stamp
+    proven = core.record(s, type="Rule", scope="org", title="rotate the webhook signing secret every quarter")
+    core.record(s, type="Rule", scope="org", title="close every sqlite connection you open")
+    minute = dt.datetime.now(dt.UTC).strftime("%Y-%m-%dT%H:%MZ")
+    core.verify(s, proven, f"`true` exit 0, matched '' on commit abcdef1 @ {minute}", commit="abcdef1")
+    for task in ("add the ownership predicate to the query", "rotate the webhook signing secret"):
+        core.record_briefing(s, "app", core.check(s, "app", task))
+    report = core.exposure_report(s, "app")
+    checked = {r["id"]: r["checked"] for r in report["most_shown"]}
+    assert checked == {hand: False, proven: True}, checked
+    assert [r["id"] for r in report["most_shown_unchecked"]] == [hand]
+    s.close()
 
 
 def test_drift_compares_the_commit_a_check_passed_at_not_the_clock(store, tmp_path, monkeypatch, capsys):

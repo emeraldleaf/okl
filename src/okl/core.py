@@ -23,7 +23,7 @@ from typing import Any
 # judge which bundled seed packs fit a repo.
 from . import decide, semantic, warm
 from . import rerank as rerank_stage
-from .store import RETIRED_STATUSES, Edge, Node, Store, _now_ms, split_tags
+from .store import RETIRED_STATUSES, Edge, Node, Store, _now_ms, has_observed_check, split_tags
 from .store import STACK_TAGS as STACK_TAGS
 
 
@@ -787,10 +787,11 @@ def _also_entry(n: Node) -> dict[str, Any]:
     fix = re.split(r"(?<=[.!?])\s", (n.fix or "").strip(), maxsplit=1)[0]
     if len(fix) > ALSO_FIX_CHARS:
         fix = fix[:ALSO_FIX_CHARS].rsplit(" ", 1)[0].rstrip(",;:") + "…"
-    # What the client's drift and proof marks read, so a listed lesson is judged as a briefed
-    # one is (#222): a second-tier line said nothing about whether any check backed it.
-    proof = {"scope": n.scope, "files": n.files, "verified_at": n.verified_at,
-             "verified_by": n.verified_by, "verified_commit": n.verified_commit}
+    # What the client's proof mark reads (#222): a second-tier line said nothing about whether
+    # any check backed it. Not the governed files: drift's verdict costs a git call per entry on
+    # every prompt, and the one-line tier stays without drift marks (review of #316).
+    proof = {"verified_at": n.verified_at, "verified_by": n.verified_by,
+             "verified_commit": n.verified_commit}
     return {"id": n.id, "type": n.type, "title": n.title, "fix": fix, **proof, **stale}
 
 
@@ -1341,7 +1342,7 @@ def render_actions_only(result: dict[str, Any], limit: int | None = None) -> str
             head = (f"OKL: {shown} lesson(s) matched with no action to route; the full briefing shows "
                     f"them ({result['repo']})." if shown else
                     f"OKL: no rule matched this task closely ({result['repo']}).")
-            return "\n".join([head, *tail, *_replaced_lines(result)])
+            return "\n".join(_unchecked_note([head, *tail, *_replaced_lines(result)]))
         if result.get("replaced"):
             return "\n".join([f"OKL: no live rule applies to this task ({result['repo']}); "
                               "a lesson it matched was replaced:", *_replaced_lines(result)])
@@ -1353,7 +1354,16 @@ def render_actions_only(result: dict[str, Any], limit: int | None = None) -> str
         sym = f" [when: {a['symptom']}]" if a.get("symptom") else ""
         out.append(f"- {verb.get(a['kind'], 'DO')}: {a['target']}{_id_tag(a)}{_drift_tag(a)}{_proof_tag(a)}{sym}")
         out.append(f"  -> {a['how']}")
-    return "\n".join(out + _replaced_lines(result) + tail)
+    return "\n".join(_unchecked_note(out + _replaced_lines(result) + tail))
+
+
+def _unchecked_note(lines: list[str]) -> list[str]:
+    """`lines`, and what the UNCHECKED mark means when one of them carries it: the compact path
+    prints no footer, and a mark with no meaning tells the agent nothing (review of #316)."""
+    if not any("*(UNCHECKED)*" in line for line in lines):
+        return lines
+    return [*lines, "UNCHECKED: no observed check backs that lesson. Treat it as advice, and confirm "
+                    "it against the code before relying on it."]
 
 
 def _also_line(e: dict[str, Any]) -> str:
@@ -1913,6 +1923,13 @@ def hygiene_report(store: Store, repo: str, top: int = 10) -> dict[str, Any]:
     }
 
 
+def _proven(n: Node) -> bool:
+    """Whether an observed check backs `n`, by the predicate the briefing's UNCHECKED mark reads:
+    the report counted any stored check as one, whatever its stamp said (review of #316)."""
+    return has_observed_check({"verified_at": n.verified_at, "verified_by": n.verified_by,
+                               "verified_commit": n.verified_commit})
+
+
 def exposure_report(store: Store, repo: str, interests: list[str] | None = None,
                     top: int = 10) -> dict[str, Any]:
     """Which of the lessons `repo` can be briefed its briefings have actually shown (#129).
@@ -1935,8 +1952,7 @@ def exposure_report(store: Store, repo: str, interests: list[str] | None = None,
     times = Counter(i for b in logged for i in b.node_ids)
 
     def row(n: Node) -> dict[str, Any]:
-        return {"id": n.id, "type": n.type, "title": n.title, "times": times[n.id],
-                "checked": bool(n.verified_by)}
+        return {"id": n.id, "type": n.type, "title": n.title, "times": times[n.id], "checked": _proven(n)}
 
     # Never shown, oldest first: the longer a lesson has gone unseen, the better a
     # candidate it is to review or retire.
@@ -1953,5 +1969,5 @@ def exposure_report(store: Store, repo: str, interests: list[str] | None = None,
         "never_shown": [row(n) for n in never[:top]],
         "most_shown": [row(n) for n in shown[:top]],
         # Shown often with nothing proving it: candidates for a check (`okl verify --run`).
-        "most_shown_unchecked": [row(n) for n in shown if not n.verified_by][:top],
+        "most_shown_unchecked": [row(n) for n in shown if not _proven(n)][:top],
     }

@@ -11,13 +11,14 @@ promoting SQLite -> Postgres is a one-env-var change, no call-site edits.
 from __future__ import annotations
 
 import contextlib
+import datetime as _dt
 import json
 import os
 import re
 import time
 import uuid
 import weakref
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import asdict, dataclass, field
 from typing import Any, Protocol, runtime_checkable
 
@@ -39,6 +40,62 @@ VALID_STATUS = {
 # briefings, while a retracted one is briefed as AVOID. "resolved" is not here: a fixed
 # defect keeps briefing against its return.
 RETIRED_STATUSES = frozenset({"retracted", "obsolete", "superseded"})
+
+
+# The evidence stamp `okl verify` writes at the end of verified_by, and the predicate the drift
+# gate, the briefing and the hygiene report share. Here, below drift and core, so both read one
+# rule (review of #316: the report counted a lesson checked that every briefing marked UNCHECKED).
+# The commit sits BEFORE the time stamp, so an okl older than #102 still finds the stamp
+# at the end and keeps reading the snapshot (it just compares times).
+_STAMP = re.compile(r"(?: on commit ([0-9a-f]{7,64}))? @ (\d{4}-\d\d-\d\dT\d\d:\d\dZ)$")
+# `okl verify` writes its evidence stamp (minute resolution) just before the store sets
+# verified_at, so the two can straddle a minute boundary, and a remote service's clock is
+# not the caller's. So verified_at must fall from one minute before the stamped minute to
+# five minutes after it -- a hand edit can move it that far at most, never past a commit
+# made later than that. Pinned at both edges by a test.
+_STAMP_SKEW_MS = (-60_000, 5 * 60_000)
+
+def _utc_day(ms: int) -> str:
+    """Epoch-ms -> YYYY-MM-DD in UTC.
+
+    `utcfromtimestamp` is deprecated from 3.12 and returns a naive datetime that silently
+    reads as local time wherever it is later compared or formatted. Drift timestamps are
+    compared against git commit times across machines and timezones, so naive is wrong.
+    """
+    return _dt.datetime.fromtimestamp(ms / 1000, tz=_dt.UTC).strftime("%Y-%m-%d")
+
+def stamp_problem(rule: Mapping[str, Any]) -> str | None:
+    """Why this entry's verification cannot be trusted, or None.
+
+    The snapshot is an ordinary file, so its verified_at can be edited. An entry is
+    accepted only when verified_at falls at the minute `okl verify` stamped into its
+    evidence: editing the number alone is refused. Editing both is still possible -- it
+    is a deliberate forgery in a reviewed diff, and review is the guard for that.
+    """
+    at = rule.get("verified_at")
+    if at is None:
+        return None                      # never verified: drift reports it, nothing to trust
+    m = _STAMP.search(rule.get("verified_by") or "")
+    if not m:
+        return "verified_at is set but verified_by carries no `okl verify` evidence stamp"
+    stamped = int(_dt.datetime.strptime(m.group(2), "%Y-%m-%dT%H:%MZ")
+                  .replace(tzinfo=_dt.UTC).timestamp() * 1000)
+    lo, hi = _STAMP_SKEW_MS
+    if not (stamped + lo <= at < stamped + hi):
+        return (f"verified_at ({_utc_day(at)}) does not match the evidence stamp "
+                f"({m.group(2)}) -- edited by hand?")
+    # The commit is bound the same way. Unbound, setting it to HEAD would clear drift with
+    # one edit -- the forgery the stamp check exists to stop.
+    commit = rule.get("verified_commit")
+    if commit is not None and not (m.group(1) and commit.startswith(m.group(1))):
+        return "verified_commit does not match the commit its evidence names -- edited by hand?"
+    return None
+
+
+def has_observed_check(rule: Mapping[str, Any]) -> bool:
+    """Whether an observed check backs this record: `okl verify` stamped it, and the stamp holds."""
+    return rule.get("verified_at") is not None and stamp_problem(rule) is None
+
 # Subject tags are a controlled vocabulary like NODE_TYPES: grow it by editing this
 # set (a deliberate curation act), not ad hoc — freeform tags sprawl and stop filtering.
 # Stacks mirror the scaffold profiles; the rest are cross-cutting subjects.

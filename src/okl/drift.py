@@ -18,7 +18,6 @@ when the governed code moves, not on a fixed schedule.
 """
 from __future__ import annotations
 
-import datetime as _dt
 import fnmatch
 import json
 import re
@@ -28,7 +27,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .store import RETIRED_STATUSES, Node
+from .store import RETIRED_STATUSES, Node, _utc_day, has_observed_check, stamp_problem
 
 
 @dataclass
@@ -55,14 +54,6 @@ class DriftHit:
 
 
 
-def _utc_day(ms: int) -> str:
-    """Epoch-ms -> YYYY-MM-DD in UTC.
-
-    `utcfromtimestamp` is deprecated from 3.12 and returns a naive datetime that silently
-    reads as local time wherever it is later compared or formatted. Drift timestamps are
-    compared against git commit times across machines and timezones, so naive is wrong.
-    """
-    return _dt.datetime.fromtimestamp(ms / 1000, tz=_dt.UTC).strftime("%Y-%m-%d")
 
 def _git_last_change_ms(globs: list[str], repo_dir: str) -> int | None:
     """Epoch-ms of the most recent commit touching any path matching `globs`.
@@ -305,10 +296,14 @@ def _record_drift(rec: dict[str, Any], repo_scope: str, repo_dir: str) -> dict[s
     return out
 
 
-# The lists of a check result that brief lessons: core's buckets and its second tier. The index
-# (§4r) and near-miss (§4s) arms name lessons without briefing them, and are left as they are.
-_BRIEFED = ("armed_gates", "relevant_defects", "rules", "decisions", "live_retractions",
-            "in_scope_tombstones", "threat_prior_art", "context", "also_matched")
+# The lists of a check result that brief lessons as advice: core's buckets and its second tier.
+# Retractions and tombstones are warnings, and the index (§4r) and near-miss (§4s) arms name
+# lessons without briefing them; none of them is marked.
+_BRIEFED = ("armed_gates", "relevant_defects", "rules", "decisions", "threat_prior_art", "context",
+            "also_matched")
+# Records that are never advice: a withdrawn claim, a retired identifier, a tag declaration. The
+# second tier lists them beside advice, so each entry is tested (review of #316).
+_NOT_ADVICE = frozenset({"Retraction", "Tombstone", "Vocabulary"})
 
 
 def _record_proof(rec: dict[str, Any], verdict: dict[str, Any] | None) -> str | None:
@@ -318,14 +313,13 @@ def _record_proof(rec: dict[str, Any], verdict: dict[str, Any] | None) -> str | 
     Drift marks only lessons whose governed files are in this checkout, so a lesson with no
     files, or with files elsewhere, was briefed exactly like a proven one whether or not a check
     had ever run: 139 of the 155 lessons recorded in okl's own repo on 2026-10-31. A stamp with
-    no `okl verify` evidence is no check, by the gate's own predicate. A withdrawn record or a
-    retired identifier is a warning, not advice, and is not marked."""
-    if (verdict or rec.get("avoid") or rec.get("type") == "Tombstone"
-            or rec.get("status") in RETIRED_STATUSES):
+    no `okl verify` evidence is no check, by the gate's own predicate. A record that is not
+    advice is not marked, and neither is an entry from a service older than this mark, which
+    sends no proof fields: not knowing is not unchecked (review of #316)."""
+    if (verdict or rec.get("avoid") or rec.get("type") in _NOT_ADVICE
+            or rec.get("status") in RETIRED_STATUSES or "verified_at" not in rec):
         return None
-    if rec.get("verified_at") is not None and stamp_problem(rec) is None:
-        return None
-    return "unchecked"
+    return None if has_observed_check(rec) else "unchecked"
 
 
 def _mark(rec: dict[str, Any], verdict: dict[str, Any] | None, proof: str | None) -> None:
@@ -476,15 +470,6 @@ def render_drift(hits: list[DriftHit], checked: int | None = None) -> str:
 SNAPSHOT_FILE = "okl-drift.json"
 SNAPSHOT_FORMAT = "okl-drift-snapshot/1"
 _FIELDS = ("id", "type", "title", "scope", "files", "verified_at", "verified_by", "verified_commit")
-# The commit sits BEFORE the time stamp, so an okl older than #102 still finds the stamp
-# at the end and keeps reading the snapshot (it just compares times).
-_STAMP = re.compile(r"(?: on commit ([0-9a-f]{7,64}))? @ (\d{4}-\d\d-\d\dT\d\d:\d\dZ)$")
-# `okl verify` writes its evidence stamp (minute resolution) just before the store sets
-# verified_at, so the two can straddle a minute boundary, and a remote service's clock is
-# not the caller's. So verified_at must fall from one minute before the stamped minute to
-# five minutes after it -- a hand edit can move it that far at most, never past a commit
-# made later than that. Pinned at both edges by a test.
-_STAMP_SKEW_MS = (-60_000, 5 * 60_000)
 
 
 def snapshot(nodes: Iterable[Node], repo: str) -> dict[str, Any]:
@@ -507,32 +492,6 @@ def dump_snapshot(snap: dict[str, Any]) -> str:
     return json.dumps(snap, indent=2, ensure_ascii=False) + "\n"
 
 
-def stamp_problem(rule: dict[str, Any]) -> str | None:
-    """Why this entry's verification cannot be trusted, or None.
-
-    The snapshot is an ordinary file, so its verified_at can be edited. An entry is
-    accepted only when verified_at falls at the minute `okl verify` stamped into its
-    evidence: editing the number alone is refused. Editing both is still possible -- it
-    is a deliberate forgery in a reviewed diff, and review is the guard for that.
-    """
-    at = rule.get("verified_at")
-    if at is None:
-        return None                      # never verified: drift reports it, nothing to trust
-    m = _STAMP.search(rule.get("verified_by") or "")
-    if not m:
-        return "verified_at is set but verified_by carries no `okl verify` evidence stamp"
-    stamped = int(_dt.datetime.strptime(m.group(2), "%Y-%m-%dT%H:%MZ")
-                  .replace(tzinfo=_dt.UTC).timestamp() * 1000)
-    lo, hi = _STAMP_SKEW_MS
-    if not (stamped + lo <= at < stamped + hi):
-        return (f"verified_at ({_utc_day(at)}) does not match the evidence stamp "
-                f"({m.group(2)}) -- edited by hand?")
-    # The commit is bound the same way. Unbound, setting it to HEAD would clear drift with
-    # one edit -- the forgery the stamp check exists to stop.
-    commit = rule.get("verified_commit")
-    if commit is not None and not (m.group(1) and commit.startswith(m.group(1))):
-        return "verified_commit does not match the commit its evidence names -- edited by hand?"
-    return None
 
 
 def read_committed_snapshot(path: str, repo_dir: str = ".") -> dict[str, Any]:

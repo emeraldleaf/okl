@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """What the UNCHECKED mark costs a briefing (#222): each eval task and probe prompt briefed from a
-copy of this checkout's store with the repo's interests, as the prompt hook briefs, rendered with
-the proof marks and with them taken out.
+copy of this checkout's store through the client the prompt hook uses, so with the config's
+interests, decision, hybrid, rerank and warm settings and drift's marks, rendered with the proof
+marks and with them taken out.
 
     PYTHONPATH=src python3 evals/briefing_marks_size.py
         # writes evals/results/briefing-marks-size-<stamp>.txt
@@ -23,7 +24,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
-from okl import core, drift  # noqa: E402
+from okl import core  # noqa: E402
+from okl.client import Client  # noqa: E402
 from okl.store import Store  # noqa: E402
 
 
@@ -48,7 +50,6 @@ def without_marks(result: dict) -> dict:
 def main() -> int:
     """Brief each prompt, render it both ways, and write the receipt."""
     config = json.loads((main_store().parent / "config.json").read_text())
-    repo, interests = config["repo"], config.get("interests")
     prompts = [("task", json.loads(x)["task"]) for x in (ROOT / "evals" / "tasks.jsonl").read_text().splitlines()
                if x.strip()]
     prompts += [("probe", p) for p in json.loads((ROOT / "evals" / "probe_prompts.json").read_text())["prompts"]]
@@ -62,11 +63,14 @@ def main() -> int:
             src.close()
             dst.close()
         store = Store(f"sqlite:///{db}")
+        # The hook's own path, over this copy and never a service: a bare core.check ignored the
+        # config's decision, hybrid, rerank and warm settings (review of #316).
+        client = Client(config=config)
+        client.service_url, client._store = None, store
         try:
             records = len(store.all_nodes())
             for kind, text in prompts:
-                res = core.check(store, repo, text, interests=interests)
-                drift.annotate_briefing(res, repo, str(ROOT))
+                res = client.check(text)
                 marked, bare = core.render_check_for_agent(res), core.render_check_for_agent(without_marks(res))
                 rows.append({"kind": kind, "full": res.get("match_count") or 0,
                              "listed": len(res.get("also_matched") or []), "unchecked": res.get("unchecked", 0),
@@ -81,7 +85,8 @@ def main() -> int:
     lines = [f"briefing marks size (#222) · {datetime.now(UTC):%Y-%m-%dT%H:%MZ} · code {commit} · "
              f"{len(rows)} prompts ({sum(r['kind'] == 'task' for r in rows)} eval tasks, "
              f"{sum(r['kind'] == 'probe' for r in rows)} probe prompts) · a copy of the store ({records} records), "
-             f"repo {repo} with its interests",
+             f"repo {client.repo} as the hook briefs it (decision {client.decision}, hybrid {client.hybrid}, "
+             f"rerank {client.rerank}, warm {client.warm})",
              f"  {'kind':6} {'full':>5} {'listed':>7} {'unchecked':>10} {'chars':>7} {'added':>6}"]
     lines += [f"  {r['kind']:6} {r['full']:>5} {r['listed']:>7} {r['unchecked']:>10} {r['chars']:>7} {r['added']:>6}"
               for r in rows]
