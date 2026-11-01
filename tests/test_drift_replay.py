@@ -28,12 +28,14 @@ def _git(repo, *a):
                           capture_output=True, text=True, check=True).stdout.strip()
 
 
-def _commit(repo, files: dict[str, str], stamp: str | None = None, cmd: str = CHECK) -> str:
-    """Write `files`, and a snapshot stamping lesson L at commit `stamp` when given; commit."""
+def _commit(repo, files: dict[str, str], stamp: str | None = None, cmd: str = CHECK,
+            governs: str = "a.txt") -> str:
+    """Write `files`, and a snapshot stamping lesson L at commit `stamp`, governing `governs`,
+    when given; commit."""
     for name, text in files.items():
         (repo / name).write_text(text)
     if stamp:
-        rule = {"id": "L", "type": "Rule", "title": "t", "scope": "repo:r", "files": "a.txt",
+        rule = {"id": "L", "type": "Rule", "title": "t", "scope": "repo:r", "files": governs,
                 "verified_at": 1, "verified_commit": stamp,
                 "verified_by": f"`{cmd}` exit 0, matched 'FINE' on commit {stamp[:12]}"}
         (repo / "okl-drift.json").write_text(json.dumps({"format": "okl-drift-snapshot/1", "repo": "r",
@@ -302,16 +304,16 @@ def test_a_judge_that_times_out_gives_no_verdict_and_the_rest_still_count(dr, tm
     from okl.store import Node
     node = Node(type="Rule", title="t", scope="org", symptom="s", fix="f")
     receipt = tmp_path / "drift-replay-x.json"
-    events = [{"lesson": "L", "p": f"p{i}", "v": f"v{i}", "outcome": o} for i, o in enumerate(("needed", "unneeded"))]
+    events = [{"lesson": "L", "p": f"p{i}", "v": f"v{i}", "c": f"c{i}", "files": ["a.py"], "outcome": o}
+              for i, o in enumerate(("needed", "unneeded"))]
     receipt.write_text(json.dumps({"until": "u", "events": events, "lesson_sha": {"L": dr.text_sha(node)}}))
 
     class Copy:
         def get_node(self, _i):
             return node
     monkeypatch.setattr(dr, "store_copy", lambda _db: contextlib.nullcontext(Copy()))
-    monkeypatch.setattr(dr, "snapshot", lambda _u: {"L": {}})
-    monkeypatch.setattr(dr, "governs", lambda _r: ["a.py"])
-    monkeypatch.setattr(dr, "git", lambda *_a, **_k: "diff")
+    logged: list[tuple] = []
+    monkeypatch.setattr(dr, "git", lambda *a, **_k: logged.append(a) or "diff")
     monkeypatch.setattr(dr, "REPO", tmp_path)
     calls = iter([subprocess.TimeoutExpired("claude", 1),
                   subprocess.CompletedProcess([], 0, stdout='a {b} then {"broken": true, "why": "w"}')])
@@ -326,29 +328,33 @@ def test_a_judge_that_times_out_gives_no_verdict_and_the_rest_still_count(dr, tm
     out = json.loads((tmp_path / "drift-replay-x-judge.json").read_text())
     assert sorted(o["judge"] is None for o in out["judged"]) == [False, True]
     assert out["answered"] == 1
+    # Each diff by the paths the event recorded, not the lesson's final ones (review on #312).
+    assert all(a[-1] == "a.py" for a in logged if a[0] == "log")
 
 def test_each_side_of_an_event_reads_the_paths_its_snapshot_named(dr, tmp_path):
     """A lesson whose governed paths changed was compared everywhere by its final paths, so an
-    event before the change read as "governed content unchanged" and a red commit as green; four
-    lessons in §4ae's window had moved (review on #312)."""
+    event before the change read as "governed content unchanged" and a red commit as green;
+    three lessons in §4ae's window had moved theirs, each in the commit that re-stamped them
+    (review on #312). Paths that move between two stamps, or a rule with none, are set apart."""
     repo = tmp_path / "r"
     repo.mkdir()
     _git(repo, "init", "-q")
-
-    def stamp(at: str, files: str) -> str:
-        rule = {"id": "L", "type": "Rule", "title": "t", "scope": "repo:r", "files": files, "verified_at": 1,
-                "verified_commit": at, "verified_by": f"`{CHECK}` exit 0, matched 'FINE' on commit {at[:12]}"}
-        (repo / "okl-drift.json").write_text(json.dumps({"format": "okl-drift-snapshot/1", "repo": "r",
-                                                          "rules": [rule]}))
-        _git(repo, "add", "-A")
-        _git(repo, "commit", "-q", "-m", "s")
-        return _git(repo, "rev-parse", "HEAD")
     c0 = _commit(repo, {"old.txt": "ok\n", "a.txt": "ok\n"})
-    stamp(c0, "old.txt")
-    c2 = _commit(repo, {"old.txt": "changed\n"})       # governed by the snapshot of its day
-    stamp(c2, "old.txt")
-    stamp(c2, "a.txt")                                   # the lesson moves to a.txt
+    _commit(repo, {}, stamp=c0, governs="old.txt")
+    c2 = _commit(repo, {"old.txt": "changed\n"})               # governed by the snapshot of its day
+    c3 = _commit(repo, {}, stamp=c2, governs="a.txt")           # re-stamped, moving to a.txt at once
     evs = {(e.p, e.v): e for e in dr.events(dr.snapshot("HEAD", repo), "HEAD", repo)}
     assert evs[(c0, c2)].kind == "drift-red" and evs[(c0, c2)].touched == [c2]
+    assert evs[(c0, c2)].files == ["old.txt"]
     red = {q.x: q.red for q in dr.pairs(dr.snapshot("HEAD", repo), "HEAD", repo)[0]}
-    assert red[c2] is True
+    assert red[c2] is True and red[c3] is False
+    _commit(repo, {}, stamp=c2, governs="b.txt")                # paths move with no new stamp
+    c5 = _commit(repo, {"a.txt": "ok 2\n"})
+    _commit(repo, {}, stamp=c5, governs="b.txt")
+    _commit(repo, {}, stamp=c0, governs="")                      # re-stamped, governing nothing
+    c8 = _commit(repo, {}, stamp=c5, governs="")
+    kinds = {(e.p, e.v): e.kind for e in dr.events(dr.snapshot("HEAD", repo), "HEAD", repo)}
+    assert kinds[(c2, c5)] == "governed paths changed between stamps"
+    assert kinds[(c0, c5)] == "no governed paths"
+    got, left = dr.pairs(dr.snapshot("HEAD", repo), "HEAD", repo)
+    assert c8 not in {q.x for q in got} and left["no governed paths"] >= 1
