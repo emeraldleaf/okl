@@ -87,8 +87,16 @@ help_text = subprocess.run([sys.executable, "-m", "okl", "check", "--help"], cap
                            cwd=REPO, check=True, env={**os.environ, "PYTHONPATH": str(REPO / "src")}).stdout
 formats = re.search(r"--format \{([a-z,]+)\}", help_text).group(1).split(",")
 readme = (REPO / "README.md").read_text()
-if "up to twelve" not in " ".join(readme.split()):
-    problems.append("the README does not say a check names up to twelve records")
+# Every count of briefed records the README gives must be the default: an "up to N" right after
+# "one line each", "in full" or "the start of the fix", or followed by "records". `okl recap`'s
+# "up to five" counts other things.
+NUMBER = r"(\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fifteen|twenty)"
+BRIEFED = re.compile(rf"(?:(?:one line each|in full|start of the fix)\W[^.]{{0,20}}?\bup to {NUMBER}\b"
+                     rf"|\bup to {NUMBER} records\b)", re.I)
+counts = [m.group(1) or m.group(2) for m in BRIEFED.finditer(" ".join(readme.split()))]
+if not counts:
+    problems.append("the README does not say how many records a check names")
+problems += [f"the README says a check names up to {n}" for n in counts if n.lower() not in ("twelve", str(LIMIT))]
 problems += [f"the README does not document --format {f}" for f in formats if f != "agent" and f"--format {f}" not in readme]
 
 if problems:

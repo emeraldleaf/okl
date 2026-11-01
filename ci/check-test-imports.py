@@ -3,7 +3,7 @@
 
 The check behind the `n_7e50e3588bcd` lesson: a test that imports an undeclared package passes
 only where that package happens to be installed. What CI installs is read from its workflow's
-`pip install -e .` line: the project's dependencies, any extras in brackets, and each `--group`.
+`pip install -e .` lines, and only what every one installs counts: the project's dependencies, any extras in brackets, and each `--group`.
 A module the tests import, or name to `pytest.importorskip`, must be the standard library,
 okl's own, a module of this repository, or come from one of those distributions. Nothing else
 counts: a package an extra declares that CI never installs is as undeclared as any other. The first version grepped the tests for one import, so a
@@ -33,16 +33,24 @@ def tracked(*paths: str) -> list[Path]:
 
 
 project = tomllib.loads((REPO / "pyproject.toml").read_text())
-install = re.search(r"pip install -e \.(?:\[([\w,-]+)\])?((?: --group [\w-]+)*)",
-                    (REPO / ".github/workflows/ci.yml").read_text())
-if not install:
+installs = list(re.finditer(r"pip install -e \.(?:\[([\w,-]+)\])?((?: --group [\w-]+)*)",
+                            (REPO / ".github/workflows/ci.yml").read_text()))
+if not installs:
     sys.exit("UNDECLARED TEST IMPORT: ci.yml has no `pip install -e .` line to read")
-wanted = [*project["project"].get("dependencies", [])]
-for extra in (install.group(1) or "").split(","):
-    wanted += project["project"].get("optional-dependencies", {}).get(extra, []) if extra else []
-for group in re.findall(r"--group ([\w-]+)", install.group(2)):
-    wanted += project["dependency-groups"][group]
-declared = {norm(re.match(r"[A-Za-z0-9._-]+", r).group(0)) for r in wanted if isinstance(r, str)}
+
+
+def installed_by(install: re.Match) -> set[str]:
+    """The distributions one `pip install -e .` line installs: dependencies, extras, groups."""
+    wanted = [*project["project"].get("dependencies", [])]
+    for extra in filter(None, (install.group(1) or "").split(",")):
+        wanted += project["project"].get("optional-dependencies", {}).get(extra, [])
+    for group in re.findall(r"--group ([\w-]+)", install.group(2)):
+        wanted += project["dependency-groups"][group]
+    return {norm(re.match(r"[A-Za-z0-9._-]+", r).group(0)) for r in wanted if isinstance(r, str)}
+
+
+# Each job that installs runs the tests, so a test may use only what every one of them installs.
+declared = set.intersection(*(installed_by(i) for i in installs))
 local = {"okl"} | {p.stem for p in tracked("tests/", "evals/", "ci/")}
 dists = packages_distributions()
 

@@ -285,13 +285,19 @@ def test_a_blind_breaker_cannot_read_how_its_lesson_is_checked(monkeypatch, tmp_
     dm = importlib.util.module_from_spec(spec)
     monkeypatch.setitem(sys.modules, "drift_mutate", dm)
     spec.loader.exec_module(dm)
-    for path in ("okl-drift.json", "evals/REPORT.md", "evals/results/r.json", "ci/check-x.py", "ci/other.py"):
+    for path in ("okl-drift.json", "evals/REPORT.md", "evals/results/r.json", "ci/check-x.py", "ci/other.py",
+                 "README.md", "docs/GUIDE.md"):
         (tmp_path / path).parent.mkdir(parents=True, exist_ok=True)
         (tmp_path / path).write_text("x")
-    assert dm.hidden(tmp_path, "python3 ci/check-x.py", blind=False) == ["okl-drift.json"]
-    kept = dm.hidden(tmp_path, "python3 ci/check-x.py", blind=True)
+    assert dm.hidden(tmp_path, "python3 ci/check-x.py", ["README.md"], blind=False) == ["okl-drift.json"]
+    kept = dm.hidden(tmp_path, "python3 ci/check-x.py", ["README.md"], blind=True)
     assert {"okl-drift.json", "evals/REPORT.md", "evals/results", "ci/check-x.py"} <= set(kept)
     assert "ci/other.py" not in kept and "CHANGELOG.md" not in kept   # absent paths are not named
+    # An inline check names the files its lesson governs; the breaker must still read and edit them.
+    inline = dm.hidden(tmp_path, "grep -q okl README.md docs/GUIDE.md", ["README.md", "docs/"], blind=True)
+    assert "README.md" not in inline and "docs/GUIDE.md" not in inline
+    # Nor is a hidden path one that holds a governed file.
+    assert "evals/results" not in dm.hidden(tmp_path, "true", ["evals/results/r.json"], blind=True)
 
 
 def test_a_judge_reads_each_lesson_as_its_receipt_recorded_it(dr):

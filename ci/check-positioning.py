@@ -6,11 +6,12 @@ The check behind the `n_d45d7bf64896` lesson. Two halves. The honest framing the
 load-bearing must still be there, in the words it was written in: WHERE-THIS-SITS's "not a novel
 idea", "they're better at it" and "they compose", and the first post's "those tools are better at
 it than anything I would build". And no sentence or table cell in README.md or docs/ may claim
-the opposite: that okl beats, outranks or replaces a named memory tool, that it is the better
-or the first memory layer, or that the tools are not worth composing with. A comparison counts
-only when a rival is named in it, so okl's own settings can be compared ("the tiered decision
-beats the floor on recall"), and a negation just before the claim ("okl is not meant to replace
-a memory store") clears it. The first version grepped two files for a fixed list of phrases, so
+the opposite: that okl beats, outranks, replaces or obsoletes a memory tool, that it is the
+better or the first memory layer, or that the tools are not worth composing with. A comparison
+counts only when a rival is named in it, so okl's own settings can be compared ("the tiered
+decision beats the floor on recall"), and a negation just before the claim ("okl is not meant to
+replace a memory store") clears it. It is a list of the shapes such claims have taken (in §4af's
+breaks and two reviews), not a reader: a new shape passes until it is added. The first version grepped two files for a fixed list of phrases, so
 three rewordings in other docs passed it (REPORT §4af, #318). CHANGELOG.md is history and may
 quote a removed claim, so it is not read. Changing the positioning on purpose means superseding
 the lesson.
@@ -27,21 +28,27 @@ FRAMING = {
 }
 RIVAL = (r"(?:mem0|zep|letta|cognee|claude-mem|agentmemory|those tools|these tools"
          r"|memory (?:tools?|stores?|layers?|infrastructure|backends?|systems?|products?))")
-OVER = (r"(?:beat\w*|outperform\w*|outrank\w*|outclass\w*|surpass\w*|outdo\w*|superior to|better than"
-        r"|more accurate than|more often than|more of [\w ]{0,30}? than)")
+GOOD = r"(?:better|stronger|faster|smarter|richer|more (?:accurate|precise|reliable|complete|capable|useful))"
+OVER = (rf"(?:beat\w*|outperform\w*|outrank\w*|outclass\w*|surpass\w*|outdo\w*|superior to"
+        rf"|{GOOD}(?: [\w-]+){{0,3}}? than|more often than|more of [\w ]{{0,30}}? than)")
 CLAIMS = [re.compile(c, re.I) for c in (
     rf"\b{OVER}[^.;|]{{0,80}}?\b{RIVAL}",                      # okl over a named rival
+    rf"\b{RIVAL}('s)?[^.;|]{{0,40}}?\b(?:worse|weaker|slower|less \w+) than (?:okl|this)\b",
     rf"\b(?:better|superior) than theirs\b|\bunlike {RIVAL}\b[^.;|]{{0,60}}?\b(?:more|better|superior)\b",
     rf"\b(?:the|a) better memory\b|\bbest memory (?:tool|store|layer)\b|\bfirst {RIVAL} (?:to|that)\b",
     rf"\b(?:replac\w*|stand in for|substitute for)\b(?:\W+\w+){{0,4}}?\W+{RIVAL}",
+    r"\breplac\w* them with (?:better|more)\b|\b(?:be )?used instead of (?:them|those tools|these tools)\b",
+    rf"\bmakes? {RIVAL} (?:unnecessary|obsolete|redundant)\b|\b{RIVAL} (?:is|are|becomes?) (?:unnecessary|obsolete|redundant)\b",
     rf"\bswap (?:your|the) {RIVAL} for\b|\b(?:no longer|will not|won't) need\b[^.;|]{{0,20}}?{RIVAL}",
     rf"\bno (?:other )?{RIVAL} (?:verif|prov|check)\w*",
     r"\b(?:not|none of them (?:is|are)) worth composing\b|\bnobody else (?:does|offers|verifies|checks)\b"
     r"|\bnothing invalidates\b|\bno other tool\b|\bthe only (?:tool|memory)\b|\bfirst tool to\b",
 )]
-# A claim with one of these just before it is the stance, not its opposite: "okl is no
-# replacement for mem0", "it doesn't try to replace those tools".
-NEGATED = re.compile(r"\b(?:not|no|never|nor|without|\w+n't|cannot)\b[\w ]{0,20}$", re.I)
+# A claim right after a negation, with only auxiliary words between, is the stance, not its
+# opposite: "okl is no replacement for mem0", "it doesn't try to replace those tools". "There is
+# no question that okl beats mem0" is not negated: other words stand between.
+NEGATED = re.compile(r"\b(?:not|no|never|nor|without|\w+n't|cannot)(?:\s+(?:meant|intended|designed|built"
+                     r"|trying|try|going|to|a|an|the|be|is|are|been|do|does|need|needs|direct|real))*\s+$", re.I)
 
 
 def claims(text: str) -> list[str]:

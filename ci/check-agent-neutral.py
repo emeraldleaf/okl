@@ -20,7 +20,9 @@ REPO = Path(__file__).resolve().parent.parent
 ONLY = re.compile(r"(?<![\w/.-])/(record|triggers|seed-from-codebase|seed-from-docs)\b"
                   r"|\b(stop|prompt|pre-task|briefing|session-end)[- ]hooks?\b|\bUserPromptSubmit\b"
                   r"|\bsession-end question\b|\bokl's hooks\b|--format hook\b|(?<!pre-push )\bhook scripts?\b", re.I)
-OTHERS = re.compile(r"\b([\w-]+)'s $")   # claude-mem's Stop hook is that tool's, not okl's
+# Another tool's own hook is that tool's: "claude-mem's Stop hook", "their Stop hooks". Only named
+# tools: "your agent's prompt hook" is okl's, and needs its label.
+OTHERS = re.compile(r"\b(?:(?:claude-mem|agentmemory|mem0|zep|letta|cognee)'s|their)\s+$", re.I)
 LABEL = re.compile(r"Claude Code|\.claude/|`claude( -p)?`", re.I)
 
 
@@ -43,8 +45,7 @@ def unlabelled(text: str) -> list[str]:
             units = [(item, lead) for item in items]
         for unit, header in units:
             for m in ONLY.finditer(unit):
-                owner = OTHERS.search(unit[:m.start()])
-                if owner and owner.group(1).lower() != "okl":
+                if OTHERS.search(unit[:m.start()]):
                     continue
                 if not any(LABEL.search(t) for t in (unit, header, under)):
                     found.append(f"{m.group(0)!r} unlabelled in {' '.join(unit.split())[:90]!r}")

@@ -31,6 +31,7 @@ the measures. The registered receipt is left as it is; this one is reported besi
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import json
 import random
 import re
@@ -163,13 +164,24 @@ def summarize(patches: list[dict]) -> dict:
     }
 
 
-def hidden(wt: Path, cmd: str, blind: bool) -> list[str]:
+def overlaps(path: str, governed: list[str]) -> bool:
+    """Whether `path` is, holds or sits under one of `governed`'s pathspecs (a file, a directory
+    with or without its slash, or a glob)."""
+    path = path.rstrip("/")
+    return any(path == g.rstrip("/") or path.startswith(g.rstrip("/") + "/") or g.startswith(path + "/")
+               or fnmatch.fnmatch(path, g) for g in governed)
+
+
+def hidden(wt: Path, cmd: str, governed: list[str], blind: bool) -> list[str]:
     """The paths kept from the breaker: the snapshot, and with `blind` the rest of BLIND and the
-    tracked files the lesson's check command names."""
+    check scripts (under ci/ or evals/) the lesson's check command names. A governed file is never
+    hidden: an inline check names the very files its lesson governs, and the breaker must read
+    and edit those (review on #318)."""
     if not blind:
         return ["okl-drift.json"]
-    named = [t for t in re.findall(r"[\w./-]+", cmd) if (wt / t).is_file()]
-    return [x for x in dict.fromkeys((*BLIND, *named)) if (wt / x).exists()]
+    named = [t for t in re.findall(r"[\w./-]+", cmd) if t.startswith(("ci/", "evals/")) and (wt / t).is_file()]
+    keep = [x for x in dict.fromkeys((*BLIND, *named)) if (wt / x).exists()]
+    return [x for x in keep if not overlaps(x, governed)]
 
 
 def claude(cmd: list[str], prompt: str, cwd: Path) -> dict:
@@ -308,7 +320,7 @@ def main() -> int:
                         continue
                     dr.git("checkout", "-q", "-f", "--detach", base, repo=wt)
                     dr.git("clean", "-fdxq", repo=wt)
-                    kept_out = hidden(wt, cmd, args.blind)
+                    kept_out = hidden(wt, cmd, files, args.blind)
                     for x in kept_out:
                         (shutil.rmtree if (wt / x).is_dir() else Path.unlink)(wt / x)
                     avoid = (f"\n\nEarlier changes for this lesson edited {', '.join(sorted(set(earlier)))}; make a "

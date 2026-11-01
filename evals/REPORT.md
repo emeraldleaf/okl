@@ -3953,20 +3953,26 @@ it costs on the history, and registers the re-run, before that run.
   - `check-positioning.py`: the honest framing still reads as written, and no doc claims okl
     beats, outranks or replaces a named memory tool.
 
-  Each passes at the change and fails on every §4af patch its lesson missed. One of those,
-  `n_d45d7bf64896-breaking-3`, no longer applied, because its doc had moved, and was inserted by
-  hand. The checks were written with those patches in view, so this shows only that they read
-  what was missed. The re-run below is the measure.
+  Each passes at the change. Each fails on every §4af break its lesson's judge confirmed, caught
+  or missed, and passes every control. One break, `n_d45d7bf64896-breaking-3`, no longer
+  applied, because its doc had moved, and was inserted by hand. The checks were written with those
+  patches in view, so this shows only that they read what was missed. The re-run below is the
+  measure.
 - **The label check found the docs short of the lesson.** It added 24 labels in 13 docs, such as
   the README's "Per session: the Stop hook interrupts once". `docs/SEEDING.md` said the
   `/seed-from-codebase` command comes with any coding agent; only the Claude Code scaffold writes
   it, and another agent can follow its prompt file. A mention that names no surface ("okl asks
   once what was learned") is beyond a pattern.
-- **Local review (two rounds) shaped three of the checks.** The first positioning check flagged
-  the stance its lesson requires ("okl is no replacement for mem0", "they're worth composing
-  with"). It also flagged okl comparing its own settings, so comparisons now need a named rival,
-  and a negation just before a claim clears it. Against the reviewer's probe it now catches 13 of
-  13 claims and passes 12 of 12 legitimate sentences.
+- **The two pattern checks are lists of the shapes met so far.** Local review (three rounds)
+  shaped them.
+  - **Positioning.** The first version flagged the stance its lesson requires ("okl is no
+    replacement for mem0", "they're worth composing with"), and okl comparing its own settings.
+    So comparisons now need a named rival, and a negation followed only by auxiliary words
+    clears a claim.
+  - **Fresh wording a reviewer wrote passed both checks** until its shapes were added. Every shape
+    met, from §4af's breaks and the reviews' probes, is a test in `tests/test_ci_checks.py`, with
+    the sentences each check must let through. A new shape passes until it is added. How the
+    checks meet the breaker's fresh wording is what the re-run measures.
 
 **What it costs.** Receipt `drift-widen-cost-20261101-1703.json`, run by
 `evals/drift_widen_cost.py` without running any check. Both file lists, the snapshot before
@@ -4006,12 +4012,13 @@ exist.
 - **One departure, registered: `--blind`.** §4af kept only the snapshot from the breaker. By B,
   six of the nine lessons' checks are files the breaker could read, and the repository holds
   §4af's patches and a write-up of every miss. `--blind` also keeps from it:
-  - the lesson's check files;
+  - the lesson's check scripts under `ci/` or `evals/`;
   - `evals/REPORT.md`, `evals/results/` and the cost counter;
   - the CHANGELOG and the reviewer's notes.
 
-  It restores them all before the diff. So this breaker is at least as blind as §4af's, which
-  could read `ci/check-init-flags.py`.
+  It restores them all before the diff, and never hides a file the lesson governs: an inline check
+  names the very files the breaker has to read and edit. So this breaker is at least as blind as
+  §4af's, which could read `ci/check-init-flags.py`.
 - **Population:** the lessons in `okl-drift.json` at B with a recorded check, less the three that
   answer from outside the commit. These are expected to be nine, 54 patches:
   - `doc-check-defaults`, `doc-init-flags`, `doc-install-name` and `doc-verified-refused`;
