@@ -163,6 +163,10 @@ Setting up another agent: [Getting started](docs/GETTING-STARTED.md#using-anothe
   with `--files` is also red until its first `okl verify`). The briefing says so too:
   such a lesson is marked *STALE* (or *UNVERIFIED*, or *UNPROVEN*) with the file
   that changed, so the agent confirms it against the code instead of trusting it blindly.
+  A lesson that governs no files here, and was never verified or carries a stamp with no
+  `okl verify` run behind it, is marked *UNCHECKED*; drift has no verdict on it, so nothing
+  else would say so. The agent treats it as advice, and one line under the briefing says how
+  many there are.
   `okl reverify` re-runs each drifted lesson's stored check after you confirm. Drift notices
   that what a lesson watches changed; it does not find every break. Of 52 patches written to
   break the lessons it watched in this repo, a judge confirmed 36 as breaks, and drift caught 14

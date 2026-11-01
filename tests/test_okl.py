@@ -5,6 +5,7 @@ can learn the contract being checked without opening the code under test. Where 
 guards a security boundary, an ordering rule, or a "silence is not safety" invariant,
 the assertions are numbered and each says which failure it prevents.
 """
+import dataclasses
 import importlib.util
 import json
 import os
@@ -3551,6 +3552,150 @@ def test_unverified_mark_covers_uncommitted_files_and_skips_other_repos(tmp_path
     assert result["rules"][0]["drift"]["reason"] == "never verified"
     assert result["next_actions"][0]["drift"]["reason"] == "never verified"
     assert result["drifted"] == 2
+
+
+def test_a_lesson_no_observed_check_backs_is_marked_unchecked_in_every_tier(tmp_path):
+    """#222: drift marks only lessons whose governed files are here, so a lesson with no files,
+    or files elsewhere, was briefed like a proven one whether or not any check had run. It is
+    marked unchecked, counted apart from drift's count; an observed check, a warning to avoid
+    and drift's own verdict are not marked."""
+    import datetime as dt
+    import subprocess
+
+    from okl import drift
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    (tmp_path / "new_module.py").write_text("x = 1\n")
+    at = int(dt.datetime(2026, 10, 31, 12, 0, tzinfo=dt.UTC).timestamp() * 1000)
+    evidence = "`pytest -q -k x` exit 0, matched 'passed' on commit abcdef1 @ 2026-10-31T12:00Z"
+    result = {
+        "rules": [
+            {"id": "note", "scope": "org", "files": None, "verified_at": None},
+            {"id": "proven", "scope": "org", "files": None, "verified_at": at, "verified_by": evidence,
+             "verified_commit": "abcdef1"},
+            {"id": "bare-stamp", "scope": "org", "files": None, "verified_at": at, "verified_by": None},
+            {"id": "elsewhere", "scope": "org", "files": "src/**/*.cs", "verified_at": None},
+            {"id": "new", "scope": "repo:s", "files": "new_module.py", "verified_at": None},
+        ],
+        "live_retractions": [{"id": "gone", "scope": "org", "status": "retracted", "verified_at": None}],
+        "also_matched": [{"id": "listed", "title": "t", "fix": "f", "scope": "org", "files": None,
+                          "verified_at": None}],
+        "next_actions": [{"id": "note"}],
+    }
+    assert drift.annotate_briefing(result, "s", str(tmp_path)) == 1   # drift's count: "new" alone
+    unchecked = {r["id"] for key in ("rules", "also_matched", "live_retractions") for r in result[key]
+                 if r.get("proof") == "unchecked"}
+    assert unchecked == {"note", "bare-stamp", "elsewhere", "listed"}, unchecked
+    assert result["unchecked"] == 4 and result["drifted"] == 1
+    assert result["next_actions"][0]["proof"] == "unchecked"
+
+
+def test_the_briefing_says_which_lessons_no_check_backs(store, tmp_path):
+    """#222 end to end: the mark on the lesson's line, one footer that says what it means, and
+    the count in the person's line; a lesson that passed a check is not marked."""
+    import datetime as dt
+    import subprocess
+
+    from okl import drift
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    nid = core.record(store, type="Rule", title="rotate the webhook signing secret every quarter",
+                      scope="org", fix="rotate the webhook signing secret before it expires")
+    res = core.check(store, repo="s", task="rotate the webhook signing secret")
+    drift.annotate_briefing(res, "s", str(tmp_path))
+    text = core.render_check_for_agent(res)
+    assert f"[{nid}] *(UNCHECKED)*" in text, text
+    assert "1 lesson(s) marked UNCHECKED have no observed check behind them" in text, text
+    assert "1 unchecked" in core.briefing_notice(res)
+    # The compact path prints no footer, so it says once what the mark means (review of #316).
+    assert "UNCHECKED: no observed check backs that lesson" in core.render_actions_only(res)
+    # Once a check is observed, as okl verify stamps it, the mark and the footer go.
+    minute = dt.datetime.now(dt.UTC).strftime("%Y-%m-%dT%H:%MZ")
+    core.verify(store, nid, f"`true` exit 0, matched '' on commit abcdef1 @ {minute}", commit="abcdef1")
+    res = core.check(store, repo="s", task="rotate the webhook signing secret")
+    drift.annotate_briefing(res, "s", str(tmp_path))
+    text = core.render_check_for_agent(res)
+    assert "UNCHECKED" not in text and "unchecked" not in (core.briefing_notice(res) or ""), text
+    assert "UNCHECKED" not in core.render_actions_only(res)
+
+
+def test_proof_eligibility_is_what_the_mark_and_its_receipt_count():
+    """One test for what the UNCHECKED mark can reach, which the size receipt counts as its
+    denominator: advice with its proof fields, live, and with no drift verdict (review of #316)."""
+    from okl import drift
+    assert drift.proof_eligible({"type": "Rule", "verified_at": None}, None)
+    assert not drift.proof_eligible({"type": "Rule", "verified_at": None}, {"reason": "never verified"})
+    assert not drift.proof_eligible({"type": "Retraction", "verified_at": None}, None)
+    assert not drift.proof_eligible({"type": "Rule", "verified_at": None, "status": "superseded"}, None)
+    assert not drift.proof_eligible({"type": "Rule"}, None)                    # an older service's entry
+
+
+def test_a_second_tier_line_carries_the_proof_mark_and_no_drift_mark():
+    """The one-line tier sends no governed files, so drift never judges it; a drift tag on its
+    line was dead code that contradicted that (review of #316)."""
+    line = core._also_line({"id": "a", "title": "t", "fix": "f", "proof": "unchecked",
+                            "drift": {"reason": "never verified"}})
+    assert "*(UNCHECKED)*" in line and "UNVERIFIED" not in line
+
+
+def test_the_persons_line_counts_unchecked_lessons_listed_without_any_in_full():
+    """With nothing shown in full and one unchecked lesson listed, the line returned early and
+    never counted it (review of #316)."""
+    result = {"match_count": 0, "also_matched": [{"id": "a", "title": "t", "fix": "f", "proof": "unchecked"}],
+              "unchecked": 1}
+    assert core.briefing_notice(result).endswith("none close enough to show in full · 1 unchecked")
+
+
+def test_only_advice_is_marked_and_an_older_service_marks_nothing(tmp_path):
+    """Review of #316: a Retraction record, whose status is None, was marked UNCHECKED, so a
+    warning read as unproven advice; a tag declaration was marked in the second tier and not in
+    full; and a service older than the mark, which sends no proof fields, had every listed
+    lesson marked. The second tier carries no governed files, so drift spends no git call on
+    it."""
+    import subprocess
+
+    from okl import drift
+    from okl.store import Node
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    (tmp_path / "governed.py").write_text("x = 1\n")
+    entry = core._also_entry(Node(type="Rule", title="t", scope="org", files="governed.py", fix="f"))
+    assert "files" not in entry and entry["verified_at"] is None
+    result = {
+        "live_retractions": [{"id": "withdrawn", "type": "Retraction", "scope": "org", "verified_at": None}],
+        "in_scope_tombstones": [{"id": "old-name", "type": "Tombstone", "scope": "org", "verified_at": None}],
+        "also_matched": [
+            {"id": "a-tag", "type": "Vocabulary", "title": "t", "fix": "", "verified_at": None},
+            {"id": "a-claim", "type": "Retraction", "title": "t", "fix": "", "verified_at": None},
+            {"id": "from-0.9", "type": "Rule", "title": "t", "fix": "f"},         # no proof fields
+            {**entry, "id": "listed"},
+        ],
+    }
+    assert drift.annotate_briefing(result, "s", str(tmp_path)) == 0          # no drift on the second tier
+    marked = {r["id"] for v in result.values() if isinstance(v, list) for r in v if r.get("proof")}
+    assert marked == {"listed"} and result["unchecked"] == 1, marked
+
+
+def test_the_hygiene_report_counts_a_check_as_the_briefing_does(monkeypatch):
+    """A stored check with no `okl verify` evidence is no check: the briefing marks the lesson
+    UNCHECKED, and the report listed it as checked (review of #316)."""
+    import datetime as dt
+    monkeypatch.delenv("OKL_BRIEFING_LOG", raising=False)
+    s = Store("sqlite:///:memory:")
+    hand = core.record(s, type="Rule", scope="org", title="put the ownership predicate in the WHERE clause")
+    s.add_node(dataclasses.replace(s.get_node(hand), verified_by="checked by hand"))   # a seed-style stamp
+    proven = core.record(s, type="Rule", scope="org", title="rotate the webhook signing secret every quarter")
+    core.record(s, type="Rule", scope="org", title="close every sqlite connection you open")
+    minute = dt.datetime.now(dt.UTC).strftime("%Y-%m-%dT%H:%MZ")
+    core.verify(s, proven, f"`true` exit 0, matched '' on commit abcdef1 @ {minute}", commit="abcdef1")
+    for task in ("add the ownership predicate to the query", "rotate the webhook signing secret"):
+        core.record_briefing(s, "app", core.check(s, "app", task))
+    report = core.exposure_report(s, "app")
+    checked = {r["id"]: r["checked"] for r in report["most_shown"]}
+    assert checked == {hand: False, proven: True}, checked
+    assert [r["id"] for r in report["most_shown_unchecked"]] == [hand]
+    # A retracted lesson is briefed as one to avoid, so it is never offered for a check.
+    core.retire(s, hand, reason="wrong")
+    core.record_briefing(s, "app", core.check(s, "app", "add the ownership predicate to the query"))
+    assert core.exposure_report(s, "app")["most_shown_unchecked"] == []
+    s.close()
 
 
 def test_drift_compares_the_commit_a_check_passed_at_not_the_clock(store, tmp_path, monkeypatch, capsys):

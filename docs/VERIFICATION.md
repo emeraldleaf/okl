@@ -24,7 +24,7 @@ folder.) Two clarifications that stop the common misreadings:
    `verified: true` on a record. What closes the loop is the drift gate: the live-store
    scan (and so the pre-push hook) reports a stamp with no `okl verify` evidence as drift,
    CI's snapshot reader refuses a snapshot that carries one (exit 2), and the briefing
-   marks it *UNPROVEN*.
+   marks it *UNPROVEN* when it governs files here and *UNCHECKED* otherwise.
 2. **Observed check with a stored trail** — `okl verify <id> --run "pytest -q"
    --expect "passed"` runs the check itself, reads the real outcome, requires the
    positive signal (exit 0 alone can't self-certify), and stores command + result +

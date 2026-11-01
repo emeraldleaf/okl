@@ -23,7 +23,7 @@ from typing import Any
 # judge which bundled seed packs fit a repo.
 from . import decide, semantic, warm
 from . import rerank as rerank_stage
-from .store import RETIRED_STATUSES, Edge, Node, Store, _now_ms, split_tags
+from .store import RETIRED_STATUSES, Edge, Node, Store, _now_ms, has_observed_check, split_tags
 from .store import STACK_TAGS as STACK_TAGS
 
 
@@ -787,7 +787,12 @@ def _also_entry(n: Node) -> dict[str, Any]:
     fix = re.split(r"(?<=[.!?])\s", (n.fix or "").strip(), maxsplit=1)[0]
     if len(fix) > ALSO_FIX_CHARS:
         fix = fix[:ALSO_FIX_CHARS].rsplit(" ", 1)[0].rstrip(",;:") + "…"
-    return {"id": n.id, "type": n.type, "title": n.title, "fix": fix, **stale}
+    # What the client's proof mark reads (#222): a second-tier line said nothing about whether
+    # any check backed it. Not the governed files: drift's verdict costs a git call per entry on
+    # every prompt, and the one-line tier stays without drift marks (review of #316).
+    proof = {"verified_at": n.verified_at, "verified_by": n.verified_by,
+             "verified_commit": n.verified_commit}
+    return {"id": n.id, "type": n.type, "title": n.title, "fix": fix, **proof, **stale}
 
 
 def _avoid_kind(n: Node) -> str:
@@ -1283,7 +1288,8 @@ def briefing_notice(result: dict[str, Any], shown: int = 3) -> str | None:
             return "okl · the store is empty, so nothing was briefed — see docs/GETTING-STARTED.md"
         if also:
             # The second tier named them: "nothing briefed" would hide that (REPORT §4y).
-            return f"okl · {len(also)} related lesson(s) listed for the agent; none close enough to show in full"
+            return (f"okl · {len(also)} related lesson(s) listed for the agent; none close enough to show "
+                    f"in full{_notice_marks(result)}")
         if result.get("weak_matches"):
             # Not silence: okl ran and found only weak matches, which is a different fact
             # from an empty store and from a task with no subject words. Under the tiered
@@ -1305,8 +1311,14 @@ def briefing_notice(result: dict[str, Any], shown: int = 3) -> str | None:
     more = result["match_count"] - len(short)
     return (f"okl · briefed {result['match_count']} lesson(s): " + "; ".join(short)
             + (f" (+{more} more)" if more > 0 else "")
-            + (f" · {listed}" if also else "")
-            + (f" · {result['drifted']} need re-checking" if result.get("drifted") else ""))
+            + (f" · {listed}" if also else "") + _notice_marks(result))
+
+
+def _notice_marks(result: dict[str, Any]) -> str:
+    """The person's line's counts of marked lessons, on every line that names a lesson: a listed
+    lesson can be unchecked while none is shown in full (review of #316)."""
+    return ((f" · {result['drifted']} need re-checking" if result.get("drifted") else "")
+            + (f" · {result['unchecked']} unchecked" if result.get("unchecked") else ""))
 
 
 def render_actions_only(result: dict[str, Any], limit: int | None = None) -> str:
@@ -1336,7 +1348,7 @@ def render_actions_only(result: dict[str, Any], limit: int | None = None) -> str
             head = (f"OKL: {shown} lesson(s) matched with no action to route; the full briefing shows "
                     f"them ({result['repo']})." if shown else
                     f"OKL: no rule matched this task closely ({result['repo']}).")
-            return "\n".join([head, *tail, *_replaced_lines(result)])
+            return "\n".join(_unchecked_note([head, *tail, *_replaced_lines(result)]))
         if result.get("replaced"):
             return "\n".join([f"OKL: no live rule applies to this task ({result['repo']}); "
                               "a lesson it matched was replaced:", *_replaced_lines(result)])
@@ -1346,9 +1358,18 @@ def render_actions_only(result: dict[str, Any], limit: int | None = None) -> str
     out = [f"OKL — {len(actions)} rule(s) apply before you start:"]
     for a in actions:
         sym = f" [when: {a['symptom']}]" if a.get("symptom") else ""
-        out.append(f"- {verb.get(a['kind'], 'DO')}: {a['target']}{_id_tag(a)}{_drift_tag(a)}{sym}")
+        out.append(f"- {verb.get(a['kind'], 'DO')}: {a['target']}{_id_tag(a)}{_drift_tag(a)}{_proof_tag(a)}{sym}")
         out.append(f"  -> {a['how']}")
-    return "\n".join(out + _replaced_lines(result) + tail)
+    return "\n".join(_unchecked_note(out + _replaced_lines(result) + tail))
+
+
+def _unchecked_note(lines: list[str]) -> list[str]:
+    """`lines`, and what the UNCHECKED mark means when one of them carries it: the compact path
+    prints no footer, and a mark with no meaning tells the agent nothing (review of #316)."""
+    if not any("*(UNCHECKED)*" in line for line in lines):
+        return lines
+    return [*lines, "UNCHECKED: no observed check backs that lesson. Treat it as advice, and confirm "
+                    "it against the code before relying on it."]
 
 
 def _also_line(e: dict[str, Any]) -> str:
@@ -1357,7 +1378,8 @@ def _also_line(e: dict[str, Any]) -> str:
     stale = " *(STALE — re-verify)*" if e.get("stale") else ""
     if e.get("avoid"):
         return f"- [{e['id']}] AVOID ({e['avoid']}): {e['title']}{stale}"
-    return f"- [{e['id']}] {e['title']}{stale}" + (f" — {e['fix']}" if e.get("fix") else "")
+    return (f"- [{e['id']}] {e['title']}{stale}{_proof_tag(e)}"
+            + (f" — {e['fix']}" if e.get("fix") else ""))
 
 
 def _replaced_lines(result: dict[str, Any]) -> list[str]:
@@ -1409,6 +1431,9 @@ def render_check_for_agent(result: dict[str, Any]) -> str:
     if result.get("drifted"):
         lines.append(f"> {result['drifted']} lesson(s) govern code that changed after their last check, "
                      "or were never checked: confirm them against the code before relying on them.")
+    if result.get("unchecked"):
+        lines.append(f"> {result['unchecked']} lesson(s) marked UNCHECKED have no observed check behind "
+                     "them: treat them as advice, and confirm them against the code before relying on them.")
     if result.get("dropped_by_cutoff"):
         lines.append(f"> {result['dropped_by_cutoff']} lower-ranked record(s) were trimmed to keep this "
                      "briefing short. Raise --limit or narrow the task if you expected more.")
@@ -1653,6 +1678,12 @@ def _drift_tag(item: dict) -> str:
             f"{d['verified']}; {lead})*")
 
 
+def _proof_tag(item: dict) -> str:
+    """The mark for a lesson no observed check backs and drift has no verdict on (#222); the
+    briefing's footer says once what it means, so each mark stays one word."""
+    return " *(UNCHECKED)*" if item.get("proof") == "unchecked" else ""
+
+
 def _id_tag(item: dict) -> str:
     """The lesson's id in brackets, so an agent can update, retire, link or verify the
     lesson it was just shown without searching for it first (okl review R1)."""
@@ -1675,7 +1706,7 @@ def _render_actions(actions: list[dict]) -> list[str]:
         sym = f" — when you see: {a['symptom']}" if a.get("symptom") else ""
         # The per-record stale marker lives here now that a routed record has no section
         # entry of its own (#52 review); a bare count cannot say which action to distrust.
-        tag = (" *(STALE — re-verify)*" if a.get("stale") else "") + _drift_tag(a)
+        tag = (" *(STALE — re-verify)*" if a.get("stale") else "") + _drift_tag(a) + _proof_tag(a)
         out.append(f"- **{verb.get(a['kind'], 'DO')}: {a['target']}**{_id_tag(a)}{tag}{sym}")
         out.append(f"    → {a['how']}")
         if a.get("why"):
@@ -1696,7 +1727,7 @@ def _render_records(items: list[dict], show_catches: bool = False) -> list[str]:
     for it in items:
         suffix = (f"  ← catches: {', '.join(it['catches'])}"
                   if show_catches and it.get("catches") else "")
-        tag = (" *(STALE — re-verify)*" if it.get("stale") else "") + _drift_tag(it)
+        tag = (" *(STALE — re-verify)*" if it.get("stale") else "") + _drift_tag(it) + _proof_tag(it)
         out.append(f"- **{it['title']}**{_id_tag(it)}{tag}{suffix}")
         if it.get("symptom"):
             out.append(f"  symptom: {it['symptom'][:160]}")
@@ -1889,6 +1920,13 @@ def hygiene_report(store: Store, repo: str, top: int = 10) -> dict[str, Any]:
     }
 
 
+def _proven(n: Node) -> bool:
+    """Whether an observed check backs `n`, by the predicate the briefing's UNCHECKED mark reads:
+    the report counted any stored check as one, whatever its stamp said (review of #316)."""
+    return has_observed_check({"verified_at": n.verified_at, "verified_by": n.verified_by,
+                               "verified_commit": n.verified_commit})
+
+
 def exposure_report(store: Store, repo: str, interests: list[str] | None = None,
                     top: int = 10) -> dict[str, Any]:
     """Which of the lessons `repo` can be briefed its briefings have actually shown (#129).
@@ -1911,8 +1949,7 @@ def exposure_report(store: Store, repo: str, interests: list[str] | None = None,
     times = Counter(i for b in logged for i in b.node_ids)
 
     def row(n: Node) -> dict[str, Any]:
-        return {"id": n.id, "type": n.type, "title": n.title, "times": times[n.id],
-                "checked": bool(n.verified_by)}
+        return {"id": n.id, "type": n.type, "title": n.title, "times": times[n.id], "checked": _proven(n)}
 
     # Never shown, oldest first: the longer a lesson has gone unseen, the better a
     # candidate it is to review or retire.
@@ -1929,5 +1966,7 @@ def exposure_report(store: Store, repo: str, interests: list[str] | None = None,
         "never_shown": [row(n) for n in never[:top]],
         "most_shown": [row(n) for n in shown[:top]],
         # Shown often with nothing proving it: candidates for a check (`okl verify --run`).
-        "most_shown_unchecked": [row(n) for n in shown if not n.verified_by][:top],
+        # A warning to avoid is never a candidate for a check: the briefing says not to use it
+        # (review of #316).
+        "most_shown_unchecked": [row(n) for n in shown if not _proven(n) and not _avoid_kind(n)][:top],
     }
