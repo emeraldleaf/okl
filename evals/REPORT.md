@@ -4075,10 +4075,7 @@ with haiku beside it.
 - **The receipt's summary still shows a rate,** and `unusable: 0`, because `summarize()` counts
   as unusable only a patch that did not apply or whose check timed out, not one without a
   verdict. That rate is not the registered result.
-- **The missing verdicts cannot move the counts across the bar.** All 8 breaking patches without
-  a verdict were red, and 7 failed their check, so however they are judged, drift catches between
-  16 of 25 and 23 of 31. That bound trusts the verdicts the judge did give, which is what the 20%
-  rule is there to doubt, so it settles nothing either.
+- **All 8 breaking patches without a verdict were red, and 7 failed their check.**
 
 **The counts,** from the first judge pass:
 - **The judge confirmed 24 of the 36 breaking patches as breaks,** more than half, and called 4
@@ -4116,7 +4113,7 @@ with haiku beside it.
 - **`doc-init-flags-breaking-3`:** `docs/DEPLOY.md` gained `okl init --server`, a flag `init`
   does not have. The lesson's title limits it to "the README and guide", and its files and check
   cover those two docs, so this break may be outside its claim. Whether every doc that shows
-  `okl init` is inside it is the lesson's to settle, as prediction 2's follow-up asks.
+  `okl init` is inside it is the lesson's to settle.
 - **`n_07faa4565128-breaking-0`, `-1` and `-2`:** the guidance that tells an agent how to set
   `applies_to` now says to gate by the stack in hand. The three are the scaffold's `/record`
   command, the `okl_record` tool's description and `okl record --applies-to`'s help. The check
@@ -4147,8 +4144,10 @@ them above, a new shape passes until it is added.
 **What `--blind` hid, read from the sessions' transcripts.** Claude Code keeps each headless
 session's transcript. Receipt `harness-transcripts-cefb1r8y.json`, from
 `evals/harness_transcripts.py`, counts what the 54 breaker sessions saw and did.
-- **No breaker called on a file in the main checkout, and none read a hidden file.** One asked
-  for `ci/check-agent-neutral.py` and was told it does not exist.
+- **No breaker made a call on a file in the main checkout, and none read a hidden file.** One
+  asked for `ci/check-agent-neutral.py` and was told it does not exist. Four Edit calls went
+  outside their worktrees, to paths that do not exist (a dash where the folder name has an
+  underscore), so nothing was written there.
 - **Each breaker saw some hidden files' names.** A session's context carries the worktree's git
   status, here cut at 2,000 characters after 43 or 44 of the deleted files. The breakers of the
   six lessons with a check script saw it named there (` D ci/check-agent-neutral.py`), and every
@@ -4184,7 +4183,7 @@ the repository is also behind both wrong verdicts on harmless patches.
 **What follows.**
 - **The docs stay as they are.** CHANGELOG, `RELATED-WORK.md` and the thesis's baseline give
   these counts beside §4af's, and no doc calls drift detection.
-- **The judge's time-outs made this result counts only.** Each run lost 11 verdicts (14% of
+- **The judge's missing verdicts made this result counts only.** Each run lost 11 verdicts (14% of
   §4af's 78, 20.4% of these 54). A run that can settle prediction 1 needs a judge that answers:
   one that can read the commit it judges, with the check's files still kept from it, or one told
   it has only the diff, and a time-out rule registered before the run. Both are filed as #327.
