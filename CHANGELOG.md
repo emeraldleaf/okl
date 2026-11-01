@@ -5,8 +5,9 @@
 - **The briefing marks the lessons no check backs** (#222). Only lessons whose governed files
   are in the checkout were marked (*STALE*, *UNVERIFIED*, *UNPROVEN*), so every other lesson
   was briefed exactly like a proven one. In okl's own store that was 139 of 155. A lesson that
-  governs no files here and was never verified, or whose stamp has no `okl verify` run behind
-  it, is now marked *UNCHECKED*, in the full briefing and the one-line tier. One line under the
+  governs no files here, and was never verified or carries a stamp with no `okl verify` run
+  behind it, is now marked *UNCHECKED*, in the full briefing and the one-line tier; one that
+  governs files here keeps drift's *UNVERIFIED* or *UNPROVEN*. One line under the
   briefing says how many there are, the compact briefing says once what the mark means, and the
   person's line counts them. The test is the one the CI gate applies to a stamp. Warnings
   (retractions, retired identifiers) and tag declarations are not marked, and the one-line tier

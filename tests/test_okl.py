@@ -3617,6 +3617,17 @@ def test_the_briefing_says_which_lessons_no_check_backs(store, tmp_path):
     assert "UNCHECKED" not in core.render_actions_only(res)
 
 
+def test_proof_eligibility_is_what_the_mark_and_its_receipt_count():
+    """One test for what the UNCHECKED mark can reach, which the size receipt counts as its
+    denominator: advice with its proof fields, live, and with no drift verdict (review of #316)."""
+    from okl import drift
+    assert drift.proof_eligible({"type": "Rule", "verified_at": None}, None)
+    assert not drift.proof_eligible({"type": "Rule", "verified_at": None}, {"reason": "never verified"})
+    assert not drift.proof_eligible({"type": "Retraction", "verified_at": None}, None)
+    assert not drift.proof_eligible({"type": "Rule", "verified_at": None, "status": "superseded"}, None)
+    assert not drift.proof_eligible({"type": "Rule"}, None)                    # an older service's entry
+
+
 def test_the_persons_line_counts_unchecked_lessons_listed_without_any_in_full():
     """With nothing shown in full and one unchecked lesson listed, the line returned early and
     never counted it (review of #316)."""

@@ -24,7 +24,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
-from okl import core  # noqa: E402
+from okl import core, drift  # noqa: E402
 from okl.client import Client  # noqa: E402
 from okl.store import Store  # noqa: E402
 
@@ -45,6 +45,14 @@ def without_marks(result: dict) -> dict:
             if isinstance(rec, dict):
                 rec.pop("proof", None)
     return out
+
+
+def eligible(result: dict) -> int:
+    """The briefed lessons the mark could reach, counted once each by drift's own test: warnings,
+    retired lessons and lessons drift already marks are not in the denominator (review of #316)."""
+    ids = {rec["id"] for key in drift._BRIEFED for rec in result.get(key) or []
+           if isinstance(rec, dict) and rec.get("id") and drift.proof_eligible(rec, rec.get("drift"))}
+    return len(ids)
 
 
 def main() -> int:
@@ -74,7 +82,7 @@ def main() -> int:
                 marked, bare = core.render_check_for_agent(res), core.render_check_for_agent(without_marks(res))
                 rows.append({"kind": kind, "full": res.get("match_count") or 0,
                              "listed": len(res.get("also_matched") or []), "unchecked": res.get("unchecked", 0),
-                             "chars": len(bare), "added": len(marked) - len(bare)})
+                             "eligible": eligible(res), "chars": len(bare), "added": len(marked) - len(bare)})
         finally:
             store.close()
     commit = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--short=12", "HEAD"],
@@ -82,16 +90,17 @@ def main() -> int:
     briefed = [r for r in rows if r["full"] or r["listed"]]
     total, added = sum(r["chars"] for r in briefed), sum(r["added"] for r in briefed)
     lessons = sum(r["full"] + r["listed"] for r in briefed)
+    reach = sum(r["eligible"] for r in briefed)
     lines = [f"briefing marks size (#222) · {datetime.now(UTC):%Y-%m-%dT%H:%MZ} · code {commit} · "
              f"{len(rows)} prompts ({sum(r['kind'] == 'task' for r in rows)} eval tasks, "
              f"{sum(r['kind'] == 'probe' for r in rows)} probe prompts) · a copy of the store ({records} records), "
              f"repo {client.repo} as the hook briefs it (decision {client.decision}, hybrid {client.hybrid}, "
              f"rerank {client.rerank}, warm {client.warm})",
-             f"  {'kind':6} {'full':>5} {'listed':>7} {'unchecked':>10} {'chars':>7} {'added':>6}"]
-    lines += [f"  {r['kind']:6} {r['full']:>5} {r['listed']:>7} {r['unchecked']:>10} {r['chars']:>7} {r['added']:>6}"
+             f"  {'kind':6} {'full':>5} {'listed':>7} {'eligible':>9} {'unchecked':>10} {'chars':>7} {'added':>6}"]
+    lines += [f"  {r['kind']:6} {r['full']:>5} {r['listed']:>7} {r['eligible']:>9} {r['unchecked']:>10} {r['chars']:>7} {r['added']:>6}"
               for r in rows]
-    lines.append(f"  briefed prompts {len(briefed)}: {sum(r['unchecked'] for r in briefed)} of {lessons} lessons "
-                 f"marked unchecked; the marks add {added} characters to {total} "
+    lines.append(f"  briefed prompts {len(briefed)}: {sum(r['unchecked'] for r in briefed)} of the {reach} lessons the "
+                 f"mark could reach are marked unchecked ({lessons} briefed in all); the marks add {added} characters to {total} "
                  f"({100 * added / total if total else 0:.1f}%)")
     out = ROOT / "evals" / "results" / f"briefing-marks-size-{datetime.now(UTC):%Y%m%d-%H%M}.txt"
     out.write_text("\n".join(lines) + "\n")

@@ -1,0 +1,17 @@
+briefing marks size (#222) · 2026-11-01T11:10Z · code beb30e5496f4 · 14 prompts (8 eval tasks, 6 probe prompts) · a copy of the store (346 records), repo okl as the hook briefs it (decision tiered, hybrid None, rerank False, warm False)
+  kind    full  listed  eligible  unchecked   chars  added
+  task       5      12        17         11    6952    302
+  task       5      12        17         10    6946    288
+  task       5      12        17         14    7190    344
+  task       5      12        17          9    7132    273
+  task       5      12        17         13    7536    330
+  task       5      12        17         14    6412    344
+  task       5      12        17         10    7231    288
+  task       5      12        17         12    6240    316
+  probe      0       1         1          1     632    161
+  probe      1      11        12         12    4118    316
+  probe      0       0         0          0     313      0
+  probe      0       2         2          0     982      0
+  probe      0      12        12          8    4023    259
+  probe      0       9         9          7    3279    245
+  briefed prompts 13: 121 of the 172 lessons the mark could reach are marked unchecked (172 briefed in all); the marks add 3466 characters to 68673 (5.0%)

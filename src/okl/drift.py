@@ -316,10 +316,17 @@ def _record_proof(rec: dict[str, Any], verdict: dict[str, Any] | None) -> str | 
     no `okl verify` evidence is no check, by the gate's own predicate. A record that is not
     advice is not marked, and neither is an entry from a service older than this mark, which
     sends no proof fields: not knowing is not unchecked (review of #316)."""
-    if (verdict or rec.get("avoid") or rec.get("type") in _NOT_ADVICE
-            or rec.get("status") in RETIRED_STATUSES or "verified_at" not in rec):
+    if not proof_eligible(rec, verdict):
         return None
     return None if has_observed_check(rec) else "unchecked"
+
+
+def proof_eligible(rec: dict[str, Any], verdict: dict[str, Any] | None) -> bool:
+    """Whether a briefed record can carry the proof mark at all: advice, live, with its proof
+    fields, and with no drift verdict, which marks it already. The eval receipt counts by this,
+    so its denominator is the lessons the mark could reach (review of #316)."""
+    return not (verdict or rec.get("avoid") or rec.get("type") in _NOT_ADVICE
+                or rec.get("status") in RETIRED_STATUSES or "verified_at" not in rec)
 
 
 def _mark(rec: dict[str, Any], verdict: dict[str, Any] | None, proof: str | None) -> None:
