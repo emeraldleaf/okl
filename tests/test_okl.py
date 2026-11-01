@@ -3628,6 +3628,14 @@ def test_proof_eligibility_is_what_the_mark_and_its_receipt_count():
     assert not drift.proof_eligible({"type": "Rule"}, None)                    # an older service's entry
 
 
+def test_a_second_tier_line_carries_the_proof_mark_and_no_drift_mark():
+    """The one-line tier sends no governed files, so drift never judges it; a drift tag on its
+    line was dead code that contradicted that (review of #316)."""
+    line = core._also_line({"id": "a", "title": "t", "fix": "f", "proof": "unchecked",
+                            "drift": {"reason": "never verified"}})
+    assert "*(UNCHECKED)*" in line and "UNVERIFIED" not in line
+
+
 def test_the_persons_line_counts_unchecked_lessons_listed_without_any_in_full():
     """With nothing shown in full and one unchecked lesson listed, the line returned early and
     never counted it (review of #316)."""
@@ -3683,6 +3691,10 @@ def test_the_hygiene_report_counts_a_check_as_the_briefing_does(monkeypatch):
     checked = {r["id"]: r["checked"] for r in report["most_shown"]}
     assert checked == {hand: False, proven: True}, checked
     assert [r["id"] for r in report["most_shown_unchecked"]] == [hand]
+    # A retracted lesson is briefed as one to avoid, so it is never offered for a check.
+    core.retire(s, hand, reason="wrong")
+    core.record_briefing(s, "app", core.check(s, "app", "add the ownership predicate to the query"))
+    assert core.exposure_report(s, "app")["most_shown_unchecked"] == []
     s.close()
 
 

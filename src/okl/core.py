@@ -1378,7 +1378,7 @@ def _also_line(e: dict[str, Any]) -> str:
     stale = " *(STALE — re-verify)*" if e.get("stale") else ""
     if e.get("avoid"):
         return f"- [{e['id']}] AVOID ({e['avoid']}): {e['title']}{stale}"
-    return (f"- [{e['id']}] {e['title']}{stale}{_short_drift_tag(e)}{_proof_tag(e)}"
+    return (f"- [{e['id']}] {e['title']}{stale}{_proof_tag(e)}"
             + (f" — {e['fix']}" if e.get("fix") else ""))
 
 
@@ -1678,15 +1678,6 @@ def _drift_tag(item: dict) -> str:
             f"{d['verified']}; {lead})*")
 
 
-def _short_drift_tag(item: dict) -> str:
-    """_drift_tag in one word, for a second-tier line: the full reason is a `okl show` away."""
-    d = item.get("drift")
-    if not d:
-        return ""
-    word = {"never verified": "UNVERIFIED", "verified with no observed check": "UNPROVEN"}
-    return f" *({word.get(d['reason'], 'STALE')})*"
-
-
 def _proof_tag(item: dict) -> str:
     """The mark for a lesson no observed check backs and drift has no verdict on (#222); the
     briefing's footer says once what it means, so each mark stays one word."""
@@ -1975,5 +1966,7 @@ def exposure_report(store: Store, repo: str, interests: list[str] | None = None,
         "never_shown": [row(n) for n in never[:top]],
         "most_shown": [row(n) for n in shown[:top]],
         # Shown often with nothing proving it: candidates for a check (`okl verify --run`).
-        "most_shown_unchecked": [row(n) for n in shown if not _proven(n)][:top],
+        # A warning to avoid is never a candidate for a check: the briefing says not to use it
+        # (review of #316).
+        "most_shown_unchecked": [row(n) for n in shown if not _proven(n) and not _avoid_kind(n)][:top],
     }
