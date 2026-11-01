@@ -8,9 +8,9 @@
       "title": "The README's stated check defaults (limit 12; formats agent, actions, json, hook) match the code",
       "scope": "repo:okl",
       "files": "README.md,src/okl/core.py,src/okl/cli/,src/okl/client.py,src/okl/service.py,src/okl/mcp_server.py",
-      "verified_at": 1793553412266,
-      "verified_by": "`python3 ci/check-check-defaults.py` exit 0, matched 'CHECK DEFAULTS MATCH' on commit 31445d17ab6a @ 2026-11-01T17:16Z",
-      "verified_commit": "31445d17ab6a8c201ba00d4852e5aa993d622875"
+      "verified_at": 1793554182027,
+      "verified_by": "`python3 ci/check-check-defaults.py` exit 0, matched 'CHECK DEFAULTS MATCH' on commit ebea5aeea100 @ 2026-11-01T17:29Z",
+      "verified_commit": "ebea5aeea10060aa1e986e9165b8cac75b48343e"
     },
     {
       "id": "doc-init-flags",
@@ -48,9 +48,9 @@
       "title": "okl's docs are agent-neutral; Claude Code-only parts are labelled as such",
       "scope": "repo:okl",
       "files": "README.md,docs/",
-      "verified_at": 1793553412575,
-      "verified_by": "`python3 ci/check-agent-neutral.py` exit 0, matched 'AGENT NEUTRAL' on commit 31445d17ab6a @ 2026-11-01T17:16Z",
-      "verified_commit": "31445d17ab6a8c201ba00d4852e5aa993d622875"
+      "verified_at": 1793554181497,
+      "verified_by": "`python3 ci/check-agent-neutral.py` exit 0, matched 'AGENT NEUTRAL' on commit ebea5aeea100 @ 2026-11-01T17:29Z",
+      "verified_commit": "ebea5aeea10060aa1e986e9165b8cac75b48343e"
     },
     {
       "id": "n_07faa4565128",
@@ -58,9 +58,9 @@
       "title": "Read a record's own body before gating it — it may already declare its portability",
       "scope": "org",
       "files": "seed/,src/okl/store.py",
-      "verified_at": 1793553413606,
-      "verified_by": "`python3 ci/check-portable-ungated.py` exit 0, matched 'PORTABLE RECORDS UNGATED' on commit 31445d17ab6a @ 2026-11-01T17:16Z",
-      "verified_commit": "31445d17ab6a8c201ba00d4852e5aa993d622875"
+      "verified_at": 1793554182244,
+      "verified_by": "`python3 ci/check-portable-ungated.py` exit 0, matched 'PORTABLE RECORDS UNGATED' on commit ebea5aeea100 @ 2026-11-01T17:29Z",
+      "verified_commit": "ebea5aeea10060aa1e986e9165b8cac75b48343e"
     },
     {
       "id": "n_7e50e3588bcd",
@@ -108,9 +108,9 @@
       "title": "Entered a crowded category deliberately: differentiate on verification-of-memory, compose with memory infra, never compete on recall",
       "scope": "repo:okl",
       "files": "README.md,docs/",
-      "verified_at": 1793553412876,
-      "verified_by": "`python3 ci/check-positioning.py` exit 0, matched 'POSITIONING OK' on commit 31445d17ab6a @ 2026-11-01T17:16Z",
-      "verified_commit": "31445d17ab6a8c201ba00d4852e5aa993d622875"
+      "verified_at": 1793554181684,
+      "verified_by": "`python3 ci/check-positioning.py` exit 0, matched 'POSITIONING OK' on commit ebea5aeea100 @ 2026-11-01T17:29Z",
+      "verified_commit": "ebea5aeea10060aa1e986e9165b8cac75b48343e"
     },
     {
       "id": "n_ead8e0a2b43d",
