@@ -50,7 +50,8 @@ The whole walk-through, with ADR status, teams, and keeping docs and comments cu
 **3. Generate records from this codebase.** If you use Claude Code, the scaffold
 stamps a `/seed-from-codebase` command that has the agent read your repo — the guard
 rails already in the code, what CI enforces, the fix commits, the existing canon — and
-propose records with a `file:line` citation each. Everything it proposes is repo-scoped
+propose records with a `file:line` citation each; another agent can follow the same prompt,
+`.claude/commands/seed-from-codebase.md` in `okl scaffold`'s output. Everything it proposes is repo-scoped
 and unverified by design; it writes a reviewable file and imports nothing, because a
 plausible rule no file supports is worse than an empty store.
 

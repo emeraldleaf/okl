@@ -276,6 +276,24 @@ def test_the_mutation_run_counts_catches_misses_and_ci_by_group(monkeypatch):
     assert s["controls"] == {"n": 1, "check_failed": 1}
 
 
+def test_a_blind_breaker_cannot_read_how_its_lesson_is_checked(monkeypatch, tmp_path):
+    """§4ah: by default the breaker loses only the snapshot, as in §4af. With --blind it also loses
+    the files its lesson's check command names, and the receipts and write-ups that describe every
+    check, which did not exist at §4af's BASE (review on #318)."""
+    monkeypatch.setattr(sys, "path", list(sys.path))
+    spec = importlib.util.spec_from_file_location("drift_mutate", HERE / "evals" / "drift_mutate.py")
+    dm = importlib.util.module_from_spec(spec)
+    monkeypatch.setitem(sys.modules, "drift_mutate", dm)
+    spec.loader.exec_module(dm)
+    for path in ("okl-drift.json", "evals/REPORT.md", "evals/results/r.json", "ci/check-x.py", "ci/other.py"):
+        (tmp_path / path).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / path).write_text("x")
+    assert dm.hidden(tmp_path, "python3 ci/check-x.py", blind=False) == ["okl-drift.json"]
+    kept = dm.hidden(tmp_path, "python3 ci/check-x.py", blind=True)
+    assert {"okl-drift.json", "evals/REPORT.md", "evals/results", "ci/check-x.py"} <= set(kept)
+    assert "ci/other.py" not in kept and "CHANGELOG.md" not in kept   # absent paths are not named
+
+
 def test_a_judge_reads_each_lesson_as_its_receipt_recorded_it(dr):
     """A judge run after the store moved on would read today's lesson beside the run's code, so a
     receipt without hashes, or a lesson whose text changed, is refused (review on #312)."""

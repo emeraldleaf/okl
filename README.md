@@ -420,7 +420,7 @@ candidate source joins before the gates: the task as one vector, its nearest rec
 cosine, and a fusion of the two orders. It needs the floor: a record found by meaning alone
 shares no word with the task, so the calibrated line cannot brief it. Meaning measured best
 added to the word count instead. EmbeddingGemma-300m took held-out recall from 90.0% to
-95.2% that way at full precision. A prompt hook would pay a second or two to load it on every
+95.2% that way at full precision. The Claude Code prompt hook would pay a second or two to load it on every
 prompt, so `okl warm` keeps its int8 file loaded in a local process: on once `okl warm index`
 has embedded a local store's lessons, about 1.6 GB of memory, 114 ms added to a prompt at the median,
 and on real held-out prompts 46 applying
@@ -553,7 +553,7 @@ follow the limit), against ~1,390 for the full briefing. Cheap enough to call pe
 `--decision calibrated` drops the one-line entries for the smallest list.
 
 The same holds for a main session on a model with a small context window, where the
-briefing arrives with every prompt. Set `OKL_BRIEFING_COMPACT=1` and the prompt hook sends
+briefing arrives with every prompt. Set `OKL_BRIEFING_COMPACT=1` and the Claude Code prompt hook sends
 only the action list (`okl check --compact`); set `OKL_BRIEFING_LIMIT=3` and it shows three
 records and names three more, instead of five and twelve. Together that is ~350 tokens instead of ~1,390 on the
 measurement above. Set them where the agent starts: hooks inherit its environment. A

@@ -2,16 +2,17 @@
 """Every package the tests import is one CI installs for them.
 
 The check behind the `n_7e50e3588bcd` lesson: a test that imports an undeclared package passes
-only where that package happens to be installed. CI installs the project and its `dev` group
-(`pip install -e . --group dev`), so a module the tests import, or name to
-`pytest.importorskip`, must be the standard library, okl's own, a module of this repository, or
-come from a distribution named in `[project].dependencies` or the `dev` group. The extras do not
-count: CI does not install them. The first version grepped the tests for one import, so a
+only where that package happens to be installed. What CI installs is read from its workflow's
+`pip install -e .` line: the project's dependencies, any extras in brackets, and each `--group`.
+A module the tests import, or name to `pytest.importorskip`, must be the standard library,
+okl's own, a module of this repository, or come from one of those distributions. Nothing else
+counts: a package an extra declares that CI never installs is as undeclared as any other. The first version grepped the tests for one import, so a
 break that took fastapi out of the dev group passed it, and the tests that import it skipped
 themselves (REPORT §4af, #318).
 """
 import ast
 import re
+import subprocess
 import sys
 import tomllib
 from importlib.metadata import packages_distributions
@@ -25,15 +26,28 @@ def norm(name: str) -> str:
     return re.sub(r"[-_.]+", "-", name).lower()
 
 
+def tracked(*paths: str) -> list[Path]:
+    """The committed files under `paths` (CLAUDE.md: audits read the repo, not the working tree)."""
+    out = subprocess.run(["git", "-C", str(REPO), "ls-files", *paths], capture_output=True, text=True, check=True)
+    return [REPO / f for f in out.stdout.split() if f.endswith(".py")]
+
+
 project = tomllib.loads((REPO / "pyproject.toml").read_text())
-declared = {norm(re.match(r"[A-Za-z0-9._-]+", r).group(0))
-            for r in [*project["project"].get("dependencies", []), *project["dependency-groups"]["dev"]]
-            if isinstance(r, str)}
-local = {"okl"} | {p.stem for d in ("tests", "evals", "ci") for p in (REPO / d).glob("*.py")}
+install = re.search(r"pip install -e \.(?:\[([\w,-]+)\])?((?: --group [\w-]+)*)",
+                    (REPO / ".github/workflows/ci.yml").read_text())
+if not install:
+    sys.exit("UNDECLARED TEST IMPORT: ci.yml has no `pip install -e .` line to read")
+wanted = [*project["project"].get("dependencies", [])]
+for extra in (install.group(1) or "").split(","):
+    wanted += project["project"].get("optional-dependencies", {}).get(extra, []) if extra else []
+for group in re.findall(r"--group ([\w-]+)", install.group(2)):
+    wanted += project["dependency-groups"][group]
+declared = {norm(re.match(r"[A-Za-z0-9._-]+", r).group(0)) for r in wanted if isinstance(r, str)}
+local = {"okl"} | {p.stem for p in tracked("tests/", "evals/", "ci/")}
 dists = packages_distributions()
 
 imported: dict[str, str] = {}
-for path in sorted((REPO / "tests").rglob("*.py")):
+for path in tracked("tests/"):
     for node in ast.walk(ast.parse(path.read_text(), str(path))):
         names = []
         if isinstance(node, ast.Import):

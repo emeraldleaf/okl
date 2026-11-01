@@ -78,7 +78,8 @@ into a file you review before importing anything (`okl scaffold .` adds it outsi
 lists more bundled packs; `okl seed <name>` imports one.
 
 Already have rules files, ADRs, standards or specs? [Load your rules](LOAD-YOUR-RULES.md)
-walks through importing them with `/seed-from-docs`, proving the ones that govern code,
+walks through importing them (`/seed-from-docs` in Claude Code, its prompt file with any
+other agent), proving the ones that govern code,
 and keeping them current.
 
 ### Check it works

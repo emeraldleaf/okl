@@ -149,7 +149,7 @@ A project commits `okl-ledger.json` beside `okl-drift.json`:
   newest commit and prints what changes for this repo: lessons added, changed and retired in
   its areas. The project commits that in its own pull request, so its reviewers see which org
   lessons change.
-- **Sync stays out of the prompt hook**, which stays fast and offline. `okl doctor`, and one
+- **Sync stays out of the Claude Code prompt hook**, which stays fast and offline. `okl doctor`, and one
   line in the briefing, say when the store was synced from a different commit than
   `okl-ledger.json` names, as after a pull that moved `ref`.
 

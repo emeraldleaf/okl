@@ -57,7 +57,7 @@ okl init --interests "python,security"    # drop records tagged for stacks you d
   not to a shared service or `--decision floor`. When the model does not answer, the briefing is
   the usual one; `--format json` says why in `warm_unavailable`
   ([REPORT §4z](../evals/REPORT.md)).
-- **The prompt hook takes two of these from the environment**: `OKL_BRIEFING_LIMIT=N`
+- **The Claude Code prompt hook takes two of these from the environment**: `OKL_BRIEFING_LIMIT=N`
   becomes `--limit N`, and `OKL_BRIEFING_COMPACT=1` sends only the action list. They are
   for a model with a small context window; see
   [Small context budgets](SUBAGENTS.md).

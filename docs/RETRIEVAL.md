@@ -81,7 +81,7 @@ the original rule, every match in full.
 **A warm model, once you index a store.** A small embedding model (EmbeddingGemma-300m), added to the word
 count rather than replacing it, took held-out recall from 90.0% to **95.2%** on the benchmark
 (at full precision; the int8 file `okl warm` runs measured 92.0% against 92.4% on the selection split),
-most of it on paraphrases. The prompt hook starts a new process for every prompt, and loading
+most of it on paraphrases. The Claude Code prompt hook starts a new process for every prompt, and loading
 the model there costs a second or two, so `okl warm` keeps it loaded in a local process instead
 (int8, a 309.5 MB file). On real held-out prompts it showed 46 applying lessons in full against 38,
 at 23.0% precision against 17.8%, and named 107 against 102, adding a median of 114 ms to a prompt
