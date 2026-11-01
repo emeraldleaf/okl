@@ -1,0 +1,21 @@
+diff --git a/src/okl/cli/lessons.py b/src/okl/cli/lessons.py
+index 21e03ff..2105e52 100644
+--- a/src/okl/cli/lessons.py
++++ b/src/okl/cli/lessons.py
+@@ -184,16 +184,6 @@ def cmd_record(args: argparse.Namespace) -> int:
+     exit 2 with the message, which names the vocabulary. A traceback would bury the one
+     line that tells them how to fix the call.
+     """
+-    if args.verified:
+-        # A stamp the recorder awards itself is the step grading its own homework. The
+-        # README said live verification refused this; it accepted it, silently, and the
+-        # shipped encoding-loop skill told agents to pass it. Found checking a launch post
+-        # that claimed "never by assertion". Historical receipts still import via `okl seed`.
+-        print("okl record --verified is refused: a lesson is verified by running a check, not "
+-              "by saying so.\n  Record it without --verified, then run `okl verify <id>` to see the "
+-              "tests that touch its files, or ask your agent to prove it.\n  (Importing historical, "
+-              "already-verified records? Use okl seed.)", file=sys.stderr)
+-        return 2
+     if getattr(args, "replace", False) and not args.id:
+         print("okl record --replace needs --id: it overwrites the lesson with that id. Without "
+               "one there is nothing to replace.", file=sys.stderr)

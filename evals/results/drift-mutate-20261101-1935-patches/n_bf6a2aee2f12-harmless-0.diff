@@ -1,0 +1,13 @@
+diff --git a/docs/DEVELOPING.md b/docs/DEVELOPING.md
+index 782f7fb..6538dcb 100644
+--- a/docs/DEVELOPING.md
++++ b/docs/DEVELOPING.md
+@@ -140,7 +140,7 @@ That is expected; see CONTRIBUTING.
+    `gh release create vX.Y.Z --target <sha> --title "okl X.Y.Z" --notes-file <that CHANGELOG section>`.
+    The tag starts `publish.yml`. It builds, checks that the tag matches `pyproject.toml`,
+    then waits at the `pypi` environment for the maintainer's approval.
+-5. **Publish to the MCP Registry** from the repo, in a regular terminal (it asks for a
++5. **Publish to the MCP Registry** from the repo root, in a regular terminal (it asks for a
+    GitHub device code): `mcp-publisher login github && mcp-publisher publish`.
+ 6. **Check what was published.** PyPI should list the version. Then launch the server the
+    way a registry client would,

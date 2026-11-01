@@ -1,0 +1,22 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 8dfb289..29631d0 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -30,6 +30,17 @@ defaults:
+     shell: bash -euo pipefail {0}
+ 
+ jobs:
++  open-alerts:
++    runs-on: ubuntu-latest
++    steps:
++      - name: Fail while Dependabot alerts are open
++        env:
++          GH_TOKEN: ${{ secrets.ALERTS_TOKEN }}
++        run: |
++          n=$(gh api "repos/${GITHUB_REPOSITORY}/dependabot/alerts?state=open" --jq length)
++          echo "open Dependabot alerts: $n"
++          test "$n" -eq 0
++
+   lint-and-test:
+     runs-on: ubuntu-latest
+     # The Postgres backend against a real server, for the test step below. Its tests skipped

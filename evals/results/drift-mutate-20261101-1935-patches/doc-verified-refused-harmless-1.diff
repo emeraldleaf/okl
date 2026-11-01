@@ -1,0 +1,13 @@
+diff --git a/docs/GETTING-STARTED.md b/docs/GETTING-STARTED.md
+index 8063d46..7b8166d 100644
+--- a/docs/GETTING-STARTED.md
++++ b/docs/GETTING-STARTED.md
+@@ -477,7 +477,7 @@ a CI gate as well.
+ | CI warns "Drift not checked" | no `okl-drift.json` committed yet | expected until a lesson with `--files` is verified; then commit the file `okl verify` creates |
+ | CI fails with "NOTHING CHECKED" | a snapshot with zero rules is committed | remove it, or record a lesson with `--files` and re-export |
+ | `okl drift` is red right after `okl record --files` | a new rule is unverified until its first `okl verify` | run its check with `okl verify` |
+-| `okl drift` is red after you changed code | lessons governing those files need re-checking | `okl reverify` |
++| `okl drift` is red after you changed code | lessons governing those files need re-checking | `okl reverify` (run it from the repo root so the governed paths resolve) |
+ | `git push` stops with "okl pre-push: lessons drifted" | the pre-push hook found drift | `okl reverify`, commit, push again; `git push --no-verify` skips the check once |
+ | `okl drift` reports a lesson "stamped …, unverified" | its stamp has no observed check behind it, often from a seed file that marked it verified | prove it with `okl verify <id> --run …`, or drop its `files` if nothing should gate it |
+ | A briefed lesson is marked *STALE*, *UNVERIFIED* or *UNPROVEN* | its governed files changed after its last check, no check has passed yet, or its stamp has no observed check behind it | `okl reverify` re-runs stored checks; a lesson with none needs one first: ask your agent to re-check it, or run `okl verify <id>` to see what to run |

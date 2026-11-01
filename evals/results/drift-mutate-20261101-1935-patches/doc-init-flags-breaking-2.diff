@@ -1,0 +1,13 @@
+diff --git a/docs/GETTING-STARTED.md b/docs/GETTING-STARTED.md
+index 8063d46..718a5dc 100644
+--- a/docs/GETTING-STARTED.md
++++ b/docs/GETTING-STARTED.md
+@@ -32,7 +32,7 @@ should work, but the Claude Code hooks likely need fixes there
+ From the root of your repo:
+ 
+ ```bash
+-okl init --repo shop --dry-run   # lists every file it would write, and what it detected
++okl init --repo shop --dry-run --preview   # lists every file it would write, and what it detected
+ okl init --repo shop
+ ```
+ 

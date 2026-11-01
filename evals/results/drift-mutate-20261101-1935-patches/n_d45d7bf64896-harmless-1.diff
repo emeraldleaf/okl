@@ -1,0 +1,13 @@
+diff --git a/docs/DEVELOPING.md b/docs/DEVELOPING.md
+index 782f7fb..3c98bad 100644
+--- a/docs/DEVELOPING.md
++++ b/docs/DEVELOPING.md
+@@ -122,6 +122,8 @@ That is expected; see CONTRIBUTING.
+   real bugs in this repo were found that way before review bots saw them.
+ - **Merge commits only.** Squash and rebase are disabled, because drift reads commit
+   history. Head branches delete themselves on merge.
++- **Keep PRs to one concern.** A small PR is easier to re-verify when it touches a governed
++  file, and easier for a reviewer to try to break.
+ 
+ ## Releasing
+ 

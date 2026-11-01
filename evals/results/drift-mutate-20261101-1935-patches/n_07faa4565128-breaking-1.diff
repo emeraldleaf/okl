@@ -1,0 +1,15 @@
+diff --git a/src/okl/mcp_server.py b/src/okl/mcp_server.py
+index 331237b..332d387 100644
+--- a/src/okl/mcp_server.py
++++ b/src/okl/mcp_server.py
+@@ -125,8 +125,8 @@ def _build() -> Any:  # noqa: C901, PLR0915 - a declarative table of tool defini
+         eval-integrity) categorize the subject so `check` can filter by interest.
+         id is a short stable key for the new lesson. An id that already exists is
+         refused: refine that lesson with okl_update, which keeps its proof.
+-        applies_to: leave unset unless the lesson is false off one stack; unset
+-        reaches every repo, a wrong value hides the lesson silently.
++        applies_to: set it to the stack named in the title or symptom; unset
++        reaches every repo, so gating by stack keeps the briefing focused.
+         """
+         try:
+             node_id = client.record(type=type, title=title, scope=scope, body=body,

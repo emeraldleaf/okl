@@ -1,0 +1,21 @@
+diff --git a/tests/test_hygiene.py b/tests/test_hygiene.py
+index 4a166d7..7bdd363 100644
+--- a/tests/test_hygiene.py
++++ b/tests/test_hygiene.py
+@@ -83,6 +83,8 @@ def test_seed_warns_and_strict_refuses(tmp_path, monkeypatch, capsys):
+     """okl seed prints one warning per flagged org record and still imports; --strict imports nothing and exits 2."""
+     import argparse
+ 
++    import yaml
++
+     from okl.cli.packs import cmd_seed
+     from okl.client import Client
+     monkeypatch.chdir(tmp_path)
+@@ -98,6 +100,7 @@ def test_seed_warns_and_strict_refuses(tmp_path, monkeypatch, capsys):
+         {"key": "deep", "type": "Rule", "title": "scoped rule", "scope": "org", "repo": "a",
+          "fix": "edit src/orders/api/views.py"},
+     ]}))
++    assert len(yaml.safe_load(pack.read_text())["nodes"]) == 3
+     args = argparse.Namespace(path=str(pack), all=False, strict=False)
+     assert cmd_seed(args) == 0
+     err = capsys.readouterr().err

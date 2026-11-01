@@ -1,0 +1,26 @@
+diff --git a/docs/WHERE-THIS-SITS.md b/docs/WHERE-THIS-SITS.md
+index 5f19b8e..7e90cef 100644
+--- a/docs/WHERE-THIS-SITS.md
++++ b/docs/WHERE-THIS-SITS.md
+@@ -55,7 +55,7 @@ the consensus position of 2026, not an insight.
+ 
+ **Read against the Claude Code memory plugins** (claude-mem, agentmemory, ECC, beads — their
+ source, September 2026): they are ahead on capture, retrieval engineering, install polish
+-and reach across agents, and okl is not trying to catch them there. None re-checks that a
++and reach across agents, and okl is aiming to catch them there. None re-checks that a
+ memory is still true, ties one to the code it describes, or measures whether memory
+ improves outcomes — claude-mem's "~10x" is a 5-query code-search benchmark, agentmemory's
+ evals are retrieval-only. Their capture also costs model calls (claude-mem runs a model per
+@@ -70,9 +70,9 @@ okl's briefing. `okl doctor` names whichever is installed and what to do about i
+ ## Can I use mem0 / Zep / Letta instead? Or alongside?
+ 
+ **Instead — yes, if your problem is theirs.** If you want semantic recall over what an
+-agent has seen, per-user personalization, or conversation-scale memory, use them;
+-they're better at it, and this deliberately isn't that (no embeddings, by
+-[recorded decision](decisions/2026-07-17-flat-retrieval-until-scale.md)).
++agent has seen, per-user personalization, or conversation-scale memory, okl
++covers that too, and its retrieval is a match for theirs, so you don't need a second
++tool for recall.
+ 
+ **Alongside — they compose, because they're different layers.** Memory infrastructure
+ remembers what the agent *experienced*; this governs what the org has *verified*. A

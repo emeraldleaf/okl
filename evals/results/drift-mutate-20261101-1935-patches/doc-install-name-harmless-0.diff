@@ -1,0 +1,13 @@
+diff --git a/README.md b/README.md
+index 289c5ce..09afc6e 100644
+--- a/README.md
++++ b/README.md
+@@ -615,7 +615,7 @@ active. To load the plugin from a checkout for one session: `claude --plugin-dir
+ 
+ ```bash
+ pipx install observed-knowledge-ledger   # provides the `okl` command
+-pip install -e .                   # or from a clone of this repo
++pip install -e .                         # or from a clone of this repo
+ ```
+ 
+ The core (local + client + CLI) is **stdlib-only** — zero required dependencies.

@@ -1,0 +1,14 @@
+diff --git a/src/okl/cli/lessons.py b/src/okl/cli/lessons.py
+index 21e03ff..0b3ed61 100644
+--- a/src/okl/cli/lessons.py
++++ b/src/okl/cli/lessons.py
+@@ -182,7 +182,8 @@ def cmd_record(args: argparse.Namespace) -> int:
+ 
+     Validation errors (an unknown tag, a malformed scope) are the caller's mistake and
+     exit 2 with the message, which names the vocabulary. A traceback would bury the one
+-    line that tells them how to fix the call.
++    line that tells them how to fix the call. Nothing is written until every check here
++    has passed.
+     """
+     if args.verified:
+         # A stamp the recorder awards itself is the step grading its own homework. The

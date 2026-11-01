@@ -1,0 +1,14 @@
+diff --git a/docs/DEVELOPING.md b/docs/DEVELOPING.md
+index 782f7fb..5092ee4 100644
+--- a/docs/DEVELOPING.md
++++ b/docs/DEVELOPING.md
+@@ -83,7 +83,8 @@ okl is developed with its own hooks switched on:
+ - **Before every prompt,** the Claude Code UserPromptSubmit hook briefs the agent with the lessons that
+   match the prompt.
+ - **At the end of a session,** the Claude Code Stop hook asks what was learned and lists the lessons
+-  the session touched (`okl recap`). Answer it.
++  the session touched (`okl recap`). Answer it. With another agent, run `okl recap` by hand
++  before you finish.
+ - **Recording:** `okl record` with a stable `--id`, a deliberate `--scope` (`org` if true
+   in any repo, `repo` if true only here), and tags from the closed vocabulary.
+ - **Correcting:** `okl update <id>` changes a lesson and keeps its proof, unless its
