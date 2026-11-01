@@ -16,9 +16,10 @@ asking first. Each session's lessons are recorded, so the next starts from more.
 backed by a check you choose, or marked unchecked.
 
 Two rules hold throughout:
-- **okl calls no generative model.** It notices mechanically, and the agent in the session does
-  the work. By default it runs no model at all; three local models, off until you turn them on,
-  can help choose what the briefing shows.
+- **okl itself calls no generative model.** It notices mechanically, and the agent in the session
+  does the work. By default it runs no model at all; three local models, off until you turn them
+  on, can help choose what the briefing shows. The scaffold's optional CI review step runs a
+  generative model only if you name one.
 - **Nothing is written to the store without you knowing.**
 
 ## What holds today, and what is still direction
