@@ -4020,7 +4020,7 @@ these three that changes nothing.) None of the nine re-run lessons touches Postg
   §4af's patches and a write-up of every miss. `--blind` also keeps from it:
   - the lesson's check scripts under `ci/` or `evals/`;
   - `evals/REPORT.md`, `evals/results/` and the cost counter;
-  - the CHANGELOG and the reviewer's notes.
+  - the CHANGELOG, the reviewer's notes, and the tests that list what the pattern checks catch.
 
   It restores them all before the diff, and never hides a file the lesson governs: an inline check
   names the very files the breaker has to read and edit. So this breaker is at least as blind as

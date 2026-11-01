@@ -65,7 +65,7 @@ LESSON = "Title: {title}\nSymptom: {symptom}\nFix: {fix}"
 # At §4af's BASE only the snapshot did; since then six checks became scripts, and the run left
 # receipts, patches and a write-up of every miss. The lesson's own check files are added per lesson.
 BLIND = ("okl-drift.json", "evals/REPORT.md", "evals/results", "evals/drift_widen_cost.py", "CHANGELOG.md",
-         ".claude/agent-memory")
+         ".claude/agent-memory", "tests/test_ci_checks.py")
 BREAK_PROMPT = """You are working in a software repository, your working directory. The project keeps this
 lesson about itself:
 
