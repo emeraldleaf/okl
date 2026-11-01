@@ -121,8 +121,8 @@ benchmark built to decide (REPORT §4w; the design and its evidence:
   claim has changed. A test fails when the README's headline and the page's claim stop matching.
   The overview and anatomy sheets in `docs/overview/` carry the claim too, re-rendered.
 - **Drift is described as what it measured to be: a prompt to re-check.** In REPORT §4af it
-  caught 14 of 36 deliberate breaks of the lessons it watched, and most of the misses changed a
-  file one step from the ones the lesson watched. The README says so, and the docs no longer call
+  caught 14 of the 36 breaks a judge confirmed among 52 patches written to break the lessons it
+  watched, and most of the misses changed a file one step from the ones the lesson watched. The README says so, and the docs no longer call
   drift detection. #318 widens the lessons it missed.
 
 ## 0.9.0

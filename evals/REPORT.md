@@ -3707,9 +3707,10 @@ changes a registered result, and the receipts stay as the run wrote them.
 - **`docs-agent-neutral`:** three breaks were in docs the lesson does not govern (`COMMANDS.md`,
   `COSTS-AND-KNOBS.md`, `RETRIEVAL.md`). It governs two files, while its claim covers every doc.
 - **`n_d45d7bf64896`** (no superiority claims): two breaks were in an essay and `RELATED-WORK.md`.
-- **`n_e635fd921086`** (the package name): one break was in the second `pyproject.toml` under
-  `packaging/`.
-- **Elsewhere:** the rest changed tests, configuration, a shipped hook, or a module beside the
+- **`n_e635fd921086`** (the package name): two breaks were outside its files, one in the second
+  `pyproject.toml` under `packaging/` and one in the shipped prompt hook,
+  `src/okl/scaffold/hooks/userpromptsubmit-okl-check.sh` (review on #312).
+- **Elsewhere:** the rest changed tests, configuration, or a module beside the
   governed ones.
 
 Where drift was red and the check passed, the check reads less than the lesson says:

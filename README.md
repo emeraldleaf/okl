@@ -162,9 +162,10 @@ Setting up another agent: [Getting started](docs/GETTING-STARTED.md#using-anothe
   such a lesson is marked *STALE* (or *UNVERIFIED*, or *UNPROVEN*) with the file
   that changed, so the agent confirms it against the code instead of trusting it blindly.
   `okl reverify` re-runs each drifted lesson's stored check after you confirm. Drift notices
-  that what a lesson watches changed; it does not find every break. Of 36 deliberate breaks of
-  the lessons it watched in this repo it caught 14, and most of the misses changed a file one
-  step from the ones the lesson watches (REPORT §4af). So list every file a lesson's claim
+  that what a lesson watches changed; it does not find every break. Of 52 patches written to
+  break the lessons it watched in this repo, a judge confirmed 36 as breaks, and drift caught 14
+  of those 36; most of the misses changed a file one step from the ones the lesson watches
+  (REPORT §4af). So list every file a lesson's claim
   depends on, and read a green drift as "nothing it watches moved". With the
   GitHub workflow (`okl init --ci`), CI reads a committed snapshot, `okl-drift.json`, which
   `okl verify` creates the first time a lesson with `--files` is verified and keeps current
