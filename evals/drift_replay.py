@@ -87,6 +87,12 @@ def outside_commit(cmd: str) -> str:
     return next((why for token, why in OUTSIDE if token in cmd), "")
 
 
+def dirty(repo: Path = REPO) -> bool:
+    """Whether tracked files differ from HEAD, so a receipt that names HEAD says when its script
+    was not HEAD's (local review on #312)."""
+    return bool(git("status", "--porcelain", "--untracked-files=no", repo=repo).strip())
+
+
 def governs(rule: dict) -> list[str]:
     """The path globs a snapshot rule governs."""
     return [g.strip() for g in rule.get("files", "").split(",") if g.strip()]
@@ -138,11 +144,12 @@ def events(watched: dict[str, dict], until: str, repo: Path = REPO) -> list[Even
     classified; only kind "drift-red" is replayed.
 
     Each side is read by the snapshot the gate read there, never by the lesson's final paths:
-    three replayed lessons moved theirs in §4ae's window (review on #312). Paths that change
-    between two stamps would mean the gate read two sets across one span, which one replay
-    cannot reproduce, so that event is set apart; none did in that window."""
+    four watched lessons changed theirs in §4ae's window, three CLI lessons from `cli.py` to
+    `cli/` and one widened to a second doc (review on #312). Paths that change between two
+    stamps would mean the gate read two sets across one span, which one replay cannot
+    reproduce, so that event is set apart; none did in that window."""
     out = []
-    moved: set[str] = set()   # lessons whose paths changed since their last stamp
+    shifts: dict[str, list[str]] = {}   # snapshot commits that moved a lesson's paths, no new stamp
     for c in changed_commits(until, ["okl-drift.json"], repo):
         parent = git("rev-parse", "--verify", "-q", f"{c}^1", repo=repo).strip()
         now, before = snapshot(c, repo), snapshot(parent, repo)
@@ -152,15 +159,13 @@ def events(watched: dict[str, dict], until: str, repo: Path = REPO) -> list[Even
             v, p = now[lid].get("verified_commit"), (before.get(lid) or {}).get("verified_commit")
             if lid in before and v == p:
                 if governs(now[lid]) != governs(before[lid]):
-                    moved.add(lid)
+                    shifts.setdefault(lid, []).append(c)
                 continue
             e = Event(lid, p or "", v or "", c, "")
             e.files = governs(before[lid]) if lid in before else []
             check = parse_check((before.get(lid) or {}).get("verified_by"))
             if lid not in before:
                 e.kind = "first stamp"
-            elif lid in moved:
-                e.kind = "governed paths changed between stamps"
             elif not e.files:
                 e.kind = "no governed paths"
             elif not v or not p:
@@ -179,9 +184,19 @@ def events(watched: dict[str, dict], until: str, repo: Path = REPO) -> list[Even
                 e.kind = "drift-red"
                 e.cmd, e.expect = check
                 e.touched = changed_commits(f"{p}..{v}", e.files, repo)
-            moved.discard(lid)
             out.append(e)
+    # After every snapshot is read, so a move on any line of history between p and c counts,
+    # whatever order rev-list walked the branches in (local review on #312).
+    for e in out:
+        if e.p and e.kind not in _PATHLESS and any(
+                x != e.c and git_ok("merge-base", "--is-ancestor", e.p, x, repo=repo)
+                and git_ok("merge-base", "--is-ancestor", x, e.c, repo=repo) for x in shifts.get(e.lesson, ())):
+            e.kind, e.cmd, e.expect, e.touched = "governed paths changed between stamps", "", "", []
     return out
+
+
+# Event kinds decided before any governed path is read.
+_PATHLESS = ("first stamp", "no commit recorded", "previous stamp not an ancestor")
 
 
 @dataclass
@@ -213,6 +228,8 @@ def left_out(stamp: dict | None, x: str, repo: Path = REPO) -> str:
         return "not in this commit's snapshot"
     if unusable(stamp):
         return unusable(stamp)
+    if not governs(stamp):   # git with no pathspec would read the whole tree (review on #312)
+        return "no governed paths"
     if stamp["verified_commit"] == x:
         return "the verified commit itself"
     if not git_ok("merge-base", "--is-ancestor", stamp["verified_commit"], x, repo=repo):
@@ -232,7 +249,7 @@ def pairs(watched: dict[str, dict], until: str, repo: Path = REPO) -> tuple[list
             continue
         for lid in watched:
             stamp = snap.get(lid)
-            why = left_out(stamp, x, repo) or ("" if stamp is None or governs(stamp) else "no governed paths")
+            why = left_out(stamp, x, repo)
             check = parse_check((stamp or {}).get("verified_by"))
             if why or stamp is None or check is None:
                 left[why] = left.get(why, 0) + 1
@@ -485,7 +502,7 @@ def main() -> int:
         finally:
             r.close()
     result = {
-        "section": "§4ae", "until": until, "harness_commit": git("rev-parse", "HEAD").strip(),
+        "section": "§4ae", "until": until, "harness_commit": git("rev-parse", "HEAD").strip(), "dirty": dirty(),
         "seed": SEED, "sample": SAMPLE, "timeout_s": TIMEOUT, "check_runs": r.runs,
         "minutes": round((time.time() - started) / 60, 1),
         "watched": sorted(watched), "replayed_lessons": lessons, "kinds": kinds,
@@ -535,13 +552,18 @@ def judge(receipt: Path, db: Path) -> int:
     with store_copy(db) as s:
         nodes = {e["lesson"]: s.get_node(e["lesson"]) for e in chosen}
     as_recorded(nodes, data.get("lesson_sha"))
-    out = []
+    out, before_c = [], {}
     for e in chosen:
         node = nodes[e["lesson"]]
         # The paths the gate read across p..v, as the event recorded them; a receipt from before
         # events recorded them gets them from the snapshot before c, as events() reads them. The
-        # lesson's final paths missed the cli.py changes of three lessons (review on #312).
-        paths = e.get("files") or governs(snapshot(f"{e['c']}^1").get(e["lesson"]) or {})
+        # lesson's final paths differ for four lessons in §4ae's window (review on #312).
+        if "files" in e:
+            paths = e["files"]
+        else:
+            if e["c"] not in before_c:
+                before_c[e["c"]] = snapshot(f"{e['c']}^1")
+            paths = governs(before_c[e["c"]].get(e["lesson"]) or {})
         diff = git("log", "-p", "--reverse", "--format=commit %h %s", f"{e['p']}..{e['v']}", "--",
                    *paths)[:12000] if paths else ""
         prompt = JUDGE_PROMPT.format(title=node.title if node else e["lesson"],
@@ -564,6 +586,7 @@ def judge(receipt: Path, db: Path) -> int:
     while path.exists():   # a judge run never overwrites an earlier one's receipt
         path, n = receipt.with_name(f"{receipt.stem}-judge-{n}.json"), n + 1
     path.write_text(json.dumps({"receipt": receipt.name, "code": git("rev-parse", "--short=12", "HEAD").strip(),
+                                "dirty": dirty(),
                                 "judge": "claude -p --model sonnet --restricted",
                                 "agree": agree, "answered": answered, "wilson95": wilson(agree, answered),
                                 "judged": out}, indent=1) + "\n")

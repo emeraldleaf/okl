@@ -329,12 +329,58 @@ def test_a_judge_that_times_out_gives_no_verdict_and_the_rest_still_count(dr, tm
     assert sorted(o["judge"] is None for o in out["judged"]) == [False, True]
     assert out["answered"] == 1
     # Each diff by the paths the event recorded, not the lesson's final ones (review on #312).
-    assert all(a[-1] == "a.py" for a in logged if a[0] == "log")
+    logs = [a for a in logged if a[0] == "log"]
+    assert len(logs) == 2 and all(a[-1] == "a.py" for a in logs)
+
+
+def test_an_older_receipt_is_judged_by_the_paths_before_each_snapshot(dr, tmp_path, monkeypatch):
+    """A receipt from before events recorded their paths, as run 3's is, takes them from the
+    snapshot before c, as events() reads them, never from the lesson's final paths (local
+    review on #312)."""
+    import contextlib
+    from dataclasses import asdict
+
+    from okl.store import Node
+    repo = tmp_path / "r"
+    repo.mkdir()
+    _git(repo, "init", "-q")
+    c0 = _commit(repo, {"old.txt": "ok\n", "a.txt": "ok\n"})
+    _commit(repo, {}, stamp=c0, governs="old.txt")
+    c2 = _commit(repo, {"old.txt": "changed\n"})
+    _commit(repo, {}, stamp=c2, governs="a.txt")              # the final paths are not the event's
+    node = Node(type="Rule", title="t", scope="org", symptom="s", fix="f")
+    evs = [{k: v for k, v in asdict(e).items() if k != "files"} | {"outcome": "unneeded"}
+           for e in dr.events(dr.snapshot("HEAD", repo), "HEAD", repo) if e.kind == "drift-red"]
+    receipt = tmp_path / "drift-replay-x.json"
+    receipt.write_text(json.dumps({"until": "HEAD", "events": evs, "lesson_sha": {"L": dr.text_sha(node)}}))
+
+    class Copy:
+        def get_node(self, _i):
+            return node
+    real_git, real_snapshot, logged = dr.git, dr.snapshot, []
+
+    def git(*a, **_k):
+        logged.append(a)
+        return real_git(*a, repo=repo)
+    monkeypatch.setattr(dr, "git", git)
+    monkeypatch.setattr(dr, "snapshot", lambda rev, *_a, **_k: real_snapshot(rev, repo))
+    monkeypatch.setattr(dr, "store_copy", lambda _db: contextlib.nullcontext(Copy()))
+    monkeypatch.setattr(dr, "REPO", tmp_path)
+    real_run = subprocess.run
+
+    def run(cmd, *a, **k):   # the judge's model call answers; git runs as it is
+        if cmd[0] == "claude":
+            return subprocess.CompletedProcess(cmd, 0, stdout='{"broken": false, "why": "w"}')
+        return real_run(cmd, *a, **k)
+    monkeypatch.setattr(dr.subprocess, "run", run)
+    assert evs and dr.judge(receipt, tmp_path / "okl.db") == 0
+    logs = [a for a in logged if a[0] == "log"]
+    assert len(logs) == len(evs) == 1 and logs[0][logs[0].index("--") + 1:] == ("old.txt",)
 
 def test_each_side_of_an_event_reads_the_paths_its_snapshot_named(dr, tmp_path):
     """A lesson whose governed paths changed was compared everywhere by its final paths, so an
-    event before the change read as "governed content unchanged" and a red commit as green;
-    three lessons in §4ae's window had moved theirs, each in the commit that re-stamped them
+    event before the change read as "governed content unchanged" and a red commit as green; four
+    lessons in §4ae's window had changed theirs, each in the commit that re-stamped them
     (review on #312). Paths that move between two stamps, or a rule with none, are set apart."""
     repo = tmp_path / "r"
     repo.mkdir()
@@ -351,10 +397,17 @@ def test_each_side_of_an_event_reads_the_paths_its_snapshot_named(dr, tmp_path):
     _commit(repo, {}, stamp=c2, governs="b.txt")                # paths move with no new stamp
     c5 = _commit(repo, {"a.txt": "ok 2\n"})
     _commit(repo, {}, stamp=c5, governs="b.txt")
-    _commit(repo, {}, stamp=c0, governs="")                      # re-stamped, governing nothing
-    c8 = _commit(repo, {}, stamp=c5, governs="")
     kinds = {(e.p, e.v): e.kind for e in dr.events(dr.snapshot("HEAD", repo), "HEAD", repo)}
     assert kinds[(c2, c5)] == "governed paths changed between stamps"
-    assert kinds[(c0, c5)] == "no governed paths"
-    got, left = dr.pairs(dr.snapshot("HEAD", repo), "HEAD", repo)
-    assert c8 not in {q.x for q in got} and left["no governed paths"] >= 1
+    # A rule that governs nothing, in a history of its own.
+    bare = tmp_path / "bare"
+    bare.mkdir()
+    _git(bare, "init", "-q")
+    b0 = _commit(bare, {"a.txt": "ok\n"})
+    _commit(bare, {}, stamp=b0, governs="")
+    b2 = _commit(bare, {"a.txt": "ok 2\n"})
+    b3 = _commit(bare, {}, stamp=b2, governs="")
+    kinds = {(e.p, e.v): e.kind for e in dr.events(dr.snapshot("HEAD", bare), "HEAD", bare)}
+    assert kinds[(b0, b2)] == "no governed paths"
+    got, left = dr.pairs(dr.snapshot("HEAD", bare), "HEAD", bare)
+    assert not got and b3 and left["no governed paths"] >= 1

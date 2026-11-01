@@ -3446,6 +3446,12 @@ the exclusions or the samples after any verdict is read. If the run cannot compl
   Each side is now read by the snapshot the gate read there, and each event records those paths,
   with tests. A dry run at 8c6ad3c, which also sets apart paths that move between two stamps and
   rules that govern nothing, gives the same counts: neither occurs in the window.
+- **Departures from the registration.** It allowed one replay and one judge pass of 40 calls,
+  and no change to the pins, the exclusions or the samples after any verdict was read. This
+  section ran three replays and three judge passes. Each later one corrects a defect in the
+  instrument found after verdicts were read, and the samples and two new exclusion kinds (none
+  occurs in the window) changed with it. The judge pass read is the one with the corrected
+  instrument, and the lowest of the three.
 - **The samples changed with the pools.** The registration fixes the samples once a verdict is
   read, but the corrected pools moved the seeded draw by 2 red pairs and 1 green pair:
   - out of the red sample, `doc-verified-refused` at f7beee3 and `n_d45d7bf64896` at ec32dc2;
@@ -3494,15 +3500,17 @@ by the check's verdict, once.
 - **The red sample's one break** is the same rewrite, at the merge d374bd4, judged by main's
   older stamp.
 
-**The judge.** It agrees on 32 of 40 answered events, at the registered 80% and not below it,
-so precision stands as the check's verdict, with no margin. Receipt
+**The judge.** It agrees on 32 of 40 answered events, at the registered 80% and not below it by
+one verdict, so precision is the check's verdict either way (falsifiers, below). Receipt
 `drift-replay-20261101-0143-judge-2.json`, from 8c6ad3c, with each event's diff by the paths the
 gate read.
-- **Three passes, one read.** Two earlier passes diffed every event by the lesson's final paths,
-  the instrument's defect: run 2's at 35 of 40, and one on run 3 at 34 of 40, on input identical
-  to it. So the judge moves by one between passes on the same prompts, and of the two verdicts
-  that changed in the pass read here, one had identical input too. At 40 events its agreement
-  varies across the registered line.
+- **Three passes, one read, and the judge's noise.** Two earlier passes diffed every event by
+  the lesson's final paths, the instrument's defect: run 2's at 35 of 40, and one on run 3 at 34
+  of 40, on identical input. Between those two, 3 of the 40 verdicts changed. Between the second
+  and the pass read here, 2 more changed, both on input the fix left identical: the fix changed
+  the input of one judged event, whose verdict did not move. So the fall from 35 to 32 is the
+  judge, not the instrument. On the same prompts it changes 2 or 3 of 40 verdicts a pass, which
+  spans the registered line.
 - **Every dissent on the unneeded side is the judge's error** (it agrees on 32 of 36):
   - twice, on one event counted on its branch and again at its merge, it reads a README
     conceding a recall loss as breaking a rule against claiming better recall, which it does not;
@@ -3517,10 +3525,10 @@ gate read.
 - So on this kind of break the judge is the weaker instrument. It does not show that a check
   passed on a lesson that had gone wrong.
 
-**Context: catches before a commit.** On this machine, since the check log began (okl review
-R3), the 12 lessons logged 4 failed runs among 1,180. These are the catches drift's red led to
-while the author was still working, which committed history cannot show. The other four watched
-lessons (three excluded, one with no event) logged 11 more.
+**Context: catches before a commit.** On this machine, since the check log began (okl review R3),
+the 12 lessons logged 4 failed runs among 1,332 (run 3's copy of the log). These are the catches
+drift's red led to while the author was still working, which committed history cannot show. The
+other four watched lessons (three excluded, one with no event) logged 11 more.
 
 **Falsifiers.**
 - **Precision is below 10%, but prediction 2 was not read,** so the registered follow-up, narrowing
@@ -3528,8 +3536,10 @@ lessons (three excluded, one with no event) logged 11 more.
 - **The green miss rate is below 2%, and the recall estimate is not below 0.8 as registered,** so
   this run files no scheduled re-run of the checks.
 - **Not-reproducible counts stay far under 20%,** so the rates stand.
-- **The judge is at 80%, not below,** so precision stands as the check's verdict. Its variance
-  between passes spans the line, so at this size the falsifier is not informative.
+- **The judge is at 80%, not below, by one verdict,** and its noise between passes spans the
+  line. Precision is the check's verdict either way, so the branch for a judge below 80% is
+  taken too: precision is reported as the check's verdict only, and the checks go to #189, where
+  §4af already sends them.
 
 **What it shows, and what it does not.**
 - **Shown:** in committed history, drift's red was almost never a broken commit. One commit in
