@@ -297,7 +297,7 @@ It depends on three planned changes: lesson ids in the briefing with `okl update
    `--scope org` in a subscribed repo.
 4. Deviations through SUPERSEDES.
 
-The Stop hook's and CLAUDE.md's "org spreads to every repo" should be corrected before any
+The Claude Code Stop hook's and CLAUDE.md's "org spreads to every repo" should be corrected before any
 of this: until the ledger exists, an org lesson reaches another repo only through a pack.
 
 ## Open questions

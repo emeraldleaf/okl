@@ -47,7 +47,7 @@ prompt itself, `src/okl/scaffold/claude/commands/seed-from-docs.md`. Three thing
 The whole walk-through, with ADR status, teams, and keeping docs and comments current, is
 [docs/LOAD-YOUR-RULES.md](LOAD-YOUR-RULES.md).
 
-**3. Generate records from this codebase.** If you use a coding agent, the scaffold
+**3. Generate records from this codebase.** If you use Claude Code, the scaffold
 stamps a `/seed-from-codebase` command that has the agent read your repo — the guard
 rails already in the code, what CI enforces, the fix commits, the existing canon — and
 propose records with a `file:line` citation each. Everything it proposes is repo-scoped

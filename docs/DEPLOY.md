@@ -145,7 +145,7 @@ OKL UNREACHABLE — refusing to report a clean check.
 OKL service unreachable at http://okl.internal/check: ...
 ```
 
-The pre-task hook and the CI verifier both treat a non-zero exit as a block. If you wrap
+The Claude Code pre-task hook and the CI verifier both treat a non-zero exit as a block. If you wrap
 okl in your own tooling, do the same: a check that cannot run has not passed. The pre-push
 drift hook is the deliberate exception: when okl cannot check (the service is down, exit 2)
 it warns and lets the push through, so keep a CI gate where drift must block.

@@ -62,7 +62,7 @@ evals are retrieval-only. Their capture also costs model calls (claude-mem runs 
 tool call; agentmemory's lessons need an API key); okl requires none. claude-mem remembers
 what happened; okl keeps what must stay true, and proves it.
 
-**Running one of them alongside okl** works, with three known collisions: okl's Stop hook
+**Running one of them alongside okl** works, with three known collisions: okl's Claude Code Stop hook
 blocks the first stop, so their Stop hooks run twice; capture-everything tools record
 `okl record` too, so a lesson lands in two stores; and each injects its own context beside
 okl's briefing. `okl doctor` names whichever is installed and what to do about it.

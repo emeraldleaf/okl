@@ -136,7 +136,7 @@ finish — adding discount codes to `shop`.
 
 ### Before you start
 
-Just prompt. The pre-task hook runs `okl check` on what you typed and puts the matching
+Just prompt. In Claude Code, the pre-task hook runs `okl check` on what you typed and puts the matching
 lessons in the agent's context. To see what it will get, run it yourself:
 
 ```bash

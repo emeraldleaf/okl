@@ -80,9 +80,9 @@ src/okl/
 
 okl is developed with its own hooks switched on:
 
-- **Before every prompt,** the UserPromptSubmit hook briefs the agent with the lessons that
+- **Before every prompt,** the Claude Code UserPromptSubmit hook briefs the agent with the lessons that
   match the prompt.
-- **At the end of a session,** the Stop hook asks what was learned and lists the lessons
+- **At the end of a session,** the Claude Code Stop hook asks what was learned and lists the lessons
   the session touched (`okl recap`). Answer it.
 - **Recording:** `okl record` with a stable `--id`, a deliberate `--scope` (`org` if true
   in any repo, `repo` if true only here), and tags from the closed vocabulary.
