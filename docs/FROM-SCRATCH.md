@@ -8,8 +8,8 @@ and code shaped so a lesson can watch the few files it is about. Then it seeds o
 tools that pair with it, and shows how to prompt so the briefing finds what you need.
 
 **What was tested.** Every gate in the tables below was run on a scratch repository per stack on
-2026-11-01, as were the lesson checks and both dependency audits (each also against a package
-with a known vulnerability). The versions run were:
+2026-11-01, as were the lesson checks, and the Python and .NET dependency audits also against a
+package with a known vulnerability. The versions run were:
 - uv 0.13.5 with Python 3.14;
 - the .NET SDK 10.0.102;
 - Node 22.22 with pnpm 11.3.
@@ -67,12 +67,14 @@ command has 600 seconds by default (`--timeout` changes it). Four things follow:
   - `dotnet test` exits 8 when its filter matches nothing.
   - Vitest exits 0, with every test skipped.
 
-  The expected text catches all three: okl refuses to stamp a check whose output lacks it.
+  The exit code catches the first two. Only the expected text catches Vitest's: okl refuses to
+  stamp a check whose output lacks it.
 
 **Which lessons get files.** A lesson's `files` are what drift watches. CI already runs your
 tests, so a lesson whose check is a test in CI's suite needs no files:
 - Record it without them (as a `Gate`), and prove it once with `okl verify`. The briefing shows
-  it as proven, and CI keeps it true on every change.
+  it as proven, and CI runs its test on every change. okl does not re-run a lesson without files,
+  so if you rename or delete that test, run `okl verify` again with the new one.
 - Give `files` only to a lesson whose check CI does not run, such as a doc claim checked by a
   script, a pattern found by a grep, or a check too slow for CI. Drift then re-opens it when those
   files change ([Load your rules](LOAD-YOUR-RULES.md#1-decide-what-goes-where)).
@@ -142,7 +144,8 @@ here.
 ```bash
 uv init --lib my-service && cd my-service      # src/ layout, with py.typed
 uv add --dev --bounds exact ruff mypy pytest coverage import-linter
-mkdir -p src/my_service/domain src/my_service/infra   # each with an __init__.py
+mkdir -p src/my_service/domain src/my_service/infra
+touch src/my_service/domain/__init__.py src/my_service/infra/__init__.py
 ```
 
 `--bounds exact` writes `==` pins into `[dependency-groups]`, which never ship with the package.
@@ -266,19 +269,25 @@ written in English fails on a machine set to another language.
 ```bash
 dotnet new install xunit.v3.templates
 dotnet new sln -n App                      # writes App.slnx
-dotnet new editorconfig                    # the style rules dotnet format and the build enforce
+dotnet new editorconfig                    # then set insert_final_newline = true in it
 dotnet new classlib -o src/App
-dotnet new xunit3 -o tests/App.Tests
-dotnet new xunit3 -o tests/App.ArchitectureTests
+dotnet new xunit3 -f net10.0 -o tests/App.Tests
+dotnet new xunit3 -f net10.0 -o tests/App.ArchitectureTests
 dotnet sln add src/App tests/App.Tests tests/App.ArchitectureTests
 dotnet add tests/App.Tests reference src/App
 dotnet add tests/App.ArchitectureTests reference src/App
 dotnet new tool-manifest && dotnet tool install dotnet-sonarscanner --version <exact>
 ```
 
-The `xunit3` template targets `net8.0`, whose support ends on 2026-11-10. Delete
-`TargetFramework`, `Nullable` and `ImplicitUsings` from each project; `Directory.Build.props`,
-below, sets them once.
+Three details in that block matter:
+- **`-f net10.0`.** The `xunit3` template defaults to `net8.0`, whose support ends on
+  2026-11-10, and a `net8.0` test project cannot reference the `net10.0` library.
+- **`insert_final_newline = true`.** The `.editorconfig` template sets it to `false`, and then
+  `dotnet format` fails on the templates' own files.
+- **The tool manifest.** It lands in `dotnet-tools.json` at the repository root.
+
+Then delete `TargetFramework`, `Nullable` and `ImplicitUsings` from each project, and the
+`Version` from each `PackageReference`. The two files below set them once.
 
 `global.json` pins the SDK and opts in to the test platform:
 
@@ -325,7 +334,10 @@ below, sets them once.
 </Project>
 ```
 
-The projects then carry `<PackageReference Include="..." />` with no `Version`.
+The projects then carry `<PackageReference Include="..." />` with no `Version`: both test
+projects reference `Microsoft.Testing.Extensions.CodeCoverage`, and the architecture tests also
+`TngTech.ArchUnitNET.xUnitV3`. Run `dotnet restore` once and commit the `packages.lock.json`
+files it writes; from then on, `--locked-mode` fails a restore that would change them.
 
 Test names in the `Method_Scenario_Expected` style that Microsoft's testing guidance recommends
 break a CI build. `latest-recommended` turns on CA1707, which forbids underscores. Microsoft's
@@ -742,7 +754,8 @@ the snapshot. The pre-push hook holds the push until it is done.
       fork pull requests skipped; quality gate required.
 - [ ] Each lesson-worthy claim has one fast test, selectable by exact name, with a success line
       only success prints.
-- [ ] okl wired (`okl init`), the drift snapshot committed, the pre-push hook in place.
+- [ ] okl wired (`okl init`), the pre-push hook in place, and the drift snapshot committed once a
+      lesson with files is verified.
 - [ ] Store seeded: stack packs, your own rules, triggers. Lessons held by a CI test are verified
       with no files; the rest have files and are verified.
 - [ ] Prompts name their subject, the marks are read, and lessons are recorded as you learn.
