@@ -8,7 +8,7 @@ lands. `tests/test_docs.py` holds the README's headline to the claim below.
 
 ## The claim
 
-**Keeps your coding agent true to your rules, specs and docs, and keeps them true to the code.**
+**Keeps your coding agent true to your rules, specs and docs. Keeps them true to the code. Keeps learning as you build.**
 
 Before each task, okl briefs the agent with what applies. When something you maintain falls out
 of step with what it describes, okl notices and has the agent bring it back, telling you or
@@ -46,6 +46,9 @@ when #316 merges.
 
 ## History
 
+- **2026-11-01.** The claim became three sentences. "Keeps learning as you build" joined the two
+  directions of drift, because learning is as much the point as keeping things true, at the
+  maintainer's direction. The README names drift in the line beneath it.
 - **2026-10-31.** The headline was "Verified memory for coding agents, and the loop that keeps
   it true." It changed to the claim above. The scope widened from lessons to everything a team
   maintains, and this page and its baseline were added (#317).

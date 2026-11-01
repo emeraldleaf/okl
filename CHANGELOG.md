@@ -115,8 +115,8 @@ benchmark built to decide (REPORT §4w; the design and its evidence:
   kept waiting past the timeout by another writer, now fails the open and is retried by the
   next. Before, the store fell back to plain substring search, which cannot see tags.
 - **The README's headline is now the thesis,** and the thesis has its own page (#317). The new
-  headline reads "Keeps your coding agent true to your rules, specs and docs, and keeps them true
-  to the code." [docs/THESIS.md](docs/THESIS.md) says which parts of that claim hold today and
+  headline reads "Keeps your coding agent true to your rules, specs and docs. Keeps them true to
+  the code. Keeps learning as you build." [docs/THESIS.md](docs/THESIS.md) says which parts of that claim hold today and
   which are still direction, gives the measured baseline with each receipt, and records how the
   claim has changed. A test fails when the README's headline and the page's claim stop matching.
   The overview and anatomy sheets in `docs/overview/` carry the claim too, re-rendered.

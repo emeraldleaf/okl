@@ -8,7 +8,9 @@
 
 # okl — Observed Knowledge Ledger
 
-**Keeps your coding agent true to your rules, specs and docs, and keeps them true to the code.**<br>
+**Keeps your coding agent true to your rules, specs and docs. Keeps them true to the code. Keeps learning as you build.**<br>
+It guards against drift both ways: your agent drifting from your rules, and your rules, specs
+and docs drifting from the code.<br>
 Your rules, architecture decisions, past defects, documentation and diagrams: recorded once,
 briefed to your agent before every task (by a hook in Claude Code; any MCP agent can ask for
 the same briefing), each proven by a check you choose, flagged before you push (or in CI) when
@@ -357,7 +359,7 @@ throwaway repo.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/emeraldleaf/okl/main/docs/overview/okl-anatomy-dark.png">
-  <img src="https://raw.githubusercontent.com/emeraldleaf/okl/main/docs/overview/okl-anatomy-light.png" alt="Anatomy of okl, which keeps your coding agent true to your rules, specs and docs, and keeps them true to the code: load your rules, hold your agent to them, keep learning as you build. A ring around the store runs through six steps: lessons come in, up front from your rules, ADRs, standards and specs plus starter lessons for your stack, and as you build from new rules, mistakes, drift the gate finds, failing tests and reviews; each is written down as a lesson; okl proves it with a check you choose; it is briefed before each task (by a Claude Code hook; other MCP agents can call okl_check); when a file it covers changes, the pre-push hook holds the push until the check passes again or the code is back to what passed; then it is re-checked, fixed or retired. Below, real okl output follows the lesson 'order lookups are scoped to the signed-in customer' from okl record to a blocked push, where re-running its check caught a change that dropped the owner check. Then where a lesson lives (briefing only, watched for drift, build-breaking); what the briefing did (68 of 163 unbriefed attempts repeated a known defect against 11 of 164 briefed, over seven A/B runs on tasks built to invite one); and how it ranks, what it costs and where it breaks." width="100%">
+  <img src="https://raw.githubusercontent.com/emeraldleaf/okl/main/docs/overview/okl-anatomy-light.png" alt="Anatomy of okl. Keeps your coding agent true to your rules, specs and docs. Keeps them true to the code. Keeps learning as you build. load your rules, hold your agent to them, keep learning as you build. A ring around the store runs through six steps: lessons come in, up front from your rules, ADRs, standards and specs plus starter lessons for your stack, and as you build from new rules, mistakes, drift the gate finds, failing tests and reviews; each is written down as a lesson; okl proves it with a check you choose; it is briefed before each task (by a Claude Code hook; other MCP agents can call okl_check); when a file it covers changes, the pre-push hook holds the push until the check passes again or the code is back to what passed; then it is re-checked, fixed or retired. Below, real okl output follows the lesson 'order lookups are scoped to the signed-in customer' from okl record to a blocked push, where re-running its check caught a change that dropped the owner check. Then where a lesson lives (briefing only, watched for drift, build-breaking); what the briefing did (68 of 163 unbriefed attempts repeated a known defect against 11 of 164 briefed, over seven A/B runs on tasks built to invite one); and how it ranks, what it costs and where it breaks." width="100%">
 </picture>
 
 ### How a briefing is actually built
