@@ -1,0 +1,79 @@
+{
+ "section": "\u00a74ah",
+ "what": "what the run's breaker and judge sessions saw and did, from their transcripts",
+ "at": "2026-11-01T21:22Z",
+ "run": "cefb1r8y",
+ "rejudge": "fnt18zq9",
+ "breakers": {
+  "sessions": 54,
+  "status_cut": 54,
+  "deleted_named": {
+   "44": 36,
+   "43": 18
+  },
+  "hidden_asked": 1,
+  "hidden_returned": 0,
+  "main_checkout_calls": 0,
+  "named_per_lesson": {
+   "doc-check-defaults": [
+    "CHANGELOG.md",
+    "ci/check-check-defaults.py",
+    "evals/REPORT.md"
+   ],
+   "doc-init-flags": [
+    "CHANGELOG.md",
+    "ci/check-init-flags.py",
+    "evals/REPORT.md"
+   ],
+   "doc-install-name": [
+    "CHANGELOG.md",
+    "evals/REPORT.md"
+   ],
+   "doc-verified-refused": [
+    "CHANGELOG.md",
+    "evals/REPORT.md"
+   ],
+   "docs-agent-neutral": [
+    "CHANGELOG.md",
+    "ci/check-agent-neutral.py",
+    "evals/REPORT.md"
+   ],
+   "n_07faa4565128": [
+    "CHANGELOG.md",
+    "ci/check-portable-ungated.py",
+    "evals/REPORT.md"
+   ],
+   "n_7e50e3588bcd": [
+    "CHANGELOG.md",
+    "ci/check-test-imports.py",
+    "evals/REPORT.md"
+   ],
+   "n_bf6a2aee2f12": [
+    "CHANGELOG.md",
+    "evals/REPORT.md"
+   ],
+   "n_d45d7bf64896": [
+    "CHANGELOG.md",
+    "ci/check-positioning.py",
+    "evals/REPORT.md"
+   ]
+  }
+ },
+ "judges": {
+  "first pass": {
+   "sessions": 54,
+   "no_answer_saved": 10,
+   "tool_call_as_text": 7
+  },
+  "re-judge": {
+   "sessions": 11,
+   "no_answer_saved": 2,
+   "tool_call_as_text": 7
+  }
+ },
+ "earlier": {
+  "run": "vqivxk4v",
+  "sessions": 78,
+  "named_okl_drift_json": 78
+ }
+}

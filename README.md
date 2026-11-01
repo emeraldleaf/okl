@@ -17,9 +17,10 @@ the same briefing), each proven by a check you choose, flagged before you push (
 what it covers changes, and corrected or retired as you build. Prompts advise; the gate
 enforces. Use it in one repo, or share one store across every repo your team runs.<br>
 Under the hood: typed records, keyword search and one-step links. No model runs by default,
-no generative model ever, no automatic capture. Three local models are optional, measured and
-off until you turn them on: an embedding arm, a reranker and `okl warm`
-([REPORT §4q, §4t, §4z](evals/REPORT.md)). A lesson is written
+okl itself calls no generative model, and nothing is captured automatically. Three local models
+are optional, measured and off until you turn them on: an embedding arm, a reranker and a warm
+embedding model, `okl warm` ([REPORT §4q, §4t, §4z](evals/REPORT.md)). The scaffold's optional
+review step runs a generative model only if you name one. A lesson is written
 on purpose and proven by a check. The claim in full, how much of it holds today and how it
 has changed: [docs/THESIS.md](docs/THESIS.md).
 
