@@ -22,6 +22,15 @@
   server okl starts in the background ran `okl warm serve`, which undoes a stop as a person's own
   `okl warm serve` should, so a prompt that found no server just as a stop landed could bring it
   back for good; that server now keeps the stop.
+- **The watched lessons check what they claim** (#318, REPORT §4ah). §4af broke them on purpose
+  and drift caught 14 of 36 breaks: lessons watched one file of a claim that spans several, and
+  checks read one record, one default or one heading. Five checks now read what their lesson
+  claims (scripts in `ci/`), four lessons govern what their claim depends on, and four whose check
+  CI already runs no longer govern files. Over the 148 merges since the snapshot began, that is
+  fewer re-checks, 794 against 828. The docs now label every mention of a Claude Code-only part
+  (18 were unlabelled), and SEEDING.md no longer says `/seed-from-codebase` comes with any agent.
+  A re-run of §4af is registered; until it reaches a catch rate of 0.5, drift stays described as
+  a prompt to re-check.
 
 ## 0.10.0
 
