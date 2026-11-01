@@ -51,7 +51,7 @@ def own_checks(rule: dict) -> list[str]:
 def events(path: Path) -> list[dict]:
     """A transcript's events, skipping lines that are not JSON."""
     out = []
-    for line in path.read_text().splitlines():
+    for line in path.read_text(encoding="utf-8").splitlines():
         try:
             out.append(json.loads(line))
         except ValueError:
@@ -125,9 +125,9 @@ def main() -> int:
     args = ap.parse_args()
     main_checkout = str(REPO)
     if (REPO / ".git").is_file():   # a worktree: its .git file names <main>/.git/worktrees/<name>
-        main_checkout = str(Path((REPO / ".git").read_text().split(":", 1)[1].strip()).parents[2])
+        main_checkout = str(Path((REPO / ".git").read_text(encoding="utf-8").split(":", 1)[1].strip()).parents[2])
     # A folder's name is cut and its underscores made dashes: read the lesson id back from the snapshot.
-    rules = {r["id"]: r for r in json.loads((REPO / "okl-drift.json").read_text())["rules"]}
+    rules = {r["id"]: r for r in json.loads((REPO / "okl-drift.json").read_text(encoding="utf-8"))["rules"]}
     lessons: dict[str, list[dict]] = {}
     for d in sorted(PROJECTS.glob(f"*okl-mutate-{args.run}-breaker-*")):
         cut = d.name.split("-breaker-", 1)[1].split("-", 1)[1]
@@ -165,7 +165,7 @@ def main() -> int:
         receipt["earlier"] = {"run": args.earlier, "sessions": len(earlier),
                               "named_okl_drift_json": sum("okl-drift.json" in s["named"] for s in earlier)}
     out = REPO / "evals" / "results" / f"harness-transcripts-{args.run}.json"
-    out.write_text(json.dumps(receipt, indent=1) + "\n")
+    out.write_text(json.dumps(receipt, indent=1) + "\n", encoding="utf-8")
     print(json.dumps({k: receipt[k] for k in ("breakers", "judges")}, indent=1))
     print(f"wrote {out.relative_to(REPO)}")
     return 0
