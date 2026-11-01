@@ -37,7 +37,7 @@ Each figure names its receipt in `evals/results/`.
 | measure | value | receipt |
 |---|---|---|
 | lessons recorded in this repo: watched by drift / checked only by CI / no check | 16 / 55 / 84 of 155; all 55 CI-left checks pass at f645d81 | `lesson-census-20261031-1409.json` |
-| drift's red that was a committed break | 4 of 1,854 events (0.22%) | `drift-replay-20261031-0558.json` (§4ae) |
+| drift's red that was a committed break | 4 of 1,865 events (0.21%) | `drift-replay-20261101-0143.json` (§4ae) |
 | deliberate breaks of watched lessons that drift caught | 14 of 36 (38.9%, 95% interval 24.8–55.1%); of the 22 misses, 14 changed a file the lesson does not watch, and 8 passed a check too narrow to see them | `drift-mutate-20261031-1522.json` (§4af) |
 | lessons with no check judged stale | 2 of 65 that make a claim about this repo, both confirmed and corrected; the judge let wrong details pass, so this is a count, not a rate | `stale-lessons-20261031-1527.json` (§4ag) |
 

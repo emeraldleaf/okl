@@ -3416,7 +3416,7 @@ the exclusions or the samples after any verdict is read. If the run cannot compl
 
 ### Result (2026-10-31)
 
-**Two runs, and why the first does not count.**
+**Three runs, and why the first two do not count.**
 - **Run 1** (`drift-replay-20261031-0519.json`, from e12485e) listed an event's commits, and the
   snapshot's history, with git's path-limited history. Its simplification drops a merge whose
   files match one parent. In 450 of its 862 events, 563 merges that changed the governed files
@@ -3427,25 +3427,34 @@ the exclusions or the samples after any verdict is read. If the run cannot compl
 - **The correction:** every commit whose files differ from its first parent's, with a test that
   reproduces the merge case. Its corrected counts replace the ones above: 3,494 replaced stamps,
   of which 1,859 are drift-red events holding 4,751 commits that changed governed files.
-- **Run 2** (`drift-replay-20261031-0558.json`, from 25c8f51, 2,713 check runs in 16 minutes) is
-  the one this section reads. The pins, exclusions and samples did not change, and both runs
-  gave the samples the same verdicts. Run 1's census found 2 needed events in 860.
+- **Run 2** (`drift-replay-20261031-0558.json`, from 25c8f51, 2,713 check runs in 16 minutes)
+  was the one this section read until 2026-11-01. The pins, exclusions and samples did not
+  change, and both runs gave the samples the same verdicts. Run 1's census found 2 needed events
+  in 860.
+- **Run 3** (`drift-replay-20261101-0143.json`, from 3f0d43e, 2,718 check runs in 16 minutes) is
+  the one this section reads. Run 2 compared every commit with each lesson's final governed
+  paths. Four replayed lessons had changed theirs in the window: three from `src/okl/cli.py` to
+  `src/okl/cli/`, and one dropped `docs/WHERE-THIS-SITS.md`. So 11 drift-red events read as
+  "governed content unchanged", and 13 red pairs as green. Each side is now read by the snapshot
+  the gate read there, with a test (review on #312). Run 3 found 1,870 drift-red events. The
+  needed events, the samples' breaks and every prediction read as in run 2, whose figures were
+  4 of 1,854 (0.22%) and a judge at 35 of 40.
 - **Declared before run 2:** a PR's merge into main replaces main's stamp with the one its branch
   already recorded, so a per-verification figure (each lesson and V counted once) is reported
   beside the per-event one.
 
 | measure | result | 95% interval |
 |---|---|---|
-| event precision | 4 needed of 1,854 decided (0.22%) | 0.08%–0.55% |
-| per verification | 4 of 1,317 (0.30%) | 0.12%–0.78% |
+| event precision | 4 needed of 1,865 decided (0.21%) | 0.08%–0.55% |
+| per verification | 4 of 1,323 (0.30%) | 0.12%–0.77% |
 | red break rate | 1 of 298 (0.34%) | 0.06%–1.88% |
 | green miss rate | 0 of 299 | 0%–1.27% |
 | recall estimate | 1.0, from one break (below) | — |
-| not reproducible | 5 of 1,859 events, 3 of 600 pairs | — |
-| judge agrees with the check | 35 of 40 | 74%–95% |
+| not reproducible | 5 of 1,870 events, 3 of 600 pairs | — |
+| judge agrees with the check | 34 of 40 | 71%–93% |
 
 **Predictions.**
-1. **Held.** Event precision is 0.22%, against a registered bound of 10%.
+1. **Held.** Event precision is 0.21%, against a registered bound of 10%.
 2. **Not read.** The run found 4 needed events, below the 5 the registration requires.
 3. **Held.** No green pair of 299 was broken; the interval's top is 1.27%.
 4. **Held as registered, and not informative.** The estimate of 1.0 rests on the red sample's one
@@ -3456,7 +3465,7 @@ the exclusions or the samples after any verdict is read. If the run cannot compl
 with the essays moved to docs/". It took two documented facts out of the README: the check
 command's formats, and the refused `--verified` line. The next commit restored both before
 re-verification. Each lesson's event is counted on its branch and again at the merge into main.
-So across 12 lessons, drift went red 1,859 times, and the code it governs was committed broken,
+So across 12 lessons, drift went red 1,870 times, and the code it governs was committed broken,
 by the check's verdict, once.
 
 **What does not reproduce.**
@@ -3466,14 +3475,16 @@ by the check's verdict, once.
 - **Two `n_7e50e3588bcd` events.** The check itself was rewritten at re-verification: its ban
   on `import tomllib` was dropped when okl dropped Python 3.10. The old check fails at V by
   design. These are re-verifications that changed the lesson on purpose, an outcome the
-  registration did not name. Counted as needed, precision would be 6 of 1,856 (0.32%).
+  registration did not name. Counted as needed, precision would be 6 of 1,867 (0.32%).
 - **The red sample's one break** is the same rewrite, at the merge d374bd4, judged by main's
   older stamp.
 
-**The judge.** It agrees on 35 of 40 answered events, above the registered 80%, so precision
+**The judge.** It agrees on 34 of 40 answered events, above the registered 80%, so precision
 stands as the check's verdict.
-- Its agreement is all on the unneeded side: 35 of 36. Its one dissent there reads a README
+- Its agreement is all on the unneeded side: 34 of 36. One dissent there reads a README
   conceding a recall loss as breaking a rule against claiming better recall, which it does not.
+  The other reads a new default decision as leaving the README behind; at V the README describes
+  that default, in a part of the change the 12,000-character diff cut off.
 - On the needed side it disagreed on all 4. The break was a deletion inside a 735-line README
   rewrite, and the judge, given each commit's diff cut to 12,000 characters, reported that no
   format line was added. The check is right there: at 198fc81 it prints
@@ -3496,7 +3507,7 @@ lessons (three excluded, one with no event) logged 11 more.
 
 **What it shows, and what it does not.**
 - **Shown:** in committed history, drift's red was almost never a broken commit. One commit in
-  1,859 red events was, and the author had already fixed it before re-verifying. Its cost is a
+  1,870 red events was, and the author had already fixed it before re-verifying. Its cost is a
   re-run of a check that passes; its value lands before the commit, where the check log is the
   only record.
 - **Not shown:**
@@ -3511,7 +3522,7 @@ lessons (three excluded, one with no event) logged 11 more.
 Written before any patch is generated and before any check of this run. Follows §4ae, which
 measured drift's precision and could not measure its recall: committed history held one break.
 
-**Why.** §4ae found that drift's red almost never meant a broken commit (4 of 1,854 events). The
+**Why.** §4ae found that drift's red almost never meant a broken commit (4 of 1,865 events). The
 question left is the one that would justify its cost: when a lesson is broken, does drift say so,
 and would CI have said so anyway? History cannot answer it, so this run breaks the lessons on
 purpose.

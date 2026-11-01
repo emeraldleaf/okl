@@ -327,3 +327,28 @@ def test_a_judge_that_times_out_gives_no_verdict_and_the_rest_still_count(dr, tm
     assert sorted(o["judge"] is None for o in out["judged"]) == [False, True]
     assert out["answered"] == 1
 
+def test_each_side_of_an_event_reads_the_paths_its_snapshot_named(dr, tmp_path):
+    """A lesson whose governed paths changed was compared everywhere by its final paths, so an
+    event before the change read as "governed content unchanged" and a red commit as green; four
+    lessons in §4ae's window had moved (review on #312)."""
+    repo = tmp_path / "r"
+    repo.mkdir()
+    _git(repo, "init", "-q")
+
+    def stamp(at: str, files: str) -> str:
+        rule = {"id": "L", "type": "Rule", "title": "t", "scope": "repo:r", "files": files, "verified_at": 1,
+                "verified_commit": at, "verified_by": f"`{CHECK}` exit 0, matched 'FINE' on commit {at[:12]}"}
+        (repo / "okl-drift.json").write_text(json.dumps({"format": "okl-drift-snapshot/1", "repo": "r",
+                                                          "rules": [rule]}))
+        _git(repo, "add", "-A")
+        _git(repo, "commit", "-q", "-m", "s")
+        return _git(repo, "rev-parse", "HEAD")
+    c0 = _commit(repo, {"old.txt": "ok\n", "a.txt": "ok\n"})
+    stamp(c0, "old.txt")
+    c2 = _commit(repo, {"old.txt": "changed\n"})       # governed by the snapshot of its day
+    stamp(c2, "old.txt")
+    stamp(c2, "a.txt")                                   # the lesson moves to a.txt
+    evs = {(e.p, e.v): e for e in dr.events(dr.snapshot("HEAD", repo), "HEAD", repo)}
+    assert evs[(c0, c2)].kind == "drift-red" and evs[(c0, c2)].touched == [c2]
+    red = {q.x: q.red for q in dr.pairs(dr.snapshot("HEAD", repo), "HEAD", repo)[0]}
+    assert red[c2] is True
