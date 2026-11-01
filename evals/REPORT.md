@@ -3931,75 +3931,115 @@ it costs on the history, and registers the re-run, before that run.
 
 **What changed.**
 - **Four lessons lose their governed files** (#39: a rule gets files only when CI does not
-  already run its check). The three §4af named: `n_71c09abf3f37`, `n_b74bad29fd87` and
-  `n_be9f13d587b1`. The fourth is `n_e635fd921086`, the package name. #318 proposed widening its files to
-  `packaging/`, but CI's `test_the_old_distribution_name_is_swept_and_still_installable`
-  already asserts its claim for both `pyproject.toml` files, and CI failed on both of its §4af
-  breaks. Its check is now that test.
+  already run its check). The three §4af named: `n_71c09abf3f37` (`lint-imports`), and
+  `n_b74bad29fd87` and `n_be9f13d587b1` (pytest selections). The fourth is `n_e635fd921086`, the
+  package name. #318 proposed widening its files to `packaging/`, but CI's
+  `test_the_old_distribution_name_is_swept_and_still_installable` already asserts its claim for
+  both `pyproject.toml` files, and CI failed on both of its §4af breaks. Its check, a `tomllib`
+  one-liner, is now that test.
 - **Four lessons govern what their claim depends on.**
-  - `doc-check-defaults` adds `client.py` and `service.py`.
+  - `doc-check-defaults` adds `client.py`, `service.py` and `mcp_server.py`.
   - `docs-agent-neutral` governs all of `docs/`.
-  - `n_d45d7bf64896` governs `README.md`, `CHANGELOG.md` and `docs/`.
-  - `n_7e50e3588bcd` adds `pyproject.toml`.
+  - `n_d45d7bf64896` governs `README.md` and `docs/`.
+  - `n_7e50e3588bcd` adds `pyproject.toml` and CI's workflow.
 - **Five checks read what their lesson claims,** each a script in `ci/` that CI does not run:
-  - `check-check-defaults.py`: the limit of 12 on all four paths, core, service, CLI and client.
-  - `check-test-imports.py`: every module the tests import is declared for CI to install.
+  - `check-check-defaults.py`: the limit of 12 on every path a check takes. That is core and the
+    service, and the CLI, its handler, the client (local and remote) and the MCP tool passing none.
+  - `check-test-imports.py`: every module the tests import comes from what CI's own install
+    line installs.
   - `check-portable-ungated.py`: every gated seed record, not one.
-  - `check-agent-neutral.py`: each paragraph, list item or table row that names a Claude
-    Code-only surface also labels it, in every tracked doc.
+  - `check-agent-neutral.py`: each paragraph, list item or table row in `README.md` and `docs/`
+    that names a Claude Code-only surface also labels it.
   - `check-positioning.py`: the honest framing still reads as written, and no doc claims okl
-    beats or replaces a memory tool.
+    beats, outranks or replaces a named memory tool.
 
   Each passes at the change and fails on every §4af patch its lesson missed. One of those,
   `n_d45d7bf64896-breaking-3`, no longer applied, because its doc had moved, and was inserted by
   hand. The checks were written with those patches in view, so this shows only that they read
   what was missed. The re-run below is the measure.
-- **The label check found the docs short of the lesson.** Eighteen mentions in 12 docs named a
-  Claude Code-only surface with no label, such as the README's "Per session: the Stop hook
-  interrupts once". `docs/SEEDING.md` said the `/seed-from-codebase` command comes with any
-  coding agent; only the Claude Code scaffold writes it. Each now says so.
+- **The label check found the docs short of the lesson.** It added 24 labels in 13 docs, such as
+  the README's "Per session: the Stop hook interrupts once". `docs/SEEDING.md` said the
+  `/seed-from-codebase` command comes with any coding agent; only the Claude Code scaffold writes
+  it, and another agent can follow its prompt file. A mention that names no surface ("okl asks
+  once what was learned") is beyond a pattern.
+- **Local review (two rounds) shaped three of the checks.** The first positioning check flagged
+  the stance its lesson requires ("okl is no replacement for mem0", "they're worth composing
+  with"). It also flagged okl comparing its own settings, so comparisons now need a named rival,
+  and a negation just before a claim clears it. Against the reviewer's probe it now catches 13 of
+  13 claims and passes 12 of 12 legitimate sentences.
 
-**What it costs.** Receipt `drift-widen-cost-20261101-1630.json`, from 21c04a8, run by
-`evals/drift_widen_cost.py` without running any check. The window is the 148 merges into main
-from the snapshot's first commit, 61b567c (2026-09-25), to 3af67a8. Under the drift order, a merge
-that touches a lesson's governed files re-verifies that lesson at least once.
+**What it costs.** Receipt `drift-widen-cost-20261101-1703.json`, run by
+`evals/drift_widen_cost.py` without running any check. Both file lists, the snapshot before
+#318 (3af67a8) and after it, are applied to the whole window, which runs from the snapshot's
+first commit, 61b567c (2026-09-25), to 3af67a8. So "before" is what today's lists would have
+cost, not what was paid. A re-verify is counted two ways: per merge into main, a floor, and per
+commit, a ceiling.
 
-| | before | after |
+| | per merge (148) | per commit (883) |
 |---|---:|---:|
-| Lesson re-checks, all watched lessons | 828 | 794 |
-| Merges that re-verify anything | 137 | 142 |
+| Lesson re-checks, before → after | 828 → 766 | 1,610 → 1,561 |
+| Units that re-verify anything, before → after | 137 → 142 | 359 → 387 |
 
-- **Clearing the four saves 133 re-checks.** `n_b74bad29fd87` 41, `n_e635fd921086` 40,
-  `n_71c09abf3f37` 36 and `n_be9f13d587b1` 16.
-- **Widening adds 99.** `n_d45d7bf64896` 73 → 129, `n_7e50e3588bcd` 92 → 116,
-  `docs-agent-neutral` 84 → 100 and `doc-check-defaults` 88 → 91.
-- **The step a person pays barely moves.** 137 of the 148 merges already re-verified something;
-  142 now do. The checks the cleared lessons ran were pytest selections; the new ones are
-  scripts that take seconds.
+- **Clearing the four saves more than widening adds.** Per merge it saves 133 (`n_b74bad29fd87`
+  41, `n_e635fd921086` 40, `n_71c09abf3f37` 36 and `n_be9f13d587b1` 16) and adds 71
+  (`n_d45d7bf64896` 73 → 100, `n_7e50e3588bcd` 92 → 116, `docs-agent-neutral` 84 → 100 and
+  `doc-check-defaults` 88 → 92). Per commit it saves 246 and adds 197.
+- **The step a person pays moves a little.** Five more merges re-verify something, 142 of 148,
+  and 28 more commits, 387 of 883.
+- **The widened lessons are red on most merges:** `n_7e50e3588bcd` on 116 of 148, `n_d45d7bf64896`
+  and `docs-agent-neutral` on 100, and `doc-check-defaults` on 92. For them a catch is mostly
+  the check's. They stay lessons, re-checked when their files change and stamped one by one,
+  rather than becoming CI steps. On cost alone a CI step would serve them about as well. Whether
+  a repeating shape should be a gate instead is #314's question.
+
+**Breaks nothing catches.** Three judged breaks of the cleared lessons were caught by neither drift
+nor CI: `n_b74bad29fd87-breaking-0` and `-1`, and `n_be9f13d587b1-breaking-1`. The first passed
+because the Postgres tests skip in CI. Clearing the files changes nothing for them, since drift
+was red and the check passed. They need a check, and CI needs a Postgres to run the ones that
+exist.
 
 **The re-run, registered.** Written before any patch of it is generated.
-- **Instrument:** `PYTHONPATH=src python3 evals/drift_mutate.py --base <B>`, where B is the merge
-  of this section into main. Everything else is as in §4af: the breaker and judge models and
-  prompts, four breaking and two harmless patches per lesson, and the CI steps.
+- **Instrument:** `PYTHONPATH=src python3 evals/drift_mutate.py --base <B> --blind`, where B is
+  the merge of this section into main. The breaker and judge models, prompts and CI steps are
+  §4af's, four breaking and two harmless patches per lesson. The receipt records the models the
+  aliases resolved to.
+- **One departure, registered: `--blind`.** §4af kept only the snapshot from the breaker. By B,
+  six of the nine lessons' checks are files the breaker could read, and the repository holds
+  §4af's patches and a write-up of every miss. `--blind` also keeps from it:
+  - the lesson's check files;
+  - `evals/REPORT.md`, `evals/results/` and the cost counter;
+  - the CHANGELOG and the reviewer's notes.
+
+  It restores them all before the diff. So this breaker is at least as blind as §4af's, which
+  could read `ci/check-init-flags.py`.
 - **Population:** the lessons in `okl-drift.json` at B with a recorded check, less the three that
-  answer from outside the commit. These are expected to be nine:
+  answer from outside the commit. These are expected to be nine, 54 patches:
   - `doc-check-defaults`, `doc-init-flags`, `doc-install-name` and `doc-verified-refused`;
   - `docs-agent-neutral`, `n_07faa4565128`, `n_7e50e3588bcd`, `n_bf6a2aee2f12` and
     `n_d45d7bf64896`.
-- **Baseline, the same nine in §4af:** 8 of 22 breaks caught, 36.4% (Wilson 19.7–57.0%). Re-judged,
-  11 of 25.
+- **Baseline, the same nine in §4af:** 8 of 22 breaks caught, 36.4% (Wilson 19.7–57.0%), with 8
+  of the 22 coverage misses. Re-judged, 11 of 25.
+- **Registered result:** the first judge pass. Any re-judge is reported apart.
 - **Predictions:**
-  1. **The catch rate is at least 0.5,** the bar §4af registered. If it is, the docs may say that
-     drift detects breaks of the lessons it watches, quoting the rate and its interval. If not,
-     they keep calling it bookkeeping, a prompt to re-check.
-  2. **Coverage misses fall** below §4af's share on the nine, 8 of 22.
-  3. **At most one harmless patch fails its check.** The wider checks read more, so a false alarm
-     is now possible; §4af had none in 26.
+  1. **The catch rate is at least 0.5,** the bar §4af registered, reported beside each lesson's
+     red rate above. If it is, the docs may say that drift detects breaks of the lessons it
+     watches, quoting the rate and its interval. If not, they keep calling it bookkeeping, a
+     prompt to re-check, and each miss goes to its cause again.
+  2. **Coverage misses fall** below §4af's share on the nine, 8 of 22. If they do not, each miss's
+     file is named, and either joins the lesson's files or is recorded as outside its claim.
+  3. **At most one control fails its check.** Controls are harmless patches the judge calls
+     intact; §4af had none fail in 26. The wider checks read more, so a false alarm is now
+     possible. If more than one fails, each goes to its check before any catch rate is quoted.
+- **Carried over from §4af:**
+  - **Counts only, no rate:** if the judge confirms fewer than half the breaking patches, or if
+    more than 20% of patches do not apply or time out.
+  - **If more than two controls fail,** a failed check is not evidence of a break for those
+    lessons, and their catches are reported apart.
 - **Cost:** §4af cost $5.20 for 13 lessons, so nine should cost about $3.60.
 - **Deadline:** 2026-11-15. If the run cannot happen by then, this section says why.
-- **Threat:** the breaker sees the same lesson text as before and may make similar breaks, which
-  the new checks were written against. Read the result as an upper bound on what a fresh kind
-  of break would meet.
+- **Threat:** the breaker sees the same lesson text as in §4af and may make similar breaks, which
+  the new checks were written against. `--blind` keeps it from reading the checks, not from
+  repeating itself. Read the result as an upper bound on what a fresh kind of break would meet.
 
 ## 5. Findings
 

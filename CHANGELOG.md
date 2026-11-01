@@ -26,11 +26,12 @@
   and drift caught 14 of 36 breaks: lessons watched one file of a claim that spans several, and
   checks read one record, one default or one heading. Five checks now read what their lesson
   claims (scripts in `ci/`), four lessons govern what their claim depends on, and four whose check
-  CI already runs no longer govern files. Over the 148 merges since the snapshot began, that is
-  fewer re-checks, 794 against 828. The docs now label every mention of a Claude Code-only part
-  (18 were unlabelled), and SEEDING.md no longer says `/seed-from-codebase` comes with any agent.
-  A re-run of §4af is registered; until it reaches a catch rate of 0.5, drift stays described as
-  a prompt to re-check.
+  CI already runs no longer govern files. Over the history since the snapshot began, that is
+  fewer lesson re-checks (766 against 828 per merge, 1,561 against 1,610 per commit), and five
+  more of 148 merges that re-verify anything. The label check added 24 Claude Code labels in 13
+  docs, and SEEDING.md no longer says `/seed-from-codebase` comes with any agent. A re-run of
+  §4af is registered; until it reaches a catch rate of 0.5, drift stays described as a prompt to
+  re-check.
 
 ## 0.10.0
 
