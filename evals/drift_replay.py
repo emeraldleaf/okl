@@ -142,7 +142,9 @@ def events(watched: dict[str, dict], until: str, repo: Path = REPO) -> list[Even
             if lid in before and v == p:
                 continue
             e = Event(lid, p or "", v or "", c, "")
-            files = governs(rule)
+            # Each side by the snapshot the gate read there, not the lesson's final paths: four of
+            # the replayed lessons changed theirs in the window (review on #312).
+            then = governs(before[lid]) if lid in before else governs(rule)
             check = parse_check((before.get(lid) or {}).get("verified_by"))
             if lid not in before:
                 e.kind = "first stamp"
@@ -150,9 +152,9 @@ def events(watched: dict[str, dict], until: str, repo: Path = REPO) -> list[Even
                 e.kind = "no commit recorded"
             elif not git_ok("merge-base", "--is-ancestor", p, v, repo=repo):
                 e.kind = "previous stamp not an ancestor"
-            elif not differs(p, v, files, repo):
+            elif not differs(p, v, then, repo):
                 e.kind = "re-verified, governed content unchanged"
-            elif differs(v, c, files, repo):
+            elif differs(v, c, governs(now[lid]), repo):
                 e.kind = "verified before its code commit"
             elif check is None:
                 e.kind = "check not recorded"
@@ -161,7 +163,7 @@ def events(watched: dict[str, dict], until: str, repo: Path = REPO) -> list[Even
             else:
                 e.kind = "drift-red"
                 e.cmd, e.expect = check
-                e.touched = changed_commits(f"{p}..{v}", files, repo)
+                e.touched = changed_commits(f"{p}..{v}", then, repo)
             out.append(e)
     return out
 
@@ -212,7 +214,7 @@ def pairs(watched: dict[str, dict], until: str, repo: Path = REPO) -> tuple[list
         snap = snapshot(x, repo)
         if not snap:
             continue
-        for lid, rule in watched.items():
+        for lid in watched:
             stamp = snap.get(lid)
             why = left_out(stamp, x, repo)
             check = parse_check((stamp or {}).get("verified_by"))
@@ -220,7 +222,7 @@ def pairs(watched: dict[str, dict], until: str, repo: Path = REPO) -> tuple[list
                 left[why] = left.get(why, 0) + 1
                 continue
             out.append(Pair(lid, x, stamp["verified_commit"],
-                            differs(stamp["verified_commit"], x, governs(rule), repo), *check))
+                            differs(stamp["verified_commit"], x, governs(stamp), repo), *check))
     return out, left
 
 
