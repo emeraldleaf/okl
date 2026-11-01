@@ -149,6 +149,8 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                     help="start it in the background, stop it, say whether it runs, embed this store's "
                          "lessons through it, or run it in the foreground")
     pw.add_argument("--wait", type=float, default=0.0, help="with start: seconds to wait for it to load")
+    # with serve: the server okl's own start spawns, which keeps a stop (review on #320)
+    pw.add_argument("--spawned", action="store_true", help=argparse.SUPPRESS)
     pw.set_defaults(func=cmd_warm)
 
     pr = sub.add_parser("record", help="record a node (defect/gate/claim/...)")

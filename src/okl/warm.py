@@ -55,6 +55,9 @@ WEIGHT = 8.0       # §4w: the top of a broad rise on the selection split
 LINE = 5.767926
 NEAREST = 36       # the model's own candidates, as many as the full-text window
 TIMEOUT_S = 0.5    # what a prompt waits for the prompt's vector before briefing without it
+# What a person's `okl warm stop` or `status` waits: nothing waits on them the way a prompt
+# does, and a server embedding a batch for `okl warm index` is busy for longer (#320).
+COMMAND_TIMEOUT_S = 5.0
 IDLE_EXIT_S = 4 * 3600
 # How long after a start the default waits before starting the server again: loading takes about
 # a second, so a server that is not up by then failed, and starting another each prompt would
@@ -401,7 +404,8 @@ def stopped() -> bool:
 
 def resume() -> None:
     """Undo `okl warm stop`: what the person's own start, index or serve does first. The
-    default's start for a prompt never does (review on #300)."""
+    default's start for a prompt never does (review on #300), nor the server a start spawns
+    (review on #320)."""
     _stopped_path().unlink(missing_ok=True)
 
 
@@ -422,7 +426,7 @@ def start(*, wait_s: float = 0.0) -> dict[str, Any] | None:
     log.parent.mkdir(parents=True, exist_ok=True)
     _started_path().touch()
     with log.open("ab") as out:
-        subprocess.Popen([sys.executable, "-m", "okl", "warm", "serve"], stdin=subprocess.DEVNULL,
+        subprocess.Popen([sys.executable, "-m", "okl", "warm", "serve", "--spawned"], stdin=subprocess.DEVNULL,
                          stdout=out, stderr=subprocess.STDOUT, start_new_session=True, close_fds=True)
     return _wait(wait_s)
 
@@ -463,11 +467,14 @@ def revive() -> str:
 
 def stop() -> bool:
     """Ask a running server to exit, and keep the default from starting it again until `okl warm
-    start` (review on #300). False when none answered."""
-    _stopped_path().parent.mkdir(parents=True, exist_ok=True)
-    _stopped_path().touch()
+    start` (review on #300). False when none answered. The record is left after the request: the
+    server reads it too, and left first it could end the server before the request was read,
+    which then said none had answered (#320)."""
     try:
-        _ask({"op": "stop"}, TIMEOUT_S)
+        _ask({"op": "stop"}, COMMAND_TIMEOUT_S)
     except WarmUnavailableError:
         return False
+    finally:
+        _stopped_path().parent.mkdir(parents=True, exist_ok=True)
+        _stopped_path().touch()
     return True
