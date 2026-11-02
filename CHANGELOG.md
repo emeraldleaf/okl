@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.11.0
 
 - **`okl init --ci` pins the okl release CI installs.** The workflow installed the newest okl
   from PyPI, so a repo's CI could run a different release from its own hooks. `okl init` now
