@@ -37,21 +37,29 @@ else:
 '''
 
 
+def _clean_env() -> dict[str, str]:
+    """This environment without the variables that locate a repository: run from inside a git
+    hook, they would point every git call here at the developer's own repository."""
+    local = subprocess.run(["git", "rev-parse", "--local-env-vars"], capture_output=True, text=True).stdout.split()
+    return {k: v for k, v in os.environ.items() if k not in local}
+
+
 def _repo(tmp_path: Path) -> Path:
     """A committed git repository, with one uncommitted file the judge must not see."""
     repo = tmp_path / "repo"; repo.mkdir()
+    env = _clean_env()
     for cmd in (["init", "-q"], ["config", "user.email", "t@example.com"], ["config", "user.name", "t"]):
-        subprocess.run(["git", "-C", str(repo), *cmd], check=True)
+        subprocess.run(["git", "-C", str(repo), *cmd], check=True, env=env)
     (repo / "README.md").write_text("# demo\n"); (repo / "okl-drift.json").write_text("{}\n")
-    subprocess.run(["git", "-C", str(repo), "add", "."], check=True)
-    subprocess.run(["git", "-C", str(repo), "commit", "-qm", "init"], check=True)
+    subprocess.run(["git", "-C", str(repo), "add", "."], check=True, env=env)
+    subprocess.run(["git", "-C", str(repo), "commit", "-qm", "init"], check=True, env=env)
     (repo / "draft.txt").write_text("not committed\n")
     return repo
 
 
 def _okl(tmp_path: Path, repo: Path, *args: str, stdin: str | None = None) -> subprocess.CompletedProcess[str]:
     """Run the CLI in `repo` against a throwaway store, with the fake judge's log beside it."""
-    env = {k: v for k, v in os.environ.items() if k not in ("OKL_SERVICE_URL", "OKL_TOKEN")}
+    env = {k: v for k, v in _clean_env().items() if k not in ("OKL_SERVICE_URL", "OKL_TOKEN")}
     env["OKL_DATABASE_URL"] = f"sqlite:///{tmp_path / 'store.db'}"
     env["PYTHONPATH"] = str(ROOT / "src")
     env["JUDGE_LOG"] = str(tmp_path / "judge.log")
@@ -152,7 +160,7 @@ def test_okl_review_reports_what_no_longer_holds_and_writes_nothing(tmp_path):
     assert all(s["committed"] and not s["uncommitted"] and not s["drift_json"] for s in seen)
     assert not Path(seen[0]["cwd"]).exists()                       # the scratch worktree was removed
     assert "okl-review-" not in subprocess.run(["git", "-C", str(repo), "worktree", "list"],
-                                               capture_output=True, text=True).stdout
+                                               capture_output=True, text=True, env=_clean_env()).stdout
     assert _okl(tmp_path, repo, "show", "a-wrong", "--format", "json").stdout == before
 
 
@@ -189,3 +197,29 @@ def test_okl_review_names_lessons_and_answers_in_json(tmp_path):
     assert out["lessons"][0]["verdict"] == "current"
     nothing = _okl(tmp_path, repo, "review", "--list")              # w-files is drift's, b-fine is listed
     assert "w-files" not in nothing.stdout and "b-fine" in nothing.stdout
+
+
+def test_a_review_with_an_unanswered_lesson_is_never_clean(tmp_path):
+    """Fail closed: with nothing questioned, a lesson the judge gave no answer for exits 2, not 0;
+    a judge on PATH that cannot start is a per-lesson error, not a traceback."""
+    repo = _repo(tmp_path)
+    _record(tmp_path, repo, "c-bare", "A BARE verdict")
+    unanswered = _okl(tmp_path, repo, "review", "--yes", "--judge", _judge_cmd(tmp_path))
+    assert unanswered.returncode == 2, unanswered.stdout + unanswered.stderr
+    assert "1 judged — 1 no answer" in unanswered.stdout
+
+    broken = tmp_path / "broken-judge"
+    broken.write_text("#!/no/such/interpreter\n"); broken.chmod(0o755)
+    r = _okl(tmp_path, repo, "review", "--yes", "--judge", str(broken))
+    assert r.returncode == 2 and "could not run the judge" in r.stderr and "Traceback" not in r.stderr
+
+
+def test_the_judges_evidence_is_always_a_list_of_strings(tmp_path):
+    """A judge that gives its evidence as one string, a number or nothing still reads as a list."""
+    repo = _repo(tmp_path)
+    for given, want in (('"README.md:1"', ["README.md:1"]), ("3", []), ('["a:1", 2]', ["a:1", "2"])):
+        script = tmp_path / "judge.py"
+        script.write_text(f'''import sys; sys.stdin.read()
+print('{{"verdict": "current", "evidence": {given}}}')''')
+        got = review.judge_one(Node(id="x", type="Rule", title="t", scope="org"), [sys.executable, str(script)], repo)
+        assert got["evidence"] == want, given

@@ -16,6 +16,7 @@ command has no measured catch rate.
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import tempfile
@@ -112,20 +113,34 @@ def _answer(stdout: str) -> str:
     return stdout
 
 
-def judge_one(n: Node, judge: list[str], cwd: Path, timeout: int = TIMEOUT) -> dict[str, Any]:
-    """One lesson, judged once: the parsed answer with its id, or the reason there is none."""
+def _git_env() -> dict[str, str]:
+    """This environment without the variables that locate a repository: run from inside a git
+    hook, GIT_DIR and friends would point the worktree calls at that repository instead."""
+    local = subprocess.run(["git", "rev-parse", "--local-env-vars"], capture_output=True, text=True).stdout.split()
+    return {k: v for k, v in os.environ.items() if k not in local}
+
+
+def judge_one(n: Node, judge: list[str], cwd: Path, timeout: int = TIMEOUT,
+              env: dict[str, str] | None = None) -> dict[str, Any]:
+    """One lesson, judged once: the parsed answer with its id, or the reason there is none. It
+    never raises, so one lesson's failure costs neither the others nor the calls already made."""
     text = {f: getattr(n, f) or "" for f in ("title", "symptom", "fix", "body")}
     out: dict[str, Any] = {"id": n.id, "type": n.type, "title": n.title}
     try:
         p = subprocess.run(judge, input=PROMPT.format(**text), capture_output=True, text=True,
-                           timeout=timeout, cwd=cwd)
+                           timeout=timeout, cwd=cwd, env=env)
     except subprocess.TimeoutExpired:
         return {**out, "error": f"no answer in {timeout} seconds"}
+    except OSError as e:   # on PATH but not runnable, such as a bad interpreter line
+        return {**out, "error": f"could not run the judge: {e}"}
     got = parse(_answer(p.stdout))
     if got is None:
         why = (p.stderr or p.stdout or "no output").strip().splitlines() or ["no output"]
         return {**out, "error": f"no valid answer (exit {p.returncode}): {why[-1][:200]}"}
-    return {**out, **{k: got.get(k) for k in ("verdict", "no_longer", "instead", "evidence", "reason", "checkable")}}
+    evidence = got.get("evidence")
+    evidence = [evidence] if isinstance(evidence, str) else evidence if isinstance(evidence, list) else []
+    return {**out, **{k: got.get(k) for k in ("verdict", "no_longer", "instead", "reason", "checkable")},
+            "evidence": [str(x) for x in evidence]}
 
 
 def review(nodes: list[Node], root: Path, *, judge: list[str] | None = None, workers: int = 3,
@@ -134,17 +149,18 @@ def review(nodes: list[Node], root: Path, *, judge: list[str] | None = None, wor
     the judge reads what is committed and never the working tree; the worktree holds no
     okl-drift.json, as measured. Nothing is written to the store or the checkout."""
     judge = judge or JUDGE
+    env = _git_env()
     with tempfile.TemporaryDirectory(prefix="okl-review-") as room:
         wt = Path(room) / "repo"
         add = subprocess.run(["git", "-C", str(root), "worktree", "add", "-q", "--detach", str(wt), "HEAD"],
-                             capture_output=True, text=True)
+                             capture_output=True, text=True, env=env)
         if add.returncode != 0:
             raise ValueError(f"could not check out HEAD to review against: {add.stderr.strip()}")
         try:
             (wt / "okl-drift.json").unlink(missing_ok=True)   # the judge reads no check or file list
 
             def one(n: Node) -> dict[str, Any]:
-                got = judge_one(n, judge, wt, timeout)
+                got = judge_one(n, judge, wt, timeout, env)
                 if progress:
                     progress(got)
                 return got
@@ -152,4 +168,4 @@ def review(nodes: list[Node], root: Path, *, judge: list[str] | None = None, wor
                 return list(pool.map(one, nodes))
         finally:
             subprocess.run(["git", "-C", str(root), "worktree", "remove", "--force", str(wt)],
-                           capture_output=True, text=True)
+                           capture_output=True, text=True, env=env)

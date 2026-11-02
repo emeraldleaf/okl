@@ -21,8 +21,9 @@ okl review           # opt-in: a model reads each lesson that governs no files a
                      #   outlived or stale) with the words that no longer hold; writes nothing.
                      #   It asks before the first model call (--yes skips; unattended without
                      #   it, exit 2); --list names the lessons and calls no model; <id>... judges
-                     #   only those; --judge '<cmd>' swaps the judge (§4ai's rates are the default's). Exit 0 none
-                     #   questioned, 1 some, 2 could not run. REPORT §4ai measured the default.
+                     #   only those; --judge '<cmd>' swaps the judge (§4ai's rates are the default's). Exit 1 some
+                     #   questioned; else 2 could not run or a lesson got no answer; 0 none
+                     #   questioned. REPORT §4ai measured the default.
 okl drift --gate     # flag lessons whose governed source changed after they were last verified
                      #   (exit 1 on drift, 2 when nothing could be checked; the pre-push hook
                      #   and CI run it; lessons last checked on another branch are listed

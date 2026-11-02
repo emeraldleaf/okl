@@ -289,8 +289,8 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                     "and what the repository has instead. It calls a model only when you run it, asks "
                     "first, and writes nothing: you confirm each verdict, then `okl update` or `okl "
                     "retire`. Measured with the default judge (REPORT §4ai): it caught 8 of 10 planted "
-                    "wrong details and questioned 1 of 10 lessons known to be current. Exit 0: none "
-                    "questioned; 1: some questioned; 2: could not run.")
+                    "wrong details and questioned 1 of 10 lessons known to be current. Exit 1: some "
+                    "questioned; otherwise 2: could not run, or a lesson got no answer; 0: none questioned.")
     prw.add_argument("node_id", nargs="*", help="only these lessons (default: every unchecked one)")
     prw.add_argument("--list", action="store_true", help="list the lessons it would judge, call no model")
     prw.add_argument("--yes", action="store_true", help="run without asking (it calls a model once per lesson)")

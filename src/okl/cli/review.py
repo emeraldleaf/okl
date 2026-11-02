@@ -92,11 +92,20 @@ def _print_report(results: list[dict[str, Any]], measured: bool) -> None:
           "This is not the judge §4ai measured: its catch rates hold for the default judge alone.")
 
 
+def _exit_code(results: list[dict[str, Any]]) -> int:
+    """1 when a lesson was questioned; else 2 when one got no answer, since a lesson the judge
+    did not answer for was not reviewed and is never a clean exit (fail closed); else 0."""
+    if any(r.get("verdict") in review.QUESTIONED for r in results):
+        return 1
+    return 2 if any(not r.get("verdict") for r in results) else 0
+
+
 def cmd_review(args: argparse.Namespace) -> int:
     """Judge the lessons nothing re-checks against the repo at HEAD, and report the ones questioned.
 
-    Exit 0 when the judge questioned none, 1 when it questioned at least one, 2 when it could
-    not run. Nothing is written: the person decides what each verdict is worth.
+    Exit 1 when the judge questioned at least one lesson; otherwise 2 when it could not run or
+    gave no answer for a lesson, and 0 when it answered for every lesson and questioned none.
+    Nothing is written: the person decides what each verdict is worth.
     """
     from .verification import _snapshot_path
     targets = _targets(args)
@@ -129,4 +138,4 @@ def cmd_review(args: argparse.Namespace) -> int:
         _print_json({"judge": shlex.join(judge), "measured": measured, "lessons": results})
     else:
         _print_report(results, measured)
-    return 1 if any(r.get("verdict") in review.QUESTIONED for r in results) else 0
+    return _exit_code(results)
