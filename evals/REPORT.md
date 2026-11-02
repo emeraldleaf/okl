@@ -4212,6 +4212,17 @@ planted facts (`evals/lesson_census_planted.json`, unchanged), one judgment per 
 seeded order, and the 300-second limit. A changed scale is a changed instrument, so this is a
 new series: nothing here is pooled with §4ag.
 
+**Amended before any judgment (2026-11-02): what the judge cannot see.** The first attempt to
+run stopped at the instrument's guard: every planted name was found at the run's commit. None is
+in okl's code; all ten are in this experiment's own files, which main now holds and §4ag's judge
+never saw: the planted-facts file, §4ag's receipt with each verdict and reason, REPORT's §4ag
+text, and the test that quotes planted names. A judge reading those could learn which lessons
+are planted or what §4ag said of its own lesson. So the judge's scratch worktree withholds them:
+`evals/lesson_census_planted.json`, `evals/lesson_census.py`, `tests/test_drift_replay.py`, the
+census and stale-lesson receipts in `evals/results/`, and REPORT's §4ag and §4ai sections, each
+replaced by a line that says it is withheld. The guard then checks each planted name against
+that worktree, as the judge sees it. Nothing else changes.
+
 **The scale.** The judge answers one of six:
 - *current:* the lesson's point holds of this repository, and so does every detail it states
   about it;
