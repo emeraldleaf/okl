@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **The thesis page is held to its receipts** (#319). Every figure on `docs/THESIS.md` is
+  recomputed by the test suite from the receipt it names. Changing one, adding one without its
+  receipt, citing a receipt that is not committed, or leaving a measurement's newer run uncited
+  fails the build.
 - **Every `okl` command and flag the docs write is checked against the CLI** (#314).
   `ci/check-doc-commands.py`, run by the test suite, reads every `okl ...` command in the README,
   `docs/` and the overview sheets and walks the parser: each subcommand must exist and each
