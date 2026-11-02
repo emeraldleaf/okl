@@ -9,6 +9,14 @@
   in three docs were checked before (`doc-claim-coverage-20261102.txt`). By docs alone the
   share was already whole, since two lessons govern every doc, but they check wording and
   positioning, not commands.
+- **Docs that say something is not yet measured name the question they wait on** (#334).
+  `tests/test_docs.py` lists each such sentence with its open question. A REPORT result or
+  CHANGELOG entry that answers one writes ``Settles open question `<id>` ``, and the test fails
+  until the sentence is rewritten. It found one sentence a search had missed: the README says
+  `okl scaffold` has never been measured.
+- **CI installs from the lockfile** (#331). Both test jobs run `uv sync --locked`, so they test
+  the versions `uv.lock` holds and fail the day it falls behind `pyproject.toml`; the separate
+  `uv lock --check` step it replaces is gone. Nothing changes for users of okl.
 - **`okl init --dry-run` says what init keeps** (#340). In a repo whose config already records
   interests, it said detected stacks would replace them; init keeps them and detects only for a
   config with none, and the dry run now names them as kept. It also lists

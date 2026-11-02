@@ -497,3 +497,80 @@ okl log
     found, _ = check.problems({"a.md": doc})
 
     assert found == ["a.md: `okl frobnicate` is not a command", "a.md: `okl init` has no --no-sead"]
+
+
+# Every place the docs say something is not yet measured or still open, and the open question it
+# waits on (#334). Docs kept saying "not yet measured" after the measurement had landed, and a
+# review caught it three times (the anatomy sheet on #333 had three). The REPORT result or
+# CHANGELOG entry that answers a question writes "Settles open question `<id>`"; this test then
+# fails until the sentence is rewritten and its entry removed. A new sentence of this kind fails
+# until it names its question here, or says in NOT_OPEN why it is not one.
+OPEN_PHRASE = re.compile(r"(?i)\b(?:not|never) (?:yet )?(?:been )?measured\b|\bunmeasured\b|\bstill open\b")
+OPEN_QUESTIONS = {
+    # (file, words of the sentence around the phrase): the question it waits on.
+    ("docs/ACROSS-AN-ORG.md", "Reporting the rate per pack rather than per store is still open in #252"):
+        "per-pack-rate",
+    ("docs/overview/okl-anatomy.html", "a working session is not yet measured"):
+        "one-line-lesson-in-a-working-session",
+    ("src/okl/core.py", "no probe prompt has one subject word, so extending it is unmeasured (#282)"):
+        "common-word-weight-for-one-word-tasks",
+    ("README.md", "It has never been measured; use it to get a new repo"):
+        "scaffold-effect",
+}
+# The phrase, used for something that is not a question waiting on an answer, with why.
+NOT_OPEN = {
+    ("README.md", "a bug that is still open"): "about a team's bugs, not about okl",
+    ("docs/COMMANDS.md", "REPORT §4s says why it was not measured live"): "a fact about one finished run",
+    ("docs/overview/okl-anatomy.html", "Not measured in this A/B"): "scopes one finished A/B",
+    ("docs/decisions/2026-07-21-subject-tags-controlled-vocabulary.md", "**Still open:** the rank-cutoff half"):
+        "a dated record; its 2026-09-01 entry closes it",
+    ("docs/decisions/2026-07-21-subject-tags-controlled-vocabulary.md", 'the "still open" rank cutoff above is closed'):
+        "the entry that closes it",
+    ("src/okl/recap.py", "**Still open:**"): "a heading in `okl recap`'s output",
+    ("docs/DEVELOPING.md", '"not yet measured", "unmeasured" and "still open" sentences'): "describes this check",
+}
+SETTLES = re.compile(r"Settles open question `([\w-]+)`")
+
+
+def _open_question_problems(docs: dict[str, str], settled_in: str, questions: dict, not_open: dict) -> list[str]:
+    """What is wrong with the docs' open-question sentences: one no entry names, an entry whose
+    sentence is gone, or a sentence still in the docs after its question was settled."""
+    problems, seen = [], set()
+    entries = {**{k: ("open", q) for k, q in questions.items()}, **{k: ("not", w) for k, w in not_open.items()}}
+    for name, text in docs.items():
+        flat = " ".join(text.split())
+        for m in OPEN_PHRASE.finditer(flat):
+            covering = [key for key in entries if key[0] == name and any(
+                p <= m.start() and m.end() <= p + len(key[1])
+                for p in (i.start() for i in re.finditer(re.escape(key[1]), flat)))]
+            if not covering:
+                problems.append(f"{name}: {flat[max(0, m.start() - 80):m.end() + 40]!r} says something is "
+                                "open: name its question in OPEN_QUESTIONS, or say in NOT_OPEN why it is not one")
+            seen.update(covering)
+    problems += [f"{name}: no longer says {words!r}: remove its entry" for name, words in entries.keys() - seen]
+    settled = set(SETTLES.findall(settled_in))
+    problems += [f"{name}: still says {words!r}, but open question `{q}` is settled: rewrite the sentence"
+                 for (name, words), q in questions.items() if q in settled]
+    return problems
+
+
+def test_every_open_question_in_the_docs_names_what_settles_it():
+    """The docs' open questions, held to the REPORT and CHANGELOG that settle them (#334)."""
+    docs = {str(p.relative_to(ROOT)): p.read_text() for p in _published_docs()}
+    settled_in = (ROOT / "evals" / "REPORT.md").read_text() + (ROOT / "CHANGELOG.md").read_text()
+
+    assert _open_question_problems(docs, settled_in, OPEN_QUESTIONS, NOT_OPEN) == []
+
+
+def test_the_open_question_check_fails_on_a_settled_question_and_an_unnamed_one():
+    """The check is red where it should be: a settled question's sentence still in the docs, a
+    new sentence nobody named, and an entry whose sentence is gone."""
+    questions = {("a.md", "the warm model's recall is not yet measured"): "warm-recall"}
+    docs = {"a.md": "Fast. The warm model's recall\nis not yet measured. Its size is still open."}
+
+    problems = _open_question_problems(docs, "## §9\nSettles open question `warm-recall`.", questions, {})
+    assert any("`warm-recall` is settled" in p for p in problems), problems
+    assert any("size is still open" in p and "name its question" in p for p in problems), problems
+
+    assert _open_question_problems({"a.md": "Fast."}, "", questions, {}) == [
+        "a.md: no longer says \"the warm model's recall is not yet measured\": remove its entry"]

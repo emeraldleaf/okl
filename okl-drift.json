@@ -28,9 +28,9 @@
       "title": "The install command in the README and guide names the real PyPI distribution",
       "scope": "repo:okl",
       "files": "README.md,docs/GETTING-STARTED.md,pyproject.toml",
-      "verified_at": 1793635589539,
-      "verified_by": "`python3 -c \"import tomllib,sys; n=tomllib.load(open(\\\"pyproject.toml\\\",\\\"rb\\\"))[\\\"project\\\"][\\\"name\\\"]; line=\\\"pipx install '\\\"+n+\\\"[mcp]'\\\"; bad=[f for f in (\\\"README.md\\\",\\\"docs/GETTING-STARTED.md\\\") if line not in open(f).read()]; sys.exit(\\\"install line missing in %s\\\" % bad) if bad else print(\\\"INSTALL LINE MATCHES\\\", n)\"` exit 0, matched 'INSTALL LINE MATCHES' on commit 9ee9fda0ec2b @ 2026-11-02T16:06Z",
-      "verified_commit": "9ee9fda0ec2bf2b3500837d9b008c41ad875840a"
+      "verified_at": 1793636352580,
+      "verified_by": "`python3 -c \"import tomllib,sys; n=tomllib.load(open(\\\"pyproject.toml\\\",\\\"rb\\\"))[\\\"project\\\"][\\\"name\\\"]; line=\\\"pipx install '\\\"+n+\\\"[mcp]'\\\"; bad=[f for f in (\\\"README.md\\\",\\\"docs/GETTING-STARTED.md\\\") if line not in open(f).read()]; sys.exit(\\\"install line missing in %s\\\" % bad) if bad else print(\\\"INSTALL LINE MATCHES\\\", n)\"` exit 0, matched 'INSTALL LINE MATCHES' on commit e022de514773 @ 2026-11-02T16:19Z",
+      "verified_commit": "e022de5147737d3a1972d171e4efec12f84d0d79"
     },
     {
       "id": "doc-verified-refused",
@@ -48,9 +48,9 @@
       "title": "okl's docs are agent-neutral; Claude Code-only parts are labelled as such",
       "scope": "repo:okl",
       "files": "README.md,docs/",
-      "verified_at": 1793635589739,
-      "verified_by": "`python3 ci/check-agent-neutral.py` exit 0, matched 'AGENT NEUTRAL' on commit 9ee9fda0ec2b @ 2026-11-02T16:06Z",
-      "verified_commit": "9ee9fda0ec2bf2b3500837d9b008c41ad875840a"
+      "verified_at": 1793636351963,
+      "verified_by": "`python3 ci/check-agent-neutral.py` exit 0, matched 'AGENT NEUTRAL' on commit e022de514773 @ 2026-11-02T16:19Z",
+      "verified_commit": "e022de5147737d3a1972d171e4efec12f84d0d79"
     },
     {
       "id": "n_07faa4565128",
@@ -68,9 +68,9 @@
       "title": "A test that imports an undeclared package passes only where that package happens to be installed",
       "scope": "org",
       "files": "tests/,pyproject.toml,.github/workflows/ci.yml",
-      "verified_at": 1793635590397,
-      "verified_by": "`python3 ci/check-test-imports.py` exit 0, matched 'NO UNDECLARED IMPORT' on commit 9ee9fda0ec2b @ 2026-11-02T16:06Z",
-      "verified_commit": "9ee9fda0ec2bf2b3500837d9b008c41ad875840a"
+      "verified_at": 1793636352509,
+      "verified_by": "`python3 ci/check-test-imports.py` exit 0, matched 'NO UNDECLARED IMPORT' on commit e022de514773 @ 2026-11-02T16:19Z",
+      "verified_commit": "e022de5147737d3a1972d171e4efec12f84d0d79"
     },
     {
       "id": "n_9ba48d85ed19",
@@ -98,9 +98,9 @@
       "title": "Dependabot alerts reach no one unless a step reads them",
       "scope": "org",
       "files": "docs/DEVELOPING.md",
-      "verified_at": 1793635589594,
-      "verified_by": "`awk '/^## Releasing/{r=1;next} r&&/^(## |2\\. )/{exit} r&&/^1\\. /{s=1} s{print}' docs/DEVELOPING.md | tr '\\n' ' ' | grep -o 'dependabot/alerts?state=open.*--jq length.*should print 0'` exit 0, matched 'should print 0' on commit 9ee9fda0ec2b @ 2026-11-02T16:06Z",
-      "verified_commit": "9ee9fda0ec2bf2b3500837d9b008c41ad875840a"
+      "verified_at": 1793636351838,
+      "verified_by": "`awk '/^## Releasing/{r=1;next} r&&/^(## |2\\. )/{exit} r&&/^1\\. /{s=1} s{print}' docs/DEVELOPING.md | tr '\\n' ' ' | grep -o 'dependabot/alerts?state=open.*--jq length.*should print 0'` exit 0, matched 'should print 0' on commit e022de514773 @ 2026-11-02T16:19Z",
+      "verified_commit": "e022de5147737d3a1972d171e4efec12f84d0d79"
     },
     {
       "id": "n_d45d7bf64896",
@@ -108,9 +108,9 @@
       "title": "Entered a crowded category deliberately: differentiate on verification-of-memory, compose with memory infra, never compete on recall",
       "scope": "repo:okl",
       "files": "README.md,docs/",
-      "verified_at": 1793635589918,
-      "verified_by": "`python3 ci/check-positioning.py` exit 0, matched 'POSITIONING OK' on commit 9ee9fda0ec2b @ 2026-11-02T16:06Z",
-      "verified_commit": "9ee9fda0ec2bf2b3500837d9b008c41ad875840a"
+      "verified_at": 1793636352143,
+      "verified_by": "`python3 ci/check-positioning.py` exit 0, matched 'POSITIONING OK' on commit e022de514773 @ 2026-11-02T16:19Z",
+      "verified_commit": "e022de5147737d3a1972d171e4efec12f84d0d79"
     },
     {
       "id": "n_ead8e0a2b43d",
