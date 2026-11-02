@@ -723,8 +723,9 @@ def test_the_open_question_check_fails_on_a_settled_question_and_an_unnamed_one(
 # A claim is held where it is said: its paragraph, list item or table row must carry the condition.
 # A new claim of this kind goes here with its condition, so the next doc that repeats it is held too.
 OPT_IN_CLAIMS = {
-    r"calls no generative model": (r"only if you name one|REVIEW_CMD",
-                                   "the scaffold's review step runs a model when REVIEW_CMD names one"),
+    r"calls no generative model": (r"(?=.*(?:only if you name one|REVIEW_CMD))(?=.*okl review)",
+                                   "the scaffold's review step runs a model when REVIEW_CMD names one, "
+                                   "and okl review runs one when the person runs it"),
     r"shares no exact word with a lesson misses it": (r"[Ww]ithout the warm model",
                                                       "the warm model finds a lesson by meaning once indexed"),
     r"CI runs what your hooks run": (r"installed from PyPI",

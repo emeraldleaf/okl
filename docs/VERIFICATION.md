@@ -44,3 +44,8 @@ folder.) Two clarifications that stop the common misreadings:
    coverage (how many defects have a gate it could speak for) and by counting
    recurrences with no gate separately: lessons written down that came back anyway.
    Until issue #31 it printed a bare "0 ✓" while the store held three recurrences.
+   A lesson that governs no files and carries no check has nothing to re-grade it, and the
+   briefing marks it *UNCHECKED*. `okl review`, run by hand, has a model read each one against
+   the repository and report what no longer holds; the person confirms each verdict before
+   changing anything. The judge is not the lesson's author, and §4ai measured it before it
+   shipped, with planted wrong details and lessons known to be current mixed in blind.

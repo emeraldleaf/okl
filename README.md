@@ -17,10 +17,11 @@ the same briefing), each proven by a check you choose, flagged before you push (
 what it covers changes, and corrected or retired as you build. Prompts advise; the gate
 enforces. Use it in one repo, or share one store across every repo your team runs.<br>
 Under the hood: typed records, keyword search and one-step links. No model runs by default,
-okl itself calls no generative model, and nothing is captured automatically. Three local models
+okl calls no generative model unasked, and nothing is captured automatically. Three local models
 are optional, measured and off until you turn them on: an embedding arm, a reranker and a warm
 embedding model, `okl warm` ([REPORT §4q, §4t, §4z](evals/REPORT.md)). The scaffold's optional
-review step runs a generative model only if you name one. A lesson is written
+review step runs a generative model only if you name one, and `okl review`, which checks the
+lessons nothing re-checks, runs one only when you run it ([REPORT §4ai](evals/REPORT.md)). A lesson is written
 on purpose and proven by a check. The claim in full, how much of it holds today and how it
 has changed: [docs/THESIS.md](docs/THESIS.md).
 
@@ -262,6 +263,7 @@ it is worth knowing which one catches what, because they do not overlap.
 | **A doc nobody links to** | `check-doc-orphans.sh` | checks that each top-level `docs/` doc or image is named by a hub file or a `docs/*.md` (one hop, not transitive) | nothing names it, so it drifts unread |
 | **A link pointing at a file that moved** | `check-links.sh` | reads every markdown file listed by `git ls-files` and checks each local link's target exists in the working tree | the target does not exist |
 | **A diagram source with no rendered image** | `check-diagram-pairs.sh` | pairs each editable source with its export; format-agnostic via `OKL_DIAGRAM_SRC_EXT`/`OUT_EXT` | reviewers would see nothing. A hand-authored image with no source is noted, never failed, and a repo with no diagram sources is a clean no-op |
+| **A lesson nothing re-checks going wrong** | `okl review` (opt-in) | a model reads each lesson that governs no files and that no check backs against the repo at HEAD, and reports a detail that is wrong now, a workaround a later change made unnecessary, or a point that no longer holds, quoting the words; it writes nothing | only when you run it. With the default judge it caught 8 of 10 planted wrong details and questioned 1 of 10 lessons known to be current ([REPORT §4ai](evals/REPORT.md)) |
 | **Verification going quietly stale** | TTL + `verified_by` | records carry when they were last verified and by which observed check; a TTL applies only to records given `--ttl-days` (none by default) | past its TTL, a record is shown demoted rather than deleted |
 
 Three honest limits on that table:

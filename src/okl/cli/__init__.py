@@ -7,6 +7,7 @@ Where to look:
     lessons.py       okl check / record / link / search / bootstrap / dedup
     packs.py         okl seed, and the bundled seed packs that init offers
     verification.py  okl verify / reverify / drift / export: proving lessons, finding stale ones
+    review.py        okl review: a model's opt-in review of the lessons nothing re-checks
     health.py        okl doctor / metric / coverage: reports on the install and the store
     servers.py       okl serve / mcp: the long-running HTTP and MCP servers
     common.py        _print_json, the JSON printer three of the above share
