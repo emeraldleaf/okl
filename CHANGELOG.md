@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.13.0
 
 - **`okl review`: a model's review of the lessons nothing re-checks** (#315, REPORT §4ai). A
   lesson that governs no files and that no check backs is never re-read, and the briefing marks

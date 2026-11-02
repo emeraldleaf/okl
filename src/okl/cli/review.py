@@ -51,7 +51,11 @@ def _targets(args: argparse.Namespace) -> list[Node] | int:
 def _judge(args: argparse.Namespace, count: int) -> list[str] | int:
     """The judge command, once the person has agreed to run it, or the exit code to stop with:
     the measured judge unless --judge names another, and a model call is never made unasked."""
-    judge = shlex.split(args.judge) if args.judge else list(review.JUDGE)
+    try:
+        judge = shlex.split(args.judge) if args.judge else list(review.JUDGE)
+    except ValueError as e:   # an unbalanced quote: say so and stop, never a traceback
+        print(f"okl review: cannot read --judge: {e}", file=sys.stderr)
+        return 2
     if not judge or shutil.which(judge[0]) is None:
         print(f"okl review: the judge `{judge[0] if judge else ''}` is not on PATH. The default is Claude "
               "Code's CLI; pass --judge '<a command that reads the prompt on stdin and prints its "

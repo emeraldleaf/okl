@@ -179,6 +179,9 @@ def test_okl_review_never_calls_a_model_unasked(tmp_path):
     assert missing.returncode == 2 and "not on PATH" in missing.stderr
     unknown = _okl(tmp_path, repo, "review", "nope", "--yes", "--judge", judge)
     assert unknown.returncode == 2 and "no lesson with id nope" in unknown.stderr
+    unbalanced = _okl(tmp_path, repo, "review", "--yes", "--judge", "judge 'unclosed")
+    assert unbalanced.returncode == 2 and "cannot read --judge" in unbalanced.stderr
+    assert "Traceback" not in unbalanced.stderr
     assert _judged(tmp_path) == []
 
 
