@@ -492,6 +492,7 @@ NOT_OPEN = {
     ("docs/decisions/2026-07-21-subject-tags-controlled-vocabulary.md", 'the "still open" rank cutoff above is closed'):
         "the entry that closes it",
     ("src/okl/recap.py", "**Still open:**"): "a heading in `okl recap`'s output",
+    ("docs/DEVELOPING.md", '"not yet measured", "unmeasured" and "still open" sentences'): "describes this check",
 }
 SETTLES = re.compile(r"Settles open question `([\w-]+)`")
 

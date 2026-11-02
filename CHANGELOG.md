@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Docs that say something is not yet measured name the question they wait on** (#334).
+  `tests/test_docs.py` lists each such sentence with its open question. A REPORT result or
+  CHANGELOG entry that answers one writes ``Settles open question `<id>` ``, and the test fails
+  until the sentence is rewritten. It found one sentence a search had missed: the README says
+  `okl scaffold` has never been measured.
 - **`okl init --dry-run` says what init keeps** (#340). In a repo whose config already records
   interests, it said detected stacks would replace them; init keeps them and detects only for a
   config with none, and the dry run now names them as kept. It also lists

@@ -179,6 +179,11 @@ honest:
 - **Every cited figure has a committed receipt** in `evals/results/`.
 - **A changed instrument starts a new series.** That covers a different judge, judge
   prompt or resolved model, and the new run is not pooled with older ones.
+- **A result that answers an open question says so.** The docs' "not yet measured", "unmeasured"
+  and "still open" sentences are listed in `tests/test_docs.py` (`OPEN_QUESTIONS`), each with
+  the question it waits on. When a result answers one, write ``Settles open question `<id>` ``
+  in its "What follows": the test then fails until the sentence is rewritten and its entry
+  removed. A new sentence of that kind must name its question there too (#334).
 
 ### Run the deterministic checks first
 
