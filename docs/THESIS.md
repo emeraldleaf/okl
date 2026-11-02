@@ -27,10 +27,10 @@ Two rules hold throughout:
 | the claim says | today | evidence |
 |---|---|---|
 | it briefs the agent with what applies | built | 42% → 7% defects reproduced on eight bait tasks, pooled over seven A/B runs ([REPORT](../evals/REPORT.md) §5 finding 7) |
-| it notices when something you maintain falls out of step | built for lessons that govern files and carry a check, including docs a lesson names (this README is one); not yet for docs, diagrams, specs, reports or results in general (#317, #314) | 16 of the 155 lessons recorded here were watched at the census below, 12 after #318 moved four whose check CI runs (§4ah); of 52 patches written to break those lessons, a judge confirmed 36 as breaks, and drift caught 14 of them (§4af); after #318, it caught 16 of 24 on the nine whose check runs from the commit, counts only (§4ah) |
+| it notices when something you maintain falls out of step | built for lessons that govern files and carry a check, including docs a lesson names (this README is one); not yet for docs, diagrams, specs, reports or results in general (#317, #314) | 16 of the 155 lessons recorded here were watched at the 2026-10-31 census below, 12 after #318 moved four whose check CI runs (§4ah); of 52 patches written to break those lessons, a judge confirmed 36 as breaks, and drift caught 14 of them (§4af); after #318, it caught 16 of 24 on the nine whose check runs from the commit, counts only (§4ah) |
 | it has the agent bring it back, telling you or asking first | partly: a drifted lesson blocks the push or fails CI, and the briefing marks it STALE; telling or asking for other artifacts is #317 | §4ae, §4af |
 | each session's lessons are recorded | built: in Claude Code, the Stop hook asks once a session what was learned | — |
-| every claim is backed by a check, or marked unchecked | built: a briefed lesson no observed check backs, and drift has no verdict on, is marked UNCHECKED (#222); 71 of 155 lessons have a check | census and briefing marks below |
+| every claim is backed by a check, or marked unchecked | built: a briefed lesson no observed check backs, and drift has no verdict on, is marked UNCHECKED (#222); 72 of 168 lessons have a check at the 2026-11-02 census | census and briefing marks below |
 
 ## Baseline (2026-10-31)
 
@@ -39,10 +39,12 @@ Each figure names its receipt in `evals/results/`.
 | measure | value | receipt |
 |---|---|---|
 | lessons recorded in this repo: watched by drift / checked only by CI / no check | 16 / 55 / 84 of 155; all 55 CI-left checks pass at f645d81 | `lesson-census-20261031-1409.json` |
+| the same on 2026-11-02, at §4ai's run | 12 / 60 / 96 of 168; this census ran no checks | `lesson-census-20261102-2119.json` |
 | drift's red that was a committed break | 4 of 1,865 events (0.21%) | `drift-replay-20261101-0143.json` (§4ae) |
 | judge-confirmed breaks of watched lessons (of 52 patches written to break them) that drift caught | 14 of 36 (38.9%, 95% interval 24.8–55.1%); of the 22 misses, 14 changed a file the lesson does not watch, and 8 passed a check too narrow to see them | `drift-mutate-20261031-1522.json` (§4af) |
 | the same after #318, on the nine watched lessons whose check runs from the commit (of 36 patches written to break them) | 16 of 24, counts only: the judge gave no verdict on 11 of the 54 patches, over the 20% that allows a rate; §4af caught 8 of 22 on the same nine | `drift-mutate-20261101-1935.json` (§4ah) |
 | lessons with no check judged stale | 2 of 65 that make a claim about this repo, both confirmed and corrected; the judge let wrong details pass, so this is a count, not a rate | `stale-lessons-20261031-1527.json` (§4ag) |
+| lessons with no check questioned, on a scale that names a wrong detail and an outlived workaround (2026-11-02) | 9 of 80 that make a claim about this repo: 7 with a wrong detail (8.8%, 95% interval 4.3–17.0%), 1 outlived, 1 stale; all 9 confirmed and corrected. The judge caught 8 of 10 planted wrong details and wrongly flagged 1 of 10 known-current lessons, both exactly at the registered bars | `stale-review-20261102-2133.json` (§4ai) |
 | briefed lessons marked UNCHECKED, on 13 briefed prompts (eval tasks and probe prompts) | 121 of the 172 the mark could reach (all 172 briefed could); the marks add 3,466 characters to 68,673 (5.0%) | `briefing-marks-size-20261101-1110.txt` (#222) |
 
 
