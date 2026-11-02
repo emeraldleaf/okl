@@ -39,27 +39,45 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         print("\n• drift is not gated in CI here; `okl init --ci` adds the GitHub workflow, and "
               "another CI can run `okl drift --gate`")
     print(_git_hook_state(root))
-    owners = _owner_state(root)
+    try:
+        recorded = json.loads(cfg.read_text()) if cfg else {}
+    except (OSError, ValueError):
+        recorded = {}
+    owners = _owner_state(root, recorded if isinstance(recorded, dict) else {})
     if owners:
         print(owners)
     return 1 if (found or twice) else 0
 
 
-def _owner_state(root: Path) -> str:
-    """One line on okl's owner-approved paths (#329): whether GitHub enforces the owner's
-    approval, and if not, why. Empty where `okl init --owner` wrote none, so no API call is made."""
+def _owner_state(root: Path, cfg: dict) -> str:
+    """okl's owner-approved paths (#329): whether GitHub enforces the owner's approval, then each
+    path's owner on the default branch. The paths come from what `okl init --owner` recorded (or,
+    failing that, okl's block in CODEOWNERS), since GitHub reads the merged file, not this working
+    tree's. Empty, and no API call made, where no owner was set."""
     from .. import codeowners, protection
-    path = codeowners.location(root)
-    try:
-        owned = codeowners.owned((root / path).read_text()) if (root / path).is_file() else {}
-    except (OSError, UnicodeDecodeError):
-        owned = {}
-    if not owned:
-        return ""
-    owner = sorted({o for names in owned.values() for o in names})[0]
-    state, why = protection.check(list(owned), path.as_posix(), owner)
-    mark = {protection.ENFORCED: "✓", protection.NOT_ENFORCED: "!"}.get(state, "•")
-    return f"\n{mark} owner-approved paths ({', '.join(owned)}): {state}. {why}"
+    owner, paths = cfg.get("owner"), codeowners.owner_paths(cfg.get("owned", []))
+    if not owner:
+        path = root / codeowners.location(root)
+        try:
+            block = codeowners.owned(path.read_bytes().decode("utf-8")) if path.is_file() else {}
+        except (OSError, UnicodeDecodeError, codeowners.MalformedBlockError) as e:
+            return f"\n! owner-approved paths: not enforced. {path.name} cannot be read as okl wrote it ({e})"
+        if not block:
+            return ""
+        names = sorted({o for found in block.values() for o in found})
+        if not names:
+            # A hand edit left okl's block with paths and no owner: say so, never a traceback.
+            return (f"\n! owner-approved paths ({', '.join(block)}): not enforced. okl's block in {path.name} "
+                    "names no owner; `okl init --owner @you` writes it again")
+        owner, paths = names[0], list(block)
+    verdict = protection.check(paths, owner)
+    mark = {protection.ENFORCED: "✓", protection.NOT_ENFORCED: "!"}.get(verdict.state, "•")
+    lines = [f"\n{mark} owner-approved paths for {owner}: {verdict.state}. {verdict.why}"]
+    for p, found in verdict.owners.items():
+        held = ("a glob in CODEOWNERS may own it" if found is None
+                else f"owned by {' '.join(found)}" if found else "no owner")
+        lines.append(f"    {p}: {held}")
+    return "\n".join(lines)
 
 
 def _git_hook_state(root: Path) -> str:
