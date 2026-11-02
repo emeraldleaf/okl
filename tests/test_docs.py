@@ -451,3 +451,14 @@ def test_the_readme_headline_is_the_thesis_claim():
     headline = re.search(r"^\*\*(.+?)\*\*<br>$", (ROOT / "README.md").read_text(), re.M).group(1)
     claim = (ROOT / "docs" / "THESIS.md").read_text().split("## The claim", 1)[1]
     assert re.search(r"^\*\*(.+?)\*\*$", claim, re.M).group(1) == headline
+
+
+def test_the_from_scratch_guide_states_verifys_default_timeout():
+    """docs/FROM-SCRATCH.md tells a reader how long `okl verify` gives a check; when the parser's
+    default moves, the guide must move with it (review on #332: it once said 120 for 600)."""
+    import argparse
+
+    from okl.cli.parser import build_parser
+    sub = next(a for a in build_parser()._actions if isinstance(a, argparse._SubParsersAction))
+    default = sub.choices["verify"].get_default("timeout")
+    assert f"{default} seconds by default" in _flat("docs/FROM-SCRATCH.md")

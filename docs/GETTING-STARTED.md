@@ -9,6 +9,8 @@ This guide gets you from nothing to that loop working, then shows the two habits
 it pay off: **adding to the canon as you build a feature**, and **putting your docs in the
 canon so they cannot drift silently**. Every command here was run, in this order, in a fresh
 repository. The running example is a small service called `shop`.
+Starting from an empty folder instead, with no CI, linters or tests yet? [Set up a repository
+from scratch](FROM-SCRATCH.md) builds those first, for Python, .NET or TypeScript.
 
 ---
 

@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **A guide to setting up a repository from scratch** (#330), `docs/FROM-SCRATCH.md`. For Python,
+  .NET and TypeScript it covers:
+  - pinned versions and a CI that gates format, lint, types, tests, architecture rules and a
+    dependency audit, with SonarQube;
+  - tests that make good lesson checks, and code shaped so lessons can watch it;
+  - wiring, seeding, companion tools, and how to prompt so the briefing finds what you need.
+  Every gate and lesson check in it was run on a scratch repository per stack (Python 3.14 via
+  uv, .NET SDK 10.0.102, Node 22.22 with pnpm 11.3); the CI workflows and SonarQube steps were
+  not.
+
 - **The briefing marks the lessons no check backs** (#222). Only lessons whose governed files
   are in the checkout were marked (*STALE*, *UNVERIFIED*, *UNPROVEN*), so every other lesson
   was briefed exactly like a proven one. In okl's own store that was 139 of 155. A lesson that
