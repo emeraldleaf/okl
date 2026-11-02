@@ -116,6 +116,12 @@ That is expected; see CONTRIBUTING.
   push. The PR bot no longer reviews automatically (`.coderabbit.yaml`): every push spent a
   review, and the allowance fell to one an hour. Ask for a PR review with
   `@coderabbitai review` when a second look on the PR itself is worth the wait.
+- **Sweep every few merges.** Changes that went in without a CLI review (docs, figures,
+  small fixes) get one batched review on an up-to-date `main`:
+  `coderabbit review --committed --base-commit <the commit the last sweep ended at>`. One
+  review covers them all and uses one review of the CLI's hourly allowance. Generated files
+  (receipts, renders, the drift snapshot) are left out by `.coderabbit.yaml`. Fix what it
+  finds in one follow-up PR.
 - **Get an independent review for risky changes:** hooks, retrieval, storage, anything
   that fails open. Ask a reviewer, human or agent, to try to break the change. Several
   real bugs in this repo were found that way before review bots saw them. Different
@@ -134,23 +140,25 @@ That is expected; see CONTRIBUTING.
    Fix each alert, or dismiss it with a reason, before the release. Nothing else surfaces
    them: CI, the reviews and drift all stay green while an alert is open. Six sat for a day
    in October 2026 and were noticed only because a `git push` printed them (#285).
-2. **On a `release-X.Y.Z` branch,** set the version in `pyproject.toml`, in `server.json`
+2. **Sweep what merged since the last sweep** with the CodeRabbit CLI, as above, so every
+   change in the release has had at least one review. Fix what it finds first.
+3. **On a `release-X.Y.Z` branch,** set the version in `pyproject.toml`, in `server.json`
    (twice), in `.claude-plugin/plugin.json` and in `docs/GETTING-STARTED.md` (twice).
    Rename the CHANGELOG's `## Unreleased` to `## X.Y.Z`. Run `uv lock`, so the lockfile's own
    version follows (CI's `uv lock --check` fails otherwise). Reinstall the editable package so
    the version test passes: `pip install --no-deps -e .`.
-3. **Commit, re-verify, open the PR, merge.**
-4. **Tag the merge commit:**
+4. **Commit, re-verify, open the PR, merge.**
+5. **Tag the merge commit:**
    `gh release create vX.Y.Z --target <sha> --title "okl X.Y.Z" --notes-file <that CHANGELOG section>`.
    The tag starts `publish.yml`. It builds, checks that the tag matches `pyproject.toml`,
    then waits at the `pypi` environment for the maintainer's approval.
-5. **Publish to the MCP Registry** from the repo, in a regular terminal (it asks for a
+6. **Publish to the MCP Registry** from the repo, in a regular terminal (it asks for a
    GitHub device code): `mcp-publisher login github && mcp-publisher publish`.
-6. **Check what was published.** PyPI should list the version. Then launch the server the
+7. **Check what was published.** PyPI should list the version. Then launch the server the
    way a registry client would,
    `uvx --with 'mcp>=1.2' observed-knowledge-ledger==X.Y.Z mcp`, and confirm it answers
    `initialize` with `serverInfo.version` X.Y.Z and lists its tools.
-7. **If the hooks changed,** refresh them in repos set up with `okl init`: run
+8. **If the hooks changed,** refresh them in repos set up with `okl init`: run
    `okl init --repo <name> --no-seed`, or copy the scaffold hook byte for byte. Then
    update the website's okl page.
 

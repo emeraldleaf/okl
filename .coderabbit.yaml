@@ -5,3 +5,9 @@
 reviews:
   auto_review:
     enabled: false
+  # Generated files: eval receipts and patches, image renders and the drift snapshot. Their
+  # content is checked by tests and gates, and reading them spends a review on noise.
+  path_filters:
+    - "!evals/results/**"
+    - "!**/*.png"
+    - "!okl-drift.json"
