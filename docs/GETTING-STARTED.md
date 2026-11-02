@@ -406,7 +406,7 @@ okl-drift:
   image: python:3.13
   variables:
     GIT_DEPTH: 0
-    OKL_VERSION: "0.10.0"   # the version you run locally
+    OKL_VERSION: "0.11.0"   # the version you run locally
   script:
     - pip install "observed-knowledge-ledger==$OKL_VERSION"
     - okl drift --gate --snapshot okl-drift.json
@@ -422,7 +422,7 @@ steps:
     inputs:
       versionSpec: "3.13"
   - script: |
-      pip install "observed-knowledge-ledger==0.10.0"
+      pip install "observed-knowledge-ledger==0.11.0"
       okl drift --gate --snapshot okl-drift.json
     displayName: okl drift gate
 ```

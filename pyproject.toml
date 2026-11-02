@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 # Distribution name only. The CLI command, the import package, and the repo are all `okl`;
 # PyPI rejects `okl` as too similar to the existing `oki` (l/i are treated as confusable).
 name = "observed-knowledge-ledger"
-version = "0.10.0"
+version = "0.11.0"
 description = "Observed Knowledge Ledger. Keeps your coding agent true to your rules, specs and docs. Keeps them true to the code. Keeps learning as you build."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -49,12 +49,13 @@ dev = [
   # that changed nothing, which is a recorded defect in this repo's own store.
   # Verified against PyPI and run green here on 2026-09-02, rather than a
   # plausible-looking guess: an invented version 404s the install step.
-  # ruff and mypy moved to the versions Dependabot proposed in #139, run green here
-  # on 2026-10-10.
+  # mypy moved to the version Dependabot proposed in #139, run green here on 2026-10-10;
+  # pytest 9.2.0 and ruff 0.17.3 (Dependabot's #313, applied in #338) on 2026-11-02.
   "pytest==9.2.0", "pytest-cov==7.1.0", "ruff==0.17.3", "mypy==2.4.0",
   "import-linter==2.15",  # verified on PyPI 2026-10-04 (released 2026-09-04)
   # CI runs `uv lock --check`: uv.lock is what `uv sync` builds, and it drifted from this
-  # file for weeks with nothing reading it (#285). Verified on PyPI 2026-10-25.
+  # file for weeks with nothing reading it (#285). 0.13.6 installed and run green in CI
+  # on 2026-11-02 (#338).
   "uv==0.13.6",
   "fastapi>=0.110", "uvicorn>=0.54.0", "pydantic>=2.14.1", "httpx>=0.28.1",
   # The service tests use Starlette's TestClient. Starlette 1.2.0 (2026-05-28) moved it to

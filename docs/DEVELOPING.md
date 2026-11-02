@@ -161,7 +161,8 @@ That is expected; see CONTRIBUTING.
 8. **Refresh the repos set up with `okl init`:** run `okl init --repo <name> --no-seed` in
    each, after reinstalling okl at the new release. It refreshes any hooks that changed, and in
    a repo with okl's CI workflow it moves `.github/okl-version`, so CI installs the new release;
-   commit that. Then update the website's okl page.
+   commit that. Where init says the kept workflow does not read the file, it predates 0.11.0:
+   `okl init --force` replaces it (and any other edited okl file), then pins. Then update the website's okl page.
 
 ## Evaluations
 
