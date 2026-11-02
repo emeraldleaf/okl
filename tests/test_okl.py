@@ -1076,6 +1076,28 @@ def test_init_dry_run_writes_nothing(tmp_path, monkeypatch, capsys):
     assert not (tmp_path / ".okl").exists()
     assert not (tmp_path / ".github").exists()
 
+def test_init_dry_run_names_the_interests_init_would_keep(tmp_path, monkeypatch, capsys):
+    """A config that records interests keeps them: init detects only for one with none. The dry
+    run said detected stacks would replace them (#340), and lists the MCP launcher init installs."""
+    import argparse
+    import json
+
+    from okl.cli.install import cmd_init
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".claude").mkdir(); (tmp_path / ".git").mkdir()
+    (tmp_path / "pyproject.toml").write_text('[project]\nname = "s"\n')
+    (tmp_path / ".okl").mkdir()
+    (tmp_path / ".okl" / "config.json").write_text(json.dumps({"repo": "demo", "interests": ["python-rag", "eval-integrity"]}))
+    args = argparse.Namespace(repo="demo", service=None, interests=None, dry_run=True)
+
+    assert cmd_init(args) == 0
+
+    out = capsys.readouterr().out
+    assert "(interests kept: python-rag, eval-integrity; --interests replaces them)" in out, out
+    assert "would be set from it" not in out
+    assert ".claude/hooks/okl-mcp.sh" in out
+
+
 def test_actions_format_fits_a_small_context_budget(store):
     """A subagent working in a few thousand tokens cannot afford the full briefing.
     The compact format must carry the imperative content at a fraction of the size,

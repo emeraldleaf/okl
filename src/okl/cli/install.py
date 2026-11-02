@@ -404,14 +404,19 @@ def _init_dry_run(args: argparse.Namespace) -> int:
         print("  .claude/hooks/userpromptsubmit-okl-check.sh   executable; runs when you submit a task")
         print("  .claude/hooks/stop-okl-encode.sh             executable; runs when a session ends")
         print("  .claude/settings.json                   registers those two hooks (merged, existing keys kept)")
-        print("  .mcp.json                               registers the okl MCP server (only if the [mcp] extra is installed)")
+        print("  .claude/hooks/okl-mcp.sh                     executable; starts the okl MCP server the way the hooks do")
+        print("  .mcp.json                               registers the okl MCP server (both only if the [mcp] extra is installed)")
     elif why:
         print(f"  (no Claude Code hooks: {why})")
     else:
         print("  (no .claude/ here and Claude Code not found, so no hooks; `--claude` installs them anyway)")
     _dry_run_drift_gates(args)
+    recorded = load_config().get("interests")
     if args.interests:
         print(f"  (interests: {args.interests})")
+    elif recorded:
+        # As _init_interests decides: detection only fills a config that has none (#340).
+        print(f"  (interests kept: {', '.join(recorded)}; --interests replaces them)")
     else:
         stacks = _detect_stacks(Path.cwd())
         print("  (detected: " + (", ".join(f"{t} from {f}" for t, f in stacks) or "no known stack")
