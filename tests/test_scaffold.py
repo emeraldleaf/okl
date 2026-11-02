@@ -134,6 +134,53 @@ def test_retractions_gate_fails_on_restatement(tmp_path):
     assert r.returncode != 0
 
 
+@pytest.mark.parametrize("gate,entry,registry,offence", [
+    ("check-tombstones.sh", "dead_id_v1\tstray\t2026-07\n", "tombstones.txt", "we still import dead_id_v1 here\n"),
+    ("check-retractions.sh", '\n### R1\n- **Retracted:** "the widget is threadsafe"\n', "RETRACTIONS.md",
+     'Note: "the widget is threadsafe" so we skip locks.\n'),
+])
+def test_tombstone_and_retraction_gates_read_the_committed_tree(tmp_path, gate, entry, registry, offence):
+    """#352: both gates grepped the working tree, so an uncommitted edit passed or failed a local
+    run that CI, on a clean checkout, would answer the other way. In a git repository they now
+    read what HEAD holds, the registry included; the tests above cover the files-on-disk fallback.
+    """
+    if shutil_which("git") is None:
+        pytest.skip("git not available")
+    local = subprocess.run(["git", "rev-parse", "--local-env-vars"], capture_output=True, text=True).stdout.split()
+    env = {**{k: v for k, v in os.environ.items() if k not in local},
+           "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t"}
+    def git(*a):
+        return subprocess.run(["git", "-C", str(tmp_path), *a], capture_output=True, text=True, check=True, env=env)
+    def run():
+        return subprocess.run(["bash", f"gates/{gate}"], cwd=tmp_path, capture_output=True, text=True, env=env)
+    # ARRANGE — a scaffolded repo whose committed registry names one retired thing
+    scaffold(target=str(tmp_path), repo="r", claude_dir="dotclaude")
+    reg = tmp_path / "registries" / registry
+    reg.write_text(reg.read_text() + entry)
+    (tmp_path / "docs").mkdir(exist_ok=True)
+    doc = tmp_path / "docs" / "guide.md"; doc.write_text("clean\n")
+    git("init", "-q"); git("add", "-A"); git("commit", "-qm", "init")
+    assert run().returncode == 0, run().stdout
+
+    # An offence only in the working tree, tracked or untracked, is not the repo's: it passes.
+    doc.write_text(offence)
+    (tmp_path / "docs" / "scratch.md").write_text(offence)
+    assert run().returncode == 0, run().stdout
+    # Committed, it fails, and undoing it on disk alone does not pass.
+    git("add", "docs/guide.md"); git("commit", "-qm", "restate it")
+    assert run().returncode == 1
+    doc.write_text("clean\n")
+    assert run().returncode == 1
+    # The registry is read from HEAD as well: an uncommitted entry for committed text does not apply.
+    git("commit", "-qam", "fix it")
+    (tmp_path / "docs" / "scratch.md").unlink()
+    reg.write_text(reg.read_text() + entry.replace("dead_id_v1", "clean").replace("the widget is threadsafe",
+                                                                                 "clean and also long enough"))
+    doc.write_text("clean and also long enough\n")
+    git("add", "docs/guide.md"); git("commit", "-qm", "text only the uncommitted registry names")
+    assert run().returncode == 0, run().stdout
+
+
 def test_clean_repo_gates_pass(tmp_path):
     """The other half of verify-by-making-it-fail: the gates must also go GREEN.
 
