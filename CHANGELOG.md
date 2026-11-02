@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.12.0
 
 - **`okl init --owner @you`, and `okl doctor` saying whether GitHub enforces it** (#329, part A).
   With a branch rule that requires code-owner review, which you set up, each change to the
