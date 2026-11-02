@@ -257,8 +257,8 @@ it is worth knowing which one catches what, because they do not overlap.
 | Drift | Caught by | How it works | Fires when |
 |---|---|---|---|
 | **A rule vs. the code it governs** | `okl drift --gate` | a record declares the path globs it governs, and `okl verify` records the commit its check passed at | those files differ between that commit and HEAD (a verification with no recorded commit, or one this clone lacks, compares commit times instead) — or the rule has never been verified at all, so a new `--files` rule is red until its first `okl verify` — or its stamp has no observed check behind it |
-| **A retired identifier reappearing in prose** | `check-tombstones.sh` | greps the working tree's source, docs, comments and config for every tombstoned name | any non-allowlisted hit |
-| **A withdrawn claim being restated** | `check-retractions.sh` | greps the working tree's markdown for the exact quoted claim from the retraction registry | the quote appears outside the registry |
+| **A retired identifier reappearing in prose** | `check-tombstones.sh` | greps the committed source, docs, comments and config (the files on disk, outside a git repo) for every tombstoned name | any non-allowlisted hit |
+| **A withdrawn claim being restated** | `check-retractions.sh` | greps the committed markdown for the exact quoted claim from the retraction registry | the quote appears outside the registry |
 | **A doc nobody links to** | `check-doc-orphans.sh` | checks that each top-level `docs/` doc or image is named by a hub file or a `docs/*.md` (one hop, not transitive) | nothing names it, so it drifts unread |
 | **A link pointing at a file that moved** | `check-links.sh` | reads every markdown file listed by `git ls-files` and checks each local link's target exists in the working tree | the target does not exist |
 | **A diagram source with no rendered image** | `check-diagram-pairs.sh` | pairs each editable source with its export; format-agnostic via `OKL_DIAGRAM_SRC_EXT`/`OUT_EXT` | reviewers would see nothing. A hand-authored image with no source is noted, never failed, and a repo with no diagram sources is a clean no-op |
@@ -280,7 +280,8 @@ Three honest limits on that table:
 - **`okl drift` only watches what a record claims.** A file no record governs is not
   watched by anything. Coverage is a curation decision, and the gap is invisible until
   something breaks — which is why the mechanical gates above scan the whole repo (the
-  tombstone and retraction gates grep the working tree) rather than only what is enrolled.
+  tombstone and retraction gates grep every committed file of their kinds) rather than only
+  what is enrolled.
 
 
 ## How okl differs
