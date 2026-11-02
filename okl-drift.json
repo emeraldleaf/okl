@@ -8,9 +8,9 @@
       "title": "The README's stated check defaults (limit 12; formats agent, actions, json, hook) match the code",
       "scope": "repo:okl",
       "files": "README.md,src/okl/core.py,src/okl/cli/,src/okl/client.py,src/okl/service.py,src/okl/mcp_server.py",
-      "verified_at": 1793627924992,
-      "verified_by": "`python3 ci/check-check-defaults.py` exit 0, matched 'CHECK DEFAULTS MATCH' on commit d55c1ca30b8a @ 2026-11-02T13:58Z",
-      "verified_commit": "d55c1ca30b8a20eb0334cb4b3d3f5966b5fa30b6"
+      "verified_at": 1793628164151,
+      "verified_by": "`python3 ci/check-check-defaults.py` exit 0, matched 'CHECK DEFAULTS MATCH' on commit f7d9e02a1fc5 @ 2026-11-02T14:02Z",
+      "verified_commit": "f7d9e02a1fc52460f30472b851e085e3c73f573c"
     },
     {
       "id": "doc-init-flags",
@@ -18,9 +18,9 @@
       "title": "Every okl init flag the README and guide document exists in the CLI",
       "scope": "repo:okl",
       "files": "README.md,docs/GETTING-STARTED.md,docs/FROM-SCRATCH.md,src/okl/cli/",
-      "verified_at": 1793627925140,
-      "verified_by": "`PYTHONPATH=src python3 ci/check-init-flags.py` exit 0, matched 'INIT FLAGS EXIST' on commit d55c1ca30b8a @ 2026-11-02T13:58Z",
-      "verified_commit": "d55c1ca30b8a20eb0334cb4b3d3f5966b5fa30b6"
+      "verified_at": 1793628164306,
+      "verified_by": "`PYTHONPATH=src python3 ci/check-init-flags.py` exit 0, matched 'INIT FLAGS EXIST' on commit f7d9e02a1fc5 @ 2026-11-02T14:02Z",
+      "verified_commit": "f7d9e02a1fc52460f30472b851e085e3c73f573c"
     },
     {
       "id": "doc-install-name",
@@ -38,9 +38,9 @@
       "title": "The docs' claim that okl record --verified is refused is true",
       "scope": "repo:okl",
       "files": "README.md,docs/GETTING-STARTED.md,src/okl/cli/",
-      "verified_at": 1793627924792,
-      "verified_by": "`R=$PWD; d=$(mktemp -d) && cd $d && git init -q && env -u OKL_DATABASE_URL -u OKL_SERVICE_URL PYTHONPATH=$R/src python3 -m okl init --repo z --no-claude >/dev/null 2>&1; env -u OKL_DATABASE_URL -u OKL_SERVICE_URL PYTHONPATH=$R/src python3 -m okl record --type Rule --scope repo --title x --verified >/dev/null 2>&1; rc=$?; cd $R; rm -rf $d; [ $rc -eq 2 ] && python3 -c \"import sys; t=lambda f: \\\" \\\".join(open(f).read().split()); sys.exit(0 if \\\"exits 2\\\" in t(\\\"README.md\\\") and \\\"okl record --verified\\` is refused\\\" in t(\\\"docs/GETTING-STARTED.md\\\") else 1)\" && echo VERIFIED FLAG REFUSED` exit 0, matched 'VERIFIED FLAG REFUSED' on commit d55c1ca30b8a @ 2026-11-02T13:58Z",
-      "verified_commit": "d55c1ca30b8a20eb0334cb4b3d3f5966b5fa30b6"
+      "verified_at": 1793628163931,
+      "verified_by": "`R=$PWD; d=$(mktemp -d) && cd $d && git init -q && env -u OKL_DATABASE_URL -u OKL_SERVICE_URL PYTHONPATH=$R/src python3 -m okl init --repo z --no-claude >/dev/null 2>&1; env -u OKL_DATABASE_URL -u OKL_SERVICE_URL PYTHONPATH=$R/src python3 -m okl record --type Rule --scope repo --title x --verified >/dev/null 2>&1; rc=$?; cd $R; rm -rf $d; [ $rc -eq 2 ] && python3 -c \"import sys; t=lambda f: \\\" \\\".join(open(f).read().split()); sys.exit(0 if \\\"exits 2\\\" in t(\\\"README.md\\\") and \\\"okl record --verified\\` is refused\\\" in t(\\\"docs/GETTING-STARTED.md\\\") else 1)\" && echo VERIFIED FLAG REFUSED` exit 0, matched 'VERIFIED FLAG REFUSED' on commit f7d9e02a1fc5 @ 2026-11-02T14:02Z",
+      "verified_commit": "f7d9e02a1fc52460f30472b851e085e3c73f573c"
     },
     {
       "id": "docs-agent-neutral",
@@ -68,9 +68,9 @@
       "title": "A test that imports an undeclared package passes only where that package happens to be installed",
       "scope": "org",
       "files": "tests/,pyproject.toml,.github/workflows/ci.yml",
-      "verified_at": 1793627925700,
-      "verified_by": "`python3 ci/check-test-imports.py` exit 0, matched 'NO UNDECLARED IMPORT' on commit d55c1ca30b8a @ 2026-11-02T13:58Z",
-      "verified_commit": "d55c1ca30b8a20eb0334cb4b3d3f5966b5fa30b6"
+      "verified_at": 1793628164788,
+      "verified_by": "`python3 ci/check-test-imports.py` exit 0, matched 'NO UNDECLARED IMPORT' on commit f7d9e02a1fc5 @ 2026-11-02T14:02Z",
+      "verified_commit": "f7d9e02a1fc52460f30472b851e085e3c73f573c"
     },
     {
       "id": "n_9ba48d85ed19",
