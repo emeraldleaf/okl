@@ -1,0 +1,14 @@
+diff --git a/README.md b/README.md
+index 289c5ce..48ebbe6 100644
+--- a/README.md
++++ b/README.md
+@@ -279,7 +279,8 @@ Three honest limits on that table:
+ ## How okl differs
+ 
+ - **From memory layers** (mem0, Zep, Letta, the Claude Code memory plugins): they recall what
+-  the agent experienced; okl keeps what must stay true, and proves it with a check you chose.
++  the agent experienced; okl replaces them with better recall of everything the agent
++  experienced, so you no longer need a separate memory tool.
+ - **From rules files** (`CLAUDE.md`, `AGENTS.md`): a briefing selects the few lessons that
+   match the task; a rules file loads whole, every time, and nothing re-checks it.
+ - **From instruction-file linters**: they check that a path or command a rules file names still

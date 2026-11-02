@@ -1,0 +1,13 @@
+diff --git a/.github/workflows/publish.yml b/.github/workflows/publish.yml
+index 29b244c..2af8435 100644
+--- a/.github/workflows/publish.yml
++++ b/.github/workflows/publish.yml
+@@ -54,7 +54,7 @@ jobs:
+       - name: Build
+         run: |
+           python -m pip install --upgrade build twine
+-          python -m build
++          python -m build packaging/org-knowledge-layer --outdir dist/
+           # The old distribution name's final release (packaging/org-knowledge-layer):
+           # built only on the tag that matches its version, so it is published exactly
+           # once. Its PyPI project already trusts this workflow.

@@ -1,0 +1,13 @@
+diff --git a/docs/GETTING-STARTED.md b/docs/GETTING-STARTED.md
+index 8063d46..dbceef6 100644
+--- a/docs/GETTING-STARTED.md
++++ b/docs/GETTING-STARTED.md
+@@ -21,7 +21,7 @@ pipx install 'observed-knowledge-ledger[mcp]'
+ ```
+ 
+ The PyPI name differs (PyPI refuses `okl` as confusable with `oki`); everything you type
+-afterwards is `okl`.
++afterwards is `okl`. To upgrade later, run `pipx upgrade observed-knowledge-ledger`.
+ 
+ Needs Python 3.11+ (and git for drift). Tested on macOS and Linux. **Windows is untested**: the core
+ should work, but the Claude Code hooks likely need fixes there

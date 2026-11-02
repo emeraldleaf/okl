@@ -1,0 +1,13 @@
+diff --git a/src/okl/core.py b/src/okl/core.py
+index 02aeda9..449e285 100644
+--- a/src/okl/core.py
++++ b/src/okl/core.py
+@@ -163,7 +163,7 @@ COMMON_WORD_SHARE: float | None = 0.05
+ COMMON_WORD_MIN_RECORDS = 5
+ 
+ 
+-def check(store: Store, repo: str, task: str, limit: int = 12,
++def check(store: Store, repo: str, task: str, limit: int = 8,
+           interests: list[str] | None = None, *, hybrid: str | None = None,
+           index: bool = False, near_misses: bool = False, rerank: bool = False,
+           decision: str = decide.DEFAULT, warm: bool | None = False) -> dict[str, Any]:

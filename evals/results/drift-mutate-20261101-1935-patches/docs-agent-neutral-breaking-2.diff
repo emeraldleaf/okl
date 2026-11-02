@@ -1,0 +1,13 @@
+diff --git a/docs/SCAFFOLD.md b/docs/SCAFFOLD.md
+index 43f90aa..18b7961 100644
+--- a/docs/SCAFFOLD.md
++++ b/docs/SCAFFOLD.md
+@@ -8,7 +8,7 @@ rather than accumulating them by hand:
+ 
+ ```bash
+ okl scaffold .                 # stamp the starter files into the current repo
+-okl scaffold . --plugin        # also emit a Claude Code plugin manifest
++okl scaffold . --plugin        # also emit a plugin manifest
+ okl scaffold new-repo --profile python-rag --profile react   # include stack rule packs
+ ```
+ 

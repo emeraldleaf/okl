@@ -1,0 +1,13 @@
+diff --git a/seed/python-canon.json b/seed/python-canon.json
+index 1bf19a7..67a1bc7 100644
+--- a/seed/python-canon.json
++++ b/seed/python-canon.json
+@@ -35,7 +35,7 @@
+     },
+     {
+       "key": "py_comments_why",
+-      "aliases": ["comment restates the code", "obvious comment", "why not what", "uncommented tricky line", "commenting style"],
++      "aliases": ["comment restates the code", "obvious comment", "why not what", "uncommented tricky line", "commenting style", "stale comment"],
+       "triggers": ["Reviewing a PR full of comments that just restate each line of code", "Writing a tricky workaround for a library bug and deciding what to leave in the code", "Cleaning up comments in an old module before onboarding a new teammate", "Adding explanation to a non-obvious retry loop someone will question in review", "Comment says increment counter right above the line that increments the counter", "This weird line has no explanation and nobody remembers why it's there", "Comments are out of date and contradict what the code actually does now", "Code comments explaining intent and rationale rather than mechanics", "Noise comments, redundant comments, stale inline comments", "Commenting guidelines: what versus why, and self-documenting code"],
+       "type": "Rule",
+       "scope": "org",

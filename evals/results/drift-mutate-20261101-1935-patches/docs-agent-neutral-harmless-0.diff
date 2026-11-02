@@ -1,0 +1,13 @@
+diff --git a/README.md b/README.md
+index 289c5ce..4cefe81 100644
+--- a/README.md
++++ b/README.md
+@@ -556,7 +556,7 @@ The same holds for a main session on a model with a small context window, where
+ briefing arrives with every prompt. Set `OKL_BRIEFING_COMPACT=1` and the Claude Code prompt hook sends
+ only the action list (`okl check --compact`); set `OKL_BRIEFING_LIMIT=3` and it shows three
+ records and names three more, instead of five and twelve. Together that is ~350 tokens instead of ~1,390 on the
+-measurement above. Set them where the agent starts: hooks inherit its environment. A
++measurement above. Set them where the agent starts, since hooks inherit its environment. A
+ limit that is not a whole number above zero is ignored, and an okl too old for
+ `--compact` briefs in full rather than blocking the prompt. Like `--format actions`, the
+ compact briefing does not say how many records it trimmed.

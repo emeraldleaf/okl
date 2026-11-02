@@ -1,0 +1,20 @@
+diff --git a/tests/test_aliases.py b/tests/test_aliases.py
+index f905e4f..a4f2538 100644
+--- a/tests/test_aliases.py
++++ b/tests/test_aliases.py
+@@ -71,3 +71,15 @@ def test_a_seed_pack_may_write_aliases_as_a_list(tmp_path):
+     assert r.returncode == 0, r.stdout + r.stderr
+     shown = json.loads(_okl(tmp_path, "show", "seed:my-pack:a", "--format", "json").stdout)
+     assert shown["aliases"] == "logged out on refresh; session lost"
++
++
++def test_blank_aliases_in_a_list_are_dropped():
++    """Blank entries in an `aliases` list are not stored as empty segments."""
++    from okl import core
++    from okl.store import Store
++    s = Store("sqlite:///:memory:")
++    try:
++        a = core.record(s, type="Rule", title="t", scope="org", aliases=["session lost", "  ", ""])
++        assert s.get_node(a).aliases == "session lost"
++    finally:
++        s.close()

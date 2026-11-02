@@ -1,1 +1,2 @@
 - [Review findings log](review_findings_log.md) — recurring finding classes with counts; promote to a gate at 3
+- [Harness transcripts](reference_harness_transcripts.md) — where drift_mutate's breaker/judge sessions live; time-outs save nothing; gitStatus cut at 2k chars

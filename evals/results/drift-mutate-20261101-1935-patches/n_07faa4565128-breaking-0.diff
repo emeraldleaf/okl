@@ -1,0 +1,13 @@
+diff --git a/src/okl/scaffold/claude/commands/record.md b/src/okl/scaffold/claude/commands/record.md
+index 6710434..d03d2a0 100644
+--- a/src/okl/scaffold/claude/commands/record.md
++++ b/src/okl/scaffold/claude/commands/record.md
+@@ -33,7 +33,7 @@ Then fill in, from evidence in this session only:
+   said. A lesson is briefed only when a prompt shares three subject words (or two rare ones)
+   with its title, symptom, aliases and triggers, so one without triggers is easy to miss.
+ - **tags** — only from the vocabulary `okl_record` names; omit if none fits.
+-- **applies_to** — leave unset. Only set it if the lesson is *false* off one stack.
++- **applies_to** — set it to the stack the session was working in (e.g. `python`, `react`).
+ 
+ Do not invent a cause, a number or a file you have not seen in this session.
+ 

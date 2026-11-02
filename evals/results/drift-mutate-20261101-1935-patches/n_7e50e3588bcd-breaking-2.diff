@@ -1,0 +1,22 @@
+diff --git a/tests/test_docs.py b/tests/test_docs.py
+index 7158f29..2d80b4d 100644
+--- a/tests/test_docs.py
++++ b/tests/test_docs.py
+@@ -14,6 +14,8 @@ import subprocess
+ from collections import Counter
+ from pathlib import Path
+ 
++import yaml
++
+ ROOT = Path(__file__).resolve().parents[1]
+ 
+ 
+@@ -26,7 +28,7 @@ def _seed_counts() -> tuple[int, Counter[str]]:
+     """How many records the bundled seed packs hold, in total and by type."""
+     total, types = 0, Counter[str]()
+     for pack in sorted((ROOT / "seed").glob("*.json")):
+-        data = json.loads(pack.read_text())
++        data = yaml.safe_load(pack.read_text())
+         nodes = data["nodes"] if isinstance(data, dict) else data
+         total += len(nodes)
+         types.update(n["type"] for n in nodes)

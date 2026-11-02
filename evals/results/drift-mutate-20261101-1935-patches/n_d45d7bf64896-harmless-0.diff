@@ -1,0 +1,12 @@
+diff --git a/docs/GETTING-STARTED.md b/docs/GETTING-STARTED.md
+index 8063d46..b308cae 100644
+--- a/docs/GETTING-STARTED.md
++++ b/docs/GETTING-STARTED.md
+@@ -484,6 +484,7 @@ a CI gate as well.
+ | A briefed lesson is marked *UNCHECKED* | no observed check backs it and drift has no verdict on it: it governs no files here, and was never verified or carries a stamp with no `okl verify` run behind it (a lesson that governs files here is marked *UNVERIFIED* or *UNPROVEN* instead) | give it a check with `okl verify <id> --run …`; if code should gate it, first name the files with `okl update <id> --files …`; until then the agent treats it as advice |
+ | `okl drift` lists lessons "last verified on a commit outside this branch's history" | one local store serves every branch, and those lessons were checked on another one | `okl reverify` re-checks them on this branch; until then their evidence depends on that branch still existing |
+ | Every lesson is drifted in CI, but `okl drift` is clean locally | the CI checkout is shallow, so every file looks freshly changed | fetch full history (section 4) |
++| `okl reverify` says "no stored check" for a lesson | the lesson was recorded without `--run`, so there is nothing to re-run | add one with `okl verify <id> --run …` |
+ 
+ More: the [README](../README.md) covers costs, scopes, the shared service and the MCP tools;
+ [DEPLOY](DEPLOY.md) covers running a shared store for a team.

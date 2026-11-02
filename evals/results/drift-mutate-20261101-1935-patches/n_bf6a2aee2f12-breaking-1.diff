@@ -1,0 +1,12 @@
+diff --git a/.github/workflows/publish.yml b/.github/workflows/publish.yml
+index 29b244c..f7124bb 100644
+--- a/.github/workflows/publish.yml
++++ b/.github/workflows/publish.yml
+@@ -21,7 +21,6 @@ name: publish
+ on:
+   push:
+     tags: ["v*"]
+-
+ permissions:
+   contents: read
+ 

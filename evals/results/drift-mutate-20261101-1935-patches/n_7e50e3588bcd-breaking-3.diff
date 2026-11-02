@@ -1,0 +1,16 @@
+diff --git a/tests/test_scaffold.py b/tests/test_scaffold.py
+index 7fe091c..fbae48c 100644
+--- a/tests/test_scaffold.py
++++ b/tests/test_scaffold.py
+@@ -17,10 +17,10 @@ import re
+ import subprocess
+ import sys
+ import tempfile
+-import tomllib
+ from pathlib import Path
+ 
+ import pytest
++import tomli as tomllib
+ 
+ from okl.scaffold_cmd import scaffold
+ 

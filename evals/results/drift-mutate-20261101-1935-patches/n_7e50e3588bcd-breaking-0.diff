@@ -1,0 +1,13 @@
+diff --git a/pyproject.toml b/pyproject.toml
+index b93afec..9ec7bf3 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -56,7 +56,7 @@ dev = [
+   # CI runs `uv lock --check`: uv.lock is what `uv sync` builds, and it drifted from this
+   # file for weeks with nothing reading it (#285). Verified on PyPI 2026-10-25.
+   "uv==0.13.5",
+-  "fastapi>=0.110", "uvicorn>=0.54.0", "pydantic>=2.14.1", "httpx>=0.28.1",
++  "uvicorn>=0.54.0", "pydantic>=2.14.1", "httpx>=0.28.1",
+   # The service tests use Starlette's TestClient. Starlette 1.2.0 (2026-05-28) moved it to
+   # httpx2 (github.com/pydantic/httpx2, which Pydantic maintains as httpx's successor) and
+   # warns when it falls back to httpx; the strict pytest config turns that into failures.

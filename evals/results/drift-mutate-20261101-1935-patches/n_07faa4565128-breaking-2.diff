@@ -1,0 +1,15 @@
+diff --git a/src/okl/cli/parser.py b/src/okl/cli/parser.py
+index c15a4ac..4b9e58a 100644
+--- a/src/okl/cli/parser.py
++++ b/src/okl/cli/parser.py
+@@ -174,8 +174,8 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
+     pr.add_argument("--applies-to", dest="applies_to", default=None,
+                     help="stacks this lesson is VALID for (comma-sep), or 'any'. Leave unset "
+                          "for a portable lesson — that is the default and the common case. "
+-                         "Use it only when the lesson genuinely does not transfer, e.g. a "
+-                         "framework's middleware ordering. Distinct from --tags, which "
++                         "Set it from the stack you were working in when you found the "
++                         "lesson, e.g. a framework's middleware ordering. Distinct from --tags, which "
+                          "records subject and where the lesson was found.")
+     pr.add_argument("--tags", help="comma-sep subject tags from the controlled vocabulary "
+                     "(store.KNOWN_TAGS), e.g. 'react,security'")

@@ -1,0 +1,13 @@
+diff --git a/src/okl/store.py b/src/okl/store.py
+index a4507df..79fdc45 100644
+--- a/src/okl/store.py
++++ b/src/okl/store.py
+@@ -182,7 +182,7 @@ class Node:
+     tags: str | None = None              # comma-sep subject labels ("react,security"); orthogonal to scope
+     applies_to: str | None = None        # comma-sep stacks this lesson is VALID for; None/"any" = everywhere
+     verified_by: str | None = None       # evidence trail: the observed check that last stamped verified_at
+-    verified_commit: str | None = None   # git HEAD that check passed at; drift diffs the governed files there vs HEAD (#102)
++    verified_commit: str | None = None   # git HEAD that check passed at; drift diffs the governed files there vs HEAD (#102); None if never verified
+     id: str = field(default_factory=lambda: new_id("n"))
+     created_at: int = field(default_factory=_now_ms)
+ 
