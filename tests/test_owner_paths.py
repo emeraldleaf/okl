@@ -189,8 +189,12 @@ def test_init_owner_keeps_a_teams_file_and_uninstall_takes_out_only_okls_part(re
     (root / ".claude").mkdir()
     (root / ".claude" / "settings.json").write_text(json.dumps({"permissions": {"deny": ["Bash(rm -rf *)"]}}))
 
+    from okl.cli.install import OWNER_DENY
     assert okl("init", "--repo", "r", "--no-seed", "--claude", "--owner", "@ana", capsys=capsys)[0] == 0
-    assert (root / ".github" / "CODEOWNERS").read_text().startswith(TEAM.rstrip("\n"))
+    written = (root / ".github" / "CODEOWNERS").read_text()
+    assert written.startswith(TEAM.rstrip("\n")) and "docs/THESIS.md @ana" in written
+    deny = json.loads((root / ".claude" / "settings.json").read_text())["permissions"]["deny"]
+    assert deny == ["Bash(rm -rf *)", *OWNER_DENY]
 
     code, out = okl("init", "--uninstall", capsys=capsys)
     assert code == 0, out
