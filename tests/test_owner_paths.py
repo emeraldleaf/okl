@@ -16,6 +16,7 @@ TEAM = "# the platform team owns everything by default\n* @acme/platform\n/docs/
 
 
 def test_a_new_file_names_the_owner_for_each_path_and_itself():
+    """With no CODEOWNERS, okl writes only its block."""
     text, notes = codeowners.merge("", "@ana", ["docs/THESIS.md", ".github/CODEOWNERS"])
 
     assert notes == []
@@ -33,6 +34,7 @@ def test_an_existing_file_keeps_every_line_and_okl_goes_last():
 
 
 def test_a_path_the_team_already_owns_is_left_to_its_line_and_named():
+    """okl never rewrites a team's own line for a path; it says whose the path is."""
     text, notes = codeowners.merge(TEAM + "docs/THESIS.md @acme/leads\n", "@ana", ["docs/THESIS.md", "ADR/"])
 
     assert "docs/THESIS.md @ana" not in text
@@ -41,6 +43,7 @@ def test_a_path_the_team_already_owns_is_left_to_its_line_and_named():
 
 
 def test_a_second_run_rewrites_the_block_and_nothing_else():
+    """Idempotent: the same run twice is one block; a new owner replaces the old one."""
     once, _ = codeowners.merge(TEAM, "@ana", ["docs/THESIS.md"])
     twice, _ = codeowners.merge(once, "@ana", ["docs/THESIS.md"])
     moved, _ = codeowners.merge(once, "@ben", ["docs/THESIS.md"])
@@ -51,6 +54,7 @@ def test_a_second_run_rewrites_the_block_and_nothing_else():
 
 
 def test_remove_takes_out_okls_block_and_only_it():
+    """Uninstall leaves the team's file exactly as it was, and an okl-only file empty."""
     text, _ = codeowners.merge(TEAM, "@ana", ["docs/THESIS.md"])
 
     assert codeowners.remove(text) == TEAM
@@ -62,6 +66,7 @@ def test_remove_takes_out_okls_block_and_only_it():
     ("ana@example.com", "ana@example.com"), ("@-bad", None), ("two words", None), ("", None),
 ])
 def test_an_owner_is_one_codeowners_accepts(given, owner):
+    """A user, a team or an email; a bare name gets its @."""
     assert codeowners.normalise_owner(given) == owner
 
 
@@ -86,7 +91,7 @@ PATHS = ["docs/THESIS.md", ".github/CODEOWNERS"]
 OWNER_RULE = [{"type": "pull_request", "ruleset_id": 7, "parameters": {"require_code_owner_review": True}}]
 
 
-def _github(codeowners=LINES, errors=(), rules=(), bypass="never", classic=(404, None), viewer="WRITE",
+def _github(*, codeowners=LINES, errors=(), rules=(), bypass="never", classic=(404, None), viewer="WRITE",
             visibility="PUBLIC"):
     """A recorded GitHub: each API path okl doctor reads, and its (status, body)."""
     answers = {
@@ -127,6 +132,7 @@ def test_doctor_says_enforced_not_enforced_with_the_reason_or_unknown(github, st
 
 
 def test_doctor_says_unknown_when_gh_cannot_read_the_repo():
+    """No gh, or no login: unknown, with what to do, never a silent pass."""
     state, why = protection.check(PATHS, FILE, "@ana", get=lambda p: (None, None), repo=lambda: None)
 
     assert state == "unknown" and "gh auth login" in why
