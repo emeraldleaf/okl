@@ -2439,6 +2439,8 @@ def test_okl_init_ci_writes_the_pin_and_moves_it_beside_an_edited_workflow(ci_re
 
     out = init("0.11.0")
     assert wf.exists() and pin.read_text() == "0.11.0\n", out
+    out = init("0.11.0")
+    assert "already pinned" in out and pin.read_text() == "0.11.0\n", out
 
     edited = wf.read_text().replace("runs-on: ubuntu-latest", "runs-on: ubuntu-24.04")
     assert edited != wf.read_text()
@@ -2459,6 +2461,21 @@ def test_okl_init_ci_pins_nothing_beside_another_tools_workflow(ci_repo):
 
     assert not (repo / ".github" / "okl-version").exists()
     assert "no CI pin written" in out, out
+
+
+def test_okl_init_ci_pins_nothing_beside_a_refused_symlink(ci_repo, tmp_path):
+    """A workflow path that is a symlink is refused, not followed, even when it points at okl's
+    own workflow, and no pin goes beside it (0.11.0 review)."""
+    from okl.cli import install
+    repo, init = ci_repo
+    target = tmp_path / "okl-verify.yml"; target.write_text(install.WORKFLOW_SRC.read_text())
+    (repo / ".github" / "workflows").mkdir(parents=True)
+    (repo / ".github" / "workflows" / "okl-verify.yml").symlink_to(target)
+
+    out = init("0.11.0")
+
+    assert not (repo / ".github" / "okl-version").exists()
+    assert "refused" in out and "no CI pin written" in out, out
 
 
 @pytest.mark.parametrize(("version", "says"), [
