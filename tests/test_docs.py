@@ -98,7 +98,7 @@ def test_quoted_briefing_sizes_match_the_receipt_the_readme_cites():
     assert f"about {full:,} tokens" in (ROOT / sheet).read_text(), f"{sheet} no longer says: about {full:,} tokens"
     # (5) The median on real prompts both quote is the tiered row of the held-out size receipt
     # (REPORT §4y), rounded to ten.
-    sized = (ROOT / "evals" / "results" / "real-20261026-heldout-size.txt").read_text()
+    sized = (ROOT / "evals" / "results" / "real-20261102-heldout-size.txt").read_text()
     median = int(re.search(r"task prompts.*?\n.*?\n\s+floor.*?\n.*?\n\s+tiered\s+(\d+)", sized, re.S).group(1))
     assert f"the median is **~{round(median, -1)}**" in readme, f"README.md no longer quotes the median {median}"
     assert f"a median of about {round(median, -1)} on real prompts" in (ROOT / sheet).read_text()

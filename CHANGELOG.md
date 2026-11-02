@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **The briefing sizes and the anatomy sheet are current again.** The sizes the README, the
+  `okl_check` tool description and the anatomy sheet quote were measured before the briefing
+  marked lessons *UNCHECKED*. Re-measured (`briefing-size-20261102-0123.json`), a full briefing
+  is ~1,580 tokens, up from ~1,390, and the action list at `--limit 3` ~400, up from ~350. The
+  median on real prompts (~720) counts the selection without the marks, and the docs now say
+  so. The anatomy sheet says no model runs by default, explains the *UNCHECKED* mark, and lists
+  drift's measured limit under "Where it breaks".
+
 - **The briefing marks the lessons no check backs** (#222). Only lessons whose governed files
   are in the checkout were marked (*STALE*, *UNVERIFIED*, *UNPROVEN*), so every other lesson
   was briefed exactly like a proven one. In okl's own store that was 139 of 155. A lesson that

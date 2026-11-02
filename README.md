@@ -527,7 +527,7 @@ Your store and your tasks will differ.
 | | |
 |---|---|
 | Latency | **~0.1s** for the whole `okl check` process (0.07s median warm) — one local SQLite query, no network in local mode |
-| Context | **~1,580 tokens** by default on one representative task (five lessons in full, twelve named in a line; ~780 under `--decision calibrated`, ~1,810 under `--decision floor`); on real prompts the median is **~720** ([REPORT §4y](evals/REPORT.md)). Down to **~400** for only the action list at `--limit 3` |
+| Context | **~1,580 tokens** by default on one representative task (five lessons in full, twelve named in a line; ~780 under `--decision calibrated`, ~1,810 under `--decision floor`); on real prompts the median is **~720** ([REPORT §4y](evals/REPORT.md)), before the *UNCHECKED* marks, which added about 5% on okl's own store (`briefing-marks-size-20261101-1110.txt`). Down to **~400** for only the action list at `--limit 3` |
 
 
 **Per session:** in Claude Code, the Stop hook interrupts once at the end to ask what was learned. It
