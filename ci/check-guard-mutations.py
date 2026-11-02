@@ -55,13 +55,19 @@ def replace_span(source: str, site: tuple[int, int, int, int, str, str]) -> str:
 
 
 def caught(path: str, mutated: str, tests: list[str]) -> int:
-    """pytest's exit with `path` holding `mutated`; the file is restored either way. Only 1 means
-    a test failed: 2 or more is a collection or import error, a broken mutation, not a catch."""
+    """pytest's exit with `path` holding `mutated` (1: a test failed), or -1 when the mutated
+    module does not import, which is a broken mutation and no evidence of a test. The import is
+    tried first because pytest's exit cannot tell them apart: a test that runs okl in a
+    subprocess fails, exit 1, on an import error too. The file is restored either way."""
     target = REPO / path
     original = target.read_bytes()
     target.write_text(mutated)
     try:
         env = {**os.environ, "PYTHONPATH": str(REPO / "src")}
+        module = path.removeprefix("src/").removesuffix(".py").replace("/", ".")
+        if subprocess.run([sys.executable, "-c", f"import {module}"], cwd=REPO, env=env,
+                          capture_output=True).returncode != 0:
+            return -1
         r = subprocess.run([sys.executable, "-m", "pytest", "-x", "-q", "-p", "no:cacheprovider", *tests],
                            cwd=REPO, env=env, capture_output=True, text=True)
         return r.returncode
@@ -71,7 +77,9 @@ def caught(path: str, mutated: str, tests: list[str]) -> int:
 
 def _why(code: int) -> str:
     """Why a mutation counts as missed: no test failed, or the mutated code did not run."""
-    return "" if code == 0 else f" (pytest exit {code}: the mutated file did not import or collect)"
+    if code == -1:
+        return " (the mutated module does not import: fix the mutation)"
+    return "" if code == 0 else f" (pytest exit {code}: the tests did not run)"
 
 
 def main() -> int:
