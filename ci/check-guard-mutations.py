@@ -54,8 +54,9 @@ def replace_span(source: str, site: tuple[int, int, int, int, str, str]) -> str:
     return source[:start] + site[5] + source[end:]
 
 
-def caught(path: str, mutated: str, tests: list[str]) -> bool:
-    """Whether a test fails with `path` holding `mutated`; the file is restored either way."""
+def caught(path: str, mutated: str, tests: list[str]) -> int:
+    """pytest's exit with `path` holding `mutated`; the file is restored either way. Only 1 means
+    a test failed: 2 or more is a collection or import error, a broken mutation, not a catch."""
     target = REPO / path
     original = target.read_bytes()
     target.write_text(mutated)
@@ -63,9 +64,14 @@ def caught(path: str, mutated: str, tests: list[str]) -> bool:
         env = {**os.environ, "PYTHONPATH": str(REPO / "src")}
         r = subprocess.run([sys.executable, "-m", "pytest", "-x", "-q", "-p", "no:cacheprovider", *tests],
                            cwd=REPO, env=env, capture_output=True, text=True)
-        return r.returncode != 0
+        return r.returncode
     finally:
         target.write_bytes(original)
+
+
+def _why(code: int) -> str:
+    """Why a mutation counts as missed: no test failed, or the mutated code did not run."""
+    return "" if code == 0 else f" (pytest exit {code}: the mutated file did not import or collect)"
 
 
 def main() -> int:
@@ -80,15 +86,16 @@ def main() -> int:
         source = (REPO / path).read_text()
         for site in call_sites(path, guards):
             total += 1
-            if not caught(path, replace_span(source, site), TESTS):
-                missed.append(f"{path}:{site[0]} `{site[4]}` -> {site[5]}")
+            code = caught(path, replace_span(source, site), TESTS)
+            if code != 1:
+                missed.append(f"{path}:{site[0]} `{site[4]}` -> {site[5]}" + _why(code))
     for path, text, replacement, label in MUTATIONS:
         source = (REPO / path).read_text()
         total += 1
         if source.count(text) != 1:
             missed.append(f"{path}: the guard for '{label}' is not found once; update MUTATIONS")
-        elif not caught(path, source.replace(text, replacement), TESTS):
-            missed.append(f"{path}: {label}")
+        elif (code := caught(path, source.replace(text, replacement), TESTS)) != 1:
+            missed.append(f"{path}: {label}" + _why(code))
     if missed:
         print(f"GUARD MUTATIONS MISSED {len(missed)} of {total}: no test fails with each of these off")  # noqa: T201
         print("\n".join(f"  {m}" for m in missed))  # noqa: T201
