@@ -71,8 +71,8 @@ WORKFLOW_SRC = Path(__file__).parent.parent / "scaffold" / "ci" / "okl-verify.ym
 # replaced, which would freeze a pin written into it (review of the 0.11.0 release prep).
 OKL_VERSION_FILE = Path(".github") / "okl-version"
 # A version PyPI publishes (PEP 440, public): releases, pre-releases and post-releases. A dev or
-# local build has no release to pin.
-PUBLIC_VERSION = re.compile(r"\d+(?:\.\d+)*(?:(?:a|b|rc)\d+)?(?:\.post\d+)?")
+# local build has no release to pin. The groups are what _version_key orders by.
+PUBLIC_VERSION = re.compile(r"(\d+(?:\.\d+)*)(?:(a|b|rc)(\d+))?(?:\.post(\d+))?")
 
 
 def _symlinked(path: Path) -> Path | None:
@@ -156,6 +156,7 @@ def _uninstall_files(act: str, dry_run: bool) -> list[str]:
     from .. import ownership
     scaffold = Path(__file__).parent.parent / "scaffold"
     kept: list[str] = []
+    workflow_removed = False
     owned = [(Path(".claude/hooks/userpromptsubmit-okl-check.sh"),
               scaffold / "hooks" / "userpromptsubmit-okl-check.sh"),
              (Path(".claude/hooks/stop-okl-encode.sh"), scaffold / "hooks" / "stop-okl-encode.sh"),
@@ -173,18 +174,21 @@ def _uninstall_files(act: str, dry_run: bool) -> list[str]:
             if not dry_run:
                 dst.unlink()
             print(f"✓ {act} {dst}")
+            workflow_removed = workflow_removed or dst == WORKFLOW
         elif state != ownership.MISSING:
             why = "edited" if state == ownership.MODIFIED else "not recognisably okl's"
             kept.append(f"{dst} ({why})")
-    # The CI pin goes with okl's workflow; beside a workflow that is kept, it stays, so the
-    # kept workflow goes on installing the same okl.
+    # The CI pin goes only with okl's workflow. Beside a kept workflow it stays, so that workflow
+    # goes on installing the same okl; with no okl workflow beside it, nothing says it is okl's.
     if OKL_VERSION_FILE.is_file() and _symlinked(OKL_VERSION_FILE) is None:
-        if any(k.startswith(f"{WORKFLOW} ") for k in kept):
-            kept.append(f"{OKL_VERSION_FILE} (the pin of the kept workflow)")
-        else:
+        if workflow_removed:
             if not dry_run:
                 OKL_VERSION_FILE.unlink()
             print(f"✓ {act} {OKL_VERSION_FILE}")
+        elif WORKFLOW.exists():
+            kept.append(f"{OKL_VERSION_FILE} (the pin of the kept workflow)")
+        else:
+            kept.append(f"{OKL_VERSION_FILE} (no okl workflow beside it; delete it if it is okl's)")
     return kept
 
 
@@ -426,6 +430,14 @@ def _dry_run_drift_gates(args: argparse.Namespace) -> None:
     ci = _ci_wanted(args, cfg)
     if ci:
         print("  .github/workflows/okl-verify.yml        a CI workflow running the drift gate on PRs")
+        version = _pinnable_version()
+        if Path("src/okl/__init__.py").is_file():
+            print("  (no CI pin: okl's own CI installs its checkout)")
+        elif version is None:
+            print("  (no CI pin: this okl is a dev or source build, so CI installs the newest release)")
+        else:
+            print(f"  {OKL_VERSION_FILE!s:<40}the okl release CI installs ({version}, or a newer pin "
+                  "it finds there)")
     else:
         print("  (no CI workflow: opt-in with --ci, or an earlier init recorded --no-ci)")
     if not _git_hook_wanted(args, cfg):
@@ -619,15 +631,27 @@ def _pinnable_version() -> str | None:
     try:
         if metadata.distribution("observed-knowledge-ledger").read_text("direct_url.json") is not None:
             return None
-    except metadata.PackageNotFoundError:
+    except (metadata.PackageNotFoundError, OSError, ValueError):
+        # Unreadable install metadata cannot show an index install: pin nothing, as for a dev build.
         return None
     return __version__ if PUBLIC_VERSION.fullmatch(__version__) else None
 
 
-def _release_key(version: str) -> tuple[int, ...]:
-    """The numeric release of a version, for ordering two pins: 0.11.0rc1 -> (0, 11, 0)."""
-    m = re.match(r"\d+(?:\.\d+)*", version)
-    return tuple(int(x) for x in m.group(0).split(".")) if m else ()
+def _version_key(version: str) -> tuple:
+    """A public version's PEP 440 order; () for anything else, which orders before every version.
+
+    0.11.0a1 < 0.11.0rc1 < 0.11.0 < 0.11.0.post1, and 0.11 == 0.11.0. Ordering the release
+    numbers alone put a release candidate level with its final, so init replaced a final pin
+    with the candidate (the 0.11.0 review)."""
+    m = PUBLIC_VERSION.fullmatch(version)
+    if m is None:
+        return ()
+    release, pre, pre_n, post = m.groups()
+    numbers = [int(x) for x in release.split(".")]
+    while numbers and numbers[-1] == 0:
+        numbers.pop()
+    pre_rank = {"a": 0, "b": 1, "rc": 2, None: 3}[pre]
+    return (tuple(numbers), pre_rank, int(pre_n or 0), int(post) if post else -1)
 
 
 def _pin_okl_version() -> None:
@@ -644,11 +668,12 @@ def _pin_okl_version() -> None:
     if ours is None:
         stays = f"stays on okl {current}" if current else "installs the newest okl release"
         print(f"• CI {stays}: this okl is a dev or source build, so it moves no pin")
-    elif current and _release_key(current) > _release_key(ours):
+    elif _version_key(current) > _version_key(ours):
         print(f"• CI stays on okl {current} ({OKL_VERSION_FILE}), newer than this okl ({ours})")
-    elif current == ours:
-        print(f"• CI already pinned to okl {ours} → {OKL_VERSION_FILE}")
+    elif _version_key(current) == _version_key(ours):
+        print(f"• CI already pinned to okl {current} → {OKL_VERSION_FILE}")
     else:
+        # Missing, older, or not a version at all (CI refuses that one): this okl's release.
         OKL_VERSION_FILE.parent.mkdir(parents=True, exist_ok=True)
         OKL_VERSION_FILE.write_text(ours + "\n")
         print(f"✓ CI pinned to okl {ours} → {OKL_VERSION_FILE} (commit it; `okl init` after an "
@@ -658,9 +683,15 @@ def _pin_okl_version() -> None:
 def _install_ci_verifier(force: bool = False) -> None:
     """Install the CI verifier workflow instead of printing a copy instruction, and pin the okl
     release it installs."""
+    from .. import ownership
     _place_owned(WORKFLOW, WORKFLOW_SRC.read_text(), "CI verifier (drift gate + repo gates on every PR)",
                  force)
-    _pin_okl_version()
+    # Only okl's workflow (edited or not) reads the pin: beside another tool's file, or a refused
+    # symlink, a pin would be a file nothing uses.
+    if _symlinked(WORKFLOW) is None and _workflow_state() in (ownership.OKL, ownership.MODIFIED):
+        _pin_okl_version()
+    else:
+        print(f"• no CI pin written: {WORKFLOW} is not okl's workflow")
 
 
 GIT_HOOK_SRC = Path(__file__).parent.parent / "scaffold" / "git-hooks" / "pre-push"

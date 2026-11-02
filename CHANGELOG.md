@@ -6,7 +6,11 @@
   from PyPI, so a repo's CI could run a different release from its own hooks. `okl init` now
   writes `.github/okl-version` beside the workflow, and the workflow installs that release.
   - **Upgrading:** after upgrading okl, re-run `okl init --repo <name> --no-seed` and commit
-    the file; the pin moves forward only, so a teammate on an older okl never rolls it back.
+    the file; the pin moves forward only, in PEP 440 order (a release candidate never replaces
+    its final), so a teammate on an older okl never rolls it back.
+  - **Checked:** a version file that holds anything but a release version stops CI's install
+    step with an error naming the file. `okl init --uninstall` removes the file with okl's
+    workflow, and keeps it beside a workflow it keeps.
   - **Not pinned:** an okl installed from source (editable, a local path, git) or a dev or local
     build pins nothing, and a workflow with no version file installs the newest release, as
     before.

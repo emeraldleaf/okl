@@ -1,4 +1,4 @@
-# okl-fingerprint: sha256:daf80c1e23d7b1c9bc56d5771d1de2a9c9fef8f6d108ce0cfa7ac7451b6355b1
+# okl-fingerprint: sha256:db185e4a9d7295a005c6a016dae1c67e01f94015da27322870e14fb9d6f8ee50
 # Installed by `okl init --ci` into .github/workflows/okl-verify.yml (a repo an earlier okl gave it keeps it).
 #
 # The knowledge layer's CI verifier — real checks, not placeholders:
@@ -69,7 +69,13 @@ jobs:
           if [ -f src/okl/__init__.py ]; then
             pip install -e .
           elif [ -s .github/okl-version ]; then
-            pip install "observed-knowledge-ledger==$(tr -d '[:space:]' < .github/okl-version)"
+            v=$(tr -d '[:space:]' < .github/okl-version)
+            if ! printf '%s\n' "$v" | grep -Eqx '[0-9]+(\.[0-9]+)*((a|b|rc)[0-9]+)?(\.post[0-9]+)?'; then
+              echo "::error file=.github/okl-version::not an okl release version; \`okl init --ci\` rewrites it"
+              printf 'found: %s\n' "$v"
+              exit 1
+            fi
+            pip install "observed-knowledge-ledger==$v"
           else
             pip install observed-knowledge-ledger
           fi

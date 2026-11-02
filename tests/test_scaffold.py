@@ -2278,15 +2278,22 @@ def _install_step(workflow: str) -> str:
     return "\n".join(line[10:] if line.startswith(" " * 10) else line for line in lines)
 
 
-@pytest.mark.parametrize(("setup", "installs"), [
-    ("checkout", "install -e ."),
-    ("pinned", "install observed-knowledge-ledger==0.11.0"),
-    ("bare", "install observed-knowledge-ledger"),
+@pytest.mark.parametrize("case", [
+    ("checkout", None, 0, "pip install -e ."),
+    ("pinned", "0.11.0\n", 0, "pip install observed-knowledge-ledger==0.11.0"),
+    ("pinned", " 0.11.0rc1 \r\n", 0, "pip install observed-knowledge-ledger==0.11.0rc1"),
+    ("bare", None, 0, "pip install observed-knowledge-ledger"),
+    ("pinned", "latest\n", 1, "found: latest"),
+    ("pinned", "0.11.0;curl x\n", 1, "found: 0.11.0;curlx"),
+    ("pinned", " \n", 1, "found: "),
 ])
-def test_the_ci_workflow_installs_the_checkout_the_pinned_release_or_the_newest(tmp_path, setup, installs):
+def test_the_ci_workflow_installs_the_checkout_the_pinned_release_or_the_newest(tmp_path, case):
     """okl's own repo installs its checkout; a repo okl init pinned installs that release; a
-    workflow copied by hand, with no pin, installs the newest (0.11.0)."""
+    workflow copied by hand, with no pin, installs the newest. A pin that is not a release
+    version stops the step with an error naming the file, before pip sees it (0.11.0). Each
+    case is the repo, the pin's text, the step's exit code, and its last line."""
     # ARRANGE — the shipped step, a pip that only says what it was asked, and the repo's state.
+    setup, pin, code, last = case
     root = Path(__file__).resolve().parents[1]
     script = _install_step((root / "src/okl/scaffold/ci/okl-verify.yml").read_text())
     bin_dir = tmp_path / "bin"; bin_dir.mkdir()
@@ -2294,16 +2301,19 @@ def test_the_ci_workflow_installs_the_checkout_the_pinned_release_or_the_newest(
     repo = tmp_path / "repo"; (repo / ".github").mkdir(parents=True)
     if setup == "checkout":
         (repo / "src" / "okl").mkdir(parents=True); (repo / "src" / "okl" / "__init__.py").write_text("")
-    if setup == "pinned":
-        (repo / ".github" / "okl-version").write_text("0.11.0\n")
+    if pin is not None:
+        (repo / ".github" / "okl-version").write_text(pin)
 
-    # ACT
-    r = subprocess.run(["bash", "-c", script], cwd=repo, capture_output=True, text=True,
-                       env={**os.environ, "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}"})
+    # ACT — strict, as a careful CI would run it: an unset variable or a failed pipe stops it.
+    r = subprocess.run(["bash", "-euo", "pipefail", "-c", script], cwd=repo, capture_output=True,
+                       text=True, env={**os.environ, "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}"})
 
     # ASSERT
-    assert r.returncode == 0, r.stderr
-    assert r.stdout.strip() == f"pip {installs}", r.stdout
+    assert r.returncode == code, (r.stdout, r.stderr)
+    assert r.stdout.splitlines()[-1] == last, r.stdout
+    if code:
+        assert r.stdout.startswith("::error file=.github/okl-version::"), r.stdout
+        assert "pip " not in r.stdout, r.stdout
 
 
 @pytest.mark.parametrize("case", [
@@ -2313,6 +2323,14 @@ def test_the_ci_workflow_installs_the_checkout_the_pinned_release_or_the_newest(
     ("0.12.0", "0.11.0", "0.12.0", "newer than this okl"),
     ("0.10.0", None, "0.10.0", "dev or source build"),
     (None, None, None, "installs the newest okl release"),
+    ("0.9.9", "0.10.0", "0.10.0", "CI pinned to okl 0.10.0"),        # numbers, not text
+    ("0.11.0", "0.11.0rc1", "0.11.0", "newer than this okl"),        # a candidate is not a final
+    ("0.11.0rc1", "0.11.0", "0.11.0", "CI pinned to okl 0.11.0"),
+    ("0.11.0b2", "0.11.0rc1", "0.11.0rc1", "CI pinned to okl 0.11.0rc1"),
+    ("0.11.0.post1", "0.11.0", "0.11.0.post1", "newer than this okl"),
+    ("0.11.0", "0.11.0.post1", "0.11.0.post1", "CI pinned to okl 0.11.0.post1"),
+    ("0.11", "0.11.0", "0.11", "already pinned"),                    # the same release
+    ("latest", "0.11.0", "0.11.0", "CI pinned to okl 0.11.0"),       # not a version: replaced
 ])
 def test_okl_init_ci_moves_the_pin_forward_only(tmp_path, monkeypatch, capsys, case):
     """The pin is written for a release install and moved up after an upgrade, never back: a
@@ -2376,8 +2394,90 @@ def test_only_a_release_installed_from_an_index_is_pinned(monkeypatch, version, 
     assert install._pinnable_version() == pinned
 
 
+@pytest.mark.parametrize("failure", ["not installed", "unreadable", "undecodable"])
+def test_install_metadata_that_cannot_be_read_pins_nothing(monkeypatch, failure):
+    """With no readable install record, nothing shows a release from an index: pin nothing, as
+    for a dev build, rather than fail init (0.11.0 review)."""
+    import importlib.metadata
+
+    from okl.cli import install
+    errors = {"not installed": importlib.metadata.PackageNotFoundError("observed-knowledge-ledger"),
+              "unreadable": PermissionError("direct_url.json"),
+              "undecodable": UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid start byte")}
+
+    def distribution(_name):
+        raise errors[failure]
+
+    monkeypatch.setattr(importlib.metadata, "distribution", distribution)
+    assert install._pinnable_version() is None
+
+
+@pytest.fixture
+def ci_repo(tmp_path, monkeypatch, capsys):
+    """An empty git repo as cwd, and `init(version, *flags)`: `okl init --ci` run in-process by a
+    release install of okl `version` (None: a dev build), returning what it printed."""
+    from okl.cli import install, main
+    repo = tmp_path / "r"; repo.mkdir()
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    monkeypatch.chdir(repo)
+    monkeypatch.setenv("HOME", str(tmp_path))
+
+    def init(version, *flags):
+        monkeypatch.setattr(install, "_pinnable_version", lambda: version)
+        assert main(["init", "--repo", "r", "--no-claude", "--no-seed", "--ci", *flags]) == 0
+        return capsys.readouterr().out
+
+    return repo, init
+
+
+def test_okl_init_ci_writes_the_pin_and_moves_it_beside_an_edited_workflow(ci_repo):
+    """End to end through `okl init --ci`: the pin is written with the workflow, and after an
+    upgrade it moves even though the workflow, edited (Dependabot bumps it), is kept as it is.
+    Deleting the pin call from init broke no test before this one (0.11.0 review)."""
+    repo, init = ci_repo
+    wf, pin = repo / ".github" / "workflows" / "okl-verify.yml", repo / ".github" / "okl-version"
+
+    out = init("0.11.0")
+    assert wf.exists() and pin.read_text() == "0.11.0\n", out
+
+    edited = wf.read_text().replace("runs-on: ubuntu-latest", "runs-on: ubuntu-24.04")
+    assert edited != wf.read_text()
+    wf.write_text(edited)
+    out = init("0.12.0")
+    assert f"! kept {Path('.github/workflows/okl-verify.yml')}" in out, out
+    assert wf.read_text() == edited and pin.read_text() == "0.12.0\n", out
+
+
+def test_okl_init_ci_pins_nothing_beside_another_tools_workflow(ci_repo):
+    """A file okl did not write holds the workflow's path: it is kept, and no pin goes beside it,
+    since nothing would read one (0.11.0 review)."""
+    repo, init = ci_repo
+    (repo / ".github" / "workflows").mkdir(parents=True)
+    (repo / ".github" / "workflows" / "okl-verify.yml").write_text("name: someone else's\n")
+
+    out = init("0.11.0")
+
+    assert not (repo / ".github" / "okl-version").exists()
+    assert "no CI pin written" in out, out
+
+
+@pytest.mark.parametrize(("version", "says"), [
+    ("0.11.0", ".github/okl-version"),
+    (None, "(no CI pin: this okl is a dev or source build"),
+])
+def test_okl_init_ci_dry_run_lists_the_pin(ci_repo, version, says):
+    """`--dry-run` lists every path init would touch, the pin among them (0.11.0 review)."""
+    repo, init = ci_repo
+
+    out = init(version, "--dry-run")
+
+    assert says in out, out
+    assert not (repo / ".github").exists()
+
+
 def test_uninstall_removes_the_pin_with_the_workflow_and_keeps_it_with_an_edited_one(tmp_path):
-    """The pin goes with okl's workflow; beside a workflow uninstall keeps, it stays (0.11.0)."""
+    """The pin goes with okl's workflow and only with it: beside a workflow uninstall keeps, or
+    with no okl workflow beside it, it stays (0.11.0)."""
     repo, _git, okl = _git_hook_repo(tmp_path)
     wf, pin = repo / ".github" / "workflows" / "okl-verify.yml", repo / ".github" / "okl-version"
     assert okl("init", "--repo", "r", "--no-claude", "--no-seed", "--ci").returncode == 0
@@ -2388,7 +2488,14 @@ def test_uninstall_removes_the_pin_with_the_workflow_and_keeps_it_with_an_edited
     r = okl("init", "--uninstall")
     assert wf.exists() and pin.exists() and "the pin of the kept workflow" in r.stdout, r.stdout
 
-    # An unedited one goes, and its pin with it.
+    # An unedited one goes, and its pin with it; the dry run says so and removes nothing.
     assert okl("init", "--repo", "r", "--no-claude", "--no-seed", "--ci", "--force").returncode == 0
+    r = okl("init", "--uninstall", "--dry-run")
+    assert f"would remove {Path('.github/okl-version')}" in r.stdout and pin.exists(), r.stdout
     r = okl("init", "--uninstall")
     assert not wf.exists() and not pin.exists(), r.stdout
+
+    # With no okl workflow beside it, nothing says the file is okl's: it stays.
+    pin.write_text("0.11.0\n")
+    r = okl("init", "--uninstall")
+    assert pin.exists() and "no okl workflow beside it" in r.stdout, r.stdout
