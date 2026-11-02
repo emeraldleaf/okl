@@ -244,6 +244,42 @@ def test_the_stale_lesson_judge_reads_only_a_valid_verdict_and_counts_by_role(mo
     assert (s["negatives_called_stale"], s["positives_called_stale"], s["stale_checkable"]) == (1, 1, 1)
 
 
+def test_the_4ai_review_counts_its_controls_first_and_rates_only_when_they_hold(monkeypatch):
+    """§4ai: the six-way scale parses; a planted fact is caught as detail wrong or stale, a
+    negative is over-called as detail wrong, outlived or stale, an outlived lesson is caught by any
+    of the three; rates are given only when the planted and negative controls hold (REPORT §4ai)."""
+    monkeypatch.setattr(sys, "path", list(sys.path))
+    spec = importlib.util.spec_from_file_location("lesson_census", HERE / "evals" / "lesson_census.py")
+    lc = importlib.util.module_from_spec(spec)
+    monkeypatch.setitem(sys.modules, "lesson_census", lc)
+    spec.loader.exec_module(lc)
+    assert lc.parse_verdict('{"verdict": "detail wrong", "no_longer": "x"}', lc.VERDICTS_4AI)["verdict"] == "detail wrong"
+    assert lc.parse_verdict('{"verdict": "detail wrong"}') is None          # §4ag's scale has no such verdict
+    assert set(lc.OUTLIVED) == {"harness-reads-a-moving-working-tree", "fastembed-cache-in-tmpdir", "n_f215b68b925c"}
+
+    def run(planted_caught, over_called, outlived_caught):
+        items = ([{"role": "positive", "verdict": "detail wrong"}] * planted_caught
+                 + [{"role": "positive", "verdict": "current"}] * (10 - planted_caught)
+                 + [{"role": "negative", "verdict": "outlived"}] * over_called
+                 + [{"role": "negative", "verdict": "current"}] * (10 - over_called)
+                 + [{"role": "outlived", "verdict": "outlived"}] * outlived_caught
+                 + [{"role": "outlived", "verdict": "current"}] * (3 - outlived_caught)
+                 + [{"role": "population", "verdict": v, "type": "Rule", "scope": "org", "checkable": True}
+                    for v in ("current", "current", "detail wrong", "detail wrong", "detail wrong", "stale",
+                              "no claim")])
+        return lc.summarize_4ai(items)
+
+    held = run(8, 1, 2)
+    assert held["planted_caught"] == {"caught": 8, "of": 10} and held["negatives_over_called"] == {"over": 1, "of": 10}
+    assert held["outlived_caught"] == {"caught": 2, "of": 3}
+    assert all(held["predictions"].values())
+    assert held["rates"]["detail wrong"]["count"] == 3 and held["rates"]["detail wrong"]["decided"] == 6
+    assert held["questioned_checkable"] == 4
+    assert run(7, 0, 3)["rates"] is None                       # planted below 8: counts only
+    assert run(10, 2, 3)["rates"] is None                      # two negatives over-called: counts only
+    assert run(8, 1, 1)["predictions"]["3_outlived_at_least_2"] is False
+
+
 def test_the_mutation_run_counts_catches_misses_and_ci_by_group(monkeypatch):
     """§4af: a break is caught when drift is red and the check fails; a miss is coverage when
     drift stayed green and sensitivity when it was red; only judged breaks and judged-intact

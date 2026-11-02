@@ -23,6 +23,11 @@ scopes and verdicts, never a lesson's text.
 lesson_census_planted.json), judged once each, blind and in a seeded order, by a model reading
 the repository at the receipt's commit. Judgments are kept as they arrive, so a run that stops
 resumes where it stopped.
+
+--judge --section 4ai runs REPORT §4ai instead (#315): the same instrument, judge, seed,
+negatives and planted facts, on a six-way scale that also names a wrong detail and an outlived
+workaround, with the three outlived lessons §4ag's notes found as controls (OUTLIVED), taken out
+of the population. It writes evals/results/stale-review-<stamp>.json.
 """
 from __future__ import annotations
 
@@ -73,6 +78,35 @@ Answer with one JSON object and nothing else:
 {{"verdict": "current|stale|no claim|unsure", "evidence": ["path:line", ...], "reason": "one sentence", "checkable": true or false}}
 "checkable" says whether a shell command could check what the lesson claims about this repository."""
 VERDICTS = ("current", "stale", "no claim", "unsure")
+# REPORT §4ai: §4ag's prompt with a scale that names what §4ag's could not (#315).
+JUDGE_PROMPT_4AI = """You are checking whether a lesson a software project recorded about itself still holds.
+The project's repository is your working directory, at the commit the project is at now. Read
+whatever you need with your tools. Do not change anything.
+
+The lesson:
+Title: {title}
+Symptom: {symptom}
+Fix: {fix}
+Body: {body}
+
+Choose one verdict:
+- "current": the lesson's point holds of this repository, and so does every detail it states about it.
+- "detail wrong": the point holds, but a detail it states about this repository (a path, name,
+  command, flag, default or count) is wrong now.
+- "outlived": the lesson advises a workaround, an interim step or a caution that a later change in
+  this repository has made unnecessary.
+- "stale": the lesson's point no longer holds of this repository.
+- "no claim": it says nothing this repository can confirm or contradict (advice in general, or a
+  fact about another project).
+- "unsure": you cannot decide.
+
+Answer with one JSON object and nothing else:
+{{"verdict": "current|detail wrong|outlived|stale|no claim|unsure", "no_longer": "the lesson's words that no longer hold, or empty", "instead": "what the repository has instead, or empty", "evidence": ["path:line", ...], "reason": "one sentence", "checkable": true or false}}
+"checkable" says whether a shell command could check what the lesson claims about this repository."""
+VERDICTS_4AI = ("current", "detail wrong", "outlived", "stale", "no claim", "unsure")
+# §4ai's outlived controls: lessons §4ag's notes found still advising a workaround whose fix has landed.
+OUTLIVED = ("harness-reads-a-moving-working-tree", "fastembed-cache-in-tmpdir", "n_f215b68b925c")
+SECTIONS = {"4ag": (JUDGE_PROMPT, VERDICTS), "4ai": (JUDGE_PROMPT_4AI, VERDICTS_4AI)}
 
 
 def classify(n: Node) -> str:
@@ -93,9 +127,9 @@ def plant(text: str, old: str, new: str) -> str:
     return re.sub(rf"(?<![\w-]){re.escape(old)}(?![\w-])", new, text)
 
 
-def parse_verdict(result: str) -> dict | None:
+def parse_verdict(result: str, verdicts: tuple[str, ...] = VERDICTS) -> dict | None:
     """The judge's last valid JSON object, or None when its answer holds none."""
-    return dr.last_object(result, lambda o: o.get("verdict") in VERDICTS)
+    return dr.last_object(result, lambda o: o.get("verdict") in verdicts)
 
 
 def summarize(items: list[dict]) -> dict:
@@ -119,8 +153,41 @@ def summarize(items: list[dict]) -> dict:
     }
 
 
-def judge(census_path: Path, workers: int) -> int:
-    """Run §4ag on the census receipt and write its receipt."""
+def summarize_4ai(items: list[dict]) -> dict:
+    """§4ai's measures from the judged items: the controls first, the rates only if they hold."""
+    pop = [x for x in items if x["role"] == "population"]
+    v = Counter(x.get("verdict") or "invalid" for x in pop)
+    role = {r: Counter(x.get("verdict") or "invalid" for x in items if x["role"] == r)
+            for r in ("negative", "positive", "outlived")}
+    planted = role["positive"]["detail wrong"] + role["positive"]["stale"]
+    over = sum(role["negative"][k] for k in ("detail wrong", "outlived", "stale"))
+    outlived = sum(role["outlived"][k] for k in ("outlived", "detail wrong", "stale"))
+    invalid = sum(1 for x in items if not x.get("verdict"))
+    decided = sum(v[k] for k in ("current", "detail wrong", "outlived", "stale"))
+    held = planted >= 8 and over <= 1 and invalid <= len(items) / 5
+    rates = {k: {"count": v[k], "decided": decided, "rate": round(v[k] / decided, 4) if decided else None,
+                 "wilson95": dr.wilson(v[k], decided)} for k in ("stale", "detail wrong", "outlived")} if held else None
+    questioned = [x for x in pop if x.get("verdict") in ("detail wrong", "outlived", "stale")]
+    return {
+        "population": len(pop), "verdicts": dict(v),
+        "planted_caught": {"caught": planted, "of": sum(role["positive"].values())},
+        "negatives_over_called": {"over": over, "of": sum(role["negative"].values())},
+        "outlived_caught": {"caught": outlived, "of": sum(role["outlived"].values())},
+        "controls": {r: dict(c) for r, c in role.items()},
+        "predictions": {"1_planted_at_least_8": planted >= 8, "2_negatives_at_most_1": over <= 1,
+                        "3_outlived_at_least_2": outlived >= 2,
+                        "4_more_wrong_details_than_4ag_stale": v["detail wrong"] > 2},
+        "invalid_share": round(invalid / len(items), 4) if items else None,
+        "rates": rates,
+        "questioned_checkable": sum(1 for x in questioned if x.get("checkable") is True),
+        "questioned_by_type": dict(Counter(x["type"] for x in questioned)),
+    }
+
+
+def judge(census_path: Path, workers: int, section: str = "4ag") -> int:
+    """Run §4ag (or §4ai) on the census receipt and write its receipt."""
+    prompt, verdicts = SECTIONS[section]
+    outlived = OUTLIVED if section == "4ai" else ()
     census = json.loads(census_path.read_text())
     rev = dr.git("rev-parse", census["rev"]).strip()
     planted = {p["id"]: p for p in json.loads(PLANTED.read_text())["lessons"]}
@@ -128,6 +195,8 @@ def judge(census_path: Path, workers: int) -> int:
         if subprocess.run(["git", "-C", str(dr.REPO), "grep", "-q", "-F", "-e", p["new"].rstrip("()"), rev]).returncode == 0:
             sys.exit(f"ABORT: planted name {p['new']!r} exists at {rev[:12]}")
     rows = {x["id"]: x for x in census["lessons"]}
+    if missing := [i for i in outlived if i not in rows]:
+        sys.exit(f"ABORT: outlived controls not in the census: {missing}")
     recorded = {i: x["sha"] for i, x in rows.items()} if all("sha" in x for x in rows.values()) else None
     dr.as_recorded({}, recorded)   # an old receipt is refused before any check runs
     with dr.store_copy(dr.main_store()) as store:
@@ -149,16 +218,18 @@ def judge(census_path: Path, workers: int) -> int:
                     negatives.append(i)
         finally:
             r.close()
-    items = ([{"id": i, "role": "population"} for i, x in rows.items() if x["class"] == "unchecked"]
+    items = ([{"id": i, "role": "population"} for i, x in rows.items()
+              if x["class"] == "unchecked" and i not in outlived]
              + [{"id": i, "role": "negative"} for i in negatives]
-             + [{"id": i, "role": "positive", "planted": planted[i]} for i in planted])
+             + [{"id": i, "role": "positive", "planted": planted[i]} for i in planted]
+             + [{"id": i, "role": "outlived"} for i in outlived])
     for x in items:
         x["type"], x["scope"] = rows[x["id"]]["type"], rows[x["id"]]["scope"]
     dr.as_recorded({x["id"]: nodes[x["id"]] for x in items}, recorded)
     order = {i: k for k, i in enumerate(drawn([x["id"] for x in items], salt="order:"))}
     items.sort(key=lambda x: order[x["id"]])
 
-    partial = Path(tempfile.gettempdir()) / f"okl-stale-lessons-{census_path.stem}.jsonl"
+    partial = Path(tempfile.gettempdir()) / f"okl-stale-{section}-{census_path.stem}.jsonl"
     done = {}
     if partial.exists():
         for line in partial.read_text().splitlines():
@@ -178,10 +249,10 @@ def judge(census_path: Path, workers: int) -> int:
             text = {f: plant(t, x["planted"]["old"], x["planted"]["new"]) for f, t in text.items()}
         out = {"id": x["id"]}
         try:
-            p = subprocess.run(JUDGE, input=JUDGE_PROMPT.format(**text), capture_output=True, text=True,
+            p = subprocess.run(JUDGE, input=prompt.format(**text), capture_output=True, text=True,
                                timeout=TIMEOUT, cwd=wt)
             env = json.loads(p.stdout) if p.stdout.strip().startswith("{") else {}
-            got = parse_verdict(env.get("result") or "")
+            got = parse_verdict(env.get("result") or "", verdicts)
             out.update(got or {"error": (env.get("result") or p.stderr or "no output")[-300:]})
             out["cost_usd"], out["secs"] = env.get("total_cost_usd"), round((env.get("duration_ms") or 0) / 1000, 1)
         except subprocess.TimeoutExpired:
@@ -196,14 +267,17 @@ def judge(census_path: Path, workers: int) -> int:
             judged = list(pool.map(one, items))
     finally:
         dr.git("worktree", "remove", "--force", str(wt))
+    what = "stale lessons (REPORT §4ag)" if section == "4ag" else "a review of unchecked lessons (REPORT §4ai)"
     receipt = {
-        "what": "stale lessons (REPORT §4ag)", "at": f"{datetime.now(UTC):%Y-%m-%dT%H:%MZ}",
+        "what": what, "at": f"{datetime.now(UTC):%Y-%m-%dT%H:%MZ}",
         "code": dr.git("rev-parse", "--short=12", "HEAD").strip(), "rev": rev[:12], "census": census_path.name,
         "judge": " ".join(JUDGE), "seed": SEED, "negatives": negatives, "planted": PLANTED.name,
+        "outlived": list(outlived), "prompt_sha": hashlib.sha256(prompt.encode()).hexdigest()[:16],
         "cost_usd": round(sum(x.get("cost_usd") or 0 for x in judged), 2),
-        "summary": summarize(judged), "items": judged,
+        "summary": summarize(judged) if section == "4ag" else summarize_4ai(judged), "items": judged,
     }
-    out = dr.RESULTS / f"stale-lessons-{datetime.now(UTC):%Y%m%d-%H%M}.json"
+    stem = "stale-lessons" if section == "4ag" else "stale-review"
+    out = dr.RESULTS / f"{stem}-{datetime.now(UTC):%Y%m%d-%H%M}.json"
     out.write_text(json.dumps(receipt, indent=1) + "\n")
     print(json.dumps(receipt["summary"], indent=1))
     print(f"receipt: {out.relative_to(dr.REPO)}")
@@ -215,11 +289,12 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--rev", default="origin/main", help="the commit the checks run at")
     ap.add_argument("--run-checks", action="store_true", help="run each checked lesson's check at --rev")
-    ap.add_argument("--judge", type=Path, help="run §4ag on this census receipt")
+    ap.add_argument("--judge", type=Path, help="run §4ag (or --section 4ai) on this census receipt")
+    ap.add_argument("--section", choices=sorted(SECTIONS), default="4ag", help="which registered run")
     ap.add_argument("--workers", type=int, default=3, help="judge sessions at once")
     args = ap.parse_args()
     if args.judge:
-        return judge(args.judge.resolve(), args.workers)
+        return judge(args.judge.resolve(), args.workers, args.section)
     rev = dr.git("rev-parse", args.rev).strip()
     with dr.store_copy(dr.main_store()) as store:
         live = [n for n in store.all_nodes() if n.status not in RETIRED_STATUSES]
