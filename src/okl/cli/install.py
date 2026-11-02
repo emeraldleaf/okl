@@ -456,12 +456,15 @@ def _dry_run_pin(args: argparse.Namespace) -> str:
     """The dry run's line for the CI pin, decided as the real run decides it: another tool's
     file at the workflow's path stays unless --force, a symlink always, and neither gets a pin."""
     from .. import ownership
-    foreign = _symlinked(WORKFLOW) is not None or (
-        _workflow_state() == ownership.UNKNOWN and not getattr(args, "force", False))
+    force = getattr(args, "force", False)
+    state = _workflow_state()
+    foreign = _symlinked(WORKFLOW) is not None or (state == ownership.UNKNOWN and not force)
     if Path("src/okl/__init__.py").is_file():
         return "  (no CI pin: okl's own CI installs its checkout)"
     if foreign:
         return f"  (no CI pin: {WORKFLOW} is not okl's workflow, and is kept)"
+    if state == ownership.MODIFIED and not force and not _workflow_reads_pin():
+        return f"  (no CI pin: the kept, edited {WORKFLOW} does not read {OKL_VERSION_FILE.as_posix()})"
     version = _pinnable_version()
     if version is None:
         return "  (no CI pin: this okl is a dev or source build, so CI installs the newest release)"
@@ -708,10 +711,24 @@ def _install_ci_verifier(force: bool = False) -> None:
                  force)
     # Only okl's workflow (edited or not) reads the pin: beside another tool's file, or a refused
     # symlink, a pin would be a file nothing uses.
-    if _symlinked(WORKFLOW) is None and _workflow_state() in (ownership.OKL, ownership.MODIFIED):
-        _pin_okl_version()
-    else:
+    if _symlinked(WORKFLOW) is not None or _workflow_state() not in (ownership.OKL, ownership.MODIFIED):
         print(f"• no CI pin written: {WORKFLOW} is not okl's workflow")
+    elif not _workflow_reads_pin():
+        print(f"! no CI pin written: {WORKFLOW} is kept as edited, and its install step does not "
+              f"read {OKL_VERSION_FILE.as_posix()} (it predates 0.11.0, or the step was changed), so "
+              "CI installs the newest okl. `okl init --force` replaces it with okl's workflow.")
+    else:
+        _pin_okl_version()
+
+
+def _workflow_reads_pin() -> bool:
+    """Whether the workflow at WORKFLOW reads the pin. One okl wrote before 0.11.0, edited since
+    (Dependabot bumps it) and so kept, installs the newest okl whatever the pin says: writing it
+    there reported a pin CI never used (the 0.11.0 release sweep)."""
+    try:
+        return OKL_VERSION_FILE.as_posix() in WORKFLOW.read_text(errors="replace")
+    except OSError:
+        return False
 
 
 GIT_HOOK_SRC = Path(__file__).parent.parent / "scaffold" / "git-hooks" / "pre-push"

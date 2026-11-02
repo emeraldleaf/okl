@@ -8,6 +8,9 @@
   - **Upgrading:** after upgrading okl, re-run `okl init --repo <name> --no-seed` and commit
     the file; the pin moves forward only, in PEP 440 order (a release candidate never replaces
     its final), so a teammate on an older okl never rolls it back.
+  - **An edited workflow from before 0.11.0** (a Dependabot bump counts as an edit) is kept,
+    and its install step does not read the file: init writes no pin there and says so.
+    `okl init --force` replaces the workflow with okl's, and then pins.
   - **Checked:** a version file that holds anything but a release version stops CI's install
     step with an error naming the file. `okl init --uninstall` removes the file with okl's
     workflow, and keeps it beside a workflow it keeps.

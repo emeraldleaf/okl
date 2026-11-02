@@ -24,7 +24,7 @@ touches only the current directory, and only these:
 | `.claude/settings.json` | registers those two hooks (merged in place; your existing keys are preserved) |
 | `.mcp.json` | registers the okl MCP server — only when the `mcp` extra is installed |
 | `.github/workflows/okl-verify.yml` | **a CI workflow** running the drift gate on pull requests — only with `--ci`, or where an earlier okl installed it |
-| `.github/okl-version` | **one line, the okl release CI installs**, written beside the workflow so CI runs what your hooks run. `okl init` writes it for an okl installed from PyPI, and moves it when re-run after an upgrade, never backwards; a dev or editable okl leaves it alone. Without it, CI installs the newest release. Commit it |
+| `.github/okl-version` | **one line, the okl release CI installs**, written beside the workflow so CI runs what your hooks run. `okl init` writes it for an okl installed from PyPI, and moves it when re-run after an upgrade, never backwards; a dev or editable okl leaves it alone. Written only where okl's workflow reads it: an edited workflow from before 0.11.0 is kept and does not, so init says so instead (`--force` replaces the workflow). Without it, CI installs the newest release. Commit it |
 | `.git/hooks/pre-push` (or your `core.hooksPath`) | **executable**; in a git repository with no okl workflow, or with `--git-hook`; runs the drift gate before a push and blocks only on drift; never written over another tool's hook |
 
 Re-running `init` is safe: it keeps the repo name already configured here (`--repo` renames,

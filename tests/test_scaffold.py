@@ -2477,6 +2477,28 @@ def test_okl_init_ci_pins_nothing_beside_another_tools_workflow(ci_repo):
     assert "no CI pin written" in out, out
 
 
+def test_okl_init_ci_pins_nothing_beside_an_edited_workflow_that_does_not_read_it(ci_repo):
+    """An okl workflow from before 0.11.0, edited since and so kept, installs the newest okl
+    whatever the pin says: init wrote the pin there and said "CI pinned" (the 0.11.0 release
+    sweep). It writes none, says why, and the dry run promises none; --force replaces the
+    workflow, and then pins."""
+    repo, init = ci_repo
+    wf, pin = repo / ".github" / "workflows" / "okl-verify.yml", repo / ".github" / "okl-version"
+    init("0.11.0")
+    pin.unlink()
+    old = "\n".join(line for line in wf.read_text().splitlines() if "okl-version" not in line) + "\n"
+    assert old != wf.read_text()
+    wf.write_text(old)
+
+    assert "does not read .github/okl-version" in init("0.12.0", "--dry-run")
+    out = init("0.12.0")
+    assert "! no CI pin written" in out and "does not read .github/okl-version" in out, out
+    assert not pin.exists() and wf.read_text() == old
+
+    out = init("0.12.0", "--force")
+    assert pin.read_text() == "0.12.0\n", out
+
+
 def test_okl_init_ci_pins_nothing_beside_a_refused_symlink(ci_repo, tmp_path):
     """A workflow path that is a symlink is refused, not followed, even when it points at okl's
     own workflow, and no pin goes beside it (0.11.0 review)."""
