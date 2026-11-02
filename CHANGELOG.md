@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- **`okl init --owner @you`: changes to the thesis need your approval, and `okl doctor` says
+  whether GitHub enforces it** (#329, part A). Init writes okl's block into CODEOWNERS, naming you
+  owner of `docs/THESIS.md`, of the CODEOWNERS file and of any `--owned` path; it merges into an
+  existing file and never rewrites a line of yours. In Claude Code it also adds deny rules for
+  editing branch protection or rulesets through `gh api` and for `gh pr merge --admin`. `okl
+  doctor` asks GitHub and answers "enforced", "not enforced" with the reason, or "unknown"; run as
+  an administrator it says "not enforced", because that identity can change the rule. The new
+  guide, [docs/AGENT-IDENTITY.md](docs/AGENT-IDENTITY.md), covers giving the agent an identity of
+  its own and the branch rule, which are yours to set up.
 - **The thesis page is held to its receipts** (#319). Every figure on `docs/THESIS.md` is
   recomputed by the test suite from the receipt it names. Changing one, adding one without its
   receipt, citing a receipt that is not committed, or leaving a measurement's newer run uncited

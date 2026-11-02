@@ -158,8 +158,8 @@ root_package = "okl"
 # The architecture test for the rule "dependency direction is one-way". It held by
 # convention alone until this contract; now CI fails the first import that points up.
 # Higher layers may import lower ones, never the reverse; `|` marks siblings that must
-# not import each other either. Modules not listed (bootstrap, coexist, ownership,
-# scaffold_cmd) import nothing from okl and are used only by the CLI.
+# not import each other either. Modules not listed (bootstrap, codeowners, coexist,
+# ownership, protection, scaffold_cmd) import nothing from okl and are used only by the CLI.
 name = "Dependencies point one way: CLI -> adapters -> client -> core -> store"
 type = "layers"
 layers = [

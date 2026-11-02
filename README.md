@@ -94,6 +94,8 @@ Code when the repo has a `.claude/` directory or `claude` is on your PATH (`--cl
 (`--no-git-hook` skips it; `--ci` installs the GitHub workflow instead, `--ci --git-hook` both),
 and remembers both choices. Every path it writes, and what each is for:
 [What `okl init` writes](docs/WHAT-INIT-WRITES.md).
+`--owner @you` makes each change to the thesis need your approval, and `okl doctor` says
+whether GitHub enforces it: [Give your agent its own identity](docs/AGENT-IDENTITY.md).
 
 **3. Add a rule of your own.** The starter lessons are generic; what pays is what only your
 codebase knows. Tell your agent — *"record an okl rule for this repo: order lookups are
