@@ -1,0 +1,90 @@
+{
+ "section": "\u00a74ah",
+ "what": "what the run's breaker and judge sessions saw and did, from their transcripts",
+ "at": "2026-11-01T23:07Z",
+ "run": "cefb1r8y",
+ "rejudge": "fnt18zq9",
+ "code": "5f144132c635",
+ "breakers": {
+  "sessions": 54,
+  "status_cut": 54,
+  "deleted_named": {
+   "44": 36,
+   "43": 18
+  },
+  "hidden_asked": 1,
+  "hidden_returned": 0,
+  "outside_worktree_calls": 4,
+  "main_checkout_calls": 0,
+  "named_per_lesson": {
+   "doc-check-defaults": {
+    "sessions": 6,
+    "CHANGELOG.md": 6,
+    "ci/check-check-defaults.py": 6,
+    "evals/REPORT.md": 6
+   },
+   "doc-init-flags": {
+    "sessions": 6,
+    "CHANGELOG.md": 6,
+    "ci/check-init-flags.py": 6,
+    "evals/REPORT.md": 6
+   },
+   "doc-install-name": {
+    "sessions": 6,
+    "CHANGELOG.md": 6,
+    "evals/REPORT.md": 6
+   },
+   "doc-verified-refused": {
+    "sessions": 6,
+    "CHANGELOG.md": 6,
+    "evals/REPORT.md": 6
+   },
+   "docs-agent-neutral": {
+    "sessions": 6,
+    "CHANGELOG.md": 6,
+    "ci/check-agent-neutral.py": 6,
+    "evals/REPORT.md": 6
+   },
+   "n_07faa4565128": {
+    "sessions": 6,
+    "CHANGELOG.md": 6,
+    "ci/check-portable-ungated.py": 6,
+    "evals/REPORT.md": 6
+   },
+   "n_7e50e3588bcd": {
+    "sessions": 6,
+    "CHANGELOG.md": 6,
+    "ci/check-test-imports.py": 6,
+    "evals/REPORT.md": 6
+   },
+   "n_bf6a2aee2f12": {
+    "sessions": 6,
+    "CHANGELOG.md": 6,
+    "evals/REPORT.md": 6
+   },
+   "n_d45d7bf64896": {
+    "sessions": 6,
+    "CHANGELOG.md": 6,
+    "ci/check-positioning.py": 6,
+    "evals/REPORT.md": 6
+   }
+  }
+ },
+ "judges": {
+  "first pass": {
+   "sessions": 54,
+   "no_answer_saved": 10,
+   "tool_call_as_text": 7
+  },
+  "re-judge": {
+   "sessions": 11,
+   "no_answer_saved": 2,
+   "tool_call_as_text": 7
+  }
+ },
+ "earlier": {
+  "run": "vqivxk4v",
+  "sessions": 78,
+  "named_okl_drift_json": 78
+ }
+}

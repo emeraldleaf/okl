@@ -254,7 +254,8 @@ def rejudge(receipt: Path) -> int:
             print(f'{redone[-1]:40} judge={p["judge"]}', flush=True)
     out = receipt.with_name(f"{receipt.stem}-rejudge.json")
     out.write_text(json.dumps({
-        "what": "drift catch rate, patches without a verdict judged once more (REPORT §4af)",
+        # The section is the first pass's own: §4af's or the re-run's (§4ah).
+        "what": f"{rec['what']}, patches without a verdict judged once more",
         "at": f"{datetime.now(UTC):%Y-%m-%dT%H:%MZ}", "receipt": receipt.name,
         "code": dr.git("rev-parse", "--short=12", "HEAD").strip(), "judge": " ".join(JUDGE), "rejudged": redone,
         "cost_usd": round(sum(p.get("judge_cost", 0) for p in patches if p.get("rejudged")), 2),

@@ -1,0 +1,14 @@
+diff --git a/src/okl/cli/parser.py b/src/okl/cli/parser.py
+index c15a4ac..8262012 100644
+--- a/src/okl/cli/parser.py
++++ b/src/okl/cli/parser.py
+@@ -72,9 +72,6 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
+                     help="list every file init would write or modify, and write nothing")
+     pi.add_argument("--force", action="store_true",
+                     help="replace okl files you have edited with okl's version")
+-    pi.add_argument("--uninstall", action="store_true",
+-                    help="remove okl's hooks, registrations and CI workflow (never .okl/); "
+-                         "edited files are kept. Combine with --dry-run to preview")
+     pi.set_defaults(func=cmd_init)
+ 
+     pc = sub.add_parser("connect", help="point this repo at a shared OKL service URL")

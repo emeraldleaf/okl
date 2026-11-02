@@ -1,0 +1,13 @@
+diff --git a/src/okl/mcp_server.py b/src/okl/mcp_server.py
+index 331237b..f7096d9 100644
+--- a/src/okl/mcp_server.py
++++ b/src/okl/mcp_server.py
+@@ -170,7 +170,7 @@ def _build() -> Any:  # noqa: C901, PLR0915 - a declarative table of tool defini
+         except (OKLRejectedError, OKLNotConfiguredError) as e:
+             return f"⚠️ OKL REFUSED THE SEARCH — no search ran ({e})."
+         if not rows:
+-            return "no matches."
++            return f"no matches for {query!r}."
+         # The id was missing, so an agent told to "search first and reuse the id" had no
+         # id to reuse (CodeRabbit on #79).
+         return "\n".join(f"{r['id']} [{r['type']}] {r['scope']} — {r['title']}"

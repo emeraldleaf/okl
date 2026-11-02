@@ -1,0 +1,19 @@
+diff --git a/tests/test_stem.py b/tests/test_stem.py
+index 503c162..d04411e 100644
+--- a/tests/test_stem.py
++++ b/tests/test_stem.py
+@@ -117,6 +117,14 @@ def test_the_floor_counts_two_forms_of_one_word_once(store):
+     assert not core.briefed_ids(res)
+ 
+ 
++def test_the_line_ignores_the_case_of_a_word(store):
++    """"Rotating" in the prompt shares its stem with "rotate" in a title."""
++    core.record(store, type="Rule", title="rotate the signing secret", scope="org")
++    nodes = store.all_nodes()
++    _, shared = decide.score(["Rotating", "signing"], nodes[0], decide.Rarity(nodes))
++    assert len(shared) == 2
++
++
+ def test_a_stem_counts_once_however_many_words_share_it(store):
+     """Two forms of one word are one shared word to the line, as on the bench that set it (§4ac)."""
+     core.record(store, type="Rule", title="migration order", scope="org")

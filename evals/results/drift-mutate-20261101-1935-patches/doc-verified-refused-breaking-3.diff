@@ -1,0 +1,13 @@
+diff --git a/src/okl/cli/lessons.py b/src/okl/cli/lessons.py
+index 21e03ff..738cb2e 100644
+--- a/src/okl/cli/lessons.py
++++ b/src/okl/cli/lessons.py
+@@ -184,7 +184,7 @@ def cmd_record(args: argparse.Namespace) -> int:
+     exit 2 with the message, which names the vocabulary. A traceback would bury the one
+     line that tells them how to fix the call.
+     """
+-    if args.verified:
++    if args.verified and not getattr(args, "replace", False):
+         # A stamp the recorder awards itself is the step grading its own homework. The
+         # README said live verification refused this; it accepted it, silently, and the
+         # shipped encoding-loop skill told agents to pass it. Found checking a launch post

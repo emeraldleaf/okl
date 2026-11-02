@@ -1,0 +1,14 @@
+diff --git a/seed/dotnet-defects.json b/seed/dotnet-defects.json
+index d8f059e..46e7df8 100644
+--- a/seed/dotnet-defects.json
++++ b/seed/dotnet-defects.json
+@@ -14,7 +14,8 @@
+    "body": "A resource endpoint that doesn't scope by the caller's identity leaks other users' data. Portable fix: push the ownership predicate INTO the query (read handlers) or check on the tracked entity (write handlers), return 404 not 403 (403 leaks existence). Require an integration test asserting user X cannot read user Y's resource for every scoped-entity endpoint.",
+    "symptom": "an endpoint fetches an entity by id with no owner/tenant predicate",
+    "fix": "add the caller's owner id to the WHERE clause; return 404 (not 403) on no match",
+-   "tags": "security,dotnet"
++   "tags": "security,dotnet",
++   "applies_to": "dotnet"
+   },
+   {
+    "key": "nc_jwt_clockskew",

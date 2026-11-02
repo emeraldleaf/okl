@@ -29,9 +29,10 @@
   CI already runs no longer govern files. Over the history since the snapshot began, that is
   fewer lesson re-checks (766 against 828 per merge, 1,561 against 1,610 per commit), and five
   more of 148 merges that re-verify anything. The label check added 24 Claude Code labels in 13
-  docs, and SEEDING.md no longer says `/seed-from-codebase` comes with any agent. A re-run of
-  §4af is registered; until it reaches a catch rate of 0.5, drift stays described as a prompt to
-  re-check.
+  docs, and SEEDING.md no longer says `/seed-from-codebase` comes with any agent. In the registered
+  re-run, drift caught 16 of 24 judged breaks of the same nine lessons, where §4af caught 8 of 22. The
+  judge gave no verdict on 11 of its 54 patches, over the 20% the rule allows, so no rate is
+  quoted, and drift stays described as a prompt to re-check.
 
 ## 0.10.0
 

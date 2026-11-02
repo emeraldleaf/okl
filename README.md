@@ -16,9 +16,11 @@ briefed to your agent before every task (by a hook in Claude Code; any MCP agent
 the same briefing), each proven by a check you choose, flagged before you push (or in CI) when
 what it covers changes, and corrected or retired as you build. Prompts advise; the gate
 enforces. Use it in one repo, or share one store across every repo your team runs.<br>
-Under the hood: typed records, keyword search and one-step links. No embeddings by default,
-no model calls in the loop, no automatic capture; an optional local embedding arm exists,
-measured and off until you turn it on ([REPORT §4q](evals/REPORT.md)). A lesson is written
+Under the hood: typed records, keyword search and one-step links. No model runs by default,
+okl itself calls no generative model, and nothing is captured automatically. Three local models
+are optional, measured and off until you turn them on: an embedding arm, a reranker and a warm
+embedding model, `okl warm` ([REPORT §4q, §4t, §4z](evals/REPORT.md)). The scaffold's optional
+review step runs a generative model only if you name one. A lesson is written
 on purpose and proven by a check. The claim in full, how much of it holds today and how it
 has changed: [docs/THESIS.md](docs/THESIS.md).
 

@@ -1,0 +1,1453 @@
+{
+ "what": "drift catch rate (REPORT \u00a74ah, the re-run), patches without a verdict judged once more",
+ "at": "2026-11-01T21:02Z",
+ "receipt": "drift-mutate-20261101-1935.json",
+ "code": "753437e71249",
+ "judge": "claude -p --model opus --restricted --strict-mcp-config --output-format json --tools ",
+ "rejudged": [
+  "doc-init-flags-breaking-0",
+  "doc-init-flags-breaking-1",
+  "doc-init-flags-breaking-2",
+  "doc-init-flags-harmless-0",
+  "doc-init-flags-harmless-1",
+  "doc-install-name-breaking-0",
+  "doc-install-name-breaking-1",
+  "doc-verified-refused-breaking-1",
+  "doc-verified-refused-breaking-3",
+  "n_7e50e3588bcd-breaking-3",
+  "n_7e50e3588bcd-harmless-1"
+ ],
+ "cost_usd": 0.51,
+ "summary": {
+  "breaking_patches": 36,
+  "breaks": 30,
+  "judge": {
+   "breaking:broken": 30,
+   "harmless:intact": 16,
+   "breaking:invalid": 2,
+   "harmless:broken": 1,
+   "harmless:invalid": 1,
+   "breaking:intact": 4
+  },
+  "catch": {
+   "caught": 21,
+   "breaks": 30,
+   "rate": 0.7,
+   "wilson95": [
+    0.5212,
+    0.8334
+   ],
+   "bootstrap95_by_lesson": [
+    0.5294,
+    0.8611
+   ]
+  },
+  "coverage_misses": 4,
+  "sensitivity_misses": 5,
+  "check_timed_out": 0,
+  "against_ci": {
+   "ci_run_lessons": {
+    "drift_only": 0,
+    "both": 0,
+    "ci_only": 0,
+    "neither": 0,
+    "breaks": 0
+   },
+   "other_lessons": {
+    "drift_only": 16,
+    "both": 5,
+    "ci_only": 1,
+    "neither": 8,
+    "breaks": 30
+   }
+  },
+  "controls": {
+   "n": 16,
+   "check_failed": 0
+  },
+  "unusable": 0,
+  "per_lesson": {
+   "doc-check-defaults": {
+    "breaks": 4,
+    "caught": 4,
+    "coverage_misses": 0,
+    "sensitivity_misses": 0,
+    "controls_failed": 0
+   },
+   "doc-init-flags": {
+    "breaks": 3,
+    "caught": 2,
+    "coverage_misses": 1,
+    "sensitivity_misses": 0,
+    "controls_failed": 0
+   },
+   "doc-install-name": {
+    "breaks": 2,
+    "caught": 1,
+    "coverage_misses": 0,
+    "sensitivity_misses": 1,
+    "controls_failed": 0
+   },
+   "doc-verified-refused": {
+    "breaks": 4,
+    "caught": 2,
+    "coverage_misses": 0,
+    "sensitivity_misses": 2,
+    "controls_failed": 0
+   },
+   "docs-agent-neutral": {
+    "breaks": 4,
+    "caught": 3,
+    "coverage_misses": 0,
+    "sensitivity_misses": 1,
+    "controls_failed": 0
+   },
+   "n_07faa4565128": {
+    "breaks": 4,
+    "caught": 1,
+    "coverage_misses": 3,
+    "sensitivity_misses": 0,
+    "controls_failed": 0
+   },
+   "n_7e50e3588bcd": {
+    "breaks": 4,
+    "caught": 4,
+    "coverage_misses": 0,
+    "sensitivity_misses": 0,
+    "controls_failed": 0
+   },
+   "n_bf6a2aee2f12": {
+    "breaks": 1,
+    "caught": 1,
+    "coverage_misses": 0,
+    "sensitivity_misses": 0,
+    "controls_failed": 0
+   },
+   "n_d45d7bf64896": {
+    "breaks": 4,
+    "caught": 3,
+    "coverage_misses": 0,
+    "sensitivity_misses": 1,
+    "controls_failed": 0
+   }
+  }
+ },
+ "patches": [
+  {
+   "lesson": "doc-check-defaults",
+   "lesson_sha": "1e3c17276215bcf3",
+   "kind": "breaking",
+   "k": 0,
+   "ci_run": false,
+   "said": " fine for a contributor-level change.\n\nI added a `markdown` choice to the `check` command's `--format` option in `src/okl/cli/parser.py`. The README doesn't mention it, and no code in `src/okl/cli/lessons.py` handles it yet, so it prints the normal agent briefing. I haven't run the tests or the CLI.",
+   "breaker_cost": 0.038900199999999996,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "fail",
+   "ci": "pass",
+   "ci_failed": [],
+   "judge": "broken",
+   "judge_cost": 0.023017100000000002,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "{\"verdict\": \"broken\", \"reason\": \"The diff adds a 'markdown' choice to `check --format` without updating the README, so the code now has a format the README's stated list (agent, actions, json, hook) doesn't mention.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/doc-check-defaults-breaking-0.diff"
+  },
+  {
+   "lesson": "doc-check-defaults",
+   "lesson_sha": "1e3c17276215bcf3",
+   "kind": "breaking",
+   "k": 1,
+   "ci_run": false,
+   "said": "I changed the default `limit` of `check()` in `src/okl/core.py` from 12 to 8. I didn't touch the README, so it still says 12. I haven't run any tests, and `src/okl/service.py` still defaults its own `limit` to 12.",
+   "breaker_cost": 0.0224797,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "fail",
+   "ci": "fail",
+   "ci_failed": [
+    "python3 -m pytest -q -p no:cacheprovider"
+   ],
+   "judge": "broken",
+   "judge_cost": 0.0149687,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "{\"verdict\": \"broken\", \"reason\": \"The diff changes check()'s default limit from 12 to 8 without touching the README, so the README's stated default of 12 no longer matches the code.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/doc-check-defaults-breaking-1.diff"
+  },
+  {
+   "lesson": "doc-check-defaults",
+   "lesson_sha": "1e3c17276215bcf3",
+   "kind": "breaking",
+   "k": 2,
+   "ci_run": false,
+   "said": "I changed the default `limit` on the service's `POST /check` request model (`CheckReq` in `src/okl/service.py`) from 12 to 10. I didn't touch the README or run any tests.",
+   "breaker_cost": 0.0267654,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "fail",
+   "ci": "pass",
+   "ci_failed": [],
+   "judge": "broken",
+   "judge_cost": 0.014172000000000002,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "{\"verdict\": \"broken\", \"reason\": \"The diff changes the check request's default `limit` from 12 to 10 in `src/okl/service.py` but leaves the README alone, so the README's stated default of 12 no longer matches the code.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/doc-check-defaults-breaking-2.diff"
+  },
+  {
+   "lesson": "doc-check-defaults",
+   "lesson_sha": "1e3c17276215bcf3",
+   "kind": "breaking",
+   "k": 3,
+   "ci_run": false,
+   "said": "I changed `src/okl/client.py` so a local `check` with no `--limit` now defaults to 10 lessons instead of falling through to the core default of 12. I didn't run any tests or edit the README.",
+   "breaker_cost": 0.0465241,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "fail",
+   "ci": "pass",
+   "ci_failed": [],
+   "judge": "broken",
+   "judge_cost": 0.0116636,
+   "judge_models": [
+    "claude-opus-5-5"
+   ],
+   "judge_said": "{\"verdict\": \"broken\", \"reason\": \"The client now forces a default limit of 10 when none is given, contradicting the README's stated default limit of 12.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/doc-check-defaults-breaking-3.diff"
+  },
+  {
+   "lesson": "doc-check-defaults",
+   "lesson_sha": "1e3c17276215bcf3",
+   "kind": "harmless",
+   "k": 0,
+   "ci_run": false,
+   "said": "I edited the `--format` help text for `okl check` in `src/okl/cli/parser.py` so it now reads \"agent (default)\". Behavior is unchanged, and I didn't run any tests or the CLI.",
+   "breaker_cost": 0.0304277,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "pass",
+   "judge": "intact",
+   "judge_cost": 0.012632899999999999,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "{\"verdict\": \"intact\", \"reason\": \"The change only edits help text to label agent as the default; the choices, default format, and limit default are unchanged.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/doc-check-defaults-harmless-0.diff"
+  },
+  {
+   "lesson": "doc-check-defaults",
+   "lesson_sha": "1e3c17276215bcf3",
+   "kind": "harmless",
+   "k": 1,
+   "ci_run": false,
+   "said": "I changed the `okl_search` tool in `src/okl/mcp_server.py` so its empty-result message now includes the query, as `no matches for '<query>'.`. A search of the repo found no other copies of the old `no matches.` string. I didn't run any tests.",
+   "breaker_cost": 0.027416499999999996,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "pass",
+   "judge": "intact",
+   "judge_cost": 0.012298900000000001,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "{\"verdict\": \"intact\", \"reason\": \"The change only alters the MCP search tool's empty-result message and does not touch the check command's default limit or output formats documented in the README.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/doc-check-defaults-harmless-1.diff"
+  },
+  {
+   "lesson": "doc-init-flags",
+   "lesson_sha": "90d976cf425eddf7",
+   "kind": "breaking",
+   "k": 0,
+   "ci_run": false,
+   "said": "I removed the `--uninstall` option from the `okl init` parser in `src/okl/cli/parser.py`. `docs/COSTS-AND-KNOBS.md` and `docs/GETTING-STARTED.md` still document `okl init --uninstall`, so running it now fails with \"unrecognized arguments\". I didn't run the tests or the CLI.",
+   "breaker_cost": 0.048345500000000007,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "fail",
+   "ci": "fail",
+   "ci_failed": [
+    "python3 -m pytest -q -p no:cacheprovider"
+   ],
+   "judge": null,
+   "judge_cost": 0.10665399999999998,
+   "judge_models": [],
+   "judge_said": "me=\"Bash\">\n<parameter name=\"command\">echo 27</parameter>\n</invoke>\n\n<invoke name=\"Bash\">\n<parameter name=\"command\">echo 28</parameter>\n</invoke>\n\n<invoke name=\"Bash\">\n<parameter name=\"command\">echo 29</parameter>\n</invoke>\n\n<invoke name=\"Bash\">\n<parameter name=\"command\">echo 30</parameter>\n</invoke>",
+   "patch": "drift-mutate-20261101-1935-patches/doc-init-flags-breaking-0.diff",
+   "judge_first": "timed out",
+   "rejudged": true
+  },
+  {
+   "lesson": "doc-init-flags",
+   "lesson_sha": "90d976cf425eddf7",
+   "kind": "breaking",
+   "k": 1,
+   "ci_run": false,
+   "said": "I changed the README quick-start line to `okl init --repo my-repo --minimal`. The CLI has no `--minimal` flag, so the documented command would now fail with \"unrecognized arguments\". I confirmed the flag is absent with a search of `src/`, but I didn't run the command or any tests.",
+   "breaker_cost": 0.0338904,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "fail",
+   "ci": "pass",
+   "ci_failed": [],
+   "judge": "broken",
+   "judge_cost": 0.07519170000000001,
+   "judge_models": [],
+   "judge_said": "ocuments `okl init --minimal`, but no `--minimal` option appears to be defined for `init` in src/okl/cli/ and the change didn't touch the CLI, so this documented flag would fail with 'unrecognized arguments' (my repository searches returned no visible output, so this rests mainly on the diff).\"}\n```",
+   "patch": "drift-mutate-20261101-1935-patches/doc-init-flags-breaking-1.diff",
+   "judge_first": "timed out",
+   "rejudged": true
+  },
+  {
+   "lesson": "doc-init-flags",
+   "lesson_sha": "90d976cf425eddf7",
+   "kind": "breaking",
+   "k": 2,
+   "ci_run": false,
+   "said": "I changed the getting-started example in `docs/GETTING-STARTED.md` to `okl init --repo shop --dry-run --preview`. I didn't check the CLI parser, so I'm assuming `--preview` isn't an `okl init` flag. If so, the doc now shows a flag the CLI would reject as unrecognized. I haven't run the command.",
+   "breaker_cost": 0.027590400000000005,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "fail",
+   "ci": "pass",
+   "ci_failed": [],
+   "judge": "broken",
+   "judge_cost": 0.0125559,
+   "judge_models": [],
+   "judge_said": "\"verdict\": \"broken\", \"reason\": \"The diff adds a new `--preview` flag to the documented `okl init` command without any matching change under src/okl/cli/, so the guide now documents a flag the CLI almost certainly rejects with 'unrecognized arguments' (the repo wasn't available locally to confirm).\"}",
+   "patch": "drift-mutate-20261101-1935-patches/doc-init-flags-breaking-2.diff",
+   "judge_first": "timed out",
+   "rejudged": true
+  },
+  {
+   "lesson": "doc-init-flags",
+   "lesson_sha": "90d976cf425eddf7",
+   "kind": "breaking",
+   "k": 3,
+   "ci_run": false,
+   "said": "I changed the repo-setup example in `docs/DEPLOY.md` to `okl init --repo checkout-api --server https://okl.internal`. I didn't check `src/okl/cli/parser.py`, so I'm assuming `--server` isn't an `okl init` flag. I didn't run anything to confirm it.",
+   "breaker_cost": 0.0334718,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": false,
+   "check": "pass",
+   "ci": "pass",
+   "ci_failed": [],
+   "judge": "broken",
+   "judge_cost": 0.07192780000000001,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "and without any matching change in src/okl/cli/, and the guide already passes the server URL to `okl connect`, so `okl init --server` most likely fails with 'unrecognized arguments' (my attempts to inspect the CLI source returned no output, so this is inferred from the diff rather than confirmed).\"}",
+   "patch": "drift-mutate-20261101-1935-patches/doc-init-flags-breaking-3.diff"
+  },
+  {
+   "lesson": "doc-init-flags",
+   "lesson_sha": "90d976cf425eddf7",
+   "kind": "harmless",
+   "k": 0,
+   "ci_run": false,
+   "said": "I added a short note to the `okl init` paragraph in `README.md` saying that `okl init --uninstall` removes what init wired. `--uninstall` is already defined in `src/okl/cli/parser.py`, so the note only documents a flag the CLI has. I didn't run the CLI or any tests.",
+   "breaker_cost": 0.0402808,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "pass",
+   "judge": "broken",
+   "judge_cost": 0.020516999999999997,
+   "judge_models": [],
+   "judge_said": "{\"verdict\": \"broken\", \"reason\": \"The diff documents a new `okl init --uninstall` flag in the README without any change to src/okl/cli/, so a reader running it would most likely get 'unrecognized arguments' (the working directory was empty, so I could not confirm the CLI lacks the flag).\"}",
+   "patch": "drift-mutate-20261101-1935-patches/doc-init-flags-harmless-0.diff",
+   "judge_first": "timed out",
+   "rejudged": true
+  },
+  {
+   "lesson": "doc-init-flags",
+   "lesson_sha": "90d976cf425eddf7",
+   "kind": "harmless",
+   "k": 1,
+   "ci_run": false,
+   "said": "I edited `docs/GETTING-STARTED.md` to say that `--interests` takes a comma-separated list, and added the example `--interests python,security`. The CLI's `--interests` help text already describes it as comma-separated, so no new flag is documented. I didn't run the CLI or any tests.",
+   "breaker_cost": 0.034698200000000005,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "pass",
+   "judge": null,
+   "judge_cost": 0.0,
+   "judge_models": [],
+   "judge_said": "timed out",
+   "patch": "drift-mutate-20261101-1935-patches/doc-init-flags-harmless-1.diff",
+   "judge_first": "timed out",
+   "rejudged": true
+  },
+  {
+   "lesson": "doc-install-name",
+   "lesson_sha": "09c3884e565d07a6",
+   "kind": "breaking",
+   "k": 0,
+   "ci_run": false,
+   "said": "I renamed the distribution in `pyproject.toml` from `observed-knowledge-ledger` to `okl-ledger`. I left `README.md` and `docs/GETTING-STARTED.md` unchanged, so their install lines still name the old package. I didn't run any tests or builds.",
+   "breaker_cost": 0.0208621,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "fail",
+   "ci": "fail",
+   "ci_failed": [
+    "python3 -m pytest -q -p no:cacheprovider"
+   ],
+   "judge": null,
+   "judge_cost": 0.0,
+   "judge_models": [],
+   "judge_said": "timed out",
+   "patch": "drift-mutate-20261101-1935-patches/doc-install-name-breaking-0.diff",
+   "judge_first": "timed out",
+   "rejudged": true
+  },
+  {
+   "lesson": "doc-install-name",
+   "lesson_sha": "09c3884e565d07a6",
+   "kind": "breaking",
+   "k": 1,
+   "ci_run": false,
+   "said": "I changed the `pipx install` line at the top of `docs/GETTING-STARTED.md` to install `okl-ledger[mcp]`. `pyproject.toml` still publishes `observed-knowledge-ledger`, so that line now names a package that doesn't exist. I didn't run anything or touch the other install lines.",
+   "breaker_cost": 0.025205399999999996,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "fail",
+   "ci": "pass",
+   "ci_failed": [],
+   "judge": "broken",
+   "judge_cost": 0.2463614,
+   "judge_models": [],
+   "judge_said": "ct\": \"broken\", \"reason\": \"The diff changes the GETTING-STARTED install line to 'okl-ledger' without any matching change to pyproject.toml or README.md, so since the old name 'observed-knowledge-ledger' was the real distribution before, the guide now names a package pyproject.toml does not publish.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/doc-install-name-breaking-1.diff",
+   "judge_first": "timed out",
+   "rejudged": true
+  },
+  {
+   "lesson": "doc-install-name",
+   "lesson_sha": "09c3884e565d07a6",
+   "kind": "breaking",
+   "k": 2,
+   "ci_run": false,
+   "said": "nstall` line and the MCP section's `pip install` line to use `okl-ledger`, which `pyproject.toml` doesn't publish (it still says `observed-knowledge-ledger`). I didn't run any tests or checks. The extras install lines in the README and the two in `docs/GETTING-STARTED.md` still name the old package.",
+   "breaker_cost": 0.0315507,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "pass",
+   "ci": "pass",
+   "ci_failed": [],
+   "judge": "broken",
+   "judge_cost": 0.024609499999999996,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "n\", \"reason\": \"The diff changes the README install lines to `okl-ledger` without touching pyproject.toml, which still publishes `observed-knowledge-ledger`, so the README now names a distribution the project doesn't publish (and contradicts its own unchanged `observed-knowledge-ledger[all]` line).\"}",
+   "patch": "drift-mutate-20261101-1935-patches/doc-install-name-breaking-2.diff"
+  },
+  {
+   "lesson": "doc-install-name",
+   "lesson_sha": "09c3884e565d07a6",
+   "kind": "breaking",
+   "k": 3,
+   "ci_run": false,
+   "said": "ish.yml` so the release builds `packaging/org-knowledge-layer` instead of the root project. A release would then upload only `org-knowledge-layer`, not `observed-knowledge-ledger`, which is the name the README and getting-started guide tell people to install. I haven't run the workflow or any tests.",
+   "breaker_cost": 0.0668135,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": false,
+   "check": "pass",
+   "ci": "pass",
+   "ci_failed": [],
+   "judge": "intact",
+   "judge_cost": 0.018578,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "nges the build step in publish.yml and touches neither pyproject.toml's distribution name nor the install lines in README.md and docs/GETTING-STARTED.md, so the docs still name the distribution pyproject.toml declares (though the workflow no longer builds that main package, a separate regression).\"}",
+   "patch": "drift-mutate-20261101-1935-patches/doc-install-name-breaking-3.diff"
+  },
+  {
+   "lesson": "doc-install-name",
+   "lesson_sha": "09c3884e565d07a6",
+   "kind": "harmless",
+   "k": 0,
+   "ci_run": false,
+   "said": "I realigned the trailing comment on the `pip install -e .` line in the README's Install block so it lines up with the `pipx install` comment above it. It's a whitespace-only change, and I didn't run any tests or builds.",
+   "breaker_cost": 0.026193499999999998,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "pass",
+   "judge": "intact",
+   "judge_cost": 0.0118734,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "{\"verdict\": \"intact\", \"reason\": \"The diff only changes whitespace alignment of a comment on the `pip install -e .` line; the package name `observed-knowledge-ledger` in the install command is untouched and no rename occurred.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/doc-install-name-harmless-0.diff"
+  },
+  {
+   "lesson": "doc-install-name",
+   "lesson_sha": "09c3884e565d07a6",
+   "kind": "harmless",
+   "k": 1,
+   "ci_run": false,
+   "said": "I added an upgrade tip to the install section of `docs/GETTING-STARTED.md`: `pipx upgrade observed-knowledge-ledger`, using the same package name as the install line.",
+   "breaker_cost": 0.026658800000000003,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "pass",
+   "judge": "intact",
+   "judge_cost": 0.0124798,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "{\"verdict\": \"intact\", \"reason\": \"The diff only adds an upgrade hint that uses the same distribution name, `observed-knowledge-ledger`, as the existing install line, so the docs still match the published PyPI name.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/doc-install-name-harmless-1.diff"
+  },
+  {
+   "lesson": "doc-verified-refused",
+   "lesson_sha": "702e2eb63f9d7984",
+   "kind": "breaking",
+   "k": 0,
+   "ci_run": false,
+   "said": "I removed the `--verified` refusal block from `cmd_record` in `src/okl/cli/lessons.py`, so `okl record --verified` no longer exits with an error. I didn't edit the docs, so they still say it is refused, and I didn't run any tests or the CLI.",
+   "breaker_cost": 0.0396981,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "fail",
+   "ci": "fail",
+   "ci_failed": [
+    "python3 -m pytest -q -p no:cacheprovider"
+   ],
+   "judge": "broken",
+   "judge_cost": 0.0160247,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "{\"verdict\": \"broken\", \"reason\": \"The diff deletes cmd_record's only refusal of --verified, so the CLI now accepts self-stamped lessons while the docs still say this is refused, which is exactly the lesson's symptom.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/doc-verified-refused-breaking-0.diff"
+  },
+  {
+   "lesson": "doc-verified-refused",
+   "lesson_sha": "702e2eb63f9d7984",
+   "kind": "breaking",
+   "k": 1,
+   "ci_run": false,
+   "said": "I changed the `--verified` option on `okl record` in `src/okl/cli/parser.py` so it always parses as false. `cmd_record` therefore never reaches its refusal, and the CLI now accepts `--verified` without complaint while the docs still say it is refused. I haven't run the CLI or the tests.",
+   "breaker_cost": 0.0354461,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "fail",
+   "ci": "fail",
+   "ci_failed": [
+    "python3 -m pytest -q -p no:cacheprovider"
+   ],
+   "judge": "broken",
+   "judge_cost": 0.010567700000000001,
+   "judge_models": [],
+   "judge_said": "{\"verdict\": \"broken\", \"reason\": \"With `store_const` and `const=False`, passing `--verified` now sets `args.verified` to False, so cmd_record's refusal check never fires and the CLI silently accepts the flag, even though the docs and help text still say it is refused.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/doc-verified-refused-breaking-1.diff",
+   "judge_first": "timed out",
+   "rejudged": true
+  },
+  {
+   "lesson": "doc-verified-refused",
+   "lesson_sha": "702e2eb63f9d7984",
+   "kind": "breaking",
+   "k": 2,
+   "ci_run": false,
+   "said": "anged `main` in `src/okl/cli/__init__.py` to clear `args.verified` before dispatch when `--replace` is also set. As a result, `okl record --replace --verified` now skips the refusal in `cmd_record` and is accepted, even though the docs say `--verified` is refused. I haven't run the tests or the CLI.",
+   "breaker_cost": 0.052483600000000005,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "pass",
+   "ci": "pass",
+   "ci_failed": [],
+   "judge": "broken",
+   "judge_cost": 0.0699276,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "e, main() now silently clears args.verified before cmd_record runs, so `okl record --verified --replace` exits successfully instead of being refused, which makes the docs' claim that --verified is refused false for that path (I couldn't find the repo source, so this is judged from the diff alone).\"}",
+   "patch": "drift-mutate-20261101-1935-patches/doc-verified-refused-breaking-2.diff"
+  },
+  {
+   "lesson": "doc-verified-refused",
+   "lesson_sha": "702e2eb63f9d7984",
+   "kind": "breaking",
+   "k": 3,
+   "ci_run": false,
+   "said": "nger true. I did not run the tests or the command.\n\nThis is another edit to `lessons.py`, one of the three files earlier changes used. I found no other way to make the CLI accept `--verified`: the flag is defined in `parser.py` and checked only in `cmd_record`, and `cli/__init__.py` just dispatches.",
+   "breaker_cost": 0.11289249999999999,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "pass",
+   "ci": "pass",
+   "ci_failed": [],
+   "judge": "broken",
+   "judge_cost": 0.0174529,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "{\"verdict\": \"broken\", \"reason\": \"The refusal in cmd_record now only fires when --replace is absent, so `okl record --verified --replace` self-stamps without being refused while the docs still say it is refused, and the docs' wording was not updated in the same change.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/doc-verified-refused-breaking-3.diff",
+   "judge_first": "ut_mode\">content</parameter>\n<parameter name=\"-n\">true</parameter>\n</invoke>\n|<invoke name=\"Grep\">\n<parameter name=\"pattern\">replace</parameter>\n<parameter name=\"path\">src/okl/cli/lessons.py</parameter>\n<parameter name=\"output_mode\">content</parameter>\n<parameter name=\"-n\">true</parameter>\n</invoke>",
+   "rejudged": true
+  },
+  {
+   "lesson": "doc-verified-refused",
+   "lesson_sha": "702e2eb63f9d7984",
+   "kind": "harmless",
+   "k": 0,
+   "ci_run": false,
+   "said": "I added one sentence to the `cmd_record` docstring in `src/okl/cli/lessons.py`, saying nothing is written until every check there has passed. It's a docstring-only change, and I didn't run any tests.",
+   "breaker_cost": 0.035970999999999996,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "pass",
+   "judge": "intact",
+   "judge_cost": 0.012103599999999999,
+   "judge_models": [
+    "claude-opus-5-5"
+   ],
+   "judge_said": "{\"verdict\": \"intact\", \"reason\": \"The diff only adds a docstring sentence to cmd_record; the `if args.verified:` refusal branch is untouched, so the CLI still refuses self-stamping as the docs claim.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/doc-verified-refused-harmless-0.diff"
+  },
+  {
+   "lesson": "doc-verified-refused",
+   "lesson_sha": "702e2eb63f9d7984",
+   "kind": "harmless",
+   "k": 1,
+   "ci_run": false,
+   "said": "I added a note to the `okl drift` troubleshooting row in `docs/GETTING-STARTED.md`. It now says to run `okl reverify` from the repo root so the governed paths resolve. I didn't verify that this is how `okl reverify` resolves paths, and I didn't run any tests.",
+   "breaker_cost": 0.0300537,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "pass",
+   "judge": "intact",
+   "judge_cost": 0.015296100000000002,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "{\"verdict\": \"intact\", \"reason\": \"The diff only adds a note about running `okl reverify` from the repo root and touches neither cmd_record's refusal of --verified nor any doc wording about self-stamping being refused.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/doc-verified-refused-harmless-1.diff"
+  },
+  {
+   "lesson": "docs-agent-neutral",
+   "lesson_sha": "d352c4d2eb9a2507",
+   "kind": "breaking",
+   "k": 0,
+   "ci_run": false,
+   "said": "I removed the \"in Claude Code\" label from the `/triggers` sentence in `docs/RETRIEVAL.md`. The doc now presents that Claude Code-only command as if it worked with any agent. I didn't run any tests or checks, including `ci/check-agent-neutral.py`.",
+   "breaker_cost": 0.0259892,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "fail",
+   "ci": "pass",
+   "ci_failed": [],
+   "judge": "broken",
+   "judge_cost": 0.0122463,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "{\"verdict\": \"broken\", \"reason\": \"The change removes the \\\"in Claude Code\\\" label from `/triggers`, a Claude Code-only slash command, so the docs now present a Claude Code-only feature without labelling it as such.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/docs-agent-neutral-breaking-0.diff"
+  },
+  {
+   "lesson": "docs-agent-neutral",
+   "lesson_sha": "d352c4d2eb9a2507",
+   "kind": "breaking",
+   "k": 1,
+   "ci_run": false,
+   "said": "laude Code\" label from two Claude Code-only items: the `/triggers` slash command and the prompt hook that reads `OKL_BRIEFING_LIMIT`. Both now read as if they apply to any agent. I didn't run any checks or tests. `ci/check-agent-neutral.py` is deleted in this worktree, so it couldn't be used either.",
+   "breaker_cost": 0.032262000000000006,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "fail",
+   "ci": "pass",
+   "ci_failed": [],
+   "judge": "broken",
+   "judge_cost": 0.0159189,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "{\"verdict\": \"broken\", \"reason\": \"The change removes the \\\"in Claude Code\\\" label from the `/triggers` slash command and the Claude Code prompt hook, so these Claude Code-only features are no longer labelled as such.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/docs-agent-neutral-breaking-1.diff"
+  },
+  {
+   "lesson": "docs-agent-neutral",
+   "lesson_sha": "d352c4d2eb9a2507",
+   "kind": "breaking",
+   "k": 2,
+   "ci_run": false,
+   "said": "I edited `docs/SCAFFOLD.md` so the `okl scaffold . --plugin` comment reads \"also emit a plugin manifest\" instead of \"also emit a Claude Code plugin manifest\". That drops the label from a Claude Code-only feature. I didn't run any tests or checks, including `ci/check-agent-neutral.py`.",
+   "breaker_cost": 0.0338189,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "pass",
+   "ci": "pass",
+   "ci_failed": [],
+   "judge": "broken",
+   "judge_cost": 0.0117921,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "{\"verdict\": \"broken\", \"reason\": \"The change removes the 'Claude Code' label from the --plugin option, which emits a Claude Code-only plugin manifest, so a Claude Code-only part of the docs is no longer labelled as such.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/docs-agent-neutral-breaking-2.diff"
+  },
+  {
+   "lesson": "docs-agent-neutral",
+   "lesson_sha": "d352c4d2eb9a2507",
+   "kind": "breaking",
+   "k": 3,
+   "ci_run": false,
+   "said": "I edited `docs/COMMANDS.md` so the `okl triggers` entry now says \"/triggers\" instead of \"/triggers in Claude Code\". That leaves a Claude Code-only slash command with no label saying so. I didn't run any checks, including `ci/check-agent-neutral.py`.",
+   "breaker_cost": 0.0277391,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "fail",
+   "ci": "pass",
+   "ci_failed": [],
+   "judge": "broken",
+   "judge_cost": 0.012751499999999999,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "{\"verdict\": \"broken\", \"reason\": \"The change removes the \\\"in Claude Code\\\" label from the `/triggers` slash-command reference, leaving a Claude Code-only feature presented unlabelled in otherwise agent-neutral docs.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/docs-agent-neutral-breaking-3.diff"
+  },
+  {
+   "lesson": "docs-agent-neutral",
+   "lesson_sha": "d352c4d2eb9a2507",
+   "kind": "harmless",
+   "k": 0,
+   "ci_run": false,
+   "said": "I reworded one sentence in the README's compact-briefing section, changing \"Set them where the agent starts: hooks inherit its environment\" to \"Set them where the agent starts, since hooks inherit its environment\". I didn't run any tests or checks.",
+   "breaker_cost": 0.0280488,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "pass",
+   "judge": "intact",
+   "judge_cost": 0.013302900000000001,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "verdict\": \"intact\", \"reason\": \"The change only rewords punctuation ('starts: hooks' to 'starts, since hooks') in a sentence whose surrounding text already labels the prompt hook as Claude Code's, so no Claude Code-only content loses its label and nothing agent-neutral becomes Claude Code-specific.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/docs-agent-neutral-harmless-0.diff"
+  },
+  {
+   "lesson": "docs-agent-neutral",
+   "lesson_sha": "d352c4d2eb9a2507",
+   "kind": "harmless",
+   "k": 1,
+   "ci_run": false,
+   "said": "I added a sentence to `docs/DEVELOPING.md` under the Stop-hook bullet. It says that with a non-Claude agent you should run `okl recap` by hand before finishing.",
+   "breaker_cost": 0.0332204,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "pass",
+   "judge": "intact",
+   "judge_cost": 0.0125036,
+   "judge_models": [
+    "claude-opus-5-5"
+   ],
+   "judge_said": "{\"verdict\": \"intact\", \"reason\": \"The change adds an agent-neutral instruction for non-Claude agents alongside the already-labelled Claude Code Stop hook, which improves rather than violates agent-neutrality.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/docs-agent-neutral-harmless-1.diff"
+  },
+  {
+   "lesson": "n_07faa4565128",
+   "lesson_sha": "863611416c9d3327",
+   "kind": "breaking",
+   "k": 0,
+   "ci_run": false,
+   "said": "mands/record.md`. It now tells contributors to set `applies_to` to the stack the session was working in, where before it said to leave it unset unless the lesson was false off one stack.\n\nThe same edit to the repo's own `.claude/commands/record.md` was denied, so that copy still has the old wording.",
+   "breaker_cost": 0.06021289999999999,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": false,
+   "check": "pass",
+   "ci": "fail",
+   "ci_failed": [
+    "python3 -m pytest -q -p no:cacheprovider"
+   ],
+   "judge": "broken",
+   "judge_cost": 0.0128647,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "{\"verdict\": \"broken\", \"reason\": \"The record command now instructs setting applies_to to the session's stack unconditionally, gating every record without reading its body for declared portability, which directly contradicts the lesson's fix.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/n_07faa4565128-breaking-0.diff"
+  },
+  {
+   "lesson": "n_07faa4565128",
+   "lesson_sha": "863611416c9d3327",
+   "kind": "breaking",
+   "k": 1,
+   "ci_run": false,
+   "said": "I changed the `okl_record` docstring in `src/okl/mcp_server.py`. It now tells callers to set `applies_to` to the stack named in the title or symptom, where before it said to leave it unset unless the lesson is false off one stack. I didn't run any tests or checks.",
+   "breaker_cost": 0.039861600000000004,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": false,
+   "check": "pass",
+   "ci": "pass",
+   "ci_failed": [],
+   "judge": "broken",
+   "judge_cost": 0.0131082,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "{\"verdict\": \"broken\", \"reason\": \"The tool guidance now says to set applies_to from the stack named in the title or symptom without reading the body, so a record whose body declares itself portable gets gated, which is exactly what the lesson warns against.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/n_07faa4565128-breaking-1.diff"
+  },
+  {
+   "lesson": "n_07faa4565128",
+   "lesson_sha": "863611416c9d3327",
+   "kind": "breaking",
+   "k": 2,
+   "ci_run": false,
+   "said": "g up the summary now.\n\nI changed the `--applies-to` help text in `src/okl/cli/parser.py`. It now tells contributors to set it from the stack they were working in when they found the lesson. Before, it said to use it only when the lesson genuinely doesn't transfer. I haven't run any tests or the CLI.",
+   "breaker_cost": 0.043667399999999995,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": false,
+   "check": "pass",
+   "ci": "pass",
+   "ci_failed": [],
+   "judge": "broken",
+   "judge_cost": 0.016180399999999998,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "e --applies-to help now tells users to set applies_to from the stack they were working in rather than from whether the lesson's own body says it transfers, which directs exactly the gating-by-origin the lesson warns against (and contradicts the help's own 'leave unset for a portable lesson' line).\"}",
+   "patch": "drift-mutate-20261101-1935-patches/n_07faa4565128-breaking-2.diff"
+  },
+  {
+   "lesson": "n_07faa4565128",
+   "lesson_sha": "863611416c9d3327",
+   "kind": "breaking",
+   "k": 3,
+   "ci_run": false,
+   "said": "I added `\"applies_to\": \"dotnet\"` to the `nc_idor` record in `seed/dotnet-defects.json`. That record's body calls its fix \"Portable\", so it is now gated to .NET repos only. I haven't run any tests or checks on the change.",
+   "breaker_cost": 0.0859318,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "fail",
+   "ci": "fail",
+   "ci_failed": [
+    "python3 -m pytest -q -p no:cacheprovider"
+   ],
+   "judge": "broken",
+   "judge_cost": 0.013361900000000001,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "{\"verdict\": \"broken\", \"reason\": \"The change gates the record to dotnet even though its body explicitly says \\\"Portable fix:\\\" and describes a stack-agnostic ownership-predicate pattern, which contradicts the record's own stated portability.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/n_07faa4565128-breaking-3.diff"
+  },
+  {
+   "lesson": "n_07faa4565128",
+   "lesson_sha": "863611416c9d3327",
+   "kind": "harmless",
+   "k": 0,
+   "ci_run": false,
+   "said": "I edited the comment on the `verified_commit` field in `src/okl/store.py` to add \"None if never verified\". It's a comment-only change, and I didn't run any tests.",
+   "breaker_cost": 0.033861,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "pass",
+   "judge": "intact",
+   "judge_cost": 0.012910799999999998,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "{\"verdict\": \"intact\", \"reason\": \"The diff only extends a comment on the verified_commit field and changes no logic around applies_to gating or reading a record's body, so the lesson's claim is unaffected.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/n_07faa4565128-harmless-0.diff"
+  },
+  {
+   "lesson": "n_07faa4565128",
+   "lesson_sha": "863611416c9d3327",
+   "kind": "harmless",
+   "k": 1,
+   "ci_run": false,
+   "said": "I added a \"stale comment\" alias to the `py_comments_why` node in `seed/python-canon.json`, so that lesson also matches searches for stale comments. I didn't run any tests or checks on it.",
+   "breaker_cost": 0.0378398,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "pass",
+   "judge": "intact",
+   "judge_cost": 0.0142345,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "{\"verdict\": \"intact\", \"reason\": \"The diff only adds a \\\"stale comment\\\" alias to an existing record and does not touch applies_to or any record's portability gating, so the lesson's claim about not gating self-declared portable records is unaffected.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/n_07faa4565128-harmless-1.diff"
+  },
+  {
+   "lesson": "n_7e50e3588bcd",
+   "lesson_sha": "5b624338705f2065",
+   "kind": "breaking",
+   "k": 0,
+   "ci_run": false,
+   "said": "I removed `fastapi` from the `dev` dependency group in `pyproject.toml`. The service tests import `fastapi.testclient`, so they now rely on a package no test dependency group declares. I haven't run the tests, and I didn't check whether `uv.lock` or the CI install step also need updating.",
+   "breaker_cost": 0.06971290000000001,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "fail",
+   "ci": "pass",
+   "ci_failed": [],
+   "judge": "broken",
+   "judge_cost": 0.0281039,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "ays the service tests use Starlette's TestClient, and Starlette only arrives through fastapi; those tests now import packages no dependency list declares, so they pass only where fastapi happens to be installed (I could not confirm the test imports because the workspace holds only pyproject.toml).\"}",
+   "patch": "drift-mutate-20261101-1935-patches/n_7e50e3588bcd-breaking-0.diff"
+  },
+  {
+   "lesson": "n_7e50e3588bcd",
+   "lesson_sha": "5b624338705f2065",
+   "kind": "breaking",
+   "k": 1,
+   "ci_run": false,
+   "said": "I changed `test_seed_warns_and_strict_refuses` in `tests/test_hygiene.py` to `import yaml` and use `yaml.safe_load` to check the seed pack it writes. `yaml` is in no dependency group in `pyproject.toml`. I haven't run the tests.",
+   "breaker_cost": 0.06823399999999999,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "fail",
+   "ci": "pass",
+   "ci_failed": [],
+   "judge": "broken",
+   "judge_cost": 0.0243384,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "000gn/T/okl-mutate-cefb1r8y/pyproject.toml</parameter>\n</invoke>\n\n\n```json\n{\"verdict\": \"broken\", \"reason\": \"The test now imports `yaml` (PyYAML), but pyproject.toml declares no runtime dependencies and only pytest in the test extra, so the test passes only where PyYAML happens to be installed.\"}\n```",
+   "patch": "drift-mutate-20261101-1935-patches/n_7e50e3588bcd-breaking-1.diff"
+  },
+  {
+   "lesson": "n_7e50e3588bcd",
+   "lesson_sha": "5b624338705f2065",
+   "kind": "breaking",
+   "k": 2,
+   "ci_run": false,
+   "said": "I changed `tests/test_docs.py` so it imports `yaml` (PyYAML) and uses `yaml.safe_load` to read the seed packs in `_seed_counts`. PyYAML isn't in any dependency group in `pyproject.toml`. I didn't run the tests, so I haven't confirmed the `ModuleNotFoundError` on a machine without PyYAML.",
+   "breaker_cost": 0.0701832,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "fail",
+   "ci": "pass",
+   "ci_failed": [],
+   "judge": "broken",
+   "judge_cost": 0.021507199999999997,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "\"verdict\": \"broken\", \"reason\": \"The test now imports the third-party `yaml` package (PyYAML) to parse files that `json` already handled; the repository was not available to check, but PyYAML is unlikely to be a declared test dependency, so the test would pass only where it happens to be installed.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/n_7e50e3588bcd-breaking-2.diff"
+  },
+  {
+   "lesson": "n_7e50e3588bcd",
+   "lesson_sha": "5b624338705f2065",
+   "kind": "breaking",
+   "k": 3,
+   "ci_run": false,
+   "said": "I changed `tests/test_scaffold.py` to import `tomli as tomllib` instead of the standard-library `tomllib`. `tomli` isn't in any dependency list, so that test only passes where `tomli` happens to be installed. I didn't run the tests.",
+   "breaker_cost": 0.0531236,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "fail",
+   "ci": "fail",
+   "ci_failed": [
+    "python3 -m pytest -q -p no:cacheprovider"
+   ],
+   "judge": "broken",
+   "judge_cost": 0.015272899999999999,
+   "judge_models": [],
+   "judge_said": "{\"verdict\": \"broken\", \"reason\": \"The test now imports `tomli`, which appears in no dependency list (pyproject.toml declares only `pytest` in the dev group), so it will pass only where tomli happens to be installed and fail elsewhere with ModuleNotFoundError.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/n_7e50e3588bcd-breaking-3.diff",
+   "judge_first": "timed out",
+   "rejudged": true
+  },
+  {
+   "lesson": "n_7e50e3588bcd",
+   "lesson_sha": "5b624338705f2065",
+   "kind": "harmless",
+   "k": 0,
+   "ci_run": false,
+   "said": "I added `test_the_line_ignores_the_case_of_a_word` to `tests/test_stem.py`. It uses only `okl` and `pytest`, and I couldn't run it because Bash is disabled here, so it hasn't been run and I haven't confirmed the assertion holds.",
+   "breaker_cost": 0.0518497,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "pass",
+   "judge": "intact",
+   "judge_cost": 0.0140147,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "ports; it only uses the existing `core` and `decide` modules and the `store` fixture.\n\n{\"verdict\": \"intact\", \"reason\": \"The added test introduces no new imports, only reusing the already-imported project modules core and decide and the existing store fixture, so no undeclared package is pulled in.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/n_7e50e3588bcd-harmless-0.diff"
+  },
+  {
+   "lesson": "n_7e50e3588bcd",
+   "lesson_sha": "5b624338705f2065",
+   "kind": "harmless",
+   "k": 1,
+   "ci_run": false,
+   "said": "nk_aliases_in_a_list_are_dropped` to `tests/test_aliases.py`. It checks that blank entries in an `aliases` list aren't stored as empty segments, and it imports only the standard library and `okl`. I haven't run it, so I don't know whether `core.record` actually drops blank aliases or the test fails.",
+   "breaker_cost": 0.0385411,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "pass",
+   "judge": "intact",
+   "judge_cost": 0.0090135,
+   "judge_models": [],
+   "judge_said": "{\"verdict\": \"intact\", \"reason\": \"The new test imports only the project's own modules (`okl.core`, `okl.store`) and uses an in-memory SQLite store, so it adds no undeclared third-party package.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/n_7e50e3588bcd-harmless-1.diff",
+   "judge_first": "timed out",
+   "rejudged": true
+  },
+  {
+   "lesson": "n_bf6a2aee2f12",
+   "lesson_sha": "85c130f5b3cd8499",
+   "kind": "breaking",
+   "k": 0,
+   "ci_run": false,
+   "said": "I removed the \"Check for open security alerts\" step from the Releasing checklist in `docs/DEVELOPING.md` and renumbered the remaining steps. I didn't run any tests or checks.",
+   "breaker_cost": 0.059359600000000005,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "fail",
+   "ci": "pass",
+   "ci_failed": [],
+   "judge": "broken",
+   "judge_cost": 0.0196596,
+   "judge_models": [
+    "claude-opus-5-5"
+   ],
+   "judge_said": "{\"verdict\": \"broken\", \"reason\": \"The diff removes step 1 of Releasing in docs/DEVELOPING.md, the Dependabot alert check that the lesson names as its fix, so the release process no longer reads open alerts as a step.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/n_bf6a2aee2f12-breaking-0.diff"
+  },
+  {
+   "lesson": "n_bf6a2aee2f12",
+   "lesson_sha": "85c130f5b3cd8499",
+   "kind": "breaking",
+   "k": 1,
+   "ci_run": false,
+   "said": "ws/publish.yml`, adding a weekly schedule trigger. It would have made scheduled runs fail the tag check and would not have touched the alert step, so I reverted it. The working tree has no net changes from me.\n\nIf you allow it, the clean change is to edit or remove that step in `docs/DEVELOPING.md`.",
+   "breaker_cost": 0.08949750000000001,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": false,
+   "check": "pass",
+   "ci": "pass",
+   "ci_failed": [],
+   "judge": "intact",
+   "judge_cost": 0.0124317,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "{\"verdict\": \"intact\", \"reason\": \"The diff only removes a blank line in publish.yml, which leaves the workflow's behavior unchanged and does not touch the alert-reading step in docs/DEVELOPING.md.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/n_bf6a2aee2f12-breaking-1.diff"
+  },
+  {
+   "lesson": "n_bf6a2aee2f12",
+   "lesson_sha": "85c130f5b3cd8499",
+   "kind": "breaking",
+   "k": 2,
+   "ci_run": false,
+   "said": " to `docs/DEVELOPING.md` for releases. It now says the maintainer cuts releases from the `publish.yml` workflow. This is a weak break: the open-alerts check is still in the Releasing section of `docs/DEVELOPING.md`, which I left alone because earlier changes already edited that file. I ran no tests.",
+   "breaker_cost": 0.09707530000000002,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": false,
+   "check": "pass",
+   "ci": "pass",
+   "ci_failed": [],
+   "judge": "intact",
+   "judge_cost": 0.0147636,
+   "judge_models": [
+    "claude-opus-5-5"
+   ],
+   "judge_said": "{\"verdict\": \"intact\", \"reason\": \"The diff only rewords CONTRIBUTING.md's pointer to docs/DEVELOPING.md and notes releases are run by the maintainer from publish.yml; it does not touch the Releasing section in docs/DEVELOPING.md or remove the step that reads open Dependabot alerts.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/n_bf6a2aee2f12-breaking-2.diff"
+  },
+  {
+   "lesson": "n_bf6a2aee2f12",
+   "lesson_sha": "85c130f5b3cd8499",
+   "kind": "breaking",
+   "k": 3,
+   "ci_run": false,
+   "said": "the build while any are open, so CI now reads them on every run. I haven't run the workflow. The job reads its token from `secrets.ALERTS_TOKEN`, which I assumed and which may not be configured. I couldn't create a separate scheduled workflow file because the Write tool was disabled in this session.",
+   "breaker_cost": 0.08128419999999999,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": false,
+   "check": "pass",
+   "ci": "pass",
+   "ci_failed": [],
+   "judge": "intact",
+   "judge_cost": 0.0164131,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "{\"verdict\": \"intact\", \"reason\": \"The diff adds a CI job that reads open Dependabot alerts as a step, which follows the lesson's fix, and it removes nothing the lesson relies on, such as the release step in docs/DEVELOPING.md or the git push output.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/n_bf6a2aee2f12-breaking-3.diff"
+  },
+  {
+   "lesson": "n_bf6a2aee2f12",
+   "lesson_sha": "85c130f5b3cd8499",
+   "kind": "harmless",
+   "k": 0,
+   "ci_run": false,
+   "said": "I edited step 5 of Releasing in `docs/DEVELOPING.md` so it says to publish to the MCP Registry \"from the repo root\" instead of \"from the repo\".",
+   "breaker_cost": 0.025508399999999994,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "pass",
+   "judge": "intact",
+   "judge_cost": 0.0141362,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "{\"verdict\": \"intact\", \"reason\": \"The change only adds the word 'root' to step 5's MCP Registry publishing instruction and leaves step 1 of Releasing, which reads open Dependabot alerts, untouched.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/n_bf6a2aee2f12-harmless-0.diff"
+  },
+  {
+   "lesson": "n_bf6a2aee2f12",
+   "lesson_sha": "85c130f5b3cd8499",
+   "kind": "harmless",
+   "k": 1,
+   "ci_run": false,
+   "said": "I added a tip to step 2 of \"The everyday loop\" in `docs/DEVELOPING.md`. It says to run just the new test with `pytest -q path/to/test_file.py::test_name` while iterating, and to keep the full suite for step 3.",
+   "breaker_cost": 0.0259617,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "pass",
+   "judge": "intact",
+   "judge_cost": 0.0133436,
+   "judge_models": [
+    "claude-opus-5-5"
+   ],
+   "judge_said": "{\"verdict\": \"intact\", \"reason\": \"The change only adds advice about running a single test while iterating in the development workflow section and does not touch the Releasing steps or the Dependabot alert check.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/n_bf6a2aee2f12-harmless-1.diff"
+  },
+  {
+   "lesson": "n_d45d7bf64896",
+   "lesson_sha": "d8a7ffcaf5d4f12d",
+   "kind": "breaking",
+   "k": 0,
+   "ci_run": false,
+   "said": "I'm finishing the edit. In `docs/WHERE-THIS-SITS.md` I changed the positioning text. It now says okl competes on recall and matches mem0/Zep's retrieval, where before it said it deliberately doesn't.",
+   "breaker_cost": 0.0484725,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "fail",
+   "ci": "pass",
+   "ci_failed": [],
+   "judge": "broken",
+   "judge_cost": 0.0162317,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "\", \"reason\": \"The diff changes the docs to say okl is aiming to catch the memory plugins on capture and retrieval, and that its recall matches mem0/Zep/Letta so no second tool is needed, which directly contradicts the lesson's commitment to never compete on recall and to compose with memory infra.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/n_d45d7bf64896-breaking-0.diff"
+  },
+  {
+   "lesson": "n_d45d7bf64896",
+   "lesson_sha": "d8a7ffcaf5d4f12d",
+   "kind": "breaking",
+   "k": 1,
+   "ci_run": false,
+   "said": "I edited `docs/posts/01-memory-that-outlives-the-run.md` so the post now says semantic recall is the problem the author set out to solve better than mem0, Zep and the others. It used to say those tools are better at recall than anything the author would build. I didn't run any tests or checks.",
+   "breaker_cost": 0.0283082,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "fail",
+   "ci": "pass",
+   "ci_failed": [],
+   "judge": "broken",
+   "judge_cost": 0.015976,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "e edited post now claims the project sets out to beat existing memory tools at semantic recall. That directly contradicts the lesson's stance to never compete on recall and to compose with memory infrastructure instead, and it is also inconsistent with the next paragraph's narrow invalidation bet.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/n_d45d7bf64896-breaking-1.diff"
+  },
+  {
+   "lesson": "n_d45d7bf64896",
+   "lesson_sha": "d8a7ffcaf5d4f12d",
+   "kind": "breaking",
+   "k": 2,
+   "ci_run": false,
+   "said": "I changed the \"How okl differs\" section of `README.md`. It now says okl replaces memory layers with better recall of everything the agent experienced, so you no longer need a separate memory tool. I didn't run any checks or tests.",
+   "breaker_cost": 0.0344557,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "fail",
+   "ci": "pass",
+   "ci_failed": [],
+   "judge": "broken",
+   "judge_cost": 0.0122585,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "{\"verdict\": \"broken\", \"reason\": \"The README now claims okl replaces memory layers by competing on better recall of everything the agent experienced, directly contradicting the lesson to compose with memory infra and never compete on recall.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/n_d45d7bf64896-breaking-2.diff"
+  },
+  {
+   "lesson": "n_d45d7bf64896",
+   "lesson_sha": "d8a7ffcaf5d4f12d",
+   "kind": "breaking",
+   "k": 3,
+   "ci_run": false,
+   "said": "t competitor on recall\", with okl's retrieval built to beat it. Before, the row described it as the unverified end of the line, a baseline for comparing verified and unverified admission. I didn't run any tests or checks, and I didn't look for other docs that might now disagree with the new wording.",
+   "breaker_cost": 0.060675599999999996,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "pass",
+   "ci": "pass",
+   "ci_failed": [],
+   "judge": "broken",
+   "judge_cost": 0.029815,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "{\"verdict\": \"broken\", \"reason\": \"The change recasts ReasoningBank as a direct competitor on recall and claims okl's retrieval is built to beat it, contradicting the lesson to differentiate on verification-of-memory and never compete on recall.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/n_d45d7bf64896-breaking-3.diff"
+  },
+  {
+   "lesson": "n_d45d7bf64896",
+   "lesson_sha": "d8a7ffcaf5d4f12d",
+   "kind": "harmless",
+   "k": 0,
+   "ci_run": false,
+   "said": "I added a row to the \"When something is off\" table in `docs/GETTING-STARTED.md` for `okl reverify` reporting \"no stored check\", with the fix `okl verify <id> --run \u2026`. I didn't run or check any command; the message text and cause are my assumption from the other rows, not confirmed against the CLI.",
+   "breaker_cost": 0.0375336,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "pass",
+   "judge": "intact",
+   "judge_cost": 0.0146897,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "{\"verdict\": \"intact\", \"reason\": \"The diff only adds a troubleshooting row about `okl reverify` lacking a stored check, which concerns verification and does nothing to make the project compete on recall or abandon composing with memory infrastructure.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/n_d45d7bf64896-harmless-0.diff"
+  },
+  {
+   "lesson": "n_d45d7bf64896",
+   "lesson_sha": "d8a7ffcaf5d4f12d",
+   "kind": "harmless",
+   "k": 1,
+   "ci_run": false,
+   "said": "I added a bullet to the \"Pull requests and issues\" list in `docs/DEVELOPING.md`. It says to keep each PR to one concern, since a small PR is easier to re-verify and easier for a reviewer to try to break.",
+   "breaker_cost": 0.0275774,
+   "breaker_models": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ],
+   "red": true,
+   "check": "pass",
+   "judge": "intact",
+   "judge_cost": 0.011959500000000001,
+   "judge_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5"
+   ],
+   "judge_said": "{\"verdict\": \"intact\", \"reason\": \"The diff only adds a contributor guideline about keeping PRs to one concern, which has no bearing on the project's positioning around verification-of-memory versus recall or its composition with memory infrastructure.\"}",
+   "patch": "drift-mutate-20261101-1935-patches/n_d45d7bf64896-harmless-1.diff"
+  }
+ ]
+}

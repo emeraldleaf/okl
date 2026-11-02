@@ -1,0 +1,13 @@
+diff --git a/docs/GETTING-STARTED.md b/docs/GETTING-STARTED.md
+index 8063d46..fcd4692 100644
+--- a/docs/GETTING-STARTED.md
++++ b/docs/GETTING-STARTED.md
+@@ -17,7 +17,7 @@ repository. The running example is a small service called `shop`.
+ ### Install the CLI
+ 
+ ```bash
+-pipx install 'observed-knowledge-ledger[mcp]'
++pipx install 'okl-ledger[mcp]'
+ ```
+ 
+ The PyPI name differs (PyPI refuses `okl` as confusable with `oki`); everything you type

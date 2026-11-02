@@ -1,0 +1,13 @@
+diff --git a/README.md b/README.md
+index 289c5ce..0943988 100644
+--- a/README.md
++++ b/README.md
+@@ -88,7 +88,7 @@ codebase plus the bundled packs for your stack, so the first prompt is already b
+ Code when the repo has a `.claude/` directory or `claude` is on your PATH (`--claude` /
+ `--no-claude`), installs a pre-push hook that blocks a push only when lessons have drifted
+ (`--no-git-hook` skips it; `--ci` installs the GitHub workflow instead, `--ci --git-hook` both),
+-and remembers both choices. Every path it writes, and what each is for:
++and remembers both choices (`okl init --uninstall` removes what it wired). Every path it writes, and what each is for:
+ [What `okl init` writes](docs/WHAT-INIT-WRITES.md).
+ 
+ **3. Add a rule of your own.** The starter lessons are generic; what pays is what only your

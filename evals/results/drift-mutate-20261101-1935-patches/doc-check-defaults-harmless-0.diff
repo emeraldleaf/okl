@@ -1,0 +1,13 @@
+diff --git a/src/okl/cli/parser.py b/src/okl/cli/parser.py
+index c15a4ac..06a1c3f 100644
+--- a/src/okl/cli/parser.py
++++ b/src/okl/cli/parser.py
+@@ -84,7 +84,7 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
+     pk = sub.add_parser("check", help="pre-task read: relevant lessons for a task")
+     pk.add_argument("--task", required=True); pk.add_argument("--repo")
+     pk.add_argument("--format", choices=["agent", "actions", "json", "hook"], default="agent",
+-                    help="agent: the full briefing. actions: the routed action list only, "
++                    help="agent (default): the full briefing. actions: the routed action list only, "
+                          "for callers on a small context budget. json: the raw result. hook: what a "
+                          "Claude Code UserPromptSubmit hook prints (briefing + a line for the user).")
+     pk.add_argument("--limit", type=int, default=None,

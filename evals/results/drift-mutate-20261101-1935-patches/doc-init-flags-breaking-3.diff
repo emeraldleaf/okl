@@ -1,0 +1,13 @@
+diff --git a/docs/DEPLOY.md b/docs/DEPLOY.md
+index ded8ec0..937f460 100644
+--- a/docs/DEPLOY.md
++++ b/docs/DEPLOY.md
+@@ -100,7 +100,7 @@ happily serving an empty file-backed store that will vanish with the container.
+ In each repo:
+ 
+ ```bash
+-okl init --repo checkout-api
++okl init --repo checkout-api --server https://okl.internal
+ okl connect https://okl.internal --token "$OKL_TOKEN"
+ ```
+ 
