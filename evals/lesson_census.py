@@ -26,8 +26,9 @@ resumes where it stopped.
 
 --judge --section 4ai runs REPORT §4ai instead (#315): the same instrument, judge, seed,
 negatives and planted facts, on a six-way scale that also names a wrong detail and an outlived
-workaround, with the three outlived lessons §4ag's notes found as controls (OUTLIVED), taken out
-of the population. It writes evals/results/stale-review-<stamp>.json.
+workaround, with two of the three outlived lessons §4ag's notes found as controls (OUTLIVED), taken
+out of the population; the third, n_f215b68b925c, stays a planted control. The judge's worktree
+withholds this experiment's own files (withhold). It writes evals/results/stale-review-<stamp>.json.
 """
 from __future__ import annotations
 
