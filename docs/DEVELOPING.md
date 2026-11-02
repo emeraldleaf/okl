@@ -111,15 +111,19 @@ That is expected; see CONTRIBUTING.
 - **Name the issue.** Write `Closes #N` (or `Part of #N` for a slice) in every PR, so
   merging closes it. The roadmap is the
   [`loop-review` issues](https://github.com/emeraldleaf/okl/issues?q=is%3Aopen+label%3Aloop-review).
-- **Resolve every review thread.** CodeRabbit reviews each PR, and `main` requires every
-  conversation resolved. Fix the finding, reply on the thread with the fixing commit, then
-  resolve it.
-- **Check that CodeRabbit actually reviewed.** Its plan allows a few reviews an hour. When
-  it posts "Review limit reached", its check still shows as passed, but it reviewed
-  nothing.
+- **Review before the PR, not after.** Run the CodeRabbit CLI on the branch's committed
+  changes, `coderabbit review --committed --base origin/main`, and fix what it finds in one
+  push. The PR bot no longer reviews automatically (`.coderabbit.yaml`): every push spent a
+  review, and the allowance fell to one an hour. Ask for a PR review with
+  `@coderabbitai review` when a second look on the PR itself is worth the wait.
 - **Get an independent review for risky changes:** hooks, retrieval, storage, anything
   that fails open. Ask a reviewer, human or agent, to try to break the change. Several
-  real bugs in this repo were found that way before review bots saw them.
+  real bugs in this repo were found that way before review bots saw them. Different
+  reviewers catch different things, so a change to logic gets more than one.
+- **Resolve every review thread.** `main` requires every conversation resolved. Fix the
+  finding, reply on the thread with the fixing commit, then resolve it.
+- **Check that a requested PR review actually ran.** When CodeRabbit posts "Review limit
+  reached", its check still shows as passed, but it reviewed nothing.
 - **Merge commits only.** Squash and rebase are disabled, because drift reads commit
   history. Head branches delete themselves on merge.
 

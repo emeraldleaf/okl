@@ -1,0 +1,7 @@
+# CodeRabbit reviews this repo's PRs on request only. Changes are reviewed before the PR, with
+# the CodeRabbit CLI (`coderabbit review --committed --base origin/main`) and an independent
+# agent review; see docs/DEVELOPING.md. Automatic PR reviews spent the hourly allowance on every
+# push and kept it at one review an hour. Ask for a PR review with `@coderabbitai review`.
+reviews:
+  auto_review:
+    enabled: false
