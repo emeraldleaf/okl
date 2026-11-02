@@ -94,7 +94,7 @@ jobs:
 
       # Each guard install.py relies on (every symlink refusal, found by reading the code) is
       # switched off in turn, and a test must fail: reviews kept finding guards that could be
-      # deleted with every test passing. About a minute.
+      # deleted with every test passing; plus the guards listed in its MUTATIONS. A few minutes.
       - name: Guards are held by tests (each one switched off fails a test)
         run: python ci/check-guard-mutations.py
 

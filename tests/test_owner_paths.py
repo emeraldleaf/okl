@@ -692,3 +692,16 @@ def test_the_guide_names_what_doctor_answers_and_what_the_deny_rules_cover():
         named = [words for key, words in covers.items() if key in rule]
         assert named and all(words in guide for words in named), (rule, named)
     assert "dismiss stale approvals" in guide and "at least one approval" in guide
+
+
+def test_uninstall_does_not_rewrite_deny_rules_through_a_linked_settings_file(repo, capsys, tmp_path):
+    """A .claude/settings.json that links outside the repo and holds okl's deny rules keeps every
+    byte through uninstall: okl removes its rules only from a real file inside the repo."""
+    root, okl = repo
+    held = json.dumps({"permissions": {"deny": list(OWNER_DENY)}}) + "\n"
+    outside = tmp_path / "settings.json"; outside.write_text(held)
+    (root / ".claude").mkdir(); (root / ".claude" / "settings.json").symlink_to(outside)
+
+    code, out = okl("init", "--uninstall", capsys=capsys)
+
+    assert code == 0 and outside.read_text() == held, out
