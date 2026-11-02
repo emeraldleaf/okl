@@ -483,7 +483,7 @@ repos at a shared service when you want one store ([docs/SCAFFOLD.md](docs/SCAFF
 ```bash
 # 1. READ the relevant lessons before starting a task (the load-bearing move)
 okl check --task "add an endpoint that returns an order for the logged-in user"
-#   add --format actions --limit 3 for a ~350-token version (subagents, CI)
+#   add --format actions --limit 3 for a ~400-token version (subagents, CI)
 
 # 2. RECORD a lesson after you learn it, with an actionable symptom/cause/fix
 okl record --type Defect --scope org --tags "security" \
@@ -519,7 +519,7 @@ before you wire it into every prompt. Every number below was measured rather tha
 estimated, with one representative task ("add an endpoint that returns an order for the
 logged-in user"; tokens ≈ characters ÷ 4). The sizes come from a fresh store holding every
 bundled seed pack, 183 records (`python3 evals/briefing_size.py`, receipt
-[`evals/results/briefing-size-20261027-0132.json`](evals/results/briefing-size-20261027-0132.json)); the latency from the 161 seed records bundled before that.
+[`evals/results/briefing-size-20261102-0123.json`](evals/results/briefing-size-20261102-0123.json)); the latency from the 161 seed records bundled before that.
 Your store and your tasks will differ.
 
 **Per prompt, once the hook is installed:**
@@ -527,7 +527,7 @@ Your store and your tasks will differ.
 | | |
 |---|---|
 | Latency | **~0.1s** for the whole `okl check` process (0.07s median warm) — one local SQLite query, no network in local mode |
-| Context | **~1,390 tokens** by default on one representative task (five lessons in full, twelve named in a line; ~730 under `--decision calibrated`, ~1,730 under `--decision floor`); on real prompts the median is **~720** ([REPORT §4y](evals/REPORT.md)). Down to **~350** for only the action list at `--limit 3` |
+| Context | **~1,580 tokens** by default on one representative task (five lessons in full, twelve named in a line; ~780 under `--decision calibrated`, ~1,810 under `--decision floor`); on real prompts the median is **~720** ([REPORT §4y](evals/REPORT.md)). Down to **~400** for only the action list at `--limit 3` |
 
 
 **Per session:** in Claude Code, the Stop hook interrupts once at the end to ask what was learned. It
@@ -541,23 +541,23 @@ a change in one line and makes it once you agree. To read the whole session back
 briefings, the lessons recorded and retired, the checks run and failed, the commits, and what
 is stale now, from the store's own logs.
 
-A full briefing costs roughly **1,390 tokens** on the measurement above (~730 for the line
-alone, ~1,730 under the floor's twelve), fine for a main session with a large window and still a real share for a subagent
+A full briefing costs roughly **1,580 tokens** on the measurement above (~780 for the line
+alone, ~1,810 under the floor's twelve), fine for a main session with a large window and still a real share for a subagent
 working in a few thousand. That asymmetry matters
 because subagents are exactly where org rules get lost: a focused worker handling one
 subtask has the least context and the most need for "here is the mistake this codebase
 already made."
 
 **Measured on every bundled seed pack (183 records), one representative task**
-([receipt](evals/results/briefing-size-20261027-0132.json)): the action list alone is ~350
-tokens at `--limit 3`, ~580 at `--limit 5` and ~1,010 at `--limit 12` (its one-line entries
-follow the limit), against ~1,390 for the full briefing. Cheap enough to call per subtask;
+([receipt](evals/results/briefing-size-20261102-0123.json)): the action list alone is ~400
+tokens at `--limit 3`, ~710 at `--limit 5` and ~1,150 at `--limit 12` (its one-line entries
+follow the limit), against ~1,580 for the full briefing. Cheap enough to call per subtask;
 `--decision calibrated` drops the one-line entries for the smallest list.
 
 The same holds for a main session on a model with a small context window, where the
 briefing arrives with every prompt. Set `OKL_BRIEFING_COMPACT=1` and the Claude Code prompt hook sends
 only the action list (`okl check --compact`); set `OKL_BRIEFING_LIMIT=3` and it shows three
-records and names three more, instead of five and twelve. Together that is ~350 tokens instead of ~1,390 on the
+records and names three more, instead of five and twelve. Together that is ~400 tokens instead of ~1,580 on the
 measurement above. Set them where the agent starts: hooks inherit its environment. A
 limit that is not a whole number above zero is ignored, and an okl too old for
 `--compact` briefs in full rather than blocking the prompt. Like `--format actions`, the
