@@ -179,6 +179,10 @@ honest:
 - **Every cited figure has a committed receipt** in `evals/results/`.
 - **A changed instrument starts a new series.** That covers a different judge, judge
   prompt or resolved model, and the new run is not pooled with older ones.
+- **The thesis quotes only what its receipts hold.** Every figure on `docs/THESIS.md` is
+  recomputed in `tests/test_docs.py` (`_thesis_figures`) from the receipt it names. A new figure
+  needs its line there, and a newer run of a measurement the page cites fails the test until
+  the page cites it (#319).
 
 ### Run the deterministic checks first
 

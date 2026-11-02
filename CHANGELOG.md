@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **The thesis page is held to its receipts** (#319). Every figure on `docs/THESIS.md` is
+  recomputed by the test suite from the receipt it names. Changing one, adding one without its
+  receipt, citing a receipt that is not committed, or leaving a measurement's newer run uncited
+  fails the build.
 - **`okl init --dry-run` says what init keeps** (#340). In a repo whose config already records
   interests, it said detected stacks would replace them; init keeps them and detects only for a
   config with none, and the dry run now names them as kept. It also lists
