@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- **`okl init --dry-run` says what init keeps** (#340). In a repo whose config already records
+  interests, it said detected stacks would replace them; init keeps them and detects only for a
+  config with none, and the dry run now names them as kept. It also lists
+  `.claude/hooks/okl-mcp.sh`, the MCP server launcher init installs with the `[mcp]` extra.
+
 ## 0.11.0
 
 - **`okl init --ci` pins the okl release CI installs.** The workflow installed the newest okl
