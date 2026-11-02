@@ -462,3 +462,129 @@ def test_the_from_scratch_guide_states_verifys_default_timeout():
     sub = next(a for a in build_parser()._actions if isinstance(a, argparse._SubParsersAction))
     default = sub.choices["verify"].get_default("timeout")
     assert f"{default} seconds by default" in _flat("docs/FROM-SCRATCH.md")
+
+
+# docs/THESIS.md held to its receipts (#319). The page states the claim, what holds today and a
+# measured baseline, and is meant to be the most current page in the repo (#317); it was held
+# current by hand. Every figure on it is recomputed here from the receipt it names, so changing a
+# figure, naming an uncommitted receipt, or adding a figure with no receipt fails, and a newer
+# receipt of a measurement the page cites fails until the page cites it.
+_WORDS = {4: "four", 7: "seven", 8: "eight", 9: "nine"}
+_RECEIPT = re.compile(r"`([\w.-]+\.(?:json|txt))`")
+# Numbers on the page that are not measurements: dates, issues, REPORT sections, versions,
+# receipt names, and the MCP Registry's description limit.
+_NOT_FIGURES = re.compile(r"`[^`]*`|\d{4}-\d{2}-\d{2}|#\d+|§\w+(?: finding \d+)?|\b\d+\.\d+\.\d+\b|100-character")
+_NUMBER = re.compile(r"(?<![\w.])\d(?:[\d,]*\d)?(?:\.\d+)?%?")   # commas only between digits
+# A status row with no measurement behind it, and why.
+NO_EVIDENCE = {"each session's lessons are recorded": "the Stop hook's behaviour, held by its tests, not a measurement"}
+
+
+def _thesis_figures() -> dict[str, str]:
+    """Each figure the thesis quotes, as the page words it, recomputed: text -> its receipt."""
+    results = ROOT / "evals" / "results"
+
+    def load(name):
+        return json.loads((results / name).read_text())
+
+    census = load("lesson-census-20261031-1409.json")
+    c, n = census["classes"], census["store"]["recorded"]
+    ep = load("drift-replay-20261101-0143.json")["summary"]["event_precision"]
+    first, rerun = load("drift-mutate-20261031-1522.json"), load("drift-mutate-20261101-1935.json")
+    m1, m2 = first["summary"], rerun["summary"]
+    k1, k2 = m1["catch"], m2["catch"]
+    lo, hi = k1["wilson95"]
+    nine = [first["summary"]["per_lesson"][lesson] for lesson in rerun["lessons"]]
+    no_verdict = sum(v for key, v in m2["judge"].items() if key.endswith(":invalid"))
+    stale = load("stale-lessons-20261031-1527.json")["summary"]["stale_rate"]
+    marks = re.search(r"briefed prompts (\d+): (\d+) of the (\d+) lessons the mark could reach are marked "
+                      r"unchecked \((\d+) briefed in all\); the marks add (\d+) characters to (\d+) \(([\d.]+)%\)",
+                      (results / "briefing-marks-size-20261101-1110.txt").read_text())
+    prompts, unchecked, reach, briefed, added, chars, share = marks.groups()
+    bh, bn, rh, rn = _pool(POOLED_RECEIPTS)
+    return {
+        f"{round(100 * bh / bn)}% → {round(100 * rh / rn)}% defects reproduced on {_WORDS[8]} bait tasks, "
+        f"pooled over {_WORDS[len(POOLED_RECEIPTS)]} A/B runs": "the pooled A/B receipts (§5 finding 7)",
+        f"{c['watched']} of the {n} lessons recorded here were watched at the census below, "
+        f"{len(rerun['lessons']) + len(rerun['left_out'])} after #318 moved "
+        f"{_WORDS[c['watched'] - len(rerun['lessons']) - len(rerun['left_out'])]}": "the census and §4ah",
+        f"of {m1['breaking_patches']} patches written to break those lessons, a judge confirmed {m1['breaks']} "
+        f"as breaks, and drift caught {k1['caught']} of them": "drift-mutate-20261031-1522.json",
+        f"it caught {k2['caught']} of {k2['breaks']} on the {_WORDS[len(rerun['lessons'])]} whose check runs "
+        "from the commit": "drift-mutate-20261101-1935.json",
+        f"{c['watched'] + c['checked']} of {n} lessons have a check": "lesson-census-20261031-1409.json",
+        f"{c['watched']} / {c['checked']} / {c['unchecked']} of {n}; all {census['checks_at_rev']['pass']} "
+        f"CI-left checks pass at {census['rev'][:7]}": "lesson-census-20261031-1409.json",
+        f"{ep['needed']} of {ep['decided']:,} events ({ep['rate']:.2%})": "drift-replay-20261101-0143.json",
+        f"(of {m1['breaking_patches']} patches written to break them) that drift caught | {k1['caught']} of "
+        f"{k1['breaks']} ({k1['rate']:.1%}, 95% interval {100 * lo:.1f}–{100 * hi:.1f}%); of the "
+        f"{k1['breaks'] - k1['caught']} misses, {m1['coverage_misses']} changed a file the lesson does not "
+        f"watch, and {m1['sensitivity_misses']} passed": "drift-mutate-20261031-1522.json",
+        f"(of {m2['breaking_patches']} patches written to break them) | {k2['caught']} of {k2['breaks']}, counts "
+        f"only: the judge gave no verdict on {no_verdict} of the {sum(m2['judge'].values())} patches, over the "
+        # 20%: the registered limit on judge failures (DEVELOPING's evaluation rules), not a measurement.
+        f"20% that allows a rate; §4af caught {sum(x['caught'] for x in nine)} of {sum(x['breaks'] for x in nine)} "
+        f"on the same {_WORDS[len(nine)]}": "drift-mutate-20261101-1935.json and -1522",
+        f"{stale['stale']} of {stale['decided']} that make a claim about this repo": "stale-lessons-20261031-1527.json",
+        f"on {prompts} briefed prompts": "briefing-marks-size-20261101-1110.txt",
+        f"{unchecked} of the {reach} the mark could reach (all {briefed} briefed could); the marks add "
+        f"{int(added):,} characters to {int(chars):,} ({share}%)": "briefing-marks-size-20261101-1110.txt",
+        f"{unchecked} of {reach} on the measured prompts": "briefing-marks-size-20261101-1110.txt",
+        f"drift watched {c['watched']} of the {n} lessons": "lesson-census-20261031-1409.json",
+    }
+
+
+def _thesis_problems(page: str) -> list[str]:
+    """What docs/THESIS.md says that its receipts do not: a figure that is not the recomputed one,
+    a number no receipt accounts for, an uncommitted or superseded receipt, a missing section."""
+    flat = " ".join(page.split())
+    problems = [f"not on the page, recomputed from {where}: {text!r}"
+                for text, where in _thesis_figures().items() if text not in flat]
+    # Every number is inside a recomputed figure or is not a measurement.
+    covered = [False] * len(flat)
+    for pattern in [*(re.escape(t) for t in _thesis_figures()), _NOT_FIGURES.pattern]:
+        for m in re.finditer(pattern, flat):
+            covered[m.start():m.end()] = [True] * (m.end() - m.start())
+    problems += [f"a number no receipt accounts for: {flat[max(0, m.start() - 60):m.end() + 20]!r}"
+                 for m in _NUMBER.finditer(flat) if not all(covered[m.start():m.end()])]
+    # Every receipt is committed, and is the newest of its measurement.
+    committed = set(subprocess.run(["git", "-C", str(ROOT), "ls-files", "evals/results"], capture_output=True,
+                                   text=True, check=True).stdout.split())
+    cited = set(_RECEIPT.findall(page))
+    for name in sorted(cited):
+        if f"evals/results/{name}" not in committed:
+            problems.append(f"names a receipt that is not committed: {name}")
+        family = re.match(r"(.+)-\d{8}-\d{4}\.(json|txt)$", name)
+        if family:
+            same = sorted(Path(f).name for f in committed
+                          if re.fullmatch(re.escape(family[1]) + r"-\d{8}-\d{4}\." + family[2], Path(f).name))
+            if same and same[-1] not in cited:
+                problems.append(f"cites {name}, but {same[-1]} is a newer run of the same measurement")
+    # Every REPORT section it names exists.
+    headings = set(re.findall(r"^## (\w+)\.", (ROOT / "evals" / "REPORT.md").read_text(), re.M))
+    problems += [f"names §{s}, which REPORT has no section for" for s in sorted(set(re.findall(r"§(\w+)", page)))
+                 if s not in headings]
+    # Every status row names its evidence, or says here why it has none.
+    for row in re.findall(r"^\| (it [^|]+|each [^|]+|every [^|]+) \|[^|]+\| (.+) \|$", page, re.M):
+        if row[1].strip() in ("—", "-", "") and row[0].strip() not in NO_EVIDENCE:
+            problems.append(f"the status row {row[0].strip()!r} names no evidence")
+    return problems
+
+
+def test_every_figure_on_the_thesis_is_recomputed_from_its_receipt():
+    """docs/THESIS.md's figures, receipts and sections, held to the receipts (#319)."""
+    assert _thesis_problems((ROOT / "docs" / "THESIS.md").read_text()) == []
+
+
+def test_the_thesis_check_fails_on_a_changed_figure_a_new_one_and_a_stale_receipt():
+    """Planted failures: the check goes red on each thing it guards."""
+    page = (ROOT / "docs" / "THESIS.md").read_text()
+
+    changed = _thesis_problems(page.replace("4 of 1,865 events", "3 of 1,865 events"))
+    assert any("not on the page" in p and "1,865" in p for p in changed), changed
+    unaccounted = _thesis_problems(page.replace("## History", "Drift caught 97% of breaks.\n\n## History"))
+    assert any("no receipt accounts for" in p and "97%" in p for p in unaccounted), unaccounted
+    uncommitted = _thesis_problems(page.replace("`stale-lessons-20261031-1527.json`", "`stale-lessons-20991231-0000.json`"))
+    assert any("not committed" in p for p in uncommitted), uncommitted
+    superseded = _thesis_problems(page.replace("`briefing-marks-size-20261101-1110.txt`",
+                                               "`briefing-marks-size-20261031-1612.txt`"))
+    assert any("newer run" in p for p in superseded), superseded
