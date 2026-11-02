@@ -1,4 +1,4 @@
-# okl-fingerprint: sha256:685f553b1c62f74d446cfab21c63cf7c0fd4250246194474ef65bf6174d465e0
+# okl-fingerprint: sha256:daf80c1e23d7b1c9bc56d5771d1de2a9c9fef8f6d108ce0cfa7ac7451b6355b1
 # Installed by `okl init --ci` into .github/workflows/okl-verify.yml (a repo an earlier okl gave it keeps it).
 #
 # The knowledge layer's CI verifier — real checks, not placeholders:
@@ -63,12 +63,15 @@ jobs:
         # And by the package itself, not one of its modules: this named src/okl/cli.py
         # until the CLI became a package, when okl's own CI would have tested the release.
         run: |
+          # .github/okl-version pins the okl release, so CI runs what your hooks run:
+          # `okl init --ci` writes it, and moves it when re-run after an upgrade. Without it
+          # (a hand-copied workflow, a dev build of okl), CI installs the newest release.
           if [ -f src/okl/__init__.py ]; then
             pip install -e .
+          elif [ -s .github/okl-version ]; then
+            pip install "observed-knowledge-ledger==$(tr -d '[:space:]' < .github/okl-version)"
           else
-            # The okl that wrote this workflow, so CI runs the release your hooks run.
-            # `okl init --ci` writes it; re-run init after upgrading okl to move it.
-            pip install "observed-knowledge-ledger==__OKL_VERSION__"
+            pip install observed-knowledge-ledger
           fi
 
       - name: Report which store the gate will run against
