@@ -716,6 +716,9 @@ OPT_IN_CLAIMS = {
                                                       "the warm model finds a lesson by meaning once indexed"),
     r"CI runs what your hooks run": (r"installed from PyPI",
                                      "only an okl installed from an index writes the pin CI installs"),
+    r"--owner @you`?[^|]*?needs? your approval": (r"branch rule|code-owner review",
+                                                   "GitHub enforces the owner only with a rule requiring "
+                                                   "code-owner review, which okl does not set"),
 }
 
 

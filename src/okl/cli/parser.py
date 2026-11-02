@@ -65,6 +65,14 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                          "another tool's pre-push hook is never replaced); --no-git-hook skips it. "
                          "Default: installed wherever okl's GitHub workflow is not. Recorded in "
                          ".okl/config.json so later runs upgrade it")
+    pi.add_argument("--owner", metavar="HANDLE",
+                    help="name a person (@user, @org/team or an email) code owner of docs/THESIS.md and "
+                         "of CODEOWNERS itself, so that a branch rule requiring code-owner review needs "
+                         "their approval for each change; `okl doctor` says whether GitHub enforces it "
+                         "(docs/AGENT-IDENTITY.md). Recorded in .okl/config.json")
+    pi.add_argument("--owned", action="append", metavar="PATH",
+                    help="another path the --owner must approve, such as your rules or ADRs (repeatable; "
+                         "recorded)")
     pi.add_argument("--no-seed", dest="no_seed", action="store_true",
                     help="leave the store empty (by default init imports the starter lessons and "
                          "the bundled packs that match this repo's stack)")
@@ -301,7 +309,8 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
     pex.set_defaults(func=cmd_export)
 
     pdoc = sub.add_parser("doctor", help="report other agent-memory tools installed beside okl, "
-                                         "how they collide, and where drift is gated (changes nothing)")
+                                         "how they collide, where drift is gated, and, after `init --owner`, "
+                                         "whether GitHub enforces the owner's approval (changes nothing)")
     pdoc.set_defaults(func=cmd_doctor)
 
     pdd = sub.add_parser("dedup", help="report near-duplicate records for review (never auto-merges)")

@@ -2,7 +2,7 @@
 """Every `okl init` flag the README and the guides document exists in the CLI.
 
 The check behind the `doc-init-flags` rule. It reads every sentence of README.md,
-docs/GETTING-STARTED.md and docs/FROM-SCRATCH.md (#330) that mentions init and collects the init flags written there: those
+docs/GETTING-STARTED.md, docs/FROM-SCRATCH.md (#330) and docs/AGENT-IDENTITY.md (#329) that mentions init and collects the init flags written there: those
 inside an `okl init ...` command, and those written as a backticked flag of their own, the way
 prose names one (`--no-claude`). A flag inside another command quoted in the same sentence
 (`okl record --files ...`, `git push --no-verify`) is that command's, not init's, and a
@@ -22,7 +22,7 @@ FLAG = re.compile(r"--[a-z][a-z0-9-]+")
 help_text = subprocess.run([sys.executable, "-m", "okl", "init", "--help"],
                            capture_output=True, text=True, cwd=REPO, check=True).stdout
 flags: set[str] = set()
-for doc in ("README.md", "docs/GETTING-STARTED.md", "docs/FROM-SCRATCH.md"):
+for doc in ("README.md", "docs/GETTING-STARTED.md", "docs/FROM-SCRATCH.md", "docs/AGENT-IDENTITY.md"):
     for unit in re.split(r"(?<=[.!?])\s+|\n\s*\n", (REPO / doc).read_text()):
         if not re.search(r"\binit\b", unit):
             continue

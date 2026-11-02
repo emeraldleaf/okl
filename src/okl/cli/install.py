@@ -45,6 +45,17 @@ def _merge_hook_settings(claude: Path) -> bool:
     return changed
 
 
+# The usual forms of what would undo the owner's approval from inside a Claude Code session
+# (#329): editing branch protection or rulesets through the REST or GraphQL API (matching is
+# case-sensitive, so both spellings), and merging past the rules, as an admin or through the API.
+# They advise the agent; GitHub enforces. A Bash rule does not match `sh -c '...'`, gh called by
+# its full path or `git push` (Claude Code's permissions docs), so they never stand in for the
+# branch rule. `*protection*` also stops reading protection through the agent's shell; `okl
+# doctor` reads it itself. Uninstall removes these exact strings, an identical one you wrote too.
+OWNER_DENY = ("Bash(gh api *protection*)", "Bash(gh api *Protection*)", "Bash(gh api *rulesets*)",
+              "Bash(gh api *Ruleset*)", "Bash(gh api *pulls/*/merge*)", "Bash(gh pr merge *--admin*)")
+
+
 HOOK_COMMANDS = {
     # okl registers exactly these commands; uninstall removes exactly these and nothing else.
     "UserPromptSubmit": '"$CLAUDE_PROJECT_DIR"/.claude/hooks/userpromptsubmit-okl-check.sh',
@@ -144,7 +155,8 @@ def _uninstall(dry_run: bool) -> int:
     never touched; an edited okl file is kept and named, never deleted."""
     act = "would remove" if dry_run else "removed"
     kept = (_uninstall_files(act, dry_run) + _uninstall_hook_registrations(act, dry_run)
-            + _uninstall_mcp(act, dry_run))
+            + _uninstall_mcp(act, dry_run) + _uninstall_owner_paths(act, dry_run)
+            + _uninstall_owner_denies(act, dry_run))
     for k in kept:
         print(f"! kept {k}")
     print("• .okl/ (your store and config) is never removed by uninstall; delete it yourself "
@@ -219,6 +231,58 @@ def _uninstall_hook_registrations(act: str, dry_run: bool) -> list[str]:
             path.write_text(json.dumps(settings, indent=2) + "\n")
         print(f"✓ {act} {removed} okl hook registration(s) from {path}")
     return []
+
+
+def _uninstall_owner_paths(act: str, dry_run: bool) -> list[str]:
+    """okl's CODEOWNERS block (#329): every other byte of the file as it was, and a file that
+    held only okl's block goes with it. Unpaired markers keep the file, named."""
+    from .. import codeowners
+    kept: list[str] = []
+    # Every location, not only the one GitHub reads now: init may have written the block into a
+    # file that a CODEOWNERS added since, earlier in GitHub's order, has replaced.
+    for path in codeowners.LOCATIONS:
+        if not path.is_file() and not path.is_symlink():
+            continue
+        if _symlinked(path) is not None:
+            kept.append(f"{path} (a symlink — okl's owner-approved paths not removed)")
+            continue
+        try:
+            text = path.read_bytes().decode("utf-8")
+            rest = codeowners.remove(text)
+        except (UnicodeDecodeError, codeowners.MalformedBlockError) as e:
+            kept.append(f"{path} ({e}; okl's owner-approved paths not removed)")
+            continue
+        if rest != text:
+            if not dry_run:
+                if rest:
+                    path.write_bytes(rest.encode("utf-8"))   # exact bytes: no newline translation
+                else:
+                    path.unlink()
+            print(f"✓ {act} okl's owner-approved paths from {path}" + ("" if rest else " (the file held nothing else)"))
+    return kept
+
+
+def _uninstall_owner_denies(act: str, dry_run: bool) -> list[str]:
+    """okl's Claude Code deny rules (OWNER_DENY), and nothing else: a list they leave empty stays,
+    since okl cannot tell whether it was there before init."""
+    kept: list[str] = []
+    settings = Path(".claude/settings.json")
+    if not settings.is_file() or _symlinked(settings) is not None:
+        return kept
+    try:
+        data = json.loads(settings.read_text())
+    except json.JSONDecodeError:
+        return kept
+    perms = data.get("permissions") if isinstance(data, dict) else None
+    if not isinstance(perms, dict) or not isinstance(perms.get("deny"), list):
+        return kept
+    deny = perms["deny"]
+    if any(rule in deny for rule in OWNER_DENY):
+        perms["deny"] = [rule for rule in deny if rule not in OWNER_DENY]
+        if not dry_run:
+            settings.write_text(json.dumps(data, indent=2) + "\n")
+        print(f"✓ {act} okl's deny rules from {settings}")
+    return kept
 
 
 def _drop_okl_hooks(hooks_cfg: dict) -> int:
@@ -411,6 +475,8 @@ def _init_dry_run(args: argparse.Namespace) -> int:
     else:
         print("  (no .claude/ here and Claude Code not found, so no hooks; `--claude` installs them anyway)")
     _dry_run_drift_gates(args)
+    if not _dry_run_owner(args, (wire or why == _BY_PLUGIN) and why != _OPTED_OUT and link is None):
+        return 2
     recorded = load_config().get("interests")
     if args.interests:
         print(f"  (interests: {args.interests})")
@@ -428,6 +494,24 @@ def _init_dry_run(args: argparse.Namespace) -> int:
     print("  https://github.com/emeraldleaf/okl/blob/main/src/okl/scaffold/hooks/")
     print("  https://github.com/emeraldleaf/okl/blob/main/src/okl/scaffold/git-hooks/pre-push")
     return 0
+
+
+def _dry_run_owner(args: argparse.Namespace, wiring_claude: bool) -> bool:
+    """The dry run's lines for the owner step; False for an owner CODEOWNERS would reject."""
+    from .. import codeowners
+    cfg = load_config()
+    if not _init_owner(cfg, args):
+        return False
+    owner = cfg.get("owner")
+    if owner and _symlinked(path := codeowners.location(Path())) is not None:
+        print(f"  (no owner-approved paths: {path} is a symlink, which init refuses to write through)")
+    elif owner:
+        print(f"  {path!s:<40}names {owner} code owner of "
+              f"{', '.join(codeowners.owner_paths(cfg.get('owned', [])))} (okl's block only)")
+        if wiring_claude:
+            print("  .claude/settings.json                   deny rules for editing branch protection and "
+                  "merging as an admin")
+    return True
 
 
 def _dry_run_drift_gates(args: argparse.Namespace) -> None:
@@ -550,6 +634,8 @@ def cmd_init(args: argparse.Namespace) -> int:
         print(f"• repo renamed {previous} → {repo}: lessons scoped repo:{previous} "
               "no longer brief here")
     cfg = load_config()
+    if not _init_owner(cfg, args):
+        return 2
     cfg["repo"] = repo
     if args.service:
         cfg["service_url"] = args.service
@@ -568,6 +654,7 @@ def cmd_init(args: argparse.Namespace) -> int:
 
     _wire_claude_code(args)
     _wire_drift_gates(cfg, force=getattr(args, "force", False))
+    _wire_owner_paths(cfg, args)
     if not getattr(args, "no_seed", False):
         _seed_first_run(Client())
     for line in _empty_store_guidance(Client()):
@@ -579,6 +666,93 @@ def cmd_init(args: argparse.Namespace) -> int:
     if found:
         print("\n" + coexist.render(found))
     return 0
+
+
+def _init_owner(cfg: dict, args: argparse.Namespace) -> bool:
+    """Record --owner and --owned in `cfg`; False, having said why, for an owner CODEOWNERS would
+    reject, before anything is written."""
+    from .. import codeowners
+    given = getattr(args, "owner", None)
+    if given is not None:
+        owner = codeowners.normalise_owner(given)
+        if owner is None:
+            print(f"! --owner {given!r} is not an owner CODEOWNERS accepts: @user, @org/team or an email")
+            return False
+        cfg["owner"] = owner
+    given_paths = getattr(args, "owned", None) or []
+    owned = [p.lstrip("/") for p in given_paths]   # validated as written: `/` alone strips to nothing
+    bad = [g for g, p in zip(given_paths, owned, strict=True) if not codeowners.valid_path(p)]
+    if bad:
+        print(f"! --owned {bad[0]!r} is not one CODEOWNERS pattern (no spaces, '#', '!' or line breaks, "
+              "and not the root alone)")
+        return False
+    if owned:
+        cfg["owned"] = sorted({*cfg.get("owned", []), *owned})
+        if not cfg.get("owner"):
+            print("• --owned is recorded, and takes effect once --owner names who approves it")
+    return True
+
+
+def _wire_owner_paths(cfg: dict, args: argparse.Namespace) -> None:
+    """init's owner step (#329): okl's CODEOWNERS block, and the Claude Code rules that keep an
+    agent from undoing the branch rule behind it. Nothing without a recorded --owner."""
+    from .. import codeowners
+    owner = cfg.get("owner")
+    if not owner:
+        return
+    path = codeowners.location(Path())
+    if _refuse_symlink(path):
+        return
+    try:
+        current = path.read_bytes().decode("utf-8") if path.is_file() else ""
+        text, notes = codeowners.merge(current, owner, codeowners.owner_paths(cfg.get("owned", [])))
+    except (UnicodeDecodeError, codeowners.MalformedBlockError) as e:
+        print(f"! kept {path}: {e}. Fix or remove okl's lines in it, then re-run `okl init`.")
+        return
+    for note in notes:
+        print(f"• {note}")
+    if text == current:
+        print(f"• owner-approved paths already current → {path}")
+    else:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(text.encode("utf-8"))       # exact bytes: the file's own line endings stay
+        print(f"✓ named {owner} code owner of {', '.join(codeowners.owned(text))} → {path} (commit it; "
+              "GitHub enforces it only where a branch rule requires code-owner review: `okl doctor` "
+              "says whether it does here)")
+    wire = _should_wire_claude(args)
+    if wire[1] != _OPTED_OUT and (wire[0] or wire[1] == _BY_PLUGIN) and _merge_owner_denies(Path(".claude")):
+        print("✓ added Claude Code deny rules for editing branch protection and merging as an admin "
+              "→ .claude/settings.json (they advise the agent; the branch rule is what enforces)")
+
+
+def _merge_owner_denies(claude: Path) -> bool:
+    """Add OWNER_DENY to permissions.deny in .claude/settings.json, keeping every other entry."""
+    path = claude / "settings.json"
+    if _refuse_symlink(path):
+        return False
+    try:
+        settings = json.loads(path.read_text()) if path.exists() else {}
+    except json.JSONDecodeError:
+        print(f"! {path} is not valid JSON — not adding okl's deny rules; add them by hand: {list(OWNER_DENY)}")
+        return False
+    # `permissions: null` and a missing `deny` are filled in; any other shape is the user's to fix.
+    perms = settings.get("permissions") if isinstance(settings, dict) else None
+    if isinstance(settings, dict) and perms is None:
+        perms = settings["permissions"] = {}
+    if isinstance(perms, dict) and perms.get("deny") is None:
+        perms["deny"] = []
+    deny = perms.get("deny") if isinstance(perms, dict) else None
+    if not isinstance(deny, list):
+        print(f"! {path}'s permissions are not in the shape Claude Code reads — not adding okl's deny "
+              f"rules; add them by hand: {list(OWNER_DENY)}")
+        return False
+    missing = [rule for rule in OWNER_DENY if rule not in deny]
+    if not missing:
+        return False
+    deny.extend(missing)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(settings, indent=2) + "\n")
+    return True
 
 
 def _install_claude_wiring(claude: Path, force: bool = False) -> None:

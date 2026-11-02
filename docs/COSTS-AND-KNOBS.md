@@ -95,7 +95,8 @@ from CI, and through the MCP server whether or not any hook is installed.
 To remove okl from a repo: `okl init --uninstall` (add `--dry-run` to preview). It removes
 the two hook scripts, their exact entries in `.claude/settings.json`, okl's `.mcp.json`
 server, `.github/workflows/okl-verify.yml` with the `.github/okl-version` pin beside it, and
-its pre-push hook — and nothing else: another tool's hooks in the same events stay, a file
+its pre-push hook, and with `--owner` okl's CODEOWNERS block and its deny rules — and nothing
+else: another tool's hooks in the same events stay, a file
 you edited is kept and named, and `.okl/` (your store) is never touched; delete it yourself
 if you mean to. Nothing outside the repo was ever written.
 

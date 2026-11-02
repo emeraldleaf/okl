@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- **`okl init --owner @you`, and `okl doctor` saying whether GitHub enforces it** (#329, part A).
+  With a branch rule that requires code-owner review, which you set up, each change to the
+  thesis then needs your approval. Init writes okl's block into CODEOWNERS, naming you owner of
+  `docs/THESIS.md`, of every place GitHub reads CODEOWNERS from and of any `--owned` path; it is
+  spliced into an existing file in its own line endings and changes no line of yours (a last
+  line with no newline gets one). In Claude Code it also adds deny rules for the usual ways to
+  edit branch protection or rulesets and to merge past them. `okl doctor` asks GitHub and says
+  "enforced" only when it has read and recognised every condition: the merged CODEOWNERS gives
+  each path to the owner alone, with okl's block last (init moves it there on every run), a rule
+  requires code-owner review and dismisses an approval when new commits are pushed, and the
+  identity running it can neither bypass nor change the rule, nor approve as the owner (a user by
+  login, a team by membership; an email owner is "unknown"); otherwise "not enforced" with the reason, or
+  "unknown" with what it could not read. Run as an administrator it says "not enforced", because
+  that identity can change the rule. The guide, [docs/AGENT-IDENTITY.md](docs/AGENT-IDENTITY.md),
+  covers giving the agent an identity of its own and the rule.
 - **Two review findings that kept coming back are now gates.** `ci/check-guard-mutations.py`, run
   in CI, switches off each guard `okl init` relies on (every symlink refusal, found by reading the
   code, so a new one is covered) and fails unless a test fails: on its first run 7 of the 14 had

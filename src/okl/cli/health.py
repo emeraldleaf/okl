@@ -19,7 +19,9 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     its hooks registered in the project or user settings, so every prompt is briefed
     twice) -- findings,
     per the CLI contract -- and 0 when neither is. It reads settings files, asks git where
-    its hooks live, and changes nothing.
+    its hooks live, and, where `okl init --owner` set an owner, asks GitHub through gh whether
+    the owner's approval is enforced (a few reads; informational, not a finding). It changes
+    nothing.
     """
     from .. import coexist
     cfg = _find_config()
@@ -39,7 +41,55 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         print("\n• drift is not gated in CI here; `okl init --ci` adds the GitHub workflow, and "
               "another CI can run `okl drift --gate`")
     print(_git_hook_state(root))
+    try:
+        recorded = json.loads(cfg.read_text()) if cfg else {}
+    except (OSError, ValueError):
+        recorded = {}
+    owners = _owner_state(root, recorded if isinstance(recorded, dict) else {})
+    if owners:
+        print(owners)
     return 1 if (found or twice) else 0
+
+
+def _owner_state(root: Path, cfg: dict) -> str:
+    """okl's owner-approved paths (#329): whether GitHub enforces the owner's approval, then each
+    path's owner on the default branch. The owner and paths come from what `okl init --owner`
+    recorded; a clone without them (.okl/ is not committed) checks the owner okl's block names on
+    the default branch, where a committed CODEOWNERS holds the block. Empty, and no API call made,
+    where neither does: whether it runs is decided from committed files, not the working tree."""
+    from .. import codeowners, protection
+    owner = cfg.get("owner")
+    if not owner and not _committed_block(root):
+        return ""
+    verdict = (protection.check(codeowners.owner_paths(cfg.get("owned", [])), owner) if owner
+               else protection.check(None, None))
+    mark = {protection.ENFORCED: "✓", protection.NOT_ENFORCED: "!"}.get(verdict.state, "•")
+    who = owner or verdict.owner
+    lines = [f"\n{mark} owner-approved paths{f' for {who}' if who else ''}: {verdict.state}. {verdict.why}"]
+    for p, found in verdict.owners.items():
+        held = ("okl could not tell" if found is None else f"owned by {' '.join(found)}" if found else "no owner")
+        lines.append(f"    {p}: {held}")
+    return "\n".join(lines)
+
+
+def _committed_block(root: Path) -> bool:
+    """Whether a CODEOWNERS committed at HEAD, or on the default branch (origin/HEAD), holds okl's
+    block: read from git as bytes, never the working tree, and never a traceback (no git, a
+    CODEOWNERS that is not UTF-8)."""
+    import subprocess
+
+    from .. import codeowners
+    marker = codeowners.BEGIN.encode()
+    for ref in ("HEAD", "refs/remotes/origin/HEAD"):
+        for location in codeowners.LOCATIONS:
+            try:
+                r = subprocess.run(["git", "-C", str(root), "show", f"{ref}:{location.as_posix()}"],
+                                   capture_output=True, timeout=10)
+            except (OSError, subprocess.SubprocessError):
+                return False
+            if r.returncode == 0 and marker in r.stdout:
+                return True
+    return False
 
 
 def _git_hook_state(root: Path) -> str:
