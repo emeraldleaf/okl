@@ -6,7 +6,7 @@
 <!--
   okl, one lesson's life: the anatomy sheet. Rendered to PNG by render.py (light and dark):
       python render.py okl-anatomy.html okl-anatomy
-  The worked example is real okl output (run 2026-10-26) from a throwaway repo, trimmed where a line
+  The worked example is real okl output (run 2026-11-02) from a throwaway repo, trimmed where a line
   ran long (marked …) and annotated with # notes, which okl does not print.
   Type and colour are emeraldleaf.dev's, as in okl-overview.html. Icons are Lucide
   (lucide-static 0.460.0, ISC License, https://lucide.dev), inlined unmodified.
@@ -246,7 +246,7 @@ footer b { color: var(--text); font-weight: 600; }
       <article class="panel runs" style="flex: none">
         <div class="ph"><span class="num">4</span><h3>Briefed before each task</h3><svg class="ic"><use href="#i-bot"/></svg></div>
         <p class="who">okl runs it, in Claude Code</p>
-        <p class="lede">okl shows up to five lessons that share enough of the task's subject, lists the rest that matched in a line each, and puts them in the agent's context first. A lesson no check backs is marked UNCHECKED: advice, not proof.</p>
+        <p class="lede">okl shows up to five lessons that share enough of the task's subject, lists the rest that matched in a line each, and puts them in the agent's context first. A lesson no check backs is marked UNCHECKED, as advice rather than proof.</p>
         <p class="mech"><span class="cc">Claude Code</span> A hook runs on every prompt; if okl can't brief, the prompt is blocked or told so. Other MCP agents can call <code>okl_check</code>; nothing calls it for them.</p>
       </article>
     </div>
@@ -270,7 +270,7 @@ footer b { color: var(--text); font-weight: 600; }
   <section class="example">
     <div class="example-head">
       <h2>One lesson, all the way round</h2>
-      <p>Real okl output from a throwaway repo (2026-10-26), shortened where … marks a cut. The # notes are ours.</p>
+      <p>Real okl output from a throwaway repo (2026-11-02), shortened where … marks a cut. The # notes are ours.</p>
     </div>
     <div class="term">
       <div class="bar"><i></i><i></i><i></i><span>orders-api</span></div>
@@ -283,7 +283,7 @@ footer b { color: var(--text); font-weight: 600; }
 <span class="t-id">order_scope</span></pre></div>
       <div class="step"><div class="g runs"><b>3</b></div><pre><span class="t-p">$</span> <span class="t-c">okl verify order_scope --run "pytest -q" --expect passed</span>
 <span class="t-ok">✓ verified order_scope</span> — Order lookups are scoped to the signed-in customer
-  evidence: `pytest -q` exit 0, matched 'passed' on commit <span class="t-id">f5e6d52be671</span> @ 2026-10-26T08:31Z
+  evidence: `pytest -q` exit 0, matched 'passed' on commit <span class="t-id">e19f9e203884</span> @ 2026-11-02T01:40Z
 <span class="t-m">…</span></pre></div>
       <div class="step"><div class="g runs"><b>4</b></div><pre><span class="t-p">$</span> <span class="t-c">okl check --task "Add an endpoint that returns one order by id for the signed-in customer"</span>
 ## OKL briefing — orders-api · task: Add an endpoint that returns one order by id for the signed-in customer
@@ -293,7 +293,10 @@ _4 relevant node(s) from the org's encoded body, and 4 more listed by title._
 - **FIX: Order lookups are scoped to the signed-in customer** [<span class="t-id">order_scope</span>] — when you see: an order is fetched by id …
     → filter the lookup by the caller's id; another customer's order is a 404, not a 403
     why: Without the owner check, any signed-in user can read any order by trying ids (IDOR, CWE-639).
+<span class="t-note"># proven above, so unmarked; the fourth, from a seed pack and never checked here, is marked:</span>
+- **FIX: Authorization behavior is only proven by an authorization-FAILURE test …** [<span class="t-id">seed:dotnet-canon:r_authz_test_required</span>] <span class="t-bad">*(UNCHECKED)*</span> …
 <span class="t-m">…</span>
+> 7 lesson(s) marked UNCHECKED have no observed check behind them: treat them as advice, …
 <span class="t-note"># in Claude Code, a prompt hook puts this briefing in the agent's context before every turn, and shows the person:</span>
 <span class="t-m">okl · briefed 4 lesson(s): Missing ownership scope check is an IDOR…; Server-controlled fields trusted from the…;
   Order lookups are scoped to the signed-in… (+1 more) · 4 related listed for the agent</span></pre></div>
@@ -341,7 +344,7 @@ OKL drift: <span class="t-ok">OK</span> — 1 rule(s) checked, no encoded rule's
       <div class="stat"><span class="big bad">42%</span><span class="arrowto">→</span><span class="big good">7%</span></div>
       <div class="stat-l"><span>68 of 163 unbriefed</span><span>11 of 164 briefed</span></div>
       <p class="lede">attempts that repeated a known defect</p>
-      <p class="mech">Seven A/B runs on eight tasks built to invite a defect, three samples per arm: sonnet writes one-shot code with the briefing put in its prompt, and haiku judges it blind. The runs (Aug 30 to Sep 3) predate today's subject-word search. Not measured: the hook, the gate, the write side, improvement over time. The example above shows how the parts work, not that they help.</p>
+      <p class="mech">Seven A/B runs on eight tasks built to invite a defect, three samples per arm: sonnet writes one-shot code with the briefing put in its prompt, and haiku judges it blind. The runs (Aug 30 to Sep 3) predate today's subject-word search. Not measured in this A/B: the hook, the write side, improvement over time. The gate's drift was measured on its own (REPORT §4ae, §4af, §4ah). The example above shows how the parts work, not that they help.</p>
       <p class="receipts">Receipts in <code>evals/results/</code>: ab-20260830-0003, ab-20260901-0133, ab-20260901-1238, ab-20260902-0538, ab-20260903-0157, ab-20260903-1214, ab-20260903-1323 · evals/REPORT.md §5, finding 7</p>
     </article>
     <article class="panel">
@@ -349,16 +352,16 @@ OKL drift: <span class="t-ok">OK</span> — 1 rule(s) checked, no encoded rule's
       <h3>How it ranks, what it costs</h3>
       <dl class="spec">
         <dt>Rank</dt><dd>the prompt's subject words, up to 40 → BM25 in SQLite full-text search (title 8, body, symptom, aliases and triggers 4, fix 2, tags 1) → 36 fetched → filtered by scope, and org lessons by <code>applies_to</code> and the repo's interests → shown in full if three subject words, or two rare ones, are in its title, symptom, aliases or triggers, at most 5 → the rest that matched named in a line each, up to 12</dd>
-        <dt>Cost</dt><dd>about 1,580 tokens for a full briefing, a median of about 720 on real prompts before the UNCHECKED marks (about 5% more), and about 0.1 s for <code>okl check</code>; no model runs by default, and of the three optional local models the warm one (<code>okl warm index</code>) adds what a lesson means at a median of 114 ms a prompt and about 1.6 GB of memory</dd>
+        <dt>Cost</dt><dd>about 1,580 tokens for a full briefing, a median of about 720 on real prompts before the briefing's marks (about 5% more), and about 0.1&nbsp;s for <code>okl check</code>; no model runs until you turn one on. Of the three optional local models, the warm one runs once <code>okl warm index</code> has embedded the store, adding what a lesson means at a median of 114 ms a prompt and about 1.6 GB of memory</dd>
         <dt>Stale</dt><dd>the committed content of the lesson's files differs from the proven commit (commit times, if that commit is missing); a lesson with files and no observed pass holds the push too</dd>
       </dl>
       <p class="kicker" style="margin-top: 12px">Where it breaks</p>
       <ul class="ul">
-        <li>A task that shares no exact word with a lesson misses it: no stemming, so "orders" won't match "order".</li>
-        <li>A lesson named in a line is not shown: whether an agent opens it is not yet measured.</li>
+        <li>Without the warm model, a task that shares no exact word with a lesson misses it: no stemming, so "orders" won't match "order".</li>
+        <li>A lesson named in a line is not shown: an agent told to output only code opened one in at most 1 of 24 runs (REPORT §4ab); a working session is not yet measured.</li>
         <li>A file is watched whole: any edit needs a re-run.</li>
         <li>A check proves what it tests, and nothing more.</li>
-        <li>Drift prompts a re-check; it is not yet a measured detector of breaks (REPORT §4af, §4ah).</li>
+        <li>Drift prompts a re-check; it is not yet shown to catch most breaks (REPORT §4af, §4ah).</li>
       </ul>
     </article>
   </section>
