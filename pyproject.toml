@@ -159,7 +159,8 @@ root_package = "okl"
 # convention alone until this contract; now CI fails the first import that points up.
 # Higher layers may import lower ones, never the reverse; `|` marks siblings that must
 # not import each other either. Modules not listed (bootstrap, codeowners, coexist,
-# ownership, protection, scaffold_cmd) import nothing from okl and are used only by the CLI.
+# ownership, scaffold_cmd) import nothing from okl, and protection only codeowners (the
+# contract below); all are used only by the CLI.
 name = "Dependencies point one way: CLI -> adapters -> client -> core -> store"
 type = "layers"
 layers = [
@@ -171,6 +172,13 @@ layers = [
   "okl.semantic | okl.rerank | okl.decide | okl.warm",
   "okl.store | okl.hub",
 ]
+
+[[tool.importlinter.contracts]]
+# `okl doctor`'s owner check reads okl's CODEOWNERS block through codeowners, which writes it
+# and imports nothing from okl; the reverse would tie the writer to the checker (#329).
+name = "Owner-approved paths: protection reads codeowners, never the reverse"
+type = "layers"
+layers = ["okl.protection", "okl.codeowners"]
 
 [tool.ruff]
 line-length = 100

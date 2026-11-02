@@ -78,9 +78,15 @@ gates it (#329).
   classic protection: use a ruleset, or doctor answers "unknown". It does not evaluate every
   CODEOWNERS glob as GitHub does: okl's block is kept last, so its own lines need no evaluating,
   and a rule placed after it, or a glob that might own a path left to a team's line, makes the
-  answer "not enforced" or "unknown". It checks that the identity running it is not the owner
-  (an App's token has no login to compare), but not whether that identity belongs to a team
-  named as owner: name a person, not a team the agent is in. In a clone with no `.okl/` (the
+  answer "not enforced" or "unknown"; so does a line in okl's block that does not name the
+  owner alone (a re-run of `okl init` moves such a line just above the block and says so). It
+  checks that the identity running it cannot approve as the owner: a user by login, a team by
+  reading the identity's membership; an App's token is neither. An email owner cannot be tied
+  to an account from here, so it answers "unknown": name an @user or a team. A ruleset's list of
+  who may bypass it is returned only to an identity with write access to the ruleset; when it
+  is, anyone listed means "not enforced", as classic protection's bypass allowances do. A
+  CODEOWNERS line holding a character Python and GitHub may split differently (a no-break or
+  other unusual space, a form feed) makes the answer "unknown". In a clone with no `.okl/` (the
   agent's, or CI), doctor runs when a committed CODEOWNERS holds okl's block, and takes the
   owner and paths from the block on the default branch.
 - **Private repositories on GitHub Free** have no protected branches, code owners or required

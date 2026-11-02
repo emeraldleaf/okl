@@ -43,10 +43,18 @@ Get = Callable[[str], tuple[int | None, object]]
 
 
 class Verdict(NamedTuple):
-    """okl doctor's answer, its reason, and each path's owners on the default branch."""
+    """okl doctor's answer, its reason, each path's owners on the default branch, and the owner
+    it checked (from the recorded config, or from okl's block on the default branch)."""
     state: str
     why: str
     owners: dict[str, list[str] | None]     # None: okl could not tell who owns it
+    owner: str | None = None
+
+
+# Characters Python splits a line or a word on and GitHub may not: a CODEOWNERS line holding one
+# is not read the way GitHub reads it, so the answer is unknown.
+ODD_SPACE = frozenset("\x0b\x0c\x1c\x1d\x1e\x1f\x85\xa0\u1680\u2028\u2029\u202f\u205f\u3000"
+                      + "".join(chr(c) for c in range(0x2000, 0x200b)))
 
 
 def _gh_get(path: str) -> tuple[int | None, object]:
@@ -81,9 +89,12 @@ def _gh_repo() -> dict | None:
                            capture_output=True, text=True, timeout=30)
         info = json.loads(r.stdout) if r.returncode == 0 else None
         if isinstance(info, dict):
-            who = subprocess.run(["gh", "api", "user", "--jq", ".login"], capture_output=True, text=True,
-                                 timeout=30)
-            info["viewerLogin"] = who.stdout.strip() if who.returncode == 0 else None
+            # Who this identity is, by status: 200 a user (with a login), 401/403 an App's token
+            # (no user), anything else unread.
+            status, user = _gh_get("user")
+            login = user.get("login") if status == 200 and isinstance(user, dict) else None
+            info["viewerLogin"] = login if isinstance(login, str) else None
+            info["viewerKind"] = "user" if info["viewerLogin"] else "app" if status in (401, 403) else None
         return info
     except (OSError, subprocess.SubprocessError, ValueError):
         return None
@@ -95,7 +106,7 @@ def _matches(pattern: str, path: str) -> str:
 
     A pattern with a leading or inner slash is anchored to the root; otherwise it matches a file
     or directory of that name at any depth. A directory match covers everything under it."""
-    if "**" in pattern or pattern.startswith(("!", "\\")):
+    if "**" in pattern or "\\" in pattern or pattern.startswith("!"):
         return "maybe"
     dir_only, core = pattern.endswith("/"), pattern.strip("/")
     if not core:
@@ -131,17 +142,45 @@ def _owner_of(rules: list[tuple[str, list[str]]], path: str) -> list[str] | None
     return []
 
 
-def _ownership(text: str, paths: list[str], owner: str, branch: str) -> Verdict | None:
-    """Not enforced, or unknown, when the default branch's CODEOWNERS does not give every path
-    to `owner` alone; None when it does."""
+def _block_lines(text: str, owner: str, branch: str) -> tuple[list[tuple[str, list[str]]], Verdict | None]:
+    """okl's block's rules on the default branch, or why they cannot stand: a character okl may
+    split differently from GitHub, unpaired markers, a rule after the block, or a rule in it that
+    does not name the owner alone."""
+    if odd := sorted({repr(c) for c in text if c in ODD_SPACE}):
+        return [], Verdict(UNKNOWN, f"CODEOWNERS on {branch} holds {', '.join(odd)}, which okl may split "
+                                    "differently from GitHub", {})
     try:
         span = codeowners.block_span(text)
     except codeowners.MalformedBlockError as e:
-        return Verdict(NOT_ENFORCED, f"{e} on {branch}", {})
-    if span is not None and (after := codeowners.rules(text[span[1]:])):
-        return Verdict(NOT_ENFORCED, f"{len(after)} rule(s) after okl's block in CODEOWNERS on {branch} can "
-                                     "override it: re-run `okl init`, which moves the block last", {})
-    block = {p.lstrip("/"): o for p, o in codeowners.rules(text[span[0]:span[1]])} if span else {}
+        return [], Verdict(NOT_ENFORCED, f"{e} on {branch}", {})
+    if span is None:
+        return [], None
+    if after := codeowners.rules(text[span[1]:]):
+        return [], Verdict(NOT_ENFORCED, f"{len(after)} rule(s) after okl's block in CODEOWNERS on {branch} can "
+                                         "override it: re-run `okl init`, which moves the block last", {})
+    in_block = codeowners.rules(text[span[0]:span[1]])
+    for pattern, who in in_block:
+        if [x.lower() for x in who] != [owner.lower()]:
+            line = " ".join([pattern, *who])
+            return [], Verdict(NOT_ENFORCED, f"okl's block in CODEOWNERS on {branch} holds `{line}`, which does not "
+                                             f"name {owner} alone: re-run `okl init`, which keeps okl's lines only", {})
+    return in_block, None
+
+
+def _ownership(text: str, paths: list[str], owner: str, branch: str) -> Verdict | None:
+    """Not enforced, or unknown, when the default branch's CODEOWNERS does not give every path
+    to `owner` alone; None when it does.
+
+    okl's block is last, and every rule in it must name the owner alone: then whatever the order
+    of its lines, the last match for any path it covers names the owner (the third review of #329
+    found a team line inside the block winning over okl's own). A path the block does not name
+    is a file left to a team's line, matched against the team's rules, or a pattern okl cannot
+    evaluate."""
+    in_block, stop = _block_lines(text, owner, branch)
+    if stop:
+        return stop
+    alone = [owner.lower()]
+    block = {p.lstrip("/"): o for p, o in in_block}
     every = codeowners.rules(text)
     owners: dict[str, list[str] | None] = {}
     for path in paths:
@@ -150,15 +189,15 @@ def _ownership(text: str, paths: list[str], owner: str, branch: str) -> Verdict 
         elif not any(c in path for c in "*?[") and not path.endswith("/"):
             owners[path] = _owner_of(every, path)   # a file left to a team's line
         else:
-            owners[path] = None                     # a pattern okl did not write: not evaluated
-    alone = [owner.lower()]
+            owners[path] = None                     # a pattern okl's block does not name
     wrong = {p: o for p, o in owners.items() if o is not None and [x.lower() for x in o] != alone}
     if wrong:
         path, who = next(iter(wrong.items()))
         return Verdict(NOT_ENFORCED, f"on {branch}, {path} is owned by {' '.join(who) or 'no one'}"
                                      + ("" if not who else f", not {owner} alone"), owners)
     if unread := [p for p, o in owners.items() if o is None]:
-        return Verdict(UNKNOWN, f"on {branch}, a rule okl cannot evaluate may own {', '.join(unread)}", owners)
+        return Verdict(UNKNOWN, f"okl's block on {branch} does not name {', '.join(unread)}, and the team's lines "
+                                "for it are not evaluated (or a rule okl cannot evaluate may own it)", owners)
     return None
 
 
@@ -183,7 +222,7 @@ def _codeowners_text(get: Get, name: str, branch: str) -> tuple[str | None, Verd
 
 def _review_problem(stale_dismissed: object, count: object, where: str) -> tuple[str, bool] | None:
     """(problem, it is a gap okl could not settle) for a code-owner review rule, or None."""
-    if not stale_dismissed:
+    if stale_dismissed is not True:
         return (f"{where} keeps an approval when new commits are pushed (turn on dismissing stale "
                 "approvals; approval of the most recent push alone keeps the owner's earlier approval)", False)
     if count == 0:
@@ -202,11 +241,12 @@ def _rulesets(get: Get, name: str, branch: str) -> tuple[bool, list[str], bool]:
     for rule in rules:
         params = rule.get("parameters") if isinstance(rule, dict) else None
         if not isinstance(params, dict) or rule.get("type") != "pull_request" \
-                or not params.get("require_code_owner_review"):
+                or params.get("require_code_owner_review") is not True:
             continue
         rid = rule.get("ruleset_id")
         status, ruleset = get(f"repos/{name}/rulesets/{rid}?includes_parents=true")
         can = ruleset.get("current_user_can_bypass") if status == 200 and isinstance(ruleset, dict) else None
+        actors = ruleset.get("bypass_actors") if isinstance(ruleset, dict) else None
         review = _review_problem(params.get("dismiss_stale_reviews_on_push"),
                                  params.get("required_approving_review_count"), f"ruleset {rid}")
         if can not in BYPASS_VALUES:
@@ -214,6 +254,10 @@ def _rulesets(get: Get, name: str, branch: str) -> tuple[bool, list[str], bool]:
             problems.append(f"cannot tell whether this identity can bypass ruleset {rid}")
         elif can != "never":
             problems.append(f"this identity can bypass ruleset {rid} ({can})")
+        elif actors:
+            # As classic protection's bypass allowances: others listed can merge past the owner.
+            problems.append(f"ruleset {rid} lets {len(actors) if isinstance(actors, list) else 'some'} listed "
+                            "actor(s) bypass it")
         elif review:
             unread = unread or review[1]
             problems.append(review[0])
@@ -229,20 +273,20 @@ def _classic(get: Get, name: str, branch: str, viewer: object) -> tuple[bool, li
     if status != 200 or not isinstance(body, dict):
         return False, [], None if status == 404 and viewer != "ADMIN" else status
     reviews = body.get("required_pull_request_reviews")
-    if not isinstance(reviews, dict) or not reviews.get("require_code_owner_reviews"):
+    if not isinstance(reviews, dict) or reviews.get("require_code_owner_reviews") is not True:
         return False, [], status
     allowances = reviews.get("bypass_pull_request_allowances")
-    allowances = allowances if isinstance(allowances, dict) else {}
+    bypassers = (any(allowances.get(k) for k in ("users", "teams", "apps")) if isinstance(allowances, dict)
+                 else allowances is not None)     # another shape: not read as empty
     admins = body.get("enforce_admins")
     review = _review_problem(reviews.get("dismiss_stale_reviews"), reviews.get("required_approving_review_count"),
                              f"branch protection on {branch}")
     problems = [msg for failed, msg in (
-        (not (isinstance(admins, dict) and admins.get("enabled")),
+        (not (isinstance(admins, dict) and admins.get("enabled") is True),
          f"branch protection on {branch} lets administrators bypass it (turn on 'Do not allow bypassing "
          "the above settings')"),
         (review is not None, review[0] if review else ""),
-        (any(allowances.get(k) for k in ("users", "teams", "apps")),
-         f"branch protection on {branch} lets listed users, teams or apps bypass pull request review"),
+        (bypassers, f"branch protection on {branch} lets listed users, teams or apps bypass pull request review"),
     ) if failed]
     return not problems, problems, status
 
@@ -267,9 +311,31 @@ def _rule_verdict(get: Get, name: str, branch: str, info: dict) -> Verdict | Non
     return Verdict(UNKNOWN, f"{lead}{' and '.join(unread)} could not be read as this identity{plan}", {})
 
 
-def _identity_verdict(info: dict, owner: str, branch: str, owners: dict) -> Verdict:
-    """With a binding rule in place: enforced only for a role that cannot change it, and not the owner."""
-    viewer, login = info.get("viewerPermission"), info.get("viewerLogin")
+def _owner_is_identity(get: Get, info: dict, owner: str) -> bool | None:
+    """Whether the identity running this could approve as `owner`: True, False, or None unread.
+    An App's token is no user and in no team; a user is compared by login, or read as a member of
+    an owning team; an email owner cannot be tied to an account from here."""
+    kind, login = info.get("viewerKind"), info.get("viewerLogin")
+    if kind == "app":
+        return False
+    if kind != "user" or not isinstance(login, str):
+        return None
+    if not owner.startswith("@"):
+        return None
+    if "/" not in owner:
+        return owner[1:].lower() == login.lower()
+    org, team = owner[1:].split("/", 1)
+    status, body = get(f"orgs/{org}/teams/{team}/memberships/{login}")
+    if status == 404:
+        return False
+    state = body.get("state") if status == 200 and isinstance(body, dict) else None
+    return True if state in ("active", "pending") else None
+
+
+def _identity_verdict(get: Get, info: dict, owner: str, branch: str, owners: dict) -> Verdict:
+    """With a binding rule in place: enforced only for a role that cannot change it, and an
+    identity that is not the owner."""
+    viewer = info.get("viewerPermission")
     if viewer == "ADMIN":
         return Verdict(NOT_ENFORCED, "the rule is in place, but this identity is an administrator, so it can "
                                      "change or remove it: run the agent as an identity without admin "
@@ -277,25 +343,32 @@ def _identity_verdict(info: dict, owner: str, branch: str, owners: dict) -> Verd
     if viewer not in SAFE_ROLES:
         return Verdict(UNKNOWN, f"the rule is in place, but GitHub reports no role okl knows for this identity "
                                 f"({viewer!r}); for an App, check it has no Administration write", owners)
-    if isinstance(login, str) and f"@{login}".lower() == owner.lower():
-        return Verdict(NOT_ENFORCED, f"this identity is {owner}, the owner, so its own approval counts: run the "
+    same = _owner_is_identity(get, info, owner)
+    if same:
+        return Verdict(NOT_ENFORCED, f"this identity is {owner}, or in it, so its own approval counts: run the "
                                      "agent as an identity of its own (docs/AGENT-IDENTITY.md)", owners)
+    if same is None:
+        return Verdict(UNKNOWN, f"the rule is in place, but okl could not tell whether this identity is {owner} "
+                                "(an email owner, or who this identity is could not be read): name an @user", owners)
     return Verdict(ENFORCED, f"code-owner review is required on {branch}, a new push dismisses an approval, "
-                             "and this identity cannot bypass or change the rule", owners)
+                             "and this identity cannot bypass or change the rule, nor approve as the owner", owners)
 
 
 def _from_block(text: str, branch: str) -> tuple[str | None, list[str], Verdict | None]:
-    """The owner and paths okl's block on the default branch names, for a clone with no recorded
-    owner (.okl/ is not committed)."""
+    """The owner and paths okl's block on the default branch names (its rules, and the paths it
+    notes it left to a team's line), for a clone with no recorded owner (.okl/ is not committed)."""
     try:
         block = codeowners.owned(text)
+        checked = codeowners.checked(text)
     except codeowners.MalformedBlockError as e:
         return None, [], Verdict(NOT_ENFORCED, f"{e} on {branch}", {})
+    if codeowners.block_span(text) is None:
+        return None, [], Verdict(NOT_ENFORCED, f"okl's block in CODEOWNERS on {branch} is not there", {})
     names = {o.lower(): o for found in block.values() for o in found}
     if len(names) != 1:
-        why = "is not there" if not block else "names no owner" if not names else "names more than one owner"
+        why = "is empty" if not block else "names no owner" if not names else "names more than one owner"
         return None, [], Verdict(NOT_ENFORCED, f"okl's block in CODEOWNERS on {branch} {why}", {})
-    extra = [p for p in block if p not in codeowners.owner_paths([])]
+    extra = [p for p in checked if p not in codeowners.owner_paths([])]
     return next(iter(names.values())), codeowners.owner_paths(extra), None
 
 
@@ -318,7 +391,8 @@ def check(paths: list[str] | None, owner: str | None, get: Get = _gh_get,
         return stop or Verdict(UNKNOWN, f"cannot read who owns okl's paths on {branch}", {})
     paths = paths or codeowners.owner_paths([])
     if stop := _ownership(text, paths, owner, branch):
-        return stop
+        return stop._replace(owner=owner)
     owners: dict[str, list[str] | None] = {p: [owner] for p in paths}
     rule = _rule_verdict(get, name, branch, info)
-    return rule._replace(owners=owners) if rule else _identity_verdict(info, owner, branch, owners)
+    verdict = rule._replace(owners=owners) if rule else _identity_verdict(get, info, owner, branch, owners)
+    return verdict._replace(owner=owner)

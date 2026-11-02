@@ -135,7 +135,7 @@ def test_the_file_is_the_one_github_reads(tmp_path):
 # contents, codeowners/errors). Hand-written from the docs, so no test touches the network.
 
 REPO = {"nameWithOwner": "acme/app", "defaultBranchRef": {"name": "main"}, "viewerPermission": "WRITE",
-        "visibility": "PUBLIC", "viewerLogin": "agent-bot"}
+        "visibility": "PUBLIC", "viewerLogin": "agent-bot", "viewerKind": "user"}
 PATHS = ["docs/THESIS.md", ".github/CODEOWNERS"]
 BLOCK = codeowners.merge("", "@ana", PATHS)[0]
 RULE = {"type": "pull_request", "ruleset_id": 7,
@@ -154,13 +154,15 @@ def _with(**changes):
 
 
 def _github(*, files=None, errors=(200, {"errors": []}), rules=(200, []), bypass=(200, "never"),
-            classic=(404, None), info=None, **who):
+            classic=(404, None), info=None, ruleset_extra=None, members=None, **who):
     """A GitHub: each API path okl doctor reads, and its (status, body)."""
     files = {".github/CODEOWNERS": BLOCK} if files is None else files
     answers = {
         "repos/acme/app/codeowners/errors?ref=main": errors,
         "repos/acme/app/rules/branches/main?per_page=100": rules,
-        "repos/acme/app/rulesets/7?includes_parents=true": (bypass[0], {"id": 7, "current_user_can_bypass": bypass[1]}),
+        "repos/acme/app/rulesets/7?includes_parents=true":
+            (bypass[0], {"id": 7, "current_user_can_bypass": bypass[1], **(ruleset_extra or {})}),
+        **(members or {}),
         "repos/acme/app/branches/main/protection": classic,
     }
     for location in codeowners.LOCATIONS:
@@ -188,7 +190,7 @@ LEFT_TO_TEAM = codeowners.merge("", "@ana", [".github/CODEOWNERS"])[0]     # okl
     (dict(rules=(200, ["not a rule", RULE])), "enforced", "cannot bypass"),
     # not enforced: read, and missing
     (dict(rules=(200, [RULE]), viewerPermission="ADMIN"), "not enforced", "is an administrator"),
-    (dict(rules=(200, [RULE]), viewerLogin="Ana"), "not enforced", "this identity is @ana, the owner"),
+    (dict(rules=(200, [RULE]), viewerLogin="Ana"), "not enforced", "this identity is @ana, or in it"),
     (dict(rules=(200, [STALE_RULE]), classic=(200, {})), "not enforced", "approval of the most recent push alone"),
     (dict(rules=(200, [RULE]), bypass=(200, "always"), classic=(200, {})), "not enforced", "can bypass ruleset 7 (always)"),
     (dict(rules=(200, [RULE]), bypass=(200, "pull_requests_only"), classic=(200, {})), "not enforced", "can bypass"),
@@ -209,7 +211,7 @@ LEFT_TO_TEAM = codeowners.merge("", "@ana", [".github/CODEOWNERS"])[0]     # okl
     (dict(files={".github/CODEOWNERS": "docs/THESIS.md @ana @bob\n" + LEFT_TO_TEAM}, rules=(200, [RULE])),
      "not enforced", "owned by @ana @bob, not @ana alone"),
     (dict(files={".github/CODEOWNERS": BLOCK.replace("docs/THESIS.md @ana", "docs/THESIS.md @ana @bob")},
-          rules=(200, [RULE])), "not enforced", "owned by @ana @bob"),
+          rules=(200, [RULE])), "not enforced", "holds `docs/THESIS.md @ana @bob`, which does not name @ana alone"),
     (dict(files={".github/CODEOWNERS": "docs/THESIS.md # @ana\n" + LEFT_TO_TEAM}, rules=(200, [RULE])),
      "not enforced", "docs/THESIS.md is owned by no one"),
     (dict(files={".github/CODEOWNERS": "THESIS.md @eve\n" + LEFT_TO_TEAM}, rules=(200, [RULE])),
@@ -238,8 +240,28 @@ LEFT_TO_TEAM = codeowners.merge("", "@ana", [".github/CODEOWNERS"])[0]     # okl
           rules=(200, [RULE])), "unknown", "cannot read .github/CODEOWNERS"),
     (dict(errors=(None, None), rules=(200, [RULE])), "unknown", "cannot read GitHub's check"),
     (dict(files={".github/CODEOWNERS": "*.md @eve\n" + LEFT_TO_TEAM}, rules=(200, [RULE])), "unknown",
-     "a rule okl cannot evaluate may own docs/THESIS.md"),
+     "okl's block on main does not name docs/THESIS.md"),
     (dict(info={"defaultBranchRef": {"name": "main"}}), "unknown", "gh cannot read this repository"),
+    # a line inside okl's block that is not the owner's wins over okl's own (the third review of #329)
+    *[(dict(files={".github/CODEOWNERS": BLOCK.replace(codeowners.END, f"{line}\n{codeowners.END}")},
+            rules=(200, [RULE])), "not enforced", f"holds `{line.split('#')[0].strip()}`")
+      for line in ("* @eve", "docs/ @eve", "/docs/ @eve", "*.md @eve", "**/THESIS.md @eve", "docs/", "*",
+                   "* # @ana")],
+    # who this identity is: an App is no user and in no team; a team is read by membership
+    (dict(rules=(200, [RULE]), viewerKind="app", viewerLogin=None), "enforced", "nor approve as the owner"),
+    (dict(rules=(200, [RULE]), viewerKind=None, viewerLogin=None), "unknown", "could not tell whether this identity"),
+    # a character Python splits on and GitHub may not
+    (dict(files={".github/CODEOWNERS": BLOCK.replace("docs/THESIS.md @ana", "docs/THESIS.md\xa0@ana")},
+          rules=(200, [RULE])), "unknown", "which okl may split differently"),
+    # a ruleset's bypass list, when GitHub returns it; values in another type are not 'true'
+    (dict(rules=(200, [RULE]), bypass=(200, "never"), ruleset_extra={"bypass_actors": [{"actor_type": "Integration"}]},
+          classic=(200, {})), "not enforced", "lets 1 listed actor(s) bypass it"),
+    (dict(rules=(200, [{**RULE, "parameters": {**RULE["parameters"], "dismiss_stale_reviews_on_push": "false"}}]),
+          classic=(200, {})), "not enforced", "keeps an approval when new commits are pushed"),
+    (dict(rules=(200, [{**RULE, "parameters": {**RULE["parameters"], "require_code_owner_review": "false"}}]),
+          classic=(200, {}), viewerPermission="MAINTAIN"), "not enforced", "no rule on main"),
+    (dict(classic=(200, _with(bypass_pull_request_allowances=[{"slug": "bot"}])), viewerPermission="MAINTAIN"),
+     "not enforced", "lets listed users, teams or apps bypass"),
 ])
 def test_doctor_says_enforced_only_on_what_it_read_and_recognised(github, state, says):
     """Each answer okl doctor can give and the reason it names (#329): 'enforced' only when every
@@ -558,3 +580,99 @@ def test_a_dangling_link_at_codeowners_is_refused_and_nothing_is_created(repo, c
 
     assert "! refused .github/CODEOWNERS" in out, out
     assert not missing.exists()
+
+
+@pytest.mark.parametrize(("membership", "state", "says"), [
+    ((200, {"state": "active"}), "not enforced", "this identity is @acme/leads, or in it"),
+    ((404, None), "enforced", "nor approve as the owner"),
+    ((500, None), "unknown", "could not tell whether this identity is @acme/leads"),
+])
+def test_a_team_owner_is_checked_by_membership(membership, state, says):
+    """A team named owner: an identity in it can approve as the owner (the third review of #329)."""
+    files = {".github/CODEOWNERS": codeowners.merge("", "@acme/leads", PATHS)[0]}
+    github = _github(files=files, rules=(200, [RULE]),
+                     members={"orgs/acme/teams/leads/memberships/agent-bot": membership})
+
+    verdict = protection.check(PATHS, "@acme/leads", **github)
+
+    assert (verdict.state, says in verdict.why) == (state, True), verdict.why
+
+
+def test_a_path_left_to_a_team_line_is_noted_in_the_block_for_a_clone_without_config():
+    """okl leaves a path the team owns to its line, and notes it in the block, so the agent's clone
+    (no .okl/) still checks it: here @acme/leads owns the thesis, so it is not enforced."""
+    team = "docs/THESIS.md @acme/leads\n"
+    text, notes = codeowners.merge(team, "@ana", codeowners.owner_paths([]))
+
+    assert codeowners.NOTE + "docs/THESIS.md" in text and "docs/THESIS.md" in codeowners.checked(text)
+    verdict = protection.check(None, None, **_github(files={".github/CODEOWNERS": text}, rules=(200, [RULE])))
+    assert verdict.state == "not enforced" and "owned by @acme/leads" in verdict.why, verdict.why
+    assert verdict.owner == "@ana"
+
+
+def test_a_line_someone_put_in_okls_block_is_kept_above_it_on_a_rerun():
+    """init keeps okl's block to okl's lines: a line someone added inside it is moved just above,
+    every byte kept, and said, never dropped (the third review of #329)."""
+    block = codeowners.merge(TEAM, "@ana", ["docs/THESIS.md"])[0]
+    edited = block.replace(codeowners.END, "docs/ @eve\n" + codeowners.END)
+
+    text, notes = codeowners.merge(edited, "@ana", ["docs/THESIS.md"])
+
+    assert text.index("docs/ @eve") < text.index(codeowners.BEGIN)
+    assert codeowners.owned(text) == {"docs/THESIS.md": ["@ana"]}
+    assert notes == ["kept `docs/ @eve`, which was in okl's block, just above it"]
+    assert codeowners.merge(text, "@ana", ["docs/THESIS.md"]) == (text, [])
+
+
+def test_an_email_owner_cannot_be_tied_to_this_identity():
+    """An email named owner is some account okl cannot name from here: unknown, never enforced."""
+    files = {".github/CODEOWNERS": codeowners.merge("", "ana@example.com", PATHS)[0]}
+
+    verdict = protection.check(PATHS, "ana@example.com", **_github(files=files, rules=(200, [RULE])))
+
+    assert verdict.state == "unknown" and "could not tell whether this identity is ana@example.com" in verdict.why
+
+
+def test_an_owned_pattern_left_to_a_teams_line_is_not_evaluated():
+    """`--owned *.sql` with the team's own `*.sql @eve`: okl's block does not name it, and the
+    team's lines for a pattern are not evaluated, so the answer is unknown, not enforced."""
+    files = {".github/CODEOWNERS": "*.sql @eve\n" + BLOCK}
+
+    verdict = protection.check([*PATHS, "*.sql"], "@ana", **_github(files=files, rules=(200, [RULE])))
+
+    assert verdict.state == "unknown" and "does not name *.sql" in verdict.why, verdict.why
+
+
+@pytest.mark.parametrize(("pattern", "hit"), [("/", "maybe"), ("do\\cs/", "maybe")])
+def test_a_root_alone_or_an_escape_is_never_ruled_out(pattern, hit):
+    """`/` names nothing okl can place, and git reads `do\\cs/` as `docs/`: neither is a "no"."""
+    assert protection._matches(pattern, "docs/THESIS.md") == hit
+
+
+
+def test_the_doctor_trigger_reads_the_default_branch_and_never_crashes(repo, capsys, monkeypatch):
+    """okl doctor decides whether to ask GitHub from committed files: HEAD, and the default
+    branch, so a branch that drops okl's block does not silence it while main still has it; a
+    CODEOWNERS that is not UTF-8, or no git at all, is a quiet no, never a traceback (the third
+    review of #329)."""
+    from okl.cli import health
+    root, _okl = repo
+    git = ["git", "-c", "user.email=t@t", "-c", "user.name=t"]
+    (root / "CODEOWNERS").write_bytes(b"* @caf\xe9\n")
+    subprocess.run([*git, "add", "CODEOWNERS"], check=True); subprocess.run([*git, "commit", "-qm", "latin-1"], check=True)
+    assert health._committed_block(root) is False
+
+    (root / "CODEOWNERS").write_text(FULL_BLOCK)
+    subprocess.run([*git, "commit", "-qam", "okl's block"], check=True)
+    main = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True).stdout.strip()
+    subprocess.run(["git", "update-ref", "refs/remotes/origin/main", main], check=True)
+    subprocess.run(["git", "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main"], check=True)
+    subprocess.run(["git", "switch", "-qc", "drop-it"], check=True)
+    (root / "CODEOWNERS").write_text(TEAM)
+    subprocess.run([*git, "commit", "-qam", "drop okl's block"], check=True)
+    assert health._committed_block(root) is True            # main still has it
+
+    def no_git(*a, **k):
+        raise FileNotFoundError("git")
+    monkeypatch.setattr(subprocess, "run", no_git)
+    assert health._committed_block(root) is False

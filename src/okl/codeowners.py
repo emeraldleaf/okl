@@ -86,6 +86,19 @@ def rules(text: str) -> list[tuple[str, list[str]]]:
     return found
 
 
+NOTE = "# okl checks: "     # a path okl left to a team's own line, noted so a clone without .okl/ checks it
+
+
+def checked(text: str) -> list[str]:
+    """Every path okl's block covers: its rules, and the paths it notes it left to a team's line."""
+    span = block_span(text)
+    if span is None:
+        return []
+    noted = [line.strip()[len(NOTE):].split()[0] for line in text[span[0]:span[1]].splitlines()
+             if line.strip().startswith(NOTE) and line.strip()[len(NOTE):].split()]
+    return list(dict.fromkeys([*owned(text), *noted]))
+
+
 def owned(text: str) -> dict[str, list[str]]:
     """The paths okl's block names, with their owners (MalformedBlockError if its markers do not pair)."""
     span = block_span(text)
@@ -97,22 +110,34 @@ def merge(text: str, owner: str, paths: list[str]) -> tuple[str, list[str]]:
 
     A path a line outside the block already names is the team's: okl leaves it to that line,
     and says whose it is. Raises MalformedBlockError rather than rewriting around unpaired markers."""
+    wanted = list(dict.fromkeys(p.lstrip("/") for p in paths))
     span = block_span(text)
-    if span is not None and rules(text[span[1]:]):
-        # A rule after okl's block would win over it (CODEOWNERS applies the last match): take the
-        # block out, keeping every other byte, and put it back at the end.
-        text, span = remove(text), None
+    nl = _newline(text)
+    notes: list[str] = []
+    if span is not None:
+        # A line in okl's block that okl did not write (not one of its paths, or naming more than
+        # one owner) is someone's: it is kept, moved just above the block, and said, never dropped.
+        foreign = [line for line in text[span[0]:span[1]].splitlines()
+                   if (words := line.split("#", 1)[0].split()) and (words[0].lstrip("/") not in wanted
+                                                                    or len(words) != 2)]
+        rest = remove(text)
+        if foreign or rules(text[span[1]:]):
+            # A rule after the block would win over it (CODEOWNERS applies the last match): the
+            # block goes back at the end, every other byte as it was.
+            body = rest if not rest or rest.endswith(("\n", "\r")) else rest + nl
+            text, span = body + "".join(line + nl for line in foreign), None
+            notes += [f"kept `{line.strip()}`, which was in okl's block, just above it" for line in foreign]
     outside = text if span is None else text[:span[0]] + text[span[1]:]
     theirs = {p.lstrip("/"): o for p, o in rules(outside)}
-    notes, mine = [], []
-    for path in dict.fromkeys(p.lstrip("/") for p in paths):
+    mine, left = [], []
+    for path in wanted:
         if path in theirs:
             notes.append(f"{path} is already owned by {' '.join(theirs[path]) or 'no one'} on a line of "
                          "its own; okl leaves it")
+            left.append(f"{NOTE}{path}")
         else:
             mine.append(f"{path} {owner}")
-    nl = _newline(text)
-    block = nl.join([BEGIN, *mine, END]) + nl if mine else ""
+    block = nl.join([BEGIN, *mine, *left, END]) + nl if mine or left else ""
     if span is not None:
         return (text[:span[0]] + block + text[span[1]:]) if block else remove(text), notes
     if not block:

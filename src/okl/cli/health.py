@@ -64,7 +64,8 @@ def _owner_state(root: Path, cfg: dict) -> str:
     verdict = (protection.check(codeowners.owner_paths(cfg.get("owned", [])), owner) if owner
                else protection.check(None, None))
     mark = {protection.ENFORCED: "✓", protection.NOT_ENFORCED: "!"}.get(verdict.state, "•")
-    lines = [f"\n{mark} owner-approved paths{f' for {owner}' if owner else ''}: {verdict.state}. {verdict.why}"]
+    who = owner or verdict.owner
+    lines = [f"\n{mark} owner-approved paths{f' for {who}' if who else ''}: {verdict.state}. {verdict.why}"]
     for p, found in verdict.owners.items():
         held = ("okl could not tell" if found is None else f"owned by {' '.join(found)}" if found else "no owner")
         lines.append(f"    {p}: {held}")
@@ -72,15 +73,22 @@ def _owner_state(root: Path, cfg: dict) -> str:
 
 
 def _committed_block(root: Path) -> bool:
-    """Whether a CODEOWNERS committed at HEAD holds okl's block (read from git, not the tree)."""
+    """Whether a CODEOWNERS committed at HEAD, or on the default branch (origin/HEAD), holds okl's
+    block: read from git as bytes, never the working tree, and never a traceback (no git, a
+    CODEOWNERS that is not UTF-8)."""
     import subprocess
 
     from .. import codeowners
-    for location in codeowners.LOCATIONS:
-        r = subprocess.run(["git", "-C", str(root), "show", f"HEAD:{location.as_posix()}"],
-                           capture_output=True, text=True)
-        if r.returncode == 0 and codeowners.BEGIN in r.stdout:
-            return True
+    marker = codeowners.BEGIN.encode()
+    for ref in ("HEAD", "refs/remotes/origin/HEAD"):
+        for location in codeowners.LOCATIONS:
+            try:
+                r = subprocess.run(["git", "-C", str(root), "show", f"{ref}:{location.as_posix()}"],
+                                   capture_output=True, timeout=10)
+            except (OSError, subprocess.SubprocessError):
+                return False
+            if r.returncode == 0 and marker in r.stdout:
+                return True
     return False
 
 
