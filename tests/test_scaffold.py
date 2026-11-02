@@ -2350,6 +2350,20 @@ def test_okl_init_ci_moves_the_pin_forward_only(tmp_path, monkeypatch, capsys, c
     assert says in capsys.readouterr().out
 
 
+def test_okl_init_ci_keeps_a_pin_file_it_cannot_read(tmp_path, monkeypatch, capsys):
+    """A version file that is not UTF-8 crashed init with a traceback (CI review, 0.11.0): it is
+    kept as it is and named, since okl cannot tell it is its own."""
+    from okl.cli import install
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(install, "_pinnable_version", lambda: "0.11.0")
+    pin = tmp_path / ".github" / "okl-version"; pin.parent.mkdir(); pin.write_bytes(b"\xff\xfe0.11\n")
+
+    install._pin_okl_version()
+
+    assert pin.read_bytes() == b"\xff\xfe0.11\n"
+    assert "kept .github/okl-version: unreadable (UnicodeDecodeError)" in capsys.readouterr().out
+
+
 def test_okl_init_ci_pins_nothing_in_okls_own_repo(tmp_path, monkeypatch):
     """okl's own workflow installs the checkout, so no pin is written beside it."""
     from okl.cli import install
