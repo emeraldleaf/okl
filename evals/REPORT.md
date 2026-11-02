@@ -4238,22 +4238,25 @@ counted again; the receipt names both counts.
   that exists nowhere in the repository at the run's commit (the instrument refuses the run
   otherwise). A judge that calls one current misses a wrong detail. Detail wrong and stale both
   count as caught.
-- **Outlived, 3:** the three lessons §4ag's notes found still advising a workaround whose fix has
-  landed, at the run's commit, unchanged:
+  - **One of them also advises an outlived workaround.** `n_f215b68b925c` says "until init keeps
+    an existing config's repo name, always pass --repo", and init keeps it. §4ag noted that its
+    catch there may have had that cause. On it, an outlived verdict counts as catching the plant
+    only if the words the judge quotes as no longer holding include the planted name.
+- **Outlived, 2:** the lessons §4ag's notes found still advising a workaround whose fix has landed,
+  at the run's commit, unchanged, apart from `n_f215b68b925c` above:
   - `harness-reads-a-moving-working-tree`: "until that lands, do not switch branches in a checkout
     with a run in progress". The harness now marks a run whose tree moved as not usable;
-  - `fastembed-cache-in-tmpdir`, whose text describes the cache before the fix;
-  - `n_f215b68b925c`: "until init keeps an existing config's repo name, always pass --repo".
-    Init keeps it.
+  - `fastembed-cache-in-tmpdir`, whose text describes the cache before the fix.
 
-  These were chosen by the experimenter from §4ag's notes, not drawn, and they are taken out of
-  the population, where they would otherwise be judged twice. Outlived, detail wrong and stale
-  all count as caught; current does not.
+  These were chosen by the experimenter from §4ag's notes, not drawn: a search of the store for
+  other interim advice found none. They are taken out of the population, where they would
+  otherwise be judged twice. Outlived, detail wrong and stale all count as caught; current does
+  not.
 
 **Measures.**
 1. **Planted facts caught:** detail wrong or stale, of 10.
 2. **Negatives over-called:** detail wrong, outlived or stale, of 10.
-3. **Outlived caught:** outlived, detail wrong or stale, of 3.
+3. **Outlived caught:** outlived, detail wrong or stale, of 2.
 4. **The population by verdict,** counts. Rates (stale, detail wrong and outlived, each over the
    lessons that make a claim, with Wilson 95% intervals) only if the controls hold.
 5. **Confirmed:** each population verdict other than current, no claim or unsure goes to the
@@ -4262,14 +4265,16 @@ counted again; the receipt names both counts.
 **Predictions.**
 1. At least 8 of the 10 planted facts are caught. This is #315's bar and §4ag's.
 2. At most 1 of the 10 negatives is over-called.
-3. At least 2 of the 3 outlived lessons are caught.
-4. The judge finds more wrong details in the population than §4ag found stale lessons (2).
+3. Both outlived lessons are caught.
+
+Not predicted: the population's counts by verdict, reported as they come. They are not compared
+with §4ag's 2 stale lessons, which counted a different thing on a different scale.
 
 **What the run can settle, and what it cannot.**
 - **One wrong detail at a time.** Each planted lesson holds one changed name. Real wrong details
   can be subtler, so the planted catch rate is a ceiling on the judge's sensitivity.
-- **Three outlived lessons, chosen, not drawn.** Their catch says the scale can name the kind,
-  not how often the judge finds it.
+- **Two outlived lessons, chosen, not drawn.** Their catch says the scale can name the kind, not
+  how often the judge finds it, and two is thin evidence even of that.
 - **The planted facts are reused.** The judge has never seen them; the experimenter has. They are
   reused so this run answers the question §4ag left: whether the same judge, on the same plants,
   counts them once the scale has a word for them.
@@ -4283,14 +4288,15 @@ counted again; the receipt names both counts.
 - **If fewer than 8 planted facts are caught, or more than 1 negative is over-called,** the judge
   is not trusted. No command ships, the run reports counts only, and each verdict goes to the
   person as in §4ag. A changed prompt or model is a new pre-registration.
-- **If fewer than 2 outlived lessons are caught,** a review may ship without the outlived
-  verdict, and says it cannot find that kind.
+- **If either outlived lesson is missed,** a review may ship without the outlived verdict, and
+  says it cannot find that kind.
 - **Counts only, no rate:** if more than a fifth of all judgments time out or return no valid
   answer.
 
 **Budget and stop.**
-- **Runs:** one judge session per lesson, at most 300 seconds each, read-only. About 110 in all,
-  at the census's count.
+- **Runs:** one judge session per lesson, at most 300 seconds each, read-only: the census's
+  unchecked lessons less the 2 outlived ones, plus 22 controls (10 negative, 10 planted, 2
+  outlived). The receipt states the total.
 - **The instrument** is `evals/lesson_census.py --judge` with the new scale, committed before any
   judgment. The receipt names its commit, and any difference from this section is reported as a
   deviation.
