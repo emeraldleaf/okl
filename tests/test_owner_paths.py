@@ -202,7 +202,9 @@ def _github(*, files=None, errors=(200, {"errors": []}), rules=(200, []), bypass
     (dict(rules=(200, [RULE]), bypass=(200, "sometimes")), "unknown", "cannot tell whether this identity can bypass"),
     (dict(rules=(200, [RULE]), bypass=(404, None)), "unknown", "cannot tell whether this identity can bypass"),
     (dict(rules=(500, None), viewer="ADMIN"), "unknown", "could not be read"),
-    (dict(files={".github/CODEOWNERS": (403, None)}, rules=(200, [RULE])), "unknown", "cannot read .github/CODEOWNERS"),
+    # GitHub's 403 carries a JSON body, so only the status tells it from the file
+    (dict(files={".github/CODEOWNERS": (403, {"message": "Resource not accessible by integration"})},
+          rules=(200, [RULE])), "unknown", "cannot read .github/CODEOWNERS"),
     (dict(files={".github/CODEOWNERS": (None, None)}, rules=(200, [RULE])), "unknown", "cannot read .github/CODEOWNERS"),
     (dict(errors=(None, None), rules=(200, [RULE])), "unknown", "cannot read GitHub's check"),
     (dict(files={".github/CODEOWNERS": LINES + "*.md @eve\n"}, rules=(200, [RULE])), "unknown", "a glob"),
