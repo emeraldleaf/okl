@@ -376,13 +376,13 @@ Nothing in okl reads a comment. Here is what you can do instead:
 
 - **`registries/tombstones.txt`:** one retired identifier per line, then a TAB, the reason, another TAB and the date. If you use spaces instead of tabs, the whole line becomes the identifier and never matches.
   - `gates/check-tombstones.sh` fails when an identifier appears in a `.md`, `.py`, `.ts`, `.tsx`, `.cs`, `.yaml`, `.yml`, `.json` or `.sh` file, comments included.
-  - Other file types (`.js`, `.go`, `.rs`, `.java`, `.rst`, `.toml` and more) are not scanned. Add `--include` lines to your copy of the script.
+  - Other file types (`.js`, `.go`, `.rs`, `.java`, `.rst`, `.toml` and more) are not scanned. Add patterns to `GLOBS` in your copy of the script.
   - Only paths containing `registries/` are skipped, so a CHANGELOG or an old ADR that names the identifier fails too.
 - **`registries/RETRACTIONS.md`:** a withdrawn claim, written in double quotes.
   - `gates/check-retractions.sh` fails when that exact text appears in a `.md` file.
   - It does not read code, comments or docstrings, and it misses a reworded claim.
   - It also reads quotes inside HTML comments, including the template's example.
-- Both gates scan the working tree, untracked files included.
+- In a git repository, both gates read the committed tree, their registries included, so an uncommitted edit neither passes nor fails them and a local run answers as CI will (#352). Outside one, they scan the files on disk.
 - Run them with `bash gates/run-gates.sh`. In CI, either `.github/workflows/method-gates.yml` (from `okl scaffold`) or the workflow from `okl init --ci` runs it when the script is present. The pre-push hook runs only `okl drift --gate`, not these gates.
 
 ## 12. Keep learning as you build
