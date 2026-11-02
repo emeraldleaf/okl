@@ -726,9 +726,15 @@ def _workflow_reads_pin() -> bool:
     (Dependabot bumps it) and so kept, installs the newest okl whatever the pin says: writing it
     there reported a pin CI never used (the 0.11.0 release sweep)."""
     try:
-        return OKL_VERSION_FILE.as_posix() in WORKFLOW.read_text(errors="replace")
+        text = WORKFLOW.read_text(errors="replace")
     except OSError:
         return False
+    # The `Install okl` step's own commands: a comment, or another step, naming the file reads
+    # nothing (review of the 0.11.0 release).
+    step = re.split(r"\n\s*- name:", text.split("- name: Install okl", 1)[1], maxsplit=1)[0] \
+        if "- name: Install okl" in text else ""
+    return any(OKL_VERSION_FILE.as_posix() in line for line in step.splitlines()
+               if not line.lstrip().startswith("#"))
 
 
 GIT_HOOK_SRC = Path(__file__).parent.parent / "scaffold" / "git-hooks" / "pre-push"

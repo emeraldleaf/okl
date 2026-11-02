@@ -2477,16 +2477,19 @@ def test_okl_init_ci_pins_nothing_beside_another_tools_workflow(ci_repo):
     assert "no CI pin written" in out, out
 
 
-def test_okl_init_ci_pins_nothing_beside_an_edited_workflow_that_does_not_read_it(ci_repo):
+@pytest.mark.parametrize("keeps_comment", [False, True])
+def test_okl_init_ci_pins_nothing_beside_an_edited_workflow_that_does_not_read_it(ci_repo, keeps_comment):
     """An okl workflow from before 0.11.0, edited since and so kept, installs the newest okl
     whatever the pin says: init wrote the pin there and said "CI pinned" (the 0.11.0 release
     sweep). It writes none, says why, and the dry run promises none; --force replaces the
-    workflow, and then pins."""
+    workflow, and then pins. A comment naming the file is not a read (review of the release)."""
     repo, init = ci_repo
     wf, pin = repo / ".github" / "workflows" / "okl-verify.yml", repo / ".github" / "okl-version"
     init("0.11.0")
     pin.unlink()
-    old = "\n".join(line for line in wf.read_text().splitlines() if "okl-version" not in line) + "\n"
+    old = "\n".join(line for line in wf.read_text().splitlines()
+                    if "okl-version" not in line or (keeps_comment and line.lstrip().startswith("#"))) + "\n"
+    assert ("# .github/okl-version" in old) == keeps_comment
     assert old != wf.read_text()
     wf.write_text(old)
 
