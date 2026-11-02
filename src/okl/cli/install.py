@@ -238,29 +238,33 @@ def _uninstall_owner_paths(act: str, dry_run: bool) -> list[str]:
     held only okl's block goes with it. Unpaired markers keep the file, named."""
     from .. import codeowners
     kept: list[str] = []
-    path = codeowners.location(Path())
-    if path.is_file() and _symlinked(path) is not None:
-        kept.append(f"{path} (a symlink — okl's owner-approved paths not removed)")
-    elif path.is_file():
+    # Every location, not only the one GitHub reads now: init may have written the block into a
+    # file that a CODEOWNERS added since, earlier in GitHub's order, has replaced.
+    for path in codeowners.LOCATIONS:
+        if not path.is_file() and not path.is_symlink():
+            continue
+        if _symlinked(path) is not None:
+            kept.append(f"{path} (a symlink — okl's owner-approved paths not removed)")
+            continue
         try:
             text = path.read_bytes().decode("utf-8")
             rest = codeowners.remove(text)
         except (UnicodeDecodeError, codeowners.MalformedBlockError) as e:
             kept.append(f"{path} ({e}; okl's owner-approved paths not removed)")
-        else:
-            if rest != text:
-                if not dry_run:
-                    if rest:
-                        path.write_bytes(rest.encode("utf-8"))   # exact bytes: no newline translation
-                    else:
-                        path.unlink()
-                print(f"✓ {act} okl's owner-approved paths from {path}"
-                      + ("" if rest else " (the file held nothing else)"))
+            continue
+        if rest != text:
+            if not dry_run:
+                if rest:
+                    path.write_bytes(rest.encode("utf-8"))   # exact bytes: no newline translation
+                else:
+                    path.unlink()
+            print(f"✓ {act} okl's owner-approved paths from {path}" + ("" if rest else " (the file held nothing else)"))
     return kept
 
 
 def _uninstall_owner_denies(act: str, dry_run: bool) -> list[str]:
-    """okl's Claude Code deny rules (OWNER_DENY), and any group they leave empty; nothing else."""
+    """okl's Claude Code deny rules (OWNER_DENY), and nothing else: a list they leave empty stays,
+    since okl cannot tell whether it was there before init."""
     kept: list[str] = []
     settings = Path(".claude/settings.json")
     if not settings.is_file() or _symlinked(settings) is not None:
@@ -275,10 +279,6 @@ def _uninstall_owner_denies(act: str, dry_run: bool) -> list[str]:
     deny = perms["deny"]
     if any(rule in deny for rule in OWNER_DENY):
         perms["deny"] = [rule for rule in deny if rule not in OWNER_DENY]
-        if not perms["deny"]:
-            del perms["deny"]
-        if not perms:
-            del data["permissions"]
         if not dry_run:
             settings.write_text(json.dumps(data, indent=2) + "\n")
         print(f"✓ {act} okl's deny rules from {settings}")
@@ -503,8 +503,9 @@ def _dry_run_owner(args: argparse.Namespace, wiring_claude: bool) -> bool:
     if not _init_owner(cfg, args):
         return False
     owner = cfg.get("owner")
-    if owner:
-        path = codeowners.location(Path())
+    if owner and _symlinked(path := codeowners.location(Path())) is not None:
+        print(f"  (no owner-approved paths: {path} is a symlink, which init refuses to write through)")
+    elif owner:
         print(f"  {path!s:<40}names {owner} code owner of "
               f"{', '.join(codeowners.owner_paths(cfg.get('owned', [])))} (okl's block only)")
         if wiring_claude:
@@ -678,13 +679,17 @@ def _init_owner(cfg: dict, args: argparse.Namespace) -> bool:
             print(f"! --owner {given!r} is not an owner CODEOWNERS accepts: @user, @org/team or an email")
             return False
         cfg["owner"] = owner
-    owned = getattr(args, "owned", None) or []
-    bad = [p for p in owned if not codeowners.valid_path(p)]
+    given_paths = getattr(args, "owned", None) or []
+    owned = [p.lstrip("/") for p in given_paths]   # validated as written: `/` alone strips to nothing
+    bad = [g for g, p in zip(given_paths, owned, strict=True) if not codeowners.valid_path(p)]
     if bad:
-        print(f"! --owned {bad[0]!r} is not one CODEOWNERS pattern (no spaces, '#', '!' or line breaks)")
+        print(f"! --owned {bad[0]!r} is not one CODEOWNERS pattern (no spaces, '#', '!' or line breaks, "
+              "and not the root alone)")
         return False
     if owned:
-        cfg["owned"] = sorted({*cfg.get("owned", []), *(p.lstrip("/") for p in owned)})
+        cfg["owned"] = sorted({*cfg.get("owned", []), *owned})
+        if not cfg.get("owner"):
+            print("• --owned is recorded, and takes effect once --owner names who approves it")
     return True
 
 

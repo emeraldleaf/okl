@@ -20,8 +20,8 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     twice) -- findings,
     per the CLI contract -- and 0 when neither is. It reads settings files, asks git where
     its hooks live, and, where `okl init --owner` set an owner, asks GitHub through gh whether
-    the owner's approval is enforced (up to seven reads; informational, not a finding). It
-    changes nothing.
+    the owner's approval is enforced (a few reads; informational, not a finding). It changes
+    nothing.
     """
     from .. import coexist
     cfg = _find_config()
@@ -53,33 +53,35 @@ def cmd_doctor(args: argparse.Namespace) -> int:
 
 def _owner_state(root: Path, cfg: dict) -> str:
     """okl's owner-approved paths (#329): whether GitHub enforces the owner's approval, then each
-    path's owner on the default branch. The paths come from what `okl init --owner` recorded (or,
-    failing that, okl's block in CODEOWNERS), since GitHub reads the merged file, not this working
-    tree's. Empty, and no API call made, where no owner was set."""
+    path's owner on the default branch. The owner and paths come from what `okl init --owner`
+    recorded; a clone without them (.okl/ is not committed) checks the owner okl's block names on
+    the default branch, where a committed CODEOWNERS holds the block. Empty, and no API call made,
+    where neither does: whether it runs is decided from committed files, not the working tree."""
     from .. import codeowners, protection
-    owner, paths = cfg.get("owner"), codeowners.owner_paths(cfg.get("owned", []))
-    if not owner:
-        path = root / codeowners.location(root)
-        try:
-            block = codeowners.owned(path.read_bytes().decode("utf-8")) if path.is_file() else {}
-        except (OSError, UnicodeDecodeError, codeowners.MalformedBlockError) as e:
-            return f"\n! owner-approved paths: not enforced. {path.name} cannot be read as okl wrote it ({e})"
-        if not block:
-            return ""
-        names = sorted({o for found in block.values() for o in found})
-        if not names:
-            # A hand edit left okl's block with paths and no owner: say so, never a traceback.
-            return (f"\n! owner-approved paths ({', '.join(block)}): not enforced. okl's block in {path.name} "
-                    "names no owner; `okl init --owner @you` writes it again")
-        owner, paths = names[0], list(block)
-    verdict = protection.check(paths, owner)
+    owner = cfg.get("owner")
+    if not owner and not _committed_block(root):
+        return ""
+    verdict = (protection.check(codeowners.owner_paths(cfg.get("owned", [])), owner) if owner
+               else protection.check(None, None))
     mark = {protection.ENFORCED: "✓", protection.NOT_ENFORCED: "!"}.get(verdict.state, "•")
-    lines = [f"\n{mark} owner-approved paths for {owner}: {verdict.state}. {verdict.why}"]
+    lines = [f"\n{mark} owner-approved paths{f' for {owner}' if owner else ''}: {verdict.state}. {verdict.why}"]
     for p, found in verdict.owners.items():
-        held = ("a glob in CODEOWNERS may own it" if found is None
-                else f"owned by {' '.join(found)}" if found else "no owner")
+        held = ("okl could not tell" if found is None else f"owned by {' '.join(found)}" if found else "no owner")
         lines.append(f"    {p}: {held}")
     return "\n".join(lines)
+
+
+def _committed_block(root: Path) -> bool:
+    """Whether a CODEOWNERS committed at HEAD holds okl's block (read from git, not the tree)."""
+    import subprocess
+
+    from .. import codeowners
+    for location in codeowners.LOCATIONS:
+        r = subprocess.run(["git", "-C", str(root), "show", f"HEAD:{location.as_posix()}"],
+                           capture_output=True, text=True)
+        if r.returncode == 0 and codeowners.BEGIN in r.stdout:
+            return True
+    return False
 
 
 def _git_hook_state(root: Path) -> str:

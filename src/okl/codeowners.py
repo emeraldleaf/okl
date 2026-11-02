@@ -7,8 +7,9 @@ GitHub's order cannot take over unowned), and a branch rule requiring code-owner
 makes GitHub refuse the merge without them. Whether that rule is on, and binds the identity the
 agent runs as, is `okl doctor`'s question (okl.protection), not this module's.
 
-okl's lines sit in one marked block at the end of the file: CODEOWNERS applies the last
-matching line, so a broader team rule above (`* @team`) does not override them. The block is
+okl's lines sit in one marked block at the end of the file, moved back there on every run:
+CODEOWNERS applies the last matching line, so a team rule above it (`* @team`) does not override
+them, and `okl doctor` counts any rule after it as able to. The block is
 spliced into the file's own text, in its own line endings, so every other byte stays as it was;
 a path the team already owns on a line of its own is left to that line. Markers that do not
 pair are refused, never guessed at. This module imports nothing from okl.
@@ -62,7 +63,7 @@ def _newline(text: str) -> str:
     return "\r\n" if "\r\n" in text else "\n"
 
 
-def _span(text: str) -> tuple[int, int] | None:
+def block_span(text: str) -> tuple[int, int] | None:
     """Where okl's block is in `text` (from its first marker to the end of its last line), or
     None; MalformedBlockError when the markers are unmatched, repeated or out of order."""
     lines = text.splitlines(keepends=True)
@@ -87,7 +88,7 @@ def rules(text: str) -> list[tuple[str, list[str]]]:
 
 def owned(text: str) -> dict[str, list[str]]:
     """The paths okl's block names, with their owners (MalformedBlockError if its markers do not pair)."""
-    span = _span(text)
+    span = block_span(text)
     return {} if span is None else {p.lstrip("/"): o for p, o in rules(text[span[0]:span[1]])}
 
 
@@ -96,7 +97,11 @@ def merge(text: str, owner: str, paths: list[str]) -> tuple[str, list[str]]:
 
     A path a line outside the block already names is the team's: okl leaves it to that line,
     and says whose it is. Raises MalformedBlockError rather than rewriting around unpaired markers."""
-    span = _span(text)
+    span = block_span(text)
+    if span is not None and rules(text[span[1]:]):
+        # A rule after okl's block would win over it (CODEOWNERS applies the last match): take the
+        # block out, keeping every other byte, and put it back at the end.
+        text, span = remove(text), None
     outside = text if span is None else text[:span[0]] + text[span[1]:]
     theirs = {p.lstrip("/"): o for p, o in rules(outside)}
     notes, mine = [], []
@@ -119,7 +124,7 @@ def merge(text: str, owner: str, paths: list[str]) -> tuple[str, list[str]]:
 def remove(text: str) -> str:
     """The file without okl's block and the blank line merge put before it; every other byte as
     it was (a file okl gave a final newline keeps it). MalformedBlockError on unpaired markers."""
-    span = _span(text)
+    span = block_span(text)
     if span is None:
         return text
     before, after = text[:span[0]], text[span[1]:]

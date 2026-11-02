@@ -135,96 +135,157 @@ def test_the_file_is_the_one_github_reads(tmp_path):
 # contents, codeowners/errors). Hand-written from the docs, so no test touches the network.
 
 REPO = {"nameWithOwner": "acme/app", "defaultBranchRef": {"name": "main"}, "viewerPermission": "WRITE",
-        "visibility": "PUBLIC"}
-LINES = "docs/THESIS.md @ana\n.github/CODEOWNERS @ana\n"
+        "visibility": "PUBLIC", "viewerLogin": "agent-bot"}
 PATHS = ["docs/THESIS.md", ".github/CODEOWNERS"]
+BLOCK = codeowners.merge("", "@ana", PATHS)[0]
 RULE = {"type": "pull_request", "ruleset_id": 7,
-        "parameters": {"require_code_owner_review": True, "dismiss_stale_reviews_on_push": True}}
-STALE_RULE = {**RULE, "parameters": {"require_code_owner_review": True}}
-CLASSIC = {"required_pull_request_reviews": {"require_code_owner_reviews": True, "dismiss_stale_reviews": True},
+        "parameters": {"require_code_owner_review": True, "dismiss_stale_reviews_on_push": True,
+                       "required_approving_review_count": 1}}
+STALE_RULE = {**RULE, "parameters": {"require_code_owner_review": True, "require_last_push_approval": True,
+                                     "required_approving_review_count": 1}}
+CLASSIC = {"required_pull_request_reviews": {"require_code_owner_reviews": True, "dismiss_stale_reviews": True,
+                                             "required_approving_review_count": 1},
            "enforce_admins": {"enabled": True}}
 
 
+def _with(**changes):
+    """CLASSIC with some of its review settings changed."""
+    return {**CLASSIC, "required_pull_request_reviews": {**CLASSIC["required_pull_request_reviews"], **changes}}
+
+
 def _github(*, files=None, errors=(200, {"errors": []}), rules=(200, []), bypass=(200, "never"),
-            classic=(404, None), viewer="WRITE", visibility="PUBLIC"):
+            classic=(404, None), info=None, **who):
     """A GitHub: each API path okl doctor reads, and its (status, body)."""
-    files = {".github/CODEOWNERS": LINES} if files is None else files
+    files = {".github/CODEOWNERS": BLOCK} if files is None else files
     answers = {
         "repos/acme/app/codeowners/errors?ref=main": errors,
         "repos/acme/app/rules/branches/main?per_page=100": rules,
         "repos/acme/app/rulesets/7?includes_parents=true": (bypass[0], {"id": 7, "current_user_can_bypass": bypass[1]}),
         "repos/acme/app/branches/main/protection": classic,
     }
-    for location in protection.CODEOWNERS:
-        found = files.get(location)
-        answers[f"repos/acme/app/contents/{location}?ref=main"] = (
+    for location in codeowners.LOCATIONS:
+        found = files.get(location.as_posix())
+        answers[f"repos/acme/app/contents/{location.as_posix()}?ref=main"] = (
             found if isinstance(found, tuple)
             else (200, {"content": b64encode(found.encode()).decode()}) if found is not None else (404, None))
-    info = {**REPO, "viewerPermission": viewer, "visibility": visibility}
-    return dict(get=lambda path: answers[path], repo=lambda: info)
+    repo = {**REPO, **who} if info is None else info
+    return dict(get=lambda path: answers[path], repo=lambda: repo)
+
+
+TEAM_THEN_BLOCK = TEAM + "\n" + BLOCK
+LEFT_TO_TEAM = codeowners.merge("", "@ana", [".github/CODEOWNERS"])[0]     # okl's block lacks the thesis
 
 
 @pytest.mark.parametrize(("github", "state", "says"), [
     # enforced: every condition read and recognised
     (dict(rules=(200, [RULE])), "enforced", "cannot bypass or change the rule"),
-    (dict(classic=(200, CLASSIC), viewer="MAINTAIN"), "enforced", "cannot bypass or change the rule"),
-    (dict(files={"docs/CODEOWNERS": LINES}, rules=(200, [RULE])), "enforced", "cannot bypass"),
-    (dict(files={".github/CODEOWNERS": "docs/THESIS.md @ANA\n.github/CODEOWNERS @Ana\n"}, rules=(200, [RULE])),
+    (dict(classic=(200, CLASSIC), viewerPermission="MAINTAIN"), "enforced", "cannot bypass or change the rule"),
+    (dict(files={"docs/CODEOWNERS": BLOCK}, rules=(200, [RULE])), "enforced", "cannot bypass"),
+    (dict(files={".github/CODEOWNERS": BLOCK.replace("@ana", "@ANA")}, rules=(200, [RULE])), "enforced", "cannot"),
+    (dict(files={".github/CODEOWNERS": TEAM_THEN_BLOCK}, rules=(200, [RULE])), "enforced", "cannot bypass"),
+    (dict(files={".github/CODEOWNERS": "docs/THESIS.md @ana\n" + LEFT_TO_TEAM}, rules=(200, [RULE])),
      "enforced", "cannot bypass"),
+    (dict(rules=(200, ["not a rule", RULE])), "enforced", "cannot bypass"),
     # not enforced: read, and missing
-    (dict(rules=(200, [RULE]), viewer="ADMIN"), "not enforced", "is an administrator"),
-    # (classic protection readable, as with an App granted Administration: read, and not a rule)
-    (dict(rules=(200, [STALE_RULE]), classic=(200, {})), "not enforced", "keeps an approval through later pushes"),
+    (dict(rules=(200, [RULE]), viewerPermission="ADMIN"), "not enforced", "is an administrator"),
+    (dict(rules=(200, [RULE]), viewerLogin="Ana"), "not enforced", "this identity is @ana, the owner"),
+    (dict(rules=(200, [STALE_RULE]), classic=(200, {})), "not enforced", "approval of the most recent push alone"),
     (dict(rules=(200, [RULE]), bypass=(200, "always"), classic=(200, {})), "not enforced", "can bypass ruleset 7 (always)"),
     (dict(rules=(200, [RULE]), bypass=(200, "pull_requests_only"), classic=(200, {})), "not enforced", "can bypass"),
     (dict(rules=(200, [RULE]), bypass=(200, "exempt"), classic=(200, {})), "not enforced", "can bypass ruleset 7"),
-    (dict(classic=(200, {**CLASSIC, "enforce_admins": {"enabled": False}}), viewer="ADMIN"),
+    (dict(classic=(200, {**CLASSIC, "enforce_admins": {"enabled": False}}), viewerPermission="ADMIN"),
      "not enforced", "lets administrators bypass it"),
-    (dict(classic=(200, {**CLASSIC, "required_pull_request_reviews": {"require_code_owner_reviews": True}}),
-          viewer="MAINTAIN"), "not enforced", "keeps an approval through later pushes"),
-    (dict(classic=(200, {**CLASSIC, "required_pull_request_reviews": {
-        **CLASSIC["required_pull_request_reviews"], "bypass_pull_request_allowances": {"apps": [{"slug": "bot"}]}}}),
-        viewer="MAINTAIN"), "not enforced", "lets listed users, teams or apps bypass"),
-    (dict(viewer="ADMIN"), "not enforced", "no rule on main requires code-owner review"),
-    (dict(classic=(200, {"required_status_checks": {}}), viewer="MAINTAIN"), "not enforced", "no rule on main"),
+    (dict(classic=(200, _with(dismiss_stale_reviews=False, require_last_push_approval=True)),
+          viewerPermission="MAINTAIN"), "not enforced", "keeps an approval when new commits are pushed"),
+    (dict(classic=(200, _with(bypass_pull_request_allowances={"apps": [{"slug": "bot"}]})),
+          viewerPermission="MAINTAIN"), "not enforced", "lets listed users, teams or apps bypass"),
+    (dict(viewerPermission="ADMIN"), "not enforced", "no rule on main requires code-owner review"),
+    (dict(classic=(200, {"required_status_checks": {}}), viewerPermission="MAINTAIN"), "not enforced", "no rule on"),
     (dict(files={}), "not enforced", "no CODEOWNERS on main yet"),
-    (dict(files={".github/CODEOWNERS": "* @team\n"}, rules=(200, [RULE])), "not enforced", "owned by @team, not @ana"),
-    (dict(files={".github/CODEOWNERS": LINES + "docs/THESIS.md @eve\n"}, rules=(200, [RULE])),
-     "not enforced", "docs/THESIS.md is owned by @eve"),
-    (dict(files={".github/CODEOWNERS": "docs/THESIS.md # @ana\n.github/CODEOWNERS @ana\n"}, rules=(200, [RULE])),
+    (dict(files={".github/CODEOWNERS": BLOCK + "docs @eve\n"}, rules=(200, [RULE])), "not enforced",
+     "1 rule(s) after okl's block"),
+    (dict(files={".github/CODEOWNERS": "docs/THESIS.md @acme/leads\n" + LEFT_TO_TEAM}, rules=(200, [RULE])),
+     "not enforced", "docs/THESIS.md is owned by @acme/leads, not @ana alone"),
+    (dict(files={".github/CODEOWNERS": "docs/THESIS.md @ana @bob\n" + LEFT_TO_TEAM}, rules=(200, [RULE])),
+     "not enforced", "owned by @ana @bob, not @ana alone"),
+    (dict(files={".github/CODEOWNERS": BLOCK.replace("docs/THESIS.md @ana", "docs/THESIS.md @ana @bob")},
+          rules=(200, [RULE])), "not enforced", "owned by @ana @bob"),
+    (dict(files={".github/CODEOWNERS": "docs/THESIS.md # @ana\n" + LEFT_TO_TEAM}, rules=(200, [RULE])),
      "not enforced", "docs/THESIS.md is owned by no one"),
+    (dict(files={".github/CODEOWNERS": "THESIS.md @eve\n" + LEFT_TO_TEAM}, rules=(200, [RULE])),
+     "not enforced", "owned by @eve"),
+    (dict(files={".github/CODEOWNERS": "/docs @eve\n" + LEFT_TO_TEAM}, rules=(200, [RULE])),
+     "not enforced", "owned by @eve"),
+    (dict(files={".github/CODEOWNERS": f"{TEAM}{codeowners.BEGIN}\ndocs/THESIS.md @ana\n"}, rules=(200, [RULE])),
+     "not enforced", "unmatched or repeated"),
     (dict(errors=(200, {"errors": [{"line": 2}]}), rules=(200, [RULE])), "not enforced", "1 error(s)"),
     # unknown: something not read, or not recognised
-    (dict(), "unknown", "could not be read as this identity"),
-    (dict(rules=(200, [RULE]), bypass=(200, "always")), "unknown", "another rule may still apply"),
+    (dict(), "unknown", "branch protection could not be read as this identity"),
+    (dict(rules=(200, [RULE]), bypass=(200, "always")), "unknown", "can bypass ruleset 7 (always); branch protection"),
     (dict(classic=(403, None), visibility="PRIVATE"), "unknown", "needs GitHub Pro"),
-    (dict(rules=(200, [RULE]), viewer=None), "unknown", "no role okl knows"),
+    (dict(rules=(200, [RULE]), viewerPermission=None), "unknown", "no role okl knows"),
     (dict(rules=(200, [RULE]), bypass=(200, "sometimes")), "unknown", "cannot tell whether this identity can bypass"),
     (dict(rules=(200, [RULE]), bypass=(404, None)), "unknown", "cannot tell whether this identity can bypass"),
-    (dict(rules=(500, None), viewer="ADMIN"), "unknown", "could not be read"),
-    # GitHub's 403 carries a JSON body, so only the status tells it from the file
+    (dict(rules=(500, None), viewerPermission="ADMIN"), "unknown", "the rulesets on main could not be read"),
+    (dict(rules=(200, [{**RULE, "parameters": {**RULE["parameters"], "required_approving_review_count": 0}}])),
+     "unknown", "requires 0 approvals"),
     (dict(files={".github/CODEOWNERS": (403, {"message": "Resource not accessible by integration"})},
           rules=(200, [RULE])), "unknown", "cannot read .github/CODEOWNERS"),
     (dict(files={".github/CODEOWNERS": (None, None)}, rules=(200, [RULE])), "unknown", "cannot read .github/CODEOWNERS"),
+    (dict(files={".github/CODEOWNERS": (200, {"content": None})}, rules=(200, [RULE])), "unknown", "cannot read"),
     (dict(errors=(None, None), rules=(200, [RULE])), "unknown", "cannot read GitHub's check"),
-    (dict(files={".github/CODEOWNERS": LINES + "*.md @eve\n"}, rules=(200, [RULE])), "unknown", "a glob"),
+    (dict(files={".github/CODEOWNERS": "*.md @eve\n" + LEFT_TO_TEAM}, rules=(200, [RULE])), "unknown",
+     "a rule okl cannot evaluate may own docs/THESIS.md"),
+    (dict(info={"defaultBranchRef": {"name": "main"}}), "unknown", "gh cannot read this repository"),
 ])
 def test_doctor_says_enforced_only_on_what_it_read_and_recognised(github, state, says):
     """Each answer okl doctor can give and the reason it names (#329): 'enforced' only when every
-    condition was read and recognised; an unread or unknown value is 'unknown', never a pass (the
-    review of #329 found eleven ways the first version said 'enforced' on unread data)."""
+    condition was read and recognised; an unread or unknown value is 'unknown', never a pass (two
+    reviews of #329 found fifteen ways earlier versions said 'enforced' when it was not)."""
     verdict = protection.check(PATHS, "@ana", **_github(**github))
+
+    assert (verdict.state, says in verdict.why) == (state, True), verdict.why
+
+
+@pytest.mark.parametrize(("pattern", "path", "hit"), [
+    ("docs/THESIS.md", "docs/THESIS.md", "yes"), ("/docs/THESIS.md", "docs/THESIS.md", "yes"),
+    ("THESIS.md", "docs/THESIS.md", "yes"), ("docs", "docs/THESIS.md", "yes"), ("/docs", "docs/THESIS.md", "yes"),
+    ("docs/", "docs/THESIS.md", "yes"), (".github", ".github/CODEOWNERS", "yes"), ("*", "a/b", "yes"),
+    ("/apps/github", "apps/github/x.md", "yes"),                       # GitHub's own CODEOWNERS example
+    ("/docs/", "a/docs/x.md", "no"), ("src/", "docs/THESIS.md", "no"), ("README.md", "docs/THESIS.md", "no"),
+    ("docs/THESIS.md/", "docs/THESIS.md", "no"),
+    ("*.md", "docs/THESIS.md", "maybe"), ("*/", "docs/THESIS.md", "maybe"), ("?ocs/", "docs/THESIS.md", "maybe"),
+    ("**/THESIS.md", "docs/THESIS.md", "maybe"), ("docs/*.txt", "docs/THESIS.md", "no"),
+])
+def test_a_pattern_is_ruled_out_only_when_it_cannot_match(pattern, path, hit):
+    """CODEOWNERS follows gitignore rules: a name with no slash matches at any depth, a leading or
+    inner slash anchors it, a directory covers everything under it. "no" only when certain."""
+    assert protection._matches(pattern, path) == hit
+
+
+FULL_BLOCK = codeowners.merge("", "@ana", codeowners.owner_paths([]))[0]     # what init writes
+
+
+@pytest.mark.parametrize(("files", "state", "says"), [
+    ({".github/CODEOWNERS": FULL_BLOCK}, "enforced", "cannot bypass"),
+    ({".github/CODEOWNERS": FULL_BLOCK.replace(".github/CODEOWNERS @ana", ".github/CODEOWNERS @bob")},
+     "not enforced", "names more than one owner"),
+    ({".github/CODEOWNERS": TEAM}, "not enforced", "okl's block in CODEOWNERS on main is not there"),
+])
+def test_with_no_owner_recorded_doctor_reads_it_from_okls_block_on_the_default_branch(files, state, says):
+    """.okl/ is not committed, so the agent's clone and CI have no recorded owner: doctor takes the
+    owner and paths from the merged block, not from the working tree (the second review of #329)."""
+    github = _github(files=files, rules=(200, [RULE]))
+    verdict = protection.check(None, None, **github)
 
     assert (verdict.state, says in verdict.why) == (state, True), verdict.why
 
 
 def test_doctor_names_each_paths_owner_on_the_default_branch():
     """One line per path, read from the merged CODEOWNERS, not the working tree's."""
-    files = {".github/CODEOWNERS": "docs/THESIS.md @ana\n.github/CODEOWNERS @eve\n"}
+    verdict = protection.check(PATHS, "@ana", **_github(rules=(200, [RULE])))
 
-    verdict = protection.check(PATHS, "@ana", **_github(files=files, rules=(200, [RULE])))
-
-    assert verdict.owners == {"docs/THESIS.md": ["@ana"], ".github/CODEOWNERS": ["@eve"]}
+    assert verdict.owners == {"docs/THESIS.md": ["@ana"], ".github/CODEOWNERS": ["@ana"]}
 
 
 def test_doctor_says_unknown_when_gh_cannot_read_the_repo():
@@ -298,6 +359,7 @@ def test_uninstall_removes_a_codeowners_file_that_held_only_okls_block(repo, cap
     root, okl = repo
     assert okl("init", "--repo", "r", "--no-seed", "--no-claude", "--owner", "ana", capsys=capsys)[0] == 0
     assert (root / ".github" / "CODEOWNERS").is_file()
+    assert not (root / ".claude").exists()                  # --no-claude: no deny rules either
 
     code, out = okl("init", "--uninstall", capsys=capsys)
 
@@ -377,29 +439,119 @@ def test_the_deny_merge_survives_settings_of_another_shape(repo, capsys, setting
         assert saved["permissions"]["deny"] == list(OWNER_DENY)
 
 
-def test_doctor_reports_from_the_recorded_owner_or_okls_block(repo, capsys, monkeypatch):
-    """No owner recorded and no block: no line, no API call. With one: doctor prints protection's
-    answer and each path's owner. A block with no owner is named, never a traceback."""
+def test_doctor_reports_from_the_recorded_owner_or_a_committed_block(repo, capsys, monkeypatch):
+    """No owner recorded and no committed block: no line, no API call, and a block only in the
+    working tree changes nothing (audits read committed files). A committed block: doctor asks
+    with no owner, so the default branch's block decides. A recorded owner: its paths, and each
+    path's owner printed."""
     root, okl = repo
     calls = []
     verdict = protection.Verdict("not enforced", "no rule on main requires code-owner review",
-                                 {"docs/THESIS.md": ["@ana"], "CODEOWNERS": []})
+                                 {"docs/THESIS.md": ["@ana"], "CODEOWNERS": [], "ADR/": None})
     monkeypatch.setattr(protection, "check", lambda *a: calls.append(a) or verdict)
+    git = ["git", "-c", "user.email=t@t", "-c", "user.name=t"]
 
+    okl("doctor", capsys=capsys)
+    (root / ".github").mkdir()
+    (root / ".github" / "CODEOWNERS").write_text(FULL_BLOCK)
     okl("doctor", capsys=capsys)
     assert calls == []
 
-    (root / ".github").mkdir()
-    (root / ".github" / "CODEOWNERS").write_text(codeowners.merge("", "@ana", ["docs/THESIS.md"])[0])
+    subprocess.run([*git, "add", ".github/CODEOWNERS"], check=True)
+    subprocess.run([*git, "commit", "-qm", "okl's block"], check=True)
     _, out = okl("doctor", capsys=capsys)
-    assert "! owner-approved paths for @ana: not enforced. no rule on main" in out, out
+    assert calls == [(None, None)]
+    assert "! owner-approved paths: not enforced. no rule on main" in out, out
     assert "    docs/THESIS.md: owned by @ana" in out and "    CODEOWNERS: no owner" in out
-    assert calls == [(["docs/THESIS.md"], "@ana")]
+    assert "    ADR/: okl could not tell" in out
 
-    (root / ".github" / "CODEOWNERS").write_text(f"{codeowners.BEGIN}\ndocs/THESIS.md\n{codeowners.END}\n")
+    okl("init", "--repo", "r", "--no-seed", "--no-claude", "--owner", "ben", "--owned", "ADR/", capsys=capsys)
     _, out = okl("doctor", capsys=capsys)
-    assert "okl's block in CODEOWNERS names no owner" in out and len(calls) == 1, out
+    assert calls[-1] == (codeowners.owner_paths(["ADR/"]), "@ben")
+    assert "owner-approved paths for @ben: not enforced" in out, out
 
-    okl("init", "--repo", "r", "--no-seed", "--no-claude", "--owner", "ben", capsys=capsys)
-    okl("doctor", capsys=capsys)
-    assert calls[-1] == (codeowners.owner_paths([]), "@ben")
+
+def test_a_rerun_moves_okls_block_back_after_a_team_line_added_below_it():
+    """A rule after okl's block would win over it: init takes the block out and puts it back at
+    the end, keeping the team's line byte for byte (the second review of #329)."""
+    once, _ = codeowners.merge(TEAM, "@ana", ["docs/THESIS.md"])
+    later = once + "docs/ @acme/docs\n"
+
+    moved, _ = codeowners.merge(later, "@ana", ["docs/THESIS.md"])
+
+    assert moved.index("docs/ @acme/docs") < moved.index(codeowners.BEGIN)
+    assert codeowners.rules(moved[codeowners.block_span(moved)[1]:]) == []
+    assert codeowners.remove(moved) == TEAM + "docs/ @acme/docs\n"
+    assert codeowners.merge(moved, "@ana", ["docs/THESIS.md"])[0] == moved
+
+
+@pytest.mark.parametrize("owned", ["/", "//"])
+def test_owned_the_root_alone_is_refused(repo, capsys, owned):
+    """`--owned /` stripped to nothing and wrote a line GitHub reads as no pattern (CodeRabbit and
+    the second review of #329): it is validated as it will be written."""
+    root, okl = repo
+
+    code, out = okl("init", "--repo", "r", "--no-seed", "--owner", "ana", "--owned", owned, capsys=capsys)
+
+    assert code == 2 and "not the root alone" in out, out
+    assert not (root / ".github").exists()
+
+
+def test_owned_without_an_owner_says_it_waits_for_one(repo, capsys):
+    """--owned alone is recorded and does nothing yet: init says so rather than nothing."""
+    root, okl = repo
+
+    code, out = okl("init", "--repo", "r", "--no-seed", "--no-claude", "--owned", "ADR/", capsys=capsys)
+
+    assert code == 0 and "takes effect once --owner" in out, out
+    assert not (root / ".github" / "CODEOWNERS").exists()
+
+
+def test_uninstall_leaves_an_empty_deny_list_the_team_had(repo, capsys):
+    """okl cannot tell whether an empty `deny` was there before init, so it leaves it."""
+    root, okl = repo
+    (root / ".claude").mkdir()
+    (root / ".claude" / "settings.json").write_text(json.dumps({"permissions": {"deny": []}}))
+
+    okl("init", "--repo", "r", "--no-seed", "--claude", "--owner", "ana", capsys=capsys)
+    okl("init", "--uninstall", capsys=capsys)
+
+    assert json.loads((root / ".claude" / "settings.json").read_text()) == {"permissions": {"deny": []}}
+
+
+def test_uninstall_finds_okls_block_in_a_file_github_no_longer_reads(repo, capsys):
+    """init wrote into the root CODEOWNERS; a .github/CODEOWNERS added since is the one GitHub
+    reads, and uninstall still takes okl's block out of the root file."""
+    root, okl = repo
+    (root / "CODEOWNERS").write_text(TEAM)
+    okl("init", "--repo", "r", "--no-seed", "--no-claude", "--owner", "ana", capsys=capsys)
+    (root / ".github").mkdir(); (root / ".github" / "CODEOWNERS").write_text("* @acme/platform\n")
+
+    code, out = okl("init", "--uninstall", capsys=capsys)
+
+    assert (root / "CODEOWNERS").read_text() == TEAM, out
+    assert (root / ".github" / "CODEOWNERS").read_text() == "* @acme/platform\n"
+
+
+def test_the_dry_run_says_a_linked_codeowners_would_be_refused(repo, capsys, tmp_path):
+    """The dry run says what the run will do: a CODEOWNERS that is a link is refused, not written."""
+    root, okl = repo
+    outside = tmp_path / "outside"; outside.write_text(TEAM)
+    (root / ".github").mkdir(); (root / ".github" / "CODEOWNERS").symlink_to(outside)
+
+    code, out = okl("init", "--repo", "r", "--owner", "ana", "--dry-run", capsys=capsys)
+
+    assert "(no owner-approved paths: .github/CODEOWNERS is a symlink" in out, out
+    assert outside.read_text() == TEAM
+
+
+def test_a_dangling_link_at_codeowners_is_refused_and_nothing_is_created(repo, capsys, tmp_path):
+    """A link to a file that does not exist: following it would create a file outside the repo."""
+    root, okl = repo
+    missing = tmp_path / "not-there"
+    (root / ".github").mkdir(); (root / ".github" / "CODEOWNERS").symlink_to(missing)
+
+    code, out = okl("init", "--repo", "r", "--no-seed", "--no-claude", "--owner", "ana", capsys=capsys)
+
+    assert "! refused .github/CODEOWNERS" in out, out
+    assert not missing.exists()
