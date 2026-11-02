@@ -51,8 +51,10 @@ gates it (#329).
    that branch.
 4. **Turn on the rule for the default branch**, as a ruleset or as classic branch protection:
    - require a pull request, with review from code owners;
-   - require approval of the most recent reviewable push, or dismiss stale approvals when new
-     commits are pushed: without one of them, an approval of one change lets a later push merge;
+   - require at least one approval, and dismiss stale approvals when new commits are pushed:
+     without it, your approval of one change lets a later push merge. Requiring approval of the
+     most recent push alone is not enough, since it keeps your earlier approval (GitHub's own
+     docs call dismissing the safer choice);
    - keep your required status checks;
    - bind administrators: "Do not allow bypassing the above settings" in classic protection, or
      no bypass entry for the agent in a ruleset.
@@ -74,7 +76,13 @@ gates it (#329).
   settings that it has no Administration write permission. Classic branch protection is
   readable by an administrator only, so as the agent doctor can confirm a ruleset but not
   classic protection: use a ruleset, or doctor answers "unknown". It does not evaluate every
-  CODEOWNERS glob as GitHub does; one that might own a path makes the answer "unknown".
+  CODEOWNERS glob as GitHub does: okl's block is kept last, so its own lines need no evaluating,
+  and a rule placed after it, or a glob that might own a path left to a team's line, makes the
+  answer "not enforced" or "unknown". It checks that the identity running it is not the owner
+  (an App's token has no login to compare), but not whether that identity belongs to a team
+  named as owner: name a person, not a team the agent is in. In a clone with no `.okl/` (the
+  agent's, or CI), doctor runs when a committed CODEOWNERS holds okl's block, and takes the
+  owner and paths from the block on the default branch.
 - **Private repositories on GitHub Free** have no protected branches, code owners or required
   reviewers; GitHub Pro or a paid organization plan adds them. `okl doctor` says so when it can
   tell.

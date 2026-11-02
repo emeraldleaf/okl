@@ -9,9 +9,10 @@
   spliced into an existing file in its own line endings and changes no line of yours (a last
   line with no newline gets one). In Claude Code it also adds deny rules for the usual ways to
   edit branch protection or rulesets and to merge past them. `okl doctor` asks GitHub and says
-  "enforced" only when it has read and recognised every condition: the owner on the merged
-  CODEOWNERS, a rule requiring code-owner review whose approval a new push dismisses, and an
-  identity that can neither bypass nor change it; otherwise "not enforced" with the reason, or
+  "enforced" only when it has read and recognised every condition: the merged CODEOWNERS gives
+  each path to the owner alone, with okl's block last (init moves it there on every run), a rule
+  requires code-owner review and dismisses an approval when new commits are pushed, and the
+  identity running it can neither bypass nor change the rule nor approve as the owner; otherwise "not enforced" with the reason, or
   "unknown" with what it could not read. Run as an administrator it says "not enforced", because
   that identity can change the rule. The guide, [docs/AGENT-IDENTITY.md](docs/AGENT-IDENTITY.md),
   covers giving the agent an identity of its own and the rule.
