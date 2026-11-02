@@ -1,4 +1,4 @@
-# okl-fingerprint: sha256:79cdf5c0350c1f622357593321be83305f6e64ae0b8228263da905736c29bee3
+# okl-fingerprint: sha256:db185e4a9d7295a005c6a016dae1c67e01f94015da27322870e14fb9d6f8ee50
 # Installed by `okl init --ci` into .github/workflows/okl-verify.yml (a repo an earlier okl gave it keeps it).
 #
 # The knowledge layer's CI verifier — real checks, not placeholders:
@@ -53,7 +53,7 @@ jobs:
           fetch-depth: 0   # drift needs history: it compares governed-file commits vs verified_at
           persist-credentials: false   # this job never pushes
 
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
           python-version: "3.13"
 
@@ -63,8 +63,19 @@ jobs:
         # And by the package itself, not one of its modules: this named src/okl/cli.py
         # until the CLI became a package, when okl's own CI would have tested the release.
         run: |
+          # .github/okl-version pins the okl release, so CI runs what your hooks run:
+          # `okl init --ci` writes it, and moves it when re-run after an upgrade. Without it
+          # (a hand-copied workflow, a dev build of okl), CI installs the newest release.
           if [ -f src/okl/__init__.py ]; then
             pip install -e .
+          elif [ -s .github/okl-version ]; then
+            v=$(tr -d '[:space:]' < .github/okl-version)
+            if ! printf '%s\n' "$v" | grep -Eqx '[0-9]+(\.[0-9]+)*((a|b|rc)[0-9]+)?(\.post[0-9]+)?'; then
+              echo "::error file=.github/okl-version::not an okl release version; \`okl init --ci\` rewrites it"
+              printf 'found: %s\n' "$v"
+              exit 1
+            fi
+            pip install "observed-knowledge-ledger==$v"
           else
             pip install observed-knowledge-ledger
           fi

@@ -156,10 +156,15 @@ def test_cli_warns_gates_and_reverify_restamps_an_off_branch_lesson(branches, tm
 
     # ARRANGE — a lesson about g.py, checked on a side branch where g.py matches main
     assert okl("init", "--repo", "r", "--no-seed", "--no-claude").returncode == 0
-    lid = okl("record", "--type", "Rule", "--scope", "repo", "--title", "the rule holds",
-              "--files", "g.py").stdout.strip().splitlines()[-1]
-    other = okl("record", "--type", "Rule", "--scope", "repo", "--title", "another rule",
-                "--files", "g.py").stdout.strip().splitlines()[-1]
+
+    def record(title: str) -> str:
+        # Failed once in a full suite, as an IndexError on empty stdout that hid the cause
+        # (0.11.0 release prep): say what record printed when it does not record.
+        r = okl("record", "--type", "Rule", "--scope", "repo", "--title", title, "--files", "g.py")
+        assert r.returncode == 0 and r.stdout.strip(), f"exit {r.returncode}: {r.stderr}"
+        return r.stdout.strip().splitlines()[-1]
+
+    lid, other = record("the rule holds"), record("another rule")
     check = ("grep -q holds g.py && echo HOLDS", "HOLDS")
     run("switch", "-q", "same")
     assert okl("verify", lid, "--run", check[0], "--expect", check[1]).returncode == 0

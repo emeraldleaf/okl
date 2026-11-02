@@ -100,7 +100,7 @@ flags okl wired twice (plugin and project hooks).
 ### Commit the wiring
 
 ```bash
-git add .claude .mcp.json      # and .github/workflows/okl-verify.yml if you ran init --ci
+git add .claude .mcp.json      # and .github/ (the workflow and okl-version) if you ran init --ci
 git commit -m "Wire okl"
 ```
 

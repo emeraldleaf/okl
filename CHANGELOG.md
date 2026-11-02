@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+- **`okl init --ci` pins the okl release CI installs.** The workflow installed the newest okl
+  from PyPI, so a repo's CI could run a different release from its own hooks. `okl init` now
+  writes `.github/okl-version` beside the workflow, and the workflow installs that release.
+  - **Upgrading:** after upgrading okl, re-run `okl init --repo <name> --no-seed` and commit
+    the file; the pin moves forward only, in PEP 440 order (a release candidate never replaces
+    its final), so a teammate on an older okl never rolls it back.
+  - **Checked:** a version file that holds anything but a release version stops CI's install
+    step with an error naming the file. `okl init --uninstall` removes the file with okl's
+    workflow, and keeps it beside a workflow it keeps.
+  - **Not pinned:** an okl installed from source (editable, a local path, git) or a dev or local
+    build pins nothing, and a workflow with no version file installs the newest release, as
+    before.
+  - **Why a separate file:** a workflow Dependabot has bumped counts as edited and is never
+    replaced, so a pin written inside it would freeze.
+- **Dependencies:** pytest 9.2.0, ruff 0.17.3, uv 0.13.6, fastapi 0.162.0, `actions/setup-python`
+  7.1.0 and `pypa/gh-action-pypi-publish` 1.14.3, in one change across every copy of the workflow.
+
 - **A guide to setting up a repository from scratch** (#330), `docs/FROM-SCRATCH.md`. For Python,
   .NET and TypeScript it covers:
   - pinned versions and a CI that gates format, lint, types, tests, architecture rules and a
