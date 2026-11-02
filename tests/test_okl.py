@@ -1062,6 +1062,9 @@ def test_init_dry_run_writes_nothing(tmp_path, monkeypatch, capsys):
 
     from okl.cli.install import cmd_init
     monkeypatch.chdir(tmp_path)
+    # Not the developer's home: with okl's own plugin enabled there, init skips the hooks and the
+    # list below changes on that machine only (CodeRabbit's sweep, 2026-11-02).
+    monkeypatch.setenv("HOME", str(tmp_path)); monkeypatch.setenv("USERPROFILE", str(tmp_path))
     (tmp_path / ".claude").mkdir()
     (tmp_path / ".git").mkdir()
     before = sorted(p.name for p in tmp_path.iterdir())
@@ -1084,6 +1087,7 @@ def test_init_dry_run_names_the_interests_init_would_keep(tmp_path, monkeypatch,
 
     from okl.cli.install import cmd_init
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("HOME", str(tmp_path)); monkeypatch.setenv("USERPROFILE", str(tmp_path))
     (tmp_path / ".claude").mkdir(); (tmp_path / ".git").mkdir()
     (tmp_path / "pyproject.toml").write_text('[project]\nname = "s"\n')
     (tmp_path / ".okl").mkdir()
