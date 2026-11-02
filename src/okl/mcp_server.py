@@ -74,7 +74,7 @@ def _build() -> Any:  # noqa: C901, PLR0915 - a declarative table of tool defini
 
         `compact=True` returns ONLY the imperative action list (what to fix, when you
         see it, what to do), with the other lessons that matched named one line each: roughly
-        350 tokens at limit=3 and 580 at limit=5, versus ~1,390 for the full briefing (measured
+        400 tokens at limit=3 and 710 at limit=5, versus ~1,580 for the full briefing (measured
         by evals/briefing_size.py).
         Use it when working in a small context budget, e.g. a subagent handling one
         focused subtask. `limit` caps how many records are drawn on.

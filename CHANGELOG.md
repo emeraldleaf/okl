@@ -12,6 +12,16 @@
   uv, .NET SDK 10.0.102, Node 22.22 with pnpm 11.3); the CI workflows and SonarQube steps were
   not.
 
+- **The briefing sizes and the anatomy sheet are current again.** The sizes the README, the
+  `okl_check` tool description and the anatomy sheet quote were measured before the second
+  tier's later fix (#299: a twelfth listed lesson and the trimmed note) and before the briefing
+  marked lessons *UNCHECKED*; each added about half of the growth. Re-measured (`briefing-size-20261102-0123.json`), a full briefing
+  is ~1,580 tokens, up from ~1,390, and the action list at `--limit 3` ~400, up from ~350. The
+  median on real prompts (~720) counts the selection without the briefing's marks, and the
+  docs now say so; the anatomy sheet's worked example is re-captured, and three of its lines
+  that said something was not yet measured now say what was. The anatomy sheet says no model runs until you turn one on, explains the *UNCHECKED* mark, and lists
+  drift's measured limit under "Where it breaks".
+
 - **The briefing marks the lessons no check backs** (#222). Only lessons whose governed files
   are in the checkout were marked (*STALE*, *UNVERIFIED*, *UNPROVEN*), so every other lesson
   was briefed exactly like a proven one. In okl's own store that was 139 of 155. A lesson that

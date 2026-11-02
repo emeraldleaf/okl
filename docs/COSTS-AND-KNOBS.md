@@ -42,7 +42,8 @@ okl init --interests "python,security"    # drop records tagged for stacks you d
   each, up to `--limit`. `calibrated` is the first tier alone, the smallest briefing; `floor`
   shows up to `--limit` that share two words, all in full. On real prompts against a real
   store, the default reached 102 of 115 applying lessons, the floor 90 and `calibrated` 38,
-  at a median of 721, 1,424 and 113 tokens a prompt ([RETRIEVAL.md](RETRIEVAL.md)). Give your
+  at a median of 721, 1,424 and 113 tokens a prompt before the briefing's marks, which add
+  about 5% ([RETRIEVAL.md](RETRIEVAL.md)). Give your
   own lessons triggers (`okl triggers`, or `/triggers` in Claude Code) so they reach the first tier.
   `"decision"` in `.okl/config.json` or `OKL_DECISION` sets it for every check.
 - **`--warm on`** adds what a lesson means to the words it shares, from a model `okl warm start`
