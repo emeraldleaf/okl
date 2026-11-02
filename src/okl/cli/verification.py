@@ -24,7 +24,8 @@ if TYPE_CHECKING:
 
 def _run_check(args: argparse.Namespace) -> tuple[str | None, str]:
     """Run `--run`; return its output if it passed (None after saying why it did not), and
-    a short outcome for the check log: "exit 0", "exit 1", "timed out after 120s", ...
+    a short outcome for the check log: "exit 0", "exit 1", "timed out after 600s" (the
+    `--timeout` default), ...
 
     Passing means exit 0 and, when `--expect` is given, that text in the output: exit 0
     alone is a step grading itself (the exit-0-zero-files lesson).
