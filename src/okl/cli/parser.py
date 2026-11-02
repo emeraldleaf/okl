@@ -21,6 +21,7 @@ from .lessons import (
     cmd_update,
 )
 from .packs import cmd_seed
+from .review import cmd_review
 from .servers import cmd_mcp, cmd_serve
 from .verification import cmd_drift, cmd_export, cmd_reverify, cmd_verify
 from .warm import cmd_warm
@@ -277,6 +278,28 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                      help="list what would be re-run, run nothing")
     prv.add_argument("--timeout", type=int, default=600)
     prv.set_defaults(func=cmd_reverify)
+
+    prw = sub.add_parser(
+        "review", help="a model reads each lesson nothing re-checks against the repo and reports the "
+                       "ones that no longer hold (opt-in; never writes)",
+        description="Has a model read each lesson that governs no files and that no check backs (the "
+                    "ones the briefing marks UNCHECKED) against the repository at HEAD, and reports each "
+                    "it questions: a detail that is wrong now, a workaround a later change made "
+                    "unnecessary, or a point that no longer holds, with the words that no longer hold "
+                    "and what the repository has instead. It calls a model only when you run it, asks "
+                    "first, and writes nothing: you confirm each verdict, then `okl update` or `okl "
+                    "retire`. Measured with the default judge (REPORT §4ai): it caught 8 of 10 planted "
+                    "wrong details and questioned 1 of 10 lessons known to be current. Exit 1: some "
+                    "questioned; otherwise 2: could not run, or a lesson got no answer; 0: none questioned.")
+    prw.add_argument("node_id", nargs="*", help="only these lessons (default: every unchecked one)")
+    prw.add_argument("--list", action="store_true", help="list the lessons it would judge, call no model")
+    prw.add_argument("--yes", action="store_true", help="run without asking (it calls a model once per lesson)")
+    prw.add_argument("--judge", help="another judge command, which reads the prompt on stdin and prints its "
+                                     "answer (default: Claude Code's CLI as §4ai measured it; its catch rates are that judge's alone)")
+    prw.add_argument("--workers", type=int, default=3, help="lessons judged at once (default 3)")
+    prw.add_argument("--timeout", type=int, default=300, help="seconds per lesson (default 300)")
+    prw.add_argument("--format", choices=["text", "json"], default="text")
+    prw.set_defaults(func=cmd_review)
 
     ps = sub.add_parser("search", help="full-text search over the encoded body")
     ps.add_argument("query")

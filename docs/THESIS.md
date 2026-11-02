@@ -16,10 +16,12 @@ asking first. Each session's lessons are recorded, so the next starts from more.
 backed by a check you choose, or marked unchecked.
 
 Two rules hold throughout:
-- **okl itself calls no generative model.** It notices mechanically, and the agent in the session
-  does the work. By default it runs no model at all; three local models, off until you turn them
-  on, can help choose what the briefing shows. The scaffold's optional CI review step runs a
-  generative model only if you name one.
+- **okl calls no generative model unasked.** It notices mechanically, and the agent in the session
+  does the work. By default it runs no model at all, and the briefing, the hooks and the gate never
+  run a generative one; three local models, off until you turn them on, can help choose what the
+  briefing shows. The scaffold's optional CI review step runs a generative model only if you name
+  one, and `okl review`, which checks the lessons nothing re-checks, runs one only when you run it
+  (§4ai).
 - **Nothing is written to the store without you knowing.**
 
 ## What holds today, and what is still direction
@@ -50,6 +52,10 @@ Each figure names its receipt in `evals/results/`.
 
 ## History
 
+- **2026-11-02.** The first rule above changed, at the maintainer's direction: okl had run no
+  generative model of its own, and now runs one when the person asks, so that `okl review` could
+  ship as §4ai measured it. The briefing, the hooks and the gate still run none; the review runs
+  one only when the person runs it, asks first, and writes nothing.
 - **2026-11-01.** The unchecked mark landed (#316, #222): a briefed lesson that no observed check
   backs is marked UNCHECKED, 121 of 172 on the measured prompts.
 - **2026-11-01.** The claim became three sentences. "Keeps learning as you build" joined the two

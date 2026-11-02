@@ -165,7 +165,7 @@ name = "Dependencies point one way: CLI -> adapters -> client -> core -> store"
 type = "layers"
 layers = [
   "okl.cli",
-  "okl.service | okl.mcp_server | okl.seed",
+  "okl.service | okl.mcp_server | okl.seed | okl.review",
   "okl.client",
   "okl.recap",
   "okl.core | okl.drift",

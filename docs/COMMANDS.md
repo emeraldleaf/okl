@@ -15,6 +15,15 @@ okl reverify         # re-run the stored check of every drifted lesson, and of a
                      #   on another branch, and re-stamp the passes;
                      #   lists the commands first and runs them only after you confirm
                      #   (or --yes), because they come from the store; --dry-run lists only
+okl review           # opt-in: a model reads each lesson that governs no files and that no check
+                     #   backs (the ones the briefing marks UNCHECKED) against the repo at HEAD,
+                     #   in a scratch worktree, and reports each it questions (detail wrong,
+                     #   outlived or stale) with the words that no longer hold; writes nothing.
+                     #   It asks before the first model call (--yes skips; unattended without
+                     #   it, exit 2); --list names the lessons and calls no model; <id>... judges
+                     #   only those; --judge '<cmd>' swaps the judge (§4ai's rates are the default's). Exit 1 some
+                     #   questioned; else 2 could not run or a lesson got no answer; 0 none
+                     #   questioned. REPORT §4ai measured the default.
 okl drift --gate     # flag lessons whose governed source changed after they were last verified
                      #   (exit 1 on drift, 2 when nothing could be checked; the pre-push hook
                      #   and CI run it; lessons last checked on another branch are listed

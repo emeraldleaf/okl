@@ -735,7 +735,8 @@ you send the prompt.
 - **UNPROVEN:** the lesson governs files, but no observed check backs its stamp. Prove it the same
   way.
 - **UNCHECKED:** the lesson has no observed check behind it. Treat it as advice, and confirm it
-  against the code before relying on it.
+  against the code before relying on it. `okl review` does that for all of them at once, with a
+  model, when you run it; it reports what no longer holds and changes nothing.
 
 **Say what to remember.** "Remember: a discount is capped at 100 percent, tested in
 `test_pricing.py`" is enough for the agent to record a lesson.

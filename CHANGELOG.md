@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+- **`okl review`: a model's review of the lessons nothing re-checks** (#315, REPORT §4ai). A
+  lesson that governs no files and that no check backs is never re-read, and the briefing marks
+  it UNCHECKED. `okl review` has a model read each one against the repository at HEAD, in a
+  scratch worktree, and reports each it questions with the words that no longer hold and what
+  the repository has instead:
+  - *detail wrong:* a path, name, flag, default or count;
+  - *outlived:* a workaround a later change made unnecessary;
+  - *stale:* a point that no longer holds.
+
+  It is opt-in and outside the loop. It calls a model only when you run it, asks first (`--yes`
+  skips; unattended without it, it refuses), and writes nothing: you confirm each verdict, then
+  `okl update` or `okl retire`. `--list` names the lessons without calling a model. The prompt
+  and the default judge, Claude Code's CLI, are the ones REPORT §4ai measured: it caught 8 of 10
+  planted wrong details and questioned 1 of 10 lessons known to be current. `--judge` swaps in
+  another command, whose rates nobody has measured. On okl's own store, the first run questioned
+  9 of the 80 lessons that make a claim, and the maintainer confirmed all 9.
+- **The thesis's first rule now reads "okl calls no generative model unasked"**, so the review
+  could ship. The briefing, the hooks and the gate still run none.
 - **The tombstone and retraction gates read the committed tree** (#352). They grepped the working
   tree, so a local run could pass or fail on an uncommitted edit that CI, on a clean checkout,
   would answer the other way. In a git repository they now read what HEAD holds, their registries
