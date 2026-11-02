@@ -253,8 +253,14 @@ def test_the_4ai_review_counts_its_controls_first_and_rates_only_when_they_hold(
     lc = importlib.util.module_from_spec(spec)
     monkeypatch.setitem(sys.modules, "lesson_census", lc)
     spec.loader.exec_module(lc)
-    assert lc.parse_verdict('{"verdict": "detail wrong", "no_longer": "x"}', lc.VERDICTS_4AI)["verdict"] == "detail wrong"
-    assert lc.parse_verdict('{"verdict": "detail wrong"}') is None          # §4ag's scale has no such verdict
+    full = '{"verdict": "detail wrong", "no_longer": "x", "instead": "y"}'
+    assert lc.parse_verdict(full, lc.VERDICTS_4AI)["verdict"] == "detail wrong"
+    assert lc.parse_verdict(full) is None                                   # §4ag's scale has no such verdict
+    # A questioning answer without the words that no longer hold, or what is there instead, is no answer.
+    for bare in ('{"verdict": "detail wrong", "no_longer": "x"}', '{"verdict": "stale", "instead": "y"}',
+                 '{"verdict": "outlived", "no_longer": " ", "instead": "y"}'):
+        assert lc.parse_verdict(bare, lc.VERDICTS_4AI) is None, bare
+    assert lc.parse_verdict('{"verdict": "current"}', lc.VERDICTS_4AI)["verdict"] == "current"
     assert set(lc.OUTLIVED) == {"harness-reads-a-moving-working-tree", "fastembed-cache-in-tmpdir"}
 
     def run(planted_caught, over_called, outlived_caught, extra=()):
@@ -278,7 +284,9 @@ def test_the_4ai_review_counts_its_controls_first_and_rates_only_when_they_hold(
     assert held["questioned_checkable"] == 4
     assert run(7, 0, 2)["rates"] is None                       # planted below 8: counts only
     assert run(10, 2, 2)["rates"] is None                      # two negatives over-called: counts only
-    assert run(8, 1, 1)["predictions"]["3_both_outlived"] is False
+    missed = run(8, 1, 1)
+    assert missed["predictions"]["3_both_outlived"] is False
+    assert set(missed["rates"]) == {"detail wrong", "stale"}            # it cannot find that kind: no outlived rate
     # n_f215b68b925c: an outlived verdict catches its plant only when it quotes the planted name.
     quoted = {"role": "positive", "verdict": "outlived", "planted": {"new": "--slug"}, "no_longer": "pass --slug"}
     unquoted = {**quoted, "no_longer": "until init keeps the name"}

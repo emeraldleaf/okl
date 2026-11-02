@@ -4330,6 +4330,16 @@ none invalid, $10.87.
   the judge could not confirm the census figures the lesson cites, because their files were
   withheld. Its verdict rests on another detail (below).
 - **No deviation** from this section.
+- **Two checks were added to the instrument after the run, and neither changes it.** A review of
+  this result found two places where the code that ran was looser than this section:
+  - It accepted a verdict that questioned a lesson without quoting the words that no longer
+    hold and what the repository has instead. All 20 questioning answers in the receipt carry
+    both.
+  - It would have given an outlived rate even with an outlived control missed. Both were
+    caught.
+
+  The summary recomputed from the receipt's items with the stricter code is identical to the
+  one the receipt holds.
 
 | | count |
 |---|---|

@@ -104,6 +104,7 @@ Answer with one JSON object and nothing else:
 {{"verdict": "current|detail wrong|outlived|stale|no claim|unsure", "no_longer": "the lesson's words that no longer hold, or empty", "instead": "what the repository has instead, or empty", "evidence": ["path:line", ...], "reason": "one sentence", "checkable": true or false}}
 "checkable" says whether a shell command could check what the lesson claims about this repository."""
 VERDICTS_4AI = ("current", "detail wrong", "outlived", "stale", "no claim", "unsure")
+QUESTIONED = ("detail wrong", "outlived", "stale")
 # §4ai's outlived controls: lessons §4ag's notes found still advising a workaround whose fix has
 # landed. n_f215b68b925c does too, but it is one of the planted controls, so it stays there alone.
 OUTLIVED = ("harness-reads-a-moving-working-tree", "fastembed-cache-in-tmpdir")
@@ -155,8 +156,16 @@ def plant(text: str, old: str, new: str) -> str:
 
 
 def parse_verdict(result: str, verdicts: tuple[str, ...] = VERDICTS) -> dict | None:
-    """The judge's last valid JSON object, or None when its answer holds none."""
-    return dr.last_object(result, lambda o: o.get("verdict") in verdicts)
+    """The judge's last valid JSON object, or None when its answer holds none. On §4ai's scale, an
+    answer that questions the lesson is valid only with the words that no longer hold and what the
+    repository has instead, as §4ai registers (CLI review on the result's PR)."""
+    def valid(o: dict) -> bool:
+        if o.get("verdict") not in verdicts:
+            return False
+        if verdicts == VERDICTS_4AI and o["verdict"] in QUESTIONED:
+            return all(isinstance(o.get(k), str) and o[k].strip() for k in ("no_longer", "instead"))
+        return True
+    return dr.last_object(result, valid)
 
 
 def summarize(items: list[dict]) -> dict:
@@ -196,9 +205,11 @@ def summarize_4ai(items: list[dict]) -> dict:
     invalid = sum(1 for x in items if not x.get("verdict"))
     decided = sum(v[k] for k in ("current", "detail wrong", "outlived", "stale"))
     held = planted >= 8 and over <= 1 and invalid <= len(items) / 5
+    # A missed outlived control means the review cannot find that kind (§4ai), so no outlived rate.
+    kinds = QUESTIONED if outlived == len(OUTLIVED) else ("detail wrong", "stale")
     rates = {k: {"count": v[k], "decided": decided, "rate": round(v[k] / decided, 4) if decided else None,
-                 "wilson95": dr.wilson(v[k], decided)} for k in ("stale", "detail wrong", "outlived")} if held else None
-    questioned = [x for x in pop if x.get("verdict") in ("detail wrong", "outlived", "stale")]
+                 "wilson95": dr.wilson(v[k], decided)} for k in kinds} if held else None
+    questioned = [x for x in pop if x.get("verdict") in QUESTIONED]
     return {
         "population": len(pop), "verdicts": dict(v),
         "planted_caught": {"caught": planted, "of": sum(role["positive"].values())},
