@@ -8,9 +8,9 @@
       "title": "The README's stated check defaults (limit 12; formats agent, actions, json, hook) match the code",
       "scope": "repo:okl",
       "files": "README.md,src/okl/core.py,src/okl/cli/,src/okl/client.py,src/okl/service.py,src/okl/mcp_server.py",
-      "verified_at": 1793585012874,
-      "verified_by": "`python3 ci/check-check-defaults.py` exit 0, matched 'CHECK DEFAULTS MATCH' on commit e2ba39d9e91f @ 2026-11-02T02:03Z",
-      "verified_commit": "e2ba39d9e91f7dc3ac5d16d388a78ab630e2e3c9"
+      "verified_at": 1793588865026,
+      "verified_by": "`python3 ci/check-check-defaults.py` exit 0, matched 'CHECK DEFAULTS MATCH' on commit 976304dd4c5c @ 2026-11-02T03:07Z",
+      "verified_commit": "976304dd4c5c473200b2af363af62cc502790345"
     },
     {
       "id": "doc-init-flags",
@@ -18,9 +18,9 @@
       "title": "Every okl init flag the README and guide document exists in the CLI",
       "scope": "repo:okl",
       "files": "README.md,docs/GETTING-STARTED.md,docs/FROM-SCRATCH.md,src/okl/cli/",
-      "verified_at": 1793585013034,
-      "verified_by": "`PYTHONPATH=src python3 ci/check-init-flags.py` exit 0, matched 'INIT FLAGS EXIST' on commit e2ba39d9e91f @ 2026-11-02T02:03Z",
-      "verified_commit": "e2ba39d9e91f7dc3ac5d16d388a78ab630e2e3c9"
+      "verified_at": 1793588865177,
+      "verified_by": "`PYTHONPATH=src python3 ci/check-init-flags.py` exit 0, matched 'INIT FLAGS EXIST' on commit 976304dd4c5c @ 2026-11-02T03:07Z",
+      "verified_commit": "976304dd4c5c473200b2af363af62cc502790345"
     },
     {
       "id": "doc-install-name",
@@ -38,9 +38,9 @@
       "title": "The docs' claim that okl record --verified is refused is true",
       "scope": "repo:okl",
       "files": "README.md,docs/GETTING-STARTED.md,src/okl/cli/",
-      "verified_at": 1793585012662,
-      "verified_by": "`R=$PWD; d=$(mktemp -d) && cd $d && git init -q && env -u OKL_DATABASE_URL -u OKL_SERVICE_URL PYTHONPATH=$R/src python3 -m okl init --repo z --no-claude >/dev/null 2>&1; env -u OKL_DATABASE_URL -u OKL_SERVICE_URL PYTHONPATH=$R/src python3 -m okl record --type Rule --scope repo --title x --verified >/dev/null 2>&1; rc=$?; cd $R; rm -rf $d; [ $rc -eq 2 ] && python3 -c \"import sys; t=lambda f: \\\" \\\".join(open(f).read().split()); sys.exit(0 if \\\"exits 2\\\" in t(\\\"README.md\\\") and \\\"okl record --verified\\` is refused\\\" in t(\\\"docs/GETTING-STARTED.md\\\") else 1)\" && echo VERIFIED FLAG REFUSED` exit 0, matched 'VERIFIED FLAG REFUSED' on commit e2ba39d9e91f @ 2026-11-02T02:03Z",
-      "verified_commit": "e2ba39d9e91f7dc3ac5d16d388a78ab630e2e3c9"
+      "verified_at": 1793588864802,
+      "verified_by": "`R=$PWD; d=$(mktemp -d) && cd $d && git init -q && env -u OKL_DATABASE_URL -u OKL_SERVICE_URL PYTHONPATH=$R/src python3 -m okl init --repo z --no-claude >/dev/null 2>&1; env -u OKL_DATABASE_URL -u OKL_SERVICE_URL PYTHONPATH=$R/src python3 -m okl record --type Rule --scope repo --title x --verified >/dev/null 2>&1; rc=$?; cd $R; rm -rf $d; [ $rc -eq 2 ] && python3 -c \"import sys; t=lambda f: \\\" \\\".join(open(f).read().split()); sys.exit(0 if \\\"exits 2\\\" in t(\\\"README.md\\\") and \\\"okl record --verified\\` is refused\\\" in t(\\\"docs/GETTING-STARTED.md\\\") else 1)\" && echo VERIFIED FLAG REFUSED` exit 0, matched 'VERIFIED FLAG REFUSED' on commit 976304dd4c5c @ 2026-11-02T03:07Z",
+      "verified_commit": "976304dd4c5c473200b2af363af62cc502790345"
     },
     {
       "id": "docs-agent-neutral",
