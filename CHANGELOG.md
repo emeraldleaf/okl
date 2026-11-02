@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **Two review findings that kept coming back are now gates.** `ci/check-guard-mutations.py`, run
+  in CI, switches off each guard `okl init` relies on (every symlink refusal, found by reading the
+  code, so a new one is covered) and fails unless a test fails: on its first run 7 of the 14 had
+  no test, and `tests/test_symlink_guards.py` now holds all of them. `tests/test_docs.py` holds
+  each claim the docs make about an optional part of okl to the condition it depends on, where it
+  is made (`OPT_IN_CLAIMS`), so "calls no generative model" stays beside the review step that
+  runs one when you name one.
 - **The thesis page is held to its receipts** (#319). Every figure on `docs/THESIS.md` is
   recomputed by the test suite from the receipt it names. Changing one, adding one without its
   receipt, citing a receipt that is not committed, or leaving a measurement's newer run uncited
