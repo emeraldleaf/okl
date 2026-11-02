@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Docs that say something is not yet measured name the question they wait on** (#334).
+  `tests/test_docs.py` lists each such sentence with its open question. A REPORT result or
+  CHANGELOG entry that answers one writes ``Settles open question `<id>` ``, and the test fails
+  until the sentence is rewritten. It found one sentence a search had missed: the README says
+  `okl scaffold` has never been measured.
 - **CI installs from the lockfile** (#331). Both test jobs run `uv sync --locked`, so they test
   the versions `uv.lock` holds and fail the day it falls behind `pyproject.toml`; the separate
   `uv lock --check` step it replaces is gone. Nothing changes for users of okl.
