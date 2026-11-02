@@ -20,7 +20,6 @@ import-linter 2.15, pip-audit 2.9.0. A layered package (`domain`, `infra`) with 
 | `uv run lint-imports` | `Contracts: 1 kept, 0 broken.` |
 | `uv run pytest -q tests/test_pricing.py::test_total_applies_the_discount_to_the_whole_order` | `1 passed` |
 | `uv run coverage run -m pytest -q && uv run coverage xml` | `coverage.xml` written |
-| `uv export … -o req.txt && uvx pip-audit==2.9.0 -r req.txt --disable-pip` | exit 0, `No known vulnerabilities found` |
 
 In this first batch, output was piped through `tail`, so the rows above record the line each tool
 printed, not its exit code. The runs below captured exit codes.
@@ -30,8 +29,12 @@ printed, not its exit code. The runs below captured exit codes.
 | `pytest -q -k no_such_test` | exit 5 |
 | a `domain` module importing `infra`, then `lint-imports` | `infra may import domain, never the reverse BROKEN`, `Contracts: 0 kept, 1 broken.`, exit 1 |
 | `fail_under = 100`, one test, then `coverage report` | exit 2, `Coverage failure: total of 89 is less than fail-under=100` |
+| `uv export … -o req.txt && uvx pip-audit==2.9.0 -r req.txt --disable-pip`, on the clean lock | `No known vulnerabilities found`, exit 0 |
 | pip-audit on a hashed pin of `urllib3==1.26.4` | three advisories listed, exit 1 |
 | pip-audit without `--disable-pip`, under Python 3.14 | crashed creating its own virtualenv (`ensurepip` died with SIGABRT) |
+
+The guide adds `--locked` to `uv export` after review on #332. That flag was not run here; it
+makes the export fail rather than re-lock a stale `uv.lock`.
 
 **okl, from main:** `okl verify <id> --run "uv run pytest -q tests/test_pricing.py::test_total_refuses_a_discount_over_100_percent" --expect "1 passed"` verified the lesson.
 - With no `--ci` workflow, it wrote no `okl-drift.json`.
@@ -56,7 +59,7 @@ the guide's Create-it block as published, with `global.json` naming the installe
 | `dotnet test --project tests/App.Tests --filter-method '*.Total_DiscountOver100_Throws'` | 0 | `Test run summary: Passed!` (also when piped) |
 | `dotnet test --project tests/App.ArchitectureTests` | 0 | `Test run summary: Passed!` |
 | `dotnet test --coverage --coverage-output-format cobertura` | 0 | `Test run summary: Passed!`, a `TestResults/<guid>.cobertura.xml` per test project |
-| `dotnet restore -p:AuditPipeline=true` | 0 | `Restored` |
+| `dotnet restore -p:AuditPipeline=true` | 0 | `Restored` (the guide adds `--locked-mode`, run on its own in the row above) |
 | `dotnet package list --vulnerable --include-transitive` | 0 | `The given project `App` has no vulnerable packages given the current sources.` |
 
 | Probe | Result |

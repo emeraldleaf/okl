@@ -16,6 +16,13 @@ package with a known vulnerability. The versions run were:
 
 The CI workflows and the SonarQube steps were not run; they follow each tool's own documentation.
 What each command printed is in [the receipt](FROM-SCRATCH-RECEIPT.md).
+
+**The running example.** Each stack's commands use one small module standing in for your code.
+It is a pricing function that totals an order and refuses a discount over 100 percent, in a
+`domain` layer that an `infra` layer may import but never the reverse, with a test of the
+refusal. The names in the commands are that example's: `tests/test_pricing.py`,
+`App.Domain.Pricing`, `src/domain/pricing.test.ts` and the test names. Replace them with your
+own module and its test.
 Every tool choice cites its sources at the end. Versions move: pin the current release of each
 tool when you start, and let Dependabot move the pins.
 
@@ -204,10 +211,11 @@ sonar.python.coverage.reportPaths=coverage.xml
 | One-way imports | `uv run lint-imports` | `0 broken.` |
 | One test | `uv run pytest -q tests/test_pricing.py::test_total_refuses_a_discount_over_100_percent` | `1 passed` |
 | Full suite, coverage | `uv run coverage run -m pytest -q && uv run coverage xml` | exit 0 |
-| Dependency audit | `uv export --format requirements.txt --no-emit-project -o req.txt && uvx pip-audit==<pin> -r req.txt --disable-pip` | `No known vulnerabilities found` |
+| Dependency audit | `uv export --locked --format requirements.txt --no-emit-project -o req.txt && uvx pip-audit==<pin> -r req.txt --disable-pip` | `No known vulnerabilities found` |
 
 `uv export` pins every package with its hash, so `--disable-pip` lets pip-audit read the file as
-it is, without building a virtualenv to resolve it. A known-vulnerable pin makes it exit 1.
+it is, without building a virtualenv to resolve it. `--locked` makes the export fail rather than
+re-lock when `uv.lock` is stale, so the audit reads the committed lock. A known-vulnerable pin makes it exit 1.
 
 **Coverage thresholds belong on the full suite.** If you set `fail_under`, run `coverage report`
 only in the full-suite step. After a run of one test, `coverage report` exits 2 on coverage that
@@ -239,7 +247,7 @@ jobs:
       - run: uv run mypy
       - run: uv run lint-imports
       - run: uv run coverage run -m pytest -q && uv run coverage xml
-      - run: uv export --format requirements.txt --no-emit-project -o req.txt && uvx pip-audit==<exact> -r req.txt --disable-pip
+      - run: uv export --locked --format requirements.txt --no-emit-project -o req.txt && uvx pip-audit==<exact> -r req.txt --disable-pip
       - uses: SonarSource/sonarqube-scan-action@<sha>   # pin
         if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
         env: { SONAR_TOKEN: "${{ secrets.SONAR_TOKEN }}" }
@@ -298,6 +306,9 @@ Then delete `TargetFramework`, `Nullable` and `ImplicitUsings` from each project
   "test": { "runner": "Microsoft.Testing.Platform" }
 }
 ```
+
+Name the SDK you install. 10.0.403 was the latest 10.0 patch on 2026-11-01. The receipt's run
+pinned 10.0.102, the one installed on that machine.
 
 `Directory.Build.props` applies to every project:
 
@@ -384,7 +395,7 @@ public class LayerTests
 | One test | `dotnet test --project tests/App.Tests --filter-method '*.Total_DiscountOver100_Throws'` | `Test run summary: Passed!` |
 | Architecture | `dotnet test --project tests/App.ArchitectureTests` | `Test run summary: Passed!` |
 | Coverage | `dotnet test --coverage --coverage-output-format cobertura` | exit 0 |
-| Dependency audit | `dotnet restore -p:AuditPipeline=true` | exit 0 |
+| Dependency audit | `dotnet restore --locked-mode -p:AuditPipeline=true` | exit 0 |
 
 Notes on these gates:
 - **Filters.** Under the new test platform, xUnit filters with `--filter-method`,
@@ -460,7 +471,9 @@ pnpm add -D -E typescript@6 eslint @eslint/js typescript-eslint prettier eslint-
 mkdir -p src/domain src/infra
 ```
 
-`-E` writes exact versions. Pin TypeScript to 6.x for now. `pnpm add typescript` installs 7.0,
+`.node-version` names the major version only, on purpose: Node's patch releases are security
+releases, and `setup-node` takes the latest of that major. The receipt's run used Node 22.22, since
+Vitest 5 needs 22.12 or later. `-E` writes exact versions. Pin TypeScript to 6.x for now. `pnpm add typescript` installs 7.0,
 and typescript-eslint did not support it as of version 8.72 (2026-11-01). Set `"type":
 "module"`, `"packageManager": "pnpm@<exact>"` and `"engines": { "node": ">=26" }` in
 `package.json`.
@@ -555,7 +568,8 @@ sonar.javascript.lcov.reportPaths=coverage/lcov.info
 | Dependency audit | `pnpm audit --prod --audit-level high` | `No known vulnerabilities found` |
 
 Selecting one Vitest test takes three things:
-- **A file path.** Give it with `-t`, or Vitest loads every test file.
+- **A file path.** Pass the test file's path as an argument beside `-t`. Without one, Vitest
+  loads every test file.
 - **An anchored pattern.** `-t` is a pattern over the test's full name, which joins the
   `describe` and test names with " > ". Unanchored, it matches every test whose name contains it,
   and the `Test Files  1 passed` line still matches "1 passed". So anchor it with `^` and `$`, or
