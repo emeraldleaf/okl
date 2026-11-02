@@ -153,13 +153,19 @@ That is expected; see CONTRIBUTING.
    The tag starts `publish.yml`. It builds, checks that the tag matches `pyproject.toml`,
    then waits at the `pypi` environment for the maintainer's approval.
 6. **Publish to the MCP Registry** from the repo, in a regular terminal (it asks for a
-   GitHub device code): `mcp-publisher login github && mcp-publisher publish`.
+   GitHub device code): `mcp-publisher login github && mcp-publisher publish`. Pull `main`
+   first: the publisher reads `server.json` from the checkout, and one still on the commit
+   before the release publishes the old version (0.12.0's first attempt was refused as a
+   duplicate of 0.11.0).
 7. **Check what was published.** PyPI should list the version. Then launch the server the
    way a registry client would,
    `uvx --with 'mcp>=1.2' observed-knowledge-ledger==X.Y.Z mcp`, and confirm it answers
    `initialize` with `serverInfo.version` X.Y.Z and lists its tools.
 8. **Refresh the repos set up with `okl init`:** run `okl init --repo <name> --no-seed` in
-   each, after reinstalling okl at the new release. It refreshes any hooks that changed, and in
+   each, after reinstalling okl at the new release. Wait until PyPI's index lists the release
+   (`curl -s -H "Accept: application/vnd.pypi.simple.v1+json"
+   https://pypi.org/simple/observed-knowledge-ledger/` names it): for some minutes after a
+   publish the index lags, a pinned CI install fails, and `uv` needs `--refresh` (0.12.0). It refreshes any hooks that changed, and in
    a repo with okl's CI workflow it moves `.github/okl-version`, so CI installs the new release;
    commit that. Where init says the kept workflow does not read the file, it predates 0.11.0:
    `okl init --force` replaces it (and any other edited okl file), then pins. Then update the website's okl page.
