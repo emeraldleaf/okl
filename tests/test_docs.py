@@ -462,3 +462,38 @@ def test_the_from_scratch_guide_states_verifys_default_timeout():
     sub = next(a for a in build_parser()._actions if isinstance(a, argparse._SubParsersAction))
     default = sub.choices["verify"].get_default("timeout")
     assert f"{default} seconds by default" in _flat("docs/FROM-SCRATCH.md")
+
+
+def _doc_commands():
+    """ci/check-doc-commands.py, loaded as a module: it is a script, not a package."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("check_doc_commands", ROOT / "ci" / "check-doc-commands.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_every_okl_command_and_flag_the_docs_write_exists():
+    """Every `okl <command> --flag` in the README, docs/ and the overview sheets is one the CLI
+    has (#314): only `okl init`'s flags, in three docs, were checked before."""
+    found, checked = _doc_commands().problems(_doc_commands().docs())
+
+    assert found == []
+    assert checked > 400, checked             # the docs write hundreds; none found means a broken reader
+
+
+def test_the_doc_command_check_names_a_missing_command_or_flag():
+    """Red where it should be, and not on a flag inside a quoted argument or a placeholder."""
+    check = _doc_commands()
+    doc = """Run `okl init --no-sead`, then:
+
+```bash
+okl frobnicate --all
+okl verify x --run "grep -q -- '--port' README.md && echo OK | cat" --expect OK
+okl <command> --anything
+okl log
+```
+"""
+    found, _ = check.problems({"a.md": doc})
+
+    assert found == ["a.md: `okl frobnicate` is not a command", "a.md: `okl init` has no --no-sead"]
