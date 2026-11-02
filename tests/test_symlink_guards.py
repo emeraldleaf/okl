@@ -170,3 +170,22 @@ def test_uninstall_leaves_linked_settings_and_mcp_json_alone(repo):
     assert "okl's hook entries not removed" in out and "the okl server entry not removed" in out, out
     assert (s.read_text(), m.read_text()) == (settings, mcp)
     assert Path(root / ".mcp.json").is_symlink()
+
+
+def test_the_mutation_check_finds_every_guard_call_and_switches_off_only_that_one():
+    """ci/check-guard-mutations.py reads the guard calls from the code: if it found none, it would
+    pass by checking nothing. Each stand-in replaces exactly its own call."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("check_guard_mutations",
+                                                  Path(__file__).resolve().parents[1] / "ci" / "check-guard-mutations.py")
+    check = importlib.util.module_from_spec(spec); spec.loader.exec_module(check)
+    path, guards = next(iter(check.GUARD_CALLS.items()))
+    source = (Path(__file__).resolve().parents[1] / path).read_text()
+
+    sites = check.call_sites(path, guards)
+
+    assert len(sites) >= 14, sites
+    for site in sites:
+        mutated = check.replace_span(source, site)
+        assert mutated.count(site[4]) == source.count(site[4]) - 1
+        assert len(mutated) == len(source) - len(site[4]) + len(site[5])

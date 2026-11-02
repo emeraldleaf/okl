@@ -700,3 +700,56 @@ def test_the_open_question_check_fails_on_a_settled_question_and_an_unnamed_one(
 
     assert _open_question_problems({"a.md": "Fast."}, "", questions, {}) == [
         "a.md: no longer says \"the warm model's recall is not yet measured\": remove its entry"]
+
+
+# What the docs claim about an optional or opt-in part of okl, and the condition each place it is
+# said must also name (the findings log's "absolute public claim broader than a shipped opt-in
+# file", three times: "no generative model ever" while the scaffold's review step runs one when
+# named; a lesson "misses" a task with no shared word while the warm model finds it by meaning;
+# --owner "makes each change need your approval" while that needs a branch rule okl does not set).
+# A claim is held where it is said: its paragraph, list item or table row must carry the condition.
+# A new claim of this kind goes here with its condition, so the next doc that repeats it is held too.
+OPT_IN_CLAIMS = {
+    r"calls no generative model": (r"only if you name one|optional",
+                                   "the scaffold's review step runs a model when REVIEW_CMD names one"),
+    r"shares no exact word with a lesson misses it": (r"[Ww]ithout the warm model",
+                                                      "the warm model finds a lesson by meaning once indexed"),
+    r"CI runs what your hooks run": (r"installed from PyPI",
+                                     "only an okl installed from an index writes the pin CI installs"),
+}
+
+
+def _opt_in_claim_problems(docs: dict[str, str], claims: dict) -> list[str]:
+    """Each place a claim is made without its condition, and each claim no doc makes any more."""
+    problems, seen = [], set()
+    for name, text in docs.items():
+        # A paragraph, a list item or a table row: the condition must sit where the claim does.
+        for unit in re.split(r"\n\s*\n|\n(?=\s*[-*|] )|</?(?:li|p|tr)\b[^>]*>", text):
+            flat = " ".join(unit.split())
+            for claim, (condition, why) in claims.items():
+                if re.search(claim, flat):
+                    seen.add(claim)
+                    if not re.search(condition, flat):
+                        problems.append(f"{name}: {flat[:160]!r} claims {claim!r} without its condition ({why})")
+    return problems + [f"no doc claims {c!r} any more: remove its entry" for c in claims if c not in seen]
+
+
+def test_every_opt_in_claim_names_its_condition_where_it_is_made():
+    """The claims in OPT_IN_CLAIMS, held in every published doc."""
+    docs = {str(p.relative_to(ROOT)): p.read_text() for p in _published_docs()}
+
+    assert _opt_in_claim_problems(docs, OPT_IN_CLAIMS) == []
+
+
+def test_the_opt_in_claim_check_fails_on_a_bare_claim_and_a_stale_entry():
+    """Red where it should be: the claim without its condition, in its own paragraph."""
+    claims = {r"calls no generative model": (r"only if you name one", "the review step")}
+    docs = {"a.md": "okl calls no generative model.\n\nThe review step runs one only if you name one.\n"}
+
+    assert _opt_in_claim_problems(docs, claims) == [
+        "a.md: 'okl calls no generative model.' claims 'calls no generative model' without its condition "
+        "(the review step)"]
+    assert _opt_in_claim_problems({"a.md": "okl calls no generative model, and the review step runs one "
+                                           "only if you name one."}, claims) == []
+    assert _opt_in_claim_problems({"a.md": "Nothing here."}, claims) == [
+        "no doc claims 'calls no generative model' any more: remove its entry"]
