@@ -18,9 +18,9 @@
       "title": "Every okl init flag the README and guide document exists in the CLI",
       "scope": "repo:okl",
       "files": "README.md,docs/GETTING-STARTED.md,docs/FROM-SCRATCH.md,src/okl/cli/",
-      "verified_at": 1793576035312,
-      "verified_by": "`PYTHONPATH=src python3 ci/check-init-flags.py` exit 0, matched 'INIT FLAGS EXIST' on commit 0604671dadb9 @ 2026-11-01T23:33Z",
-      "verified_commit": "0604671dadb9b3be10218473c21e8b9186953fe6"
+      "verified_at": 1793580461211,
+      "verified_by": "`PYTHONPATH=src python3 ci/check-init-flags.py` exit 0, matched 'INIT FLAGS EXIST' on commit 664712a33578 @ 2026-11-02T00:47Z",
+      "verified_commit": "664712a3357870ad25f37cec570d00fd69955052"
     },
     {
       "id": "doc-install-name",
@@ -48,9 +48,9 @@
       "title": "okl's docs are agent-neutral; Claude Code-only parts are labelled as such",
       "scope": "repo:okl",
       "files": "README.md,docs/",
-      "verified_at": 1793576035429,
-      "verified_by": "`python3 ci/check-agent-neutral.py` exit 0, matched 'AGENT NEUTRAL' on commit 0604671dadb9 @ 2026-11-01T23:33Z",
-      "verified_commit": "0604671dadb9b3be10218473c21e8b9186953fe6"
+      "verified_at": 1793580461318,
+      "verified_by": "`python3 ci/check-agent-neutral.py` exit 0, matched 'AGENT NEUTRAL' on commit 664712a33578 @ 2026-11-02T00:47Z",
+      "verified_commit": "664712a3357870ad25f37cec570d00fd69955052"
     },
     {
       "id": "n_07faa4565128",
@@ -68,9 +68,9 @@
       "title": "A test that imports an undeclared package passes only where that package happens to be installed",
       "scope": "org",
       "files": "tests/,pyproject.toml,.github/workflows/ci.yml",
-      "verified_at": 1793557755295,
-      "verified_by": "`python3 ci/check-test-imports.py` exit 0, matched 'NO UNDECLARED IMPORT' on commit 477e8f0a79ca @ 2026-11-01T18:29Z",
-      "verified_commit": "477e8f0a79caf262257971ab1416e04025dafabd"
+      "verified_at": 1793580461058,
+      "verified_by": "`python3 ci/check-test-imports.py` exit 0, matched 'NO UNDECLARED IMPORT' on commit 664712a33578 @ 2026-11-02T00:47Z",
+      "verified_commit": "664712a3357870ad25f37cec570d00fd69955052"
     },
     {
       "id": "n_9ba48d85ed19",
@@ -108,9 +108,9 @@
       "title": "Entered a crowded category deliberately: differentiate on verification-of-memory, compose with memory infra, never compete on recall",
       "scope": "repo:okl",
       "files": "README.md,docs/",
-      "verified_at": 1793576035603,
-      "verified_by": "`python3 ci/check-positioning.py` exit 0, matched 'POSITIONING OK' on commit 0604671dadb9 @ 2026-11-01T23:33Z",
-      "verified_commit": "0604671dadb9b3be10218473c21e8b9186953fe6"
+      "verified_at": 1793580461493,
+      "verified_by": "`python3 ci/check-positioning.py` exit 0, matched 'POSITIONING OK' on commit 664712a33578 @ 2026-11-02T00:47Z",
+      "verified_commit": "664712a3357870ad25f37cec570d00fd69955052"
     },
     {
       "id": "n_ead8e0a2b43d",
