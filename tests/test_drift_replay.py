@@ -255,15 +255,16 @@ def test_the_4ai_review_counts_its_controls_first_and_rates_only_when_they_hold(
     spec.loader.exec_module(lc)
     assert lc.parse_verdict('{"verdict": "detail wrong", "no_longer": "x"}', lc.VERDICTS_4AI)["verdict"] == "detail wrong"
     assert lc.parse_verdict('{"verdict": "detail wrong"}') is None          # §4ag's scale has no such verdict
-    assert set(lc.OUTLIVED) == {"harness-reads-a-moving-working-tree", "fastembed-cache-in-tmpdir", "n_f215b68b925c"}
+    assert set(lc.OUTLIVED) == {"harness-reads-a-moving-working-tree", "fastembed-cache-in-tmpdir"}
 
-    def run(planted_caught, over_called, outlived_caught):
+    def run(planted_caught, over_called, outlived_caught, extra=()):
         items = ([{"role": "positive", "verdict": "detail wrong"}] * planted_caught
-                 + [{"role": "positive", "verdict": "current"}] * (10 - planted_caught)
+                 + [{"role": "positive", "verdict": "current"}] * (10 - planted_caught - len(extra))
+                 + list(extra)
                  + [{"role": "negative", "verdict": "outlived"}] * over_called
                  + [{"role": "negative", "verdict": "current"}] * (10 - over_called)
                  + [{"role": "outlived", "verdict": "outlived"}] * outlived_caught
-                 + [{"role": "outlived", "verdict": "current"}] * (3 - outlived_caught)
+                 + [{"role": "outlived", "verdict": "current"}] * (2 - outlived_caught)
                  + [{"role": "population", "verdict": v, "type": "Rule", "scope": "org", "checkable": True}
                     for v in ("current", "current", "detail wrong", "detail wrong", "detail wrong", "stale",
                               "no claim")])
@@ -271,13 +272,18 @@ def test_the_4ai_review_counts_its_controls_first_and_rates_only_when_they_hold(
 
     held = run(8, 1, 2)
     assert held["planted_caught"] == {"caught": 8, "of": 10} and held["negatives_over_called"] == {"over": 1, "of": 10}
-    assert held["outlived_caught"] == {"caught": 2, "of": 3}
+    assert held["outlived_caught"] == {"caught": 2, "of": 2}
     assert all(held["predictions"].values())
     assert held["rates"]["detail wrong"]["count"] == 3 and held["rates"]["detail wrong"]["decided"] == 6
     assert held["questioned_checkable"] == 4
-    assert run(7, 0, 3)["rates"] is None                       # planted below 8: counts only
-    assert run(10, 2, 3)["rates"] is None                      # two negatives over-called: counts only
-    assert run(8, 1, 1)["predictions"]["3_outlived_at_least_2"] is False
+    assert run(7, 0, 2)["rates"] is None                       # planted below 8: counts only
+    assert run(10, 2, 2)["rates"] is None                      # two negatives over-called: counts only
+    assert run(8, 1, 1)["predictions"]["3_both_outlived"] is False
+    # n_f215b68b925c: an outlived verdict catches its plant only when it quotes the planted name.
+    quoted = {"role": "positive", "verdict": "outlived", "planted": {"new": "--slug"}, "no_longer": "pass --slug"}
+    unquoted = {**quoted, "no_longer": "until init keeps the name"}
+    assert run(7, 0, 2, extra=[quoted])["planted_caught"]["caught"] == 8
+    assert run(7, 0, 2, extra=[unquoted])["planted_caught"]["caught"] == 7
 
 
 def test_the_mutation_run_counts_catches_misses_and_ci_by_group(monkeypatch):

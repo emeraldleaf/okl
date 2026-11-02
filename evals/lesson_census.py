@@ -104,8 +104,9 @@ Answer with one JSON object and nothing else:
 {{"verdict": "current|detail wrong|outlived|stale|no claim|unsure", "no_longer": "the lesson's words that no longer hold, or empty", "instead": "what the repository has instead, or empty", "evidence": ["path:line", ...], "reason": "one sentence", "checkable": true or false}}
 "checkable" says whether a shell command could check what the lesson claims about this repository."""
 VERDICTS_4AI = ("current", "detail wrong", "outlived", "stale", "no claim", "unsure")
-# §4ai's outlived controls: lessons §4ag's notes found still advising a workaround whose fix has landed.
-OUTLIVED = ("harness-reads-a-moving-working-tree", "fastembed-cache-in-tmpdir", "n_f215b68b925c")
+# §4ai's outlived controls: lessons §4ag's notes found still advising a workaround whose fix has
+# landed. n_f215b68b925c does too, but it is one of the planted controls, so it stays there alone.
+OUTLIVED = ("harness-reads-a-moving-working-tree", "fastembed-cache-in-tmpdir")
 SECTIONS = {"4ag": (JUDGE_PROMPT, VERDICTS), "4ai": (JUDGE_PROMPT_4AI, VERDICTS_4AI)}
 
 
@@ -159,7 +160,11 @@ def summarize_4ai(items: list[dict]) -> dict:
     v = Counter(x.get("verdict") or "invalid" for x in pop)
     role = {r: Counter(x.get("verdict") or "invalid" for x in items if x["role"] == r)
             for r in ("negative", "positive", "outlived")}
-    planted = role["positive"]["detail wrong"] + role["positive"]["stale"]
+    # A planted fact is caught as detail wrong or stale; on a planted lesson that also advises an
+    # outlived workaround, an outlived verdict counts only when it quotes the planted name (§4ai).
+    planted = sum(1 for x in items if x["role"] == "positive" and (
+        x.get("verdict") in ("detail wrong", "stale")
+        or (x.get("verdict") == "outlived" and x.get("planted", {}).get("new", "\0") in (x.get("no_longer") or ""))))
     over = sum(role["negative"][k] for k in ("detail wrong", "outlived", "stale"))
     outlived = sum(role["outlived"][k] for k in ("outlived", "detail wrong", "stale"))
     invalid = sum(1 for x in items if not x.get("verdict"))
@@ -175,8 +180,7 @@ def summarize_4ai(items: list[dict]) -> dict:
         "outlived_caught": {"caught": outlived, "of": sum(role["outlived"].values())},
         "controls": {r: dict(c) for r, c in role.items()},
         "predictions": {"1_planted_at_least_8": planted >= 8, "2_negatives_at_most_1": over <= 1,
-                        "3_outlived_at_least_2": outlived >= 2,
-                        "4_more_wrong_details_than_4ag_stale": v["detail wrong"] > 2},
+                        "3_both_outlived": outlived == len(OUTLIVED)},
         "invalid_share": round(invalid / len(items), 4) if items else None,
         "rates": rates,
         "questioned_checkable": sum(1 for x in questioned if x.get("checkable") is True),
