@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **Every `okl` command and flag the docs write is checked against the CLI** (#314).
+  `ci/check-doc-commands.py`, run by the test suite, reads every `okl ...` command in the README,
+  `docs/` and the overview sheets and walks the parser: each subcommand must exist and each
+  `--flag` must be one it takes. It checks 464 commands, where only the 26 `okl init` commands
+  in three docs were checked before (`doc-claim-coverage-20261102.txt`). By docs alone the
+  share was already whole, since two lessons govern every doc, but they check wording and
+  positioning, not commands.
 - **`okl init --dry-run` says what init keeps** (#340). In a repo whose config already records
   interests, it said detected stacks would replace them; init keeps them and detects only for a
   config with none, and the dry run now names them as kept. It also lists
