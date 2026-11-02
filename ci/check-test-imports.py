@@ -3,7 +3,8 @@
 
 The check behind the `n_7e50e3588bcd` lesson: a test that imports an undeclared package passes
 only where that package happens to be installed. What CI installs is read from its workflow's
-`pip install -e .` lines, and only what every one installs counts: the project's dependencies, any extras in brackets, and each `--group`.
+`pip install -e .` and `uv sync` lines, and only what every one installs counts: the project's dependencies, any extras (in
+brackets, or `--extra`/`--all-extras`), uv's default groups unless turned off, and each `--group`.
 A module the tests import, or name to `pytest.importorskip`, must be the standard library,
 okl's own, a module of this repository, or come from one of those distributions. Nothing else
 counts: a package an extra declares that CI never installs is as undeclared as any other. The first version grepped the tests for one import, so a
@@ -33,24 +34,44 @@ def tracked(*paths: str) -> list[Path]:
 
 
 project = tomllib.loads((REPO / "pyproject.toml").read_text())
-installs = list(re.finditer(r"pip install -e \.(?:\[([\w,-]+)\])?((?: --group [\w-]+)*)",
-                            (REPO / ".github/workflows/ci.yml").read_text()))
-if not installs:
-    sys.exit("UNDECLARED TEST IMPORT: ci.yml has no `pip install -e .` line to read")
+EXTRAS = project["project"].get("optional-dependencies", {})
+GROUPS = project.get("dependency-groups", {})
 
 
-def installed_by(install: re.Match) -> set[str]:
-    """The distributions one `pip install -e .` line installs: dependencies, extras, groups."""
+def installed_by(extras: list[str], groups: list[str]) -> set[str]:
+    """The distributions one install line brings in: dependencies, extras, groups."""
     wanted = [*project["project"].get("dependencies", [])]
-    for extra in filter(None, (install.group(1) or "").split(",")):
-        wanted += project["project"].get("optional-dependencies", {}).get(extra, [])
-    for group in re.findall(r"--group ([\w-]+)", install.group(2)):
-        wanted += project["dependency-groups"][group]
+    for extra in extras:
+        wanted += EXTRAS.get(extra, [])
+    for group in groups:
+        wanted += GROUPS[group]
     return {norm(re.match(r"[A-Za-z0-9._-]+", r).group(0)) for r in wanted if isinstance(r, str)}
 
 
+def uv_sync(flags: str) -> set[str]:
+    """What `uv sync <flags>` installs: uv's default groups (`dev` unless [tool.uv] names others)
+    unless --no-dev or --no-default-groups, each --group, and --extra or --all-extras."""
+    default = project.get("tool", {}).get("uv", {}).get("default-groups", ["dev"])
+    groups = [] if re.search(r"--no-dev\b|--no-default-groups\b", flags) else (
+        list(GROUPS) if default == "all" else list(default))
+    extras = list(EXTRAS) if "--all-extras" in flags else re.findall(r"--extra[ =]([\w-]+)", flags)
+    return installed_by(extras, groups + re.findall(r"--group[ =]([\w-]+)", flags))
+
+
+installs: list[set[str]] = []
+for line in (REPO / ".github/workflows/ci.yml").read_text().splitlines():
+    if line.lstrip().startswith("#"):
+        continue                       # a comment naming a command installs nothing
+    if m := re.search(r"pip install -e \.(?:\[([\w,-]+)\])?((?: --group [\w-]+)*)", line):
+        installs.append(installed_by(list(filter(None, (m.group(1) or "").split(","))),
+                                     re.findall(r"--group ([\w-]+)", m.group(2))))
+    elif m := re.search(r"\buv sync\b(.*)", line):
+        installs.append(uv_sync(m.group(1)))
+if not installs:
+    sys.exit("UNDECLARED TEST IMPORT: ci.yml has no `pip install -e .` or `uv sync` line to read")
+
 # Each job that installs runs the tests, so a test may use only what every one of them installs.
-declared = set.intersection(*(installed_by(i) for i in installs))
+declared = set.intersection(*installs)
 local = {"okl"} | {p.stem for p in tracked("tests/", "evals/", "ci/")}
 dists = packages_distributions()
 
