@@ -4192,6 +4192,248 @@ the repository is also behind both wrong verdicts on harmless patches.
   rival for the two pattern checks. Two are questions of claim, put to their lessons: `DEPLOY.md`
   for `doc-init-flags`, and the guidance for `n_07faa4565128`.
 
+## 4ai. PRE-REGISTERED: a review of the lessons nothing re-checks, on a scale that names wrong details and outlived workarounds (#315)
+
+Written before any lesson is judged. It decides whether `okl` can ship a review of unchecked
+lessons (#315) that a person can act on.
+
+**Why.** §4ag judged the lessons nothing re-checks on a four-way scale: current, stale, no claim
+and unsure. The judge never called a known-current lesson stale, but it caught 5 of 10 planted
+wrong facts, against 8 registered. In four of its five misses it named the wrong fact in its
+reason and still answered current: its scale had no answer for "the point holds, a detail is
+wrong". Its notes also found lessons whose fix has landed but which still advise the workaround,
+which neither drift nor that scale can flag. A review a person acts on has to report both.
+
+**What changes, and only that.** The judge's scale, and the answer it gives with it. Everything
+else is §4ag's: the instrument (`evals/lesson_census.py --judge`), the judge
+(`claude -p --model opus --restricted --tools Read,Grep,Glob`, in a scratch worktree with no
+`okl-drift.json` and no store), the seed (189), the number and draw of negative controls, the
+planted facts (`evals/lesson_census_planted.json`, unchanged), one judgment per lesson in a
+seeded order, and the 300-second limit. A changed scale is a changed instrument, so this is a
+new series: nothing here is pooled with §4ag.
+
+**Amended before any judgment (2026-11-02): what the judge cannot see.** The first attempt to
+run stopped at the instrument's guard: every planted name was found at the run's commit. None is
+in okl's code; all ten are in this experiment's own files, which main now holds and §4ag's judge
+never saw: the planted-facts file, §4ag's receipt with each verdict and reason, REPORT's §4ag
+text, and the test that quotes planted names. A judge reading those could learn which lessons
+are planted or what §4ag said of its own lesson. So the judge's scratch worktree withholds them:
+`evals/lesson_census_planted.json`, `evals/lesson_census.py`, `tests/test_drift_replay.py`, the
+census and stale-lesson receipts in `evals/results/`, and REPORT's §4ag and §4ai sections, each
+replaced by a line that says it is withheld. The guard then checks each planted name against
+that worktree, as the judge sees it. Nothing else changes.
+
+**The scale.** The judge answers one of six:
+- *current:* the lesson's point holds of this repository, and so does every detail it states
+  about it;
+- *detail wrong:* the point holds, but a detail it states about this repository (a path, name,
+  command, flag, default or count) is wrong now;
+- *outlived:* the lesson advises a workaround, an interim step or a caution that a later change
+  in this repository has made unnecessary;
+- *stale:* the lesson's point no longer holds of this repository;
+- *no claim:* it says nothing this repository can confirm or contradict;
+- *unsure.*
+
+With a verdict of detail wrong, outlived or stale, it also quotes the words of the lesson that no
+longer hold and what the repository has instead. It still gives its evidence (paths and lines)
+and whether a command could check the lesson.
+
+**Population.** The unchecked lessons in a census taken at the run's commit
+(`evals/lesson_census.py`), by id. The store has grown since §4ag's census, so the population is
+counted again; the receipt names both counts.
+
+**Controls,** mixed in blind:
+- **Negative, 10:** as §4ag. Checked lessons in the seed-189 draw whose checks pass at the run's
+  commit. A judge that calls one anything but current or no claim over-calls.
+- **Planted, 10:** §4ag's ten planted wrong facts, unchanged. Each is one detail changed to a name
+  that exists nowhere in the repository at the run's commit (the instrument refuses the run
+  otherwise). A judge that calls one current misses a wrong detail. Detail wrong and stale both
+  count as caught.
+  - **One of them also advises an outlived workaround.** `n_f215b68b925c` says "until init keeps
+    an existing config's repo name, always pass --repo", and init keeps it. §4ag noted that its
+    catch there may have had that cause. On it, an outlived verdict counts as catching the plant
+    only if the words the judge quotes as no longer holding include the planted name.
+- **Outlived, 2:** the lessons §4ag's notes found still advising a workaround whose fix has landed,
+  at the run's commit, unchanged, apart from `n_f215b68b925c` above:
+  - `harness-reads-a-moving-working-tree`: "until that lands, do not switch branches in a checkout
+    with a run in progress". The harness now marks a run whose tree moved as not usable;
+  - `fastembed-cache-in-tmpdir`, whose text describes the cache before the fix.
+
+  These were chosen by the experimenter from §4ag's notes, not drawn: a search of the store for
+  other interim advice found none. They are taken out of the population, where they would
+  otherwise be judged twice. Outlived, detail wrong and stale all count as caught; current does
+  not.
+
+**Measures.**
+1. **Planted facts caught:** detail wrong or stale, of 10.
+2. **Negatives over-called:** detail wrong, outlived or stale, of 10.
+3. **Outlived caught:** outlived, detail wrong or stale, of 2.
+4. **The population by verdict,** counts. Rates (stale, detail wrong and outlived, each over the
+   lessons that make a claim, with Wilson 95% intervals) only if the controls hold.
+5. **Confirmed:** each population verdict other than current, no claim or unsure goes to the
+   person, who confirms it or not before it counts as found.
+
+**Predictions.**
+1. At least 8 of the 10 planted facts are caught. This is #315's bar and §4ag's.
+2. At most 1 of the 10 negatives is over-called.
+3. Both outlived lessons are caught.
+
+Not predicted: the population's counts by verdict, reported as they come. They are not compared
+with §4ag's 2 stale lessons, which counted a different thing on a different scale.
+
+**What the run can settle, and what it cannot.**
+- **One wrong detail at a time.** Each planted lesson holds one changed name. Real wrong details
+  can be subtler, so the planted catch rate is a ceiling on the judge's sensitivity.
+- **Two outlived lessons, chosen, not drawn.** Their catch says the scale can name the kind, not
+  how often the judge finds it, and two is thin evidence even of that.
+- **The planted facts are reused.** The judge has never seen them; the experimenter has. They are
+  reused so this run answers the question §4ag left: whether the same judge, on the same plants,
+  counts them once the scale has a word for them.
+- **One store, one repository, one judge model.** The seed lessons are left out.
+
+**Falsifiers and what follows.**
+- **If predictions 1 to 3 hold,** the scale and prompt ship as an opt-in review, `okl review`,
+  outside the briefing and the gate (the README promises no model calls in the loop). It reads,
+  never writes, and reports each lesson it questions with the words that no longer hold, for the
+  person to `okl update` or `okl retire`. Its help names this section's catch rates.
+- **If fewer than 8 planted facts are caught, or more than 1 negative is over-called,** the judge
+  is not trusted. No command ships, the run reports counts only, and each verdict goes to the
+  person as in §4ag. A changed prompt or model is a new pre-registration.
+- **If either outlived lesson is missed,** a review may ship without the outlived verdict, and
+  says it cannot find that kind.
+- **Counts only, no rate:** if more than a fifth of all judgments time out or return no valid
+  answer.
+
+**Budget and stop.**
+- **Runs:** one judge session per lesson, at most 300 seconds each, read-only: the census's
+  unchecked lessons less the 2 outlived ones, plus 22 controls (10 negative, 10 planted, 2
+  outlived). The receipt states the total.
+- **The instrument** is `evals/lesson_census.py --judge` with the new scale, committed before any
+  judgment. The receipt names its commit, and any difference from this section is reported as a
+  deviation.
+- **Fixed once a verdict is read:** everything above.
+- **Deadline:** 2026-11-17. If the run cannot happen by then, this section says why, and nothing
+  is concluded.
+
+### Result (2026-11-02)
+
+**The run.** Receipt `stale-review-20261102-2133.json`: the repository at 0609d69, the
+instrument at a2c61e6, 116 judgments (94 from the census, 10 negative, 10 planted, 2 outlived),
+none invalid, $10.87.
+- **The population is as registered.** The census at 0609d69 (731e29e) found 168 recorded
+  lessons, 96 of them unchecked; less the 2 outlived controls, 94.
+- **Withheld, as amended:** the planted file, the instrument, `tests/test_drift_replay.py`,
+  §4ag's census and stale-lesson receipts, and REPORT's §4ag. The instrument's guard then found
+  no planted name in what the judge could read. §4ai was not yet at 0609d69, so there was
+  nothing of it to withhold.
+- **Withholding cost one lesson some evidence.** For `measure-the-population-not-the-slice`,
+  the judge could not confirm the census figures the lesson cites, because their files were
+  withheld. Its verdict rests on another detail (below).
+- **No deviation** from this section.
+- **Two checks were added to the instrument after the run, and neither changes it.** A review of
+  this result found two places where the code that ran was looser than this section:
+  - It accepted a verdict that questioned a lesson without quoting the words that no longer
+    hold and what the repository has instead. All 20 questioning answers in the receipt carry
+    both.
+  - It would have given an outlived rate even with an outlived control missed. Both were
+    caught.
+
+  The summary recomputed from the receipt's items with the stricter code is identical to the
+  one the receipt holds.
+
+| | count |
+|---|---|
+| planted facts caught (detail wrong or stale) | 8 of 10 |
+| negatives over-called (detail wrong, outlived or stale) | 1 of 10 |
+| outlived lessons caught | 2 of 2 |
+| the 94: current | 71 |
+| the 94: detail wrong | 7 |
+| the 94: outlived | 1 |
+| the 94: stale | 1 |
+| the 94: no claim | 14 |
+| the 94: unsure | 0 |
+
+**Predictions.**
+1. **Held, at the bar: 8 of 10 planted facts caught.**
+   - Seven are detail wrong. The eighth, `n_f215b68b925c`, is outlived, and the words it quotes
+     as no longer holding include the planted `--slug`, so it counts, as registered.
+   - Every catch quotes the planted name.
+   - The two misses are `n_5ddb0776a863` (`--report` changed to `--summary`) and `n_b4050b826687`
+     (`--run` changed to `--exec`). Both were called current with no mention of the flag, and
+     §4ag missed both too.
+   - Three of §4ag's misses are caught here: `storage.py`, `--via` and `.github/actions/`. In
+     §4ag the judge had named each and still answered current.
+2. **Held, at the bar: 1 of 10 negatives over-called.**
+   - `n_696a70084e1a` was called stale. Its reason holds against the code: the lesson said
+     `okl seed` stamps `verified_at` at load time, and since #110 a re-seed keeps an existing
+     stamp.
+   - A negative control is a lesson whose check passes, and this lesson's check proves its fix
+     (the snapshot reader), not its account of the cause. So a control can be over-called and
+     right.
+   - It counts as registered. The person agreed the text was out of date, and it was
+     corrected.
+3. **Held: both outlived lessons caught.** Each was called outlived and quoted its interim
+   advice: "until that lands, do not switch branches…" and the cache that macOS evicts.
+
+**The population's rates.** The controls held and no judgment was invalid, so the registered
+rates are read, over the 80 lessons that make a claim (94 less 14 with no claim):
+
+| verdict | count | 95% interval (Wilson) |
+|---|---|---|
+| detail wrong | 7 of 80 (8.8%) | 4.3–17.0% |
+| outlived | 1 of 80 (1.3%) | 0.2–6.7% |
+| stale | 1 of 80 (1.3%) | 0.2–6.7% |
+
+**Confirmed.** The person confirmed all nine questioned lessons on 2026-11-02, and each was
+corrected in the store:
+- **Three CodeRabbit lessons.** okl now turns automatic PR reviews off itself
+  (`.coderabbit.yaml`):
+  - `n_02aa43137a2e` and `n_e99ea322dee5` are detail wrong: each gave the old reason for
+    on-request reviews, okl's star count;
+  - `review-budget-one-push-per-round` is outlived: here a push no longer spends a review.
+
+  All three are org lessons whose point holds wherever a bot reviews every push, so each was
+  updated, not retired.
+- **Four out-of-date figures or quotes, all detail wrong:**
+  - `n_a4b40c96ede4`: the noise floor was set at 17 points from the first runs, not "never
+    measured", and is now at least 21;
+  - `measure-the-population-not-the-slice`: §4ae's 1,859 red events are 1,870 in its third
+    run;
+  - `verification-scope-is-the-thesis`: it quoted the README headline that #317 replaced, and
+    said unchecked lessons are briefed like proven ones, which #222 fixed;
+  - `n_92398fae87c0`: the redirect test now checks only the `okl` command, since the package
+    gained a second one.
+- **`briefing-hides-unproven-lessons`, stale.** #222 fixed the defect it records. It was
+  rewritten as fixed, and #222's two tests now verify it, so it is no longer unchecked.
+- **`n_57cc4b427f05`, detail wrong.** Where it meant "`git ls-files` output", its text held a file
+  list: a shell ran the backticks when it was recorded. The judge also found that
+  `check-tombstones.sh` still scans the working tree, which breaks the lesson. That gate and the
+  retraction gate are #352.
+
+**What follows, as registered.** Predictions 1 to 3 held, so the scale and prompt ship as
+`okl review`. It is opt-in and sits outside the briefing and the gate. It reads and never writes.
+It reports each lesson it questions with the words that no longer hold, for the person to
+`okl update` or `okl retire`, and its help names this section's catch rates.
+
+**What it shows, and what it does not.**
+- **Shown:**
+  - On the same planted facts, the judge that caught 5 of 10 on §4ag's four-way scale catches 8
+    of 10 once the scale has a word for a wrong detail, and every catch names the planted
+    detail.
+  - Among the 80 unchecked lessons that make a claim, the person confirmed 9 with something that
+    no longer holds. Seven were a detail, not the point.
+- **Not shown:**
+  - **A margin.** Two of the three predictions held exactly at their bars: one more miss or one
+    more over-call and nothing would ship. Ten controls give a wide interval: 8 of 10 caught is
+    49–94% (Wilson).
+  - **Negatives that are current in every detail.** A passing check does not make that so, as the
+    one over-call shows. A next series would pick negative controls whose stated details the
+    experimenter has checked, not only whose check passes.
+  - **How often the judge misses an outlived lesson.** Two were chosen and both caught; the
+    population held one. That says the scale can name the kind, not how often it finds it.
+  - **Anything beyond one store, one repository and one judge model.** The planted facts change
+    one name each, so 8 of 10 is a ceiling on finding subtler wrong details.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

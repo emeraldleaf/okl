@@ -48,9 +48,9 @@
       "title": "okl's docs are agent-neutral; Claude Code-only parts are labelled as such",
       "scope": "repo:okl",
       "files": "README.md,docs/",
-      "verified_at": 1793658682708,
-      "verified_by": "`python3 ci/check-agent-neutral.py` exit 0, matched 'AGENT NEUTRAL' on commit 002140239bbb @ 2026-11-02T22:31Z",
-      "verified_commit": "002140239bbb7b01b1d7930062b60a5feb5f5456"
+      "verified_at": 1793659624166,
+      "verified_by": "`python3 ci/check-agent-neutral.py` exit 0, matched 'AGENT NEUTRAL' on commit 04252d70bc35 @ 2026-11-02T22:47Z",
+      "verified_commit": "04252d70bc355b6087c03d5113100d0b1df0f352"
     },
     {
       "id": "n_07faa4565128",
@@ -68,9 +68,9 @@
       "title": "A test that imports an undeclared package passes only where that package happens to be installed",
       "scope": "org",
       "files": "tests/,pyproject.toml,.github/workflows/ci.yml",
-      "verified_at": 1793658683439,
-      "verified_by": "`python3 ci/check-test-imports.py` exit 0, matched 'NO UNDECLARED IMPORT' on commit 002140239bbb @ 2026-11-02T22:31Z",
-      "verified_commit": "002140239bbb7b01b1d7930062b60a5feb5f5456"
+      "verified_at": 1793659624934,
+      "verified_by": "`python3 ci/check-test-imports.py` exit 0, matched 'NO UNDECLARED IMPORT' on commit 04252d70bc35 @ 2026-11-02T22:47Z",
+      "verified_commit": "04252d70bc355b6087c03d5113100d0b1df0f352"
     },
     {
       "id": "n_9ba48d85ed19",
@@ -98,9 +98,9 @@
       "title": "Dependabot alerts reach no one unless a step reads them",
       "scope": "org",
       "files": "docs/DEVELOPING.md",
-      "verified_at": 1793658681859,
-      "verified_by": "`awk '/^## Releasing/{r=1;next} r&&/^(## |2\\. )/{exit} r&&/^1\\. /{s=1} s{print}' docs/DEVELOPING.md | tr '\\n' ' ' | grep -o 'dependabot/alerts?state=open.*--jq length.*should print 0'` exit 0, matched 'should print 0' on commit 002140239bbb @ 2026-11-02T22:31Z",
-      "verified_commit": "002140239bbb7b01b1d7930062b60a5feb5f5456"
+      "verified_at": 1793659624034,
+      "verified_by": "`awk '/^## Releasing/{r=1;next} r&&/^(## |2\\. )/{exit} r&&/^1\\. /{s=1} s{print}' docs/DEVELOPING.md | tr '\\n' ' ' | grep -o 'dependabot/alerts?state=open.*--jq length.*should print 0'` exit 0, matched 'should print 0' on commit 04252d70bc35 @ 2026-11-02T22:47Z",
+      "verified_commit": "04252d70bc355b6087c03d5113100d0b1df0f352"
     },
     {
       "id": "n_d45d7bf64896",
@@ -108,9 +108,9 @@
       "title": "Entered a crowded category deliberately: differentiate on verification-of-memory, compose with memory infra, never compete on recall",
       "scope": "repo:okl",
       "files": "README.md,docs/",
-      "verified_at": 1793658682907,
-      "verified_by": "`python3 ci/check-positioning.py` exit 0, matched 'POSITIONING OK' on commit 002140239bbb @ 2026-11-02T22:31Z",
-      "verified_commit": "002140239bbb7b01b1d7930062b60a5feb5f5456"
+      "verified_at": 1793659624361,
+      "verified_by": "`python3 ci/check-positioning.py` exit 0, matched 'POSITIONING OK' on commit 04252d70bc35 @ 2026-11-02T22:47Z",
+      "verified_commit": "04252d70bc355b6087c03d5113100d0b1df0f352"
     },
     {
       "id": "n_ead8e0a2b43d",

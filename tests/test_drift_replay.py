@@ -244,6 +244,81 @@ def test_the_stale_lesson_judge_reads_only_a_valid_verdict_and_counts_by_role(mo
     assert (s["negatives_called_stale"], s["positives_called_stale"], s["stale_checkable"]) == (1, 1, 1)
 
 
+def test_the_4ai_review_counts_its_controls_first_and_rates_only_when_they_hold(monkeypatch):
+    """§4ai: the six-way scale parses; a planted fact is caught as detail wrong or stale, a
+    negative is over-called as detail wrong, outlived or stale, an outlived lesson is caught by any
+    of the three; rates are given only when the planted and negative controls hold (REPORT §4ai)."""
+    monkeypatch.setattr(sys, "path", list(sys.path))
+    spec = importlib.util.spec_from_file_location("lesson_census", HERE / "evals" / "lesson_census.py")
+    lc = importlib.util.module_from_spec(spec)
+    monkeypatch.setitem(sys.modules, "lesson_census", lc)
+    spec.loader.exec_module(lc)
+    full = '{"verdict": "detail wrong", "no_longer": "x", "instead": "y"}'
+    assert lc.parse_verdict(full, lc.VERDICTS_4AI)["verdict"] == "detail wrong"
+    assert lc.parse_verdict(full) is None                                   # §4ag's scale has no such verdict
+    # A questioning answer without the words that no longer hold, or what is there instead, is no answer.
+    for bare in ('{"verdict": "detail wrong", "no_longer": "x"}', '{"verdict": "stale", "instead": "y"}',
+                 '{"verdict": "outlived", "no_longer": " ", "instead": "y"}'):
+        assert lc.parse_verdict(bare, lc.VERDICTS_4AI) is None, bare
+    assert lc.parse_verdict('{"verdict": "current"}', lc.VERDICTS_4AI)["verdict"] == "current"
+    assert set(lc.OUTLIVED) == {"harness-reads-a-moving-working-tree", "fastembed-cache-in-tmpdir"}
+
+    def run(planted_caught, over_called, outlived_caught, extra=()):
+        items = ([{"role": "positive", "verdict": "detail wrong"}] * planted_caught
+                 + [{"role": "positive", "verdict": "current"}] * (10 - planted_caught - len(extra))
+                 + list(extra)
+                 + [{"role": "negative", "verdict": "outlived"}] * over_called
+                 + [{"role": "negative", "verdict": "current"}] * (10 - over_called)
+                 + [{"role": "outlived", "verdict": "outlived"}] * outlived_caught
+                 + [{"role": "outlived", "verdict": "current"}] * (2 - outlived_caught)
+                 + [{"role": "population", "verdict": v, "type": "Rule", "scope": "org", "checkable": True}
+                    for v in ("current", "current", "detail wrong", "detail wrong", "detail wrong", "stale",
+                              "no claim")])
+        return lc.summarize_4ai(items)
+
+    held = run(8, 1, 2)
+    assert held["planted_caught"] == {"caught": 8, "of": 10} and held["negatives_over_called"] == {"over": 1, "of": 10}
+    assert held["outlived_caught"] == {"caught": 2, "of": 2}
+    assert all(held["predictions"].values())
+    assert held["rates"]["detail wrong"]["count"] == 3 and held["rates"]["detail wrong"]["decided"] == 6
+    assert held["questioned_checkable"] == 4
+    assert run(7, 0, 2)["rates"] is None                       # planted below 8: counts only
+    assert run(10, 2, 2)["rates"] is None                      # two negatives over-called: counts only
+    missed = run(8, 1, 1)
+    assert missed["predictions"]["3_both_outlived"] is False
+    assert set(missed["rates"]) == {"detail wrong", "stale"}            # it cannot find that kind: no outlived rate
+    # n_f215b68b925c: an outlived verdict catches its plant only when it quotes the planted name.
+    quoted = {"role": "positive", "verdict": "outlived", "planted": {"new": "--slug"}, "no_longer": "pass --slug"}
+    unquoted = {**quoted, "no_longer": "until init keeps the name"}
+    assert run(7, 0, 2, extra=[quoted])["planted_caught"]["caught"] == 8
+    assert run(7, 0, 2, extra=[unquoted])["planted_caught"]["caught"] == 7
+
+
+def test_the_4ai_judge_cannot_see_the_experiments_own_files(monkeypatch, tmp_path):
+    """§4ai, amended before judging: main now holds §4ag's planted file, receipts and REPORT text,
+    which name the plants and §4ag's verdicts; the judge's worktree withholds them and keeps the
+    rest of REPORT."""
+    monkeypatch.setattr(sys, "path", list(sys.path))
+    spec = importlib.util.spec_from_file_location("lesson_census", HERE / "evals" / "lesson_census.py")
+    lc = importlib.util.module_from_spec(spec)
+    monkeypatch.setitem(sys.modules, "lesson_census", lc)
+    spec.loader.exec_module(lc)
+    (tmp_path / "evals" / "results").mkdir(parents=True); (tmp_path / "tests").mkdir()
+    for rel in [*lc.WITHHELD_FILES, "evals/results/stale-lessons-1.json", "evals/results/lesson-census-1.json",
+                "evals/results/ab-1.json", "src.py"]:
+        (tmp_path / rel).write_text("x")
+    (tmp_path / "evals" / "REPORT.md").write_text("## 4af. kept\nA\n## 4ag. planted storage.py\nB\n## 4ah. kept\nC\n")
+
+    gone = lc.withhold(tmp_path)
+
+    assert not any((tmp_path / rel).exists() for rel in lc.WITHHELD_FILES)
+    assert not (tmp_path / "evals/results/stale-lessons-1.json").exists()
+    assert (tmp_path / "evals/results/ab-1.json").exists() and (tmp_path / "src.py").exists()
+    report = (tmp_path / "evals" / "REPORT.md").read_text()
+    assert "storage.py" not in report and "## 4af. kept" in report and "## 4ah. kept" in report
+    assert "evals/REPORT.md §4ag" in gone
+
+
 def test_the_mutation_run_counts_catches_misses_and_ci_by_group(monkeypatch):
     """§4af: a break is caught when drift is red and the check fails; a miss is coverage when
     drift stayed green and sensitivity when it was red; only judged breaks and judged-intact

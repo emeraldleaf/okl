@@ -109,7 +109,10 @@ and re-runs each watched lesson's check where drift was red and on a sample of c
 was green, in a scratch worktree with no store variable set. `--dry-run` counts the events and
 the samples and runs no check. `evals/lesson_census.py` classes each lesson recorded here by what
 re-checks it (REPORT §4ag): drift (governed files and a check), CI (a check alone, #39), or
-nothing. `--run-checks` runs every check left to CI at a commit, the same way.
+nothing. `--run-checks` runs every check left to CI at a commit, the same way. `--judge` has a
+model judge each unchecked lesson against the repo, with planted and known-current controls
+mixed in blind: `--section 4ag` on that section's four-way scale, `--section 4ai` on §4ai's
+six-way one, which also names a wrong detail and an outlived workaround.
 
 ## What working means: the standing measures
 

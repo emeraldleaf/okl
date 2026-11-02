@@ -1,0 +1,1588 @@
+{
+ "what": "lesson census (REPORT \u00a74ag)",
+ "at": "2026-11-02T21:19Z",
+ "code": "26323b81dff0",
+ "rev": "0609d691e23b",
+ "store": {
+  "recorded": 168,
+  "seed": 182
+ },
+ "classes": {
+  "unchecked": 96,
+  "checked": 60,
+  "watched": 12
+ },
+ "unchecked_by_type": {
+  "Claim": 3,
+  "Defect": 47,
+  "Rule": 36,
+  "Decision": 10
+ },
+ "unchecked_by_scope": {
+  "org": 78,
+  "repo:okl": 18
+ },
+ "checks_at_rev": null,
+ "lessons": [
+  {
+   "id": "n_0aefd5072428",
+   "class": "unchecked",
+   "type": "Claim",
+   "scope": "org",
+   "sha": "11377f89efe68ff7",
+   "check": null
+  },
+  {
+   "id": "n_1f2e2c211974",
+   "class": "checked",
+   "type": "Claim",
+   "scope": "org",
+   "sha": "b6c42f0265dca577",
+   "check": [
+    "python3 -m pytest -q -k duplicate_scoring",
+    "1 passed"
+   ]
+  },
+  {
+   "id": "n_0adfbf18d9f7",
+   "class": "unchecked",
+   "type": "Claim",
+   "scope": "org",
+   "sha": "8fe8a0d443092e8a",
+   "check": null
+  },
+  {
+   "id": "n_f17868ded85d",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "776e8702008a5a24",
+   "check": null
+  },
+  {
+   "id": "n_b1e148e008d8",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "c22bf8005194df7b",
+   "check": null
+  },
+  {
+   "id": "n_310e54bb09d5",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "a9060fb1e44e593c",
+   "check": null
+  },
+  {
+   "id": "break-test-masked-by-integrity-check",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "f3c88c048c80a359",
+   "check": null
+  },
+  {
+   "id": "ca-distrust-every-trust-store",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "a2568e24c6d58dd7",
+   "check": null
+  },
+  {
+   "id": "comparison-table-one-sitting-generated",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "dbc4f128a2c61103",
+   "check": null
+  },
+  {
+   "id": "diagnostic-on-stage-window",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "fb4dee3d9f7c67a8",
+   "check": null
+  },
+  {
+   "id": "doc-claim-governs-doc-and-code",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "872cb0186b45597d",
+   "check": null
+  },
+  {
+   "id": "drift-verdict-paths-agree",
+   "class": "checked",
+   "type": "Rule",
+   "scope": "repo:okl",
+   "sha": "c2764305533e9481",
+   "check": [
+    "python3 -m pytest -q -p no:cacheprovider -k test_drift_refuses_a_stamp_with_no_observed_check",
+    "1 passed"
+   ]
+  },
+  {
+   "id": "empty-drift-snapshot-fails-ci",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "repo:okl",
+   "sha": "c5edd5442fc94f90",
+   "check": [
+    "bash -c 'd=$(mktemp -d) && cd $d && git init -q && env -u OKL_DATABASE_URL python3 -m okl init --repo z --no-claude >/dev/null 2>&1 && env -u OKL_DATABASE_URL python3 -m okl export --drift >/dev/null 2>&1 && git add -A && git -c user.email=t@e -c user.name=t commit -qm i && env -u OKL_DATABASE_URL python3 -m okl drift --gate --snapshot okl-drift.json >/dev/null 2>&1; rc=$?; rm -rf $d; [ $rc -eq 2 ] && echo EMPTY SNAPSHOT EXITS 2'",
+    "EMPTY SNAPSHOT EXITS 2"
+   ]
+  },
+  {
+   "id": "eval-scripts-no-exposure",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "repo:okl",
+   "sha": "43abe3c31d6c570e",
+   "check": null
+  },
+  {
+   "id": "falsifier-relative-to-control",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "a29ff971d4d28b2d",
+   "check": null
+  },
+  {
+   "id": "fastembed-cache-in-tmpdir",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "25b95c9c0c92bb63",
+   "check": null
+  },
+  {
+   "id": "filter-after-fetch-widens-window",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "cb9669ce06199503",
+   "check": [
+    "env -u OKL_DATABASE_URL python3 -m pytest -q tests/test_retire.py -k do_not_use_up_the_search_window",
+    "1 passed"
+   ]
+  },
+  {
+   "id": "fused-window-readmits-weak-matches",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "c5810fae8966c341",
+   "check": null
+  },
+  {
+   "id": "generated-diagram-traced-old-path",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "494b2518c7555526",
+   "check": null
+  },
+  {
+   "id": "guarantee-holds-on-every-write-path",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "4ceee2eb50b65c2b",
+   "check": null
+  },
+  {
+   "id": "harness-reads-a-moving-working-tree",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "repo:okl",
+   "sha": "2e2f9c6554537955",
+   "check": null
+  },
+  {
+   "id": "heredoc-ends-the-chain",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "184eb038ec8a9b54",
+   "check": null
+  },
+  {
+   "id": "hook-cli-version-skew",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "7b16ad95fae1411d",
+   "check": null
+  },
+  {
+   "id": "idea-to-issue-through-review",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "cddba59fad2d2943",
+   "check": null
+  },
+  {
+   "id": "importer-keeps-local-decision",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "04902d0b92b753c5",
+   "check": [
+    "env -u OKL_DATABASE_URL python3 -m pytest -q tests/test_retire.py -k reseeding_keeps_a_retirement_when_the_pack_sets_a_status",
+    "1 passed"
+   ]
+  },
+  {
+   "id": "index-in-context-not-fetched",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "88ec6bcf3075a6fe",
+   "check": null
+  },
+  {
+   "id": "mcp-docker-localhost",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "e049781ff57de8e2",
+   "check": null
+  },
+  {
+   "id": "mcp-registry-publish-limits",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "178f19df43c92d04",
+   "check": null
+  },
+  {
+   "id": "mcp-registry-pypi-command-name",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "2fecd91b45df45a8",
+   "check": [
+    "pytest -q tests/test_scaffold.py::test_registry_entry_starts_the_server_it_lists",
+    "1 passed"
+   ]
+  },
+  {
+   "id": "merge-needs-resolved-threads",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "repo:okl",
+   "sha": "83102220436e8a62",
+   "check": null
+  },
+  {
+   "id": "n_00985805cdbb",
+   "class": "checked",
+   "type": "Rule",
+   "scope": "repo:okl",
+   "sha": "b0805e933e6c7764",
+   "check": [
+    "python3 -m pytest -q -k 'token_out_of_git or safety_property'",
+    "1 passed"
+   ]
+  },
+  {
+   "id": "n_02aa43137a2e",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "c9deea1efcdf9241",
+   "check": null
+  },
+  {
+   "id": "n_02cc84da158d",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "2b9ad9e7a9c37da0",
+   "check": [
+    "python3 -m pytest -q -k 'naming_a_store_by_env_var or client_resolves_the_shared_layer'",
+    "passed"
+   ]
+  },
+  {
+   "id": "n_041a066035b2",
+   "class": "checked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "7fbb3da9badd800a",
+   "check": [
+    "python3 -m pytest -q -k 'applies_to or off_stack'",
+    "passed"
+   ]
+  },
+  {
+   "id": "n_0637c92c032f",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "411f6d3a7de34007",
+   "check": null
+  },
+  {
+   "id": "n_09ba6adf0fdc",
+   "class": "unchecked",
+   "type": "Decision",
+   "scope": "org",
+   "sha": "8b1d6c3b47632eba",
+   "check": null
+  },
+  {
+   "id": "n_0e6928348b1d",
+   "class": "checked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "6b13b50fdb68a753",
+   "check": [
+    "python3 -m pytest -q -k 'self_declared_proposal or dedup_never'",
+    "2 passed"
+   ]
+  },
+  {
+   "id": "n_110bb4fb7112",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "35af05977a5b7994",
+   "check": [
+    "python3 -m pytest -q -k 'mirror_files_identical'",
+    "passed"
+   ]
+  },
+  {
+   "id": "n_119528a07fa5",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "495845f56fc82fb6",
+   "check": [
+    "python3 -m pytest -q -k 'off_series_instrument'",
+    "passed"
+   ]
+  },
+  {
+   "id": "n_132265e9a9b5",
+   "class": "unchecked",
+   "type": "Decision",
+   "scope": "repo:okl",
+   "sha": "87d15b10cbd54691",
+   "check": null
+  },
+  {
+   "id": "n_1b3190127af3",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "763c7a00acba816b",
+   "check": null
+  },
+  {
+   "id": "n_1eaf9a5f24e2",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "f5b7071fd9b7b448",
+   "check": null
+  },
+  {
+   "id": "n_1fe5ef1aaca5",
+   "class": "checked",
+   "type": "Rule",
+   "scope": "repo:okl",
+   "sha": "05f869c14797e75c",
+   "check": [
+    "python3 -m pytest -q -k 'mirror_files_identical'",
+    "passed"
+   ]
+  },
+  {
+   "id": "n_221da2fec863",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "7e808dbb7eae3767",
+   "check": null
+  },
+  {
+   "id": "n_22ad98216e87",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "fb6da0121825b60d",
+   "check": [
+    "python3 -m pytest -q -k 'seed_node_without_repo_stays_unattributed'",
+    "passed"
+   ]
+  },
+  {
+   "id": "n_2c95128f307d",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "37ff8843904c1c5a",
+   "check": null
+  },
+  {
+   "id": "n_31bde92d9003",
+   "class": "checked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "d47d15c61cde1aa2",
+   "check": [
+    "python3 -m pytest -q -k 'verify_stamps_only_from_evidence or cmd_verify_runs_the_check_first'",
+    "passed"
+   ]
+  },
+  {
+   "id": "n_37ea04a8a0ac",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "d61aad4ed7cbc1e3",
+   "check": null
+  },
+  {
+   "id": "n_3dac3a1d8fba",
+   "class": "checked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "7b1d461653bfedc0",
+   "check": [
+    "python3 -m pytest -q -k 'tags_are_searchable'",
+    "passed"
+   ]
+  },
+  {
+   "id": "n_428707b5e596",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "aec3944c474d54cf",
+   "check": [
+    "python3 -m pytest -q -k 'scaffold_stamps_both_hooks'",
+    "passed"
+   ]
+  },
+  {
+   "id": "n_473aec369b25",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "18c6fc5a867a6ac1",
+   "check": [
+    "python3 -m pytest -q -k 'off_series_instrument'",
+    "passed"
+   ]
+  },
+  {
+   "id": "n_48fd7d3e6c65",
+   "class": "unchecked",
+   "type": "Decision",
+   "scope": "repo:okl",
+   "sha": "37c4f35ce8c96a83",
+   "check": null
+  },
+  {
+   "id": "n_4a398f2f8095",
+   "class": "checked",
+   "type": "Rule",
+   "scope": "repo:okl",
+   "sha": "a020652f9a8481fb",
+   "check": [
+    "python3 -m pytest -q -p no:cacheprovider tests/test_okl.py -k standard_library_at_module_level",
+    "1 passed"
+   ]
+  },
+  {
+   "id": "n_50f0ddf7ea19",
+   "class": "unchecked",
+   "type": "Decision",
+   "scope": "repo:okl",
+   "sha": "86d0f34142bbdc98",
+   "check": null
+  },
+  {
+   "id": "n_57cc4b427f05",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "9045ee235f28bc97",
+   "check": null
+  },
+  {
+   "id": "n_58119d0a63d9",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "412a6a84d48056bb",
+   "check": null
+  },
+  {
+   "id": "n_5a9589af345f",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "53200e6dfed5181c",
+   "check": [
+    "python3 -m pytest -q -k 'cli_check_fails_closed_when_the_service_refuses_it'",
+    "passed"
+   ]
+  },
+  {
+   "id": "n_5db37b759b1e",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "8125769b7fd7b1e8",
+   "check": [
+    "python3 -m pytest -q -k 'client_resolves_the_shared_layer_from_the_environment'",
+    "passed"
+   ]
+  },
+  {
+   "id": "n_5ddb0776a863",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "f69d0cdf081f1bf3",
+   "check": [
+    "python3 -m pytest -q -k 'never_reports_clean or drift_step_warns'",
+    "passed"
+   ]
+  },
+  {
+   "id": "n_5f36600f6c51",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "33b573d3b95e68b6",
+   "check": null
+  },
+  {
+   "id": "n_69244bb71160",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "18d0bc08147c6412",
+   "check": [
+    "python3 -m pytest -q -k 'token_also_takes_down_the_openapi_spec'",
+    "passed"
+   ]
+  },
+  {
+   "id": "n_696a70084e1a",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "1c4db2e8c0b73e25",
+   "check": [
+    "python3 -m pytest -q -k drift_snapshot_gives_ci_a_store",
+    "passed"
+   ]
+  },
+  {
+   "id": "n_69f673496137",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "b6f42cf047795260",
+   "check": null
+  },
+  {
+   "id": "n_6b65aa35593c",
+   "class": "checked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "067d64444dc64346",
+   "check": [
+    "python3 -m pytest -q -k 'pipeline_diagram_is_current'",
+    "passed"
+   ]
+  },
+  {
+   "id": "n_710e8dc6b757",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "repo:okl",
+   "sha": "498a486a92a04b33",
+   "check": null
+  },
+  {
+   "id": "n_713b8c104f12",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "0694cb7f7cb20309",
+   "check": [
+    "python3 -m pytest -q -k 'search_scope_refuses'",
+    "passed"
+   ]
+  },
+  {
+   "id": "n_7e292a18d45d",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "bea3107738f71f8c",
+   "check": null
+  },
+  {
+   "id": "n_805cf67e5cc5",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "2c007f0ef290adb7",
+   "check": [
+    "pytest -q tests/test_okl.py::test_drift_compares_the_commit_a_check_passed_at_not_the_clock",
+    "1 passed"
+   ]
+  },
+  {
+   "id": "n_849a5b0425ef",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "d0a89d8724be33b5",
+   "check": [
+    "python3 -m pytest -q -k 'applies_to or off_stack'",
+    "passed"
+   ]
+  },
+  {
+   "id": "n_8519bf0f71c6",
+   "class": "checked",
+   "type": "Gate",
+   "scope": "org",
+   "sha": "eb1bc21bd197da25",
+   "check": [
+    "python3 -m pytest -q -k 'encode_hook_loop_guard or stamps_both_hooks'",
+    "passed"
+   ]
+  },
+  {
+   "id": "n_8a6e1abce5cc",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "444ac582f85d0c81",
+   "check": [
+    "python3 -m pytest -q -k 'off_series_instrument'",
+    "passed"
+   ]
+  },
+  {
+   "id": "n_8b3345b90621",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "33216b24ef900920",
+   "check": null
+  },
+  {
+   "id": "n_90066f354f1e",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "c00d521b1bf035cd",
+   "check": null
+  },
+  {
+   "id": "n_916330f61994",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "81df35e66a89a1a2",
+   "check": null
+  },
+  {
+   "id": "n_92398fae87c0",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "5ae9c3957e3b8f1f",
+   "check": null
+  },
+  {
+   "id": "n_93f96eae7359",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "0ba6915a2d666cc5",
+   "check": [
+    "python3 -m pytest -q -k 'symptom_and_fix_are_searchable or index_built_before_symptom'",
+    "passed"
+   ]
+  },
+  {
+   "id": "n_9464023070dd",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "ec7d943f7453fcda",
+   "check": null
+  },
+  {
+   "id": "n_967ef9825472",
+   "class": "checked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "b88f6e23aa29d465",
+   "check": [
+    "python3 -m pytest -q -k 'no_clobber or dry_run_writes_nothing or seed_is_idempotent'",
+    "passed"
+   ]
+  },
+  {
+   "id": "n_991d07b0549e",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "76b83701abf6fe36",
+   "check": [
+    "python3 -m pytest -q -k 'asgi_entrypoint_resolves'",
+    "passed"
+   ]
+  },
+  {
+   "id": "n_a4b40c96ede4",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "d833bb086e0aaeb0",
+   "check": null
+  },
+  {
+   "id": "n_a5520510b99c",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "8ac2784816ebfc7f",
+   "check": null
+  },
+  {
+   "id": "n_a7634ef53a8f",
+   "class": "unchecked",
+   "type": "Decision",
+   "scope": "org",
+   "sha": "64dc2d519a952bb5",
+   "check": null
+  },
+  {
+   "id": "n_adea7f2c7373",
+   "class": "checked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "f99a20df3a5f753e",
+   "check": [
+    "python3 -m pytest -q -k 'stored_data_never_reaches_a_shell'",
+    "passed"
+   ]
+  },
+  {
+   "id": "n_b0457b37c65a",
+   "class": "checked",
+   "type": "Decision",
+   "scope": "org",
+   "sha": "e8e39b4140191dd4",
+   "check": [
+    "python3 -m pytest -q -k 'declare_its_own_tags'",
+    "passed"
+   ]
+  },
+  {
+   "id": "n_b4050b826687",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "19efdf02bc5a5012",
+   "check": [
+    "./ci/check-diagram-figures.sh",
+    "DIAGRAM_FIGURES_RECEIPTED"
+   ]
+  },
+  {
+   "id": "n_b40a468119f6",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "72a6ada71f532765",
+   "check": [
+    "python3 -m pytest -q -k 'pack_fits_only or empty_store_guidance'",
+    "passed"
+   ]
+  },
+  {
+   "id": "n_b550ba9c5c8a",
+   "class": "checked",
+   "type": "Rule",
+   "scope": "repo:okl",
+   "sha": "1e0b20507e48783c",
+   "check": [
+    "./ci/check-diagram-figures.sh",
+    "DIAGRAM_FIGURES_RECEIPTED"
+   ]
+  },
+  {
+   "id": "n_b578addf6269",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "bd0b6ab17c208066",
+   "check": null
+  },
+  {
+   "id": "n_b6cc6890ba26",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "48f68f6021bfdf18",
+   "check": [
+    "python3 -m pytest -q -k 'review_agent_soft_passes'",
+    "passed"
+   ]
+  },
+  {
+   "id": "n_b83c550a0ca4",
+   "class": "unchecked",
+   "type": "Decision",
+   "scope": "repo:okl",
+   "sha": "ac04e22794367971",
+   "check": null
+  },
+  {
+   "id": "n_c95bdc056620",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "3540d5af22b4dde6",
+   "check": [
+    "python3 -m pytest -q -k 'shipped_workflows_are_hardened'",
+    "passed"
+   ]
+  },
+  {
+   "id": "n_ce6a27cc432f",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "61e97a6494ebec57",
+   "check": [
+    "python3 -m pytest -q -p no:cacheprovider tests/test_okl.py -k no_store_named",
+    "1 passed"
+   ]
+  },
+  {
+   "id": "n_d8166465591e",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "259237e9639c8abb",
+   "check": null
+  },
+  {
+   "id": "n_d8e5ee92ad8f",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "b379370274353a8a",
+   "check": [
+    "python3 -m pytest -q -k 'encode_hook_loop_guard or encode_hook_resolver'",
+    "passed"
+   ]
+  },
+  {
+   "id": "n_dc7429065f5d",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "repo:okl",
+   "sha": "08c617cca38699b1",
+   "check": [
+    "python3 -m pytest tests/test_okl.py -q -k 'actions_format or empty_store'",
+    "passed"
+   ]
+  },
+  {
+   "id": "n_e49be14d6207",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "5f5925b015103f63",
+   "check": null
+  },
+  {
+   "id": "n_e7988ff536fb",
+   "class": "checked",
+   "type": "Rule",
+   "scope": "repo:okl",
+   "sha": "041dd5b924fa5d8f",
+   "check": [
+    "python3 -m pytest -q -k 'fails_closed or empty_store_is_never_reported or search_scope_refuses or never_reports_clean'",
+    "passed"
+   ]
+  },
+  {
+   "id": "n_e8b039f47ee1",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "02ad4c2cc5500754",
+   "check": null
+  },
+  {
+   "id": "n_e99ea322dee5",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "6404ba2ddc660572",
+   "check": null
+  },
+  {
+   "id": "n_ea7633cd748c",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "bc1479e9cae9d1d9",
+   "check": null
+  },
+  {
+   "id": "n_ec568941f68a",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "e75c84e47f8bcf0c",
+   "check": [
+    "python3 -m pytest -q -k 'naming_a_store_by_env_var'",
+    "passed"
+   ]
+  },
+  {
+   "id": "n_ed7e782d12fd",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "520e1ab383db5f18",
+   "check": [
+    "python3 -m pytest -q -k 'service_token_gates_reads_as_well_as_writes'",
+    "passed"
+   ]
+  },
+  {
+   "id": "n_f215b68b925c",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "repo:okl",
+   "sha": "88578e8a197f4301",
+   "check": [
+    "python3 -m pytest -q -p no:cacheprovider -k init_rerun_keeps_the_configured_repo_name",
+    "1 passed"
+   ]
+  },
+  {
+   "id": "n_f6d01e368155",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "4079b1e67f5a7ddf",
+   "check": [
+    "python3 -m pytest -q -p no:cacheprovider tests/test_scaffold.py -k detects_okls_checkout",
+    "1 passed"
+   ]
+  },
+  {
+   "id": "n_fe26d1897041",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "c8751051fdf39407",
+   "check": [
+    "python3 -m pytest -q -k 'off_series_instrument'",
+    "passed"
+   ]
+  },
+  {
+   "id": "n_fe4ced54e60f",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "repo:okl",
+   "sha": "67659041f5b74f88",
+   "check": null
+  },
+  {
+   "id": "novelty-claims-expire",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "52e3b43aff26edcc",
+   "check": null
+  },
+  {
+   "id": "one-verb-owns-a-transition",
+   "class": "checked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "de3841e8a409bfd1",
+   "check": [
+    "env -u OKL_DATABASE_URL python3 -m pytest -q tests/test_retire.py -k update_and_record_cannot_set_or_clear_a_retirement",
+    "1 passed"
+   ]
+  },
+  {
+   "id": "optional-feature-shipped-text",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "de7d95642aa0e9e6",
+   "check": null
+  },
+  {
+   "id": "order-from-log-not-edges",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "c0ad9bd25532b70c",
+   "check": [
+    "env -u OKL_DATABASE_URL python3 -m pytest -q tests/test_retire.py -k latest_replacement_through_a_chain",
+    "1 passed"
+   ]
+  },
+  {
+   "id": "piped-python-output-reorders",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "3f27872010b640c8",
+   "check": null
+  },
+  {
+   "id": "pipeline-hides-test-status",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "99a496b23a193377",
+   "check": null
+  },
+  {
+   "id": "pooled-receipts-miss-report-corrections",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "7c2621d1dd1a0d19",
+   "check": null
+  },
+  {
+   "id": "pretooluse-additionalcontext",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "ef9df096341787c7",
+   "check": null
+  },
+  {
+   "id": "readonly-agents-side-effects",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "07c39936466aa2e8",
+   "check": null
+  },
+  {
+   "id": "refusal-offers-no-destructive-shortcut",
+   "class": "checked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "4eac048905653a77",
+   "check": [
+    "env -u OKL_DATABASE_URL python3 -m pytest -q tests/test_addressable_lessons.py -k points_only_to_update",
+    "passed"
+   ]
+  },
+  {
+   "id": "remote-path-test-through-client",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "e5039dea79a3805e",
+   "check": [
+    "env -u OKL_DATABASE_URL python3 -m pytest -q tests/test_addressable_lessons.py -k 'over_a_service or too_old'",
+    "passed"
+   ]
+  },
+  {
+   "id": "remote-timeout-not-a-deadline",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "b5dc0c86a53f24eb",
+   "check": [
+    "env -u OKL_DATABASE_URL python3 -m pytest -q tests/test_remote_failures.py",
+    "passed"
+   ]
+  },
+  {
+   "id": "rerank-ships-off",
+   "class": "unchecked",
+   "type": "Decision",
+   "scope": "repo:okl",
+   "sha": "debc409fa1795f68",
+   "check": null
+  },
+  {
+   "id": "research-cited-products-not-named",
+   "class": "unchecked",
+   "type": "Decision",
+   "scope": "repo:okl",
+   "sha": "fac403b8a6d76949",
+   "check": null
+  },
+  {
+   "id": "review-bot-watch-matches-wrong-comment",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "717144abe93538e9",
+   "check": null
+  },
+  {
+   "id": "scope-literature-gap-claims",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "4444ab99df54b04c",
+   "check": null
+  },
+  {
+   "id": "stacked-pr-retarget-runs-no-ci",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "857991fc4f0b39ac",
+   "check": null
+  },
+  {
+   "id": "synthesis-copies-original-proposals",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "2df6eab95d78c5b6",
+   "check": null
+  },
+  {
+   "id": "tall-sheet-screenshot-tiles",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "d97cafd6987ccc9e",
+   "check": null
+  },
+  {
+   "id": "typed-closed-request-models",
+   "class": "checked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "794caaeb68954130",
+   "check": [
+    "env -u OKL_DATABASE_URL python3 -m pytest -q tests/test_addressable_lessons.py -k wrong_type",
+    "passed"
+   ]
+  },
+  {
+   "id": "unclosed-sqlite-in-test-pr154",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "repo:okl",
+   "sha": "8963f1949a44e075",
+   "check": null
+  },
+  {
+   "id": "watch-what-the-rule-depends-on",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "38253541aef4de25",
+   "check": null
+  },
+  {
+   "id": "worktree-no-store-reverify",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "repo:okl",
+   "sha": "57a21b7210cbc4bd",
+   "check": null
+  },
+  {
+   "id": "onnx-memory-after-first-inference",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "7cbe188703ea24b5",
+   "check": null
+  },
+  {
+   "id": "model-server-warm-up-before-serving",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "1c700ae1e6b9bfcc",
+   "check": null
+  },
+  {
+   "id": "dev-code-migrates-live-store",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "repo:okl",
+   "sha": "4198cbf449a14314",
+   "check": null
+  },
+  {
+   "id": "commit-wip-in-tmp-worktrees",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "bdb2b909725e5abe",
+   "check": null
+  },
+  {
+   "id": "gh-pr-needs-repo-in-scripts",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "b7c324b399d7bdfa",
+   "check": null
+  },
+  {
+   "id": "n_9ba48d85ed19",
+   "class": "watched",
+   "type": "Gate",
+   "scope": "org",
+   "sha": "343d3e5aab8c38e0",
+   "check": [
+    "python3 evals/preflight.py",
+    "PRE-FLIGHT OK"
+   ]
+  },
+  {
+   "id": "n_aa3e45a2ecd6",
+   "class": "watched",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "804c7f48c84f3d2d",
+   "check": [
+    "python3 evals/preflight.py && python3 -m pytest -q tests/test_ab_harness.py",
+    "passed"
+   ]
+  },
+  {
+   "id": "n_9a8b5215da32",
+   "class": "unchecked",
+   "type": "Claim",
+   "scope": "org",
+   "sha": "8e4284937f034e64",
+   "check": null
+  },
+  {
+   "id": "threshold-transfer-is-a-hypothesis",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "5508ea099cceb2af",
+   "check": null
+  },
+  {
+   "id": "git-path-history-drops-merges",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "7a17f97451a23251",
+   "check": null
+  },
+  {
+   "id": "snapshot-from-worktree-drops-repo-rules",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "repo:okl",
+   "sha": "d6aa41d03828b71a",
+   "check": null
+  },
+  {
+   "id": "briefing-hides-unproven-lessons",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "repo:okl",
+   "sha": "4e0f3e47c4e95544",
+   "check": null
+  },
+  {
+   "id": "measure-the-population-not-the-slice",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "ddcb20f273719250",
+   "check": null
+  },
+  {
+   "id": "verification-scope-is-the-thesis",
+   "class": "unchecked",
+   "type": "Decision",
+   "scope": "repo:okl",
+   "sha": "c108b13f2170cea8",
+   "check": null
+  },
+  {
+   "id": "fix-the-class-not-the-instance",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "84528d1deb92d8f7",
+   "check": null
+  },
+  {
+   "id": "thesis-maintain-anything",
+   "class": "unchecked",
+   "type": "Decision",
+   "scope": "repo:okl",
+   "sha": "22faffc2e58c792e",
+   "check": null
+  },
+  {
+   "id": "review-budget-one-push-per-round",
+   "class": "unchecked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "c0f89c8c736ec484",
+   "check": null
+  },
+  {
+   "id": "n_ee5a49712ff3",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "f833fac70a19122f",
+   "check": null
+  },
+  {
+   "id": "n_ead8e0a2b43d",
+   "class": "watched",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "d4def3ac03a4949f",
+   "check": [
+    "gh api repos/emeraldleaf/okl --jq 'if .allow_squash_merge or .allow_rebase_merge then error(\"squash or rebase enabled\") else \"MERGE COMMITS ONLY\" end'",
+    "MERGE COMMITS ONLY"
+   ]
+  },
+  {
+   "id": "n_4c203faa7014",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "b07dd34dadba9560",
+   "check": null
+  },
+  {
+   "id": "n_71c09abf3f37",
+   "class": "checked",
+   "type": "Rule",
+   "scope": "repo:okl",
+   "sha": "c79c2368b497aa26",
+   "check": [
+    "lint-imports",
+    "1 kept, 0 broken"
+   ]
+  },
+  {
+   "id": "n_b74bad29fd87",
+   "class": "checked",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "c1df721130fdcdaf",
+   "check": [
+    "python3 -m pytest -q -k 'backend_conformance'",
+    "passed"
+   ]
+  },
+  {
+   "id": "n_be9f13d587b1",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "7bc1b3d86e95422b",
+   "check": [
+    "python3 -m pytest -q -k 'postgres_search_is_ranked_fulltext or backend_conformance or tsvector_covers_tags'",
+    "passed"
+   ]
+  },
+  {
+   "id": "n_e635fd921086",
+   "class": "checked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "be95ae18eeac9ad0",
+   "check": [
+    "python3 -m pytest -q -p no:cacheprovider tests/test_scaffold.py -k old_distribution_name",
+    "1 passed"
+   ]
+  },
+  {
+   "id": "n_0b43d18cdb1d",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "d7f92b63fe785c38",
+   "check": null
+  },
+  {
+   "id": "n_85b9d0a7823d",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "014c43e6a036b64f",
+   "check": null
+  },
+  {
+   "id": "n_07faa4565128",
+   "class": "watched",
+   "type": "Rule",
+   "scope": "org",
+   "sha": "863611416c9d3327",
+   "check": [
+    "python3 ci/check-portable-ungated.py",
+    "PORTABLE RECORDS UNGATED"
+   ]
+  },
+  {
+   "id": "probe-revert-with-checkout-loses-work",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "7f8a762a0a6169d3",
+   "check": null
+  },
+  {
+   "id": "ci-rerun-reuses-event-payload",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "55f17fdfb326dc58",
+   "check": null
+  },
+  {
+   "id": "editable-install-follows-last-pip-e",
+   "class": "unchecked",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "7cde2b14f77a8043",
+   "check": null
+  },
+  {
+   "id": "owned-file-features-check-the-kept-copy",
+   "class": "checked",
+   "type": "Rule",
+   "scope": "repo:okl",
+   "sha": "e5df281bdbdd6ab4",
+   "check": [
+    "python3 -m pytest -q -p no:cacheprovider tests/test_scaffold.py -k does_not_read_it",
+    "2 passed"
+   ]
+  },
+  {
+   "id": "doc-check-defaults",
+   "class": "watched",
+   "type": "Rule",
+   "scope": "repo:okl",
+   "sha": "1e3c17276215bcf3",
+   "check": [
+    "python3 ci/check-check-defaults.py",
+    "CHECK DEFAULTS MATCH"
+   ]
+  },
+  {
+   "id": "doc-verified-refused",
+   "class": "watched",
+   "type": "Rule",
+   "scope": "repo:okl",
+   "sha": "702e2eb63f9d7984",
+   "check": [
+    "R=$PWD; d=$(mktemp -d) && cd $d && git init -q && env -u OKL_DATABASE_URL -u OKL_SERVICE_URL PYTHONPATH=$R/src python3 -m okl init --repo z --no-claude >/dev/null 2>&1; env -u OKL_DATABASE_URL -u OKL_SERVICE_URL PYTHONPATH=$R/src python3 -m okl record --type Rule --scope repo --title x --verified >/dev/null 2>&1; rc=$?; cd $R; rm -rf $d; [ $rc -eq 2 ] && python3 -c \"import sys; t=lambda f: \\\" \\\".join(open(f).read().split()); sys.exit(0 if \\\"exits 2\\\" in t(\\\"README.md\\\") and \\\"okl record --verified\\` is refused\\\" in t(\\\"docs/GETTING-STARTED.md\\\") else 1)\" && echo VERIFIED FLAG REFUSED",
+    "VERIFIED FLAG REFUSED"
+   ]
+  },
+  {
+   "id": "doc-install-name",
+   "class": "watched",
+   "type": "Rule",
+   "scope": "repo:okl",
+   "sha": "09c3884e565d07a6",
+   "check": [
+    "python3 -c \"import tomllib,sys; n=tomllib.load(open(\\\"pyproject.toml\\\",\\\"rb\\\"))[\\\"project\\\"][\\\"name\\\"]; line=\\\"pipx install '\\\"+n+\\\"[mcp]'\\\"; bad=[f for f in (\\\"README.md\\\",\\\"docs/GETTING-STARTED.md\\\") if line not in open(f).read()]; sys.exit(\\\"install line missing in %s\\\" % bad) if bad else print(\\\"INSTALL LINE MATCHES\\\", n)\"",
+    "INSTALL LINE MATCHES"
+   ]
+  },
+  {
+   "id": "n_7e50e3588bcd",
+   "class": "watched",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "5b624338705f2065",
+   "check": [
+    "python3 ci/check-test-imports.py",
+    "NO UNDECLARED IMPORT"
+   ]
+  },
+  {
+   "id": "doc-init-flags",
+   "class": "watched",
+   "type": "Rule",
+   "scope": "repo:okl",
+   "sha": "90d976cf425eddf7",
+   "check": [
+    "PYTHONPATH=src python3 ci/check-init-flags.py",
+    "INIT FLAGS EXIST"
+   ]
+  },
+  {
+   "id": "n_bf6a2aee2f12",
+   "class": "watched",
+   "type": "Defect",
+   "scope": "org",
+   "sha": "85c130f5b3cd8499",
+   "check": [
+    "awk '/^## Releasing/{r=1;next} r&&/^(## |2\\. )/{exit} r&&/^1\\. /{s=1} s{print}' docs/DEVELOPING.md | tr '\\n' ' ' | grep -o 'dependabot/alerts?state=open.*--jq length.*should print 0'",
+    "should print 0"
+   ]
+  },
+  {
+   "id": "docs-agent-neutral",
+   "class": "watched",
+   "type": "Decision",
+   "scope": "repo:okl",
+   "sha": "d352c4d2eb9a2507",
+   "check": [
+    "python3 ci/check-agent-neutral.py",
+    "AGENT NEUTRAL"
+   ]
+  },
+  {
+   "id": "n_d45d7bf64896",
+   "class": "watched",
+   "type": "Decision",
+   "scope": "repo:okl",
+   "sha": "d8a7ffcaf5d4f12d",
+   "check": [
+    "python3 ci/check-positioning.py",
+    "POSITIONING OK"
+   ]
+  }
+ ]
+}

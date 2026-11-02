@@ -488,6 +488,8 @@ def _thesis_figures() -> dict[str, str]:
 
     census = load("lesson-census-20261031-1409.json")
     c, n = census["classes"], census["store"]["recorded"]
+    latest = load("lesson-census-20261102-2119.json")
+    c2, n2 = latest["classes"], latest["store"]["recorded"]
     ep = load("drift-replay-20261101-0143.json")["summary"]["event_precision"]
     first, rerun = load("drift-mutate-20261031-1522.json"), load("drift-mutate-20261101-1935.json")
     m1, m2 = first["summary"], rerun["summary"]
@@ -496,6 +498,11 @@ def _thesis_figures() -> dict[str, str]:
     nine = [first["summary"]["per_lesson"][lesson] for lesson in rerun["lessons"]]
     no_verdict = sum(v for key, v in m2["judge"].items() if key.endswith(":invalid"))
     stale = load("stale-lessons-20261031-1527.json")["summary"]["stale_rate"]
+    review = load("stale-review-20261102-2133.json")["summary"]
+    verdicts, wrong = review["verdicts"], review["rates"]["detail wrong"]
+    questioned = sum(verdicts[v] for v in ("detail wrong", "outlived", "stale"))
+    wlo, whi = wrong["wilson95"]
+    planted, over = review["planted_caught"], review["negatives_over_called"]
     marks = re.search(r"briefed prompts (\d+): (\d+) of the (\d+) lessons the mark could reach are marked "
                       r"unchecked \((\d+) briefed in all\); the marks add (\d+) characters to (\d+) \(([\d.]+)%\)",
                       (results / "briefing-marks-size-20261101-1110.txt").read_text())
@@ -504,14 +511,15 @@ def _thesis_figures() -> dict[str, str]:
     return {
         f"{round(100 * bh / bn)}% → {round(100 * rh / rn)}% defects reproduced on {_WORDS[8]} bait tasks, "
         f"pooled over {_WORDS[len(POOLED_RECEIPTS)]} A/B runs": "the pooled A/B receipts (§5 finding 7)",
-        f"{c['watched']} of the {n} lessons recorded here were watched at the census below, "
+        f"{c['watched']} of the {n} lessons recorded here were watched at the 2026-10-31 census below, "
         f"{len(rerun['lessons']) + len(rerun['left_out'])} after #318 moved "
         f"{_WORDS[c['watched'] - len(rerun['lessons']) - len(rerun['left_out'])]}": "the census and §4ah",
         f"of {m1['breaking_patches']} patches written to break those lessons, a judge confirmed {m1['breaks']} "
         f"as breaks, and drift caught {k1['caught']} of them": "drift-mutate-20261031-1522.json",
         f"it caught {k2['caught']} of {k2['breaks']} on the {_WORDS[len(rerun['lessons'])]} whose check runs "
         "from the commit": "drift-mutate-20261101-1935.json",
-        f"{c['watched'] + c['checked']} of {n} lessons have a check": "lesson-census-20261031-1409.json",
+        f"{c2['watched'] + c2['checked']} of {n2} lessons have a check": "lesson-census-20261102-2119.json",
+        f"{c2['watched']} / {c2['checked']} / {c2['unchecked']} of {n2}": "lesson-census-20261102-2119.json",
         f"{c['watched']} / {c['checked']} / {c['unchecked']} of {n}; all {census['checks_at_rev']['pass']} "
         f"CI-left checks pass at {census['rev'][:7]}": "lesson-census-20261031-1409.json",
         f"{ep['needed']} of {ep['decided']:,} events ({ep['rate']:.2%})": "drift-replay-20261101-0143.json",
@@ -525,6 +533,11 @@ def _thesis_figures() -> dict[str, str]:
         f"20% that allows a rate; §4af caught {sum(x['caught'] for x in nine)} of {sum(x['breaks'] for x in nine)} "
         f"on the same {_WORDS[len(nine)]}": "drift-mutate-20261101-1935.json and -1522",
         f"{stale['stale']} of {stale['decided']} that make a claim about this repo": "stale-lessons-20261031-1527.json",
+        f"{questioned} of {wrong['decided']} that make a claim about this repo: {verdicts['detail wrong']} with a "
+        f"wrong detail ({wrong['rate']:.1%}, 95% interval {100 * wlo:.1f}–{100 * whi:.1f}%), "
+        f"{verdicts['outlived']} outlived, {verdicts['stale']} stale; all {questioned} confirmed and corrected. "
+        f"The judge caught {planted['caught']} of {planted['of']} planted wrong details and wrongly flagged "
+        f"{over['over']} of {over['of']} known-current lessons": "stale-review-20261102-2133.json (§4ai)",
         f"on {prompts} briefed prompts": "briefing-marks-size-20261101-1110.txt",
         f"{unchecked} of the {reach} the mark could reach (all {briefed} briefed could); the marks add "
         f"{int(added):,} characters to {int(chars):,} ({share}%)": "briefing-marks-size-20261101-1110.txt",
