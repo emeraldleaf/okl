@@ -252,8 +252,10 @@ def _uninstall_owner_paths(act: str, dry_run: bool) -> list[str]:
     except json.JSONDecodeError:
         return kept
     perms = data.get("permissions") if isinstance(data, dict) else None
-    deny = perms.get("deny") if isinstance(perms, dict) else None
-    if isinstance(deny, list) and any(rule in deny for rule in OWNER_DENY):
+    if not isinstance(perms, dict) or not isinstance(perms.get("deny"), list):
+        return kept
+    deny = perms["deny"]
+    if any(rule in deny for rule in OWNER_DENY):
         perms["deny"] = [rule for rule in deny if rule not in OWNER_DENY]
         if not perms["deny"]:
             del perms["deny"]

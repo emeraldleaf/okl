@@ -39,7 +39,27 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         print("\n• drift is not gated in CI here; `okl init --ci` adds the GitHub workflow, and "
               "another CI can run `okl drift --gate`")
     print(_git_hook_state(root))
+    owners = _owner_state(root)
+    if owners:
+        print(owners)
     return 1 if (found or twice) else 0
+
+
+def _owner_state(root: Path) -> str:
+    """One line on okl's owner-approved paths (#329): whether GitHub enforces the owner's
+    approval, and if not, why. Empty where `okl init --owner` wrote none, so no API call is made."""
+    from .. import codeowners, protection
+    path = codeowners.location(root)
+    try:
+        owned = codeowners.owned((root / path).read_text()) if (root / path).is_file() else {}
+    except (OSError, UnicodeDecodeError):
+        owned = {}
+    if not owned:
+        return ""
+    owner = sorted({o for names in owned.values() for o in names})[0]
+    state, why = protection.check(list(owned), path.as_posix(), owner)
+    mark = {protection.ENFORCED: "✓", protection.NOT_ENFORCED: "!"}.get(state, "•")
+    return f"\n{mark} owner-approved paths ({', '.join(owned)}): {state}. {why}"
 
 
 def _git_hook_state(root: Path) -> str:

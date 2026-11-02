@@ -136,3 +136,112 @@ def test_doctor_says_unknown_when_gh_cannot_read_the_repo():
     state, why = protection.check(PATHS, FILE, "@ana", get=lambda p: (None, None), repo=lambda: None)
 
     assert state == "unknown" and "gh auth login" in why
+
+
+@pytest.fixture
+def repo(tmp_path, monkeypatch):
+    """An empty git repo as cwd, its own home, and `okl(*args)` run in-process: (exit, output)."""
+    import subprocess
+
+    from okl.cli import main
+    root = tmp_path / "r"; root.mkdir()
+    subprocess.run(["git", "init", "-q", str(root)], check=True)
+    monkeypatch.chdir(root)
+    monkeypatch.setenv("HOME", str(tmp_path)); monkeypatch.setenv("USERPROFILE", str(tmp_path))
+
+    def okl(*args, capsys=None):
+        code = main(list(args))
+        return code, capsys.readouterr().out if capsys else ""
+    return root, okl
+
+
+def test_init_owner_writes_the_block_and_the_deny_rules_and_records_them(repo, capsys):
+    """`okl init --owner` names the owner for the thesis, the --owned paths and CODEOWNERS itself,
+    adds the Claude Code deny rules, and records both, so a plain re-run keeps them current."""
+    import json
+
+    from okl.cli.install import OWNER_DENY
+    root, okl = repo
+
+    code, out = okl("init", "--repo", "r", "--no-seed", "--claude", "--owner", "ana", "--owned", "ADR/",
+                    capsys=capsys)
+
+    assert code == 0, out
+    text = (root / ".github" / "CODEOWNERS").read_text()
+    assert codeowners.owned(text) == {"docs/THESIS.md": ["@ana"], "ADR/": ["@ana"], ".github/CODEOWNERS": ["@ana"]}
+    deny = json.loads((root / ".claude" / "settings.json").read_text())["permissions"]["deny"]
+    assert set(OWNER_DENY) <= set(deny)
+    cfg = json.loads((root / ".okl" / "config.json").read_text())
+    assert (cfg["owner"], cfg["owned"]) == ("@ana", ["ADR/"])
+
+    code, out = okl("init", "--repo", "r", "--no-seed", "--claude", capsys=capsys)
+    assert code == 0 and "owner-approved paths already current" in out, out
+    assert (root / ".github" / "CODEOWNERS").read_text() == text
+
+
+def test_init_owner_keeps_a_teams_file_and_uninstall_takes_out_only_okls_part(repo, capsys):
+    """An existing CODEOWNERS keeps every line; uninstall restores it byte for byte and removes
+    only okl's deny rules from settings."""
+    import json
+    root, okl = repo
+    (root / ".github").mkdir()
+    (root / ".github" / "CODEOWNERS").write_text(TEAM)
+    (root / ".claude").mkdir()
+    (root / ".claude" / "settings.json").write_text(json.dumps({"permissions": {"deny": ["Bash(rm -rf *)"]}}))
+
+    assert okl("init", "--repo", "r", "--no-seed", "--claude", "--owner", "@ana", capsys=capsys)[0] == 0
+    assert (root / ".github" / "CODEOWNERS").read_text().startswith(TEAM.rstrip("\n"))
+
+    code, out = okl("init", "--uninstall", capsys=capsys)
+    assert code == 0, out
+    assert (root / ".github" / "CODEOWNERS").read_text() == TEAM
+    settings = json.loads((root / ".claude" / "settings.json").read_text())
+    assert settings.get("permissions") == {"deny": ["Bash(rm -rf *)"]}
+
+
+def test_uninstall_removes_a_codeowners_file_that_held_only_okls_block(repo, capsys):
+    """A CODEOWNERS okl created is removed whole, as the other files okl wrote are."""
+    root, okl = repo
+    assert okl("init", "--repo", "r", "--no-seed", "--no-claude", "--owner", "ana", capsys=capsys)[0] == 0
+    assert (root / ".github" / "CODEOWNERS").is_file()
+
+    code, out = okl("init", "--uninstall", capsys=capsys)
+
+    assert code == 0 and not (root / ".github" / "CODEOWNERS").exists(), out
+
+
+def test_an_owner_codeowners_would_reject_stops_init_before_it_writes(repo, capsys):
+    """A typo in --owner is said and nothing is written, not a CODEOWNERS GitHub reports errors in."""
+    root, okl = repo
+
+    code, out = okl("init", "--repo", "r", "--no-seed", "--owner", "two words", capsys=capsys)
+
+    assert code == 2 and "not an owner CODEOWNERS accepts" in out, out
+    assert not (root / ".github").exists() and not (root / ".okl").exists()
+
+
+def test_the_dry_run_lists_the_owner_files(repo, capsys):
+    """--dry-run names CODEOWNERS and the settings deny rules, and writes neither."""
+    root, okl = repo
+
+    code, out = okl("init", "--repo", "r", "--claude", "--owner", "ana", "--dry-run", capsys=capsys)
+
+    assert code == 0 and ".github/CODEOWNERS" in out and "names @ana code owner" in out, out
+    assert "deny rules for editing branch protection" in out
+    assert not (root / ".github").exists()
+
+
+def test_doctor_reports_the_owner_state_only_where_okl_wrote_a_block(repo, capsys, monkeypatch):
+    """No block, no line and no API call; with one, doctor prints protection's answer."""
+    root, okl = repo
+    calls = []
+    monkeypatch.setattr(protection, "check", lambda *a: calls.append(a) or ("not enforced", "no rule on main"))
+
+    okl("doctor", capsys=capsys)
+    assert calls == []
+
+    (root / ".github").mkdir()
+    (root / ".github" / "CODEOWNERS").write_text(codeowners.merge("", "@ana", ["docs/THESIS.md"])[0])
+    _, out = okl("doctor", capsys=capsys)
+    assert "! owner-approved paths (docs/THESIS.md): not enforced. no rule on main" in out, out
+    assert calls == [(["docs/THESIS.md"], ".github/CODEOWNERS", "@ana")]
