@@ -18,9 +18,9 @@
       "title": "Every okl init flag the README and guide document exists in the CLI",
       "scope": "repo:okl",
       "files": "README.md,docs/GETTING-STARTED.md,docs/FROM-SCRATCH.md,docs/AGENT-IDENTITY.md,ci/check-init-flags.py,src/okl/cli/",
-      "verified_at": null,
-      "verified_by": "`PYTHONPATH=src python3 ci/check-init-flags.py` exit 0, matched 'INIT FLAGS EXIST' on commit 655cbb9ab589 @ 2026-11-02T18:43Z",
-      "verified_commit": null
+      "verified_at": 1793645361733,
+      "verified_by": "`PYTHONPATH=src python3 ci/check-init-flags.py` exit 0, matched 'INIT FLAGS EXIST' on commit 46b30851a6d7 @ 2026-11-02T18:49Z",
+      "verified_commit": "46b30851a6d7451f69a11b3cc81862692e169765"
     },
     {
       "id": "doc-install-name",
@@ -68,9 +68,9 @@
       "title": "A test that imports an undeclared package passes only where that package happens to be installed",
       "scope": "org",
       "files": "tests/,pyproject.toml,.github/workflows/ci.yml",
-      "verified_at": 1793644995510,
-      "verified_by": "`python3 ci/check-test-imports.py` exit 0, matched 'NO UNDECLARED IMPORT' on commit 655cbb9ab589 @ 2026-11-02T18:43Z",
-      "verified_commit": "655cbb9ab589ff9ea42710331f73336275338f36"
+      "verified_at": 1793645361571,
+      "verified_by": "`python3 ci/check-test-imports.py` exit 0, matched 'NO UNDECLARED IMPORT' on commit 46b30851a6d7 @ 2026-11-02T18:49Z",
+      "verified_commit": "46b30851a6d7451f69a11b3cc81862692e169765"
     },
     {
       "id": "n_9ba48d85ed19",
