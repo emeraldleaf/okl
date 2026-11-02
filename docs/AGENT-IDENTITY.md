@@ -11,22 +11,31 @@ gates it (#329).
 
 - **`okl init --owner @you`** writes a block into CODEOWNERS that names you as owner of:
   - `docs/THESIS.md`;
-  - the CODEOWNERS file itself, so the gate cannot be edited around you;
+  - every place GitHub reads CODEOWNERS from (`.github/`, the root, `docs/`), so the gate cannot
+    be edited around you, nor replaced by a new CODEOWNERS that GitHub would read first;
   - any path you add with `--owned` (repeatable), such as your rules or decision records.
 
-  It merges into an existing CODEOWNERS and never rewrites a line of yours. A path you already
-  own on a line of your own stays yours, and init says so. okl's block goes last, because
-  CODEOWNERS applies the last line that matches, so a team-wide rule above it (`* @team`) does
-  not take the thesis back. `okl init --uninstall` removes the block and nothing else.
-- **In Claude Code, init adds deny rules** to `.claude/settings.json` for the commands that would
-  undo the gate: editing branch protection or rulesets through `gh api`, and `gh pr merge --admin`.
-  They advise the agent; GitHub is what enforces. Claude Code's rules do not match a command run
-  through `sh -c '...'` or `gh` called by its full path, so they never stand in for the branch
-  rule. Other agents need their own equivalent.
-- **`okl doctor` asks GitHub whether the gate is real.** It answers "enforced", "not enforced"
-  with the reason, or "unknown" with what it could not read, and it changes nothing. Run it as
-  the agent's identity, `GH_TOKEN=<the agent's token> okl doctor`. Run as an administrator, it
-  answers "not enforced", correctly: that identity can change the rule.
+  The block is spliced into an existing CODEOWNERS in its own line endings and changes no line
+  of yours; only a last line with no newline gets one. A path you already own on a line of your
+  own stays yours, and init says so. okl's block goes last, because CODEOWNERS applies the last
+  line that matches, so a team-wide rule above it (`* @team`) does not take the thesis back. If
+  okl's markers in the file no longer pair, init and uninstall keep the file and say so rather
+  than guess. `okl init --uninstall` removes the block and nothing else.
+- **In Claude Code, init adds deny rules** to `.claude/settings.json` for the usual ways to undo
+  the gate: editing branch protection or rulesets through `gh api` (REST or GraphQL), and merging
+  past them with `gh pr merge --admin` or the merge API. They advise the agent; GitHub is what
+  enforces. Claude Code's rules do not match a command run through `sh -c '...'`, `gh` called by
+  its full path, or a `git push`, so they never stand in for the branch rule. Uninstall removes
+  these exact rules, including one you had written the same way. Other agents need their own
+  equivalent.
+- **`okl doctor` asks GitHub whether the gate is real,** and changes nothing. It says
+  "enforced" only when it has read and recognised every condition: the merged CODEOWNERS gives
+  each path to you, a rule requires code-owner review, a new push dismisses an approval, and the
+  identity running it can neither bypass the rule nor change it. A condition it read as missing
+  is "not enforced", with the reason; one it could not read or did not recognise is "unknown",
+  with what it was. It lists each path's owner on the default branch. Run it as the agent's
+  identity, `GH_TOKEN=<the agent's token> okl doctor`. Run as an administrator, it answers "not
+  enforced", correctly: that identity can change the rule.
 - **What okl cannot do:** create the identity or turn the protection on. Both are yours, on
   purpose. A gate the agent could set up, it could also take down.
 
@@ -42,7 +51,8 @@ gates it (#329).
    that branch.
 4. **Turn on the rule for the default branch**, as a ruleset or as classic branch protection:
    - require a pull request, with review from code owners;
-   - require approval of the most recent reviewable push;
+   - require approval of the most recent reviewable push, or dismiss stale approvals when new
+     commits are pushed: without one of them, an approval of one change lets a later push merge;
    - keep your required status checks;
    - bind administrators: "Do not allow bypassing the above settings" in classic protection, or
      no bypass entry for the agent in a ruleset.
@@ -58,6 +68,13 @@ gates it (#329).
 
 - **GitHub only, for now.** Other hosts have their own code-owner approvals, and each would need
   its own version of `okl doctor`'s check.
+- **What `okl doctor` cannot see.** A custom role granted "edit repository rules" reports its
+  base role, so an identity holding one looks safe; give the agent a built-in role. A GitHub
+  App's token may report no role at all, and then doctor answers "unknown": check in the App's
+  settings that it has no Administration write permission. Classic branch protection is
+  readable by an administrator only, so as the agent doctor can confirm a ruleset but not
+  classic protection: use a ruleset, or doctor answers "unknown". It does not evaluate every
+  CODEOWNERS glob as GitHub does; one that might own a path makes the answer "unknown".
 - **Private repositories on GitHub Free** have no protected branches, code owners or required
   reviewers; GitHub Pro or a paid organization plan adds them. `okl doctor` says so when it can
   tell.

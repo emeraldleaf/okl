@@ -309,7 +309,8 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
     pex.set_defaults(func=cmd_export)
 
     pdoc = sub.add_parser("doctor", help="report other agent-memory tools installed beside okl, "
-                                         "how they collide, and where drift is gated (changes nothing)")
+                                         "how they collide, where drift is gated, and, after `init --owner`, "
+                                         "whether GitHub enforces the owner's approval (changes nothing)")
     pdoc.set_defaults(func=cmd_doctor)
 
     pdd = sub.add_parser("dedup", help="report near-duplicate records for review (never auto-merges)")

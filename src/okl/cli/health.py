@@ -19,7 +19,9 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     its hooks registered in the project or user settings, so every prompt is briefed
     twice) -- findings,
     per the CLI contract -- and 0 when neither is. It reads settings files, asks git where
-    its hooks live, and changes nothing.
+    its hooks live, and, where `okl init --owner` set an owner, asks GitHub through gh whether
+    the owner's approval is enforced (up to seven reads; informational, not a finding). It
+    changes nothing.
     """
     from .. import coexist
     cfg = _find_config()

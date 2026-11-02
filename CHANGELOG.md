@@ -2,15 +2,19 @@
 
 ## Unreleased
 
-- **`okl init --owner @you`: changes to the thesis need your approval, and `okl doctor` says
-  whether GitHub enforces it** (#329, part A). Init writes okl's block into CODEOWNERS, naming you
-  owner of `docs/THESIS.md`, of the CODEOWNERS file and of any `--owned` path; it merges into an
-  existing file and never rewrites a line of yours. In Claude Code it also adds deny rules for
-  editing branch protection or rulesets through `gh api` and for `gh pr merge --admin`. `okl
-  doctor` asks GitHub and answers "enforced", "not enforced" with the reason, or "unknown"; run as
-  an administrator it says "not enforced", because that identity can change the rule. The new
-  guide, [docs/AGENT-IDENTITY.md](docs/AGENT-IDENTITY.md), covers giving the agent an identity of
-  its own and the branch rule, which are yours to set up.
+- **`okl init --owner @you`, and `okl doctor` saying whether GitHub enforces it** (#329, part A).
+  With a branch rule that requires code-owner review, which you set up, each change to the
+  thesis then needs your approval. Init writes okl's block into CODEOWNERS, naming you owner of
+  `docs/THESIS.md`, of every place GitHub reads CODEOWNERS from and of any `--owned` path; it is
+  spliced into an existing file in its own line endings and changes no line of yours (a last
+  line with no newline gets one). In Claude Code it also adds deny rules for the usual ways to
+  edit branch protection or rulesets and to merge past them. `okl doctor` asks GitHub and says
+  "enforced" only when it has read and recognised every condition: the owner on the merged
+  CODEOWNERS, a rule requiring code-owner review whose approval a new push dismisses, and an
+  identity that can neither bypass nor change it; otherwise "not enforced" with the reason, or
+  "unknown" with what it could not read. Run as an administrator it says "not enforced", because
+  that identity can change the rule. The guide, [docs/AGENT-IDENTITY.md](docs/AGENT-IDENTITY.md),
+  covers giving the agent an identity of its own and the rule.
 - **The thesis page is held to its receipts** (#319). Every figure on `docs/THESIS.md` is
   recomputed by the test suite from the receipt it names. Changing one, adding one without its
   receipt, citing a receipt that is not committed, or leaving a measurement's newer run uncited
