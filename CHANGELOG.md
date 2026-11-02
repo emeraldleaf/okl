@@ -20,6 +20,10 @@
   9 of the 80 lessons that make a claim, and the maintainer confirmed all 9.
 - **The thesis's first rule now reads "okl calls no generative model unasked"**, so the review
   could ship. The briefing, the hooks and the gate still run none.
+- **The tombstone and retraction gates read the committed tree** (#352). They grepped the working
+  tree, so a local run could pass or fail on an uncommitted edit that CI, on a clean checkout,
+  would answer the other way. In a git repository they now read what HEAD holds, their registries
+  included; outside one they read the files on disk as before. Both ship in `okl scaffold`.
 
 ## 0.12.0
 

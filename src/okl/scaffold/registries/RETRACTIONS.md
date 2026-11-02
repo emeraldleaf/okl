@@ -3,8 +3,9 @@
 Claims this project once made and has since found to be false. A retraction is a **receipt**, not a
 deletion — the wrong claim stays visible with its correction so it cannot be quietly restated.
 
-The `retractions` gate fails any doc in the working tree (committed or not) that restates a quoted
-retracted claim verbatim anywhere outside this registry.
+The `retractions` gate fails any committed doc that restates a quoted retracted claim verbatim
+anywhere outside this registry. It reads the committed tree, this registry included, so an
+uncommitted edit neither passes nor fails it.
 
 ## Format
 Each entry: a stable `id`, the retracted claim (quoted), why it is false, and the date/commit.
