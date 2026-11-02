@@ -233,6 +233,9 @@ LEFT_TO_TEAM = codeowners.merge("", "@ana", [".github/CODEOWNERS"])[0]     # okl
           rules=(200, [RULE])), "unknown", "cannot read .github/CODEOWNERS"),
     (dict(files={".github/CODEOWNERS": (None, None)}, rules=(200, [RULE])), "unknown", "cannot read .github/CODEOWNERS"),
     (dict(files={".github/CODEOWNERS": (200, {"content": None})}, rules=(200, [RULE])), "unknown", "cannot read"),
+    # only a 200 is the file: a body that carries content under any other status is not read as it
+    (dict(files={".github/CODEOWNERS": (500, {"content": b64encode(BLOCK.encode()).decode()})},
+          rules=(200, [RULE])), "unknown", "cannot read .github/CODEOWNERS"),
     (dict(errors=(None, None), rules=(200, [RULE])), "unknown", "cannot read GitHub's check"),
     (dict(files={".github/CODEOWNERS": "*.md @eve\n" + LEFT_TO_TEAM}, rules=(200, [RULE])), "unknown",
      "a rule okl cannot evaluate may own docs/THESIS.md"),
