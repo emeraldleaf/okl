@@ -430,9 +430,15 @@ def _dry_run_drift_gates(args: argparse.Namespace) -> None:
     ci = _ci_wanted(args, cfg)
     if ci:
         print("  .github/workflows/okl-verify.yml        a CI workflow running the drift gate on PRs")
+        from .. import ownership
         version = _pinnable_version()
+        # As the real run decides: another tool's file stays unless --force, a symlink always.
+        foreign = _symlinked(WORKFLOW) is not None or (
+            _workflow_state() == ownership.UNKNOWN and not getattr(args, "force", False))
         if Path("src/okl/__init__.py").is_file():
             print("  (no CI pin: okl's own CI installs its checkout)")
+        elif foreign:
+            print(f"  (no CI pin: {WORKFLOW} is not okl's workflow, and is kept)")
         elif version is None:
             print("  (no CI pin: this okl is a dev or source build, so CI installs the newest release)")
         else:

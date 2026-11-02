@@ -2478,18 +2478,24 @@ def test_okl_init_ci_pins_nothing_beside_a_refused_symlink(ci_repo, tmp_path):
     assert "refused" in out and "no CI pin written" in out, out
 
 
-@pytest.mark.parametrize(("version", "says"), [
-    ("0.11.0", ".github/okl-version"),
-    (None, "(no CI pin: this okl is a dev or source build"),
+@pytest.mark.parametrize(("version", "foreign", "says"), [
+    ("0.11.0", False, ".github/okl-version"),
+    (None, False, "(no CI pin: this okl is a dev or source build"),
+    ("0.11.0", True, "is not okl's workflow, and is kept)"),
 ])
-def test_okl_init_ci_dry_run_lists_the_pin(ci_repo, version, says):
-    """`--dry-run` lists every path init would touch, the pin among them (0.11.0 review)."""
+def test_okl_init_ci_dry_run_lists_the_pin(ci_repo, version, foreign, says):
+    """`--dry-run` lists every path init would touch, the pin among them, and promises no pin
+    where the real run writes none: beside another tool's workflow (0.11.0 review)."""
     repo, init = ci_repo
+    wf = repo / ".github" / "workflows" / "okl-verify.yml"
+    if foreign:
+        wf.parent.mkdir(parents=True); wf.write_text("name: someone else's\n")
 
     out = init(version, "--dry-run")
 
     assert says in out, out
-    assert not (repo / ".github").exists()
+    assert not (repo / ".github" / "okl-version").exists()
+    assert wf.exists() == foreign
 
 
 def test_uninstall_removes_the_pin_with_the_workflow_and_keeps_it_with_an_edited_one(tmp_path):
