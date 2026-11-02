@@ -48,9 +48,9 @@
       "title": "okl's docs are agent-neutral; Claude Code-only parts are labelled as such",
       "scope": "repo:okl",
       "files": "README.md,docs/",
-      "verified_at": 1793589102794,
-      "verified_by": "`python3 ci/check-agent-neutral.py` exit 0, matched 'AGENT NEUTRAL' on commit 5245168fc429 @ 2026-11-02T03:11Z",
-      "verified_commit": "5245168fc429a9e02efe135b87b8e5d551747cee"
+      "verified_at": 1793590724747,
+      "verified_by": "`python3 ci/check-agent-neutral.py` exit 0, matched 'AGENT NEUTRAL' on commit 514505125fe9 @ 2026-11-02T03:38Z",
+      "verified_commit": "514505125fe9de1ba5f76728188ca4db0848f65b"
     },
     {
       "id": "n_07faa4565128",
@@ -98,9 +98,9 @@
       "title": "Dependabot alerts reach no one unless a step reads them",
       "scope": "org",
       "files": "docs/DEVELOPING.md",
-      "verified_at": 1793589102666,
-      "verified_by": "`awk '/^## Releasing/{r=1;next} r&&/^(## |2\\. )/{exit} r&&/^1\\. /{s=1} s{print}' docs/DEVELOPING.md | tr '\\n' ' ' | grep -o 'dependabot/alerts?state=open.*--jq length.*should print 0'` exit 0, matched 'should print 0' on commit 5245168fc429 @ 2026-11-02T03:11Z",
-      "verified_commit": "5245168fc429a9e02efe135b87b8e5d551747cee"
+      "verified_at": 1793590724622,
+      "verified_by": "`awk '/^## Releasing/{r=1;next} r&&/^(## |2\\. )/{exit} r&&/^1\\. /{s=1} s{print}' docs/DEVELOPING.md | tr '\\n' ' ' | grep -o 'dependabot/alerts?state=open.*--jq length.*should print 0'` exit 0, matched 'should print 0' on commit 514505125fe9 @ 2026-11-02T03:38Z",
+      "verified_commit": "514505125fe9de1ba5f76728188ca4db0848f65b"
     },
     {
       "id": "n_d45d7bf64896",
@@ -108,9 +108,9 @@
       "title": "Entered a crowded category deliberately: differentiate on verification-of-memory, compose with memory infra, never compete on recall",
       "scope": "repo:okl",
       "files": "README.md,docs/",
-      "verified_at": 1793589102978,
-      "verified_by": "`python3 ci/check-positioning.py` exit 0, matched 'POSITIONING OK' on commit 5245168fc429 @ 2026-11-02T03:11Z",
-      "verified_commit": "5245168fc429a9e02efe135b87b8e5d551747cee"
+      "verified_at": 1793590724928,
+      "verified_by": "`python3 ci/check-positioning.py` exit 0, matched 'POSITIONING OK' on commit 514505125fe9 @ 2026-11-02T03:38Z",
+      "verified_commit": "514505125fe9de1ba5f76728188ca4db0848f65b"
     },
     {
       "id": "n_ead8e0a2b43d",
