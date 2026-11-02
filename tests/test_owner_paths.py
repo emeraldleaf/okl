@@ -676,3 +676,19 @@ def test_the_doctor_trigger_reads_the_default_branch_and_never_crashes(repo, cap
         raise FileNotFoundError("git")
     monkeypatch.setattr(subprocess, "run", no_git)
     assert health._committed_block(root) is False
+
+
+def test_the_guide_names_what_doctor_answers_and_what_the_deny_rules_cover():
+    """docs/AGENT-IDENTITY.md describes doctor's answers and the deny rules: each answer it names
+    is one protection gives, word for word, and each command the deny rules stop is named there,
+    so a change to either leaves the guide behind only with this test red (CI review on #348)."""
+    guide = " ".join((Path(__file__).resolve().parents[1] / "docs" / "AGENT-IDENTITY.md").read_text().split())
+
+    for state in (protection.ENFORCED, protection.NOT_ENFORCED, protection.UNKNOWN):
+        assert f'"{state}"' in guide, state
+    covers = {"protection": "branch protection", "Protection": "GraphQL", "rulesets": "rulesets",
+              "Ruleset": "GraphQL", "pulls/*/merge": "merge API", "--admin": "gh pr merge --admin"}
+    for rule in OWNER_DENY:
+        named = [words for key, words in covers.items() if key in rule]
+        assert named and all(words in guide for words in named), (rule, named)
+    assert "dismiss stale approvals" in guide and "at least one approval" in guide

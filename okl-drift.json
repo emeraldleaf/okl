@@ -17,10 +17,10 @@
       "type": "Rule",
       "title": "Every okl init flag the README and guide document exists in the CLI",
       "scope": "repo:okl",
-      "files": "README.md,docs/GETTING-STARTED.md,docs/FROM-SCRATCH.md,src/okl/cli/",
-      "verified_at": 1793644994623,
+      "files": "README.md,docs/GETTING-STARTED.md,docs/FROM-SCRATCH.md,docs/AGENT-IDENTITY.md,ci/check-init-flags.py,src/okl/cli/",
+      "verified_at": null,
       "verified_by": "`PYTHONPATH=src python3 ci/check-init-flags.py` exit 0, matched 'INIT FLAGS EXIST' on commit 655cbb9ab589 @ 2026-11-02T18:43Z",
-      "verified_commit": "655cbb9ab589ff9ea42710331f73336275338f36"
+      "verified_commit": null
     },
     {
       "id": "doc-install-name",
