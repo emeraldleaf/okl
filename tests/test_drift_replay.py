@@ -286,6 +286,31 @@ def test_the_4ai_review_counts_its_controls_first_and_rates_only_when_they_hold(
     assert run(7, 0, 2, extra=[unquoted])["planted_caught"]["caught"] == 7
 
 
+def test_the_4ai_judge_cannot_see_the_experiments_own_files(monkeypatch, tmp_path):
+    """§4ai, amended before judging: main now holds §4ag's planted file, receipts and REPORT text,
+    which name the plants and §4ag's verdicts; the judge's worktree withholds them and keeps the
+    rest of REPORT."""
+    monkeypatch.setattr(sys, "path", list(sys.path))
+    spec = importlib.util.spec_from_file_location("lesson_census", HERE / "evals" / "lesson_census.py")
+    lc = importlib.util.module_from_spec(spec)
+    monkeypatch.setitem(sys.modules, "lesson_census", lc)
+    spec.loader.exec_module(lc)
+    (tmp_path / "evals" / "results").mkdir(parents=True); (tmp_path / "tests").mkdir()
+    for rel in [*lc.WITHHELD_FILES, "evals/results/stale-lessons-1.json", "evals/results/lesson-census-1.json",
+                "evals/results/ab-1.json", "src.py"]:
+        (tmp_path / rel).write_text("x")
+    (tmp_path / "evals" / "REPORT.md").write_text("## 4af. kept\nA\n## 4ag. planted storage.py\nB\n## 4ah. kept\nC\n")
+
+    gone = lc.withhold(tmp_path)
+
+    assert not any((tmp_path / rel).exists() for rel in lc.WITHHELD_FILES)
+    assert not (tmp_path / "evals/results/stale-lessons-1.json").exists()
+    assert (tmp_path / "evals/results/ab-1.json").exists() and (tmp_path / "src.py").exists()
+    report = (tmp_path / "evals" / "REPORT.md").read_text()
+    assert "storage.py" not in report and "## 4af. kept" in report and "## 4ah. kept" in report
+    assert "evals/REPORT.md §4ag" in gone
+
+
 def test_the_mutation_run_counts_catches_misses_and_ci_by_group(monkeypatch):
     """§4af: a break is caught when drift is red and the check fails; a miss is coverage when
     drift stayed green and sensitivity when it was red; only judged breaks and judged-intact

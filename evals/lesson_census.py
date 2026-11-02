@@ -108,6 +108,32 @@ VERDICTS_4AI = ("current", "detail wrong", "outlived", "stale", "no claim", "uns
 # landed. n_f215b68b925c does too, but it is one of the planted controls, so it stays there alone.
 OUTLIVED = ("harness-reads-a-moving-working-tree", "fastembed-cache-in-tmpdir")
 SECTIONS = {"4ag": (JUDGE_PROMPT, VERDICTS), "4ai": (JUDGE_PROMPT_4AI, VERDICTS_4AI)}
+# What §4ai's judge cannot see: this experiment's own files, which main holds since §4ag merged
+# and which name the planted facts and §4ag's verdicts (REPORT §4ai, amended before judging).
+WITHHELD_FILES = ("evals/lesson_census_planted.json", "evals/lesson_census.py", "tests/test_drift_replay.py")
+WITHHELD_RECEIPTS = ("stale-lessons-*", "stale-review-*", "lesson-census-*")
+WITHHELD_SECTIONS = ("4ag", "4ai")
+
+
+def withhold(wt: Path) -> list[str]:
+    """Remove this experiment's own files from the judge's worktree and blank its REPORT sections;
+    return what was withheld."""
+    gone = []
+    for rel in WITHHELD_FILES:
+        if (wt / rel).exists():
+            (wt / rel).unlink(); gone.append(rel)
+    for pattern in WITHHELD_RECEIPTS:
+        for f in sorted((wt / "evals" / "results").glob(pattern)):
+            f.unlink(); gone.append(str(f.relative_to(wt)))
+    report = wt / "evals" / "REPORT.md"
+    text = report.read_text()
+    for section in WITHHELD_SECTIONS:
+        m = re.search(rf"^## {section}\..*?(?=^## )", text, re.S | re.M)
+        if m:
+            text = text[:m.start()] + f"## {section}. (withheld from this judgment: it describes the run)\n\n" + text[m.end():]
+            gone.append(f"evals/REPORT.md §{section}")
+    report.write_text(text)
+    return gone
 
 
 def classify(n: Node) -> str:
@@ -195,7 +221,7 @@ def judge(census_path: Path, workers: int, section: str = "4ag") -> int:
     census = json.loads(census_path.read_text())
     rev = dr.git("rev-parse", census["rev"]).strip()
     planted = {p["id"]: p for p in json.loads(PLANTED.read_text())["lessons"]}
-    for p in planted.values():   # a planted name must be false at the commit the judge reads
+    for p in planted.values() if section == "4ag" else ():   # §4ai checks the judge's own worktree, below
         if subprocess.run(["git", "-C", str(dr.REPO), "grep", "-q", "-F", "-e", p["new"].rstrip("()"), rev]).returncode == 0:
             sys.exit(f"ABORT: planted name {p['new']!r} exists at {rev[:12]}")
     rows = {x["id"]: x for x in census["lessons"]}
@@ -243,6 +269,11 @@ def judge(census_path: Path, workers: int, section: str = "4ag") -> int:
     wt = room / "repo"
     dr.git("worktree", "add", "-q", "--detach", str(wt), rev)
     (wt / "okl-drift.json").unlink(missing_ok=True)   # the judge reads no check and no governed file list
+    withheld = withhold(wt) if section == "4ai" else []
+    for p in planted.values() if section == "4ai" else ():   # false where the judge reads, or no run
+        if subprocess.run(["grep", "-rqF", "--exclude-dir=.git", "-e", p["new"].rstrip("()"), str(wt)]).returncode == 0:
+            dr.git("worktree", "remove", "--force", str(wt))
+            sys.exit(f"ABORT: planted name {p['new']!r} is in the judge's worktree at {rev[:12]}")
 
     def one(x: dict) -> dict:
         if x["id"] in done:
@@ -276,7 +307,7 @@ def judge(census_path: Path, workers: int, section: str = "4ag") -> int:
         "what": what, "at": f"{datetime.now(UTC):%Y-%m-%dT%H:%MZ}",
         "code": dr.git("rev-parse", "--short=12", "HEAD").strip(), "rev": rev[:12], "census": census_path.name,
         "judge": " ".join(JUDGE), "seed": SEED, "negatives": negatives, "planted": PLANTED.name,
-        "outlived": list(outlived), "prompt_sha": hashlib.sha256(prompt.encode()).hexdigest()[:16],
+        "outlived": list(outlived), "withheld": withheld, "prompt_sha": hashlib.sha256(prompt.encode()).hexdigest()[:16],
         "cost_usd": round(sum(x.get("cost_usd") or 0 for x in judged), 2),
         "summary": summarize(judged) if section == "4ag" else summarize_4ai(judged), "items": judged,
     }
