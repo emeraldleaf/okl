@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **`okl init --ci` pins the workflow to the okl that wrote it.** The workflow installed the
+  newest okl from PyPI, so a repo's CI could run a different release from its own hooks. It now
+  installs the version that ran `okl init`, and re-running `okl init` after an upgrade moves the
+  pin; an edited workflow is kept. A version PyPI would not hold (a dev or local build) leaves
+  the install unpinned, as before.
+- **Dependencies:** pytest 9.2.0, ruff 0.17.3, uv 0.13.6, fastapi 0.162.0, `actions/setup-python`
+  7.1.0 and the PyPI publish action, in one change across every copy of the workflow.
+
 - **A guide to setting up a repository from scratch** (#330), `docs/FROM-SCRATCH.md`. For Python,
   .NET and TypeScript it covers:
   - pinned versions and a CI that gates format, lint, types, tests, architecture rules and a

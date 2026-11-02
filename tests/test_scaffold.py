@@ -2268,3 +2268,58 @@ def test_server_json_description_fits_the_registry_limit():
     server = json.loads((Path(__file__).resolve().parents[1] / "server.json").read_text())
     assert len(server["description"]) <= 100, len(server["description"])
     assert server["description"].startswith("Keeps your agent true to your rules")   # the thesis claim, shortened
+
+
+def test_init_ci_pins_the_workflow_to_the_okl_that_wrote_it(tmp_path):
+    """`okl init --ci` writes its own version into the workflow's install line, so a repo's
+    CI runs the release its hooks run. A re-run changes nothing, an init after an upgrade moves
+    the pin, and an edited workflow is kept (0.11.0)."""
+    from okl import __version__, ownership
+    from okl.cli import install
+
+    # ARRANGE/ACT 1 — install it.
+    repo, _git, okl = _git_hook_repo(tmp_path)
+    wf = repo / ".github" / "workflows" / "okl-verify.yml"
+    args = ("init", "--repo", "r", "--no-claude", "--no-seed", "--ci")
+    r = okl(*args)
+    text = wf.read_text()
+
+    # ASSERT — pinned to this okl, and stamped as okl's own.
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert f'pip install "observed-knowledge-ledger=={__version__}"' in text
+    assert install.WORKFLOW_PIN not in text
+    assert ownership.status(wf, install._workflow_shipped()) == ownership.OKL
+
+    # 2 — the same okl again changes nothing.
+    r = okl(*args)
+    assert "already current" in r.stdout and wf.read_text() == text, r.stdout
+
+    # 3 — a workflow an older okl wrote (its own pin, its own stamp) is upgraded.
+    wf.write_text(ownership.stamp(text.replace(f"=={__version__}", "==0.0.1")))
+    r = okl(*args)
+    assert "upgraded" in r.stdout and wf.read_text() == text, r.stdout
+
+    # 4 — an edited workflow is kept.
+    wf.write_text(text + "# a local edit\n")
+    r = okl(*args)
+    assert "kept" in r.stdout and wf.read_text().endswith("# a local edit\n"), r.stdout
+
+
+@pytest.mark.parametrize(("version", "pinned"), [
+    ("0.11.0", True), ("1.2", True), ("unknown", False), ("0.11.0.dev1", False), ("0.11.0+local", False),
+])
+def test_the_workflow_pin_names_only_a_release_pypi_holds(monkeypatch, version, pinned):
+    """A version PyPI would not hold leaves the install unpinned rather than pin a release
+    that does not exist and fail every CI run; either way the file is stamped as okl's."""
+    import okl
+    from okl import ownership
+    from okl.cli import install
+
+    monkeypatch.setattr(okl, "__version__", version)
+    text = install._workflow_shipped()
+
+    assert (f'pip install "observed-knowledge-ledger=={version}"' in text) == pinned
+    assert install.WORKFLOW_PIN not in text
+    assert ownership.embedded(text) == ownership.digest(text)
+    if not pinned:
+        assert "pip install observed-knowledge-ledger\n" in text

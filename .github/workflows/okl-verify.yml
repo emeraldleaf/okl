@@ -1,4 +1,4 @@
-# okl-fingerprint: sha256:9399e527943880bc000c5b74b3e86a6d917e259e4a32e5433c3b70e977deb080
+# okl-fingerprint: sha256:685f553b1c62f74d446cfab21c63cf7c0fd4250246194474ef65bf6174d465e0
 # Installed by `okl init --ci` into .github/workflows/okl-verify.yml (a repo an earlier okl gave it keeps it).
 #
 # The knowledge layer's CI verifier — real checks, not placeholders:
@@ -66,7 +66,9 @@ jobs:
           if [ -f src/okl/__init__.py ]; then
             pip install -e .
           else
-            pip install observed-knowledge-ledger
+            # The okl that wrote this workflow, so CI runs the release your hooks run.
+            # `okl init --ci` writes it; re-run init after upgrading okl to move it.
+            pip install "observed-knowledge-ledger==__OKL_VERSION__"
           fi
 
       - name: Report which store the gate will run against
