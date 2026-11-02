@@ -1,0 +1,28 @@
+docs read: 23 (README, docs/ and the overview sheets; dated records left out)
+covered before the command gate: 23 of 23 (100%)
+covered after:                   23 of 23 (100%)
+okl commands whose flags a check reads: before 26 (okl init, three docs), after 464 (every command, every doc read)
+
+README.md                                                  lesson doc-check-defaults, lesson doc-init-flags, lesson doc-install-name, lesson doc-verified-refused, lesson docs-agent-neutral, lesson n_d45d7bf64896, check-init-flags, figures test, command gate (76)
+docs/ACROSS-AN-ORG.md                                      lesson docs-agent-neutral, lesson n_d45d7bf64896, command gate (8)
+docs/COMMANDS.md                                           lesson docs-agent-neutral, lesson n_d45d7bf64896, figures test, command gate (21)
+docs/COSTS-AND-KNOBS.md                                    lesson docs-agent-neutral, lesson n_d45d7bf64896, figures test, command gate (29)
+docs/DEPLOY.md                                             lesson docs-agent-neutral, lesson n_d45d7bf64896, command gate (7)
+docs/DESIGN-CHOICES.md                                     lesson docs-agent-neutral, lesson n_d45d7bf64896
+docs/DEVELOPING.md                                         lesson docs-agent-neutral, lesson n_bf6a2aee2f12, lesson n_d45d7bf64896, command gate (17)
+docs/FROM-SCRATCH.md                                       lesson doc-init-flags, lesson docs-agent-neutral, lesson n_d45d7bf64896, check-init-flags, command gate (29)
+docs/GETTING-STARTED.md                                    lesson doc-init-flags, lesson doc-install-name, lesson doc-verified-refused, lesson docs-agent-neutral, lesson n_d45d7bf64896, check-init-flags, command gate (87)
+docs/LOAD-YOUR-RULES.md                                    lesson docs-agent-neutral, lesson n_d45d7bf64896, command gate (109)
+docs/RELATED-WORK.md                                       lesson docs-agent-neutral, lesson n_d45d7bf64896, command gate (1)
+docs/RETRIEVAL.md                                          lesson docs-agent-neutral, lesson n_d45d7bf64896, figures test, command gate (11)
+docs/SCAFFOLD.md                                           lesson docs-agent-neutral, lesson n_d45d7bf64896, command gate (8)
+docs/SEEDING.md                                            lesson docs-agent-neutral, lesson n_d45d7bf64896, command gate (18)
+docs/SUBAGENTS.md                                          lesson docs-agent-neutral, lesson n_d45d7bf64896
+docs/THESIS.md                                             lesson docs-agent-neutral, lesson n_d45d7bf64896, command gate (1)
+docs/VERIFICATION.md                                       lesson docs-agent-neutral, lesson n_d45d7bf64896, command gate (9)
+docs/WHAT-INIT-WRITES.md                                   lesson docs-agent-neutral, lesson n_d45d7bf64896, command gate (16)
+docs/WHERE-THIS-SITS.md                                    lesson docs-agent-neutral, lesson n_d45d7bf64896, command gate (4)
+docs/brand/README.md                                       lesson docs-agent-neutral, lesson n_d45d7bf64896
+docs/overview/ATTRIBUTION.md                               lesson docs-agent-neutral, lesson n_d45d7bf64896
+docs/overview/okl-anatomy.html                             lesson docs-agent-neutral, lesson n_d45d7bf64896, figures test, command gate (10)
+docs/overview/okl-overview.html                            lesson docs-agent-neutral, lesson n_d45d7bf64896, command gate (3)

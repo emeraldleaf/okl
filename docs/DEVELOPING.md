@@ -97,8 +97,8 @@ okl is developed with its own hooks switched on:
 
 | Workflow | Job | What it checks |
 |---|---|---|
-| `ci.yml` | lint-and-test (Python 3.12) | ruff, mypy, lint-imports, pytest with a coverage floor (66%) and the Postgres tests against a `postgres:17.6` service (a service that fails to start fails this job), diagram figures, the method gates, gitleaks, and the architecture reviewer on the maintainer's Claude subscription (`CLAUDE_CODE_OAUTH_TOKEN`; it soft-passes without it, and `REVIEW_CMD` swaps in another CLI) |
-| `ci.yml` | tests-other-pythons | the suite on 3.11, 3.13, 3.14 and 3.15 |
+| `ci.yml` | lint-and-test (Python 3.12) | installs from `uv.lock` (`uv sync --locked`, which fails on a stale lockfile), then ruff, mypy, lint-imports, pytest with a coverage floor (66%) and the Postgres tests against a `postgres:17.6` service (a service that fails to start fails this job), diagram figures, the method gates, gitleaks, and the architecture reviewer on the maintainer's Claude subscription (`CLAUDE_CODE_OAUTH_TOKEN`; it soft-passes without it, and `REVIEW_CMD` swaps in another CLI) |
+| `ci.yml` | tests-other-pythons | the suite on 3.11, 3.13, 3.14 and 3.15, installed from `uv.lock` the same way |
 | `okl-verify.yml` | drift gate | the committed `okl-drift.json`: a rule whose governed files changed since its check passed fails the build |
 | CodeQL | Analyze | GitHub's code scanning |
 | `publish.yml` | build, publish | on a `v*` tag only (see Releasing) |
@@ -145,7 +145,7 @@ That is expected; see CONTRIBUTING.
 3. **On a `release-X.Y.Z` branch,** set the version in `pyproject.toml`, in `server.json`
    (twice), in `.claude-plugin/plugin.json` and in `docs/GETTING-STARTED.md` (twice).
    Rename the CHANGELOG's `## Unreleased` to `## X.Y.Z`. Run `uv lock`, so the lockfile's own
-   version follows (CI's `uv lock --check` fails otherwise). Reinstall the editable package so
+   version follows (CI's `uv sync --locked` fails otherwise). Reinstall the editable package so
    the version test passes: `pip install --no-deps -e .`.
 4. **Commit, re-verify, open the PR, merge.**
 5. **Tag the merge commit:**
@@ -183,6 +183,11 @@ honest:
   recomputed in `tests/test_docs.py` (`_thesis_figures`) from the receipt it names. A new figure
   needs its line there, and a newer run of a measurement the page cites fails the test until
   the page cites it (#319).
+- **A result that answers an open question says so.** The docs' "not yet measured", "unmeasured"
+  and "still open" sentences are listed in `tests/test_docs.py` (`OPEN_QUESTIONS`), each with
+  the question it waits on. When a result answers one, write ``Settles open question `<id>` ``
+  in its "What follows": the test then fails until the sentence is rewritten and its entry
+  removed. A new sentence of that kind must name its question there too (#334).
 
 ### Run the deterministic checks first
 
