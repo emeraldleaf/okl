@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **A guide to setting up a repository from scratch** (#330), `docs/FROM-SCRATCH.md`. For Python,
+  .NET and TypeScript it covers:
+  - pinned versions and a CI that gates format, lint, types, tests, architecture rules and a
+    dependency audit, with SonarQube;
+  - tests that make good lesson checks, and code shaped so lessons can watch it;
+  - wiring, seeding, companion tools, and how to prompt so the briefing finds what you need.
+  Every gate and lesson check in it was run on a scratch repository per stack (Python 3.14 via
+  uv, .NET SDK 10.0.102, Node 22.22 with pnpm 11.3); the CI workflows and SonarQube steps were
+  not.
+
 - **The briefing sizes and the anatomy sheet are current again.** The sizes the README, the
   `okl_check` tool description and the anatomy sheet quote were measured before the second
   tier's later fix (#299: a twelfth listed lesson and the trimmed note) and before the briefing
@@ -9,7 +19,7 @@
   is ~1,580 tokens, up from ~1,390, and the action list at `--limit 3` ~400, up from ~350. The
   median on real prompts (~720) counts the selection without the briefing's marks, and the
   docs now say so; the anatomy sheet's worked example is re-captured, and three of its lines
-  that said something was not yet measured now say what was. The anatomy sheet says no model runs by default, explains the *UNCHECKED* mark, and lists
+  that said something was not yet measured now say what was. The anatomy sheet says no model runs until you turn one on, explains the *UNCHECKED* mark, and lists
   drift's measured limit under "Where it breaks".
 
 - **The briefing marks the lessons no check backs** (#222). Only lessons whose governed files

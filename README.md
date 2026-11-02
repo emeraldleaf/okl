@@ -67,6 +67,8 @@ sample, one-shot code on bait tasks; [what it does and does not show](#measured-
 > habit of adding lessons as you build a feature. Already have a `CLAUDE.md`, ADRs, standards or
 > specs? **[Load your rules](docs/LOAD-YOUR-RULES.md)** shows how to load them, prove the ones
 > that matter, and keep them current.
+> Starting from an empty folder? **[Set up a repository from scratch](docs/FROM-SCRATCH.md)**
+> builds the CI, linters and tests okl's checks point at, for Python, .NET or TypeScript.
 
 **1. Install the CLI.** Python 3.11+ (0.8.9 is the last release for 3.10), git for drift.
 macOS and Linux; Windows is untested
