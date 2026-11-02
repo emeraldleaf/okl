@@ -13,11 +13,11 @@ if git rev-parse --verify -q HEAD >/dev/null 2>&1; then
   registry="$(git show "HEAD:./$REG" 2>/dev/null)" || { echo "no RETRACTIONS.md committed — skipping"; exit 0; }
 else
   in_repo=0
-  [ -f "$REG" ] || { echo "no RETRACTIONS.md — skipping"; exit 0; }
+  [[ -f "$REG" ]] || { echo "no RETRACTIONS.md — skipping"; exit 0; }
   registry="$(cat "$REG")"
 fi
 search() {  # each markdown line holding $1, as path:line:text
-  if [ "$in_repo" = 1 ]; then
+  if [[ "$in_repo" == 1 ]]; then
     git grep -nF -e "$1" HEAD -- '*.md' 2>/dev/null | sed 's/^HEAD://'
   else
     grep -RnF -e "$1" . --include='*.md' 2>/dev/null
@@ -27,9 +27,9 @@ rc=0
 tmp="$(mktemp)"
 printf '%s\n' "$registry" | grep -oE '"[^"]{12,}"' | sed 's/^"//;s/"$//' > "$tmp" || true
 while IFS= read -r claim; do
-  [ -z "$claim" ] && continue
+  [[ -z "$claim" ]] && continue
   hits="$(search "$claim" | grep -v "$REG" || true)"
-  if [ -n "$hits" ]; then
+  if [[ -n "$hits" ]]; then
     echo "  ✗ retracted claim restated: \"$claim\""
     echo "$hits" | sed 's/^/      /'
     rc=1

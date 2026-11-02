@@ -12,11 +12,11 @@ if git rev-parse --verify -q HEAD >/dev/null 2>&1; then
   registry="$(git show "HEAD:./$TS" 2>/dev/null)" || { echo "no tombstones.txt committed — skipping"; exit 0; }
 else
   in_repo=0
-  [ -f "$TS" ] || { echo "no tombstones.txt — skipping"; exit 0; }
+  [[ -f "$TS" ]] || { echo "no tombstones.txt — skipping"; exit 0; }
   registry="$(cat "$TS")"
 fi
 search() {  # each line holding $1, as path:line:text
-  if [ "$in_repo" = 1 ]; then
+  if [[ "$in_repo" == 1 ]]; then
     git grep -nF -e "$1" HEAD -- "${GLOBS[@]}" 2>/dev/null | sed 's/^HEAD://'
   else
     local inc=(); for g in "${GLOBS[@]}"; do inc+=(--include="$g"); done
@@ -27,9 +27,9 @@ rc=0
 while IFS= read -r line; do
   case "$line" in ''|'#'*) continue;; esac
   id="$(printf '%s' "$line" | cut -f1)"
-  [ -z "$id" ] && continue
+  [[ -z "$id" ]] && continue
   hits="$(search "$id" | grep -v 'registries/' || true)"
-  if [ -n "$hits" ]; then
+  if [[ -n "$hits" ]]; then
     echo "  ✗ tombstoned identifier '$id' resurrected:"
     echo "$hits" | sed 's/^/      /'
     rc=1
