@@ -1,0 +1,212 @@
+{
+ "what": "does a file's briefing reach the model when Claude Code reads the file (REPORT \u00a74aj)",
+ "at": "2026-11-03T02:11Z",
+ "code": "7edfd1eaa0a8",
+ "claude_code": "2.1.302 (Claude Code)",
+ "agent": "claude -p --model sonnet --setting-sources project --strict-mcp-config --output-format json --tools Read,Edit,Write --allowedTools Read Edit Write",
+ "task": "Read src/ledger.py, then add a function entries_for(account_id) to it that returns the list of that account's entries. Keep the change small.",
+ "canary": "audit_trail_7Q",
+ "summary": {
+  "treatment": {
+   "runs": 5,
+   "read": 5,
+   "arrived": 5,
+   "used": 0
+  },
+  "control": {
+   "runs": 5,
+   "read": 5,
+   "used": 0,
+   "frames_logged": 0
+  },
+  "predictions": {
+   "1_arrives_in_every_treatment_read": true,
+   "2_canary_in_at_least_4_treatment_reads": false,
+   "3_no_control_uses_canary": true
+  },
+  "counts_only": false
+ },
+ "runs": [
+  {
+   "arm": "treatment",
+   "session": "33ac0795-f581-4b59-bed6-7735567c0ec9",
+   "transcript_found": true,
+   "read": true,
+   "frames": [
+    {
+     "sha256": "649b8ae797aa0c4ed953be61c3cee4e43d678158a1e638029904bae44c9cc01a",
+     "bytes": 701,
+     "paths": [
+      "src/ledger.py"
+     ],
+     "session": "33ac0795-f581-4b59-bed6-7735567c0ec9",
+     "at": "2026-11-03T02:09:33Z"
+    }
+   ],
+   "arrived": true,
+   "used": false,
+   "defines_entries_for": true,
+   "cost_usd": 0.032384,
+   "secs": 13.9,
+   "error": null
+  },
+  {
+   "arm": "control",
+   "session": "7687c8a8-c2aa-4f3b-9724-85d0cb198e72",
+   "transcript_found": true,
+   "read": true,
+   "frames": [],
+   "arrived": false,
+   "used": false,
+   "defines_entries_for": true,
+   "cost_usd": 0.0195369,
+   "secs": 4.6,
+   "error": null
+  },
+  {
+   "arm": "treatment",
+   "session": "7d445812-481b-4cf3-9bf9-9861e6672b35",
+   "transcript_found": true,
+   "read": true,
+   "frames": [
+    {
+     "sha256": "649b8ae797aa0c4ed953be61c3cee4e43d678158a1e638029904bae44c9cc01a",
+     "bytes": 701,
+     "paths": [
+      "src/ledger.py"
+     ],
+     "session": "7d445812-481b-4cf3-9bf9-9861e6672b35",
+     "at": "2026-11-03T02:09:54Z"
+    }
+   ],
+   "arrived": true,
+   "used": false,
+   "defines_entries_for": true,
+   "cost_usd": 0.0327191,
+   "secs": 13.5,
+   "error": null
+  },
+  {
+   "arm": "control",
+   "session": "bbbb8def-0ee0-49b6-8dc4-e519addf80e6",
+   "transcript_found": true,
+   "read": true,
+   "frames": [],
+   "arrived": false,
+   "used": false,
+   "defines_entries_for": true,
+   "cost_usd": 0.0195369,
+   "secs": 5.4,
+   "error": null
+  },
+  {
+   "arm": "treatment",
+   "session": "a8c05898-fcd8-41a4-bdee-1b494f0abae1",
+   "transcript_found": true,
+   "read": true,
+   "frames": [
+    {
+     "sha256": "649b8ae797aa0c4ed953be61c3cee4e43d678158a1e638029904bae44c9cc01a",
+     "bytes": 701,
+     "paths": [
+      "src/ledger.py"
+     ],
+     "session": "a8c05898-fcd8-41a4-bdee-1b494f0abae1",
+     "at": "2026-11-03T02:10:15Z"
+    }
+   ],
+   "arrived": true,
+   "used": false,
+   "defines_entries_for": true,
+   "cost_usd": 0.0326288,
+   "secs": 13.4,
+   "error": null
+  },
+  {
+   "arm": "control",
+   "session": "01801ed3-d7f9-45b4-969f-47f646d51cba",
+   "transcript_found": true,
+   "read": true,
+   "frames": [],
+   "arrived": false,
+   "used": false,
+   "defines_entries_for": true,
+   "cost_usd": 0.0195253,
+   "secs": 4.6,
+   "error": null
+  },
+  {
+   "arm": "treatment",
+   "session": "6989ca6d-1db1-402c-b1d2-962fc6a7410b",
+   "transcript_found": true,
+   "read": true,
+   "frames": [
+    {
+     "sha256": "649b8ae797aa0c4ed953be61c3cee4e43d678158a1e638029904bae44c9cc01a",
+     "bytes": 701,
+     "paths": [
+      "src/ledger.py"
+     ],
+     "session": "6989ca6d-1db1-402c-b1d2-962fc6a7410b",
+     "at": "2026-11-03T02:10:35Z"
+    }
+   ],
+   "arrived": true,
+   "used": false,
+   "defines_entries_for": true,
+   "cost_usd": 0.0329279,
+   "secs": 13.7,
+   "error": null
+  },
+  {
+   "arm": "control",
+   "session": "e8208bf4-a93d-4f04-8ebd-04d83c6b06c0",
+   "transcript_found": true,
+   "read": true,
+   "frames": [],
+   "arrived": false,
+   "used": false,
+   "defines_entries_for": true,
+   "cost_usd": 0.019662699999999998,
+   "secs": 5.5,
+   "error": null
+  },
+  {
+   "arm": "treatment",
+   "session": "04c923fe-4d1f-460a-a5f4-70aaacfaad08",
+   "transcript_found": true,
+   "read": true,
+   "frames": [
+    {
+     "sha256": "649b8ae797aa0c4ed953be61c3cee4e43d678158a1e638029904bae44c9cc01a",
+     "bytes": 701,
+     "paths": [
+      "src/ledger.py"
+     ],
+     "session": "04c923fe-4d1f-460a-a5f4-70aaacfaad08",
+     "at": "2026-11-03T02:10:57Z"
+    }
+   ],
+   "arrived": true,
+   "used": false,
+   "defines_entries_for": true,
+   "cost_usd": 0.0402835,
+   "secs": 19.5,
+   "error": null
+  },
+  {
+   "arm": "control",
+   "session": "2c496083-5ed7-49cd-97b1-dcbf53846fc3",
+   "transcript_found": true,
+   "read": true,
+   "frames": [],
+   "arrived": false,
+   "used": false,
+   "defines_entries_for": true,
+   "cost_usd": 0.019450099999999998,
+   "secs": 4.5,
+   "error": null
+  }
+ ],
+ "transcripts_kept_in": "/var/folders/7t/n551m2kj4dv80_8wdhyvflrc0000gn/T/okl-e2e-read-briefing-20261103-0209"
+}

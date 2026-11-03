@@ -1,6 +1,6 @@
 """Which files in someone else's repo are okl's, and whether they are still untouched (#49).
 
-okl writes into other people's repositories: two hook scripts and a CI workflow. It used
+okl writes into other people's repositories: its hook scripts and a CI workflow. It used
 to overwrite the hooks on every `okl init`, silently discarding a local edit, and there
 was no uninstall -- removing okl meant hand-editing settings next to other tools' hooks.
 

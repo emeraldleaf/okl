@@ -21,7 +21,8 @@ touches only the current directory, and only these:
 | `.okl/okl.db` | the local store (local mode only; seeded with the starter lessons and your stack's packs unless `--no-seed`) |
 | `.claude/hooks/userpromptsubmit-okl-check.sh` | **executable**; runs when you submit a task, injects the briefing |
 | `.claude/hooks/stop-okl-encode.sh` | **executable**; runs at session end, asks what was learned |
-| `.claude/settings.json` | registers those two hooks (merged in place; your existing keys are preserved) |
+| `.claude/hooks/posttooluse-okl-read.sh` | **executable**; runs after the agent reads a file, briefs the lessons that govern it |
+| `.claude/settings.json` | registers those three hooks (merged in place; your existing keys are preserved) |
 | `.mcp.json` | registers the okl MCP server — only when the `mcp` extra is installed |
 | `.github/workflows/okl-verify.yml` | **a CI workflow** running the drift gate on pull requests — only with `--ci`, or where an earlier okl installed it |
 | `.github/okl-version` | **one line, the okl release CI installs**, written beside the workflow so CI runs what your hooks run. `okl init` writes it for an okl installed from PyPI, and moves it when re-run after an upgrade, never backwards; a dev or editable okl leaves it alone. Written only where okl's workflow reads it: an edited workflow from before 0.11.0 is kept and does not, so init says so instead (`--force` replaces the workflow). Without it, CI installs the newest release. Commit it |
@@ -45,14 +46,19 @@ is written outside the directory you run `init` in; nothing contacts a network u
 run `okl connect` and point it somewhere yourself.
 
 `init` writes `.okl/config.json`. When it wires Claude Code (the repo has a `.claude/`
-directory, `claude` is on PATH, or you passed `--claude`), it also installs two hooks:
+directory, `claude` is on PATH, or you passed `--claude`), it also installs three hooks:
 a `UserPromptSubmit` hook that runs `check` on
 the prompt you actually typed and puts the briefing into the model's context (the
 enforced read — it must be this event: `PreToolUse` stdout never reaches the model,
 which an end-to-end test caught the hard way), and a session-end hook that blocks the first stop
 of a session that changed files with one question — *did this session learn anything
 worth `okl record`ing?* — so the write side of the loop gets a mechanical prompt too,
-not just a convention. It fires once per session and never loops.
+not just a convention. It fires once per session and never loops. The third runs after the
+agent reads a file (`PostToolUse` on `Read`): it returns `okl check --path` for that file as
+`additionalContext`, which Claude Code puts next to the read's result, before any edit. Each
+lesson is briefed once a session, again only while drift marks it; a file no lesson governs
+gets nothing; when okl cannot answer it says so in one line. REPORT §4aj measured that the
+briefing arrives (5 of 5 sessions); it did not show that it changes the edit.
 
 **Other agents (AGENTS.md):** `okl scaffold` (not `init`) writes the repo canon to both
 `CLAUDE.md` and `AGENTS.md` — one content, two filenames, so Codex/Cursor/anything
@@ -73,7 +79,7 @@ your agent's current docs before trusting any of that. Wiring one up is a well-s
 contribution — see [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 Hooks run in whatever environment the agent harness spawns — often without your venv or
-pipx bin dir on PATH — so both hooks resolve the `okl` binary in layers: the `OKL_BIN`
+pipx bin dir on PATH — so the hooks resolve the `okl` binary in layers: the `OKL_BIN`
 env var, then the `okl_bin` path `init` pins into `.okl/config.json` (machine-local),
 then PATH, then any `python3` that can `import okl` (`python3 -m okl`). `OKL_BIN` and
 `okl_bin` hold a path to okl (spaces are fine) or `<python> -m okl`; a launcher with
