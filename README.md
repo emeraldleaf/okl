@@ -645,7 +645,8 @@ pip install "observed-knowledge-ledger[mcp]"
 okl mcp     # register in your coding agent's tool config
 ```
 
-Exposes six tools to a coding agent: `okl_check` (read lessons before a task),
+Exposes six tools to a coding agent: `okl_check` (read lessons before a task, or, given a
+`path`, every lesson that governs a file before it is read or edited),
 `okl_record` (a new lesson), `okl_update` (refine one by id, keeping its proof),
 `okl_retire` (withdraw one, with a reason), `okl_get` (one lesson whole) and
 `okl_search`. `okl_check` **reports an outage loudly** — if a configured

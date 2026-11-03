@@ -307,8 +307,15 @@ class Client:
                 raise
             return self._post("/check", {**payload, "decision": "calibrated"})
 
-    def check(self, task: str, repo: str | None = None, limit: int | None = None) -> dict:
+    def check(self, task: str, repo: str | None = None, limit: int | None = None,
+              paths: list[str] | None = None) -> dict:
         """The briefing for starting `task` in `repo` (default: this repo), as core.check returns it.
+
+        With `paths`, the lessons that govern those files instead, as core.check_paths returns
+        them (#94): the question an agent asks before it reads or edits one. Each path is taken
+        as git takes it, relative to the working directory unless absolute, and made relative to
+        this repo's root; one outside the repo is left out, since none of its lessons governs
+        it, and listed under `outside_repo`.
 
         Lessons whose governed code changed since their last check come back marked.
         Over a shared service, raises ValueError when the service rejects the request (any
@@ -316,6 +323,14 @@ class Client:
         reached or fails on its side (a network error or any 5xx).
         """
         repo = repo or self.repo
+        cfg = _find_config()
+        root = cfg.parent.parent if cfg else Path.cwd()
+        if paths is not None:
+            result = self._check_paths(repo, paths, root)
+            drift.annotate_briefing(result, repo, str(root))
+            if self.mode != "remote":
+                core.record_briefing(self._local_store(), repo, result)
+            return result
         payload = {"repo": repo, "task": task, "interests": self.interests or None,
                    "hybrid": self.hybrid, "index": self.index, "near_misses": self.near_misses,
                    "rerank": self.rerank, "decision": self.decision}
@@ -356,13 +371,28 @@ class Client:
         # Mark briefed lessons whose code changed since their last check (#93). Done here,
         # not in core, because only the client has this repo's checkout: a shared service
         # answering /check has no git history to compare against.
-        cfg = _find_config()
-        drift.annotate_briefing(result, repo, str(cfg.parent.parent if cfg else Path.cwd()))
+        drift.annotate_briefing(result, repo, str(root))
         if self.mode != "remote":
             # Over a shared service the service logs the briefing it answers; locally, the
             # client is the only one who sees it (#129). Logged after the drift marks, so
             # the log keeps which briefed lessons were stale at the time (#252).
             core.record_briefing(store, repo, result)
+        return result
+
+    def _check_paths(self, repo: str, paths: list[str], root: Path) -> dict:
+        """core.check_paths over this repo's view, locally or from the service, with the paths
+        made repo-relative and those outside the repo listed apart."""
+        inside, outside = _repo_relative(paths, root)
+        if self.mode == "remote":
+            result = self._post("/check", {"repo": repo, "task": "", "paths": inside})
+            # An older service drops a field it does not know and briefs an empty task: never
+            # read that as "nothing governs this file".
+            if not isinstance(result.get("paths"), list):
+                raise OKLRejectedError(_TOO_OLD.format(what="answers `paths` on /check"), status=404)
+        else:
+            result = core.check_paths(self._local_store(), repo, inside)
+        if outside:
+            result["outside_repo"] = outside
         return result
 
     def record(self, **kwargs: Any) -> str:
@@ -586,6 +616,19 @@ class Client:
 
 # For a 404 from a route a service older than R1 lacks: say so, rather than leave the
 # person reading "404 Not Found" as a missing lesson or an outage.
+def _repo_relative(paths: list[str], root: Path) -> tuple[list[str], list[str]]:
+    """Each path as the repo names it from its root (`src/a.py`), and the ones outside it. A
+    relative path is taken from the working directory, as git takes it."""
+    base, inside, outside = root.resolve(), [], []
+    for p in paths:
+        full = Path(p) if Path(p).is_absolute() else Path.cwd() / p
+        try:
+            inside.append(full.resolve().relative_to(base).as_posix())
+        except ValueError:
+            outside.append(p)
+    return inside, outside
+
+
 _TOO_OLD = ("the OKL service is older than this okl client and nothing was changed: it "
             "predates the version that {what}. Upgrade the service to match.")
 

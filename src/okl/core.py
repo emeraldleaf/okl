@@ -23,7 +23,16 @@ from typing import Any
 # judge which bundled seed packs fit a repo.
 from . import decide, semantic, warm
 from . import rerank as rerank_stage
-from .store import RETIRED_STATUSES, Edge, Node, Store, _now_ms, has_observed_check, split_tags
+from .store import (
+    RETIRED_STATUSES,
+    Edge,
+    Node,
+    Store,
+    _now_ms,
+    has_observed_check,
+    path_matches,
+    split_tags,
+)
 from .store import STACK_TAGS as STACK_TAGS
 
 
@@ -311,6 +320,39 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
     _attach_named(out, store, buckets, also=also if decision == "tiered" else None,
                   near=left_out[:NEAR_MISSES] if near_misses else None,
                   index_scope=(repo_scope, interests) if index else None)
+    return out
+
+
+def governing(nodes: list[Node], repo: str, paths: set[str]) -> list[Node]:
+    """Live lessons in this repo's view whose governed files include one of `paths`
+    (repo-relative): the org's, and this repo's own."""
+    repo_scope = f"repo:{repo}"
+    out = []
+    for n in nodes:
+        if not n.files or n.status in RETIRED_STATUSES or n.scope not in ("org", repo_scope):
+            continue
+        globs = [g for g in n.files.split(",") if g.strip()]
+        if any(path_matches(g, p) for g in globs for p in paths):
+            out.append(n)
+    return out
+
+
+def check_paths(store: Store, repo: str, paths: list[str]) -> dict[str, Any]:
+    """The lessons that govern `paths` (repo-relative) in `repo`, in the shape check() returns,
+    so every format renders it (#94): the question an agent asks before it reads or edits a
+    file, where check() answers the one it asks before a task. They are found by the files a
+    lesson names, not by words, so none is ranked out: every lesson governing the file is
+    briefed. A path outside the repo, or one no lesson names, is answered with nothing, and
+    `store_records` then says whether the store held anything to match against."""
+    hits = sorted(governing(store.all_nodes(), repo, set(paths)), key=lambda n: n.id)
+    buckets = _bucket_by_type(hits)
+    _attach_catches(store, buckets["armed_gates"])
+    total = sum(len(v) for k, v in buckets.items() if k != "stale_warnings")
+    out: dict[str, Any] = {"repo": repo, "task": "", "paths": sorted(set(paths)), "match_count": total,
+                           "next_actions": _route_actions(buckets), "dropped_by_cutoff": 0,
+                           "weak_matches": 0, "hybrid": None, "decision": None, **buckets, "replaced": []}
+    if total == 0:
+        out["store_records"] = len(store.all_nodes())
     return out
 
 
@@ -1352,10 +1394,13 @@ def render_actions_only(result: dict[str, Any], limit: int | None = None) -> str
         if result.get("replaced"):
             return "\n".join([f"OKL: no live rule applies to this task ({result['repo']}); "
                               "a lesson it matched was replaced:", *_replaced_lines(result)])
+        if result.get("paths") is not None:
+            return f"OKL: no lesson governs {', '.join(result['paths'])} ({result['repo']})."
         return f"OKL: no encoded rule applies to this task ({result['repo']}). Proceed."
     verb = {"arm_gate": "ARM", "apply_fix": "FIX", "avoid_retracted": "AVOID",
             "avoid_identifier": "AVOID"}
-    out = [f"OKL — {len(actions)} rule(s) apply before you start:"]
+    out = [f"OKL — {len(actions)} rule(s) govern {', '.join(result['paths'])}:" if result.get("paths") is not None
+           else f"OKL — {len(actions)} rule(s) apply before you start:"]
     for a in actions:
         sym = f" [when: {a['symptom']}]" if a.get("symptom") else ""
         out.append(f"- {verb.get(a['kind'], 'DO')}: {a['target']}{_id_tag(a)}{_drift_tag(a)}{_proof_tag(a)}{sym}")
@@ -1388,11 +1433,44 @@ def _replaced_lines(result: dict[str, Any]) -> list[str]:
             "follow the replacement." for r in result.get("replaced") or []]
 
 
+def _nothing_matched(result: dict[str, Any], also: list[dict]) -> list[str]:
+    """The line a briefing ends on when it showed nothing in full: an empty store, a second tier,
+    near misses, weak matches, files no lesson governs, or a clean slate, each said as what it is."""
+    lines: list[str] = []
+    if result.get("store_records") == 0:
+        lines.append("> **The store is EMPTY (0 records).** This check proves nothing: there is "
+                     "no encoded knowledge to match against yet. That is different from "
+                     "\"no rule applies here\". Run `okl seed`, or record your first rule "
+                     "with `okl record`.")
+    elif result.get("paths") is not None:
+        lines.append("_No lesson governs these files: none names them in its `files`._")
+    elif also:
+        # The second tier named lessons; "clean slate" would contradict it (REPORT §4y).
+        lines.append(f"_Nothing matched this task closely enough to show in full; the {len(also)} above "
+                     "also matched. Read any that fits before you proceed, and record anything you "
+                     "learn with `okl record`._")
+    elif result.get("near_misses"):
+        # The near-miss list above offers records to inspect; "clean slate" would contradict it.
+        lines.append(f"_No encoded rule matched this task closely; the {len(result['near_misses'])} "
+                     "near miss(es) above are what came closest. Read any that fits before you "
+                     "proceed, and record anything you learn with `okl record`._")
+    elif result.get("weak_matches"):
+        lines.append(f"_No encoded rule matched this task closely: {result['weak_matches']} "
+                     "record(s) sharing a single word with it were left out. Proceeding with "
+                     "a clean slate — record anything you learn with `okl record`._")
+    else:
+        lines.append("_No encoded rule matched this task. Proceeding with a clean slate — "
+                     "record anything you learn with `okl record`._")
+    return lines
+
+
 def render_check_for_agent(result: dict[str, Any]) -> str:
     """Format a check() result as compact markdown for injection into agent context."""
     also = result.get("also_matched") or []
     more = f", and {len(also)} more listed by title" if also else ""
-    lines = [f"## OKL briefing — {result['repo']} · task: {result['task']}",
+    subject = (f"files: {', '.join(result['paths'])}" if result.get("paths") is not None
+               else f"task: {result['task']}")
+    lines = [f"## OKL briefing — {result['repo']} · {subject}",
              f"_{result['match_count']} relevant node(s) from the org's encoded body{more}._", ""]
 
     actions = result.get("next_actions") or []
@@ -1439,28 +1517,10 @@ def render_check_for_agent(result: dict[str, Any]) -> str:
                      "briefing short. Raise --limit or narrow the task if you expected more.")
     lines += _named_lines(result, also)
     if not any_hit:
-        if result.get("store_records") == 0:
-            lines.append("> **The store is EMPTY (0 records).** This check proves nothing: there is "
-                         "no encoded knowledge to match against yet. That is different from "
-                         "\"no rule applies here\". Run `okl seed`, or record your first rule "
-                         "with `okl record`.")
-        elif also:
-            # The second tier named lessons; "clean slate" would contradict it (REPORT §4y).
-            lines.append(f"_Nothing matched this task closely enough to show in full; the {len(also)} above "
-                         "also matched. Read any that fits before you proceed, and record anything you "
-                         "learn with `okl record`._")
-        elif result.get("near_misses"):
-            # The near-miss list above offers records to inspect; "clean slate" would contradict it.
-            lines.append(f"_No encoded rule matched this task closely; the {len(result['near_misses'])} "
-                         "near miss(es) above are what came closest. Read any that fits before you "
-                         "proceed, and record anything you learn with `okl record`._")
-        elif result.get("weak_matches"):
-            lines.append(f"_No encoded rule matched this task closely: {result['weak_matches']} "
-                         "record(s) sharing a single word with it were left out. Proceeding with "
-                         "a clean slate — record anything you learn with `okl record`._")
-        else:
-            lines.append("_No encoded rule matched this task. Proceeding with a clean slate — "
-                         "record anything you learn with `okl record`._")
+        lines += _nothing_matched(result, also)
+    if result.get("outside_repo"):
+        lines.append(f"_Outside this repository, so none of its lessons governs them: "
+                     f"{', '.join(result['outside_repo'])}._")
     return "\n".join(lines)
 
 

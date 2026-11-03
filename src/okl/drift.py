@@ -18,7 +18,6 @@ when the governed code moves, not on a fixed schedule.
 """
 from __future__ import annotations
 
-import fnmatch
 import json
 import re
 import subprocess
@@ -27,7 +26,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .store import RETIRED_STATUSES, Node, _utc_day, has_observed_check, stamp_problem
+from .store import RETIRED_STATUSES, Node, _utc_day, has_observed_check, path_matches, stamp_problem
 
 
 @dataclass
@@ -388,13 +387,6 @@ def _head_files(repo_dir: str) -> list[str] | None:
     return [p for p in out.stdout.decode("utf-8", "surrogateescape").split("\0") if p]
 
 
-def _glob_matches(glob: str, path: str) -> bool:
-    """git's default pathspec: the path itself, a directory above it, or an fnmatch
-    pattern whose `*` also crosses `/` -- the same matching drift's `git log` applies."""
-    g = glob.strip().rstrip("/")
-    return bool(g) and (path == g or path.startswith(g + "/") or fnmatch.fnmatchcase(path, g))
-
-
 def governs_nothing(nodes: Iterable[Node], repo: str, repo_dir: str = ".") -> list[Node]:
     """This repo's lessons whose `files` match nothing committed at HEAD (#109).
 
@@ -414,7 +406,7 @@ def governs_nothing(nodes: Iterable[Node], repo: str, repo_dir: str = ".") -> li
                 or n.status in RETIRED_STATUSES):
             continue
         globs = [g for g in n.files.split(",") if g.strip()]
-        if not any(_glob_matches(g, p) for g in globs for p in paths):
+        if not any(path_matches(g, p) for g in globs for p in paths):
             out.append(n)
     return out
 

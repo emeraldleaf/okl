@@ -64,9 +64,13 @@ def _build() -> Any:  # noqa: C901, PLR0915 - a declarative table of tool defini
     client = Client()
 
     @mcp.tool()
-    def okl_check(task: str, repo: str | None = None, limit: int | None = None,
-                  compact: bool = False) -> str:
+    def okl_check(task: str = "", repo: str | None = None, limit: int | None = None,
+                  compact: bool = False, path: list[str] | None = None) -> str:
         """Read the org's encoded rules that apply to a task, BEFORE starting it.
+
+        Or pass `path` (one or more files, repo-relative or absolute) instead of `task`, before
+        reading or editing them: every lesson whose governed files include one, with its drift
+        and proof marks (#94).
 
         Returns armed gates (with the defect each catches), past defects in this area,
         live retractions, retired identifiers, THREAT prior-art, rules and vocabulary.
@@ -79,8 +83,10 @@ def _build() -> Any:  # noqa: C901, PLR0915 - a declarative table of tool defini
         Use it when working in a small context budget, e.g. a subagent handling one
         focused subtask. `limit` caps how many records are drawn on.
         """
+        if not task.strip() and not path:
+            return "⚠️ okl_check needs a task, or a path to the files about to be read or edited."
         try:
-            result = client.check(task, repo=repo, limit=limit)
+            result = client.check(task, repo=repo, limit=limit, paths=list(path) if path else None)
         except OKLUnreachableError as e:
             return (f"⚠️ OKL UNREACHABLE — cannot confirm a clean check ({e}). "
                     "Treat as: rules may exist that you cannot see. Proceed with caution "

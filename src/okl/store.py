@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import contextlib
 import datetime as _dt
+import fnmatch
 import json
 import os
 import re
@@ -90,6 +91,15 @@ def stamp_problem(rule: Mapping[str, Any]) -> str | None:
     if commit is not None and not (m.group(1) and commit.startswith(m.group(1))):
         return "verified_commit does not match the commit its evidence names -- edited by hand?"
     return None
+
+
+def path_matches(glob: str, path: str) -> bool:
+    """Whether a lesson's `files` entry covers a repo-relative path: git's default pathspec, the
+    path itself, a directory above it, or an fnmatch pattern whose `*` also crosses `/`, the same
+    matching drift's `git log` applies. Here, below drift and core, so the drift gate and the
+    briefing by path (#94) read one rule."""
+    g = glob.strip().rstrip("/")
+    return bool(g) and (path == g or path.startswith(g + "/") or fnmatch.fnmatchcase(path, g))
 
 
 def has_observed_check(rule: Mapping[str, Any]) -> bool:

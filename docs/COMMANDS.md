@@ -55,6 +55,12 @@ okl metric           # recurrence: defect classes that came back, split by wheth
                      #   code had changed since its check) and over-scope (org lessons
                      #   whose title, symptom or fix names one repository's world),
                      #   each with its denominator and the lessons it flags
+okl check --path src/orders.py
+                     # every lesson whose `files` govern a file, before it is read or edited,
+                     #   with its drift and proof marks, in any --format (repeatable; #94).
+                     #   Found by the files a lesson names, not by words, so none is ranked
+                     #   out. Relative to the working directory or absolute; a file outside
+                     #   the repo has none. Instead of --task; okl_check takes `path` too.
 okl embed            # build or refresh one local vector per record for --hybrid briefings
                      #   (needs the `hybrid` extra; downloads a 131 MB static model once;
                      #   re-embeds only records whose text changed). Off by default: a check

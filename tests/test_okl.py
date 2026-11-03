@@ -434,7 +434,7 @@ def test_cli_check_fails_closed_when_the_service_refuses_it(tmp_path, monkeypatc
     (tmp_path / ".okl" / "config.json").write_text(
         json.dumps({"repo": "r", "service_url": "http://127.0.0.1:9"}))
 
-    def refuse(self, task, repo=None, limit=None):
+    def refuse(self, task, repo=None, limit=None, paths=None):
         raise ValueError("OKL service rejected the request (401): missing or bad bearer token")
     monkeypatch.setattr("okl.client.Client.check", refuse)
 

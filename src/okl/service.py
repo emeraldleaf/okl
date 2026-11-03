@@ -36,7 +36,11 @@ class CheckReq(BaseModel):
     """Request body for POST /check."""
 
     repo: str
-    task: str
+    task: str = ""
+    # Repo-relative files about to be read or edited: answered with the lessons governing them,
+    # in place of a task (#94). A client sends them only when it asked, and refuses an answer
+    # without them, so an older service is never read as "nothing governs this file".
+    paths: list[str] | None = None
     limit: int = 12
     interests: list[str] | None = None   # the calling repo's declared subject tags
     hybrid: str | None = None            # None, "rrf" or "linear" (#258); the service's own vectors
@@ -213,6 +217,12 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901, PLR0915 - 
     @app.post("/check")
     def check(req: CheckReq, authorization: str | None = Header(default=None)) -> dict[str, Any]:
         _auth(authorization)
+        if req.paths is not None:
+            result = core.check_paths(_store, req.repo, req.paths)
+            core.record_briefing(_store, req.repo, result)
+            return result
+        if not req.task.strip():
+            raise HTTPException(status_code=422, detail="give a task, or the paths of the files about to change")
         result = core.check(_store, req.repo, req.task, limit=req.limit,
                             interests=req.interests, hybrid=req.hybrid, index=req.index,
                             near_misses=req.near_misses, rerank=req.rerank, decision=req.decision)
