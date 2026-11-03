@@ -1182,11 +1182,14 @@ def test_hooks_step_aside_in_a_repo_okl_was_never_set_up_in(tmp_path):
         return subprocess.run(["bash", str(hooks / name)], cwd=other, text=True,
                               input=json.dumps(payload), capture_output=True, env={**env, **extra})
 
-    # Unenrolled repo, project named: both hooks are silent no-ops.
+    # Unenrolled repo, project named: every hook is a silent no-op.
     r = hook("userpromptsubmit-okl-check.sh", {"prompt": "fix the login page"})
     assert r.returncode == 0 and r.stdout == "" and r.stderr == "", (r.returncode, r.stderr)
     r = hook("stop-okl-encode.sh", {"session_id": "u1", "stop_hook_active": False})
     assert r.returncode == 0, r.stderr
+    r = hook("posttooluse-okl-read.sh", {"session_id": "u1", "tool_name": "Read",
+                                         "tool_input": {"file_path": str(other / "dirty.txt")}})
+    assert r.returncode == 0 and r.stdout == "" and r.stderr == "", (r.returncode, r.stderr)
     # Enrolled, but okl cannot run: still fail-closed.
     (other / ".okl").mkdir(); (other / ".okl" / "config.json").write_text('{"repo": "o"}')
     r = hook("userpromptsubmit-okl-check.sh", {"prompt": "fix the login page"},
@@ -1791,12 +1794,15 @@ def test_init_wires_claude_code_without_an_existing_claude_dir(tmp_path):
     assert "--claude" in r.stdout and "userpromptsubmit" not in r.stdout, r.stdout
     r = okl(p, "init", "--repo", "x")
     assert r.returncode == 0 and not (p / ".claude").exists() and "okl init --claude" in r.stdout, r.stdout
-    # Asked for: .claude/ is created and both hooks are registered.
+    # Asked for: .claude/ is created and the hooks are registered, the read hook on Read.
     p = repo("flag")
     r = okl(p, "init", "--repo", "x", "--claude")
     assert r.returncode == 0, r.stderr
     assert (p / ".claude" / "hooks" / "userpromptsubmit-okl-check.sh").is_file(), r.stdout
-    assert "userpromptsubmit-okl-check.sh" in (p / ".claude" / "settings.json").read_text()
+    registered = json.loads((p / ".claude" / "settings.json").read_text())["hooks"]
+    assert "userpromptsubmit-okl-check.sh" in json.dumps(registered["UserPromptSubmit"])
+    assert registered["PostToolUse"][0]["matcher"] == "Read"
+    assert "posttooluse-okl-read.sh" in json.dumps(registered["PostToolUse"])
     # Claude Code installed: wired without the flag, and the dry run says why.
     p = repo("detected")
     (bare / "claude").write_text("#!/bin/sh\n"); (bare / "claude").chmod(0o755)

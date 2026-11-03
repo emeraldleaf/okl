@@ -101,7 +101,7 @@ else: another tool's hooks in the same events stay, a file
 you edited is kept and named, and `.okl/` (your store) is never touched; delete it yourself
 if you mean to. Nothing outside the repo was ever written.
 
-The two Claude Code hook scripts, the pre-push hook and the CI workflow each carry a
+The three Claude Code hook scripts, the pre-push hook and the CI workflow each carry a
 `# okl-fingerprint:` line, the hash
 of the rest of the file (settings and `.mcp.json` are merged entry by entry instead). That
 is how `init` and `--uninstall` tell an untouched okl file (of any fingerprinted version:

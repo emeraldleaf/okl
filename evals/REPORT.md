@@ -4529,6 +4529,9 @@ asked.
   mode, and the instrument found the transcript. Its treatment session read the file and the
   briefing arrived; it did not use the canary. It is not counted.
 - **No deviation.** The instrument did not change after the pilot.
+- **Added after the run:** the instrument's `--replies` mode, which reads the kept transcripts
+  into the companion receipt below, and a tidy of its `main` for SonarCloud. Neither changes
+  what the run measured, which ran at 7edfd1e (tagged `receipts/7edfd1e`).
 
 | | sessions | read the file | briefing arrived | used the canary |
 |---|---|---|---|---|
