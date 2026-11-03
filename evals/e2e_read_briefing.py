@@ -230,7 +230,7 @@ def replies(receipt_path: Path) -> Path:
     return out
 
 
-def main() -> int:
+def main() -> None:
     """Run §4aj and write its receipt, or with --replies its companion receipt of the replies."""
     ap = argparse.ArgumentParser()
     ap.add_argument("--runs", type=int, default=5, help="sessions per arm")
@@ -240,7 +240,7 @@ def main() -> int:
         out = replies(args.replies.resolve())
         print(json.dumps(json.loads(out.read_text())["counts"]), f"of {json.loads(out.read_text())['of']}")
         print(f"receipt: {out.relative_to(REPO)}")
-        return 0
+        return
     if shutil.which("claude") is None:
         sys.exit("ABORT: claude is not on PATH")
     stamp = f"{datetime.now(UTC):%Y%m%d-%H%M}"
@@ -262,8 +262,7 @@ def main() -> int:
     out.write_text(json.dumps(receipt, indent=1) + "\n")
     print(json.dumps(receipt["summary"], indent=1))
     print(f"receipt: {out.relative_to(REPO)}")
-    return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
