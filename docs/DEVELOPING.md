@@ -136,10 +136,14 @@ That is expected; see CONTRIBUTING.
 ## Releasing
 
 1. **Check for open security alerts:**
-   `gh api 'repos/emeraldleaf/okl/dependabot/alerts?state=open' --jq length` should print 0.
-   Fix each alert, or dismiss it with a reason, before the release. Nothing else surfaces
-   them: CI, the reviews and drift all stay green while an alert is open. Six sat for a day
-   in October 2026 and were noticed only because a `git push` printed them (#285).
+   `gh api 'repos/emeraldleaf/okl/dependabot/alerts?state=open' --jq length` (dependencies)
+   and `gh api 'repos/emeraldleaf/okl/code-scanning/alerts?state=open' --jq length` (CodeQL's
+   default setup, on Python and the Actions workflows): each should print 0. Fix each alert, or
+   dismiss it with a reason, before the release. Nothing else surfaces them: CI, the reviews
+   and drift all stay green while an alert is open, and CodeQL's PR check fails only on an
+   alert the PR adds, not on one its scheduled scan finds in code already on main. Six
+   Dependabot alerts sat for a day in October 2026 and were noticed only because a `git push`
+   printed them (#285).
 2. **Sweep what merged since the last sweep** with the CodeRabbit CLI, as above, so every
    change in the release has had at least one review. Fix what it finds first.
 3. **On a `release-X.Y.Z` branch,** set the version in `pyproject.toml`, in `server.json`
