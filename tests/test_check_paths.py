@@ -327,14 +327,17 @@ def test_the_replies_receipt_counts_the_reasons_by_fixed_patterns(tmp_path):
             {"sessionId": sid, "type": "user"},
             {"sessionId": sid, "message": {"role": "assistant", "content": [{"type": "text", "text": "Reading."}]}},
             {"sessionId": sid, "message": {"role": "assistant", "content": [{"type": "text", "text": text}]}})) + "\n")
+    control = tmp_path / "okl-e2e-control-c1"; control.mkdir()
+    (control / "transcript.jsonl").write_text(json.dumps({"sessionId": "c1", "message": {"role": "assistant",
+        "content": [{"type": "tool_use", "name": "Read", "input": {"file_path": "/x/repo/src/ledger.py"}}]}}) + "\n")
     receipt = tmp_path / "e2e-read-briefing-x.json"
     receipt.write_text(json.dumps({"transcripts_kept_in": str(tmp_path), "runs": [
-        {"arm": "treatment", "session": "s1"}, {"arm": "control", "session": "c1"},
-        {"arm": "treatment", "session": "s2"}]}))
-    receipt.write_text(json.dumps({"transcripts_kept_in": str(tmp_path), "runs": [
-        {"arm": "treatment", "session": "s1", "frames": []}, {"arm": "treatment", "session": "s2", "frames": []}]}))
+        {"arm": "treatment", "session": "s1", "frames": []}, {"arm": "control", "session": "c1", "frames": []},
+        {"arm": "treatment", "session": "s2", "frames": []}]}))
     out = json.loads(e2e.replies(receipt).read_text())
-    assert [e["session"] for e in out["evidence"]] == ["s1", "s2"]
-    assert all(e["reads"] == [] and e["frames_in_transcript"] == [] for e in out["evidence"])
+    # every run's evidence, the control's too; only the treatment agents' replies
+    assert [(e["arm"], e["session"]) for e in out["evidence"]] == [("treatment", "s1"), ("control", "c1"),
+                                                                    ("treatment", "s2")]
+    assert out["evidence"][1]["reads"] == ["src/ledger.py"] and out["evidence"][1]["frames_in_transcript"] == []
     assert out["of"] == 2 and [r["final_reply"] for r in out["replies"]] == [replies["s1"], replies["s2"]]
     assert out["counts"] == {"names_the_canary": 2, "module_missing": 2, "not_asked": 1, "marked_unverified": 1}
