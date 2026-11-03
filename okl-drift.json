@@ -48,9 +48,9 @@
       "title": "okl's docs are agent-neutral; Claude Code-only parts are labelled as such",
       "scope": "repo:okl",
       "files": "README.md,docs/",
-      "verified_at": 1793663747905,
-      "verified_by": "`python3 ci/check-agent-neutral.py` exit 0, matched 'AGENT NEUTRAL' on commit 1ece731839d7 @ 2026-11-02T23:55Z",
-      "verified_commit": "1ece731839d77ea99cbccee8ce933f2421d524f0"
+      "verified_at": 1793664152269,
+      "verified_by": "`python3 ci/check-agent-neutral.py` exit 0, matched 'AGENT NEUTRAL' on commit 7839e121dfd8 @ 2026-11-03T00:02Z",
+      "verified_commit": "7839e121dfd8cfb9e5671e4f01e16be0cf50001c"
     },
     {
       "id": "n_07faa4565128",
@@ -95,12 +95,12 @@
     {
       "id": "n_bf6a2aee2f12",
       "type": "Defect",
-      "title": "Dependabot alerts reach no one unless a step reads them",
+      "title": "Security alerts (Dependabot, code scanning) reach no one unless a step reads them",
       "scope": "org",
       "files": "docs/DEVELOPING.md",
-      "verified_at": 1793659624034,
-      "verified_by": "`awk '/^## Releasing/{r=1;next} r&&/^(## |2\\. )/{exit} r&&/^1\\. /{s=1} s{print}' docs/DEVELOPING.md | tr '\\n' ' ' | grep -o 'dependabot/alerts?state=open.*--jq length.*should print 0'` exit 0, matched 'should print 0' on commit 04252d70bc35 @ 2026-11-02T22:47Z",
-      "verified_commit": "04252d70bc355b6087c03d5113100d0b1df0f352"
+      "verified_at": 1793664145424,
+      "verified_by": "`awk '/^## Releasing/{r=1;next} r&&/^(## |2\\. )/{exit} r&&/^1\\. /{s=1} s{print}' docs/DEVELOPING.md | tr '\\n' ' ' | grep -o 'dependabot/alerts?state=open.*code-scanning/alerts?state=open.*--jq length.*should print 0'` exit 0, matched 'should print 0' on commit 7839e121dfd8 @ 2026-11-03T00:02Z",
+      "verified_commit": "7839e121dfd8cfb9e5671e4f01e16be0cf50001c"
     },
     {
       "id": "n_d45d7bf64896",
@@ -108,9 +108,9 @@
       "title": "Entered a crowded category deliberately: differentiate on verification-of-memory, compose with memory infra, never compete on recall",
       "scope": "repo:okl",
       "files": "README.md,docs/",
-      "verified_at": 1793663748102,
-      "verified_by": "`python3 ci/check-positioning.py` exit 0, matched 'POSITIONING OK' on commit 1ece731839d7 @ 2026-11-02T23:55Z",
-      "verified_commit": "1ece731839d77ea99cbccee8ce933f2421d524f0"
+      "verified_at": 1793664152460,
+      "verified_by": "`python3 ci/check-positioning.py` exit 0, matched 'POSITIONING OK' on commit 7839e121dfd8 @ 2026-11-03T00:02Z",
+      "verified_commit": "7839e121dfd8cfb9e5671e4f01e16be0cf50001c"
     },
     {
       "id": "n_ead8e0a2b43d",
