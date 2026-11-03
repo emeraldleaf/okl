@@ -4519,6 +4519,56 @@ reported as a deviation. The instrument and the hook are at commit 7edfd1e on #9
 - **Fixed once a run is read:** everything above.
 - **Deadline:** 2026-11-17. If the run cannot happen by then, this section says why.
 
+### Result (2026-11-03)
+
+**The run.** Receipt `e2e-read-briefing-20261103-0209.json`: the instrument and hook at 7edfd1e,
+Claude Code 2.1.302, ten sessions, none errored, $0.27. Each agent added `entries_for` as
+asked.
+- **The pilot** (`e2e-read-briefing-pilot-20261103-0208.json`, same commit) ran first, as the
+  amendment registered: one session per arm. Claude Code loaded the project's hook in print
+  mode, and the instrument found the transcript. Its treatment session read the file and the
+  briefing arrived; it did not use the canary. It is not counted.
+- **No deviation.** The instrument did not change after the pilot.
+
+| | sessions | read the file | briefing arrived | used the canary |
+|---|---|---|---|---|
+| treatment | 5 | 5 | 5 | 0 |
+| control | 5 | 5 | (no hook; no frame logged) | 0 |
+
+**Predictions.**
+1. **Held: the briefing arrived in all 5 treatment sessions.** Each transcript holds the frame
+   the hook logged, with the same sha256 and byte count (701 bytes each time), so it arrived
+   whole.
+2. **Failed: no treatment session used the canary, 0 of 5.**
+3. **Held: no control session used it.**
+
+**Exploratory, not registered: why none used it.** Every treatment session's last reply named
+the lesson and the canary, told the user it had left the call out, and gave reasons:
+- the `audit` module it imports from does not exist (5 of 5; some looked for it first);
+- the user had not asked for it (4 of 5);
+- the briefing marks the lesson unverified (2 of 5).
+
+They read it and weighed it. A call to a function that does not exist would have broken the
+file. So the canary measured whether an agent would write an import that fails, as much as
+whether it read the lesson. The design confounded the two, and the registered measure cannot
+separate them.
+
+**What follows, as registered.** Prediction 1 held and 2 did not, so the hook ships, and its
+docs say the briefing arrives without showing that it changes the edit. `okl init` installs it
+beside the prompt hook (`PostToolUse` on `Read`), each lesson once a session unless drift marks
+it.
+
+**What it shows, and what it does not.**
+- **Shown:** context a `PostToolUse` hook returns on a `Read` reaches the model whole, in every
+  session measured, and the agent reads it: all five named the lesson to the user. This is the
+  precondition #94 set, which REPORT §8's unread hook made necessary.
+- **Not shown:** that it changes what an agent writes. The agents treated it as something to
+  check, not an order: context that arrives with a tool result, unasked, naming a function that
+  does not exist, and marked unverified. A next measurement, registered anew, would brief a
+  lesson an agent can follow (an existing function, a verified lesson), and compare the same
+  lesson arriving at the read with the same lesson arriving in the prompt's briefing.
+- **Not measured here:** re-briefing after a compaction, which is #94's other half.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

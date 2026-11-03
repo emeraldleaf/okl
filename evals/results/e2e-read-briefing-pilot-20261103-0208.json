@@ -1,0 +1,68 @@
+{
+ "what": "does a file's briefing reach the model when Claude Code reads the file (REPORT \u00a74aj)",
+ "at": "2026-11-03T02:08Z",
+ "code": "7edfd1eaa0a8",
+ "claude_code": "2.1.302 (Claude Code)",
+ "agent": "claude -p --model sonnet --setting-sources project --strict-mcp-config --output-format json --tools Read,Edit,Write --allowedTools Read Edit Write",
+ "task": "Read src/ledger.py, then add a function entries_for(account_id) to it that returns the list of that account's entries. Keep the change small.",
+ "canary": "audit_trail_7Q",
+ "summary": {
+  "treatment": {
+   "runs": 1,
+   "read": 1,
+   "arrived": 1,
+   "used": 0
+  },
+  "control": {
+   "runs": 1,
+   "read": 1,
+   "used": 0,
+   "frames_logged": 0
+  },
+  "predictions": {
+   "1_arrives_in_every_treatment_read": true,
+   "2_canary_in_at_least_4_treatment_reads": false,
+   "3_no_control_uses_canary": true
+  },
+  "counts_only": false
+ },
+ "runs": [
+  {
+   "arm": "treatment",
+   "session": "2bfd34d6-d3e9-42f1-99bb-a8366f2a048c",
+   "transcript_found": true,
+   "read": true,
+   "frames": [
+    {
+     "sha256": "649b8ae797aa0c4ed953be61c3cee4e43d678158a1e638029904bae44c9cc01a",
+     "bytes": 701,
+     "paths": [
+      "src/ledger.py"
+     ],
+     "session": "2bfd34d6-d3e9-42f1-99bb-a8366f2a048c",
+     "at": "2026-11-03T02:08:40Z"
+    }
+   ],
+   "arrived": true,
+   "used": false,
+   "defines_entries_for": true,
+   "cost_usd": 0.0318267,
+   "secs": 12.8,
+   "error": null
+  },
+  {
+   "arm": "control",
+   "session": "f123be51-acc8-4233-a67a-5419df075e34",
+   "transcript_found": true,
+   "read": true,
+   "frames": [],
+   "arrived": false,
+   "used": false,
+   "defines_entries_for": true,
+   "cost_usd": 0.019499100000000002,
+   "secs": 5.0,
+   "error": null
+  }
+ ],
+ "transcripts_kept_in": "/var/folders/7t/n551m2kj4dv80_8wdhyvflrc0000gn/T/okl-e2e-read-briefing-20261103-0208"
+}
