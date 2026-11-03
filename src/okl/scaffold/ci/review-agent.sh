@@ -151,7 +151,7 @@ clean="$(mktemp -d)"
 raw="$(cd "$clean" && printf '%s' "$prompt" | $REVIEW_CMD 2>/dev/null)"
 rmdir "$clean" 2>/dev/null || true
 
-# The review: the last JSON object in the reply that has "findings". A reviewer often writes a
+# The review: the last JSON object in the reply with its three lists. A reviewer often writes a
 # line of prose before its JSON, or fences it; stripping fences alone left that line, the whole
 # reply failed to parse, and its findings were dropped while the job passed (three on okl #363,
 # one review in three that day).
@@ -164,7 +164,8 @@ for i, ch in enumerate(text):
             obj, _end = dec.raw_decode(text, i)
         except ValueError:
             continue
-        if isinstance(obj, dict) and "findings" in obj:
+        # A review carries all three lists; a reply quoting the format ({"findings":[]}) is not one.
+        if isinstance(obj, dict) and all(isinstance(obj.get(k), list) for k in ("findings", "checked", "not_checked")):
             found = obj
 if found is None:
     sys.exit(1)
@@ -178,7 +179,7 @@ if [[ -z "$json" ]]; then
   # On GitHub it is an annotation on the PR, so a green check is not read as a review.
   echo "review-agent: no review in the reviewer's reply — not blocking, but this change has no review verdict." >&2
   if [[ "${GITHUB_ACTIONS:-}" == "true" ]]; then
-    echo "::warning title=architecture review::no review verdict: the reviewer's reply held no JSON with findings. Re-run the job before relying on this check."
+    echo "::warning title=architecture review::no review verdict: the reviewer's reply held no review (findings, checked, not_checked). Re-run the job before relying on this check."
   fi
   printf '%s\n' "$raw" | head -20 >&2
   exit 0

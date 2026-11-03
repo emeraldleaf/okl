@@ -920,6 +920,9 @@ def test_review_agent_gives_the_reviewer_what_the_diff_cannot_and_annotates_its_
      '"rule":"r","finding":"f"}],"checked":[],"not_checked":[]} Done.', 0, "0 must-fix, 1 to consider"),
     # no review at all: not blocking, but a warning on the PR says there is no verdict
     ("I could not finish the review.", 0, "::warning title=architecture review::no review verdict"),
+    # a reply quoting the format is not a review (CLI review): it needs all three lists
+    ('Reply as {"findings":[]} when there is nothing to report.', 0,
+     "::warning title=architecture review::no review verdict"),
 ])
 def test_review_agent_finds_the_review_wherever_the_reply_puts_it(tmp_path, reply, code, expect):
     """The reviewer's JSON is read from anywhere in its reply, and a reply with none is said on the
