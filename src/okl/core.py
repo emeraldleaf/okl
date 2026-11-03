@@ -1372,7 +1372,7 @@ def render_actions_only(result: dict[str, Any], limit: int | None = None) -> str
     the prose bodies, and the stale-node footer, keeping one line per action.
     """
     actions = result.get("next_actions") or []
-    if limit is not None:
+    if limit is not None and result.get("paths") is None:   # a file's lessons are all shown (#94)
         actions = actions[:limit]
     also = [_also_line(e) for e in result.get("also_matched") or []]
     tail = [f"Also matched ({len(also)}), one line each; `okl show <id>` reads the whole lesson:", *also] if also else []

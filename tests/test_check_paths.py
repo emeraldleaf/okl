@@ -2,6 +2,7 @@
 import asyncio
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -53,6 +54,8 @@ def test_check_paths_briefs_every_lesson_that_governs_the_file():
 
 
 def _repo(tmp_path):
+    if shutil.which("git") is None:
+        pytest.skip("git not available")
     repo = tmp_path / "repo"; (repo / "src").mkdir(parents=True)
     local = subprocess.run(["git", "rev-parse", "--local-env-vars"], capture_output=True, text=True).stdout.split()
     env = {k: v for k, v in os.environ.items() if k not in local}
@@ -141,3 +144,60 @@ def test_okl_check_mcp_tool_takes_a_path(tmp_path, monkeypatch):
         assert asked.startswith("⚠️ okl_check needs a task, or a path"), asked
 
     asyncio.run(exercise())
+
+
+@pytest.mark.parametrize("entry", [
+    "src/orders.py", "src", "src/", "src/*.py", "*.py", "src/*/x.py",
+    ":(glob)src/**/*.py", ":(glob)src/*.py", ":(glob)**/x.py", ":(glob)src/**",
+    ":(literal)src/*.py", ":(icase)SRC/Orders.py", ":/src/orders.py", ":(top)docs",
+])
+def test_path_matching_agrees_with_git(tmp_path, entry):
+    """A lesson's `files` entry covers the same paths for the briefing by file as for drift's
+    `git log`: compared here with git's own pathspec, default and magic (CLI review on #362)."""
+    from okl.store import path_matches
+    if shutil.which("git") is None:
+        pytest.skip("git not available")
+    files = ["src/orders.py", "src/a/x.py", "src/a/b/c.py", "src/*.py", "x.py", "docs/README.md", "src/orders.pyc"]
+    for f in files:
+        (tmp_path / f).parent.mkdir(parents=True, exist_ok=True); (tmp_path / f).write_text("x\n")
+    local = subprocess.run(["git", "rev-parse", "--local-env-vars"], capture_output=True, text=True).stdout.split()
+    env = {k: v for k, v in os.environ.items() if k not in local}
+    subprocess.run(["git", "-C", str(tmp_path), "init", "-q"], check=True, env=env)
+    subprocess.run(["git", "-C", str(tmp_path), "add", "--", *[f":(literal){f}" for f in files]], check=True, env=env)
+    by_git = set(subprocess.run(["git", "-C", str(tmp_path), "ls-files", "--", entry], capture_output=True,
+                                text=True, check=True, env=env).stdout.split())
+    assert {f for f in files if path_matches(entry, f)} == by_git, entry
+
+
+def test_other_pathspec_magic_matches_nothing():
+    """`:(exclude)` and the like are never guessed at: no match, rather than a wrong one."""
+    from okl.store import path_matches
+    assert not path_matches(":(exclude)src", "src/orders.py")
+    assert not path_matches(":(attr:x)src", "src/orders.py")
+
+
+def test_a_symlinked_file_keeps_its_own_name(tmp_path, monkeypatch):
+    """A tracked symlink is governed by its own path, as git tracks it, not by its target's; `..`
+    and `.` still fold (CLI review on #362)."""
+    from okl.client import _repo_relative
+    (tmp_path / "src").mkdir(); (tmp_path / "src" / "impl.py").write_text("x\n")
+    (tmp_path / "src" / "current.py").symlink_to("impl.py")
+    monkeypatch.chdir(tmp_path / "src")
+    inside, outside = _repo_relative([str(tmp_path / "src" / "current.py"), "../src/./current.py", "../../elsewhere.py"],
+                                     tmp_path)
+    assert inside == ["src/current.py", "src/current.py"] and outside == ["../../elsewhere.py"]
+
+
+def test_a_file_briefing_is_never_cut_and_an_empty_request_is_no_check(remote):
+    """`limit` caps a task's briefing, never the lessons that govern a file: compact and limited,
+    every one is still shown. And no paths at all is refused, by the client and the service, not
+    answered as a clean check (CLI review on #362)."""
+    for i in range(4):
+        _record(remote.store, f"rule-{i}", "src/orders.py")
+    result = core.check_paths(remote.store, "r", ["src/orders.py"])
+    shown = core.render_actions_only(result, limit=2)
+    assert shown.startswith("OKL — 4 rule(s) govern") and all(f"rule-{i}" in shown for i in range(4)), shown
+
+    with pytest.raises(ValueError, match="no paths given"):
+        Client().check("", paths=[])
+    assert remote.api.post("/check", json={"repo": "r", "paths": []}).status_code == 422
