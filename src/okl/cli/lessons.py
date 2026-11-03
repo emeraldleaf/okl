@@ -56,7 +56,8 @@ def _apply_check_flags(client: Client, args: argparse.Namespace) -> None:
 
 
 def cmd_check(args: argparse.Namespace) -> int:
-    """Print the lessons that apply to `--task`, in the shape `--format` names.
+    """Print the lessons that apply to `--task`, or that govern each `--path`, in the shape
+    `--format` names.
 
     Exit 0 when the check ran, even if nothing applies; 2 when it could not run (no
     config, an unreachable store, or a rejected request), so a hook never reads a
@@ -74,7 +75,7 @@ def cmd_check(args: argparse.Namespace) -> int:
         return 2
     _apply_check_flags(client, args)
     try:
-        result = client.check(args.task, repo=args.repo, limit=args.limit)
+        result = client.check(args.task or "", repo=args.repo, limit=args.limit, paths=getattr(args, "path", None))
     except OKLUnreachableError as e:
         # FAIL CLOSED — loud, non-zero, no reassuring empty result.
         print(f"OKL UNREACHABLE — refusing to report a clean check.\n{e}", file=sys.stderr)

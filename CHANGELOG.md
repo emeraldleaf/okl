@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **`okl check --path <file>`: the lessons that govern a file** (#94). Asked before a file is read
+  or edited, it briefs every lesson whose `files` cover it, with its drift and proof marks, in
+  any of `check`'s formats; `okl_check` takes a `path` for MCP agents, and a shared service
+  answers it. Lessons are found by the files they name rather than by words, so none is ranked
+  out. A path is relative to the working directory or absolute; one outside the repository is
+  named as such, since none of its lessons can govern it. This is the agent-neutral half of
+  briefing at edit time: a pre-commit hook or another agent's pre-tool hook calls the same
+  command, and Claude Code's hook comes next.
 - **Every bash script okl ships tests with `[[ ]]`** (#356): the hooks, the gates, the pre-push
   hook and the CI scripts, 273 tests in all. `[[ ]]` neither word-splits nor globs its operands,
   and a test now fails on any new `[ ]`. Inside `[[ ]]`, `-gt` and its kin read their operands as

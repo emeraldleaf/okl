@@ -55,7 +55,7 @@ class _Asked:
     """A client for the CLI handler: records the limit it is asked for."""
     configured, seen = True, None
 
-    def check(self, _task: str, repo: str | None = None, limit: object = "unset") -> dict:
+    def check(self, _task: str, repo: str | None = None, limit: object = "unset", paths: object = None) -> dict:
         _Asked.seen = limit
         return {}
 

@@ -18,7 +18,8 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-from .drift import SNAPSHOT_FILE, _glob_matches
+from .core import governing
+from .drift import SNAPSHOT_FILE
 from .store import RETIRED_STATUSES, Node
 
 # A briefed lesson's id follows its bold title: `- **FIX: title** [id]` (R1).
@@ -114,19 +115,6 @@ def changed_paths(repo_dir: str, since: str | None) -> set[str]:
         paths.update(p for p in _git_lines(repo_dir, "log", f"--since={since}", "--name-only",
                                            "--format=") if p)
     return paths
-
-
-def governing(nodes: list[Node], repo: str, paths: set[str]) -> list[Node]:
-    """Live lessons in this repo's view whose governed files include one of `paths`."""
-    repo_scope = f"repo:{repo}"
-    out = []
-    for n in nodes:
-        if not n.files or n.status in RETIRED_STATUSES or n.scope not in ("org", repo_scope):
-            continue
-        globs = [g for g in n.files.split(",") if g.strip()]
-        if any(_glob_matches(g, p) for g in globs for p in paths):
-            out.append(n)
-    return out
 
 
 def recap(nodes: list[Node], repo: str, repo_dir: str, transcript: str | None, *,

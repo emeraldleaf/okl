@@ -90,8 +90,14 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
     pc.add_argument("url"); pc.add_argument("--token")
     pc.set_defaults(func=cmd_connect)
 
-    pk = sub.add_parser("check", help="pre-task read: relevant lessons for a task")
-    pk.add_argument("--task", required=True); pk.add_argument("--repo")
+    pk = sub.add_parser("check", help="pre-task read: the lessons for a task, or for the files about to be read or edited")
+    what = pk.add_mutually_exclusive_group(required=True)
+    what.add_argument("--task", help="the task about to start: the lessons whose words match it")
+    what.add_argument("--path", action="append", metavar="FILE",
+                      help="a file about to be read or edited: every lesson whose `files` govern it, with "
+                           "its drift and proof marks (repeatable; #94). Relative to the working directory "
+                           "or absolute; a file outside this repo has none")
+    pk.add_argument("--repo")
     pk.add_argument("--format", choices=["agent", "actions", "json", "hook"], default="agent",
                     help="agent: the full briefing. actions: the routed action list only, "
                          "for callers on a small context budget. json: the raw result. hook: what a "
