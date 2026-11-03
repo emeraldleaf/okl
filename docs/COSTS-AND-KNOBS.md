@@ -3,7 +3,7 @@
 Part of okl's documentation; the [README](../README.md) is the short version. The headline numbers and the receipt are in the README's "What it costs"; this page has what `okl init` writes, every knob, how to turn parts off, and the opt-in architecture review.
 
 **In your repo:** `okl init` writes `.okl/` (config, the local database, a `.gitignore`
-covering both) and, when it wires Claude Code, two hook scripts plus their registration. In a
+covering both) and, when it wires Claude Code, three hook scripts plus their registration. In a
 git repository it also installs a pre-push hook that runs the drift gate (`--no-git-hook`
 skips it). `--ci` installs `.github/workflows/okl-verify.yml`, which runs the gate on every
 PR, instead of the hook. A hook an earlier `init` installed stays: `--no-git-hook` only stops
@@ -79,7 +79,8 @@ never the task: a briefing's task is usually your prompt.
 
 `OKL_QUIET=1` keeps the briefing but hides the one-line *okl · briefed …* notice. Switch a
 hook off by name with `OKL_DISABLED_HOOKS=briefing` (the pre-task read),
-`OKL_DISABLED_HOOKS=encode` (the end-of-session question), or both, comma-separated.
+`OKL_DISABLED_HOOKS=encode` (the end-of-session question), `OKL_DISABLED_HOOKS=read` (the
+lessons briefed when the agent reads a file), or several, comma-separated.
 **Set `OKL_DISABLED_HOOKS=encode` for headless runs (`claude -p`, CI agents, scripts):**
 print mode emits only the final message, and a blocked stop makes the reply to "what did
 we learn?" that final message — the answer you asked for is then only in the transcript.
@@ -93,14 +94,14 @@ Nothing is load-bearing on the hooks: `okl check` and `okl record` work from the
 from CI, and through the MCP server whether or not any hook is installed.
 
 To remove okl from a repo: `okl init --uninstall` (add `--dry-run` to preview). It removes
-the two hook scripts, their exact entries in `.claude/settings.json`, okl's `.mcp.json`
+the three hook scripts, their exact entries in `.claude/settings.json`, okl's `.mcp.json`
 server, `.github/workflows/okl-verify.yml` with the `.github/okl-version` pin beside it, and
 its pre-push hook, and with `--owner` okl's CODEOWNERS block and its deny rules — and nothing
 else: another tool's hooks in the same events stay, a file
 you edited is kept and named, and `.okl/` (your store) is never touched; delete it yourself
 if you mean to. Nothing outside the repo was ever written.
 
-The two Claude Code hook scripts, the pre-push hook and the CI workflow each carry a
+The three Claude Code hook scripts, the pre-push hook and the CI workflow each carry a
 `# okl-fingerprint:` line, the hash
 of the rest of the file (settings and `.mcp.json` are merged entry by entry instead). That
 is how `init` and `--uninstall` tell an untouched okl file (of any fingerprinted version:

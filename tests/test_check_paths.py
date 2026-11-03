@@ -201,3 +201,143 @@ def test_a_file_briefing_is_never_cut_and_an_empty_request_is_no_check(remote):
     with pytest.raises(ValueError, match="no paths given"):
         Client().check("", paths=[])
     assert remote.api.post("/check", json={"repo": "r", "paths": []}).status_code == 422
+
+
+READ_HOOK = ROOT / "src" / "okl" / "scaffold" / "hooks" / "posttooluse-okl-read.sh"
+
+
+def _read_hook(repo, env, tmp_path, file_path, session="s1", **extra):
+    hook_env = {**env, "CLAUDE_PROJECT_DIR": str(repo), "OKL_BIN": f"{sys.executable} -m okl",
+                "OKL_DATABASE_URL": f"sqlite:///{tmp_path / 'store.db'}", "PYTHONPATH": str(ROOT / "src"),
+                "TMPDIR": str(tmp_path), "OKL_FRAME_LOG": str(tmp_path / "frames.jsonl"), **extra}
+    hook_env.pop("OKL_SERVICE_URL", None)
+    stdin = json.dumps({"session_id": session, "hook_event_name": "PostToolUse", "tool_name": "Read",
+                        "tool_input": {"file_path": file_path}})
+    return subprocess.run(["bash", str(READ_HOOK)], cwd=repo, env=hook_env, input=stdin,
+                          capture_output=True, text=True)
+
+
+def test_the_read_hook_briefs_a_files_lessons_once_framed_and_never_silently_fails(tmp_path):
+    """After a Read, the hook returns the lessons governing the file as PostToolUse
+    additionalContext, framed by their sha256 and byte count and logged the same (REPORT §4aj);
+    the same session's next read of it is quiet unless drift marks a lesson (this one, never
+    verified, stays marked); an ungoverned file gets nothing; okl failing is said, not silent."""
+    import hashlib
+    repo, env = _repo(tmp_path)
+    r = _okl(tmp_path, repo, env, "record", "--type", "Rule", "--scope", "repo", "--id", "ledger-audit",
+             "--title", "Every ledger read goes through the audit trail", "--files", "src/orders.py",
+             "--fix", "call audit_trail_7Q(account_id) before returning entries")
+    assert r.returncode == 0, r.stderr
+
+    first = _read_hook(repo, env, tmp_path, str(repo / "src" / "orders.py"))
+    assert first.returncode == 0, first.stderr
+    out = json.loads(first.stdout)["hookSpecificOutput"]
+    assert out["hookEventName"] == "PostToolUse"
+    frame, body = out["additionalContext"].split("\n", 1)
+    digest = hashlib.sha256(body.encode()).hexdigest()
+    assert frame == f"okl-briefing sha256={digest} bytes={len(body.encode())}"
+    assert "audit_trail_7Q" in body and "[ledger-audit]" in body
+    logged = [json.loads(x) for x in (tmp_path / "frames.jsonl").read_text().splitlines()]
+    assert logged[-1]["sha256"] == digest and logged[-1]["session"] == "s1"
+
+    # never verified, so drift marks it, and it is briefed again; once verified it would be quiet
+    again = _read_hook(repo, env, tmp_path, str(repo / "src" / "orders.py"))
+    assert "audit_trail_7Q" in again.stdout
+
+    assert _read_hook(repo, env, tmp_path, str(repo / "README.md")).stdout == ""
+    assert _read_hook(repo, env, tmp_path, str(repo / "src" / "orders.py"),
+                      OKL_DISABLED_HOOKS="read").stdout == ""
+    broken = _read_hook(repo, env, tmp_path, str(repo / "src" / "orders.py"), OKL_BIN="/no/such/okl",
+                        PATH="/usr/bin:/bin", PYTHONPATH="/nowhere")
+    note = json.loads(broken.stdout)["hookSpecificOutput"]["additionalContext"]
+    assert broken.returncode == 0 and note.startswith("OKL NOT BRIEFED for ") and "cannot see" in note
+
+
+def test_once_per_session_drops_a_lesson_already_briefed_unless_drift_marks_it(tmp_path, monkeypatch):
+    """The dedupe itself: a verified lesson briefed once in a session is left out of that session's
+    next file briefing, and a drift-marked one is kept; another session starts afresh."""
+    from okl.cli.lessons import _once_per_session
+    monkeypatch.setattr("tempfile.gettempdir", lambda: str(tmp_path))
+    def result():
+        return {"rules": [{"id": "proven"}, {"id": "stale", "drift": {"reason": "changed"}}],
+                "next_actions": [{"id": "proven"}, {"id": "stale", "drift": {"reason": "changed"}}],
+                "match_count": 2}
+    first = result(); _once_per_session(first, "s1")
+    assert [r["id"] for r in first["rules"]] == ["proven", "stale"]
+    second = result(); _once_per_session(second, "s1")
+    assert [r["id"] for r in second["rules"]] == ["stale"] and second["match_count"] == 1
+    other = result(); _once_per_session(other, "s2")
+    assert [r["id"] for r in other["rules"]] == ["proven", "stale"]
+
+
+def test_the_e2e_instrument_builds_measures_and_summarizes_without_a_session(tmp_path, monkeypatch):
+    """REPORT §4aj's plumbing, with no model: a treatment repo whose hook, fired as Claude Code
+    would after a Read, logs a frame; `measure` finds the read, the frame and the canary in a
+    transcript; `summarize` reads the registered predictions. The control repo registers no hook."""
+    import importlib.util
+    if shutil.which("git") is None:
+        pytest.skip("git not available")
+    spec = importlib.util.spec_from_file_location("e2e_read_briefing", ROOT / "evals" / "e2e_read_briefing.py")
+    e2e = importlib.util.module_from_spec(spec); spec.loader.exec_module(e2e)
+
+    room = tmp_path / "t"; room.mkdir()
+    repo, env = e2e.build(room, "treatment")
+    settings = json.loads((repo / ".claude" / "settings.json").read_text())
+    assert settings["hooks"]["PostToolUse"][0]["matcher"] == "Read"
+    stdin = json.dumps({"session_id": "sess-1", "tool_name": "Read",
+                        "tool_input": {"file_path": str(repo / "src" / "ledger.py")}})
+    hook = subprocess.run(["bash", str(repo / ".claude" / "hooks" / e2e.HOOK.name)], cwd=repo, input=stdin,
+                          env={**env, "CLAUDE_PROJECT_DIR": str(repo)}, capture_output=True, text=True)
+    context = json.loads(hook.stdout)["hookSpecificOutput"]["additionalContext"]
+    assert e2e.CANARY in context
+
+    # A transcript as Claude Code writes one: the Read, then the hook's context beside its result.
+    projects = tmp_path / "home" / ".claude" / "projects" / "x"; projects.mkdir(parents=True)
+    (projects / "sess-1.jsonl").write_text("\n".join(json.dumps(x) for x in (
+        {"message": {"content": [{"type": "tool_use", "name": "Read",
+                                  "input": {"file_path": str(repo / "src" / "ledger.py")}}]}},
+        {"message": {"content": [{"type": "text", "text": context}]}})) + "\n")
+    monkeypatch.setattr(Path, "home", lambda: tmp_path / "home")
+    (repo / "src" / "ledger.py").write_text(e2e.FIXTURE + f"\n\ndef entries_for(a):\n    {e2e.CANARY}(a)\n")
+    got = e2e.measure(repo, room, {"session_id": "sess-1"})
+    assert got["read"] and got["arrived"] and got["used"] and got["defines_entries_for"]
+
+    croom = tmp_path / "c"; croom.mkdir()
+    crepo, _ = e2e.build(croom, "control")
+    assert json.loads((crepo / ".claude" / "settings.json").read_text()) == {}
+    summary = e2e.summarize([{"arm": "treatment", **got}, {"arm": "control", "read": True, "used": False,
+                                                           "frames": [], "arrived": False}])
+    assert summary["treatment"] == {"runs": 1, "read": 1, "arrived": 1, "used": 1}
+    assert summary["predictions"]["1_arrives_in_every_treatment_read"]
+    assert summary["predictions"]["3_no_control_uses_canary"] and not summary["counts_only"]
+
+
+def test_the_replies_receipt_counts_the_reasons_by_fixed_patterns(tmp_path):
+    """§4aj's exploratory counts come from a committed receipt: each treatment agent's final reply
+    verbatim, and each reason found by a fixed pattern (the CI review's must-fix on #363)."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("e2e_read_briefing", ROOT / "evals" / "e2e_read_briefing.py")
+    e2e = importlib.util.module_from_spec(spec); spec.loader.exec_module(e2e)
+    replies = {"s1": "I left out audit_trail_7Q(account_id): you didn't ask for it and there's no `audit` module.",
+               "s2": "I looked for audit.py and neither exists, so audit_trail_7Q would raise an ImportError. "
+                     "The briefing marks it unverified."}
+    for sid, text in replies.items():
+        room = tmp_path / f"okl-e2e-treatment-{sid}"; room.mkdir()
+        (room / "transcript.jsonl").write_text("\n".join(json.dumps(x) for x in (
+            {"sessionId": sid, "type": "user"},
+            {"sessionId": sid, "message": {"role": "assistant", "content": [{"type": "text", "text": "Reading."}]}},
+            {"sessionId": sid, "message": {"role": "assistant", "content": [{"type": "text", "text": text}]}})) + "\n")
+    control = tmp_path / "okl-e2e-control-c1"; control.mkdir()
+    (control / "transcript.jsonl").write_text(json.dumps({"sessionId": "c1", "message": {"role": "assistant",
+        "content": [{"type": "tool_use", "name": "Read", "input": {"file_path": "/x/repo/src/ledger.py"}}]}}) + "\n")
+    receipt = tmp_path / "e2e-read-briefing-x.json"
+    receipt.write_text(json.dumps({"transcripts_kept_in": str(tmp_path), "runs": [
+        {"arm": "treatment", "session": "s1", "frames": []}, {"arm": "control", "session": "c1", "frames": []},
+        {"arm": "treatment", "session": "s2", "frames": []}]}))
+    out = json.loads(e2e.replies(receipt).read_text())
+    # every run's evidence, the control's too; only the treatment agents' replies
+    assert [(e["arm"], e["session"]) for e in out["evidence"]] == [("treatment", "s1"), ("control", "c1"),
+                                                                    ("treatment", "s2")]
+    assert out["evidence"][1]["reads"] == ["src/ledger.py"] and out["evidence"][1]["frames_in_transcript"] == []
+    assert out["of"] == 2 and [r["final_reply"] for r in out["replies"]] == [replies["s1"], replies["s2"]]
+    assert out["counts"] == {"names_the_canary": 2, "module_missing": 2, "not_asked": 1, "marked_unverified": 1}

@@ -15,7 +15,16 @@
   out. A path is relative to the working directory or absolute; one outside the repository is
   named as such, since none of its lessons can govern it. This is the agent-neutral half of
   briefing at edit time: a pre-commit hook or another agent's pre-tool hook calls the same
-  command, and Claude Code's hook comes next.
+  command.
+- **In Claude Code, the lessons that govern a file arrive when the agent reads it** (#94, REPORT
+  §4aj). `okl init` installs a third hook, `PostToolUse` on `Read`: it returns
+  `okl check --path` for the file as context next to the read's result, before any edit, each
+  lesson once a session (again only while drift marks it), framed with its sha256 and byte count.
+  A file no lesson governs gets nothing; when okl cannot answer, the hook says so in one line and
+  never blocks; `OKL_DISABLED_HOOKS=read` turns it off. Measured before it shipped: in five
+  sessions the briefing arrived every time, and every agent read it and named the lesson. None
+  followed it, though: the measured lesson called a function that did not exist, and each said
+  so. So it is shown to arrive, not to change an edit. `okl init` on a repo set up earlier adds it.
 - **Every bash script okl ships tests with `[[ ]]`** (#356): the hooks, the gates, the pre-push
   hook and the CI scripts, 273 tests in all. `[[ ]]` neither word-splits nor globs its operands,
   and a test now fails on any new `[ ]`. Inside `[[ ]]`, `-gt` and its kin read their operands as
