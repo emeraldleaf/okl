@@ -48,9 +48,9 @@
       "title": "okl's docs are agent-neutral; Claude Code-only parts are labelled as such",
       "scope": "repo:okl",
       "files": "README.md,docs/",
-      "verified_at": 1793673867136,
-      "verified_by": "`python3 ci/check-agent-neutral.py` exit 0, matched 'AGENT NEUTRAL' on commit 874e1a85c8f9 @ 2026-11-03T02:44Z",
-      "verified_commit": "874e1a85c8f9eddc7f22ed4ac33326e449f0f085"
+      "verified_at": 1793709638260,
+      "verified_by": "`python3 ci/check-agent-neutral.py` exit 0, matched 'AGENT NEUTRAL' on commit e53f70cca760 @ 2026-11-03T12:40Z",
+      "verified_commit": "e53f70cca760eb5b781f2c896afed86c016e2d65"
     },
     {
       "id": "n_07faa4565128",
@@ -68,9 +68,9 @@
       "title": "A test that imports an undeclared package passes only where that package happens to be installed",
       "scope": "org",
       "files": "tests/,pyproject.toml,.github/workflows/ci.yml",
-      "verified_at": 1793673867011,
-      "verified_by": "`python3 ci/check-test-imports.py` exit 0, matched 'NO UNDECLARED IMPORT' on commit 874e1a85c8f9 @ 2026-11-03T02:44Z",
-      "verified_commit": "874e1a85c8f9eddc7f22ed4ac33326e449f0f085"
+      "verified_at": 1793709638127,
+      "verified_by": "`python3 ci/check-test-imports.py` exit 0, matched 'NO UNDECLARED IMPORT' on commit e53f70cca760 @ 2026-11-03T12:40Z",
+      "verified_commit": "e53f70cca760eb5b781f2c896afed86c016e2d65"
     },
     {
       "id": "n_9ba48d85ed19",
@@ -108,9 +108,9 @@
       "title": "Entered a crowded category deliberately: differentiate on verification-of-memory, compose with memory infra, never compete on recall",
       "scope": "repo:okl",
       "files": "README.md,docs/",
-      "verified_at": 1793673867326,
-      "verified_by": "`python3 ci/check-positioning.py` exit 0, matched 'POSITIONING OK' on commit 874e1a85c8f9 @ 2026-11-03T02:44Z",
-      "verified_commit": "874e1a85c8f9eddc7f22ed4ac33326e449f0f085"
+      "verified_at": 1793709638478,
+      "verified_by": "`python3 ci/check-positioning.py` exit 0, matched 'POSITIONING OK' on commit e53f70cca760 @ 2026-11-03T12:40Z",
+      "verified_commit": "e53f70cca760eb5b781f2c896afed86c016e2d65"
     },
     {
       "id": "n_ead8e0a2b43d",
