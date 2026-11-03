@@ -8,9 +8,9 @@
       "title": "The README's stated check defaults (limit 12; formats agent, actions, json, hook) match the code",
       "scope": "repo:okl",
       "files": "README.md,src/okl/core.py,src/okl/cli/,src/okl/client.py,src/okl/service.py,src/okl/mcp_server.py",
-      "verified_at": 1793663746685,
-      "verified_by": "`python3 ci/check-check-defaults.py` exit 0, matched 'CHECK DEFAULTS MATCH' on commit 1ece731839d7 @ 2026-11-02T23:55Z",
-      "verified_commit": "1ece731839d77ea99cbccee8ce933f2421d524f0"
+      "verified_at": 1793668688047,
+      "verified_by": "`python3 ci/check-check-defaults.py` exit 0, matched 'CHECK DEFAULTS MATCH' on commit 11fc3f68c6f9 @ 2026-11-03T01:18Z",
+      "verified_commit": "11fc3f68c6f917539fdcb94db9cfc8007b69fbf6"
     },
     {
       "id": "doc-init-flags",
