@@ -151,14 +151,36 @@ clean="$(mktemp -d)"
 raw="$(cd "$clean" && printf '%s' "$prompt" | $REVIEW_CMD 2>/dev/null)"
 rmdir "$clean" 2>/dev/null || true
 
-# Strip any markdown fence the model adds around the JSON.
-json="$(printf '%s' "$raw" | sed -e 's/^```json//' -e 's/^```//' -e '/^```$/d')"
+# The review: the last JSON object in the reply with its three lists. A reviewer often writes a
+# line of prose before its JSON, or fences it; stripping fences alone left that line, the whole
+# reply failed to parse, and its findings were dropped while the job passed (three on okl #363,
+# one review in three that day).
+json="$(printf '%s' "$raw" | python3 -c '
+import json, sys
+text, dec, found = sys.stdin.read(), json.JSONDecoder(), None
+for i, ch in enumerate(text):
+    if ch == "{":
+        try:
+            obj, _end = dec.raw_decode(text, i)
+        except ValueError:
+            continue
+        # A review carries all three lists; a reply quoting the format ({"findings":[]}) is not one.
+        if isinstance(obj, dict) and all(isinstance(obj.get(k), list) for k in ("findings", "checked", "not_checked")):
+            found = obj
+if found is None:
+    sys.exit(1)
+print(json.dumps(found))
+' 2>/dev/null)" || json=""
 
-if ! printf '%s' "$json" | python3 -c "import json,sys; json.load(sys.stdin)" 2>/dev/null; then
-  # Fail OPEN on an unparseable reply, loudly. A reviewer that cannot be understood has not
-  # found anything; blocking every merge on a malformed model response would train people to
-  # bypass the gate, which is worse than the gate not firing.
-  echo "review-agent: could not parse the reviewer's reply as JSON — not blocking." >&2
+if [[ -z "$json" ]]; then
+  # Fail OPEN when no review can be found in the reply, but never quietly. A reviewer that
+  # cannot be understood has not found anything; blocking every merge on a malformed model
+  # response would train people to bypass the gate, which is worse than the gate not firing.
+  # On GitHub it is an annotation on the PR, so a green check is not read as a review.
+  echo "review-agent: no review in the reviewer's reply — not blocking, but this change has no review verdict." >&2
+  if [[ "${GITHUB_ACTIONS:-}" == "true" ]]; then
+    echo "::warning title=architecture review::no review verdict: the reviewer's reply held no review (findings, checked, not_checked). Re-run the job before relying on this check."
+  fi
   printf '%s\n' "$raw" | head -20 >&2
   exit 0
 fi

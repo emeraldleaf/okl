@@ -909,6 +909,42 @@ def test_review_agent_gives_the_reviewer_what_the_diff_cannot_and_annotates_its_
     assert "::error file=a.py,line=3,title=architecture review%3A r1::bad, really: 100%25" in r.stdout
 
 
+@pytest.mark.parametrize("reply,code,expect", [
+    # okl #363: a line of prose, then a fenced review. Stripping fences left the prose, the reply
+    # failed to parse, and its findings were dropped while the job passed.
+    ("I'm done reading and am writing up the review now.\n\n```json\n"
+     '{"findings":[{"severity":"must-fix","file":"a.py","line":1,"rule":"r","finding":"f"}],'
+     '"checked":["c"],"not_checked":[]}\n```\n', 1, "1 must-fix, 0 to consider"),
+    # braces before the review are skipped; the last object with findings is the review
+    ('Looked at {"a": 1} first. {"findings":[{"severity":"consider","file":"b.py","line":2,'
+     '"rule":"r","finding":"f"}],"checked":[],"not_checked":[]} Done.', 0, "0 must-fix, 1 to consider"),
+    # no review at all: not blocking, but a warning on the PR says there is no verdict
+    ("I could not finish the review.", 0, "::warning title=architecture review::no review verdict"),
+    # a reply quoting the format is not a review (CLI review): it needs all three lists
+    ('Reply as {"findings":[]} when there is nothing to report.', 0,
+     "::warning title=architecture review::no review verdict"),
+])
+def test_review_agent_finds_the_review_wherever_the_reply_puts_it(tmp_path, reply, code, expect):
+    """The reviewer's JSON is read from anywhere in its reply, and a reply with none is said on the
+    PR rather than passing quietly as if reviewed."""
+    scaffold(target=str(tmp_path), repo="r", claude_dir="dotclaude")
+    def git(*args):
+        return subprocess.run(["git", "-c", "user.email=t@example.invalid", "-c", "user.name=t", *args],
+                              cwd=tmp_path, check=True, capture_output=True, text=True).stdout.strip()
+    git("init", "-q"); git("add", "-A"); git("commit", "-qm", "base")
+    base = git("rev-parse", "HEAD")
+    (tmp_path / "a.py").write_text("x = 1\n"); git("add", "a.py"); git("commit", "-qm", "change")
+    (tmp_path / "reply.txt").write_text(reply)
+    fake = tmp_path / "fake-reviewer.sh"
+    fake.write_text(f"#!/bin/bash\ncat >/dev/null\ncat {tmp_path / 'reply.txt'}\n"); fake.chmod(0o755)
+    env = {"PATH": f"{Path(sys.executable).parent}:/usr/bin:/bin", "HOME": str(tmp_path),
+           "REVIEW_CMD": str(fake), "REVIEW_BASE_REF": base, "GITHUB_ACTIONS": "true"}
+    r = subprocess.run(["bash", str(tmp_path / "ci" / "review-agent.sh")], capture_output=True,
+                       text=True, cwd=str(tmp_path), env=env)
+    assert r.returncode == code, r.stdout + r.stderr
+    assert expect in r.stdout, r.stdout + r.stderr
+
+
 def test_stored_data_never_reaches_a_shell():
     """Data from the store reaches subprocesses list-form; only a typed arg may be shelled.
 
