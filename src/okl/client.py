@@ -326,11 +326,7 @@ class Client:
         cfg = _find_config()
         root = cfg.parent.parent if cfg else Path.cwd()
         if paths is not None:
-            result = self._check_paths(repo, paths, root)
-            drift.annotate_briefing(result, repo, str(root))
-            if self.mode != "remote":
-                core.record_briefing(self._local_store(), repo, result)
-            return result
+            return self._check_files(repo, paths, root)
         payload = {"repo": repo, "task": task, "interests": self.interests or None,
                    "hybrid": self.hybrid, "index": self.index, "near_misses": self.near_misses,
                    "rerank": self.rerank, "decision": self.decision}
@@ -377,6 +373,16 @@ class Client:
             # client is the only one who sees it (#129). Logged after the drift marks, so
             # the log keeps which briefed lessons were stale at the time (#252).
             core.record_briefing(store, repo, result)
+        return result
+
+    def _check_files(self, repo: str, paths: list[str], root: Path) -> dict:
+        """check() with `paths`: the governing lessons, marked by drift, and logged as a briefing."""
+        if not paths:
+            raise ValueError("no paths given: nothing was checked")
+        result = self._check_paths(repo, paths, root)
+        drift.annotate_briefing(result, repo, str(root))
+        if self.mode != "remote":
+            core.record_briefing(self._local_store(), repo, result)
         return result
 
     def _check_paths(self, repo: str, paths: list[str], root: Path) -> dict:
@@ -621,9 +627,11 @@ def _repo_relative(paths: list[str], root: Path) -> tuple[list[str], list[str]]:
     relative path is taken from the working directory, as git takes it."""
     base, inside, outside = root.resolve(), [], []
     for p in paths:
-        full = Path(p) if Path(p).is_absolute() else Path.cwd() / p
+        # `..` and `.` are folded and the directory resolved, but the file is not followed: a
+        # tracked symlink is governed by its own name, as git tracks it.
+        full = Path(os.path.normpath(Path(p) if Path(p).is_absolute() else Path.cwd() / p))
         try:
-            inside.append(full.resolve().relative_to(base).as_posix())
+            inside.append((full.parent.resolve() / full.name).relative_to(base).as_posix())
         except ValueError:
             outside.append(p)
     return inside, outside

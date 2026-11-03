@@ -93,13 +93,54 @@ def stamp_problem(rule: Mapping[str, Any]) -> str | None:
     return None
 
 
+_MAGIC = re.compile(r"^:\(([a-z,]*)\)(.*)$|^:/(.*)$")
+
+
+def _glob_regex(pattern: str) -> re.Pattern[str]:
+    """git's `:(glob)` pattern as a regex: `*` and `?` stay within one directory, `**/` is any
+    number of directories, and a trailing `/**` is everything inside."""
+    out, i = [], 0
+    while i < len(pattern):
+        if pattern.startswith("**/", i):
+            out.append("(?:.*/)?"); i += 3
+        elif pattern.startswith("/**", i) and i + 3 == len(pattern):
+            out.append("/.*"); i += 3
+        elif pattern[i] == "*":
+            out.append("[^/]*"); i += 1
+        elif pattern[i] == "?":
+            out.append("[^/]"); i += 1
+        else:
+            out.append(re.escape(pattern[i])); i += 1
+    return re.compile("".join(out) + r"\Z")
+
+
 def path_matches(glob: str, path: str) -> bool:
-    """Whether a lesson's `files` entry covers a repo-relative path: git's default pathspec, the
-    path itself, a directory above it, or an fnmatch pattern whose `*` also crosses `/`, the same
-    matching drift's `git log` applies. Here, below drift and core, so the drift gate and the
-    briefing by path (#94) read one rule."""
-    g = glob.strip().rstrip("/")
-    return bool(g) and (path == g or path.startswith(g + "/") or fnmatch.fnmatchcase(path, g))
+    """Whether a lesson's `files` entry covers a repo-relative path, as drift's `git log` reads
+    the same entry: by default the path itself, a directory above it, or an fnmatch pattern whose
+    `*` also crosses `/`; with git's pathspec magic, `:(glob)` (`**/` for any directories),
+    `:(literal)`, `:(icase)` and `:(top)` or `:/` (paths here are already from the top). Any other
+    magic matches nothing rather than a guess. Here, below drift and core, so the drift gate and
+    the briefing by path (#94) read one rule."""
+    entry = glob.strip()
+    magic: set[str] = set()
+    m = _MAGIC.match(entry)
+    if m:
+        magic = set(filter(None, (m.group(1) or "").split(",")))
+        entry = m.group(2) if m.group(3) is None else m.group(3)
+        if magic - {"glob", "literal", "icase", "top"}:
+            return False
+    g = entry.rstrip("/")
+    if not g:
+        return False
+    if "icase" in magic:
+        g, path = g.lower(), path.lower()
+    if path == g or path.startswith(g + "/"):
+        return True
+    if "literal" in magic:
+        return False
+    if "glob" in magic:
+        return bool(_glob_regex(g).match(path))
+    return fnmatch.fnmatchcase(path, g)
 
 
 def has_observed_check(rule: Mapping[str, Any]) -> bool:

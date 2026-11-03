@@ -218,6 +218,8 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901, PLR0915 - 
     def check(req: CheckReq, authorization: str | None = Header(default=None)) -> dict[str, Any]:
         _auth(authorization)
         if req.paths is not None:
+            if not req.paths:
+                raise HTTPException(status_code=422, detail="no paths given: nothing was checked")
             result = core.check_paths(_store, req.repo, req.paths)
             core.record_briefing(_store, req.repo, result)
             return result

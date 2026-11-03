@@ -8,9 +8,9 @@
       "title": "The README's stated check defaults (limit 12; formats agent, actions, json, hook) match the code",
       "scope": "repo:okl",
       "files": "README.md,src/okl/core.py,src/okl/cli/,src/okl/client.py,src/okl/service.py,src/okl/mcp_server.py",
-      "verified_at": 1793668835587,
-      "verified_by": "`python3 ci/check-check-defaults.py` exit 0, matched 'CHECK DEFAULTS MATCH' on commit c27578d85363 @ 2026-11-03T01:20Z",
-      "verified_commit": "c27578d85363f390c6ddeb8d07a7a1c9f1d24b5a"
+      "verified_at": 1793669845533,
+      "verified_by": "`python3 ci/check-check-defaults.py` exit 0, matched 'CHECK DEFAULTS MATCH' on commit 82bad0218ee6 @ 2026-11-03T01:37Z",
+      "verified_commit": "82bad0218ee655360900985a56b009edb1bb9716"
     },
     {
       "id": "doc-init-flags",
@@ -18,9 +18,9 @@
       "title": "Every okl init flag the README and guide document exists in the CLI",
       "scope": "repo:okl",
       "files": "README.md,docs/GETTING-STARTED.md,docs/FROM-SCRATCH.md,docs/AGENT-IDENTITY.md,ci/check-init-flags.py,src/okl/cli/",
-      "verified_at": 1793668834450,
-      "verified_by": "`PYTHONPATH=src python3 ci/check-init-flags.py` exit 0, matched 'INIT FLAGS EXIST' on commit c27578d85363 @ 2026-11-03T01:20Z",
-      "verified_commit": "c27578d85363f390c6ddeb8d07a7a1c9f1d24b5a"
+      "verified_at": 1793669844510,
+      "verified_by": "`PYTHONPATH=src python3 ci/check-init-flags.py` exit 0, matched 'INIT FLAGS EXIST' on commit 82bad0218ee6 @ 2026-11-03T01:37Z",
+      "verified_commit": "82bad0218ee655360900985a56b009edb1bb9716"
     },
     {
       "id": "doc-install-name",
@@ -28,9 +28,9 @@
       "title": "The install command in the README and guide names the real PyPI distribution",
       "scope": "repo:okl",
       "files": "README.md,docs/GETTING-STARTED.md,pyproject.toml",
-      "verified_at": 1793668834259,
-      "verified_by": "`python3 -c \"import tomllib,sys; n=tomllib.load(open(\\\"pyproject.toml\\\",\\\"rb\\\"))[\\\"project\\\"][\\\"name\\\"]; line=\\\"pipx install '\\\"+n+\\\"[mcp]'\\\"; bad=[f for f in (\\\"README.md\\\",\\\"docs/GETTING-STARTED.md\\\") if line not in open(f).read()]; sys.exit(\\\"install line missing in %s\\\" % bad) if bad else print(\\\"INSTALL LINE MATCHES\\\", n)\"` exit 0, matched 'INSTALL LINE MATCHES' on commit c27578d85363 @ 2026-11-03T01:20Z",
-      "verified_commit": "c27578d85363f390c6ddeb8d07a7a1c9f1d24b5a"
+      "verified_at": 1793669844358,
+      "verified_by": "`python3 -c \"import tomllib,sys; n=tomllib.load(open(\\\"pyproject.toml\\\",\\\"rb\\\"))[\\\"project\\\"][\\\"name\\\"]; line=\\\"pipx install '\\\"+n+\\\"[mcp]'\\\"; bad=[f for f in (\\\"README.md\\\",\\\"docs/GETTING-STARTED.md\\\") if line not in open(f).read()]; sys.exit(\\\"install line missing in %s\\\" % bad) if bad else print(\\\"INSTALL LINE MATCHES\\\", n)\"` exit 0, matched 'INSTALL LINE MATCHES' on commit 82bad0218ee6 @ 2026-11-03T01:37Z",
+      "verified_commit": "82bad0218ee655360900985a56b009edb1bb9716"
     },
     {
       "id": "doc-verified-refused",
@@ -38,9 +38,9 @@
       "title": "The docs' claim that okl record --verified is refused is true",
       "scope": "repo:okl",
       "files": "README.md,docs/GETTING-STARTED.md,src/okl/cli/",
-      "verified_at": 1793668834168,
-      "verified_by": "`R=$PWD; d=$(mktemp -d) && cd $d && git init -q && env -u OKL_DATABASE_URL -u OKL_SERVICE_URL PYTHONPATH=$R/src python3 -m okl init --repo z --no-claude >/dev/null 2>&1; env -u OKL_DATABASE_URL -u OKL_SERVICE_URL PYTHONPATH=$R/src python3 -m okl record --type Rule --scope repo --title x --verified >/dev/null 2>&1; rc=$?; cd $R; rm -rf $d; [ $rc -eq 2 ] && python3 -c \"import sys; t=lambda f: \\\" \\\".join(open(f).read().split()); sys.exit(0 if \\\"exits 2\\\" in t(\\\"README.md\\\") and \\\"okl record --verified\\` is refused\\\" in t(\\\"docs/GETTING-STARTED.md\\\") else 1)\" && echo VERIFIED FLAG REFUSED` exit 0, matched 'VERIFIED FLAG REFUSED' on commit c27578d85363 @ 2026-11-03T01:20Z",
-      "verified_commit": "c27578d85363f390c6ddeb8d07a7a1c9f1d24b5a"
+      "verified_at": 1793669844284,
+      "verified_by": "`R=$PWD; d=$(mktemp -d) && cd $d && git init -q && env -u OKL_DATABASE_URL -u OKL_SERVICE_URL PYTHONPATH=$R/src python3 -m okl init --repo z --no-claude >/dev/null 2>&1; env -u OKL_DATABASE_URL -u OKL_SERVICE_URL PYTHONPATH=$R/src python3 -m okl record --type Rule --scope repo --title x --verified >/dev/null 2>&1; rc=$?; cd $R; rm -rf $d; [ $rc -eq 2 ] && python3 -c \"import sys; t=lambda f: \\\" \\\".join(open(f).read().split()); sys.exit(0 if \\\"exits 2\\\" in t(\\\"README.md\\\") and \\\"okl record --verified\\` is refused\\\" in t(\\\"docs/GETTING-STARTED.md\\\") else 1)\" && echo VERIFIED FLAG REFUSED` exit 0, matched 'VERIFIED FLAG REFUSED' on commit 82bad0218ee6 @ 2026-11-03T01:37Z",
+      "verified_commit": "82bad0218ee655360900985a56b009edb1bb9716"
     },
     {
       "id": "docs-agent-neutral",
@@ -48,9 +48,9 @@
       "title": "okl's docs are agent-neutral; Claude Code-only parts are labelled as such",
       "scope": "repo:okl",
       "files": "README.md,docs/",
-      "verified_at": 1793668835137,
-      "verified_by": "`python3 ci/check-agent-neutral.py` exit 0, matched 'AGENT NEUTRAL' on commit c27578d85363 @ 2026-11-03T01:20Z",
-      "verified_commit": "c27578d85363f390c6ddeb8d07a7a1c9f1d24b5a"
+      "verified_at": 1793669845146,
+      "verified_by": "`python3 ci/check-agent-neutral.py` exit 0, matched 'AGENT NEUTRAL' on commit 82bad0218ee6 @ 2026-11-03T01:37Z",
+      "verified_commit": "82bad0218ee655360900985a56b009edb1bb9716"
     },
     {
       "id": "n_07faa4565128",
@@ -58,9 +58,9 @@
       "title": "Read a record's own body before gating it — it may already declare its portability",
       "scope": "org",
       "files": "seed/,src/okl/store.py",
-      "verified_at": 1793668833850,
-      "verified_by": "`python3 ci/check-portable-ungated.py` exit 0, matched 'PORTABLE RECORDS UNGATED' on commit c27578d85363 @ 2026-11-03T01:20Z",
-      "verified_commit": "c27578d85363f390c6ddeb8d07a7a1c9f1d24b5a"
+      "verified_at": 1793669844025,
+      "verified_by": "`python3 ci/check-portable-ungated.py` exit 0, matched 'PORTABLE RECORDS UNGATED' on commit 82bad0218ee6 @ 2026-11-03T01:37Z",
+      "verified_commit": "82bad0218ee655360900985a56b009edb1bb9716"
     },
     {
       "id": "n_7e50e3588bcd",
@@ -68,9 +68,9 @@
       "title": "A test that imports an undeclared package passes only where that package happens to be installed",
       "scope": "org",
       "files": "tests/,pyproject.toml,.github/workflows/ci.yml",
-      "verified_at": 1793668835008,
-      "verified_by": "`python3 ci/check-test-imports.py` exit 0, matched 'NO UNDECLARED IMPORT' on commit c27578d85363 @ 2026-11-03T01:20Z",
-      "verified_commit": "c27578d85363f390c6ddeb8d07a7a1c9f1d24b5a"
+      "verified_at": 1793669845031,
+      "verified_by": "`python3 ci/check-test-imports.py` exit 0, matched 'NO UNDECLARED IMPORT' on commit 82bad0218ee6 @ 2026-11-03T01:37Z",
+      "verified_commit": "82bad0218ee655360900985a56b009edb1bb9716"
     },
     {
       "id": "n_9ba48d85ed19",
@@ -108,9 +108,9 @@
       "title": "Entered a crowded category deliberately: differentiate on verification-of-memory, compose with memory infra, never compete on recall",
       "scope": "repo:okl",
       "files": "README.md,docs/",
-      "verified_at": 1793668835344,
-      "verified_by": "`python3 ci/check-positioning.py` exit 0, matched 'POSITIONING OK' on commit c27578d85363 @ 2026-11-03T01:20Z",
-      "verified_commit": "c27578d85363f390c6ddeb8d07a7a1c9f1d24b5a"
+      "verified_at": 1793669845327,
+      "verified_by": "`python3 ci/check-positioning.py` exit 0, matched 'POSITIONING OK' on commit 82bad0218ee6 @ 2026-11-03T01:37Z",
+      "verified_commit": "82bad0218ee655360900985a56b009edb1bb9716"
     },
     {
       "id": "n_ead8e0a2b43d",
@@ -118,9 +118,9 @@
       "title": "A gate that reads commit times needs merge commits — squash and rebase restamp history at merge time",
       "scope": "org",
       "files": "CONTRIBUTING.md,src/okl/drift.py",
-      "verified_at": 1793668833736,
-      "verified_by": "`gh api repos/emeraldleaf/okl --jq 'if .allow_squash_merge or .allow_rebase_merge then error(\"squash or rebase enabled\") else \"MERGE COMMITS ONLY\" end'` exit 0, matched 'MERGE COMMITS ONLY' on commit c27578d85363 @ 2026-11-03T01:20Z",
-      "verified_commit": "c27578d85363f390c6ddeb8d07a7a1c9f1d24b5a"
+      "verified_at": 1793669843916,
+      "verified_by": "`gh api repos/emeraldleaf/okl --jq 'if .allow_squash_merge or .allow_rebase_merge then error(\"squash or rebase enabled\") else \"MERGE COMMITS ONLY\" end'` exit 0, matched 'MERGE COMMITS ONLY' on commit 82bad0218ee6 @ 2026-11-03T01:37Z",
+      "verified_commit": "82bad0218ee655360900985a56b009edb1bb9716"
     }
   ]
 }
