@@ -200,7 +200,7 @@ def test_canon_size_gate_takes_only_whole_numbers(tmp_path):
 
 def _single_bracket_tests(text):
     """Each `[ … ]` test in a bash script's text, comments left out (#356)."""
-    test = re.compile(r"(?<![\[\w$])\[ (.+?) \](?!\])")
+    test = re.compile(r"(?<![\[\w$])\[[ \t](.+?)[ \t]\](?!\])")   # a tab separates as a space does
     return [m.group(0) for line in text.splitlines() if not line.lstrip().startswith("#")
             for m in test.finditer(line)]
 
@@ -210,8 +210,8 @@ def test_every_bash_script_tests_with_double_brackets():
     [ ] a PR touched (S7688), 279 on main. Every tracked bash script uses [[ ]], so CI catches a new
     [ ] first. The examples' demo scripts are left as measured: the README's results ran on them."""
     root = Path(__file__).resolve().parents[1]
-    tracked = subprocess.run(["git", "-C", str(root), "ls-files"], capture_output=True, text=True,
-                             check=True).stdout.split()
+    tracked = subprocess.run(["git", "-C", str(root), "ls-files", "-z"], capture_output=True, text=True,
+                             check=True).stdout.split("\0")   # NUL-separated: a path may hold a space
     found, checked = [], 0
     for rel in tracked:
         path = root / rel
@@ -229,6 +229,7 @@ def test_every_bash_script_tests_with_double_brackets():
     assert found == []
     # Red where it should be: a planted [ ] is found, and [[ ]], arrays and character classes are not.
     assert _single_bracket_tests('if [ -n "$x" ]; then :; fi') == ['[ -n "$x" ]']
+    assert _single_bracket_tests('if [\t-n "$x"\t]; then :; fi') == ['[\t-n "$x"\t]']
     assert _single_bracket_tests('[[ -n "$x" ]] && echo "${a[0]}" | grep -q "[a-z]"') == []
 
 
