@@ -11,13 +11,13 @@
 # pass or fail an audit that the committed tree would answer differently.
 set -uo pipefail
 cd "$(dirname "$0")/.."
-[ -d docs ] || { echo "no docs/ — skipping"; exit 0; }
+[[ -d docs ]] || { echo "no docs/ — skipping"; exit 0; }
 # The root README.md is a hub. It was missing from this list, so a doc linked from the
 # most obvious index in the repository was still reported as an orphan — the gate was
 # telling people to fix a doc that was already reachable. Found by running this gate
 # against okl itself, which links docs/DEPLOY.md from its root README and nowhere else.
 HUBS="$(ls README.md docs/README.md docs/index.md CLAUDE.md METHOD.md 2>/dev/null || true)"
-[ -z "$HUBS" ] && { echo "no hub file — skipping"; exit 0; }
+[[ -z "$HUBS" ]] && { echo "no hub file — skipping"; exit 0; }
 if git rev-parse --verify -q HEAD >/dev/null 2>&1; then
   in_repo=1
   targets=$(git ls-tree --name-only HEAD docs/ | grep -E '\.(md|svg|png|jpe?g|gif|webp)$' || true)
@@ -26,7 +26,7 @@ else
   targets=$(ls docs/*.md docs/*.svg docs/*.png docs/*.jpg docs/*.jpeg docs/*.gif docs/*.webp 2>/dev/null || true)
 fi
 linked() {  # is $1 named in any hub or in any markdown under docs/?
-  if [ "$in_repo" = 1 ]; then
+  if [[ "$in_repo" = 1 ]]; then
     # shellcheck disable=SC2086
     git grep -qF "$1" HEAD -- $HUBS 'docs/*.md' 2>/dev/null
   else

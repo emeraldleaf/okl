@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:1c9a0d7738f309a2f0e77cd19db3f58dbd0fea687f4c1e5b0be7c9704fef4cc4
+# okl-fingerprint: sha256:28f4d95bb4bb41dc40aac8af7adc7288a75edb7ca5007ef71a36b62bcc633845
 # Stop hook — the write-side mechanical catch for the encoding loop.
 #
 # The read side (okl check) is enforced by the UserPromptSubmit hook; nothing enforced the WRITE
@@ -14,7 +14,7 @@ set -uo pipefail
 # command moves it; from outside the project, okl finds no config and the hook blocked
 # every prompt as "unreachable" until the session was restarted. Claude Code sets
 # CLAUDE_PROJECT_DIR for every hook; without it, stay where we are.
-if [ -n "${CLAUDE_PROJECT_DIR:-}" ] && [ -d "$CLAUDE_PROJECT_DIR" ]; then
+if [[ -n "${CLAUDE_PROJECT_DIR:-}" ]] && [[ -d "$CLAUDE_PROJECT_DIR" ]]; then
   if ! cd "$CLAUDE_PROJECT_DIR" 2>/dev/null; then
     # Continuing from the drifted directory is the failure this block exists to prevent.
     echo "okl encode reminder skipped — cannot enter the project directory $CLAUDE_PROJECT_DIR." >&2
@@ -34,13 +34,13 @@ case ",${OKL_DISABLED_HOOKS:-}," in *,encode,*) exit 0 ;; esac
 # 2026-09-29, before any user hit it). Only when Claude Code names the project: with no
 # CLAUDE_PROJECT_DIR the hook cannot tell an unenrolled repo from a session that drifted
 # out of an enrolled one, and fail-closed still wins there.
-if [ -n "${CLAUDE_PROJECT_DIR:-}" ] && [ -z "${OKL_SERVICE_URL:-}${OKL_DATABASE_URL:-}" ]; then
+if [[ -n "${CLAUDE_PROJECT_DIR:-}" ]] && [[ -z "${OKL_SERVICE_URL:-}${OKL_DATABASE_URL:-}" ]]; then
   enrolled=0; d="$PWD"
-  while [ "$d" != "/" ]; do
-    if [ -f "$d/.okl/config.json" ]; then enrolled=1; break; fi
+  while [[ "$d" != "/" ]]; do
+    if [[ -f "$d/.okl/config.json" ]]; then enrolled=1; break; fi
     d=$(dirname "$d")
   done
-  [ "$enrolled" = 1 ] || exit 0
+  [[ "$enrolled" = 1 ]] || exit 0
 fi
 
 # Same resolver as userpromptsubmit-okl-check.sh (env → pinned config → PATH → python3 -m okl);
@@ -69,17 +69,17 @@ try_pinned() {
 resolve_note=""
 OKL=()
 resolve_okl() {
-  if [ -n "${OKL_BIN:-}" ]; then
+  if [[ -n "${OKL_BIN:-}" ]]; then
     if try_pinned "$OKL_BIN"; then return 0; fi
     resolve_note="OKL_BIN=$OKL_BIN cannot be run (it takes a path to okl, or \"<python> -m okl\" with a python that can import okl); "
   fi
   local d="$PWD"
-  while [ "$d" != "/" ]; do
-    if [ -f "$d/.okl/config.json" ]; then
+  while [[ "$d" != "/" ]]; do
+    if [[ -f "$d/.okl/config.json" ]]; then
       local bin
       bin=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("okl_bin") or "")' \
             "$d/.okl/config.json" 2>/dev/null || true)
-      if [ -n "$bin" ]; then
+      if [[ -n "$bin" ]]; then
         if try_pinned "$bin"; then return 0; fi
         resolve_note="${resolve_note}the okl_bin pinned in $d/.okl/config.json ($bin) cannot be run -- re-run okl init to re-pin; "
       fi
@@ -108,25 +108,25 @@ print(d.get("transcript_path", ""))
 session_id=$(printf '%s\n' "$parsed" | sed -n 1p)
 stop_hook_active=$(printf '%s\n' "$parsed" | sed -n 2p)
 transcript=$(printf '%s\n' "$parsed" | sed -n 3p)
-[ -n "$stop_hook_active" ] || stop_hook_active="false"
+[[ -n "$stop_hook_active" ]] || stop_hook_active="false"
 
 # Never loop: if we already blocked once and Claude is stopping again, let it stop.
-[ "${stop_hook_active}" = "true" ] && exit 0
+[[ "${stop_hook_active}" = "true" ]] && exit 0
 
 # Only fire when the session plausibly did work: uncommitted changes, or a commit in the
 # last hour (covers commit-then-stop sessions).
 changed=0
-if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
+if [[ -n "$(git status --porcelain 2>/dev/null)" ]]; then
   changed=1
 elif last=$(git log -1 --format=%ct 2>/dev/null); then
   now=$(date +%s)
-  [ $((now - last)) -lt 3600 ] && changed=1
+  [[ $((now - last)) -lt 3600 ]] && changed=1
 fi
-[ "$changed" = "1" ] || exit 0
+[[ "$changed" = "1" ]] || exit 0
 
 # Once per session (fall back to a repo-scoped marker when no session id is provided).
 marker="${TMPDIR:-/tmp}/okl-encode-reminder-${session_id:-$(pwd | cksum | cut -d' ' -f1)}"
-[ -e "$marker" ] && exit 0
+[[ -e "$marker" ]] && exit 0
 touch "$marker" 2>/dev/null || true
 
 cat >&2 <<'MSG'
@@ -180,7 +180,7 @@ MSG
 # hook on every tool call, no log file, no model call. Failed commands are where lessons
 # usually hide; the agent decides which, if any, is worth a record. Harness validation
 # errors and permission denials are about the tooling, not the code, and are left out.
-if [ -n "$transcript" ] && [ -r "$transcript" ]; then
+if [[ -n "$transcript" ]] && [[ -r "$transcript" ]]; then
   python3 - "$transcript" <<'PY' >&2 2>/dev/null || true
 import json, sys
 calls, failed = {}, []

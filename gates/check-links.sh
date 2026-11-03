@@ -15,7 +15,7 @@ git rev-parse --git-dir >/dev/null 2>&1 || { echo "not a git repo — skipping";
 rc=0
 checked=0
 while IFS= read -r md; do
-  [ -f "$md" ] || continue
+  [[ -f "$md" ]] || continue
   dir=$(dirname "$md")
   # pull the target out of every ](...) link on the page
   while IFS= read -r target; do
@@ -24,18 +24,18 @@ while IFS= read -r md; do
     esac
     target=${target%%#*}          # drop #anchor / #L42
     target=${target%%\?*}         # drop ?query
-    [ -z "$target" ] && continue
+    [[ -z "$target" ]] && continue
     case "$target" in
       /*) path=".${target}" ;;    # repo-absolute
       *)  path="$dir/$target" ;;  # relative to the doc
     esac
     checked=$((checked + 1))
-    if [ ! -e "$path" ]; then
+    if [[ ! -e "$path" ]]; then
       echo "  ✗ broken link: $md -> $target"
       rc=1
     fi
   done < <(grep -oE '\]\([^)]+\)' "$md" 2>/dev/null | sed -E 's/^\]\(//; s/\)$//' | awk '{print $1}')
 done < <(git ls-files '*.md')
 
-[ "$checked" -eq 0 ] && echo "no local markdown links found — nothing to check"
+[[ "$checked" -eq 0 ]] && echo "no local markdown links found — nothing to check"
 exit $rc

@@ -338,10 +338,10 @@ def test_the_prompt_hook_finishes_before_claude_code_cancels_it():
     # A command that cannot start ends the loop and the hook moves on to the next layer
     # (#152), but only after a quick failure, and never to a command that already failed:
     # budget that quick failure for every layer but the last, which gets the full loop.
-    fallthrough = re.search(r'\[ "\$run_s" -lt ([0-9]+) \]; do$', hook, re.MULTILINE)
+    fallthrough = re.search(r'\[\[ "\$run_s" -lt ([0-9]+) \]\]; do$', hook, re.MULTILINE)
     layers = {int(n) for n in re.findall(r"okl_layer=([0-9]+);", hook)}
     pause = re.search(r"&& sleep ([0-9.]+)$", hook, re.MULTILINE)
-    quick = re.search(r"^\s*\[ \$\(\(SECONDS - started\)\) -ge ([0-9]+) \] && break$", hook, re.MULTILINE)
+    quick = re.search(r"^\s*\[\[ \$\(\(SECONDS - started\)\) -ge ([0-9]+) \]\] && break$", hook, re.MULTILINE)
     assert loop, "the hook's retry loop changed shape; re-derive this budget from it"
     assert pause, "the hook's pause between tries changed shape; re-derive this budget"
     assert quick, "the hook no longer stops after a slow try; three of them overran Claude Code's limit"

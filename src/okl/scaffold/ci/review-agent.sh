@@ -26,19 +26,19 @@ cd "$(dirname "$0")/.."
 # exactly those repos — a gate that quietly does nothing is the failure this whole file exists to
 # fix. AGENT_FILE overrides for anything unusual.
 AGENT="${AGENT_FILE:-}"
-if [ -z "$AGENT" ]; then
+if [[ -z "$AGENT" ]]; then
   AGENT="$(find . -maxdepth 3 -path ./.git -prune -o \
            -name architecture-reviewer.md -print 2>/dev/null | head -1)"
 fi
 BASE="${REVIEW_BASE_REF:-origin/main}"
 
-if [ -z "${REVIEW_CMD:-}" ]; then
+if [[ -z "${REVIEW_CMD:-}" ]]; then
   echo "review-agent: REVIEW_CMD not set — skipping (soft pass)."
   echo "  Set it to any CLI that takes a prompt on stdin to turn this into a blocking gate,"
   echo "  e.g. REVIEW_CMD=\"claude -p --model sonnet\" or REVIEW_CMD=\"ollama run qwen2.5-coder\"."
   exit 0
 fi
-if [ ! -f "$AGENT" ]; then
+if [[ ! -f "$AGENT" ]]; then
   echo "review-agent: no $AGENT — skipping (the reviewer ships with \`okl scaffold\`)."
   exit 0
 fi
@@ -52,7 +52,7 @@ diff_text="$(git diff "$BASE"...HEAD 2>/dev/null)"
 # Every changed file, even past the diff's cut below, so a reviewer that can read files knows
 # what it has not seen.
 changed_files="$(git diff --name-status "$BASE"...HEAD 2>/dev/null)"
-if [ -z "$diff_text" ]; then
+if [[ -z "$diff_text" ]]; then
   echo "review-agent: no diff against $BASE — nothing to review."
   exit 0
 fi
@@ -62,7 +62,7 @@ fi
 # truncated diff as though it were whole.
 max_lines=4000
 total_lines=$(printf '%s' "$diff_text" | wc -l | tr -d ' ')
-if [ "$total_lines" -gt "$max_lines" ]; then
+if [[ "$total_lines" -gt "$max_lines" ]]; then
   diff_text="$(printf '%s' "$diff_text" | head -n "$max_lines")"
   echo "review-agent: diff is $total_lines lines; reviewing the first $max_lines."
 fi
