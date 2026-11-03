@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **The scaffold's CI review step no longer drops a review it cannot parse.** A reviewer often
+  writes a line of prose before its JSON; the step stripped code fences only, so the reply failed
+  to parse and the job passed with the findings thrown away. On okl's own PRs that dropped three
+  findings in one review of three. The step now reads the last JSON object with `findings`
+  wherever the reply puts it, and when there is none it still passes but puts a warning on the
+  PR saying the change has no review verdict, so a green check is not read as a review.
 - **`okl check --path <file>`: the lessons that govern a file** (#94). Asked before a file is read
   or edited, it briefs every lesson whose `files` cover it, with its drift and proof marks, in
   any of `check`'s formats; `okl_check` takes a `path` for MCP agents, and a shared service
