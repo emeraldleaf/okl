@@ -414,7 +414,7 @@ def _wire_claude_code(args: argparse.Namespace) -> None:
     claude = Path(".claude")
     wire = _should_wire_claude(args)
     if wire[1] == _BY_PLUGIN:
-        # The plugin carries both hooks and the MCP server; registering them here too
+        # The plugin carries the hooks and the MCP server; registering them here too
         # would brief every prompt twice and ask the Stop question twice (#45).
         print("• okl's Claude Code plugin is enabled here, so it provides the hooks and the MCP "
               "server: none are installed into .claude/ or registered in settings.")

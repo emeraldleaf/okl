@@ -4543,7 +4543,10 @@ asked.
 3. **Held: no control session used it.**
 
 **Exploratory, not registered: why none used it.** Every treatment session's last reply named
-the lesson and the canary, told the user it had left the call out, and gave reasons:
+the lesson and the canary, told the user it had left the call out, and gave reasons. The
+companion receipt `e2e-read-briefing-20261103-0209-replies.json`, written from the kept
+transcripts after the run by the instrument's `--replies`, holds each final reply verbatim. It
+counts the reasons by the fixed patterns it names:
 - the `audit` module it imports from does not exist (5 of 5; some looked for it first);
 - the user had not asked for it (4 of 5);
 - the briefing marks the lesson unverified (2 of 5).

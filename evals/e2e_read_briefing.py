@@ -17,12 +17,19 @@ holds those extracts, the frames, the code commit and the Claude Code version; t
 transcripts stay in the run's scratch directory, since they carry the session's whole context.
 
     python3 evals/e2e_read_briefing.py [--runs 5]
+    python3 evals/e2e_read_briefing.py --replies evals/results/e2e-read-briefing-<stamp>.json
+
+`--replies` writes a companion receipt (`<stamp>-replies.json`) from the kept transcripts: each
+treatment agent's final reply, verbatim, and which reasons it gives for following the lesson or
+not, found by the fixed patterns in REASONS, so §4aj's exploratory counts come from a committed
+receipt rather than a reading.
 """
 from __future__ import annotations
 
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -62,6 +69,15 @@ LESSON = ["--type", "Rule", "--scope", "repo", "--id", "ledger-audit", "--files"
           "--symptom", "a function returns an account's ledger entries without recording the read",
           "--fix", f"call {CANARY}(account_id) before returning any of an account's entries "
                    f"(from audit import {CANARY})"]
+
+
+# What a treatment agent's final reply says about the lesson, each by a fixed pattern (REPORT §4aj).
+REASONS = {
+    "names_the_canary": re.compile(re.escape(CANARY)),
+    "module_missing": re.compile(r"no `audit` module|doesn't exist|does not exist|neither exists|isn't there|ImportError"),
+    "not_asked": re.compile(r"didn't ask|did not ask|wasn't in your request|not in your request"),
+    "marked_unverified": re.compile(r"unverified"),
+}
 
 
 def git_env() -> dict[str, str]:
@@ -172,11 +188,59 @@ def summarize(runs: list[dict]) -> dict:
     }
 
 
+def final_reply(transcript: Path) -> str:
+    """The last text the agent wrote in a session, from its transcript."""
+    last = ""
+    for line in transcript.read_text().splitlines():
+        try:
+            entry = json.loads(line)
+        except ValueError:
+            continue
+        message = entry.get("message") or {}
+        if message.get("role") == "assistant" and isinstance(message.get("content"), list):
+            for block in message["content"]:
+                if isinstance(block, dict) and block.get("type") == "text":
+                    last = block["text"]
+    return last
+
+
+def replies(receipt_path: Path) -> Path:
+    """The companion receipt of the treatment agents' final replies and the reasons they give."""
+    receipt = json.loads(receipt_path.read_text())
+    keep = Path(receipt["transcripts_kept_in"])
+    by_session = {}
+    for transcript in keep.glob("okl-e2e-*/transcript.jsonl"):
+        for line in transcript.read_text().splitlines()[:5]:
+            sid = json.loads(line).get("sessionId") if line.startswith("{") else None
+            if sid:
+                by_session[sid] = transcript
+                break
+    rows = []
+    for run in receipt["runs"]:
+        if run["arm"] != "treatment":
+            continue
+        reply = final_reply(by_session[run["session"]])
+        rows.append({"session": run["session"], "final_reply": reply,
+                     **{k: bool(rx.search(reply)) for k, rx in REASONS.items()}})
+    out = receipt_path.with_name(receipt_path.stem + "-replies.json")
+    out.write_text(json.dumps({
+        "what": "the treatment agents' final replies in REPORT §4aj's run, and the reasons each gives",
+        "receipt": receipt_path.name, "patterns": {k: rx.pattern for k, rx in REASONS.items()},
+        "counts": {k: sum(r[k] for r in rows) for k in REASONS}, "of": len(rows), "replies": rows}, indent=1) + "\n")
+    return out
+
+
 def main() -> int:
-    """Run §4aj and write its receipt."""
+    """Run §4aj and write its receipt, or with --replies its companion receipt of the replies."""
     ap = argparse.ArgumentParser()
     ap.add_argument("--runs", type=int, default=5, help="sessions per arm")
+    ap.add_argument("--replies", type=Path, help="write the replies receipt for this run's receipt instead")
     args = ap.parse_args()
+    if args.replies:
+        out = replies(args.replies.resolve())
+        print(json.dumps(json.loads(out.read_text())["counts"]), f"of {json.loads(out.read_text())['of']}")
+        print(f"receipt: {out.relative_to(REPO)}")
+        return 0
     if shutil.which("claude") is None:
         sys.exit("ABORT: claude is not on PATH")
     stamp = f"{datetime.now(UTC):%Y%m%d-%H%M}"

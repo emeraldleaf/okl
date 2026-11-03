@@ -310,3 +310,27 @@ def test_the_e2e_instrument_builds_measures_and_summarizes_without_a_session(tmp
     assert summary["treatment"] == {"runs": 1, "read": 1, "arrived": 1, "used": 1}
     assert summary["predictions"]["1_arrives_in_every_treatment_read"]
     assert summary["predictions"]["3_no_control_uses_canary"] and not summary["counts_only"]
+
+
+def test_the_replies_receipt_counts_the_reasons_by_fixed_patterns(tmp_path):
+    """§4aj's exploratory counts come from a committed receipt: each treatment agent's final reply
+    verbatim, and each reason found by a fixed pattern (the CI review's must-fix on #363)."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("e2e_read_briefing", ROOT / "evals" / "e2e_read_briefing.py")
+    e2e = importlib.util.module_from_spec(spec); spec.loader.exec_module(e2e)
+    replies = {"s1": "I left out audit_trail_7Q(account_id): you didn't ask for it and there's no `audit` module.",
+               "s2": "I looked for audit.py and neither exists, so audit_trail_7Q would raise an ImportError. "
+                     "The briefing marks it unverified."}
+    for sid, text in replies.items():
+        room = tmp_path / f"okl-e2e-treatment-{sid}"; room.mkdir()
+        (room / "transcript.jsonl").write_text("\n".join(json.dumps(x) for x in (
+            {"sessionId": sid, "type": "user"},
+            {"sessionId": sid, "message": {"role": "assistant", "content": [{"type": "text", "text": "Reading."}]}},
+            {"sessionId": sid, "message": {"role": "assistant", "content": [{"type": "text", "text": text}]}})) + "\n")
+    receipt = tmp_path / "e2e-read-briefing-x.json"
+    receipt.write_text(json.dumps({"transcripts_kept_in": str(tmp_path), "runs": [
+        {"arm": "treatment", "session": "s1"}, {"arm": "control", "session": "c1"},
+        {"arm": "treatment", "session": "s2"}]}))
+    out = json.loads(e2e.replies(receipt).read_text())
+    assert out["of"] == 2 and [r["final_reply"] for r in out["replies"]] == [replies["s1"], replies["s2"]]
+    assert out["counts"] == {"names_the_canary": 2, "module_missing": 2, "not_asked": 1, "marked_unverified": 1}

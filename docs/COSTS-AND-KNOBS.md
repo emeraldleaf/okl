@@ -79,7 +79,8 @@ never the task: a briefing's task is usually your prompt.
 
 `OKL_QUIET=1` keeps the briefing but hides the one-line *okl · briefed …* notice. Switch a
 hook off by name with `OKL_DISABLED_HOOKS=briefing` (the pre-task read),
-`OKL_DISABLED_HOOKS=encode` (the end-of-session question), or both, comma-separated.
+`OKL_DISABLED_HOOKS=encode` (the end-of-session question), `OKL_DISABLED_HOOKS=read` (the
+lessons briefed when the agent reads a file), or several, comma-separated.
 **Set `OKL_DISABLED_HOOKS=encode` for headless runs (`claude -p`, CI agents, scripts):**
 print mode emits only the final message, and a blocked stop makes the reply to "what did
 we learn?" that final message — the answer you asked for is then only in the transcript.

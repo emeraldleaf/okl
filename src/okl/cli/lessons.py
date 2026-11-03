@@ -99,7 +99,8 @@ def cmd_check(args: argparse.Namespace) -> int:
     if getattr(args, "path", None) and getattr(args, "session", None):
         _once_per_session(result, args.session)
     if args.format == "hook":
-        return _print_file_hook(result, args) if getattr(args, "path", None) else _print_prompt_hook(result, args)
+        (_print_file_hook if getattr(args, "path", None) else _print_prompt_hook)(result, args)
+        return 0
     if args.format == "json":
         _print_json(result)
     elif args.format == "actions":
@@ -145,7 +146,7 @@ def _once_per_session(result: dict[str, Any], session: str) -> None:
             seen_file.write_text("\n".join(sorted(seen | briefed)) + "\n")
 
 
-def _print_prompt_hook(result: dict[str, Any], args: argparse.Namespace) -> int:
+def _print_prompt_hook(result: dict[str, Any], args: argparse.Namespace) -> None:
     """What a Claude Code UserPromptSubmit hook prints: the briefing into the model's context,
     and one line the person can see. OKL_QUIET=1 keeps the line out."""
     out: dict[str, Any] = {"hookSpecificOutput": {
@@ -156,16 +157,15 @@ def _print_prompt_hook(result: dict[str, Any], args: argparse.Namespace) -> int:
     if lines:
         out["systemMessage"] = " · ".join(lines)
     print(json.dumps(out))
-    return 0
 
 
-def _print_file_hook(result: dict[str, Any], args: argparse.Namespace) -> int:
+def _print_file_hook(result: dict[str, Any], args: argparse.Namespace) -> None:
     """What a Claude Code hook prints after a file is read: the lessons that govern it, framed by
     their own sha256 and byte count so a transcript shows whether they arrived whole (#94,
     REPORT §4aj), and nothing at all when no lesson does, since a line on every read of an
     ungoverned file would be noise. OKL_FRAME_LOG names a file that gets the same two values."""
     if not result.get("match_count"):
-        return 0
+        return
     body = _briefing_text(result, args)
     digest, size = hashlib.sha256(body.encode()).hexdigest(), len(body.encode())
     frame = f"okl-briefing sha256={digest} bytes={size}"
@@ -185,7 +185,6 @@ def _print_file_hook(result: dict[str, Any], args: argparse.Namespace) -> int:
         except OSError as e:
             print(f"okl: could not write OKL_FRAME_LOG: {e}", file=sys.stderr)
     print(json.dumps(out))
-    return 0
 
 
 # Below this, a handful of new lessons recorded without triggers do not earn a line on every prompt;
