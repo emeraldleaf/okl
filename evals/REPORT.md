@@ -4434,6 +4434,86 @@ It reports each lesson it questions with the words that no longer hold, for the 
   - **Anything beyond one store, one repository and one judge model.** The planted facts change
     one name each, so 8 of 10 is a ceiling on finding subtler wrong details.
 
+## 4aj. PRE-REGISTERED: does a file's briefing reach the model when Claude Code reads the file? (#94)
+
+Written before any run. It decides whether okl ships a Claude Code hook that briefs the lessons
+governing a file when the agent reads it.
+
+**Why.** okl briefs once, when a prompt is sent. Within a long turn, the edit a lesson governs
+can come many tool calls later, and recall of what is in context falls as the window fills
+(#94 names the evidence). `okl check --path` (#94's agent-neutral half) answers "which lessons
+govern this file?". A hook can put that answer in front of the agent when it reads the file,
+which in Claude Code comes before an edit. The hooks reference places a PostToolUse hook's
+`hookSpecificOutput.additionalContext` "next to the tool result", in a system reminder the model
+reads on its next request. Nothing in this repo has shown that it arrives. #94 made proving it
+the precondition for shipping, after REPORT §8 found an "enforced read" hook whose output no
+model ever saw.
+
+**The instrument** is `evals/e2e_read_briefing.py`, committed before any run. Each run builds a
+fresh scratch repository from a fixed fixture:
+- **The fixture.** `src/ledger.py` holds a few functions over an in-memory list of entries.
+- **The lesson.** One lesson in a scratch store governs `src/ledger.py` and names a canary: every
+  ledger read must call `audit_trail_7Q(account_id)` first. That name exists nowhere else, so an
+  agent can only learn it from the lesson.
+- **The task.** `claude -p --model sonnet --setting-sources project` is told to read
+  `src/ledger.py` and add `entries_for(account_id)`, returning that account's entries. Its
+  tools are Read, Edit and Write. It loads only the scratch repo's settings, so no hook of this
+  machine's runs.
+- **The arms.**
+  - *Control:* no okl hook at all.
+  - *Treatment:* only the PostToolUse hook on `Read`, which runs `okl check --path <file>` and
+    returns its briefing as `additionalContext`, framed by a line
+    `okl-briefing sha256=<hex> bytes=<n>`. The same two values are written to a log the
+    instrument reads.
+
+  Neither arm has the prompt hook, so the treatment adds the read-time channel and nothing else.
+
+**Runs.** Five per arm, alternating arms, each in its own fresh repository and store.
+
+**Measures, per run.**
+1. **Read:** whether the agent read `src/ledger.py`, from the session transcript. The hook
+   cannot fire on a run without a read, so such a run is reported and left out of 2 and 3.
+2. **Arrived:** whether the transcript holds the frame line with the sha256 and byte count the
+   hook logged. This is the channel, measured, not judged.
+3. **Used:** whether the final `src/ledger.py` calls `audit_trail_7Q(`. This is a grep, with no
+   judge.
+
+**Predictions.**
+1. In the treatment, the briefing arrives in every run with a read: 5 of 5 if all five read.
+2. In the treatment, at least 4 of the runs with a read use the canary.
+3. In the control, no run uses it: 0 of 5.
+
+**Falsifiers and what follows.**
+- **If prediction 1 holds,** the channel is proven, and the hook ships. `okl init` installs it
+  beside the prompt hook, labelled Claude Code-only. It briefs each lesson once per session
+  unless the lesson is stale or unchecked, and fails open with one line that says why, never
+  silently.
+- **If prediction 1 holds and 2 does not,** the hook still ships, and its docs say the briefing
+  arrives without showing that it changes the edit.
+- **If a treatment run with a read lacks the frame,** the channel is not proven and nothing
+  ships. The run's transcript and hook log are kept, and the cause is found before any re-run,
+  which is a new section.
+- **If a control run uses the canary,** the run is contaminated (the name leaked into the
+  fixture or the store), and the measurement is void until the leak is found.
+- **More than one run in five without a read in either arm:** the task wording failed, and the
+  run reports counts only.
+
+**What it cannot settle.**
+- **Whether reading a lesson at read time changes what an agent writes in a real session.**
+  The canary is an instruction with no competing pull, so prediction 2 is a ceiling, and five
+  runs is thin. A session-level measurement, with the governed edit late in a long turn, is
+  #94's next piece of work.
+- **Re-briefing after a compaction** (SessionStart, `compact`). That is #94's other half and is
+  not measured here.
+- **One model, one Claude Code version, one task.**
+
+**Budget and stop.**
+- **Runs:** ten sessions, each limited to 300 seconds.
+- **The instrument and the hook** are committed before any run, and the receipt names their
+  commit. Any difference from this section is reported as a deviation.
+- **Fixed once a run is read:** everything above.
+- **Deadline:** 2026-11-17. If the run cannot happen by then, this section says why.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
