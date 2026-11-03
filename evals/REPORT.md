@@ -4470,6 +4470,11 @@ fresh scratch repository from a fixed fixture:
 
 **Runs.** Five per arm, alternating arms, each in its own fresh repository and store.
 
+**Amended before any run (2026-11-03): a pilot pair.** One session per arm runs first, to confirm
+that Claude Code loads a project's hook in print mode and that the instrument finds the
+transcript. It is reported, and not counted. A change to the instrument after the pilot is
+reported as a deviation. The instrument and the hook are at commit 7edfd1e on #94's branch.
+
 **Measures, per run.**
 1. **Read:** whether the agent read `src/ledger.py`, from the session transcript. The hook
    cannot fire on a run without a read, so such a run is reported and left out of 2 and 3.
