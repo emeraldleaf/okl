@@ -1,6 +1,125 @@
 {
- "what": "the treatment agents' final replies in REPORT \u00a74aj's run, and the reasons each gives",
+ "what": "REPORT \u00a74aj's run, from its transcripts: every run's Read calls and frame lines, and the treatment agents' final replies with the reasons each gives",
  "receipt": "e2e-read-briefing-20261103-0209.json",
+ "evidence": [
+  {
+   "session": "33ac0795-f581-4b59-bed6-7735567c0ec9",
+   "arm": "treatment",
+   "reads": [
+    "src/ledger.py",
+    "src/audit.py"
+   ],
+   "frames_in_transcript": [
+    "okl-briefing sha256=649b8ae797aa0c4ed953be61c3cee4e43d678158a1e638029904bae44c9cc01a bytes=701"
+   ],
+   "frames_logged": [
+    "okl-briefing sha256=649b8ae797aa0c4ed953be61c3cee4e43d678158a1e638029904bae44c9cc01a bytes=701"
+   ]
+  },
+  {
+   "session": "7687c8a8-c2aa-4f3b-9724-85d0cb198e72",
+   "arm": "control",
+   "reads": [
+    "src/ledger.py"
+   ],
+   "frames_in_transcript": [],
+   "frames_logged": []
+  },
+  {
+   "session": "7d445812-481b-4cf3-9bf9-9861e6672b35",
+   "arm": "treatment",
+   "reads": [
+    "src/ledger.py",
+    "src/audit.py"
+   ],
+   "frames_in_transcript": [
+    "okl-briefing sha256=649b8ae797aa0c4ed953be61c3cee4e43d678158a1e638029904bae44c9cc01a bytes=701"
+   ],
+   "frames_logged": [
+    "okl-briefing sha256=649b8ae797aa0c4ed953be61c3cee4e43d678158a1e638029904bae44c9cc01a bytes=701"
+   ]
+  },
+  {
+   "session": "bbbb8def-0ee0-49b6-8dc4-e519addf80e6",
+   "arm": "control",
+   "reads": [
+    "src/ledger.py"
+   ],
+   "frames_in_transcript": [],
+   "frames_logged": []
+  },
+  {
+   "session": "a8c05898-fcd8-41a4-bdee-1b494f0abae1",
+   "arm": "treatment",
+   "reads": [
+    "src/ledger.py",
+    "src/audit.py"
+   ],
+   "frames_in_transcript": [
+    "okl-briefing sha256=649b8ae797aa0c4ed953be61c3cee4e43d678158a1e638029904bae44c9cc01a bytes=701"
+   ],
+   "frames_logged": [
+    "okl-briefing sha256=649b8ae797aa0c4ed953be61c3cee4e43d678158a1e638029904bae44c9cc01a bytes=701"
+   ]
+  },
+  {
+   "session": "01801ed3-d7f9-45b4-969f-47f646d51cba",
+   "arm": "control",
+   "reads": [
+    "src/ledger.py"
+   ],
+   "frames_in_transcript": [],
+   "frames_logged": []
+  },
+  {
+   "session": "6989ca6d-1db1-402c-b1d2-962fc6a7410b",
+   "arm": "treatment",
+   "reads": [
+    "src/ledger.py",
+    "src/audit.py"
+   ],
+   "frames_in_transcript": [
+    "okl-briefing sha256=649b8ae797aa0c4ed953be61c3cee4e43d678158a1e638029904bae44c9cc01a bytes=701"
+   ],
+   "frames_logged": [
+    "okl-briefing sha256=649b8ae797aa0c4ed953be61c3cee4e43d678158a1e638029904bae44c9cc01a bytes=701"
+   ]
+  },
+  {
+   "session": "e8208bf4-a93d-4f04-8ebd-04d83c6b06c0",
+   "arm": "control",
+   "reads": [
+    "src/ledger.py"
+   ],
+   "frames_in_transcript": [],
+   "frames_logged": []
+  },
+  {
+   "session": "04c923fe-4d1f-460a-a5f4-70aaacfaad08",
+   "arm": "treatment",
+   "reads": [
+    "src/ledger.py",
+    "src",
+    "src/audit.py",
+    "audit.py"
+   ],
+   "frames_in_transcript": [
+    "okl-briefing sha256=649b8ae797aa0c4ed953be61c3cee4e43d678158a1e638029904bae44c9cc01a bytes=701"
+   ],
+   "frames_logged": [
+    "okl-briefing sha256=649b8ae797aa0c4ed953be61c3cee4e43d678158a1e638029904bae44c9cc01a bytes=701"
+   ]
+  },
+  {
+   "session": "2c496083-5ed7-49cd-97b1-dcbf53846fc3",
+   "arm": "control",
+   "reads": [
+    "src/ledger.py"
+   ],
+   "frames_in_transcript": [],
+   "frames_logged": []
+  }
+ ],
  "patterns": {
   "names_the_canary": "audit_trail_7Q",
   "module_missing": "no `audit` module|doesn't exist|does not exist|neither exists|isn't there|ImportError",

@@ -4529,9 +4529,13 @@ asked.
   mode, and the instrument found the transcript. Its treatment session read the file and the
   briefing arrived; it did not use the canary. It is not counted.
 - **No deviation.** The instrument did not change after the pilot.
-- **Added after the run:** the instrument's `--replies` mode, which reads the kept transcripts
-  into the companion receipt below, and a tidy of its `main` for SonarCloud. Neither changes
-  what the run measured, which ran at 7edfd1e (tagged `receipts/7edfd1e`).
+- **Added after the run:** the instrument's `--replies` mode and two tidies for SonarCloud
+  (the instrument's `main`, and `okl check`'s hook printers, which no longer return a value).
+  None changes what the run measured, which ran at 7edfd1e (tagged `receipts/7edfd1e`).
+  `--replies` reads the kept transcripts into a companion receipt,
+  `e2e-read-briefing-20261103-0209-replies.json`. It holds every run's Read calls and the frame
+  lines its transcript holds, so `read` and `arrived` can be checked without the transcripts,
+  which carry whole sessions and are not committed.
 
 | | sessions | read the file | briefing arrived | used the canary |
 |---|---|---|---|---|

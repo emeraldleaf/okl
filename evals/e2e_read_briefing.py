@@ -204,8 +204,29 @@ def final_reply(transcript: Path) -> str:
     return last
 
 
+FRAME = re.compile(r"okl-briefing sha256=[0-9a-f]{64} bytes=\d+")
+
+
+def reads_of(transcript: Path) -> list[str]:
+    """The files the agent read in a session, in order, each once: the transcript records a call
+    more than once as its message is written."""
+    out = []
+    for line in transcript.read_text().splitlines():
+        try:
+            entry = json.loads(line)
+        except ValueError:
+            continue
+        content = (entry.get("message") or {}).get("content")
+        out.extend(str((block.get("input") or {}).get("file_path", ""))
+                   for block in (content if isinstance(content, list) else [])
+                   if isinstance(block, dict) and block.get("type") == "tool_use" and block.get("name") == "Read")
+    return list(dict.fromkeys(out))
+
+
 def replies(receipt_path: Path) -> Path:
-    """The companion receipt of the treatment agents' final replies and the reasons they give."""
+    """The companion receipt: for every run, the Read calls and the frame lines its transcript
+    holds, so `read` and `arrived` can be checked without the transcripts; and for the treatment
+    agents, the final reply verbatim with the reasons it gives."""
     receipt = json.loads(receipt_path.read_text())
     keep = Path(receipt["transcripts_kept_in"])
     by_session = {}
@@ -215,17 +236,25 @@ def replies(receipt_path: Path) -> Path:
             if sid:
                 by_session[sid] = transcript
                 break
-    rows = []
+    rows, evidence = [], []
     for run in receipt["runs"]:
+        transcript = by_session[run["session"]]
+        logged = [f"okl-briefing sha256={f['sha256']} bytes={f['bytes']}" for f in run["frames"]]
+        evidence.append({"session": run["session"], "arm": run["arm"],
+                         "reads": [r.rsplit("/repo/", 1)[-1] for r in reads_of(transcript)],
+                         "frames_in_transcript": sorted(set(FRAME.findall(transcript.read_text()))),
+                         "frames_logged": logged})
         if run["arm"] != "treatment":
             continue
-        reply = final_reply(by_session[run["session"]])
+        reply = final_reply(transcript)
         rows.append({"session": run["session"], "final_reply": reply,
                      **{k: bool(rx.search(reply)) for k, rx in REASONS.items()}})
     out = receipt_path.with_name(receipt_path.stem + "-replies.json")
     out.write_text(json.dumps({
-        "what": "the treatment agents' final replies in REPORT §4aj's run, and the reasons each gives",
-        "receipt": receipt_path.name, "patterns": {k: rx.pattern for k, rx in REASONS.items()},
+        "what": ("REPORT §4aj's run, from its transcripts: every run's Read calls and frame lines, and "
+                 "the treatment agents' final replies with the reasons each gives"),
+        "receipt": receipt_path.name, "evidence": evidence,
+        "patterns": {k: rx.pattern for k, rx in REASONS.items()},
         "counts": {k: sum(r[k] for r in rows) for k in REASONS}, "of": len(rows), "replies": rows}, indent=1) + "\n")
     return out
 
