@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:d07086d1e2ac22b97b6bb4a1cdeced0e2a76fe4822b8776b495ef8f7a78cb5ff
+# okl-fingerprint: sha256:2131615cc49aca754c2834c8ff48227a258186f52d8e178205c71747867968db
 # UserPromptSubmit hook — inject the org's relevant lessons into the model's context
 # BEFORE it starts the task. This event is the only correct one for delivery: its stdout
 # (exit 0) is added to Claude's context, and its stdin carries the actual prompt text, so
@@ -18,7 +18,7 @@ set -uo pipefail
 # command moves it; from outside the project, okl finds no config and the hook blocked
 # every prompt as "unreachable" until the session was restarted. Claude Code sets
 # CLAUDE_PROJECT_DIR for every hook; without it, stay where we are.
-if [ -n "${CLAUDE_PROJECT_DIR:-}" ] && [ -d "$CLAUDE_PROJECT_DIR" ]; then
+if [[ -n "${CLAUDE_PROJECT_DIR:-}" ]] && [[ -d "$CLAUDE_PROJECT_DIR" ]]; then
   if ! cd "$CLAUDE_PROJECT_DIR" 2>/dev/null; then
     # Continuing from the drifted directory is the failure this block exists to prevent.
     echo "OKL CHECK DID NOT RUN — cannot enter the project directory $CLAUDE_PROJECT_DIR, so" >&2
@@ -39,13 +39,13 @@ case ",${OKL_DISABLED_HOOKS:-}," in *,briefing,*) exit 0 ;; esac
 # 2026-09-29, before any user hit it). Only when Claude Code names the project: with no
 # CLAUDE_PROJECT_DIR the hook cannot tell an unenrolled repo from a session that drifted
 # out of an enrolled one, and fail-closed still wins there.
-if [ -n "${CLAUDE_PROJECT_DIR:-}" ] && [ -z "${OKL_SERVICE_URL:-}${OKL_DATABASE_URL:-}" ]; then
+if [[ -n "${CLAUDE_PROJECT_DIR:-}" ]] && [[ -z "${OKL_SERVICE_URL:-}${OKL_DATABASE_URL:-}" ]]; then
   enrolled=0; d="$PWD"
-  while [ "$d" != "/" ]; do
-    if [ -f "$d/.okl/config.json" ]; then enrolled=1; break; fi
+  while [[ "$d" != "/" ]]; do
+    if [[ -f "$d/.okl/config.json" ]]; then enrolled=1; break; fi
     d=$(dirname "$d")
   done
-  [ "$enrolled" = 1 ] || exit 0
+  [[ "$enrolled" = 1 ]] || exit 0
 fi
 
 # Resolve how to invoke okl (env → pinned config → PATH → python3 -m okl); hooks run in
@@ -79,17 +79,17 @@ OKL=()
 okl_layer=0
 resolve_okl() {
   local from="${1:-1}"
-  if [ "$from" -le 1 ] && [ -n "${OKL_BIN:-}" ]; then
+  if [[ "$from" -le 1 ]] && [[ -n "${OKL_BIN:-}" ]]; then
     if try_pinned "$OKL_BIN"; then okl_layer=1; return 0; fi
     resolve_note="OKL_BIN=$OKL_BIN cannot be run (it takes a path to okl, or \"<python> -m okl\" with a python that can import okl); "
   fi
   local d="$PWD"
-  while [ "$from" -le 2 ] && [ "$d" != "/" ]; do
-    if [ -f "$d/.okl/config.json" ]; then
+  while [[ "$from" -le 2 ]] && [[ "$d" != "/" ]]; do
+    if [[ -f "$d/.okl/config.json" ]]; then
       local bin
       bin=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("okl_bin") or "")' \
             "$d/.okl/config.json" 2>/dev/null || true)
-      if [ -n "$bin" ]; then
+      if [[ -n "$bin" ]]; then
         if try_pinned "$bin"; then okl_layer=2; return 0; fi
         resolve_note="${resolve_note}the okl_bin pinned in $d/.okl/config.json ($bin) cannot be run -- re-run okl init to re-pin; "
       fi
@@ -97,13 +97,13 @@ resolve_okl() {
     fi
     d=$(dirname "$d")
   done
-  if [ "$from" -le 3 ] && command -v okl >/dev/null 2>&1; then OKL=(okl); okl_layer=3; return 0; fi
-  if [ "$from" -le 4 ] && python3 -c "import okl" >/dev/null 2>&1; then OKL=(python3 -m okl); okl_layer=4; return 0; fi
+  if [[ "$from" -le 3 ]] && command -v okl >/dev/null 2>&1; then OKL=(okl); okl_layer=3; return 0; fi
+  if [[ "$from" -le 4 ]] && python3 -c "import okl" >/dev/null 2>&1; then OKL=(python3 -m okl); okl_layer=4; return 0; fi
   return 1
 }
 # One key per command, so a file reached through two layers (pinned, and on PATH) counts once.
 cmd_key() {
-  if [ "${#OKL[@]}" -eq 1 ]; then command -v "${OKL[0]}" 2>/dev/null || printf '%s' "${OKL[0]}"
+  if [[ "${#OKL[@]}" -eq 1 ]]; then command -v "${OKL[0]}" 2>/dev/null || printf '%s' "${OKL[0]}"
   else printf '%s' "${OKL[*]}"; fi
 }
 # Resolve the next layer whose command has not already failed this prompt.
@@ -162,9 +162,9 @@ one_line() { tr '\n' ' ' | tr -d '\000-\037\177'; }
 scrub() { sed -e 's/No such file or directory/a file is missing/g' -e 's/command not found/command is absent/g'; }
 
 if ! resolve_okl; then
-  [ "${OKL_OFFLINE:-0}" = "1" ] && offline_pass "okl could not be found: $(printf '%s' "${resolve_note:-not as OKL_BIN, a pin in .okl/config.json, on PATH, or as python3 -m okl}" | scrub | one_line)"
+  [[ "${OKL_OFFLINE:-0}" = "1" ]] && offline_pass "okl could not be found: $(printf '%s' "${resolve_note:-not as OKL_BIN, a pin in .okl/config.json, on PATH, or as python3 -m okl}" | scrub | one_line)"
   echo "okl could not be resolved — blocking (a check that can't run must not pass as clean)." >&2
-  [ -n "$resolve_note" ] && printf '  %s\n' "$resolve_note" | scrub >&2
+  [[ -n "$resolve_note" ]] && printf '  %s\n' "$resolve_note" | scrub >&2
   echo "Install it: pip install observed-knowledge-ledger. Do not 'pip install okl' — PyPI refuses that" >&2
   echo "name as confusable, so it fails and looks like the tool does not exist." >&2
   echo "Or set OKL_BIN, or re-run 'okl init' from a shell where okl works (that pins okl_bin" >&2
@@ -190,7 +190,7 @@ prompt=$(printf '%s\n' "$parsed" | sed -n '2,$p')
 # A prompt with no text (an image or a file alone) names no task. It was briefed on the last
 # commit's subject instead, twelve lessons about unrelated work. okl is not asked: an okl
 # before 0.8.6 answers an empty task with every lesson it has.
-if [ -z "${OKL_TASK:-}" ] && [ -z "$prompt" ] && [ "$(printf '%s\n' "$parsed" | sed -n 1p)" = "event" ]; then
+if [[ -z "${OKL_TASK:-}" ]] && [[ -z "$prompt" ]] && [[ "$(printf '%s\n' "$parsed" | sed -n 1p)" = "event" ]]; then
   pass_with "OKL: nothing briefed. This prompt has no text (an image or a file alone), so it names no task to brief on. If the work has a subject, run \`okl check --task \"...\"\` before relying on the absence of a rule." \
     "okl: nothing to brief on (the prompt has no text)"
 fi
@@ -213,11 +213,13 @@ fmt=hook
 size_args=""
 case "${OKL_BRIEFING_LIMIT:-}" in
   ''|*[!0-9]*) ;;
-  *) [ "$OKL_BRIEFING_LIMIT" -gt 0 ] 2>/dev/null && size_args="--limit $OKL_BRIEFING_LIMIT" ;;
+  # Digits only here, so above zero means some digit is not 0. A pattern, not -gt: inside [[ ]]
+  # -gt reads its operands as arithmetic, where a leading 0 means octal (08 would be refused).
+  *) [[ "$OKL_BRIEFING_LIMIT" == *[1-9]* ]] && size_args="--limit $OKL_BRIEFING_LIMIT" ;;
 esac
-[ "${OKL_BRIEFING_COMPACT:-0}" = "1" ] && size_args="$size_args --compact"
+[[ "${OKL_BRIEFING_COMPACT:-0}" = "1" ]] && size_args="$size_args --compact"
 check_once() {
-  [ -n "$errf" ] && : > "$errf"   # keep only the last attempt's reason
+  [[ -n "$errf" ]] && : > "$errf"   # keep only the last attempt's reason
   # $size_args unquoted on purpose: empty, or validated digits and fixed flags only.
   out=$("${OKL[@]}" check --task "$TASK" --format "$fmt" $size_args 2>"${errf:-/dev/null}")
   rc=$?   # read here: after an if-block, $? is the if's own status, not okl's
@@ -236,21 +238,21 @@ run_check() {
   for attempt in 1 2 3; do
     started=$SECONDS
     check_once
-    if [ "$rc" -eq 2 ] && [ "$fmt" = hook ] && [ -n "$errf" ] && grep -q "invalid choice" "$errf" 2>/dev/null; then
+    if [[ "$rc" -eq 2 ]] && [[ "$fmt" = hook ]] && [[ -n "$errf" ]] && grep -q "invalid choice" "$errf" 2>/dev/null; then
       # An okl older than this hook has no --format hook. The plugin updates from main and the
       # CLI only when upgraded, so the two can differ: brief the old way rather than block.
       fmt=agent
       check_once
     fi
-    if [ "$rc" -eq 2 ] && [ -n "$size_args" ] && [ -n "$errf" ] && grep -q "unrecognized arguments" "$errf" 2>/dev/null; then
+    if [[ "$rc" -eq 2 ]] && [[ -n "$size_args" ]] && [[ -n "$errf" ]] && grep -q "unrecognized arguments" "$errf" 2>/dev/null; then
       # An okl older than OKL_BRIEFING_COMPACT: brief in full rather than block the prompt.
       size_args=""
       check_once
     fi
-    [ "$rc" -eq 0 ] && break
+    [[ "$rc" -eq 0 ]] && break
     case "$rc" in 126|127) break ;; esac
-    [ $((SECONDS - started)) -ge 3 ] && break
-    [ "$attempt" -lt 3 ] && sleep 0.5
+    [[ $((SECONDS - started)) -ge 3 ]] && break
+    [[ "$attempt" -lt 3 ]] && sleep 0.5
   done
   run_s=$((SECONDS - t0))
 }
@@ -265,19 +267,19 @@ run_check
 # (a `docker run` whose image lacks okl also exits 127) would be run again at each layer
 # and could take the hook past Claude Code's 30 s limit, which lets the prompt through
 # unbriefed (review of R21). A command that already failed is never run again.
-while { [ "$rc" -eq 126 ] || [ "$rc" -eq 127 ]; } && [ "$run_s" -lt 2 ]; do
+while { [[ "$rc" -eq 126 ]] || [[ "$rc" -eq 127 ]]; } && [[ "$run_s" -lt 2 ]]; do
   failed_cmds="${failed_cmds}$(cmd_key)|"
   next_layer || break
   resolve_note="${resolve_note}$ran could not start (exit $rc) -- $(layer_fix "$ran_layer"); "
   ran="${OKL[*]}"; ran_layer=$okl_layer
   run_check
 done
-if [ "$rc" -eq 0 ]; then
-  [ -n "$errf" ] && rm -f "$errf"
+if [[ "$rc" -eq 0 ]]; then
+  [[ -n "$errf" ]] && rm -f "$errf"
   # A layer was passed over: tell the person, or the broken pin stays unseen and every
   # prompt pays a failed start. Into the line they see when okl printed the hook's JSON
   # (never into the agent's context), and on stderr either way.
-  if [ -n "$resolve_note" ]; then
+  if [[ -n "$resolve_note" ]]; then
     note="okl: $(printf '%s' "$resolve_note" | scrub | one_line)briefed by $ran instead."
     printf '%s\n' "$note" >&2
     merged=$(OKL_OUT="$out" OKL_NOTE="$note" python3 -c '
@@ -300,28 +302,28 @@ case "$rc" in
   126|127) meaning="okl could not be started (absent or not executable)" ;;
   2) meaning="okl refused (its contract: 2 = did not run)" ;;
   1) meaning="okl reported an error" ;;
-  *) if [ "$rc" -gt 128 ]; then meaning="okl was killed by signal $((rc - 128)) (e.g. the machine slept, or a timeout)"
+  *) if [[ "$rc" -gt 128 ]]; then meaning="okl was killed by signal $((rc - 128)) (e.g. the machine slept, or a timeout)"
      else meaning="okl failed"; fi ;;
 esac
-if [ -z "$errf" ]; then
+if [[ -z "$errf" ]]; then
   why="(okl's error output was not captured: no private temp file could be made)"
 else
   # A failed read is not silence: only an empty file that read back cleanly is "nothing".
   # The relayed text must not carry the shell's ENOENT phrasing (see resolve_okl).
   if why=$(head -c 1500 "$errf" 2>/dev/null | tr -d '\000-\010\013-\037\177' | scrub); then
-    [ -n "$why" ] || why="(okl printed nothing)"
+    [[ -n "$why" ]] || why="(okl printed nothing)"
   else
     why="(okl's error output was captured but could not be read back)"
   fi
   rm -f "$errf"
 fi
 
-if [ "${OKL_OFFLINE:-0}" = "1" ]; then
+if [[ "${OKL_OFFLINE:-0}" = "1" ]]; then
   offline_pass "exit $rc: $meaning. $(printf '%s' "$resolve_note" | scrub | one_line)okl said: $(printf '%s' "$why" | one_line)"
 fi
 echo "OKL CHECK DID NOT RUN — blocking this prompt. A check that reports 'clean' while broken is worse than no check." >&2
 echo "exit $rc: $meaning." >&2
-[ -n "$resolve_note" ] && printf 'resolver: %s\n' "$resolve_note" | scrub >&2
+[[ -n "$resolve_note" ]] && printf 'resolver: %s\n' "$resolve_note" | scrub >&2
 echo "okl said: $why" >&2
 echo "Ran from: $PWD. Fix the cause above, or start the session with OKL_OFFLINE=1 to proceed without the layer." >&2
 exit 2

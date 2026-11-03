@@ -22,16 +22,16 @@ rc=0
 n=0
 while IFS= read -r src; do
   n=$((n + 1))
-  [ -e "${src%.$SRC_EXT}.$OUT_EXT" ] || { echo "  ✗ diagram source with no rendered $OUT_EXT: $src"; rc=1; }
+  [[ -e "${src%.$SRC_EXT}.$OUT_EXT" ]] || { echo "  ✗ diagram source with no rendered $OUT_EXT: $src"; rc=1; }
 done < <(git ls-files "*.$SRC_EXT")
 
 # Informational only: a hand-authored image is a legitimate source of its own.
 while IFS= read -r out; do
   n=$((n + 1))
-  [ -e "${out%.$OUT_EXT}.$SRC_EXT" ] || echo "  · note: $out has no .$SRC_EXT source (fine if hand-authored)"
+  [[ -e "${out%.$OUT_EXT}.$SRC_EXT" ]] || echo "  · note: $out has no .$SRC_EXT source (fine if hand-authored)"
 done < <(git ls-files "*.$OUT_EXT")
 
-if [ "$n" -eq 0 ]; then
+if [[ "$n" -eq 0 ]]; then
   echo "no .$SRC_EXT/.$OUT_EXT diagrams tracked — nothing to check"
   echo "  (different diagram workflow? set OKL_DIAGRAM_SRC_EXT / OKL_DIAGRAM_OUT_EXT,"
   echo "   e.g. OKL_DIAGRAM_SRC_EXT=drawio OKL_DIAGRAM_OUT_EXT=png)"

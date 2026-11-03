@@ -13,7 +13,7 @@ set -uo pipefail
 unset OKL_DATABASE_URL
 export PYTHONUNBUFFERED=1   # okl's stdout and stderr in the order a terminal shows them
 W=$(mktemp -d "${TMPDIR:-/tmp}/okl-anatomy.XXXXXX")
-[ "${KEEP:-0}" = 1 ] || trap 'rm -rf "$W"' EXIT
+[[ "${KEEP:-0}" = 1 ]] || trap 'rm -rf "$W"' EXIT
 D="$W/orders-api"; mkdir -p "$D/app" "$D/tests"
 TASK="Add an endpoint that returns one order by id for the signed-in customer"
 step() { printf '\n===== %s\n' "$1"; }

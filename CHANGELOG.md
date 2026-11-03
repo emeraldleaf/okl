@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- **Every bash script okl ships tests with `[[ ]]`** (#356): the hooks, the gates, the pre-push
+  hook and the CI scripts, 273 tests in all. `[[ ]]` neither word-splits nor globs its operands,
+  and a test now fails on any new `[ ]`. Inside `[[ ]]`, `-gt` and its kin read their operands as
+  arithmetic, so the two settings that were compared that way are checked first:
+  `OKL_BRIEFING_LIMIT` is matched as digits, so `08` still means 8, and the canon-size gate refuses
+  a `CANON_WARN` or `CANON_FAIL` that is not a whole number (exit 2) where it used to pass quietly.
+
 ## 0.13.0
 
 - **`okl review`: a model's review of the lessons nothing re-checks** (#315, REPORT §4ai). A

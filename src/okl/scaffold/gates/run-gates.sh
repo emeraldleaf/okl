@@ -26,7 +26,7 @@ run "canon-size"      bash "$GATES_DIR/check-canon-size.sh"
 # run "class-paths"   bash "$GATES_DIR/check-scaffold-classpaths.sh"
 # run "tests"         your-test-command
 
-if [ "$fail" -ne 0 ]; then
+if [[ "$fail" -ne 0 ]]; then
   echo; echo "GATES RED — do not merge. Encode the fix at the smallest surface, then re-run."
   exit 1
 fi

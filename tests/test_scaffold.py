@@ -181,6 +181,57 @@ def test_tombstone_and_retraction_gates_read_the_committed_tree(tmp_path, gate, 
     assert run().returncode == 0, run().stdout
 
 
+def test_canon_size_gate_takes_only_whole_numbers(tmp_path):
+    """#356: [[ ]] reads -gt's operands as arithmetic, so a CANON_WARN or CANON_FAIL that is not a
+    whole number would run what it hides, or read 0200 as octal. The gate refuses it, exit 2, and
+    runs nothing; under [ ] such a value failed the test quietly and the gate passed."""
+    scaffold(target=str(tmp_path), repo="r", claude_dir="dotclaude")
+    def run(**env):
+        return subprocess.run(["bash", "gates/check-canon-size.sh"], cwd=tmp_path, capture_output=True,
+                              text=True, env={**os.environ, **env})
+    assert run().returncode == 0
+    for bad in ("a[$(touch pwned)]", "200x", "0200", "-1"):   # empty means the default
+        r = run(CANON_WARN=bad)
+        assert r.returncode == 2 and "whole numbers" in r.stdout, (bad, r.stdout)
+    assert not (tmp_path / "pwned").exists()
+    (tmp_path / "CLAUDE.md").write_text("x\n" * 12)
+    assert run(CANON_FAIL="10").returncode == 1
+
+
+def _single_bracket_tests(text):
+    """Each `[ … ]` test in a bash script's text, comments left out (#356)."""
+    test = re.compile(r"(?<![\[\w$])\[ (.+?) \](?!\])")
+    return [m.group(0) for line in text.splitlines() if not line.lstrip().startswith("#")
+            for m in test.finditer(line)]
+
+
+def test_every_bash_script_tests_with_double_brackets():
+    """#356: in bash, [[ ]] neither word-splits nor globs its operands, and SonarCloud flagged every
+    [ ] a PR touched (S7688), 279 on main. Every tracked bash script uses [[ ]], so CI catches a new
+    [ ] first. The examples' demo scripts are left as measured: the README's results ran on them."""
+    root = Path(__file__).resolve().parents[1]
+    tracked = subprocess.run(["git", "-C", str(root), "ls-files"], capture_output=True, text=True,
+                             check=True).stdout.split()
+    found, checked = [], 0
+    for rel in tracked:
+        path = root / rel
+        if rel.startswith("examples/") or not path.is_file():
+            continue
+        try:
+            text = path.read_text()
+        except UnicodeDecodeError:
+            continue
+        if not (text.startswith("#!") and "bash" in text.split("\n", 1)[0]):
+            continue
+        checked += 1
+        found += [f"{rel}: {t}" for t in _single_bracket_tests(text)]
+    assert checked >= 20, checked                  # the hooks, gates, CI scripts and pre-push hook
+    assert found == []
+    # Red where it should be: a planted [ ] is found, and [[ ]], arrays and character classes are not.
+    assert _single_bracket_tests('if [ -n "$x" ]; then :; fi') == ['[ -n "$x" ]']
+    assert _single_bracket_tests('[[ -n "$x" ]] && echo "${a[0]}" | grep -q "[a-z]"') == []
+
+
 def test_clean_repo_gates_pass(tmp_path):
     """The other half of verify-by-making-it-fail: the gates must also go GREEN.
 
@@ -1842,10 +1893,13 @@ def test_prompt_hook_shrinks_the_briefing_on_request_and_survives_an_older_okl(t
     assert r.returncode == 0 and "--limit" not in seen.read_text() and "--compact" not in seen.read_text()
 
     # ASSERT (3) — a limit that is not a whole number above zero is ignored, not passed on.
-    for bad in ("0", "abc", "3; touch pwned", "-1"):
+    for bad in ("0", "00", "abc", "3; touch pwned", "-1", "a[$(touch pwned)]"):
         r = run(record_and_brief, OKL_BRIEFING_LIMIT=bad)
         assert r.returncode == 0 and "--limit" not in seen.read_text(), (bad, seen.read_text())
     assert not (tmp_path / "pwned").exists()
+    # A leading zero is still a whole number above zero: no arithmetic reads 08 as octal (#356).
+    r = run(record_and_brief, OKL_BRIEFING_LIMIT="08")
+    assert r.returncode == 0 and "--limit 08" in seen.read_text(), (r.stderr, seen.read_text())
 
     # ASSERT (4) — an okl without --compact: argparse refuses it, and the hook briefs in full.
     older = (f'echo "$@" >> {seen}; for a in "$@"; do [ "$a" = --compact ] && {{ echo "okl: error: '

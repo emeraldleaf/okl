@@ -35,7 +35,7 @@ git ls-files 'docs/*.excalidraw' | while IFS= read -r src; do
   # 1. Every receipt the diagram names is committed. A diagram that shows a percentage
   #    while naming no receipt at all is the original failure and fails here too.
   named=$(git show "HEAD:$src" | grep -oE 'ab-[0-9]{8}-[0-9]{4}' | sort -u || true)
-  if [ -z "$named" ]; then
+  if [[ -z "$named" ]]; then
     if git show "HEAD:$src" | grep -qE '[0-9]+ ?%'; then
       echo "   FAIL: shows a percentage but names no receipt"
       touch "$work/fail"
@@ -84,7 +84,7 @@ git ls-files 'docs/*.html' | while IFS= read -r src; do
   echo "-- $src"
   text=$(git show "HEAD:$src" | sed '/<style>/,/<\/style>/d' | sed -E 's/style="[^"]*"//g')
   named=$(printf '%s\n' "$text" | grep -oE 'ab-[0-9]{8}-[0-9]{4}' | sort -u || true)
-  if [ -z "$named" ]; then
+  if [[ -z "$named" ]]; then
     if printf '%s\n' "$text" | grep -qE '[0-9]+ ?%'; then
       echo "   FAIL: shows a percentage but names no receipt"
       touch "$work/fail"
@@ -108,7 +108,7 @@ git ls-files 'docs/*.html' | while IFS= read -r src; do
   done
 done
 
-if [ -e "$work/fail" ]; then
+if [[ -e "$work/fail" ]]; then
   exit 1
 fi
 echo "DIAGRAM_FIGURES_RECEIPTED"

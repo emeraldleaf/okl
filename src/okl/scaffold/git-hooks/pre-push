@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:c4b181106819b30c00de40039e3617ca53bb116386bc39886e40eef4fcaae70e
+# okl-fingerprint: sha256:588c0d7926f26ef3043257ba0424cf37a4e861600600b0431a0029d7faccb9bf
 # git pre-push hook, installed by `okl init --git-hook` (#90): run the drift gate before a push.
 #
 # Blocks the push ONLY when okl ran and found drift (exit 1): a lesson whose governed files
@@ -31,8 +31,8 @@ try_pinned() {
   esac
 }
 resolve_okl() {
-  if [ -n "${OKL_BIN:-}" ] && try_pinned "$OKL_BIN"; then return 0; fi
-  if [ -f .okl/config.json ]; then
+  if [[ -n "${OKL_BIN:-}" ]] && try_pinned "$OKL_BIN"; then return 0; fi
+  if [[ -f .okl/config.json ]]; then
     local bin=""
     if command -v python3 >/dev/null 2>&1; then
       bin=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("okl_bin") or "")' \
@@ -42,7 +42,7 @@ resolve_okl() {
       # one key per line; a value holding a JSON escape is skipped, never misread.
       bin=$(sed -n 's/^ *"okl_bin": *"\([^"\\]*\)",\{0,1\} *$/\1/p' .okl/config.json 2>/dev/null || true)
     fi
-    if [ -n "$bin" ] && try_pinned "$bin"; then return 0; fi
+    if [[ -n "$bin" ]] && try_pinned "$bin"; then return 0; fi
   fi
   try_okl okl || try_okl python3 -m okl
 }
@@ -58,7 +58,7 @@ rc=$?
 # No lesson governs a file yet: nothing to gate, which is how every new repo starts. Printed
 # as "NOTHING CHECKED" and "DRIFT NOT CHECKED" on every push, it read like an error (#204).
 # Only this reason is calmed: an exit 2 for a missing or unreadable store stays loud below.
-if [ "$rc" -eq 2 ] && [[ "$out" == *"no rule governing files"* ]]; then
+if [[ "$rc" -eq 2 ]] && [[ "$out" == *"no rule governing files"* ]]; then
   printf '%s\n' "$out" | grep -v "no rule governing files" >&2
   echo "okl pre-push: no lesson governs a file here yet, so there is nothing to gate. Give one" >&2
   echo "  --files and a check (okl record ... --files <path>, then okl verify <id> --run ...)." >&2
@@ -68,12 +68,12 @@ printf '%s\n' "$out"
 # Exit 1 is drift only alongside the drift report: Python also exits 1 when okl crashes.
 # Matched in bash, not piped to `grep -q`: on a long report grep exits early, printf takes
 # SIGPIPE, and under pipefail the drift would read as no match.
-if [ "$rc" -eq 1 ] && [[ "$out" == *"may be stale"* ]]; then
+if [[ "$rc" -eq 1 ]] && [[ "$out" == *"may be stale"* ]]; then
   echo "okl pre-push: lessons drifted (above). Re-check them with 'okl reverify', commit," >&2
   echo "  then push again. 'git push --no-verify' skips this check." >&2
   exit 1
 fi
-if [ "$rc" -ne 0 ]; then
+if [[ "$rc" -ne 0 ]]; then
   echo "okl pre-push: DRIFT NOT CHECKED (okl exit $rc, reason above). Pushing anyway." >&2
 fi
 exit 0
