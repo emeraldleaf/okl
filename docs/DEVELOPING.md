@@ -160,7 +160,10 @@ That is expected; see CONTRIBUTING.
    GitHub device code): `mcp-publisher login github && mcp-publisher publish`. Pull `main`
    first: the publisher reads `server.json` from the checkout, and one still on the commit
    before the release publishes the old version (0.12.0's first attempt was refused as a
-   duplicate of 0.11.0).
+   duplicate of 0.11.0). Publish only once the `pypi` environment is approved and PyPI lists
+   the release: the registry refuses a version PyPI does not have, and 0.13.0's first two
+   attempts came before the approval (`gh api repos/emeraldleaf/okl/actions/runs/<id>/pending_deployments`
+   names an environment still waiting).
 7. **Check what was published.** PyPI should list the version. Then launch the server the
    way a registry client would,
    `uvx --with 'mcp>=1.2' observed-knowledge-ledger==X.Y.Z mcp`, and confirm it answers
@@ -172,7 +175,13 @@ That is expected; see CONTRIBUTING.
    publish the index lags, a pinned CI install fails, and `uv` needs `--refresh` (0.12.0). It refreshes any hooks that changed, and in
    a repo with okl's CI workflow it moves `.github/okl-version`, so CI installs the new release;
    commit that. Where init says the kept workflow does not read the file, it predates 0.11.0:
-   `okl init --force` replaces it (and any other edited okl file), then pins. Then update the website's okl page.
+   `okl init --force` replaces it (and any other edited okl file), then pins.
+9. **Bring the website's okl page in line** with what changed: change what it says, not only
+   add to it. In the site, `npm run check:okl` must pass before its PR merges. It holds the
+   page's claim and rules to `docs/THESIS.md` word for word, each figure to the doc it quotes,
+   and its roadmap to open issues, reading this repo's main (`OKL_REPO_DIR=<this checkout>`
+   checks changes not yet merged). Each release used to append a paragraph there, until the
+   page read as a changelog and listed closed issues as next steps.
 
 ## Evaluations
 
