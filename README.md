@@ -130,6 +130,7 @@ okl doctor                  # flags other memory tools, double wiring, and where
 | | Claude Code | Any MCP agent (Cursor, Codex, Copilot …) | Any agent, or none |
 |---|---|---|---|
 | Briefing before each task | a hook on every prompt, automatic, fails closed | the `okl_check` tool, when the agent calls it | `okl check` in the terminal or a script |
+| Briefing when a file is read | a hook after each Read: the lessons governing the file, once a session | `okl_check` with `path` | `okl check --path` |
 | Recording what was learned | the Stop hook asks once per session that changed files | the `okl_record` tool | `okl record` |
 | Proof and drift | `okl verify`, `okl reverify`, `okl drift` | the same commands | the same commands |
 | The gate | the pre-push hook | the pre-push hook | the pre-push hook, or the CI workflow (`okl init --ci`) |
@@ -612,7 +613,7 @@ measurements above. [What it is not for](#what-okl-is-not-for) and
 /plugin install okl@okl
 ```
 
-The plugin carries the two hooks, the MCP tools and the seeding commands. It does not
+The plugin carries the three hooks, the MCP tools and the seeding commands. It does not
 carry okl itself: install the CLI first, **with the MCP extra**, because the plugin
 registers the `okl mcp` server (`pipx install 'observed-knowledge-ledger[mcp]'`), then run
 `okl init` in the repo for the store and the drift gate (a pre-push hook; `--ci` for the

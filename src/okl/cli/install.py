@@ -31,14 +31,19 @@ def _merge_hook_settings(claude: Path) -> bool:
         return False
     hooks_cfg = settings.setdefault("hooks", {})
     changed = False
-    # UserPromptSubmit, not PreToolUse: only UserPromptSubmit/SessionStart stdout reaches the
-    # model's context. A PreToolUse briefing fires but is never read (found by E2E test).
+    # The task briefing is UserPromptSubmit, not PreToolUse: plain stdout reaches the model only
+    # from UserPromptSubmit and SessionStart, and a PreToolUse briefing printed that way fired
+    # unread (REPORT §8). The read hook returns JSON `additionalContext`, which does reach it from
+    # PostToolUse, next to the read's result: measured, 5 of 5 (REPORT §4aj).
     for event, command in HOOK_COMMANDS.items():
         entries = hooks_cfg.setdefault(event, [])
         if any(h.get("command", "").endswith(Path(command).name)
                for e in entries for h in e.get("hooks", [])):
             continue
-        entries.append({"hooks": [{"type": "command", "command": command}]})
+        entry: dict = {"hooks": [{"type": "command", "command": command}]}
+        if event in HOOK_MATCHERS:
+            entry = {"matcher": HOOK_MATCHERS[event], **entry}
+        entries.append(entry)
         changed = True
     if changed:
         settings_path.write_text(json.dumps(settings, indent=2) + "\n")
@@ -60,7 +65,11 @@ HOOK_COMMANDS = {
     # okl registers exactly these commands; uninstall removes exactly these and nothing else.
     "UserPromptSubmit": '"$CLAUDE_PROJECT_DIR"/.claude/hooks/userpromptsubmit-okl-check.sh',
     "Stop": '"$CLAUDE_PROJECT_DIR"/.claude/hooks/stop-okl-encode.sh',
+    "PostToolUse": '"$CLAUDE_PROJECT_DIR"/.claude/hooks/posttooluse-okl-read.sh',
 }
+# The tool a hook answers, for the events Claude Code filters by tool: the read hook briefs the
+# lessons governing a file when it is read, which comes before an edit (#94).
+HOOK_MATCHERS = {"PostToolUse": "Read"}
 
 
 # The MCP server starts through .claude/hooks/okl-mcp.sh, which finds okl in the hooks'
@@ -172,6 +181,7 @@ def _uninstall_files(act: str, dry_run: bool) -> list[str]:
     owned = [(Path(".claude/hooks/userpromptsubmit-okl-check.sh"),
               scaffold / "hooks" / "userpromptsubmit-okl-check.sh"),
              (Path(".claude/hooks/stop-okl-encode.sh"), scaffold / "hooks" / "stop-okl-encode.sh"),
+             (Path(".claude/hooks/posttooluse-okl-read.sh"), scaffold / "hooks" / "posttooluse-okl-read.sh"),
              (MCP_LAUNCHER, scaffold / "hooks" / "okl-mcp.sh"),
              (WORKFLOW, WORKFLOW_SRC)]
     hooks, _ = _git_hooks_dir()
@@ -467,7 +477,8 @@ def _init_dry_run(args: argparse.Namespace) -> int:
         print(f"  (wiring Claude Code: {why})")
         print("  .claude/hooks/userpromptsubmit-okl-check.sh   executable; runs when you submit a task")
         print("  .claude/hooks/stop-okl-encode.sh             executable; runs when a session ends")
-        print("  .claude/settings.json                   registers those two hooks (merged, existing keys kept)")
+        print("  .claude/hooks/posttooluse-okl-read.sh        executable; runs after the agent reads a file")
+        print("  .claude/settings.json                   registers those three hooks (merged, existing keys kept)")
         print("  .claude/hooks/okl-mcp.sh                     executable; starts the okl MCP server the way the hooks do")
         print("  .mcp.json                               registers the okl MCP server (both only if the [mcp] extra is installed)")
     elif why:
@@ -756,17 +767,19 @@ def _merge_owner_denies(claude: Path) -> bool:
 
 
 def _install_claude_wiring(claude: Path, force: bool = False) -> None:
-    """Install AND register the hooks: the UserPromptSubmit check (the enforced read) and the
-    Stop encode reminder (the write-side catch). Scripts come from the packaged scaffold —
+    """Install AND register the hooks: the UserPromptSubmit check (the enforced read), the
+    Stop encode reminder (the write-side catch), and the read briefing after a file is read
+    (PostToolUse on Read, #94). Scripts come from the packaged scaffold —
     one canonical source, no drift. Also registers the MCP server when the extra exists."""
     hooks = claude / "hooks"
     hooks.mkdir(exist_ok=True)
     scaffold_hooks = Path(__file__).parent.parent / "scaffold" / "hooks"
     for name, label in [("userpromptsubmit-okl-check.sh", "pre-task check hook (UserPromptSubmit)"),
-                        ("stop-okl-encode.sh", "encode reminder (Stop hook)")]:
+                        ("stop-okl-encode.sh", "encode reminder (Stop hook)"),
+                        ("posttooluse-okl-read.sh", "read briefing (PostToolUse on Read)")]:
         _place_owned(hooks / name, (scaffold_hooks / name).read_text(), label, force)
     if _merge_hook_settings(claude):
-        print("✓ registered both hooks in .claude/settings.json (UserPromptSubmit + Stop)")
+        print("✓ registered the hooks in .claude/settings.json (UserPromptSubmit, Stop, PostToolUse on Read)")
     else:
         print("• hooks already registered in .claude/settings.json")
     # MCP: register the okl server only if the extra is importable (a registration whose

@@ -51,7 +51,7 @@ okl init --repo shop
   first prompt is briefed. `--no-seed` leaves it empty.
 - `init` wires Claude Code when the repo has a `.claude/` folder or `claude` is on your
   PATH (`--claude` forces it, `--no-claude` skips it). It writes `.okl/` (config and the
-  local store, gitignored), two hooks in `.claude/hooks/` registered in
+  local store, gitignored), three hooks in `.claude/hooks/` registered in
   `.claude/settings.json`, `.mcp.json`, and a git pre-push hook that gates drift
   (`--ci` installs a GitHub Actions workflow instead, unless an earlier `init` already
   installed the hook, which stays; `--ci --git-hook` gives both).

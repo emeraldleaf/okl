@@ -3,7 +3,7 @@
 Part of okl's documentation; the [README](../README.md) is the short version. The headline numbers and the receipt are in the README's "What it costs"; this page has what `okl init` writes, every knob, how to turn parts off, and the opt-in architecture review.
 
 **In your repo:** `okl init` writes `.okl/` (config, the local database, a `.gitignore`
-covering both) and, when it wires Claude Code, two hook scripts plus their registration. In a
+covering both) and, when it wires Claude Code, three hook scripts plus their registration. In a
 git repository it also installs a pre-push hook that runs the drift gate (`--no-git-hook`
 skips it). `--ci` installs `.github/workflows/okl-verify.yml`, which runs the gate on every
 PR, instead of the hook. A hook an earlier `init` installed stays: `--no-git-hook` only stops
@@ -93,7 +93,7 @@ Nothing is load-bearing on the hooks: `okl check` and `okl record` work from the
 from CI, and through the MCP server whether or not any hook is installed.
 
 To remove okl from a repo: `okl init --uninstall` (add `--dry-run` to preview). It removes
-the two hook scripts, their exact entries in `.claude/settings.json`, okl's `.mcp.json`
+the three hook scripts, their exact entries in `.claude/settings.json`, okl's `.mcp.json`
 server, `.github/workflows/okl-verify.yml` with the `.github/okl-version` pin beside it, and
 its pre-push hook, and with `--owner` okl's CODEOWNERS block and its deny rules — and nothing
 else: another tool's hooks in the same events stay, a file
