@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import hashlib
 import json
 import os
@@ -57,6 +58,22 @@ def _apply_check_flags(client: Client, args: argparse.Namespace) -> None:
         client.warm = meaning == "on"
 
 
+def _checked(client: Client, args: argparse.Namespace) -> dict[str, Any] | None:
+    """The check's result, or None once it has said on stderr why none could be had."""
+    try:
+        return client.check(args.task or "", repo=args.repo, limit=args.limit, paths=getattr(args, "path", None))
+    except OKLUnreachableError as e:
+        # FAIL CLOSED — loud, non-zero, no reassuring empty result.
+        print(f"OKL UNREACHABLE — refusing to report a clean check.\n{e}", file=sys.stderr)
+    except ValueError as e:
+        # A 4xx (usually a 401 against a token-protected service) is a REFUSED check,
+        # not a clean one, so it fails closed just the same. It gets its own message
+        # because the fix is different: a credential, not connectivity. Before this,
+        # an unauthorized check exited 0 with a raw urllib traceback.
+        print(f"OKL REFUSED THE CHECK — refusing to report a clean check.\n{e}", file=sys.stderr)
+    return None
+
+
 def cmd_check(args: argparse.Namespace) -> int:
     """Print the lessons that apply to `--task`, or that govern each `--path`, in the shape
     `--format` names.
@@ -76,35 +93,13 @@ def cmd_check(args: argparse.Namespace) -> int:
               file=sys.stderr)
         return 2
     _apply_check_flags(client, args)
-    try:
-        result = client.check(args.task or "", repo=args.repo, limit=args.limit, paths=getattr(args, "path", None))
-    except OKLUnreachableError as e:
-        # FAIL CLOSED — loud, non-zero, no reassuring empty result.
-        print(f"OKL UNREACHABLE — refusing to report a clean check.\n{e}", file=sys.stderr)
-        return 2
-    except ValueError as e:
-        # A 4xx (usually a 401 against a token-protected service) is a REFUSED check,
-        # not a clean one, so it fails closed just the same. It gets its own message
-        # because the fix is different: a credential, not connectivity. Before this,
-        # an unauthorized check exited 0 with a raw urllib traceback.
-        print(f"OKL REFUSED THE CHECK — refusing to report a clean check.\n{e}", file=sys.stderr)
+    result = _checked(client, args)
+    if result is None:
         return 2
     if getattr(args, "path", None) and getattr(args, "session", None):
         _once_per_session(result, args.session)
     if args.format == "hook":
-        if getattr(args, "path", None):
-            return _print_file_hook(result, args)
-        # What a Claude Code UserPromptSubmit hook prints: the briefing into the model's
-        # context, and one line the person can see. OKL_QUIET=1 keeps the line out.
-        out: dict[str, Any] = {"hookSpecificOutput": {
-            "hookEventName": getattr(args, "hook_event", None) or "UserPromptSubmit",
-            "additionalContext": _briefing_text(result, args)}}
-        quiet = os.environ.get("OKL_QUIET") == "1"
-        lines = [] if quiet else [x for x in (core.briefing_notice(result), *_person_notes(result)) if x]
-        if lines:
-            out["systemMessage"] = " · ".join(lines)
-        print(json.dumps(out))
-        return 0
+        return _print_file_hook(result, args) if getattr(args, "path", None) else _print_prompt_hook(result, args)
     if args.format == "json":
         _print_json(result)
     elif args.format == "actions":
@@ -145,10 +140,23 @@ def _once_per_session(result: dict[str, Any], session: str) -> None:
     result["match_count"] = sum(len(result[k]) for k in _BRIEFED_BUCKETS)
     briefed = {r["id"] for k in _BRIEFED_BUCKETS for r in result[k] if r.get("id")}
     if briefed - seen:
-        try:
+        # A temp directory that cannot be written costs a repeat, not the briefing.
+        with contextlib.suppress(OSError):
             seen_file.write_text("\n".join(sorted(seen | briefed)) + "\n")
-        except OSError:
-            pass   # a temp directory that cannot be written costs a repeat, not the briefing
+
+
+def _print_prompt_hook(result: dict[str, Any], args: argparse.Namespace) -> int:
+    """What a Claude Code UserPromptSubmit hook prints: the briefing into the model's context,
+    and one line the person can see. OKL_QUIET=1 keeps the line out."""
+    out: dict[str, Any] = {"hookSpecificOutput": {
+        "hookEventName": getattr(args, "hook_event", None) or "UserPromptSubmit",
+        "additionalContext": _briefing_text(result, args)}}
+    quiet = os.environ.get("OKL_QUIET") == "1"
+    lines = [] if quiet else [x for x in (core.briefing_notice(result), *_person_notes(result)) if x]
+    if lines:
+        out["systemMessage"] = " · ".join(lines)
+    print(json.dumps(out))
+    return 0
 
 
 def _print_file_hook(result: dict[str, Any], args: argparse.Namespace) -> int:
