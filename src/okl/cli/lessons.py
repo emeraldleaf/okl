@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import sys
+import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -87,11 +89,15 @@ def cmd_check(args: argparse.Namespace) -> int:
         # an unauthorized check exited 0 with a raw urllib traceback.
         print(f"OKL REFUSED THE CHECK — refusing to report a clean check.\n{e}", file=sys.stderr)
         return 2
+    if getattr(args, "path", None) and getattr(args, "session", None):
+        _once_per_session(result, args.session)
     if args.format == "hook":
+        if getattr(args, "path", None):
+            return _print_file_hook(result, args)
         # What a Claude Code UserPromptSubmit hook prints: the briefing into the model's
         # context, and one line the person can see. OKL_QUIET=1 keeps the line out.
         out: dict[str, Any] = {"hookSpecificOutput": {
-            "hookEventName": "UserPromptSubmit",
+            "hookEventName": getattr(args, "hook_event", None) or "UserPromptSubmit",
             "additionalContext": _briefing_text(result, args)}}
         quiet = os.environ.get("OKL_QUIET") == "1"
         lines = [] if quiet else [x for x in (core.briefing_notice(result), *_person_notes(result)) if x]
@@ -115,6 +121,62 @@ def cmd_check(args: argparse.Namespace) -> int:
     if args.format != "json":
         for line in _person_notes(result):
             print(line, file=sys.stderr)
+    return 0
+
+
+_BRIEFED_BUCKETS = ("armed_gates", "relevant_defects", "live_retractions", "in_scope_tombstones",
+                    "threat_prior_art", "rules", "vocabulary", "decisions", "context")
+
+
+def _once_per_session(result: dict[str, Any], session: str) -> None:
+    """Drop from a file briefing the lessons this session was already briefed by file, unless
+    drift marks one (stale, or never verified), and remember the rest (#94). A lesson the agent
+    has read once need not fill its context again on every read of the file; a stale one is
+    news each time. Remembered in the temp directory, per session, as the Stop hook's marker is."""
+    seen_file = Path(tempfile.gettempdir()) / f"okl-read-briefed-{hashlib.sha256(session.encode()).hexdigest()[:16]}"
+    try:
+        seen = set(seen_file.read_text().split())
+    except OSError:
+        seen = set()
+    keep = lambda rec: rec.get("id") not in seen or bool(rec.get("drift"))  # noqa: E731 - a predicate named once
+    for key in (*_BRIEFED_BUCKETS, "stale_warnings"):
+        result[key] = [r for r in result.get(key) or [] if keep(r)]
+    result["next_actions"] = [a for a in result.get("next_actions") or [] if keep(a)]
+    result["match_count"] = sum(len(result[k]) for k in _BRIEFED_BUCKETS)
+    briefed = {r["id"] for k in _BRIEFED_BUCKETS for r in result[k] if r.get("id")}
+    if briefed - seen:
+        try:
+            seen_file.write_text("\n".join(sorted(seen | briefed)) + "\n")
+        except OSError:
+            pass   # a temp directory that cannot be written costs a repeat, not the briefing
+
+
+def _print_file_hook(result: dict[str, Any], args: argparse.Namespace) -> int:
+    """What a Claude Code hook prints after a file is read: the lessons that govern it, framed by
+    their own sha256 and byte count so a transcript shows whether they arrived whole (#94,
+    REPORT §4aj), and nothing at all when no lesson does, since a line on every read of an
+    ungoverned file would be noise. OKL_FRAME_LOG names a file that gets the same two values."""
+    if not result.get("match_count"):
+        return 0
+    body = _briefing_text(result, args)
+    digest, size = hashlib.sha256(body.encode()).hexdigest(), len(body.encode())
+    frame = f"okl-briefing sha256={digest} bytes={size}"
+    out: dict[str, Any] = {"hookSpecificOutput": {
+        "hookEventName": getattr(args, "hook_event", None) or "PostToolUse",
+        "additionalContext": f"{frame}\n{body}"}}
+    if os.environ.get("OKL_QUIET") != "1":
+        out["systemMessage"] = (f"okl · {result['match_count']} lesson(s) governing "
+                                f"{', '.join(result['paths'])} briefed to the agent")
+    log = os.environ.get("OKL_FRAME_LOG")
+    if log:
+        try:
+            with Path(log).open("a") as f:
+                f.write(json.dumps({"sha256": digest, "bytes": size, "paths": result["paths"],
+                                    "session": getattr(args, "session", None),
+                                    "at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")}) + "\n")
+        except OSError as e:
+            print(f"okl: could not write OKL_FRAME_LOG: {e}", file=sys.stderr)
+    print(json.dumps(out))
     return 0
 
 

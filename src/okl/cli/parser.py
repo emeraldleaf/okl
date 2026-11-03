@@ -98,6 +98,11 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                            "its drift and proof marks (repeatable; #94). Relative to the working directory "
                            "or absolute; a file outside this repo has none")
     pk.add_argument("--repo")
+    pk.add_argument("--hook-event", dest="hook_event", choices=["UserPromptSubmit", "PostToolUse", "SessionStart"],
+                    help="with --format hook: the Claude Code event the output answers (default: "
+                         "UserPromptSubmit for --task, PostToolUse for --path)")
+    pk.add_argument("--session", help="with --path: brief each lesson once in this session id, again only "
+                                      "while drift marks it (#94); the file-read hook passes Claude Code's")
     pk.add_argument("--format", choices=["agent", "actions", "json", "hook"], default="agent",
                     help="agent: the full briefing. actions: the routed action list only, "
                          "for callers on a small context budget. json: the raw result. hook: what a "
