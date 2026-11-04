@@ -133,8 +133,8 @@ def _once_per_session(result: dict[str, Any], session: str, where: str) -> None:
     project, but another caller may pass one session id from several checkouts, and another
     store can hold the same seed id saying something else; moving within a repo costs a repeat,
     never a dropped lesson."""
-    marker = f"{where}\0{session}"
-    seen_file = Path(tempfile.gettempdir()) / f"okl-read-briefed-{hashlib.sha256(marker.encode()).hexdigest()[:16]}"
+    marker = f"{where}\0{session}".encode(errors="surrogatepass")   # a path's undecodable bytes
+    seen_file = Path(tempfile.gettempdir()) / f"okl-read-briefed-{hashlib.sha256(marker).hexdigest()[:16]}"
     try:
         seen = set(seen_file.read_text().split())
     except OSError:

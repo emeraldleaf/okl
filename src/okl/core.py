@@ -1381,8 +1381,20 @@ def render_actions_only(result: dict[str, Any], limit: int | None = None) -> str
     A subagent working in a few thousand tokens cannot afford the full briefing (~4-5k
     tokens of bucketed detail). What it actually needs to change its behaviour is the
     imperative list: what to fix, when you see it, what to do. This drops the buckets,
-    the prose bodies, and the stale-node footer, keeping one line per action.
+    the prose bodies, and the stale-node footer, keeping one line per action. A file
+    briefing ends by naming the paths outside the repo, as the full briefing does.
     """
+    text = _actions_text(result, limit)
+    outside = result.get("outside_repo")
+    if not outside:
+        return text
+    note = f"OKL: outside this repository, so none of its lessons governs {', '.join(outside)}."
+    # With no path inside the repo, the line above would read "no lesson governs  (repo)".
+    return f"{text}\n{note}" if result.get("paths") else note
+
+
+def _actions_text(result: dict[str, Any], limit: int | None) -> str:
+    """render_actions_only's lines for what the repo's lessons say."""
     actions = result.get("next_actions") or []
     if limit is not None and result.get("paths") is None:   # a file's lessons are all shown (#94)
         actions = actions[:limit]

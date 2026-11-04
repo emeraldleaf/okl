@@ -74,6 +74,20 @@ def _okl(tmp_path, cwd, env, *args):
     return subprocess.run([sys.executable, "-m", "okl", *args], cwd=cwd, env=env, capture_output=True, text=True)
 
 
+def test_the_compact_format_names_the_paths_outside_the_repo():
+    """`--format actions` says which paths lay outside the repo, as the agent format does: alone
+    when every path did, never as "no lesson governs  (r)" with an empty list (review of #366),
+    and after the actions when some did not."""
+    alone = {**core.no_paths_answer("r"), "outside_repo": ["/etc/hosts"]}
+    assert core.render_actions_only(alone) == ("OKL: outside this repository, so none of its "
+                                               "lessons governs /etc/hosts.")
+    store = Store("sqlite:///:memory:")
+    _record(store, "exact", "src/orders.py")
+    mixed = {**core.check_paths(store, "r", ["src/orders.py"]), "outside_repo": ["/etc/hosts"]}
+    text = core.render_actions_only(mixed)
+    assert text.startswith("OKL — 1 rule(s) govern src/orders.py:") and text.endswith("governs /etc/hosts.")
+
+
 def test_okl_check_path_from_the_cli(tmp_path):
     """A path relative to the working directory, absolute, or from a subdirectory names the same
     file; the lesson comes with its drift mark (governed files, never verified); a path outside
@@ -279,6 +293,9 @@ def test_once_per_session_drops_a_lesson_already_briefed_unless_drift_marks_it(t
     assert [r["id"] for r in other["rules"]] == ["proven", "stale"]
     namesake = result(); _once_per_session(namesake, "s1", "/oss/api\0api")
     assert [r["id"] for r in namesake["rules"]] == ["proven", "stale"]
+    # A checkout whose name is not valid UTF-8 reaches Python with surrogates in it (review of #366).
+    odd = result(); _once_per_session(odd, "s1", os.fsdecode(b"/work/caf\xe9") + "\0cafe")
+    assert [r["id"] for r in odd["rules"]] == ["proven", "stale"]
 
 
 def test_the_e2e_instrument_builds_measures_and_summarizes_without_a_session(tmp_path, monkeypatch):
