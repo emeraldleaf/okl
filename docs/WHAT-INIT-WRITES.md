@@ -56,7 +56,7 @@ worth `okl record`ing?* — so the write side of the loop gets a mechanical prom
 not just a convention. It fires once per session and never loops. The third runs after the
 agent reads a file (`PostToolUse` on `Read`): it returns `okl check --path` for that file as
 `additionalContext`, which Claude Code puts next to the read's result, before any edit. Each
-lesson is briefed once a session in each repo, again only while drift marks it; a file no lesson governs
+lesson is briefed once a session, again only while drift marks it; a file no lesson governs
 gets nothing; when okl cannot answer it says so in one line. REPORT §4aj measured that the
 briefing arrives (5 of 5 sessions); it did not show that it changes the edit.
 

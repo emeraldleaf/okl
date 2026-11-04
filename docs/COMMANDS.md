@@ -62,10 +62,9 @@ okl check --path src/orders.py
                      #   out. Relative to the working directory or absolute; a file outside
                      #   the repo has none. Instead of --task; okl_check takes `path` too.
                      #   --format hook --hook-event PostToolUse --session <id> is what the
-                     #   Claude Code read hook runs: each lesson once a session per repo,
-                     #   again only while drift marks it, the briefing framed by its sha256
-                     #   and bytes. OKL_FRAME_LOG=<file> appends that frame too (REPORT
-                     #   §4aj's instrument).
+                     #   Claude Code read hook runs: each lesson once a session, again only
+                     #   while drift marks it, the briefing framed by its sha256 and bytes.
+                     #   OKL_FRAME_LOG=<file> appends that frame too (REPORT §4aj's instrument).
 okl embed            # build or refresh one local vector per record for --hybrid briefings
                      #   (needs the `hybrid` extra; downloads a 131 MB static model once;
                      #   re-embeds only records whose text changed). Off by default: a check

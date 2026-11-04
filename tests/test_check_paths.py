@@ -263,21 +263,22 @@ def test_the_read_hook_briefs_a_files_lessons_once_framed_and_never_silently_fai
 def test_once_per_session_drops_a_lesson_already_briefed_unless_drift_marks_it(tmp_path, monkeypatch):
     """The dedupe itself: a verified lesson briefed once in a session is left out of that session's
     next file briefing, and a drift-marked one is kept; another session starts afresh, and so does
-    another repo in the same session, whose store may hold the same seed id saying something else."""
+    another checkout given the same session id, whose store may hold the same seed id saying
+    something else."""
     from okl.cli.lessons import _once_per_session
     monkeypatch.setattr("tempfile.gettempdir", lambda: str(tmp_path))
-    def result(repo="r"):
-        return {"repo": repo, "rules": [{"id": "proven"}, {"id": "stale", "drift": {"reason": "changed"}}],
+    def result():
+        return {"rules": [{"id": "proven"}, {"id": "stale", "drift": {"reason": "changed"}}],
                 "next_actions": [{"id": "proven"}, {"id": "stale", "drift": {"reason": "changed"}}],
                 "match_count": 2}
-    first = result(); _once_per_session(first, "s1")
+    first = result(); _once_per_session(first, "s1", "/work/api\0api")
     assert [r["id"] for r in first["rules"]] == ["proven", "stale"]
-    second = result(); _once_per_session(second, "s1")
+    second = result(); _once_per_session(second, "s1", "/work/api\0api")
     assert [r["id"] for r in second["rules"]] == ["stale"] and second["match_count"] == 1
-    other = result(); _once_per_session(other, "s2")
+    other = result(); _once_per_session(other, "s2", "/work/api\0api")
     assert [r["id"] for r in other["rules"]] == ["proven", "stale"]
-    elsewhere = result("r2"); _once_per_session(elsewhere, "s1")
-    assert [r["id"] for r in elsewhere["rules"]] == ["proven", "stale"]
+    namesake = result(); _once_per_session(namesake, "s1", "/oss/api\0api")
+    assert [r["id"] for r in namesake["rules"]] == ["proven", "stale"]
 
 
 def test_the_e2e_instrument_builds_measures_and_summarizes_without_a_session(tmp_path, monkeypatch):

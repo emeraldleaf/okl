@@ -361,6 +361,7 @@ def no_paths_answer(repo: str) -> dict[str, Any]:
 
 
 def _paths_answer(repo: str, paths: list[str], buckets: dict[str, list[dict]]) -> dict[str, Any]:
+    """A file briefing in check()'s shape, from its buckets."""
     total = sum(len(v) for k, v in buckets.items() if k != "stale_warnings")
     return {"repo": repo, "task": "", "paths": sorted(set(paths)), "match_count": total,
             "next_actions": _route_actions(buckets), "dropped_by_cutoff": 0,
