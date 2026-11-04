@@ -128,8 +128,11 @@ def _once_per_session(result: dict[str, Any], session: str) -> None:
     """Drop from a file briefing the lessons this session was already briefed by file, unless
     drift marks one (stale, or never verified), and remember the rest (#94). A lesson the agent
     has read once need not fill its context again on every read of the file; a stale one is
-    news each time. Remembered in the temp directory, per session, as the Stop hook's marker is."""
-    seen_file = Path(tempfile.gettempdir()) / f"okl-read-briefed-{hashlib.sha256(session.encode()).hexdigest()[:16]}"
+    news each time. Remembered in the temp directory, per session, as the Stop hook's marker is,
+    and per repo: a session can move between repos, and another repo's store may hold the same
+    seed id saying something else."""
+    marker = f"{result.get('repo', '')}\0{session}"
+    seen_file = Path(tempfile.gettempdir()) / f"okl-read-briefed-{hashlib.sha256(marker.encode()).hexdigest()[:16]}"
     try:
         seen = set(seen_file.read_text().split())
     except OSError:

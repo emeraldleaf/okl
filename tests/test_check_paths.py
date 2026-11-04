@@ -111,6 +111,13 @@ def test_a_service_answers_paths_and_an_older_one_is_refused(remote, monkeypatch
 
     assert remote.api.post("/check", json={"repo": "r"}).status_code == 422
 
+    # Every path outside the repo: nothing there can be governed, and the service refuses an
+    # empty list, so the client answers in the local shape without asking (CodeRabbit sweep 6).
+    outside = Client().check("", paths=["/etc/hosts"])
+    assert outside["outside_repo"] == ["/etc/hosts"] and outside["match_count"] == 0
+    assert set(core.check_paths(remote.store, "r", [])) - {"store_records"} <= set(outside)
+    assert "store_records" not in outside           # no store was read, so none is counted
+
     real = Client._post
     monkeypatch.setattr(Client, "_post", lambda self, path, payload: {
         k: v for k, v in real(self, path, {**payload, "task": "orders"}).items() if k != "paths"})
@@ -255,11 +262,12 @@ def test_the_read_hook_briefs_a_files_lessons_once_framed_and_never_silently_fai
 
 def test_once_per_session_drops_a_lesson_already_briefed_unless_drift_marks_it(tmp_path, monkeypatch):
     """The dedupe itself: a verified lesson briefed once in a session is left out of that session's
-    next file briefing, and a drift-marked one is kept; another session starts afresh."""
+    next file briefing, and a drift-marked one is kept; another session starts afresh, and so does
+    another repo in the same session, whose store may hold the same seed id saying something else."""
     from okl.cli.lessons import _once_per_session
     monkeypatch.setattr("tempfile.gettempdir", lambda: str(tmp_path))
-    def result():
-        return {"rules": [{"id": "proven"}, {"id": "stale", "drift": {"reason": "changed"}}],
+    def result(repo="r"):
+        return {"repo": repo, "rules": [{"id": "proven"}, {"id": "stale", "drift": {"reason": "changed"}}],
                 "next_actions": [{"id": "proven"}, {"id": "stale", "drift": {"reason": "changed"}}],
                 "match_count": 2}
     first = result(); _once_per_session(first, "s1")
@@ -268,6 +276,8 @@ def test_once_per_session_drops_a_lesson_already_briefed_unless_drift_marks_it(t
     assert [r["id"] for r in second["rules"]] == ["stale"] and second["match_count"] == 1
     other = result(); _once_per_session(other, "s2")
     assert [r["id"] for r in other["rules"]] == ["proven", "stale"]
+    elsewhere = result("r2"); _once_per_session(elsewhere, "s1")
+    assert [r["id"] for r in elsewhere["rules"]] == ["proven", "stale"]
 
 
 def test_the_e2e_instrument_builds_measures_and_summarizes_without_a_session(tmp_path, monkeypatch):
