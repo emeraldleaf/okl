@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.14.0
 
 - **The scaffold's CI review step no longer drops a review it cannot parse.** A reviewer often
   writes a line of prose before its JSON; the step stripped code fences only, so the reply failed
@@ -19,7 +19,8 @@
 - **In Claude Code, the lessons that govern a file arrive when the agent reads it** (#94, REPORT
   §4aj). `okl init` installs a third hook, `PostToolUse` on `Read`: it returns
   `okl check --path` for the file as context next to the read's result, before any edit, each
-  lesson once a session (again only while drift marks it), framed with its sha256 and byte count.
+  lesson once a session in each repo (again only while drift marks it), framed with its sha256
+  and byte count.
   A file no lesson governs gets nothing; when okl cannot answer, the hook says so in one line and
   never blocks; `OKL_DISABLED_HOOKS=read` turns it off. Measured before it shipped: in five
   sessions the briefing arrived every time, and every agent read it and named the lesson. None
