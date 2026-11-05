@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:5999b0689b50c09260ea1fac6512549e915aedeaacb0e80ac8aaf98b70eb5caf
+# okl-fingerprint: sha256:239e0272c02f11f38079b21ad578e35d3ea6f3595e7d3c19cb5ff407bb0a2c0b
 # PostToolUse hook on Read — brief the lessons that govern a file when the agent reads it (#94).
 #
 # The prompt hook briefs once, when a prompt is sent; within a long turn the edit a lesson
@@ -30,6 +30,14 @@ if [[ -n "${CLAUDE_PROJECT_DIR:-}" ]] && [[ -z "${OKL_SERVICE_URL:-}${OKL_DATABA
     d=$(dirname "$d")
   done
   [[ "$enrolled" = 1 ]] || exit 0
+fi
+
+# python3 reads the payload below. Without it the hook cannot tell which file was read, and
+# exiting silent reads to the agent as "no lessons here": say so instead, in JSON built
+# without python (a fixed text, so nothing needs escaping).
+if ! command -v python3 >/dev/null 2>&1; then
+  printf '%s\n' '{"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": "OKL NOT BRIEFED: python3 is not on PATH, so the read hook could not tell which file was read. Lessons may govern it that you cannot see; check before relying on what you read."}}'
+  exit 0
 fi
 
 # The read: which file, in which session. Anything unreadable is no file, and no briefing.

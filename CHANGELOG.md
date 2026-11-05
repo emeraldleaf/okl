@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **With no `python3` on PATH, the read hook says it could not brief the read.** It reads its
+  payload with python3, so without one it cannot tell which file was read; it exited silently,
+  which the agent reads as "no lessons here". It now returns one `OKL NOT BRIEFED` line.
 - **The read hook falls back past an okl that cannot start.** When the okl it resolved exits
   126 or 127 at once (a pinned okl whose python is gone), it now tries the next layer, okl on
   PATH and then `python3 -m okl`, as the prompt hook has since #152, instead of telling the agent
