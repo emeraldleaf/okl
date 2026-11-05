@@ -121,6 +121,16 @@
       "verified_at": 1793669843916,
       "verified_by": "`gh api repos/emeraldleaf/okl --jq 'if .allow_squash_merge or .allow_rebase_merge then error(\"squash or rebase enabled\") else \"MERGE COMMITS ONLY\" end'` exit 0, matched 'MERGE COMMITS ONLY' on commit 82bad0218ee6 @ 2026-11-03T01:37Z",
       "verified_commit": "82bad0218ee655360900985a56b009edb1bb9716"
+    },
+    {
+      "id": "temp-marker-keyed-by-scope",
+      "type": "Defect",
+      "title": "A once-a-session marker in the temp directory keyed by the session alone drops a lesson in another checkout",
+      "scope": "repo:okl",
+      "files": "src/okl/cli/lessons.py",
+      "verified_at": 1793847525649,
+      "verified_by": "`env -u OKL_DATABASE_URL python3 -m pytest -q tests/test_check_paths.py -k once_per_session` exit 0, matched '1 passed' on commit 816ed6f25360 @ 2026-11-05T02:58Z",
+      "verified_commit": "816ed6f2536087e3d594b1fd71f5f3aedccedc5c"
     }
   ]
 }
