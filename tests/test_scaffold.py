@@ -1936,7 +1936,10 @@ def test_prompt_hook_shrinks_the_briefing_on_request_and_survives_an_older_okl(t
     assert r.returncode == 0 and "--limit" not in seen.read_text() and "--compact" not in seen.read_text()
 
     # ASSERT (3) — a limit that is not a whole number above zero is ignored, not passed on.
-    for bad in ("0", "00", "abc", "3; touch pwned", "-1", "a[$(touch pwned)]"):
+    # Nor is one past 9999: beyond any store, and past SQLite's range okl cannot run the query,
+    # so the prompt would be blocked (review of quartzose#23).
+    for bad in ("0", "00", "abc", "3; touch pwned", "-1", "a[$(touch pwned)]", "10000",
+                "99999999999999999999"):
         r = run(record_and_brief, OKL_BRIEFING_LIMIT=bad)
         assert r.returncode == 0 and "--limit" not in seen.read_text(), (bad, seen.read_text())
     assert not (tmp_path / "pwned").exists()

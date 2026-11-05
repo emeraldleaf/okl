@@ -274,6 +274,26 @@ def test_the_read_hook_briefs_a_files_lessons_once_framed_and_never_silently_fai
     assert broken.returncode == 0 and note.startswith("OKL NOT BRIEFED for ") and "cannot see" in note
 
 
+def test_the_read_hook_resumes_at_the_next_layer_when_okl_cannot_start(tmp_path):
+    """An okl that resolves but cannot start (a launcher whose interpreter is gone exits 127) is
+    passed over for the next layer, as the prompt hook does (#152), instead of a lost briefing
+    (review of quartzose#23). PATH offers only a python3 that imports this checkout's okl."""
+    repo, env = _repo(tmp_path)
+    r = _okl(tmp_path, repo, env, "record", "--type", "Rule", "--scope", "repo", "--id", "ledger-audit",
+             "--title", "Every ledger read goes through the audit trail", "--files", "src/orders.py",
+             "--fix", "call audit_trail_7Q(account_id) before returning entries")
+    assert r.returncode == 0, r.stderr
+    broken, bindir = tmp_path / "okl-broken", tmp_path / "bin"
+    broken.write_text("#!/no/such/interpreter\n"); broken.chmod(0o755)
+    bindir.mkdir(); (bindir / "python3").symlink_to(sys.executable)
+
+    read = _read_hook(repo, env, tmp_path, str(repo / "src" / "orders.py"), OKL_BIN=str(broken),
+                      PATH=f"{bindir}:/usr/bin:/bin")
+    assert read.returncode == 0, read.stderr
+    context = json.loads(read.stdout)["hookSpecificOutput"]["additionalContext"]
+    assert "audit_trail_7Q" in context and "OKL NOT BRIEFED" not in context, context
+
+
 def test_once_per_session_drops_a_lesson_already_briefed_unless_drift_marks_it(tmp_path, monkeypatch):
     """The dedupe itself: a verified lesson briefed once in a session is left out of that session's
     next file briefing, and a drift-marked one is kept; another session starts afresh, and so does

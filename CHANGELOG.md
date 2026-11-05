@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- **The read hook falls back past an okl that cannot start.** When the okl it resolved exits
+  126 or 127 at once (a pinned okl whose python is gone), it now tries the next layer, okl on
+  PATH and then `python3 -m okl`, as the prompt hook has since #152, instead of telling the agent
+  the file was not briefed. A command that failed is never run twice, and a launcher that ran
+  before failing is not retried.
+- **An `OKL_BRIEFING_LIMIT` above 9999 is ignored,** as any other unusable value is. The prompt
+  hook passed any run of digits to okl, and one past SQLite's integer range made the check fail,
+  so the hook blocked the prompt. A leading zero still counts: `08` is 8.
+
 ## 0.14.0
 
 - **The scaffold's CI review step no longer drops a review it cannot parse.** A reviewer often
