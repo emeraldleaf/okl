@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.14.0
 
 - **The scaffold's CI review step no longer drops a review it cannot parse.** A reviewer often
   writes a line of prose before its JSON; the step stripped code fences only, so the reply failed

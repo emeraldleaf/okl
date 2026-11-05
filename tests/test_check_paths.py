@@ -74,6 +74,20 @@ def _okl(tmp_path, cwd, env, *args):
     return subprocess.run([sys.executable, "-m", "okl", *args], cwd=cwd, env=env, capture_output=True, text=True)
 
 
+def test_the_compact_format_names_the_paths_outside_the_repo():
+    """`--format actions` says which paths lay outside the repo, as the agent format does: alone
+    when every path did, never as "no lesson governs  (r)" with an empty list (review of #366),
+    and after the actions when some did not."""
+    alone = {**core.no_paths_answer("r"), "outside_repo": ["/etc/hosts"]}
+    assert core.render_actions_only(alone) == ("OKL: outside this repository, so none of its "
+                                               "lessons governs /etc/hosts.")
+    store = Store("sqlite:///:memory:")
+    _record(store, "exact", "src/orders.py")
+    mixed = {**core.check_paths(store, "r", ["src/orders.py"]), "outside_repo": ["/etc/hosts"]}
+    text = core.render_actions_only(mixed)
+    assert text.startswith("OKL — 1 rule(s) govern src/orders.py:") and text.endswith("governs /etc/hosts.")
+
+
 def test_okl_check_path_from_the_cli(tmp_path):
     """A path relative to the working directory, absolute, or from a subdirectory names the same
     file; the lesson comes with its drift mark (governed files, never verified); a path outside
@@ -110,6 +124,13 @@ def test_a_service_answers_paths_and_an_older_one_is_refused(remote, monkeypatch
     assert result["paths"] == ["src/orders.py"] and [x["id"] for x in result["rules"]] == ["scoped-orders"]
 
     assert remote.api.post("/check", json={"repo": "r"}).status_code == 422
+
+    # Every path outside the repo: nothing there can be governed, and the service refuses an
+    # empty list, so the client answers in the local shape without asking (CodeRabbit sweep 6).
+    outside = Client().check("", paths=["/etc/hosts"])
+    assert outside["outside_repo"] == ["/etc/hosts"] and outside["match_count"] == 0
+    assert set(core.check_paths(remote.store, "r", [])) - {"store_records"} <= set(outside)
+    assert "store_records" not in outside           # no store was read, so none is counted
 
     real = Client._post
     monkeypatch.setattr(Client, "_post", lambda self, path, payload: {
@@ -255,19 +276,26 @@ def test_the_read_hook_briefs_a_files_lessons_once_framed_and_never_silently_fai
 
 def test_once_per_session_drops_a_lesson_already_briefed_unless_drift_marks_it(tmp_path, monkeypatch):
     """The dedupe itself: a verified lesson briefed once in a session is left out of that session's
-    next file briefing, and a drift-marked one is kept; another session starts afresh."""
+    next file briefing, and a drift-marked one is kept; another session starts afresh, and so does
+    another checkout given the same session id, whose store may hold the same seed id saying
+    something else."""
     from okl.cli.lessons import _once_per_session
     monkeypatch.setattr("tempfile.gettempdir", lambda: str(tmp_path))
     def result():
         return {"rules": [{"id": "proven"}, {"id": "stale", "drift": {"reason": "changed"}}],
                 "next_actions": [{"id": "proven"}, {"id": "stale", "drift": {"reason": "changed"}}],
                 "match_count": 2}
-    first = result(); _once_per_session(first, "s1")
+    first = result(); _once_per_session(first, "s1", "/work/api\0api")
     assert [r["id"] for r in first["rules"]] == ["proven", "stale"]
-    second = result(); _once_per_session(second, "s1")
+    second = result(); _once_per_session(second, "s1", "/work/api\0api")
     assert [r["id"] for r in second["rules"]] == ["stale"] and second["match_count"] == 1
-    other = result(); _once_per_session(other, "s2")
+    other = result(); _once_per_session(other, "s2", "/work/api\0api")
     assert [r["id"] for r in other["rules"]] == ["proven", "stale"]
+    namesake = result(); _once_per_session(namesake, "s1", "/oss/api\0api")
+    assert [r["id"] for r in namesake["rules"]] == ["proven", "stale"]
+    # A checkout whose name is not valid UTF-8 reaches Python with surrogates in it (review of #366).
+    odd = result(); _once_per_session(odd, "s1", os.fsdecode(b"/work/caf\xe9") + "\0cafe")
+    assert [r["id"] for r in odd["rules"]] == ["proven", "stale"]
 
 
 def test_the_e2e_instrument_builds_measures_and_summarizes_without_a_session(tmp_path, monkeypatch):

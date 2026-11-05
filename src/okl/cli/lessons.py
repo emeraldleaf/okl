@@ -97,7 +97,7 @@ def cmd_check(args: argparse.Namespace) -> int:
     if result is None:
         return 2
     if getattr(args, "path", None) and getattr(args, "session", None):
-        _once_per_session(result, args.session)
+        _once_per_session(result, args.session, f"{Path.cwd().resolve()}\0{result.get('repo') or client.repo}")
     if args.format == "hook":
         (_print_file_hook if getattr(args, "path", None) else _print_prompt_hook)(result, args)
         return 0
@@ -124,12 +124,17 @@ _BRIEFED_BUCKETS = ("armed_gates", "relevant_defects", "live_retractions", "in_s
                     "threat_prior_art", "rules", "vocabulary", "decisions", "context")
 
 
-def _once_per_session(result: dict[str, Any], session: str) -> None:
+def _once_per_session(result: dict[str, Any], session: str, where: str) -> None:
     """Drop from a file briefing the lessons this session was already briefed by file, unless
     drift marks one (stale, or never verified), and remember the rest (#94). A lesson the agent
     has read once need not fill its context again on every read of the file; a stale one is
-    news each time. Remembered in the temp directory, per session, as the Stop hook's marker is."""
-    seen_file = Path(tempfile.gettempdir()) / f"okl-read-briefed-{hashlib.sha256(session.encode()).hexdigest()[:16]}"
+    news each time. Remembered in the temp directory, per session, as the Stop hook's marker is,
+    and per `where` (the directory okl runs from and its repo). Claude Code's hook anchors to one
+    project, but another caller may pass one session id from several checkouts, and another
+    store can hold the same seed id saying something else; moving within a repo costs a repeat,
+    never a dropped lesson."""
+    marker = f"{where}\0{session}".encode(errors="surrogatepass")   # a path's undecodable bytes
+    seen_file = Path(tempfile.gettempdir()) / f"okl-read-briefed-{hashlib.sha256(marker).hexdigest()[:16]}"
     try:
         seen = set(seen_file.read_text().split())
     except OSError:

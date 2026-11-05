@@ -389,7 +389,11 @@ class Client:
         """core.check_paths over this repo's view, locally or from the service, with the paths
         made repo-relative and those outside the repo listed apart."""
         inside, outside = _repo_relative(paths, root)
-        if self.mode == "remote":
+        if self.mode == "remote" and not inside:
+            # The service refuses an empty list, and nothing outside the repo can be governed:
+            # answer as a local store would, rather than report a refusal (CodeRabbit sweep 6).
+            result = core.no_paths_answer(repo)
+        elif self.mode == "remote":
             result = self._post("/check", {"repo": repo, "task": "", "paths": inside})
             # An older service drops a field it does not know and briefs an empty task: never
             # read that as "nothing governs this file".

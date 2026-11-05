@@ -347,13 +347,25 @@ def check_paths(store: Store, repo: str, paths: list[str]) -> dict[str, Any]:
     hits = sorted(governing(store.all_nodes(), repo, set(paths)), key=lambda n: n.id)
     buckets = _bucket_by_type(hits)
     _attach_catches(store, buckets["armed_gates"])
-    total = sum(len(v) for k, v in buckets.items() if k != "stale_warnings")
-    out: dict[str, Any] = {"repo": repo, "task": "", "paths": sorted(set(paths)), "match_count": total,
-                           "next_actions": _route_actions(buckets), "dropped_by_cutoff": 0,
-                           "weak_matches": 0, "hybrid": None, "decision": None, **buckets, "replaced": []}
-    if total == 0:
+    out = _paths_answer(repo, paths, buckets)
+    if out["match_count"] == 0:
         out["store_records"] = len(store.all_nodes())
     return out
+
+
+def no_paths_answer(repo: str) -> dict[str, Any]:
+    """check_paths' answer when every path asked about lies outside the repo, where no lesson can
+    govern one. Built without a store, because a shared service refuses an empty list; so
+    `store_records` is left out, there being no store read to count."""
+    return _paths_answer(repo, [], _bucket_by_type([]))
+
+
+def _paths_answer(repo: str, paths: list[str], buckets: dict[str, list[dict]]) -> dict[str, Any]:
+    """A file briefing in check()'s shape, from its buckets."""
+    total = sum(len(v) for k, v in buckets.items() if k != "stale_warnings")
+    return {"repo": repo, "task": "", "paths": sorted(set(paths)), "match_count": total,
+            "next_actions": _route_actions(buckets), "dropped_by_cutoff": 0,
+            "weak_matches": 0, "hybrid": None, "decision": None, **buckets, "replaced": []}
 
 
 def _attach_named(out: dict[str, Any], store: Store, buckets: dict[str, list[dict]], *, also: list[Node] | None,
@@ -1369,8 +1381,20 @@ def render_actions_only(result: dict[str, Any], limit: int | None = None) -> str
     A subagent working in a few thousand tokens cannot afford the full briefing (~4-5k
     tokens of bucketed detail). What it actually needs to change its behaviour is the
     imperative list: what to fix, when you see it, what to do. This drops the buckets,
-    the prose bodies, and the stale-node footer, keeping one line per action.
+    the prose bodies, and the stale-node footer, keeping one line per action. A file
+    briefing ends by naming the paths outside the repo, as the full briefing does.
     """
+    text = _actions_text(result, limit)
+    outside = result.get("outside_repo")
+    if not outside:
+        return text
+    note = f"OKL: outside this repository, so none of its lessons governs {', '.join(outside)}."
+    # With no path inside the repo, the line above would read "no lesson governs  (repo)".
+    return f"{text}\n{note}" if result.get("paths") else note
+
+
+def _actions_text(result: dict[str, Any], limit: int | None) -> str:
+    """render_actions_only's lines for what the repo's lessons say."""
     actions = result.get("next_actions") or []
     if limit is not None and result.get("paths") is None:   # a file's lessons are all shown (#94)
         actions = actions[:limit]
