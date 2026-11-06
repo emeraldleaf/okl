@@ -5,6 +5,7 @@ import argparse
 import contextlib
 import json
 import sys
+from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -48,7 +49,44 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     owners = _owner_state(root, recorded if isinstance(recorded, dict) else {})
     if owners:
         print(owners)
+    for line in _interest_lines(Client()):
+        print(line)
     return 1 if (found or twice) else 0
+
+
+def _interest_lines(client: Client, shown: int = 5) -> list[str]:
+    """What this repo's interests keep out of its briefings (#374), for doctor and init.
+
+    Informational, as the interest list is a choice a re-run of init keeps (#340). That is
+    also why a later default never reached a repo set up before it: one repo's briefings
+    went without 26 of its 70 org lessons for months, and nothing said so. Silent with no
+    store named (a read would create one) and with one that cannot be reached, since each
+    caller reports reachability in its own way.
+    """
+    from .. import core
+    from ..store import split_tags
+    if not client.configured or not client.interests:
+        return []
+    try:
+        hidden = core.hidden_by_interests(client.all_nodes(), client.repo, client.interests)
+    except OKLUnreachableError:
+        return []
+    if not hidden:
+        return []
+    have = {t.strip().lower() for t in client.interests}
+    lines = [f"\n• this repo's interests ({', '.join(client.interests)}) keep {len(hidden)} org "
+             "lesson(s) out of every briefing"]
+    missing = sorted(core.DEFAULT_INTERESTS - have)
+    if missing:
+        revealed = sum(1 for n in hidden if split_tags(n.tags) & set(missing))
+        lines.append(f"  okl's default subject(s) {', '.join(missing)} are not among them, and would "
+                     f"show {revealed} of these: okl init --interests {','.join(sorted(have | set(missing)))}")
+    subjects = Counter(t for n in hidden for t in split_tags(n.tags))
+    lines.append("  their subjects: " + ", ".join(f"{t} ({c})" for t, c in subjects.most_common(6)))
+    lines += [f"  [{n.id}] {n.title}" for n in hidden[:shown]]
+    if len(hidden) > shown:
+        lines.append(f"  … and {len(hidden) - shown} more")
+    return lines
 
 
 def _owner_state(root: Path, cfg: dict) -> str:
@@ -174,6 +212,14 @@ def _print_hygiene(report: dict | None) -> None:
             print(f"  [{r['id']}] {r['title']} — {'; '.join(r['signals'])}")
 
 
+def _print_hidden(report: dict) -> None:
+    # Outside every figure above, so said beside them (#374). A service older than the count
+    # sends no key, and then nothing is claimed either way.
+    if report.get("hidden_by_interests"):
+        print(f"kept out by this repo's interests, so in no figure here: {report['hidden_by_interests']} "
+              "org lesson(s); `okl doctor` names them")
+
+
 def _print_exposure(report: dict | None) -> None:
     """The briefing-exposure lines of `okl metric` (#129), led by what they cover."""
     if report is None:
@@ -185,11 +231,13 @@ def _print_exposure(report: dict | None) -> None:
         # list of every lesson as "never shown".
         print("\nbriefings logged: none yet, so which lessons get shown is not reported. "
               "The log fills as okl check runs (OKL_BRIEFING_LOG=0 turns it off).")
+        _print_hidden(report)
         return
     since = datetime.fromtimestamp(report["first_at"] / 1000, tz=UTC).date()
     print(f"\nbriefings logged: {n} since {since} — the figures below cover only these")
     print(f"lessons this repo can be briefed: {report['reachable']} — shown at least once: "
           f"{report['shown']}, never shown: {report['never_shown_count']}")
+    _print_hidden(report)
     if report["never_shown"]:
         print("  never shown, oldest first (review or retire?):")
         for r in report["never_shown"]:

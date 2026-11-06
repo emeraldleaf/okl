@@ -42,7 +42,9 @@ okl doctor           # names other agent-memory tools installed beside okl (clau
                      #   agentmemory, ECC, beads) and how each collides with okl's hooks,
                      #   and whether the pre-push drift gate is installed and CI gates
                      #   drift; with `init --owner`, asks GitHub (through gh) whether
-                     #   the owner's approval is enforced. Changes nothing.
+                     #   the owner's approval is enforced; and which org lessons this
+                     #   repo's interests keep out of every briefing, with the default
+                     #   subjects the list lacks. Changes nothing.
 okl --version        # the installed release, for a repo whose hooks run a pinned okl
 okl coverage         # ratio of encoded-knowledge lines to code lines — a health signal
 okl bootstrap        # cold-start a new repo: propose starter notes from its own
@@ -50,7 +52,8 @@ okl bootstrap        # cold-start a new repo: propose starter notes from its own
 okl metric           # recurrence: defect classes that came back, split by whether a
                      #   gate existed, with how many defects the number can speak for;
                      #   exposure: how many briefings okl has logged, the lessons
-                     #   never shown, and those shown most with no stored check;
+                     #   never shown, those shown most with no stored check, and how
+                     #   many the interests keep out of every figure;
                      #   and hygiene: stale-use (briefings that included a lesson whose
                      #   code had changed since its check) and over-scope (org lessons
                      #   whose title, symptom or fix names one repository's world),

@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- **`okl doctor`, a re-run of `okl init` and `okl metric` say what the interests hide** (#374).
+  `init` adds `security` and `method` to the interests it detects, but only for a repo with none:
+  a later run keeps the list you have (#340). A repo set up before those defaults never gained
+  them, and the lessons filed under them never reached its briefings. In one repo that was 26 of
+  70 org lessons, among them the authorization ones, and `okl metric` counted only the rest. Now
+  `okl doctor` and `okl init` name the org lessons the list keeps out, their subjects, and the
+  default subjects it lacks, with the `okl init --interests` command that adds them. `okl metric`
+  counts them beside its figures. The list itself is still yours: nothing changes it.
+
 - **With no `python3` on PATH, the read hook says it could not brief the read.** It reads its
   payload with python3, so without one it cannot tell which file was read; it exited silently,
   which the agent reads as "no lessons here". It now returns one `OKL NOT BRIEFED` line.

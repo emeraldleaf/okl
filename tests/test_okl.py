@@ -3284,6 +3284,81 @@ def test_metric_reports_briefing_exposure_with_its_coverage(tmp_path, monkeypatc
     assert data["exposure"]["briefings"] == 2 and "armed" in data
 
 
+def test_hidden_by_interests_is_the_subject_filter_alone():
+    """The lessons a repo's interests keep out are the ones the subject filter drops (#374):
+    not one `applies_to` rules out, which was excluded on purpose, nor a retired lesson or a
+    vocabulary entry, which no briefing would show either way."""
+    s = Store("sqlite:///:memory:")
+    hidden = core.record(s, type="Rule", title="test that each route checks who may call it",
+                         scope="org", tags="security")
+    core.record(s, type="Rule", title="pin the interpreter version", scope="org", tags="python")
+    core.record(s, type="Rule", title="untagged reaches every repo", scope="org")
+    core.record(s, type="Rule", title="a dotnet-only security rule", scope="org", tags="security",
+                applies_to="dotnet")
+    gone = core.record(s, type="Rule", title="a retired security rule", scope="org", tags="security")
+    core.retire(s, gone, "wrong", obsolete=True)
+    core.record(s, type="Vocabulary", title="security", scope="org", tags="security")
+    core.record(s, type="Rule", title="another repo's own rule", scope="repo:other", tags="security")
+
+    # ASSERT (1) — only the org lesson whose subjects are all outside the list.
+    assert [n.id for n in core.hidden_by_interests(s.all_nodes(), "r", ["python"])] == [hidden]
+    # ASSERT (2) — no interests filter nothing, and a list that names the subject hides nothing.
+    assert core.hidden_by_interests(s.all_nodes(), "r", None) == []
+    assert core.hidden_by_interests(s.all_nodes(), "r", ["python", "Security"]) == []
+
+
+def test_doctor_init_and_metric_say_what_the_interests_hide(tmp_path, monkeypatch, capsys):
+    """A repo configured before `security` and `method` became default interests keeps its
+    list through every re-run of init (#340), so the lessons filed under them never reached
+    its briefings: in one repo, 26 of 70 org lessons, among them the authorization ones, and
+    its metric counted only the rest. Doctor, a re-run of init and the metric now say so,
+    and the list stays the repo's choice (#374)."""
+    import subprocess
+
+    from okl.cli import main
+    from okl.client import Client, load_config
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+    subprocess.run(["git", "init", "-q", "."], check=True)
+    assert main(["init", "--repo", "r", "--no-claude", "--no-seed", "--no-ci", "--interests", "python"]) == 0
+    hidden = Client().record(type="Rule", title="test that each route checks who may call it",
+                             scope="org", tags="security")
+    Client().record(type="Rule", title="pin the interpreter version", scope="org", tags="python")
+    capsys.readouterr()
+
+    # ACT / ASSERT (1) — doctor names the lesson, the default it lacks and the command.
+    main(["doctor"])
+    out = capsys.readouterr().out
+    assert "keep 1 org lesson(s) out of every briefing" in out, out
+    assert f"[{hidden}] test that each route checks who may call it" in out, out
+    assert "method, security are not among them, and would show 1 of these" in out, out
+    assert "okl init --interests method,python,security" in out, out
+
+    # ACT / ASSERT (2) — a re-run of init says the same and leaves the list as it was.
+    assert main(["init", "--no-claude", "--no-seed", "--no-ci"]) == 0
+    out = capsys.readouterr().out
+    assert "keep 1 org lesson(s) out of every briefing" in out, out
+    assert load_config()["interests"] == ["python"]
+
+    # ACT / ASSERT (3) — the metric counts it beside the figures that leave it out, before
+    # any briefing and after one.
+    assert main(["metric"]) == 0
+    assert "kept out by this repo's interests, so in no figure here: 1 org lesson(s)" in capsys.readouterr().out
+    assert main(["check", "--task", "pin the interpreter version", "--format", "hook"]) == 0
+    capsys.readouterr()
+    assert main(["metric"]) == 0
+    out = capsys.readouterr().out
+    assert "briefings logged: 1 since" in out and "in no figure here: 1 org lesson(s)" in out, out
+    assert main(["metric", "--format", "json"]) == 0
+    assert json.loads(capsys.readouterr().out)["exposure"]["hidden_by_interests"] == 1
+
+    # ACT / ASSERT (4) — once the list names the subject, nothing is said.
+    assert main(["init", "--no-claude", "--no-seed", "--no-ci", "--interests", "python,security,method"]) == 0
+    capsys.readouterr()
+    main(["doctor"])
+    assert "out of every briefing" not in capsys.readouterr().out
+
+
 def test_remote_exposure_is_unknown_on_an_older_service_but_never_hides_a_refusal(monkeypatch):
     """A service without /metric/exposure (404) makes exposure unknown; any other refusal,
     such as a 401, must still surface rather than read as "no data"."""
