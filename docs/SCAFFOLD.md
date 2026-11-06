@@ -39,15 +39,16 @@ They are complementary, not a package deal.
 export OKL_DATABASE_URL="sqlite:///path/to/okl.db"
 # a shared database when several repos need one store
 export OKL_DATABASE_URL="postgresql://user:pass@host/okl"
-OKL_TOKEN="a-shared-secret" okl serve --port 8080
+okl serve --port 8080   # off loopback it needs OKL_TOKEN: see the next section
 ```
 
 ## Run the shared service
 
 ```bash
 pip install "observed-knowledge-ledger[service]"
-OKL_DATABASE_URL="postgresql://user:pass@host/okl" OKL_TOKEN="a-shared-secret" okl serve
-# repos then: okl connect https://your-host --token a-shared-secret
+export OKL_TOKEN="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
+OKL_DATABASE_URL="postgresql://user:pass@host/okl" okl serve
+# repos then: okl connect https://your-host --token "$OKL_TOKEN"
 ```
 
 **Set `OKL_TOKEN`.** With it, every route requires the bearer token except `/health`

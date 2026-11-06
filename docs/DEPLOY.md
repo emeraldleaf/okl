@@ -68,7 +68,10 @@ material the layer exists to accumulate.
 So with no token (an empty one counts as none), `okl serve` on `0.0.0.0` or any other
 non-loopback address exits 2 before it binds anything. Bind `--host 127.0.0.1` to run
 it for this machine alone. When a proxy in front authenticates every request, or the
-network is trusted, `--allow-no-token` serves anyway. `uvicorn okl.service:app` refuses
+network is trusted, `--allow-no-token` serves anyway. Behind a proxy, only the proxy may
+reach the service's port: bind loopback when they share a host, or firewall the port to
+the proxy alone, since a client that reaches the port directly skips the proxy's
+authentication and finds the store open. `uvicorn okl.service:app` refuses
 too, on any address, since the app cannot see which one it is bound to: with no token it
 fails at startup unless `OKL_ALLOW_NO_TOKEN=1` is set, the environment form of the flag.
 A service started open either way logs a warning on every start that every route is open.

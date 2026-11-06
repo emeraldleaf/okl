@@ -30,7 +30,8 @@ holds the token (or, without one, anyone who can reach the port) can read all of
 
 `okl serve` binds `0.0.0.0` by default, so a container's port is reachable from outside
 it. Without `OKL_TOKEN` it refuses to start on any address but loopback, unless you pass
-`--allow-no-token`. For local use, bind it to loopback: `okl serve --host 127.0.0.1`.
+`--allow-no-token` or set `OKL_ALLOW_NO_TOKEN=1`: either opens the store on whatever
+address it binds. For local use, bind it to loopback: `okl serve --host 127.0.0.1`.
 `uvicorn okl.service:app` cannot see its address, so with no token it refuses on any
 address unless `OKL_ALLOW_NO_TOKEN=1` is set. Started open either way, the service logs a
 warning that every route is open.
