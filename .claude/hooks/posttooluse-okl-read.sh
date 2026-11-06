@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:3a3d05ddf2f33b8c2e3861a8c8b6732c841c16eb7c679b67fc2f0625dc0c29ec
+# okl-fingerprint: sha256:239e0272c02f11f38079b21ad578e35d3ea6f3595e7d3c19cb5ff407bb0a2c0b
 # PostToolUse hook on Read — brief the lessons that govern a file when the agent reads it (#94).
 #
 # The prompt hook briefs once, when a prompt is sent; within a long turn the edit a lesson
@@ -32,6 +32,14 @@ if [[ -n "${CLAUDE_PROJECT_DIR:-}" ]] && [[ -z "${OKL_SERVICE_URL:-}${OKL_DATABA
   [[ "$enrolled" = 1 ]] || exit 0
 fi
 
+# python3 reads the payload below. Without it the hook cannot tell which file was read, and
+# exiting silent reads to the agent as "no lessons here": say so instead, in JSON built
+# without python (a fixed text, so nothing needs escaping).
+if ! command -v python3 >/dev/null 2>&1; then
+  printf '%s\n' '{"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": "OKL NOT BRIEFED: python3 is not on PATH, so the read hook could not tell which file was read. Lessons may govern it that you cannot see; check before relying on what you read."}}'
+  exit 0
+fi
+
 # The read: which file, in which session. Anything unreadable is no file, and no briefing.
 payload=$(cat 2>/dev/null || true)
 parsed=$(printf '%s' "$payload" | python3 -c '
@@ -58,21 +66,39 @@ try_pinned() {
   esac
 }
 OKL=()
+okl_layer=0
+# The layers, in order: 1 OKL_BIN, 2 the okl_bin pinned in .okl/config.json, 3 okl on PATH,
+# 4 python3 -m okl. $1 is the first layer to try, so a command that resolved but then could
+# not start can resume at the next one, as in the prompt hook (#152).
 resolve_okl() {
-  if [[ -n "${OKL_BIN:-}" ]] && try_pinned "$OKL_BIN"; then return 0; fi
+  local from="${1:-1}"
+  if [[ "$from" -le 1 ]] && [[ -n "${OKL_BIN:-}" ]] && try_pinned "$OKL_BIN"; then okl_layer=1; return 0; fi
   local d="$PWD"
-  while [[ "$d" != "/" ]]; do
+  while [[ "$from" -le 2 ]] && [[ "$d" != "/" ]]; do
     if [[ -f "$d/.okl/config.json" ]]; then
       local bin
       bin=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("okl_bin") or "")' \
             "$d/.okl/config.json" 2>/dev/null || true)
-      if [[ -n "$bin" ]] && try_pinned "$bin"; then return 0; fi
+      if [[ -n "$bin" ]] && try_pinned "$bin"; then okl_layer=2; return 0; fi
       break
     fi
     d=$(dirname "$d")
   done
-  if command -v okl >/dev/null 2>&1; then OKL=(okl); return 0; fi
-  if python3 -c "import okl" >/dev/null 2>&1; then OKL=(python3 -m okl); return 0; fi
+  if [[ "$from" -le 3 ]] && command -v okl >/dev/null 2>&1; then OKL=(okl); okl_layer=3; return 0; fi
+  if [[ "$from" -le 4 ]] && python3 -c "import okl" >/dev/null 2>&1; then OKL=(python3 -m okl); okl_layer=4; return 0; fi
+  return 1
+}
+# One key per command, so a file reached through two layers (pinned, and on PATH) counts once.
+cmd_key() {
+  if [[ "${#OKL[@]}" -eq 1 ]]; then command -v "${OKL[0]}" 2>/dev/null || printf '%s' "${OKL[0]}"
+  else printf '%s' "${OKL[*]}"; fi
+}
+# Resolve the next layer whose command has not already failed this read.
+failed_cmds="|"
+next_layer() {
+  while resolve_okl $((okl_layer + 1)); do
+    case "$failed_cmds" in *"|$(cmd_key)|"*) ;; *) return 0 ;; esac
+  done
   return 1
 }
 
@@ -91,9 +117,23 @@ if ! resolve_okl; then
 fi
 
 errf=$(mktemp 2>/dev/null || echo "")
-out=$("${OKL[@]}" check --path "$file" --format hook --hook-event PostToolUse \
-      ${session_id:+--session "$session_id"} 2>"${errf:-/dev/null}")
-rc=$?
+run_check() {
+  local started=$SECONDS
+  out=$("${OKL[@]}" check --path "$file" --format hook --hook-event PostToolUse \
+        ${session_id:+--session "$session_id"} 2>"${errf:-/dev/null}")
+  rc=$?
+  run_s=$((SECONDS - started))
+}
+run_check
+# A command that resolved but could not start (a pinned okl whose interpreter is gone exits
+# 126 or 127) resumes at the next layer rather than lose the briefing (#152). Only a QUICK
+# failure falls through, as in the prompt hook: a launcher that ran and exited 127 would run
+# again at each layer. A command that already failed is never run again.
+while { [[ "$rc" -eq 126 ]] || [[ "$rc" -eq 127 ]]; } && [[ "$run_s" -lt 2 ]]; do
+  failed_cmds="${failed_cmds}$(cmd_key)|"
+  next_layer || break
+  run_check
+done
 if [[ "$rc" -eq 0 ]]; then
   printf '%s' "$out"
 else

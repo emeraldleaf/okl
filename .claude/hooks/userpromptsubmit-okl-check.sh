@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:2131615cc49aca754c2834c8ff48227a258186f52d8e178205c71747867968db
+# okl-fingerprint: sha256:de6de581ee5e4684dddb973b4f78924929d34a66aa8d46686ec1d27b37ebeecb
 # UserPromptSubmit hook — inject the org's relevant lessons into the model's context
 # BEFORE it starts the task. This event is the only correct one for delivery: its stdout
 # (exit 0) is added to Claude's context, and its stdin carries the actual prompt text, so
@@ -209,13 +209,16 @@ fmt=hook
 # A smaller briefing, for a model with a small context window: a full one is roughly 1,600
 # tokens on every prompt. OKL_BRIEFING_LIMIT caps how many lessons it draws on (okl's
 # default is 12); OKL_BRIEFING_COMPACT=1 sends only the action list. Anything that is not a
-# whole number above zero is ignored, so only digits and fixed flags ever reach okl.
+# whole number from 1 to 9999 is ignored, so only digits and fixed flags ever reach okl.
 size_args=""
 case "${OKL_BRIEFING_LIMIT:-}" in
   ''|*[!0-9]*) ;;
-  # Digits only here, so above zero means some digit is not 0. A pattern, not -gt: inside [[ ]]
-  # -gt reads its operands as arithmetic, where a leading 0 means octal (08 would be refused).
-  *) [[ "$OKL_BRIEFING_LIMIT" == *[1-9]* ]] && size_args="--limit $OKL_BRIEFING_LIMIT" ;;
+  # Digits only here. With the leading zeros gone, above zero means something is left, and at
+  # most four digits: a larger limit is beyond any store, and past SQLite's integer range okl
+  # cannot run the query, so the prompt would be blocked (review of quartzose#23). Patterns,
+  # not -gt: inside [[ ]] -gt reads its operands as arithmetic, where a leading 0 means octal.
+  *) n="$OKL_BRIEFING_LIMIT"; while [[ "$n" == 0* ]]; do n="${n#0}"; done
+     [[ -n "$n" ]] && [[ "${#n}" -le 4 ]] && size_args="--limit $OKL_BRIEFING_LIMIT" ;;
 esac
 [[ "${OKL_BRIEFING_COMPACT:-0}" = "1" ]] && size_args="$size_args --compact"
 check_once() {
