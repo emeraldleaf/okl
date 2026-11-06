@@ -44,7 +44,7 @@ okl doctor           # names other agent-memory tools installed beside okl (clau
                      #   drift; with `init --owner`, asks GitHub (through gh) whether
                      #   the owner's approval is enforced; and which org lessons this
                      #   repo's interests keep out of every briefing, with the default
-                     #   subjects the list lacks. Changes nothing.
+                     #   subjects the list lacks. Writes nothing.
 okl --version        # the installed release, for a repo whose hooks run a pinned okl
 okl coverage         # ratio of encoded-knowledge lines to code lines — a health signal
 okl bootstrap        # cold-start a new repo: propose starter notes from its own

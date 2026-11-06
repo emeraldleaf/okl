@@ -3320,9 +3320,9 @@ def test_hidden_by_interests_is_the_subject_filter_alone():
 def test_doctor_init_and_metric_say_what_the_interests_hide(tmp_path, monkeypatch, capsys):
     """A repo configured before `security` and `method` became default interests keeps its
     list through every re-run of init (#340), so the lessons filed under them never reached
-    its briefings: in one repo, 26 of 70 org lessons, among them the authorization ones, and
-    its metric counted only the rest. Doctor, a re-run of init and the metric now say so,
-    and the list stays the repo's choice (#374)."""
+    its briefings, among them the authorization ones, and its metric, which counts only what
+    the filter passes, never said. Doctor, a re-run of init and the metric now say so, and
+    the list stays the repo's choice (#374)."""
     import subprocess
 
     from okl.cli import main
