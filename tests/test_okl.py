@@ -3027,15 +3027,16 @@ def test_serve_and_mcp_without_their_extra_exit_2_and_name_it(monkeypatch, capsy
     monkeypatch.delitem(sys.modules, "okl.service", raising=False)
     monkeypatch.setitem(sys.modules, "fastapi", None)
 
-    # ACT / ASSERT (1) — serve refuses with the install command, no traceback.
-    assert main(["serve"]) == 2
+    # ACT / ASSERT (1) — serve refuses with the install command, no traceback. On loopback,
+    # so the refusal to serve off it without a token (#371) does not answer first.
+    assert main(["serve", "--host", "127.0.0.1"]) == 2
     out, err = capsys.readouterr()
     assert out == "" and "observed-knowledge-ledger[service]" in err and "Traceback" not in err, err
 
     # ARRANGE / ACT / ASSERT (1b) — FastAPI present but uvicorn missing: same refusal.
     monkeypatch.delitem(sys.modules, "fastapi")
     monkeypatch.setitem(sys.modules, "uvicorn", None)
-    assert main(["serve"]) == 2
+    assert main(["serve", "--host", "127.0.0.1"]) == 2
     out, err = capsys.readouterr()
     assert out == "" and "needs uvicorn" in err and "[service]" in err, err
 
@@ -3047,6 +3048,101 @@ def test_serve_and_mcp_without_their_extra_exit_2_and_name_it(monkeypatch, capsy
     assert main(["mcp"]) == 2
     out, err = capsys.readouterr()
     assert out == "" and "observed-knowledge-ledger[mcp]" in err and "Traceback" not in err, err
+
+def test_serve_refuses_to_open_the_store_off_loopback_without_a_token(monkeypatch, capsys):
+    """`okl serve` binds 0.0.0.0 by default, and with no OKL_TOKEN every route is open, GET
+    /nodes included: a service started without one handed the whole store to anyone who
+    could reach the port, and nothing warned or refused (#371). The same shape, a secret
+    defaulting to empty that switched auth off on a published port, turned up in another
+    project the day before. A default that fails open gets deployed open."""
+    import sys
+
+    from okl.cli import main, servers
+
+    # ARRANGE — okl.service cannot even be imported, so a refusal that came after the
+    # import, or after binding, would raise here instead of answering.
+    monkeypatch.setitem(sys.modules, "okl.service", None)
+
+    # ACT / ASSERT (1) — the default host, no token: exit 2, naming every way out.
+    assert main(["serve"]) == 2
+    out, err = capsys.readouterr()
+    assert out == "" and "OKL_TOKEN" in err and "--host 127.0.0.1" in err and "--allow-no-token" in err, err
+
+    # ACT / ASSERT (2) — an empty token is no token: compose's ${OKL_TOKEN:-} sets exactly
+    # that, and a host name is not loopback, since it may resolve anywhere.
+    monkeypatch.setenv("OKL_TOKEN", "")
+    for host in ("10.0.0.5", "::", "okl.internal", "[::1]"):
+        assert servers._open_bind_refusal(host, allow_no_token=False), host
+    assert main(["serve", "--host", "10.0.0.5"]) == 2
+    capsys.readouterr()
+
+    # ASSERT (3) — loopback, the opt-in and a token each let it start.
+    for host in ("127.0.0.1", "127.0.0.2", "::1", "localhost"):
+        assert servers._open_bind_refusal(host, allow_no_token=False) is None, host
+    assert servers._open_bind_refusal("0.0.0.0", allow_no_token=True) is None
+    monkeypatch.setenv("OKL_TOKEN", "s3cret")
+    assert servers._open_bind_refusal("0.0.0.0", allow_no_token=False) is None
+
+
+def test_serve_with_the_opt_in_reaches_the_server_on_the_host_asked(monkeypatch):
+    """The refusal's ways out have to reach `run`, not just pass the decision: a flag the
+    parser dropped would leave `--allow-no-token` refusing like the default (#371)."""
+    pytest.importorskip("fastapi")
+    uvicorn = pytest.importorskip("uvicorn")
+    from okl.cli import main
+
+    # ARRANGE — stub `run` on the module cmd_serve imports: another test re-imports
+    # okl.service, after which `from okl import service` can hand back a different one. A
+    # stub that missed must fail, not serve the store on 0.0.0.0, which is what it did once.
+    service = importlib.import_module("okl.service")
+    started: list[str] = []
+    monkeypatch.setattr(service, "run", lambda host, port: started.append(host))
+    monkeypatch.setattr(uvicorn, "run", lambda *a, **k: pytest.fail("a real server started"))
+
+    assert main(["serve", "--allow-no-token"]) == 0
+    assert main(["serve", "--host", "127.0.0.1"]) == 0
+    assert started == ["0.0.0.0", "127.0.0.1"]
+
+
+def test_a_service_built_with_no_token_says_its_routes_are_open(monkeypatch, caplog):
+    """`uvicorn okl.service:app` never passes through okl serve's refusal, and create_app
+    cannot see the address it is bound to, so the app itself warns on every start with no
+    token (#371). An empty OKL_TOKEN counts as none: it used to take the docs routes down,
+    as if the service were private, while `_auth` let every request through."""
+    import logging
+
+    pytest.importorskip("fastapi")
+    pytest.importorskip("httpx")
+    from fastapi.testclient import TestClient
+
+    from okl.service import create_app
+
+    s = Store("sqlite:///:memory:")
+
+    # ASSERT (1) — unset and empty each log one warning that names the variable.
+    for value in (None, ""):
+        if value is None:
+            monkeypatch.delenv("OKL_TOKEN", raising=False)
+        else:
+            monkeypatch.setenv("OKL_TOKEN", value)
+        caplog.clear()
+        with caplog.at_level(logging.WARNING, logger="okl.service"):
+            create_app(store=s)
+        assert [r.levelname for r in caplog.records] == ["WARNING"], (value, caplog.records)
+        assert "OKL_TOKEN is not set" in caplog.text and "GET /nodes" in caplog.text
+
+    # ASSERT (2) — with a token it is silent, and the check still refuses a near miss and a
+    # header that is not ASCII with a 401. hmac.compare_digest raises on a str that is not
+    # ASCII, which would turn that refusal into a 500 (#195's constant-time comparison).
+    monkeypatch.setenv("OKL_TOKEN", "s3cret")
+    caplog.clear()
+    with caplog.at_level(logging.WARNING, logger="okl.service"):
+        closed = TestClient(create_app(store=s))
+    assert caplog.records == []
+    for header in ("Bearer s3cre", "Bearer s3cret ", "Bearer s3cr\xe9t".encode("latin-1")):
+        assert closed.get("/nodes", headers={"Authorization": header}).status_code == 401, header
+    assert closed.get("/nodes", headers={"Authorization": "Bearer s3cret"}).status_code == 200
+
 
 def test_the_service_answers_an_unknown_relation_with_400(tmp_path, monkeypatch):
     """#119: /link let core.link's ValueError escape as a 500, which the client reads as an

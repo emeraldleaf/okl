@@ -29,7 +29,10 @@ and the shape of your systems. **Treat the store as sensitive** and assume anyon
 holds the token (or, without one, anyone who can reach the port) can read all of it.
 
 `okl serve` binds `0.0.0.0` by default, so a container's port is reachable from outside
-it. For local use, bind it to loopback: `okl serve --host 127.0.0.1`.
+it. Without `OKL_TOKEN` it refuses to start on any address but loopback, unless you pass
+`--allow-no-token`. For local use, bind it to loopback: `okl serve --host 127.0.0.1`.
+`uvicorn okl.service:app` skips that check: with no token it starts, and logs a warning
+that every route is open.
 
 The write routes trust the caller as far as the token does. `POST /verify` records
 whatever evidence string it is sent (nothing is executed server-side), and

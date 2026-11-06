@@ -39,7 +39,7 @@ They are complementary, not a package deal.
 export OKL_DATABASE_URL="sqlite:///path/to/okl.db"
 # a shared database when several repos need one store
 export OKL_DATABASE_URL="postgresql://user:pass@host/okl"
-okl serve --port 8080
+OKL_TOKEN="a-shared-secret" okl serve --port 8080
 ```
 
 ## Run the shared service
@@ -51,8 +51,9 @@ OKL_DATABASE_URL="postgresql://user:pass@host/okl" OKL_TOKEN="a-shared-secret" o
 ```
 
 **Set `OKL_TOKEN`.** With it, every route requires the bearer token except `/health`
-(left open so schedulers can probe it). Without it, every route is open — including
-`GET /nodes`, which hands the whole store to anyone who can reach the port. A mature
+(left open so schedulers can probe it). Without it, every route would be open — including
+`GET /nodes`, which hands the whole store to anyone who can reach the port — so `okl serve`
+refuses to start off loopback unless you pass `--allow-no-token`. A mature
 store is a catalogue of your known defects and internal architecture, which is a map of
 where you are weak. It is a single shared secret with no per-repo scoping or rotation;
 put a real authenticating proxy in front if you need more.

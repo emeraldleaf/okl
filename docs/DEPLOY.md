@@ -52,7 +52,7 @@ to do.
 
 ## 2. A token
 
-**Set `OKL_TOKEN`.** It is optional in the code and mandatory in practice:
+**Set `OKL_TOKEN`.** `okl serve` refuses to start without it on any address but loopback:
 
 ```bash
 export OKL_TOKEN="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
@@ -64,6 +64,12 @@ Without it, every endpoint is open to anyone who can reach the port — includin
 catalogue of your organization's known defects, its retired identifiers and its internal
 architecture decisions. That is a map of where you are weak, and it is precisely the
 material the layer exists to accumulate.
+
+So with no token (an empty one counts as none), `okl serve` on `0.0.0.0` or any other
+non-loopback address exits 2 before it binds anything. Bind `--host 127.0.0.1` to run
+it for this machine alone. When a proxy in front authenticates every request, or the
+network is trusted, `--allow-no-token` serves anyway. The service then logs a warning
+on every start that every route is open.
 
 `/health` stays open deliberately: schedulers and load balancers probe it before they
 hold any credential, and a service that cannot be health-checked never goes live. It
@@ -77,12 +83,15 @@ front and leave `OKL_TOKEN` set underneath as defence in depth.
 
 ```bash
 pip install "observed-knowledge-ledger[service,postgres]"   # postgres extra = the psycopg driver
-okl serve --port 8080                       # convenience wrapper; binds 0.0.0.0
+okl serve --port 8080                       # convenience wrapper; binds 0.0.0.0, needs OKL_TOKEN
 uvicorn okl.service:app --host 0.0.0.0 --port 8080   # standard ASGI entrypoint
 ```
 
 Both work and serve the same app. Use the second one under a process manager or in a
-container, since it is the form every platform's default start command takes.
+container, since it is the form every platform's default start command takes. It does
+not pass through `okl serve`'s refusal, and the app cannot see the address it is bound
+to, so with no token it starts anyway and logs one warning: `OKL_TOKEN is not set`. If
+that line is in your deploy log, the store is open.
 
 Confirm it is up:
 

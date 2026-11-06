@@ -9,6 +9,8 @@ Run: `okl serve` (or `uvicorn okl.service:app`).
 """
 from __future__ import annotations
 
+import hmac
+import logging
 import os
 import threading
 from typing import Any, Literal
@@ -182,7 +184,15 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901, PLR0915 - 
     # encoded body — its known defects, its retired identifiers, its architecture
     # decisions. That is a catalogue of where the org is weak, and it is exactly the
     # material the layer exists to collect. If you set a token, you want it private.
-    token = os.environ.get("OKL_TOKEN")
+    # An empty one is no token. It used to take the docs routes down while `_auth` let every
+    # request through, and compose's `${OKL_TOKEN:-}` hands a process exactly that (#371).
+    token = os.environ.get("OKL_TOKEN") or None
+    if token is None:
+        # `okl serve` refuses this off loopback, but `uvicorn okl.service:app` never passes
+        # through it and nothing here can see the bind address, so say it on every start.
+        logging.getLogger(__name__).warning(
+            "OKL: OKL_TOKEN is not set, so every route, GET /nodes included, is open to anyone "
+            "who can reach this service. Set it unless only this machine can (docs/DEPLOY.md §2).")
     # The same reasoning reaches the spec routes, and they were missed when the data
     # routes were closed: FastAPI serves /openapi.json, /docs and /redoc to anyone by
     # default, and no `_auth` call can protect them because the framework mounts them
@@ -204,7 +214,9 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901, PLR0915 - 
     _write = threading.Lock()
 
     def _auth(authorization: str | None) -> None:
-        if token and authorization != f"Bearer {token}":
+        # compare_digest, so the time a refusal takes says nothing of how much matched (#195);
+        # on bytes, because on str it raises for a header that is not ASCII, a 500 not a 401.
+        if token and not hmac.compare_digest((authorization or "").encode(), f"Bearer {token}".encode()):
             raise HTTPException(status_code=401, detail="missing or bad bearer token")
 
     @app.get("/health")
