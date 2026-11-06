@@ -31,9 +31,16 @@ PLANNED = {"okl log": "#129", "okl explain": "#129"}
 WRAPPERS = (("python", "-m"), ("python3", "-m"), ("uv", "run"), ("exec",), ("time",), ("sudo",))
 
 
+# What okl ships for an agent to follow: the plugin's skill and commands, everything `okl init`
+# copies, and this repo's mirrors of them. A flag renamed in the CLI failed the README here while
+# shipping unnoticed in the files an agent acts on (#314).
+SHIPPED = (".claude/skills", ".claude/commands", "src/okl/scaffold")
+
+
 def docs() -> dict[str, str]:
-    """The committed docs a reader is told things in (CLAUDE.md: audits read the repo)."""
-    out = subprocess.run(["git", "-C", str(REPO), "ls-files", "README.md", "docs"],
+    """The committed docs a reader is told things in, and the files okl ships for an agent to
+    follow (CLAUDE.md: audits read the repo)."""
+    out = subprocess.run(["git", "-C", str(REPO), "ls-files", "README.md", "docs", *SHIPPED],
                          capture_output=True, text=True, check=True).stdout.split()
     keep = [f for f in out if f.endswith((".md", ".html"))
             and not f.startswith(("docs/posts/", "docs/decisions/")) and "RECEIPT" not in f]
