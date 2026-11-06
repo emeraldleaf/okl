@@ -672,9 +672,11 @@ def cmd_init(args: argparse.Namespace) -> int:
     for line in _empty_store_guidance(Client()):
         print(line)
     # A kept interest list (#340) never gains a later default, so say what it hides (#374).
+    # Local only, as the steps above: a remote store is a download, and doctor reports it.
     from .health import _interest_lines
-    for line in _interest_lines(Client()):
-        print(line)
+    if Client().mode != "remote":
+        for line in _interest_lines(Client(), say_unread=False):
+            print(line)
     # Said at install time, the one moment someone is reading okl's output and deciding
     # what to wire. Informational here: init succeeded; `okl doctor` is the re-runnable check.
     from .. import coexist

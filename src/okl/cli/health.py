@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import json
+import os
 import sys
 from collections import Counter
 from datetime import UTC, datetime
@@ -21,8 +22,10 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     twice) -- findings,
     per the CLI contract -- and 0 when neither is. It reads settings files, asks git where
     its hooks live, and, where `okl init --owner` set an owner, asks GitHub through gh whether
-    the owner's approval is enforced (a few reads; informational, not a finding). It changes
-    nothing.
+    the owner's approval is enforced (a few reads; informational, not a finding). Where a
+    store exists it reads its lessons, to say which the interests keep out of briefings
+    (#374): informational too. It writes nothing, beyond the schema upgrade any command
+    makes when it opens an older store.
     """
     from .. import coexist
     cfg = _find_config()
@@ -54,39 +57,59 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     return 1 if (found or twice) else 0
 
 
-def _interest_lines(client: Client, shown: int = 5) -> list[str]:
+def _interest_lines(client: Client, *, say_unread: bool = True, shown: int = 5) -> list[str]:
     """What this repo's interests keep out of its briefings (#374), for doctor and init.
 
     Informational, as the interest list is a choice a re-run of init keeps (#340). That is
-    also why a later default never reached a repo set up before it: one repo's briefings
-    went without 26 of its 70 org lessons for months, and nothing said so. Silent with no
-    store named (a read would create one) and with one that cannot be reached, since each
-    caller reports reachability in its own way.
+    also why a later default never reached a repo set up before it, and nothing said so.
+    Silent with no store to read, since reading one would create it. A store that cannot
+    be read, refused or unreachable, gets one line saying so with `say_unread`, so silence
+    never stands for "nothing hidden"; never an error, since the command already did its job.
     """
     from .. import core
+    from ..client import OKLRejectedError
     from ..store import split_tags
-    if not client.configured or not client.interests:
+    if not client.configured or not client.interests or _no_store_yet(client):
         return []
     try:
         hidden = core.hidden_by_interests(client.all_nodes(), client.repo, client.interests)
-    except OKLUnreachableError:
-        return []
+    except (OKLUnreachableError, OKLRejectedError, OSError) as e:
+        why = (str(e).strip().splitlines() or [type(e).__name__])[0]
+        return [f"\n• what this repo's interests hide: not reported, the store could not be read ({why})"] \
+            if say_unread else []
     if not hidden:
         return []
     have = {t.strip().lower() for t in client.interests}
+    missing = sorted(core.DEFAULT_INTERESTS - have)
     lines = [f"\n• this repo's interests ({', '.join(client.interests)}) keep {len(hidden)} org "
              "lesson(s) out of every briefing"]
-    missing = sorted(core.DEFAULT_INTERESTS - have)
     if missing:
         revealed = sum(1 for n in hidden if split_tags(n.tags) & set(missing))
         lines.append(f"  okl's default subject(s) {', '.join(missing)} are not among them, and would "
                      f"show {revealed} of these: okl init --interests {','.join(sorted(have | set(missing)))}")
     subjects = Counter(t for n in hidden for t in split_tags(n.tags))
     lines.append("  their subjects: " + ", ".join(f"{t} ({c})" for t, c in subjects.most_common(6)))
-    lines += [f"  [{n.id}] {n.title}" for n in hidden[:shown]]
+    if not missing:
+        lines.append(f"  to brief one, add its subject: okl init --interests {','.join(sorted(have))},<subject>")
+    # The ones a missing default would bring back first: they are what the offer is about.
+    first = sorted(hidden, key=lambda n: (not split_tags(n.tags) & set(missing), n.id))
+    lines += [f"  [{n.id}] {n.title}" for n in first[:shown]]
     if len(hidden) > shown:
         lines.append(f"  … and {len(hidden) - shown} more")
     return lines
+
+
+def _no_store_yet(client: Client) -> bool:
+    """Whether this repo's local SQLite store does not exist, so a read would create it."""
+    if client.mode == "remote":
+        return False
+    url = os.environ.get("OKL_DATABASE_URL")
+    if url is None:
+        cfg = _find_config()
+        return cfg is None or not (cfg.parent / "okl.db").exists()
+    if url.startswith("sqlite:///") and url != "sqlite:///:memory:":
+        return not Path(url.removeprefix("sqlite:///")).exists()
+    return False
 
 
 def _owner_state(root: Path, cfg: dict) -> str:
@@ -216,8 +239,8 @@ def _print_hidden(report: dict) -> None:
     # Outside every figure above, so said beside them (#374). A service older than the count
     # sends no key, and then nothing is claimed either way.
     if report.get("hidden_by_interests"):
-        print(f"kept out by this repo's interests, so in no figure here: {report['hidden_by_interests']} "
-              "org lesson(s); `okl doctor` names them")
+        print(f"kept out by this repo's interests, so in none of the exposure figures: "
+              f"{report['hidden_by_interests']} org lesson(s); `okl doctor` names them")
 
 
 def _print_exposure(report: dict | None) -> None:

@@ -2011,6 +2011,10 @@ def _proven(n: Node) -> bool:
                                "verified_commit": n.verified_commit})
 
 
+# Retired so that no briefing shows them, as `exposure_report` and `hidden_by_interests` both
+# count: a retracted lesson is retired too, but it is still briefed, as AVOID.
+_UNBRIEFED = frozenset({"superseded", "obsolete"})
+
 # The subjects okl's portable lessons are filed under. `okl init` adds them to the
 # interests it detects; a list set without them hides those lessons from every briefing.
 DEFAULT_INTERESTS = frozenset({"security", "method"})
@@ -2020,10 +2024,11 @@ def hidden_by_interests(nodes: Iterable[Node], repo: str, interests: list[str] |
     """The org lessons `repo`'s interests alone keep out of its briefings, by id (#374).
 
     The subject filter in _in_scope and nothing else: a lesson `applies_to` rules out was
-    excluded on purpose, so it is not hidden, and a retired lesson or a vocabulary entry is
-    nothing a briefing would show. Empty with no interests, which filter nothing. A list
-    set before a default subject existed kept it out silently: one repo's briefings never
-    showed 26 of its 70 org lessons, and its metric reported only the other 44.
+    excluded on purpose, so it is not hidden, and a superseded or obsolete lesson or a
+    vocabulary entry is nothing a briefing would show. A retracted one is: it is briefed
+    as AVOID, so it counts. Empty with no interests, which filter nothing. A list set
+    before a default subject existed kept that subject's lessons out silently, and the
+    metric, which counts only what the filter passes, never mentioned them.
     """
     if not interests:
         return []
@@ -2035,7 +2040,7 @@ def hidden_by_interests(nodes: Iterable[Node], repo: str, interests: list[str] |
         return not applies or bool(applies & wanted)
 
     return sorted((n for n in nodes if n.scope == "org" and n.type not in _NOT_ADVICE
-                   and n.status not in RETIRED_STATUSES and applies_here(n)
+                   and n.status not in _UNBRIEFED and applies_here(n)
                    and not _in_scope(n, repo_scope, interests)), key=lambda n: n.id)
 
 
@@ -2058,7 +2063,7 @@ def exposure_report(store: Store, repo: str, interests: list[str] | None = None,
     # "never shown" would offer them for review again (review of okl R2).
     reachable = [n for n in nodes
                  if n.type not in _NOT_ADVICE and _in_scope(n, repo_scope, interests)
-                 and n.status not in ("superseded", "obsolete")]
+                 and n.status not in _UNBRIEFED]
     times = Counter(i for b in logged for i in b.node_ids)
 
     def row(n: Node) -> dict[str, Any]:

@@ -53,7 +53,7 @@ okl metric           # recurrence: defect classes that came back, split by wheth
                      #   gate existed, with how many defects the number can speak for;
                      #   exposure: how many briefings okl has logged, the lessons
                      #   never shown, those shown most with no stored check, and how
-                     #   many the interests keep out of every figure;
+                     #   many the interests keep out of those figures;
                      #   and hygiene: stale-use (briefings that included a lesson whose
                      #   code had changed since its check) and over-scope (org lessons
                      #   whose title, symptom or fix names one repository's world),
