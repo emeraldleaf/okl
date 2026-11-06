@@ -3402,21 +3402,30 @@ def test_what_the_interests_hide_never_fails_a_command_or_creates_a_store(tmp_pa
     assert main(["init", "--repo", "r", "--no-claude", "--no-seed", "--no-ci", "--interests", "python"]) == 0
     capsys.readouterr()
 
-    # ASSERT (1) — refused or unreachable: doctor keeps its exit code and says why; init passes.
-    for err in (OKLRejectedError("rejected (401): missing or bad bearer token", status=401),
-                OKLUnreachableError("service unreachable: connection refused")):
-        def refuse(self, _err=err):
-            raise _err
-        monkeypatch.setattr(Client, "all_nodes", refuse)
-        assert main(["doctor"]) in (0, 1)
-        out = capsys.readouterr().out
-        assert "what this repo's interests hide: not reported, the store could not be read" in out, out
-        assert str(err).splitlines()[0] in out, out
-        assert main(["init", "--no-claude", "--no-seed", "--no-ci"]) == 0
-        assert "could not be read" not in capsys.readouterr().out
-    monkeypatch.undo()
-    monkeypatch.setenv("HOME", str(tmp_path))
-    monkeypatch.chdir(tmp_path)
+    # ASSERT (1) — refused, unreachable, or a Postgres store that is down (psycopg's errors are
+    # not OSError; a stand-in, as psycopg is an optional extra): doctor keeps its exit code and
+    # says why; init passes. A context rather than `monkeypatch.undo()`, which reverts all set
+    # through the fixture, HOME and the cwd too (and conftest's store protections, until they
+    # had their own: CodeRabbit on #380).
+    import sys
+    import types
+
+    class PgError(Exception):
+        pass
+    with monkeypatch.context() as m:
+        m.setitem(sys.modules, "psycopg", types.SimpleNamespace(Error=PgError))
+        for err in (OKLRejectedError("rejected (401): missing or bad bearer token", status=401),
+                    OKLUnreachableError("service unreachable: connection refused"),
+                    PgError("connection failed: server closed the connection unexpectedly")):
+            def refuse(self, _err=err):
+                raise _err
+            m.setattr(Client, "all_nodes", refuse)
+            assert main(["doctor"]) in (0, 1)
+            out = capsys.readouterr().out
+            assert "what this repo's interests hide: not reported, the store could not be read" in out, out
+            assert str(err).splitlines()[0] in out, out
+            assert main(["init", "--no-claude", "--no-seed", "--no-ci"]) == 0
+            assert "could not be read" not in capsys.readouterr().out
 
     # ASSERT (2) — a corrupt store is one that cannot be read, not a traceback.
     db = tmp_path / ".okl" / "okl.db"
@@ -4309,3 +4318,15 @@ def test_the_suite_is_deaf_to_a_real_store_named_in_the_environment(store):
     a "throwaway" Client would land in the real store. Here it lands in a temp one."""
     import os
     assert all(v not in os.environ for v in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN"))
+
+
+def test_a_tests_own_undo_keeps_the_suite_deaf_to_a_real_store(monkeypatch):
+    """`monkeypatch.undo()` reverts every change made through that fixture. conftest's
+    protections went through the same one, so a test that called it got a developer's exported
+    store back for the rest of its body (CodeRabbit on #380). They have their own now."""
+    import os
+    socket = os.environ["OKL_WARM_SOCKET"]
+    monkeypatch.setenv("OKL_DATABASE_URL", "sqlite:///never-written.db")
+    monkeypatch.undo()
+    assert "OKL_DATABASE_URL" not in os.environ
+    assert os.environ.get("OKL_WARM_SOCKET") == socket

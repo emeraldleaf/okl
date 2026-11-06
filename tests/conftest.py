@@ -27,15 +27,20 @@ GIT_REPO_VARS = tuple(subprocess.run(["git", "rev-parse", "--local-env-vars"], c
 
 
 @pytest.fixture(autouse=True)
-def _no_real_store(monkeypatch):
-    for var in (*STORE_VARS, *BRIEFING_VARS, *GIT_REPO_VARS):
-        monkeypatch.delenv(var, raising=False)
-    # The warm model's socket and the records beside it (`okl warm stop`, the last start) are
-    # per user, in ~/.cache/okl: a test must neither reach a developer's running server nor read
-    # or write those records (review on #300). Under /tmp: a socket's path has a length limit.
-    warm_dir = tempfile.mkdtemp(prefix="okl", dir="/tmp")
-    monkeypatch.setenv("OKL_WARM_SOCKET", str(Path(warm_dir) / "warm.sock"))
-    yield
+def _no_real_store():
+    # Its own MonkeyPatch, never the test's `monkeypatch`: a test's `monkeypatch.undo()` reverts
+    # every change made through that fixture, so these went with it and a developer's exported
+    # store was back for the rest of the test (CodeRabbit on #380).
+    with pytest.MonkeyPatch.context() as mp:
+        for var in (*STORE_VARS, *BRIEFING_VARS, *GIT_REPO_VARS):
+            mp.delenv(var, raising=False)
+        # The warm model's socket and the records beside it (`okl warm stop`, the last start)
+        # are per user, in ~/.cache/okl: a test must neither reach a developer's running server
+        # nor read or write those records (review on #300). Under /tmp: a socket's path has a
+        # length limit.
+        warm_dir = tempfile.mkdtemp(prefix="okl", dir="/tmp")
+        mp.setenv("OKL_WARM_SOCKET", str(Path(warm_dir) / "warm.sock"))
+        yield
     shutil.rmtree(warm_dir, ignore_errors=True)
 
 

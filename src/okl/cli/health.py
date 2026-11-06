@@ -66,16 +66,17 @@ def _interest_lines(client: Client, *, say_unread: bool = True, shown: int = 5) 
     be read, refused or unreachable, gets one line saying so with `say_unread`, so silence
     never stands for "nothing hidden"; never an error, since the command already did its job.
     """
-    import sqlite3
-
     from .. import core
     from ..client import OKLRejectedError
-    from ..store import split_tags
+    from ..store import backend_errors, split_tags
     if not client.configured or not client.interests or _no_store_yet(client):
         return []
+    # Refused, unreachable, or the database itself: a corrupt file, a Postgres server down.
+    unreadable: tuple[type[Exception], ...] = (OKLUnreachableError, OKLRejectedError, OSError,
+                                               *backend_errors())
     try:
         hidden = core.hidden_by_interests(client.all_nodes(), client.repo, client.interests)
-    except (OKLUnreachableError, OKLRejectedError, OSError, sqlite3.Error) as e:   # a corrupt file too
+    except unreadable as e:
         why = (str(e).strip().splitlines() or [type(e).__name__])[0]
         return [f"\n• what this repo's interests hide: not reported, the store could not be read ({why})"] \
             if say_unread else []
