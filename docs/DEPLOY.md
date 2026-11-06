@@ -68,8 +68,10 @@ material the layer exists to accumulate.
 So with no token (an empty one counts as none), `okl serve` on `0.0.0.0` or any other
 non-loopback address exits 2 before it binds anything. Bind `--host 127.0.0.1` to run
 it for this machine alone. When a proxy in front authenticates every request, or the
-network is trusted, `--allow-no-token` serves anyway. The service then logs a warning
-on every start that every route is open.
+network is trusted, `--allow-no-token` serves anyway. `uvicorn okl.service:app` refuses
+too, on any address, since the app cannot see which one it is bound to: with no token it
+fails at startup unless `OKL_ALLOW_NO_TOKEN=1` is set, the environment form of the flag.
+A service started open either way logs a warning on every start that every route is open.
 
 `/health` stays open deliberately: schedulers and load balancers probe it before they
 hold any credential, and a service that cannot be health-checked never goes live. It
@@ -88,10 +90,11 @@ uvicorn okl.service:app --host 0.0.0.0 --port 8080   # standard ASGI entrypoint
 ```
 
 Both work and serve the same app. Use the second one under a process manager or in a
-container, since it is the form every platform's default start command takes. It does
-not pass through `okl serve`'s refusal, and the app cannot see the address it is bound
-to, so with no token it starts anyway and logs one warning: `OKL_TOKEN is not set`. If
-that line is in your deploy log, the store is open.
+container, since it is the form every platform's default start command takes. With no
+token it refuses to start on any address, because the app cannot see the one it is bound
+to. `OKL_ALLOW_NO_TOKEN=1` starts it anyway, and then it logs a warning as each worker
+starts: `OKL_TOKEN is not set or is empty`. If that line is in your deploy log, the store
+is open.
 
 Confirm it is up:
 

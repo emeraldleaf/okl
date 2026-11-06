@@ -15,7 +15,7 @@ Supported: the latest release (currently `0.8.x`). Older versions get nothing.
 Three behaviors are deliberate, not bugs. If any of them is wrong for your environment,
 that is a configuration decision you need to make before deploying.
 
-### 1. The shared service is open by default, on every interface
+### 1. The shared service is open without a token
 
 Without `OKL_TOKEN`, **every route is open**, reads and writes alike, to anyone who can
 reach the port. `/nodes` returns the entire store in one request. With `OKL_TOKEN` set,
@@ -31,8 +31,9 @@ holds the token (or, without one, anyone who can reach the port) can read all of
 `okl serve` binds `0.0.0.0` by default, so a container's port is reachable from outside
 it. Without `OKL_TOKEN` it refuses to start on any address but loopback, unless you pass
 `--allow-no-token`. For local use, bind it to loopback: `okl serve --host 127.0.0.1`.
-`uvicorn okl.service:app` skips that check: with no token it starts, and logs a warning
-that every route is open.
+`uvicorn okl.service:app` cannot see its address, so with no token it refuses on any
+address unless `OKL_ALLOW_NO_TOKEN=1` is set. Started open either way, the service logs a
+warning that every route is open.
 
 The write routes trust the caller as far as the token does. `POST /verify` records
 whatever evidence string it is sent (nothing is executed server-side), and

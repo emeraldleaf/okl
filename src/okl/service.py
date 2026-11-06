@@ -188,10 +188,11 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901, PLR0915 - 
     # request through, and compose's `${OKL_TOKEN:-}` hands a process exactly that (#371).
     token = os.environ.get("OKL_TOKEN") or None
     if token is None:
-        # `okl serve` refuses this off loopback, but `uvicorn okl.service:app` never passes
-        # through it and nothing here can see the bind address, so say it on every start.
+        # Both entry points refuse this unless told otherwise (#371): `okl serve` off
+        # loopback, `module:app` on any address. What starts anyway was asked to, or runs on
+        # a laptop, and it still says so on every start.
         logging.getLogger(__name__).warning(
-            "OKL: OKL_TOKEN is not set, so every route, GET /nodes included, is open to anyone "
+            "OKL: OKL_TOKEN is not set or is empty, so every route, GET /nodes included, is open to anyone "
             "who can reach this service. Set it unless only this machine can (docs/DEPLOY.md §2).")
     # The same reasoning reaches the spec routes, and they were missed when the data
     # routes were closed: FastAPI serves /openapi.json, /docs and /redoc to anyone by
@@ -374,12 +375,35 @@ def __getattr__(name: str) -> FastAPI:
     if name == "app":
         global _app
         if _app is None:
+            _refuse_an_open_store()
             _app = create_app()
         return _app
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
-def run(host: str = "0.0.0.0", port: int = 8080) -> None:
-    """Serve the app with uvicorn. `create_app()` is called here, not at import."""
+def _refuse_an_open_store() -> None:
+    """Refuse to build `module:app` with no token, unless OKL_ALLOW_NO_TOKEN=1 (#371).
+
+    Only an ASGI host reaches `app`; `okl serve` builds its app in `run()` and refuses off
+    loopback itself. Here the bind address is out of sight, and `uvicorn okl.service:app
+    --host 0.0.0.0` is the form the deploy guide gives containers and platforms, so it
+    refuses on every address: a deploy that fails at startup beats one that serves the
+    whole store to anyone who can reach the port.
+    """
+    if os.environ.get("OKL_TOKEN") or os.environ.get("OKL_ALLOW_NO_TOKEN") == "1":
+        return
+    raise RuntimeError(
+        "OKL: refusing to build the app without OKL_TOKEN: every route, GET /nodes included, "
+        "would be open to anyone who can reach the port, and this entry point cannot see which "
+        "address it is bound to. Set OKL_TOKEN, or set OKL_ALLOW_NO_TOKEN=1 when only this "
+        "machine can reach it or a proxy in front authenticates (docs/DEPLOY.md §2).")
+
+
+def run(host: str, port: int = 8080) -> None:
+    """Serve the app with uvicorn. `create_app()` is called here, not at import.
+
+    No default host: `okl serve` refuses a host other than loopback when no token is set
+    (#371), and a caller that skips it should choose the address knowingly.
+    """
     import uvicorn
     uvicorn.run(create_app(), host=host, port=port)

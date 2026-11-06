@@ -359,8 +359,10 @@ def test_asgi_entrypoint_resolves_to_a_real_app_without_importing_the_database(m
 
     import okl.service as svc
 
-    # ARRANGE — a database URL that would fail loudly if anything connected to it
+    # ARRANGE — a database URL that would fail loudly if anything connected to it, and a
+    # token, without which this entry point refuses to build the app (#371)
     monkeypatch.setenv("OKL_DATABASE_URL", "sqlite:///:memory:")
+    monkeypatch.setenv("OKL_TOKEN", "s3cret")
     monkeypatch.setattr(svc, "_app", None)   # forget any app a previous test built
 
     # ASSERT (1) — importing does not build the app, so it does not touch storage
@@ -3069,7 +3071,8 @@ def test_serve_refuses_to_open_the_store_off_loopback_without_a_token(monkeypatc
     assert out == "" and "OKL_TOKEN" in err and "--host 127.0.0.1" in err and "--allow-no-token" in err, err
 
     # ACT / ASSERT (2) — an empty token is no token: compose's ${OKL_TOKEN:-} sets exactly
-    # that, and a host name is not loopback, since it may resolve anywhere.
+    # that. A host name is not loopback, since it may resolve anywhere, and neither is any
+    # spelling ipaddress does not parse, such as a bracketed [::1]: refusing it fails closed.
     monkeypatch.setenv("OKL_TOKEN", "")
     for host in ("10.0.0.5", "::", "okl.internal", "[::1]"):
         assert servers._open_bind_refusal(host, allow_no_token=False), host
@@ -3080,8 +3083,45 @@ def test_serve_refuses_to_open_the_store_off_loopback_without_a_token(monkeypatc
     for host in ("127.0.0.1", "127.0.0.2", "::1", "localhost"):
         assert servers._open_bind_refusal(host, allow_no_token=False) is None, host
     assert servers._open_bind_refusal("0.0.0.0", allow_no_token=True) is None
+    monkeypatch.setenv("OKL_ALLOW_NO_TOKEN", "true")   # only 1 opts in: anything else refuses
+    assert servers._open_bind_refusal("0.0.0.0", allow_no_token=False)
+    monkeypatch.setenv("OKL_ALLOW_NO_TOKEN", "1")      # the flag's environment form
+    assert servers._open_bind_refusal("0.0.0.0", allow_no_token=False) is None
+    monkeypatch.delenv("OKL_ALLOW_NO_TOKEN")
     monkeypatch.setenv("OKL_TOKEN", "s3cret")
     assert servers._open_bind_refusal("0.0.0.0", allow_no_token=False) is None
+
+
+def test_the_asgi_entrypoint_refuses_an_open_store_unless_told(monkeypatch):
+    """`uvicorn okl.service:app --host 0.0.0.0` is the form the deploy guide gives containers
+    and platforms, and it never passes through okl serve's refusal. It cannot see the address
+    it is bound to, so with no token it refuses on every one, before building anything,
+    unless OKL_ALLOW_NO_TOKEN=1 says the open store is meant (#371)."""
+    pytest.importorskip("fastapi")
+    pytest.importorskip("httpx")
+    from fastapi.testclient import TestClient
+
+    import okl.service as svc
+
+    monkeypatch.setenv("OKL_DATABASE_URL", "sqlite:///:memory:")
+    monkeypatch.setattr(svc, "_app", None)   # forget any app a previous test built
+
+    # ASSERT (1) — unset, empty, or an opt-in that is not 1: refused, naming both ways out,
+    # and nothing built, so no storage was touched.
+    for token, allow in ((None, None), ("", None), (None, "yes")):
+        for var, value in (("OKL_TOKEN", token), ("OKL_ALLOW_NO_TOKEN", allow)):
+            if value is None:
+                monkeypatch.delenv(var, raising=False)
+            else:
+                monkeypatch.setenv(var, value)
+        with pytest.raises(RuntimeError, match="OKL_TOKEN") as refused:
+            svc.app  # noqa: B018 — resolving the attribute IS what an ASGI host does
+        assert "OKL_ALLOW_NO_TOKEN=1" in str(refused.value), (token, allow)
+        assert svc._app is None, (token, allow)
+
+    # ASSERT (2) — the opt-in builds an app that serves.
+    monkeypatch.setenv("OKL_ALLOW_NO_TOKEN", "1")
+    assert TestClient(svc.app).get("/health").json()["ok"] is True
 
 
 def test_serve_with_the_opt_in_reaches_the_server_on_the_host_asked(monkeypatch):
@@ -3105,10 +3145,10 @@ def test_serve_with_the_opt_in_reaches_the_server_on_the_host_asked(monkeypatch)
 
 
 def test_a_service_built_with_no_token_says_its_routes_are_open(monkeypatch, caplog):
-    """`uvicorn okl.service:app` never passes through okl serve's refusal, and create_app
-    cannot see the address it is bound to, so the app itself warns on every start with no
-    token (#371). An empty OKL_TOKEN counts as none: it used to take the docs routes down,
-    as if the service were private, while `_auth` let every request through."""
+    """A service that starts with no token was asked to, by an opt-in or a loopback host, and
+    it still says on every start that its routes are open (#371). An empty OKL_TOKEN counts
+    as none: it used to take the docs routes down, as if the service were private, while
+    `_auth` let every request through."""
     import logging
 
     pytest.importorskip("fastapi")
@@ -3119,7 +3159,8 @@ def test_a_service_built_with_no_token_says_its_routes_are_open(monkeypatch, cap
 
     s = Store("sqlite:///:memory:")
 
-    # ASSERT (1) — unset and empty each log one warning that names the variable.
+    # ASSERT (1) — unset and empty each log one warning that names the variable, and neither
+    # takes the docs routes down: nothing claims an open service is private.
     for value in (None, ""):
         if value is None:
             monkeypatch.delenv("OKL_TOKEN", raising=False)
@@ -3127,20 +3168,34 @@ def test_a_service_built_with_no_token_says_its_routes_are_open(monkeypatch, cap
             monkeypatch.setenv("OKL_TOKEN", value)
         caplog.clear()
         with caplog.at_level(logging.WARNING, logger="okl.service"):
-            create_app(store=s)
+            app = TestClient(create_app(store=s))
         assert [r.levelname for r in caplog.records] == ["WARNING"], (value, caplog.records)
         assert "OKL_TOKEN is not set" in caplog.text and "GET /nodes" in caplog.text
+        assert app.get("/openapi.json").status_code == 200, value
 
-    # ASSERT (2) — with a token it is silent, and the check still refuses a near miss and a
-    # header that is not ASCII with a 401. hmac.compare_digest raises on a str that is not
-    # ASCII, which would turn that refusal into a 500 (#195's constant-time comparison).
+    # ARRANGE (2) — watch the comparison, so a revert to `!=` fails here (#195): a 401 alone
+    # cannot tell a constant-time comparison from a plain one.
+    import hmac
+    compared: list[tuple[bytes, bytes]] = []
+    real_compare = hmac.compare_digest
+
+    def spy(a: bytes, b: bytes) -> bool:
+        compared.append((a, b))
+        return real_compare(a, b)
+
+    monkeypatch.setattr(hmac, "compare_digest", spy)
+
+    # ASSERT (2) — with a token it is silent, compares in constant time, and refuses a near
+    # miss and a header that is not ASCII with a 401. compare_digest raises on a str that is
+    # not ASCII, which would turn that refusal into a 500, so it compares bytes.
     monkeypatch.setenv("OKL_TOKEN", "s3cret")
     caplog.clear()
     with caplog.at_level(logging.WARNING, logger="okl.service"):
         closed = TestClient(create_app(store=s))
     assert caplog.records == []
-    for header in ("Bearer s3cre", "Bearer s3cret ", "Bearer s3cr\xe9t".encode("latin-1")):
+    for header in ("Bearer s3cre", "Bearer s3cr\xe9t".encode("latin-1")):
         assert closed.get("/nodes", headers={"Authorization": header}).status_code == 401, header
+    assert compared[0] == (b"Bearer s3cre", b"Bearer s3cret"), compared
     assert closed.get("/nodes", headers={"Authorization": "Bearer s3cret"}).status_code == 200
 
 
