@@ -54,8 +54,9 @@ OKL_DATABASE_URL="postgresql://user:pass@host/okl" okl serve
 **Set `OKL_TOKEN`.** With it, every route requires the bearer token except `/health`
 (left open so schedulers can probe it). Without it, every route would be open — including
 `GET /nodes`, which hands the whole store to anyone who can reach the port — so `okl serve`
-refuses to start off loopback, and `uvicorn okl.service:app` anywhere, unless you opt in
-(`--allow-no-token`, or `OKL_ALLOW_NO_TOKEN=1`). A mature
+refuses to start off loopback, and `uvicorn okl.service:app` anywhere, unless you opt in:
+`okl serve` takes `--allow-no-token` or `OKL_ALLOW_NO_TOKEN=1`, and `uvicorn` only the
+variable. A mature
 store is a catalogue of your known defects and internal architecture, which is a map of
 where you are weak. It is a single shared secret with no per-repo scoping or rotation;
 put a real authenticating proxy in front if you need more.
