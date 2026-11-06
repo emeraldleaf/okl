@@ -613,12 +613,17 @@ def _doc_commands():
 
 
 def test_every_okl_command_and_flag_the_docs_write_exists():
-    """Every `okl <command> --flag` in the README, docs/ and the overview sheets is one the CLI
-    has (#314): only `okl init`'s flags, in three docs, were checked before."""
-    found, checked = _doc_commands().problems(_doc_commands().docs())
+    """Every `okl <command> --flag` in the README, docs/, the overview sheets and the skills,
+    commands and templates okl ships is one the CLI has (#314): only `okl init`'s flags, in three
+    docs, were checked before."""
+    read = _doc_commands().docs()
+    found, checked = _doc_commands().problems(read)
 
     assert found == []
     assert checked > 400, checked             # the docs write hundreds; none found means a broken reader
+    # The files okl ships for an agent to follow are read too (#314), the skill and its mirror.
+    assert {"src/okl/scaffold/claude/skills/encoding-loop/SKILL.md",
+            ".claude/skills/encoding-loop/SKILL.md", ".claude/commands/record.md"} <= set(read)
 
 
 def test_the_doc_command_check_names_a_missing_command_or_flag():
