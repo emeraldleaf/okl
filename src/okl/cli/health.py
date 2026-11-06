@@ -66,6 +66,8 @@ def _interest_lines(client: Client, *, say_unread: bool = True, shown: int = 5) 
     be read, refused or unreachable, gets one line saying so with `say_unread`, so silence
     never stands for "nothing hidden"; never an error, since the command already did its job.
     """
+    import sqlite3
+
     from .. import core
     from ..client import OKLRejectedError
     from ..store import split_tags
@@ -73,7 +75,7 @@ def _interest_lines(client: Client, *, say_unread: bool = True, shown: int = 5) 
         return []
     try:
         hidden = core.hidden_by_interests(client.all_nodes(), client.repo, client.interests)
-    except (OKLUnreachableError, OKLRejectedError, OSError) as e:
+    except (OKLUnreachableError, OKLRejectedError, OSError, sqlite3.Error) as e:   # a corrupt file too
         why = (str(e).strip().splitlines() or [type(e).__name__])[0]
         return [f"\n• what this repo's interests hide: not reported, the store could not be read ({why})"] \
             if say_unread else []
@@ -104,7 +106,7 @@ def _no_store_yet(client: Client) -> bool:
     if client.mode == "remote":
         return False
     url = os.environ.get("OKL_DATABASE_URL")
-    if url is None:
+    if not url:   # empty is unset, as Client._local_store reads it
         cfg = _find_config()
         return cfg is None or not (cfg.parent / "okl.db").exists()
     if url.startswith("sqlite:///") and url != "sqlite:///:memory:":

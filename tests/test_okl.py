@@ -3418,14 +3418,25 @@ def test_what_the_interests_hide_never_fails_a_command_or_creates_a_store(tmp_pa
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.chdir(tmp_path)
 
-    # ASSERT (2) — no store yet: doctor reads nothing, so it creates nothing.
+    # ASSERT (2) — a corrupt store is one that cannot be read, not a traceback.
     db = tmp_path / ".okl" / "okl.db"
-    db.unlink()
+    db.write_bytes(b"not a database " * 100)
     assert main(["doctor"]) in (0, 1)
-    assert not db.exists(), "doctor created a store"
-    assert "interests" not in capsys.readouterr().out
+    assert "the store could not be read" in capsys.readouterr().out
 
-    # ASSERT (3) — init against a service does not download the store for this; doctor does.
+    # ASSERT (3) — no store yet: doctor reads nothing, so it creates nothing, with
+    # OKL_DATABASE_URL unset or empty (the client reads empty as unset; review on #380).
+    db.unlink()
+    for url in (None, ""):
+        if url is None:
+            monkeypatch.delenv("OKL_DATABASE_URL", raising=False)
+        else:
+            monkeypatch.setenv("OKL_DATABASE_URL", url)
+        assert main(["doctor"]) in (0, 1)
+        assert not db.exists(), f"doctor created a store with OKL_DATABASE_URL={url!r}"
+        assert "interests" not in capsys.readouterr().out
+
+    # ASSERT (4) — init against a service does not download the store for this; doctor does.
     monkeypatch.setattr(Client, "all_nodes", lambda self: pytest.fail("init read a remote store"))
     assert main(["init", "--service", "http://okl.invalid", "--no-claude", "--no-seed", "--no-ci"]) == 0
 
