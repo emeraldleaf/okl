@@ -340,13 +340,14 @@ def governing(nodes: list[Node], repo: str, paths: set[str]) -> list[Node]:
 def unproven_watch(node_id: str) -> str:
     """What to say when a lesson governs files and no check has passed (#377). Drift reports
     such a lesson as never verified once git attributes a change to its files, so the
-    pre-push gate goes red for a lesson just recorded, and CI's once okl-drift.json is next
-    refreshed (any verify or export). Unsaid, that reads as okl breaking the build, and in one
+    pre-push gate goes red for a lesson just recorded, and CI's once a refreshed
+    okl-drift.json (any verify or export writes one) is committed. Unsaid, that reads as okl breaking the build, and in one
     repo an agent cleared the lesson's files to get past it, dropping the watch it was for.
     The id is shell-quoted: `--id` is the caller's choice (CodeRabbit on #381)."""
     import shlex
     return (f"it governs files and no check has passed, so drift reports it as never verified "
-            f"(the pre-push gate at once, CI's once okl-drift.json is refreshed) until one does: "
+            f"wherever git finds a commit to those files (the pre-push gate at once, CI's once a "
+            f"refreshed okl-drift.json is committed), until one passes: "
             f"okl verify {shlex.quote(node_id)} --run \"<check>\" --expect \"<signal>\"")
 
 
