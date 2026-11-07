@@ -7,6 +7,7 @@ from .. import __version__, core, semantic
 from .embed import cmd_embed
 from .health import cmd_coverage, cmd_doctor, cmd_metric
 from .install import cmd_connect, cmd_init, cmd_scaffold
+from .intake import cmd_intake
 from .lessons import (
     cmd_bootstrap,
     cmd_check,
@@ -289,6 +290,17 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                      help="list what would be re-run, run nothing")
     prv.add_argument("--timeout", type=int, default=600)
     prv.set_defaults(func=cmd_reverify)
+
+    pin = sub.add_parser(
+        "intake", help="a PR's resolved review findings, each with the question and the okl record "
+                       "and okl verify commands that would encode it (reads through gh; writes nothing)")
+    pin_sub = pin.add_subparsers(dest="source", required=True)
+    pin_pr = pin_sub.add_parser("pr", help="a pull request's resolved review threads, with the "
+                                           "commits that resolved them")
+    pin_pr.add_argument("number", type=int, help="the PR number")
+    pin_pr.add_argument("--repo", default=None, help="OWNER/NAME (default: the repo gh sees here)")
+    pin_pr.add_argument("--format", choices=["text", "json"], default="text")
+    pin_pr.set_defaults(func=cmd_intake)
 
     prw = sub.add_parser(
         "review", help="a model reads each lesson nothing re-checks against the repo and reports the "

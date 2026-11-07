@@ -15,6 +15,13 @@ okl reverify         # re-run the stored check of every drifted lesson, and of a
                      #   on another branch, and re-stamp the passes;
                      #   lists the commands first and runs them only after you confirm
                      #   (or --yes), because they come from the store; --dry-run lists only
+okl intake pr <n>    # a PR's resolved review threads, each with the commit that resolved it (named in
+                     #   a reply, or else the first commit after it to touch the file, marked a
+                     #   guess), the lessons a briefing on it already shows, the encoding-loop
+                     #   question, and the okl record and okl verify commands that would encode it;
+                     #   unresolved threads are left out. Reads through gh (--repo OWNER/NAME; default:
+                     #   the repo gh sees here); --format json for an agent; writes nothing; exit 2
+                     #   when gh cannot read the PR.
 okl review           # opt-in: a model reads each lesson that governs no files and that no check
                      #   backs (the ones the briefing marks UNCHECKED) against the repo at HEAD,
                      #   in a scratch worktree, and reports each it questions (detail wrong,
