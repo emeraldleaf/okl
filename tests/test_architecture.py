@@ -86,3 +86,26 @@ def test_a_render_that_disagrees_with_its_source_fails(tmp_path):
     # (3) — a name only the render shows, which the code lacks
     ghost = run("okl check --task x okl_teleport")
     assert ghost.returncode == 1 and "FAIL: okl_teleport: no such MCP tool" in ghost.stdout, ghost.stdout
+
+
+def test_a_render_from_an_older_source_is_stale(tmp_path, monkeypatch):
+    """The generated charts are images, so the suite cannot re-render them without a browser.
+    Each SVG carries the sha256 of the Mermaid source it was drawn from; one whose stamp is
+    missing or names another source is stale, which --check reports."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("render_architecture", ROOT / "docs" / "render_architecture.py")
+    ra = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ra)
+    monkeypatch.setattr(ra, "OUT", tmp_path)
+    source = "flowchart LR\n  a --> b\n"
+    stamp = f"<!-- okl:source-sha256 {ra._sha(source)} -->"
+
+    # ASSERT (1) — current: the stamp is this source's
+    (tmp_path / "c.svg").write_text(f"<svg>{stamp}</svg>")
+    assert ra.stale_renders({"c": source}) == []
+    # (2) — the source moved on after the render
+    assert ra.stale_renders({"c": source + "  b --> c\n"}) == ["docs/architecture/c.svg"]
+    # (3) — no stamp, and no render at all
+    (tmp_path / "c.svg").write_text("<svg></svg>")
+    assert ra.stale_renders({"c": source}) == ["docs/architecture/c.svg"]
+    assert ra.stale_renders({"gone": source}) == ["docs/architecture/gone.svg"]
