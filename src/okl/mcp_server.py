@@ -160,6 +160,8 @@ def _build() -> Any:  # noqa: C901, PLR0915 - a declarative table of tool defini
             # its own call. Raising here surfaces as an opaque "Error executing tool",
             # which reads like an outage and teaches the agent nothing.
             return f"NOT RECORDED — {e}"
+        if files:
+            return f"recorded {node_id} ({type}, {scope}): {core.unproven_watch(node_id)}"
         return f"recorded {node_id} ({type}, {scope})"
 
     @mcp.tool()
@@ -217,6 +219,9 @@ def _build() -> Any:  # noqa: C901, PLR0915 - a declarative table of tool defini
         elif before and before.get("verified_at") is not None:
             proof = ("proof cleared: its governed files changed. `okl reverify` re-runs its "
                      "stored check")
+        elif node.get("files") and before and not core.same_files(before.get("files"), node.get("files")):
+            # As the CLI does: said when the files are given, not on every later update.
+            proof = f"not proven yet: {core.unproven_watch(node['id'])}"
         else:
             proof = "not proven yet"
         return f"updated {node['id']} ({node['type']}, {node['scope']}): {proof}"

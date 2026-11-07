@@ -562,3 +562,61 @@ def test_a_files_change_refreshes_the_committed_snapshot(repo, capsys, monkeypat
 
     # ASSERT — refreshed once, for the files change only
     assert calls == [("price-server-side", "its governed files changed")]
+
+
+def test_a_lesson_given_files_with_no_check_says_drift_will_report_it(repo, capsys):
+    """Drift reports a lesson that governs files and has no passing check as never verified,
+    so where a drift gate runs, the next push goes red for a lesson just recorded. Nothing said
+    so, and in one repo an agent cleared the lesson's files to get past it (#377). Record, and
+    an update that gives an unproven lesson files, now name the verify command; record's exit
+    code and its stdout, the bare id, are unchanged."""
+    # ACT / ASSERT (1) — record with files: the id on stdout, the next command on stderr
+    assert main(["record", "--id", "w1", "--type", "Rule", "--scope", "repo", "--title", "t",
+                 "--trigger", "price taken from the request", "--files", "src/x.py"]) == 0
+    out, err = capsys.readouterr()
+    assert out.strip() == "w1", out
+    assert 'okl verify w1 --run "<check>" --expect "<signal>"' in err and "never verified" in err, err
+    # the id is the caller's choice, so the command is shell-quoted (CodeRabbit on #381)
+    assert main(["record", "--id", "price check; rm", "--type", "Rule", "--scope", "repo",
+                 "--title", "t2", "--trigger", "price taken from the request", "--files", "src/x.py"]) == 0
+    assert "okl verify 'price check; rm' --run" in capsys.readouterr().err
+
+    # ACT / ASSERT (2) — without files, nothing to prove against drift, so no hint
+    assert main(["record", "--id", "w2", "--type", "Rule", "--scope", "repo", "--title", "u",
+                 "--trigger", "price taken from the request"]) == 0
+    assert "okl verify" not in capsys.readouterr().err
+
+    # ACT / ASSERT (3) — files given later by update: the same hint; an update that leaves
+    # the files alone does not repeat it
+    assert main(["update", "w2", "--files", "src/y.py"]) == 0
+    assert 'okl verify w2 --run "<check>"' in capsys.readouterr().out
+    assert main(["update", "w2", "--fix", "look it up"]) == 0
+    assert "okl verify" not in capsys.readouterr().out
+    # the same globs written differently are the same files, as proof counts them
+    assert main(["update", "w2", "--files", " src/y.py ,"]) == 0
+    assert "okl verify" not in capsys.readouterr().out
+
+
+def test_the_mcp_tools_say_drift_will_report_a_lesson_given_files_with_no_check(repo):
+    """An agent recording over MCP gets the same next step as the CLI prints (#377)."""
+    import asyncio
+    pytest.importorskip("mcp")
+    from okl.mcp_server import _build
+
+    async def exercise():
+        mcp = _build()
+        rec = _mcp_text(await mcp.call_tool("okl_record", {
+            "type": "Rule", "title": "t", "scope": "repo", "id": "m1", "files": "src/x.py"}))
+        assert rec.startswith("recorded m1") and 'okl verify m1 --run "<check>"' in rec, rec
+        bare = _mcp_text(await mcp.call_tool("okl_record", {
+            "type": "Rule", "title": "u", "scope": "repo", "id": "m2"}))
+        assert bare.startswith("recorded m2") and "okl verify" not in bare, bare
+        upd = _mcp_text(await mcp.call_tool("okl_update", {"id": "m2", "files": "src/y.py"}))
+        assert "not proven yet" in upd and 'okl verify m2 --run "<check>"' in upd, upd
+        # said when the files are given, not again on a later update that keeps them, nor
+        # for the same globs written differently (CodeRabbit on #381)
+        for later in ({"fix": "look it up"}, {"files": "src/y.py, "}):
+            again = _mcp_text(await mcp.call_tool("okl_update", {"id": "m2", **later}))
+            assert "not proven yet" in again and "okl verify" not in again, (later, again)
+
+    asyncio.run(exercise())
