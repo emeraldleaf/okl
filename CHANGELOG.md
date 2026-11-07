@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **`okl record --files` with no check says what comes next** (#377). Drift reports a lesson
+  that governs files as never verified until a check passes, so where a drift gate runs, the
+  next push or CI run went red for a lesson just recorded, and `okl record` printed only its
+  id. In one repo an agent cleared the lesson's files to get the gate green, which dropped
+  the watch the lesson was recorded for. `okl record` now prints, on stderr, that drift will
+  report it and the `okl verify <id> --run … --expect …` command to run, as `okl update` does
+  when it gives an unproven lesson files, and as the MCP `okl_record` and `okl_update` tools
+  do. The lesson is still recorded and the exit code is unchanged.
 - **`okl doctor`, a re-run of `okl init` and `okl metric` say what the interests hide** (#374).
   `init` adds `security` and `method` to the interests it detects, but only for a repo with none:
   a later run keeps the list you have (#340). A repo set up before those defaults never gained

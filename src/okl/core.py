@@ -337,6 +337,16 @@ def governing(nodes: list[Node], repo: str, paths: set[str]) -> list[Node]:
     return out
 
 
+def unproven_watch(node_id: str) -> str:
+    """What to say when a lesson governs files and no check has passed (#377). Drift reports
+    such a lesson as never verified, so where a drift gate runs the next push or CI run goes
+    red for a lesson just recorded. Unsaid, that reads as okl breaking the build, and in one
+    repo an agent cleared the lesson's files to get past it, dropping the watch it was for."""
+    return (f"it governs files and no check has passed, so `okl drift`, and the drift gate "
+            f"where one runs, report it until one does: okl verify {node_id} --run \"<check>\" "
+            f"--expect \"<signal>\"")
+
+
 def check_paths(store: Store, repo: str, paths: list[str]) -> dict[str, Any]:
     """The lessons that govern `paths` (repo-relative) in `repo`, in the shape check() returns,
     so every format renders it (#94): the question an agent asks before it reads or edits a

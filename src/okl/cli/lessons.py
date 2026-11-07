@@ -312,6 +312,9 @@ def cmd_record(args: argparse.Namespace) -> int:
         print(f"okl: no --trigger. A lesson is briefed when a prompt shares three subject words (or "
               f"two rare ones) with its title, symptom, aliases and triggers. Add the request or error "
               f"that led here: okl update {node_id} --trigger \"...\" (repeatable).", file=sys.stderr)
+    if args.files:
+        # Recorded: a check is the next step, not a condition of keeping it (#377).
+        print(f"okl: {core.unproven_watch(node_id)}", file=sys.stderr)
     return 0
 
 
@@ -341,6 +344,10 @@ def cmd_update(args: argparse.Namespace) -> int:
                       "--expect \"<signal>\"")
         print(f"  proof cleared: its governed files changed, and a check of other files proves "
               f"nothing about these.\n  To {rerun}")
+    elif node.get("files") and before and (before.get("files") or None) != node.get("files"):
+        # Files given to a lesson no check had proved: the same red gate as recording it with
+        # them (#377).
+        print(f"  {core.unproven_watch(node['id'])}")
     if before and (before.get("files") or None) != (node.get("files") or None):
         # The committed snapshot CI's drift gate reads still showed the old files as proven:
         # green in CI while the store said stale (review of okl R1).
