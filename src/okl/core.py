@@ -1074,6 +1074,9 @@ def record(store: Store, *, type: str, title: str, scope: str, repo: str | None 
     # An explicit id names the lesson; omit it and the store mints a fresh random one.
     if supersedes is not None and id is None:
         raise ValueError("supersedes names the lesson's old id, so it needs the new one: pass id")
+    if supersedes is not None and supersedes == id:
+        # It would retire the lesson as replaced by itself, out of every briefing (CodeRabbit on #387).
+        raise ValueError(f"supersedes names the lesson's old id, which cannot be its new id {id!r}")
     prior = store.get_node(supersedes) if supersedes else None
     if prior is not None and prior.status == "superseded":
         prior = None                                  # moved already: nothing to carry or retire

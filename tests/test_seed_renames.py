@@ -190,3 +190,16 @@ def test_a_record_already_moved_is_neither_carried_nor_retired_again():
 
     assert len(store.retirements("seed:old-p:k")) == 1
     assert store.get_node("seed:other-p:k").status not in ("superseded", "obsolete")
+
+
+def test_a_lesson_cannot_supersede_itself():
+    """`supersedes` equal to `id` would retire the lesson as replaced by itself, so no briefing
+    showed it again. Refused before anything is written (CodeRabbit on #387)."""
+    from okl.store import Store
+    store = Store("sqlite:///:memory:")
+    core.record(store, id="seed:p:k", type="Rule", title="t", scope="org")
+    with pytest.raises(ValueError, match="cannot be its new id"):
+        core.record(store, id="seed:p:k", type="Rule", title="t", scope="org",
+                    keep_verification=True, supersedes="seed:p:k")
+    assert store.get_node("seed:p:k").status not in ("superseded", "obsolete")
+    assert store.retirements("seed:p:k") == []
