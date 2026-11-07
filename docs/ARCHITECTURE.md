@@ -15,8 +15,11 @@ source and `pyproject.toml`, and `tests/test_architecture.py` fails the suite wh
 moves and they do not: run `python3 docs/render_architecture.py` to bring them back. The
 drawn ones are Excalidraw files under `docs/architecture/`. Open the `.excalidraw` in
 Excalidraw (excalidraw.com, or the VS Code extension), edit it, and export the `.svg` beside
-it. `ci/check-diagram-names.py` reads both and fails CI on any command, flag, MCP tool, hook
-event, script or briefing mark they name that the code no longer has. okl's previous
+it. `ci/check-diagram-names.py` reads each source and its render, and fails CI on any
+command, flag, MCP tool, script or briefing mark they name that the code no longer has, on any
+word shaped like a hook event that `hooks/hooks.json` does not register, and on a render whose
+names differ from its source. It proves the names exist, not that the picture is right: a
+change of behaviour under an unchanged name is still review's to catch. okl's previous
 hand-drawn architecture diagram was retired after it was found wrong in four places that
 nothing checked; these two are checked.
 

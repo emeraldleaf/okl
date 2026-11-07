@@ -4,14 +4,20 @@
 okl retired its last hand-drawn architecture diagram (commit 93933d7) after a review found it
 wrong in four places: it described behaviour the code had moved past, and nothing compared
 the picture with the code. The diagrams under docs/architecture/ are drawn too, so this reads
-their text and fails on any name the code no longer has:
+the text of each source and of its exported render, and fails on any name the code no longer
+has:
 
   okl <command>    a subcommand of the CLI parser
   --<flag>         a flag some CLI parser defines (or one of EXTERNAL_FLAGS)
   okl_<tool>       an MCP tool okl_mcp serves
-  <Event>          a Claude Code hook event, registered in hooks/hooks.json
+  <Event>          a word shaped like a Claude Code hook event (UserPrompt*, Pre*/Post* in
+                   PascalCase, Session*, Subagent*, Notification, Stop), registered in
+                   hooks/hooks.json, so a misspelt one fails too
   <path>.sh/.yml   a tracked file: the path the diagram names, or its basename
   <MARK>           an all-caps briefing mark, present in core.py or drift.py
+
+It also fails when a render names something its source does not, or the reverse: the .svg is
+what people read, and an edited source whose render was never re-exported shows the old names.
 
 It proves the names exist, not that the picture is right: a renamed command fails here, a
 changed behaviour under an unchanged name does not. That second kind is what review is for.
@@ -25,6 +31,7 @@ Exit 0 when every name resolves, 1 when any does not, 2 when it cannot run.
 from __future__ import annotations
 
 import ast
+import html
 import json
 import re
 import subprocess
@@ -40,8 +47,18 @@ ROOT = Path(__file__).resolve().parents[1]
 PROSE = frozenset({"runs", "stamps", "cannot", "can", "keeps", "is"})
 # Flags that belong to another tool the diagrams show (git's, here), not to okl's parser.
 EXTERNAL_FLAGS = frozenset({"--no-verify"})
-HOOK_EVENTS = ("UserPromptSubmit", "PreToolUse", "PostToolUse", "Stop", "SubagentStop",
-               "SessionStart", "SessionEnd", "PreCompact", "Notification")
+# What each kind of name looks like in a diagram's text. Events match any word shaped like a
+# Claude Code hook event rather than a fixed list, so "UserPromptSubmitted" is caught as well
+# as a removed hook (CodeRabbit on #383).
+PATTERNS = {
+    "command": r"\bokl ([a-z][a-z-]*)",
+    "flag": r"(?<![\w-])(--[a-z][a-z-]*)",
+    "tool": r"\b(okl_[a-z_]+)\b",
+    "event": r"\b(UserPrompt[A-Za-z]*|Pre[A-Z][A-Za-z]+|Post[A-Z][A-Za-z]+|Session[A-Z][A-Za-z]*"
+             r"|Subagent[A-Z][A-Za-z]*|Notification|Stop)\b",
+    "path": r"([\w./-]*[\w-]\.(?:sh|yml))\b",
+    "mark": r"\b([A-Z]{5,})\b",
+}
 
 
 def _git(*args: str) -> str:
@@ -102,6 +119,18 @@ def diagram_text(raw: str) -> str:
                      if e.get("type") == "text" and not e.get("isDeleted"))
 
 
+def render_text(raw: str) -> str:
+    """The text of an exported .svg: Excalidraw writes each line as an escaped <text>."""
+    return "\n".join(html.unescape(t) for t in re.findall(r"<text\b[^>]*>(.*?)</text>", raw, re.S))
+
+
+def names(text: str) -> dict[str, set[str]]:
+    """Every name `text` shows, by kind."""
+    found = {kind: set(re.findall(pattern, text)) for kind, pattern in PATTERNS.items()}
+    found["command"] -= PROSE
+    return found
+
+
 def _tracked(path: str, files: set[str]) -> bool:
     name = path.removeprefix("./")
     return any(f == name or f.endswith("/" + name) for f in files)
@@ -109,21 +138,35 @@ def _tracked(path: str, files: set[str]) -> bool:
 
 def unknown(text: str, known: dict[str, Any]) -> list[str]:
     """Each name in `text` the code does not have, described."""
-    checks: list[tuple[set[str], Callable[[str], bool], str]] = [
-        (set(re.findall(r"\bokl ([a-z][a-z-]*)", text)) - PROSE,
-         lambda c: c in known["commands"], "okl {}: no such command in src/okl/cli/parser.py"),
-        (set(re.findall(r"(?<![\w-])(--[a-z][a-z-]*)", text)),
-         lambda f: f in known["flags"], "{}: no CLI parser defines it"),
-        (set(re.findall(r"\b(okl_[a-z_]+)\b", text)),
-         lambda t: t in known["tools"], "{}: no such MCP tool in src/okl/mcp_server.py"),
-        ({e for e in HOOK_EVENTS if re.search(rf"\b{e}\b", text)},
-         lambda e: e in known["events"], "{}: not a hook hooks/hooks.json registers"),
-        (set(re.findall(r"[\w./-]*[\w-]\.(?:sh|yml)\b", text)),
-         lambda p: _tracked(p, known["files"]), "{}: no tracked file by that path or name"),
-        (set(re.findall(r"\b[A-Z]{5,}\b", text)),
-         lambda m: m in known["marks_text"], "{}: no such briefing mark in core.py or drift.py"),
-    ]
-    return [msg.format(n) for names, ok, msg in checks for n in sorted(names) if not ok(n)]
+    ok: dict[str, Callable[[str], bool]] = {
+        "command": lambda c: c in known["commands"],
+        "flag": lambda f: f in known["flags"],
+        "tool": lambda t: t in known["tools"],
+        "event": lambda e: e in known["events"],
+        "path": lambda p: _tracked(p, known["files"]),
+        "mark": lambda m: m in known["marks_text"],
+    }
+    say = {"command": "okl {}: no such command in src/okl/cli/parser.py",
+           "flag": "{}: no CLI parser defines it",
+           "tool": "{}: no such MCP tool in src/okl/mcp_server.py",
+           "event": "{}: not a hook hooks/hooks.json registers",
+           "path": "{}: no tracked file by that path or name",
+           "mark": "{}: no such briefing mark in core.py or drift.py"}
+    found = names(text)
+    return [say[k].format(n) for k in PATTERNS for n in sorted(found[k]) if not ok[k](n)]
+
+
+def mismatch(source: str, render: str) -> list[str]:
+    """How a render's names differ from its source's, or nothing when they agree."""
+    a, b = names(source), names(render)
+    only_source = sorted(n for k in PATTERNS for n in a[k] - b[k])
+    only_render = sorted(n for k in PATTERNS for n in b[k] - a[k])
+    if not (only_source or only_render):
+        return []
+    parts = [f"only the .excalidraw names {', '.join(only_source)}" if only_source else "",
+             f"only the .svg names {', '.join(only_render)}" if only_render else ""]
+    return ["the render does not match its source (" + "; ".join(p for p in parts if p)
+            + "): re-export the .svg"]
 
 
 def _say(msg: str, *, err: bool = False) -> None:
@@ -136,10 +179,15 @@ def main(argv: list[str]) -> int:
     repo = Repo(committed)
     try:
         if committed:
-            paths = [p for p in repo.files() if p.startswith("docs/") and p.endswith(".excalidraw")]
+            files = set(repo.files())
+            paths = [p for p in files if p.startswith("docs/") and p.endswith(".excalidraw")]
             sources = {p: repo.read(p) for p in paths}
+            renders = {p: repo.read(svg) for p in paths
+                       if (svg := p.removesuffix(".excalidraw") + ".svg") in files}
         else:
             sources = {p: Path(p).read_text(encoding="utf-8") for p in argv}
+            renders = {p: svg.read_text(encoding="utf-8") for p in argv
+                       if (svg := Path(p).with_suffix(".svg")).exists()}
         known = known_names(repo)
     except (OSError, subprocess.CalledProcessError, ValueError, KeyError) as e:
         _say(f"check-diagram-names: could not run: {e}", err=True)
@@ -149,13 +197,19 @@ def main(argv: list[str]) -> int:
         return 0
     failed = False
     for path, raw in sorted(sources.items()):
-        problems = unknown(diagram_text(raw), known)
+        text = diagram_text(raw)
+        problems = unknown(text, known)
+        if path in renders:     # a missing render is check-diagram-pairs.sh's to report
+            drawn = render_text(renders[path])
+            problems += [p for p in unknown(drawn, known) if p not in problems]
+            problems += mismatch(text, drawn)
         _say(f"-- {path}")
         if problems:
             failed = True
             _say("\n".join(f"   FAIL: {p}" for p in problems))
         else:
-            _say("   ok: every command, flag, tool, hook, script and mark it names exists")
+            _say("   ok: every command, flag, tool, hook, script and mark it names exists, "
+                 "in the source and its render")
     if failed:
         _say("\nA drawn diagram names something the code no longer has. Fix the diagram "
              "(edit the .excalidraw, re-export the .svg), or, if a name here is prose, see "

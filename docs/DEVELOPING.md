@@ -49,7 +49,9 @@ src/okl/
    lint-imports
    bash gates/run-gates.sh           # links, doc orphans, diagram pairs, tombstones, canon size
    ./ci/check-diagram-figures.sh     # every figure in a diagram names a committed receipt
-   python3 ci/check-diagram-names.py # every name a drawn diagram shows still exists in the code
+   python3 ci/check-diagram-names.py # names in the drawn diagrams exist in the code: reads HEAD,
+                                     # so commit first, or pass the .excalidraw paths to check
+                                     # the working copies (as tests/test_architecture.py does)
    ```
 
 4. **Keep mirrored files identical.** If you edit a hook, re-stamp its ownership line and
@@ -64,7 +66,10 @@ src/okl/
    the CHANGELOG's `## Unreleased` section, and the diagrams if what they show changed. A
    drawn one (`docs/architecture/`) is edited in its `.excalidraw` source and re-exported to
    SVG; the generated ones are rewritten by `python3 docs/render_architecture.py` and
-   `docs/render_pipeline_diagram.py`, and tests fail until they are; the one-page
+   `python3 docs/render_pipeline_diagram.py`, and their tests fail until they are. The hybrid
+   pipeline render is separate (`docs/render_pipeline_diagram.py --hybrid linear`), and its
+   test skips wherever the embedding model is not cached, CI included, so re-render it by
+   hand when the retrieval changes; the one-page
    overview is edited in `docs/overview/okl-overview.html` and re-rendered with the
    `render.py` beside it. The website's okl page and its copies of both follow each release.
 6. **Commit, then re-verify, then commit the snapshot** (maintainer). This order matters:
