@@ -263,6 +263,8 @@ def test_a_finding_a_lesson_covers_names_it_and_the_lookup_is_not_logged(covered
     assert "a briefing on it already shows: [price-from-catalogue] Never trust the price" in first
     assert "refine that one: okl update <id>" in first
     assert covered._local_store().briefings("r") == []
+    covered.check("", paths=["app/orders.py"], log=False)                # a check by paths as well
+    assert covered._local_store().briefings("r") == []
     covered.check("don't trust the client's price for an order")       # an agent's briefing still is
     assert len(covered._local_store().briefings("r")) == 1
 
@@ -281,8 +283,8 @@ def test_over_a_service_the_lookup_names_the_lesson_and_logs_no_briefing(remote,
     assert main(["intake", "pr", "7"]) == 0
     assert "already shows: [price-from-catalogue]" in capsys.readouterr().out
     assert remote.store.briefings("r") == []
-    # The service honours it for a check by paths too, which no client sends unlogged yet.
-    assert remote.api.post("/check", json={"repo": "r", "paths": ["app/orders.py"], "log": False}).status_code == 200
+    # A check by paths too: it returned before `log` was read (CodeRabbit on #388).
+    Client().check("", paths=["app/orders.py"], log=False)
     assert remote.store.briefings("r") == []
     Client().check("don't trust the client's price for an order")
     assert len(remote.store.briefings("r")) == 1
@@ -356,7 +358,10 @@ def test_with_no_repo_gh_names_it_and_a_commits_files_are_read_once(monkeypatch)
         return json.dumps({"data": {"repository": {"pullRequest": {"number": 7, "title": "t", key: conn}}}})
     monkeypatch.setattr(intake, "_gh", gh)
     _pr, files_of = intake.fetch(7)
-    assert all({"owner=acme", "name=shop"} <= set(a) for a in calls if a[:2] == ("api", "graphql"))
+    for a in (a for a in calls if a[:2] == ("api", "graphql")):
+        # as strings: -F would send a repo named 2048 as a number (CodeRabbit on #388)
+        flag = {v: a[i - 1] for i, v in enumerate(a)}
+        assert (flag["owner=acme"], flag["name=shop"], flag["number=7"]) == ("-f", "-f", "-F")
     assert files_of(C1) == files_of(C1) == {"app/orders.py"}
     assert sum(1 for a in calls if a[1] == f"repos/acme/shop/commits/{C1}") == 1
 

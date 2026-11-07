@@ -238,7 +238,9 @@ def _pages(query: str, key: str, owner: str, name: str, number: int) -> tuple[di
     head: dict | None = None
     after: str | None = None
     for _ in range(_MAX_PAGES):
-        args = ["api", "graphql", "-f", f"query={query}", "-F", f"owner={owner}", "-F", f"name={name}",
+        # -f sends a string as it is; -F types it (a repo named 2048 went as a number) and reads
+        # a value starting with @ from a file (CodeRabbit on #388). Only the number is typed.
+        args = ["api", "graphql", "-f", f"query={query}", "-f", f"owner={owner}", "-f", f"name={name}",
                 "-F", f"number={number}"] + (["-f", f"after={after}"] if after else [])
         data = json.loads(_gh(*args))
         pr = ((data.get("data") or {}).get("repository") or {}).get("pullRequest")

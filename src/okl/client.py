@@ -329,7 +329,7 @@ class Client:
         cfg = _find_config()
         root = cfg.parent.parent if cfg else Path.cwd()
         if paths is not None:
-            return self._check_files(repo, paths, root)
+            return self._check_files(repo, paths, root, log=log)
         payload = {"repo": repo, "task": task, "interests": self.interests or None,
                    "hybrid": self.hybrid, "index": self.index, "near_misses": self.near_misses,
                    "rerank": self.rerank, "decision": self.decision}
@@ -380,17 +380,18 @@ class Client:
             core.record_briefing(store, repo, result)
         return result
 
-    def _check_files(self, repo: str, paths: list[str], root: Path) -> dict:
-        """check() with `paths`: the governing lessons, marked by drift, and logged as a briefing."""
+    def _check_files(self, repo: str, paths: list[str], root: Path, *, log: bool = True) -> dict:
+        """check() with `paths`: the governing lessons, marked by drift, and logged as a briefing
+        unless `log` is False."""
         if not paths:
             raise ValueError("no paths given: nothing was checked")
-        result = self._check_paths(repo, paths, root)
+        result = self._check_paths(repo, paths, root, log=log)
         drift.annotate_briefing(result, repo, str(root))
-        if self.mode != "remote":
+        if self.mode != "remote" and log:
             core.record_briefing(self._local_store(), repo, result)
         return result
 
-    def _check_paths(self, repo: str, paths: list[str], root: Path) -> dict:
+    def _check_paths(self, repo: str, paths: list[str], root: Path, *, log: bool = True) -> dict:
         """core.check_paths over this repo's view, locally or from the service, with the paths
         made repo-relative and those outside the repo listed apart."""
         inside, outside = _repo_relative(paths, root)
@@ -399,7 +400,8 @@ class Client:
             # answer as a local store would, rather than report a refusal (CodeRabbit sweep 6).
             result = core.no_paths_answer(repo)
         elif self.mode == "remote":
-            result = self._post("/check", {"repo": repo, "task": "", "paths": inside})
+            result = self._post("/check", {"repo": repo, "task": "", "paths": inside,
+                                           **({} if log else {"log": False})})
             # An older service drops a field it does not know and briefs an empty task: never
             # read that as "nothing governs this file".
             if not isinstance(result.get("paths"), list):
