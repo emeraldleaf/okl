@@ -124,6 +124,9 @@ okl seed --refresh   # re-import only the records this store already holds, from
                      #   they came from (newer symptoms, aliases, triggers, text; verification kept),
                      #   without importing the rest of each pack. No path: the bundled packs
                      #   the store's own seed ids name; a repo's own pack file is named.
+                     #   A bundled pack renamed since the store was seeded refreshes from its
+                     #   new name: each record moves to the new id with its proof, and the
+                     #   old id is superseded by it.
 okl seed <pack> --strict
                      # exit 2 instead of importing when an advice record has no symptom,
                      #   a record is trace-shaped, or an org record names one repository's

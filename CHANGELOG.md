@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- **A renamed seed pack takes the records a store holds under its old name with it** (#379).
+  A seed record's id is `seed:<pack>:<key>`, and ten bundled packs were renamed, keeping their
+  keys, when project identities came off the public surface. A store seeded before then held
+  ids that `okl seed --refresh` could not find, and seeding a renamed pack stored the same
+  lessons a second time. Refresh and seed now recognise the old names (kept as hashes, so the
+  names themselves are not shipped again): each record is written to the renamed pack's id
+  with its proof, first creation date and any retirement, and the old id is retired as
+  superseded by it, keeping its history. A store seeded under both names keeps the new id's
+  own proof. Against a service, the record request carries the new `supersedes` field.
 - **Architecture diagrams of okl itself** ([docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)),
   drawn in Excalidraw under `docs/architecture/` with an SVG render beside each: where the code
   lives (the repo's folders, what each file in `src/okl/` does, and what `okl init` copies into

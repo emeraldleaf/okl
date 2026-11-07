@@ -74,10 +74,14 @@ def seed_from_file(client: Client, path: str, *, only: set[str] | None = None) -
         _warn_near_duplicates(client, data)
 
     ns = f"seed:{p.stem}"
+    # The records this store holds under a name the pack had before a rename (#379): each is
+    # written to the pack's id with its proof carried over, and the old id is superseded.
+    renamed = _held_under_old_names(client, p.stem)
     keymap: dict[str, str] = {}
     for node in data.get("nodes", []):
         key = node.pop("key", None)
-        if only is not None and (not key or f"{ns}:{key}" not in only):
+        old_id = renamed.get(key) if key else None
+        if only is not None and (not key or (f"{ns}:{key}" not in only and old_id is None)):
             continue
         # Seed nodes carry provenance from ANOTHER repo. Client.record defaults a
         # missing `repo` to the CURRENT repo, which would mislabel it — pass None
@@ -88,8 +92,8 @@ def seed_from_file(client: Client, path: str, *, only: set[str] | None = None) -
                   "recording provenance as unknown, not this repo", file=sys.stderr)
         stable_id = f"{ns}:{key}" if key else None
         # A re-seed updates a lesson's content; it does not verify it (#110).
-        node_id = (client.record(id=stable_id, keep_verification=True, **node) if stable_id
-                   else client.record(**node))
+        node_id = (client.record(id=stable_id, keep_verification=True, supersedes=old_id, **node)
+                   if stable_id else client.record(**node))
         if key:
             keymap[key] = node_id
     for edge in data.get("edges", []):
@@ -99,6 +103,20 @@ def seed_from_file(client: Client, path: str, *, only: set[str] | None = None) -
         dst = keymap.get(edge["dst"], edge["dst"])
         client.link(src, edge["rel"], dst)
     return len(keymap) if only is not None else len(data.get("nodes", []))
+
+
+def _held_under_old_names(client: Client, pack: str) -> dict[str, str]:
+    """{key: id} for the live records this store holds under a name `pack` had before a
+    rename (#379), or nothing for a pack never renamed, without reading the store."""
+    if pack not in core.PACK_RENAMES.values():
+        return {}
+    held: dict[str, str] = {}
+    for n in client.all_nodes():
+        parts = n.id.split(":", 2)
+        if (len(parts) == 3 and parts[0] == "seed" and parts[1] != pack
+                and core.current_pack(parts[1]) == pack and n.status != "superseded"):
+            held[parts[2]] = n.id
+    return held
 
 
 def pack_node_count(path: str) -> int:
