@@ -13,8 +13,14 @@ has:
   <Event>          a word shaped like a Claude Code hook event (UserPrompt*, Pre*/Post* in
                    PascalCase, Session*, Subagent*, Notification, Stop), registered in
                    hooks/hooks.json, so a misspelt one fails too
-  <path>.sh/.yml   a tracked file: the path the diagram names, or its basename
+  <path>.<ext>     a tracked file (.sh .yml .py .json .toml .md): that path, or its basename
+  <folder>/        a tracked folder: some tracked file lies under it
+  <name>()         a function defined under src/okl/; `core.check()` or `Client.check()`
+                   must be defined in that module (core.py, client.py)
   <MARK>           an all-caps briefing mark, present in core.py or drift.py
+
+The code map and the command paths in docs/ARCHITECTURE.md lean on the last four: they name
+files, folders and functions, and a rename that leaves them pointing nowhere fails here.
 
 It also fails when a render names something its source does not, or the reverse: the .svg is
 what people read, and an edited source whose render was never re-exported shows the old names.
@@ -47,6 +53,10 @@ ROOT = Path(__file__).resolve().parents[1]
 PROSE = frozenset({"runs", "stamps", "cannot", "can", "keeps", "is"})
 # Flags that belong to another tool the diagrams show (git's, here), not to okl's parser.
 EXTERNAL_FLAGS = frozenset({"--no-verify"})
+# Paths a diagram names that are not in the repo on purpose: what okl creates at run time in
+# your checkout, and the made-up file in the lesson diagram's sample briefing.
+RUNTIME_PREFIXES = (".okl/", ".git/")
+EXAMPLE_PATHS = frozenset({"app/orders.py"})
 # What each kind of name looks like in a diagram's text. Events match any word shaped like a
 # Claude Code hook event rather than a fixed list, so "UserPromptSubmitted" is caught as well
 # as a removed hook (CodeRabbit on #383).
@@ -56,8 +66,10 @@ PATTERNS = {
     "tool": r"\b(okl_[a-z_]+)\b",
     "event": r"\b(UserPrompt[A-Za-z]*|Pre[A-Z][A-Za-z]+|Post[A-Z][A-Za-z]+|Session[A-Z][A-Za-z]*"
              r"|Subagent[A-Z][A-Za-z]*|Notification|Stop)\b",
-    "path": r"([\w./-]*[\w-]\.(?:sh|yml))\b",
-    "mark": r"\b([A-Z]{5,})\b",
+    "path": r"([\w./-]*[\w-]\.(?:sh|yml|py|json|toml|md))\b",
+    "folder": r"(?<![\w./-])((?:\.?[\w-]+/)+)(?![\w.-])",
+    "function": r"\b((?:[A-Za-z_]\w*\.)?[A-Za-z_]\w*)\(\)",
+    "mark": r"\b([A-Z]{5,})\b(?!\.\w)",        # not the stem of a file name, as in THESIS.md
 }
 
 
@@ -108,8 +120,14 @@ def known_names(repo: Repo) -> dict[str, Any]:
                      and d.func.attr == "tool" for d in n.decorator_list)}
     events = set(json.loads(repo.read("hooks/hooks.json"))["hooks"])
     marks_text = repo.read("src/okl/core.py") + repo.read("src/okl/drift.py")
+    # Every function and method under src/okl, by the module stem that defines it.
+    functions: dict[str, set[str]] = {}
+    for rel in (f for f in repo.files() if f.startswith("src/okl/") and f.endswith(".py")):
+        defs = {n.name for n in ast.walk(ast.parse(repo.read(rel)))
+                if isinstance(n, ast.FunctionDef | ast.AsyncFunctionDef)}
+        functions.setdefault(Path(rel).stem, set()).update(defs)
     return {"commands": commands, "flags": flags, "tools": tools, "events": events,
-            "files": set(repo.files()), "marks_text": marks_text}
+            "files": set(repo.files()), "marks_text": marks_text, "functions": functions}
 
 
 def diagram_text(raw: str) -> str:
@@ -133,7 +151,25 @@ def names(text: str) -> dict[str, set[str]]:
 
 def _tracked(path: str, files: set[str]) -> bool:
     name = path.removeprefix("./")
+    if name.startswith(RUNTIME_PREFIXES) or name in EXAMPLE_PATHS:
+        return True
     return any(f == name or f.endswith("/" + name) for f in files)
+
+
+def _tracked_dir(folder: str, files: set[str]) -> bool:
+    name = folder.removeprefix("./")
+    if name.startswith(RUNTIME_PREFIXES):
+        return True
+    return any(f.startswith(name) or ("/" + name) in f for f in files)
+
+
+def _defined(ref: str, functions: dict[str, set[str]]) -> bool:
+    """`name` defined anywhere under src/okl; `module.name` (or `Client.name`) defined in
+    that module, when a module by that name exists."""
+    module, _, name = ref.rpartition(".")
+    if module and module.lower() in functions:
+        return name in functions[module.lower()]
+    return any(name in defs for defs in functions.values())
 
 
 def unknown(text: str, known: dict[str, Any]) -> list[str]:
@@ -144,6 +180,8 @@ def unknown(text: str, known: dict[str, Any]) -> list[str]:
         "tool": lambda t: t in known["tools"],
         "event": lambda e: e in known["events"],
         "path": lambda p: _tracked(p, known["files"]),
+        "folder": lambda d: _tracked_dir(d, known["files"]),
+        "function": lambda f: _defined(f, known["functions"]),
         "mark": lambda m: m in known["marks_text"],
     }
     say = {"command": "okl {}: no such command in src/okl/cli/parser.py",
@@ -151,6 +189,8 @@ def unknown(text: str, known: dict[str, Any]) -> list[str]:
            "tool": "{}: no such MCP tool in src/okl/mcp_server.py",
            "event": "{}: not a hook hooks/hooks.json registers",
            "path": "{}: no tracked file by that path or name",
+           "folder": "{}: no tracked file under that folder",
+           "function": "{}(): not defined there, under src/okl/",
            "mark": "{}: no such briefing mark in core.py or drift.py"}
     found = names(text)
     return [say[k].format(n) for k in PATTERNS for n in sorted(found[k]) if not ok[k](n)]
@@ -208,8 +248,8 @@ def main(argv: list[str]) -> int:
             failed = True
             _say("\n".join(f"   FAIL: {p}" for p in problems))
         else:
-            _say("   ok: every command, flag, tool, hook, script and mark it names exists, "
-                 "in the source and its render")
+            _say("   ok: every command, flag, tool, hook, path, folder, function and mark it "
+                 "names exists, in the source and its render")
     if failed:
         _say("\nA drawn diagram names something the code no longer has. Fix the diagram "
              "(edit the .excalidraw, re-export the .svg), or, if a name here is prose, see "
