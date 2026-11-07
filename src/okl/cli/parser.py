@@ -397,6 +397,9 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
 
     pv = sub.add_parser("serve", help="run the shared FastAPI service")
     pv.add_argument("--host", default="0.0.0.0"); pv.add_argument("--port", type=int, default=8080)
+    pv.add_argument("--allow-no-token", action="store_true",
+                    help="serve off loopback with no OKL_TOKEN, every route open (a proxy in front "
+                         "authenticates); OKL_ALLOW_NO_TOKEN=1 does the same")
     pv.set_defaults(func=cmd_serve)
 
     pmcp = sub.add_parser("mcp", help="run the MCP server (stdio) for agent tools")

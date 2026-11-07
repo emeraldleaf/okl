@@ -3,7 +3,36 @@ from __future__ import annotations
 
 import argparse
 import importlib
+import ipaddress
+import os
 import sys
+
+
+def _open_bind_refusal(host: str, allow_no_token: bool) -> str | None:
+    """Why `okl serve` must not start on `host`, or None when it may.
+
+    With no OKL_TOKEN every route is open, GET /nodes included. On loopback only this
+    machine can reach it; anywhere else the whole store goes to whoever can reach the
+    port, and nothing used to warn or refuse (#371). An empty token is no token: the
+    service treats it as unset, and compose's `${OKL_TOKEN:-}` hands a process exactly that.
+    OKL_ALLOW_NO_TOKEN=1 is the flag's environment form, the one `module:app` reads.
+    """
+    if (os.environ.get("OKL_TOKEN") or allow_no_token or os.environ.get("OKL_ALLOW_NO_TOKEN") == "1"
+            or _is_loopback(host)):
+        return None
+    return (f"OKL: refusing to serve on {host} without OKL_TOKEN: every route, GET /nodes "
+            "included, would be open to anyone who can reach the port. Set OKL_TOKEN, bind "
+            "--host 127.0.0.1, or pass --allow-no-token (OKL_ALLOW_NO_TOKEN=1) when a proxy "
+            "in front authenticates (docs/DEPLOY.md §2).")
+
+
+def _is_loopback(host: str) -> bool:
+    if host == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False   # any other name may resolve to an address others can reach
 
 
 def cmd_serve(args: argparse.Namespace) -> int:
@@ -11,9 +40,15 @@ def cmd_serve(args: argparse.Namespace) -> int:
 
     The 0.0.0.0 default is so the service is reachable from outside its container,
     which is the only way a shared instance is useful. OKL_TOKEN gates every route
-    except /health; see docs/DEPLOY.md before exposing it. Exit 2, naming the extra to
-    install, when FastAPI or uvicorn is missing.
+    except /health; see docs/DEPLOY.md before exposing it. Exit 2 when the host is not
+    loopback and no token is set (unless --allow-no-token), checked before anything is
+    imported or bound, and exit 2, naming the extra to install, when FastAPI or uvicorn
+    is missing.
     """
+    refusal = _open_bind_refusal(args.host, args.allow_no_token)
+    if refusal:
+        print(refusal, file=sys.stderr)
+        return 2
     try:
         from ..service import run  # raises RuntimeError naming the extra without FastAPI
     except RuntimeError as e:

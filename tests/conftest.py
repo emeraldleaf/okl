@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-STORE_VARS = ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN")
+STORE_VARS = ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN", "OKL_ALLOW_NO_TOKEN")
 # The settings that change what a briefing holds or says. A developer's shell may set any of
 # them, and a test that asserts a default must see the default (review on #299).
 BRIEFING_VARS = ("OKL_DECISION", "OKL_HYBRID", "OKL_RERANK", "OKL_WARM", "OKL_QUIET",

@@ -213,7 +213,7 @@ ignore = [
            # caller's toolchain wins (a hardcoded /usr/bin/git breaks nix, brew, CI images)
   "S104",  # `okl serve --host 0.0.0.0`: the default exists so the service is reachable
            # from outside its container, which is the only way a shared instance works.
-           # OKL_TOKEN gates every route; the deploy doc says to put a proxy in front.
+           # OKL_TOKEN gates every route, and okl serve refuses that host without one (#371).
   "S602",  # the single shell=True is `okl verify --run "<cmd>"`, where the command is
            # typed by the person running it. No stored field ever reaches a shell —
            # that boundary is the rule "never let stored data reach a shell".
