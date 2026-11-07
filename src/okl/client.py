@@ -308,7 +308,7 @@ class Client:
             return self._post("/check", {**payload, "decision": "calibrated"})
 
     def check(self, task: str, repo: str | None = None, limit: int | None = None,
-              paths: list[str] | None = None) -> dict:
+              paths: list[str] | None = None, *, log: bool = True) -> dict:
         """The briefing for starting `task` in `repo` (default: this repo), as core.check returns it.
 
         With `paths`, the lessons that govern those files instead, as core.check_paths returns
@@ -316,6 +316,9 @@ class Client:
         as git takes it, relative to the working directory unless absolute, and made relative to
         this repo's root; one outside the repo is left out, since none of its lessons governs
         it, and listed under `outside_repo`.
+
+        The briefing is logged as exposure (`okl metric`); `log=False` asks for it unlogged, for
+        a caller that briefs no agent (okl intake). An older service ignores that and logs.
 
         Lessons whose governed code changed since their last check come back marked.
         Over a shared service, raises ValueError when the service rejects the request (any
@@ -326,12 +329,14 @@ class Client:
         cfg = _find_config()
         root = cfg.parent.parent if cfg else Path.cwd()
         if paths is not None:
-            return self._check_files(repo, paths, root)
+            return self._check_files(repo, paths, root, log=log)
         payload = {"repo": repo, "task": task, "interests": self.interests or None,
                    "hybrid": self.hybrid, "index": self.index, "near_misses": self.near_misses,
                    "rerank": self.rerank, "decision": self.decision}
         if limit is not None:
             payload["limit"] = limit
+        if not log:
+            payload["log"] = False
         if self.mode == "remote":
             result = self._post_check(payload)
             # An older service drops a request field it does not know and answers an ordinary
@@ -368,24 +373,25 @@ class Client:
         # not in core, because only the client has this repo's checkout: a shared service
         # answering /check has no git history to compare against.
         drift.annotate_briefing(result, repo, str(root))
-        if self.mode != "remote":
+        if self.mode != "remote" and log:
             # Over a shared service the service logs the briefing it answers; locally, the
             # client is the only one who sees it (#129). Logged after the drift marks, so
             # the log keeps which briefed lessons were stale at the time (#252).
             core.record_briefing(store, repo, result)
         return result
 
-    def _check_files(self, repo: str, paths: list[str], root: Path) -> dict:
-        """check() with `paths`: the governing lessons, marked by drift, and logged as a briefing."""
+    def _check_files(self, repo: str, paths: list[str], root: Path, *, log: bool = True) -> dict:
+        """check() with `paths`: the governing lessons, marked by drift, and logged as a briefing
+        unless `log` is False."""
         if not paths:
             raise ValueError("no paths given: nothing was checked")
-        result = self._check_paths(repo, paths, root)
+        result = self._check_paths(repo, paths, root, log=log)
         drift.annotate_briefing(result, repo, str(root))
-        if self.mode != "remote":
+        if self.mode != "remote" and log:
             core.record_briefing(self._local_store(), repo, result)
         return result
 
-    def _check_paths(self, repo: str, paths: list[str], root: Path) -> dict:
+    def _check_paths(self, repo: str, paths: list[str], root: Path, *, log: bool = True) -> dict:
         """core.check_paths over this repo's view, locally or from the service, with the paths
         made repo-relative and those outside the repo listed apart."""
         inside, outside = _repo_relative(paths, root)
@@ -394,7 +400,8 @@ class Client:
             # answer as a local store would, rather than report a refusal (CodeRabbit sweep 6).
             result = core.no_paths_answer(repo)
         elif self.mode == "remote":
-            result = self._post("/check", {"repo": repo, "task": "", "paths": inside})
+            result = self._post("/check", {"repo": repo, "task": "", "paths": inside,
+                                           **({} if log else {"log": False})})
             # An older service drops a field it does not know and briefs an empty task: never
             # read that as "nothing governs this file".
             if not isinstance(result.get("paths"), list):
