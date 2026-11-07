@@ -7,7 +7,10 @@
   it can stop you) and a lesson's life (every state, the command that moves it, and the mark
   a briefing prints) are drawn in Excalidraw under `docs/architecture/`. Where lessons are
   stored and the code's layers are generated from the code by `docs/render_architecture.py`,
-  and a test fails when either goes stale. A new CI step, `ci/check-diagram-names.py`, fails
+  and a test fails when either goes stale. They are rendered to SVG images with a white
+  background, like the drawn ones, so they look the same in any viewer and theme: as Mermaid
+  blocks, a dark VS Code preview lost their arrows and then showed them as solid black. Each
+  render carries the hash of its source, so the test catches a stale image too. A new CI step, `ci/check-diagram-names.py`, fails
   on any command, flag, MCP tool, script or briefing mark a drawn diagram or its render names
   that the code no longer has, on any word shaped like a Claude Code hook event that
   `hooks/hooks.json` does not register (a misspelt one included), and on a render whose names

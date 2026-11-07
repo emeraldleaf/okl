@@ -11,8 +11,11 @@ what okl does for you; these show how it is put together.
 | [The code's layers](#the-codes-layers) | the modules, the one-way import contract, and every import | generated from the code |
 
 The generated ones are written by [`render_architecture.py`](render_architecture.py) from the
-source and `pyproject.toml`, and `tests/test_architecture.py` fails the suite when the code
-moves and they do not: run `python3 docs/render_architecture.py` to bring them back. The
+source and `pyproject.toml`, as Mermaid source (`docs/architecture/*.mmd`) rendered to the SVG
+beside it, so they look the same in any viewer and theme. `tests/test_architecture.py` fails
+the suite when the code moves and they do not, a render included: run
+`python3 docs/render_architecture.py --svg` to bring them back (rendering needs Playwright; see
+[DEVELOPING.md](DEVELOPING.md)). The
 drawn ones are Excalidraw files under `docs/architecture/`. Open the `.excalidraw` in
 Excalidraw (excalidraw.com, or the VS Code extension), edit it, and export the `.svg` beside
 it. `ci/check-diagram-names.py` reads each source and its render, and fails CI on any
@@ -42,85 +45,21 @@ briefing prints for each, so the agent knows how far to trust what it is told.
 ## Where lessons are stored
 
 <!-- generated:storage -->
-```mermaid
-flowchart LR
-  cli["okl CLI<br/>27 commands"]
-  mcp["okl mcp, for any MCP agent<br/>okl_check · okl_record<br/>okl_search · okl_update<br/>okl_retire · okl_get"]
-  client["okl.client.Client"]
-  service["okl serve (okl.service)<br/>14 HTTP routes<br/>OKL_TOKEN guards all but /health"]
-  store["okl.store.Store"]
-  sqlite[("SQLite<br/>.okl/okl.db by default")]
-  pg[("Postgres<br/>the postgres extra")]
-  cli --> client
-  mcp --> client
-  client -- "OKL_SERVICE_URL, or service_url in .okl/config.json" --> service
-  client -- "otherwise, in this process" --> store
-  service --> store
-  store -- "sqlite:/// URL, or none" --> sqlite
-  store -- "OKL_DATABASE_URL starting postgres" --> pg
-```
+<img src="architecture/okl-storage.svg" alt="Where lessons are stored. The okl CLI (27 commands) and okl mcp, for any MCP agent (tools okl_check, okl_record, okl_search, okl_update, okl_retire, okl_get), both go through okl.client.Client. With OKL_SERVICE_URL, or service_url in .okl/config.json, the client calls okl serve (okl.service: 14 HTTP routes, OKL_TOKEN guarding all but /health), which uses okl.store.Store; otherwise the client uses the store in its own process. The store keeps lessons in SQLite (.okl/okl.db by default, or a sqlite:/// URL) or in Postgres when OKL_DATABASE_URL starts with postgres (the postgres extra)." width="100%">
+
+Its source, generated with it: [`okl-storage.mmd`](architecture/okl-storage.mmd).
 <!-- /generated:storage -->
 
 ## The code's layers
 
-Higher layers import lower ones, never the reverse, and `|` separates siblings that must not
-import each other. `lint-imports` enforces it in CI. An arrow is an import; the CLI's many
-imports are drawn as one arrow to each group it reaches.
+Higher layers import lower ones, never the reverse, and modules in the same layer must not
+import each other. `lint-imports` enforces it in CI. An arrow between two groups means some
+module in one imports some module in the other; inside a group, an arrow is one import.
 
 <!-- generated:layers -->
 Layer 1 (top), `cli`, imports from every group below, so it is left out of the chart.
 
-```mermaid
-flowchart LR
-  subgraph outside["outside the layer contract"]
-    bootstrap
-    codeowners
-    coexist
-    hygiene
-    ownership
-    protection
-    scaffold_cmd
-  end
-  subgraph layer1["layer 2"]
-    service
-    mcp_server
-    seed
-    review
-  end
-  subgraph layer2["layer 3"]
-    client
-  end
-  subgraph layer3["layer 4"]
-    recap
-  end
-  subgraph layer4["layer 5"]
-    core
-    drift
-  end
-  subgraph layer5["layer 6"]
-    semantic
-    rerank
-    decide
-    warm
-  end
-  subgraph layer6["layer 7 (bottom)"]
-    store
-    hub
-  end
-  layer1 --> layer2
-  layer1 --> layer4
-  layer1 --> layer5
-  layer1 --> layer6
-  layer1 --> outside
-  layer2 --> layer4
-  layer2 --> layer5
-  layer2 --> layer6
-  layer3 --> layer4
-  layer3 --> layer6
-  layer4 --> layer5
-  layer4 --> layer6
-  layer4 --> outside
-  layer5 --> layer6
-  protection --> codeowners
-```
+<img src="architecture/okl-layers.svg" alt="The code&#x27;s layers, left to right. layer 2: mcp_server, review, seed, service; layer 3: client; layer 4: recap; layer 5: core, drift; layer 6: decide, rerank, semantic, warm; layer 7: hub, store; outside the contract: bootstrap, codeowners, coexist, hygiene, ownership, protection, scaffold_cmd. Layer 2 imports from layer 3, layer 5, layer 6, layer 7, outside the contract. Layer 3 imports from layer 5, layer 6, layer 7. Layer 4 imports from layer 5, layer 7. Layer 5 imports from layer 6, layer 7, outside the contract. Layer 6 imports from layer 7. protection imports codeowners." width="100%">
+
+Its source, generated with it: [`okl-layers.mmd`](architecture/okl-layers.mmd).
 <!-- /generated:layers -->
