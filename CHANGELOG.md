@@ -2,20 +2,18 @@
 
 ## Unreleased
 
-- **Architecture diagrams of okl itself** ([docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)).
-  What runs when (each hook, MCP tool and gate, the moment it fires, the command and whether
-  it can stop you) and a lesson's life (every state, the command that moves it, and the mark
-  a briefing prints) are drawn in Excalidraw under `docs/architecture/`. Where lessons are
-  stored and the code's layers are generated from the code by `docs/render_architecture.py`,
-  and a test fails when either goes stale. They are rendered to SVG images with a white
-  background, like the drawn ones, so they look the same in any viewer and theme: as Mermaid
-  blocks, a dark VS Code preview lost their arrows and then showed them as solid black. Each
-  render carries the hash of its source, so the test catches a stale image too. A new CI step, `ci/check-diagram-names.py`, fails
-  on any command, flag, MCP tool, script or briefing mark a drawn diagram or its render names
-  that the code no longer has, on any word shaped like a Claude Code hook event that
-  `hooks/hooks.json` does not register (a misspelt one included), and on a render whose names
-  differ from its source. okl's last hand-drawn diagram was retired after it was found wrong
-  in four places nothing checked.
+- **Architecture diagrams of okl itself** ([docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)),
+  drawn in Excalidraw under `docs/architecture/` with an SVG render beside each: where the code
+  lives (the repo's folders, what each file in `src/okl/` does, and what `okl init` copies into
+  your repo), what a command touches (each command and hook through the files and functions it
+  runs, down to the store), what runs when (each hook, MCP tool and gate, the moment it fires and
+  whether it can stop you), and a lesson's life (every state, the command that moves it, and the
+  mark a briefing prints). A new CI step, `ci/check-diagram-names.py`, fails on any command,
+  flag, MCP tool, file, folder, function or briefing mark a diagram or its render names that the
+  code no longer has (`core.check()` must be defined in `core.py`), on any word shaped like a
+  Claude Code hook event that `hooks/hooks.json` does not register (a misspelt one included),
+  and on a render whose names differ from its source. okl's last hand-drawn diagram was retired
+  after it was found wrong in four places nothing checked.
 - **A snapshot takes no stamp from another branch** (#378). One store serves every branch, so
   `okl export --drift`, and the refresh after `okl verify`, wrote each lesson with its latest
   stamp, whichever branch it was made on. With stacked branches, a lesson checked on a later

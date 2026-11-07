@@ -1,30 +1,44 @@
 # How okl is built
 
 Four diagrams of the project itself. The [overview and anatomy](../README.md) sheets explain
-what okl does for you; these show how it is put together.
+what okl does for you; these show how it is put together, down to the files and functions.
 
-| Diagram | Shows | Kept current by |
-|---|---|---|
-| [What runs when](#what-runs-when) | each hook, tool and gate, the moment it fires and the command it runs | drawn; `ci/check-diagram-names.py` fails on a name the code no longer has |
-| [A lesson's life](#a-lessons-life) | every state a lesson moves through, and the command that moves it | drawn; the same check |
-| [Where lessons are stored](#where-lessons-are-stored) | the ways in, the client's choice of store, the backends | generated from the code |
-| [The code's layers](#the-codes-layers) | the modules, the one-way import contract, and every import | generated from the code |
+| Diagram | Shows |
+|---|---|
+| [Where the code lives](#where-the-code-lives) | the repo's folders, what each file in `src/okl/` does, and what `okl init` copies into your repo |
+| [What a command touches](#what-a-command-touches) | each command and hook, through the files and functions it runs, down to the store |
+| [What runs when](#what-runs-when) | each hook, tool and gate, the moment it fires, and whether it can stop you |
+| [A lesson's life](#a-lessons-life) | every state a lesson moves through, and the command that moves it |
 
-The generated ones are written by [`render_architecture.py`](render_architecture.py) from the
-source and `pyproject.toml`, as Mermaid source (`docs/architecture/*.mmd`) rendered to the SVG
-beside it, so they look the same in any viewer and theme. `tests/test_architecture.py` fails
-the suite when the code moves and they do not, a render included: run
-`python3 docs/render_architecture.py --svg` to bring them back (rendering needs Playwright; see
-[DEVELOPING.md](DEVELOPING.md)). The
-drawn ones are Excalidraw files under `docs/architecture/`. Open the `.excalidraw` in
-Excalidraw (excalidraw.com, or the VS Code extension), edit it, and export the `.svg` beside
-it. `ci/check-diagram-names.py` reads each source and its render, and fails CI on any
-command, flag, MCP tool, script or briefing mark they name that the code no longer has, on any
-word shaped like a hook event that `hooks/hooks.json` does not register, and on a render whose
-names differ from its source. It proves the names exist, not that the picture is right: a
-change of behaviour under an unchanged name is still review's to catch. okl's previous
-hand-drawn architecture diagram was retired after it was found wrong in four places that
-nothing checked; these two are checked.
+All four are Excalidraw files under `docs/architecture/`, each with the `.svg` render beside it,
+which is what this page shows: an image looks the same in any viewer and theme. To change one,
+open its `.excalidraw` in Excalidraw (excalidraw.com, or the VS Code extension), edit it, and
+export the `.svg` beside it.
+
+They are checked, not just drawn. `ci/check-diagram-names.py` reads each source and its render
+and fails CI on any command, flag, MCP tool, hook event, file, folder, function or briefing mark
+they name that the code no longer has (`core.check()` must be defined in `core.py`), and on a
+render whose names differ from its source. It proves the names exist, not that the picture is
+right: a change of behaviour under an unchanged name is still review's to catch. okl's previous
+hand-drawn architecture diagram was retired after it was found wrong in four places nothing
+checked.
+
+## Where the code lives
+
+`src/okl/` laid out by layer, top to bottom: the command line, the adapters (MCP, HTTP, seed
+packs, review), the client that picks the store, the core, the retrieval helpers, and the store.
+The thick arrows are the path every command takes. Below them, `scaffold/` and where each part
+lands in your repo; on the right, the rest of the repo, and which folders mirror which.
+
+<img src="architecture/okl-code-map.svg" alt="Where the code lives. Inside src/okl, the package pip installs: cli/, the command line, one file per kind of command: parser.py (every command and its flags), lessons.py (check, record, update, retire, recap, search, show), verification.py (verify, reverify, drift, export), install.py (init, connect, scaffold), packs.py (seed), health.py (doctor, metric, coverage), servers.py (serve, mcp), review.py, warm.py and embed.py. Below it the adapters: mcp_server.py (the MCP tools, okl mcp), service.py (the HTTP service, whose routes call core: okl serve), seed.py (loads a seed pack's lessons) and review.py. client.py picks the store: the service over HTTP when OKL_SERVICE_URL or service_url in .okl/config.json is set, otherwise this process, on OKL_DATABASE_URL or .okl/okl.db. Then core.py (check, the briefing, plus record, update, retire, verify and search), drift.py (stale lessons and the okl-drift.json snapshot) and recap.py (what a session touched). The briefing uses decide.py, semantic.py, rerank.py and warm.py when they are on. store.py keeps the lessons, their links and every check run in SQLite or Postgres, with full-text search; hub.py is the model cache. A thick arrow runs cli to client to core to store. Outside the layers: coexist.py, ownership.py, codeowners.py, protection.py, hygiene.py, bootstrap.py and scaffold_cmd.py. scaffold/ holds what okl init and okl scaffold copy into your repo: hooks/ to .claude/hooks/, git-hooks/pre-push to git's hooks folder, ci/okl-verify.yml to .github/workflows/, gates/, claude/ to .claude/, root/ to CLAUDE.md and AGENTS.md, profiles/ and plugin/. The rest of the repo: hooks/ and gates/, byte-identical mirrors of their scaffold copies; .github/workflows/ with ci.yml and okl-verify.yml; ci/, this repo's own checks; seed/, the starter packs; tests/; evals/ with REPORT.md and results/; docs/; examples/; .claude/ and .claude-plugin/; and at the root pyproject.toml and okl-drift.json." width="100%">
+
+## What a command touches
+
+One row per command or hook, left to right through `src/okl/cli/`, `client.py`, the core
+modules and `store.py`, naming the function at each step, with what else it touches on the
+right. Read a row to find where to start reading the code.
+
+<img src="architecture/okl-command-paths.svg" alt="What a command touches. okl check --task, the UserPromptSubmit hook: cli/lessons.py cmd_check() and _print_prompt_hook(), Client.check(), core.check() calling briefing_terms(), _live_hits() and _calibrated(), then store.search(); decide.py chooses who is briefed and semantic.py joins with --hybrid. okl check --path, the PostToolUse hook: cmd_check() and _print_file_hook(), Client.check() and _check_paths(), core.check_paths() calling governing(), store.all_nodes(). okl record, update and retire: cmd_record(), cmd_update(), cmd_retire(), the Client methods of the same names, core.record(), core.update(), core.retire(), store.add_node(). okl verify: verification.py cmd_verify() and _run_check(), Client.verify(), core.verify(), store.add_node() and store.log_check(), then _refresh_snapshot() and drift.branch_snapshot() write okl-drift.json. okl drift --gate, the pre-push hook and CI: cmd_drift(), Client.all_nodes(), drift.scan_drift() and drift.off_branch(), against store.all_nodes() or in CI the committed okl-drift.json, with a git diff of each lesson's files against the commit its check passed on. okl recap, the Stop hook: cmd_recap(), Client.all_nodes(), recap.recap() and recap.render(), store.all_nodes(), and git for what the session changed. okl mcp: servers.py cmd_mcp(), mcp_server.py's tools such as okl_check() and okl_record(), then the Client, core and store like the CLI. okl serve: cmd_serve(), service.py create_app() whose routes call core, then store.py; a Client with OKL_SERVICE_URL calls those routes over HTTP. okl init and okl seed: install.py cmd_init(), packs.py cmd_seed() and seed.seed_from_file(), Client.record(), core.record(), store.add_node(); init also copies src/okl/scaffold/ into your repo." width="100%">
 
 ## What runs when
 
@@ -41,25 +55,3 @@ Every state a lesson can be in, the command that moves it between them, and the 
 briefing prints for each, so the agent knows how far to trust what it is told.
 
 <img src="architecture/okl-lesson-states.svg" alt="A lesson's life. okl record makes a lesson UNCHECKED without --files (briefed as advice, drift has no verdict) or UNVERIFIED with --files (drift reports it never verified). okl seed lands a pack lesson the same way, or UNPROVEN when it carries a stamp with no observed run. From any of the three, okl verify with --run and --expect, when the check passes, makes it PROVEN: okl stamps the command, the commit and the time and keeps every run; okl update keeps the stamp unless --files changes. A failing check stamps nothing. When a file it governs changes after the check, it is STALE: the briefing marks it, the pre-push hook holds the push and CI fails the build. okl reverify passing, or the code going back to what passed, makes it PROVEN again; if the check fails, fix the code or change the lesson on purpose with okl update. From any state, okl retire makes it retracted by default (it was wrong, still briefed as AVOID), obsolete with --obsolete (no longer briefed) or superseded with --by (the briefing shows the replacement). Drift stops checking a retired lesson; a fixed defect is not retired, and okl update --status resolved keeps it briefed. Below, the marks as a briefing prints them: UNCHECKED, UNVERIFIED, STALE and AVOID (retracted)." width="100%">
-
-## Where lessons are stored
-
-<!-- generated:storage -->
-<img src="architecture/okl-storage.svg" alt="Where lessons are stored. The okl CLI (27 commands) and okl mcp, for any MCP agent (tools okl_check, okl_record, okl_search, okl_update, okl_retire, okl_get), both go through okl.client.Client. With OKL_SERVICE_URL, or service_url in .okl/config.json, the client calls okl serve (okl.service: 14 HTTP routes, OKL_TOKEN guarding all but /health), which uses okl.store.Store; otherwise the client uses the store in its own process. The store keeps lessons in SQLite (.okl/okl.db by default, or a sqlite:/// URL) or in Postgres when OKL_DATABASE_URL starts with postgres (the postgres extra)." width="100%">
-
-Its source, generated with it: [`okl-storage.mmd`](architecture/okl-storage.mmd).
-<!-- /generated:storage -->
-
-## The code's layers
-
-Higher layers import lower ones, never the reverse, and modules in the same layer must not
-import each other. `lint-imports` enforces it in CI. An arrow between two groups means some
-module in one imports some module in the other; inside a group, an arrow is one import.
-
-<!-- generated:layers -->
-Layer 1 (top), `cli`, imports from every group below, so it is left out of the chart.
-
-<img src="architecture/okl-layers.svg" alt="The code&#x27;s layers, left to right. layer 2: mcp_server, review, seed, service; layer 3: client; layer 4: recap; layer 5: core, drift; layer 6: decide, rerank, semantic, warm; layer 7: hub, store; outside the contract: bootstrap, codeowners, coexist, hygiene, ownership, protection, scaffold_cmd. Layer 2 imports from layer 3, layer 5, layer 6, layer 7, outside the contract. Layer 3 imports from layer 5, layer 6, layer 7. Layer 4 imports from layer 5, layer 7. Layer 5 imports from layer 6, layer 7, outside the contract. Layer 6 imports from layer 7. protection imports codeowners." width="100%">
-
-Its source, generated with it: [`okl-layers.mmd`](architecture/okl-layers.mmd).
-<!-- /generated:layers -->
