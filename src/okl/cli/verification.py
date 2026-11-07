@@ -174,13 +174,13 @@ def _refresh_snapshot(node: dict, why: str = "this verification") -> None:
                   "--allow-shrink` writes it anyway.", file=sys.stderr)
 
 
-def _warn_off_branch(client: Client, skip: str | None = None) -> None:
+def _warn_off_branch(client: Client, skip: str | None = None, snapshot: Path | None = None) -> None:
     """Name, on stderr, the lessons whose stamps sit on another branch's commit (#126).
 
     One store serves every branch, so a lesson verified on a sibling branch carries that
-    branch's commit here, and the snapshot written on this branch commits it. Said where
-    the snapshot is written, `okl verify` and `okl export --drift`, so nobody learns of it
-    from a red build on a branch whose files never changed.
+    branch's commit here. The snapshot written on this branch no longer takes that stamp
+    (#378); each line says what it holds instead, so the lesson is not dropped silently.
+    Said where the snapshot is written, `okl verify` and `okl export --drift`, and by drift.
     """
     from .. import drift
     try:
@@ -189,7 +189,23 @@ def _warn_off_branch(client: Client, skip: str | None = None) -> None:
         return
     items = [(n, c) for n, c in items if n.id != skip]
     if items:
-        print(drift.render_off_branch(items).lstrip("\n"), file=sys.stderr)
+        # The file just written, which `okl export --drift -o` may have put elsewhere.
+        snap = snapshot or _snapshot_path()
+        print(drift.render_off_branch(items, _snapshot_stamps(snap), snap.name).lstrip("\n"),
+              file=sys.stderr)
+
+
+def _snapshot_stamps(path: Path) -> dict[str, str | None] | None:
+    """Each rule's stamped commit in the snapshot file on disk, the one a refresh just wrote;
+    None when there is no snapshot to read, so the advisory says nothing about one."""
+    import json
+    try:
+        rules = json.loads(path.read_text(encoding="utf-8"))["rules"]
+        # Hand-editable: a commit that is not a string is read as none, not sliced.
+        return {r["id"]: c if isinstance(c := r.get("verified_commit"), str) else None
+                for r in rules}
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        return None
 
 
 _GENERIC_STEMS = {"src", "lib", "app", "main", "index", "test", "tests", "pages", "utils", "util",
@@ -414,11 +430,12 @@ class SnapshotShrinkError(Exception):
     """A refresh would take rules out of CI's gate that this store cannot account for (#213)."""
 
 
-def _committed_snapshot(path: Path) -> dict | None:
-    """The snapshot CI reads: the committed copy (an earlier refresh may already have changed
-    the file on disk), else the file itself when HEAD has none or there is no git; None only
-    when there is no snapshot at all. One that exists and cannot be read raises
-    SnapshotShrinkError: read as none, it let a partial store overwrite it (review on #310)."""
+def _committed_snapshot(path: Path) -> tuple[dict | None, bool]:
+    """The snapshot CI reads, and whether it is HEAD's: the committed copy (an earlier refresh
+    may already have changed the file on disk), else the file itself when HEAD has none or
+    there is no git; None only when there is no snapshot at all. One that exists and cannot
+    be read raises SnapshotShrinkError: read as none, it let a partial store overwrite it
+    (review on #310)."""
     import json
     import subprocess
     try:
@@ -434,7 +451,7 @@ def _committed_snapshot(path: Path) -> dict | None:
         text, where = r.stdout, "committed"
     elif r is None or any(a in r.stderr for a in absent):
         if not path.exists():
-            return None
+            return None, False
         text, where = path.read_text(encoding="utf-8"), "on disk"
     else:
         raise SnapshotShrinkError(f"the committed {path.name} could not be read ({r.stderr.strip()[:120]})")
@@ -445,7 +462,7 @@ def _committed_snapshot(path: Path) -> dict | None:
     if not isinstance(snap, dict) or not isinstance(snap.get("rules", []), list) \
             or not all(isinstance(r, dict) and isinstance(r.get("id"), str) for r in snap.get("rules", [])):
         raise SnapshotShrinkError(f"the {where} {path.name} is not a snapshot (each rule needs an id)")
-    return snap
+    return snap, where == "committed"
 
 
 def _shrink_problem(old: dict | None, new: dict, held: set[str]) -> str | None:
@@ -471,8 +488,16 @@ def _shrink_problem(old: dict | None, new: dict, held: set[str]) -> str | None:
 def _write_snapshot(client: Client, path: Path, *, allow_shrink: bool = False) -> int:
     from .. import drift
     nodes = client.all_nodes()
-    snap = drift.snapshot(nodes, client.repo)
-    why = None if allow_shrink else _shrink_problem(_committed_snapshot(path), snap, {n.id for n in nodes})
+    try:
+        committed, at_head = _committed_snapshot(path)
+    except SnapshotShrinkError:
+        if not allow_shrink:
+            raise
+        committed, at_head = None, False
+    # A stamp from another branch keeps the entry this branch COMMITTED, or stays out (#378).
+    # Never the file on disk's: an untracked one survives a branch switch, stamps and all.
+    snap = drift.branch_snapshot(nodes, client.repo, str(path.parent), committed if at_head else None)
+    why = None if allow_shrink else _shrink_problem(committed, snap, {n.id for n in nodes})
     if why:
         raise SnapshotShrinkError(why)
     path.write_text(drift.dump_snapshot(snap), encoding="utf-8")
@@ -499,11 +524,16 @@ def cmd_export(args: argparse.Namespace) -> int:
     if n == 0:
         # An empty snapshot would make CI report NOTHING CHECKED, which is honest, but
         # committing one is almost certainly a mistake worth saying so about.
-        print(f"wrote {path} with 0 rules — no rule in this store governs files "
-              "(`okl record ... --files <globs>` enrolls one)", file=sys.stderr)
+        from .. import drift
+        why = ("every rule that governs files was last verified on another branch, with no "
+               "entry committed here to keep (#378): `okl reverify` checks them on this branch"
+               if drift.off_branch(client.all_nodes(), client.repo, str(path.parent))
+               else "no rule in this store governs files (`okl record ... --files <globs>` enrolls one)")
+        print(f"wrote {path} with 0 rules — {why}", file=sys.stderr)
+        _warn_off_branch(client, snapshot=path)
         return 2
     print(f"wrote {path}: {n} rule(s). Commit it — CI's drift gate reads the committed copy.")
-    _warn_off_branch(client)
+    _warn_off_branch(client, snapshot=path)
     return 0
 
 
