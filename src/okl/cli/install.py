@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -352,34 +353,80 @@ _RAG_DEPS = ("langchain", "llama-index", "llama_index", "chromadb", "qdrant", "f
 _GEO_DEPS = ("rasterio", "geopandas", "gdal", "rslearn", "shapely", "xarray")
 
 
+_SKIP_DIRS = (".git", "node_modules", ".venv", "venv", "bin", "obj")
+# The root, then one and two folders down: a monorepo keeps its UI or its service a level or two
+# in (app/frontend-react/package.json), and reading the root alone never saw it (#375).
+_MAX_DEPTH = 2
+
+
+def _kept(root: Path, hit: Path) -> bool:
+    """Whether `hit` lies outside dependency folders and build output."""
+    return not any(part in _SKIP_DIRS for part in hit.relative_to(root).parts)
+
+
+def _manifests(root: Path, *names: str) -> list[Path]:
+    """Every file by one of `names`, the root's first, then one and two folders down, each depth
+    in path order. A skipped folder is never listed: globbing `*/*/package.json` walked every
+    package under node_modules/ only to drop it (CodeRabbit on #386)."""
+    found: list[Path] = []
+    level = [root]
+    for depth in range(_MAX_DEPTH + 1):
+        # All names together, so a/requirements.txt comes before z/pyproject.toml.
+        found += sorted(d / n for d in level for n in names if _readable(d / n))
+        if depth < _MAX_DEPTH:
+            level = sorted(c for d in level for c in _subfolders(d))
+    return found
+
+
+def _readable(p: Path) -> bool:
+    """Whether `p` is a file detection can read. In a folder it cannot open, is_file() raises
+    PermissionError (Python 3.11 ignores only "no such file"), and one bind-mounted database
+    folder (`data/postgres`, owned by the container's user) failed `okl init` outright; a
+    manifest it cannot read shows no stack."""
+    try:
+        return p.is_file() and os.access(p, os.R_OK)
+    except OSError:
+        return False
+
+
+def _subfolders(d: Path) -> list[Path]:
+    """The folders directly in `d` that detection reads, none of _SKIP_DIRS; none if unreadable."""
+    try:
+        return [c for c in d.iterdir() if c.is_dir() and c.name not in _SKIP_DIRS]
+    except OSError:
+        return []
+
+
+def _mentions(p: Path, deps: tuple[str, ...]) -> bool:
+    """Whether manifest `p` names any of `deps`, ignoring case; False if it cannot be read."""
+    try:
+        text = p.read_text(errors="ignore").lower()
+    except OSError:
+        return False
+    return any(d in text for d in deps)
+
+
 def _detect_stacks(root: Path) -> list[tuple[str, str]]:
-    """[(stack tag, the file that showed it)], strongest evidence first."""
+    """[(stack tag, the file that showed it)], strongest evidence first. Manifests are read at
+    the root and up to two folders down, the root first, so a root manifest is the one named
+    whenever it shows the stack; dependency folders and build output are skipped."""
     found: list[tuple[str, str]] = []
-
-    def first(patterns: tuple[str, ...]) -> Path | None:
-        for pat in patterns:
-            for hit in root.glob(pat):
-                if not any(part in (".git", "node_modules", ".venv", "venv", "bin", "obj")
-                           for part in hit.relative_to(root).parts):
-                    return hit
-        return None
-
-    dn = first(("*.sln", "*.slnx", "*.csproj", "*/*.csproj", "*/*/*.csproj"))
+    dn = next((hit for pat in ("*.sln", "*.slnx", "*.csproj", "*/*.csproj", "*/*/*.csproj")
+               for hit in sorted(root.glob(pat)) if _kept(root, hit)), None)
     if dn:
         found.append(("dotnet", dn.relative_to(root).as_posix()))
-    pkg = root / "package.json"
-    if pkg.is_file():
-        text = pkg.read_text(errors="ignore").lower()
-        found.append(("react" if '"react"' in text else "frontend", "package.json"))
-    py = next((root / f for f in ("pyproject.toml", "requirements.txt", "setup.py")
-               if (root / f).is_file()), None)
+    js = _manifests(root, "package.json")
+    if js:
+        react = next((p for p in js if _mentions(p, ('"react"',))), None)
+        found.append(("react", react.relative_to(root).as_posix()) if react
+                     else ("frontend", js[0].relative_to(root).as_posix()))
+    py = _manifests(root, "pyproject.toml", "requirements.txt", "setup.py")
     if py:
-        text = py.read_text(errors="ignore").lower()
-        found.append(("python", py.name))
-        if any(d in text for d in _RAG_DEPS):
-            found.append(("python-rag", py.name))
-        if any(d in text for d in _GEO_DEPS):
-            found.append(("geospatial", py.name))
+        found.append(("python", py[0].relative_to(root).as_posix()))
+        for tag, deps in (("python-rag", _RAG_DEPS), ("geospatial", _GEO_DEPS)):
+            hit = next((p for p in py if _mentions(p, deps)), None)
+            if hit:
+                found.append((tag, hit.relative_to(root).as_posix()))
     return found
 
 
@@ -950,7 +997,6 @@ def _git_hooks_dir(root: Path | None = None) -> tuple[Path | None, str]:
     outside `root` -- a global core.hooksPath, or the shared .git of a linked worktree --
     is refused: okl writes only inside the repo it was run in.
     """
-    import os
     import subprocess
     root = root or Path.cwd()
     try:

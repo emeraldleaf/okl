@@ -13,6 +13,14 @@
   log: its lookups are not counted as lessons shown to an agent (`okl metric`), and against a
   service the check request carries a new `log: false` field for that. `--format json` is for
   an agent.
+- **`okl init` detects a stack whose manifest sits a folder or two down** (#375). It read the
+  root's `package.json` and Python manifests only, so a monorepo with its UI in
+  `app/frontend-react/package.json` was never detected as `react`, and the frontend pack was
+  never offered. It now reads them up to two folders down, as it already did for `*.csproj`,
+  skipping `node_modules/`, virtualenvs and build output, and names the file that showed each
+  stack. A folder or manifest it cannot read, such as a database's bind-mounted data folder,
+  is stepped over, not a failed `init`. A root manifest is still the one named when it shows the stack. Only a first `init`
+  sets interests from detection; a configured repo keeps its list (#340).
 - **Architecture diagrams of okl itself** ([docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)),
   drawn in Excalidraw under `docs/architecture/` with an SVG render beside each: where the code
   lives (the repo's folders, what each file in `src/okl/` does, and what `okl init` copies into
