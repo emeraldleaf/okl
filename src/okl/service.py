@@ -9,6 +9,8 @@ Run: `okl serve` (or `uvicorn okl.service:app`).
 """
 from __future__ import annotations
 
+import hmac
+import logging
 import os
 import threading
 from typing import Any, Literal
@@ -182,7 +184,16 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901, PLR0915 - 
     # encoded body — its known defects, its retired identifiers, its architecture
     # decisions. That is a catalogue of where the org is weak, and it is exactly the
     # material the layer exists to collect. If you set a token, you want it private.
-    token = os.environ.get("OKL_TOKEN")
+    # An empty one is no token. It used to take the docs routes down while `_auth` let every
+    # request through, and compose's `${OKL_TOKEN:-}` hands a process exactly that (#371).
+    token = os.environ.get("OKL_TOKEN") or None
+    if token is None:
+        # Both entry points refuse this unless told otherwise (#371): `okl serve` off
+        # loopback, `module:app` on any address. What starts anyway was asked to, or runs on
+        # a laptop, and it still says so on every start.
+        logging.getLogger(__name__).warning(
+            "OKL: OKL_TOKEN is not set or is empty, so every route, GET /nodes included, is open to anyone "
+            "who can reach this service. Set it unless only this machine can (docs/DEPLOY.md §2).")
     # The same reasoning reaches the spec routes, and they were missed when the data
     # routes were closed: FastAPI serves /openapi.json, /docs and /redoc to anyone by
     # default, and no `_auth` call can protect them because the framework mounts them
@@ -204,7 +215,9 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901, PLR0915 - 
     _write = threading.Lock()
 
     def _auth(authorization: str | None) -> None:
-        if token and authorization != f"Bearer {token}":
+        # compare_digest, so the time a refusal takes says nothing of how much matched (#195);
+        # on bytes, because on str it raises for a header that is not ASCII, a 500 not a 401.
+        if token and not hmac.compare_digest((authorization or "").encode(), f"Bearer {token}".encode()):
             raise HTTPException(status_code=401, detail="missing or bad bearer token")
 
     @app.get("/health")
@@ -362,12 +375,35 @@ def __getattr__(name: str) -> FastAPI:
     if name == "app":
         global _app
         if _app is None:
+            _refuse_an_open_store()
             _app = create_app()
         return _app
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
-def run(host: str = "0.0.0.0", port: int = 8080) -> None:
-    """Serve the app with uvicorn. `create_app()` is called here, not at import."""
+def _refuse_an_open_store() -> None:
+    """Refuse to build `module:app` with no token, unless OKL_ALLOW_NO_TOKEN=1 (#371).
+
+    Only an ASGI host reaches `app`; `okl serve` builds its app in `run()` and refuses off
+    loopback itself. Here the bind address is out of sight, and `uvicorn okl.service:app
+    --host 0.0.0.0` is the form the deploy guide gives containers and platforms, so it
+    refuses on every address: a deploy that fails at startup beats one that serves the
+    whole store to anyone who can reach the port.
+    """
+    if os.environ.get("OKL_TOKEN") or os.environ.get("OKL_ALLOW_NO_TOKEN") == "1":
+        return
+    raise RuntimeError(
+        "OKL: refusing to build the app without OKL_TOKEN: every route, GET /nodes included, "
+        "would be open to anyone who can reach the port, and this entry point cannot see which "
+        "address it is bound to. Set OKL_TOKEN, or set OKL_ALLOW_NO_TOKEN=1 when only this "
+        "machine can reach it or a proxy in front authenticates (docs/DEPLOY.md §2).")
+
+
+def run(host: str, port: int = 8080) -> None:
+    """Serve the app with uvicorn. `create_app()` is called here, not at import.
+
+    No default host: `okl serve` refuses a host other than loopback when no token is set
+    (#371), and a caller that skips it should choose the address knowingly.
+    """
     import uvicorn
     uvicorn.run(create_app(), host=host, port=port)

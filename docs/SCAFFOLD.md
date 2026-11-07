@@ -39,20 +39,24 @@ They are complementary, not a package deal.
 export OKL_DATABASE_URL="sqlite:///path/to/okl.db"
 # a shared database when several repos need one store
 export OKL_DATABASE_URL="postgresql://user:pass@host/okl"
-okl serve --port 8080
+okl serve --port 8080   # off loopback it needs OKL_TOKEN: see the next section
 ```
 
 ## Run the shared service
 
 ```bash
 pip install "observed-knowledge-ledger[service]"
-OKL_DATABASE_URL="postgresql://user:pass@host/okl" OKL_TOKEN="a-shared-secret" okl serve
-# repos then: okl connect https://your-host --token a-shared-secret
+export OKL_TOKEN="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
+OKL_DATABASE_URL="postgresql://user:pass@host/okl" okl serve
+# repos then: okl connect https://your-host --token "$OKL_TOKEN"
 ```
 
 **Set `OKL_TOKEN`.** With it, every route requires the bearer token except `/health`
-(left open so schedulers can probe it). Without it, every route is open — including
-`GET /nodes`, which hands the whole store to anyone who can reach the port. A mature
+(left open so schedulers can probe it). Without it, every route would be open — including
+`GET /nodes`, which hands the whole store to anyone who can reach the port — so `okl serve`
+refuses to start off loopback, and `uvicorn okl.service:app` anywhere, unless you opt in:
+`okl serve` takes `--allow-no-token` or `OKL_ALLOW_NO_TOKEN=1`, and `uvicorn` only the
+variable. A mature
 store is a catalogue of your known defects and internal architecture, which is a map of
 where you are weak. It is a single shared secret with no per-repo scoping or rotation;
 put a real authenticating proxy in front if you need more.
