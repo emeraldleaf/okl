@@ -9,7 +9,9 @@
   review threads, each with the commit that resolved it (the one a reply names, or else the
   first after it to touch the file, marked as a guess) and the lessons a briefing on it already
   shows, and asks of each whether to encode it and where, printing the `okl record` and `okl
-  verify` commands that would. It reads through `gh` and writes nothing; `--format json` is for
+  verify` commands that would. It reads through `gh` and writes nothing, not even the briefing
+  log: its lookups are not counted as lessons shown to an agent (`okl metric`), and against a
+  service the check request carries a new `log: false` field for that. `--format json` is for
   an agent.
 - **Architecture diagrams of okl itself** ([docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)),
   drawn in Excalidraw under `docs/architecture/` with an SVG render beside each: where the code

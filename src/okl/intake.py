@@ -86,6 +86,13 @@ def summary_of(body: str) -> str:
     line of prose, without HTML comments, tags or a leading severity badge."""
     text = re.sub(r"<!--.*?-->", "", body, flags=re.S)
     text = re.sub(r"<[^>]+>", "", text)
+    # A title stands on a line of its own. Badges share one (**Major** · **Data Integrity &
+    # Integration** · **Heavy lift**), and a label can be four words long, so length alone took
+    # the label for the title on three findings of twelve real PRs.
+    for line in text.splitlines():
+        whole = re.fullmatch(r"\s*\*\*(.+?)\*\*\s*", line)
+        if whole and "**" not in whole.group(1) and len(whole.group(1).split()) >= 3:
+            return _clip(whole.group(1).strip(" ."))
     titles = [t.strip(" .") for t in re.findall(r"\*\*(.+?)\*\*", text)]
     # A CodeRabbit finding opens with badges (**Minor**, **Quick win**); its title is the
     # first bold phrase that is a sentence, not a label.
@@ -254,6 +261,8 @@ def fetch(number: int, repo: str | None = None) -> tuple[dict, Callable[[str], s
     if not repo:
         repo = json.loads(_gh("repo", "view", "--json", "nameWithOwner"))["nameWithOwner"]
     owner, _, name = (repo or "").partition("/")
+    if not owner or not name or "/" in name:
+        raise IntakeError(f"--repo takes OWNER/NAME, as gh does, not {repo!r}")
     pr, threads = _pages(THREADS_QUERY, "reviewThreads", owner, name, number)
     if not pr:
         raise IntakeError(f"no PR #{number} in {repo}")

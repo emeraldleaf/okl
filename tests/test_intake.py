@@ -211,3 +211,161 @@ def test_a_briefing_lookup_that_fails_is_said_not_read_as_nothing_covered(tmp_pa
     out = capsys.readouterr()
     assert "briefing lookup skipped" in out.err and "connection refused" in out.err
     assert "a briefing on it already shows" not in out.out
+
+
+# Real CodeRabbit finding bodies, as GitHub returned them on okl's own PRs (#388's thread
+# r4503411160 and #385's), trimmed after the title: the badge line names a category.
+CATEGORY_BADGES = (
+    "<!-- coderabbit-ai-generated:v1 -->\n\n"
+    '**<picture><img src="https://example.invalid/major-16.svg" alt=""></picture> Major** · '
+    "**Data Integrity & Integration** · **Heavy lift**\n\n"
+    "**Paginate the GraphQL connections or warn when they are truncated.**\n\n"
+    "The query uses `commits(first: 250)` and never reads `pageInfo`.")
+
+
+def test_a_category_badge_of_four_words_is_not_taken_for_the_title():
+    """The newer CodeRabbit format puts severity, category and effort in one line of bold
+    labels, and a category such as "Data Integrity & Integration" is four words long, so the
+    first four-word bold phrase was the category, not the finding: three of thirty findings on
+    twelve real PRs read as a label. The title is the bold phrase that stands on its own line."""
+    assert intake.summary_of(CATEGORY_BADGES) == "Paginate the GraphQL connections or warn when they are truncated"
+    assert intake.summary_of("**Maintainability & Code Quality** · **Quick win**\n\n**Pass the path on.**\n") \
+        == "Pass the path on"
+    # A title on the same line as its prose still comes from the bold phrase.
+    assert intake.summary_of("**Reject unknown function qualifiers.** They pass silently.") \
+        == "Reject unknown function qualifiers"
+
+
+@pytest.fixture
+def covered(tmp_path, monkeypatch):
+    """A configured repo whose store holds a lesson covering the price finding of PR 7."""
+    from okl.client import Client
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".okl").mkdir()
+    (tmp_path / ".okl" / "config.json").write_text(json.dumps({"repo": "r"}))
+    monkeypatch.setattr(intake, "fetch", lambda n, repo=None: (PR, _files_of()))
+    Client().record(id="price-from-catalogue", type="Defect", scope="repo",
+                    title="Never trust the price the client sends for an order",
+                    symptom="an order is saved with the client's price",
+                    fix="read the price from the catalogue on the server",
+                    triggers=["don't trust the client's price for an order"])
+    return Client()
+
+
+def test_a_finding_a_lesson_covers_names_it_and_the_lookup_is_not_logged(covered, capsys):
+    """The point of the lookup: a finding a lesson already covers names it, so it is refined with
+    okl update rather than recorded twice. And intake writes nothing: each lookup was logged as a
+    briefing, so every run counted lessons as shown to an agent that never saw them."""
+    from okl.cli import main
+    assert main(["intake", "pr", "7"]) == 0
+    out = capsys.readouterr().out
+    first = out.split("[2]")[0]
+    assert "a briefing on it already shows: [price-from-catalogue] Never trust the price" in first
+    assert "refine that one: okl update <id>" in first
+    assert covered._local_store().briefings("r") == []
+    covered.check("don't trust the client's price for an order")       # an agent's briefing still is
+    assert len(covered._local_store().briefings("r")) == 1
+
+
+def test_over_a_service_the_lookup_names_the_lesson_and_logs_no_briefing(remote, monkeypatch, capsys):
+    """The same through the real client against a service: the request says `log: false`, and
+    the service, which logs every briefing it answers (#129), logs none for it."""
+    from okl.cli import main
+    from okl.client import Client
+    monkeypatch.setattr(intake, "fetch", lambda n, repo=None: (PR, _files_of()))
+    Client().record(id="price-from-catalogue", type="Defect", scope="repo",
+                    title="Never trust the price the client sends for an order",
+                    symptom="an order is saved with the client's price",
+                    fix="read the price from the catalogue on the server",
+                    triggers=["don't trust the client's price for an order"])
+    assert main(["intake", "pr", "7"]) == 0
+    assert "already shows: [price-from-catalogue]" in capsys.readouterr().out
+    assert remote.store.briefings("r") == []
+    # The service honours it for a check by paths too, which no client sends unlogged yet.
+    assert remote.api.post("/check", json={"repo": "r", "paths": ["app/orders.py"], "log": False}).status_code == 200
+    assert remote.store.briefings("r") == []
+    Client().check("don't trust the client's price for an order")
+    assert len(remote.store.briefings("r")) == 1
+
+
+def test_gh_that_is_missing_fails_or_cannot_start_is_said_plainly(monkeypatch):
+    """Every way gh can fail is an IntakeError naming why: not installed, its own last line of
+    error on a non-zero exit (or "gh failed" when it says nothing), and an OS error or timeout."""
+    import subprocess
+    monkeypatch.setattr(intake.shutil, "which", lambda name: None)
+    with pytest.raises(intake.IntakeError, match="gh is not installed"):
+        intake._gh("api", "x")
+
+    monkeypatch.setattr(intake.shutil, "which", lambda name: "/usr/bin/gh")
+    outcomes = iter([
+        subprocess.CompletedProcess([], 1, "", "a warning first\nGraphQL: Could not resolve to a Repository\n"),
+        subprocess.CompletedProcess([], 1, "", ""),
+        OSError("exec format error"),
+        subprocess.TimeoutExpired("gh", 60),
+    ])
+
+    def run(*a, **k):
+        outcome = next(outcomes)
+        if isinstance(outcome, BaseException):
+            raise outcome
+        return outcome
+    monkeypatch.setattr(intake.subprocess, "run", run)
+    for expected in ("^GraphQL: Could not resolve to a Repository$", "^gh failed$",
+                     "gh did not run: exec format error", "gh did not run: .*timed out"):
+        with pytest.raises(intake.IntakeError, match=expected):
+            intake._gh("api", "x")
+
+
+def test_a_connection_that_never_ends_stops_at_the_page_cap(monkeypatch):
+    """A cursor that always has a next page (or none to give) is read to the cap and refused,
+    never looped on, and never shown as a whole list."""
+    monkeypatch.setattr(intake, "_MAX_PAGES", 3)
+    calls = []
+
+    def gh(*args):
+        calls.append(args)
+        conn = {"pageInfo": {"hasNextPage": True, "endCursor": None}, "nodes": []}
+        return json.dumps({"data": {"repository": {"pullRequest": {"number": 7, "reviewThreads": conn}}}})
+    monkeypatch.setattr(intake, "_gh", gh)
+    with pytest.raises(intake.IntakeError, match="more than 3 pages of reviewThreads"):
+        intake.fetch(7, "o/r")
+    assert len(calls) == 3
+
+
+@pytest.mark.parametrize("repo", ["okl", "o/", "/r", "o/r/x"])
+def test_a_repo_that_is_not_owner_slash_name_is_refused_before_gh_runs(monkeypatch, repo):
+    """`--repo okl` split into an owner and an empty name and came back as GitHub's own error."""
+    monkeypatch.setattr(intake, "_gh", lambda *a: pytest.fail("gh ran"))
+    with pytest.raises(intake.IntakeError, match="OWNER/NAME"):
+        intake.fetch(7, repo)
+
+
+def test_with_no_repo_gh_names_it_and_a_commits_files_are_read_once(monkeypatch):
+    """No --repo: the repo is the one gh sees here. A commit's changed files are asked of
+    GitHub once, however many threads ask about it."""
+    calls = []
+
+    def gh(*args):
+        calls.append(args)
+        if args[:2] == ("repo", "view"):
+            return json.dumps({"nameWithOwner": "acme/shop"})
+        if args[0] == "api" and args[1].startswith("repos/"):
+            return json.dumps({"files": [{"filename": "app/orders.py"}]})
+        key = "reviewThreads" if any("reviewThreads" in a for a in args) else "commits"
+        conn = {"pageInfo": {"hasNextPage": False}, "nodes": PR[key]["nodes"]}
+        return json.dumps({"data": {"repository": {"pullRequest": {"number": 7, "title": "t", key: conn}}}})
+    monkeypatch.setattr(intake, "_gh", gh)
+    _pr, files_of = intake.fetch(7)
+    assert all({"owner=acme", "name=shop"} <= set(a) for a in calls if a[:2] == ("api", "graphql"))
+    assert files_of(C1) == files_of(C1) == {"app/orders.py"}
+    assert sum(1 for a in calls if a[1] == f"repos/acme/shop/commits/{C1}") == 1
+
+
+def test_a_reply_naming_a_sha_from_no_commit_of_the_pr_falls_back_to_the_guess():
+    """A reply can name a commit of another branch, or a hex word that is no commit at all; only
+    a commit of this PR resolves the thread, so the guess is made as if no reply named one."""
+    t = PR["reviewThreads"]["nodes"][0]
+    reply = {**t["comments"]["nodes"][1], "body": "Fixed in deadbee, and see cafe123."}
+    pr = {**PR, "reviewThreads": {"nodes": [{**t, "comments": {"nodes": [t["comments"]["nodes"][0], reply]}}]}}
+    [f] = intake.findings(pr, _files_of())
+    assert f.commit == C3[:7] and f.found_how.startswith("a guess")

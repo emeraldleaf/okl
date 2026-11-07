@@ -36,7 +36,8 @@ def _add_nearest(found: list[intake.Finding]) -> None:
         return
     for f in found:
         try:
-            result = client.check(f.summary, limit=3)
+            # Not logged: no agent was briefed, so it is no exposure (`okl metric`).
+            result = client.check(f.summary, limit=3, log=False)
         except (OKLUnreachableError, OSError, ValueError) as e:
             # Said, so no finding reads as one nothing covers (CodeRabbit on #388).
             print(f"okl intake: briefing lookup skipped, the store could not be read ({e})",

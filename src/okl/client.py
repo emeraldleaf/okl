@@ -308,7 +308,7 @@ class Client:
             return self._post("/check", {**payload, "decision": "calibrated"})
 
     def check(self, task: str, repo: str | None = None, limit: int | None = None,
-              paths: list[str] | None = None) -> dict:
+              paths: list[str] | None = None, *, log: bool = True) -> dict:
         """The briefing for starting `task` in `repo` (default: this repo), as core.check returns it.
 
         With `paths`, the lessons that govern those files instead, as core.check_paths returns
@@ -316,6 +316,9 @@ class Client:
         as git takes it, relative to the working directory unless absolute, and made relative to
         this repo's root; one outside the repo is left out, since none of its lessons governs
         it, and listed under `outside_repo`.
+
+        The briefing is logged as exposure (`okl metric`); `log=False` asks for it unlogged, for
+        a caller that briefs no agent (okl intake). An older service ignores that and logs.
 
         Lessons whose governed code changed since their last check come back marked.
         Over a shared service, raises ValueError when the service rejects the request (any
@@ -332,6 +335,8 @@ class Client:
                    "rerank": self.rerank, "decision": self.decision}
         if limit is not None:
             payload["limit"] = limit
+        if not log:
+            payload["log"] = False
         if self.mode == "remote":
             result = self._post_check(payload)
             # An older service drops a request field it does not know and answers an ordinary
@@ -368,7 +373,7 @@ class Client:
         # not in core, because only the client has this repo's checkout: a shared service
         # answering /check has no git history to compare against.
         drift.annotate_briefing(result, repo, str(root))
-        if self.mode != "remote":
+        if self.mode != "remote" and log:
             # Over a shared service the service logs the briefing it answers; locally, the
             # client is the only one who sees it (#129). Logged after the drift marks, so
             # the log keeps which briefed lessons were stale at the time (#252).

@@ -20,8 +20,8 @@ okl intake pr <n>    # a PR's resolved review threads, each with the commit that
                      #   guess), the lessons a briefing on it already shows, the encoding-loop
                      #   question, and the okl record and okl verify commands that would encode it;
                      #   unresolved threads are left out. Reads through gh (--repo OWNER/NAME; default:
-                     #   the repo gh sees here); --format json for an agent; writes nothing; exit 2
-                     #   when gh cannot read the PR.
+                     #   the repo gh sees here); --format json for an agent; writes nothing, not
+                     #   even the briefing log `okl metric` reads; exit 2 when gh cannot read the PR.
 okl review           # opt-in: a model reads each lesson that governs no files and that no check
                      #   backs (the ones the briefing marks UNCHECKED) against the repo at HEAD,
                      #   in a scratch worktree, and reports each it questions (detail wrong,

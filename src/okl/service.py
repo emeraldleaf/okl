@@ -52,6 +52,8 @@ class CheckReq(BaseModel):
     # How candidates become a briefing (#291, REPORT §4w); a closed set, so an unknown value is a
     # 422 from validation rather than a 500 from inside check.
     decision: Literal["floor", "calibrated", "tiered"] = decide.DEFAULT
+    # False when the caller briefs no agent (okl intake), so the lookup counts as no exposure.
+    log: bool = True
 
 
 class RecordReq(BaseModel):
@@ -234,7 +236,8 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901, PLR0915 - 
             if not req.paths:
                 raise HTTPException(status_code=422, detail="no paths given: nothing was checked")
             result = core.check_paths(_store, req.repo, req.paths)
-            core.record_briefing(_store, req.repo, result)
+            if req.log:
+                core.record_briefing(_store, req.repo, result)
             return result
         if not req.task.strip():
             raise HTTPException(status_code=422, detail="give a task, or the paths of the files about to change")
@@ -242,7 +245,8 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901, PLR0915 - 
                             interests=req.interests, hybrid=req.hybrid, index=req.index,
                             near_misses=req.near_misses, rerank=req.rerank, decision=req.decision)
         # The service is the only party that sees every client's briefings (#129).
-        core.record_briefing(_store, req.repo, result)
+        if req.log:
+            core.record_briefing(_store, req.repo, result)
         return result
 
     @app.post("/record")
