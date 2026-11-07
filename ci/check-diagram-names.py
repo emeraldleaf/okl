@@ -164,11 +164,12 @@ def _tracked_dir(folder: str, files: set[str]) -> bool:
 
 
 def _defined(ref: str, functions: dict[str, set[str]]) -> bool:
-    """`name` defined anywhere under src/okl; `module.name` (or `Client.name`) defined in
-    that module, when a module by that name exists."""
+    """`name` defined anywhere under src/okl; `module.name` (or `Client.name`) defined in that
+    module. A qualifier that names no module fails: falling back to any module let a misspelt
+    `storex.check()` pass on core's check() (CodeRabbit on #385)."""
     module, _, name = ref.rpartition(".")
-    if module and module.lower() in functions:
-        return name in functions[module.lower()]
+    if module:
+        return name in functions.get(module.lower(), set())
     return any(name in defs for defs in functions.values())
 
 

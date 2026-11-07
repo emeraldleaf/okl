@@ -52,14 +52,15 @@ def test_the_name_check_fails_on_each_kind_of_name_the_code_lacks(tmp_path):
     bad = run(diagram("okl frobnicate", "okl check --no-such-flag", "okl_teleport", "PreCompact",
                       "UserPromptSubmitted", "stop-okl-encode2.sh", "gates/ghost.yml", "UNVANISHED",
                       "src/okl/nowhere.py", "src/okl/ghost/", "core.frobnicate()", "store.check()",
-                      "cmd_vanish()"))
+                      "cmd_vanish()", "storex.check()"))
     assert bad.returncode == 1, bad.stdout
     # A misspelt hook event fails as well as an unregistered one (CodeRabbit on #383), and a
-    # function qualified with a module must be defined in that module: store.py has no check().
+    # function qualified with a module must be defined in that module: store.py has no check(),
+    # and no module is called storex, though core defines check() (CodeRabbit on #385).
     for name in ("okl frobnicate", "--no-such-flag", "okl_teleport", "PreCompact",
                  "UserPromptSubmitted", "stop-okl-encode2.sh", "gates/ghost.yml", "UNVANISHED",
                  "src/okl/nowhere.py", "src/okl/ghost/", "core.frobnicate", "store.check",
-                 "cmd_vanish"):
+                 "cmd_vanish", "storex.check"):
         assert f"FAIL: {name}" in bad.stdout, (name, bad.stdout)
 
 
