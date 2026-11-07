@@ -528,6 +528,19 @@ class Store:
         self._impl.close()
 
 
+def backend_errors() -> tuple[type[Exception], ...]:
+    """What a backend raises when its database cannot be opened or read: sqlite3's errors,
+    and psycopg's where that optional extra is installed. Neither is an OSError, so a caller
+    that reports an unreadable store rather than failing, as doctor does, needs both
+    (CodeRabbit on #380)."""
+    import sqlite3
+    try:
+        import psycopg
+    except ImportError:
+        return (sqlite3.Error,)
+    return (sqlite3.Error, psycopg.Error)
+
+
 @runtime_checkable
 class _Backend(Protocol):
     """What a storage backend must provide.

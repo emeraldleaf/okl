@@ -120,7 +120,7 @@ Loading the rules, ADRs and specs you already wrote, and the bundled packs, is
 
 ```bash
 okl check --task "add an endpoint that returns an order for the logged-in user"
-okl doctor                  # flags other memory tools, double wiring, and where drift is gated
+okl doctor                  # flags other memory tools, double wiring, where drift is gated, and what your interests hide
 ```
 
 [^name]: The PyPI name differs because PyPI refuses `okl` as confusable with `oki`; everything you type afterwards is `okl`.

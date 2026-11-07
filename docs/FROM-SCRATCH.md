@@ -755,8 +755,9 @@ you send the prompt.
 the snapshot. The pre-push hook holds the push until it is done.
 
 **Now and then:**
-- `okl doctor` reports what else is installed beside okl and where drift is gated, and, after
-  `okl init --owner`, whether GitHub enforces the owner's approval of the thesis.
+- `okl doctor` reports what else is installed beside okl and where drift is gated, after
+  `okl init --owner` whether GitHub enforces the owner's approval of the thesis, and which
+  org lessons the repo's interests keep out of its briefings.
 - `okl metric` reports how often a known defect comes back after its lesson exists, and which
   lessons are never shown or most often shown unchecked.
 - `okl triggers` lists lessons that cannot yet be found.

@@ -13,7 +13,7 @@ import functools
 import os
 import re
 from collections import Counter
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import Any
@@ -2011,6 +2011,39 @@ def _proven(n: Node) -> bool:
                                "verified_commit": n.verified_commit})
 
 
+# Retired so that no briefing shows them, as `exposure_report` and `hidden_by_interests` both
+# count: a retracted lesson is retired too, but it is still briefed, as AVOID.
+_UNBRIEFED = frozenset({"superseded", "obsolete"})
+
+# The subjects okl's portable lessons are filed under. `okl init` adds them to the
+# interests it detects; a list set without them hides those lessons from every briefing.
+DEFAULT_INTERESTS = frozenset({"security", "method"})
+
+
+def hidden_by_interests(nodes: Iterable[Node], repo: str, interests: list[str] | None) -> list[Node]:
+    """The org lessons `repo`'s interests alone keep out of its briefings, by id (#374).
+
+    The subject filter in _in_scope and nothing else: a lesson `applies_to` rules out was
+    excluded on purpose, so it is not hidden, and a superseded or obsolete lesson or a
+    vocabulary entry is nothing a briefing would show. A retracted one is: it is briefed
+    as AVOID, so it counts. Empty with no interests, which filter nothing. A list set
+    before a default subject existed kept that subject's lessons out silently, and the
+    metric, which counts only what the filter passes, never mentioned them.
+    """
+    if not interests:
+        return []
+    repo_scope = f"repo:{repo}"
+    wanted = {t.strip().lower() for t in interests if t.strip()}
+
+    def applies_here(n: Node) -> bool:
+        applies = split_tags(n.applies_to) - {"any"}
+        return not applies or bool(applies & wanted)
+
+    return sorted((n for n in nodes if n.scope == "org" and n.type not in _NOT_ADVICE
+                   and n.status not in _UNBRIEFED and applies_here(n)
+                   and not _in_scope(n, repo_scope, interests)), key=lambda n: n.id)
+
+
 def exposure_report(store: Store, repo: str, interests: list[str] | None = None,
                     top: int = 10) -> dict[str, Any]:
     """Which of the lessons `repo` can be briefed its briefings have actually shown (#129).
@@ -2025,11 +2058,12 @@ def exposure_report(store: Store, repo: str, interests: list[str] | None = None,
     """
     logged = store.briefings(repo)
     repo_scope = f"repo:{repo}"
+    nodes = store.all_nodes()
     # Superseded and obsolete lessons are retired: no briefing is meant to show them, so
     # "never shown" would offer them for review again (review of okl R2).
-    reachable = [n for n in store.all_nodes()
+    reachable = [n for n in nodes
                  if n.type not in _NOT_ADVICE and _in_scope(n, repo_scope, interests)
-                 and n.status not in ("superseded", "obsolete")]
+                 and n.status not in _UNBRIEFED]
     times = Counter(i for b in logged for i in b.node_ids)
 
     def row(n: Node) -> dict[str, Any]:
@@ -2045,6 +2079,9 @@ def exposure_report(store: Store, repo: str, interests: list[str] | None = None,
         "first_at": logged[0].at if logged else None,
         "last_at": logged[-1].at if logged else None,
         "reachable": len(reachable),
+        # Left out of `reachable`, so of every figure here, and said beside it: a count the
+        # report leaves out is one nobody asks about (#374).
+        "hidden_by_interests": len(hidden_by_interests(nodes, repo, interests)),
         "shown": len(shown),
         "never_shown_count": len(never),
         "never_shown": [row(n) for n in never[:top]],

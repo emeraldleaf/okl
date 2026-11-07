@@ -4,7 +4,9 @@ from __future__ import annotations
 import argparse
 import contextlib
 import json
+import os
 import sys
+from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -20,8 +22,10 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     twice) -- findings,
     per the CLI contract -- and 0 when neither is. It reads settings files, asks git where
     its hooks live, and, where `okl init --owner` set an owner, asks GitHub through gh whether
-    the owner's approval is enforced (a few reads; informational, not a finding). It changes
-    nothing.
+    the owner's approval is enforced (a few reads; informational, not a finding). Where a
+    store exists it reads its lessons, to say which the interests keep out of briefings
+    (#374): informational too. It writes nothing, beyond the schema upgrade any command
+    makes when it opens an older store.
     """
     from .. import coexist
     cfg = _find_config()
@@ -48,7 +52,67 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     owners = _owner_state(root, recorded if isinstance(recorded, dict) else {})
     if owners:
         print(owners)
+    for line in _interest_lines(Client()):
+        print(line)
     return 1 if (found or twice) else 0
+
+
+def _interest_lines(client: Client, *, say_unread: bool = True, shown: int = 5) -> list[str]:
+    """What this repo's interests keep out of its briefings (#374), for doctor and init.
+
+    Informational, as the interest list is a choice a re-run of init keeps (#340). That is
+    also why a later default never reached a repo set up before it, and nothing said so.
+    Silent with no store to read, since reading one would create it. A store that cannot
+    be read, refused or unreachable, gets one line saying so with `say_unread`, so silence
+    never stands for "nothing hidden"; never an error, since the command already did its job.
+    """
+    from .. import core
+    from ..client import OKLRejectedError
+    from ..store import backend_errors, split_tags
+    if not client.configured or not client.interests or _no_store_yet(client):
+        return []
+    # Refused, unreachable, or the database itself: a corrupt file, a Postgres server down.
+    unreadable: tuple[type[Exception], ...] = (OKLUnreachableError, OKLRejectedError, OSError,
+                                               *backend_errors())
+    try:
+        hidden = core.hidden_by_interests(client.all_nodes(), client.repo, client.interests)
+    except unreadable as e:
+        why = (str(e).strip().splitlines() or [type(e).__name__])[0]
+        return [f"\n• what this repo's interests hide: not reported, the store could not be read ({why})"] \
+            if say_unread else []
+    if not hidden:
+        return []
+    have = {t.strip().lower() for t in client.interests}
+    missing = sorted(core.DEFAULT_INTERESTS - have)
+    lines = [f"\n• this repo's interests ({', '.join(client.interests)}) keep {len(hidden)} org "
+             "lesson(s) out of every briefing"]
+    if missing:
+        revealed = sum(1 for n in hidden if split_tags(n.tags) & set(missing))
+        lines.append(f"  okl's default subject(s) {', '.join(missing)} are not among them, and would "
+                     f"show {revealed} of these: okl init --interests {','.join(sorted(have | set(missing)))}")
+    subjects = Counter(t for n in hidden for t in split_tags(n.tags))
+    lines.append("  their subjects: " + ", ".join(f"{t} ({c})" for t, c in subjects.most_common(6)))
+    if not missing:
+        lines.append(f"  to brief one, add its subject: okl init --interests {','.join(sorted(have))},<subject>")
+    # The ones a missing default would bring back first: they are what the offer is about.
+    first = sorted(hidden, key=lambda n: (not split_tags(n.tags) & set(missing), n.id))
+    lines += [f"  [{n.id}] {n.title}" for n in first[:shown]]
+    if len(hidden) > shown:
+        lines.append(f"  … and {len(hidden) - shown} more")
+    return lines
+
+
+def _no_store_yet(client: Client) -> bool:
+    """Whether this repo's local SQLite store does not exist, so a read would create it."""
+    if client.mode == "remote":
+        return False
+    url = os.environ.get("OKL_DATABASE_URL")
+    if not url:   # empty is unset, as Client._local_store reads it
+        cfg = _find_config()
+        return cfg is None or not (cfg.parent / "okl.db").exists()
+    if url.startswith("sqlite:///") and url != "sqlite:///:memory:":
+        return not Path(url.removeprefix("sqlite:///")).exists()
+    return False
 
 
 def _owner_state(root: Path, cfg: dict) -> str:
@@ -174,6 +238,14 @@ def _print_hygiene(report: dict | None) -> None:
             print(f"  [{r['id']}] {r['title']} — {'; '.join(r['signals'])}")
 
 
+def _print_hidden(report: dict) -> None:
+    # Outside every figure above, so said beside them (#374). A service older than the count
+    # sends no key, and then nothing is claimed either way.
+    if report.get("hidden_by_interests"):
+        print(f"kept out by this repo's interests, so in none of the exposure figures: "
+              f"{report['hidden_by_interests']} org lesson(s); `okl doctor` names them")
+
+
 def _print_exposure(report: dict | None) -> None:
     """The briefing-exposure lines of `okl metric` (#129), led by what they cover."""
     if report is None:
@@ -185,11 +257,13 @@ def _print_exposure(report: dict | None) -> None:
         # list of every lesson as "never shown".
         print("\nbriefings logged: none yet, so which lessons get shown is not reported. "
               "The log fills as okl check runs (OKL_BRIEFING_LOG=0 turns it off).")
+        _print_hidden(report)
         return
     since = datetime.fromtimestamp(report["first_at"] / 1000, tz=UTC).date()
     print(f"\nbriefings logged: {n} since {since} — the figures below cover only these")
     print(f"lessons this repo can be briefed: {report['reachable']} — shown at least once: "
           f"{report['shown']}, never shown: {report['never_shown_count']}")
+    _print_hidden(report)
     if report["never_shown"]:
         print("  never shown, oldest first (review or retire?):")
         for r in report["never_shown"]:

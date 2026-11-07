@@ -3435,6 +3435,172 @@ def test_metric_reports_briefing_exposure_with_its_coverage(tmp_path, monkeypatc
     assert data["exposure"]["briefings"] == 2 and "armed" in data
 
 
+def test_hidden_by_interests_is_the_subject_filter_alone():
+    """The lessons a repo's interests keep out are the ones the subject filter drops (#374):
+    not one `applies_to` rules out, which was excluded on purpose, nor a superseded or
+    obsolete lesson or a vocabulary entry, which no briefing would show either way. A
+    retracted lesson is still briefed, as AVOID, so it counts (review of #374)."""
+    s = Store("sqlite:///:memory:")
+    hidden = core.record(s, type="Rule", title="test that each route checks who may call it",
+                         scope="org", tags="security")
+    anywhere = core.record(s, type="Rule", title="a security rule valid on any stack", scope="org",
+                           tags="security", applies_to="any")
+    retracted = core.record(s, type="Rule", title="a retracted security rule", scope="org", tags="security")
+    core.retire(s, retracted, "wrong")
+    core.record(s, type="Rule", title="pin the interpreter version", scope="org", tags="python")
+    core.record(s, type="Rule", title="untagged reaches every repo", scope="org")
+    core.record(s, type="Rule", title="a dotnet-only security rule", scope="org", tags="security",
+                applies_to="dotnet")
+    gone = core.record(s, type="Rule", title="a retired security rule", scope="org", tags="security")
+    core.retire(s, gone, "wrong", obsolete=True)
+    core.record(s, type="Vocabulary", title="security", scope="org", tags="security")
+    core.record(s, type="Rule", title="another repo's own rule", scope="repo:other", tags="security")
+
+    # ASSERT (1) — only the org lessons whose subjects are all outside the list, `applies_to:
+    # any` and the retracted one among them, and the retracted one is what a briefing shows.
+    assert [n.id for n in core.hidden_by_interests(s.all_nodes(), "r", ["python"])] == sorted(
+        [hidden, anywhere, retracted])
+    assert next(n for n in s.all_nodes() if n.id == retracted).status == "retracted"
+    assert retracted in json.dumps(core.check(s, "r", "a retracted security rule",
+                                              interests=["python", "security"])), "a briefing shows it"
+    # ASSERT (2) — no interests filter nothing, and a list that names the subject hides nothing.
+    assert core.hidden_by_interests(s.all_nodes(), "r", None) == []
+    assert core.hidden_by_interests(s.all_nodes(), "r", ["python", "Security"]) == []
+
+
+def test_doctor_init_and_metric_say_what_the_interests_hide(tmp_path, monkeypatch, capsys):
+    """A repo configured before `security` and `method` became default interests keeps its
+    list through every re-run of init (#340), so the lessons filed under them never reached
+    its briefings, among them the authorization ones, and its metric, which counts only what
+    the filter passes, never said. Doctor, a re-run of init and the metric now say so, and
+    the list stays the repo's choice (#374)."""
+    import subprocess
+
+    from okl.cli import main
+    from okl.client import Client, load_config
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+    subprocess.run(["git", "init", "-q", "."], check=True)
+    assert main(["init", "--repo", "r", "--no-claude", "--no-seed", "--no-ci", "--interests", "python"]) == 0
+    # Ids chosen so the frontend lesson sorts first by id: listing the security one first is
+    # then the ordering's doing, not the ids'.
+    frontend = Client().record(type="Rule", title="a form label for every input", scope="org",
+                               tags="frontend", id="a-form-label")
+    hidden = Client().record(type="Rule", title="test that each route checks who may call it",
+                             scope="org", tags="security", id="z-route-authz-test")
+    Client().record(type="Rule", title="pin the interpreter version", scope="org", tags="python")
+    capsys.readouterr()
+
+    # ACT / ASSERT (1) — doctor names both, the defaults it lacks and the command, and counts
+    # only the one a default would bring back, listing it first.
+    main(["doctor"])
+    out = capsys.readouterr().out
+    assert "keep 2 org lesson(s) out of every briefing" in out, out
+    assert "method, security are not among them, and would show 1 of these" in out, out
+    assert "okl init --interests method,python,security" in out, out
+    assert "their subjects: " in out and "security (1)" in out and "frontend (1)" in out, out
+    assert out.index(f"[{hidden}]") < out.index(f"[{frontend}]"), out
+
+    # ACT / ASSERT (2) — a re-run of init says the same and leaves the list as it was.
+    assert main(["init", "--no-claude", "--no-seed", "--no-ci"]) == 0
+    out = capsys.readouterr().out
+    assert "keep 2 org lesson(s) out of every briefing" in out, out
+    assert load_config()["interests"] == ["python"]
+
+    # ACT / ASSERT (3) — the metric counts it beside the figures that leave it out, before
+    # any briefing and after one.
+    assert main(["metric"]) == 0
+    assert "kept out by this repo's interests, so in none of the exposure figures: 2 org lesson(s)" \
+        in capsys.readouterr().out
+    assert main(["check", "--task", "pin the interpreter version", "--format", "hook"]) == 0
+    capsys.readouterr()
+    assert main(["metric"]) == 0
+    out = capsys.readouterr().out
+    assert "briefings logged: 1 since" in out and "in none of the exposure figures: 2 org lesson(s)" in out, out
+    assert main(["metric", "--format", "json"]) == 0
+    assert json.loads(capsys.readouterr().out)["exposure"]["hidden_by_interests"] == 2
+
+    # ACT / ASSERT (4) — with both defaults the security lesson is back, and the frontend one
+    # is still out: no default to offer, so the line says how to add a subject instead.
+    assert main(["init", "--no-claude", "--no-seed", "--no-ci", "--interests", "python,security,method"]) == 0
+    capsys.readouterr()
+    main(["doctor"])
+    out = capsys.readouterr().out
+    assert "keep 1 org lesson(s) out of every briefing" in out and f"[{frontend}]" in out, out
+    assert "default subject" not in out and f"[{hidden}]" not in out, out
+    assert "okl init --interests method,python,security,<subject>" in out, out
+
+    # ACT / ASSERT (5) — once the list names every subject, nothing is said.
+    assert main(["init", "--no-claude", "--no-seed", "--no-ci", "--interests", "python,security,method,frontend"]) == 0
+    capsys.readouterr()
+    main(["doctor"])
+    assert "out of every briefing" not in capsys.readouterr().out
+
+
+def test_what_the_interests_hide_never_fails_a_command_or_creates_a_store(tmp_path, monkeypatch, capsys):
+    """Doctor and init report what the interests hide only as information (#374). A store
+    that refuses the read (a 401 from a service whose token is not set yet) or cannot be
+    reached must not turn a finished init, or doctor's 0-or-1 contract, into exit 2; doctor
+    says it could not read rather than staying silent, which reads as "nothing hidden"; and
+    a repo whose store does not exist yet must not get one from doctor (review of #374)."""
+    import subprocess
+
+    from okl.cli import main
+    from okl.client import Client, OKLRejectedError, OKLUnreachableError
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+    subprocess.run(["git", "init", "-q", "."], check=True)
+    assert main(["init", "--repo", "r", "--no-claude", "--no-seed", "--no-ci", "--interests", "python"]) == 0
+    capsys.readouterr()
+
+    # ASSERT (1) — refused, unreachable, or a Postgres store that is down (psycopg's errors are
+    # not OSError; a stand-in, as psycopg is an optional extra): doctor keeps its exit code and
+    # says why; init passes. A context rather than `monkeypatch.undo()`, which reverts all set
+    # through the fixture, HOME and the cwd too (and conftest's store protections, until they
+    # had their own: CodeRabbit on #380).
+    import sys
+    import types
+
+    class PgError(Exception):
+        pass
+    with monkeypatch.context() as m:
+        m.setitem(sys.modules, "psycopg", types.SimpleNamespace(Error=PgError))
+        for err in (OKLRejectedError("rejected (401): missing or bad bearer token", status=401),
+                    OKLUnreachableError("service unreachable: connection refused"),
+                    PgError("connection failed: server closed the connection unexpectedly")):
+            def refuse(self, _err=err):
+                raise _err
+            m.setattr(Client, "all_nodes", refuse)
+            assert main(["doctor"]) in (0, 1)
+            out = capsys.readouterr().out
+            assert "what this repo's interests hide: not reported, the store could not be read" in out, out
+            assert str(err).splitlines()[0] in out, out
+            assert main(["init", "--no-claude", "--no-seed", "--no-ci"]) == 0
+            assert "could not be read" not in capsys.readouterr().out
+
+    # ASSERT (2) — a corrupt store is one that cannot be read, not a traceback.
+    db = tmp_path / ".okl" / "okl.db"
+    db.write_bytes(b"not a database " * 100)
+    assert main(["doctor"]) in (0, 1)
+    assert "the store could not be read" in capsys.readouterr().out
+
+    # ASSERT (3) — no store yet: doctor reads nothing, so it creates nothing, with
+    # OKL_DATABASE_URL unset or empty (the client reads empty as unset; review on #380).
+    db.unlink()
+    for url in (None, ""):
+        if url is None:
+            monkeypatch.delenv("OKL_DATABASE_URL", raising=False)
+        else:
+            monkeypatch.setenv("OKL_DATABASE_URL", url)
+        assert main(["doctor"]) in (0, 1)
+        assert not db.exists(), f"doctor created a store with OKL_DATABASE_URL={url!r}"
+        assert "interests" not in capsys.readouterr().out
+
+    # ASSERT (4) — init against a service does not download the store for this; doctor does.
+    monkeypatch.setattr(Client, "all_nodes", lambda self: pytest.fail("init read a remote store"))
+    assert main(["init", "--service", "http://okl.invalid", "--no-claude", "--no-seed", "--no-ci"]) == 0
+
+
 def test_remote_exposure_is_unknown_on_an_older_service_but_never_hides_a_refusal(monkeypatch):
     """A service without /metric/exposure (404) makes exposure unknown; any other refusal,
     such as a 401, must still surface rather than read as "no data"."""
@@ -4303,3 +4469,15 @@ def test_the_suite_is_deaf_to_a_real_store_named_in_the_environment(store):
     a "throwaway" Client would land in the real store. Here it lands in a temp one."""
     import os
     assert all(v not in os.environ for v in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN"))
+
+
+def test_a_tests_own_undo_keeps_the_suite_deaf_to_a_real_store(monkeypatch):
+    """`monkeypatch.undo()` reverts every change made through that fixture. conftest's
+    protections went through the same one, so a test that called it got a developer's exported
+    store back for the rest of its body (CodeRabbit on #380). They have their own now."""
+    import os
+    socket = os.environ["OKL_WARM_SOCKET"]
+    monkeypatch.setenv("OKL_DATABASE_URL", "sqlite:///never-written.db")
+    monkeypatch.undo()
+    assert "OKL_DATABASE_URL" not in os.environ
+    assert os.environ.get("OKL_WARM_SOCKET") == socket

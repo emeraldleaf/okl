@@ -45,7 +45,9 @@ okl init --repo shop
   the subjects its briefings cover — to that stack plus `security` and `method`. To choose
   your own, pass `--interests` from this list: `agent-safety data-quality dotnet
   eval-integrity frontend geospatial messaging method prose python python-rag react
-  retrieval-design security`.
+  retrieval-design security`. A later `okl init` keeps the list you have, so a subject that
+  became a default after you set it never joins: `okl init` and `okl doctor` say how many
+  org lessons the list keeps out of your briefings, and which default subjects it lacks.
 - **It fills the store** with 20 starter lessons that hold on almost any codebase (web
   security, CI, docs, verification) plus the bundled packs for your stack, so your very
   first prompt is briefed. `--no-seed` leaves it empty.

@@ -13,6 +13,7 @@ import re
 import sys
 from pathlib import Path
 
+from .. import core
 from ..client import Client, _find_config, load_config, save_config
 from .packs import _empty_store_guidance, _seed_first_run
 
@@ -620,7 +621,7 @@ def _init_interests(cfg: dict, args: argparse.Namespace) -> None:
         # are added because the portable lessons are filed under them.
         stacks = _detect_stacks(Path.cwd())
         if stacks:
-            cfg["interests"] = sorted({t for t, _ in stacks} | {"security", "method"})
+            cfg["interests"] = sorted({t for t, _ in stacks} | core.DEFAULT_INTERESTS)
             print("• detected " + ", ".join(f"{t} ({f})" for t, f in stacks)
                   + " — interests set; pass --interests to choose your own")
 
@@ -670,6 +671,12 @@ def cmd_init(args: argparse.Namespace) -> int:
         _seed_first_run(Client())
     for line in _empty_store_guidance(Client()):
         print(line)
+    # A kept interest list (#340) never gains a later default, so say what it hides (#374).
+    # Local only, as the steps above: a remote store is a download, and doctor reports it.
+    from .health import _interest_lines
+    if Client().mode != "remote":
+        for line in _interest_lines(Client(), say_unread=False):
+            print(line)
     # Said at install time, the one moment someone is reading okl's output and deciding
     # what to wire. Informational here: init succeeded; `okl doctor` is the re-runnable check.
     from .. import coexist
