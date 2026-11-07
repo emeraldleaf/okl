@@ -51,7 +51,7 @@ dev = [
   # plausible-looking guess: an invented version 404s the install step.
   # mypy moved to the version Dependabot proposed in #139, run green here on 2026-10-10;
   # pytest 9.2.0 and ruff 0.17.3 (Dependabot's #313, applied in #338) on 2026-11-02.
-  "pytest==9.2.0", "pytest-cov==7.1.0", "ruff==0.17.3", "mypy==2.4.0",
+  "pytest==9.2.0", "pytest-cov==7.1.0", "ruff==0.17.3", "mypy==2.4.1",
   "import-linter==2.15",  # verified on PyPI 2026-10-04 (released 2026-09-04)
   # CI installs with `uv sync --locked`, which fails when uv.lock disagrees with this file:
   # uv.lock is what `uv sync` builds, and it drifted from this file for weeks with nothing
