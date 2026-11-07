@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- **`okl intake pr <n>`: a PR's resolved review findings, put to the encoding loop** (#376).
+  The Stop hook asks what a session learned, and nothing else asked at all: a finding a
+  reviewer made on a PR reached the store only when the agent that fixed it recorded it by
+  hand, and a PR no session opened was never asked. `okl intake pr <n>` lists the PR's resolved
+  review threads, each with the commit that resolved it (the one a reply names, or else the
+  first after it to touch the file, marked as a guess) and the lessons a briefing on it already
+  shows, and asks of each whether to encode it and where, printing the `okl record` and `okl
+  verify` commands that would. It reads through `gh` and writes nothing, not even the briefing
+  log: its lookups are not counted as lessons shown to an agent (`okl metric`), and against a
+  service the check request carries a new `log: false` field for that. `--format json` is for
+  an agent.
 - **`okl init` detects a stack whose manifest sits a folder or two down** (#375). It read the
   root's `package.json` and Python manifests only, so a monorepo with its UI in
   `app/frontend-react/package.json` was never detected as `react`, and the frontend pack was
