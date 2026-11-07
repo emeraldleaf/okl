@@ -9,6 +9,7 @@ import dataclasses
 import importlib.util
 import json
 import os
+import sys
 from datetime import UTC
 from pathlib import Path
 from urllib import request as _req
@@ -4480,6 +4481,29 @@ def test_stack_detection_never_lists_a_skipped_folder(tmp_path, monkeypatch):
 
     assert dict(_detect_stacks(tmp_path)) == {"frontend": "web/package.json"}
     assert "node_modules" not in opened and ".venv" not in opened, opened
+
+
+@pytest.mark.skipif(sys.platform == "win32" or os.geteuid() == 0, reason="root reads any file")
+def test_stack_detection_steps_over_what_it_cannot_read(tmp_path):
+    """A folder it cannot open (a bind-mounted database's, owned by the container's user) made
+    is_file() raise PermissionError, and `okl init` failed; a manifest it cannot read is no
+    evidence of a stack. Real permissions, not a stub: is_file()'s own handling is the point."""
+    from okl.cli.install import _detect_stacks, _mentions
+    (tmp_path / "web").mkdir()
+    (tmp_path / "web" / "package.json").write_text('{"dependencies": {"react": "18"}}')
+    (tmp_path / "data" / "postgres").mkdir(parents=True)
+    (tmp_path / "data" / "postgres" / "pyproject.toml").write_text("[project]")
+    (tmp_path / "data" / "postgres" / "pyproject.toml").chmod(0)       # unreadable file
+    (tmp_path / "locked").mkdir()
+    (tmp_path / "locked" / "package.json").write_text("{}")
+    (tmp_path / "locked").chmod(0)                                       # unopenable folder
+    try:
+        assert dict(_detect_stacks(tmp_path)) == {"react": "web/package.json"}
+        # read between the listing and the read (it changed hands): it shows nothing
+        assert not _mentions(tmp_path / "data" / "postgres" / "pyproject.toml", ("project",))
+    finally:
+        (tmp_path / "locked").chmod(0o755)
+        (tmp_path / "data" / "postgres" / "pyproject.toml").chmod(0o644)
 
 
 def test_every_record_that_wins_a_slot_is_shown(tmp_path):

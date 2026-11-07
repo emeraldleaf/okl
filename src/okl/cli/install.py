@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -371,10 +372,21 @@ def _manifests(root: Path, *names: str) -> list[Path]:
     level = [root]
     for depth in range(_MAX_DEPTH + 1):
         # All names together, so a/requirements.txt comes before z/pyproject.toml.
-        found += sorted(d / n for d in level for n in names if (d / n).is_file())
+        found += sorted(d / n for d in level for n in names if _readable(d / n))
         if depth < _MAX_DEPTH:
             level = sorted(c for d in level for c in _subfolders(d))
     return found
+
+
+def _readable(p: Path) -> bool:
+    """Whether `p` is a file detection can read. In a folder it cannot open, is_file() raises
+    PermissionError (Python 3.11 ignores only "no such file"), and one bind-mounted database
+    folder (`data/postgres`, owned by the container's user) failed `okl init` outright; a
+    manifest it cannot read shows no stack."""
+    try:
+        return p.is_file() and os.access(p, os.R_OK)
+    except OSError:
+        return False
 
 
 def _subfolders(d: Path) -> list[Path]:
@@ -386,8 +398,11 @@ def _subfolders(d: Path) -> list[Path]:
 
 
 def _mentions(p: Path, deps: tuple[str, ...]) -> bool:
-    """Whether manifest `p` names any of `deps`, ignoring case."""
-    text = p.read_text(errors="ignore").lower()
+    """Whether manifest `p` names any of `deps`, ignoring case; False if it cannot be read."""
+    try:
+        text = p.read_text(errors="ignore").lower()
+    except OSError:
+        return False
     return any(d in text for d in deps)
 
 
@@ -982,7 +997,6 @@ def _git_hooks_dir(root: Path | None = None) -> tuple[Path | None, str]:
     outside `root` -- a global core.hooksPath, or the shared .git of a linked worktree --
     is refused: okl writes only inside the repo it was run in.
     """
-    import os
     import subprocess
     root = root or Path.cwd()
     try:
