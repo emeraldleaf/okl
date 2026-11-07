@@ -466,8 +466,21 @@ def test_dedup_recommends_retire(repo, capsys):
     c.record(type="Rule", title="refunds post to the ledger before the charge", scope="repo",
              body="refund ledger ordering rule")
     capsys.readouterr()
-    main(["dedup"])
+    assert main(["dedup"]) == 1
     assert "okl retire" in capsys.readouterr().out
+
+
+def test_dedup_is_clear_once_its_advice_is_taken(repo, capsys):
+    """Retiring one of a pair, as dedup advises, settles it: dedup compared retired records
+    too, so the pair it had advised on stayed reported and its exit stayed 1."""
+    c = Client()
+    for i in ("refund-a", "refund-b"):
+        c.record(id=i, type="Rule", title="refunds post to the ledger before the charge", scope="repo",
+                 body="refund ledger ordering rule")
+    assert main(["retire", "refund-b", "--reason", "same lesson as refund-a", "--by", "refund-a"]) == 0
+    capsys.readouterr()
+    assert main(["dedup"]) == 0
+    assert "no pair" in capsys.readouterr().out
 
 
 def test_a_new_record_cannot_arrive_already_retired_even_on_the_import_path():

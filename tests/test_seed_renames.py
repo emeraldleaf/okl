@@ -80,6 +80,11 @@ def test_a_refresh_moves_old_named_records_to_the_renamed_pack_with_their_proof(
     assert main(["seed", "--refresh"]) == 0
     again = {n.id: (n.status, n.verified_at) for n in c.all_nodes()}
     assert again == {i: (n.status, n.verified_at) for i, n in nodes.items()}
+    # (5) — dedup reports no old id against its own copy: a real store's refresh moved 158
+    # records, and each pair buried any real duplicate
+    capsys.readouterr()
+    main(["dedup"])
+    assert f"seed:{OLD}:" not in capsys.readouterr().out
 
 
 def test_seeding_the_renamed_pack_into_an_old_store_stores_nothing_twice(repo, capsys):
@@ -190,6 +195,19 @@ def test_a_record_already_moved_is_neither_carried_nor_retired_again():
 
     assert len(store.retirements("seed:old-p:k")) == 1
     assert store.get_node("seed:other-p:k").status not in ("superseded", "obsolete")
+
+
+def test_supersedes_needs_the_new_id():
+    """With no id the store would mint a random one, and the old record would be retired as
+    replaced by a lesson no later run could find again."""
+    from okl.store import Store
+    store = Store("sqlite:///:memory:")
+    core.record(store, id="seed:old:k", type="Rule", title="t", scope="org")
+    with pytest.raises(ValueError, match="pass id"):
+        core.record(store, type="Rule", title="t", scope="org", keep_verification=True,
+                    supersedes="seed:old:k")
+    assert store.get_node("seed:old:k").status not in ("superseded", "obsolete")
+    assert len(store.all_nodes()) == 1
 
 
 def test_a_lesson_cannot_supersede_itself():

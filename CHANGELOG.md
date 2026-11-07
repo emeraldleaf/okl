@@ -11,6 +11,9 @@
   with its proof, first creation date and any retirement, and the old id is retired as
   superseded by it, keeping its history. A store seeded under both names keeps the new id's
   own proof. Against a service, the record request carries the new `supersedes` field.
+  `okl dedup` now compares live records only: it compared retired ones too, so after a refresh
+  each old id was reported against its own copy, and a pair settled by `okl retire`, which
+  dedup itself advises, stayed reported with exit 1.
 - **Architecture diagrams of okl itself** ([docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)),
   drawn in Excalidraw under `docs/architecture/` with an SVG render beside each: where the code
   lives (the repo's folders, what each file in `src/okl/` does, and what `okl init` copies into
