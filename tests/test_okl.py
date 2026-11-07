@@ -4450,6 +4450,37 @@ def test_stack_detection_reads_manifests_up_to_two_folders_down(tmp_path):
     assert stacks(both) == {"react": "package.json", "python": "pyproject.toml",
                             "python-rag": "services/rag/requirements.txt"}
 
+    # (4) — below the root, path order across every manifest name: a/requirements.txt before
+    # z/pyproject.toml, not each name's own sort (CodeRabbit on #386)
+    nested = tmp_path / "nested"
+    (nested / "a").mkdir(parents=True); (nested / "z").mkdir()
+    (nested / "a" / "requirements.txt").write_text("requests\n")
+    (nested / "z" / "pyproject.toml").write_text("[project]\nname = 'z'\n")
+    assert stacks(nested) == {"python": "a/requirements.txt"}
+
+
+def test_stack_detection_never_lists_a_skipped_folder(tmp_path, monkeypatch):
+    """Globbing `*/*/package.json` walked every package under node_modules/ only to drop it,
+    thousands of folders in a JS repo; a skipped folder is now never opened (CodeRabbit on #386)."""
+    import pathlib
+
+    from okl.cli.install import _detect_stacks
+    for pkg in ("left-pad", "react"):
+        (tmp_path / "node_modules" / pkg).mkdir(parents=True)
+        (tmp_path / "node_modules" / pkg / "package.json").write_text('{"dependencies": {"react": "1"}}')
+    (tmp_path / ".venv" / "lib").mkdir(parents=True)
+    (tmp_path / "web").mkdir()
+    (tmp_path / "web" / "package.json").write_text("{}")
+    opened: list[str] = []
+    real = pathlib.Path.iterdir
+    def spy(self):
+        opened.append(self.name)
+        return real(self)
+    monkeypatch.setattr(pathlib.Path, "iterdir", spy)
+
+    assert dict(_detect_stacks(tmp_path)) == {"frontend": "web/package.json"}
+    assert "node_modules" not in opened and ".venv" not in opened, opened
+
 
 def test_every_record_that_wins_a_slot_is_shown(tmp_path):
     """A record that wins one of the briefing's top-k slots must appear in it.

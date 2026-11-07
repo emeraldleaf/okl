@@ -355,7 +355,7 @@ _GEO_DEPS = ("rasterio", "geopandas", "gdal", "rslearn", "shapely", "xarray")
 _SKIP_DIRS = (".git", "node_modules", ".venv", "venv", "bin", "obj")
 # The root, then one and two folders down: a monorepo keeps its UI or its service a level or two
 # in (app/frontend-react/package.json), and reading the root alone never saw it (#375).
-_DEPTHS = ("", "*/", "*/*/")
+_MAX_DEPTH = 2
 
 
 def _kept(root: Path, hit: Path) -> bool:
@@ -364,12 +364,29 @@ def _kept(root: Path, hit: Path) -> bool:
 
 
 def _manifests(root: Path, *names: str) -> list[Path]:
-    """Every file by one of `names`, the root's first, then one and two folders down."""
-    return [hit for depth in _DEPTHS for name in names
-            for hit in sorted(root.glob(depth + name)) if hit.is_file() and _kept(root, hit)]
+    """Every file by one of `names`, the root's first, then one and two folders down, each depth
+    in path order. A skipped folder is never listed: globbing `*/*/package.json` walked every
+    package under node_modules/ only to drop it (CodeRabbit on #386)."""
+    found: list[Path] = []
+    level = [root]
+    for depth in range(_MAX_DEPTH + 1):
+        # All names together, so a/requirements.txt comes before z/pyproject.toml.
+        found += sorted(d / n for d in level for n in names if (d / n).is_file())
+        if depth < _MAX_DEPTH:
+            level = sorted(c for d in level for c in _subfolders(d))
+    return found
+
+
+def _subfolders(d: Path) -> list[Path]:
+    """The folders directly in `d` that detection reads, none of _SKIP_DIRS; none if unreadable."""
+    try:
+        return [c for c in d.iterdir() if c.is_dir() and c.name not in _SKIP_DIRS]
+    except OSError:
+        return []
 
 
 def _mentions(p: Path, deps: tuple[str, ...]) -> bool:
+    """Whether manifest `p` names any of `deps`, ignoring case."""
     text = p.read_text(errors="ignore").lower()
     return any(d in text for d in deps)
 
