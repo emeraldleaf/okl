@@ -344,7 +344,7 @@ def cmd_update(args: argparse.Namespace) -> int:
                       "--expect \"<signal>\"")
         print(f"  proof cleared: its governed files changed, and a check of other files proves "
               f"nothing about these.\n  To {rerun}")
-    elif node.get("files") and before and (before.get("files") or None) != node.get("files"):
+    elif node.get("files") and before and not core.same_files(before.get("files"), node.get("files")):
         # Files given to a lesson no check had proved: the same red gate as recording it with
         # them (#377).
         print(f"  {core.unproven_watch(node['id'])}")

@@ -575,7 +575,11 @@ def test_a_lesson_given_files_with_no_check_says_drift_will_report_it(repo, caps
                  "--trigger", "price taken from the request", "--files", "src/x.py"]) == 0
     out, err = capsys.readouterr()
     assert out.strip() == "w1", out
-    assert 'okl verify w1 --run "<check>" --expect "<signal>"' in err and "drift gate" in err, err
+    assert 'okl verify w1 --run "<check>" --expect "<signal>"' in err and "never verified" in err, err
+    # the id is the caller's choice, so the command is shell-quoted (CodeRabbit on #381)
+    assert main(["record", "--id", "price check; rm", "--type", "Rule", "--scope", "repo",
+                 "--title", "t2", "--trigger", "price taken from the request", "--files", "src/x.py"]) == 0
+    assert "okl verify 'price check; rm' --run" in capsys.readouterr().err
 
     # ACT / ASSERT (2) — without files, nothing to prove against drift, so no hint
     assert main(["record", "--id", "w2", "--type", "Rule", "--scope", "repo", "--title", "u",
@@ -587,6 +591,9 @@ def test_a_lesson_given_files_with_no_check_says_drift_will_report_it(repo, caps
     assert main(["update", "w2", "--files", "src/y.py"]) == 0
     assert 'okl verify w2 --run "<check>"' in capsys.readouterr().out
     assert main(["update", "w2", "--fix", "look it up"]) == 0
+    assert "okl verify" not in capsys.readouterr().out
+    # the same globs written differently are the same files, as proof counts them
+    assert main(["update", "w2", "--files", " src/y.py ,"]) == 0
     assert "okl verify" not in capsys.readouterr().out
 
 
@@ -606,5 +613,10 @@ def test_the_mcp_tools_say_drift_will_report_a_lesson_given_files_with_no_check(
         assert bare.startswith("recorded m2") and "okl verify" not in bare, bare
         upd = _mcp_text(await mcp.call_tool("okl_update", {"id": "m2", "files": "src/y.py"}))
         assert "not proven yet" in upd and 'okl verify m2 --run "<check>"' in upd, upd
+        # said when the files are given, not again on a later update that keeps them, nor
+        # for the same globs written differently (CodeRabbit on #381)
+        for later in ({"fix": "look it up"}, {"files": "src/y.py, "}):
+            again = _mcp_text(await mcp.call_tool("okl_update", {"id": "m2", **later}))
+            assert "not proven yet" in again and "okl verify" not in again, (later, again)
 
     asyncio.run(exercise())
