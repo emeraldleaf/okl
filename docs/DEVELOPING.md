@@ -49,6 +49,7 @@ src/okl/
    lint-imports
    bash gates/run-gates.sh           # links, doc orphans, diagram pairs, tombstones, canon size
    ./ci/check-diagram-figures.sh     # every figure in a diagram names a committed receipt
+   python3 ci/check-diagram-names.py # every name a drawn diagram shows still exists in the code
    ```
 
 4. **Keep mirrored files identical.** If you edit a hook, re-stamp its ownership line and
@@ -60,8 +61,10 @@ src/okl/
    ```
 
 5. **Change the docs in the same PR.** That means the README, `docs/GETTING-STARTED.md`,
-   the CHANGELOG's `## Unreleased` section, and the diagram if what it shows changed. The
-   diagram is edited in the `.excalidraw` source and re-rendered to SVG; the one-page
+   the CHANGELOG's `## Unreleased` section, and the diagrams if what they show changed. A
+   drawn one (`docs/architecture/`) is edited in its `.excalidraw` source and re-exported to
+   SVG; the generated ones are rewritten by `python3 docs/render_architecture.py` and
+   `docs/render_pipeline_diagram.py`, and tests fail until they are; the one-page
    overview is edited in `docs/overview/okl-overview.html` and re-rendered with the
    `render.py` beside it. The website's okl page and its copies of both follow each release.
 6. **Commit, then re-verify, then commit the snapshot** (maintainer). This order matters:
@@ -97,7 +100,7 @@ okl is developed with its own hooks switched on:
 
 | Workflow | Job | What it checks |
 |---|---|---|
-| `ci.yml` | lint-and-test (Python 3.12) | installs from `uv.lock` (`uv sync --locked`, which fails on a stale lockfile), then ruff, mypy, lint-imports, pytest with a coverage floor (66%) and the Postgres tests against a `postgres:17.6` service (a service that fails to start fails this job), the guard mutations (`ci/check-guard-mutations.py`: each symlink guard in install.py switched off must fail a test), diagram figures, the method gates, gitleaks, and the architecture reviewer on the maintainer's Claude subscription (`CLAUDE_CODE_OAUTH_TOKEN`; it soft-passes without it, and `REVIEW_CMD` swaps in another CLI) |
+| `ci.yml` | lint-and-test (Python 3.12) | installs from `uv.lock` (`uv sync --locked`, which fails on a stale lockfile), then ruff, mypy, lint-imports, pytest with a coverage floor (66%) and the Postgres tests against a `postgres:17.6` service (a service that fails to start fails this job), the guard mutations (`ci/check-guard-mutations.py`: each symlink guard in install.py switched off must fail a test), diagram figures and names, the method gates, gitleaks, and the architecture reviewer on the maintainer's Claude subscription (`CLAUDE_CODE_OAUTH_TOKEN`; it soft-passes without it, and `REVIEW_CMD` swaps in another CLI) |
 | `ci.yml` | tests-other-pythons | the suite on 3.11, 3.13, 3.14 and 3.15, installed from `uv.lock` the same way |
 | `okl-verify.yml` | drift gate | the committed `okl-drift.json`: a rule whose governed files changed since its check passed fails the build |
 | CodeQL | Analyze | GitHub's code scanning |

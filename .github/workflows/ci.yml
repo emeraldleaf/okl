@@ -101,6 +101,12 @@ jobs:
       - name: Diagram figures trace to committed receipts
         run: ./ci/check-diagram-figures.sh
 
+      # The drawn architecture diagrams (docs/architecture/) name commands, flags, MCP tools,
+      # hook events, scripts and briefing marks. okl's last hand-drawn diagram was retired
+      # wrong in four places nothing checked (93933d7); this fails on a name the code lacks.
+      - name: Diagram names exist in the code
+        run: python3 ci/check-diagram-names.py
+
       # The content audits okl ships to consumers, run against okl itself. They were
       # shipped for weeks without this repo running any of them — the "enforcement
       # surface nothing triggers" failure, one level up: a gate whose author has never

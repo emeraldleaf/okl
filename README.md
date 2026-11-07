@@ -370,7 +370,8 @@ The overview at the top is rendered from
 follows one lesson all the way round, in okl's own output; it is rendered from
 [`docs/overview/okl-anatomy.html`](docs/overview/okl-anatomy.html), and
 [`docs/overview/anatomy-story.sh`](docs/overview/anatomy-story.sh) runs the same story in a
-throwaway repo.
+throwaway repo. How the project itself is built (what runs when, a lesson's states, where
+lessons are stored and the code's layers) is drawn in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/emeraldleaf/okl/main/docs/overview/okl-anatomy-dark.png">

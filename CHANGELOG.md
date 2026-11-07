@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- **Architecture diagrams of okl itself** ([docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)).
+  What runs when (each hook, MCP tool and gate, the moment it fires, the command and whether
+  it can stop you) and a lesson's life (every state, the command that moves it, and the mark
+  a briefing prints) are drawn in Excalidraw under `docs/architecture/`. Where lessons are
+  stored and the code's layers are generated from the code by `docs/render_architecture.py`,
+  and a test fails when either goes stale. A new CI step, `ci/check-diagram-names.py`, fails
+  on any command, flag, MCP tool, hook event, script or briefing mark a drawn diagram names
+  that the code no longer has: okl's last hand-drawn diagram was retired after it was found
+  wrong in four places nothing checked.
 - **`okl doctor`, a re-run of `okl init` and `okl metric` say what the interests hide** (#374).
   `init` adds `security` and `method` to the interests it detects, but only for a repo with none:
   a later run keeps the list you have (#340). A repo set up before those defaults never gained
