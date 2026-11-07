@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **A snapshot takes no stamp from another branch** (#378). One store serves every branch, so
+  `okl export --drift`, and the refresh after `okl verify`, wrote each lesson with its latest
+  stamp, whichever branch it was made on. With stacked branches, a lesson checked on a later
+  branch went into an earlier one's snapshot; its file differs there, so that branch's gate went
+  red for a lesson it never touched. A stamp made on a commit outside HEAD's history is now held
+  back: the lesson keeps the entry this branch committed for it, or is left out where there is
+  none. After a squash merge the committed entry is the merged branch's stamp, so main keeps
+  it. The list of lessons last verified elsewhere now says, for each, what the snapshot holds.
 - **`okl doctor`, a re-run of `okl init` and `okl metric` say what the interests hide** (#374).
   `init` adds `security` and `method` to the interests it detects, but only for a repo with none:
   a later run keeps the list you have (#340). A repo set up before those defaults never gained

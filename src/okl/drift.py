@@ -21,7 +21,7 @@ from __future__ import annotations
 import json
 import re
 import subprocess
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -230,15 +230,33 @@ def off_branch(nodes: Iterable[Node], repo: str, repo_dir: str = ".") -> list[tu
     return out
 
 
-def render_off_branch(items: list[tuple[Node, str]]) -> str:
-    """The advisory under the drift report; empty when every stamp is on this branch."""
+def render_off_branch(items: list[tuple[Node, str]],
+                      in_snapshot: Mapping[str, str | None] | None = None) -> str:
+    """The advisory under the drift report; empty when every stamp is on this branch.
+
+    `in_snapshot`, each rule's stamped commit in the snapshot file, adds what that file
+    holds for each lesson, as a refresh takes no stamp from outside this branch (#378).
+    """
     if not items:
         return ""
     lines = ["", f"OKL: {len(items)} lesson(s) were last verified on a commit outside this branch's "
                  "history, so their evidence depends on another branch. `okl reverify` re-runs "
                  "their checks here:"]
-    lines.extend(f"  • [{n.id}] {n.title}  (verified on {commit[:7]})" for n, commit in items)
+    lines.extend(f"  • [{n.id}] {n.title}  (verified on {commit[:7]}"
+                 f"{_snapshot_note(n.id, commit, in_snapshot)})" for n, commit in items)
     return "\n".join(lines)
+
+
+def _snapshot_note(node_id: str, commit: str, in_snapshot: Mapping[str, str | None] | None) -> str:
+    """What the snapshot file holds for a lesson last verified on another branch (#378)."""
+    if in_snapshot is None:
+        return ""
+    if node_id not in in_snapshot:
+        return f"; not in {SNAPSHOT_FILE}"
+    held = in_snapshot[node_id]
+    if held == commit:
+        return f"; {SNAPSHOT_FILE} holds that stamp too"
+    return f"; {SNAPSHOT_FILE} keeps this branch's entry" + (f", checked on {held[:7]}" if held else "")
 
 
 def _governed_paths_exist(globs: list[str], repo_dir: str) -> bool:
@@ -484,6 +502,29 @@ def snapshot(nodes: Iterable[Node], repo: str) -> dict[str, Any]:
              and n.status not in RETIRED_STATUSES]
     return {"format": SNAPSHOT_FORMAT, "repo": repo,
             "rules": sorted(rules, key=lambda r: r["id"])}
+
+
+def branch_snapshot(nodes: Iterable[Node], repo: str, repo_dir: str,
+                    committed: dict[str, Any] | None) -> dict[str, Any]:
+    """snapshot(), holding back every stamp made on a commit outside HEAD's history (#378).
+
+    One store serves every branch, so a lesson verified on branch B carries B's commit
+    when the snapshot is written on branch A, and A's gate went red for a lesson A never
+    touched, whose governed file differs on A. Such a lesson keeps the entry this branch
+    already committed for it, or is left out where there is none. After a squash merge the
+    committed entry is the merged branch's stamp, so main keeps what the merge brought.
+    A stamp git cannot place (a commit this clone lacks) is written as before.
+    """
+    nodes = list(nodes)
+    snap = snapshot(nodes, repo)
+    off = {n.id for n, _c in off_branch(nodes, repo, repo_dir)}
+    if not off:
+        return snap
+    old = {r["id"]: r for r in (committed or {}).get("rules", [])
+           if isinstance(r, dict) and isinstance(r.get("id"), str)}
+    snap["rules"] = [old[r["id"]] if r["id"] in off else r for r in snap["rules"]
+                     if r["id"] not in off or r["id"] in old]
+    return snap
 
 
 def dump_snapshot(snap: dict[str, Any]) -> str:
