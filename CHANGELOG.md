@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- **Architecture diagrams of okl itself** ([docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)).
+  What runs when (each hook, MCP tool and gate, the moment it fires, the command and whether
+  it can stop you) and a lesson's life (every state, the command that moves it, and the mark
+  a briefing prints) are drawn in Excalidraw under `docs/architecture/`. Where lessons are
+  stored and the code's layers are generated from the code by `docs/render_architecture.py`,
+  and a test fails when either goes stale. A new CI step, `ci/check-diagram-names.py`, fails
+  on any command, flag, MCP tool, script or briefing mark a drawn diagram or its render names
+  that the code no longer has, on any word shaped like a Claude Code hook event that
+  `hooks/hooks.json` does not register (a misspelt one included), and on a render whose names
+  differ from its source. okl's last hand-drawn diagram was retired after it was found wrong
+  in four places nothing checked.
 - **A snapshot takes no stamp from another branch** (#378). One store serves every branch, so
   `okl export --drift`, and the refresh after `okl verify`, wrote each lesson with its latest
   stamp, whichever branch it was made on. With stacked branches, a lesson checked on a later

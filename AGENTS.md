@@ -64,8 +64,11 @@ okl drift                          # rules whose governed source changed after v
 - **The diagram and README move with the system**: `ci/check-diagram-figures.sh` fails
   any diagram figure that does not name a committed receipt (the rule is
   `n_b550ba9c5c8a`; it governs no files, because that check tests the claims rather than
-  noticing an edit). `docs/*.svg` are *renders* of the `.excalidraw` sources — if you
-  edit a source, re-render or say loudly in the commit that the render is stale.
+  noticing an edit). The drawn diagrams in `docs/architecture/` are `.excalidraw`
+  sources with the `.svg` render beside each: edit the source, re-export the render, and
+  `ci/check-diagram-names.py` fails on any name in them the code no longer has. The other
+  diagrams are generated from the code (`docs/render_architecture.py`,
+  `docs/render_pipeline_diagram.py`), and a test fails when one is stale.
 
 ## Layout truth
 
