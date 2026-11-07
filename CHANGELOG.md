@@ -14,7 +14,8 @@
   `okl dedup` now leaves out superseded and obsolete records, which no briefing shows: after a
   refresh it reported each old id against its own copy, and a pair settled by `okl retire
   --by`, which dedup itself advises, stayed reported with exit 1. A retracted lesson is still
-  compared, since a briefing shows it as AVOID.
+  compared, since a briefing shows it as AVOID; dedup marks it, and for its pair advises
+  retracting a live repeat rather than superseding the retraction, which would drop the warning.
 - **`okl intake pr <n>`: a PR's resolved review findings, put to the encoding loop** (#376).
   The Stop hook asks what a session learned, and nothing else asked at all: a finding a
   reviewer made on a PR reached the store only when the agent that fixed it recorded it by

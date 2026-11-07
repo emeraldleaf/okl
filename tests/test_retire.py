@@ -467,7 +467,8 @@ def test_dedup_recommends_retire(repo, capsys):
              body="refund ledger ordering rule")
     capsys.readouterr()
     assert main(["dedup"]) == 1
-    assert "okl retire" in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert "okl retire" in out and "RETRACTED" not in out   # no retraction advice for two live records
 
 
 def test_dedup_is_clear_once_its_advice_is_taken(repo, capsys):
@@ -495,7 +496,10 @@ def test_dedup_still_pairs_a_live_lesson_with_the_retracted_one_it_repeats(repo,
     capsys.readouterr()
     assert main(["dedup"]) == 1
     out = capsys.readouterr().out
-    assert "[refund-a]" in out and "[refund-b]" in out
+    assert "[refund-a] Rule · repo:r · RETRACTED, briefed as AVOID" in out and "[refund-b] Rule · repo:r\n" in out
+    # The advice keeps the warning: retract the live repeat, never supersede the retraction.
+    assert "never retire the retracted one --by the other" in out
+    assert 'okl retire <live> --reason "wrong: ..."' in out
 
 
 def test_a_new_record_cannot_arrive_already_retired_even_on_the_import_path():

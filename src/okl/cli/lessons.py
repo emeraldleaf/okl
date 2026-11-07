@@ -613,7 +613,8 @@ def cmd_dedup(args: argparse.Namespace) -> int:
     for score, a, b in pairs[: args.limit]:
         print(f"  {score:.2f}")
         for n in (a, b):
-            print(f"    [{n.id}] {n.type} · {n.scope}")
+            mark = " · RETRACTED, briefed as AVOID" if n.status == "retracted" else ""
+            print(f"    [{n.id}] {n.type} · {n.scope}{mark}")
             print(f"       {n.title}")
             if n.symptom:
                 print(f"       symptom: {n.symptom[:88]}")
@@ -624,6 +625,14 @@ def cmd_dedup(args: argparse.Namespace) -> int:
           "  okl retire <other> --by <kept> --reason \"...\"\n"
           "Briefings then point from it to the one kept. Nothing is deleted: the record "
           "that it was once believed stays.")
+    if any(n.status == "retracted" for _s, a, b in pairs[: args.limit] for n in (a, b)):
+        # Retiring the retracted one --by the live one would supersede it, and its AVOID
+        # warning would leave every briefing (CodeRabbit on #387).
+        print("\nA pair with a RETRACTED record is not two copies to merge: never retire the "
+              "retracted one --by the other, which drops its AVOID warning from every briefing. "
+              "If the live one repeats the retracted advice, retract it too:\n"
+              "  okl retire <live> --reason \"wrong: ...\"\n"
+              "If it is the correction, keep both.")
     return 1
 
 
