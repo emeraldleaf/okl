@@ -42,7 +42,9 @@ prompt itself, `src/okl/scaffold/claude/commands/seed-from-docs.md`. Three thing
   refreshed by naming it (`okl seed --refresh seed/<repo>.json`). A record's id names its
   pack by file stem, so give your own pack a name no bundled pack has; when a same-named
   file sits in `seed/` or the repo root, the no-path form skips that pack and asks you to
-  name the source.
+  name the source. When a bundled pack has been renamed since your store was seeded, its
+  records move with it: refreshing or seeding writes each one to the new pack's id, with its
+  proof, creation date and any retirement, and the old id is retired as superseded by it.
 
 The whole walk-through, with ADR status, teams, and keeping docs and comments current, is
 [docs/LOAD-YOUR-RULES.md](LOAD-YOUR-RULES.md).

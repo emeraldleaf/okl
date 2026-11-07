@@ -466,8 +466,40 @@ def test_dedup_recommends_retire(repo, capsys):
     c.record(type="Rule", title="refunds post to the ledger before the charge", scope="repo",
              body="refund ledger ordering rule")
     capsys.readouterr()
-    main(["dedup"])
-    assert "okl retire" in capsys.readouterr().out
+    assert main(["dedup"]) == 1
+    out = capsys.readouterr().out
+    assert "okl retire" in out and "RETRACTED" not in out   # no retraction advice for two live records
+
+
+def test_dedup_is_clear_once_its_advice_is_taken(repo, capsys):
+    """Retiring one of a pair, as dedup advises, settles it: dedup compared retired records
+    too, so the pair it had advised on stayed reported and its exit stayed 1."""
+    c = Client()
+    for i in ("refund-a", "refund-b"):
+        c.record(id=i, type="Rule", title="refunds post to the ledger before the charge", scope="repo",
+                 body="refund ledger ordering rule")
+    assert main(["retire", "refund-b", "--reason", "same lesson as refund-a", "--by", "refund-a"]) == 0
+    capsys.readouterr()
+    assert main(["dedup"]) == 0
+    assert "no pair" in capsys.readouterr().out
+
+
+def test_dedup_still_pairs_a_live_lesson_with_the_retracted_one_it_repeats(repo, capsys):
+    """A lesson retracted as wrong is still briefed, as AVOID; a live one saying the same puts the
+    warning and the advice in one briefing, so dedup must still report the pair (CodeRabbit on
+    #387). Only what no briefing shows, superseded and obsolete, is left out."""
+    c = Client()
+    for i in ("refund-a", "refund-b"):
+        c.record(id=i, type="Rule", title="refunds post to the ledger before the charge", scope="repo",
+                 body="refund ledger ordering rule")
+    assert main(["retire", "refund-a", "--reason", "wrong: the charge posts first"]) == 0
+    capsys.readouterr()
+    assert main(["dedup"]) == 1
+    out = capsys.readouterr().out
+    assert "[refund-a] Rule · repo:r · RETRACTED, briefed as AVOID" in out and "[refund-b] Rule · repo:r\n" in out
+    # The advice keeps the warning: retract the live repeat, never supersede the retraction.
+    assert "never retire the retracted one --by the other" in out
+    assert 'okl retire <live> --reason "wrong: ..."' in out
 
 
 def test_a_new_record_cannot_arrive_already_retired_even_on_the_import_path():

@@ -10,6 +10,7 @@ search(query, ...)  -> targeted retrieval (progressive disclosure).
 from __future__ import annotations
 
 import functools
+import hashlib
 import os
 import re
 from collections import Counter
@@ -750,6 +751,31 @@ def bundled_packs() -> frozenset[str]:
     return frozenset(f.stem for f in bundled_seed_dir().glob("*.json"))
 
 
+# Bundled packs renamed since a store may have been seeded, old name -> current name (#379).
+# b28bf64 renamed ten when it took project identities off the public surface, keeping every
+# record's key, so a store seeded before it holds `seed:<old name>:<key>` ids that `okl seed
+# --refresh` could not find and a re-seed stored a second time. Each old name is written as its
+# sha256, so this map does not put back the names that commit removed: current_pack() hashes
+# the name it reads from an id and looks that up. Add a rename here when a pack is renamed.
+PACK_RENAMES: dict[str, str] = {
+    "2537bc2a741f3238b1e2024e7fb416898c3c589322828f8fc55c16176e4512b9": "dotnet-canon",
+    "891389c1e9a0d3e8f7ca9ca5533b56eddd0fb67df45b02b3e944eae540f49d29": "dotnet-decisions",
+    "9dca98f3a749cbfd995e2bc23cf119cba120d66c49f7ba236c2a27e963f36fb4": "dotnet-defects",
+    "f6ef38dd63cc7179190cca0191ac2bf61626590f48c27fa5f5f6517819fe5f3e": "dotnet-review-surfaces",
+    "d7d7d3ae76eb712cc4e922a50fbccfbb38dcb20cba38ec15450f273653763720": "frontend-canon",
+    "1add6a3b13b4ce7510dbe9e276317e1e558d3c748bb51715b73152a2b8bf8d96": "geospatial-deeptime-defects",
+    "0130604b40df44d95c39da91299cb2174a46decf48cffac8996d5ab7de6ea468": "geospatial-defects",
+    "8734c888f76cd4d0d7c5d67a0d48d50b3714023d723135193a2ad2675e1119ee": "geospatial-enforcement-defects",
+    "531e11b6ad763de0d2d215b8311775b1c151c1bcbae997a2673a28c54f32f670": "geospatial-eval-defects",
+    "4015214610a69829afa4579a461b39ac0556a19b3313beb9c5f383fe98446f3a": "rag-defects",
+}
+
+
+def current_pack(pack: str) -> str:
+    """The name pack `pack` has now: the one it was renamed to, or itself (#379)."""
+    return PACK_RENAMES.get(hashlib.sha256(pack.encode("utf-8")).hexdigest(), pack)
+
+
 def lessons_without_triggers(nodes: list[Node]) -> list[Node]:
     """The store's own live advice lessons that carry no triggers. The calibrated decision reads
     triggers, and on a real store it found 3 of the 55 applying recorded lessons without them
@@ -759,7 +785,7 @@ def lessons_without_triggers(nodes: list[Node]) -> list[Node]:
     bundled = bundled_packs()
     def own(n: Node) -> bool:
         parts = n.id.split(":")
-        return not (len(parts) >= 3 and parts[0] == "seed" and parts[1] in bundled)
+        return not (len(parts) >= 3 and parts[0] == "seed" and current_pack(parts[1]) in bundled)
     return [n for n in nodes if n.status not in RETIRED_STATUSES and n.type in TRIGGER_TYPES
             and own(n) and not n.triggers]
 
@@ -981,6 +1007,7 @@ def record(store: Store, *, type: str, title: str, scope: str, repo: str | None 
            tags: str | None = None, aliases: str | None = None, triggers: Any = None,
            verified: bool = False, id: str | None = None,
            keep_verification: bool = False, replace: bool = False,
+           supersedes: str | None = None,
            ) -> str:
     """Create a node. `scope` is 'org' (meant for every repo) or 'repo:<name>'.
 
@@ -1013,6 +1040,12 @@ def record(store: Store, *, type: str, title: str, scope: str, repo: str | None 
     the whole row, proof and creation date included, and every surface taught it as the
     way to refine a lesson (okl review R1); `update` is that way now. An overwrite keeps
     the lesson's first creation date.
+
+    `supersedes` names the id this lesson had before (a pack renamed since the store was
+    seeded, #379). When `id` is not held yet, the lesson is written as a re-import of that
+    record: its proof, first creation date, retirement and locally set fields carry over by
+    the rules above. Either way the old id is then retired as superseded by `id`, so it stops
+    being briefed and keeps its history; a second run finds it superseded and does nothing.
     """
     # The fields the caller set, before normalising: a re-import keeps what its pack leaves
     # out, and an explicit "" or [] is the pack clearing the field (#214, review on #310).
@@ -1039,11 +1072,37 @@ def record(store: Store, *, type: str, title: str, scope: str, repo: str | None 
         "verified_at": _now_ms() if verified else None,
     }
     # An explicit id names the lesson; omit it and the store mints a fresh random one.
+    if supersedes is not None and id is None:
+        raise ValueError("supersedes names the lesson's old id, so it needs the new one: pass id")
+    if supersedes is not None and supersedes == id:
+        # It would retire the lesson as replaced by itself, out of every briefing (CodeRabbit on #387).
+        raise ValueError(f"supersedes names the lesson's old id, which cannot be its new id {id!r}")
+    prior = store.get_node(supersedes) if supersedes else None
+    if prior is not None and prior.status == "superseded":
+        prior = None                                  # moved already: nothing to carry or retire
     if id is not None:
         kw["id"] = id
-        _carry_over(store, kw, id, replace=replace, keep_verification=keep_verification, given=given)
-    n = Node(**kw)
-    return store.add_node(n)
+        if prior is not None and store.get_node(id) is None:
+            # The renamed record is the same lesson: it carries over as a re-import of itself.
+            _carry_over(store, kw, prior.id, replace=False, keep_verification=True, given=given)
+        else:
+            _carry_over(store, kw, id, replace=replace, keep_verification=keep_verification, given=given)
+    new_id = store.add_node(Node(**kw))
+    if prior is not None:
+        _supersede(store, prior, new_id)
+    return new_id
+
+
+def _supersede(store: Store, old: Node, new_id: str) -> None:
+    """Retire `old` as superseded by `new_id`, as `okl retire --by` writes it: the reason first,
+    the edge, the status last. Without retire()'s rule that a replacement be live: a renamed
+    lesson its team had retracted carries the retraction to its new id, and the old id must
+    still step aside rather than brief the same AVOID twice."""
+    reason = f"its pack was renamed: {old.id} is now {new_id} (#379)"
+    store.log_retirement(old.id, "superseded", reason, new_id)
+    store.add_edge(Edge(src=new_id, rel="SUPERSEDES", dst=old.id))
+    old.status = "superseded"
+    store.add_node(old)
 
 
 class LessonExistsError(ValueError):

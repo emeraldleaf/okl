@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- **A renamed seed pack takes the records a store holds under its old name with it** (#379).
+  A seed record's id is `seed:<pack>:<key>`, and ten bundled packs were renamed, keeping their
+  keys, when project identities came off the public surface. A store seeded before then held
+  ids that `okl seed --refresh` could not find, and seeding a renamed pack stored the same
+  lessons a second time. Refresh and seed now recognise the old names (kept as hashes, so the
+  names themselves are not shipped again): each record is written to the renamed pack's id
+  with its proof, first creation date and any retirement, and the old id is retired as
+  superseded by it, keeping its history. A store seeded under both names keeps the new id's
+  own proof. Against a service, the record request carries the new `supersedes` field.
+  `okl dedup` now leaves out superseded and obsolete records, which no briefing shows: after a
+  refresh it reported each old id against its own copy, and a pair settled by `okl retire
+  --by`, which dedup itself advises, stayed reported with exit 1. A retracted lesson is still
+  compared, since a briefing shows it as AVOID; dedup marks it, and for its pair advises
+  retracting a live repeat rather than superseding the retraction, which would drop the warning.
 - **`okl intake pr <n>`: a PR's resolved review findings, put to the encoding loop** (#376).
   The Stop hook asks what a session learned, and nothing else asked at all: a finding a
   reviewer made on a PR reached the store only when the agent that fixed it recorded it by

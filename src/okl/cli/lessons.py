@@ -573,6 +573,12 @@ def cmd_dedup(args: argparse.Namespace) -> int:
     saying the same thing both get injected, spend the budget twice, and can push a third
     relevant record out of the briefing entirely.
 
+    Only records a briefing can show are compared. A superseded or obsolete one is briefed no
+    more: comparing it reported a pair its own advice (okl retire --by) had settled, with exit
+    1, and a refresh after a pack rename (#379) supersedes each old id by its copy, a pair per
+    record. A retracted one stays in: it is briefed as AVOID, so a live record repeating it puts
+    a warning and its advice in one briefing (CodeRabbit on #387).
+
     Exit 1 when it finds candidate pairs, 0 when it finds none, 2 when okl is not
     configured here.
     """
@@ -580,7 +586,7 @@ def cmd_dedup(args: argparse.Namespace) -> int:
     if not client.configured:
         print("OKL NOT CONFIGURED — run `okl init` here, or `okl connect <url>`.", file=sys.stderr)
         return 2
-    nodes = list(client.all_nodes())
+    nodes = [n for n in client.all_nodes() if n.status not in core._UNBRIEFED]
     store = client._local_store() if client.mode == "local" else None
     idf = core._idf(store) if store is not None else {}
 
@@ -607,7 +613,8 @@ def cmd_dedup(args: argparse.Namespace) -> int:
     for score, a, b in pairs[: args.limit]:
         print(f"  {score:.2f}")
         for n in (a, b):
-            print(f"    [{n.id}] {n.type} · {n.scope}")
+            mark = " · RETRACTED, briefed as AVOID" if n.status == "retracted" else ""
+            print(f"    [{n.id}] {n.type} · {n.scope}{mark}")
             print(f"       {n.title}")
             if n.symptom:
                 print(f"       symptom: {n.symptom[:88]}")
@@ -618,6 +625,14 @@ def cmd_dedup(args: argparse.Namespace) -> int:
           "  okl retire <other> --by <kept> --reason \"...\"\n"
           "Briefings then point from it to the one kept. Nothing is deleted: the record "
           "that it was once believed stays.")
+    if any(n.status == "retracted" for _s, a, b in pairs[: args.limit] for n in (a, b)):
+        # Retiring the retracted one --by the live one would supersede it, and its AVOID
+        # warning would leave every briefing (CodeRabbit on #387).
+        print("\nA pair with a RETRACTED record is not two copies to merge: never retire the "
+              "retracted one --by the other, which drops its AVOID warning from every briefing. "
+              "If the live one repeats the retracted advice, retract it too:\n"
+              "  okl retire <live> --reason \"wrong: ...\"\n"
+              "If it is the correction, keep both.")
     return 1
 
 

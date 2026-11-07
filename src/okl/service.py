@@ -87,6 +87,9 @@ class RecordReq(BaseModel):
     keep_verification: bool = False
     # An explicit overwrite of an existing id; without it, a re-record is refused (R1).
     replace: bool = False
+    # The id a renamed pack's record had before, which this one carries over and supersedes
+    # (#379). Sent by `okl seed` against a service.
+    supersedes: str | None = None
 
 
 class SearchReq(BaseModel):
