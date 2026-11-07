@@ -41,7 +41,9 @@ okl init --repo shop
 - `--repo` names this repo in the store. A later `okl init` keeps this name; pass `--repo`
   again only to rename, which stops `repo:<old>` lessons from briefing here.
 - **It detects your stack** from the files every stack keeps (`*.csproj`/`*.sln`,
-  `package.json`, `pyproject.toml`/`requirements.txt`) and sets this repo's *interests* —
+  `package.json`, `pyproject.toml`/`requirements.txt`), at the root or up to two folders down,
+  so a monorepo's `app/web/package.json` counts (`node_modules/`, virtualenvs and build output
+  do not), and sets this repo's *interests* —
   the subjects its briefings cover — to that stack plus `security` and `method`. To choose
   your own, pass `--interests` from this list: `agent-safety data-quality dotnet
   eval-integrity frontend geospatial messaging method prose python python-rag react

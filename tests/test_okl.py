@@ -4414,6 +4414,43 @@ def test_stack_detection(tmp_path):
     assert _detect_stacks(tmp_path / "api") == [("dotnet", "Api.csproj")]
 
 
+def test_stack_detection_reads_manifests_up_to_two_folders_down(tmp_path):
+    """A monorepo keeps its UI or its service a level or two in, and only the root's
+    package.json and Python manifests were read, so its React app was never detected and the
+    frontend pack never offered (#375). Dependency folders stay skipped, the depth stops at
+    two, and a root manifest is still the one named when it shows the stack."""
+    from okl.cli.install import _detect_stacks
+
+    def stacks(root):
+        return dict(_detect_stacks(root))
+
+    # ARRANGE / ASSERT (1) — a React app two folders down
+    mono = tmp_path / "mono"
+    (mono / "app" / "web").mkdir(parents=True)
+    (mono / "app" / "web" / "package.json").write_text('{"dependencies": {"react": "^19.0.0"}}')
+    assert stacks(mono) == {"react": "app/web/package.json"}
+
+    # (2) — one inside node_modules, or three folders down, is not read
+    deps = tmp_path / "deps"
+    (deps / "node_modules" / "x").mkdir(parents=True)
+    (deps / "node_modules" / "x" / "package.json").write_text('{"dependencies": {"react": "1"}}')
+    (deps / "a" / "b" / "c").mkdir(parents=True)
+    (deps / "a" / "b" / "c" / "package.json").write_text('{"dependencies": {"react": "1"}}')
+    assert stacks(deps) == {}
+
+    # (3) — a root manifest is the one named when it shows the stack; a nested one still
+    # shows what the root does not
+    both = tmp_path / "both"
+    (both / "app" / "web").mkdir(parents=True)
+    (both / "package.json").write_text('{"dependencies": {"react": "^19.0.0"}}')
+    (both / "app" / "web" / "package.json").write_text('{"dependencies": {"react": "^18.0.0"}}')
+    (both / "pyproject.toml").write_text("[project]\nname = 'x'\n")
+    (both / "services" / "rag").mkdir(parents=True)
+    (both / "services" / "rag" / "requirements.txt").write_text("langchain\n")
+    assert stacks(both) == {"react": "package.json", "python": "pyproject.toml",
+                            "python-rag": "services/rag/requirements.txt"}
+
+
 def test_every_record_that_wins_a_slot_is_shown(tmp_path):
     """A record that wins one of the briefing's top-k slots must appear in it.
 

@@ -352,34 +352,49 @@ _RAG_DEPS = ("langchain", "llama-index", "llama_index", "chromadb", "qdrant", "f
 _GEO_DEPS = ("rasterio", "geopandas", "gdal", "rslearn", "shapely", "xarray")
 
 
+_SKIP_DIRS = (".git", "node_modules", ".venv", "venv", "bin", "obj")
+# The root, then one and two folders down: a monorepo keeps its UI or its service a level or two
+# in (app/frontend-react/package.json), and reading the root alone never saw it (#375).
+_DEPTHS = ("", "*/", "*/*/")
+
+
+def _kept(root: Path, hit: Path) -> bool:
+    """Whether `hit` lies outside dependency folders and build output."""
+    return not any(part in _SKIP_DIRS for part in hit.relative_to(root).parts)
+
+
+def _manifests(root: Path, *names: str) -> list[Path]:
+    """Every file by one of `names`, the root's first, then one and two folders down."""
+    return [hit for depth in _DEPTHS for name in names
+            for hit in sorted(root.glob(depth + name)) if hit.is_file() and _kept(root, hit)]
+
+
+def _mentions(p: Path, deps: tuple[str, ...]) -> bool:
+    text = p.read_text(errors="ignore").lower()
+    return any(d in text for d in deps)
+
+
 def _detect_stacks(root: Path) -> list[tuple[str, str]]:
-    """[(stack tag, the file that showed it)], strongest evidence first."""
+    """[(stack tag, the file that showed it)], strongest evidence first. Manifests are read at
+    the root and up to two folders down, the root first, so a root manifest is the one named
+    whenever it shows the stack; dependency folders and build output are skipped."""
     found: list[tuple[str, str]] = []
-
-    def first(patterns: tuple[str, ...]) -> Path | None:
-        for pat in patterns:
-            for hit in root.glob(pat):
-                if not any(part in (".git", "node_modules", ".venv", "venv", "bin", "obj")
-                           for part in hit.relative_to(root).parts):
-                    return hit
-        return None
-
-    dn = first(("*.sln", "*.slnx", "*.csproj", "*/*.csproj", "*/*/*.csproj"))
+    dn = next((hit for pat in ("*.sln", "*.slnx", "*.csproj", "*/*.csproj", "*/*/*.csproj")
+               for hit in sorted(root.glob(pat)) if _kept(root, hit)), None)
     if dn:
         found.append(("dotnet", dn.relative_to(root).as_posix()))
-    pkg = root / "package.json"
-    if pkg.is_file():
-        text = pkg.read_text(errors="ignore").lower()
-        found.append(("react" if '"react"' in text else "frontend", "package.json"))
-    py = next((root / f for f in ("pyproject.toml", "requirements.txt", "setup.py")
-               if (root / f).is_file()), None)
+    js = _manifests(root, "package.json")
+    if js:
+        react = next((p for p in js if _mentions(p, ('"react"',))), None)
+        found.append(("react", react.relative_to(root).as_posix()) if react
+                     else ("frontend", js[0].relative_to(root).as_posix()))
+    py = _manifests(root, "pyproject.toml", "requirements.txt", "setup.py")
     if py:
-        text = py.read_text(errors="ignore").lower()
-        found.append(("python", py.name))
-        if any(d in text for d in _RAG_DEPS):
-            found.append(("python-rag", py.name))
-        if any(d in text for d in _GEO_DEPS):
-            found.append(("geospatial", py.name))
+        found.append(("python", py[0].relative_to(root).as_posix()))
+        for tag, deps in (("python-rag", _RAG_DEPS), ("geospatial", _GEO_DEPS)):
+            hit = next((p for p in py if _mentions(p, deps)), None)
+            if hit:
+                found.append((tag, hit.relative_to(root).as_posix()))
     return found
 
 

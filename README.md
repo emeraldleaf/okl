@@ -86,9 +86,10 @@ okl init --repo my-repo --dry-run   # lists every file it would write; writes no
 okl init --repo my-repo             # config, Claude Code hooks, MCP server, pre-push drift gate, starter lessons
 ```
 
-`init` detects your stack (`*.csproj`, `package.json`, `pyproject.toml` …), sets the repo's
-interests from it, and fills the store with 20 starter lessons that hold on almost any
-codebase plus the bundled packs for your stack, so the first prompt is already briefed
+`init` detects your stack (`*.csproj`, `package.json`, `pyproject.toml` …, at the root or up
+to two folders down), sets the repo's interests from it, and fills the store with 20 starter
+lessons that hold on almost any codebase plus the bundled packs for your stack, so the first
+prompt is already briefed
 (`--interests` chooses your own subjects; `--no-seed` leaves the store empty). It wires Claude
 Code when the repo has a `.claude/` directory or `claude` is on your PATH (`--claude` /
 `--no-claude`), installs a pre-push hook that blocks a push only when lessons have drifted
