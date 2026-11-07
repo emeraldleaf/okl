@@ -573,9 +573,11 @@ def cmd_dedup(args: argparse.Namespace) -> int:
     saying the same thing both get injected, spend the budget twice, and can push a third
     relevant record out of the briefing entirely.
 
-    Only live records are compared. A retired one was already ruled on: comparing it reported a
-    pair its own advice (okl retire) had settled, and the exit stayed 1; and a refresh after a
-    pack rename (#379) supersedes each old id by its copy, a pair per record.
+    Only records a briefing can show are compared. A superseded or obsolete one is briefed no
+    more: comparing it reported a pair its own advice (okl retire --by) had settled, with exit
+    1, and a refresh after a pack rename (#379) supersedes each old id by its copy, a pair per
+    record. A retracted one stays in: it is briefed as AVOID, so a live record repeating it puts
+    a warning and its advice in one briefing (CodeRabbit on #387).
 
     Exit 1 when it finds candidate pairs, 0 when it finds none, 2 when okl is not
     configured here.
@@ -584,7 +586,7 @@ def cmd_dedup(args: argparse.Namespace) -> int:
     if not client.configured:
         print("OKL NOT CONFIGURED — run `okl init` here, or `okl connect <url>`.", file=sys.stderr)
         return 2
-    nodes = [n for n in client.all_nodes() if n.status not in core.RETIRED_STATUSES]
+    nodes = [n for n in client.all_nodes() if n.status not in core._UNBRIEFED]
     store = client._local_store() if client.mode == "local" else None
     idf = core._idf(store) if store is not None else {}
 

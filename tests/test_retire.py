@@ -483,6 +483,21 @@ def test_dedup_is_clear_once_its_advice_is_taken(repo, capsys):
     assert "no pair" in capsys.readouterr().out
 
 
+def test_dedup_still_pairs_a_live_lesson_with_the_retracted_one_it_repeats(repo, capsys):
+    """A lesson retracted as wrong is still briefed, as AVOID; a live one saying the same puts the
+    warning and the advice in one briefing, so dedup must still report the pair (CodeRabbit on
+    #387). Only what no briefing shows, superseded and obsolete, is left out."""
+    c = Client()
+    for i in ("refund-a", "refund-b"):
+        c.record(id=i, type="Rule", title="refunds post to the ledger before the charge", scope="repo",
+                 body="refund ledger ordering rule")
+    assert main(["retire", "refund-a", "--reason", "wrong: the charge posts first"]) == 0
+    capsys.readouterr()
+    assert main(["dedup"]) == 1
+    out = capsys.readouterr().out
+    assert "[refund-a]" in out and "[refund-b]" in out
+
+
 def test_a_new_record_cannot_arrive_already_retired_even_on_the_import_path():
     """keep_verification (okl seed's path, and a service's /record) skipped the guard, so a
     new stable id could be created superseded or obsolete with no reason (CodeRabbit, #163)."""

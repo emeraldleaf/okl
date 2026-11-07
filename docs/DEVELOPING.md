@@ -257,7 +257,7 @@ OKL_BRIEF_INTERESTS="python,method,security,agent-safety,retrieval-design,eval-i
 | `okl drift` | Lessons whose governed files changed since their check passed |
 | `okl recap --transcript <path>` | The lessons a session was briefed on and those whose files it changed |
 | `okl recap --report [--since 6h]` | How the session went: briefings, lessons recorded and retired, checks run and failed, commits, and what is stale now, from the local store's logs (`--format json` for scripts) |
-| `okl dedup` | Near-duplicate live lessons, for review (retired ones are already ruled on) |
+| `okl dedup` | Near-duplicate lessons a briefing can show, for review (superseded and obsolete ones are left out) |
 | `okl doctor` | Other agent-memory tools beside okl, how they collide, where drift is gated, after `okl init --owner` whether GitHub enforces the owner's approval, and which org lessons the interests keep out of briefings |
 | `okl coverage` | How much of the code the store's lessons govern |
 
