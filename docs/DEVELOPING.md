@@ -65,12 +65,9 @@ src/okl/
 5. **Change the docs in the same PR.** That means the README, `docs/GETTING-STARTED.md`,
    the CHANGELOG's `## Unreleased` section, and the diagrams if what they show changed. A
    drawn one (`docs/architecture/`) is edited in its `.excalidraw` source and re-exported to
-   SVG; the generated ones are rewritten by `python3 docs/render_architecture.py --svg` and
-   `python3 docs/render_pipeline_diagram.py`, and their tests fail until they are. `--svg`
-   renders the Mermaid sources with Playwright's Chromium and Mermaid from a pinned CDN URL;
-   the Excalidraw diagram skill's environment has both, so from the repo root run
-   `uv run --project <the skill's references/ directory> python docs/render_architecture.py --svg`,
-   or use any environment with `playwright` and its Chromium. The hybrid
+   SVG, and `ci/check-diagram-names.py` fails until every file, folder, function and command it
+   names exists; the pipeline diagrams are rewritten by `python3 docs/render_pipeline_diagram.py`,
+   and their tests fail until they are. The hybrid
    pipeline render is separate (`docs/render_pipeline_diagram.py --hybrid linear`), and its
    test skips wherever the embedding model is not cached, CI included, so re-render it by
    hand when the retrieval changes; the one-page

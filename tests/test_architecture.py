@@ -1,9 +1,9 @@
 """docs/ARCHITECTURE.md's diagrams stay true to the code.
 
 okl retired its last hand-drawn architecture diagram (93933d7) after a review found it wrong in
-four places that nothing had checked. Two of the four diagrams now are generated from the code
-and must match what the generator writes today; the two drawn ones must name only commands,
-flags, MCP tools, hook events, scripts and briefing marks the code still has.
+four places that nothing had checked. The four diagrams now are drawn too, so each must name
+only commands, flags, MCP tools, hook events, files, folders, functions and briefing marks the
+code still has, and its render must name the same ones as its source.
 """
 import json
 import subprocess
@@ -14,19 +14,10 @@ ROOT = Path(__file__).resolve().parents[1]
 CHECK = ROOT / "ci" / "check-diagram-names.py"
 
 
-def test_the_generated_architecture_diagrams_are_current():
-    """The layers and storage diagrams are what docs/render_architecture.py writes from the
-    code right now. --check compares without writing: a test that repaired what it checks
-    would always pass."""
-    r = subprocess.run([sys.executable, str(ROOT / "docs" / "render_architecture.py"), "--check"],
-                       capture_output=True, text=True, cwd=ROOT)
-    assert r.returncode == 0, r.stderr
-
-
 def test_the_drawn_diagrams_name_only_what_the_code_has():
-    """Both drawn diagrams pass the name check CI runs on them."""
+    """Every diagram ARCHITECTURE.md shows passes the name check CI runs on it."""
     diagrams = sorted(str(p) for p in (ROOT / "docs" / "architecture").glob("*.excalidraw"))
-    assert len(diagrams) == 2, diagrams
+    assert len(diagrams) == 4, diagrams
     r = subprocess.run([sys.executable, str(CHECK), *diagrams], capture_output=True, text=True, cwd=ROOT)
     assert r.returncode == 0, r.stdout + r.stderr
 
@@ -48,17 +39,28 @@ def test_the_name_check_fails_on_each_kind_of_name_the_code_lacks(tmp_path):
     # ARRANGE / ACT — real names, and prose that only looks like a command
     good = run(diagram("okl check --task x --format hook", "okl_record", "UserPromptSubmit",
                        "stop-okl-encode.sh", ".github/workflows/okl-verify.yml", "STALE",
-                       "okl runs it", "git push --no-verify"))
+                       "okl runs it", "git push --no-verify",
+                       # files, folders and functions, as the code map and command paths name them
+                       "src/okl/cli/ lessons.py cmd_check() core.check() Client.check()",
+                       "drift.scan_drift() pyproject.toml THESIS.md",
+                       # runtime and example paths, deliberately exempt
+                       ".okl/config.json app/orders.py"))
     # ASSERT (1)
     assert good.returncode == 0, good.stdout + good.stderr
 
     # ACT / ASSERT (2) — one unknown of each kind, each named in the report
     bad = run(diagram("okl frobnicate", "okl check --no-such-flag", "okl_teleport", "PreCompact",
-                      "UserPromptSubmitted", "stop-okl-encode2.sh", "gates/ghost.yml", "UNVANISHED"))
+                      "UserPromptSubmitted", "stop-okl-encode2.sh", "gates/ghost.yml", "UNVANISHED",
+                      "src/okl/nowhere.py", "src/okl/ghost/", "core.frobnicate()", "store.check()",
+                      "cmd_vanish()", "storex.check()"))
     assert bad.returncode == 1, bad.stdout
-    # A misspelt hook event fails as well as an unregistered one (CodeRabbit on #383).
+    # A misspelt hook event fails as well as an unregistered one (CodeRabbit on #383), and a
+    # function qualified with a module must be defined in that module: store.py has no check(),
+    # and no module is called storex, though core defines check() (CodeRabbit on #385).
     for name in ("okl frobnicate", "--no-such-flag", "okl_teleport", "PreCompact",
-                 "UserPromptSubmitted", "stop-okl-encode2.sh", "gates/ghost.yml", "UNVANISHED"):
+                 "UserPromptSubmitted", "stop-okl-encode2.sh", "gates/ghost.yml", "UNVANISHED",
+                 "src/okl/nowhere.py", "src/okl/ghost/", "core.frobnicate", "store.check",
+                 "cmd_vanish", "storex.check"):
         assert f"FAIL: {name}" in bad.stdout, (name, bad.stdout)
 
 
@@ -86,26 +88,3 @@ def test_a_render_that_disagrees_with_its_source_fails(tmp_path):
     # (3) — a name only the render shows, which the code lacks
     ghost = run("okl check --task x okl_teleport")
     assert ghost.returncode == 1 and "FAIL: okl_teleport: no such MCP tool" in ghost.stdout, ghost.stdout
-
-
-def test_a_render_from_an_older_source_is_stale(tmp_path, monkeypatch):
-    """The generated charts are images, so the suite cannot re-render them without a browser.
-    Each SVG carries the sha256 of the Mermaid source it was drawn from; one whose stamp is
-    missing or names another source is stale, which --check reports."""
-    import importlib.util
-    spec = importlib.util.spec_from_file_location("render_architecture", ROOT / "docs" / "render_architecture.py")
-    ra = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(ra)
-    monkeypatch.setattr(ra, "OUT", tmp_path)
-    source = "flowchart LR\n  a --> b\n"
-    stamp = f"<!-- okl:source-sha256 {ra._sha(source)} -->"
-
-    # ASSERT (1) — current: the stamp is this source's
-    (tmp_path / "c.svg").write_text(f"<svg>{stamp}</svg>")
-    assert ra.stale_renders({"c": source}) == []
-    # (2) — the source moved on after the render
-    assert ra.stale_renders({"c": source + "  b --> c\n"}) == ["docs/architecture/c.svg"]
-    # (3) — no stamp, and no render at all
-    (tmp_path / "c.svg").write_text("<svg></svg>")
-    assert ra.stale_renders({"c": source}) == ["docs/architecture/c.svg"]
-    assert ra.stale_renders({"gone": source}) == ["docs/architecture/gone.svg"]
