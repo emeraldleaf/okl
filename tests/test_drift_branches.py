@@ -273,6 +273,12 @@ def test_export_on_a_branch_keeps_its_entry_for_a_lesson_verified_on_another(bra
     r = okl("drift", "--gate", "--snapshot", "okl-drift.json")
     assert r.returncode == 0, (r.stdout, r.stderr)
 
+    # ACT / ASSERT (3) — exported elsewhere with -o, the list describes the file written, not
+    # okl-drift.json: alt.json has no entry committed here, so the lesson is not in it
+    # (CodeRabbit on #382)
+    r = okl("export", "--drift", "-o", "alt.json")
+    assert f"[{lid}]" in r.stderr and "not in alt.json" in r.stderr, r.stderr
+
 
 def test_an_untracked_snapshot_from_another_branch_lends_no_entry(branches, tmp_path):
     """An untracked okl-drift.json survives a branch switch with the stamps it was written
@@ -307,3 +313,17 @@ def test_an_untracked_snapshot_from_another_branch_lends_no_entry(branches, tmp_
     assert lid not in {e["id"] for e in written}, written
     assert r.returncode == 2 and "last verified on another branch" in r.stderr, r.stderr
     assert "no rule in this store governs files" not in r.stderr and f"[{lid}]" in r.stderr, r.stderr
+
+
+def test_a_hand_edited_commit_in_the_snapshot_is_read_as_none(branches, tmp_path):
+    """The snapshot is hand-editable; a verified_commit that is not a string was sliced for
+    the list and raised (CodeRabbit on #382). It reads as no stamp."""
+    from okl.cli.verification import _snapshot_stamps
+    path = tmp_path / "okl-drift.json"
+    path.write_text(json.dumps({"rules": [{"id": "same", "verified_commit": 1234567},
+                                          {"id": "other", "verified_commit": "abc1234def"}]}))
+    stamps = _snapshot_stamps(path)
+    assert stamps == {"same": None, "other": "abc1234def"}
+    text = drift.render_off_branch([(_lesson("same", branches["same"]), branches["same"])], stamps)
+    assert "okl-drift.json keeps this branch's entry)" in text, text
+    assert _snapshot_stamps(tmp_path / "absent.json") is None

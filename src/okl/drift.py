@@ -231,7 +231,8 @@ def off_branch(nodes: Iterable[Node], repo: str, repo_dir: str = ".") -> list[tu
 
 
 def render_off_branch(items: list[tuple[Node, str]],
-                      in_snapshot: Mapping[str, str | None] | None = None) -> str:
+                      in_snapshot: Mapping[str, str | None] | None = None,
+                      snapshot_name: str | None = None) -> str:
     """The advisory under the drift report; empty when every stamp is on this branch.
 
     `in_snapshot`, each rule's stamped commit in the snapshot file, adds what that file
@@ -243,20 +244,22 @@ def render_off_branch(items: list[tuple[Node, str]],
                  "history, so their evidence depends on another branch. `okl reverify` re-runs "
                  "their checks here:"]
     lines.extend(f"  • [{n.id}] {n.title}  (verified on {commit[:7]}"
-                 f"{_snapshot_note(n.id, commit, in_snapshot)})" for n, commit in items)
+                 f"{_snapshot_note(n.id, commit, in_snapshot, snapshot_name or SNAPSHOT_FILE)})"
+                 for n, commit in items)
     return "\n".join(lines)
 
 
-def _snapshot_note(node_id: str, commit: str, in_snapshot: Mapping[str, str | None] | None) -> str:
+def _snapshot_note(node_id: str, commit: str, in_snapshot: Mapping[str, str | None] | None,
+                   name: str) -> str:
     """What the snapshot file holds for a lesson last verified on another branch (#378)."""
     if in_snapshot is None:
         return ""
     if node_id not in in_snapshot:
-        return f"; not in {SNAPSHOT_FILE}"
+        return f"; not in {name}"
     held = in_snapshot[node_id]
     if held == commit:
-        return f"; {SNAPSHOT_FILE} holds that stamp too"
-    return f"; {SNAPSHOT_FILE} keeps this branch's entry" + (f", checked on {held[:7]}" if held else "")
+        return f"; {name} holds that stamp too"
+    return f"; {name} keeps this branch's entry" + (f", checked on {held[:7]}" if held else "")
 
 
 def _governed_paths_exist(globs: list[str], repo_dir: str) -> bool:

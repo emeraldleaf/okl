@@ -174,7 +174,7 @@ def _refresh_snapshot(node: dict, why: str = "this verification") -> None:
                   "--allow-shrink` writes it anyway.", file=sys.stderr)
 
 
-def _warn_off_branch(client: Client, skip: str | None = None) -> None:
+def _warn_off_branch(client: Client, skip: str | None = None, snapshot: Path | None = None) -> None:
     """Name, on stderr, the lessons whose stamps sit on another branch's commit (#126).
 
     One store serves every branch, so a lesson verified on a sibling branch carries that
@@ -189,7 +189,9 @@ def _warn_off_branch(client: Client, skip: str | None = None) -> None:
         return
     items = [(n, c) for n, c in items if n.id != skip]
     if items:
-        print(drift.render_off_branch(items, _snapshot_stamps(_snapshot_path())).lstrip("\n"),
+        # The file just written, which `okl export --drift -o` may have put elsewhere.
+        snap = snapshot or _snapshot_path()
+        print(drift.render_off_branch(items, _snapshot_stamps(snap), snap.name).lstrip("\n"),
               file=sys.stderr)
 
 
@@ -199,7 +201,9 @@ def _snapshot_stamps(path: Path) -> dict[str, str | None] | None:
     import json
     try:
         rules = json.loads(path.read_text(encoding="utf-8"))["rules"]
-        return {r["id"]: r.get("verified_commit") for r in rules}
+        # Hand-editable: a commit that is not a string is read as none, not sliced.
+        return {r["id"]: c if isinstance(c := r.get("verified_commit"), str) else None
+                for r in rules}
     except (OSError, ValueError, KeyError, TypeError, AttributeError):
         return None
 
@@ -526,10 +530,10 @@ def cmd_export(args: argparse.Namespace) -> int:
                if drift.off_branch(client.all_nodes(), client.repo, str(path.parent))
                else "no rule in this store governs files (`okl record ... --files <globs>` enrolls one)")
         print(f"wrote {path} with 0 rules — {why}", file=sys.stderr)
-        _warn_off_branch(client)
+        _warn_off_branch(client, snapshot=path)
         return 2
     print(f"wrote {path}: {n} rule(s). Commit it — CI's drift gate reads the committed copy.")
-    _warn_off_branch(client)
+    _warn_off_branch(client, snapshot=path)
     return 0
 
 
