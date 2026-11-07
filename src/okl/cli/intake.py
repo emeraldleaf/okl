@@ -37,7 +37,10 @@ def _add_nearest(found: list[intake.Finding]) -> None:
     for f in found:
         try:
             result = client.check(f.summary, limit=3)
-        except (OKLUnreachableError, OSError, ValueError):
+        except (OKLUnreachableError, OSError, ValueError) as e:
+            # Said, so no finding reads as one nothing covers (CodeRabbit on #388).
+            print(f"okl intake: briefing lookup skipped, the store could not be read ({e})",
+                  file=sys.stderr)
             return
         titles = {item["id"]: item.get("title", "") for bucket in result.values()
                   if isinstance(bucket, list) for item in bucket

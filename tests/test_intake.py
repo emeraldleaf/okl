@@ -145,3 +145,69 @@ def test_a_pr_gh_cannot_find_is_an_error_not_an_empty_list(monkeypatch, missing)
     monkeypatch.setattr(intake, "_gh", lambda *a: json.dumps(body))
     with pytest.raises(intake.IntakeError, match="no PR #9"):
         intake.fetch(9, "o/r")
+
+
+def test_every_page_of_threads_and_commits_is_read_and_a_long_thread_is_named(monkeypatch):
+    """One page held 100 threads and 250 commits, and a PR with more was shown as if whole
+    (CodeRabbit on #388). Both connections are followed page by page; a thread with more
+    comments than a page holds is named in a warning."""
+    t1, t2 = PR["reviewThreads"]["nodes"][0], PR["reviewThreads"]["nodes"][1]
+    long_thread = {**t2, "comments": {**t2["comments"], "pageInfo": {"hasNextPage": True}}}
+    pages = {
+        ("reviewThreads", None): {"hasNextPage": True, "endCursor": "T1", "nodes": [t1]},
+        ("reviewThreads", "T1"): {"hasNextPage": False, "endCursor": None, "nodes": [long_thread]},
+        ("commits", None): {"hasNextPage": True, "endCursor": "K1", "nodes": PR["commits"]["nodes"][:2]},
+        ("commits", "K1"): {"hasNextPage": False, "endCursor": None, "nodes": PR["commits"]["nodes"][2:]},
+    }
+
+    def gh(*args):
+        if args[:1] == ("api",) and args[1].startswith("repos/"):
+            return json.dumps({"files": [{"filename": f} for f in FILES[args[1].rsplit("/", 1)[1]]]})
+        query = next(a for a in args if a.startswith("query="))
+        key = "reviewThreads" if "reviewThreads" in query else "commits"
+        after = next((a.split("=", 1)[1] for a in args if a.startswith("after=")), None)
+        page = pages[(key, after)]
+        conn = {"pageInfo": {"hasNextPage": page["hasNextPage"], "endCursor": page["endCursor"]},
+                "nodes": page["nodes"]}
+        return json.dumps({"data": {"repository": {"pullRequest": {"number": 7, "title": "t", key: conn}}}})
+    monkeypatch.setattr(intake, "_gh", gh)
+
+    pr, files_of = intake.fetch(7, "o/r")
+    found = intake.findings(pr, files_of)
+
+    assert [f.url[-2:] for f in found] == ["r1", "r2"]                  # the second page's thread too
+    assert [f.commit for f in found] == [C3[:7], C2[:7]]                 # C3 is on the second commit page
+    assert pr["warnings"] == ["a thread on app/cart.py has more than 100 comments; only the first 100 were read"]
+    assert "! a thread on app/cart.py" in intake.render(found, pr)
+
+
+def test_findings_come_in_the_order_they_were_made():
+    """By when each was made, then by comment number: sorting the URLs put discussion_r10
+    before discussion_r9 (CodeRabbit on #388)."""
+    def thread(n: int, at: str) -> dict:
+        return {"isResolved": True, "path": "a.py", "line": n, "resolvedBy": None,
+                "comments": {"nodes": [{"author": {"login": "x"}, "createdAt": at, "body": f"finding {n}",
+                                        "url": f"https://github.com/o/r/pull/7#discussion_r{n}"}]}}
+    pr = {"number": 7, "commits": {"nodes": []}, "reviewThreads": {"nodes": [
+        thread(10, "2026-11-01T12:00:00Z"), thread(9, "2026-11-01T11:00:00Z"),
+        thread(12, "2026-11-01T13:00:00Z"), thread(11, "2026-11-01T13:00:00Z")]}}
+    assert [f.line for f in intake.findings(pr, lambda sha: set())] == [9, 10, 11, 12]
+
+
+def test_a_briefing_lookup_that_fails_is_said_not_read_as_nothing_covered(tmp_path, monkeypatch, capsys):
+    """With a store that cannot be read, the related lessons are skipped, and saying so keeps a
+    finding from reading as one no lesson covers (CodeRabbit on #388)."""
+    from okl.cli import main
+    from okl.client import Client, OKLUnreachableError
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".okl").mkdir()
+    (tmp_path / ".okl" / "config.json").write_text(json.dumps({"repo": "r"}))
+    monkeypatch.setattr(intake, "fetch", lambda n, repo=None: (PR, _files_of()))
+    def unreachable(self, *a, **k):
+        raise OKLUnreachableError("service unreachable: connection refused")
+    monkeypatch.setattr(Client, "check", unreachable)
+
+    assert main(["intake", "pr", "7"]) == 0
+    out = capsys.readouterr()
+    assert "briefing lookup skipped" in out.err and "connection refused" in out.err
+    assert "a briefing on it already shows" not in out.out

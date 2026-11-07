@@ -24,21 +24,35 @@ import subprocess
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
 
-QUERY = """query($owner: String!, $name: String!, $number: Int!) {
+# Paged, both connections: a PR with more threads or commits than one page holds was read only
+# in part, and shown as if whole (CodeRabbit on #388). A thread's comments come 100 at a time,
+# and a thread with more is named in a warning rather than followed.
+THREADS_QUERY = """query($owner: String!, $name: String!, $number: Int!, $after: String) {
   repository(owner: $owner, name: $name) {
     pullRequest(number: $number) {
       number title url state
-      commits(first: 250) { nodes { commit { oid committedDate messageHeadline } } }
-      reviewThreads(first: 100) {
+      reviewThreads(first: 100, after: $after) {
+        pageInfo { hasNextPage endCursor }
         nodes {
           isResolved path line originalLine
           resolvedBy { login }
-          comments(first: 50) { nodes { author { login } body createdAt url } }
+          comments(first: 100) { pageInfo { hasNextPage } nodes { author { login } body createdAt url } }
         }
       }
     }
   }
 }"""
+COMMITS_QUERY = """query($owner: String!, $name: String!, $number: Int!, $after: String) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      commits(first: 100, after: $after) {
+        pageInfo { hasNextPage endCursor }
+        nodes { commit { oid committedDate messageHeadline } }
+      }
+    }
+  }
+}"""
+_MAX_PAGES = 50                    # 5,000 threads or commits: past that, something is wrong
 
 _SHA = re.compile(r"\b[0-9a-f]{7,40}\b")
 
@@ -86,30 +100,40 @@ def summary_of(body: str) -> str:
 
 
 def _clip(s: str, n: int = 160) -> str:
+    """`s` on one line, cut to `n` characters with an ellipsis."""
     s = " ".join(s.split())
     return s if len(s) <= n else s[: n - 1] + "…"
 
 
 def findings(pr: dict, files_of: Callable[[str], set[str]]) -> list[Finding]:
-    """The resolved threads of `pr` (GitHub's pullRequest object, as QUERY returns it), oldest
+    """The resolved threads of `pr` (GitHub's pullRequest object, as fetch() returns it), oldest
     first. `files_of(sha)` gives the paths a commit changed; it is asked only for a thread no
     reply names a commit for."""
     commits = sorted(((c["commit"]["oid"], c["commit"]["committedDate"], c["commit"]["messageHeadline"])
                       for c in pr.get("commits", {}).get("nodes", [])), key=lambda c: c[1])
-    out: list[Finding] = []
+    out: list[tuple[str, int, Finding]] = []
     for t in pr.get("reviewThreads", {}).get("nodes", []):
         comments = t.get("comments", {}).get("nodes", [])
         if not t.get("isResolved") or not comments:
             continue
         first = comments[0]
         sha, title, how = _resolving_commit(comments, commits, t.get("path") or "", files_of)
-        out.append(Finding(
+        url = first.get("url") or ""
+        out.append((first.get("createdAt") or "", _comment_number(url), Finding(
             path=t.get("path") or "", line=t.get("line") or t.get("originalLine"),
             author=(first.get("author") or {}).get("login") or "?",
-            summary=summary_of(first.get("body") or ""), url=first.get("url") or "",
+            summary=summary_of(first.get("body") or ""), url=url,
             resolved_by=(t.get("resolvedBy") or {}).get("login"),
-            commit=sha[:7] if sha else None, commit_title=title, found_how=how))
-    return sorted(out, key=lambda f: f.url)
+            commit=sha[:7] if sha else None, commit_title=title, found_how=how)))
+    # When each finding was made, then its comment number: a URL sorts discussion_r10 before
+    # discussion_r9 (CodeRabbit on #388).
+    return [f for _at, _n, f in sorted(out, key=lambda e: (e[0], e[1]))]
+
+
+def _comment_number(url: str) -> int:
+    """The review comment's number at the end of its URL (#discussion_r4503195153), or 0."""
+    m = re.search(r"(\d+)$", url)
+    return int(m.group(1)) if m else 0
 
 
 def _resolving_commit(comments: list[dict], commits: list[tuple[str, str, str]], path: str,
@@ -155,9 +179,10 @@ def render(fs: list[Finding], pr: dict) -> str:
     """The worksheet: each resolved finding, the question, and the commands to answer it."""
     n = int(pr.get("number") or 0)
     head = f"okl intake pr {n}: {len(fs)} resolved review thread(s) on \"{pr.get('title', '')}\""
+    warned = [f"  ! {w}" for w in pr.get("warnings", [])]
     if not fs:
-        return head + ".\nNothing to ask: no review thread on it was resolved."
-    lines = [head, ""]
+        return "\n".join([head + ".", *warned, "Nothing to ask: no review thread on it was resolved."]) + "\n"
+    lines = [head, *warned, ""]
     for i, f in enumerate(fs, 1):
         lines.append(f"[{i}] {f.where()} · {f.author}"
                      + (f" · resolved by {f.resolved_by}" if f.resolved_by else ""))
@@ -179,6 +204,7 @@ def as_json(fs: list[Finding], pr: dict) -> str:
     """The same, for an agent: each finding with its commands."""
     n = int(pr.get("number") or 0)
     return json.dumps({"pr": n, "title": pr.get("title"), "url": pr.get("url"), "question": QUESTION,
+                       "warnings": pr.get("warnings", []),
                        "findings": [{**asdict(f), "record": record_command(f, n), "verify": verify_command()}
                                     for f in fs]}, indent=2)
 
@@ -186,6 +212,7 @@ def as_json(fs: list[Finding], pr: dict) -> str:
 # --- reading GitHub, through gh ------------------------------------------------------------
 
 def _gh(*args: str) -> str:
+    """gh's output for `args`, or IntakeError saying why gh could not give it."""
     if shutil.which("gh") is None:
         raise IntakeError("gh is not installed: okl intake reads the PR through it (https://cli.github.com)")
     try:
@@ -197,20 +224,48 @@ def _gh(*args: str) -> str:
     return r.stdout
 
 
+def _pages(query: str, key: str, owner: str, name: str, number: int) -> tuple[dict | None, list[dict]]:
+    """The PR object of the first page, and every node of its `key` connection, page by page;
+    (None, []) when GitHub has no such PR."""
+    nodes: list[dict] = []
+    head: dict | None = None
+    after: str | None = None
+    for _ in range(_MAX_PAGES):
+        args = ["api", "graphql", "-f", f"query={query}", "-F", f"owner={owner}", "-F", f"name={name}",
+                "-F", f"number={number}"] + (["-f", f"after={after}"] if after else [])
+        data = json.loads(_gh(*args))
+        pr = ((data.get("data") or {}).get("repository") or {}).get("pullRequest")
+        if not pr:
+            return None, []
+        head = head or pr
+        conn = pr.get(key) or {}
+        nodes += conn.get("nodes", [])
+        info = conn.get("pageInfo") or {}
+        if not info.get("hasNextPage"):
+            return head, nodes
+        after = info.get("endCursor")
+    raise IntakeError(f"more than {_MAX_PAGES} pages of {key}: stopped rather than read on")
+
+
 def fetch(number: int, repo: str | None = None) -> tuple[dict, Callable[[str], set[str]]]:
-    """PR `number` of `repo` (OWNER/NAME, else the repo gh sees here) as QUERY returns it, and a
-    reader of the files a commit changed."""
+    """PR `number` of `repo` (OWNER/NAME, else the repo gh sees here), every review thread and
+    commit of it, in the shape findings() reads, with a `warnings` list for anything read only
+    in part; and a reader of the files a commit changed."""
     if not repo:
         repo = json.loads(_gh("repo", "view", "--json", "nameWithOwner"))["nameWithOwner"]
     owner, _, name = (repo or "").partition("/")
-    data = json.loads(_gh("api", "graphql", "-f", f"query={QUERY}", "-F", f"owner={owner}",
-                          "-F", f"name={name}", "-F", f"number={number}"))
-    pr = ((data.get("data") or {}).get("repository") or {}).get("pullRequest")
+    pr, threads = _pages(THREADS_QUERY, "reviewThreads", owner, name, number)
     if not pr:
         raise IntakeError(f"no PR #{number} in {repo}")
+    _head, commits = _pages(COMMITS_QUERY, "commits", owner, name, number)
+    pr = {**pr, "reviewThreads": {"nodes": threads}, "commits": {"nodes": commits},
+          "warnings": [f"a thread on {t.get('path') or 'the PR'} has more than 100 comments; only "
+                       "the first 100 were read" for t in threads
+                       if ((t.get("comments") or {}).get("pageInfo") or {}).get("hasNextPage")]}
     cache: dict[str, set[str]] = {}
 
     def files_of(sha: str) -> set[str]:
+        """The paths commit `sha` changed, read once."""
         if sha not in cache:
             info = json.loads(_gh("api", f"repos/{owner}/{name}/commits/{sha}"))
             cache[sha] = {f["filename"] for f in info.get("files", [])}
