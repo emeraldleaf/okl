@@ -32,6 +32,17 @@ ROOT = Path(__file__).resolve().parents[1]
 PKG = ROOT / "src" / "okl"
 DOC = ROOT / "docs" / "ARCHITECTURE.md"
 
+# A Mermaid chart is drawn on the page's own background, transparent, so on a dark theme the
+# default near-black arrows vanished (reported in a dark VS Code preview). Every box gets a
+# light fill with dark text, and the arrows a mid teal that reads on black and on white, so
+# the chart looks the same on either. okl's colours, from docs/overview/okl-anatomy.html.
+THEME = ('%%{init: {"theme": "base", "themeVariables": {'
+         '"primaryColor": "#e8f0f0", "primaryTextColor": "#1a4d4a", "primaryBorderColor": "#1a4d4a", '
+         '"lineColor": "#3d9b96", "clusterBkg": "#f8f6f3", "clusterBorder": "#8a6a3f", '
+         '"titleColor": "#1a4d4a", "edgeLabelBackground": "#ffffff", "textColor": "#1a4d4a"}}}%%')
+# Mermaid's default arrow is a hairline; at 2px it holds up on a dark page as well as a light one.
+ARROWS = "  linkStyle default stroke-width:2px"
+
 
 # --- the package layers ------------------------------------------------------------------
 
@@ -108,7 +119,7 @@ def layers_diagram() -> str:
     if cli_reaches_all:
         between = {e for e in between if e[0] != "layer0"}
     top = layers[0][0]
-    lines = ["flowchart LR"]
+    lines = [THEME, "flowchart LR"]
     lines.append('  subgraph outside["outside the layer contract"]')
     lines.extend(f"    {m}" for m in outside)
     lines.append("  end")
@@ -125,6 +136,7 @@ def layers_diagram() -> str:
     # the store, drew a tangle nobody could read. Inside a group, module to module.
     lines.extend(f"  {a} --> {b}" for a, b in sorted(between, key=lambda e: (order.index(e[0]), order.index(e[1]))))
     lines.extend(f"  {m} --> {t}" for (m, t) in sorted(edges) if group[m] == group[t])
+    lines.append(ARROWS)
     lead = (f"Layer 1 (top), `{top}`, imports from every group below, so it is left out of the "
             "chart.\n\n" if cli_reaches_all else "")
     return f"{lead}```mermaid\n" + "\n".join(lines) + "\n```"
@@ -196,6 +208,7 @@ def storage_diagram() -> str:
         return "<br/>".join(" · ".join(items[i:i + per]) for i in range(0, len(items), per))
 
     return "```mermaid\n" + "\n".join([
+        THEME,
         "flowchart LR",
         f'  cli["okl CLI<br/>{len(cmds)} commands"]',
         f'  mcp["okl mcp, for any MCP agent<br/>{rows(tools, 2)}"]',
@@ -211,6 +224,7 @@ def storage_diagram() -> str:
         "  service --> store",
         '  store -- "sqlite:/// URL, or none" --> sqlite',
         '  store -- "OKL_DATABASE_URL starting postgres" --> pg',
+        ARROWS,
     ]) + "\n```"
 
 

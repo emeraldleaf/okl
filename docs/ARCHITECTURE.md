@@ -43,6 +43,7 @@ briefing prints for each, so the agent knows how far to trust what it is told.
 
 <!-- generated:storage -->
 ```mermaid
+%%{init: {"theme": "base", "themeVariables": {"primaryColor": "#e8f0f0", "primaryTextColor": "#1a4d4a", "primaryBorderColor": "#1a4d4a", "lineColor": "#3d9b96", "clusterBkg": "#f8f6f3", "clusterBorder": "#8a6a3f", "titleColor": "#1a4d4a", "edgeLabelBackground": "#ffffff", "textColor": "#1a4d4a"}}}%%
 flowchart LR
   cli["okl CLI<br/>27 commands"]
   mcp["okl mcp, for any MCP agent<br/>okl_check · okl_record<br/>okl_search · okl_update<br/>okl_retire · okl_get"]
@@ -58,6 +59,7 @@ flowchart LR
   service --> store
   store -- "sqlite:/// URL, or none" --> sqlite
   store -- "OKL_DATABASE_URL starting postgres" --> pg
+  linkStyle default stroke-width:2px
 ```
 <!-- /generated:storage -->
 
@@ -71,6 +73,7 @@ imports are drawn as one arrow to each group it reaches.
 Layer 1 (top), `cli`, imports from every group below, so it is left out of the chart.
 
 ```mermaid
+%%{init: {"theme": "base", "themeVariables": {"primaryColor": "#e8f0f0", "primaryTextColor": "#1a4d4a", "primaryBorderColor": "#1a4d4a", "lineColor": "#3d9b96", "clusterBkg": "#f8f6f3", "clusterBorder": "#8a6a3f", "titleColor": "#1a4d4a", "edgeLabelBackground": "#ffffff", "textColor": "#1a4d4a"}}}%%
 flowchart LR
   subgraph outside["outside the layer contract"]
     bootstrap
@@ -122,5 +125,6 @@ flowchart LR
   layer4 --> outside
   layer5 --> layer6
   protection --> codeowners
+  linkStyle default stroke-width:2px
 ```
 <!-- /generated:layers -->
