@@ -2589,9 +2589,15 @@ def test_a_snapshot_that_cannot_be_read_is_refused_not_read_as_none(tmp_path, mo
     git = ["git", "-c", "user.email=t@t", "-c", "user.name=t"]
     subprocess.run(["git", "init", "-q", "."], check=True)
     snap = tmp_path / "okl-drift.json"
-    assert _committed_snapshot(snap) is None                       # none anywhere, no commits yet
+    assert _committed_snapshot(snap) == (None, False)              # none anywhere, no commits yet
     snap.write_text('{"repo": "r", "rules": []}')
-    assert _committed_snapshot(snap) == {"repo": "r", "rules": []}   # on disk, not committed
+    # On disk, not committed: read for the shrink check, but not HEAD's, so a refresh keeps
+    # no entry from it for a lesson last verified on another branch (#378)
+    assert _committed_snapshot(snap) == ({"repo": "r", "rules": []}, False)
+    subprocess.run(["git", "add", "okl-drift.json"], check=True)
+    subprocess.run([*git, "commit", "-qm", "snapshot"], check=True)
+    snap.write_text('{"repo": "r", "rules": [{"id": "on-disk-only"}]}')
+    assert _committed_snapshot(snap) == ({"repo": "r", "rules": []}, True)   # HEAD's, not the disk's
     snap.write_text("{ not json")
     subprocess.run(["git", "add", "okl-drift.json"], check=True)
     subprocess.run([*git, "commit", "-qm", "broken"], check=True)

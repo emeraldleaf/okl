@@ -337,6 +337,20 @@ def governing(nodes: list[Node], repo: str, paths: set[str]) -> list[Node]:
     return out
 
 
+def unproven_watch(node_id: str) -> str:
+    """What to say when a lesson governs files and no check has passed (#377). Drift reports
+    such a lesson as never verified once git attributes a change to its files, so the
+    pre-push gate goes red for a lesson just recorded, and CI's once a refreshed
+    okl-drift.json (any verify or export writes one) is committed. Unsaid, that reads as okl breaking the build, and in one
+    repo an agent cleared the lesson's files to get past it, dropping the watch it was for.
+    The id is shell-quoted: `--id` is the caller's choice (CodeRabbit on #381)."""
+    import shlex
+    return (f"it governs files and no check has passed, so drift reports it as never verified "
+            f"wherever git finds a commit to those files (the pre-push gate at once, CI's once a "
+            f"refreshed okl-drift.json is committed), until one passes: "
+            f"okl verify {shlex.quote(node_id)} --run \"<check>\" --expect \"<signal>\"")
+
+
 def check_paths(store: Store, repo: str, paths: list[str]) -> dict[str, Any]:
     """The lessons that govern `paths` (repo-relative) in `repo`, in the shape check() returns,
     so every format renders it (#94): the question an agent asks before it reads or edits a
@@ -1080,7 +1094,7 @@ def _carry_over(store: Store, kw: dict[str, Any], node_id: str, *,
     for name in _KEPT_ON_SILENCE:
         if name not in given and getattr(old, name) not in (None, ""):
             kw[name] = getattr(old, name)
-    if not _same_files(old.files, kw.get("files")):
+    if not same_files(old.files, kw.get("files")):
         kw.update(verified_at=None, verified_commit=None, verified_by=old.verified_by)
     else:
         # The stored check and the stamp stay while the files do, as the store has them: after
@@ -1150,7 +1164,7 @@ def update(store: Store, node_id: str, repo: str | None = None,
     old_files = n.files
     for k, v in changes.items():
         setattr(n, k, v)
-    if "files" in changes and not _same_files(old_files, n.files):
+    if "files" in changes and not same_files(old_files, n.files):
         n.verified_at = n.verified_commit = None
     store.add_node(n)
     return _node_public(n)
@@ -1282,8 +1296,9 @@ def retire(store: Store, node_id: str, reason: str, *, by: str | None = None,
     return get(store, node_id) or {}
 
 
-def _same_files(a: str | None, b: str | None) -> bool:
-    """Whether two `files` values name the same globs, ignoring order, spacing and blanks."""
+def same_files(a: str | None, b: str | None) -> bool:
+    """Whether two `files` values name the same globs, ignoring order, spacing and blanks.
+    The one test of "the governed files changed": proof, and every message about it."""
     def norm(v: str | None) -> set[str]:
         return {g.strip() for g in (v or "").split(",") if g.strip()}
     return norm(a) == norm(b)

@@ -13,6 +13,22 @@
   `hooks/hooks.json` does not register (a misspelt one included), and on a render whose names
   differ from its source. okl's last hand-drawn diagram was retired after it was found wrong
   in four places nothing checked.
+- **A snapshot takes no stamp from another branch** (#378). One store serves every branch, so
+  `okl export --drift`, and the refresh after `okl verify`, wrote each lesson with its latest
+  stamp, whichever branch it was made on. With stacked branches, a lesson checked on a later
+  branch went into an earlier one's snapshot; its file differs there, so that branch's gate went
+  red for a lesson it never touched. A stamp made on a commit outside HEAD's history is now held
+  back: the lesson keeps the entry this branch committed for it, or is left out where there is
+  none. After a squash merge the committed entry is the merged branch's stamp, so main keeps
+  it. The list of lessons last verified elsewhere now says, for each, what the snapshot holds.
+- **`okl record --files` with no check says what comes next** (#377). Drift reports a lesson
+  that governs files as never verified until a check passes, so where a drift gate runs, the
+  next push or CI run went red for a lesson just recorded, and `okl record` printed only its
+  id. In one repo an agent cleared the lesson's files to get the gate green, which dropped
+  the watch the lesson was recorded for. `okl record` now prints, on stderr, that drift will
+  report it and the `okl verify <id> --run … --expect …` command to run, as `okl update` does
+  when it gives an unproven lesson files, and as the MCP `okl_record` and `okl_update` tools
+  do. The lesson is still recorded and the exit code is unchanged.
 - **`okl doctor`, a re-run of `okl init` and `okl metric` say what the interests hide** (#374).
   `init` adds `security` and `method` to the interests it detects, but only for a repo with none:
   a later run keeps the list you have (#340). A repo set up before those defaults never gained

@@ -227,6 +227,8 @@ okl record --type Rule --scope repo --id discount-server-side \
 `--trigger` (repeatable) is a phrasing of a moment the lesson applies, in a developer's own
 words: the request or error that led to it first. The briefing finds a lesson by its title,
 symptom, aliases and triggers ([how](RETRIEVAL.md)), so `okl record` says so when you give none.
+With `--files` it also prints the `okl verify` command to run next: until a check passes,
+drift reports the lesson as never verified, so a drift gate goes red on it.
 
 The same record from a Decision needs only `--type Decision`, `--title` and a `--body`
 starting `why:`. To correct a lesson later, change only what is wrong:
@@ -482,13 +484,13 @@ a CI gate as well.
 | `claude -p` prints the answer to "what did we learn?" | the Stop hook replaced the printed answer | run headless sessions with `OKL_DISABLED_HOOKS=encode` |
 | CI warns "Drift not checked" | no `okl-drift.json` committed yet | expected until a lesson with `--files` is verified; then commit the file `okl verify` creates |
 | CI fails with "NOTHING CHECKED" | a snapshot with zero rules is committed | remove it, or record a lesson with `--files` and re-export |
-| `okl drift` is red right after `okl record --files` | a new rule is unverified until its first `okl verify` | run its check with `okl verify` |
+| `okl drift` is red right after `okl record --files` | a new rule is unverified until its first `okl verify` | run its check with the `okl verify` command `okl record` printed; clearing the lesson's `--files` turns the gate green by dropping the watch the lesson exists for |
 | `okl drift` is red after you changed code | lessons governing those files need re-checking | `okl reverify` |
 | `git push` stops with "okl pre-push: lessons drifted" | the pre-push hook found drift | `okl reverify`, commit, push again; `git push --no-verify` skips the check once |
 | `okl drift` reports a lesson "stamped …, unverified" | its stamp has no observed check behind it, often from a seed file that marked it verified | prove it with `okl verify <id> --run …`, or drop its `files` if nothing should gate it |
 | A briefed lesson is marked *STALE*, *UNVERIFIED* or *UNPROVEN* | its governed files changed after its last check, no check has passed yet, or its stamp has no observed check behind it | `okl reverify` re-runs stored checks; a lesson with none needs one first: ask your agent to re-check it, or run `okl verify <id>` to see what to run |
 | A briefed lesson is marked *UNCHECKED* | no observed check backs it and drift has no verdict on it: it governs no files here, and was never verified or carries a stamp with no `okl verify` run behind it (a lesson that governs files here is marked *UNVERIFIED* or *UNPROVEN* instead) | give it a check with `okl verify <id> --run …`; if code should gate it, first name the files with `okl update <id> --files …`; until then the agent treats it as advice. `okl review` (opt-in; it runs a model when you run it) has a model check these lessons against the repo and report the ones that no longer hold |
-| `okl drift` lists lessons "last verified on a commit outside this branch's history" | one local store serves every branch, and those lessons were checked on another one | `okl reverify` re-checks them on this branch; until then their evidence depends on that branch still existing |
+| `okl drift` lists lessons "last verified on a commit outside this branch's history" | one local store serves every branch, and those lessons were checked on another one | `okl reverify` re-checks them on this branch; until then their evidence depends on that branch still existing. A snapshot written here takes none of those stamps: each such lesson keeps the entry this branch committed, or is left out, and `okl verify`, `okl reverify` and `okl export --drift` say which |
 | Every lesson is drifted in CI, but `okl drift` is clean locally | the CI checkout is shallow, so every file looks freshly changed | fetch full history (section 4) |
 
 More: the [README](../README.md) covers costs, scopes, the shared service and the MCP tools;

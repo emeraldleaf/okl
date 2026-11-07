@@ -31,7 +31,9 @@ okl drift --gate     # flag lessons whose governed source changed after they wer
 okl export --drift   # write okl-drift.json, the committed snapshot CI's drift gate reads
                      #   when it has no store; `okl verify` creates it for the first lesson
                      #   with --files and refreshes it after that (with no CI workflow, it
-                     #   only refreshes a committed one).
+                     #   only refreshes a committed one). A stamp made on a commit
+                     #   outside this branch's history is not written: the lesson keeps
+                     #   the entry this branch committed, or is left out, and is named.
                      #   CI reads the COMMITTED copy, and refuses an entry whose timestamp
                      #   does not match its verify evidence, so editing the timestamp alone
                      #   cannot clear it (editing both fields can; review is the guard).
