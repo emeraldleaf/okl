@@ -5204,6 +5204,84 @@ this one has not seen. A rule that must hold needs a check that fails the build,
 here replaces that. The audit (#394) could still move these figures most, since 173 of the flags are lessons the
 judge called *related*.
 
+## 4ap. PRE-REGISTERED: does a review that says whether a change followed each lesson find what it has left to do? (2026-11-08)
+
+Written before the review or its answer key ran on any task below. §4ao's review failed its bar, and the
+sort of its misses found that its answer key asked what a change needed when it was written, while a
+review has work only where the change has not followed a lesson. That sort came after the failure was
+known, so it cannot rescue §4ao. This section tests the idea on tasks no review has read, with the key
+made first.
+
+**The question.** When a review reads every lesson against a pull request's whole change and says whether
+the change followed it, how many of the lessons calling for action does it raise, how many does it raise
+wrongly, and at what cost?
+
+**What this test can and cannot show.** The key is Opus's reading and the review is Sonnet's, so a high
+score shows that two models agree. Three limits remain. The ledger's two known misses do not depend on
+any model, but they are on #388, whose misses have been read, so that check is in-sample. The audit (#394)
+covers §4al's labels and not the sort, and must be extended to it before any figure leaves this section.
+And there is no control arm: §4ao's prompt is not run on these tasks, so the result cannot say how much
+comes from the new prompt, from reading the whole change, or from the new key.
+
+**Seen before this was written.** §4ao's result and all of its sort on the later 25 tasks, including the
+reason for each miss; the new prompt's changes come from reading them. §4al's labels and §4am's and §4an's
+development-half figures on the 25 tasks below. No review's answer and no sort on any of those 25.
+
+**Tasks.** §4al's first 25 tasks by frozen `at` (§4am's development half), which no review has read. Each
+task's store is its lessons as §4al froze them. #388 is reviewed as well, only for the ledger.
+
+**The answer key, finished before the review runs** (`evals/review_action.py key`; `run` refuses until
+it is complete).
+1. *Labels.* §4al's judge read only the first 60,000 characters of a change. On the 6 of these 25 that run
+   longer, every lesson (1,451 pairs) is labelled again against the whole change, with §4al's judge and
+   prompt (`b1dbb8c24bbce0de`). On the other 19, §4al's labels stand.
+2. *States.* Opus puts each pair labelled needed in one state, against the whole change, with the prompt of
+   §4ao's sort (`9c4fbd5ccc965be3`): followed, not followed, check or unclear.
+
+A lesson *calls for action* when it is labelled needed and sorted not followed or check.
+
+**The review.** Sonnet (`claude -p --model sonnet --restricted --strict-mcp-config`, no tools), twenty
+lessons a call. Three things differ from §4ao:
+- It reads the whole change, in parts of at most 60,000 characters, cut between files where it can. Each
+  part comes with the list of every changed file, and every lesson is asked of every part.
+- It answers one word per lesson, worded apart from the key's states: *none*, *done*, *gap* or *ask*, with
+  a sentence to the author for the last two. A lesson's answer on the whole change is the one asking most
+  of the author across its parts: gap, then ask, then done, then none.
+- It is not required to name a line.
+
+A lesson is *raised* when its answer is gap or ask. The review still cannot read the repository around the
+change, which is a separate question. The prompt is in the script and its sha256 in the receipt. A lesson
+left unanswered is asked again, up to three rounds in all; any still unanswered mark the run INCOMPLETE.
+
+**Measures.**
+1. Reach: lessons calling for action that are raised, with a bootstrap over tasks.
+2. The task-level failure rate: a lesson calling for action not raised, with Wilson intervals.
+3. Raised per task (median and maximum), each raise classed as *confirmed* (it calls for action), *wrong*
+   (the pair is labelled no, or labelled needed and sorted followed) or *unresolved* (labelled related, or
+   needed and sorted unclear).
+4. The ledger: whether both lessons are raised on #388.
+5. Cost per pull request: calls, tokens and seconds, and the tokens' API-priced equivalent.
+6. The share of followed lessons raised, and how the review's words line up with the key's states.
+
+**Decision rule.** The review holds when all four are true: the lower bound of its reach is at least 70%;
+at most 5 raises are wrong at the median task; at most 10 lessons are raised at the median task; and both
+ledger lessons are raised. The 70 and the 5 are §4ao's, unchanged, and *wrong* is stricter here, since it
+includes asking for work already done. The 10 is a judgement call set before the run: a longer list on a
+typical pull request will not be read. If it holds, it ships as a CI comment, never a gate (#390), and its
+figures stay inside this section until they hold on a fresh holdout and #394 passes. If it fails, its
+misses are read, and a changed review is measured only under a new pre-registration, on pull requests
+merged after this date.
+
+**Predictions** (not decision rules):
+- its reach is at least 81.6%, what §4ao's sort read;
+- it raises fewer than §4ao's 12 lessons at the median task;
+- it raises under 45.5% of the lessons a change had followed;
+- it still misses a lesson calling for action on more than a third of the tasks.
+
+**Budget.** About 100 Opus calls for the key, then about 570 Sonnet calls, three at a time, on the
+maintainer's subscription.
+
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
