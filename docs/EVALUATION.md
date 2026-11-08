@@ -30,9 +30,10 @@ mistake no lesson named.
 
 **Tasks**
 
-1. **Tasks come from real work, and do not name the lesson.** A task is a real prompt, issue or
-   pull request, and the lesson it needs must not be inferable from its text: a leak check
-   rejects any task whose prompt or repository states the answer. Real-log tasks with the target
+1. **Tasks come from real work, and do not state the answer.** A task is a real prompt, issue or
+   pull request. That its lesson can be inferred, as "add a webhook endpoint" implies signature
+   verification, does not exclude it: that is ordinary work. A leak check rejects any task whose
+   prompt or repository states the answer. Real-log tasks with the target
    stripped from the prompt (TellOnce, arXiv 2606.13174v2), a validator that rejects revealing
    traps (DreamBench-SWE, 2608.20664), and the rule left out of the prompt in the "native" arm
    (2607.26819) all do this. okl's eight authored tasks name their lesson's subject; they stay,
@@ -73,9 +74,10 @@ mistake no lesson named.
 **Arms**
 
 8. **A floor and a ceiling beside each treatment.** No briefing; the treatment; and every lesson,
-   or the needed lesson quoted. The gap between floor and ceiling is the headroom; the gap
-   between treatment and ceiling separates "did not reach the agent" from "reached it and was not
-   followed" (TellOnce's no, all and relevant rules; 2607.26819's native and quote arms;
+   or the needed lesson quoted. The gap between floor and ceiling is the headroom. The gap between
+   treatment and ceiling cannot by itself tell "did not reach the agent" from "reached it and was
+   not followed", so each task also records whether the lesson reached the agent, and outcomes are
+   compared by that as well as against the ceiling (TellOnce's no, all and relevant rules; 2607.26819's native and quote arms;
    MemoryAgentBench's zero-shot floor, 2507.05257).
 9. **Harm is counted.** A task the agent passes without a briefing and fails with one is reported
    on its own (Memory Transfer Learning's negative transfer, 2604.14004; DreamBench-SWE's
@@ -103,7 +105,11 @@ mistake no lesson named.
     cutoff from real tasks so that the needed lesson is reached with probability at least 1 − α,
     whatever the retriever (Lei et al., JASA 2018, 1604.04173; Angelopoulos and Bates, 2107.07511;
     TRAQ, 2307.04642). Calibrating on each task's worst-ranked needed lesson covers all of them;
-    conformal risk control bounds the share missed (2208.02814). It holds only while new tasks
+    conformal risk control bounds the share missed (2208.02814). The calibration runs on the set
+    actually delivered, after every filter: a needed lesson the retriever never returns, or a
+    filter removes, has no rank and counts as beyond every cutoff. When that leaves no finite cutoff
+    meeting the target, the report says so and gives the reach at the largest cutoff instead of a
+    guarantee. It holds only while new tasks
     resemble the calibration tasks, so it is recalibrated when the store or retriever changes. At
     α = 0.1 it needs at least 9 calibration tasks to exist and about 100 to be tight within five
     points (Angelopoulos and Bates, Table 1). Where needed lessons rank deep, as in §4ak, the
@@ -127,8 +133,9 @@ mistake no lesson named.
 ## Retrieval: the channels, and what each can see
 
 A lesson can reach the agent through five channels, and §4ak shows they are not interchangeable:
-two lessons relevant to what the code did, not to what the task was about, ranked between 54th and
-299th of 364 for every text written before the code, with or without the semantic arms. Only a
+two lessons relevant to what the code did, not to what the task was about, were not even full-text
+candidates for the prompt, and every rank recorded for a text written before the code ran from 54th
+to 299th, of 311 to 364 candidates, with or without the semantic arms. Only a
 channel that reads the code can see that class. Reach is reported per channel, and for the union
 before the code merged.
 
