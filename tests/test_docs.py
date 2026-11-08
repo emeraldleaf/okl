@@ -476,7 +476,7 @@ _RECEIPT = re.compile(r"`([\w.-]+\.(?:json|txt))`")
 _NOT_FIGURES = re.compile(r"`[^`]*`|\d{4}-\d{2}-\d{2}|#\d+|§\w+(?: finding \d+)?|\b\d+\.\d+\.\d+\b|100-character")
 _NUMBER = re.compile(r"(?<![\w.])\d(?:[\d,]*\d)?(?:\.\d+)?%?")   # commas only between digits
 # A status row with no measurement behind it, and why.
-NO_EVIDENCE = {"each session's lessons are recorded": "the Stop hook's behaviour, held by its tests, not a measurement"}
+NO_EVIDENCE: dict[str, str] = {}   # the Stop hook's row now cites #391, where a long session showed what its tests did not
 
 
 def _thesis_figures() -> dict[str, str]:
