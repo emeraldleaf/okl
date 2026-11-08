@@ -4826,6 +4826,69 @@ calibration set for the conformal cutoff; with the needed lessons at a median ra
 90% cutoff will be deep, and its briefing size will be reported beside it. Outside this section, none
 of these figures is quoted until #394 passes.
 
+## 4am. PRE-REGISTERED: can the briefing reach more of what real work needs? Three arms on a time split (2026-11-08)
+
+Written before any arm is computed on either half. It follows §4al, which found the default briefing
+named 36% of the lessons real changes needed (model-judged, not yet audited); #390.
+
+**The question.** Do three changes to the briefing reach more of the lessons later work needed, and
+at what cost in briefing size?
+
+**Seen before this was written.** An in-sample look at all 50 of §4al's tasks, from its receipt and
+the store snapshot, is why these arms were chosen:
+- the ten lessons needed most often account for 99 of the 364 needed pairs, and the default missed
+  66 of those;
+- 163 of the 233 missed pairs ranked below 50th by the full-text search fused with the potion
+  embedding on the issue and title;
+- 24 ranked in its first 17 and were not named;
+- lessons from seed packs make up 30% of the missed pairs and 9% of the reached.
+
+That look covered both halves below, so the test half is not untouched. To limit the damage, every
+parameter is fixed here and the standing set is chosen from the development half alone; a fresh
+holdout settles it (What follows).
+
+**Split.** §4al's 50 tasks in the order each was frozen (ties by PR number): the first 25 are
+development (2026-09-18 to 2026-10-13), the last 25 test (2026-10-21 to 2026-11-07). The labels are
+§4al's: Opus, prompt b1dbb8c24bbce0de, with the labels file's sha256 in the receipt. *Needed* counts;
+*unsure* does not. The stores are §4al's: each task's lessons as they stood when its code was written.
+
+**Arms.** Each is added to §4al's default union, the base. The base is taken from receipt
+`realwork-reach-20261108-1548.json`, not re-run.
+1. **Standing set (S).** The k lessons needed on the most development tasks (ties broken by id),
+   named on every task whose store holds them. k = 10 decides; k = 20 is reported.
+2. **The ranker's top (R).** The first 17 lessons of the full-text search fused with the potion
+   embedding (`core.ranked_candidates`, linear) on the issue and title, all named. 17 is the
+   briefing's cap today. This tests whether the briefing's decision drops what the ranker finds.
+3. **Diff re-brief (D).** For each changed file, `okl check --task` on the file's path and its added
+   lines, whitespace collapsed and cut to 1,500 characters (under the 1,650 at which the warm model was
+   seen to fall back), run as the default runs (tiered, warm on). D names the union over files. It
+   stands for a briefing at each edit, a channel okl does not have yet.
+4. **All three together,** with S at k = 10.
+
+**Measures, on the test half.** The development half is reported beside them, marked in-sample.
+1. Lesson-level reach (named), and each arm's gain over the base, with a paired bootstrap over tasks.
+2. The task-level failure rate (a needed lesson not named), with Wilson intervals.
+3. Cost: the lessons each arm adds to a task's briefing (median and maximum), and how many of them
+   are labelled *no*.
+
+**Decision rule.** An arm joins the default briefing when, on the test half, the lower bound of its
+paired-bootstrap reach gain is above zero and it adds at most 10 lessons at the median task. An arm
+that passes on reach but fails on size is reported with its size, and its design is revisited
+rather than adopted.
+
+**Predictions** (not decision rules):
+- S at k = 10 adds at least 8 points of reach on the test half;
+- D adds more reach than R;
+- the three together still miss a needed lesson on more than half of the test tasks.
+
+**What follows.** An adopted arm is built into `okl check` behind its own flag. Its figures stay
+inside this section until it holds on a fresh holdout (pull requests merged after this date,
+labelled the same way) and #394 passes. Rewriting the seed packs' triggers is left out: done with
+these tasks in view, it would leak them into the measure.
+
+**Budget.** No model calls. About 620 `okl check` calls for D (one per changed file, both halves),
+with the warm model running.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
