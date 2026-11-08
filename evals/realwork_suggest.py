@@ -132,7 +132,7 @@ def main() -> int:
         print(f"no suggestion for {len(missing)} pair(s): {missing}; nothing written", file=sys.stderr)
         return 1
     rng = random.Random(SEED)  # noqa: S311 - a seeded draw, not a secret
-    decoys = set(rng.sample(sorted(best), DECOYS))
+    decoys = set(rng.sample(sorted(best), DECOYS))  # NOSONAR - seeded, reproducible on purpose
     shown = {pid: ({"answer": s["other"]["answer"], "reason": s["other"]["reason"], "line": s["other"]["line"]}
                    if pid in decoys else {k: s[k] for k in ("answer", "reason", "line")})
              for pid, s in best.items()}
