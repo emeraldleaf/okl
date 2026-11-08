@@ -221,3 +221,38 @@ jobs:
 
       - name: Tests
         run: pytest -q
+
+  # okl end to end, as a user gets it: a wheel built from this commit, installed fresh with the
+  # MCP extra into a clean virtualenv, then driven on a scratch repository by ci/e2e.py: init on
+  # a monorepo with a folder it cannot read, the prompt and Stop hooks fed the JSON Claude Code
+  # sends, the loop from record to re-verify with the pre-push gate, a stamp kept out of another
+  # branch's snapshot, the MCP server over stdio, and okl intake on this repository's own pull
+  # requests. A run of this by hand on 2026-11-07 found four bugs the suite had passed (#390).
+  # A job of its own, so its red can neither hide the suite's nor hide behind it.
+  e2e:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read   # okl intake reads this repository's review threads
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: Build a wheel and install it fresh, with the MCP extra
+        # What a user gets: no lockfile and no checkout on the path, only the wheel and the
+        # versions pip resolves for it today.
+        run: |
+          python -m pip wheel --no-deps -w "$RUNNER_TEMP/dist" .
+          python -m venv "$RUNNER_TEMP/okl-venv"
+          wheel="$(ls "$RUNNER_TEMP"/dist/*.whl)"
+          "$RUNNER_TEMP/okl-venv/bin/pip" install "${wheel}[mcp]"
+
+      - name: okl end to end
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python ci/e2e.py --okl "$RUNNER_TEMP/okl-venv/bin/okl"

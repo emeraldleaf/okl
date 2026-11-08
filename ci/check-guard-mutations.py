@@ -65,9 +65,43 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
      "validating --owned"),
     ("src/okl/cli/health.py", '    for ref in ("HEAD", "refs/remotes/origin/HEAD"):', '    for ref in ("HEAD",):',
      "doctor reading the default branch's CODEOWNERS"),
+    # okl intake (#376, #388): it reads, and writes nothing, the briefing log included.
+    ("src/okl/cli/intake.py", "limit=3, log=False)", "limit=3)", "intake's lookups left out of the briefing log"),
+    ("src/okl/client.py", '        if not log:\n            payload["log"] = False\n', "",
+     "a check sent to a service saying log: false"),
+    ("src/okl/client.py", '        if self.mode != "remote" and log:\n            # Over a shared service',
+     '        if self.mode != "remote":\n            # Over a shared service', "a local check left unlogged on request"),
+    ("src/okl/client.py", '        if self.mode != "remote" and log:\n            core.record_briefing(self._local_store(), repo, result)',
+     '        if self.mode != "remote":\n            core.record_briefing(self._local_store(), repo, result)',
+     "a local check by paths left unlogged on request"),
+    ("src/okl/service.py", "        if req.log:\n            core.record_briefing(_store, req.repo, result)\n        return result",
+     "        core.record_briefing(_store, req.repo, result)\n        return result",
+     "the service leaving an unlogged check out of its log"),
+    ("src/okl/service.py",
+     "            if req.log:\n                core.record_briefing(_store, req.repo, result)\n            return result",
+     "            core.record_briefing(_store, req.repo, result)\n            return result",
+     "the service leaving an unlogged check by paths out of its log"),
+    ("src/okl/intake.py", '    if not owner or not name or "/" in name:', "    if False:", "refusing a --repo that is not OWNER/NAME"),
+    ("src/okl/intake.py", '        if whole and "**" not in whole.group(1) and len(whole.group(1).split()) >= 3:',
+     "        if False:", "a review bot's title read from its own line, not its badges"),
+    # okl init's stack detection (#375, #386): a folder or manifest it cannot read is no evidence.
+    ("src/okl/cli/install.py", "        return p.is_file() and os.access(p, os.R_OK)\n    except OSError:\n        return False",
+     "        return p.is_file()\n    except FileNotFoundError:\n        return False",
+     "detection stepping over a folder it cannot open"),
+    ("src/okl/cli/install.py", '    try:\n        text = p.read_text(errors="ignore").lower()\n    except OSError:\n        return False',
+     '    text = p.read_text(errors="ignore").lower()', "a manifest that cannot be read showing no stack"),
+    # okl dedup (#387): what no briefing shows is left out; a retraction is kept, and its advice keeps it.
+    ("src/okl/cli/lessons.py", "    nodes = [n for n in client.all_nodes() if n.status not in core._UNBRIEFED]",
+     "    nodes = list(client.all_nodes())", "dedup leaving out superseded and obsolete records"),
+    ("src/okl/cli/lessons.py", '    if any(n.status == "retracted" for _s, a, b in pairs[: args.limit] for n in (a, b)):',
+     "    if False:", "dedup's advice that keeps a retraction's warning"),
+    # okl seed's pack renames (#379, #387): a supersession needs the new id, and never names itself.
+    ("src/okl/core.py", "    if supersedes is not None and id is None:", "    if False:", "supersedes without the new id"),
+    ("src/okl/core.py", "    if supersedes is not None and supersedes == id:", "    if False:", "a lesson superseding itself"),
 ]
 # The tests that cover these files, fastest catchers first; -x stops at the first failure.
-TESTS = ["tests/test_symlink_guards.py", "tests/test_owner_paths.py", "tests/test_scaffold.py", "tests/test_okl.py"]
+TESTS = ["tests/test_intake.py", "tests/test_retire.py", "tests/test_seed_renames.py", "tests/test_symlink_guards.py",
+         "tests/test_owner_paths.py", "tests/test_scaffold.py", "tests/test_okl.py"]
 
 
 def call_sites(path: str, guards: dict[str, str]) -> list[tuple[int, int, int, int, str, str]]:

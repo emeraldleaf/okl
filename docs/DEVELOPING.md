@@ -52,6 +52,8 @@ src/okl/
    python3 ci/check-diagram-names.py # names in the drawn diagrams exist in the code: reads HEAD,
                                      # so commit first, or pass the .excalidraw paths to check
                                      # the working copies (as tests/test_architecture.py does)
+   python3 ci/check-guard-mutations.py # each guard switched off must fail a test (commit first)
+   python3 ci/e2e.py --okl <installed okl> # okl end to end on a fresh repo, as CI's e2e job runs it
    ```
 
 4. **Keep mirrored files identical.** If you edit a hook, re-stamp its ownership line and

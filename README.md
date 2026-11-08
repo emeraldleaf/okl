@@ -314,7 +314,7 @@ What the research literature measured in 2026, with figures read from the papers
 ## Measured effect, and its limits
 
 What follows was measured on authored tasks. On real work, two lessons that applied were missed by
-every retrieval arm, and none of the measurements below could have shown it
+every retrieval arm that ran, and none of the measurements below could have shown it
 ([REPORT §4ak](evals/REPORT.md)). The standard okl is now held to, and where each claim stands
 against it: [docs/EVALUATION.md](docs/EVALUATION.md).
 
