@@ -93,6 +93,16 @@ def ask(prompt: str, room: Path) -> tuple[list | None, dict]:
     return rl.last_array(reply.get("result") or ""), use
 
 
+def resolve(given: str, ids: list[str]) -> str | None:
+    """The lesson in this call that `given` names: as written, or the one id that ends with it.
+    The reviewer can shorten a seed lesson's id (§4ao's amendments). An id that could mean two
+    lessons names neither, and no answer can reach a lesson outside its own call."""
+    if given in ids:
+        return given
+    hits = [i for i in ids if i.endswith(f":{given}")]
+    return hits[0] if len(hits) == 1 else None
+
+
 def one(task: dict, ids: list[str], change: str, texts: dict[str, str], room: Path) -> tuple[list[dict], dict]:
     """One call: the answers it gave for `ids`, and its cost."""
     issues = "\n\n".join(f"#{i['number']} {i['title']}\n{i['body']}" for i in task["issues"]) or "(none)"
@@ -102,8 +112,7 @@ def one(task: dict, ids: list[str], change: str, texts: dict[str, str], room: Pa
     for item in got or []:
         if not isinstance(item, dict) or not isinstance(item.get("id"), str) or not isinstance(item.get("flag"), bool):
             continue
-        # The reviewer can copy a seed lesson's id without its prefix (§4ao's amendment).
-        lesson = item["id"] if item["id"] in wanted else f"seed:{item['id']}"
+        lesson = resolve(item["id"], ids)
         if lesson in wanted:
             wanted.discard(lesson)
             rows.append({"pr": task["pr"], "lesson": lesson, "flag": item["flag"], "line": str(item.get("line") or "")[:LINE_CUT],

@@ -5109,6 +5109,12 @@ answers as unanswered. The script now restores the prefix when an id matches no 
 written. The prompt is unchanged. A further run asks for the 241 pairs, up to three rounds as before,
 and any still unanswered mark the run INCOMPLETE.
 
+**Amended again before the score was read (2026-11-08).** The further run still left 161 pairs
+unanswered. A second diagnostic call, read only for the ids it returned, showed the reviewer can also
+drop the pack name and write just the last part of a seed lesson's id. The script now accepts an id
+that matches the end of exactly one lesson in the call. An answer cannot reach a lesson outside its own
+call, and an id that could mean two lessons stays unanswered. The prompt is still unchanged.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
