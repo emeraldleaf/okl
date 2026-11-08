@@ -4693,6 +4693,27 @@ the maintainer and the judge on the pairs where the suggester and the judge disa
 maintainer's own reading decides, and κ between suggester and judge, so how much the suggestions
 could carry the result is visible. The κ and miss bars above are unchanged.
 
+**Amended again before the audit is scored (2026-11-08): double annotation with adjudication.** The
+maintainer labelled 3 pairs under the suggestion design, at about two minutes a pair, and cannot give
+the hours 120 take. The audit becomes the standard double-annotation design:
+- **Two annotators:** the judge (Opus) and an independent model, Sonnet with its own wording (the
+  suggester's own answers, before any decoy was drawn), each labelled all 120 pairs.
+- **A person adjudicates** in one shuffled list, blind to both models and with no suggestion shown:
+  every pair the two disagree on (needed against not), and 10 drawn by a seed from the pairs they
+  agree on. Each pair opens on the lines of the change either model cited, with the whole change one
+  click away.
+- **The final label** of a pair is the maintainer's where given, and the two models' shared answer
+  elsewhere.
+
+**The bar.** The audit passes when the maintainer overturns at most 1 of the 10 sampled agreements
+(more, and the models' agreement cannot stand in for a person: the audit fails), and κ between the
+judge and the final labels over the 120 is at least 0.6.
+
+**Seen before this amendment, and so not used as a bar:** the two models agree on 109 of the 120
+pairs (11 disagreements), and the judge labelled both of the ledger's known positives (§4ak's two
+lessons, on #388) as needed. Both are reported as they are. The 3 labels given under the suggestion
+design are reported and not scored, and the decoys no longer apply, since no suggestion is shown.
+
 **Measures, per task and channel.** The channels are *issue*, *title*, *issue and title*, *paths*
 (`okl check --path` over each file), and their union. For each, the default briefing (tiered, with
 warm on, as this repository now runs) and the floor. Reported:
