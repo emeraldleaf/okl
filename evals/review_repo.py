@@ -137,7 +137,7 @@ def sha(text: str) -> str:
     return hashlib.sha256(text.encode()).hexdigest()[:16]
 
 
-PROMPTS = {"key": sha(KEY_PROMPT), "settle": sha(SETTLE_PROMPT), "judge": sha(JUDGE_PROMPT), "first": FIRST_PROMPT}
+PROMPTS = {"states": sha(KEY_PROMPT), "settle": sha(SETTLE_PROMPT), "judge": sha(JUDGE_PROMPT), "first": FIRST_PROMPT}
 
 
 def eligible() -> list[dict]:
@@ -344,7 +344,7 @@ def state_batch(task: dict, ids: list[str]) -> list[dict]:
                                lessons="\n\n".join(texts()[i] for i in ids))
     with checkout(task) as room:
         got = ask_with_repo(OPUS_READS, prompt, room, pr=task["pr"], step="key")
-    return [{"pr": task["pr"], "lesson": i, "state": x["state"], "why": str(x.get("why", ""))[:300], "prompt": PROMPTS["key"]}
+    return [{"pr": task["pr"], "lesson": i, "state": x["state"], "why": str(x.get("why", ""))[:300], "prompt": PROMPTS["states"]}
             for i, x in pick(got, ids, "state", (*ACTION, "followed", "unclear"))]
 
 
