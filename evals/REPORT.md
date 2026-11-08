@@ -4889,6 +4889,63 @@ these tasks in view, it would leak them into the measure.
 **Budget.** No model calls. About 620 `okl check` calls for D (one per changed file, both halves),
 with the warm model running.
 
+## 4an. PRE-REGISTERED: do lessons that name their files reach more of what real work needs? (2026-11-08)
+
+Written before §4am's result was read and before any path trigger was drafted. In §4al the
+changed-files channel named 2.5% of the needed lessons, and only 13 of the store's 369 live lessons
+list files.
+
+**The question.** If lessons named the files they apply to, in a field apart from `files` (which
+drift watches, and which turns the pre-push gate red for a lesson with no passing check), how much
+more of what later work needed would be reached, and at what cost in briefing size?
+
+**Seen before this was written.** A look at the development half only (§4am's first 25 tasks). For
+each lesson needed on at least four of them, the best of eight areas of the repository was picked
+after the fact, for example:
+- the mirror-files lesson, needed on 8 of the 10 tasks touching hooks or the scaffold and 0 of the
+  other 15;
+- the lesson on changing the judge mid-series, on 5 of the 7 tasks touching `evals/` and 0 of the
+  other 18;
+- the single-source lesson, on 4 of the 14 tasks touching source outside `cli/` and 0 of the other 11.
+
+Those counts prompted the question and are used for nothing else. No file-area count was computed on
+the test half. §4am discloses its own earlier look over all 50 tasks.
+
+**Path triggers, drafted blind.** Sonnet (never Opus, the judge) drafts each entry for the 361
+lessons in §4al's tasks, twenty a call, with no tools. It is given only each lesson's title, symptom,
+cause and fix, and this repository's file list at the split's boundary commit (the last development
+task's, 5e49c3238, so a file added later cannot be named). It sees no task, no label and no briefing.
+It is asked for the fewest entries covering where following the lesson would change what someone
+writes, and an empty list when the lesson could apply anywhere. Entries are read by the rule `files`
+uses today (`path_matches`). The prompt is in `evals/path_triggers.py`, and its sha256 and the model go
+in every line of `evals/realwork/path-triggers.jsonl`.
+
+**Arm P.** Added to §4al's default union (the base): every lesson in a task's store with an entry
+matching a file the change touches. It stands for the read hook, which briefs each lesson once a
+session.
+
+**Split, labels and measures.** §4am's: the later 25 tasks decide and the first 25 are reported
+beside them. Reported in addition:
+- what P adds beyond §4am's three arms together, as a gain with the same bootstrap;
+- the lessons drafted with no entry;
+- needed lessons from seed packs, named by the base and by P.
+
+**Decision rule.** §4am's, unchanged: P is adopted when, on the test half, the lower bound of its
+paired-bootstrap gain over the base is above zero and it adds at most 10 lessons at the median task.
+
+**Predictions** (not decision rules):
+- P adds at least 5 points of reach on the test half;
+- most lessons P adds are labelled *no*;
+- P adds reach beyond §4am's three arms together.
+
+**What follows.** If adopted, a path-trigger field apart from `files`, matched by the read hook,
+drafted by a model and approved by a person as `/triggers` is. Its figures stay inside this section
+until it holds on a fresh holdout and #394 passes. Entries that name kinds of file, which a shared
+pack needs because it cannot name a repository's paths, are a separate question: this test drafts
+against this repository's own file list.
+
+**Budget.** About 19 Sonnet calls (361 lessons, twenty a call), plus retries for unanswered lessons.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
