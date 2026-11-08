@@ -94,14 +94,17 @@ def lesson_text(db: Path) -> dict[str, str]:
 
 
 def last_array(text: str) -> list | None:
-    """The last JSON array in `text`, or None."""
+    """The judge's answer in `text`: the largest JSON array of objects carrying an "id", or None.
+    Not merely the last array: evidence that quotes a list ("[4, 11]") parses as one, and taking it
+    left a whole batch unanswered in the pilot."""
     dec, found = json.JSONDecoder(), None
     for m in re.finditer(r"\[", text):
         try:
             obj, _ = dec.raw_decode(text, m.start())
         except ValueError:
             continue
-        if isinstance(obj, list):
+        if (isinstance(obj, list) and obj and all(isinstance(x, dict) and "id" in x for x in obj)
+                and (found is None or len(obj) >= len(found))):
             found = obj
     return found
 
