@@ -467,7 +467,7 @@ def decoys_for(tasks: list[dict], raised: dict[int, dict[str, str]]) -> dict[str
     for t in tasks:
         here = raised[t["pr"]]
         others = [x for x in pool if x[0] != t["pr"] and x[1] not in here and x[1] in t["lessons"]]
-        rng.shuffle(others)
+        rng.shuffle(others)  # NOSONAR - seeded, reproducible on purpose
         picked: dict[str, str] = {}
         for _, i, told in others:
             if len(picked) >= (max(1, round(len(here) * DECOY_SHARE)) if here else 0):
