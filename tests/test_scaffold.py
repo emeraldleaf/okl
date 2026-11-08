@@ -1061,6 +1061,7 @@ def test_the_old_distribution_name_is_swept_and_still_installable():
         "packaging/org-knowledge-layer/pyproject.toml",  # the redirect itself
         "packaging/org-knowledge-layer/README.md",
         "tests/test_scaffold.py",                        # this test
+        "evals/realwork/tasks.jsonl",                    # issues frozen as written (REPORT §4al)
     }
     tracked = subprocess.run(["git", "-C", str(root), "grep", "-l", "org-knowledge-layer"],
                              capture_output=True, text=True).stdout.split()
