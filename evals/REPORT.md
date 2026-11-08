@@ -4632,6 +4632,76 @@ that can see this class are the ones that read code: a briefing on the change as
 review of every lesson against a pull request's diff. Each is measured on the ledger before it ships,
 under the standard in [docs/EVALUATION.md](../docs/EVALUATION.md).
 
+## 4al. PRE-REGISTERED: does the right lesson reach the agent on real work? A set with complete labels (2026-11-08)
+
+Written before any task is mined or any label is made. The first evaluation under
+[docs/EVALUATION.md](../docs/EVALUATION.md); step 2 of #390.
+
+**The question.** Of the lessons a real change needed, what share reached the agent, through
+which channel, at the sizes a briefing has?
+
+**Tasks.** This repository's merged pull requests created on or after 2026-09-15 (the store held
+fewer than a hundred lessons before then). Forty are drawn from those with at least one resolved
+review thread, and ten from those with none, each by the order of sha256("4al:" + PR number), the
+smallest first. A pull request whose change cannot be rebuilt from the local history is skipped
+and the next one drawn; each skip is reported. Each task is frozen as it stood when its code was
+first written:
+- **change:** `git diff` from the merge base to the last commit of the pull request made before its
+  first review comment (with no review, its last commit before merging), cut at 60,000 characters
+  (the count cut is reported);
+- **issue:** the title and body of each issue it closes, if the issue was opened before that
+  commit;
+- **title:** the pull request's title, which is written with the code and reported apart;
+- **paths:** the files the change touches;
+- **store:** the lessons recorded before that commit, from a snapshot of this machine's store
+  (its sha256 in the receipt; the snapshot stays in `evals/bench/private/`), retired ones
+  included only if they were retired after it.
+
+A task whose issue or title names a lesson's id, or repeats a lesson's title, is reported and left
+out.
+
+**Labels.** Every lesson in a task's store is labelled against that task by Opus (`claude -p
+--model opus --restricted`, text only: the change, the issue and the title, with twenty lessons a
+call). Each answer is *needed* (following the lesson would change this code, or it warns of a
+defect this change has or risks), *related* (the same subject, nothing to change), *no* or
+*unsure*, with the line of the change or the issue it rests on. A lesson is needed by a task when
+it is labelled *needed*; *unsure* is reported both ways. No arm's output is shown to the judge,
+and no arm uses Opus.
+
+**The judge is audited before any figure counts.** The maintainer labels 120 pairs blind to the
+judge: 40 the judge called needed, 40 it called no that share the most words with the task's
+text, and 40 it called no drawn at random. The audit reports Cohen's κ (needed against not) and
+the judge's misses among the pairs the maintainer called needed, per stratum. The bar is κ ≥ 0.6
+and at most 2 misses in the random stratum. Below it, the judge's prompt is revised, every task
+relabelled, and a fresh sample audited; no reach figure is reported until a judge passes. The
+random stratum also estimates how many needed lessons the labels missed.
+
+**Measures, per task and channel.** The channels are *issue*, *title*, *issue and title*, *paths*
+(`okl check --path` over each file), and their union. For each, the default briefing (tiered, with
+warm on, as this repository now runs) and the floor. Reported:
+1. the task-level failure rate: the share of tasks with a needed lesson not shown in full, and not
+   named at all, with Wilson intervals;
+2. lesson-level reach, with intervals from a bootstrap over tasks;
+3. each needed lesson's rank among every candidate, by the full-text search alone and fused with
+   each embedding;
+4. the same on the ten tasks with no review thread, and the count of lessons the briefing named
+   that were labelled *no*.
+
+**Predictions** (written before, not decision rules): the default briefing misses a needed
+lesson, in full, on more than half the tasks with one through *issue and title*; *paths* reaches
+lessons that govern files that no text channel reaches; the union names fewer than 70% of needed
+lessons.
+
+**What follows.** If the union's task-level failure rate, named, exceeds 20%, the review of every
+lesson against a diff is built next (#390 step 3), measured on these tasks with Sonnet, so the
+labeller and the arm differ. These tasks are the calibration set for the conformal cutoff (step 4):
+at α = 0.1 it needs at least 9. Once the judge passes its audit, the tasks, the labels and an export
+of the lessons they cite are committed, and the reach measurement becomes deterministic: it replays
+in CI's end-to-end job (step 1) on every pull request, failing if reach falls below this receipt's.
+
+**Budget.** About 600 judge calls on the maintainer's subscription, three at a time, and the
+maintainer's labels for the audit.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
