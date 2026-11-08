@@ -32,7 +32,7 @@ has changed: [docs/THESIS.md](docs/THESIS.md).
 [![Claude Code plugin](https://img.shields.io/badge/Claude_Code-plugin-D97757)](#install-as-a-claude-code-plugin)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-🚀 [Quickstart](#quickstart) · 📘 [Getting started](docs/GETTING-STARTED.md) · 📥 [Load your rules](docs/LOAD-YOUR-RULES.md) · 🔬 [How it works](#how-it-works) · 📊 [Results](#measured-effect-and-its-limits) · 🧪 [Eval report](evals/REPORT.md) · 🧩 [Plugin](#install-as-a-claude-code-plugin)
+🚀 [Quickstart](#quickstart) · 📘 [Getting started](docs/GETTING-STARTED.md) · 📥 [Load your rules](docs/LOAD-YOUR-RULES.md) · 🔬 [How it works](#how-it-works) · 📊 [Results](#measured-effect-and-its-limits) · 🧪 [Eval report](evals/REPORT.md) · ⚖️ [How it is evaluated](docs/EVALUATION.md) · 🧩 [Plugin](#install-as-a-claude-code-plugin)
 
 </div>
 
@@ -312,6 +312,11 @@ What the research literature measured in 2026, with figures read from the papers
 "where okl stands" column beside each result: [Related work](docs/RELATED-WORK.md).
 
 ## Measured effect, and its limits
+
+What follows was measured on authored tasks. On real work, two lessons that applied were missed by
+every retrieval arm that ran, and none of the measurements below could have shown it
+([REPORT §4ak](evals/REPORT.md)). The standard okl is now held to, and where each claim stands
+against it: [docs/EVALUATION.md](docs/EVALUATION.md).
 
 One held-fixed A/B (8 authored tasks, 3 samples per arm per run; generator and blind
 judge are different models; method + raw receipts in [evals/REPORT.md](evals/REPORT.md)):

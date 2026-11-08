@@ -476,7 +476,7 @@ _RECEIPT = re.compile(r"`([\w.-]+\.(?:json|txt))`")
 _NOT_FIGURES = re.compile(r"`[^`]*`|\d{4}-\d{2}-\d{2}|#\d+|§\w+(?: finding \d+)?|\b\d+\.\d+\.\d+\b|100-character")
 _NUMBER = re.compile(r"(?<![\w.])\d(?:[\d,]*\d)?(?:\.\d+)?%?")   # commas only between digits
 # A status row with no measurement behind it, and why.
-NO_EVIDENCE = {"each session's lessons are recorded": "the Stop hook's behaviour, held by its tests, not a measurement"}
+NO_EVIDENCE: dict[str, str] = {}   # the Stop hook's row now cites #391, where a long session showed what its tests did not
 
 
 def _thesis_figures() -> dict[str, str]:
@@ -508,7 +508,24 @@ def _thesis_figures() -> dict[str, str]:
                       (results / "briefing-marks-size-20261101-1110.txt").read_text())
     prompts, unchecked, reach, briefed, added, chars, share = marks.groups()
     bh, bn, rh, rn = _pool(POOLED_RECEIPTS)
+    missed = (results / "missed-20261108-0000.txt").read_text()
+    blocks = re.split(r"^(?=\[)", missed, flags=re.M)[1:]
+    reached = sum(1 for b in blocks if re.search(r"\b(full|line)\b", b.split("rank among")[0]))
+    ranks = [(int(r), int(t)) for r, t in re.findall(r"(?:lexical|lexical\+potion) (\d+) of (\d+)", missed)]
+    lo_rank, hi_rank, live = min(r for r, _ in ranks), max(r for r, _ in ranks), max(t for _, t in ranks)
+    # Every text and arm pair, and how many ran: a "?" did not, and the page must not claim it did.
+    cells = [c.strip() for line in missed.splitlines()
+             if line.startswith("    ") and " | " in line and not line.strip().startswith("tiered")
+             for c in line.split(None, 1)[1].split("|")]
+    ran = sum(1 for c in cells if c != "?")
+
+    def nth(k: int) -> str:
+        return f"{k}{'th' if 10 <= k % 100 <= 20 else {1: 'st', 2: 'nd', 3: 'rd'}.get(k % 10, 'th')}"
     return {
+        f"{reached} of {len(blocks)} lessons that applied by what the code did "
+        f"reached the agent through any arm that ran ({ran} of {len(cells)} text and arm pairs ran), "
+        f"ranked {nth(lo_rank)} to {nth(hi_rank)} of {live}":
+            "missed-20261108-0000.txt (§4ak)",
         f"{round(100 * bh / bn)}% → {round(100 * rh / rn)}% defects reproduced on {_WORDS[8]} bait tasks, "
         f"pooled over {_WORDS[len(POOLED_RECEIPTS)]} A/B runs": "the pooled A/B receipts (§5 finding 7)",
         f"{c['watched']} of the {n} lessons recorded here were watched at the 2026-10-31 census below, "
@@ -660,9 +677,12 @@ OPEN_QUESTIONS = {
         "common-word-weight-for-one-word-tasks",
     ("README.md", "It has never been measured; use it to get a new repo"):
         "scaffold-effect",
+    ("docs/EVALUATION.md", "and sessions with nothing to learn | Not measured (#251)"):
+        "capture-without-fabrication",
 }
 # The phrase, used for something that is not a question waiting on an answer, with why.
 NOT_OPEN = {
+    ("docs/EVALUATION.md", "is marked unmeasured or removed"): "a rule for public claims, not a question",
     ("README.md", "a bug that is still open"): "about a team's bugs, not about okl",
     ("docs/COMMANDS.md", "REPORT §4s says why it was not measured live"): "a fact about one finished run",
     ("docs/overview/okl-anatomy.html", "Not measured in this A/B"): "scopes one finished A/B",
