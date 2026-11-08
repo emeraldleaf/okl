@@ -15,6 +15,7 @@ import sqlite3
 import subprocess
 import sys
 from collections import Counter
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -36,7 +37,7 @@ def git(*args: str) -> str:
     return subprocess.run(["git", "-C", str(rr.REPO), *args], capture_output=True, text=True, check=True).stdout
 
 
-def share(rows: list[dict], pred) -> dict:
+def share(rows: list[dict], pred: Callable[..., bool]) -> dict:
     """Needed lessons flagged, among those `pred` selects."""
     pairs = [i in t["flagged"] for t in rows for i in t["needed"] if pred(t, i)]
     return {"flagged": sum(pairs), "needed": len(pairs), "share": round(sum(pairs) / max(1, len(pairs)), 3)}
@@ -54,7 +55,7 @@ def review_detail(tasks: dict[int, dict]) -> dict:
     needed = Counter(i for t in rows for i in t["needed"])
     total = sum(needed.values())
 
-    def union(other) -> dict:
+    def union(other: Callable[[int], set[str]]) -> dict:
         n = sum(1 for t in rows for i in t["needed"] if i in t["flagged"] or i in other(t["pr"]))
         return {"named": n, "of": total, "share": round(n / total, 3)}
 

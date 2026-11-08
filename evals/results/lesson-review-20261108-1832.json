@@ -1,0 +1,1280 @@
+{
+ "section": "4ao",
+ "at": "2026-11-08T18:32Z",
+ "okl_commit": "7edf325780b4669c6955ca83ecacbc81a81e0739",
+ "status": "model-judged, not yet audited (#394)",
+ "usable": true,
+ "reviewer": {
+  "model": "sonnet",
+  "prompt": "2a4ca5f9d9a8ed57"
+ },
+ "missing": [],
+ "inputs": {
+  "labels_sha256": "28fee9a43ba204a7a73eab0de952d4915a5780dca027ad3b3ebd1402b66ccf1f",
+  "tasks_sha256": "948fb5e3d3ca91ab3cae6787f472141329486ff64ffc965e1becf71f7de089da",
+  "store_sha256": "c63c1638a64431f55cbf1cc5458207b31813739ef74504a88c8dd30f230b9078"
+ },
+ "result": {
+  "tasks": 25,
+  "tasks_with_needed": 25,
+  "needed": 199,
+  "reach": 0.608,
+  "reach_boot95": [
+   0.528,
+   0.691
+  ],
+  "tasks_missing": 20,
+  "failure_rate": 0.8,
+  "failure_wilson95": [
+   0.609,
+   0.911
+  ],
+  "flagged_median": 12,
+  "flagged_max": 28,
+  "flagged_by_label": {
+   "needed": 121,
+   "related": 173,
+   "no": 35
+  },
+  "named_wrongly_median": 1,
+  "named_wrongly_max": 7
+ },
+ "ledger": {
+  "eval-scripts-no-exposure": true,
+  "seed:rag-defects:qz_fixtures": false
+ },
+ "cost": {
+  "calls": 523,
+  "unanswered_calls": 98,
+  "per_pr_median_calls": 19,
+  "per_pr_median_tokens": 532537,
+  "per_pr_median_seconds": 221.9,
+  "per_pr_median_usd": 2.22,
+  "total_api_priced_usd": 51.25
+ },
+ "secondary_estimate": {
+  "note": "if the review read only the lessons \u00a74am's three arms or \u00a74an's P name",
+  "reach_kept": 0.553,
+  "lessons_read_median": 109,
+  "lessons_read_full_median": 325
+ },
+ "holds": {
+  "reach_lower_bound_at_least_70": false,
+  "named_wrongly_median_at_most_5": true,
+  "both_ledger_lessons_flagged": false,
+  "all": false
+ },
+ "predictions": {
+  "reach above the best briefing's 82.4%": false,
+  "flags both ledger lessons": false,
+  "misses a needed lesson on more than a third of the tasks": true,
+  "named wrongly at most 5 at the median task": true
+ },
+ "per_task": [
+  {
+   "pr": 245,
+   "needed": [
+    "doc-claim-governs-doc-and-code",
+    "guarantee-holds-on-every-write-path",
+    "n_0637c92c032f",
+    "n_b550ba9c5c8a"
+   ],
+   "flagged": [
+    "doc-claim-governs-doc-and-code",
+    "n_0637c92c032f",
+    "n_aa3e45a2ecd6",
+    "n_b4050b826687",
+    "n_b550ba9c5c8a",
+    "optional-feature-shipped-text"
+   ],
+   "missed": [
+    "guarantee-holds-on-every-write-path"
+   ],
+   "lines": {
+    "doc-claim-governs-doc-and-code": "+    <p class=\"sub\">Start okl with the rules, ADRs, standards and specs you already have, loaded as lessons that cite their source.",
+    "n_0637c92c032f": "+    <p class=\"sub\">Start okl with the rules, ADRs, standards and specs you already have, loaded as lessons that cite their source. ... (okl-anatomy.html source edited alongside regenerated okl-anatom",
+    "n_aa3e45a2ecd6": "Start okl with the rules, ADRs, standards and specs you already have, loaded as lessons that cite their source.",
+    "n_b4050b826687": "+    <p class=\"sub\">Start okl with the rules, ADRs, standards and specs you already have, loaded as lessons that cite their source. It briefs your coding agent...",
+    "n_b550ba9c5c8a": "diff --git a/docs/overview/okl-anatomy.html b/docs/overview/okl-anatomy.html (diagram source changed alongside re-rendered okl-anatomy-dark.png / okl-anatomy-light.png; new claim 'loaded as lessons th",
+    "optional-feature-shipped-text": "+    <p class=\"sub\">... <b>when the code a lesson covers changes, the pre-push hook holds the push until its check passes again, or the code is back to what passed.</b> ..."
+   }
+  },
+  {
+   "pr": 256,
+   "needed": [
+    "generated-diagram-traced-old-path",
+    "readonly-agents-side-effects",
+    "seed:geospatial-enforcement-defects:r_single_source_sets",
+    "seed:rag-defects:qz_fixtures"
+   ],
+   "flagged": [
+    "generated-diagram-traced-old-path",
+    "n_00985805cdbb",
+    "n_849a5b0425ef",
+    "n_9ba48d85ed19",
+    "n_b83c550a0ca4",
+    "n_dc7429065f5d",
+    "readonly-agents-side-effects",
+    "research-cited-products-not-named",
+    "seed:geospatial-enforcement-defects:r_single_source_sets",
+    "seed:rag-defects:qz_fixtures"
+   ],
+   "missed": [],
+   "lines": {
+    "generated-diagram-traced-old-path": "def rank_of(...): q = \" \".join(core.briefing_terms(task)); found = store.search(q, limit=400); live = [n for n in found if core._in_scope(...) and n.status not in core.RETIRED_STATUSES]  (a re-impleme",
+    "n_00985805cdbb": "The output is deterministic for a given store; the receipt names the store size and the repo's configured interests (a property asserted in the module docstring with no test or code enforcing it)",
+    "n_849a5b0425ef": "r2 = nid in returned(core.check(store, repo=REPO, task=task, interests=INTERESTS)) \u2014 the receipt shows react_fetch hit under the harness config but MISS under the hook's interest filtering (authored a",
+    "n_9ba48d85ed19": "exit_code_trust  authored    MISS     MISS ... \u2014 the receipt shows the authored task's governing record missing from retrieval (and README claims preflight covers this), yet the PR names no known-gap ",
+    "n_b83c550a0ca4": "recall by variant (of 8): {'authored': 'harness 7/8, hook 6/8', 'ticket': 'harness 7/8, hook 6/8', 'paraphrase': 'harness 1/8, hook 1/8', 'bug-report': 'harness 2/8, hook 2/8'} \u2014 misses cluster around",
+    "n_dc7429065f5d": "B. PRECISION on six real prompts... would survive: >=2 terms: 0/12 \u00b7 a term in <=3% of store \u2014 the probe measures the unfiltered-briefing problem this defect says is open (no rank-score cutoff), so th",
+    "readonly-agents-side-effects": "r1 = nid in returned(core.check(store, repo=REPO, task=task, interests=None)) \u2014 the probe calls core.check dozens of times against the real local store while the docstring says it only reads; if check",
+    "research-cited-products-not-named": "PROMPTS = [... \"how do we come up with a good plan for governing github copilot and mcp\" ...] \u2014 the committed receipt evals/results/probe-rephrase-20261021.txt names GitHub Copilot in a public repo fi",
+    "seed:geospatial-enforcement-defects:r_single_source_sets": "BUCKETS = (\"rules\", \"relevant_defects\", \"armed_gates\", \"live_retractions\", \"in_scope_tombstones\", \"threat_prior_art\", \"vocabulary\", \"decisions\", \"context\")",
+    "seed:rag-defects:qz_fixtures": "VARIANTS = {\n \"idor_endpoint\": [\"add GET /orders/{id} route, return the order as JSON\", ... \u2014 the ticket, paraphrase and bug-report rephrasings are invented by the author who knows the governing lesso"
+   }
+  },
+  {
+   "pr": 261,
+   "needed": [
+    "n_0e6928348b1d",
+    "n_b550ba9c5c8a",
+    "seed:dotnet-canon:r_docs_review_surface",
+    "seed:dotnet-canon:r_encoding_loop"
+   ],
+   "flagged": [
+    "n_0637c92c032f",
+    "n_6b65aa35593c",
+    "n_a4b40c96ede4",
+    "n_b550ba9c5c8a",
+    "seed:geospatial-deeptime-defects:r_resubstitution_not_validation",
+    "seed:geospatial-enforcement-defects:r_single_source_sets"
+   ],
+   "missed": [
+    "n_0e6928348b1d",
+    "seed:dotnet-canon:r_docs_review_surface",
+    "seed:dotnet-canon:r_encoding_loop"
+   ],
+   "lines": {
+    "n_0637c92c032f": "docs/okl-retrieval-pipeline.svg: `28 survive` / `3 dropped: off-stack` and the edited rect widths (`width=\"636\"`, `width=\"68\"`) are hand-edited counts in a committed render. Nothing in the diff ties t",
+    "n_6b65aa35593c": "<text x=\"120\" y=\"608\" ...>28 survive</text> / 3 dropped: off-stack / 20 survive / 8 trimmed, 0 retired \u2014 stage counts and bar widths in docs/okl-retrieval-pipeline.svg edited; confirm they were regene",
+    "n_a4b40c96ede4": "**Prediction.** On the next run of this instrument, `exit_code_trust` briefed reproductions fall toward 0 of 3; ... The other seven tasks and the baseline arm read within the floor of \u00a74m.",
+    "n_b550ba9c5c8a": "docs/okl-retrieval-pipeline.svg: <text ...>28 survive</text> / 3 dropped: off-stack / 20 survive / 8 trimmed, with hand-adjusted rect widths, edited directly in the rendered SVG; the rule says to edit",
+    "seed:geospatial-deeptime-defects:r_resubstitution_not_validation": "The probe's bug-report row is their measure, and it moved by the one task that has an eval.",
+    "seed:geospatial-enforcement-defects:r_single_source_sets": "+ADVICE_TYPES = (\"Rule\", \"Defect\", \"Gate\")"
+   }
+  },
+  {
+   "pr": 262,
+   "needed": [
+    "harness-reads-a-moving-working-tree",
+    "n_119528a07fa5",
+    "n_473aec369b25",
+    "n_8a6e1abce5cc",
+    "seed:dotnet-canon:r_surprise_in_writing"
+   ],
+   "flagged": [
+    "harness-reads-a-moving-working-tree",
+    "n_5ddb0776a863",
+    "n_8a6e1abce5cc",
+    "pooled-receipts-miss-report-corrections",
+    "seed:rag-defects:qz_judge_crash",
+    "worktree-no-store-reverify"
+   ],
+   "missed": [
+    "n_119528a07fa5",
+    "n_473aec369b25",
+    "seed:dotnet-canon:r_surprise_in_writing"
+   ],
+   "lines": {
+    "harness-reads-a-moving-working-tree": "+    started_at_commit = _okl_commit() ... +    moved = head_moved(started_at_commit, _okl_commit()) ... +        \"usable\": frate <= FAILURE_RATE_UNUSABLE and not moved,",
+    "n_5ddb0776a863": "if started is None or now is None or started == now:\n        return None",
+    "n_8a6e1abce5cc": "+    moved = head_moved(started_at_commit, _okl_commit())\n+    if moved:\n+        print(moved_banner(moved))",
+    "pooled-receipts-miss-report-corrections": "Receipt ab-20261022-0455 was made that way (REPORT \u00a74o); a run whose tree moved is not usable, and says so.",
+    "seed:rag-defects:qz_judge_crash": "+    moved = head_moved(started_at_commit, _okl_commit())\n+    if moved:\n+        print(moved_banner(moved))",
+    "worktree-no-store-reverify": "+this). Run the harness from a pinned git worktree, never from the checkout other work uses."
+   }
+  },
+  {
+   "pr": 267,
+   "needed": [
+    "doc-claim-governs-doc-and-code",
+    "filter-after-fetch-widens-window",
+    "generated-diagram-traced-old-path",
+    "guarantee-holds-on-every-write-path",
+    "n_0637c92c032f",
+    "n_4a398f2f8095",
+    "n_6b65aa35593c",
+    "n_7e50e3588bcd",
+    "n_967ef9825472",
+    "n_b578addf6269",
+    "n_e49be14d6207",
+    "n_e7988ff536fb",
+    "research-cited-products-not-named",
+    "seed:geospatial-enforcement-defects:r_single_source_sets",
+    "seed:rag-defects:qz_judge_crash"
+   ],
+   "flagged": [
+    "doc-claim-governs-doc-and-code",
+    "filter-after-fetch-widens-window",
+    "generated-diagram-traced-old-path",
+    "guarantee-holds-on-every-write-path",
+    "n_00985805cdbb",
+    "n_02cc84da158d",
+    "n_0637c92c032f",
+    "n_119528a07fa5",
+    "n_3dac3a1d8fba",
+    "n_4a398f2f8095",
+    "n_6b65aa35593c",
+    "n_916330f61994",
+    "n_967ef9825472",
+    "n_9ba48d85ed19",
+    "n_b550ba9c5c8a",
+    "n_b578addf6269",
+    "n_b74bad29fd87",
+    "n_be9f13d587b1",
+    "n_dc7429065f5d",
+    "n_e7988ff536fb",
+    "research-cited-products-not-named",
+    "scope-literature-gap-claims",
+    "seed:geospatial-deeptime-defects:r_resubstitution_not_validation",
+    "seed:geospatial-enforcement-defects:r_single_source_sets",
+    "seed:python-canon:py_unclosed_sqlite",
+    "seed:rag-defects:qz_judge_crash",
+    "seed:rag-defects:qz_unequal_budget",
+    "synthesis-copies-original-proposals"
+   ],
+   "missed": [
+    "n_7e50e3588bcd",
+    "n_e49be14d6207"
+   ],
+   "lines": {
+    "doc-claim-governs-doc-and-code": "`\"hybrid\": \"linear\"` in .okl/config.json or OKL_HYBRID turns it on for every check. What it buys and costs: REPORT \u00a74q.",
+    "filter-after-fetch-widens-window": "And the fused window is up to twice the full-text one, so more records reached the floor's one-word title-or-symptom rule (fused candidates are filtered after a fixed LIMIT * 3 fetch; no small-limit t",
+    "generated-diagram-traced-old-path": "\"linear: a convex combination of a rank-normalised full-text score and the min-max cosine (alpha 0.5). rrf: reciprocal ranks summed (k = 60).\" (constants hardcoded in the generator's text rather than ",
+    "guarantee-holds-on-every-write-path": "At check time the model loads from the local cache only, so a hook never reaches the network (the guarantee is stated for the hook, not checked on the CLI, MCP, service and the --hybrid paths)",
+    "n_00985805cdbb": "The selection rule is written in REPORT \u00a74q before this runs; this script only prints the cells. (a claim in a docstring that nothing enforces)",
+    "n_02cc84da158d": "env = {k: v for k, v in os.environ.items() if k != \"OKL_SERVICE_URL\"}; env[\"OKL_DATABASE_URL\"] = url (the diagram generator's scratch store is the place this lesson was found, and the new --hybrid pat",
+    "n_0637c92c032f": "+<img src=\"docs/okl-retrieval-pipeline-hybrid.svg\" ...> (a new committed render with no visible freshness assertion; the README's claim that test_pipeline_diagram_is_current covers the committed SVG a",
+    "n_119528a07fa5": "raise SystemExit(f\"ABORT: the semantic arm did not run: {cand.note}\") (the hybrid trace needs the cached 249 MB model and vectors, so a test of it passes on a developer machine and aborts on a clean C",
+    "n_3dac3a1d8fba": "indexed with the symptom at its weight in SQLite and Postgres (an older store rebuilds its index once on open)",
+    "n_4a398f2f8095": "The vector search is a numpy matrix product (3 ms at 50,000 records); `okl embed` writes one vector per record from a local static embedding model (installed with the new `hybrid` extra)",
+    "n_6b65aa35593c": "regenerate: python3 docs/render_pipeline_diagram.py --hybrid linear (the hybrid SVG hardcodes 'alpha 0.5', 'k = 60' and the model name in render(), and it is traced from a locally cached model, so a f",
+    "n_916330f61994": "At check time the model loads from the local cache only, so a hook never reaches the network",
+    "n_967ef9825472": "one vector per record in the store, refreshed by `okl embed` after the records change",
+    "n_9ba48d85ed19": "`\"hybrid\": \"linear\"` in the config or `OKL_HYBRID` turns it on for every check",
+    "n_b550ba9c5c8a": "+<img src=\"docs/okl-retrieval-pipeline-hybrid.svg\" alt=\"The same pipeline with the semantic arm on: ...\"> (a new committed diagram that needs the claims gate, ci/check-diagram-figures.sh, and a freshn",
+    "n_b578addf6269": "+    semantic.SUBJECT_SIMILARITY = line (hybrid_grid.py mutates a module constant and runs recall with interests None but precision with the hook's INTERESTS, so the harness must be shown to actually ",
+    "n_b74bad29fd87": "+        vectors = store.embeddings(semantic.MODEL_ID) (a new store method and vector table; both backends need the same behavioural contract and one shared conformance test)",
+    "n_be9f13d587b1": "the next tier, an approximate index over the same table (sqlite-vec locally, pgvector on the service) (the semantic arm is built for the local store; the shared Postgres service must match on quality ",
+    "n_dc7429065f5d": "In both modes three of the six precision prompts returned twelve records (full-text: 9, 11, 7, 12) ... linear at 0.40 adds one record to two prompts (a cosine admission on the relevance floor widens t",
+    "n_e7988ff536fb": "+        sys.exit(f\"probe: --hybrid asked for but {e}\") (a 'could not run' path exits 1, not 2; likewise the render script's raise SystemExit(\"ABORT: the semantic arm did not run\") and the new okl emb",
+    "research-cited-products-not-named": "REPORT \u00a74q: \"the family Bruch, Gai and Ingber (ACM TOIS 2023) found to beat RRF once its one weight is tuned\" and \"its model card gives MTEB retrieval 35.1 against all-MiniLM-L6-v2's 42.9\" cite a pape",
+    "scope-literature-gap-claims": "the family Bruch, Gai and Ingber (ACM TOIS 2023) found to beat RRF once its one weight is tuned ... the literature favours the convex combination once tuned, and alpha is not tuned here",
+    "seed:geospatial-deeptime-defects:r_resubstitution_not_validation": "the line is chosen by a grid over 0.25, 0.30, 0.35 and 0.40 in both modes ... the higher held-out paraphrase row \u2014 the cosine line and fusion mode are tuned on the same held-out set (evals/hybrid_grid",
+    "seed:geospatial-enforcement-defects:r_single_source_sets": "evals/hybrid_grid.py: BUCKETS = (\"rules\", \"relevant_defects\", \"armed_gates\", ...) restates the bucket list that probe_rephrase.py already defines and uses in returned(); the render script likewise wri",
+    "seed:python-canon:py_unclosed_sqlite": "evals/hybrid_grid.py: `store = Client()._local_store()` opens a SQLite store that is never closed (and `Client()` is built a second time for INTERESTS), the unclosed-connection pattern that warns on P",
+    "seed:rag-defects:qz_judge_crash": "evals/hybrid_grid.py `ids()` calls `core.check(store, ..., hybrid=hybrid)` with no guard that the semantic arm ran. check() falls back to full-text with a note when the model or vectors are missing, s",
+    "seed:rag-defects:qz_unequal_budget": "REPORT \u00a74q: 'the fused window is up to twice the full-text one' (the diagram shows 36 full-text candidates against 55 fused). The hybrid-vs-full-text recall and precision gaps are attributed to the se",
+    "synthesis-copies-original-proposals": "REPORT \u00a74q: \"No cell satisfies the rule as written ... Linear at 0.40 is therefore the arm's configuration\" sits beside the unrevised pre-registered text (0.25 line, \"about 30 MB\", predictions). The C"
+   }
+  },
+  {
+   "pr": 269,
+   "needed": [
+    "eval-scripts-no-exposure",
+    "falsifier-relative-to-control",
+    "n_02cc84da158d",
+    "n_119528a07fa5",
+    "n_473aec369b25",
+    "n_5ddb0776a863",
+    "n_9ba48d85ed19",
+    "n_b578addf6269",
+    "remote-path-test-through-client",
+    "seed:dotnet-canon:r_experiment_sunset",
+    "seed:rag-defects:qz_broken_tool",
+    "seed:rag-defects:qz_crosstab"
+   ],
+   "flagged": [
+    "falsifier-relative-to-control",
+    "harness-reads-a-moving-working-tree",
+    "n_00985805cdbb",
+    "n_02cc84da158d",
+    "n_0637c92c032f",
+    "n_5ddb0776a863",
+    "n_69f673496137",
+    "n_849a5b0425ef",
+    "n_8a6e1abce5cc",
+    "n_9ba48d85ed19",
+    "n_a4b40c96ede4",
+    "n_aa3e45a2ecd6",
+    "n_b578addf6269",
+    "n_ce6a27cc432f",
+    "n_dc7429065f5d",
+    "n_ec568941f68a",
+    "remote-path-test-through-client",
+    "seed:dotnet-canon:r_experiment_sunset",
+    "seed:dotnet-canon:r_pagination_cap",
+    "seed:python-canon:py_docstrings",
+    "seed:rag-defects:qz_broken_tool",
+    "seed:rag-defects:qz_crosstab",
+    "seed:rag-defects:qz_wrong_corpus"
+   ],
+   "missed": [
+    "eval-scripts-no-exposure",
+    "n_119528a07fa5",
+    "n_473aec369b25"
+   ],
+   "lines": {
+    "falsifier-relative-to-control": "**Falsifiers.** The governing lesson is fetched in under 10% of indexed samples (the agent does not use an index of this shape); ... or the agent fetches so many lessons that the cost reads as a secon",
+    "harness-reads-a-moving-working-tree": "**Cost.** 72 agentic generations and 72 judgments per arm; the tree is not switched while the run is in progress, and the receipt refuses if it moved (\u00a74o).",
+    "n_00985805cdbb": "# The environment is passed only when tools are on, so the one-shot path is byte for byte the call every section through \u00a74q made (and its tests' fakes still fit).",
+    "n_02cc84da158d": "\"OKL_DATABASE_URL\": os.environ.get(\"OKL_DATABASE_URL\") or f\"sqlite:///{REPO / '.okl' / 'okl.db'}\"}",
+    "n_0637c92c032f": "(REPO / \"evals\" / \"heldout_tasks.jsonl\").write_text(\"\".join(json.dumps(t, ensure_ascii=False) + \"\\n\" for t in out))",
+    "n_5ddb0776a863": "\"OKL_DATABASE_URL\": os.environ.get(\"OKL_DATABASE_URL\") or f\"sqlite:///{REPO / '.okl' / 'okl.db'}\" (the shim reads a gitignored store that may be absent, and a missing log makes fetched_ids return [], ",
+    "n_69f673496137": "except OSError:\n        return []  (in fetched_ids: a broken shim and a generator that chose not to fetch are indistinguishable, and falsifier 1 (<10% fetched) would read the broken instrument as 'the",
+    "n_849a5b0425ef": "and _in_scope(n, repo_scope, interests)),  (the index is filtered by interests, so with interests set it can omit the governing lesson, while REPORT \u00a74r says the index names it in all 24 \"by construct",
+    "n_8a6e1abce5cc": "got = sum(1 for r in rows if r.get(\"fetched_governing\"))  (the new per-arm fetch report and receipt fields in main() run only after the dry-run return, and tests/test_index_arm.py covers run_one and t",
+    "n_9ba48d85ed19": "The index names it in all 24, by construction. (REPORT \u00a74r asserts the governing lesson is present in the indexed arm's input, but preflight was not extended to check the index or the held-out tasks b",
+    "n_a4b40c96ede4": "or the indexed arm reproduces more defects than the briefed arm by more than the noise the baseline arm shows between its own samples (the threshold is within-run sample spread, not between-run drift;",
+    "n_aa3e45a2ecd6": "rec[\"fetched_governing\"] = t[\"defect_node\"] in rec[\"fetched\"] (and the 24 new defect_node values in evals/heldout_tasks.jsonl)",
+    "n_b578addf6269": "\"--interests\", BRIEF_INTERESTS, *([\"--index\"] if index else [])  (nothing asserts that --index changes the briefing this harness fetches, and evals/preflight.py is untouched)",
+    "n_ce6a27cc432f": "\"OKL_DATABASE_URL\": os.environ.get(\"OKL_DATABASE_URL\") or f\"sqlite:///{REPO / '.okl' / 'okl.db'}\"  (a hardcoded default store location for the generator's okl show)",
+    "n_dc7429065f5d": "out[\"index\"] = sorted(({\"id\": n.id, \"title\": n.title} for n in store.all_nodes() if n.id not in briefed ...  (appends every other lesson in scope, at about 120 characters each, to a briefing meant to ",
+    "n_ec568941f68a": "\"OKL_DATABASE_URL\": os.environ.get(\"OKL_DATABASE_URL\") or f\"sqlite:///{REPO / '.okl' / 'okl.db'}\" (the shim's `okl show` store is resolved by a different rule than the one `okl check` uses for the bri",
+    "remote-path-test-through-client": "payload = {\"repo\": repo, \"task\": task, \"interests\": self.interests or None, \"hybrid\": self.hybrid, \"index\": self.index} (the new index field travels client\u2192service, but tests/test_index_arm.py only ex",
+    "seed:dotnet-canon:r_experiment_sunset": "Any of these and the arm stays an experiment; the hook does not gain an index. (the pre-registration states a cost and falsifiers but no budget or stop-time, and no plan to remove the code if the arm ",
+    "seed:dotnet-canon:r_pagination_cap": "out[\"index\"] = sorted(({\"id\": n.id, \"title\": n.title} for n in store.all_nodes() if n.id not in briefed and ...)) (the /check response now carries every in-scope lesson with no server-side size cap)",
+    "seed:python-canon:py_docstrings": "+    `index` adds every other live lesson this repo may see, as id and title, ... REPORT \u00a74r). It is a treatment under measurement, off by default.\\n     When asked for and not possible here (no extra",
+    "seed:rag-defects:qz_broken_tool": "shim.write_text('#!/bin/sh\\nprintf \\'%s\\\\n\\' \"$*\" >> \"$OKL_SHIM_LOG\"\\n' f'exec {shlex.quote(sys.executable)} -m okl \"$@\"\\n') \u2014 the shim logs every `okl show` call before running it, and `fetched_ids` ",
+    "seed:rag-defects:qz_crosstab": "print(f\"            fetched the governing lesson in {got}/{len(rows)}, fetched anything in {any_fetch}/{len(rows)}\") \u2014 the run reports fetch rates and defect-reproduction rates separately, with no fet",
+    "seed:rag-defects:qz_wrong_corpus": "\"OKL_DATABASE_URL\": os.environ.get(\"OKL_DATABASE_URL\") or f\"sqlite:///{REPO / '.okl' / 'okl.db'}\""
+   }
+  },
+  {
+   "pr": 274,
+   "needed": [
+    "fastembed-cache-in-tmpdir",
+    "n_967ef9825472",
+    "seed:dotnet-canon:r_surprise_in_writing",
+    "seed:python-canon:py_dont_mock_what_you_dont_own"
+   ],
+   "flagged": [
+    "doc-claim-governs-doc-and-code",
+    "fastembed-cache-in-tmpdir",
+    "n_00985805cdbb",
+    "n_71c09abf3f37",
+    "n_967ef9825472",
+    "seed:geospatial-defects:d16",
+    "seed:python-canon:py_dont_mock_what_you_dont_own",
+    "seed:rag-defects:qz_fixtures"
+   ],
+   "missed": [
+    "seed:dotnet-canon:r_surprise_in_writing"
+   ],
+   "lines": {
+    "doc-claim-governs-doc-and-code": "`~/.cache/okl/models`, or `FASTEMBED_CACHE_PATH` when you set it; the temp directory fastembed",
+    "fastembed-cache-in-tmpdir": "_LOADED[model_id] = TextCrossEncoder(model_name=model_id, cache_dir=str(hub.model_cache_dir()))",
+    "n_00985805cdbb": "The embedder is not affected: model2vec reads the Hugging Face hub cache, which already lives under ~/.cache. (hub.py docstring, repeated in the CHANGELOG; this is a property claim and no code or test",
+    "n_71c09abf3f37": "_LOADED[model_id] = TextCrossEncoder(model_name=model_id, cache_dir=str(hub.model_cache_dir()))",
+    "n_967ef9825472": "Run `okl embed` once online after upgrading; the old copy in the temp directory is not read.",
+    "seed:geospatial-defects:d16": "_LOADED[model_id] = TextCrossEncoder(model_name=model_id, cache_dir=str(hub.model_cache_dir()))",
+    "seed:python-canon:py_dont_mock_what_you_dont_own": "fe = types.ModuleType(\"fastembed.rerank.cross_encoder\"); fe.TextCrossEncoder = Encoder",
+    "seed:rag-defects:qz_fixtures": "class Encoder:\n        def __init__(self, model_name, cache_dir=None):\n            seen[\"cache_dir\"] = cache_dir"
+   }
+  },
+  {
+   "pr": 275,
+   "needed": [
+    "diagnostic-on-stage-window",
+    "falsifier-relative-to-control",
+    "fused-window-readmits-weak-matches",
+    "rerank-ships-off",
+    "seed:geospatial-enforcement-defects:r_single_source_sets"
+   ],
+   "flagged": [
+    "diagnostic-on-stage-window",
+    "fused-window-readmits-weak-matches",
+    "n_3dac3a1d8fba",
+    "n_9ba48d85ed19",
+    "n_b578addf6269",
+    "seed:dotnet-canon:r_experiment_sunset",
+    "synthesis-copies-original-proposals"
+   ],
+   "missed": [
+    "falsifier-relative-to-control",
+    "rerank-ships-off",
+    "seed:geospatial-enforcement-defects:r_single_source_sets"
+   ],
+   "lines": {
+    "diagnostic-on-stage-window": "the paraphrase for the exit-code lesson ... sits at fused position 18, but the full-text search's 36 did not include the lesson ... At a fetch of 72 the full-text search includes it and the two-word r",
+    "fused-window-readmits-weak-matches": "The two-word rule ships (`SEMANTIC_WORD_FLOOR = 2`) ... The rule judges a candidate by the evidence in front of the floor, two shared subject words, rather than by which arm's window happened to reach",
+    "n_3dac3a1d8fba": "the floor now keeps the lesson, the sixteenth of thirty-six kept records, and the cutoff at twelve drops it ... and the floor test for the knob",
+    "n_9ba48d85ed19": "The mechanism was half-read: two gates stood in the row's way and the pre-registration named the first.",
+    "n_b578addf6269": "**The falsifier fired: the named row did not enter.** Every cell is identical. Tracing the row through `check`: the floor now keeps the lesson, the sixteenth of thirty-six kept records, and the cutoff",
+    "seed:dotnet-canon:r_experiment_sunset": "By the rule as written `SEMANTIC_WORD_FLOOR` reverts to None in this change; the knob, its test and the probe flag stay for a later pre-registration.",
+    "synthesis-copies-original-proposals": "**The choice, and why.** The two-word rule ships (`SEMANTIC_WORD_FLOOR = 2`); the fetch stays at 3 times the limit. (this pre-result text contradicts the Result's revert to None, and the section says "
+   }
+  },
+  {
+   "pr": 278,
+   "needed": [
+    "doc-claim-governs-doc-and-code",
+    "n_6b65aa35593c",
+    "n_b550ba9c5c8a"
+   ],
+   "flagged": [
+    "n_00985805cdbb",
+    "n_0637c92c032f",
+    "n_0e6928348b1d",
+    "n_6b65aa35593c",
+    "n_713b8c104f12",
+    "n_b550ba9c5c8a",
+    "seed:dotnet-defects:nc_arch_reviewer",
+    "worktree-no-store-reverify"
+   ],
+   "missed": [
+    "doc-claim-governs-doc-and-code"
+   ],
+   "lines": {
+    "n_00985805cdbb": "+# The abstention measure (#179): these prompts have no right answer, so a lesson returned is\n+# a false positive; the summary says how many prompts the briefing refused, by the budget. (and README: \"",
+    "n_0637c92c032f": "+The targets the retrieval work is held to ... Each figure is read from a committed probe receipt (table figures are hand-copied into the README with no check tying them to the receipt files)",
+    "n_0e6928348b1d": "+| no-match prompts refused, at most 3 lessons, of 6 (must not fall; the counts must not rise) | ... (targets stated in prose only; the probe merely prints the rejection line and nothing fails when it",
+    "n_6b65aa35593c": "| no-match prompts refused, at most 3 lessons, of 6 (must not fall; the counts must not rise) | 1 of 6: 4, 11, 0, 11, 9, 12 | 1 of 6: 5, 11, 0, 12, 9, 12 | 1 of 6: 5, 11, 0, 12, 9, 12 |",
+    "n_713b8c104f12": "+print(f\"\\nrejection: {sum(c <= REJECTION_BUDGET for c in counts)} of {len(counts)} no-match prompts return at most \"",
+    "n_b550ba9c5c8a": "Receipts, 2026-10-24, one 322-record store: `probe-rephrase-20261024-rejection-fulltext.txt`, ... (the README table states figures as read from receipts, but the new receipt header says 'store: 323 no",
+    "seed:dotnet-defects:nc_arch_reviewer": "| no-match prompts refused, at most 3 lessons, of 6 (must not fall; the counts must not rise) | 1 of 6: 4, 11, 0, 11, 9, 12 |",
+    "worktree-no-store-reverify": "\"verified_by\": \"`PYTHONPATH=src python3 -c ... README.md ... CHECK DEFAULTS MATCH` exit 0 ... on commit 1be5bc803066 @ 2026-10-24T18:32Z\" (okl-drift.json re-stamp for a rule governing README.md, which"
+   }
+  },
+  {
+   "pr": 283,
+   "needed": [
+    "n_00985805cdbb",
+    "seed:geospatial-enforcement-defects:r_pin_gating_tools",
+    "seed:python-canon:py_pyproject_versions"
+   ],
+   "flagged": [
+    "n_00985805cdbb",
+    "n_110bb4fb7112",
+    "n_5db37b759b1e",
+    "n_916330f61994",
+    "n_e99ea322dee5",
+    "seed:dotnet-decisions:pd_major_upgrade_runtime_breaks",
+    "seed:geospatial-enforcement-defects:d_unpinned_linter",
+    "seed:geospatial-enforcement-defects:r_pin_gating_tools",
+    "seed:python-canon:py_pyproject_versions"
+   ],
+   "missed": [],
+   "lines": {
+    "n_00985805cdbb": "+    # such as pydantic>=2 is left alone and an exact gate pin such as ruff==0.16.10 still becomes ruff==0.17.1 (dependabot-core's python requirements_updater, checked 2026-10-24).",
+    "n_110bb4fb7112": "-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1\n+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2",
+    "n_5db37b759b1e": "+    # becomes ruff==0.17.1 (dependabot-core's python requirements_updater, checked 2026-10-24). ... +    versioning-strategy: increase-if-necessary",
+    "n_916330f61994": "+    # such as pydantic>=2 is left alone and an exact gate pin such as ruff==0.16.10 still becomes ruff==0.17.1 (dependabot-core's python requirements_updater, checked 2026-10-24).",
+    "n_e99ea322dee5": "-  \"pytest==9.1.1\", \"pytest-cov==7.1.0\", \"ruff==0.16.10\", \"mypy==2.4.0\", / +  \"pytest==9.1.1\", \"pytest-cov==7.1.0\", \"ruff==0.17.1\", \"mypy==2.4.0\", (a bundle of Dependabot updates, which the review bot",
+    "seed:dotnet-decisions:pd_major_upgrade_runtime_breaks": "+  \"fastapi>=0.110\", \"uvicorn>=0.54.0\", \"pydantic>=2.14.1\", \"httpx>=0.28.1\",",
+    "seed:geospatial-enforcement-defects:d_unpinned_linter": "-  \"pytest==9.1.1\", \"pytest-cov==7.1.0\", \"ruff==0.16.10\", \"mypy==2.4.0\",  \u2192  +  \"pytest==9.1.1\", \"pytest-cov==7.1.0\", \"ruff==0.17.1\", \"mypy==2.4.0\",",
+    "seed:geospatial-enforcement-defects:r_pin_gating_tools": "+  \"pytest==9.1.1\", \"pytest-cov==7.1.0\", \"ruff==0.17.1\", \"mypy==2.4.0\",  (the ruff gate bump is bundled with six other dependency updates instead of landing in its own PR)",
+    "seed:python-canon:py_pyproject_versions": "+  \"fastapi>=0.110\", \"uvicorn>=0.54.0\", \"pydantic>=2.14.1\", \"httpx>=0.28.1\","
+   }
+  },
+  {
+   "pr": 284,
+   "needed": [
+    "n_00985805cdbb",
+    "seed:geospatial-enforcement-defects:d_ungated_zone",
+    "seed:geospatial-enforcement-defects:r_single_source_sets"
+   ],
+   "flagged": [
+    "doc-claim-governs-doc-and-code",
+    "doc-init-flags",
+    "n_00985805cdbb",
+    "n_110bb4fb7112",
+    "n_7e50e3588bcd",
+    "n_ead8e0a2b43d",
+    "research-cited-products-not-named",
+    "seed:dotnet-canon:r_encoding_loop",
+    "seed:geospatial-enforcement-defects:d_ungated_zone",
+    "seed:geospatial-enforcement-defects:g_gate_every_dir",
+    "seed:geospatial-enforcement-defects:r_single_source_sets",
+    "watch-what-the-rule-depends-on"
+   ],
+   "missed": [],
+   "lines": {
+    "doc-claim-governs-doc-and-code": "+            pieces = unit.split(\"`\")  (ci/check-init-flags.py rewrites the check that governs the docs against the CLI; it should be proven still red by breaking one side on purpose, e.g. a documente",
+    "doc-init-flags": "+                if flag := re.match(FLAG, pieces[k]):  (replaces the backtick-flag regex in the check behind this rule, so its re-stamped verification needs to confirm the bare-backtick flag case is ",
+    "n_00985805cdbb": "# The hooks, the gates and the CI verifier exist in byte-identical copies: ... held equal by tests/test_scaffold.py::test_mirror_files_identical. Only the shipped copies are analysed, so each finding ",
+    "n_110bb4fb7112": "sonar.exclusions=ci/okl-verify.yml  (and sonar.sources=src,evals,ci,docs,examples,.github, which leaves the mirrored copies unscanned/unanalysed while the ci.yml edit touches only .github/workflows/ci",
+    "n_7e50e3588bcd": "\"verified_by\": \"`bash -c \\\"! grep -rnE '^\\\\s*(import yaml|from yaml)' tests/ && echo 'NO UNDECLARED IMPORT'\\\"` exit 0 ... (the `&& ! grep -rnE '^\\\\s*import tomllib' tests/` clause was dropped from the",
+    "n_ead8e0a2b43d": "+      \"verified_at\": 1792900719896, ... \"verified_commit\": \"dc6eb9039c9cead158fbe800c5d724967119cdbe\" (re-stamped rules in okl-drift.json are only stable if the PR is merged with a merge commit, not ",
+    "research-cited-products-not-named": "+# SonarQube Cloud automatic analysis for okl (read from the default branch).",
+    "seed:dotnet-canon:r_encoding_loop": "+def _has_deep_path(text: str) -> bool:  (a fix for a quadratic-regex antipattern, plus the same fix in ci/check-init-flags.py, with no accompanying rule or gate to catch the next unbounded regex on p",
+    "seed:geospatial-enforcement-defects:d_ungated_zone": "+sonar.sources=src,evals,ci,docs,examples,.github",
+    "seed:geospatial-enforcement-defects:g_gate_every_dir": "+sonar.sources=src,evals,ci,docs,examples,.github",
+    "seed:geospatial-enforcement-defects:r_single_source_sets": "+_PATH_CHAIN = re.compile(r\"[\\w.-]+(?:/[\\w.-]+)*\")",
+    "watch-what-the-rule-depends-on": "\"verified_by\": \"`PYTHONPATH=src python3 ci/check-init-flags.py` exit 0, matched 'INIT FLAGS EXIST' on commit dc6eb9039c9c @ 2026-10-25T03:58Z\" (the doc-init-flags rule's files are README.md,docs/GETTI"
+   }
+  },
+  {
+   "pr": 289,
+   "needed": [
+    "n_1eaf9a5f24e2",
+    "n_bf6a2aee2f12"
+   ],
+   "flagged": [
+    "importer-keeps-local-decision",
+    "mcp-registry-publish-limits",
+    "mcp-registry-pypi-command-name",
+    "n_1eaf9a5f24e2",
+    "n_a5520510b99c",
+    "n_b4050b826687",
+    "n_bf6a2aee2f12",
+    "n_ead8e0a2b43d",
+    "seed:dotnet-defects:g_tombstones_nc",
+    "seed:geospatial-enforcement-defects:r_single_source_sets",
+    "seed:python-canon:py_pyproject_versions",
+    "seed:python-canon:py_test_every_version"
+   ],
+   "missed": [],
+   "lines": {
+    "importer-keeps-local-decision": "`okl seed --refresh` takes a pack's newer lessons without the rest of the pack",
+    "mcp-registry-publish-limits": "-  \"version\": \"0.8.9\", +  \"version\": \"0.9.0\", (server.json)",
+    "mcp-registry-pypi-command-name": "-      \"version\": \"0.8.9\", +      \"version\": \"0.9.0\", (server.json packages entry, which must match pyproject.toml)",
+    "n_1eaf9a5f24e2": "+      \"id\": \"n_bf6a2aee2f12\", ... \"files\": \"docs/DEVELOPING.md\", ... \"verified_commit\": \"444dba012971f716c2f80d481d256063f7049d26\"",
+    "n_a5520510b99c": "-    OKL_VERSION: \"0.8.9\"   # the version you run locally\n+    OKL_VERSION: \"0.9.0\"   # the version you run locally (and the pip install ...==0.9.0 pin in the Azure snippet): these pins fail every bui",
+    "n_b4050b826687": "+      \"verified_by\": \"`grep -c 'dependabot/alerts?state=open' docs/DEVELOPING.md` exit 0, matched '1' on commit 444dba012971 @ 2026-10-25T13:43Z\",",
+    "n_bf6a2aee2f12": "+version = \"0.9.0\" (release bump in pyproject.toml; Releasing step 1 requires reading open Dependabot and code-scanning alerts before every release, and the changelog claims advisories drove this rele",
+    "n_ead8e0a2b43d": "+      \"verified_at\": 1792940760914, ... \"verified_commit\": \"29c5dba12a6fd8ab9a184b07ca2fc65965a8bf8a\" (drift records re-stamped on this branch; squash or rebase merge would restamp commit times and t",
+    "seed:dotnet-defects:g_tombstones_nc": "-    OKL_VERSION: \"0.8.9\"   # the version you run locally\n+    OKL_VERSION: \"0.9.0\"   # the version you run locally",
+    "seed:geospatial-enforcement-defects:r_single_source_sets": "+    OKL_VERSION: \"0.9.0\"   # the version you run locally (the version is also restated as a literal in plugin.json, server.json and pyproject.toml)",
+    "seed:python-canon:py_pyproject_versions": "-version = \"0.8.9\"\n+version = \"0.9.0\" (pyproject.toml), bumped by hand again in .claude-plugin/plugin.json, server.json (twice) and docs/GETTING-STARTED.md",
+    "seed:python-canon:py_test_every_version": "okl now needs Python 3.11 or newer: 3.10 is past end of life ... CI drops its 3.10 job, adds 3.15"
+   }
+  },
+  {
+   "pr": 290,
+   "needed": [
+    "n_1eaf9a5f24e2",
+    "seed:dotnet-canon:r_surprise_in_writing",
+    "seed:geospatial-defects:d16",
+    "seed:python-canon:py_dont_mock_what_you_dont_own"
+   ],
+   "flagged": [
+    "n_00985805cdbb",
+    "n_09ba6adf0fdc",
+    "n_1eaf9a5f24e2",
+    "n_b4050b826687",
+    "seed:geospatial-enforcement-defects:r_single_source_sets",
+    "seed:python-canon:py_dont_mock_what_you_dont_own",
+    "seed:rag-defects:qz_fixtures",
+    "worktree-no-store-reverify"
+   ],
+   "missed": [
+    "seed:dotnet-canon:r_surprise_in_writing",
+    "seed:geospatial-defects:d16"
+   ],
+   "lines": {
+    "n_00985805cdbb": "+    module is loaded.\"\"\" ... and in the test: \"+    # embed goes on to the reranker, its one online step; unmocked, a machine with the rerank extra fetched it for real here\" \u2014 comments claim properti",
+    "n_09ba6adf0fdc": "diff --git a/okl-drift.json ... -      \"verified_at\": 1792934132173, +      \"verified_at\": 1792942353858 \u2014 the committed snapshot is a derived export; it must be regenerated from the store, never hand",
+    "n_1eaf9a5f24e2": "+      \"id\": \"n_bf6a2aee2f12\", ... \"files\": \"docs/DEVELOPING.md\", ... \"verified_commit\": \"444dba012971f716c2f80d481d256063f7049d26\" (a lesson governing a file changed on another open PR, pulled into t",
+    "n_b4050b826687": "\"verified_by\": \"`grep -c 'dependabot/alerts?state=open' docs/DEVELOPING.md` exit 0, matched '1' on commit 444dba012971 @ 2026-10-25T13:43Z\" (new record n_bf6a2aee2f12 is stamped by grepping for an exp",
+    "seed:geospatial-enforcement-defects:r_single_source_sets": "prior_offline = any((os.environ.get(v) or \"\").upper() in {\"1\", \"ON\", \"YES\", \"TRUE\"}",
+    "seed:python-canon:py_dont_mock_what_you_dont_own": "monkeypatch.setitem(sys.modules, \"huggingface_hub.constants\", constants)",
+    "seed:rag-defects:qz_fixtures": "constants = types.SimpleNamespace(HF_HUB_OFFLINE=False)    # imported by an online load",
+    "worktree-no-store-reverify": "-      \"verified_commit\": \"9062f1a348e3832018a3af18f4d23733b9637d55\" / +      \"verified_commit\": \"146f6294d0046ab6e9347f352bba26b29981e8b4\" (okl-drift.json re-verified snapshot; if built in a worktree"
+   }
+  },
+  {
+   "pr": 299,
+   "needed": [
+    "comparison-table-one-sitting-generated",
+    "doc-claim-governs-doc-and-code",
+    "generated-diagram-traced-old-path",
+    "index-in-context-not-fetched",
+    "n_6b65aa35593c",
+    "n_b550ba9c5c8a",
+    "seed:dotnet-canon:r_docs_review_surface",
+    "tall-sheet-screenshot-tiles"
+   ],
+   "flagged": [
+    "comparison-table-one-sitting-generated",
+    "doc-check-defaults",
+    "doc-claim-governs-doc-and-code",
+    "fused-window-readmits-weak-matches",
+    "generated-diagram-traced-old-path",
+    "guarantee-holds-on-every-write-path",
+    "index-in-context-not-fetched",
+    "n_0637c92c032f",
+    "n_428707b5e596",
+    "n_6b65aa35593c",
+    "n_b550ba9c5c8a",
+    "n_dc7429065f5d",
+    "optional-feature-shipped-text",
+    "seed:dotnet-canon:r_grep_to_zero",
+    "seed:geospatial-deeptime-defects:r_resubstitution_not_validation",
+    "seed:rag-defects:qz_unequal_budget",
+    "synthesis-copies-original-proposals",
+    "tall-sheet-screenshot-tiles"
+   ],
+   "missed": [
+    "seed:dotnet-canon:r_docs_review_surface"
+   ],
+   "lines": {
+    "comparison-table-one-sitting-generated": "RETRIEVAL.md table: `applying lessons named (of 115 any version found) | 90 | 31 | 38 | **102**` puts the 31 and 38 from \u00a74x's pool of 101 beside \u00a74y's pool of 115, so the columns come from different ",
+    "doc-check-defaults": "README: `add --format actions --limit 3 for a ~350-token version`, and the default decision changing to tiered, where --limit now also caps the one-line list; the README's stated check defaults must b",
+    "doc-claim-governs-doc-and-code": "COSTS-AND-KNOBS.md: `The default, `tiered`, shows in full at most five lessons ... and names the rest ... up to `--limit``; many new doc claims about defaults and token counts are stated with no check",
+    "fused-window-readmits-weak-matches": "CHANGELOG: `--hybrid: a record found by meaning alone is shown in full only under --decision floor; under the default it can be named in a line`, and the second tier names something on prompts that as",
+    "generated-diagram-traced-old-path": "render_pipeline_diagram.py trace(): the generator calls `_also_matched` itself and derives `left_out` and `trimmed` on its own, then cross-checks against check(). The new tier's counts and the regener",
+    "guarantee-holds-on-every-write-path": "RETRIEVAL.md: `**Nothing that matched is hidden.**` and CHANGELOG `briefed nothing, under every decision`; the regenerated SVG itself shows '7 left out', and the claims were not checked across the hoo",
+    "index-in-context-not-fetched": "Whether an agent acts on a one-line entry as it does on a lesson shown in full is not yet measured. (the default now relies on the agent running `okl show <id>` for the 64 of 102 reached lessons that ",
+    "n_0637c92c032f": "Binary files a/docs/overview/okl-anatomy-dark.png and b/docs/overview/okl-anatomy-dark.png differ (and okl-anatomy-light.png, the regenerated docs/okl-retrieval-pipeline.svg and the okl-anatomy.html t",
+    "n_428707b5e596": "Whether an agent acts on a one-line entry as it does on a lesson shown in full is not yet measured.",
+    "n_6b65aa35593c": "<text x=\"938\" y=\"992\" ...>7 left out</text> and '12 listed' in docs/okl-retrieval-pipeline.svg, plus hand-edited counts in docs/overview/okl-anatomy.html ('4 more listed by title', '~1,390 tokens'): t",
+    "n_b550ba9c5c8a": "README.md table '| applying lessons named, of 115 | 90 | 38 | **102** ...' and the regenerated docs/okl-retrieval-pipeline.svg / okl-anatomy PNGs: these diagram and README figures are review surfaces,",
+    "n_dc7429065f5d": "On a prompt that asks for no work, the second tier names something about as often as the floor briefed. (the default now lists up to twelve more matches, which reopens the 'nearly the whole store is r",
+    "optional-feature-shipped-text": "The default decision changes from the calibrated line to tiered, and the diff hand-edits docs, README and the anatomy sheet. Any other shipped text that still says the default 'briefs at most five' or",
+    "seed:dotnet-canon:r_grep_to_zero": "The receipt rename `briefing-size-20261026-0828.json` -> `briefing-size-20261027-0132.json` and the changed numbers (730 tokens, ~160, 'at most five', 'a quarter to a third') must be swept across all ",
+    "seed:geospatial-deeptime-defects:r_resubstitution_not_validation": "README: \"real prompts, a real store, held out\" table (102 of 115) and CHANGELOG \"(REPORT \u00a74x and \u00a74y, held out)\", while REPORT \u00a74y admits the composition \"reaches 101 of the held-out pool's 101 applyi",
+    "seed:rag-defects:qz_unequal_budget": "| applying lessons named, of 115 | 90 | 38 | **102** (38 in full, 64 in a line) | \u2014 the headline compares tiered, which names up to 5 in full plus 12 by line, against a floor that shows 12 in full, an",
+    "synthesis-copies-original-proposals": "docs/RETRIEVAL.md still reads \"Never more than five lessons.\" in item 3 beside the new item 4 that names up to twelve. The PR rewrites many hand-written figures (721 vs 1,424 tokens, 102 of 115, ~350 ",
+    "tall-sheet-screenshot-tiles": "diff --git a/docs/overview/okl-anatomy-dark.png and okl-anatomy-light.png (binary changes, with the okl-anatomy.html edits). These rasters were re-rendered, so they should come from the stitched-tile "
+   }
+  },
+  {
+   "pr": 300,
+   "needed": [
+    "comparison-table-one-sitting-generated",
+    "doc-claim-governs-doc-and-code",
+    "eval-scripts-no-exposure",
+    "falsifier-relative-to-control",
+    "fastembed-cache-in-tmpdir",
+    "fused-window-readmits-weak-matches",
+    "harness-reads-a-moving-working-tree",
+    "n_3dac3a1d8fba",
+    "n_4a398f2f8095",
+    "n_967ef9825472",
+    "n_9ba48d85ed19",
+    "n_b550ba9c5c8a",
+    "n_b578addf6269",
+    "n_e7988ff536fb",
+    "n_f17868ded85d",
+    "onnx-memory-after-first-inference",
+    "remote-timeout-not-a-deadline"
+   ],
+   "flagged": [
+    "comparison-table-one-sitting-generated",
+    "diagnostic-on-stage-window",
+    "doc-claim-governs-doc-and-code",
+    "falsifier-relative-to-control",
+    "harness-reads-a-moving-working-tree",
+    "n_1eaf9a5f24e2",
+    "n_3dac3a1d8fba",
+    "n_473aec369b25",
+    "n_4a398f2f8095",
+    "n_58119d0a63d9",
+    "n_916330f61994",
+    "n_a4b40c96ede4",
+    "n_b550ba9c5c8a",
+    "n_b74bad29fd87",
+    "n_f17868ded85d",
+    "onnx-memory-after-first-inference",
+    "seed:geospatial-defects:d15",
+    "seed:geospatial-defects:g_verify_outputs",
+    "seed:geospatial-enforcement-defects:r_single_source_sets",
+    "snapshot-from-worktree-drops-repo-rules"
+   ],
+   "missed": [
+    "eval-scripts-no-exposure",
+    "fastembed-cache-in-tmpdir",
+    "fused-window-readmits-weak-matches",
+    "n_967ef9825472",
+    "n_9ba48d85ed19",
+    "n_b578addf6269",
+    "n_e7988ff536fb",
+    "remote-timeout-not-a-deadline"
+   ],
+   "lines": {
+    "comparison-table-one-sitting-generated": "Receipts disagree on commit: the tally says `code 815a148bf124`, the size receipt `code ada6f2abf336`, and REPORT says the arms were briefed at c1f340b. The int8 receipt (c1cba7f29e88) shows `encode p",
+    "diagnostic-on-stage-window": "\"The line is 5.767926, the selection split's conformal line at alpha 0.05 for that score, from the same receipt\" (run_dense.py `exact` lines). It was computed by the benchmark diagnostic's candidate p",
+    "doc-claim-governs-doc-and-code": "docs/COMMANDS.md adds claims about `okl check --warm on`, `okl warm start/index`, `OKL_WARM=1` and \"only changed ones are embedded\". The diff adds no Rule tying these doc claims to the code they descr",
+    "falsifier-relative-to-control": "Prediction 5: \"the server holds at most 700 MB.\" It is an absolute figure taken from a reading before the model had encoded anything, and it failed. The REPORT itself calls it \"a planning error\".",
+    "harness-reads-a-moving-working-tree": "\"The arms were briefed at c1f340b, the same code before a rebase onto #299's review fixes\" while the tally is stamped 815a148. The size and memory receipts are stamped ada6f2abf336, so the run's code ",
+    "n_1eaf9a5f24e2": "okl-drift.json: \"verified_commit\": \"884c9d89eeefb91ee5f94fbe7f2dd867fb128445\" (every lesson re-verified on this branch; check no governed lesson's evidence commit exists only on another branch)",
+    "n_3dac3a1d8fba": "CHANGELOG.md: `okl check --warm on` ... adds 8 times a lesson's best cosine with the prompt to the line's score (a new ranking weight W = 8; test it from both sides and assert it is above zero, not on",
+    "n_473aec369b25": "REPORT.md \u00a74z Result: \"The warm arms' new pairs, 72 held out and 65 on tuning, were judged per lesson by Sonnet sub-agents\" (the judge is not pinned in the pre-registration, only \"judged as in \u00a74x\"; c",
+    "n_4a398f2f8095": "CHANGELOG.md: \"The `warm` extra installs it.\" (and evals/bench/real_prompts.py `from okl import core, decide, warm`: confirm okl.warm and core.check's warm path import fastembed/onnx only inside funct",
+    "n_58119d0a63d9": "docs/RETRIEVAL.md: \"`okl warm start`, `okl warm index`, then `\\\"warm\\\": true` in `.okl/config.json` or `OKL_WARM=1`\" (a manual multi-step setup, plus re-running `okl warm index` after lessons change, ",
+    "n_916330f61994": "The arms were briefed at c1f340b, the same code before a rebase onto #299's review fixes, none of which changes which lessons a check names. (an asserted property with no test or check behind it; the ",
+    "n_a4b40c96ede4": "On real held-out prompts it showed 46 applying lessons in full against 38, at 23.0% precision against 17.8% (the tuning half shows 42 against 41 and 23.9% against 26.3%, and the intervals overlap, wit",
+    "n_b550ba9c5c8a": "README.md: `okl warm` keeps it loaded in a local process: opt-in, about 1.3 to 1.6 GB of memory, a median of 109 ms a prompt, and on real held-out prompts 46 applying lessons shown in full against 38 ",
+    "n_b74bad29fd87": "s.put_embedding(node_id, warm.MODEL_ID, h, base64.b64decode(rows)) (a new Store method that both storage backends must implement and pass a shared conformance test for)",
+    "n_f17868ded85d": "\"google/embeddinggemma-300m-quantized\": (\"task: search result | query: {}\", \"title: none | text: {}\"), \u2014 the new int8 model only gets its retrieval prompts because they are formatted by hand here (fas",
+    "onnx-memory-after-first-inference": "**Why the memory bound was wrong.** It came from a reading taken just after the model loaded (about 500 MB), before it had encoded anything... The prediction was a planning error, recorded as it was w",
+    "seed:geospatial-defects:d15": "if r.returncode != 0:\n                sys.exit(f\"ABORT: okl check exited {r.returncode}\")  (warm_latency.py: the 'on' timing trusts exit 0, but a warm check that gets no answer falls back to the model",
+    "seed:geospatial-defects:g_verify_outputs": "times[setting].append((time.perf_counter() - t0) * 1000)\n            if r.returncode != 0: (warm_latency.py: only the exit code is checked; the hook output is never asserted to carry the warm result, ",
+    "seed:geospatial-enforcement-defects:r_single_source_sets": "+           \"google/embeddinggemma-300m-quantized\": (\"task: search result | query: {}\", \"title: none | text: {}\"),  (restates the base model's prompt templates as literals, while warm.QUERY also holds",
+    "snapshot-from-worktree-drops-repo-rules": "\"verified_at\": 1793097098752, ... on commit 884c9d89eeef @ 2026-10-27T10:31Z (okl-drift.json regenerated; confirm its repo and rule count match the previous commit's snapshot)"
+   }
+  },
+  {
+   "pr": 305,
+   "needed": [
+    "falsifier-relative-to-control",
+    "index-in-context-not-fetched",
+    "n_02cc84da158d",
+    "n_221da2fec863",
+    "n_5ddb0776a863",
+    "n_69f673496137",
+    "n_8a6e1abce5cc",
+    "n_a4b40c96ede4",
+    "n_b578addf6269",
+    "n_b6cc6890ba26",
+    "seed:geospatial-eval-defects:r_preregistered_control_vetoes",
+    "seed:python-canon:py_exceptions_canon",
+    "seed:rag-defects:qz_broken_tool",
+    "seed:rag-defects:qz_unequal_budget"
+   ],
+   "flagged": [
+    "comparison-table-one-sitting-generated",
+    "falsifier-relative-to-control",
+    "index-in-context-not-fetched",
+    "n_00985805cdbb",
+    "n_02cc84da158d",
+    "n_221da2fec863",
+    "n_473aec369b25",
+    "n_6b65aa35593c",
+    "n_7e50e3588bcd",
+    "n_8a6e1abce5cc",
+    "n_ce6a27cc432f",
+    "pooled-receipts-miss-report-corrections",
+    "research-cited-products-not-named",
+    "seed:python-canon:py_unclosed_sqlite",
+    "worktree-no-store-reverify"
+   ],
+   "missed": [
+    "n_5ddb0776a863",
+    "n_69f673496137",
+    "n_a4b40c96ede4",
+    "n_b578addf6269",
+    "n_b6cc6890ba26",
+    "seed:geospatial-eval-defects:r_preregistered_control_vetoes",
+    "seed:python-canon:py_exceptions_canon",
+    "seed:rag-defects:qz_broken_tool",
+    "seed:rag-defects:qz_unequal_budget"
+   ],
+   "lines": {
+    "comparison-table-one-sitting-generated": "| `line` | 0 of 24 | 0 of 24 | 2 of 24 |",
+    "falsifier-relative-to-control": "- If `titles` or `when` reproduces a defect in more than 3 of its 6 informative samples (half of \u00a74aa's baseline, 6 of 6), the fix's sentence is carrying the effect, and no line format drops it.",
+    "index-in-context-not-fetched": "- `when-tool`: the `when` lines. The fetch is offered only as an MCP tool `okl_get` (`evals/fetch_tool.py`), and the tool's description is the treatment",
+    "n_00985805cdbb": "# The treatment's wording, pre-registered in REPORT \u00a74ab: changing it changes the experiment.",
+    "n_02cc84da158d": "\"env\": {\"OKL_SHIM_LOG\": log, \"OKL_BRIEFING_LOG\": \"0\", \"OKL_DATABASE_URL\": store_url(), \"PYTHONPATH\": str(REPO / \"src\")}  (fetch_tool.py calls Client().get(id))",
+    "n_221da2fec863": "\"env\": {\"OKL_SHIM_LOG\": log, \"OKL_BRIEFING_LOG\": \"0\", \"OKL_DATABASE_URL\": store_url(), \"PYTHONPATH\": str(REPO / \"src\")}  (a hand-built subprocess env for the MCP fetch tool; the REPORT also admits the",
+    "n_473aec369b25": "That is the one change to \u00a74aa's instrument, which loaded whatever MCP servers the user's own configuration names  (--strict-mcp-config added to every arm, yet the receipt records \"instrument_changed_",
+    "n_6b65aa35593c": "Across the eight tasks, the `titles` briefings are 80% of `line`'s length and `when` is 102%. (a hand-typed figure in REPORT.md, alongside the hand-copied results table, with no freshness check agains",
+    "n_7e50e3588bcd": "from mcp.server.mcpserver import MCPServer as Server  # mcp >= 2 / from mcp.server.fastmcp import FastMCP as Server (evals/fetch_tool.py imports `mcp`; check it is in a declared dependency group, not ",
+    "n_8a6e1abce5cc": "refused = startup_refusal(models, arms, clean_cwd, tasks[0][\"defect_node\"], args.timeout) and the new receipt fields (\"when_tool_generator\", \"fetch_tool_description\") sit after the --dry-run early ret",
+    "n_ce6a27cc432f": "return os.environ.get(\"OKL_DATABASE_URL\") or f\"sqlite:///{REPO / '.okl' / 'okl.db'}\"  (store_url falls back to a default location, and the fetch tool and probes read from it)",
+    "pooled-receipts-miss-report-corrections": "+++ b/evals/results/ab-20261029-0425.json (a new receipt whose `line` arm repeats \u00a74aa's arm) and the REPORT text \"This one moves none of the published figures\": tests/test_docs.py pools receipts, so ",
+    "research-cited-products-not-named": "+Agent Skills use the same progressive disclosure, and their documentation names two things okl's second tier does not do. ... And in Claude Code a skill is opened through a tool of its own ... okl's ",
+    "seed:python-canon:py_unclosed_sqlite": "node: Any = Client().get(id)  (evals/fetch_tool.py: okl_get opens a new Client/store on every call in a long-lived MCP server and never closes it)",
+    "worktree-no-store-reverify": "The run is from a worktree pinned at the commit that adds this section, with this repo's store and config."
+   }
+  },
+  {
+   "pr": 308,
+   "needed": [
+    "seed:python-canon:py_unclosed_sqlite",
+    "seed:rag-defects:qz_unequal_budget",
+    "snapshot-from-worktree-drops-repo-rules",
+    "threshold-transfer-is-a-hypothesis"
+   ],
+   "flagged": [
+    "comparison-table-one-sitting-generated",
+    "generated-diagram-traced-old-path",
+    "harness-reads-a-moving-working-tree",
+    "n_00985805cdbb",
+    "n_967ef9825472",
+    "n_b74bad29fd87",
+    "n_be9f13d587b1",
+    "n_ead8e0a2b43d",
+    "seed:geospatial-enforcement-defects:r_single_source_sets",
+    "seed:python-canon:py_contract_tests",
+    "seed:python-canon:py_unclosed_sqlite",
+    "snapshot-from-worktree-drops-repo-rules",
+    "threshold-transfer-is-a-hypothesis",
+    "unclosed-sqlite-in-test-pr154",
+    "worktree-no-store-reverify"
+   ],
+   "missed": [
+    "seed:rag-defects:qz_unequal_budget"
+   ],
+   "lines": {
+    "comparison-table-one-sitting-generated": "| alpha 0.05, cap 5 | `words` | `stem` | table in evals/REPORT.md, typed by hand from four receipts rather than printed from them by a script that refuses receipts disagreeing on commit or store size",
+    "generated-diagram-traced-old-path": "- **`words`** is the shipped decision as it is. (the arm runs on the bench's own copy of the decision in v2.py, with no cross-check against the production entry point)",
+    "harness-reads-a-moving-working-tree": "Receipts: `bench-20261029-{sel,heldout}-v2-stem-{words,stem}.txt`, at 6f2a32c, all four in one sitting. A first sitting at the same commit was stamped DIRTY only because the bench's private prompts we",
+    "n_00985805cdbb": "# word matching stems each word with FTS5's own Porter tokenizer, so it agrees with an index built with that tokenizer (run.porter_index) rather than with a second stemmer's opinion.",
+    "n_967ef9825472": "- the porter tokenizer, with the index rebuilt on open;",
+    "n_b74bad29fd87": "- the porter tokenizer, with the index rebuilt on open;",
+    "n_be9f13d587b1": "The Postgres backend already stems (`websearch_to_tsquery('english', ...)`), so the two backends match words differently today.",
+    "n_ead8e0a2b43d": "okl-drift.json: \"verified_at\": 1793433320359 and \"verified_commit\": \"0196980079636c10...\" (rules re-verified on the branch; a squash or rebase merge restamps the governed files' commit times after the",
+    "seed:geospatial-enforcement-defects:r_single_source_sets": "c.execute(\"CREATE VIRTUAL TABLE node_fts USING fts5(id UNINDEXED, title, body, symptom, fix, \" \"tags, aliases, triggers, tokenize='porter unicode61')\") in porter_index restates the product's node_fts ",
+    "seed:python-canon:py_contract_tests": "The Postgres backend already stems (`websearch_to_tsquery('english', ...)`), so the two backends match words differently today. \u2014 the planned porter change to the SQLite backend has no shared backend-",
+    "seed:python-canon:py_unclosed_sqlite": "_PORTER = sqlite3.connect(\":memory:\")  (in v2.stem: a module-level SQLite connection that is never closed or tied to an owner with weakref.finalize)",
+    "snapshot-from-worktree-drops-repo-rules": "A first sitting at the same commit was stamped DIRTY only because the bench's private prompts were linked into the worktree ... (and okl-drift.json was refreshed in the same PR; the snapshot's repo an",
+    "threshold-transfer-is-a-hypothesis": "stemmed words in `decide`, with `CALIBRATED_LINE` set from this bench's stemmed calibration;",
+    "unclosed-sqlite-in-test-pr154": "_PORTER = sqlite3.connect(\":memory:\")",
+    "worktree-no-store-reverify": "\"verified_commit\": \"0196980079636c1000a0e907829624abd0287845\" (okl-drift.json re-verified; the worktree note in REPORT \u00a74ac suggests the branch was built in a worktree, so confirm okl drift --gate pas"
+   }
+  },
+  {
+   "pr": 312,
+   "needed": [
+    "docs-agent-neutral",
+    "git-path-history-drops-merges",
+    "harness-reads-a-moving-working-tree",
+    "measure-the-population-not-the-slice",
+    "n_0637c92c032f",
+    "n_b550ba9c5c8a",
+    "n_b6cc6890ba26",
+    "n_c95bdc056620",
+    "n_d45d7bf64896",
+    "n_e8b039f47ee1",
+    "n_fe4ced54e60f",
+    "novelty-claims-expire",
+    "optional-feature-shipped-text",
+    "scope-literature-gap-claims",
+    "seed:dotnet-canon:r_grep_to_zero",
+    "thesis-maintain-anything",
+    "verification-scope-is-the-thesis"
+   ],
+   "flagged": [
+    "briefing-hides-unproven-lessons",
+    "comparison-table-one-sitting-generated",
+    "doc-claim-governs-doc-and-code",
+    "guarantee-holds-on-every-write-path",
+    "harness-reads-a-moving-working-tree",
+    "measure-the-population-not-the-slice",
+    "n_0637c92c032f",
+    "n_6b65aa35593c",
+    "n_8a6e1abce5cc",
+    "n_aa3e45a2ecd6",
+    "n_adea7f2c7373",
+    "n_b550ba9c5c8a",
+    "n_c95bdc056620",
+    "n_d45d7bf64896",
+    "n_f215b68b925c",
+    "optional-feature-shipped-text",
+    "pooled-receipts-miss-report-corrections",
+    "seed:dotnet-canon:r_docs_review_surface",
+    "seed:dotnet-canon:r_grep_to_zero",
+    "seed:dotnet-defects:g_tombstones_nc",
+    "seed:geospatial-enforcement-defects:r_single_source_sets",
+    "tall-sheet-screenshot-tiles",
+    "thesis-maintain-anything",
+    "verification-scope-is-the-thesis",
+    "worktree-no-store-reverify"
+   ],
+   "missed": [
+    "docs-agent-neutral",
+    "git-path-history-drops-merges",
+    "n_b6cc6890ba26",
+    "n_e8b039f47ee1",
+    "n_fe4ced54e60f",
+    "novelty-claims-expire",
+    "scope-literature-gap-claims"
+   ],
+   "lines": {
+    "briefing-hides-unproven-lessons": "| every claim is backed by a check, or marked unchecked | 71 of 155 lessons have a check; the unchecked mark is #222, in review as #316 | census below |",
+    "comparison-table-one-sitting-generated": "| lessons recorded in this repo: watched by drift / checked only by CI / no check | 16 / 55 / 84 of 155; all 55 CI-left checks pass at f645d81 | `lesson-census-20261031-1409.json` |",
+    "doc-claim-governs-doc-and-code": "Of 36 deliberate breaks of the lessons it watched in this repo it caught 14, and most of the misses changed a file one step from the ones the lesson watches (REPORT \u00a74af).",
+    "guarantee-holds-on-every-write-path": "+- **Nothing is written to the store without you knowing.**",
+    "harness-reads-a-moving-working-tree": "+- **Started from f502559.** The receipt names 07cd1c4, the branch head when the run ended,",
+    "measure-the-population-not-the-slice": "+  that what a lesson watches changed; it does not find every break. Of 36 deliberate breaks of\n+  the lessons it watched in this repo it caught 14",
+    "n_0637c92c032f": "diff --git a/docs/overview/okl-anatomy-light.png b/docs/overview/okl-anatomy-light.png (binary PNGs re-rendered alongside the okl-anatomy.html and okl-overview.html eyebrow changes; the render needs i",
+    "n_6b65aa35593c": "docs/THESIS.md: \"42% \u2192 7% defects reproduced on eight bait tasks, pooled over seven A/B runs\" is hand-copied, and the README anatomy alt text says \"78 of 186 ... against 13 of 188 ... over eight A/B r",
+    "n_8a6e1abce5cc": "`--dry-run` counts the events and the samples and runs no check. (evals/README.md, on the new drift_replay.py and lesson_census.py instruments: tests that only run --dry-run cannot reach the report an",
+    "n_aa3e45a2ecd6": "Each figure names its receipt in `evals/results/`. (docs/THESIS.md baseline table: the receipt filenames are provenance references that no test dereferences, so a typo or renamed receipt would go unno",
+    "n_adea7f2c7373": "Each check runs as `okl verify` runs it: through a shell, passing on exit 0 with the expected text in its output. (REPORT \u00a74ae; and `--run-checks` in evals/README.md, which runs stored check strings f",
+    "n_b550ba9c5c8a": "The README's alt text for the re-rendered anatomy PNGs and docs/THESIS.md both quote figures (\"78 of 186 ... eight A/B runs\" against \"42% \u2192 7% ... pooled over seven A/B runs\", and 68 of 163 in RELATED",
+    "n_c95bdc056620": "docs/THESIS.md \"Still to align\": pyproject.toml, server.json (with tests/test_scaffold.py pinning its first words), plugin.json and the CLI --help still carry the old tagline. Grep the old tagline \"Ve",
+    "n_d45d7bf64896": "README headline replaced: \"**Verified memory for coding agents, and the loop that keeps it true.**\" becomes \"**Keeps your coding agent true to your rules, specs and docs, and keeps them true to the co",
+    "n_f215b68b925c": "One of its five catches may have another cause. For `n_f215b68b925c`, its reason cites the fix that has since landed in `okl init`. That fix makes the lesson's interim advice out of date, planted flag",
+    "optional-feature-shipped-text": "| it has the agent bring it back, telling you or asking first | partly: a drifted lesson blocks the push or fails CI, and the briefing marks it STALE; telling or asking for other artifacts is #317 | \u00a7",
+    "pooled-receipts-miss-report-corrections": "| it briefs the agent with what applies | built | 42% \u2192 7% defects reproduced on eight bait tasks, pooled over seven A/B runs ([REPORT](../evals/REPORT.md) \u00a75 finding 7) |",
+    "seed:dotnet-canon:r_docs_review_surface": "These still use the old tagline, and change with the next release, which is the maintainer's call: - `pyproject.toml`'s description ... `server.json` ... `.claude-plugin/plugin.json` ... the CLI's `--",
+    "seed:dotnet-canon:r_grep_to_zero": "CHANGELOG says \"the docs no longer call drift detection\", yet RELATED-WORK.md still reads \"okl's drift is such a detector.\" and REPORT \u00a74af says docs will describe drift as \"bookkeeping, not detection",
+    "seed:dotnet-defects:g_tombstones_nc": "These still use the old tagline, and change with the next release: `pyproject.toml`'s description, `server.json`, `.claude-plugin/plugin.json`, the CLI's `--help` description.",
+    "seed:geospatial-enforcement-defects:r_single_source_sets": "+**Keeps your coding agent true to your rules, specs and docs, and keeps them true to the code.**<br> (README) \u2014 the same headline is restated as a literal in the README alt text, okl-anatomy.html, ok",
+    "tall-sheet-screenshot-tiles": "diff --git a/docs/overview/okl-anatomy-dark.png b/docs/overview/okl-anatomy-dark.png (and the other re-rendered overview/anatomy PNGs): the stitched rasters should be eyeballed before committing",
+    "thesis-maintain-anything": "diff --git a/docs/THESIS.md b/docs/THESIS.md new file mode 100644 (the thesis page and baseline must list every promise okl makes and stay current with the measured results)",
+    "verification-scope-is-the-thesis": "README: \"Of 36 deliberate breaks of the lessons it watched in this repo it caught 14\" and THESIS.md's table, which measure the 16 watched lessons rather than all briefed lessons",
+    "worktree-no-store-reverify": "`okl reverify` re-runs each drifted lesson's stored check after you confirm. Drift notices that what a lesson watches changed;"
+   }
+  },
+  {
+   "pr": 342,
+   "needed": [
+    "n_1eaf9a5f24e2",
+    "n_5db37b759b1e",
+    "n_7e50e3588bcd",
+    "n_c95bdc056620",
+    "seed:dotnet-canon:r_docs_review_surface",
+    "seed:dotnet-canon:r_grep_to_zero",
+    "seed:dotnet-defects:g_tombstones_nc",
+    "seed:geospatial-enforcement-defects:d_unpinned_linter",
+    "seed:geospatial-enforcement-defects:r_pin_gating_tools",
+    "seed:geospatial-enforcement-defects:r_single_source_sets",
+    "seed:geospatial-enforcement-defects:r_surface_needs_trigger",
+    "seed:python-canon:py_pyproject_versions"
+   ],
+   "flagged": [
+    "n_5db37b759b1e",
+    "n_7e50e3588bcd",
+    "n_c95bdc056620",
+    "seed:dotnet-defects:g_tombstones_nc",
+    "seed:dotnet-review-surfaces:rs_workflow_hardening_baseline",
+    "snapshot-from-worktree-drops-repo-rules",
+    "watch-what-the-rule-depends-on"
+   ],
+   "missed": [
+    "n_1eaf9a5f24e2",
+    "seed:dotnet-canon:r_docs_review_surface",
+    "seed:dotnet-canon:r_grep_to_zero",
+    "seed:geospatial-enforcement-defects:d_unpinned_linter",
+    "seed:geospatial-enforcement-defects:r_pin_gating_tools",
+    "seed:geospatial-enforcement-defects:r_single_source_sets",
+    "seed:geospatial-enforcement-defects:r_surface_needs_trigger",
+    "seed:python-canon:py_pyproject_versions"
+   ],
+   "lines": {
+    "n_5db37b759b1e": "-      - name: Lockfile matches pyproject.toml\n-        run: uv lock --check  (replaced by `uv sync --locked`, whose failure on a stale lockfile is asserted in comments and the CHANGELOG but never sho",
+    "n_7e50e3588bcd": "elif m := re.search(r\"\\buv sync\\b(.*)\", line):\\n        installs.append(uv_sync(m.group(1)))",
+    "n_c95bdc056620": "-installs = list(re.finditer(r\"pip install -e \\.(?:\\[([\\w,-]+)\\])?((?: --group [\\w-]+)*)\", ... the old `pip install -e .` text that ci/check-test-imports.py keyed on is replaced in ci.yml by `uv sync ",
+    "seed:dotnet-defects:g_tombstones_nc": "-        run: uv lock --check  (retired step; DEVELOPING.md now reads \"CI's `uv sync --locked` fails otherwise\", so the author should grep the repo for any remaining mention of `uv lock --check` or th",
+    "seed:dotnet-review-surfaces:rs_workflow_hardening_baseline": "+          python -m pip install \"$(python -c 'import tomllib; print(next(d for d in tomllib.load(open(\"pyproject.toml\", \"rb\"))[\"dependency-groups\"][\"dev\"] if isinstance(d, str) and d.startswith(\"uv==",
+    "snapshot-from-worktree-drops-repo-rules": "okl-drift.json: \"verified_at\": 1793635255378 ... \"verified_commit\": \"518a9eb7beaf9d43f172ab6281bbcdf09d3823db\" \u2014 the snapshot was regenerated, so check its repo and rule count against the previous com",
+    "watch-what-the-rule-depends-on": "\"files\": \"tests/,pyproject.toml,.github/workflows/ci.yml\", (the n_ import-check lesson's watched files omit ci/check-test-imports.py, which this PR rewrites, and uv.lock, which CI now installs from)"
+   }
+  },
+  {
+   "pr": 359,
+   "needed": [
+    "bash-double-brackets",
+    "n_1eaf9a5f24e2",
+    "n_1fe5ef1aaca5",
+    "n_57cc4b427f05",
+    "n_5ddb0776a863",
+    "n_69f673496137",
+    "n_713b8c104f12",
+    "n_e7988ff536fb",
+    "seed:dotnet-canon:r_encoding_loop"
+   ],
+   "flagged": [
+    "bash-double-brackets",
+    "break-test-masked-by-integrity-check",
+    "n_1eaf9a5f24e2",
+    "n_1fe5ef1aaca5",
+    "n_57cc4b427f05",
+    "n_5db37b759b1e",
+    "n_69f673496137",
+    "n_d8e5ee92ad8f",
+    "n_e7988ff536fb",
+    "seed:dotnet-canon:r_encoding_loop",
+    "seed:dotnet-decisions:pd_major_upgrade_runtime_breaks",
+    "seed:dotnet-defects:nc_arch_reviewer",
+    "seed:geospatial-enforcement-defects:d_invoked_by_nothing",
+    "seed:geospatial-enforcement-defects:d_ungated_zone",
+    "seed:geospatial-enforcement-defects:r_surface_needs_trigger",
+    "snapshot-from-worktree-drops-repo-rules",
+    "worktree-no-store-reverify"
+   ],
+   "missed": [
+    "n_5ddb0776a863",
+    "n_713b8c104f12"
+   ],
+   "lines": {
+    "bash-double-brackets": "*) [[ \"$OKL_BRIEFING_LIMIT\" == *[1-9]* ]] && size_args=\"--limit $OKL_BRIEFING_LIMIT\" ;; and the new whole-number guard in gates/check-canon-size.sh: [[ \"$v\" =~ ^(0|[1-9][0-9]*)$ ]]",
+    "break-test-masked-by-integrity-check": "-# okl-fingerprint: sha256:d07086d1e2ac22b97b6bb4a1cdeced0e2a76fe4822b8776b495ef8f7a78cb5ff / +# okl-fingerprint: sha256:2131615cc49aca754c2834c8ff48227a258186f52d8e178205c71747867968db (the hooks are",
+    "n_1eaf9a5f24e2": "diff --git a/okl-drift.json ... \"verified_commit\": \"5b00acf50d67f8235c5f02bf134e713adaea35cd\" (and a416aa68c845...) \u2014 the snapshot is re-verified on this branch, so evidence commits may exist only her",
+    "n_1fe5ef1aaca5": "diff --git a/hooks/okl-mcp.sh and a/.claude/hooks/okl-mcp.sh and a/src/okl/scaffold/gates/check-canon-size.sh \u2014 every converted script has mirrored copies that must stay byte-identical (including the ",
+    "n_57cc4b427f05": "and a test now fails on any new `[ ]`. (CHANGELOG.md) \u2014 the new check over \"tracked\" bash scripts must iterate git ls-files, not the working tree",
+    "n_5db37b759b1e": "*) [[ \"$OKL_BRIEFING_LIMIT\" == *[1-9]* ]] && size_args=\"--limit $OKL_BRIEFING_LIMIT\" ;; \u2014 replaces `-gt 0 2>/dev/null` and adds the CANON_WARN/CANON_FAIL whole-number refusal (exit 2), on the strength",
+    "n_69f673496137": "a test now fails on any new `[ ]`. (CHANGELOG entry; the new check is only trustworthy if it is run against a known `[ ]` case and shown to fail)",
+    "n_d8e5ee92ad8f": "*) [[ \"$OKL_BRIEFING_LIMIT\" == *[1-9]* ]] && size_args=\"--limit $OKL_BRIEFING_LIMIT\" ;;  (a behaviour change inside a hook, which this lesson says to check by running the hook, not by reading it)",
+    "n_e7988ff536fb": "[[ \"$v\" =~ ^(0|[1-9][0-9]*)$ ]] || { echo \"  \u2717 CANON_WARN and CANON_FAIL must be whole numbers, not '$v'\"; exit 2; }  (the new exit 2 prints its reason to stdout rather than stderr, and no test assert",
+    "seed:dotnet-canon:r_encoding_loop": "+  and a test now fails on any new `[ ]`. (CHANGELOG claim; the shown diff has no new test or recorded org-scope rule, only verified_at refreshes in okl-drift.json. The rule and its check must land in",
+    "seed:dotnet-decisions:pd_major_upgrade_runtime_breaks": "+  # Digits only here, so above zero means some digit is not 0. A pattern, not -gt: inside [[ ]]\n+  # -gt reads its operands as arithmetic, where a leading 0 means octal (08 would be refused).\n+  *) [",
+    "seed:dotnet-defects:nc_arch_reviewer": "+  and a test now fails on any new `[ ]`. (CHANGELOG.md) \u2014 the new test only enforces the rule if CI or a hook actually invokes it, so confirm it is wired to something that runs.",
+    "seed:geospatial-enforcement-defects:d_invoked_by_nothing": "+  and a test now fails on any new `[ ]`. (CHANGELOG: the new test is the enforcement, so it must have a mechanical trigger in CI, not only be runnable on demand)",
+    "seed:geospatial-enforcement-defects:d_ungated_zone": "-[ \"${KEEP:-0}\" = 1 ] || trap 'rm -rf \"$W\"' EXIT (docs/overview/anatomy-story.sh, a script outside hooks/gates/ci; the new test must enumerate every tracked bash script, including docs/ and extensionl",
+    "seed:geospatial-enforcement-defects:r_surface_needs_trigger": "+  and a test now fails on any new `[ ]`. (CHANGELOG: the PR adds a new enforcement gate, so the AUTOMATIC-vs-RUN ledger must be updated in this same change)",
+    "snapshot-from-worktree-drops-repo-rules": "diff --git a/okl-drift.json b/okl-drift.json (verified_at/verified_commit restamped on several rules; the snapshot's repo and rule count must be compared with the previous commit if regenerated in a w",
+    "worktree-no-store-reverify": "\"verified_commit\": \"5b00acf50d67f8235c5f02bf134e713adaea35cd\" in okl-drift.json (the hook/gate edits change files that rules govern, so reverify must run from the main checkout and `okl drift --gate -"
+   }
+  },
+  {
+   "pr": 373,
+   "needed": [
+    "doc-claim-governs-doc-and-code",
+    "guarantee-holds-on-every-write-path",
+    "n_02cc84da158d",
+    "n_1eaf9a5f24e2",
+    "n_e49be14d6207",
+    "n_e7988ff536fb",
+    "seed:dotnet-canon:r_docs_review_surface",
+    "seed:dotnet-canon:r_https_metadata_failclosed",
+    "seed:dotnet-defects:nc_arch_reviewer"
+   ],
+   "flagged": [
+    "doc-claim-governs-doc-and-code",
+    "guarantee-holds-on-every-write-path",
+    "n_00985805cdbb",
+    "n_69244bb71160",
+    "n_991d07b0549e",
+    "n_e49be14d6207",
+    "n_e7988ff536fb",
+    "n_ec568941f68a",
+    "n_ed7e782d12fd",
+    "seed:dotnet-review-surfaces:rs_integration_tests_default",
+    "seed:geospatial-enforcement-defects:r_single_source_sets",
+    "seed:python-canon:py_dont_mock_what_you_dont_own",
+    "seed:python-canon:py_unclosed_sqlite"
+   ],
+   "missed": [
+    "n_02cc84da158d",
+    "n_1eaf9a5f24e2",
+    "seed:dotnet-canon:r_docs_review_surface",
+    "seed:dotnet-canon:r_https_metadata_failclosed",
+    "seed:dotnet-defects:nc_arch_reviewer"
+   ],
+   "lines": {
+    "doc-claim-governs-doc-and-code": "docs/DEPLOY.md: \"With no token it refuses to start on any address... `OKL_ALLOW_NO_TOKEN=1` starts it anyway, and then it logs a warning as each worker starts: `OKL_TOKEN is not set or is empty`\" (and",
+    "guarantee-holds-on-every-write-path": "def run(host: str, port: int = 8080) -> None: ... uvicorn.run(create_app(), host=host, port=port)  (the refusal lives only in cmd_serve and the module `app` attribute, so run() and create_app() called",
+    "n_00985805cdbb": "# Both entry points refuse this unless told otherwise (#371): `okl serve` off loopback, `module:app` on any address. What starts anyway was asked to, or runs on a laptop, and it still says so on every",
+    "n_69244bb71160": "+    token = os.environ.get(\"OKL_TOKEN\") or None  (with the new `--allow-no-token` / `OKL_ALLOW_NO_TOKEN=1` opt-in, the spec routes stay mounted; the test asserts `app.get(\"/openapi.json\").status_code",
+    "n_991d07b0549e": "            _refuse_an_open_store()\n            _app = create_app()  (in module __getattr__, the `uvicorn okl.service:app` path; the test must still show that entry point serves a request)",
+    "n_e49be14d6207": "STORE_VARS = (\"OKL_DATABASE_URL\", \"OKL_SERVICE_URL\", \"OKL_TOKEN\", \"OKL_ALLOW_NO_TOKEN\")",
+    "n_e7988ff536fb": "    refusal = _open_bind_refusal(args.host, args.allow_no_token)\n    if refusal:\n        print(refusal, file=sys.stderr)\n        return 2",
+    "n_ec568941f68a": "def _refuse_an_open_store() -> None:\n    \"\"\"Refuse to build `module:app` with no token, unless OKL_ALLOW_NO_TOKEN=1 (#371).\n\n    Only an ASGI host reaches `app`; `okl serve` builds its app in `run()` ",
+    "n_ed7e782d12fd": "-    token = os.environ.get(\"OKL_TOKEN\")\n+    token = os.environ.get(\"OKL_TOKEN\") or None",
+    "seed:dotnet-review-surfaces:rs_integration_tests_default": "+def test_serve_with_the_opt_in_reaches_the_server_on_the_host_asked(monkeypatch): ... monkeypatch.setattr(service, \"run\", lambda host, port: started.append(host)) -- a guard with several branches (to",
+    "seed:geospatial-enforcement-defects:r_single_source_sets": "if os.environ.get(\"OKL_TOKEN\") or os.environ.get(\"OKL_ALLOW_NO_TOKEN\") == \"1\": (service._refuse_an_open_store) restates the same token/opt-in decision as servers._open_bind_refusal and create_app's `t",
+    "seed:python-canon:py_dont_mock_what_you_dont_own": "monkeypatch.setattr(hmac, \"compare_digest\", spy) and monkeypatch.setattr(uvicorn, \"run\", lambda *a, **k: pytest.fail(...)) patch stdlib/third-party functions directly instead of an adapter the project",
+    "seed:python-canon:py_unclosed_sqlite": "+    s = Store(\"sqlite:///:memory:\")  (in test_a_service_built_with_no_token_says_its_routes_are_open, passed to create_app several times and never closed; the ASGI-entrypoint test likewise builds an "
+   }
+  },
+  {
+   "pr": 381,
+   "needed": [
+    "guarantee-holds-on-every-write-path",
+    "n_1eaf9a5f24e2",
+    "n_7e50e3588bcd",
+    "optional-feature-shipped-text",
+    "refusal-offers-no-destructive-shortcut"
+   ],
+   "flagged": [
+    "doc-claim-governs-doc-and-code",
+    "guarantee-holds-on-every-write-path",
+    "n_ead8e0a2b43d",
+    "seed:dotnet-canon:r_docs_review_surface",
+    "seed:dotnet-canon:r_encoding_loop",
+    "seed:dotnet-review-surfaces:rs_integration_tests_default"
+   ],
+   "missed": [
+    "n_1eaf9a5f24e2",
+    "n_7e50e3588bcd",
+    "optional-feature-shipped-text",
+    "refusal-offers-no-destructive-shortcut"
+   ],
+   "lines": {
+    "doc-claim-governs-doc-and-code": "+With `--files` it also prints the `okl verify` command to run next: until a check passes, drift reports the lesson as never verified, so a drift gate goes red on it.",
+    "guarantee-holds-on-every-write-path": "+    if args.files:\n+        print(f\"okl: {core.unproven_watch(node_id)}\", file=sys.stderr)  (the hint is added to CLI record/update and the MCP tools only; the changelog and GETTING-STARTED claim it ",
+    "n_ead8e0a2b43d": "-      \"verified_at\": 1794017205629,\n+      \"verified_at\": 1794018528828, (okl-drift.json re-stamps every rule's verified_at on this PR, so merging it by squash or rebase would restamp the governed fi",
+    "seed:dotnet-canon:r_docs_review_surface": "+With `--files` it also prints the `okl verify` command to run next: until a check passes, drift reports the lesson as never verified, so a drift gate goes red on it.",
+    "seed:dotnet-canon:r_encoding_loop": "+- **`okl record --files` with no check says what comes next** (#377). Drift reports a lesson that governs files as never verified until a check passes",
+    "seed:dotnet-review-surfaces:rs_integration_tests_default": "+    assert 'okl verify w1 --run \"<check>\" --expect \"<signal>\"' in err and \"drift gate\" in err, err (the new tests cover each branch: files given, no files, update with and without files changes, and "
+   }
+  },
+  {
+   "pr": 383,
+   "needed": [
+    "doc-claim-governs-doc-and-code",
+    "generated-diagram-traced-old-path",
+    "n_00985805cdbb",
+    "n_0637c92c032f",
+    "n_57cc4b427f05",
+    "n_5ddb0776a863",
+    "n_6b65aa35593c",
+    "n_b4050b826687",
+    "n_b550ba9c5c8a",
+    "n_e7988ff536fb",
+    "seed:dotnet-canon:r_docs_review_surface",
+    "seed:dotnet-defects:nc_arch_reviewer",
+    "seed:geospatial-enforcement-defects:d_invoked_by_nothing",
+    "seed:geospatial-enforcement-defects:r_surface_needs_trigger",
+    "thesis-maintain-anything"
+   ],
+   "flagged": [
+    "doc-claim-governs-doc-and-code",
+    "generated-diagram-traced-old-path",
+    "guarantee-holds-on-every-write-path",
+    "n_0637c92c032f",
+    "n_428707b5e596",
+    "n_5ddb0776a863",
+    "n_6b65aa35593c",
+    "n_b550ba9c5c8a",
+    "n_c95bdc056620",
+    "n_e7988ff536fb",
+    "optional-feature-shipped-text",
+    "seed:dotnet-canon:r_docs_review_surface",
+    "seed:geospatial-enforcement-defects:d_masked_gate_order"
+   ],
+   "missed": [
+    "n_00985805cdbb",
+    "n_57cc4b427f05",
+    "n_b4050b826687",
+    "seed:dotnet-defects:nc_arch_reviewer",
+    "seed:geospatial-enforcement-defects:d_invoked_by_nothing",
+    "seed:geospatial-enforcement-defects:r_surface_needs_trigger",
+    "thesis-maintain-anything"
+   ],
+   "lines": {
+    "doc-claim-governs-doc-and-code": "It proves the names exist, not that the picture is right: a renamed command fails here, a changed behaviour under an unchanged name does not. (the drawn diagrams also assert behaviour such as fail-clo",
+    "generated-diagram-traced-old-path": "The generated ones are written by render_architecture.py from the source and pyproject.toml, and tests/test_architecture.py fails the suite when the code moves and they do not",
+    "guarantee-holds-on-every-write-path": "okl verify with --run and --expect, when the check passes, makes it PROVEN ... A failing check stamps nothing (state-diagram claims stated without listing every path that writes a stamp: record, seed,",
+    "n_0637c92c032f": "paths = [p for p in repo.files() if p.startswith(\"docs/\") and p.endswith(\".excalidraw\")]",
+    "n_428707b5e596": "the PostToolUse Read hook runs posttooluse-okl-read.sh, which runs okl check --path and briefs the lessons that govern that file; it never blocks",
+    "n_5ddb0776a863": "if not sources: _say(\"no .excalidraw diagrams under docs/: nothing to check\"); return 0 \u2014 zero diagrams inspected exits 0 as clean, so the gate stays green if the diagrams are moved, renamed or not tr",
+    "n_6b65aa35593c": "Six moments, left to right: three Claude Code hooks and the MCP tools inside a session... (hand-drawn counts and the 'six' MCP tools list in docs/ARCHITECTURE.md are transcribed by hand, and check-dia",
+    "n_b550ba9c5c8a": "+  noticing an edit). The drawn diagrams in `docs/architecture/` are `.excalidraw`\n+  sources with the `.svg` render beside each: edit the source, re-export the render, and\n+  `ci/check-diagram-names.",
+    "n_c95bdc056620": "EXTERNAL_FLAGS = frozenset({\"--no-verify\"}) and PROSE = frozenset({\"runs\", \"stamps\", \"cannot\", \"can\", \"keeps\", \"is\"}) \u2014 the checker keys on names (okl <word>, flags, tool names, scripts) that can be r",
+    "n_e7988ff536fb": "Exit 0 when every name resolves, 1 when any does not, 2 when it cannot run. / `if not sources: _say(\"no .excalidraw diagrams under docs/: nothing to check\"); return 0` \u2014 a missing diagram set exits 0 ",
+    "optional-feature-shipped-text": "\"text\": \"the briefing marks it, the\\npre-push hook holds the push,\\nand CI fails the build\" (STALE card in okl-lesson-states.excalidraw; the drift gate is optional, so a repo set up with --no-git-hook",
+    "seed:dotnet-canon:r_docs_review_surface": "ci/check-diagram-names.py collects only `.excalidraw` files (`p.endswith(\".excalidraw\")`), while the `.svg` renders beside them and the long `alt=` text in docs/ARCHITECTURE.md also name commands and ",
+    "seed:geospatial-enforcement-defects:d_masked_gate_order": "+      - name: Diagram names exist in the code\n+        run: python3 ci/check-diagram-names.py"
+   }
+  },
+  {
+   "pr": 384,
+   "needed": [
+    "n_0637c92c032f",
+    "n_6b65aa35593c",
+    "seed:dotnet-canon:r_docs_review_surface"
+   ],
+   "flagged": [
+    "doc-claim-governs-doc-and-code",
+    "generated-diagram-traced-old-path",
+    "merge-needs-resolved-threads",
+    "n_00985805cdbb",
+    "n_02aa43137a2e",
+    "n_0637c92c032f",
+    "n_119528a07fa5",
+    "n_6b65aa35593c",
+    "n_7e50e3588bcd",
+    "n_a5520510b99c",
+    "n_b550ba9c5c8a",
+    "n_c95bdc056620",
+    "n_f6d01e368155",
+    "seed:dotnet-canon:r_docs_review_surface",
+    "seed:dotnet-canon:r_encoding_loop",
+    "seed:dotnet-canon:r_file_move_discipline",
+    "seed:dotnet-canon:r_grep_to_zero",
+    "seed:dotnet-defects:g_tombstones_nc",
+    "seed:dotnet-defects:nc_arch_reviewer",
+    "seed:python-canon:py_layers_contract",
+    "seed:python-canon:py_pyproject_versions"
+   ],
+   "missed": [],
+   "lines": {
+    "doc-claim-governs-doc-and-code": "`python3 docs/render_architecture.py --svg` to bring them back (rendering needs Playwright; see [DEVELOPING.md](DEVELOPING.md))",
+    "generated-diagram-traced-old-path": "Each render carries the hash of its source, so the test catches a stale image too.",
+    "merge-needs-resolved-threads": "CodeRabbit-style review threads on this PR must be resolved before merge; the PR adds docs/CHANGELOG changes that will draw bot review (main requires resolved conversations)",
+    "n_00985805cdbb": "<!-- okl:source-sha256 e30a0ec7... --> and the claim 'Each render carries the hash of its source, so the test catches a stale image too' in CHANGELOG.md: a claim in a comment/docs must be executable a",
+    "n_02aa43137a2e": "Docs/CHANGELOG PR that will be reviewed by a bot: wait for the actual review result, not the 'review triggered' acknowledgement",
+    "n_0637c92c032f": "+<svg ... ><!-- okl:source-sha256 e30a0ec7... --> in docs/architecture/okl-layers.svg and okl-storage.svg: the render is a separate artifact from the .mmd source and needs its own assertion that sourc",
+    "n_119528a07fa5": "`python3 docs/render_architecture.py --svg` needs Playwright's Chromium and a pinned CDN Mermaid; a test that tests staleness of the renders must not depend on the developer's environment (CI clean ch",
+    "n_6b65aa35593c": "Each render carries the hash of its source, so the test catches a stale image too.",
+    "n_7e50e3588bcd": "`python3 docs/render_architecture.py --svg` to bring them back (rendering needs Playwright; see",
+    "n_a5520510b99c": "`--svg` renders the Mermaid sources with Playwright's Chromium and Mermaid from a pinned CDN URL; ... or use any environment with `playwright` and its Chromium.",
+    "n_b550ba9c5c8a": "the SVG is a render; ... Each render carries the hash of its source, so the test catches a stale image too. (diagram/README review surface: the PR adds new diagram SVGs under docs/architecture/ and sa",
+    "n_c95bdc056620": "-```mermaid\n-flowchart LR\n-  cli[\"okl CLI<br/>27 commands\"]  (replaced by <img src=\"architecture/okl-storage.svg\" ...>: the generated sections no longer hold a mermaid block, so anything keyed on the ",
+    "n_f6d01e368155": "-```mermaid\n-flowchart LR\n-  cli[\"okl CLI<br/>27 commands\"]",
+    "seed:dotnet-canon:r_docs_review_surface": "Keep editable diagram sources paired with their rendered artifacts: the diff adds okl-storage.mmd/okl-layers.mmd paired with .svg renders carrying a source-sha256 hash, and updates ARCHITECTURE.md, DE",
+    "seed:dotnet-canon:r_encoding_loop": "The fix for mermaid blocks rendering badly in dark VS Code previews lands with a test-enforced staleness check: \"Each render carries the hash of its source, so the test catches a stale image too\" and ",
+    "seed:dotnet-canon:r_file_move_discipline": "The diff removes the inline ```mermaid blocks from docs/ARCHITECTURE.md and changes the render command to `render_architecture.py --svg`; references to the old output and command (README, GETTING-STAR",
+    "seed:dotnet-canon:r_grep_to_zero": "-and `python3 docs/render_architecture.py` to bring them back  /  +`python3 docs/render_architecture.py --svg` to bring them back \u2014 the old command and Mermaid-block wording need a grep-to-zero across",
+    "seed:dotnet-defects:g_tombstones_nc": "-```mermaid / +<img src=\"architecture/okl-storage.svg\" ... (the generated charts stop being Mermaid blocks; any other doc, comment or test still describing them as Mermaid blocks would now teach a ret",
+    "seed:dotnet-defects:nc_arch_reviewer": "`tests/test_architecture.py` fails the suite when the code moves and they do not, a render included: run `python3 docs/render_architecture.py --svg`",
+    "seed:python-canon:py_layers_contract": "+import each other. `lint-imports` enforces it in CI. An arrow between two groups means some\n+module in one imports some module in the other; inside a group, an arrow is one import.",
+    "seed:python-canon:py_pyproject_versions": "+   renders the Mermaid sources with Playwright's Chromium and Mermaid from a pinned CDN URL;"
+   }
+  },
+  {
+   "pr": 388,
+   "needed": [
+    "doc-claim-governs-doc-and-code",
+    "eval-scripts-no-exposure",
+    "gh-pr-needs-repo-in-scripts",
+    "git-path-history-drops-merges",
+    "n_0637c92c032f",
+    "n_1eaf9a5f24e2",
+    "n_4a398f2f8095",
+    "n_adea7f2c7373",
+    "n_b550ba9c5c8a",
+    "n_e7988ff536fb",
+    "readonly-agents-side-effects",
+    "review-bot-watch-matches-wrong-comment",
+    "seed:dotnet-canon:r_docs_review_surface",
+    "seed:dotnet-canon:r_encoding_loop",
+    "seed:python-canon:py_dont_mock_what_you_dont_own",
+    "seed:python-canon:py_exceptions_canon",
+    "seed:python-canon:py_value_objects_at_seams",
+    "seed:rag-defects:qz_fixtures"
+   ],
+   "flagged": [
+    "doc-claim-governs-doc-and-code",
+    "eval-scripts-no-exposure",
+    "gh-pr-needs-repo-in-scripts",
+    "git-path-history-drops-merges",
+    "merge-needs-resolved-threads",
+    "n_0637c92c032f",
+    "n_1eaf9a5f24e2",
+    "n_5ddb0776a863",
+    "n_adea7f2c7373",
+    "n_b550ba9c5c8a",
+    "n_e7988ff536fb",
+    "readonly-agents-side-effects",
+    "review-bot-watch-matches-wrong-comment",
+    "seed:dotnet-defects:nc_arch_reviewer",
+    "seed:geospatial-enforcement-defects:d_invoked_by_nothing",
+    "seed:geospatial-enforcement-defects:r_surface_needs_trigger"
+   ],
+   "missed": [
+    "n_4a398f2f8095",
+    "seed:dotnet-canon:r_docs_review_surface",
+    "seed:dotnet-canon:r_encoding_loop",
+    "seed:python-canon:py_dont_mock_what_you_dont_own",
+    "seed:python-canon:py_exceptions_canon",
+    "seed:python-canon:py_value_objects_at_seams",
+    "seed:rag-defects:qz_fixtures"
+   ],
+   "lines": {
+    "doc-claim-governs-doc-and-code": "+okl intake pr <n>    # a PR's resolved review threads, each with the commit that resolved it ... Reads through gh (--repo OWNER/NAME; default: the repo gh sees here); --format json for an agent; writ",
+    "eval-scripts-no-exposure": "+  shows, and asks of each whether to encode it and where ... It reads through `gh` and writes nothing  (the command shows 'the lessons a briefing on it already shows', so it calls Client.check, which",
+    "gh-pr-needs-repo-in-scripts": "Reads through gh (--repo OWNER/NAME; default: the repo gh sees here); --format json for an agent; writes nothing; exit 2 when gh cannot read the PR.",
+    "git-path-history-drops-merges": "each with the commit that resolved it (the one a reply names, or else the first after it to touch the file, marked as a guess)",
+    "merge-needs-resolved-threads": "each with the commit that resolved it (the one a reply names, or else the first after it to touch the file, marked as a guess)",
+    "n_0637c92c032f": "docs/architecture/okl-code-map.excalidraw and okl-code-map.svg both edited to add intake.py; the render is a separate artifact with no assertion that it carries the source's new claim",
+    "n_1eaf9a5f24e2": "printing the `okl record` and `okl verify` commands that would. It reads through `gh` and writes nothing",
+    "n_5ddb0776a863": "and the lessons a briefing on it already shows, and asks of each whether to encode it and where",
+    "n_adea7f2c7373": "each with the commit that resolved it (the one a reply names, or else the first after it to touch the file, marked as a guess) ... It reads through `gh`",
+    "n_b550ba9c5c8a": "diff --git a/docs/architecture/okl-code-map.svg b/docs/architecture/okl-code-map.svg (the .excalidraw text edits for intake.py need the SVG re-rendered and ./ci/check-diagram-figures.sh run)",
+    "n_e7988ff536fb": "Reads through gh (--repo OWNER/NAME; default: the repo gh sees here); --format json for an agent; writes nothing; exit 2 when gh cannot read the PR.",
+    "readonly-agents-side-effects": "It reads through `gh` and writes nothing; `--format json` is for an agent. (the command also shows the lessons a briefing on each thread already shows, and building a briefing via okl check logs brief",
+    "review-bot-watch-matches-wrong-comment": "`okl intake pr <n>` lists the PR's resolved review threads, each with the commit that resolved it (the one a reply names, or else the first after it to touch the file, marked as a guess)",
+    "seed:dotnet-defects:nc_arch_reviewer": "The Stop hook asks what a session learned, and nothing else asked at all... a PR no session opened was never asked. `okl intake pr <n>` lists the PR's resolved review threads",
+    "seed:geospatial-enforcement-defects:d_invoked_by_nothing": "+okl intake pr <n>    # a PR's resolved review threads, each with the commit that resolved it ... writes nothing; exit 2 when gh cannot read the PR.",
+    "seed:geospatial-enforcement-defects:r_surface_needs_trigger": "+  verify` commands that would. It reads through `gh` and writes nothing; `--format json` is for an agent."
+   }
+  }
+ ]
+}
