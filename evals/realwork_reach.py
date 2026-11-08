@@ -30,6 +30,7 @@ import sqlite3
 import subprocess
 import sys
 import tempfile
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -75,16 +76,21 @@ def store_as_of(task: dict, room: Path) -> Path:
 
 
 WARM_MISSED: list[str] = []
+WARM_RETRIES: list[str] = []
+WARM_TRIES = 4
 
 
 def okl_check(db: Path, *args: str) -> dict:
     """`okl check ... --format json` on store `db`, unlogged; {} on failure. A task check asked
     of the default arm must run with warm, as this repository does: one that falls back (the model
-    did not answer in its budget, as under load) is asked once more, then recorded in WARM_MISSED,
+    did not answer in its budget, as under load) is asked up to three more times, then recorded in WARM_MISSED,
     which makes the run unusable rather than quietly keyword-only."""
     env = {k: v for k, v in os.environ.items() if k != "OKL_DATABASE_URL"}
     env.update({"OKL_DATABASE_URL": f"sqlite:///{db}", "OKL_BRIEFING_LOG": "0", "PYTHONPATH": str(REPO / "src")})
-    for _attempt in range(2):
+    for attempt in range(WARM_TRIES):
+        if attempt:
+            WARM_RETRIES.append(db.name)
+            time.sleep(2)   # a loaded machine misses warm's 0.5 s budget; give it a moment
         r = subprocess.run([sys.executable, "-m", "okl", "check", *args, "--format", "json"], cwd=REPO, env=env,
                            capture_output=True, text=True, timeout=180)
         try:
@@ -191,6 +197,7 @@ def main() -> int:
     if not usable:
         status = f"NOT USABLE: {len(WARM_MISSED)} default briefing(s) ran without warm; " + status
     out = {"section": "4al", "step": "reach", "audited": audited, "usable": usable, "warm_missed": WARM_MISSED,
+           "warm_retries": len(WARM_RETRIES),
            "judge": "opus (labels in evals/realwork/labels.jsonl, prompt b1dbb8c24bbce0de)",
            "status": status,
            "at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%MZ"),
