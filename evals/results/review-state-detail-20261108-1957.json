@@ -1,0 +1,1576 @@
+{
+ "section": "4ao by state, not pre-registered",
+ "at": "2026-11-08T19:57Z",
+ "okl_commit": "0981dcaebcb81fd7ca71931bf0968156ea5bec2e",
+ "status": "model-judged, not audited (#394); sorted after the failure was known, by the judge's model",
+ "sorter": {
+  "model": "opus",
+  "prompt": "9c4fbd5ccc965be3",
+  "saw_the_review": false
+ },
+ "note": "the sort ran from a scratch copy of this file before it was committed; the prompt is unchanged",
+ "inputs": {
+  "labels_sha256": "28fee9a43ba204a7a73eab0de952d4915a5780dca027ad3b3ebd1402b66ccf1f",
+  "tasks_sha256": "948fb5e3d3ca91ab3cae6787f472141329486ff64ffc965e1becf71f7de089da",
+  "states_sha256": "586446775cb67162927426e9aef09e5c285246e765ff0e9b3ef4a8d28548ae44"
+ },
+ "needed": 199,
+ "flagged": 121,
+ "by_state": {
+  "followed": {
+   "flagged": 45,
+   "of": 99,
+   "share": 0.455
+  },
+  "not_followed": {
+   "flagged": 30,
+   "of": 33,
+   "share": 0.909
+  },
+  "check": {
+   "flagged": 41,
+   "of": 54,
+   "share": 0.759
+  },
+  "unclear": {
+   "flagged": 5,
+   "of": 13,
+   "share": 0.385
+  }
+ },
+ "calling_for_action": {
+  "flagged": 71,
+  "of": 87,
+  "reach": 0.816,
+  "reach_boot95": [
+   0.724,
+   0.894
+  ],
+  "tasks_with_one": 23,
+  "tasks_missing_one": 12
+ },
+ "by_origin": {
+  "own": {
+   "followed": {
+    "flagged": 41,
+    "of": 71,
+    "share": 0.577
+   },
+   "calling_for_action": {
+    "flagged": 56,
+    "of": 69,
+    "share": 0.812
+   }
+  },
+  "seed_pack": {
+   "followed": {
+    "flagged": 4,
+    "of": 28,
+    "share": 0.143
+   },
+   "calling_for_action": {
+    "flagged": 15,
+    "of": 18,
+    "share": 0.833
+   }
+  }
+ },
+ "per_pr_median": {
+  "flagged": 12,
+  "flagged_calling_for_action": 2,
+  "flagged_already_followed": 2
+ },
+ "missed_calling_for_action": [
+  {
+   "pr": 245,
+   "lesson": "guarantee-holds-on-every-write-path",
+   "state": "check",
+   "why": "The claim that loaded lessons cite their source must hold on every import path (init, seed packs, MCP, CLI), and the diff cannot show that."
+  },
+  {
+   "pr": 267,
+   "lesson": "n_7e50e3588bcd",
+   "state": "check",
+   "why": "The new tests are not visible, nor is whether semantic.py imports numpy or model2vec at import time, so tests must be checked against the declared dependencies."
+  },
+  {
+   "pr": 275,
+   "lesson": "seed:geospatial-enforcement-defects:r_single_source_sets",
+   "state": "not_followed",
+   "why": "admission_grid.py hard-codes check's window as the literal 36 instead of deriving it from core.FETCH_MULTIPLIER and the limit, so the two can drift."
+  },
+  {
+   "pr": 278,
+   "lesson": "doc-claim-governs-doc-and-code",
+   "state": "not_followed",
+   "why": "The README adds hand-copied recall, rejection and latency figures, but okl-drift.json only gets re-stamped and no new rule or check ties those figures to the receipts or probe."
+  },
+  {
+   "pr": 300,
+   "lesson": "n_967ef9825472",
+   "state": "check",
+   "why": "Lesson vectors are new derived store state, but the schema and migration code is outside the visible diff."
+  },
+  {
+   "pr": 300,
+   "lesson": "n_e7988ff536fb",
+   "state": "check",
+   "why": "The okl warm command handlers and their exit-code tests are not in the visible diff."
+  },
+  {
+   "pr": 300,
+   "lesson": "remote-timeout-not-a-deadline",
+   "state": "check",
+   "why": "The docs promise a 0.5 s answer, but the visible diff does not show whether the client enforces a whole-call deadline or only a per-socket timeout."
+  },
+  {
+   "pr": 312,
+   "lesson": "docs-agent-neutral",
+   "state": "not_followed",
+   "why": "THESIS.md presents the Stop hook and per-task briefing as general behaviour without labelling the hook as Claude Code-only."
+  },
+  {
+   "pr": 312,
+   "lesson": "n_fe4ced54e60f",
+   "state": "check",
+   "why": "The scripts that invoke claude -p are not visible in the diff as shown, so stdin prompting and the timeout method must be checked there."
+  },
+  {
+   "pr": 342,
+   "lesson": "n_1eaf9a5f24e2",
+   "state": "check",
+   "why": "The snapshot records branch commit 518a9eb7 for lessons governing files changed here, and whether that breaks the gate depends on other open branches and how this merges."
+  },
+  {
+   "pr": 342,
+   "lesson": "seed:dotnet-canon:r_grep_to_zero",
+   "state": "check",
+   "why": "The diff shows a sweep of several files but cannot show whether the removed command greps to zero across the repo."
+  },
+  {
+   "pr": 359,
+   "lesson": "n_5ddb0776a863",
+   "state": "check",
+   "why": "The new test is not in the visible diff, so whether a scan that finds zero scripts fails rather than passes must be checked."
+  },
+  {
+   "pr": 373,
+   "lesson": "n_1eaf9a5f24e2",
+   "state": "check",
+   "why": "Lessons governing service.py are stamped with commits from this unmerged branch, and whether that breaks other branches' gates or survives the merge depends on their snapshots and the merge method."
+  },
+  {
+   "pr": 381,
+   "lesson": "n_1eaf9a5f24e2",
+   "state": "check",
+   "why": "The snapshot is re-stamped with a branch commit for lessons governing files this PR changes, and only the other open branches and the merge method can show whether that breaks their gates."
+  },
+  {
+   "pr": 383,
+   "lesson": "thesis-maintain-anything",
+   "state": "check",
+   "why": "docs/THESIS.md is not changed, so someone must confirm whether it already covers the new promises that diagrams are kept current."
+  },
+  {
+   "pr": 388,
+   "lesson": "seed:rag-defects:qz_fixtures",
+   "state": "check",
+   "why": "The issue calls for recorded gh JSON, but the author should confirm the fixture is real captured output rather than hand-written."
+  }
+ ],
+ "per_pair": [
+  {
+   "pr": 245,
+   "lesson": "doc-claim-governs-doc-and-code",
+   "state": "check",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 245,
+   "lesson": "guarantee-holds-on-every-write-path",
+   "state": "check",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 245,
+   "lesson": "n_0637c92c032f",
+   "state": "check",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 245,
+   "lesson": "n_b550ba9c5c8a",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 256,
+   "lesson": "generated-diagram-traced-old-path",
+   "state": "not_followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 256,
+   "lesson": "readonly-agents-side-effects",
+   "state": "check",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 256,
+   "lesson": "seed:geospatial-enforcement-defects:r_single_source_sets",
+   "state": "check",
+   "flagged": true,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 256,
+   "lesson": "seed:rag-defects:qz_fixtures",
+   "state": "not_followed",
+   "flagged": true,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 261,
+   "lesson": "n_0e6928348b1d",
+   "state": "followed",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 261,
+   "lesson": "n_b550ba9c5c8a",
+   "state": "check",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 261,
+   "lesson": "seed:dotnet-canon:r_docs_review_surface",
+   "state": "followed",
+   "flagged": false,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 261,
+   "lesson": "seed:dotnet-canon:r_encoding_loop",
+   "state": "followed",
+   "flagged": false,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 262,
+   "lesson": "harness-reads-a-moving-working-tree",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 262,
+   "lesson": "n_119528a07fa5",
+   "state": "followed",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 262,
+   "lesson": "n_473aec369b25",
+   "state": "unclear",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 262,
+   "lesson": "n_8a6e1abce5cc",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 262,
+   "lesson": "seed:dotnet-canon:r_surprise_in_writing",
+   "state": "followed",
+   "flagged": false,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 267,
+   "lesson": "doc-claim-governs-doc-and-code",
+   "state": "check",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 267,
+   "lesson": "filter-after-fetch-widens-window",
+   "state": "check",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 267,
+   "lesson": "generated-diagram-traced-old-path",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 267,
+   "lesson": "guarantee-holds-on-every-write-path",
+   "state": "check",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 267,
+   "lesson": "n_0637c92c032f",
+   "state": "check",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 267,
+   "lesson": "n_4a398f2f8095",
+   "state": "check",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 267,
+   "lesson": "n_6b65aa35593c",
+   "state": "check",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 267,
+   "lesson": "n_7e50e3588bcd",
+   "state": "check",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 267,
+   "lesson": "n_967ef9825472",
+   "state": "check",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 267,
+   "lesson": "n_b578addf6269",
+   "state": "not_followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 267,
+   "lesson": "n_e49be14d6207",
+   "state": "followed",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 267,
+   "lesson": "n_e7988ff536fb",
+   "state": "check",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 267,
+   "lesson": "research-cited-products-not-named",
+   "state": "check",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 267,
+   "lesson": "seed:geospatial-enforcement-defects:r_single_source_sets",
+   "state": "check",
+   "flagged": true,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 267,
+   "lesson": "seed:rag-defects:qz_judge_crash",
+   "state": "not_followed",
+   "flagged": true,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 269,
+   "lesson": "eval-scripts-no-exposure",
+   "state": "followed",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 269,
+   "lesson": "falsifier-relative-to-control",
+   "state": "not_followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 269,
+   "lesson": "n_02cc84da158d",
+   "state": "check",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 269,
+   "lesson": "n_119528a07fa5",
+   "state": "followed",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 269,
+   "lesson": "n_473aec369b25",
+   "state": "followed",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 269,
+   "lesson": "n_5ddb0776a863",
+   "state": "not_followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 269,
+   "lesson": "n_9ba48d85ed19",
+   "state": "not_followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 269,
+   "lesson": "n_b578addf6269",
+   "state": "not_followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 269,
+   "lesson": "remote-path-test-through-client",
+   "state": "not_followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 269,
+   "lesson": "seed:dotnet-canon:r_experiment_sunset",
+   "state": "not_followed",
+   "flagged": true,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 269,
+   "lesson": "seed:rag-defects:qz_broken_tool",
+   "state": "check",
+   "flagged": true,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 269,
+   "lesson": "seed:rag-defects:qz_crosstab",
+   "state": "not_followed",
+   "flagged": true,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 274,
+   "lesson": "fastembed-cache-in-tmpdir",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 274,
+   "lesson": "n_967ef9825472",
+   "state": "unclear",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 274,
+   "lesson": "seed:dotnet-canon:r_surprise_in_writing",
+   "state": "followed",
+   "flagged": false,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 274,
+   "lesson": "seed:python-canon:py_dont_mock_what_you_dont_own",
+   "state": "not_followed",
+   "flagged": true,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 275,
+   "lesson": "diagnostic-on-stage-window",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 275,
+   "lesson": "falsifier-relative-to-control",
+   "state": "followed",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 275,
+   "lesson": "fused-window-readmits-weak-matches",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 275,
+   "lesson": "rerank-ships-off",
+   "state": "followed",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 275,
+   "lesson": "seed:geospatial-enforcement-defects:r_single_source_sets",
+   "state": "not_followed",
+   "flagged": false,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 278,
+   "lesson": "doc-claim-governs-doc-and-code",
+   "state": "not_followed",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 278,
+   "lesson": "n_6b65aa35593c",
+   "state": "not_followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 278,
+   "lesson": "n_b550ba9c5c8a",
+   "state": "check",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 283,
+   "lesson": "n_00985805cdbb",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 283,
+   "lesson": "seed:geospatial-enforcement-defects:r_pin_gating_tools",
+   "state": "not_followed",
+   "flagged": true,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 283,
+   "lesson": "seed:python-canon:py_pyproject_versions",
+   "state": "followed",
+   "flagged": true,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 284,
+   "lesson": "n_00985805cdbb",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 284,
+   "lesson": "seed:geospatial-enforcement-defects:d_ungated_zone",
+   "state": "check",
+   "flagged": true,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 284,
+   "lesson": "seed:geospatial-enforcement-defects:r_single_source_sets",
+   "state": "followed",
+   "flagged": true,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 289,
+   "lesson": "n_1eaf9a5f24e2",
+   "state": "check",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 289,
+   "lesson": "n_bf6a2aee2f12",
+   "state": "check",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 290,
+   "lesson": "n_1eaf9a5f24e2",
+   "state": "check",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 290,
+   "lesson": "seed:dotnet-canon:r_surprise_in_writing",
+   "state": "followed",
+   "flagged": false,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 290,
+   "lesson": "seed:geospatial-defects:d16",
+   "state": "unclear",
+   "flagged": false,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 290,
+   "lesson": "seed:python-canon:py_dont_mock_what_you_dont_own",
+   "state": "not_followed",
+   "flagged": true,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 299,
+   "lesson": "comparison-table-one-sitting-generated",
+   "state": "not_followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 299,
+   "lesson": "doc-claim-governs-doc-and-code",
+   "state": "check",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 299,
+   "lesson": "generated-diagram-traced-old-path",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 299,
+   "lesson": "index-in-context-not-fetched",
+   "state": "not_followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 299,
+   "lesson": "n_6b65aa35593c",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 299,
+   "lesson": "n_b550ba9c5c8a",
+   "state": "check",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 299,
+   "lesson": "seed:dotnet-canon:r_docs_review_surface",
+   "state": "followed",
+   "flagged": false,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 299,
+   "lesson": "tall-sheet-screenshot-tiles",
+   "state": "check",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 300,
+   "lesson": "comparison-table-one-sitting-generated",
+   "state": "not_followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 300,
+   "lesson": "doc-claim-governs-doc-and-code",
+   "state": "check",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 300,
+   "lesson": "eval-scripts-no-exposure",
+   "state": "followed",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 300,
+   "lesson": "falsifier-relative-to-control",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 300,
+   "lesson": "fastembed-cache-in-tmpdir",
+   "state": "followed",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 300,
+   "lesson": "fused-window-readmits-weak-matches",
+   "state": "followed",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 300,
+   "lesson": "harness-reads-a-moving-working-tree",
+   "state": "not_followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 300,
+   "lesson": "n_3dac3a1d8fba",
+   "state": "check",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 300,
+   "lesson": "n_4a398f2f8095",
+   "state": "check",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 300,
+   "lesson": "n_967ef9825472",
+   "state": "check",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 300,
+   "lesson": "n_9ba48d85ed19",
+   "state": "followed",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 300,
+   "lesson": "n_b550ba9c5c8a",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 300,
+   "lesson": "n_b578addf6269",
+   "state": "followed",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 300,
+   "lesson": "n_e7988ff536fb",
+   "state": "check",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 300,
+   "lesson": "n_f17868ded85d",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 300,
+   "lesson": "onnx-memory-after-first-inference",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 300,
+   "lesson": "remote-timeout-not-a-deadline",
+   "state": "check",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 305,
+   "lesson": "falsifier-relative-to-control",
+   "state": "not_followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 305,
+   "lesson": "index-in-context-not-fetched",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 305,
+   "lesson": "n_02cc84da158d",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 305,
+   "lesson": "n_221da2fec863",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 305,
+   "lesson": "n_5ddb0776a863",
+   "state": "followed",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 305,
+   "lesson": "n_69f673496137",
+   "state": "followed",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 305,
+   "lesson": "n_8a6e1abce5cc",
+   "state": "check",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 305,
+   "lesson": "n_a4b40c96ede4",
+   "state": "followed",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 305,
+   "lesson": "n_b578addf6269",
+   "state": "followed",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 305,
+   "lesson": "n_b6cc6890ba26",
+   "state": "followed",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 305,
+   "lesson": "seed:geospatial-eval-defects:r_preregistered_control_vetoes",
+   "state": "followed",
+   "flagged": false,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 305,
+   "lesson": "seed:python-canon:py_exceptions_canon",
+   "state": "followed",
+   "flagged": false,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 305,
+   "lesson": "seed:rag-defects:qz_broken_tool",
+   "state": "followed",
+   "flagged": false,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 305,
+   "lesson": "seed:rag-defects:qz_unequal_budget",
+   "state": "followed",
+   "flagged": false,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 308,
+   "lesson": "seed:python-canon:py_unclosed_sqlite",
+   "state": "not_followed",
+   "flagged": true,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 308,
+   "lesson": "seed:rag-defects:qz_unequal_budget",
+   "state": "followed",
+   "flagged": false,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 308,
+   "lesson": "snapshot-from-worktree-drops-repo-rules",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 308,
+   "lesson": "threshold-transfer-is-a-hypothesis",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 312,
+   "lesson": "docs-agent-neutral",
+   "state": "not_followed",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 312,
+   "lesson": "git-path-history-drops-merges",
+   "state": "followed",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 312,
+   "lesson": "harness-reads-a-moving-working-tree",
+   "state": "not_followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 312,
+   "lesson": "measure-the-population-not-the-slice",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 312,
+   "lesson": "n_0637c92c032f",
+   "state": "not_followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 312,
+   "lesson": "n_b550ba9c5c8a",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 312,
+   "lesson": "n_b6cc6890ba26",
+   "state": "followed",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 312,
+   "lesson": "n_c95bdc056620",
+   "state": "unclear",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 312,
+   "lesson": "n_d45d7bf64896",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 312,
+   "lesson": "n_e8b039f47ee1",
+   "state": "followed",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 312,
+   "lesson": "n_fe4ced54e60f",
+   "state": "check",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 312,
+   "lesson": "novelty-claims-expire",
+   "state": "followed",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 312,
+   "lesson": "optional-feature-shipped-text",
+   "state": "unclear",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 312,
+   "lesson": "scope-literature-gap-claims",
+   "state": "followed",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 312,
+   "lesson": "seed:dotnet-canon:r_grep_to_zero",
+   "state": "not_followed",
+   "flagged": true,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 312,
+   "lesson": "thesis-maintain-anything",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 312,
+   "lesson": "verification-scope-is-the-thesis",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 342,
+   "lesson": "n_1eaf9a5f24e2",
+   "state": "check",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 342,
+   "lesson": "n_5db37b759b1e",
+   "state": "check",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 342,
+   "lesson": "n_7e50e3588bcd",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 342,
+   "lesson": "n_c95bdc056620",
+   "state": "check",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 342,
+   "lesson": "seed:dotnet-canon:r_docs_review_surface",
+   "state": "followed",
+   "flagged": false,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 342,
+   "lesson": "seed:dotnet-canon:r_grep_to_zero",
+   "state": "check",
+   "flagged": false,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 342,
+   "lesson": "seed:dotnet-defects:g_tombstones_nc",
+   "state": "check",
+   "flagged": true,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 342,
+   "lesson": "seed:geospatial-enforcement-defects:d_unpinned_linter",
+   "state": "followed",
+   "flagged": false,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 342,
+   "lesson": "seed:geospatial-enforcement-defects:r_pin_gating_tools",
+   "state": "followed",
+   "flagged": false,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 342,
+   "lesson": "seed:geospatial-enforcement-defects:r_single_source_sets",
+   "state": "followed",
+   "flagged": false,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 342,
+   "lesson": "seed:geospatial-enforcement-defects:r_surface_needs_trigger",
+   "state": "followed",
+   "flagged": false,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 342,
+   "lesson": "seed:python-canon:py_pyproject_versions",
+   "state": "followed",
+   "flagged": false,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 359,
+   "lesson": "bash-double-brackets",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 359,
+   "lesson": "n_1eaf9a5f24e2",
+   "state": "check",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 359,
+   "lesson": "n_1fe5ef1aaca5",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 359,
+   "lesson": "n_57cc4b427f05",
+   "state": "check",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 359,
+   "lesson": "n_5ddb0776a863",
+   "state": "check",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 359,
+   "lesson": "n_69f673496137",
+   "state": "check",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 359,
+   "lesson": "n_713b8c104f12",
+   "state": "followed",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 359,
+   "lesson": "n_e7988ff536fb",
+   "state": "not_followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 359,
+   "lesson": "seed:dotnet-canon:r_encoding_loop",
+   "state": "followed",
+   "flagged": true,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 373,
+   "lesson": "doc-claim-governs-doc-and-code",
+   "state": "not_followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 373,
+   "lesson": "guarantee-holds-on-every-write-path",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 373,
+   "lesson": "n_02cc84da158d",
+   "state": "unclear",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 373,
+   "lesson": "n_1eaf9a5f24e2",
+   "state": "check",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 373,
+   "lesson": "n_e49be14d6207",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 373,
+   "lesson": "n_e7988ff536fb",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 373,
+   "lesson": "seed:dotnet-canon:r_docs_review_surface",
+   "state": "followed",
+   "flagged": false,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 373,
+   "lesson": "seed:dotnet-canon:r_https_metadata_failclosed",
+   "state": "unclear",
+   "flagged": false,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 373,
+   "lesson": "seed:dotnet-defects:nc_arch_reviewer",
+   "state": "followed",
+   "flagged": false,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 381,
+   "lesson": "guarantee-holds-on-every-write-path",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 381,
+   "lesson": "n_1eaf9a5f24e2",
+   "state": "check",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 381,
+   "lesson": "n_7e50e3588bcd",
+   "state": "followed",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 381,
+   "lesson": "optional-feature-shipped-text",
+   "state": "followed",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 381,
+   "lesson": "refusal-offers-no-destructive-shortcut",
+   "state": "followed",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 383,
+   "lesson": "doc-claim-governs-doc-and-code",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 383,
+   "lesson": "generated-diagram-traced-old-path",
+   "state": "check",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 383,
+   "lesson": "n_00985805cdbb",
+   "state": "followed",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 383,
+   "lesson": "n_0637c92c032f",
+   "state": "not_followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 383,
+   "lesson": "n_57cc4b427f05",
+   "state": "followed",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 383,
+   "lesson": "n_5ddb0776a863",
+   "state": "not_followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 383,
+   "lesson": "n_6b65aa35593c",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 383,
+   "lesson": "n_b4050b826687",
+   "state": "followed",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 383,
+   "lesson": "n_b550ba9c5c8a",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 383,
+   "lesson": "n_e7988ff536fb",
+   "state": "not_followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 383,
+   "lesson": "seed:dotnet-canon:r_docs_review_surface",
+   "state": "check",
+   "flagged": true,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 383,
+   "lesson": "seed:dotnet-defects:nc_arch_reviewer",
+   "state": "followed",
+   "flagged": false,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 383,
+   "lesson": "seed:geospatial-enforcement-defects:d_invoked_by_nothing",
+   "state": "followed",
+   "flagged": false,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 383,
+   "lesson": "seed:geospatial-enforcement-defects:r_surface_needs_trigger",
+   "state": "followed",
+   "flagged": false,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 383,
+   "lesson": "thesis-maintain-anything",
+   "state": "check",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 384,
+   "lesson": "n_0637c92c032f",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 384,
+   "lesson": "n_6b65aa35593c",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 384,
+   "lesson": "seed:dotnet-canon:r_docs_review_surface",
+   "state": "followed",
+   "flagged": true,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 388,
+   "lesson": "doc-claim-governs-doc-and-code",
+   "state": "check",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 388,
+   "lesson": "eval-scripts-no-exposure",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 388,
+   "lesson": "gh-pr-needs-repo-in-scripts",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 388,
+   "lesson": "git-path-history-drops-merges",
+   "state": "unclear",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 388,
+   "lesson": "n_0637c92c032f",
+   "state": "check",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 388,
+   "lesson": "n_1eaf9a5f24e2",
+   "state": "check",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 388,
+   "lesson": "n_4a398f2f8095",
+   "state": "unclear",
+   "flagged": false,
+   "origin": "own"
+  },
+  {
+   "pr": 388,
+   "lesson": "n_adea7f2c7373",
+   "state": "check",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 388,
+   "lesson": "n_b550ba9c5c8a",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 388,
+   "lesson": "n_e7988ff536fb",
+   "state": "followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 388,
+   "lesson": "readonly-agents-side-effects",
+   "state": "unclear",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 388,
+   "lesson": "review-bot-watch-matches-wrong-comment",
+   "state": "not_followed",
+   "flagged": true,
+   "origin": "own"
+  },
+  {
+   "pr": 388,
+   "lesson": "seed:dotnet-canon:r_docs_review_surface",
+   "state": "followed",
+   "flagged": false,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 388,
+   "lesson": "seed:dotnet-canon:r_encoding_loop",
+   "state": "followed",
+   "flagged": false,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 388,
+   "lesson": "seed:python-canon:py_dont_mock_what_you_dont_own",
+   "state": "unclear",
+   "flagged": false,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 388,
+   "lesson": "seed:python-canon:py_exceptions_canon",
+   "state": "unclear",
+   "flagged": false,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 388,
+   "lesson": "seed:python-canon:py_value_objects_at_seams",
+   "state": "unclear",
+   "flagged": false,
+   "origin": "seed_pack"
+  },
+  {
+   "pr": 388,
+   "lesson": "seed:rag-defects:qz_fixtures",
+   "state": "check",
+   "flagged": false,
+   "origin": "seed_pack"
+  }
+ ]
+}

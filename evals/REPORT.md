@@ -5155,7 +5155,8 @@ median of 109 lessons rather than 325, and keeps 55.3% of the needed lessons aga
 
 **The misses, read as the rule requires; not pre-registered** (receipt `reach-detail-20261108-1835.json`):
 - *Seed-pack lessons.* It flagged 19 of the 51 needed lessons from packs (37%) and 102 of the 148 this
-  repository recorded itself (69%). Pack lessons are written in another project's words.
+  repository recorded itself (69%). The sort below puts that gap in the lessons a change had already
+  followed, not in how packs are worded.
 - *The cut.* 10 of the 25 changes ran past 60,000 characters. Reach was no lower on them (62% against
   59%), but the ledger's missed lesson concerns `tests/test_intake.py`, which lies past the cut of
   #388's 175,184 characters, so the review never saw that file. A large change has to be read in parts.
@@ -5163,13 +5164,44 @@ median of 109 lessons rather than 325, and keeps 55.3% of the needed lessons aga
   the two together name 143 (71.9%). With the standing set they name 150 (75.4%), and with the file
   patterns 163 (81.9%).
 - *The line.* The prompt required a line of the diff, and a lesson about something a change leaves out
-  has no such line. This is a hypothesis, not a measurement.
+  has no such line. The sort below gives this no support as a cause: the review flagged 30 of the 33
+  lessons the change had not followed.
+
+**The misses by the state of the change; sorted after the failure was known, not pre-registered**
+(receipt `review-state-detail-20261108-1957.json`, script `evals/review_state_detail.py`). §4al's label
+asks what a change needed when it was written. That suits a briefing, which arrives first. A review
+arrives afterwards and has work only where the change as written has not followed the lesson, so this
+section's measure counts a correct silence as a miss: its bar was set against the wrong answer key.
+Opus, shown nothing of the review's answers, put each of the 199 needed lessons in one state:
+
+| State of the change as written | Needed lessons | Flagged by the review |
+|---|---|---|
+| Already followed the lesson | 99 | 45 (45.5%) |
+| Did not follow it | 33 | 30 (90.9%) |
+| The diff cannot settle it, so the author should check | 54 | 41 (75.9%) |
+| Unclear | 13 | 5 (38.5%) |
+
+54 of the 78 misses are lessons the change had already followed. Of the 87 lessons that called for
+action the review flagged 71: 81.6%, bootstrap [72.4, 89.4]. Packs and this repository's own lessons do
+not differ there (15 of 18 and 56 of 69); the gap above comes from the followed ones (4 of 28 and 41 of
+71). The review's own faults are these:
+- *It cannot tell a followed lesson from a broken one.* It flagged 45 of the 99 followed lessons, because
+  the prompt asks only whether a lesson bears on a line. At the median pull request it flags 12 lessons,
+  and 2 of them are sorted as calling for action. The 173 flags the judge called *related* were not sorted.
+- *It sees part of the change.* Six of the 13 missed lessons in the check state are ones whose reason says
+  the code was not visible in the diff.
+- *It still misses real ones.* 12 of the 23 pull requests with a lesson calling for action lost at least
+  one, and the ledger's `seed:rag-defects:qz_fixtures` is among them.
+
+None of this changes the decision above. The sort was made after the failure was known, by the judge's
+own model, and has not been audited, and reading a failed test more kindly afterwards is what
+pre-registration exists to prevent. It is a lead to be tested on tasks the review has not seen.
 
 **What follows.** The review is not a guarantee that a needed lesson is found. A revised review (the
-whole change read in parts, and a looser instruction about the line) is measured only under a new
-pre-registration, on tasks this one has not seen: §4al's first 25, or pull requests merged after this
-date. A rule that must hold needs a check that fails the build, and nothing measured here replaces
-that. The audit (#394) could still move these figures most, since 173 of the flags are lessons the
+whole change read in parts, an answer that separates a followed lesson from a broken one, and a key that
+asks that same question) is measured only under a new pre-registration, on §4al's first 25 tasks, which
+this one has not seen. A rule that must hold needs a check that fails the build, and nothing measured
+here replaces that. The audit (#394) could still move these figures most, since 173 of the flags are lessons the
 judge called *related*.
 
 ## 5. Findings
