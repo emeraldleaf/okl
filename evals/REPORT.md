@@ -4676,6 +4676,23 @@ and at most 2 misses in the random stratum. Below it, the judge's prompt is revi
 relabelled, and a fresh sample audited; no reach figure is reported until a judge passes. The
 random stratum also estimates how many needed lessons the labels missed.
 
+**Amended before any audit label (2026-11-08): suggestions, and decoys.** At the maintainer's
+request, to cut the time the audit takes, each pair is shown with a suggested answer, which the
+maintainer accepts or changes. Accepting suggestions risks measuring agreement with the suggester
+rather than the judge's accuracy, so:
+- the suggestions come from **Sonnet**, with a prompt worded apart from the judge's, never from
+  the Opus judge under audit;
+- **20 of the 120 suggestions are decoys**, drawn by a seed and kept in the private key: each shows
+  the opposite answer, with the suggester's own best case for it, so a decoy reads like any other
+  suggestion. The maintainer is told decoys exist, not which;
+- every label records the suggestion shown and whether it was kept.
+
+**The audit is void if the maintainer keeps more than 5 of the 20 decoys** (a decoy can be right
+when the suggester's first answer was wrong, so the bar is not zero). It also reports κ between
+the maintainer and the judge on the pairs where the suggester and the judge disagree, where the
+maintainer's own reading decides, and κ between suggester and judge, so how much the suggestions
+could carry the result is visible. The κ and miss bars above are unchanged.
+
 **Measures, per task and channel.** The channels are *issue*, *title*, *issue and title*, *paths*
 (`okl check --path` over each file), and their union. For each, the default briefing (tiered, with
 warm on, as this repository now runs) and the floor. Reported:
