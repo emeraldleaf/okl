@@ -1,0 +1,33 @@
+missed lessons replay · 2026-11-07T23:59Z · okl at 51127e2
+full = shown in full · line = named in one line · - = absent · ? = arm did not run
+
+[intake-logs-briefings-20261107] lesson eval-scripts-no-exposure
+                tiered (default) |            floor |    tiered+hybrid |     floor+hybrid |      tiered+warm |       floor+warm
+    prompt                      - |                - |                - |                - |                - |                -
+    prompt+reply                - |                - |                - |                - |                - |                -
+    issue                       - |                - |                - |                - |                ? |                -
+    plan                        - |                - |                - |                - |                - |                -
+    by path src/okl/cli/intake.py: -
+    by path src/okl/intake.py: -
+    rank among every candidate, before the floor and the cap:
+      prompt       lexical not a candidate (32 found) · lexical+potion 137 of 364
+      prompt+reply lexical 262 of 345 · lexical+potion 243 of 364
+      issue        lexical 84 of 341 · lexical+potion 62 of 364
+      plan         lexical 99 of 311 · lexical+potion 54 of 364
+
+[intake-invented-fixture-20261107] lesson seed:rag-defects:qz_fixtures
+                tiered (default) |            floor |    tiered+hybrid |     floor+hybrid |      tiered+warm |       floor+warm
+    prompt                      - |                - |                - |                - |                - |                -
+    prompt+reply                - |                - |                - |                - |                - |                -
+    issue                       - |                - |                - |                - |                - |                -
+    plan                        - |                - |                - |                - |                - |                -
+    by path tests/test_intake.py: -
+    by path src/okl/intake.py: -
+    rank among every candidate, before the floor and the cap:
+      prompt       lexical not a candidate (32 found) · lexical+potion 123 of 364
+      prompt+reply lexical 299 of 345 · lexical+potion 269 of 364
+      issue        lexical 126 of 341 · lexical+potion 174 of 364
+      plan         lexical 91 of 318 · lexical+potion 168 of 364
+
+note: tiered+warm: the warm model did not answer within 0.5 s
+default arm misses: 8 of 8 case queries
