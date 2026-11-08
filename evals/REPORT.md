@@ -4595,8 +4595,10 @@ committed eight minutes later (100d09f). Two lessons in the store applied to tha
 
 An end-to-end run found both bugs after review had passed (#388, fixed in a563615). The store's
 briefing log holds 14 briefings to the session between 19:05Z and 19:40Z: neither lesson is in any.
-The session's transcript shows the first lesson last reached the agent on 2026-11-04, on another
-task, and the second first reached it at 20:40Z, 90 minutes after the code was committed.
+The session's transcript shows the first lesson reached the agent before then only on 2026-11-04,
+on another task, and the second first reached it at 20:40Z, 90 minutes after the code was committed.
+Both sources stay off the repository; `evals/missed_evidence.py` writes what they show, as times,
+counts and lesson ids with no conversation text, to `missed-evidence-20261108-0344.json`.
 
 **The instrument.** `evals/missed_lessons.jsonl` holds each case with only text that existed at the
 time: the prompt as typed; the prompt with the last 600 characters of the reply the prompt hook could
@@ -4609,8 +4611,9 @@ lesson's rank among every candidate before the floor and the cap.
 **Result** (receipt `missed-20261108-0000.txt`): both lessons were absent from every briefing that ran,
 and by path. Of the 48 text and arm pairs (8 texts, 6 arms), 47 ran; in the one that did not, the
 warm arm on the first case's issue, the warm model missed its 0.5 s budget, and the receipt marks it
-`?`. The floor with warm, on that same text, ran and missed. Ranked among all 364 live records by the
-full-text search alone and fused with the potion embedding, the closer of the two came
+`?`. The floor with warm, on that same text, ran and missed. Ranked among the candidates each search returned
+(311 to 345 for the full-text search alone, which on the two "start" prompts did not return it at
+all, and all 364 live records when fused with the potion embedding), the closer of the two came
 54th (the agent's own words, with the embedding); the rest ranked between 62nd and 299th. A
 briefing shows about 17.
 
@@ -4633,6 +4636,8 @@ the docs describe was not the one running.
 
 **Amended 2026-11-08, after the CI architecture review on #389.** The first version of this section
 said "under all 6 arms"; the receipt shows one pair that did not run, and the text above now says so.
+The receipt was written by `evals/missed_lessons.py` as committed in 3803c2f, before it could mark a
+run NOT USABLE; the instrument at this commit would mark that run so.
 The instrument now asks a pair again when the warm model misses its budget, and marks the whole run
 NOT USABLE if any pair still did not run, rather than leaving a `?` a reader can pass over. A second
 limit, for the next replay: the replay reads the live store, and `eval-scripts-no-exposure` was

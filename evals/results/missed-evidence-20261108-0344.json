@@ -1,0 +1,111 @@
+{
+ "for": "REPORT \u00a74ak; #391",
+ "made": "2026-11-08T03:44Z",
+ "session": "852b5bfc-eb8e-4b6c-97f3-14fc96d673a6",
+ "briefing_window": {
+  "since": "2026-11-07T19:05:00Z",
+  "until": "2026-11-07T19:40:00Z",
+  "briefings": 14,
+  "naming_a_missed_lesson": 0,
+  "rows": [
+   {
+    "at": "2026-11-07T19:05:33Z",
+    "lessons": [],
+    "names_a_missed_lesson": false
+   },
+   {
+    "at": "2026-11-07T19:07:44Z",
+    "lessons": [],
+    "names_a_missed_lesson": false
+   },
+   {
+    "at": "2026-11-07T19:07:44Z",
+    "lessons": [
+     "seed:geospatial-defects:g_verify_outputs",
+     "stub-the-module-the-code-imports",
+     "n_991d07b0549e",
+     "seed:python-canon:py_print_at_edges",
+     "idea-to-issue-through-review"
+    ],
+    "names_a_missed_lesson": false
+   },
+   {
+    "at": "2026-11-07T19:08:03Z",
+    "lessons": [],
+    "names_a_missed_lesson": false
+   },
+   {
+    "at": "2026-11-07T19:08:04Z",
+    "lessons": [
+     "n_991d07b0549e",
+     "n_ed7e782d12fd"
+    ],
+    "names_a_missed_lesson": false
+   },
+   {
+    "at": "2026-11-07T19:08:04Z",
+    "lessons": [],
+    "names_a_missed_lesson": false
+   },
+   {
+    "at": "2026-11-07T19:08:04Z",
+    "lessons": [],
+    "names_a_missed_lesson": false
+   },
+   {
+    "at": "2026-11-07T19:09:44Z",
+    "lessons": [],
+    "names_a_missed_lesson": false
+   },
+   {
+    "at": "2026-11-07T19:24:30Z",
+    "lessons": [],
+    "names_a_missed_lesson": false
+   },
+   {
+    "at": "2026-11-07T19:25:45Z",
+    "lessons": [],
+    "names_a_missed_lesson": false
+   },
+   {
+    "at": "2026-11-07T19:25:46Z",
+    "lessons": [
+     "n_991d07b0549e",
+     "n_ed7e782d12fd"
+    ],
+    "names_a_missed_lesson": false
+   },
+   {
+    "at": "2026-11-07T19:25:46Z",
+    "lessons": [],
+    "names_a_missed_lesson": false
+   },
+   {
+    "at": "2026-11-07T19:25:46Z",
+    "lessons": [],
+    "names_a_missed_lesson": false
+   },
+   {
+    "at": "2026-11-07T19:34:46Z",
+    "lessons": [],
+    "names_a_missed_lesson": false
+   }
+  ]
+ },
+ "reached_the_session": {
+  "eval-scripts-no-exposure": [
+   "2026-11-04T03:51:43Z",
+   "2026-11-08T00:17:03Z",
+   "2026-11-08T00:41:59Z"
+  ],
+  "seed:rag-defects:qz_fixtures": [
+   "2026-11-07T20:40:59Z"
+  ]
+ },
+ "stop_hook_fired": [
+  "2026-11-04T04:35:56Z",
+  "2026-11-06T18:06:47Z",
+  "2026-11-07T02:07:26Z"
+ ],
+ "stop_hook_marker_mtime": "2026-11-07T02:07:26Z"
+}
