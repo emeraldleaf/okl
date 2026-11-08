@@ -1,0 +1,87 @@
+{
+ "section": "4am and 4an detail, not pre-registered",
+ "at": "2026-11-08T17:23Z",
+ "okl_commit": "653b7539b106f34f8bf1d3e868ac4ac8e78da630",
+ "status": "model-judged, not yet audited (#394)",
+ "from_receipts": [
+  "briefing-arms-20261108-1716.json",
+  "path-triggers-20261108-1720.json"
+ ],
+ "pair_S10_and_R": {
+  "test": {
+   "tasks": 25,
+   "tasks_with_needed": 25,
+   "needed": 199,
+   "reach": 0.503,
+   "base_reach": 0.327,
+   "gain": 0.176,
+   "gain_boot95": [
+    0.135,
+    0.221
+   ],
+   "tasks_missing": 23,
+   "failure_rate": 0.92,
+   "failure_wilson95": [
+    0.75,
+    0.978
+   ],
+   "added_median": 16,
+   "added_max": 22,
+   "added_labelled_no": 255,
+   "briefing_size_median": 36
+  },
+  "dev": {
+   "tasks": 25,
+   "tasks_with_needed": 22,
+   "needed": 165,
+   "reach": 0.6,
+   "base_reach": 0.4,
+   "gain": 0.2,
+   "gain_boot95": [
+    0.134,
+    0.27
+   ],
+   "tasks_missing": 18,
+   "failure_rate": 0.818,
+   "failure_wilson95": [
+    0.615,
+    0.927
+   ],
+   "added_median": 13,
+   "added_max": 22,
+   "added_labelled_no": 206,
+   "briefing_size_median": 34
+  }
+ },
+ "added_and_needed_on_test": {
+  "S10": {
+   "added": 226,
+   "needed": 23,
+   "share": 0.102
+  },
+  "R": {
+   "added": 182,
+   "needed": 15,
+   "share": 0.082
+  },
+  "D": {
+   "added": 1659,
+   "needed": 82,
+   "share": 0.049
+  }
+ },
+ "diff_on_test": {
+  "new_lessons_per_changed_file_median": 6.17,
+  "changed_files_per_task_median": 9
+ },
+ "path_triggers_on_test": {
+  "new_lessons_per_changed_file_median": 2.86
+ },
+ "warm": {
+  "per_file_briefings": 617,
+  "fell_back": 83,
+  "shortest_text": 1089,
+  "at_the_cut": 71,
+  "retries": 310
+ }
+}

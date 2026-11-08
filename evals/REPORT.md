@@ -4826,6 +4826,221 @@ calibration set for the conformal cutoff; with the needed lessons at a median ra
 90% cutoff will be deep, and its briefing size will be reported beside it. Outside this section, none
 of these figures is quoted until #394 passes.
 
+## 4am. PRE-REGISTERED: can the briefing reach more of what real work needs? Three arms on a time split (2026-11-08)
+
+Written before any arm is computed on either half. It follows §4al, which found the default briefing
+named 36% of the lessons real changes needed (model-judged, not yet audited); #390.
+
+**The question.** Do three changes to the briefing reach more of the lessons later work needed, and
+at what cost in briefing size?
+
+**Seen before this was written.** An in-sample look at all 50 of §4al's tasks, from its receipt and
+the store snapshot, is why these arms were chosen:
+- the ten lessons needed most often account for 99 of the 364 needed pairs, and the default missed
+  66 of those;
+- 163 of the 233 missed pairs ranked below 50th by the full-text search fused with the potion
+  embedding on the issue and title;
+- 24 ranked in its first 17 and were not named;
+- lessons from seed packs make up 30% of the missed pairs and 9% of the reached.
+
+That look covered both halves below, so the test half is not untouched. To limit the damage, every
+parameter is fixed here and the standing set is chosen from the development half alone; a fresh
+holdout settles it (What follows).
+
+**Split.** §4al's 50 tasks in the order each was frozen (ties by PR number): the first 25 are
+development (2026-09-18 to 2026-10-13), the last 25 test (2026-10-21 to 2026-11-07). The labels are
+§4al's: Opus, prompt b1dbb8c24bbce0de, with the labels file's sha256 in the receipt. *Needed* counts;
+*unsure* does not. The stores are §4al's: each task's lessons as they stood when its code was written.
+
+**Arms.** Each is added to §4al's default union, the base. The base is taken from receipt
+`realwork-reach-20261108-1548.json`, not re-run.
+1. **Standing set (S).** The k lessons needed on the most development tasks (ties broken by id),
+   named on every task whose store holds them. k = 10 decides; k = 20 is reported.
+2. **The ranker's top (R).** The first 17 lessons of the full-text search fused with the potion
+   embedding (`core.ranked_candidates`, linear) on the issue and title, all named. 17 is the
+   briefing's cap today. This tests whether the briefing's decision drops what the ranker finds.
+3. **Diff re-brief (D).** For each changed file, `okl check --task` on the file's path and its added
+   lines, whitespace collapsed and cut to 1,500 characters (under the 1,650 at which the warm model was
+   seen to fall back), run as the default runs (tiered, warm on). D names the union over files. It
+   stands for a briefing at each edit, a channel okl does not have yet.
+4. **All three together,** with S at k = 10.
+
+**Measures, on the test half.** The development half is reported beside them, marked in-sample.
+1. Lesson-level reach (named), and each arm's gain over the base, with a paired bootstrap over tasks.
+2. The task-level failure rate (a needed lesson not named), with Wilson intervals.
+3. Cost: the lessons each arm adds to a task's briefing (median and maximum), and how many of them
+   are labelled *no*.
+
+**Decision rule.** An arm joins the default briefing when, on the test half, the lower bound of its
+paired-bootstrap reach gain is above zero and it adds at most 10 lessons at the median task. An arm
+that passes on reach but fails on size is reported with its size, and its design is revisited
+rather than adopted.
+
+**Predictions** (not decision rules):
+- S at k = 10 adds at least 8 points of reach on the test half;
+- D adds more reach than R;
+- the three together still miss a needed lesson on more than half of the test tasks.
+
+**What follows.** An adopted arm is built into `okl check` behind its own flag. Its figures stay
+inside this section until it holds on a fresh holdout (pull requests merged after this date,
+labelled the same way) and #394 passes. Rewriting the seed packs' triggers is left out: done with
+these tasks in view, it would leak them into the measure.
+
+**Budget.** No model calls. About 620 `okl check` calls for D (one per changed file, both halves),
+with the warm model running.
+
+### Result (2026-11-08): model-judged, not yet audited
+
+Receipt `briefing-arms-20261108-1716.json` (the instrument at bba43d3; the labels, tasks and store by
+sha256). **Every figure here is model-judged and not yet audited (#394), and the test half was seen in
+aggregate before the split, as disclosed above.** An earlier start of this run died with its session
+before printing anything, so no figure from it was seen.
+
+**The test half** (the later 25 tasks, all with a needed lesson, 199 needed lessons). The base named
+32.7% and missed a needed lesson on 24 of the 25.
+
+| arm | reach, named | gain over the base [95%] | tasks still missing one | lessons added: median (max) | added and labelled *no* |
+|---|---|---|---|---|---|
+| S, k = 10 | 44.2% | +11.6 [7.7, 15.8] | 24 | 9 (10) | 135 |
+| S, k = 20 (reported) | 49.7% | +17.1 [11.7, 23.2] | 23 | 18 (20) | 282 |
+| R | 40.2% | +7.5 [4.2, 11.2] | 23 | 7 (12) | 123 |
+| D | 73.9% | +41.2 [32.2, 49.5] | 21 | 62 (166) | 1,220 |
+| all three | 82.4% | +49.7 [41.5, 58.0] | 19 | 71 (167) | 1,378 |
+
+**The development half** (22 tasks with a needed lesson, 165 needed; in-sample for S, which was chosen
+from it). The base named 40.0%; S at k = 10 named 57.0% (+17.0), at k = 20 69.7%, R 45.5% (+5.5), D 79.4%
+(+39.4) and all three 84.2%. S's gain fell from 17.0 points on the half it was chosen from to 11.6 on
+later work.
+
+**Decisions, by the rule.** S at k = 10 and R each pass: the lower bound of the gain is above zero and
+each adds at most 10 lessons at the median task. D and all three fail on size, so they are reported
+with their size and their design is revisited.
+
+**Predictions.** All three held. S at k = 10 added 11.6 points against the 8 predicted, D added more
+than R, and the three together still missed a needed lesson on 19 of the 25 test tasks.
+
+**Detail, computed after the run and not pre-registered** (receipt
+`briefing-arms-detail-20261108-1723.json`):
+- *The rule judged each arm alone.* S and R together reach 50.3%, +17.6 [13.5, 22.1], and add 16
+  lessons at the median task (22 at most), which is over the bar. So the rule does not license adopting
+  both. S goes first, since more of what it adds was needed: 23 of 226 added lessons on the test half
+  (10.2%), against 15 of 182 for R (8.2%). R waits for a test of the pair.
+- *What D costs.* It added 1,659 lessons on the test half, of which 82 were needed (4.9%). Its 62 at
+  the median task are a whole session's total rather than one briefing: about 6 new lessons a changed
+  file, on tasks touching a median of 9 files. The bar was written per task and stands; a cap per
+  file is the next design, under its own pre-registration.
+- *The warm model.* 83 of the 617 per-file briefings fell back to the full-text search after four tries,
+  the shortest at 1,089 characters and 71 of them at the 1,500-character cut, with 310 retries in all. The
+  pre-registration's premise that 1,500 characters sat under the warm model's limit was wrong. No text
+  under 1,000 characters missed, so the run stands by §4al's rule, but part of D ran without its
+  semantic arm (#395).
+
+**What follows.** S is built into `okl check` behind its own flag. It needs a source of how often a
+lesson applies, which at run time is the review of every lesson against a diff (#390 step 3), not
+these labels. Its figures stay inside this section until it holds on a fresh holdout and #394 passes.
+D's reach is the strongest evidence so far that what a change touches finds lessons its task's words
+do not. Reach here counts a lesson named, not one the agent acted on, and even all three arms miss a
+needed lesson on most tasks, so the review remains the guarantee.
+
+## 4an. PRE-REGISTERED: do lessons that name their files reach more of what real work needs? (2026-11-08)
+
+Written before §4am's result was read and before any path trigger was drafted. In §4al the
+changed-files channel named 2.5% of the needed lessons, and only 13 of the store's 369 live lessons
+list files.
+
+**The question.** If lessons named the files they apply to, in a field apart from `files` (which
+drift watches, and which turns the pre-push gate red for a lesson with no passing check), how much
+more of what later work needed would be reached, and at what cost in briefing size?
+
+**Seen before this was written.** A look at the development half only (§4am's first 25 tasks). For
+each lesson needed on at least four of them, the best of eight areas of the repository was picked
+after the fact, for example:
+- the mirror-files lesson, needed on 8 of the 10 tasks touching hooks or the scaffold and 0 of the
+  other 15;
+- the lesson on changing the judge mid-series, on 5 of the 7 tasks touching `evals/` and 0 of the
+  other 18;
+- the single-source lesson, on 4 of the 14 tasks touching source outside `cli/` and 0 of the other 11.
+
+Those counts prompted the question and are used for nothing else. No file-area count was computed on
+the test half. §4am discloses its own earlier look over all 50 tasks.
+
+**Path triggers, drafted blind.** Sonnet (never Opus, the judge) drafts each entry for the 361
+lessons in §4al's tasks, twenty a call, with no tools. It is given only each lesson's title, symptom,
+cause and fix, and this repository's file list at the split's boundary commit (the last development
+task's, 5e49c3238, so a file added later cannot be named). It sees no task, no label and no briefing.
+It is asked for the fewest entries covering where following the lesson would change what someone
+writes, and an empty list when the lesson could apply anywhere. Entries are read by the rule `files`
+uses today (`path_matches`). The prompt is in `evals/path_triggers.py`, and its sha256 and the model go
+in every line of `evals/realwork/path-triggers.jsonl`.
+
+**Arm P.** Added to §4al's default union (the base): every lesson in a task's store with an entry
+matching a file the change touches. It stands for the read hook, which briefs each lesson once a
+session.
+
+**Split, labels and measures.** §4am's: the later 25 tasks decide and the first 25 are reported
+beside them. Reported in addition:
+- what P adds beyond §4am's three arms together, as a gain with the same bootstrap;
+- the lessons drafted with no entry;
+- needed lessons from seed packs, named by the base and by P.
+
+**Decision rule.** §4am's, unchanged: P is adopted when, on the test half, the lower bound of its
+paired-bootstrap gain over the base is above zero and it adds at most 10 lessons at the median task.
+
+**Predictions** (not decision rules):
+- P adds at least 5 points of reach on the test half;
+- most lessons P adds are labelled *no*;
+- P adds reach beyond §4am's three arms together.
+
+**What follows.** If adopted, a path-trigger field apart from `files`, matched by the read hook,
+drafted by a model and approved by a person as `/triggers` is. Its figures stay inside this section
+until it holds on a fresh holdout and #394 passes. Entries that name kinds of file, which a shared
+pack needs because it cannot name a repository's paths, are a separate question: this test drafts
+against this repository's own file list.
+
+**Budget.** About 19 Sonnet calls (361 lessons, twenty a call), plus retries for unanswered lessons.
+
+### Result (2026-11-08): model-judged, not yet audited
+
+Receipt `path-triggers-20261108-1720.json` (the instrument at 8ca9f8c, committed before §4am's result
+was read; the drafts in `evals/realwork/path-triggers.jsonl`, prompt 4b72314cf4ec873a). **Every figure
+here is model-judged and not yet audited (#394).**
+
+**The drafts.** Sonnet answered for all 361 lessons in 19 calls with none left over: 247 lessons got
+entries (a median of 2) and 114 an empty list.
+
+**The test half** (25 tasks, 199 needed lessons, the base at 32.7%).
+
+| | reach, named | gain [95%] | tasks still missing one | lessons added: median (max) | added and labelled *no* |
+|---|---|---|---|---|---|
+| P over the base | 64.8% | +32.2 [23.0, 42.7] | 23 | 32 (78) | 591 |
+| P beyond §4am's three arms together | 87.9% (from 82.4%) | +5.5 [2.3, 10.0] | 17 | 16 (40) | 299 |
+
+P added 895 lessons on the test half, of which 64 were needed (7.2%). Of the 51 needed lessons that
+come from seed packs, the base named 7 and P 19.
+
+**The development half** (22 tasks with a needed lesson, 165 needed; no draft saw either half). P named
+70.3% against the base's 40.0%, +30.3 [15.0, 44.9], adding 11 lessons at the median task (66 at most).
+
+**Decision, by the rule.** P is not adopted: the lower bound of its gain is above zero, but it adds 32
+lessons at the median task against a bar of 10.
+
+**Predictions.** All three held: P added 32.2 points against the 5 predicted, 591 of its 895 added
+lessons are labelled *no*, and it added reach beyond §4am's three arms together.
+
+**Detail, computed after the run and not pre-registered** (receipt
+`briefing-arms-detail-20261108-1723.json`). P adds a median of 2.86 new lessons a changed file, against
+D's 6.17. It gets most of D's reach at about half the lessons, and more of what it adds was needed
+(7.2% against 4.9%), from a blind draft and with no model running at the moment of the briefing.
+
+**Limits.** P counts a lesson as briefed when an entry matches any file the change touches. The read
+hook fires only on a `Read`, so a new file, or an edit with no read, would get nothing (#94). Like
+§4am's, reach counts a lesson named, not one the agent acted on.
+
+**What follows.** The bar was written per task and stands, so nothing is built yet. The next test
+caps what a file can add, ranks within the cap, and registers a bar per changed file before it runs.
+It would measure P and D side by side, and on tasks merged after this date. Entries that name kinds of
+file, for shared packs, remain a separate question.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

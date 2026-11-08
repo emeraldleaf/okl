@@ -1,0 +1,361 @@
+{"lesson": "bash-double-brackets", "paths": ["*.sh", "src/okl/scaffold/git-hooks/pre-push"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "break-test-masked-by-integrity-check", "paths": ["tests/test_scaffold.py", "src/okl/ownership.py", "src/okl/scaffold/git-hooks/pre-push"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "briefing-hides-unproven-lessons", "paths": ["src/okl/core.py", "src/okl/drift.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "ca-distrust-every-trust-store", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "ci-rerun-reuses-event-payload", "paths": [".github/workflows/*", "ci/review-agent.sh", "src/okl/scaffold/ci/*"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "commit-wip-in-tmp-worktrees", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "comparison-table-one-sitting-generated", "paths": ["evals/README.md", "evals/REPORT.md", "README.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "dev-code-migrates-live-store", "paths": ["src/okl/store.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "diagnostic-on-stage-window", "paths": ["evals/precision.py", "evals/preflight.py", "evals/layout_preflight.py", "src/okl/core.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "doc-check-defaults", "paths": ["README.md", "src/okl/core.py", "src/okl/cli/"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "doc-claim-governs-doc-and-code", "paths": ["README.md", "docs/*.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "doc-init-flags", "paths": ["README.md", "docs/GETTING-STARTED.md", "src/okl/cli/"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "doc-install-name", "paths": ["README.md", "docs/GETTING-STARTED.md", "pyproject.toml"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "doc-verified-refused", "paths": ["README.md", "docs/GETTING-STARTED.md", "src/okl/cli/lessons.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "docs-agent-neutral", "paths": ["README.md", "docs/*.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "drift-verdict-paths-agree", "paths": ["src/okl/drift.py", "src/okl/core.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "editable-install-follows-last-pip-e", "paths": ["pyproject.toml"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "empty-drift-snapshot-fails-ci", "paths": ["okl-drift.json", "README.md", "docs/GETTING-STARTED.md", ".github/workflows/okl-verify.yml", "ci/okl-verify.yml", "src/okl/scaffold/ci/okl-verify.yml", "src/okl/drift.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "empty-secret-is-unset", "paths": ["src/okl/service.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "eval-scripts-no-exposure", "paths": ["evals/*.py", "src/okl/client.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "fail-closed-at-every-entry-point", "paths": ["src/okl/service.py", "src/okl/cli/servers.py", "docs/DEPLOY.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "falsifier-relative-to-control", "paths": ["evals/REPORT.md", "evals/README.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "fastembed-cache-in-tmpdir", "paths": ["src/okl/core.py", "src/okl/store.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "filter-after-fetch-widens-window", "paths": ["src/okl/store.py", "src/okl/core.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "fix-the-class-not-the-instance", "paths": ["evals/precision.py", "evals/ab_harness.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "fused-window-readmits-weak-matches", "paths": ["src/okl/core.py", "src/okl/store.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "generated-diagram-traced-old-path", "paths": ["docs/render_pipeline_diagram.py", "docs/okl-retrieval-pipeline.svg", "tests/test_docs.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "gh-pr-needs-repo-in-scripts", "paths": ["ci/review-agent.sh", "src/okl/scaffold/ci/review-agent.sh"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "git-path-history-drops-merges", "paths": ["src/okl/drift.py", "tests/test_drift_branches.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "guarantee-holds-on-every-write-path", "paths": ["README.md", "docs/overview/*.html", "docs/posts/*.md", "docs/GETTING-STARTED.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "guard-fixture-own-monkeypatch", "paths": ["tests/conftest.py", "tests/"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "harness-reads-a-moving-working-tree", "paths": ["evals/ab_harness.py", "tests/test_ab_harness.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "heredoc-ends-the-chain", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "hook-cli-version-skew", "paths": ["hooks/*.sh", "src/okl/scaffold/hooks/*.sh", ".claude/hooks/*.sh"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "hook-context-is-weighed-not-obeyed", "paths": ["evals/REPORT.md", "docs/posts/*.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "idea-to-issue-through-review", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "importer-keeps-local-decision", "paths": ["src/okl/seed.py", "src/okl/store.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "index-in-context-not-fetched", "paths": ["evals/REPORT.md", "src/okl/core.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "judge-reads-the-experiment-too", "paths": ["evals/ab_harness.py", "evals/REPORT.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "mcp-docker-localhost", "paths": [".mcp.json"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "mcp-registry-publish-limits", "paths": ["server.json"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "mcp-registry-pypi-command-name", "paths": ["server.json", "pyproject.toml"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "measure-the-population-not-the-slice", "paths": ["evals/*.py", "evals/REPORT.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "merge-needs-resolved-threads", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "model-reply-parse-fails-open-loudly", "paths": ["ci/review-agent.sh", "src/okl/scaffold/ci/review-agent.sh"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "model-server-warm-up-before-serving", "paths": ["src/okl/service.py", "src/okl/mcp_server.py", "hooks/userpromptsubmit-okl-check.sh"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_00985805cdbb", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_02aa43137a2e", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_02cc84da158d", "paths": ["src/okl/client.py", "src/okl/store.py", "src/okl/cli/*.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_041a066035b2", "paths": ["src/okl/core.py", "src/okl/store.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_0637c92c032f", "paths": ["docs/okl-retrieval-pipeline.svg", "docs/render_pipeline_diagram.py", "gates/check-diagram-pairs.sh", "ci/check-diagram-figures.sh", "docs/overview/render.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_07faa4565128", "paths": ["seed/"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_09ba6adf0fdc", "paths": ["okl-drift.json", "src/okl/drift.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_0adfbf18d9f7", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_0aefd5072428", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_0b43d18cdb1d", "paths": ["gates/", "src/okl/scaffold/gates/", "tests/test_docs.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_0e6928348b1d", "paths": ["src/okl/seed.py", "src/okl/scaffold/claude/commands/seed-from-codebase.md", "src/okl/scaffold/claude/commands/seed-from-docs.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_110bb4fb7112", "paths": [".github/dependabot.yml", "src/okl/scaffold/ci/dependabot.yml", "ci/okl-verify.yml", "src/okl/scaffold/ci/okl-verify.yml", ".github/workflows/okl-verify.yml"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_119528a07fa5", "paths": ["tests/"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_132265e9a9b5", "paths": ["src/okl/*.py", "src/okl/cli/*.py", "pyproject.toml"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_1b3190127af3", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_1eaf9a5f24e2", "paths": ["okl-drift.json"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_1f2e2c211974", "paths": ["docs/decisions/2026-07-17-flat-retrieval-until-scale.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_1fe5ef1aaca5", "paths": ["hooks/", "src/okl/scaffold/hooks/", "ci/okl-verify.yml", ".github/workflows/okl-verify.yml", "src/okl/scaffold/ci/okl-verify.yml"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_221da2fec863", "paths": ["tests/"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_22ad98216e87", "paths": ["src/okl/seed.py", "src/okl/client.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_2c95128f307d", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_310e54bb09d5", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_31bde92d9003", "paths": ["src/okl/cli/verification.py", "src/okl/drift.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_37ea04a8a0ac", "paths": ["docs/posts/", "docs/overview/okl-*.html", "docs/okl-retrieval-pipeline.svg"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_3dac3a1d8fba", "paths": ["src/okl/store.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_428707b5e596", "paths": ["hooks/", "src/okl/scaffold/hooks/", ".claude/hooks/", ".claude/settings.json"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_473aec369b25", "paths": ["evals/ab_harness.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_48fd7d3e6c65", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_4a398f2f8095", "paths": ["src/okl/store.py", "src/okl/core.py", "src/okl/client.py", "src/okl/drift.py", "src/okl/cli/"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_4c203faa7014", "paths": ["tests/"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_50f0ddf7ea19", "paths": ["pyproject.toml", ".github/workflows/ci.yml"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_57cc4b427f05", "paths": ["gates/", "src/okl/scaffold/gates/", "ci/check-diagram-figures.sh"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_58119d0a63d9", "paths": ["src/okl/cli/install.py", "src/okl/scaffold_cmd.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_5a9589af345f", "paths": ["src/okl/service.py", "src/okl/client.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_5db37b759b1e", "paths": [".github/workflows/*", "ci/*", "src/okl/scaffold/ci/*"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_5ddb0776a863", "paths": ["src/okl/drift.py", "ci/okl-verify.yml", ".github/workflows/okl-verify.yml", "src/okl/scaffold/ci/okl-verify.yml", "src/okl/recap.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_5f36600f6c51", "paths": ["tests/"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_69244bb71160", "paths": ["src/okl/service.py", "examples/python-fastapi/app/main.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_696a70084e1a", "paths": ["src/okl/seed.py", "src/okl/drift.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_69f673496137", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_6b65aa35593c", "paths": ["docs/render_pipeline_diagram.py", "docs/okl-retrieval-pipeline.svg", "gates/check-diagram-pairs.sh", "ci/check-diagram-figures.sh"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_710e8dc6b757", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_713b8c104f12", "paths": ["src/okl/cli/", "src/okl/core.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_71c09abf3f37", "paths": ["src/okl/*.py", "src/okl/cli/*.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_7e292a18d45d", "paths": ["hooks/*.sh", "src/okl/scaffold/hooks/*.sh", ".claude/hooks/*.sh", "src/okl/__main__.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_7e50e3588bcd", "paths": ["tests/", "pyproject.toml"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_805cf67e5cc5", "paths": ["src/okl/drift.py", "tests/test_drift_branches.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_849a5b0425ef", "paths": ["src/okl/core.py", "src/okl/store.py", "src/okl/service.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_8519bf0f71c6", "paths": ["hooks/stop-okl-encode.sh", "hooks/hooks.json", "src/okl/scaffold/hooks/stop-okl-encode.sh", "src/okl/scaffold/hooks/hooks.json", ".claude/hooks/stop-okl-encode.sh", ".claude/settings.json"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_85b9d0a7823d", "paths": ["evals/ab_harness.py", "evals/README.md", "evals/REPORT.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_8a6e1abce5cc", "paths": ["evals/ab_harness.py", "tests/test_ab_harness.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_8b3345b90621", "paths": ["hooks/*.sh", "src/okl/scaffold/hooks/*.sh", ".claude/hooks/*.sh"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_90066f354f1e", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_916330f61994", "paths": ["src/okl/cli/install.py", "src/okl/bootstrap.py", "src/okl/scaffold_cmd.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_92398fae87c0", "paths": ["packaging/org-knowledge-layer/pyproject.toml", "packaging/org-knowledge-layer/README.md", "pyproject.toml"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_93f96eae7359", "paths": ["src/okl/store.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_9464023070dd", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_967ef9825472", "paths": ["src/okl/store.py", "src/okl/scaffold_cmd.py", "src/okl/bootstrap.py", "src/okl/cli/install.py", "ci/okl-verify.yml"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_991d07b0549e", "paths": ["src/okl/mcp_server.py", "src/okl/service.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_9a8b5215da32", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_9ba48d85ed19", "paths": ["evals/ab_harness.py", "evals/preflight.py", "evals/layout_preflight.py", "evals/tasks.jsonl"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_a4b40c96ede4", "paths": ["evals/REPORT.md", "evals/ab_harness.py", "evals/README.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_a5520510b99c", "paths": [".github/workflows/*", "ci/*", "src/okl/scaffold/ci/*"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_a7634ef53a8f", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_aa3e45a2ecd6", "paths": ["evals/ab_harness.py", "evals/preflight.py", "evals/tasks.jsonl", "examples/dotnet-minimal-api/tasks.jsonl", "examples/python-fastapi/tasks.jsonl"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_adea7f2c7373", "paths": ["src/okl/drift.py", "src/okl/cli/verification.py", "src/okl/client.py", "src/okl/core.py", "src/okl/service.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_b0457b37c65a", "paths": ["src/okl/core.py", "src/okl/store.py", "src/okl/service.py", "src/okl/cli/lessons.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_b1e148e008d8", "paths": ["*.sh"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_b4050b826687", "paths": ["src/okl/cli/verification.py", "ci/check-diagram-figures.sh", "src/okl/drift.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_b40a468119f6", "paths": ["src/okl/seed.py", "src/okl/cli/packs.py", "src/okl/bootstrap.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_b550ba9c5c8a", "paths": ["README.md", "docs/okl-retrieval-pipeline.svg", "docs/render_pipeline_diagram.py", "ci/check-diagram-figures.sh", "gates/check-doc-orphans.sh", "docs/overview/*"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_b578addf6269", "paths": ["evals/ab_harness.py", "evals/preflight.py", "evals/REPORT.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_b6cc6890ba26", "paths": ["ci/review-agent.sh", "src/okl/scaffold/ci/review-agent.sh", "evals/ab_harness.py", "hooks/*.sh"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_b74bad29fd87", "paths": ["src/okl/store.py", "tests/test_okl.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_b83c550a0ca4", "paths": ["src/okl/store.py", "src/okl/core.py", "docs/decisions/2026-10-05-records-not-an-ontology-store.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_be9f13d587b1", "paths": ["src/okl/store.py", "tests/test_okl.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_bf6a2aee2f12", "paths": [".github/dependabot.yml", "docs/DEVELOPING.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_c95bdc056620", "paths": [".github/workflows/*", "ci/*", "pyproject.toml", "packaging/org-knowledge-layer/pyproject.toml"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_ce6a27cc432f", "paths": ["src/okl/client.py", "src/okl/cli/common.py", "tests/test_config_permissions.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_d45d7bf64896", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_d8166465591e", "paths": ["src/okl/cli/install.py", "src/okl/scaffold_cmd.py", "src/okl/bootstrap.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_d8e5ee92ad8f", "paths": ["hooks/*.sh", "src/okl/scaffold/hooks/*.sh", ".claude/hooks/*.sh"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_dc7429065f5d", "paths": ["src/okl/core.py", "src/okl/store.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_e49be14d6207", "paths": ["tests/conftest.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_e635fd921086", "paths": ["pyproject.toml", "packaging/org-knowledge-layer/pyproject.toml", ".github/workflows/publish.yml"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_e7988ff536fb", "paths": ["src/okl/cli/"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_e8b039f47ee1", "paths": ["hooks/stop-okl-encode.sh", "src/okl/scaffold/hooks/stop-okl-encode.sh", ".claude/hooks/stop-okl-encode.sh"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_e99ea322dee5", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_ea7633cd748c", "paths": ["pyproject.toml", "seed/python-canon.json"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_ead8e0a2b43d", "paths": ["src/okl/drift.py", "CONTRIBUTING.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_ec568941f68a", "paths": ["src/okl/client.py", "src/okl/cli/common.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_ed7e782d12fd", "paths": ["src/okl/service.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_ee5a49712ff3", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_f17868ded85d", "paths": ["evals/ab_harness.py", "evals/precision.py", "evals/briefing_size.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_f215b68b925c", "paths": ["src/okl/cli/install.py", "src/okl/cli/parser.py", "tests/test_okl.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_f6d01e368155", "paths": ["ci/okl-verify.yml", ".github/workflows/okl-verify.yml", "src/okl/scaffold/ci/okl-verify.yml", "src/okl/scaffold/ci/method-gates.yml"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_fe26d1897041", "paths": ["evals/ab_harness.py", "tests/test_ab_harness.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "n_fe4ced54e60f", "paths": ["evals/ab_harness.py", "ci/review-agent.sh", "src/okl/scaffold/ci/review-agent.sh"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "novelty-claims-expire", "paths": ["README.md", "docs/posts/", "docs/overview/okl-overview.html", "docs/overview/okl-anatomy.html"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "one-verb-owns-a-transition", "paths": ["src/okl/cli/lessons.py", "src/okl/mcp_server.py", "src/okl/service.py", "src/okl/core.py", "src/okl/store.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "onnx-memory-after-first-inference", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "optional-feature-shipped-text", "paths": ["src/okl/scaffold/", "hooks/", "src/okl/cli/install.py", ".claude/hooks/", "src/okl/scaffold_cmd.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "order-from-log-not-edges", "paths": ["src/okl/store.py", "src/okl/core.py", "src/okl/service.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "owned-file-features-check-the-kept-copy", "paths": ["src/okl/cli/install.py", "src/okl/scaffold_cmd.py", "src/okl/ownership.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "passing-check-not-current-control", "paths": ["evals/REPORT.md", "evals/precision.py", "evals/ab_harness.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "piped-python-output-reorders", "paths": ["docs/overview/anatomy-story.sh", "docs/overview/render.py", "docs/overview/okl-anatomy.html"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "pipeline-hides-test-status", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "pooled-receipts-miss-report-corrections", "paths": ["evals/REPORT.md", "evals/ab_harness.py", "tests/test_ab_harness.py", "evals/results/"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "pretooluse-additionalcontext", "paths": ["hooks/hooks.json", "src/okl/scaffold/hooks/hooks.json", ".claude/settings.json", "hooks/userpromptsubmit-okl-check.sh", "src/okl/scaffold/hooks/userpromptsubmit-okl-check.sh"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "probe-revert-with-checkout-loses-work", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "readonly-agents-side-effects", "paths": [".claude/agents/architecture-reviewer.md", "src/okl/scaffold/claude/agents/architecture-reviewer.md", "ci/review-agent.sh", "src/okl/scaffold/ci/review-agent.sh"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "refusal-offers-no-destructive-shortcut", "paths": ["src/okl/mcp_server.py", "src/okl/service.py", "hooks/", "src/okl/scaffold/hooks/"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "remote-path-test-through-client", "paths": ["src/okl/client.py", "src/okl/service.py", "src/okl/mcp_server.py", "tests/test_remote_failures.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "remote-timeout-not-a-deadline", "paths": ["src/okl/client.py", "hooks/userpromptsubmit-okl-check.sh", "hooks/stop-okl-encode.sh", "src/okl/scaffold/hooks/"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "rerank-ships-off", "paths": ["src/okl/core.py", "src/okl/cli/parser.py", "evals/REPORT.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "research-cited-products-not-named", "paths": ["README.md", "docs/"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "review-bot-watch-matches-wrong-comment", "paths": ["ci/review-agent.sh", "src/okl/scaffold/ci/review-agent.sh"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "review-budget-one-push-per-round", "paths": ["CONTRIBUTING.md", ".github/pull_request_template.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "scope-literature-gap-claims", "paths": ["README.md", "docs/", "evals/REPORT.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:dec_asb_removed", "paths": ["src/okl/scaffold/profiles/dotnet/rules/messaging.md", "examples/dotnet-minimal-api/src/*.cs"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:dec_sixth_surface", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_202_long_running", "paths": ["examples/dotnet-minimal-api/src/*.cs", "src/okl/scaffold/profiles/dotnet/rules/messaging.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_aaa_narrative", "paths": ["examples/dotnet-minimal-api/tests/ApiTests.cs"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_arch_enforcement_ladder", "paths": ["src/okl/scaffold/profiles/dotnet/rules/architecture.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_aspire_azure_fallback", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_aspire_versions", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_aspire_waitfor", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_authz_test_required", "paths": ["examples/dotnet-minimal-api/tests/ApiTests.cs", "examples/dotnet-minimal-api/src/Program.cs", "src/okl/scaffold/profiles/dotnet/rules/security.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_batch_beats_whenall", "paths": ["examples/dotnet-minimal-api/src/*.cs"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_bulk_ops", "paths": ["examples/dotnet-minimal-api/src/Store.cs", "src/okl/scaffold/profiles/dotnet/rules/performance-and-data.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_cache_write_path", "paths": ["examples/dotnet-minimal-api/src/*.cs", "src/okl/scaffold/profiles/dotnet/rules/performance-and-data.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_comments_durable_docs", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_connection_hold", "paths": ["examples/dotnet-minimal-api/src/Store.cs", "src/okl/scaffold/profiles/dotnet/rules/performance-and-data.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_dapper_escape", "paths": ["examples/dotnet-minimal-api/src/Store.cs", "src/okl/scaffold/profiles/dotnet/rules/performance-and-data.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_dbcontext_direct", "paths": ["examples/dotnet-minimal-api/src/*.cs", "src/okl/scaffold/profiles/dotnet/rules/architecture.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_docs_review_surface", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_durability_not_replay", "paths": ["src/okl/scaffold/profiles/dotnet/rules/messaging.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_encoding_loop", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_exceptions_canon", "paths": ["examples/dotnet-minimal-api/src/*.cs", "src/okl/scaffold/profiles/dotnet/rules/architecture.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_experiment_sunset", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_feature_file_cap", "paths": ["examples/dotnet-minimal-api/src/*.cs", "src/okl/scaffold/profiles/dotnet/rules/architecture.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_file_move_discipline", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_grep_to_zero", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_guid_v7", "paths": ["examples/dotnet-minimal-api/src/*.cs"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_https_metadata_failclosed", "paths": ["examples/dotnet-minimal-api/src/Program.cs", "src/okl/scaffold/profiles/dotnet/rules/security.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_idempotent_handlers", "paths": ["src/okl/scaffold/profiles/dotnet/rules/messaging.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_idp_policy_pinned", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_logging_hygiene", "paths": ["examples/dotnet-minimal-api/src/*.cs"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_measure_first", "paths": ["examples/dotnet-minimal-api/src/*.cs", "src/okl/scaffold/profiles/dotnet/rules/performance-and-data.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_middleware_order", "paths": ["examples/dotnet-minimal-api/src/Program.cs"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_migrations_immutable", "paths": ["src/okl/scaffold/profiles/dotnet/rules/performance-and-data.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_no_nplus1", "paths": ["examples/dotnet-minimal-api/src/*.cs", "src/okl/scaffold/profiles/dotnet/rules/performance-and-data.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_optimistic_concurrency", "paths": ["examples/dotnet-minimal-api/src/Store.cs", "src/okl/scaffold/profiles/dotnet/rules/performance-and-data.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_pagination_cap", "paths": ["examples/dotnet-minimal-api/src/*.cs", "src/okl/scaffold/profiles/dotnet/rules/performance-and-data.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_presence_in_loop", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_problemdetails_traceid", "paths": ["examples/dotnet-minimal-api/src/Program.cs"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_rate_limiter_scaleout", "paths": ["examples/dotnet-minimal-api/src/Program.cs"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_request_naming", "paths": ["examples/dotnet-minimal-api/src/*.cs"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_rich_domain_when_observed", "paths": ["examples/dotnet-minimal-api/src/*.cs"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_sargable", "paths": ["examples/dotnet-minimal-api/src/Store.cs"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_secret_fakes", "paths": ["examples/dotnet-minimal-api/tests/ApiTests.cs"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_surprise_in_writing", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_wolverine_inbox", "paths": ["src/okl/scaffold/profiles/dotnet/rules/messaging.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_wolverine_instance_middleware", "paths": ["src/okl/scaffold/profiles/dotnet/rules/messaging.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:r_wolverine_lockstep", "paths": ["src/okl/scaffold/profiles/dotnet/rules/messaging.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:ts_azure_service_bus", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:ts_dead_observability", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-canon:ts_send_notification_queue", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-decisions:pd_authz_adapts_at_endpoint_boundary", "paths": ["examples/dotnet-minimal-api/src/Program.cs"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-decisions:pd_broker_swap_portability_oversold", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-decisions:pd_central_package_management", "paths": ["*.csproj"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-decisions:pd_choreography_with_flip_trigger", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-decisions:pd_ci_grep_unanalyzable_hazards", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-decisions:pd_context_propagation_sync_and_async", "paths": ["examples/dotnet-minimal-api/src/Program.cs"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-decisions:pd_dapr_considered_not_adopted", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-decisions:pd_db_primitives_before_distributed_locks", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-decisions:pd_established_idp_never_handroll_auth", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-decisions:pd_hybridcache_no_backplane", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-decisions:pd_hybridcache_over_handrolled", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-decisions:pd_keycloak_realm_reimport", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-decisions:pd_license_driven_test_lib_forks", "paths": ["examples/dotnet-minimal-api/tests/OrdersApi.Tests.csproj", "examples/dotnet-minimal-api/tests/ApiTests.cs"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-decisions:pd_macos_docker_host_testcontainers", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-decisions:pd_major_upgrade_runtime_breaks", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-decisions:pd_melogging_over_serilog", "paths": ["examples/dotnet-minimal-api/src/Program.cs"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-decisions:pd_microservices_vs_modular_monolith", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-decisions:pd_minimal_apis_over_controllers", "paths": ["examples/dotnet-minimal-api/src/Program.cs"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-decisions:pd_nonhandler_outbox_idbcontextoutbox", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-decisions:pd_openapi_dev_only", "paths": ["examples/dotnet-minimal-api/src/Program.cs"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-decisions:pd_otel_vendor_neutral", "paths": ["examples/dotnet-minimal-api/src/Program.cs"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-decisions:pd_rate_limit_expensive_endpoints", "paths": ["examples/dotnet-minimal-api/src/Program.cs"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-decisions:pd_require_explicit_api_version", "paths": ["examples/dotnet-minimal-api/src/Program.cs"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-decisions:pd_rfc7807_global_handler_traceid", "paths": ["examples/dotnet-minimal-api/src/Program.cs"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-decisions:pd_rollback_test_write_then_publish", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-decisions:pd_scalar_over_swagger", "paths": ["examples/dotnet-minimal-api/src/Program.cs"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-decisions:pd_standard_resilience_handler", "paths": ["examples/dotnet-minimal-api/src/Program.cs"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-decisions:pd_testcontainers_real_providers", "paths": ["examples/dotnet-minimal-api/tests/ApiTests.cs", "examples/dotnet-minimal-api/tests/OrdersApi.Tests.csproj"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-decisions:pd_three_validation_layers", "paths": ["examples/dotnet-minimal-api/src/Program.cs", "examples/dotnet-minimal-api/src/Store.cs"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-decisions:pd_transport_decision_tree", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-decisions:pd_url_segment_versioning", "paths": ["examples/dotnet-minimal-api/src/Program.cs"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-decisions:pd_wolverine6_runtime_compilation_split", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-decisions:pd_wolverine6_service_location_policy", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-decisions:pd_wolverine_middleware_order", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-decisions:pd_wolverine_over_mediatr_masstransit", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-decisions:pd_zero_warning_build", "paths": ["examples/dotnet-minimal-api/src/OrdersApi.csproj", "examples/dotnet-minimal-api/tests/OrdersApi.Tests.csproj"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-defects:g_tombstones_nc", "paths": ["gates/check-tombstones.sh", "src/okl/scaffold/gates/check-tombstones.sh", "src/okl/scaffold/registries/tombstones.txt"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-defects:nc_arch_reviewer", "paths": [".claude/agents/architecture-reviewer.md", "src/okl/scaffold/claude/agents/architecture-reviewer.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-defects:nc_dead_metric", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-defects:nc_handler_di", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-defects:nc_idor", "paths": ["examples/dotnet-minimal-api/src/Program.cs", "examples/dotnet-minimal-api/src/Store.cs"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-defects:nc_jwt_clockskew", "paths": ["examples/dotnet-minimal-api/src/Program.cs"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-defects:nc_outbox_atomicity", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-defects:nc_price_tamper", "paths": ["examples/dotnet-minimal-api/src/Program.cs"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-defects:nc_speculative_interface", "paths": ["examples/dotnet-minimal-api/src/Store.cs", "examples/dotnet-minimal-api/src/Program.cs"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-defects:nc_topology_race", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-review-surfaces:au_audit_examples_not_advice", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-review-surfaces:au_di_lifetimes_captive_dependency", "paths": ["examples/dotnet-minimal-api/src/Program.cs"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-review-surfaces:rs_endpoint_group_hygiene", "paths": ["examples/dotnet-minimal-api/src/Program.cs"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-review-surfaces:rs_event_carries_recipient_id", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-review-surfaces:rs_fanout_per_recipient", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-review-surfaces:rs_handler_idempotency_guard", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-review-surfaces:rs_integration_tests_default", "paths": ["examples/dotnet-minimal-api/tests/ApiTests.cs"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-review-surfaces:rs_keyed_services_over_factories", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-review-surfaces:rs_meter_wildcard_registration", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-review-surfaces:rs_read_projection_axes", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-review-surfaces:rs_rich_aggregate_shape", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-review-surfaces:rs_sweeper_hygiene", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-review-surfaces:rs_transport_removal_orphans", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:dotnet-review-surfaces:rs_workflow_hardening_baseline", "paths": [".github/workflows/*", "ci/okl-verify.yml", "src/okl/scaffold/ci/*.yml"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:frontend-canon:rxc_bundle_budget", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:frontend-canon:rxc_effects_discipline", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:frontend-canon:rxc_feature_boundaries", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:frontend-canon:rxc_mutation_invalidate", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:frontend-canon:rxc_no_client_money", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:frontend-canon:rxc_no_state_copy", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:frontend-canon:rxc_no_waterfalls", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:frontend-canon:rxc_query_keys", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:frontend-canon:rxc_shared_promotion", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:frontend-canon:rxc_spa_auth_bff", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:frontend-canon:rxc_test_behavior", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:geospatial-deeptime-defects:d_cross_domain_recipe_dependence", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:geospatial-deeptime-defects:g_multi_recipe_robustness", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:geospatial-deeptime-defects:g_multiyear_window_composite", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:geospatial-deeptime-defects:r_mask_hierarchical_classifier", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:geospatial-deeptime-defects:r_resubstitution_not_validation", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:geospatial-defects:d11", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:geospatial-defects:d12", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:geospatial-defects:d14", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:geospatial-defects:d15", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:geospatial-defects:d16", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:geospatial-defects:d18", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:geospatial-defects:d19", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:geospatial-defects:g_classpath", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:geospatial-defects:g_verify_outputs", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:geospatial-defects:pa1", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:geospatial-enforcement-defects:d_cwd_isort", "paths": [".github/workflows/*"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:geospatial-enforcement-defects:d_invoked_by_nothing", "paths": ["CLAUDE.md", ".claude/agents/architecture-reviewer.md", "ci/review-agent.sh"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:geospatial-enforcement-defects:d_masked_gate_order", "paths": [".github/workflows/*"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:geospatial-enforcement-defects:d_month_range_28", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:geospatial-enforcement-defects:d_ungated_zone", "paths": [".github/workflows/*"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:geospatial-enforcement-defects:d_unpinned_linter", "paths": [".github/workflows/*", "ci/*", "src/okl/scaffold/ci/*"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:geospatial-enforcement-defects:g_gate_every_dir", "paths": [".github/workflows/*"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:geospatial-enforcement-defects:g_review_agent_in_ci", "paths": ["ci/review-agent.sh", "src/okl/scaffold/ci/review-agent.sh", ".github/workflows/*"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:geospatial-enforcement-defects:r_pin_gating_tools", "paths": [".github/workflows/*", "ci/*", "src/okl/scaffold/ci/*"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:geospatial-enforcement-defects:r_single_source_sets", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:geospatial-enforcement-defects:r_surface_needs_trigger", "paths": ["CLAUDE.md", "src/okl/scaffold/root/CLAUDE.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:geospatial-eval-defects:d_loo_group_single_class", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:geospatial-eval-defects:r_preregistered_control_vetoes", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:python-canon:py_classes_earn_place", "paths": ["src/okl/*.py", "examples/python-fastapi/app/*.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:python-canon:py_comments_why", "paths": ["src/okl/*.py", "examples/python-fastapi/app/*.py", "tests/*.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:python-canon:py_composition_root", "paths": ["src/okl/*.py", "examples/python-fastapi/app/*.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:python-canon:py_contract_tests", "paths": ["tests/*.py", "examples/python-fastapi/tests/*.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:python-canon:py_docstrings", "paths": ["src/okl/*.py", "examples/python-fastapi/app/*.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:python-canon:py_dont_mock_what_you_dont_own", "paths": ["tests/*.py", "examples/python-fastapi/tests/*.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:python-canon:py_exceptions_canon", "paths": ["src/okl/*.py", "examples/python-fastapi/app/*.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:python-canon:py_layers_contract", "paths": ["pyproject.toml", "src/okl/*.py", ".github/workflows/ci.yml"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:python-canon:py_no_power_features", "paths": ["src/okl/*.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:python-canon:py_one_docstring_format", "paths": ["pyproject.toml", "src/okl/*.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:python-canon:py_one_type_checker", "paths": ["pyproject.toml", ".github/workflows/ci.yml"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:python-canon:py_print_at_edges", "paths": ["src/okl/*.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:python-canon:py_protocol_isinstance_names_only", "paths": ["src/okl/*.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:python-canon:py_pyproject_versions", "paths": ["pyproject.toml", "packaging/org-knowledge-layer/pyproject.toml", "examples/python-fastapi/pyproject.toml", ".github/workflows/*"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:python-canon:py_size_limits", "paths": ["src/okl/*.py", "pyproject.toml"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:python-canon:py_starlette_httpx2", "paths": ["pyproject.toml", "examples/python-fastapi/pyproject.toml", "examples/python-fastapi/tests/test_app.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:python-canon:py_strict_pytest", "paths": ["pyproject.toml", "tests/conftest.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:python-canon:py_test_every_version", "paths": [".github/workflows/ci.yml", "pyproject.toml"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:python-canon:py_type_hints_gradual", "paths": ["pyproject.toml", "src/okl/*.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:python-canon:py_typing_syntax_floor", "paths": ["pyproject.toml", "src/okl/*.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:python-canon:py_unclosed_sqlite", "paths": ["src/okl/store.py", "src/okl/cli/", "tests/"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:python-canon:py_value_objects_at_seams", "paths": ["src/okl/client.py", "src/okl/store.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:rag-defects:qz_agent_contract", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:rag-defects:qz_broken_tool", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:rag-defects:qz_crosstab", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:rag-defects:qz_fixtures", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:rag-defects:qz_identity", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:rag-defects:qz_judge_crash", "paths": ["evals/*.py", "src/okl/scaffold/evals/run_evals.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:rag-defects:qz_judge_self", "paths": ["evals/ab_harness.py", "src/okl/scaffold/evals/run_evals.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:rag-defects:qz_unequal_budget", "paths": ["evals/ab_harness.py", "src/okl/scaffold/evals/run_evals.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:rag-defects:qz_wrong_corpus", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:react-defects:rx_fight_compiler", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:react-defects:rx_tokens_localstorage", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "seed:react-defects:rx_useeffect_fetch", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "snapshot-from-worktree-drops-repo-rules", "paths": ["src/okl/drift.py", "src/okl/client.py", "okl-drift.json", "src/okl/cli/verification.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "stacked-pr-retarget-runs-no-ci", "paths": [".github/workflows/*"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "stale-pyc-after-probe", "paths": ["tests/*.py", "evals/*.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "stub-the-module-the-code-imports", "paths": ["tests/*.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "synthesis-copies-original-proposals", "paths": ["evals/REPORT.md", "docs/posts/"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "tall-sheet-screenshot-tiles", "paths": ["docs/overview/render.py", "docs/render_pipeline_diagram.py", "docs/overview/okl-anatomy.html", "docs/overview/okl-overview.html"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "temp-marker-keyed-by-scope", "paths": ["hooks/userpromptsubmit-okl-check.sh", "src/okl/cli/lessons.py", "src/okl/core.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "thesis-maintain-anything", "paths": [], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "threshold-transfer-is-a-hypothesis", "paths": ["evals/REPORT.md", "evals/precision.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "typed-closed-request-models", "paths": ["src/okl/service.py", "src/okl/core.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "unclosed-sqlite-in-test-pr154", "paths": ["tests/*.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "verification-scope-is-the-thesis", "paths": ["src/okl/drift.py", "src/okl/cli/verification.py", "README.md"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "watch-what-the-rule-depends-on", "paths": ["docs/LOAD-YOUR-RULES.md", "src/okl/drift.py"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
+{"lesson": "worktree-no-store-reverify", "paths": ["okl-drift.json", ".github/workflows/okl-verify.yml"], "model": "sonnet", "prompt": "4b72314cf4ec873a"}
