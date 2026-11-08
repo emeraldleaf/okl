@@ -4940,7 +4940,8 @@ lesson applies, which at run time is the review of every lesson against a diff (
 these labels. Its figures stay inside this section until it holds on a fresh holdout and #394 passes.
 D's reach is the strongest evidence so far that what a change touches finds lessons its task's words
 do not. Reach here counts a lesson named, not one the agent acted on, and even all three arms miss a
-needed lesson on most tasks, so the review remains the guarantee.
+needed lesson on most tasks, so the briefing cannot be the only safety net. §4ao measures the review of
+every lesson against a diff, and finds it is not a guarantee either.
 
 ## 4an. PRE-REGISTERED: do lessons that name their files reach more of what real work needs? (2026-11-08)
 
@@ -5036,10 +5037,172 @@ D's 6.17. It gets most of D's reach at about half the lessons, and more of what 
 hook fires only on a `Read`, so a new file, or an edit with no read, would get nothing (#94). Like
 §4am's, reach counts a lesson named, not one the agent acted on.
 
+**Limits read after the run; not pre-registered** (receipt `reach-detail-20261108-1835.json`). A file match cannot be the only route.
+Of the 199 needed lessons on the test half, 96 could not be reached by any file match: 37 were drafted
+with no entries, and 59 had entries that no changed file matched. Only 2 matched nothing but a file the
+change added, and that understates new files: 157 of the 386 changed files were added by the change, and
+437 of the 569 drafted entries are exact file names, which can never match a new file. The later 25
+tasks contain no renames or deletions, so this test says nothing about code that moves (#398).
+
 **What follows.** The bar was written per task and stands, so nothing is built yet. The next test
 caps what a file can add, ranks within the cap, and registers a bar per changed file before it runs.
 It would measure P and D side by side, and on tasks merged after this date. Entries that name kinds of
 file, for shared packs, remain a separate question.
+
+## 4ao. PRE-REGISTERED: does a review of every lesson against the diff find what a change needed? (2026-11-08)
+
+Written before the review ran on any task below. It is step 3 of #390, which §4al's rule calls for
+next, because the briefing missed a needed lesson on 94% of tasks.
+
+**The question.** When a model reads every lesson against a pull request's diff, how many of the
+lessons the change needed does it name, how many does it name wrongly, and at what cost?
+
+**What this test can and cannot show.** The labels come from a model (Opus) doing a similar reading
+of the same diff, so a high score shows that two models agree, not that both are right. Three things
+limit that: the review is a different model with a prompt worded apart from the judge's; the ledger's
+two known misses (§4ak) were established by what happened in real work, not by any model's reading;
+and the audit of the judge (#394) is still to come. Until it passes, this is a measure of agreement
+with the judge.
+
+**Seen before this was written.** §4al's labels, and §4am's and §4an's results on these tasks. An
+independent model (Sonnet, with its own wording) agrees with the judge on 109 of 120 audit pairs
+(κ 0.78), and the judge labelled both ledger lessons needed.
+
+**Tasks.** §4am's test half: the later 25 of §4al's tasks, so the review compares directly with the
+arms already measured on them. All 25 need at least one lesson (199 in all). #388 is among them, so
+the two ledger lessons are measured here. Each task's store is its lessons as §4al froze them.
+
+**The review.** Sonnet (`claude -p --model sonnet --restricted --strict-mcp-config`, no tools), twenty
+lessons a call. It is given the pull request's title, the issue it closes if any, the frozen change
+(built and cut as the judge's was, at 60,000 characters) and each lesson's text as the judge saw it.
+For each lesson it answers one question: because of this lesson, should the author do something
+differently or check something before merging, with the line of the diff it bears on. The prompt is in
+`evals/lesson_review.py` and its sha256 is in the receipt. A lesson left unanswered is asked again, up
+to three rounds in all; any still unanswered mark the run INCOMPLETE.
+
+**Measures.**
+1. Lesson-level reach: needed lessons flagged, with a bootstrap over tasks.
+2. The task-level failure rate: a needed lesson not flagged, with Wilson intervals.
+3. Flags per task (median and maximum), and how many of them are labelled *needed*, *related* and
+   *no*. A flag labelled *no* is a lesson named wrongly.
+4. The ledger: whether both lessons are flagged on #388.
+5. Cost per pull request: calls, tokens and seconds, and the tokens' API-priced equivalent.
+6. A secondary estimate of a cheaper design: if the review read only the lessons that §4am's three arms
+   or §4an's P name, the reach it would keep and the lessons it would read.
+
+**Decision rule.** The review holds when all three are true: the lower bound of its reach is at least
+70%; at most 5 lessons are named wrongly at the median task; and it flags both ledger lessons. The 70
+and the 5 are judgement calls set before the run: a review that may miss more than three needed
+lessons in ten, or names more than five wrong ones on a typical pull request, would not earn a place
+on it. If it holds, it ships as a CI comment, never a gate (#390: a gate only after a larger positive
+set). If it fails, its misses are read, and a changed prompt is measured only under a new
+pre-registration, on tasks it has not seen.
+
+**Predictions** (not decision rules):
+- its reach is above 82.4%, the best any briefing arm reached on these tasks (§4am's three together);
+- it flags both ledger lessons;
+- it still misses a needed lesson on more than a third of the tasks;
+- at most 5 lessons are named wrongly at the median task.
+
+**What follows.** If it ships, the counts of which lessons apply become the source §4am's standing set
+needs. Its figures stay inside this section until they hold on a fresh holdout and #394 passes.
+
+**Budget.** About 425 Sonnet calls, three at a time, on the maintainer's subscription.
+
+**Amended before the score was read (2026-11-08): the reviewer's ids.** The first run left 241 of the
+8,278 pairs unanswered after three rounds, all in calls on seed-pack lessons, so it stopped before
+scoring. A diagnostic call on one such batch, whose answers were not kept, showed why: the reviewer
+answered every lesson but wrote some ids without their `seed:` prefix, and the script discarded those
+answers as unanswered. The script now restores the prefix when an id matches no lesson in the call as
+written. The prompt is unchanged. A further run asks for the 241 pairs, up to three rounds as before,
+and any still unanswered mark the run INCOMPLETE.
+
+**Amended again before the score was read (2026-11-08).** The further run still left 161 pairs
+unanswered. A second diagnostic call, read only for the ids it returned, showed the reviewer can also
+drop the pack name and write just the last part of a seed lesson's id. The script now accepts an id
+that matches the end of exactly one lesson in the call. An answer cannot reach a lesson outside its own
+call, and an id that could mean two lessons stays unanswered. The prompt is still unchanged.
+
+### Result (2026-11-08): model-judged, not yet audited
+
+Receipt `lesson-review-20261108-1832.json` (the instrument at 7edf325, prompt 2a4ca5f9d9a8ed57, all 8,278
+pairs answered after the two amendments above). **Every figure here is model-judged and not yet audited
+(#394), and shows agreement with the judge rather than correctness.**
+
+**It does not hold.**
+
+| test | result | bar | |
+|---|---|---|---|
+| reach: needed lessons flagged | 60.8% [52.8, 69.1], 121 of 199 | lower bound at least 70% | missed |
+| lessons named wrongly, at the median task | 1 (7 at most) | at most 5 | met |
+| the ledger's two lessons | 1 of 2 | both | missed |
+
+It flagged a median of 12 lessons a task (28 at most), 329 in all: 121 labelled *needed*, 173 *related*
+and 35 *no*. It still missed a needed lesson on 20 of the 25 tasks (80%, Wilson 61 to 91%).
+
+**Predictions.** Two held: it missed a needed lesson on more than a third of the tasks, and named at
+most 5 wrongly at the median task. Two did not: its reach is below the 82.4% of §4am's three arms
+together, and it flagged only one of the ledger's lessons.
+
+**Cost.** At the median pull request: 19 calls, about 533,000 tokens and 222 seconds of model time, or
+$2.22 at API prices (usage on a subscription, not a charge). These include the calls repeated for the
+id problem above: 98 of the 523 calls left some lessons unanswered.
+
+**A cheaper design, estimated.** Reading only the lessons §4am's three arms or §4an's P name means a
+median of 109 lessons rather than 325, and keeps 55.3% of the needed lessons against 60.8%.
+
+**Decision, by the rule.** It does not ship as a CI comment.
+
+**The misses, read as the rule requires; not pre-registered** (receipt `reach-detail-20261108-1835.json`):
+- *Seed-pack lessons.* It flagged 19 of the 51 needed lessons from packs (37%) and 102 of the 148 this
+  repository recorded itself (69%). The sort below puts that gap in the lessons a change had already
+  followed, not in how packs are worded.
+- *The cut.* 10 of the 25 changes ran past 60,000 characters. Reach was no lower on them (62% against
+  59%), but the ledger's missed lesson concerns `tests/test_intake.py`, which lies past the cut of
+  #388's 175,184 characters, so the review never saw that file. A large change has to be read in parts.
+- *Beside the briefing.* Today's briefing named 65 of the 199. The review caught 78 that it did not, and
+  the two together name 143 (71.9%). With the standing set they name 150 (75.4%), and with the file
+  patterns 163 (81.9%).
+- *The line.* The prompt required a line of the diff, and a lesson about something a change leaves out
+  has no such line. The sort below gives this no support as a cause: the review flagged 30 of the 33
+  lessons the change had not followed.
+
+**The misses by the state of the change; sorted after the failure was known, not pre-registered**
+(receipt `review-state-detail-20261108-1957.json`, script `evals/review_state_detail.py`). §4al's label
+asks what a change needed when it was written. That suits a briefing, which arrives first. A review
+arrives afterwards and has work only where the change as written has not followed the lesson, so this
+section's measure counts a correct silence as a miss: its bar was set against the wrong answer key.
+Opus, shown nothing of the review's answers, put each of the 199 needed lessons in one state:
+
+| State of the change as written | Needed lessons | Flagged by the review |
+|---|---|---|
+| Already followed the lesson | 99 | 45 (45.5%) |
+| Did not follow it | 33 | 30 (90.9%) |
+| The diff cannot settle it, so the author should check | 54 | 41 (75.9%) |
+| Unclear | 13 | 5 (38.5%) |
+
+54 of the 78 misses are lessons the change had already followed. Of the 87 lessons that called for
+action the review flagged 71: 81.6%, bootstrap [72.4, 89.4]. Packs and this repository's own lessons do
+not differ there (15 of 18 and 56 of 69); the gap above comes from the followed ones (4 of 28 and 41 of
+71). The review's own faults are these:
+- *It cannot tell a followed lesson from a broken one.* It flagged 45 of the 99 followed lessons, because
+  the prompt asks only whether a lesson bears on a line. At the median pull request it flags 12 lessons,
+  and 2 of them are sorted as calling for action. The 173 flags the judge called *related* were not sorted.
+- *It sees part of the change.* Six of the 13 missed lessons in the check state are ones whose reason says
+  the code was not visible in the diff.
+- *It still misses real ones.* 12 of the 23 pull requests with a lesson calling for action lost at least
+  one, and the ledger's `seed:rag-defects:qz_fixtures` is among them.
+
+None of this changes the decision above. The sort was made after the failure was known, by the judge's
+own model, and has not been audited, and reading a failed test more kindly afterwards is what
+pre-registration exists to prevent. It is a lead to be tested on tasks the review has not seen.
+
+**What follows.** The review is not a guarantee that a needed lesson is found. A revised review (the
+whole change read in parts, an answer that separates a followed lesson from a broken one, and a key that
+asks that same question) is measured only under a new pre-registration, on §4al's first 25 tasks, which
+this one has not seen. A rule that must hold needs a check that fails the build, and nothing measured
+here replaces that. The audit (#394) could still move these figures most, since 173 of the flags are lessons the
+judge called *related*.
 
 ## 5. Findings
 

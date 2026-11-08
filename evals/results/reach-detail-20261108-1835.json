@@ -1,0 +1,152 @@
+{
+ "section": "4ao misses and 4an limits, not pre-registered",
+ "at": "2026-11-08T18:35Z",
+ "okl_commit": "71540f6878bbdaa012b5896d1d7acd9af0f5312f",
+ "status": "model-judged, not yet audited (#394)",
+ "review": {
+  "by_origin": {
+   "own": {
+    "flagged": 102,
+    "needed": 148,
+    "share": 0.689
+   },
+   "seed_pack": {
+    "flagged": 19,
+    "needed": 51,
+    "share": 0.373
+   }
+  },
+  "by_cut": {
+   "tasks_cut": 10,
+   "cut": {
+    "flagged": 75,
+    "needed": 121,
+    "share": 0.62
+   },
+   "not_cut": {
+    "flagged": 46,
+    "needed": 78,
+    "share": 0.59
+   }
+  },
+  "by_type": {
+   "Rule": {
+    "flagged": 69,
+    "needed": 110,
+    "share": 0.627
+   },
+   "Defect": {
+    "flagged": 46,
+    "needed": 79,
+    "share": 0.582
+   },
+   "Decision": {
+    "flagged": 4,
+    "needed": 7,
+    "share": 0.571
+   },
+   "Gate": {
+    "flagged": 2,
+    "needed": 3,
+    "share": 0.667
+   }
+  },
+  "most_missed": [
+   {
+    "lesson": "seed:dotnet-canon:r_docs_review_surface",
+    "missed": 5,
+    "needed": 7
+   },
+   {
+    "lesson": "seed:dotnet-canon:r_surprise_in_writing",
+    "missed": 3,
+    "needed": 3
+   },
+   {
+    "lesson": "n_1eaf9a5f24e2",
+    "missed": 3,
+    "needed": 7
+   },
+   {
+    "lesson": "seed:dotnet-canon:r_encoding_loop",
+    "missed": 2,
+    "needed": 3
+   },
+   {
+    "lesson": "n_119528a07fa5",
+    "missed": 2,
+    "needed": 2
+   },
+   {
+    "lesson": "n_473aec369b25",
+    "missed": 2,
+    "needed": 2
+   },
+   {
+    "lesson": "n_7e50e3588bcd",
+    "missed": 2,
+    "needed": 3
+   },
+   {
+    "lesson": "eval-scripts-no-exposure",
+    "missed": 2,
+    "needed": 3
+   },
+   {
+    "lesson": "seed:geospatial-enforcement-defects:r_single_source_sets",
+    "missed": 2,
+    "needed": 5
+   },
+   {
+    "lesson": "n_b578addf6269",
+    "missed": 2,
+    "needed": 4
+   }
+  ],
+  "alongside": {
+   "review_or_base": {
+    "named": 143,
+    "of": 199,
+    "share": 0.719
+   },
+   "base_alone": 65,
+   "review_caught_base_did_not": 78,
+   "review_or_S10": {
+    "named": 150,
+    "of": 199,
+    "share": 0.754
+   },
+   "review_or_P_and_base": {
+    "named": 163,
+    "of": 199,
+    "share": 0.819
+   }
+  },
+  "ledger_miss": {
+   "lesson": "seed:rag-defects:qz_fixtures",
+   "pr": 388,
+   "change_chars": 175184,
+   "cut": true,
+   "file": "tests/test_intake.py",
+   "file_inside_the_change_seen": false
+  }
+ },
+ "path_triggers": {
+  "needed_pairs_on_test_half": {
+   "entries_but_no_changed_file_matched": 59,
+   "matched_a_file_that_already_existed": 101,
+   "no_entries_applies_anywhere": 37,
+   "matched_only_a_new_or_moved_file": 2
+  },
+  "entries_by_kind": {
+   "pattern": 97,
+   "exact_file": 437,
+   "folder": 35
+  },
+  "entries_dead_since_the_boundary": 0,
+  "changed_files_on_test_half_by_status": {
+   "M": 229,
+   "A": 157
+  }
+ }
+}
