@@ -25,7 +25,8 @@ from pathlib import Path
 PRIVATE = Path(__file__).resolve().parent / "bench" / "private" / "realwork"
 SUGGESTER = ["claude", "-p", "--model", "sonnet", "--restricted", "--strict-mcp-config", "--output-format", "json",
              "--tools", ""]
-DECOYS, SEED, TIMEOUT = 20, 44, 600
+DECOYS, SEED, TIMEOUT, CHUNK = 20, 44, 600, 10
+RAW = PRIVATE / "audit-suggester-raw.json"
 ANSWERS = ("needed", "related", "no", "unsure")
 PROMPT = """A reviewer is deciding, for one code change, which of a team's recorded lessons applied to it.
 Suggest an answer for each lesson below, for the reviewer to accept or change.
@@ -83,7 +84,7 @@ def suggest(task: dict, pairs: list[dict], room: Path) -> dict[str, dict]:
     issues = "\n\n".join(f"#{i['number']} {i['title']}\n{i['body']}" for i in task["issues"]) or "(none)"
     out: dict[str, dict] = {}
     pending = list(pairs)
-    for _ in range(2):
+    for _ in range(3):
         if not pending:
             break
         prompt = PROMPT.format(title=task["title"], issues=issues, change=task["diff"],
@@ -108,17 +109,24 @@ def suggest(task: dict, pairs: list[dict], room: Path) -> dict[str, dict]:
 def main() -> int:
     """Suggest for every pair, draw the decoys, write the shown suggestions and the key."""
     data = json.loads((PRIVATE / "audit-pairs.json").read_text())
+    # Kept between runs, so a re-run asks only for what is missing; asked ten pairs at a time,
+    # since a task with 32 pairs on one long diff came back with some left out.
+    best: dict[str, dict] = json.loads(RAW.read_text()) if RAW.exists() else {}
     by_task: dict[int, list[dict]] = defaultdict(list)
     for p in data["pairs"]:
-        by_task[p["pr"]].append(p)
+        if p["id"] not in best:
+            by_task[p["pr"]].append(p)
+    jobs = [(pr, ps[k:k + CHUNK]) for pr, ps in sorted(by_task.items()) for k in range(0, len(ps), CHUNK)]
     with tempfile.TemporaryDirectory(prefix="okl-4al-suggest-") as room:
-        def one(pr: int) -> dict[str, dict]:
-            got = suggest(data["tasks"][str(pr)], by_task[pr], Path(room))
-            print(f"  #{pr}: {len(got)} of {len(by_task[pr])}", file=sys.stderr)
+        def one(job: tuple[int, list[dict]]) -> dict[str, dict]:
+            pr, chunk = job
+            got = suggest(data["tasks"][str(pr)], chunk, Path(room))
+            print(f"  #{pr}: {len(got)} of {len(chunk)}", file=sys.stderr)
             return got
         with ThreadPoolExecutor(max_workers=3) as pool:
-            results = list(pool.map(one, sorted(by_task)))
-    best: dict[str, dict] = {k: v for r in results for k, v in r.items()}
+            for got in pool.map(one, jobs):
+                best.update(got)
+                RAW.write_text(json.dumps(best, ensure_ascii=False))
     missing = [p["id"] for p in data["pairs"] if p["id"] not in best]
     if missing:
         print(f"no suggestion for {len(missing)} pair(s): {missing}; nothing written", file=sys.stderr)
@@ -133,7 +141,6 @@ def main() -> int:
         key[pid].update({"suggested": s["answer"], "shown": shown[pid]["answer"], "decoy": pid in decoys})
     (PRIVATE / "audit-key.json").write_text(json.dumps(key, indent=1))
     (PRIVATE / "audit-suggestions.json").write_text(json.dumps(shown, ensure_ascii=False))
-    (PRIVATE / "audit-suggester-raw.json").write_text(json.dumps(best, ensure_ascii=False))
     print(json.dumps({"pairs": len(best), "decoys": len(decoys), "suggester": SUGGESTER[3]}))
     return 0
 
