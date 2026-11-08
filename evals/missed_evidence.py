@@ -12,15 +12,18 @@ show, with no conversation text:
 - when the Stop hook's question fired in the session (the stop_hook_summary entries that carry
   it; one is written at every stop), and the time of its once-a-session marker.
 
-    python3 evals/missed_evidence.py <transcript.jsonl> [--since 2026-11-07T19:05Z --until 2026-11-07T19:40Z]
+    python3 evals/missed_evidence.py <transcript.jsonl> [--stop-marker <path>]
+        [--since 2026-11-07T19:05:00Z --until 2026-11-07T19:40:00Z]
+
+The Stop hook keeps its once-a-session marker at ${TMPDIR:-/tmp}/okl-encode-reminder-<session>;
+pass that path as --stop-marker to record its time. The script never builds a path in a shared
+temporary directory itself.
 """
 from __future__ import annotations
 
 import argparse
 import json
-import os
 import sqlite3
-import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -44,6 +47,7 @@ def main() -> int:
     ap.add_argument("transcript")
     ap.add_argument("--since", default="2026-11-07T19:05:00Z")
     ap.add_argument("--until", default="2026-11-07T19:40:00Z")
+    ap.add_argument("--stop-marker", default=None, help="the Stop hook's marker file, to record its time")
     args = ap.parse_args()
     con = sqlite3.connect(REPO / ".okl" / "okl.db")
     rows = con.execute("select at, node_ids from briefing where repo = 'okl' and at between ? and ? order by at",
@@ -73,8 +77,7 @@ def main() -> int:
         for lesson in LESSONS:
             if lesson in line:
                 reached[lesson].append(ts[:19] + "Z")
-    # The Stop hook writes its marker under ${TMPDIR:-/tmp}; read the same place, read-only.
-    marker = Path(os.environ.get("TMPDIR") or tempfile.gettempdir()) / f"okl-encode-reminder-{session}"
+    marker = Path(args.stop_marker) if args.stop_marker else None
     receipt = {
         "for": "REPORT §4ak; #391", "made": datetime.now(UTC).strftime("%Y-%m-%dT%H:%MZ"), "session": session,
         "briefing_window": {"since": args.since, "until": args.until, "briefings": len(briefings),
@@ -83,7 +86,7 @@ def main() -> int:
         "reached_the_session": {k: sorted(v) for k, v in reached.items()},
         "stop_hook_fired": stops,
         "stop_hook_marker_mtime": (datetime.fromtimestamp(marker.stat().st_mtime, UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-                                   if marker.exists() else None),
+                                   if marker and marker.exists() else None),
     }
     out = REPO / "evals" / "results" / f"missed-evidence-{datetime.now(UTC):%Y%m%d-%H%M}.json"
     out.write_text(json.dumps(receipt, indent=1) + "\n")

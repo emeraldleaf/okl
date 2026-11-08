@@ -127,9 +127,10 @@ def main() -> int:
                  f"{sum(len(c['queries']) for c in cases)} case queries")
     unrun = sum(line.count(" ? ") + line.endswith(" ?") for line in lines if " | " in line)
     if unrun:
-        # A pair that did not run is a gap, not a miss: the run says so at the top of its verdict.
-        lines.append(f"NOT USABLE: {unrun} text and arm pair(s) did not run (see the notes); "
-                     "no claim may cover them")
+        # A pair that did not run is a gap, not a miss. The run is incomplete, not unusable: a claim
+        # from it covers only the pairs that ran, and says how many of all of them that is.
+        lines.append(f"INCOMPLETE: {unrun} text and arm pair(s) did not run (see the notes); "
+                     "a claim from this run covers only the pairs that ran, and says so")
     out = "\n".join(lines) + "\n"
     print(out, end="")
     if args.receipt:

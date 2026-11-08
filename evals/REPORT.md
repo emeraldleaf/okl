@@ -4636,10 +4636,13 @@ the docs describe was not the one running.
 
 **Amended 2026-11-08, after the CI architecture review on #389.** The first version of this section
 said "under all 6 arms"; the receipt shows one pair that did not run, and the text above now says so.
-The receipt was written by `evals/missed_lessons.py` as committed in 3803c2f, before it could mark a
-run NOT USABLE; the instrument at this commit would mark that run so.
-The instrument now asks a pair again when the warm model misses its budget, and marks the whole run
-NOT USABLE if any pair still did not run, rather than leaving a `?` a reader can pass over. A second
+The receipt names okl at 51127e2, the checkout's HEAD when it ran, with the instrument not yet
+committed; the same file was committed unchanged with the receipt in 3803c2f, before it could mark a
+run INCOMPLETE, which the instrument at this commit would. The evidence receipt can be re-derived only
+on the machine that holds the briefing log and the transcript, as with the bench's private inputs.
+The instrument now asks a pair again when the warm model misses its budget, and marks a run
+INCOMPLETE if any pair still did not run, rather than leaving a `?` a reader can pass over: a claim
+from such a run covers only the pairs that ran and says how many, as THESIS's row does. A second
 limit, for the next replay: the replay reads the live store, and `eval-scripts-no-exposure` was
 widened afterwards in words that name this case's command, so a later replay of this case is no
 longer a test of the lesson as it stood. Replays will take each case's store as it stood at its
