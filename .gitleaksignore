@@ -1,0 +1,3 @@
+# The sha256 of a private answer-key file, in a committed receipt. Its field name, key_sha256,
+# matches the generic-api-key rule; the value is a hash, not a credential.
+8f484b13ac90cb56cd137a78b146a1120819a5f1:evals/results/review-action-20261108-2050.json:generic-api-key:21
