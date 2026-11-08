@@ -5321,6 +5321,87 @@ raises one confirmed lesson among six is not yet a list an author should have to
 *related* raises are useful is what the audit (#394), extended to this key, would show.
 
 
+## 4aq. PRE-REGISTERED: with the repository to read, does the review find what a change has left to do, and is what it raises worth reading? (2026-11-08)
+
+Written before any of its tasks exist: they are pull requests opened on or after 2026-11-09. §4ap's review
+missed one bar of four, on an interval from only 49 lessons. Trials on §4ap's own tasks, which are not
+results and have no receipt, shaped this design in two ways. Most of the noise came from *ask* answers,
+which a look at the repository turned into findings naming a file and line. And the answer key, which read
+only the diff, could not judge such a finding: it labelled #37's unguarded gate step and #112's second
+config parser as lessons that did not apply, and both hold at those commits.
+
+**The question.** With the repository to read, how many of the lessons calling for action does the review
+raise, how much of what it raises is true and worth acting on, and at what cost?
+
+**What this test can and cannot show.** The key and the judge are Opus and the review is Sonnet, so a high
+score shows that models agree. The key's first step reads only the change, so a lesson that needs the
+repository to be seen at all is outside the reach measure; that is why every raise is also graded on its
+own, by a judge that can read the repository. A judge can agree too easily, so decoys are mixed in. Neither
+the key nor the judge is audited yet: #394 covers §4al's labels, and must be extended to both before any
+figure leaves this section. The ledger's two lessons are on #388, whose misses have been read, so that
+check is in-sample. There is no control arm, so the result cannot say how much the repository read adds.
+
+**Seen before this was written.** §4ao and §4ap in full and the trials on §4ap's tasks. None of these
+tasks, which do not exist yet.
+
+**Tasks.** The first 50 pull requests to merge that were opened on or after 2026-11-09 and are not by a bot,
+in the order they merged, frozen as §4al's were: at the last commit before the first review comment, or
+before merging if none, with the store as it stood at that commit. One whose title or issue names a lesson
+is left out and reported, and the next is taken. The 50 is fixed now and does not move with the results. At
+§4ap's rate of lessons calling for action it would give about 98, near the 97 §4ap's rough scaling asked for.
+
+**The answer key, finished before the review runs.** Opus. `evals/review_repo.py key`; `run` refuses until
+it is complete.
+1. *Labels.* Every lesson on every task, against the whole change, with §4al's prompt (`b1dbb8c24bbce0de`).
+2. *States.* Every pair labelled needed or related, with a read-only copy of the repository at the task's
+   commit (no history and no agent settings): followed, not followed, check or unclear (`f0370a561971b9ed`).
+   A lesson followed in some places and not others is not followed. *Check* now means it depends on
+   something outside the repository.
+
+A lesson *calls for action* when it is sorted not followed or check. Only this key, made before any review
+exists, sets the reach measure, so what the review alone finds cannot inflate it.
+
+**The review.** Sonnet, in two steps.
+1. §4ap's review, unchanged (`03a44686243e047b`): the whole change in parts, one word per lesson.
+2. Each *ask* is settled by reading the same copy of the repository: gap, met or ask (`732605e91ed0b3c7`).
+
+A lesson is *raised* when the first step says gap, or the second says gap or ask. The second look at *done*
+answers and the separate keep-or-drop check were tried on §4ap's tasks and are left out.
+
+**The judge, after the review.** Opus, with the same copy of the repository, grades every raise (`b734e38be301fc91`):
+*act* (true of this change, and a maintainer would act on it), *minor* (true, but could reasonably be left)
+or *false*. About one raise in ten is a decoy taken from another pull request, not marked as one. If the
+judge grades more than 20% of the decoys *act*, the run is marked RESULTS NOT USABLE.
+
+**Measures.**
+1. Reach: lessons calling for action that are raised, with a bootstrap over tasks.
+2. The task-level failure rate: a lesson calling for action not raised, with Wilson intervals.
+3. Raised per task (median and maximum), and the share of raises graded *act*, with a bootstrap over tasks.
+4. Raises graded *false* per task.
+5. The ledger: whether both lessons are raised on #388, on §4ap's first-pass answers and this review's second step.
+6. The decoys: how they were graded.
+7. The review's cost per pull request: calls, tokens and seconds, and the tokens' API-priced equivalent.
+
+**Decision rule.** The review holds when all five are true, and the run is usable: the lower bound of its
+reach is at least 70%; the lower bound of the share graded *act* is at least 50%; at most 5 raises are graded
+*false* at the median task; at most 10 lessons are raised at the median task; and both ledger lessons are
+raised. The 70, 5 and 10 are §4ap's. The 50 is a judgement call set before the run: a list where most items
+are not worth acting on will stop being read. If it holds, it ships as a CI comment, never a gate (#390), and
+its figures stay inside this section until #394, extended, passes. If it fails, its misses are read, and a
+changed review is measured only under a new pre-registration, on pull requests later than these.
+
+**Predictions** (not decision rules):
+- its reach is at least 70%;
+- at least half of what it raises is graded *act*;
+- it raises at most 5 lessons at the median task;
+- it still misses a lesson calling for action on more than a third of the tasks.
+
+**Budget.** About 1,000 Opus calls for the labels, 170 more with the repository for the states, 1,100 Sonnet
+calls for the first step, 90 with the repository for the second, and 50 Opus calls for the judge: a run of
+some hours, on the maintainer's subscription. Nothing is posted on any pull request. At the recent rate of
+about five merged pull requests a day, the 50 exist in roughly ten days.
+
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
