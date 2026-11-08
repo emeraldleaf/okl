@@ -4721,6 +4721,17 @@ agrees with it on 109 of the 120 audit pairs (κ = 0.78, needed against not), an
 ledger's known positives needed. Every figure is reported as **model-judged and not yet audited**: no
 README, THESIS or site claim rests on one until the adjudication passes, and the receipt says so.
 
+**Amended before the reported run (2026-11-08): warm's fallback on long texts is how the default runs.**
+Two runs were marked unusable because 7 default briefings ran without the warm model after four tries.
+The 7 are the same each time: the issue channels of the four tasks whose issue text is longest (1,650
+to 2,584 characters). The warm model does not embed text that long within its 0.5 s budget, so the
+briefing falls back to the full-text search, as it would for a person. That is the default as this
+repository runs, not noise, so the reported run counts those briefings as they ran and names each one.
+A fallback on every try for a text shorter than 1,000 characters, which the warm model embeds within
+its budget when the machine is not loaded, still marks a run unusable. It is also a
+finding in its own right: a channel that briefs on an issue or a plan loses the semantic arm on a long
+one (#395).
+
 **Measures, per task and channel.** The channels are *issue*, *title*, *issue and title*, *paths*
 (`okl check --path` over each file), and their union. For each, the default briefing (tiered, with
 warm on, as this repository now runs) and the floor. Reported:

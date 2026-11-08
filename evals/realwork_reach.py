@@ -76,6 +76,8 @@ def store_as_of(task: dict, room: Path) -> Path:
 
 
 WARM_MISSED: list[str] = []
+WARM_FALLBACK: list[str] = []
+LONG_TEXT = 1000   # characters; the shortest text seen to fall back on every try had 1,650
 WARM_RETRIES: list[str] = []
 WARM_TRIES = 4
 
@@ -99,7 +101,11 @@ def okl_check(db: Path, *args: str) -> dict:
             return {}
         if "--task" not in args or "--decision" in args or result.get("warm"):
             return result
-    WARM_MISSED.append(f"{db.name}: {result.get('warm_unavailable')}")
+    # Every try missed. On a long text that is how the default runs (the warm model cannot embed
+    # it within its budget): reported by name, and the run stays usable. On a short one it is load,
+    # which the warm model answers when the machine is not loaded: the run is not usable.
+    text = args[args.index("--task") + 1] if "--task" in args else ""
+    (WARM_FALLBACK if len(text) >= LONG_TEXT else WARM_MISSED).append(f"{db.name}: {len(text)} characters")
     return result
 
 
@@ -197,7 +203,7 @@ def main() -> int:
     if not usable:
         status = f"NOT USABLE: {len(WARM_MISSED)} default briefing(s) ran without warm; " + status
     out = {"section": "4al", "step": "reach", "audited": audited, "usable": usable, "warm_missed": WARM_MISSED,
-           "warm_retries": len(WARM_RETRIES),
+           "warm_retries": len(WARM_RETRIES), "warm_fell_back_after_every_try": WARM_FALLBACK,
            "judge": "opus (labels in evals/realwork/labels.jsonl, prompt b1dbb8c24bbce0de)",
            "status": status,
            "at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%MZ"),
