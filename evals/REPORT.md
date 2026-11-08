@@ -4653,6 +4653,179 @@ that can see this class are the ones that read code: a briefing on the change as
 review of every lesson against a pull request's diff. Each is measured on the ledger before it ships,
 under the standard in [docs/EVALUATION.md](../docs/EVALUATION.md).
 
+## 4al. PRE-REGISTERED: does the right lesson reach the agent on real work? A set with complete labels (2026-11-08)
+
+Written before any task is mined or any label is made. The first evaluation under
+[docs/EVALUATION.md](../docs/EVALUATION.md); step 2 of #390.
+
+**The question.** Of the lessons a real change needed, what share reached the agent, through
+which channel, at the sizes a briefing has?
+
+**Tasks.** This repository's merged pull requests created on or after 2026-09-15 (the store held
+fewer than a hundred lessons before then). Forty are drawn from those with at least one resolved
+review thread, and ten from those with none, each by the order of sha256("4al:" + PR number), the
+smallest first. A pull request whose change cannot be rebuilt from the local history is skipped
+and the next one drawn; each skip is reported. Each task is frozen as it stood when its code was
+first written:
+- **change:** `git diff` from the merge base to the last commit of the pull request made before its
+  first review comment (with no review, its last commit before merging), cut at 60,000 characters
+  (the count cut is reported);
+- **issue:** the title and body of each issue it closes, if the issue was opened before that
+  commit;
+- **title:** the pull request's title, which is written with the code and reported apart;
+- **paths:** the files the change touches;
+- **store:** the lessons recorded before that commit, from a snapshot of this machine's store
+  (its sha256 in the receipt; the snapshot stays in `evals/bench/private/`), retired ones
+  included only if they were retired after it.
+
+A task whose issue or title names a lesson's id, or repeats a lesson's title, is reported and left
+out.
+
+**Labels.** Every lesson in a task's store is labelled against that task by Opus (`claude -p
+--model opus --restricted`, text only: the change, the issue and the title, with twenty lessons a
+call). Each answer is *needed* (following the lesson would change this code, or it warns of a
+defect this change has or risks), *related* (the same subject, nothing to change), *no* or
+*unsure*, with the line of the change or the issue it rests on. A lesson is needed by a task when
+it is labelled *needed*; *unsure* is reported both ways. No arm's output is shown to the judge,
+and no arm uses Opus.
+
+**The judge is audited before any figure counts.** The maintainer labels 120 pairs blind to the
+judge: 40 the judge called needed, 40 it called no that share the most words with the task's
+text, and 40 it called no drawn at random. The audit reports Cohen's κ (needed against not) and
+the judge's misses among the pairs the maintainer called needed, per stratum. The bar is κ ≥ 0.6
+and at most 2 misses in the random stratum. Below it, the judge's prompt is revised, every task
+relabelled, and a fresh sample audited; no reach figure is reported until a judge passes. The
+random stratum also estimates how many needed lessons the labels missed.
+
+**Amended before any audit label (2026-11-08): suggestions, and decoys.** At the maintainer's
+request, to cut the time the audit takes, each pair is shown with a suggested answer, which the
+maintainer accepts or changes. Accepting suggestions risks measuring agreement with the suggester
+rather than the judge's accuracy, so:
+- the suggestions come from **Sonnet**, with a prompt worded apart from the judge's, never from
+  the Opus judge under audit;
+- **20 of the 120 suggestions are decoys**, drawn by a seed and kept in the private key: each shows
+  the opposite answer, with the suggester's own best case for it, so a decoy reads like any other
+  suggestion. The maintainer is told decoys exist, not which;
+- every label records the suggestion shown and whether it was kept.
+
+**The audit is void if the maintainer keeps more than 5 of the 20 decoys** (a decoy can be right
+when the suggester's first answer was wrong, so the bar is not zero). It also reports κ between
+the maintainer and the judge on the pairs where the suggester and the judge disagree, where the
+maintainer's own reading decides, and κ between suggester and judge, so how much the suggestions
+could carry the result is visible. The κ and miss bars above are unchanged.
+
+**Amended again before the audit is scored (2026-11-08): double annotation with adjudication.** The
+maintainer labelled 3 pairs under the suggestion design, at about two minutes a pair, and cannot give
+the hours 120 take. The audit becomes the standard double-annotation design:
+- **Two annotators:** the judge (Opus) and an independent model, Sonnet with its own wording (the
+  suggester's own answers, before any decoy was drawn), each labelled all 120 pairs.
+- **A person adjudicates** in one shuffled list, blind to both models and with no suggestion shown:
+  every pair the two disagree on (needed against not), and 10 drawn by a seed from the pairs they
+  agree on. Each pair opens on the lines of the change either model cited, with the whole change one
+  click away.
+- **The final label** of a pair is the maintainer's where given, and the two models' shared answer
+  elsewhere.
+
+**The bar.** The audit passes when the maintainer overturns at most 1 of the 10 sampled agreements
+(more, and the models' agreement cannot stand in for a person: the audit fails), and κ between the
+judge and the final labels over the 120 is at least 0.6.
+
+**Seen before this amendment, and so not used as a bar:** the two models agree on 109 of the 120
+pairs (11 disagreements), and the judge labelled both of the ledger's known positives (§4ak's two
+lessons, on #388) as needed. Both are reported as they are. The 3 labels given under the suggestion
+design are reported and not scored, and the decoys no longer apply, since no suggestion is shown.
+
+**Amended before the measure ran (2026-11-08): reported now, audited later.** The maintainer chose to
+report the measure now and to adjudicate the 21 pairs as a follow-on (#394). So the figures below rest
+on the model judge alone, with what checks it has short of a person: an independent model (Sonnet)
+agrees with it on 109 of the 120 audit pairs (κ = 0.78, needed against not), and it labelled both of the
+ledger's known positives needed. Every figure is reported as **model-judged and not yet audited**: no
+README, THESIS or site claim rests on one until the adjudication passes, and the receipt says so.
+
+**Amended before the reported run (2026-11-08): warm's fallback on long texts is how the default runs.**
+Two runs were marked unusable because 7 default briefings ran without the warm model after four tries.
+The 7 are the same each time: the issue channels of the four tasks whose issue text is longest (1,650
+to 2,584 characters). The warm model does not embed text that long within its 0.5 s budget, so the
+briefing falls back to the full-text search, as it would for a person. That is the default as this
+repository runs, not noise, so the reported run counts those briefings as they ran and names each one.
+A fallback on every try for a text shorter than 1,000 characters, which the warm model embeds within
+its budget when the machine is not loaded, still marks a run unusable. It is also a
+finding in its own right: a channel that briefs on an issue or a plan loses the semantic arm on a long
+one (#395).
+
+**Measures, per task and channel.** The channels are *issue*, *title*, *issue and title*, *paths*
+(`okl check --path` over each file), and their union. For each, the default briefing (tiered, with
+warm on, as this repository now runs) and the floor. Reported:
+1. the task-level failure rate: the share of tasks with a needed lesson not shown in full, and not
+   named at all, with Wilson intervals;
+2. lesson-level reach, with intervals from a bootstrap over tasks;
+3. each needed lesson's rank among every candidate, by the full-text search alone and fused with
+   each embedding;
+4. the same on the ten tasks with no review thread, and the count of lessons the briefing named
+   that were labelled *no*.
+
+**Predictions** (written before, not decision rules): the default briefing misses a needed
+lesson, in full, on more than half the tasks with one through *issue and title*; *paths* reaches
+lessons that govern files that no text channel reaches; the union names fewer than 70% of needed
+lessons.
+
+**What follows.** If the union's task-level failure rate, named, exceeds 20%, the review of every
+lesson against a diff is built next (#390 step 3), measured on these tasks with Sonnet, so the
+labeller and the arm differ. These tasks are the calibration set for the conformal cutoff (step 4):
+at α = 0.1 it needs at least 9. Once the judge passes its audit, the tasks, the labels and an export
+of the lessons they cite are committed, and the reach measurement becomes deterministic: it replays
+in CI's end-to-end job (step 1) on every pull request, failing if reach falls below this receipt's.
+
+**Budget.** About 600 judge calls on the maintainer's subscription, three at a time, and the
+maintainer's labels for the audit.
+
+### Result (2026-11-08): model-judged, not yet audited
+
+Receipt `realwork-reach-20261108-1548.json` (the tasks of be11c90; the judge's labels, prompt
+b1dbb8c24bbce0de; the store snapshot whose sha256 the tasks receipt names). **Every figure here is
+model-judged and not yet audited (#394).** So far the judge is checked by an independent model, which
+agrees with it on 109 of the 120 audit pairs (κ 0.78), and by the ledger's two known positives, which
+it labelled needed.
+
+**The labels.** 47 of the 50 tasks needed at least one lesson: 364 of the 14,103 task-lesson pairs, a
+median of 5 a task (18 at most), none unsure. 7 of the 10 tasks with no review thread needed one.
+
+**Reach**, the share of needed lessons the briefing named, in full or in one line (the default is the
+tiered decision with warm on, as this repository runs; intervals from a bootstrap over tasks):
+
+| channel | tasks | default: named | default: in full | floor: named |
+|---|---|---|---|---|
+| issue | the 13 with an issue | 37.5% (45 of 120) | 17.5% | 28.3% |
+| title | 47 | 26.9% [22.1, 32.2] | 9.3% | 25.8% |
+| issue and title | 47 | 29.4% [24.7, 34.5] | 11.0% | 25.0% |
+| paths (`okl check --path`) | 47 | 2.5% [1.0, 4.1] | 2.5% | 2.5% |
+| all four together | 47 | **36.0% [29.5, 42.4]** | 15.4% [11.2, 19.8] | 32.1% [26.4, 38.1] |
+
+Per task, the four channels together named every needed lesson on 3 of the 47 tasks: on 44 (94%,
+Wilson 83 to 98%) they missed at least one.
+
+**Ranks.** Fused with the potion embedding, the needed lessons' median rank among the lessons each
+task's store held was 42.5; 121 of the 364 (33%) ranked in the first 17, about a briefing's size, and
+193 (53%) in the first 50.
+
+**Over-briefing.** Across the 50 tasks the four channels named 582 lessons the judge labelled not
+needed, 92 of them on the 10 tasks with no review thread.
+
+**The warm model** fell back to the full-text search on 5 briefings, on the three longest issue texts
+(1,650 to 2,583 characters), as the amendment above provides (#395). 18 other tries answered on a retry.
+
+**Predictions.** All three held. Through issue and title, the default missed a needed lesson in full
+on 46 of 47 tasks, more than half. Paths reached 9 needed lessons no text channel reached. The four
+channels together named 36% of the needed lessons, under 70%.
+
+**What follows, as registered.** The four channels' task-level failure rate, named, is 94%, over the
+20% bar, so the review of every lesson against a diff is built next (#390 step 3), measured on these
+tasks with Sonnet so the labeller and the arm differ. A first sign it reaches this class: the judge,
+which is such a review, labelled both of the ledger's known positives needed. These tasks are the
+calibration set for the conformal cutoff; with the needed lessons at a median rank of 42.5, an honest
+90% cutoff will be deep, and its briefing size will be reported beside it. Outside this section, none
+of these figures is quoted until #394 passes.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
