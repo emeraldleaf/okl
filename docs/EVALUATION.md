@@ -7,7 +7,7 @@ result in full are in [evals/REPORT.md](../evals/REPORT.md); each figure names i
 [evals/results/](../evals/results/).
 
 Written 2026-11-07, after two lessons that applied to real work reached the agent through none
-of okl's retrieval arms, and none of okl's own evaluations could have shown it
+of okl's retrieval arms that ran, and none of okl's own evaluations could have shown it
 ([REPORT §4ak](../evals/REPORT.md)). The rules below are the methods of the studies okl's docs
 already cite, and of the evaluation literature behind them, applied to okl. Each names its
 sources; arXiv ids are given where a paper has one.

@@ -11,7 +11,8 @@ For each case, each query and each retrieval arm okl ships, it prints whether th
 shown in full, named in a line, or absent, and the files it would have been briefed on by
 path. It calls no model and writes nothing (OKL_BRIEFING_LOG=0).
 
-    python3 evals/missed_lessons.py              # the table; exit 1 if the default arm misses a case
+    python3 evals/missed_lessons.py              # the table; exit 1 if the default arm misses a case,
+                                                 # 2 if any text and arm pair did not run
     python3 evals/missed_lessons.py --receipt    # also write evals/results/missed-<date>.txt
 """
 from __future__ import annotations
@@ -40,14 +41,20 @@ FULL = ("next_actions", "armed_gates", "relevant_defects", "live_retractions", "
 
 
 def _okl(*args: str) -> dict:
-    """`okl check ... --format json` from this checkout, unlogged; {} when it fails."""
+    """`okl check ... --format json` from this checkout, unlogged; {} when it fails. A semantic arm
+    that did not run (the warm model missed its budget, as under load) is asked once more."""
     env = {**os.environ, "PYTHONPATH": str(REPO / "src"), "OKL_BRIEFING_LOG": "0"}
-    r = subprocess.run([sys.executable, "-m", "okl", "check", *args, "--format", "json"],
-                       cwd=REPO, env=env, capture_output=True, text=True, timeout=120)
-    try:
-        return json.loads(r.stdout)
-    except json.JSONDecodeError:
-        return {}
+    result: dict = {}
+    for _attempt in range(2):
+        r = subprocess.run([sys.executable, "-m", "okl", "check", *args, "--format", "json"],
+                           cwd=REPO, env=env, capture_output=True, text=True, timeout=120)
+        try:
+            result = json.loads(r.stdout)
+        except json.JSONDecodeError:
+            return {}
+        if not unavailable(result):
+            return result
+    return result
 
 
 def where(result: dict, lesson: str) -> str:
@@ -118,12 +125,19 @@ def main() -> int:
     lines += [f"note: {n}" for n in sorted(notes)]
     lines.append(f"default arm misses: {len(default_misses)} of "
                  f"{sum(len(c['queries']) for c in cases)} case queries")
+    unrun = sum(line.count(" ? ") + line.endswith(" ?") for line in lines if " | " in line)
+    if unrun:
+        # A pair that did not run is a gap, not a miss: the run says so at the top of its verdict.
+        lines.append(f"NOT USABLE: {unrun} text and arm pair(s) did not run (see the notes); "
+                     "no claim may cover them")
     out = "\n".join(lines) + "\n"
     print(out, end="")
     if args.receipt:
         path = REPO / "evals" / "results" / f"missed-{datetime.now(UTC):%Y%m%d-%H%M}.txt"
         path.write_text(out)
         print(f"receipt: {path.relative_to(REPO)}")
+    if unrun:
+        return 2
     return 1 if default_misses else 0
 
 

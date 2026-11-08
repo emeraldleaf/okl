@@ -513,12 +513,18 @@ def _thesis_figures() -> dict[str, str]:
     reached = sum(1 for b in blocks if re.search(r"\b(full|line)\b", b.split("rank among")[0]))
     ranks = [(int(r), int(t)) for r, t in re.findall(r"(?:lexical|lexical\+potion) (\d+) of (\d+)", missed)]
     lo_rank, hi_rank, live = min(r for r, _ in ranks), max(r for r, _ in ranks), max(t for _, t in ranks)
+    # Every text and arm pair, and how many ran: a "?" did not, and the page must not claim it did.
+    cells = [c.strip() for line in missed.splitlines()
+             if line.startswith("    ") and " | " in line and not line.strip().startswith("tiered")
+             for c in line.split(None, 1)[1].split("|")]
+    ran = sum(1 for c in cells if c != "?")
 
     def nth(k: int) -> str:
         return f"{k}{'th' if 10 <= k % 100 <= 20 else {1: 'st', 2: 'nd', 3: 'rd'}.get(k % 10, 'th')}"
     return {
         f"{reached} of {len(blocks)} lessons that applied by what the code did "
-        f"reached the agent through any arm, ranked {nth(lo_rank)} to {nth(hi_rank)} of {live}":
+        f"reached the agent through any arm that ran ({ran} of {len(cells)} text and arm pairs ran), "
+        f"ranked {nth(lo_rank)} to {nth(hi_rank)} of {live}":
             "missed-20261108-0000.txt (§4ak)",
         f"{round(100 * bh / bn)}% → {round(100 * rh / rn)}% defects reproduced on {_WORDS[8]} bait tasks, "
         f"pooled over {_WORDS[len(POOLED_RECEIPTS)]} A/B runs": "the pooled A/B receipts (§5 finding 7)",
