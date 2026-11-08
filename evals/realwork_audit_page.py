@@ -107,6 +107,16 @@ h2 { font: 600 1.1rem/1.3 var(--display); margin: 0; text-wrap: balance; }
       <dt>No</dt><dd>It does not apply to this change. Sharing words does not make a lesson needed.</dd>
       <dt>Unsure</dt><dd>You cannot decide from what is shown.</dd>
     </dl>
+    <p class="sub">A change that does the thing a lesson is about counts as needed even when it already gets it right: the lesson applied to it.</p>
+  </details>
+  <details class="rubric">
+    <summary>How to decide one pair, in four steps</summary>
+    <ol class="sub">
+      <li>Read the lesson on the right first: what does it tell you to do, or to avoid? Put it in a few words of your own.</li>
+      <li>Look at the files changed. If the change plainly never touches that kind of thing (another stack, another part of the system), answer No.</li>
+      <li>Otherwise skim the diff for that thing. If the change does it (right or wrong), answer Needed. If it is only the same topic and nothing here would change, answer Related.</li>
+      <li>If deciding would mean reading code outside this diff, answer Unsure and move on.</li>
+    </ol>
   </details>
   <div class="desk">
     <section class="pane" aria-label="The change">
@@ -162,8 +172,10 @@ function render() {
   $('pairtag').textContent = `Pair ${at + 1} of ${pairs.length} · ${p.id}`;
   $('prtitle').textContent = t.title;
   const meta = $('prmeta'); meta.replaceChildren();
-  const a = document.createElement('a'); a.href = `https://github.com/emeraldleaf/okl/pull/${p.pr}`; a.target = '_blank'; a.rel = 'noopener'; a.textContent = `PR #${p.pr}`;
-  meta.append(a, Object.assign(document.createElement('span'), {textContent: `${t.paths.length} files changed`}));
+  // No link to the pull request: its page shows the review and the later fixes, which the judge
+  // never saw. Both judge the change as it was first written.
+  meta.append(Object.assign(document.createElement('span'), {textContent: `PR #${p.pr}, as first written, before review`}),
+              Object.assign(document.createElement('span'), {textContent: `${t.paths.length} files changed`}));
   const ib = $('issuebox'); ib.replaceChildren();
   for (const i of t.issues) {
     const h = document.createElement('div'); h.className = 'eyebrow'; h.textContent = `Issue #${i.number}: ${i.title}`;
