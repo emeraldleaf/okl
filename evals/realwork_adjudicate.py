@@ -76,8 +76,8 @@ def build() -> int:
     disagree = sorted(k for k, v in key.items() if needed(v["judge"]) != needed(v["suggested"]))
     agree = sorted(k for k, v in key.items() if needed(v["judge"]) == needed(v["suggested"]))
     rng = random.Random(SEED)  # noqa: S311 - a seeded draw, not a secret
-    chosen = disagree + rng.sample(agree, AGREEMENTS)
-    rng.shuffle(chosen)
+    chosen = disagree + rng.sample(agree, AGREEMENTS)  # NOSONAR - seeded, reproducible on purpose
+    rng.shuffle(chosen)  # NOSONAR - seeded, reproducible on purpose
     out_pairs, out_key = [], {}
     for n, pid in enumerate(chosen, 1):
         aid, p, k = f"a{n:02d}", pairs[pid], key[pid]
