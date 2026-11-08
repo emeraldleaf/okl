@@ -100,9 +100,13 @@ def one(task: dict, ids: list[str], change: str, texts: dict[str, str], room: Pa
     got, use = ask(prompt, room)
     wanted, rows = set(ids), []
     for item in got or []:
-        if isinstance(item, dict) and item.get("id") in wanted and isinstance(item.get("flag"), bool):
-            wanted.discard(item["id"])
-            rows.append({"pr": task["pr"], "lesson": item["id"], "flag": item["flag"], "line": str(item.get("line") or "")[:LINE_CUT],
+        if not isinstance(item, dict) or not isinstance(item.get("id"), str) or not isinstance(item.get("flag"), bool):
+            continue
+        # The reviewer can copy a seed lesson's id without its prefix (§4ao's amendment).
+        lesson = item["id"] if item["id"] in wanted else f"seed:{item['id']}"
+        if lesson in wanted:
+            wanted.discard(lesson)
+            rows.append({"pr": task["pr"], "lesson": lesson, "flag": item["flag"], "line": str(item.get("line") or "")[:LINE_CUT],
                          "model": MODEL, "prompt": PROMPT_SHA})
     return rows, {"pr": task["pr"], "asked": len(ids), "answered": len(rows), "prompt": PROMPT_SHA, **use}
 

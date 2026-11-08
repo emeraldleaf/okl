@@ -5101,6 +5101,14 @@ needs. Its figures stay inside this section until they hold on a fresh holdout a
 
 **Budget.** About 425 Sonnet calls, three at a time, on the maintainer's subscription.
 
+**Amended before the score was read (2026-11-08): the reviewer's ids.** The first run left 241 of the
+8,278 pairs unanswered after three rounds, all in calls on seed-pack lessons, so it stopped before
+scoring. A diagnostic call on one such batch, whose answers were not kept, showed why: the reviewer
+answered every lesson but wrote some ids without their `seed:` prefix, and the script discarded those
+answers as unanswered. The script now restores the prefix when an id matches no lesson in the call as
+written. The prompt is unchanged. A further run asks for the 241 pairs, up to three rounds as before,
+and any still unanswered mark the run INCOMPLETE.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
