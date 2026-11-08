@@ -75,13 +75,13 @@ def sample() -> int:
     def overlap(r: dict) -> int:
         lz = lessons[r["lesson"]]
         return len(words(texts[r["pr"]][0]) & words(" ".join(str(lz[k] or "") for k in ("title", "symptom", "fix", "body"))))
-    chosen = [("needed", r) for r in rng.sample(needed, min(PER_STRATUM, len(needed)))]
+    chosen = [("needed", r) for r in rng.sample(needed, min(PER_STRATUM, len(needed)))]  # NOSONAR - seeded, reproducible on purpose
     by_overlap = sorted(no, key=overlap, reverse=True)
     high = by_overlap[:PER_STRATUM]
     rest = [r for r in no if r not in high]
     chosen += [("no-overlap", r) for r in high]
-    chosen += [("no-random", r) for r in rng.sample(rest, min(PER_STRATUM, len(rest)))]
-    rng.shuffle(chosen)
+    chosen += [("no-random", r) for r in rng.sample(rest, min(PER_STRATUM, len(rest)))]  # NOSONAR - seeded, reproducible on purpose
+    rng.shuffle(chosen)  # NOSONAR - seeded, reproducible on purpose
     pairs, key, diffs = [], {}, {}
     for n, (stratum, r) in enumerate(chosen, 1):
         pid = f"p{n:03d}"
