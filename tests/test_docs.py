@@ -671,7 +671,7 @@ OPEN_QUESTIONS = {
         "common-word-weight-for-one-word-tasks",
     ("README.md", "It has never been measured; use it to get a new repo"):
         "scaffold-effect",
-    ("docs/EVALUATION.md", "a control with nothing to learn | Not measured (#251)"):
+    ("docs/EVALUATION.md", "and sessions with nothing to learn | Not measured (#251)"):
         "capture-without-fabrication",
 }
 # The phrase, used for something that is not a question waiting on an answer, with why.
