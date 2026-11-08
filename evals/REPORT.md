@@ -4579,6 +4579,59 @@ it.
   lesson arriving at the read with the same lesson arriving in the prompt's briefing.
 - **Not measured here:** re-briefing after a compaction, which is #94's other half.
 
+## 4ak. Two lessons real work needed, missed by every arm (2026-11-07): a diagnostic
+
+Not pre-registered: a replay of two misses, deterministic, with no model called and nothing tuned.
+The first replay ran before this section was written; the receipt is a re-run at the commit that
+adds the instrument.
+
+**What happened.** Issue #376 (`okl intake pr`) was started with the prompt "start" and its code
+committed eight minutes later (100d09f). Two lessons in the store applied to that code:
+- `eval-scripts-no-exposure`: a caller of `Client.check` that briefs no agent must not log the
+  briefing. Intake's per-finding lookup did, so each run counted lessons as shown to an agent.
+- `seed:rag-defects:qz_fixtures`: fixtures written by the author share the author's assumptions.
+  The tests' fixture was written by hand and called recorded; a real CodeRabbit badge line broke
+  the summary on 3 of 30 real findings.
+
+An end-to-end run found both bugs after review had passed (#388, fixed in a563615). The store's
+briefing log holds 14 briefings to the session between 19:05Z and 19:40Z: neither lesson is in any.
+The session's transcript shows the first lesson last reached the agent on 2026-11-04, on another
+task, and the second first reached it at 20:40Z, 90 minutes after the code was committed.
+
+**The instrument.** `evals/missed_lessons.jsonl` holds each case with only text that existed at the
+time: the prompt as typed; the prompt with the last 600 characters of the reply the prompt hook could
+have read with it; the issue; and the agent's own words at the commit (the docstring of the function,
+or of the test module). `evals/missed_lessons.py` runs each text through six arms (the tiered and
+floor decisions, each with the full-text search alone, with the potion embedding fused (§4q) and
+with the warm model (§4z)), asks `okl check --path` for the files the change touched, and prints each
+lesson's rank among every candidate before the floor and the cap.
+
+**Result** (receipt `missed-20261108-0000.txt`): both lessons were absent from every briefing: 8 of
+8 texts, under all 6 arms, and by path. Ranked among all 364 live records, the closer of the two came
+54th (the agent's own words, with the embedding); the rest ranked between 62nd and 299th. A
+briefing shows about 17.
+
+**What it shows.**
+1. **Not a lexical-versus-semantic gap.** Both semantic arms ranked both lessons far outside any
+   briefing. Semantic search would not have caught these.
+2. **Not a short prompt alone.** The issue and the agent's own words missed as badly as "start".
+3. **The lessons applied to what the code did, not to what the task was about.** One concerns a
+   call the code made, the other a fixture it wrote. No text written before the code names either,
+   so similarity to the task cannot reach them at a size a briefing can afford.
+4. **The recall figures in this report cannot see this class.** §4x and §4y pool: a lesson is judged
+   only if an arm returned it. Neither lesson would have entered a pool, so a miss of this kind was
+   never counted against any arm. See §6.
+
+**A finding beside it.** This repo's `.okl/config.json` has held `"warm": false` since 2026-10-27,
+with no record of why, and the potion model had never been downloaded here. Every briefing on this
+machine since then was full-text only. It did not decide these two cases (point 1), but the default
+the docs describe was not the one running.
+
+**What follows.** The ledger grows with every miss found, with text from the time only. The channels
+that can see this class are the ones that read code: a briefing on the change as it is written, and a
+review of every lesson against a pull request's diff. Each is measured on the ledger before it ships,
+under the standard in [docs/EVALUATION.md](../docs/EVALUATION.md).
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
@@ -4663,6 +4716,10 @@ it.
   and observed live, but not by this experiment. Likewise no Stop hook, gates, or verify
   step were in the loop — the experiment isolates the briefing variable and measures
   generation only, not the full enforced loop end to end.
+- **Recall is pooled, so a lesson no arm ranks near the top is never counted as missed.** Every
+  recall figure from §4x on judges only the lessons some arm returned. §4ak replayed two real misses:
+  both ranked between 54th and 299th of 364 under every arm, so neither could have entered a pool. The
+  recall these sections report is recall of what okl's own arms can find, not of what applied.
 - **Both models are one vendor's; "budget model" ≈ haiku.** The local-model version of
   the claim (via `GENERATOR_CMD="ollama run ..."`) is unmeasured — the harness supports
   it; nobody has run it yet.
