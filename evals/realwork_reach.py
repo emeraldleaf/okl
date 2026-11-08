@@ -165,6 +165,7 @@ def main() -> int:
             row["named_but_no"] = sorted(set(row["channels"]["default:union"]["named"]) & no)
             row["ranks"] = ranks(db, texts["issue+title"], needed | unsure) if (needed or unsure) else {}
             per_task.append(row)
+            db.unlink()   # one store copy at a time: fifty at once would not fit a crowded disk
             print(f"  #{t['pr']} needed {len(needed)} unsure {len(unsure)}", file=sys.stderr)
     tally: dict[str, dict] = {}
     with_needed = [r for r in per_task if r["needed"]]
@@ -190,6 +191,7 @@ def main() -> int:
     if not usable:
         status = f"NOT USABLE: {len(WARM_MISSED)} default briefing(s) ran without warm; " + status
     out = {"section": "4al", "step": "reach", "audited": audited, "usable": usable, "warm_missed": WARM_MISSED,
+           "judge": "opus (labels in evals/realwork/labels.jsonl, prompt b1dbb8c24bbce0de)",
            "status": status,
            "at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%MZ"),
            "tasks": len(per_task), "tasks_with_needed": len(with_needed),

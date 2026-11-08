@@ -4714,6 +4714,13 @@ pairs (11 disagreements), and the judge labelled both of the ledger's known posi
 lessons, on #388) as needed. Both are reported as they are. The 3 labels given under the suggestion
 design are reported and not scored, and the decoys no longer apply, since no suggestion is shown.
 
+**Amended before the measure ran (2026-11-08): reported now, audited later.** The maintainer chose to
+report the measure now and to adjudicate the 21 pairs as a follow-on (#394). So the figures below rest
+on the model judge alone, with what checks it has short of a person: an independent model (Sonnet)
+agrees with it on 109 of the 120 audit pairs (κ = 0.78, needed against not), and it labelled both of the
+ledger's known positives needed. Every figure is reported as **model-judged and not yet audited**: no
+README, THESIS or site claim rests on one until the adjudication passes, and the receipt says so.
+
 **Measures, per task and channel.** The channels are *issue*, *title*, *issue and title*, *paths*
 (`okl check --path` over each file), and their union. For each, the default briefing (tiered, with
 warm on, as this repository now runs) and the floor. Reported:
