@@ -191,7 +191,7 @@ def main() -> int:
             reach = sum(h for h, _ in hits) / max(1, sum(n for _, n in hits))
             boots = []
             for _ in range(2000):
-                s = [hits[rng.randrange(len(hits))] for _ in hits] if hits else []
+                s = [hits[rng.randrange(len(hits))] for _ in hits] if hits else []  # NOSONAR - seeded, reproducible on purpose
                 boots.append(sum(h for h, _ in s) / max(1, sum(n for _, n in s)))
             boots.sort()
             tally[f"{key}:{mode}"] = {"tasks_missing": miss, "of": len(with_needed),

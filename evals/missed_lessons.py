@@ -51,6 +51,7 @@ def _okl(*args: str) -> dict:
         try:
             result = json.loads(r.stdout)
         except json.JSONDecodeError:
+            print(f"okl check failed (exit {r.returncode}): {r.stderr.strip()[-300:]}", file=sys.stderr)
             return {}
         if not unavailable(result):
             return result
@@ -113,7 +114,8 @@ def main() -> int:
                     notes.add(f"{name}: {why}")
                 cell = "?" if why else where(result, case["lesson"])
                 cells.append(cell)
-                if name.startswith("tiered (default)") and cell == "-":
+                # "?" counts here because a crashed default arm must not exit 0 as "no misses".
+                if name.startswith("tiered (default)") and cell in ("-", "?"):
                     default_misses.append((case["id"], qname))
             lines.append(f"    {qname:<{width}} " + " | ".join(f"{c:>16}" for c in cells))
         lines.extend(f"    by path {path}: {where(_okl('--path', path), case['lesson'])}"
