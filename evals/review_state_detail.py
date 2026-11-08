@@ -107,7 +107,7 @@ def sort_pairs(tasks: list[dict], evidence: dict[tuple[int, str], str], change_o
             jobs = []
             for t in tasks:
                 todo = [i for i in sorted(t["lessons"]) if (t["pr"], i) in evidence and (t["pr"], i) not in done and i in texts]
-                rng.shuffle(todo)
+                rng.shuffle(todo)  # NOSONAR - seeded, reproducible on purpose
                 jobs += [(t, todo[k:k + rl.BATCH]) for k in range(0, len(todo), rl.BATCH)]
             if not jobs:
                 break
