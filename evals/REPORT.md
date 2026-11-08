@@ -5041,6 +5041,66 @@ caps what a file can add, ranks within the cap, and registers a bar per changed 
 It would measure P and D side by side, and on tasks merged after this date. Entries that name kinds of
 file, for shared packs, remain a separate question.
 
+## 4ao. PRE-REGISTERED: does a review of every lesson against the diff find what a change needed? (2026-11-08)
+
+Written before the review ran on any task below. It is step 3 of #390, which §4al's rule calls for
+next, because the briefing missed a needed lesson on 94% of tasks.
+
+**The question.** When a model reads every lesson against a pull request's diff, how many of the
+lessons the change needed does it name, how many does it name wrongly, and at what cost?
+
+**What this test can and cannot show.** The labels come from a model (Opus) doing a similar reading
+of the same diff, so a high score shows that two models agree, not that both are right. Three things
+limit that: the review is a different model with a prompt worded apart from the judge's; the ledger's
+two known misses (§4ak) were established by what happened in real work, not by any model's reading;
+and the audit of the judge (#394) is still to come. Until it passes, this is a measure of agreement
+with the judge.
+
+**Seen before this was written.** §4al's labels, and §4am's and §4an's results on these tasks. An
+independent model (Sonnet, with its own wording) agrees with the judge on 109 of 120 audit pairs
+(κ 0.78), and the judge labelled both ledger lessons needed.
+
+**Tasks.** §4am's test half: the later 25 of §4al's tasks, so the review compares directly with the
+arms already measured on them. All 25 need at least one lesson (199 in all). #388 is among them, so
+the two ledger lessons are measured here. Each task's store is its lessons as §4al froze them.
+
+**The review.** Sonnet (`claude -p --model sonnet --restricted --strict-mcp-config`, no tools), twenty
+lessons a call. It is given the pull request's title, the issue it closes if any, the frozen change
+(built and cut as the judge's was, at 60,000 characters) and each lesson's text as the judge saw it.
+For each lesson it answers one question: because of this lesson, should the author do something
+differently or check something before merging, with the line of the diff it bears on. The prompt is in
+`evals/lesson_review.py` and its sha256 is in the receipt. A lesson left unanswered is asked again, up
+to three rounds in all; any still unanswered mark the run INCOMPLETE.
+
+**Measures.**
+1. Lesson-level reach: needed lessons flagged, with a bootstrap over tasks.
+2. The task-level failure rate: a needed lesson not flagged, with Wilson intervals.
+3. Flags per task (median and maximum), and how many of them are labelled *needed*, *related* and
+   *no*. A flag labelled *no* is a lesson named wrongly.
+4. The ledger: whether both lessons are flagged on #388.
+5. Cost per pull request: calls, tokens and seconds, and the tokens' API-priced equivalent.
+6. A secondary estimate of a cheaper design: if the review read only the lessons that §4am's three arms
+   or §4an's P name, the reach it would keep and the lessons it would read.
+
+**Decision rule.** The review holds when all three are true: the lower bound of its reach is at least
+70%; at most 5 lessons are named wrongly at the median task; and it flags both ledger lessons. The 70
+and the 5 are judgement calls set before the run: a review that may miss more than three needed
+lessons in ten, or names more than five wrong ones on a typical pull request, would not earn a place
+on it. If it holds, it ships as a CI comment, never a gate (#390: a gate only after a larger positive
+set). If it fails, its misses are read, and a changed prompt is measured only under a new
+pre-registration, on tasks it has not seen.
+
+**Predictions** (not decision rules):
+- its reach is above 82.4%, the best any briefing arm reached on these tasks (§4am's three together);
+- it flags both ledger lessons;
+- it still misses a needed lesson on more than a third of the tasks;
+- at most 5 lessons are named wrongly at the median task.
+
+**What follows.** If it ships, the counts of which lessons apply become the source §4am's standing set
+needs. Its figures stay inside this section until they hold on a fresh holdout and #394 passes.
+
+**Budget.** About 425 Sonnet calls, three at a time, on the maintainer's subscription.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
