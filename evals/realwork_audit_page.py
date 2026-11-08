@@ -3,7 +3,8 @@
 
 Reads evals/bench/private/realwork/audit-pairs.json (written by `realwork_audit.py sample`) and
 writes audit.html beside it: each pair's change (the PR's title, issue, files and diff) and its
-lesson, with four answers under the judge's own definitions. The page holds no judge verdict and
+lesson, with four answers under the judge's own definitions, and, once realwork_suggest.py has
+run, the suggested answer to accept or change (decoys included, unmarked). The page holds no judge verdict and
 no stratum, and shows the pairs in their shuffled order. Labels are saved, one document per pair,
 to the artifact's db collection `labels`; they are read back with ArtifactData and scored by
 `realwork_audit.py score`. The page stays private: it is published as a private artifact.
@@ -83,6 +84,13 @@ h2 { font: 600 1.1rem/1.3 var(--display); margin: 0; text-wrap: balance; }
 .verdicts button[data-v="no"].on { border-color: var(--no); color: var(--no); }
 .verdicts button[data-v="unsure"].on { border-color: var(--unsure); color: var(--unsure); }
 .verdicts button:disabled { opacity: .5; cursor: not-allowed; }
+.verdicts button.sugg { border-style: dashed; border-color: var(--accent); }
+.suggest { border: 1px dashed var(--accent); border-radius: 6px; padding: 10px 12px; display: grid; gap: 6px; }
+.suggest .head { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; justify-content: space-between; }
+.suggest .ans { font-weight: 600; } .suggest .line { font: .78rem/1.4 var(--mono); color: var(--muted); white-space: pre-wrap; overflow-wrap: anywhere; }
+.suggest button { font: 600 .85rem var(--body); padding: 6px 12px; border-radius: 6px; border: 1.5px solid var(--accent); background: var(--panel); color: var(--accent); cursor: pointer; }
+.suggest button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.warnline { color: var(--needed); font-weight: 500; }
 .nav { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; }
 .nav button { font: 500 .85rem var(--body); padding: 7px 12px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
 .dots { display: flex; flex-wrap: wrap; gap: 4px; }
@@ -95,7 +103,8 @@ h2 { font: 600 1.1rem/1.3 var(--display); margin: 0; text-wrap: balance; }
   <header>
     <div>
       <h1>Lesson judge audit</h1>
-      <p class="sub">For each pair, decide whether this change needed the lesson. Your answers are checked against a model judge's, which you do not see. Answer from the change and the lesson alone.</p>
+      <p class="sub">For each pair, decide whether this change needed the lesson. Each pair comes with a suggested answer from a model; accept it or change it. Your answers are then checked against a different model judge, which you do not see.</p>
+      <p class="sub warnline">Some suggestions are deliberately wrong, to check that the review is yours. Read each one against the change before accepting it.</p>
     </div>
     <div class="progress"><span id="count">0 of 0 labelled</span><div class="bar"><i id="fill"></i></div><span id="status" class="note">Connecting to saved labels…</span></div>
   </header>
@@ -134,6 +143,11 @@ h2 { font: 600 1.1rem/1.3 var(--display); margin: 0; text-wrap: balance; }
       <div class="field" id="lsymptom"><b>Symptom</b><p></p></div>
       <div class="field" id="lfix"><b>Fix</b><p></p></div>
       <div class="field" id="lbody"><b>Body</b><p></p></div>
+      <div class="suggest" id="suggest">
+        <div class="head"><span>Suggested: <span class="ans" id="sans"></span></span><button type="button" id="accept">Accept <kbd>Enter</kbd></button></div>
+        <div id="sreason"></div>
+        <div class="line" id="sline"></div>
+      </div>
       <div class="verdicts" id="verdicts">
         <button type="button" data-v="needed">Needed<kbd>1</kbd></button>
         <button type="button" data-v="related">Related<kbd>2</kbd></button>
@@ -188,7 +202,18 @@ function render() {
   $('ltitle').textContent = L.title || '';
   field('lsymptom', L.symptom); field('lfix', L.fix); field('lbody', L.body);
   const mine = labels[p.id];
-  for (const b of $('verdicts').querySelectorAll('button')) { b.classList.toggle('on', b.dataset.v === mine); b.disabled = !db || !canWrite; }
+  const sg = (DATA.suggestions || {})[p.id];
+  $('suggest').hidden = !sg;
+  if (sg) {
+    $('sans').textContent = {needed: 'Needed', related: 'Related', no: 'No', unsure: 'Unsure'}[sg.answer] || sg.answer;
+    $('sreason').textContent = sg.reason || '';
+    $('sline').textContent = sg.line ? `rests on: ${sg.line}` : '';
+    $('accept').disabled = !db || !canWrite;
+  }
+  for (const b of $('verdicts').querySelectorAll('button')) {
+    b.classList.toggle('on', b.dataset.v === mine); b.classList.toggle('sugg', !!sg && b.dataset.v === sg.answer);
+    b.disabled = !db || !canWrite;
+  }
   const done = pairs.filter((q) => labels[q.id]).length;
   $('count').textContent = `${done} of ${pairs.length} labelled`;
   $('fill').style.width = `${(100 * done / pairs.length).toFixed(1)}%`;
@@ -206,7 +231,9 @@ async function choose(v) {
   if (!db || !canWrite) return;
   const p = pairs[at]; labels[p.id] = v; render();
   try {
-    await db.collection('labels').doc(p.id).set({verdict: v, at: new Date().toISOString()});
+    const sg = (DATA.suggestions || {})[p.id];
+    await db.collection('labels').doc(p.id).set({verdict: v, suggested: sg ? sg.answer : null,
+      kept: sg ? v === sg.answer : null, at: new Date().toISOString()});
     $('status').textContent = 'Saved'; $('status').className = 'note';
     nextOpen();
   } catch (e) {
@@ -216,11 +243,13 @@ async function choose(v) {
   }
 }
 $('verdicts').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) choose(b.dataset.v); });
+$('accept').onclick = () => { const sg = (DATA.suggestions || {})[pairs[at].id]; if (sg) choose(sg.answer); };
 $('prev').onclick = () => go(at - 1); $('next').onclick = () => go(at + 1); $('nextopen').onclick = nextOpen;
 document.addEventListener('keydown', (e) => {
   if (e.target.closest('input, textarea')) return;
   const map = {'1': 'needed', '2': 'related', '3': 'no', '4': 'unsure'};
   if (map[e.key]) choose(map[e.key]);
+  else if (e.key === 'Enter' && !e.target.closest('button')) { const sg = (DATA.suggestions || {})[pairs[at].id]; if (sg) choose(sg.answer); }
   else if (e.key === 'ArrowRight') go(at + 1);
   else if (e.key === 'ArrowLeft') go(at - 1);
 });
@@ -243,6 +272,9 @@ render();
 def main() -> int:
     """Write audit.html from the private sample."""
     data = json.loads((PRIVATE / "audit-pairs.json").read_text())
+    sugg = PRIVATE / "audit-suggestions.json"
+    if sugg.exists():
+        data["suggestions"] = json.loads(sugg.read_text())
     blob = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
     (PRIVATE / "audit.html").write_text(PAGE.replace("__DATA__", blob))
     print(f"wrote {PRIVATE / 'audit.html'} · {len(data['pairs'])} pairs · {len(blob) // 1024} KiB of data")

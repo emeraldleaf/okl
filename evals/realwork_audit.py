@@ -8,10 +8,12 @@ nor the stratum, to evals/bench/private/realwork/audit-pairs.json, and the key (
 stratum per pair) to audit-key.json beside it. Both stay private until the audit is scored, so the
 person labelling never sees what the judge said.
 
-`score` reads the maintainer's labels (a JSON object of pair id to needed, related, no or unsure),
-reports Cohen's kappa on needed against not, and the judge's misses among the pairs the
-maintainer called needed, per stratum; it passes at kappa >= 0.6 with at most 2 misses in the
-random stratum, and writes evals/realwork/audit.json, which evals/realwork_reach.py reads.
+`score` reads the maintainer's labels (pair id to an answer, or the page's {verdict, suggested,
+kept} documents), reports Cohen's kappa on needed against not, and the judge's misses among the
+pairs the maintainer called needed, per stratum; with suggestions (as amended), also the decoys
+kept, kappa where the suggester and the judge disagree, and kappa between them. It passes when every
+pair is labelled, kappa >= 0.6, at most 2 misses in the random stratum and at most 5 decoys kept,
+and writes evals/realwork/audit.json, which evals/realwork_reach.py reads.
 
     python3 evals/realwork_audit.py sample
     python3 evals/realwork_audit.py score <labels.json>
@@ -33,7 +35,7 @@ LABELS = REPO / "evals" / "realwork" / "labels.jsonl"
 PRIVATE = REPO / "evals" / "bench" / "private" / "realwork"
 STORE = PRIVATE / "store.db"
 OUT = REPO / "evals" / "realwork" / "audit.json"
-PER_STRATUM, SEED, KAPPA_BAR, RANDOM_MISS_BAR = 40, 4, 0.6, 2
+PER_STRATUM, SEED, KAPPA_BAR, RANDOM_MISS_BAR, DECOYS_KEPT_MAX = 40, 4, 0.6, 2, 5
 WORD = re.compile(r"[a-z][a-z0-9_]{3,}")
 
 
@@ -99,29 +101,54 @@ def sample() -> int:
     return 0
 
 
+def kappa(a: list[bool], b: list[bool]) -> float:
+    """Cohen's kappa between two lists of needed/not."""
+    n = len(a)
+    if not n:
+        return 0.0
+    po = sum(x == y for x, y in zip(a, b, strict=True)) / n
+    pa, pb = sum(a) / n, sum(b) / n
+    pe = pa * pb + (1 - pa) * (1 - pb)
+    return (po - pe) / (1 - pe) if pe < 1 else 1.0
+
+
 def score(path: str) -> int:
-    """Score the maintainer's labels against the judge's; write audit.json."""
+    """Score the maintainer's labels against the judge's; write audit.json. `path` holds the page's
+    labels: pair id -> an answer, or a document {verdict, suggested, kept}."""
     key = json.loads((PRIVATE / "audit-key.json").read_text())
-    human = json.loads(Path(path).read_text())
+    raw = json.loads(Path(path).read_text())
+    human = {k: (v.get("verdict") if isinstance(v, dict) else v) for k, v in raw.items()}
     pairs = [(k, v) for k, v in key.items() if human.get(k) in ("needed", "related", "no", "unsure")]
     h = [human[k] == "needed" for k, _ in pairs]
     j = [v["judge"] == "needed" for _, v in pairs]
-    n = len(pairs)
-    po = sum(a == b for a, b in zip(h, j, strict=True)) / n if n else 0.0
-    ph, pj = sum(h) / n if n else 0.0, sum(j) / n if n else 0.0
-    pe = ph * pj + (1 - ph) * (1 - pj)
-    kappa = (po - pe) / (1 - pe) if pe < 1 else 1.0
     misses = {s: sum(1 for (k, v) in pairs if v["stratum"] == s and human[k] == "needed" and v["judge"] != "needed")
               for s in ("needed", "no-overlap", "no-random")}
-    passed = kappa >= KAPPA_BAR and misses["no-random"] <= RANDOM_MISS_BAR
     out = {"section": "4al", "step": "audit", "at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%MZ"),
-           "labelled": n, "kappa": round(kappa, 3), "judge_misses": misses,
+           "labelled": len(pairs), "of": len(key), "kappa": round(kappa(h, j), 3), "judge_misses": misses,
            "human_needed": sum(h), "unsure": sum(1 for k, _ in pairs if human[k] == "unsure"),
-           "bar": {"kappa": KAPPA_BAR, "random_misses": RANDOM_MISS_BAR}, "passed": passed}
+           "bar": {"kappa": KAPPA_BAR, "random_misses": RANDOM_MISS_BAR, "decoys_kept_max": DECOYS_KEPT_MAX}}
+    suggested = any("decoy" in v for v in key.values())
+    if suggested:
+        decoys = [(k, v) for k, v in pairs if v.get("decoy")]
+        kept = sum(1 for k, v in decoys if human[k] == v["shown"])
+        split = [(k, v) for k, v in pairs if not v.get("decoy") and (v["suggested"] == "needed") != (v["judge"] == "needed")]
+        shown_kept = sum(1 for k, v in pairs if not v.get("decoy") and human[k] == v["shown"])
+        out["suggestions"] = {
+            "decoys_kept": kept, "decoys_labelled": len(decoys), "void": kept > DECOYS_KEPT_MAX,
+            "kept_rate_not_decoy": round(shown_kept / max(1, len(pairs) - len(decoys)), 3),
+            "kappa_suggester_judge": round(kappa([v["suggested"] == "needed" for _, v in pairs],
+                                                 [v["judge"] == "needed" for _, v in pairs]), 3),
+            "kappa_where_suggester_and_judge_disagree": round(kappa(
+                [human[k] == "needed" for k, _ in split], [v["judge"] == "needed" for _, v in split]), 3),
+            "pairs_where_they_disagree": len(split)}
+    complete = len(pairs) == len(key)
+    void = bool(out.get("suggestions", {}).get("void"))
+    out["passed"] = (complete and not void and out["kappa"] >= KAPPA_BAR and misses["no-random"] <= RANDOM_MISS_BAR)
+    out["status"] = ("VOID: more decoys kept than the bar allows" if void
+                     else "incomplete" if not complete else "passed" if out["passed"] else "failed")
     OUT.write_text(json.dumps(out, indent=1) + "\n")
     print(json.dumps(out, indent=1))
-    return 0 if passed else 1
-
+    return 0 if out["passed"] else 1
 
 if __name__ == "__main__":
     if len(sys.argv) >= 2 and sys.argv[1] == "sample":
