@@ -14,6 +14,7 @@ to the artifact's db collection `labels`; they are read back with ArtifactData a
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 PRIVATE = Path(__file__).resolve().parent / "bench" / "private" / "realwork"
@@ -91,6 +92,10 @@ h2 { font: 600 1.1rem/1.3 var(--display); margin: 0; text-wrap: balance; }
 .suggest button { font: 600 .85rem var(--body); padding: 6px 12px; border-radius: 6px; border: 1.5px solid var(--accent); background: var(--panel); color: var(--accent); cursor: pointer; }
 .suggest button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .warnline { color: var(--needed); font-weight: 500; }
+.look { display: grid; gap: 8px; }
+.look .ex { border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.look .exfile { font: .75rem var(--mono); color: var(--muted); padding: 4px 10px; background: var(--hunk); }
+details.whole summary { cursor: pointer; font-weight: 500; color: var(--accent); }
 .nav { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; }
 .nav button { font: 500 .85rem var(--body); padding: 7px 12px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; }
 .dots { display: flex; flex-wrap: wrap; gap: 4px; }
@@ -102,9 +107,9 @@ h2 { font: 600 1.1rem/1.3 var(--display); margin: 0; text-wrap: balance; }
 <div class="wrap">
   <header>
     <div>
-      <h1>Lesson judge audit</h1>
-      <p class="sub">For each pair, decide whether this change needed the lesson. Each pair comes with a suggested answer from a model; accept it or change it. Your answers are then checked against a different model judge, which you do not see.</p>
-      <p class="sub warnline">Some suggestions are deliberately wrong, to check that the review is yours. Read each one against the change before accepting it.</p>
+      <h1 id="pagetitle">Lesson judge audit</h1>
+      <p class="sub" id="intro">For each pair, decide whether this change needed the lesson. Each pair comes with a suggested answer from a model; accept it or change it. Your answers are then checked against a different model judge, which you do not see.</p>
+      <p class="sub warnline" id="decoywarn">Some suggestions are deliberately wrong, to check that the review is yours. Read each one against the change before accepting it.</p>
     </div>
     <div class="progress"><span id="count">0 of 0 labelled</span><div class="bar"><i id="fill"></i></div><span id="status" class="note">Connecting to saved labels…</span></div>
   </header>
@@ -134,7 +139,8 @@ h2 { font: 600 1.1rem/1.3 var(--display); margin: 0; text-wrap: balance; }
       <div class="meta" id="prmeta"></div>
       <div id="issuebox"></div>
       <div class="paths" id="paths"></div>
-      <div class="diff" id="diff"></div>
+      <div class="look" id="look" hidden><span class="eyebrow">Look here first: the lines the two models pointed to</span><div id="excerpts" class="look"></div></div>
+      <details class="whole" id="wholebox" open><summary>The whole change</summary><div class="diff" id="diff"></div></details>
     </section>
     <section class="pane lesson-pane" aria-label="The lesson">
       <span class="eyebrow">The lesson</span>
@@ -167,6 +173,11 @@ h2 { font: 600 1.1rem/1.3 var(--display); margin: 0; text-wrap: balance; }
 <script>
 const DATA = JSON.parse(document.getElementById('data').textContent);
 const pairs = DATA.pairs, tasks = DATA.tasks;
+if (!DATA.suggestions) {
+  document.getElementById('decoywarn').hidden = true;
+  document.getElementById('intro').textContent = 'For each pair, decide whether this change needed the lesson. These are the pairs where two models disagreed, mixed with some where they agreed; you do not see either answer. Start with the lines the models pointed to, and open the whole change only when you need it.';
+  document.getElementById('pagetitle').textContent = 'Lesson audit: your call';
+}
 let labels = {}, at = 0, db = null, canWrite = true;
 const $ = (id) => document.getElementById(id);
 
@@ -198,6 +209,21 @@ function render() {
   }
   $('paths').textContent = t.paths.join('\n');
   diffView(t.diff);
+  const ex = p.excerpts || [];
+  $('look').hidden = !ex.length;
+  $('wholebox').open = !ex.length;
+  const exbox = $('excerpts'); exbox.replaceChildren();
+  for (const e of ex) {
+    const wrap = document.createElement('div'); wrap.className = 'ex';
+    const f = document.createElement('div'); f.className = 'exfile'; f.textContent = e.file || 'the change';
+    const d = document.createElement('div'); d.className = 'diff';
+    for (const line of e.text.split('\n')) {
+      const row = document.createElement('div');
+      row.className = line.startsWith('@@') ? 'h' : (line.startsWith('+') && !line.startsWith('+++')) ? 'a' : (line.startsWith('-') && !line.startsWith('---')) ? 'd' : '';
+      row.textContent = line || ' '; d.appendChild(row);
+    }
+    wrap.append(f, d); exbox.appendChild(wrap);
+  }
   $('ltype').textContent = L.type || 'Lesson';
   $('ltitle').textContent = L.title || '';
   field('lsymptom', L.symptom); field('lfix', L.fix); field('lbody', L.body);
@@ -232,7 +258,7 @@ async function choose(v) {
   const p = pairs[at]; labels[p.id] = v; render();
   try {
     const sg = (DATA.suggestions || {})[p.id];
-    await db.collection('labels').doc(p.id).set({verdict: v, suggested: sg ? sg.answer : null,
+    await db.collection(DATA.collection || 'labels').doc(p.id).set({verdict: v, suggested: sg ? sg.answer : null,
       kept: sg ? v === sg.answer : null, at: new Date().toISOString()});
     $('status').textContent = 'Saved'; $('status').className = 'note';
     nextOpen();
@@ -258,7 +284,7 @@ render();
   db = await claude.use('db');
   if (!db) { $('status').textContent = 'Labels cannot be saved in this view. Open the artifact in claude.ai while signed in.'; $('status').className = 'note warn'; render(); return; }
   const timer = setTimeout(() => { $('status').textContent = 'Saved labels have not loaded yet.'; $('status').className = 'note warn'; }, 10000);
-  db.collection('labels').onSnapshot((snap) => {
+  db.collection(DATA.collection || 'labels').onSnapshot((snap) => {
     labels = {}; snap.docs.forEach((d) => { const v = d.data()?.verdict; if (v) labels[d.id] = v; });
     if (!snap.metadata.fromCache) { clearTimeout(timer); $('status').textContent = 'Saved labels loaded'; $('status').className = 'note'; }
     render();
@@ -270,14 +296,18 @@ render();
 
 
 def main() -> int:
-    """Write audit.html from the private sample."""
-    data = json.loads((PRIVATE / "audit-pairs.json").read_text())
+    """Write the page: audit.html from the audit sample, or with `adjudicate`, adjudicate.html from
+    the pairs realwork_adjudicate.py drew (excerpts first, no suggestion, its own db collection)."""
+    adjudicate = len(sys.argv) > 1 and sys.argv[1] == "adjudicate"
+    data = json.loads((PRIVATE / ("adjudication-pairs.json" if adjudicate else "audit-pairs.json")).read_text())
     sugg = PRIVATE / "audit-suggestions.json"
-    if sugg.exists():
+    if sugg.exists() and not adjudicate:
         data["suggestions"] = json.loads(sugg.read_text())
     blob = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
-    (PRIVATE / "audit.html").write_text(PAGE.replace("__DATA__", blob))
-    print(f"wrote {PRIVATE / 'audit.html'} · {len(data['pairs'])} pairs · {len(blob) // 1024} KiB of data")
+    page = PAGE.replace("<title>Lesson Judge Audit</title>", "<title>Lesson Audit Adjudication</title>") if adjudicate else PAGE
+    out = PRIVATE / ("adjudicate.html" if adjudicate else "audit.html")
+    out.write_text(page.replace("__DATA__", blob))
+    print(f"wrote {out} · {len(data['pairs'])} pairs · {len(blob) // 1024} KiB of data")
     return 0
 
 
