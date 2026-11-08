@@ -5281,6 +5281,45 @@ merged after this date.
 **Budget.** About 100 Opus calls for the key, then about 570 Sonnet calls, three at a time, on the
 maintainer's subscription.
 
+**Result** (receipt `review-action-20261108-2050.json`; model-judged, not yet audited). It does not hold:
+one of the four bars is missed.
+
+| Bar | Result | |
+|---|---|---|
+| Reach on lessons calling for action, lower bound at least 70% | 81.6% (40 of 49), bootstrap [65.3, 94.1] | missed |
+| At most 5 raises wrong at the median task | 2 (maximum 9) | met |
+| At most 10 raised at the median task | 6 (maximum 25) | met |
+| Both ledger lessons raised on #388 | both | met |
+
+Of the 157 lessons labelled needed, the key sorted 101 as followed, 37 as not followed, 12 as check and 7
+as unclear, so 49 call for action, on 20 of the 25 tasks. A lesson calling for action went unraised on 6 of
+those 20 (30%, Wilson [14.5, 51.9]). The review raised 15 of the 101 followed lessons (14.9%). It raised
+200 lessons in all: 40 confirmed, 59 wrong and 101 unresolved. At the median pull request it cost 15 calls,
+279,282 tokens and 164 seconds of model time, $1.21 at API prices. Three predictions held (reach, fewer
+raises, fewer followed lessons raised); the fourth did not, since it missed on fewer than a third of tasks.
+
+**Decision, by the rule.** It does not ship as a CI comment.
+
+**The misses and raises, read as the rule requires; not pre-registered** (receipt
+`review-action-detail-20261108-2054.json`):
+- *The misses.* All 9 are lessons the key sorted as not followed; the review raised all 12 in the check
+  state. On 7 of the 9 it answered *done*, where the key names a narrower gap in a change that otherwise
+  follows the rule, and three of those are the one rule on exit codes. Its *done* has no room for *partly*.
+  This is a hypothesis, and the key's reasons have not been checked against the code.
+- *The sample.* 49 lessons is few, and the interval is wide. At this reach, about 97 would bring its lower
+  bound to the bar, by a rough scaling. That is a reason to collect more, not to lower the bar.
+- *The raises.* Of the 200, 44 are lessons labelled no, 15 ask for work already done, 99 are lessons the
+  judge called *related*, and 2 others. At the median pull request, 1 of the 6 is confirmed, 2 are wrong and
+  3 are unresolved. Five tasks with nothing calling for action still drew 2 to 7 raises.
+- *The ledger.* `seed:rag-defects:qz_fixtures` is raised only in the last part of #388, past the 60,000
+  characters §4ao read, so reading the whole change is what reached it. #388's misses had been read, so
+  this is in-sample.
+
+**What follows.** By the rule, a changed review is measured only under a new pre-registration, on pull
+requests merged after this date, with its sample size set so the interval can resolve. A review that
+raises one confirmed lesson among six is not yet a list an author should have to read, and whether the
+*related* raises are useful is what the audit (#394), extended to this key, would show.
+
 
 ## 5. Findings
 

@@ -1,0 +1,148 @@
+{
+ "section": "4ap misses and raises, not pre-registered",
+ "at": "2026-11-08T20:54Z",
+ "okl_commit": "8f484b13ac90cb56cd137a78b146a1120819a5f1",
+ "status": "model-judged, not yet audited (#394)",
+ "from_receipt": "review-action-20261108-2050.json",
+ "misses": [
+  {
+   "pr": 34,
+   "lesson": "n_58119d0a63d9",
+   "parts": 1,
+   "review_said": "none",
+   "key_state": "not_followed",
+   "key_why": "Giving CI a store is left as a manual instruction in a comment, and init's generated workflow is not wired to seed one as the issue suggested."
+  },
+  {
+   "pr": 35,
+   "lesson": "n_e7988ff536fb",
+   "parts": 1,
+   "review_said": "done",
+   "key_state": "not_followed",
+   "key_why": "The refusal paths return 2 and use stderr, but the test never asserts empty stdout and the too-old-service path has no test."
+  },
+  {
+   "pr": 37,
+   "lesson": "n_02cc84da158d",
+   "parts": 1,
+   "review_said": "none",
+   "key_state": "not_followed",
+   "key_why": "The info step ignores OKL_DATABASE_URL and announces the snapshot while the drift step uses the store when that variable is set, so store resolution is duplicated and disagrees."
+  },
+  {
+   "pr": 37,
+   "lesson": "n_e7988ff536fb",
+   "parts": 1,
+   "review_said": "done",
+   "key_state": "not_followed",
+   "key_why": "A committed snapshot entry missing `title` or carrying an invalid stamp date raises an uncaught exception and exits 1 rather than 2, and the refusal tests never assert empty stdout."
+  },
+  {
+   "pr": 37,
+   "lesson": "seed:dotnet-defects:nc_arch_reviewer",
+   "parts": 1,
+   "review_said": "done",
+   "key_state": "not_followed",
+   "key_why": "The workflow only uses a tracked okl-drift.json and the diff commits none, so this repo's CI still runs no drift check through the new path."
+  },
+  {
+   "pr": 77,
+   "lesson": "n_e7988ff536fb",
+   "parts": 2,
+   "review_said": "done",
+   "key_state": "not_followed",
+   "key_why": "cmd_reverify counts any non-zero verify result as failed and returns 1, so a verify that could not run (exit 2) looks like a finding."
+  },
+  {
+   "pr": 112,
+   "lesson": "n_31bde92d9003",
+   "parts": 1,
+   "review_said": "done",
+   "key_state": "not_followed",
+   "key_why": "Existing evidence is now preserved, but a cleared or new lesson marked `\"verified\": true` in a pack still appears to get a fresh stamp with no check or evidence behind it."
+  },
+  {
+   "pr": 112,
+   "lesson": "n_696a70084e1a",
+   "parts": 1,
+   "review_said": "done",
+   "key_state": "not_followed",
+   "key_why": "When the stored lesson has no stamp and the files match, `kw` is left as built, so a pack's `\"verified\": true` still takes the create path's clock, including on the re-seed after a files change cleared it."
+  },
+  {
+   "pr": 161,
+   "lesson": "seed:dotnet-canon:r_docs_review_surface",
+   "parts": 7,
+   "review_said": "done",
+   "key_state": "not_followed",
+   "key_why": "The PR changes the MCP surface, but the diagram it touches still depicts three tools and no deferred follow-up is named."
+  }
+ ],
+ "missed_by_word": {
+  "none": 2,
+  "done": 7,
+  "ask": 0,
+  "gap": 0
+ },
+ "raises": {
+  "total": 200,
+  "confirmed": 40,
+  "wrong_labelled_no": 44,
+  "wrong_already_followed": 15,
+  "unresolved_labelled_related": 99,
+  "unresolved_other": 2
+ },
+ "per_pr_median": {
+  "confirmed": 1,
+  "wrong": 2,
+  "unresolved": 3
+ },
+ "raised_on_tasks_with_no_action": {
+  "64": 7,
+  "67": 3,
+  "70": 2,
+  "203": 4,
+  "212": 4
+ },
+ "by_length": [
+  {
+   "group": "long, labelled again",
+   "tasks": 6,
+   "of_tasks": 25,
+   "calling_for_action": 19,
+   "confirmed": 17,
+   "raised": 79,
+   "wrong": 26
+  },
+  {
+   "group": "short",
+   "tasks": 19,
+   "of_tasks": 25,
+   "calling_for_action": 30,
+   "confirmed": 23,
+   "raised": 121,
+   "wrong": 33
+  }
+ ],
+ "ledger_by_part_on_388": {
+  "eval-scripts-no-exposure": [
+   "ask",
+   "none",
+   "none",
+   "none",
+   "gap"
+  ],
+  "seed:rag-defects:qz_fixtures": [
+   "none",
+   "none",
+   "none",
+   "none",
+   "gap"
+  ]
+ },
+ "lessons_for_the_bar_at_this_reach": {
+  "note": "the interval's width scaled by the square root of the sample, a rough estimate",
+  "had": 49,
+  "needed": 97
+ }
+}
