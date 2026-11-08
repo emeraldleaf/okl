@@ -4739,7 +4739,8 @@ under the standard in [docs/EVALUATION.md](../docs/EVALUATION.md).
   generation only, not the full enforced loop end to end.
 - **Recall is pooled, so a lesson no arm ranks near the top is never counted as missed.** Every
   recall figure from §4x on judges only the lessons some arm returned. §4ak replayed two real misses:
-  both ranked between 54th and 299th of 364, by the full-text search and by its fusion with an embedding,
+  neither was a full-text candidate for the prompt, and every rank recorded ran from 54th to 299th, of 311 to 364 candidates,
+  by the full-text search and by its fusion with an embedding,
   so neither could have entered a pool. The
   recall these sections report is recall of what okl's own arms can find, not of what applied.
 - **Both models are one vendor's; "budget model" ≈ haiku.** The local-model version of
