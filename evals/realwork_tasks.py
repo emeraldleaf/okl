@@ -99,6 +99,41 @@ def frozen_commit(pr: dict) -> tuple[str | None, str]:
     return (commits[-1][0], "last commit, no review") if commits else (None, "no commits")
 
 
+def freeze_task(p: dict, pr: dict, group: str, db: Path) -> dict:
+    """One pull request frozen as its code was first written: {"task": ...}, {"skip": why} or {"leak": ids}."""
+    n = p["number"]
+    sha, why = frozen_commit(pr)
+    merge = (p.get("mergeCommit") or {}).get("oid")
+    if not sha or not merge or not git("cat-file", "-t", sha) or not git("cat-file", "-t", merge):
+        return {"skip": why if not sha else "commit not in local history"}
+    base = git("merge-base", sha, f"{merge}^1")
+    if not base:
+        return {"skip": "no merge base"}
+    at = int(git("show", "-s", "--format=%ct", sha)) * 1000
+    issues = []
+    for num in sorted({int(x) for x in CLOSES.findall(p.get("body") or "")}):
+        r = subprocess.run(["gh", "issue", "view", str(num), "-R", GH_REPO, "--json", "title,body,createdAt"],
+                           capture_output=True, text=True)
+        if r.returncode == 0:
+            i = json.loads(r.stdout)
+            if ms(i["createdAt"]) < at:
+                issues.append({"number": num, "title": i["title"], "body": i["body"] or ""})
+    lessons = lessons_at(db, at)
+    text = " ".join([p["title"], *(i["title"] + " " + i["body"] for i in issues)]).lower()
+    named = [lesson["id"] for lesson in lessons
+             if lesson["id"].lower() in text or (len(lesson["title"]) > 20 and lesson["title"].lower() in text)]
+    if named:
+        return {"leak": named}
+    paths = [f for f in git("diff", "--name-only", f"{base}..{sha}").splitlines() if f]
+    size = len(git("diff", f"{base}..{sha}"))
+    print(f"  #{n} {group:6} frozen at {sha[:7]} · {len(paths)} files · {size} chars · "
+          f"{len(issues)} issue(s) · {len(lessons)} lessons", file=sys.stderr)
+    return {"task": {"pr": n, "group": group, "base": base, "commit": sha, "frozen": why,
+                     "at": datetime.fromtimestamp(at / 1000, UTC).strftime("%Y-%m-%dT%H:%MZ"),
+                     "title": p["title"], "issues": issues, "paths": paths, "change_chars": size,
+                     "cut": size > 60000, "lessons": [lesson["id"] for lesson in lessons]}}
+
+
 def main() -> int:
     """Draw, freeze and write the tasks; print the receipt."""
     prs = json.loads(subprocess.run(
@@ -122,40 +157,14 @@ def main() -> int:
         group = "review" if resolved else "none"
         if got[group] >= want[group]:
             continue
-        sha, why = frozen_commit(pr)
-        merge = (p.get("mergeCommit") or {}).get("oid")
-        if not sha or not merge or not git("cat-file", "-t", sha) or not git("cat-file", "-t", merge):
-            skipped.append({"pr": n, "why": why if not sha else "commit not in local history"})
-            continue
-        base = git("merge-base", sha, f"{merge}^1")
-        if not base:
-            skipped.append({"pr": n, "why": "no merge base"})
-            continue
-        at = int(git("show", "-s", "--format=%ct", sha)) * 1000
-        issues = []
-        for num in sorted({int(x) for x in CLOSES.findall(p.get("body") or "")}):
-            r = subprocess.run(["gh", "issue", "view", str(num), "-R", GH_REPO, "--json", "title,body,createdAt"],
-                               capture_output=True, text=True)
-            if r.returncode == 0:
-                i = json.loads(r.stdout)
-                if ms(i["createdAt"]) < at:
-                    issues.append({"number": num, "title": i["title"], "body": i["body"] or ""})
-        lessons = lessons_at(db, at)
-        text = " ".join([p["title"], *(i["title"] + " " + i["body"] for i in issues)]).lower()
-        named = [lesson["id"] for lesson in lessons
-                 if lesson["id"].lower() in text or (len(lesson["title"]) > 20 and lesson["title"].lower() in text)]
-        if named:
-            leaks.append({"pr": n, "names": named})
-            continue
-        paths = [f for f in git("diff", "--name-only", f"{base}..{sha}").splitlines() if f]
-        size = len(git("diff", f"{base}..{sha}"))
-        tasks.append({"pr": n, "group": group, "base": base, "commit": sha, "frozen": why,
-                      "at": datetime.fromtimestamp(at / 1000, UTC).strftime("%Y-%m-%dT%H:%MZ"),
-                      "title": p["title"], "issues": issues, "paths": paths, "change_chars": size,
-                      "cut": size > 60000, "lessons": [lesson["id"] for lesson in lessons]})
-        got[group] += 1
-        print(f"  #{n} {group:6} frozen at {sha[:7]} · {len(paths)} files · {size} chars · "
-              f"{len(issues)} issue(s) · {len(lessons)} lessons", file=sys.stderr)
+        frozen = freeze_task(p, pr, group, db)
+        if "skip" in frozen:
+            skipped.append({"pr": n, "why": frozen["skip"]})
+        elif "leak" in frozen:
+            leaks.append({"pr": n, "names": frozen["leak"]})
+        else:
+            tasks.append(frozen["task"])
+            got[group] += 1
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text("".join(json.dumps(t, ensure_ascii=False) + "\n" for t in tasks))
     receipt = {"section": "4al", "built": datetime.now(UTC).strftime("%Y-%m-%dT%H:%MZ"),
