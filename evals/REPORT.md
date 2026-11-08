@@ -4758,6 +4758,53 @@ in CI's end-to-end job (step 1) on every pull request, failing if reach falls be
 **Budget.** About 600 judge calls on the maintainer's subscription, three at a time, and the
 maintainer's labels for the audit.
 
+### Result (2026-11-08): model-judged, not yet audited
+
+Receipt `realwork-reach-20261108-1548.json` (the tasks of be11c90; the judge's labels, prompt
+b1dbb8c24bbce0de; the store snapshot whose sha256 the tasks receipt names). **Every figure here is
+model-judged and not yet audited (#394).** So far the judge is checked by an independent model, which
+agrees with it on 109 of the 120 audit pairs (κ 0.78), and by the ledger's two known positives, which
+it labelled needed.
+
+**The labels.** 47 of the 50 tasks needed at least one lesson: 364 of the 14,103 task-lesson pairs, a
+median of 5 a task (18 at most), none unsure. 7 of the 10 tasks with no review thread needed one.
+
+**Reach**, the share of needed lessons the briefing named, in full or in one line (the default is the
+tiered decision with warm on, as this repository runs; intervals from a bootstrap over tasks):
+
+| channel | tasks | default: named | default: in full | floor: named |
+|---|---|---|---|---|
+| issue | the 13 with an issue | 37.5% (45 of 120) | 17.5% | 28.3% |
+| title | 47 | 26.9% [22.1, 32.2] | 9.3% | 25.8% |
+| issue and title | 47 | 29.4% [24.7, 34.5] | 11.0% | 25.0% |
+| paths (`okl check --path`) | 47 | 2.5% [1.0, 4.1] | 2.5% | 2.5% |
+| all four together | 47 | **36.0% [29.5, 42.4]** | 15.4% [11.2, 19.8] | 32.1% [26.4, 38.1] |
+
+Per task, the four channels together named every needed lesson on 3 of the 47 tasks: on 44 (94%,
+Wilson 83 to 98%) they missed at least one.
+
+**Ranks.** Fused with the potion embedding, the needed lessons' median rank among the lessons each
+task's store held was 42.5; 121 of the 364 (33%) ranked in the first 17, about a briefing's size, and
+193 (53%) in the first 50.
+
+**Over-briefing.** Across the 50 tasks the four channels named 582 lessons the judge labelled not
+needed, 92 of them on the 10 tasks with no review thread.
+
+**The warm model** fell back to the full-text search on 5 briefings, on the three longest issue texts
+(1,650 to 2,583 characters), as the amendment above provides (#395). 18 other tries answered on a retry.
+
+**Predictions.** All three held. Through issue and title, the default missed a needed lesson in full
+on 46 of 47 tasks, more than half. Paths reached 9 needed lessons no text channel reached. The four
+channels together named 36% of the needed lessons, under 70%.
+
+**What follows, as registered.** The four channels' task-level failure rate, named, is 94%, over the
+20% bar, so the review of every lesson against a diff is built next (#390 step 3), measured on these
+tasks with Sonnet so the labeller and the arm differ. A first sign it reaches this class: the judge,
+which is such a review, labelled both of the ledger's known positives needed. These tasks are the
+calibration set for the conformal cutoff; with the needed lessons at a median rank of 42.5, an honest
+90% cutoff will be deep, and its briefing size will be reported beside it. Outside this section, none
+of these figures is quoted until #394 passes.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
