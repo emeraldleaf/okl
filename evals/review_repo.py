@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""REPORT §4aq: the revised review with the repository to read, on pull requests opened after it was written.
+"""REPORT §4aq: the revised review with the repository to read, on 50 pull requests no review has read.
 
 The steps run in order, and each refuses until the one before it is complete, so the key is finished
 before any review exists for these tasks:
 
-    python3 evals/review_repo.py status      # how many eligible pull requests have merged
-    python3 evals/review_repo.py freeze      # freeze the first 50, once there are 50
+    python3 evals/review_repo.py status      # how many pull requests are in the pool
+    python3 evals/review_repo.py freeze      # freeze 50, in the fixed draw order
     python3 evals/review_repo.py key         # Opus: labels, then each lesson's state with the repository to read
     python3 evals/review_repo.py run         # Sonnet: the review of §4ap, then the repository read for each "ask"
     python3 evals/review_repo.py judge       # Opus: is each raise true, and would a maintainer act on it
@@ -47,7 +47,7 @@ import realwork_reach as rr
 import realwork_tasks as rt
 import review_action as ra
 
-BOUNDARY, N_TASKS = "2026-11-09T00:00:00Z", 50   # opened on or after this time; the first 50 to merge
+POOL_UNTIL, N_TASKS = "2026-11-08T00:23:00Z", 50   # §4al's pool, as it stood when its tasks were frozen (REPORT §4aq's amendment)
 FIRST_PROMPT = "03a44686243e047b"   # §4ap's first pass, unchanged
 W = SimpleNamespace(home=lr.PRIVATE, tasks=rr.REPO / "evals" / "realwork" / "tasks-4aq.jsonl", store=lr.PRIVATE / "store-4aq.db")
 LABELS, STATES, FIRST, USAGE, SETTLED, VERDICTS, DECOYS = ("4aq-labels.jsonl", "4aq-states.jsonl", "4aq-first.jsonl", "4aq-usage.jsonl",
@@ -141,11 +141,13 @@ PROMPTS = {"states": sha(KEY_PROMPT), "settle": sha(SETTLE_PROMPT), "judge": sha
 
 
 def eligible() -> list[dict]:
-    """Pull requests opened on or after the boundary and merged, not by a bot, in the order they merged."""
+    """The pull requests §4al's draw could have taken and did not, none by a bot, in the fixed draw order."""
     out = subprocess.run(["gh", "pr", "list", "-R", rt.GH_REPO, "--state", "merged", "--limit", "500", "--json",
                           "number,createdAt,mergedAt,title,body,mergeCommit,author"], capture_output=True, text=True, check=True).stdout
-    prs = [p for p in json.loads(out) if p["createdAt"] >= BOUNDARY and not (p.get("author") or {}).get("is_bot")]
-    return sorted(prs, key=lambda p: p["mergedAt"])
+    read = {json.loads(line)["pr"] for line in rr.TASKS.read_text().splitlines() if line.strip()}
+    prs = [p for p in json.loads(out) if p["createdAt"][:10] >= rt.SINCE and p["mergedAt"] <= POOL_UNTIL
+           and p["number"] not in read and not (p.get("author") or {}).get("is_bot")]
+    return sorted(prs, key=lambda p: sha(f"4aq:{p['number']}"))
 
 
 def snapshot() -> str:
@@ -571,9 +573,9 @@ def score(write: bool) -> int:
 
 
 def status() -> int:
-    """How many eligible pull requests have merged so far."""
+    """How many pull requests are in the pool, and whether that is enough."""
     got = eligible()
-    print(json.dumps({"eligible_merged": len(got), "needed": N_TASKS, "ready": len(got) >= N_TASKS, "opened_on_or_after": BOUNDARY}))
+    print(json.dumps({"in_pool": len(got), "needed": N_TASKS, "ready": len(got) >= N_TASKS, "merged_by": POOL_UNTIL}))
     return 0
 
 

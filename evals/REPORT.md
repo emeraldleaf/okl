@@ -5350,6 +5350,19 @@ before merging if none, with the store as it stood at that commit. One whose tit
 is left out and reported, and the next is taken. The 50 is fixed now and does not move with the results. At
 §4ap's rate of lessons calling for action it would give about 98, near the 97 §4ap's rough scaling asked for.
 
+**Amended before any task was frozen and before any model read one (2026-11-09).** The maintainer will not
+wait about ten days for new pull requests, so the tasks above are replaced. The tasks are now 50 of the 149
+pull requests §4al's draw could have taken and did not: created on or after 2026-09-15, merged by the time
+§4al's tasks were frozen (2026-11-08T00:23Z), not by a bot, taken in the order of sha256("4aq:" + number),
+smallest first, and frozen the same way. No review, label or sort exists for any of them. This sets aside
+§4ap's statement that a changed review is measured only on pull requests merged after that date, and the
+trade is this. These tasks are not later in time: they come from the same period as the 50 whose misses
+shaped the review, so a pass says less about future work than the original plan would have. Their stores
+were smaller than today's, so at today's size raises and cost would likely be higher. The bars, the sample
+size, the prompts and the order of key, review and judge do not change. If it holds, it ships as a comment
+that cannot block a merge, and the pull requests opened after this date become the later holdout that must
+agree before any figure is quoted outside this section.
+
 **The answer key, finished before the review runs.** Opus. `evals/review_repo.py key`; `run` refuses until
 it is complete.
 1. *Labels.* Every lesson on every task, against the whole change, with §4al's prompt (`b1dbb8c24bbce0de`).
