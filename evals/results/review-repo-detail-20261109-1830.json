@@ -1,0 +1,282 @@
+{
+ "section": "4aq misses and raises, not pre-registered",
+ "at": "2026-11-09T18:30Z",
+ "okl_commit": "20d93bd87fc0f2998d62f777f1a6410f3a547cc7",
+ "status": "model-judged, not yet audited (#394)",
+ "from_receipt": "review-repo-20261109-1827.json",
+ "misses": [
+  {
+   "pr": 265,
+   "lesson": "doc-claim-governs-doc-and-code",
+   "first_pass": "done",
+   "repository_read": null,
+   "sorted_as": "not_followed",
+   "reason": "tests/test_docs.py now recomputes the never-reproduced sentence, but the README and REPORT \u00a72b noise-floor figures (21 and 26 points), the claim that had gone stale at 17, still have no check.",
+   "change_chars": 50646
+  },
+  {
+   "pr": 265,
+   "lesson": "n_6b65aa35593c",
+   "first_pass": "done",
+   "repository_read": null,
+   "sorted_as": "not_followed",
+   "reason": "tests/test_docs.py recomputes the pool and never-reproduced counts from receipts, but the re-transcribed 21- and 26-point floor in README.md and evals/REPORT.md has no recomputing test.",
+   "change_chars": 50646
+  },
+  {
+   "pr": 265,
+   "lesson": "pooled-receipts-miss-report-corrections",
+   "first_pass": "done",
+   "repository_read": null,
+   "sorted_as": "not_followed",
+   "reason": "The new _arm_counts in tests/test_docs.py pools every receipt from raw rows and skips unevaluable ones but not the PLAN_ONLY list that _pool applies for \u00a74j's excluded sample.",
+   "change_chars": 50646
+  },
+  {
+   "pr": 265,
+   "lesson": "scope-literature-gap-claims",
+   "first_pass": "done",
+   "repository_read": null,
+   "sorted_as": "not_followed",
+   "reason": "The DreamBench row in docs/RELATED-WORK.md still says 'What no benchmark reports' about stale detection, unscoped, though the same page now admits other work measures it.",
+   "change_chars": 50646
+  },
+  {
+   "pr": 89,
+   "lesson": "n_ead8e0a2b43d",
+   "first_pass": "done",
+   "repository_read": null,
+   "sorted_as": "check",
+   "reason": "docs/GETTING-STARTED.md states the merge-commit requirement, but the branch commits stamped in okl-drift.json only survive if the live repo settings still force a merge commit.",
+   "change_chars": 17976
+  },
+  {
+   "pr": 326,
+   "lesson": "doc-claim-governs-doc-and-code",
+   "first_pass": "done",
+   "repository_read": null,
+   "sorted_as": "not_followed",
+   "reason": "`ci/check-agent-neutral.py` matches surfaces on unnormalised text with `[- ]`, so a mention wrapped across lines passes, against the lesson's normalise-whitespace fix; `docs/decisions/2026-10-05-records-not-an-ontology-store.md:81` is one.",
+   "change_chars": 134
+  },
+  {
+   "pr": 326,
+   "lesson": "docs-agent-neutral",
+   "first_pass": "done",
+   "repository_read": null,
+   "sorted_as": "not_followed",
+   "reason": "Unlabelled line-wrapped mentions remain at `docs/decisions/2026-10-10-org-lessons-ledger-repo.md:20` (\"The Stop\\nhook\") and `docs/decisions/2026-10-05-records-not-an-ontology-store.md:81` (\"a prompt\\nhook\"), and `ci/check-agent-neutral.py` cannot see them.",
+   "change_chars": 134
+  },
+  {
+   "pr": 266,
+   "lesson": "n_b74bad29fd87",
+   "first_pass": "done",
+   "repository_read": null,
+   "sorted_as": "not_followed",
+   "reason": "The _Backend docstring in src/okl/store.py now promises aliases are matchable, but the shared _backend_conformance in tests/test_okl.py never searches an alias, so the new test runs on the SQLite fixture only.",
+   "change_chars": 134
+  },
+  {
+   "pr": 280,
+   "lesson": "doc-claim-governs-doc-and-code",
+   "first_pass": "none",
+   "repository_read": null,
+   "sorted_as": "not_followed",
+   "reason": "README.md adds the 'one record in twenty' claim, but no drift rule or check in okl-drift.json or the tests compares it with core.COMMON_WORD_SHARE, so changing the constant turns nothing red.",
+   "change_chars": 134
+  },
+  {
+   "pr": 387,
+   "lesson": "importer-keeps-local-decision",
+   "first_pass": "done",
+   "repository_read": null,
+   "sorted_as": "not_followed",
+   "reason": "In core.py `record`/`_supersede`, a retraction on the old id is overwritten with 'superseded' while an already-held new id stays live, and seed.py `_held_under_old_names` skips team-superseded old records, so `okl seed` recreates them live under the new id.",
+   "change_chars": 30732
+  },
+  {
+   "pr": 387,
+   "lesson": "n_c95bdc056620",
+   "first_pass": "done",
+   "repository_read": null,
+   "sorted_as": "not_followed",
+   "reason": "core.py `lessons_without_triggers` now resolves old names through `current_pack`, but the identical `parts[1] in bundled` check in src/okl/review.py `unchecked` was missed, so old-named pack records silently count as the store's own.",
+   "change_chars": 30732
+  },
+  {
+   "pr": 307,
+   "lesson": "doc-claim-governs-doc-and-code",
+   "first_pass": "done",
+   "repository_read": null,
+   "sorted_as": "not_followed",
+   "reason": "tests/test_docs.py holds figures to receipts, but the new docs/DEVELOPING.md claims (postgres:17.6, CLAUDE_CODE_OAUTH_TOKEN, soft-pass) have no check or rule in okl-drift.json tying them to ci.yml.",
+   "change_chars": 133
+  },
+  {
+   "pr": 307,
+   "lesson": "n_916330f61994",
+   "first_pass": "none",
+   "repository_read": null,
+   "sorted_as": "not_followed",
+   "reason": ".github/workflows/ci.yml asserts its git allowlist has 'only forms that cannot write', but no test enforces it and git log/show accept --output=<file>.",
+   "change_chars": 133
+  },
+  {
+   "pr": 307,
+   "lesson": "n_e99ea322dee5",
+   "first_pass": "ask",
+   "repository_read": "met",
+   "sorted_as": "check",
+   "reason": "ci.yml's review step stays green when the secret is missing and review-agent.sh exits 0 on an unparseable reply, so whether a review really ran on a PR must be confirmed from the live run's output.",
+   "change_chars": 133
+  },
+  {
+   "pr": 339,
+   "lesson": "n_c95bdc056620",
+   "first_pass": "none",
+   "repository_read": null,
+   "sorted_as": "not_followed",
+   "reason": "`_workflow_reads_pin` in src/okl/cli/install.py finds the step by the literal name `- name: Install okl`, so a kept workflow with that step renamed that still reads the pin is reported as not reading it and its pin stops moving, a failed match that looks like a real negative.",
+   "change_chars": 21190
+  },
+  {
+   "pr": 309,
+   "lesson": "n_b74bad29fd87",
+   "first_pass": "none",
+   "repository_read": null,
+   "sorted_as": "not_followed",
+   "reason": "REPORT \u00a74ad says the backend contract and conformance suite gain the rebuild case, but the _Backend docstring and _backend_conformance do not, and tests/test_stem.py covers SQLite only.",
+   "change_chars": 133
+  },
+  {
+   "pr": 75,
+   "lesson": "n_5ddb0776a863",
+   "first_pass": "done",
+   "repository_read": null,
+   "sorted_as": "not_followed",
+   "reason": "src/okl/scaffold/evals/run_evals.py now exits 2 for placeholder or empty cases, but a missing cases file still prints 'Nothing to measure' and returns 0, so CI passes having checked nothing.",
+   "change_chars": 134
+  },
+  {
+   "pr": 380,
+   "lesson": "guarantee-holds-on-every-write-path",
+   "first_pass": "none",
+   "repository_read": null,
+   "sorted_as": "not_followed",
+   "reason": "`src/okl/cli/parser.py` and `docs/COMMANDS.md` say doctor writes nothing, but `_interest_lines` opens a Store whose `init_schema` upgrades an older store or creates tables in an empty Postgres; only the docstring admits the exception.",
+   "change_chars": 51740
+  },
+  {
+   "pr": 38,
+   "lesson": "n_ead8e0a2b43d",
+   "first_pass": "done",
+   "repository_read": null,
+   "sorted_as": "check",
+   "reason": "CONTRIBUTING.md documents merge-commits-only and why, and src/okl/drift.py does read %ct, but allow_squash_merge/allow_rebase_merge are live GitHub settings the repo cannot show, so the author should confirm they are off.",
+   "change_chars": 25136
+  }
+ ],
+ "missed_by_first_pass": {
+  "done": 13,
+  "none": 5,
+  "ask": 1
+ },
+ "missed_by_sorted_state": {
+  "not_followed": 16,
+  "check": 3
+ },
+ "missed_after_repository_read": {
+  "met": 1
+ },
+ "needed_pairs_by_state": {
+  "not_followed": 54,
+  "followed": 113,
+  "check": 5
+ },
+ "grades_by_route": {
+  "first pass said gap": {
+   "act": 19,
+   "minor": 45,
+   "false": 12
+  },
+  "repository read said ask": {
+   "act": 3,
+   "minor": 22,
+   "false": 61
+  },
+  "repository read said gap": {
+   "act": 11,
+   "minor": 34,
+   "false": 11
+  }
+ },
+ "grades_by_kind": {
+  "needed, check": {
+   "act": 1,
+   "minor": 0,
+   "false": 1
+  },
+  "needed, followed": {
+   "act": 0,
+   "minor": 5,
+   "false": 5
+  },
+  "needed, not_followed": {
+   "act": 21,
+   "minor": 16,
+   "false": 1
+  },
+  "no": {
+   "act": 3,
+   "minor": 16,
+   "false": 26
+  },
+  "related": {
+   "act": 8,
+   "minor": 64,
+   "false": 50
+  },
+  "unsure": {
+   "act": 0,
+   "minor": 0,
+   "false": 1
+  }
+ },
+ "grades_on_raises_the_sheet_counts": {
+  "act": 22,
+  "minor": 16,
+  "false": 2
+ },
+ "other_raising_rules": [
+  {
+   "rule": "first pass gap only",
+   "raised": 76,
+   "calling_for_action_raised": 29,
+   "of": 59,
+   "reach": 0.492
+  },
+  {
+   "rule": "first pass gap or ask, no repository read",
+   "raised": 306,
+   "calling_for_action_raised": 41,
+   "of": 59,
+   "reach": 0.695
+  },
+  {
+   "rule": "gap from either step, dropping what stays ask",
+   "raised": 132,
+   "calling_for_action_raised": 36,
+   "of": 59,
+   "reach": 0.61
+  }
+ ],
+ "tasks": {
+  "total": 50,
+  "raised_nothing": 2,
+  "at_least_one_act": 21,
+  "act_median": 0.0,
+  "no_action_but_raised": 22,
+  "raises_on_those": 55
+ }
+}
