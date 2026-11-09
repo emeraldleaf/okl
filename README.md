@@ -55,7 +55,8 @@ sample, one-shot code on bait tasks; [what it does and does not show](#measured-
 
 | When | What okl does |
 |---|---|
-| The agent is about to repeat a defect you already paid for | the briefing puts the lesson in front of it before the task, selected by the task's words |
+| An agent is writing your code, docs, artifacts or diagrams | the briefing puts your matching lessons in front of it before it writes, selected by the task's words and, in Claude Code, by the files it reads |
+| The agent is about to repeat a defect you already paid for | the same briefing carries that defect's lesson |
 | Code a lesson covers changes after its last check | `okl drift` goes red; the pre-push hook holds the push (or CI fails) until the check passes again or the code is back to what passed; the next briefing marks the lesson STALE |
 | A lesson turns out to be wrong | `okl retire --reason` keeps it, briefed as AVOID so nobody restates it; nothing is deleted |
 | A lesson is replaced | `okl retire --by <new-id>`; the briefing points to the replacement |
