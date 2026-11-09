@@ -25,7 +25,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
-from .core import bundled_packs
+from .core import bundled_packs, from_bundled_pack
 from .store import RETIRED_STATUSES, Node, has_observed_check
 
 # The judge §4ai measured: read-only tools, and --restricted ignores every settings file, so no
@@ -73,11 +73,7 @@ def unchecked(nodes: Iterable[Node]) -> list[Node]:
     and nothing ever re-reads. A lesson with files is drift's, which reports it until it has a
     check."""
     bundled = bundled_packs()
-
-    def own(n: Node) -> bool:
-        parts = n.id.split(":")
-        return not (len(parts) >= 3 and parts[0] == "seed" and parts[1] in bundled)
-    return [n for n in nodes if n.status not in RETIRED_STATUSES and n.type not in _NOT_ADVICE and own(n)
+    return [n for n in nodes if n.status not in RETIRED_STATUSES and n.type not in _NOT_ADVICE and not from_bundled_pack(n.id, bundled)
             and not n.files and not has_observed_check({"verified_at": n.verified_at, "verified_by": n.verified_by,
                                                         "verified_commit": n.verified_commit})]
 

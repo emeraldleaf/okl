@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Records under a renamed pack's old name count as that pack's everywhere** (#379). `okl
+  review` judges a store's own lessons and leaves the bundled packs' out, but it compared the
+  old name as written, so a store seeded before the rename had that pack's lessons reviewed as
+  its own. The note telling a store to run `okl seed --refresh` had the same gap, and stayed
+  silent for the stores that needed it. Both now use the check the trigger count already used.
 - **A renamed seed pack takes the records a store holds under its old name with it** (#379).
   A seed record's id is `seed:<pack>:<key>`, and ten bundled packs were renamed, keeping their
   keys, when project identities came off the public surface. A store seeded before then held

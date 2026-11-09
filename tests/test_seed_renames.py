@@ -10,9 +10,11 @@ import json
 
 import pytest
 
-from okl import core
+from okl import core, review
 from okl.cli import main
+from okl.cli.lessons import _person_notes
 from okl.client import Client
+from okl.store import Node
 
 OLD, NEW = "old-rag-pack", "rag-defects"
 EVIDENCE = "`pytest -q tests/test_x.py` exit 0, matched 'passed' on commit {c} @ 2026-08-01T10:00Z"
@@ -176,6 +178,30 @@ def test_old_named_records_of_a_renamed_pack_are_not_asked_for_triggers(repo):
     node.triggers = None
     store.add_node(node)
     assert f"seed:{OLD}:{k1}" not in {n.id for n in core.lessons_without_triggers(c.all_nodes())}
+
+
+def test_old_named_records_of_a_renamed_pack_are_not_the_stores_own_to_review(repo):
+    """`okl review` judges the store's own lessons and leaves a bundled pack's out. A record under
+    a renamed pack's old name is the pack's; a team's own pack is still the team's."""
+    def node(id):
+        return Node(id=id, type="Rule", title=id, scope="org")
+    nodes = [node(f"seed:{OLD}:k"), node(f"seed:{NEW}:k"), node("seed:team-pack:k"), node("mine")]
+    assert {n.id for n in review.unchecked(nodes)} == {"seed:team-pack:k", "mine"}
+
+
+def test_a_store_seeded_under_an_old_name_is_told_to_refresh(repo):
+    """The note keeps only names that are bundled now. Reported under the old name, a pack that
+    predates its triggers was dropped from the note, in the store that most needs the refresh."""
+    behind = core._packs_without_triggers([Node(id=f"seed:{OLD}:k", type="Rule", title="t", scope="org")])
+    assert behind == [NEW]
+    assert any("okl seed --refresh" in line for line in _person_notes({"packs_without_triggers": behind}))
+
+
+def test_triggers_under_either_name_count_for_the_one_pack(repo):
+    """A store holding both names mid-refresh is one pack: triggers on either side mean it is not behind."""
+    nodes = [Node(id=f"seed:{OLD}:a", type="Rule", title="t", scope="org"),
+             Node(id=f"seed:{NEW}:b", type="Rule", title="t", scope="org", triggers="retry")]
+    assert core._packs_without_triggers(nodes) == []
 
 
 def test_a_record_already_moved_is_neither_carried_nor_retired_again():
