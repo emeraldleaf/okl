@@ -554,6 +554,8 @@ def score(write: bool) -> int:
              "both_ledger_lessons_raised": all(ledger.values())}
     predictions = {"reach at least 70%": v["reach"] >= REACH_BAR, "at least half of the raises judged worth acting on": share >= ACT_BAR,
                    "raises at most 5 at the median task": statistics.median(n_raised) <= 5, "misses a lesson calling for action on more than a third of the tasks": v["failure_rate"] > 1 / 3}
+    drawn, frozen = [p["number"] for p in eligible()], {t["pr"] for t in tasks}
+    left_out = [n for n in drawn[:max(drawn.index(n) for n in frozen)] if n not in frozen] if frozen <= set(drawn) else []
     status = "RESULTS NOT USABLE: the judge passed too many decoys" if void else "model-judged, not yet audited" if usable else "INCOMPLETE"
     out = {"section": "4aq", "at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%MZ"), "okl_commit": rl.git("rev-parse", "HEAD").strip(), "status": status, "usable": usable and not void,
            "prompts": PROMPTS, "script_sha256": ba.sha256(Path(__file__)), "inputs": {"tasks_sha256": ba.sha256(W.tasks), "store_sha256": ba.sha256(W.store)},
@@ -561,7 +563,7 @@ def score(write: bool) -> int:
                       "tasks_missing": v["tasks_missing"], "failure_rate": v["failure_rate"], "failure_wilson95": v["failure_wilson95"],
                       "raised_median": statistics.median(n_raised), "raised_max": max(n_raised), "false_median": statistics.median(n_false),
                       "act_share": share, "act_share_boot95": share_ci, "grades": dict(sum((Counter(r["grades"]) for r in rows), Counter()))},
-           "decoys": {"grades": dict(decoy_grades), "act_share": round(decoy_acted, 3), "void_above": DECOY_VOID}, "ledger_on_388": ledger, "cost": cost_of({t["pr"] for t in tasks}),
+           "decoys": {"grades": dict(decoy_grades), "act_share": round(decoy_acted, 3), "void_above": DECOY_VOID}, "ledger_on_388": ledger, "cost": cost_of({t["pr"] for t in tasks}), "left_out_of_the_draw": left_out,
            "holds": {**holds, "all": all(holds.values()) and not void}, "predictions": predictions, "per_task": rows}
     print(status)
     print(json.dumps({k: out[k] for k in ("result", "decoys", "ledger_on_388", "cost", "holds", "predictions")}, indent=1))
