@@ -58,6 +58,7 @@ ENV = {**os.environ, "OKL_BRIEFING_LOG": "0"}
 AGENT_FILES = (".claude", ".cursor", ".mcp.json", "CLAUDE.md", "AGENTS.md")   # the copy must not brief or instruct the model
 ACTION, RAISED_AFTER, CHANGE_FILE = ("not_followed", "check"), ("gap", "ask"), "CHANGE.diff"
 WORKERS, TOOL_TIMEOUT, TOOL_BATCH, DECOY_SHARE, DECOY_VOID = 3, 900, 10, 0.1, 0.2
+STOP_AFTER_EMPTY = 12   # this many calls in a row with no answer is what a usage limit looks like
 REACH_BAR, ACT_BAR, FALSE_BAR, RAISED_BAR = 0.70, 0.50, 5, 10
 _usage_lock = threading.Lock()
 
@@ -320,10 +321,17 @@ def pump(name: str, todo: Callable[[], list[tuple]], work: Callable[..., list[di
             if not jobs:
                 return
             print(f"{name} round {attempt + 1}: {len(jobs)} calls", file=sys.stderr, flush=True)
-            for n, future in enumerate(as_completed([pool.submit(work, *j) for j in jobs]), 1):
-                for row in future.result():
+            futures, empty = [pool.submit(work, *j) for j in jobs], 0
+            for n, future in enumerate(as_completed(futures), 1):
+                rows = future.result()
+                for row in rows:
                     sink.write(json.dumps(row, ensure_ascii=False) + "\n")
                 sink.flush()
+                empty = 0 if rows else empty + 1
+                if empty >= STOP_AFTER_EMPTY:
+                    for waiting in futures:
+                        waiting.cancel()
+                    sys.exit(f"{name}: {empty} calls in a row returned nothing, which is what a usage limit looks like. Stopping; rerun this step to resume.")
                 if n % 50 == 0:
                     print(f"  {n}/{len(jobs)}", file=sys.stderr, flush=True)
 
@@ -351,14 +359,14 @@ def state_batch(task: dict, ids: list[str]) -> list[dict]:
 
 
 def key_gaps(tasks: list[dict]) -> list[str]:
-    """What the key still lacks: an unlabelled pair, or a labelled needed or related pair with no state."""
+    """What the key still lacks: an unlabelled pair, or a pair labelled needed with no state."""
     labels, states = keyed(LABELS), keyed(STATES)
     gaps = [f"#{t['pr']} {i}: no label" for t in tasks for i in t["lessons"] if i in texts() and not labels.get((t["pr"], i), {}).get("verdict")]
-    return gaps + [f"#{k[0]} {k[1]}: no state" for k, r in labels.items() if r.get("verdict") in ("needed", "related") and k not in states]
+    return gaps + [f"#{k[0]} {k[1]}: no state" for k, r in labels.items() if r.get("verdict") == "needed" and k not in states]
 
 
 def make_key() -> int:
-    """Label every pair against the whole change, then give each needed or related pair its state."""
+    """Label every pair against the whole change, then give each needed pair its state."""
     tasks = load_tasks()
     by_pr = {t["pr"]: t for t in tasks}
     with tempfile.TemporaryDirectory(prefix="okl-4aq-") as tmp:
@@ -368,7 +376,7 @@ def make_key() -> int:
         labels, done = keyed(LABELS), keyed(STATES)
         group = defaultdict(list)
         for (pr, i), r in labels.items():
-            if r.get("verdict") in ("needed", "related") and (pr, i) not in done:
+            if r.get("verdict") == "needed" and (pr, i) not in done:
                 group[pr].append(i)
         return [(by_pr[pr], ids) for pr, all_ids in group.items() for ids in batches(sorted(all_ids), TOOL_BATCH)]
 
@@ -507,7 +515,7 @@ def judge() -> int:
 def task_row(task: dict, raised: dict[str, str], labels: dict[tuple[int, str], dict], states: dict[tuple[int, str], dict], verdicts: dict[tuple[int, str], dict]) -> dict:
     """One task's scoring row, in the shape briefing_arms.tally reads."""
     pr = task["pr"]
-    action = sorted(i for i in task["lessons"] if labels.get((pr, i), {}).get("verdict") in ("needed", "related") and states.get((pr, i), {}).get("state") in ACTION)
+    action = sorted(i for i in task["lessons"] if labels.get((pr, i), {}).get("verdict") == "needed" and states.get((pr, i), {}).get("state") in ACTION)
     grades = Counter(verdicts.get((pr, i), {}).get("answer", "unjudged") for i in raised)
     return {"pr": pr, "needed": action, "named": {"base": [], "review": sorted(raised)}, "missed": sorted(set(action) - set(raised)), "grades": dict(grades),
             "confirmed": sorted(set(action) & set(raised))}

@@ -5363,6 +5363,13 @@ size, the prompts and the order of key, review and judge do not change. If it ho
 that cannot block a merge, and the pull requests opened after this date become the later holdout that must
 agree before any figure is quoted outside this section.
 
+**Amended again before any review ran (2026-11-09).** The first run stopped at the maintainer's plan limit with
+every label done (172 needed, 1,083 related) and 176 of 1,255 states sorted; only those counts were read. To fit
+the rest within the plan, step 2 of the key now sorts only the pairs labelled needed, as §4ap's did, so a lesson
+calls for action when it is labelled needed and sorted not followed or check. The trade: a lesson labelled related
+that the change did not follow no longer counts in the reach measure, though any raise of it is still graded by
+the judge. The runner now stops after 12 calls in a row return nothing, instead of retrying into the limit.
+
 **The answer key, finished before the review runs.** Opus. `evals/review_repo.py key`; `run` refuses until
 it is complete.
 1. *Labels.* Every lesson on every task, against the whole change, with §4al's prompt (`b1dbb8c24bbce0de`).
