@@ -776,6 +776,12 @@ def current_pack(pack: str) -> str:
     return PACK_RENAMES.get(hashlib.sha256(pack.encode("utf-8")).hexdigest(), pack)
 
 
+def from_bundled_pack(node_id: str, bundled: frozenset[str]) -> bool:
+    """Whether a record id is a bundled pack's, under the pack's name now or an old one (#379)."""
+    parts = node_id.split(":")
+    return len(parts) >= 3 and parts[0] == "seed" and current_pack(parts[1]) in bundled
+
+
 def lessons_without_triggers(nodes: list[Node]) -> list[Node]:
     """The store's own live advice lessons that carry no triggers. The calibrated decision reads
     triggers, and on a real store it found 3 of the 55 applying recorded lessons without them
@@ -783,11 +789,8 @@ def lessons_without_triggers(nodes: list[Node]) -> list[Node]:
     own (a store seeded before they did is told by packs_without_triggers); a team's own pack
     is the team's to give triggers, so its lessons count (review on #298)."""
     bundled = bundled_packs()
-    def own(n: Node) -> bool:
-        parts = n.id.split(":")
-        return not (len(parts) >= 3 and parts[0] == "seed" and current_pack(parts[1]) in bundled)
     return [n for n in nodes if n.status not in RETIRED_STATUSES and n.type in TRIGGER_TYPES
-            and own(n) and not n.triggers]
+            and not from_bundled_pack(n.id, bundled) and not n.triggers]
 
 
 def _calibrated(store: Store, hits: list[Node], query: str, limit: int, *,
@@ -898,14 +901,16 @@ def _avoid_kind(n: Node) -> str:
 
 
 def _packs_without_triggers(live: list[Node]) -> list[str]:
-    """The packs (by the `seed:<pack>:<key>` ids `okl seed` gives) none of whose live lessons
-    here carry triggers. The calibrated decision reads triggers, and a store seeded before the
-    packs carried them briefs those lessons worse until `okl seed --refresh` brings them in."""
+    """The packs (by the `seed:<pack>:<key>` ids `okl seed` gives, under the name each has now)
+    none of whose live lessons here carry triggers. The calibrated decision reads triggers, and
+    a store seeded before the packs carried them briefs those lessons worse until `okl seed
+    --refresh` brings them in."""
     seen: dict[str, bool] = {}
     for n in live:
         parts = n.id.split(":")
         if len(parts) >= 3 and parts[0] == "seed" and n.type != "Vocabulary":
-            seen[parts[1]] = seen.get(parts[1], False) or bool(n.triggers)
+            pack = current_pack(parts[1])
+            seen[pack] = seen.get(pack, False) or bool(n.triggers)
     return sorted(pack for pack, any_triggers in seen.items() if not any_triggers)
 
 
