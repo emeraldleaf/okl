@@ -5350,6 +5350,26 @@ before merging if none, with the store as it stood at that commit. One whose tit
 is left out and reported, and the next is taken. The 50 is fixed now and does not move with the results. At
 §4ap's rate of lessons calling for action it would give about 98, near the 97 §4ap's rough scaling asked for.
 
+**Amended before any task was frozen and before any model read one (2026-11-09).** The maintainer will not
+wait about ten days for new pull requests, so the tasks above are replaced. The tasks are now 50 of the 149
+pull requests §4al's draw could have taken and did not: created on or after 2026-09-15, merged by the time
+§4al's tasks were frozen (2026-11-08T00:23Z), not by a bot, taken in the order of sha256("4aq:" + number),
+smallest first, and frozen the same way. No review, label or sort exists for any of them. This sets aside
+§4ap's statement that a changed review is measured only on pull requests merged after that date, and the
+trade is this. These tasks are not later in time: they come from the same period as the 50 whose misses
+shaped the review, so a pass says less about future work than the original plan would have. Their stores
+were smaller than today's, so at today's size raises and cost would likely be higher. The bars, the sample
+size, the prompts and the order of key, review and judge do not change. If it holds, it ships as a comment
+that cannot block a merge, and the pull requests opened after this date become the later holdout that must
+agree before any figure is quoted outside this section.
+
+**Amended again before any review ran (2026-11-09).** The first run stopped at the maintainer's plan limit with
+every label done (172 needed, 1,083 related) and 176 of 1,255 states sorted; only those counts were read. To fit
+the rest within the plan, step 2 of the key now sorts only the pairs labelled needed, as §4ap's did, so a lesson
+calls for action when it is labelled needed and sorted not followed or check. The trade: a lesson labelled related
+that the change did not follow no longer counts in the reach measure, though any raise of it is still graded by
+the judge. The runner now stops after 12 calls in a row return nothing, instead of retrying into the limit.
+
 **The answer key, finished before the review runs.** Opus. `evals/review_repo.py key`; `run` refuses until
 it is complete.
 1. *Labels.* Every lesson on every task, against the whole change, with §4al's prompt (`b1dbb8c24bbce0de`).
@@ -5400,6 +5420,63 @@ changed review is measured only under a new pre-registration, on pull requests l
 calls for the first step, 90 with the repository for the second, and 50 Opus calls for the judge: a run of
 some hours, on the maintainer's subscription. Nothing is posted on any pull request. At the recent rate of
 about five merged pull requests a day, the 50 exist in roughly ten days.
+
+**Result (2026-11-09; model-judged, not yet audited, #394).** Receipt `review-repo-20261109-1827.json`. The
+run is usable: the judge graded 1 of the 48 decoys *act* (2.1%, void above 20%) and the other 47 *false*. The
+judge's last 10 calls came back empty within about a second, the pattern of the plan limit, leaving 50 of its 266
+items open, and the step was rerun about three hours later with the same prompts. Two of the five bars are missed.
+
+| Bar | Result | |
+|---|---|---|
+| Reach on lessons calling for action, lower bound at least 70% | 67.8% (40 of 59), bootstrap [53.8, 81.0] | missed |
+| Share of raises graded *act*, lower bound at least 50% | 15.1% (33 of 218), bootstrap [10.5, 20.0] | missed |
+| At most 5 raises graded *false* at the median task | 1 | met |
+| At most 10 raised at the median task | 3 (maximum 13) | met |
+| Both ledger lessons raised on #388 | both | met |
+
+Of the 172 lessons labelled needed, the key sorted 113 as followed, 54 as not followed and 5 as check, so 59
+call for action, on 26 of the 50 tasks. A lesson calling for action went unraised on 12 of those 26 (46.2%,
+Wilson [28.8, 64.5]). The review raised 218 lessons in all: 33 graded *act*, 101 *minor* and 84 *false*. At the
+median pull request it cost 17 calls, 302,952 tokens and 223 seconds of model time, $1.18 at API prices. Two
+predictions held (at most 5 raised at the median task, and a miss on more than a third of tasks); two did not
+(reach, and the share graded *act*). §4ap's 81.6% is on other tasks with a key that could not read the
+repository, so the two reaches do not compare.
+
+**Decision, by the rule.** It does not ship as a CI comment.
+
+**The misses and raises, read as the rule requires; not pre-registered** (receipt
+`review-repo-detail-20261109-1830.json`):
+- *The misses.* 19 lessons on 12 tasks, 16 sorted not followed and 3 check. The first pass answered *done* on
+  13 and *none* on 5, and the repository read runs only on *ask*, so those 18 never reached it. On the other, it
+  asked and the read said *met*. The key's reasons mostly name a narrower gap in a change that otherwise
+  follows the rule, or the same mistake somewhere the change did not touch. Four of the 19 are one lesson,
+  `doc-claim-governs-doc-and-code`.
+- *What the repository read did.* The first pass alone, raising every gap and ask, gives 306 raises and 41 of the
+  59. The read took that to 218 and 40: 88 fewer raises for one lesson. This is computed from the same answers
+  and describes the step; it is not a control arm.
+- *Where the noise is.* Of the 76 raises where the first pass said gap, 19 are *act*, 45 *minor* and 12 *false*;
+  of the 56 where the read said gap, 11, 34 and 11; of the 86 that stayed *ask* after the read, 3, 22 and 61. That
+  last route is 39% of the raises, 73% of the false ones and 9% of the *act* ones. Counting only the first two
+  routes gives 132 raises and a 22.7% *act* share, at a reach of 61.0% (36 of 59), so dropping it costs reach.
+- *What the key and the judge agree on.* Of the 40 raises the key counts as calling for action, the judge graded
+  22 *act*, 16 *minor* and 2 *false*. Of the 167 raises labelled related or no, it graded 11 *act*, 80 *minor* and
+  76 *false*. So the raises the key confirms are nearly all true, and even they reach *act* only 55% of the time.
+  That says how far the 50% bar is from what this judge gives; the bar stays where it was set.
+- *The tasks.* The review raised nothing on 2 of the 50, and 21 of the 50 had at least one raise graded *act*. On
+  the 22 tasks with nothing calling for action that still drew a raise, it raised 55.
+- *Read against the code by hand, no receipt; chosen, not sampled.* Three misses and three raises graded *act*,
+  each at its task's commit: #387 (`src/okl/review.py:79` tests `parts[1] in bundled` where the changed code in
+  `core.py` resolves old pack names first), #75 (`run_evals.py:55` returns 0 on a missing cases file), #307 (the
+  workflow's allowlist comment says only forms that cannot write, and `git log --output=<file>` writes), #380
+  (`_no_store_yet` reads an empty `OKL_DATABASE_URL` differently from `Client._local_store`), #325 (`stop()` keeps the
+  prompt's 0.5 s timeout) and #309 (an unclosed `sqlite3.connect` in `tests/test_bench.py`). All six hold there. Main
+  has since changed five of them; #387's is still there.
+
+**What follows.** By the rule, a changed review is measured only under a new pre-registration, on pull requests
+later than these. What the misses and raises suggest, as hypotheses for that design and nothing more: a repository
+read of *done* answers, where 13 of the 19 misses sit, and raising nothing that stays *ask* after the read, where 61
+of the 84 false raises sit, with the reach that would cost measured rather than assumed. Neither the key nor the
+judge has been audited, and #394 must be extended to both before any figure here leaves this section.
 
 
 ## 5. Findings

@@ -1,0 +1,1228 @@
+{
+ "section": "4aq",
+ "at": "2026-11-09T18:27Z",
+ "okl_commit": "20d93bd87fc0f2998d62f777f1a6410f3a547cc7",
+ "status": "model-judged, not yet audited",
+ "usable": true,
+ "prompts": {
+  "states": "f0370a561971b9ed",
+  "settle": "732605e91ed0b3c7",
+  "judge": "b734e38be301fc91",
+  "first": "03a44686243e047b"
+ },
+ "script_sha256": "12b6f15cde757b0efa3c2942805392374b5d338e5ff6215ea7cdc89d549254fc",
+ "inputs": {
+  "tasks_sha256": "9496e0f29851c6be0700df8871f8484db6ad6fff7c379d5455f43b64e6db2382",
+  "store_sha256": "98764cc67d7bea2222bb40c580f9fa995d722ae60e22b21c03dc1785a7340cea"
+ },
+ "result": {
+  "tasks": 50,
+  "tasks_with_action": 26,
+  "calling_for_action": 59,
+  "reach": 0.678,
+  "reach_boot95": [
+   0.538,
+   0.81
+  ],
+  "tasks_missing": 12,
+  "failure_rate": 0.462,
+  "failure_wilson95": [
+   0.288,
+   0.645
+  ],
+  "raised_median": 3.0,
+  "raised_max": 13,
+  "false_median": 1.0,
+  "act_share": 0.151,
+  "act_share_boot95": [
+   0.105,
+   0.2
+  ],
+  "grades": {
+   "minor": 101,
+   "false": 84,
+   "act": 33
+  }
+ },
+ "decoys": {
+  "grades": {
+   "false": 47,
+   "act": 1
+  },
+  "act_share": 0.021,
+  "void_above": 0.2
+ },
+ "ledger_on_388": {
+  "eval-scripts-no-exposure": true,
+  "seed:rag-defects:qz_fixtures": true
+ },
+ "cost": {
+  "per_pr_median_calls": 17.0,
+  "per_pr_median_tokens": 302952.5,
+  "per_pr_median_seconds": 223.0,
+  "per_pr_median_usd": 1.18
+ },
+ "left_out_of_the_draw": [
+  355,
+  310
+ ],
+ "holds": {
+  "reach_lower_bound_at_least_70": false,
+  "act_share_lower_bound_at_least_50": false,
+  "false_median_at_most_5": true,
+  "raised_median_at_most_10": true,
+  "both_ledger_lessons_raised": true,
+  "all": false
+ },
+ "predictions": {
+  "reach at least 70%": false,
+  "at least half of the raises judged worth acting on": false,
+  "raises at most 5 at the median task": true,
+  "misses a lesson calling for action on more than a third of the tasks": true
+ },
+ "per_task": [
+  {
+   "pr": 265,
+   "needed": [
+    "doc-claim-governs-doc-and-code",
+    "n_57cc4b427f05",
+    "n_6b65aa35593c",
+    "pooled-receipts-miss-report-corrections",
+    "scope-literature-gap-claims"
+   ],
+   "named": {
+    "base": [],
+    "review": [
+     "n_57cc4b427f05",
+     "worktree-no-store-reverify"
+    ]
+   },
+   "missed": [
+    "doc-claim-governs-doc-and-code",
+    "n_6b65aa35593c",
+    "pooled-receipts-miss-report-corrections",
+    "scope-literature-gap-claims"
+   ],
+   "grades": {
+    "minor": 1,
+    "false": 1
+   },
+   "confirmed": [
+    "n_57cc4b427f05"
+   ]
+  },
+  {
+   "pr": 89,
+   "needed": [
+    "doc-claim-governs-doc-and-code",
+    "n_ead8e0a2b43d"
+   ],
+   "named": {
+    "base": [],
+    "review": [
+     "doc-claim-governs-doc-and-code",
+     "n_58119d0a63d9",
+     "n_6b65aa35593c",
+     "n_8b3345b90621",
+     "seed:dotnet-review-surfaces:rs_workflow_hardening_baseline"
+    ]
+   },
+   "missed": [
+    "n_ead8e0a2b43d"
+   ],
+   "grades": {
+    "minor": 4,
+    "false": 1
+   },
+   "confirmed": [
+    "doc-claim-governs-doc-and-code"
+   ]
+  },
+  {
+   "pr": 66,
+   "needed": [
+    "n_6b65aa35593c"
+   ],
+   "named": {
+    "base": [],
+    "review": [
+     "n_5db37b759b1e",
+     "n_6b65aa35593c",
+     "seed:dotnet-defects:g_tombstones_nc"
+    ]
+   },
+   "missed": [],
+   "grades": {
+    "false": 2,
+    "minor": 1
+   },
+   "confirmed": [
+    "n_6b65aa35593c"
+   ]
+  },
+  {
+   "pr": 122,
+   "needed": [
+    "doc-claim-governs-doc-and-code"
+   ],
+   "named": {
+    "base": [],
+    "review": [
+     "doc-claim-governs-doc-and-code",
+     "n_0637c92c032f",
+     "n_58119d0a63d9",
+     "seed:geospatial-enforcement-defects:r_single_source_sets"
+    ]
+   },
+   "missed": [],
+   "grades": {
+    "act": 1,
+    "false": 2,
+    "minor": 1
+   },
+   "confirmed": [
+    "doc-claim-governs-doc-and-code"
+   ]
+  },
+  {
+   "pr": 326,
+   "needed": [
+    "doc-claim-governs-doc-and-code",
+    "docs-agent-neutral",
+    "falsifier-relative-to-control",
+    "n_1eaf9a5f24e2"
+   ],
+   "named": {
+    "base": [],
+    "review": [
+     "falsifier-relative-to-control",
+     "n_1eaf9a5f24e2",
+     "n_473aec369b25",
+     "n_5ddb0776a863",
+     "n_6b65aa35593c",
+     "n_a4b40c96ede4",
+     "n_aa3e45a2ecd6",
+     "novelty-claims-expire",
+     "worktree-no-store-reverify"
+    ]
+   },
+   "missed": [
+    "doc-claim-governs-doc-and-code",
+    "docs-agent-neutral"
+   ],
+   "grades": {
+    "act": 1,
+    "false": 3,
+    "minor": 5
+   },
+   "confirmed": [
+    "falsifier-relative-to-control",
+    "n_1eaf9a5f24e2"
+   ]
+  },
+  {
+   "pr": 372,
+   "needed": [],
+   "named": {
+    "base": [],
+    "review": [
+     "break-test-masked-by-integrity-check",
+     "n_916330f61994",
+     "n_ead8e0a2b43d",
+     "review-budget-one-push-per-round"
+    ]
+   },
+   "missed": [],
+   "grades": {
+    "false": 3,
+    "act": 1
+   },
+   "confirmed": []
+  },
+  {
+   "pr": 101,
+   "needed": [],
+   "named": {
+    "base": [],
+    "review": [
+     "doc-claim-governs-doc-and-code",
+     "n_5ddb0776a863",
+     "n_8a6e1abce5cc",
+     "seed:geospatial-enforcement-defects:r_single_source_sets"
+    ]
+   },
+   "missed": [],
+   "grades": {
+    "minor": 3,
+    "act": 1
+   },
+   "confirmed": []
+  },
+  {
+   "pr": 259,
+   "needed": [
+    "filter-after-fetch-widens-window",
+    "n_849a5b0425ef",
+    "seed:dotnet-canon:r_no_nplus1"
+   ],
+   "named": {
+    "base": [],
+    "review": [
+     "doc-claim-governs-doc-and-code",
+     "filter-after-fetch-widens-window",
+     "n_00985805cdbb",
+     "n_849a5b0425ef",
+     "n_93f96eae7359",
+     "n_a4b40c96ede4",
+     "n_b578addf6269",
+     "n_be9f13d587b1",
+     "remote-path-test-through-client",
+     "seed:dotnet-canon:r_no_nplus1",
+     "unclosed-sqlite-in-test-pr154"
+    ]
+   },
+   "missed": [],
+   "grades": {
+    "minor": 6,
+    "act": 4,
+    "false": 1
+   },
+   "confirmed": [
+    "filter-after-fetch-widens-window",
+    "n_849a5b0425ef",
+    "seed:dotnet-canon:r_no_nplus1"
+   ]
+  },
+  {
+   "pr": 266,
+   "needed": [
+    "n_b74bad29fd87",
+    "remote-path-test-through-client",
+    "seed:geospatial-enforcement-defects:r_single_source_sets"
+   ],
+   "named": {
+    "base": [],
+    "review": [
+     "readonly-agents-side-effects",
+     "remote-path-test-through-client",
+     "seed:geospatial-deeptime-defects:r_resubstitution_not_validation",
+     "seed:geospatial-enforcement-defects:r_single_source_sets",
+     "seed:python-canon:py_contract_tests",
+     "seed:python-canon:py_unclosed_sqlite"
+    ]
+   },
+   "missed": [
+    "n_b74bad29fd87"
+   ],
+   "grades": {
+    "false": 2,
+    "act": 3,
+    "minor": 1
+   },
+   "confirmed": [
+    "remote-path-test-through-client",
+    "seed:geospatial-enforcement-defects:r_single_source_sets"
+   ]
+  },
+  {
+   "pr": 81,
+   "needed": [],
+   "named": {
+    "base": [],
+    "review": [
+     "n_90066f354f1e",
+     "n_ead8e0a2b43d"
+    ]
+   },
+   "missed": [],
+   "grades": {
+    "false": 1,
+    "minor": 1
+   },
+   "confirmed": []
+  },
+  {
+   "pr": 24,
+   "needed": [
+    "seed:dotnet-decisions:pd_major_upgrade_runtime_breaks"
+   ],
+   "named": {
+    "base": [],
+    "review": [
+     "n_a5520510b99c",
+     "seed:dotnet-decisions:pd_major_upgrade_runtime_breaks",
+     "seed:dotnet-defects:nc_arch_reviewer"
+    ]
+   },
+   "missed": [],
+   "grades": {
+    "false": 1,
+    "act": 2
+   },
+   "confirmed": [
+    "seed:dotnet-decisions:pd_major_upgrade_runtime_breaks"
+   ]
+  },
+  {
+   "pr": 47,
+   "needed": [],
+   "named": {
+    "base": [],
+    "review": [
+     "n_ead8e0a2b43d"
+    ]
+   },
+   "missed": [],
+   "grades": {
+    "false": 1
+   },
+   "confirmed": []
+  },
+  {
+   "pr": 343,
+   "needed": [
+    "n_aa3e45a2ecd6"
+   ],
+   "named": {
+    "base": [],
+    "review": [
+     "n_0b43d18cdb1d",
+     "n_1eaf9a5f24e2",
+     "n_aa3e45a2ecd6"
+    ]
+   },
+   "missed": [],
+   "grades": {
+    "minor": 1,
+    "false": 1,
+    "act": 1
+   },
+   "confirmed": [
+    "n_aa3e45a2ecd6"
+   ]
+  },
+  {
+   "pr": 386,
+   "needed": [],
+   "named": {
+    "base": [],
+    "review": [
+     "doc-claim-governs-doc-and-code",
+     "seed:rag-defects:qz_fixtures"
+    ]
+   },
+   "missed": [],
+   "grades": {
+    "minor": 2
+   },
+   "confirmed": []
+  },
+  {
+   "pr": 108,
+   "needed": [],
+   "named": {
+    "base": [],
+    "review": [
+     "n_ead8e0a2b43d"
+    ]
+   },
+   "missed": [],
+   "grades": {
+    "minor": 1
+   },
+   "confirmed": []
+  },
+  {
+   "pr": 29,
+   "needed": [],
+   "named": {
+    "base": [],
+    "review": [
+     "n_0e6928348b1d",
+     "n_31bde92d9003",
+     "seed:geospatial-enforcement-defects:r_surface_needs_trigger"
+    ]
+   },
+   "missed": [],
+   "grades": {
+    "minor": 1,
+    "false": 2
+   },
+   "confirmed": []
+  },
+  {
+   "pr": 363,
+   "needed": [
+    "harness-reads-a-moving-working-tree",
+    "hook-cli-version-skew",
+    "thesis-maintain-anything"
+   ],
+   "named": {
+    "base": [],
+    "review": [
+     "doc-claim-governs-doc-and-code",
+     "falsifier-relative-to-control",
+     "harness-reads-a-moving-working-tree",
+     "hook-cli-version-skew",
+     "n_0b43d18cdb1d",
+     "n_9ba48d85ed19",
+     "n_d8e5ee92ad8f",
+     "remote-timeout-not-a-deadline",
+     "seed:dotnet-canon:r_encoding_loop",
+     "seed:python-canon:py_exceptions_canon",
+     "seed:rag-defects:qz_fixtures",
+     "thesis-maintain-anything"
+    ]
+   },
+   "missed": [],
+   "grades": {
+    "minor": 6,
+    "act": 3,
+    "false": 3
+   },
+   "confirmed": [
+    "harness-reads-a-moving-working-tree",
+    "hook-cli-version-skew",
+    "thesis-maintain-anything"
+   ]
+  },
+  {
+   "pr": 103,
+   "needed": [],
+   "named": {
+    "base": [],
+    "review": [
+     "n_ead8e0a2b43d"
+    ]
+   },
+   "missed": [],
+   "grades": {
+    "minor": 1
+   },
+   "confirmed": []
+  },
+  {
+   "pr": 72,
+   "needed": [],
+   "named": {
+    "base": [],
+    "review": [
+     "n_ead8e0a2b43d"
+    ]
+   },
+   "missed": [],
+   "grades": {
+    "minor": 1
+   },
+   "confirmed": []
+  },
+  {
+   "pr": 148,
+   "needed": [],
+   "named": {
+    "base": [],
+    "review": [
+     "mcp-registry-pypi-command-name",
+     "n_57cc4b427f05",
+     "n_ead8e0a2b43d",
+     "novelty-claims-expire"
+    ]
+   },
+   "missed": [],
+   "grades": {
+    "false": 4
+   },
+   "confirmed": []
+  },
+  {
+   "pr": 362,
+   "needed": [
+    "n_713b8c104f12",
+    "remote-path-test-through-client"
+   ],
+   "named": {
+    "base": [],
+    "review": [
+     "n_713b8c104f12",
+     "remote-path-test-through-client",
+     "seed:dotnet-canon:r_pagination_cap",
+     "typed-closed-request-models"
+    ]
+   },
+   "missed": [],
+   "grades": {
+    "act": 2,
+    "minor": 2
+   },
+   "confirmed": [
+    "n_713b8c104f12",
+    "remote-path-test-through-client"
+   ]
+  },
+  {
+   "pr": 280,
+   "needed": [
+    "doc-claim-governs-doc-and-code",
+    "n_00985805cdbb"
+   ],
+   "named": {
+    "base": [],
+    "review": [
+     "harness-reads-a-moving-working-tree",
+     "n_00985805cdbb",
+     "n_3dac3a1d8fba",
+     "n_b550ba9c5c8a",
+     "n_dc7429065f5d",
+     "worktree-no-store-reverify"
+    ]
+   },
+   "missed": [
+    "doc-claim-governs-doc-and-code"
+   ],
+   "grades": {
+    "false": 3,
+    "act": 1,
+    "minor": 2
+   },
+   "confirmed": [
+    "n_00985805cdbb"
+   ]
+  },
+  {
+   "pr": 387,
+   "needed": [
+    "importer-keeps-local-decision",
+    "n_c95bdc056620"
+   ],
+   "named": {
+    "base": [],
+    "review": [
+     "n_1eaf9a5f24e2",
+     "n_aa3e45a2ecd6",
+     "n_b74bad29fd87",
+     "one-verb-owns-a-transition",
+     "seed:dotnet-canon:r_encoding_loop",
+     "seed:dotnet-canon:r_secret_fakes",
+     "seed:dotnet-decisions:pd_rollback_test_write_then_publish",
+     "seed:dotnet-defects:nc_price_tamper",
+     "seed:python-canon:py_contract_tests",
+     "seed:python-canon:py_unclosed_sqlite",
+     "seed:rag-defects:qz_fixtures",
+     "typed-closed-request-models",
+     "unclosed-sqlite-in-test-pr154"
+    ]
+   },
+   "missed": [
+    "importer-keeps-local-decision",
+    "n_c95bdc056620"
+   ],
+   "grades": {
+    "false": 5,
+    "minor": 6,
+    "act": 2
+   },
+   "confirmed": []
+  },
+  {
+   "pr": 229,
+   "needed": [],
+   "named": {
+    "base": [],
+    "review": [
+     "n_57cc4b427f05",
+     "novelty-claims-expire",
+     "worktree-no-store-reverify"
+    ]
+   },
+   "missed": [],
+   "grades": {
+    "false": 2,
+    "minor": 1
+   },
+   "confirmed": []
+  },
+  {
+   "pr": 157,
+   "needed": [],
+   "named": {
+    "base": [],
+    "review": [
+     "mcp-registry-pypi-command-name",
+     "n_696a70084e1a",
+     "n_805cf67e5cc5",
+     "n_a5520510b99c",
+     "n_ead8e0a2b43d"
+    ]
+   },
+   "missed": [],
+   "grades": {
+    "minor": 2,
+    "false": 3
+   },
+   "confirmed": []
+  },
+  {
+   "pr": 276,
+   "needed": [],
+   "named": {
+    "base": [],
+    "review": [
+     "doc-claim-governs-doc-and-code",
+     "idea-to-issue-through-review",
+     "n_00985805cdbb",
+     "n_967ef9825472",
+     "n_adea7f2c7373",
+     "seed:geospatial-enforcement-defects:r_single_source_sets",
+     "seed:python-canon:py_unclosed_sqlite"
+    ]
+   },
+   "missed": [],
+   "grades": {
+    "minor": 5,
+    "false": 2
+   },
+   "confirmed": []
+  },
+  {
+   "pr": 133,
+   "needed": [],
+   "named": {
+    "base": [],
+    "review": [
+     "n_805cf67e5cc5",
+     "n_90066f354f1e",
+     "n_ead8e0a2b43d"
+    ]
+   },
+   "missed": [],
+   "grades": {
+    "false": 3
+   },
+   "confirmed": []
+  },
+  {
+   "pr": 136,
+   "needed": [],
+   "named": {
+    "base": [],
+    "review": [
+     "doc-claim-governs-doc-and-code"
+    ]
+   },
+   "missed": [],
+   "grades": {
+    "act": 1
+   },
+   "confirmed": []
+  },
+  {
+   "pr": 169,
+   "needed": [],
+   "named": {
+    "base": [],
+    "review": [
+     "n_ead8e0a2b43d"
+    ]
+   },
+   "missed": [],
+   "grades": {
+    "minor": 1
+   },
+   "confirmed": []
+  },
+  {
+   "pr": 307,
+   "needed": [
+    "doc-claim-governs-doc-and-code",
+    "harness-reads-a-moving-working-tree",
+    "n_57cc4b427f05",
+    "n_916330f61994",
+    "n_e99ea322dee5"
+   ],
+   "named": {
+    "base": [],
+    "review": [
+     "harness-reads-a-moving-working-tree",
+     "n_1eaf9a5f24e2",
+     "n_57cc4b427f05",
+     "n_90066f354f1e",
+     "n_a5520510b99c",
+     "seed:geospatial-enforcement-defects:r_pin_gating_tools",
+     "seed:python-canon:py_pyproject_versions",
+     "worktree-no-store-reverify"
+    ]
+   },
+   "missed": [
+    "doc-claim-governs-doc-and-code",
+    "n_916330f61994",
+    "n_e99ea322dee5"
+   ],
+   "grades": {
+    "false": 6,
+    "act": 1,
+    "minor": 1
+   },
+   "confirmed": [
+    "harness-reads-a-moving-working-tree",
+    "n_57cc4b427f05"
+   ]
+  },
+  {
+   "pr": 339,
+   "needed": [
+    "n_c95bdc056620"
+   ],
+   "named": {
+    "base": [],
+    "review": [
+     "doc-claim-governs-doc-and-code",
+     "n_1eaf9a5f24e2",
+     "n_bf6a2aee2f12",
+     "n_ead8e0a2b43d",
+     "worktree-no-store-reverify"
+    ]
+   },
+   "missed": [
+    "n_c95bdc056620"
+   ],
+   "grades": {
+    "minor": 2,
+    "false": 3
+   },
+   "confirmed": []
+  },
+  {
+   "pr": 309,
+   "needed": [
+    "harness-reads-a-moving-working-tree",
+    "n_02cc84da158d",
+    "n_b74bad29fd87",
+    "seed:geospatial-enforcement-defects:r_single_source_sets",
+    "seed:python-canon:py_dont_mock_what_you_dont_own",
+    "seed:python-canon:py_unclosed_sqlite",
+    "unclosed-sqlite-in-test-pr154"
+   ],
+   "named": {
+    "base": [],
+    "review": [
+     "comparison-table-one-sitting-generated",
+     "harness-reads-a-moving-working-tree",
+     "n_02cc84da158d",
+     "n_1eaf9a5f24e2",
+     "seed:dotnet-canon:r_measure_first",
+     "seed:geospatial-enforcement-defects:r_single_source_sets",
+     "seed:python-canon:py_dont_mock_what_you_dont_own",
+     "seed:python-canon:py_unclosed_sqlite",
+     "unclosed-sqlite-in-test-pr154"
+    ]
+   },
+   "missed": [
+    "n_b74bad29fd87"
+   ],
+   "grades": {
+    "minor": 6,
+    "false": 1,
+    "act": 2
+   },
+   "confirmed": [
+    "harness-reads-a-moving-working-tree",
+    "n_02cc84da158d",
+    "seed:geospatial-enforcement-defects:r_single_source_sets",
+    "seed:python-canon:py_dont_mock_what_you_dont_own",
+    "seed:python-canon:py_unclosed_sqlite",
+    "unclosed-sqlite-in-test-pr154"
+   ]
+  },
+  {
+   "pr": 130,
+   "needed": [],
+   "named": {
+    "base": [],
+    "review": [
+     "n_5db37b759b1e"
+    ]
+   },
+   "missed": [],
+   "grades": {
+    "minor": 1
+   },
+   "confirmed": []
+  },
+  {
+   "pr": 154,
+   "needed": [],
+   "named": {
+    "base": [],
+    "review": []
+   },
+   "missed": [],
+   "grades": {},
+   "confirmed": []
+  },
+  {
+   "pr": 333,
+   "needed": [
+    "n_b550ba9c5c8a"
+   ],
+   "named": {
+    "base": [],
+    "review": [
+     "n_1eaf9a5f24e2",
+     "n_b550ba9c5c8a",
+     "tall-sheet-screenshot-tiles",
+     "worktree-no-store-reverify"
+    ]
+   },
+   "missed": [],
+   "grades": {
+    "false": 3,
+    "minor": 1
+   },
+   "confirmed": [
+    "n_b550ba9c5c8a"
+   ]
+  },
+  {
+   "pr": 138,
+   "needed": [],
+   "named": {
+    "base": [],
+    "review": [
+     "doc-claim-governs-doc-and-code",
+     "n_916330f61994",
+     "n_ead8e0a2b43d"
+    ]
+   },
+   "missed": [],
+   "grades": {
+    "minor": 1,
+    "false": 2
+   },
+   "confirmed": []
+  },
+  {
+   "pr": 75,
+   "needed": [
+    "n_5ddb0776a863",
+    "n_6b65aa35593c",
+    "n_e7988ff536fb"
+   ],
+   "named": {
+    "base": [],
+    "review": [
+     "n_0637c92c032f",
+     "n_31bde92d9003",
+     "n_57cc4b427f05",
+     "n_6b65aa35593c",
+     "n_8519bf0f71c6",
+     "n_b550ba9c5c8a",
+     "n_dc7429065f5d",
+     "n_e7988ff536fb",
+     "seed:dotnet-review-surfaces:rs_workflow_hardening_baseline",
+     "seed:geospatial-enforcement-defects:r_single_source_sets"
+    ]
+   },
+   "missed": [
+    "n_5ddb0776a863"
+   ],
+   "grades": {
+    "minor": 6,
+    "false": 3,
+    "act": 1
+   },
+   "confirmed": [
+    "n_6b65aa35593c",
+    "n_e7988ff536fb"
+   ]
+  },
+  {
+   "pr": 325,
+   "needed": [
+    "remote-timeout-not-a-deadline"
+   ],
+   "named": {
+    "base": [],
+    "review": [
+     "n_1eaf9a5f24e2",
+     "remote-timeout-not-a-deadline",
+     "seed:python-canon:py_dont_mock_what_you_dont_own"
+    ]
+   },
+   "missed": [],
+   "grades": {
+    "false": 1,
+    "act": 1,
+    "minor": 1
+   },
+   "confirmed": [
+    "remote-timeout-not-a-deadline"
+   ]
+  },
+  {
+   "pr": 380,
+   "needed": [
+    "guarantee-holds-on-every-write-path",
+    "n_02cc84da158d"
+   ],
+   "named": {
+    "base": [],
+    "review": [
+     "doc-claim-governs-doc-and-code",
+     "n_02cc84da158d",
+     "n_ec568941f68a",
+     "remote-path-test-through-client",
+     "unclosed-sqlite-in-test-pr154"
+    ]
+   },
+   "missed": [
+    "guarantee-holds-on-every-write-path"
+   ],
+   "grades": {
+    "minor": 3,
+    "act": 1,
+    "false": 1
+   },
+   "confirmed": [
+    "n_02cc84da158d"
+   ]
+  },
+  {
+   "pr": 227,
+   "needed": [],
+   "named": {
+    "base": [],
+    "review": [
+     "doc-claim-governs-doc-and-code",
+     "worktree-no-store-reverify"
+    ]
+   },
+   "missed": [],
+   "grades": {
+    "minor": 1,
+    "false": 1
+   },
+   "confirmed": []
+  },
+  {
+   "pr": 167,
+   "needed": [
+    "remote-timeout-not-a-deadline"
+   ],
+   "named": {
+    "base": [],
+    "review": [
+     "n_ead8e0a2b43d",
+     "remote-timeout-not-a-deadline"
+    ]
+   },
+   "missed": [],
+   "grades": {
+    "minor": 2
+   },
+   "confirmed": [
+    "remote-timeout-not-a-deadline"
+   ]
+  },
+  {
+   "pr": 197,
+   "needed": [
+    "doc-claim-governs-doc-and-code",
+    "docs-agent-neutral"
+   ],
+   "named": {
+    "base": [],
+    "review": [
+     "doc-claim-governs-doc-and-code",
+     "docs-agent-neutral",
+     "n_1fe5ef1aaca5",
+     "n_6b65aa35593c",
+     "n_90066f354f1e",
+     "n_a4b40c96ede4",
+     "n_e8b039f47ee1",
+     "readonly-agents-side-effects",
+     "seed:dotnet-defects:g_tombstones_nc",
+     "unclosed-sqlite-in-test-pr154"
+    ]
+   },
+   "missed": [],
+   "grades": {
+    "act": 1,
+    "minor": 6,
+    "false": 3
+   },
+   "confirmed": [
+    "doc-claim-governs-doc-and-code",
+    "docs-agent-neutral"
+   ]
+  },
+  {
+   "pr": 273,
+   "needed": [],
+   "named": {
+    "base": [],
+    "review": []
+   },
+   "missed": [],
+   "grades": {},
+   "confirmed": []
+  },
+  {
+   "pr": 83,
+   "needed": [],
+   "named": {
+    "base": [],
+    "review": [
+     "doc-claim-governs-doc-and-code",
+     "n_b4050b826687"
+    ]
+   },
+   "missed": [],
+   "grades": {
+    "minor": 1,
+    "false": 1
+   },
+   "confirmed": []
+  },
+  {
+   "pr": 335,
+   "needed": [
+    "n_00985805cdbb",
+    "seed:geospatial-enforcement-defects:r_single_source_sets"
+   ],
+   "named": {
+    "base": [],
+    "review": [
+     "doc-claim-governs-doc-and-code",
+     "guarantee-holds-on-every-write-path",
+     "n_00985805cdbb",
+     "n_1eaf9a5f24e2",
+     "n_805cf67e5cc5",
+     "review-budget-one-push-per-round",
+     "seed:geospatial-enforcement-defects:r_single_source_sets"
+    ]
+   },
+   "missed": [],
+   "grades": {
+    "minor": 3,
+    "false": 4
+   },
+   "confirmed": [
+    "n_00985805cdbb",
+    "seed:geospatial-enforcement-defects:r_single_source_sets"
+   ]
+  },
+  {
+   "pr": 55,
+   "needed": [
+    "n_37ea04a8a0ac"
+   ],
+   "named": {
+    "base": [],
+    "review": [
+     "n_02cc84da158d",
+     "n_37ea04a8a0ac",
+     "n_5ddb0776a863",
+     "n_b4050b826687",
+     "seed:geospatial-enforcement-defects:d_cwd_isort"
+    ]
+   },
+   "missed": [],
+   "grades": {
+    "minor": 2,
+    "act": 2,
+    "false": 1
+   },
+   "confirmed": [
+    "n_37ea04a8a0ac"
+   ]
+  },
+  {
+   "pr": 88,
+   "needed": [],
+   "named": {
+    "base": [],
+    "review": [
+     "doc-claim-governs-doc-and-code"
+    ]
+   },
+   "missed": [],
+   "grades": {
+    "minor": 1
+   },
+   "confirmed": []
+  },
+  {
+   "pr": 202,
+   "needed": [],
+   "named": {
+    "base": [],
+    "review": [
+     "break-test-masked-by-integrity-check",
+     "n_ea7633cd748c",
+     "worktree-no-store-reverify"
+    ]
+   },
+   "missed": [],
+   "grades": {
+    "false": 2,
+    "minor": 1
+   },
+   "confirmed": []
+  },
+  {
+   "pr": 131,
+   "needed": [
+    "doc-claim-governs-doc-and-code",
+    "n_6b65aa35593c"
+   ],
+   "named": {
+    "base": [],
+    "review": [
+     "doc-claim-governs-doc-and-code",
+     "docs-agent-neutral",
+     "n_00985805cdbb",
+     "n_0637c92c032f",
+     "n_2c95128f307d",
+     "n_6b65aa35593c",
+     "n_713b8c104f12",
+     "n_b550ba9c5c8a",
+     "n_dc7429065f5d",
+     "seed:dotnet-defects:nc_arch_reviewer",
+     "seed:geospatial-enforcement-defects:r_single_source_sets",
+     "seed:rag-defects:qz_unequal_budget"
+    ]
+   },
+   "missed": [],
+   "grades": {
+    "act": 1,
+    "false": 5,
+    "minor": 6
+   },
+   "confirmed": [
+    "doc-claim-governs-doc-and-code",
+    "n_6b65aa35593c"
+   ]
+  },
+  {
+   "pr": 38,
+   "needed": [
+    "n_ead8e0a2b43d"
+   ],
+   "named": {
+    "base": [],
+    "review": [
+     "n_916330f61994",
+     "seed:geospatial-enforcement-defects:d_invoked_by_nothing"
+    ]
+   },
+   "missed": [
+    "n_ead8e0a2b43d"
+   ],
+   "grades": {
+    "false": 1,
+    "minor": 1
+   },
+   "confirmed": []
+  }
+ ]
+}

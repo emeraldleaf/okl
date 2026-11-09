@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""REPORT §4aq: the revised review with the repository to read, on pull requests opened after it was written.
+"""REPORT §4aq: the revised review with the repository to read, on 50 pull requests no review has read.
 
 The steps run in order, and each refuses until the one before it is complete, so the key is finished
 before any review exists for these tasks:
 
-    python3 evals/review_repo.py status      # how many eligible pull requests have merged
-    python3 evals/review_repo.py freeze      # freeze the first 50, once there are 50
+    python3 evals/review_repo.py status      # how many pull requests are in the pool
+    python3 evals/review_repo.py freeze      # freeze 50, in the fixed draw order
     python3 evals/review_repo.py key         # Opus: labels, then each lesson's state with the repository to read
     python3 evals/review_repo.py run         # Sonnet: the review of §4ap, then the repository read for each "ask"
     python3 evals/review_repo.py judge       # Opus: is each raise true, and would a maintainer act on it
@@ -47,7 +47,7 @@ import realwork_reach as rr
 import realwork_tasks as rt
 import review_action as ra
 
-BOUNDARY, N_TASKS = "2026-11-09T00:00:00Z", 50   # opened on or after this time; the first 50 to merge
+POOL_UNTIL, N_TASKS = "2026-11-08T00:23:00Z", 50   # §4al's pool, as it stood when its tasks were frozen (REPORT §4aq's amendment)
 FIRST_PROMPT = "03a44686243e047b"   # §4ap's first pass, unchanged
 W = SimpleNamespace(home=lr.PRIVATE, tasks=rr.REPO / "evals" / "realwork" / "tasks-4aq.jsonl", store=lr.PRIVATE / "store-4aq.db")
 LABELS, STATES, FIRST, USAGE, SETTLED, VERDICTS, DECOYS = ("4aq-labels.jsonl", "4aq-states.jsonl", "4aq-first.jsonl", "4aq-usage.jsonl",
@@ -58,6 +58,7 @@ ENV = {**os.environ, "OKL_BRIEFING_LOG": "0"}
 AGENT_FILES = (".claude", ".cursor", ".mcp.json", "CLAUDE.md", "AGENTS.md")   # the copy must not brief or instruct the model
 ACTION, RAISED_AFTER, CHANGE_FILE = ("not_followed", "check"), ("gap", "ask"), "CHANGE.diff"
 WORKERS, TOOL_TIMEOUT, TOOL_BATCH, DECOY_SHARE, DECOY_VOID = 3, 900, 10, 0.1, 0.2
+STOP_AFTER_EMPTY = 12   # this many calls in a row with no answer is what a usage limit looks like
 REACH_BAR, ACT_BAR, FALSE_BAR, RAISED_BAR = 0.70, 0.50, 5, 10
 _usage_lock = threading.Lock()
 
@@ -141,11 +142,13 @@ PROMPTS = {"states": sha(KEY_PROMPT), "settle": sha(SETTLE_PROMPT), "judge": sha
 
 
 def eligible() -> list[dict]:
-    """Pull requests opened on or after the boundary and merged, not by a bot, in the order they merged."""
+    """The pull requests §4al's draw could have taken and did not, none by a bot, in the fixed draw order."""
     out = subprocess.run(["gh", "pr", "list", "-R", rt.GH_REPO, "--state", "merged", "--limit", "500", "--json",
                           "number,createdAt,mergedAt,title,body,mergeCommit,author"], capture_output=True, text=True, check=True).stdout
-    prs = [p for p in json.loads(out) if p["createdAt"] >= BOUNDARY and not (p.get("author") or {}).get("is_bot")]
-    return sorted(prs, key=lambda p: p["mergedAt"])
+    read = {json.loads(line)["pr"] for line in rr.TASKS.read_text().splitlines() if line.strip()}
+    prs = [p for p in json.loads(out) if p["createdAt"][:10] >= rt.SINCE and p["mergedAt"] <= POOL_UNTIL
+           and p["number"] not in read and not (p.get("author") or {}).get("is_bot")]
+    return sorted(prs, key=lambda p: sha(f"4aq:{p['number']}"))
 
 
 def snapshot() -> str:
@@ -318,10 +321,17 @@ def pump(name: str, todo: Callable[[], list[tuple]], work: Callable[..., list[di
             if not jobs:
                 return
             print(f"{name} round {attempt + 1}: {len(jobs)} calls", file=sys.stderr, flush=True)
-            for n, future in enumerate(as_completed([pool.submit(work, *j) for j in jobs]), 1):
-                for row in future.result():
+            futures, empty = [pool.submit(work, *j) for j in jobs], 0
+            for n, future in enumerate(as_completed(futures), 1):
+                rows = future.result()
+                for row in rows:
                     sink.write(json.dumps(row, ensure_ascii=False) + "\n")
                 sink.flush()
+                empty = 0 if rows else empty + 1
+                if empty >= STOP_AFTER_EMPTY:
+                    for waiting in futures:
+                        waiting.cancel()
+                    sys.exit(f"{name}: {empty} calls in a row returned nothing, which is what a usage limit looks like. Stopping; rerun this step to resume.")
                 if n % 50 == 0:
                     print(f"  {n}/{len(jobs)}", file=sys.stderr, flush=True)
 
@@ -349,14 +359,14 @@ def state_batch(task: dict, ids: list[str]) -> list[dict]:
 
 
 def key_gaps(tasks: list[dict]) -> list[str]:
-    """What the key still lacks: an unlabelled pair, or a labelled needed or related pair with no state."""
+    """What the key still lacks: an unlabelled pair, or a pair labelled needed with no state."""
     labels, states = keyed(LABELS), keyed(STATES)
     gaps = [f"#{t['pr']} {i}: no label" for t in tasks for i in t["lessons"] if i in texts() and not labels.get((t["pr"], i), {}).get("verdict")]
-    return gaps + [f"#{k[0]} {k[1]}: no state" for k, r in labels.items() if r.get("verdict") in ("needed", "related") and k not in states]
+    return gaps + [f"#{k[0]} {k[1]}: no state" for k, r in labels.items() if r.get("verdict") == "needed" and k not in states]
 
 
 def make_key() -> int:
-    """Label every pair against the whole change, then give each needed or related pair its state."""
+    """Label every pair against the whole change, then give each needed pair its state."""
     tasks = load_tasks()
     by_pr = {t["pr"]: t for t in tasks}
     with tempfile.TemporaryDirectory(prefix="okl-4aq-") as tmp:
@@ -366,7 +376,7 @@ def make_key() -> int:
         labels, done = keyed(LABELS), keyed(STATES)
         group = defaultdict(list)
         for (pr, i), r in labels.items():
-            if r.get("verdict") in ("needed", "related") and (pr, i) not in done:
+            if r.get("verdict") == "needed" and (pr, i) not in done:
                 group[pr].append(i)
         return [(by_pr[pr], ids) for pr, all_ids in group.items() for ids in batches(sorted(all_ids), TOOL_BATCH)]
 
@@ -505,7 +515,7 @@ def judge() -> int:
 def task_row(task: dict, raised: dict[str, str], labels: dict[tuple[int, str], dict], states: dict[tuple[int, str], dict], verdicts: dict[tuple[int, str], dict]) -> dict:
     """One task's scoring row, in the shape briefing_arms.tally reads."""
     pr = task["pr"]
-    action = sorted(i for i in task["lessons"] if labels.get((pr, i), {}).get("verdict") in ("needed", "related") and states.get((pr, i), {}).get("state") in ACTION)
+    action = sorted(i for i in task["lessons"] if labels.get((pr, i), {}).get("verdict") == "needed" and states.get((pr, i), {}).get("state") in ACTION)
     grades = Counter(verdicts.get((pr, i), {}).get("answer", "unjudged") for i in raised)
     return {"pr": pr, "needed": action, "named": {"base": [], "review": sorted(raised)}, "missed": sorted(set(action) - set(raised)), "grades": dict(grades),
             "confirmed": sorted(set(action) & set(raised))}
@@ -552,6 +562,8 @@ def score(write: bool) -> int:
              "both_ledger_lessons_raised": all(ledger.values())}
     predictions = {"reach at least 70%": v["reach"] >= REACH_BAR, "at least half of the raises judged worth acting on": share >= ACT_BAR,
                    "raises at most 5 at the median task": statistics.median(n_raised) <= 5, "misses a lesson calling for action on more than a third of the tasks": v["failure_rate"] > 1 / 3}
+    drawn, frozen = [p["number"] for p in eligible()], {t["pr"] for t in tasks}
+    left_out = [n for n in drawn[:max(drawn.index(n) for n in frozen)] if n not in frozen] if frozen <= set(drawn) else []
     status = "RESULTS NOT USABLE: the judge passed too many decoys" if void else "model-judged, not yet audited" if usable else "INCOMPLETE"
     out = {"section": "4aq", "at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%MZ"), "okl_commit": rl.git("rev-parse", "HEAD").strip(), "status": status, "usable": usable and not void,
            "prompts": PROMPTS, "script_sha256": ba.sha256(Path(__file__)), "inputs": {"tasks_sha256": ba.sha256(W.tasks), "store_sha256": ba.sha256(W.store)},
@@ -559,7 +571,7 @@ def score(write: bool) -> int:
                       "tasks_missing": v["tasks_missing"], "failure_rate": v["failure_rate"], "failure_wilson95": v["failure_wilson95"],
                       "raised_median": statistics.median(n_raised), "raised_max": max(n_raised), "false_median": statistics.median(n_false),
                       "act_share": share, "act_share_boot95": share_ci, "grades": dict(sum((Counter(r["grades"]) for r in rows), Counter()))},
-           "decoys": {"grades": dict(decoy_grades), "act_share": round(decoy_acted, 3), "void_above": DECOY_VOID}, "ledger_on_388": ledger, "cost": cost_of({t["pr"] for t in tasks}),
+           "decoys": {"grades": dict(decoy_grades), "act_share": round(decoy_acted, 3), "void_above": DECOY_VOID}, "ledger_on_388": ledger, "cost": cost_of({t["pr"] for t in tasks}), "left_out_of_the_draw": left_out,
            "holds": {**holds, "all": all(holds.values()) and not void}, "predictions": predictions, "per_task": rows}
     print(status)
     print(json.dumps({k: out[k] for k in ("result", "decoys", "ledger_on_388", "cost", "holds", "predictions")}, indent=1))
@@ -571,9 +583,9 @@ def score(write: bool) -> int:
 
 
 def status() -> int:
-    """How many eligible pull requests have merged so far."""
+    """How many pull requests are in the pool, and whether that is enough."""
     got = eligible()
-    print(json.dumps({"eligible_merged": len(got), "needed": N_TASKS, "ready": len(got) >= N_TASKS, "opened_on_or_after": BOUNDARY}))
+    print(json.dumps({"in_pool": len(got), "needed": N_TASKS, "ready": len(got) >= N_TASKS, "merged_by": POOL_UNTIL}))
     return 0
 
 
