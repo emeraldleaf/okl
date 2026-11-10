@@ -5651,6 +5651,22 @@ broken only when sorted not followed: 70 on 34 development tasks and 54 on 24 te
 K, the measures and the decision rule are unchanged. While this was checked, T and C were run on the
 development half (T reached 14.3% at K = 5); nothing has run on the test half.
 
+**Development half, first prompt (2026-11-10; in-sample, not a result).** With prompt
+`687d7ba1f5a10e85`, E reached 14.3% of the 70 broken lessons at K = 5 [5.4, 24.6], the same as T
+(14.3%) and about C (12.9%); its gain over T was [−9.6, 9.9] points. At K = 10: T 21.4%, C 21.4%,
+E 22.9%. 26 of the 34 tasks with a broken lesson had none in E's first five. All three queries land in
+the same place, so the query is not what limits this search.
+
+*P, added on the development half and not pre-registered.* Sonnet is given E's sentences and every
+lesson's one line (its title and the first sentence of its fix, in id order) and names the ten the
+change most likely breaks (pick prompt `8f902958cfbdbe32`). P reached 24.3% at K = 5 [14.3, 33.9] and
+40.0% at K = 10; its gain over T at K = 5 was [1.6, 18.0] points. What it gains is lessons that bear on
+the change: of the 356 lessons the key calls needed on these tasks, P's first ten held 159 against T's
+87, and its first five held 26 lessons labelled neither needed nor related against T's 110. It does
+not tell a broken lesson from a followed one: 17 of the 109 needed lessons in its first five were
+broken, about the base rate (70 of 356). Receipt: `explain-search-dev-20261110-1306.json`. P has no
+test-half run; one would need its own dated amendment first.
+
 
 ## 5. Findings
 
