@@ -118,6 +118,23 @@ def explained() -> dict[tuple[str, int, str], list[str]]:
     return {(r["half"], r["pr"], r["prompt"]): r["sentences"] for r in map(json.loads, EXPLAINED.read_text().splitlines()) if r.get("sentences")}
 
 
+def sentences_in(text: str) -> list[str]:
+    """The largest JSON array of strings in `text`, so a short list quoted inside a sentence never
+    wins. realwork_label.last_array reads arrays of objects only, and returned nothing for every
+    explanation of the first pass."""
+    decoder, found = json.JSONDecoder(), None
+    for i, ch in enumerate(text):
+        if ch != "[":
+            continue
+        try:
+            obj, _ = decoder.raw_decode(text, i)
+        except ValueError:
+            continue
+        if isinstance(obj, list) and obj and all(isinstance(x, str) for x in obj) and (found is None or len(obj) >= len(found)):
+            found = obj
+    return [s.strip() for s in found or [] if s.strip()]
+
+
 def explain_one(half: str, task: dict) -> dict | None:
     """One Sonnet call: the change's explanation, from the diff alone, in an empty directory."""
     with tempfile.TemporaryDirectory(prefix="okl-4at-") as room:
@@ -130,8 +147,7 @@ def explain_one(half: str, task: dict) -> dict | None:
         result = json.loads(p.stdout).get("result") or ""
     except ValueError:
         result = p.stdout
-    got = rl.last_array(result)
-    sentences = [s for s in (got or []) if isinstance(s, str) and s.strip()]
+    sentences = sentences_in(result)
     return {"half": half, "pr": task["pr"], "prompt": PROMPT_SHA, "sentences": sentences} if sentences else None
 
 
