@@ -65,22 +65,27 @@ def test_the_name_check_fails_on_each_kind_of_name_the_code_lacks(tmp_path):
 
 
 def test_a_render_that_disagrees_with_its_source_fails(tmp_path):
-    """The .svg is what people read. One whose names differ from its .excalidraw (a source
-    edited and never re-exported) fails, and so does a name only the render shows that the code
-    lacks (CodeRabbit on #383). A render that agrees passes."""
+    """The .svg is what people read. One whose names or words differ from its .excalidraw (a
+    source edited and never re-exported) fails, and so does a name only the render shows that the
+    code lacks (CodeRabbit on #383). A render that agrees passes."""
     src = tmp_path / "d.excalidraw"
     src.write_text(json.dumps({"type": "excalidraw", "elements": [
-        {"type": "text", "text": "okl check --task x"}]}))
+        {"type": "text", "text": "okl check --task x <y>\nlessons cite  their source"}]}))
     svg = tmp_path / "d.svg"
 
     def run(render: str) -> subprocess.CompletedProcess[str]:
-        svg.write_text(f'<svg><text x="0">{render}</text></svg>')
+        svg.write_text("<svg>" + "".join(f'<text x="0">{line}</text>' for line in render.split("\n")) + "</svg>")
         return subprocess.run([sys.executable, str(CHECK), str(src)], capture_output=True,
                               text=True, cwd=ROOT)
 
-    # ASSERT (1) — agrees, with the escaping Excalidraw writes
-    agrees = run("okl check --task x &lt;y&gt;")
+    # ASSERT (1) — agrees, with the escaping Excalidraw writes and a line per <text>
+    agrees = run("okl check --task x &lt;y&gt;\nlessons cite their source")
     assert agrees.returncode == 0, agrees.stdout
+    # (1b) — prose changed and no name did: the render still shows the old words (#415)
+    prose = run("okl check --task x &lt;y&gt;\nlessons cite nothing")
+    assert prose.returncode == 1, prose.stdout
+    assert "only the .excalidraw says 'lessons cite their source'" in prose.stdout, prose.stdout
+    assert "only the .svg says 'lessons cite nothing'" in prose.stdout, prose.stdout
     # (2) — a stale render: real names, but not the source's
     stale = run("okl record --task x")
     assert stale.returncode == 1 and "the render does not match its source" in stale.stdout, stale.stdout
