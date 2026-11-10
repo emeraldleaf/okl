@@ -5479,6 +5479,82 @@ of the 84 false raises sit, with the reach that would cost measured rather than 
 judge has been audited, and #394 must be extended to both before any figure here leaves this section.
 
 
+## 4ar. PRE-REGISTERED: does checking what the review calls done, and raising nothing it cannot settle, find more of what a change has left to do with less noise? (2026-11-09)
+
+Written before any of its tasks exist. §4aq's review missed two bars of five: its reach (67.8%, lower bound
+53.8%) and the share of its raises worth acting on (15.1%). Its misses and raises, read after the run and not
+pre-registered, suggest two changes, tested here. 13 of its 19 misses were lessons the first pass called
+*done*, and the repository read runs only on *ask*, so it never looked at them. And 61 of its 84 false raises
+were ones the read left at *ask*.
+
+**The question.** With a repository read of every lesson the first pass calls *done*, and nothing raised that
+stays *ask*, how many of the lessons calling for action does the review raise, how much of what it raises is
+worth acting on, and does it beat §4aq's review on the same tasks?
+
+**What this test can and cannot show.** Everything §4aq says of itself holds here: the key and the judge are
+Opus and the review is Sonnet, so a high score shows that models agree, and neither the key nor the judge is
+audited (#394, extended to both, comes before any figure leaves this section). The two changes come from
+§4aq's own answers, which are this test's development set; none of these tasks has been seen. The base rate is
+against the first change: of §4aq's 786 *done* answers, 13 were lessons calling for action, so a read that
+wrongly raised even 1 in 20 of the rest would add about 39 raises. This time there is a comparison: §4aq's
+review, run on the same tasks from the same answers, at no extra cost.
+
+**Seen before this was written.** §4aq in full, with its misses, its raises and six findings read by hand.
+None of these tasks.
+
+**Tasks.** The first 50 pull requests to merge that were opened at or after 2026-11-10T02:30Z and are not by a
+bot, in the order they merged, frozen as §4al's were: at the last commit before the first review comment, or
+before merging if none, with the store as it stood at that commit. One whose title or issue names a lesson is
+left out and reported, and the next is taken. The pull request that adds this section was opened before that
+time. The 50 is fixed now. At §4aq's rate it gives about 59 lessons calling for action, and at that size §4aq's
+interval ran about 14 points either side, so clearing the reach bar needs a reach near 84%.
+
+**The answer key, finished before the review runs.** Unchanged from §4aq as amended: Opus labels every lesson on
+every task against the whole change (`b1dbb8c24bbce0de`), then sorts each pair labelled needed with a read-only
+copy of the repository (`f0370a561971b9ed`). A lesson calls for action when it is labelled needed and sorted not
+followed or check.
+
+**The review.** Sonnet, in three steps.
+1. §4ap's first pass, unchanged (`03a44686243e047b`): the whole change in parts, one word per lesson.
+2. Each *ask* settled by reading the repository, as in §4aq (`732605e91ed0b3c7`).
+3. New: each lesson the first pass calls *done* checked by reading the same copy of the repository: gap or met.
+
+A lesson is *raised* when the first pass says gap, or either read says gap. Nothing that stays *ask* is raised.
+Step 3's prompt is written and tried on §4aq's tasks only, and is committed with its hash in a dated amendment
+before any model reads one of these tasks. Nothing else about the review changes after that.
+
+**The comparison.** §4aq's review is scored on the same tasks from the same answers: raised when the first pass
+says gap, or step 2 says gap or ask. Steps 1 and 2 are shared, so the comparison costs only the scoring.
+
+**The judge, after the review.** Unchanged from §4aq (`b734e38be301fc91`): Opus, with the same copy of the
+repository, grades every raise of either review *act*, *minor* or *false*, with about one raise in ten a decoy
+from another pull request, not marked as one. If more than 20% of the decoys are graded *act*, the run is
+marked RESULTS NOT USABLE.
+
+**Measures.** §4aq's seven, for this review. Then, against §4aq's review on the same tasks: the difference in
+reach and in raises graded *act* and *false* per task, with a paired bootstrap over tasks (2000 resamples, seed 4).
+
+**Decision rule.** §4aq's five bars, unchanged: the lower bound of its reach is at least 70%; the lower bound of
+the share graded *act* is at least 50%; at most 5 raises graded *false* at the median task; at most 10 raised at
+the median task; and both ledger lessons raised on #388. If all five hold and the run is usable, it ships as a
+CI comment that cannot block a merge (#390), and its figures stay in this section until #394, extended, passes.
+If it fails, its misses are read, and a changed review is measured only under a new pre-registration, on pull
+requests later than these. The comparison decides nothing on its own; it says which change helped.
+
+**Predictions** (not decision rules):
+- its reach is higher than §4aq's review's on the same tasks;
+- it raises more lessons at the median task than §4aq's review does;
+- fewer of its raises are graded *false* than §4aq's review's;
+- the share graded *act* stays under 50%: in §4aq even the raises the key counted reached *act* only 55% of the time.
+
+**Budget.** About 1,000 Opus calls for the labels and 60 with the repository for the states; about 1,000 Sonnet
+calls for the first pass, 90 with the repository to settle *ask* and about 110 to check *done*; and about 70 Opus
+calls for the judge, which grades both reviews' raises. The labels alone ran into the maintainer's plan limit in §4aq, so the run is started when
+the maintainer is not working, and it stops at the first sign of the limit and resumes from what it kept.
+Nothing is posted on any pull request. At the recent rate of about five merged pull requests a day, the 50
+exist in roughly ten days.
+
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
