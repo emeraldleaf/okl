@@ -882,8 +882,9 @@ def add_standing(result: dict[str, Any], lessons: list[Node], repo: str) -> int:
     most needed on earlier work lifted reach on later work (REPORT §4am, model-judged; its
     figures stay in that section until audited). The repo chooses them (`okl standing`). A lesson the briefing already names
     is not repeated, nor is a retired one or one outside this repo's view; a file briefing gets
-    none, since it repeats on every read. Named in the one-line form `also_matched` uses."""
-    if result.get("paths") is not None:
+    none, since it repeats on every read, and neither does a prompt the harness wrote, which
+    briefs nothing (CodeRabbit sweep 7). Named in the one-line form `also_matched` uses."""
+    if result.get("paths") is not None or result.get("skipped") == "harness":
         return 0
     named = set(briefed_ids(result)) | {e.get("id") for e in result.get("also_matched") or []}
     named |= {a.get("id") for a in result.get("next_actions") or []}

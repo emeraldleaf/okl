@@ -213,7 +213,10 @@ def scenario_mcp(root: Path) -> None:
     finally:
         if p.stdin:
             p.stdin.close()
-        p.wait(timeout=30)
+        try:
+            p.wait(timeout=30)
+        except subprocess.TimeoutExpired:
+            p.kill()
 
 
 def scenario_intake(root: Path) -> None:
