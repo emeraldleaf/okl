@@ -132,7 +132,8 @@ def _review_after_writing(client: Client, args: argparse.Namespace) -> int:
     review on and something changed. Exit 0 when it ran, 2 when git or the store could not be
     read, or a flag that shapes a briefing (--limit, --compact, --format actions) was given."""
     if args.format == "hook":
-        return _review_note(client, args)
+        _review_note(client, args)
+        return 0
     if getattr(args, "limit", None) is not None or getattr(args, "compact", False) or args.format == "actions":
         print("okl check --change: --limit, --compact and --format actions shape a briefing; the review "
               "lists every lesson in scope, so they do not apply", file=sys.stderr)
@@ -164,22 +165,21 @@ def _review_after_writing(client: Client, args: argparse.Namespace) -> int:
     return 0
 
 
-def _review_note(client: Client, args: argparse.Namespace) -> int:
+def _review_note(client: Client, args: argparse.Namespace) -> None:
     """The Stop hook's note: nothing, without a git call, where the review is off; the note where
     it is on and the work changed something; and, where it is on but git cannot list the change,
     a note saying so, since the hook discards stderr and a review that never ran would otherwise
     look like one with nothing to review."""
     if not client.review_after_writing:
-        return 0
+        return
     try:
         _, files = changes.touched(args.change or None)
     except changes.ChangesError as e:
         print(f"REVIEW AFTER WRITING is on in this repo, but okl could not list the changes ({e}). "
               "Run `okl check --change <the branch this work started from>` and follow its steps.")
-        return 0
+        return
     if files:
         print(core.REVIEW_NOTE)
-    return 0
 
 
 _BRIEFED_BUCKETS = ("armed_gates", "relevant_defects", "live_retractions", "in_scope_tombstones",

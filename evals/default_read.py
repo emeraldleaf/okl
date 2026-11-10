@@ -67,7 +67,9 @@ def chosen() -> list[tuple[str, dict]]:
     broke = [t for t in tasks if any(key.get((t["pr"], i)) == "broken" for i in t["lessons"])]
     clean = [t for t in tasks if t not in broke]
     rng = random.Random(SEED)  # noqa: S311 - a seeded draw, not a secret
-    return [("broke", t) for t in rng.sample(broke, PER_ARM)] + [("clean", t) for t in rng.sample(clean, PER_ARM)]
+    drawn_broke = rng.sample(broke, PER_ARM)  # NOSONAR - seeded, reproducible on purpose
+    drawn_clean = rng.sample(clean, PER_ARM)  # NOSONAR - seeded, reproducible on purpose
+    return [("broke", t) for t in drawn_broke] + [("clean", t) for t in drawn_clean]
 
 
 def full_text(db: Path) -> dict[str, str]:
