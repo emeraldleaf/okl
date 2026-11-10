@@ -48,7 +48,13 @@ REPO = Path(__file__).resolve().parent.parent
 # its effect, so the entry went. Its sibling d_unpinned_linter is still shown in full with the
 # same fix, so ci_linter cannot tell the line's effect from the sibling's (§4aa, amended in
 # review of #303).
-ACCEPTED_GAPS: dict[str, str] = {}
+# ci_linter again from 2026-11-10 (REPORT §4aa, dated note): one CI lesson recorded since, which
+# ranks above it, leaves its rule 18th for a briefing of 17 (5 in full, 12 named), with nothing in
+# the retrieval changed. The sibling is still shown in full with the same fix.
+ACCEPTED_GAPS: dict[str, str] = {
+    "ci_linter": ("its rule ranks 18th for 17 places since ci-rerun-reuses-event-payload was recorded; "
+                  "d_unpinned_linter, the defect it generalizes, is shown in full with the same fix (REPORT §4aa)"),
+}
 
 
 def main() -> int:
