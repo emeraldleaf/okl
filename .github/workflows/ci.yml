@@ -231,6 +231,7 @@ jobs:
   # A job of its own, so its red can neither hide the suite's nor hide behind it.
   e2e:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
       pull-requests: read   # okl intake reads this repository's review threads

@@ -141,10 +141,12 @@ def main() -> int:
     audited = bool(audit.get("passed"))
     tasks = [json.loads(line) for line in TASKS.read_text().splitlines() if line.strip()]
     labels: dict[tuple[int, str], str] = {}
+    prompts: set[str] = set()   # what the labels were made with, read from them (CodeRabbit sweep 7)
     for line in LABELS.read_text().splitlines():
         r = json.loads(line)
         if r.get("verdict"):
             labels[(r["pr"], r["lesson"])] = r["verdict"]
+            prompts.add(str(r.get("prompt")))
     per_task = []
     with tempfile.TemporaryDirectory(prefix="okl-4al-reach-") as room:
         for t in tasks:
@@ -204,7 +206,7 @@ def main() -> int:
         status = f"NOT USABLE: {len(WARM_MISSED)} default briefing(s) ran without warm; " + status
     out = {"section": "4al", "step": "reach", "audited": audited, "usable": usable, "warm_missed": WARM_MISSED,
            "warm_retries": len(WARM_RETRIES), "warm_fell_back_after_every_try": WARM_FALLBACK,
-           "judge": "opus (labels in evals/realwork/labels.jsonl, prompt b1dbb8c24bbce0de)",
+           "judge": f"opus (labels in evals/realwork/labels.jsonl, prompt {', '.join(sorted(prompts))})",
            "status": status,
            "at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%MZ"),
            "tasks": len(per_task), "tasks_with_needed": len(with_needed),

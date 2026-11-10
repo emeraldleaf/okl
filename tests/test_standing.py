@@ -110,3 +110,12 @@ def test_the_command_needs_a_config(tmp_path, monkeypatch, capsys):
     monkeypatch.chdir(tmp_path)
     assert main(["standing"]) == 2
     assert "run okl init first" in capsys.readouterr().err
+
+
+def test_a_prompt_the_harness_wrote_gets_none(repo):
+    """A task notification or a sub-agent's report briefs nothing, and standing lessons are no
+    exception: they would otherwise fill the context on every harness turn (CodeRabbit sweep 7)."""
+    _stand(repo, ["claims"])
+    result = Client().check("<task-notification> the background job finished </task-notification>")
+    assert result.get("skipped") == "harness"
+    assert "standing" not in result

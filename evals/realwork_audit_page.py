@@ -255,7 +255,7 @@ function go(k) { at = Math.max(0, Math.min(pairs.length - 1, k)); render(); $('d
 function nextOpen() { for (let s = 1; s <= pairs.length; s++) { const k = (at + s) % pairs.length; if (!labels[pairs[k].id]) return go(k); } }
 async function choose(v) {
   if (!db || !canWrite) return;
-  const p = pairs[at]; labels[p.id] = v; render();
+  const p = pairs[at], prev = labels[p.id]; labels[p.id] = v; render();
   try {
     const sg = (DATA.suggestions || {})[p.id];
     await db.collection(DATA.collection || 'labels').doc(p.id).set({verdict: v, suggested: sg ? sg.answer : null,
@@ -263,6 +263,8 @@ async function choose(v) {
     $('status').textContent = 'Saved'; $('status').className = 'note';
     nextOpen();
   } catch (e) {
+    if (prev === undefined) delete labels[p.id]; else labels[p.id] = prev;
+    render();
     $('status').textContent = e && e.code === 'invalid_argument' ? 'This view cannot save labels.' : 'Not saved: the store did not answer. Try again.';
     $('status').className = 'note warn';
     if (e && e.code === 'invalid_argument') { canWrite = false; render(); }

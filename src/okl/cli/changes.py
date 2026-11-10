@@ -5,7 +5,8 @@ import argparse
 import sys
 
 from .. import changes
-from ..client import Client, OKLUnreachableError
+from ..client import Client, OKLRejectedError, OKLUnreachableError
+from ..store import backend_errors
 
 
 def cmd_changes(args: argparse.Namespace) -> int:
@@ -27,9 +28,10 @@ def cmd_changes(args: argparse.Namespace) -> int:
         # Opening an unconfigured store creates one (#21), so no lesson is read here.
         print("okl changes: no store is named here, so no lessons are matched (run okl init)", file=sys.stderr)
     else:
+        unreadable: tuple[type[Exception], ...] = (OKLUnreachableError, OKLRejectedError, OSError, *backend_errors())
         try:
             nodes = client.all_nodes()
-        except OKLUnreachableError as e:
+        except unreadable as e:
             print(f"okl changes: lessons skipped, the store could not be read ({e})", file=sys.stderr)
     rep = changes.report(found, nodes, args.repo or client.repo)
     print(changes.as_json(rep) if args.format == "json" else changes.render(rep), end="")

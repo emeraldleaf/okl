@@ -153,3 +153,16 @@ def test_a_base_git_cannot_find_is_refused(repo, capsys):
     """A base git cannot resolve is exit 2, said on stderr."""
     assert main(["changes", "--base", "no-such-branch"]) == 2
     assert "okl changes:" in capsys.readouterr().err
+
+
+def test_a_store_that_refuses_still_leaves_the_git_report(repo, capsys, monkeypatch):
+    """A service answering 401, or a store that cannot be read, costs the lessons, not the report."""
+    from okl.client import OKLRejectedError
+
+    def refuse(self):
+        raise OKLRejectedError("401: no token", status=401)
+    monkeypatch.setattr(Client, "all_nodes", refuse)
+    assert main(["changes", "--base", "main", "--head", "work"]) == 0
+    got = capsys.readouterr()
+    assert "lessons skipped, the store could not be read" in got.err
+    assert "src/legacy.py → src/kept.py" in got.out
