@@ -37,3 +37,10 @@ def test_kappa_reads_agreement_beyond_chance():
     assert ca.kappa(a, a) == 1.0
     assert ca.kappa(a, [not x for x in a]) < 0
     assert ca.kappa([True, True, True, False], [True, True, True, True]) == 0.0
+
+
+def test_a_verdict_missing_its_closing_brace_is_still_read():
+    """Fable's habit in the pilot: the object ends at the reason's closing quote."""
+    got = ca.verdict_in('Looked at it.\n{"verdict": "broken", "evidence": ["a.py:3"], "reason": "no test asserts it."')
+    assert got == {"verdict": "broken", "evidence": ["a.py:3"], "reason": "no test asserts it."}
+    assert ca.verdict_in("no object here") is None

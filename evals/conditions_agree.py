@@ -42,8 +42,9 @@ PROMPT = dr.SETTLE_PROMPT   # §4au's follow-up prompt, so arm A is the call tha
 assert dr.SETTLE_SHA == "7b2f46b1d66ab41b", "the §4au follow-up prompt changed"
 JUDGES = {"sonnet": ["claude", "-p", "--model", "sonnet", *rp.READ_ONLY],
           "fable": ["claude", "-p", "--model", "fable", *rp.READ_ONLY]}
-FROZEN_CONDITIONS: str | None = None   # set by the amendment that freezes the conditions, before any test-half call
+FROZEN_CONDITIONS: str | None = "5b30c4808857b727"   # frozen by §4av's amendment of 2026-11-10, after the pilot
 OUT = lr.PRIVATE / "conditions-4av.jsonl"
+UNREAD = lr.PRIVATE / "conditions-4av-unread.jsonl"
 SEED, RELATED, WORKERS, TIMEOUT, STOP_AFTER_EMPTY = 4, 15, 4, 1500, 8
 KAPPA_GAIN, KEEP_FLAGGED, EXTRA_ALARMS, MIN_COMPLETE = 0.15, 2 / 3, 2, 60
 
@@ -103,7 +104,8 @@ def kept() -> dict[tuple, dict]:
 
 
 def verdict_in(text: str) -> dict | None:
-    """The last JSON object in the reply that carries a verdict."""
+    """The last JSON object in the reply that carries a verdict. Fable sometimes ends the object
+    without its closing brace (5 of the pilot's 35 Fable replies); when nothing parses, one is added."""
     got, decoder = None, json.JSONDecoder()
     for i, ch in enumerate(text):
         if ch == "{":
@@ -113,7 +115,17 @@ def verdict_in(text: str) -> dict | None:
                 continue
             if isinstance(obj, dict) and "verdict" in obj:
                 got = obj
+    tail = text.rstrip()
+    if got is None and tail and not tail.endswith("}"):
+        return verdict_in(tail + "}")
     return got
+
+
+def keep_unread(call: dict, reply: dict) -> None:
+    """A paid reply with no verdict is kept, so a parsing fix can read it without calling again."""
+    with UNREAD.open("a") as sink:
+        sink.write(json.dumps({**call, "prompt": dr.SETTLE_SHA, "result": reply.get("result"),
+                               "subtype": reply.get("subtype")}) + "\n")
 
 
 def judge_one(call: dict, task: dict) -> dict | None:
@@ -148,6 +160,7 @@ def judge_one(call: dict, task: dict) -> dict | None:
     if got is None or got.get("verdict") not in ("broken", "followed", "not applicable"):
         print(f"  #{call['pr']} {call['lesson']} {call['arm']}/{call['judge']}: no verdict ({reply.get('subtype')}): "
               f"{(reply.get('result') or '')[-200:]!r}", file=sys.stderr, flush=True)
+        keep_unread(call, reply)
         return None
     return {**call, "prompt": dr.SETTLE_SHA, "conditions": conditions_sha() if call["arm"] == "B" else None,
             "verdict": got["verdict"], "reason": got.get("reason"), "evidence": got.get("evidence"), "model": models,

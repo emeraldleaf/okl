@@ -5844,6 +5844,28 @@ the yes/no form; this design does not separate them.
 about $0.76 a call, so roughly $200 API-priced in all, which a Max plan does not pay. The verdicts
 are kept in the private results directory; the receipts are committed.
 
+**Amendment before the test half (2026-11-10): what the pilot changed.** All 70 pilot calls
+answered (receipt `conditions-agree-dev-20261110-1942.json`, conditions `b1691684317188e2`). Five
+Fable replies ended their JSON at the reason's closing quote, without the brace; the parser now
+adds one when nothing else parses, and keeps any reply it cannot read, and those five calls were
+made again. That fix was not yet committed when the receipt was written, so it is stamped
+`7e4ce89+dirty`; it is in the commit that carries this amendment. With the conditions, the two
+judges agreed on 33 of the 35 development-half cases on broken or not (kappa 0.87). This half has
+no arm A and the conditions were written from its cases, so that figure is not a result. Both
+judges called broken several cases the key had called followed, each where the lesson's own fix
+asks for something the change lacked (a test that asserts stdout is empty; a test that passes a
+hostile value): the conditions apply the lessons' text more strictly than the key did, which the
+silence guard does not count against them. The two disagreements came from wording, and it was
+changed:
+- `remote-path-test-through-client`: "cover each field" became two questions: a test through the
+  client sends each field as the client really sends it, including its default when the caller
+  gives none (the lesson's own incident was a null default), and one reaches each error the
+  endpoint returns.
+- `docs-agent-neutral`: a Claude Code-only label must be in the same paragraph, bullet or table
+  row as the mention, not only elsewhere in the document.
+
+The conditions are frozen at `5b30c4808857b727`.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

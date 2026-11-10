@@ -78,7 +78,8 @@
   "not_in_scope": "the change touches no path between the client and the service",
   "questions": [
    "Is there a test that calls the real client against the in-process service app (the remote fixture, or urlopen routed to a TestClient), not only a test that posts to the app directly?",
-   "Does that test cover each new or changed field or endpoint, including an input the client trims or filters before sending, down to empty?"
+   "Does a test through the client send each new or changed field as the client really sends it, including its default when the caller gives none (often null, or the field left out) and an input the client trims or filters before sending, down to empty?",
+   "Does a test through the client reach each error the new endpoint can return (a missing id, an invalid input) and check what the client reports for it?"
   ]
  },
  "falsifier-relative-to-control": {
@@ -112,7 +113,7 @@
   "not_in_scope": "the text is a dated report section describing runs made with a named agent (a fact about that run), or it states nothing about how okl works with an agent",
   "questions": [
    "Where the text describes what any agent can do with okl, does it say 'your agent' (or name more than one agent) rather than Claude or Claude Code?",
-   "Is every hook, slash command (/record, /seed-from-codebase), Stop question or per-prompt briefing it mentions labelled as Claude Code-only?",
+   "Is every hook, slash command (/record, /seed-from-codebase), Stop question or per-prompt briefing it mentions labelled as Claude Code-only in the same paragraph, bullet or table row, not only elsewhere in the document?",
    "Where it explains how an agent gets or records lessons, does it name the path other agents use (the MCP tools okl_check and okl_record, or the CLI)?"
   ]
  },
