@@ -47,7 +47,7 @@ def words(text: str) -> set[str]:
 def task_text(t: dict) -> tuple[str, str]:
     """A task's text (title, issues, paths, the change's added lines) and the change itself."""
     diff = subprocess.run(["git", "-C", str(REPO), "diff", f"{t['base']}..{t['commit']}"],
-                          capture_output=True, text=True).stdout
+                          capture_output=True, text=True, check=True).stdout
     added = "\n".join(line[1:] for line in diff.splitlines() if line.startswith("+") and not line.startswith("+++"))
     issues = " ".join(f"{i['title']} {i['body']}" for i in t["issues"])
     return f"{t['title']} {issues} {' '.join(t['paths'])} {added}", diff

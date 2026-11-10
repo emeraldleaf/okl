@@ -20,7 +20,7 @@ mistake no lesson named.
 
 | claim | the question | ground truth | status today |
 |---|---|---|---|
-| **The software does what its docs say** | Do the commands, hooks and gates behave as documented, on real inputs? | Executable: tests on recorded inputs, and an end-to-end run on a fresh install | The suite runs in CI on five Python versions. Some fixtures were written by hand, the end-to-end run is manual, and part of the guard check is not yet registered |
+| **The software does what its docs say** | Do the commands, hooks and gates behave as documented, on real inputs? | Executable: tests on recorded inputs, and an end-to-end run on a fresh install | The suite runs in CI on five Python versions, and so does an end-to-end run on a fresh install (`ci/e2e.py`), with every guard held by the mutation check (#393). Some fixtures were written by hand |
 | **The right lesson reaches the agent** | Of the lessons a piece of real work needed, how many reached the agent before the code was written, and through which channel? | Every needed lesson labelled per task before any arm runs, plus known-item cases from real misses | Pooled figures only (§4x, §4y), which are upper bounds. The real misses on file reached: 0 of 2 (§4ak) |
 | **The agent then complies** | Given the lesson, does the agent write code that passes the check the eventual fix added, and does a briefing ever turn a pass into a fail? | Executable: a hidden test taken from the real fix | Only on eight authored bait tasks (§5, finding 7), whose prompts name the lesson's subject |
 | **What it watches stays true** | When code a lesson governs changes, is the lesson flagged, and only then? | Executable: deliberate breaks and a replay of history (§4ae, §4af, §4ah) | Measured, with judge-confirmed breaks |
@@ -153,6 +153,7 @@ before the code merged.
 |---|---|---|
 | the test suite, lint, types, import contracts | `pytest`, `ruff`, `mypy`, `lint-imports` | CI, every pull request |
 | guards held by tests | `ci/check-guard-mutations.py` | CI, every pull request |
+| the end-to-end run on a fresh install | `ci/e2e.py` | CI, every pull request |
 | known-item replay of real misses | `evals/missed_lessons.py` | locally; in CI once the store's lessons are committed |
 | drift on history and on planted breaks | `evals/drift_replay.py`, `evals/drift_mutate.py` | before a release |
 | briefing reach and size on real prompts | `evals/bench/real_prompts.py` (pooled: upper bound) | before a release |
@@ -161,8 +162,8 @@ before the code merged.
 
 ## What is being built, in order
 
-1. **The end-to-end run in CI, and every guard registered.** A fresh install on a fixture
-   monorepo, the hooks fired as the agent's harness fires them, the loop from record to re-verify,
+1. **The end-to-end run in CI, and every guard registered.** Done (#393): `ci/e2e.py` runs on
+   every pull request. A fresh install on a fixture monorepo, the hooks fired as the agent's harness fires them, the loop from record to re-verify,
    a branch's stamp kept from another, and the MCP server over stdio.
 2. **A real-work set with complete labels.** Tasks mined from this repository's merged pull
    requests and sessions (each resolved review finding, the diff it was found on, and the text
