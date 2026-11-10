@@ -178,11 +178,11 @@ holds, or propose a correction (`okl update`) or retirement (`okl retire`) for y
 approve. That question is the safety net for the lessons nobody stopped to say out loud;
 answer it, or say explicitly that nothing was worth keeping.
 
-**The review after writing** (opt-in): after `okl init --review-after-writing`, in Claude
-Code the Stop hook first asks the agent to run `okl check --change` and check the code it wrote against the
-lessons. The command lists the files changed since the main branch, committed or not, and
-every lesson in scope one line each, those governing a changed file first. The agent says
-what its code does, picks the ten lessons the change most likely breaks, reads each with
+**The review after writing** (opt-in): in Claude Code, after `okl init --review-after-writing`,
+the Stop hook first asks the agent to run `okl check --change` and check the code it wrote
+against the lessons. The command lists the files changed since the main branch, committed or
+not, and every lesson in scope one line each, those governing a changed file first. The agent
+says what its code does, picks the ten lessons the change most likely breaks, reads each with
 `okl show`, and fixes only what breaks one. okl calls no model for it. It is off by default:
 it has been measured on one repository only ([REPORT §4at](../evals/REPORT.md)), and the list
 costs about 60 tokens a lesson.
