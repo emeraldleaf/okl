@@ -95,8 +95,9 @@ okl check --path src/orders.py
 okl check --change [BASE]
                      # the review after writing: the files changed since BASE (default: the
                      #   remote's default branch, then main, then master), committed or not,
-                     #   untracked included, and every lesson in scope one line each, with the
-                     #   steps: say what the changed code does, pick the ten lessons it most
+                     #   untracked included, and every lesson in scope one line each (those
+                     #   governing a changed file first; about 60 tokens a lesson, never cut,
+                     #   its first line saying to read all of it), with the steps: say what the changed code does, pick the ten lessons it most
                      #   likely breaks, read each with okl show, check the code, fix only what
                      #   breaks one. okl calls no model; the agent does the review. A step under
                      #   measurement (REPORT §4at). --format json for a script. --format hook

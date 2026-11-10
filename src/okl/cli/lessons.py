@@ -130,18 +130,21 @@ def _review_after_writing(client: Client, args: argparse.Namespace) -> int:
 
     With --format hook it prints only the Stop hook's note, and only when the repo turns the
     review on and something changed. Exit 0 when it ran, 2 when git or the store could not be
-    read."""
+    read, or a flag that shapes a briefing (--limit, --compact, --format actions) was given."""
+    if args.format == "hook":
+        return _review_note(client, args)
+    if getattr(args, "limit", None) is not None or getattr(args, "compact", False) or args.format == "actions":
+        print("okl check --change: --limit, --compact and --format actions shape a briefing; the review "
+              "lists every lesson in scope, so they do not apply", file=sys.stderr)
+        return 2
     try:
         merge_base, files = changes.touched(args.change or None)
     except changes.ChangesError as e:
         print(f"okl check --change: {e}", file=sys.stderr)
         return 2
-    if args.format == "hook":
-        if client.review_after_writing and files:
-            print(core.REVIEW_NOTE)
-        return 0
     repo = args.repo or client.repo
     lessons: list[dict[str, Any]] = []
+    governed: list[str] = []
     if files:
         unreadable: tuple[type[Exception], ...] = (OKLUnreachableError, OKLRejectedError, OSError, *backend_errors())
         try:
@@ -150,11 +153,32 @@ def _review_after_writing(client: Client, args: argparse.Namespace) -> int:
             print(f"OKL UNREACHABLE — cannot list the lessons to review against.\n{e}", file=sys.stderr)
             return 2
         lessons = core.review_menu(nodes, repo, client.interests or None)
-    result = {"repo": repo, "base": args.change or None, "merge_base": merge_base, "files": files, "lessons": lessons}
+        listed = {e["id"] for e in lessons}
+        governed = sorted(n.id for n in core.governing(nodes, repo, set(files)) if n.id in listed)
+    result = {"repo": repo, "base": args.change or None, "merge_base": merge_base, "files": files,
+              "governing": governed, "lessons": lessons}
     if args.format == "json":
         _print_json(result)
     else:
         print(core.render_review(result), end="")
+    return 0
+
+
+def _review_note(client: Client, args: argparse.Namespace) -> int:
+    """The Stop hook's note: nothing, without a git call, where the review is off; the note where
+    it is on and the work changed something; and, where it is on but git cannot list the change,
+    a note saying so, since the hook discards stderr and a review that never ran would otherwise
+    look like one with nothing to review."""
+    if not client.review_after_writing:
+        return 0
+    try:
+        _, files = changes.touched(args.change or None)
+    except changes.ChangesError as e:
+        print(f"REVIEW AFTER WRITING is on in this repo, but okl could not list the changes ({e}). "
+              "Run `okl check --change <the branch this work started from>` and follow its steps.")
+        return 0
+    if files:
+        print(core.REVIEW_NOTE)
     return 0
 
 

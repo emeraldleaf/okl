@@ -53,6 +53,14 @@ def test_touched_lists_committed_uncommitted_and_untracked_work(repo):
     assert base == _git(repo, "rev-parse", "main").strip()
 
 
+def test_touched_from_a_subdirectory_lists_the_whole_repo_from_its_root(repo, monkeypatch):
+    """git ls-files lists only the current subtree, relative to it, unless told otherwise: run from
+    a subdirectory, an untracked file outside it went missing (found by review)."""
+    (repo / "sub").mkdir(); (repo / "sub" / "inner.py").write_text("z = 3\n")
+    monkeypatch.chdir(repo / "sub")
+    assert changes.touched(None)[1] == ["committed.py", "notes.md", "sub/inner.py", "untracked.py"]
+
+
 def test_touched_without_a_branch_to_compare_names_the_flag(tmp_path, monkeypatch):
     """No remote default branch, main or master: say how to name one, in this command's words."""
     if shutil.which("git") is None:
@@ -61,8 +69,9 @@ def test_touched_without_a_branch_to_compare_names_the_flag(tmp_path, monkeypatc
     subprocess.run(["git", "init", "-q", "-b", "trunk", str(r)], check=True)
     (r / "a.py").write_text("a\n"); _git(r, "add", "-A"); _git(r, "commit", "-qm", "a")
     monkeypatch.chdir(r)
-    with pytest.raises(changes.ChangesError, match="okl check --change main"):
+    with pytest.raises(changes.ChangesError, match="okl check --change main") as e:
         changes.touched(None)
+    assert str(e.value).count("found no branch") == 1 and "--base" not in str(e.value)
     assert changes.touched("trunk")[1] == []
 
 
@@ -102,15 +111,20 @@ def test_a_retracted_lesson_stays_in_the_list_as_what_to_avoid():
 
 
 def test_the_rendering_carries_the_steps_the_files_and_each_lesson():
-    """The steps, the merge base, the files (cut at thirty) and each lesson's line."""
+    """The steps, the merge base, every file, the list's size, and each lesson's line, those
+    governing a changed file first."""
+    menu = core.review_menu([_n("b-org"), _n("c-gov")], "r", None)
     text = core.render_review({"repo": "r", "base": None, "merge_base": "abc1234def", "files": ["a.py", "b.py"],
-                               "lessons": core.review_menu([_n("b-org")], "r", None)})
+                               "governing": ["c-gov"], "lessons": menu})
     assert "2 file(s) changed since the default branch (merge base abc1234)" in text
+    assert "This review lists 2 lesson(s) in about 1 KB. Read all of it" in text
     assert all(step in text for step in core.REVIEW_STEPS)
     assert "Changed: a.py, b.py" in text
     assert "- [b-org] title b-org" in text and "— do b-org." in text
+    assert text.index("govern a file this change touched (1)") < text.index("[c-gov]") \
+        < text.index("Every other lesson in scope (1)") < text.index("[b-org]")
     many = core.render_review({"repo": "r", "files": [f"f{i}.py" for i in range(35)], "lessons": []})
-    assert "and 5 more" in many and "nothing to check against" in many
+    assert "f34.py" in many and "nothing to check against" in many
     assert "nothing to review" in core.render_review({"repo": "r", "base": "main", "files": [], "lessons": []})
 
 
@@ -123,7 +137,8 @@ def _store(repo, *nodes):
 
 def test_check_change_prints_the_review(repo, capsys):
     """The review lists this change's files and the lessons this repo may see, in text and JSON."""
-    _store(repo, _n("b-org"), _n("z-own", scope="repo:r"), _n("a-other", scope="repo:other"))
+    _store(repo, _n("b-org"), _n("z-own", scope="repo:r"), _n("a-other", scope="repo:other"),
+           _n("g-notes", files="notes.md"))
     assert main(["check", "--change"]) == 0
     out = capsys.readouterr().out
     assert "3 file(s) changed" in out and "committed.py, notes.md, untracked.py" in out
@@ -131,7 +146,8 @@ def test_check_change_prints_the_review(repo, capsys):
     assert main(["check", "--change", "main", "--format", "json"]) == 0
     got = json.loads(capsys.readouterr().out)
     assert got["files"] == ["committed.py", "notes.md", "untracked.py"] and got["base"] == "main"
-    assert [e["id"] for e in got["lessons"]] == ["b-org", "z-own"]
+    assert [e["id"] for e in got["lessons"]] == ["b-org", "g-notes", "z-own"]
+    assert got["governing"] == ["g-notes"]
 
 
 def test_check_change_refuses_with_exit_2_and_nothing_on_stdout(repo, capsys, monkeypatch):
@@ -143,6 +159,36 @@ def test_check_change_refuses_with_exit_2_and_nothing_on_stdout(repo, capsys, mo
     assert main(["check", "--change"]) == 2
     got = capsys.readouterr()
     assert got.out == "" and "NOT CONFIGURED" in got.err
+
+
+def test_flags_that_shape_a_briefing_are_refused_with_change(repo, capsys):
+    """--limit, --compact and --format actions would be ignored silently; the review lists everything."""
+    for extra in (["--limit", "5"], ["--compact"], ["--format", "actions"]):
+        assert main(["check", "--change", *extra]) == 2, extra
+        got = capsys.readouterr()
+        assert got.out == "" and "do not apply" in got.err
+
+
+def test_the_hook_note_says_when_it_is_on_and_cannot_run(tmp_path, monkeypatch, capsys):
+    """The hook discards stderr, so a review that is on and cannot list the change says so on
+    stdout; off, it makes no git call at all."""
+    if shutil.which("git") is None:
+        pytest.skip("git not available")
+    r = tmp_path / "solo"; r.mkdir()
+    subprocess.run(["git", "init", "-q", "-b", "trunk", str(r)], check=True)
+    (r / "a.py").write_text("a\n"); _git(r, "add", "-A"); _git(r, "commit", "-qm", "a")
+    (r / ".okl").mkdir(); (r / ".okl" / "config.json").write_text(json.dumps({"repo": "solo", "review_after_writing": True}))
+    monkeypatch.chdir(r)
+    assert main(["check", "--change", "--format", "hook"]) == 0
+    out = capsys.readouterr().out
+    assert "on in this repo, but okl could not list the changes" in out and "okl check --change <" in out
+    (r / ".okl" / "config.json").write_text(json.dumps({"repo": "solo"}))
+
+    def no_git(*a, **k):
+        raise AssertionError("git was asked although the review is off")
+    monkeypatch.setattr(changes, "touched", no_git)
+    assert main(["check", "--change", "--format", "hook"]) == 0
+    assert capsys.readouterr().out == ""
 
 
 def test_the_hook_note_follows_the_setting(repo, capsys, monkeypatch):

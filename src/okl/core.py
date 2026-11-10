@@ -1580,39 +1580,50 @@ REVIEW_STEPS = (
     "and what it returns or prints then, what its tests check and with what data, and what the docs it "
     "changes now claim.",
     "From the lessons below, pick the ten this change is most likely to break: the ones about something "
-    "the code does, or about a file it touches.",
+    "the code does. Any that govern a file it touched are listed first, and are read as well.",
     "Read each with `okl show <id>` (the okl_get tool) and check the code against all of it.",
     "Change the code only where it breaks one. Where a lesson does not apply, or the code already does "
     "what it says, leave the code alone.",
     "Say which lessons you checked, what you changed for each, and why the rest needed nothing.",
 )
-REVIEW_FILES_SHOWN = 30
-# What the Stop hook adds when a repo turns the review on (`review_after_writing`).
+# What the Stop hook adds when a repo turns the review on (`okl init --review-after-writing`).
 REVIEW_NOTE = ("REVIEW AFTER WRITING (on in this repo): before you answer the question below, check the "
                "code this session wrote against the lessons. Run `okl check --change` and follow its steps.")
 
 
 def render_review(result: dict[str, Any]) -> str:
-    """`okl check --change` for the agent: the steps, the changed files, and every lesson in
-    scope, one line each."""
+    """`okl check --change` for the agent: the steps, the changed files, the lessons governing
+    them, and every other lesson in scope, one line each.
+
+    Nothing is cut. In id order a cut would drop lessons at random, and the list is what the
+    pick reads. A long list can reach the agent as a preview with the rest in a saved file, as
+    Claude Code shows long command output, which REPORT §4at's pick never met (it had every line
+    in its prompt): the header says how long the list is and to read all of it."""
     since = f"{result.get('base') or 'the default branch'} (merge base {str(result.get('merge_base') or '')[:7]})"
     files = result.get("files") or []
     head = f"## OKL review after writing — {result.get('repo')}"
     if not files:
         return f"{head} · nothing changed since {since}, committed or not, so there is nothing to review.\n"
     lessons = result.get("lessons") or []
+    governed = set(result.get("governing") or [])
+    first = [_also_line(e) for e in lessons if e["id"] in governed]
+    rest = [_also_line(e) for e in lessons if e["id"] not in governed]
+    size = sum(len(line) + 1 for line in first + rest)
     lines = [f"{head} · {len(files)} file(s) changed since {since}, committed or not", "",
-             "Before you finish, check the code you wrote against this repo's lessons (a step under "
+             f"This review lists {len(lessons)} lesson(s) in about {max(1, round(size / 1000))} KB. Read all of "
+             "it before you pick: if your tool showed only part of this output, read the rest where it saved it.",
+             "", "Before you finish, check the code you wrote against this repo's lessons (a step under "
              "measurement, REPORT §4at):"]
     lines += [f"{i}. {step}" for i, step in enumerate(REVIEW_STEPS, 1)]
-    shown = ", ".join(files[:REVIEW_FILES_SHOWN])
-    more = len(files) - REVIEW_FILES_SHOWN
-    lines += ["", f"Changed: {shown}" + (f", and {more} more" if more > 0 else ""), ""]
+    lines += ["", "Changed: " + ", ".join(files), ""]
     if not lessons:
         lines.append("> No lesson in this store applies to this repo, so there is nothing to check against.")
-    else:
-        lines.append(f"### Every lesson in scope ({len(lessons)}), one line each")
-        lines += [_also_line(e) for e in lessons]
+        return "\n".join(lines) + "\n"
+    if first:
+        lines.append(f"### Lessons that govern a file this change touched ({len(first)}): read each")
+        lines += first + [""]
+    lines.append(f"### {'Every other' if first else 'Every'} lesson in scope ({len(rest)}), one line each")
+    lines += rest
     return "\n".join(lines) + "\n"
 
 

@@ -123,9 +123,14 @@ def touched(base: str | None, repo_dir: str = ".") -> tuple[str, list[str]]:
     except ChangesError as e:
         if base:
             raise
-        raise ChangesError(f"found no branch to compare with ({e}): name one, as in `okl check --change main`") from e
-    paths = {p for p in _git(repo_dir, "diff", "--name-only", "-z", "--no-ext-diff", merge_base).split("\0") if p}
-    paths |= {p for p in _git(repo_dir, "ls-files", "--others", "--exclude-standard", "-z").split("\0") if p}
+        raise ChangesError("found no branch to compare with (no remote default branch, main or master): "
+                           "name one, as in `okl check --change main`") from e
+    # Paths from the repository's root, from whatever directory this runs in: `git diff` gives
+    # them so, while `ls-files` lists only the current subtree, relative to it, unless told
+    # otherwise (found by review: run from a subdirectory, an untracked file beside it was lost).
+    paths = {p for p in _git(repo_dir, "diff", "--name-only", "-z", "--no-ext-diff", merge_base, "--").split("\0") if p}
+    paths |= {p for p in _git(repo_dir, "ls-files", "--others", "--exclude-standard", "--full-name", "-z",
+                              "--", ":/").split("\0") if p}
     return merge_base, sorted(paths)
 
 
