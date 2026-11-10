@@ -139,13 +139,14 @@ def warm_setting(env: str | None, configured: Any) -> bool | None:
 def review_setting(env: str | None, configured: Any) -> bool:
     """Whether the Stop hook asks for the review after writing (`okl check --change`; REPORT
     §4at): OKL_REVIEW_AFTER_WRITING wins over the config's `review_after_writing`, read as warm
-    is (on/1/true or off/0/false); unset is off. Any other value is refused: a mistyped "ture"
-    silently leaving it off would look the same as off."""
+    is (on/1/true or off/0/false); unset is on, the maintainer's choice of 2026-11-10, made
+    before the test on other repositories (#413). Any other value is refused: a mistyped "of"
+    silently leaving it on would look the same as on."""
     raw = env if env not in (None, "") else configured
-    if raw in (None, "", False, "0", "off", "false", "no"):
-        return False
-    if raw in (True, "1", "on", "true", "yes"):
+    if raw in (None, "", True, "1", "on", "true", "yes"):
         return True
+    if raw in (False, "0", "off", "false", "no"):
+        return False
     raise ValueError(f"review_after_writing must be on or off, not {raw!r}")
 
 
@@ -199,7 +200,7 @@ class Client:
                                     [str(i).strip() for i in self.config.get("standing") or [] if str(i).strip()])
         self.warm = warm_setting(os.environ.get("OKL_WARM"), self.config.get("warm"))
         # The review after writing (`okl check --change`; REPORT §4at): the Stop hook asks for it
-        # only where the config's `review_after_writing` turns it on; OKL_REVIEW_AFTER_WRITING=1 or 0
+        # unless the config's `review_after_writing` turns it off; OKL_REVIEW_AFTER_WRITING=1 or 0
         # overrides the config for one session.
         self.review_after_writing = review_setting(os.environ.get("OKL_REVIEW_AFTER_WRITING"),
                                                    self.config.get("review_after_writing"))

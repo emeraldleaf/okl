@@ -112,12 +112,13 @@ fingerprint, so unless one is byte-identical to the current version, `init` keep
 same for a teammate who cloned the repo. okl never writes through a symlink: a hook,
 settings or workflow path that is a link, or sits under one, is refused and named.
 
-## The review after writing (off by default)
+## The review after writing (on by default)
 
-`okl init --review-after-writing` has the Stop hook ask the agent, before it finishes, to
-run `okl check --change` and check the code it wrote against the lessons
-([REPORT §4at](../evals/REPORT.md)); `--no-review-after-writing` turns it off, and
-`OKL_REVIEW_AFTER_WRITING=0` (or `1`) decides for one session. The cost is the list: every
+The Stop hook asks the agent, before it finishes, to run `okl check --change` and check the
+code it wrote against the lessons ([REPORT §4at](../evals/REPORT.md); measured on one
+repository so far, #413). `okl init --no-review-after-writing` turns it off,
+`--review-after-writing` turns it back on, and `OKL_REVIEW_AFTER_WRITING=0` (or `1`) decides
+for one session. The cost is the list: every
 lesson in scope, one line each, about 270 bytes (roughly 60 tokens) a lesson, so about 80 KB
 for 300 lessons, read once per session that changed something, plus the lessons the agent
 then opens with `okl show`. Nothing is cut, because in id order a cut would drop lessons at

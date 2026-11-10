@@ -971,14 +971,16 @@ def _install_ci_verifier(force: bool = False) -> None:
 
 
 def _say_review_after_writing(cfg: dict) -> None:
-    """With the review after writing on, say so, and say when this project's Stop hook cannot
+    """Say whether the review after writing is on, and when on, whether this project's Stop hook cannot
     ask for it: an edited copy from before it, which init keeps unless --force. Read from the
     copy on disk, comments ignored, as _workflow_reads_pin reads the workflow. A hook okl's
     plugin provides lives outside the project and is not read."""
-    if not cfg.get("review_after_writing"):
+    from ..client import review_setting
+    if not review_setting(None, cfg.get("review_after_writing")):
+        print("• review after writing: off (`okl init --review-after-writing` turns it back on)")
         return
     print("• review after writing: on. Before the agent finishes, the Stop hook asks it to check its "
-          "code against the lessons (`okl check --change`)")
+          "code against the lessons (`okl check --change`; `okl init --no-review-after-writing` turns it off)")
     try:
         text = STOP_HOOK.read_text(errors="replace")
     except OSError:

@@ -679,7 +679,7 @@ OPEN_QUESTIONS = {
         "scaffold-effect",
     ("docs/EVALUATION.md", "and sessions with nothing to learn | Not measured (#251)"):
         "capture-without-fabrication",
-    ("src/okl/core.py", "On other repositories it is not yet measured, so the review stays opt-in"):
+    ("src/okl/core.py", "On other repositories it is not yet measured (#413); it is on by default by choice"):
         "review-after-writing-beyond-one-repository",
 }
 # The phrase, used for something that is not a question waiting on an answer, with why.

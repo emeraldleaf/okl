@@ -73,7 +73,7 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                     default=None,
                     help="--review-after-writing has the Stop hook ask the agent, before it finishes, to "
                          "check the code it wrote against the lessons (`okl check --change`; a step under "
-                         "measurement, REPORT §4at); --no-review-after-writing turns it off. Default: off, "
+                         "measurement, REPORT §4at); --no-review-after-writing turns it off. Default: on, "
                          "or whatever an earlier run chose. Recorded in .okl/config.json")
     pi.add_argument("--owner", metavar="HANDLE",
                     help="name a person (@user, @org/team or an email) code owner of docs/THESIS.md and "
@@ -113,7 +113,7 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                            "one line each, with the steps of the review after writing: explain the change, "
                            "pick the lessons it most likely breaks, read and check each, fix. Calls no "
                            "model. A step under measurement (REPORT §4at). With --format hook, only the "
-                           "Stop hook's note, where `review_after_writing` is on in .okl/config.json "
+                           "Stop hook's note, unless `okl init --no-review-after-writing` turned it off "
                            "(OKL_REVIEW_AFTER_WRITING=1 or 0 for one session)")
     pk.add_argument("--repo")
     pk.add_argument("--hook-event", dest="hook_event", choices=["UserPromptSubmit", "PostToolUse", "SessionStart"],

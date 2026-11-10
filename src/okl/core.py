@@ -1567,7 +1567,7 @@ def review_menu(nodes: Iterable[Node], repo: str, interests: list[str] | None) -
     order, which says nothing about relevance: what the review after writing picks from. In
     REPORT §4at's development half, a model given an explanation of a change and this list
     found more of the lessons the change broke than the search did. On other repositories it is
-    not yet measured, so the review stays opt-in. The set a briefing can show: superseded and
+    not yet measured (#413); it is on by default by choice, not by measurement. The set a briefing can show: superseded and
     obsolete lessons are left out, and a retracted one stays in as what to avoid."""
     scope = f"repo:{repo}"
     return [_also_entry(n) for n in sorted(nodes, key=lambda n: n.id)
@@ -1586,8 +1586,8 @@ REVIEW_STEPS = (
     "what it says, leave the code alone.",
     "Say which lessons you checked, what you changed for each, and why the rest needed nothing.",
 )
-# What the Stop hook adds when a repo turns the review on (`okl init --review-after-writing`).
-REVIEW_NOTE = ("REVIEW AFTER WRITING (on in this repo): before you answer the question below, check the "
+# What the Stop hook adds unless a repo turns the review off (`okl init --no-review-after-writing`).
+REVIEW_NOTE = ("REVIEW AFTER WRITING: before you answer the question below, check the "
                "code this session wrote against the lessons. Run `okl check --change` and follow its steps.")
 
 

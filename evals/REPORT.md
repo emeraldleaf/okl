@@ -5667,9 +5667,10 @@ not tell a broken lesson from a followed one: 17 of the 109 needed lessons in it
 broken, about the base rate (70 of 356). Receipt: `explain-search-dev-20261110-1306.json`. P has no
 test-half run; one would need its own dated amendment first.
 
-**Shipped opt-in before its test half (2026-11-10).** `okl check --change`, off by default
-(`okl init --review-after-writing`), hands the agent P's list, not E's search, so the decision
-rule above, which governs E, did not decide it. It differs from what was measured: the agent
+**Shipped before its test half (2026-11-10).** `okl check --change` hands the agent P's list,
+not E's search, so the decision rule above, which governs E, did not decide it. It ships on by
+default (`okl init --no-review-after-writing` turns it off): the maintainer's decision, made
+the same day on the development half alone, with the test on other repositories filed as #413. It differs from what was measured: the agent
 that wrote the code picks, with the code in hand, not a separate model reading an explanation;
 the lessons governing a changed file come first; and a tool that shows long output as a preview
 may not put every line in front of the agent, where P had all of them in its prompt. It comes
