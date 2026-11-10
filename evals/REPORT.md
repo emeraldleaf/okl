@@ -5555,6 +5555,43 @@ Nothing is posted on any pull request. At the recent rate of about five merged p
 exist in roughly ten days.
 
 
+## 4as. EXPLORATORY, NOT PRE-REGISTERED: on real work, was a lesson the briefing showed followed more often than one it did not show? (2026-11-10)
+
+Observational, from data that already existed, with no model calls. It joins the store's exposure log
+(which lessons each briefing showed in full, and when) with §4al's and §4aq's answer keys (which
+lessons each real pull request needed, and whether the change followed each). Asked because §4al to
+§4aq measured reach, and §5 finding 7's effect on behaviour comes only from authored bait tasks.
+
+**Method, fixed in `evals/briefed_follow.py` before the data was read.** A pair counts when it is
+labelled needed and sorted followed or not followed. Its window runs from 2 hours before the
+earliest commit in the pull request to the commit the key judged (6 hours as a sensitivity run); the
+lesson is *shown* when a briefing logged for this repo in that window showed it in full. Tasks whose
+window starts before the log's first entry (2026-10-04) are left out: 34 of the 100 remain.
+
+**Result** (receipt `briefed-follow-20261110-0357.json`):
+
+| window | shown: followed | not shown: followed | difference, bootstrap over tasks |
+|---|---|---|---|
+| from 2 hours before the first commit | 62.7% (of 51) | 68.8% (of 125) | -6.1 points [-19.4, 6.8] |
+| from 6 hours before | 66.7% (of 60) | 67.2% (of 116) | -0.5 points [-11.9, 11.2] |
+
+Within lessons shown on some tasks and not others (23), 4 were followed more often when shown, 6
+less often and 13 the same.
+
+**What it can and cannot show.** A correlation, not an effect: a lesson a task's words matched may
+come with harder work, a session on another branch in the same window counts as shown, a lesson
+named in one line is not in the log, and the labels are model-judged and not yet audited (#394). It
+finds no association between being shown a lesson and following it, and its intervals exclude an
+effect as large as §5 finding 7's on these tasks, but not a modest one. The agent followed about
+two-thirds of the needed lessons whether or not it was shown them.
+
+**What follows.** The question this leaves is the one only a controlled test answers: on real work,
+does the briefing change what the agent writes? That is EVALUATION.md's outcome replay (real tasks at
+their base commit, okl on and off, graded by the test the real fix added), under its own
+pre-registration. Until it runs, no claim that briefing keeps an agent in line on real work rests on
+anything but authored tasks.
+
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

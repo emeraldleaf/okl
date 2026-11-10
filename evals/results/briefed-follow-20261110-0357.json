@@ -1,0 +1,63 @@
+{
+ "section": "briefed lessons followed on real work: exploratory, observational, not pre-registered",
+ "at": "2026-11-10T03:57Z",
+ "okl_commit": "37c1c8de27fc46296aa70c2e9b8997f9af72f1b9",
+ "status": "model-judged labels, not yet audited (#394); a correlation, not an effect",
+ "log": {
+  "briefings": 1785,
+  "first": "2026-10-05",
+  "last": "2026-11-10"
+ },
+ "main": {
+  "window_hours_before_first_commit": 2,
+  "tasks_with_exposure_data": 34,
+  "tasks_left_out_before_the_log": 21,
+  "pairs": 176,
+  "shown": {
+   "pairs": 51,
+   "followed_rate": 0.627
+  },
+  "not_shown": {
+   "pairs": 125,
+   "followed_rate": 0.688
+  },
+  "difference": -0.061,
+  "difference_boot95": [
+   -0.194,
+   0.068
+  ],
+  "within_lessons": {
+   "lessons_both_shown_and_not": 23,
+   "followed_more_when_shown": 4,
+   "followed_less_when_shown": 6,
+   "same": 13,
+   "pair_weighted_difference": -0.073
+  }
+ },
+ "sensitivity": {
+  "window_hours_before_first_commit": 6,
+  "tasks_with_exposure_data": 34,
+  "tasks_left_out_before_the_log": 21,
+  "pairs": 176,
+  "shown": {
+   "pairs": 60,
+   "followed_rate": 0.667
+  },
+  "not_shown": {
+   "pairs": 116,
+   "followed_rate": 0.672
+  },
+  "difference": -0.005,
+  "difference_boot95": [
+   -0.119,
+   0.112
+  ],
+  "within_lessons": {
+   "lessons_both_shown_and_not": 22,
+   "followed_more_when_shown": 5,
+   "followed_less_when_shown": 4,
+   "same": 13,
+   "pair_weighted_difference": -0.006
+  }
+ }
+}
