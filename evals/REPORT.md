@@ -5678,6 +5678,46 @@ out of okl if its test half, run under its own dated amendment on tasks no arm h
 the lower bound of P's paired gain over T at K = 10 at or below zero.
 
 
+## 4au. PRE-REGISTERED: should the review after writing be on by default? A quick read on 20 unseen tasks (2026-11-10)
+
+Written before any review in this section runs. #412 ships `okl check --change`, the review after
+writing, and the maintainer asked for a quick, cheap read on whether it should be on by default
+for everyone before #413's test on other repositories. Being on by default has two costs: the
+lessons the review calls broken that were not (needless edits at the end of a session, after the
+tests last ran) and the tokens. It has one benefit: the broken lessons it catches.
+
+**Tasks.** §4aq's 50 tasks, which no part of §4at was tuned on: 24 whose change broke a lesson
+(sorted not followed in §4aq's key) and 26 that broke none. Ten of each are drawn with
+`random.Random(4)` from the tasks in pull-request order, 20 in all.
+
+**The review.** One Sonnet session per task, in a copy of the repository at the task's commit with
+the change applied and no agent settings (`review_repo.checkout`). It gets the change as
+`CHANGE.diff`, the output `okl check --change` gives for it (`core.render_review` over the store as
+it stood, `realwork_reach.store_as_of`), and each lesson's full text as a file, which stands in for
+`okl show`. The prompt is the shipped steps (`core.REVIEW_STEPS`) with two words changed: where to
+read a lesson, and that it lists what it would change rather than changing it. It answers what it
+explained, which lessons it picked, and which it would change code for.
+
+**Measures.**
+1. Reach: the share of the broken lessons on the 10 broken tasks that it would change code for, with
+   a bootstrap over tasks (2000, seed 4); also the share it picked.
+2. False alarms: lessons it would change code for that the key calls followed, related or neither;
+   per task, median and mean over all 20, and on the clean tasks alone. Those the key calls
+   needed but unsorted are reported apart and counted neither way.
+3. Cost: tokens and API-priced dollars per review (a Max plan pays neither).
+
+**Decision rule.** On by default for everyone when both hold: reach is at least 30% (the briefing
+from the task's words reached 21% at ten on §4at's development half) and the median false alarms
+per task is at most 1. Otherwise it is off by default and stays on in the maintainer's repositories
+until #413 answers.
+
+**Threats.** One repository, okl's own (#413). The key is a model's (Opus, §4aq), not audited (#394).
+Sonnet reviews a change it did not write. Twenty tasks give wide intervals: this is a quick read, not
+a result to cite beyond this decision.
+
+**Budget.** 20 Sonnet sessions. The reviews are kept in the private results directory; the receipt
+is committed.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
