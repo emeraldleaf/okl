@@ -69,6 +69,12 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                          "another tool's pre-push hook is never replaced); --no-git-hook skips it. "
                          "Default: installed wherever okl's GitHub workflow is not. Recorded in "
                          ".okl/config.json so later runs upgrade it")
+    pi.add_argument("--review-after-writing", dest="review_after_writing", action=argparse.BooleanOptionalAction,
+                    default=None,
+                    help="--review-after-writing has the Stop hook ask the agent, before it finishes, to "
+                         "check the code it wrote against the lessons (`okl check --change`; a step under "
+                         "measurement, REPORT §4at); --no-review-after-writing turns it off. Default: off, "
+                         "or whatever an earlier run chose. Recorded in .okl/config.json")
     pi.add_argument("--owner", metavar="HANDLE",
                     help="name a person (@user, @org/team or an email) code owner of docs/THESIS.md and "
                          "of CODEOWNERS itself, so that a branch rule requiring code-owner review needs "

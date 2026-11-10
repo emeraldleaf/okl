@@ -66,6 +66,15 @@ def test_touched_without_a_branch_to_compare_names_the_flag(tmp_path, monkeypatc
     assert changes.touched("trunk")[1] == []
 
 
+def test_a_base_that_looks_like_an_option_never_reaches_git(repo, capsys):
+    """git reads `--output=<file>` as an option and writes the file; a ref never starts with '-'."""
+    target = repo.parent / "written-by-git"
+    with pytest.raises(changes.ChangesError, match="cannot start with '-'"):
+        changes.touched(f"--output={target}")
+    assert main(["check", f"--change=--output={target}"]) == 2
+    assert capsys.readouterr().out == "" and not target.exists()
+
+
 def _n(id, **kw):
     return Node(id=id, type=kw.pop("type", "Rule"), title=f"title {id}", fix=kw.pop("fix", f"do {id}. Then more."),
                 scope=kw.pop("scope", "org"), **kw)
@@ -76,11 +85,20 @@ def test_the_list_is_every_live_lesson_in_scope_in_id_order():
     another repo owns, nothing whose applies_to excludes this repo's interests."""
     nodes = [_n("z-own", scope="repo:r"), _n("b-org"), _n("a-other", scope="repo:other"),
              _n("c-vocab", type="Vocabulary"), _n("d-retired", status="obsolete"),
-             _n("e-dotnet", applies_to="dotnet")]
+             _n("d-replaced", status="superseded"), _n("e-dotnet", applies_to="dotnet")]
     menu = core.review_menu(nodes, "r", ["python"])
     assert [e["id"] for e in menu] == ["b-org", "z-own"]
     assert menu[0]["fix"] == "do b-org."   # the first sentence of the fix, as the second tier cuts it
     assert [e["id"] for e in core.review_menu(nodes, "r", None)] == ["b-org", "e-dotnet", "z-own"]
+
+
+def test_a_retracted_lesson_stays_in_the_list_as_what_to_avoid():
+    """The set a briefing can show (report-commands-use-briefable-set): a change can restate a
+    withdrawn claim, so the review must still name it, as something to avoid."""
+    menu = core.review_menu([_n("f-withdrawn", status="retracted")], "r", None)
+    assert menu[0]["avoid"] == "retracted"
+    assert "- [f-withdrawn] AVOID (retracted): title f-withdrawn" in core.render_review(
+        {"repo": "r", "files": ["a.py"], "lessons": menu})
 
 
 def test_the_rendering_carries_the_steps_the_files_and_each_lesson():
@@ -144,6 +162,36 @@ def test_the_hook_note_follows_the_setting(repo, capsys, monkeypatch):
     assert capsys.readouterr().out.strip() == core.REVIEW_NOTE
 
 
+def test_a_setting_okl_cannot_read_is_refused_not_ignored(repo, capsys, monkeypatch):
+    """A mistyped value that left the review off would look exactly like off."""
+    from okl.client import review_setting
+    assert review_setting(None, "on") is True and review_setting("0", True) is False and review_setting("", None) is False
+    with pytest.raises(ValueError, match="must be on or off"):
+        review_setting(None, "ture")
+    (repo / ".okl" / "config.json").write_text(json.dumps({"repo": "r", "review_after_writing": "ture"}))
+    assert main(["check", "--change", "--format", "hook"]) == 2
+    got = capsys.readouterr()
+    assert got.out == "" and "review_after_writing must be on or off" in got.err
+
+
+def test_init_says_when_the_stop_hook_on_disk_cannot_ask_for_the_review(tmp_path, monkeypatch, capsys):
+    """An edited Stop hook from before the review is kept by init, so turning the review on
+    there would do nothing (owned-file-features-check-the-kept-copy): init says so."""
+    from okl.cli import install
+    monkeypatch.chdir(tmp_path)
+    hooks = tmp_path / ".claude" / "hooks"; hooks.mkdir(parents=True)
+    install._say_review_after_writing({"review_after_writing": False})
+    assert capsys.readouterr().out == ""
+    (hooks / "stop-okl-encode.sh").write_text("# okl check --change appears only in a comment\nexit 2\n")
+    install._say_review_after_writing({"review_after_writing": True})
+    out = capsys.readouterr().out
+    assert "review after writing: on" in out and "okl init --force" in out
+    shipped = Path(install.__file__).resolve().parents[1] / "scaffold" / "hooks" / "stop-okl-encode.sh"
+    shutil.copy(shipped, hooks / "stop-okl-encode.sh")
+    install._say_review_after_writing({"review_after_writing": True})
+    assert "--force" not in capsys.readouterr().out
+
+
 def test_the_hook_note_is_silent_when_nothing_changed(repo, capsys, monkeypatch):
     """Turned on, but with nothing changed since the default branch, the Stop hook gets no note."""
     monkeypatch.setenv("OKL_REVIEW_AFTER_WRITING", "1")
@@ -171,3 +219,12 @@ def test_the_stop_hook_asks_for_the_review_only_where_it_is_on(repo, tmp_path):
     r = stop("on")
     assert r.returncode == 2 and "okl check --change" in r.stderr
     assert r.stderr.index("REVIEW AFTER WRITING") < r.stderr.index("ENCODING LOOP")
+    # An okl older than --change refuses it (hook-cli-version-skew): the question stands as it
+    # was, and the refusal never reaches the agent.
+    stub = tmp_path / "old-okl"
+    stub.write_text("#!/bin/sh\necho 'okl: error: unrecognized arguments: --change' >&2\nexit 2\n")
+    stub.chmod(0o755)
+    env["OKL_BIN"] = str(stub)
+    r = stop("old")
+    assert r.returncode == 2 and "ENCODING LOOP" in r.stderr
+    assert "REVIEW AFTER WRITING" not in r.stderr and "unrecognized" not in r.stderr

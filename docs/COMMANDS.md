@@ -100,9 +100,11 @@ okl check --change [BASE]
                      #   likely breaks, read each with okl show, check the code, fix only what
                      #   breaks one. okl calls no model; the agent does the review. A step under
                      #   measurement (REPORT §4at). --format json for a script. --format hook
-                     #   prints only the Stop hook's one-line note, where `review_after_writing`
-                     #   is true in .okl/config.json (OKL_REVIEW_AFTER_WRITING=1 or 0 for one
-                     #   session); off by default. Exit 2 when git or the store cannot be read.
+                     #   prints only the Stop hook's one-line note, where `okl init
+                     #   --review-after-writing` turned it on (OKL_REVIEW_AFTER_WRITING=1 or 0 for
+                     #   one session); off by default. A retracted lesson stays in the list as
+                     #   what to avoid. Exit 2 when git or the store cannot be read, or BASE
+                     #   starts with '-'.
 okl embed            # build or refresh one local vector per record for --hybrid briefings
                      #   (needs the `hybrid` extra; downloads a 131 MB static model once;
                      #   re-embeds only records whose text changed). Off by default: a check

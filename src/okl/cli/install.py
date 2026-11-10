@@ -707,11 +707,14 @@ def cmd_init(args: argparse.Namespace) -> int:
     # workflow file came or went in between.
     cfg["ci"] = _ci_wanted(args, cfg)
     cfg["git_hook"] = _git_hook_wanted(args, cfg)
+    if getattr(args, "review_after_writing", None) is not None:
+        cfg["review_after_writing"] = args.review_after_writing
     path = save_config(cfg)
     print(f"✓ wrote {path}  (repo={repo}, mode={'remote' if cfg.get('service_url') else 'local'}"
           + (f", interests={','.join(cfg['interests'])}" if cfg.get("interests") else "") + ")")
 
     _wire_claude_code(args)
+    _say_review_after_writing(cfg)
     _wire_drift_gates(cfg, force=getattr(args, "force", False))
     _wire_owner_paths(cfg, args)
     if not getattr(args, "no_seed", False):
@@ -965,6 +968,27 @@ def _install_ci_verifier(force: bool = False) -> None:
               "CI installs the newest okl. `okl init --force` replaces it with okl's workflow.")
     else:
         _pin_okl_version()
+
+
+def _say_review_after_writing(cfg: dict) -> None:
+    """With the review after writing on, say so, and say when this project's Stop hook cannot
+    ask for it: an edited copy from before it, which init keeps unless --force. Read from the
+    copy on disk, comments ignored, as _workflow_reads_pin reads the workflow. A hook okl's
+    plugin provides lives outside the project and is not read."""
+    if not cfg.get("review_after_writing"):
+        return
+    print("• review after writing: on. Before the agent finishes, the Stop hook asks it to check its "
+          "code against the lessons (`okl check --change`)")
+    try:
+        text = STOP_HOOK.read_text(errors="replace")
+    except OSError:
+        return
+    if not any("check --change" in line for line in text.splitlines() if not line.lstrip().startswith("#")):
+        print(f"! {STOP_HOOK} is an edited copy that does not ask for it, so the review will not run. "
+              "`okl init --force` replaces it with okl's.")
+
+
+STOP_HOOK = Path(".claude/hooks/stop-okl-encode.sh")
 
 
 def _workflow_reads_pin() -> bool:

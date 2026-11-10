@@ -98,6 +98,10 @@ def _default_bases(repo_dir: str) -> list[str]:
 def resolve(base: str | None, head: str, repo_dir: str = ".") -> tuple[str, str]:
     """The two commits compared: the merge base of `base` and `head`, as a pull request's diff
     is, and `head`."""
+    for ref in (base, head):
+        if ref and ref.startswith("-"):
+            # git would read it as an option (`--output=<file>` writes a file), so it is refused.
+            raise ChangesError(f"{ref!r} is not a branch or commit: a ref cannot start with '-'")
     head_sha = _git(repo_dir, "rev-parse", "--verify", "--quiet", f"{head}^{{commit}}").strip()
     for candidate in [base] if base else _default_bases(repo_dir):
         try:

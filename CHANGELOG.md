@@ -9,9 +9,11 @@
   (committed or not, untracked included) and every lesson in scope one line each, with the
   steps for the agent: say what the changed code does, pick the ten lessons it most likely
   breaks, read each with `okl show`, check the code, fix only what breaks one. okl calls no
-  model. Set `"review_after_writing": true` in `.okl/config.json` (or
-  `OKL_REVIEW_AFTER_WRITING=1` for one session) and the Stop hook asks for it before its
-  question about what was learned. It is off by default because it is measured on one
+  model. `okl init --review-after-writing` turns it on (`OKL_REVIEW_AFTER_WRITING=1` or `0`
+  for one session), and the Stop hook then asks for it before its question about what was
+  learned; init says when the project's Stop hook is an edited copy that cannot ask, and
+  `okl init --force` replaces it. A value okl cannot read as on or off is refused, never
+  read as off. It is off by default because it is measured on one
   repository's development half only: there, a model picking from these lines found 40% of
   the lessons changes had broken in its first ten, against 21% for the search on the task's
   words (`explain-search-dev-20261110-1306.json`, in-sample).
