@@ -56,6 +56,12 @@ src/okl/
    python3 ci/e2e.py --okl <installed okl> # okl end to end on a fresh repo, as CI's e2e job runs it
    ```
 
+   Exit codes mean the same everywhere: 0 clean, 1 findings, 2 did not run. A command or
+   check that cannot run says why on stderr and leaves stdout empty, and one that inspected
+   nothing has not passed. `tests/test_exit_codes.py` runs every command, every `ci/` check and
+   every gate where it cannot do its job, so a new one is added to its tables; a new `ci/` check
+   installs `ci/_ran.py` (as the others do), which turns a crash into exit 2.
+
 4. **Keep mirrored files identical.** If you edit a hook, re-stamp its ownership line and
    copy it to its twins:
 

@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- **Checks for the lessons past work kept breaking** (#415). Twenty lessons hold two-thirds of
+  the breaks found in past work, and showing a lesson did not make it followed, so the
+  scriptable ones now fail the build:
+  - **Exit codes and empty checks:** `tests/test_exit_codes.py` runs every command, `ci/` check
+    and gate where it cannot do its job. A command or check that cannot run exits 2 with stdout
+    empty, and one that read nothing never passes. It found six `ci/` checks that crashed with
+    exit 1 (which reads as findings) when their inputs were missing, two that passed having read
+    nothing, and a guard-mutation refusal that said "not run" and exited 1; all now exit 2.
+  - **One store resolver:** `okl.client.store_url()` is the only reader of `OKL_DATABASE_URL`
+    besides the store's own default; `okl doctor`, the service and two eval scripts now call it,
+    and a test fails a new reader.
+  - **Eval receipts name the code at both ends:** `evals/run_guard.py` lends `ab_harness.py`'s
+    start-and-end check to every script, and a test fails a new receipt writer that skips it.
+  - **The agent-neutral docs check** now reads a mention or a label wrapped across lines, and
+    found two unlabelled ones in the decision records.
+
 - **The review after writing: `okl check --change`** (REPORT §4at; opt-in). A briefing is
   chosen from the task's words before any code exists, and the lessons a change goes on to
   break are often about what the code does, which those words never name. `okl check

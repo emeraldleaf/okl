@@ -19,6 +19,10 @@ import tomllib
 from importlib.metadata import packages_distributions
 from pathlib import Path
 
+if __name__ == "__main__":   # a crash is "did not run": exit 2, never 1 (ci/_ran.py)
+    import _ran
+    _ran.install()
+
 REPO = Path(__file__).resolve().parent.parent
 
 

@@ -79,7 +79,7 @@ add back the search okl already runs, then pay for a triple store on every promp
 ## Why
 
 - **The job is ranked free text, under a tight budget.** The briefing runs inside a prompt
-  hook on other people's machines, with no service to call and nothing extra installed.
+  hook (Claude Code's; other agents call `okl_check`) on other people's machines, with no service to call and nothing extra installed.
 - **Strict classification measured worse here.** In §4d of [the eval report](../../evals/REPORT.md)
   (receipt `ab-20260902-0538`), treating stack tags as an exclusive classification hid 35 of
   172 org records from a repo that shared their subject. The briefed arm then reproduced a

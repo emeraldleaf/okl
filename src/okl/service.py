@@ -210,7 +210,7 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901, PLR0915 - 
                   openapi_url=None if private else "/openapi.json",
                   docs_url=None if private else "/docs",
                   redoc_url=None if private else "/redoc")
-    _store = store or Store(os.environ.get("OKL_DATABASE_URL"))
+    _store = store or Store()   # Store resolves OKL_DATABASE_URL itself
     # Writes read a lesson, change it and write it back (record's existence check, update,
     # verify). The endpoints run on a thread pool, so two requests could interleave and
     # one change would be lost without an error: measured at 60 in 150 rounds of two

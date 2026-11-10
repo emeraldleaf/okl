@@ -20,6 +20,10 @@ import subprocess
 import sys
 from pathlib import Path
 
+if __name__ == "__main__":   # a crash is "did not run": exit 2, never 1 (ci/_ran.py)
+    import _ran
+    _ran.install()
+
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "src"))
 from okl import client, core  # noqa: E402

@@ -4,13 +4,12 @@ from __future__ import annotations
 import argparse
 import contextlib
 import json
-import os
 import sys
 from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
 
-from ..client import Client, OKLUnreachableError, _find_config
+from ..client import Client, OKLUnreachableError, _find_config, store_url
 from .common import _print_json
 
 
@@ -106,10 +105,9 @@ def _no_store_yet(client: Client) -> bool:
     """Whether this repo's local SQLite store does not exist, so a read would create it."""
     if client.mode == "remote":
         return False
-    url = os.environ.get("OKL_DATABASE_URL")
-    if not url:   # empty is unset, as Client._local_store reads it
-        cfg = _find_config()
-        return cfg is None or not (cfg.parent / "okl.db").exists()
+    url = store_url()   # the client's own rule, so the two cannot disagree (#380)
+    if url is None:
+        return True
     if url.startswith("sqlite:///") and url != "sqlite:///:memory:":
         return not Path(url.removeprefix("sqlite:///")).exists()
     return False

@@ -15,14 +15,19 @@ import subprocess
 import sys
 from pathlib import Path
 
+if __name__ == "__main__":   # a crash is "did not run": exit 2, never 1 (ci/_ran.py)
+    import _ran
+    _ran.install()
+
 REPO = Path(__file__).resolve().parent.parent
 PORTABLE = re.compile(r"\bportab\w*|\b(stack|language|framework)-agnostic\b", re.I)
 NEGATED = re.compile(r"\b(not|no|never|isn't|aren't)\s+$", re.I)   # "not portable" is the gate's reason
 
 # Committed reality, not the working tree's untracked files (CLAUDE.md: audits read the repo).
 packs = subprocess.run(["git", "-C", str(REPO), "ls-files", "seed/*.json"], capture_output=True, text=True, check=True)
-gated, contradicted = 0, []
+gated, contradicted, read = 0, [], 0
 for pack in [REPO / f for f in packs.stdout.split()]:
+    read += 1
     for node in json.loads(pack.read_text())["nodes"]:
         # As the briefing reads it (core.py): "any" gates nothing, so only a named stack counts.
         stacks = {t.strip().lower() for t in str(node.get("applies_to") or "").split(",") if t.strip()} - {"any"}
@@ -33,6 +38,9 @@ for pack in [REPO / f for f in packs.stdout.split()]:
         if m := next((m for m in PORTABLE.finditer(text) if not NEGATED.search(text[:m.start()])), None):
             contradicted.append(f"{pack.name} {node.get('key')} (applies_to {node['applies_to']}, says {m.group(0)!r})")
 
+if not read:   # read nothing: did not run, never a pass (lesson n_5ddb0776a863)
+    print("PORTABLE RECORDS NOT CHECKED: no seed pack is committed here", file=sys.stderr)  # noqa: T201
+    sys.exit(2)
 if contradicted:
     sys.exit("PORTABLE RECORD GATED: " + "; ".join(contradicted))
 print("PORTABLE RECORDS UNGATED", gated, "gated records read")  # noqa: T201 - a check script reports on stdout

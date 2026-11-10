@@ -292,7 +292,8 @@ def generator_env(workdir: str, log: str) -> dict[str, str] | None:
 
 def store_url() -> str:
     """The store the generator's fetches read: the harness's own."""
-    return os.environ.get("OKL_DATABASE_URL") or f"sqlite:///{REPO / '.okl' / 'okl.db'}"
+    from okl.client import store_url as resolved  # the client's own rule (lesson n_02cc84da158d)
+    return resolved(REPO) or f"sqlite:///{REPO / '.okl' / 'okl.db'}"
 
 
 def fetch_tool_description() -> str:
@@ -670,8 +671,9 @@ def _head(git: list[str]) -> tuple[str, str] | None:
     return (short.stdout.strip(), full.stdout.strip()) if short.stdout.strip() and full.stdout.strip() else None
 
 
-def tree_state() -> tuple[str | None, str]:
-    """The receipt's commit label for the code a run reads (RUN_READS), and a fingerprint of it.
+def tree_state(reads: tuple[str, ...] = RUN_READS) -> tuple[str | None, str]:
+    """The receipt's commit label for the code a run reads (`reads`, RUN_READS for this harness;
+    evals/run_guard.py passes its own), and a fingerprint of it.
 
     The label is the short HEAD, `+dirty` when RUN_READS has uncommitted edits. The
     fingerprint is the full HEAD plus a hash of the uncommitted diff and the untracked
@@ -688,7 +690,7 @@ def tree_state() -> tuple[str | None, str]:
     # --untracked-files=all: a wholly untracked directory is otherwise one "?? dir/" entry,
     # and its files' content would never reach the fingerprint. -z: NUL-delimited entries
     # with unquoted paths, so a name git would quote still resolves to its file.
-    probe = subprocess.run([*git, "status", "--porcelain", "-z", "--untracked-files=all", "--", *RUN_READS],
+    probe = subprocess.run([*git, "status", "--porcelain", "-z", "--untracked-files=all", "--", *reads],
                            capture_output=True)
     if probe.returncode != 0:
         # Fail closed: a probe that cannot say what the tree holds must not compare equal
@@ -697,7 +699,7 @@ def tree_state() -> tuple[str | None, str]:
     entries = [e for e in probe.stdout.decode("utf-8", "surrogateescape").split("\0") if e]
     if not entries:
         return head, full
-    diffed = subprocess.run([*git, "diff", "HEAD", "--", *RUN_READS], capture_output=True)
+    diffed = subprocess.run([*git, "diff", "HEAD", "--", *reads], capture_output=True)
     if diffed.returncode != 0:
         # Same rule as the status probe: a diff that cannot be read must not compare equal.
         return f"{head}+unknown", f"{full}+diff-failed-{os.urandom(4).hex()}"

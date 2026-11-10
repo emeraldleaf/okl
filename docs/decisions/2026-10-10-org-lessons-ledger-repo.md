@@ -17,7 +17,7 @@ interests.
 
 **Each repo has its own store.** It is `.okl/okl.db` beside `.okl/config.json`, and it is
 gitignored. A lesson recorded with `--scope org` is written into that one repo's store, and
-no other repo reads it. On a default install, "org" is a label, not a way to share. (The Stop
+no other repo reads it. On a default install, "org" is a label, not a way to share. (Claude Code's Stop
 hook and this repo's CLAUDE.md say `org` "spreads to every repo"; that is not true today.)
 
 **Packs are the one path that reaches other repos.** A pack is a committed JSON file of

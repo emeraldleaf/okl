@@ -28,6 +28,11 @@ different model from the generator; the harness refuses to run otherwise.
   call in the repo cwd came back answering our Stop hook instead of the question).
 - **Briefed arm fails closed**: if `okl check` errors, that run counts as a harness
   failure — it must never silently degrade into a second baseline.
+- **The receipt names the code that made it** (`harness-reads-a-moving-working-tree`): a new
+  script that writes to `evals/results/` calls `run = run_guard.start()` before its first sample
+  and `run.stamp(receipt)` before writing, which records the commit at both ends and marks a run
+  whose code moved as not usable. `tests/test_eval_guard.py` fails a new receipt writer without
+  it; the scripts written before the guard are listed there and come off as they adopt it.
 
 ## Usage
 

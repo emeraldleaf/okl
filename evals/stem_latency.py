@@ -30,7 +30,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 PRIVATE = REPO / "evals" / "bench" / "private"
 sys.path.insert(0, str(REPO / "src"))
-from okl.client import _find_config  # noqa: E402 - the client's own rule for which config applies
+from okl.client import _find_config, store_url  # noqa: E402 - the client's own rule for which config applies
 from okl.store import fts_tokenizer  # noqa: E402
 
 # Each setting enters the CLI through the same `python -c`, so both pay the same start-up.
@@ -87,15 +87,12 @@ def source_store(repo: Path = REPO) -> Path:
     """The store the CLI would open here: the SQLite file OKL_DATABASE_URL names, else the one
     beside the nearest .okl/config.json, found as the client finds it. A URL that is not SQLite,
     or no config at all, stops the run: this copies SQLite files only (review on #309)."""
-    url = os.environ.get("OKL_DATABASE_URL", "")
-    if url:
-        if not url.startswith("sqlite:///"):
-            sys.exit("ABORT: OKL_DATABASE_URL names a store that is not SQLite; this copies only SQLite files")
-        return Path(url.removeprefix("sqlite:///"))
-    cfg = _find_config(repo)
-    if cfg is None:
+    url = store_url(repo)   # the client's own rule (lesson n_02cc84da158d)
+    if url is None:
         sys.exit(f"ABORT: no .okl/config.json at or above {repo}, so there is no store to copy")
-    return cfg.parent / "okl.db"
+    if not url.startswith("sqlite:///"):
+        sys.exit("ABORT: OKL_DATABASE_URL names a store that is not SQLite; this copies only SQLite files")
+    return Path(url.removeprefix("sqlite:///"))
 
 
 def main() -> int:

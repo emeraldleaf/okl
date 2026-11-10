@@ -22,6 +22,13 @@ cd "$(git rev-parse --show-toplevel)"
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
+# Read nothing, pass nothing (lesson n_5ddb0776a863): with no diagram or overview committed this
+# check did not run, which is exit 2, never the receipted line below.
+if [[ -z "$(git ls-files 'docs/*.excalidraw' 'docs/*.html')" ]]; then
+  echo "DIAGRAM FIGURES NOT CHECKED: no docs/*.excalidraw or docs/*.html is committed here" >&2
+  exit 2
+fi
+
 # Every diagram under docs/, rather than a hard-coded path: a diagram added later is
 # covered the day it lands, not the day someone remembers to extend this file.
 #
