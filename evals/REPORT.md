@@ -5734,6 +5734,19 @@ reads most broken lessons as followed. Whether that is the reviewer under-callin
 over-calling (it was a model's, and three of the eight are one broad process lesson) is #394's
 question and #413's. It stays on in the maintainer's repositories, as the rule says.
 
+**Follow-up, stated before it runs (2026-11-10; not pre-registered with the section).** Whether
+the reviewer is lenient or §4aq's key is strict is settled, case by case, by a third model that
+made neither call: Fable 5.1 (the key was Opus's, the reviewer Sonnet). It reads the repository
+at the task's commit with the change applied and one lesson's full text, sees neither side's
+verdict or reason, and answers broken, followed or not applicable. The 24 cases are every one
+the two disagreed on or agreed was broken: the 8 broken lessons the reviewer picked and cleared,
+the 12 it called broken that the key did not, and the 4 both called broken, as a control. Read
+as: if the third model calls at least 6 of the 8 broken, the reviewer is too lenient and the
+check step needs work; if at most 2, the key over-calls and 17% understates the review. If it
+calls at least 8 of the 12 broken, those were not false alarms and the key under-calls. Anything
+between is mixed, said as such. The control should come out broken; if fewer than 3 of the 4
+do, the third model's verdicts are read as noise.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

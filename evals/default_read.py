@@ -9,6 +9,10 @@ they were broken.
 
     python3 evals/default_read.py run       # the 20 reviews, resumable
     python3 evals/default_read.py score [--receipt]
+    python3 evals/default_read.py settle [--receipt]   # the follow-up: a third model on the 24 cases
+
+The follow-up has Fable 5.1, which made neither call, judge each lesson the reviewer and §4aq's
+key disagreed on or agreed was broken, blind to both.
 """
 from __future__ import annotations
 
@@ -253,13 +257,106 @@ def score(write: bool) -> int:
     return 0
 
 
+THIRD = ["claude", "-p", "--model", "fable", *rp.READ_ONLY]
+SETTLE_OUT = lr.PRIVATE / "default-read-settle-4au.jsonl"
+RECEIPT = "default-read-20261110-1438.json"
+SETTLE_PROMPT = f"""Your working directory is a copy of a repository with one change applied; the change itself is in {CHANGE_FILE}. Below is a lesson the team that owns the repository keeps. Decide whether this change breaks it: the change does what the lesson is about, or touches what it governs, and does not do what the lesson says. Read whatever you need. Do not change anything.
+
+The lesson:
+{{lesson}}
+
+Answer with one JSON object and nothing after it:
+{{{{"verdict": "broken|followed|not applicable", "evidence": ["path:line", ...], "reason": "one sentence"}}}}"""
+SETTLE_SHA = hashlib.sha256(SETTLE_PROMPT.encode()).hexdigest()[:16]
+
+
+def cases() -> list[dict]:
+    """The 24: broken lessons the reviewer picked and cleared, lessons it called broken that the key
+    did not, and those both called broken."""
+    rows = json.loads((rl.REPO / "evals" / "results" / RECEIPT).read_text())["per_task"]
+    out = []
+    for r in rows:
+        out += [{"pr": r["pr"], "lesson": i, "case": "reviewer_cleared"} for i in r.get("picked_broken", []) if i not in r["hits"]]
+        out += [{"pr": r["pr"], "lesson": i, "case": "reviewer_only"} for i in r.get("false_alarms", [])]
+        out += [{"pr": r["pr"], "lesson": i, "case": "both_broken"} for i in r.get("hits", [])]
+    return out
+
+
+def settle_one(case: dict, task: dict) -> dict | None:
+    """One blind verdict from the third model."""
+    with tempfile.TemporaryDirectory(prefix="okl-4au-settle-store-") as side, rp.checkout(task) as room:
+        db = es.store_for("test", task, Path(side))
+        lesson = full_text(db).get(case["lesson"], "")
+        (room / CHANGE_FILE).write_text(ra.whole(task))
+        try:
+            p = subprocess.run(THIRD, input=SETTLE_PROMPT.format(lesson=lesson), capture_output=True, text=True,
+                               timeout=TIMEOUT, cwd=room, env=rp.ENV)
+        except subprocess.TimeoutExpired:
+            return None
+    try:
+        reply = json.loads(p.stdout)
+    except ValueError:
+        return None
+    text, got = reply.get("result") or "", None
+    decoder = json.JSONDecoder()
+    for i, ch in enumerate(text):
+        if ch == "{":
+            try:
+                obj, _ = decoder.raw_decode(text, i)
+            except ValueError:
+                continue
+            if isinstance(obj, dict) and "verdict" in obj:
+                got = obj
+    if got is None:
+        return None
+    return {**case, "prompt": SETTLE_SHA, "verdict": got.get("verdict"), "reason": got.get("reason"),
+            "evidence": got.get("evidence"), "model": list(reply.get("modelUsage") or {}),
+            "api_priced_usd": reply.get("total_cost_usd", 0)}
+
+
+def settle(write: bool) -> int:
+    """Run the third model on each case without a verdict yet, then read the result as stated."""
+    tasks = {t["pr"]: t for t in es.tasks_of("test")}
+    have = {(r["pr"], r["lesson"]): r for r in map(json.loads, SETTLE_OUT.read_text().splitlines())
+            if r.get("prompt") == SETTLE_SHA} if SETTLE_OUT.exists() else {}
+    todo = [c for c in cases() if (c["pr"], c["lesson"]) not in have]
+    print(f"{len(todo)} of {len(cases())} cases to settle with prompt {SETTLE_SHA}", file=sys.stderr, flush=True)
+    with SETTLE_OUT.open("a") as sink, ThreadPoolExecutor(max_workers=WORKERS) as pool:
+        futures = {pool.submit(settle_one, c, tasks[c["pr"]]): c for c in todo}
+        for f in as_completed(futures):
+            row = f.result()
+            if row:
+                sink.write(json.dumps(row) + "\n"); sink.flush()
+                have[(row["pr"], row["lesson"])] = row
+            else:
+                print(f"  no verdict: #{futures[f]['pr']} {futures[f]['lesson']}", file=sys.stderr, flush=True)
+    rows = [have[(c["pr"], c["lesson"])] for c in cases() if (c["pr"], c["lesson"]) in have]
+    count = {k: {v: sum(1 for r in rows if r["case"] == k and r["verdict"] == v) for v in ("broken", "followed", "not applicable")}
+             for k in ("reviewer_cleared", "reviewer_only", "both_broken")}
+    n = {k: sum(count[k].values()) for k in count}
+    cleared = count["reviewer_cleared"]["broken"]
+    reading = {"control_holds": count["both_broken"]["broken"] >= 3,
+               "reviewer_cleared": ("reviewer too lenient" if cleared >= 6 else "key over-calls" if cleared <= 2 else "mixed"),
+               "reviewer_only": ("key under-calls" if count["reviewer_only"]["broken"] >= 8 else "mixed or false alarms")}
+    out = {"section": "4au follow-up", "at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%MZ"), "prompt": SETTLE_SHA,
+           "third_model": sorted({m for r in rows for m in r.get("model") or []}), "settled": len(rows), "of": len(cases()),
+           "counts": count, "n": n, "reading": reading, "api_priced_usd": round(sum(r["api_priced_usd"] for r in rows), 2),
+           "okl_commit": rl.git("rev-parse", "HEAD").strip(), "script_sha256": ba.sha256(Path(__file__)), "cases": rows}
+    print(json.dumps({k: out[k] for k in ("third_model", "settled", "of", "counts", "reading", "api_priced_usd")}, indent=1))
+    if write:
+        dest = rl.REPO / "evals" / "results" / f"default-read-settle-{datetime.now(UTC):%Y%m%d-%H%M}.json"
+        dest.write_text(json.dumps(out, indent=1) + "\n")
+        print(f"receipt: {dest.relative_to(rl.REPO)}")
+    return 0 if len(rows) == len(cases()) else 2
+
+
 def main() -> int:
-    """run or score."""
+    """run, score or settle."""
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=["run", "score"])
+    ap.add_argument("step", choices=["run", "score", "settle"])
     ap.add_argument("--receipt", action="store_true")
     a = ap.parse_args()
-    return run() if a.step == "run" else score(a.receipt)
+    return run() if a.step == "run" else score(a.receipt) if a.step == "score" else settle(a.receipt)
 
 
 if __name__ == "__main__":
