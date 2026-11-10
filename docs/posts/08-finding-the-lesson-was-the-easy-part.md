@@ -2,11 +2,13 @@
 
 *Part 8: what happened when I tested whether a lesson in front of a coding agent changes the code it writes. The canonical copy is on [emeraldleaf.dev](https://emeraldleaf.dev/writing/finding-the-lesson-was-the-easy-part/); the measurements are in [REPORT §4as to §4au](../../evals/REPORT.md) and the reading in [Research on each layer](../research/okl-layers-2026-11-10.md).*
 
-For seven parts I have argued that a coding agent should be briefed on what its team has learned, and that each lesson should carry its evidence. This week I tested the claim underneath all of it: when okl puts a lesson in front of an agent, does the code come out different?
+okl does two things. It puts a team's lessons in front of a coding agent, and it gives each lesson a check that is re-run when the code it governs changes and that can block the push. Both have evidence behind them. On eight seeded tasks, across seven runs, briefed agents reproduced a known defect in 7% of attempts against 42% without the briefing. And the second half, a lesson that carries a check, is what the research on agent memory keeps arriving at independently: compiled checks reached 88% compliance where the same rules as prompts reached 67%, and a memory layer on its own still left 57.5% of a user's rules broken.
 
-The short answer is that finding the right lesson turned out to be solvable, and it was not the hard part. The hard part is that many lessons do not say clearly enough when they have been broken, so neither the agent nor anyone grading it can tell. Getting there took five hypotheses, four of which failed, and I kept every one.
+Seeded tasks are built around known defects, though. This week I tested the harder claim, on real work: when okl puts a lesson in front of an agent, does the code come out different?
 
-## The uncomfortable number
+The short answer is that finding the right lesson turned out to be solvable, and it was not the hard part. The hard part is that many lessons do not say clearly enough when they have been broken, so neither the agent nor anyone grading it can tell. Getting there took five hypotheses, four of which failed, and I kept every one. Where it led is the reassuring part: the evidence points at the half of okl that checks lessons, not the half that shows them.
+
+## Shown is not followed
 
 okl logs which lessons each briefing showed. I joined that log against an answer key for 50 real changes to this repository, saying which lessons each change needed and whether it followed them. Lessons the agent had been shown were followed no more often than lessons it had not. The estimate even pointed the wrong way, by about nine points, with an interval wide enough to include zero (§4as).
 
@@ -58,12 +60,12 @@ The vague lessons get rewritten. Whatever is left goes to the review.
 
 ## What the research says
 
-Then I read, in three threads covering recording, presentation and retrieval, from the papers themselves rather than their abstracts. The agreement was striking:
+Then I read, in three threads covering recording, presentation and retrieval, from the papers themselves rather than their abstracts. The agreement was striking, and it starts with what okl already does:
 
+- **Checks beat prompts, and models pass their own work.** Correction that relies on tests and tools works, and unaided self-correction mostly does not. Judges were more than 50% more likely to mark an output as meeting a criterion it failed when the output was their own. A lesson whose check runs when the code changes, and which blocks the push until it passes, is the mechanism with the strongest support in everything I read. It is the centre of okl.
 - **Confirm before you keep.** In SkillsBench, skills an agent wrote for itself scored 8 to 12 points below having no skills at all, while curated skills added 18 to 25 on the same setups. A study of memory management found that errors in stored experience compound, and argues for regulating what gets stored. okl lets the agent record lessons mid-session with no confirmation. That is its biggest departure from the evidence.
 - **Context files help less than people assume.** A study of repository context files found that agents follow them, but they do not generally improve task success and they add over 20% to the cost. They earn their place for what an agent cannot infer.
 - **Conditional wording is the weakest.** In a study of policy wording, "if relevant, do this" was followed less often than direct or explained instructions. That is how okl phrases its one-line lessons.
-- **Models pass their own work.** Judges were more than 50% more likely to mark an output as meeting a criterion it failed when the output was their own. Correction that relies on tests and tools works, and unaided self-correction mostly does not. That is the case for gates.
 - **One sentence fixes stale guidance.** Agents followed a stale instruction file over the actual code nine times in ten. Adding one sentence telling them to follow the code when the two disagree moved code-following from 4.2% to 91.4%.
 - **Vague criteria make judges disagree.** Breaking a criterion into yes/no questions raised agreement between judge models by 0.45.
 - **Ask only on real ambiguity.** Asking the user helps on underspecified tasks, but models are poor judges of when to ask, so the triggers have to be structural.
@@ -80,8 +82,12 @@ The lessons stay. How they reach the agent changes. Each task gets a short proto
 
 New lessons stay "proposed" until a check passes or I confirm them. The vague ones get yes/no conditions. And the measure that needs no judge comes next: real past bugs replayed at their base commit, graded by the test the real fix added, comparing today's briefing with the protocol.
 
+## What this means if you are deciding whether to use it
+
+Showing an agent its team's lessons helps on the defects those lessons describe; the seeded tasks show that. On open-ended real work, showing alone is the weakest thing okl does, which is also what the research found for memory layers that only show. What okl does differently is the part that held up all week: a lesson carries a check, the check re-runs when its code moves, and the push waits until it passes. The changes this week all move weight in that direction. The most-broken lessons became checks, the review after writing gives the agent a second pass with the code in hand, and the protocol asks it to say what it did with each lesson, so its account can be checked too.
+
 ## What the week was really about
 
-Four of five hypotheses failed. Better queries did not help, my own repository was the wrong sample, the review did not earn a default, and a third model could not settle the question. Each failure narrowed where the real problem was. The bar was written before every result, and every number has a receipt.
+Four of five hypotheses failed. Better queries did not help, my own repository was the wrong sample, the review did not earn a default, and a third model could not settle the question. Each failure narrowed where the real problem was, and none of them touched the part of okl that checks. The bar was written before every result, and every number has a receipt.
 
 The tool checked itself throughout: its new step reviewed its own first draft and found real bugs, and its new sweep caught okl's own checks reporting nothing as success. That is the habit I am trying to build into an agent, and this week it applied to me as much as to the agent.
