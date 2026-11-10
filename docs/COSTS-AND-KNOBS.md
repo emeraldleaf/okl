@@ -123,7 +123,11 @@ for 300 lessons, read once per session that changed something, plus the lessons 
 then opens with `okl show`. Nothing is cut, because in id order a cut would drop lessons at
 random. Where the agent's tool shows long output as a preview with the rest in a saved file,
 as Claude Code does past about 30,000 characters, the list's first line tells the agent to
-read all of it. okl calls no model for this; the agent's own turns are the cost.
+read all of it. okl calls no model for this; the agent's own turns are the cost. Measured on
+20 of this repository's changes with 280 lessons in scope (REPORT §4au), one review took a
+median of about 170,000 tokens, nearly all of them cached context the session re-reads, about
+$0.21 at API prices and 45 seconds. That cost, and a catch rate below the bar §4au set, are why
+it is off by default.
 
 ## Architecture review in CI (off by default)
 

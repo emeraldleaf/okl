@@ -1582,8 +1582,8 @@ REVIEW_STEPS = (
     "From the lessons below, pick the ten this change is most likely to break: the ones about something "
     "the code does. Any that govern a file it touched are listed first, and are read as well.",
     "Read each with `okl show <id>` (the okl_get tool) and check the code against all of it.",
-    "Change the code only where it breaks one. Where a lesson does not apply, or the code already does "
-    "what it says, leave the code alone.",
+    "Change the code only where it breaks one, and run its tests again after any change. Where a lesson "
+    "does not apply, or the code already does what it says, leave the code alone.",
     "Say which lessons you checked, what you changed for each, and why the rest needed nothing.",
 )
 # What the Stop hook adds when a repo turns the review on (`okl init --review-after-writing`).

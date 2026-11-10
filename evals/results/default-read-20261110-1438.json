@@ -1,0 +1,767 @@
+{
+ "section": "4au",
+ "at": "2026-11-10T14:38Z",
+ "status": "model-judged key (\u00a74aq), not audited (#394); one repository (#413)",
+ "okl_commit": "d9120c960972a6cf4f435804b36aba323918a5ee",
+ "prompt": "a394d83ab20f46e4",
+ "script_sha256": "0abdbf4ac7b469bacf580fff1ca6fd166795083b538c5c9c9f12defd36e2d043",
+ "result": {
+  "reviewed": 20,
+  "of": 20,
+  "reach": 0.174,
+  "reach_boot95": [
+   0.04,
+   0.375
+  ],
+  "broken": 23,
+  "caught": 4,
+  "picked_reach": 0.522,
+  "false_alarms_per_task": {
+   "median": 0.0,
+   "mean": 0.6,
+   "clean_tasks_median": 0.0,
+   "total": 12
+  },
+  "unsorted_named": 0,
+  "named_per_task_median": 1.0,
+  "tokens_per_review_median": 168906.0,
+  "api_priced_usd_total": 4.82
+ },
+ "holds": {
+  "reach_at_least_30": false,
+  "median_false_alarms_at_most_1": true,
+  "all_reviewed": true,
+  "on_by_default": false
+ },
+ "per_task": [
+  {
+   "pr": 197,
+   "arm": "broke",
+   "reviewed": true,
+   "broken": [
+    "doc-claim-governs-doc-and-code",
+    "docs-agent-neutral"
+   ],
+   "picked": [
+    "doc-check-defaults",
+    "doc-init-flags",
+    "doc-install-name",
+    "doc-verified-refused",
+    "docs-agent-neutral",
+    "n_d45d7bf64896",
+    "n_ead8e0a2b43d",
+    "doc-claim-governs-doc-and-code",
+    "n_b550ba9c5c8a",
+    "n_02cc84da158d"
+   ],
+   "named": [
+    "docs-agent-neutral"
+   ],
+   "hits": [
+    "docs-agent-neutral"
+   ],
+   "false_alarms": [],
+   "unsorted": [],
+   "picked_broken": [
+    "docs-agent-neutral",
+    "doc-claim-governs-doc-and-code"
+   ],
+   "tokens": {
+    "input": 12,
+    "cache_read": 173581,
+    "cache_write": 41960,
+    "output": 3880
+   },
+   "api_priced_usd": 0.2243296,
+   "seconds": 41.3
+  },
+  {
+   "pr": 265,
+   "arm": "broke",
+   "reviewed": true,
+   "broken": [
+    "doc-claim-governs-doc-and-code",
+    "n_57cc4b427f05",
+    "n_6b65aa35593c",
+    "pooled-receipts-miss-report-corrections",
+    "scope-literature-gap-claims"
+   ],
+   "picked": [
+    "n_9ba48d85ed19",
+    "n_b578addf6269",
+    "n_221da2fec863",
+    "n_119528a07fa5",
+    "n_e49be14d6207",
+    "eval-scripts-no-exposure",
+    "n_713b8c104f12",
+    "pooled-receipts-miss-report-corrections",
+    "n_b6cc6890ba26",
+    "scope-literature-gap-claims"
+   ],
+   "named": [
+    "n_221da2fec863"
+   ],
+   "hits": [],
+   "false_alarms": [
+    "n_221da2fec863"
+   ],
+   "unsorted": [],
+   "picked_broken": [
+    "pooled-receipts-miss-report-corrections",
+    "scope-literature-gap-claims"
+   ],
+   "tokens": {
+    "input": 12,
+    "cache_read": 238310,
+    "cache_write": 62020,
+    "output": 5730
+   },
+   "api_priced_usd": 0.32957149999999996,
+   "seconds": 58.5
+  },
+  {
+   "pr": 89,
+   "arm": "broke",
+   "reviewed": true,
+   "broken": [
+    "doc-claim-governs-doc-and-code"
+   ],
+   "picked": [
+    "doc-check-defaults",
+    "doc-init-flags",
+    "doc-install-name",
+    "doc-verified-refused",
+    "docs-agent-neutral",
+    "n_d45d7bf64896",
+    "n_5ddb0776a863",
+    "n_e7988ff536fb",
+    "doc-claim-governs-doc-and-code",
+    "n_805cf67e5cc5"
+   ],
+   "named": [
+    "n_5ddb0776a863",
+    "n_e7988ff536fb"
+   ],
+   "hits": [],
+   "false_alarms": [
+    "n_5ddb0776a863",
+    "n_e7988ff536fb"
+   ],
+   "unsorted": [],
+   "picked_broken": [
+    "doc-claim-governs-doc-and-code"
+   ],
+   "tokens": {
+    "input": 14,
+    "cache_read": 213532,
+    "cache_write": 43027,
+    "output": 5029
+   },
+   "api_priced_usd": 0.24412170000000002,
+   "seconds": 62.3
+  },
+  {
+   "pr": 307,
+   "arm": "broke",
+   "reviewed": true,
+   "broken": [
+    "doc-claim-governs-doc-and-code",
+    "harness-reads-a-moving-working-tree",
+    "n_57cc4b427f05",
+    "n_916330f61994"
+   ],
+   "picked": [
+    "readonly-agents-side-effects",
+    "n_00985805cdbb",
+    "n_57cc4b427f05",
+    "n_1fe5ef1aaca5",
+    "n_b6cc6890ba26",
+    "n_5ddb0776a863",
+    "n_7e50e3588bcd",
+    "n_5f36600f6c51",
+    "n_a5520510b99c",
+    "n_adea7f2c7373"
+   ],
+   "named": [
+    "readonly-agents-side-effects",
+    "n_00985805cdbb",
+    "n_57cc4b427f05"
+   ],
+   "hits": [
+    "n_57cc4b427f05"
+   ],
+   "false_alarms": [
+    "readonly-agents-side-effects",
+    "n_00985805cdbb"
+   ],
+   "unsorted": [],
+   "picked_broken": [
+    "n_57cc4b427f05"
+   ],
+   "tokens": {
+    "input": 14,
+    "cache_read": 353957,
+    "cache_write": 73090,
+    "output": 7873
+   },
+   "api_priced_usd": 0.4068937,
+   "seconds": 70.5
+  },
+  {
+   "pr": 326,
+   "arm": "broke",
+   "reviewed": true,
+   "broken": [
+    "doc-claim-governs-doc-and-code",
+    "docs-agent-neutral",
+    "falsifier-relative-to-control"
+   ],
+   "picked": [
+    "doc-check-defaults",
+    "doc-init-flags",
+    "doc-install-name",
+    "doc-verified-refused",
+    "docs-agent-neutral",
+    "n_7e50e3588bcd",
+    "n_bf6a2aee2f12",
+    "n_d45d7bf64896",
+    "n_5ddb0776a863",
+    "optional-feature-shipped-text"
+   ],
+   "named": [
+    "n_5ddb0776a863",
+    "optional-feature-shipped-text"
+   ],
+   "hits": [],
+   "false_alarms": [
+    "n_5ddb0776a863",
+    "optional-feature-shipped-text"
+   ],
+   "unsorted": [],
+   "picked_broken": [
+    "docs-agent-neutral"
+   ],
+   "tokens": {
+    "input": 26,
+    "cache_read": 1013621,
+    "cache_write": 106507,
+    "output": 13849
+   },
+   "api_priced_usd": 0.6662486000000002,
+   "seconds": 122.8
+  },
+  {
+   "pr": 122,
+   "arm": "broke",
+   "reviewed": true,
+   "broken": [
+    "doc-claim-governs-doc-and-code"
+   ],
+   "picked": [
+    "n_6b65aa35593c",
+    "n_b550ba9c5c8a",
+    "n_0637c92c032f",
+    "n_b40a468119f6",
+    "n_07faa4565128",
+    "n_041a066035b2",
+    "n_aa3e45a2ecd6",
+    "n_7e50e3588bcd",
+    "n_805cf67e5cc5",
+    "doc-claim-governs-doc-and-code"
+   ],
+   "named": [
+    "n_6b65aa35593c",
+    "n_b550ba9c5c8a"
+   ],
+   "hits": [],
+   "false_alarms": [
+    "n_6b65aa35593c",
+    "n_b550ba9c5c8a"
+   ],
+   "unsorted": [],
+   "picked_broken": [
+    "doc-claim-governs-doc-and-code"
+   ],
+   "tokens": {
+    "input": 8,
+    "cache_read": 110162,
+    "cache_write": 52346,
+    "output": 7231
+   },
+   "api_priced_usd": 0.2930657,
+   "seconds": 60.2
+  },
+  {
+   "pr": 75,
+   "arm": "broke",
+   "reviewed": true,
+   "broken": [
+    "n_5ddb0776a863",
+    "n_6b65aa35593c",
+    "n_e7988ff536fb"
+   ],
+   "picked": [
+    "n_1fe5ef1aaca5",
+    "n_8b3345b90621",
+    "n_7e50e3588bcd",
+    "n_e8b039f47ee1",
+    "n_c95bdc056620",
+    "n_e7988ff536fb",
+    "n_0637c92c032f",
+    "n_b550ba9c5c8a",
+    "n_ec568941f68a"
+   ],
+   "named": [],
+   "hits": [],
+   "false_alarms": [],
+   "unsorted": [],
+   "picked_broken": [
+    "n_e7988ff536fb"
+   ],
+   "tokens": {
+    "input": 22,
+    "cache_read": 369511,
+    "cache_write": 45816,
+    "output": 7091
+   },
+   "api_priced_usd": 0.2914756,
+   "seconds": 68.9
+  },
+  {
+   "pr": 335,
+   "arm": "broke",
+   "reviewed": true,
+   "broken": [
+    "n_00985805cdbb",
+    "seed:geospatial-enforcement-defects:r_single_source_sets"
+   ],
+   "picked": [
+    "doc-check-defaults",
+    "doc-init-flags",
+    "doc-verified-refused",
+    "n_00985805cdbb",
+    "n_805cf67e5cc5",
+    "n_1eaf9a5f24e2",
+    "snapshot-from-worktree-drops-repo-rules",
+    "n_31bde92d9003",
+    "seed:python-canon:py_comments_why",
+    "n_696a70084e1a"
+   ],
+   "named": [],
+   "hits": [],
+   "false_alarms": [],
+   "unsorted": [],
+   "picked_broken": [
+    "n_00985805cdbb"
+   ],
+   "tokens": {
+    "input": 10,
+    "cache_read": 122002,
+    "cache_write": 42398,
+    "output": 3655
+   },
+   "api_priced_usd": 0.2187137,
+   "seconds": 42.9
+  },
+  {
+   "pr": 55,
+   "arm": "broke",
+   "reviewed": true,
+   "broken": [
+    "n_37ea04a8a0ac"
+   ],
+   "picked": [
+    "n_d45d7bf64896",
+    "n_e8b039f47ee1",
+    "n_fe4ced54e60f",
+    "n_b6cc6890ba26",
+    "n_37ea04a8a0ac",
+    "n_428707b5e596",
+    "n_696a70084e1a",
+    "n_09ba6adf0fdc",
+    "n_a7634ef53a8f",
+    "n_a4b40c96ede4"
+   ],
+   "named": [
+    "n_37ea04a8a0ac"
+   ],
+   "hits": [
+    "n_37ea04a8a0ac"
+   ],
+   "false_alarms": [],
+   "unsorted": [],
+   "picked_broken": [
+    "n_37ea04a8a0ac"
+   ],
+   "tokens": {
+    "input": 10,
+    "cache_read": 99030,
+    "cache_write": 29909,
+    "output": 4259
+   },
+   "api_priced_usd": 0.172456,
+   "seconds": 37.0
+  },
+  {
+   "pr": 167,
+   "arm": "broke",
+   "reviewed": true,
+   "broken": [
+    "remote-timeout-not-a-deadline"
+   ],
+   "picked": [
+    "doc-check-defaults",
+    "n_7e50e3588bcd",
+    "remote-timeout-not-a-deadline",
+    "n_5a9589af345f",
+    "refusal-offers-no-destructive-shortcut",
+    "remote-path-test-through-client",
+    "n_e7988ff536fb",
+    "n_00985805cdbb",
+    "seed:python-canon:py_exceptions_canon",
+    "seed:python-canon:py_strict_pytest"
+   ],
+   "named": [
+    "remote-timeout-not-a-deadline"
+   ],
+   "hits": [
+    "remote-timeout-not-a-deadline"
+   ],
+   "false_alarms": [],
+   "unsorted": [],
+   "picked_broken": [
+    "remote-timeout-not-a-deadline"
+   ],
+   "tokens": {
+    "input": 10,
+    "cache_read": 152113,
+    "cache_write": 47976,
+    "output": 4406
+   },
+   "api_priced_usd": 0.2515443,
+   "seconds": 52.4
+  },
+  {
+   "pr": 157,
+   "arm": "clean",
+   "reviewed": true,
+   "broken": [],
+   "picked": [
+    "doc-init-flags",
+    "doc-install-name",
+    "doc-verified-refused",
+    "docs-agent-neutral",
+    "n_110bb4fb7112",
+    "n_09ba6adf0fdc",
+    "n_696a70084e1a",
+    "n_805cf67e5cc5",
+    "mcp-registry-pypi-command-name",
+    "n_c95bdc056620"
+   ],
+   "named": [],
+   "hits": [],
+   "false_alarms": [],
+   "unsorted": [],
+   "picked_broken": [],
+   "tokens": {
+    "input": 10,
+    "cache_read": 127470,
+    "cache_write": 37519,
+    "output": 2932
+   },
+   "api_priced_usd": 0.1925555,
+   "seconds": 34.8
+  },
+  {
+   "pr": 103,
+   "arm": "clean",
+   "reviewed": true,
+   "broken": [],
+   "picked": [
+    "doc-install-name",
+    "docs-agent-neutral",
+    "n_7e50e3588bcd",
+    "n_d45d7bf64896",
+    "n_b550ba9c5c8a",
+    "novelty-claims-expire",
+    "n_e635fd921086",
+    "n_1fe5ef1aaca5",
+    "n_696a70084e1a",
+    "n_09ba6adf0fdc"
+   ],
+   "named": [],
+   "hits": [],
+   "false_alarms": [],
+   "unsorted": [],
+   "picked_broken": [],
+   "tokens": {
+    "input": 10,
+    "cache_read": 107393,
+    "cache_write": 32393,
+    "output": 2790
+   },
+   "api_priced_usd": 0.1685558,
+   "seconds": 54.8
+  },
+  {
+   "pr": 29,
+   "arm": "clean",
+   "reviewed": true,
+   "broken": [],
+   "picked": [
+    "n_02cc84da158d",
+    "n_119528a07fa5",
+    "n_ec568941f68a",
+    "n_00985805cdbb",
+    "n_916330f61994",
+    "n_0e6928348b1d",
+    "n_b4050b826687",
+    "n_58119d0a63d9",
+    "n_b6cc6890ba26",
+    "n_5f36600f6c51"
+   ],
+   "named": [],
+   "hits": [],
+   "false_alarms": [],
+   "unsorted": [],
+   "picked_broken": [],
+   "tokens": {
+    "input": 8,
+    "cache_read": 54484,
+    "cache_write": 21522,
+    "output": 2314
+   },
+   "api_priced_usd": 0.11505789999999999,
+   "seconds": 20.1
+  },
+  {
+   "pr": 88,
+   "arm": "clean",
+   "reviewed": true,
+   "broken": [],
+   "picked": [
+    "doc-install-name",
+    "docs-agent-neutral",
+    "n_d45d7bf64896",
+    "doc-claim-governs-doc-and-code",
+    "novelty-claims-expire",
+    "n_b550ba9c5c8a",
+    "n_b4050b826687",
+    "n_31bde92d9003",
+    "n_696a70084e1a",
+    "n_0637c92c032f"
+   ],
+   "named": [],
+   "hits": [],
+   "false_alarms": [],
+   "unsorted": [],
+   "picked_broken": [],
+   "tokens": {
+    "input": 12,
+    "cache_read": 132129,
+    "cache_write": 31406,
+    "output": 3300
+   },
+   "api_priced_usd": 0.17219489999999998,
+   "seconds": 42.2
+  },
+  {
+   "pr": 154,
+   "arm": "clean",
+   "reviewed": true,
+   "broken": [],
+   "picked": [
+    "n_7e50e3588bcd",
+    "eval-scripts-no-exposure",
+    "n_221da2fec863",
+    "n_119528a07fa5",
+    "n_e49be14d6207",
+    "n_02cc84da158d",
+    "seed:python-canon:py_unclosed_sqlite",
+    "n_b6cc6890ba26",
+    "n_00985805cdbb",
+    "n_9ba48d85ed19"
+   ],
+   "named": [],
+   "hits": [],
+   "false_alarms": [],
+   "unsorted": [],
+   "picked_broken": [],
+   "tokens": {
+    "input": 12,
+    "cache_read": 143875,
+    "cache_write": 32918,
+    "output": 4221
+   },
+   "api_priced_usd": 0.18859950000000003,
+   "seconds": 43.3
+  },
+  {
+   "pr": 386,
+   "arm": "clean",
+   "reviewed": true,
+   "broken": [],
+   "picked": [
+    "doc-init-flags",
+    "doc-claim-governs-doc-and-code",
+    "n_7e50e3588bcd",
+    "n_d8166465591e",
+    "n_57cc4b427f05",
+    "n_00985805cdbb",
+    "n_f215b68b925c",
+    "n_967ef9825472",
+    "seed:python-canon:py_comments_why",
+    "n_8a6e1abce5cc"
+   ],
+   "named": [
+    "doc-claim-governs-doc-and-code"
+   ],
+   "hits": [],
+   "false_alarms": [
+    "doc-claim-governs-doc-and-code"
+   ],
+   "unsorted": [],
+   "picked_broken": [],
+   "tokens": {
+    "input": 10,
+    "cache_read": 141122,
+    "cache_write": 49033,
+    "output": 5290
+   },
+   "api_priced_usd": 0.2635127,
+   "seconds": 55.3
+  },
+  {
+   "pr": 130,
+   "arm": "clean",
+   "reviewed": true,
+   "broken": [],
+   "picked": [
+    "doc-check-defaults",
+    "n_7e50e3588bcd",
+    "n_00985805cdbb",
+    "n_b4050b826687",
+    "n_5db37b759b1e",
+    "n_3dac3a1d8fba",
+    "n_dc7429065f5d",
+    "n_805cf67e5cc5",
+    "n_b74bad29fd87",
+    "n_696a70084e1a"
+   ],
+   "named": [
+    "n_00985805cdbb"
+   ],
+   "hits": [],
+   "false_alarms": [
+    "n_00985805cdbb"
+   ],
+   "unsorted": [],
+   "picked_broken": [],
+   "tokens": {
+    "input": 6,
+    "cache_read": 37542,
+    "cache_write": 26995,
+    "output": 3256
+   },
+   "api_priced_usd": 0.1446442,
+   "seconds": 34.7
+  },
+  {
+   "pr": 101,
+   "arm": "clean",
+   "reviewed": true,
+   "broken": [],
+   "picked": [
+    "doc-install-name",
+    "docs-agent-neutral",
+    "n_7e50e3588bcd",
+    "n_d45d7bf64896",
+    "n_ead8e0a2b43d",
+    "n_71c09abf3f37",
+    "n_adea7f2c7373",
+    "n_00985805cdbb",
+    "n_8a6e1abce5cc",
+    "n_696a70084e1a"
+   ],
+   "named": [
+    "n_8a6e1abce5cc"
+   ],
+   "hits": [],
+   "false_alarms": [
+    "n_8a6e1abce5cc"
+   ],
+   "unsorted": [],
+   "picked_broken": [],
+   "tokens": {
+    "input": 8,
+    "cache_read": 85867,
+    "cache_write": 36548,
+    "output": 4280
+   },
+   "api_priced_usd": 0.19791369999999997,
+   "seconds": 35.7
+  },
+  {
+   "pr": 81,
+   "arm": "clean",
+   "reviewed": true,
+   "broken": [],
+   "picked": [
+    "doc-install-name",
+    "n_7e50e3588bcd",
+    "n_1fe5ef1aaca5",
+    "n_31bde92d9003",
+    "n_696a70084e1a",
+    "n_09ba6adf0fdc",
+    "n_c95bdc056620",
+    "n_ead8e0a2b43d",
+    "doc-claim-governs-doc-and-code",
+    "n_e635fd921086"
+   ],
+   "named": [],
+   "hits": [],
+   "false_alarms": [],
+   "unsorted": [],
+   "picked_broken": [],
+   "tokens": {
+    "input": 8,
+    "cache_read": 63058,
+    "cache_write": 24192,
+    "output": 1959
+   },
+   "api_priced_usd": 0.1230318,
+   "seconds": 19.8
+  },
+  {
+   "pr": 47,
+   "arm": "clean",
+   "reviewed": true,
+   "broken": [],
+   "picked": [
+    "n_7e50e3588bcd",
+    "n_92398fae87c0",
+    "n_e635fd921086",
+    "n_c95bdc056620",
+    "n_71c09abf3f37",
+    "n_b4050b826687",
+    "n_696a70084e1a",
+    "n_1fe5ef1aaca5",
+    "n_31bde92d9003",
+    "n_00985805cdbb"
+   ],
+   "named": [],
+   "hits": [],
+   "false_alarms": [],
+   "unsorted": [],
+   "picked_broken": [],
+   "tokens": {
+    "input": 12,
+    "cache_read": 118532,
+    "cache_write": 26470,
+    "output": 3633
+   },
+   "api_priced_usd": 0.1543562,
+   "seconds": 43.6
+  }
+ ]
+}

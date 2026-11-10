@@ -15,10 +15,14 @@
   for one session), and the Stop hook then asks for it before its question about what was
   learned; init says when the project's Stop hook is an edited copy that cannot ask, and
   `okl init --force` replaces it. A value okl cannot read as on or off is refused, never
-  read as off. It is off by default because it is measured on one
-  repository's development half only: there, a model picking from these lines found 40% of
-  the lessons changes had broken in its first ten, against 21% for the search on the task's
-  words (`explain-search-dev-20261110-1306.json`, in-sample).
+  read as off. After any change the steps say to run the tests again. It is off by default. On
+  §4at's development half, a model picking from these lines found 40% of the lessons changes
+  had broken in its first ten, against 21% for the search on the task's words
+  (`explain-search-dev-20261110-1306.json`, in-sample). A quick read on 20 unseen changes
+  (REPORT §4au, `default-read-20261110-1438.json`) set a bar for turning it on by default and
+  missed it: the review picked 12 of the 23 broken lessons but called only 4 broken (17%,
+  bar 30%), while wrongly calling a lesson broken rarely (median 0 a change), at about 170,000
+  mostly cached tokens a review. The test on other repositories is #413.
 
 ## 0.15.0
 

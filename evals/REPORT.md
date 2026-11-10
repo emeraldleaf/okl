@@ -5717,6 +5717,23 @@ a result to cite beyond this decision.
 **Budget.** 20 Sonnet sessions. The reviews are kept in the private results directory; the receipt
 is committed.
 
+**Result (2026-11-10): the rule fails, so the review after writing is off by default.** All 20
+reviews answered (prompt `a394d83ab20f46e4`; receipt `default-read-20261110-1438.json`).
+1. Reach: 4 of the 23 broken lessons on the 10 broken tasks were ones it would change code for,
+   17.4%, bootstrap [4.0, 37.5]; under the 30% bar. It *picked* 12 of the 23 (52.2%), more than
+   P's 40% at ten on the development half, so the loss is in the check: of the 8 it picked and
+   then judged the code to follow, 3 are the same lesson (`doc-claim-governs-doc-and-code`).
+2. False alarms: median 0 a task (mean 0.6, 12 in all), 3 of them on the clean tasks; 10 of the 12
+   are lessons the key calls related, 2 followed. Under the bar of 1.
+3. Cost: a median of 168,906 tokens a review, of them about 130,000 cache reads and 40,000 cache
+   writes, 4,240 output; $0.21 API-priced (a Max plan pays none), 43 seconds; $4.82 for all 20.
+
+What it means, not pre-registered: a reviewer that sees the list finds the lessons that bear on a
+change about as well as a model picking from it did, and rarely raises one that does not, but it
+reads most broken lessons as followed. Whether that is the reviewer under-calling or §4aq's key
+over-calling (it was a model's, and three of the eight are one broad process lesson) is #394's
+question and #413's. It stays on in the maintainer's repositories, as the rule says.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

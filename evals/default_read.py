@@ -42,11 +42,13 @@ PER_ARM, SEED, WORKERS, TIMEOUT, STOP_AFTER_EMPTY = 10, 4, 3, 1500, 6
 REACH_BAR, FALSE_ALARM_BAR = 0.30, 1
 OUT = lr.PRIVATE / "default-read-4au.jsonl"
 LESSON_DIR, LIST_FILE, CHANGE_FILE = "review-lessons", "REVIEW.md", "CHANGE.diff"
-STEPS = [s.replace("Read each with `okl show <id>` (the okl_get tool)", f"Read each in full at {LESSON_DIR}/<id>.md")
-          .replace("From the lessons below", f"From the lessons in {LIST_FILE}")
-          .replace("Change the code only where it breaks one.",
-                   "You cannot change code here: list each lesson you would change code for, and what you would change.")
-         for s in core.REVIEW_STEPS]
+STEPS = [   # the steps as §4au ran them (prompt a394d83ab20f46e4), frozen so its receipt stays reproducible
+    'Say what the changed code does, one mechanism per sentence: what it calls and from where, what it reads and writes (files, databases, environment, network, output), what it assumes, how it fails and what it returns or prints then, what its tests check and with what data, and what the docs it changes now claim.',
+    'From the lessons in REVIEW.md, pick the ten this change is most likely to break: the ones about something the code does. Any that govern a file it touched are listed first, and are read as well.',
+    'Read each in full at review-lessons/<id>.md and check the code against all of it.',
+    'You cannot change code here: list each lesson you would change code for, and what you would change. Where a lesson does not apply, or the code already does what it says, leave the code alone.',
+    'Say which lessons you checked, what you changed for each, and why the rest needed nothing.',
+]
 PROMPT = f"""You just wrote the change in {CHANGE_FILE}. Your working directory is the repository with that change applied. Before you finish, check the code you wrote against this repository's lessons. {LIST_FILE} is what `okl check --change` printed for this change: the steps, the changed files, and every lesson in scope, one line each.
 
 """ + "\n".join(f"{i}. {s}" for i, s in enumerate(STEPS, 1)) + """
@@ -55,6 +57,7 @@ Answer with one JSON object and nothing after it:
 {"explained": ["one sentence per mechanism", ...], "picked": ["lesson id", ...], "breaks": [{"id": "lesson id", "why": "what in the code breaks it", "change": "what you would change"}]}
 "breaks" holds only the lessons the code breaks and that you would change code for; an empty list is a fine answer."""
 PROMPT_SHA = hashlib.sha256(PROMPT.encode()).hexdigest()[:16]
+assert PROMPT_SHA == "a394d83ab20f46e4", "the §4au prompt changed after its run"
 SONNET = rp.SONNET_READS
 
 
