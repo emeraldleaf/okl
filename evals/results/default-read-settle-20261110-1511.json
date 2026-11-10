@@ -1,0 +1,574 @@
+{
+ "section": "4au follow-up",
+ "at": "2026-11-10T15:11Z",
+ "prompt": "7b2f46b1d66ab41b",
+ "third_model": [
+  "claude-fable-5-1",
+  "claude-haiku-5-5"
+ ],
+ "settled": 24,
+ "of": 24,
+ "counts": {
+  "reviewer_cleared": {
+   "broken": 4,
+   "followed": 4,
+   "not applicable": 0
+  },
+  "reviewer_only": {
+   "broken": 2,
+   "followed": 8,
+   "not applicable": 2
+  },
+  "both_broken": {
+   "broken": 2,
+   "followed": 1,
+   "not applicable": 1
+  }
+ },
+ "n": {
+  "reviewer_cleared": 8,
+  "reviewer_only": 12,
+  "both_broken": 4
+ },
+ "reading": {
+  "control_holds": false,
+  "reviewer_cleared": "mixed",
+  "reviewer_only": "mixed or false alarms"
+ },
+ "api_priced_usd": 18.18,
+ "okl_commit": "ea9a4ff99672cbc15eb9b2a06a59f382309a4988",
+ "script_sha256": "9fa64f815d8c6706428797f50372b3f9ecfa03a335793ad5e3f7db96ad628c8a",
+ "cases": [
+  {
+   "pr": 197,
+   "lesson": "doc-claim-governs-doc-and-code",
+   "case": "reviewer_cleared",
+   "prompt": "7b2f46b1d66ab41b",
+   "verdict": "broken",
+   "reason": "The change adds docs/DEVELOPING.md full of concrete claims about commands, flags and numbers (the 66% coverage floor, the 20% failure cutoff, the Python matrix, okl CLI flags, and a script `evals/precision.py` that does not exist under evals/) but records no Rule in okl-drift.json with --files naming the new doc and the code it describes, unlike the repo's existing doc-check-defaults and doc-init-flags rules, so one claim is already stale and nothing goes red.",
+   "evidence": [
+    "docs/DEVELOPING.md:169",
+    "docs/DEVELOPING.md:99",
+    "docs/DEVELOPING.md:80",
+    "okl-drift.json:10",
+    "okl-drift.json:20",
+    "evals/ab_harness.py:46",
+    "pyproject.toml:104"
+   ],
+   "model": [
+    "claude-fable-5-1",
+    "claude-haiku-5-5"
+   ],
+   "api_priced_usd": 0.62432955
+  },
+  {
+   "pr": 197,
+   "lesson": "docs-agent-neutral",
+   "case": "both_broken",
+   "prompt": "7b2f46b1d66ab41b",
+   "verdict": "broken",
+   "reason": "The new docs/DEVELOPING.md describes the UserPromptSubmit and Stop hooks as simply 'okl's own hooks' briefing 'the agent', and calls CLAUDE.md the contract 'every agent working here follows', without labelling any of it as Claude Code-specific, whereas README.md and GETTING-STARTED.md consistently mark the per-prompt briefing and Stop question as Claude Code hooks.",
+   "evidence": [
+    "docs/DEVELOPING.md:78",
+    "docs/DEVELOPING.md:80",
+    "docs/DEVELOPING.md:82",
+    "docs/DEVELOPING.md:7",
+    "docs/GETTING-STARTED.md:111",
+    "README.md:694"
+   ],
+   "model": [
+    "claude-haiku-5-5",
+    "claude-fable-5-1"
+   ],
+   "api_priced_usd": 0.2703388
+  },
+  {
+   "pr": 265,
+   "lesson": "pooled-receipts-miss-report-corrections",
+   "case": "reviewer_cleared",
+   "prompt": "7b2f46b1d66ab41b",
+   "verdict": "broken",
+   "reason": "The change adds a second pooling helper, _arm_counts, that sums every committed receipt's raw rows skipping only the unevaluable flag, bypassing the PLAN_ONLY named list the existing _pool applies, so \u00a74j's plan-only idor_endpoint briefed row (scored clean in the receipt, excluded by REPORT \u00a74j) is counted again and any new correction added to PLAN_ONLY will not surface in the new README-sentence test.",
+   "evidence": [
+    "tests/test_docs.py:238",
+    "tests/test_docs.py:243",
+    "tests/test_docs.py:185",
+    "tests/test_docs.py:193",
+    "tests/test_docs.py:259",
+    "evals/results/ab-20261010-2314.json:38",
+    "evals/results/ab-20261010-2314.json:43"
+   ],
+   "model": [
+    "claude-fable-5-1",
+    "claude-haiku-5-5"
+   ],
+   "api_priced_usd": 0.8103195500000001
+  },
+  {
+   "pr": 265,
+   "lesson": "scope-literature-gap-claims",
+   "case": "reviewer_cleared",
+   "prompt": "7b2f46b1d66ab41b",
+   "verdict": "followed",
+   "reason": "The change keeps both gap claims scoped as 'of the seven papers reviewed here, none\u2026', names the search (two web searches on 2026-10-20 plus related-work sections), labels it a reading rather than a review, records that the 2026-10-22 independent verification found counterexamples outside that reading, and tracks the narrowing in #264; the only residual is the pre-existing, untouched DreamBench row sentence 'What no benchmark reports\u2026' at line 19, which the diff did not modify or introduce.",
+   "evidence": [
+    "docs/RELATED-WORK.md:26",
+    "docs/RELATED-WORK.md:29",
+    "docs/RELATED-WORK.md:32-35",
+    "docs/RELATED-WORK.md:36-38",
+    "CHANGELOG.md:5",
+    "docs/RELATED-WORK.md:19"
+   ],
+   "model": [
+    "claude-haiku-5-5",
+    "claude-fable-5-1"
+   ],
+   "api_priced_usd": 0.7742786
+  },
+  {
+   "pr": 265,
+   "lesson": "n_221da2fec863",
+   "case": "reviewer_only",
+   "prompt": "7b2f46b1d66ab41b",
+   "verdict": "followed",
+   "reason": "The new subprocess test builds its env by extending a filtered copy of os.environ rather than from scratch (the lesson's accepted alternative), and the behaviour it asserts lives in evals/preflight.py, which is run by checkout path and pins the checkout's src/ onto sys.path itself, so the old script's 'interests=None (unfiltered by design)' output would fail the 'interests=none (unfiltered' assertion; only the arrange-step 'python -m okl seed' child runs without an explicit PYTHONPATH pin, unlike the repo's usual {**os.environ, PYTHONPATH: src} pattern.",
+   "evidence": [
+    "tests/test_preflight.py:23",
+    "tests/test_preflight.py:27",
+    "tests/test_preflight.py:540",
+    "tests/test_preflight.py:545",
+    "evals/preflight.py:29",
+    "evals/preflight.py:234",
+    "tests/test_okl.py:2892"
+   ],
+   "model": [
+    "claude-haiku-5-5",
+    "claude-fable-5-1"
+   ],
+   "api_priced_usd": 0.7887552000000001
+  },
+  {
+   "pr": 89,
+   "lesson": "doc-claim-governs-doc-and-code",
+   "case": "reviewer_cleared",
+   "prompt": "7b2f46b1d66ab41b",
+   "verdict": "broken",
+   "reason": "The change adds a new doc section stating the exact gate command and flags, exit codes 0/1/2, the OKL_SERVICE_URL/OKL_TOKEN variables, the Python 3.10 floor and the okl --version behaviour, all of which depend on parser.py, verification.py and pyproject.toml, yet okl-drift.json only re-stamps existing rules and records no Rule with --files naming the new doc section and that code, nor any check that runs the documented command or compares the documented exit codes and defaults with the code's, so these claims can drift silently exactly as the lesson warns.",
+   "evidence": [
+    "docs/GETTING-STARTED.md:332",
+    "docs/GETTING-STARTED.md:336",
+    "docs/GETTING-STARTED.md:355",
+    "docs/GETTING-STARTED.md:357",
+    "okl-drift.json:4",
+    "src/okl/cli/parser.py:133",
+    "src/okl/cli/verification.py:390",
+    "pyproject.toml:12"
+   ],
+   "model": [
+    "claude-haiku-5-5",
+    "claude-fable-5-1"
+   ],
+   "api_priced_usd": 0.53413905
+  },
+  {
+   "pr": 89,
+   "lesson": "n_5ddb0776a863",
+   "case": "reviewer_only",
+   "prompt": "7b2f46b1d66ab41b",
+   "verdict": "followed",
+   "reason": "The new docs state exit 2 as 'could not check at all' distinct from clean, the GitLab and Azure snippets let that non-zero exit fail the job, and the pre-push hook's mapping of 2 to 0 is an explicit, commented, local-only decision while the gate itself still prints its 'OKL NOT CONFIGURED \u2014 refusing' message to stderr, so a not-run never reads as clean.",
+   "evidence": [
+    "docs/GETTING-STARTED.md:330",
+    "docs/GETTING-STARTED.md:99",
+    "docs/GETTING-STARTED.md:110",
+    "src/okl/cli/verification.py:338",
+    "src/okl/cli/verification.py:391",
+    "README.md:6"
+   ],
+   "model": [
+    "claude-haiku-5-5",
+    "claude-fable-5-1"
+   ],
+   "api_priced_usd": 0.43516695
+  },
+  {
+   "pr": 89,
+   "lesson": "n_e7988ff536fb",
+   "case": "reviewer_only",
+   "prompt": "7b2f46b1d66ab41b",
+   "verdict": "not applicable",
+   "reason": "The change touches only README, the getting-started guide and the drift snapshot, adds no command or error path, and its documented 0/1/2 semantics for `okl drift --gate` match the existing CLI code.",
+   "evidence": [
+    "CHANGE.diff:1-247",
+    "docs/GETTING-STARTED.md:330-332",
+    "src/okl/cli/verification.py:388-395"
+   ],
+   "model": [
+    "claude-haiku-5-5",
+    "claude-fable-5-1"
+   ],
+   "api_priced_usd": 0.39820849999999997
+  },
+  {
+   "pr": 307,
+   "lesson": "readonly-agents-side-effects",
+   "case": "reviewer_only",
+   "prompt": "7b2f46b1d66ab41b",
+   "verdict": "followed",
+   "reason": "The change wires a review agent into CI with mechanisms rather than a 'read-only' instruction: Bash is allow-listed to four non-writing git subcommands in a settings file with every other shell command refused in -p mode, the store is a throwaway sqlite in RUNNER_TEMP with OKL_BRIEFING_LOG=0 so no exposure rows reach the real store, and the agent runs from a clean temp directory so the repo's hooks and receipt scripts cannot fire; the lesson's post-run git-status and row-count diff is moot on an ephemeral runner with a per-step store.",
+   "evidence": [
+    ".github/workflows/ci.yml:148",
+    ".github/workflows/ci.yml:151",
+    ".github/workflows/ci.yml:156",
+    "ci/review-agent.sh:150",
+    "ci/review-agent.sh:151"
+   ],
+   "model": [
+    "claude-haiku-5-5",
+    "claude-fable-5-1"
+   ],
+   "api_priced_usd": 1.2287874500000002
+  },
+  {
+   "pr": 307,
+   "lesson": "n_00985805cdbb",
+   "case": "reviewer_only",
+   "prompt": "7b2f46b1d66ab41b",
+   "verdict": "followed",
+   "reason": "The new comments name the incident behind each line (#300, #307, Postgres tests skipping everywhere) rather than restating it, and every property they assert is made executable: published sizes and latencies are held to committed receipts by the new test_docs figure check, the Postgres fail-instead-of-skip claim points at _postgres_url which enforces it, the clean-room claim is backed by the mktemp cd in review-agent.sh, and the read-only-git claim is backed by the settings allow-list written in the same step.",
+   "evidence": [
+    ".github/workflows/ci.yml:35",
+    ".github/workflows/ci.yml:88",
+    ".github/workflows/ci.yml:134",
+    "ci/review-agent.sh:75",
+    "ci/review-agent.sh:145",
+    "src/okl/semantic.py:4",
+    "src/okl/rerank.py:6",
+    "evals/model_files.py:9",
+    "tests/test_docs.py:315",
+    "tests/test_okl.py:1159"
+   ],
+   "model": [
+    "claude-haiku-5-5",
+    "claude-fable-5-1"
+   ],
+   "api_priced_usd": 0.8815874500000002
+  },
+  {
+   "pr": 307,
+   "lesson": "n_57cc4b427f05",
+   "case": "both_broken",
+   "prompt": "7b2f46b1d66ab41b",
+   "verdict": "broken",
+   "reason": "The new figure-to-receipt audit enumerates docs, overview HTML and okl source with filesystem rglob/glob, so an untracked or uncommitted file changes its verdict, whereas the lesson (and the same file's older audit at line 205, plus the rule this change itself restates in the reviewer checklist) requires iterating git ls-files.",
+   "evidence": [
+    "tests/test_docs.py:355",
+    "tests/test_docs.py:357",
+    "tests/test_docs.py:358",
+    "tests/test_docs.py:1011",
+    "tests/test_docs.py:205",
+    ".claude/agents/architecture-reviewer.md:45"
+   ],
+   "model": [
+    "claude-haiku-5-5",
+    "claude-fable-5-1"
+   ],
+   "api_priced_usd": 0.83579615
+  },
+  {
+   "pr": 326,
+   "lesson": "docs-agent-neutral",
+   "case": "reviewer_cleared",
+   "prompt": "7b2f46b1d66ab41b",
+   "verdict": "followed",
+   "reason": "Every README and docs/ hunk adds a 'Claude Code' label to a hook, /record-style command or Stop-question mention (and SEEDING.md stops saying /seed-from-codebase comes with any agent, pointing other agents to the prompt file), and the change adds ci/check-agent-neutral.py to enforce exactly this labelling, so it does what the lesson says rather than breaking it.",
+   "evidence": [
+    "README.md:60",
+    "README.md:134",
+    "README.md:531",
+    "docs/SEEDING.md:50",
+    "docs/GETTING-STARTED.md:81",
+    "docs/COSTS-AND-KNOBS.md:46",
+    "docs/LOAD-YOUR-RULES.md:124",
+    "docs/THESIS.md:30",
+    "ci/check-agent-neutral.py:1"
+   ],
+   "model": [
+    "claude-haiku-5-5",
+    "claude-fable-5-1"
+   ],
+   "api_priced_usd": 0.8916708
+  },
+  {
+   "pr": 326,
+   "lesson": "n_5ddb0776a863",
+   "case": "reviewer_only",
+   "prompt": "7b2f46b1d66ab41b",
+   "verdict": "followed",
+   "reason": "The five new gate scripts read only committed files via git ls-files (never the gitignored .okl/ store or okl.db), fail loudly when their input is absent or a stubbed path is never reached, and print the inspected count beside every clean line, which is what the lesson asks for.",
+   "evidence": [
+    "ci/check-agent-neutral.py:179",
+    "ci/check-agent-neutral.py:185",
+    "ci/check-portable-ungated.py:324",
+    "ci/check-portable-ungated.py:337",
+    "ci/check-positioning.py:415",
+    "ci/check-positioning.py:421",
+    "ci/check-test-imports.py:466",
+    "ci/check-test-imports.py:509",
+    "ci/check-check-defaults.py:259",
+    "ci/check-check-defaults.py:273",
+    "src/okl/client.py:223"
+   ],
+   "model": [
+    "claude-haiku-5-5",
+    "claude-fable-5-1"
+   ],
+   "api_priced_usd": 1.4709732
+  },
+  {
+   "pr": 326,
+   "lesson": "optional-feature-shipped-text",
+   "case": "reviewer_only",
+   "prompt": "7b2f46b1d66ab41b",
+   "verdict": "not applicable",
+   "reason": "The change makes no feature optional and touches none of the shipped scaffold templates (hooks, /record, encoding-loop skill), which already use configuration-neutral drift-gate wording; its only generated-text edit, the bootstrap hint in src/okl/cli/lessons.py, is reworded to hold for any agent, which is the docs-agent-neutral lesson's concern rather than this one's.",
+   "evidence": [
+    "CHANGE.diff:1570",
+    "CHANGE.diff:1581",
+    "src/okl/scaffold/claude/skills/encoding-loop/SKILL.md:51",
+    "src/okl/scaffold/hooks/stop-okl-encode.sh:160",
+    "src/okl/scaffold/claude/commands/record.md:64"
+   ],
+   "model": [
+    "claude-haiku-5-5",
+    "claude-fable-5-1"
+   ],
+   "api_priced_usd": 1.22637555
+  },
+  {
+   "pr": 122,
+   "lesson": "doc-claim-governs-doc-and-code",
+   "case": "reviewer_cleared",
+   "prompt": "7b2f46b1d66ab41b",
+   "verdict": "broken",
+   "reason": "The change hand-bumps corpus numbers (161 to 178 records, 105 Rules, 36 Defects, 11 to 12 packs) in README.md, AGENTS.md, CLAUDE.md and the SVG after adding seed/python-canon.json, yet records no Rule whose --files names both those docs and seed/ with a check that recomputes the counts, so the next pack added will leave the same claims stale with nothing going red.",
+   "evidence": [
+    "README.md:152",
+    "README.md:153",
+    "AGENTS.md:29",
+    "AGENTS.md:71",
+    "CLAUDE.md:29",
+    "okl-drift.json:6",
+    "okl-drift.json:10",
+    "seed/python-canon.json:1",
+    "tests/test_okl.py:2341"
+   ],
+   "model": [
+    "claude-haiku-5-5",
+    "claude-fable-5-1"
+   ],
+   "api_priced_usd": 0.8766515500000001
+  },
+  {
+   "pr": 122,
+   "lesson": "n_6b65aa35593c",
+   "case": "reviewer_only",
+   "prompt": "7b2f46b1d66ab41b",
+   "verdict": "followed",
+   "reason": "The change adds a 17-node seed pack and the diagram's only changed figures (178 records, applies_to set on 46) are exactly what the committed generator derives from seed/*.json (161+17 nodes; 31+15 nodes carrying applies_to), the generator seeds from committed files rather than the gitignored store, and the byte-identical freshness test runs in CI under pytest, so the diagram remains generated and verifiable rather than hand-transcribed.",
+   "evidence": [
+    "docs/okl-retrieval-pipeline.svg:4",
+    "docs/okl-retrieval-pipeline.svg:15",
+    "docs/okl-retrieval-pipeline.svg:43",
+    "docs/render_pipeline_diagram.py:45",
+    "docs/render_pipeline_diagram.py:58",
+    "docs/render_pipeline_diagram.py:114",
+    "tests/test_okl.py:1678",
+    "tests/test_okl.py:1708",
+    ".github/workflows/ci.yml:66",
+    "seed/python-canon.json:1",
+    "README.md:152",
+    "README.md:158"
+   ],
+   "model": [
+    "claude-haiku-5-5",
+    "claude-fable-5-1"
+   ],
+   "api_priced_usd": 1.4852740999999998
+  },
+  {
+   "pr": 122,
+   "lesson": "n_b550ba9c5c8a",
+   "case": "reviewer_only",
+   "prompt": "7b2f46b1d66ab41b",
+   "verdict": "followed",
+   "reason": "The change adds 17 seed records (15 Rules, 2 Defects, 15 with applies_to) and updates every count the README and the retrieval-pipeline diagram publish to match (161\u2192178, 90\u2192105 Rules, 34\u219236 Defects, 31\u219246 applies_to), relabels the token-cost figures as measured on the earlier 161-record corpus rather than leaving a stale claim, notes the corpus change in REPORT.md, and the diagram it touched is a script-generated render that the CI freshness test byte-compares against a regeneration, while both committed diagrams remain linked from the README.",
+   "evidence": [
+    "README.md:96",
+    "README.md:97",
+    "README.md:107",
+    "README.md:116",
+    "docs/okl-retrieval-pipeline.svg:4",
+    "docs/okl-retrieval-pipeline.svg:43",
+    "docs/render_pipeline_diagram.py:2",
+    "tests/test_okl.py:1708",
+    "README.md:342",
+    "evals/REPORT.md:831"
+   ],
+   "model": [
+    "claude-haiku-5-5",
+    "claude-fable-5-1"
+   ],
+   "api_priced_usd": 1.473417
+  },
+  {
+   "pr": 75,
+   "lesson": "n_e7988ff536fb",
+   "case": "reviewer_cleared",
+   "prompt": "7b2f46b1d66ab41b",
+   "verdict": "followed",
+   "reason": "The new 'did not run' paths in run_evals.py (placeholder or empty golden set) return 2 with the reason on stderr and a test asserts the code and that no score reached stdout, while the hooks' new exit 0 is a deliberate no-op for repos never enrolled in okl (not an okl failure) and the accompanying test asserts an enrolled repo whose okl cannot run still exits 2.",
+   "evidence": [
+    "CHANGE.diff:1499-1509",
+    "CHANGE.diff:1838-1845",
+    "CHANGE.diff:1044-1050",
+    "CHANGE.diff:1885-1889"
+   ],
+   "model": [
+    "claude-haiku-5-5",
+    "claude-fable-5-1"
+   ],
+   "api_priced_usd": 0.4757287499999999
+  },
+  {
+   "pr": 335,
+   "lesson": "n_00985805cdbb",
+   "case": "reviewer_cleared",
+   "prompt": "7b2f46b1d66ab41b",
+   "verdict": "followed",
+   "reason": "The only comment change corrects a stale docstring example (120s to 600s) and names its source as the `--timeout` default, which parser.py:262 actually sets and verification.py:42 actually emits, so it asserts no unenforced safety property and keeps the existing incident-naming (the exit-0-zero-files lesson); the one weakness is that the number is still duplicated by hand (store.py:310 still says 120s), but that is pre-existing drift the change did not introduce.",
+   "evidence": [
+    "src/okl/cli/verification.py:27",
+    "src/okl/cli/verification.py:28",
+    "src/okl/cli/parser.py:262",
+    "src/okl/cli/verification.py:42",
+    "src/okl/store.py:310"
+   ],
+   "model": [
+    "claude-haiku-5-5",
+    "claude-fable-5-1"
+   ],
+   "api_priced_usd": 0.23471569999999997
+  },
+  {
+   "pr": 55,
+   "lesson": "n_37ea04a8a0ac",
+   "case": "both_broken",
+   "prompt": "7b2f46b1d66ab41b",
+   "verdict": "not applicable",
+   "reason": "The change adds internal eval receipts, a REPORT section, README/CHANGELOG notes, and a routine re-verification timestamp in okl-drift.json; it creates no outward-facing diagram, post, or slide and does not scrub any seed file, repo field, or found_by trail, so the sanitize-the-copy rule is neither exercised nor violated.",
+   "evidence": [
+    "CHANGE.diff:1",
+    "CHANGE.diff:36",
+    "CHANGE.diff:81",
+    "CHANGE.diff:124",
+    "CHANGE.diff:313",
+    "CHANGE.diff:321"
+   ],
+   "model": [
+    "claude-haiku-5-5",
+    "claude-fable-5-1"
+   ],
+   "api_priced_usd": 0.4240691999999999
+  },
+  {
+   "pr": 167,
+   "lesson": "remote-timeout-not-a-deadline",
+   "case": "both_broken",
+   "prompt": "7b2f46b1d66ab41b",
+   "verdict": "followed",
+   "reason": "The change extends the lesson's rule to a new post-send failure (a 2xx that is not JSON is now OKLNoAnswerError, not a ValueError refusal), makes the MCP okl_record say MAYBE RECORDED with search-first or same-id retry guidance and reserve NOT RECORDED for a pre-send URLError exactly as the CLI already does, and the same-id retry it calls safe is covered by the existing test that a re-record over a stored id is refused and leaves the row unchanged, with the hook's worst-case timing test left intact.",
+   "evidence": [
+    "src/okl/client.py:468",
+    "src/okl/client.py:482",
+    "src/okl/mcp_server.py:129",
+    "src/okl/mcp_server.py:135",
+    "tests/test_remote_failures.py:261",
+    "tests/test_remote_failures.py:279",
+    "tests/test_remote_failures.py:402",
+    "tests/test_addressable_lessons.py:47",
+    "src/okl/cli/lessons.py:132"
+   ],
+   "model": [
+    "claude-haiku-5-5",
+    "claude-fable-5-1"
+   ],
+   "api_priced_usd": 0.7006853
+  },
+  {
+   "pr": 386,
+   "lesson": "doc-claim-governs-doc-and-code",
+   "case": "reviewer_only",
+   "prompt": "7b2f46b1d66ab41b",
+   "verdict": "broken",
+   "reason": "The change writes a new factual claim into the README and guide (manifests are read 'at the root or up to two folders down', skipping node_modules, virtualenvs and build output) that depends on _DEPTHS and _SKIP_DIRS in src/okl/cli/install.py, but records no Rule in okl-drift.json naming both the docs and install.py with a check that compares them; it only bumps the verified_at stamps of existing rules, none of which (doc-init-flags checks flag names only) would go red if the depth or skip list changed.",
+   "evidence": [
+    "README.md:90",
+    "docs/GETTING-STARTED.md:44",
+    "src/okl/cli/install.py:361",
+    "okl-drift.json:16",
+    "okl-drift.json:20"
+   ],
+   "model": [
+    "claude-haiku-5-5",
+    "claude-fable-5-1"
+   ],
+   "api_priced_usd": 0.42320555
+  },
+  {
+   "pr": 130,
+   "lesson": "n_00985805cdbb",
+   "case": "reviewer_only",
+   "prompt": "7b2f46b1d66ab41b",
+   "verdict": "followed",
+   "reason": "The added comment explains WHY by naming the #122 incident and the old Claim-only routing instead of restating the condition, and the property it asserts is enforced by the code on the same branch and made executable by the new test_a_retracted_record_of_any_type_is_briefed_as_withdrawn.",
+   "evidence": [
+    "src/okl/core.py:153",
+    "src/okl/core.py:154",
+    "src/okl/core.py:156",
+    "tests/test_okl.py:104",
+    "tests/test_okl.py:129"
+   ],
+   "model": [
+    "claude-fable-5-1",
+    "claude-haiku-5-5"
+   ],
+   "api_priced_usd": 0.16976945
+  },
+  {
+   "pr": 101,
+   "lesson": "n_8a6e1abce5cc",
+   "case": "reviewer_only",
+   "prompt": "7b2f46b1d66ab41b",
+   "verdict": "broken",
+   "reason": "The change emits the new STALE/UNVERIFIED mark at five output points, but its only test briefs through --format hook with a Rule that has a fix, so it reaches the routed-action line, the footer and the notice while the actions-format line in render_actions_only (core.py:338, the path the MCP server and --format actions use) and the section line in _render_records (core.py:608, for a non-routed record) are never rendered with a drift annotation by any test, exactly the one-entry-point coverage gap the lesson warns about.",
+   "evidence": [
+    "src/okl/core.py:338",
+    "src/okl/core.py:608",
+    "src/okl/core.py:587",
+    "src/okl/core.py:380",
+    "src/okl/cli.py:540",
+    "src/okl/cli.py:553",
+    "tests/test_okl.py:2444",
+    "tests/test_okl.py:2451",
+    "tests/test_okl.py:770",
+    "tests/test_okl.py:834"
+   ],
+   "model": [
+    "claude-haiku-5-5",
+    "claude-fable-5-1"
+   ],
+   "api_priced_usd": 0.7420969
+  }
+ ]
+}
