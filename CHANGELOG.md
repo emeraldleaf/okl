@@ -17,6 +17,11 @@
     start-and-end check to every script, and a test fails a new receipt writer that skips it.
   - **The agent-neutral docs check** now reads a mention or a label wrapped across lines, and
     found two unlabelled ones in the decision records.
+  - **Tests fake only what okl owns:** `tests/test_mock_ownership.py` reads every patch the
+    tests make, resolves its target through the file's imports, and fails a new one that
+    replaces a library okl does not own (a fake of fastembed and of huggingface_hub's constants
+    were two of the lesson's past breaks). The twelve already there are listed with why, and the
+    list only shrinks.
 
 - **The review after writing: `okl check --change`** (REPORT §4at; opt-in). A briefing is
   chosen from the task's words before any code exists, and the lessons a change goes on to
