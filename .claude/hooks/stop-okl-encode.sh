@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:28f4d95bb4bb41dc40aac8af7adc7288a75edb7ca5007ef71a36b62bcc633845
+# okl-fingerprint: sha256:3a897b11b3ed7ae5d490298332227d2ef51c319517a6a9f7d1636443258a0e8e
 # Stop hook — the write-side mechanical catch for the encoding loop.
 #
 # The read side (okl check) is enforced by the UserPromptSubmit hook; nothing enforced the WRITE
@@ -128,6 +128,12 @@ fi
 marker="${TMPDIR:-/tmp}/okl-encode-reminder-${session_id:-$(pwd | cksum | cut -d' ' -f1)}"
 [[ -e "$marker" ]] && exit 0
 touch "$marker" 2>/dev/null || true
+
+# The review after writing (REPORT §4at), first, and only where the repo turns it on
+# (`review_after_writing` in .okl/config.json): okl prints a one-line note pointing at
+# `okl check --change`, or nothing. Advisory, as the recap below: an okl too old to know
+# --change, or one that cannot read git, adds nothing and the question stands as it was.
+"${OKL[@]}" check --change --format hook >&2 2>/dev/null || true
 
 cat >&2 <<'MSG'
 ENCODING LOOP — before this session ends: did it surface a lesson worth keeping?

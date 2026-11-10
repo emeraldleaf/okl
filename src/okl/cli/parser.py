@@ -100,6 +100,14 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                       help="a file about to be read or edited: every lesson whose `files` govern it, with "
                            "its drift and proof marks (repeatable; #94). Relative to the working directory "
                            "or absolute; a file outside this repo has none")
+    what.add_argument("--change", nargs="?", const="", metavar="BASE",
+                      help="after writing: the files changed since BASE (default: the remote's default "
+                           "branch, then main, then master), committed or not, and every lesson in scope "
+                           "one line each, with the steps of the review after writing: explain the change, "
+                           "pick the lessons it most likely breaks, read and check each, fix. Calls no "
+                           "model. A step under measurement (REPORT §4at). With --format hook, only the "
+                           "Stop hook's note, where `review_after_writing` is on in .okl/config.json "
+                           "(OKL_REVIEW_AFTER_WRITING=1 or 0 for one session)")
     pk.add_argument("--repo")
     pk.add_argument("--hook-event", dest="hook_event", choices=["UserPromptSubmit", "PostToolUse", "SessionStart"],
                     help="with --format hook: the Claude Code event the output answers (default: "

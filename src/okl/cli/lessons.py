@@ -13,8 +13,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from .. import core
-from ..client import Client, OKLNoAnswerError, OKLUnreachableError
+from .. import changes, core
+from ..client import Client, OKLNoAnswerError, OKLRejectedError, OKLUnreachableError
+from ..store import backend_errors
 from .common import _print_json
 from .packs import _bundled_seed_dir, _empty_store_guidance
 from .verification import _refresh_snapshot
@@ -93,6 +94,8 @@ def cmd_check(args: argparse.Namespace) -> int:
               file=sys.stderr)
         return 2
     _apply_check_flags(client, args)
+    if getattr(args, "change", None) is not None:
+        return _review_after_writing(client, args)
     result = _checked(client, args)
     if result is None:
         return 2
@@ -117,6 +120,41 @@ def cmd_check(args: argparse.Namespace) -> int:
     if args.format != "json":
         for line in _person_notes(result):
             print(line, file=sys.stderr)
+    return 0
+
+
+def _review_after_writing(client: Client, args: argparse.Namespace) -> int:
+    """`okl check --change [BASE]`: the files changed since BASE, committed or not, and every
+    lesson in scope one line each, with the steps of the review after writing (REPORT §4at).
+    okl calls no model: the agent explains its change, picks, reads and checks.
+
+    With --format hook it prints only the Stop hook's note, and only when the repo turns the
+    review on and something changed. Exit 0 when it ran, 2 when git or the store could not be
+    read."""
+    try:
+        merge_base, files = changes.touched(args.change or None)
+    except changes.ChangesError as e:
+        print(f"okl check --change: {e}", file=sys.stderr)
+        return 2
+    if args.format == "hook":
+        if client.review_after_writing and files:
+            print(core.REVIEW_NOTE)
+        return 0
+    repo = args.repo or client.repo
+    lessons: list[dict[str, Any]] = []
+    if files:
+        unreadable: tuple[type[Exception], ...] = (OKLUnreachableError, OKLRejectedError, OSError, *backend_errors())
+        try:
+            nodes = client.all_nodes()
+        except unreadable as e:
+            print(f"OKL UNREACHABLE — cannot list the lessons to review against.\n{e}", file=sys.stderr)
+            return 2
+        lessons = core.review_menu(nodes, repo, client.interests or None)
+    result = {"repo": repo, "base": args.change or None, "merge_base": merge_base, "files": files, "lessons": lessons}
+    if args.format == "json":
+        _print_json(result)
+    else:
+        print(core.render_review(result), end="")
     return 0
 
 

@@ -92,6 +92,17 @@ okl check --path src/orders.py
                      #   Claude Code read hook runs: each lesson once a session, again only
                      #   while drift marks it, the briefing framed by its sha256 and bytes.
                      #   OKL_FRAME_LOG=<file> appends that frame too (REPORT §4aj's instrument).
+okl check --change [BASE]
+                     # the review after writing: the files changed since BASE (default: the
+                     #   remote's default branch, then main, then master), committed or not,
+                     #   untracked included, and every lesson in scope one line each, with the
+                     #   steps: say what the changed code does, pick the ten lessons it most
+                     #   likely breaks, read each with okl show, check the code, fix only what
+                     #   breaks one. okl calls no model; the agent does the review. A step under
+                     #   measurement (REPORT §4at). --format json for a script. --format hook
+                     #   prints only the Stop hook's one-line note, where `review_after_writing`
+                     #   is true in .okl/config.json (OKL_REVIEW_AFTER_WRITING=1 or 0 for one
+                     #   session); off by default. Exit 2 when git or the store cannot be read.
 okl embed            # build or refresh one local vector per record for --hybrid briefings
                      #   (needs the `hybrid` extra; downloads a 131 MB static model once;
                      #   re-embeds only records whose text changed). Off by default: a check

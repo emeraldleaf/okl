@@ -108,6 +108,23 @@ def resolve(base: str | None, head: str, repo_dir: str = ".") -> tuple[str, str]
     raise ChangesError("found no branch to compare with: pass --base <ref>")
 
 
+def touched(base: str | None, repo_dir: str = ".") -> tuple[str, list[str]]:
+    """The merge base with `base` (the remote's default branch, then main, then master, when
+    none is named) and every path changed since it, committed or not, untracked files
+    included. The review after writing (`okl check --change`) reads the work in progress on
+    purpose: it runs before the agent finishes, often before anything is committed. A gate
+    must never read the working tree this way; this one is advice to the agent, not a verdict."""
+    try:
+        merge_base, _ = resolve(base, "HEAD", repo_dir)
+    except ChangesError as e:
+        if base:
+            raise
+        raise ChangesError(f"found no branch to compare with ({e}): name one, as in `okl check --change main`") from e
+    paths = {p for p in _git(repo_dir, "diff", "--name-only", "-z", "--no-ext-diff", merge_base).split("\0") if p}
+    paths |= {p for p in _git(repo_dir, "ls-files", "--others", "--exclude-standard", "-z").split("\0") if p}
+    return merge_base, sorted(paths)
+
+
 def _name_status(base: str, head: str, repo_dir: str) -> tuple[list[str], list[str], list[Renamed], int]:
     """New, deleted and renamed files, and how many others changed. A copy counts as new."""
     raw = _git(repo_dir, "diff", "--name-status", "-z", "-M", "--no-ext-diff", base, head).split("\0")

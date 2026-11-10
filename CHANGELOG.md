@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+- **The review after writing: `okl check --change`** (REPORT §4at; opt-in). A briefing is
+  chosen from the task's words before any code exists, and the lessons a change goes on to
+  break are often about what the code does, which those words never name. `okl check
+  --change [BASE]` runs after the code is written: it lists the files changed since BASE
+  (committed or not, untracked included) and every lesson in scope one line each, with the
+  steps for the agent: say what the changed code does, pick the ten lessons it most likely
+  breaks, read each with `okl show`, check the code, fix only what breaks one. okl calls no
+  model. Set `"review_after_writing": true` in `.okl/config.json` (or
+  `OKL_REVIEW_AFTER_WRITING=1` for one session) and the Stop hook asks for it before its
+  question about what was learned. It is off by default because it is measured on one
+  repository's development half only: there, a model picking from these lines found 40% of
+  the lessons changes had broken in its first ten, against 21% for the search on the task's
+  words (`explain-search-dev-20261110-1306.json`, in-sample).
+
 ## 0.15.0
 
 **Upgrading a shared service:** without `OKL_TOKEN`, `okl serve` now refuses to start off

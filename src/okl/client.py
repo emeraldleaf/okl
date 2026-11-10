@@ -185,6 +185,11 @@ class Client:
         self.standing: list[str] = ([] if os.environ.get("OKL_STANDING") == "0" else
                                     [str(i).strip() for i in self.config.get("standing") or [] if str(i).strip()])
         self.warm = warm_setting(os.environ.get("OKL_WARM"), self.config.get("warm"))
+        # The review after writing (`okl check --change`; REPORT §4at): the Stop hook asks for it
+        # only where the config's `review_after_writing` turns it on; OKL_REVIEW_AFTER_WRITING=1 or 0
+        # overrides the config for one session.
+        flag = os.environ.get("OKL_REVIEW_AFTER_WRITING")
+        self.review_after_writing = (flag == "1") if flag in ("0", "1") else self.config.get("review_after_writing") is True
         self._store: Store | None = None
 
     @property

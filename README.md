@@ -140,6 +140,7 @@ okl doctor                  # flags other memory tools, double wiring, where dri
 |---|---|---|---|
 | Briefing before each task | a hook on every prompt, automatic, fails closed | the `okl_check` tool, when the agent calls it | `okl check` in the terminal or a script |
 | Briefing when a file is read | a hook after each Read: the lessons governing the file, once a session | `okl_check` with `path` | `okl check --path` |
+| Review after writing (opt-in) | the Stop hook points at it where `review_after_writing` is on | — | `okl check --change` |
 | Recording what was learned | the Stop hook asks once per session that changed files | the `okl_record` tool | `okl record` |
 | Proof and drift | `okl verify`, `okl reverify`, `okl drift` | the same commands | the same commands |
 | The gate | the pre-push hook | the pre-push hook | the pre-push hook, or the CI workflow (`okl init --ci`) |

@@ -1562,6 +1562,59 @@ def _also_line(e: dict[str, Any]) -> str:
             + (f" — {e['fix']}" if e.get("fix") else ""))
 
 
+def review_menu(nodes: Iterable[Node], repo: str, interests: list[str] | None) -> list[dict[str, Any]]:
+    """Every live lesson this repo may see, one line each as the second tier writes it, in id
+    order, which says nothing about relevance: what the review after writing picks from. In
+    REPORT §4at's development half, a model given an explanation of a change and this list
+    found more of the lessons the change broke than the search did. On other repositories it is
+    not yet measured, so the review stays opt-in."""
+    scope = f"repo:{repo}"
+    return [_also_entry(n) for n in sorted(nodes, key=lambda n: n.id)
+            if n.type != "Vocabulary" and n.status not in RETIRED_STATUSES and _in_scope(n, scope, interests)]
+
+
+REVIEW_STEPS = (
+    "Say what the changed code does, one mechanism per sentence: what it calls and from where, what it "
+    "reads and writes (files, databases, environment, network, output), what it assumes, how it fails "
+    "and what it returns or prints then, what its tests check and with what data, and what the docs it "
+    "changes now claim.",
+    "From the lessons below, pick the ten this change is most likely to break: the ones about something "
+    "the code does, or about a file it touches.",
+    "Read each with `okl show <id>` (the okl_get tool) and check the code against all of it.",
+    "Change the code only where it breaks one. Where a lesson does not apply, or the code already does "
+    "what it says, leave the code alone.",
+    "Say which lessons you checked, what you changed for each, and why the rest needed nothing.",
+)
+REVIEW_FILES_SHOWN = 30
+# What the Stop hook adds when a repo turns the review on (`review_after_writing`).
+REVIEW_NOTE = ("REVIEW AFTER WRITING (on in this repo): before you answer the question below, check the "
+               "code this session wrote against the lessons. Run `okl check --change` and follow its steps.")
+
+
+def render_review(result: dict[str, Any]) -> str:
+    """`okl check --change` for the agent: the steps, the changed files, and every lesson in
+    scope, one line each."""
+    since = f"{result.get('base') or 'the default branch'} (merge base {str(result.get('merge_base') or '')[:7]})"
+    files = result.get("files") or []
+    head = f"## OKL review after writing — {result.get('repo')}"
+    if not files:
+        return f"{head} · nothing changed since {since}, committed or not, so there is nothing to review.\n"
+    lessons = result.get("lessons") or []
+    lines = [f"{head} · {len(files)} file(s) changed since {since}, committed or not", "",
+             "Before you finish, check the code you wrote against this repo's lessons (a step under "
+             "measurement, REPORT §4at):"]
+    lines += [f"{i}. {step}" for i, step in enumerate(REVIEW_STEPS, 1)]
+    shown = ", ".join(files[:REVIEW_FILES_SHOWN])
+    more = len(files) - REVIEW_FILES_SHOWN
+    lines += ["", f"Changed: {shown}" + (f", and {more} more" if more > 0 else ""), ""]
+    if not lessons:
+        lines.append("> No lesson in this store applies to this repo, so there is nothing to check against.")
+    else:
+        lines.append(f"### Every lesson in scope ({len(lessons)}), one line each")
+        lines += [_also_line(e) for e in lessons]
+    return "\n".join(lines) + "\n"
+
+
 def _replaced_lines(result: dict[str, Any]) -> list[str]:
     """One line per superseded lesson the task matched, pointing at its replacement by id."""
     return [f"> {r['title']} [{r['id']}] was replaced by {r['by_title']} [{r['by']}]; "
