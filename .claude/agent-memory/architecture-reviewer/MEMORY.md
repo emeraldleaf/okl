@@ -1,3 +1,4 @@
 - [Review findings log](review_findings_log.md) — recurring finding classes with counts; promote to a gate at 3
 - [Harness transcripts](reference_harness_transcripts.md) — where drift_mutate's breaker/judge sessions live; time-outs save nothing; gitStatus cut at 2k chars
+- [Claude Code output limits](reference_claude_code_output_limits.md) — Bash inline cap 30,000 chars then preview+file; MCP 25k tokens; read from the binary
 - [Reproducing receipts](reference_reproducing_receipts.md) — old commit's briefing via git archive src+seed, absolute PYTHONPATH; anatomy-story via a shim okl
