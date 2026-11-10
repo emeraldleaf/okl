@@ -63,6 +63,13 @@ sample, one-shot code on bait tasks; [what it does and does not show](#measured-
 | The store cannot be reached | the Claude Code hook blocks the prompt and says why; the MCP tool says it was not briefed. Never a clean "no rules apply" |
 | A session changed files and recorded nothing | the Claude Code Stop hook asks once what was learned, and names the lessons the session touched |
 
+One lesson all the way round, in okl's own output:
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/emeraldleaf/okl/main/docs/overview/okl-anatomy-dark.png">
+  <img src="https://raw.githubusercontent.com/emeraldleaf/okl/main/docs/overview/okl-anatomy-light.png" alt="Anatomy of okl. Keeps your coding agent true to your rules, specs and docs. Keeps them true to the code. Keeps learning as you build. load your rules, hold your agent to them, keep learning as you build. A ring around the store runs through six steps: lessons come in, up front from your rules, ADRs, standards and specs plus starter lessons for your stack, and as you build from new rules, mistakes, drift the gate finds, failing tests and reviews; each is written down as a lesson; okl proves it with a check you choose; it is briefed before each task (by a Claude Code hook; other MCP agents can call okl_check); when a file it covers changes, the pre-push hook holds the push until the check passes again or the code is back to what passed; then it is re-checked, fixed or retired. Below, real okl output follows the lesson 'order lookups are scoped to the signed-in customer' from okl record to a blocked push, where re-running its check caught a change that dropped the owner check. Then where a lesson lives (briefing only, watched for drift, build-breaking); what the briefing did (68 of 163 unbriefed attempts repeated a known defect against 11 of 164 briefed, over seven A/B runs on tasks built to invite one); and how it ranks, what it costs and where it breaks." width="100%">
+</picture>
+
 ## Quickstart
 
 > New here? **[docs/GETTING-STARTED.md](docs/GETTING-STARTED.md)** walks through setup and the
@@ -267,6 +274,7 @@ it is worth knowing which one catches what, because they do not overlap.
 | **A link pointing at a file that moved** | `check-links.sh` | reads every markdown file listed by `git ls-files` and checks each local link's target exists in the working tree | the target does not exist |
 | **A diagram source with no rendered image** | `check-diagram-pairs.sh` | pairs each editable source with its export; format-agnostic via `OKL_DIAGRAM_SRC_EXT`/`OUT_EXT` | reviewers would see nothing. A hand-authored image with no source is noted, never failed, and a repo with no diagram sources is a clean no-op |
 | **A lesson nothing re-checks going wrong** | `okl review` (opt-in) | a model reads each lesson that governs no files and that no check backs against the repo at HEAD, and reports a detail that is wrong now, a workaround a later change made unnecessary, or a point that no longer holds, quoting the words; it writes nothing | only when you run it. With the default judge it caught 8 of 10 planted wrong details and questioned 1 of 10 lessons known to be current ([REPORT §4ai](evals/REPORT.md)) |
+| **A lesson left pointing at code that moved** | `okl changes` | reads a change with git alone, no model: new, deleted and renamed files, and code moved between files, which git's rename detection misses; for each of this repo's lessons the change leaves behind it proposes the `okl update --files` that would follow it, and writes nothing | you run it on a branch or a pull request's range; each proposal is yours to confirm |
 | **Verification going quietly stale** | TTL + `verified_by` | records carry when they were last verified and by which observed check; a TTL applies only to records given `--ttl-days` (none by default) | past its TTL, a record is shown demoted rather than deleted |
 
 Three honest limits on that table:
@@ -373,17 +381,13 @@ with receipts, not a benchmark.
 ## How it works
 
 The overview at the top is rendered from
-[`docs/overview/okl-overview.html`](docs/overview/okl-overview.html). The anatomy below
-follows one lesson all the way round, in okl's own output; it is rendered from
+[`docs/overview/okl-overview.html`](docs/overview/okl-overview.html). The anatomy under
+"What goes wrong" follows one lesson all the way round, in okl's own output; it is rendered from
 [`docs/overview/okl-anatomy.html`](docs/overview/okl-anatomy.html), and
 [`docs/overview/anatomy-story.sh`](docs/overview/anatomy-story.sh) runs the same story in a
 throwaway repo. How the project itself is built (where the code lives, what each command
 touches, what runs when, and a lesson's states) is drawn in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/emeraldleaf/okl/main/docs/overview/okl-anatomy-dark.png">
-  <img src="https://raw.githubusercontent.com/emeraldleaf/okl/main/docs/overview/okl-anatomy-light.png" alt="Anatomy of okl. Keeps your coding agent true to your rules, specs and docs. Keeps them true to the code. Keeps learning as you build. load your rules, hold your agent to them, keep learning as you build. A ring around the store runs through six steps: lessons come in, up front from your rules, ADRs, standards and specs plus starter lessons for your stack, and as you build from new rules, mistakes, drift the gate finds, failing tests and reviews; each is written down as a lesson; okl proves it with a check you choose; it is briefed before each task (by a Claude Code hook; other MCP agents can call okl_check); when a file it covers changes, the pre-push hook holds the push until the check passes again or the code is back to what passed; then it is re-checked, fixed or retired. Below, real okl output follows the lesson 'order lookups are scoped to the signed-in customer' from okl record to a blocked push, where re-running its check caught a change that dropped the owner check. Then where a lesson lives (briefing only, watched for drift, build-breaking); what the briefing did (68 of 163 unbriefed attempts repeated a known defect against 11 of 164 briefed, over seven A/B runs on tasks built to invite one); and how it ranks, what it costs and where it breaks." width="100%">
-</picture>
 
 ### How a briefing is actually built
 
@@ -431,6 +435,12 @@ that cost are in [docs/RETRIEVAL.md](docs/RETRIEVAL.md) and REPORT [§4w](evals/
 §4x and §4y.
 `--decision calibrated` gives the line alone, the smallest briefing; `--decision floor` the
 earlier rule (two shared subject words, every match in full, up to twelve records).
+
+A repo can also name up to ten **standing lessons** (`okl standing add <id>...`): the ones its
+changes keep needing, named one line each on every task briefing whatever its words. Found by
+words, each competes with every other lesson on every prompt; named on every task, the ten most
+needed on earlier work raised the briefing's reach on later work ([REPORT §4am](evals/REPORT.md),
+model-judged). They are off until a repo lists some.
 
 <img src="docs/okl-retrieval-pipeline.svg" alt="The corpus; the task's subject words, with messages a harness wrote briefed nothing; a BM25 fetch of three times the limit, triggers weighted like the symptom; a scope gate; the exclusive applies_to filter; the inclusive tags-times-interests filter; the calibrated line of three shared subject words in the title, symptom, aliases and triggers, or two nearly as rare as a word in one record, with retired lessons out; the best five in full; the rest of what matched, what cleared the line past five and what the word floor keeps, named one line each, up to twelve; bucketing by type; and rendering. Each stage shows how many records survive it." width="100%">
 
