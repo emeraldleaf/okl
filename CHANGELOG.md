@@ -2,9 +2,7 @@
 
 ## Unreleased
 
-- **Behaviour change: the review after writing, `okl check --change`, on by default** (REPORT
-  §4at). Where the Stop hook asked only what was learned, it now first asks the agent to check
-  the code it wrote against the lessons. A briefing is
+- **The review after writing: `okl check --change`** (REPORT §4at; opt-in). A briefing is
   chosen from the task's words before any code exists, and the lessons a change goes on to
   break are often about what the code does, which those words never name. `okl check
   --change [BASE]` runs after the code is written: it lists the files changed since BASE
@@ -13,15 +11,14 @@
   breaks, read each with `okl show`, check the code, fix only what breaks one. Lessons whose
   files cover a changed path come first. Nothing is cut (about 60 tokens a lesson), and the
   first line says to read all of it where a tool shows long output as a preview. okl calls no
-  model. `okl init --no-review-after-writing` turns it off and `--review-after-writing` back on
-  (`OKL_REVIEW_AFTER_WRITING=0` or `1` for one session); init says when the project's Stop hook
-  is an edited copy that cannot ask, and `okl init --force` replaces it. A value okl cannot
-  read as on or off is refused. It costs the agent about 60 tokens a lesson in scope, once per
-  session that changed something. It is on by default by the maintainer's choice, though it is
-  measured on one repository's development half only: there, a model picking from these lines
-  found 40% of the lessons changes had broken in its first ten, against 21% for the search on
-  the task's words (`explain-search-dev-20261110-1306.json`, in-sample). The test on other
-  repositories is #413.
+  model. `okl init --review-after-writing` turns it on (`OKL_REVIEW_AFTER_WRITING=1` or `0`
+  for one session), and the Stop hook then asks for it before its question about what was
+  learned; init says when the project's Stop hook is an edited copy that cannot ask, and
+  `okl init --force` replaces it. A value okl cannot read as on or off is refused, never
+  read as off. It is off by default because it is measured on one
+  repository's development half only: there, a model picking from these lines found 40% of
+  the lessons changes had broken in its first ten, against 21% for the search on the task's
+  words (`explain-search-dev-20261110-1306.json`, in-sample).
 
 ## 0.15.0
 

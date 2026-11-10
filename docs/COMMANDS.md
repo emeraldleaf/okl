@@ -97,14 +97,13 @@ okl check --change [BASE]
                      #   remote's default branch, then main, then master), committed or not,
                      #   untracked included, and every lesson in scope one line each (those
                      #   governing a changed file first; about 60 tokens a lesson, never cut,
-                     #   its first line saying to read all of it), with the steps: say what
-                     #   the changed code does, pick the ten lessons it most likely breaks, read
-                     #   each with okl show, check the code, fix only what breaks one. okl calls
-                     #   no model; the agent does the review. A step under measurement (REPORT
-                     #   §4at; #413). --format json for a script. --format hook prints only the
-                     #   Stop hook's one-line note: on by default, off after `okl init
-                     #   --no-review-after-writing` (OKL_REVIEW_AFTER_WRITING=1 or 0 for one
-                     #   session). A retracted lesson stays in the list as
+                     #   its first line saying to read all of it), with the steps: say what the changed code does, pick the ten lessons it most
+                     #   likely breaks, read each with okl show, check the code, fix only what
+                     #   breaks one. okl calls no model; the agent does the review. A step under
+                     #   measurement (REPORT §4at). --format json for a script. --format hook
+                     #   prints only the Stop hook's one-line note, where `okl init
+                     #   --review-after-writing` turned it on (OKL_REVIEW_AFTER_WRITING=1 or 0 for
+                     #   one session); off by default. A retracted lesson stays in the list as
                      #   what to avoid. Exit 2 when git or the store cannot be read, or BASE
                      #   starts with '-'.
 okl embed            # build or refresh one local vector per record for --hybrid briefings
