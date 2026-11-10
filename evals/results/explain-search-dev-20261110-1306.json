@@ -1,0 +1,2952 @@
+{
+ "section": "4at",
+ "half": "dev",
+ "at": "2026-11-10T13:06Z",
+ "status": "development half: in-sample, not a result",
+ "okl_commit": "7938d643dc4c681e88de04fa611da389a25f2d2c",
+ "prompt": "687d7ba1f5a10e85",
+ "script_sha256": "a1bdba7850ad65854ace60bdfd65b8c3026f73e947ef5a40ae7bdbc64546726c",
+ "result": {
+  "tasks": 50,
+  "tasks_with_broken": 34,
+  "broken": 70,
+  "explained": 50,
+  "picked": 50,
+  "reach": {
+   "T@5": 0.143,
+   "T@10": 0.214,
+   "C@5": 0.129,
+   "C@10": 0.214,
+   "E@5": 0.143,
+   "E@10": 0.229,
+   "P@5": 0.243,
+   "P@10": 0.4
+  },
+  "reach_boot95": {
+   "E@5": [
+    0.054,
+    0.246
+   ],
+   "P@5": [
+    0.143,
+    0.339
+   ]
+  },
+  "gain": {
+   "E-T@5": [
+    -0.096,
+    0.099
+   ],
+   "E-C@5": [
+    -0.082,
+    0.102
+   ],
+   "P-T@5": [
+    0.016,
+    0.18
+   ],
+   "P-E@5": [
+    -0.016,
+    0.207
+   ]
+  },
+  "first_k_holds": {
+   "T": {
+    "broken": 10,
+    "followed": 32,
+    "needed_other": 11,
+    "related": 87,
+    "other": 110
+   },
+   "C": {
+    "broken": 9,
+    "followed": 31,
+    "needed_other": 6,
+    "related": 84,
+    "other": 115
+   },
+   "E": {
+    "broken": 10,
+    "followed": 30,
+    "needed_other": 8,
+    "related": 92,
+    "other": 110
+   },
+   "P": {
+    "broken": 17,
+    "followed": 78,
+    "needed_other": 14,
+    "related": 115,
+    "other": 26
+   }
+  },
+  "first_k_also_holds": {
+   "T": {
+    "broken": 15,
+    "followed": 56,
+    "needed_other": 16,
+    "related": 151,
+    "other": 262
+   },
+   "C": {
+    "broken": 15,
+    "followed": 47,
+    "needed_other": 11,
+    "related": 171,
+    "other": 246
+   },
+   "E": {
+    "broken": 16,
+    "followed": 50,
+    "needed_other": 11,
+    "related": 172,
+    "other": 251
+   },
+   "P": {
+    "broken": 28,
+    "followed": 108,
+    "needed_other": 23,
+    "related": 235,
+    "other": 95
+   }
+  },
+  "needed_in_key": 356,
+  "tasks_with_broken_none_in_E@5": 26,
+  "tasks_with_broken_none_in_P@5": 20
+ },
+ "holds": null,
+ "per_task": [
+  {
+   "pr": 67,
+   "broken": [],
+   "explained": true,
+   "top": {
+    "T": [
+     "n_aa3e45a2ecd6",
+     "n_6b65aa35593c",
+     "n_0637c92c032f",
+     "seed:dotnet-defects:nc_arch_reviewer",
+     "n_b4050b826687",
+     "n_5f36600f6c51",
+     "n_37ea04a8a0ac",
+     "seed:geospatial-enforcement-defects:d_invoked_by_nothing",
+     "n_02cc84da158d",
+     "seed:geospatial-enforcement-defects:r_surface_needs_trigger"
+    ],
+    "C": [],
+    "E": [
+     "n_37ea04a8a0ac",
+     "n_d8166465591e",
+     "n_0637c92c032f",
+     "n_c95bdc056620",
+     "n_d8e5ee92ad8f",
+     "n_5ddb0776a863",
+     "n_09ba6adf0fdc",
+     "n_6b65aa35593c",
+     "n_967ef9825472",
+     "n_e635fd921086"
+    ],
+    "P": [
+     "n_6b65aa35593c",
+     "n_0637c92c032f",
+     "n_c95bdc056620",
+     "n_b4050b826687",
+     "n_5db37b759b1e",
+     "n_37ea04a8a0ac",
+     "n_aa3e45a2ecd6",
+     "n_2c95128f307d",
+     "n_916330f61994",
+     "n_00985805cdbb"
+    ]
+   }
+  },
+  {
+   "pr": 278,
+   "broken": [
+    "doc-claim-governs-doc-and-code",
+    "n_6b65aa35593c"
+   ],
+   "explained": true,
+   "top": {
+    "T": [
+     "research-cited-products-not-named",
+     "scope-literature-gap-claims",
+     "n_b550ba9c5c8a",
+     "rerank-ships-off",
+     "n_119528a07fa5",
+     "seed:dotnet-decisions:pd_wolverine_middleware_order",
+     "n_a4b40c96ede4",
+     "break-test-masked-by-integrity-check",
+     "seed:python-canon:py_print_at_edges",
+     "n_428707b5e596"
+    ],
+    "C": [
+     "rerank-ships-off",
+     "scope-literature-gap-claims",
+     "fused-window-readmits-weak-matches",
+     "falsifier-relative-to-control",
+     "n_69f673496137",
+     "pooled-receipts-miss-report-corrections",
+     "n_b578addf6269",
+     "idea-to-issue-through-review",
+     "index-in-context-not-fetched",
+     "n_a4b40c96ede4"
+    ],
+    "E": [
+     "rerank-ships-off",
+     "remote-timeout-not-a-deadline",
+     "readonly-agents-side-effects",
+     "n_69f673496137",
+     "idea-to-issue-through-review",
+     "review-bot-watch-matches-wrong-comment",
+     "index-in-context-not-fetched",
+     "fused-window-readmits-weak-matches",
+     "eval-scripts-no-exposure",
+     "pooled-receipts-miss-report-corrections"
+    ],
+    "P": [
+     "eval-scripts-no-exposure",
+     "doc-check-defaults",
+     "falsifier-relative-to-control",
+     "n_b4050b826687",
+     "n_31bde92d9003",
+     "n_696a70084e1a",
+     "harness-reads-a-moving-working-tree",
+     "n_9ba48d85ed19",
+     "n_dc7429065f5d"
+    ]
+   }
+  },
+  {
+   "pr": 381,
+   "broken": [],
+   "explained": true,
+   "top": {
+    "T": [
+     "n_1eaf9a5f24e2",
+     "empty-drift-snapshot-fails-ci",
+     "n_5ddb0776a863",
+     "n_ce6a27cc432f",
+     "worktree-no-store-reverify",
+     "optional-feature-shipped-text",
+     "n_696a70084e1a",
+     "snapshot-from-worktree-drops-repo-rules",
+     "n_805cf67e5cc5",
+     "seed:geospatial-enforcement-defects:d_ungated_zone"
+    ],
+    "C": [
+     "n_1eaf9a5f24e2",
+     "empty-drift-snapshot-fails-ci",
+     "n_5ddb0776a863",
+     "worktree-no-store-reverify",
+     "n_ce6a27cc432f",
+     "optional-feature-shipped-text",
+     "n_696a70084e1a",
+     "n_805cf67e5cc5",
+     "verification-scope-is-the-thesis",
+     "n_e7988ff536fb"
+    ],
+    "E": [
+     "n_1eaf9a5f24e2",
+     "empty-drift-snapshot-fails-ci",
+     "n_5ddb0776a863",
+     "n_f6d01e368155",
+     "n_e7988ff536fb",
+     "n_ce6a27cc432f",
+     "n_e635fd921086",
+     "optional-feature-shipped-text",
+     "piped-python-output-reorders",
+     "snapshot-from-worktree-drops-repo-rules"
+    ],
+    "P": [
+     "guarantee-holds-on-every-write-path",
+     "n_e7988ff536fb",
+     "briefing-hides-unproven-lessons",
+     "verification-scope-is-the-thesis",
+     "n_31bde92d9003",
+     "n_1eaf9a5f24e2",
+     "doc-verified-refused",
+     "optional-feature-shipped-text",
+     "n_916330f61994",
+     "n_b4050b826687"
+    ]
+   }
+  },
+  {
+   "pr": 17,
+   "broken": [],
+   "explained": true,
+   "top": {
+    "T": [
+     "n_c95bdc056620",
+     "seed:geospatial-enforcement-defects:r_pin_gating_tools",
+     "n_8519bf0f71c6",
+     "n_58119d0a63d9",
+     "n_ec568941f68a",
+     "n_e7988ff536fb",
+     "seed:geospatial-enforcement-defects:d_unpinned_linter",
+     "n_fe26d1897041",
+     "n_0aefd5072428",
+     "n_9a8b5215da32"
+    ],
+    "C": [
+     "n_ec568941f68a",
+     "n_58119d0a63d9",
+     "n_8519bf0f71c6",
+     "n_c95bdc056620",
+     "n_e635fd921086",
+     "n_02cc84da158d",
+     "n_428707b5e596",
+     "seed:geospatial-enforcement-defects:r_pin_gating_tools",
+     "n_9a8b5215da32",
+     "n_e7988ff536fb"
+    ],
+    "E": [
+     "n_8519bf0f71c6",
+     "n_58119d0a63d9",
+     "n_428707b5e596",
+     "n_02cc84da158d",
+     "n_e7988ff536fb",
+     "n_ec568941f68a",
+     "n_d8e5ee92ad8f",
+     "n_e635fd921086",
+     "n_b6cc6890ba26",
+     "n_1fe5ef1aaca5"
+    ],
+    "P": [
+     "n_1fe5ef1aaca5",
+     "n_e635fd921086",
+     "n_58119d0a63d9",
+     "n_428707b5e596",
+     "n_d8e5ee92ad8f",
+     "n_e7988ff536fb",
+     "n_c95bdc056620",
+     "n_b4050b826687",
+     "n_916330f61994",
+     "n_00985805cdbb"
+    ]
+   }
+  },
+  {
+   "pr": 70,
+   "broken": [],
+   "explained": true,
+   "top": {
+    "T": [
+     "seed:geospatial-enforcement-defects:d_unpinned_linter",
+     "n_92398fae87c0",
+     "seed:geospatial-enforcement-defects:r_pin_gating_tools",
+     "n_a5520510b99c",
+     "seed:dotnet-decisions:pd_require_explicit_api_version",
+     "seed:dotnet-decisions:pd_license_driven_test_lib_forks",
+     "seed:dotnet-decisions:pd_microservices_vs_modular_monolith",
+     "n_e635fd921086",
+     "seed:geospatial-defects:g_verify_outputs",
+     "seed:dotnet-decisions:pd_central_package_management"
+    ],
+    "C": [
+     "n_8b3345b90621",
+     "n_b550ba9c5c8a",
+     "n_5ddb0776a863",
+     "seed:geospatial-defects:g_classpath",
+     "n_e635fd921086",
+     "n_5a9589af345f",
+     "n_69f673496137",
+     "n_aa3e45a2ecd6",
+     "n_92398fae87c0",
+     "n_57cc4b427f05"
+    ],
+    "E": [
+     "n_c95bdc056620",
+     "n_e635fd921086",
+     "n_58119d0a63d9",
+     "n_8b3345b90621",
+     "n_428707b5e596",
+     "n_5ddb0776a863",
+     "n_92398fae87c0",
+     "seed:geospatial-enforcement-defects:r_pin_gating_tools",
+     "seed:geospatial-enforcement-defects:d_unpinned_linter",
+     "n_221da2fec863"
+    ],
+    "P": [
+     "n_31bde92d9003",
+     "n_b550ba9c5c8a",
+     "n_58119d0a63d9",
+     "n_696a70084e1a",
+     "n_6b65aa35593c",
+     "n_b4050b826687",
+     "n_e635fd921086",
+     "n_92398fae87c0",
+     "n_71c09abf3f37",
+     "n_dc7429065f5d"
+    ]
+   }
+  },
+  {
+   "pr": 283,
+   "broken": [
+    "seed:geospatial-enforcement-defects:r_pin_gating_tools"
+   ],
+   "explained": true,
+   "top": {
+    "T": [
+     "n_110bb4fb7112",
+     "n_e99ea322dee5",
+     "seed:dotnet-canon:r_docs_review_surface",
+     "n_02aa43137a2e",
+     "seed:dotnet-canon:r_wolverine_lockstep",
+     "review-bot-watch-matches-wrong-comment",
+     "seed:python-canon:py_typing_syntax_floor",
+     "seed:dotnet-canon:r_cache_write_path",
+     "n_c95bdc056620",
+     "n_4a398f2f8095"
+    ],
+    "C": [
+     "n_f6d01e368155",
+     "n_ce6a27cc432f",
+     "seed:python-canon:py_pyproject_versions",
+     "fastembed-cache-in-tmpdir",
+     "n_7e292a18d45d",
+     "n_9a8b5215da32",
+     "watch-what-the-rule-depends-on",
+     "seed:geospatial-enforcement-defects:d_ungated_zone",
+     "n_02cc84da158d",
+     "n_58119d0a63d9"
+    ],
+    "E": [
+     "seed:python-canon:py_pyproject_versions",
+     "n_9a8b5215da32",
+     "n_4a398f2f8095",
+     "n_110bb4fb7112",
+     "n_f6d01e368155",
+     "seed:python-canon:py_strict_pytest",
+     "seed:geospatial-enforcement-defects:d_unpinned_linter",
+     "stacked-pr-retarget-runs-no-ci",
+     "n_ea7633cd748c",
+     "n_e635fd921086"
+    ],
+    "P": [
+     "n_110bb4fb7112",
+     "n_00985805cdbb",
+     "n_a5520510b99c",
+     "n_b4050b826687",
+     "n_31bde92d9003",
+     "n_696a70084e1a",
+     "n_805cf67e5cc5",
+     "seed:python-canon:py_pyproject_versions",
+     "watch-what-the-rule-depends-on"
+    ]
+   }
+  },
+  {
+   "pr": 308,
+   "broken": [
+    "seed:python-canon:py_unclosed_sqlite"
+   ],
+   "explained": true,
+   "top": {
+    "T": [
+     "n_041a066035b2",
+     "threshold-transfer-is-a-hypothesis",
+     "seed:geospatial-eval-defects:r_preregistered_control_vetoes",
+     "rerank-ships-off",
+     "n_d45d7bf64896",
+     "remote-path-test-through-client",
+     "seed:dotnet-canon:r_exceptions_canon",
+     "seed:rag-defects:qz_judge_crash",
+     "n_be9f13d587b1",
+     "seed:dotnet-canon:r_rate_limiter_scaleout"
+    ],
+    "C": [
+     "n_be9f13d587b1",
+     "index-in-context-not-fetched",
+     "rerank-ships-off",
+     "fused-window-readmits-weak-matches",
+     "n_041a066035b2",
+     "dev-code-migrates-live-store",
+     "falsifier-relative-to-control",
+     "harness-reads-a-moving-working-tree",
+     "threshold-transfer-is-a-hypothesis",
+     "review-bot-watch-matches-wrong-comment"
+    ],
+    "E": [
+     "n_be9f13d587b1",
+     "n_967ef9825472",
+     "seed:dotnet-canon:r_sargable",
+     "unclosed-sqlite-in-test-pr154",
+     "comparison-table-one-sitting-generated",
+     "dev-code-migrates-live-store",
+     "n_5f36600f6c51",
+     "seed:python-canon:py_unclosed_sqlite",
+     "order-from-log-not-edges",
+     "n_e49be14d6207"
+    ],
+    "P": [
+     "falsifier-relative-to-control",
+     "comparison-table-one-sitting-generated",
+     "threshold-transfer-is-a-hypothesis",
+     "unclosed-sqlite-in-test-pr154",
+     "harness-reads-a-moving-working-tree",
+     "n_a4b40c96ede4",
+     "n_b578addf6269",
+     "n_967ef9825472",
+     "n_be9f13d587b1"
+    ]
+   }
+  },
+  {
+   "pr": 269,
+   "broken": [
+    "falsifier-relative-to-control",
+    "n_5ddb0776a863",
+    "n_9ba48d85ed19",
+    "n_b578addf6269",
+    "remote-path-test-through-client",
+    "seed:dotnet-canon:r_experiment_sunset",
+    "seed:rag-defects:qz_crosstab"
+   ],
+   "explained": true,
+   "top": {
+    "T": [
+     "seed:rag-defects:qz_broken_tool",
+     "falsifier-relative-to-control",
+     "seed:rag-defects:qz_agent_contract",
+     "n_93f96eae7359",
+     "n_849a5b0425ef",
+     "n_a7634ef53a8f",
+     "n_0aefd5072428",
+     "n_5a9589af345f",
+     "seed:dotnet-defects:nc_idor",
+     "seed:rag-defects:qz_unequal_budget"
+    ],
+    "C": [
+     "n_0aefd5072428",
+     "eval-scripts-no-exposure",
+     "seed:dotnet-defects:nc_idor",
+     "n_849a5b0425ef",
+     "n_428707b5e596",
+     "readonly-agents-side-effects",
+     "harness-reads-a-moving-working-tree",
+     "seed:rag-defects:qz_fixtures",
+     "pooled-receipts-miss-report-corrections",
+     "remote-timeout-not-a-deadline"
+    ],
+    "E": [
+     "n_7e292a18d45d",
+     "n_f6d01e368155",
+     "n_ce6a27cc432f",
+     "eval-scripts-no-exposure",
+     "n_713b8c104f12",
+     "n_d8e5ee92ad8f",
+     "remote-timeout-not-a-deadline",
+     "guarantee-holds-on-every-write-path",
+     "n_5db37b759b1e",
+     "n_9a8b5215da32"
+    ],
+    "P": [
+     "eval-scripts-no-exposure",
+     "falsifier-relative-to-control",
+     "harness-reads-a-moving-working-tree",
+     "n_b578addf6269",
+     "n_b6cc6890ba26",
+     "n_9ba48d85ed19",
+     "n_a4b40c96ede4",
+     "n_8a6e1abce5cc",
+     "doc-check-defaults",
+     "n_805cf67e5cc5"
+    ]
+   }
+  },
+  {
+   "pr": 245,
+   "broken": [],
+   "explained": true,
+   "top": {
+    "T": [
+     "n_b83c550a0ca4",
+     "n_a7634ef53a8f",
+     "n_0aefd5072428",
+     "n_0e6928348b1d",
+     "watch-what-the-rule-depends-on",
+     "n_07faa4565128",
+     "importer-keeps-local-decision",
+     "n_ea7633cd748c",
+     "seed:dotnet-review-surfaces:au_di_lifetimes_captive_dependency",
+     "seed:geospatial-enforcement-defects:r_single_source_sets"
+    ],
+    "C": [
+     "n_a7634ef53a8f",
+     "docs-agent-neutral",
+     "eval-scripts-no-exposure",
+     "readonly-agents-side-effects",
+     "break-test-masked-by-integrity-check",
+     "n_8519bf0f71c6",
+     "n_428707b5e596",
+     "n_119528a07fa5",
+     "n_8b3345b90621",
+     "optional-feature-shipped-text"
+    ],
+    "E": [
+     "readonly-agents-side-effects",
+     "review-bot-watch-matches-wrong-comment",
+     "optional-feature-shipped-text",
+     "n_ea7633cd748c",
+     "n_428707b5e596",
+     "piped-python-output-reorders",
+     "break-test-masked-by-integrity-check",
+     "n_967ef9825472",
+     "worktree-no-store-reverify",
+     "n_b550ba9c5c8a"
+    ],
+    "P": [
+     "n_0637c92c032f",
+     "n_6b65aa35593c",
+     "n_b550ba9c5c8a",
+     "doc-claim-governs-doc-and-code",
+     "generated-diagram-traced-old-path",
+     "seed:dotnet-canon:r_docs_review_surface",
+     "docs-agent-neutral",
+     "n_b4050b826687",
+     "novelty-claims-expire"
+    ]
+   }
+  },
+  {
+   "pr": 312,
+   "broken": [
+    "docs-agent-neutral",
+    "harness-reads-a-moving-working-tree",
+    "n_0637c92c032f",
+    "seed:dotnet-canon:r_grep_to_zero"
+   ],
+   "explained": true,
+   "top": {
+    "T": [
+     "verification-scope-is-the-thesis",
+     "drift-verdict-paths-agree",
+     "thesis-maintain-anything",
+     "measure-the-population-not-the-slice",
+     "briefing-hides-unproven-lessons",
+     "doc-claim-governs-doc-and-code",
+     "novelty-claims-expire",
+     "snapshot-from-worktree-drops-repo-rules",
+     "empty-drift-snapshot-fails-ci",
+     "n_b550ba9c5c8a"
+    ],
+    "C": [
+     "thesis-maintain-anything",
+     "verification-scope-is-the-thesis",
+     "doc-claim-governs-doc-and-code",
+     "research-cited-products-not-named",
+     "n_a7634ef53a8f",
+     "watch-what-the-rule-depends-on",
+     "briefing-hides-unproven-lessons",
+     "n_b550ba9c5c8a",
+     "doc-verified-refused",
+     "doc-check-defaults"
+    ],
+    "E": [
+     "git-path-history-drops-merges",
+     "readonly-agents-side-effects",
+     "worktree-no-store-reverify",
+     "verification-scope-is-the-thesis",
+     "n_805cf67e5cc5",
+     "snapshot-from-worktree-drops-repo-rules",
+     "n_1eaf9a5f24e2",
+     "comparison-table-one-sitting-generated",
+     "harness-reads-a-moving-working-tree",
+     "n_09ba6adf0fdc"
+    ],
+    "P": [
+     "git-path-history-drops-merges",
+     "eval-scripts-no-exposure",
+     "readonly-agents-side-effects",
+     "n_b6cc6890ba26",
+     "thesis-maintain-anything",
+     "comparison-table-one-sitting-generated",
+     "measure-the-population-not-the-slice",
+     "n_473aec369b25",
+     "n_0637c92c032f",
+     "verification-scope-is-the-thesis"
+    ]
+   }
+  },
+  {
+   "pr": 359,
+   "broken": [
+    "n_e7988ff536fb"
+   ],
+   "explained": true,
+   "top": {
+    "T": [
+     "bash-double-brackets",
+     "n_7e292a18d45d",
+     "n_d8e5ee92ad8f",
+     "n_69f673496137",
+     "n_e7988ff536fb",
+     "pipeline-hides-test-status",
+     "seed:frontend-canon:rxc_test_behavior",
+     "n_57cc4b427f05",
+     "seed:geospatial-enforcement-defects:d_ungated_zone",
+     "break-test-masked-by-integrity-check"
+    ],
+    "C": [
+     "n_ce6a27cc432f",
+     "n_8b3345b90621",
+     "n_02cc84da158d",
+     "docs-agent-neutral",
+     "heredoc-ends-the-chain",
+     "n_ec568941f68a",
+     "n_7e292a18d45d",
+     "n_8519bf0f71c6",
+     "snapshot-from-worktree-drops-repo-rules",
+     "n_d8166465591e"
+    ],
+    "E": [
+     "bash-double-brackets",
+     "n_8b3345b90621",
+     "n_8519bf0f71c6",
+     "docs-agent-neutral",
+     "n_7e292a18d45d",
+     "readonly-agents-side-effects",
+     "owned-file-features-check-the-kept-copy",
+     "optional-feature-shipped-text",
+     "n_e7988ff536fb",
+     "n_d8e5ee92ad8f"
+    ],
+    "P": [
+     "bash-double-brackets",
+     "n_1fe5ef1aaca5",
+     "n_8b3345b90621",
+     "n_7e292a18d45d",
+     "n_adea7f2c7373",
+     "n_e7988ff536fb",
+     "hook-cli-version-skew",
+     "n_d8e5ee92ad8f",
+     "n_805cf67e5cc5",
+     "n_e8b039f47ee1"
+    ]
+   }
+  },
+  {
+   "pr": 212,
+   "broken": [],
+   "explained": true,
+   "top": {
+    "T": [
+     "n_ea7633cd748c",
+     "seed:python-canon:py_pyproject_versions",
+     "n_f6d01e368155",
+     "seed:geospatial-enforcement-defects:d_unpinned_linter",
+     "n_92398fae87c0",
+     "n_a5520510b99c",
+     "seed:geospatial-enforcement-defects:r_pin_gating_tools",
+     "seed:python-canon:py_typing_syntax_floor",
+     "seed:dotnet-canon:r_aspire_versions",
+     "seed:dotnet-canon:r_connection_hold"
+    ],
+    "C": [
+     "readonly-agents-side-effects",
+     "docs-agent-neutral",
+     "n_a7634ef53a8f",
+     "doc-claim-governs-doc-and-code",
+     "piped-python-output-reorders",
+     "doc-install-name",
+     "doc-init-flags",
+     "n_b550ba9c5c8a",
+     "n_5ddb0776a863",
+     "doc-check-defaults"
+    ],
+    "E": [
+     "doc-install-name",
+     "empty-drift-snapshot-fails-ci",
+     "doc-init-flags",
+     "mcp-registry-pypi-command-name",
+     "docs-agent-neutral",
+     "n_5ddb0776a863",
+     "worktree-no-store-reverify",
+     "n_92398fae87c0",
+     "n_c95bdc056620",
+     "n_f6d01e368155"
+    ],
+    "P": [
+     "doc-install-name",
+     "doc-init-flags",
+     "doc-verified-refused",
+     "docs-agent-neutral",
+     "n_b4050b826687",
+     "n_805cf67e5cc5",
+     "n_6b65aa35593c",
+     "n_b550ba9c5c8a",
+     "doc-claim-governs-doc-and-code",
+     "n_31bde92d9003"
+    ]
+   }
+  },
+  {
+   "pr": 342,
+   "broken": [],
+   "explained": true,
+   "top": {
+    "T": [
+     "seed:dotnet-decisions:pd_db_primitives_before_distributed_locks",
+     "ca-distrust-every-trust-store",
+     "n_92398fae87c0",
+     "seed:python-canon:py_pyproject_versions",
+     "n_ee5a49712ff3",
+     "n_09ba6adf0fdc",
+     "seed:geospatial-enforcement-defects:r_pin_gating_tools",
+     "seed:dotnet-decisions:pd_established_idp_never_handroll_auth",
+     "owned-file-features-check-the-kept-copy",
+     "seed:dotnet-decisions:pd_zero_warning_build"
+    ],
+    "C": [
+     "seed:python-canon:py_pyproject_versions",
+     "n_92398fae87c0",
+     "n_7e292a18d45d",
+     "mcp-registry-pypi-command-name",
+     "seed:python-canon:py_test_every_version",
+     "seed:python-canon:py_layers_contract",
+     "n_4a398f2f8095",
+     "n_c95bdc056620",
+     "ca-distrust-every-trust-store",
+     "seed:dotnet-decisions:pd_db_primitives_before_distributed_locks"
+    ],
+    "E": [
+     "seed:python-canon:py_pyproject_versions",
+     "n_92398fae87c0",
+     "seed:python-canon:py_layers_contract",
+     "n_7e292a18d45d",
+     "n_c95bdc056620",
+     "n_4a398f2f8095",
+     "seed:python-canon:py_test_every_version",
+     "mcp-registry-pypi-command-name",
+     "n_7e50e3588bcd",
+     "n_221da2fec863"
+    ],
+    "P": [
+     "n_1fe5ef1aaca5",
+     "n_5db37b759b1e",
+     "watch-what-the-rule-depends-on",
+     "n_c95bdc056620",
+     "owned-file-features-check-the-kept-copy",
+     "n_7e50e3588bcd",
+     "n_a5520510b99c",
+     "pipeline-hides-test-status",
+     "n_110bb4fb7112",
+     "n_00985805cdbb"
+    ]
+   }
+  },
+  {
+   "pr": 112,
+   "broken": [
+    "n_31bde92d9003",
+    "n_696a70084e1a"
+   ],
+   "explained": true,
+   "top": {
+    "T": [
+     "n_696a70084e1a",
+     "n_805cf67e5cc5",
+     "n_31bde92d9003",
+     "n_b0457b37c65a",
+     "empty-drift-snapshot-fails-ci",
+     "n_37ea04a8a0ac",
+     "n_b40a468119f6",
+     "n_09ba6adf0fdc",
+     "n_e49be14d6207",
+     "n_ead8e0a2b43d"
+    ],
+    "C": [
+     "empty-drift-snapshot-fails-ci",
+     "n_696a70084e1a",
+     "n_5ddb0776a863",
+     "n_805cf67e5cc5",
+     "n_09ba6adf0fdc",
+     "n_02cc84da158d",
+     "n_b0457b37c65a",
+     "n_37ea04a8a0ac",
+     "n_57cc4b427f05",
+     "n_31bde92d9003"
+    ],
+    "E": [
+     "n_696a70084e1a",
+     "n_aa3e45a2ecd6",
+     "n_805cf67e5cc5",
+     "n_b0457b37c65a",
+     "n_31bde92d9003",
+     "seed:geospatial-enforcement-defects:d_ungated_zone",
+     "n_967ef9825472",
+     "n_ead8e0a2b43d",
+     "n_d8166465591e",
+     "n_09ba6adf0fdc"
+    ],
+    "P": [
+     "n_696a70084e1a",
+     "n_31bde92d9003",
+     "n_805cf67e5cc5",
+     "n_5ddb0776a863",
+     "n_58119d0a63d9",
+     "n_1fe5ef1aaca5",
+     "n_e7988ff536fb",
+     "n_8a6e1abce5cc",
+     "n_119528a07fa5",
+     "n_221da2fec863"
+    ]
+   }
+  },
+  {
+   "pr": 267,
+   "broken": [
+    "n_b578addf6269",
+    "seed:rag-defects:qz_judge_crash"
+   ],
+   "explained": true,
+   "top": {
+    "T": [
+     "n_b83c550a0ca4",
+     "seed:dotnet-canon:r_sargable",
+     "n_be9f13d587b1",
+     "seed:rag-defects:qz_identity",
+     "seed:rag-defects:qz_unequal_budget",
+     "n_a4b40c96ede4",
+     "n_93f96eae7359",
+     "research-cited-products-not-named",
+     "seed:dotnet-decisions:pd_rate_limit_expensive_endpoints",
+     "n_3dac3a1d8fba"
+    ],
+    "C": [
+     "n_b83c550a0ca4",
+     "n_a7634ef53a8f",
+     "n_be9f13d587b1",
+     "seed:rag-defects:qz_wrong_corpus",
+     "n_ce6a27cc432f",
+     "n_849a5b0425ef",
+     "typed-closed-request-models",
+     "n_9ba48d85ed19",
+     "seed:rag-defects:qz_identity",
+     "seed:python-canon:py_value_objects_at_seams"
+    ],
+    "E": [
+     "n_be9f13d587b1",
+     "n_b83c550a0ca4",
+     "filter-after-fetch-widens-window",
+     "seed:rag-defects:qz_identity",
+     "n_713b8c104f12",
+     "seed:rag-defects:qz_wrong_corpus",
+     "seed:dotnet-canon:r_sargable",
+     "n_b578addf6269",
+     "n_041a066035b2",
+     "n_849a5b0425ef"
+    ],
+    "P": [
+     "n_4a398f2f8095",
+     "filter-after-fetch-widens-window",
+     "generated-diagram-traced-old-path",
+     "n_6b65aa35593c",
+     "optional-feature-shipped-text",
+     "eval-scripts-no-exposure",
+     "n_dc7429065f5d",
+     "n_be9f13d587b1",
+     "n_7e50e3588bcd",
+     "watch-what-the-rule-depends-on"
+    ]
+   }
+  },
+  {
+   "pr": 30,
+   "broken": [
+    "n_849a5b0425ef"
+   ],
+   "explained": true,
+   "top": {
+    "T": [
+     "n_02cc84da158d",
+     "n_58119d0a63d9",
+     "n_713b8c104f12",
+     "n_e7988ff536fb",
+     "n_ec568941f68a",
+     "n_967ef9825472",
+     "n_916330f61994",
+     "n_e635fd921086",
+     "n_b0457b37c65a",
+     "n_8519bf0f71c6"
+    ],
+    "C": [
+     "n_713b8c104f12",
+     "n_b0457b37c65a",
+     "n_5a9589af345f",
+     "n_849a5b0425ef",
+     "n_58119d0a63d9",
+     "n_02cc84da158d",
+     "n_adea7f2c7373",
+     "n_22ad98216e87",
+     "n_b6cc6890ba26",
+     "n_e7988ff536fb"
+    ],
+    "E": [
+     "n_02cc84da158d",
+     "n_e7988ff536fb",
+     "n_713b8c104f12",
+     "n_58119d0a63d9",
+     "n_e635fd921086",
+     "n_a7634ef53a8f",
+     "n_ec568941f68a",
+     "n_428707b5e596",
+     "n_71c09abf3f37",
+     "seed:geospatial-defects:d15"
+    ],
+    "P": [
+     "n_58119d0a63d9",
+     "n_71c09abf3f37",
+     "n_428707b5e596",
+     "n_119528a07fa5",
+     "n_8a6e1abce5cc",
+     "n_00985805cdbb",
+     "n_e7988ff536fb",
+     "n_849a5b0425ef",
+     "n_967ef9825472",
+     "n_02cc84da158d"
+    ]
+   }
+  },
+  {
+   "pr": 383,
+   "broken": [
+    "n_0637c92c032f",
+    "n_5ddb0776a863",
+    "n_e7988ff536fb"
+   ],
+   "explained": true,
+   "top": {
+    "T": [
+     "n_b550ba9c5c8a",
+     "thesis-maintain-anything",
+     "generated-diagram-traced-old-path",
+     "n_5ddb0776a863",
+     "worktree-no-store-reverify",
+     "empty-drift-snapshot-fails-ci",
+     "seed:dotnet-canon:r_docs_review_surface",
+     "n_6b65aa35593c",
+     "comparison-table-one-sitting-generated",
+     "guarantee-holds-on-every-write-path"
+    ],
+    "C": [
+     "n_b550ba9c5c8a",
+     "seed:dotnet-canon:r_docs_review_surface",
+     "generated-diagram-traced-old-path",
+     "n_0637c92c032f",
+     "n_6b65aa35593c",
+     "readonly-agents-side-effects",
+     "docs-agent-neutral",
+     "seed:geospatial-enforcement-defects:d_ungated_zone",
+     "doc-claim-governs-doc-and-code",
+     "optional-feature-shipped-text"
+    ],
+    "E": [
+     "n_ce6a27cc432f",
+     "n_c95bdc056620",
+     "n_f6d01e368155",
+     "git-path-history-drops-merges",
+     "seed:dotnet-canon:r_file_move_discipline",
+     "n_8b3345b90621",
+     "seed:geospatial-enforcement-defects:d_ungated_zone",
+     "heredoc-ends-the-chain",
+     "worktree-no-store-reverify",
+     "n_57cc4b427f05"
+    ],
+    "P": [
+     "n_b550ba9c5c8a",
+     "n_6b65aa35593c",
+     "generated-diagram-traced-old-path",
+     "n_0637c92c032f",
+     "n_b4050b826687",
+     "seed:dotnet-canon:r_docs_review_surface",
+     "n_c95bdc056620",
+     "n_57cc4b427f05",
+     "verification-scope-is-the-thesis",
+     "n_696a70084e1a"
+    ]
+   }
+  },
+  {
+   "pr": 35,
+   "broken": [
+    "n_e7988ff536fb"
+   ],
+   "explained": true,
+   "top": {
+    "T": [
+     "n_5ddb0776a863",
+     "seed:rag-defects:qz_judge_crash",
+     "n_90066f354f1e",
+     "n_a7634ef53a8f",
+     "n_69f673496137",
+     "n_ec568941f68a",
+     "n_6b65aa35593c",
+     "n_713b8c104f12",
+     "n_0aefd5072428",
+     "n_849a5b0425ef"
+    ],
+    "C": [
+     "n_5ddb0776a863",
+     "n_a7634ef53a8f",
+     "n_b74bad29fd87",
+     "n_e7988ff536fb",
+     "n_849a5b0425ef",
+     "seed:geospatial-enforcement-defects:d_invoked_by_nothing",
+     "n_69f673496137",
+     "seed:geospatial-enforcement-defects:g_review_agent_in_ci",
+     "n_be9f13d587b1",
+     "seed:geospatial-enforcement-defects:r_surface_needs_trigger"
+    ],
+    "E": [
+     "n_90066f354f1e",
+     "n_5ddb0776a863",
+     "n_37ea04a8a0ac",
+     "n_07faa4565128",
+     "n_713b8c104f12",
+     "n_71c09abf3f37",
+     "n_967ef9825472",
+     "n_a7634ef53a8f",
+     "n_ed7e782d12fd",
+     "n_9a8b5215da32"
+    ],
+    "P": [
+     "n_e7988ff536fb",
+     "n_b74bad29fd87",
+     "n_00985805cdbb",
+     "n_713b8c104f12",
+     "n_71c09abf3f37",
+     "n_916330f61994",
+     "n_5db37b759b1e",
+     "n_8a6e1abce5cc",
+     "n_119528a07fa5",
+     "n_ec568941f68a"
+    ]
+   }
+  },
+  {
+   "pr": 77,
+   "broken": [
+    "n_5ddb0776a863",
+    "n_adea7f2c7373",
+    "n_b4050b826687",
+    "n_e7988ff536fb"
+   ],
+   "explained": true,
+   "top": {
+    "T": [
+     "n_428707b5e596",
+     "docs-agent-neutral",
+     "n_a7634ef53a8f",
+     "n_dc7429065f5d",
+     "n_849a5b0425ef",
+     "n_041a066035b2",
+     "n_8519bf0f71c6",
+     "hook-cli-version-skew",
+     "empty-drift-snapshot-fails-ci",
+     "seed:dotnet-decisions:pd_license_driven_test_lib_forks"
+    ],
+    "C": [
+     "n_8519bf0f71c6",
+     "docs-agent-neutral",
+     "n_b6cc6890ba26",
+     "n_8b3345b90621",
+     "n_428707b5e596",
+     "n_58119d0a63d9",
+     "n_a7634ef53a8f",
+     "n_90066f354f1e",
+     "n_e8b039f47ee1",
+     "n_849a5b0425ef"
+    ],
+    "E": [
+     "n_8b3345b90621",
+     "n_58119d0a63d9",
+     "n_b40a468119f6",
+     "n_e7988ff536fb",
+     "n_967ef9825472",
+     "seed:geospatial-enforcement-defects:d_ungated_zone",
+     "n_d8166465591e",
+     "n_aa3e45a2ecd6",
+     "n_c95bdc056620",
+     "n_221da2fec863"
+    ],
+    "P": [
+     "docs-agent-neutral",
+     "hook-cli-version-skew",
+     "empty-drift-snapshot-fails-ci",
+     "n_58119d0a63d9",
+     "n_1fe5ef1aaca5",
+     "doc-claim-governs-doc-and-code",
+     "n_e7988ff536fb",
+     "n_967ef9825472",
+     "n_8a6e1abce5cc",
+     "n_221da2fec863"
+    ]
+   }
+  },
+  {
+   "pr": 384,
+   "broken": [],
+   "explained": true,
+   "top": {
+    "T": [
+     "n_0637c92c032f",
+     "generated-diagram-traced-old-path",
+     "n_b550ba9c5c8a",
+     "seed:geospatial-defects:d19",
+     "seed:dotnet-canon:r_feature_file_cap",
+     "n_6b65aa35593c",
+     "seed:dotnet-decisions:pd_scalar_over_swagger",
+     "n_48fd7d3e6c65",
+     "seed:python-canon:py_value_objects_at_seams",
+     "seed:dotnet-canon:r_arch_enforcement_ladder"
+    ],
+    "C": [
+     "n_f6d01e368155",
+     "empty-drift-snapshot-fails-ci",
+     "n_ce6a27cc432f",
+     "snapshot-from-worktree-drops-repo-rules",
+     "n_5ddb0776a863",
+     "n_02cc84da158d",
+     "eval-scripts-no-exposure",
+     "seed:python-canon:py_layers_contract",
+     "seed:python-canon:py_pyproject_versions",
+     "optional-feature-shipped-text"
+    ],
+    "E": [
+     "n_0637c92c032f",
+     "n_7e292a18d45d",
+     "n_02cc84da158d",
+     "optional-feature-shipped-text",
+     "piped-python-output-reorders",
+     "tall-sheet-screenshot-tiles",
+     "seed:python-canon:py_layers_contract",
+     "n_b550ba9c5c8a",
+     "generated-diagram-traced-old-path",
+     "n_f6d01e368155"
+    ],
+    "P": [
+     "n_b550ba9c5c8a",
+     "n_0637c92c032f",
+     "generated-diagram-traced-old-path",
+     "n_6b65aa35593c",
+     "n_4a398f2f8095",
+     "seed:dotnet-canon:r_docs_review_surface",
+     "n_b4050b826687",
+     "n_5db37b759b1e",
+     "seed:dotnet-canon:r_file_move_discipline",
+     "verification-scope-is-the-thesis"
+    ]
+   }
+  },
+  {
+   "pr": 135,
+   "broken": [
+    "doc-claim-governs-doc-and-code",
+    "n_6b65aa35593c"
+   ],
+   "explained": true,
+   "top": {
+    "T": [
+     "n_b83c550a0ca4",
+     "n_ce6a27cc432f",
+     "n_428707b5e596",
+     "docs-agent-neutral",
+     "n_5ddb0776a863",
+     "pretooluse-additionalcontext",
+     "n_a7634ef53a8f",
+     "seed:rag-defects:qz_judge_crash",
+     "n_dc7429065f5d",
+     "n_8519bf0f71c6"
+    ],
+    "C": [
+     "n_b83c550a0ca4",
+     "n_ce6a27cc432f",
+     "docs-agent-neutral",
+     "n_a7634ef53a8f",
+     "n_ec568941f68a",
+     "n_428707b5e596",
+     "n_849a5b0425ef",
+     "n_8b3345b90621",
+     "n_8519bf0f71c6",
+     "n_5ddb0776a863"
+    ],
+    "E": [
+     "n_849a5b0425ef",
+     "seed:dotnet-defects:nc_idor",
+     "n_a7634ef53a8f",
+     "n_dc7429065f5d",
+     "n_02cc84da158d",
+     "n_713b8c104f12",
+     "n_b83c550a0ca4",
+     "n_37ea04a8a0ac",
+     "n_be9f13d587b1",
+     "n_ec568941f68a"
+    ],
+    "P": [
+     "n_b83c550a0ca4",
+     "doc-claim-governs-doc-and-code",
+     "n_b74bad29fd87",
+     "n_e7988ff536fb",
+     "n_b578addf6269",
+     "n_dc7429065f5d",
+     "n_09ba6adf0fdc",
+     "n_696a70084e1a",
+     "n_ed7e782d12fd",
+     "n_5a9589af345f"
+    ]
+   }
+  },
+  {
+   "pr": 160,
+   "broken": [],
+   "explained": true,
+   "top": {
+    "T": [
+     "mcp-registry-pypi-command-name",
+     "docs-agent-neutral",
+     "n_ce6a27cc432f",
+     "n_58119d0a63d9",
+     "n_f6d01e368155",
+     "eval-scripts-no-exposure",
+     "n_5ddb0776a863",
+     "doc-install-name",
+     "n_92398fae87c0",
+     "n_ec568941f68a"
+    ],
+    "C": [
+     "seed:dotnet-canon:dec_sixth_surface",
+     "n_713b8c104f12",
+     "n_b40a468119f6",
+     "n_b6cc6890ba26",
+     "n_b0457b37c65a",
+     "n_849a5b0425ef",
+     "n_e635fd921086",
+     "optional-feature-shipped-text",
+     "mcp-registry-pypi-command-name",
+     "n_5a9589af345f"
+    ],
+    "E": [
+     "mcp-registry-pypi-command-name",
+     "n_f6d01e368155",
+     "seed:python-canon:py_strict_pytest",
+     "n_58119d0a63d9",
+     "n_221da2fec863",
+     "n_e635fd921086",
+     "eval-scripts-no-exposure",
+     "seed:python-canon:py_contract_tests",
+     "n_7e50e3588bcd",
+     "n_a7634ef53a8f"
+    ],
+    "P": [
+     "n_1fe5ef1aaca5",
+     "n_221da2fec863",
+     "n_119528a07fa5",
+     "n_805cf67e5cc5",
+     "n_b4050b826687",
+     "drift-verdict-paths-agree",
+     "n_7e50e3588bcd",
+     "unclosed-sqlite-in-test-pr154",
+     "n_8519bf0f71c6",
+     "n_696a70084e1a"
+    ]
+   }
+  },
+  {
+   "pr": 86,
+   "broken": [
+    "doc-claim-governs-doc-and-code"
+   ],
+   "explained": true,
+   "top": {
+    "T": [
+     "seed:dotnet-decisions:pd_openapi_dev_only",
+     "doc-claim-governs-doc-and-code",
+     "n_119528a07fa5",
+     "seed:dotnet-review-surfaces:rs_integration_tests_default",
+     "n_b550ba9c5c8a",
+     "n_57cc4b427f05",
+     "seed:dotnet-defects:g_tombstones_nc",
+     "n_09ba6adf0fdc",
+     "n_69244bb71160",
+     "docs-agent-neutral"
+    ],
+    "C": [
+     "n_8b3345b90621",
+     "n_e7988ff536fb",
+     "n_d8e5ee92ad8f",
+     "n_adea7f2c7373",
+     "docs-agent-neutral",
+     "n_221da2fec863",
+     "n_57cc4b427f05",
+     "seed:geospatial-enforcement-defects:d_ungated_zone",
+     "n_ec568941f68a",
+     "n_916330f61994"
+    ],
+    "E": [
+     "doc-claim-governs-doc-and-code",
+     "doc-install-name",
+     "docs-agent-neutral",
+     "n_92398fae87c0",
+     "n_c95bdc056620",
+     "n_8b3345b90621",
+     "n_58119d0a63d9",
+     "n_ec568941f68a",
+     "seed:dotnet-defects:g_tombstones_nc",
+     "seed:geospatial-enforcement-defects:d_ungated_zone"
+    ],
+    "P": [
+     "doc-claim-governs-doc-and-code",
+     "n_31bde92d9003",
+     "n_69f673496137",
+     "n_0637c92c032f",
+     "n_b550ba9c5c8a",
+     "n_916330f61994",
+     "n_00985805cdbb",
+     "n_5db37b759b1e",
+     "n_e635fd921086"
+    ]
+   }
+  },
+  {
+   "pr": 158,
+   "broken": [
+    "n_aa3e45a2ecd6",
+    "n_adea7f2c7373"
+   ],
+   "explained": true,
+   "top": {
+    "T": [
+     "seed:dotnet-canon:dec_sixth_surface",
+     "n_849a5b0425ef",
+     "n_f215b68b925c",
+     "doc-install-name",
+     "n_e635fd921086",
+     "n_ead8e0a2b43d",
+     "n_d8166465591e",
+     "n_37ea04a8a0ac",
+     "n_1fe5ef1aaca5",
+     "n_713b8c104f12"
+    ],
+    "C": [
+     "seed:dotnet-canon:dec_sixth_surface",
+     "n_f215b68b925c",
+     "n_b0457b37c65a",
+     "n_b40a468119f6",
+     "n_d8166465591e",
+     "n_849a5b0425ef",
+     "readonly-agents-side-effects",
+     "n_b83c550a0ca4",
+     "worktree-no-store-reverify",
+     "n_57cc4b427f05"
+    ],
+    "E": [
+     "n_f215b68b925c",
+     "seed:dotnet-canon:dec_sixth_surface",
+     "optional-feature-shipped-text",
+     "n_713b8c104f12",
+     "n_849a5b0425ef",
+     "n_b0457b37c65a",
+     "n_b83c550a0ca4",
+     "doc-install-name",
+     "readonly-agents-side-effects",
+     "n_b40a468119f6"
+    ],
+    "P": [
+     "novelty-claims-expire",
+     "n_00985805cdbb",
+     "doc-claim-governs-doc-and-code",
+     "n_b0457b37c65a",
+     "n_0e6928348b1d",
+     "n_09ba6adf0fdc",
+     "n_31bde92d9003",
+     "n_1f2e2c211974",
+     "n_37ea04a8a0ac",
+     "optional-feature-shipped-text"
+    ]
+   }
+  },
+  {
+   "pr": 203,
+   "broken": [],
+   "explained": true,
+   "top": {
+    "T": [
+     "n_ea7633cd748c",
+     "n_f6d01e368155",
+     "seed:geospatial-enforcement-defects:d_unpinned_linter",
+     "seed:python-canon:py_pyproject_versions",
+     "n_92398fae87c0",
+     "n_a5520510b99c",
+     "seed:geospatial-enforcement-defects:r_pin_gating_tools",
+     "seed:dotnet-canon:r_aspire_versions",
+     "seed:python-canon:py_typing_syntax_floor",
+     "seed:dotnet-canon:r_wolverine_lockstep"
+    ],
+    "C": [
+     "n_d45d7bf64896",
+     "readonly-agents-side-effects",
+     "n_b83c550a0ca4",
+     "seed:dotnet-canon:r_grep_to_zero",
+     "n_ce6a27cc432f",
+     "novelty-claims-expire",
+     "n_a7634ef53a8f",
+     "n_69f673496137",
+     "seed:dotnet-canon:r_cache_write_path",
+     "n_696a70084e1a"
+    ],
+    "E": [
+     "doc-install-name",
+     "empty-drift-snapshot-fails-ci",
+     "doc-claim-governs-doc-and-code",
+     "mcp-registry-pypi-command-name",
+     "n_e635fd921086",
+     "worktree-no-store-reverify",
+     "n_09ba6adf0fdc",
+     "docs-agent-neutral",
+     "doc-init-flags",
+     "n_c95bdc056620"
+    ],
+    "P": [
+     "novelty-claims-expire",
+     "n_d45d7bf64896",
+     "n_31bde92d9003",
+     "n_b4050b826687",
+     "doc-claim-governs-doc-and-code",
+     "n_805cf67e5cc5",
+     "n_696a70084e1a",
+     "doc-install-name",
+     "n_09ba6adf0fdc",
+     "n_1fe5ef1aaca5"
+    ]
+   }
+  },
+  {
+   "pr": 34,
+   "broken": [
+    "n_58119d0a63d9",
+    "n_e7988ff536fb",
+    "seed:dotnet-review-surfaces:rs_workflow_hardening_baseline"
+   ],
+   "explained": true,
+   "top": {
+    "T": [
+     "n_5ddb0776a863",
+     "n_ec568941f68a",
+     "n_e7988ff536fb",
+     "n_713b8c104f12",
+     "n_02cc84da158d",
+     "n_5db37b759b1e",
+     "n_b0457b37c65a",
+     "n_119528a07fa5",
+     "n_58119d0a63d9",
+     "seed:geospatial-enforcement-defects:d_ungated_zone"
+    ],
+    "C": [
+     "n_5ddb0776a863",
+     "n_ec568941f68a",
+     "n_e7988ff536fb",
+     "n_02cc84da158d",
+     "n_69f673496137",
+     "n_713b8c104f12",
+     "n_58119d0a63d9",
+     "n_5db37b759b1e",
+     "n_a7634ef53a8f",
+     "n_b0457b37c65a"
+    ],
+    "E": [
+     "n_5ddb0776a863",
+     "n_e7988ff536fb",
+     "n_713b8c104f12",
+     "seed:geospatial-enforcement-defects:d_ungated_zone",
+     "n_b0457b37c65a",
+     "n_69f673496137",
+     "n_ec568941f68a",
+     "n_02cc84da158d",
+     "n_31bde92d9003",
+     "n_58119d0a63d9"
+    ],
+    "P": [
+     "n_5ddb0776a863",
+     "n_e7988ff536fb",
+     "n_1fe5ef1aaca5",
+     "n_00985805cdbb",
+     "n_ec568941f68a",
+     "n_713b8c104f12",
+     "n_119528a07fa5",
+     "n_5db37b759b1e",
+     "n_916330f61994",
+     "n_02cc84da158d"
+    ]
+   }
+  },
+  {
+   "pr": 150,
+   "broken": [
+    "doc-claim-governs-doc-and-code"
+   ],
+   "explained": true,
+   "top": {
+    "T": [
+     "doc-claim-governs-doc-and-code",
+     "n_5ddb0776a863",
+     "doc-install-name",
+     "seed:dotnet-defects:nc_arch_reviewer",
+     "n_a7634ef53a8f",
+     "seed:python-canon:py_type_hints_gradual",
+     "n_b550ba9c5c8a",
+     "doc-init-flags",
+     "n_8519bf0f71c6",
+     "seed:python-canon:py_contract_tests"
+    ],
+    "C": [
+     "doc-claim-governs-doc-and-code",
+     "empty-drift-snapshot-fails-ci",
+     "n_5ddb0776a863",
+     "n_57cc4b427f05",
+     "n_805cf67e5cc5",
+     "n_adea7f2c7373",
+     "n_696a70084e1a",
+     "optional-feature-shipped-text",
+     "n_31bde92d9003",
+     "n_f6d01e368155"
+    ],
+    "E": [
+     "doc-claim-governs-doc-and-code",
+     "empty-drift-snapshot-fails-ci",
+     "doc-check-defaults",
+     "optional-feature-shipped-text",
+     "n_805cf67e5cc5",
+     "doc-install-name",
+     "docs-agent-neutral",
+     "doc-verified-refused",
+     "n_5ddb0776a863",
+     "n_09ba6adf0fdc"
+    ],
+    "P": [
+     "doc-claim-governs-doc-and-code",
+     "n_31bde92d9003",
+     "n_696a70084e1a",
+     "n_b4050b826687",
+     "drift-verdict-paths-agree",
+     "doc-check-defaults",
+     "doc-verified-refused",
+     "doc-init-flags",
+     "n_805cf67e5cc5",
+     "n_09ba6adf0fdc"
+    ]
+   }
+  },
+  {
+   "pr": 162,
+   "broken": [
+    "n_473aec369b25"
+   ],
+   "explained": true,
+   "top": {
+    "T": [
+     "seed:dotnet-canon:r_guid_v7",
+     "n_8a6e1abce5cc",
+     "seed:dotnet-defects:nc_idor",
+     "seed:dotnet-canon:dec_sixth_surface",
+     "n_b83c550a0ca4",
+     "seed:dotnet-canon:r_problemdetails_traceid",
+     "n_473aec369b25",
+     "seed:rag-defects:qz_wrong_corpus",
+     "n_a7634ef53a8f",
+     "unclosed-sqlite-in-test-pr154"
+    ],
+    "C": [
+     "n_473aec369b25",
+     "eval-scripts-no-exposure",
+     "n_69f673496137",
+     "n_5ddb0776a863",
+     "remote-timeout-not-a-deadline",
+     "n_aa3e45a2ecd6",
+     "n_b578addf6269",
+     "n_8a6e1abce5cc",
+     "n_a4b40c96ede4",
+     "n_a7634ef53a8f"
+    ],
+    "E": [
+     "n_428707b5e596",
+     "eval-scripts-no-exposure",
+     "n_a7634ef53a8f",
+     "n_b578addf6269",
+     "n_0aefd5072428",
+     "readonly-agents-side-effects",
+     "n_aa3e45a2ecd6",
+     "n_e7988ff536fb",
+     "n_9ba48d85ed19",
+     "n_849a5b0425ef"
+    ],
+    "P": [
+     "n_473aec369b25",
+     "n_a4b40c96ede4",
+     "n_fe26d1897041",
+     "seed:geospatial-eval-defects:r_preregistered_control_vetoes",
+     "n_b4050b826687",
+     "n_31bde92d9003",
+     "n_fe4ced54e60f"
+    ]
+   }
+  },
+  {
+   "pr": 274,
+   "broken": [
+    "seed:python-canon:py_dont_mock_what_you_dont_own"
+   ],
+   "explained": true,
+   "top": {
+    "T": [
+     "fastembed-cache-in-tmpdir",
+     "seed:geospatial-defects:d16",
+     "seed:frontend-canon:rxc_query_keys",
+     "seed:dotnet-canon:r_cache_write_path",
+     "rerank-ships-off",
+     "seed:rag-defects:qz_broken_tool",
+     "seed:dotnet-decisions:pd_testcontainers_real_providers",
+     "n_b6cc6890ba26",
+     "idea-to-issue-through-review",
+     "seed:python-canon:py_pyproject_versions"
+    ],
+    "C": [
+     "fastembed-cache-in-tmpdir",
+     "n_ce6a27cc432f",
+     "seed:dotnet-canon:r_cache_write_path",
+     "n_f6d01e368155",
+     "seed:geospatial-defects:d16",
+     "rerank-ships-off",
+     "seed:dotnet-decisions:pd_hybridcache_over_handrolled",
+     "n_d8166465591e",
+     "n_02cc84da158d",
+     "n_f215b68b925c"
+    ],
+    "E": [
+     "fastembed-cache-in-tmpdir",
+     "seed:geospatial-enforcement-defects:d_ungated_zone",
+     "n_e7988ff536fb",
+     "n_f6d01e368155",
+     "n_ce6a27cc432f",
+     "seed:dotnet-canon:r_cache_write_path",
+     "n_7e292a18d45d",
+     "n_02cc84da158d",
+     "remote-timeout-not-a-deadline",
+     "n_ec568941f68a"
+    ],
+    "P": [
+     "fastembed-cache-in-tmpdir",
+     "n_b4050b826687",
+     "rerank-ships-off",
+     "n_7e50e3588bcd",
+     "n_805cf67e5cc5",
+     "watch-what-the-rule-depends-on",
+     "n_31bde92d9003",
+     "n_4a398f2f8095",
+     "unclosed-sqlite-in-test-pr154",
+     "doc-claim-governs-doc-and-code"
+    ]
+   }
+  },
+  {
+   "pr": 275,
+   "broken": [
+    "seed:geospatial-enforcement-defects:r_single_source_sets"
+   ],
+   "explained": true,
+   "top": {
+    "T": [
+     "n_a4b40c96ede4",
+     "n_b578addf6269",
+     "rerank-ships-off",
+     "falsifier-relative-to-control",
+     "pooled-receipts-miss-report-corrections",
+     "diagnostic-on-stage-window",
+     "n_b74bad29fd87",
+     "n_041a066035b2",
+     "seed:dotnet-decisions:pd_require_explicit_api_version",
+     "n_0adfbf18d9f7"
+    ],
+    "C": [
+     "rerank-ships-off",
+     "fused-window-readmits-weak-matches",
+     "diagnostic-on-stage-window",
+     "falsifier-relative-to-control",
+     "n_041a066035b2",
+     "n_b83c550a0ca4",
+     "filter-after-fetch-widens-window",
+     "index-in-context-not-fetched",
+     "n_119528a07fa5",
+     "n_849a5b0425ef"
+    ],
+    "E": [
+     "fused-window-readmits-weak-matches",
+     "rerank-ships-off",
+     "n_9a8b5215da32",
+     "review-bot-watch-matches-wrong-comment",
+     "filter-after-fetch-widens-window",
+     "seed:python-canon:py_comments_why",
+     "n_b83c550a0ca4",
+     "index-in-context-not-fetched",
+     "seed:python-canon:py_typing_syntax_floor",
+     "n_a7634ef53a8f"
+    ],
+    "P": [
+     "fused-window-readmits-weak-matches",
+     "falsifier-relative-to-control",
+     "diagnostic-on-stage-window",
+     "eval-scripts-no-exposure",
+     "harness-reads-a-moving-working-tree",
+     "n_b578addf6269",
+     "rerank-ships-off",
+     "n_7e50e3588bcd",
+     "pooled-receipts-miss-report-corrections",
+     "n_00985805cdbb"
+    ]
+   }
+  },
+  {
+   "pr": 198,
+   "broken": [
+    "n_00985805cdbb",
+    "n_8a6e1abce5cc"
+   ],
+   "explained": true,
+   "top": {
+    "T": [
+     "n_473aec369b25",
+     "seed:rag-defects:qz_judge_self",
+     "n_aa3e45a2ecd6",
+     "n_ed7e782d12fd",
+     "n_fe26d1897041",
+     "n_0aefd5072428",
+     "n_a4b40c96ede4",
+     "seed:python-canon:py_docstrings",
+     "pretooluse-additionalcontext",
+     "remote-timeout-not-a-deadline"
+    ],
+    "C": [
+     "n_473aec369b25",
+     "n_fe26d1897041",
+     "n_a4b40c96ede4",
+     "n_b578addf6269",
+     "readonly-agents-side-effects",
+     "n_041a066035b2",
+     "n_8a6e1abce5cc",
+     "n_9ba48d85ed19",
+     "n_5ddb0776a863",
+     "n_119528a07fa5"
+    ],
+    "E": [
+     "seed:rag-defects:qz_judge_self",
+     "n_473aec369b25",
+     "n_fe26d1897041",
+     "n_0aefd5072428",
+     "n_69f673496137",
+     "eval-scripts-no-exposure",
+     "readonly-agents-side-effects",
+     "seed:python-canon:py_typing_syntax_floor",
+     "typed-closed-request-models",
+     "n_8a6e1abce5cc"
+    ],
+    "P": [
+     "n_473aec369b25",
+     "n_fe26d1897041",
+     "n_a4b40c96ede4",
+     "n_b578addf6269",
+     "n_805cf67e5cc5",
+     "n_8a6e1abce5cc",
+     "n_00985805cdbb",
+     "n_916330f61994",
+     "n_b4050b826687",
+     "seed:geospatial-eval-defects:r_preregistered_control_vetoes"
+    ]
+   }
+  },
+  {
+   "pr": 373,
+   "broken": [
+    "doc-claim-governs-doc-and-code"
+   ],
+   "explained": true,
+   "top": {
+    "T": [
+     "n_ce6a27cc432f",
+     "n_69244bb71160",
+     "n_02cc84da158d",
+     "n_f6d01e368155",
+     "mcp-registry-publish-limits",
+     "worktree-no-store-reverify",
+     "guarantee-holds-on-every-write-path",
+     "n_5ddb0776a863",
+     "n_5db37b759b1e",
+     "n_7e292a18d45d"
+    ],
+    "C": [
+     "n_f6d01e368155",
+     "seed:geospatial-enforcement-defects:d_ungated_zone",
+     "n_221da2fec863",
+     "seed:python-canon:py_pyproject_versions",
+     "n_8a6e1abce5cc",
+     "seed:python-canon:py_contract_tests",
+     "n_5ddb0776a863",
+     "seed:dotnet-canon:r_authz_test_required",
+     "owned-file-features-check-the-kept-copy",
+     "n_7e292a18d45d"
+    ],
+    "E": [
+     "n_e7988ff536fb",
+     "remote-timeout-not-a-deadline",
+     "n_02cc84da158d",
+     "n_f6d01e368155",
+     "n_713b8c104f12",
+     "model-reply-parse-fails-open-loudly",
+     "bash-double-brackets",
+     "n_e635fd921086",
+     "heredoc-ends-the-chain",
+     "n_9a8b5215da32"
+    ],
+    "P": [
+     "n_e7988ff536fb",
+     "n_991d07b0549e",
+     "n_69244bb71160",
+     "n_ed7e782d12fd",
+     "n_e49be14d6207",
+     "seed:python-canon:py_print_at_edges",
+     "n_4a398f2f8095",
+     "n_1fe5ef1aaca5",
+     "doc-claim-governs-doc-and-code",
+     "n_00985805cdbb"
+    ]
+   }
+  },
+  {
+   "pr": 168,
+   "broken": [
+    "n_8a6e1abce5cc",
+    "seed:rag-defects:qz_fixtures"
+   ],
+   "explained": true,
+   "top": {
+    "T": [
+     "n_119528a07fa5",
+     "seed:dotnet-defects:nc_idor",
+     "n_849a5b0425ef",
+     "n_69f673496137",
+     "seed:dotnet-canon:r_authz_test_required",
+     "n_aa3e45a2ecd6",
+     "n_5ddb0776a863",
+     "n_fe26d1897041",
+     "seed:python-canon:py_protocol_isinstance_names_only",
+     "seed:rag-defects:qz_judge_crash"
+    ],
+    "C": [
+     "n_473aec369b25",
+     "n_aa3e45a2ecd6",
+     "n_b578addf6269",
+     "n_9ba48d85ed19",
+     "n_fe26d1897041",
+     "n_69f673496137",
+     "n_a7634ef53a8f",
+     "n_a4b40c96ede4",
+     "seed:rag-defects:qz_judge_self",
+     "n_8a6e1abce5cc"
+    ],
+    "E": [
+     "remote-timeout-not-a-deadline",
+     "seed:python-canon:py_exceptions_canon",
+     "n_aa3e45a2ecd6",
+     "n_69f673496137",
+     "n_a7634ef53a8f",
+     "n_0aefd5072428",
+     "n_473aec369b25",
+     "eval-scripts-no-exposure",
+     "seed:rag-defects:qz_judge_crash",
+     "readonly-agents-side-effects"
+    ],
+    "P": [
+     "n_473aec369b25",
+     "n_a4b40c96ede4",
+     "n_b6cc6890ba26",
+     "n_805cf67e5cc5",
+     "n_7e50e3588bcd",
+     "n_fe26d1897041",
+     "n_b578addf6269",
+     "n_9ba48d85ed19"
+    ]
+   }
+  },
+  {
+   "pr": 161,
+   "broken": [
+    "doc-claim-governs-doc-and-code",
+    "n_6b65aa35593c",
+    "n_b550ba9c5c8a",
+    "seed:dotnet-canon:r_docs_review_surface",
+    "seed:dotnet-canon:r_optimistic_concurrency",
+    "seed:geospatial-enforcement-defects:r_single_source_sets"
+   ],
+   "explained": true,
+   "top": {
+    "T": [
+     "n_ce6a27cc432f",
+     "n_8519bf0f71c6",
+     "n_02aa43137a2e",
+     "n_b83c550a0ca4",
+     "n_ec568941f68a",
+     "n_5ddb0776a863",
+     "n_a7634ef53a8f",
+     "optional-feature-shipped-text",
+     "readonly-agents-side-effects",
+     "review-bot-watch-matches-wrong-comment"
+    ],
+    "C": [
+     "n_ce6a27cc432f",
+     "n_c95bdc056620",
+     "n_967ef9825472",
+     "n_696a70084e1a",
+     "optional-feature-shipped-text",
+     "seed:dotnet-decisions:pd_db_primitives_before_distributed_locks",
+     "n_02cc84da158d",
+     "seed:dotnet-review-surfaces:rs_event_carries_recipient_id",
+     "n_aa3e45a2ecd6",
+     "n_b0457b37c65a"
+    ],
+    "E": [
+     "remote-timeout-not-a-deadline",
+     "n_f6d01e368155",
+     "worktree-no-store-reverify",
+     "n_aa3e45a2ecd6",
+     "n_b0457b37c65a",
+     "n_02cc84da158d",
+     "n_ead8e0a2b43d",
+     "stacked-pr-retarget-runs-no-ci",
+     "doc-verified-refused",
+     "n_713b8c104f12"
+    ],
+    "P": [
+     "n_1fe5ef1aaca5",
+     "n_e7988ff536fb",
+     "n_b550ba9c5c8a",
+     "n_6b65aa35593c",
+     "drift-verdict-paths-agree",
+     "n_5a9589af345f",
+     "remote-timeout-not-a-deadline",
+     "n_0637c92c032f",
+     "n_b0457b37c65a",
+     "n_916330f61994"
+    ]
+   }
+  },
+  {
+   "pr": 388,
+   "broken": [
+    "review-bot-watch-matches-wrong-comment"
+   ],
+   "explained": true,
+   "top": {
+    "T": [
+     "merge-needs-resolved-threads",
+     "model-reply-parse-fails-open-loudly",
+     "seed:dotnet-canon:r_encoding_loop",
+     "n_a7634ef53a8f",
+     "n_e99ea322dee5",
+     "n_ce6a27cc432f",
+     "optional-feature-shipped-text",
+     "n_8519bf0f71c6",
+     "review-bot-watch-matches-wrong-comment",
+     "remote-timeout-not-a-deadline"
+    ],
+    "C": [
+     "eval-scripts-no-exposure",
+     "n_ce6a27cc432f",
+     "optional-feature-shipped-text",
+     "model-reply-parse-fails-open-loudly",
+     "readonly-agents-side-effects",
+     "n_ea7633cd748c",
+     "thesis-maintain-anything",
+     "n_8519bf0f71c6",
+     "n_e635fd921086",
+     "remote-timeout-not-a-deadline"
+    ],
+    "E": [
+     "n_e7988ff536fb",
+     "n_f215b68b925c",
+     "stacked-pr-retarget-runs-no-ci",
+     "gh-pr-needs-repo-in-scripts",
+     "model-reply-parse-fails-open-loudly",
+     "hook-cli-version-skew",
+     "n_f6d01e368155",
+     "n_7e292a18d45d",
+     "seed:dotnet-canon:r_file_move_discipline",
+     "n_713b8c104f12"
+    ],
+    "P": [
+     "eval-scripts-no-exposure",
+     "gh-pr-needs-repo-in-scripts",
+     "n_e7988ff536fb",
+     "n_71c09abf3f37",
+     "doc-claim-governs-doc-and-code",
+     "n_adea7f2c7373",
+     "n_8a6e1abce5cc",
+     "n_119528a07fa5",
+     "seed:python-canon:py_print_at_edges",
+     "n_6b65aa35593c"
+    ]
+   }
+  },
+  {
+   "pr": 262,
+   "broken": [],
+   "explained": true,
+   "top": {
+    "T": [
+     "harness-reads-a-moving-working-tree",
+     "seed:geospatial-enforcement-defects:g_gate_every_dir",
+     "seed:geospatial-enforcement-defects:d_cwd_isort",
+     "n_473aec369b25",
+     "n_b6cc6890ba26",
+     "n_8b3345b90621",
+     "n_57cc4b427f05",
+     "n_8a6e1abce5cc",
+     "n_aa3e45a2ecd6",
+     "n_ce6a27cc432f"
+    ],
+    "C": [
+     "harness-reads-a-moving-working-tree",
+     "worktree-no-store-reverify",
+     "readonly-agents-side-effects",
+     "eval-scripts-no-exposure",
+     "n_ce6a27cc432f",
+     "pooled-receipts-miss-report-corrections",
+     "n_8a6e1abce5cc",
+     "n_119528a07fa5",
+     "n_f6d01e368155",
+     "n_805cf67e5cc5"
+    ],
+    "E": [
+     "harness-reads-a-moving-working-tree",
+     "n_805cf67e5cc5",
+     "n_f6d01e368155",
+     "n_69f673496137",
+     "n_ce6a27cc432f",
+     "eval-scripts-no-exposure",
+     "stacked-pr-retarget-runs-no-ci",
+     "n_57cc4b427f05",
+     "n_119528a07fa5",
+     "n_5ddb0776a863"
+    ],
+    "P": [
+     "harness-reads-a-moving-working-tree",
+     "seed:rag-defects:qz_judge_crash",
+     "n_e7988ff536fb",
+     "n_473aec369b25",
+     "doc-claim-governs-doc-and-code",
+     "n_805cf67e5cc5",
+     "n_8a6e1abce5cc",
+     "n_5db37b759b1e",
+     "worktree-no-store-reverify",
+     "n_916330f61994"
+    ]
+   }
+  },
+  {
+   "pr": 37,
+   "broken": [
+    "n_02cc84da158d",
+    "n_e7988ff536fb",
+    "seed:dotnet-defects:nc_arch_reviewer"
+   ],
+   "explained": true,
+   "top": {
+    "T": [
+     "n_5ddb0776a863",
+     "n_31bde92d9003",
+     "n_b0457b37c65a",
+     "n_5db37b759b1e",
+     "n_713b8c104f12",
+     "n_58119d0a63d9",
+     "n_02cc84da158d",
+     "n_c95bdc056620",
+     "n_57cc4b427f05",
+     "n_a7634ef53a8f"
+    ],
+    "C": [
+     "n_02cc84da158d",
+     "n_5db37b759b1e",
+     "n_b0457b37c65a",
+     "n_5ddb0776a863",
+     "n_58119d0a63d9",
+     "n_69f673496137",
+     "n_916330f61994",
+     "n_ec568941f68a",
+     "n_c95bdc056620",
+     "n_5f36600f6c51"
+    ],
+    "E": [
+     "n_e7988ff536fb",
+     "n_5ddb0776a863",
+     "n_02cc84da158d",
+     "n_713b8c104f12",
+     "n_58119d0a63d9",
+     "seed:geospatial-enforcement-defects:d_ungated_zone",
+     "n_8a6e1abce5cc",
+     "n_adea7f2c7373",
+     "n_967ef9825472",
+     "n_ec568941f68a"
+    ],
+    "P": [
+     "n_5ddb0776a863",
+     "n_1fe5ef1aaca5",
+     "n_e7988ff536fb",
+     "n_31bde92d9003",
+     "n_57cc4b427f05",
+     "n_b4050b826687",
+     "n_ec568941f68a",
+     "n_5db37b759b1e",
+     "n_00985805cdbb",
+     "n_916330f61994"
+    ]
+   }
+  },
+  {
+   "pr": 256,
+   "broken": [
+    "generated-diagram-traced-old-path",
+    "seed:rag-defects:qz_fixtures"
+   ],
+   "explained": true,
+   "top": {
+    "T": [
+     "seed:dotnet-canon:dec_sixth_surface",
+     "research-cited-products-not-named",
+     "n_fe26d1897041",
+     "n_9ba48d85ed19",
+     "pooled-receipts-miss-report-corrections",
+     "seed:rag-defects:qz_crosstab",
+     "readonly-agents-side-effects",
+     "n_1f2e2c211974",
+     "n_b4050b826687",
+     "n_8a6e1abce5cc"
+    ],
+    "C": [
+     "n_a7634ef53a8f",
+     "n_849a5b0425ef",
+     "eval-scripts-no-exposure",
+     "n_be9f13d587b1",
+     "n_9ba48d85ed19",
+     "n_69f673496137",
+     "n_b578addf6269",
+     "generated-diagram-traced-old-path",
+     "readonly-agents-side-effects",
+     "n_b83c550a0ca4"
+    ],
+    "E": [
+     "readonly-agents-side-effects",
+     "remote-timeout-not-a-deadline",
+     "n_7e292a18d45d",
+     "n_ce6a27cc432f",
+     "n_a7634ef53a8f",
+     "n_f6d01e368155",
+     "n_f215b68b925c",
+     "remote-path-test-through-client",
+     "eval-scripts-no-exposure",
+     "n_ed7e782d12fd"
+    ],
+    "P": [
+     "eval-scripts-no-exposure",
+     "n_69f673496137",
+     "n_9ba48d85ed19",
+     "filter-after-fetch-widens-window",
+     "pooled-receipts-miss-report-corrections",
+     "n_b578addf6269",
+     "n_71c09abf3f37",
+     "n_00985805cdbb",
+     "n_a4b40c96ede4",
+     "n_1f2e2c211974"
+    ]
+   }
+  },
+  {
+   "pr": 284,
+   "broken": [],
+   "explained": true,
+   "top": {
+    "T": [
+     "n_bf6a2aee2f12",
+     "n_ea7633cd748c",
+     "mcp-docker-localhost",
+     "seed:dotnet-decisions:pd_ci_grep_unanalyzable_hazards",
+     "seed:dotnet-canon:dec_asb_removed",
+     "seed:python-canon:py_exceptions_canon",
+     "n_b40a468119f6",
+     "n_5a9589af345f",
+     "seed:geospatial-defects:g_verify_outputs",
+     "seed:dotnet-defects:g_tombstones_nc"
+    ],
+    "C": [
+     "n_1fe5ef1aaca5",
+     "n_bf6a2aee2f12",
+     "n_f6d01e368155",
+     "optional-feature-shipped-text",
+     "n_c95bdc056620",
+     "seed:geospatial-enforcement-defects:d_ungated_zone",
+     "n_ce6a27cc432f",
+     "n_57cc4b427f05",
+     "seed:dotnet-canon:r_secret_fakes",
+     "n_110bb4fb7112"
+    ],
+    "E": [
+     "n_bf6a2aee2f12",
+     "seed:dotnet-canon:r_file_move_discipline",
+     "n_e7988ff536fb",
+     "n_916330f61994",
+     "n_d8e5ee92ad8f",
+     "n_1fe5ef1aaca5",
+     "n_ce6a27cc432f",
+     "n_7e292a18d45d",
+     "optional-feature-shipped-text",
+     "seed:geospatial-enforcement-defects:d_ungated_zone"
+    ],
+    "P": [
+     "n_1fe5ef1aaca5",
+     "n_7e50e3588bcd",
+     "n_b4050b826687",
+     "n_9ba48d85ed19",
+     "n_aa3e45a2ecd6",
+     "n_ead8e0a2b43d",
+     "n_31bde92d9003",
+     "n_5db37b759b1e",
+     "n_916330f61994",
+     "n_00985805cdbb"
+    ]
+   }
+  },
+  {
+   "pr": 196,
+   "broken": [],
+   "explained": true,
+   "top": {
+    "T": [
+     "eval-scripts-no-exposure",
+     "n_dc7429065f5d",
+     "n_9ba48d85ed19",
+     "n_b578addf6269",
+     "n_041a066035b2",
+     "filter-after-fetch-widens-window",
+     "n_b83c550a0ca4",
+     "n_849a5b0425ef",
+     "n_a7634ef53a8f",
+     "n_b40a468119f6"
+    ],
+    "C": [
+     "filter-after-fetch-widens-window",
+     "review-bot-watch-matches-wrong-comment",
+     "readonly-agents-side-effects",
+     "n_b83c550a0ca4",
+     "eval-scripts-no-exposure",
+     "n_dc7429065f5d",
+     "n_5ddb0776a863",
+     "n_a7634ef53a8f",
+     "remote-timeout-not-a-deadline",
+     "n_849a5b0425ef"
+    ],
+    "E": [
+     "n_be9f13d587b1",
+     "filter-after-fetch-widens-window",
+     "n_849a5b0425ef",
+     "n_b83c550a0ca4",
+     "n_428707b5e596",
+     "n_dc7429065f5d",
+     "remote-timeout-not-a-deadline",
+     "readonly-agents-side-effects",
+     "eval-scripts-no-exposure",
+     "n_b578addf6269"
+    ],
+    "P": [
+     "eval-scripts-no-exposure",
+     "n_dc7429065f5d",
+     "n_b578addf6269",
+     "n_473aec369b25",
+     "n_a4b40c96ede4",
+     "n_805cf67e5cc5",
+     "seed:rag-defects:qz_judge_crash",
+     "n_119528a07fa5",
+     "n_9ba48d85ed19",
+     "n_221da2fec863"
+    ]
+   }
+  },
+  {
+   "pr": 300,
+   "broken": [
+    "comparison-table-one-sitting-generated",
+    "harness-reads-a-moving-working-tree"
+   ],
+   "explained": true,
+   "top": {
+    "T": [
+     "n_b83c550a0ca4",
+     "eval-scripts-no-exposure",
+     "fastembed-cache-in-tmpdir",
+     "n_5ddb0776a863",
+     "n_696a70084e1a",
+     "onnx-memory-after-first-inference",
+     "importer-keeps-local-decision",
+     "falsifier-relative-to-control",
+     "fused-window-readmits-weak-matches",
+     "rerank-ships-off"
+    ],
+    "C": [
+     "onnx-memory-after-first-inference",
+     "n_5ddb0776a863",
+     "eval-scripts-no-exposure",
+     "n_b83c550a0ca4",
+     "n_a7634ef53a8f",
+     "fastembed-cache-in-tmpdir",
+     "index-in-context-not-fetched",
+     "n_f17868ded85d",
+     "n_1eaf9a5f24e2",
+     "rerank-ships-off"
+    ],
+    "E": [
+     "onnx-memory-after-first-inference",
+     "fastembed-cache-in-tmpdir",
+     "remote-timeout-not-a-deadline",
+     "n_ce6a27cc432f",
+     "piped-python-output-reorders",
+     "n_f17868ded85d",
+     "n_428707b5e596",
+     "n_fe4ced54e60f",
+     "seed:dotnet-canon:r_aspire_waitfor",
+     "seed:dotnet-canon:r_cache_write_path"
+    ],
+    "P": [
+     "onnx-memory-after-first-inference",
+     "fastembed-cache-in-tmpdir",
+     "n_4a398f2f8095",
+     "optional-feature-shipped-text",
+     "falsifier-relative-to-control",
+     "n_f17868ded85d",
+     "n_7e50e3588bcd",
+     "fused-window-readmits-weak-matches",
+     "eval-scripts-no-exposure",
+     "n_e7988ff536fb"
+    ]
+   }
+  },
+  {
+   "pr": 299,
+   "broken": [
+    "comparison-table-one-sitting-generated",
+    "index-in-context-not-fetched"
+   ],
+   "explained": true,
+   "top": {
+    "T": [
+     "rerank-ships-off",
+     "diagnostic-on-stage-window",
+     "n_5a9589af345f",
+     "falsifier-relative-to-control",
+     "n_0aefd5072428",
+     "seed:dotnet-defects:nc_arch_reviewer",
+     "n_22ad98216e87",
+     "n_37ea04a8a0ac",
+     "n_93f96eae7359",
+     "seed:python-canon:py_comments_why"
+    ],
+    "C": [
+     "rerank-ships-off",
+     "index-in-context-not-fetched",
+     "n_b83c550a0ca4",
+     "fused-window-readmits-weak-matches",
+     "n_a7634ef53a8f",
+     "n_ce6a27cc432f",
+     "n_dc7429065f5d",
+     "falsifier-relative-to-control",
+     "readonly-agents-side-effects",
+     "review-bot-watch-matches-wrong-comment"
+    ],
+    "E": [
+     "seed:python-canon:py_exceptions_canon",
+     "n_e7988ff536fb",
+     "n_ce6a27cc432f",
+     "remote-timeout-not-a-deadline",
+     "n_f6d01e368155",
+     "n_713b8c104f12",
+     "n_ec568941f68a",
+     "typed-closed-request-models",
+     "eval-scripts-no-exposure",
+     "n_9a8b5215da32"
+    ],
+    "P": [
+     "generated-diagram-traced-old-path",
+     "doc-check-defaults",
+     "n_6b65aa35593c",
+     "comparison-table-one-sitting-generated",
+     "n_0637c92c032f",
+     "fused-window-readmits-weak-matches",
+     "index-in-context-not-fetched",
+     "falsifier-relative-to-control",
+     "harness-reads-a-moving-working-tree",
+     "eval-scripts-no-exposure"
+    ]
+   }
+  },
+  {
+   "pr": 305,
+   "broken": [
+    "falsifier-relative-to-control"
+   ],
+   "explained": true,
+   "top": {
+    "T": [
+     "seed:rag-defects:qz_agent_contract",
+     "guarantee-holds-on-every-write-path",
+     "falsifier-relative-to-control",
+     "rerank-ships-off",
+     "index-in-context-not-fetched",
+     "harness-reads-a-moving-working-tree",
+     "n_8519bf0f71c6",
+     "break-test-masked-by-integrity-check",
+     "n_a5520510b99c",
+     "novelty-claims-expire"
+    ],
+    "C": [
+     "index-in-context-not-fetched",
+     "seed:rag-defects:qz_agent_contract",
+     "n_ce6a27cc432f",
+     "n_310e54bb09d5",
+     "refusal-offers-no-destructive-shortcut",
+     "guarantee-holds-on-every-write-path",
+     "generated-diagram-traced-old-path",
+     "n_8b3345b90621",
+     "rerank-ships-off",
+     "harness-reads-a-moving-working-tree"
+    ],
+    "E": [
+     "index-in-context-not-fetched",
+     "n_967ef9825472",
+     "n_7e292a18d45d",
+     "n_e7988ff536fb",
+     "eval-scripts-no-exposure",
+     "harness-reads-a-moving-working-tree",
+     "n_428707b5e596",
+     "n_aa3e45a2ecd6",
+     "refusal-offers-no-destructive-shortcut",
+     "n_be9f13d587b1"
+    ],
+    "P": [
+     "index-in-context-not-fetched",
+     "falsifier-relative-to-control",
+     "comparison-table-one-sitting-generated",
+     "harness-reads-a-moving-working-tree",
+     "n_473aec369b25",
+     "n_b578addf6269",
+     "n_221da2fec863",
+     "n_b6cc6890ba26",
+     "n_e8b039f47ee1",
+     "eval-scripts-no-exposure"
+    ]
+   }
+  },
+  {
+   "pr": 289,
+   "broken": [],
+   "explained": true,
+   "top": {
+    "T": [
+     "n_ea7633cd748c",
+     "n_f6d01e368155",
+     "n_92398fae87c0",
+     "seed:geospatial-enforcement-defects:d_unpinned_linter",
+     "n_bf6a2aee2f12",
+     "seed:python-canon:py_pyproject_versions",
+     "seed:geospatial-enforcement-defects:r_pin_gating_tools",
+     "mcp-registry-publish-limits",
+     "n_a5520510b99c",
+     "seed:dotnet-canon:r_aspire_versions"
+    ],
+    "C": [
+     "n_f6d01e368155",
+     "n_92398fae87c0",
+     "n_02cc84da158d",
+     "seed:python-canon:py_test_every_version",
+     "n_69f673496137",
+     "remote-timeout-not-a-deadline",
+     "n_bf6a2aee2f12",
+     "mcp-registry-pypi-command-name",
+     "n_d8e5ee92ad8f",
+     "unclosed-sqlite-in-test-pr154"
+    ],
+    "E": [
+     "n_92398fae87c0",
+     "mcp-registry-pypi-command-name",
+     "n_f6d01e368155",
+     "doc-install-name",
+     "n_ce6a27cc432f",
+     "n_c95bdc056620",
+     "seed:python-canon:py_pyproject_versions",
+     "seed:python-canon:py_test_every_version",
+     "n_e635fd921086",
+     "doc-init-flags"
+    ],
+    "P": [
+     "comparison-table-one-sitting-generated",
+     "n_1eaf9a5f24e2",
+     "n_b4050b826687",
+     "watch-what-the-rule-depends-on",
+     "n_110bb4fb7112",
+     "n_805cf67e5cc5",
+     "seed:python-canon:py_test_every_version",
+     "fastembed-cache-in-tmpdir",
+     "falsifier-relative-to-control",
+     "n_bf6a2aee2f12"
+    ]
+   }
+  },
+  {
+   "pr": 50,
+   "broken": [
+    "n_e7988ff536fb",
+    "seed:geospatial-enforcement-defects:r_single_source_sets"
+   ],
+   "explained": true,
+   "top": {
+    "T": [
+     "n_8b3345b90621",
+     "n_8519bf0f71c6",
+     "n_58119d0a63d9",
+     "n_5db37b759b1e",
+     "n_5ddb0776a863",
+     "n_428707b5e596",
+     "n_967ef9825472",
+     "n_02cc84da158d",
+     "n_c95bdc056620",
+     "n_e7988ff536fb"
+    ],
+    "C": [
+     "n_8b3345b90621",
+     "n_8519bf0f71c6",
+     "n_d8e5ee92ad8f",
+     "n_58119d0a63d9",
+     "n_428707b5e596",
+     "n_02cc84da158d",
+     "n_5ddb0776a863",
+     "n_e7988ff536fb",
+     "n_5db37b759b1e",
+     "n_b6cc6890ba26"
+    ],
+    "E": [
+     "n_e7988ff536fb",
+     "n_8b3345b90621",
+     "n_5ddb0776a863",
+     "n_58119d0a63d9",
+     "seed:geospatial-enforcement-defects:d_ungated_zone",
+     "n_02cc84da158d",
+     "n_967ef9825472",
+     "n_713b8c104f12",
+     "n_696a70084e1a",
+     "n_5db37b759b1e"
+    ],
+    "P": [
+     "n_967ef9825472",
+     "n_1fe5ef1aaca5",
+     "n_58119d0a63d9",
+     "n_d8e5ee92ad8f",
+     "n_8a6e1abce5cc",
+     "n_e7988ff536fb",
+     "n_8b3345b90621",
+     "n_119528a07fa5",
+     "n_00985805cdbb",
+     "n_428707b5e596"
+    ]
+   }
+  },
+  {
+   "pr": 115,
+   "broken": [
+    "doc-claim-governs-doc-and-code"
+   ],
+   "explained": true,
+   "top": {
+    "T": [
+     "empty-drift-snapshot-fails-ci",
+     "n_805cf67e5cc5",
+     "n_5ddb0776a863",
+     "doc-claim-governs-doc-and-code",
+     "n_b0457b37c65a",
+     "n_b4050b826687",
+     "n_31bde92d9003",
+     "n_58119d0a63d9",
+     "n_e7988ff536fb",
+     "n_696a70084e1a"
+    ],
+    "C": [
+     "n_a7634ef53a8f",
+     "n_5ddb0776a863",
+     "n_31bde92d9003",
+     "empty-drift-snapshot-fails-ci",
+     "n_69f673496137",
+     "n_e7988ff536fb",
+     "n_e49be14d6207",
+     "n_696a70084e1a",
+     "n_713b8c104f12",
+     "n_5db37b759b1e"
+    ],
+    "E": [
+     "n_aa3e45a2ecd6",
+     "n_8a6e1abce5cc",
+     "seed:geospatial-enforcement-defects:d_ungated_zone",
+     "n_69f673496137",
+     "n_adea7f2c7373",
+     "n_e7988ff536fb",
+     "n_221da2fec863",
+     "mcp-registry-pypi-command-name",
+     "n_8b3345b90621",
+     "n_fe4ced54e60f"
+    ],
+    "P": [
+     "n_31bde92d9003",
+     "n_e7988ff536fb",
+     "n_adea7f2c7373",
+     "doc-claim-governs-doc-and-code",
+     "n_805cf67e5cc5",
+     "n_696a70084e1a",
+     "n_119528a07fa5",
+     "n_221da2fec863",
+     "n_e49be14d6207",
+     "n_09ba6adf0fdc"
+    ]
+   }
+  },
+  {
+   "pr": 261,
+   "broken": [],
+   "explained": true,
+   "top": {
+    "T": [
+     "n_ce6a27cc432f",
+     "n_696a70084e1a",
+     "importer-keeps-local-decision",
+     "guarantee-holds-on-every-write-path",
+     "n_02cc84da158d",
+     "docs-agent-neutral",
+     "n_967ef9825472",
+     "n_b40a468119f6",
+     "drift-verdict-paths-agree",
+     "n_b83c550a0ca4"
+    ],
+    "C": [
+     "n_a7634ef53a8f",
+     "n_5ddb0776a863",
+     "n_849a5b0425ef",
+     "n_ce6a27cc432f",
+     "n_07faa4565128",
+     "n_b83c550a0ca4",
+     "guarantee-holds-on-every-write-path",
+     "idea-to-issue-through-review",
+     "watch-what-the-rule-depends-on",
+     "n_041a066035b2"
+    ],
+    "E": [
+     "n_a7634ef53a8f",
+     "n_713b8c104f12",
+     "n_967ef9825472",
+     "idea-to-issue-through-review",
+     "n_93f96eae7359",
+     "n_aa3e45a2ecd6",
+     "seed:geospatial-enforcement-defects:d_ungated_zone",
+     "n_ed7e782d12fd",
+     "n_ce6a27cc432f",
+     "n_e7988ff536fb"
+    ],
+    "P": [
+     "n_31bde92d9003",
+     "n_6b65aa35593c",
+     "generated-diagram-traced-old-path",
+     "n_b550ba9c5c8a",
+     "n_9ba48d85ed19",
+     "guarantee-holds-on-every-write-path",
+     "pooled-receipts-miss-report-corrections",
+     "n_805cf67e5cc5",
+     "n_0637c92c032f"
+    ]
+   }
+  },
+  {
+   "pr": 290,
+   "broken": [
+    "seed:python-canon:py_dont_mock_what_you_dont_own"
+   ],
+   "explained": true,
+   "top": {
+    "T": [
+     "fastembed-cache-in-tmpdir",
+     "seed:frontend-canon:rxc_bundle_budget",
+     "watch-what-the-rule-depends-on",
+     "seed:dotnet-decisions:pd_hybridcache_over_handrolled",
+     "seed:dotnet-canon:r_202_long_running",
+     "n_a5520510b99c",
+     "seed:frontend-canon:rxc_no_waterfalls",
+     "n_9ba48d85ed19",
+     "seed:dotnet-canon:r_connection_hold",
+     "seed:dotnet-decisions:pd_testcontainers_real_providers"
+    ],
+    "C": [
+     "remote-timeout-not-a-deadline",
+     "fastembed-cache-in-tmpdir",
+     "n_02cc84da158d",
+     "seed:python-canon:py_unclosed_sqlite",
+     "n_696a70084e1a",
+     "seed:dotnet-canon:r_connection_hold",
+     "n_e49be14d6207",
+     "n_7e292a18d45d",
+     "watch-what-the-rule-depends-on",
+     "n_ec568941f68a"
+    ],
+    "E": [
+     "seed:python-canon:py_composition_root",
+     "seed:python-canon:py_layers_contract",
+     "n_71c09abf3f37",
+     "n_7e292a18d45d",
+     "n_991d07b0549e",
+     "fastembed-cache-in-tmpdir",
+     "n_4a398f2f8095",
+     "n_f6d01e368155",
+     "n_e8b039f47ee1",
+     "seed:python-canon:py_unclosed_sqlite"
+    ],
+    "P": [
+     "n_00985805cdbb",
+     "n_4a398f2f8095",
+     "n_805cf67e5cc5",
+     "n_b4050b826687",
+     "n_696a70084e1a",
+     "seed:python-canon:py_dont_mock_what_you_dont_own",
+     "n_7e50e3588bcd",
+     "n_119528a07fa5",
+     "watch-what-the-rule-depends-on",
+     "n_1eaf9a5f24e2"
+    ]
+   }
+  },
+  {
+   "pr": 64,
+   "broken": [],
+   "explained": true,
+   "top": {
+    "T": [
+     "n_8b3345b90621",
+     "n_8519bf0f71c6",
+     "n_d8166465591e",
+     "n_e8b039f47ee1",
+     "n_5ddb0776a863",
+     "n_8a6e1abce5cc",
+     "n_e7988ff536fb",
+     "seed:dotnet-review-surfaces:rs_transport_removal_orphans",
+     "n_0aefd5072428",
+     "n_58119d0a63d9"
+    ],
+    "C": [
+     "n_8b3345b90621",
+     "n_02cc84da158d",
+     "n_5ddb0776a863",
+     "n_d8166465591e",
+     "n_e7988ff536fb",
+     "n_ec568941f68a",
+     "n_5db37b759b1e",
+     "n_d8e5ee92ad8f",
+     "n_e49be14d6207",
+     "n_428707b5e596"
+    ],
+    "E": [
+     "n_8b3345b90621",
+     "n_ec568941f68a",
+     "n_02cc84da158d",
+     "n_e7988ff536fb",
+     "n_8519bf0f71c6",
+     "n_d8166465591e",
+     "n_e8b039f47ee1",
+     "n_d8e5ee92ad8f",
+     "n_5db37b759b1e",
+     "n_713b8c104f12"
+    ],
+    "P": [
+     "n_1fe5ef1aaca5",
+     "n_b4050b826687",
+     "n_d8e5ee92ad8f",
+     "n_428707b5e596",
+     "n_e8b039f47ee1",
+     "n_696a70084e1a",
+     "n_00985805cdbb",
+     "n_31bde92d9003",
+     "n_8b3345b90621",
+     "n_e7988ff536fb"
+    ]
+   }
+  },
+  {
+   "pr": 163,
+   "broken": [
+    "remote-timeout-not-a-deadline",
+    "seed:dotnet-canon:r_no_nplus1",
+    "seed:geospatial-enforcement-defects:r_single_source_sets"
+   ],
+   "explained": true,
+   "top": {
+    "T": [
+     "refusal-offers-no-destructive-shortcut",
+     "n_90066f354f1e",
+     "n_ce6a27cc432f",
+     "empty-drift-snapshot-fails-ci",
+     "n_8b3345b90621",
+     "n_8519bf0f71c6",
+     "optional-feature-shipped-text",
+     "typed-closed-request-models",
+     "n_5ddb0776a863",
+     "n_e7988ff536fb"
+    ],
+    "C": [
+     "n_ce6a27cc432f",
+     "refusal-offers-no-destructive-shortcut",
+     "n_967ef9825472",
+     "n_696a70084e1a",
+     "n_713b8c104f12",
+     "seed:dotnet-canon:r_grep_to_zero",
+     "n_90066f354f1e",
+     "break-test-masked-by-integrity-check",
+     "n_c95bdc056620",
+     "n_e7988ff536fb"
+    ],
+    "E": [
+     "n_e7988ff536fb",
+     "n_ce6a27cc432f",
+     "remote-timeout-not-a-deadline",
+     "seed:python-canon:py_exceptions_canon",
+     "empty-drift-snapshot-fails-ci",
+     "n_f6d01e368155",
+     "n_02cc84da158d",
+     "n_713b8c104f12",
+     "n_5ddb0776a863",
+     "n_9a8b5215da32"
+    ],
+    "P": [
+     "drift-verdict-paths-agree",
+     "n_e7988ff536fb",
+     "n_1fe5ef1aaca5",
+     "remote-path-test-through-client",
+     "typed-closed-request-models",
+     "n_5a9589af345f",
+     "n_71c09abf3f37",
+     "refusal-offers-no-destructive-shortcut",
+     "hook-cli-version-skew",
+     "n_b74bad29fd87"
+    ]
+   }
+  }
+ ]
+}
