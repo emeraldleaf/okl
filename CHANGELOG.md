@@ -17,6 +17,10 @@
     start-and-end check to every script, and a test fails a new receipt writer that skips it.
   - **The agent-neutral docs check** now reads a mention or a label wrapped across lines, and
     found two unlabelled ones in the decision records.
+  - **One definition of a fact:** `tests/test_single_source.py` treats every string collection
+    defined at module level in `src/okl` as canonical and fails when its values are written out
+    anywhere else. Four copies inside the package now import the definition; the ones left are
+    listed with why, and the list only shrinks.
 
 - **The review after writing: `okl check --change`** (REPORT §4at; opt-in). A briefing is
   chosen from the task's words before any code exists, and the lessons a change goes on to

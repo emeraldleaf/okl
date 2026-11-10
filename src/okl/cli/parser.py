@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import argparse
 
-from .. import __version__, core, semantic
+from .. import __version__, core, decide, semantic
 from .changes import cmd_changes
 from .embed import cmd_embed
 from .health import cmd_coverage, cmd_doctor, cmd_metric
@@ -152,7 +152,7 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                          "the gates (REPORT §4t); 'off' for the first-stage order. Omit it to follow the "
                          "config's `rerank` or OKL_RERANK. Needs the rerank extra and `okl embed` once "
                          "online; otherwise the first-stage order stands and the JSON says why.")
-    pk.add_argument("--decision", choices=["floor", "calibrated", "tiered"], default=None,
+    pk.add_argument("--decision", choices=list(decide.SETTINGS), default=None,
                     help="how candidates become a briefing: 'calibrated' briefs those whose title, "
                          "symptom, aliases and triggers hold enough of the task's subject to clear a "
                          "line set on real subjectless prompts, at most five; 'floor' keeps those "

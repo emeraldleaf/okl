@@ -25,7 +25,7 @@ MEASURED_LINE = (f"Measured with the default judge (REPORT §4ai): it caught {re
                  f"{review.MEASURED['planted'][1]} planted wrong details and questioned "
                  f"{review.MEASURED['over_called'][0]} of {review.MEASURED['over_called'][1]} lessons known to be "
                  "current, so confirm each verdict before you act on it.")
-_ORDER = {v: i for i, v in enumerate(("stale", "outlived", "detail wrong"))}
+_ORDER = {v: i for i, v in enumerate(reversed(review.QUESTIONED))}   # most urgent first
 
 
 def _targets(args: argparse.Namespace) -> list[Node] | int:
