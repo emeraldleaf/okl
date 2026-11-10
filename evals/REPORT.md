@@ -5747,6 +5747,19 @@ calls at least 8 of the 12 broken, those were not false alarms and the key under
 between is mixed, said as such. The control should come out broken; if fewer than 3 of the 4
 do, the third model's verdicts are read as noise.
 
+*Follow-up result (2026-11-10): the control fails, so the third model settles nothing.* All 24
+answered (prompt `7b2f46b1d66ab41b`; receipt `default-read-settle-20261110-1511.json`; 8 of the
+first 24 calls, and 1 of their 8 retries, gave no readable verdict; each was run again, as the
+script's resume does). Of the
+4 lessons the reviewer and the key both called broken, Fable called 2 broken, 1 followed and 1 not
+applicable: under the 3 the reading required. For the record, of the 8 the reviewer cleared it
+called 4 broken and 4 followed, and of the 12 the reviewer alone called broken it called 2
+broken, 8 followed and 2 not applicable. Three models, asked whether a change breaks a lesson,
+agree on these lessons about as often as not. That is the finding: on okl's own lessons, a
+model's key cannot say how good the review is, because the models do not agree on the answer.
+A key that does not rest on a model's judgement is needed: the outcome replay, graded by the
+tests a real fix added (#390 item 5), or people (#394, #413). $18.18 API-priced.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

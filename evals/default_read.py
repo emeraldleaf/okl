@@ -296,6 +296,8 @@ def settle_one(case: dict, task: dict) -> dict | None:
     try:
         reply = json.loads(p.stdout)
     except ValueError:
+        print(f"  #{case['pr']} {case['lesson']}: unreadable reply, exit {p.returncode}: {(p.stderr or p.stdout)[-200:]!r}",
+              file=sys.stderr, flush=True)
         return None
     text, got = reply.get("result") or "", None
     decoder = json.JSONDecoder()
@@ -308,6 +310,8 @@ def settle_one(case: dict, task: dict) -> dict | None:
             if isinstance(obj, dict) and "verdict" in obj:
                 got = obj
     if got is None:
+        print(f"  #{case['pr']} {case['lesson']}: no verdict in the reply ({reply.get('subtype')}, "
+              f"error {reply.get('is_error')}): {text[-200:]!r}", file=sys.stderr, flush=True)
         return None
     return {**case, "prompt": SETTLE_SHA, "verdict": got.get("verdict"), "reason": got.get("reason"),
             "evidence": got.get("evidence"), "model": list(reply.get("modelUsage") or {}),
