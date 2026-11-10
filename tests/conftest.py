@@ -20,7 +20,7 @@ STORE_VARS = ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN", "OKL_ALLOW_NO_
 # OKL_BRIEFING_LOG too: the evals export it as 0, and a suite run in that shell failed every test
 # that asserts an agent's briefing is logged.
 BRIEFING_VARS = ("OKL_DECISION", "OKL_HYBRID", "OKL_RERANK", "OKL_WARM", "OKL_QUIET",
-                 "OKL_BRIEFING_LIMIT", "OKL_BRIEFING_COMPACT", "OKL_BRIEFING_LOG")
+                 "OKL_BRIEFING_LIMIT", "OKL_BRIEFING_COMPACT", "OKL_BRIEFING_LOG", "OKL_STANDING")
 # The variables that locate a git repository, as git names them. Run from inside a git hook
 # they are set, and a test that makes a repository under tmp_path would commit to and read the
 # caller's instead (review on #305).

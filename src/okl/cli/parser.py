@@ -25,6 +25,7 @@ from .lessons import (
 from .packs import cmd_seed
 from .review import cmd_review
 from .servers import cmd_mcp, cmd_serve
+from .standing import cmd_standing
 from .verification import cmd_drift, cmd_export, cmd_reverify, cmd_verify
 from .warm import cmd_warm
 
@@ -302,6 +303,13 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
     pin_pr.add_argument("--repo", default=None, help="OWNER/NAME (default: the repo gh sees here)")
     pin_pr.add_argument("--format", choices=["text", "json"], default="text")
     pin_pr.set_defaults(func=cmd_intake)
+
+    pst = sub.add_parser(
+        "standing", help="the lessons this repo names on every task briefing, one line each (REPORT §4am): "
+                         "list them, or add or remove some by id")
+    pst.add_argument("action", nargs="?", choices=["list", "add", "remove"], default="list")
+    pst.add_argument("ids", nargs="*", metavar="id", help="lesson ids, as the briefing shows them in [brackets]")
+    pst.set_defaults(func=cmd_standing)
 
     pch = sub.add_parser(
         "changes", help="what a change did to the files lessons name: new, deleted and renamed files and "

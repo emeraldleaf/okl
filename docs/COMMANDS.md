@@ -22,6 +22,12 @@ okl intake pr <n>    # a PR's resolved review threads, each with the commit that
                      #   unresolved threads are left out. Reads through gh (--repo OWNER/NAME; default:
                      #   the repo gh sees here); --format json for an agent; writes nothing, not
                      #   even the briefing log `okl metric` reads; exit 2 when gh cannot read the PR.
+okl standing         # the lessons this repo names on every task briefing, one line each, because
+                     #   changes here keep needing them; `okl standing add <id>...` and `remove
+                     #   <id>...` keep the list in .okl/config.json, at most 10 (REPORT §4am measured
+                     #   ten: the ones most needed on earlier work, named on every task, raised the
+                     #   briefing's reach on later work). A lesson the briefing already names is not
+                     #   repeated, a file briefing gets none, and OKL_STANDING=0 leaves them out.
 okl changes          # what a change did to the files lessons name, read from git with no model:
                      #   new, deleted and renamed files, and code moved between files (5 or more
                      #   lines removed from one file and added to another, which git's rename

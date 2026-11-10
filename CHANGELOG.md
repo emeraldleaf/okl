@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **Standing lessons: the ones a repo names on every task briefing** (REPORT §4am). A few
+  lessons are needed on change after change, and found by a task's words each competes with
+  every other lesson and is often left out. A repo can now list up to ten in
+  `.okl/config.json` with `okl standing add <id>...`, and every task briefing names them, one
+  line each, under their own heading, after whatever the task matched. Measured: the ten most
+  needed on earlier work, named on every task, raised the briefing's reach on later work
+  (model-judged; the figures stay in §4am until the audit, #394). A lesson the briefing already
+  names is not repeated, a retired one or another repo's is skipped, file briefings get none,
+  and `OKL_STANDING=0` leaves them out, as a measurement of the briefing without them should.
+  Off until a repo lists some.
 - **`okl changes`: what a change did to the files lessons name** (#398). A lesson governs files
   through its `files` field, and a change that renames or deletes one, or moves code out of it,
   can leave the lesson pointing at nothing or at the wrong place; drift does not follow renames.
