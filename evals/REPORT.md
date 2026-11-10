@@ -2912,6 +2912,19 @@ series (no briefing against the live briefing), so `tests/test_docs.py` pools on
 arms are those two. This one moves none of the published figures, and neither does §4r's
 (`ab-20261023-1303.json`, the indexed arm), which the same rule now leaves out.
 
+*Dated note (2026-11-10): `ci_linter`'s gap is back, from the store's growth alone.* Re-verifying
+the pre-flight's rules after #415 touched `evals/ab_harness.py` found `ci_linter`'s rule
+(`seed:geospatial-enforcement-defects:r_pin_gating_tools`) missing from its briefing. The code
+of 2026-10-31, when the pre-flight last passed, misses it too on today's store, so nothing in the
+retrieval changed: with a limit of 40 the rule ranks 18th, the briefing has 17 places (5 in full,
+12 named), and the one lesson ahead of it recorded since is `ci-rerun-reuses-event-payload`, about
+CI as well (receipt `preflight-rank-ci_linter-20261110-1545.json`, from
+`evals/preflight_rank.py`, which ran the 2026-10-31 code on a copy of the store). It is back in
+`ACCEPTED_GAPS`; as before, its sibling `d_unpinned_linter` is shown in
+full with the same fix, so an A/B's `ci_linter` reads as the briefing with the sibling and
+without the rule. The A/B series runs against the live store, so any lesson recorded later can
+move an authored task's briefing this way; a store frozen with the series would not (#416).
+
 ## 4ab. PRE-REGISTERED: does a line that says when, or a tool that says to call it, get a lesson opened? (2026-10-29)
 
 Written before any model call of this run. Issue #304.

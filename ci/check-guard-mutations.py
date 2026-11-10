@@ -25,6 +25,10 @@ import subprocess
 import sys
 from pathlib import Path
 
+if __name__ == "__main__":   # a crash is "did not run": exit 2, never 1 (ci/_ran.py)
+    import _ran
+    _ran.install()
+
 REPO = Path(__file__).resolve().parent.parent
 # file -> {guard function: the value its call is replaced with, which lets the write through}
 GUARD_CALLS = {"src/okl/cli/install.py": {"_refuse_symlink": "False", "_symlinked": "None"}}
@@ -157,8 +161,10 @@ def main() -> int:
     files = sorted({*GUARD_CALLS, *(m[0] for m in MUTATIONS)})
     dirty = subprocess.run(["git", "-C", str(REPO), "status", "--porcelain", "--", *files],
                            capture_output=True, text=True, check=True).stdout.strip()
-    if dirty:
-        sys.exit(f"GUARD MUTATIONS NOT RUN: commit or stash these first, they are edited in place:\n{dirty}")
+    if dirty:   # not run is exit 2, never the 1 that means a guard was missed (lesson n_e7988ff536fb)
+        print(f"GUARD MUTATIONS NOT RUN: commit or stash these first, they are edited in place:\n{dirty}",  # noqa: T201
+              file=sys.stderr)
+        return 2
     missed, total = [], 0
     for path, guards in GUARD_CALLS.items():
         source = (REPO / path).read_text()

@@ -33,6 +33,21 @@ CONFIG_FILE = "config.json"
 _HTTP_TIMEOUT_S = 5
 
 
+def store_url(start: Path | None = None) -> str | None:
+    """Where the local store is: the one place okl resolves it (lesson n_02cc84da158d).
+
+    OKL_DATABASE_URL when it is set and not empty, else the SQLite file beside the nearest
+    .okl/config.json at or above `start`, else None: nothing names a store. Every reader goes
+    through here; a second reader of the variable diverged on #37, #309 and #380 (an empty
+    value counted as set in one place and unset in another), and tests/test_store_resolution.py
+    fails on a new one."""
+    url = os.environ.get("OKL_DATABASE_URL")
+    if url:
+        return url
+    cfg = _find_config(start)
+    return f"sqlite:///{cfg.parent / 'okl.db'}" if cfg else None
+
+
 def _find_config(start: Path | None = None) -> Path | None:
     """Walk up from `start` looking for .okl/config.json.
 
@@ -224,9 +239,7 @@ class Client:
         What it still protects is the bare directory where nothing has been named at all,
         where `_local_store` refuses rather than invent a database.
         """
-        return (bool(self.service_url)
-                or bool(os.environ.get("OKL_DATABASE_URL"))
-                or _find_config() is not None)
+        return bool(self.service_url) or store_url() is not None
 
     def _local_store(self) -> Store:
         if self._store is None:
@@ -236,19 +249,16 @@ class Client:
             # variable at Postgres and running `okl record` wrote to a local file instead,
             # silently, which is the worst shape a storage bug can take: you are told the
             # record landed, and it landed somewhere else.
-            url = os.environ.get("OKL_DATABASE_URL")
-            if not url:
-                # Otherwise the local store lives next to the config. With no config there
-                # is no store, and this used to invent one as ./okl.db: `okl record` and
-                # `okl seed` then exited 0 having written lessons where no hook, check or
-                # CI job ever looks (#117). Refusing here covers every command at once.
-                cfg = _find_config()
-                if cfg is None:
-                    raise OKLNotConfiguredError(
-                        "not configured: no .okl/config.json here or in any parent directory, "
-                        "and neither OKL_SERVICE_URL nor OKL_DATABASE_URL is set, so there is "
-                        "no store to use. Run `okl init` here, or `okl connect <url>`.")
-                url = f"sqlite:///{cfg.parent / 'okl.db'}"
+            # Otherwise the local store lives next to the config (store_url). With no config
+            # there is no store, and this used to invent one as ./okl.db: `okl record` and
+            # `okl seed` then exited 0 having written lessons where no hook, check or CI job
+            # ever looks (#117). Refusing here covers every command at once.
+            url = store_url()
+            if url is None:
+                raise OKLNotConfiguredError(
+                    "not configured: no .okl/config.json here or in any parent directory, "
+                    "and neither OKL_SERVICE_URL nor OKL_DATABASE_URL is set, so there is "
+                    "no store to use. Run `okl init` here, or `okl connect <url>`.")
             self._store = Store(url)
         return self._store
 

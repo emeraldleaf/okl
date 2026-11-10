@@ -16,6 +16,10 @@ import subprocess
 import sys
 from pathlib import Path
 
+if __name__ == "__main__":   # a crash is "did not run": exit 2, never 1 (ci/_ran.py)
+    import _ran
+    _ran.install()
+
 REPO = Path(__file__).resolve().parent.parent
 ONLY = re.compile(r"(?<![\w/.-])/(record|triggers|seed-from-codebase|seed-from-docs)\b"
                   r"|\b(stop|prompt|pre-task|briefing|session-end)[- ]hooks?\b|\bUserPromptSubmit\b"
@@ -44,11 +48,15 @@ def unlabelled(text: str) -> list[str]:
             lead = items[0] if len(items) > 1 and items[0].rstrip().endswith(":") else ""
             units = [(item, lead) for item in items]
         for unit, header in units:
+            # Whitespace joined first: a surface or a label wrapped across lines ("The Stop\nhook",
+            # "in Claude\nCode") read as two words, so a wrapped mention passed and a wrapped label
+            # failed (lesson docs-agent-neutral, broken this way on #326 and during #412).
+            unit, header = " ".join(unit.split()), " ".join(header.split())
             for m in ONLY.finditer(unit):
                 if OTHERS.search(unit[:m.start()]):
                     continue
-                if not any(LABEL.search(t) for t in (unit, header, under)):
-                    found.append(f"{m.group(0)!r} unlabelled in {' '.join(unit.split())[:90]!r}")
+                if not any(LABEL.search(t) for t in (unit, header, " ".join(under.split()))):
+                    found.append(f"{m.group(0)!r} unlabelled in {unit[:90]!r}")
                 break
     return found
 

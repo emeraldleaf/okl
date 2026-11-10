@@ -20,6 +20,10 @@ import subprocess
 import sys
 from pathlib import Path
 
+if __name__ == "__main__":   # a crash is "did not run": exit 2, never 1 (ci/_ran.py)
+    import _ran
+    _ran.install()
+
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "src"))
 
@@ -118,6 +122,9 @@ def problems(files: dict[str, str]) -> tuple[list[str], int]:
 
 if __name__ == "__main__":
     found, checked = problems(docs())
-    if found or not checked:
-        sys.exit("DOC COMMANDS THE CLI DOES NOT HAVE:\n  " + "\n  ".join(found or ["(no command found)"]))
+    if not checked:   # found no command to check: did not run, never a finding (lesson n_5ddb0776a863)
+        print("DOC COMMANDS NOT CHECKED: no okl command found in the docs", file=sys.stderr)  # noqa: T201
+        sys.exit(2)
+    if found:
+        sys.exit("DOC COMMANDS THE CLI DOES NOT HAVE:\n  " + "\n  ".join(found))
     print("DOC COMMANDS EXIST", checked, "commands")  # noqa: T201 - a check script reports on stdout

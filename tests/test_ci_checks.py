@@ -69,6 +69,9 @@ def test_the_positioning_check_lets_the_stance_and_okls_own_comparisons_through(
     "okl's hooks brief the agent before every prompt.",
     "Your agent's prompt hook runs okl check.",
     "| Task | What happens |\n|---|---|\n| Recording | the Stop hook asks once |",
+    # #326's two, wrapped across lines, which the check read as two words and passed
+    "The briefing runs inside a prompt\n  hook on other people's machines.",
+    "(The Stop\nhook and this repo's CLAUDE.md say `org` spreads.)",
 ])
 def test_the_label_check_catches_each_unlabelled_mention_it_has_met(text):
     """A Claude Code-only surface named with no label nearby fails the check."""
@@ -83,6 +86,8 @@ def test_the_label_check_catches_each_unlabelled_mention_it_has_met(text):
     "`okl init --git-hook` installs a pre-push hook script that runs `okl drift --gate`.",
     "claude-mem's Stop hook records the session too, so their Stop hooks run twice.",
     "It removes the two hook scripts and their entries in `.claude/settings.json`.",
+    # a label wrapped across lines still labels (the GETTING-STARTED paragraph during #412)
+    "After `okl init --review-after-writing`, in Claude\nCode the Stop hook first asks the agent.",
 ])
 def test_the_label_check_lets_labelled_and_other_tools_mentions_through(text):
     """A label in the unit, its table header, its heading or its lead-in clears it; so does another tool's hook."""

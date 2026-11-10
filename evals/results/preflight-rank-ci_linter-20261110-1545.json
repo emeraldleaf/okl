@@ -1,0 +1,27 @@
+{
+ "section": "4aa dated note",
+ "at": "2026-11-10T15:45Z",
+ "since": "2026-10-31T02:00Z",
+ "now": {
+  "task": "ci_linter",
+  "rule": "seed:geospatial-enforcement-defects:r_pin_gating_tools",
+  "places_by_default": 17,
+  "shown_in_full_by_default": 5,
+  "in_default_briefing": false,
+  "position_at_wide_limit": 18,
+  "wide_limit": 40,
+  "store_records": 382,
+  "ahead_recorded_since": [
+   "ci-rerun-reuses-event-payload"
+  ]
+ },
+ "older_code": {
+  "commit": "f585f1c",
+  "exit": 1,
+  "missing_lines": [
+   "[MISSING] ci_linter         tags=method                       trimmed=19"
+  ]
+ },
+ "okl_commit_at_start": "e02c0a2",
+ "okl_commit": "e02c0a2"
+}

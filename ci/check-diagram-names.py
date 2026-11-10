@@ -46,6 +46,10 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+if __name__ == "__main__":   # a crash is "did not run": exit 2, never 1 (ci/_ran.py)
+    import _ran
+    _ran.install()
+
 ROOT = Path(__file__).resolve().parents[1]
 
 # Words that follow "okl " in prose ("okl runs it") rather than naming a command. Adding one
