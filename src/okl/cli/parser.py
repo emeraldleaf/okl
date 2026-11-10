@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 
 from .. import __version__, core, semantic
+from .changes import cmd_changes
 from .embed import cmd_embed
 from .health import cmd_coverage, cmd_doctor, cmd_metric
 from .install import cmd_connect, cmd_init, cmd_scaffold
@@ -301,6 +302,17 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
     pin_pr.add_argument("--repo", default=None, help="OWNER/NAME (default: the repo gh sees here)")
     pin_pr.add_argument("--format", choices=["text", "json"], default="text")
     pin_pr.set_defaults(func=cmd_intake)
+
+    pch = sub.add_parser(
+        "changes", help="what a change did to the files lessons name: new, deleted and renamed files and "
+                        "moved code, with proposed lesson updates (no model; writes nothing)")
+    pch.add_argument("--base", help="compare from the merge base with this ref (default: the remote's "
+                                    "default branch, then main, then master)")
+    pch.add_argument("--head", default="HEAD", help="the change's last commit (default HEAD)")
+    pch.add_argument("--repo", help="the repo's name in the store (default: from .okl/config.json)")
+    pch.add_argument("--repo-dir", dest="repo_dir", default=".")
+    pch.add_argument("--format", choices=["text", "json"], default="text")
+    pch.set_defaults(func=cmd_changes)
 
     prw = sub.add_parser(
         "review", help="a model reads each lesson nothing re-checks against the repo and reports the "

@@ -22,6 +22,15 @@ okl intake pr <n>    # a PR's resolved review threads, each with the commit that
                      #   unresolved threads are left out. Reads through gh (--repo OWNER/NAME; default:
                      #   the repo gh sees here); --format json for an agent; writes nothing, not
                      #   even the briefing log `okl metric` reads; exit 2 when gh cannot read the PR.
+okl changes          # what a change did to the files lessons name, read from git with no model:
+                     #   new, deleted and renamed files, and code moved between files (5 or more
+                     #   lines removed from one file and added to another, which git's rename
+                     #   detection misses); the lessons governing each new file; where the tree
+                     #   still names a removed path; and, for each of this repo's lessons left
+                     #   pointing at the wrong place, a proposed `okl update --files` (a deleted
+                     #   file's lesson is yours to re-point, drop or retire). Compares the merge base
+                     #   with --base (default: the remote's default branch) to --head (default HEAD);
+                     #   --format json for an agent; writes nothing; exit 2 when git cannot read it.
 okl review           # opt-in: a model reads each lesson that governs no files and that no check
                      #   backs (the ones the briefing marks UNCHECKED) against the repo at HEAD,
                      #   in a scratch worktree, and reports each it questions (detail wrong,

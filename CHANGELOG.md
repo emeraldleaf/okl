@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **`okl changes`: what a change did to the files lessons name** (#398). A lesson governs files
+  through its `files` field, and a change that renames or deletes one, or moves code out of it,
+  can leave the lesson pointing at nothing or at the wrong place; drift does not follow renames.
+  `okl changes` reads the change with git alone, no model: new, deleted and renamed files, and
+  code moved between files, which git's rename detection misses (in #316, 38 lines of path
+  matching moved from `drift.py` to `store.py` and git reported no rename). It names the lessons
+  governing each new file and where the tree still names a removed path, and for each of this
+  repo's lessons the change leaves behind it proposes the `okl update --files` that would follow
+  it. It writes nothing: a moved block is not always what a lesson is about, so each proposal is
+  the reader's to confirm.
 - **Records under a renamed pack's old name count as that pack's everywhere** (#379). `okl
   review` judges a store's own lessons and leaves the bundled packs' out, but it compared the
   old name as written, so a store seeded before the rename had that pack's lessons reviewed as
