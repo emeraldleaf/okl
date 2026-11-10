@@ -5590,6 +5590,13 @@ does the briefing change what the agent writes? That is EVALUATION.md's outcome 
 their base commit, okl on and off, graded by the test the real fix added), under its own
 pre-registration. Until it runs, no claim that briefing keeps an agent in line on real work rests on
 anything but authored tasks.
+**Corrected (2026-11-10).** The script first read only §4ap's key for §4al's tasks, which sorted half of
+them, though the method above says §4ao's sort; §4ao's sort holds the other half. Re-run with both
+(receipt `briefed-follow-20261110-0426.json`): 58 tasks and 317 pairs. Shown, 63.3% were followed (of
+79), against 72.3% not shown (of 238): -9.0 points [-22.0, 4.2]; from 6 hours before, -4.8 [-16.7,
+6.8]. Within lessons, 9 were followed more often when shown, 14 less often and 16 the same. The
+reading stands, and its intervals now exclude more.
+
 ## 4at. PRE-REGISTERED: once the change is written, does an explanation of what its code does find the lessons it broke? (2026-11-10)
 
 Written before any explanation exists. §4ak found the lessons real work missed were relevant by what
@@ -5636,6 +5643,13 @@ at least 50%; T's is under 25%.
 
 **Budget.** About 50 Sonnet calls a pass on the development half, at most four passes, and 50 on the
 test half: at most 250. The search runs locally. Nothing is posted anywhere.
+
+**Amended before any explanation exists (2026-11-10).** The counts above read only §4ap's key for §4al's
+tasks, which sorted 25 of them; §4ao's sort holds the other 25, and both are used. §4ao's sort used
+*check* for what the diff alone could not show, a looser sense than §4aq's, so a lesson counts as
+broken only when sorted not followed: 70 on 34 development tasks and 54 on 24 test tasks. The queries,
+K, the measures and the decision rule are unchanged. While this was checked, T and C were run on the
+development half (T reached 14.3% at K = 5); nothing has run on the test half.
 
 
 ## 5. Findings

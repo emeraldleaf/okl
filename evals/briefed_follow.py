@@ -6,8 +6,9 @@ exposure log (which lessons each briefing showed, and when) with the answer keys
 §4aq (which lessons each real pull request needed, and whether the change followed each).
 
 The method, fixed before the data was read (2026-11-10):
-- Tasks: §4al's 50 (labels in evals/realwork/labels.jsonl, states from §4ao's sort) and §4aq's
-  50 (labels and states in the private 4aq files). A pair counts when its label is needed and
+- Tasks: §4al's 50 (states from §4ap's key for half of them and §4ao's sort for the other half;
+  each key holds only the pairs it judged needed) and §4aq's 50 (labels and states in the private
+  4aq files). Corrected 2026-11-10: the first run read only §4ap's key, so half of §4al's tasks. A pair counts when its label is needed and
   its state is followed or not followed; check and unclear are left out.
 - Window: from WINDOW_HOURS before the earliest commit in base..commit to that commit's time.
   The sensitivity run widens the start to SENSITIVITY_HOURS.
@@ -73,16 +74,12 @@ def briefings() -> list[tuple[int, set[str]]]:
 def pairs() -> list[dict]:
     """Every needed pair whose change followed or did not follow its lesson, with its task."""
     out = []
-    al_labels = {}
-    for line in (REPO / "evals" / "realwork" / "labels.jsonl").read_text().splitlines():
-        r = json.loads(line)
-        if r.get("verdict"):
-            al_labels[(r["pr"], r["lesson"])] = r["verdict"]
-    al_states = rsd.load(ra.KEY)
+    # Two keys sorted §4al's tasks: §4ap's (action-key) half and §4ao's sort the other half.
+    al_states = {**rsd.load(rsd.ANSWERS), **rsd.load(ra.KEY)}
     for t in map(json.loads, (REPO / "evals" / "realwork" / "tasks.jsonl").read_text().splitlines()):
         for i in t["lessons"]:
-            state = al_states.get((t["pr"], i), {}).get("state")
-            if al_labels.get((t["pr"], i)) == "needed" and state in ("followed", "not_followed"):
+            state = al_states.get((t["pr"], i), {}).get("state")   # a key holds only pairs it judged needed
+            if state in ("followed", "not_followed"):
                 out.append({"set": "4al", "task": t, "lesson": i, "followed": state == "followed"})
     aq_labels, aq_states = rp.keyed(rp.LABELS), rp.keyed(rp.STATES)
     for t in rp.load_tasks():

@@ -55,10 +55,11 @@ def wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
     return (max(0.0, c - h), min(1.0, c + h))
 
 
-def store_as_of(task: dict, room: Path) -> Path:
-    """A copy of the snapshot holding only the lessons `task` could see, as they stood then."""
+def store_as_of(task: dict, room: Path, snapshot: Path | None = None) -> Path:
+    """A copy of the snapshot (§4al's, unless another is given) holding only the lessons `task` could
+    see, as they stood then."""
     db = room / f"store-{task['pr']}.db"
-    shutil.copy(SNAPSHOT, db)
+    shutil.copy(snapshot or SNAPSHOT, db)
     keep = set(task["lessons"])
     con = sqlite3.connect(db)
     con.execute("create temp table keep(id text primary key)")
