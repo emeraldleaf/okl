@@ -48,9 +48,9 @@
       "title": "okl's docs are agent-neutral; Claude Code-only parts are labelled as such",
       "scope": "repo:okl",
       "files": "README.md,docs/",
-      "verified_at": 1794324725122,
-      "verified_by": "`python3 ci/check-agent-neutral.py` exit 0, matched 'AGENT NEUTRAL' on commit 9e950b39baf1 @ 2026-11-10T15:32Z",
-      "verified_commit": "9e950b39baf1e49ded87b2692eb749f99a1ed144"
+      "verified_at": 1794327704698,
+      "verified_by": "`python3 ci/check-agent-neutral.py` exit 0, matched 'AGENT NEUTRAL' on commit 2fb1b29b3823 @ 2026-11-10T16:21Z",
+      "verified_commit": "2fb1b29b382390fd5c78ed429a1edc45d530bcac"
     },
     {
       "id": "n_07faa4565128",
@@ -108,9 +108,9 @@
       "title": "Entered a crowded category deliberately: differentiate on verification-of-memory, compose with memory infra, never compete on recall",
       "scope": "repo:okl",
       "files": "README.md,docs/",
-      "verified_at": 1794324726213,
-      "verified_by": "`python3 ci/check-positioning.py` exit 0, matched 'POSITIONING OK' on commit 9e950b39baf1 @ 2026-11-10T15:32Z",
-      "verified_commit": "9e950b39baf1e49ded87b2692eb749f99a1ed144"
+      "verified_at": 1794327705179,
+      "verified_by": "`python3 ci/check-positioning.py` exit 0, matched 'POSITIONING OK' on commit 2fb1b29b3823 @ 2026-11-10T16:21Z",
+      "verified_commit": "2fb1b29b382390fd5c78ed429a1edc45d530bcac"
     },
     {
       "id": "n_ead8e0a2b43d",

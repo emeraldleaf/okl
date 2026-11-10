@@ -7,7 +7,8 @@ the paper's own pages (noted per row), never from a search snippet. Products are
 compared here; a product enters public copy only with a measured comparison and a receipt
 in [evals/results/](../evals/results/).
 
-Read on 2026-10-21.
+Read on 2026-10-21. A wider reading on 2026-11-10, about 150 papers across every layer of okl from
+recording to evaluation, is [Research on each layer of okl](research/okl-layers-2026-11-10.md).
 
 ## Seven results from 2026
 

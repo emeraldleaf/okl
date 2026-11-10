@@ -1,0 +1,95 @@
+{
+ "section": "#415, Part 8",
+ "at": "2026-11-10T16:00Z",
+ "status": "model-judged keys (\u00a74ao/\u00a74ap for \u00a74al's tasks, \u00a74aq's own), not audited (#394)",
+ "breaks": 124,
+ "lessons": 56,
+ "top_share": {
+  "10": 0.468,
+  "20": 0.653
+ },
+ "top20": [
+  {
+   "lesson": "doc-claim-governs-doc-and-code",
+   "breaks": 15
+  },
+  {
+   "lesson": "n_e7988ff536fb",
+   "breaks": 8
+  },
+  {
+   "lesson": "n_6b65aa35593c",
+   "breaks": 7
+  },
+  {
+   "lesson": "seed:geospatial-enforcement-defects:r_single_source_sets",
+   "breaks": 7
+  },
+  {
+   "lesson": "harness-reads-a-moving-working-tree",
+   "breaks": 5
+  },
+  {
+   "lesson": "n_5ddb0776a863",
+   "breaks": 4
+  },
+  {
+   "lesson": "remote-timeout-not-a-deadline",
+   "breaks": 3
+  },
+  {
+   "lesson": "n_00985805cdbb",
+   "breaks": 3
+  },
+  {
+   "lesson": "remote-path-test-through-client",
+   "breaks": 3
+  },
+  {
+   "lesson": "falsifier-relative-to-control",
+   "breaks": 3
+  },
+  {
+   "lesson": "n_02cc84da158d",
+   "breaks": 3
+  },
+  {
+   "lesson": "seed:python-canon:py_dont_mock_what_you_dont_own",
+   "breaks": 3
+  },
+  {
+   "lesson": "docs-agent-neutral",
+   "breaks": 3
+  },
+  {
+   "lesson": "n_adea7f2c7373",
+   "breaks": 2
+  },
+  {
+   "lesson": "n_8a6e1abce5cc",
+   "breaks": 2
+  },
+  {
+   "lesson": "n_0637c92c032f",
+   "breaks": 2
+  },
+  {
+   "lesson": "n_aa3e45a2ecd6",
+   "breaks": 2
+  },
+  {
+   "lesson": "comparison-table-one-sitting-generated",
+   "breaks": 2
+  },
+  {
+   "lesson": "n_849a5b0425ef",
+   "breaks": 2
+  },
+  {
+   "lesson": "seed:python-canon:py_unclosed_sqlite",
+   "breaks": 2
+  }
+ ],
+ "okl_commit_at_start": "0d337cf",
+ "okl_commit": "0d337cf"
+}
