@@ -1,5 +1,29 @@
 # Changelog
 
+## Unreleased
+
+- **The review after writing: `okl check --change`** (REPORT §4at; opt-in). A briefing is
+  chosen from the task's words before any code exists, and the lessons a change goes on to
+  break are often about what the code does, which those words never name. `okl check
+  --change [BASE]` runs after the code is written: it lists the files changed since BASE
+  (committed or not, untracked included) and every lesson in scope one line each, with the
+  steps for the agent: say what the changed code does, pick the ten lessons it most likely
+  breaks, read each with `okl show`, check the code, fix only what breaks one. Lessons whose
+  files cover a changed path come first. Nothing is cut (about 60 tokens a lesson), and the
+  first line says to read all of it where a tool shows long output as a preview. okl calls no
+  model. `okl init --review-after-writing` turns it on (`OKL_REVIEW_AFTER_WRITING=1` or `0`
+  for one session), and the Stop hook then asks for it before its question about what was
+  learned; init says when the project's Stop hook is an edited copy that cannot ask, and
+  `okl init --force` replaces it. A value okl cannot read as on or off is refused, never
+  read as off. After any change the steps say to run the tests again. It is off by default. On
+  §4at's development half, a model picking from these lines found 40% of the lessons changes
+  had broken in its first ten, against 21% for the search on the task's words
+  (`explain-search-dev-20261110-1306.json`, in-sample). A quick read on 20 unseen changes
+  (REPORT §4au, `default-read-20261110-1438.json`) set a bar for turning it on by default and
+  missed it: the review picked 12 of the 23 broken lessons but called only 4 broken (17%,
+  bar 30%), while wrongly calling a lesson broken rarely (median 0 a change), at about 170,000
+  mostly cached tokens a review. The test on other repositories is #413.
+
 ## 0.15.0
 
 **Upgrading a shared service:** without `OKL_TOKEN`, `okl serve` now refuses to start off

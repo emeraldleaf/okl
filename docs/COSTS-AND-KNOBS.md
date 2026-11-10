@@ -112,6 +112,23 @@ fingerprint, so unless one is byte-identical to the current version, `init` keep
 same for a teammate who cloned the repo. okl never writes through a symlink: a hook,
 settings or workflow path that is a link, or sits under one, is refused and named.
 
+## The review after writing (off by default)
+
+`okl init --review-after-writing` has the Stop hook ask the agent, before it finishes, to
+run `okl check --change` and check the code it wrote against the lessons
+([REPORT §4at](../evals/REPORT.md)); `--no-review-after-writing` turns it off, and
+`OKL_REVIEW_AFTER_WRITING=0` (or `1`) decides for one session. The cost is the list: every
+lesson in scope, one line each, about 270 bytes (roughly 60 tokens) a lesson, so about 80 KB
+for 300 lessons, read once per session that changed something, plus the lessons the agent
+then opens with `okl show`. Nothing is cut, because in id order a cut would drop lessons at
+random. Where the agent's tool shows long output as a preview with the rest in a saved file,
+as Claude Code does past about 30,000 characters, the list's first line tells the agent to
+read all of it. okl calls no model for this; the agent's own turns are the cost. Measured on
+20 of this repository's changes with 280 lessons in scope (REPORT §4au), one review took a
+median of about 170,000 tokens, nearly all of them cached context the session re-reads, about
+$0.21 at API prices and 43 seconds. That cost, and a catch rate below the bar §4au set, are why
+it is off by default.
+
 ## Architecture review in CI (off by default)
 
 The kit ships a reviewer that reads a PR diff against your encoded rules and fails the

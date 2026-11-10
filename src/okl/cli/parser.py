@@ -69,6 +69,12 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                          "another tool's pre-push hook is never replaced); --no-git-hook skips it. "
                          "Default: installed wherever okl's GitHub workflow is not. Recorded in "
                          ".okl/config.json so later runs upgrade it")
+    pi.add_argument("--review-after-writing", dest="review_after_writing", action=argparse.BooleanOptionalAction,
+                    default=None,
+                    help="--review-after-writing has the Stop hook ask the agent, before it finishes, to "
+                         "check the code it wrote against the lessons (`okl check --change`; a step under "
+                         "measurement, REPORT §4at); --no-review-after-writing turns it off. Default: off, "
+                         "or whatever an earlier run chose. Recorded in .okl/config.json")
     pi.add_argument("--owner", metavar="HANDLE",
                     help="name a person (@user, @org/team or an email) code owner of docs/THESIS.md and "
                          "of CODEOWNERS itself, so that a branch rule requiring code-owner review needs "
@@ -93,17 +99,27 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
     pc.add_argument("url"); pc.add_argument("--token")
     pc.set_defaults(func=cmd_connect)
 
-    pk = sub.add_parser("check", help="pre-task read: the lessons for a task, or for the files about to be read or edited")
+    pk = sub.add_parser("check", help="the lessons for a task before it starts, for the files about to be read "
+                                      "or edited, or for a change just written (--change)")
     what = pk.add_mutually_exclusive_group(required=True)
     what.add_argument("--task", help="the task about to start: the lessons whose words match it")
     what.add_argument("--path", action="append", metavar="FILE",
                       help="a file about to be read or edited: every lesson whose `files` govern it, with "
                            "its drift and proof marks (repeatable; #94). Relative to the working directory "
                            "or absolute; a file outside this repo has none")
+    what.add_argument("--change", nargs="?", const="", metavar="BASE",
+                      help="after writing: the files changed since BASE (default: the remote's default "
+                           "branch, then main, then master), committed or not, and every lesson in scope "
+                           "one line each, with the steps of the review after writing: explain the change, "
+                           "pick the lessons it most likely breaks, read and check each, fix. Calls no "
+                           "model. A step under measurement (REPORT §4at). With --format hook, only the "
+                           "Stop hook's note, where `review_after_writing` is on in .okl/config.json "
+                           "(OKL_REVIEW_AFTER_WRITING=1 or 0 for one session)")
     pk.add_argument("--repo")
     pk.add_argument("--hook-event", dest="hook_event", choices=["UserPromptSubmit", "PostToolUse", "SessionStart"],
                     help="with --format hook: the Claude Code event the output answers (default: "
-                         "UserPromptSubmit for --task, PostToolUse for --path)")
+                         "UserPromptSubmit for --task, PostToolUse for --path; --change answers the Stop "
+                         "hook and takes none)")
     pk.add_argument("--session", help="with --path: brief each lesson once in this session id, again only "
                                       "while drift marks it (#94); the file-read hook passes Claude Code's")
     pk.add_argument("--format", choices=["agent", "actions", "json", "hook"], default="agent",
