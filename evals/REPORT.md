@@ -5590,6 +5590,52 @@ does the briefing change what the agent writes? That is EVALUATION.md's outcome 
 their base commit, okl on and off, graded by the test the real fix added), under its own
 pre-registration. Until it runs, no claim that briefing keeps an agent in line on real work rests on
 anything but authored tasks.
+## 4at. PRE-REGISTERED: once the change is written, does an explanation of what its code does find the lessons it broke? (2026-11-10)
+
+Written before any explanation exists. §4ak found the lessons real work missed were relevant by what
+the code did, which no text written before the code names; searching the code itself (§4am's D) found
+more but brought about 62 lessons a task. §4ao to §4aq judged every lesson against the change and drew
+a list mostly not worth acting on. The design this tests sits between them: after the agent writes the
+change, it explains what the code does in plain words, and that explanation searches the lessons, so a
+handful arrive for the agent to check its own code against. Whether the agent then acts on them is the
+outcome replay's question, not this one; this asks whether the search finds them.
+
+**Tasks and the key.** §4al's 50 tasks are the development half and §4aq's 50 the test half. A lesson
+a change *broke* is one its key labelled needed and sorted not followed or check (§4ao's sort for
+§4al, §4aq's own for §4aq): 49 on the development half, 59 on the test half. Seen before this was
+written: which lessons were broken on both halves (counted on 2026-11-09) and the reasons for §4aq's
+19 misses. The explanation never names a lesson, and its prompt is tuned on the development half only.
+
+**Three queries, one search.** Each searches the task's lessons as they stood when it was frozen
+(`realwork_reach.store_as_of`, §4aq's tasks against their own store), with `core.ranked_candidates`
+(the full-text search fused with the potion embedding, linear), as §4am's R did. The first K count.
+- *T*, the task's words: its title and issues, as a briefing before the code is written sees them.
+- *C*, the code: the change's added lines, whitespace collapsed, cut to 4,000 characters.
+- *E*, the explanation: Sonnet reads the whole change from a file in an empty directory, with no
+  repository, no lessons and no agent settings, and writes what the code does, one mechanism a
+  sentence: what it calls and from where, what it reads and writes, what it assumes, how it fails,
+  what its tests check and with what data, what the docs it changes now claim. It does not judge the
+  change. The sentences, joined, are the query.
+
+**Measures, on the test half.** K = 5 decides; K = 10 is reported.
+1. Reach: the share of broken lessons in E's first K, with a bootstrap over tasks (2000, seed 4).
+2. E against T and against C: the paired difference in reach, bootstrapped over tasks.
+3. What else E's first K holds: lessons the change needed and followed, lessons labelled related, and
+   the rest.
+4. Tasks with a broken lesson where E's first K holds none of them.
+
+**Decision rule.** E is built into okl, as a step after a change is written and behind its own flag,
+when on the test half both hold: the lower bound of E's paired gain over T at K = 5 is above zero, and
+E's reach at K = 5 is at least 50%. Otherwise its misses are read, and nothing is built from it.
+
+**Development.** The explanation prompt may be revised on the development half, at most three times.
+Before any test-half explanation exists, its final text and hash are committed in a dated amendment.
+
+**Predictions** (not decision rules): E reaches more than C, and C more than T; E's reach at K = 5 is
+at least 50%; T's is under 25%.
+
+**Budget.** About 50 Sonnet calls a pass on the development half, at most four passes, and 50 on the
+test half: at most 250. The search runs locally. Nothing is posted anywhere.
 
 
 ## 5. Findings
