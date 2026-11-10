@@ -320,7 +320,7 @@ def _record_drift(rec: dict[str, Any], repo_scope: str, repo_dir: str) -> dict[s
 # Retractions and tombstones are warnings, and the index (§4r) and near-miss (§4s) arms name
 # lessons without briefing them; none of them is marked.
 _BRIEFED = ("armed_gates", "relevant_defects", "rules", "decisions", "threat_prior_art", "context",
-            "also_matched")
+            "also_matched", "standing")
 # Records that are never advice: a withdrawn claim, a retired identifier, a tag declaration. The
 # second tier lists them beside advice, so each entry is tested (review of #316).
 _NOT_ADVICE = frozenset({"Retraction", "Tombstone", "Vocabulary"})

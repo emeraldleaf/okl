@@ -242,6 +242,8 @@ def _person_notes(result: dict[str, Any]) -> list[str]:
                      "are briefed less often: run `okl seed --refresh`")
     if result.get("decision_unavailable"):
         notes.append(f"okl · {result['decision_unavailable']}")
+    if result.get("standing_unavailable"):
+        notes.append(f"okl · briefed without its standing lessons: {result['standing_unavailable']}")
     if result.get("warm_unavailable"):
         # Asked for and not used: said where the person looks, not only in the JSON (review on #300).
         notes.append(f"okl · briefed without the warm model: {result['warm_unavailable']}")

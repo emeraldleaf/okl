@@ -180,6 +180,10 @@ class Client:
         self.near_misses = False   # the near-miss arm (REPORT §4s): `okl check --near-misses`
         self.rerank = rerank_setting(os.environ.get("OKL_RERANK"), self.config.get("rerank"))
         self.decision = decision_setting(os.environ.get("OKL_DECISION"), self.config.get("decision"))
+        # This repo's standing lessons, named on every task briefing (REPORT §4am; `okl standing`).
+        # OKL_STANDING=0 leaves them out, for a measurement of the briefing without them.
+        self.standing: list[str] = ([] if os.environ.get("OKL_STANDING") == "0" else
+                                    [str(i).strip() for i in self.config.get("standing") or [] if str(i).strip()])
         self.warm = warm_setting(os.environ.get("OKL_WARM"), self.config.get("warm"))
         self._store: Store | None = None
 
@@ -369,6 +373,7 @@ class Client:
             result = core.check(store, repo, task, **kw)
             if result.get("warm_reason") == "not_running":
                 result["warm_unavailable"] = _revive_warm(result["warm_unavailable"])
+        self._add_standing(result, repo)
         # Mark briefed lessons whose code changed since their last check (#93). Done here,
         # not in core, because only the client has this repo's checkout: a shared service
         # answering /check has no git history to compare against.
@@ -379,6 +384,27 @@ class Client:
             # the log keeps which briefed lessons were stale at the time (#252).
             core.record_briefing(store, repo, result)
         return result
+
+    def _add_standing(self, result: dict, repo: str) -> None:
+        """Name this repo's standing lessons in a task briefing (core.add_standing). Read by id,
+        locally or from the service; one that cannot be read is skipped, and a service too old to
+        answer by id is said, since a briefing must not fail on what the service cannot do."""
+        if not self.standing:
+            return
+        lessons: list[Node] = []
+        for node_id in self.standing:
+            try:
+                if self.mode == "remote":
+                    found = self.get(node_id)
+                    node = Node(**{k: v for k, v in found.items() if k in Node.__dataclass_fields__}) if found else None
+                else:
+                    node = self._local_store().get_node(node_id)
+            except (OKLRejectedError, OKLUnreachableError) as e:
+                result["standing_unavailable"] = f"the standing lessons could not be read ({e})"
+                return
+            if node is not None:
+                lessons.append(node)
+        core.add_standing(result, lessons, repo)
 
     def _check_files(self, repo: str, paths: list[str], root: Path, *, log: bool = True) -> dict:
         """check() with `paths`: the governing lessons, marked by drift, and logged as a briefing

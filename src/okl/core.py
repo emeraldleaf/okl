@@ -871,6 +871,35 @@ def _also_matched(store: Store, query: str, limit: int, repo_scope: str, interes
 ALSO_FIX_CHARS = 160
 
 
+STANDING_CAP = 10   # the size REPORT §4am measured
+
+
+def add_standing(result: dict[str, Any], lessons: list[Node], repo: str) -> int:
+    """Add this repo's standing lessons to a task briefing, one line each, and return how many.
+
+    A few lessons are needed on change after change. Found by the task's words, each competes
+    with every other lesson on every prompt and is often left out. Named on every task, the ten
+    most needed on earlier work lifted reach on later work (REPORT §4am, model-judged; its
+    figures stay in that section until audited). The repo chooses them (`okl standing`). A lesson the briefing already names
+    is not repeated, nor is a retired one or one outside this repo's view; a file briefing gets
+    none, since it repeats on every read. Named in the one-line form `also_matched` uses."""
+    if result.get("paths") is not None:
+        return 0
+    named = set(briefed_ids(result)) | {e.get("id") for e in result.get("also_matched") or []}
+    named |= {a.get("id") for a in result.get("next_actions") or []}
+    out: list[dict[str, Any]] = []
+    for n in lessons:
+        if len(out) >= STANDING_CAP:
+            break
+        if n.id in named or n.status in RETIRED_STATUSES or n.scope not in ("org", f"repo:{repo}"):
+            continue
+        out.append(_also_entry(n))
+        named.add(n.id)
+    if out:
+        result["standing"] = out
+    return len(out)
+
+
 def _also_entry(n: Node) -> dict[str, Any]:
     """A lesson in the second tier: id, type, title, and the first sentence of its fix, cut at
     a word to ALSO_FIX_CHARS, so the line says what to do and `okl show <id>` has the rest.
@@ -1479,13 +1508,15 @@ def _actions_text(result: dict[str, Any], limit: int | None) -> str:
         actions = actions[:limit]
     also = [_also_line(e) for e in result.get("also_matched") or []]
     tail = [f"Also matched ({len(also)}), one line each; `okl show <id>` reads the whole lesson:", *also] if also else []
+    standing = [_also_line(e) for e in result.get("standing") or []]
+    tail += [f"Standing lessons in this repo ({len(standing)}), briefed on every task:", *standing] if standing else []
     if not actions:
         if result.get("store_records") == 0:
             return ("OKL: the store is EMPTY (0 records). This is not 'no rules apply' — "
                     "nothing has been recorded yet, so this check proves nothing. "
                     "Run `okl seed` or record your first rule.")
         shown = result.get("match_count") or 0
-        if also or shown:
+        if tail or shown:
             # Not "no rule applies": the second tier named lessons that matched (REPORT §4y), or a
             # lesson shown in full routes no action (a rule with no fix) and still matched closely;
             # the line says so rather than contradict the full briefing, and keeps the pointers
@@ -1627,6 +1658,16 @@ def render_check_for_agent(result: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _standing_lines(result: dict[str, Any]) -> list[str]:
+    """This repo's standing lessons (REPORT §4am), one line each, when the briefing carries any."""
+    standing = result.get("standing") or []
+    if not standing:
+        return []
+    return ["", f"### Standing lessons in this repo ({len(standing)}): briefed on every task because changes "
+                "here keep needing them. If one bears on this work, read it with `okl show <id>`.",
+            *[_also_line(e) for e in standing], ""]
+
+
 def _named_lines(result: dict[str, Any], also: list[dict]) -> list[str]:
     """The briefing's lists that name lessons by id and title without showing them: the second
     tier (REPORT §4y), the near misses (§4s) and the index (§4r), each when present."""
@@ -1639,6 +1680,7 @@ def _named_lines(result: dict[str, Any], also: list[dict]) -> list[str]:
                      "`okl show <id>` (the okl_get tool) before you write code.")
         lines += [_also_line(e) for e in also]
         lines.append("")
+    lines += _standing_lines(result)
     if result.get("near_misses"):
         # The near-miss arm (REPORT §4s): what matched and was left out, one line each, so a
         # title can carry its lesson and the agent can fetch the record if it fits.
@@ -1978,7 +2020,7 @@ _NOT_ADVICE = frozenset({"Vocabulary"})
 # counted, one points past superseded lessons, and the rest name lessons by id and title
 # without showing them (#269, §4s, §4y).
 _NAMED_NOT_SHOWN = frozenset({"next_actions", "stale_warnings", "replaced", "index", "near_misses",
-                              "also_matched"})
+                              "also_matched", "standing"})
 
 
 def briefed_ids(result: dict[str, Any]) -> list[str]:
