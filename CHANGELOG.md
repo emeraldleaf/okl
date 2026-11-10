@@ -1,7 +1,23 @@
 # Changelog
 
-## Unreleased
+## 0.15.0
 
+**Upgrading a shared service:** without `OKL_TOKEN`, `okl serve` now refuses to start off
+loopback, and `okl.service:app` under uvicorn refuses on any address (first entry below). A
+service that runs without a token on purpose, behind a proxy that authenticates, needs
+`--allow-no-token` or `OKL_ALLOW_NO_TOKEN=1` before it is upgraded.
+
+- **Behaviour change: the service refuses to open the store without `OKL_TOKEN`** (#371). With
+  no token every route is open, `GET /nodes` included, and the default host is `0.0.0.0`, so a
+  service started without one served the whole store to anyone who could reach the port, with
+  no warning. `okl serve` off loopback now exits 2 before binding, naming the fixes: set
+  `OKL_TOKEN`, bind `--host 127.0.0.1`, or pass `--allow-no-token` when a proxy in front
+  authenticates. `uvicorn okl.service:app` cannot see its address, so with no token it fails at
+  startup on any address unless `OKL_ALLOW_NO_TOKEN=1` is set. **Before upgrading** a service
+  that runs without a token on purpose, add the flag or the variable. A service started open
+  logs a warning on every start. An empty `OKL_TOKEN` now counts as none: it switched the API
+  docs routes off while every request still got through. The token check now compares in
+  constant time (one of #195's service fixes).
 - **Standing lessons: the ones a repo names on every task briefing** (REPORT §4am). A few
   lessons are needed on change after change, and found by a task's words each competes with
   every other lesson and is often left out. A repo can now list up to ten in
@@ -96,17 +112,6 @@
   `okl doctor` and `okl init` name the org lessons the list keeps out, their subjects, and the
   default subjects it lacks, with the `okl init --interests` command that adds them. `okl metric`
   counts them beside its exposure figures. The list itself is still yours: nothing changes it.
-- **Behaviour change: the service refuses to open the store without `OKL_TOKEN`** (#371). With
-  no token every route is open, `GET /nodes` included, and the default host is `0.0.0.0`, so a
-  service started without one served the whole store to anyone who could reach the port, with
-  no warning. `okl serve` off loopback now exits 2 before binding, naming the fixes: set
-  `OKL_TOKEN`, bind `--host 127.0.0.1`, or pass `--allow-no-token` when a proxy in front
-  authenticates. `uvicorn okl.service:app` cannot see its address, so with no token it fails at
-  startup on any address unless `OKL_ALLOW_NO_TOKEN=1` is set. **Before upgrading** a service
-  that runs without a token on purpose, add the flag or the variable. A service started open
-  logs a warning on every start. An empty `OKL_TOKEN` now counts as none: it switched the API
-  docs routes off while every request still got through. The token check now compares in
-  constant time (one of #195's service fixes).
 - **With no `python3` on PATH, the read hook says it could not brief the read.** It reads its
   payload with python3, so without one it cannot tell which file was read; it exited silently,
   which the agent reads as "no lessons here". It now returns one `OKL NOT BRIEFED` line.
