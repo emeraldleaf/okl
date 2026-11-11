@@ -5896,6 +5896,254 @@ different cases and not a comparison, but they point the same way as the reading
 each lesson on its own. Agreement also says nothing about whether an agent follows a lesson, which
 §4aw tests.
 
+## 4aw. PRE-REGISTERED, A PILOT: does the way a lesson is written change the code an agent produces? (2026-11-11)
+
+Written before any session in this section counts; one throwaway session checked the plumbing and
+was discarded (arm N on #168). §4as to §4av measured whether a lesson is found and whether judges
+agree on it. None asked what matters most: with the right lesson in front of it, does an agent's
+code come out different, and does the wording change that? This is EVALUATION.md's outcome replay,
+narrowed to what okl's history can grade fairly.
+
+**Tasks.** Twenty past changes have a test the real fix added that fails on the code as first
+written and passes after the fix, without an import error. Reading each test against the lessons
+that existed when the change was frozen leaves five where the test checks what a lesson already
+said. Most of the rest test something no lesson said. Others are out for cause: the lessons on #163
+and #34 had text added from those same bugs, so they would give the answer; #37 also pins a
+timestamp window its lesson never mentions; #307's test carries the final docs' figures; on #325 an
+answer correct under the lesson would still fail; #380's test bundles behaviour its lesson does not
+cover. The five, in `evals/replay-tasks-4aw.json`: #115 (`n_adea7f2c7373`), #168
+(`seed:rag-defects:qz_judge_self`), #196 (`n_57cc4b427f05`), #198 (`n_473aec369b25`) and #309
+(`n_02cc84da158d`). On #309 one assertion on the exact words of an error message is relaxed.
+
+**Start.** Each task starts at its frozen commit, the change as first written and before review
+found the defect, in a copy with one commit of history and no agent files. So this tests an agent
+finishing a written change, not writing one from nothing: starting earlier would grade the private
+names the real author happened to choose.
+
+**Arms.** N: no lesson. T: the lesson as `okl show` gives it. C: the lesson as a contract (when, do,
+done when, does not apply, why). D: the contract and one bad, good and not-applicable example. Every
+lesson arm gets the right lesson, so this tests how a lesson is written and not whether it is found.
+A separate agent wrote the contracts and examples from the five lessons' text alone, shown nothing
+about the tasks (`evals/replay-contracts-4aw.json`).
+
+**Agent.** Sonnet, one session per call, able to read and edit files and to run only pytest and
+`git diff` or `git status`. Five repeats: 100 sessions in a seeded order, so stopping early favours
+no arm.
+
+**Grader.** The real fix's test, hidden from the agent and laid over the tree it leaves. A session
+passes when every parameter of the test passes. Each test is confirmed to fail on the frozen code
+and pass on the real fix (`outcome-replay-check-4aw.json`).
+
+**Measures.** Pass rate per arm, averaged over tasks, and per task. Harm: sessions where another
+test in that file, passing on the frozen code, now fails. Turns, time and cost.
+
+**Reading.** This is a pilot: it decides what to build next, not what to ship. A *lead* for the
+contract needs at least 90 of the 100 sessions complete, C at least 0.2 above T in the same sitting,
+and C at or above T on at least 4 of the 5 tasks. With a lead, the next step is a larger set of
+tasks (#413) before any format ships. Without one, the lesson format stays as it is. T minus N says
+whether a lesson changes the code at all, and D minus C whether the example earns its length; both
+are reported, with no ship decision attached.
+
+**Threats.** Five tasks in one repository, chosen by hand by Opus after reading the tests, and
+chosen because a lesson applies, so this says nothing about how often one does. Telling the agent
+that a lesson "bears on this change" is more than a real briefing says. Sonnet is not the model
+most work here uses. A test can fail a correct fix that takes another shape, equally across arms.
+
+**Budget.** 100 Sonnet sessions. The throwaway session cost $0.07 and took 87 seconds; one that
+edits and tests costs more. The sessions are kept in the private results directory; the receipts
+are committed.
+
+**Amendment before grading (2026-11-11): the graders were broken and are replaced.** Four of the
+five tests above call a function the real fix invented (`judge_is_generator`, `instrument_drift`,
+`_seed_packs`, `source_store`), so on the frozen code they fail on a missing name and no agent could
+pass them without guessing it. The filter meant to exclude exactly that read the failure's reason
+from a line pytest had left empty, so it excluded nothing, which also makes "twenty past changes"
+above wrong; how many of them have a fair test was not recounted. `outcome-replay-check-4aw.json`
+is the check that missed this. The sessions themselves stand: they never see a grader, and each
+saved its patch. Written after all 100 ran and before any was graded by these:
+`tests/replay_graders_4aw.py` drives each script through what it had when the change was frozen,
+and asks what the lesson asks: #168, two commands resolving to one model must not start a run; #198,
+a run on another judge's window must be refused or said so; #196, an untracked seed pack must not
+reach the measurement; #309, a Postgres URL must be refused, not swapped for a default file. Each
+but #196 has a positive control, so a fix that refuses everything fails; #196 accepts a refusal, which
+also keeps the pack out. #115's own test fails by assertion and stays. Each grader fails on the
+frozen code and passes on the real fix (`outcome-regrade-check-4aw.json`), and they were written
+against those two states only. Seen before grading: whether each of the first 38 sessions edited
+anything, their pass counts under the broken graders (1 of 38, meaningless), and one session's
+closing words. Patches are applied to the frozen code, and `outcome_regrade.py` reports any that did
+not apply, were cut off, or left a new file outside the patch. The reading above is unchanged.
+
+**Result (2026-11-11): no lead for the contract, and a large effect from the lesson itself.** All
+100 sessions ran; every patch applied and none was cut off (receipt
+`outcome-replay-20261111-0129.json`; $11.96 API-priced, a median of 77 seconds a session).
+
+| arm | pass rate, averaged over tasks | sessions that edited |
+|---|---|---|
+| N: no lesson | 0 | 0 of 25 |
+| T: the lesson as stored | 0.64 | 22 of 25 |
+| C: contract | 0.52 | 17 of 25 |
+| D: contract and example | 0.6 | 20 of 25 |
+
+As stated: C minus T is -0.12 and C is at or above T on 3 of the 5 tasks, so there is no lead and
+the lesson format stays as it is. D minus C is 0.08. No session broke another test in the grader's
+file.
+
+What it means, not pre-registered:
+1. With no lesson, the agent left every one of the 25 changes as it found them and called them
+   ready. With the right lesson named as bearing on the change, it fixed most of them. This is the
+   first evidence on real past defects that a lesson changes the code. Its scope is narrow: five
+   tasks picked because a lesson applies, one lesson in front of the agent, and a sentence telling
+   it the lesson bears on this change.
+2. That does not contradict §4as, where lessons shown were followed no more often than lessons not
+   shown. There a lesson was one of many and nothing said it applied. The gap between those two
+   settings is the next thing to measure: the same lesson among ten others, with no such sentence.
+3. The contract may give an agent a place to stop. On #168 the sessions given it that made no edit
+   reasoned that the configured models differ, which its condition asks, and stopped; on #309 no
+   session given it edited anything. That is two tasks and a reading of the sessions' last words, so
+   it is a lead for a later test and no more.
+4. The rooms have unrelated test failures (no agent files, an older package version, the briefing
+   log off), and agents spent turns on them in every arm.
+
+## 4ax. PRE-REGISTERED, A PILOT: a lesson changed the code when it stood alone and was named. Does it among ten others? (2026-11-11)
+
+Written before any session in this section runs. §4aw found that with no lesson an agent fixed none
+of five real defects, and with the right lesson it fixed most. But the agent had that one lesson
+only, and was told it bears on the change. A real briefing gives neither. This separates the two.
+
+**Arms, a two-by-two on §4aw's five tasks.** The lesson as stored, either alone or among nine others,
+and either told it bears on this change or not:
+- alone, told: "This team keeps the lesson below, and it bears on this change." (§4aw's T, re-run as
+  the control in this sitting.)
+- alone, plain: "This team keeps the lesson below."
+- ten, told: "This team keeps the lessons below, and they bear on this change."
+- ten, plain: "This team keeps the lessons below."
+
+**The nine others** are what okl's search (`core.ranked_candidates`, linear) ranks highest for the
+task's own words among the lessons as they stood, leaving out the right one, records that are not
+advice, retired lessons, and any lesson citing the task or its test (`evals/replay-lists-4ax.json`).
+The right lesson's place among the ten is seeded per session.
+
+**Everything else is §4aw's:** the frozen start, Sonnet, the limited tools, five repeats (100
+sessions, seeded order), and the behaviour graders of its amendment, run inside each session.
+
+**Reading, against alone-and-told in the same sitting, with at least 90 of the 100 complete.** It
+*holds in a list* if ten-plain is within 0.15 of alone-told. If it is not, *the sentence rescues it*
+if ten-told is within 0.15, and otherwise it *collapses in a list*. Each reading points at different
+work: getting the right lesson into the briefing; changing the briefing's wording; or handing over
+lessons one at a time after the code exists. Alone-plain is reported, with no rule attached.
+
+**Threats.** §4aw's, and more. Every arm is still given the right lesson; whether okl would choose it
+is a separate question. Measured while building this list: by the task's own words the search ranks
+it 47th, 25th, 66th, 1st and 243rd on these five tasks, against a default briefing of 12 places. Ten
+lessons in full is more than a real briefing, which shows most in one line. "They bear on this
+change" claims more than okl could honestly say of ten lessons, so a win for that arm is a finding
+about wording and not yet something to ship as written.
+
+**Budget.** 100 Sonnet sessions; §4aw's cost $11.96 API-priced.
+
+**Amendment before scoring (2026-11-11): a correction to the threats above.** A default briefing is
+up to 17 places, not 12: 5 in full and 12 named in one line. And the ranks quoted came from the
+search with linear fusion, before the briefing's own filters, so they do not say what a briefing
+shows. Running the default briefing itself from each task's words, on the lessons as they stood
+(`replay-list-reach-4ax.json`), the right lesson is shown in full on #168, named in one line on #198,
+and not shown on #115, #196 and #309. The title's "ten others" is a list of ten: the lesson and nine
+others. None of this changes the arms or the reading.
+
+**Result (2026-11-11): it collapses in a list.** All 100 sessions ran (receipt `replay-list-20261111-0249.json`;
+$13.18 API-priced, a median of 90 seconds a session).
+
+| arm | pass rate, averaged over tasks | sessions that edited |
+|---|---|---|
+| alone, told | 0.6 | 19 of 25 |
+| alone, plain | 0.6 | 20 of 25 |
+| ten, told | 0.12 | 6 of 25 |
+| ten, plain | 0.2 | 10 of 25 |
+
+As stated: ten-plain is more than 0.15 below alone-told, and so is ten-told, so the reading is
+*collapses in a list*. No session broke another test.
+
+What it means, not pre-registered:
+1. Being one of ten is what costs, and being told it applies is not what helps. Alone, the sentence
+   made no difference to the pass rate; in the list, it did not rescue it. So the "if one fits" wording
+   is not the main problem, and §4aw's effect needed the lesson to stand alone more than it needed
+   the sentence.
+2. In the list the agent mostly did nothing: it edited in 16 of 50 sessions, against 39 of 50 alone.
+   It read ten lessons, found no reason to act on any, and called the change ready.
+3. This gives §4as a likely explanation. Lessons shown in a briefing were followed no more often
+   than lessons not shown, and a briefing is a list.
+4. The control reproduced: alone-told came out within 0.04 of §4aw's T, in a separate sitting.
+5. #198 held up in the list (0.6 and 0.8) where the others fell to 0.2 or below. It is the one task
+   whose lesson the search ranks first for the task's words, so its neighbours may be less of a
+   distraction, but one task cannot say.
+
+The reading points at handing lessons over one at a time, once the code exists (#426). Whether that
+works when the agent is also given lessons that do not apply is not tested here: every arm with one
+lesson had the right one.
+
+## 4ay. PRE-REGISTERED, A PILOT: the same ten lessons, asked about one at a time (2026-11-11)
+
+Written before any session in this section runs. §4ax found that a lesson which changes the code
+when it stands alone mostly does not in a list of ten. This tests the direction that points at:
+hand the lessons over one at a time, once the code exists. The risk is the other nine, which mostly
+do not apply: an agent asked about each may invent problems.
+
+**Arms, on §4aw's five tasks, five repeats each, 75 sessions in a seeded order.**
+- *one at a time:* the same ten lessons as §4ax, in the same seeded order, each in its own fresh
+  session in one working copy, so edits carry forward. Each is asked: "This team keeps the lesson
+  below. Check this change against it: if the change breaks it, fix that; if it does not, or the
+  lesson has no bearing on this change, change nothing for it."
+- *list:* §4ax's ten-plain, re-run as the control.
+- *alone:* §4ax's alone-told, re-run as the ceiling.
+
+Everything else is §4ax's: the frozen start, Sonnet, the limited tools, and §4aw's behaviour graders,
+run on the tree each session leaves.
+
+**Measures.** Pass rate per arm, averaged over tasks. Noise: passes on the nine other lessons that
+edited anything, per one-at-a-time session, and sessions that broke another test.
+
+**Reading, against the list and the lesson alone in the same sitting, with at least 68 of the 75
+complete.** One at a time is *no better than the list* if it is less than 0.25 above it. If it clears
+that but is more than 0.15 below alone, it is *better than the list, short of alone*. Otherwise it
+*works* if the median session made at most 2 edits for the other nine and broke another test in at
+most 2 more sessions than the list, and *catches it, but noisy* if not. The noise limits are a
+shipping bar, labelled as one: an edit for another lesson may be a real fix, so they bound
+interruption and do not measure error.
+
+**Threats.** §4aw's and §4ax's. Every arm is still given the right lesson among its ten; choosing
+ten from what the code does is a further step, tested separately (§4at's model pick reached 40% at
+ten). The nine others were chosen from the task's words, so they may be easier to dismiss than
+lessons chosen from the code. Ten sessions cost about ten times one, and that cost is reported.
+
+**Budget.** 25 ten-pass sessions and 50 single ones, about 300 Sonnet calls.
+
+**Result (2026-11-11): it works.** All 75 sessions ran (receipt `replay-one-20261111-1355.json`). The first pass stopped at
+a usage limit with 64 complete and was resumed at the same commit, question and lists; the partial
+receipt was deleted.
+
+| arm | pass rate, averaged over tasks | sessions that edited | API-priced cost a session | median time |
+|---|---|---|---|---|
+| alone | 0.72 | 20 of 25 | $0.118 | 72 s |
+| list | 0.08 | 10 of 25 | $0.134 | 83 s |
+| one at a time | 0.72 | 23 of 25 | $0.809 | 453 s |
+
+As stated: one at a time is 0.64 above the list and level with the lesson alone. The
+median session made 1 edit for the nine other lessons (26 edits in 225 such passes) and
+none broke another test, inside the shipping bar, so the reading is *works*.
+
+What it means, not pre-registered:
+1. The same ten lessons that did almost nothing as a list did as well as the right lesson alone
+   when asked about one at a time. The cost of a list is in how lessons are handed over, not in
+   the lessons.
+2. The worry was the nine that do not apply. They produced an edit in about one pass in nine, and
+   no edit broke a test; whether those edits were improvements or noise was not judged.
+3. It costs about seven times as much and six times as long as a single prompt. Ten passes in a
+   fresh context each is the expensive way to do this; asking several lessons in one fresh
+   context, or only the few a model picks from the change, are cheaper shapes still untested.
+4. Per task it moves around: #309 went from 0 of 5 alone to 4 of 5 one at a time, and #115 the
+   other way, from 3 of 5 to 0 of 5. Five repeats on five tasks cannot separate those from noise.
+5. Every arm still had the right lesson among its ten. Choosing the ten from what the code does is
+   the remaining step before this could ship (§4at's model pick found 40% of broken lessons in ten).
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

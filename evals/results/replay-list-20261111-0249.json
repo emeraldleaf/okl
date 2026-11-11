@@ -1,0 +1,1770 @@
+{
+ "section": "4ax",
+ "at": "2026-11-11T02:49Z",
+ "words": "f19f5f6d09f8825c",
+ "lists": "5db23cae9529d97e",
+ "sessions": 100,
+ "of": 100,
+ "pass_rate": {
+  "alone_told": 0.6,
+  "alone_plain": 0.6,
+  "ten_told": 0.12,
+  "ten_plain": 0.2
+ },
+ "per_task": {
+  "alone_told": {
+   "115": 0.2,
+   "168": 1,
+   "196": 0.8,
+   "198": 1,
+   "309": 0
+  },
+  "alone_plain": {
+   "115": 0,
+   "168": 0.6,
+   "196": 0.8,
+   "198": 1,
+   "309": 0.6
+  },
+  "ten_told": {
+   "115": 0,
+   "168": 0,
+   "196": 0,
+   "198": 0.6,
+   "309": 0
+  },
+  "ten_plain": {
+   "115": 0,
+   "168": 0.2,
+   "196": 0,
+   "198": 0.8,
+   "309": 0
+  }
+ },
+ "reading": "collapses in a list",
+ "edited": {
+  "alone_told": 19,
+  "alone_plain": 20,
+  "ten_told": 6,
+  "ten_plain": 10
+ },
+ "sessions_per_arm": {
+  "alone_told": 25,
+  "alone_plain": 25,
+  "ten_told": 25,
+  "ten_plain": 25
+ },
+ "sessions_with_harm": {
+  "alone_told": 0,
+  "alone_plain": 0,
+  "ten_told": 0,
+  "ten_plain": 0
+ },
+ "api_priced_usd": 13.18,
+ "median_seconds": 89.9,
+ "script_sha256": "2a1db1fce812b0d44a7699c69a5b96acbdc2d07ec4d60fd1f5e87e47c4d04135",
+ "rows": [
+  {
+   "pr": 198,
+   "arm": "ten_told",
+   "rep": 3,
+   "position": 5,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 3,
+   "seconds": 17.4,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.05s",
+   "said": "I made no changes: the change already has its code, the changelog entry, the REPORT \u00a74m pre-registration and tests. The 17 tests in `tests/test_ab_harness.py` pass.\n\nOne weakness remains. `test_the_receipt_names_the_judges_window` only asserts that `JUDGE_MAX_CHARS` is at least 40,000. It doesn't check that the receipt records `judge_max_chars`, because that field is written in `main()`, which the tests don't run.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "alone_told",
+   "rep": 3,
+   "position": null,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 14,
+   "seconds": 44.7,
+   "summary": "2 passed, 5 deselected in 0.06s",
+   "said": "t before the change.\n\nThe change was already complete: the judge returns `implemented`, plan-only samples count as unevaluable failures, receipts record resolved model ids, and REPORT \u00a74k pre-registers it. One gap remained. The startup check only compared the alias strings, so two different aliases that resolve to the same model would still let the judge grade its own output. I added a refusal (exit 3) when the resolved judge and generator models overlap, plus a test. `tests/test_ab_harness.py` passes, 11 of 11. I haven't added a line to the CHANGELOG for the new refusal. Nothing is committed.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "alone_told",
+   "rep": 1,
+   "position": null,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 8,
+   "seconds": 74.3,
+   "summary": "1 passed, 82 deselected in 0.49s",
+   "said": "gests a check, and drift and reverify give plain-word guidance. I made two small additions:\n\n- **Test path quoting:** the suggested `pytest -q <path>` command now runs the path through `shlex.quote`, so an odd filename can't turn into shell syntax.\n- **Hostile-glob test:** I added a test that feeds `git grep` hostile-looking globs such as `--open-files-in-pager=\u2026` and `$(touch \u2026)`. It confirms they stay patterns, because the code uses list-form argv with `--` before the pathspec.\n\n`tests/test_okl.py` gives 81 passed and 2 skipped. The skips are Postgres tests that need `OKL_TEST_POSTGRES_URL`.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "alone_told",
+   "rep": 2,
+   "position": null,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 9,
+   "seconds": 38.0,
+   "summary": "1 passed, 6 deselected in 0.14s",
+   "said": "I changed one thing: `evals/precision.py` now seeds its store from `git ls-files seed/*.json` instead of globbing `seed/`. That follows the team lesson, since an uncommitted pack in `seed/` could otherwise change the precision verdict. The rest of the change (stoplist, term cap, empty-query guard, tests) needed no edits, and `tests/test_briefing_terms.py` passes (29 tests, including the precision check). I did not commit.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "alone_told",
+   "rep": 2,
+   "position": null,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 16,
+   "seconds": 211.4,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.08s",
+   "said": "ing logs:** `test_service_check`, the two `test_recap.py` tests and `test_record_briefing_logs_the_drift_marks_the_briefing_carries` fail because `record_briefing` returns False. I suspect `OKL_BRIEFING_LOG=0` is set in my shell, since `core.py` skips logging when it is. I couldn't confirm that, because the sandbox blocked the commands that would have shown it.\n- **Storage lesson:** The lesson on storage targets doesn't apply here. `FTS_TOKENIZE` is a module constant, not an environment variable, and it is read in the one place the store is opened, so every entry point gets the same tokenizer.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "alone_told",
+   "rep": 0,
+   "position": null,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 15,
+   "seconds": 44.5,
+   "summary": "1 passed, 6 deselected in 0.09s",
+   "said": "w seeds its store from `git ls-files seed/*.json` instead of globbing `seed/`, following the team's lesson that audits read the repo, not the working tree. An untracked scratch pack can no longer change the verdict.\n\n`tests/test_briefing_terms.py` passes (29 tests, including the precision check). I did not run `evals/preflight.py`: the sandbox wouldn't allow it. The CHANGELOG and REPORT \u00a74l report 7 of 8 eval tasks still receiving their rule plus the accepted `exit_code_trust` gap, but I haven't confirmed that figure here. I also didn't run the rest of the test suite, and nothing is committed.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "alone_plain",
+   "rep": 1,
+   "position": null,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 16,
+   "seconds": 266.7,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.05s",
+   "said": "gainst the unchanged code, because that needed a stash I didn't run.\n\nNothing needed changing. I read the whole change and it already carries its own tests (`tests/test_stem.py`, plus an updated `tests/test_bench.py` that checks the bench corpus leaves the store named by `OKL_DATABASE_URL` untouched), so I made no edits.\n\nThe targeted run was 170 passed, 4 failed, 2 skipped. The full suite was 520 passed, 8 failed, 2 skipped. The briefing-log failures read as environmental: the code skips logging when `OKL_BRIEFING_LOG=0`, and I couldn't read that variable in this shell. I did not verify this.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "alone_plain",
+   "rep": 4,
+   "position": null,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 11,
+   "seconds": 39.9,
+   "summary": "2 passed, 5 deselected in 0.07s",
+   "said": "x_chars` in each receipt, but nothing read it back. That is the lesson's failure: an instrument change that nobody compares. Receipts from before this change have no `judge_max_chars` field, so I count them as 8000. Without that, a run on the new window would not have been flagged as differing from the old series.\n\nThe edits are in `evals/ab_harness.py` (new `_instrument` and `_receipt_instrument` helpers, used by the startup check in `main()`) and one new test in `tests/test_ab_harness.py`. I did not test the startup warning end to end. The test covers only the helpers.\n\nNothing is committed.",
+   "model": [
+    "claude-sonnet-5-5",
+    "claude-haiku-5-5"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "ten_plain",
+   "rep": 2,
+   "position": 2,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 19,
+   "seconds": 137.0,
+   "summary": "1 failed, 6 deselected in 0.09s",
+   "said": "* 337 passed, 5 failed, 2 skipped. Four of the failures are in files this change doesn't touch: `CLAUDE.md`, `AGENTS.md` and `.mcp.json` are missing from this checkout, and the package version is out of step with `pyproject.toml`.\n- **`test_service_check`:** this one failed on exposure logging (`briefings` was 0, expected 1). I think my shell has `OKL_BRIEFING_LOG=0` set, which turns logging off. I couldn't confirm that, because the sandbox blocked the check, so treat it as unverified.\n- **Not run:** I couldn't run `evals/preflight.py`; the sandbox blocked it. The diff doesn't touch that file.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "alone_plain",
+   "rep": 0,
+   "position": null,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 4,
+   "seconds": 22.2,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.10s",
+   "said": "e now counts as an unevaluable failure: it stays in `failures`, out of both arms' denominators, and counts toward the 20% bar. Receipts now record `code_chars`, an excerpt and the resolved model ids. REPORT \u00a74k has the pre-registration and the CHANGELOG has an entry. `python3 -m pytest -q tests/test_ab_harness.py` passes (10 tests).\n\nThe judge\u2260generator guard still compares the command strings at startup. I did not extend it to compare resolved models. A `claude` call can list a helper model such as haiku in its usage alongside the main one, so an overlap check would refuse runs that are fine.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "ten_plain",
+   "rep": 1,
+   "position": 9,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 15,
+   "seconds": 118.4,
+   "summary": "2 passed, 5 deselected in 0.05s",
+   "said": ". I also added `judge_max_chars` to the constructed history in `tests/test_scaffold.py`, which would otherwise have flagged that test's own receipts.\n\n`tests/test_ab_harness.py` passes (17 tests). `tests/test_scaffold.py` still has 3 failures, which I did not investigate. They are `test_mirror_files_identical`, `test_the_package_version_is_the_installed_distributions` and `test_plugin_manifest_points_at_real_files_and_the_shipped_version`; the last one fails on a missing `./.mcp.json`. I didn't run them without my edits, so I haven't confirmed they fail without my change. Nothing is committed.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "alone_told",
+   "rep": 1,
+   "position": null,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 12,
+   "seconds": 38.4,
+   "summary": "1 passed, 6 deselected in 0.12s",
+   "said": "ed no code or test fixes. The one edit I made is to `evals/precision.py`. It now builds its seed-only store from `git ls-files seed/*.json` instead of globbing the `seed/` directory. That follows the team lesson: an untracked or edited pack can't change the verdict away from what main gives.\n\n`tests/test_briefing_terms.py` passes (29 tests) before and after the edit, and it includes the precision check on the seed packs. I didn't run `evals/preflight.py` because the sandbox blocked it. The REPORT's pre-flight result (7 of 8 tasks, unchanged) is therefore unconfirmed here. Nothing is committed.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "alone_plain",
+   "rep": 4,
+   "position": null,
+   "passed": false,
+   "edited": true,
+   "harm": [],
+   "turns": 6,
+   "seconds": 93.0,
+   "summary": "1 failed, 82 deselected in 0.49s",
+   "said": "The change was sound, so I made one addition. `okl verify <id>` already ran git in list form with `--` before the pathspecs, and it passes the stored file globs as `-e` patterns. I added `test_suggest_check_treats_a_hostile_file_glob_as_data` in `tests/test_okl.py`, which feeds a hostile-looking glob through that path, as the lesson asks. `tests/test_okl.py` now gives 81 passed and 2 skipped (the Postgres ones need a database URL), and nothing is committed.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "alone_plain",
+   "rep": 3,
+   "position": null,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 14,
+   "seconds": 199.5,
+   "summary": "2 passed, 5 deselected in 0.06s",
+   "said": " `OKL_DATABASE_URL` isn't a `sqlite:///` URL. Before, it quietly timed `.okl/okl.db` instead, which is the failure in the team's lesson. The change's tests (`tests/test_stem.py`, `tests/test_bench.py`) pass, 6 of 6. The full suite had 8 failures and 520 passes. I only inspected 4 of the 8 \u2014 three in `tests/test_scaffold.py` and one in `tests/test_recap.py` \u2014 and they look environmental and unrelated. They hit a missing `AGENTS.md` and `.mcp.json`, an installed version of 0.9.0 against 0.15.0, and a recap count mismatch. I did not check the other 4 or confirm that these fail without the change.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "ten_told",
+   "rep": 4,
+   "position": 1,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 21,
+   "seconds": 308.1,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.09s",
+   "said": ".py` test finds installed version 0.15.0 against 0.9.0.\n- **Briefing log:** the `test_hygiene.py` drift test, `test_service_check` and the two `test_recap.py` tests count logged briefings and see none. `core.record_briefing` returns False when `OKL_BRIEFING_LOG=0`, so I suspect that variable is set here, but I couldn't confirm it.\n\nI couldn't run these 8 against the commit before the change, because the sandbox blocked each way I tried to make a copy of it.\n\nThe registered rule in REPORT \u00a74ad is written relative to the unstemmed control arms, and the report applies it as written when it fails.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "ten_told",
+   "rep": 4,
+   "position": 5,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 3,
+   "seconds": 17.4,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.06s",
+   "said": "I made no further changes; the change was already complete. `tests/test_ab_harness.py` passes (17 tests). It covers the judge getting a long submission whole, a submission over 40,000 characters being marked unevaluable with no judge call, and the window size.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "alone_told",
+   "rep": 3,
+   "position": null,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 21,
+   "seconds": 231.1,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.06s",
+   "said": "son.\n\nThe full suite has 8 failures, all from this environment and none from the stemming change:\n- **Missing files:** the checkout lacks `CLAUDE.md`, `AGENTS.md` and `.mcp.json`.\n- **Version mismatch:** the installed package version is 0.9.0, not 0.15.0.\n- **Briefing log:** `OKL_BRIEFING_LOG=0` appears to be set here, and `record_briefing` returns False when it is. I couldn't confirm the variable's value, because my attempts to run the tests with it unset were blocked. So those four failures are inferred, not verified.\n\nI also couldn't run the suite against the previous commit for comparison.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "alone_plain",
+   "rep": 2,
+   "position": null,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 8,
+   "seconds": 29.5,
+   "summary": "2 passed, 5 deselected in 0.06s",
+   "said": "I added the judge's window (`judge_max_chars`) to the harness's existing instrument-drift check in `evals/ab_harness.py`. The change had made the window part of the instrument and recorded it in receipts, but nothing compared it across runs, which is the gap the team's lesson describes. Receipts from before this change count as 8,000 characters, so the first run on the new window warns that it differs from the series. `tests/test_ab_harness.py` passes (17 tests). I didn't add a test for the new drift comparison.",
+   "model": [
+    "claude-sonnet-5-5",
+    "claude-haiku-5-5"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "ten_plain",
+   "rep": 4,
+   "position": 5,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 8,
+   "seconds": 104.8,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.07s",
+   "said": "000. A longer submission is marked unevaluable and no judge is called, and the window is recorded in each receipt as `judge_max_chars`. The 17 tests in `tests/test_ab_harness.py` pass, including the new ones for a long submission reaching the judge whole and for the over-window case.\n\nTwo gaps remain, and I left both:\n- **No drift guard for the window.** The startup drift guard doesn't check `judge_max_chars`, so a run with a different window won't be flagged as off-series.\n- **A weak test.** `test_the_receipt_names_the_judges_window` only checks the constant, not that the receipt contains it.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "ten_told",
+   "rep": 1,
+   "position": 6,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 16,
+   "seconds": 255.2,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.07s",
+   "said": " to `record_briefing` returning `False`. That happens when `OKL_BRIEFING_LOG=0` is set, and the harness may set it here. I couldn't confirm the variable, because my attempts to unset it and rerun were blocked. I'm treating `test_service_check` and the two `test_recap` failures as the same cause without having checked them.\n\nI read the diff, including the pre-registered rule in REPORT \u00a74ad. Its 15% size limit is relative to the unstemmed control measured in the same sitting, as the lesson requires. The report applies the rule as written and records the failure, so stemming stays off by default.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "ten_plain",
+   "rep": 0,
+   "position": 4,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 18,
+   "seconds": 224.3,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.07s",
+   "said": "ures (5):**\n  - `test_docs` and `test_scaffold::test_mirror_files_identical` fail because `CLAUDE.md`, `AGENTS.md` and `.mcp.json` don't exist in this checkout.\n  - Two more `test_scaffold` tests compare against the installed package version (0.15.0 against 0.9.0).\n- **Briefing-log failures (3):** `test_hygiene`, `test_okl::test_service_check` and `test_recap` come back with no briefing logged. `core.record_briefing` returns False when `OKL_BRIEFING_LOG=0`, and the harness sets that variable. I'm inferring that cause and haven't confirmed it.\n\nNothing in the diff touches the briefing-log path.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "ten_plain",
+   "rep": 0,
+   "position": 1,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 18,
+   "seconds": 122.7,
+   "summary": "2 passed, 5 deselected in 0.05s",
+   "said": " failing:** `tests/test_ab_harness.py` and `tests/test_scaffold.py` give 68 passed and 3 failed. The failures are `test_mirror_files_identical`, `test_the_package_version_is_the_installed_distributions` and `test_plugin_manifest_points_at_real_files_and_the_shipped_version`. One reports a missing `.mcp.json`. They concern mirrored files, the installed package version and the plugin manifest, not the harness. I did not confirm they also fail without my change, because the command that would have checked that was blocked.\n\nI left `okl-drift.json` as it was in the working copy and did not commit.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "ten_told",
+   "rep": 2,
+   "position": 7,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 10,
+   "seconds": 33.5,
+   "summary": "2 passed, 5 deselected in 0.05s",
+   "said": "r the judge's window. The startup guard now compares `judge_max_chars` against the modal value across prior receipts, treating receipts from before the field existed as 8,000. A run on the new 40,000-character window is therefore flagged as a new series, as \u00a74m says it is. The `evals/ab_harness.py` banner also now prints the right current value for that key. The existing change (window, unevaluable over-length submissions, receipt field, tests, docs) was otherwise fine. `tests/test_ab_harness.py` passes (17), but I added no test for the new check, so it is covered only by that unchanged suite.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "alone_plain",
+   "rep": 1,
+   "position": null,
+   "passed": false,
+   "edited": true,
+   "harm": [],
+   "turns": 6,
+   "seconds": 64.3,
+   "summary": "1 failed, 82 deselected in 0.48s",
+   "said": "The change needed one addition. `okl verify <id>` now suggests a check, and drift and reverify give plain-word guidance. The suggestion helper runs `git grep` with list-form argv and `--` before the pathspec, as the lesson requires, but no test covered that. I added `test_tests_touching_treats_a_hostile_glob_as_data` in `tests/test_okl.py`. It passes a hostile-looking glob and checks nothing runs. `tests/test_okl.py` gives 81 passed, 2 skipped (the real-Postgres tests). Nothing is committed.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "ten_told",
+   "rep": 1,
+   "position": 9,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 13,
+   "seconds": 37.1,
+   "summary": "2 passed, 5 deselected in 0.05s",
+   "said": "till needed. The instrument-drift guard in `evals/ab_harness.py` only compared the generator and judge commands. I added `judge_max_chars` to it, with receipts that predate the field read as 8,000. This means the first run on the 40,000-character window is flagged as off-series, which matches what REPORT \u00a74m pre-registers. The 17 tests in `tests/test_ab_harness.py` pass.\n\nI didn't add a test for the new guard check. That code sits inline in `main()`, so testing it would mean refactoring first. I also didn't run ruff or any test files other than `tests/test_ab_harness.py`. Nothing is committed.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "alone_told",
+   "rep": 4,
+   "position": null,
+   "passed": false,
+   "edited": true,
+   "harm": [],
+   "turns": 5,
+   "seconds": 65.4,
+   "summary": "1 failed, 82 deselected in 0.36s",
+   "said": "The change was already sound. `_tests_touching` uses list-form `git` calls, with each stored glob passed as `-e <pattern>` and the file list after `--`. I added `test_tests_touching_treats_a_hostile_glob_as_data` in `tests/test_okl.py`, as the lesson asks, to check that a hostile glob stays plain data and runs nothing. `python3 -m pytest -q tests/test_okl.py` gives 81 passed and 2 skipped (the Postgres conformance tests, which need `OKL_TEST_POSTGRES_URL`). I did not commit.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "alone_told",
+   "rep": 3,
+   "position": null,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 14,
+   "seconds": 47.8,
+   "summary": "2 passed, 5 deselected in 0.06s",
+   "said": "I made the harness check the judge's read window against the series, which the change had left out. `main()` in `evals/ab_harness.py` now compares `judge_max_chars` alongside the generator and judge. Receipts that predate the field count as 8,000, so a 40,000-character run is flagged \"INSTRUMENT DIFFERS\" at startup and in the report instead of passing silently. I added a test for that, and `python3 -m pytest -q tests/test_ab_harness.py` passes (18 tests). I did not commit.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "alone_plain",
+   "rep": 0,
+   "position": null,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 11,
+   "seconds": 38.9,
+   "summary": "2 passed, 5 deselected in 0.05s",
+   "said": "ge: the harness's instrument-continuity check now also compares `judge_max_chars`. It previously compared only the generator and judge commands. The 8,000-to-40,000 window change would therefore have gone unflagged, which is the failure in the lesson. Receipts without the field count as the old 8,000-character window, so the first run on the new judge prints the \"instrument differs from the series\" warning. `tests/test_ab_harness.py` passes (17 tests). I did not add a test for the new comparison, since it sits inline in `main()`, and I did not run ruff.\n\nThe change is in `evals/ab_harness.py`.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "alone_told",
+   "rep": 0,
+   "position": null,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 20,
+   "seconds": 94.8,
+   "summary": "2 passed, 5 deselected in 0.07s",
+   "said": "y compared the command strings. I put the check before pre-flight, with a test in `tests/test_ab_harness.py`.\n\n`python3 -m pytest -q tests/test_ab_harness.py` passes (11 tests). I also ran `tests/test_scaffold.py`, where three tests fail: `test_mirror_files_identical`, `test_the_package_version_is_the_installed_distributions` and `test_plugin_manifest_points_at_real_files_and_the_shipped_version`. The plugin manifest failure is a missing `./.mcp.json`. I didn't look into the other two or confirm those three also fail without the change, but none of them touch the harness. Nothing is committed.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "alone_told",
+   "rep": 2,
+   "position": null,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 16,
+   "seconds": 120.0,
+   "summary": "2 passed, 5 deselected in 0.05s",
+   "said": "`, which it reads as 8,000. I also updated the fixture in `tests/test_scaffold.py` and added an assertion for this case. `tests/test_ab_harness.py` and `tests/test_scaffold.py` give 68 passed and 3 failed.\n\nThe 3 failures (`test_mirror_files_identical`, `test_the_package_version_is_the_installed_distributions`, `test_plugin_manifest_points_at_real_files_and_the_shipped_version`) look environmental, not caused by this change. I did not confirm they fail without it. Two come from a missing `AGENTS.md` mirror and a version mismatch (`0.15.0` installed vs `0.8.5`); I didn't read the third's error.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "alone_plain",
+   "rep": 4,
+   "position": null,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 3,
+   "seconds": 17.2,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.10s",
+   "said": "y complete, so I made no edits. The 10 tests in `tests/test_ab_harness.py` pass.\n\n- **What it does:** The judge now returns `implemented`. A sample with no code is counted as a failure and left out of both arms' denominators. It still counts toward the 20% usability bar. Each receipt records the resolved generator and judge model ids, and REPORT \u00a74k holds the pre-registration.\n- **Judge and generator:** The startup refusal when they are the same command is still in `evals/ab_harness.py`.\n- **Left alone:** `okl-drift.json` also changed, but only its re-verified commit stamps. I didn't touch it.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "alone_told",
+   "rep": 0,
+   "position": null,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 22,
+   "seconds": 133.7,
+   "summary": "2 passed, 5 deselected in 0.06s",
+   "said": "E SERIES\" instead of passing as comparable.\n\nI added two tests for that in `tests/test_ab_harness.py` and updated the fixture receipts in `tests/test_scaffold.py` to carry the new field. `tests/test_ab_harness.py` and `tests/test_scaffold.py` give 70 passed and 3 failed. The three failures are `test_mirror_files_identical`, `test_the_package_version_is_the_installed_distributions` and the plugin-manifest test. The manifest one fails on a missing `./.mcp.json`; I didn't investigate the other two, and none of the three touch the harness. I didn't check whether they also fail without this change.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "alone_plain",
+   "rep": 4,
+   "position": null,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 13,
+   "seconds": 224.5,
+   "summary": "2 passed, 5 deselected in 0.08s",
+   "said": "st_stem.py` and `tests/test_bench.py` pass, but I did not run the stem-latency script.\n\nNone of the 8 failures touch this change:\n- **Missing files:** `CLAUDE.md`, `AGENTS.md` and `.mcp.json` aren't in the repo (`test_docs`, `test_scaffold`).\n- **Version mismatch:** the installed package is 0.15.0 against 0.9.0 (`test_scaffold`).\n- **Briefing-log tests:** `test_hygiene`, `test_okl::test_service_check` and the two `test_recap` tests record no briefings. I couldn't confirm the cause because the check was blocked, but `OKL_BRIEFING_LOG=0` in this environment would produce that.\n\nI did not commit.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "ten_plain",
+   "rep": 1,
+   "position": 6,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 25,
+   "seconds": 194.2,
+   "summary": "1 failed, 6 deselected in 0.08s",
+   "said": "po has a single commit:\n- Four are in `tests/test_docs.py` and `tests/test_scaffold.py`. Those tests need files this checkout doesn't have: `CLAUDE.md`, `AGENTS.md` and `.mcp.json`. They also expect a different package version.\n- `tests/test_okl.py::test_service_check` fails because my shell appears to have `OKL_BRIEFING_LOG` set. A scratch test confirmed the variable is set. The test never clears it, so no briefing row gets logged. I could not print its value.\n\nI couldn't run `evals/preflight.py`: the sandbox blocked it twice, so the \"pre-flight unchanged\" acceptance point is unverified here.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "ten_plain",
+   "rep": 4,
+   "position": 5,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 19,
+   "seconds": 169.7,
+   "summary": "1 failed, 6 deselected in 0.09s",
+   "said": "touches:\n- **Missing files:** `CLAUDE.md`, `AGENTS.md` and `.mcp.json` are absent from this checkout, which breaks the docs and scaffold tests.\n- **Version mismatch:** the installed package reports 0.8.5 against the manifest's 0.15.0.\n- **`test_service_check`:** it counts 0 logged briefings where it expects 1. I suspect `OKL_BRIEFING_LOG=0` is set in my shell, because that test doesn't clear the variable. I couldn't confirm that, so treat it as unconfirmed.\n\nI couldn't run `evals/preflight.py`, because the sandbox blocked it. The pre-flight result in the diff is therefore unchecked on my side.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "ten_told",
+   "rep": 0,
+   "position": 4,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 14,
+   "seconds": 179.1,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.08s",
+   "said": "tays off, as `FTS_TOKENIZE = \"unicode61\"`.\n- **Full suite:** 520 passed, 2 skipped, 8 failed. One failure is `tests/test_docs.py`, which can't find `CLAUDE.md` in this checkout. The other seven are in `test_hygiene`, `test_okl::test_service_check`, `test_recap` and `test_scaffold`.\n- **Not confirmed:** the briefing-log failures look like `OKL_BRIEFING_LOG=0` being set in this environment, which makes `record_briefing` return False. I tried to confirm that by rerunning them with the variable unset, but the command wasn't approved. None of the failing tests touch stemming.\n\nNothing is committed.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "ten_plain",
+   "rep": 1,
+   "position": 4,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 6,
+   "seconds": 159.7,
+   "summary": "1 failed, 82 deselected in 0.50s",
+   "said": "mplete, so I made no edits. `tests/test_okl.py` passes (80 passed, 2 skipped for lack of a Postgres URL), including the new test for `okl verify <id>` suggesting a check and for the plainer drift wording.\n\nThe full suite has two failures in `tests/test_scaffold.py`: `test_mirror_files_identical` (no `AGENTS.md`) and the plugin-manifest test (no `.mcp.json`). Neither file is in this working copy and the change doesn't touch them. I didn't re-run the suite without the change to confirm they fail there too.\n\nI checked the new subprocess calls against the list-form and `--` rules, and they comply.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "ten_told",
+   "rep": 4,
+   "position": 9,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 3,
+   "seconds": 60.5,
+   "summary": "1 failed, 82 deselected in 0.49s",
+   "said": "nd the tests that mention them. It suggests a `--run` command and stamps nothing. Drift and reverify now give one plain-words instruction instead of the `<check>` placeholder. The new subprocess call uses list-form argv with a `--` guard, and the new test covers the suggestion, the unknown-id error and the drift text.\n\n`okl verify <id>` without `--run` returns exit 2 but prints its suggestion to stdout, which doesn't match the exit-code lesson's \"reason to stderr, stdout empty\" for a command that didn't run. I left it as is, because the suggestion is the intended output and nothing is stamped.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "ten_told",
+   "rep": 0,
+   "position": 2,
+   "passed": false,
+   "edited": true,
+   "harm": [],
+   "turns": 7,
+   "seconds": 69.8,
+   "summary": "1 failed, 82 deselected in 0.43s",
+   "said": "The change was already complete; I made one hardening fix and added one test. `tests/test_okl.py` passes (80 passed, 2 skipped because they need Postgres).\n\n- **Fix:** `_tests_touching` now runs `git --literal-pathspecs grep`, so test paths that contain glob characters are treated as literal text.\n- **Test:** I added a case to the new verify-suggestion test that records a lesson with a hostile-looking `--files` glob. It checks that `okl verify <id>` exits 2, that nothing is executed, and that it falls through to \"No test mentions those files yet\".\n\nNothing is committed.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "alone_told",
+   "rep": 4,
+   "position": null,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 16,
+   "seconds": 196.4,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.08s",
+   "said": "use I wasn't permitted to stash it or rerun with the environment changed.\n\n- **Probably the checkout, not the change:** five failures in `tests/test_docs.py` and `tests/test_scaffold.py` are missing `CLAUDE.md`, `AGENTS.md` and `.mcp.json`, plus an installed-version mismatch (0.15.0 against 0.9.0).\n- **Unconfirmed:** the other three (`tests/test_hygiene.py` briefing-log, `tests/test_okl.py::test_service_check` and two in `tests/test_recap.py`) expect briefings to be logged. I suspect `OKL_BRIEFING_LOG=0` is set in this shell, but I couldn't read the environment to check.\n\nNothing is committed.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "alone_told",
+   "rep": 4,
+   "position": null,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 11,
+   "seconds": 41.8,
+   "summary": "1 passed, 6 deselected in 0.11s",
+   "said": "The change was already complete and its tests passed. I made one fix: `evals/precision.py` now seeds its store from the packs `git ls-files` tracks, not from a glob of `seed/`. That follows the team's lesson, so an untracked or edited pack can't change the precision verdict. It falls back to the directory glob outside a git checkout. `tests/test_briefing_terms.py` passes (29 tests, including the precision check), and nothing is committed.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "ten_plain",
+   "rep": 3,
+   "position": 3,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 17,
+   "seconds": 88.3,
+   "summary": "1 failed, 6 deselected in 0.11s",
+   "said": "ng with `test_okl.py`, `test_check_log.py`, `test_docs.py` and `test_unbriefed_paths.py`. The new tests pass, including the seed-pack precision check. 162 passed, 2 were skipped (Postgres), and 2 failed:\n- **`test_docs` seed-corpus count:** `CLAUDE.md` isn't in this checkout, so the test can't read it.\n- **`test_service_check`:** the briefing itself is returned (`armed_gates` is non-empty), but no exposure row is logged. I suspect `OKL_BRIEFING_LOG=0` is set in this shell. I couldn't confirm that, because the sandbox blocked the command that would check it.\n\nI didn't run the rest of the suite.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "ten_plain",
+   "rep": 2,
+   "position": 7,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 10,
+   "seconds": 36.1,
+   "summary": "2 passed, 5 deselected in 0.06s",
+   "said": " been compared silently against the old 8,000-character receipts. The check now compares the window against the modal value across all prior receipts. A receipt with no window field counts as 8,000.\n\n`python3 -m pytest -q tests/test_ab_harness.py` gives 17 passed. I did not add a test for the new window comparison. The startup check sits inside `main()`, which the tests don't exercise, so that branch is untested. The existing banner code already handles the new key.\n\nThe diff's `okl-drift.json` changes are only re-verification timestamps and commit ids, and I left them alone. I did not commit.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "alone_plain",
+   "rep": 0,
+   "position": null,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 13,
+   "seconds": 206.3,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.08s",
+   "said": "g.\n- **Briefing-log failures:** The other three (`test_record_briefing_logs_the_drift_marks_the_briefing_carries`, `test_service_check`, and the recap tests) fail because `record_briefing` returns False. That function returns False whenever `OKL_BRIEFING_LOG=0`, and I suspect this sandbox sets that variable. I couldn't check or rerun with it unset because the commands were blocked, so this is unconfirmed.\n- **Lesson check:** The change follows the lesson about one storage target. The bench's corpus store ignores `OKL_DATABASE_URL`, and `tests/test_bench.py` asserts the real store is untouched.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "alone_plain",
+   "rep": 1,
+   "position": null,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 7,
+   "seconds": 27.9,
+   "summary": "2 passed, 5 deselected in 0.10s",
+   "said": "or commands differ but resolve to the same model id. That makes the lesson's rule hold for two aliases that point at one model, which the existing string comparison missed. I didn't add a test for it. The 10 tests in `tests/test_ab_harness.py` pass, and I ran only that file.\n\nThe rest was in place: `implemented` in the judge verdict, plan-only samples counted as unevaluable failures, `code_chars` and an excerpt kept for audit, `generator_model` and `judge_model` in the receipt, and the REPORT \u00a74k pre-registration.\n\nThe `okl-drift.json` verification timestamps in the diff are regenerated noise.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "ten_told",
+   "rep": 2,
+   "position": 5,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 3,
+   "seconds": 18.8,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.09s",
+   "said": "ade no edits. I read the diff and ran `python3 -m pytest -q tests/test_ab_harness.py`: all 10 tests pass.\n\nA plan-only sample is now a failure in `evals/ab_harness.py`. It stays in `failures`, is left out of both arms' denominators, and counts toward the 20% bar. `evals/REPORT.md` \u00a74k pre-registers the change, and receipts record the resolved model ids. I did not run the harness itself, since that spends live model calls.\n\nThe diff also touches `okl-drift.json`: it only refreshes verification timestamps and commit ids on three lessons, unrelated to #164. You may want to drop it from the merge.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "alone_plain",
+   "rep": 3,
+   "position": null,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 11,
+   "seconds": 34.8,
+   "summary": "1 passed, 6 deselected in 0.10s",
+   "said": "The change was already in place and its tests passed (29 in `tests/test_briefing_terms.py`). I made one edit: `evals/precision.py` now loads the seed packs from `git ls-files seed/*.json` instead of globbing the directory. That follows the team lesson, so an uncommitted pack can't change the verdict.\n\nThe pytest run covers the new script, because one test calls `evals/precision.py` and checks for \"PRECISION OK\". I did not run the script on its own. I did not run the rest of the suite.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "ten_plain",
+   "rep": 3,
+   "position": 0,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 16,
+   "seconds": 212.4,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.05s",
+   "said": "ks `CLAUDE.md`, `AGENTS.md` and `.mcp.json`. The installed package is 0.9.0 against 0.15.0 in the repo.\n- **Briefing-log tests (3 of 8):** `test_record_briefing_logs_the_drift_marks_the_briefing_carries` and the recap tests fail the same way: `record_briefing` returns False. That looks like `OKL_BRIEFING_LOG=0` being set here, which `record_briefing` honours. I couldn't confirm that, because I couldn't read or unset the variable in this sandbox, so it is a likely cause, not a verified one.\n- **`test_service_check`:** I didn't investigate this failure separately.\n\nI made no edits and no commit.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "ten_told",
+   "rep": 2,
+   "position": 2,
+   "passed": false,
+   "edited": true,
+   "harm": [],
+   "turns": 7,
+   "seconds": 72.5,
+   "summary": "1 failed, 82 deselected in 0.38s",
+   "said": "The change needed one addition: a test that a hostile drift glob can't reach `git grep` as an option. I added `test_tests_touching_never_lets_a_stored_glob_act_as_a_git_option` in `tests/test_okl.py`. The rest of the change (`okl verify <id>` suggesting a check, plain-words drift and reverify output, docs) already looked right, so I left it alone.\n\nThe full `tests/test_okl.py` run gave 80 passed and 2 skipped (the Postgres ones). I ran that before adding the new test. After adding it, I ran only the new test and the new verify test, and both passed. Nothing is committed.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "ten_plain",
+   "rep": 1,
+   "position": 0,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 7,
+   "seconds": 32.1,
+   "summary": "2 passed, 5 deselected in 0.09s",
+   "said": "The change was already in place and its 10 tests pass (`python3 -m pytest -q tests/test_ab_harness.py`). I added one thing: the harness now refuses to run, exit code 2, when the generator and judge aliases resolve to the same model id. This extends the judge\u2260generator rule to the resolved ids that R12 now records. I did not add a test for that refusal, and nothing was committed.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "ten_plain",
+   "rep": 3,
+   "position": 1,
+   "passed": false,
+   "edited": true,
+   "harm": [],
+   "turns": 7,
+   "seconds": 75.9,
+   "summary": "1 failed, 82 deselected in 0.53s",
+   "said": "`okl verify <id>` with no `--run` now suggests a check, and drift and reverify say what to do in plain words. The existing tests pass (80 passed, 2 skipped because they need a Postgres server). I only added `test_suggest_check_passes_hostile_globs_to_git_as_data` in `tests/test_okl.py`, which feeds hostile-looking globs to the new `git grep` call, as the list-form subprocess lesson requires. Nothing is committed.\n\nI did not re-run the full suite after adding that test. The new test and the existing `test_verify_without_a_check_suggests_one_and_drift_says_what_to_do` pass when run on their own.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "alone_plain",
+   "rep": 0,
+   "position": null,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 9,
+   "seconds": 154.2,
+   "summary": "1 failed, 6 deselected in 0.08s",
+   "said": "I'm wrapping up: I made no changes, because the change already looks complete. The 29 tests in `tests/test_briefing_terms.py` pass. In the full suite, 337 passed, 2 were skipped and 5 failed. Four of the failures are because `CLAUDE.md`, `AGENTS.md` and `.mcp.json` are missing from this checkout and the installed package version (0.8.5) doesn't match the repo's (0.15.0). I didn't look into `test_service_check`, so I can't say whether it's related to the change. I didn't run `evals/preflight.py` (the command needed approval), so the \"every eval task still gets its rule\" gate is unchecked.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "ten_told",
+   "rep": 4,
+   "position": 5,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 19,
+   "seconds": 186.2,
+   "summary": "1 failed, 6 deselected in 0.11s",
+   "said": "run it.\n\nThe full suite has 5 failures (337 passed, 2 skipped):\n- **Missing files and version:** The scaffold and docs failures come from files absent in this checkout (`AGENTS.md`, `CLAUDE.md`, `.mcp.json`) and an installed version mismatch (0.8.5 against 0.15.0).\n- **`test_service_check`:** It fails on its exposure count of 1 (it gets 0), and I didn't establish why. The change doesn't touch logging, and the briefing it checks still returns its armed gate, so I judge it unrelated. I couldn't check this against the commit before the change because the sandbox blocked the git operations needed.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "alone_told",
+   "rep": 0,
+   "position": null,
+   "passed": false,
+   "edited": true,
+   "harm": [],
+   "turns": 8,
+   "seconds": 74.4,
+   "summary": "1 failed, 82 deselected in 0.51s",
+   "said": "rocess: `_tests_touching` in `src/okl/cli.py` now runs `git --literal-pathspecs \u2026 grep`, so test paths can't be read as git pathspec magic. It already used list-form argv, `-e` for the search terms and `--` before the paths. I also added `test_tests_touching_treats_a_hostile_glob_as_data` in `tests/test_okl.py`, which passes a hostile-looking glob and checks nothing is executed. All 80 tests in `tests/test_okl.py` passed before I added the new test and 2 were skipped (Postgres). After adding it, I re-ran only the new test and the new verify/drift test, and those 2 passed. Nothing is committed.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "ten_told",
+   "rep": 3,
+   "position": 3,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 16,
+   "seconds": 147.8,
+   "summary": "1 failed, 6 deselected in 0.11s",
+   "said": "o confirm.\n- **Unexplained failure:** `tests/test_okl.py::test_service_check` fails at the exposure-count assert (0 briefings, expected 1). The `/check` call before it passes and returns armed gates. My best guess is that `OKL_BRIEFING_LOG=0` is set in this shell, which would switch briefing logging off. I couldn't confirm that.\n- **Not run:** I didn't run `python3 evals/preflight.py`. It would need your approval, and the report's claim that 7 of 8 tasks still receive their rule is unchecked here.\n\nIf you approve it, the next step is to rerun `test_service_check` with `OKL_BRIEFING_LOG` unset.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "alone_told",
+   "rep": 1,
+   "position": null,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 14,
+   "seconds": 226.0,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.16s",
+   "said": "from this checkout, and the package version reads 0.15.0 against 0.9.0 in the plugin manifest. That accounts for the docs and scaffold failures.\n- **Briefing logging:** `record_briefing` returns False when `OKL_BRIEFING_LOG=0`. I suspect that is set in this environment, but I couldn't check it or rerun with it unset. It would explain the hygiene, recap and `test_service_check` failures.\n\nOn the lesson: the new `FTS_TOKENIZE` setting lives in `store.py` and is applied when the store opens, so every entry point gets it. The bench test also checks that the bench corpus ignores `OKL_DATABASE_URL`.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "ten_told",
+   "rep": 3,
+   "position": 0,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 15,
+   "seconds": 295.2,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.07s",
+   "said": " fail-on-size rule is stated relative to the control arm, as the team's lessons require.\n- **Default:** The setting is off by default (`store.FTS_TOKENIZE = \"unicode61\"`).\n- **Failures:** The 8 failures are `test_docs`, `test_scaffold` (3), `test_recap` (2) and `test_okl::test_service_check`, plus one more I did not read. The ones I read come from the extracted checkout lacking `CLAUDE.md`, `AGENTS.md` and `.mcp.json`, from a version mismatch (0.15.0 against 0.9.0), and from no briefing being logged. The repo has a single commit, so I could not run the suite against the base.\n\nI didn't commit.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "ten_plain",
+   "rep": 0,
+   "position": 3,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 16,
+   "seconds": 146.0,
+   "summary": "1 failed, 6 deselected in 0.11s",
+   "said": "from this checkout (`CLAUDE.md`, `AGENTS.md`, `.mcp.json`) or compare the installed package version (0.15.0) against `pyproject.toml` (0.8.5). I did not open those four failures individually.\n- **`test_service_check`:** it fails on the exposure count (0, not 1). It never clears `OKL_BRIEFING_LOG`, so I suspect that variable is set to 0 in my shell. I couldn't confirm that, because the commands to read it or re-run without it were blocked.\n\nI also couldn't run `evals/preflight.py`; the command needed approval. Run it before merging, since the issue requires the pre-flight to come out unchanged.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "alone_plain",
+   "rep": 0,
+   "position": null,
+   "passed": false,
+   "edited": true,
+   "harm": [],
+   "turns": 7,
+   "seconds": 79.9,
+   "summary": "1 failed, 82 deselected in 0.44s",
+   "said": "was already complete and its tests pass. The one gap was the team's shell-safety lesson. The new `git grep` call (list-form argv with `--`) takes a stored file glob, but no test passed it a hostile glob. I added `test_tests_touching_treats_a_hostile_glob_as_data` to `tests/test_okl.py`, which feeds option-like and shell-metacharacter globs and checks nothing runs. The full `tests/test_okl.py` run gave 80 passed, 2 skipped (Postgres) before I added that test. I then ran only the new test and the change's own test, and both passed. I didn't re-run the whole file afterwards. Nothing is committed.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "ten_plain",
+   "rep": 2,
+   "position": 2,
+   "passed": false,
+   "edited": true,
+   "harm": [],
+   "turns": 8,
+   "seconds": 78.4,
+   "summary": "1 failed, 82 deselected in 0.46s",
+   "said": "hat a hostile file-glob from the store reaches `git grep` as a pattern, not as an option. The new `okl verify <id>` suggestion, the drift and reverify wording, and the docs were already correct. `tests/test_okl.py` passes: 80 passed, 2 skipped (the Postgres tests), run before I added the test. The new test passed on its own along with the existing verify-suggestion test. I didn't re-run the full file after adding it, and nothing is committed.\n\nI also left the diff's hand-looking edits to `okl-drift.json` as they are. They reference commit `442080fa\u2026`, which I didn't check exists in this clone.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "ten_told",
+   "rep": 2,
+   "position": 2,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 15,
+   "seconds": 140.6,
+   "summary": "1 failed, 6 deselected in 0.09s",
+   "said": " passes, including the precision-check test.\n- **Failures:** the full `python3 -m pytest -q tests` run had 5 failures. Four are files missing from this checkout (`CLAUDE.md`, `AGENTS.md`, `.mcp.json`) and a package-version mismatch.\n- **`test_service_check`:** it fails on the exposure count (0, expected 1), but its briefing assertion passed first. I suspect an inherited `OKL_BRIEFING_LOG=0`, but I couldn't confirm it because commands that set or read env vars were blocked here.\n- **Not run:** I couldn't run `evals/preflight.py` either, because the sandbox blocked it. The diff doesn't touch it.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "ten_plain",
+   "rep": 0,
+   "position": 2,
+   "passed": false,
+   "edited": true,
+   "harm": [],
+   "turns": 7,
+   "seconds": 77.5,
+   "summary": "1 failed, 82 deselected in 0.40s",
+   "said": "The change was already in good shape, and the full `tests/test_okl.py` run passed (80 passed, 2 Postgres tests skipped). I added one test, which passes along with the existing `verify` test: it passes a hostile-looking glob to `_tests_touching` and checks it stays plain data, never reaching a shell or a git option. I didn't commit.\n\nBare `okl verify <id>` exits 2 and prints its suggestion on stdout. Your exit-code lesson says a \"did not run\" result should keep stdout empty, so you may want to move that output to stderr. I left it because the output is the whole point of the command.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "ten_told",
+   "rep": 1,
+   "position": 0,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 6,
+   "seconds": 133.8,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.07s",
+   "said": " The 10 tests in `tests/test_ab_harness.py` pass, and the harness, judge prompt, REPORT \u00a74k, CHANGELOG and resolved-model recording match what #164 asks for.\n\nThe full suite has 5 failures, which I did not trace to this change. Four are in `tests/test_scaffold.py` and one is `tests/test_okl.py::test_service_check`. The ones I inspected come from this checkout: a missing `AGENTS.md` and `.mcp.json`, and an installed package version (0.8.3) that doesn't match the repo's 0.15.0. I didn't look at why `test_service_check` fails.\n\nI did not check whether the same failures happen without this change.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "ten_plain",
+   "rep": 4,
+   "position": 1,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 18,
+   "seconds": 233.3,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.05s",
+   "said": "this checkout, plus a package-version mismatch. The other four (`test_hygiene`, `test_okl::test_service_check`, `test_recap` \u00d72) depend on `core.record_briefing` writing its log, which it skips when `OKL_BRIEFING_LOG=0`. I think this shell sets that variable but couldn't confirm it, so I couldn't rerun them with it unset.\n- **The rule:** the \u00a74ad rule is stated against the unstemmed control arm measured in the same sitting, as the team's lesson on falsifiers requires. The report applies it as written: the warm arms grew 17.5% against the 15% allowed, so the default stays off.\n\nI didn't commit.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "alone_told",
+   "rep": 0,
+   "position": null,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 18,
+   "seconds": 231.2,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.05s",
+   "said": "ronmental rather than caused by the change:\n- **Missing files and version:** four fail on missing `CLAUDE.md`, `AGENTS.md` and `.mcp.json`, or on the installed package version being 0.9.0 against the repo's 0.15.0.\n- **Briefing log:** `OKL_BRIEFING_LOG=0` is probably set in this shell and would explain the other four, but I couldn't confirm it. The sandbox blocked every command that would have shown or unset it.\n\nOn the lesson: the change adds no environment variable. `FTS_TOKENIZE` is a single module setting, and the store and the line's word-stemming both read it, so I added no refusal code.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "alone_plain",
+   "rep": 4,
+   "position": null,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 12,
+   "seconds": 34.1,
+   "summary": "1 passed, 6 deselected in 0.10s",
+   "said": "I made one change: `evals/precision.py` now seeds its store from the packs git tracks under `seed/` (`git ls-files`) instead of globbing the directory. This follows the team lesson, so an untracked or deleted pack can't change the precision verdict. The rest of the change (stoplist, term cap, `briefing_terms`, tests) needed nothing. `python3 -m pytest -q tests/test_briefing_terms.py` passes, 29 tests, including the precision-check test. I didn't commit.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "alone_told",
+   "rep": 4,
+   "position": null,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 14,
+   "seconds": 70.7,
+   "summary": "2 passed, 5 deselected in 0.05s",
+   "said": "of the change (40,000-character window, unevaluable over-length submissions, the receipt field, REPORT \u00a74m) was already sound.\n\n`tests/test_ab_harness.py` and the series tests pass. Three tests in `tests/test_scaffold.py` still fail: `test_mirror_files_identical`, `test_the_package_version_is_the_installed_distributions` and `test_plugin_manifest_points_at_real_files_and_the_shipped_version`. They concern mirror files, package version and plugin manifest, which this change doesn't touch. I couldn't confirm they fail without my edits because the baseline check was blocked. Nothing is committed.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "alone_plain",
+   "rep": 2,
+   "position": null,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 11,
+   "seconds": 36.9,
+   "summary": "1 passed, 6 deselected in 0.10s",
+   "said": "The change was already in place. I made one fix, in `evals/precision.py`: it now seeds its store from `git ls-files seed/*.json` instead of globbing the directory. That follows your lesson, so an untracked pack can't change the precision verdict. `python3 -m pytest -q tests/test_briefing_terms.py` passes (29 tests), including the one that runs the precision check on the seed packs. I didn't run the rest of the suite or commit anything.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "alone_told",
+   "rep": 3,
+   "position": null,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 22,
+   "seconds": 164.4,
+   "summary": "1 failed, 6 deselected in 0.08s",
+   "said": "* They fail because this checkout has no `CLAUDE.md`, `AGENTS.md` or `.mcp.json`, and because the installed package version differs from the plugin manifest.\n- **`test_service_check` I could not explain.** The briefing it requests does return its gate, but the logged-briefing count is 0, not 1. I suspect `OKL_BRIEFING_LOG=0` is set in this shell, since that setting turns the log off. The sandbox blocked every check of the shell environment, and the repo has only the one frozen commit, so I couldn't compare against the base.\n\nPlease re-run that test with `OKL_BRIEFING_LOG` unset before merging.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "ten_plain",
+   "rep": 1,
+   "position": 6,
+   "passed": false,
+   "edited": true,
+   "harm": [],
+   "turns": 15,
+   "seconds": 277.4,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.06s",
+   "said": ". The code and tests needed nothing else.\n\n`tests/test_stem.py` and `tests/test_bench.py` pass (6 tests). The full suite has 8 failures, none touching stemming:\n- **Missing files:** `CLAUDE.md`, `AGENTS.md` and `.mcp.json` aren't in this checkout.\n- **Version check:** the package version test fails on `0.15.0` against `0.9.0`.\n- **Briefing log:** the hygiene, recap and service-check failures look like `OKL_BRIEFING_LOG=0` in this environment switching logging off. I couldn't confirm that, because the commands that would check it were blocked.\n\nI didn't compare against a run without the change.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "ten_plain",
+   "rep": 4,
+   "position": 6,
+   "passed": false,
+   "edited": true,
+   "harm": [],
+   "turns": 8,
+   "seconds": 132.8,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.07s",
+   "said": "the issue asks. The judge returns `implemented`, and a sample with no code is now a failure. I only added a README line about that rule to `evals/README.md`. `python3 -m pytest -q tests/test_ab_harness.py` passes (10 tests).\n\nThe full suite has 5 failures, 3 of them in `tests/test_scaffold.py`. I did not run the suite without the change, so I can't say they predate it. The 3 scaffold failures are a missing `AGENTS.md`, a missing `.mcp.json`, and a version mismatch (0.15.0 vs 0.8.3). Those look like this snapshot rather than the change. I did not look at the other 2.\n\nI did not commit anything.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "alone_told",
+   "rep": 4,
+   "position": null,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 13,
+   "seconds": 49.9,
+   "summary": "2 passed, 5 deselected in 0.09s",
+   "said": "added one thing: the harness now refuses to run, with exit 3, when the generator and judge resolve to the same model id. The existing string check missed that case, for example an alias and a full id naming one model, which is what the judge\u2260generator lesson warns against. The new test in `tests/test_ab_harness.py` and the other tests there pass (11 passed). I ran only that file, nothing was committed, and I didn't run the harness itself.\n\nThe refusal only fires when both models resolve to a known id. If the id probe fails for either one, the harness runs and only the old string check applies.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "alone_plain",
+   "rep": 2,
+   "position": null,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 15,
+   "seconds": 296.9,
+   "summary": "2 passed, 5 deselected in 0.08s",
+   "said": "out. This accounts for the failures in `tests/test_docs.py` and in `tests/test_scaffold.py::test_mirror_files_identical`, and for the plugin-manifest failure in `tests/test_scaffold.py`.\n- **Version mismatch:** the installed package reports 0.15.0, but the repo's expected version is 0.9.0.\n- **Briefing log (4 tests):** `test_hygiene`, `test_service_check` and the two `test_recap` tests fail because `record_briefing` returns False. That looks like `OKL_BRIEFING_LOG=0` set in this environment. I couldn't confirm it, because the sandbox blocked the commands that would unset it.\n\nI did not commit.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "ten_told",
+   "rep": 4,
+   "position": 6,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 6,
+   "seconds": 38.3,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.10s",
+   "said": "ample is now an unevaluable failure, a verdict without `implemented` counts as a judge failure, receipts record `generator_model` and `judge_model`, and REPORT \u00a74k pre-registers the instrument change.\n\nI also ran `tests/test_docs.py` and `tests/test_unbriefed_paths.py`. One test fails: `test_readme_and_claude_md_count_the_seed_corpus_as_it_is`, because `CLAUDE.md` isn't in this checkout. The diff doesn't touch that file. I didn't confirm it fails the same way without the change.\n\nI didn't run the live harness, so the `resolved_model` probe has only been tested against stubbed `claude` scripts.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "alone_told",
+   "rep": 1,
+   "position": null,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 9,
+   "seconds": 108.0,
+   "summary": "2 passed, 5 deselected in 0.06s",
+   "said": "y` already refused to run when the two commands were identical strings. It now also refuses (exit 3) when the generator and judge aliases resolve to the same model id, which is the mirror case the lesson describes. I didn't add a test for this new refusal.\n- **Tests:** `tests/test_ab_harness.py` has 10 passing tests. In `tests/test_scaffold.py`, 3 tests fail on a missing `AGENTS.md` and `.mcp.json` and on a package version mismatch (installed 0.15.0, repo 0.8.3). I didn't check whether they fail without this change, but they test packaging files that this diff doesn't touch.\n\nI did not commit.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "ten_plain",
+   "rep": 3,
+   "position": 5,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 10,
+   "seconds": 33.0,
+   "summary": "2 passed, 5 deselected in 0.05s",
+   "said": "n `tests/test_ab_harness.py` pass (17). I didn't run ruff or the rest of the test suite.\n\nThe addition is in `evals/ab_harness.py`: the startup drift check now compares the judge's window (`judge_max_chars`) against the series, alongside generator and judge. Receipts from before the window was recorded count as 8,000 characters. Without this, the next run would report as comparable to the 8,000-character runs, which REPORT \u00a74m says it isn't.\n\nI didn't add a test for the new window comparison. `test_the_receipt_names_the_judges_window` only asserts the constant, not that the receipt records it.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "alone_plain",
+   "rep": 2,
+   "position": null,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 7,
+   "seconds": 27.8,
+   "summary": "2 passed, 5 deselected in 0.09s",
+   "said": "did what the issue asked: `implemented` in the judge verdict, plan-only samples counted as unevaluable failures, the REPORT \u00a74k pre-registration, and the resolved model ids in the receipt. I added one thing, in `evals/ab_harness.py`: the judge\u2260generator check now also refuses to run (exit 3) when the two resolve to the same model id. Before, it only compared the command strings, so two different aliases for one model would have passed.\n\nThe 10 tests in `tests/test_ab_harness.py` pass. I did not add a test for the new refusal, because exercising it needs the whole of `main()`. I did not commit.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "alone_told",
+   "rep": 3,
+   "position": null,
+   "passed": false,
+   "edited": true,
+   "harm": [],
+   "turns": 6,
+   "seconds": 89.9,
+   "summary": "1 failed, 82 deselected in 0.39s",
+   "said": "e place a stored file-glob reaches a subprocess, `_tests_touching`, already uses list-form argv with `-e` for the patterns and `--` before the paths. The change had no test for that, so I added `test_verify_suggestion_never_lets_a_stored_glob_reach_a_shell_or_a_git_option` in `tests/test_okl.py`. It passes a hostile glob (a `--open-files-in-pager=\u2026` option, shell metacharacters, `--no-index`, `-O`) and asserts nothing runs and no files are created. `python3 -m pytest -q tests/test_okl.py` gives 81 passed, 2 skipped (the Postgres tests, which need `OKL_TEST_POSTGRES_URL`). Nothing is committed.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "alone_told",
+   "rep": 2,
+   "position": null,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 7,
+   "seconds": 28.1,
+   "summary": "2 passed, 5 deselected in 0.08s",
+   "said": "s already complete: the judge returns `implemented`, a plan-only sample counts as an unevaluable failure, receipts record the resolved model ids, and REPORT \u00a74k pre-registers it. I added one thing it was missing. `evals/ab_harness.py` now also refuses to run when two different aliases resolve to the same model, as the judge\u2260generator lesson requires, because the existing check only compared the command strings. `tests/test_ab_harness.py` passes (10 tests). The new refusal has no test of its own, because it sits in `main()` behind the preflight, and I didn't run it either. Nothing is committed.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "ten_told",
+   "rep": 3,
+   "position": 3,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 5,
+   "seconds": 130.6,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.06s",
+   "said": "h no code counts as a failure: out of the denominators and toward the 20% bar. Receipts record the resolved model ids, and REPORT \u00a74k holds the pre-registration. The new tests in `tests/test_ab_harness.py` pass.\n\nI ran the whole `tests` directory: 272 passed, 2 skipped, 5 failed. The failures are in `test_docs`, `test_scaffold` and `test_okl::test_service_check`. They fail on files missing from this checkout (`CLAUDE.md`, `AGENTS.md`, `.mcp.json`) and on a version mismatch (installed 0.15.0 against 0.8.3). They don't touch the harness, though I didn't confirm they also fail without the change.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "alone_plain",
+   "rep": 1,
+   "position": null,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 14,
+   "seconds": 38.9,
+   "summary": "1 passed, 6 deselected in 0.09s",
+   "said": "The change was already complete and its tests passed. I made one small fix. `evals/precision.py` built its seed-only store from a glob of `seed/`, so an untracked or half-edited pack could change the verdict. It now loads only the packs `git ls-files` lists, as the lesson says. `python3 -m pytest -q tests/test_briefing_terms.py` gives 29 passed, including the test that runs the precision script. I couldn't run `evals/precision.py` directly here, so that test is the only run of it after the edit.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "ten_plain",
+   "rep": 2,
+   "position": 0,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 12,
+   "seconds": 183.2,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.08s",
+   "said": "e:\n\n- **Missing files:** `CLAUDE.md`, `AGENTS.md` and `.mcp.json` aren't in this checkout, which fails the docs and scaffold tests. Those scaffold tests also see the installed package as 0.15.0 against a 0.9.0 manifest.\n- **Briefing log:** the sandbox sets `OKL_BRIEFING_LOG=0`, which makes `core.record_briefing` return `False`. That accounts for the hygiene, recap and `test_service_check` failures.\n\nI couldn't confirm the briefing-log explanation. My attempt to rerun those tests with the variable set was blocked, and I didn't try a before/after comparison because the change is already in HEAD.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "ten_plain",
+   "rep": 0,
+   "position": 3,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 5,
+   "seconds": 128.1,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.06s",
+   "said": "complete: the judge's `implemented` field, plan-only samples counted as failures, `code_chars` and excerpt on each record, resolved model ids on the receipt, the REPORT \u00a74k pre-registration, and the CHANGELOG entry. `python3 -m pytest -q tests/test_ab_harness.py` passes with 10 tests.\n\nThe full `tests` run has 5 failures (272 passed, 2 skipped), none in the A/B harness. They come from this checkout lacking `CLAUDE.md`, `AGENTS.md` and `.mcp.json`, and from the installed package version (0.15.0) not matching the repo's 0.8.3. I didn't run the suite without the change to confirm they predate it.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "alone_plain",
+   "rep": 1,
+   "position": null,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 16,
+   "seconds": 46.7,
+   "summary": "2 passed, 5 deselected in 0.05s",
+   "said": "ment-continuity check in `evals/ab_harness.py` to cover the judge window, as the lesson asks. Before, it compared only the generator and judge commands. A run on the new 40,000-character window would have looked like part of the old series, and receipts from before the window was recorded now count as 8,000. I added a test in `tests/test_ab_harness.py` that checks the \"INSTRUMENT DIFFERS\" warning fires. `tests/test_ab_harness.py` now passes, 18 tests. I didn't commit.\n\nThe existing `main()` banner code builds the \"series uses X\" line for each key, so I also taught it to print the window value.",
+   "model": [
+    "claude-sonnet-5-5",
+    "claude-haiku-5-5"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "alone_plain",
+   "rep": 3,
+   "position": null,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 22,
+   "seconds": 121.1,
+   "summary": "2 passed, 5 deselected in 0.05s",
+   "said": "/test_ab_harness.py` and gave the constructed receipts in `tests/test_scaffold.py` the new field.\n\nThe ab_harness tests and the off-series test in `test_scaffold.py` pass. Three other `test_scaffold.py` tests still fail: `test_mirror_files_identical`, `test_the_package_version_is_the_installed_distributions` and `test_plugin_manifest_points_at_real_files_and_the_shipped_version`. The one failure I looked at was a missing `.mcp.json` in the plugin-manifest test, which this change doesn't touch. I did not check whether the other two or that one also fail without the change. Nothing is committed.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "alone_plain",
+   "rep": 2,
+   "position": null,
+   "passed": false,
+   "edited": true,
+   "harm": [],
+   "turns": 5,
+   "seconds": 63.7,
+   "summary": "1 failed, 82 deselected in 0.39s",
+   "said": "I left the change itself as it was and added one test, `test_tests_touching_treats_a_hostile_stored_glob_as_data`, in `tests/test_okl.py`. The existing code already follows the shell-safety lesson: the new `git` calls use list-form argv, and stored globs reach `git grep` only as `-e` patterns, with the pathspecs after `--`. The new test passes a hostile-looking glob and checks that nothing is executed and no file is created. `python3 -m pytest -q tests/test_okl.py` gives 81 passed and 2 skipped; the skips are the Postgres-backed tests, which need `OKL_TEST_POSTGRES_URL`. Nothing is committed.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "ten_plain",
+   "rep": 2,
+   "position": 5,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 3,
+   "seconds": 17.9,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.07s",
+   "said": "Nothing needed changing. The change already did what the issue asked, and `python3 -m pytest -q tests/test_ab_harness.py` passes with 10 tests.\n\n- **Unevaluable samples:** the judge now returns `implemented`. A sample with `implemented: false` goes into `failures`, out of both arms' denominators and toward the 20% bar.\n- **Receipt:** it records the resolved `generator_model` and `judge_model`.\n- **Pre-registration:** REPORT \u00a74k covers the judge-prompt change.\n\nI only ran the new test file, not the rest of the suite or a live A/B run.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "ten_told",
+   "rep": 0,
+   "position": 1,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 8,
+   "seconds": 31.9,
+   "summary": "2 passed, 5 deselected in 0.05s",
+   "said": "judge, and records `judge_max_chars` in each receipt. The window is part of the judge instrument, so the harness's check against the series now compares it too. Older receipts have no such field and count as 8,000. Without that, a run on the new window would not be flagged as off-series.\n\nThe new check in `main` has no test, because it is inline and only a full run reaches it. I did not run ruff.\n\nI also left the diff's last test, `test_the_receipt_names_the_judges_window`, as it was. It only asserts the constant's value and does not check what lands in the receipt.\n\nI did not commit anything.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "alone_plain",
+   "rep": 3,
+   "position": null,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 9,
+   "seconds": 176.8,
+   "summary": "2 passed, 5 deselected in 0.06s",
+   "said": "dd a test for this new refusal, because it sits in `main()`, which needs the pre-flight and a live setup.\n\nFive tests in the full suite fail: two in `tests/test_scaffold.py` (package version and plugin manifest), plus `tests/test_okl.py::test_service_check`, `tests/test_docs.py` and `test_mirror_files_identical`. The errors point at missing `CLAUDE.md`, `AGENTS.md` and `.mcp.json` files in this checkout and a version mismatch (0.15.0 installed, 0.8.3 expected). None touch the harness. I did not run the suite without the change, so I haven't confirmed they fail without it. Nothing is committed.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "alone_told",
+   "rep": 2,
+   "position": null,
+   "passed": false,
+   "edited": true,
+   "harm": [],
+   "turns": 6,
+   "seconds": 63.0,
+   "summary": "1 failed, 82 deselected in 0.36s",
+   "said": "It already passes the stored file glob to `git grep` as a list-form `-e` term, with `--` before the pathspecs. The one gap was a test for that, which the lesson asks for, so I added `test_verify_suggestion_never_lets_a_stored_glob_reach_a_shell_or_a_git_option` in `tests/test_okl.py`. It feeds `_tests_touching` several hostile-looking globs and checks that nothing runs and nothing matches.\n\n`python3 -m pytest -q tests/test_okl.py` gives 81 passed and 2 skipped. One skip is the Postgres conformance test, which needs `OKL_TEST_POSTGRES_URL`. I didn't look at the other skip. Nothing is committed.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "ten_told",
+   "rep": 1,
+   "position": 4,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 3,
+   "seconds": 56.0,
+   "summary": "1 failed, 82 deselected in 0.37s",
+   "said": "derr.\n- **Shell safety:** the new test-file lookup uses list-form `git` calls with `-F`, `-e` and `--`, so stored file globs can't reach a shell or inject a git option.\n- **Docs:** the doc changes keep `okl record --verified` described as refused, which the `doc-verified-refused` rule checks, and the new test covers the plain-words drift output.\n\nOne thing for you to decide: the suggestion text goes to stdout while the exit code is 2. I left it that way because the suggestion is the intended output of the command, but the exit-code lesson says refusals should print to stderr with stdout empty.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "ten_told",
+   "rep": 1,
+   "position": 6,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 18,
+   "seconds": 163.9,
+   "summary": "1 failed, 6 deselected in 0.09s",
+   "said": "m pytest -q tests/test_briefing_terms.py` gives 29 passed.\n- **Full suite:** 337 passed, 2 skipped, 5 failed.\n- **Failures:** four are environment problems, with missing `CLAUDE.md`, `AGENTS.md` and `.mcp.json` in this checkout and a package version mismatch (installed 0.15.0, manifest 0.8.5). The fifth, `test_service_check`, expects one logged briefing and found none. I suspect an inherited `OKL_BRIEFING_LOG=0`, but I couldn't confirm it.\n\nBefore merging, run `python3 evals/preflight.py` and `python3 evals/precision.py` yourself. Also re-run `test_service_check` with `OKL_BRIEFING_LOG` unset.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "alone_plain",
+   "rep": 3,
+   "position": null,
+   "passed": false,
+   "edited": true,
+   "harm": [],
+   "turns": 6,
+   "seconds": 83.0,
+   "summary": "1 failed, 82 deselected in 0.38s",
+   "said": "The change was already complete. I added one test, `test_suggest_check_treats_a_hostile_files_glob_as_data` in `tests/test_okl.py`. It checks the team lesson: the new suggestion code calls git in list form, with the lesson's file globs passed after `-e` and the test paths after `--`. The test feeds it a hostile glob and asserts that nothing runs and no marker file is created. `python3 -m pytest -q tests/test_okl.py` gives 81 passed, 2 skipped (Postgres tests, which need a database URL). Nothing is committed.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "ten_plain",
+   "rep": 4,
+   "position": 9,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 3,
+   "seconds": 52.9,
+   "summary": "1 failed, 82 deselected in 0.41s",
+   "said": "ests/test_okl.py` gives 80 passed and 2 skipped. The two skips are the Postgres tests, which need `OKL_TEST_POSTGRES_URL`.\n\nThe change makes `okl verify <id>` with no `--run` show the lesson, the files it covers and the tests that mention them, and stamp nothing. Drift now says once, in plain words, how to re-check, and reverify and the docs say the same.\n\nBare `okl verify <id>` exits 2 but prints its suggestion to stdout, not stderr. That departs from the team's exit-code lesson, but it is deliberate: nothing was stamped, and stdout is where the suggestion belongs.\n\nI did not commit anything.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "alone_told",
+   "rep": 1,
+   "position": null,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 12,
+   "seconds": 38.5,
+   "summary": "2 passed, 5 deselected in 0.05s",
+   "said": "I extended the harness's existing series-continuity check to include the new `judge_max_chars` window. Receipts that lack the field count as 8000, so the first run with the 40,000-character window is flagged \"instrument differs from the series\" and stamped `instrument_changed_from`. That is what the lesson asks for, since this change alters the grader mid-series. I added a test for the legacy default, and the 18 tests in `tests/test_ab_harness.py` pass. I didn't run the rest of the suite or exercise the drift-banner path with a real prior receipt, and nothing is committed.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "ten_told",
+   "rep": 3,
+   "position": 1,
+   "passed": false,
+   "edited": true,
+   "harm": [],
+   "turns": 9,
+   "seconds": 122.4,
+   "summary": "1 failed, 82 deselected in 0.41s",
+   "said": "ats_a_hostile_glob_as_data` in `tests/test_okl.py`. It shows that a hostile stored file glob (an option-looking string, `$(\u2026)`) reaches `git grep` only as a pattern and never as an option or shell command.\n\nIn the full `tests` run, 121 passed, 2 were skipped (a Postgres test), and 2 failed in `tests/test_scaffold.py`. Those two failures are about `AGENTS.md` and `.mcp.json` not being in this working copy. I didn't re-run them without the change to confirm they fail either way, but nothing the change touches would affect that. The new test and the change's own tests pass.\n\nNothing is committed.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "ten_told",
+   "rep": 0,
+   "position": 3,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 15,
+   "seconds": 155.5,
+   "summary": "1 failed, 6 deselected in 0.09s",
+   "said": "`tests/test_scaffold.py`):** The checkout lacks `AGENTS.md` and `.mcp.json`. The installed package is also version 0.8.5 against 0.15.0 in the repo.\n- **`tests/test_okl.py::test_service_check`:** The briefing-log count came back 0 instead of 1. That test does not clear `OKL_BRIEFING_LOG`, so I suspect it is set to 0 in this environment, but I couldn't read the variable to confirm.\n- **Not confirmed as pre-existing:** I never ran the suite without the change, so I can't say all five predate it. The scaffold failures look environmental, and `precision.py` only sets that variable inside `main()`.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "ten_told",
+   "rep": 2,
+   "position": 0,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 21,
+   "seconds": 206.2,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.06s",
+   "said": "d 8 failed. I believe none of the failures come from this change, but I did not run them against the commit before it.\n- **Missing files:** four fail because `CLAUDE.md`, `AGENTS.md` and `.mcp.json` are absent from this checkout.\n- **Version mismatch:** one fails because the installed package is 0.15.0 against 0.9.0 in the repo.\n- **Briefing-log tests:** the three tests that count logged briefings fail, and the shell policy stopped me from checking `OKL_BRIEFING_LOG`. If it is set to 0 here, that would explain them (`core.record_briefing` returns False without writing); I could not confirm it.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "ten_plain",
+   "rep": 3,
+   "position": 3,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 8,
+   "seconds": 107.0,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.06s",
+   "said": " `implemented` field, plan-only samples counted as unevaluable failures, resolved model ids in the receipt, and the REPORT \u00a74k pre-registration. I found nothing it still needed.\n\n`python3 -m pytest -q tests/test_ab_harness.py` passes (10 tests). In the full `tests` run, 5 other tests fail: `test_docs`, `test_okl::test_service_check`, and 3 in `test_scaffold`. At least some are environmental: `AGENTS.md` and `CLAUDE.md` are missing from this checkout and the package version doesn't match the installed one. I did not check these 5 against the commit before the change, and I did not run a linter.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "ten_told",
+   "rep": 0,
+   "position": 3,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 5,
+   "seconds": 158.4,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.08s",
+   "said": " the issue asks: a plan-only sample is a failure, kept out of both denominators and counted toward the 20% bar. Receipts now record the resolved generator and judge model ids.\n\n`tests/test_ab_harness.py` passes (10 tests). The full `tests` run has 5 failures, all in other files: `test_docs`, `test_okl::test_service_check` and three in `test_scaffold`. The ones I read are environmental: this checkout lacks `CLAUDE.md`, `AGENTS.md` and `.mcp.json`, and the installed package is 0.15.0 against the 0.8.3 changelog. I did not check whether they also fail without the change, and nothing is committed.",
+   "model": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+   ]
+  }
+ ],
+ "okl_commit_at_start": "9786b8e",
+ "okl_commit": "9786b8e"
+}

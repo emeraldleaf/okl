@@ -1,0 +1,70 @@
+{
+ "section": "4aw",
+ "at": "2026-11-11T00:10Z",
+ "tasks": [
+  {
+   "pr": 115,
+   "grader": "test_a_suggested_check_quotes_a_hostile_test_filename",
+   "fails_frozen": true,
+   "passes_fixed": true,
+   "already_failing_frozen": [
+    "tests/test_okl.py::test_verify_without_a_check_suggests_one_and_drift_says_what_to_do"
+   ],
+   "before": "2 failed, 79 passed, 2 skipped in 16.11s",
+   "after": "81 passed, 2 skipped in 16.33s"
+  },
+  {
+   "pr": 168,
+   "grader": "test_a_judge_that_resolves_to_the_generators_model_is_caught",
+   "fails_frozen": true,
+   "passes_fixed": true,
+   "already_failing_frozen": [],
+   "before": "4 failed, 10 passed in 0.09s",
+   "after": "14 passed in 0.09s"
+  },
+  {
+   "pr": 196,
+   "grader": "test_the_precision_check_reads_only_tracked_seed_packs",
+   "fails_frozen": true,
+   "passes_fixed": true,
+   "already_failing_frozen": [
+    "tests/test_briefing_terms.py::test_a_stopword_in_a_dotted_name_is_kept[Next.js-Next]",
+    "tests/test_briefing_terms.py::test_a_stopword_in_a_dotted_name_is_kept[add",
+    "tests/test_briefing_terms.py::test_a_stopword_in_a_dotted_name_is_kept[use"
+   ],
+   "before": "4 failed, 30 passed in 0.36s",
+   "after": "34 passed in 0.38s"
+  },
+  {
+   "pr": 198,
+   "grader": "test_the_judges_window_is_part_of_instrument_drift",
+   "fails_frozen": true,
+   "passes_fixed": true,
+   "already_failing_frozen": [
+    "tests/test_ab_harness.py::test_a_changed_judge_command_is_still_drift",
+    "tests/test_ab_harness.py::test_a_submission_over_the_window_reads_too_long_not_no_code"
+   ],
+   "before": "6 failed, 17 passed in 0.10s",
+   "after": "23 passed in 0.11s"
+  },
+  {
+   "pr": 309,
+   "grader": "test_the_latency_runs_copy_the_store_the_cli_would_open",
+   "fails_frozen": true,
+   "passes_fixed": true,
+   "already_failing_frozen": [
+    "tests/test_stem.py::test_a_rebuild_kept_waiting_raises_rather_than_search_without_its_index",
+    "tests/test_stem.py::test_a_rebuild_that_fails_leaves_the_index_it_found",
+    "tests/test_stem.py::test_a_tokenizer_is_read_in_every_form_sqlite_takes",
+    "tests/test_stem.py::test_an_index_whose_tokenizer_is_named_bare_is_rebuilt_when_it_differs",
+    "tests/test_stem.py::test_the_floor_counts_two_forms_of_one_word_once",
+    "tests/test_stem.py::test_the_latency_runs_never_reach_a_service",
+    "tests/test_stem.py::test_the_latency_runs_read_back_each_copys_index"
+   ],
+   "before": "8 failed, 5 passed in 0.19s",
+   "after": "13 passed in 0.20s"
+  }
+ ],
+ "okl_commit_at_start": "78423b3",
+ "okl_commit": "78423b3"
+}

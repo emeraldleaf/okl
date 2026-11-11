@@ -1,0 +1,55 @@
+{
+ "section": "4ax amendment",
+ "at": "2026-11-11T02:57Z",
+ "decision": "tiered",
+ "interests": [
+  "python",
+  "method",
+  "security",
+  "agent-safety",
+  "retrieval-design",
+  "eval-integrity",
+  "data-quality"
+ ],
+ "shown": 2,
+ "of": 5,
+ "tasks": [
+  {
+   "pr": 115,
+   "lesson": "n_adea7f2c7373",
+   "where": "not shown",
+   "in_full": 3,
+   "named": 12
+  },
+  {
+   "pr": 168,
+   "lesson": "seed:rag-defects:qz_judge_self",
+   "where": "in full",
+   "in_full": 5,
+   "named": 12
+  },
+  {
+   "pr": 196,
+   "lesson": "n_57cc4b427f05",
+   "where": "not shown",
+   "in_full": 5,
+   "named": 12
+  },
+  {
+   "pr": 198,
+   "lesson": "n_473aec369b25",
+   "where": "named in one line",
+   "in_full": 2,
+   "named": 7
+  },
+  {
+   "pr": 309,
+   "lesson": "n_02cc84da158d",
+   "where": "not shown",
+   "in_full": 2,
+   "named": 12
+  }
+ ],
+ "okl_commit_at_start": "cd3cdfc",
+ "okl_commit": "cd3cdfc"
+}

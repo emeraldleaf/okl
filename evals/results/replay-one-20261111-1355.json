@@ -1,0 +1,3072 @@
+{
+ "section": "4ay",
+ "at": "2026-11-11T13:55Z",
+ "question": "29e6e8428cfc9c9d",
+ "lists": "5db23cae9529d97e",
+ "sessions": 75,
+ "of": 75,
+ "pass_rate": {
+  "alone_told": 0.72,
+  "ten_plain": 0.08,
+  "one_at_a_time": 0.72
+ },
+ "per_task": {
+  "alone_told": {
+   "115": 0.6,
+   "168": 1,
+   "196": 1,
+   "198": 1,
+   "309": 0
+  },
+  "ten_plain": {
+   "115": 0,
+   "168": 0,
+   "196": 0,
+   "198": 0.4,
+   "309": 0
+  },
+  "one_at_a_time": {
+   "115": 0,
+   "168": 0.8,
+   "196": 1,
+   "198": 1,
+   "309": 0.8
+  }
+ },
+ "reading": "works",
+ "sessions_with_harm": {
+  "alone_told": 0,
+  "ten_plain": 0,
+  "one_at_a_time": 0
+ },
+ "edited": {
+  "alone_told": 20,
+  "ten_plain": 10,
+  "one_at_a_time": 23
+ },
+ "sessions_per_arm": {
+  "alone_told": 25,
+  "ten_plain": 25,
+  "one_at_a_time": 25
+ },
+ "other_edits_median": 1,
+ "other_edits_total": 26,
+ "other_passes": 225,
+ "right_lesson_edited": 24,
+ "api_priced_usd": 26.53,
+ "usd_per_session": {
+  "alone_told": 0.118,
+  "ten_plain": 0.134,
+  "one_at_a_time": 0.809
+ },
+ "median_seconds": {
+  "alone_told": 71.8,
+  "ten_plain": 82.8,
+  "one_at_a_time": 453.2
+ },
+ "script_sha256": "e0971e63c20247ac002ba4486f0081953203dd4b9265234beb07bd05a22b42cc",
+ "rows": [
+  {
+   "pr": 198,
+   "arm": "alone_told",
+   "rep": 1,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 43.4,
+   "summary": "2 passed, 5 deselected in 0.05s",
+   "passes": null
+  },
+  {
+   "pr": 198,
+   "arm": "alone_told",
+   "rep": 0,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 124.2,
+   "summary": "2 passed, 5 deselected in 0.05s",
+   "passes": null
+  },
+  {
+   "pr": 309,
+   "arm": "ten_plain",
+   "rep": 2,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 181.4,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.06s",
+   "passes": null
+  },
+  {
+   "pr": 309,
+   "arm": "alone_told",
+   "rep": 2,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 190.1,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.06s",
+   "passes": null
+  },
+  {
+   "pr": 196,
+   "arm": "alone_told",
+   "rep": 1,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 31.3,
+   "summary": "1 passed, 6 deselected in 0.09s",
+   "passes": null
+  },
+  {
+   "pr": 198,
+   "arm": "alone_told",
+   "rep": 2,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 39.0,
+   "summary": "2 passed, 5 deselected in 0.06s",
+   "passes": null
+  },
+  {
+   "pr": 168,
+   "arm": "ten_plain",
+   "rep": 0,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 17.5,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.08s",
+   "passes": null
+  },
+  {
+   "pr": 309,
+   "arm": "alone_told",
+   "rep": 0,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 183.3,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.05s",
+   "passes": null
+  },
+  {
+   "pr": 309,
+   "arm": "ten_plain",
+   "rep": 0,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 211.9,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.06s",
+   "passes": null
+  },
+  {
+   "pr": 196,
+   "arm": "ten_plain",
+   "rep": 0,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 130.4,
+   "summary": "1 failed, 6 deselected in 0.07s",
+   "passes": null
+  },
+  {
+   "pr": 115,
+   "arm": "alone_told",
+   "rep": 4,
+   "passed": false,
+   "edited": true,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 66.6,
+   "summary": "1 failed, 82 deselected in 0.40s",
+   "passes": null
+  },
+  {
+   "pr": 115,
+   "arm": "alone_told",
+   "rep": 3,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 94.8,
+   "summary": "1 passed, 82 deselected in 0.42s",
+   "passes": null
+  },
+  {
+   "pr": 309,
+   "arm": "ten_plain",
+   "rep": 1,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 171.7,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.06s",
+   "passes": null
+  },
+  {
+   "pr": 309,
+   "arm": "alone_told",
+   "rep": 3,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 194.2,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.06s",
+   "passes": null
+  },
+  {
+   "pr": 168,
+   "arm": "one_at_a_time",
+   "rep": 3,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": true,
+   "other_edits": 0,
+   "seconds": 181.3,
+   "summary": "2 passed, 5 deselected in 0.07s",
+   "passes": [
+    {
+     "position": 0,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.055847100000000004,
+     "said": "ds the resolved model ids and adds the REPORT \u00a74k pre-registration. The new tests in `tests/test_ab_harness.py` call `run_one` and `resolved_model` directly with stubs, so they don't depend on local state and the lesson doesn't apply. All 10 pass with `python3 -m pytest -q tests/test_ab_harness.py`."
+    },
+    {
+     "position": 1,
+     "right": false,
+     "edited": false,
+     "turns": 4,
+     "usd": 0.059506500000000004,
+     "said": "ounts toward the 20% bar.\n- **Model id:** receipts now record the resolved model id for the generator and the judge.\n- **REPORT:** \u00a74k holds the pre-registration for the change.\n- **IDOR lesson:** it doesn't apply, since this change is eval-harness code with no resource endpoints.\n\nI did not commit."
+    },
+    {
+     "position": 2,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.05497389999999999,
+     "said": "eipts:** they record the resolved model ids.\n- **Pre-registration:** REPORT \u00a74k is written up as the pre-registration.\n- **Tests:** `tests/test_ab_harness.py` passes, 10 tests.\n\nThe lesson is about filtering retrieval by stack tags, and this change doesn't touch retrieval, so it has no bearing here."
+    },
+    {
+     "position": 3,
+     "right": true,
+     "edited": true,
+     "turns": 12,
+     "usd": 0.13832239999999998,
+     "said": "odel id. Two different strings, such as `sonnet` and `claude-sonnet-5-5`, could therefore resolve to the same model without being caught. I added a refusal in `evals/ab_harness.py` when the generator and judge resolve to a shared model id, with a test in `tests/test_ab_harness.py`. I did not commit."
+    },
+    {
+     "position": 4,
+     "right": false,
+     "edited": false,
+     "turns": 8,
+     "usd": 0.08154440000000002,
+     "said": "l.\n\nThe change covers what the issue asked for. The judge returns `implemented`, and a sample with no code is counted as a failure. That failure stays out of both arms' denominators and counts toward the usability bar. Receipts record the resolved model ids, and \u00a74k pre-registers the new instrument."
+    },
+    {
+     "position": 5,
+     "right": false,
+     "edited": false,
+     "turns": 4,
+     "usd": 0.0591841,
+     "said": "he receipt records the resolved model id for the generator and the judge.\n\nAll 11 tests in `tests/test_ab_harness.py` pass. I did not run the rest of the suite.\n\nThe authorization-test lesson doesn't apply here, because this is an eval harness and has no scoped-entity endpoint. Nothing is committed."
+    },
+    {
+     "position": 6,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.057324099999999996,
+     "said": "s at startup), the change doesn't break it. `ab_harness.py` already refuses to run when a task cites a `defect_node` that isn't in the store, and the new model probe runs after that check.\n\nOne gap I left alone: that check skips tasks whose `defect_node` is empty or missing. It predates this change."
+    },
+    {
+     "position": 7,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.058238399999999996,
+     "said": "The change already handles the lesson's concern. Zero evaluated samples gives a failure rate of 100%, which prints \"RESULTS NOT USABLE\". The count of unevaluable samples is also printed in the report. The new tests pass (11 passed), so I changed nothing."
+    },
+    {
+     "position": 8,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0558114,
+     "said": "the resolved-model receipts and the \u00a74k pre-registration are all in place, and `python3 -m pytest -q tests/test_ab_harness.py` passes (11 tests). The lesson has no bearing on this change: it adds no guard that compares against the latest receipt, and the existing instrument-drift check is untouched."
+    },
+    {
+     "position": 9,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0590961,
+     "said": "sample counts as a failure, left out of both arms' denominators and counted toward the 20% bar. Receipts record the resolved model ids, REPORT \u00a74k holds the pre-registration, and the CHANGELOG has an entry.\n- **Lesson:** it doesn't apply. The change uses no Protocol, `isinstance` or Pydantic typing."
+    }
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "ten_plain",
+   "rep": 2,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 18.1,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.08s",
+   "passes": null
+  },
+  {
+   "pr": 196,
+   "arm": "ten_plain",
+   "rep": 4,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 171.6,
+   "summary": "1 failed, 6 deselected in 0.10s",
+   "passes": null
+  },
+  {
+   "pr": 198,
+   "arm": "ten_plain",
+   "rep": 4,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 31.2,
+   "summary": "2 passed, 5 deselected in 0.05s",
+   "passes": null
+  },
+  {
+   "pr": 196,
+   "arm": "one_at_a_time",
+   "rep": 3,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": true,
+   "other_edits": 2,
+   "seconds": 768.1,
+   "summary": "1 passed, 6 deselected in 0.09s",
+   "passes": [
+    {
+     "position": 0,
+     "right": false,
+     "edited": true,
+     "turns": 10,
+     "usd": 0.1413915,
+     "said": "eck`. It already sets `OKL_BRIEFING_LOG=0` before building the Client, so it was safe. The new test in `tests/test_briefing_terms.py` runs it on a throwaway store and asserts no briefing row is written. `tests/test_briefing_terms.py` passes, 30 tests. I ran only that file, not the rest of the suite."
+    },
+    {
+     "position": 1,
+     "right": false,
+     "edited": false,
+     "turns": 7,
+     "usd": 0.09327159999999998,
+     "said": "). A wider run stopped at its first failure, `tests/test_docs.py::test_readme_and_claude_md_count_the_seed_corpus_as_it_is`, which fails because `CLAUDE.md` is missing from this checkout. That is unrelated to this change. I stopped the wider run at that failure, so the rest of the suite was not run."
+    },
+    {
+     "position": 2,
+     "right": false,
+     "edited": false,
+     "turns": 10,
+     "usd": 0.100577,
+     "said": "on check is committed. The new tests in `tests/test_briefing_terms.py` and the existing `tests/test_ab_harness.py` pass (47 passed). I couldn't run `python3 evals/preflight.py` myself, because the sandbox asked for approval, so that 7-of-8 figure is the REPORT's claim and not something I re-checked."
+    },
+    {
+     "position": 3,
+     "right": true,
+     "edited": true,
+     "turns": 7,
+     "usd": 0.0612728,
+     "said": "or the team's lesson. `evals/precision.py` was building its seed-only store from `seed/*.json` on disk. It now takes the packs from `git ls-files`, so an uncommitted pack can't change the precision verdict. The rest of the change needed no edits, and `tests/test_briefing_terms.py` passes (30 tests)."
+    },
+    {
+     "position": 4,
+     "right": false,
+     "edited": true,
+     "turns": 8,
+     "usd": 0.14302330000000002,
+     "said": " switched off. It asserts that at least one briefing differs, so the change is shown to be active in the path the harness uses. The filter doesn't depend on interests, so nothing in the change itself needed fixing. `tests/test_briefing_terms.py` passes (31 tests); I didn't run the rest of the suite."
+    },
+    {
+     "position": 5,
+     "right": false,
+     "edited": false,
+     "turns": 13,
+     "usd": 0.1470384,
+     "said": "RIEFING_LOG` was blocked. It is most likely the log being switched off by that variable in this shell. The test's earlier check on armed gates passed, so the briefing itself still works.\n- **Lesson `n_041a066035b2`:** the change doesn't touch `applies_to` or tag-derived values, so it needed nothing."
+    },
+    {
+     "position": 6,
+     "right": false,
+     "edited": false,
+     "turns": 16,
+     "usd": 0.1485336,
+     "said": " explain it. The sandbox blocked my last attempts to check the environment variable or re-run it, so I couldn't confirm that.\n- **Fifth failure:** it was cut off in the output, so I never saw which test it is.\n\nI did not re-run the failures on the original commit to confirm they pre-date the change."
+    },
+    {
+     "position": 7,
+     "right": false,
+     "edited": false,
+     "turns": 8,
+     "usd": 0.0462131,
+     "said": "ch (installed 0.8.5, expected 0.15.0). I didn't look into `test_service_check`, which fails with `assert (0 == 1)`. I didn't run the suite without the change, so I can't confirm none of the five come from it. I didn't run `evals/precision.py` on its own either. The briefing test that runs it passes."
+    },
+    {
+     "position": 8,
+     "right": false,
+     "edited": false,
+     "turns": 5,
+     "usd": 0.09141500000000001,
+     "said": "Nothing needed changing. The briefing change is a stoplist plus a term cap, and it doesn't filter on stack tags, so the lesson doesn't apply to it. The A/B result for it is also already in the report. `tests/test_briefing_terms.py` passes (31 tests), including the precision check on the seed packs."
+    },
+    {
+     "position": 9,
+     "right": false,
+     "edited": false,
+     "turns": 14,
+     "usd": 0.1293553,
+     "said": "s on the briefing-exposure count. I suspect `OKL_BRIEFING_LOG=0` is set in the shell, which would disable that logging. I couldn't confirm it because the sandbox blocked the commands that would check. I did not run the suite without your changes, so I haven't shown that any of the five predate them."
+    }
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "one_at_a_time",
+   "rep": 0,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": true,
+   "other_edits": 2,
+   "seconds": 157.2,
+   "summary": "2 passed, 5 deselected in 0.04s",
+   "passes": [
+    {
+     "position": 0,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.056997799999999994,
+     "said": "eading the whole submission, and its tests pass (17 passed in `tests/test_ab_harness.py`). The harness already follows the judge\u2260generator lesson. The defaults differ (sonnet and haiku), and it refuses to run if the two commands are equal or resolve to the same model. This change doesn't touch that."
+    },
+    {
+     "position": 1,
+     "right": true,
+     "edited": true,
+     "turns": 13,
+     "usd": 0.1374313,
+     "said": "asks, instead of passing silently. I added a test for this in `tests/test_ab_harness.py`, and all 18 tests in that file pass. I ran only that file, not the rest of the suite.\n\nThe rest of the change needed nothing. It already pre-registers the new window in REPORT \u00a74m and records it in each receipt."
+    },
+    {
+     "position": 2,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0566126,
+     "said": "Nothing needed changing. The change already includes the code, tests and docs, and `tests/test_ab_harness.py` passes (18 tests). The lesson doesn't apply here: `ab_harness.py` already refuses to run when a task's `defect_node` isn't in the store, and this change doesn't touch that check."
+    },
+    {
+     "position": 3,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0566218,
+     "said": " is about gating reads versus writes on a service, so it doesn't apply to this eval-harness change.\n\n`test_the_receipt_names_the_judges_window` only checks that the `JUDGE_MAX_CHARS` constant is at least 40,000. It never checks that `judge_max_chars` is written into the receipt. I left it as it was."
+    },
+    {
+     "position": 4,
+     "right": false,
+     "edited": true,
+     "turns": 9,
+     "usd": 0.11917670000000001,
+     "said": "ars` continuity check already compares against the modal window, not the latest receipt, so it doesn't break the lesson. I added one test in `tests/test_ab_harness.py` with a constructed history (two receipts at 40,000, then an odd 8,000 one) to cover the repair case. All 19 tests in that file pass."
+    },
+    {
+     "position": 5,
+     "right": false,
+     "edited": false,
+     "turns": 4,
+     "usd": 0.07144990000000001,
+     "said": "ch passes (19 tests). The lesson's three verifier failures don't apply: an over-length submission counts as a failure, not a clean run. It is excluded from both arms' denominators, and the judge is never called on it. The judge and generator settings are untouched, and both arms get the same window."
+    },
+    {
+     "position": 6,
+     "right": false,
+     "edited": true,
+     "turns": 9,
+     "usd": 0.09784319999999999,
+     "said": "iefed arm, which the briefing can't reach, already moved 26 points in \u00a74k (43% to 17%). \u00a74m now uses 26 points as the floor, and a new paragraph names the unbriefed arm as the control. A gap smaller than that floor is not a finding. `tests/test_ab_harness.py` passes (19 tests); I ran only that file."
+    },
+    {
+     "position": 7,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.055419300000000005,
+     "said": "ng. The change already includes tests, and all 19 in `tests/test_ab_harness.py` pass. The docstring lesson has no bearing on it, because the change adds no new public module, class or function. It adds only a constant and logic inside `run_one`, and the existing `Unevaluable` docstring is untouched."
+    },
+    {
+     "position": 8,
+     "right": false,
+     "edited": false,
+     "turns": 4,
+     "usd": 0.0641037,
+     "said": "ded changing. The change is already complete, with code, tests, changelog and the REPORT \u00a74m pre-registration in place, and `tests/test_ab_harness.py` passes (19 passed). The hooks lesson concerns PreToolUse `additionalContext`, which this A/B judge change doesn't touch, so I changed nothing for it."
+    },
+    {
+     "position": 9,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0577917,
+     "said": "Nothing needed changing. The lesson is about remote-call timeouts and retries, and this change only widens the judge's read window and adds a length check, so it doesn't apply. The 19 tests in `tests/test_ab_harness.py` pass."
+    }
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "one_at_a_time",
+   "rep": 2,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": true,
+   "other_edits": 1,
+   "seconds": 135.7,
+   "summary": "2 passed, 5 deselected in 0.10s",
+   "passes": [
+    {
+     "position": 0,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0569376,
+     "said": "The change doesn't break the lesson. The harness already refuses to run when the judge resolves to the generator's model, and this change doesn't touch that check. I made no edits, and the 17 tests in `tests/test_ab_harness.py` pass."
+    },
+    {
+     "position": 1,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0565629,
+     "said": "Nothing needed changing. The change is a self-contained judge-window fix, and its tests pass (17 passed in `tests/test_ab_harness.py`). The harness already resolves every task's `defect_node` at startup and refuses to run on a miss, and this change doesn't touch that."
+    },
+    {
+     "position": 2,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0544545,
+     "said": "Nothing needed changing. The judge now reads up to 40,000 characters, and `tests/test_ab_harness.py` passes (17 passed). The lesson about gating writes but not reads is about auth on service routes, and this change touches only the eval harness, so I made no change for it."
+    },
+    {
+     "position": 3,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.056774899999999996,
+     "said": "continuity guard that compares against the latest receipt. It only records `judge_max_chars` in each receipt and makes over-long submissions unevaluable.\n\nOne weak spot I left alone: `test_the_receipt_names_the_judges_window` only checks the constant, not that the receipt contains `judge_max_chars`."
+    },
+    {
+     "position": 4,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0565017,
+     "said": "y` pass (17 passed). The lesson is about verifiers failing: judge crash-masking, judge equal to generator, and unequal arm budgets. This change touches none of those. It only widens the judge's window to 40,000 characters, marks longer submissions unevaluable, and records the window in each receipt."
+    },
+    {
+     "position": 5,
+     "right": false,
+     "edited": true,
+     "turns": 7,
+     "usd": 0.09110380000000001,
+     "said": " drift as the detection threshold. I added a \"The floor\" paragraph and amended the falsifier. The floor is now the larger of 17 points and the baseline's drift in the run. The paragraph also notes that the judge change reaches the baseline arm too, so its drift can't be cleanly separated from noise."
+    },
+    {
+     "position": 6,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0545917,
+     "said": "Nothing needed changing. The change adds no new public function, class or module, so the docstring lesson doesn't apply to it, and the new tests are exempt. `tests/test_ab_harness.py` passes (17 tests)."
+    },
+    {
+     "position": 7,
+     "right": true,
+     "edited": true,
+     "turns": 16,
+     "usd": 0.1515669,
+     "said": "dow would not have been flagged against the earlier runs. That check now also compares `judge_max_chars`. Receipts that predate the field count as 8,000. The change is in `evals/ab_harness.py`. I added a test for it in `tests/test_ab_harness.py`, and all 18 tests in that file pass. I did not commit."
+    },
+    {
+     "position": 8,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.056347299999999996,
+     "said": "A/B judge's input window, so it doesn't apply. The 18 tests in `tests/test_ab_harness.py` pass.\n\nOne thing I noticed but left alone: `test_the_receipt_names_the_judges_window` only checks that `JUDGE_MAX_CHARS` is at least 40,000. It doesn't check that the written receipt contains `judge_max_chars`."
+    },
+    {
+     "position": 9,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0563952,
+     "said": "I changed nothing. The A/B judge now reads up to 40,000 characters, marks anything longer unevaluable, and records `judge_max_chars` in each receipt. The 18 tests in `tests/test_ab_harness.py` pass. The remote-timeout lesson doesn't apply, since the change adds no network or retry logic."
+    }
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "one_at_a_time",
+   "rep": 2,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": true,
+   "other_edits": 2,
+   "seconds": 540.8,
+   "summary": "1 passed, 6 deselected in 0.09s",
+   "passes": [
+    {
+     "position": 0,
+     "right": false,
+     "edited": true,
+     "turns": 12,
+     "usd": 0.0838723,
+     "said": "ipt's seeded-store flow and asserts no briefing row was written. `python3 -m pytest -q tests/test_briefing_terms.py` passes (30 tests).\n\nI didn't change `precision.py`. `Client.check` here has no `log` argument, so the environment variable is the only option. I also didn't run `precision.py` itself."
+    },
+    {
+     "position": 1,
+     "right": false,
+     "edited": false,
+     "turns": 17,
+     "usd": 0.15548320000000004,
+     "said": "ecause `CLAUDE.md` is missing from this checkout and the installed package version doesn't match.\n- **`test_service_check`:** this most likely fails because `OKL_BRIEFING_LOG=0` is set in the shell. I couldn't read the shell's environment to confirm it, and I didn't run the suite on the base commit."
+    },
+    {
+     "position": 2,
+     "right": true,
+     "edited": true,
+     "turns": 9,
+     "usd": 0.1152619,
+     "said": "ion.py` now loads its seed packs from `git ls-files seed/*.json`, not from a glob of the `seed/` directory. An uncommitted or edited-away pack can no longer change the precision verdict. The rest of the change needed nothing, and `python3 -m pytest -q tests/test_briefing_terms.py` passes (30 tests)."
+    },
+    {
+     "position": 3,
+     "right": false,
+     "edited": false,
+     "turns": 23,
+     "usd": 0.13093540000000004,
+     "said": "ice_check` fails:** I couldn't confirm the cause. My guess is that `OKL_BRIEFING_LOG=0` is set in this shell, since the test doesn't clear it and the briefing log is skipped when it is set. I couldn't read my environment to check, so I haven't ruled out the change itself.\n\nI did not commit anything."
+    },
+    {
+     "position": 4,
+     "right": false,
+     "edited": true,
+     "turns": 16,
+     "usd": 0.1741503,
+     "said": " committed.\n\nThe harness's `BRIEF_INTERESTS` defaults to empty, which is the short-circuit case the lesson describes. The term filter runs before the scope filter, so the change still acts with it empty. The receipts in `REPORT.md` used a populated value, so the new test does not exercise that case."
+    },
+    {
+     "position": 5,
+     "right": false,
+     "edited": false,
+     "turns": 4,
+     "usd": 0.09168660000000001,
+     "said": "Nothing needed changing. `python3 -m pytest -q tests/test_briefing_terms.py` passes (31 tests), including the precision check on the seed-only store. The change doesn't touch `applies_to`, so the lesson has no bearing on it.\n\nI made no edits and did not commit."
+    },
+    {
+     "position": 6,
+     "right": false,
+     "edited": false,
+     "turns": 5,
+     "usd": 0.08603870000000001,
+     "said": "-retry loop in `_live_hits`, so superseded or obsolete matches ranked above a live lesson don't empty a small-limit briefing. Its early return only fires when the prompt has no subject terms, which is intended. `tests/test_briefing_terms.py` passes (31 tests), and I made no edits and did not commit."
+    },
+    {
+     "position": 7,
+     "right": false,
+     "edited": false,
+     "turns": 16,
+     "usd": 0.1543419,
+     "said": "`OKL_BRIEFING_LOG=0`. I suspect it's set in this shell, but I couldn't confirm that or rule out the change as the cause.\n\nTo settle it, run `env -u OKL_BRIEFING_LOG python3 -m pytest -q tests/test_okl.py::test_service_check` yourself. If it passes, the failure is the environment and not this change."
+    },
+    {
+     "position": 8,
+     "right": false,
+     "edited": false,
+     "turns": 8,
+     "usd": 0.10480840000000001,
+     "said": " an A/B on retrieval changes is already met by REPORT \u00a74l/\u00a74m, which both held. `tests/test_briefing_terms.py` passes (31 tests). I couldn't run `evals/preflight.py` because the sandbox required approval for it, so its recall result is unconfirmed here; I'm relying on the figures REPORT \u00a74l records."
+    },
+    {
+     "position": 9,
+     "right": false,
+     "edited": false,
+     "turns": 4,
+     "usd": 0.0771203,
+     "said": "1 tests), including the precision check on the seed packs.\n\nThe lesson (the encoding loop has no runtime input) doesn't bear on this change, since the change doesn't touch where lessons come from, so I did nothing for it.\n\nI didn't run the rest of the test suite, the eval pre-flight, or any A/B run."
+    }
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "alone_told",
+   "rep": 0,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 68.8,
+   "summary": "1 passed, 82 deselected in 0.45s",
+   "passes": null
+  },
+  {
+   "pr": 115,
+   "arm": "ten_plain",
+   "rep": 4,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 58.3,
+   "summary": "1 failed, 82 deselected in 0.41s",
+   "passes": null
+  },
+  {
+   "pr": 196,
+   "arm": "one_at_a_time",
+   "rep": 4,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": true,
+   "other_edits": 1,
+   "seconds": 644.8,
+   "summary": "1 passed, 6 deselected in 0.10s",
+   "passes": [
+    {
+     "position": 0,
+     "right": false,
+     "edited": true,
+     "turns": 14,
+     "usd": 0.13791860000000003,
+     "said": "n `tests/test_briefing_terms.py` confirms it logs no briefing rows. `tests/test_briefing_terms.py` passes (30 tests). `tests/test_docs.py` has one failure, `test_readme_and_claude_md_count_the_seed_corpus_as_it_is`, because `CLAUDE.md` isn't in this checkout. I didn't try to fix it. I didn't commit."
+    },
+    {
+     "position": 1,
+     "right": false,
+     "edited": false,
+     "turns": 14,
+     "usd": 0.14498000000000003,
+     "said": "assertion. The briefing itself worked, since `armed_gates` was returned. I think an inherited `OKL_BRIEFING_LOG=0` is switching off the logging. I couldn't confirm that, because the sandbox refused the commands that would show it, and I didn't check the remaining two `test_scaffold` failures either."
+    },
+    {
+     "position": 2,
+     "right": false,
+     "edited": false,
+     "turns": 8,
+     "usd": 0.0983157,
+     "said": "-q tests/test_briefing_terms.py` passes (30 tests). I could not run `python3 evals/preflight.py` myself because the command needed approval, so the 7-of-8 recall result is the one recorded in REPORT \u00a74l, not one I reproduced. The pre-flight calls `core.check`, so it exercises the new term filtering."
+    },
+    {
+     "position": 3,
+     "right": false,
+     "edited": false,
+     "turns": 9,
+     "usd": 0.12406860000000001,
+     "said": "f the longer ones may lose trailing terms. I did not confirm how many.\n\nI changed nothing. That means I did not add a deterministic test that `core.check` with the harness's flags returns a different briefing from the old all-words query. The lesson recommends one, and it would be the next addition."
+    },
+    {
+     "position": 4,
+     "right": false,
+     "edited": false,
+     "turns": 6,
+     "usd": 0.08435390000000001,
+     "said": "30 tests), and that includes running the precision check on the seed packs. Running the scripts directly needed an approval I didn't get, so I haven't run the pre-flight myself.\n\nNothing needed changing. The change doesn't touch `applies_to` or tag-derived values, so the lesson has no bearing on it."
+    },
+    {
+     "position": 5,
+     "right": true,
+     "edited": true,
+     "turns": 7,
+     "usd": 0.10246250000000001,
+     "said": "nstead of globbing `seed/`. This follows the team's lesson: a working-tree glob would pick up an untracked or edited pack and give a different verdict than main. Everything else in the change was already in place, and the 30 tests in `tests/test_briefing_terms.py` pass. I haven't committed anything."
+    },
+    {
+     "position": 6,
+     "right": false,
+     "edited": false,
+     "turns": 17,
+     "usd": 0.14878059999999996,
+     "said": " The scaffold failures come from the temp working directory: missing `AGENTS.md` and `.mcp.json`, and a version mismatch (0.15.0 against 0.8.5).\n  - `test_service_check` finds 0 logged briefings instead of 1. That points to `OKL_BRIEFING_LOG=0` in this environment, but I couldn't check the variable."
+    },
+    {
+     "position": 7,
+     "right": false,
+     "edited": false,
+     "turns": 16,
+     "usd": 0.15422809999999998,
+     "said": "y` (mirror files, package version, plugin manifest).\n- **Service:** `test_okl.py::test_service_check` fails because the briefing wasn't logged. I think it reads `OKL_BRIEFING_LOG` from my shell, but I couldn't confirm that.\n\nI also did not re-run `evals/preflight.py`, because the sandbox blocked it."
+    },
+    {
+     "position": 8,
+     "right": false,
+     "edited": false,
+     "turns": 5,
+     "usd": 0.0817044,
+     "said": " provenance label as applicability, so no records are hidden by tag. `python3 -m pytest -q tests/test_briefing_terms.py` passes (30 passed). I did not run `evals/preflight.py` because the command needed approval. The 7-of-8 recall result I'm relying on is the one the change's own REPORT \u00a74l records."
+    },
+    {
+     "position": 9,
+     "right": false,
+     "edited": false,
+     "turns": 4,
+     "usd": 0.0852316,
+     "said": "Nothing needed changing. The working copy already implements the stoplist, the 40-term cap, the empty-subject gate and `evals/precision.py`, and all 30 tests in `tests/test_briefing_terms.py` pass. The lesson (the encoding loop has no runtime input) has no bearing on this change."
+    }
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "one_at_a_time",
+   "rep": 0,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": true,
+   "other_edits": 0,
+   "seconds": 655.2,
+   "summary": "2 passed, 5 deselected in 0.06s",
+   "passes": [
+    {
+     "position": 0,
+     "right": false,
+     "edited": false,
+     "turns": 6,
+     "usd": 0.0713993,
+     "said": "ss.py` passes (10 tests). The full `tests/` run has 5 failures, which I looked into only for the 3 in `tests/test_scaffold.py`. Those fail on a missing `AGENTS.md` and `.mcp.json` and on an installed package version of 0.15.0 against 0.8.3. They don't touch the harness. I didn't look at the other 2."
+    },
+    {
+     "position": 1,
+     "right": false,
+     "edited": false,
+     "turns": 5,
+     "usd": 0.06548380000000001,
+     "said": "ures, all in `tests/test_scaffold.py`, `tests/test_docs.py` and `tests/test_okl.py`. The scaffold ones come from a missing `AGENTS.md` and `.mcp.json` and a version mismatch in the environment, not from this diff. I didn't look into the other two, and I couldn't confirm they fail without the change."
+    },
+    {
+     "position": 2,
+     "right": false,
+     "edited": false,
+     "turns": 7,
+     "usd": 0.07570559999999998,
+     "said": "h retrieval or tag filtering.\n\nThe full suite has 5 failures. I only looked at the 3 in `tests/test_scaffold.py`: a missing `AGENTS.md`, a missing `.mcp.json`, and an installed package version of 0.15.0 against 0.8.3. None of them touch the A/B harness, and I didn't investigate the other 2 failures."
+    },
+    {
+     "position": 3,
+     "right": true,
+     "edited": true,
+     "turns": 9,
+     "usd": 0.0856196,
+     "said": "rings were identical. That check misses two different aliases resolving to the same model. Now that receipts record resolved model ids, I added a startup refusal in `evals/ab_harness.py` when both resolve to the same model. It exits with code 3, like the existing refusal.\n\nI did not commit anything."
+    },
+    {
+     "position": 4,
+     "right": false,
+     "edited": false,
+     "turns": 7,
+     "usd": 0.08268160000000001,
+     "said": " is covered by committed tests.\n\nThere is also an uncommitted edit in `evals/ab_harness.py`, which isn't in `CHANGE.diff`. It makes the harness refuse to run when the generator and judge resolve to the same model. It has no test, and I left it alone. You'll want to test it or drop it before merging."
+    },
+    {
+     "position": 5,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.053090200000000004,
+     "said": "ilure handling, the resolved-model fields on the receipt and REPORT \u00a74k are all already in place, and `python3 -m pytest -q tests/test_ab_harness.py` passes (10 tests). The authorization-failure-test lesson doesn't apply, because this change touches the eval harness and not a scoped-entity endpoint."
+    },
+    {
+     "position": 6,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.05635849999999999,
+     "said": "ete as written: the judge returns `implemented`, a plan-only sample counts as an unevaluable failure, and receipts record the resolved model ids. The CHANGELOG and REPORT \u00a74k pre-registration are in place too. The 10 tests in `tests/test_ab_harness.py` pass. I did not run the rest of the test suite."
+    },
+    {
+     "position": 7,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0626675,
+     "said": "unts as a failure, and receipts record the resolved model ids. The lesson doesn't apply: the harness doesn't read gitignored state, and when every run fails it reports a 100% failure rate and \"RESULTS NOT USABLE\", not a clean result.\n\nI ran only `tests/test_ab_harness.py`, not the rest of the suite."
+    },
+    {
+     "position": 8,
+     "right": false,
+     "edited": false,
+     "turns": 5,
+     "usd": 0.07040790000000001,
+     "said": "this change doesn't touch it or add a latest-receipt comparison.\n\nThe full suite has 5 failures in `tests/test_scaffold.py` (mirror files, package version, plugin manifest). Those tests don't touch the harness. I didn't confirm they also fail without this change, because the stash check was blocked."
+    },
+    {
+     "position": 9,
+     "right": false,
+     "edited": false,
+     "turns": 4,
+     "usd": 0.06301280000000001,
+     "said": "y, since the change has no Protocol.\n\nThe working copy also has an uncommitted guard in `ab_harness.py`, which I left alone. `main()` now refuses to run (exit 3) if the generator and judge aliases resolve to the same model. No test covers it, and `CHANGE.diff`, REPORT and CHANGELOG don't mention it."
+    }
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "alone_told",
+   "rep": 4,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 157.4,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.06s",
+   "passes": null
+  },
+  {
+   "pr": 168,
+   "arm": "one_at_a_time",
+   "rep": 2,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": true,
+   "other_edits": 0,
+   "seconds": 395.4,
+   "summary": "2 passed, 5 deselected in 0.07s",
+   "passes": [
+    {
+     "position": 0,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0586463,
+     "said": "he lesson doesn't apply. The new tests call `run_one`, `parse_judge` and `resolved_model` directly with stubbed generator and judge replies and a stub `claude` script in `tmp_path`, so they don't depend on the local store or any subprocess pipeline.\n\nI didn't run a live harness; the tests use stubs."
+    },
+    {
+     "position": 1,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.054280699999999994,
+     "said": "o records the resolved model ids in the receipt and adds the REPORT \u00a74k pre-registration and the tests. `python3 -m pytest -q tests/test_ab_harness.py` passes with 10 tests. The IDOR lesson doesn't apply, since this change touches the eval harness and adds no resource endpoint. Nothing is committed."
+    },
+    {
+     "position": 2,
+     "right": false,
+     "edited": false,
+     "turns": 6,
+     "usd": 0.06966779999999999,
+     "said": "`implemented`, a no-code sample counts as a failure kept out of the denominators, and receipts record the resolved model ids. REPORT \u00a74k pre-registers it, and the 10 tests in `tests/test_ab_harness.py` pass. The tag-provenance lesson doesn't apply, since nothing here touches retrieval or stack tags."
+    },
+    {
+     "position": 3,
+     "right": false,
+     "edited": false,
+     "turns": 7,
+     "usd": 0.07763659999999999,
+     "said": " missing `.mcp.json`, and a version mismatch between 0.15.0 and 0.8.3. I did not check the other two, and I did not run the suite without the change to confirm they fail there too.\n- **Lesson:** it did not apply. No ad-hoc shell check was involved, and the new tests assert the failure case directly."
+    },
+    {
+     "position": 4,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.053780800000000004,
+     "said": "he REPORT \u00a74k pre-registration. It also records the resolved model ids per run, and its 10 tests in `tests/test_ab_harness.py` pass. The authorization-failure-test lesson doesn't apply, because this touches the eval harness and not a scoped-entity endpoint.\n\nI did not run the rest of the test suite."
+    },
+    {
+     "position": 5,
+     "right": true,
+     "edited": true,
+     "turns": 8,
+     "usd": 0.0785582,
+     "said": "e same model would have gotten past it. Since the change now records the resolved model ids, `evals/ab_harness.py` also refuses to run (exit 3) when the generator and judge resolve to the same model, per the judge\u2260generator lesson. I did not add a test for this new refusal, and nothing is committed."
+    },
+    {
+     "position": 6,
+     "right": false,
+     "edited": false,
+     "turns": 5,
+     "usd": 0.060657100000000005,
+     "said": " The judge now returns `implemented`, and a plan-only sample counts as an unevaluable failure rather than a clean run. Each run records the resolved model id, and REPORT \u00a74k pre-registers it. The 10 tests in `tests/test_ab_harness.py` pass. I didn't run the rest of the suite or `evals/preflight.py`."
+    },
+    {
+     "position": 7,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0624105,
+     "said": "sed. With zero runs the failure rate is 1.0, so the report says RESULTS NOT USABLE and exits 1, and an arm with no evaluable samples prints `0/0` with no percentage. The change's 10 tests in `tests/test_ab_harness.py` pass. I ran only that file with `python3 -m pytest -q`, not the rest of the suite."
+    },
+    {
+     "position": 8,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0573364,
+     "said": "f both arms' denominators and counts toward the 20% bar. Receipts also record the resolved model ids, and REPORT \u00a74k holds the pre-registration.\n\nThe lesson doesn't apply. The change adds no guard that compares against the most recent receipt, and it leaves the existing instrument-drift guard alone."
+    },
+    {
+     "position": 9,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0572466,
+     "said": "t of both arms' denominators and counts toward the usability bar. It also records the resolved model ids, and REPORT \u00a74k pre-registers the change. `python3 -m pytest -q tests/test_ab_harness.py` passes with 10 tests. The Protocol/`isinstance` lesson doesn't apply, since the change uses no Protocols."
+    }
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "one_at_a_time",
+   "rep": 1,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "right_edited": true,
+   "other_edits": 1,
+   "seconds": 553.2,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.08s",
+   "passes": [
+    {
+     "position": 0,
+     "right": true,
+     "edited": true,
+     "turns": 10,
+     "usd": 0.09414130000000001,
+     "said": ": `test_mirror_files_identical` (a missing `AGENTS.md` mirror), `test_the_package_version_is_the_installed_distributions` and `test_plugin_manifest_points_at_real_files_and_the_shipped_version`. I checked only the mirror failure; the other two I did not look into. None of them touch the A/B harness."
+    },
+    {
+     "position": 1,
+     "right": false,
+     "edited": false,
+     "turns": 7,
+     "usd": 0.0747327,
+     "said": "a missing `AGENTS.md` and `.mcp.json` and an installed package version of 0.15.0 against 0.8.3 in the repo. That points to this checkout and environment rather than the A/B change, which touches neither. I couldn't run it against the original commit to confirm, because the stash command was blocked."
+    },
+    {
+     "position": 2,
+     "right": false,
+     "edited": false,
+     "turns": 6,
+     "usd": 0.0717714,
+     "said": "he 5 failures are `test_service_check`, `test_mirror_files_identical`, `test_the_package_version_is_the_installed_distributions` and `test_plugin_manifest_points_at_real_files_and_the_shipped_version`, plus one more that was cut off in the output. I didn't run the second pair. Nothing was committed."
+    },
+    {
+     "position": 3,
+     "right": false,
+     "edited": false,
+     "turns": 4,
+     "usd": 0.0620788,
+     "said": "or filtering.\n\nThe working copy has one uncommitted addition that `CHANGE.diff` doesn't show: `evals/ab_harness.py` now refuses to run if the generator and judge resolve to the same model. It isn't in the issue and has no test. I left it as is, so you may want to review it or drop it before merging."
+    },
+    {
+     "position": 4,
+     "right": false,
+     "edited": true,
+     "turns": 7,
+     "usd": 0.0776222,
+     "said": "t_ab_harness.py` passes (10 tests).\n\nThe rest of the change needed nothing: the `implemented` judge field, unevaluable counting, `code_chars`, resolved model ids, the REPORT \u00a74k pre-registration and the CHANGELOG entry. The lesson about unverified negative checks doesn't bear on it. I didn't commit."
+    },
+    {
+     "position": 5,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.054570400000000005,
+     "said": "sample as a failure, the resolved model ids in the receipt, the REPORT \u00a74k pre-registration and the tests. All 10 tests in `tests/test_ab_harness.py` pass.\n\nThe authorization-failure lesson doesn't apply. This change touches the eval harness, not a scoped-entity endpoint, so I made no change for it."
+    },
+    {
+     "position": 6,
+     "right": false,
+     "edited": false,
+     "turns": 4,
+     "usd": 0.0617339,
+     "said": "s; the change was already ready to merge. `python3 -m pytest -q tests/test_ab_harness.py` passes with 10 tests.\n\nThe lesson doesn't break here. The harness already resolves every task's `defect_node` against the store at startup and refuses to run on a miss, and this change doesn't touch that check."
+    },
+    {
+     "position": 7,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0617297,
+     "said": "s fails closed when nothing was inspected. Zero runs gives a 100% failure rate, which reads as unusable, and an arm with no evaluable rows prints `0/0` with no percentage, so nothing reads as clean. `python3 -m pytest -q tests/test_ab_harness.py` passes, 10 tests. I didn't run the rest of the suite."
+    },
+    {
+     "position": 8,
+     "right": false,
+     "edited": false,
+     "turns": 7,
+     "usd": 0.0736562,
+     "said": "heck`. Four are environmental: `AGENTS.md` and `.mcp.json` are missing and the installed package version is 0.15.0. I did not look into `test_service_check`. I didn't run the suite on the base commit, so I can't confirm the five also fail without the change, but none of them touches the A/B harness."
+    },
+    {
+     "position": 9,
+     "right": false,
+     "edited": false,
+     "turns": 4,
+     "usd": 0.0586258,
+     "said": "he resolved model ids in the receipt, the REPORT \u00a74k pre-registration, and tests. The 10 tests in `tests/test_ab_harness.py` pass. I did not run the rest of the test suite or `evals/preflight.py`. The Protocol/`isinstance` lesson doesn't apply, since the change has no Protocol or `isinstance` check."
+    }
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "one_at_a_time",
+   "rep": 4,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": true,
+   "other_edits": 0,
+   "seconds": 571.3,
+   "summary": "2 passed, 5 deselected in 0.07s",
+   "passes": [
+    {
+     "position": 0,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0559689,
+     "said": "`run_one`, `parse_judge` and `resolved_model` directly, with a faked `call` and a stub `claude` script in `tmp_path`. None of them depend on the local store or on a full harness run.\n\nI didn't run the live harness, and I left the unrelated `okl-drift.json` verification refresh in the diff as it was."
+    },
+    {
+     "position": 1,
+     "right": false,
+     "edited": false,
+     "turns": 8,
+     "usd": 0.0751595,
+     "said": " failures. They come from files missing in this checkout (`CLAUDE.md`, `AGENTS.md`, `.mcp.json`), a version mismatch and the service check. I did not confirm them against a clean checkout.\n- **IDOR lesson:** it has no bearing on this change, because the harness has no endpoints or ownership scoping."
+    },
+    {
+     "position": 2,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0548515,
+     "said": "Nothing needed changing. The 10 tests in `tests/test_ab_harness.py` pass, and the imports and the report path for unevaluable samples look right. The lesson doesn't apply: the change touches only judge grading and receipt metadata, not retrieval or stack tags."
+    },
+    {
+     "position": 3,
+     "right": false,
+     "edited": false,
+     "turns": 5,
+     "usd": 0.0706581,
+     "said": " and the change adds none.\n\nI did not confirm that the new test goes red when the `implemented` check is removed. The sandbox blocked the one-off edit-and-revert I tried for that. The plan-only test does assert `ok is False` for a sample the old code scored as clean, so it targets exactly that case."
+    },
+    {
+     "position": 4,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0541304,
+     "said": "othing needed changing. The change already makes `implemented: false` a counted failure and records the resolved model ids, and its 10 tests in `tests/test_ab_harness.py` pass. The authorization-failure-test lesson doesn't apply, because this touches the A/B harness and not a scoped-entity endpoint."
+    },
+    {
+     "position": 5,
+     "right": false,
+     "edited": false,
+     "turns": 6,
+     "usd": 0.0684655,
+     "said": "lesson isn't broken.\n\nThe full `tests` run has 5 failures, all in `tests/test_scaffold.py`: a missing `AGENTS.md`, a missing `.mcp.json`, and a package-version mismatch. These look like they come from the frozen repo snapshot, not this change, but I didn't confirm that against the pre-change commit."
+    },
+    {
+     "position": 6,
+     "right": true,
+     "edited": true,
+     "turns": 13,
+     "usd": 0.14297749999999998,
+     "said": "efuses to run, exit code 3, when both resolve to the same model id (the lesson `qz_judge_self`).\n\nThe rest of the change (the `implemented` field, unevaluable samples counted as failures, resolved model ids in the receipt, and the REPORT \u00a74k pre-registration) needed no changes. Nothing is committed."
+    },
+    {
+     "position": 7,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0626954,
+     "said": " the lesson: a zero-run result is not read as clean. The harness counts a sample with no code as a failure, and with no results at all the failure rate is 100%, so the run is marked unusable and exits 1. A zero-run arm prints `0/0` with no percentage. The 11 tests in `tests/test_ab_harness.py` pass."
+    },
+    {
+     "position": 8,
+     "right": false,
+     "edited": false,
+     "turns": 6,
+     "usd": 0.0685959,
+     "said": "eld, the `code_chars` and resolved-model fields in the receipt, and the \u00a74k pre-registration.\n\nThe full suite has 5 failures, in `test_docs`, `test_okl` and `test_scaffold`. They are in files this change doesn't touch and look unrelated, but I didn't run the suite without the change to confirm that."
+    },
+    {
+     "position": 9,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.05511139999999999,
+     "said": "lemented`, and a plan-only sample is an unevaluable failure.\n- The REPORT \u00a74k pre-registration is in.\n- Receipts record the resolved model ids (R12).\n\nAll 11 tests in `tests/test_ab_harness.py` pass. The Protocol/`isinstance` lesson doesn't apply, since the change uses no Protocols. I didn't commit."
+    }
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "alone_told",
+   "rep": 3,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 123.4,
+   "summary": "2 passed, 5 deselected in 0.06s",
+   "passes": null
+  },
+  {
+   "pr": 309,
+   "arm": "one_at_a_time",
+   "rep": 0,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": true,
+   "other_edits": 0,
+   "seconds": 681.2,
+   "summary": "2 passed, 5 deselected in 0.06s",
+   "passes": [
+    {
+     "position": 0,
+     "right": false,
+     "edited": false,
+     "turns": 6,
+     "usd": 0.07978170000000001,
+     "said": "y` passes (5 passed). The full suite has 8 failures that look environmental: missing `AGENTS.md` and `.mcp.json` in this checkout, a package version mismatch (0.15.0 installed, 0.9.0 expected), and the service and recap tests. I didn't run the suite without the change to confirm they fail there too."
+    },
+    {
+     "position": 1,
+     "right": false,
+     "edited": false,
+     "turns": 12,
+     "usd": 0.11668740000000001,
+     "said": " for reasons that appear unrelated to the change:\n- **`test_docs.py`:** it fails because `CLAUDE.md` isn't in this checkout.\n- **`test_service_check`:** it logs 0 briefings. I suspect `OKL_BRIEFING_LOG=0` is set in this environment, but I couldn't confirm it because the shell wouldn't run the check."
+    },
+    {
+     "position": 2,
+     "right": false,
+     "edited": false,
+     "turns": 6,
+     "usd": 0.06328529999999999,
+     "said": "st_stem`, `test_bench`, `test_relevance_floor`, `test_warm`, `test_docs`): 59 passed and 1 failed. The failure is `test_docs.py::test_readme_and_claude_md_count_the_seed_corpus_as_it_is`, which needs a root `CLAUDE.md` that isn't tracked in this repo. The change doesn't touch it, so I left it alone."
+    },
+    {
+     "position": 3,
+     "right": false,
+     "edited": false,
+     "turns": 7,
+     "usd": 0.12155600000000001,
+     "said": "oth bench columns come from one sitting on the same 182-record corpus. The two runs are at different commits (cdaaf93 and ca31cf8), but the report states this and says the bench code is identical, so the lesson isn't broken. `tests/test_stem.py` passes (5 passed). I didn't run the rest of the suite."
+    },
+    {
+     "position": 4,
+     "right": true,
+     "edited": true,
+     "turns": 7,
+     "usd": 0.09982680000000001,
+     "said": "tself needed nothing beyond one fix. `evals/stem_latency.py` read `OKL_DATABASE_URL` but fell back to the local `.okl/okl.db` whenever the URL wasn't a sqlite file. That is the silent substitution the lesson describes, so it now exits with an error naming the URL it won't time. Nothing is committed."
+    },
+    {
+     "position": 5,
+     "right": false,
+     "edited": false,
+     "turns": 4,
+     "usd": 0.059616699999999995,
+     "said": "ging. The stemming change adds no filter after a fixed-size fetch, so the widen-the-window lesson doesn't apply to it. `tests/test_stem.py` and `tests/test_bench.py` pass (6 passed). The only uncommitted edit is in `evals/stem_latency.py`, where it now aborts if the database URL isn't a sqlite file."
+    },
+    {
+     "position": 6,
+     "right": false,
+     "edited": false,
+     "turns": 4,
+     "usd": 0.0566128,
+     "said": "Nothing needed changing. The pagination lesson doesn't apply: this change only touches stemming, the benchmark and eval scripts, and the report, and adds no list endpoint. `tests/test_stem.py` and `tests/test_bench.py` pass (6 tests)."
+    },
+    {
+     "position": 7,
+     "right": false,
+     "edited": false,
+     "turns": 4,
+     "usd": 0.031871500000000004,
+     "said": "Nothing needed changing. The change adds no judge or generator model setting, and its judging is done by sub-agents outside the code, so the judge\u2260generator lesson doesn't apply. `tests/test_stem.py` and `tests/test_bench.py` pass (6 passed)."
+    },
+    {
+     "position": 8,
+     "right": false,
+     "edited": false,
+     "turns": 7,
+     "usd": 0.06716309999999999,
+     "said": "s (6 tests). The full suite has 8 failures that look environmental: missing `AGENTS.md` and `.mcp.json` mirror files, a package version mismatch (0.15.0 installed vs 0.9.0), and recap time-window counts. I didn't compare against a clean checkout, so I haven't confirmed they fail without this change."
+    },
+    {
+     "position": 9,
+     "right": false,
+     "edited": false,
+     "turns": 7,
+     "usd": 0.0705996,
+     "said": " `.mcp.json`, and an installed package version of 0.9.0 against 0.15.0. I didn't check the two `test_recap` failures. I also didn't run the suite on a clean checkout to confirm the 8 fail without this change. The lesson about runtime input doesn't apply to this change, so nothing was changed for it."
+    }
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "ten_plain",
+   "rep": 1,
+   "passed": false,
+   "edited": true,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 66.5,
+   "summary": "1 failed, 6 deselected in 0.09s",
+   "passes": null
+  },
+  {
+   "pr": 198,
+   "arm": "one_at_a_time",
+   "rep": 1,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": true,
+   "other_edits": 1,
+   "seconds": 222.6,
+   "summary": "2 passed, 5 deselected in 0.06s",
+   "passes": [
+    {
+     "position": 0,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.055611799999999996,
+     "said": "ng needed changing. The harness already refuses to run when the judge and generator are the same model: `judge_is_generator` is checked at startup, and the defaults differ (sonnet and haiku). This change doesn't touch that guard. The change's own tests pass (17 passed in `tests/test_ab_harness.py`)."
+    },
+    {
+     "position": 1,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0578921,
+     "said": "ds `judge_max_chars` in each receipt. Its tests pass (17 passed in `tests/test_ab_harness.py`).\n\nThe lesson doesn't apply here. The change doesn't touch `defect_node`, and the harness already resolves every task's `defect_node` at startup and refuses to run on a miss (`evals/ab_harness.py:325-352`)."
+    },
+    {
+     "position": 2,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0540772,
+     "said": "I changed nothing. The change is complete, and `python3 -m pytest -q tests/test_ab_harness.py` passes (17 tests). The lesson about gating writes but not reads doesn't apply, because the change only affects how the A/B judge reads a submission and adds no endpoint or auth."
+    },
+    {
+     "position": 3,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0562739,
+     "said": "I changed nothing. The harness tests pass (17 in `tests/test_ab_harness.py`). The lesson doesn't apply, because this change adds no continuity guard. It only records `judge_max_chars` in each receipt and never compares it to an earlier receipt."
+    },
+    {
+     "position": 4,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0643591,
+     "said": "Crash-masking:** a submission over the 40,000-character window raises `Unevaluable`. `run_one` then records it as a failure, so it isn't scored as clean.\n- **Judge as generator:** the guard in `judge_is_generator` is untouched.\n- **Unequal arm budgets:** the window applies the same way to both arms."
+    },
+    {
+     "position": 5,
+     "right": false,
+     "edited": true,
+     "turns": 8,
+     "usd": 0.09313239999999999,
+     "said": " has since moved 26 points (\u00a74j). It now says to read the floor as at least 21 points. It also notes that the judge change reaches both arms, so the baseline isn't an untouched control for this run. The code and tests needed nothing, and `tests/test_ab_harness.py` passes (17 tests). I didn't commit."
+    },
+    {
+     "position": 6,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0558748,
+     "said": "ss or function, so the docstring lesson doesn't apply, and the 17 tests in `tests/test_ab_harness.py` pass.\n\nOne weak spot, which I left alone: `test_the_receipt_names_the_judges_window` only checks the `JUDGE_MAX_CHARS` constant. It doesn't check that the written receipt contains `judge_max_chars`."
+    },
+    {
+     "position": 7,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.056535100000000005,
+     "said": "arness.py` gives 17 passed. The hooks lesson doesn't apply, because this change doesn't touch hooks or `additionalContext`.\n\nOne weak spot: `test_the_receipt_names_the_judges_window` only checks the `JUDGE_MAX_CHARS` constant. It doesn't check that `main()` writes `judge_max_chars` into the receipt."
+    },
+    {
+     "position": 8,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.05708060000000001,
+     "said": "I changed nothing. The change is the judge's window going from 8,000 to 40,000 characters, and all 17 tests in `tests/test_ab_harness.py` pass. The remote-timeout lesson doesn't apply, because the change adds no network retry, timeout or write path."
+    },
+    {
+     "position": 9,
+     "right": true,
+     "edited": true,
+     "turns": 17,
+     "usd": 0.19554480000000002,
+     "said": "_version_is_the_installed_distributions` and `test_plugin_manifest_points_at_real_files_and_the_shipped_version`. They report a missing `AGENTS.md`, a version mismatch (0.15.0 installed, 0.8.5 expected) and a missing `.mcp.json`. I didn't run them on the original code to confirm they fail there too."
+    }
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "alone_told",
+   "rep": 0,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 110.3,
+   "summary": "2 passed, 5 deselected in 0.06s",
+   "passes": null
+  },
+  {
+   "pr": 196,
+   "arm": "alone_told",
+   "rep": 2,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 35.2,
+   "summary": "1 passed, 6 deselected in 0.09s",
+   "passes": null
+  },
+  {
+   "pr": 168,
+   "arm": "ten_plain",
+   "rep": 4,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 147.9,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.09s",
+   "passes": null
+  },
+  {
+   "pr": 168,
+   "arm": "ten_plain",
+   "rep": 1,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 36.6,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.11s",
+   "passes": null
+  },
+  {
+   "pr": 309,
+   "arm": "one_at_a_time",
+   "rep": 1,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": true,
+   "other_edits": 0,
+   "seconds": 1170.9,
+   "summary": "2 passed, 5 deselected in 0.08s",
+   "passes": [
+    {
+     "position": 0,
+     "right": false,
+     "edited": false,
+     "turns": 8,
+     "usd": 0.1102379,
+     "said": "ting on the same store, so the lesson isn't broken. Its +15% size limit and its \"at most twice as many null prompts\" limit are differences from those arms, and the report applies the rule as written. `tests/test_bench.py` and `tests/test_stem.py` pass (6 passed); I did not run the rest of the suite."
+    },
+    {
+     "position": 1,
+     "right": false,
+     "edited": false,
+     "turns": 16,
+     "usd": 0.14230450000000003,
+     "said": " `test_service_check`, `test_hygiene` and two in `test_recap` all read the briefing log, which `OKL_BRIEFING_LOG=0` switches off. I suspect the sandbox sets that variable, but I couldn't check it, because the shell blocked the command that would unset it.\n- **Eighth failure:** I didn't look into it."
+    },
+    {
+     "position": 2,
+     "right": false,
+     "edited": false,
+     "turns": 7,
+     "usd": 0.0379341,
+     "said": "ng `AGENTS.md` and `.mcp.json`, and an installed package version of 0.9.0 against 0.15.0. I didn't re-run them on the commit before the change.\n\nThe lesson doesn't apply, because this change measures stemming and keeps it off by default, and it doesn't fix a recurring antipattern. I changed nothing."
+    },
+    {
+     "position": 3,
+     "right": false,
+     "edited": false,
+     "turns": 5,
+     "usd": 0.09668729999999999,
+     "said": "`ee5406f19cf9`). The bench table's two receipts name different commits, but the report says so and says the bench code is the same at both. I couldn't verify that claim. The only figures without a receipt are the in-process timings in the \u00a74ad prose, and the report already labels those \"no receipt\"."
+    },
+    {
+     "position": 4,
+     "right": false,
+     "edited": false,
+     "turns": 8,
+     "usd": 0.0831774,
+     "said": "s. The three in `tests/test_scaffold.py` come from missing `AGENTS.md` and `.mcp.json` files and a version mismatch, not from the diff. I didn't diagnose the other six, including the `tests/test_warm.py` server test, and I didn't run the suite without the change to confirm they were already failing."
+    },
+    {
+     "position": 5,
+     "right": false,
+     "edited": false,
+     "turns": 7,
+     "usd": 0.0733399,
+     "said": "py` one come from this trimmed checkout, which is missing `AGENTS.md` and `.mcp.json` and has a version mismatch. I didn't look into `test_service_check` or the three `test_recap.py`-related failures, so I can't say whether they're unrelated to the change. I couldn't compare against the base commit."
+    },
+    {
+     "position": 6,
+     "right": true,
+     "edited": true,
+     "turns": 8,
+     "usd": 0.10504940000000001,
+     "said": "st of the change is consistent: stemming is off by default, `store.FTS_TOKENIZE` is the one setting, and the store and CLI paths still resolve the URL as before. `python3 -m pytest -q tests/test_stem.py` passes (5 tests). I didn't run the rest of the suite, and I didn't add a test for the new abort."
+    },
+    {
+     "position": 7,
+     "right": false,
+     "edited": false,
+     "turns": 4,
+     "usd": 0.0312758,
+     "said": "The lesson doesn't apply here. The change adds no LLM judge or generator model setting. The only judging in it is \u00a74x's human-run sub-agent labelling, which was stopped before the new pairs were judged. I made no edits, and `tests/test_stem.py` and `tests/test_bench.py` pass (6 passed)."
+    },
+    {
+     "position": 8,
+     "right": false,
+     "edited": false,
+     "turns": 4,
+     "usd": 0.0529713,
+     "said": "Nothing needed changing. I left the change as it was and didn't commit. The lesson (the `num_classes` off-by-one with a reserved class 0) doesn't apply, because this change has no class counts or crosswalk. `tests/test_stem.py` and `tests/test_bench.py` pass (6 passed)."
+    },
+    {
+     "position": 9,
+     "right": false,
+     "edited": false,
+     "turns": 8,
+     "usd": 0.0773301,
+     "said": "not from stemming: missing `AGENTS.md` and `.mcp.json`, an installed package version of 0.15.0 against the 0.9.0 the test expects, and a briefing log that isn't being written. I didn't look at the other 3. I also didn't run the suite on the unmodified tree to confirm the failures were already there."
+    }
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "one_at_a_time",
+   "rep": 4,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "right_edited": false,
+   "other_edits": 0,
+   "seconds": 1034.7,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.08s",
+   "passes": [
+    {
+     "position": 0,
+     "right": false,
+     "edited": false,
+     "turns": 5,
+     "usd": 0.0491587,
+     "said": "ready satisfied: every check in \u00a74ad's rule is written as a difference from a control arm. The controls were re-briefed in the same sitting on the same store, and the failure is reported as the rule reads (+17.5% against an allowed 15%). `tests/test_stem.py` and `tests/test_bench.py` pass (6 tests)."
+    },
+    {
+     "position": 1,
+     "right": true,
+     "edited": false,
+     "turns": 9,
+     "usd": 0.10269300000000002,
+     "said": "recap.py` and `tests/test_scaffold.py`. Those are missing `AGENTS.md` and `.mcp.json` files, a package-version mismatch (installed 0.15.0, expected 0.9.0), and recap time-window counts. None touch stemming. I didn't compare against a run without the change, and I didn't see the other three failures."
+    },
+    {
+     "position": 2,
+     "right": false,
+     "edited": false,
+     "turns": 4,
+     "usd": 0.0250341,
+     "said": "Nothing needed changing. The change doesn't touch how `applies_to` is set or derived (the only mention is a re-verified commit hash in `okl-drift.json`), so the lesson doesn't apply. `tests/test_stem.py` and `tests/test_bench.py` pass, 6 tests. I didn't run the rest of the suite."
+    },
+    {
+     "position": 3,
+     "right": false,
+     "edited": false,
+     "turns": 16,
+     "usd": 0.1154326,
+     "said": "count_the_seed_corpus_as_it_is`, fails on the missing `CLAUDE.md`.\n- **Briefing log:** the other four fail because `record_briefing` writes nothing, which fits `OKL_BRIEFING_LOG=0` being set in this shell. I couldn't read the environment to confirm that, so it's a guess. None of them touch stemming."
+    },
+    {
+     "position": 4,
+     "right": false,
+     "edited": false,
+     "turns": 5,
+     "usd": 0.10693670000000001,
+     "said": "NGELOG tables against the receipts they cite, and they all match. The two stem-arm and `bench` tests pass (6 passed).\n\nThe lesson doesn't apply here. The results come from one sitting at one store, and the 4ad bench table's two commits are disclosed in the text, with the bench code the same at both."
+    },
+    {
+     "position": 5,
+     "right": false,
+     "edited": false,
+     "turns": 7,
+     "usd": 0.0682703,
+     "said": "o post-fetch filtering and leaves the search window and limit alone, so the filter-after-fetch lesson doesn't apply. It only makes the tokenizer a setting that is off by default and adds stemmed matching for the line and floor. The 36 tests in `test_stem.py`, `test_bench.py` and `test_warm.py` pass."
+    },
+    {
+     "position": 6,
+     "right": false,
+     "edited": false,
+     "turns": 7,
+     "usd": 0.0699554,
+     "said": " The ones I looked at come from missing `AGENTS.md` and `.mcp.json` files in this checkout, a version mismatch (0.15.0 against 0.9.0), and recap timing. None of those are stemming code, but I didn't check every failure, and I couldn't compare against a baseline because the change is already in HEAD."
+    },
+    {
+     "position": 7,
+     "right": false,
+     "edited": false,
+     "turns": 4,
+     "usd": 0.028852600000000003,
+     "said": "Nothing needed changing. The lesson doesn't apply: the change adds a stemming setting (off) and its measurement, and has no generator-versus-judge model pairing. The pair judging is done by separate sub-agents. `tests/test_bench.py` and `tests/test_stem.py` pass (6 tests)."
+    },
+    {
+     "position": 8,
+     "right": false,
+     "edited": false,
+     "turns": 7,
+     "usd": 0.06943730000000001,
+     "said": "failures I looked at come from the environment, not the stemming code: missing `AGENTS.md` and `.mcp.json`, an installed package version of 0.9.0 against 0.15.0, and recap and service checks that count nothing. I did not look at every failure, and I couldn't compare against a run without the change."
+    },
+    {
+     "position": 9,
+     "right": false,
+     "edited": false,
+     "turns": 8,
+     "usd": 0.0789426,
+     "said": "iled. The failures look environmental rather than caused by this change. They hit files missing from this checkout (`AGENTS.md`, `.mcp.json`), an installed package version of 0.15.0 against 0.9.0 in the repo, and a few doc, recap and hygiene tests. I did not rerun them without the change to confirm."
+    }
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "ten_plain",
+   "rep": 0,
+   "passed": false,
+   "edited": true,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 82.8,
+   "summary": "1 failed, 82 deselected in 0.39s",
+   "passes": null
+  },
+  {
+   "pr": 198,
+   "arm": "one_at_a_time",
+   "rep": 4,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": true,
+   "other_edits": 1,
+   "seconds": 162.2,
+   "summary": "2 passed, 5 deselected in 0.06s",
+   "passes": [
+    {
+     "position": 0,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0555252,
+     "said": " needed changing. The harness already refuses to run when the judge is the generator: it compares the command strings, compares the resolved models, and defaults to different models (sonnet generates, haiku judges). This change doesn't touch any of that. `tests/test_ab_harness.py` passes (17 tests)."
+    },
+    {
+     "position": 1,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.058222300000000005,
+     "said": "Nothing needed changing. The change makes the judge read the whole submission and doesn't touch `defect_node`. The harness already resolves every task's `defect_node` at startup and refuses to run on a miss, so the lesson is satisfied. `tests/test_ab_harness.py` passes (17 tests)."
+    },
+    {
+     "position": 2,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0542151,
+     "said": "s what it set out to do: the judge reads up to 40,000 characters, longer submissions are marked unevaluable, and each receipt records the window. `tests/test_ab_harness.py` passes (17 tests). The auth lesson doesn't apply, because this change touches an eval harness and has no routes or credentials."
+    },
+    {
+     "position": 3,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.056197800000000006,
+     "said": "I changed nothing. The tests in `tests/test_ab_harness.py` pass (17 passed). The lesson doesn't apply here: the change adds no continuity or regression guard that compares against the latest receipt. It only widens the judge's read window and records `judge_max_chars` in each receipt."
+    },
+    {
+     "position": 4,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0583031,
+     "said": "mask, and both arms use the same window. The lesson isn't broken.\n\nNothing needed changing. The change makes the judge read the whole submission, up to 40,000 characters. A longer submission is marked unevaluable instead of being judged on a cut copy. All 17 tests in `tests/test_ab_harness.py` pass."
+    },
+    {
+     "position": 5,
+     "right": true,
+     "edited": true,
+     "turns": 9,
+     "usd": 0.11635999999999998,
+     "said": " 8,000. A run whose window differs from the series now prints the startup warning and is marked in `instrument_changed_from`. The pre-registration in REPORT \u00a74m already treats this as a new series.\n\n`tests/test_ab_harness.py` passes (17 tests), but I did not add a test for the new window comparison."
+    },
+    {
+     "position": 6,
+     "right": false,
+     "edited": true,
+     "turns": 7,
+     "usd": 0.08128830000000001,
+     "said": "and the falsifier to use 21, with the \u00a74k evidence behind it. I also added a note that this change alters the judge for both arms. That means the baseline isn't an untouched control in the next run, so its movement is read as the floor, and a between-arm difference smaller than that isn't a finding."
+    },
+    {
+     "position": 7,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0558842,
+     "said": "Nothing needed changing. The change adds a constant, `JUDGE_MAX_CHARS`, and no new functions, classes or modules, so the docstring lesson doesn't apply to it. The change already includes its tests, and `tests/test_ab_harness.py` passes (17 passed)."
+    },
+    {
+     "position": 8,
+     "right": false,
+     "edited": false,
+     "turns": 5,
+     "usd": 0.0722575,
+     "said": "already complete: the judge reads up to 40,000 characters, longer submissions are marked unevaluable, and the receipt records `judge_max_chars`. The 17 tests in `tests/test_ab_harness.py` pass.\n\nThe lesson is about `PreToolUse` hook output, which this change doesn't touch, so I made no edits for it."
+    },
+    {
+     "position": 9,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0584716,
+     "said": "nd the lesson doesn't apply because this change makes no network calls, retries or hook deadlines.\n\nThe one weak spot is `test_the_receipt_names_the_judges_window`. It only checks the `JUDGE_MAX_CHARS` constant, not that the receipt written by `main()` carries `judge_max_chars`. I left it as it was."
+    }
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "alone_told",
+   "rep": 3,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 197.3,
+   "summary": "2 passed, 5 deselected in 0.07s",
+   "passes": null
+  },
+  {
+   "pr": 309,
+   "arm": "ten_plain",
+   "rep": 4,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 196.3,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.06s",
+   "passes": null
+  },
+  {
+   "pr": 196,
+   "arm": "one_at_a_time",
+   "rep": 0,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": true,
+   "other_edits": 2,
+   "seconds": 658.8,
+   "summary": "1 passed, 6 deselected in 0.09s",
+   "passes": [
+    {
+     "position": 0,
+     "right": false,
+     "edited": true,
+     "turns": 9,
+     "usd": 0.0749125,
+     "said": "measurement and asserts no briefing row was written. `tests/test_briefing_terms.py` passes (30 tests); I ran only that file, so the rest of the suite is untested. Nothing is committed.\n\nThe lesson suggests `log=False`, but `Client.check` here has no such parameter, so the env var is the only option."
+    },
+    {
+     "position": 1,
+     "right": false,
+     "edited": false,
+     "turns": 17,
+     "usd": 0.14449570000000003,
+     "said": "ail.\n- **`test_service_check`:** it counts 0 logged briefings instead of 1, and the briefing itself was returned. I suspect `OKL_BRIEFING_LOG=0` is set in this environment, but I couldn't read the variable to check.\n\nI didn't run `evals/precision.py` directly. The committed test that runs it passed."
+    },
+    {
+     "position": 2,
+     "right": false,
+     "edited": false,
+     "turns": 10,
+     "usd": 0.1008106,
+     "said": "s: `test_mirror_files_identical`, `test_the_package_version_is_the_installed_distributions` and `test_plugin_manifest_points_at_real_files_and_the_shipped_version`. One failure is a missing `./.mcp.json`. I read these as environment problems, not breakage from this change. I didn't investigate them."
+    },
+    {
+     "position": 3,
+     "right": true,
+     "edited": true,
+     "turns": 8,
+     "usd": 0.0749105,
+     "said": " (`git ls-files`) instead of globbing `seed/`. That follows the lesson, because an uncommitted pack can no longer change the verdict. The rest of the change, including the stoplist, term cap and tests, needed nothing. The 30 tests in `tests/test_briefing_terms.py` pass, and I didn't commit anything."
+    },
+    {
+     "position": 4,
+     "right": false,
+     "edited": true,
+     "turns": 9,
+     "usd": 0.1294196,
+     "said": "the lesson. It checks that the stoplist changes the briefing the A/B harness fetches, with both `--interests ''` and the harness's interest list. The rest of the change, including `evals/precision.py`, needed nothing more, and all 32 tests in that file pass. I ran only that file, not the full suite."
+    },
+    {
+     "position": 5,
+     "right": false,
+     "edited": false,
+     "turns": 4,
+     "usd": 0.0865977,
+     "said": "e doesn't touch `applies_to`, so the lesson doesn't apply, and the 32 tests in `tests/test_briefing_terms.py` pass. I made no edits and didn't commit.\n\nI read `CHANGE.diff` and the uncommitted edits in `evals/precision.py` and `tests/test_briefing_terms.py`. I didn't run the eval scripts themselves."
+    },
+    {
+     "position": 6,
+     "right": false,
+     "edited": false,
+     "turns": 5,
+     "usd": 0.0830506,
+     "said": " has the change and its tests, and `python3 -m pytest -q tests/test_briefing_terms.py` passes (32 tests). The lesson doesn't apply. `_live_hits` in `src/okl/core.py` already widens its fetch by the number of obsolete and superseded lessons it drops, and this change only swaps the query it passes in."
+    },
+    {
+     "position": 7,
+     "right": false,
+     "edited": false,
+     "turns": 13,
+     "usd": 0.0734543,
+     "said": "pect the cause is an `OKL_BRIEFING_LOG=0` setting in my environment. The commands I needed to confirm that were blocked, so this is unverified.\n\nI didn't compare against the pre-change code, because the command to stash the changes needed approval. None of the failing tests touch the briefing terms."
+    },
+    {
+     "position": 8,
+     "right": false,
+     "edited": false,
+     "turns": 5,
+     "usd": 0.0458992,
+     "said": "Nothing needed changing. The change filters words in the prompt (a stoplist and a term cap) and doesn't filter lessons by stack tag, so the lesson doesn't apply. `python3 -m pytest -q tests/test_briefing_terms.py` passes (32 tests)."
+    },
+    {
+     "position": 9,
+     "right": false,
+     "edited": false,
+     "turns": 17,
+     "usd": 0.155584,
+     "said": "e_check` fails when run alone and looks like an `OKL_BRIEFING_LOG=0` setting leaking in from the environment, but the sandbox wouldn't let me print the variable to check. I also couldn't run `evals/precision.py` directly, so I didn't re-run its pass/fail check. The pytest test that runs it did pass."
+    }
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "one_at_a_time",
+   "rep": 3,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": true,
+   "other_edits": 0,
+   "seconds": 859.1,
+   "summary": "2 passed, 5 deselected in 0.06s",
+   "passes": [
+    {
+     "position": 0,
+     "right": true,
+     "edited": true,
+     "turns": 8,
+     "usd": 0.0975843,
+     "said": "'t a `sqlite:///` URL. That's the silent substitution the lesson warns about. It now exits with an `ABORT` message for any non-sqlite URL. I didn't add a test for the new check.\n\n`tests/test_stem.py` and `tests/test_bench.py` pass (6 passed). I didn't run the rest of the suite. Nothing is committed."
+    },
+    {
+     "position": 1,
+     "right": false,
+     "edited": false,
+     "turns": 5,
+     "usd": 0.0480827,
+     "said": "t the unstemmed control arm (for example \"at most 15% more\" than the namesake arm). The controls were re-briefed in the same sitting, so no absolute figure or cross-set baseline is in play. `tests/test_stem.py` and `tests/test_bench.py` pass (6 tests). I ran only those two files, not the full suite."
+    },
+    {
+     "position": 2,
+     "right": false,
+     "edited": false,
+     "turns": 5,
+     "usd": 0.090156,
+     "said": "_hygiene`, `test_okl` and `test_recap` failures. The briefing log appears to be off in this environment.\n\nI couldn't check whether the eight fail without the change, because that run needed a `git stash` that wasn't approved. The change's own tests (`tests/test_stem.py`, `tests/test_bench.py`) pass."
+    },
+    {
+     "position": 3,
+     "right": false,
+     "edited": false,
+     "turns": 7,
+     "usd": 0.08505370000000001,
+     "said": "* `AGENTS.md` and `.mcp.json` are absent from this checkout.\n- **Version mismatch:** the installed package reports 0.15.0 against a recorded 0.9.0.\n- **Recap test:** it found no briefings in the report window.\n\nI didn't investigate the `test_hygiene.py` failure or the `test_service_check` assertion."
+    },
+    {
+     "position": 4,
+     "right": false,
+     "edited": false,
+     "turns": 14,
+     "usd": 0.1307256,
+     "said": "eries. The report never claimed that table as a one-sitting comparison.\n\n`python3 -m pytest -q tests/test_stem.py` passes, 5 tests. I ran only that file; I didn't run the rest of the suite. The uncommitted `evals/stem_latency.py` change only adds an abort when `OKL_DATABASE_URL` isn't a SQLite file."
+    },
+    {
+     "position": 5,
+     "right": false,
+     "edited": false,
+     "turns": 7,
+     "usd": 0.0917047,
+     "said": "fter a fixed-size fetch. `tests/test_stem.py`, `tests/test_bench.py` and `tests/test_warm.py` pass (36 passed). I didn't run the full test suite.\n\nThe one uncommitted edit in the working copy, in `evals/stem_latency.py`, makes the script abort on a non-SQLite `OKL_DATABASE_URL`. I left it as it was."
+    },
+    {
+     "position": 6,
+     "right": false,
+     "edited": false,
+     "turns": 4,
+     "usd": 0.056073,
+     "said": "Nothing needed changing. The change's tests pass (`tests/test_stem.py` and `tests/test_bench.py`, 6 passed). The pagination lesson doesn't apply, since the change adds no list endpoints. I didn't commit."
+    },
+    {
+     "position": 7,
+     "right": false,
+     "edited": false,
+     "turns": 4,
+     "usd": 0.0717961,
+     "said": "separate Sonnet sub-agents, so there's no judge-equals-generator case to guard. The unstaged edit to `evals/stem_latency.py` is a guard that aborts on a non-sqlite `OKL_DATABASE_URL`. I left it as is. `tests/test_stem.py` and `tests/test_bench.py` pass (6 passed). I didn't run the rest of the suite."
+    },
+    {
+     "position": 8,
+     "right": false,
+     "edited": false,
+     "turns": 4,
+     "usd": 0.023284999999999997,
+     "said": " is about `num_classes` and a reserved class 0 in a model config. This change is about a stemming setting and has no class-count or crosswalk code, so it doesn't apply. The tests in `tests/test_stem.py` and `tests/test_bench.py` pass (6 passed). I only ran those two files, not the rest of the suite."
+    },
+    {
+     "position": 9,
+     "right": false,
+     "edited": false,
+     "turns": 12,
+     "usd": 0.09310330000000003,
+     "said": "ecap` failures come from briefing logging being off in my environment. I couldn't confirm that, because the command to rerun them with `OKL_BRIEFING_LOG=1` needed approval.\n\nI haven't shown that any of the 8 failures are unrelated to the change, because I never ran the suite on the commit before it."
+    }
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "one_at_a_time",
+   "rep": 3,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": true,
+   "other_edits": 2,
+   "seconds": 194.4,
+   "summary": "2 passed, 5 deselected in 0.05s",
+   "passes": [
+    {
+     "position": 0,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0571958,
+     "said": "Nothing needed changing. The change doesn't touch the judge-versus-generator setup, and the harness already refuses to run when the two resolve to the same model. All 17 tests in `tests/test_ab_harness.py` pass."
+    },
+    {
+     "position": 1,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.056859900000000005,
+     "said": "eeded changing. The change makes the judge read the whole submission and doesn't touch `defect_node`, and the harness already refuses to run when a task cites a `defect_node` missing from the store (`evals/ab_harness.py:349`), so the lesson isn't broken. `tests/test_ab_harness.py` passes (17 tests)."
+    },
+    {
+     "position": 2,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0582302,
+     "said": "40,000 characters, and a longer submission is marked unevaluable. The receipt records the window as `judge_max_chars`, and the changelog and pre-registration are in place. The 17 tests in `tests/test_ab_harness.py` pass. The auth lesson doesn't apply, because the change has no routes or credentials."
+    },
+    {
+     "position": 3,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.056164000000000006,
+     "said": "I changed nothing. The change adds a 40,000-character judge window and records it in each receipt as `judge_max_chars`. It doesn't add any guard that compares a run against the latest receipt, so the lesson doesn't apply here. `tests/test_ab_harness.py` passes (17 tests)."
+    },
+    {
+     "position": 4,
+     "right": false,
+     "edited": true,
+     "turns": 9,
+     "usd": 0.10256550000000002,
+     "said": " the judge's window\". I didn't add a test for the new label or report line. The 17 tests in `tests/test_ab_harness.py` pass, and nothing is committed.\n\nThe rest of the change needed no edits. Over-window samples already count as failures, never as clean runs, and the judge is never asked about them."
+    },
+    {
+     "position": 5,
+     "right": true,
+     "edited": true,
+     "turns": 18,
+     "usd": 0.16955949999999997,
+     "said": "ainst the series. Receipts that don't record the field count as 8,000, so the next run is flagged as a new series, as \u00a74m intends. `tests/test_ab_harness.py` passes (17 tests), but I added no test for the new comparison. The rest of the change needed nothing.\n\nThe edits are in `evals/ab_harness.py`."
+    },
+    {
+     "position": 6,
+     "right": false,
+     "edited": true,
+     "turns": 8,
+     "usd": 0.0945289,
+     "said": "ine has since moved 26, per \u00a74k) and that the baseline's own drift is the measured threshold. The falsifier now requires the briefed arm to worsen beyond that drift as well.\n\nI also noted that the judge change reaches both arms, so a baseline that moves in the next run partly reflects the new judge."
+    },
+    {
+     "position": 7,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0591964,
+     "said": "Nothing needed changing. The lesson covers docstrings on modules, public classes and public functions, and this change adds only a constant (`JUDGE_MAX_CHARS`) and its comment. The existing `Unevaluable` docstring is untouched. The 17 tests in `tests/test_ab_harness.py` pass."
+    },
+    {
+     "position": 8,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0565628,
+     "said": " the A/B judge's input window, so it doesn't apply. `tests/test_ab_harness.py` passes (17 tests), and I didn't commit.\n\nOne weakness I left alone: `test_the_receipt_names_the_judges_window` only checks the `JUDGE_MAX_CHARS` constant. It doesn't check that `judge_max_chars` is written to the receipt."
+    },
+    {
+     "position": 9,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0569401,
+     "said": "I changed nothing. The change already comes with its tests, and all 17 in `tests/test_ab_harness.py` pass. The lesson doesn't apply, because the change only affects how much text the A/B judge reads. It doesn't touch any timeout, retry loop or write path."
+    }
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "ten_plain",
+   "rep": 3,
+   "passed": false,
+   "edited": true,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 65.5,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.06s",
+   "passes": null
+  },
+  {
+   "pr": 115,
+   "arm": "one_at_a_time",
+   "rep": 0,
+   "passed": false,
+   "edited": true,
+   "harm": [],
+   "right_edited": true,
+   "other_edits": 2,
+   "seconds": 405.2,
+   "summary": "1 failed, 82 deselected in 0.41s",
+   "passes": [
+    {
+     "position": 0,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.065149,
+     "said": "test -q tests/test_okl.py` gives 80 passed and 2 skipped (the two Postgres tests, which need `OKL_TEST_POSTGRES_URL`). The empty-drift-snapshot lesson doesn't apply: the change never touches `export --drift` or snapshot creation, and the committed `okl-drift.json` it refreshes still has rules in it."
+    },
+    {
+     "position": 1,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.06558789999999999,
+     "said": " and reverify use plain words). It doesn't touch how drift is computed or how the verified commit is recorded and bound into the evidence, so the lesson doesn't apply. `tests/test_okl.py` gives 80 passed and 2 skipped; the skips are the Postgres conformance tests, which need `OKL_TEST_POSTGRES_URL`."
+    },
+    {
+     "position": 2,
+     "right": true,
+     "edited": true,
+     "turns": 6,
+     "usd": 0.09556640000000001,
+     "said": "le-glob test the lesson asks for, so I added `test_tests_touching_keeps_a_hostile_stored_glob_away_from_git_and_the_shell` to `tests/test_okl.py`. `python3 -m pytest -q tests/test_okl.py` gives 81 passed and 2 skipped. The skips are the Postgres conformance tests, which need `OKL_TEST_POSTGRES_URL`."
+    },
+    {
+     "position": 3,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.06977130000000001,
+     "said": "carries its checked count and still says \"NOTHING CHECKED\" at zero. The new `okl verify <id>` suggestion path only reads the store and never stamps anything. `python3 -m pytest -q tests/test_okl.py` gives 81 passed and 2 skipped. Both skips are the Postgres tests, which need `OKL_TEST_POSTGRES_URL`."
+    },
+    {
+     "position": 4,
+     "right": false,
+     "edited": true,
+     "turns": 14,
+     "usd": 0.1308847,
+     "said": "hat wasn't granted, and hand-editing `okl-drift.json` would fake a verification. I did not prove the new test red by breaking one side. Before merge, you may want to run `okl record --type Rule --scope repo --files docs/GETTING-STARTED.md,src/okl/cli.py \u2026` and then `okl verify` it against this test."
+    },
+    {
+     "position": 5,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.064271,
+     "said": "I changed nothing. The lesson is about the closed tag vocabulary, and this change doesn't touch tags or validation, so it has no bearing here. `python3 -m pytest -q tests/test_okl.py` gives 82 passed and 2 skipped. The two skips are the Postgres conformance tests, which need `OKL_TEST_POSTGRES_URL`."
+    },
+    {
+     "position": 6,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0655222,
+     "said": " are the Postgres tests, which need `OKL_TEST_POSTGRES_URL`.\n\nThe lesson doesn't apply to this change. `okl verify <id>` with no `--run` only prints the lesson and the tests that mention its files, and it stamps nothing. The command it suggests runs an existing test, not a grep for expected strings."
+    },
+    {
+     "position": 7,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0648718,
+     "said": "rs and the tests that mention them, and exits 2 without stamping. Stamping still needs an executed `--run` check, and `okl record --verified` is still refused. `python3 -m pytest -q tests/test_okl.py` gives 82 passed and 2 skipped (the Postgres conformance tests, which need `OKL_TEST_POSTGRES_URL`)."
+    },
+    {
+     "position": 8,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0649317,
+     "said": "eady as it stands: `tests/test_okl.py` gives 82 passed and 2 skipped, and the skips need a real Postgres via `OKL_TEST_POSTGRES_URL`. The lesson is about `okl init` printing manual follow-up steps. This change only touches `verify`, `drift`, `reverify` and the docs, and it adds no init instructions."
+    },
+    {
+     "position": 9,
+     "right": false,
+     "edited": true,
+     "turns": 6,
+     "usd": 0.0869345,
+     "said": "`. `python3 -m pytest -q tests/test_okl.py` gives 82 passed and 2 skipped; the skips need `OKL_TEST_POSTGRES_URL`. I did not commit.\n\nThe suggestion text itself goes to stdout while the exit code is 2. I left it that way because `okl reverify`'s refusal already prints its plan to stdout with code 2."
+    }
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "alone_told",
+   "rep": 1,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 71.8,
+   "summary": "1 passed, 82 deselected in 0.40s",
+   "passes": null
+  },
+  {
+   "pr": 115,
+   "arm": "one_at_a_time",
+   "rep": 2,
+   "passed": false,
+   "edited": true,
+   "harm": [],
+   "right_edited": true,
+   "other_edits": 1,
+   "seconds": 427.8,
+   "summary": "1 failed, 82 deselected in 0.36s",
+   "passes": [
+    {
+     "position": 0,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0649129,
+     "said": "ed).\n\nThe empty-drift-snapshot lesson doesn't apply here. The change only rewrites messages and adds the no-`--run` suggestion path for `okl verify`. The `okl-drift.json` in the diff is a refresh of an existing snapshot that still has rules, and nothing in the change commits or exports an empty one."
+    },
+    {
+     "position": 1,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0663328,
+     "said": " verify <id>`, drift and reverify print, and it adds the no-`--run` suggestion path. It doesn't touch how drift decides a lesson is stale, so the same-second lesson isn't affected. `tests/test_okl.py` gives 80 passed and 2 skipped (the Postgres conformance tests, which need `OKL_TEST_POSTGRES_URL`)."
+    },
+    {
+     "position": 2,
+     "right": true,
+     "edited": true,
+     "turns": 9,
+     "usd": 0.10456359999999999,
+     "said": "glob_reach_git_as_an_option` to `tests/test_okl.py`. It passes a hostile-looking glob (a git option, `;`, `$()` and backticks) and checks that nothing is injected and no file gets created. `python3 -m pytest -q tests/test_okl.py` gives 81 passed, 2 skipped (the Postgres tests). Nothing is committed."
+    },
+    {
+     "position": 3,
+     "right": false,
+     "edited": false,
+     "turns": 4,
+     "usd": 0.0756646,
+     "said": "o edits.\n\n`okl verify <id>` with no `--run` is read-only and exits 2. The `render_drift` gate output keeps its \"NOTHING CHECKED\" and \"N rule(s) checked\" lines, and the new plain-words footer only prints when there are drift hits. `python3 -m pytest -q tests/test_okl.py` gave 81 passed and 2 skipped."
+    },
+    {
+     "position": 4,
+     "right": false,
+     "edited": false,
+     "turns": 8,
+     "usd": 0.0993141,
+     "said": "aviour but not the guide wording. I didn't add a drift rule for it, because stamping one needs a real `okl verify` run against your store. Hand-editing `okl-drift.json` would fake the evidence. If you want it covered, record a Rule with `--files docs/GETTING-STARTED.md,src/okl/cli.py` and verify it."
+    },
+    {
+     "position": 5,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.06458900000000001,
+     "said": "I changed nothing. The lesson is about closed tag vocabularies, and this change adds no vocabulary or validated tag set, so it doesn't apply. `python3 -m pytest -q tests/test_okl.py` gives 81 passed and 2 skipped. The two skips are the Postgres tests, which need `OKL_TEST_POSTGRES_URL`."
+    },
+    {
+     "position": 6,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0653396,
+     "said": " verify <id>` suggestion and the plain-words drift and reverify text, and `tests/test_okl.py` passes (81 passed, 2 skipped; the skips are the Postgres-only tests). The lesson doesn't apply: the change adds no `--run` check that greps for expected strings. It only suggests a check and stamps nothing."
+    },
+    {
+     "position": 7,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.064983,
+     "said": "he lesson holds: `okl verify <id>` with no `--run` only prints the lesson, the files it covers and the tests that mention them, and stamps nothing (it exits 2). Stamping still needs an executed check. `tests/test_okl.py` passes (81 passed, 2 skipped; the Postgres tests need `OKL_TEST_POSTGRES_URL`)."
+    },
+    {
+     "position": 8,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0643583,
+     "said": "bout `okl init` printing manual setup steps, and this change doesn't touch `init`. It only changes `okl verify`, drift, reverify and the docs. `python3 -m pytest -q tests/test_okl.py` gives 81 passed and 2 skipped. The two skips are the Postgres conformance tests, which need `OKL_TEST_POSTGRES_URL`."
+    },
+    {
+     "position": 9,
+     "right": false,
+     "edited": true,
+     "turns": 13,
+     "usd": 0.11986449999999997,
+     "said": " itself on stdout. I added a stderr line, \"no --run given, so no check ran and nothing was stamped.\" The suggestion text stays on stdout, because that text is the feature. The test now checks that stderr line. It also checks that the unknown-id case leaves stdout empty. Nothing else needed changing."
+    }
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "alone_told",
+   "rep": 1,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 93.7,
+   "summary": "2 passed, 5 deselected in 0.07s",
+   "passes": null
+  },
+  {
+   "pr": 115,
+   "arm": "ten_plain",
+   "rep": 1,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 58.1,
+   "summary": "1 failed, 82 deselected in 0.42s",
+   "passes": null
+  },
+  {
+   "pr": 198,
+   "arm": "ten_plain",
+   "rep": 2,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 19.9,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.05s",
+   "passes": null
+  },
+  {
+   "pr": 309,
+   "arm": "one_at_a_time",
+   "rep": 2,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": true,
+   "other_edits": 0,
+   "seconds": 315.5,
+   "summary": "2 passed, 5 deselected in 0.05s",
+   "passes": [
+    {
+     "position": 0,
+     "right": true,
+     "edited": true,
+     "turns": 11,
+     "usd": 0.10866019999999998,
+     "said": "URL` isn't a `sqlite:///` URL. Before, it silently timed the default `.okl/okl.db` instead, which is the failure the lesson describes. I didn't add a test for the new exit. `tests/test_stem.py` and `tests/test_bench.py` pass (6 tests). I didn't run the rest of the suite or the latency script itself."
+    },
+    {
+     "position": 1,
+     "right": false,
+     "edited": false,
+     "turns": 4,
+     "usd": 0.09077299999999999,
+     "said": " \"at most twice as many null prompts\", and a precision bound taken from the namesake. The lesson also asks for the rule to be applied as written after the fact. The report does that: the warm arms fail at +17.5%, and it doesn't substitute a figure that passes. `tests/test_stem.py` passes (5 passed)."
+    },
+    {
+     "position": 2,
+     "right": false,
+     "edited": false,
+     "turns": 4,
+     "usd": 0.025331,
+     "said": "I changed nothing. The stemming change doesn't touch how `applies_to` is set or derived, so the lesson doesn't apply to it. `tests/test_stem.py` and `tests/test_bench.py` pass (6 passed)."
+    },
+    {
+     "position": 3,
+     "right": false,
+     "edited": false,
+     "turns": 4,
+     "usd": 0.026413,
+     "said": "ing. `tests/test_stem.py` and `tests/test_bench.py` pass (6 passed). The change is a measured result with the setting left off, plus a small guard in `evals/stem_latency.py` that aborts when the database isn't SQLite. It doesn't fix a recurring antipattern, so the encoding-loop lesson doesn't apply."
+    },
+    {
+     "position": 4,
+     "right": false,
+     "edited": false,
+     "turns": 9,
+     "usd": 0.0801559,
+     "said": "gures also match their receipts. The 15 ms latency receipt was taken at a different commit, but it compares stemmed against unstemmed inside that one receipt, and \u00a74ad says which commit it came from.\n\n`tests/test_stem.py` and `tests/test_bench.py` pass (6 passed). I didn't run the rest of the suite."
+    },
+    {
+     "position": 5,
+     "right": false,
+     "edited": false,
+     "turns": 5,
+     "usd": 0.0562741,
+     "said": "ge doesn't add any filtering after a fixed-size fetch. It only touches the tokenizer setting, the stemmed word matching, and a guard in `evals/stem_latency.py`, so the lesson doesn't apply. `tests/test_stem.py` and `tests/test_bench.py` pass (6 tests); I ran only those two files, not the full suite."
+    },
+    {
+     "position": 6,
+     "right": false,
+     "edited": false,
+     "turns": 4,
+     "usd": 0.0266394,
+     "said": "Nothing needed changing. The change adds a stemming setting that is off by default, plus its benchmark report and tests. It has no list endpoint or pagination, so the pagination-cap lesson doesn't apply. `tests/test_stem.py` and `tests/test_bench.py` pass (6 passed), and I didn't commit."
+    },
+    {
+     "position": 7,
+     "right": false,
+     "edited": false,
+     "turns": 4,
+     "usd": 0.0317544,
+     "said": "Nothing needed changing. The change adds no LLM judge or generator model setting. Its judging is done by blind Sonnet sub-agents, and the new pairs were left unjudged. The lesson therefore doesn't apply. `tests/test_stem.py` and `tests/test_bench.py` pass (6 passed)."
+    },
+    {
+     "position": 8,
+     "right": false,
+     "edited": false,
+     "turns": 7,
+     "usd": 0.083223,
+     "said": " 8 failures. The ones I opened come from the environment: missing `AGENTS.md` and `.mcp.json`, a version mismatch (0.15.0 installed vs 0.9.0), and a recap timing check. I didn't open the remaining failures. I also didn't run the suite without the change, so I haven't confirmed all 8 fail without it."
+    },
+    {
+     "position": 9,
+     "right": false,
+     "edited": false,
+     "turns": 4,
+     "usd": 0.0553961,
+     "said": "port says, and `tests/test_stem.py` and `tests/test_bench.py` pass (6 tests). The lesson is about runtime telemetry records and doesn't bear on this change. I left the uncommitted `evals/stem_latency.py` edit alone. It only makes the script abort when `OKL_DATABASE_URL` points at a non-SQLite store."
+    }
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "alone_told",
+   "rep": 4,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 35.8,
+   "summary": "2 passed, 5 deselected in 0.05s",
+   "passes": null
+  },
+  {
+   "pr": 168,
+   "arm": "alone_told",
+   "rep": 2,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 44.3,
+   "summary": "2 passed, 5 deselected in 0.08s",
+   "passes": null
+  },
+  {
+   "pr": 309,
+   "arm": "ten_plain",
+   "rep": 3,
+   "passed": false,
+   "edited": true,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 200.3,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.07s",
+   "passes": null
+  },
+  {
+   "pr": 196,
+   "arm": "alone_told",
+   "rep": 4,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 36.0,
+   "summary": "1 passed, 6 deselected in 0.08s",
+   "passes": null
+  },
+  {
+   "pr": 196,
+   "arm": "alone_told",
+   "rep": 3,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 46.0,
+   "summary": "1 passed, 6 deselected in 0.09s",
+   "passes": null
+  },
+  {
+   "pr": 168,
+   "arm": "ten_plain",
+   "rep": 3,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 147.0,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.07s",
+   "passes": null
+  },
+  {
+   "pr": 115,
+   "arm": "ten_plain",
+   "rep": 2,
+   "passed": false,
+   "edited": true,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 91.6,
+   "summary": "1 failed, 82 deselected in 0.40s",
+   "passes": null
+  },
+  {
+   "pr": 196,
+   "arm": "ten_plain",
+   "rep": 2,
+   "passed": false,
+   "edited": true,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 44.8,
+   "summary": "1 failed, 6 deselected in 0.07s",
+   "passes": null
+  },
+  {
+   "pr": 198,
+   "arm": "ten_plain",
+   "rep": 1,
+   "passed": false,
+   "edited": true,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 40.6,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.05s",
+   "passes": null
+  },
+  {
+   "pr": 115,
+   "arm": "alone_told",
+   "rep": 2,
+   "passed": false,
+   "edited": true,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 104.1,
+   "summary": "1 failed, 82 deselected in 0.43s",
+   "passes": null
+  },
+  {
+   "pr": 115,
+   "arm": "ten_plain",
+   "rep": 3,
+   "passed": false,
+   "edited": true,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 97.4,
+   "summary": "1 failed, 82 deselected in 0.50s",
+   "passes": null
+  },
+  {
+   "pr": 115,
+   "arm": "one_at_a_time",
+   "rep": 4,
+   "passed": false,
+   "edited": true,
+   "harm": [],
+   "right_edited": true,
+   "other_edits": 2,
+   "seconds": 427.3,
+   "summary": "1 failed, 82 deselected in 0.46s",
+   "passes": [
+    {
+     "position": 0,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.06878419999999999,
+     "said": "nd `python3 -m pytest -q tests/test_okl.py` gives 80 passed and 2 skipped. The two skips are the Postgres tests, which need `OKL_TEST_POSTGRES_URL`.\n\nThe empty-drift-snapshot lesson doesn't apply. The change doesn't touch `export --drift`, and the `okl-drift.json` it refreshes still has rules in it."
+    },
+    {
+     "position": 1,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0658762,
+     "said": " (now a read-only suggestion that stamps nothing), the drift and reverify wording, and docs. It doesn't touch how drift compares commits or how the verified commit is recorded, so the same-second lesson isn't affected. `tests/test_okl.py` gives 80 passed and 2 skipped; the skips need a Postgres URL."
+    },
+    {
+     "position": 2,
+     "right": false,
+     "edited": false,
+     "turns": 4,
+     "usd": 0.0753156,
+     "said": "only rewords the hint text in `okl drift` and `okl reverify`, and adds the suggestion mode to `okl verify <id>`. The \"NOTHING CHECKED\" branch in `render_drift` and the zero-checked exit code under `--gate` are untouched. The new suggestion mode stamps nothing and exits 2, so it can't read as a pass."
+    },
+    {
+     "position": 3,
+     "right": false,
+     "edited": true,
+     "turns": 11,
+     "usd": 0.11324279999999999,
+     "said": "rift` red when the guide or `cli.py` changes. To close it, record a Rule with `--files docs/GETTING-STARTED.md,src/okl/cli.py` and verify it with that test.\n\nI didn't read `okl-drift.json` or run `okl drift`. I also didn't try breaking the guide or the code on purpose to see the new assertions fail."
+    },
+    {
+     "position": 4,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0651191,
+     "said": "tag vocabulary, and this change doesn't touch tags or `KNOWN_TAGS`. It only changes `okl verify <id>` with no `--run`, and the drift and reverify wording. `python3 -m pytest -q tests/test_okl.py` gives 80 passed and 2 skipped. The two skips are the Postgres tests, which need `OKL_TEST_POSTGRES_URL`."
+    },
+    {
+     "position": 5,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0669395,
+     "said": "e. `okl verify <id>` with no `--run` only prints the lesson, its files and nearby tests, and stamps nothing. The command it suggests runs a real test with `--expect \"passed\"`, not a grep for expected strings. The re-stamped entries in `okl-drift.json` are refreshes of checks that were already there."
+    },
+    {
+     "position": 6,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0650012,
+     "said": " and the tests that mention its files, and it exits 2 without stamping anything. Stamping still requires an executed check with the `--expect` signal, and the refusal of `okl record --verified` is unchanged. The tests in `tests/test_okl.py` pass (80 passed, 2 skipped; the skips need a Postgres URL)."
+    },
+    {
+     "position": 7,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0651215,
+     "said": "at to do in plain words. `tests/test_okl.py` gives 80 passed and 2 skipped (the two Postgres tests). The init-wiring lesson doesn't apply, because the change doesn't touch `okl init`. The check a lesson needs has to be written by a person or an agent, so printing guidance for it is the right output."
+    },
+    {
+     "position": 8,
+     "right": false,
+     "edited": true,
+     "turns": 12,
+     "usd": 0.13616850000000003,
+     "said": " also asserts that stdout stays empty for the suggestion, the \"no test mentions those files\" case and the unknown-id case.\n\n`python3 -m pytest -q tests/test_okl.py` gives 80 passed and 2 skipped. One of the skips is the Postgres conformance test, which needs `OKL_TEST_POSTGRES_URL`. I didn't commit."
+    },
+    {
+     "position": 9,
+     "right": true,
+     "edited": true,
+     "turns": 5,
+     "usd": 0.0982279,
+     "said": "the paths. It was missing the hostile-glob test the lesson asks for, so I added `test_suggest_check_never_lets_a_stored_glob_reach_a_shell_or_a_git_option` to `tests/test_okl.py`. I ran `python3 -m pytest -q tests/test_okl.py`: 81 passed, 2 skipped (the Postgres backend tests). Nothing is committed."
+    }
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "alone_told",
+   "rep": 4,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 40.9,
+   "summary": "2 passed, 5 deselected in 0.09s",
+   "passes": null
+  },
+  {
+   "pr": 115,
+   "arm": "one_at_a_time",
+   "rep": 1,
+   "passed": false,
+   "edited": true,
+   "harm": [],
+   "right_edited": true,
+   "other_edits": 2,
+   "seconds": 407.5,
+   "summary": "1 failed, 82 deselected in 0.46s",
+   "passes": [
+    {
+     "position": 0,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0659561,
+     "said": " drift and reverify wording, and it doesn't touch how `export --drift` or the snapshot gate handle an empty snapshot, so the lesson doesn't apply. `python3 -m pytest -q tests/test_okl.py` gives 80 passed and 2 skipped. The skips are the Postgres conformance tests, which need `OKL_TEST_POSTGRES_URL`."
+    },
+    {
+     "position": 1,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0658008,
+     "said": "t only reworks the text of the verify, drift and reverify messages, adds the no-`--run` suggestion path (which exits before stamping anything), and updates the docs.\n\n`tests/test_okl.py` gives 80 passed and 2 skipped. Both skips are the Postgres conformance tests, which need `OKL_TEST_POSTGRES_URL`."
+    },
+    {
+     "position": 2,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.06995219999999999,
+     "said": "NG CHECKED\" at zero. `okl verify <id>` with no `--run` reads the store and stamps nothing, and it exits 2. I made no code or test changes, and `python3 -m pytest -q tests/test_okl.py` gives 80 passed and 2 skipped. The two skips are the Postgres conformance tests, which need `OKL_TEST_POSTGRES_URL`."
+    },
+    {
+     "position": 3,
+     "right": false,
+     "edited": true,
+     "turns": 12,
+     "usd": 0.11798079999999998,
+     "said": "e check. I also did not prove the test red by breaking one side on purpose.\n\nAll 80 tests in `tests/test_okl.py` passed, with 2 skipped (the Postgres ones), before I added the new test. After adding it I ran only the 4 relevant tests (`-k \"bare_verify or suggests_one or reverify\"`), and they passed."
+    },
+    {
+     "position": 4,
+     "right": true,
+     "edited": true,
+     "turns": 6,
+     "usd": 0.09910730000000001,
+     "said": "git_option` to `tests/test_okl.py`. It uses a `$(\u2026)`/`;` glob and a `--open-files-in-pager=\u2026` option, and asserts that nothing runs. `python3 -m pytest -q tests/test_okl.py` gives 82 passed and 2 skipped (including the Postgres conformance test, which needs `OKL_TEST_POSTGRES_URL`). I didn't commit."
+    },
+    {
+     "position": 5,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.06432009999999999,
+     "said": "I changed nothing. The lesson is about the closed tag vocabulary, and this change doesn't touch tags, so it has no bearing here. `python3 -m pytest -q tests/test_okl.py` gives 82 passed and 2 skipped. The two skipped tests are the Postgres conformance tests, which need `OKL_TEST_POSTGRES_URL`."
+    },
+    {
+     "position": 6,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0675997,
+     "said": "e change doesn't break the grep-for-expected-strings lesson. It adds no new `--run` check that greps for text. The no-argument `okl verify <id>` stamps nothing, and the check it suggests is a test run with `--expect passed`. The re-stamped entries in `okl-drift.json` use checks that already existed."
+    },
+    {
+     "position": 7,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0651003,
+     "said": " and the tests that touch its files, and returns exit 2 without stamping. Stamping still requires an executed check, and `okl record --verified` is still refused. `python3 -m pytest -q tests/test_okl.py` gives 82 passed, 2 skipped (the Postgres conformance tests, which need `OKL_TEST_POSTGRES_URL`)."
+    },
+    {
+     "position": 8,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0653616,
+     "said": "esting a check and drift/reverify giving plain-words guidance. `tests/test_okl.py` passes (82 passed, 2 skipped; the skips are the Postgres tests, which need `OKL_TEST_POSTGRES_URL`). The lesson is about `okl init` printing manual setup steps, and this change doesn't touch init, so it doesn't apply."
+    },
+    {
+     "position": 9,
+     "right": false,
+     "edited": true,
+     "turns": 6,
+     "usd": 0.08998010000000001,
+     "said": "2. The one gap was that the unknown-id test never checked stdout, so I added an assertion in `tests/test_okl.py` that stdout stays empty. `tests/test_okl.py` now gives 82 passed and 2 skipped; the skips include the Postgres conformance test, which needs `OKL_TEST_POSTGRES_URL`. Nothing is committed."
+    }
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "ten_plain",
+   "rep": 0,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 39.4,
+   "summary": "2 passed, 5 deselected in 0.05s",
+   "passes": null
+  },
+  {
+   "pr": 309,
+   "arm": "alone_told",
+   "rep": 1,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 217.2,
+   "summary": "1 failed, 1 passed, 5 deselected in 0.06s",
+   "passes": null
+  },
+  {
+   "pr": 196,
+   "arm": "ten_plain",
+   "rep": 3,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 196.6,
+   "summary": "1 failed, 6 deselected in 0.08s",
+   "passes": null
+  },
+  {
+   "pr": 196,
+   "arm": "alone_told",
+   "rep": 0,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": null,
+   "other_edits": null,
+   "seconds": 34.6,
+   "summary": "1 passed, 6 deselected in 0.10s",
+   "passes": null
+  },
+  {
+   "pr": 196,
+   "arm": "one_at_a_time",
+   "rep": 1,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "right_edited": true,
+   "other_edits": 2,
+   "seconds": 1096.3,
+   "summary": "1 passed, 6 deselected in 0.08s",
+   "passes": [
+    {
+     "position": 0,
+     "right": false,
+     "edited": true,
+     "turns": 11,
+     "usd": 0.0795568,
+     "said": "ng` to `tests/test_briefing_terms.py`. It runs the script's `main()` and asserts that no briefing row is written. `tests/test_briefing_terms.py` passes (30 tests), and I ran no other test files. I didn't commit.\n\nI didn't check that the new test fails when the env var is removed from `precision.py`."
+    },
+    {
+     "position": 1,
+     "right": false,
+     "edited": false,
+     "turns": 11,
+     "usd": 0.1191852,
+     "said": " `.mcp.json`, and a package version mismatch. The fifth is `test_service_check`. I suspect my shell has `OKL_BRIEFING_LOG=0` set, which would stop the briefing from being logged, but I couldn't confirm it. My attempts to check were blocked for needing approval.\n\n**Summary:** Nothing needed changing."
+    },
+    {
+     "position": 2,
+     "right": false,
+     "edited": false,
+     "turns": 19,
+     "usd": 0.1480295,
+     "said": "as_it_is` fails because `CLAUDE.md` is missing.\n  - Three `test_scaffold.py` tests fail on the version/mirror/manifest checks.\n  - `test_okl.py::test_service_check` finds no logged briefing, which points to briefing logging being off in this environment (`OKL_BRIEFING_LOG=0`). I couldn't check that."
+    },
+    {
+     "position": 3,
+     "right": false,
+     "edited": false,
+     "turns": 8,
+     "usd": 0.0974165,
+     "said": "s=None`. That meets the lesson's concern, and REPORT \u00a74l already records that the bait briefings differ from main's. `tests/test_briefing_terms.py` passes (30 tests). I did not run `evals/preflight.py` or the rest of the suite. The pre-flight call was blocked pending approval, and I didn't retry it."
+    },
+    {
+     "position": 4,
+     "right": false,
+     "edited": false,
+     "turns": 13,
+     "usd": 0.12631130000000002,
+     "said": "and a package version mismatch. The fifth is `test_service_check`, which reads zero logged briefings. I'm assuming my shell has `OKL_BRIEFING_LOG=0` set, but approval was denied on the command to check that, so I didn't confirm it. I didn't check whether any of the five also fail without the change."
+    },
+    {
+     "position": 5,
+     "right": false,
+     "edited": true,
+     "turns": 16,
+     "usd": 0.1540618,
+     "said": "gs 0 briefings instead of 1. It still failed when run alone, so my test isn't the cause. My guess is `OKL_BRIEFING_LOG=0` is set in this environment, but I couldn't confirm that because the sandbox blocked the commands that would show it.\n\nI didn't check whether any of the 5 fail on the base commit."
+    },
+    {
+     "position": 6,
+     "right": true,
+     "edited": true,
+     "turns": 7,
+     "usd": 0.0803537,
+     "said": " or edited pack can't change the precision verdict. I made no other changes to the change itself. `python3 -m pytest -q tests/test_briefing_terms.py` gives 30 passed, including the uncommitted new test that checks the precision script writes no briefing row. I did not run the rest of the test suite."
+    },
+    {
+     "position": 7,
+     "right": false,
+     "edited": false,
+     "turns": 9,
+     "usd": 0.1005568,
+     "said": "re touches the briefing code. I didn't run them without the change, so I can't confirm they were already failing.\n\nI didn't run `evals/precision.py` directly, because the sandbox asked for approval. `test_the_precision_check_passes_on_the_seed_packs` runs it and passed. I haven't committed anything."
+    },
+    {
+     "position": 8,
+     "right": false,
+     "edited": false,
+     "turns": 5,
+     "usd": 0.0501865,
+     "said": "Nothing needed changing. The change filters the briefing's query terms (stoplist, term cap, no search on an empty query) and never filters lessons by stack tag, so the provenance-versus-applicability lesson doesn't apply. `tests/test_briefing_terms.py` passes, 30 tests."
+    },
+    {
+     "position": 9,
+     "right": false,
+     "edited": false,
+     "turns": 14,
+     "usd": 0.1502383,
+     "said": "couldn't rerun it against the pre-change code, so I can't rule out this change as the cause.\n- **Fifth failure:** the run showed 5 failures, but my rerun printed only the four above. I didn't identify the fifth.\n\nThe lesson on runtime input doesn't bear on this change, so nothing was changed for it."
+    }
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "one_at_a_time",
+   "rep": 3,
+   "passed": false,
+   "edited": true,
+   "harm": [],
+   "right_edited": true,
+   "other_edits": 2,
+   "seconds": 453.2,
+   "summary": "1 failed, 82 deselected in 0.37s",
+   "passes": [
+    {
+     "position": 0,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.065058,
+     "said": ".py` gives 80 passed and 2 skipped. The two skips are the Postgres tests, which need `OKL_TEST_POSTGRES_URL`.\n\nThe lesson doesn't apply here. The change doesn't touch `okl export --drift`, and the committed `okl-drift.json` still holds rules, so it can't produce the zero-rule snapshot that fails CI."
+    },
+    {
+     "position": 1,
+     "right": true,
+     "edited": true,
+     "turns": 5,
+     "usd": 0.08721109999999999,
+     "said": "_okl.py`. It passes option-like and shell-metacharacter globs and checks that nothing runs and nothing is returned. `python3 -m pytest -q tests/test_okl.py` gives 81 passed and 2 skipped. One of the skipped tests is the Postgres conformance test, which needs `OKL_TEST_POSTGRES_URL`. I didn't commit."
+    },
+    {
+     "position": 2,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0691953,
+     "said": "run` suggestion path. The commit-based drift check (`verified_commit`, `git diff --quiet`) is untouched, and `okl verify <id>` without `--run` stamps nothing. `python3 -m pytest -q tests/test_okl.py` gives 81 passed and 2 skipped. The skips are the Postgres tests, which need `OKL_TEST_POSTGRES_URL`."
+    },
+    {
+     "position": 3,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0710646,
+     "said": "Postgres tests, which need a database URL).\n\nThe lesson doesn't apply here. `render_drift` still prints \"NOTHING CHECKED \u2014 \u2026 not an all-clear\" when zero rules were checked, and the change only touches the output for drifted rules. The new `okl verify <id>` with no `--run` exits 2 and stamps nothing."
+    },
+    {
+     "position": 4,
+     "right": false,
+     "edited": true,
+     "turns": 13,
+     "usd": 0.16024970000000005,
+     "said": "othing is true\" --files docs/GETTING-STARTED.md,src/okl/cli.py,tests/test_okl.py\n```\n\nThen run:\n\n```\nokl verify doc-verify-suggests --run \"python3 -m pytest -q tests/test_okl.py -k guide_claims_about_verify\" --expect passed\n```\n\nThat wires the claim to a check that governs both the doc and the code."
+    },
+    {
+     "position": 5,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0646477,
+     "said": " and rewrites the drift and reverify messages in plain words. It doesn't touch tags or any controlled vocabulary, so the lesson doesn't apply. `python3 -m pytest -q tests/test_okl.py` gives 82 passed and 2 skipped. The two skips are the Postgres conformance tests, which need `OKL_TEST_POSTGRES_URL`."
+    },
+    {
+     "position": 6,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0667291,
+     "said": "'t apply here. `okl verify <id>` with no `--run` stamps nothing and exits 2. It only suggests a check, and a stamp still needs a real run that passes. The grep it does is a search of the test files for ones that mention the governed files. That finds candidate tests to run, not evidence for a stamp."
+    },
+    {
+     "position": 7,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0657402,
+     "said": "es a check that actually ran. `okl record --verified` is still refused. The new test checks that the lesson's `verified_at` stays unset after a bare `verify`.\n\n`python3 -m pytest -q tests/test_okl.py` gave 82 passed and 2 skipped. The skips are the Postgres tests, which need `OKL_TEST_POSTGRES_URL`."
+    },
+    {
+     "position": 8,
+     "right": false,
+     "edited": false,
+     "turns": 3,
+     "usd": 0.0644224,
+     "said": "esson is about `okl init` installers that print manual steps. This change doesn't touch `init`: it only changes `okl verify <id>` (which now suggests a check), the drift and reverify wording, and the docs. The tests in `tests/test_okl.py` pass (82 passed, 2 skipped because they need a Postgres URL)."
+    },
+    {
+     "position": 9,
+     "right": false,
+     "edited": true,
+     "turns": 15,
+     "usd": 0.1499937,
+     "said": "s empty. It still exits 2 because nothing ran, and that follows the exit-code lesson. I updated the two tests that read that output to assert empty stdout and check stderr, including the unknown-id path. `tests/test_okl.py` now passes (82 passed, 2 skipped, the Postgres tests); nothing is committed."
+    }
+   ]
+  }
+ ],
+ "okl_commit_at_start": "179a7b0",
+ "okl_commit": "179a7b0"
+}

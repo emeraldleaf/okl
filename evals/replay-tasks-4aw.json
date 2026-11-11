@@ -1,0 +1,108 @@
+[
+ {
+  "pr": 115,
+  "set": "4al",
+  "title": "okl verify <id> suggests a check; drift and reverify say what to do in plain words",
+  "issues": [],
+  "base": "c6fdb0a3f3758510311aa76c294567061f82d884",
+  "frozen": "0efcd434bb06db7bdeff40291051522f22cc784b",
+  "end": "27b32a5f0895566f00282bf420e94e51eed043a3",
+  "task_commit": "0efcd434bb06db7bdeff40291051522f22cc784b",
+  "lesson": "n_adea7f2c7373",
+  "lesson_text": "[n_adea7f2c7373] Rule \u00b7 Never let stored data reach a shell \u2014 list-form subprocess, and a -- guard before any pathspec\nsymptom: a subprocess call built by string concatenation, or shell=True anywhere the input is not typed by the person running it\nfix: list-form argv, and -- before any user- or store-supplied pathspec; assert it in a test that passes a hostile-looking glob\nbody: cause: a shared knowledge store holds records written by other people and other repos. Any path from a stored field to a shell turns that store into remote code execution on every consumer's machine. The one shell=True call is a command the human typed themselves; the one place a stored field (a drift file-glob) reaches a subprocess uses list form with a -- separator, so it cannot inject a git option either.\n",
+  "test_file": "tests/test_okl.py",
+  "grader": "test_a_suggested_check_quotes_a_hostile_test_filename",
+  "tests_after": [
+   "tests/test_okl.py"
+  ],
+  "relax": {}
+ },
+ {
+  "pr": 168,
+  "set": "4al",
+  "title": "A/B: a sample with no code is unevaluable; receipts name the model (#164)",
+  "issues": [
+   {
+    "title": "A/B harness scores a plan with no code as a clean run",
+    "body": "In `ab-20261010-2314.json` (REPORT \u00a74j), the briefed `idor_endpoint` sample 1 returned a plan, not code. The judge's own reason says so:\n\n> No actual code was submitted\u2014only a plan describing intended implementation; the developer claims IDOR-safe scoping by buyer_id with 404 on non-match, but code must be audited to verify.\n\nThe harness still scored it `reproduced: false`, so it counted as a clean briefed run. A sample with no implementation shows nothing either way. Counted as clean, it flatters whichever arm it lands in. (Found by CodeRabbit on #162.)\n\n**Scope checked:** a text scan of every committed receipt's judge reasons found only this one plan-only sample. The other two matches were real implementations that reproduced the defect.\n\n**Proposed fix:**\n- The judge returns `implemented: bool` alongside `defect_reproduced`.\n- The harness counts `implemented: false` as a failure (unevaluable): kept in `failures`, out of the denominators, and counted toward the 20% usability bar.\n- The judge prompt is part of the instrument, so this should land with a REPORT pre-registration, like \u00a74i's and \u00a74j's.\n\n**Also worth adding while there:** record the resolved model id per run, not only the alias (review item R12). \u00a74j's baseline fell 26 points, and the receipt can't say whether the model changed.\n"
+   }
+  ],
+  "base": "cafbcbab3b3e54d7b347dccc5ceef85b6299cc9a",
+  "frozen": "d5aaf799c75d8702a17a2ffe370eb261de22816a",
+  "end": "05ed88bc8d320012dd76f3ae1884efa82192d60f",
+  "task_commit": "d5aaf799c75d8702a17a2ffe370eb261de22816a",
+  "lesson": "seed:rag-defects:qz_judge_self",
+  "lesson_text": "[seed:rag-defects:qz_judge_self] Defect \u00b7 The LLM judge was grading its own homework (same model as the generator)\nsymptom: the eval's judge model equals (or defaults to) the generator model\nfix: require judge\u2260generator; refuse to run if they're equal\nbody: The judge defaulted to the same model as the generator \u2014 a mirror, not a signal (its default was even an embedding model that can't generate). Portable rule: the judge must be a different model from the generator; refuse to run if they're equal.\n",
+  "test_file": "tests/test_ab_harness.py",
+  "grader": "test_a_judge_that_resolves_to_the_generators_model_is_caught",
+  "tests_after": [
+   "tests/test_ab_harness.py"
+  ],
+  "relax": {}
+ },
+ {
+  "pr": 196,
+  "set": "4al",
+  "title": "A prompt with no subject is not briefed; a precision check for it (R7, R8)",
+  "issues": [
+   {
+    "title": "Quiet the briefing: a curated stoplist and a term cap, gated by pre-flight",
+    "body": "## Problem\nConversational prompts get full briefings. On a store with only the bundled packs (`okl seed seed/`), \"do it\", \"yes do it\" and \"what about this one?\" each brief 12 lessons, the cap. The noise comes from generic lessons matching common words.\n\n## Proposal (now)\n- **A curated stoplist that keeps short meaningful tokens** (`id`, `ci`, `py`, `db`, `go`, `ui`). A standard stoplist alone still briefs most chatty prompts. Dropping short tokens entirely loses the IDOR rule.\n- **An order-preserving cap** on the number of query terms.\n- **Order the actions by rank.** #143 covers the ordering half.\n- **Gate the change on the pre-flight:** every eval task still receives the rule it tests.\n\n## Later\n- A relevance floor relative to the top score, calibrated on the precision check (R8 (#179)). Never a count of matched terms: that drops the `spa_tokens` rule.\n\n## Acceptance\n- On a seed-only store, those prompts brief fewer lessons, with a committed receipt. R8 (#179)'s budget (empty, or at most 3 lessons) becomes the bar once R8 (#179) lands.\n- The pre-flight is unchanged, and if the bait briefings change, an A/B run per the eval report's rules.\n\n---\nFrom an unpublished 2026-10-10 multi-agent review of okl, in which two reviewer agents checked each recommendation, one against the code and one for value at its cost. **R7**, priority **P1** (P0 highest). This issue describes the version they endorsed."
+   }
+  ],
+  "base": "9fe076e3a6430d5be643af5edaeb9217a3ebdcd3",
+  "frozen": "02c88c671a212a0219dff15a33f6195d931631b9",
+  "end": "768aa748d4b69308764b0f143b5a500d3cb18a71",
+  "task_commit": "02c88c671a212a0219dff15a33f6195d931631b9",
+  "lesson": "n_57cc4b427f05",
+  "lesson_text": "[n_57cc4b427f05] Rule \u00b7 Audits read the repo, not the working tree \u2014 a scan of dirty files answers a question main would answer differently\nsymptom: a gate/audit passes locally but fails in CI (or vice versa), or an uncommitted edit changes an audit verdict\nfix: iterate git ls-files, not the directory tree; if working-tree scanning is genuinely wanted (pre-commit), say so explicitly and separately\nbody: cause: content audits (tombstone sweeps, doc-orphan checks, identifier greps) that scan the filesystem see uncommitted state \u2014 an in-progress edit can silently satisfy or violate the audit while the committed reality differs. The audit's subject is what ships, which is what git tracks. Scan `git ls-files` output (or a clean checkout) so the verdict matches main.\n",
+  "test_file": "tests/test_briefing_terms.py",
+  "grader": "test_the_precision_check_reads_only_tracked_seed_packs",
+  "tests_after": [
+   "tests/test_ab_harness.py",
+   "tests/test_briefing_terms.py",
+   "tests/test_scaffold.py"
+  ],
+  "relax": {}
+ },
+ {
+  "pr": 198,
+  "set": "4al",
+  "title": "A/B: the judge reads the whole submission (part of #182)",
+  "issues": [],
+  "base": "e47e5ce2231b22b918ba93229acc0c9c1947faf9",
+  "frozen": "8802d0c4d7cec725c156e49bf875df4143d7b64c",
+  "end": "a3131f6e64912240b370597228ee84addb0caa13",
+  "task_commit": "8802d0c4d7cec725c156e49bf875df4143d7b64c",
+  "lesson": "n_473aec369b25",
+  "lesson_text": "[n_473aec369b25] Defect \u00b7 Changing the judge mid-series silently voids every cross-run comparison\nsymptom: both arms of an A/B move in the same direction between runs, and the run's grader was changed without being pre-registered\nfix: pin the grader in the pre-registration and assert it at run time: the harness should refuse, or loudly mark, a run whose judge differs from the series it will be compared against; treat any instrument change as starting a new series\nbody: cause: the re-run was launched with JUDGE_CMD set to a different model than every prior run in the series (opus vs haiku), typed inline with the other flags and not noticed until the receipts were tabulated. The run stayed internally valid - one judge for both arms, and the judge!=generator guard held - so nothing failed and no warning fired. But both arms rose together (baseline 35 to 46 percent, briefed 8 to 12), which is the exact signature of a stricter grader, making the movement unattributable and voiding the falsifier that was defined against the earlier series' noise floor. The receipts recorded the judge correctly the whole time; nothing read the field back and compared it.\n",
+  "test_file": "tests/test_ab_harness.py",
+  "grader": "test_the_judges_window_is_part_of_instrument_drift",
+  "tests_after": [
+   "tests/test_ab_harness.py",
+   "tests/test_scaffold.py"
+  ],
+  "relax": {}
+ },
+ {
+  "pr": 309,
+  "set": "4aq",
+  "title": "Stemming as a measured setting, off: \u00a74ad's rule fails on size",
+  "issues": [],
+  "base": "f645d81d6b30130b9bc99c590245fb7b1d189d56",
+  "frozen": "f5ad37776501cb59cf89e420ba0d384f93febcce",
+  "end": "13d899797b4a89262ee1ea07bb44b4ba4676b79c",
+  "task_commit": "f5ad37776501cb59cf89e420ba0d384f93febcce",
+  "lesson": "n_02cc84da158d",
+  "lesson_text": "[n_02cc84da158d] Defect \u00b7 OKL_DATABASE_URL was honoured by the store and ignored by every CLI command\nsymptom: a documented storage env var works in one entry point and is silently overridden in another; writes land somewhere other than where the operator pointed them\nfix: resolve the storage target in ONE place that every entry point calls; if a component deliberately ignores the variable, refuse loudly rather than silently substituting a default\nbody: cause: Store honoured OKL_DATABASE_URL from v0.1 and the HTTP service passed it through, but Client._local_store built a config-adjacent sqlite URL unconditionally - so every CLI command ignored it. Pointing the variable at Postgres and running okl record reported success and wrote to a local file. Found while building a diagram generator that needed a scratch store: the seed step printed 'seeded 10 records' and the target database was empty, which is the exit-0-with-no-output case the verify_materialized gate exists for. The variable was never unsupported; it was supported in the layer nobody entered through.\n",
+  "test_file": "tests/test_stem.py",
+  "grader": "test_the_latency_runs_copy_the_store_the_cli_would_open",
+  "tests_after": [
+   "tests/test_bench.py",
+   "tests/test_stem.py"
+  ],
+  "relax": {
+   ", match=\"not SQLite\"": ""
+  }
+ }
+]
