@@ -1585,8 +1585,9 @@ REVIEW_STEPS = (
     "conversation, one lesson each and one after another, since each may change code. Give it the lesson's "
     "full text (`okl show <id>`, the okl_get tool), the files this change touched, and one question: does "
     "this change break this lesson? If it does, fix that and run the tests that cover it; if it does not, "
-    "or the lesson has no bearing on this change, change nothing for it. The same ten lessons checked "
-    "together in one pass caught far less than when each was asked on its own (REPORT §4ax, §4ay).",
+    "or the lesson has no bearing on this change, change nothing for it. In a pilot on five past bugs, "
+    "the same ten lessons checked together in one pass caught far less than when each was asked on its "
+    "own (REPORT §4ax, §4ay).",
     "If you cannot start a sub-agent, check them yourself one at a time, one lesson per pass, and say "
     "the review ran without fresh contexts: that is weaker, and not measured.",
     "Say which lessons you checked, which a change broke and what you changed for each, and which needed "

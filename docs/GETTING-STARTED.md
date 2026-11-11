@@ -183,8 +183,9 @@ the Stop hook first asks the agent to run `okl check --change` and check the cod
 against the lessons. The command lists the files changed since the main branch, committed or
 not, and every lesson in scope one line each, those governing a changed file first. The agent
 says what its code does, picks the ten lessons the change most likely breaks, and checks each
-one on its own in a fresh sub-agent, fixing only what breaks one; on five real past bugs that
-caught far more than checking the same lessons together (REPORT §4ay). okl calls no model for it. It is off by default:
+one on its own in a fresh sub-agent, fixing only what breaks one; in a pilot on five real past
+bugs, that caught far more than checking the same lessons together (REPORT §4ay, receipt
+`replay-one-20261111-1355.json`). okl calls no model for it. It is off by default:
 it has been measured on one repository only ([REPORT §4at](../evals/REPORT.md)), and the list
 costs about 60 tokens a lesson.
 
