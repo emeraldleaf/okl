@@ -237,3 +237,27 @@ def test_the_end_to_end_reading_follows_the_stated_rule():
     assert e2e.reading({**rate, "review_each_alone": 0.3}, True, 0.8, quiet) == "stays opt-in"
     assert e2e.reading(rate, True, 0.8, {**quiet, "review_each_alone": 3}) == "stays opt-in"
     assert e2e.reading(rate, False, 0.8, quiet) == "not complete"
+
+
+def _plan_module():
+    spec6 = importlib.util.spec_from_file_location("plan_reach", REPO / "evals" / "plan_reach.py")
+    assert spec6 and spec6.loader
+    mod = importlib.util.module_from_spec(spec6)
+    spec6.loader.exec_module(mod)
+    return mod
+
+
+def test_the_plan_reading_follows_the_stated_rule():
+    """The plan finds it only when it is good on its own and clearly better than the task's words."""
+    plan = _plan_module()
+    assert plan.reading({"task": 0.2, "plan": 0.6, "diff": 0.5}, True) == "the plan finds it"
+    assert plan.reading({"task": 0.4, "plan": 0.6, "diff": 0.5}, True) == "the plan does not find it well enough"
+    assert plan.reading({"task": 0.0, "plan": 0.5, "diff": 0.5}, True) == "the plan does not find it well enough"
+    assert plan.reading({"task": 0.0, "plan": 1.0, "diff": 1.0}, False) == "not complete"
+
+
+def test_a_pick_is_read_from_the_last_array_of_ids():
+    """A reply may quote a short list in prose before its answer; the answer is the last array."""
+    plan = _plan_module()
+    assert plan.last_array('I considered ["a"] first.\n["x", "y", "z"]') == ["x", "y", "z"]
+    assert plan.last_array("no answer") is None

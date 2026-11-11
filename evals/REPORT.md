@@ -6180,6 +6180,34 @@ run `okl show`. The agent is told the review is required; a real Stop hook asks 
 
 **Budget.** About 75 sessions and up to 250 sub-agents; the throwaway session cost $0.38.
 
+## 4ba. PRE-REGISTERED, A PILOT: does a plan written before any code find the lesson a change needs? (2026-11-11)
+
+Written before any pick in this section. §4ax found the default briefing, built from a task's words,
+showed the right lesson on two of §4aw's five tasks. A plan says what the code will do, which a task's
+words rarely do, so a planning step could put the right lessons in front of the agent before it
+writes, with the review after writing (§4az) kept as the net for what a plan leaves out. This tests
+the part that has failed most: choosing.
+
+**Arms, on §4aw's five tasks, five repeats each, 75 picks.** One picker (Sonnet, no tools) gets every
+lesson the task could see, one line each (§4at's lines), and names the ten the change most needs. What
+it reads first is the arm:
+- *task:* the task as its author wrote it.
+- *plan:* a plan Sonnet writes in the repository at the task's base commit, before any code exists,
+  one mechanism per sentence, with read-only tools.
+- *diff:* the finished change as first written, cut to 40,000 characters.
+
+A hit is the task's lesson among the ten. No model grades anything.
+
+**Reading, with at least 68 of the 75 complete.** *The plan finds it* if the plan's hit rate,
+averaged over tasks, is at least 0.6 and at least 0.25 above the task's words; otherwise *the plan
+does not find it well enough*. The diff arm is the review's own starting point, reported with no rule.
+
+**Threats.** Five tasks, chosen because a lesson applies. The picker is told nothing about which kind
+of lesson matters. Two diffs (#196, #309) are longer than the cut. The plan is a model's, written
+without the issue thread a person would bring.
+
+**Budget.** 25 plans and 75 picks, all Sonnet.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
