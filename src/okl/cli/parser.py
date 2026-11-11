@@ -73,7 +73,7 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                     default=None,
                     help="--review-after-writing has the Stop hook ask the agent, before it finishes, to "
                          "check the code it wrote against the lessons (`okl check --change`; a step under "
-                         "measurement, REPORT §4at); --no-review-after-writing turns it off. Default: off, "
+                         "measurement, REPORT §4at to §4ay); --no-review-after-writing turns it off. Default: off, "
                          "or whatever an earlier run chose. Recorded in .okl/config.json")
     pi.add_argument("--owner", metavar="HANDLE",
                     help="name a person (@user, @org/team or an email) code owner of docs/THESIS.md and "

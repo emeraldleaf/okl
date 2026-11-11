@@ -274,3 +274,14 @@ def test_the_stop_hook_asks_for_the_review_only_where_it_is_on(repo, tmp_path):
     r = stop("old")
     assert r.returncode == 2 and "ENCODING LOOP" in r.stderr
     assert "REVIEW AFTER WRITING" not in r.stderr and "unrecognized" not in r.stderr
+
+
+def test_the_review_asks_each_lesson_on_its_own_in_a_fresh_context():
+    """REPORT §4ay: ten lessons asked one at a time caught what the same ten checked together did
+    not (§4ax). The steps ask for one sub-agent per lesson, one after another, and say what to do,
+    and to say so, where an agent cannot start one."""
+    steps = " ".join(" ".join(core.REVIEW_STEPS).split())
+    assert "start a sub-agent for it" in steps and "one lesson each and one after another" in steps
+    assert "does this change break this lesson?" in steps
+    assert "If you cannot start a sub-agent" in steps and "say the review ran without fresh contexts" in steps
+    assert "§4ay" in core.render_review({"repo": "r", "files": ["a.py"], "lessons": []})

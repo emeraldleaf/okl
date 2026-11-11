@@ -681,6 +681,8 @@ OPEN_QUESTIONS = {
         "capture-without-fabrication",
     ("src/okl/core.py", "On other repositories it is not yet measured, so the review stays opt-in"):
         "review-after-writing-beyond-one-repository",
+    ("src/okl/core.py", "the review ran without fresh contexts: that is weaker, and not measured"):
+        "review-without-fresh-contexts",
 }
 # The phrase, used for something that is not a question waiting on an answer, with why.
 NOT_OPEN = {
