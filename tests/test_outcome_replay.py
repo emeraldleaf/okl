@@ -89,3 +89,44 @@ def test_the_reports_figures_are_the_receipts():
     assert f"D minus C is {receipt['example_gain']}" in flat
     assert f"${receipt['api_priced_usd']} API-priced" in flat
     assert receipt["sessions"] == 100 and not receipt["lead"] and not any(receipt["sessions_with_harm"].values())
+
+
+def _list_module():
+    spec3 = importlib.util.spec_from_file_location("replay_list", REPO / "evals" / "replay_list.py")
+    assert spec3 and spec3.loader
+    mod = importlib.util.module_from_spec(spec3)
+    spec3.loader.exec_module(mod)
+    return mod
+
+
+def test_each_list_holds_nine_others_and_none_gives_the_bug_away():
+    """§4ax's lists: nine other lessons, never the right one, none citing the task or its test."""
+    lists = json.loads(_list_module().LISTS.read_text())
+    for t in replay.tasks():
+        others = lists[str(t["pr"])]["others"]
+        assert len(others) == 9 and len({o["id"] for o in others}) == 9, t["pr"]
+        assert t["lesson"] not in {o["id"] for o in others}, t["pr"]
+        for other in others:
+            assert f"#{t['pr']}" not in other["text"] and t["grader"] not in other["text"], (t["pr"], other["id"])
+
+
+def test_each_arm_of_the_list_test_gets_what_it_should():
+    """Alone has one lesson, ten has ten including the right one, and only told says it bears."""
+    rl = _list_module()
+    for t in replay.tasks():
+        for rep in range(replay.REPEATS):
+            alone, ten = rl.told(t, "alone_plain", rep), rl.told(t, "ten_plain", rep)
+            assert alone.count("<lesson>") == 1 and ten.count("<lesson>") == 10
+            assert t["lesson_text"].strip() in alone and t["lesson_text"].strip() in ten
+            assert "bear" not in alone and "bear" not in ten
+            assert "bears on this change" in rl.told(t, "alone_told", rep) and "bear on this change" in rl.told(t, "ten_told", rep)
+
+
+def test_the_list_reading_follows_the_stated_rule():
+    """Held, rescued or collapsed, against the alone-and-told arm, and nothing until complete."""
+    rl = _list_module()
+    base = {"alone_told": 0.6, "alone_plain": 0.5}
+    assert rl.reading({**base, "ten_plain": 0.45, "ten_told": 0.1}, True) == "holds in a list"
+    assert rl.reading({**base, "ten_plain": 0.2, "ten_told": 0.5}, True) == "the sentence rescues it"
+    assert rl.reading({**base, "ten_plain": 0.2, "ten_told": 0.2}, True) == "collapses in a list"
+    assert rl.reading({**base, "ten_plain": 0.6, "ten_told": 0.6}, False) == "not complete"

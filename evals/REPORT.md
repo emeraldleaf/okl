@@ -6004,6 +6004,43 @@ What it means, not pre-registered:
 4. The rooms have unrelated test failures (no agent files, an older package version, the briefing
    log off), and agents spent turns on them in every arm.
 
+## 4ax. PRE-REGISTERED, A PILOT: a lesson changed the code when it stood alone and was named. Does it among ten others? (2026-11-11)
+
+Written before any session in this section runs. §4aw found that with no lesson an agent fixed none
+of five real defects, and with the right lesson it fixed most. But the agent had that one lesson
+only, and was told it bears on the change. A real briefing gives neither. This separates the two.
+
+**Arms, a two-by-two on §4aw's five tasks.** The lesson as stored, either alone or among nine others,
+and either told it bears on this change or not:
+- alone, told: "This team keeps the lesson below, and it bears on this change." (§4aw's T, re-run as
+  the control in this sitting.)
+- alone, plain: "This team keeps the lesson below."
+- ten, told: "This team keeps the lessons below, and they bear on this change."
+- ten, plain: "This team keeps the lessons below."
+
+**The nine others** are what okl's search (`core.ranked_candidates`, linear) ranks highest for the
+task's own words among the lessons as they stood, leaving out the right one, records that are not
+advice, retired lessons, and any lesson citing the task or its test (`evals/replay-lists-4ax.json`).
+The right lesson's place among the ten is seeded per session.
+
+**Everything else is §4aw's:** the frozen start, Sonnet, the limited tools, five repeats (100
+sessions, seeded order), and the behaviour graders of its amendment, run inside each session.
+
+**Reading, against alone-and-told in the same sitting, with at least 90 of the 100 complete.** It
+*holds in a list* if ten-plain is within 0.15 of alone-told. If it is not, *the sentence rescues it*
+if ten-told is within 0.15, and otherwise it *collapses in a list*. Each reading points at different
+work: getting the right lesson into the briefing; changing the briefing's wording; or handing over
+lessons one at a time after the code exists. Alone-plain is reported, with no rule attached.
+
+**Threats.** §4aw's, and more. Every arm is still given the right lesson; whether okl would choose it
+is a separate question. Measured while building this list: by the task's own words the search ranks
+it 47th, 25th, 66th, 1st and 243rd on these five tasks, against a default briefing of 12 places. Ten
+lessons in full is more than a real briefing, which shows most in one line. "They bear on this
+change" claims more than okl could honestly say of ten lessons, so a win for that arm is a finding
+about wording and not yet something to ship as written.
+
+**Budget.** 100 Sonnet sessions; §4aw's cost $11.96 API-priced.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
