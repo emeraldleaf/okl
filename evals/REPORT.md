@@ -6049,6 +6049,37 @@ shows. Running the default briefing itself from each task's words, on the lesson
 and not shown on #115, #196 and #309. The title's "ten others" is a list of ten: the lesson and nine
 others. None of this changes the arms or the reading.
 
+**Result (2026-11-11): it collapses in a list.** All 100 sessions ran (receipt `replay-list-20261111-0249.json`;
+$13.18 API-priced, a median of 90 seconds a session).
+
+| arm | pass rate, averaged over tasks | sessions that edited |
+|---|---|---|
+| alone, told | 0.6 | 19 of 25 |
+| alone, plain | 0.6 | 20 of 25 |
+| ten, told | 0.12 | 6 of 25 |
+| ten, plain | 0.2 | 10 of 25 |
+
+As stated: ten-plain is more than 0.15 below alone-told, and so is ten-told, so the reading is
+*collapses in a list*. No session broke another test.
+
+What it means, not pre-registered:
+1. Being one of ten is what costs, and being told it applies is not what helps. Alone, the sentence
+   made no difference to the pass rate; in the list, it did not rescue it. So the "if one fits" wording
+   is not the main problem, and §4aw's effect needed the lesson to stand alone more than it needed
+   the sentence.
+2. In the list the agent mostly did nothing: it edited in 16 of 50 sessions, against 39 of 50 alone.
+   It read ten lessons, found no reason to act on any, and called the change ready.
+3. This gives §4as a likely explanation. Lessons shown in a briefing were followed no more often
+   than lessons not shown, and a briefing is a list.
+4. The control reproduced: alone-told came out within 0.04 of §4aw's T, in a separate sitting.
+5. #198 held up in the list (0.6 and 0.8) where the others fell to 0.2 or below. It is the one task
+   whose lesson the search ranks first for the task's words, so its neighbours may be less of a
+   distraction, but one task cannot say.
+
+The reading points at handing lessons over one at a time, once the code exists (#426). Whether that
+works when the agent is also given lessons that do not apply is not tested here: every arm with one
+lesson had the right one.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

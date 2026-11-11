@@ -130,3 +130,18 @@ def test_the_list_reading_follows_the_stated_rule():
     assert rl.reading({**base, "ten_plain": 0.2, "ten_told": 0.5}, True) == "the sentence rescues it"
     assert rl.reading({**base, "ten_plain": 0.2, "ten_told": 0.2}, True) == "collapses in a list"
     assert rl.reading({**base, "ten_plain": 0.6, "ten_told": 0.6}, False) == "not complete"
+
+
+def test_the_list_results_figures_are_the_receipts():
+    """§4ax's result quotes these; each is read from the committed receipt."""
+    receipt = json.loads(sorted((REPO / "evals" / "results").glob("replay-list-2*.json"))[-1].read_text())
+    report = (REPO / "evals" / "REPORT.md").read_text()
+    section = report[report.index("## 4ax."):report.index("## 5. Findings")]
+    names = {"alone_told": "alone, told", "alone_plain": "alone, plain", "ten_told": "ten, told", "ten_plain": "ten, plain"}
+    for arm, name in names.items():
+        assert f"| {name} | {receipt['pass_rate'][arm]} | {receipt['edited'][arm]} of 25 |" in section, arm
+    assert receipt["reading"] == "collapses in a list" and receipt["sessions"] == 100
+    edited = receipt["edited"]
+    flat = " ".join(section.split())
+    assert f"edited in {edited['ten_told'] + edited['ten_plain']} of 50 sessions, against {edited['alone_told'] + edited['alone_plain']} of 50 alone" in flat
+    assert not any(receipt["sessions_with_harm"].values())
