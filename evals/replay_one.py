@@ -163,6 +163,8 @@ def score(write: bool) -> int:
            "edited": {a: sum(r["edited"] for r in rows if r["arm"] == a) for a in ARMS}, "sessions_per_arm": {a: sum(r["arm"] == a for r in rows) for a in ARMS},
            "other_edits_median": other_edits, "other_edits_total": sum(r["other_edits"] for r in ones), "other_passes": 9 * len(ones),
            "right_lesson_edited": sum(r["right_edited"] for r in ones), "api_priced_usd": round(sum(r["api_priced_usd"] for r in rows), 2),
+           "usd_per_session": {a: round(mean(r["api_priced_usd"] for r in rows if r["arm"] == a), 3) for a in ARMS if any(r["arm"] == a for r in rows)},
+           "median_seconds": {a: median(r["seconds"] for r in rows if r["arm"] == a) for a in ARMS if any(r["arm"] == a for r in rows)},
            "script_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
            "rows": [{k: r.get(k) for k in ("pr", "arm", "rep", "passed", "edited", "harm", "right_edited", "other_edits", "seconds", "summary", "passes")} for r in rows]}
     out = guard.stamp(out)
