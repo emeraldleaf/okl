@@ -18,7 +18,7 @@ export the `.svg` beside it.
 They are checked, not just drawn. `ci/check-diagram-names.py` reads each source and its render
 and fails CI on any command, flag, MCP tool, hook event, file, folder, function or briefing mark
 they name that the code no longer has (`core.check()` must be defined in `core.py`), and on a
-render whose names differ from its source. It proves the names exist, not that the picture is
+render whose text differs from its source's, line by line. It proves the names exist, not that the picture is
 right: a change of behaviour under an unchanged name is still review's to catch. okl's previous
 hand-drawn architecture diagram was retired after it was found wrong in four places nothing
 checked.

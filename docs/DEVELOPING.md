@@ -49,7 +49,8 @@ src/okl/
    lint-imports
    bash gates/run-gates.sh           # links, doc orphans, diagram pairs, tombstones, canon size
    ./ci/check-diagram-figures.sh     # every figure in a diagram names a committed receipt
-   python3 ci/check-diagram-names.py # names in the drawn diagrams exist in the code: reads HEAD,
+   python3 ci/check-diagram-names.py # names in the drawn diagrams exist in the code, and each
+                                     # .svg carries its source's text: reads HEAD,
                                      # so commit first, or pass the .excalidraw paths to check
                                      # the working copies (as tests/test_architecture.py does)
    python3 ci/check-guard-mutations.py # each guard switched off must fail a test (commit first)
@@ -74,7 +75,7 @@ src/okl/
    the CHANGELOG's `## Unreleased` section, and the diagrams if what they show changed. A
    drawn one (`docs/architecture/`) is edited in its `.excalidraw` source and re-exported to
    SVG, and `ci/check-diagram-names.py` fails until every file, folder, function and command it
-   names exists; the pipeline diagrams are rewritten by `python3 docs/render_pipeline_diagram.py`,
+   names exists and the render carries the source's text; the pipeline diagrams are rewritten by `python3 docs/render_pipeline_diagram.py`,
    and their tests fail until they are. The hybrid
    pipeline render is separate (`docs/render_pipeline_diagram.py --hybrid linear`), and its
    test skips wherever the embedding model is not cached, CI included, so re-render it by

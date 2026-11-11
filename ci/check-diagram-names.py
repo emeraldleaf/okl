@@ -22,8 +22,9 @@ has:
 The code map and the command paths in docs/ARCHITECTURE.md lean on the last four: they name
 files, folders and functions, and a rename that leaves them pointing nowhere fails here.
 
-It also fails when a render names something its source does not, or the reverse: the .svg is
-what people read, and an edited source whose render was never re-exported shows the old names.
+It also fails when a render's text differs from its source's, line by line, and names what
+differs: the .svg is what people read, and an edited source whose render was never re-exported
+shows the old words, whether or not they hold a name (lesson n_0637c92c032f, #415).
 
 It proves the names exist, not that the picture is right: a renamed command fails here, a
 changed behaviour under an unchanged name does not. That second kind is what review is for.
@@ -42,6 +43,7 @@ import json
 import re
 import subprocess
 import sys
+from collections import Counter
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -201,15 +203,29 @@ def unknown(text: str, known: dict[str, Any]) -> list[str]:
     return [say[k].format(n) for k in PATTERNS for n in sorted(found[k]) if not ok[k](n)]
 
 
+def lines(text: str) -> Counter[str]:
+    """Each line of text, whitespace collapsed: Excalidraw exports each line as its own <text>."""
+    return Counter(n for line in text.splitlines() if (n := " ".join(line.split())))
+
+
+def _quoted(found: list[str], most: int = 3) -> str:
+    more = f" and {len(found) - most} more" if len(found) > most else ""
+    return "; ".join(repr(line) for line in found[:most]) + more
+
+
 def mismatch(source: str, render: str) -> list[str]:
-    """How a render's names differ from its source's, or nothing when they agree."""
+    """How a render's names and text differ from its source's, or nothing when they agree."""
     a, b = names(source), names(render)
     only_source = sorted(n for k in PATTERNS for n in a[k] - b[k])
     only_render = sorted(n for k in PATTERNS for n in b[k] - a[k])
-    if not (only_source or only_render):
+    said, drawn = lines(source), lines(render)
+    text_source, text_render = sorted((said - drawn).elements()), sorted((drawn - said).elements())
+    if not (only_source or only_render or text_source or text_render):
         return []
     parts = [f"only the .excalidraw names {', '.join(only_source)}" if only_source else "",
-             f"only the .svg names {', '.join(only_render)}" if only_render else ""]
+             f"only the .svg names {', '.join(only_render)}" if only_render else "",
+             f"only the .excalidraw says {_quoted(text_source)}" if text_source else "",
+             f"only the .svg says {_quoted(text_render)}" if text_render else ""]
     return ["the render does not match its source (" + "; ".join(p for p in parts if p)
             + "): re-export the .svg"]
 
@@ -254,9 +270,10 @@ def main(argv: list[str]) -> int:
             _say("\n".join(f"   FAIL: {p}" for p in problems))
         else:
             _say("   ok: every command, flag, tool, hook, path, folder, function and mark it "
-                 "names exists, in the source and its render")
+                 "names exists, and its render carries the source's text")
     if failed:
-        _say("\nA drawn diagram names something the code no longer has. Fix the diagram "
+        _say("\nA drawn diagram names something the code no longer has, or its .svg does not carry "
+             "its source's text. Fix the diagram "
              "(edit the .excalidraw, re-export the .svg), or, if a name here is prose, see "
              "PROSE and EXTERNAL_FLAGS in ci/check-diagram-names.py.", err=True)
     return 1 if failed else 0
