@@ -1,16 +1,18 @@
 # Finding the lesson was the easy part
 
-*Part 8: what happened when I tested whether a lesson in front of a coding agent changes the code it writes. The canonical copy is on [emeraldleaf.dev](https://emeraldleaf.dev/writing/finding-the-lesson-was-the-easy-part/); the measurements are in [REPORT §4as to §4au](../../evals/REPORT.md) and the reading in [Research on each layer](../research/okl-layers-2026-11-10.md).*
+*Part 8: what happened when I tested whether a lesson in front of a coding agent changes the code it writes. The canonical copy is on [emeraldleaf.dev](https://emeraldleaf.dev/writing/finding-the-lesson-was-the-easy-part/); the measurements are in [REPORT §4as to §4av](../../evals/REPORT.md) and the reading in [Research on each layer](../research/okl-layers-2026-11-10.md).*
+
+*Corrected on 2026-11-11. A later test showed the section on three models was wrong, so it is rewritten and the opening changed with it. Two smaller errors are fixed: the size of the first sample, and who wrote the code the reviewer judged.*
 
 okl does two things. It puts a team's lessons in front of a coding agent, and it gives each lesson a check that is re-run when the code it governs changes and that can block the push. Both have evidence behind them. On eight seeded tasks, across seven runs, briefed agents reproduced a known defect in 7% of attempts against 42% without the briefing. And the second half, a lesson that carries a check, is what the research on agent memory keeps arriving at independently: compiled checks reached 88% compliance where the same rules as prompts reached 67%, and a memory layer on its own still left 57.5% of a user's rules broken.
 
 Seeded tasks are built around known defects, though. This week I tested the harder claim, on real work: when okl puts a lesson in front of an agent, does the code come out different?
 
-The short answer is that finding the right lesson turned out to be solvable, and it was not the hard part. The hard part is that many lessons do not say clearly enough when they have been broken, so neither the agent nor anyone grading it can tell. Getting there took five hypotheses, four of which failed, and I kept every one. Where it led is the reassuring part: the evidence points at the half of okl that checks lessons, not the half that shows them.
+The short answer is that finding the right lesson turned out to be solvable, and it was not the hard part. The hard part is getting an agent to act on a lesson it can see. Getting there took six hypotheses, five of which failed, and I kept every one. Where it led is the reassuring part: the evidence points at the half of okl that checks lessons, not the half that shows them.
 
 ## Shown is not followed
 
-okl logs which lessons each briefing showed. I joined that log against an answer key for 50 real changes to this repository, saying which lessons each change needed and whether it followed them. Lessons the agent had been shown were followed no more often than lessons it had not. The estimate even pointed the wrong way, by about nine points, with an interval wide enough to include zero (§4as).
+okl logs which lessons each briefing showed. I joined that log against an answer key for 58 real changes to this repository, 317 pairs of a change and a lesson, saying which lessons each change needed and whether it followed them. Lessons the agent had been shown were followed no more often than lessons it had not. The estimate even pointed the wrong way, by about nine points, with an interval wide enough to include zero (§4as).
 
 It is observational, so it cannot say the briefing does nothing. It does say that *shown* is not *followed*, and that I had been measuring the first and assuming the second.
 
@@ -42,13 +44,15 @@ Its first review was of its own change. It flagged six lessons the first version
 
 Then I decided it should be on for everyone. My own rule is that a default needs evidence, so I asked for something quick, wrote the bar first, and ran it on 20 changes the method had never seen. The bar: catch at least 30% of the broken lessons, and wrongly flag at most one lesson on a typical change (§4au).
 
-It picked 12 of the 23 broken lessons, then judged its own code fine for 8 of them. It caught 4, or 17%. It was quiet, with three false alarms across ten changes that broke nothing, but each review cost about 170,000 tokens, most of them cached. It missed the bar, so it ships off by default and on in my own repositories. I reverted the commit that had already turned it on.
+It picked 12 of the 23 broken lessons, then judged the change fine for 8 of them. It was reviewing code it had not written. It caught 4, or 17%. It was quiet, with three false alarms across ten changes that broke nothing, but each review cost about 170,000 tokens, most of them cached. It missed the bar, so it ships off by default and on in my own repositories. I reverted the commit that had already turned it on.
 
-## Three models, one coin
+## I read a tie-breaker wrong
 
-Seventeen percent could mean the reviewer was lenient or the answer key was strict, and the key was itself a model's judgement. So a third model, one that had made neither call, judged the disputed cases without seeing either verdict. I wrote down beforehand that it needed to agree on at least three of the four lessons the reviewer and the key both called broken, or its verdicts would count as noise. It agreed on two.
+Seventeen percent could mean the reviewer was lenient or the answer key was strict, and the key was itself a model's judgement. So a third model, one that had made neither call, judged the disputed cases without seeing either verdict. I wrote down beforehand that it needed to agree on at least three of the four lessons the reviewer and the key both called broken, or its verdicts would count as noise. It agreed on two, so it settled nothing.
 
-That is the finding. Asked whether a change breaks one of these lessons, three capable models agree about as often as not. A lesson three models cannot agree on is not one an agent can reliably follow, and not one anyone can reliably grade. Research on using models to label software artifacts says the same: when models disagree with each other on a task, it is not one to hand to them.
+I then made a bigger claim than that supported. I wrote that three models agree on these lessons about as often as not, and that this was the real problem: lessons too vague to judge. The next test showed I was wrong. Those 24 cases had been picked because they were in dispute, and four cases are too few to read a rate from.
+
+That next test was meant to prove the fix. I gave the 20 most-broken lessons yes/no conditions and a line saying when each does not apply, then had two models judge 70 past cases, chosen without regard to dispute, with and without them. Without the conditions, the two models already agreed on 62 of the 70. With them, 56. False alarms rose too. By the rule I had written down, the conditions do not ship. They did make the judges stricter, which may or may not be better; only a key that is not a model can say.
 
 ## Stop relying on judgement where it matters most
 
@@ -56,7 +60,7 @@ The breaks are concentrated. Across both answer keys, 124 breaks fall on 56 less
 
 The lessons a script can check now fail the build. The first sweep runs every command and every check where it cannot do its job. It found six of okl's own CI checks that crashed with the exit code meaning "found problems" when their inputs were missing, and two that passed having read nothing. The lesson that says exactly that is one of the ten this repository names on every task. It had been shown, and it had not been followed.
 
-The vague lessons get rewritten. Whatever is left goes to the review.
+Whatever a script cannot check goes to the review.
 
 ## What the research says
 
@@ -67,7 +71,7 @@ Then I read, in three threads covering recording, presentation and retrieval, fr
 - **Context files help less than people assume.** A study of repository context files found that agents follow them, but they do not generally improve task success and they add over 20% to the cost. They earn their place for what an agent cannot infer.
 - **Conditional wording is the weakest.** In a study of policy wording, "if relevant, do this" was followed less often than direct or explained instructions. That is how okl phrases its one-line lessons.
 - **One sentence fixes stale guidance.** Agents followed a stale instruction file over the actual code nine times in ten. Adding one sentence telling them to follow the code when the two disagree moved code-following from 4.2% to 91.4%.
-- **Vague criteria make judges disagree.** Breaking a criterion into yes/no questions raised agreement between judge models by 0.45.
+- **Yes/no questions raise agreement, in one study.** Breaking a vague criterion into them raised agreement between judge models by 0.45. On okl's lessons they did not, because the models already agreed.
 - **Ask only on real ambiguity.** Asking the user helps on underspecified tasks, but models are poor judges of when to ask, so the triggers have to be structural.
 
 ## What changes
@@ -80,7 +84,7 @@ The lessons stay. How they reach the agent changes. Each task gets a short proto
 4. **Verify.** It runs each lesson's check where there is one, and checks one lesson at a time where there is not.
 5. **Escalate, rarely.** It asks me only on four triggers: reversing a recorded decision, two readings of a lesson that produce different code, an irreversible action, or a check whose fix conflicts with the task.
 
-New lessons stay "proposed" until a check passes or I confirm them. The vague ones get yes/no conditions. And the measure that needs no judge comes next: real past bugs replayed at their base commit, graded by the test the real fix added, comparing today's briefing with the protocol.
+New lessons stay "proposed" until I confirm them, because a passing check shows that code meets the check, not that the rule is right. And the measure that needs no judge comes next: real past bugs replayed at their base commit, graded by the test the real fix added, comparing no lesson, today's wording, and the same lesson written as a small contract.
 
 ## What this means if you are deciding whether to use it
 
@@ -88,6 +92,6 @@ Showing an agent its team's lessons helps on the defects those lessons describe;
 
 ## What the week was really about
 
-Four of five hypotheses failed. Better queries did not help, my own repository was the wrong sample, the review did not earn a default, and a third model could not settle the question. Each failure narrowed where the real problem was, and none of them touched the part of okl that checks. The bar was written before every result, and every number has a receipt.
+Five of six hypotheses failed. Better queries did not help, my own repository was the wrong sample, the review did not earn a default, a third model could not settle the question, and yes/no conditions did not make models agree. Each failure narrowed where the real problem was, and none of them touched the part of okl that checks. The bar was written before every result, and every number has a receipt.
 
 The tool checked itself throughout: its new step reviewed its own first draft and found real bugs, and its new sweep caught okl's own checks reporting nothing as success. That is the habit I am trying to build into an agent, and this week it applied to me as much as to the agent.

@@ -44,3 +44,19 @@ def test_a_verdict_missing_its_closing_brace_is_still_read():
     got = ca.verdict_in('Looked at it.\n{"verdict": "broken", "evidence": ["a.py:3"], "reason": "no test asserts it."')
     assert got == {"verdict": "broken", "evidence": ["a.py:3"], "reason": "no test asserts it."}
     assert ca.verdict_in("no object here") is None
+
+
+def test_the_reports_figures_are_the_receipts():
+    """§4av's result quotes these; each is read from the committed receipt."""
+    receipt = json.loads(sorted((REPO / "evals" / "results").glob("conditions-agree-test-*.json"))[-1].read_text())
+    report = (REPO / "evals" / "REPORT.md").read_text()
+    section = " ".join(report[report.index("## 4av."):report.index("## 4aw.") if "## 4aw." in report else report.index("## 5. Findings")].split())
+    agree, by_key = receipt["agree_broken_or_not"], receipt["by_key"]
+    broken_calls = receipt["broken_calls"]
+    assert f"agreed on {agree['A']} of {receipt['complete']} and {agree['B']} of {receipt['complete']}" in section
+    assert f"kappa {receipt['kappa']['A']} without the conditions and {receipt['kappa']['B']} with them" in section
+    assert f"from {broken_calls['A/sonnet'] + broken_calls['A/fable']} broken calls to {broken_calls['B/sonnet'] + broken_calls['B/fable']}" in section
+    assert f"rose from {by_key['broken']['A/both']} to {by_key['broken']['B/both']}" in section
+    followed = by_key["followed"]
+    assert f"rose from {followed['A/sonnet'] + followed['A/fable']} to {followed['B/sonnet'] + followed['B/fable']}" in section
+    assert f"Sonnet called {by_key['broken']['A/sonnet']} of the {by_key['broken']['cases']} broken" in section

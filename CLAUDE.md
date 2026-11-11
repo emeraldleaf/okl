@@ -67,7 +67,7 @@ okl drift                          # rules whose governed source changed after v
   noticing an edit). The drawn diagrams in `docs/architecture/` are `.excalidraw`
   sources with the `.svg` render beside each: edit the source, re-export the render, and
   `ci/check-diagram-names.py` fails on any command, file, folder or function in them the
-  code no longer has. The pipeline diagrams are generated from the code
+  code no longer has, and on a render whose text is not its source's. The pipeline diagrams are generated from the code
   (`docs/render_pipeline_diagram.py`), and a test fails when one is stale.
 
 ## Layout truth

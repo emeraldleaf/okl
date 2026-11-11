@@ -5874,7 +5874,7 @@ changed:
 The conditions are frozen at `5b30c4808857b727`.
 
 **Result (2026-11-11): the rule fails, so the conditions do not ship.** All 280 calls answered and
-all 70 cases are complete (receipt `conditions-agree-test-20261111-0007.json`). The first pass
+all 70 cases are complete (receipt `conditions-agree-test-20261111-0038.json`). The first pass
 stopped at a usage limit at call 149 and was resumed at the same commit, prompt and conditions.
 1. Agreement: kappa 0.742 without the conditions and 0.599 with them, a gain of -0.143, interval
    [-0.368, 0.094]; under the 0.15 bar. On broken or not, the judges agreed on 62 of 70 and 56 of 70.

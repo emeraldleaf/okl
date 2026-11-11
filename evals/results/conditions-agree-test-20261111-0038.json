@@ -1,6 +1,6 @@
 {
  "section": "4av",
- "at": "2026-11-11T00:07Z",
+ "at": "2026-11-11T00:38Z",
  "half": "test",
  "prompt": "7b2f46b1d66ab41b",
  "conditions": "5b30c4808857b727",
@@ -14,6 +14,39 @@
  "agree": {
   "A": 55,
   "B": 54
+ },
+ "agree_broken_or_not": {
+  "A": 62,
+  "B": 56
+ },
+ "by_key": {
+  "broken": {
+   "cases": 35,
+   "A/sonnet": 21,
+   "A/fable": 24,
+   "B/sonnet": 29,
+   "B/fable": 30,
+   "A/both": 19,
+   "B/both": 28
+  },
+  "followed": {
+   "cases": 20,
+   "A/sonnet": 0,
+   "A/fable": 0,
+   "B/sonnet": 7,
+   "B/fable": 4,
+   "A/both": 0,
+   "B/both": 2
+  },
+  "related": {
+   "cases": 15,
+   "A/sonnet": 0,
+   "A/fable": 1,
+   "B/sonnet": 0,
+   "B/fable": 4,
+   "A/both": 0,
+   "B/both": 0
+  }
  },
  "broken_calls": {
   "A/sonnet": 21,
@@ -562,7 +595,7 @@
   }
  ],
  "api_priced_usd": 127.17,
- "script_sha256": "1939f4cba05a5652b47992f9eca2b4292b072db68492331f28d666a393bcfca2",
- "okl_commit_at_start": "85dc699",
- "okl_commit": "85dc699"
+ "script_sha256": "d739e96a6ebed45428e92da17838d3558fa2e565018510693eec4de6f2343516",
+ "okl_commit_at_start": "8712070",
+ "okl_commit": "8712070"
 }

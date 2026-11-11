@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import Any
 
 from .core import bundled_packs, from_bundled_pack
+from .drift import _NOT_ADVICE  # never advice; one definition (tests/test_single_source.py)
 from .store import RETIRED_STATUSES, Node, has_observed_check
 
 # The judge §4ai measured: read-only tools, and --restricted ignores every settings file, so no
@@ -63,8 +64,6 @@ TIMEOUT = 300   # seconds per lesson, as measured
 # What §4ai measured, quoted by the help; a test recomputes each from the receipt.
 MEASURED = {"receipt": "stale-review-20261102-2133.json", "planted": (8, 10), "over_called": (1, 10),
             "outlived": (2, 2)}
-# Records that are never advice: a withdrawn claim, a retired identifier, a tag declaration.
-_NOT_ADVICE = frozenset({"Retraction", "Tombstone", "Vocabulary"})
 
 
 def unchecked(nodes: Iterable[Node]) -> list[Node]:

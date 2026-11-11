@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import random
 import subprocess
 import sys
@@ -237,6 +238,13 @@ def score(half: str, write: bool) -> int:
                  "cases": len(cases(half)), "complete": len(rows),
                  "kappa": {arm: round(kappa(broken(rows, arm, sonnet), broken(rows, arm, fable)), 3) for arm in arms},
                  "agree": {arm: sum(r[f"{arm}/{sonnet}"] == r[f"{arm}/{fable}"] for r in rows) for arm in arms},
+                 "agree_broken_or_not": {arm: sum(a == b for a, b in zip(broken(rows, arm, sonnet), broken(rows, arm, fable), strict=True))
+                                         for arm in arms},
+                 "by_key": {key: {"cases": sum(r["key"] == key for r in rows),
+                                  **{f"{arm}/{j}": sum(broken([r for r in rows if r["key"] == key], arm, j)) for arm in arms for j in JUDGES},
+                                  **{f"{arm}/both": sum(r[f"{arm}/{sonnet}"] == "broken" == r[f"{arm}/{fable}"] for r in rows if r["key"] == key)
+                                     for arm in arms}}
+                            for key in ("broken", "followed", "related")},
                  "broken_calls": {f"{arm}/{j}": sum(broken(rows, arm, j)) for arm in arms for j in JUDGES}}
     if half == "test":
         gain = kappa(broken(rows, "B", sonnet), broken(rows, "B", fable)) - kappa(broken(rows, "A", sonnet), broken(rows, "A", fable))
@@ -244,7 +252,7 @@ def score(half: str, write: bool) -> int:
         for _ in range(2000):
             s = [rows[rng.randrange(len(rows))] for _ in rows]
             d = kappa(broken(s, "B", sonnet), broken(s, "B", fable)) - kappa(broken(s, "A", sonnet), broken(s, "A", fable))
-            if d == d:   # a resample where a judge called everything one way has no kappa
+            if not math.isnan(d):   # a resample where a judge called everything one way has no kappa
                 draws.append(d)
         draws.sort()
         lo, hi = draws[int(0.025 * len(draws))], draws[int(0.975 * len(draws)) - 1]
