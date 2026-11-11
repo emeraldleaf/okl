@@ -1,0 +1,59 @@
+{
+ "section": "4aw amendment",
+ "at": "2026-11-11T01:11Z",
+ "graders": "59332702fbd94ae4",
+ "tasks": [
+  {
+   "pr": 115,
+   "fails_frozen": true,
+   "passes_fixed": true,
+   "frozen": "1 failed, 82 deselected in 0.38s",
+   "frozen_bad": [
+    "tests/test_okl.py::test_a_suggested_check_quotes_a_hostile_test_filename"
+   ],
+   "fixed": "1 passed, 82 deselected in 0.39s"
+  },
+  {
+   "pr": 168,
+   "fails_frozen": true,
+   "passes_fixed": true,
+   "frozen": "1 failed, 1 passed, 5 deselected in 0.09s",
+   "frozen_bad": [
+    "tests/test_replay_grader.py::test_pr168[claude-sonnet-5-5-True]"
+   ],
+   "fixed": "2 passed, 5 deselected in 0.07s"
+  },
+  {
+   "pr": 196,
+   "fails_frozen": true,
+   "passes_fixed": true,
+   "frozen": "1 failed, 6 deselected in 0.09s",
+   "frozen_bad": [
+    "tests/test_replay_grader.py::test_pr196"
+   ],
+   "fixed": "1 passed, 6 deselected in 0.11s"
+  },
+  {
+   "pr": 198,
+   "fails_frozen": true,
+   "passes_fixed": true,
+   "frozen": "1 failed, 1 passed, 5 deselected in 0.05s",
+   "frozen_bad": [
+    "tests/test_replay_grader.py::test_pr198[8000-True]"
+   ],
+   "fixed": "2 passed, 5 deselected in 0.05s"
+  },
+  {
+   "pr": 309,
+   "fails_frozen": true,
+   "passes_fixed": true,
+   "frozen": "1 failed, 1 passed, 5 deselected in 0.06s",
+   "frozen_bad": [
+    "tests/test_replay_grader.py::test_pr309_refuses_a_store_it_cannot_copy"
+   ],
+   "fixed": "2 passed, 5 deselected in 0.08s"
+  }
+ ],
+ "okl_commit_at_start": "cd7cfd8",
+ "okl_commit": "cd7cfd8"
+}
