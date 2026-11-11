@@ -272,3 +272,15 @@ def test_a_pick_is_read_from_the_last_array_of_ids():
     plan = _plan_module()
     assert plan.last_array('I considered ["a"] first.\n["x", "y", "z"]') == ["x", "y", "z"]
     assert plan.last_array("no answer") is None
+
+
+def test_the_plan_results_figures_are_the_receipts():
+    """§4ba's result quotes these; each is read from the committed receipt."""
+    receipt = json.loads(sorted((REPO / "evals" / "results").glob("plan-reach-2*.json"))[-1].read_text())
+    report = (REPO / "evals" / "REPORT.md").read_text()
+    section = report[report.index("## 4ba."):report.index("## 5. Findings")]
+    hit, per = receipt["hit_rate"], receipt["per_task"]
+    for arm in ("task", "plan", "diff"):
+        cells = " | ".join(str(per[arm][k]) for k in ("115", "168", "196", "198", "309"))
+        assert f"| {arm} | {hit[arm]} | {cells} |" in section, arm
+    assert receipt["reading"] == "the plan does not find it well enough" and receipt["picks"] == 75
