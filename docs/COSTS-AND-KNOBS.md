@@ -129,8 +129,10 @@ median of about 170,000 tokens, nearly all of them cached context the session re
 $0.21 at API prices and 43 seconds. That cost, and a catch rate below the bar §4au set, are why
 it is off by default. Since §4ay the agent checks each lesson it picks in its own fresh
 sub-agent, which costs more again: in that test, ten lessons asked one at a time took about
-seven times the cost and six times the time of a single pass. It stays off by default until a
-test with okl choosing the lessons itself says whether that buys enough.
+seven times the cost and six times the time of a single pass. With the agent choosing its own
+lessons (REPORT §4az, receipt `review-e2e-20261111-1543.json`), a review cost a median of $0.73 API-priced and 214 seconds, and fixed 1 in
+5 of the past bugs tested, against none for the earlier one-pass review: short of the bar for
+turning it on, so it stays off by default.
 
 ## Architecture review in CI (off by default)
 
