@@ -21,6 +21,11 @@
     diagram's `.svg` with its `.excalidraw` only by the names in them, so a source whose prose
     changed and whose render was never re-exported passed. It now compares every line, and
     names the lines only one side has.
+  - **Tests fake only what okl owns:** `tests/test_mock_ownership.py` reads every patch the
+    tests make, resolves its target through the file's imports, and fails a new one that
+    replaces a library okl does not own (a fake of fastembed and of huggingface_hub's constants
+    were two of the lesson's past breaks). The twelve already there are listed with why, and the
+    list only shrinks.
 
 - **The review after writing: `okl check --change`** (REPORT §4at; opt-in). A briefing is
   chosen from the task's words before any code exists, and the lessons a change goes on to
