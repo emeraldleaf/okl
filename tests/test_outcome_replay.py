@@ -250,3 +250,25 @@ def test_the_end_to_end_figures_are_the_receipts():
         assert f"| {name} | {r[arm]} | {e[arm]} of 25 | ${u[arm]} | {round(t[arm])} s | {cells} |" in section, arm
     assert receipt["reading"] == "stays opt-in" and receipt["sessions"] == 75
     assert f"{round(receipt['sessions_started_a_sub_agent'] * 100)}% of the each-alone sessions started a sub-agent" in section
+def _plan_module():
+    spec6 = importlib.util.spec_from_file_location("plan_reach", REPO / "evals" / "plan_reach.py")
+    assert spec6 and spec6.loader
+    mod = importlib.util.module_from_spec(spec6)
+    spec6.loader.exec_module(mod)
+    return mod
+
+
+def test_the_plan_reading_follows_the_stated_rule():
+    """The plan finds it only when it is good on its own and clearly better than the task's words."""
+    plan = _plan_module()
+    assert plan.reading({"task": 0.2, "plan": 0.6, "diff": 0.5}, True) == "the plan finds it"
+    assert plan.reading({"task": 0.4, "plan": 0.6, "diff": 0.5}, True) == "the plan does not find it well enough"
+    assert plan.reading({"task": 0.0, "plan": 0.5, "diff": 0.5}, True) == "the plan does not find it well enough"
+    assert plan.reading({"task": 0.0, "plan": 1.0, "diff": 1.0}, False) == "not complete"
+
+
+def test_a_pick_is_read_from_the_last_array_of_ids():
+    """A reply may quote a short list in prose before its answer; the answer is the last array."""
+    plan = _plan_module()
+    assert plan.last_array('I considered ["a"] first.\n["x", "y", "z"]') == ["x", "y", "z"]
+    assert plan.last_array("no answer") is None
