@@ -6144,6 +6144,42 @@ What it means, not pre-registered:
 5. Every arm still had the right lesson among its ten. Choosing the ten from what the code does is
    the remaining step before this could ship (§4at's model pick found 40% of broken lessons in ten).
 
+## 4az. PRE-REGISTERED, A PILOT: the review after writing, end to end, with the agent choosing the lessons (2026-11-11)
+
+Written before any counted session. §4ay found that ten lessons asked about one at a time caught as
+much as the right lesson alone, but every arm since §4aw was handed a set that held the right lesson.
+#427 builds §4ay into `okl check --change`: the agent picks the ten likeliest lessons from every
+lesson in scope, then checks each in its own fresh sub-agent. This tests that as an agent would meet
+it, with nothing chosen for it, and decides whether the review should be on by default.
+
+**Arms, on §4aw's five tasks, five repeats each, 75 sessions in a seeded order.** Each session is
+asked to get the change ready to merge, as in §4aw. In the two review arms it is also asked to run the
+repository's review after writing: the review as `okl check --change` renders it for that change over
+the lessons as they stood (280 to 300 lessons, one line each, those governing a changed file first),
+with each lesson's full text in a folder because okl is not installed in the copy.
+- *none:* no review (§4aw's N, re-run as the floor).
+- *review, one pass:* the steps before #427: pick ten, read each, check the code against all of them.
+- *review, each alone:* #427's steps: the same pick, then each lesson in its own fresh sub-agent.
+
+Sonnet, with §4aw's tools plus the sub-agent tool, and §4aw's behaviour graders on the tree each
+session leaves. Sub-agent use is counted from the session's own event stream.
+
+**Reading, against the arms in the same sitting, with at least 68 of the 75 complete.** If fewer than
+half the each-alone sessions start a sub-agent, *the new steps were not followed* and this says
+nothing about them. Otherwise the review is *on by default* if each-alone is at least 0.15 above one
+pass and at least 0.25 above none, and breaks another test in at most 2 more sessions than one pass;
+if not, it *stays opt-in*. These are shipping bars, labelled as such.
+
+**Seen before this was written:** one throwaway each-alone session on #198, discarded. It started
+three sub-agents, picked the right lesson among them, judged it not broken, did not fix the defect,
+and stopped after three of its ten, saying it would finish there.
+
+**Threats.** §4aw's to §4ay's: five hand-picked tasks in okl's own repository, Sonnet. The lesson
+list is the real one for the time, but the copy has no okl, so the agent reads files where it would
+run `okl show`. The agent is told the review is required; a real Stop hook asks once, after the work.
+
+**Budget.** About 75 sessions and up to 250 sub-agents; the throwaway session cost $0.38.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
