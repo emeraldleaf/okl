@@ -6208,6 +6208,28 @@ without the issue thread a person would bring.
 
 **Budget.** 25 plans and 75 picks, all Sonnet.
 
+**Result (2026-11-11): the plan does not find it well enough.** All 75 picks answered (receipt
+`plan-reach-20261111-1435.json`).
+
+| starting point | hit rate, averaged over tasks | #115 | #168 | #196 | #198 | #309 |
+|---|---|---|---|---|---|---|
+| task | 0.36 | 0 | 0.8 | 0 | 1 | 0 |
+| plan | 0.48 | 1 | 0.4 | 0 | 1 | 0 |
+| diff | 0.48 | 1 | 0.4 | 0 | 1 | 0 |
+
+As stated: the plan's rate is under 0.6 and 0.12 above the task's words, under the 0.25 asked.
+
+What it means, not pre-registered:
+1. A plan written before any code chose as well as the finished change did. So choosing lessons
+   does not have to wait for the code: whatever picks from a diff can pick from a plan as well, and
+   earlier, where a fix costs least.
+2. Choosing is the weak link at every stage. With the right lesson in hand an agent fixed about
+   three in four (§4ay); from any starting point here the picker put it in its ten about half the
+   time. On #196 and #309 no arm found it in any repeat, and those are the two diffs longer than the
+   cut, so the diff arm may understate; their plans did not name the mechanism the lesson is about.
+3. §4az, running now, picks from the diff inside the review, so this suggests its ceiling: about
+   half the lessons found, times about three in four fixed when found.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
