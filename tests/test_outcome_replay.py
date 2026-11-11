@@ -237,3 +237,16 @@ def test_the_end_to_end_reading_follows_the_stated_rule():
     assert e2e.reading({**rate, "review_each_alone": 0.3}, True, 0.8, quiet) == "stays opt-in"
     assert e2e.reading(rate, True, 0.8, {**quiet, "review_each_alone": 3}) == "stays opt-in"
     assert e2e.reading(rate, False, 0.8, quiet) == "not complete"
+
+
+def test_the_end_to_end_figures_are_the_receipts():
+    """§4az's result quotes these; each is read from the committed receipt."""
+    receipt = json.loads(sorted((REPO / "evals" / "results").glob("review-e2e-2*.json"))[-1].read_text())
+    report = (REPO / "evals" / "REPORT.md").read_text()
+    section = report[report.index("## 4az."):report.index("## 5. Findings")]
+    r, e, u, t, per = (receipt[k] for k in ("pass_rate", "edited", "usd_per_session", "median_seconds", "per_task"))
+    for arm, name in (("none", "none"), ("review_one_pass", "review, one pass"), ("review_each_alone", "review, each alone")):
+        cells = " | ".join(str(per[arm][k]) for k in ("115", "168", "196", "198", "309"))
+        assert f"| {name} | {r[arm]} | {e[arm]} of 25 | ${u[arm]} | {round(t[arm])} s | {cells} |" in section, arm
+    assert receipt["reading"] == "stays opt-in" and receipt["sessions"] == 75
+    assert f"{round(receipt['sessions_started_a_sub_agent'] * 100)}% of the each-alone sessions started a sub-agent" in section

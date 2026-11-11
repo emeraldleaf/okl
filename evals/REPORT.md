@@ -6180,6 +6180,29 @@ run `okl show`. The agent is told the review is required; a real Stop hook asks 
 
 **Budget.** About 75 sessions and up to 250 sub-agents; the throwaway session cost $0.38.
 
+**Result (2026-11-11): it stays opt-in.** All 75 sessions ran (receipt `review-e2e-20261111-1543.json`).
+
+| arm | pass rate, averaged over tasks | sessions that edited | API-priced cost a session | median time | #115 | #168 | #196 | #198 | #309 |
+|---|---|---|---|---|---|---|---|---|---|
+| none | 0 | 0 of 25 | $0.106 | 160 s | 0 | 0 | 0 | 0 | 0 |
+| review, one pass | 0 | 9 of 25 | $0.276 | 77 s | 0 | 0 | 0 | 0 | 0 |
+| review, each alone | 0.2 | 17 of 25 | $0.729 | 214 s | 0.2 | 0 | 0 | 0.8 | 0 |
+
+As stated: 84% of the each-alone sessions started a sub-agent (a median of 10), so the steps were followed.
+Each alone is 0.2 above one pass, clearing 0.15, but 0.2 above none, short of 0.25.
+No session broke another test. So the review *stays opt-in*.
+
+What it means, not pre-registered:
+1. With the agent choosing, the old review fixed none of the 25 and the new one fixed 5. The new
+   steps are the better review; they are not yet good enough to be on by default.
+2. The gap from §4ay's 0.72 is choosing. It found the right lesson's fix on #198, whose lesson the
+   search ranks first and every picker in §4ba found, and almost nowhere else. §4ba measured the same
+   ceiling from the other side: the right lesson in a picker's ten about half the time.
+3. One session gave its sub-agents only part of the change (one read the first 400 lines of the
+   diff), so a sub-agent can miss what lies past what it was handed.
+4. It costs about seven times no review and two and a half times the old one, at three times its
+   time.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
