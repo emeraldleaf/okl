@@ -26,6 +26,11 @@
     replaces a library okl does not own (a fake of fastembed and of huggingface_hub's constants
     were two of the lesson's past breaks). The twelve already there are listed with why, and the
     list only shrinks.
+  - **The client and the service agree on every field:** the service's request models drop a
+    key they do not have, so a field only the client knew did nothing over a shared service.
+    `tests/test_client_service_contract.py` checks that each core function behind the service
+    has a model field for every keyword, and that every body the real client posts through
+    the real app names only fields its path reads.
 
 - **The review after writing: `okl check --change`** (REPORT §4at; opt-in). A briefing is
   chosen from the task's words before any code exists, and the lessons a change goes on to

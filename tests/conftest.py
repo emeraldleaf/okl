@@ -81,8 +81,12 @@ def remote(tmp_path, monkeypatch):
         def __exit__(self, *exc):
             self.close()
 
+    sent: list[tuple[str, dict]] = []   # each body the client posted, as it left the client
+
     def urlopen(req, timeout=None):
         u = urlsplit(req.full_url)
+        if req.data:
+            sent.append((u.path, json.loads(req.data)))
         r = api.request(req.get_method(), u.path + (f"?{u.query}" if u.query else ""),
                         content=req.data, headers=dict(req.header_items()))
         if r.status_code >= 400:
@@ -91,4 +95,4 @@ def remote(tmp_path, monkeypatch):
         return Reply(r.content)
 
     monkeypatch.setattr("okl.client._req.urlopen", urlopen)
-    return SimpleNamespace(store=store, app=app, api=api)
+    return SimpleNamespace(store=store, app=app, api=api, sent=sent)
