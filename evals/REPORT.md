@@ -6252,6 +6252,33 @@ What it means, not pre-registered:
 3. §4az, running now, picks from the diff inside the review, so this suggests its ceiling: about
    half the lessons found, times about three in four fixed when found.
 
+## 4bb. PRE-REGISTERED, A PILOT: does a line saying when a lesson applies, by mechanism, help a picker find it? (2026-11-11)
+
+Written before any line or pick in this section. §4az and §4ba found choosing to be the gap: with the
+right lesson in hand an agent fixed about three in four (§4ay), but a picker put it in its ten about
+half the time. On #196 the picker read the faulty line, an eval script loading every file in a
+folder, and missed a lesson written about "audits": a lesson is named after the incident that taught
+it, not the mechanism it is about.
+
+**The lines.** Sonnet, shown only each lesson's full text, never a task, writes one line per lesson
+saying when it applies by what the code or change does, at most 25 words, for the 337 lessons any
+of the five tasks could see (`evals/when-lines-4bb.json`). The file is frozen by hash before any pick.
+
+**Arms, on §4aw's five tasks, five repeats each, 150 picks in a seeded order.** §4ba's picker and
+prompt, from §4ba's three starting points: the task's words, §4ba's own 25 plans (reused, so the
+plans are identical across arms), and the diff cut as in §4ba. Each with the lessons' one-line list
+as §4ba gave it (*plain*), or with each line followed by "applies when:" and its line (*when*). Both
+are re-run here, in one sitting.
+
+**Reading, with at least 135 of the 150 complete.** *The lines help* if, averaged over the plan and
+diff starting points, they raise the hit rate by at least 0.15 against plain in the same sitting;
+otherwise *the lines do not help enough*. The task's words are reported, with no rule.
+
+**Threats.** §4ba's. The lines are a model's; a person or the lesson's author might write better ones.
+They make the list about twice as long, which may itself change what a picker reads.
+
+**Budget.** About 17 calls to write the lines and 150 picks, all Sonnet.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
