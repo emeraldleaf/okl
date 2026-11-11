@@ -6041,6 +6041,14 @@ about wording and not yet something to ship as written.
 
 **Budget.** 100 Sonnet sessions; §4aw's cost $11.96 API-priced.
 
+**Amendment before scoring (2026-11-11): a correction to the threats above.** A default briefing is
+up to 17 places, not 12: 5 in full and 12 named in one line. And the ranks quoted came from the
+search with linear fusion, before the briefing's own filters, so they do not say what a briefing
+shows. Running the default briefing itself from each task's words, on the lessons as they stood
+(`replay-list-reach-4ax.json`), the right lesson is shown in full on #168, named in one line on #198,
+and not shown on #115, #196 and #309. The title's "ten others" is a list of ten: the lesson and nine
+others. None of this changes the arms or the reading.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
