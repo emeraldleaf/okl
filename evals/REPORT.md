@@ -5973,6 +5973,37 @@ anything, their pass counts under the broken graders (1 of 38, meaningless), and
 closing words. Patches are applied to the frozen code, and `outcome_regrade.py` reports any that did
 not apply, were cut off, or left a new file outside the patch. The reading above is unchanged.
 
+**Result (2026-11-11): no lead for the contract, and a large effect from the lesson itself.** All
+100 sessions ran; every patch applied and none was cut off (receipt
+`outcome-replay-20261111-0129.json`; $11.96 API-priced, a median of 77 seconds a session).
+
+| arm | pass rate, averaged over tasks | sessions that edited |
+|---|---|---|
+| N: no lesson | 0 | 0 of 25 |
+| T: the lesson as stored | 0.64 | 22 of 25 |
+| C: contract | 0.52 | 17 of 25 |
+| D: contract and example | 0.6 | 20 of 25 |
+
+As stated: C minus T is -0.12 and C is at or above T on 3 of the 5 tasks, so there is no lead and
+the lesson format stays as it is. D minus C is 0.08. No session broke another test in the grader's
+file.
+
+What it means, not pre-registered:
+1. With no lesson, the agent left every one of the 25 changes as it found them and called them
+   ready. With the right lesson named as bearing on the change, it fixed most of them. This is the
+   first evidence on real past defects that a lesson changes the code. Its scope is narrow: five
+   tasks picked because a lesson applies, one lesson in front of the agent, and a sentence telling
+   it the lesson bears on this change.
+2. That does not contradict §4as, where lessons shown were followed no more often than lessons not
+   shown. There a lesson was one of many and nothing said it applied. The gap between those two
+   settings is the next thing to measure: the same lesson among ten others, with no such sentence.
+3. The contract may give an agent a place to stop. On #168 the sessions given it that made no edit
+   reasoned that the configured models differ, which its condition asks, and stopped; on #309 no
+   session given it edited anything. That is two tasks and a reading of the sessions' last words, so
+   it is a lead for a later test and no more.
+4. The rooms have unrelated test failures (no agent files, an older package version, the briefing
+   log off), and agents spent turns on them in every arm.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

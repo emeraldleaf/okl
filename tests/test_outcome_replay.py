@@ -73,3 +73,19 @@ def test_every_task_has_a_grader_that_its_keyword_selects():
     assert set(regrade.KEYWORD) == {t["pr"] for t in replay.tasks()} - {115}
     for key in regrade.KEYWORD.values():
         assert f"def {key}" in source, key
+
+
+def test_the_reports_figures_are_the_receipts():
+    """§4aw's result quotes these; each is read from the committed receipt."""
+    receipt = json.loads(sorted((REPO / "evals" / "results").glob("outcome-replay-2*.json"))[-1].read_text())
+    report = (REPO / "evals" / "REPORT.md").read_text()
+    section = report[report.index("## 4aw."):report.index("## 5. Findings")]
+    flat = " ".join(section.split())
+    names = {"N": "N: no lesson", "T": "T: the lesson as stored", "C": "C: contract", "D": "D: contract and example"}
+    for arm, name in names.items():
+        row = f"| {name} | {receipt['pass_rate'][arm]} | {receipt['edited'][arm]} of {receipt['sessions_per_arm'][arm]} |"
+        assert row in section, row
+    assert f"C minus T is {receipt['contract_gain']} and C is at or above T on {receipt['contract_at_least_today_on']} of the 5" in flat
+    assert f"D minus C is {receipt['example_gain']}" in flat
+    assert f"${receipt['api_priced_usd']} API-priced" in flat
+    assert receipt["sessions"] == 100 and not receipt["lead"] and not any(receipt["sessions_with_harm"].values())
