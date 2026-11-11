@@ -5896,6 +5896,63 @@ different cases and not a comparison, but they point the same way as the reading
 each lesson on its own. Agreement also says nothing about whether an agent follows a lesson, which
 §4aw tests.
 
+## 4aw. PRE-REGISTERED, A PILOT: does the way a lesson is written change the code an agent produces? (2026-11-11)
+
+Written before any session in this section counts; one throwaway session checked the plumbing and
+was discarded (arm N on #168). §4as to §4av measured whether a lesson is found and whether judges
+agree on it. None asked what matters most: with the right lesson in front of it, does an agent's
+code come out different, and does the wording change that? This is EVALUATION.md's outcome replay,
+narrowed to what okl's history can grade fairly.
+
+**Tasks.** Twenty past changes have a test the real fix added that fails on the code as first
+written and passes after the fix, without an import error. Reading each test against the lessons
+that existed when the change was frozen leaves five where the test checks what a lesson already
+said. Most of the rest test something no lesson said. Others are out for cause: the lessons on #163
+and #34 had text added from those same bugs, so they would give the answer; #37 also pins a
+timestamp window its lesson never mentions; #307's test carries the final docs' figures; on #325 an
+answer correct under the lesson would still fail; #380's test bundles behaviour its lesson does not
+cover. The five, in `evals/replay-tasks-4aw.json`: #115 (`n_adea7f2c7373`), #168
+(`seed:rag-defects:qz_judge_self`), #196 (`n_57cc4b427f05`), #198 (`n_473aec369b25`) and #309
+(`n_02cc84da158d`). On #309 one assertion on the exact words of an error message is relaxed.
+
+**Start.** Each task starts at its frozen commit, the change as first written and before review
+found the defect, in a copy with one commit of history and no agent files. So this tests an agent
+finishing a written change, not writing one from nothing: starting earlier would grade the private
+names the real author happened to choose.
+
+**Arms.** N: no lesson. T: the lesson as `okl show` gives it. C: the lesson as a contract (when, do,
+done when, does not apply, why). D: the contract and one bad, good and not-applicable example. Every
+lesson arm gets the right lesson, so this tests how a lesson is written and not whether it is found.
+A separate agent wrote the contracts and examples from the five lessons' text alone, shown nothing
+about the tasks (`evals/replay-contracts-4aw.json`).
+
+**Agent.** Sonnet, one session per call, able to read and edit files and to run only pytest and
+`git diff` or `git status`. Five repeats: 100 sessions in a seeded order, so stopping early favours
+no arm.
+
+**Grader.** The real fix's test, hidden from the agent and laid over the tree it leaves. A session
+passes when every parameter of the test passes. Each test is confirmed to fail on the frozen code
+and pass on the real fix (`outcome-replay-check-4aw.json`).
+
+**Measures.** Pass rate per arm, averaged over tasks, and per task. Harm: sessions where another
+test in that file, passing on the frozen code, now fails. Turns, time and cost.
+
+**Reading.** This is a pilot: it decides what to build next, not what to ship. A *lead* for the
+contract needs at least 90 of the 100 sessions complete, C at least 0.2 above T in the same sitting,
+and C at or above T on at least 4 of the 5 tasks. With a lead, the next step is a larger set of
+tasks (#413) before any format ships. Without one, the lesson format stays as it is. T minus N says
+whether a lesson changes the code at all, and D minus C whether the example earns its length; both
+are reported, with no ship decision attached.
+
+**Threats.** Five tasks in one repository, chosen by hand by Opus after reading the tests, and
+chosen because a lesson applies, so this says nothing about how often one does. Telling the agent
+that a lesson "bears on this change" is more than a real briefing says. Sonnet is not the model
+most work here uses. A test can fail a correct fix that takes another shape, equally across arms.
+
+**Budget.** 100 Sonnet sessions. The throwaway session cost $0.07 and took 87 seconds; one that
+edits and tests costs more. The sessions are kept in the private results directory; the receipts
+are committed.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
