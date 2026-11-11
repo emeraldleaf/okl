@@ -103,7 +103,8 @@ jobs:
 
       # The drawn architecture diagrams (docs/architecture/) name commands, flags, MCP tools,
       # hook events, scripts and briefing marks. okl's last hand-drawn diagram was retired
-      # wrong in four places nothing checked (93933d7); this fails on a name the code lacks.
+      # wrong in four places nothing checked (93933d7); this fails on a name the code lacks,
+      # and on an .svg that does not carry its source's text (#415).
       - name: Diagram names exist in the code
         run: python3 ci/check-diagram-names.py
 

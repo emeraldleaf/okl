@@ -17,6 +17,10 @@
     start-and-end check to every script, and a test fails a new receipt writer that skips it.
   - **The agent-neutral docs check** now reads a mention or a label wrapped across lines, and
     found two unlabelled ones in the decision records.
+  - **A render carries its source's text:** `ci/check-diagram-names.py` compared a drawn
+    diagram's `.svg` with its `.excalidraw` only by the names in them, so a source whose prose
+    changed and whose render was never re-exported passed. It now compares every line, and
+    names the lines only one side has.
 
 - **The review after writing: `okl check --change`** (REPORT §4at; opt-in). A briefing is
   chosen from the task's words before any code exists, and the lessons a change goes on to
