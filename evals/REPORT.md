@@ -5953,6 +5953,26 @@ most work here uses. A test can fail a correct fix that takes another shape, equ
 edits and tests costs more. The sessions are kept in the private results directory; the receipts
 are committed.
 
+**Amendment before grading (2026-11-11): the graders were broken and are replaced.** Four of the
+five tests above call a function the real fix invented (`judge_is_generator`, `instrument_drift`,
+`_seed_packs`, `source_store`), so on the frozen code they fail on a missing name and no agent could
+pass them without guessing it. The filter meant to exclude exactly that read the failure's reason
+from a line pytest had left empty, so it excluded nothing, which also makes "twenty past changes"
+above wrong; how many of them have a fair test was not recounted. `outcome-replay-check-4aw.json`
+is the check that missed this. The sessions themselves stand: they never see a grader, and each
+saved its patch. Written after all 100 ran and before any was graded by these:
+`tests/replay_graders_4aw.py` drives each script through what it had when the change was frozen,
+and asks what the lesson asks: #168, two commands resolving to one model must not start a run; #198,
+a run on another judge's window must be refused or said so; #196, an untracked seed pack must not
+reach the measurement; #309, a Postgres URL must be refused, not swapped for a default file. Each
+but #196 has a positive control, so a fix that refuses everything fails; #196 accepts a refusal, which
+also keeps the pack out. #115's own test fails by assertion and stays. Each grader fails on the
+frozen code and passes on the real fix (`outcome-regrade-check-4aw.json`), and they were written
+against those two states only. Seen before grading: whether each of the first 38 sessions edited
+anything, their pass counts under the broken graders (1 of 38, meaningless), and one session's
+closing words. Patches are applied to the frozen code, and `outcome_regrade.py` reports any that did
+not apply, were cut off, or left a new file outside the patch. The reading above is unchanged.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

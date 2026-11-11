@@ -61,3 +61,15 @@ def test_the_grader_reads_a_failure_and_a_file_that_did_not_run():
     assert not replay.grader_failed({"exit": 1, "bad": ["tests/a.py::test_other"]}, task)
     assert not replay.grader_failed({"exit": 0, "bad": []}, task)
     assert replay.grader_failed({"exit": 2, "bad": []}, task)
+
+
+def test_every_task_has_a_grader_that_its_keyword_selects():
+    """Each task but #115 (whose own test fails by assertion) is graded by a behaviour test."""
+    spec2 = importlib.util.spec_from_file_location("outcome_regrade", REPO / "evals" / "outcome_regrade.py")
+    assert spec2 and spec2.loader
+    regrade = importlib.util.module_from_spec(spec2)
+    spec2.loader.exec_module(regrade)
+    source = regrade.GRADERS.read_text()
+    assert set(regrade.KEYWORD) == {t["pr"] for t in replay.tasks()} - {115}
+    for key in regrade.KEYWORD.values():
+        assert f"def {key}" in source, key
