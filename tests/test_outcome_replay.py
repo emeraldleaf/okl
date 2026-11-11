@@ -181,3 +181,17 @@ def test_the_one_at_a_time_reading_follows_the_stated_rule():
     assert one.reading({**base, arm: 0.5}, True, 0, {**quiet, arm: 3}) == "catches it, but noisy"
     low = {"ten_plain": 0.1, "alone_told": 0.8}
     assert one.reading({**low, arm: 0.4}, True, 0, quiet) == "better than the list, short of alone"
+
+
+def test_the_one_at_a_time_figures_are_the_receipts():
+    """§4ay's result quotes these; each is read from the committed receipt."""
+    receipt = json.loads(sorted((REPO / "evals" / "results").glob("replay-one-2*.json"))[-1].read_text())
+    report = (REPO / "evals" / "REPORT.md").read_text()
+    section = report[report.index("## 4ay."):report.index("## 5. Findings")]
+    flat = " ".join(section.split())
+    r, e, u, t = receipt["pass_rate"], receipt["edited"], receipt["usd_per_session"], receipt["median_seconds"]
+    for arm, name in (("alone_told", "alone"), ("ten_plain", "list"), ("one_at_a_time", "one at a time")):
+        assert f"| {name} | {r[arm]} | {e[arm]} of 25 | ${u[arm]} | {round(t[arm])} s |" in section, arm
+    assert receipt["reading"] == "works" and receipt["sessions"] == 75
+    assert f"made {receipt['other_edits_median']} edit for the nine other lessons ({receipt['other_edits_total']} edits in {receipt['other_passes']} such passes)" in flat
+    assert not any(receipt["sessions_with_harm"].values())

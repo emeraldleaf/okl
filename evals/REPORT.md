@@ -6116,6 +6116,34 @@ lessons chosen from the code. Ten sessions cost about ten times one, and that co
 
 **Budget.** 25 ten-pass sessions and 50 single ones, about 300 Sonnet calls.
 
+**Result (2026-11-11): it works.** All 75 sessions ran (receipt `replay-one-20261111-1355.json`). The first pass stopped at
+a usage limit with 64 complete and was resumed at the same commit, question and lists; the partial
+receipt was deleted.
+
+| arm | pass rate, averaged over tasks | sessions that edited | API-priced cost a session | median time |
+|---|---|---|---|---|
+| alone | 0.72 | 20 of 25 | $0.118 | 72 s |
+| list | 0.08 | 10 of 25 | $0.134 | 83 s |
+| one at a time | 0.72 | 23 of 25 | $0.809 | 453 s |
+
+As stated: one at a time is 0.64 above the list and level with the lesson alone. The
+median session made 1 edit for the nine other lessons (26 edits in 225 such passes) and
+none broke another test, inside the shipping bar, so the reading is *works*.
+
+What it means, not pre-registered:
+1. The same ten lessons that did almost nothing as a list did as well as the right lesson alone
+   when asked about one at a time. The cost of a list is in how lessons are handed over, not in
+   the lessons.
+2. The worry was the nine that do not apply. They produced an edit in about one pass in nine, and
+   no edit broke a test; whether those edits were improvements or noise was not judged.
+3. It costs about seven times as much and six times as long as a single prompt. Ten passes in a
+   fresh context each is the expensive way to do this; asking several lessons in one fresh
+   context, or only the few a model picks from the change, are cheaper shapes still untested.
+4. Per task it moves around: #309 went from 0 of 5 alone to 4 of 5 one at a time, and #115 the
+   other way, from 3 of 5 to 0 of 5. Five repeats on five tasks cannot separate those from noise.
+5. Every arm still had the right lesson among its ten. Choosing the ten from what the code does is
+   the remaining step before this could ship (§4at's model pick found 40% of broken lessons in ten).
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
