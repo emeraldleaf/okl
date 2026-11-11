@@ -31,6 +31,10 @@
     `tests/test_client_service_contract.py` checks that each core function behind the service
     has a model field for every keyword, and that every body the real client posts through
     the real app names only fields its path reads.
+  - **One definition of a fact:** `tests/test_single_source.py` treats every string collection
+    defined at module level in `src/okl` as canonical and fails when its values are written out
+    anywhere else. Four copies inside the package now import the definition; the ones left are
+    listed with why, and the list only shrinks.
 
 - **The review after writing: `okl check --change`** (REPORT §4at; opt-in). A briefing is
   chosen from the task's words before any code exists, and the lessons a change goes on to

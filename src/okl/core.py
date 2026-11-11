@@ -1087,7 +1087,7 @@ def record(store: Store, *, type: str, title: str, scope: str, repo: str | None 
     given = {k for k, v in locals().items() if k in _KEPT_ON_SILENCE and v is not None}
     if scope == "repo" and repo:
         scope = f"repo:{repo}"
-    if status in ("superseded", "obsolete"):
+    if status in _UNBRIEFED:
         # Only `okl retire` sets these, with a reason. A re-import of a lesson retired here
         # passes (its status is kept anyway); a NEW record, re-import path or not, may not
         # arrive already retired with nothing logged (CodeRabbit on #163).
