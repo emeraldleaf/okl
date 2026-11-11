@@ -21,12 +21,12 @@ import explain_search as es
 import run_guard
 
 from okl import core, decide
+from okl.cli.lessons import _BRIEFED_BUCKETS
 from okl.store import Store
 
 REPO = Path(__file__).resolve().parents[1]
 TASKS = REPO / "evals" / "replay-tasks-4aw.json"
 INTERESTS = ["python", "method", "ci", "security"]   # okl's own declared stack, as its config holds them
-FULL = ("rules", "relevant_defects", "armed_gates", "live_retractions", "in_scope_tombstones", "threat_prior_art", "vocabulary", "decisions", "context")
 HALF = {"4al": "dev", "4aq": "test"}
 
 
@@ -37,7 +37,7 @@ def reach(task: dict, interests: list[str]) -> dict:
     with tempfile.TemporaryDirectory() as side:
         store = Store(f"sqlite:///{es.store_for(HALF[task['set']], frozen, Path(side))}")
         res = core.check(store, "okl", words, interests=interests, limit=12, decision=decide.DEFAULT)
-    full = [r["id"] for b in FULL for r in res.get(b, [])]
+    full = [r["id"] for b in _BRIEFED_BUCKETS for r in res.get(b, [])]
     named = [e["id"] for e in res.get("also_matched") or []]
     where = "in full" if task["lesson"] in full else "named in one line" if task["lesson"] in named else "not shown"
     return {"pr": task["pr"], "lesson": task["lesson"], "where": where, "in_full": len(full), "named": len(named)}
