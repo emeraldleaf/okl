@@ -195,3 +195,45 @@ def test_the_one_at_a_time_figures_are_the_receipts():
     assert receipt["reading"] == "works" and receipt["sessions"] == 75
     assert f"made {receipt['other_edits_median']} edit for the nine other lessons ({receipt['other_edits_total']} edits in {receipt['other_passes']} such passes)" in flat
     assert not any(receipt["sessions_with_harm"].values())
+
+
+def _e2e_module():
+    spec5 = importlib.util.spec_from_file_location("review_e2e", REPO / "evals" / "review_e2e.py")
+    assert spec5 and spec5.loader
+    mod = importlib.util.module_from_spec(spec5)
+    spec5.loader.exec_module(mod)
+    return mod
+
+
+def test_the_end_to_end_arms_differ_only_in_the_review_steps():
+    """§4az: one pass is the steps before #427, each alone is today's, and they share everything else."""
+    e2e = _e2e_module()
+    from okl import core
+    assert e2e.STEPS["review_each_alone"] == core.REVIEW_STEPS
+    assert e2e.STEPS["review_one_pass"] != core.REVIEW_STEPS
+    assert e2e.STEPS["review_one_pass"][:2] == core.REVIEW_STEPS[:2]
+    assert "sub-agent" not in " ".join(e2e.STEPS["review_one_pass"])
+
+
+def test_the_stream_counts_sub_agents_and_finds_the_result():
+    """A stream-json run: tool_use events naming the sub-agent tool are counted, and the last result kept."""
+    e2e = _e2e_module()
+    lines = [json.dumps({"type": "system", "message": "started"}),
+             json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Agent"}, {"type": "text"}]}}),
+             json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Read"}]}}),
+             json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Task"}]}}),
+             "not json", json.dumps({"type": "result", "result": "done", "num_turns": 3})]
+    result, agents = e2e.stream("\n".join(lines))
+    assert agents == 2 and result == {"type": "result", "result": "done", "num_turns": 3}
+
+
+def test_the_end_to_end_reading_follows_the_stated_rule():
+    """Not followed, on by default, or stays opt-in, against the same sitting's arms."""
+    e2e = _e2e_module()
+    rate = {"none": 0.0, "review_one_pass": 0.2, "review_each_alone": 0.5}
+    quiet = {a: 0 for a in e2e.ARMS}
+    assert e2e.reading(rate, True, 0.4, quiet) == "the new steps were not followed"
+    assert e2e.reading(rate, True, 0.8, quiet) == "on by default"
+    assert e2e.reading({**rate, "review_each_alone": 0.3}, True, 0.8, quiet) == "stays opt-in"
+    assert e2e.reading(rate, True, 0.8, {**quiet, "review_each_alone": 3}) == "stays opt-in"
+    assert e2e.reading(rate, False, 0.8, quiet) == "not complete"
