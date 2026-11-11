@@ -1,0 +1,179 @@
+{
+ "doc-claim-governs-doc-and-code": {
+  "in_scope": "the change adds or edits a sentence in documentation (README, docs/, a guide, COMMANDS.md, SECURITY.md) that states a command, flag, default value, number, version requirement or refusal behaviour of the code",
+  "not_in_scope": "the documentation it changes states no such fact (positioning, history, explanation), or it only removes a claim; or the sentence is in a dated report section or post that cites the receipt it came from",
+  "questions": [
+   "For each such new or changed claim, is there a test, a CI check, or an okl rule whose files name both the document and the code, that fails when the two disagree (already in the repository or added by this change)?",
+   "Does that check take the expected value from the code itself (running the documented command, importing the constant, reading pyproject.toml or the receipt) rather than from a copy typed into the test?"
+  ]
+ },
+ "n_e7988ff536fb": {
+  "in_scope": "the change adds or changes an exit path of a command okl ships (src/okl/cli), a hook in hooks/, or a check that CI or a gate runs (ci/, gates/)",
+  "not_in_scope": "the code is an eval or one-off script under evals/ that no hook or CI step runs, or the change touches no exit path",
+  "questions": [
+   "Does every path where the command could not do its job (unconfigured, unreachable, rejected credentials, invalid input, a missing, unreadable or malformed file, nothing to inspect) exit 2, including an exception raised while reading its input?",
+   "Does each of those paths print its reason to stderr and leave stdout empty?",
+   "Is exit 1 used only when the command ran and found something, and exit 0 only when it ran and found nothing?",
+   "Does a test run each new could-not-run path and assert both the exit code and that stdout is empty?"
+  ]
+ },
+ "n_6b65aa35593c": {
+  "in_scope": "the change adds or edits a diagram, chart, table or documentation sentence that states a count, threshold, size or measured figure about the system",
+  "not_in_scope": "the number is part of an interface rather than a measurement or count (an exit code, a port, a version requirement), which the doc-claim lesson covers",
+  "questions": [
+   "Is each new or changed figure produced by a script from the system or from a committed receipt, rather than typed by hand?",
+   "Is there a test that regenerates the artifact, or recomputes the figure from its receipt, and fails when the committed copy differs?",
+   "Does that regeneration read only committed inputs, never a gitignored store or the developer's local state?"
+  ]
+ },
+ "seed:geospatial-enforcement-defects:r_single_source_sets": {
+  "in_scope": "the change writes a constant, set, list, mapping, field list or class scheme (in code or in tests) whose values are also defined, or must stay equal to values defined, somewhere else",
+  "not_in_scope": "the value is defined only here; or the copy is in a file that cannot import the definition (another language, a CI YAML, a properties file) and a check compares the two",
+  "questions": [
+   "Does each such constant, set or literal import or derive its value from the one canonical definition, instead of restating it?",
+   "Where two places must list the same items (fields, paths, bucket names, statuses, a window size), is one derived from the other, or does a test assert they are equal?",
+   "If no canonical definition existed and this change made a second copy of a fact, did it create one definition and point both places at it?"
+  ]
+ },
+ "harness-reads-a-moving-working-tree": {
+  "in_scope": "the change adds or changes a script that runs a measurement and writes a receipt, or commits a receipt from such a run",
+  "not_in_scope": "the script writes no receipt, or the change does not touch receipt-writing code and commits no receipt",
+  "questions": [
+   "Does the script record the commit (git HEAD) when the run starts and again before it writes the receipt (in okl, evals/run_guard.py's start() and Run.stamp(), or an equivalent)?",
+   "When the two commits differ, does the receipt name both and mark itself not usable (usable false)?",
+   "Does each receipt this change commits name the same commit at start and end, or say it is not usable?"
+  ]
+ },
+ "n_5ddb0776a863": {
+  "in_scope": "the change adds or changes a gate, check, CI step or report line that states a clean, passing or all-clear result",
+  "not_in_scope": "the code states no clean result (it only lists or prints data)",
+  "questions": [
+   "Does it count what it inspected (rules, files, diagrams, receipts, rows)?",
+   "When that count is zero, or its input is missing, empty or gitignored, does it exit with its did-not-run code or say unknown, rather than exit 0 or print a clean result? (A gate okl ships to other repositories may exit 0 there only if it prints that it skipped.)",
+   "Does any clean result it prints carry the inspected count beside it?",
+   "If its input is gitignored, does the change say how CI gets that input?"
+  ]
+ },
+ "remote-timeout-not-a-deadline": {
+  "in_scope": "the change adds or changes a network call to a remote service, a retry loop around one, or the message for a write whose reply may have been lost",
+  "not_in_scope": "the code makes no network call and reports on no remote write",
+  "questions": [
+   "Is the caller's worst case bounded as a whole (a deadline around the call, or per-try timeout times tries times addresses kept under the host's limit and asserted by a test), not only by a per-socket timeout?",
+   "Are errors raised after the request was sent (OSError, http.client.HTTPException, TimeoutError) caught, and does the caller fail closed on them?",
+   "For a write whose reply was lost, does the message say it may have been recorded, never that it was not?",
+   "Where the code or its message calls a retry safe, does a test show that an identical second call writes nothing new?"
+  ]
+ },
+ "n_00985805cdbb": {
+  "in_scope": "the change adds or edits comments or docstrings",
+  "not_in_scope": "the change adds or edits no comment or docstring",
+  "questions": [
+   "Does each new comment explain why (the cause, or the incident behind the line) rather than restate what the next line does?",
+   "Where a comment or docstring states a property or invariant (X is always Y, the receipt records Z, this cannot happen), does code or a test in the repository enforce it?",
+   "Does each new test's docstring claim only what that test's assertions check?"
+  ]
+ },
+ "remote-path-test-through-client": {
+  "in_scope": "the change adds or changes an endpoint, a request field or a parameter that the okl client (okl.client.Client) sends to the service",
+  "not_in_scope": "the change touches no path between the client and the service",
+  "questions": [
+   "Is there a test that calls the real client against the in-process service app (the remote fixture, or urlopen routed to a TestClient), not only a test that posts to the app directly?",
+   "Does a test through the client send each new or changed field as the client really sends it, including its default when the caller gives none (often null, or the field left out) and an input the client trims or filters before sending, down to empty?",
+   "Does a test through the client reach each error the new endpoint can return (a missing id, an invalid input) and check what the client reports for it?"
+  ]
+ },
+ "falsifier-relative-to-control": {
+  "in_scope": "the change pre-registers, or applies after a run, a falsifier: the result that would show an effect absent or a change harmful",
+  "not_in_scope": "the threshold is a shipping bar labelled as one (a level a feature must reach to be turned on, such as a minimum catch rate or a maximum cost), not a test of whether an effect exists",
+  "questions": [
+   "Is each falsifier stated as a difference from a control arm measured in the same run, on the same store and prompts, with the allowed size named?",
+   "Is any baseline figure quoted in the pre-registration re-measured on the store the change will run on?",
+   "After the run, is the rule applied as written, with any other reading reported beside it and labelled as such?"
+  ]
+ },
+ "n_02cc84da158d": {
+  "in_scope": "the change reads, resolves or defaults where the store is (OKL_DATABASE_URL, a store path, a database URL), or adds an entry point or workflow step that opens the store",
+  "not_in_scope": "the code only uses a store or client handed to it",
+  "questions": [
+   "Does every new place that needs the store get it from the one resolver the code has (okl.client.store_url() or Client in okl), rather than reading OKL_DATABASE_URL or building a path itself?",
+   "Where a component deliberately ignores the variable, does it refuse with a reason (exit 2) rather than silently use a default?",
+   "Do the steps of one workflow (an info step and the check it describes) resolve the store the same way?"
+  ]
+ },
+ "seed:python-canon:py_dont_mock_what_you_dont_own": {
+  "in_scope": "the change adds or changes a test that patches, monkeypatches or replaces a module, class, function or constant",
+  "not_in_scope": "every replacement is of the project's own code, of the environment (variables, the working directory, HOME), or routes a transport to a real in-process server",
+  "questions": [
+   "Does each new patch replace only the project's own code, never a third-party or standard-library module, class or constant (through mock.patch on a library path, sys.modules, or a SimpleNamespace standing in for it)?",
+   "Where the code under test calls a third-party library, is that call behind a small adapter the project owns, with at least one test of the adapter against the real library?"
+  ]
+ },
+ "docs-agent-neutral": {
+  "in_scope": "the change adds or edits documentation for people using okl (README.md, docs/, THESIS.md, a guide, the site's okl page) that describes what okl or the agent does",
+  "not_in_scope": "the text is a dated report section describing runs made with a named agent (a fact about that run), or it states nothing about how okl works with an agent",
+  "questions": [
+   "Where the text describes what any agent can do with okl, does it say 'your agent' (or name more than one agent) rather than Claude or Claude Code?",
+   "Is every hook, slash command (/record, /seed-from-codebase), Stop question or per-prompt briefing it mentions labelled as Claude Code-only in the same paragraph, bullet or table row, not only elsewhere in the document?",
+   "Where it explains how an agent gets or records lessons, does it name the path other agents use (the MCP tools okl_check and okl_record, or the CLI)?"
+  ]
+ },
+ "n_adea7f2c7373": {
+  "in_scope": "the change adds or changes a subprocess call, a shell invocation, or a path along which stored or outside data (store fields, pull-request text, file contents, a ledger) reaches a command",
+  "not_in_scope": "the only command that reaches a shell is a check that a person typed or confirmed, run by okl verify --run or okl reverify: that is the one designed shell path",
+  "questions": [
+   "Is every new subprocess call list-form argv, with no shell=True and no command string built from data?",
+   "Is there a -- before every pathspec or argument that comes from the store, a user or a pull request, so it cannot be read as an option?",
+   "Does a test pass a hostile-looking value (a leading dash, a glob, a semicolon) and assert it is treated as data?",
+   "Does any design in the change that runs a command written by someone else (another repository, a ledger, a pull request) require a person to see and confirm it first?"
+  ]
+ },
+ "n_8a6e1abce5cc": {
+  "in_scope": "the change adds output at more than one point of a run (a startup line, a final report, a receipt field), or tests a feature that has a flag returning early (--dry-run, --list)",
+  "not_in_scope": "the feature emits its output at one point and has no early-return flag",
+  "questions": [
+   "Does a test reach each new output point (startup, report, receipt) through a run that does not return early?",
+   "Where a test is named for a behaviour (the receipt records X), does it assert on the output that carries X, not only on the constant that feeds it?"
+  ]
+ },
+ "n_0637c92c032f": {
+  "in_scope": "the change commits a render (an SVG, PNG or generated document) beside its source, or edits a source whose render is committed",
+  "not_in_scope": "the render is generated at build time and not committed",
+  "questions": [
+   "Is there a check that fails when the committed render does not carry the source's current content (the source's text appears in the render, or the render embeds the source's hash and a test compares it)?",
+   "When this change edits a source, does it re-render and commit the render in the same change?"
+  ]
+ },
+ "n_aa3e45a2ecd6": {
+  "in_scope": "the change adds or changes a field that stores an identifier as provenance (a lesson id, a receipt name, a commit, a pull-request number, a source path) that no normal run reads",
+  "not_in_scope": "the identifier is one the code reads and uses on every run, so a bad value already fails",
+  "questions": [
+   "Does some code path resolve each such reference (look the id up, open the file, check the commit exists) at startup or in a check?",
+   "Does a reference that does not resolve stop the run or fail the check, rather than pass silently?"
+  ]
+ },
+ "comparison-table-one-sitting-generated": {
+  "in_scope": "the change adds or edits a table in documentation or a report that compares configurations, arms or settings by measured figures",
+  "not_in_scope": "the table lists facts that are not measurements (commands, flags, files), or the figures of a single run",
+  "questions": [
+   "Did one sitting, at one commit and on one store, produce every column, as the receipts the table cites show?",
+   "Is the table printed by a script from those receipts (in okl, evals/standing_table.py) rather than typed by hand?",
+   "Does that script refuse receipts that disagree on commit or store size?"
+  ]
+ },
+ "n_849a5b0425ef": {
+  "in_scope": "the change filters, excludes or ranks lessons or packs by their tags or stack labels",
+  "not_in_scope": "tags are only displayed, or the filter reads applies_to",
+  "questions": [
+   "Does every filter that decides whether a lesson or pack reaches a repository read applies_to (where it is true), never tags (where it was found)?",
+   "Is the retrieval change measured by the A/B, or a pre-registered comparison, before it ships?"
+  ]
+ },
+ "seed:python-canon:py_unclosed_sqlite": {
+  "in_scope": "the change opens a sqlite3 connection, or a Store or Client that holds one, in code or in tests",
+  "not_in_scope": "the code only uses a connection its owner opened and closes",
+  "questions": [
+   "Is every connection the change opens closed explicitly (try/finally with close(), contextlib.closing, or the owner's close())? sqlite3's own `with con:` commits but does not close.",
+   "Is a connection with no single owner (module-global, cached, opened lazily) tied to its owner with weakref.finalize, or closed at exit?"
+  ]
+ }
+}

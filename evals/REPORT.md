@@ -5773,6 +5773,129 @@ model's key cannot say how good the review is, because the models do not agree o
 A key that does not rest on a model's judgement is needed: the outcome replay, graded by the
 tests a real fix added (#390 item 5), or people (#394, #413). $18.18 API-priced.
 
+*Corrected reading (2026-11-11, from §4av).* "Three models agree about as often as not" does not
+hold as a statement about okl's lessons. These 24 cases were chosen because a reviewer and the key
+had disagreed on them, or as a control of four, so they are the disputed ones, and four is too few
+to read a rate from. On §4av's 70 cases, chosen without regard to disagreement, two models given
+one lesson at a time agreed on 62. What stands is narrower: this third model did not settle these
+cases.
+
+## 4av. PRE-REGISTERED: do yes/no conditions make two models agree on whether a change broke a lesson? (2026-11-10)
+
+Written before any call in this section runs. §4au's follow-up found that three models, asked
+whether a change breaks one of okl's lessons, agree about as often as not. In CheckEval (Lee et
+al., arXiv 2403.18771), breaking a vague criterion into yes/no questions raised agreement between
+judge models by 0.45, and the reading of 2026-11-10 ranked doing that to okl's most-broken lessons
+fourth of ten changes ([Research on each layer](../docs/research/okl-layers-2026-11-10.md)). A
+lesson two models read the same way is one an agent can check its own code against and one a key
+can grade. This section tests whether conditions get okl's lessons there. It does not test whether
+an agent follows them more often; that is the outcome replay's question (#390 item 5).
+
+**Lessons.** The 20 that hold 65% of past breaks (`break-concentration-20261110-1600.json`). Each
+gets two to four yes/no questions, phrased so that yes means followed and naming a file, a pattern
+or a command where one fits, and two lines: when the lesson is in scope and when it is not
+(`evals/conditions-4av.json`). Opus wrote them from each lesson's text and the development half's
+cases (§4al's tasks, with the reasons §4ao's and §4ap's keys gave); no test-half case or reason was
+read. The 20 were chosen by break counts over both halves, so the selection saw the test half and
+the wording did not.
+
+**Cases.** The test half, §4aq's tasks: every pair of these lessons that §4aq's key sorted broken
+(35) or followed (20), and 15 of the 171 pairs it labelled related, drawn with `random.Random(4)`;
+70 cases over 28 pull requests.
+
+**Arms.** A: the lesson's full text as it stood when the task was frozen, as `okl show` gives it
+(`default_read.full_text`). B: the same text with the conditions after it, opening "This change
+breaks the lesson when the lesson is in scope and any answer below is no."
+
+**Judges.** Sonnet and Fable 5.1, neither of which wrote the lessons, the conditions or the key
+(Opus's). Each verdict is one session in a copy of the repository at the task's commit with the
+change applied (`review_repo.checkout`), read-only tools, the change as `CHANGE.diff` and one
+lesson, under §4au's follow-up prompt unchanged (`7b2f46b1d66ab41b`): broken, followed or not
+applicable. A session that reports a model other than its judge is refused. 280 calls.
+
+**Pilot, on the development half, before the test half.** Arm B only, both judges, on the first
+broken and the first followed case of each lesson in pull-request order: 35 cases, 70 calls. Its
+disagreements are read for conditions the two judges read differently, and those are reworded.
+Then the conditions are frozen by hash in the script (`FROZEN_CONDITIONS`), without which the test
+half refuses to run, and a dated amendment here lists what the pilot changed.
+
+**Measures.**
+1. Agreement: Cohen's kappa between the two judges on broken against not broken (followed or not
+   applicable), per arm, and the gain B minus A with a paired bootstrap over cases (2000, seed 4).
+2. Flagged: of the 35 cases the key calls broken, how many at least one judge calls broken, per arm.
+3. False alarms: on the 15 related cases, the broken calls of both judges together, per arm.
+
+Also reported: raw agreement, each judge's broken calls, agreement per lesson, every disagreement
+with both judges' reasons, and cost.
+
+**Rule.** The conditions hold when all four do:
+- complete: at least 60 of the 70 cases have all four verdicts;
+- agreement: kappa gains at least 0.15 and the interval's lower bound is above 0;
+- not by silence: B's flagged count is at least two thirds of A's;
+- not by noise: B's false alarms are at most A's plus 2.
+
+The last three are stated against arm A in the same sitting (lesson
+`falsifier-relative-to-control`). If they hold, conditions become part of a lesson: a field that
+`okl show`, the briefing and the review after writing carry, filled for these 20 first. If not,
+they do not ship, and the per-lesson table says which lessons gained and which did not.
+
+**Threats.** One repository, okl's own (#413). The key is a model's and not audited (#394); it
+picks the cases and feeds the silence guard, but no measure treats it as right. Agreement is not
+correctness: two judges can agree and both be wrong, and the two guards catch only the cheapest
+ways to agree (calling nothing broken, or everything). The conditions' author, Opus, wrote most of
+the code being judged; it judges nothing here. Seventy cases give a wide interval. Arm B adds text,
+so a gain could come from the length, or from naming files the judge then reads, rather than from
+the yes/no form; this design does not separate them.
+
+**Budget.** 350 calls: 70 in the pilot and 280 on the test half. §4au's follow-up priced Fable at
+about $0.76 a call, so roughly $200 API-priced in all, which a Max plan does not pay. The verdicts
+are kept in the private results directory; the receipts are committed.
+
+**Amendment before the test half (2026-11-10): what the pilot changed.** All 70 pilot calls
+answered (receipt `conditions-agree-dev-20261110-1942.json`, conditions `b1691684317188e2`). Five
+Fable replies ended their JSON at the reason's closing quote, without the brace; the parser now
+adds one when nothing else parses, and keeps any reply it cannot read, and those five calls were
+made again. That fix was not yet committed when the receipt was written, so it is stamped
+`7e4ce89+dirty`; it is in the commit that carries this amendment. With the conditions, the two
+judges agreed on 33 of the 35 development-half cases on broken or not (kappa 0.87). This half has
+no arm A and the conditions were written from its cases, so that figure is not a result. Both
+judges called broken several cases the key had called followed, each where the lesson's own fix
+asks for something the change lacked (a test that asserts stdout is empty; a test that passes a
+hostile value): the conditions apply the lessons' text more strictly than the key did, which the
+silence guard does not count against them. The two disagreements came from wording, and it was
+changed:
+- `remote-path-test-through-client`: "cover each field" became two questions: a test through the
+  client sends each field as the client really sends it, including its default when the caller
+  gives none (the lesson's own incident was a null default), and one reaches each error the
+  endpoint returns.
+- `docs-agent-neutral`: a Claude Code-only label must be in the same paragraph, bullet or table
+  row as the mention, not only elsewhere in the document.
+
+The conditions are frozen at `5b30c4808857b727`.
+
+**Result (2026-11-11): the rule fails, so the conditions do not ship.** All 280 calls answered and
+all 70 cases are complete (receipt `conditions-agree-test-20261111-0038.json`). The first pass
+stopped at a usage limit at call 149 and was resumed at the same commit, prompt and conditions.
+1. Agreement: kappa 0.742 without the conditions and 0.599 with them, a gain of -0.143, interval
+   [-0.368, 0.094]; under the 0.15 bar. On broken or not, the judges agreed on 62 of 70 and 56 of 70.
+2. Flagged: of the 35 cases the key calls broken, at least one judge called 26 broken without the
+   conditions and 31 with them. The silence guard holds.
+3. False alarms: on the 15 related cases, 1 broken call without the conditions and 4 with them; over
+   arm A plus 2, so the noise guard fails.
+4. Cost: $127.17 API-priced for the test half and $28.04 for the pilot, which a Max plan does not pay.
+
+What it means, not pre-registered. The section's premise was wrong: without any conditions, two
+models reading one lesson at a time already agree well, so §4au's follow-up described its disputed
+cases and not the lessons (corrected there). The pilot's 0.87 had no arm A and misled in the same
+direction. The conditions do change the verdicts: they make the judges stricter, from 46 broken
+calls to 74. Cases both judges call broken among the key's broken rose from 19 to 28, and broken
+calls on the 20 the key calls followed rose from 0 to 11. Whether that strictness is right or
+over-reach needs a key that is not a model. Reading one lesson at a time, Sonnet called 21 of the
+35 broken (60%), against the 17% a single session reached reading the whole list in §4au; those are
+different cases and not a comparison, but they point the same way as the reading's advice to check
+each lesson on its own. Agreement also says nothing about whether an agent follows a lesson, which
+§4aw tests.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

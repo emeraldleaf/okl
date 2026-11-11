@@ -1,0 +1,601 @@
+{
+ "section": "4av",
+ "at": "2026-11-11T00:38Z",
+ "half": "test",
+ "prompt": "7b2f46b1d66ab41b",
+ "conditions": "5b30c4808857b727",
+ "frozen": "5b30c4808857b727",
+ "cases": 70,
+ "complete": 70,
+ "kappa": {
+  "A": 0.742,
+  "B": 0.599
+ },
+ "agree": {
+  "A": 55,
+  "B": 54
+ },
+ "agree_broken_or_not": {
+  "A": 62,
+  "B": 56
+ },
+ "by_key": {
+  "broken": {
+   "cases": 35,
+   "A/sonnet": 21,
+   "A/fable": 24,
+   "B/sonnet": 29,
+   "B/fable": 30,
+   "A/both": 19,
+   "B/both": 28
+  },
+  "followed": {
+   "cases": 20,
+   "A/sonnet": 0,
+   "A/fable": 0,
+   "B/sonnet": 7,
+   "B/fable": 4,
+   "A/both": 0,
+   "B/both": 2
+  },
+  "related": {
+   "cases": 15,
+   "A/sonnet": 0,
+   "A/fable": 1,
+   "B/sonnet": 0,
+   "B/fable": 4,
+   "A/both": 0,
+   "B/both": 0
+  }
+ },
+ "broken_calls": {
+  "A/sonnet": 21,
+  "A/fable": 25,
+  "B/sonnet": 36,
+  "B/fable": 38
+ },
+ "kappa_gain": -0.143,
+ "interval": [
+  -0.368,
+  0.094
+ ],
+ "key_broken": 35,
+ "flagged_by_either": {
+  "A": 26,
+  "B": 31
+ },
+ "related": 15,
+ "related_broken_calls": {
+  "A": 1,
+  "B": 4
+ },
+ "holds": {
+  "complete": true,
+  "gain": false,
+  "not_by_silence": true,
+  "not_by_noise": false
+ },
+ "result": "fails",
+ "per_lesson_agree": {
+  "doc-claim-governs-doc-and-code": {
+   "A": "9/10",
+   "B": "9/10"
+  },
+  "n_e7988ff536fb": {
+   "A": "2/5",
+   "B": "5/5"
+  },
+  "n_6b65aa35593c": {
+   "A": "6/6",
+   "B": "6/6"
+  },
+  "seed:geospatial-enforcement-defects:r_single_source_sets": {
+   "A": "7/9",
+   "B": "6/9"
+  },
+  "harness-reads-a-moving-working-tree": {
+   "A": "2/3",
+   "B": "3/3"
+  },
+  "n_5ddb0776a863": {
+   "A": "3/5",
+   "B": "2/5"
+  },
+  "remote-timeout-not-a-deadline": {
+   "A": "1/2",
+   "B": "1/2"
+  },
+  "n_00985805cdbb": {
+   "A": "5/5",
+   "B": "4/5"
+  },
+  "remote-path-test-through-client": {
+   "A": "2/2",
+   "B": "2/2"
+  },
+  "falsifier-relative-to-control": {
+   "A": "2/2",
+   "B": "2/2"
+  },
+  "n_02cc84da158d": {
+   "A": "1/2",
+   "B": "2/2"
+  },
+  "seed:python-canon:py_dont_mock_what_you_dont_own": {
+   "A": "1/1",
+   "B": "1/1"
+  },
+  "docs-agent-neutral": {
+   "A": "5/6",
+   "B": "4/6"
+  },
+  "n_adea7f2c7373": {
+   "A": "1/1",
+   "B": "0/1"
+  },
+  "n_8a6e1abce5cc": {
+   "A": "0/0",
+   "B": "0/0"
+  },
+  "n_0637c92c032f": {
+   "A": "3/3",
+   "B": "2/3"
+  },
+  "n_aa3e45a2ecd6": {
+   "A": "0/2",
+   "B": "1/2"
+  },
+  "comparison-table-one-sitting-generated": {
+   "A": "1/1",
+   "B": "1/1"
+  },
+  "n_849a5b0425ef": {
+   "A": "1/2",
+   "B": "1/2"
+  },
+  "seed:python-canon:py_unclosed_sqlite": {
+   "A": "3/3",
+   "B": "2/3"
+  }
+ },
+ "disagreements": [
+  {
+   "pr": 75,
+   "lesson": "n_5ddb0776a863",
+   "key": "broken",
+   "arm": "A",
+   "sonnet": {
+    "verdict": "followed",
+    "reason": "The change does not touch `okl drift --gate`; where it edits a CI check that could measure nothing (the evals job), it makes unfilled or empty cases exit 2 as 'did not run' and has the workflow surface that as a warning annotation rather than a pass, which matches the lesson's fix."
+   },
+   "fable": {
+    "verdict": "broken",
+    "reason": "The change adopts the lesson for the <<FILL and empty-file cases (exit 2, CI warning annotation, case count in the summary) but edits the same function while leaving the absent-cases-file path printing 'Nothing to measure' and returning 0, so a missing golden set still reads as a green eval step, exactly the absence-as-success the lesson says never to allow; the README also claims the job 'stays red' while the workflow turns exit 2 into a passing warning."
+   }
+  },
+  {
+   "pr": 75,
+   "lesson": "n_5ddb0776a863",
+   "key": "broken",
+   "arm": "B",
+   "sonnet": {
+    "verdict": "followed",
+    "reason": "The change turns the eval gate's empty or placeholder-only case sets from a clean 0 into exit 2 (did not run), and the shipped workflow reports that as a '::warning ... NOT a result' annotation rather than a pass. The remaining 'no cases file' branch still returns 0, but it prints 'Nothing to measure'. The rest of the diff is renames, docs and unrelated fixes."
+   },
+   "fable": {
+    "verdict": "broken",
+    "reason": "The evals step correctly counts cases, exits 2 on a placeholder or empty golden set, and has the workflow surface that as a warning rather than a pass, but the hooks' new enrolment check reads .okl/config.json, which okl gitignores entirely, and when it is missing the formerly fail-closed check exits 0 with no output at all (the test asserts empty stdout and stderr), so a fresh clone of an enrolled repo silently proceeds with no briefing, and the change never says how such a clone gets that file; the scaffold README also still claims the CI job 'stays red' on exit 2 while the workflow now exits 0."
+   }
+  },
+  {
+   "pr": 75,
+   "lesson": "n_849a5b0425ef",
+   "key": "followed",
+   "arm": "B",
+   "sonnet": {
+    "verdict": "not applicable",
+    "reason": "The diff adds no tag or stack filtering or ranking in code: it corrects README wording about the existing inclusive interests filter, adds briefing buckets for Decision and other record types, and fixes the service so it keeps applies_to."
+   },
+   "fable": {
+    "verdict": "followed",
+    "reason": "The change adds no tag-based exclusion; it adds the missing applies_to field to the service's RecordReq so applicability is recorded separately from provenance tags, corrects the README to describe tags as any-match with only applies_to excluding by stack, and leaves the _in_scope filter (applies_to exclusive, tags inclusive) untouched."
+   }
+  },
+  {
+   "pr": 75,
+   "lesson": "n_e7988ff536fb",
+   "key": "broken",
+   "arm": "A",
+   "sonnet": {
+    "verdict": "broken",
+    "reason": "The change makes the UserPromptSubmit and Stop hooks exit 0 with no stderr when the repo is not set up with okl, which is the 'unconfigured, did not run' condition the rule says must return 2 with the reason on stderr, and the new test asserts exit 0 with empty stderr."
+   },
+   "fable": {
+    "verdict": "followed",
+    "reason": "The only new did-not-run paths in the change (an unfilled or empty eval golden set) were moved from exit 0 to exit 2 with the reason on stderr and a test asserting the code and no score on stdout, the CLI's own exit contract is untouched, and the hooks' new unenrolled no-op is a Claude Code hook-protocol scope gate that still exits 2 whenever okl is enrolled but cannot run or the project cannot be identified."
+   }
+  },
+  {
+   "pr": 88,
+   "lesson": "docs-agent-neutral",
+   "key": "followed",
+   "arm": "B",
+   "sonnet": {
+    "verdict": "broken",
+    "reason": "The edited tagline says lessons are 'briefed to Claude Code or any MCP agent before every task', but the automatic per-task briefing is a Claude Code-only hook. The sentence doesn't label it that way and doesn't name okl_check or okl_record as the path other agents use, although the README says elsewhere that other agents must call okl_check themselves."
+   },
+   "fable": {
+    "verdict": "followed",
+    "reason": "The only doc edit changes the README tagline from 'briefed to Claude Code' to 'briefed to Claude Code or any MCP agent', naming more than one agent and pointing at the MCP path, while the existing 'Using another agent' bullet still labels the automatic hooks as Claude Code's and names okl_check, so the lesson is in scope and satisfied."
+   }
+  },
+  {
+   "pr": 89,
+   "lesson": "n_5ddb0776a863",
+   "key": "followed",
+   "arm": "B",
+   "sonnet": {
+    "verdict": "broken",
+    "reason": "The new pre-push hook gate reads the gitignored local store and exits 0 when `okl drift --gate` returns 2 (could not check, e.g. no store), without printing that it skipped, so not-run looks the same as clean."
+   },
+   "fable": {
+    "verdict": "followed",
+    "reason": "The new docs add CI snippets and a pre-push hook around `okl drift --gate`, which already counts checked rules and exits 2 with a NOT CONFIGURED / NOTHING CHECKED message when it inspected nothing; the GitLab/Azure jobs fail on that non-zero exit, the hook lets exit 2 through only after okl has printed that it did not check (and is explicitly labelled an early warning, not a merge gate), and the section states how CI gets the input (committed okl-drift.json or OKL_SERVICE_URL/OKL_TOKEN)."
+   }
+  },
+  {
+   "pr": 122,
+   "lesson": "n_aa3e45a2ecd6",
+   "key": "followed",
+   "arm": "A",
+   "sonnet": {
+    "verdict": "not applicable",
+    "reason": "The change adds a seed pack, doc counts and a test that checks every seed edge resolves. It does not touch evals/ab_harness.py, evals/tasks.jsonl or any eval task's defect_node references, and its only evals edit is a prose note in REPORT.md."
+   },
+   "fable": {
+    "verdict": "followed",
+    "reason": "The change adds eight cross-pack ENCODES edge ids that the loader stores without checking existence (core.link does no lookup), which is exactly the unread-provenance pattern the lesson warns about, but it also adds a repo test that resolves every seed edge end against every pack and fails on a miss, all eight targets resolve today, and the harness's own startup check of defect_node in evals/ab_harness.py and evals/tasks.jsonl is untouched."
+   }
+  },
+  {
+   "pr": 131,
+   "lesson": "n_0637c92c032f",
+   "key": "followed",
+   "arm": "B",
+   "sonnet": {
+    "verdict": "broken",
+    "reason": "The change edits the excalidraw text (~1,650 to ~1,620) and re-renders the SVG, but no check fails when the SVG lacks the source's current text, because the gates only verify that a render exists and that receipt IDs match."
+   },
+   "fable": {
+    "verdict": "followed",
+    "reason": "The change edits the excalidraw source (1,650 to 1,620) and re-renders and commits the SVG in the same diff, with the working-tree SVG carrying 1,620 and no stale 1,650, while the CI-wired ci/check-diagram-figures.sh already asserts that claims (receipt IDs) named in the source also appear in the committed render."
+   }
+  },
+  {
+   "pr": 167,
+   "lesson": "remote-timeout-not-a-deadline",
+   "key": "broken",
+   "arm": "B",
+   "sonnet": {
+    "verdict": "broken",
+    "reason": "The new MAYBE RECORDED message calls recording again with the same id safe, but no test shows an identical second call writes nothing new, including no new history row. The new test only checks that the text contains \"same id\", and the one existing same-id test (tests/test_addressable_lessons.py:47) sends different fields and runs against the local store, not the shared service."
+   },
+   "fable": {
+    "verdict": "followed",
+    "reason": "The change keeps the per-try timeout and the hook's worst-case test untouched, turns a non-JSON 200 into the post-send no-answer error that every fail-closed caller already treats as an outage (exit 2, OKL UNREACHABLE), makes the MCP record tool say MAYBE RECORDED with a search-first instruction for a lost reply and NOT RECORDED only for a refused connection, and the same-id retry it calls safe is covered by an existing test showing a second record with that id is refused before any row is written and leaves the stored lesson unchanged."
+   }
+  },
+  {
+   "pr": 259,
+   "lesson": "n_849a5b0425ef",
+   "key": "broken",
+   "arm": "A",
+   "sonnet": {
+    "verdict": "not applicable",
+    "reason": "The new relevance floor drops records by how many task words they share, not by filtering on provenance stack tags (`tags` is only one of the fields searched for matching words), so it is a different kind of retrieval change from the one the lesson describes."
+   },
+   "fable": {
+    "verdict": "broken",
+    "reason": "The change adds a new record-dropping retrieval stage and ships it as done in the CHANGELOG and README on the strength of a diagnostic probe and a unit test, without the held-fixed A/B the lesson's fix and the REPORT's shipping rule require (latest A/B result is ab-20261011, no REPORT section for #257), though it does not itself reintroduce provenance tags as a scoping predicate."
+   }
+  },
+  {
+   "pr": 259,
+   "lesson": "seed:python-canon:py_unclosed_sqlite",
+   "key": "followed",
+   "arm": "B",
+   "sonnet": {
+    "verdict": "broken",
+    "reason": "The new tests open `Store(\"sqlite:///:memory:\")` in `_store()` and in `test_a_weak_hit_linked_to_a_kept_hit_stays`, and a `Client` whose `_local_store()` is used in the eval-task test. None of them is ever closed with `close()`, `closing` or a fixture finalizer, so a strict-warnings run on Python 3.13 can hit the unclosed-database ResourceWarning."
+   },
+   "fable": {
+    "verdict": "followed",
+    "reason": "The new tests open in-memory Stores and a Client-owned Store without calling close(), but every Store's SQLite connection is tied to its backend with weakref.finalize at construction (the lesson's prescribed fix for a connection with no clear owner), so no 'unclosed database' ResourceWarning can reach the filterwarnings=error config, matching how existing tests such as test_retire.py already open inline stores."
+   }
+  },
+  {
+   "pr": 307,
+   "lesson": "doc-claim-governs-doc-and-code",
+   "key": "broken",
+   "arm": "A",
+   "sonnet": {
+    "verdict": "followed",
+    "reason": "The change corrects stale size and latency claims in the docs and the code docstrings, and adds a test that reads each receipt and fails if a published figure disagrees or is unnamed, so one check covers both the doc and what it describes; the one gap is that the figure regex does not span wrapped lines, which weakens the check but does not break the lesson."
+   },
+   "fable": {
+    "verdict": "broken",
+    "reason": "The numeric figures are wired well (tests/test_docs.py holds docs and src/okl docstrings to receipts and fails on disagreement), but the change also writes new doc claims about ci.yml into docs/DEVELOPING.md (the postgres:17.6 service, CLAUDE_CODE_OAUTH_TOKEN soft-pass, REVIEW_CMD swap) with no check or Rule naming both that doc and ci.yml; the only drift rule on DEVELOPING.md checks the Dependabot sentence, so a bumped image or changed review step would leave the doc stale with nothing red."
+   }
+  },
+  {
+   "pr": 307,
+   "lesson": "harness-reads-a-moving-working-tree",
+   "key": "broken",
+   "arm": "A",
+   "sonnet": {
+    "verdict": "broken",
+    "reason": "The change adds two eval scripts, evals/model_files.py and evals/semantic_scale.py, that run against the checkout's src/ and stamp the receipt's `code <sha>` from the tree's HEAD only when writing at the end. They don't use a pinned worktree, don't record HEAD at the start, and don't re-check it or mark the run unusable if it moved, which is the pattern the lesson warns about. The runs are short and produce no briefed samples, so the exposure is small. The reviewer checklist addition (line 27) only says to state when a run came from a worktree and doesn't enforce any of this."
+   },
+   "fable": {
+    "verdict": "not applicable",
+    "reason": "The change does not touch ab_harness, its tree_state/head_moved receipt logic, or any multi-sample run from the working tree; the two new one-shot measurement scripts stamp HEAD once like the existing warm_memory/warm_latency/bench receipts, which is the repo's convention outside the harness the lesson governs."
+   }
+  },
+  {
+   "pr": 325,
+   "lesson": "remote-timeout-not-a-deadline",
+   "key": "broken",
+   "arm": "A",
+   "sonnet": {
+    "verdict": "not applicable",
+    "reason": "The change only reorders the stop request and the stop record in the local warm-server lifecycle and adds a `--spawned` flag. It adds no remote HTTP call, retry loop, timeout budget or write retry for the lesson to govern."
+   },
+   "fable": {
+    "verdict": "followed",
+    "reason": "The change reorders stop() so the request goes first and the stays-off record is written in a finally block, so a stop whose single 0.5 s request fails after sending is still recorded, the CLI reports 'no server answered; one still loading or busy exits when it sees the stop' rather than 'not stopped', the retry is idempotent (touching the same file), and the client already catches post-send TimeoutError and OSError with no retry loop added, which is what the lesson prescribes."
+   }
+  },
+  {
+   "pr": 343,
+   "lesson": "doc-claim-governs-doc-and-code",
+   "key": "followed",
+   "arm": "B",
+   "sonnet": {
+    "verdict": "not applicable",
+    "reason": "The added CHANGELOG and docs/DEVELOPING.md sentences describe a documentation process and a new test. They state no command, flag, default, number, version requirement or refusal behaviour of okl's code, and the okl-drift.json edits only re-verify existing rules."
+   },
+   "fable": {
+    "verdict": "broken",
+    "reason": "The new DEVELOPING.md sentence states code facts (the file and constant name, the trigger phrase ``Settles open question `<id>` ``, the three phrases matched) but the only wiring is a NOT_OPEN entry that greps the doc for a typed copy of the phrase list, so renaming SETTLES's trigger, OPEN_QUESTIONS, or widening OPEN_PHRASE would leave the doc stale with nothing red, and no okl rule names both docs/DEVELOPING.md and tests/test_docs.py."
+   }
+  },
+  {
+   "pr": 343,
+   "lesson": "n_aa3e45a2ecd6",
+   "key": "broken",
+   "arm": "A",
+   "sonnet": {
+    "verdict": "not applicable",
+    "reason": "The change adds a docs check for open-question sentences and touches neither evals/ab_harness.py nor evals/tasks.jsonl, so it does not handle the eval tasks' defect_node provenance ids that the lesson governs."
+   },
+   "fable": {
+    "verdict": "broken",
+    "reason": "The change introduces a new provenance reference (a `Settles open question <id>` marker in REPORT/CHANGELOG pointing at an OPEN_QUESTIONS id) but only checks the direction known-question -> settled set, so a marker whose id matches no known question is silently ignored rather than failing, which is exactly the typo-survives-indefinitely rot the lesson says to prevent by refusing on a miss."
+   }
+  },
+  {
+   "pr": 343,
+   "lesson": "n_aa3e45a2ecd6",
+   "key": "broken",
+   "arm": "B",
+   "sonnet": {
+    "verdict": "not applicable",
+    "reason": "The change adds question ids that `test_every_open_question_in_the_docs_names_what_settles_it` matches against the docs and the `Settles open question` text on every test run, and it fails on an entry with no matching sentence. The `verified_commit` edits in okl-drift.json only refresh existing receipts and add no new unread provenance field."
+   },
+   "fable": {
+    "verdict": "broken",
+    "reason": "The change introduces a provenance identifier (the open-question id written as ``Settles open question `<id>` `` in REPORT or CHANGELOG), but the check only intersects found ids with OPEN_QUESTIONS and never fails on an id that matches no entry, so a mistyped or stale id in a receipt passes silently, which is exactly the rot the lesson says to refuse at check time."
+   }
+  },
+  {
+   "pr": 362,
+   "lesson": "n_5ddb0776a863",
+   "key": "followed",
+   "arm": "B",
+   "sonnet": {
+    "verdict": "followed",
+    "reason": "The new `okl check --path` briefing carries `store_records` when nothing matches and renders an empty store as 'EMPTY ... proves nothing' rather than 'no lesson governs', and it refuses empty paths and a service too old to answer `paths` rather than reading them as clean, so the lesson's conditions are met (or it states no clean result at all)."
+   },
+   "fable": {
+    "verdict": "broken",
+    "reason": "The new file briefing refuses an empty path list, an unconfigured or older service, and an empty store, but when every given path falls outside the repo `_check_files` passes an empty `inside` list to `check_paths` and the actions/compact format (the one meant for subagents and CI) prints 'OKL: no lesson governs  (repo).' with exit 0, a clean result over zero inspected files with no count or 'outside repo' note beside it."
+   }
+  },
+  {
+   "pr": 380,
+   "lesson": "n_02cc84da158d",
+   "key": "broken",
+   "arm": "A",
+   "sonnet": {
+    "verdict": "followed",
+    "reason": "The change adds no entry point that ignores OKL_DATABASE_URL: the new doctor and init interest reports read through `Client()`, which honours the variable, and the added `_no_store_yet` probe checks the same variable before the config-adjacent okl.db, so nothing can be written to a different target. `_no_store_yet` does re-derive the storage target instead of sharing Client's resolution, and it treats an empty-string variable differently from `Client._local_store`. That gap only affects whether doctor skips a read, so it is a minor drift and not a break of the lesson."
+   },
+   "fable": {
+    "verdict": "broken",
+    "reason": "The new _no_store_yet helper re-derives the storage target from OKL_DATABASE_URL and the config-adjacent okl.db in a second place instead of calling Client._local_store's single resolution, and already disagrees with it (an empty OKL_DATABASE_URL is 'unset' to the client but a non-sqlite URL to the helper, and sqlite:// relative forms are :memory: to Store but a real path to the helper), so doctor can silently skip or silently create a store other than the one the client actually opens."
+   }
+  },
+  {
+   "pr": 380,
+   "lesson": "n_5ddb0776a863",
+   "key": "followed",
+   "arm": "A",
+   "sonnet": {
+    "verdict": "not applicable",
+    "reason": "The change adds informational interest-hiding lines to doctor, init and metric, which are not a CI gate and never print a clean or all-clear result. They stay silent when no store exists or nothing is hidden, say 'could not be read' when the store is unreadable, and make no claim at all when an older service sends no count."
+   },
+   "fable": {
+    "verdict": "followed",
+    "reason": "The change touches what the lesson governs (a store-reading report line and a count beside the metric's clean figures) and does what it says: it refuses to read an unconfigured store rather than silently creating okl.db, prints 'not reported, the store could not be read' instead of silence on a refused or unreachable read, carries the inspected count in every hidden-lessons line, and claims nothing when an older service sends no count, with tests asserting doctor creates no store and never reads a failed read as clean."
+   }
+  },
+  {
+   "pr": 380,
+   "lesson": "seed:geospatial-enforcement-defects:r_single_source_sets",
+   "key": "followed",
+   "arm": "B",
+   "sonnet": {
+    "verdict": "broken",
+    "reason": "The change adds a new literal `_UNBRIEFED = frozenset({\"superseded\", \"obsolete\"})`, which restates part of the canonical `RETIRED_STATUSES` (`store.py:43`, which also holds \"retracted\"), instead of deriving it as `RETIRED_STATUSES - {\"retracted\"}`; the same pair is also still a literal at `core.py:1008`. The `DEFAULT_INTERESTS` part is fine: it is single-sourced, and `install.py:624` now imports it in place of the old `{\"security\", \"method\"}` literal."
+   },
+   "fable": {
+    "verdict": "followed",
+    "reason": "The change creates one canonical DEFAULT_INTERESTS and one _UNBRIEFED frozenset in core.py and replaces the prior literals (install.py's {\"security\", \"method\"} and exposure_report's (\"superseded\", \"obsolete\")) with imports of them, so both new uses in hidden_by_interests and doctor derive from the single definition rather than restating it."
+   }
+  },
+  {
+   "pr": 169,
+   "lesson": "docs-agent-neutral",
+   "key": "related",
+   "arm": "A",
+   "sonnet": {
+    "verdict": "not applicable",
+    "reason": "The change only bumps the version from 0.8.3 to 0.8.4 and re-stamps drift checks, so it adds no agent-specific wording and removes no Claude Code labelling from the docs."
+   },
+   "fable": {
+    "verdict": "followed",
+    "reason": "The change only bumps version strings in the agent-neutral CI gate examples in docs/GETTING-STARTED.md and re-verifies the docs-agent-neutral check in okl-drift.json, so the docs stay agent-neutral and no Claude Code-only wording is added or unlabelled."
+   }
+  },
+  {
+   "pr": 259,
+   "lesson": "seed:geospatial-enforcement-defects:r_single_source_sets",
+   "key": "related",
+   "arm": "A",
+   "sonnet": {
+    "verdict": "not applicable",
+    "reason": "The change adds a relevance floor that reuses the canonical `briefing_terms(task)` and does not restate any existing constant, set or class scheme as a literal; the only repetition is the same word-boundary regex written twice inside the new helpers, which is a pattern, not a canonical fact."
+   },
+   "fable": {
+    "verdict": "followed",
+    "reason": "The floor rule is defined once in core._apply_floor and the diagram renderer imports and runs it rather than restating the threshold, and no canonical importable constant exists for the field tuple or word-boundary regex the new helpers spell out (store.py only has them as SQL literals), so nothing already single-sourced was re-hardcoded."
+   }
+  },
+  {
+   "pr": 259,
+   "lesson": "seed:geospatial-enforcement-defects:r_single_source_sets",
+   "key": "related",
+   "arm": "B",
+   "sonnet": {
+    "verdict": "followed",
+    "reason": "The floor of 2 is defined once in `_apply_floor`, and the diagram renderer imports and calls that function instead of restating the threshold. `check()` also calls it, and its counts come from a live trace. No existing canonical constant or set was copied as a literal."
+   },
+   "fable": {
+    "verdict": "broken",
+    "reason": "The new _matched_terms restates the FTS5-indexed field list (title, symptom, body, fix, tags) as a literal tuple that must stay equal to the node_fts schema in store.py with no shared constant, derivation, or parity test; the same word-boundary regex is written twice; and the new test re-hardcodes the exit_code_trust accepted gap and the bucket list that evals/preflight.py already defines as ACCEPTED_GAPS and its bucket tuple."
+   }
+  },
+  {
+   "pr": 326,
+   "lesson": "seed:geospatial-enforcement-defects:r_single_source_sets",
+   "key": "related",
+   "arm": "A",
+   "sonnet": {
+    "verdict": "not applicable",
+    "reason": "The diff adds CI check scripts, docs and log edits, and restates no existing canonical constant or set. The `LIMIT = 12` in the new check is the closest case. But the default of 12 exists only as separate literals in `core.check` and the service's request model, so there is no canonical constant to import. The check pins the documented value on purpose, to compare it against those literals."
+   },
+   "fable": {
+    "verdict": "broken",
+    "reason": "The change writes the set of named rival memory tools (mem0, zep, letta, cognee, claude-mem, agentmemory) as a separate literal in two new ci scripts with no shared source, and restates the briefing limit 12 as a third inline literal beside core.check and CheckReq, so these facts are now free to diverge."
+   }
+  },
+  {
+   "pr": 326,
+   "lesson": "seed:geospatial-enforcement-defects:r_single_source_sets",
+   "key": "related",
+   "arm": "B",
+   "sonnet": {
+    "verdict": "followed",
+    "reason": "The change adds no unguarded copy of a canonical fact: the restated limit of 12 in check-check-defaults.py is asserted equal to core.check's default and the service's CheckReq.limit, and check-test-imports.py derives its declared packages from ci.yml and pyproject.toml instead of restating them."
+   },
+   "fable": {
+    "verdict": "broken",
+    "reason": "The new BLIND tuple, the non-blind branch of hidden(), and the new test each restate the snapshot filename \"okl-drift.json\" as a literal although okl.drift.SNAPSHOT_FILE is the canonical import reachable from that script (it already runs under PYTHONPATH=src and uses the okl store), and the new check-defaults script pins LIMIT = 12 as a third literal copy beside core.check's and CheckReq's defaults without creating one named definition for them, so only the first fact has a test holding the copies equal and neither derives from a single source."
+   }
+  },
+  {
+   "pr": 131,
+   "lesson": "n_e7988ff536fb",
+   "key": "related",
+   "arm": "A",
+   "sonnet": {
+    "verdict": "not applicable",
+    "reason": "The change adds a `--compact` output option and hook env vars, with no new command or error path that returns 0 or 1 for a run that did not happen; the hook's retry on argparse's exit 2 re-runs the check and still delivers a briefing, so a failed run is never reported as clean."
+   },
+   "fable": {
+    "verdict": "followed",
+    "reason": "The new --compact flag only changes which renderer produces the briefing and adds no exit path, cmd_check still returns 2 on every did-not-run condition (the unconfigured test is kept and still asserts 2), and the hook's new fallback re-runs the check in full when an older okl rejects --compact rather than mapping that 2 to 0, so any remaining failure still surfaces as a blocking 2 with its stderr reason."
+   }
+  },
+  {
+   "pr": 101,
+   "lesson": "n_adea7f2c7373",
+   "key": "related",
+   "arm": "B",
+   "sonnet": {
+    "verdict": "followed",
+    "reason": "The change adds no new subprocess call: the new briefing path sends the stored `files` globs through the existing `_git_last_change_ms`, which uses list-form argv with `--` before the pathspecs, and no stored command is run. The one gap is that the new test passes no hostile glob; the guard is asserted only by a source-string check in tests/test_scaffold.py."
+   },
+   "fable": {
+    "verdict": "broken",
+    "reason": "The change opens a new path where a stored files field, now including a remote service's /check response, reaches git on every consumer's check, and while it reuses the list-form call with a -- guard, neither the new test nor any existing test passes a hostile-looking glob (leading dash, semicolon, wildcard) and asserts it is treated as data; the only coverage is a string match on the guard in test_scaffold.py."
+   }
+  },
+  {
+   "pr": 89,
+   "lesson": "n_e7988ff536fb",
+   "key": "related",
+   "arm": "A",
+   "sonnet": {
+    "verdict": "not applicable",
+    "reason": "The change is docs and drift-snapshot updates only, with no new okl command or error path. The docs describe the 0/1/2 contract correctly, and the sample pre-push hook is user-side shell, not okl returning 0 for a run that did not happen."
+   },
+   "fable": {
+    "verdict": "followed",
+    "reason": "The change adds no command or error path and only documents the drift gate's exit codes, and its description (0 clean, 1 drift, 2 could not check, e.g. no snapshot) matches the refuse-with-2-to-stderr paths in cmd_drift; the pre-push hook's choice to not block on 2 is a documented downstream consumer decision, not a change to the CLI's own codes."
+   }
+  },
+  {
+   "pr": 307,
+   "lesson": "docs-agent-neutral",
+   "key": "related",
+   "arm": "B",
+   "sonnet": {
+    "verdict": "not applicable",
+    "reason": "The doc edits only correct measured figures (model sizes and search latencies) and update a contributor-facing CI table row about this repo's own review job, so they say nothing new about how okl works with an agent. One edited line still mentions 'the hook' without a Claude Code label (COSTS-AND-KNOBS.md:141), but that wording was already there and the change only touched the numbers around it."
+   },
+   "fable": {
+    "verdict": "followed",
+    "reason": "The docs edits are figure corrections plus one DEVELOPING.md row about okl's own repo CI that names the maintainer's Claude subscription while also saying REVIEW_CMD swaps in any other CLI, and the unlabelled 'the hook runs okl check' phrase in COSTS-AND-KNOBS.md is pre-existing wording only reflowed, so no new agent-specific claim about what okl or your agent does was introduced."
+   }
+  },
+  {
+   "pr": 259,
+   "lesson": "n_00985805cdbb",
+   "key": "related",
+   "arm": "B",
+   "sonnet": {
+    "verdict": "followed",
+    "reason": "The new comments give the cause and cite the incident (#257 and the probe file, which exists), and the behaviours they claim (weak matches counted, matched_terms in the JSON, the floor rule) are asserted by the new tests. The one weak spot is the eval-recall test, whose docstring and name say all eight tasks while it skips exit_code_trust. That skip is explained inline and does not make the claim false."
+   },
+   "fable": {
+    "verdict": "broken",
+    "reason": "Two new test docstrings claim what their assertions do not check: the one-word-task test uses \"price\", which sits in the record's title and so passes the floor through the title-or-symptom rule regardless of the one-word lowering, and the linked-gate test's gate title contains the task word \"decoder\", so the gate clears the floor on its own and the CATCHES link is never what keeps it; the new n_symptom docstring also just restates the line below it."
+   }
+  }
+ ],
+ "api_priced_usd": 127.17,
+ "script_sha256": "d739e96a6ebed45428e92da17838d3558fa2e565018510693eec4de6f2343516",
+ "okl_commit_at_start": "8712070",
+ "okl_commit": "8712070"
+}

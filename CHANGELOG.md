@@ -21,6 +21,20 @@
     diagram's `.svg` with its `.excalidraw` only by the names in them, so a source whose prose
     changed and whose render was never re-exported passed. It now compares every line, and
     names the lines only one side has.
+  - **Tests fake only what okl owns:** `tests/test_mock_ownership.py` reads every patch the
+    tests make, resolves its target through the file's imports, and fails a new one that
+    replaces a library okl does not own (a fake of fastembed and of huggingface_hub's constants
+    were two of the lesson's past breaks). The twelve already there are listed with why, and the
+    list only shrinks.
+  - **The client and the service agree on every field:** the service's request models drop a
+    key they do not have, so a field only the client knew did nothing over a shared service.
+    `tests/test_client_service_contract.py` checks that each core function behind the service
+    has a model field for every keyword, and that every body the real client posts through
+    the real app names only fields its path reads.
+  - **One definition of a fact:** `tests/test_single_source.py` treats every string collection
+    defined at module level in `src/okl` as canonical and fails when its values are written out
+    anywhere else. Four copies inside the package now import the definition; the ones left are
+    listed with why, and the list only shrinks.
 
 - **The review after writing: `okl check --change`** (REPORT §4at; opt-in). A briefing is
   chosen from the task's words before any code exists, and the lessons a change goes on to

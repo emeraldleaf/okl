@@ -1,0 +1,130 @@
+{
+ "section": "4av",
+ "at": "2026-11-10T19:42Z",
+ "half": "dev",
+ "prompt": "7b2f46b1d66ab41b",
+ "conditions": "b1691684317188e2",
+ "frozen": null,
+ "cases": 35,
+ "complete": 35,
+ "kappa": {
+  "B": 0.874
+ },
+ "agree": {
+  "B": 32
+ },
+ "broken_calls": {
+  "B/sonnet": 24,
+  "B/fable": 22
+ },
+ "per_lesson_agree": {
+  "doc-claim-governs-doc-and-code": {
+   "B": "2/2"
+  },
+  "n_e7988ff536fb": {
+   "B": "2/2"
+  },
+  "n_6b65aa35593c": {
+   "B": "2/2"
+  },
+  "seed:geospatial-enforcement-defects:r_single_source_sets": {
+   "B": "2/2"
+  },
+  "harness-reads-a-moving-working-tree": {
+   "B": "2/2"
+  },
+  "n_5ddb0776a863": {
+   "B": "2/2"
+  },
+  "remote-timeout-not-a-deadline": {
+   "B": "1/1"
+  },
+  "n_00985805cdbb": {
+   "B": "2/2"
+  },
+  "remote-path-test-through-client": {
+   "B": "1/2"
+  },
+  "falsifier-relative-to-control": {
+   "B": "2/2"
+  },
+  "n_02cc84da158d": {
+   "B": "2/2"
+  },
+  "seed:python-canon:py_dont_mock_what_you_dont_own": {
+   "B": "1/1"
+  },
+  "docs-agent-neutral": {
+   "B": "1/2"
+  },
+  "n_adea7f2c7373": {
+   "B": "1/2"
+  },
+  "n_8a6e1abce5cc": {
+   "B": "2/2"
+  },
+  "n_0637c92c032f": {
+   "B": "2/2"
+  },
+  "n_aa3e45a2ecd6": {
+   "B": "1/1"
+  },
+  "comparison-table-one-sitting-generated": {
+   "B": "1/1"
+  },
+  "n_849a5b0425ef": {
+   "B": "2/2"
+  },
+  "seed:python-canon:py_unclosed_sqlite": {
+   "B": "1/1"
+  }
+ },
+ "disagreements": [
+  {
+   "pr": 163,
+   "lesson": "remote-path-test-through-client",
+   "key": "followed",
+   "arm": "B",
+   "sonnet": {
+    "verdict": "broken",
+    "reason": "The change adds POST /retire and Client.retire, and the only test over the remote client (test_mcp_and_a_service_can_retire) retires one lesson with a replacement (by=\"b\"). The default call that makes the client send by=null, the obsolete flag, and the 400 and 404 error mapping are never exercised through the client against the service, and every other retire test runs in local mode."
+   },
+   "fable": {
+    "verdict": "followed",
+    "reason": "The change adds POST /retire and Client.retire, and it ships one test that drives the new endpoint through the real client (MCP okl_retire -> Client.retire -> urlopen patched to a TestClient via the new remote fixture) sending every field of RetireReq; the client trims or filters nothing before posting, so no empty-after-filter input exists to cover."
+   }
+  },
+  {
+   "pr": 77,
+   "lesson": "docs-agent-neutral",
+   "key": "followed",
+   "arm": "B",
+   "sonnet": {
+    "verdict": "broken",
+    "reason": "The change largely follows the lesson. It adds a 'Using another agent' section, names okl_check and okl_record as the MCP path, and labels /record and the Stop hook as Claude Code. But the README's step 3 (new text, around line 327) names `/seed-from-codebase` as a command that has 'your agent' propose records, with no Claude Code label. The 'pre-task hook' bullet (around line 336) is also unlabelled within that bullet, so question 2 fails."
+   },
+   "fable": {
+    "verdict": "followed",
+    "reason": "The rewritten README and getting-started guide say 'your agent', name okl_record/okl_check and the CLI as the path any MCP agent uses, label /record, /seed-from-codebase, the Stop question and the per-prompt notice as Claude Code, and add a 'Using another agent' section, which is exactly what the lesson asks for."
+   }
+  },
+  {
+   "pr": 77,
+   "lesson": "n_adea7f2c7373",
+   "key": "broken",
+   "arm": "B",
+   "sonnet": {
+    "verdict": "not applicable",
+    "reason": "The only new path that sends stored data to a shell is `okl reverify`, which lists the stored commands and runs them only after a typed confirmation or `--yes`, so it falls under the lesson's designed-shell-path exception; the other new subprocess calls are list-form calls in tests that take no stored data."
+   },
+   "fable": {
+    "verdict": "followed",
+    "reason": "The only new path from stored data to a shell is okl reverify, which the lesson names as the designed path; it lists each stored command, refuses unattended without --yes (tested at CHANGE.diff:1792-1793), and routes through the pre-existing cmd_verify, while every other new subprocess call is list-form and the drift pathspec -- guard is untouched."
+   }
+  }
+ ],
+ "api_priced_usd": 28.04,
+ "script_sha256": "cb298f03ccd66173a75ff8bd44c797f3853878ee158c2c2bd4d0010b50a17f2b",
+ "okl_commit_at_start": "7e4ce89+dirty",
+ "okl_commit": "7e4ce89+dirty"
+}
