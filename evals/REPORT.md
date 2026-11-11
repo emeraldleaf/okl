@@ -6080,6 +6080,42 @@ The reading points at handing lessons over one at a time, once the code exists (
 works when the agent is also given lessons that do not apply is not tested here: every arm with one
 lesson had the right one.
 
+## 4ay. PRE-REGISTERED, A PILOT: the same ten lessons, asked about one at a time (2026-11-11)
+
+Written before any session in this section runs. §4ax found that a lesson which changes the code
+when it stands alone mostly does not in a list of ten. This tests the direction that points at:
+hand the lessons over one at a time, once the code exists. The risk is the other nine, which mostly
+do not apply: an agent asked about each may invent problems.
+
+**Arms, on §4aw's five tasks, five repeats each, 75 sessions in a seeded order.**
+- *one at a time:* the same ten lessons as §4ax, in the same seeded order, each in its own fresh
+  session in one working copy, so edits carry forward. Each is asked: "This team keeps the lesson
+  below. Check this change against it: if the change breaks it, fix that; if it does not, or the
+  lesson has no bearing on this change, change nothing for it."
+- *list:* §4ax's ten-plain, re-run as the control.
+- *alone:* §4ax's alone-told, re-run as the ceiling.
+
+Everything else is §4ax's: the frozen start, Sonnet, the limited tools, and §4aw's behaviour graders,
+run on the tree each session leaves.
+
+**Measures.** Pass rate per arm, averaged over tasks. Noise: passes on the nine other lessons that
+edited anything, per one-at-a-time session, and sessions that broke another test.
+
+**Reading, against the list and the lesson alone in the same sitting, with at least 68 of the 75
+complete.** One at a time is *no better than the list* if it is less than 0.25 above it. If it clears
+that but is more than 0.15 below alone, it is *better than the list, short of alone*. Otherwise it
+*works* if the median session made at most 2 edits for the other nine and broke another test in at
+most 2 more sessions than the list, and *catches it, but noisy* if not. The noise limits are a
+shipping bar, labelled as one: an edit for another lesson may be a real fix, so they bound
+interruption and do not measure error.
+
+**Threats.** §4aw's and §4ax's. Every arm is still given the right lesson among its ten; choosing
+ten from what the code does is a further step, tested separately (§4at's model pick reached 40% at
+ten). The nine others were chosen from the task's words, so they may be easier to dismiss than
+lessons chosen from the code. Ten sessions cost about ten times one, and that cost is reported.
+
+**Budget.** 25 ten-pass sessions and 50 single ones, about 300 Sonnet calls.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

@@ -145,3 +145,39 @@ def test_the_list_results_figures_are_the_receipts():
     flat = " ".join(section.split())
     assert f"edited in {edited['ten_told'] + edited['ten_plain']} of 50 sessions, against {edited['alone_told'] + edited['alone_plain']} of 50 alone" in flat
     assert not any(receipt["sessions_with_harm"].values())
+
+
+def _one_module():
+    spec4 = importlib.util.spec_from_file_location("replay_one", REPO / "evals" / "replay_one.py")
+    assert spec4 and spec4.loader
+    mod = importlib.util.module_from_spec(spec4)
+    spec4.loader.exec_module(mod)
+    return mod
+
+
+def test_one_at_a_time_asks_about_the_same_ten_in_the_same_order():
+    """§4ay hands over §4ax's list: ten lessons, one of them right, in the list's own place."""
+    one, rl = _one_module(), _list_module()
+    for t in replay.tasks():
+        for rep in range(replay.REPEATS):
+            lessons = one.order(t, rep)
+            assert len(lessons) == 10 and sum(right for right, _ in lessons) == 1
+            assert lessons[rl.position(t["pr"], rep)] == (True, t["lesson_text"].strip())
+            listed = rl.told(t, "ten_plain", rep)
+            assert [listed.index(text) for _, text in lessons] == sorted(listed.index(text) for _, text in lessons)
+
+
+def test_the_one_at_a_time_reading_follows_the_stated_rule():
+    """No better, short of alone, works, or noisy, against the same sitting's list and lesson alone."""
+    one = _one_module()
+    arm = one.ONE
+    quiet = {arm: 0, "ten_plain": 0, "alone_told": 0}
+    base = {"ten_plain": 0.2, "alone_told": 0.6}
+    assert one.reading({**base, arm: 0.4}, True, 0, quiet) == "no better than the list"
+    assert one.reading({**base, arm: 0.45}, False, 0, quiet) == "not complete"
+    assert one.reading({**base, arm: 0.45 - 0.01 + 0.01}, True, 0, quiet) in ("works", "better than the list, short of alone")
+    assert one.reading({**base, arm: 0.5}, True, 2, quiet) == "works"
+    assert one.reading({**base, arm: 0.5}, True, 3, quiet) == "catches it, but noisy"
+    assert one.reading({**base, arm: 0.5}, True, 0, {**quiet, arm: 3}) == "catches it, but noisy"
+    low = {"ten_plain": 0.1, "alone_told": 0.8}
+    assert one.reading({**low, arm: 0.4}, True, 0, quiet) == "better than the list, short of alone"
