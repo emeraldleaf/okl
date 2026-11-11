@@ -7,7 +7,8 @@ tells the story that led here.
 **Why this reading.** REPORT §4as to §4au found that lessons shown to the agent were followed no
 more often than lessons not shown, that search could not find the lessons a change broke, that a
 model reading every lesson's line could find them but then judged most of them followed, and
-that three models agree only about half the time on whether a change breaks a lesson. So the
+and that a third model could not settle the cases the reviewer and the key disputed (§4av later
+found that two models agree well on cases not chosen for dispute). So the
 question became whether each layer of okl follows what others have measured.
 
 **How it was read.** Three threads, one per group of layers: recording and format; presentation
@@ -23,7 +24,7 @@ Products are not compared here, as on the related-work page.
 | | What the research supports | Where okl departs from it |
 |---|---|---|
 | **Recording** | Lessons as "when this, do that" with a stated boundary; abstract lessons over raw traces; explicit retire and supersede. | The agent records lessons mid-session and they are briefed at once. Studies that compared the two found that admitting only what was confirmed beat admitting everything, and in SkillsBench skills an agent wrote for itself scored below having none. 284 of okl's 379 live lessons have no check. |
-| **Format** | Checkable conditions. Breaking a vague criterion into yes/no questions raised agreement between judges by 0.45 (CheckEval). | Broad process lessons ("wire a doc claim to a check") are the ones models disagree on, and the most broken. No lesson says when it does not apply. |
+| **Format** | Checkable conditions. Breaking a vague criterion into yes/no questions raised agreement between judges by 0.45 (CheckEval). | Broad process lessons ("wire a doc claim to a check") are the most broken. No lesson says when it does not apply. |
 | **Presentation** | Direct instructions; a stated reason; the long material before the question. Code takes precedence over a stale instruction when told so in one sentence (4.2% to 91.4%). | The one-line tier says "if one fits this task, read it", the least-followed wording in a study of policy wording. The review after writing puts its steps before an 80 KB list. Lessons that arrive as tool output rank below instruction files. |
 | **Use** | Correction with external feedback (tests, tools, checks) works. Gates have the strongest support of any okl mechanic. | The review asks the agent to judge its own code against each lesson, and judges are more than 50% more likely to pass their own output on a criterion it fails. |
 | **Escalation** | Asking the user helps on underspecified tasks, with structural triggers. | okl has no escalation step, and "ask when unsure" is not a trigger models can use: they are poor judges of when they are unsure. |
@@ -38,7 +39,7 @@ Merged across the three threads. Each is a proposal to measure before it ships.
 1. **Fix the answer key first.** Audit a small random sample by hand, sized for prediction-powered inference, and report agreement among people, between people and models, and between models. Every real-work figure rests on it. Cost: a few hours of one person's time.
 2. **Hold agent-written lessons as proposed** until a check is seen red then green, or a person confirms against evidence; keep them out of briefings or mark them. The strongest agreement across the recording studies. Cost: a new state and a briefing filter.
 3. **Rewrite the framing lines.** Direct wording instead of "if one fits"; the code-precedence sentence for unchecked lessons; the review's steps both before and after its list. Cost: text, tested on the seeded tasks first, since which wording works best differs by model.
-4. **Rewrite the most-broken broad lessons as two to four yes/no conditions,** each naming a file, a pattern or a command, with a line saying when the lesson does not apply. Cost: low, starting with the 20 that hold 65% of breaks.
+4. **Rewrite the most-broken broad lessons as two to four yes/no conditions,** each naming a file, a pattern or a command, with a line saying when the lesson does not apply. Cost: low, starting with the 20 that hold 65% of breaks. *Measured since (REPORT §4av): on these 20, conditions did not raise agreement between judges, which was already high, and they raised false alarms, so they did not ship.*
 5. **Gate the high-stakes lessons a script can check** (#415, under way).
 6. **Rebuild the review.** okl preselects lessons from the diff instead of listing all of them; each lesson is checked on its own, in a fresh context, with the reasoning before the verdict; high-stakes items get a second model. Cost: medium.
 7. **Add the per-task protocol:** brief, commit, act, verify, and escalate on four triggers (reversing a recorded decision; two readings that produce different code; an irreversible action; a check whose fix conflicts with the task), with the agent's report on each lesson re-checked by okl. Cost: low to medium.

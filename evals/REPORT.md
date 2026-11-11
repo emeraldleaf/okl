@@ -5773,6 +5773,13 @@ model's key cannot say how good the review is, because the models do not agree o
 A key that does not rest on a model's judgement is needed: the outcome replay, graded by the
 tests a real fix added (#390 item 5), or people (#394, #413). $18.18 API-priced.
 
+*Corrected reading (2026-11-11, from §4av).* "Three models agree about as often as not" does not
+hold as a statement about okl's lessons. These 24 cases were chosen because a reviewer and the key
+had disagreed on them, or as a control of four, so they are the disputed ones, and four is too few
+to read a rate from. On §4av's 70 cases, chosen without regard to disagreement, two models given
+one lesson at a time agreed on 62. What stands is narrower: this third model did not settle these
+cases.
+
 ## 4av. PRE-REGISTERED: do yes/no conditions make two models agree on whether a change broke a lesson? (2026-11-10)
 
 Written before any call in this section runs. §4au's follow-up found that three models, asked
@@ -5865,6 +5872,29 @@ changed:
   row as the mention, not only elsewhere in the document.
 
 The conditions are frozen at `5b30c4808857b727`.
+
+**Result (2026-11-11): the rule fails, so the conditions do not ship.** All 280 calls answered and
+all 70 cases are complete (receipt `conditions-agree-test-20261111-0007.json`). The first pass
+stopped at a usage limit at call 149 and was resumed at the same commit, prompt and conditions.
+1. Agreement: kappa 0.742 without the conditions and 0.599 with them, a gain of -0.143, interval
+   [-0.368, 0.094]; under the 0.15 bar. On broken or not, the judges agreed on 62 of 70 and 56 of 70.
+2. Flagged: of the 35 cases the key calls broken, at least one judge called 26 broken without the
+   conditions and 31 with them. The silence guard holds.
+3. False alarms: on the 15 related cases, 1 broken call without the conditions and 4 with them; over
+   arm A plus 2, so the noise guard fails.
+4. Cost: $127.17 API-priced for the test half and $28.04 for the pilot, which a Max plan does not pay.
+
+What it means, not pre-registered. The section's premise was wrong: without any conditions, two
+models reading one lesson at a time already agree well, so §4au's follow-up described its disputed
+cases and not the lessons (corrected there). The pilot's 0.87 had no arm A and misled in the same
+direction. The conditions do change the verdicts: they make the judges stricter, from 46 broken
+calls to 74. Cases both judges call broken among the key's broken rose from 19 to 28, and broken
+calls on the 20 the key calls followed rose from 0 to 11. Whether that strictness is right or
+over-reach needs a key that is not a model. Reading one lesson at a time, Sonnet called 21 of the
+35 broken (60%), against the 17% a single session reached reading the whole list in §4au; those are
+different cases and not a comparison, but they point the same way as the reading's advice to check
+each lesson on its own. Agreement also says nothing about whether an agent follows a lesson, which
+§4aw tests.
 
 ## 5. Findings
 
