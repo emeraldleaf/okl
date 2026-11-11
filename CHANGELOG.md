@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **The review after writing checks each lesson on its own** (REPORT §4ax, §4ay). On five
+  real past bugs, ten lessons handed over together fixed about one in twelve, and the same ten
+  asked about one at a time fixed as many as the right lesson alone. So `okl check --change`
+  now asks the agent to check each lesson it picks in a fresh sub-agent, one lesson and one
+  question each, one after another; an agent that cannot start one checks them one at a time
+  itself and says the review ran without fresh contexts. It costs more per review, and it
+  stays off by default until a test with okl choosing the lessons itself is in.
+
 - **Checks for the lessons past work kept breaking** (#415). Twenty lessons hold two-thirds of
   the breaks found in past work, and showing a lesson did not make it followed, so the
   scriptable ones now fail the build:

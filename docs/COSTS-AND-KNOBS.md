@@ -127,7 +127,10 @@ read all of it. okl calls no model for this; the agent's own turns are the cost.
 20 of this repository's changes with 280 lessons in scope (REPORT §4au), one review took a
 median of about 170,000 tokens, nearly all of them cached context the session re-reads, about
 $0.21 at API prices and 43 seconds. That cost, and a catch rate below the bar §4au set, are why
-it is off by default.
+it is off by default. Since §4ay the agent checks each lesson it picks in its own fresh
+sub-agent, which costs more again: in that test, ten lessons asked one at a time took about
+seven times the cost and six times the time of a single pass. It stays off by default until a
+test with okl choosing the lessons itself says whether that buys enough.
 
 ## Architecture review in CI (off by default)
 

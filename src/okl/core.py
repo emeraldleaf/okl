@@ -1581,10 +1581,17 @@ REVIEW_STEPS = (
     "changes now claim.",
     "From the lessons below, pick the ten this change is most likely to break: the ones about something "
     "the code does. Any that govern a file it touched are listed first, and are read as well.",
-    "Read each with `okl show <id>` (the okl_get tool) and check the code against all of it.",
-    "Change the code only where it breaks one, and run its tests again after any change. Where a lesson "
-    "does not apply, or the code already does what it says, leave the code alone.",
-    "Say which lessons you checked, what you changed for each, and why the rest needed nothing.",
+    "Check each one on its own, in a fresh context: start a sub-agent for it, a session with none of this "
+    "conversation, one lesson each and one after another, since each may change code. Give it the lesson's "
+    "full text (`okl show <id>`, the okl_get tool), the files this change touched, and one question: does "
+    "this change break this lesson? If it does, fix that and run the tests that cover it; if it does not, "
+    "or the lesson has no bearing on this change, change nothing for it. In a pilot on five past bugs, "
+    "the same ten lessons checked together in one pass caught far less than when each was asked on its "
+    "own (REPORT §4ax, §4ay).",
+    "If you cannot start a sub-agent, check them yourself one at a time, one lesson per pass, and say "
+    "the review ran without fresh contexts: that is weaker, and not measured.",
+    "Say which lessons you checked, which a change broke and what you changed for each, and which needed "
+    "nothing.",
 )
 # What the Stop hook adds when a repo turns the review on (`okl init --review-after-writing`).
 REVIEW_NOTE = ("REVIEW AFTER WRITING (on in this repo): before you answer the question below, check the "
@@ -1613,7 +1620,7 @@ def render_review(result: dict[str, Any]) -> str:
              f"This review lists {len(lessons)} lesson(s) in about {max(1, round(size / 1000))} KB. Read all of "
              "it before you pick: if your tool showed only part of this output, read the rest where it saved it.",
              "", "Before you finish, check the code you wrote against this repo's lessons (a step under "
-             "measurement, REPORT §4at):"]
+             "measurement, REPORT §4at to §4ay):"]
     lines += [f"{i}. {step}" for i, step in enumerate(REVIEW_STEPS, 1)]
     lines += ["", "Changed: " + ", ".join(files), ""]
     if not lessons:
