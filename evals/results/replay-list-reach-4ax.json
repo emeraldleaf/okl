@@ -1,6 +1,6 @@
 {
  "section": "4ax amendment",
- "at": "2026-11-11T02:49Z",
+ "at": "2026-11-11T02:57Z",
  "decision": "tiered",
  "interests": [
   "python",
@@ -50,6 +50,6 @@
    "named": 12
   }
  ],
- "okl_commit_at_start": "bc87f80",
- "okl_commit": "bc87f80"
+ "okl_commit_at_start": "cd3cdfc",
+ "okl_commit": "cd3cdfc"
 }
