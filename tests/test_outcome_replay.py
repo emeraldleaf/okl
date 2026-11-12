@@ -371,3 +371,18 @@ def test_the_choosing_reading_follows_the_stated_rule():
     assert pick.reading(rates, 10, [-0.01, 0.3], True) == "choosing does not improve enough"
     assert pick.reading({"pick": 0.45, "screen": 0.55}, 8, [0.01, 0.2], True) == "choosing does not improve enough"
     assert pick.reading(rates, 10, [0.05, 0.3], False) == "not complete"
+
+
+def test_the_choosing_figures_are_the_receipts():
+    """§4bc's result quotes these; each is read from the committed receipt."""
+    receipt = json.loads(sorted((REPO / "evals" / "results").glob("pick-fix-2*.json"))[-1].read_text())
+    report = (REPO / "evals" / "REPORT.md").read_text()
+    section = report[report.index("## 4bc."):report.index("## 5. Findings")]
+    rec, half = receipt["recall"], receipt["by_half"]
+    sizes = {"pick": "10", "chunk": "10", "desc": "10", "anchor": "10", "pool": "30", "screen": f"{receipt['screen_set_mean']} on average"}
+    for arm, size in sizes.items():
+        assert f"| {arm} | {size} | {rec[arm]} | {half['dev'][arm]} | {half['test'][arm]} |" in section, arm
+    low, high = receipt["interval"]
+    assert f"held {receipt['screen_minus_pick']} more of the broken lessons than pick, interval [{low}, {high}]" in " ".join(section.split())
+    assert receipt["reading"] == "choosing does not improve enough" in section
+    assert receipt["changes"] == receipt["of"] == 58 and receipt["broken_lessons"] == 124
