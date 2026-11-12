@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.16.0
 
 - **The review after writing checks each lesson on its own** (REPORT §4ax, §4ay). On five
   real past bugs, ten lessons handed over together fixed about one in twelve, and the same ten
@@ -67,6 +67,9 @@
   missed it: the review picked 12 of the 23 broken lessons but called only 4 broken (17%,
   bar 30%), while wrongly calling a lesson broken rarely (median 0 a change), at about 170,000
   mostly cached tokens a review. The test on other repositories is #413.
+
+- **Dependencies:** pydantic 2.14.3, fastapi 0.162.5, import-linter 2.16, ruff 0.17.4, mypy 2.4.1
+  and uv 0.13.7 (#438).
 
 ## 0.15.0
 
