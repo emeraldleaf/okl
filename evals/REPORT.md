@@ -6180,7 +6180,8 @@ run `okl show`. The agent is told the review is required; a real Stop hook asks 
 
 **Budget.** About 75 sessions and up to 250 sub-agents; the throwaway session cost $0.38.
 
-**Result (2026-11-11): it stays opt-in.** All 75 sessions ran (receipt `review-e2e-20261111-1543.json`).
+**Result (2026-11-11): it stays opt-in.** All 75 sessions ran (receipt `review-e2e-20261111-1543.json`),
+from a worktree of its own at 313df22, whose code the sessions ran.
 
 | arm | pass rate, averaged over tasks | sessions that edited | API-priced cost a session | median time | #115 | #168 | #196 | #198 | #309 |
 |---|---|---|---|---|---|---|---|---|---|
@@ -6200,8 +6201,8 @@ What it means, not pre-registered:
    ceiling from the other side: the right lesson in a picker's ten about half the time.
 3. One session gave its sub-agents only part of the change (one read the first 400 lines of the
    diff), so a sub-agent can miss what lies past what it was handed.
-4. It costs about seven times no review and two and a half times the old one, at three times its
-   time.
+4. It costs 6.9 times no review and 2.6 times the old one, at 2.8 times the old one's time.
+
 ## 4ba. PRE-REGISTERED, A PILOT: does a plan written before any code find the lesson a change needs? (2026-11-11)
 
 Written before any pick in this section. §4ax found the default briefing, built from a task's words,
@@ -6249,8 +6250,9 @@ What it means, not pre-registered:
    three in four (§4ay); from any starting point here the picker put it in its ten about half the
    time. On #196 and #309 no arm found it in any repeat, and those are the two diffs longer than the
    cut, so the diff arm may understate; their plans did not name the mechanism the lesson is about.
-3. §4az, running now, picks from the diff inside the review, so this suggests its ceiling: about
-   half the lessons found, times about three in four fixed when found.
+3. §4az picks from the diff inside the review, and its measured result fits that ceiling: with the
+   agent choosing, the review fixed 0.2 of the five bugs, against about half the lessons found
+   here times about three in four fixed when found (§4ay).
 
 ## 4bb. PRE-REGISTERED, A PILOT: does a line saying when a lesson applies, by mechanism, help a picker find it? (2026-11-11)
 
