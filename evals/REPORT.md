@@ -6128,14 +6128,15 @@ receipt was deleted.
 
 As stated: one at a time is 0.64 above the list and level with the lesson alone. The
 median session made 1 edit for the nine other lessons (26 edits in 225 such passes) and
-none broke another test, inside the shipping bar, so the reading is *works*.
+none broke another test in the grader's file, inside the shipping bar, so the reading is *works*.
 
 What it means, not pre-registered:
 1. The same ten lessons that did almost nothing as a list did as well as the right lesson alone
    when asked about one at a time. The cost of a list is in how lessons are handed over, not in
    the lessons.
 2. The worry was the nine that do not apply. They produced an edit in about one pass in nine, and
-   no edit broke a test; whether those edits were improvements or noise was not judged.
+   no edit broke a test in the grader's file; whether those edits were improvements or noise was
+   not judged.
 3. It costs about seven times as much and six times as long as a single prompt. Ten passes in a
    fresh context each is the expensive way to do this; asking several lessons in one fresh
    context, or only the few a model picks from the change, are cheaper shapes still untested.
@@ -6191,7 +6192,7 @@ from a worktree of its own at 313df22, whose code the sessions ran.
 
 As stated: 84% of the each-alone sessions started a sub-agent (a median of 10), so the steps were followed.
 Each alone is 0.2 above one pass, clearing 0.15, but 0.2 above none, short of 0.25.
-No session broke another test. So the review *stays opt-in*.
+No session broke another test in the grader's file. So the review *stays opt-in*.
 
 What it means, not pre-registered:
 1. With the agent choosing, the old review fixed none of the 25 and the new one fixed 5. The new
@@ -6252,17 +6253,20 @@ What it means, not pre-registered:
    cut, so the diff arm may understate; their plans did not name the mechanism the lesson is about.
 3. §4az picks from the diff inside the review, and its measured 0.2 is well under the ceiling
    this suggests, about half the lessons found here times about three in four fixed when found
-   (§4ay), or about 0.37. Choosing does not explain all of it; §4az's throwaway session also
-   stopped after three of its ten sub-agents, and agents cutting a review short would cost more.
+   (§4ay), or about 0.37 (corrected in the erratum below). Choosing does not explain all of it;
+   §4az's throwaway session also stopped after three of its ten sub-agents, and agents cutting a
+   review short would cost more.
 
-*Erratum (2026-11-12, from a review of Part 9's site copy).* Reading 3 multiplied two averages
-that vary by task, and in opposite places: #115, which the plan and diff arms always found, was
-the one task one at a time never fixed (0 of 5 in §4ay), while #196 and #309, fixed one at a time
-5 and 4 times of 5, were never found. Each task's hit rate here times its one-at-a-time pass rate
-(`replay-one-20261111-1355.json`), averaged over the five tasks, is 0.264 from the diff and the
-same from the plan. That is close to §4az's 0.2, so choosing explains most of the drop, and what
-is left is within what five repeats can resolve. 0.37 was no ceiling: it treated the two rates as
-independent of the task.
+*Erratum (2026-11-12, from a review of Part 9's site copy).* Reading 3 called 0.37 a ceiling.
+It is an estimate, and a rounded one: the averages it names give 0.48 × 0.72 = 0.346. A product of
+averages also ignores that picking and fixing vary by task. Each task's hit rate times its fix
+rate, averaged over the five tasks, keeps them together, but its value depends on which sitting's
+per-task rates are paired, and §4ay's reading 4 found those swings cannot be told from noise.
+Pairing the two picks from the diff (here, and §4bb's without the lines) with the five measures of
+the right lesson handed over on its own (§4aw's T, §4ax's alone told and alone plain, §4ay's alone
+and one at a time), the ten estimates run from 0.2 to 0.4. §4az's 0.2 is at the bottom of that
+range, so choosing accounts for at least about 60% of the drop from 0.72, and perhaps all of it.
+Whether anything else costs as well, such as agents cutting a review short, these runs cannot say.
 
 ## 4bb. PRE-REGISTERED, A PILOT: does a line saying when a lesson applies, by mechanism, help a picker find it? (2026-11-11)
 
