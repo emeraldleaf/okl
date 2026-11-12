@@ -6250,9 +6250,71 @@ What it means, not pre-registered:
    three in four (§4ay); from any starting point here the picker put it in its ten about half the
    time. On #196 and #309 no arm found it in any repeat, and those are the two diffs longer than the
    cut, so the diff arm may understate; their plans did not name the mechanism the lesson is about.
-3. §4az picks from the diff inside the review, and its measured result fits that ceiling: with the
-   agent choosing, the review fixed 0.2 of the five bugs, against about half the lessons found
-   here times about three in four fixed when found (§4ay).
+3. §4az picks from the diff inside the review, and its measured 0.2 is well under the ceiling
+   this suggests, about half the lessons found here times about three in four fixed when found
+   (§4ay), or about 0.37. Choosing does not explain all of it; §4az's throwaway session also
+   stopped after three of its ten sub-agents, and agents cutting a review short would cost more.
+
+## 4bb. PRE-REGISTERED, A PILOT: does a line saying when a lesson applies, by mechanism, help a picker find it? (2026-11-11)
+
+Written before any line or pick in this section. §4az and §4ba found choosing to be the gap: with the
+right lesson in hand an agent fixed about three in four (§4ay), but a picker put it in its ten about
+half the time. On #196 the picker read the faulty line, an eval script loading every file in a
+folder, and missed a lesson written about "audits": a lesson is named after the incident that taught
+it, not the mechanism it is about.
+
+**The lines.** Sonnet, shown only each lesson's full text, never a task, writes one line per lesson
+saying when it applies by what the code or change does, at most 25 words, for the 337 lessons any
+of the five tasks could see (`evals/when-lines-4bb.json`). The file is frozen by hash before any pick.
+
+**Arms, on §4aw's five tasks, five repeats each, 150 picks in a seeded order.** §4ba's picker and
+prompt, from §4ba's three starting points: the task's words, §4ba's own 25 plans (reused, so the
+plans are identical across arms), and the diff cut as in §4ba. Each with the lessons' one-line list
+as §4ba gave it (*plain*), or with each line followed by "applies when:" and its line (*when*). Both
+are re-run here, in one sitting.
+
+**Reading, with at least 135 of the 150 complete.** *The lines help* if, averaged over the plan and
+diff starting points, they raise the hit rate by at least 0.15 against plain in the same sitting;
+otherwise *the lines do not help enough*. The task's words are reported, with no rule.
+
+**Threats.** §4ba's. The lines are a model's; a person or the lesson's author might write better ones.
+They make the list about twice as long, which may itself change what a picker reads.
+
+**Budget.** About 17 calls to write the lines and 150 picks, all Sonnet.
+
+*Correction (2026-11-12, from CI's review of #428).* "On #196 the picker read the faulty line" above
+rests on a check by hand that the line lies inside the part of #196's diff the picker reads; no
+receipt records it. The receipts show only that no arm picked the lesson.
+
+**Amendment before any pick (2026-11-11).** Two fixes to the instrument, neither touching a pick:
+§4ba's plans are read from its committed receipt by name, where a glob would have read the working
+tree (found by the review after writing); and a lesson id the writing model echoed without its seed
+prefix is resolved within its batch, where the first pass dropped those lines. The first writing
+pass also stopped partway at a usage limit. All 337 lines are written, and frozen at `428b12d45bd7256c`.
+
+**Result (2026-11-12): the lines do not help enough.** All 150 picks answered (receipt `when-lines-20261112-0058.json`).
+
+| starting point | plain | with the lines | #115 | #168 | #196 | #198 | #309 (with the lines) |
+|---|---|---|---|---|---|---|---|
+| task | 0.36 | 0.4 | 0.2 | 0.8 | 0 | 1 | 0 |
+| plan | 0.44 | 0.52 | 0.8 | 0.8 | 0 | 1 | 0 |
+| diff | 0.4 | 0.52 | 1 | 0.6 | 0 | 1 | 0 |
+
+As stated: the lines raised the hit rate by 0.08 from a plan and 0.12 from a diff, 0.1 on average, under
+the 0.15 asked.
+
+What it means, not pre-registered:
+1. Nearly all of the gain is one task: #168, whose judge lesson the lines describe by what an eval
+   configures. #196 and #309 stayed at 0 in every arm, with the lines too.
+2. The line written for #196's lesson still says "a CI gate or audit that scans files": shown only
+   the lesson, the writing model kept the lesson's own framing, and nothing in it names an eval
+   script loading a folder. A line written from the lesson alone cannot know which other kinds of
+   code share its mechanism.
+3. On #309 the plans never named the store-resolving code the bug lived in, and in the diff it lay
+   past the cut, so no line on the lesson's side could have helped.
+4. Across §4ba and this, no way of choosing from the information before or just after writing found
+   these two. What would is reading the code where it touches the mechanism, which is what the
+   review's own reading of the change does, or a lesson whose files name the code it governs.
 
 ## 5. Findings
 

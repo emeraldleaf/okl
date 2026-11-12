@@ -286,3 +286,50 @@ def test_the_plan_results_figures_are_the_receipts():
         cells = " | ".join(str(per[arm][k]) for k in ("115", "168", "196", "198", "309"))
         assert f"| {arm} | {hit[arm]} | {cells} |" in section, arm
     assert receipt["reading"] == "the plan does not find it well enough" and receipt["picks"] == 75
+
+
+def _when_module():
+    spec7 = importlib.util.spec_from_file_location("when_lines", REPO / "evals" / "when_lines.py")
+    assert spec7 and spec7.loader
+    mod = importlib.util.module_from_spec(spec7)
+    spec7.loader.exec_module(mod)
+    return mod
+
+
+def test_the_when_lines_reading_follows_the_stated_rule():
+    """The lines help only when plan and diff gain at least 0.15 on average, in the same sitting."""
+    when = _when_module()
+    base = {"task_plain": 0.3, "task_when": 0.3, "plan_plain": 0.5, "diff_plain": 0.5}
+    assert when.reading({**base, "plan_when": 0.7, "diff_when": 0.6}, True) == "the lines help"
+    assert when.reading({**base, "plan_when": 0.6, "diff_when": 0.6}, True) == "the lines do not help enough"
+    assert when.reading({**base, "plan_when": 0.9, "diff_when": 0.9}, False) == "not complete"
+
+
+def test_the_picks_refuse_until_the_lines_are_frozen(monkeypatch, capsys):
+    """No pick is made under lines the pre-registration has not frozen."""
+    when = _when_module()
+    monkeypatch.setattr(when, "FROZEN_LINES", "0" * 16)
+    monkeypatch.setattr(when, "pick", lambda *_: (_ for _ in ()).throw(AssertionError("a pick was made")))
+    assert when.run() == 2 and "not frozen" in capsys.readouterr().err
+
+
+def test_a_shortened_id_from_the_model_resolves_within_its_batch():
+    """A seed id echoed without its prefix still lands; an ambiguous one is left out."""
+    when = _when_module()
+    ids = ["seed:dotnet-canon:r_no_nplus1", "n_abc", "seed:a:x_one", "seed:b:x_one"]
+    assert when.own_id("r_no_nplus1", ids) == "seed:dotnet-canon:r_no_nplus1"
+    assert when.own_id("n_abc", ids) == "n_abc"
+    assert when.own_id("x_one", ids) is None
+    assert when.own_id("missing", ids) is None
+
+
+def test_the_when_lines_figures_are_the_receipts():
+    """§4bb's result quotes these; each is read from the committed receipt."""
+    receipt = json.loads(sorted((REPO / "evals" / "results").glob("when-lines-2*.json"))[-1].read_text())
+    report = (REPO / "evals" / "REPORT.md").read_text()
+    section = report[report.index("## 4bb."):report.index("## 5. Findings")]
+    hit, per = receipt["hit_rate"], receipt["per_task"]
+    for start in ("task", "plan", "diff"):
+        cells = " | ".join(str(per[f"{start}_when"][k]) for k in ("115", "168", "196", "198", "309"))
+        assert f"| {start} | {hit[start + '_plain']} | {hit[start + '_when']} | {cells} |" in section, start
+    assert receipt["reading"] == "the lines do not help enough" and receipt["picks"] == 150

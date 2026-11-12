@@ -1,0 +1,2891 @@
+{
+ "section": "4bb",
+ "at": "2026-11-12T00:58Z",
+ "lines": "428b12d45bd7256c",
+ "picks": 150,
+ "of": 150,
+ "hit_rate": {
+  "task_plain": 0.36,
+  "task_when": 0.4,
+  "plan_plain": 0.44,
+  "plan_when": 0.52,
+  "diff_plain": 0.4,
+  "diff_when": 0.52
+ },
+ "per_task": {
+  "task_plain": {
+   "115": 0,
+   "168": 0.8,
+   "196": 0,
+   "198": 1,
+   "309": 0
+  },
+  "task_when": {
+   "115": 0.2,
+   "168": 0.8,
+   "196": 0,
+   "198": 1,
+   "309": 0
+  },
+  "plan_plain": {
+   "115": 0.8,
+   "168": 0.4,
+   "196": 0,
+   "198": 1,
+   "309": 0
+  },
+  "plan_when": {
+   "115": 0.8,
+   "168": 0.8,
+   "196": 0,
+   "198": 1,
+   "309": 0
+  },
+  "diff_plain": {
+   "115": 1,
+   "168": 0,
+   "196": 0,
+   "198": 1,
+   "309": 0
+  },
+  "diff_when": {
+   "115": 1,
+   "168": 0.6,
+   "196": 0,
+   "198": 1,
+   "309": 0
+  }
+ },
+ "reading": "the lines do not help enough",
+ "gain": {
+  "task": 0.04,
+  "plan": 0.08,
+  "diff": 0.12
+ },
+ "script_sha256": "773983bec2cd1a728ba8736b0bb120732cf43262c5079266e90863fd8a07bf79",
+ "rows": [
+  {
+   "pr": 115,
+   "arm": "plan_plain",
+   "rep": 3,
+   "hit": true,
+   "rank": 3,
+   "picked": [
+    "n_e7988ff536fb",
+    "n_31bde92d9003",
+    "n_adea7f2c7373",
+    "n_805cf67e5cc5",
+    "doc-claim-governs-doc-and-code",
+    "n_00985805cdbb",
+    "n_8a6e1abce5cc",
+    "n_713b8c104f12",
+    "n_5ddb0776a863",
+    "n_1fe5ef1aaca5"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "task_plain",
+   "rep": 1,
+   "hit": true,
+   "rank": 1,
+   "picked": [
+    "n_473aec369b25",
+    "n_b578addf6269",
+    "n_a4b40c96ede4",
+    "n_9ba48d85ed19",
+    "eval-scripts-no-exposure",
+    "n_b6cc6890ba26",
+    "n_fe26d1897041"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "plan_when",
+   "rep": 1,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_967ef9825472",
+    "n_93f96eae7359",
+    "falsifier-relative-to-control",
+    "threshold-transfer-is-a-hypothesis",
+    "rerank-ships-off",
+    "dev-code-migrates-live-store",
+    "n_b578addf6269",
+    "eval-scripts-no-exposure",
+    "n_71c09abf3f37",
+    "n_4a398f2f8095"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "diff_plain",
+   "rep": 1,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_473aec369b25",
+    "n_fe26d1897041",
+    "n_9ba48d85ed19",
+    "n_aa3e45a2ecd6",
+    "n_b6cc6890ba26",
+    "seed:rag-defects:qz_judge_crash",
+    "n_b578addf6269",
+    "n_a4b40c96ede4",
+    "n_00985805cdbb",
+    "n_1fe5ef1aaca5"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "task_when",
+   "rep": 2,
+   "hit": true,
+   "rank": 1,
+   "picked": [
+    "n_473aec369b25",
+    "n_b578addf6269",
+    "n_a4b40c96ede4",
+    "seed:rag-defects:qz_judge_self",
+    "n_9ba48d85ed19",
+    "seed:rag-defects:qz_judge_crash",
+    "n_fe26d1897041",
+    "seed:rag-defects:qz_unequal_budget",
+    "seed:rag-defects:qz_crosstab",
+    "eval-scripts-no-exposure"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "plan_when",
+   "rep": 0,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_dc7429065f5d",
+    "n_9ba48d85ed19",
+    "n_b578addf6269",
+    "n_e7988ff536fb",
+    "n_3dac3a1d8fba",
+    "filter-after-fetch-widens-window",
+    "eval-scripts-no-exposure",
+    "doc-check-defaults",
+    "n_be9f13d587b1",
+    "n_b6cc6890ba26"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "task_plain",
+   "rep": 4,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_473aec369b25",
+    "seed:rag-defects:qz_judge_crash",
+    "n_fe26d1897041",
+    "n_a4b40c96ede4",
+    "n_b578addf6269",
+    "n_9ba48d85ed19",
+    "seed:rag-defects:qz_unequal_budget",
+    "eval-scripts-no-exposure",
+    "n_b6cc6890ba26",
+    "n_aa3e45a2ecd6"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "diff_plain",
+   "rep": 0,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_473aec369b25",
+    "n_fe26d1897041",
+    "seed:rag-defects:qz_judge_crash",
+    "n_a4b40c96ede4",
+    "n_9ba48d85ed19",
+    "n_aa3e45a2ecd6",
+    "n_b6cc6890ba26",
+    "n_00985805cdbb",
+    "n_1fe5ef1aaca5",
+    "n_221da2fec863"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "diff_when",
+   "rep": 3,
+   "hit": true,
+   "rank": 10,
+   "picked": [
+    "n_473aec369b25",
+    "seed:rag-defects:qz_judge_crash",
+    "n_a4b40c96ede4",
+    "n_fe26d1897041",
+    "n_b6cc6890ba26",
+    "n_7e50e3588bcd",
+    "n_9ba48d85ed19",
+    "n_aa3e45a2ecd6",
+    "n_00985805cdbb",
+    "seed:rag-defects:qz_judge_self"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "diff_plain",
+   "rep": 0,
+   "hit": true,
+   "rank": 1,
+   "picked": [
+    "n_473aec369b25",
+    "n_a4b40c96ede4",
+    "n_00985805cdbb",
+    "n_fe26d1897041",
+    "n_9ba48d85ed19",
+    "n_aa3e45a2ecd6",
+    "n_b578addf6269",
+    "seed:geospatial-eval-defects:r_preregistered_control_vetoes",
+    "seed:rag-defects:qz_unequal_budget"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "task_plain",
+   "rep": 0,
+   "hit": true,
+   "rank": 6,
+   "picked": [
+    "n_473aec369b25",
+    "seed:rag-defects:qz_judge_crash",
+    "n_a4b40c96ede4",
+    "n_fe26d1897041",
+    "n_b578addf6269",
+    "seed:rag-defects:qz_judge_self",
+    "seed:rag-defects:qz_unequal_budget",
+    "n_9ba48d85ed19",
+    "seed:geospatial-eval-defects:r_preregistered_control_vetoes",
+    "n_00985805cdbb"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "plan_plain",
+   "rep": 2,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "threshold-transfer-is-a-hypothesis",
+    "dev-code-migrates-live-store",
+    "n_967ef9825472",
+    "n_4a398f2f8095",
+    "n_93f96eae7359",
+    "optional-feature-shipped-text",
+    "comparison-table-one-sitting-generated",
+    "doc-check-defaults",
+    "n_b578addf6269",
+    "rerank-ships-off"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "plan_when",
+   "rep": 1,
+   "hit": true,
+   "rank": 4,
+   "picked": [
+    "n_e7988ff536fb",
+    "n_31bde92d9003",
+    "doc-claim-governs-doc-and-code",
+    "n_adea7f2c7373",
+    "n_8a6e1abce5cc",
+    "n_805cf67e5cc5",
+    "n_c95bdc056620",
+    "n_b4050b826687",
+    "n_57cc4b427f05",
+    "docs-agent-neutral"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "task_when",
+   "rep": 0,
+   "hit": true,
+   "rank": 1,
+   "picked": [
+    "n_473aec369b25",
+    "n_b578addf6269",
+    "n_a4b40c96ede4",
+    "seed:rag-defects:qz_judge_self",
+    "seed:rag-defects:qz_judge_crash",
+    "n_9ba48d85ed19",
+    "n_fe26d1897041",
+    "seed:rag-defects:qz_unequal_budget",
+    "n_b6cc6890ba26",
+    "eval-scripts-no-exposure"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "task_plain",
+   "rep": 3,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_9ba48d85ed19",
+    "n_b578addf6269",
+    "n_dc7429065f5d",
+    "n_849a5b0425ef",
+    "n_3dac3a1d8fba",
+    "n_a4b40c96ede4",
+    "n_473aec369b25",
+    "n_93f96eae7359",
+    "n_713b8c104f12"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "task_plain",
+   "rep": 4,
+   "hit": true,
+   "rank": 1,
+   "picked": [
+    "n_473aec369b25",
+    "n_b578addf6269",
+    "n_a4b40c96ede4",
+    "n_9ba48d85ed19",
+    "eval-scripts-no-exposure",
+    "n_b6cc6890ba26",
+    "n_fe26d1897041"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "plan_plain",
+   "rep": 1,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_967ef9825472",
+    "n_93f96eae7359",
+    "threshold-transfer-is-a-hypothesis",
+    "dev-code-migrates-live-store",
+    "falsifier-relative-to-control",
+    "n_b578addf6269",
+    "rerank-ships-off",
+    "comparison-table-one-sitting-generated",
+    "harness-reads-a-moving-working-tree",
+    "n_71c09abf3f37"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "plan_when",
+   "rep": 1,
+   "hit": true,
+   "rank": 7,
+   "picked": [
+    "n_473aec369b25",
+    "seed:rag-defects:qz_judge_crash",
+    "n_fe26d1897041",
+    "n_8a6e1abce5cc",
+    "n_b6cc6890ba26",
+    "n_119528a07fa5",
+    "seed:rag-defects:qz_judge_self",
+    "n_b578addf6269",
+    "n_a4b40c96ede4",
+    "n_69f673496137"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "plan_plain",
+   "rep": 1,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_dc7429065f5d",
+    "n_b578addf6269",
+    "n_9ba48d85ed19",
+    "n_849a5b0425ef",
+    "n_3dac3a1d8fba",
+    "n_a4b40c96ede4",
+    "n_fe26d1897041",
+    "n_119528a07fa5",
+    "n_221da2fec863",
+    "n_e49be14d6207"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "plan_when",
+   "rep": 0,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_967ef9825472",
+    "dev-code-migrates-live-store",
+    "n_93f96eae7359",
+    "rerank-ships-off",
+    "threshold-transfer-is-a-hypothesis",
+    "n_b578addf6269",
+    "comparison-table-one-sitting-generated",
+    "n_71c09abf3f37",
+    "n_4a398f2f8095",
+    "doc-check-defaults"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "plan_plain",
+   "rep": 0,
+   "hit": true,
+   "rank": 1,
+   "picked": [
+    "n_473aec369b25",
+    "n_a4b40c96ede4",
+    "n_00985805cdbb",
+    "n_b6cc6890ba26",
+    "n_fe26d1897041",
+    "n_69f673496137",
+    "seed:rag-defects:qz_judge_self",
+    "n_b578addf6269"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "task_plain",
+   "rep": 2,
+   "hit": true,
+   "rank": 8,
+   "picked": [
+    "n_473aec369b25",
+    "seed:rag-defects:qz_judge_crash",
+    "n_a4b40c96ede4",
+    "n_b578addf6269",
+    "n_fe26d1897041",
+    "seed:rag-defects:qz_unequal_budget",
+    "n_9ba48d85ed19",
+    "seed:rag-defects:qz_judge_self",
+    "eval-scripts-no-exposure",
+    "n_b6cc6890ba26"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "plan_plain",
+   "rep": 2,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_473aec369b25",
+    "n_b6cc6890ba26",
+    "n_8a6e1abce5cc",
+    "n_fe26d1897041",
+    "n_119528a07fa5",
+    "n_a4b40c96ede4",
+    "n_916330f61994",
+    "n_00985805cdbb",
+    "n_e49be14d6207"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "diff_plain",
+   "rep": 2,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "eval-scripts-no-exposure",
+    "n_b578addf6269",
+    "n_9ba48d85ed19",
+    "n_473aec369b25",
+    "n_a4b40c96ede4",
+    "n_849a5b0425ef",
+    "filter-after-fetch-widens-window",
+    "n_dc7429065f5d",
+    "n_3dac3a1d8fba",
+    "n_00985805cdbb"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "plan_plain",
+   "rep": 2,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_dc7429065f5d",
+    "n_be9f13d587b1",
+    "n_9ba48d85ed19",
+    "n_3dac3a1d8fba",
+    "n_b578addf6269",
+    "n_849a5b0425ef",
+    "n_119528a07fa5",
+    "n_e49be14d6207",
+    "doc-check-defaults",
+    "n_713b8c104f12"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "plan_when",
+   "rep": 4,
+   "hit": true,
+   "rank": 4,
+   "picked": [
+    "n_e7988ff536fb",
+    "n_31bde92d9003",
+    "n_8a6e1abce5cc",
+    "n_adea7f2c7373",
+    "doc-claim-governs-doc-and-code",
+    "n_1fe5ef1aaca5",
+    "n_c95bdc056620",
+    "n_713b8c104f12",
+    "n_5db37b759b1e",
+    "n_119528a07fa5"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "plan_when",
+   "rep": 1,
+   "hit": true,
+   "rank": 1,
+   "picked": [
+    "n_473aec369b25",
+    "n_fe26d1897041",
+    "eval-scripts-no-exposure",
+    "n_b6cc6890ba26",
+    "seed:rag-defects:qz_judge_crash",
+    "n_a4b40c96ede4",
+    "n_b578addf6269",
+    "n_5db37b759b1e",
+    "n_9ba48d85ed19",
+    "seed:rag-defects:qz_judge_self"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "diff_plain",
+   "rep": 3,
+   "hit": true,
+   "rank": 1,
+   "picked": [
+    "n_473aec369b25",
+    "n_a4b40c96ede4",
+    "n_fe26d1897041",
+    "n_9ba48d85ed19",
+    "n_aa3e45a2ecd6",
+    "n_b578addf6269",
+    "seed:rag-defects:qz_judge_crash",
+    "n_5db37b759b1e",
+    "n_00985805cdbb",
+    "seed:geospatial-eval-defects:r_preregistered_control_vetoes"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "diff_plain",
+   "rep": 4,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "eval-scripts-no-exposure",
+    "n_b578addf6269",
+    "n_473aec369b25",
+    "n_a4b40c96ede4",
+    "n_9ba48d85ed19",
+    "n_3dac3a1d8fba",
+    "filter-after-fetch-widens-window",
+    "n_dc7429065f5d",
+    "n_849a5b0425ef",
+    "n_713b8c104f12"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "task_when",
+   "rep": 2,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "rerank-ships-off",
+    "falsifier-relative-to-control",
+    "n_b578addf6269",
+    "comparison-table-one-sitting-generated",
+    "harness-reads-a-moving-working-tree",
+    "n_473aec369b25",
+    "n_a4b40c96ede4",
+    "threshold-transfer-is-a-hypothesis",
+    "n_9ba48d85ed19",
+    "pooled-receipts-miss-report-corrections"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "plan_plain",
+   "rep": 2,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_e7988ff536fb",
+    "n_31bde92d9003",
+    "n_696a70084e1a",
+    "n_805cf67e5cc5",
+    "doc-claim-governs-doc-and-code",
+    "n_00985805cdbb",
+    "n_5ddb0776a863",
+    "n_ec568941f68a",
+    "n_713b8c104f12",
+    "n_0637c92c032f"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "diff_when",
+   "rep": 3,
+   "hit": true,
+   "rank": 4,
+   "picked": [
+    "doc-claim-governs-doc-and-code",
+    "n_31bde92d9003",
+    "n_e7988ff536fb",
+    "n_adea7f2c7373",
+    "n_00985805cdbb",
+    "docs-agent-neutral",
+    "n_8a6e1abce5cc",
+    "n_805cf67e5cc5",
+    "n_57cc4b427f05",
+    "n_713b8c104f12"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "diff_when",
+   "rep": 0,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "comparison-table-one-sitting-generated",
+    "falsifier-relative-to-control",
+    "dev-code-migrates-live-store",
+    "n_967ef9825472",
+    "harness-reads-a-moving-working-tree",
+    "n_a4b40c96ede4",
+    "threshold-transfer-is-a-hypothesis",
+    "n_b578addf6269",
+    "pooled-receipts-miss-report-corrections",
+    "n_473aec369b25"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "task_plain",
+   "rep": 4,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_e7988ff536fb",
+    "n_713b8c104f12",
+    "doc-claim-governs-doc-and-code",
+    "n_805cf67e5cc5",
+    "n_c95bdc056620",
+    "n_31bde92d9003",
+    "n_8a6e1abce5cc",
+    "n_b4050b826687",
+    "n_0637c92c032f",
+    "n_221da2fec863"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "diff_when",
+   "rep": 2,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "comparison-table-one-sitting-generated",
+    "falsifier-relative-to-control",
+    "dev-code-migrates-live-store",
+    "n_967ef9825472",
+    "harness-reads-a-moving-working-tree",
+    "pooled-receipts-miss-report-corrections",
+    "threshold-transfer-is-a-hypothesis",
+    "n_b578addf6269",
+    "n_a4b40c96ede4",
+    "n_473aec369b25"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "task_when",
+   "rep": 4,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "doc-claim-governs-doc-and-code",
+    "n_e7988ff536fb",
+    "n_713b8c104f12",
+    "hook-cli-version-skew",
+    "n_805cf67e5cc5",
+    "docs-agent-neutral",
+    "n_b4050b826687",
+    "n_31bde92d9003",
+    "n_8a6e1abce5cc",
+    "n_00985805cdbb"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "diff_when",
+   "rep": 1,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "falsifier-relative-to-control",
+    "comparison-table-one-sitting-generated",
+    "harness-reads-a-moving-working-tree",
+    "dev-code-migrates-live-store",
+    "n_967ef9825472",
+    "threshold-transfer-is-a-hypothesis",
+    "pooled-receipts-miss-report-corrections",
+    "n_b578addf6269",
+    "n_473aec369b25",
+    "n_a4b40c96ede4"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "diff_when",
+   "rep": 4,
+   "hit": true,
+   "rank": 1,
+   "picked": [
+    "n_473aec369b25",
+    "n_fe26d1897041",
+    "n_9ba48d85ed19",
+    "n_aa3e45a2ecd6",
+    "n_a4b40c96ede4",
+    "n_b578addf6269",
+    "seed:rag-defects:qz_judge_crash",
+    "n_00985805cdbb",
+    "seed:rag-defects:qz_judge_self",
+    "n_5db37b759b1e"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "plan_plain",
+   "rep": 0,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_473aec369b25",
+    "seed:rag-defects:qz_judge_crash",
+    "n_8a6e1abce5cc",
+    "n_fe26d1897041",
+    "n_69f673496137",
+    "n_a4b40c96ede4",
+    "n_b578addf6269",
+    "n_9ba48d85ed19",
+    "n_119528a07fa5",
+    "seed:geospatial-eval-defects:r_preregistered_control_vetoes"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "task_plain",
+   "rep": 2,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_9ba48d85ed19",
+    "n_b578addf6269",
+    "n_849a5b0425ef",
+    "n_dc7429065f5d",
+    "n_3dac3a1d8fba",
+    "n_a4b40c96ede4",
+    "n_473aec369b25",
+    "n_93f96eae7359",
+    "filter-after-fetch-widens-window",
+    "n_713b8c104f12"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "task_plain",
+   "rep": 1,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_9ba48d85ed19",
+    "n_b578addf6269",
+    "n_849a5b0425ef",
+    "n_dc7429065f5d",
+    "n_3dac3a1d8fba",
+    "n_a4b40c96ede4",
+    "filter-after-fetch-widens-window",
+    "n_473aec369b25",
+    "eval-scripts-no-exposure",
+    "n_713b8c104f12"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "diff_plain",
+   "rep": 1,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "eval-scripts-no-exposure",
+    "n_b578addf6269",
+    "n_9ba48d85ed19",
+    "n_473aec369b25",
+    "n_a4b40c96ede4",
+    "n_dc7429065f5d",
+    "n_849a5b0425ef",
+    "n_fe26d1897041",
+    "seed:rag-defects:qz_unequal_budget",
+    "filter-after-fetch-widens-window"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "diff_when",
+   "rep": 1,
+   "hit": true,
+   "rank": 1,
+   "picked": [
+    "n_473aec369b25",
+    "n_b578addf6269",
+    "n_fe26d1897041",
+    "n_9ba48d85ed19",
+    "n_aa3e45a2ecd6",
+    "n_a4b40c96ede4",
+    "seed:rag-defects:qz_judge_crash",
+    "seed:rag-defects:qz_judge_self",
+    "n_00985805cdbb",
+    "n_b6cc6890ba26"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "plan_when",
+   "rep": 2,
+   "hit": true,
+   "rank": 1,
+   "picked": [
+    "n_473aec369b25",
+    "n_fe26d1897041",
+    "n_b578addf6269",
+    "eval-scripts-no-exposure",
+    "n_b6cc6890ba26",
+    "seed:rag-defects:qz_judge_crash",
+    "n_a4b40c96ede4",
+    "n_9ba48d85ed19",
+    "n_5db37b759b1e",
+    "seed:rag-defects:qz_unequal_budget"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "task_plain",
+   "rep": 2,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_e7988ff536fb",
+    "n_713b8c104f12",
+    "n_805cf67e5cc5",
+    "doc-claim-governs-doc-and-code",
+    "n_696a70084e1a",
+    "n_c95bdc056620",
+    "n_b4050b826687",
+    "n_31bde92d9003",
+    "n_00985805cdbb",
+    "docs-agent-neutral"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "task_plain",
+   "rep": 1,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_e7988ff536fb",
+    "doc-claim-governs-doc-and-code",
+    "n_713b8c104f12",
+    "n_805cf67e5cc5",
+    "n_8a6e1abce5cc",
+    "n_b4050b826687",
+    "hook-cli-version-skew",
+    "n_c95bdc056620",
+    "n_696a70084e1a",
+    "n_31bde92d9003"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "diff_when",
+   "rep": 1,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_b578addf6269",
+    "n_dc7429065f5d",
+    "eval-scripts-no-exposure",
+    "n_473aec369b25",
+    "n_9ba48d85ed19",
+    "n_a4b40c96ede4",
+    "n_fe26d1897041",
+    "n_849a5b0425ef",
+    "filter-after-fetch-widens-window",
+    "n_b4050b826687"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "plan_plain",
+   "rep": 3,
+   "hit": true,
+   "rank": 1,
+   "picked": [
+    "n_473aec369b25",
+    "seed:rag-defects:qz_judge_crash",
+    "n_a4b40c96ede4",
+    "n_b578addf6269",
+    "n_00985805cdbb",
+    "n_916330f61994",
+    "n_5db37b759b1e",
+    "n_69f673496137",
+    "seed:rag-defects:qz_unequal_budget",
+    "doc-claim-governs-doc-and-code"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "plan_when",
+   "rep": 4,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "rerank-ships-off",
+    "n_967ef9825472",
+    "dev-code-migrates-live-store",
+    "falsifier-relative-to-control",
+    "threshold-transfer-is-a-hypothesis",
+    "eval-scripts-no-exposure",
+    "n_93f96eae7359",
+    "n_be9f13d587b1",
+    "n_b578addf6269",
+    "doc-claim-governs-doc-and-code"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "task_when",
+   "rep": 0,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "rerank-ships-off",
+    "falsifier-relative-to-control",
+    "n_a4b40c96ede4",
+    "n_b578addf6269",
+    "comparison-table-one-sitting-generated",
+    "threshold-transfer-is-a-hypothesis",
+    "n_473aec369b25",
+    "harness-reads-a-moving-working-tree",
+    "n_9ba48d85ed19",
+    "diagnostic-on-stage-window"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "task_when",
+   "rep": 2,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "doc-claim-governs-doc-and-code",
+    "n_713b8c104f12",
+    "n_e7988ff536fb",
+    "n_805cf67e5cc5",
+    "docs-agent-neutral",
+    "n_b4050b826687",
+    "n_31bde92d9003",
+    "n_8a6e1abce5cc",
+    "n_6b65aa35593c",
+    "n_b550ba9c5c8a"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "plan_when",
+   "rep": 3,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "rerank-ships-off",
+    "threshold-transfer-is-a-hypothesis",
+    "dev-code-migrates-live-store",
+    "n_967ef9825472",
+    "n_e49be14d6207",
+    "falsifier-relative-to-control",
+    "eval-scripts-no-exposure",
+    "n_b578addf6269",
+    "comparison-table-one-sitting-generated",
+    "n_be9f13d587b1"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "task_plain",
+   "rep": 1,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "falsifier-relative-to-control",
+    "comparison-table-one-sitting-generated",
+    "rerank-ships-off",
+    "n_b578addf6269",
+    "n_a4b40c96ede4",
+    "harness-reads-a-moving-working-tree",
+    "n_849a5b0425ef",
+    "pooled-receipts-miss-report-corrections",
+    "diagnostic-on-stage-window",
+    "n_9ba48d85ed19"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "task_when",
+   "rep": 4,
+   "hit": true,
+   "rank": 1,
+   "picked": [
+    "n_473aec369b25",
+    "n_b578addf6269",
+    "seed:rag-defects:qz_judge_self",
+    "n_a4b40c96ede4",
+    "n_fe26d1897041",
+    "n_9ba48d85ed19",
+    "seed:rag-defects:qz_judge_crash",
+    "seed:rag-defects:qz_crosstab",
+    "seed:rag-defects:qz_unequal_budget",
+    "eval-scripts-no-exposure"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "plan_when",
+   "rep": 3,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_473aec369b25",
+    "n_8a6e1abce5cc",
+    "n_119528a07fa5",
+    "seed:rag-defects:qz_judge_crash",
+    "n_fe26d1897041",
+    "n_b6cc6890ba26",
+    "eval-scripts-no-exposure",
+    "n_fe4ced54e60f",
+    "n_b578addf6269",
+    "n_e8b039f47ee1"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "diff_plain",
+   "rep": 2,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "comparison-table-one-sitting-generated",
+    "falsifier-relative-to-control",
+    "harness-reads-a-moving-working-tree",
+    "pooled-receipts-miss-report-corrections",
+    "n_00985805cdbb",
+    "dev-code-migrates-live-store",
+    "n_967ef9825472",
+    "threshold-transfer-is-a-hypothesis",
+    "n_a4b40c96ede4",
+    "n_b578addf6269"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "plan_plain",
+   "rep": 4,
+   "hit": true,
+   "rank": 3,
+   "picked": [
+    "n_e7988ff536fb",
+    "n_31bde92d9003",
+    "n_adea7f2c7373",
+    "n_1fe5ef1aaca5",
+    "n_713b8c104f12",
+    "n_ec568941f68a",
+    "n_8a6e1abce5cc",
+    "n_5ddb0776a863",
+    "n_c95bdc056620",
+    "n_805cf67e5cc5"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "plan_when",
+   "rep": 3,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_dc7429065f5d",
+    "n_b578addf6269",
+    "n_9ba48d85ed19",
+    "n_1fe5ef1aaca5",
+    "n_d8e5ee92ad8f",
+    "eval-scripts-no-exposure",
+    "n_119528a07fa5",
+    "n_221da2fec863",
+    "n_e49be14d6207",
+    "n_be9f13d587b1"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "task_plain",
+   "rep": 3,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_e7988ff536fb",
+    "n_713b8c104f12",
+    "doc-claim-governs-doc-and-code",
+    "n_805cf67e5cc5",
+    "n_b4050b826687",
+    "docs-agent-neutral",
+    "n_0637c92c032f",
+    "n_00985805cdbb",
+    "n_8a6e1abce5cc",
+    "n_696a70084e1a"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "diff_plain",
+   "rep": 3,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_473aec369b25",
+    "n_fe26d1897041",
+    "n_a4b40c96ede4",
+    "n_b6cc6890ba26",
+    "seed:rag-defects:qz_judge_crash",
+    "n_7e50e3588bcd",
+    "n_00985805cdbb",
+    "n_b578addf6269",
+    "n_fe4ced54e60f",
+    "n_9ba48d85ed19"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "diff_when",
+   "rep": 2,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "eval-scripts-no-exposure",
+    "n_b578addf6269",
+    "n_dc7429065f5d",
+    "n_473aec369b25",
+    "n_9ba48d85ed19",
+    "n_a4b40c96ede4",
+    "n_849a5b0425ef",
+    "n_fe26d1897041",
+    "filter-after-fetch-widens-window",
+    "n_5ddb0776a863"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "task_when",
+   "rep": 4,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "rerank-ships-off",
+    "falsifier-relative-to-control",
+    "n_b578addf6269",
+    "n_a4b40c96ede4",
+    "comparison-table-one-sitting-generated",
+    "harness-reads-a-moving-working-tree",
+    "n_473aec369b25",
+    "threshold-transfer-is-a-hypothesis",
+    "pooled-receipts-miss-report-corrections",
+    "diagnostic-on-stage-window"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "diff_when",
+   "rep": 3,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_b578addf6269",
+    "eval-scripts-no-exposure",
+    "n_dc7429065f5d",
+    "n_473aec369b25",
+    "n_9ba48d85ed19",
+    "n_a4b40c96ede4",
+    "n_849a5b0425ef",
+    "filter-after-fetch-widens-window",
+    "n_fe26d1897041",
+    "n_b6cc6890ba26"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "diff_plain",
+   "rep": 0,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "comparison-table-one-sitting-generated",
+    "falsifier-relative-to-control",
+    "harness-reads-a-moving-working-tree",
+    "dev-code-migrates-live-store",
+    "pooled-receipts-miss-report-corrections",
+    "n_b578addf6269",
+    "threshold-transfer-is-a-hypothesis",
+    "n_967ef9825472",
+    "n_a4b40c96ede4",
+    "n_473aec369b25"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "plan_plain",
+   "rep": 1,
+   "hit": true,
+   "rank": 10,
+   "picked": [
+    "n_473aec369b25",
+    "seed:rag-defects:qz_judge_crash",
+    "n_fe26d1897041",
+    "n_8a6e1abce5cc",
+    "n_b6cc6890ba26",
+    "n_119528a07fa5",
+    "n_00985805cdbb",
+    "n_69f673496137",
+    "n_a4b40c96ede4",
+    "seed:rag-defects:qz_judge_self"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "diff_when",
+   "rep": 4,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_b578addf6269",
+    "eval-scripts-no-exposure",
+    "n_473aec369b25",
+    "n_dc7429065f5d",
+    "n_a4b40c96ede4",
+    "n_9ba48d85ed19",
+    "n_fe26d1897041",
+    "n_6b65aa35593c",
+    "seed:python-canon:py_comments_why",
+    "n_b4050b826687"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "plan_when",
+   "rep": 0,
+   "hit": true,
+   "rank": 10,
+   "picked": [
+    "n_473aec369b25",
+    "seed:rag-defects:qz_judge_crash",
+    "n_8a6e1abce5cc",
+    "n_fe26d1897041",
+    "n_b6cc6890ba26",
+    "n_a4b40c96ede4",
+    "n_b578addf6269",
+    "n_e7988ff536fb",
+    "n_9ba48d85ed19",
+    "seed:rag-defects:qz_judge_self"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "diff_plain",
+   "rep": 3,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "comparison-table-one-sitting-generated",
+    "falsifier-relative-to-control",
+    "harness-reads-a-moving-working-tree",
+    "n_967ef9825472",
+    "pooled-receipts-miss-report-corrections",
+    "n_00985805cdbb",
+    "dev-code-migrates-live-store",
+    "threshold-transfer-is-a-hypothesis",
+    "n_b578addf6269",
+    "n_a4b40c96ede4"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "plan_when",
+   "rep": 4,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_dc7429065f5d",
+    "n_b578addf6269",
+    "n_9ba48d85ed19",
+    "eval-scripts-no-exposure",
+    "n_221da2fec863",
+    "n_e49be14d6207",
+    "n_119528a07fa5",
+    "n_849a5b0425ef",
+    "filter-after-fetch-widens-window",
+    "n_be9f13d587b1"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "task_when",
+   "rep": 3,
+   "hit": true,
+   "rank": 1,
+   "picked": [
+    "n_473aec369b25",
+    "seed:rag-defects:qz_judge_self",
+    "n_b578addf6269",
+    "n_a4b40c96ede4",
+    "n_9ba48d85ed19",
+    "seed:rag-defects:qz_judge_crash",
+    "n_fe26d1897041",
+    "seed:rag-defects:qz_unequal_budget",
+    "n_b6cc6890ba26",
+    "seed:rag-defects:qz_crosstab"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "task_plain",
+   "rep": 0,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "falsifier-relative-to-control",
+    "rerank-ships-off",
+    "comparison-table-one-sitting-generated",
+    "harness-reads-a-moving-working-tree",
+    "n_b578addf6269",
+    "n_a4b40c96ede4",
+    "pooled-receipts-miss-report-corrections",
+    "diagnostic-on-stage-window",
+    "n_849a5b0425ef",
+    "n_473aec369b25"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "plan_when",
+   "rep": 2,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "threshold-transfer-is-a-hypothesis",
+    "n_967ef9825472",
+    "dev-code-migrates-live-store",
+    "rerank-ships-off",
+    "n_93f96eae7359",
+    "falsifier-relative-to-control",
+    "comparison-table-one-sitting-generated",
+    "n_4a398f2f8095",
+    "n_b578addf6269",
+    "pooled-receipts-miss-report-corrections"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "task_when",
+   "rep": 3,
+   "hit": true,
+   "rank": 9,
+   "picked": [
+    "doc-claim-governs-doc-and-code",
+    "n_e7988ff536fb",
+    "n_713b8c104f12",
+    "n_805cf67e5cc5",
+    "n_b4050b826687",
+    "n_31bde92d9003",
+    "docs-agent-neutral",
+    "n_8a6e1abce5cc",
+    "n_adea7f2c7373",
+    "n_b550ba9c5c8a"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "diff_when",
+   "rep": 0,
+   "hit": true,
+   "rank": 5,
+   "picked": [
+    "doc-claim-governs-doc-and-code",
+    "n_e7988ff536fb",
+    "n_31bde92d9003",
+    "n_00985805cdbb",
+    "n_adea7f2c7373",
+    "n_805cf67e5cc5",
+    "n_713b8c104f12",
+    "n_221da2fec863",
+    "n_119528a07fa5",
+    "docs-agent-neutral"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "plan_when",
+   "rep": 3,
+   "hit": true,
+   "rank": 2,
+   "picked": [
+    "n_31bde92d9003",
+    "n_adea7f2c7373",
+    "n_713b8c104f12",
+    "n_8a6e1abce5cc",
+    "doc-claim-governs-doc-and-code",
+    "n_805cf67e5cc5",
+    "n_b4050b826687",
+    "n_5ddb0776a863",
+    "n_9ba48d85ed19"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "diff_when",
+   "rep": 2,
+   "hit": true,
+   "rank": 1,
+   "picked": [
+    "n_473aec369b25",
+    "n_fe26d1897041",
+    "n_b578addf6269",
+    "n_9ba48d85ed19",
+    "n_aa3e45a2ecd6",
+    "n_a4b40c96ede4",
+    "seed:rag-defects:qz_judge_crash",
+    "seed:rag-defects:qz_judge_self",
+    "n_00985805cdbb",
+    "seed:python-canon:py_comments_why"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "plan_when",
+   "rep": 0,
+   "hit": true,
+   "rank": 1,
+   "picked": [
+    "n_473aec369b25",
+    "n_fe26d1897041",
+    "n_a4b40c96ede4",
+    "eval-scripts-no-exposure",
+    "n_b6cc6890ba26",
+    "n_b578addf6269",
+    "n_e8b039f47ee1",
+    "n_fe4ced54e60f",
+    "n_9ba48d85ed19",
+    "n_00985805cdbb"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "task_when",
+   "rep": 3,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_9ba48d85ed19",
+    "n_b578addf6269",
+    "n_dc7429065f5d",
+    "filter-after-fetch-widens-window",
+    "n_849a5b0425ef",
+    "n_3dac3a1d8fba",
+    "eval-scripts-no-exposure",
+    "n_a4b40c96ede4",
+    "n_473aec369b25",
+    "doc-check-defaults"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "plan_plain",
+   "rep": 4,
+   "hit": true,
+   "rank": 1,
+   "picked": [
+    "n_473aec369b25",
+    "n_b578addf6269",
+    "n_00985805cdbb",
+    "n_a4b40c96ede4",
+    "n_69f673496137",
+    "n_5db37b759b1e",
+    "n_916330f61994",
+    "n_b6cc6890ba26"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "task_when",
+   "rep": 3,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "rerank-ships-off",
+    "falsifier-relative-to-control",
+    "n_b578addf6269",
+    "n_a4b40c96ede4",
+    "n_473aec369b25",
+    "comparison-table-one-sitting-generated",
+    "harness-reads-a-moving-working-tree",
+    "threshold-transfer-is-a-hypothesis",
+    "n_9ba48d85ed19",
+    "diagnostic-on-stage-window"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "diff_when",
+   "rep": 4,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_473aec369b25",
+    "seed:rag-defects:qz_judge_crash",
+    "n_9ba48d85ed19",
+    "n_aa3e45a2ecd6",
+    "n_b6cc6890ba26",
+    "n_7e50e3588bcd",
+    "n_a4b40c96ede4",
+    "n_00985805cdbb",
+    "n_fe26d1897041"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "plan_plain",
+   "rep": 0,
+   "hit": true,
+   "rank": 2,
+   "picked": [
+    "n_e7988ff536fb",
+    "n_adea7f2c7373",
+    "n_31bde92d9003",
+    "n_1fe5ef1aaca5",
+    "n_0637c92c032f",
+    "doc-claim-governs-doc-and-code",
+    "n_805cf67e5cc5",
+    "n_916330f61994",
+    "n_8a6e1abce5cc",
+    "n_ec568941f68a"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "diff_plain",
+   "rep": 3,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "eval-scripts-no-exposure",
+    "n_b578addf6269",
+    "n_9ba48d85ed19",
+    "n_473aec369b25",
+    "n_a4b40c96ede4",
+    "filter-after-fetch-widens-window",
+    "n_dc7429065f5d",
+    "n_849a5b0425ef",
+    "n_3dac3a1d8fba",
+    "n_713b8c104f12"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "diff_plain",
+   "rep": 1,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "comparison-table-one-sitting-generated",
+    "falsifier-relative-to-control",
+    "harness-reads-a-moving-working-tree",
+    "pooled-receipts-miss-report-corrections",
+    "threshold-transfer-is-a-hypothesis",
+    "n_93f96eae7359",
+    "n_967ef9825472",
+    "dev-code-migrates-live-store",
+    "n_a4b40c96ede4",
+    "n_b578addf6269"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "task_when",
+   "rep": 1,
+   "hit": true,
+   "rank": 1,
+   "picked": [
+    "n_473aec369b25",
+    "seed:rag-defects:qz_judge_self",
+    "seed:rag-defects:qz_judge_crash",
+    "n_b578addf6269",
+    "n_a4b40c96ede4",
+    "n_fe26d1897041",
+    "n_9ba48d85ed19",
+    "seed:rag-defects:qz_unequal_budget",
+    "n_b6cc6890ba26",
+    "seed:rag-defects:qz_crosstab"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "task_plain",
+   "rep": 3,
+   "hit": true,
+   "rank": 7,
+   "picked": [
+    "n_473aec369b25",
+    "n_a4b40c96ede4",
+    "n_9ba48d85ed19",
+    "n_b578addf6269",
+    "seed:rag-defects:qz_unequal_budget",
+    "n_fe26d1897041",
+    "seed:rag-defects:qz_judge_self",
+    "seed:geospatial-eval-defects:r_preregistered_control_vetoes",
+    "eval-scripts-no-exposure"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "diff_when",
+   "rep": 4,
+   "hit": true,
+   "rank": 6,
+   "picked": [
+    "doc-claim-governs-doc-and-code",
+    "n_31bde92d9003",
+    "n_e7988ff536fb",
+    "docs-agent-neutral",
+    "n_00985805cdbb",
+    "n_adea7f2c7373",
+    "doc-install-name",
+    "n_8a6e1abce5cc",
+    "n_221da2fec863",
+    "n_e49be14d6207"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "diff_plain",
+   "rep": 0,
+   "hit": true,
+   "rank": 3,
+   "picked": [
+    "doc-claim-governs-doc-and-code",
+    "n_e7988ff536fb",
+    "n_adea7f2c7373",
+    "n_31bde92d9003",
+    "n_00985805cdbb",
+    "n_8a6e1abce5cc",
+    "n_119528a07fa5",
+    "n_221da2fec863",
+    "n_805cf67e5cc5",
+    "n_b4050b826687"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "diff_when",
+   "rep": 2,
+   "hit": true,
+   "rank": 9,
+   "picked": [
+    "n_473aec369b25",
+    "n_aa3e45a2ecd6",
+    "n_9ba48d85ed19",
+    "seed:rag-defects:qz_judge_crash",
+    "n_b578addf6269",
+    "n_a4b40c96ede4",
+    "n_fe26d1897041",
+    "n_b6cc6890ba26",
+    "seed:rag-defects:qz_judge_self",
+    "n_7e50e3588bcd"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "diff_when",
+   "rep": 0,
+   "hit": true,
+   "rank": 10,
+   "picked": [
+    "n_473aec369b25",
+    "seed:rag-defects:qz_judge_crash",
+    "n_b578addf6269",
+    "n_9ba48d85ed19",
+    "n_aa3e45a2ecd6",
+    "n_a4b40c96ede4",
+    "n_fe26d1897041",
+    "n_b6cc6890ba26",
+    "n_00985805cdbb",
+    "seed:rag-defects:qz_judge_self"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "task_when",
+   "rep": 1,
+   "hit": true,
+   "rank": 6,
+   "picked": [
+    "n_473aec369b25",
+    "seed:rag-defects:qz_judge_crash",
+    "n_b578addf6269",
+    "n_a4b40c96ede4",
+    "n_fe26d1897041",
+    "seed:rag-defects:qz_judge_self",
+    "n_5ddb0776a863",
+    "n_69f673496137",
+    "n_5db37b759b1e",
+    "seed:rag-defects:qz_crosstab"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "plan_when",
+   "rep": 1,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_dc7429065f5d",
+    "n_b578addf6269",
+    "n_9ba48d85ed19",
+    "eval-scripts-no-exposure",
+    "n_e49be14d6207",
+    "n_3dac3a1d8fba",
+    "filter-after-fetch-widens-window",
+    "n_a4b40c96ede4",
+    "n_221da2fec863",
+    "n_119528a07fa5"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "plan_plain",
+   "rep": 0,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_967ef9825472",
+    "dev-code-migrates-live-store",
+    "n_93f96eae7359",
+    "threshold-transfer-is-a-hypothesis",
+    "n_b578addf6269",
+    "comparison-table-one-sitting-generated",
+    "optional-feature-shipped-text",
+    "n_be9f13d587b1",
+    "n_ec568941f68a",
+    "rerank-ships-off"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "diff_plain",
+   "rep": 2,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_473aec369b25",
+    "n_fe26d1897041",
+    "n_b6cc6890ba26",
+    "seed:rag-defects:qz_judge_crash",
+    "n_9ba48d85ed19",
+    "n_aa3e45a2ecd6",
+    "n_a4b40c96ede4",
+    "n_00985805cdbb",
+    "n_7e50e3588bcd",
+    "n_fe4ced54e60f"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "task_when",
+   "rep": 0,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_9ba48d85ed19",
+    "n_b578addf6269",
+    "n_dc7429065f5d",
+    "eval-scripts-no-exposure",
+    "n_849a5b0425ef",
+    "n_3dac3a1d8fba",
+    "filter-after-fetch-widens-window",
+    "n_a4b40c96ede4",
+    "n_473aec369b25",
+    "doc-check-defaults"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "task_when",
+   "rep": 1,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "falsifier-relative-to-control",
+    "rerank-ships-off",
+    "n_a4b40c96ede4",
+    "n_b578addf6269",
+    "n_473aec369b25",
+    "harness-reads-a-moving-working-tree",
+    "comparison-table-one-sitting-generated",
+    "threshold-transfer-is-a-hypothesis",
+    "pooled-receipts-miss-report-corrections",
+    "n_9ba48d85ed19"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "task_plain",
+   "rep": 4,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "falsifier-relative-to-control",
+    "rerank-ships-off",
+    "n_849a5b0425ef",
+    "n_b578addf6269",
+    "comparison-table-one-sitting-generated",
+    "harness-reads-a-moving-working-tree",
+    "n_a4b40c96ede4",
+    "n_473aec369b25",
+    "diagnostic-on-stage-window",
+    "n_041a066035b2"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "task_plain",
+   "rep": 0,
+   "hit": true,
+   "rank": 1,
+   "picked": [
+    "n_473aec369b25",
+    "seed:rag-defects:qz_judge_self",
+    "seed:rag-defects:qz_judge_crash",
+    "n_a4b40c96ede4",
+    "n_b578addf6269",
+    "n_9ba48d85ed19",
+    "seed:rag-defects:qz_unequal_budget",
+    "seed:rag-defects:qz_crosstab",
+    "eval-scripts-no-exposure",
+    "n_b6cc6890ba26"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "plan_plain",
+   "rep": 3,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_dc7429065f5d",
+    "n_b578addf6269",
+    "n_9ba48d85ed19",
+    "n_3dac3a1d8fba",
+    "n_1fe5ef1aaca5",
+    "n_be9f13d587b1",
+    "n_849a5b0425ef",
+    "n_e7988ff536fb",
+    "n_71c09abf3f37",
+    "n_119528a07fa5"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "task_plain",
+   "rep": 3,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "falsifier-relative-to-control",
+    "rerank-ships-off",
+    "n_a4b40c96ede4",
+    "comparison-table-one-sitting-generated",
+    "harness-reads-a-moving-working-tree",
+    "n_b578addf6269",
+    "n_849a5b0425ef",
+    "n_473aec369b25",
+    "pooled-receipts-miss-report-corrections",
+    "diagnostic-on-stage-window"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "task_plain",
+   "rep": 0,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_e7988ff536fb",
+    "n_713b8c104f12",
+    "doc-claim-governs-doc-and-code",
+    "n_805cf67e5cc5",
+    "n_696a70084e1a",
+    "n_b4050b826687",
+    "n_8a6e1abce5cc",
+    "n_0637c92c032f",
+    "n_1fe5ef1aaca5",
+    "n_c95bdc056620"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "task_when",
+   "rep": 3,
+   "hit": true,
+   "rank": 9,
+   "picked": [
+    "n_473aec369b25",
+    "n_fe26d1897041",
+    "n_b578addf6269",
+    "seed:rag-defects:qz_judge_crash",
+    "n_a4b40c96ede4",
+    "n_9ba48d85ed19",
+    "eval-scripts-no-exposure",
+    "n_b6cc6890ba26",
+    "seed:rag-defects:qz_judge_self",
+    "n_5ddb0776a863"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "plan_plain",
+   "rep": 4,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_93f96eae7359",
+    "n_967ef9825472",
+    "threshold-transfer-is-a-hypothesis",
+    "dev-code-migrates-live-store",
+    "rerank-ships-off",
+    "comparison-table-one-sitting-generated",
+    "n_b578addf6269",
+    "n_be9f13d587b1",
+    "falsifier-relative-to-control",
+    "doc-claim-governs-doc-and-code"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "diff_when",
+   "rep": 0,
+   "hit": true,
+   "rank": 1,
+   "picked": [
+    "n_473aec369b25",
+    "n_b578addf6269",
+    "n_aa3e45a2ecd6",
+    "n_9ba48d85ed19",
+    "n_a4b40c96ede4",
+    "n_fe26d1897041",
+    "n_b6cc6890ba26",
+    "n_00985805cdbb",
+    "seed:rag-defects:qz_judge_self"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "task_when",
+   "rep": 0,
+   "hit": true,
+   "rank": 6,
+   "picked": [
+    "n_473aec369b25",
+    "n_fe26d1897041",
+    "seed:rag-defects:qz_judge_crash",
+    "n_b578addf6269",
+    "n_a4b40c96ede4",
+    "seed:rag-defects:qz_judge_self",
+    "n_b6cc6890ba26",
+    "n_9ba48d85ed19",
+    "eval-scripts-no-exposure",
+    "n_69f673496137"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "diff_when",
+   "rep": 4,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "falsifier-relative-to-control",
+    "comparison-table-one-sitting-generated",
+    "dev-code-migrates-live-store",
+    "harness-reads-a-moving-working-tree",
+    "n_967ef9825472",
+    "pooled-receipts-miss-report-corrections",
+    "threshold-transfer-is-a-hypothesis",
+    "n_b578addf6269",
+    "n_473aec369b25",
+    "n_a4b40c96ede4"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "diff_plain",
+   "rep": 4,
+   "hit": true,
+   "rank": 1,
+   "picked": [
+    "n_473aec369b25",
+    "n_fe26d1897041",
+    "n_a4b40c96ede4",
+    "n_9ba48d85ed19",
+    "n_aa3e45a2ecd6",
+    "n_00985805cdbb",
+    "seed:rag-defects:qz_judge_crash",
+    "n_b578addf6269",
+    "n_916330f61994",
+    "seed:geospatial-eval-defects:r_preregistered_control_vetoes"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "diff_plain",
+   "rep": 2,
+   "hit": true,
+   "rank": 3,
+   "picked": [
+    "doc-claim-governs-doc-and-code",
+    "n_e7988ff536fb",
+    "n_adea7f2c7373",
+    "n_31bde92d9003",
+    "docs-agent-neutral",
+    "n_b4050b826687",
+    "n_916330f61994",
+    "n_00985805cdbb",
+    "n_119528a07fa5",
+    "n_805cf67e5cc5"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "task_plain",
+   "rep": 4,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_9ba48d85ed19",
+    "n_b578addf6269",
+    "n_dc7429065f5d",
+    "n_849a5b0425ef",
+    "n_3dac3a1d8fba",
+    "n_473aec369b25",
+    "n_a4b40c96ede4",
+    "n_e7988ff536fb",
+    "n_713b8c104f12",
+    "eval-scripts-no-exposure"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "task_plain",
+   "rep": 1,
+   "hit": true,
+   "rank": 6,
+   "picked": [
+    "n_473aec369b25",
+    "seed:rag-defects:qz_judge_crash",
+    "n_a4b40c96ede4",
+    "n_b578addf6269",
+    "n_fe26d1897041",
+    "seed:rag-defects:qz_judge_self",
+    "n_9ba48d85ed19",
+    "seed:rag-defects:qz_unequal_budget",
+    "seed:geospatial-eval-defects:r_preregistered_control_vetoes",
+    "n_b6cc6890ba26"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "plan_when",
+   "rep": 4,
+   "hit": true,
+   "rank": 10,
+   "picked": [
+    "n_473aec369b25",
+    "seed:rag-defects:qz_judge_crash",
+    "n_fe26d1897041",
+    "n_8a6e1abce5cc",
+    "n_b578addf6269",
+    "n_a4b40c96ede4",
+    "n_119528a07fa5",
+    "eval-scripts-no-exposure",
+    "n_b6cc6890ba26",
+    "seed:rag-defects:qz_judge_self"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "diff_when",
+   "rep": 0,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "eval-scripts-no-exposure",
+    "n_b578addf6269",
+    "n_473aec369b25",
+    "n_dc7429065f5d",
+    "n_9ba48d85ed19",
+    "n_a4b40c96ede4",
+    "n_fe26d1897041",
+    "n_849a5b0425ef",
+    "filter-after-fetch-widens-window",
+    "n_b4050b826687"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "plan_plain",
+   "rep": 3,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_473aec369b25",
+    "n_119528a07fa5",
+    "n_fe26d1897041",
+    "n_b578addf6269",
+    "n_8a6e1abce5cc",
+    "n_b6cc6890ba26",
+    "n_916330f61994",
+    "n_69f673496137",
+    "n_5ddb0776a863"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "diff_when",
+   "rep": 3,
+   "hit": true,
+   "rank": 1,
+   "picked": [
+    "n_473aec369b25",
+    "n_fe26d1897041",
+    "n_b578addf6269",
+    "n_aa3e45a2ecd6",
+    "n_a4b40c96ede4",
+    "n_00985805cdbb",
+    "seed:rag-defects:qz_judge_crash",
+    "n_9ba48d85ed19",
+    "n_5db37b759b1e",
+    "n_b6cc6890ba26"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "diff_when",
+   "rep": 3,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "falsifier-relative-to-control",
+    "n_473aec369b25",
+    "harness-reads-a-moving-working-tree",
+    "comparison-table-one-sitting-generated",
+    "n_b578addf6269",
+    "dev-code-migrates-live-store",
+    "pooled-receipts-miss-report-corrections",
+    "n_967ef9825472",
+    "threshold-transfer-is-a-hypothesis",
+    "diagnostic-on-stage-window"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "plan_plain",
+   "rep": 1,
+   "hit": true,
+   "rank": 5,
+   "picked": [
+    "n_e7988ff536fb",
+    "n_31bde92d9003",
+    "n_8a6e1abce5cc",
+    "n_713b8c104f12",
+    "n_adea7f2c7373",
+    "n_805cf67e5cc5",
+    "n_5a9589af345f",
+    "n_00985805cdbb",
+    "n_c95bdc056620",
+    "doc-claim-governs-doc-and-code"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "diff_plain",
+   "rep": 2,
+   "hit": true,
+   "rank": 1,
+   "picked": [
+    "n_473aec369b25",
+    "n_fe26d1897041",
+    "n_a4b40c96ede4",
+    "n_b578addf6269",
+    "n_9ba48d85ed19",
+    "n_aa3e45a2ecd6",
+    "seed:rag-defects:qz_judge_crash",
+    "n_00985805cdbb",
+    "n_849a5b0425ef",
+    "seed:rag-defects:qz_unequal_budget"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "plan_when",
+   "rep": 3,
+   "hit": true,
+   "rank": 1,
+   "picked": [
+    "n_473aec369b25",
+    "n_fe26d1897041",
+    "seed:rag-defects:qz_judge_crash",
+    "n_a4b40c96ede4",
+    "n_b578addf6269",
+    "seed:rag-defects:qz_unequal_budget",
+    "n_b6cc6890ba26",
+    "seed:rag-defects:qz_judge_self",
+    "n_9ba48d85ed19",
+    "n_69f673496137"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "plan_when",
+   "rep": 2,
+   "hit": true,
+   "rank": 7,
+   "picked": [
+    "n_473aec369b25",
+    "seed:rag-defects:qz_judge_crash",
+    "n_8a6e1abce5cc",
+    "n_b6cc6890ba26",
+    "eval-scripts-no-exposure",
+    "n_fe26d1897041",
+    "seed:rag-defects:qz_judge_self",
+    "n_a4b40c96ede4",
+    "n_221da2fec863",
+    "n_e7988ff536fb"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "plan_when",
+   "rep": 4,
+   "hit": true,
+   "rank": 1,
+   "picked": [
+    "n_473aec369b25",
+    "n_b6cc6890ba26",
+    "seed:rag-defects:qz_judge_crash",
+    "n_fe26d1897041",
+    "n_00985805cdbb",
+    "eval-scripts-no-exposure",
+    "n_916330f61994",
+    "n_69f673496137",
+    "seed:python-canon:py_exceptions_canon"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "diff_plain",
+   "rep": 1,
+   "hit": true,
+   "rank": 1,
+   "picked": [
+    "n_473aec369b25",
+    "n_b578addf6269",
+    "n_a4b40c96ede4",
+    "n_9ba48d85ed19",
+    "n_aa3e45a2ecd6",
+    "n_fe26d1897041",
+    "seed:rag-defects:qz_judge_crash",
+    "n_00985805cdbb",
+    "seed:geospatial-eval-defects:r_preregistered_control_vetoes",
+    "n_ead8e0a2b43d"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "task_plain",
+   "rep": 3,
+   "hit": true,
+   "rank": 1,
+   "picked": [
+    "n_473aec369b25",
+    "seed:rag-defects:qz_judge_self",
+    "n_b578addf6269",
+    "n_a4b40c96ede4",
+    "n_9ba48d85ed19",
+    "seed:rag-defects:qz_judge_crash",
+    "seed:rag-defects:qz_unequal_budget",
+    "n_b6cc6890ba26",
+    "eval-scripts-no-exposure",
+    "seed:rag-defects:qz_crosstab"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "diff_plain",
+   "rep": 0,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "eval-scripts-no-exposure",
+    "n_b578addf6269",
+    "n_473aec369b25",
+    "n_9ba48d85ed19",
+    "n_a4b40c96ede4",
+    "n_dc7429065f5d",
+    "filter-after-fetch-widens-window",
+    "n_849a5b0425ef",
+    "n_3dac3a1d8fba",
+    "n_fe26d1897041"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "task_when",
+   "rep": 2,
+   "hit": true,
+   "rank": 7,
+   "picked": [
+    "n_473aec369b25",
+    "n_fe26d1897041",
+    "n_b578addf6269",
+    "n_a4b40c96ede4",
+    "n_9ba48d85ed19",
+    "seed:rag-defects:qz_judge_crash",
+    "seed:rag-defects:qz_judge_self",
+    "eval-scripts-no-exposure",
+    "n_b6cc6890ba26"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "diff_plain",
+   "rep": 4,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "comparison-table-one-sitting-generated",
+    "falsifier-relative-to-control",
+    "harness-reads-a-moving-working-tree",
+    "pooled-receipts-miss-report-corrections",
+    "threshold-transfer-is-a-hypothesis",
+    "dev-code-migrates-live-store",
+    "n_967ef9825472",
+    "n_a4b40c96ede4",
+    "n_b578addf6269",
+    "n_473aec369b25"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "diff_plain",
+   "rep": 4,
+   "hit": true,
+   "rank": 2,
+   "picked": [
+    "doc-claim-governs-doc-and-code",
+    "n_adea7f2c7373",
+    "n_00985805cdbb",
+    "n_31bde92d9003",
+    "n_8a6e1abce5cc",
+    "n_221da2fec863",
+    "n_119528a07fa5",
+    "n_b4050b826687",
+    "docs-agent-neutral"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "diff_plain",
+   "rep": 1,
+   "hit": true,
+   "rank": 4,
+   "picked": [
+    "doc-claim-governs-doc-and-code",
+    "n_e7988ff536fb",
+    "n_31bde92d9003",
+    "n_adea7f2c7373",
+    "n_805cf67e5cc5",
+    "n_b4050b826687",
+    "n_00985805cdbb",
+    "docs-agent-neutral",
+    "n_119528a07fa5",
+    "doc-install-name"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "task_when",
+   "rep": 4,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_9ba48d85ed19",
+    "n_dc7429065f5d",
+    "n_b578addf6269",
+    "n_849a5b0425ef",
+    "filter-after-fetch-widens-window",
+    "eval-scripts-no-exposure",
+    "n_3dac3a1d8fba",
+    "n_a4b40c96ede4",
+    "n_041a066035b2",
+    "n_473aec369b25"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "task_when",
+   "rep": 1,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "doc-claim-governs-doc-and-code",
+    "n_e7988ff536fb",
+    "n_713b8c104f12",
+    "n_805cf67e5cc5",
+    "n_31bde92d9003",
+    "docs-agent-neutral",
+    "n_b4050b826687",
+    "n_b550ba9c5c8a",
+    "n_58119d0a63d9",
+    "n_8a6e1abce5cc"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "task_when",
+   "rep": 1,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_9ba48d85ed19",
+    "n_b578addf6269",
+    "n_dc7429065f5d",
+    "n_849a5b0425ef",
+    "eval-scripts-no-exposure",
+    "n_a4b40c96ede4",
+    "filter-after-fetch-widens-window",
+    "n_3dac3a1d8fba",
+    "doc-check-defaults",
+    "n_473aec369b25"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "diff_plain",
+   "rep": 4,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_473aec369b25",
+    "n_b6cc6890ba26",
+    "n_fe26d1897041",
+    "seed:rag-defects:qz_judge_crash",
+    "n_b578addf6269",
+    "n_a4b40c96ede4",
+    "n_9ba48d85ed19",
+    "n_aa3e45a2ecd6",
+    "n_00985805cdbb",
+    "n_7e50e3588bcd"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "task_when",
+   "rep": 2,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_9ba48d85ed19",
+    "n_b578addf6269",
+    "n_dc7429065f5d",
+    "n_849a5b0425ef",
+    "filter-after-fetch-widens-window",
+    "n_3dac3a1d8fba",
+    "eval-scripts-no-exposure",
+    "n_a4b40c96ede4",
+    "n_93f96eae7359",
+    "n_be9f13d587b1"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "diff_when",
+   "rep": 2,
+   "hit": true,
+   "rank": 5,
+   "picked": [
+    "doc-claim-governs-doc-and-code",
+    "n_31bde92d9003",
+    "n_e7988ff536fb",
+    "n_00985805cdbb",
+    "n_adea7f2c7373",
+    "docs-agent-neutral",
+    "n_805cf67e5cc5",
+    "n_8a6e1abce5cc",
+    "n_713b8c104f12",
+    "n_119528a07fa5"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "plan_plain",
+   "rep": 4,
+   "hit": true,
+   "rank": 6,
+   "picked": [
+    "n_473aec369b25",
+    "seed:rag-defects:qz_judge_crash",
+    "n_fe26d1897041",
+    "n_8a6e1abce5cc",
+    "n_b578addf6269",
+    "seed:rag-defects:qz_judge_self",
+    "n_a4b40c96ede4",
+    "n_b6cc6890ba26",
+    "n_fe4ced54e60f",
+    "n_119528a07fa5"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "plan_plain",
+   "rep": 0,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_b578addf6269",
+    "n_9ba48d85ed19",
+    "n_dc7429065f5d",
+    "n_849a5b0425ef",
+    "n_3dac3a1d8fba",
+    "n_a4b40c96ede4",
+    "filter-after-fetch-widens-window",
+    "n_be9f13d587b1",
+    "n_e7988ff536fb",
+    "eval-scripts-no-exposure"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "task_plain",
+   "rep": 2,
+   "hit": true,
+   "rank": 1,
+   "picked": [
+    "n_473aec369b25",
+    "n_a4b40c96ede4",
+    "n_b578addf6269",
+    "n_9ba48d85ed19",
+    "eval-scripts-no-exposure",
+    "n_b6cc6890ba26",
+    "n_fe26d1897041"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "plan_plain",
+   "rep": 3,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "threshold-transfer-is-a-hypothesis",
+    "dev-code-migrates-live-store",
+    "n_967ef9825472",
+    "rerank-ships-off",
+    "comparison-table-one-sitting-generated",
+    "n_93f96eae7359",
+    "falsifier-relative-to-control",
+    "n_71c09abf3f37",
+    "n_be9f13d587b1",
+    "n_4a398f2f8095"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "diff_when",
+   "rep": 1,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_473aec369b25",
+    "n_9ba48d85ed19",
+    "seed:rag-defects:qz_judge_crash",
+    "n_aa3e45a2ecd6",
+    "n_a4b40c96ede4",
+    "n_b578addf6269",
+    "n_fe26d1897041",
+    "n_b6cc6890ba26",
+    "n_7e50e3588bcd",
+    "eval-scripts-no-exposure"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "plan_when",
+   "rep": 0,
+   "hit": true,
+   "rank": 1,
+   "picked": [
+    "n_adea7f2c7373",
+    "n_e7988ff536fb",
+    "n_31bde92d9003",
+    "doc-claim-governs-doc-and-code",
+    "n_713b8c104f12",
+    "n_ec568941f68a",
+    "n_916330f61994",
+    "n_00985805cdbb",
+    "hook-cli-version-skew",
+    "n_1fe5ef1aaca5"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "plan_plain",
+   "rep": 4,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_dc7429065f5d",
+    "n_b578addf6269",
+    "n_9ba48d85ed19",
+    "n_849a5b0425ef",
+    "eval-scripts-no-exposure",
+    "n_221da2fec863",
+    "n_119528a07fa5",
+    "n_e49be14d6207",
+    "n_be9f13d587b1",
+    "n_3dac3a1d8fba"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "task_when",
+   "rep": 0,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "doc-claim-governs-doc-and-code",
+    "n_713b8c104f12",
+    "n_00985805cdbb",
+    "docs-agent-neutral",
+    "hook-cli-version-skew",
+    "n_8a6e1abce5cc",
+    "n_31bde92d9003",
+    "n_b4050b826687"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "plan_plain",
+   "rep": 2,
+   "hit": true,
+   "rank": 1,
+   "picked": [
+    "n_473aec369b25",
+    "seed:rag-defects:qz_judge_crash",
+    "n_a4b40c96ede4",
+    "n_5db37b759b1e",
+    "n_69f673496137",
+    "n_916330f61994",
+    "n_00985805cdbb",
+    "seed:rag-defects:qz_judge_self",
+    "n_b578addf6269",
+    "n_fe26d1897041"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "plan_when",
+   "rep": 2,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_e7988ff536fb",
+    "n_31bde92d9003",
+    "doc-claim-governs-doc-and-code",
+    "n_8a6e1abce5cc",
+    "n_805cf67e5cc5",
+    "hook-cli-version-skew",
+    "n_5ddb0776a863",
+    "empty-drift-snapshot-fails-ci",
+    "n_1fe5ef1aaca5",
+    "n_ec568941f68a"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "diff_plain",
+   "rep": 3,
+   "hit": true,
+   "rank": 4,
+   "picked": [
+    "doc-claim-governs-doc-and-code",
+    "n_e7988ff536fb",
+    "n_31bde92d9003",
+    "n_adea7f2c7373",
+    "n_00985805cdbb",
+    "n_b4050b826687",
+    "n_8a6e1abce5cc",
+    "n_221da2fec863",
+    "n_119528a07fa5",
+    "docs-agent-neutral"
+   ]
+  },
+  {
+   "pr": 168,
+   "arm": "task_when",
+   "rep": 4,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_473aec369b25",
+    "n_fe26d1897041",
+    "n_b578addf6269",
+    "n_a4b40c96ede4",
+    "n_9ba48d85ed19",
+    "eval-scripts-no-exposure",
+    "n_b6cc6890ba26",
+    "seed:rag-defects:qz_judge_crash",
+    "n_5ddb0776a863"
+   ]
+  },
+  {
+   "pr": 309,
+   "arm": "task_plain",
+   "rep": 2,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "falsifier-relative-to-control",
+    "rerank-ships-off",
+    "comparison-table-one-sitting-generated",
+    "n_a4b40c96ede4",
+    "n_b578addf6269",
+    "harness-reads-a-moving-working-tree",
+    "pooled-receipts-miss-report-corrections",
+    "n_473aec369b25",
+    "diagnostic-on-stage-window",
+    "n_849a5b0425ef"
+   ]
+  },
+  {
+   "pr": 115,
+   "arm": "diff_when",
+   "rep": 1,
+   "hit": true,
+   "rank": 5,
+   "picked": [
+    "doc-claim-governs-doc-and-code",
+    "n_31bde92d9003",
+    "n_e7988ff536fb",
+    "n_00985805cdbb",
+    "n_adea7f2c7373",
+    "docs-agent-neutral",
+    "n_805cf67e5cc5",
+    "n_8a6e1abce5cc",
+    "n_713b8c104f12",
+    "n_696a70084e1a"
+   ]
+  },
+  {
+   "pr": 198,
+   "arm": "plan_plain",
+   "rep": 1,
+   "hit": true,
+   "rank": 1,
+   "picked": [
+    "n_473aec369b25",
+    "n_b578addf6269",
+    "n_a4b40c96ede4",
+    "n_fe26d1897041",
+    "n_916330f61994",
+    "n_00985805cdbb",
+    "n_b6cc6890ba26",
+    "n_5db37b759b1e",
+    "n_69f673496137"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "plan_when",
+   "rep": 2,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_dc7429065f5d",
+    "n_b578addf6269",
+    "n_9ba48d85ed19",
+    "n_be9f13d587b1",
+    "n_119528a07fa5",
+    "n_e49be14d6207",
+    "eval-scripts-no-exposure",
+    "n_b74bad29fd87",
+    "doc-check-defaults",
+    "n_93f96eae7359"
+   ]
+  },
+  {
+   "pr": 196,
+   "arm": "task_plain",
+   "rep": 0,
+   "hit": false,
+   "rank": null,
+   "picked": [
+    "n_9ba48d85ed19",
+    "n_b578addf6269",
+    "n_849a5b0425ef",
+    "n_dc7429065f5d",
+    "n_3dac3a1d8fba",
+    "n_a4b40c96ede4",
+    "n_473aec369b25",
+    "n_b40a468119f6",
+    "n_93f96eae7359"
+   ]
+  }
+ ],
+ "okl_commit_at_start": "755055b",
+ "okl_commit": "755055b"
+}
