@@ -300,6 +300,27 @@ output contains that text. Give it: exit 0 alone can come from a check that ran 
 stale, `okl reverify` re-runs it with no parameters. There is no way to mark a lesson
 verified without running something: `okl record --verified` is refused.
 
+### Run a lesson's check when the agent edits its files (opt-in)
+
+A proven lesson can also run its check while the agent works. In Claude Code, after each edit, a
+hook runs the checks of the lessons governing the edited file and hands a failure straight back to
+the agent, beside its edit; a pass says nothing. Only checks you approve run, because each command
+comes from the store, and on a shared store other people wrote some of them:
+
+```bash
+okl on-edit                                # the approved checks, and the ones that could be
+okl on-edit add discount-server-side       # shows the command, asks, then runs it on each edit
+okl on-edit remove discount-server-side
+```
+
+Approve checks that finish in a few seconds and need nothing but the checkout: each gets 30
+seconds and one edit gets 50 in all, inside Claude Code's 60-second hook limit, and a check that
+runs out of time is reported as not judged. If a lesson's stored command changes, for instance
+after `okl verify` with a different `--run`, it stops running until you approve it again. The
+hook stamps nothing: a lesson is still verified only by `okl verify`. Another agent's own hook
+can call `okl on-edit run <file>`. Whether a failing check at the edit changes what an agent
+writes has not been measured yet ([#435](https://github.com/emeraldleaf/okl/issues/435)).
+
 ### Commit, in this order
 
 1. Commit the code change.

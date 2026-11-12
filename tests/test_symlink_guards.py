@@ -159,8 +159,10 @@ def test_uninstall_keeps_a_linked_ci_pin(repo, monkeypatch):
 def test_uninstall_leaves_linked_settings_and_mcp_json_alone(repo):
     """_uninstall_hook_registrations and _uninstall_mcp do not rewrite a file through a link."""
     root, okl, outside, link = repo
-    settings = json.dumps({"hooks": {event: [{"hooks": [{"type": "command", "command": command}]}]
-                                     for event, command in install.HOOK_COMMANDS.items()}}) + "\n"
+    groups: dict[str, list] = {}
+    for event, _matcher, command in install.HOOKS:
+        groups.setdefault(event, []).append({"hooks": [{"type": "command", "command": command}]})
+    settings = json.dumps({"hooks": groups}) + "\n"
     mcp = json.dumps({"mcpServers": {"okl": install.MCP_ENTRY}}) + "\n"
     s = outside("settings.json", settings); m = outside("mcp.json", mcp)
     link(".claude/settings.json", s); link(".mcp.json", m)

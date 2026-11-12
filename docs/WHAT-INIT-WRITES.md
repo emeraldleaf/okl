@@ -22,7 +22,8 @@ touches only the current directory, and only these:
 | `.claude/hooks/userpromptsubmit-okl-check.sh` | **executable**; runs when you submit a task, injects the briefing |
 | `.claude/hooks/stop-okl-encode.sh` | **executable**; runs at session end, asks what was learned |
 | `.claude/hooks/posttooluse-okl-read.sh` | **executable**; runs after the agent reads a file, briefs the lessons that govern it |
-| `.claude/settings.json` | registers those three hooks (merged in place; your existing keys are preserved) |
+| `.claude/hooks/posttooluse-okl-edit.sh` | **executable**; runs after the agent edits a file, runs the lesson checks you approved for it with `okl on-edit add` (none until you approve one) |
+| `.claude/settings.json` | registers those four hooks (merged in place; your existing keys are preserved) |
 | `.mcp.json` | registers the okl MCP server — only when the `mcp` extra is installed |
 | `.github/workflows/okl-verify.yml` | **a CI workflow** running the drift gate on pull requests — only with `--ci`, or where an earlier okl installed it |
 | `.github/okl-version` | **one line, the okl release CI installs**, written beside the workflow so CI runs what your hooks run. `okl init` writes it for an okl installed from PyPI, and moves it when re-run after an upgrade, never backwards; a dev or editable okl leaves it alone. Written only where okl's workflow reads it: an edited workflow from before 0.11.0 is kept and does not, so init says so instead (`--force` replaces the workflow). Without it, CI installs the newest release. Commit it |
@@ -58,7 +59,12 @@ agent reads a file (`PostToolUse` on `Read`): it returns `okl check --path` for 
 `additionalContext`, which Claude Code puts next to the read's result, before any edit. Each
 lesson is briefed once a session, again only while drift marks it; a file no lesson governs
 gets nothing; when okl cannot answer it says so in one line. REPORT §4aj measured that the
-briefing arrives (5 of 5 sessions); it did not show that it changes the edit.
+briefing arrives (5 of 5 sessions); it did not show that it changes the edit. The fourth runs
+after the agent edits a file (`PostToolUse` on `Edit`, `Write`, `MultiEdit` and `NotebookEdit`).
+Until you approve a check with `okl on-edit add` it returns after one read of `.okl/config.json`,
+without starting okl. Once one is approved it runs `okl on-edit run` for the file: the approved
+checks of the lessons governing it, each with its own timeout, and a failure goes back to the
+agent as `additionalContext`. It never blocks and never stamps a lesson verified.
 
 **Other agents (AGENTS.md):** `okl scaffold` (not `init`) writes the repo canon to both
 `CLAUDE.md` and `AGENTS.md` — one content, two filenames, so Codex/Cursor/anything

@@ -22,6 +22,7 @@ from .lessons import (
     cmd_triggers,
     cmd_update,
 )
+from .on_edit import BUDGET, TIMEOUT, cmd_on_edit
 from .packs import cmd_seed
 from .review import cmd_review
 from .servers import cmd_mcp, cmd_serve
@@ -326,6 +327,32 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
     pst.add_argument("action", nargs="?", choices=["list", "add", "remove"], default="list")
     pst.add_argument("ids", nargs="*", metavar="id", help="lesson ids, as the briefing shows them in [brackets]")
     pst.set_defaults(func=cmd_standing)
+
+    poe = sub.add_parser(
+        "on-edit", help="the lesson checks that run when the agent edits a file the lesson governs (#435): "
+                        "list them, approve some by id (add) or drop them (remove), or run the ones governing "
+                        "the files given (run, what the Claude Code edit hook calls)")
+    poe.set_defaults(func=cmd_on_edit, action="list", targets=[])
+    poe_sub = poe.add_subparsers(dest="action")
+    poe_sub.add_parser("list", help="the approved checks, and the lessons whose check could be approved")
+    poe_add = poe_sub.add_parser("add", help="show each lesson's stored command and approve it to run on edit")
+    poe_add.add_argument("targets", nargs="+", metavar="id", help="lesson ids, as the briefing shows them in [brackets]")
+    poe_add.add_argument("--yes", action="store_true",
+                         help="approve the commands it shows without asking; review them first, since they "
+                              "come from the store and will run on every edit to the files they govern")
+    poe_rm = poe_sub.add_parser("remove", help="stop running these lessons' checks on edit")
+    poe_rm.add_argument("targets", nargs="+", metavar="id", help="lesson ids")
+    poe_run = poe_sub.add_parser("run", help="run the approved checks of the lessons governing these files "
+                                             "(what the Claude Code edit hook calls); exit 1 when one fails")
+    poe_run.add_argument("targets", nargs="+", metavar="file", help="the edited files")
+    poe_run.add_argument("--format", choices=["text", "hook"], default="text",
+                         help="hook prints Claude Code's PostToolUse JSON, and nothing when every check passed")
+    poe_run.add_argument("--timeout", type=int, default=TIMEOUT,
+                         help=f"seconds one check may take (default {TIMEOUT}); a check that runs longer is "
+                              "reported as not judged, not as failed")
+    poe_run.add_argument("--budget", type=int, default=BUDGET,
+                         help=f"seconds for all the checks one edit runs (default {BUDGET}, inside Claude Code's "
+                              "60-second hook limit); the rest are reported as not run")
 
     pch = sub.add_parser(
         "changes", help="what a change did to the files lessons name: new, deleted and renamed files and "

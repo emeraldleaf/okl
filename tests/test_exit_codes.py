@@ -26,7 +26,7 @@ COMMANDS: dict[str, list[str] | str] = {
     "check": ["--task", "add a login page"], "record": ["--type", "Rule", "--title", "t", "--scope", "org"],
     "update": ["x", "--title", "y"], "retire": ["x", "--reason", "wrong"], "show": ["x"], "triggers": [],
     "recap": [], "link": ["a", "supersedes", "b"], "verify": ["x", "--run", "true", "--expect", "ok"],
-    "reverify": [], "standing": ["list"], "changes": [], "review": ["--list"], "search": ["login"],
+    "reverify": [], "standing": ["list"], "on-edit": ["list"], "changes": [], "review": ["--list"], "search": ["login"],
     "metric": [], "drift": [], "export": ["--drift"], "dedup": [], "coverage": [],
     "doctor": "exits 0: it reports on the setup, and an unconfigured one is a finding it prints",
     "bootstrap": "exits 0: it proposes records from the repository's own signals and needs no store",

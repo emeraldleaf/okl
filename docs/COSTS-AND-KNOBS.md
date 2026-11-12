@@ -80,7 +80,10 @@ never the task: a briefing's task is usually your prompt.
 `OKL_QUIET=1` keeps the briefing but hides the one-line *okl · briefed …* notice. Switch a
 hook off by name with `OKL_DISABLED_HOOKS=briefing` (the pre-task read),
 `OKL_DISABLED_HOOKS=encode` (the end-of-session question), `OKL_DISABLED_HOOKS=read` (the
-lessons briefed when the agent reads a file), or several, comma-separated.
+lessons briefed when the agent reads a file), `OKL_DISABLED_HOOKS=edit` (the lesson checks
+after an edit), or several, comma-separated. The edit hook costs one read of `.okl/config.json`
+an edit until you approve a check with `okl on-edit add`; after that, the approved checks' own
+run time, at most 30 seconds each and 50 an edit (`okl on-edit run --timeout` and `--budget`).
 **Set `OKL_DISABLED_HOOKS=encode` for headless runs (`claude -p`, CI agents, scripts):**
 print mode emits only the final message, and a blocked stop makes the reply to "what did
 we learn?" that final message — the answer you asked for is then only in the transcript.

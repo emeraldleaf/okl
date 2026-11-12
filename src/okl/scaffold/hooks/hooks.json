@@ -7,7 +7,8 @@
       { "hooks": [ { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/stop-okl-encode.sh" } ] }
     ],
     "PostToolUse": [
-      { "matcher": "Read", "hooks": [ { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/posttooluse-okl-read.sh" } ] }
+      { "matcher": "Read", "hooks": [ { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/posttooluse-okl-read.sh" } ] },
+      { "matcher": "Edit|Write|MultiEdit|NotebookEdit", "hooks": [ { "type": "command", "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/posttooluse-okl-edit.sh" } ] }
     ]
   }
 }
