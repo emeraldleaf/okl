@@ -36,7 +36,7 @@ PLANS = o.REPO / "evals" / "results" / "plan-reach-20261111-1435.json"   # §4ba
 OUT = o.REPO / "evals" / "bench" / "private" / "realwork" / "when-lines-4bb.jsonl"
 ARMS = tuple(f"{start}_{lines}" for start in pr.ARMS for lines in ("plain", "when"))
 BATCH, GAIN, MIN_COMPLETE = 20, 0.15, 135
-FROZEN_LINES: str | None = None   # set once the lines are written, before any pick
+FROZEN_LINES: str | None = "428b12d45bd7256c"   # frozen 2026-11-11, after the lines were written and before any pick
 WRITE_PROMPT = """Below are lessons a software team keeps, each as its id and full text.
 
 For each, write one line saying when it applies: by what the code or the change does (a mechanism, such as reading files from a folder, resolving where data is stored, building a shell command, comparing a run with earlier runs, retrying a network call), not by the incident that taught it, and not only in the lesson's own words. A developer reading the line while writing code should recognise that the lesson bears on it. At most 25 words each.

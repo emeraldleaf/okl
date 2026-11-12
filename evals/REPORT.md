@@ -6279,6 +6279,12 @@ They make the list about twice as long, which may itself change what a picker re
 
 **Budget.** About 17 calls to write the lines and 150 picks, all Sonnet.
 
+**Amendment before any pick (2026-11-11).** Two fixes to the instrument, neither touching a pick:
+§4ba's plans are read from its committed receipt by name, where a glob would have read the working
+tree (found by the review after writing); and a lesson id the writing model echoed without its seed
+prefix is resolved within its batch, where the first pass dropped those lines. The first writing
+pass also stopped partway at a usage limit. All 337 lines are written, and frozen at .
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
