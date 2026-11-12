@@ -54,6 +54,9 @@ from okl import core
 from okl.store import Store
 
 REPO = Path(__file__).resolve().parents[1]
+# The commit each prep and screen row was made at, so a score can say which code made its rows
+# (#434's review: the run guard starts at scoring, after the calls).
+COMMIT = subprocess.run(["git", "rev-parse", "--short=7", "HEAD"], cwd=REPO, capture_output=True, text=True).stdout.strip() or "unknown"
 PREP = lr.PRIVATE / "pick-fix-prep-4bc.jsonl"
 SCREEN = lr.PRIVATE / "pick-fix-screen-4bc.jsonl"
 HAIKU = ["claude", "-p", "--model", "haiku", "--output-format", "json", "--restricted", "--strict-mcp-config", "--tools", ""]
@@ -194,7 +197,7 @@ def prep_one(half: str, task: dict) -> dict | None:
     if not picked:
         return None
     known = {line.split(" | ", 1)[0] for line in lines}
-    return {"half": half, "pr": task["pr"], "instrument": INSTRUMENT, "chunks": len(parts), "files": sorted(changed - {""}),
+    return {"half": half, "pr": task["pr"], "instrument": INSTRUMENT, "commit": COMMIT, "chunks": len(parts), "files": sorted(changed - {""}),
             "sentences": [s for _, s in sorted(desc.items())], "pick": [i for i in picked if i in known][:K],
             "chunk": fuse(chunk_lists), "desc": fuse(desc_lists), "anchor": anchors(parts, texts, governed), "governed": governed}
 
@@ -218,7 +221,13 @@ def run_parallel(todo: list, fn: Callable[..., dict | None], sink_path: Path) ->
     with sink_path.open("a") as sink, ThreadPoolExecutor(max_workers=4) as workers:
         futures = {workers.submit(fn, *item): item for item in todo}
         for f in as_completed(futures):
-            row = f.result()
+            try:
+                row = f.result()
+            except BaseException:
+                # Queued calls would otherwise all still run, and their replies be thrown away:
+                # §4bc's first two runs made about a hundred of each that way (#434's review).
+                workers.shutdown(cancel_futures=True)
+                raise
             if row:
                 sink.write(json.dumps(row) + "\n"); sink.flush()
                 empty = 0
@@ -258,7 +267,7 @@ def screen_one(item: tuple[str, int, str, list[str], list[str], str]) -> dict | 
                 got = obj
     if got is None:
         return None
-    return {"half": half, "pr": pr_, "lesson": lesson, "instrument": INSTRUMENT, "bears": bool(got.get("bears")), "reason": got.get("reason")}
+    return {"half": half, "pr": pr_, "lesson": lesson, "instrument": INSTRUMENT, "commit": COMMIT, "bears": bool(got.get("bears")), "reason": got.get("reason")}
 
 
 def screen() -> int:
@@ -304,7 +313,8 @@ def score(write: bool) -> int:
         if not all((half, task["pr"], lesson) in verdicts for lesson in pooled):
             continue
         yes = [lesson for lesson in pooled if verdicts[(half, task["pr"], lesson)]["bears"]]
-        per.append({"half": half, "pr": task["pr"], "broken": len(broken), "screen_size": len(yes),
+        sizes = {"pick": len(row["pick"]), "chunk": len(row["chunk"][:K]), "desc": len(row["desc"][:K]), "anchor": len(row["anchor"][:K]), "pool": len(pooled)}
+        per.append({"half": half, "pr": task["pr"], "broken": len(broken), "screen_size": len(yes), "sizes": sizes,
                     "pick": recall(row["pick"], broken), "chunk": recall(row["chunk"][:K], broken), "desc": recall(row["desc"][:K], broken),
                     "anchor": recall(row["anchor"][:K], broken), "pool": recall(pooled, broken), "screen": recall(yes, broken)})
     arms = ("pick", "chunk", "desc", "anchor", "pool", "screen")
@@ -317,8 +327,11 @@ def score(write: bool) -> int:
     interval = [round(draws[50], 3), round(draws[1949], 3)] if per else [0.0, 0.0]
     size = round(mean(p["screen_size"] for p in per), 1) if per else 0.0
     out = {"section": "4bc", "at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%MZ"), "instrument": INSTRUMENT, "changes": len(per), "of": len(cases()),
-           "broken_lessons": sum(p["broken"] for p in per), "recall": rates, "screen_minus_pick": round(rates["screen"] - rates["pick"], 3),
-           "interval": interval, "screen_set_mean": size, "reading": reading(rates, size, interval, len(per) >= MIN_COMPLETE),
+           "broken_lessons": sum(p["broken"] for p in per), "recall": rates,
+           "mean_size": {a: round(mean(p["sizes"][a] for p in per), 2) for a in ("pick", "chunk", "desc", "anchor", "pool")} if per else {},
+           "screens": sum(p["sizes"]["pool"] for p in per), "screen_yes": sum(p["screen_size"] for p in per),
+           "rows_made_at": sorted({r.get("commit", "unstamped") for r in [*rows.values(), *verdicts.values()]}), "screen_minus_pick": round(rates["screen"] - rates["pick"], 3),
+           "interval": interval, "interval_kind": "95% percentile, paired bootstrap over changes, 2000 draws, seed 4", "screen_set_mean": size, "reading": reading(rates, size, interval, len(per) >= MIN_COMPLETE),
            "by_half": {h: {a: round(mean(p[a] for p in per if p["half"] == h), 3) for a in arms} for h in ("dev", "test") if any(p["half"] == h for p in per)},
            "script_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(), "per_change": per}
     out = guard.stamp(out)
