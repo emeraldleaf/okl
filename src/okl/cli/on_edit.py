@@ -23,40 +23,58 @@ import hashlib
 import io
 import json
 import math
-import os
 import sys
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from .. import core
-from ..client import Client, OKLUnreachableError, _find_config
+from ..client import Client, OKLUnreachableError, _find_config, _repo_relative, save_config
 from ..store import RETIRED_STATUSES
-from .verification import _run_check, _stored_check
+from .verification import _run_check, _stored_check, shown
 
 if TYPE_CHECKING:
     from ..store import Node
 
 KEY = "on_edit"          # in .okl/config.json: {lesson id: approval hash}
 TIMEOUT = 30             # seconds one check may take at edit time
-BUDGET = 50              # seconds for every check one edit runs: Claude Code stops a hook at 60
+BUDGET = 50              # seconds for every check one edit runs, from okl's start
+HOOK_TIMEOUT = 60        # seconds okl registers the edit hook with, so Claude Code stops it there
 
 
 def approval(run: str, expect: str | None) -> str:
-    """What an approval pins: the exact command and the signal it must print."""
-    return hashlib.sha256(f"{run}\0{expect or ''}".encode()).hexdigest()
+    """What an approval pins: the exact command and the signal it must print, as one JSON
+    pair, so no command and signal can be rearranged into another with the same hash."""
+    return hashlib.sha256(json.dumps([run, expect or ""]).encode()).hexdigest()
 
 
 def cmd_on_edit(args: argparse.Namespace) -> int:
     """List the approved edit-time checks, approve or drop some by id, or run the ones governing
     the files given. Exit 2 when there is no config here or the store cannot be read, an id
     cannot be approved, or approval was not given; `run` exits 1 when a check failed."""
+    started = time.monotonic()
+    try:
+        return _on_edit(args, started)
+    # A crash exits 1 with nothing on stdout, which the hook and any caller read as a finding with
+    # nothing to say, and the approved checks then never ran unnoticed (a corrupt store, a
+    # malformed config: review of #441). Anything unforeseen is a could-not-run.
+    except Exception as e:  # noqa: BLE001 - see above
+        print(f"okl on-edit: could not run: {type(e).__name__}: {e}", file=sys.stderr)
+        return 2
+
+
+def _on_edit(args: argparse.Namespace, started: float) -> int:
     path = _find_config()
     if path is None:
         print("okl on-edit: no .okl/config.json here or above: run okl init first", file=sys.stderr)
         return 2
     config = json.loads(path.read_text())
-    approved = {str(k): str(v) for k, v in (config.get(KEY) or {}).items()}
+    raw = config.get(KEY) or {}
+    if not isinstance(raw, dict):
+        print(f"okl on-edit: `{KEY}` in {path} must map lesson ids to approvals; fix or remove it",
+              file=sys.stderr)
+        return 2
+    approved = {str(k): str(v) for k, v in raw.items()}
     client = Client()
     try:
         nodes = {n.id: n for n in client.all_nodes()}
@@ -65,37 +83,42 @@ def cmd_on_edit(args: argparse.Namespace) -> int:
         return 2
     args.action = args.action or "list"
     if args.action == "run":
-        return _run(args, path.parent.parent, approved, nodes, client.repo)
-    if args.action == "add":
-        code = _add(args, approved, nodes, client.repo)
-        if code:
-            return code
-    elif args.action == "remove":
-        approved = {k: v for k, v in approved.items() if k not in set(args.targets)}
-    if args.action in ("add", "remove") and approved != (config.get(KEY) or {}):
+        return _run(args, path.parent.parent, approved, nodes, client.repo, started=started)
+    change = {"add": _add, "remove": _remove}.get(args.action)
+    code = change(args, approved, nodes, client.repo) if change else None
+    if code:
+        return code
+    if change and approved != (config.get(KEY) or {}):
         if approved:
             config[KEY] = approved
         else:
             config.pop(KEY, None)
-        path.write_text(json.dumps(config, indent=2) + "\n")
+        save_config(config, path.parent.parent)
     _list(approved, nodes, client.repo)
     return 0
 
 
 def _why_not(node: Node | None, repo: str) -> str | None:
-    """Why a lesson cannot have an edit-time check, or None when it can."""
+    """Why a lesson cannot have an edit-time check, or None when it can: the first reason that
+    holds, in order."""
     if node is None:
         return "no lesson has this id"
-    if node.status in RETIRED_STATUSES:
-        return f"it is retired ({node.status})"
-    if node.scope not in ("org", f"repo:{repo}"):
-        return f"it belongs to another repository ({node.scope})"
-    if not node.files:
-        return "it governs no files, so no edit would run it: give it files with okl update --files"
-    if _stored_check(node.verified_by) is None:
-        return ("it has no stored check: prove it first with "
-                f"okl verify {node.id} --run \"<check>\" --expect \"<signal>\"")
-    return None
+    check = _stored_check(node.verified_by)
+    hidden = check is not None and not all(
+        s.isprintable() for s in (check[0], check[1] or "", node.title, node.files or ""))
+    reasons = (
+        (node.status in RETIRED_STATUSES, f"it is retired ({node.status})"),
+        (node.scope not in ("org", f"repo:{repo}"), f"it belongs to another repository ({node.scope})"),
+        (not node.files, "it governs no files, so no edit would run it: give it files with okl update --files"),
+        (check is None, "it has no stored check: prove it first with "
+                        f"okl verify {node.id} --run \"<check>\" --expect \"<signal>\""),
+        # What the person approves must be what runs: a control code, a zero-width or a direction
+        # mark can show one command over another (review of #441; issue #185).
+        (hidden, "its command, signal, title or files hold a character a terminal can hide (a control "
+                 "code, a zero-width or a direction mark), so it cannot be shown as it would run: "
+                 "fix the lesson first"),
+    )
+    return next((why for bad, why in reasons if bad), None)
 
 
 def _add(args: argparse.Namespace, approved: dict[str, str], nodes: dict[str, Node], repo: str) -> int | None:
@@ -120,14 +143,27 @@ def _add(args: argparse.Namespace, approved: dict[str, str], nodes: dict[str, No
         print(f"  [{i}] {nodes[i].title}\n      files: {nodes[i].files}\n      runs:  {run}"
               + (f"\n      passes when its output contains {expect!r}" if expect else ""), file=out)
     if not asking:
-        print("refusing to approve stored commands unattended: review them above, then pass --yes",
-              file=sys.stderr)
+        # Said to whoever ran it, often an agent: the way forward is a person, not a flag
+        # (lesson refusal-offers-no-destructive-shortcut).
+        print("refusing to approve stored commands unattended: a person reviews them above and "
+              "approves them in a terminal", file=sys.stderr)
         return 2
     if not args.yes and input("Approve them? [y/N] ").strip().lower() not in ("y", "yes"):
         print("okl on-edit: not approved; nothing changed", file=sys.stderr)
         return 2
     for i in wanted:
         approved[i] = approval(*(_stored_check(nodes[i].verified_by) or ("", None)))
+    return None
+
+
+def _remove(args: argparse.Namespace, approved: dict[str, str], _nodes: dict[str, Node], _repo: str) -> int | None:
+    """Drop the named approvals in place; 2, changing nothing, when one was never approved."""
+    unknown = [i for i in args.targets if i not in approved]
+    if unknown:
+        print(f"okl on-edit: not approved, so nothing to remove: {', '.join(unknown)}", file=sys.stderr)
+        return 2
+    for i in args.targets:
+        approved.pop(i, None)
     return None
 
 
@@ -141,7 +177,8 @@ def _list(approved: dict[str, str], nodes: dict[str, Node], repo: str) -> None:
             state = ("" if chk and approval(*chk) == pinned and _why_not(node, repo) is None
                      else "  (NOT RUN: " + (_why_not(node, repo) or "its stored check changed since it was "
                                              f"approved; review it with okl on-edit add {i}") + ")")
-            print(f"  [{i}] {node.title if node else ''}{state}" + (f"\n      runs: {chk[0]}" if chk else ""))
+            print(f"  [{i}] {shown(node.title) if node else ''}{state}"
+                  + (f"\n      runs: {shown(chk[0])}" if chk else ""))
     else:
         print("No lesson checks run on edit here. Approve the ones that are quick and need nothing but "
               "this checkout: okl on-edit add <id>...")
@@ -150,33 +187,33 @@ def _list(approved: dict[str, str], nodes: dict[str, Node], repo: str) -> None:
     if can:
         print(f"{len(can)} more could be added (they govern files and carry a stored check):")
         for n in can:
-            print(f"  [{n.id}] {n.title}\n      runs: {(_stored_check(n.verified_by) or ('',))[0]}")
+            print(f"  [{n.id}] {n.title}\n      runs: {(_stored_check(n.verified_by) or ('',))[0]}")  # printable: _why_not
 
 
-def _relative(paths: list[str], root: Path) -> set[str]:
-    """The paths that lie inside the repository, repo-relative; others are dropped."""
-    out = set()
-    for p in paths:
-        full = Path(p) if Path(p).is_absolute() else Path.cwd() / p
-        with contextlib.suppress(ValueError, OSError):
-            out.add(full.resolve().relative_to(root.resolve()).as_posix())
-    return out
+def _run(args: argparse.Namespace, root: Path, approved: dict[str, str], nodes: dict[str, Node], repo: str,
+         *, started: float) -> int:
+    """Run the approved checks of the lessons governing the edited files; report what failed.
 
-
-def _run(args: argparse.Namespace, root: Path, approved: dict[str, str], nodes: dict[str, Node], repo: str) -> int:
-    """Run the approved checks of the lessons governing the edited files; report what failed."""
-    rel = _relative(args.targets, root)
-    hits = sorted((n for n in core.governing(list(nodes.values()), repo, rel) if n.id in approved),
+    Exit 1 when a check failed; 2 when none failed but one could not be judged (out of time, its
+    command changed since approval), since a caller reads 0 as every check passing; 0 when every
+    check that governs the files ran and passed, or none governs them. The path is read as the
+    file briefing reads it, so a tracked symlink is governed by its own name (review of #441).
+    """
+    inside, _outside = _repo_relative(list(args.targets), root)
+    rel = sorted(set(inside))
+    hits = sorted((n for n in core.governing(list(nodes.values()), repo, set(rel)) if n.id in approved),
                   key=lambda n: n.id) if rel else []
     failed: list[tuple[Node, str, str | None, str, str]] = []
     notes: list[str] = []
     passed = 0
-    deadline = time.monotonic() + args.budget
+    deadline = started + args.budget   # from okl's start, so a slow store read counts too
     for n in hits:
         chk = _stored_check(n.verified_by)
-        if chk is None or approval(*chk) != approved[n.id]:
-            notes.append(f"[{n.id}] {n.title}: not run, because its stored check "
-                         + ("is gone" if chk is None else "changed since it was approved")
+        why = _why_not(n, repo)
+        if chk is None or why or approval(*chk) != approved[n.id]:
+            notes.append(f"[{n.id}] {shown(n.title)}: not run, because "
+                         + (why or ("its stored check changed since it was approved" if chk else
+                                    "its stored check is gone"))
                          + f"; the person can review it with okl on-edit add {n.id}")
             continue
         left = deadline - time.monotonic()
@@ -186,27 +223,25 @@ def _run(args: argparse.Namespace, root: Path, approved: dict[str, str], nodes: 
         run, expect = chk
         timeout = max(1, min(args.timeout, math.ceil(left)))
         said = io.StringIO()
-        here = Path.cwd()
-        try:
-            os.chdir(root)
-            with contextlib.redirect_stderr(said):
-                output, outcome = _run_check(argparse.Namespace(run=run, expect=expect, timeout=timeout))
-        finally:
-            os.chdir(here)
-        if output is not None:
+        with contextlib.redirect_stderr(said):
+            result = _run_check(argparse.Namespace(run=run, expect=expect, timeout=timeout, cwd=root))
+        if result.output is not None:
             passed += 1
-        elif outcome.startswith("timed out"):
+        elif result.timed_out:
             notes.append(f"[{n.id}] {n.title}: its check did not finish in {timeout}s, so it was not judged")
         else:
-            failed.append((n, run, expect, outcome, said.getvalue()))
-    text = _report(sorted(rel), failed, notes)
+            failed.append((n, run, expect, result.outcome, said.getvalue()))
+    text = _report(rel, failed, notes)
+    code = 1 if failed else 2 if notes else 0
     if args.format == "hook":
         if text:
             print(json.dumps({"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": text}}))
+    elif code == 2:
+        print(text, file=sys.stderr)
     else:
-        print(text or (f"okl on-edit: {passed} approved check(s) passed for {', '.join(sorted(rel))}"
-                       if hits else f"okl on-edit: no approved check governs {', '.join(sorted(rel)) or 'these files'}"))
-    return 1 if failed else 0
+        print(text or (f"okl on-edit: {passed} approved check(s) passed for {', '.join(rel)}" if hits
+                       else f"okl on-edit: no approved check governs {', '.join(rel) or 'these files'}"))
+    return code
 
 
 def _report(paths: list[str], failed: list, notes: list[str]) -> str:

@@ -160,7 +160,7 @@ def test_uninstall_leaves_linked_settings_and_mcp_json_alone(repo):
     """_uninstall_hook_registrations and _uninstall_mcp do not rewrite a file through a link."""
     root, okl, outside, link = repo
     groups: dict[str, list] = {}
-    for event, _matcher, command in install.HOOKS:
+    for event, _matcher, command, _timeout in install.HOOKS:
         groups.setdefault(event, []).append({"hooks": [{"type": "command", "command": command}]})
     settings = json.dumps({"hooks": groups}) + "\n"
     mcp = json.dumps({"mcpServers": {"okl": install.MCP_ENTRY}}) + "\n"

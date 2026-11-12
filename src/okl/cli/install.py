@@ -16,6 +16,7 @@ from pathlib import Path
 
 from .. import core
 from ..client import Client, _find_config, load_config, save_config
+from .on_edit import HOOK_TIMEOUT
 from .packs import _empty_store_guidance, _seed_first_run
 
 
@@ -37,12 +38,15 @@ def _merge_hook_settings(claude: Path) -> bool:
     # from UserPromptSubmit and SessionStart, and a PreToolUse briefing printed that way fired
     # unread (REPORT §8). The read hook returns JSON `additionalContext`, which does reach it from
     # PostToolUse, next to the read's result: measured, 5 of 5 (REPORT §4aj).
-    for event, matcher, command in HOOKS:
+    for event, matcher, command, timeout in HOOKS:
         entries = hooks_cfg.setdefault(event, [])
         if any(h.get("command", "").endswith(Path(command).name)
                for e in entries for h in e.get("hooks", [])):
             continue
-        entry: dict = {"hooks": [{"type": "command", "command": command}]}
+        hook: dict = {"type": "command", "command": command}
+        if timeout:
+            hook["timeout"] = timeout
+        entry: dict = {"hooks": [hook]}
         if matcher:
             entry = {"matcher": matcher, **entry}
         entries.append(entry)
@@ -64,14 +68,17 @@ OWNER_DENY = ("Bash(gh api *protection*)", "Bash(gh api *Protection*)", "Bash(gh
 
 
 # okl registers exactly these commands; uninstall removes exactly these and nothing else. Each is
-# (event, the tools it answers for events Claude Code filters by tool, command). The read hook
-# briefs the lessons governing a file when it is read, which comes before an edit (#94); the edit
-# hook runs the approved checks of the lessons governing a file after an edit (#435).
-HOOKS: tuple[tuple[str, str | None, str], ...] = (
-    ("UserPromptSubmit", None, '"$CLAUDE_PROJECT_DIR"/.claude/hooks/userpromptsubmit-okl-check.sh'),
-    ("Stop", None, '"$CLAUDE_PROJECT_DIR"/.claude/hooks/stop-okl-encode.sh'),
-    ("PostToolUse", "Read", '"$CLAUDE_PROJECT_DIR"/.claude/hooks/posttooluse-okl-read.sh'),
-    ("PostToolUse", "Edit|Write|MultiEdit|NotebookEdit", '"$CLAUDE_PROJECT_DIR"/.claude/hooks/posttooluse-okl-edit.sh'),
+# (event, the tools it answers for events Claude Code filters by tool, command, seconds Claude
+# Code may run it, or None for its default). The read hook briefs the lessons governing a file
+# when it is read, which comes before an edit (#94); the edit hook runs the approved checks of the
+# lessons governing a file after an edit (#435), under a timeout of okl's own: Claude Code's
+# default for a PostToolUse hook is ten minutes, not the minute okl's budget was written for.
+HOOKS: tuple[tuple[str, str | None, str, int | None], ...] = (
+    ("UserPromptSubmit", None, '"$CLAUDE_PROJECT_DIR"/.claude/hooks/userpromptsubmit-okl-check.sh', None),
+    ("Stop", None, '"$CLAUDE_PROJECT_DIR"/.claude/hooks/stop-okl-encode.sh', None),
+    ("PostToolUse", "Read", '"$CLAUDE_PROJECT_DIR"/.claude/hooks/posttooluse-okl-read.sh', None),
+    ("PostToolUse", "Edit|Write|MultiEdit|NotebookEdit",
+     '"$CLAUDE_PROJECT_DIR"/.claude/hooks/posttooluse-okl-edit.sh', HOOK_TIMEOUT),
 )
 
 
@@ -302,7 +309,7 @@ def _uninstall_owner_denies(act: str, dry_run: bool) -> list[str]:
 def _drop_okl_hooks(hooks_cfg: dict) -> int:
     """Remove okl's exact commands from `hooks_cfg` in place; return how many went."""
     removed = 0
-    for event, _matcher, command in HOOKS:
+    for event, _matcher, command, _timeout in HOOKS:
         groups = hooks_cfg.get(event)
         if not isinstance(groups, list):
             continue

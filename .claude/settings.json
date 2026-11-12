@@ -35,7 +35,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/posttooluse-okl-edit.sh"
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/posttooluse-okl-edit.sh",
+            "timeout": 60
           }
         ]
       }

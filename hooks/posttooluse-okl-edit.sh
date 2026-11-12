@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:56d97f5e88caf5e8ff7d806658d2ebe267aa39bd6d93c81218618b3b822d3ad9
+# okl-fingerprint: sha256:c36ab983495c2129ae22756e330faa90b9115862d12c693e0f54acbc0b956528
 # PostToolUse hook on Edit|Write|MultiEdit|NotebookEdit — after the agent edits a file, run the
 # checks of the lessons that govern it, the ones the person approved, and hand any failure back
 # beside the edit (#435).
@@ -9,8 +9,9 @@
 # code where the same lesson in a list mostly did not (REPORT §4ax), and a failing check is not a
 # list item. This hook asks `okl on-edit run <file>`, which runs only checks approved with
 # `okl on-edit add` (each command shown and confirmed, and pinned by its hash), each with its own
-# short timeout. A pass says nothing. It never blocks and never stamps a lesson verified. With no
-# check approved it returns before starting okl, so an edit costs one small read of the config.
+# short timeout, inside the 60-second timeout okl registers this hook with. A pass says nothing.
+# It never blocks and never stamps a lesson verified. With no check approved it returns before
+# starting okl, so an edit costs one small read of the config.
 set -uo pipefail
 
 # Anchor to the project, as the other hooks do: from a directory a `cd` drifted to, okl finds
@@ -125,10 +126,13 @@ while { [[ "$rc" -eq 126 ]] || [[ "$rc" -eq 127 ]]; } && [[ "$run_s" -lt 2 ]]; d
   next_layer || break
   run_checks
 done
-# 0: every check passed or none applied; 1: a check failed, and the JSON says which.
-if [[ "$rc" -eq 0 ]] || [[ "$rc" -eq 1 ]]; then
+# What okl printed goes to the agent whatever its exit: the JSON names a failing check (exit 1)
+# or a check it could not judge (exit 2). Exit 0 with nothing printed is every check passing, or
+# none governing the file. Any other silence is okl failing: a crash exits 1 with nothing on
+# stdout, and passing that on as silence read as "the checks passed" (review of #441).
+if [[ -n "$out" ]]; then
   printf '%s' "$out"
-else
+elif [[ "$rc" -ne 0 ]]; then
   why=$( { [[ -n "$errf" ]] && tail -n 1 "$errf"; } 2>/dev/null)
   not_run "okl exited $rc${why:+: $why}"
 fi

@@ -28,6 +28,16 @@ okl standing         # the lessons this repo names on every task briefing, one l
                      #   ten: the ones most needed on earlier work, named on every task, raised the
                      #   briefing's reach on later work). A lesson the briefing already names is not
                      #   repeated, a file briefing gets none, and OKL_STANDING=0 leaves them out.
+okl on-edit          # the lesson checks that run when the agent edits a file the lesson governs
+                     #   (Claude Code's edit hook calls `okl on-edit run <file>`; another agent's
+                     #   hook can too). `okl on-edit add <id>...` shows each stored command and
+                     #   approves it on your yes (--yes skips the question; unattended without it,
+                     #   exit 2), pinned to the command's hash: a command that changes afterwards
+                     #   is not run until approved again. `remove <id>...` drops one. `run` exits
+                     #   1 when a check failed, 2 when one could not be judged (out of time, or
+                     #   changed since approved), 0 when every one passed or none governs the
+                     #   file; each gets --timeout (30 s) and one edit --budget (50 s). Nothing is
+                     #   stamped verified, and nothing runs until a check is approved.
 okl changes          # what a change did to the files lessons name, read from git with no model:
                      #   new, deleted and renamed files, and code moved between files (5 or more
                      #   lines removed from one file and added to another, which git's rename

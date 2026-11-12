@@ -22,13 +22,22 @@ from .lessons import (
     cmd_triggers,
     cmd_update,
 )
-from .on_edit import BUDGET, TIMEOUT, cmd_on_edit
+from .on_edit import BUDGET, HOOK_TIMEOUT, TIMEOUT, cmd_on_edit
 from .packs import cmd_seed
 from .review import cmd_review
 from .servers import cmd_mcp, cmd_serve
 from .standing import cmd_standing
 from .verification import cmd_drift, cmd_export, cmd_reverify, cmd_verify
 from .warm import cmd_warm
+
+
+def _seconds(value: str) -> int:
+    """`okl on-edit run --timeout` and `--budget`: a whole number of seconds, at least 1. A zero
+    or negative limit marked every check out of time, or was quietly read as 1 (review of #441)."""
+    n = int(value)
+    if n < 1:
+        raise argparse.ArgumentTypeError(f"{value!r} is not a number of seconds of at least 1")
+    return n
 
 
 def _days_or_blank(value: str) -> int | str:
@@ -347,12 +356,13 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
     poe_run.add_argument("targets", nargs="+", metavar="file", help="the edited files")
     poe_run.add_argument("--format", choices=["text", "hook"], default="text",
                          help="hook prints Claude Code's PostToolUse JSON, and nothing when every check passed")
-    poe_run.add_argument("--timeout", type=int, default=TIMEOUT,
+    poe_run.add_argument("--timeout", type=_seconds, default=TIMEOUT,
                          help=f"seconds one check may take (default {TIMEOUT}); a check that runs longer is "
                               "reported as not judged, not as failed")
-    poe_run.add_argument("--budget", type=int, default=BUDGET,
-                         help=f"seconds for all the checks one edit runs (default {BUDGET}, inside Claude Code's "
-                              "60-second hook limit); the rest are reported as not run")
+    poe_run.add_argument("--budget", type=_seconds, default=BUDGET,
+                         help=f"seconds for all the checks one edit runs, from okl's start (default {BUDGET}, "
+                              f"inside the {HOOK_TIMEOUT}-second timeout okl registers the edit hook with); "
+                              "the rest are reported as not run")
 
     pch = sub.add_parser(
         "changes", help="what a change did to the files lessons name: new, deleted and renamed files and "

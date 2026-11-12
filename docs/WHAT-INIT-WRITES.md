@@ -47,7 +47,7 @@ is written outside the directory you run `init` in; nothing contacts a network u
 run `okl connect` and point it somewhere yourself.
 
 `init` writes `.okl/config.json`. When it wires Claude Code (the repo has a `.claude/`
-directory, `claude` is on PATH, or you passed `--claude`), it also installs three hooks:
+directory, `claude` is on PATH, or you passed `--claude`), it also installs four hooks:
 a `UserPromptSubmit` hook that runs `check` on
 the prompt you actually typed and puts the briefing into the model's context (the
 enforced read — it must be this event: `PreToolUse` stdout never reaches the model,

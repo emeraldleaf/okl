@@ -971,7 +971,14 @@ def test_stored_data_never_reaches_a_shell():
                if "shell=True" in line]
     assert len(shelled) == 1 and shelled[0].startswith("verification.py:"), \
         f"unexpected shell=True: {shelled}"
-    assert "subprocess.run(args.run, shell=True" in (src / "cli" / "verification.py").read_text()
+    assert "subprocess.Popen(args.run, shell=True" in (src / "cli" / "verification.py").read_text()
+    # ...and only these reach it: verify (a command the person typed, or reverify's, which the
+    # person confirmed) and on-edit (a command the person approved by its exact text, #435). A
+    # third caller hands a command to the shell and must be justified here.
+    callers = sorted(f"{p.name}:{i}" for p in src.rglob("*.py")
+                     for i, line in enumerate(p.read_text().splitlines(), 1)
+                     if "_run_check(" in line and "def _run_check(" not in line)
+    assert [c.split(":")[0] for c in callers] == ["on_edit.py", "verification.py"], callers
 
     # ASSERT (3) — the remote path can never trigger execution: /verify accepts EVIDENCE
     # already produced by a local run, and the commit it ran at, never a command for the
@@ -1576,7 +1583,7 @@ def test_init_never_writes_through_a_symlink_out_of_the_repo(tmp_path):
     # followed link would rewrite it; it must stay byte-identical, and be named.
     from okl.cli.install import HOOKS
     planted = json.dumps({"hooks": {"Stop": [{"hooks": [
-        {"type": "command", "command": next(c for e, _m, c in HOOKS if e == "Stop")}]}]}})
+        {"type": "command", "command": next(c for e, _m, c, _t in HOOKS if e == "Stop")}]}]}})
     (outside / "settings.json").write_text(planted)
     r = subprocess.run([sys.executable, "-m", "okl", "init", "--uninstall"], cwd=repo, env=env,
                        capture_output=True, text=True)
@@ -2033,7 +2040,7 @@ def test_init_and_doctor_know_okls_own_plugin(tmp_path):
     # Hooks registered by hand as well: both would fire. doctor says so and exits 1.
     from okl.cli.install import HOOKS
     (proj / ".claude" / "settings.json").write_text(json.dumps({"hooks": {"Stop": [{"hooks": [
-        {"type": "command", "command": next(c for e, _m, c in HOOKS if e == "Stop")}]}]}}))
+        {"type": "command", "command": next(c for e, _m, c, _t in HOOKS if e == "Stop")}]}]}}))
     r = okl("doctor")
     assert r.returncode == 1 and "twice" in r.stdout, r.stdout
 

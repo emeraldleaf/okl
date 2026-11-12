@@ -633,7 +633,7 @@ measurements above. [What it is not for](#what-okl-is-not-for) and
 /plugin install okl@okl
 ```
 
-The plugin carries the three hooks, the MCP tools and the seeding commands. It does not
+The plugin carries the four hooks, the MCP tools and the seeding commands. It does not
 carry okl itself: install the CLI first, **with the MCP extra**, because the plugin
 registers the `okl mcp` server (`pipx install 'observed-knowledge-ledger[mcp]'`), then run
 `okl init` in the repo for the store and the drift gate (a pre-push hook; `--ci` for the

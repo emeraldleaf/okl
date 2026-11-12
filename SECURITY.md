@@ -56,10 +56,21 @@ real exit status, and records the command as evidence. That is the feature: veri
 must come from an executed check. It also means **never pass untrusted input to
 `--run`**, and never wire it to a command built from unreviewed data.
 
+Two commands run those recorded commands again, and on a shared store other people may have
+recorded them. `okl reverify` lists them and runs them only after you confirm, or with
+`--yes`. `okl on-edit add <id>` shows a lesson's command and, once you approve it, runs it
+**unattended after every edit your agent makes to a file that lesson governs**, until you
+`okl on-edit remove` it. An approval is pinned to the exact command and its expected signal,
+so a command that changes in the store afterwards does not run until you approve it again,
+and okl refuses to show for approval any command, signal, title or file list holding a
+character a terminal can hide. Approve only commands you would run yourself, that finish in
+seconds and need nothing but the checkout.
+
 ### 3. The hooks execute scripts from your repository
 
 `okl init` installs shell hooks into `.claude/hooks/` and registers them. They run
-whenever your agent runs. In a git repository it also installs a pre-push hook (in
+whenever your agent runs; the one after an edit runs the commands you approved with
+`okl on-edit add`, and nothing until you approve one. In a git repository it also installs a pre-push hook (in
 `.git/hooks/` or your `core.hooksPath`) that runs on every push, from any git client, and
 executes the okl named by `OKL_BIN` or `.okl/config.json`. Read them before installing, the same as any other hook, and
 review changes to them the same way you would review CI configuration.

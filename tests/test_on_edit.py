@@ -83,7 +83,8 @@ def test_add_shows_each_command_and_approves_only_on_a_yes(tmp_path):
 
     refused = _okl(repo, env, "on-edit", "add", "ledger")
     assert refused.returncode == 2 and refused.stdout == ""
-    assert run in refused.stderr and "--yes" in refused.stderr
+    assert run in refused.stderr and "approves them in a terminal" in refused.stderr
+    assert "--yes" not in refused.stderr, "a refusal an agent reads offers no shortcut past the person"
     assert "on_edit" not in _config(repo)
     for bad, why in (("unproven", "no stored check"), ("nope", "no lesson has this id")):
         r = _okl(repo, env, "on-edit", "add", bad, "--yes")
@@ -96,6 +97,8 @@ def test_add_shows_each_command_and_approves_only_on_a_yes(tmp_path):
     assert "1 lesson check(s) run when the agent edits" in ok.stdout and "[ledger]" in ok.stdout
     gone = _okl(repo, env, "on-edit", "remove", "ledger")
     assert gone.returncode == 0 and "on_edit" not in _config(repo)
+    again = _okl(repo, env, "on-edit", "remove", "ledger")
+    assert (again.returncode, again.stdout) == (2, "") and "not approved" in again.stderr
     assert "[ledger]" in gone.stdout.split("could be added")[1], "an approvable lesson is listed as one"
 
 
@@ -118,6 +121,10 @@ def test_run_hands_a_failure_back_says_nothing_on_a_pass_and_stamps_nothing(tmp_
     assert context.startswith("OKL CHECK FAILED after editing src/orders.py")
     for part in ("[ledger]", "never write BAD into orders.py", "check.py", "BAD found in orders", "exit 1"):
         assert part in context, (part, context)
+    assert "NOT stamping" not in context, "verify's own header line reached the agent"
+    inside = subprocess.run([sys.executable, "-m", "okl", "on-edit", "run", "--format", "hook", "orders.py"],
+                            cwd=repo / "src", env=env, capture_output=True, text=True)
+    assert inside.returncode == 1 and "BAD found in orders" in _context(inside), "the check ran outside the root"
     assert _okl(repo, env, "show", "ledger").stdout == proof, "an edit-time run stamped the lesson"
 
     for elsewhere in (str(repo / "check.py"), "/etc/hosts"):
@@ -144,7 +151,7 @@ def test_only_an_approved_unchanged_command_runs(tmp_path):
     assert v.returncode == 0, v.stderr
     mark.unlink()
     changed = _okl(repo, env, "on-edit", "run", "--format", "hook", orders)
-    assert changed.returncode == 0 and not mark.exists(), "a changed command ran without a new approval"
+    assert changed.returncode == 2 and not mark.exists(), "a changed command ran without a new approval"
     assert "[marks]" in _context(changed) and "changed since it was approved" in _context(changed)
     listed = _okl(repo, env, "on-edit")
     assert "NOT RUN" in listed.stdout and "okl on-edit add marks" in listed.stdout
@@ -158,13 +165,16 @@ def test_a_slow_check_is_not_judged_and_the_edit_has_a_budget(tmp_path):
     _lesson(repo, env, "slow-b", run=f"{PY} marks.py  ")
     assert _okl(repo, env, "on-edit", "add", "slow-a", "slow-b", "--yes").returncode == 0
 
-    r = _okl(repo, env, "on-edit", "run", "--format", "hook", "--timeout", "1", "--budget", "1",
+    r = _okl(repo, env, "on-edit", "run", "--format", "hook", "--timeout", "30", "--budget", "1",
              str(repo / "src" / "orders.py"), SLOW="5")
-    assert r.returncode == 0, r.stderr
+    assert r.returncode == 2, r.stderr   # nothing failed, but not every check was judged
     context = _context(r)
     assert "[slow-a]" in context and "did not finish in 1s, so it was not judged" in context
     assert "[slow-b]" in context and "out of time for this edit" in context
     assert "CHECK FAILED" not in context
+    text = _okl(repo, env, "on-edit", "run", "--budget", "1", str(repo / "src" / "orders.py"), SLOW="5")
+    assert (text.returncode, text.stdout) == (2, "") and "not judged" in text.stderr
+    assert _okl(repo, env, "on-edit", "run", "--timeout", "0", "x").returncode == 2
 
 
 def _edit_hook(repo, env, file_path, **extra):
@@ -215,12 +225,118 @@ def test_uninstall_removes_the_edit_hook_and_its_registration(tmp_path):
 
 
 def test_the_docs_state_the_edit_time_limits_the_code_has():
-    """The guide and COSTS-AND-KNOBS state the per-check timeout and the per-edit budget; they
-    move with the constants, and the budget stays inside Claude Code's 60-second hook limit."""
-    from okl.cli.on_edit import BUDGET, TIMEOUT
+    """The guide and COSTS-AND-KNOBS state the per-check timeout and the per-edit budget, and the
+    budget fits inside the timeout okl registers the edit hook with, in init's table and in both
+    hooks.json copies: Claude Code's own default for a PostToolUse hook is ten minutes, so the
+    limit has to be okl's (review of #441)."""
+    from okl.cli.install import HOOKS
+    from okl.cli.on_edit import BUDGET, HOOK_TIMEOUT, TIMEOUT
 
     def flat(name):
         return " ".join((ROOT / "docs" / name).read_text().split())
-    assert BUDGET < 60
-    assert f"each gets {TIMEOUT} seconds and one edit gets {BUDGET} in all" in flat("GETTING-STARTED.md")
+    assert TIMEOUT <= BUDGET < HOOK_TIMEOUT
+    assert [t for _e, _m, c, t in HOOKS if c.endswith("posttooluse-okl-edit.sh")] == [HOOK_TIMEOUT]
+    for copy in (ROOT / "hooks" / "hooks.json", ROOT / "src" / "okl" / "scaffold" / "hooks" / "hooks.json"):
+        edit = [h for e in json.loads(copy.read_text())["hooks"]["PostToolUse"] for h in e["hooks"]
+                if h["command"].endswith("posttooluse-okl-edit.sh")]
+        assert [h.get("timeout") for h in edit] == [HOOK_TIMEOUT], copy
+    guide = flat("GETTING-STARTED.md")
+    assert f"each gets {TIMEOUT} seconds and one edit gets {BUDGET} in all" in guide
+    assert f"inside the {HOOK_TIMEOUT}-second timeout okl registers the hook with" in guide
     assert f"at most {TIMEOUT} seconds each and {BUDGET} an edit" in flat("COSTS-AND-KNOBS.md")
+
+
+def test_a_command_that_could_hide_from_the_terminal_cannot_be_approved(tmp_path):
+    """A stored command whose carriage return and erase-line code show a harmless command over the
+    one that runs (review of #441) is refused for approval, and the list never offers it; reverify
+    and the list show such text escaped, never raw."""
+    from okl.cli.verification import shown
+    repo, env = _repo(tmp_path)
+    spoof = f"echo ran > pwned.txt; echo ORDERS OK #\r\x1b[2K      runs:  {PY} check.py"
+    _lesson(repo, env, "spoof", run=spoof)
+    (repo / "pwned.txt").unlink()   # verify ran it once
+
+    r = _okl(repo, env, "on-edit", "add", "spoof", "--yes")
+    assert (r.returncode, r.stdout) == (2, "") and "a terminal can hide" in r.stderr
+    assert "on_edit" not in _config(repo)
+    assert "[spoof]" not in _okl(repo, env, "on-edit").stdout
+    assert shown("python3 check.py") == "python3 check.py"
+    assert shown(spoof) == repr(spoof) and "\x1b" not in shown(spoof)
+
+
+def test_okl_failing_is_said_never_silent(tmp_path):
+    """A malformed approval list and a store that is not a database each exit 2 with the reason,
+    and the hook says the checks did not run: a crash once exited 1 with nothing printed, which
+    the hook passed on as silence, read as every check passing (review of #441)."""
+    repo, env = _repo(tmp_path)
+    _lesson(repo, env)
+    orders = str(repo / "src" / "orders.py")
+    config = _config(repo)
+    (repo / ".okl" / "config.json").write_text(json.dumps({**config, "on_edit": ["ledger"]}))
+    bad = _okl(repo, env, "on-edit", "run", orders)
+    assert (bad.returncode, bad.stdout) == (2, "") and "must map lesson ids" in bad.stderr
+    assert _context(_edit_hook(repo, env, orders)).startswith("OKL CHECKS NOT RUN")
+
+    assert _okl(repo, env, "on-edit", "add", "ledger", "--yes").returncode == 2   # the list is still bad
+    (repo / ".okl" / "config.json").write_text(json.dumps(config))
+    assert _okl(repo, env, "on-edit", "add", "ledger", "--yes").returncode == 0
+    (tmp_path / "store.db").write_bytes(b"not a database, " * 64)
+    broken = _okl(repo, env, "on-edit", "run", "--format", "hook", orders)
+    assert (broken.returncode, broken.stdout) == (2, "") and "could not run" in broken.stderr
+    hooked = _edit_hook(repo, env, orders)
+    assert hooked.returncode == 0 and _context(hooked).startswith(f"OKL CHECKS NOT RUN for {orders}")
+    # an okl that dies the way an uncaught exception does: exit 1, nothing on stdout
+    crash = tmp_path / "crash.sh"
+    crash.write_text("#!/bin/sh\necho 'Traceback: boom' >&2\nexit 1\n"); crash.chmod(0o755)
+    died = _edit_hook(repo, env, orders, OKL_BIN=str(crash))
+    assert _context(died).startswith("OKL CHECKS NOT RUN") and "boom" in _context(died)
+
+
+def test_a_check_out_of_time_is_stopped_with_everything_it_started(tmp_path):
+    """Killing only the shell left a check's other processes running, and one wrote to the repo
+    after okl had reported the check stopped (review of #441): the whole group is stopped."""
+    repo, env = _repo(tmp_path)
+    (repo / "spawns.py").write_text(
+        "import os, subprocess, sys, time\n"
+        "if os.environ.get('SLOW'):\n"
+        "    subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(2); open(\"late.txt\", \"w\")'])\n"
+        "    time.sleep(30)\n"
+        "print('ORDERS OK')\n")
+    _lesson(repo, env, "spawns", run=f"{PY} spawns.py")
+    assert _okl(repo, env, "on-edit", "add", "spawns", "--yes").returncode == 0
+
+    r = _okl(repo, env, "on-edit", "run", "--format", "hook", "--timeout", "1",
+             str(repo / "src" / "orders.py"), SLOW="1")
+    assert r.returncode == 2 and "did not finish in 1s" in _context(r)
+    import time
+    time.sleep(3)
+    assert not (repo / "late.txt").exists(), "a process the timed-out check started ran on"
+
+
+def test_a_tracked_symlink_is_governed_by_its_own_name(tmp_path):
+    """The edit check reads a path as the file briefing does: a lesson naming a tracked symlink
+    runs when the link is edited, not only when its target is (review of #441)."""
+    repo, env = _repo(tmp_path)
+    (repo / "src" / "link.py").symlink_to("orders.py")
+    _lesson(repo, env, "linked", files="src/link.py")
+    assert _okl(repo, env, "on-edit", "add", "linked", "--yes").returncode == 0
+    (repo / "src" / "orders.py").write_text("BAD = 1\n")
+    r = _okl(repo, env, "on-edit", "run", "--format", "hook", str(repo / "src" / "link.py"))
+    assert r.returncode == 1 and "[linked]" in _context(r)
+
+
+def test_only_a_live_lesson_of_this_repository_can_be_approved_and_the_signal_is_pinned(tmp_path):
+    """A retired lesson and another repository's are refused with the reason; the approval pins
+    the expected signal as well as the command."""
+    repo, env = _repo(tmp_path)
+    _lesson(repo, env, "old")
+    assert _okl(repo, env, "retire", "old", "--reason", "wrong").returncode == 0
+    other = tmp_path / "other"; (other / ".okl").mkdir(parents=True)
+    (other / ".okl" / "config.json").write_text(json.dumps({"repo": "other"}))
+    (other / "check.py").write_text("print('ORDERS OK')\n"); (other / "src").mkdir()
+    _lesson(other, env, "theirs")
+    for lesson, why in (("old", "it is retired"), ("theirs", "another repository")):
+        r = _okl(repo, env, "on-edit", "add", lesson, "--yes")
+        assert (r.returncode, r.stdout) == (2, "") and why in r.stderr, r.stderr
+    assert approval("pytest -q", "passed") != approval("pytest -q", "1 passed")
+    assert approval("pytest -q", None) == approval("pytest -q", "")

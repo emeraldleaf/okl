@@ -14,13 +14,27 @@
   `--yes`), and pins the command's hash, so a check whose stored command changes stops running
   until it is approved again; `okl on-edit` lists them and `okl on-edit remove` drops them. The
   command runs through `okl verify`'s own runner, still the one place okl hands a command to a
-  shell. Each check gets 30 seconds and one edit 50 (`okl on-edit run --timeout`, `--budget`);
-  a check that runs out of time is reported as not judged. With nothing approved the hook
-  returns after one read of `.okl/config.json`, without starting okl. It never blocks an edit
-  and never stamps a lesson verified. Other agents can call `okl on-edit run <file>` from their
+  shell, and okl refuses to show for approval a command, signal, title or file list holding a
+  character a terminal can hide (a control code, a zero-width or a direction mark), which could
+  show one command over another. Each check gets 30 seconds and one edit 50, counted from okl's
+  start (`okl on-edit run --timeout`, `--budget`), inside a 60-second timeout okl registers the
+  hook with (Claude Code's own default for it is ten minutes); a check that runs out of time is
+  stopped with everything it started and reported as not judged. `okl on-edit run` exits 1 when
+  a check failed, 2 when one could not be judged, 0 when every one passed or none governs the
+  file. With nothing approved the hook returns after one read of `.okl/config.json`, without
+  starting okl; when okl fails, it says the checks did not run. It never blocks an edit and
+  never stamps a lesson verified. Other agents can call `okl on-edit run <file>` from their
   own hooks. `okl init` installs and registers the hook; `OKL_DISABLED_HOOKS=edit` switches it
   off. Not yet measured: whether a failing check at the edit changes what an agent writes needs
   its own pre-registered test before anything here is turned on for you.
+
+- **A check that runs out of time is stopped with everything it started** (review of #441).
+  `okl verify`, `okl reverify` and `okl on-edit` killed only the shell a check ran in, so a
+  compound check's other processes ran on, and one wrote to the repository after okl had
+  reported it stopped. The check now runs in its own session and the whole group is stopped.
+  Its output is read with undecodable bytes replaced, so one stray byte no longer ends a
+  reverify, and stdout and stderr are kept in the order printed. `okl reverify` shows a stored
+  command holding a hidden character as its escaped form.
 
 ## 0.16.0
 

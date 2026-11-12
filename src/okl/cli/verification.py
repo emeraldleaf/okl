@@ -10,7 +10,7 @@ import re
 import shlex
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 from ..client import Client, OKLNoAnswerError, OKLUnreachableError, _find_config
 from .common import _print_json
@@ -22,35 +22,67 @@ if TYPE_CHECKING:
     from ..store import Node
 
 
-def _run_check(args: argparse.Namespace) -> tuple[str | None, str]:
-    """Run `--run`; return its output if it passed (None after saying why it did not), and
-    a short outcome for the check log: "exit 0", "exit 1", "timed out after 600s" (the
-    `--timeout` default), ...
+class CheckRun(NamedTuple):
+    """One run of a check: its output when it passed (None when it did not), a short outcome
+    for the check log ("exit 0", "exit 1", "timed out after 600s", ...), and whether it ran out
+    of time, which is not a failure of the lesson: `okl on-edit` reports it as not judged."""
+    output: str | None
+    outcome: str
+    timed_out: bool = False
+
+
+def _run_check(args: argparse.Namespace) -> CheckRun:
+    """Run `--run` and say whether it passed, after saying why when it did not.
 
     Passing means exit 0 and, when `--expect` is given, that text in the output: exit 0
     alone is a step grading itself (the exit-0-zero-files lesson).
+
+    This is the one place okl hands a command to a shell: one a person typed (`okl verify
+    --run`) or saw and confirmed (`okl reverify`, `okl on-edit add`); lesson n_adea7f2c7373.
+    The command runs in its own session, so a timeout stops everything it started: killing
+    only the shell left a compound check writing to the repo after okl had reported it
+    stopped (review of #441). Its output is read with undecodable bytes replaced, so one
+    stray byte cannot end a reverify, and stdout and stderr interleaved in the order printed.
     """
+    import os
+    import signal
     import subprocess
+    proc = subprocess.Popen(args.run, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                            text=True, errors="replace", start_new_session=True,
+                            cwd=getattr(args, "cwd", None))
     try:
-        r = subprocess.run(args.run, shell=True, capture_output=True, text=True,
-                           timeout=args.timeout)
+        output, _ = proc.communicate(timeout=args.timeout)
     except subprocess.TimeoutExpired:
         # Uncaught, one slow check ended `okl reverify` in a traceback and left every
         # later lesson unchecked (CodeRabbit on #79). A timeout is a failed check.
+        killpg = getattr(os, "killpg", None)
+        try:
+            killpg(proc.pid, signal.SIGKILL) if killpg else proc.kill()
+        except (ProcessLookupError, PermissionError):
+            proc.kill()
+        proc.communicate()
         print(f"✗ check TIMED OUT after {args.timeout}s — NOT stamping verification.",
               file=sys.stderr)
-        return None, f"timed out after {args.timeout}s"
-    output = (r.stdout or "") + (r.stderr or "")
+        return CheckRun(None, f"timed out after {args.timeout}s", timed_out=True)
+    output = output or ""
     tail = "\n".join(output.strip().splitlines()[-5:])
-    if r.returncode != 0:
-        print(f"✗ check FAILED (exit {r.returncode}) — NOT stamping verification.\n{tail}",
+    if proc.returncode != 0:
+        print(f"✗ check FAILED (exit {proc.returncode}) — NOT stamping verification.\n{tail}",
               file=sys.stderr)
-        return None, f"exit {r.returncode}"
+        return CheckRun(None, f"exit {proc.returncode}")
     if args.expect and args.expect not in output:
         print(f"✗ check exited 0 but expected signal {args.expect!r} NOT in output — NOT stamping.\n{tail}",
               file=sys.stderr)
-        return None, "exit 0, expected signal missing"
-    return output, "exit 0"
+        return CheckRun(None, "exit 0, expected signal missing")
+    return CheckRun(output, "exit 0")
+
+
+def shown(text: str) -> str:
+    """`text` as a terminal can show it faithfully: itself when every character prints, else its
+    repr. A control character, a zero-width or a direction mark can hide what a command does
+    from the person asked to approve it (a carriage return and an erase-line code showed a
+    harmless command over one that wrote a file: review of #441)."""
+    return text if text.isprintable() else repr(text)
 
 
 def _log_check(args: argparse.Namespace, passed: bool, outcome: str, commit: str | None) -> None:
@@ -104,7 +136,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
         return 2
     if not args.run:
         return _suggest_check(args.node_id)
-    output, outcome = _run_check(args)
+    output, outcome, _timed_out = _run_check(args)
     # The commit the check ran at: drift diffs the governed files there against HEAD
     # instead of comparing clocks (#102). It goes into the evidence before the stamp, which
     # binds it in the committed snapshot and keeps older okl versions able to read it.
@@ -383,7 +415,7 @@ def cmd_reverify(args: argparse.Namespace) -> int:
     if plan:
         print(f"okl reverify will run {len(plan)} stored check(s), from the store:")
         for nid, (run, _exp) in plan:
-            print(f"  [{nid}] {run}")
+            print(f"  [{nid}] {shown(run)}")
     stop = _reverify_permitted(args, bool(plan), bool(manual))
     if stop is not None:
         return stop
