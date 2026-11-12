@@ -73,6 +73,16 @@ def last_object(text: str) -> dict | None:
     return found
 
 
+def own_id(key: str, ids: list[str]) -> str | None:
+    """The id a model's key means, within this batch: as written, or the one id that ends with it.
+    A model echoing ids can drop a prefix (lesson model-echoed-ids-get-shortened); an ambiguous key
+    is left unanswered."""
+    if key in ids:
+        return key
+    ends = [i for i in ids if i.endswith(f":{key}") or i.endswith(key)]
+    return ends[0] if len(ends) == 1 else None
+
+
 def write() -> int:
     """Write a line for every lesson, from the lessons' text alone, in batches."""
     texts = lesson_texts()
@@ -84,7 +94,7 @@ def write() -> int:
     def one(ids: list[str]) -> dict:
         body = "\n\n".join(f"[{i}]\n{texts[i].strip()}" for i in ids)
         got = last_object(pr.ask([*pr.SONNET, "--tools", ""], WRITE_PROMPT.format(lessons=body)) or "") or {}
-        return {i: " ".join(got[i].split()) for i in ids if i in got}
+        return {i: " ".join(got[k].split()) for k in got if (i := own_id(k, ids))}
 
     with ThreadPoolExecutor(max_workers=o.WORKERS) as pool:
         for got in pool.map(one, batches):

@@ -309,3 +309,13 @@ def test_the_picks_refuse_until_the_lines_are_frozen(monkeypatch, capsys):
     monkeypatch.setattr(when, "FROZEN_LINES", "0" * 16)
     monkeypatch.setattr(when, "pick", lambda *_: (_ for _ in ()).throw(AssertionError("a pick was made")))
     assert when.run() == 2 and "not frozen" in capsys.readouterr().err
+
+
+def test_a_shortened_id_from_the_model_resolves_within_its_batch():
+    """A seed id echoed without its prefix still lands; an ambiguous one is left out."""
+    when = _when_module()
+    ids = ["seed:dotnet-canon:r_no_nplus1", "n_abc", "seed:a:x_one", "seed:b:x_one"]
+    assert when.own_id("r_no_nplus1", ids) == "seed:dotnet-canon:r_no_nplus1"
+    assert when.own_id("n_abc", ids) == "n_abc"
+    assert when.own_id("x_one", ids) is None
+    assert when.own_id("missing", ids) is None
