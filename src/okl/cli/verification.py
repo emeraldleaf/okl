@@ -35,19 +35,57 @@ class CheckResult(NamedTuple):
     timed_out: bool = False
 
 
-def _stop_group(proc: subprocess.Popen) -> None:
-    """Stop the check's process group, or on a system without process groups (Windows) the
-    process itself. A descendant that started its own session is outside the group and is not
-    stopped: nothing here reaches it."""
+def _signal_group(proc: subprocess.Popen, sig: int) -> None:
+    """Send `sig` to the check's process group, or on a system without process groups (Windows)
+    stop the process itself. A descendant that started its own session is outside the group and
+    is not reached."""
     killpg = getattr(os, "killpg", None)
     try:
         if killpg:
-            killpg(proc.pid, signal.SIGKILL)
+            killpg(proc.pid, sig)
         else:
             proc.kill()
     except (ProcessLookupError, PermissionError):
         with contextlib.suppress(OSError):
             proc.kill()
+
+
+def _stop_group(proc: subprocess.Popen) -> None:
+    """Kill the check's process group outright: what a timeout does, as it did before #441."""
+    _signal_group(proc, getattr(signal, "SIGKILL", signal.SIGTERM))
+
+
+def _group_gone(proc: subprocess.Popen, within: float) -> bool:
+    """Whether the check's whole group has exited within `within` seconds."""
+    import time
+    killpg = getattr(os, "killpg", None)
+    deadline = time.monotonic() + within
+    while time.monotonic() < deadline:
+        proc.poll()   # reap the leader, which would otherwise answer as a zombie
+        if killpg is None:
+            if proc.returncode is not None:
+                return True
+        else:
+            try:
+                killpg(proc.pid, 0)
+            except ProcessLookupError:
+                return True
+            except PermissionError:
+                pass
+        time.sleep(0.05)
+    return False
+
+
+def _interrupt_group(proc: subprocess.Popen, error: BaseException) -> None:
+    """Pass an interrupt on to the check, give it two seconds to clean up, then kill what is left.
+    In its own group the check no longer gets the terminal's Ctrl-C, and killing it outright
+    skipped its cleanup: pytest's teardown, a `finally`, a shell trap (review of #441)."""
+    gentle = signal.SIGINT if isinstance(error, KeyboardInterrupt) else getattr(signal, "SIGTERM", signal.SIGINT)
+    _signal_group(proc, gentle)
+    if not _group_gone(proc, 2):
+        _stop_group(proc)
+    with contextlib.suppress(Exception):
+        proc.wait(timeout=2)
 
 
 def _drain(proc: subprocess.Popen) -> str:
@@ -72,14 +110,17 @@ def _raise_exit(signum: int, _frame: object) -> None:
 
 @contextlib.contextmanager
 def _exit_signals_raise() -> Iterator[None]:
-    """While a check runs, SIGTERM and SIGHUP raise in okl (main thread, POSIX only)."""
+    """While a check runs, SIGTERM and SIGHUP raise in okl, so the check is stopped before okl
+    exits. Only where the signal has its default action, in the main thread, on POSIX: a signal
+    ignored on purpose stays ignored (`nohup okl reverify` died on SIGHUP and took its check
+    with it), and a host program's own handler is left in place (review of #441)."""
     import threading
     names = ("SIGTERM", "SIGHUP")
     sigs = [getattr(signal, n) for n in names if hasattr(signal, n)]
     if threading.current_thread() is not threading.main_thread():
         yield
         return
-    previous = {s: signal.signal(s, _raise_exit) for s in sigs}
+    previous = {s: signal.signal(s, _raise_exit) for s in sigs if signal.getsignal(s) is signal.SIG_DFL}
     try:
         yield
     finally:
@@ -98,8 +139,8 @@ def _run_check(args: argparse.Namespace) -> CheckResult:
     The command runs in a process group of its own, so on macOS and Linux a timeout stops the
     group: killing only the shell left a compound check writing to the repo after okl had
     reported it stopped (review of #441). Its own group is outside the terminal's, so Ctrl-C
-    and SIGTERM reach okl and not the check: okl stops the group and then exits, or they left
-    `pytest` running in the background. A descendant that starts its own session is outside the
+    and SIGTERM reach okl and not the check: okl passes them on, gives the check two seconds to
+    clean up, kills what is left and then exits; before, they left `pytest` running. A descendant that starts its own session is outside the
     group and is not stopped, and okl stops reading from it two seconds after the timeout. The
     output is read with undecodable bytes replaced, so one stray byte cannot end a reverify, and
     stdout and stderr as one stream, in the order their writes reached it.
@@ -118,11 +159,10 @@ def _run_check(args: argparse.Namespace) -> CheckResult:
         print(f"✗ check TIMED OUT after {args.timeout}s — NOT stamping verification.",
               file=sys.stderr)
         return CheckResult(None, f"timed out after {args.timeout}s", timed_out=True)
-    except BaseException:
-        # Ctrl-C, SIGTERM, SIGHUP or anything else ending okl mid-check: stop the check first.
-        _stop_group(proc)
-        with contextlib.suppress(Exception):
-            proc.wait(timeout=2)
+    except BaseException as error:
+        # Ctrl-C, SIGTERM, SIGHUP or anything else ending okl mid-check: stop the check first,
+        # letting it clean up as it would have when the terminal's Ctrl-C reached it.
+        _interrupt_group(proc, error)
         raise
     output = output or ""
     tail = "\n".join(output.strip().splitlines()[-5:])
@@ -470,12 +510,12 @@ def cmd_reverify(args: argparse.Namespace) -> int:
         chk = _stored_check(by_id[nid].verified_by)
         (plan.append((nid, chk)) if chk else manual.append((nid, title)))
     for nid, title in manual:
-        print(f"• [{nid}] {title}\n    no stored check yet: ask your agent to write one, or run "
+        print(f"• [{shown(nid)}] {shown(title)}\n    no stored check yet: ask your agent to write one, or run "
               f"`okl verify {nid}` to see the tests that touch its files")
     if plan:
         print(f"okl reverify will run {len(plan)} stored check(s), from the store:")
         for nid, (run, _exp) in plan:
-            print(f"  [{nid}] {shown(run)}")
+            print(f"  [{shown(nid)}] {shown(run)}")
     stop = _reverify_permitted(args, bool(plan), bool(manual))
     if stop is not None:
         return stop

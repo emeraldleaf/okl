@@ -43,10 +43,11 @@ def _merge_hook_settings(claude: Path) -> bool:
         mine = [h for e in entries for h in e.get("hooks", [])
                 if h.get("command", "").endswith(Path(command).name)]
         if mine:
-            # Registered already: keep it, but give it okl's timeout, so a change to HOOK_TIMEOUT
-            # reaches a settings file written before it, not only a fresh install.
+            # Registered already: keep it, and give it okl's timeout only where it has none or one
+            # okl wrote, so a change to HOOK_TIMEOUT reaches an older settings file while a value
+            # the person chose stays theirs (lesson n_967ef9825472: never clobber).
             for h in mine:
-                if timeout and h.get("timeout") != timeout:
+                if timeout and h.get("timeout") != timeout and h.get("timeout") in (None, *OKL_WROTE_TIMEOUTS):
                     h["timeout"] = timeout
                     changed = True
             continue
@@ -87,6 +88,10 @@ HOOKS: tuple[tuple[str, str | None, str, int | None], ...] = (
     ("PostToolUse", "Edit|Write|MultiEdit|NotebookEdit",
      '"$CLAUDE_PROJECT_DIR"/.claude/hooks/posttooluse-okl-edit.sh', HOOK_TIMEOUT),
 )
+# Every timeout okl has written for a hook. Init replaces one of these, or a missing one, with
+# the current value; any other is the person's and is kept. Changing HOOK_TIMEOUT? Add the old
+# value here, or repos set up before the change keep it.
+OKL_WROTE_TIMEOUTS = frozenset({60})
 
 
 # The MCP server starts through .claude/hooks/okl-mcp.sh, which finds okl in the hooks'

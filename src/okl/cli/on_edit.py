@@ -256,7 +256,7 @@ def _report(paths: list[str], failed: list, notes: list[str]) -> str:
             fix = " ".join((n.fix or "").split())
             lines.append(f"- [{shown(n.id)}] {n.title}")
             if fix:
-                lines.append(f"  fix: {fix[:400]}")
+                lines.append(f"  fix: {shown(fix[:400])}")
             lines.append(f"  check: {run}" + (f"  (passes when its output contains {expect!r})" if expect else ""))
             tail = [ln for ln in said.splitlines()[1:] if ln.strip()]
             lines.append(f"  result: {outcome}" + (": the last lines it printed:" if tail else ""))

@@ -33,8 +33,10 @@
   compound check's other processes ran on, and one wrote to the repository after okl had
   reported it stopped. The check now runs in a process group of its own, and a timeout stops the
   group; a process that starts its own session is outside it, and okl stops reading from it two
-  seconds after the timeout rather than wait for it. Ctrl-C, SIGTERM and SIGHUP stop the group
-  before okl exits, since the group no longer receives the terminal's Ctrl-C itself. On Windows
+  seconds after the timeout rather than wait for it. The group no longer receives the
+  terminal's Ctrl-C itself, so okl passes Ctrl-C, SIGTERM and SIGHUP on to it, gives the check
+  two seconds to clean up, kills what is left and exits; a signal okl was started ignoring (as
+  under nohup) stays ignored, and a handler a host program set is left in place. On Windows
   only the check's own process is stopped, as before. Its output is read with undecodable bytes
   replaced, so one stray byte no longer ends a reverify, and stdout and stderr as one stream.
   `okl reverify` shows a stored command holding a control or format character escaped.

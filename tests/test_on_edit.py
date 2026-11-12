@@ -366,18 +366,25 @@ def test_the_budget_counts_from_okl_starting(tmp_path, capsys):
     assert code == 2 and "out of time for this edit" in capsys.readouterr().out
 
 
-def test_init_gives_an_already_registered_edit_hook_okls_timeout(tmp_path):
-    """A settings file that registered the edit hook before it had a timeout, or with another
-    one, gets okl's on the next init; everything else in it is kept."""
+def test_init_gives_an_already_registered_edit_hook_okls_timeout_but_keeps_a_chosen_one(tmp_path, monkeypatch):
+    """A settings file that registered the edit hook with no timeout, or with one okl wrote, gets
+    okl's current one on the next init; a timeout the person chose is theirs and is kept
+    (lesson n_967ef9825472); everything else in the file is kept."""
     from okl.cli import install
     from okl.cli.on_edit import HOOK_TIMEOUT
-    claude = tmp_path / ".claude"; claude.mkdir()
     command = next(c for _e, _m, c, _t in install.HOOKS if c.endswith("posttooluse-okl-edit.sh"))
     mine = {"type": "command", "command": "./mine.sh"}
-    (claude / "settings.json").write_text(json.dumps({"hooks": {"PostToolUse": [
-        {"matcher": "Edit", "hooks": [{"type": "command", "command": command, "timeout": 600}, mine]}]}}))
-    assert install._merge_hook_settings(claude)
-    hooks = json.loads((claude / "settings.json").read_text())["hooks"]["PostToolUse"]
-    edit = [h for e in hooks for h in e["hooks"] if h["command"] == command]
-    assert [h["timeout"] for h in edit] == [HOOK_TIMEOUT]
-    assert mine in hooks[0]["hooks"]
+
+    def merged(timeout):
+        claude = tmp_path / f"c{timeout}" / ".claude"; claude.mkdir(parents=True)
+        hook = {"type": "command", "command": command, **({"timeout": timeout} if timeout else {})}
+        (claude / "settings.json").write_text(json.dumps({"hooks": {"PostToolUse": [
+            {"matcher": "Edit", "hooks": [hook, mine]}]}}))
+        install._merge_hook_settings(claude)
+        hooks = json.loads((claude / "settings.json").read_text())["hooks"]["PostToolUse"]
+        assert mine in hooks[0]["hooks"]
+        return [h.get("timeout") for e in hooks for h in e["hooks"] if h["command"] == command]
+    assert merged(None) == [HOOK_TIMEOUT]
+    assert merged(120) == [120], "a timeout the person chose was overwritten"
+    monkeypatch.setattr(install, "OKL_WROTE_TIMEOUTS", frozenset({45, HOOK_TIMEOUT}))
+    assert merged(45) == [HOOK_TIMEOUT], "a timeout an older okl wrote was not moved"
