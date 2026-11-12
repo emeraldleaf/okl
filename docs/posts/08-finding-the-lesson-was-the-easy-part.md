@@ -95,3 +95,5 @@ Showing an agent its team's lessons helps on the defects those lessons describe;
 Five of six hypotheses failed. Better queries did not help, my own repository was the wrong sample, the review did not earn a default, a third model could not settle the question, and yes/no conditions did not make models agree. Each failure narrowed where the real problem was, and none of them touched the part of okl that checks. The bar was written before every result, and every number has a receipt.
 
 The tool checked itself throughout: its new step reviewed its own first draft and found real bugs, and its new sweep caught okl's own checks reporting nothing as success. That is the habit I am trying to build into an agent, and this week it applied to me as much as to the agent.
+
+*Next, Part 9: [One lesson at a time](09-one-lesson-at-a-time.md).*
