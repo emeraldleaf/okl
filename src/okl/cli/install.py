@@ -40,8 +40,15 @@ def _merge_hook_settings(claude: Path) -> bool:
     # PostToolUse, next to the read's result: measured, 5 of 5 (REPORT §4aj).
     for event, matcher, command, timeout in HOOKS:
         entries = hooks_cfg.setdefault(event, [])
-        if any(h.get("command", "").endswith(Path(command).name)
-               for e in entries for h in e.get("hooks", [])):
+        mine = [h for e in entries for h in e.get("hooks", [])
+                if h.get("command", "").endswith(Path(command).name)]
+        if mine:
+            # Registered already: keep it, but give it okl's timeout, so a change to HOOK_TIMEOUT
+            # reaches a settings file written before it, not only a fresh install.
+            for h in mine:
+                if timeout and h.get("timeout") != timeout:
+                    h["timeout"] = timeout
+                    changed = True
             continue
         hook: dict = {"type": "command", "command": command}
         if timeout:

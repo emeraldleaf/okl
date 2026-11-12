@@ -315,8 +315,8 @@ okl on-edit remove discount-server-side
 
 Approve checks that finish in a few seconds and need nothing but the checkout: each gets 30
 seconds and one edit gets 50 in all, inside the 60-second timeout okl registers the hook with,
-and a check that runs out of time is stopped, with everything it started, and reported as not
-judged. If a lesson's stored command changes, for instance
+and a check that runs out of time is stopped (on macOS and Linux, with the processes in its
+group) and reported as not judged. If a lesson's stored command changes, for instance
 after `okl verify` with a different `--run`, it stops running until you approve it again. The
 hook stamps nothing: a lesson is still verified only by `okl verify`. Another agent's own hook
 can call `okl on-edit run <file>`. Whether a failing check at the edit changes what an agent

@@ -62,8 +62,8 @@ recorded them. `okl reverify` lists them and runs them only after you confirm, o
 **unattended after every edit your agent makes to a file that lesson governs**, until you
 `okl on-edit remove` it. An approval is pinned to the exact command and its expected signal,
 so a command that changes in the store afterwards does not run until you approve it again,
-and okl refuses to show for approval any command, signal, title or file list holding a
-character a terminal can hide. Approve only commands you would run yourself, that finish in
+and okl refuses to approve any command, signal, title or file list holding a control, format
+or separator character, which a terminal can use to show one command over another. Approve only commands you would run yourself, that finish in
 seconds and need nothing but the checkout.
 
 ### 3. The hooks execute scripts from your repository

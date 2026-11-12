@@ -13,6 +13,8 @@ python `bytes.find`, since a `grep -o` with a long context runs for minutes on t
   default to 600 s (`e.timeout?e.timeout*1000:fu`), and the PostToolUse runner `HHn(...,w=fu)` is called with `void 0`, so
   PostToolUse gets 600 s. UserPromptSubmit passes `timeoutMs:dXe`, 30 s. A hook entry's own `timeout` (seconds) overrides.
   Locate it with a python regex like `var fu=600000` or `hook_event_name:"PostToolUse"`. Minified names change per version.
+- Command hooks are spawned with `detached: yo` and `yo=!gt`, where gt looks like the Windows flag, so on POSIX a hook gets its
+  own process group. I have not confirmed how a timed-out or aborted hook is killed: by its group, or only its pid.
 
 Seen at review of 42f2168 (2026-11-10): `okl check --change` printed 81,973 bytes (307 lessons) in this repo, so in
 Claude Code the agent gets a preview and a path, while §4at's pick put every line inline in the prompt.

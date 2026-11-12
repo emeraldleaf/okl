@@ -257,11 +257,18 @@ def test_a_command_that_could_hide_from_the_terminal_cannot_be_approved(tmp_path
     (repo / "pwned.txt").unlink()   # verify ran it once
 
     r = _okl(repo, env, "on-edit", "add", "spoof", "--yes")
-    assert (r.returncode, r.stdout) == (2, "") and "a terminal can hide" in r.stderr
+    assert (r.returncode, r.stdout) == (2, "") and "show one command over another" in r.stderr
     assert "on_edit" not in _config(repo)
     assert "[spoof]" not in _okl(repo, env, "on-edit").stdout
     assert shown("python3 check.py") == "python3 check.py"
     assert shown(spoof) == repr(spoof) and "\x1b" not in shown(spoof)
+    # An approval written into the config by hand, for exactly that command, still does not run it.
+    config = _config(repo)
+    (repo / ".okl" / "config.json").write_text(
+        json.dumps({**config, "on_edit": {"spoof": approval(spoof, "ORDERS OK")}}))
+    ran = _okl(repo, env, "on-edit", "run", "--format", "hook", str(repo / "src" / "orders.py"))
+    assert ran.returncode == 2 and not (repo / "pwned.txt").exists()
+    assert "show one command over another" in _context(ran)
 
 
 def test_okl_failing_is_said_never_silent(tmp_path):
@@ -292,9 +299,9 @@ def test_okl_failing_is_said_never_silent(tmp_path):
     assert _context(died).startswith("OKL CHECKS NOT RUN") and "boom" in _context(died)
 
 
-def test_a_check_out_of_time_is_stopped_with_everything_it_started(tmp_path):
+def test_a_check_out_of_time_has_its_process_group_stopped(tmp_path):
     """Killing only the shell left a check's other processes running, and one wrote to the repo
-    after okl had reported the check stopped (review of #441): the whole group is stopped."""
+    after okl had reported the check stopped (review of #441): the check's group is stopped."""
     repo, env = _repo(tmp_path)
     (repo / "spawns.py").write_text(
         "import os, subprocess, sys, time\n"
@@ -340,3 +347,37 @@ def test_only_a_live_lesson_of_this_repository_can_be_approved_and_the_signal_is
         assert (r.returncode, r.stdout) == (2, "") and why in r.stderr, r.stderr
     assert approval("pytest -q", "passed") != approval("pytest -q", "1 passed")
     assert approval("pytest -q", None) == approval("pytest -q", "")
+
+
+def test_the_budget_counts_from_okl_starting(tmp_path, capsys):
+    """The edit's budget runs from okl's start, so a slow store read spends it too and the hook
+    stays inside its timeout: with the budget already spent, no check runs (review of #441)."""
+    import argparse
+    import time
+
+    from okl.cli import on_edit
+    from okl.store import Store
+    repo, env = _repo(tmp_path)
+    run = _lesson(repo, env)
+    nodes = {n.id: n for n in Store(env["OKL_DATABASE_URL"]).all_nodes()}
+    args = argparse.Namespace(targets=[str(repo / "src" / "orders.py")], timeout=30, budget=50, format="hook")
+    code = on_edit._run(args, repo, {"ledger": approval(run, "ORDERS OK")}, nodes, "r",
+                        started=time.monotonic() - 60)
+    assert code == 2 and "out of time for this edit" in capsys.readouterr().out
+
+
+def test_init_gives_an_already_registered_edit_hook_okls_timeout(tmp_path):
+    """A settings file that registered the edit hook before it had a timeout, or with another
+    one, gets okl's on the next init; everything else in it is kept."""
+    from okl.cli import install
+    from okl.cli.on_edit import HOOK_TIMEOUT
+    claude = tmp_path / ".claude"; claude.mkdir()
+    command = next(c for _e, _m, c, _t in install.HOOKS if c.endswith("posttooluse-okl-edit.sh"))
+    mine = {"type": "command", "command": "./mine.sh"}
+    (claude / "settings.json").write_text(json.dumps({"hooks": {"PostToolUse": [
+        {"matcher": "Edit", "hooks": [{"type": "command", "command": command, "timeout": 600}, mine]}]}}))
+    assert install._merge_hook_settings(claude)
+    hooks = json.loads((claude / "settings.json").read_text())["hooks"]["PostToolUse"]
+    edit = [h for e in hooks for h in e["hooks"] if h["command"] == command]
+    assert [h["timeout"] for h in edit] == [HOOK_TIMEOUT]
+    assert mine in hooks[0]["hooks"]

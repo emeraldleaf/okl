@@ -14,12 +14,12 @@
   `--yes`), and pins the command's hash, so a check whose stored command changes stops running
   until it is approved again; `okl on-edit` lists them and `okl on-edit remove` drops them. The
   command runs through `okl verify`'s own runner, still the one place okl hands a command to a
-  shell, and okl refuses to show for approval a command, signal, title or file list holding a
-  character a terminal can hide (a control code, a zero-width or a direction mark), which could
-  show one command over another. Each check gets 30 seconds and one edit 50, counted from okl's
+  shell, and okl refuses to approve a command, signal, title or file list holding a control,
+  format or separator character (an escape code, a zero-width or a direction mark, a line
+  break), which a terminal can use to show one command over another. Each check gets 30 seconds and one edit 50, counted from okl's
   start (`okl on-edit run --timeout`, `--budget`), inside a 60-second timeout okl registers the
   hook with (Claude Code's own default for it is ten minutes); a check that runs out of time is
-  stopped with everything it started and reported as not judged. `okl on-edit run` exits 1 when
+  stopped (on macOS and Linux, with the processes in its group) and reported as not judged. `okl on-edit run` exits 1 when
   a check failed, 2 when one could not be judged, 0 when every one passed or none governs the
   file. With nothing approved the hook returns after one read of `.okl/config.json`, without
   starting okl; when okl fails, it says the checks did not run. It never blocks an edit and
@@ -28,13 +28,16 @@
   off. Not yet measured: whether a failing check at the edit changes what an agent writes needs
   its own pre-registered test before anything here is turned on for you.
 
-- **A check that runs out of time is stopped with everything it started** (review of #441).
-  `okl verify`, `okl reverify` and `okl on-edit` killed only the shell a check ran in, so a
+- **A check that runs out of time has its process group stopped** (macOS and Linux; review of
+  #441). `okl verify`, `okl reverify` and `okl on-edit` killed only the shell a check ran in, so a
   compound check's other processes ran on, and one wrote to the repository after okl had
-  reported it stopped. The check now runs in its own session and the whole group is stopped.
-  Its output is read with undecodable bytes replaced, so one stray byte no longer ends a
-  reverify, and stdout and stderr are kept in the order printed. `okl reverify` shows a stored
-  command holding a hidden character as its escaped form.
+  reported it stopped. The check now runs in a process group of its own, and a timeout stops the
+  group; a process that starts its own session is outside it, and okl stops reading from it two
+  seconds after the timeout rather than wait for it. Ctrl-C, SIGTERM and SIGHUP stop the group
+  before okl exits, since the group no longer receives the terminal's Ctrl-C itself. On Windows
+  only the check's own process is stopped, as before. Its output is read with undecodable bytes
+  replaced, so one stray byte no longer ends a reverify, and stdout and stderr as one stream.
+  `okl reverify` shows a stored command holding a control or format character escaped.
 
 ## 0.16.0
 

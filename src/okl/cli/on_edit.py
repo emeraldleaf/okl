@@ -114,9 +114,10 @@ def _why_not(node: Node | None, repo: str) -> str | None:
                         f"okl verify {node.id} --run \"<check>\" --expect \"<signal>\""),
         # What the person approves must be what runs: a control code, a zero-width or a direction
         # mark can show one command over another (review of #441; issue #185).
-        (hidden, "its command, signal, title or files hold a character a terminal can hide (a control "
-                 "code, a zero-width or a direction mark), so it cannot be shown as it would run: "
-                 "fix the lesson first"),
+        (hidden, "its command, signal, title or files hold a control, format or separator character "
+                 "(an escape code, a zero-width or a direction mark, a line break), which a terminal "
+                 "can use to show one command over another, so it cannot be approved: fix the lesson "
+                 "first"),
     )
     return next((why for bad, why in reasons if bad), None)
 
@@ -131,7 +132,7 @@ def _add(args: argparse.Namespace, approved: dict[str, str], nodes: dict[str, No
     bad = [(i, why) for i in wanted if (why := _why_not(nodes.get(i), repo))]
     if bad:
         for i, why in bad:
-            print(f"okl on-edit: cannot add [{i}]: {why}", file=sys.stderr)
+            print(f"okl on-edit: cannot add [{shown(i)}]: {why}", file=sys.stderr)
         return 2
     # A refusal leaves stdout empty, so where it will refuse, the plan goes to stderr with it.
     asking = args.yes or sys.stdin.isatty()
@@ -140,7 +141,7 @@ def _add(args: argparse.Namespace, approved: dict[str, str], nodes: dict[str, No
           "a command from the store, in this repository:", file=out)
     for i in wanted:
         run, expect = _stored_check(nodes[i].verified_by) or ("", None)
-        print(f"  [{i}] {nodes[i].title}\n      files: {nodes[i].files}\n      runs:  {run}"
+        print(f"  [{shown(i)}] {nodes[i].title}\n      files: {nodes[i].files}\n      runs:  {run}"
               + (f"\n      passes when its output contains {expect!r}" if expect else ""), file=out)
     if not asking:
         # Said to whoever ran it, often an agent: the way forward is a person, not a flag
@@ -160,7 +161,7 @@ def _remove(args: argparse.Namespace, approved: dict[str, str], _nodes: dict[str
     """Drop the named approvals in place; 2, changing nothing, when one was never approved."""
     unknown = [i for i in args.targets if i not in approved]
     if unknown:
-        print(f"okl on-edit: not approved, so nothing to remove: {', '.join(unknown)}", file=sys.stderr)
+        print(f"okl on-edit: not approved, so nothing to remove: {', '.join(map(shown, unknown))}", file=sys.stderr)
         return 2
     for i in args.targets:
         approved.pop(i, None)
@@ -176,8 +177,8 @@ def _list(approved: dict[str, str], nodes: dict[str, Node], repo: str) -> None:
             chk = _stored_check(node.verified_by) if node else None
             state = ("" if chk and approval(*chk) == pinned and _why_not(node, repo) is None
                      else "  (NOT RUN: " + (_why_not(node, repo) or "its stored check changed since it was "
-                                             f"approved; review it with okl on-edit add {i}") + ")")
-            print(f"  [{i}] {shown(node.title) if node else ''}{state}"
+                                             f"approved; review it with okl on-edit add {shown(i)}") + ")")
+            print(f"  [{shown(i)}] {shown(node.title) if node else ''}{state}"
                   + (f"\n      runs: {shown(chk[0])}" if chk else ""))
     else:
         print("No lesson checks run on edit here. Approve the ones that are quick and need nothing but "
@@ -187,7 +188,7 @@ def _list(approved: dict[str, str], nodes: dict[str, Node], repo: str) -> None:
     if can:
         print(f"{len(can)} more could be added (they govern files and carry a stored check):")
         for n in can:
-            print(f"  [{n.id}] {n.title}\n      runs: {(_stored_check(n.verified_by) or ('',))[0]}")  # printable: _why_not
+            print(f"  [{shown(n.id)}] {n.title}\n      runs: {(_stored_check(n.verified_by) or ('',))[0]}")  # printable: _why_not
 
 
 def _run(args: argparse.Namespace, root: Path, approved: dict[str, str], nodes: dict[str, Node], repo: str,
@@ -211,14 +212,14 @@ def _run(args: argparse.Namespace, root: Path, approved: dict[str, str], nodes: 
         chk = _stored_check(n.verified_by)
         why = _why_not(n, repo)
         if chk is None or why or approval(*chk) != approved[n.id]:
-            notes.append(f"[{n.id}] {shown(n.title)}: not run, because "
+            notes.append(f"[{shown(n.id)}] {shown(n.title)}: not run, because "
                          + (why or ("its stored check changed since it was approved" if chk else
                                     "its stored check is gone"))
-                         + f"; the person can review it with okl on-edit add {n.id}")
+                         + f"; the person can review it with okl on-edit add {shown(n.id)}")
             continue
         left = deadline - time.monotonic()
         if left <= 0:
-            notes.append(f"[{n.id}] {n.title}: not run, out of time for this edit ({args.budget}s)")
+            notes.append(f"[{shown(n.id)}] {n.title}: not run, out of time for this edit ({args.budget}s)")
             continue
         run, expect = chk
         timeout = max(1, min(args.timeout, math.ceil(left)))
@@ -228,7 +229,7 @@ def _run(args: argparse.Namespace, root: Path, approved: dict[str, str], nodes: 
         if result.output is not None:
             passed += 1
         elif result.timed_out:
-            notes.append(f"[{n.id}] {n.title}: its check did not finish in {timeout}s, so it was not judged")
+            notes.append(f"[{shown(n.id)}] {n.title}: its check did not finish in {timeout}s, so it was not judged")
         else:
             failed.append((n, run, expect, result.outcome, said.getvalue()))
     text = _report(rel, failed, notes)
@@ -253,7 +254,7 @@ def _report(paths: list[str], failed: list, notes: list[str]) -> str:
                      "carries a check, and the check fails now.")
         for n, run, expect, outcome, said in failed:
             fix = " ".join((n.fix or "").split())
-            lines.append(f"- [{n.id}] {n.title}")
+            lines.append(f"- [{shown(n.id)}] {n.title}")
             if fix:
                 lines.append(f"  fix: {fix[:400]}")
             lines.append(f"  check: {run}" + (f"  (passes when its output contains {expect!r})" if expect else ""))
