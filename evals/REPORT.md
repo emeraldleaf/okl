@@ -6316,6 +6316,50 @@ What it means, not pre-registered:
    these two. What would is reading the code where it touches the mechanism, which is what the
    review's own reading of the change does, or a lesson whose files name the code it governs.
 
+## 4bc. PRE-REGISTERED: can okl choose the lessons a change breaks better than a model picking from the list? (2026-11-12)
+
+Written before any call in this section. With the right lesson in hand an agent fixed about three in
+four (§4ay), but every way of choosing tried so far put it among ten about half the time (§4ba,
+§4bb), and the review after writing chooses by having the agent pick ten from every lesson's one line:
+a list, the shape §4ax found weak. This tests other ways of choosing, from the code, and choosing one
+lesson at a time.
+
+**Changes.** The 58 past changes, from §4al's and §4aq's tasks, whose keys sort at least one lesson
+broken: 124 broken lessons. Each change is read without its result and data files (`evals/results/`,
+`evals/bench/`, `evals/realwork/`, and JSON, text, CSV, SVG, PNG, lock and database files); its hunks
+are the 20 largest of the rest, each cut to 1,500 characters. The lessons are those it could see.
+
+**Ways of choosing, each a ranked list.**
+- *pick:* Sonnet picks ten from every lesson's one line, given the change cut to 40,000 characters
+  (§4ba's picker and prompt). Today's shape.
+- *chunk:* each hunk is its own query to okl's search (full text and the static embedding, linear,
+  §4am's R), ten per hunk, fused by reciprocal rank.
+- *desc:* Haiku writes one sentence per hunk saying what that code does, by mechanism; each sentence
+  is the query instead; fused.
+- *anchor:* lessons whose files govern a changed path, then lessons that name a code name, flag or
+  file the change uses, weighted by how few lessons name it. No model.
+- *pool:* the four fused, top 30.
+- *screen:* each pooled lesson asked on its own (Haiku): does this change do something this lesson is
+  about? Given the hunks' sentences, the changed files and the lesson's full text. The yeses.
+
+**Measures.** For each change, the share of its broken lessons a list holds: pick, chunk, desc and
+anchor at ten, the pool at thirty, and the screened set at whatever size it is. Averaged over changes;
+screen against pick with a paired bootstrap over changes (2000, seed 4). Also the screened set's mean
+size, and each half apart.
+
+**Reading, with at least 52 of the 58 complete.** *Choosing improves* if the screened set holds at
+least 0.15 more of the broken lessons than pick, with the interval above 0, and averages at most 12
+lessons, a size the review can check one at a time. Otherwise *choosing does not improve enough*. The
+other lists are reported, with no rule.
+
+**Threats.** The keys are a model's and not audited (#394); they also judged "broken" on the lessons
+as they stood, and some lessons' text was later extended from these same changes, which can help
+every arm alike. One repository. The screen asks whether a lesson bears on a change, not whether the
+change breaks it; the review's own check comes after. A hunk cut at 1,500 characters can lose what
+matters.
+
+**Budget.** About 58 Sonnet picks, 58 Haiku description calls and up to 1,740 Haiku screens.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
