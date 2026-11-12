@@ -319,3 +319,15 @@ def test_a_shortened_id_from_the_model_resolves_within_its_batch():
     assert when.own_id("n_abc", ids) == "n_abc"
     assert when.own_id("x_one", ids) is None
     assert when.own_id("missing", ids) is None
+
+
+def test_the_when_lines_figures_are_the_receipts():
+    """§4bb's result quotes these; each is read from the committed receipt."""
+    receipt = json.loads(sorted((REPO / "evals" / "results").glob("when-lines-2*.json"))[-1].read_text())
+    report = (REPO / "evals" / "REPORT.md").read_text()
+    section = report[report.index("## 4bb."):report.index("## 5. Findings")]
+    hit, per = receipt["hit_rate"], receipt["per_task"]
+    for start in ("task", "plan", "diff"):
+        cells = " | ".join(str(per[f"{start}_when"][k]) for k in ("115", "168", "196", "198", "309"))
+        assert f"| {start} | {hit[start + '_plain']} | {hit[start + '_when']} | {cells} |" in section, start
+    assert receipt["reading"] == "the lines do not help enough" and receipt["picks"] == 150

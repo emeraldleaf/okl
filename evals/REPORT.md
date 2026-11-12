@@ -6285,6 +6285,30 @@ tree (found by the review after writing); and a lesson id the writing model echo
 prefix is resolved within its batch, where the first pass dropped those lines. The first writing
 pass also stopped partway at a usage limit. All 337 lines are written, and frozen at `428b12d45bd7256c`.
 
+**Result (2026-11-12): the lines do not help enough.** All 150 picks answered (receipt `when-lines-20261112-0058.json`).
+
+| starting point | plain | with the lines | #115 | #168 | #196 | #198 | #309 (with the lines) |
+|---|---|---|---|---|---|---|---|
+| task | 0.36 | 0.4 | 0.2 | 0.8 | 0 | 1 | 0 |
+| plan | 0.44 | 0.52 | 0.8 | 0.8 | 0 | 1 | 0 |
+| diff | 0.4 | 0.52 | 1 | 0.6 | 0 | 1 | 0 |
+
+As stated: the lines raised the hit rate by 0.08 from a plan and 0.12 from a diff, 0.1 on average, under
+the 0.15 asked.
+
+What it means, not pre-registered:
+1. Nearly all of the gain is one task: #168, whose judge lesson the lines describe by what an eval
+   configures. #196 and #309 stayed at 0 in every arm, with the lines too.
+2. The line written for #196's lesson still says "a CI gate or audit that scans files": shown only
+   the lesson, the writing model kept the lesson's own framing, and nothing in it names an eval
+   script loading a folder. A line written from the lesson alone cannot know which other kinds of
+   code share its mechanism.
+3. On #309 the plans never named the store-resolving code the bug lived in, and in the diff it lay
+   past the cut, so no line on the lesson's side could have helped.
+4. Across §4ba and this, no way of choosing from the information before or just after writing found
+   these two. What would is reading the code where it touches the mechanism, which is what the
+   review's own reading of the change does, or a lesson whose files name the code it governs.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
