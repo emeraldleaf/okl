@@ -288,6 +288,23 @@ def test_the_plan_results_figures_are_the_receipts():
     assert receipt["reading"] == "the plan does not find it well enough" and receipt["picks"] == 75
 
 
+def test_the_task_weighted_choosing_estimate_is_the_receipts():
+    """§4ba's erratum: each task's hit rate times its one-at-a-time pass rate (§4ay), averaged
+    over the tasks. The product of the two averages (0.37) overstated it, because the task always
+    found was one one-at-a-time never fixed; the erratum's figure is read from both receipts."""
+    results = REPO / "evals" / "results"
+    reach = json.loads((results / "plan-reach-20261111-1435.json").read_text())["per_task"]
+    one = json.loads((results / "replay-one-20261111-1355.json").read_text())["per_task"]["one_at_a_time"]
+    report = (REPO / "evals" / "REPORT.md").read_text()
+    erratum = report[report.index("*Erratum (2026-11-12, from a review of Part 9"):report.index("## 4bb.")]
+    estimates = {arm: round(sum(reach[arm][t] * one[t] for t in one) / len(one), 3) for arm in ("plan", "diff")}
+    assert estimates["plan"] == estimates["diff"]
+    assert f"is {estimates['diff']} from the diff and the\nsame from the plan" in erratum
+    assert (reach["diff"]["115"], one["115"]) == (1, 0)
+    assert (reach["diff"]["196"], reach["diff"]["309"]) == (0, 0)
+    assert (one["196"], one["309"]) == (1, 0.8)
+
+
 def _when_module():
     spec7 = importlib.util.spec_from_file_location("when_lines", REPO / "evals" / "when_lines.py")
     assert spec7 and spec7.loader

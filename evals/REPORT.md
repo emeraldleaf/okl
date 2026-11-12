@@ -6255,6 +6255,15 @@ What it means, not pre-registered:
    (§4ay), or about 0.37. Choosing does not explain all of it; §4az's throwaway session also
    stopped after three of its ten sub-agents, and agents cutting a review short would cost more.
 
+*Erratum (2026-11-12, from a review of Part 9's site copy).* Reading 3 multiplied two averages
+that vary by task, and in opposite places: #115, which the plan and diff arms always found, was
+the one task one at a time never fixed (0 of 5 in §4ay), while #196 and #309, fixed one at a time
+5 and 4 times of 5, were never found. Each task's hit rate here times its one-at-a-time pass rate
+(`replay-one-20261111-1355.json`), averaged over the five tasks, is 0.264 from the diff and the
+same from the plan. That is close to §4az's 0.2, so choosing explains most of the drop, and what
+is left is within what five repeats can resolve. 0.37 was no ceiling: it treated the two rates as
+independent of the task.
+
 ## 4bb. PRE-REGISTERED, A PILOT: does a line saying when a lesson applies, by mechanism, help a picker find it? (2026-11-11)
 
 Written before any line or pick in this section. §4az and §4ba found choosing to be the gap: with the
