@@ -6316,6 +6316,103 @@ What it means, not pre-registered:
    these two. What would is reading the code where it touches the mechanism, which is what the
    review's own reading of the change does, or a lesson whose files name the code it governs.
 
+## 4bc. PRE-REGISTERED: can okl choose the lessons a change breaks better than a model picking from the list? (2026-11-12)
+
+Written before any call in this section. With the right lesson in hand an agent fixed about three in
+four (§4ay), but every way of choosing tried so far put it among ten about half the time (§4ba,
+§4bb), and the review after writing chooses by having the agent pick ten from every lesson's one line:
+a list, the shape §4ax found weak. This tests other ways of choosing, from the code, and choosing one
+lesson at a time.
+
+**Changes.** The 58 past changes, from §4al's and §4aq's tasks, whose keys sort at least one lesson
+broken: 124 broken lessons. Each change is read without its result and data files (`evals/results/`,
+`evals/bench/`, `evals/realwork/`, and JSON, text, CSV, SVG, PNG, lock and database files); its hunks
+are the 20 largest of the rest, each cut to 1,500 characters. The lessons are those it could see.
+
+**Ways of choosing, each a ranked list.**
+- *pick:* Sonnet picks ten from every lesson's one line, given the change cut to 40,000 characters
+  (§4ba's picker and prompt). Today's shape.
+- *chunk:* each hunk is its own query to okl's search (full text and the static embedding, linear,
+  §4am's R), ten per hunk, fused by reciprocal rank.
+- *desc:* Haiku writes one sentence per hunk saying what that code does, by mechanism; each sentence
+  is the query instead; fused.
+- *anchor:* lessons whose files govern a changed path, then lessons that name a code name, flag or
+  file the change uses, weighted by how few lessons name it. No model.
+- *pool:* the four fused, top 30.
+- *screen:* each pooled lesson asked on its own (Haiku): does this change do something this lesson is
+  about? Given the hunks' sentences, the changed files and the lesson's full text. The yeses.
+
+**Measures.** For each change, the share of its broken lessons a list holds: pick, chunk, desc and
+anchor at ten, the pool at thirty, and the screened set at whatever size it is. Averaged over changes;
+screen against pick with a paired bootstrap over changes (2000, seed 4). Also the screened set's mean
+size, and each half apart.
+
+**Reading, with at least 52 of the 58 complete.** *Choosing improves* if the screened set holds at
+least 0.15 more of the broken lessons than pick, with the interval above 0, and averages at most 12
+lessons, a size the review can check one at a time. Otherwise *choosing does not improve enough*. The
+other lists are reported, with no rule.
+
+**Threats.** The keys are a model's and not audited (#394); they also judged "broken" on the lessons
+as they stood, and some lessons' text was later extended from these same changes, which can help
+every arm alike. One repository. The screen asks whether a lesson bears on a change, not whether the
+change breaks it; the review's own check comes after. A hunk cut at 1,500 characters can lose what
+matters.
+
+**Budget.** About 58 Sonnet picks, 58 Haiku description calls and up to 1,740 Haiku screens.
+
+**Amendment before any row is kept (2026-11-12).** The first two runs stopped before keeping a
+row: okl's search ran in four threads at once, and the static embedding's tokenizer cannot be
+shared between threads ("Already borrowed"). The searches now run one at a time; the prompts, the
+lists, the measures and the instrument (`bb49ed57d63e3d6f`) are unchanged. To find the fault, one
+change (#278) was prepared by hand, and its lists were seen; it is prepared again with the rest.
+
+*Erratum (2026-11-12, from the review of #434).* The amendment above says the first two runs
+stopped; they did not stop calling the models. When one worker crashed, the error surfaced while
+the pool still waited for its queued work, so most changes in each run still got their Haiku
+description and Sonnet pick, and those replies were thrown away. None was kept, and none was read
+before the result; the review counted them afterwards from the sessions the tool saves, which are
+not committed. The script now cancels queued calls when one fails. The calls counted below are the
+kept run's, made at `fcec019` (its rows predate the commit stamp the script now adds).
+
+**Result (2026-11-12): choosing does not improve enough.** All 58 changes are complete, with 124
+broken lessons (receipt `pick-fix-20261112-0425.json`, re-scored from the same rows, with no model
+called, after the review of #434 added list sizes and counts to it). The kept calls were 58 Sonnet
+picks, 58 Haiku description calls and 1,727 Haiku screens.
+
+| list | mean size | share of broken lessons held | development half | test half |
+|---|---|---|---|---|
+| pick | 9.86 | 0.465 | 0.454 | 0.48 |
+| chunk | 10 | 0.261 | 0.272 | 0.246 |
+| desc | 10 | 0.366 | 0.299 | 0.46 |
+| anchor | 9.09 | 0.09 | 0.1 | 0.076 |
+| pool | 29.78 | 0.586 | 0.557 | 0.626 |
+| screen | 22.1 | 0.577 | 0.557 | 0.605 |
+
+As stated: the screened set held 0.112 more of the broken lessons than pick, 95% interval [0.04, 0.191],
+under the 0.15 asked, and averaged 22.1 lessons, over the 12 asked. So the reading is *choosing does
+not improve enough*.
+
+What it means, not pre-registered:
+1. The screen hardly screened. It said yes to 1,281 of the 1,727 pooled lessons, kept 22.1 of the pool's 29.78 on
+   average, and only 3 of the 58 sets were 12 or smaller. Asked whether a change does something a
+   lesson is about, Haiku said yes to most, so the screened set kept nearly all the pool's reach
+   (0.577 of 0.586) and little of the cut.
+2. The pool holds the pick's own list, so its holding more than the pick is partly by construction:
+   most of the pick's lessons and about twenty others. Its 0.586 against the pick's 0.465 comes at
+   three times the size, and checking each lesson one at a time costs per lesson (§4ay). Whether
+   the fused list cut to ten beats the pick was not measured.
+3. Each list built without the pick held less than the pick did: the hunks as queries 0.261, a
+   Haiku sentence per hunk 0.366, and code names with governed files 0.09. The pick read the change
+   cut to 40,000 characters and the description arm is a model too, so this compares ways of
+   choosing, not code against a model. Why exact matching found so few was not measured; its lists
+   were not short of lessons.
+4. Every list missed all of a change's broken lessons on some changes: the pick on 19 of 58, the pool
+   and the screen on 13.
+
+What it points at: a screen that tells lessons apart, asking the review's own question (does this
+change break this lesson?) or using a stronger model, and the fused list cut to the review's size.
+Each needs its own pre-registration on changes no arm here has seen.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

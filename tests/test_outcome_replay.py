@@ -333,3 +333,72 @@ def test_the_when_lines_figures_are_the_receipts():
         cells = " | ".join(str(per[f"{start}_when"][k]) for k in ("115", "168", "196", "198", "309"))
         assert f"| {start} | {hit[start + '_plain']} | {hit[start + '_when']} | {cells} |" in section, start
     assert receipt["reading"] == "the lines do not help enough" and receipt["picks"] == 150
+
+
+def _pick_module():
+    spec8 = importlib.util.spec_from_file_location("pick_fix", REPO / "evals" / "pick_fix.py")
+    assert spec8 and spec8.loader
+    mod = importlib.util.module_from_spec(spec8)
+    spec8.loader.exec_module(mod)
+    return mod
+
+
+def test_the_chunker_leaves_out_result_and_data_files():
+    """A hunk in a receipt or a data file is never a query; a code hunk is, with only its changed lines."""
+    pick = _pick_module()
+    diff = ("diff --git a/evals/results/x.json b/evals/results/x.json\n@@ -1 +1 @@\n-1\n+2\n"
+            "diff --git a/src/okl/a.py b/src/okl/a.py\n@@ -1,2 +1,2 @@\n context\n-old()\n+new()\n")
+    parts = pick.chunks(diff)
+    assert parts == [{"file": "src/okl/a.py", "text": "-old()\n+new()"}]
+    assert "results/x.json" not in pick.view(diff)
+
+
+def test_the_data_filter_matches_a_data_folder_or_a_data_suffix():
+    """Either half alone leaves a path out: a folder prefix, or a file suffix; code elsewhere stays in."""
+    pick = _pick_module()
+    assert pick.DATA.search("evals/bench/run.py") and pick.DATA.search("src/okl/table.csv")
+    assert not pick.DATA.search("src/okl/evals/results.py") and not pick.DATA.search("evals/benchmark.py")
+
+
+def test_fusion_and_anchors_rank_as_described():
+    """Reciprocal-rank fusion favours what several lists hold; governing lessons lead the anchors."""
+    pick = _pick_module()
+    assert pick.fuse([["a", "b"], ["b", "c"]])[0] == "b"
+    parts = [{"file": "src/okl/drift.py", "text": "+    url = os.environ['OKL_DATABASE_URL']"}]
+    texts = {"g": "unrelated", "x": "OKL_DATABASE_URL was honoured by the store", **{f"n{i}": "other" for i in range(40)}}
+    assert pick.anchors(parts, texts, ["g"])[:2] == ["g", "x"]
+
+
+def test_the_choosing_reading_follows_the_stated_rule():
+    """Improves only when the screen finds 0.15 more than pick, the interval clears 0, and the set stays small."""
+    pick = _pick_module()
+    rates = {"pick": 0.45, "screen": 0.65}
+    assert pick.reading(rates, 10, [0.05, 0.3], True) == "choosing improves"
+    assert pick.reading(rates, 15, [0.05, 0.3], True) == "choosing does not improve enough"
+    assert pick.reading(rates, 10, [-0.01, 0.3], True) == "choosing does not improve enough"
+    assert pick.reading({"pick": 0.45, "screen": 0.55}, 8, [0.01, 0.2], True) == "choosing does not improve enough"
+    assert pick.reading(rates, 10, [0.05, 0.3], False) == "not complete"
+
+
+def test_the_choosing_figures_are_the_receipts():
+    """§4bc's result quotes these; each is read from the committed receipt, prose counts included."""
+    receipt = json.loads(sorted((REPO / "evals" / "results").glob("pick-fix-2*.json"))[-1].read_text())
+    report = (REPO / "evals" / "REPORT.md").read_text()
+    section = report[report.index("## 4bc."):report.index("## 5. Findings")]
+    flat = " ".join(section.split())
+    rec, half, size, per = receipt["recall"], receipt["by_half"], receipt["mean_size"], receipt["per_change"]
+    sizes = {**{arm: str(size[arm]) for arm in size}, "screen": str(receipt["screen_set_mean"])}
+    for arm, shown in sizes.items():
+        assert f"| {arm} | {shown} | {rec[arm]} | {half['dev'][arm]} | {half['test'][arm]} |" in section, arm
+    low, high = receipt["interval"]
+    assert f"held {receipt['screen_minus_pick']} more of the broken lessons than pick, 95% interval [{low}, {high}]" in flat
+    assert receipt["screen_yes"] == sum(p["screen_size"] for p in per)
+    assert f"said yes to {receipt['screen_yes']:,} of the {receipt['screens']:,} pooled lessons" in flat
+    assert f"58 Haiku description calls and {receipt['screens']:,} Haiku screens" in flat
+    assert f"kept {receipt['screen_set_mean']} of the pool's {size['pool']} on average" in flat
+    assert f"only {sum(p['screen_size'] <= 12 for p in per)} of the 58 sets were 12 or smaller" in flat
+    missed = {arm: sum(p[arm] == 0 for p in per) for arm in ("pick", "pool", "screen")}
+    assert missed["pool"] == missed["screen"]
+    assert f"the pick on {missed['pick']} of 58, the pool and the screen on {missed['pool']}" in flat
+    assert receipt["reading"] == "choosing does not improve enough"
+    assert receipt["changes"] == receipt["of"] == 58 and receipt["broken_lessons"] == 124
