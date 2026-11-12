@@ -6144,6 +6144,116 @@ What it means, not pre-registered:
 5. Every arm still had the right lesson among its ten. Choosing the ten from what the code does is
    the remaining step before this could ship (§4at's model pick found 40% of broken lessons in ten).
 
+## 4az. PRE-REGISTERED, A PILOT: the review after writing, end to end, with the agent choosing the lessons (2026-11-11)
+
+Written before any counted session. §4ay found that ten lessons asked about one at a time caught as
+much as the right lesson alone, but every arm since §4aw was handed a set that held the right lesson.
+#427 builds §4ay into `okl check --change`: the agent picks the ten likeliest lessons from every
+lesson in scope, then checks each in its own fresh sub-agent. This tests that as an agent would meet
+it, with nothing chosen for it, and decides whether the review should be on by default.
+
+**Arms, on §4aw's five tasks, five repeats each, 75 sessions in a seeded order.** Each session is
+asked to get the change ready to merge, as in §4aw. In the two review arms it is also asked to run the
+repository's review after writing: the review as `okl check --change` renders it for that change over
+the lessons as they stood (280 to 300 lessons, one line each, those governing a changed file first),
+with each lesson's full text in a folder because okl is not installed in the copy.
+- *none:* no review (§4aw's N, re-run as the floor).
+- *review, one pass:* the steps before #427: pick ten, read each, check the code against all of them.
+- *review, each alone:* #427's steps: the same pick, then each lesson in its own fresh sub-agent.
+
+Sonnet, with §4aw's tools plus the sub-agent tool, and §4aw's behaviour graders on the tree each
+session leaves. Sub-agent use is counted from the session's own event stream.
+
+**Reading, against the arms in the same sitting, with at least 68 of the 75 complete.** If fewer than
+half the each-alone sessions start a sub-agent, *the new steps were not followed* and this says
+nothing about them. Otherwise the review is *on by default* if each-alone is at least 0.15 above one
+pass and at least 0.25 above none, and breaks another test in at most 2 more sessions than one pass;
+if not, it *stays opt-in*. These are shipping bars, labelled as such.
+
+**Seen before this was written:** one throwaway each-alone session on #198, discarded. It started
+three sub-agents, picked the right lesson among them, judged it not broken, did not fix the defect,
+and stopped after three of its ten, saying it would finish there.
+
+**Threats.** §4aw's to §4ay's: five hand-picked tasks in okl's own repository, Sonnet. The lesson
+list is the real one for the time, but the copy has no okl, so the agent reads files where it would
+run `okl show`. The agent is told the review is required; a real Stop hook asks once, after the work.
+
+**Budget.** About 75 sessions and up to 250 sub-agents; the throwaway session cost $0.38.
+
+**Result (2026-11-11): it stays opt-in.** All 75 sessions ran (receipt `review-e2e-20261111-1543.json`),
+from a worktree of its own at 313df22, whose code the sessions ran.
+
+| arm | pass rate, averaged over tasks | sessions that edited | API-priced cost a session | median time | #115 | #168 | #196 | #198 | #309 |
+|---|---|---|---|---|---|---|---|---|---|
+| none | 0 | 0 of 25 | $0.106 | 160 s | 0 | 0 | 0 | 0 | 0 |
+| review, one pass | 0 | 9 of 25 | $0.276 | 77 s | 0 | 0 | 0 | 0 | 0 |
+| review, each alone | 0.2 | 17 of 25 | $0.729 | 214 s | 0.2 | 0 | 0 | 0.8 | 0 |
+
+As stated: 84% of the each-alone sessions started a sub-agent (a median of 10), so the steps were followed.
+Each alone is 0.2 above one pass, clearing 0.15, but 0.2 above none, short of 0.25.
+No session broke another test. So the review *stays opt-in*.
+
+What it means, not pre-registered:
+1. With the agent choosing, the old review fixed none of the 25 and the new one fixed 5. The new
+   steps are the better review; they are not yet good enough to be on by default.
+2. The gap from §4ay's 0.72 is choosing. It found the right lesson's fix on #198, whose lesson the
+   search ranks first and every picker in §4ba found, and almost nowhere else. §4ba measured the same
+   ceiling from the other side: the right lesson in a picker's ten about half the time.
+3. One session gave its sub-agents only part of the change (one read the first 400 lines of the
+   diff), so a sub-agent can miss what lies past what it was handed.
+4. It costs 6.9 times no review and 2.6 times the old one, at 2.8 times the old one's time.
+
+## 4ba. PRE-REGISTERED, A PILOT: does a plan written before any code find the lesson a change needs? (2026-11-11)
+
+Written before any pick in this section. §4ax found the default briefing, built from a task's words,
+showed the right lesson on two of §4aw's five tasks. A plan says what the code will do, which a task's
+words rarely do, so a planning step could put the right lessons in front of the agent before it
+writes, with the review after writing (§4az) kept as the net for what a plan leaves out. This tests
+the part that has failed most: choosing.
+
+**Arms, on §4aw's five tasks, five repeats each, 75 picks.** One picker (Sonnet, no tools) gets every
+lesson the task could see, one line each (§4at's lines), and names the ten the change most needs. What
+it reads first is the arm:
+- *task:* the task as its author wrote it.
+- *plan:* a plan Sonnet writes in the repository at the task's base commit, before any code exists,
+  one mechanism per sentence, with read-only tools.
+- *diff:* the finished change as first written, cut to 40,000 characters.
+
+A hit is the task's lesson among the ten. No model grades anything.
+
+**Reading, with at least 68 of the 75 complete.** *The plan finds it* if the plan's hit rate,
+averaged over tasks, is at least 0.6 and at least 0.25 above the task's words; otherwise *the plan
+does not find it well enough*. The diff arm is the review's own starting point, reported with no rule.
+
+**Threats.** Five tasks, chosen because a lesson applies. The picker is told nothing about which kind
+of lesson matters. Two diffs (#196, #309) are longer than the cut. The plan is a model's, written
+without the issue thread a person would bring.
+
+**Budget.** 25 plans and 75 picks, all Sonnet.
+
+**Result (2026-11-11): the plan does not find it well enough.** All 75 picks answered (receipt
+`plan-reach-20261111-1435.json`).
+
+| starting point | hit rate, averaged over tasks | #115 | #168 | #196 | #198 | #309 |
+|---|---|---|---|---|---|---|
+| task | 0.36 | 0 | 0.8 | 0 | 1 | 0 |
+| plan | 0.48 | 1 | 0.4 | 0 | 1 | 0 |
+| diff | 0.48 | 1 | 0.4 | 0 | 1 | 0 |
+
+As stated: the plan's rate is under 0.6 and 0.12 above the task's words, under the 0.25 asked.
+
+What it means, not pre-registered:
+1. A plan written before any code chose as well as the finished change did. So choosing lessons
+   does not have to wait for the code: whatever picks from a diff can pick from a plan as well, and
+   earlier, where a fix costs least.
+2. Choosing is the weak link at every stage. With the right lesson in hand an agent fixed about
+   three in four (§4ay); from any starting point here the picker put it in its ten about half the
+   time. On #196 and #309 no arm found it in any repeat, and those are the two diffs longer than the
+   cut, so the diff arm may understate; their plans did not name the mechanism the lesson is about.
+3. §4az picks from the diff inside the review, and its measured result fits that ceiling: with the
+   agent choosing, the review fixed 0.2 of the five bugs, against about half the lessons found
+   here times about three in four fixed when found (§4ay).
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

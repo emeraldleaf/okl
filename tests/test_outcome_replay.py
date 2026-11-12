@@ -195,3 +195,94 @@ def test_the_one_at_a_time_figures_are_the_receipts():
     assert receipt["reading"] == "works" and receipt["sessions"] == 75
     assert f"made {receipt['other_edits_median']} edit for the nine other lessons ({receipt['other_edits_total']} edits in {receipt['other_passes']} such passes)" in flat
     assert not any(receipt["sessions_with_harm"].values())
+
+
+def _e2e_module():
+    spec5 = importlib.util.spec_from_file_location("review_e2e", REPO / "evals" / "review_e2e.py")
+    assert spec5 and spec5.loader
+    mod = importlib.util.module_from_spec(spec5)
+    spec5.loader.exec_module(mod)
+    return mod
+
+
+def test_the_end_to_end_arms_differ_only_in_the_review_steps():
+    """§4az: one pass is the steps before #427, each alone is today's, and they share everything else."""
+    e2e = _e2e_module()
+    from okl import core
+    assert e2e.STEPS["review_each_alone"] == core.REVIEW_STEPS
+    assert e2e.STEPS["review_one_pass"] != core.REVIEW_STEPS
+    assert e2e.STEPS["review_one_pass"][:2] == core.REVIEW_STEPS[:2]
+    assert "sub-agent" not in " ".join(e2e.STEPS["review_one_pass"])
+
+
+def test_the_stream_counts_sub_agents_and_finds_the_result():
+    """A stream-json run: tool_use events naming the sub-agent tool are counted, and the last result kept."""
+    e2e = _e2e_module()
+    lines = [json.dumps({"type": "system", "message": "started"}),
+             json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Agent"}, {"type": "text"}]}}),
+             json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Read"}]}}),
+             json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Task"}]}}),
+             "not json", json.dumps({"type": "result", "result": "done", "num_turns": 3})]
+    result, agents = e2e.stream("\n".join(lines))
+    assert agents == 2 and result == {"type": "result", "result": "done", "num_turns": 3}
+
+
+def test_the_end_to_end_reading_follows_the_stated_rule():
+    """Not followed, on by default, or stays opt-in, against the same sitting's arms."""
+    e2e = _e2e_module()
+    rate = {"none": 0.0, "review_one_pass": 0.2, "review_each_alone": 0.5}
+    quiet = {a: 0 for a in e2e.ARMS}
+    assert e2e.reading(rate, True, 0.4, quiet) == "the new steps were not followed"
+    assert e2e.reading(rate, True, 0.8, quiet) == "on by default"
+    assert e2e.reading({**rate, "review_each_alone": 0.3}, True, 0.8, quiet) == "stays opt-in"
+    assert e2e.reading(rate, True, 0.8, {**quiet, "review_each_alone": 3}) == "stays opt-in"
+    assert e2e.reading(rate, False, 0.8, quiet) == "not complete"
+
+
+def test_the_end_to_end_figures_are_the_receipts():
+    """§4az's result quotes these; each is read from the committed receipt."""
+    receipt = json.loads(sorted((REPO / "evals" / "results").glob("review-e2e-2*.json"))[-1].read_text())
+    report = (REPO / "evals" / "REPORT.md").read_text()
+    section = report[report.index("## 4az."):report.index("## 5. Findings")]
+    r, e, u, t, per = (receipt[k] for k in ("pass_rate", "edited", "usd_per_session", "median_seconds", "per_task"))
+    for arm, name in (("none", "none"), ("review_one_pass", "review, one pass"), ("review_each_alone", "review, each alone")):
+        cells = " | ".join(str(per[arm][k]) for k in ("115", "168", "196", "198", "309"))
+        assert f"| {name} | {r[arm]} | {e[arm]} of 25 | ${u[arm]} | {round(t[arm])} s | {cells} |" in section, arm
+    assert receipt["reading"] == "stays opt-in" and receipt["sessions"] == 75
+    assert f"{round(receipt['sessions_started_a_sub_agent'] * 100)}% of the each-alone sessions started a sub-agent" in section
+
+
+def _plan_module():
+    spec6 = importlib.util.spec_from_file_location("plan_reach", REPO / "evals" / "plan_reach.py")
+    assert spec6 and spec6.loader
+    mod = importlib.util.module_from_spec(spec6)
+    spec6.loader.exec_module(mod)
+    return mod
+
+
+def test_the_plan_reading_follows_the_stated_rule():
+    """The plan finds it only when it is good on its own and clearly better than the task's words."""
+    plan = _plan_module()
+    assert plan.reading({"task": 0.2, "plan": 0.6, "diff": 0.5}, True) == "the plan finds it"
+    assert plan.reading({"task": 0.4, "plan": 0.6, "diff": 0.5}, True) == "the plan does not find it well enough"
+    assert plan.reading({"task": 0.0, "plan": 0.5, "diff": 0.5}, True) == "the plan does not find it well enough"
+    assert plan.reading({"task": 0.0, "plan": 1.0, "diff": 1.0}, False) == "not complete"
+
+
+def test_a_pick_is_read_from_the_last_array_of_ids():
+    """A reply may quote a short list in prose before its answer; the answer is the last array."""
+    plan = _plan_module()
+    assert plan.last_array('I considered ["a"] first.\n["x", "y", "z"]') == ["x", "y", "z"]
+    assert plan.last_array("no answer") is None
+
+
+def test_the_plan_results_figures_are_the_receipts():
+    """§4ba's result quotes these; each is read from the committed receipt."""
+    receipt = json.loads(sorted((REPO / "evals" / "results").glob("plan-reach-2*.json"))[-1].read_text())
+    report = (REPO / "evals" / "REPORT.md").read_text()
+    section = report[report.index("## 4ba."):report.index("## 5. Findings")]
+    hit, per = receipt["hit_rate"], receipt["per_task"]
+    for arm in ("task", "plan", "diff"):
+        cells = " | ".join(str(per[arm][k]) for k in ("115", "168", "196", "198", "309"))
+        assert f"| {arm} | {hit[arm]} | {cells} |" in section, arm
+    assert receipt["reading"] == "the plan does not find it well enough" and receipt["picks"] == 75

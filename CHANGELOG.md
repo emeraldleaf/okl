@@ -7,8 +7,10 @@
   asked about one at a time fixed as many as the right lesson alone. So `okl check --change`
   now asks the agent to check each lesson it picks in a fresh sub-agent, one lesson and one
   question each, one after another; an agent that cannot start one checks them one at a time
-  itself and says the review ran without fresh contexts. It costs more per review, and it
-  stays off by default until a test with okl choosing the lessons itself is in.
+  itself and says the review ran without fresh contexts. It costs more per review. With the
+  agent choosing its own lessons (REPORT §4az) it fixed 1 in 5 past bugs against none for the
+  earlier review, short of the bar for turning it on, so it stays off by default. A plan
+  written before any code chose lessons as well as the finished change did (§4ba).
 
 - **Checks for the lessons past work kept breaking** (#415). Twenty lessons hold two-thirds of
   the breaks found in past work, and showing a lesson did not make it followed, so the
