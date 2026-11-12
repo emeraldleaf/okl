@@ -6250,9 +6250,10 @@ What it means, not pre-registered:
    three in four (§4ay); from any starting point here the picker put it in its ten about half the
    time. On #196 and #309 no arm found it in any repeat, and those are the two diffs longer than the
    cut, so the diff arm may understate; their plans did not name the mechanism the lesson is about.
-3. §4az picks from the diff inside the review, and its measured result fits that ceiling: with the
-   agent choosing, the review fixed 0.2 of the five bugs, against about half the lessons found
-   here times about three in four fixed when found (§4ay).
+3. §4az picks from the diff inside the review, and its measured 0.2 is well under the ceiling
+   this suggests, about half the lessons found here times about three in four fixed when found
+   (§4ay), or about 0.37. Choosing does not explain all of it; §4az's throwaway session also
+   stopped after three of its ten sub-agents, and agents cutting a review short would cost more.
 
 ## 4bb. PRE-REGISTERED, A PILOT: does a line saying when a lesson applies, by mechanism, help a picker find it? (2026-11-11)
 
@@ -6280,6 +6281,10 @@ otherwise *the lines do not help enough*. The task's words are reported, with no
 They make the list about twice as long, which may itself change what a picker reads.
 
 **Budget.** About 17 calls to write the lines and 150 picks, all Sonnet.
+
+*Correction (2026-11-12, from CI's review of #428).* "On #196 the picker read the faulty line" above
+rests on a check by hand that the line lies inside the part of #196's diff the picker reads; no
+receipt records it. The receipts show only that no arm picked the lesson.
 
 **Amendment before any pick (2026-11-11).** Two fixes to the instrument, neither touching a pick:
 §4ba's plans are read from its committed receipt by name, where a glob would have read the working
