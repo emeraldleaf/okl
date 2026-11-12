@@ -32,7 +32,7 @@ import plan_reach as pr
 import run_guard
 
 LINES = o.REPO / "evals" / "when-lines-4bb.json"
-PLANS = sorted((o.REPO / "evals" / "results").glob("plan-reach-2*.json"))[-1]
+PLANS = o.REPO / "evals" / "results" / "plan-reach-20261111-1435.json"   # §4ba's committed plans, by name: a glob would take an uncommitted receipt
 OUT = o.REPO / "evals" / "bench" / "private" / "realwork" / "when-lines-4bb.jsonl"
 ARMS = tuple(f"{start}_{lines}" for start in pr.ARMS for lines in ("plain", "when"))
 BATCH, GAIN, MIN_COMPLETE = 20, 0.15, 135
