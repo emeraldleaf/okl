@@ -80,9 +80,9 @@ def _interrupt_group(proc: subprocess.Popen, error: BaseException) -> None:
     """Pass an interrupt on to the check, give it two seconds to clean up, then kill what is left.
     In its own group the check no longer gets the terminal's Ctrl-C, and killing it outright
     skipped its cleanup: pytest's teardown, a `finally`, a shell trap (review of #441)."""
-    gentle = signal.SIGINT if isinstance(error, KeyboardInterrupt) else getattr(signal, "SIGTERM", signal.SIGINT)
-    _signal_group(proc, gentle)
     try:
+        gentle = signal.SIGINT if isinstance(error, KeyboardInterrupt) else getattr(signal, "SIGTERM", signal.SIGINT)
+        _signal_group(proc, gentle)
         if not _group_gone(proc, 2):
             _stop_group(proc)
     except BaseException:

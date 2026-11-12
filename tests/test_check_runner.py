@@ -225,9 +225,9 @@ def test_nothing_shown_before_a_question_carries_a_control_character(tmp_path):
     terminal. Sites were fixed one at a time (#441's reviews found four), so this holds them all."""
     repo, env = _repo(tmp_path)
     hostile = {
-        "x] python3 -m pytest -q\r\x1b[8m": ("t\x1b[8m", None),                       # no stored check
-        "y\x1b[2K": ("u\r\x1b[8m", "echo CHECKS OK #\r\x1b[2K      pytest -q"),       # everything hostile
-        "z\x1b[8m": ("a plain title", "echo CHECKS OK"),                               # only the id
+        "x] python3 -m pytest -q\r\x1b[8m": ("t\x1b[8m\u202e", None),                 # no stored check
+        "y\x1b[2K\b": ("u\r\x1b[8m\u200b", "echo CHECKS OK #\r\x1b[2K      pytest -q"),  # everything hostile
+        "z\u202e\x1b[8m": ("a plain title", "echo CHECKS OK"),                       # only the id
     }
     for lid, (title, run) in hostile.items():
         r = _okl(repo, env, "record", "--type", "Rule", "--scope", "repo", "--id", lid, "--title", title,
@@ -238,8 +238,14 @@ def test_nothing_shown_before_a_question_carries_a_control_character(tmp_path):
     (repo / "src" / "orders.py").write_text("def get(): return 1\n")
     subprocess.run(["git", "-C", str(repo), "commit", "-qam", "change"], check=True, env=env)
 
-    shown = [_okl(repo, env, "reverify", "--dry-run"), _okl(repo, env, "on-edit"),
+    shown = [_okl(repo, env, "reverify", "--dry-run"),
              *(_okl(repo, env, "on-edit", "add", lid) for lid in hostile)]
+    # the id-only lesson can be approved; the list then prints the approved branch too
+    shown.append(_okl(repo, env, "on-edit", "add", "z\u202e\x1b[8m", "--yes"))
+    shown.append(_okl(repo, env, "on-edit"))
+    assert "1 lesson check(s) run when the agent edits" in shown[-1].stdout, shown[-1].stdout
+    raw = [s for lid, (title, run) in hostile.items() for s in (lid, title, run) if s and not s.isprintable()]
     for r in shown:
         for stream in (r.stdout, r.stderr):
-            assert "\x1b" not in stream and "\r" not in stream, (r.args, stream)
+            assert not any(c in stream for c in "\x1b\r\b\u202e\u200b"), (r.args, stream)
+            assert not any(s in stream for s in raw), (r.args, stream)
