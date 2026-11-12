@@ -197,3 +197,49 @@ def test_reverify_shows_a_lesson_id_that_could_hide_escaped(tmp_path):
     subprocess.run(["git", "-C", str(repo), "commit", "-qam", "change"], check=True, env=env)
     out = _okl(repo, env, "reverify", "--dry-run").stdout
     assert "\x1b" not in out and repr(lid) in out, out
+
+
+def test_a_second_interrupt_in_the_grace_still_stops_the_check(tmp_path):
+    """Ctrl-C pressed twice: the second, inside the two seconds okl gives the check to clean up,
+    ended okl with the check still running, and it wrote its file afterwards (review of #441). It
+    now cuts the grace short and stops the group."""
+    repo, env = _repo(tmp_path)
+    (repo / "stubborn.py").write_text(
+        "import signal, time\nsignal.signal(signal.SIGINT, signal.SIG_IGN)\ntime.sleep(6)\nopen('late.txt', 'w')\n")
+    okl = subprocess.Popen([sys.executable, "-m", "okl", "verify", "orders", "--run", f"{PY} stubborn.py",
+                            "--expect", "never"], cwd=repo, env=env, stdin=subprocess.DEVNULL,
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    time.sleep(1.5)
+    okl.send_signal(signal.SIGINT)
+    time.sleep(0.5)
+    if okl.poll() is None:
+        okl.send_signal(signal.SIGINT)
+    okl.communicate(timeout=10)
+    time.sleep(6)
+    assert not (repo / "late.txt").exists(), "the check outlived a second Ctrl-C"
+
+
+def test_nothing_shown_before_a_question_carries_a_control_character(tmp_path):
+    """Every line okl prints before it asks to run stored commands, for reverify and for on-edit,
+    rendered with a hostile id, title and command: no escape code or carriage return reaches the
+    terminal. Sites were fixed one at a time (#441's reviews found four), so this holds them all."""
+    repo, env = _repo(tmp_path)
+    hostile = {
+        "x] python3 -m pytest -q\r\x1b[8m": ("t\x1b[8m", None),                       # no stored check
+        "y\x1b[2K": ("u\r\x1b[8m", "echo CHECKS OK #\r\x1b[2K      pytest -q"),       # everything hostile
+        "z\x1b[8m": ("a plain title", "echo CHECKS OK"),                               # only the id
+    }
+    for lid, (title, run) in hostile.items():
+        r = _okl(repo, env, "record", "--type", "Rule", "--scope", "repo", "--id", lid, "--title", title,
+                 "--files", "src/orders.py")
+        assert r.returncode == 0, r.stderr
+        if run:
+            assert _okl(repo, env, "verify", lid, "--run", run, "--expect", "CHECKS OK").returncode == 0
+    (repo / "src" / "orders.py").write_text("def get(): return 1\n")
+    subprocess.run(["git", "-C", str(repo), "commit", "-qam", "change"], check=True, env=env)
+
+    shown = [_okl(repo, env, "reverify", "--dry-run"), _okl(repo, env, "on-edit"),
+             *(_okl(repo, env, "on-edit", "add", lid) for lid in hostile)]
+    for r in shown:
+        for stream in (r.stdout, r.stderr):
+            assert "\x1b" not in stream and "\r" not in stream, (r.args, stream)

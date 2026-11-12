@@ -82,8 +82,14 @@ def _interrupt_group(proc: subprocess.Popen, error: BaseException) -> None:
     skipped its cleanup: pytest's teardown, a `finally`, a shell trap (review of #441)."""
     gentle = signal.SIGINT if isinstance(error, KeyboardInterrupt) else getattr(signal, "SIGTERM", signal.SIGINT)
     _signal_group(proc, gentle)
-    if not _group_gone(proc, 2):
+    try:
+        if not _group_gone(proc, 2):
+            _stop_group(proc)
+    except BaseException:
+        # A second Ctrl-C (or SIGTERM) inside the grace ended okl with the check still running
+        # (review of #441): it now cuts the grace short instead.
         _stop_group(proc)
+        raise
     with contextlib.suppress(Exception):
         proc.wait(timeout=2)
 
@@ -148,22 +154,24 @@ def _run_check(args: argparse.Namespace) -> CheckResult:
     proc = subprocess.Popen(args.run, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                             text=True, errors="replace", start_new_session=True,
                             cwd=getattr(args, "cwd", None))
-    try:
-        with _exit_signals_raise():
+    # The handlers stay in until the check is stopped, so a SIGTERM during the grace below still
+    # raises rather than ending okl outright with the check running.
+    with _exit_signals_raise():
+        try:
             output, _ = proc.communicate(timeout=args.timeout)
-    except subprocess.TimeoutExpired:
-        # Uncaught, one slow check ended `okl reverify` in a traceback and left every
-        # later lesson unchecked (CodeRabbit on #79). A timeout is a failed check.
-        _stop_group(proc)
-        _drain(proc)
-        print(f"✗ check TIMED OUT after {args.timeout}s — NOT stamping verification.",
-              file=sys.stderr)
-        return CheckResult(None, f"timed out after {args.timeout}s", timed_out=True)
-    except BaseException as error:
-        # Ctrl-C, SIGTERM, SIGHUP or anything else ending okl mid-check: stop the check first,
-        # letting it clean up as it would have when the terminal's Ctrl-C reached it.
-        _interrupt_group(proc, error)
-        raise
+        except subprocess.TimeoutExpired:
+            # Uncaught, one slow check ended `okl reverify` in a traceback and left every
+            # later lesson unchecked (CodeRabbit on #79). A timeout is a failed check.
+            _stop_group(proc)
+            _drain(proc)
+            print(f"✗ check TIMED OUT after {args.timeout}s — NOT stamping verification.",
+                  file=sys.stderr)
+            return CheckResult(None, f"timed out after {args.timeout}s", timed_out=True)
+        except BaseException as error:
+            # Ctrl-C, SIGTERM, SIGHUP or anything else ending okl mid-check: stop the check first,
+            # letting it clean up as it would have when the terminal's Ctrl-C reached it.
+            _interrupt_group(proc, error)
+            raise
     output = output or ""
     tail = "\n".join(output.strip().splitlines()[-5:])
     if proc.returncode != 0:
@@ -511,7 +519,7 @@ def cmd_reverify(args: argparse.Namespace) -> int:
         (plan.append((nid, chk)) if chk else manual.append((nid, title)))
     for nid, title in manual:
         print(f"• [{shown(nid)}] {shown(title)}\n    no stored check yet: ask your agent to write one, or run "
-              f"`okl verify {nid}` to see the tests that touch its files")
+              f"`okl verify {shown(nid)}` to see the tests that touch its files")
     if plan:
         print(f"okl reverify will run {len(plan)} stored check(s), from the store:")
         for nid, (run, _exp) in plan:

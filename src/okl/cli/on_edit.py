@@ -108,10 +108,10 @@ def _why_not(node: Node | None, repo: str) -> str | None:
         s.isprintable() for s in (check[0], check[1] or "", node.title, node.files or ""))
     reasons = (
         (node.status in RETIRED_STATUSES, f"it is retired ({node.status})"),
-        (node.scope not in ("org", f"repo:{repo}"), f"it belongs to another repository ({node.scope})"),
+        (node.scope not in ("org", f"repo:{repo}"), f"it belongs to another repository ({shown(node.scope)})"),
         (not node.files, "it governs no files, so no edit would run it: give it files with okl update --files"),
         (check is None, "it has no stored check: prove it first with "
-                        f"okl verify {node.id} --run \"<check>\" --expect \"<signal>\""),
+                        f"okl verify {shown(node.id)} --run \"<check>\" --expect \"<signal>\""),
         # What the person approves must be what runs: a control code, a zero-width or a direction
         # mark can show one command over another (review of #441; issue #185).
         (hidden, "its command, signal, title or files hold a control, format or separator character "
