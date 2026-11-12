@@ -6283,7 +6283,7 @@ They make the list about twice as long, which may itself change what a picker re
 §4ba's plans are read from its committed receipt by name, where a glob would have read the working
 tree (found by the review after writing); and a lesson id the writing model echoed without its seed
 prefix is resolved within its batch, where the first pass dropped those lines. The first writing
-pass also stopped partway at a usage limit. All 337 lines are written, and frozen at .
+pass also stopped partway at a usage limit. All 337 lines are written, and frozen at `428b12d45bd7256c`.
 
 ## 5. Findings
 
