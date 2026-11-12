@@ -250,6 +250,8 @@ def test_the_end_to_end_figures_are_the_receipts():
         assert f"| {name} | {r[arm]} | {e[arm]} of 25 | ${u[arm]} | {round(t[arm])} s | {cells} |" in section, arm
     assert receipt["reading"] == "stays opt-in" and receipt["sessions"] == 75
     assert f"{round(receipt['sessions_started_a_sub_agent'] * 100)}% of the each-alone sessions started a sub-agent" in section
+
+
 def _plan_module():
     spec6 = importlib.util.spec_from_file_location("plan_reach", REPO / "evals" / "plan_reach.py")
     assert spec6 and spec6.loader
