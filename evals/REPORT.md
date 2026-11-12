@@ -6366,35 +6366,46 @@ shared between threads ("Already borrowed"). The searches now run one at a time;
 lists, the measures and the instrument (`bb49ed57d63e3d6f`) are unchanged. To find the fault, one
 change (#278) was prepared by hand, and its lists were seen; it is prepared again with the rest.
 
-**Result (2026-11-12): choosing does not improve enough.** All 58 changes are complete, with 124
-broken lessons (receipt `pick-fix-20261112-0300.json`): 58 Sonnet picks, 58 Haiku description calls
-and 1,727 Haiku screens.
+*Erratum (2026-11-12, from the review of #434).* The amendment above says the first two runs
+stopped; they did not stop calling the models. When one worker crashed, the error surfaced while
+the pool still waited for its queued work, so most changes in each run still got their Haiku
+description and Sonnet pick, and those replies were thrown away. None was kept, and none was read
+before the result; the review counted them afterwards from the sessions the tool saves, which are
+not committed. The script now cancels queued calls when one fails. The calls counted below are the
+kept run's, made at `fcec019` (its rows predate the commit stamp the script now adds).
 
-| list | size | share of broken lessons held | development half | test half |
+**Result (2026-11-12): choosing does not improve enough.** All 58 changes are complete, with 124
+broken lessons (receipt `pick-fix-20261112-0425.json`, re-scored from the same rows, with no model
+called, after the review of #434 added list sizes and counts to it). The kept calls were 58 Sonnet
+picks, 58 Haiku description calls and 1,727 Haiku screens.
+
+| list | mean size | share of broken lessons held | development half | test half |
 |---|---|---|---|---|
-| pick | 10 | 0.465 | 0.454 | 0.48 |
+| pick | 9.86 | 0.465 | 0.454 | 0.48 |
 | chunk | 10 | 0.261 | 0.272 | 0.246 |
 | desc | 10 | 0.366 | 0.299 | 0.46 |
-| anchor | 10 | 0.09 | 0.1 | 0.076 |
-| pool | 30 | 0.586 | 0.557 | 0.626 |
-| screen | 22.1 on average | 0.577 | 0.557 | 0.605 |
+| anchor | 9.09 | 0.09 | 0.1 | 0.076 |
+| pool | 29.78 | 0.586 | 0.557 | 0.626 |
+| screen | 22.1 | 0.577 | 0.557 | 0.605 |
 
-As stated: the screened set held 0.112 more of the broken lessons than pick, interval [0.04, 0.191],
+As stated: the screened set held 0.112 more of the broken lessons than pick, 95% interval [0.04, 0.191],
 under the 0.15 asked, and averaged 22.1 lessons, over the 12 asked. So the reading is *choosing does
 not improve enough*.
 
 What it means, not pre-registered:
-1. The screen hardly screened. It said yes to 1,281 of the 1,727 pooled lessons, kept 22.1 of 30 on
+1. The screen hardly screened. It said yes to 1,281 of the 1,727 pooled lessons, kept 22.1 of the pool's 29.78 on
    average, and only 3 of the 58 sets were 12 or smaller. Asked whether a change does something a
    lesson is about, Haiku said yes to most, so the screened set kept nearly all the pool's reach
    (0.577 of 0.586) and little of the cut.
-2. Fusing four lists does reach more than one model's pick: the pool of 30 held 0.586 against the
-   pick's 0.465 at ten, and the interval above zero says the screened set's gain is not noise. But it
-   is two to three times the size, and checking each lesson one at a time costs per lesson (§4ay).
-   Whether the fused list cut to ten beats the pick was not measured.
-3. Read from the code alone, each list held less than a model reading the whole change: the hunks as
-   queries 0.261, a sentence per hunk 0.366, and code names with governed files 0.09. Few lessons
-   name the code they are about, so exact matching finds little.
+2. The pool holds the pick's own list, so its holding more than the pick is partly by construction:
+   most of the pick's lessons and about twenty others. Its 0.586 against the pick's 0.465 comes at
+   three times the size, and checking each lesson one at a time costs per lesson (§4ay). Whether
+   the fused list cut to ten beats the pick was not measured.
+3. Each list built without the pick held less than the pick did: the hunks as queries 0.261, a
+   Haiku sentence per hunk 0.366, and code names with governed files 0.09. The pick read the change
+   cut to 40,000 characters and the description arm is a model too, so this compares ways of
+   choosing, not code against a model. Why exact matching found so few was not measured; its lists
+   were not short of lessons.
 4. Every list missed all of a change's broken lessons on some changes: the pick on 19 of 58, the pool
    and the screen on 13.
 

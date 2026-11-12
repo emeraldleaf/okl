@@ -381,15 +381,24 @@ def test_the_choosing_reading_follows_the_stated_rule():
 
 
 def test_the_choosing_figures_are_the_receipts():
-    """§4bc's result quotes these; each is read from the committed receipt."""
+    """§4bc's result quotes these; each is read from the committed receipt, prose counts included."""
     receipt = json.loads(sorted((REPO / "evals" / "results").glob("pick-fix-2*.json"))[-1].read_text())
     report = (REPO / "evals" / "REPORT.md").read_text()
     section = report[report.index("## 4bc."):report.index("## 5. Findings")]
-    rec, half = receipt["recall"], receipt["by_half"]
-    sizes = {"pick": "10", "chunk": "10", "desc": "10", "anchor": "10", "pool": "30", "screen": f"{receipt['screen_set_mean']} on average"}
-    for arm, size in sizes.items():
-        assert f"| {arm} | {size} | {rec[arm]} | {half['dev'][arm]} | {half['test'][arm]} |" in section, arm
+    flat = " ".join(section.split())
+    rec, half, size, per = receipt["recall"], receipt["by_half"], receipt["mean_size"], receipt["per_change"]
+    sizes = {**{arm: str(size[arm]) for arm in size}, "screen": str(receipt["screen_set_mean"])}
+    for arm, shown in sizes.items():
+        assert f"| {arm} | {shown} | {rec[arm]} | {half['dev'][arm]} | {half['test'][arm]} |" in section, arm
     low, high = receipt["interval"]
-    assert f"held {receipt['screen_minus_pick']} more of the broken lessons than pick, interval [{low}, {high}]" in " ".join(section.split())
-    assert receipt["reading"] == "choosing does not improve enough" in section
+    assert f"held {receipt['screen_minus_pick']} more of the broken lessons than pick, 95% interval [{low}, {high}]" in flat
+    assert receipt["screen_yes"] == sum(p["screen_size"] for p in per)
+    assert f"said yes to {receipt['screen_yes']:,} of the {receipt['screens']:,} pooled lessons" in flat
+    assert f"58 Haiku description calls and {receipt['screens']:,} Haiku screens" in flat
+    assert f"kept {receipt['screen_set_mean']} of the pool's {size['pool']} on average" in flat
+    assert f"only {sum(p['screen_size'] <= 12 for p in per)} of the 58 sets were 12 or smaller" in flat
+    missed = {arm: sum(p[arm] == 0 for p in per) for arm in ("pick", "pool", "screen")}
+    assert missed["pool"] == missed["screen"]
+    assert f"the pick on {missed['pick']} of 58, the pool and the screen on {missed['pool']}" in flat
+    assert receipt["reading"] == "choosing does not improve enough"
     assert receipt["changes"] == receipt["of"] == 58 and receipt["broken_lessons"] == 124
