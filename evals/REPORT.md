@@ -6360,6 +6360,12 @@ matters.
 
 **Budget.** About 58 Sonnet picks, 58 Haiku description calls and up to 1,740 Haiku screens.
 
+**Amendment before any row is kept (2026-11-12).** The first two runs stopped before keeping a
+row: okl's search ran in four threads at once, and the static embedding's tokenizer cannot be
+shared between threads ("Already borrowed"). The searches now run one at a time; the prompts, the
+lists, the measures and the instrument (`bb49ed57d63e3d6f`) are unchanged. To find the fault, one
+change (#278) was prepared by hand, and its lists were seen; it is prepared again with the rest.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

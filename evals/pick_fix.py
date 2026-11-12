@@ -32,6 +32,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import threading
 from collections import defaultdict
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -149,6 +150,16 @@ def anchors(parts: list[dict], texts: dict[str, str], governed: list[str]) -> li
     return [*governed, *rest]
 
 
+SEARCH_LOCK = threading.Lock()
+
+
+def search(db: Path, text: str, lessons: set[str]) -> list[str]:
+    """okl's search, one at a time: the static embedding's tokenizer fails when two threads share it
+    ("Already borrowed"), which stopped §4bc's first two runs before any row was kept."""
+    with SEARCH_LOCK:
+        return es.ranked(db, text, lessons, PER_CHUNK)
+
+
 def ask(cmd: list[str], prompt: str, model: str) -> str | None:
     """One call's text, or None (a usage limit looks like this)."""
     try:
@@ -170,14 +181,14 @@ def prep_one(half: str, task: dict) -> dict | None:
         nodes = [n for n in Store(f"sqlite:///{db}").all_nodes() if n.id in lessons]
         changed = {b.split(" b/", 1)[-1].split("\n", 1)[0] for b in re.split(r"(?m)^diff --git ", diff)[1:]}
         governed = sorted(n.id for n in core.governing(nodes, "okl", changed))
-        chunk_lists = [es.ranked(db, part["text"], lessons, PER_CHUNK) for part in parts]
+        chunk_lists = [search(db, part["text"], lessons) for part in parts]
         body = "\n\n".join(f"[{i + 1}] {part['file']}\n{part['text']}" for i, part in enumerate(parts))
         raw = ask(HAIKU, DESC_PROMPT.format(parts=body), "haiku") if parts else "{}"
         obj = last_object(raw or "") or {}
         desc = {int(k): v for k, v in obj.items() if str(k).isdigit()}
         if parts and not desc:
             return None
-        desc_lists = [es.ranked(db, s, lessons, PER_CHUNK) for _, s in sorted(desc.items())]
+        desc_lists = [search(db, s, lessons) for _, s in sorted(desc.items())]
     lines = es.lesson_lines(half, task)
     picked = pr.last_array(ask(SONNET, pr.PICK_PROMPT.format(kind=pr.KIND["diff"], k=K, change=view(diff), lessons="\n".join(lines)), "sonnet") or "")
     if not picked:
