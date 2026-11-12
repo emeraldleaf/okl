@@ -353,6 +353,13 @@ def test_the_chunker_leaves_out_result_and_data_files():
     assert "results/x.json" not in pick.view(diff)
 
 
+def test_the_data_filter_matches_a_data_folder_or_a_data_suffix():
+    """Either half alone leaves a path out: a folder prefix, or a file suffix; code elsewhere stays in."""
+    pick = _pick_module()
+    assert pick.DATA.search("evals/bench/run.py") and pick.DATA.search("src/okl/table.csv")
+    assert not pick.DATA.search("src/okl/evals/results.py") and not pick.DATA.search("evals/benchmark.py")
+
+
 def test_fusion_and_anchors_rank_as_described():
     """Reciprocal-rank fusion favours what several lists hold; governing lessons lead the anchors."""
     pick = _pick_module()
