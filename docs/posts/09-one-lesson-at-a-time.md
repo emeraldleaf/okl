@@ -32,7 +32,7 @@ Part 8 began with lessons a briefing showed being followed no more often than le
 
 If being one of ten is what costs, the remedy is to hand lessons over one at a time. The risk is the other nine, which mostly do not apply: an agent asked about each might invent problems to fix. So I asked about the same ten lessons one at a time, each in a fresh session after the code was written: if the change breaks this lesson, fix that; if not, change nothing (§4ay).
 
-One at a time passed 0.72, level with the right lesson alone in the same sitting. The list, re-run as the control, passed 0.08. The other nine lessons produced an edit in about one pass in nine, and no session broke another test. The cost of a list was in how the lessons were handed over, not in the lessons.
+One at a time passed 0.72, level with the right lesson alone in the same sitting. The list, re-run as the control, passed 0.08. The other nine lessons produced an edit in about one pass in nine, and no session broke another test in the grader's file. The cost of a list was in how the lessons were handed over, not in the lessons.
 
 Across three sittings the lesson alone passed between 0.6 and 0.72, and the list between 0.08 and 0.2. Five repeats on five tasks move around; the gap between the two stays large.
 
@@ -44,7 +44,7 @@ Part 8 introduced the step this calls for. `okl check --change` runs after the c
 
 Every test so far had handed the agent a set that held the right lesson. The real review has to choose its own, from the 280 to 300 lessons these tasks could see. So I ran it end to end against no review and the old review, with the bar for turning it on by default written first (§4az).
 
-The old review fixed none in its 25 sessions. The new one fixed 5 of 25, and no session broke another test. It is the better review, and not yet good enough to be on by default: the bar asked for 0.25 above no review, and it came out 0.2 above. Four of its five fixes were on one task, #198, the one whose lesson okl's search ranks first for the task's own words. It costs 2.6 times the old review.
+The old review fixed none in its 25 sessions. The new one fixed 5 of 25, and no session broke another test in the grader's file. It is the better review, and not yet good enough to be on by default: the bar asked for 0.25 above no review, and it came out 0.2 above. Four of its five fixes were on one task, #198, the one whose lesson okl's search ranks first for the task's own words. It costs 2.6 times the old review.
 
 So in 0.16.0 the review after writing checks each lesson on its own, and stays off unless you turn it on for a repository with `okl init --review-after-writing`. The release also carries the checks Part 8 described for the most-broken lessons ([#415](https://github.com/emeraldleaf/okl/issues/415)), which fail the build whether or not the agent noticed.
 
@@ -58,7 +58,7 @@ Part 8's title said finding the lesson was the easy part. Once handing it over w
 
 Two of the five bugs were never found. No picker put their lesson in its ten, from any starting point, in any repeat, with or without the lines, and the review fixed neither. In one, the lesson says an audit must read the committed files rather than the working folder, and the change was an eval script that loaded every pack in a folder, so a pack never committed could reach the measurement. A lesson is often written about the incident that taught it, and a line written from the lesson alone cannot know which other code shares its mechanism.
 
-Choosing does not explain all of the drop from 0.72 to 0.2. The right lesson reaching the ten about half the time, and fixed about three times in four when it does, suggests a ceiling near 0.37 (§4ba). The review reached 0.2. Part of the rest may be the agent cutting the review short: one session gave its sub-agents only part of the change (one read just its first 400 lines), and a trial session before the count stopped after three of its ten. How often that happens is not yet measured.
+Choosing does not explain all of the drop from 0.72 to 0.2. The right lesson reaching the ten about half the time, and fixed about three times in four when it does, multiply to about 0.37: a rough estimate of what the review would reach if choosing were all it lost (§4ba). The review reached 0.2. Part of the rest may be the agent cutting the review short: one session gave its sub-agents only part of the change (one read just its first 400 lines), and a trial session before the count stopped after three of its ten. How often that happens is not yet measured.
 
 ## What this means for your rules file
 
