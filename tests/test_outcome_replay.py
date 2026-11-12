@@ -317,7 +317,7 @@ def test_the_choosing_estimate_in_the_erratum_is_the_receipts():
     assert f"§4az's {measured} is at the bottom of that range" in erratum
     assert low == measured
     assert round((top - high) / (top - measured), 2) >= 0.6
-    assert f"at least about 60% of the drop from {top}" in erratum
+    assert f"in every pairing choosing accounts for about 60% or more of the drop from {top}" in erratum
 
 
 def _when_module():

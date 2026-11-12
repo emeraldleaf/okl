@@ -6253,20 +6253,22 @@ What it means, not pre-registered:
    cut, so the diff arm may understate; their plans did not name the mechanism the lesson is about.
 3. §4az picks from the diff inside the review, and its measured 0.2 is well under the ceiling
    this suggests, about half the lessons found here times about three in four fixed when found
-   (§4ay), or about 0.37 (corrected in the erratum below). Choosing does not explain all of it;
-   §4az's throwaway session also stopped after three of its ten sub-agents, and agents cutting a
-   review short would cost more.
+   (§4ay), or about 0.37. Choosing does not explain all of it; §4az's throwaway session also
+   stopped after three of its ten sub-agents, and agents cutting a review short would cost more
+   (both corrected in the erratum below).
 
 *Erratum (2026-11-12, from a review of Part 9's site copy).* Reading 3 called 0.37 a ceiling.
 It is an estimate, and a rounded one: the averages it names give 0.48 × 0.72 = 0.346. A product of
 averages also ignores that picking and fixing vary by task. Each task's hit rate times its fix
-rate, averaged over the five tasks, keeps them together, but its value depends on which sitting's
+rate, averaged over the five tasks, keeps them together, but its value depends on which run's
 per-task rates are paired, and §4ay's reading 4 found those swings cannot be told from noise.
 Pairing the two picks from the diff (here, and §4bb's without the lines) with the five measures of
 the right lesson handed over on its own (§4aw's T, §4ax's alone told and alone plain, §4ay's alone
-and one at a time), the ten estimates run from 0.2 to 0.4. §4az's 0.2 is at the bottom of that
-range, so choosing accounts for at least about 60% of the drop from 0.72, and perhaps all of it.
-Whether anything else costs as well, such as agents cutting a review short, these runs cannot say.
+and one at a time), the ten estimates run from 0.2 to 0.4. Both picks are a standalone picker's,
+standing in for the review's own choice, which §4az's receipt does not record. §4az's 0.2 is at the
+bottom of that range, so in every pairing choosing accounts for about 60% or more of the drop from
+0.72, and perhaps all of it. Whether anything else costs as well, such as agents cutting a review
+short, these runs cannot say.
 
 ## 4bb. PRE-REGISTERED, A PILOT: does a line saying when a lesson applies, by mechanism, help a picker find it? (2026-11-11)
 
