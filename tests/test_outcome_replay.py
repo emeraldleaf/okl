@@ -288,6 +288,38 @@ def test_the_plan_results_figures_are_the_receipts():
     assert receipt["reading"] == "the plan does not find it well enough" and receipt["picks"] == 75
 
 
+def test_the_choosing_estimate_in_the_erratum_is_the_receipts():
+    """§4ba's erratum: reading 3's 0.37 was the rounded product of two averages, and a per-task
+    estimate (each task's hit rate times its fix rate, averaged) moves with the sitting its rates
+    come from, so the erratum quotes the range over every pairing of a pick from the diff with a
+    measure of the right lesson handed over alone, and the share of the drop that range leaves to
+    choosing. Each figure is computed here from the six receipts it names."""
+    results = REPO / "evals" / "results"
+    def per_task(name):
+        return json.loads((results / name).read_text())["per_task"]
+    picks = [per_task("plan-reach-20261111-1435.json")["diff"], per_task("when-lines-20261112-0058.json")["diff_plain"]]
+    aw, ax, ay = (per_task(n) for n in ("outcome-replay-20261111-0129.json", "replay-list-20261111-0249.json",
+                                         "replay-one-20261111-1355.json"))
+    fixes = [aw["T"], ax["alone_told"], ax["alone_plain"], ay["alone_told"], ay["one_at_a_time"]]
+    review = per_task("review-e2e-20261111-1543.json")["review_each_alone"]
+
+    def mean(rates):
+        return round(sum(rates.values()) / len(rates), 3)
+
+    estimates = [round(sum(p[t] * f[t] for t in f) / len(f), 3) for p in picks for f in fixes]
+    low, high = min(estimates), max(estimates)
+    top, measured = mean(ay["one_at_a_time"]), mean(review)
+    erratum = " ".join((REPO / "evals" / "REPORT.md").read_text().split())
+    erratum = erratum[erratum.index("*Erratum (2026-11-12, from a review of Part 9"):erratum.index("## 4bb.")]
+    assert len(estimates) == 10
+    assert f"the ten estimates run from {low} to {high}" in erratum
+    assert f"{mean(picks[0])} × {top} = {round(mean(picks[0]) * top, 3)}" in erratum
+    assert f"§4az's {measured} is at the bottom of that range" in erratum
+    assert low == measured
+    assert round((top - high) / (top - measured), 2) >= 0.6
+    assert f"in every pairing choosing accounts for about 60% or more of the drop from {top}" in erratum
+
+
 def _when_module():
     spec7 = importlib.util.spec_from_file_location("when_lines", REPO / "evals" / "when_lines.py")
     assert spec7 and spec7.loader
