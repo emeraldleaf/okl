@@ -172,7 +172,9 @@ def done() -> dict[tuple[str, int, str], dict]:
 
 
 def run(_args: argparse.Namespace) -> int:
-    """Each broken lesson with a stored check, at its change's base and at the change; resumable."""
+    """Each broken lesson with a stored check, at its change's base and at the change; resumable.
+    Each row names the okl commit it ran at, so score can tell a run whose code moved (#434)."""
+    at = run_guard.start().started[0]
     nodes = lessons()
     have = done()
     todo = [p for p in broken_pairs() if (p["half"], p["pr"], p["lesson"]) not in have
@@ -192,7 +194,8 @@ def run(_args: argparse.Namespace) -> int:
                 r = results[p["lesson"]]
                 row = {**{k: p[k] for k in ("half", "pr", "lesson", "base", "commit")},
                        "check": _stored_check(nodes[p["lesson"]].verified_by)[0],
-                       "at_base": r["base"], "at_change": r["change"], "sorted": sort_pair(r["base"], r["change"])}
+                       "at_base": r["base"], "at_change": r["change"], "sorted": sort_pair(r["base"], r["change"]),
+                       "okl_commit": at}
                 f.write(json.dumps(row) + "\n")
                 print(f"#{p['pr']} {p['lesson']}: {row['sorted']}", flush=True)
     return 0
@@ -215,6 +218,7 @@ def score(args: argparse.Namespace) -> int:
     per_half = {h: {"broken": sum(p["half"] == h for p in pairs),
                     "caught": sum(r["half"] == h for r in caught)} for h in ("dev", "test")}
     receipt = {"section": "4bd", "broken": len(pairs), "with_a_check": len(rows), "sorted": dict(sorted_),
+               "rows_made_at": sorted({r.get("okl_commit") for r in rows.values()} - {None}),
                "caught_share": round(len(caught) / len(pairs), 3) if pairs else None,
                "caught_share_of_checked": round(len(caught) / len(rows), 3) if rows else None,
                "caught_governing_a_changed_path": sum(governs(r) for r in caught), "per_half": per_half,
