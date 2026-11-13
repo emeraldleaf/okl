@@ -6484,6 +6484,38 @@ test more or less than it did. One repository, whose checks are mostly its own t
 says the hook would have flagged the edit, not that the agent would then have fixed it; that is the
 next test.
 
+**Result (2026-11-12): they cannot, as lessons stand.** All 75 checks ran at both ends of their
+changes (receipt `check-reach-20261113-0408.json`; rows made at `cb1165b`, scored at `db9ca8a`).
+
+| broken lessons | carry a check | caught | missed | cannot judge |
+|---|---|---|---|---|
+| 124 | 75 | 0 | 47 | 28 |
+
+None of the 124 was caught, in either half (dev 0 of 70, test 0 of 54), so none was caught where the
+lesson governs a file its change touched either. 47 checks passed at both ends. Of the 28 that cannot
+judge, 20 name a test file not yet written at the change (pytest exit 4 at both ends), 2 a script not
+yet there (exit 2), 2 missed their signal at both ends, 3 failed at both for a reason the change did
+not cause (one, the pre-flight, needs a store), and 1 failed at the base and passed at the change. At
+the change, a check took 2.9 s at the median and 8.8 s at most.
+
+Not registered, a positive control (`check-reach-control-20261113-0408.json`): a patch §4ah's re-run
+wrote to break doc-check-defaults, replayed through the same functions, passes at its base and fails
+at the patch with the check's own message, and is sorted caught. The instrument can see a catch.
+
+What it means, not pre-registered:
+1. On these breaks, a lesson's own check, run at the edit, would not have flagged one. The checks that
+   existed passed on the change that broke their lesson: each tests the incident that taught it, and
+   the next break of the same rule happened somewhere it does not look. The 28 that could not judge are
+   where the count may understate, mostly checks written after the change.
+2. So turning `okl on-edit` on for these lessons, as they stand, would not have changed these
+   outcomes, and #435's replay is not run on them. Its next step is checks that test a lesson's rule
+   across the code, not one instance (in §4af, 8 of drift's misses passed a check too narrow to see
+   the break, one reading a single record where the break was in another of the same kind), and
+   #436's pointers to code to imitate.
+3. Running checks at the edit is cheap: under nine seconds each here. What limits it is what they check.
+4. As built, the hook runs only lessons that name files, 6 of these 124; a check that tests the rule
+   across the code would also need to govern the files the rule covers.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

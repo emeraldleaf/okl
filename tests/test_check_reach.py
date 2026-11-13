@@ -60,3 +60,25 @@ def test_the_figures_seen_while_drafting_are_the_receipts():
     assert f"{count['changes']} past changes" in section
     assert math.ceil(count["broken"] * 0.10) == cr.CATCHES_NEEDED   # the fewest catches that make 10%
     assert f"at least {cr.CATCHES_NEEDED} of the {count['broken']}" in section
+
+
+def test_the_result_figures_are_the_receipts():
+    """§4bd's result quotes the score and the positive control; each figure is read from its receipt."""
+    import statistics
+    results = REPO / "evals" / "results"
+    score = json.loads(sorted(results.glob("check-reach-2026*.json"))[-1].read_text())
+    control = json.loads(sorted(results.glob("check-reach-control-*.json"))[-1].read_text())
+    report = (REPO / "evals" / "REPORT.md").read_text()
+    section = " ".join(report[report.index("## 4bd."):report.index("## 5. Findings")].split())
+    s = score["sorted"]
+    assert f"| {score['broken']} | {score['with_a_check']} | {s.get('caught', 0)} | {s['missed']} | {s['cannot_judge']} |" in section
+    assert score["reading"] == "they cannot, as lessons stand" and "they cannot, as lessons stand" in section
+    assert s.get("caught", 0) < 13 and score["caught_governing_a_changed_path"] == 0
+    half = score["per_half"]
+    assert f"dev {half['dev']['caught']} of {half['dev']['broken']}, test {half['test']['caught']} of {half['test']['broken']}" in section
+    why = score["cannot_judge_why"]
+    assert why["base exit 4; change exit 4"] == 20 and "20 name a test file not yet written" in section
+    assert why["base exit 2; change exit 2"] == 2 and why["base exit 1; change exit 1"] == 3
+    seconds = score["check_seconds_at_change"]
+    assert f"{statistics.median(seconds)} s at the median and {max(seconds)} s at most" in section
+    assert control["sorted"] == "caught" and control["before"]["passed"] and control["after"]["own_failure"]

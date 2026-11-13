@@ -1,0 +1,31 @@
+{
+ "section": "4bd, positive control (not registered)",
+ "source": "drift-mutate-20261101-1935.json",
+ "patch": "doc-check-defaults-breaking-0.diff",
+ "lesson": "doc-check-defaults",
+ "check": "python3 ci/check-check-defaults.py",
+ "before": {
+  "passed": true,
+  "own_failure": false,
+  "why": "passed",
+  "exit": 0,
+  "tail": [
+   "CHECK DEFAULTS MATCH ['agent', 'actions', 'json', 'hook']"
+  ],
+  "seconds": 0.2
+ },
+ "after": {
+  "passed": false,
+  "own_failure": true,
+  "why": "exit 1",
+  "exit": 1,
+  "tail": [
+   "CHECK DEFAULTS DIFFER: the README does not document --format markdown"
+  ],
+  "seconds": 0.2
+ },
+ "sorted": "caught",
+ "okl_commit_at_start": "db9ca8a",
+ "okl_commit": "db9ca8a",
+ "at": "2026-11-13T04:08Z"
+}
