@@ -101,3 +101,19 @@ def test_the_result_figures_are_the_receipts():
     assert f"{count['has_files']} of these {count['broken']}, and this count could not judge any of them" in section
     assert control["sorted"] == "caught" and control["before"]["passed"] and control["after"]["own_failure"]
     assert control["check"].startswith("python3 ci/") and "by a ci/ script failing in one tree" in section
+    for phrase in (f"the {s['missed']} that passed at the base passed on the change",
+                   f"for the {s['missed']} checks that passed at the base, as they were at each change"):
+        assert phrase in section, phrase
+    # the hook paragraph's changes are the receipt's, each named
+    hook = section[section.index("The lessons the hook as built would run"):section.index("Not registered, a positive")]
+    for r in named:
+        assert f"#{r['pr']}" in hook, r
+    # the erratum's two rows: the pilot ran these commands at these changes, and both passed
+    pilot = json.loads(sorted(results.glob("check-reach-pilot-2*.json"))[-1].read_text())
+    ran = {(r["pr"], r["check"]): r["frozen"]["passed"] for r in pilot["rows"] if r.get("check")}
+    assert ran[(309, next(c for pr, c in ran if pr == 309))] and ran[(198, next(c for pr, c in ran if pr == 198))]
+    assert next(c for pr, c in ran if pr == 198) == "python3 -m pytest -q -k 'off_series_instrument'"
+    assert "as 2 of the 75 rows below" in section and "`-k 'off_series_instrument'`" in section
+    # §4af's figure, quoted here, is §4af's
+    af = " ".join(report[report.index("## 4af."):report.index("## 4ag.")].split())
+    assert "8 passed a check too narrow" in af and "in §4af, 8 of drift's misses passed a check too narrow" in section

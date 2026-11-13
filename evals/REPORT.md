@@ -6502,8 +6502,7 @@ changes (receipt `check-reach-20261113-0432.json`; rows made at `cb1165b`).
 None of the 124 was caught, in either half (dev 0 of 70, test 0 of 54). 47 checks passed at both ends.
 Of the 28 that cannot judge, by what each check printed: 20 a test not yet written at the change
 (pytest exit 4 at both ends), 3 the pre-flight, which needs a store the registered environment does not
-name, 2 a script not yet there, 2 their signal missing at both ends (a selection that ran one test
-where the check expects three), and 1 a script not there at the base that passed at the change. At the
+name, 2 a script not yet there, 2 their signal missing at both ends, and 1 a script not there at the base that passed at the change. At the
 change, a check took 2.9 s at the median and 8.8 s at most.
 
 **The lessons the hook as built would run.** The 6 broken lessons that name files, 4 of them a file
@@ -6518,15 +6517,15 @@ by a ci/ script failing in one tree; a pytest failure across two trees, the shap
 shown.
 
 What it means, not pre-registered:
-1. On these breaks, no broken lesson's own check, run at the edit, would have flagged the change: the
-   47 that ran passed on the change that broke their lesson. Why was not measured. Three readings fit:
+1. On these breaks, no broken lesson's own check, run at the edit, would have caught the break: the
+   47 that passed at the base passed on the change that broke their lesson too. Why was not measured. Three readings fit:
    a check tests the incident that taught it, and the next break happened where it does not look; a
    check's selection (a `-k` name, a file) matched fewer tests at the change than it does today, and
    passed with less in it; and many of the keys' reasons are things a change left out (no test, no
    freshness check), which no check of existing code can fail on. The 28 that could not judge are where
    the count may understate, mostly checks written after the change.
-2. So turning `okl on-edit` on for the 47 checks that ran, as they stand, would not have flagged these
-   changes, and #435's replay is not run on these lessons. Its next step is checks that test a lesson's
+2. So turning `okl on-edit` on for the 47 checks that passed at the base, as they were at each change,
+   would not have caught these breaks, and #435's replay is not run on these lessons. Its next step is checks that test a lesson's
    rule across the code, not one instance (in §4af, 8 of drift's misses passed a check too narrow to
    see the break, one reading a single record where the break was in another of the same kind), and
    #436's pointers to code to imitate.
