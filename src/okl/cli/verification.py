@@ -6,51 +6,191 @@ is recorded, so drift can tell when the files it governs have changed since.
 from __future__ import annotations
 
 import argparse
+import contextlib
+import os
 import re
 import shlex
+import signal
+import subprocess
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 from ..client import Client, OKLNoAnswerError, OKLUnreachableError, _find_config
 from .common import _print_json
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Iterator, Sequence
 
     from ..drift import DriftHit
     from ..store import Node
 
 
-def _run_check(args: argparse.Namespace) -> tuple[str | None, str]:
-    """Run `--run`; return its output if it passed (None after saying why it did not), and
-    a short outcome for the check log: "exit 0", "exit 1", "timed out after 600s" (the
-    `--timeout` default), ...
+class CheckResult(NamedTuple):
+    """One run of a check: its output when it passed (None when it did not), a short outcome
+    for the check log ("exit 0", "exit 1", "timed out after 600s", ...), and whether it ran out
+    of time, which is not a failure of the lesson: `okl on-edit` reports it as not judged."""
+    output: str | None
+    outcome: str
+    timed_out: bool = False
+
+
+def _signal_group(proc: subprocess.Popen, sig: int) -> None:
+    """Send `sig` to the check's process group, or on a system without process groups (Windows)
+    stop the process itself. A descendant that started its own session is outside the group and
+    is not reached."""
+    killpg = getattr(os, "killpg", None)
+    try:
+        if killpg:
+            killpg(proc.pid, sig)
+        else:
+            proc.kill()
+    except (ProcessLookupError, PermissionError):
+        with contextlib.suppress(OSError):
+            proc.kill()
+
+
+def _stop_group(proc: subprocess.Popen) -> None:
+    """Kill the check's process group outright: what a timeout does, as it did before #441."""
+    _signal_group(proc, getattr(signal, "SIGKILL", signal.SIGTERM))
+
+
+def _group_gone(proc: subprocess.Popen, within: float) -> bool:
+    """Whether the check's whole group has exited within `within` seconds."""
+    import time
+    killpg = getattr(os, "killpg", None)
+    deadline = time.monotonic() + within
+    while time.monotonic() < deadline:
+        proc.poll()   # reap the leader, which would otherwise answer as a zombie
+        if killpg is None:
+            if proc.returncode is not None:
+                return True
+        else:
+            try:
+                killpg(proc.pid, 0)
+            except ProcessLookupError:
+                return True
+            except PermissionError:
+                pass
+        time.sleep(0.05)
+    return False
+
+
+def _interrupt_group(proc: subprocess.Popen, error: BaseException) -> None:
+    """Pass an interrupt on to the check, give it two seconds to clean up, then kill what is left.
+    In its own group the check no longer gets the terminal's Ctrl-C, and killing it outright
+    skipped its cleanup: pytest's teardown, a `finally`, a shell trap (review of #441)."""
+    try:
+        gentle = signal.SIGINT if isinstance(error, KeyboardInterrupt) else getattr(signal, "SIGTERM", signal.SIGINT)
+        _signal_group(proc, gentle)
+        if not _group_gone(proc, 2):
+            _stop_group(proc)
+    except BaseException:
+        # A second Ctrl-C (or SIGTERM) inside the grace ended okl with the check still running
+        # (review of #441): it now cuts the grace short instead.
+        _stop_group(proc)
+        raise
+    with contextlib.suppress(Exception):
+        proc.wait(timeout=2)
+
+
+def _drain(proc: subprocess.Popen) -> str:
+    """What a stopped check printed, waiting at most two seconds: a descendant that left the group
+    can hold the pipe open for as long as it runs, and okl waited with it (15 s for a 2 s timeout,
+    forever for a server: review of #441). After that, the pipe is closed and the rest dropped."""
+    try:
+        out, _ = proc.communicate(timeout=2)
+        return out or ""
+    except subprocess.TimeoutExpired:
+        if proc.stdout:
+            proc.stdout.close()
+        proc.wait()
+        return ""
+
+
+def _raise_exit(signum: int, _frame: object) -> None:
+    """Turn SIGTERM or SIGHUP into an exception, so a check running in its own group is stopped
+    before okl exits, as Ctrl-C's KeyboardInterrupt is."""
+    raise SystemExit(128 + signum)
+
+
+@contextlib.contextmanager
+def _exit_signals_raise() -> Iterator[None]:
+    """While a check runs, SIGTERM and SIGHUP raise in okl, so the check is stopped before okl
+    exits. Only where the signal has its default action, in the main thread, on POSIX: a signal
+    ignored on purpose stays ignored (`nohup okl reverify` died on SIGHUP and took its check
+    with it), and a host program's own handler is left in place (review of #441)."""
+    import threading
+    names = ("SIGTERM", "SIGHUP")
+    sigs = [getattr(signal, n) for n in names if hasattr(signal, n)]
+    if threading.current_thread() is not threading.main_thread():
+        yield
+        return
+    previous = {s: signal.signal(s, _raise_exit) for s in sigs if signal.getsignal(s) is signal.SIG_DFL}
+    try:
+        yield
+    finally:
+        for s, handler in previous.items():
+            signal.signal(s, handler)
+
+
+def _run_check(args: argparse.Namespace) -> CheckResult:
+    """Run `--run` and say whether it passed, after saying why when it did not.
 
     Passing means exit 0 and, when `--expect` is given, that text in the output: exit 0
     alone is a step grading itself (the exit-0-zero-files lesson).
+
+    This is the one place okl hands a command to a shell: one a person typed (`okl verify
+    --run`) or saw and confirmed (`okl reverify`, `okl on-edit add`); lesson n_adea7f2c7373.
+    The command runs in a process group of its own, so on macOS and Linux a timeout stops the
+    group: killing only the shell left a compound check writing to the repo after okl had
+    reported it stopped (review of #441). Its own group is outside the terminal's, so Ctrl-C
+    and SIGTERM reach okl and not the check: okl passes them on, gives the check two seconds to
+    clean up, kills what is left and then exits; before, they left `pytest` running. A descendant that starts its own session is outside the
+    group and is not stopped, and okl stops reading from it two seconds after the timeout. The
+    output is read with undecodable bytes replaced, so one stray byte cannot end a reverify, and
+    stdout and stderr as one stream, in the order their writes reached it.
     """
-    import subprocess
-    try:
-        r = subprocess.run(args.run, shell=True, capture_output=True, text=True,
-                           timeout=args.timeout)
-    except subprocess.TimeoutExpired:
-        # Uncaught, one slow check ended `okl reverify` in a traceback and left every
-        # later lesson unchecked (CodeRabbit on #79). A timeout is a failed check.
-        print(f"✗ check TIMED OUT after {args.timeout}s — NOT stamping verification.",
-              file=sys.stderr)
-        return None, f"timed out after {args.timeout}s"
-    output = (r.stdout or "") + (r.stderr or "")
+    proc = subprocess.Popen(args.run, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                            text=True, errors="replace", start_new_session=True,
+                            cwd=getattr(args, "cwd", None))
+    # The handlers stay in until the check is stopped, so a SIGTERM during the grace below still
+    # raises rather than ending okl outright with the check running.
+    with _exit_signals_raise():
+        try:
+            output, _ = proc.communicate(timeout=args.timeout)
+        except subprocess.TimeoutExpired:
+            # Uncaught, one slow check ended `okl reverify` in a traceback and left every
+            # later lesson unchecked (CodeRabbit on #79). A timeout is a failed check.
+            _stop_group(proc)
+            _drain(proc)
+            print(f"✗ check TIMED OUT after {args.timeout}s — NOT stamping verification.",
+                  file=sys.stderr)
+            return CheckResult(None, f"timed out after {args.timeout}s", timed_out=True)
+        except BaseException as error:
+            # Ctrl-C, SIGTERM, SIGHUP or anything else ending okl mid-check: stop the check first,
+            # letting it clean up as it would have when the terminal's Ctrl-C reached it.
+            _interrupt_group(proc, error)
+            raise
+    output = output or ""
     tail = "\n".join(output.strip().splitlines()[-5:])
-    if r.returncode != 0:
-        print(f"✗ check FAILED (exit {r.returncode}) — NOT stamping verification.\n{tail}",
+    if proc.returncode != 0:
+        print(f"✗ check FAILED (exit {proc.returncode}) — NOT stamping verification.\n{tail}",
               file=sys.stderr)
-        return None, f"exit {r.returncode}"
+        return CheckResult(None, f"exit {proc.returncode}")
     if args.expect and args.expect not in output:
         print(f"✗ check exited 0 but expected signal {args.expect!r} NOT in output — NOT stamping.\n{tail}",
               file=sys.stderr)
-        return None, "exit 0, expected signal missing"
-    return output, "exit 0"
+        return CheckResult(None, "exit 0, expected signal missing")
+    return CheckResult(output, "exit 0")
+
+
+def shown(text: str) -> str:
+    """`text` as a terminal can show it faithfully: itself when every character prints, else its
+    repr. A control, format or separator character (an escape code, a zero-width or a direction
+    mark, a line break) can hide what a command does from the person asked to approve it (a carriage return and an erase-line code showed a
+    harmless command over one that wrote a file: review of #441)."""
+    return text if text.isprintable() else repr(text)
 
 
 def _log_check(args: argparse.Namespace, passed: bool, outcome: str, commit: str | None) -> None:
@@ -104,7 +244,7 @@ def cmd_verify(args: argparse.Namespace) -> int:
         return 2
     if not args.run:
         return _suggest_check(args.node_id)
-    output, outcome = _run_check(args)
+    output, outcome, _timed_out = _run_check(args)
     # The commit the check ran at: drift diffs the governed files there against HEAD
     # instead of comparing clocks (#102). It goes into the evidence before the stamp, which
     # binds it in the committed snapshot and keeps older okl versions able to read it.
@@ -378,12 +518,12 @@ def cmd_reverify(args: argparse.Namespace) -> int:
         chk = _stored_check(by_id[nid].verified_by)
         (plan.append((nid, chk)) if chk else manual.append((nid, title)))
     for nid, title in manual:
-        print(f"• [{nid}] {title}\n    no stored check yet: ask your agent to write one, or run "
-              f"`okl verify {nid}` to see the tests that touch its files")
+        print(f"• [{shown(nid)}] {shown(title)}\n    no stored check yet: ask your agent to write one, or run "
+              f"`okl verify {shown(nid)}` to see the tests that touch its files")
     if plan:
         print(f"okl reverify will run {len(plan)} stored check(s), from the store:")
         for nid, (run, _exp) in plan:
-            print(f"  [{nid}] {run}")
+            print(f"  [{shown(nid)}] {shown(run)}")
     stop = _reverify_permitted(args, bool(plan), bool(manual))
     if stop is not None:
         return stop

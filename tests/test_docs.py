@@ -683,6 +683,8 @@ OPEN_QUESTIONS = {
         "review-after-writing-beyond-one-repository",
     ("src/okl/core.py", "the review ran without fresh contexts: that is weaker, and not measured"):
         "review-without-fresh-contexts",
+    ("docs/GETTING-STARTED.md", "Whether a failing check at the edit changes what an agent writes has not been measured yet"):
+        "check-on-edit-changes-the-code",
 }
 # The phrase, used for something that is not a question waiting on an answer, with why.
 NOT_OPEN = {

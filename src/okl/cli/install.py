@@ -16,11 +16,12 @@ from pathlib import Path
 
 from .. import core
 from ..client import Client, _find_config, load_config, save_config
+from .on_edit import HOOK_TIMEOUT
 from .packs import _empty_store_guidance, _seed_first_run
 
 
 def _merge_hook_settings(claude: Path) -> bool:
-    """Register both okl hooks in .claude/settings.json. Idempotent: existing settings and
+    """Register okl's hooks (HOOKS) in .claude/settings.json. Idempotent: existing settings and
     unrelated hooks are preserved; an already-registered okl hook is left alone. A hook
     that is installed but unregistered is a surface nobody runs."""
     settings_path = claude / "settings.json"
@@ -37,14 +38,25 @@ def _merge_hook_settings(claude: Path) -> bool:
     # from UserPromptSubmit and SessionStart, and a PreToolUse briefing printed that way fired
     # unread (REPORT §8). The read hook returns JSON `additionalContext`, which does reach it from
     # PostToolUse, next to the read's result: measured, 5 of 5 (REPORT §4aj).
-    for event, command in HOOK_COMMANDS.items():
+    for event, matcher, command, timeout in HOOKS:
         entries = hooks_cfg.setdefault(event, [])
-        if any(h.get("command", "").endswith(Path(command).name)
-               for e in entries for h in e.get("hooks", [])):
+        mine = [h for e in entries for h in e.get("hooks", [])
+                if h.get("command", "").endswith(Path(command).name)]
+        if mine:
+            # Registered already: keep it, and give it okl's timeout only where it has none or one
+            # okl wrote, so a change to HOOK_TIMEOUT reaches an older settings file while a value
+            # the person chose stays theirs (lesson n_967ef9825472: never clobber).
+            for h in mine:
+                if timeout and h.get("timeout") != timeout and h.get("timeout") in (None, *OKL_WROTE_TIMEOUTS):
+                    h["timeout"] = timeout
+                    changed = True
             continue
-        entry: dict = {"hooks": [{"type": "command", "command": command}]}
-        if event in HOOK_MATCHERS:
-            entry = {"matcher": HOOK_MATCHERS[event], **entry}
+        hook: dict = {"type": "command", "command": command}
+        if timeout:
+            hook["timeout"] = timeout
+        entry: dict = {"hooks": [hook]}
+        if matcher:
+            entry = {"matcher": matcher, **entry}
         entries.append(entry)
         changed = True
     if changed:
@@ -63,15 +75,23 @@ OWNER_DENY = ("Bash(gh api *protection*)", "Bash(gh api *Protection*)", "Bash(gh
               "Bash(gh api *Ruleset*)", "Bash(gh api *pulls/*/merge*)", "Bash(gh pr merge *--admin*)")
 
 
-HOOK_COMMANDS = {
-    # okl registers exactly these commands; uninstall removes exactly these and nothing else.
-    "UserPromptSubmit": '"$CLAUDE_PROJECT_DIR"/.claude/hooks/userpromptsubmit-okl-check.sh',
-    "Stop": '"$CLAUDE_PROJECT_DIR"/.claude/hooks/stop-okl-encode.sh',
-    "PostToolUse": '"$CLAUDE_PROJECT_DIR"/.claude/hooks/posttooluse-okl-read.sh',
-}
-# The tool a hook answers, for the events Claude Code filters by tool: the read hook briefs the
-# lessons governing a file when it is read, which comes before an edit (#94).
-HOOK_MATCHERS = {"PostToolUse": "Read"}
+# okl registers exactly these commands; uninstall removes exactly these and nothing else. Each is
+# (event, the tools it answers for events Claude Code filters by tool, command, seconds Claude
+# Code may run it, or None for its default). The read hook briefs the lessons governing a file
+# when it is read, which comes before an edit (#94); the edit hook runs the approved checks of the
+# lessons governing a file after an edit (#435), under a timeout of okl's own: Claude Code's
+# default for a PostToolUse hook is ten minutes, not the minute okl's budget was written for.
+HOOKS: tuple[tuple[str, str | None, str, int | None], ...] = (
+    ("UserPromptSubmit", None, '"$CLAUDE_PROJECT_DIR"/.claude/hooks/userpromptsubmit-okl-check.sh', None),
+    ("Stop", None, '"$CLAUDE_PROJECT_DIR"/.claude/hooks/stop-okl-encode.sh', None),
+    ("PostToolUse", "Read", '"$CLAUDE_PROJECT_DIR"/.claude/hooks/posttooluse-okl-read.sh', None),
+    ("PostToolUse", "Edit|Write|MultiEdit|NotebookEdit",
+     '"$CLAUDE_PROJECT_DIR"/.claude/hooks/posttooluse-okl-edit.sh', HOOK_TIMEOUT),
+)
+# Every timeout okl has written for a hook. Init replaces one of these, or a missing one, with
+# the current value; any other is the person's and is kept. Changing HOOK_TIMEOUT? Add the old
+# value here, or repos set up before the change keep it.
+OKL_WROTE_TIMEOUTS = frozenset({60})
 
 
 # The MCP server starts through .claude/hooks/okl-mcp.sh, which finds okl in the hooks'
@@ -184,6 +204,7 @@ def _uninstall_files(act: str, dry_run: bool) -> list[str]:
               scaffold / "hooks" / "userpromptsubmit-okl-check.sh"),
              (Path(".claude/hooks/stop-okl-encode.sh"), scaffold / "hooks" / "stop-okl-encode.sh"),
              (Path(".claude/hooks/posttooluse-okl-read.sh"), scaffold / "hooks" / "posttooluse-okl-read.sh"),
+             (Path(".claude/hooks/posttooluse-okl-edit.sh"), scaffold / "hooks" / "posttooluse-okl-edit.sh"),
              (MCP_LAUNCHER, scaffold / "hooks" / "okl-mcp.sh"),
              (WORKFLOW, WORKFLOW_SRC)]
     hooks, _ = _git_hooks_dir()
@@ -300,7 +321,7 @@ def _uninstall_owner_denies(act: str, dry_run: bool) -> list[str]:
 def _drop_okl_hooks(hooks_cfg: dict) -> int:
     """Remove okl's exact commands from `hooks_cfg` in place; return how many went."""
     removed = 0
-    for event, command in HOOK_COMMANDS.items():
+    for event, _matcher, command, _timeout in HOOKS:
         groups = hooks_cfg.get(event)
         if not isinstance(groups, list):
             continue
@@ -526,7 +547,8 @@ def _init_dry_run(args: argparse.Namespace) -> int:
         print("  .claude/hooks/userpromptsubmit-okl-check.sh   executable; runs when you submit a task")
         print("  .claude/hooks/stop-okl-encode.sh             executable; runs when a session ends")
         print("  .claude/hooks/posttooluse-okl-read.sh        executable; runs after the agent reads a file")
-        print("  .claude/settings.json                   registers those three hooks (merged, existing keys kept)")
+        print("  .claude/hooks/posttooluse-okl-edit.sh        executable; runs approved lesson checks after an edit")
+        print("  .claude/settings.json                   registers those four hooks (merged, existing keys kept)")
         print("  .claude/hooks/okl-mcp.sh                     executable; starts the okl MCP server the way the hooks do")
         print("  .mcp.json                               registers the okl MCP server (both only if the [mcp] extra is installed)")
     elif why:
@@ -825,18 +847,22 @@ def _merge_owner_denies(claude: Path) -> bool:
 
 def _install_claude_wiring(claude: Path, force: bool = False) -> None:
     """Install AND register the hooks: the UserPromptSubmit check (the enforced read), the
-    Stop encode reminder (the write-side catch), and the read briefing after a file is read
-    (PostToolUse on Read, #94). Scripts come from the packaged scaffold —
-    one canonical source, no drift. Also registers the MCP server when the extra exists."""
+    Stop encode reminder (the write-side catch), the read briefing after a file is read
+    (PostToolUse on Read, #94), and the edit checks (PostToolUse on edits, #435). Scripts come
+    from the packaged scaffold — one canonical source, no drift. Also registers the MCP server
+    when the extra exists."""
     hooks = claude / "hooks"
     hooks.mkdir(exist_ok=True)
     scaffold_hooks = Path(__file__).parent.parent / "scaffold" / "hooks"
     for name, label in [("userpromptsubmit-okl-check.sh", "pre-task check hook (UserPromptSubmit)"),
                         ("stop-okl-encode.sh", "encode reminder (Stop hook)"),
-                        ("posttooluse-okl-read.sh", "read briefing (PostToolUse on Read)")]:
+                        ("posttooluse-okl-read.sh", "read briefing (PostToolUse on Read)"),
+                        ("posttooluse-okl-edit.sh", "edit checks (PostToolUse on edits; runs only checks "
+                                                    "approved with okl on-edit add)")]:
         _place_owned(hooks / name, (scaffold_hooks / name).read_text(), label, force)
     if _merge_hook_settings(claude):
-        print("✓ registered the hooks in .claude/settings.json (UserPromptSubmit, Stop, PostToolUse on Read)")
+        print("✓ registered the hooks in .claude/settings.json (UserPromptSubmit, Stop, PostToolUse on Read "
+              "and on edits)")
     else:
         print("• hooks already registered in .claude/settings.json")
     # MCP: register the okl server only if the extra is importable (a registration whose
