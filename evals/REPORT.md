@@ -6534,6 +6534,77 @@ What it means, not pre-registered:
    any of them; a check that tests the rule across the code would also need to govern the files the
    rule covers.
 
+## 4be. PRE-REGISTERED, A PILOT, IN-SAMPLE: would okl's rule-wide checks (#415) have caught these breaks? (2026-11-12)
+
+Written before any of these checks ran on these changes. §4bd found that no broken lesson's own check,
+run at the edit, would have flagged any of the 124 breaks: each tests the incident that taught it. In
+0.16.0, #415 turned the rules of nine of the most-broken lessons into checks that sweep the code
+rather than one incident. Do those reach the breaks?
+
+| lesson | breaks here | rule-wide check (#415) |
+|---|---|---|
+| n_e7988ff536fb (exit codes are the CLI's API) | 8 | tests/test_exit_codes.py |
+| r_single_source_sets (one definition of a fact) | 7 | tests/test_single_source.py |
+| harness-reads-a-moving-working-tree | 5 | tests/test_eval_guard.py |
+| n_5ddb0776a863 (a gate that read nothing has not passed) | 4 | tests/test_exit_codes.py |
+| remote-path-test-through-client | 3 | tests/test_client_service_contract.py |
+| py_dont_mock_what_you_dont_own | 3 | tests/test_mock_ownership.py |
+| docs-agent-neutral | 3 | ci/check-agent-neutral.py |
+| n_02cc84da158d (one store resolver) | 3 | tests/test_store_resolution.py |
+| n_0637c92c032f (a render carries its source's text) | 2 | ci/check-diagram-names.py |
+
+Together, 38 of the 124 breaks. **In-sample:** #415 chose these lessons from these breaks, and some of
+its checks were written knowing them, so a catch here is an upper bound on what a check written from
+the rule alone would do.
+
+**Method.** §4bd's harness, environment and sorting rule (caught, cannot judge, missed), with the check
+being today's file: taken from main at 8ed0b1d and copied, with tests/conftest.py and, for a ci/
+script, ci/_ran.py, into the tree at the change's merge base and at the change. A test file runs as
+`python3 -m pytest -q -p no:cacheprovider <file>`, a ci/ script as `python3 <script>`, each passing on
+exit 0. test_exit_codes.py runs without its inventory test (`-k "not every_command_is_in_the_sweep"`),
+which checks the list of commands, not the rule.
+
+**Measures.** Over the 38: caught, missed and cannot judge, and the same for each check.
+
+**Reading.**
+- *Rule-wide checks reach these breaks* if at least 10 of the 38 (about a quarter) are caught. The next
+  test is then blind: a sub-agent writes each lesson's check from its text and the repo before these
+  changes, and the checks run the same way on breaks they were not written from.
+- *The backward method cannot judge today's checks* if fewer than 10 are caught and more than 19 cannot
+  be judged: today's checks test today's code, so the next test writes fresh breaks of each rule on
+  today's code (§4af's method) and compares each lesson's own check with its rule-wide one.
+- *Rule-wide checks do not reach these breaks either* otherwise, and #436's pointers to code to imitate
+  come next.
+
+**What I expect.** Mostly *cannot judge*: these test files read today's code and its lists (allowed
+patches, known copies, request models), which an older tree does not match; the ci/ scanners may run.
+
+**Threats.** In-sample. A test file in an older tree can fail at the base for a reason that is not the
+rule (a fixture, an import, an allowlist entry for code that did not exist yet), which lands in
+*cannot judge* and understates catches. One repository; keys a model's, not audited (#394).
+
+**Result (2026-11-12): the backward method cannot judge today's checks.** All 38 ran at both ends
+of their changes (receipt `check-reach-rulewide-20261113-0426.json`, rows made at `00647ba`).
+
+| covered breaks | caught | missed | cannot judge |
+|---|---|---|---|
+| 38 | 0 | 2 | 36 |
+
+Every one that could not judge failed at both ends: 23 by a failing test or script, 13 by a test file
+that would not even collect in the older tree. None passed at the base, so no catch could show. The
+two that ran clean, ci/check-diagram-names.py on n_0637c92c032f's two breaks, missed both.
+
+What it means, not pre-registered:
+1. Today's rule-wide checks fail on the code as it stood before these changes, for two kinds of
+   reason. Some are the rule already broken there: before #312 the README named Claude Code's hooks
+   without the Claude Code label, which today's agent-neutral check refuses. The rest are today's
+   checks holding today's code: an allowlist of the patches and copies that exist now, a fixture or
+   function that came later. Either way the base fails, and the method needs it to pass.
+2. So this says nothing for or against checks that sweep a rule; it says a check cannot be carried
+   back in time to judge them. By the registered reading, the next test writes fresh breaks of each
+   rule on today's code, where today's checks pass to begin with (§4af's method), and compares each
+   lesson's own check with its rule-wide one on the same breaks.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

@@ -13,6 +13,8 @@ only by not running), or missed (passes at both). No model is called.
     python3 evals/check_reach.py run              # the registered measurement, resumable
     python3 evals/check_reach.py score [--receipt]
     python3 evals/check_reach.py control [--receipt]   # not registered: can the instrument see a catch?
+    python3 evals/check_reach.py rulewide             # §4be: #415's rule-wide checks on the same breaks
+    python3 evals/check_reach.py rulewide-score [--receipt]
 """
 from __future__ import annotations
 
@@ -282,6 +284,103 @@ def control(args: argparse.Namespace) -> int:
     return 0
 
 
+# §4be: the rule-wide checks #415 wrote, by the lesson whose rule each sweeps, taken from main at
+# SOURCE. Each is (the check file, the pytest selector, or None for a ci/ script).
+SOURCE = "8ed0b1d27338874bfd255982827162623883c86f"
+RULEWIDE = {
+    "n_e7988ff536fb": ("tests/test_exit_codes.py", "not every_command_is_in_the_sweep"),
+    "n_5ddb0776a863": ("tests/test_exit_codes.py", "not every_command_is_in_the_sweep"),
+    "seed:geospatial-enforcement-defects:r_single_source_sets": ("tests/test_single_source.py", ""),
+    "harness-reads-a-moving-working-tree": ("tests/test_eval_guard.py", ""),
+    "remote-path-test-through-client": ("tests/test_client_service_contract.py", ""),
+    "seed:python-canon:py_dont_mock_what_you_dont_own": ("tests/test_mock_ownership.py", ""),
+    "docs-agent-neutral": ("ci/check-agent-neutral.py", None),
+    "n_02cc84da158d": ("tests/test_store_resolution.py", ""),
+    "n_0637c92c032f": ("ci/check-diagram-names.py", None),
+}
+RULE_ROWS = lr.PRIVATE / "check-reach-4be.jsonl"
+
+
+def place_check(tree: Path, path: str) -> str:
+    """Copy today's check, and what it leans on, from SOURCE into `tree`; return its command."""
+    selector = RULEWIDE_BY_FILE[path]
+    helpers = ["tests/conftest.py"] if path.startswith("tests/") else ["ci/_ran.py"]
+    for f in [path, *helpers]:
+        text = subprocess.run(["git", "-C", str(REPO), "show", f"{SOURCE}:{f}"], capture_output=True, text=True,
+                              check=True).stdout
+        (tree / f).parent.mkdir(parents=True, exist_ok=True)
+        (tree / f).write_text(text)
+    if selector is None:
+        return f"python3 {path}"
+    return f"python3 -m pytest -q -p no:cacheprovider {path}" + (f" -k '{selector}'" if selector else "")
+
+
+RULEWIDE_BY_FILE = {f: sel for f, sel in RULEWIDE.values()}
+
+
+def rule_done() -> dict[tuple[str, int, str], dict]:
+    """§4be's rows so far."""
+    if not RULE_ROWS.exists():
+        return {}
+    rows = [json.loads(x) for x in RULE_ROWS.read_text().splitlines() if x.strip()]
+    return {(r["half"], r["pr"], r["lesson"]): r for r in rows}
+
+
+def rulewide(_args: argparse.Namespace) -> int:
+    """§4be: each break of a lesson #415 swept, with today's rule-wide check, at the base and the change."""
+    at = run_guard.start().started[0]
+    have = rule_done()
+    todo = [p for p in broken_pairs() if p["lesson"] in RULEWIDE and (p["half"], p["pr"], p["lesson"]) not in have]
+    RULE_ROWS.parent.mkdir(parents=True, exist_ok=True)
+    by_commit: dict[tuple[str, str], list[dict]] = {}
+    for p in todo:
+        by_commit.setdefault((p["base"], p["commit"]), []).append(p)
+    for (base, commit), group in by_commit.items():
+        files = sorted({RULEWIDE[p["lesson"]][0] for p in group})
+        results: dict[str, dict] = {}
+        for side, sha in (("base", base), ("change", commit)):
+            with Tree(sha) as tree:
+                for f in files:
+                    results.setdefault(f, {})[side] = run_check(tree, place_check(tree, f), None)
+        with RULE_ROWS.open("a") as out:
+            for p in group:
+                f = RULEWIDE[p["lesson"]][0]
+                r = results[f]
+                row = {**{k: p[k] for k in ("half", "pr", "lesson", "base", "commit")}, "check": f,
+                       "at_base": r["base"], "at_change": r["change"], "sorted": sort_pair(r["base"], r["change"]),
+                       "okl_commit": at}
+                out.write(json.dumps(row) + "\n")
+                print(f"#{p['pr']} {p['lesson']} [{f}]: {row['sorted']}", flush=True)
+    return 0
+
+
+def rulewide_score(args: argparse.Namespace) -> int:
+    """§4be's measures and reading."""
+    guard = run_guard.start()
+    covered = [p for p in broken_pairs() if p["lesson"] in RULEWIDE]
+    rows = rule_done()
+    sorted_ = Counter(r["sorted"] for r in rows.values())
+    per_check: dict[str, Counter] = {}
+    for r in rows.values():
+        per_check.setdefault(r["check"], Counter())[r["sorted"]] += 1
+    caught, cannot = sorted_.get("caught", 0), sorted_.get("cannot_judge", 0)
+    reading = ("rule-wide checks reach these breaks" if caught >= 10 else
+               "the backward method cannot judge today's checks" if cannot > 19 else
+               "rule-wide checks do not reach these breaks either")
+    receipt = {"section": "4be", "source": SOURCE, "covered": len(covered), "ran": len(rows),
+               "sorted": dict(sorted_), "per_check": {k: dict(v) for k, v in per_check.items()},
+               "rows_made_at": sorted({r.get("okl_commit") for r in rows.values()} - {None}),
+               "cannot_judge_why": dict(Counter(f"base {r['at_base']['why']}; change {r['at_change']['why']}"
+                                                for r in rows.values() if r["sorted"] == "cannot_judge")),
+               "reading": reading,
+               "caught": [{k: r[k] for k in ("half", "pr", "lesson", "check")} for r in rows.values()
+                          if r["sorted"] == "caught"]}
+    print(json.dumps({k: v for k, v in receipt.items() if k != "caught"}, indent=1))
+    if args.receipt:
+        write("check-reach-rulewide", guard.stamp(receipt))
+    return 0
+
+
 def write(stem: str, receipt: dict) -> None:
     """Write `receipt` to evals/results/, named by `stem` and the time."""
     receipt["at"] = datetime.now(UTC).strftime("%Y-%m-%dT%H:%MZ")
@@ -294,9 +393,10 @@ def main() -> int:
     """Run the named step."""
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
-    for name, fn in (("count", count), ("pilot", pilot), ("run", run), ("score", score), ("control", control)):
+    for name, fn in (("count", count), ("pilot", pilot), ("run", run), ("score", score), ("control", control),
+                     ("rulewide", rulewide), ("rulewide-score", rulewide_score)):
         s = sub.add_parser(name)
-        if name != "run":
+        if name not in ("run", "rulewide"):
             s.add_argument("--receipt", action="store_true")
         s.set_defaults(func=fn)
     args = p.parse_args()

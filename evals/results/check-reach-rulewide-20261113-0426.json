@@ -1,0 +1,48 @@
+{
+ "section": "4be",
+ "source": "8ed0b1d27338874bfd255982827162623883c86f",
+ "covered": 38,
+ "ran": 38,
+ "sorted": {
+  "cannot_judge": 36,
+  "missed": 2
+ },
+ "per_check": {
+  "tests/test_client_service_contract.py": {
+   "cannot_judge": 3
+  },
+  "tests/test_exit_codes.py": {
+   "cannot_judge": 12
+  },
+  "ci/check-diagram-names.py": {
+   "missed": 2
+  },
+  "ci/check-agent-neutral.py": {
+   "cannot_judge": 3
+  },
+  "tests/test_eval_guard.py": {
+   "cannot_judge": 5
+  },
+  "tests/test_mock_ownership.py": {
+   "cannot_judge": 3
+  },
+  "tests/test_single_source.py": {
+   "cannot_judge": 7
+  },
+  "tests/test_store_resolution.py": {
+   "cannot_judge": 3
+  }
+ },
+ "rows_made_at": [
+  "00647ba"
+ ],
+ "cannot_judge_why": {
+  "base exit 1; change exit 1": 23,
+  "base exit 2; change exit 2": 13
+ },
+ "reading": "the backward method cannot judge today's checks",
+ "caught": [],
+ "okl_commit_at_start": "00647ba",
+ "okl_commit": "00647ba",
+ "at": "2026-11-13T04:26Z"
+}
