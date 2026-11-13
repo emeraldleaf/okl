@@ -202,6 +202,25 @@ def run(_args: argparse.Namespace) -> int:
     return 0
 
 
+def reason(row: dict) -> str:
+    """Why a pair sorted as it did, read from what its check printed: the receipt then says why, not
+    only the exit codes (review of #442)."""
+    if row["sorted"] != "cannot_judge":
+        return row["sorted"]
+    base = row["at_base"]
+    tail = " ".join(base.get("tail") or [])
+    if "file or directory not found" in tail:
+        return "a test not yet written"
+    if "can't open file" in tail:
+        return "a script not there at the base, passing at the change" if row["at_change"]["passed"] \
+            else "a script not yet there"
+    if "no store to use" in tail or "OKLNotConfiguredError" in tail:
+        return "needs a store, which the environment does not name"
+    if base["why"] == "exit 0, signal missing":
+        return "its signal missing at both ends"
+    return "other"
+
+
 def score(args: argparse.Namespace) -> int:
     """The registered measures and reading."""
     guard = run_guard.start()
@@ -222,6 +241,12 @@ def score(args: argparse.Namespace) -> int:
                "rows_made_at": sorted({r.get("okl_commit") for r in rows.values()} - {None}),
                "cannot_judge_why": dict(Counter(f"base {r['at_base']['why']}; change {r['at_change']['why']}"
                                                 for r in rows.values() if r["sorted"] == "cannot_judge")),
+               "cannot_judge_reasons": dict(Counter(reason(r) for r in rows.values() if r["sorted"] == "cannot_judge")),
+               "lessons_naming_files": sorted(
+                   ({"pr": r["pr"], "lesson": r["lesson"], "sorted": r["sorted"], "reason": reason(r),
+                     "governs_a_changed_path": governs(r)}
+                    for r in rows.values() if nodes.get(r["lesson"]) and nodes[r["lesson"]].files),
+                   key=lambda x: (x["pr"], x["lesson"])),
                "caught_share": round(len(caught) / len(pairs), 3) if pairs else None,
                "caught_share_of_checked": round(len(caught) / len(rows), 3) if rows else None,
                "caught_governing_a_changed_path": sum(governs(r) for r in caught), "per_half": per_half,
