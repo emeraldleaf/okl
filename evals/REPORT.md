@@ -6641,8 +6641,8 @@ the instrument:
   `rule-mutate-control-20261113-2349.json`). So the instrument can show both outcomes. It is not a
   measure.
 
-**Patches.** Six per lesson, as in §4af, 108 in all, each a change to BASE, the commit that adds this
-section:
+**Patches.** Six per lesson, as in §4af, 108 in all, each a change to BASE. BASE is the commit the run
+starts from, clean, holding this section and the instrument as committed with it; the receipt names it:
 - **Four breaking.** §4af's breaker and prompt, unchanged: `claude -p --model sonnet --restricted`
   with Read, Grep, Glob and Edit in a scratch worktree. It is given the lesson's title, symptom and fix,
   asked for one realistic change after which the lesson's claim is false, and told the files earlier
