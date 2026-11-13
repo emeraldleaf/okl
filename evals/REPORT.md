@@ -6128,14 +6128,15 @@ receipt was deleted.
 
 As stated: one at a time is 0.64 above the list and level with the lesson alone. The
 median session made 1 edit for the nine other lessons (26 edits in 225 such passes) and
-none broke another test, inside the shipping bar, so the reading is *works*.
+none broke another test in the grader's file, inside the shipping bar, so the reading is *works*.
 
 What it means, not pre-registered:
 1. The same ten lessons that did almost nothing as a list did as well as the right lesson alone
    when asked about one at a time. The cost of a list is in how lessons are handed over, not in
    the lessons.
 2. The worry was the nine that do not apply. They produced an edit in about one pass in nine, and
-   no edit broke a test; whether those edits were improvements or noise was not judged.
+   no edit broke a test in the grader's file; whether those edits were improvements or noise was
+   not judged.
 3. It costs about seven times as much and six times as long as a single prompt. Ten passes in a
    fresh context each is the expensive way to do this; asking several lessons in one fresh
    context, or only the few a model picks from the change, are cheaper shapes still untested.
@@ -6191,7 +6192,7 @@ from a worktree of its own at 313df22, whose code the sessions ran.
 
 As stated: 84% of the each-alone sessions started a sub-agent (a median of 10), so the steps were followed.
 Each alone is 0.2 above one pass, clearing 0.15, but 0.2 above none, short of 0.25.
-No session broke another test. So the review *stays opt-in*.
+No session broke another test in the grader's file. So the review *stays opt-in*.
 
 What it means, not pre-registered:
 1. With the agent choosing, the old review fixed none of the 25 and the new one fixed 5. The new
@@ -6253,7 +6254,21 @@ What it means, not pre-registered:
 3. §4az picks from the diff inside the review, and its measured 0.2 is well under the ceiling
    this suggests, about half the lessons found here times about three in four fixed when found
    (§4ay), or about 0.37. Choosing does not explain all of it; §4az's throwaway session also
-   stopped after three of its ten sub-agents, and agents cutting a review short would cost more.
+   stopped after three of its ten sub-agents, and agents cutting a review short would cost more
+   (both corrected in the erratum below).
+
+*Erratum (2026-11-12, from a review of Part 9's site copy).* Reading 3 called 0.37 a ceiling.
+It is an estimate, and a rounded one: the averages it names give 0.48 × 0.72 = 0.346. A product of
+averages also ignores that picking and fixing vary by task. Each task's hit rate times its fix
+rate, averaged over the five tasks, keeps them together, but its value depends on which run's
+per-task rates are paired, and §4ay's reading 4 found those swings cannot be told from noise.
+Pairing the two picks from the diff (here, and §4bb's without the lines) with the five measures of
+the right lesson handed over on its own (§4aw's T, §4ax's alone told and alone plain, §4ay's alone
+and one at a time), the ten estimates run from 0.2 to 0.4. Both picks are a standalone picker's,
+standing in for the review's own choice, which §4az's receipt does not record. §4az's 0.2 is at the
+bottom of that range, so in every pairing choosing accounts for about 60% or more of the drop from
+0.72, and perhaps all of it. Whether anything else costs as well, such as agents cutting a review
+short, these runs cannot say.
 
 ## 4bb. PRE-REGISTERED, A PILOT: does a line saying when a lesson applies, by mechanism, help a picker find it? (2026-11-11)
 
