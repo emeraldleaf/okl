@@ -82,3 +82,22 @@ def test_the_result_figures_are_the_receipts():
     seconds = score["check_seconds_at_change"]
     assert f"{statistics.median(seconds)} s at the median and {max(seconds)} s at most" in section
     assert control["sorted"] == "caught" and control["before"]["passed"] and control["after"]["own_failure"]
+
+
+def test_the_rule_wide_pilot_names_what_the_mapping_and_the_counts_say():
+    """§4be's table: each lesson's check is the file the mapping copies, each break count is the
+    concentration receipt's, the total is 38, and every check exists on main at the source commit."""
+    import subprocess
+    concentration = json.loads((REPO / "evals" / "results" / "break-concentration-20261110-1600.json").read_text())
+    breaks = {r["lesson"]: r["breaks"] for r in concentration["top20"]}
+    report = (REPO / "evals" / "REPORT.md").read_text()
+    section = report[report.index("## 4be."):report.index("## 5. Findings")]
+    total = 0
+    for lesson, (path, _selector) in cr.RULEWIDE.items():
+        short = lesson.rsplit(":", 1)[-1]
+        row = next(line for line in section.splitlines() if line.startswith(f"| {short}"))
+        assert f"| {breaks[lesson]} | {path} |" in row, (lesson, row)
+        total += breaks[lesson]
+        assert subprocess.run(["git", "-C", str(REPO), "cat-file", "-e", f"{cr.SOURCE}:{path}"]).returncode == 0
+    assert total == 38 and "Together, 38 of the 124 breaks" in " ".join(section.split())
+    assert f"main at {cr.SOURCE[:7]}" in section
