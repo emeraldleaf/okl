@@ -6428,6 +6428,62 @@ What it points at: a screen that tells lessons apart, asking the review's own qu
 change break this lesson?) or using a stronger model, and the fused list cut to the review's size.
 Each needs its own pre-registration on changes no arm here has seen.
 
+## 4bd. PRE-REGISTERED: would a lesson's own check, run at the edit, have caught the breaks past changes made? (2026-11-12)
+
+Written before any check in this section ran on these changes. Since #441, okl can run a lesson's
+stored check after the agent edits a file the lesson governs, and hand a failure back beside the edit
+(`okl on-edit`, opt-in, approved per check). That can change the code only where a lesson's check
+fails on the edit that breaks the lesson. This counts how often that happens on real past changes,
+before any test of whether a failure at the edit changes what an agent writes (#435). No model is
+called.
+
+**What was seen while drafting it.** On §4aw's five tasks I ran each lesson's stored check on the
+frozen change and on the fix (`check-reach-pilot-20261113-0350.json`): none told them apart. Three
+passed on both; one (#196's) missed its signal on both, its test not yet written in full; and
+qz_judge_self has no stored check. None of the five lessons names files, so the edit hook would not
+have run any of them. On the changes below I read only the lessons' own fields, not any check's
+outcome (`check-reach-count-20261113-0350.json`): of the 124 broken lessons, 75 carry a stored check
+and 6 name files, 4 of them a file their change touched.
+
+**Changes.** The 58 past changes from §4al's and §4aq's tasks whose keys sort at least one lesson
+broken, 124 broken lessons in all (§4bc's set). Each change has a merge base and the commit it was
+first written at (`base` and `commit` in its task).
+
+**For each broken lesson that carries a stored check**, the check as `okl verify` recorded it, run
+in a clean worktree at the merge base and at the change, with `PYTHONPATH` at that tree's `src/`, no
+store named in the environment, and a 600-second timeout:
+- *catch:* it passes at the base and fails at the change, and the failure is the check's own: a
+  failing test, a script's failure exit or its signal missing. That is the edit the hook would have
+  answered with a failure.
+- *cannot judge:* it does not pass at the base (a test not yet written, a script not yet there, a
+  failure the change did not cause), or it fails at the change only by not running (a pytest
+  collection, usage or empty-selection error, exits 2, 4 and 5, a command or file not found, exits
+  126 and 127, or a timeout). Read by the reason it printed, not its exit code alone, and reported
+  apart.
+- *misses:* it passes at both.
+
+**Measures.** The share of the 124 broken lessons caught, both halves together and each apart; the
+same within the 75 that carry a check; how many of the catches also govern a file the change touched,
+the only ones the edit hook as built would have run; and each check's run time at the change.
+
+**Reading.** *Edit-time checks can reach these breaks* if at least 13 of the 124 (10%) are caught.
+Then the catches, run with the hook against without it in §4aw's replay, are the tasks of the next
+pre-registration, and the governed share says how much of that reach the hook needs lessons to name
+files for. Otherwise *they cannot, as lessons stand*: a lesson's check guards the incident that
+taught it, not the next break of the same rule, and #435's next step is checks that do (the lesson's
+own rule checked across the code, #436's gold-standard pointers), not a replay of these lessons.
+
+**What I expect, and why it may not hold.** Few catches. These are breaks that got through to review,
+and most of okl's stored checks are tests and scripts its CI runs, which passed on many of these
+commits; §4aw's pilot found none of five. A check run on a tree older than the check itself is the
+most common way to land in *cannot judge*, which understates catches rather than inflating them.
+
+**Threats.** The keys are a model's and not audited (#394). The checks are today's, run on older
+trees: a check written after a change could not have run on it then, and one rewritten since may
+test more or less than it did. One repository, whose checks are mostly its own test suite. A catch
+says the hook would have flagged the edit, not that the agent would then have fixed it; that is the
+next test.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

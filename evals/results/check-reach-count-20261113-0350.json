@@ -1,0 +1,13 @@
+{
+ "section": "4bd, seen while drafting",
+ "counts": {
+  "broken": 124,
+  "changes": 58,
+  "has_check": 75,
+  "has_files": 6,
+  "governs_a_changed_path": 4
+ },
+ "okl_commit_at_start": "8ed0b1d+dirty",
+ "okl_commit": "8ed0b1d+dirty",
+ "at": "2026-11-13T03:50Z"
+}
