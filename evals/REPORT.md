@@ -6565,6 +6565,28 @@ patches, known copies, request models), which an older tree does not match; the 
 rule (a fixture, an import, an allowlist entry for code that did not exist yet), which lands in
 *cannot judge* and understates catches. One repository; keys a model's, not audited (#394).
 
+**Result (2026-11-12): the backward method cannot judge today's checks.** All 38 ran at both ends
+of their changes (receipt `check-reach-rulewide-20261113-0426.json`, rows made at `00647ba`).
+
+| covered breaks | caught | missed | cannot judge |
+|---|---|---|---|
+| 38 | 0 | 2 | 36 |
+
+Every one that could not judge failed at both ends: 23 by a failing test or script, 13 by a test file
+that would not even collect in the older tree. None passed at the base, so no catch could show. The
+two that ran clean, ci/check-diagram-names.py on n_0637c92c032f's two breaks, missed both.
+
+What it means, not pre-registered:
+1. Today's rule-wide checks fail on the code as it stood before these changes, for two kinds of
+   reason. Some are the rule already broken there: before #312 the README named Claude Code's hooks
+   without the Claude Code label, which today's agent-neutral check refuses. The rest are today's
+   checks holding today's code: an allowlist of the patches and copies that exist now, a fixture or
+   function that came later. Either way the base fails, and the method needs it to pass.
+2. So this says nothing for or against checks that sweep a rule; it says a check cannot be carried
+   back in time to judge them. By the registered reading, the next test writes fresh breaks of each
+   rule on today's code, where today's checks pass to begin with (§4af's method), and compares each
+   lesson's own check with its rule-wide one on the same breaks.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

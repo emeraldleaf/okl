@@ -101,3 +101,17 @@ def test_the_rule_wide_pilot_names_what_the_mapping_and_the_counts_say():
         assert subprocess.run(["git", "-C", str(REPO), "cat-file", "-e", f"{cr.SOURCE}:{path}"]).returncode == 0
     assert total == 38 and "Together, 38 of the 124 breaks" in " ".join(section.split())
     assert f"main at {cr.SOURCE[:7]}" in section
+
+
+def test_the_rule_wide_result_figures_are_the_receipt():
+    """§4be's result quotes its receipt: the counts, the reasons, the reading."""
+    receipt = json.loads(sorted((REPO / "evals" / "results").glob("check-reach-rulewide-*.json"))[-1].read_text())
+    report = (REPO / "evals" / "REPORT.md").read_text()
+    section = " ".join(report[report.index("## 4be."):report.index("## 5. Findings")].split())
+    s = receipt["sorted"]
+    assert f"| {receipt['covered']} | {s.get('caught', 0)} | {s.get('missed', 0)} | {s['cannot_judge']} |" in section
+    assert receipt["reading"] == "the backward method cannot judge today's checks" and receipt["reading"] in section
+    why = receipt["cannot_judge_why"]
+    assert (why["base exit 1; change exit 1"], why["base exit 2; change exit 2"]) == (23, 13)
+    assert "23 by a failing test or script, 13 by a test file that would not even collect" in section
+    assert receipt["per_check"]["ci/check-diagram-names.py"] == {"missed": 2}
