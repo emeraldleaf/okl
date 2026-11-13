@@ -63,25 +63,44 @@ def test_the_figures_seen_while_drafting_are_the_receipts():
 
 
 def test_the_result_figures_are_the_receipts():
-    """§4bd's result quotes the score and the positive control; each figure is read from its receipt."""
+    """§4bd's result quotes the score, the count and the positive control; every figure in it is read
+    here from its receipt (the review of #442 changed eleven and this test passed them all)."""
     import statistics
     results = REPO / "evals" / "results"
     score = json.loads(sorted(results.glob("check-reach-2026*.json"))[-1].read_text())
+    count = json.loads(sorted(results.glob("check-reach-count-2*.json"))[-1].read_text())["counts"]
     control = json.loads(sorted(results.glob("check-reach-control-*.json"))[-1].read_text())
     report = (REPO / "evals" / "REPORT.md").read_text()
     section = " ".join(report[report.index("## 4bd."):report.index("## 5. Findings")].split())
     s = score["sorted"]
+    receipt_name = sorted(results.glob("check-reach-2026*.json"))[-1].name
+    assert f"receipt `{receipt_name}`; rows made at `{score['rows_made_at'][0]}`" in section
+    assert f"All {score['with_a_check']} checks ran at both ends" in section
     assert f"| {score['broken']} | {score['with_a_check']} | {s.get('caught', 0)} | {s['missed']} | {s['cannot_judge']} |" in section
     assert score["reading"] == "they cannot, as lessons stand" and "they cannot, as lessons stand" in section
-    assert s.get("caught", 0) < 13 and score["caught_governing_a_changed_path"] == 0
+    assert s.get("caught", 0) < 13 and f"{s['missed']} checks passed at both ends" in section
     half = score["per_half"]
     assert f"dev {half['dev']['caught']} of {half['dev']['broken']}, test {half['test']['caught']} of {half['test']['broken']}" in section
-    why = score["cannot_judge_why"]
-    assert why["base exit 4; change exit 4"] == 20 and "20 name a test file not yet written" in section
-    assert why["base exit 2; change exit 2"] == 2 and why["base exit 1; change exit 1"] == 3
+    why = score["cannot_judge_reasons"]
+    for phrase, key in (("{} a test not yet written", "a test not yet written"),
+                        ("{} the pre-flight, which needs a store", "needs a store, which the environment does not name"),
+                        ("{} a script not yet there", "a script not yet there"),
+                        ("{} their signal missing at both ends", "its signal missing at both ends"),
+                        ("{} a script not there at the base that passed at the change",
+                         "a script not there at the base, passing at the change")):
+        assert phrase.format(why[key]) in section, (phrase, why[key])
+    assert sum(why.values()) == s["cannot_judge"]
     seconds = score["check_seconds_at_change"]
     assert f"{statistics.median(seconds)} s at the median and {max(seconds)} s at most" in section
+    assert max(seconds) < 9 and "under nine seconds" in section
+    named = score["lessons_naming_files"]
+    assert len(named) == count["has_files"] and all(r["sorted"] == "cannot_judge" for r in named)
+    assert sum(r["governs_a_changed_path"] for r in named) == count["governs_a_changed_path"]
+    assert (f"The {count['has_files']} broken lessons that name files, {count['governs_a_changed_path']} of them "
+            "a file their change touched, all cannot judge") in section
+    assert f"{count['has_files']} of these {count['broken']}, and this count could not judge any of them" in section
     assert control["sorted"] == "caught" and control["before"]["passed"] and control["after"]["own_failure"]
+    assert control["check"].startswith("python3 ci/") and "by a ci/ script failing in one tree" in section
 
 
 def test_the_rule_wide_pilot_names_what_the_mapping_and_the_counts_say():

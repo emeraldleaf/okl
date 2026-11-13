@@ -6484,37 +6484,56 @@ test more or less than it did. One repository, whose checks are mostly its own t
 says the hook would have flagged the edit, not that the agent would then have fixed it; that is the
 next test.
 
+*Erratum (2026-11-12, from the review of #442).* "Written before any check in this section ran on these
+changes" is not quite so. The pilot, run while drafting, had already run the same command at the same
+commit as 2 of the 75 rows below: n_02cc84da158d's check at #309's change, and the check
+`-k 'off_series_instrument'`, which n_8a6e1abce5cc shares with n_473aec369b25, at #198's. Both passed,
+and both sort missed below; a check that passes at the change cannot be a catch, so knowing them could
+not have raised the count. The pilot and count receipts are stamped `8ed0b1d+dirty` because
+evals/check_reach.py wrote them before it was committed, unchanged, in 3b115c9.
+
 **Result (2026-11-12): they cannot, as lessons stand.** All 75 checks ran at both ends of their
-changes (receipt `check-reach-20261113-0408.json`; rows made at `cb1165b`, scored at `db9ca8a`).
+changes (receipt `check-reach-20261113-0432.json`; rows made at `cb1165b`).
 
 | broken lessons | carry a check | caught | missed | cannot judge |
 |---|---|---|---|---|
 | 124 | 75 | 0 | 47 | 28 |
 
-None of the 124 was caught, in either half (dev 0 of 70, test 0 of 54), so none was caught where the
-lesson governs a file its change touched either. 47 checks passed at both ends. Of the 28 that cannot
-judge, 20 name a test file not yet written at the change (pytest exit 4 at both ends), 2 a script not
-yet there (exit 2), 2 missed their signal at both ends, 3 failed at both for a reason the change did
-not cause (one, the pre-flight, needs a store), and 1 failed at the base and passed at the change. At
-the change, a check took 2.9 s at the median and 8.8 s at most.
+None of the 124 was caught, in either half (dev 0 of 70, test 0 of 54). 47 checks passed at both ends.
+Of the 28 that cannot judge, by what each check printed: 20 a test not yet written at the change
+(pytest exit 4 at both ends), 3 the pre-flight, which needs a store the registered environment does not
+name, 2 a script not yet there, 2 their signal missing at both ends (a selection that ran one test
+where the check expects three), and 1 a script not there at the base that passed at the change. At the
+change, a check took 2.9 s at the median and 8.8 s at most.
+
+**The lessons the hook as built would run.** The 6 broken lessons that name files, 4 of them a file
+their change touched, all cannot judge: docs-agent-neutral's script was not yet there at #197 and #312,
+and at #326 it was not there at the base and passed at the change; the pre-flight's two lessons, at
+#158, #269 and #343, need a store. For them this count shows nothing either way.
 
 Not registered, a positive control (`check-reach-control-20261113-0408.json`): a patch §4ah's re-run
 wrote to break doc-check-defaults, replayed through the same functions, passes at its base and fails
-at the patch with the check's own message, and is sorted caught. The instrument can see a catch.
+at the patch with the check's own message, and is sorted caught. It shows the instrument sees a catch
+by a ci/ script failing in one tree; a pytest failure across two trees, the shape of most rows, was not
+shown.
 
 What it means, not pre-registered:
-1. On these breaks, a lesson's own check, run at the edit, would not have flagged one. The checks that
-   existed passed on the change that broke their lesson: each tests the incident that taught it, and
-   the next break of the same rule happened somewhere it does not look. The 28 that could not judge are
-   where the count may understate, mostly checks written after the change.
-2. So turning `okl on-edit` on for these lessons, as they stand, would not have changed these
-   outcomes, and #435's replay is not run on them. Its next step is checks that test a lesson's rule
-   across the code, not one instance (in §4af, 8 of drift's misses passed a check too narrow to see
-   the break, one reading a single record where the break was in another of the same kind), and
+1. On these breaks, no broken lesson's own check, run at the edit, would have flagged the change: the
+   47 that ran passed on the change that broke their lesson. Why was not measured. Three readings fit:
+   a check tests the incident that taught it, and the next break happened where it does not look; a
+   check's selection (a `-k` name, a file) matched fewer tests at the change than it does today, and
+   passed with less in it; and many of the keys' reasons are things a change left out (no test, no
+   freshness check), which no check of existing code can fail on. The 28 that could not judge are where
+   the count may understate, mostly checks written after the change.
+2. So turning `okl on-edit` on for the 47 checks that ran, as they stand, would not have flagged these
+   changes, and #435's replay is not run on these lessons. Its next step is checks that test a lesson's
+   rule across the code, not one instance (in §4af, 8 of drift's misses passed a check too narrow to
+   see the break, one reading a single record where the break was in another of the same kind), and
    #436's pointers to code to imitate.
 3. Running checks at the edit is cheap: under nine seconds each here. What limits it is what they check.
-4. As built, the hook runs only lessons that name files, 6 of these 124; a check that tests the rule
-   across the code would also need to govern the files the rule covers.
+4. As built, the hook runs only lessons that name files, 6 of these 124, and this count could not judge
+   any of them; a check that tests the rule across the code would also need to govern the files the
+   rule covers.
 
 ## 4be. PRE-REGISTERED, A PILOT, IN-SAMPLE: would okl's rule-wide checks (#415) have caught these breaks? (2026-11-12)
 
