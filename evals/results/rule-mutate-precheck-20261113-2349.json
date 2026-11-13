@@ -1,0 +1,447 @@
+{
+ "what": "REPORT \u00a74bf: every check at BASE",
+ "base": "96c31219e454",
+ "left_out": {},
+ "older_by_rule": [
+  "n_00985805cdbb",
+  "n_6b65aa35593c",
+  "n_849a5b0425ef",
+  "n_8a6e1abce5cc",
+  "n_adea7f2c7373",
+  "n_b550ba9c5c8a",
+  "n_b74bad29fd87",
+  "n_c95bdc056620",
+  "remote-timeout-not-a-deadline"
+ ],
+ "past_breaks": {
+  "n_e7988ff536fb": {
+   "missed": 8
+  },
+  "n_5ddb0776a863": {
+   "missed": 4
+  },
+  "n_02cc84da158d": {
+   "missed": 3
+  },
+  "n_0637c92c032f": {
+   "cannot_judge": 2
+  },
+  "harness-reads-a-moving-working-tree": {
+   "cannot_judge": 5
+  },
+  "seed:geospatial-enforcement-defects:r_single_source_sets": {
+   "cannot_judge": 7
+  },
+  "seed:python-canon:py_dont_mock_what_you_dont_own": {
+   "cannot_judge": 3
+  },
+  "remote-path-test-through-client": {
+   "cannot_judge": 3
+  },
+  "docs-agent-neutral": {
+   "cannot_judge": 3
+  },
+  "n_6b65aa35593c": {
+   "missed": 7
+  },
+  "n_00985805cdbb": {
+   "missed": 3
+  },
+  "remote-timeout-not-a-deadline": {
+   "missed": 3
+  },
+  "n_849a5b0425ef": {
+   "missed": 2
+  },
+  "n_adea7f2c7373": {
+   "missed": 2
+  },
+  "n_8a6e1abce5cc": {
+   "missed": 2
+  },
+  "n_b550ba9c5c8a": {
+   "missed": 2
+  },
+  "n_b74bad29fd87": {
+   "missed": 2
+  },
+  "n_c95bdc056620": {
+   "missed": 2
+  }
+ },
+ "checks": {
+  "n_e7988ff536fb": {
+   "stored": {
+    "passed": true,
+    "own_failure": false,
+    "why": "passed",
+    "exit": 0,
+    "tail": [
+     "....................................................                     [100%]Running teardown with pytest sessionfinish...",
+     "",
+     "52 passed, 1046 deselected in 5.67s"
+    ],
+    "seconds": 8.7
+   },
+   "incident": {
+    "passed": true,
+    "own_failure": false,
+    "why": "passed",
+    "exit": 0,
+    "tail": [
+     "............                                                             [100%]Running teardown with pytest sessionfinish...",
+     "",
+     "12 passed, 1086 deselected in 2.55s"
+    ],
+    "seconds": 5.4
+   },
+   "rulewide": {
+    "passed": true,
+    "own_failure": false,
+    "why": "passed",
+    "exit": 0,
+    "tail": [
+     "........................................                                 [100%]Running teardown with pytest sessionfinish...",
+     "",
+     "40 passed in 1.11s"
+    ],
+    "seconds": 3.8
+   },
+   "rulewide-no-inventory": {
+    "passed": true,
+    "own_failure": false,
+    "why": "passed",
+    "exit": 0,
+    "tail": [
+     ".....................................                                    [100%]Running teardown with pytest sessionfinish...",
+     "",
+     "37 passed, 3 deselected in 1.11s"
+    ],
+    "seconds": 3.9
+   }
+  },
+  "n_5ddb0776a863": {
+   "stored": {
+    "passed": true,
+    "own_failure": false,
+    "why": "passed",
+    "exit": 0,
+    "tail": [
+     "..........................................                               [100%]Running teardown with pytest sessionfinish...",
+     "",
+     "42 passed, 1056 deselected in 3.03s"
+    ],
+    "seconds": 5.9
+   },
+   "incident": {
+    "passed": true,
+    "own_failure": false,
+    "why": "passed",
+    "exit": 0,
+    "tail": [
+     "..                                                                       [100%]Running teardown with pytest sessionfinish...",
+     "",
+     "2 passed, 1096 deselected in 1.95s"
+    ],
+    "seconds": 4.8
+   },
+   "rulewide": {
+    "passed": true,
+    "own_failure": false,
+    "why": "passed",
+    "exit": 0,
+    "tail": [
+     "........................................                                 [100%]Running teardown with pytest sessionfinish...",
+     "",
+     "40 passed in 1.11s"
+    ],
+    "seconds": 3.9
+   },
+   "rulewide-no-inventory": {
+    "passed": true,
+    "own_failure": false,
+    "why": "passed",
+    "exit": 0,
+    "tail": [
+     ".....................................                                    [100%]Running teardown with pytest sessionfinish...",
+     "",
+     "37 passed, 3 deselected in 1.12s"
+    ],
+    "seconds": 3.8
+   }
+  },
+  "n_02cc84da158d": {
+   "stored": {
+    "passed": true,
+    "own_failure": false,
+    "why": "passed",
+    "exit": 0,
+    "tail": [
+     ".....                                                                    [100%]Running teardown with pytest sessionfinish...",
+     "",
+     "5 passed, 1093 deselected in 0.60s"
+    ],
+    "seconds": 3.3
+   },
+   "incident": {
+    "passed": true,
+    "own_failure": false,
+    "why": "passed",
+    "exit": 0,
+    "tail": [
+     "..                                                                       [100%]Running teardown with pytest sessionfinish...",
+     "",
+     "2 passed, 1096 deselected in 0.54s"
+    ],
+    "seconds": 3.3
+   },
+   "rulewide": {
+    "passed": true,
+    "own_failure": false,
+    "why": "passed",
+    "exit": 0,
+    "tail": [
+     "...                                                                      [100%]Running teardown with pytest sessionfinish...",
+     "",
+     "3 passed in 0.09s"
+    ],
+    "seconds": 2.8
+   }
+  },
+  "n_0637c92c032f": {
+   "stored": {
+    "passed": true,
+    "own_failure": false,
+    "why": "passed",
+    "exit": 0,
+    "tail": [
+     ".                                                                        [100%]Running teardown with pytest sessionfinish...",
+     "",
+     "1 passed in 0.87s"
+    ],
+    "seconds": 3.3
+   },
+   "incident": {
+    "passed": true,
+    "own_failure": false,
+    "why": "passed",
+    "exit": 0,
+    "tail": [
+     ".                                                                        [100%]Running teardown with pytest sessionfinish...",
+     "",
+     "1 passed in 0.87s"
+    ],
+    "seconds": 3.3
+   },
+   "rulewide": {
+    "passed": true,
+    "own_failure": false,
+    "why": "passed",
+    "exit": 0,
+    "tail": [
+     "   ok: every command, flag, tool, hook, path, folder, function and mark it names exists, and its render carries the source's text",
+     "-- docs/architecture/okl-runtime.excalidraw",
+     "   ok: every command, flag, tool, hook, path, folder, function and mark it names exists, and its render carries the source's text"
+    ],
+    "seconds": 0.8
+   }
+  },
+  "harness-reads-a-moving-working-tree": {
+   "stored": {
+    "passed": true,
+    "own_failure": false,
+    "why": "passed",
+    "exit": 0,
+    "tail": [
+     "...                                                                      [100%]Running teardown with pytest sessionfinish...",
+     "",
+     "3 passed in 0.08s"
+    ],
+    "seconds": 2.8
+   }
+  },
+  "seed:geospatial-enforcement-defects:r_single_source_sets": {
+   "stored": {
+    "passed": true,
+    "own_failure": false,
+    "why": "passed",
+    "exit": 0,
+    "tail": [
+     "....                                                                     [100%]Running teardown with pytest sessionfinish...",
+     "",
+     "4 passed in 2.57s"
+    ],
+    "seconds": 5.1
+   }
+  },
+  "seed:python-canon:py_dont_mock_what_you_dont_own": {
+   "stored": {
+    "passed": true,
+    "own_failure": false,
+    "why": "passed",
+    "exit": 0,
+    "tail": [
+     "...                                                                      [100%]Running teardown with pytest sessionfinish...",
+     "",
+     "3 passed in 0.86s"
+    ],
+    "seconds": 3.3
+   }
+  },
+  "remote-path-test-through-client": {
+   "stored": {
+    "passed": true,
+    "own_failure": false,
+    "why": "passed",
+    "exit": 0,
+    "tail": [
+     "..                                                                       [100%]Running teardown with pytest sessionfinish...",
+     "",
+     "2 passed in 0.15s"
+    ],
+    "seconds": 2.8
+   }
+  },
+  "docs-agent-neutral": {
+   "stored": {
+    "passed": true,
+    "own_failure": false,
+    "why": "passed",
+    "exit": 0,
+    "tail": [
+     "AGENT NEUTRAL 39 docs"
+    ],
+    "seconds": 0.1
+   }
+  },
+  "n_6b65aa35593c": {
+   "stored": {
+    "passed": true,
+    "own_failure": false,
+    "why": "passed",
+    "exit": 0,
+    "tail": [
+     "..                                                                       [100%]Running teardown with pytest sessionfinish...",
+     "",
+     "2 passed, 1096 deselected in 4.77s"
+    ],
+    "seconds": 7.5
+   }
+  },
+  "n_00985805cdbb": {
+   "stored": {
+    "passed": true,
+    "own_failure": false,
+    "why": "passed",
+    "exit": 0,
+    "tail": [
+     ".                                                                        [100%]Running teardown with pytest sessionfinish...",
+     "",
+     "1 passed, 1097 deselected in 0.25s"
+    ],
+    "seconds": 2.9
+   }
+  },
+  "remote-timeout-not-a-deadline": {
+   "stored": {
+    "passed": true,
+    "own_failure": false,
+    "why": "passed",
+    "exit": 0,
+    "tail": [
+     "........................                                                 [100%]Running teardown with pytest sessionfinish...",
+     "",
+     "24 passed in 6.29s"
+    ],
+    "seconds": 8.8
+   }
+  },
+  "n_849a5b0425ef": {
+   "stored": {
+    "passed": true,
+    "own_failure": false,
+    "why": "passed",
+    "exit": 0,
+    "tail": [
+     "....                                                                     [100%]Running teardown with pytest sessionfinish...",
+     "",
+     "4 passed, 1094 deselected in 0.29s"
+    ],
+    "seconds": 2.8
+   }
+  },
+  "n_adea7f2c7373": {
+   "stored": {
+    "passed": true,
+    "own_failure": false,
+    "why": "passed",
+    "exit": 0,
+    "tail": [
+     ".                                                                        [100%]Running teardown with pytest sessionfinish...",
+     "",
+     "1 passed, 1097 deselected in 0.26s"
+    ],
+    "seconds": 2.9
+   }
+  },
+  "n_8a6e1abce5cc": {
+   "stored": {
+    "passed": true,
+    "own_failure": false,
+    "why": "passed",
+    "exit": 0,
+    "tail": [
+     ".                                                                        [100%]Running teardown with pytest sessionfinish...",
+     "",
+     "1 passed, 1097 deselected in 0.34s"
+    ],
+    "seconds": 2.8
+   }
+  },
+  "n_b550ba9c5c8a": {
+   "stored": {
+    "passed": true,
+    "own_failure": false,
+    "why": "passed",
+    "exit": 0,
+    "tail": [
+     "-- docs/overview/okl-overview.html",
+     "   ok: publishes no figures",
+     "DIAGRAM_FIGURES_RECEIPTED"
+    ],
+    "seconds": 0.3
+   }
+  },
+  "n_b74bad29fd87": {
+   "stored": {
+    "passed": true,
+    "own_failure": false,
+    "why": "passed",
+    "exit": 0,
+    "tail": [
+     "/tests/test_okl.py', 1197, 'Skipped: set OKL_TEST_POSTGRES_URL to run against a ",
+     "real Postgres')",
+     "1 passed, 1 skipped, 1096 deselected in 0.24s"
+    ],
+    "seconds": 2.8
+   }
+  },
+  "n_c95bdc056620": {
+   "stored": {
+    "passed": true,
+    "own_failure": false,
+    "why": "passed",
+    "exit": 0,
+    "tail": [
+     ".                                                                        [100%]Running teardown with pytest sessionfinish...",
+     "",
+     "1 passed, 1097 deselected in 0.26s"
+    ],
+    "seconds": 2.9
+   }
+  }
+ },
+ "okl_commit_at_start": "96c3121",
+ "okl_commit": "96c3121",
+ "at": "2026-11-13T23:49Z"
+}

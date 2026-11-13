@@ -76,3 +76,40 @@ def test_the_summary_counts_only_judged_breaks_and_controls():
     assert (s["groups"][rm.OLDER]["controls"], s["groups"][rm.OLDER]["controls_failed"]) == (1, 1)
     assert (s["split"]["rulewide_only"], s["split"]["incident_only"], s["split"]["breaks"]) == (2, 0, 2)
     assert s["inventory_only"] == 1
+
+
+PRECHECK = ROOT / "evals" / "results" / "rule-mutate-precheck-20261113-2349.json"
+CONTROL = ROOT / "evals" / "results" / "rule-mutate-control-20261113-2349.json"
+
+
+def _section() -> str:
+    text = (ROOT / "evals" / "REPORT.md").read_text()
+    return text.split("## 4bf.", 1)[1].split("\n## ", 1)[0]
+
+
+def test_the_pre_registration_quotes_its_receipts():
+    """Every figure §4bf quotes from drafting is read here from the receipt it names."""
+    import json
+    sec, pre, ctl = _section(), json.loads(PRECHECK.read_text()), json.loads(CONTROL.read_text())
+    assert PRECHECK.name in sec and CONTROL.name in sec
+    assert pre["left_out"] == {} and len(pre["checks"]) == 18 == len(rm.POPULATION)
+    assert all(r["passed"] for checks in pre["checks"].values() for r in checks.values())
+    older = sorted(lid for lid, p in rm.POPULATION.items() if p["group"] == rm.OLDER)
+    assert pre["older_by_rule"] == older
+    by_group = {g: sum(sum(pre["past_breaks"][lid].values()) for lid, p in rm.POPULATION.items() if p["group"] == g)
+                for g in (rm.HARDENED, rm.OLDER)}
+    assert by_group == {rm.HARDENED: 38, rm.OLDER: 25}
+    assert "| 38 |" in sec and "| 25 |" in sec
+    assert ctl["sorted"] == {"stored": "caught", "incident": "missed", "rulewide": "caught"}
+    assert pre["okl_commit"] == ctl["okl_commit"] and ctl["file"] == rm.CONTROL_FILE
+    assert "usable" not in pre and "usable" not in ctl
+
+
+def test_the_budget_matches_the_instrument_and_section_4af():
+    """108 patches, 72 of them breaking; §4af's 78 patches cost $5.20."""
+    import json
+    sec, n = _section(), len(rm.POPULATION)
+    assert (n * (rm.BREAKING + rm.HARMLESS), n * rm.BREAKING) == (108, 72)
+    assert "108" in sec and "72 breaking" in sec
+    af = json.loads((ROOT / "evals" / "results" / "drift-mutate-20261031-1522.json").read_text())
+    assert (af["cost_usd"], len(af["patches"])) == (5.2, 78) and "$5.20" in sec

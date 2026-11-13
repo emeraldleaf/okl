@@ -1,0 +1,52 @@
+{
+ "what": "REPORT \u00a74bf: a hand-written break, not registered",
+ "base": "96c31219e454",
+ "file": "src/okl/cli/on_edit.py",
+ "lines": "\n\ndef _store_hint() -> str | None:\n    import os\n    return os.environ.get(\"OKL_DATABASE_URL\")\n",
+ "sorted": {
+  "stored": "caught",
+  "incident": "missed",
+  "rulewide": "caught"
+ },
+ "checks": {
+  "stored": {
+   "passed": false,
+   "own_failure": true,
+   "why": "exit 1",
+   "exit": 1,
+   "tail": [
+    "=========================== short test summary info ============================",
+    "FAILED tests/test_store_resolution.py::test_only_the_resolver_and_the_store_read_the_storage_variable",
+    "1 failed, 4 passed, 1093 deselected in 2.54s"
+   ],
+   "seconds": 5.5
+  },
+  "incident": {
+   "passed": true,
+   "own_failure": false,
+   "why": "passed",
+   "exit": 0,
+   "tail": [
+    "..                                                                       [100%]Running teardown with pytest sessionfinish...",
+    "",
+    "2 passed, 1096 deselected in 0.54s"
+   ],
+   "seconds": 3.3
+  },
+  "rulewide": {
+   "passed": false,
+   "own_failure": true,
+   "why": "exit 1",
+   "exit": 1,
+   "tail": [
+    "=========================== short test summary info ============================",
+    "FAILED tests/test_store_resolution.py::test_only_the_resolver_and_the_store_read_the_storage_variable",
+    "1 failed, 2 passed in 0.16s"
+   ],
+   "seconds": 2.8
+  }
+ },
+ "okl_commit_at_start": "96c3121",
+ "okl_commit": "96c3121",
+ "at": "2026-11-13T23:49Z"
+}
