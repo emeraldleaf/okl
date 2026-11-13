@@ -12,6 +12,7 @@ only by not running), or missed (passes at both). No model is called.
     python3 evals/check_reach.py pilot [--receipt]  # §4aw's five tasks, frozen and fixed (seen before §4bd)
     python3 evals/check_reach.py run              # the registered measurement, resumable
     python3 evals/check_reach.py score [--receipt]
+    python3 evals/check_reach.py control [--receipt]   # not registered: can the instrument see a catch?
 """
 from __future__ import annotations
 
@@ -219,6 +220,8 @@ def score(args: argparse.Namespace) -> int:
                     "caught": sum(r["half"] == h for r in caught)} for h in ("dev", "test")}
     receipt = {"section": "4bd", "broken": len(pairs), "with_a_check": len(rows), "sorted": dict(sorted_),
                "rows_made_at": sorted({r.get("okl_commit") for r in rows.values()} - {None}),
+               "cannot_judge_why": dict(Counter(f"base {r['at_base']['why']}; change {r['at_change']['why']}"
+                                                for r in rows.values() if r["sorted"] == "cannot_judge")),
                "caught_share": round(len(caught) / len(pairs), 3) if pairs else None,
                "caught_share_of_checked": round(len(caught) / len(rows), 3) if rows else None,
                "caught_governing_a_changed_path": sum(governs(r) for r in caught), "per_half": per_half,
@@ -229,6 +232,28 @@ def score(args: argparse.Namespace) -> int:
     print(json.dumps({k: v for k, v in receipt.items() if k not in ("caught", "check_seconds_at_change")}, indent=1))
     if args.receipt:
         write("check-reach", guard.stamp(receipt))
+    return 0
+
+
+def control(args: argparse.Namespace) -> int:
+    """Not registered: that the instrument can see a catch at all. A patch §4ah's re-run wrote to break
+    doc-check-defaults, which its check failed on, replayed through run_check and sort_pair."""
+    guard = run_guard.start()
+    source = RESULTS / "drift-mutate-20261101-1935.json"
+    d = json.loads(source.read_text())
+    row = next(r for r in d["patches"] if r["lesson"] == "doc-check-defaults" and r["kind"] == "breaking"
+               and r["check"] == "fail")
+    patch = RESULTS / "drift-mutate-20261101-1935-patches" / f"{row['lesson']}-{row['kind']}-{row['k']}.diff"
+    run, expect = _stored_check(lessons()[row["lesson"]].verified_by)
+    with Tree(d["base"]) as tree:
+        before = run_check(tree, run, expect)
+        subprocess.run(["git", "-C", str(tree), "apply", str(patch)], check=True)
+        after = run_check(tree, run, expect)
+    out = {"section": "4bd, positive control (not registered)", "source": source.name, "patch": patch.name,
+           "lesson": row["lesson"], "check": run, "before": before, "after": after, "sorted": sort_pair(before, after)}
+    print(json.dumps({k: out[k] for k in ("lesson", "check", "sorted")} | {"before": before["why"], "after": after["why"]}))
+    if args.receipt:
+        write("check-reach-control", guard.stamp(out))
     return 0
 
 
@@ -244,7 +269,7 @@ def main() -> int:
     """Run the named step."""
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
-    for name, fn in (("count", count), ("pilot", pilot), ("run", run), ("score", score)):
+    for name, fn in (("count", count), ("pilot", pilot), ("run", run), ("score", score), ("control", control)):
         s = sub.add_parser(name)
         if name != "run":
             s.add_argument("--receipt", action="store_true")
