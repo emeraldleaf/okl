@@ -26,6 +26,9 @@ Eval scripts that call `claude -p` with cwd=REPO (pick_fix, plan_reach, when_lin
 - §4ba/§4bb ran from `~/.claude/projects/-Users-joshuadell-Dev-okl-wt-render/` (branches review-e2e and when-lines). The §4bb when-line WRITER sessions are there too (prompt starts "Below are lessons a software team keeps"; 17 on 2026-11-11, 15 on 2026-11-12).
 - §4bf: `-private-var-folders-...-T-okl-4bf-<run>-breaker-<N>/` (run k7ezkwzs: 108 breakers, 108 judges in the room dir). §4ag/§4ai census judges: `...-T-okl-judge-<id>-repo/` (a linked worktree, so they read git status).
 - Git status is the full short status (deleted and modified lines too), so hidden files' names appear in it.
+- Each tool_use block is saved twice (its assistant event and a later api-request-blob): count by tool_use id, or every per-call tally doubles (harness-transcripts-4bf's outside_worktree_calls 38 = 19 calls).
+- Breakers sometimes type a mangled own-tree path (`_` as `-`, or `-T-okl-...` for `/T/okl-...`); `--restricted` refuses it as "outside" the working directory, so a path matcher must map it back before calling it an escape. Refused Bash/Write calls ("No such tool available") are saved too.
+- From #451 the runners' rooms are `okl-w-<id>/t<slot>` (no lesson or experiment in the name).
 
 **How to apply:** when a REPORT claims something about every session, re-count it with a short script over these dirs. Ask for that script's output to be committed as a receipt, since the transcripts are local and will be swept. Related: [[review-findings-log]].
 
