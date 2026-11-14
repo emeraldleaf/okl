@@ -350,7 +350,7 @@ def main() -> int:
                     if diff:
                         dr.git("add", "-A", repo=wt)
                         dr.git("-c", "user.name=drift-mutate", "-c", "user.email=drift-mutate@localhost",
-                               "commit", "-q", "--no-verify", "-m", f"{kind} {k} for {lid}", repo=wt)
+                               "-c", "core.hooksPath=/dev/null", "commit", "-q", "--no-verify", "-m", f"{kind} {k} for {lid}", repo=wt)
                         commit = dr.git("rev-parse", "HEAD", repo=wt).strip()
                         if commit == base:   # git() never raises: a commit that failed is caught here
                             raise RuntimeError(f"could not commit {kind} {k} for {lid}")

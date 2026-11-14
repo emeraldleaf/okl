@@ -12,6 +12,7 @@ with the most breaks in past work among those whose check came before it.
     python3 evals/rule_mutate.py control [--receipt]    # one hand-written break; no model is called
     python3 evals/rule_mutate.py run [--workers 3]      # the registered measurement, resumable
     python3 evals/rule_mutate.py score [--receipt]
+    python3 evals/rule_mutate.py rejudge [--receipt]    # not registered: the patches with no verdict, once more
 """
 from __future__ import annotations
 
@@ -317,7 +318,7 @@ def run(args: argparse.Namespace) -> int:
                         p["error"] = s["error"]
                     if diff:
                         git("-c", "user.name=rule-mutate", "-c", "user.email=rule-mutate@localhost",
-                            "commit", "-q", "--no-verify", "-m", f"{kind} {k} for {lid}", repo=wt)
+                            "-c", "core.hooksPath=/dev/null", "commit", "-q", "--no-verify", "-m", f"{kind} {k} for {lid}", repo=wt)
                         if git("rev-parse", "HEAD", repo=wt).strip() == base:
                             raise RuntimeError(f"could not commit {kind} {k} for {lid}")
                         p["checks"] = run_checks(wt, lid)
@@ -436,11 +437,45 @@ def score(args: argparse.Namespace) -> int:
     return 0
 
 
+def rejudge(args: argparse.Namespace) -> int:
+    """Judge once more each patch the judge gave no verdict, as §4af did, and score the rows with
+    those verdicts in. Not registered: the result stands on the first pass, and this is reported apart."""
+    guard = run_guard.start()
+    rows = list(done().values())
+    nodes, _ = nodes_and_refusals()
+    room = Path(tempfile.mkdtemp(prefix="okl-4bf-rejudge-"))
+    again = []
+    for p in rows:
+        if p.get("judge") is not None or not p.get("diff"):
+            continue
+        n = nodes[p["lesson"]]
+        if dr.text_sha(n) != p["lesson_sha"]:
+            raise SystemExit(f"rule_mutate: {p['lesson']}'s text changed since the run; its patches cannot be judged again")
+        text = dm.LESSON.format(title=n.title, symptom=n.symptom or "", fix=n.fix or "")
+        j = dm.claude(dm.JUDGE, dm.JUDGE_PROMPT.format(lesson=text, diff=p["diff"][:12000]), room)
+        p.update(judge_first=p.get("judge_said"), judge=dm.judged(j.get("result") or ""), rejudged=True,
+                 judge_cost=j.get("cost_usd", 0.0), judge_models=j.get("models", []),
+                 judge_said=(j.get("result") or j.get("error") or "")[-300:])
+        again.append({k: p.get(k) for k in ("lesson", "kind", "k", "judge", "judge_said", "sorted")})
+        print(f'{p["lesson"][:28]:28} {p["kind"]} {p["k"]} judge={p["judge"]}', flush=True)
+    shutil.rmtree(room, ignore_errors=True)
+    summary = summarize(rows)
+    print(json.dumps(summary["groups"], indent=1))
+    if args.receipt:
+        cr.write("rule-mutate-rejudge", guard.stamp({
+            "what": "REPORT §4bf: patches without a verdict judged once more, not registered",
+            "judge": " ".join(dm.JUDGE), "rejudged": again,
+            "cost_usd": round(sum(p.get("judge_cost", 0) for p in rows if p.get("rejudged")), 2),
+            "summary": summary}))
+    return 0
+
+
 def main() -> int:
     """Run the named step."""
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
-    for name, fn in (("precheck", precheck), ("control", control), ("run", run), ("score", score)):
+    for name, fn in (("precheck", precheck), ("control", control), ("run", run), ("score", score),
+                     ("rejudge", rejudge)):
         s = sub.add_parser(name)
         if name == "run":
             s.add_argument("--workers", type=int, default=3, help="lessons worked at once")

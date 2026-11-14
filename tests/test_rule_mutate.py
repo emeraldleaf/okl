@@ -113,3 +113,11 @@ def test_the_budget_matches_the_instrument_and_section_4af():
     assert "108" in sec and "72 breaking" in sec
     af = json.loads((ROOT / "evals" / "results" / "drift-mutate-20261031-1522.json").read_text())
     assert (af["cost_usd"], len(af["patches"])) == (5.2, 78) and "$5.20" in sec
+
+
+def test_a_throwaway_commit_runs_no_git_hooks():
+    """--no-verify skips pre-commit and commit-msg, not prepare-commit-msg: §4bf's run sent every
+    patch commit through the developer's own prepare-commit-msg hook. Both mutation scripts turn hooks off."""
+    for script in ("rule_mutate.py", "drift_mutate.py"):
+        src = (ROOT / "evals" / script).read_text()
+        assert '"-c", "core.hooksPath=/dev/null", "commit"' in src, script
