@@ -18,6 +18,7 @@ Each helper below closes one. New scripts use them instead of a copy of their ow
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import shutil
@@ -31,20 +32,26 @@ from pathlib import Path
 from typing import Any
 
 REPO = Path(__file__).resolve().parents[1]
-# Dropped from every child: the launching session's own variables, okl's and git's. Kept: what
-# signs the CLI in or names its provider, which an eval needs and which changes no answer.
-DROP = ("CLAUDE", "OKL_", "GIT_", "MCP_")
-KEEP = ("CLAUDE_CODE_OAUTH_TOKEN", "CLAUDE_CONFIG_DIR", "CLAUDE_CODE_USE_BEDROCK", "CLAUDE_CODE_USE_VERTEX")
+# Dropped from every child: the launching session's own variables, okl's and git's, and the ones that
+# choose a model or a thinking budget behind the alias a script names. Kept: what signs the CLI in and
+# selects its provider (every CLAUDE_CODE_USE_ selector), which an eval needs and which changes no answer.
+# A call made without --restricted still reads the user's settings file, its effort and model settings
+# included (#446): pass --restricted, or pin the effort with ask(effort=...).
+DROP = ("CLAUDE", "OKL_", "GIT_", "MCP_", "ANTHROPIC_DEFAULT_", "ANTHROPIC_MODEL", "ANTHROPIC_SMALL_FAST_MODEL",
+        "MAX_THINKING_TOKENS")
+KEEP = ("CLAUDE_CODE_OAUTH_TOKEN", "CLAUDE_CONFIG_DIR", "CLAUDE_CODE_USE_")
 EFFORTS = ("low", "medium", "high", "xhigh", "max")
 
 
 def clean_env(tree: Path | None = None, **extra: str) -> dict[str, str]:
     """The environment for a child: none of the launching session's, okl's or git's variables;
     this interpreter's directory first on PATH; with `tree`, that tree's code first on PYTHONPATH.
-    okl inside it logs no briefing and finds no warm model. `extra` sets more, explicitly."""
-    env = {k: v for k, v in os.environ.items() if not k.startswith(DROP) or k in KEEP}
+    okl inside it logs no briefing, and neither finds nor starts a warm model: with warm on, a check that
+    finds none starts one at the socket, where it would outlive the run. `extra` sets more, explicitly."""
+    env = {k: v for k, v in os.environ.items() if not k.startswith(DROP) or k.startswith(KEEP)}
     env["PATH"] = f"{Path(sys.executable).parent}{os.pathsep}{os.environ.get('PATH', '')}"
     env["OKL_BRIEFING_LOG"] = "0"
+    env["OKL_WARM"] = "0"
     env["OKL_WARM_SOCKET"] = str(Path(tempfile.gettempdir()) / "okl-eval-no-warm.sock")
     if tree is not None:
         env["PYTHONPATH"] = str(tree / "src")
@@ -109,18 +116,32 @@ def ask(argv: list[str], prompt: str, *, model: str, effort: str, timeout: int, 
 def copy_sqlite(src: Path, dst: Path) -> None:
     """A consistent copy of the SQLite database at `src`, with what its write-ahead log holds.
     Copying the file alone missed every write an open okl process had not checkpointed: the store
-    runs in WAL mode, and the MCP server or a warm model can hold it open (#446). Read-only, so
-    the copy never checkpoints or changes the original; where read-only access fails, the file and
-    its log are copied together."""
+    runs in WAL mode, and the MCP server or a warm model can hold it open (#446). Opened read-only,
+    so the copy never checkpoints into the original or changes its rows; on a WAL database with no log
+    on disk, SQLite may still create the empty -wal and -shm files beside it. Where read-only access
+    fails, the file and its log are copied, with a warning: that pair is not atomic, since a checkpoint
+    between the two copies would mismatch them."""
+    uri = Path(src).resolve().as_uri() + "?mode=ro"   # escaped: a "?" in a folder name cut the old path
     try:
-        with sqlite3.connect(f"file:{src}?mode=ro", uri=True) as source, sqlite3.connect(dst) as target:
+        with contextlib.closing(sqlite3.connect(uri, uri=True)) as source, \
+                contextlib.closing(sqlite3.connect(dst)) as target:
             source.backup(target)
-        source.close()
-        target.close()
-    except sqlite3.Error:
+    except sqlite3.Error as e:
+        print(f"sandbox: read-only copy of {src} failed ({e}); copying the file and its log instead",
+              file=sys.stderr)
         dst.unlink(missing_ok=True)
         shutil.copy2(src, dst)
-        for suffix in ("-wal", "-shm"):
-            side = src.with_name(src.name + suffix)
-            if side.exists():
-                shutil.copy2(side, dst.with_name(dst.name + suffix))
+        log = src.with_name(src.name + "-wal")
+        if log.exists():
+            shutil.copy2(log, dst.with_name(dst.name + "-wal"))
+
+
+def settings_effort() -> str | None:
+    """The effort level the user's settings file sets, which a call made without --restricted reads;
+    a receipt records it beside the commands it ran (#446)."""
+    base = Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude")
+    try:
+        got = json.loads((base / "settings.json").read_text()).get("effortLevel")
+    except (OSError, ValueError):
+        return None
+    return got if isinstance(got, str) else None

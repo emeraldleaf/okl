@@ -308,7 +308,8 @@ def run(args: argparse.Namespace) -> int:
                              "different change." if earlier else "")
                     prompt = (dm.BREAK_PROMPT.format(lesson=text, avoid=avoid) if kind == "breaking" else
                               HARMLESS_PROMPT.format(lesson=text, avoid=avoid))
-                    s = dm.claude(dm.BREAKER, prompt, wt)
+                    with dm.no_git(wt):   # the session reads no git status, so no commit subject (#446)
+                        s = dm.claude(dm.BREAKER, prompt, wt)
                     git("checkout", "-q", "HEAD", "--", *kept_out, repo=wt)
                     git("add", "-A", repo=wt)
                     diff = git("diff", "--cached", "HEAD", repo=wt)   # with any file the breaker created

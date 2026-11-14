@@ -24,7 +24,6 @@ import hashlib
 import json
 import random
 import shutil
-import sqlite3
 import statistics
 import subprocess
 import sys
@@ -154,8 +153,7 @@ def eligible() -> list[dict]:
 def snapshot() -> str:
     """Copy this machine's store beside the answers; its sha256."""
     W.store.parent.mkdir(parents=True, exist_ok=True)
-    with sqlite3.connect(rr.REPO / ".okl" / "okl.db") as live, sqlite3.connect(W.store) as copy:
-        live.backup(copy)
+    sb.copy_sqlite(rr.REPO / ".okl" / "okl.db", W.store)   # read-only, with its log (#446)
     return ba.sha256(W.store)
 
 

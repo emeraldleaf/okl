@@ -170,9 +170,10 @@ def test_a_check_runs_without_the_callers_store_or_repository(dr, history, tmp_p
     monkeypatch.setenv("OKL_DATABASE_URL", "sqlite:////nowhere/okl.db")
     r = dr.Replayer(tmp_path / "scratch", repo)
     try:
-        # Only what the harness sets on purpose: no warm model, and no briefing logged (#446).
-        assert not [k for k in r.env if k.startswith("OKL_") and k not in ("OKL_WARM_SOCKET", "OKL_BRIEFING_LOG")]
-        assert r.env["OKL_BRIEFING_LOG"] == "0"
+        # Only what the harness sets on purpose: no warm model, none started, no briefing logged (#446).
+        assert not [k for k in r.env if k.startswith("OKL_")
+                    and k not in ("OKL_WARM_SOCKET", "OKL_BRIEFING_LOG", "OKL_WARM")]
+        assert (r.env["OKL_BRIEFING_LOG"], r.env["OKL_WARM"]) == ("0", "0")
         assert "GIT_DIR" not in r.env and r.env["PYTHONPATH"].endswith("/src")
     finally:
         r.close()

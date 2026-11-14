@@ -31,6 +31,7 @@ the measures. The registered receipt is left as it is; this one is reported besi
 from __future__ import annotations
 
 import argparse
+import contextlib
 import fnmatch
 import json
 import random
@@ -40,6 +41,7 @@ import subprocess
 import sys
 import tempfile
 from collections import Counter
+from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
@@ -183,6 +185,19 @@ def for_judge(diff: str) -> str:
     if len(diff) <= JUDGE_CHARS:
         return diff
     return diff[:JUDGE_CHARS] + f"\n[the diff is cut here: it has {len(diff)} characters, and you see the first {JUDGE_CHARS}]"
+
+
+@contextlib.contextmanager
+def no_git(wt: Path) -> Iterator[None]:
+    """The breaker's tree without its link to the repository while the breaker works. A session in a git
+    tree reads its status into context: §4bf's breakers saw the branch and the last five commit
+    subjects, which named the experiment (#446). The link is restored even if the session fails."""
+    link, kept = wt / ".git", wt / ".git-kept-from-breaker"
+    link.rename(kept)
+    try:
+        yield
+    finally:
+        kept.rename(link)
 
 
 def at_base(wt: Path, base: str) -> None:
@@ -363,7 +378,8 @@ def main() -> int:
                              "different change." if earlier else "")
                     prompt = (BREAK_PROMPT.format(lesson=text, avoid=avoid) if kind == "breaking" else
                               HARMLESS_PROMPT.format(lesson=text, files=", ".join(files), avoid=avoid))
-                    s = claude(BREAKER, prompt, wt)
+                    with no_git(wt):
+                        s = claude(BREAKER, prompt, wt)
                     dr.git("checkout", "-q", "HEAD", "--", *kept_out, repo=wt)
                     dr.git("add", "-A", repo=wt)   # staged first, so the diff carries files the breaker created (#446)
                     diff = dr.git("diff", "--cached", "HEAD", repo=wt)

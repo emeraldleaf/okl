@@ -33,6 +33,9 @@ class Run:
         """Add the commit at the start and at the end; a run whose code moved is not usable, and says so."""
         now = ab.tree_state(READS)
         receipt["okl_commit_at_start"], receipt["okl_commit"] = self.started[0], now[0]
+        # Receipts from before #446 ran their children in the launching session's environment; this marks
+        # a receipt that did not, so the two are never pooled.
+        receipt.setdefault("child_env", "sandbox.clean_env (#446)")
         moved = ab.head_moved(self.started, now)
         if moved:
             receipt["usable"] = False

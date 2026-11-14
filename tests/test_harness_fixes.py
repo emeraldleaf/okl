@@ -61,6 +61,7 @@ def test_a_model_call_with_no_cwd_runs_in_an_empty_room(monkeypatch):
     def fake(cmd, **kw):
         seen.append(kw)
         return subprocess.CompletedProcess(cmd, 0, stdout='{"result": "x", "modelUsage": {"claude-sonnet-5-5": {}}}', stderr="")
+    monkeypatch.setenv("CLAUDE_EFFORT", "xhigh")   # set, so its absence below means something
     for name in ("pick_fix", "plan_reach"):
         mod = _load(name)
         monkeypatch.setattr(mod.subprocess, "run", fake)
@@ -96,9 +97,16 @@ def test_every_model_call_in_the_evals_names_its_room_and_its_environment():
     missing = []
     for f in files:
         for call in _model_calls(ast.parse((ROOT / f).read_text())):
-            names = {k.arg for k in call.keywords}
-            if not {"cwd", "env"} <= names:
-                missing.append(f"{f}:{call.lineno} lacks {sorted({'cwd', 'env'} - names)}")
+            kw = {k.arg: k.value for k in call.keywords}
+            if not {"cwd", "env"} <= set(kw):
+                missing.append(f"{f}:{call.lineno} lacks {sorted({'cwd', 'env'} - set(kw))}")
+                continue
+            # Present is not enough (review on #451): an environment built from os.environ, or the
+            # checkout as the working directory, is the leak the keywords were meant to close.
+            if any(isinstance(n, ast.Attribute) and n.attr == "environ" for n in ast.walk(kw["env"])):
+                missing.append(f"{f}:{call.lineno} builds env from os.environ")
+            if isinstance(kw["cwd"], ast.Name) and kw["cwd"].id == "REPO":
+                missing.append(f"{f}:{call.lineno} runs in the checkout")
     assert missing == [], missing
 
 
@@ -121,6 +129,8 @@ def test_a_patch_carries_the_files_the_agent_created(tmp_path):
     (room / "new_test.py").write_text("def test_x():\n    pass\n")
     patch = o.patch_of(room)
     assert "+++ b/a.py" in patch and "+++ b/new_test.py" in patch
+    staged = subprocess.run(["git", "-C", str(room), "diff", "--cached", "--name-only"], capture_output=True, text=True).stdout
+    assert staged == ""   # left unstaged, so a grader reading the index sees the tree as the agent left it
 
 
 def test_the_judge_is_told_when_a_diff_is_cut():
@@ -169,4 +179,28 @@ def test_the_4af_note_quotes_its_receipt():
     assert (sum(map(caught, none)), len(none), sum(map(caught, broken)), len(broken)) == (7, 11, 14, 36)
     report = (ROOT / "evals" / "REPORT.md").read_text()
     note = report.split("## 4af.", 1)[1].split("\n## 4ag.", 1)[0]
-    assert "Drift caught 7 of the 11 patches that got no verdict, against 14 of the 36 judged" in " ".join(note.split())
+    flat = " ".join(note.split())
+    assert "Drift caught 7 of the 11 breaking patches with no verdict, 3 of the 4 the re-judge called broken, against 14 of the 36 judged broken" in flat
+    rejudged = [p for p in json.loads((ROOT / "evals" / "results" / "drift-mutate-20261031-1522-rejudge.json").read_text())["patches"]
+                if p.get("rejudged") and p.get("judge") == "broken"]
+    assert (sum(map(caught, rejudged)), len(rejudged)) == (3, 4)
+    assert sum(p["lesson"].startswith("doc-") for p in none) == 7 and "(7 of the 11 here" in flat
+
+
+def test_a_breaker_sees_no_git_link_and_gets_it_back(tmp_path):
+    """A session in a git tree reads its status: §4bf's breakers saw commit subjects naming the
+    experiment. The link is hidden while the breaker works and restored even when it fails."""
+    dm = _load("drift_mutate")
+    room = _repo(tmp_path)
+    with dm.no_git(room):
+        assert not (room / ".git").exists()
+    assert (room / ".git").is_dir()
+    with pytest.raises(RuntimeError), dm.no_git(room):
+        raise RuntimeError("the session failed")
+    assert (room / ".git").is_dir()
+
+
+def test_a_receipt_says_its_children_ran_clean():
+    """Receipts from before #446 ran children in the launching session's environment: never pool them."""
+    import run_guard
+    assert run_guard.start().stamp({})["child_env"] == "sandbox.clean_env (#446)"

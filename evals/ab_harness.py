@@ -465,8 +465,9 @@ def run_one(t: dict, arm: str, s: int, *, briefed_header: str | None, brief_err:
             raise RuntimeError(f"briefing unavailable (fail closed): {brief_err}")
         env = generator_env(workdir, log)
         mcp_config = write_fetch_tool_config(log) if GENERATOR_TOOLS and arm == "when-tool" else ""
-        # The environment is passed only when tools are on, so the one-shot path is byte for
-        # byte the call every section through §4q made (and its tests' fakes still fit).
+        # The environment is passed only when tools are on; otherwise call() gives the one-shot path a
+        # clean one. Through #446 that path inherited the launching session's environment, so its
+        # command is the one every section through §4q made, its environment is not (#446).
         code = call(generator_cmd(arm, mcp_config), GEN_PROMPT.format(briefing=header, task=t["task"]),
                     timeout, workdir, **({"env": env} if env else {}))
         if GENERATOR_TOOLS:
@@ -976,6 +977,9 @@ def main() -> int:
         # §4ab: the command the arms ran (with tools on, only the MCP servers an arm names
         # load); the when-tool arm's command and the fetch tool's description are its treatment.
         "generator_cmd": generator_cmd(),
+        # #446: the environment the generator and judge ran in, and the effort a call without
+        # --restricted reads from the user's settings file; receipts before #446 recorded neither.
+        "child_env": "sandbox.clean_env (#446)", "settings_effort": sb.settings_effort(),
         **when_tool_instrument(arms),
         **({"preflight_missing": lacking} if args.accept_missing_lessons else {}),
         **({"preflight_line": lined} if lined else {}),

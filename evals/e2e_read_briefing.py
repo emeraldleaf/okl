@@ -28,7 +28,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import shutil
 import subprocess
@@ -36,6 +35,9 @@ import sys
 import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import sandbox as sb
 
 REPO = Path(__file__).resolve().parents[1]
 RESULTS = REPO / "evals" / "results"
@@ -80,12 +82,6 @@ REASONS = {
 }
 
 
-def git_env() -> dict[str, str]:
-    """This environment without the variables that locate a repository."""
-    local = subprocess.run(["git", "rev-parse", "--local-env-vars"], capture_output=True, text=True).stdout.split()
-    return {k: v for k, v in os.environ.items() if k not in local}
-
-
 def build(room: Path, arm: str) -> tuple[Path, dict[str, str]]:
     """A fresh scratch repo and store for one run, and the environment the agent runs in."""
     repo = room / "repo"
@@ -100,8 +96,10 @@ def build(room: Path, arm: str) -> tuple[Path, dict[str, str]]:
         settings = {"hooks": {"PostToolUse": [{"matcher": "Read", "hooks": [
             {"type": "command", "command": f'bash "$CLAUDE_PROJECT_DIR/.claude/hooks/{HOOK.name}"'}]}]}}
     (repo / ".claude" / "settings.json").write_text(json.dumps(settings, indent=2))
-    env = {**git_env(), "OKL_DATABASE_URL": f"sqlite:///{room / 'store.db'}", "OKL_BIN": f"{sys.executable} -m okl",
-           "PYTHONPATH": str(REPO / "src"), "OKL_FRAME_LOG": str(room / "frames.jsonl"), "TMPDIR": str(room)}
+    # Clean, then only what this run sets: before #446 the agent and its hook inherited the launching
+    # session's variables and okl's own (a warm model, a decision mode, disabled hooks).
+    env = sb.clean_env(OKL_DATABASE_URL=f"sqlite:///{room / 'store.db'}", OKL_BIN=f"{sys.executable} -m okl",
+                       PYTHONPATH=str(REPO / "src"), OKL_FRAME_LOG=str(room / "frames.jsonl"), TMPDIR=str(room))
     for k in ("OKL_SERVICE_URL", "OKL_TOKEN", "OKL_DISABLED_HOOKS", "OKL_QUIET"):
         env.pop(k, None)
     git = ["git", "-C", str(repo)]

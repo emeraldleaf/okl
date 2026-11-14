@@ -133,7 +133,7 @@ mistake no lesson named.
 ## What every pre-registration states
 
 A review of the series in November 2026 (#446) found careful procedure, with controls run in the same
-sitting and every deviation disclosed. It also found three gaps: no check that the samples could detect
+sitting and deviations disclosed. It also found three gaps: no check that the samples could detect
 the effects their bars named, ground truth no person had checked, and arms that differed in more than
 one way at once. From then on, a pre-registration in [REPORT.md](../evals/REPORT.md) states the
 following three blocks before any data are seen. It cannot amend them afterwards; relaxing one makes
@@ -184,8 +184,10 @@ for Building Rigorous Agentic Benchmarks*, 2025; Yu et al., ACL 2025.
 - **The mediators to log:** what was picked, and the grader's state after each pass.
 - **A ledger of what earlier sections have seen** (tasks, lessons, changes). The confirmatory set must
   be unseen; the five tasks of §4aw–§4bb served six sections.
-- **Model calls go through `evals/sandbox.py`:** an empty room or a scratch copy, never the checkout; a
-  clean environment; a pinned effort; and a check of which model answered.
+- **Model calls go through `evals/sandbox.py`'s `ask`:** an empty room or a scratch copy, never the
+  checkout, since a session reads the git status of the tree it runs in; a clean environment; a pinned,
+  recorded effort; and a check of which model answered. A breaker that must work in a tree of the
+  repository works with its git link hidden.
 
 Sources: Kapoor et al., *AI Agents That Matter*, TMLR 2025; Gelman and Loken, *The garden of forking
 paths*, 2013; Nosek et al., PNAS 2018.

@@ -569,8 +569,9 @@ def judge(receipt: Path, db: Path) -> int:
         prompt = JUDGE_PROMPT.format(title=node.title if node else e["lesson"],
                                      symptom=(node and node.symptom) or "-", fix=(node and node.fix) or "-",
                                      diff=diff)
-        # From an empty directory: run in the checkout it would read this repo's CLAUDE.md, which
-        # --restricted does not skip, and the judge must see only the lesson and the diffs.
+        # From an empty directory: run in the checkout, a session reads its git status (the branch, the
+        # last commit subjects, untracked file names), and the judge must see only the lesson and the
+        # diffs. --restricted skips CLAUDE.md, as a saved session showed (#446), but not the git status.
         with tempfile.TemporaryDirectory(prefix="okl-judge-") as room:
             try:
                 r = subprocess.run(["claude", "-p", "--model", "sonnet", "--restricted", "--tools", ""],
