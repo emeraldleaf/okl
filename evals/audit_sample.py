@@ -258,7 +258,10 @@ def score(args: argparse.Namespace) -> int:
     adj_labels = PRIVATE / "adjudication-labels.json"
     adj_labels.write_text(json.dumps({i: v for i, v in got.items() if key[i]["set"] == "adjudication"}))
     adj.score(str(adj_labels))
-    out = guard.stamp({"what": "the person's audit for #446", "at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%MZ"),
+    # Who gave each set's labels. The bars were written for a person's; a set a model labelled is a
+    # second annotator's agreement with the first, never an audit against a person.
+    by = {"adjudication": "the maintainer, blind", "key": args.key_by, "judge": args.judge_by}
+    out = guard.stamp({"what": "the audit for #446", "labelled_by": by, "at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%MZ"),
                        "draw_items_sha256": draw["items_sha256"],
                        "adjudication": json.loads(adj.OUT.read_text()),
                        "key": score_key(key, got), "judge": score_judge(key, got, draw["judge_population"])})
@@ -276,6 +279,8 @@ def main() -> int:
     sub.add_parser("build").set_defaults(func=build)
     s = sub.add_parser("score")
     s.add_argument("labels")
+    for flag in ("--key-by", "--judge-by"):
+        s.add_argument(flag, default="the maintainer, blind", help="who labelled this set")
     s.set_defaults(func=score)
     args = p.parse_args()
     return args.func(args)
