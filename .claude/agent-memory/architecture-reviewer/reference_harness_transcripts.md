@@ -18,6 +18,13 @@ What they lack:
 
 Eval scripts that call `claude -p` with cwd=REPO (pick_fix, plan_reach, when_lines...) save each call under `~/.claude/projects/<the checkout's absolute path, with / and _ turned into ->/*.jsonl` (the rule above; a worktree or another checkout has its own directory). Select files by mtime window, take the first `type: user` timestamp (UTC), the `message.model`, and classify by the prompt's first words. Then compare with `git log --format=%cI` to check "written before any call", "amendment before any row" and the real call counts (#434: 162 Sonnet picks against the 58 reported).
 
+**What a session loaded and its effort (Claude Code 2.1.302, found on #451):** each saved session's jsonl has an `api-request` record whose `params.output_config.effort` is the effort actually sent, and `api-request-blob` records hold the exact system prompt and user-context block. Test for CLAUDE.md with the string `Contents of /…/CLAUDE.md`; the interactive session shows it, so the detector works. The user-entry `entrypoint` shows env inheritance: `claude-vscode` was inherited from the parent; under sandbox.clean_env it is `sdk-cli`. Findings, 2026-11-14:
+- `-p --restricted` sessions load no CLAUDE.md and no user settings, and ran at effort medium: 387 pick sessions and §4bf's 108+108+6.
+- `-p` without `--restricted` reads ~/.claude/settings.json (`effortLevel: xhigh`, plus modelSettings), so the A/B harness's Sonnet generator ran at xhigh (2026-10-22/23/29 samples).
+- `CLAUDE_EFFORT` is exported to hooks and Bash and never read back; the input variable is `CLAUDE_CODE_EFFORT_LEVEL`.
+- A checkout-run session gets `gitStatus`: the branch, the last five commit subjects and untracked names.
+- §4ba/§4bb ran from `~/.claude/projects/-Users-joshuadell-Dev-okl-wt-render/` (branches review-e2e and when-lines).
+
 **How to apply:** when a REPORT claims something about every session, re-count it with a short script over these dirs. Ask for that script's output to be committed as a receipt, since the transcripts are local and will be swept. Related: [[review-findings-log]].
 
 §4az's review sessions are saved under `~/.claude/projects/*okl-4aw-*`, and each sub-agent prompt names `review-lessons/<id>.md`, so the review's own picks can be recovered there; the receipt (`review-e2e-20261111-1543.json`) records only a count of sub-agents (found on #440: the right lesson reached the sub-agents on #115 3 of 4, #198 3 of 3, and 0 on #168, #196 and #309; heuristic and uncommitted, not citable until a receipt script commits it).
