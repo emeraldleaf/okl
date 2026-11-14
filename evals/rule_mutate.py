@@ -13,6 +13,7 @@ with the most breaks in past work among those whose check came before it.
     python3 evals/rule_mutate.py run [--workers 3]      # the registered measurement, resumable
     python3 evals/rule_mutate.py score [--receipt]
     python3 evals/rule_mutate.py rejudge [--receipt]    # not registered: the patches with no verdict, once more
+    python3 evals/rule_mutate.py sensitivity [--receipt]  # not registered: how firm the reading is
 """
 from __future__ import annotations
 
@@ -470,12 +471,67 @@ def rejudge(args: argparse.Namespace) -> int:
     return 0
 
 
+def sensitivity(args: argparse.Namespace) -> int:
+    """How firm §4bf's reading is, from the rows as they stand. Not registered: the reviews for
+    #446 found what moves it, and that okl on-edit would have run few of these checks at all. One hardened lesson's stored check reads no file of the
+    repository (it tests the checker on files it writes itself), so it cannot catch a break there; the
+    patches with no verdict cluster on a few lessons; and nine lessons a group is few. Exact
+    permutation test over lessons, the unit the breaks cluster in."""
+    import itertools
+    guard = run_guard.start()
+    rows = list(done().values())
+    breaks = [p for p in rows if p["kind"] == "breaking" and p.get("judge") == "broken" and p.get("diff")]
+
+    def rate(ps: list[dict]) -> tuple[int, int]:
+        return sum(p["sorted"]["stored"] == "caught" for p in ps), len(ps)
+
+    def groups(ps: list[dict]) -> dict[str, tuple[int, int]]:
+        return {g: rate([p for p in ps if p["group"] == g]) for g in (HARDENED, OLDER)}
+
+    blind_check = "n_0637c92c032f"
+    unjudged = [p for p in rows if p["kind"] == "breaking" and p.get("judge") is None and p.get("diff")]
+    per = {lid: rate([p for p in breaks if p["lesson"] == lid]) for lid in POPULATION}
+    per = {lid: kn for lid, kn in per.items() if kn[1]}
+
+    def gap(hard: set[str]) -> float:
+        h = [per[lid] for lid in per if lid in hard]
+        o = [per[lid] for lid in per if lid not in hard]
+        return sum(k for k, _ in h) / sum(n for _, n in h) - sum(k for k, _ in o) / sum(n for _, n in o)
+    hardened = {lid for lid in per if POPULATION[lid]["group"] == HARDENED}
+    observed = gap(hardened)
+    splits = list(itertools.combinations(sorted(per), len(hardened)))
+    as_far = sum(abs(gap(set(c))) >= abs(observed) - 1e-12 for c in splits)
+    nodes, _ = nodes_and_refusals()
+    governs = {lid: [g.strip() for g in (nodes[lid].files or "").split(",") if g.strip()] for lid in POPULATION}
+    # okl on-edit runs a lesson's check only after an edit to a file the lesson governs.
+    fires = [p for p in breaks if governs[p["lesson"]]
+             and any(dm.overlaps(f, governs[p["lesson"]]) for f in dm.changed_files(p["diff"]))]
+    out = {
+        "lessons_governing_files": sorted(lid for lid, g in governs.items() if g),
+        "breaks_on_edit_would_check": rate(fires),
+        "judged_on_a_cut_diff": [f'{p["lesson"]} {p["kind"]} {p["k"]} {len(p["diff"])} chars' for p in rows
+                                 if len(p.get("diff") or "") > 12000],
+        "registered": groups(breaks),
+        "without_" + blind_check: groups([p for p in breaks if p["lesson"] != blind_check]),
+        "unjudged_breaking_counted_missed": groups(
+            breaks + [{**p, "sorted": {**p["sorted"], "stored": "missed"}} for p in unjudged]),
+        "unjudged_breaking": [f'{p["lesson"]} {p["k"]}' for p in unjudged],
+        "permutation": {"lessons": len(per), "hardened": len(hardened), "splits": len(splits),
+                        "observed_gap": round(observed, 4), "two_sided_p": round(as_far / len(splits), 4)},
+    }
+    print(json.dumps(out, indent=1))
+    if args.receipt:
+        cr.write("rule-mutate-sensitivity", guard.stamp({"what": "REPORT §4bf: how firm the reading is, not registered",
+                                                        **out}))
+    return 0
+
+
 def main() -> int:
     """Run the named step."""
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
     for name, fn in (("precheck", precheck), ("control", control), ("run", run), ("score", score),
-                     ("rejudge", rejudge)):
+                     ("rejudge", rejudge), ("sensitivity", sensitivity)):
         s = sub.add_parser(name)
         if name == "run":
             s.add_argument("--workers", type=int, default=3, help="lessons worked at once")
