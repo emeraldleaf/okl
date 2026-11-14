@@ -117,3 +117,36 @@ def test_the_result_figures_are_the_receipts():
     # §4af's figure, quoted here, is §4af's
     af = " ".join(report[report.index("## 4af."):report.index("## 4ag.")].split())
     assert "8 passed a check too narrow" in af and "in §4af, 8 of drift's misses passed a check too narrow" in section
+
+
+def test_the_rule_wide_pilot_names_what_the_mapping_and_the_counts_say():
+    """§4be's table: each lesson's check is the file the mapping copies, each break count is the
+    concentration receipt's, the total is 38, and every check exists on main at the source commit."""
+    import subprocess
+    concentration = json.loads((REPO / "evals" / "results" / "break-concentration-20261110-1600.json").read_text())
+    breaks = {r["lesson"]: r["breaks"] for r in concentration["top20"]}
+    report = (REPO / "evals" / "REPORT.md").read_text()
+    section = report[report.index("## 4be."):report.index("## 5. Findings")]
+    total = 0
+    for lesson, (path, _selector) in cr.RULEWIDE.items():
+        short = lesson.rsplit(":", 1)[-1]
+        row = next(line for line in section.splitlines() if line.startswith(f"| {short}"))
+        assert f"| {breaks[lesson]} | {path} |" in row, (lesson, row)
+        total += breaks[lesson]
+        assert subprocess.run(["git", "-C", str(REPO), "cat-file", "-e", f"{cr.SOURCE}:{path}"]).returncode == 0
+    assert total == 38 and "Together, 38 of the 124 breaks" in " ".join(section.split())
+    assert f"main at {cr.SOURCE[:7]}" in section
+
+
+def test_the_rule_wide_result_figures_are_the_receipt():
+    """§4be's result quotes its receipt: the counts, the reasons, the reading."""
+    receipt = json.loads(sorted((REPO / "evals" / "results").glob("check-reach-rulewide-*.json"))[-1].read_text())
+    report = (REPO / "evals" / "REPORT.md").read_text()
+    section = " ".join(report[report.index("## 4be."):report.index("## 5. Findings")].split())
+    s = receipt["sorted"]
+    assert f"| {receipt['covered']} | {s.get('caught', 0)} | {s.get('missed', 0)} | {s['cannot_judge']} |" in section
+    assert receipt["reading"] == "the backward method cannot judge today's checks" and receipt["reading"] in section
+    why = receipt["cannot_judge_why"]
+    assert (why["base exit 1; change exit 1"], why["base exit 2; change exit 2"]) == (23, 13)
+    assert "23 by a failing test or script, 13 by a test file that would not even collect" in section
+    assert receipt["per_check"]["ci/check-diagram-names.py"] == {"missed": 2}
