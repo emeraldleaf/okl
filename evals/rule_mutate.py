@@ -35,6 +35,7 @@ import drift_mutate as dm
 import drift_replay as dr
 import lesson_review as lr
 import run_guard
+import sandbox as sb
 
 REPO = dr.REPO
 RESULTS = dr.RESULTS
@@ -280,13 +281,13 @@ def run(args: argparse.Namespace) -> int:
     shas = {lid: dr.text_sha(n) for lid, n in nodes.items()}
     seen = {k: r for k, r in done().items() if r["base"] == base[:12] and r["lesson_sha"] == shas[r["lesson"]]}
     main_status = git("status", "--porcelain")
-    room = Path(tempfile.mkdtemp(prefix="okl-4bf-"))
+    room = Path(tempfile.mkdtemp(prefix="okl-w-"))   # a breaker's path names no experiment (#446)
 
     def work(slot: int, lid: str) -> list[dict]:
         n = nodes[lid]
         text = dm.LESSON.format(title=n.title, symptom=n.symptom or "", fix=n.fix or "")
         governed = [g.strip() for g in (n.files or "").split(",") if g.strip()]
-        wt = room / f"breaker-{slot}"
+        wt = room / f"t{slot}"
         git("worktree", "add", "-q", "--detach", str(wt), base)
         out = []
         try:
@@ -308,7 +309,8 @@ def run(args: argparse.Namespace) -> int:
                              "different change." if earlier else "")
                     prompt = (dm.BREAK_PROMPT.format(lesson=text, avoid=avoid) if kind == "breaking" else
                               HARMLESS_PROMPT.format(lesson=text, avoid=avoid))
-                    s = dm.claude(dm.BREAKER, prompt, wt)
+                    with sb.no_git(wt):   # the session reads no git status, so no commit subject (#446)
+                        s = dm.claude(dm.BREAKER, prompt, wt)
                     git("checkout", "-q", "HEAD", "--", *kept_out, repo=wt)
                     git("add", "-A", repo=wt)
                     diff = git("diff", "--cached", "HEAD", repo=wt)   # with any file the breaker created

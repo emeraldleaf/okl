@@ -11,8 +11,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
-import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -22,6 +20,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 import run_guard
+import sandbox as sb
 
 from okl import core
 from okl.client import Client
@@ -58,15 +57,11 @@ def older_code(commit: str) -> dict:
     live = Path((Client()._local_store().url or "").removeprefix("sqlite:///"))
     with tempfile.TemporaryDirectory(prefix="okl-rank-") as tmp:
         copy = Path(tmp) / "okl.db"
-        src = sqlite3.connect(f"file:{live}?mode=ro", uri=True)
-        dst = sqlite3.connect(copy)
-        src.backup(dst)
-        src.close(); dst.close()
+        sb.copy_sqlite(live, copy)   # read-only, escaped, with its log (#446)
         wt = Path(tmp) / "wt"
         subprocess.run(["git", "-C", str(REPO), "worktree", "add", "-q", "--detach", str(wt), commit], check=True)
         try:
-            env = {**os.environ, "PYTHONPATH": str(wt / "src"), "OKL_BRIEFING_LOG": "0",
-                   "OKL_DATABASE_URL": f"sqlite:///{copy}"}
+            env = sb.clean_env(tree=wt, OKL_DATABASE_URL=f"sqlite:///{copy}")   # no session, okl or git variable (#446)
             p = subprocess.run([sys.executable, "evals/preflight.py"], cwd=wt, env=env, capture_output=True, text=True)
         finally:
             subprocess.run(["git", "-C", str(REPO), "worktree", "remove", "--force", str(wt)], check=False)

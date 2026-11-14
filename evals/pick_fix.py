@@ -167,7 +167,7 @@ def search(db: Path, text: str, lessons: set[str]) -> list[str]:
 def ask(cmd: list[str], prompt: str, model: str) -> str | None:
     """One call's text, or None (a usage limit looks like this)."""
     try:
-        with sb.empty_room() as room:   # never the checkout, where CLAUDE.md loads (#446)
+        with sb.empty_room() as room:   # never the checkout, whose git status a session reads (#446)
             p = subprocess.run(cmd, input=prompt, capture_output=True, text=True, timeout=900, cwd=room,
                                env=sb.clean_env())
         reply = json.loads(p.stdout)

@@ -319,7 +319,7 @@ def main() -> int:
         else:
             lessons.append((lid, rule, check))
 
-    room = Path(tempfile.mkdtemp(prefix="okl-mutate-"))
+    room = Path(tempfile.mkdtemp(prefix="okl-w-"))   # a breaker's path names no experiment (#446)
     (room / "control").mkdir()
     control = dr.Replayer(room / "control")
     try:
@@ -338,7 +338,7 @@ def main() -> int:
         n = nodes[lid]
         text = LESSON.format(title=n.title, symptom=n.symptom or "", fix=n.fix or "")
         files = dr.governs(rule)
-        wt = room / f"breaker-{slot}-{lid[:16]}"
+        wt = room / f"t{slot}"
         dr.git("worktree", "add", "-q", "--detach", str(wt), base)
         (room / f"eval-{slot}").mkdir()
         r = dr.Replayer(room / f"eval-{slot}")
@@ -363,7 +363,8 @@ def main() -> int:
                              "different change." if earlier else "")
                     prompt = (BREAK_PROMPT.format(lesson=text, avoid=avoid) if kind == "breaking" else
                               HARMLESS_PROMPT.format(lesson=text, files=", ".join(files), avoid=avoid))
-                    s = claude(BREAKER, prompt, wt)
+                    with sb.no_git(wt):
+                        s = claude(BREAKER, prompt, wt)
                     dr.git("checkout", "-q", "HEAD", "--", *kept_out, repo=wt)
                     dr.git("add", "-A", repo=wt)   # staged first, so the diff carries files the breaker created (#446)
                     diff = dr.git("diff", "--cached", "HEAD", repo=wt)
@@ -412,7 +413,7 @@ def main() -> int:
         "what": f"drift catch rate (REPORT {'§4ah, the re-run' if args.base != BASE else '§4af'})",
         "at": f"{datetime.now(UTC):%Y-%m-%dT%H:%MZ}",
         "code": dr.git("rev-parse", "--short=12", "HEAD").strip(), "base": base[:12], "blind": args.blind,
-        "breaker": " ".join(BREAKER), "judge": " ".join(JUDGE), "ci_steps": CI_STEPS,
+        "breaker": " ".join(BREAKER), "judge": " ".join(JUDGE), "ci_steps": CI_STEPS, "model_env": sb.MODEL_ENV,
         "models": {who: sorted({m for p in patches for m in p.get(f"{who}_models", [])}) for who in ("breaker", "judge")},
         "ci_at_base": {"verdict": ci_base, "failed": ci_base_failed}, "left_out": left_out,
         "lessons": [lid for lid, _r, _c in lessons], "main_checkout_changed": moved,

@@ -108,7 +108,9 @@ def patch_of(room: Path) -> str:
     `git diff` reads tracked files only, so a new file the agent wrote was left out of the patch a
     later regrade applies (#446)."""
     git("add", "-A", cwd=room)
-    return git("diff", "--cached", cwd=room)
+    patch = git("diff", "--cached", cwd=room)
+    git("reset", "-q", cwd=room)   # unstaged again, so a grader that reads the index sees the tree as before
+    return patch
 
 
 @contextmanager
