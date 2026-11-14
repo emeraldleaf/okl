@@ -48,9 +48,9 @@
       "title": "okl's docs are agent-neutral; Claude Code-only parts are labelled as such",
       "scope": "repo:okl",
       "files": "README.md,docs/",
-      "verified_at": 1794679222218,
-      "verified_by": "`python3 ci/check-agent-neutral.py` exit 0, matched 'AGENT NEUTRAL' on commit e2fe004ef9fd @ 2026-11-14T18:00Z",
-      "verified_commit": "e2fe004ef9fdfe995d90d40367b0037c5b3d5a2a"
+      "verified_at": 1794681170569,
+      "verified_by": "`python3 ci/check-agent-neutral.py` exit 0, matched 'AGENT NEUTRAL' on commit 2625b7e49c89 @ 2026-11-14T18:32Z",
+      "verified_commit": "2625b7e49c898b6616594cd31c9ca75cd2adddf3"
     },
     {
       "id": "n_07faa4565128",
@@ -68,9 +68,9 @@
       "title": "A test that imports an undeclared package passes only where that package happens to be installed",
       "scope": "org",
       "files": "tests/,pyproject.toml,.github/workflows/ci.yml",
-      "verified_at": 1794679223343,
-      "verified_by": "`python3 ci/check-test-imports.py` exit 0, matched 'NO UNDECLARED IMPORT' on commit e2fe004ef9fd @ 2026-11-14T18:00Z",
-      "verified_commit": "e2fe004ef9fdfe995d90d40367b0037c5b3d5a2a"
+      "verified_at": 1794681171712,
+      "verified_by": "`python3 ci/check-test-imports.py` exit 0, matched 'NO UNDECLARED IMPORT' on commit 2625b7e49c89 @ 2026-11-14T18:32Z",
+      "verified_commit": "2625b7e49c898b6616594cd31c9ca75cd2adddf3"
     },
     {
       "id": "n_9ba48d85ed19",
@@ -78,9 +78,9 @@
       "title": "Pre-flight the retrieval before spending on an eval — it is deterministic and answers in milliseconds",
       "scope": "org",
       "files": "evals/preflight.py,evals/ab_harness.py",
-      "verified_at": 1794679217874,
-      "verified_by": "`python3 evals/preflight.py` exit 0, matched 'PRE-FLIGHT OK' on commit e2fe004ef9fd @ 2026-11-14T18:00Z",
-      "verified_commit": "e2fe004ef9fdfe995d90d40367b0037c5b3d5a2a"
+      "verified_at": 1794681165172,
+      "verified_by": "`python3 evals/preflight.py` exit 0, matched 'PRE-FLIGHT OK' on commit 2625b7e49c89 @ 2026-11-14T18:32Z",
+      "verified_commit": "2625b7e49c898b6616594cd31c9ca75cd2adddf3"
     },
     {
       "id": "n_aa3e45a2ecd6",
@@ -88,9 +88,9 @@
       "title": "Provenance references rot precisely because nothing reads them — validate them at startup",
       "scope": "org",
       "files": "evals/ab_harness.py,evals/tasks.jsonl",
-      "verified_at": 1794679221899,
-      "verified_by": "`python3 evals/preflight.py && python3 -m pytest -q tests/test_ab_harness.py` exit 0, matched 'passed' on commit e2fe004ef9fd @ 2026-11-14T18:00Z",
-      "verified_commit": "e2fe004ef9fdfe995d90d40367b0037c5b3d5a2a"
+      "verified_at": 1794681170271,
+      "verified_by": "`python3 evals/preflight.py && python3 -m pytest -q tests/test_ab_harness.py` exit 0, matched 'passed' on commit 2625b7e49c89 @ 2026-11-14T18:32Z",
+      "verified_commit": "2625b7e49c898b6616594cd31c9ca75cd2adddf3"
     },
     {
       "id": "n_bf6a2aee2f12",
@@ -108,9 +108,9 @@
       "title": "Entered a crowded category deliberately: differentiate on verification-of-memory, compose with memory infra, never compete on recall",
       "scope": "repo:okl",
       "files": "README.md,docs/",
-      "verified_at": 1794679222623,
-      "verified_by": "`python3 ci/check-positioning.py` exit 0, matched 'POSITIONING OK' on commit e2fe004ef9fd @ 2026-11-14T18:00Z",
-      "verified_commit": "e2fe004ef9fdfe995d90d40367b0037c5b3d5a2a"
+      "verified_at": 1794681170961,
+      "verified_by": "`python3 ci/check-positioning.py` exit 0, matched 'POSITIONING OK' on commit 2625b7e49c89 @ 2026-11-14T18:32Z",
+      "verified_commit": "2625b7e49c898b6616594cd31c9ca75cd2adddf3"
     },
     {
       "id": "n_ead8e0a2b43d",
