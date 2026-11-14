@@ -1,0 +1,15 @@
+diff --git a/src/okl/recap.py b/src/okl/recap.py
+index 2fc321a..0895e62 100644
+--- a/src/okl/recap.py
++++ b/src/okl/recap.py
+@@ -107,8 +107,8 @@ def changed_paths(repo_dir: str, since: str | None) -> set[str]:
+     okl's own snapshot and store are left out; verify rewrites the snapshot on its own.
+     """
+     paths = set()
+-    for line in _git_lines(repo_dir, "status", "--porcelain", "--untracked-files=all", "--",
+-                           ".", f":(exclude){SNAPSHOT_FILE}", ":(exclude).okl"):
++    for line in _git_lines(repo_dir, "status", "--porcelain", "--untracked-files=all",
++                           ".",f":(exclude){SNAPSHOT_FILE}", ":(exclude).okl"):
+         path = line[3:]
+         paths.add(path.split(" -> ", 1)[-1].strip('"'))    # a rename: the new path
+     if since:

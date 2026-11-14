@@ -1,0 +1,13 @@
+diff --git a/docs/GETTING-STARTED.md b/docs/GETTING-STARTED.md
+index 0ab4d09..9b2a3db 100644
+--- a/docs/GETTING-STARTED.md
++++ b/docs/GETTING-STARTED.md
+@@ -79,7 +79,7 @@ you and records it once you confirm. Section 2 shows what a good lesson contains
+ underneath.
+ 
+ To start from what the code already does rather than from memory, run
+-`/seed-from-codebase` (Claude Code): the agent reads the repo and proposes cited lessons
++`/seed-from-codebase`: the agent reads the repo and proposes cited lessons
+ into a file you review before importing anything (`okl scaffold .` adds it outside the plugin). `okl seed`
+ lists more bundled packs; `okl seed <name>` imports one.
+ 

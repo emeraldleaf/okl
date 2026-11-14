@@ -1,0 +1,14 @@
+diff --git a/evals/ab_harness.py b/evals/ab_harness.py
+index 9d3fc5f..f214e4b 100644
+--- a/evals/ab_harness.py
++++ b/evals/ab_harness.py
+@@ -652,7 +652,8 @@ def moved_banner(moved: dict) -> str:
+     """The report-time line for a run whose working tree moved; a function so it is testable."""
+     return (f"❌ RESULTS NOT USABLE — the working tree moved from {moved['okl_commit_at_start']} to "
+             f"{moved['okl_commit']} during the run, so the later briefings came from code the "
+-            "pre-registration did not describe. Run the harness from a pinned worktree.")
++            "pre-registration did not describe. Discard this receipt and rerun the harness "
++            "from a pinned worktree.")
+ 
+ 
+ def _okl_commit() -> str | None:

@@ -1,0 +1,13 @@
+diff --git a/src/okl/cli/packs.py b/src/okl/cli/packs.py
+index 780302d..f2afd1b 100644
+--- a/src/okl/cli/packs.py
++++ b/src/okl/cli/packs.py
+@@ -239,7 +239,7 @@ def _seed_targets(args: argparse.Namespace, seed_dir: Path, present: set[str]) -
+         # shares a bundled pack's name would be indistinguishable here and the bundled text
+         # would overwrite the repo's (review on #276). A same-named file in the repo's
+         # conventional places wins by being skipped: the user names the source they mean.
+-        # A pack renamed since this store was seeded is refreshed from its new name (#379).
++        # See #379.
+         stems = {core.current_pack(i.split(":")[1]) for i in present
+                  if i.startswith("seed:") and i.count(":") >= 2}
+         # In okl's own checkout the bundled dir IS ./seed, which is no collision (review on #276).

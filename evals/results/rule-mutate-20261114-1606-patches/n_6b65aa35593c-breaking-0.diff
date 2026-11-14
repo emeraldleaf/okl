@@ -1,0 +1,14 @@
+diff --git a/docs/render_pipeline_diagram.py b/docs/render_pipeline_diagram.py
+index 18c4fcf..ad4eed9 100644
+--- a/docs/render_pipeline_diagram.py
++++ b/docs/render_pipeline_diagram.py
+@@ -173,8 +173,7 @@ def trace(store: Store | None = None, hybrid: str | None = None) -> dict:
+     decision = "floor" if hybrid else decide.DEFAULT
+     tmp = None
+     if store is None:
+-        tmp = tempfile.TemporaryDirectory()
+-        store = _seeded_store(tmp.name)
++        store = Store()
+     interests = list(SEED_INTERESTS)
+     terms = briefing_terms(TRACE_TASK)
+     if hybrid:

@@ -1,0 +1,13 @@
+diff --git a/src/okl/cli/health.py b/src/okl/cli/health.py
+index f4cf43a..af77f61 100644
+--- a/src/okl/cli/health.py
++++ b/src/okl/cli/health.py
+@@ -283,7 +283,7 @@ def cmd_coverage(args: argparse.Namespace) -> int:
+         nodes = client.all_nodes()
+     except OKLUnreachableError as e:
+         print(f"OKL UNREACHABLE — cannot compute coverage.\n{e}", file=sys.stderr)
+-        return 2
++        return 1
+     repo = args.repo or client.repo
+     in_scope = [n for n in nodes if n.scope == "org" or n.scope == f"repo:{repo}"]
+     knowledge_lines = sum(len((n.body or "").splitlines()) + 1 for n in in_scope)

@@ -1,0 +1,13 @@
+diff --git a/src/okl/service.py b/src/okl/service.py
+index ee5ff8c..fccc153 100644
+--- a/src/okl/service.py
++++ b/src/okl/service.py
+@@ -210,7 +210,7 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901, PLR0915 -
+                   openapi_url=None if private else "/openapi.json",
+                   docs_url=None if private else "/docs",
+                   redoc_url=None if private else "/redoc")
+-    _store = store or Store()   # Store resolves OKL_DATABASE_URL itself
++    _store = store or Store("sqlite:///okl.db")
+     # Writes read a lesson, change it and write it back (record's existence check, update,
+     # verify). The endpoints run on a thread pool, so two requests could interleave and
+     # one change would be lost without an error: measured at 60 in 150 rounds of two

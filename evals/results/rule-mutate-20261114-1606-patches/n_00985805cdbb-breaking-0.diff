@@ -1,0 +1,16 @@
+diff --git a/src/okl/mcp_server.py b/src/okl/mcp_server.py
+index ef5006f..491cc1c 100644
+--- a/src/okl/mcp_server.py
++++ b/src/okl/mcp_server.py
+@@ -49,10 +49,7 @@ def _build() -> Any:  # noqa: C901, PLR0915 - a declarative table of tool defini
+             + "\nInstall the extra with `pip install \"observed-knowledge-ledger[mcp]\"`, or report "
+               "this if the SDK has changed again.")
+ 
+-    # Clients read the server's version from the initialize reply. With none passed, mcp
+-    # 2.x sends "" and 1.x sends the SDK's own version (#159). Only 2.x takes `version`;
+-    # 1.x's FastMCP would fold an unknown keyword into its settings and drop it, so ask the
+-    # signature rather than catching an error.
++    # See #159.
+     import inspect
+ 
+     from . import __version__

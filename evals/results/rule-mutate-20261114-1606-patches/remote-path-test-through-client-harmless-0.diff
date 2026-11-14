@@ -1,0 +1,15 @@
+diff --git a/src/okl/client.py b/src/okl/client.py
+index 2a5f7f8..99456dc 100644
+--- a/src/okl/client.py
++++ b/src/okl/client.py
+@@ -696,7 +696,9 @@ def _repo_relative(paths: list[str], root: Path) -> tuple[list[str], list[str]]:
+         # tracked symlink is governed by its own name, as git tracks it.
+         full = Path(os.path.normpath(Path(p) if Path(p).is_absolute() else Path.cwd() / p))
+         try:
+-            inside.append((full.parent.resolve() / full.name).relative_to(base).as_posix())
++            rel = (full.parent.resolve() / full.name).relative_to(base).as_posix()
++            if rel not in inside:   # `a.py` and `./a.py` are one file: ask once
++                inside.append(rel)
+         except ValueError:
+             outside.append(p)
+     return inside, outside

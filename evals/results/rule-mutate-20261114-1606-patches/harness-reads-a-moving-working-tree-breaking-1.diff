@@ -1,0 +1,13 @@
+diff --git a/evals/run_guard.py b/evals/run_guard.py
+index 38d99d2..7d6de18 100644
+--- a/evals/run_guard.py
++++ b/evals/run_guard.py
+@@ -29,7 +29,7 @@ class Run:
+ 
+     def stamp(self, receipt: dict[str, Any]) -> dict[str, Any]:
+         """Add the commit at the start and at the end; a run whose code moved is not usable, and says so."""
+-        now = ab.tree_state(READS)
++        now = self.started
+         receipt["okl_commit_at_start"], receipt["okl_commit"] = self.started[0], now[0]
+         moved = ab.head_moved(self.started, now)
+         if moved:

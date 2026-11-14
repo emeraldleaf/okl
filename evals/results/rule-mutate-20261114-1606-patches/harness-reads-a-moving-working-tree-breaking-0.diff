@@ -1,0 +1,13 @@
+diff --git a/evals/ab_harness.py b/evals/ab_harness.py
+index 9d3fc5f..b08165c 100644
+--- a/evals/ab_harness.py
++++ b/evals/ab_harness.py
+@@ -913,7 +913,7 @@ def main() -> int:
+               "reading any number below.")
+     # One reading of the tree at the end, used for both the verdict and the receipt, so
+     # the receipt cannot say usable beside a commit the verdict never saw (review on #262).
+-    ended_tree = tree_state()
++    ended_tree = started_tree
+     moved = head_moved(started_tree, ended_tree)
+     if moved:
+         print(moved_banner(moved))

@@ -1,0 +1,20 @@
+diff --git a/evals/run_guard.py b/evals/run_guard.py
+index 38d99d2..b324a37 100644
+--- a/evals/run_guard.py
++++ b/evals/run_guard.py
+@@ -14,6 +14,7 @@ fails a new receipt writer that does not use it.
+ from __future__ import annotations
+ 
+ import sys
++from pathlib import Path
+ from typing import Any
+ 
+ import ab_harness as ab
+@@ -31,6 +32,7 @@ class Run:
+         """Add the commit at the start and at the end; a run whose code moved is not usable, and says so."""
+         now = ab.tree_state(READS)
+         receipt["okl_commit_at_start"], receipt["okl_commit"] = self.started[0], now[0]
++        receipt["run_cwd"] = str(Path.cwd())   # which checkout the run rendered from
+         moved = ab.head_moved(self.started, now)
+         if moved:
+             receipt["usable"] = False

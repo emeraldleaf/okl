@@ -1,0 +1,12 @@
+diff --git a/src/okl/scaffold/hooks/userpromptsubmit-okl-check.sh b/src/okl/scaffold/hooks/userpromptsubmit-okl-check.sh
+index f1476da..d3f047b 100755
+--- a/src/okl/scaffold/hooks/userpromptsubmit-okl-check.sh
++++ b/src/okl/scaffold/hooks/userpromptsubmit-okl-check.sh
+@@ -254,7 +254,6 @@ run_check() {
+     fi
+     [[ "$rc" -eq 0 ]] && break
+     case "$rc" in 126|127) break ;; esac
+-    [[ $((SECONDS - started)) -ge 3 ]] && break
+     [[ "$attempt" -lt 3 ]] && sleep 0.5
+   done
+   run_s=$((SECONDS - t0))

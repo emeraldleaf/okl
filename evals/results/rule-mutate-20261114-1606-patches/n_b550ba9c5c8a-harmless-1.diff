@@ -1,0 +1,12 @@
+diff --git a/docs/DEVELOPING.md b/docs/DEVELOPING.md
+index f001c91..3740ef0 100644
+--- a/docs/DEVELOPING.md
++++ b/docs/DEVELOPING.md
+@@ -49,6 +49,7 @@ src/okl/
+    lint-imports
+    bash gates/run-gates.sh           # links, doc orphans, diagram pairs, tombstones, canon size
+    ./ci/check-diagram-figures.sh     # every figure in a diagram names a committed receipt
++                                     # (after editing a .excalidraw, re-render its .svg first)
+    python3 ci/check-diagram-names.py # names in the drawn diagrams exist in the code, and each
+                                      # .svg carries its source's text: reads HEAD,
+                                      # so commit first, or pass the .excalidraw paths to check

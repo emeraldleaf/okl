@@ -1,0 +1,23 @@
+diff --git a/tests/test_changes.py b/tests/test_changes.py
+index e77afcf..147fe29 100644
+--- a/tests/test_changes.py
++++ b/tests/test_changes.py
+@@ -152,7 +152,17 @@ def test_a_change_with_nothing_structural_says_so(repo, capsys):
+ def test_a_base_git_cannot_find_is_refused(repo, capsys):
+     """A base git cannot resolve is exit 2, said on stderr."""
+     assert main(["changes", "--base", "no-such-branch"]) == 2
+-    assert "okl changes:" in capsys.readouterr().err
++    out = capsys.readouterr()
++    assert "okl changes:" in out.err
++    assert out.out == ""
++
++
++def test_a_head_git_cannot_find_is_refused(repo, capsys):
++    """An unresolvable head is refused the same way: exit 2, stderr only."""
++    assert main(["changes", "--base", "main", "--head", "no-such-branch"]) == 2
++    out = capsys.readouterr()
++    assert "okl changes:" in out.err
++    assert out.out == ""
+ 
+ 
+ def test_a_store_that_refuses_still_leaves_the_git_report(repo, capsys, monkeypatch):

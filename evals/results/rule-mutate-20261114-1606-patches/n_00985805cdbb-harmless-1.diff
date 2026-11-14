@@ -1,0 +1,15 @@
+diff --git a/ci/check-doc-commands.py b/ci/check-doc-commands.py
+index 5bbceb6..c438595 100755
+--- a/ci/check-doc-commands.py
++++ b/ci/check-doc-commands.py
+@@ -29,7 +29,9 @@ sys.path.insert(0, str(REPO / "src"))
+ 
+ from okl.cli.parser import build_parser  # noqa: E402 - the path above makes this checkout's okl importable
+ 
+-# Commands the docs name as not built yet, with the issue that tracks them.
++# Commands the docs name as not built yet, with the issue that tracks them. An entry exists
++# because a doc describes the command before the CLI has it, which would otherwise fail this
++# check; delete the entry when the command ships, so the docs are held to its real flags.
+ PLANNED = {"okl log": "#129", "okl explain": "#129"}
+ # What may run okl as a command: a wrapper before it is dropped (`python3 -m okl`, `uv run okl`).
+ WRAPPERS = (("python", "-m"), ("python3", "-m"), ("uv", "run"), ("exec",), ("time",), ("sudo",))

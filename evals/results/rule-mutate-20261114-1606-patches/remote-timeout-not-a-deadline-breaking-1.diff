@@ -1,0 +1,13 @@
+diff --git a/src/okl/client.py b/src/okl/client.py
+index 2a5f7f8..79c457b 100644
+--- a/src/okl/client.py
++++ b/src/okl/client.py
+@@ -680,8 +680,6 @@ class Client:
+             raise OKLUnreachableError(f"OKL service error at {url}: {e.code} {e.reason}") from e
+         except URLError as e:
+             raise OKLUnreachableError(f"OKL service unreachable at {url}: {e}") from e
+-        except (OSError, http.client.HTTPException) as e:   # after URLError, an OSError too
+-            raise _no_answer(url, e) from e
+         return _json_reply(url, body)
+ 
+ 

@@ -1,0 +1,13 @@
+diff --git a/src/okl/cli/on_edit.py b/src/okl/cli/on_edit.py
+index 094c096..0907fd6 100644
+--- a/src/okl/cli/on_edit.py
++++ b/src/okl/cli/on_edit.py
+@@ -30,7 +30,7 @@ from typing import TYPE_CHECKING
+ 
+ from .. import core
+ from ..client import Client, OKLUnreachableError, _find_config, _repo_relative, save_config
+-from ..store import RETIRED_STATUSES
++RETIRED_STATUSES = frozenset({"retracted", "obsolete", "superseded"})
+ from .verification import _run_check, _stored_check, shown
+ 
+ if TYPE_CHECKING:

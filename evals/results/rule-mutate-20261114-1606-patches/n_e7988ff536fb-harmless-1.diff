@@ -1,0 +1,41 @@
+diff --git a/src/okl/cli/standing.py b/src/okl/cli/standing.py
+index 2b8fc93..6a94262 100644
+--- a/src/okl/cli/standing.py
++++ b/src/okl/cli/standing.py
+@@ -21,8 +21,12 @@ def cmd_standing(args: argparse.Namespace) -> int:
+     if path is None:
+         print("okl standing: no .okl/config.json here or above: run okl init first", file=sys.stderr)
+         return 2
+-    config = json.loads(path.read_text())
+-    ids = [str(i) for i in config.get("standing") or []]
++    try:
++        config = json.loads(path.read_text())
++    except (OSError, ValueError) as e:
++        print(f"okl standing: {path} could not be read ({e})", file=sys.stderr)
++        return 2
++    ids =[str(i) for i in config.get("standing") or []]
+     client = Client()
+     if args.action == "add":
+         try:
+diff --git a/tests/test_standing.py b/tests/test_standing.py
+index a8d0b3a..1b7736f 100644
+--- a/tests/test_standing.py
++++ b/tests/test_standing.py
+@@ -112,6 +112,17 @@ def test_the_command_needs_a_config(tmp_path, monkeypatch, capsys):
+     assert "run okl init first" in capsys.readouterr().err
+ 
+ 
++def test_the_command_refuses_a_config_it_cannot_parse(repo, capsys):
++    """A config that is not JSON exits 2 with the reason on stderr, stdout empty, file untouched."""
++    path = repo / ".okl" / "config.json"
++    path.write_text("{not json")
++    assert main(["standing"]) == 2
++    captured = capsys.readouterr()
++    assert "could not be read" in captured.err
++    assert captured.out == ""
++    assert path.read_text() == "{not json"
++
++
+ def test_a_prompt_the_harness_wrote_gets_none(repo):
+     """A task notification or a sub-agent's report briefs nothing, and standing lessons are no
+     exception: they would otherwise fill the context on every harness turn (CodeRabbit sweep 7)."""

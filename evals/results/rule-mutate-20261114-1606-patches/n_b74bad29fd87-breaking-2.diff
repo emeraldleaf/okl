@@ -1,0 +1,131 @@
+diff --git a/src/okl/memory.py b/src/okl/memory.py
+new file mode 100644
+index 0000000..f935b77
+--- /dev/null
++++ b/src/okl/memory.py
+@@ -0,0 +1,92 @@
++"""An in-memory storage backend, for tests and throwaway sessions that need no database file."""
++
++from __future__ import annotations
++
++from okl.store import Briefing, CheckRun, Edge, Node, Retirement
++
++
++class MemoryBackend:
++    def __init__(self) -> None:
++        self._nodes: dict[str, Node] = {}
++        self._edges: dict[tuple[str, str, str], Edge] = {}
++        self._briefings: list[Briefing] = []
++        self._retirements: list[Retirement] = []
++        self._checks: list[CheckRun] = []
++        self._embeddings: dict[tuple[str, str], tuple[str, bytes]] = {}
++
++    def init_schema(self) -> None:
++        pass
++
++    def upsert_node(self, node: Node) -> None:
++        self._nodes[node.id] = node
++
++    def upsert_edge(self, edge: Edge) -> None:
++        self._edges[(edge.src, edge.rel, edge.dst)] = edge
++
++    def get_node(self, node_id: str) -> Node | None:
++        return self._nodes.get(node_id)
++
++    def search(self, q: str, scope: str | None, node_types: list[str] | None,
++               limit: int) -> list[Node]:
++        terms = q.lower().split()
++        scored = []
++        for n in self._nodes.values():
++            if scope is not None and n.scope != scope:
++                continue
++            if node_types is not None and n.type not in node_types:
++                continue
++            title, rest = n.title.lower(), " ".join([n.body, n.symptom or "", n.fix or ""]).lower()
++            score = sum(2 * (t in title) + (t in rest) for t in terms)
++            if score:
++                scored.append((score, n))
++        scored.sort(key=lambda p: -p[0])
++        return [n for _, n in scored[:limit]]
++
++    def neighbors(self, node_id: str, rels: list[str] | None) -> list[tuple[Edge, Node]]:
++        out = []
++        for e in self._edges.values():
++            if rels is not None and e.rel not in rels:
++                continue
++            other = e.dst if e.src == node_id else e.src if e.dst == node_id else None
++            if other in self._nodes:
++                out.append((e, self._nodes[other]))
++        return out
++
++    def edges(self, rels: list[str]) -> list[Edge]:
++        return [e for e in self._edges.values() if e.rel in rels]
++
++    def all_nodes(self) -> list[Node]:
++        return list(self._nodes.values())
++
++    def log_briefing(self, briefing: Briefing) -> None:
++        self._briefings.append(briefing)
++
++    def briefings(self, repo: str | None) -> list[Briefing]:
++        return [b for b in self._briefings if repo is None or b.repo == repo]
++
++    def log_retirement(self, retirement: Retirement) -> None:
++        self._retirements.append(retirement)
++
++    def retirements(self, node_id: str) -> list[Retirement]:
++        return [r for r in self._retirements if r.node_id == node_id]
++
++    def log_check(self, run: CheckRun) -> None:
++        self._checks.append(run)
++
++    def checks(self, node_id: str) -> list[CheckRun]:
++        return [c for c in self._checks if c.node_id == node_id]
++
++    def put_embedding(self, node_id: str, model: str, text_hash: str, vector: bytes) -> None:
++        self._embeddings[(node_id, model)] = (text_hash, vector)
++
++    def embeddings(self, model: str) -> list[tuple[str, str, bytes]]:
++        return [(i, h, v) for (i, m), (h, v) in self._embeddings.items() if m == model]
++
++    def has_embeddings(self, model: str) -> bool:
++        return any(m == model for _, m in self._embeddings)
++
++    def delete_embedding(self, node_id: str, model: str) -> None:
++        self._embeddings.pop((node_id, model), None)
++
++    def close(self) -> None:
++        pass
+diff --git a/tests/test_memory_backend.py b/tests/test_memory_backend.py
+new file mode 100644
+index 0000000..47cf255
+--- /dev/null
++++ b/tests/test_memory_backend.py
+@@ -0,0 +1,27 @@
++from okl.memory import MemoryBackend
++from okl.store import Edge, Node
++
++
++def _node(id, title, body="b"):
++    return Node(id=id, type="lesson", scope="global", title=title, body=body)
++
++
++def test_upsert_replaces():
++    m = MemoryBackend()
++    m.upsert_node(_node("a", "one"))
++    m.upsert_node(_node("a", "two"))
++    assert [n.title for n in m.all_nodes()] == ["two"]
++
++
++def test_search_ranks_title_first():
++    m = MemoryBackend()
++    m.upsert_node(_node("a", "other", body="cache"))
++    m.upsert_node(_node("b", "cache"))
++    assert [n.id for n in m.search("cache", None, None, 10)] == ["b", "a"]
++
++
++def test_edges_to_non_nodes_are_kept():
++    m = MemoryBackend()
++    m.upsert_edge(Edge(src="d", rel="RECURS_IN", dst="repo"))
++    assert len(m.edges(["RECURS_IN"])) == 1
++    assert m.edges([]) == []

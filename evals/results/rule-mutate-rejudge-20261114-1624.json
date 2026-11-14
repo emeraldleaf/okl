@@ -1,0 +1,295 @@
+{
+ "what": "REPORT \u00a74bf: patches without a verdict judged once more, not registered",
+ "judge": "claude -p --model opus --restricted --strict-mcp-config --output-format json --tools ",
+ "rejudged": [
+  {
+   "lesson": "n_0637c92c032f",
+   "kind": "breaking",
+   "k": 3,
+   "judge": null,
+   "judge_said": "timed out",
+   "sorted": {
+    "stored": "missed",
+    "incident": "missed",
+    "rulewide": "caught"
+   }
+  },
+  {
+   "lesson": "n_b550ba9c5c8a",
+   "kind": "breaking",
+   "k": 1,
+   "judge": "intact",
+   "judge_said": "{\"verdict\": \"intact\", \"reason\": \"The diff only changes a code constant (leaving its own comment stale), touches no diagram, README or the claims gate, and I couldn't inspect the repository (my commands returned no output) to confirm whether any README or diagram cites the 0.40 threshold.\"}",
+   "sorted": {
+    "stored": "missed"
+   }
+  },
+  {
+   "lesson": "n_849a5b0425ef",
+   "kind": "harmless",
+   "k": 0,
+   "judge": null,
+   "judge_said": "timed out",
+   "sorted": {
+    "stored": "missed"
+   }
+  },
+  {
+   "lesson": "n_c95bdc056620",
+   "kind": "breaking",
+   "k": 1,
+   "judge": null,
+   "judge_said": "timed out",
+   "sorted": {
+    "stored": "missed"
+   }
+  },
+  {
+   "lesson": "n_b550ba9c5c8a",
+   "kind": "breaking",
+   "k": 2,
+   "judge": null,
+   "judge_said": ">echo omega-omega-omega</parameter>\n</invoke>\n\n<invoke name=\"Bash\">\n<parameter name=\"command\">echo ok-ok</parameter>\n</invoke>\n\n<invoke name=\"Bash\">\n<parameter name=\"command\">echo ok-ok-ok</parameter>\n</invoke>\n\n<invoke name=\"Bash\">\n<parameter name=\"command\">echo done-done-done</parameter>\n</invoke>",
+   "sorted": {
+    "stored": "missed"
+   }
+  },
+  {
+   "lesson": "n_c95bdc056620",
+   "kind": "breaking",
+   "k": 2,
+   "judge": "broken",
+   "judge_said": "{\"verdict\": \"broken\", \"reason\": \"The hook's capability check now greps for '\\\"on-edit\\\"' while no config or scaffold file is changed to use that key, so configs that still use \\\"on_edit\\\" stop matching and the hook silently exits 0, which is the name-keyed silent fallback the lesson warns against.\"}",
+   "sorted": {
+    "stored": "missed"
+   }
+  }
+ ],
+ "cost_usd": 0.52,
+ "summary": {
+  "breaking_patches": 72,
+  "harmless_patches": 36,
+  "judge": {
+   "breaking:broken": 62,
+   "harmless:intact": 35,
+   "breaking:intact": 7,
+   "breaking:none": 3,
+   "harmless:none": 1
+  },
+  "unusable": 0,
+  "breaks": 62,
+  "groups": {
+   "hardened": {
+    "caught": 16,
+    "of": 34,
+    "rate": 0.4706,
+    "wilson95": [
+     0.3145,
+     0.6326
+    ],
+    "bootstrap95_by_lesson": [
+     0.2581,
+     0.6765
+    ],
+    "sorted": {
+     "caught": 16,
+     "missed": 18
+    },
+    "controls": 18,
+    "controls_failed": 1
+   },
+   "older": {
+    "caught": 7,
+    "of": 28,
+    "rate": 0.25,
+    "wilson95": [
+     0.1268,
+     0.4336
+    ],
+    "bootstrap95_by_lesson": [
+     0.0526,
+     0.5172
+    ],
+    "sorted": {
+     "caught": 7,
+     "missed": 21
+    },
+    "controls": 17,
+    "controls_failed": 0
+   }
+  },
+  "split": {
+   "lessons": [
+    "n_e7988ff536fb",
+    "n_5ddb0776a863",
+    "n_02cc84da158d",
+    "n_0637c92c032f"
+   ],
+   "breaks": 15,
+   "rulewide_only": 2,
+   "incident_only": 4,
+   "both": 0,
+   "neither": 9
+  },
+  "inventory_only": 0,
+  "per_lesson": {
+   "n_e7988ff536fb": {
+    "group": "hardened",
+    "breaks": 4,
+    "stored_caught": 1,
+    "incident_caught": 1,
+    "rulewide_caught": 0,
+    "rulewide-no-inventory_caught": 0,
+    "cannot_judge": 0,
+    "controls": 2,
+    "controls_failed": 0
+   },
+   "n_5ddb0776a863": {
+    "group": "hardened",
+    "breaks": 4,
+    "stored_caught": 3,
+    "incident_caught": 3,
+    "rulewide_caught": 0,
+    "rulewide-no-inventory_caught": 0,
+    "cannot_judge": 0,
+    "controls": 2,
+    "controls_failed": 0
+   },
+   "n_02cc84da158d": {
+    "group": "hardened",
+    "breaks": 4,
+    "stored_caught": 2,
+    "incident_caught": 0,
+    "rulewide_caught": 2,
+    "cannot_judge": 0,
+    "controls": 2,
+    "controls_failed": 0
+   },
+   "n_0637c92c032f": {
+    "group": "hardened",
+    "breaks": 3,
+    "stored_caught": 0,
+    "incident_caught": 0,
+    "rulewide_caught": 0,
+    "cannot_judge": 0,
+    "controls": 2,
+    "controls_failed": 0
+   },
+   "harness-reads-a-moving-working-tree": {
+    "group": "hardened",
+    "breaks": 4,
+    "stored_caught": 2,
+    "cannot_judge": 0,
+    "controls": 2,
+    "controls_failed": 1
+   },
+   "seed:geospatial-enforcement-defects:r_single_source_sets": {
+    "group": "hardened",
+    "breaks": 4,
+    "stored_caught": 4,
+    "cannot_judge": 0,
+    "controls": 2,
+    "controls_failed": 0
+   },
+   "seed:python-canon:py_dont_mock_what_you_dont_own": {
+    "group": "hardened",
+    "breaks": 3,
+    "stored_caught": 1,
+    "cannot_judge": 0,
+    "controls": 2,
+    "controls_failed": 0
+   },
+   "remote-path-test-through-client": {
+    "group": "hardened",
+    "breaks": 4,
+    "stored_caught": 0,
+    "cannot_judge": 0,
+    "controls": 2,
+    "controls_failed": 0
+   },
+   "docs-agent-neutral": {
+    "group": "hardened",
+    "breaks": 4,
+    "stored_caught": 3,
+    "cannot_judge": 0,
+    "controls": 2,
+    "controls_failed": 0
+   },
+   "n_6b65aa35593c": {
+    "group": "older",
+    "breaks": 4,
+    "stored_caught": 1,
+    "cannot_judge": 0,
+    "controls": 2,
+    "controls_failed": 0
+   },
+   "n_00985805cdbb": {
+    "group": "older",
+    "breaks": 4,
+    "stored_caught": 0,
+    "cannot_judge": 0,
+    "controls": 2,
+    "controls_failed": 0
+   },
+   "remote-timeout-not-a-deadline": {
+    "group": "older",
+    "breaks": 4,
+    "stored_caught": 4,
+    "cannot_judge": 0,
+    "controls": 2,
+    "controls_failed": 0
+   },
+   "n_849a5b0425ef": {
+    "group": "older",
+    "breaks": 4,
+    "stored_caught": 1,
+    "cannot_judge": 0,
+    "controls": 1,
+    "controls_failed": 0
+   },
+   "n_adea7f2c7373": {
+    "group": "older",
+    "breaks": 4,
+    "stored_caught": 1,
+    "cannot_judge": 0,
+    "controls": 2,
+    "controls_failed": 0
+   },
+   "n_8a6e1abce5cc": {
+    "group": "older",
+    "breaks": 0,
+    "stored_caught": 0,
+    "cannot_judge": 0,
+    "controls": 2,
+    "controls_failed": 0
+   },
+   "n_b550ba9c5c8a": {
+    "group": "older",
+    "breaks": 1,
+    "stored_caught": 0,
+    "cannot_judge": 0,
+    "controls": 2,
+    "controls_failed": 0
+   },
+   "n_b74bad29fd87": {
+    "group": "older",
+    "breaks": 4,
+    "stored_caught": 0,
+    "cannot_judge": 0,
+    "controls": 2,
+    "controls_failed": 0
+   },
+   "n_c95bdc056620": {
+    "group": "older",
+    "breaks": 3,
+    "stored_caught": 0,
+    "cannot_judge": 0,
+    "controls": 2,
+    "controls_failed": 0
+   }
+  }
+ },
+ "okl_commit_at_start": "c6ca95b",
+ "okl_commit": "c6ca95b",
+ "at": "2026-11-14T16:24Z"
+}

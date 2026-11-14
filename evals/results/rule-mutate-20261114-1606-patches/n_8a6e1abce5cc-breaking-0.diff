@@ -1,0 +1,13 @@
+diff --git a/src/okl/cli/install.py b/src/okl/cli/install.py
+index 6b1797d..ae78d79 100644
+--- a/src/okl/cli/install.py
++++ b/src/okl/cli/install.py
+@@ -811,7 +811,7 @@ def _wire_owner_paths(cfg: dict, args: argparse.Namespace) -> None:
+               "says whether it does here)")
+     wire = _should_wire_claude(args)
+     if wire[1] != _OPTED_OUT and (wire[0] or wire[1] == _BY_PLUGIN) and _merge_owner_denies(Path(".claude")):
+-        print("✓ added Claude Code deny rules for editing branch protection and merging as an admin "
++        print(f"✓ added Claude Code deny rules for {owner.name}'s branch protection and merging as an admin "
+               "→ .claude/settings.json (they advise the agent; the branch rule is what enforces)")
+ 
+ 

@@ -1,0 +1,13 @@
+diff --git a/src/okl/seed.py b/src/okl/seed.py
+index 7d8bad9..20ca448 100644
+--- a/src/okl/seed.py
++++ b/src/okl/seed.py
+@@ -90,6 +90,8 @@ def seed_from_file(client: Client, path: str, *, only: set[str] | None = None) -
+             node["repo"] = None
+             print(f"  ! {key or node.get('title', '?')}: seed node has no 'repo' — "
+                   "recording provenance as unknown, not this repo", file=sys.stderr)
++        if node.get("tags") and not node.get("applies_to"):
++            node["applies_to"] = node["tags"]
+         stable_id = f"{ns}:{key}" if key else None
+         # A re-seed updates a lesson's content; it does not verify it (#110).
+         node_id = (client.record(id=stable_id, keep_verification=True, supersedes=old_id, **node)

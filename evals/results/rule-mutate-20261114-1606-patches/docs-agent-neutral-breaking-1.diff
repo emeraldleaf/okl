@@ -1,0 +1,13 @@
+diff --git a/docs/RETRIEVAL.md b/docs/RETRIEVAL.md
+index dffdb51..5ceeea9 100644
+--- a/docs/RETRIEVAL.md
++++ b/docs/RETRIEVAL.md
+@@ -74,7 +74,7 @@ it did on the lesson in full, without opening it (REPORT §4aa). That rests on t
+ nothing else showed the same fix, so it is a small result, not a settled one.
+ 
+ A team's own lessons need triggers to reach the first tier: `okl triggers` lists the ones that
+-have none, `/triggers` drafts them in Claude Code, and the briefing says how many are missing.
++have none, `/triggers` drafts them, and the briefing says how many are missing.
+ `--decision calibrated` gives the line alone, the smallest briefing; `--decision floor` keeps
+ the original rule, every match in full.
+ 

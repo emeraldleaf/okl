@@ -1,0 +1,22 @@
+diff --git a/src/okl/cli/health.py b/src/okl/cli/health.py
+index f4cf43a..7a85dfb 100644
+--- a/src/okl/cli/health.py
++++ b/src/okl/cli/health.py
+@@ -56,7 +56,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
+     return 1 if (found or twice) else 0
+ 
+ 
+-def _interest_lines(client: Client, *, say_unread: bool = True, shown: int = 5) -> list[str]:
++def _interest_lines(client: Client, *, say_unread: bool = True, shown: int = 5) -> list[str] | None:
+     """What this repo's interests keep out of its briefings (#374), for doctor and init.
+ 
+     Informational, as the interest list is a choice a re-run of init keeps (#340). That is
+@@ -78,7 +78,7 @@ def _interest_lines(client: Client, *, say_unread: bool = True, shown: int = 5)
+     except unreadable as e:
+         why = (str(e).strip().splitlines() or [type(e).__name__])[0]
+         return [f"\n• what this repo's interests hide: not reported, the store could not be read ({why})"] \
+-            if say_unread else []
++            if say_unread else None
+     if not hidden:
+         return []
+     have = {t.strip().lower() for t in client.interests}

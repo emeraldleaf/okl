@@ -1,0 +1,12 @@
+diff --git a/src/okl/cli/install.py b/src/okl/cli/install.py
+index 6b1797d..b2d7f14 100644
+--- a/src/okl/cli/install.py
++++ b/src/okl/cli/install.py
+@@ -755,6 +755,7 @@ def cmd_init(args: argparse.Namespace) -> int:
+     found = coexist.detect(Path.cwd(), Path.home())
+     if found:
+         print("\n" + coexist.render(found))
++    print(f"\nNext: `okl doctor` re-checks this wiring for {cfg['repo']} at any time.")
+     return 0
+ 
+ 

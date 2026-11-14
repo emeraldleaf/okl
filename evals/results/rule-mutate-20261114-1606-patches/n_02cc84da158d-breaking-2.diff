@@ -1,0 +1,13 @@
+diff --git a/src/okl/store.py b/src/okl/store.py
+index ec1ffc7..921c958 100644
+--- a/src/okl/store.py
++++ b/src/okl/store.py
+@@ -367,7 +367,7 @@ class Store:
+     """Facade over whichever backend the environment selects."""
+ 
+     def __init__(self, url: str | None = None) -> None:
+-        url = url or os.environ.get("OKL_DATABASE_URL") or "sqlite:///okl.db"
++        url = url or "sqlite:///okl.db"
+         self.url = url
+         if url.startswith("postgres"):
+             self._impl: _Backend = _PostgresBackend(url)

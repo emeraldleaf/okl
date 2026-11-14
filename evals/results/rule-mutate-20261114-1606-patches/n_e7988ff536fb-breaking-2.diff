@@ -1,0 +1,10 @@
+diff --git a/src/okl/cli/verification.py b/src/okl/cli/verification.py
+index 44803e8..b62c73a 100644
+--- a/src/okl/cli/verification.py
++++ b/src/okl/cli/verification.py
+@@ -754,4 +754,4 @@ def _report_drift(args: argparse.Namespace, scan: tuple[list[DriftHit], int],
+     # however clean its output looks.
+     if hits:
+         return 1
+-    return 2 if checked == 0 else 0
++    return 0

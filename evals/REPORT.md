@@ -6733,6 +6733,94 @@ sweep's list, whether or not it breaks the rule.
 - **Deadline:** if the run cannot complete by 2026-11-20, this section records why, and nothing is
   concluded.
 
+**Result (2026-11-14): even rule-wide checks miss fresh breaks.** Receipt `rule-mutate-20261114-1606.json`,
+with its 108 patches in the directory beside it, every row made at BASE `eb6cc25`.
+
+**The run.**
+- **Every patch applied,** none was unusable, and every check ran on every patch, so none sorted as
+  cannot judge.
+- **The judge confirmed 61 of the 72 breaking patches as breaks** and called 6 intact. It called 35 of the
+  36 harmless patches intact, and those are the controls.
+- **It gave no verdict on 6 patches,** 6% of the 108, under the registered 20%. Five timed out at 300
+  seconds. Once, given no tools, it wrote out tool calls instead of an answer.
+- **Deviations.**
+  - The laptop slept partway through. The run went on when it woke, and its rows name one commit
+    throughout.
+  - The run's throwaway commits went through the developer's own `prepare-commit-msg` hook, since
+    `--no-verify` does not skip that one. The hook added a line to commit messages the run never reads.
+    Both mutation scripts now turn hooks off for these commits.
+  - It cost $8.62 at API prices, against the $7 estimated.
+  - Claude Code's own background calls to Haiku appear beside both models, as in §4ah's run.
+
+| | hardened by #415 | older |
+|---|---|---|
+| breaks the stored check caught | 16 of 34 (47.1%), Wilson 31.5–63.3%, lesson bootstrap 25.8–67.7% | 7 of 27 (25.9%), Wilson 13.2–44.7%, lesson bootstrap 5.9–53.3% |
+| controls whose stored check failed | 1 of 18 | 0 of 17 |
+
+On the four lessons that split, over their 15 breaks: the rule-wide part alone caught 2, the incident part
+alone 4, both 0, neither 9. The exit-code sweep's list tests made no catch of their own.
+
+**Predictions.**
+1. **Failed.** The hardened checks caught 47.1% of their breaks, not half.
+2. **Failed, narrowly.** The older checks caught 25.9%, not under a quarter.
+3. **Failed.** On the four that split, the incident part caught 4 breaks and the rule-wide part 2. All four
+   of the incident part's catches were in `okl drift --gate`, the code its incident came from: the gate's
+   exit code when it checked nothing, its count, and the CI step that reads it.
+4. **Held.** One hardened control failed its check: a new field in `run_guard`'s receipt broke a test that
+   compares the receipt whole.
+
+**What the registered reading says.** The hardened rate is under half, so *even rule-wide checks miss
+fresh breaks*. Each of the 18 misses, and what its check does not look at:
+
+| lesson | missed | what the check does not look at |
+|---|---|---|
+| n_e7988ff536fb | 3 of 4 | `okl embed` and `okl seed` exiting 0 where they should refuse: the sweep leaves both commands out by name. `okl coverage` exiting 1 when the store cannot be reached: the sweep runs each command with no store, not with one it cannot reach. |
+| n_5ddb0776a863 | 1 of 4 | the recap report saying every lesson is proven when drift checked none: the sweep reads exit codes, not report lines. It also runs `okl drift` without `--gate`, so it missed all four breaks; the incident tests caught the three in the gate. |
+| n_02cc84da158d | 2 of 4 | a second resolver that never reads the variable (the service falling back to a fixed file, the health check finding the store from the config): the sweep looks for reads of the variable. |
+| n_0637c92c032f | 3 of 3 | each removed what enforces the rule: the CI steps, the gate runner's diagram step, the diagrams' freshness tests. No check sees its own removal. Its one break of the rule itself, a source edited and not re-rendered, the rule-wide check caught, but the judge timed out on it. |
+| harness-reads-a-moving-working-tree | 2 of 4 | `ab_harness.py` reusing its start state at the end: the lint trusts that file's own check by name, and the guard's test fakes the tree reader. A script that keeps `import run_guard` and drops both calls: the lint looks for the import line. |
+| py_dont_mock_what_you_dont_own | 2 of 3 | source calling a library directly instead of the wrapper okl owns, so the tests' fakes no longer intercept it: the lint reads the patches in tests, not the calls in source. |
+| remote-path-test-through-client | 4 of 4 | each removed or weakened a test through the client (a case dropped, the shared fake's error threshold raised, a test deleted, a test sent past the client): the contract test checks that the client and the service agree on fields, not that each remote path has such a test. |
+| docs-agent-neutral | 1 of 4 | a rewording that names no Claude Code-only feature ("the agent's edit hook"): the scanner has nothing to match. |
+| r_single_source_sets | 0 of 4 | |
+
+Counted after reading them, not registered: 7 of the 18 misses removed or weakened what enforces the rule
+(n_0637c92c032f's three and remote-path-test-through-client's four), and 11 broke the rule by a route its
+check does not look at.
+
+**The older group.** Of its 7 catches, 4 were remote-timeout-not-a-deadline's, whose test file covers the
+failure paths all four breaks changed; n_6b65aa35593c, n_849a5b0425ef and n_adea7f2c7373 caught one each.
+n_adea7f2c7373 shows a check that covers half its rule: it caught the break that sent a command through a
+shell, and missed all three that dropped the `--` before a pathspec. n_8a6e1abce5cc's four breaks were all
+judged intact: its lesson states a limit of tests, which a change to the code cannot make false.
+
+**Re-judged, apart from the result.** Receipt `rule-mutate-rejudge-20261114-1624.json`, from `c6ca95b`,
+$0.52. Two of the six got a verdict this time: n_c95bdc056620's second break was broken, and its check
+had missed it, and n_b550ba9c5c8a's first was intact. Four still got none: three timed out again, and
+once more the judge, given no tools, wrote out tool calls instead of an answer. n_0637c92c032f's diagram
+break, the one its rule-wide check caught, is among the four. With the two verdicts in, the older group
+caught 7 of 28 (25.0%), exactly a quarter, so prediction 2 still fails and nothing else moves. As in
+§4af, these judgments are flaky, and why is not known.
+
+**What follows, as registered.** The misses go to #415's checks, with the table above naming the gap in
+each. The guide did not yet say what a check at the edit can miss; its `okl on-edit` section now says a
+check catches only what it tests, citing this section.
+
+**What it shows, and what it does not.**
+- **Shown:**
+  - On fresh breaks of their rules, the checks #415 wrote caught about half, and the older checks about a
+    quarter. The gap, 21 points, is under the 25 registered as a difference, and the intervals overlap.
+  - Where a check missed, it tested one form of its rule: one condition (no store), one spelling (a read
+    of the variable, an import line), one place (tests, not source). A break in another form passed.
+  - A check run at the edit cannot see its own removal. Seven of the 18 hardened misses were that.
+  - The incident tests still earn their place. On the four that split, they caught the breaks that came
+    back to their incident's own code, which the sweeps did not reach.
+- **Not shown:**
+  - How often real breaks take these forms. These were aimed.
+  - Any lesson outside the 18, any other repository or breaker model.
+  - Whether a check written blind from the rule would cover more forms. That is the test §4be named, and
+    it now has 61 judged breaks to run on.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

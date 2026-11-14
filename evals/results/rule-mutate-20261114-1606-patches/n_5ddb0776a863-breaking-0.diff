@@ -1,0 +1,12 @@
+diff --git a/src/okl/cli/verification.py b/src/okl/cli/verification.py
+index 44803e8..7241365 100644
+--- a/src/okl/cli/verification.py
++++ b/src/okl/cli/verification.py
+@@ -752,6 +752,4 @@ def _report_drift(args: argparse.Namespace, scan: tuple[list[DriftHit], int],
+     # Under --gate the exit code is the verdict, and it follows the CLI's contract:
+     # 1 = ran and found drift, 2 = did not run. A gate that checked no rule did not run,
+     # however clean its output looks.
+-    if hits:
+-        return 1
+-    return 2 if checked == 0 else 0
++    return 1 if hits else 0

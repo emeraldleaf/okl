@@ -1,0 +1,14 @@
+diff --git a/src/okl/store.py b/src/okl/store.py
+index ec1ffc7..65d2ea0 100644
+--- a/src/okl/store.py
++++ b/src/okl/store.py
+@@ -375,7 +375,8 @@ class Store:
+             path = url[len("sqlite:///"):] if url.startswith("sqlite:///") else ":memory:"
+             self._impl = _SQLiteBackend(path)
+         else:
+-            raise ValueError(f"unsupported OKL_DATABASE_URL scheme: {url!r}")
++            raise ValueError(
++                f"unsupported OKL_DATABASE_URL scheme: {url!r} (expected sqlite:/// or postgres://)")
+         try:
+             self._impl.init_schema()
+         except Exception:

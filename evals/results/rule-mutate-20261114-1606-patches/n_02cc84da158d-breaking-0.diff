@@ -1,0 +1,19 @@
+diff --git a/src/okl/client.py b/src/okl/client.py
+index 2a5f7f8..aa19514 100644
+--- a/src/okl/client.py
++++ b/src/okl/client.py
+@@ -41,11 +41,10 @@ def store_url(start: Path | None = None) -> str | None:
+     through here; a second reader of the variable diverged on #37, #309 and #380 (an empty
+     value counted as set in one place and unset in another), and tests/test_store_resolution.py
+     fails on a new one."""
+-    url = os.environ.get("OKL_DATABASE_URL")
+-    if url:
+-        return url
+     cfg = _find_config(start)
+-    return f"sqlite:///{cfg.parent / 'okl.db'}" if cfg else None
++    if cfg:
++        return f"sqlite:///{cfg.parent / 'okl.db'}"
++    return os.environ.get("OKL_DATABASE_URL") or None
+ 
+ 
+ def _find_config(start: Path | None = None) -> Path | None:

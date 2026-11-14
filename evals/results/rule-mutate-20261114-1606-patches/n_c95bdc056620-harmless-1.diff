@@ -1,0 +1,14 @@
+diff --git a/ci/check-test-imports.py b/ci/check-test-imports.py
+index 425e5e4..11a6d75 100644
+--- a/ci/check-test-imports.py
++++ b/ci/check-test-imports.py
+@@ -76,7 +76,8 @@ if not installs:
+ 
+ # Each job that installs runs the tests, so a test may use only what every one of them installs.
+ declared = set.intersection(*installs)
+-local = {"okl"} | {p.stem for p in tracked("tests/", "evals/", "ci/")}
++first_party = {p.parent.name for p in (REPO / "src").glob("*/__init__.py")}   # the packages under src/, whatever they are named
++local = first_party | {p.stem for p in tracked("tests/", "evals/", "ci/")}
+ dists = packages_distributions()
+ 
+ imported: dict[str, str] = {}

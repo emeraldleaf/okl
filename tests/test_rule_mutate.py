@@ -121,3 +121,77 @@ def test_a_throwaway_commit_runs_no_git_hooks():
     for script in ("rule_mutate.py", "drift_mutate.py"):
         src = (ROOT / "evals" / script).read_text()
         assert '"-c", "core.hooksPath=/dev/null", "commit"' in src, script
+
+
+RESULT = ROOT / "evals" / "results" / "rule-mutate-20261114-1606.json"
+REJUDGE = ROOT / "evals" / "results" / "rule-mutate-rejudge-20261114-1624.json"
+
+
+def _pct(k: int, n: int) -> str:
+    return f"{100 * k / n:.1f}%"
+
+
+def _interval(pair: list[float]) -> str:
+    """A receipt's four-place bounds as percentages to one place, rounding the written digits half up:
+    a float's own formatting turns 0.3145 into 31.4, where the unrounded bound is 31.4513."""
+    from decimal import ROUND_HALF_UP, Decimal
+
+    def one(x: float) -> str:
+        return str((Decimal(str(x)) * 100).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP))
+    return f"{one(pair[0])}–{one(pair[1])}%"
+
+
+def test_the_result_quotes_its_receipt():
+    """Every figure in §4bf's result is read here from the receipt it names."""
+    import json
+    sec, rec = _section(), json.loads(RESULT.read_text())
+    s = rec["summary"]
+    assert RESULT.name in sec and rec["rows_made_at"] == ["eb6cc25"] and rec["base"] == ["eb6cc25c0e62"]
+    assert "usable" not in rec and f"made at BASE `{rec['rows_made_at'][0]}`" in sec
+    assert len(list((RESULT.parent / RESULT.stem).with_name(RESULT.stem + "-patches").iterdir())) == 108
+    assert s["unusable"] == 0 and s["judge"]["breaking:broken"] == 61 and s["judge"]["breaking:intact"] == 6
+    assert s["judge"]["harmless:intact"] == 35 and s["judge"]["breaking:none"] + s["judge"]["harmless:none"] == 6
+    assert "61 of the 72 breaking" in sec and "called 6 intact" in sec and "35 of the\n  36 harmless" in sec
+    assert f"${rec['cost_usd']:.2f}" == "$8.62" and "$8.62" in sec
+    for g, label in ((rm.HARDENED, "hardened"), (rm.OLDER, "older")):
+        v = s["groups"][g]
+        assert not v["sorted"].get("cannot_judge")
+        row = (f"{v['caught']} of {v['of']} ({_pct(v['caught'], v['of'])}), Wilson {_interval(v['wilson95'])}, "
+               f"lesson bootstrap {_interval(v['bootstrap95_by_lesson'])}")
+        assert row in sec, (label, row)
+        assert f"{v['controls_failed']} of {v['controls']}" in sec
+    sp = s["split"]
+    assert (sp["breaks"], sp["rulewide_only"], sp["incident_only"], sp["both"], sp["neither"]) == (15, 2, 4, 0, 9)
+    assert "the rule-wide part alone caught 2, the incident part\nalone 4, both 0, neither 9" in sec
+    assert s["inventory_only"] == 0
+    h, o = s["groups"][rm.HARDENED], s["groups"][rm.OLDER]
+    assert round(100 * (h["rate"] - o["rate"])) == 21 and "21 points" in sec
+
+
+def test_the_miss_table_matches_the_rows():
+    """The per-lesson misses the reading names, read from the receipt."""
+    import json
+    s = json.loads(RESULT.read_text())["summary"]["per_lesson"]
+    missed = {lid: v["breaks"] - v["stored_caught"] for lid, v in s.items() if v["group"] == rm.HARDENED}
+    assert sum(missed.values()) == 18
+    sec = _section()
+    for lid, n in missed.items():
+        short = lid.rsplit(":", 1)[-1]
+        assert f"| {short} | {n} of {s[lid]['breaks']} |" in sec, short
+    assert s["remote-timeout-not-a-deadline"]["stored_caught"] == 4
+    assert all(s[lid]["stored_caught"] == 1 for lid in ("n_6b65aa35593c", "n_849a5b0425ef", "n_adea7f2c7373"))
+    assert s["n_8a6e1abce5cc"]["breaks"] == 0
+    assert s["n_5ddb0776a863"]["rulewide_caught"] == 0 and s["n_5ddb0776a863"]["incident_caught"] == 3
+
+
+def test_the_rejudge_quotes_its_receipt():
+    """Re-judged apart: two verdicts, four still none, the older group at exactly a quarter."""
+    import json
+    sec, rj = _section(), json.loads(REJUDGE.read_text())
+    assert REJUDGE.name in sec and f"${rj['cost_usd']:.2f}" == "$0.52" and "$0.52" in sec
+    assert len(rj["rejudged"]) == 6 and sum(a["judge"] is None for a in rj["rejudged"]) == 4
+    got = {(a["lesson"], a["k"]): a["judge"] for a in rj["rejudged"] if a["judge"]}
+    assert got == {("n_c95bdc056620", 2): "broken", ("n_b550ba9c5c8a", 1): "intact"}
+    o = rj["summary"]["groups"][rm.OLDER]
+    assert (o["caught"], o["of"]) == (7, 28) and "7 of 28 (25.0%)" in sec
+    assert rj["summary"]["groups"][rm.HARDENED]["caught"] == 16

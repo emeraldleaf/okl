@@ -1,0 +1,13 @@
+diff --git a/src/okl/drift.py b/src/okl/drift.py
+index 7038068..c56151c 100644
+--- a/src/okl/drift.py
++++ b/src/okl/drift.py
+@@ -65,7 +65,7 @@ def _git_last_change_ms(globs: list[str], repo_dir: str) -> int | None:
+         return None
+     try:
+         out = subprocess.run(
+-            ["git", "-C", repo_dir, "log", "-1", "--format=%ct", "--", *pathspecs],
++            ["git", "-C", repo_dir, "log", "-1", "--format=%ct", *pathspecs],
+             capture_output=True, text=True, timeout=15,
+         )
+     except (FileNotFoundError, subprocess.TimeoutExpired):

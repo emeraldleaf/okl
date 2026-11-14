@@ -319,7 +319,9 @@ and a check that runs out of time is stopped (on macOS and Linux, with the proce
 group) and reported as not judged. If a lesson's stored command changes, for instance
 after `okl verify` with a different `--run`, it stops running until you approve it again. The
 hook stamps nothing: a lesson is still verified only by `okl verify`. Another agent's own hook
-can call `okl on-edit run <file>`. Whether a failing check at the edit changes what an agent
+can call `okl on-edit run <file>`. A check catches only what it tests: a break of the same rule in
+a form the check does not look for passes it, and so does removing the check
+([REPORT §4bf](../evals/REPORT.md)). Whether a failing check at the edit changes what an agent
 writes has not been measured yet ([#435](https://github.com/emeraldleaf/okl/issues/435)).
 
 ### Commit, in this order

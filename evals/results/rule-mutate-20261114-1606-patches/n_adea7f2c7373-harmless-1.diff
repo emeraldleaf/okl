@@ -1,0 +1,13 @@
+diff --git a/src/okl/recap.py b/src/okl/recap.py
+index 2fc321a..19e0faa 100644
+--- a/src/okl/recap.py
++++ b/src/okl/recap.py
+@@ -94,7 +94,7 @@ def session_start(transcript: str | Path) -> str | None:
+ 
+ def _git_lines(repo_dir: str, *args: str) -> list[str]:
+     try:
+-        r = subprocess.run(["git", "-C", repo_dir, *args], capture_output=True, text=True,
++        r = subprocess.run(["git", "--no-optional-locks", "-C", repo_dir, *args], capture_output=True, text=True,
+                            timeout=15)
+     except (OSError, subprocess.TimeoutExpired):
+         return []

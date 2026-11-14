@@ -1,0 +1,19 @@
+diff --git a/src/okl/mcp_server.py b/src/okl/mcp_server.py
+index ef5006f..703c450 100644
+--- a/src/okl/mcp_server.py
++++ b/src/okl/mcp_server.py
+@@ -140,13 +140,7 @@ def _build() -> Any:  # noqa: C901, PLR0915 - a declarative table of tool defini
+                                     repo=repo, symptom=symptom, fix=fix, files=files, tags=tags,
+                                     aliases=aliases, triggers=triggers,
+                                     id=id, applies_to=applies_to)
+-        except OKLNoAnswerError as e:
+-            # Sent, and no usable answer: the service may have stored it, and recording it
+-            # again without an id would store it twice (okl review R10).
+-            return ("MAYBE RECORDED — the service may have stored this lesson. Before recording "
+-                    "it again, look for it with okl_search; if you gave it an id, recording it "
+-                    f"again with the same id is safe, because a stored id is refused. ({e})")
+-        except OKLUnreachableError as e:
++        except (OKLNoAnswerError, OKLUnreachableError) as e:
+             return f"NOT RECORDED — {e}"
+         except core.LessonExistsError:
+             # Point only at okl_update. The CLI also offers --replace, a deliberate

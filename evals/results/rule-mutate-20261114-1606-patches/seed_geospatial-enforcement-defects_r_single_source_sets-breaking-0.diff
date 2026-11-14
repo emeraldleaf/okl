@@ -1,0 +1,16 @@
+diff --git a/src/okl/review.py b/src/okl/review.py
+index 675190f..d6fc7af 100644
+--- a/src/okl/review.py
++++ b/src/okl/review.py
+@@ -26,9 +26,10 @@ from pathlib import Path
+ from typing import Any
+ 
+ from .core import bundled_packs, from_bundled_pack
+-from .drift import _NOT_ADVICE  # never advice; one definition (tests/test_single_source.py)
+ from .store import RETIRED_STATUSES, Node, has_observed_check
+ 
++_NOT_ADVICE = frozenset({"Retraction", "Tombstone", "Vocabulary"})
++
+ # The judge §4ai measured: read-only tools, and --restricted ignores every settings file, so no
+ # okl hook briefs it. --allowedTools takes the rest of the line, so it comes last and the prompt
+ # goes on stdin.
