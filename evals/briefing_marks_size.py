@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import copy
 import json
-import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -27,6 +26,9 @@ sys.path.insert(0, str(ROOT / "src"))
 from okl import core, drift  # noqa: E402
 from okl.client import Client  # noqa: E402
 from okl.store import Store  # noqa: E402
+
+sys.path.insert(0, str(ROOT / "evals"))
+import sandbox as sb  # noqa: E402
 
 
 def main_store() -> Path:
@@ -64,12 +66,7 @@ def main() -> int:
     rows = []
     with tempfile.TemporaryDirectory() as tmp:
         db = Path(tmp) / "okl.db"
-        src, dst = sqlite3.connect(f"file:{main_store()}?mode=ro", uri=True), sqlite3.connect(db)
-        try:
-            src.backup(dst)
-        finally:
-            src.close()
-            dst.close()
+        sb.copy_sqlite(main_store(), db)   # read-only, escaped, with its log (#446)
         store = Store(f"sqlite:///{db}")
         # The hook's own path, over this copy and never a service: a bare core.check ignored the
         # config's decision, hybrid, rerank and warm settings (review of #316).

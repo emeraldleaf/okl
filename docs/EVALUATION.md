@@ -184,8 +184,9 @@ for Building Rigorous Agentic Benchmarks*, 2025; Yu et al., ACL 2025.
 - **The mediators to log:** what was picked, and the grader's state after each pass.
 - **A ledger of what earlier sections have seen** (tasks, lessons, changes). The confirmatory set must
   be unseen; the five tasks of §4aw–§4bb served six sections.
-- **Model calls go through `evals/sandbox.py`'s `ask`:** an empty room or a scratch copy, never the
-  checkout, since a session reads the git status of the tree it runs in; a clean environment; a pinned,
+- **Model calls go through `evals/sandbox.py`'s `ask`:** an empty room, or a scratch copy with no history of
+  this repository, never the checkout or one of its worktrees, since a session reads the git status of the
+  tree it runs in; a clean environment; a pinned,
   recorded effort; and a check of which model answered. A breaker that must work in a tree of the
   repository works with its git link hidden.
 

@@ -298,9 +298,11 @@ def judge(census_path: Path, workers: int, section: str = "4ag") -> int:
         out = {"id": x["id"]}
         try:
             # In a scratch tree of the repository on purpose: the judge reads the code to say whether a
-            # lesson still holds. Its environment is clean all the same (#446).
-            p = subprocess.run(JUDGE, input=prompt.format(**text), capture_output=True, text=True,
-                               timeout=TIMEOUT, cwd=wt, env=sb.clean_env())
+            # lesson still holds. Its environment is clean, and its git link is hidden while it works:
+            # §4ai's judges otherwise read a status listing the census files deleted from the tree (#446).
+            with sb.no_git(wt):
+                p = subprocess.run(JUDGE, input=prompt.format(**text), capture_output=True, text=True,
+                                   timeout=TIMEOUT, cwd=wt, env=sb.clean_env())
             env = json.loads(p.stdout) if p.stdout.strip().startswith("{") else {}
             got = parse_verdict(env.get("result") or "", verdicts)
             out.update(got or {"error": (env.get("result") or p.stderr or "no output")[-300:]})

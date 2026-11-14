@@ -106,6 +106,6 @@ def test_a_run_whose_code_moved_is_not_usable(monkeypatch, capsys):
     assert "NOT USABLE" in capsys.readouterr().err
     same = iter([("abc1234", "full-a"), ("abc1234", "full-a")])
     monkeypatch.setattr(ab, "tree_state", lambda reads=ab.RUN_READS: next(same))
+    monkeypatch.delitem(sys.modules, "sandbox", raising=False)   # no clean_env used: no model_env mark
     assert run_guard.start().stamp({"usable": True}) == {"usable": True, "okl_commit_at_start": "abc1234",
-                                                         "okl_commit": "abc1234",
-                                                         "child_env": "sandbox.clean_env (#446)"}
+                                                         "okl_commit": "abc1234"}

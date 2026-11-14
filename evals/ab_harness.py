@@ -466,7 +466,7 @@ def run_one(t: dict, arm: str, s: int, *, briefed_header: str | None, brief_err:
         env = generator_env(workdir, log)
         mcp_config = write_fetch_tool_config(log) if GENERATOR_TOOLS and arm == "when-tool" else ""
         # The environment is passed only when tools are on; otherwise call() gives the one-shot path a
-        # clean one. Through #446 that path inherited the launching session's environment, so its
+        # clean one. Until #446 that path inherited the launching session's environment, so its
         # command is the one every section through §4q made, its environment is not (#446).
         code = call(generator_cmd(arm, mcp_config), GEN_PROMPT.format(briefing=header, task=t["task"]),
                     timeout, workdir, **({"env": env} if env else {}))
@@ -979,7 +979,7 @@ def main() -> int:
         "generator_cmd": generator_cmd(),
         # #446: the environment the generator and judge ran in, and the effort a call without
         # --restricted reads from the user's settings file; receipts before #446 recorded neither.
-        "child_env": "sandbox.clean_env (#446)", "settings_effort": sb.settings_effort(),
+        "model_env": sb.MODEL_ENV, "settings_effort": sb.settings_effort(),
         **when_tool_instrument(arms),
         **({"preflight_missing": lacking} if args.accept_missing_lessons else {}),
         **({"preflight_line": lined} if lined else {}),

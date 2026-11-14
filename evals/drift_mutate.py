@@ -31,7 +31,6 @@ the measures. The registered receipt is left as it is; this one is reported besi
 from __future__ import annotations
 
 import argparse
-import contextlib
 import fnmatch
 import json
 import random
@@ -41,7 +40,6 @@ import subprocess
 import sys
 import tempfile
 from collections import Counter
-from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
@@ -187,19 +185,6 @@ def for_judge(diff: str) -> str:
     return diff[:JUDGE_CHARS] + f"\n[the diff is cut here: it has {len(diff)} characters, and you see the first {JUDGE_CHARS}]"
 
 
-@contextlib.contextmanager
-def no_git(wt: Path) -> Iterator[None]:
-    """The breaker's tree without its link to the repository while the breaker works. A session in a git
-    tree reads its status into context: §4bf's breakers saw the branch and the last five commit
-    subjects, which named the experiment (#446). The link is restored even if the session fails."""
-    link, kept = wt / ".git", wt / ".git-kept-from-breaker"
-    link.rename(kept)
-    try:
-        yield
-    finally:
-        kept.rename(link)
-
-
 def at_base(wt: Path, base: str) -> None:
     """Refuse to break a tree that is not clean at BASE. git() never raises, so a reset that failed
     (a stale lock, a full disk) left the last break in place and the next one stacked on it (#446)."""
@@ -334,7 +319,7 @@ def main() -> int:
         else:
             lessons.append((lid, rule, check))
 
-    room = Path(tempfile.mkdtemp(prefix="okl-mutate-"))
+    room = Path(tempfile.mkdtemp(prefix="okl-w-"))   # a breaker's path names no experiment (#446)
     (room / "control").mkdir()
     control = dr.Replayer(room / "control")
     try:
@@ -353,7 +338,7 @@ def main() -> int:
         n = nodes[lid]
         text = LESSON.format(title=n.title, symptom=n.symptom or "", fix=n.fix or "")
         files = dr.governs(rule)
-        wt = room / f"breaker-{slot}-{lid[:16]}"
+        wt = room / f"t{slot}"
         dr.git("worktree", "add", "-q", "--detach", str(wt), base)
         (room / f"eval-{slot}").mkdir()
         r = dr.Replayer(room / f"eval-{slot}")
@@ -378,7 +363,7 @@ def main() -> int:
                              "different change." if earlier else "")
                     prompt = (BREAK_PROMPT.format(lesson=text, avoid=avoid) if kind == "breaking" else
                               HARMLESS_PROMPT.format(lesson=text, files=", ".join(files), avoid=avoid))
-                    with no_git(wt):
+                    with sb.no_git(wt):
                         s = claude(BREAKER, prompt, wt)
                     dr.git("checkout", "-q", "HEAD", "--", *kept_out, repo=wt)
                     dr.git("add", "-A", repo=wt)   # staged first, so the diff carries files the breaker created (#446)
@@ -428,7 +413,7 @@ def main() -> int:
         "what": f"drift catch rate (REPORT {'§4ah, the re-run' if args.base != BASE else '§4af'})",
         "at": f"{datetime.now(UTC):%Y-%m-%dT%H:%MZ}",
         "code": dr.git("rev-parse", "--short=12", "HEAD").strip(), "base": base[:12], "blind": args.blind,
-        "breaker": " ".join(BREAKER), "judge": " ".join(JUDGE), "ci_steps": CI_STEPS,
+        "breaker": " ".join(BREAKER), "judge": " ".join(JUDGE), "ci_steps": CI_STEPS, "model_env": sb.MODEL_ENV,
         "models": {who: sorted({m for p in patches for m in p.get(f"{who}_models", [])}) for who in ("breaker", "judge")},
         "ci_at_base": {"verdict": ci_base, "failed": ci_base_failed}, "left_out": left_out,
         "lessons": [lid for lid, _r, _c in lessons], "main_checkout_changed": moved,

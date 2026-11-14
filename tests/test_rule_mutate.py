@@ -219,3 +219,26 @@ def test_the_sensitivity_note_quotes_its_receipt():
     assert (perm["lessons"], perm["hardened"], perm["splits"]) == (17, 9, 24310)
     assert round(100 * perm["observed_gap"], 1) == 21.1 and round(100 * perm["two_sided_p"], 1) == 25.5
     assert "(24,310 splits)" in sec and "21.1 points in 25.5%" in sec
+
+
+TRANSCRIPTS = ROOT / "evals" / "results" / "harness-transcripts-4bf-k7ezkwzs.json"
+
+
+def test_what_the_breakers_saw_quotes_its_receipt():
+    """§4bf's note on the breakers' git status, and §6's session counts, read from the receipt the saved
+    sessions were tallied into (they are swept in time; the receipt is the record)."""
+    import json
+    rec = json.loads(TRANSCRIPTS.read_text())
+    b, first, again = rec["breakers"], rec["judges"]["first pass"], rec["judges"]["re-judge"]
+    sec = " ".join(_section().split())
+    assert TRANSCRIPTS.name in sec
+    assert (b["sessions"], b["status_named_4bf"], b["status_named_a_check_script"]) == (108, 108, 108)
+    assert "All 108 breakers' status named the experiment" in sec and "All 108 listed the hidden check scripts" in sec
+    for script in ("ci/check-agent-neutral.py", "ci/check-diagram-figures.sh", "ci/check-diagram-names.py"):
+        assert b["check_scripts_named"][script] == 108 and f"`{script}`" in sec
+    assert (b["sessions_reaching_for_a_hidden_file"], b["hidden_reads_that_returned_content"], b["main_checkout_calls"]) == (8, 0, 0)
+    assert "8 sessions aimed a file tool at a hidden path" in sec
+    assert b["effort"] == {"medium": 108} and first["effort"] == {"medium": 108} and again["effort"] == {"medium": 6}
+    assert b["claude_md"] == first["claude_md"] == again["claude_md"] == 0
+    threats = " ".join((ROOT / "evals" / "REPORT.md").read_text().split("## 6. Threats", 1)[1].split("\n## 7", 1)[0].split())
+    assert f"all of §4bf's {b['sessions']} breaker and {first['sessions'] + again['sessions']} judge sessions sent `medium`" in threats

@@ -280,7 +280,7 @@ def main() -> None:
         "at": f"{datetime.now(UTC):%Y-%m-%dT%H:%MZ}",
         "code": subprocess.run(["git", "-C", str(REPO), "rev-parse", "--short=12", "HEAD"],
                                capture_output=True, text=True).stdout.strip(),
-        "claude_code": version, "agent": " ".join(AGENT), "task": TASK, "canary": CANARY,
+        "claude_code": version, "agent": " ".join(AGENT), "task": TASK, "canary": CANARY, "model_env": sb.MODEL_ENV,
         "summary": summarize(runs),
         "runs": [{k: v for k, v in r.items() if k != "room"} for r in runs],
         "transcripts_kept_in": str(keep),

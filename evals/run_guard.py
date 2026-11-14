@@ -34,8 +34,11 @@ class Run:
         now = ab.tree_state(READS)
         receipt["okl_commit_at_start"], receipt["okl_commit"] = self.started[0], now[0]
         # Receipts from before #446 ran their children in the launching session's environment; this marks
-        # a receipt that did not, so the two are never pooled.
-        receipt.setdefault("child_env", "sandbox.clean_env (#446)")
+        # one whose run built them with sandbox.clean_env, so the two are never pooled. Only when it did:
+        # a blanket default named a run whose child got os.environ (review on #451).
+        sb = sys.modules.get("sandbox")
+        if sb is not None and getattr(sb, "USED", False):
+            receipt.setdefault("model_env", sb.MODEL_ENV)
         moved = ab.head_moved(self.started, now)
         if moved:
             receipt["usable"] = False

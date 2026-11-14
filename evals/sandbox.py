@@ -2,10 +2,11 @@
 
 Three read-only reviews of the harness (#446, 2026-11-14) found the same leaks in copies across
 scripts, and a fix to one copy left the others as they were:
-- model sessions started inside this checkout, where CLAUDE.md loads (§4ba, §4bb and §4bc's picker,
-  screener and describer);
-- children that inherit the launching Claude Code session's variables, its effort level among them
-  (`xhigh` when §4bf ran), so an eval's effort followed whoever started it and no receipt said which;
+- model sessions started inside a git tree of this repository, which read its git status: the branch,
+  the last five commit subjects and changed, deleted and untracked file names (§4ba–§4bc's pickers; the
+  breakers of §4af, §4ah and §4bf, whose status named the check files hidden from them);
+- children that inherit the launching Claude Code session's variables, okl's and git's, and calls made
+  without --restricted that take their effort from the user's settings file, which no receipt recorded;
 - checks that kept `OKL_` and git-location variables, so a hook's `GIT_DIR` or a running warm model
   could answer for the scratch tree;
 - replies taken from whichever model answered.
@@ -15,6 +16,7 @@ Each helper below closes one. New scripts use them instead of a copy of their ow
     env = sandbox.clean_env(tree=room)                      # a check's or an agent's environment
     with sandbox.empty_room() as room: ...                  # a model call that needs no files
     reply = sandbox.ask(argv, prompt, model="opus", effort="medium", timeout=300, cwd=room)
+    with sandbox.no_git(tree): ...                          # a session that must work in a repo tree
 """
 from __future__ import annotations
 
@@ -32,14 +34,24 @@ from pathlib import Path
 from typing import Any
 
 REPO = Path(__file__).resolve().parents[1]
+_RUN = subprocess.run   # git's own answer for inside_repo, even where a test stands in for the model call
 # Dropped from every child: the launching session's own variables, okl's and git's, and the ones that
 # choose a model or a thinking budget behind the alias a script names. Kept: what signs the CLI in and
 # selects its provider (every CLAUDE_CODE_USE_ selector), which an eval needs and which changes no answer.
 # A call made without --restricted still reads the user's settings file, its effort and model settings
 # included (#446): pass --restricted, or pin the effort with ask(effort=...).
-DROP = ("CLAUDE", "OKL_", "GIT_", "MCP_", "ANTHROPIC_DEFAULT_", "ANTHROPIC_MODEL", "ANTHROPIC_SMALL_FAST_MODEL",
-        "MAX_THINKING_TOKENS")
-KEEP = ("CLAUDE_CODE_OAUTH_TOKEN", "CLAUDE_CONFIG_DIR", "CLAUDE_CODE_USE_")
+DROP = ("CLAUDE", "OKL_", "GIT_", "MCP_", "ANTHROPIC_DEFAULT_")
+DROP_EXACT = frozenset({"ANTHROPIC_MODEL", "ANTHROPIC_SMALL_FAST_MODEL", "MAX_THINKING_TOKENS"})
+# Exact names: the provider selectors this CLI reads (from its own strings, 2.1.302), so no other
+# CLAUDE_CODE_USE_ switch, such as a tool or a search mode, rides along.
+KEEP = frozenset({"CLAUDE_CODE_OAUTH_TOKEN", "CLAUDE_CONFIG_DIR", "CLAUDE_CODE_USE_BEDROCK", "CLAUDE_CODE_USE_VERTEX",
+                  "CLAUDE_CODE_USE_FOUNDRY", "CLAUDE_CODE_USE_ANTHROPIC_AWS", "CLAUDE_CODE_USE_ANTHROPIC_GOOGLE_CLOUD",
+                  "CLAUDE_CODE_USE_GATEWAY", "CLAUDE_CODE_USE_MANTLE"})
+# A receipt field: the script's children ran in clean_env. Written only when clean_env was called in
+# this process (USED), never as a blanket default (review on #451); the lint in
+# tests/test_harness_fixes.py holds every model call in evals/ to it.
+MODEL_ENV = "sandbox.clean_env (#446)"
+USED = False
 EFFORTS = ("low", "medium", "high", "xhigh", "max")
 
 
@@ -48,7 +60,9 @@ def clean_env(tree: Path | None = None, **extra: str) -> dict[str, str]:
     this interpreter's directory first on PATH; with `tree`, that tree's code first on PYTHONPATH.
     okl inside it logs no briefing, and neither finds nor starts a warm model: with warm on, a check that
     finds none starts one at the socket, where it would outlive the run. `extra` sets more, explicitly."""
-    env = {k: v for k, v in os.environ.items() if not k.startswith(DROP) or k.startswith(KEEP)}
+    global USED
+    USED = True
+    env = {k: v for k, v in os.environ.items() if k in KEEP or not (k.startswith(DROP) or k in DROP_EXACT)}
     env["PATH"] = f"{Path(sys.executable).parent}{os.pathsep}{os.environ.get('PATH', '')}"
     env["OKL_BRIEFING_LOG"] = "0"
     env["OKL_WARM"] = "0"
@@ -60,15 +74,24 @@ def clean_env(tree: Path | None = None, **extra: str) -> dict[str, str]:
 
 
 def inside_repo(path: Path) -> bool:
-    """Whether `path` is this checkout or under it."""
+    """Whether `path` is this checkout or under it, or in any git worktree of this repository: a
+    session in either reads this repository's git status."""
     p, repo = path.resolve(), REPO.resolve()
-    return p == repo or repo in p.parents
+    if p == repo or repo in p.parents:
+        return True
+    def common_dir(at: Path) -> Path | None:
+        # No --path-format: git before 2.31 echoes it back as output. A relative answer is relative to `at`.
+        got = _RUN(["git", "-C", str(at), "rev-parse", "--git-common-dir"], capture_output=True, text=True)
+        out = got.stdout.strip()
+        return (at / out).resolve() if got.returncode == 0 and out else None
+    theirs = common_dir(p)
+    return theirs is not None and theirs == common_dir(repo)
 
 
 @contextmanager
 def empty_room() -> Iterator[Path]:
     """A new empty directory outside the checkout, removed afterwards: where a model call that
-    reads no files runs, so no CLAUDE.md, settings or memory of this project loads."""
+    reads no files runs, outside any git tree, so no git status of this repository loads."""
     with tempfile.TemporaryDirectory(prefix="okl-eval-room-") as d:
         yield Path(d)
 
@@ -91,7 +114,8 @@ def ask(argv: list[str], prompt: str, *, model: str, effort: str, timeout: int, 
     an `error` when it timed out, gave no readable reply, failed, or was not answered by `model`
     (a usage limit looks like that). The caller records `models` and `effort` with each row."""
     if inside_repo(cwd):
-        raise ValueError(f"a model call must not run inside the checkout ({cwd}): CLAUDE.md would load")
+        raise ValueError(f"a model call must not run inside the checkout ({cwd}): it would read this repository's "
+                         "git status, commit subjects included")
     cmd = with_effort(argv, effort)
     base = {"effort": effort, "models": [], "cost_usd": 0.0}
     try:
@@ -136,12 +160,31 @@ def copy_sqlite(src: Path, dst: Path) -> None:
             shutil.copy2(log, dst.with_name(dst.name + "-wal"))
 
 
-def settings_effort() -> str | None:
-    """The effort level the user's settings file sets, which a call made without --restricted reads;
-    a receipt records it beside the commands it ran (#446)."""
+def settings_effort() -> dict[str, Any] | None:
+    """The effort levels the user's settings file sets, which a call made without --restricted reads: the
+    default, and any per-model level, which wins for its model. A receipt records them beside the
+    commands it ran (#446)."""
     base = Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude")
     try:
-        got = json.loads((base / "settings.json").read_text()).get("effortLevel")
+        d = json.loads((base / "settings.json").read_text())
     except (OSError, ValueError):
         return None
-    return got if isinstance(got, str) else None
+    per = {m: v.get("effortLevel") for m, v in (d.get("modelSettings") or {}).items()
+           if isinstance(v, dict) and isinstance(v.get("effortLevel"), str)}
+    level = d.get("effortLevel") if isinstance(d.get("effortLevel"), str) else None
+    return {"effortLevel": level, "modelSettings": per} if level or per else None
+
+
+@contextlib.contextmanager
+def no_git(tree: Path) -> Iterator[None]:
+    """`tree` without its link to the repository while a model session works in it. A session in a git
+    tree reads its status into context: §4bf's breakers saw the branch, the last five commit subjects
+    (which named the experiment) and the check files hidden from them, listed as deleted (#446). The
+    link is kept outside the tree, under a name that says nothing, and restored on every way out."""
+    link = tree / ".git"
+    kept = tree.parent / f".{tree.name}.link"
+    link.rename(kept)
+    try:
+        yield
+    finally:
+        kept.rename(link)
