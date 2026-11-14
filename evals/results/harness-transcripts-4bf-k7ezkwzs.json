@@ -1,10 +1,10 @@
 {
  "section": "\u00a74bf",
  "what": "what \u00a74bf's breaker and judge sessions sent, saw and did, from their saved files",
- "at": "2026-11-14T18:32Z",
+ "at": "2026-11-14T18:43Z",
  "run": "k7ezkwzs",
  "rejudge": "8-njs9s5",
- "code": "13f0e8287aa5",
+ "code": "b741abb6a5dd",
  "breakers": {
   "sessions": 108,
   "effort": {
@@ -22,10 +22,10 @@
    "ci/check-diagram-names.py": 108,
    "evals/REPORT.md": 108
   },
-  "sessions_reaching_for_a_hidden_file": 8,
-  "hidden_paths_reached_for": 8,
+  "sessions_reaching_for_a_hidden_file": 11,
+  "hidden_paths_reached_for": 11,
   "hidden_reads_that_returned_content": 0,
-  "outside_worktree_calls": 38,
+  "outside_worktree_calls": 0,
   "main_checkout_calls": 0,
   "per_lesson_sessions": {
    "n_e7988ff536fb": 6,

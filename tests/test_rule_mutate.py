@@ -236,8 +236,9 @@ def test_what_the_breakers_saw_quotes_its_receipt():
     assert "All 108 breakers' status named the experiment" in sec and "All 108 listed the hidden check scripts" in sec
     for script in ("ci/check-agent-neutral.py", "ci/check-diagram-figures.sh", "ci/check-diagram-names.py"):
         assert b["check_scripts_named"][script] == 108 and f"`{script}`" in sec
-    assert (b["sessions_reaching_for_a_hidden_file"], b["hidden_reads_that_returned_content"], b["main_checkout_calls"]) == (8, 0, 0)
-    assert "8 sessions aimed a file tool at a hidden path" in sec
+    assert (b["sessions_reaching_for_a_hidden_file"], b["hidden_reads_that_returned_content"]) == (11, 0)
+    assert (b["outside_worktree_calls"], b["main_checkout_calls"]) == (0, 0)
+    assert "11 sessions reached for a hidden file" in sec and "no call left its own tree" in sec
     assert b["effort"] == {"medium": 108} and first["effort"] == {"medium": 108} and again["effort"] == {"medium": 6}
     assert b["claude_md"] == first["claude_md"] == again["claude_md"] == 0
     threats = " ".join((ROOT / "evals" / "REPORT.md").read_text().split("## 6. Threats", 1)[1].split("\n## 7", 1)[0].split())

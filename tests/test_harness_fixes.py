@@ -307,8 +307,7 @@ def _within(tree: ast.AST, call: ast.Call, ctx: str) -> bool:
 def test_every_breaker_and_the_census_judge_work_with_the_git_link_hidden():
     """The wiring, not only the helper: removing `with sb.no_git(wt)` from a runner passed every test
     before (review on #451)."""
-    for f, argv in (("evals/drift_mutate.py", "BREAKER"), ("evals/rule_mutate.py", "BREAKER"),
-                    ("evals/lesson_census.py", "JUDGE")):
+    for f, argv in (("evals/drift_mutate.py", "BREAKER"), ("evals/rule_mutate.py", "BREAKER")):
         tree = ast.parse((ROOT / f).read_text())
         calls = [n for n in ast.walk(tree) if isinstance(n, ast.Call) and n.args
                  and _dotted(n.args[0]).rsplit(".", 1)[-1] == argv
@@ -316,6 +315,16 @@ def test_every_breaker_and_the_census_judge_work_with_the_git_link_hidden():
         assert calls, f
         for c in calls:
             assert _within(tree, c, "no_git"), f"{f}:{c.lineno} runs {argv} with the git link in place"
+    # The census judges share one tree across workers, so its link is hidden once around the pool, never
+    # per judge: a second rename of a link already moved raised (review on #451).
+    tree = ast.parse((ROOT / "evals" / "lesson_census.py").read_text())
+    pools = [w for w in ast.walk(tree) if isinstance(w, ast.With)
+             and {_dotted(i.context_expr.func).rsplit(".", 1)[-1] for i in w.items if isinstance(i.context_expr, ast.Call)}
+             >= {"no_git", "ThreadPoolExecutor"}]
+    assert len(pools) == 1
+    judges = [n for n in ast.walk(tree) if isinstance(n, ast.Call) and n.args and _dotted(n.args[0]) == "JUDGE"
+              and _dotted(n.func).endswith("run")]
+    assert judges and not any(_within(tree, c, "no_git") for c in judges)
 
 
 def test_the_ab_receipt_records_its_environment_and_the_settings_effort():
@@ -353,7 +362,18 @@ def test_the_tasks_store_snapshot_carries_the_log(monkeypatch, tmp_path):
     writer.commit()
     monkeypatch.setattr(rt, "REPO", tmp_path / "repo")
     monkeypatch.setattr(rt, "PRIVATE", tmp_path / "private")
+    import sandbox as sb
+    opened, real = [], sb.connect
+
+    def watch(target, uri=False):
+        opened.append((str(target), uri))
+        return real(target, uri=uri)
+    monkeypatch.setattr(sb, "connect", watch)   # sandbox's own adapter, not sqlite3
     copy, _digest = rt.snapshot_store()
+    # The live store is opened read-only, never as a plain path: a read-write backup also copies the rows,
+    # so counting them alone passed the old code (review on #451).
+    live_opens = [(t, uri) for t, uri in opened if "repo/.okl/okl.db" in t]
+    assert live_opens and all(uri and t.endswith("?mode=ro") for t, uri in live_opens), live_opens
     with sqlite3.connect(copy) as c:
         assert c.execute("SELECT count(*) FROM t").fetchone() == (20,)
     writer.close()

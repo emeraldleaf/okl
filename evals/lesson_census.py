@@ -298,11 +298,10 @@ def judge(census_path: Path, workers: int, section: str = "4ag") -> int:
         out = {"id": x["id"]}
         try:
             # In a scratch tree of the repository on purpose: the judge reads the code to say whether a
-            # lesson still holds. Its environment is clean, and its git link is hidden while it works:
-            # §4ai's judges otherwise read a status listing the census files deleted from the tree (#446).
-            with sb.no_git(wt):
-                p = subprocess.run(JUDGE, input=prompt.format(**text), capture_output=True, text=True,
-                                   timeout=TIMEOUT, cwd=wt, env=sb.clean_env())
+            # lesson still holds. Its environment is clean, and the tree's git link is hidden around the
+            # whole pool below (#446).
+            p = subprocess.run(JUDGE, input=prompt.format(**text), capture_output=True, text=True,
+                               timeout=TIMEOUT, cwd=wt, env=sb.clean_env())
             env = json.loads(p.stdout) if p.stdout.strip().startswith("{") else {}
             got = parse_verdict(env.get("result") or "", verdicts)
             out.update(got or {"error": (env.get("result") or p.stderr or "no output")[-300:]})
@@ -315,7 +314,10 @@ def judge(census_path: Path, workers: int, section: str = "4ag") -> int:
         return {**x, **out}
 
     try:
-        with ThreadPoolExecutor(max_workers=workers) as pool:
+        # Once for every judge, not per judge: the workers share this tree, and a second rename of a link
+        # already moved raised (review on #451). §4ai's judges otherwise read a status listing the census
+        # files removed from the tree.
+        with sb.no_git(wt), ThreadPoolExecutor(max_workers=workers) as pool:
             judged = list(pool.map(one, items))
     finally:
         dr.git("worktree", "remove", "--force", str(wt))

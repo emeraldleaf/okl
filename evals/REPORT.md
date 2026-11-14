@@ -6879,8 +6879,8 @@ a git worktree of this repository, so its context carried that worktree's git st
 - **All 108 listed the hidden check scripts as deleted:** `ci/check-agent-neutral.py`,
   `ci/check-diagram-figures.sh` and `ci/check-diagram-names.py`. So a breaker knew those scripts' names,
   not what they test, the same limit §4ah disclosed.
-- **8 sessions aimed a file tool at a hidden path,** and none got its content; no call reached the main
-  checkout.
+- **11 sessions reached for a hidden file,** by a file tool or a shell command the session was refused, and
+  none got its content; no call left its own tree.
 - **Every breaker and judge request ran at effort `medium`,** and none loaded the repository's CLAUDE.md.
 
 From #446 a breaker works with its tree's git link hidden, in a folder whose name says nothing.

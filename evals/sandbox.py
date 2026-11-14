@@ -137,6 +137,12 @@ def ask(argv: list[str], prompt: str, *, model: str, effort: str, timeout: int, 
     return out
 
 
+def connect(target: str | Path, uri: bool = False) -> sqlite3.Connection:
+    """The one place this module opens a database: an adapter okl owns, so a test watches it rather than
+    faking sqlite3 (lesson py_dont_mock_what_you_dont_own)."""
+    return sqlite3.connect(target, uri=uri)
+
+
 def copy_sqlite(src: Path, dst: Path) -> None:
     """A consistent copy of the SQLite database at `src`, with what its write-ahead log holds.
     Copying the file alone missed every write an open okl process had not checkpointed: the store
@@ -147,8 +153,7 @@ def copy_sqlite(src: Path, dst: Path) -> None:
     between the two copies would mismatch them."""
     uri = Path(src).resolve().as_uri() + "?mode=ro"   # escaped: a "?" in a folder name cut the old path
     try:
-        with contextlib.closing(sqlite3.connect(uri, uri=True)) as source, \
-                contextlib.closing(sqlite3.connect(dst)) as target:
+        with contextlib.closing(connect(uri, uri=True)) as source, contextlib.closing(connect(dst)) as target:
             source.backup(target)
     except sqlite3.Error as e:
         print(f"sandbox: read-only copy of {src} failed ({e}); copying the file and its log instead",
