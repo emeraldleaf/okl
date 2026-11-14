@@ -109,7 +109,8 @@ def breaker(path: Path, main: str, hidden: tuple[str, ...]) -> dict:
     roots = {bare, "/private" + bare} - {"", "/private"}
     asked, answered, outside, in_main = {}, 0, 0, 0
     seen_calls, seen_results = set(), set()   # each call is saved twice: in its event and its request blob
-    tree = Path(bare).name
+    def norm(path: str) -> str:   # the model writes a dash where the folder has an underscore or a slash
+        return re.sub(r"[/_.]", "-", path)
     for e in evs:
         for b in blocks(e):
             if b.get("type") == "tool_use":
@@ -121,8 +122,8 @@ def breaker(path: Path, main: str, hidden: tuple[str, ...]) -> dict:
                 rel = next((target[len(r):].lstrip("/") for r in roots if target == r or target.startswith(r + "/")), None)
                 # A path the model garbled (a dash for the temp folder's underscore or slash) still names its
                 # own tree by that tree's folder name; read the part after it (review on #451).
-                if rel is None and tree and f"/{tree}/" in target:
-                    rel = target.split(f"/{tree}/", 1)[1]
+                if rel is None and bare and norm(target).startswith(norm(bare) + "-"):
+                    rel = target[len(bare) + 1:]   # the same length, so the garbled prefix is cut by position
                 if target.startswith("/") and rel is None:
                     outside += 1
                     in_main += target == main or target.startswith(main + "/")
@@ -169,20 +170,26 @@ def folder(name: str) -> list[Path]:
     return sorted(p for d in PROJECTS.glob(f"*{name}") for p in d.glob("*.jsonl"))
 
 
-def main_4bf(run: str, rejudge: str | None, main_checkout: str) -> int:
+def room_dirs(room: str) -> list[Path]:
+    """The saved-session folders of a run's breakers, found by the room they ran in: `okl-w-<id>/t<slot>`,
+    where the temp folder's underscores are dashes in the saved name."""
+    return sorted(PROJECTS.glob(f"*{room.replace('_', '-')}-t[0-9]*"))
+
+
+def main_4bf(run: str, rejudge: str | None, main_checkout: str, room: str | None = None) -> int:
     """§4bf's sessions: what the breakers' context carried and what they reached for, and the judges'
     effort and answers. Counts and repository file names only."""
     import rule_mutate as rm
     lessons = list(rm.POPULATION)
     per: dict[str, list[dict]] = {}
     # Folders before #446's renaming (okl-4bf-<run>-breaker-<slot>) and after (okl-w-<run>/t<slot>).
-    dirs = [*PROJECTS.glob(f"*okl-4bf-{run}-breaker-*"), *PROJECTS.glob(f"*okl-w-{run}-t[0-9]*")]
+    dirs = [*PROJECTS.glob(f"*okl-4bf-{run}-breaker-*"), *(room_dirs(room) if room else [])]
     for d in sorted(dirs):
         slot = int(d.name.rsplit("-", 1)[1].lstrip("t"))
         lid = lessons[slot]
         governed = ["README.md", "docs/"] if lid == "docs-agent-neutral" else []   # its own files stay visible
         hidden = tuple(x for x in rm.HIDE if not any(x == g.rstrip("/") or x.startswith(g) for g in governed))
-        per[lid] = [{**breaker(f, main_checkout, hidden), **facts(f)} for f in sorted(d.glob("*.jsonl"))]
+        per.setdefault(lid, []).extend({**breaker(f, main_checkout, hidden), **facts(f)} for f in sorted(d.glob("*.jsonl")))
     if not per:
         sys.exit(f"harness_transcripts: no breaker sessions for okl-4bf-{run} under {PROJECTS}")
     every = [x for xs in per.values() for x in xs]
@@ -223,7 +230,9 @@ def main_4bf(run: str, rejudge: str | None, main_checkout: str) -> int:
 def main() -> int:
     """Read the run's sessions and write the receipt."""
     ap = argparse.ArgumentParser()
-    ap.add_argument("run", help="the suffix of the run's scratch folder, okl-mutate-<run>")
+    ap.add_argument("run", nargs="?", default="", help="the suffix of the run's scratch folder, okl-mutate-<run>")
+    ap.add_argument("--room", help="a run made since #446: the room its breakers ran in (the receipt's `room`)")
+    ap.add_argument("--receipt", help="with --room, a drift-mutate receipt: its `lessons` give each slot's lesson")
     ap.add_argument("--rejudge", help="the suffix of the re-judge's folder, okl-rejudge-<dir>")
     ap.add_argument("--earlier", help="another run whose breakers' sight of okl-drift.json is counted")
     ap.add_argument("--rule-mutate", action="store_true", help="§4bf's layout (rule_mutate.py), not drift_mutate's")
@@ -232,17 +241,21 @@ def main() -> int:
     if (REPO / ".git").is_file():   # a worktree: its .git file names <main>/.git/worktrees/<name>
         main_checkout = str(Path((REPO / ".git").read_text(encoding="utf-8").split(":", 1)[1].strip()).parents[2])
     if args.rule_mutate:
-        return main_4bf(args.run, args.rejudge, main_checkout)
+        return main_4bf(args.run, args.rejudge, main_checkout, args.room)
     # A folder's name is cut and its underscores made dashes: read the lesson id back from the snapshot.
     rules = {r["id"]: r for r in json.loads((REPO / "okl-drift.json").read_text(encoding="utf-8"))["rules"]}
     lessons: dict[str, list[dict]] = {}
-    for d in sorted(PROJECTS.glob(f"*okl-mutate-{args.run}-breaker-*")):
-        cut = d.name.split("-breaker-", 1)[1].split("-", 1)[1]
-        lid = next((i for i in rules if i.replace("_", "-").startswith(cut)), cut)
+    slots = json.loads(Path(args.receipt).read_text(encoding="utf-8"))["lessons"] if args.receipt else []
+    named = [(d, None) for d in sorted(PROJECTS.glob(f"*okl-mutate-{args.run}-breaker-*"))] if args.run else []
+    named += [(d, slots[int(d.name.rsplit("-t", 1)[1])]) for d in room_dirs(args.room)] if args.room and slots else []
+    for d, lid in named:
+        if lid is None:   # the older layout names the lesson in the folder, cut, with underscores as dashes
+            cut = d.name.split("-breaker-", 1)[1].split("-", 1)[1]
+            lid = next((i for i in rules if i.replace("_", "-").startswith(cut)), cut)
         hidden = (*BLIND, *own_checks(rules.get(lid) or {}))
-        lessons[lid] = [breaker(p, main_checkout, hidden) for p in sorted(d.glob("*.jsonl"))]
+        lessons.setdefault(lid, []).extend(breaker(p, main_checkout, hidden) for p in sorted(d.glob("*.jsonl")))
     if not lessons:
-        sys.exit(f"harness_transcripts: no breaker sessions for okl-mutate-{args.run} under {PROJECTS}")
+        sys.exit(f"harness_transcripts: no breaker sessions for {args.run or args.room} under {PROJECTS}")
     every = [s for ss in lessons.values() for s in ss]
     judges = {"first pass": [judge(p) for p in folder(f"okl-mutate-{args.run}")]}
     if args.rejudge:

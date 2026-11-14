@@ -81,7 +81,9 @@ def inside_repo(path: Path) -> bool:
         return True
     def common_dir(at: Path) -> Path | None:
         # No --path-format: git before 2.31 echoes it back as output. A relative answer is relative to `at`.
-        got = _RUN(["git", "-C", str(at), "rev-parse", "--git-common-dir"], capture_output=True, text=True)
+        # Without the launcher's GIT_DIR and friends: they would point both probes at one repository.
+        env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+        got = _RUN(["git", "-C", str(at), "rev-parse", "--git-common-dir"], capture_output=True, text=True, env=env)
         out = got.stdout.strip()
         return (at / out).resolve() if got.returncode == 0 and out else None
     theirs = common_dir(p)
@@ -143,19 +145,21 @@ def connect(target: str | Path, uri: bool = False) -> sqlite3.Connection:
     return sqlite3.connect(target, uri=uri)
 
 
-def copy_sqlite(src: Path, dst: Path) -> None:
+def copy_sqlite(src: Path, dst: Path, *, allow_file_copy: bool = False) -> None:
     """A consistent copy of the SQLite database at `src`, with what its write-ahead log holds.
     Copying the file alone missed every write an open okl process had not checkpointed: the store
     runs in WAL mode, and the MCP server or a warm model can hold it open (#446). Opened read-only,
     so the copy never checkpoints into the original or changes its rows; on a WAL database with no log
     on disk, SQLite may still create the empty -wal and -shm files beside it. Where read-only access
-    fails, the file and its log are copied, with a warning: that pair is not atomic, since a checkpoint
-    between the two copies would mismatch them."""
+    fails it raises, unless `allow_file_copy`: copying the file and then its log is not atomic, since a
+    checkpoint between the two copies would mismatch them (review on #451)."""
     uri = Path(src).resolve().as_uri() + "?mode=ro"   # escaped: a "?" in a folder name cut the old path
     try:
         with contextlib.closing(connect(uri, uri=True)) as source, contextlib.closing(connect(dst)) as target:
             source.backup(target)
     except sqlite3.Error as e:
+        if not allow_file_copy:
+            raise RuntimeError(f"read-only copy of {src} failed ({e}); not copying the file and its log apart") from e
         print(f"sandbox: read-only copy of {src} failed ({e}); copying the file and its log instead",
               file=sys.stderr)
         dst.unlink(missing_ok=True)

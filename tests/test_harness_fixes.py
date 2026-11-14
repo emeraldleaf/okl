@@ -378,3 +378,59 @@ def test_the_tasks_store_snapshot_carries_the_log(monkeypatch, tmp_path):
     with contextlib.closing(sqlite3.connect(copy)) as c:
         assert c.execute("SELECT count(*) FROM t").fetchone() == (20,)
     writer.close()
+
+
+def test_a_census_resume_reuses_only_judgments_made_under_the_current_isolation(tmp_path):
+    """A judgment saved before #446 saw the worktree's git status and the session's variables; a resume
+    that reused it would pool two instruments (review on #451)."""
+    import json as _json
+
+    import sandbox as sb
+    lc = _load("lesson_census")
+    partial = tmp_path / "p.jsonl"
+    partial.write_text("\n".join(_json.dumps(r) for r in (
+        {"id": "old", "verdict": "stale"},
+        {"id": "other", "verdict": "ok", "model_env": "something else"},
+        {"id": "new", "verdict": "ok", "model_env": sb.MODEL_ENV})) + "\n")
+    assert set(lc.resumed(partial)) == {"new"} and lc.resumed(tmp_path / "none.jsonl") == {}
+
+
+def test_the_git_probes_ignore_a_launchers_git_dir(monkeypatch, tmp_path):
+    """With an absolute GIT_DIR exported, both probes asked the same repository, so a folder outside it
+    passed the check and a worktree was no longer told apart (review on #451)."""
+    import sandbox as sb
+    repo, wt, other = tmp_path / "repo", tmp_path / "elsewhere" / "wt", tmp_path / "other"
+    ident = ["-c", "user.email=t@example.invalid", "-c", "user.name=t"]
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    (repo / "a").write_text("x")
+    subprocess.run(["git", "-C", str(repo), "add", "a"], check=True)
+    subprocess.run(["git", "-C", str(repo), *ident, "commit", "-qm", "c", "--no-verify"], check=True)
+    subprocess.run(["git", "-C", str(repo), "worktree", "add", "-q", "--detach", str(wt)], check=True)
+    other.mkdir()
+    monkeypatch.setattr(sb, "REPO", repo)
+    monkeypatch.setenv("GIT_DIR", str(repo / ".git"))
+    assert sb.inside_repo(wt) and not sb.inside_repo(other)
+
+
+def test_a_store_copy_that_would_split_the_file_from_its_log_refuses(tmp_path):
+    """A file copy then a log copy is not atomic; the default is to refuse (review on #451)."""
+    import sandbox as sb
+    with pytest.raises(RuntimeError, match="not copying the file and its log apart"):
+        sb.copy_sqlite(tmp_path / "missing.db", tmp_path / "copy.db")
+
+
+def test_a_garbled_path_is_read_as_its_own_tree_only_when_the_whole_prefix_matches(tmp_path):
+    """A shared folder name (every room has a t0) must not pass a call to another run's tree as this one's
+    (review on #451); the model's garbling, a dash for an underscore, still does."""
+    import json as _json
+    ht = _load("harness_transcripts")
+
+    def session(cwd: str, target: str) -> Path:
+        f = tmp_path / "s.jsonl"
+        f.write_text(_json.dumps({"cwd": cwd, "message": {"role": "assistant", "content": [
+            {"type": "tool_use", "id": "t1", "name": "Read", "input": {"file_path": target}}]}}) + "\n")
+        return f
+    own = ht.breaker(session("/tmp/okl-w-a_b/t0", "/tmp/okl-w-a-b/t0/ci/check-x.sh"), "/main", ("ci/check-x.sh",))
+    other = ht.breaker(session("/tmp/okl-w-a_b/t0", "/tmp/okl-w-c_d/t0/ci/check-x.sh"), "/main", ("ci/check-x.sh",))
+    assert (own["hidden_asked"], own["outside_worktree_calls"]) == (1, 0)
+    assert (other["hidden_asked"], other["outside_worktree_calls"]) == (0, 1)
