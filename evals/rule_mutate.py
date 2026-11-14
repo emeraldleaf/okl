@@ -315,7 +315,8 @@ def run(args: argparse.Namespace) -> int:
                     git("add", "-A", repo=wt)
                     diff = git("diff", "--cached", "HEAD", repo=wt)   # with any file the breaker created
                     p = {"lesson": lid, "group": POPULATION[lid]["group"], "lesson_sha": shas[lid], "base": base[:12],
-                         "okl_commit": guard.started[0], "kind": kind, "k": k, "hidden": kept_out, "diff": diff,
+                         "okl_commit": guard.started[0], "room": room.name, "kind": kind, "k": k, "hidden": kept_out,
+                         "diff": diff,
                          "judge_diff_cut": len(diff) > dm.JUDGE_CHARS,
                          "said": (s.get("result") or "")[-300:], "breaker_cost": s.get("cost_usd", 0.0),
                          "breaker_models": s.get("models", [])}

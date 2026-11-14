@@ -416,7 +416,7 @@ def main() -> int:
         "breaker": " ".join(BREAKER), "judge": " ".join(JUDGE), "ci_steps": CI_STEPS, "model_env": sb.MODEL_ENV,
         "models": {who: sorted({m for p in patches for m in p.get(f"{who}_models", [])}) for who in ("breaker", "judge")},
         "ci_at_base": {"verdict": ci_base, "failed": ci_base_failed}, "left_out": left_out,
-        "lessons": [lid for lid, _r, _c in lessons], "main_checkout_changed": moved,
+        "lessons": [lid for lid, _r, _c in lessons], "room": room.name, "main_checkout_changed": moved,
         "lesson_sha": {lid: dr.text_sha(nodes[lid]) for lid, _r, _c in lessons},
         "cost_usd": round(sum(p.get("breaker_cost", 0) + p.get("judge_cost", 0) for p in patches), 2),
         "summary": summarize(patches),
