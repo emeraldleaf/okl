@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import ast
+import contextlib
 import importlib.util
 import subprocess
 import sys
@@ -374,6 +375,6 @@ def test_the_tasks_store_snapshot_carries_the_log(monkeypatch, tmp_path):
     # so counting them alone passed the old code (review on #451).
     live_opens = [(t, uri) for t, uri in opened if "repo/.okl/okl.db" in t]
     assert live_opens and all(uri and t.endswith("?mode=ro") for t, uri in live_opens), live_opens
-    with sqlite3.connect(copy) as c:
+    with contextlib.closing(sqlite3.connect(copy)) as c:
         assert c.execute("SELECT count(*) FROM t").fetchone() == (20,)
     writer.close()

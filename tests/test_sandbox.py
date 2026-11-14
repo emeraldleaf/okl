@@ -1,6 +1,7 @@
 """evals/sandbox.py: a model call or a check runs without the developer's setup (#446)."""
 from __future__ import annotations
 
+import contextlib
 import importlib.util
 import json
 import subprocess
@@ -119,7 +120,7 @@ def test_a_store_copy_carries_what_the_log_holds(tmp_path):
     assert (tmp_path / "okl.db-wal").stat().st_size > 0   # the rows are in the log, not the file
     copy = tmp_path / "copy.db"
     sb.copy_sqlite(db, copy)
-    with sqlite3.connect(copy) as c:
+    with contextlib.closing(sqlite3.connect(copy)) as c:
         assert c.execute("SELECT count(*) FROM t").fetchone() == (50,)
     writer.close()
 
@@ -130,11 +131,12 @@ def test_a_store_copy_survives_a_question_mark_in_its_path(tmp_path):
     folder = tmp_path / "we?ird"
     folder.mkdir()
     db = folder / "okl.db"
-    with sqlite3.connect(db) as c:
+    with contextlib.closing(sqlite3.connect(db)) as c:
         c.execute("CREATE TABLE t (x)")
         c.execute("INSERT INTO t VALUES (1)")
+        c.commit()
     sb.copy_sqlite(db, tmp_path / "copy.db")
-    with sqlite3.connect(tmp_path / "copy.db") as c:
+    with contextlib.closing(sqlite3.connect(tmp_path / "copy.db")) as c:
         assert c.execute("SELECT count(*) FROM t").fetchone() == (1,)
     assert not (tmp_path / "we").exists()
 
