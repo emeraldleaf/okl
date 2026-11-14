@@ -195,3 +195,27 @@ def test_the_rejudge_quotes_its_receipt():
     o = rj["summary"]["groups"][rm.OLDER]
     assert (o["caught"], o["of"]) == (7, 28) and "7 of 28 (25.0%)" in sec
     assert rj["summary"]["groups"][rm.HARDENED]["caught"] == 16
+
+
+SENSITIVITY = ROOT / "evals" / "results" / "rule-mutate-sensitivity-20261114-1648.json"
+
+
+def test_the_sensitivity_note_quotes_its_receipt():
+    """§4bf's note on how firm the reading is, read from its receipt."""
+    import json
+    sec, s = _section(), json.loads(SENSITIVITY.read_text())
+    assert SENSITIVITY.name in sec and "usable" not in s
+    assert s["lessons_governing_files"] == ["docs-agent-neutral"]
+    assert s["breaks_on_edit_would_check"] == [3, 4] and "checked 4 of\n  the 61 confirmed breaks and caught 3" in sec
+    assert s["registered"] == {rm.HARDENED: [16, 34], rm.OLDER: [7, 27]}
+    k, n = s["without_n_0637c92c032f"][rm.HARDENED]
+    assert (k, n) == (16, 31) and f"{_pct(k, n)}" == "51.6%" and "16\n  of 31 (51.6%)" in sec
+    assert round(100 * (k / n - 7 / 27), 1) == 25.7 and "25.7 points" in sec
+    h, o = s["unjudged_breaking_counted_missed"][rm.HARDENED], s["unjudged_breaking_counted_missed"][rm.OLDER]
+    assert (h, o) == ([16, 35], [7, 31]) and _pct(*o) == "22.6%" and len(s["unjudged_breaking"]) == 5
+    assert "16 of 35 and 7 of 31 (22.6%)" in sec
+    assert s["judged_on_a_cut_diff"] == ["n_0637c92c032f harmless 0 172615 chars"] and "172,615 characters" in sec
+    perm = s["permutation"]
+    assert (perm["lessons"], perm["hardened"], perm["splits"]) == (17, 9, 24310)
+    assert round(100 * perm["observed_gap"], 1) == 21.1 and round(100 * perm["two_sided_p"], 1) == 25.5
+    assert "(24,310 splits)" in sec and "21.1 points in 25.5%" in sec

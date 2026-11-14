@@ -6802,6 +6802,33 @@ break, the one its rule-wide check caught, is among the four. With the two verdi
 caught 7 of 28 (25.0%), exactly a quarter, so prediction 2 still fails and nothing else moves. As in
 §4af, these judgments are flaky, and why is not known.
 
+**How firm the reading is, and what `okl on-edit` would have run.** Not registered: three read-only
+reviews for #446 found these after the result, and receipt `rule-mutate-sensitivity-20261114-1648.json`
+holds every figure below.
+- **`okl on-edit` would have run few of these checks.** It runs a lesson's check only after an edit to a
+  file the lesson governs, and of the 18 lessons only docs-agent-neutral governs any (`README.md`,
+  `docs/`). By the repo's own rule (#39) a lesson whose check CI already runs is given no files, and
+  every stored check here is a test or script CI runs. So as shipped, the hook would have checked 4 of
+  the 61 confirmed breaks and caught 3. This section measures whether a check catches a break when it
+  runs; for these lessons the hook changes when a break is caught, at the edit rather than in CI, not
+  whether. Its title says more than that, and the result should be read as about the checks.
+- **One hardened check cannot fail on the repository.** n_0637c92c032f's stored check tests the diagram
+  checker on files it writes itself and reads none of the repository's diagrams. The precheck showed it
+  passed at BASE; nothing showed it could fail there. Without that lesson the hardened checks caught 16
+  of 31 (51.6%), 25.7 points above the older ones, which is the first reading, not the third.
+- **The patches with no verdict move it too.** Counting the five breaking patches the judge left without
+  a verdict as missed breaks gives 16 of 35 and 7 of 31 (22.6%), and prediction 2 holds. The judge was
+  asked whether the lesson's claim is false of the repository but shown only the diff, with no tools, and
+  its missing verdicts fall on the same few lessons in §4af, §4ah and here, so they are not random. One
+  control's diff, 172,615 characters, reached the judge cut to its first 12,000.
+- **Nine lessons a group is few.** An exact permutation test over the 17 lessons with a judged break,
+  splitting them 9 and 8 every possible way (24,310 splits), finds a gap at least as large as the observed
+  21.1 points in 25.5% of them.
+
+So the registered reading stands as registered, but it is not firm: whether checks that sweep a rule
+catch more than older checks is undecided on 18 lessons. What does hold is how each check missed (the
+table above), and that a check can pass at BASE while being unable to fail.
+
 **What follows, as registered.** The misses go to #415's checks, with the table above naming the gap in
 each. The guide did not yet say what a check at the edit can miss; its `okl on-edit` section now says a
 check catches only what it tests, citing this section.

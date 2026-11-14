@@ -1,0 +1,60 @@
+{
+ "what": "REPORT \u00a74bf: how firm the reading is, not registered",
+ "lessons_governing_files": [
+  "docs-agent-neutral"
+ ],
+ "breaks_on_edit_would_check": [
+  3,
+  4
+ ],
+ "judged_on_a_cut_diff": [
+  "n_0637c92c032f harmless 0 172615 chars"
+ ],
+ "registered": {
+  "hardened": [
+   16,
+   34
+  ],
+  "older": [
+   7,
+   27
+  ]
+ },
+ "without_n_0637c92c032f": {
+  "hardened": [
+   16,
+   31
+  ],
+  "older": [
+   7,
+   27
+  ]
+ },
+ "unjudged_breaking_counted_missed": {
+  "hardened": [
+   16,
+   35
+  ],
+  "older": [
+   7,
+   31
+  ]
+ },
+ "unjudged_breaking": [
+  "n_0637c92c032f 3",
+  "n_b550ba9c5c8a 1",
+  "n_c95bdc056620 1",
+  "n_b550ba9c5c8a 2",
+  "n_c95bdc056620 2"
+ ],
+ "permutation": {
+  "lessons": 17,
+  "hardened": 9,
+  "splits": 24310,
+  "observed_gap": 0.2113,
+  "two_sided_p": 0.2546
+ },
+ "okl_commit_at_start": "4abd402",
+ "okl_commit": "4abd402",
+ "at": "2026-11-14T16:48Z"
+}
