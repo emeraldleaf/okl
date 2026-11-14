@@ -21,9 +21,9 @@ mistake no lesson named.
 | claim | the question | ground truth | status today |
 |---|---|---|---|
 | **The software does what its docs say** | Do the commands, hooks and gates behave as documented, on real inputs? | Executable: tests on recorded inputs, and an end-to-end run on a fresh install | The suite runs in CI on five Python versions, and so does an end-to-end run on a fresh install (`ci/e2e.py`), with every guard held by the mutation check (#393). Some fixtures were written by hand |
-| **The right lesson reaches the agent** | Of the lessons a piece of real work needed, how many reached the agent before the code was written, and through which channel? | Every needed lesson labelled per task before any arm runs, plus known-item cases from real misses | Pooled figures only (§4x, §4y), which are upper bounds. The real misses on file reached: 0 of 2 (§4ak) |
-| **The agent then complies** | Given the lesson, does the agent write code that passes the check the eventual fix added, and does a briefing ever turn a pass into a fail? | Executable: a hidden test taken from the real fix | Only on eight authored bait tasks (§5, finding 7), whose prompts name the lesson's subject. On real work, observationally, a lesson shown during the work was followed no more often than one not shown (§4as, exploratory) |
-| **What it watches stays true** | When code a lesson governs changes, is the lesson flagged, and only then? | Executable: deliberate breaks and a replay of history (§4ae, §4af, §4ah) | Measured, with judge-confirmed breaks |
+| **The right lesson reaches the agent** | Of the lessons a piece of real work needed, how many reached the agent before the code was written, and through which channel? | Every needed lesson labelled per task before any arm runs, plus known-item cases from real misses | On real work, 36.0% of needed lessons named (§4al, model-judged; its human audit is #394). Pooled figures (§4x, §4y) are upper bounds. The real misses on file reached: 0 of 2 (§4ak) |
+| **The agent then complies** | Given the lesson, does the agent write code that passes the check the eventual fix added, and does a briefing ever turn a pass into a fail? | Executable: a hidden test taken from the real fix | On eight authored bait tasks (§5, finding 7), whose prompts name the lesson's subject. In pilots on five real past bugs, a lesson given alone changed the code 0.6 of the time and in a list of ten 0.08 to 0.2 (§4ax, §4ay). On real work, observationally, a lesson shown during the work was followed no more often than one not shown (§4as, exploratory) |
+| **What it watches stays true** | When code a lesson governs changes, is the lesson flagged, and only then? | Executable: deliberate breaks and a replay of history (§4ae, §4af, §4ah) | Drift flagged about 2 in 5 deliberate breaks (§4af). Lessons' own checks caught none of 124 past breaks (§4bd); on fresh breaks, rule-wide checks caught about half and older checks about a quarter (§4bf). The breaks are judge-confirmed, and that judge is not yet checked against a person (#446) |
 | **It keeps learning, without inventing** | Are real findings captured as lessons, and how often is a lesson recorded for a failure that never happened? | Review findings on merged PRs (`okl intake`), and sessions with nothing to learn | Not measured (#251) |
 
 ## The rules every evaluation follows
@@ -144,8 +144,8 @@ before the code merged.
 | prompt | the prompt, with the reply before it for a short one | yes (the reply: not yet) |
 | plan | the agent's statement of the task before it writes code | the agent can ask (`okl_check`); nothing yet makes it |
 | file | the lessons governing a file as it is read | yes, `okl check --path` (§4aj) |
-| change | the code as it is written | no |
-| pull request | every lesson against the diff, judged one by one | no: measured next |
+| change | the code as it is written | opt-in: `okl on-edit` runs a governed lesson's check after an edit (#441); not yet measured as a channel |
+| pull request | lessons against the diff, judged one by one | opt-in: the review after writing (`okl check --change`) asks ten the agent picks, each in a fresh context; reach measured on real PRs (§4ao–§4aq), and end to end 0.2 on five tasks (§4az) |
 
 ## Where each evaluation runs
 

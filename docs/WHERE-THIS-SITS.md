@@ -26,9 +26,10 @@ the consensus position of 2026, not an insight.
    instruction file names a path or command that no longer exists. okl's version is
    stricter for the lessons that matter. A lesson cites the source it governs and
    carries a verification receipt from a check you choose (`okl verify` — the CLI will
-   not stamp without a run), can decay on a TTL, and goes stale *loudly*:
+   not stamp without a run), can decay on a TTL, and is flagged when its code moves:
    `okl drift --gate` blocks the push (or fails CI, with `--ci`) when governed code
-   changed after the lesson was last verified, or it was never verified. Most tools in the
+   changed after the lesson was last verified, or it was never verified. That flags a
+   re-check, not a break: a check catches the forms of its rule it tests (REPORT §4af, §4bf). Most tools in the
    table below accumulate, decay with time, or close a memory when a newer fact contradicts
    it; the ones that tie a memory to code check it by re-reading the
    code, checking a reference, or noticing a file changed, not by running your check.

@@ -277,7 +277,7 @@ def test_the_stop_hook_asks_for_the_review_only_where_it_is_on(repo, tmp_path):
 
 
 def test_the_review_asks_each_lesson_on_its_own_in_a_fresh_context():
-    """REPORT §4ay: ten lessons asked one at a time caught what the same ten checked together did
+    """REPORT §4ay: ten lessons asked one at a time caught what the same ten given as a list did
     not (§4ax). The steps ask for one sub-agent per lesson, one after another, and say what to do,
     and to say so, where an agent cannot start one."""
     steps = " ".join(" ".join(core.REVIEW_STEPS).split())
