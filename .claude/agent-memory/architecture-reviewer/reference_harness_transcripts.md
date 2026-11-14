@@ -23,7 +23,9 @@ Eval scripts that call `claude -p` with cwd=REPO (pick_fix, plan_reach, when_lin
 - `-p` without `--restricted` reads ~/.claude/settings.json (`effortLevel: xhigh`, plus modelSettings), so the A/B harness's Sonnet generator ran at xhigh (2026-10-22/23/29 samples).
 - `CLAUDE_EFFORT` is exported to hooks and Bash and never read back; the input variable is `CLAUDE_CODE_EFFORT_LEVEL`.
 - A checkout-run session gets `gitStatus`: the branch, the last five commit subjects and untracked names.
-- §4ba/§4bb ran from `~/.claude/projects/-Users-joshuadell-Dev-okl-wt-render/` (branches review-e2e and when-lines).
+- §4ba/§4bb ran from `~/.claude/projects/-Users-joshuadell-Dev-okl-wt-render/` (branches review-e2e and when-lines). The §4bb when-line WRITER sessions are there too (prompt starts "Below are lessons a software team keeps"; 17 on 2026-11-11, 15 on 2026-11-12).
+- §4bf: `-private-var-folders-...-T-okl-4bf-<run>-breaker-<N>/` (run k7ezkwzs: 108 breakers, 108 judges in the room dir). §4ag/§4ai census judges: `...-T-okl-judge-<id>-repo/` (a linked worktree, so they read git status).
+- Git status is the full short status (deleted and modified lines too), so hidden files' names appear in it.
 
 **How to apply:** when a REPORT claims something about every session, re-count it with a short script over these dirs. Ask for that script's output to be committed as a receipt, since the transcripts are local and will be swept. Related: [[review-findings-log]].
 
