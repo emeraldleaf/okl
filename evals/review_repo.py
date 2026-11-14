@@ -22,7 +22,6 @@ import contextlib
 import functools
 import hashlib
 import json
-import os
 import random
 import shutil
 import sqlite3
@@ -46,6 +45,7 @@ import realwork_label as rl
 import realwork_reach as rr
 import realwork_tasks as rt
 import review_action as ra
+import sandbox as sb
 
 POOL_UNTIL, N_TASKS = "2026-11-08T00:23:00Z", 50   # §4al's pool, as it stood when its tasks were frozen (REPORT §4aq's amendment)
 FIRST_PROMPT = "03a44686243e047b"   # §4ap's first pass, unchanged
@@ -54,7 +54,7 @@ LABELS, STATES, FIRST, USAGE, SETTLED, VERDICTS, DECOYS = ("4aq-labels.jsonl", "
                                                           "4aq-settled.jsonl", "4aq-verdicts.jsonl", "4aq-decoys.json")
 READ_ONLY = ["--output-format", "json", "--restricted", "--strict-mcp-config", "--tools", "Read,Grep,Glob"]
 SONNET_READS, OPUS_READS = ["claude", "-p", "--model", "sonnet", *READ_ONLY], ["claude", "-p", "--model", "opus", *READ_ONLY]
-ENV = {**os.environ, "OKL_BRIEFING_LOG": "0"}
+ENV = sb.clean_env()   # no session, okl or git variables (#446)
 AGENT_FILES = (".claude", ".cursor", ".mcp.json", "CLAUDE.md", "AGENTS.md")   # the copy must not brief or instruct the model
 ACTION, RAISED_AFTER, CHANGE_FILE = ("not_followed", "check"), ("gap", "ask"), "CHANGE.diff"
 WORKERS, TOOL_TIMEOUT, TOOL_BATCH, DECOY_SHARE, DECOY_VOID = 3, 900, 10, 0.1, 0.2

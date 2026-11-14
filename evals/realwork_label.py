@@ -30,6 +30,8 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
 
+import sandbox as sb
+
 REPO = Path(__file__).resolve().parent.parent
 TASKS = REPO / "evals" / "realwork" / "tasks.jsonl"
 LABELS = REPO / "evals" / "realwork" / "labels.jsonl"
@@ -112,7 +114,7 @@ def last_array(text: str) -> list | None:
 def ask(prompt: str, room: Path) -> tuple[list | None, str]:
     """The judge's array for `prompt`, and an error when there is none."""
     try:
-        p = subprocess.run(JUDGE, input=prompt, capture_output=True, text=True, timeout=TIMEOUT, cwd=room)
+        p = subprocess.run(JUDGE, input=prompt, capture_output=True, text=True, timeout=TIMEOUT, cwd=room, env=sb.clean_env())
     except subprocess.TimeoutExpired:
         return None, f"no answer in {TIMEOUT} s"
     try:

@@ -1,0 +1,172 @@
+"""Defects the review for #446 found in the eval harness, each pinned by its behaviour."""
+from __future__ import annotations
+
+import ast
+import importlib.util
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "evals"))
+
+
+def _load(name: str):
+    spec = importlib.util.spec_from_file_location(name, ROOT / "evals" / f"{name}.py")
+    assert spec and spec.loader
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_a_brace_in_the_judges_prose_does_not_void_its_verdict():
+    """ab_harness read from the first brace to the last, so prose with a brace before the JSON
+    turned a good verdict into a judge failure."""
+    ab = _load("ab_harness")
+    raw = 'The handler returns {status} on error. {"implemented": true, "defect_reproduced": false}'
+    assert ab.parse_judge(raw) == {"implemented": True, "defect_reproduced": False}
+    with pytest.raises(ValueError, match="missing boolean defect_reproduced"):
+        ab.parse_judge('{"implemented": true, "defect_reproduced": "no"}')
+    with pytest.raises(ValueError, match="no JSON"):
+        ab.parse_judge("no verdict here")
+
+
+def test_a_screen_answer_of_the_string_false_is_no_verdict(monkeypatch):
+    """bool("false") is True: pick_fix read a string verdict as bearing on the change."""
+    pf = _load("pick_fix")
+    item = ("dev", 1, "n_x", ["a.py"], ["it does a thing"], "Lesson text")
+    monkeypatch.setattr(pf, "ask", lambda *a, **k: '{"bears": "false", "reason": "no"}')
+    assert pf.screen_one(item) is None
+    monkeypatch.setattr(pf, "ask", lambda *a, **k: 'Thinking {x}. {"bears": false, "reason": "no"}')
+    assert pf.screen_one(item)["bears"] is False
+
+
+def test_an_echoed_id_matches_only_at_a_prefix_boundary():
+    """A model can drop a pack prefix; it cannot turn "x_abc" into "abc"."""
+    wl = _load("when_lines")
+    ids = ["seed:pack:abc", "x_abc", "n_1"]
+    assert wl.own_id("n_1", ids) == "n_1"
+    assert wl.own_id("pack:abc", ids) == "seed:pack:abc"
+    assert wl.own_id("abc", ["x_abc"]) is None
+    assert wl.own_id("abc", ["seed:a:abc", "seed:b:abc"]) is None   # ambiguous stays unanswered
+
+
+def test_a_model_call_with_no_cwd_runs_in_an_empty_room(monkeypatch):
+    """pick_fix and plan_reach ran from wherever the script started, the checkout (§4ba–§4bc)."""
+    import sandbox as sb
+    seen = []
+
+    def fake(cmd, **kw):
+        seen.append(kw)
+        return subprocess.CompletedProcess(cmd, 0, stdout='{"result": "x", "modelUsage": {"claude-sonnet-5-5": {}}}', stderr="")
+    for name in ("pick_fix", "plan_reach"):
+        mod = _load(name)
+        monkeypatch.setattr(mod.subprocess, "run", fake)
+        mod.ask(["claude", "-p"], "q", "sonnet") if name == "pick_fix" else mod.ask(["claude", "-p"], "q")
+    assert len(seen) == 2
+    for kw in seen:
+        assert not sb.inside_repo(Path(kw["cwd"])) and "CLAUDE_EFFORT" not in kw["env"]
+
+
+def _model_calls(tree: ast.AST) -> list[ast.Call]:
+    """subprocess.run/Popen calls that feed a prompt on stdin, other than to a named tool like tar."""
+    out = []
+    for node in ast.walk(tree):
+        if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+                and node.func.attr in ("run", "Popen") and getattr(node.func.value, "id", "") == "subprocess"):
+            continue
+        if not any(k.arg == "input" for k in node.keywords) or not node.args:
+            continue
+        first = node.args[0]
+        if isinstance(first, ast.List) and first.elts and isinstance(first.elts[0], ast.Constant) \
+                and first.elts[0].value != "claude":
+            continue
+        out.append(node)
+    return out
+
+
+def test_every_model_call_in_the_evals_names_its_room_and_its_environment():
+    """A call that names neither runs where the script started and with everything the launching
+    session set (#446). evals/sandbox.ask checks the room is outside the checkout at run time."""
+    files = subprocess.run(["git", "-C", str(ROOT), "ls-files", "evals/*.py"], capture_output=True, text=True,
+                           check=True).stdout.split()
+    assert len(files) > 50
+    missing = []
+    for f in files:
+        for call in _model_calls(ast.parse((ROOT / f).read_text())):
+            names = {k.arg for k in call.keywords}
+            if not {"cwd", "env"} <= names:
+                missing.append(f"{f}:{call.lineno} lacks {sorted({'cwd', 'env'} - names)}")
+    assert missing == [], missing
+
+
+def _repo(tmp_path: Path) -> Path:
+    room = tmp_path / "room"
+    room.mkdir()
+    ident = ["-c", "user.email=t@example.invalid", "-c", "user.name=t"]
+    subprocess.run(["git", "init", "-q", str(room)], check=True)
+    (room / "a.py").write_text("x = 1\n")
+    subprocess.run(["git", "-C", str(room), "add", "-A"], check=True)
+    subprocess.run(["git", "-C", str(room), *ident, "commit", "-qm", "base", "--no-verify"], check=True)
+    return room
+
+
+def test_a_patch_carries_the_files_the_agent_created(tmp_path):
+    """outcome_replay saved `git diff`, tracked files only: a new file was not in the patch."""
+    o = _load("outcome_replay")
+    room = _repo(tmp_path)
+    (room / "a.py").write_text("x = 2\n")
+    (room / "new_test.py").write_text("def test_x():\n    pass\n")
+    patch = o.patch_of(room)
+    assert "+++ b/a.py" in patch and "+++ b/new_test.py" in patch
+
+
+def test_the_judge_is_told_when_a_diff_is_cut():
+    """§4bf judged a control on the first 12,000 of 172,615 characters, with no word that it was cut."""
+    dm = _load("drift_mutate")
+    assert dm.for_judge("short diff") == "short diff"
+    long = "+x\n" * 5000
+    seen = dm.for_judge(long)
+    assert seen.startswith(long[:dm.JUDGE_CHARS]) and seen.endswith(
+        f"[the diff is cut here: it has {len(long)} characters, and you see the first {dm.JUDGE_CHARS}]")
+
+
+def test_a_breaker_never_works_on_a_tree_that_is_not_clean_at_base(tmp_path):
+    """git() never raises, so a failed reset let the next break stack on the last one."""
+    dm = _load("drift_mutate")
+    room = _repo(tmp_path)
+    base = subprocess.run(["git", "-C", str(room), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+    dm.at_base(room, base)
+    (room / "a.py").write_text("x = 3\n")
+    with pytest.raises(RuntimeError, match="not clean at BASE"):
+        dm.at_base(room, base)
+    subprocess.run(["git", "-C", str(room), "checkout", "-q", "--", "a.py"], check=True)
+    with pytest.raises(RuntimeError, match="not clean at BASE"):
+        dm.at_base(room, "0" * 40)
+
+
+def test_the_run_guard_watches_what_a_replay_reads_mid_run():
+    """outcome_regrade copies the graders into each room per session; an edit to them mid-run changed
+    the instrument behind half the sessions without the guard noticing (#446)."""
+    import run_guard
+    assert {"tests/replay_graders_4aw.py", "evals/replay-*.json"} <= set(run_guard.READS)
+    assert (ROOT / "tests" / "replay_graders_4aw.py").exists() and list((ROOT / "evals").glob("replay-*.json"))
+
+
+def test_the_4af_note_quotes_its_receipt():
+    """§4af's note: drift caught 7 of the 11 breaking patches the judge gave no verdict, against
+    14 of the 36 it judged broken, so leaving them out lowered the rate."""
+    import json
+    rec = json.loads((ROOT / "evals" / "results" / "drift-mutate-20261031-1522.json").read_text())
+    breaking = [p for p in rec["patches"] if p["kind"] == "breaking"]
+
+    def caught(p: dict) -> bool:
+        return bool(p.get("red")) and p.get("check") == "fail"
+    none = [p for p in breaking if p.get("judge") is None and p.get("patch")]
+    broken = [p for p in breaking if p.get("judge") == "broken"]
+    assert (sum(map(caught, none)), len(none), sum(map(caught, broken)), len(broken)) == (7, 11, 14, 36)
+    report = (ROOT / "evals" / "REPORT.md").read_text()
+    note = report.split("## 4af.", 1)[1].split("\n## 4ag.", 1)[0]
+    assert "Drift caught 7 of the 11 patches that got no verdict, against 14 of the 36 judged" in " ".join(note.split())

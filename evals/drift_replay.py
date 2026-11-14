@@ -25,9 +25,7 @@ import contextlib
 import hashlib
 import json
 import math
-import os
 import re
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -37,6 +35,8 @@ from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, TypeVar
+
+import sandbox as sb
 
 if TYPE_CHECKING:
     from okl.store import Node, Store
@@ -271,10 +271,10 @@ class Replayer:
     def __init__(self, scratch: Path, repo: Path = REPO) -> None:
         self.repo, self.wt = repo, scratch / "replay"
         git("worktree", "add", "-q", "--detach", str(self.wt), "HEAD", repo=repo)
-        drop = git_location_vars()
-        self.env = {k: v for k, v in os.environ.items() if not k.startswith("OKL_") and k not in drop}
-        self.env["PYTHONPATH"] = str(self.wt / "src")
-        self.env["OKL_WARM_SOCKET"] = str(scratch / "no-warm.sock")
+        # No OKL_, git or launching-session variable (#446); git_location_vars() names the git ones
+        # this git knows, and clean_env drops every GIT_ variable besides.
+        self.env = {k: v for k, v in sb.clean_env(tree=self.wt, OKL_WARM_SOCKET=str(scratch / "no-warm.sock")).items()
+                    if k not in git_location_vars()}
         self.cache: dict[tuple[str, str, str], str] = {}
         self.runs = 0
 
@@ -350,7 +350,7 @@ def store_copy(db: Path) -> Iterator[Store]:
     from okl.store import Store
     with tempfile.TemporaryDirectory() as d:
         copy = Path(d) / "okl.db"
-        shutil.copy2(db, copy)
+        sb.copy_sqlite(db, copy)   # with its write-ahead log (#446)
         store = Store(f"sqlite:///{copy}")
         try:
             yield store
@@ -574,7 +574,8 @@ def judge(receipt: Path, db: Path) -> int:
         with tempfile.TemporaryDirectory(prefix="okl-judge-") as room:
             try:
                 r = subprocess.run(["claude", "-p", "--model", "sonnet", "--restricted", "--tools", ""],
-                                   input=prompt, capture_output=True, text=True, timeout=TIMEOUT, cwd=room)
+                                   input=prompt, capture_output=True, text=True, timeout=TIMEOUT, cwd=room,
+                                   env=sb.clean_env())
                 said = last_object(r.stdout, lambda o: "broken" in o) or {}
             except subprocess.TimeoutExpired:   # no verdict for this one; the rest still count (review on #312)
                 said = {}

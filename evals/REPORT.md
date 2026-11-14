@@ -3767,6 +3767,17 @@ misses rests on four judgments, so the registered result stands, and neither cla
   - Whether wider file lists would cost more re-checks than they catch. §4ae's replay can count
     that on the history without new checks.
 
+*Note, 2026-11-14 (the harness review for #446): not comparable with §4bd–§4bf as it stands.*
+- **A check that crashed or collected nothing counted as failing,** and so as a catch. §4bd and §4bf
+  count it as cannot judge.
+- **The judge never saw a file the breaker created,** and the saved patches leave such files out.
+- **The receipt keeps only pass or fail,** so the 38.9% cannot be re-sorted. Compare it with §4bf's
+  figures only after a re-run with today's instrument.
+
+The judge's missing verdicts also fell on the same doc-claim lessons here and in §4ah, so they were not
+random. Drift caught 7 of the 11 patches that got no verdict, against 14 of the 36 judged, so leaving
+them out lowered the rate.
+
 ## 4ag. PRE-REGISTERED: the lessons nothing re-checks. How many have gone stale? (2026-10-31)
 
 Written before any lesson is judged. §4ae and §4af measure drift inside its scope; this measures
@@ -4204,6 +4215,10 @@ the repository is also behind both wrong verdicts on harmless patches.
   `doc-install-name`, `--replace` for `doc-verified-refused`, and the plugin manifest and the
   rival for the two pattern checks. Two are questions of claim, put to their lessons: `DEPLOY.md`
   for `doc-init-flags`, and the guidance for `n_07faa4565128`.
+
+*Note, 2026-11-14 (the harness review for #446).* The re-run shares §4af's instrument, so the same
+note applies: a crashed check counted as a catch, the judge did not see files the breaker created, and
+the figures are not comparable with §4bd–§4bf until a re-run.
 
 ## 4ai. PRE-REGISTERED: a review of the lessons nothing re-checks, on a scale that names wrong details and outlived workarounds (#315)
 
@@ -6270,6 +6285,12 @@ bottom of that range, so in every pairing choosing accounts for about 60% or mor
 0.72, and perhaps all of it. Whether anything else costs as well, such as agents cutting a review
 short, these runs cannot say.
 
+*Erratum, 2026-11-14 (the harness review for #446).* The picker's call passed no working directory, so
+in every arm it ran from where the script started, this checkout, and read its CLAUDE.md, whose rules are
+themselves lessons. The plan writer ran in a stripped copy of the repository, as intended. Every arm's
+picker was affected alike, so this touches the level more than the comparison, by an amount not known.
+The calls now run from an empty directory with a clean environment (`evals/sandbox.py`).
+
 ## 4bb. PRE-REGISTERED, A PILOT: does a line saying when a lesson applies, by mechanism, help a picker find it? (2026-11-11)
 
 Written before any line or pick in this section. §4az and §4ba found choosing to be the gap: with the
@@ -6330,6 +6351,10 @@ What it means, not pre-registered:
 4. Across §4ba and this, no way of choosing from the information before or just after writing found
    these two. What would is reading the code where it touches the mechanism, which is what the
    review's own reading of the change does, or a lesson whose files name the code it governs.
+
+*Erratum, 2026-11-14 (the harness review for #446).* The when-line writer and the picker ran from this
+checkout, with no working directory given, and read its CLAUDE.md. Both arms' picks were affected alike;
+how much is not known. The calls now run from an empty directory with a clean environment.
 
 ## 4bc. PRE-REGISTERED: can okl choose the lessons a change breaks better than a model picking from the list? (2026-11-12)
 
@@ -6427,6 +6452,12 @@ What it means, not pre-registered:
 What it points at: a screen that tells lessons apart, asking the review's own question (does this
 change break this lesson?) or using a stronger model, and the fused list cut to the review's size.
 Each needs its own pre-registration on changes no arm here has seen.
+
+*Erratum, 2026-11-14 (the harness review for #446).* The picker, the describer and the screener ran from
+this checkout, with no working directory given, and read its CLAUDE.md, whose rules are themselves lessons.
+That may have leaned picks and "bears" verdicts toward them; how much is not known. The screener also read
+any `"bears"` value as a yes or no by its truth, so the string `"false"` would have counted as bearing; the
+receipt does not show whether any answer took that form. Both are fixed, with tests.
 
 ## 4bd. PRE-REGISTERED: would a lesson's own check, run at the edit, have caught the breaks past changes made? (2026-11-12)
 
@@ -6911,6 +6942,11 @@ check catches only what it tests, citing this section.
 
 ## 6. Threats to validity (read before quoting)
 
+- **Model calls inherited the launching session's environment until #446 (2026-11-14).** Every
+  breaker, judge, picker and agent run from a Claude Code session received its variables, its effort
+  level among them. That was `xhigh` for the runs of §4bd–§4bf. If the CLI honours that variable, those
+  runs used more effort than its default, and no receipt recorded it. From #446, calls run with a clean
+  environment and a pinned, recorded effort (`evals/sandbox.py`).
 - **The task set is bait, constructed from the store's own lessons.** This measures
   exactly one thing: whether retrieval of known lessons prevents their known defect
   classes. It does NOT measure general code quality, novel-problem performance, or

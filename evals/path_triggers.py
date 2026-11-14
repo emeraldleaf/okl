@@ -35,6 +35,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 import briefing_arms as ba
 import realwork_label as rl
 import realwork_reach as rr
+import sandbox as sb
 
 from okl.store import path_matches
 
@@ -90,7 +91,7 @@ def lesson_texts(ids: set[str]) -> dict[str, str]:
 def ask(prompt: str, room: Path) -> list | None:
     """The drafter's array for `prompt`, or None when it gave none."""
     try:
-        p = subprocess.run(DRAFTER, input=prompt, capture_output=True, text=True, timeout=TIMEOUT, cwd=room)
+        p = subprocess.run(DRAFTER, input=prompt, capture_output=True, text=True, timeout=TIMEOUT, cwd=room, env=sb.clean_env())
     except subprocess.TimeoutExpired:
         return None
     try:

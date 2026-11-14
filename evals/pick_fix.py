@@ -48,6 +48,7 @@ import lesson_review as lr
 import plan_reach as pr
 import review_action as ra
 import run_guard
+import sandbox as sb
 from when_lines import last_object
 
 from okl import core
@@ -166,7 +167,9 @@ def search(db: Path, text: str, lessons: set[str]) -> list[str]:
 def ask(cmd: list[str], prompt: str, model: str) -> str | None:
     """One call's text, or None (a usage limit looks like this)."""
     try:
-        p = subprocess.run(cmd, input=prompt, capture_output=True, text=True, timeout=900)
+        with sb.empty_room() as room:   # never the checkout, where CLAUDE.md loads (#446)
+            p = subprocess.run(cmd, input=prompt, capture_output=True, text=True, timeout=900, cwd=room,
+                               env=sb.clean_env())
         reply = json.loads(p.stdout)
     except (subprocess.TimeoutExpired, ValueError):
         return None
@@ -263,11 +266,11 @@ def screen_one(item: tuple[str, int, str, list[str], list[str], str]) -> dict | 
                 obj, _ = decoder.raw_decode(raw, i)
             except ValueError:
                 continue
-            if isinstance(obj, dict) and "bears" in obj:
+            if isinstance(obj, dict) and isinstance(obj.get("bears"), bool):   # "false" is not True (#446)
                 got = obj
     if got is None:
         return None
-    return {"half": half, "pr": pr_, "lesson": lesson, "instrument": INSTRUMENT, "commit": COMMIT, "bears": bool(got.get("bears")), "reason": got.get("reason")}
+    return {"half": half, "pr": pr_, "lesson": lesson, "instrument": INSTRUMENT, "commit": COMMIT, "bears": got["bears"], "reason": got.get("reason")}
 
 
 def screen() -> int:

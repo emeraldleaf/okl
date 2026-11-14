@@ -96,7 +96,7 @@ def one_session(call: dict, task: dict, before: set[str]) -> dict | None:
             passes.append({"position": i, "right": right, "edited": state(room) != was, "turns": reply.get("num_turns"),
                            "usd": reply.get("total_cost_usd", 0), "said": (reply.get("result") or "")[-300:]})
         (room / "CHANGE.diff").unlink(missing_ok=True)
-        patch = o.git("diff", cwd=room)
+        patch = o.patch_of(room)
         harm = [b for b in o.run_tests(room, task)["bad"] if b not in before]
         got = regrade.grade(room, task)
     others = [p for p in passes if not p["right"]]

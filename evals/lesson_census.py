@@ -46,6 +46,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import drift_replay as dr
+import sandbox as sb
 
 from okl.store import RETIRED_STATUSES, Node
 
@@ -296,8 +297,10 @@ def judge(census_path: Path, workers: int, section: str = "4ag") -> int:
             text = {f: plant(t, x["planted"]["old"], x["planted"]["new"]) for f, t in text.items()}
         out = {"id": x["id"]}
         try:
+            # In a scratch tree of the repository on purpose: the judge reads the code to say whether a
+            # lesson still holds. Its environment is clean all the same (#446).
             p = subprocess.run(JUDGE, input=prompt.format(**text), capture_output=True, text=True,
-                               timeout=TIMEOUT, cwd=wt)
+                               timeout=TIMEOUT, cwd=wt, env=sb.clean_env())
             env = json.loads(p.stdout) if p.stdout.strip().startswith("{") else {}
             got = parse_verdict(env.get("result") or "", verdicts)
             out.update(got or {"error": (env.get("result") or p.stderr or "no output")[-300:]})

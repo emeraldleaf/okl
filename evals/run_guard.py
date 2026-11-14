@@ -18,7 +18,9 @@ from typing import Any
 
 import ab_harness as ab
 
-READS = ("src/okl", "evals/*.py")   # okl's code and the eval scripts, not the receipts a run writes
+# okl's code, the eval scripts, and what a replay reads mid-run: the graders copied into each room and
+# the replay task files (#446). Not the receipts a run writes.
+READS = ("src/okl", "evals/*.py", "tests/replay_graders_4aw.py", "evals/replay-*.json")
 
 
 class Run:

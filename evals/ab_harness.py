@@ -37,6 +37,9 @@ from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import sandbox as sb
+
 REPO = Path(__file__).resolve().parents[1]
 # Overridable so the instrument guard can be tested against a CONSTRUCTED receipt history.
 # Without this the guard is only testable against whatever this repo happens to hold, and
@@ -106,8 +109,10 @@ def call(cmd: str, prompt: str, timeout: int, workdir: str, env: dict[str, str] 
     replaces the environment when given (the generator's PATH shim and store, §4r).
     Raises RuntimeError on a non-zero exit, so the caller counts the run as a failure.
     """
+    # With no env given, a clean one, not the launching session's: before #446 the generator and
+    # the judge inherited its variables, its effort level among them.
     r = subprocess.run(shlex.split(cmd), input=prompt, capture_output=True, text=True,
-                       timeout=timeout, cwd=workdir, env=env)
+                       timeout=timeout, cwd=workdir, env=env if env is not None else sb.clean_env())
     if r.returncode != 0:
         raise RuntimeError(f"exit {r.returncode}: {r.stderr.strip()[:200]}")
     return r.stdout
@@ -250,14 +255,27 @@ def parse_judge(raw: str) -> dict:
     verdict that does not say whether there was code to judge is a judge failure, counted
     as one, never read as clean.
     """
-    m = re.search(r"\{.*\}", raw, re.DOTALL)
-    if not m:
+    # The last object that is a verdict, read one object at a time: a greedy match from the first
+    # brace to the last read any brace in the judge's prose as part of the JSON, and turned a good
+    # verdict into a judge failure (the defect drift_replay.last_object was fixed for; #446).
+    decoder, found, last = json.JSONDecoder(), None, None
+    for i, ch in enumerate(raw):
+        if ch != "{":
+            continue
+        try:
+            obj, _ = decoder.raw_decode(raw, i)
+        except ValueError:
+            continue
+        if isinstance(obj, dict):
+            last = obj
+            if all(isinstance(obj.get(k), bool) for k in ("implemented", "defect_reproduced")):
+                found = obj
+    if found is not None:
+        return found
+    if last is None:
         raise ValueError(f"no JSON in judge output: {raw.strip()[:120]}")
-    d = json.loads(m.group(0))
-    for key in ("implemented", "defect_reproduced"):
-        if not isinstance(d.get(key), bool):
-            raise ValueError(f"judge JSON missing boolean {key}: {d}")
-    return d
+    missing = next(k for k in ("implemented", "defect_reproduced") if not isinstance(last.get(k), bool))
+    raise ValueError(f"judge JSON missing boolean {missing}: {last}")
 
 
 # How much of a submission the judge reads. It read only the first 8,000 characters: a
@@ -286,7 +304,8 @@ def generator_env(workdir: str, log: str) -> dict[str, str] | None:
     reads; None (inherit) when no tools are allowed."""
     if not GENERATOR_TOOLS:
         return None
-    return {**os.environ, "PATH": f"{Path(workdir) / 'bin'}{os.pathsep}{os.environ.get('PATH', '')}",
+    base = sb.clean_env()
+    return {**base, "PATH": f"{Path(workdir) / 'bin'}{os.pathsep}{base['PATH']}",
             "OKL_SHIM_LOG": log, "OKL_BRIEFING_LOG": "0", "OKL_DATABASE_URL": store_url()}
 
 
@@ -605,7 +624,7 @@ def resolved_model(cmd: str, timeout: int, workdir: str) -> list[str] | None:
         return None
     try:
         r = subprocess.run([*argv, "--output-format", "json"], input="Reply with the single word OK.",
-                           capture_output=True, text=True, timeout=timeout, cwd=workdir)
+                           capture_output=True, text=True, timeout=timeout, cwd=workdir, env=sb.clean_env())
         usage = json.loads(r.stdout).get("modelUsage") if r.returncode == 0 else None
     except (OSError, subprocess.SubprocessError, ValueError, AttributeError):
         return None
