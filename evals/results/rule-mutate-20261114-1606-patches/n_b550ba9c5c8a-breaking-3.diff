@@ -1,0 +1,13 @@
+diff --git a/src/okl/scaffold/git-hooks/pre-push b/src/okl/scaffold/git-hooks/pre-push
+index 6f83880..b094396 100755
+--- a/src/okl/scaffold/git-hooks/pre-push
++++ b/src/okl/scaffold/git-hooks/pre-push
+@@ -71,7 +71,7 @@ printf '%s\n' "$out"
+ if [[ "$rc" -eq 1 ]] && [[ "$out" == *"may be stale"* ]]; then
+   echo "okl pre-push: lessons drifted (above). Re-check them with 'okl reverify', commit," >&2
+   echo "  then push again. 'git push --no-verify' skips this check." >&2
+-  exit 1
++  exit 0
+ fi
+ if [[ "$rc" -ne 0 ]]; then
+   echo "okl pre-push: DRIFT NOT CHECKED (okl exit $rc, reason above). Pushing anyway." >&2

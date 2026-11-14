@@ -1,0 +1,15 @@
+diff --git a/docs/architecture/okl-runtime.excalidraw b/docs/architecture/okl-runtime.excalidraw
+index 7ddcba4..e32975d 100644
+--- a/docs/architecture/okl-runtime.excalidraw
++++ b/docs/architecture/okl-runtime.excalidraw
+@@ -651,8 +651,8 @@
+    "updated": 1,
+    "link": null,
+    "locked": false,
+-   "text": "fails closed: if okl cannot\nrun, exit 2 blocks the prompt",
+-   "originalText": "fails closed: if okl cannot\nrun, exit 2 blocks the prompt",
++   "text": "fails open: if okl cannot\nrun, the prompt goes through",
++   "originalText": "fails open: if okl cannot\nrun, the prompt goes through",
+    "fontSize": 14,
+    "fontFamily": 3,
+    "textAlign": "left",

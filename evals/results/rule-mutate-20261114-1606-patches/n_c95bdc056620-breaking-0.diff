@@ -1,0 +1,26 @@
+diff --git a/.github/workflows/okl-verify.yml b/.github/workflows/okl-verify.yml
+index 6c3c143..211a4ee 100644
+--- a/.github/workflows/okl-verify.yml
++++ b/.github/workflows/okl-verify.yml
+@@ -66,7 +66,7 @@ jobs:
+           # .github/okl-version pins the okl release, so CI runs what your hooks run:
+           # `okl init --ci` writes it, and moves it when re-run after an upgrade. Without it
+           # (a hand-copied workflow, a dev build of okl), CI installs the newest release.
+-          if [ -f src/okl/__init__.py ]; then
++          if grep -q '^name = "org-knowledge-layer"' pyproject.toml 2>/dev/null; then
+             pip install -e .
+           elif [ -s .github/okl-version ]; then
+             v=$(tr -d '[:space:]' < .github/okl-version)
+diff --git a/src/okl/scaffold/ci/okl-verify.yml b/src/okl/scaffold/ci/okl-verify.yml
+index 6c3c143..211a4ee 100644
+--- a/src/okl/scaffold/ci/okl-verify.yml
++++ b/src/okl/scaffold/ci/okl-verify.yml
+@@ -66,7 +66,7 @@ jobs:
+           # .github/okl-version pins the okl release, so CI runs what your hooks run:
+           # `okl init --ci` writes it, and moves it when re-run after an upgrade. Without it
+           # (a hand-copied workflow, a dev build of okl), CI installs the newest release.
+-          if [ -f src/okl/__init__.py ]; then
++          if grep -q '^name = "org-knowledge-layer"' pyproject.toml 2>/dev/null; then
+             pip install -e .
+           elif [ -s .github/okl-version ]; then
+             v=$(tr -d '[:space:]' < .github/okl-version)

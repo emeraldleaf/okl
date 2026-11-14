@@ -1,0 +1,28 @@
+diff --git a/src/okl/service.py b/src/okl/service.py
+index ee5ff8c..e6ddb54 100644
+--- a/src/okl/service.py
++++ b/src/okl/service.py
+@@ -16,6 +16,7 @@ import threading
+ from typing import Any, Literal
+ 
+ from . import core, decide
++from . import store as store_mod
+ from .store import Store
+ 
+ 
+@@ -247,6 +248,15 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901, PLR0915 -
+         result = core.check(_store, req.repo, req.task, limit=req.limit,
+                             interests=req.interests, hybrid=req.hybrid, index=req.index,
+                             near_misses=req.near_misses, rerank=req.rerank, decision=req.decision)
++        if req.interests and result.get("lessons"):
++            wanted = {t.strip().lower() for t in req.interests if t.strip()}
++            kept = []
++            for les in result["lessons"]:
++                n = _store.get_node(les["id"])
++                stacks = (store_mod.split_tags(n.tags) & store_mod.STACK_TAGS) if n else set()
++                if not stacks or stacks & wanted:
++                    kept.append(les)
++            result["lessons"] = kept
+         # The service is the only party that sees every client's briefings (#129).
+         if req.log:
+             core.record_briefing(_store, req.repo, result)

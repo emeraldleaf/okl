@@ -1,0 +1,14 @@
+diff --git a/src/okl/recap.py b/src/okl/recap.py
+index 2fc321a..33688a7 100644
+--- a/src/okl/recap.py
++++ b/src/okl/recap.py
+@@ -306,7 +306,8 @@ def render_report(r: dict[str, Any]) -> str:
+                    "said their code had changed and nothing re-ran their check or retired them afterwards.")
+         out += [f"- [{x['id']}] {x['title']} ({x['times']}×)" for x in r["stale_not_rechecked"]]
+     if r["stale_now"]:
+-        out.append(f"\n**Still open:** {len(r['stale_now'])} lessons are stale now. `okl reverify` re-runs their checks.")
++        out.append(f"\n**Still open:** {len(r['stale_now'])} of {r['drift_checked']} checked lessons are stale now. "
++                   "`okl reverify` re-runs their checks.")
+         out += [f"- [{x['id']}] {x['title']}: {x['reason']}" for x in r["stale_now"]]
+     elif r["drift_checked"]:
+         out.append(f"\n**Still open:** nothing; the {r['drift_checked']} lessons that govern files are proven against them.")

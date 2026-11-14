@@ -1,0 +1,15 @@
+diff --git a/docs/ARCHITECTURE.md b/docs/ARCHITECTURE.md
+index 6c3742a..4ebcafa 100644
+--- a/docs/ARCHITECTURE.md
++++ b/docs/ARCHITECTURE.md
+@@ -13,7 +13,9 @@ what okl does for you; these show how it is put together, down to the files and
+ All four are Excalidraw files under `docs/architecture/`, each with the `.svg` render beside it,
+ which is what this page shows: an image looks the same in any viewer and theme. To change one,
+ open its `.excalidraw` in Excalidraw (excalidraw.com, or the VS Code extension), edit it, and
+-export the `.svg` beside it.
++export the `.svg` beside it. The retrieval pipeline diagrams in the README are different: they
++have no `.excalidraw` source, and `docs/render_pipeline_diagram.py` generates them from the live
++pipeline.
+ 
+ They are checked, not just drawn. `ci/check-diagram-names.py` reads each source and its render
+ and fails CI on any command, flag, MCP tool, hook event, file, folder, function or briefing mark

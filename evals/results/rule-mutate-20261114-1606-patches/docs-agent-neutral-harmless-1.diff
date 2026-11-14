@@ -1,0 +1,13 @@
+diff --git a/docs/DEVELOPING.md b/docs/DEVELOPING.md
+index f001c91..e61b906 100644
+--- a/docs/DEVELOPING.md
++++ b/docs/DEVELOPING.md
+@@ -71,6 +71,8 @@ src/okl/
+    cp hooks/<file>.sh src/okl/scaffold/hooks/ && cp hooks/<file>.sh .claude/hooks/
+    ```
+ 
++   The `.claude/hooks/` twin is the Claude Code-only copy; the other two serve any agent.
++
+ 5. **Change the docs in the same PR.** That means the README, `docs/GETTING-STARTED.md`,
+    the CHANGELOG's `## Unreleased` section, and the diagrams if what they show changed. A
+    drawn one (`docs/architecture/`) is edited in its `.excalidraw` source and re-exported to

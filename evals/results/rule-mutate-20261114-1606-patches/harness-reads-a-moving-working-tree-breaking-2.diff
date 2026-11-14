@@ -1,0 +1,20 @@
+diff --git a/evals/outcome_replay.py b/evals/outcome_replay.py
+index 4e43537..61b76e2 100644
+--- a/evals/outcome_replay.py
++++ b/evals/outcome_replay.py
+@@ -257,7 +257,6 @@ def harm(row: dict, baseline: dict) -> int:
+ 
+ def score(write: bool) -> int:
+     """Pass rates per arm, averaged over tasks, against the stated reading."""
+-    run_ = run_guard.start()
+     rows, prs = list(kept().values()), [t["pr"] for t in tasks()]
+     baseline = {r["pr"]: r for r in json.loads(BASELINE.read_text())["tasks"]}
+     rate = {a: {p: [r["passed"] for r in rows if r["arm"] == a and r["pr"] == p] for p in prs} for a in ARMS}
+@@ -273,7 +272,6 @@ def score(write: bool) -> int:
+            "median_seconds": sorted(r["seconds"] for r in rows)[len(rows) // 2] if rows else None, "api_priced_usd": round(sum(r["api_priced_usd"] for r in rows), 2),
+            "script_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+            "rows": [{k: r.get(k) for k in ("pr", "arm", "rep", "passed", "changed", "patch_chars", "turns", "seconds", "summary", "said", "model")} for r in rows]}
+-    out = run_.stamp(out)
+     print(json.dumps({k: v for k, v in out.items() if k != "rows"}, indent=1))
+     if write:
+         dest = REPO / "evals" / "results" / f"outcome-replay-{datetime.now(UTC):%Y%m%d-%H%M}.json"

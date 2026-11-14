@@ -1,0 +1,18 @@
+diff --git a/tests/test_check_paths.py b/tests/test_check_paths.py
+index ba3bd83..b6e9bf6 100644
+--- a/tests/test_check_paths.py
++++ b/tests/test_check_paths.py
+@@ -125,13 +125,6 @@ def test_a_service_answers_paths_and_an_older_one_is_refused(remote, monkeypatch
+ 
+     assert remote.api.post("/check", json={"repo": "r"}).status_code == 422
+ 
+-    # Every path outside the repo: nothing there can be governed, and the service refuses an
+-    # empty list, so the client answers in the local shape without asking (CodeRabbit sweep 6).
+-    outside = Client().check("", paths=["/etc/hosts"])
+-    assert outside["outside_repo"] == ["/etc/hosts"] and outside["match_count"] == 0
+-    assert set(core.check_paths(remote.store, "r", [])) - {"store_records"} <= set(outside)
+-    assert "store_records" not in outside           # no store was read, so none is counted
+-
+     real = Client._post
+     monkeypatch.setattr(Client, "_post", lambda self, path, payload: {
+         k: v for k, v in real(self, path, {**payload, "task": "orders"}).items() if k != "paths"})

@@ -1,0 +1,36 @@
+diff --git a/.github/workflows/okl-verify.yml b/.github/workflows/okl-verify.yml
+index 6c3c143..bccd208 100644
+--- a/.github/workflows/okl-verify.yml
++++ b/.github/workflows/okl-verify.yml
+@@ -35,6 +35,7 @@ defaults:
+ jobs:
+   okl-verify:
+     runs-on: ubuntu-latest
++    timeout-minutes: 15
+     env:
+       # Set at job level so every okl command below resolves the shared layer from the
+       # environment. This replaces an `okl connect --token` step, which wrote the bearer
+diff --git a/ci/okl-verify.yml b/ci/okl-verify.yml
+index 6c3c143..bccd208 100644
+--- a/ci/okl-verify.yml
++++ b/ci/okl-verify.yml
+@@ -35,6 +35,7 @@ defaults:
+ jobs:
+   okl-verify:
+     runs-on: ubuntu-latest
++    timeout-minutes: 15
+     env:
+       # Set at job level so every okl command below resolves the shared layer from the
+       # environment. This replaces an `okl connect --token` step, which wrote the bearer
+diff --git a/src/okl/scaffold/ci/okl-verify.yml b/src/okl/scaffold/ci/okl-verify.yml
+index 6c3c143..bccd208 100644
+--- a/src/okl/scaffold/ci/okl-verify.yml
++++ b/src/okl/scaffold/ci/okl-verify.yml
+@@ -35,6 +35,7 @@ defaults:
+ jobs:
+   okl-verify:
+     runs-on: ubuntu-latest
++    timeout-minutes: 15
+     env:
+       # Set at job level so every okl command below resolves the shared layer from the
+       # environment. This replaces an `okl connect --token` step, which wrote the bearer

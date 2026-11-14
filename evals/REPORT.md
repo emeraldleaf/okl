@@ -6605,6 +6605,249 @@ What it means, not pre-registered:
    rule on today's code, where today's checks pass to begin with (§4af's method), and compares each
    lesson's own check with its rule-wide one on the same breaks.
 
+## 4bf. PRE-REGISTERED: on fresh breaks of each rule on today's code, do the checks `okl on-edit` runs catch them? (2026-11-13)
+
+Written before any break is generated. §4bd ran lessons' own checks at past changes, and none caught
+its break. §4be found that today's rule-wide checks (#415) cannot be carried back: they fail on the
+older code before any break. Its reading named the next test. Break each rule afresh on today's code,
+where every check passes to begin with (§4af's method), and compare each lesson's own check with its
+rule-wide one on the same breaks.
+
+**What changed from that plan.** #415 did not give these lessons a second check beside their own. It
+rewrote each one's stored check, the one `okl on-edit` runs. For four of the nine, the stored check now
+joins a test of the lesson's incident to the sweep, and the two parts can run apart. The other five have
+only the sweep. So the comparison is made two ways:
+- **Within a lesson,** on the four that split: the incident part and the rule-wide part, on the same breaks.
+- **Between groups:** the nine #415 hardened, against nine lessons whose check came before #415. The
+  older nine are chosen by a rule fixed before any break: outside #415's nine, at least two of §4bd's
+  breaks, and a check §4bd could run at both ends of every one. The rule picks exactly nine, and
+  `rule_mutate.py precheck` confirms it from §4bd's rows.
+
+| group | lessons | §4bd's breaks |
+|---|---|---|
+| hardened by #415 | n_e7988ff536fb, n_5ddb0776a863, n_02cc84da158d and n_0637c92c032f (the four that split); harness-reads-a-moving-working-tree, r_single_source_sets, py_dont_mock_what_you_dont_own, remote-path-test-through-client, docs-agent-neutral | 38 |
+| older | n_6b65aa35593c, n_00985805cdbb, remote-timeout-not-a-deadline, n_849a5b0425ef, n_adea7f2c7373, n_8a6e1abce5cc, n_b550ba9c5c8a, n_b74bad29fd87, n_c95bdc056620 | 25 |
+
+**Seen while drafting.** Receipt `rule-mutate-precheck-20261113-2349.json`, made at the commit that adds
+the instrument:
+- Every check of all 18 lessons passed in a clean tree, both parts of the four included. Each lesson's
+  check in the store equals the one registered in `rule_mutate.py`, and the run refuses if one changes.
+  It also runs every check at BASE again before it starts.
+- The first precheck failed n_02cc84da158d's sweep. The instrument's own control break, written inline as
+  a quoted read of `OKL_DATABASE_URL`, was in a committed `.py` file the sweep reads, and the sweep
+  cannot tell a quoted read from a real one. That break now lives in `evals/rule_mutate_control.txt`.
+- The control break, a second reader of the variable in `src/okl/cli/on_edit.py`, was caught by
+  n_02cc84da158d's rule-wide part and missed by its incident part (receipt
+  `rule-mutate-control-20261113-2349.json`). So the instrument can show both outcomes. It is not a
+  measure.
+
+**Patches.** Six per lesson, as in §4af, 108 in all, each a change to BASE. BASE is the commit the run
+starts from, clean, holding this section and the instrument as committed with it; the receipt names it:
+- **Four breaking.** §4af's breaker and prompt, unchanged: `claude -p --model sonnet --restricted`
+  with Read, Grep, Glob and Edit in a scratch worktree. It is given the lesson's title, symptom and fix,
+  asked for one realistic change after which the lesson's claim is false, and told the files earlier
+  breaks of the lesson changed.
+- **Two harmless, the negative control.** §4af named the files the lesson governs, and most of these
+  lessons govern none. So the prompt asks for a realistic change "in the part of it this lesson is
+  about" after which the lesson still holds.
+- **Hidden from the breaker** (lesson n_85b9d0a7823d):
+  - §4ah's list;
+  - every file a check here names;
+  - the eval scripts and tests that name these checks (`check_reach.py`, `drift_mutate.py`, this
+    instrument, its control file and their tests);
+  - `evals/realwork/`, `evals/replay-tasks-4aw.json` and `docs/posts/`, which write up past breaks.
+
+  A file the lesson governs is never hidden, so docs-agent-neutral's breaker sees all of `docs/`.
+  Contributor guidance stays visible: CLAUDE.md, CONTRIBUTING.md, AGENTS.md, the README, `docs/` and the
+  CI workflow name some checks, as they do for any contributor.
+- `--restricted` ignores the project's settings files, so this repo's own hooks neither brief the
+  breaker nor stop it.
+
+**Ground truth.** §4af's judge and prompt: `claude -p --model opus --restricted --tools ""`, shown the
+lesson and the diff, never a check or a result. A breaking patch counts as a break only when the judge
+says broken, and a harmless one as a control only when it says intact. One fix: the diff now includes
+files the breaker created, which §4af's `git diff HEAD` left out of what its judge saw.
+
+**Per patch.** Every check of the lesson runs in the breaker's tree at the patch's commit, as §4bd runs
+one: through a shell, with that tree's `src` first on `PYTHONPATH` and no `OKL_` variable set. Every
+check passed at BASE, so §4bd's rule sorts each result:
+- **caught:** the check fails by its own failure;
+- **cannot judge:** it fails only by not running (exit 2, 4, 5, 126 or 127, a missing file, a timeout);
+- **missed:** it passes.
+
+For the two exit-code lessons, the sweep runs a second time without its three list tests
+(`every_command_is_in_the_sweep` and its two siblings). Those fail on anything new that is not on the
+sweep's list, whether or not it breaks the rule.
+
+**Measures.**
+1. Each group's catch rate by its stored check, the one `okl on-edit` runs: caught over judged breaks,
+   with a Wilson 95% interval and a 95% bootstrap that resamples lessons.
+2. On the four that split, paired: rule-wide only, incident only, both, neither.
+3. The exit-code sweep's catches that only its list tests made.
+4. Each group's controls whose stored check failed.
+5. Per lesson, all of the above.
+
+**Predictions.**
+1. The hardened group's stored checks catch at least half of its breaks.
+2. The older group's catch fewer than a quarter of its breaks.
+3. On the four that split, the rule-wide part catches at least twice as many breaks as the incident part.
+4. At most 2 of each group's controls fail their stored check.
+
+**Reading.**
+- **Sweeping a rule is what lets a check catch a fresh break,** if prediction 1 holds and the hardened
+  rate is at least 25 points above the older one. Next comes the blind test §4be named: a sub-agent
+  writes a rule-wide check from each scriptable lesson's text and the repo, and the checks run on these
+  patches, which their writer never saw. #415's method then extends to the next most-broken lessons.
+- **The older checks hold up as well,** if prediction 1 holds and the gap is under 25 points. §4bd's 0
+  caught then says more about running checks backwards than about how they were written, and the next
+  step is to give more lessons a check of any kind.
+- **Even rule-wide checks miss fresh breaks,** if the hardened rate is under half. The per-lesson table
+  names each miss and what its sweep left out, the misses go to #415's checks, and the docs keep saying
+  `okl on-edit` catches only what a check tests.
+- **Counts only, no rate,** if the judge confirms fewer than half of the 72 breaking patches, or more
+  than 20% of the 108 patches do not apply or time out.
+- **If more than 2 of a group's controls fail,** a failed check there is not evidence of a break. That
+  group's catches are reported apart, with the tests that failed.
+
+**What the run can settle, and what it cannot.**
+- **The breaks are aimed.** Each is written to break one rule, while a real break is incidental. The rate
+  says whether a check notices a break of its rule, not how often rules break.
+- **The judge stands in for the truth,** as in §4af.
+- **The groups differ in more than how their checks were written.** #415 chose its nine because their
+  rules could be scripted, and the older nine include rules #415 judged could not be: what a comment
+  says, a judgement left to the review. A gap between the groups mixes the two. The within-lesson
+  comparison is the clean one, and it covers four lessons.
+- **Partly in-sample.** #415's sweeps were written knowing the shapes these rules' past breaks took. The
+  breaks here are new, but they may take the same shapes.
+- **The breaker cannot read the checks.** A real agent could, and might steer around them or trip them.
+- **One breaker model, one repository, 18 lessons.**
+
+**Budget and stop.**
+- **Runs:** 108 breaker sessions of at most 300 seconds each, at most 108 judge calls, three lessons at a
+  time. Each patch runs one to four checks of a few seconds each. §4af's 78 patches cost $5.20 (receipt
+  `drift-mutate-20261031-1522.json`), so this should cost about $7 at API prices, on the Max plan.
+- **The instrument,** `evals/rule_mutate.py`, and its tests are committed before this section and before
+  any patch exists. The receipt names its commit, and any difference from this section is reported as a
+  deviation.
+- **Fixed once a verdict is read:** the population, the prompts, the hiding list and the rules.
+- **Deadline:** if the run cannot complete by 2026-11-20, this section records why, and nothing is
+  concluded.
+
+**Result (2026-11-14): even rule-wide checks miss fresh breaks.** Receipt `rule-mutate-20261114-1606.json`,
+with its 108 patches in the directory beside it, every row made at BASE `eb6cc25`.
+
+**The run.**
+- **Every patch applied,** none was unusable, and every check ran on every patch, so none sorted as
+  cannot judge.
+- **The judge confirmed 61 of the 72 breaking patches as breaks** and called 6 intact. It called 35 of the
+  36 harmless patches intact, and those are the controls.
+- **It gave no verdict on 6 patches,** 6% of the 108, under the registered 20%. Five timed out at 300
+  seconds. Once, given no tools, it wrote out tool calls instead of an answer.
+- **Deviations.**
+  - The laptop slept partway through. The run went on when it woke, and its rows name one commit
+    throughout.
+  - The run's throwaway commits went through the developer's own `prepare-commit-msg` hook, since
+    `--no-verify` does not skip that one. The hook added a line to commit messages the run never reads.
+    Both mutation scripts now turn hooks off for these commits.
+  - It cost $8.62 at API prices, against the $7 estimated.
+  - Claude Code's own background calls to Haiku appear beside both models, as in §4ah's run.
+
+| | hardened by #415 | older |
+|---|---|---|
+| breaks the stored check caught | 16 of 34 (47.1%), Wilson 31.5–63.3%, lesson bootstrap 25.8–67.7% | 7 of 27 (25.9%), Wilson 13.2–44.7%, lesson bootstrap 5.9–53.3% |
+| controls whose stored check failed | 1 of 18 | 0 of 17 |
+
+On the four lessons that split, over their 15 breaks: the rule-wide part alone caught 2, the incident part
+alone 4, both 0, neither 9. The exit-code sweep's list tests made no catch of their own.
+
+**Predictions.**
+1. **Failed.** The hardened checks caught 47.1% of their breaks, not half.
+2. **Failed, narrowly.** The older checks caught 25.9%, not under a quarter.
+3. **Failed.** On the four that split, the incident part caught 4 breaks and the rule-wide part 2. All four
+   of the incident part's catches were in `okl drift --gate`, the code its incident came from: the gate's
+   exit code when it checked nothing, its count, and the CI step that reads it.
+4. **Held.** One hardened control failed its check: a new field in `run_guard`'s receipt broke a test that
+   compares the receipt whole.
+
+**What the registered reading says.** The hardened rate is under half, so *even rule-wide checks miss
+fresh breaks*. Each of the 18 misses, and what its check does not look at:
+
+| lesson | missed | what the check does not look at |
+|---|---|---|
+| n_e7988ff536fb | 3 of 4 | `okl embed` and `okl seed` exiting 0 where they should refuse: the sweep leaves both commands out by name. `okl coverage` exiting 1 when the store cannot be reached: the sweep runs each command with no store, not with one it cannot reach. |
+| n_5ddb0776a863 | 1 of 4 | the recap report saying every lesson is proven when drift checked none: the sweep reads exit codes, not report lines. It also runs `okl drift` without `--gate`, so it missed all four breaks; the incident tests caught the three in the gate. |
+| n_02cc84da158d | 2 of 4 | a second resolver that never reads the variable (the service falling back to a fixed file, the health check finding the store from the config): the sweep looks for reads of the variable. |
+| n_0637c92c032f | 3 of 3 | each removed what enforces the rule: the CI steps, the gate runner's diagram step, the diagrams' freshness tests. No check sees its own removal. Its one break of the rule itself, a source edited and not re-rendered, the rule-wide check caught, but the judge timed out on it. |
+| harness-reads-a-moving-working-tree | 2 of 4 | `ab_harness.py` reusing its start state at the end: the lint trusts that file's own check by name, and the guard's test fakes the tree reader. A script that keeps `import run_guard` and drops both calls: the lint looks for the import line. |
+| py_dont_mock_what_you_dont_own | 2 of 3 | source calling a library directly instead of the wrapper okl owns, so the tests' fakes no longer intercept it: the lint reads the patches in tests, not the calls in source. |
+| remote-path-test-through-client | 4 of 4 | each removed or weakened a test through the client (a case dropped, the shared fake's error threshold raised, a test deleted, a test sent past the client): the contract test checks that the client and the service agree on fields, not that each remote path has such a test. |
+| docs-agent-neutral | 1 of 4 | a rewording that names no Claude Code-only feature ("the agent's edit hook"): the scanner has nothing to match. |
+| r_single_source_sets | 0 of 4 | |
+
+Counted after reading them, not registered: 7 of the 18 misses removed or weakened what enforces the rule
+(n_0637c92c032f's three and remote-path-test-through-client's four), and 11 broke the rule by a route its
+check does not look at.
+
+**The older group.** Of its 7 catches, 4 were remote-timeout-not-a-deadline's, whose test file covers the
+failure paths all four breaks changed; n_6b65aa35593c, n_849a5b0425ef and n_adea7f2c7373 caught one each.
+n_adea7f2c7373 shows a check that covers half its rule: it caught the break that sent a command through a
+shell, and missed all three that dropped the `--` before a pathspec. n_8a6e1abce5cc's four breaks were all
+judged intact: its lesson states a limit of tests, which a change to the code cannot make false.
+
+**Re-judged, apart from the result.** Receipt `rule-mutate-rejudge-20261114-1624.json`, from `c6ca95b`,
+$0.52. Two of the six got a verdict this time: n_c95bdc056620's second break was broken, and its check
+had missed it, and n_b550ba9c5c8a's first was intact. Four still got none: three timed out again, and
+once more the judge, given no tools, wrote out tool calls instead of an answer. n_0637c92c032f's diagram
+break, the one its rule-wide check caught, is among the four. With the two verdicts in, the older group
+caught 7 of 28 (25.0%), exactly a quarter, so prediction 2 still fails and nothing else moves. As in
+§4af, these judgments are flaky, and why is not known.
+
+**How firm the reading is, and what `okl on-edit` would have run.** Not registered: three read-only
+reviews for #446 found these after the result, and receipt `rule-mutate-sensitivity-20261114-1648.json`
+holds every figure below.
+- **`okl on-edit` would have run few of these checks.** It runs a lesson's check only after an edit to a
+  file the lesson governs, and of the 18 lessons only docs-agent-neutral governs any (`README.md`,
+  `docs/`). By the repo's own rule (#39) a lesson whose check CI already runs is given no files, and
+  every stored check here is a test or script CI runs. So as shipped, the hook would have checked 4 of
+  the 61 confirmed breaks and caught 3. This section measures whether a check catches a break when it
+  runs; for these lessons the hook changes when a break is caught, at the edit rather than in CI, not
+  whether. Its title says more than that, and the result should be read as about the checks.
+- **One hardened check cannot fail on the repository.** n_0637c92c032f's stored check tests the diagram
+  checker on files it writes itself and reads none of the repository's diagrams. The precheck showed it
+  passed at BASE; nothing showed it could fail there. Without that lesson the hardened checks caught 16
+  of 31 (51.6%), 25.7 points above the older ones, which is the first reading, not the third.
+- **The patches with no verdict move it too.** Counting the five breaking patches the judge left without
+  a verdict as missed breaks gives 16 of 35 and 7 of 31 (22.6%), and prediction 2 holds. The judge was
+  asked whether the lesson's claim is false of the repository but shown only the diff, with no tools, and
+  its missing verdicts fall on the same few lessons in §4af, §4ah and here, so they are not random. One
+  control's diff, 172,615 characters, reached the judge cut to its first 12,000.
+- **Nine lessons a group is few.** An exact permutation test over the 17 lessons with a judged break,
+  splitting them 9 and 8 every possible way (24,310 splits), finds a gap at least as large as the observed
+  21.1 points in 25.5% of them.
+
+So the registered reading stands as registered, but it is not firm: whether checks that sweep a rule
+catch more than older checks is undecided on 18 lessons. What does hold is how each check missed (the
+table above), and that a check can pass at BASE while being unable to fail.
+
+**What follows, as registered.** The misses go to #415's checks, with the table above naming the gap in
+each. The guide did not yet say what a check at the edit can miss; its `okl on-edit` section now says a
+check catches only what it tests, citing this section.
+
+**What it shows, and what it does not.**
+- **Shown:**
+  - On fresh breaks of their rules, the checks #415 wrote caught about half, and the older checks about a
+    quarter. The gap, 21 points, is under the 25 registered as a difference, and the intervals overlap.
+  - Where a check missed, it tested one form of its rule: one condition (no store), one spelling (a read
+    of the variable, an import line), one place (tests, not source). A break in another form passed.
+  - A check run at the edit cannot see its own removal. Seven of the 18 hardened misses were that.
+  - The incident tests still earn their place. On the four that split, they caught the breaks that came
+    back to their incident's own code, which the sweeps did not reach.
+- **Not shown:**
+  - How often real breaks take these forms. These were aimed.
+  - Any lesson outside the 18, any other repository or breaker model.
+  - Whether a check written blind from the rule would cover more forms. That is the test §4be named, and
+    it now has 61 judged breaks to run on.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

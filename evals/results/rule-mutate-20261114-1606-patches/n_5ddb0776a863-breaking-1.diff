@@ -1,0 +1,17 @@
+diff --git a/src/okl/recap.py b/src/okl/recap.py
+index 2fc321a..539a6d5 100644
+--- a/src/okl/recap.py
++++ b/src/okl/recap.py
+@@ -308,11 +308,8 @@ def render_report(r: dict[str, Any]) -> str:
+     if r["stale_now"]:
+         out.append(f"\n**Still open:** {len(r['stale_now'])} lessons are stale now. `okl reverify` re-runs their checks.")
+         out += [f"- [{x['id']}] {x['title']}: {x['reason']}" for x in r["stale_now"]]
+-    elif r["drift_checked"]:
+-        out.append(f"\n**Still open:** nothing; the {r['drift_checked']} lessons that govern files are proven against them.")
+     else:
+-        out.append("\n**Still open:** unknown. Drift could judge no lesson here (none governs a file git can "
+-                   "attribute), so this report cannot say what is proven.")
++        out.append(f"\n**Still open:** nothing; the {r['drift_checked']} lessons that govern files are proven against them.")
+     out.append("\nNot covered yet: corrections made with `okl update`, which carry no timestamp, and "
+                "anything a shared service logged.")
+     return "\n".join(out) + "\n"

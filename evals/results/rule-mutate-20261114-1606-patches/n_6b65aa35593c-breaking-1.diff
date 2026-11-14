@@ -1,0 +1,14 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 5ee8e5b..30f68cb 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -98,9 +98,6 @@ jobs:
+       - name: Guards are held by tests (each one switched off fails a test)
+         run: python ci/check-guard-mutations.py
+ 
+-      - name: Diagram figures trace to committed receipts
+-        run: ./ci/check-diagram-figures.sh
+-
+       # The drawn architecture diagrams (docs/architecture/) name commands, flags, MCP tools,
+       # hook events, scripts and briefing marks. okl's last hand-drawn diagram was retired
+       # wrong in four places nothing checked (93933d7); this fails on a name the code lacks,

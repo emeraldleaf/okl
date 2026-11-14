@@ -1,0 +1,14 @@
+diff --git a/docs/ARCHITECTURE.md b/docs/ARCHITECTURE.md
+index 6c3742a..1fd46cb 100644
+--- a/docs/ARCHITECTURE.md
++++ b/docs/ARCHITECTURE.md
+@@ -15,6 +15,9 @@ which is what this page shows: an image looks the same in any viewer and theme.
+ open its `.excalidraw` in Excalidraw (excalidraw.com, or the VS Code extension), edit it, and
+ export the `.svg` beside it.
+ 
++At a glance: 8 CLI command modules, 6 MCP tools, 4 Claude Code hooks, 3 retired-state kinds and
++a briefing that shows at most 5 lessons.
++
+ They are checked, not just drawn. `ci/check-diagram-names.py` reads each source and its render
+ and fails CI on any command, flag, MCP tool, hook event, file, folder, function or briefing mark
+ they name that the code no longer has (`core.check()` must be defined in `core.py`), and on a

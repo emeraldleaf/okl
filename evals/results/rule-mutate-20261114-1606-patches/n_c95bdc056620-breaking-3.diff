@@ -1,0 +1,31 @@
+diff --git a/src/okl/cli/install.py b/src/okl/cli/install.py
+index 6b1797d..38b3af4 100644
+--- a/src/okl/cli/install.py
++++ b/src/okl/cli/install.py
+@@ -83,7 +83,7 @@ OWNER_DENY = ("Bash(gh api *protection*)", "Bash(gh api *Protection*)", "Bash(gh
+ # default for a PostToolUse hook is ten minutes, not the minute okl's budget was written for.
+ HOOKS: tuple[tuple[str, str | None, str, int | None], ...] = (
+     ("UserPromptSubmit", None, '"$CLAUDE_PROJECT_DIR"/.claude/hooks/userpromptsubmit-okl-check.sh', None),
+-    ("Stop", None, '"$CLAUDE_PROJECT_DIR"/.claude/hooks/stop-okl-encode.sh', None),
++    ("Stop", None, '"$CLAUDE_PROJECT_DIR"/.claude/hooks/stop-okl-capture.sh', None),
+     ("PostToolUse", "Read", '"$CLAUDE_PROJECT_DIR"/.claude/hooks/posttooluse-okl-read.sh', None),
+     ("PostToolUse", "Edit|Write|MultiEdit|NotebookEdit",
+      '"$CLAUDE_PROJECT_DIR"/.claude/hooks/posttooluse-okl-edit.sh', HOOK_TIMEOUT),
+@@ -202,7 +202,7 @@ def _uninstall_files(act: str, dry_run: bool) -> list[str]:
+     workflow_removed = False
+     owned = [(Path(".claude/hooks/userpromptsubmit-okl-check.sh"),
+               scaffold / "hooks" / "userpromptsubmit-okl-check.sh"),
+-             (Path(".claude/hooks/stop-okl-encode.sh"), scaffold / "hooks" / "stop-okl-encode.sh"),
++             (Path(".claude/hooks/stop-okl-capture.sh"), scaffold / "hooks" / "stop-okl-encode.sh"),
+              (Path(".claude/hooks/posttooluse-okl-read.sh"), scaffold / "hooks" / "posttooluse-okl-read.sh"),
+              (Path(".claude/hooks/posttooluse-okl-edit.sh"), scaffold / "hooks" / "posttooluse-okl-edit.sh"),
+              (MCP_LAUNCHER, scaffold / "hooks" / "okl-mcp.sh"),
+@@ -1014,7 +1014,7 @@ def _say_review_after_writing(cfg: dict) -> None:
+               "`okl init --force` replaces it with okl's.")
+ 
+ 
+-STOP_HOOK = Path(".claude/hooks/stop-okl-encode.sh")
++STOP_HOOK = Path(".claude/hooks/stop-okl-capture.sh")
+ 
+ 
+ def _workflow_reads_pin() -> bool:

@@ -1,0 +1,16 @@
+diff --git a/src/okl/intake.py b/src/okl/intake.py
+index bff583b..75828c8 100644
+--- a/src/okl/intake.py
++++ b/src/okl/intake.py
+@@ -242,7 +242,10 @@ def _pages(query: str, key: str, owner: str, name: str, number: int) -> tuple[di
+         # a value starting with @ from a file (CodeRabbit on #388). Only the number is typed.
+         args = ["api", "graphql", "-f", f"query={query}", "-f", f"owner={owner}", "-f", f"name={name}",
+                 "-F", f"number={number}"] + (["-f", f"after={after}"] if after else [])
+-        data = json.loads(_gh(*args))
++        r = subprocess.run(["gh", *args], capture_output=True, text=True, timeout=60)
++        if r.returncode != 0:
++            raise IntakeError((r.stderr.strip().splitlines() or ["gh failed"])[-1])
++        data = json.loads(r.stdout)
+         pr = ((data.get("data") or {}).get("repository") or {}).get("pullRequest")
+         if not pr:
+             return None, []

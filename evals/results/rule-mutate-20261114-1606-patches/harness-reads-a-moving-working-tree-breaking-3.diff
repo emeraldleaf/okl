@@ -1,0 +1,39 @@
+diff --git a/evals/break_concentration.py b/evals/break_concentration.py
+index 608e47a..ddaedd5 100644
+--- a/evals/break_concentration.py
++++ b/evals/break_concentration.py
+@@ -9,6 +9,7 @@ from __future__ import annotations
+ 
+ import argparse
+ import json
++import subprocess
+ import sys
+ from collections import Counter
+ from datetime import UTC, datetime
+@@ -16,7 +17,6 @@ from pathlib import Path
+ 
+ sys.path.insert(0, str(Path(__file__).resolve().parent))
+ import explain_search as es
+-import run_guard
+ 
+ REPO = Path(__file__).resolve().parents[1]
+ 
+@@ -26,7 +26,6 @@ def main() -> int:
+     ap = argparse.ArgumentParser()
+     ap.add_argument("--receipt", action="store_true")
+     a = ap.parse_args()
+-    run = run_guard.start()
+     breaks: Counter[str] = Counter()
+     for half in ("dev", "test"):
+         for (_pr, lesson), cls in es.key_of(half).items():
+@@ -34,7 +33,9 @@ def main() -> int:
+                 breaks[lesson] += 1
+     total = sum(breaks.values())
+     share = {k: round(sum(n for _, n in breaks.most_common(k)) / total, 3) for k in (10, 20)}
+-    out = run.stamp({"section": "#415, Part 8", "at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%MZ"),
++    out = ({"section": "#415, Part 8", "at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%MZ"),
++            "okl_commit": subprocess.run(["git", "-C", str(REPO), "rev-parse", "HEAD"], capture_output=True,
++                                         text=True, check=True).stdout.strip(),
+                      "status": "model-judged keys (§4ao/§4ap for §4al's tasks, §4aq's own), not audited (#394)",
+                      "breaks": total, "lessons": len(breaks), "top_share": share,
+                      "top20": [{"lesson": lesson, "breaks": n} for lesson, n in breaks.most_common(20)]})

@@ -1,0 +1,22 @@
+diff --git a/src/okl/changes.py b/src/okl/changes.py
+index 75901f1..68044a9 100644
+--- a/src/okl/changes.py
++++ b/src/okl/changes.py
+@@ -136,7 +136,7 @@ def touched(base: str | None, repo_dir: str = ".") -> tuple[str, list[str]]:
+ 
+ def _name_status(base: str, head: str, repo_dir: str) -> tuple[list[str], list[str], list[Renamed], int]:
+     """New, deleted and renamed files, and how many others changed. A copy counts as new."""
+-    raw = _git(repo_dir, "diff", "--name-status", "-z", "-M", "--no-ext-diff", base, head).split("\0")
++    raw = _git(repo_dir, "diff", "--name-status", "-z", "-M", "--no-ext-diff", base, head, "--").split("\0")
+     new: list[str] = []
+     deleted: list[str] = []
+     renamed: list[Renamed] = []
+@@ -276,7 +276,7 @@ def read(base: str | None, head: str = "HEAD", repo_dir: str = ".") -> Changes:
+     base_sha, head_sha = resolve(base, head, repo_dir)
+     new, deleted, renamed, modified = _name_status(base_sha, head_sha, repo_dir)
+     diff = _git(repo_dir, "diff", "-U0", "-M", "--no-color", "--no-ext-diff", "--src-prefix=a/",
+-                "--dst-prefix=b/", base_sha, head_sha)
++                "--dst-prefix=b/", base_sha, head_sha, "--")
+     removed, added = _runs(diff)
+     head_files = [p for p in _git(repo_dir, "ls-tree", "-r", "--name-only", "-z", head_sha).split("\0") if p]
+     gone = deleted + [r.old for r in renamed]

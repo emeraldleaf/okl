@@ -1,0 +1,34 @@
+diff --git a/src/okl/rerank.py b/src/okl/rerank.py
+index b31561a..6790847 100644
+--- a/src/okl/rerank.py
++++ b/src/okl/rerank.py
+@@ -68,5 +68,7 @@ def rerank(task: str, nodes: list[Node], model_id: str = MODEL_ID,
+         return nodes, {}
+     model = load_model(model_id, offline=True)
+     scores = [float(s) for s in model.rerank(task, [pair_text(n) for n in head])]
++    if len(scores) != len(head):
++        raise RerankUnavailableError(f"the reranker {model_id} returned {len(scores)} scores for {len(head)} records")
+     order = sorted(zip(head, scores, strict=True), key=lambda p: -p[1])
+     return [n for n, _ in order] + tail, {n.id: s for n, s in order}
+diff --git a/tests/test_rerank.py b/tests/test_rerank.py
+index 9e15866..da4b3a1 100644
+--- a/tests/test_rerank.py
++++ b/tests/test_rerank.py
+@@ -51,6 +51,17 @@ def test_rerank_says_why_when_the_model_is_missing(store, monkeypatch):
+         rerank.rerank("task", [n])
+ 
+ 
++def test_rerank_refuses_a_score_list_of_the_wrong_length(store, monkeypatch):
++    """A model that returns fewer scores than records is reported as unavailable, not a bare zip error."""
++    class Short:
++        def rerank(self, query: str, documents: list[str]) -> list[float]:
++            return [1.0]
++    monkeypatch.setattr(rerank, "load_model", lambda *a, **k: Short())
++    nodes = [store.get_node(core.record(store, type="Rule", title=t, scope="org")) for t in ("a b", "c d")]
++    with pytest.raises(rerank.RerankUnavailableError, match="1 scores for 2 records"):
++        rerank.rerank("task", nodes)
++
++
+ def test_pair_text_is_the_subject_not_the_cause(store):
+     """The cross-encoder reads title, symptom and aliases, never the cause paragraph."""
+     n = store.get_node(core.record(store, type="Rule", title="token storage", scope="org",

@@ -1,0 +1,26 @@
+diff --git a/src/okl/cli/health.py b/src/okl/cli/health.py
+index f4cf43a..b063dbf 100644
+--- a/src/okl/cli/health.py
++++ b/src/okl/cli/health.py
+@@ -9,7 +9,7 @@ from collections import Counter
+ from datetime import UTC, datetime
+ from pathlib import Path
+ 
+-from ..client import Client, OKLUnreachableError, _find_config, store_url
++from ..client import Client, OKLUnreachableError, _find_config
+ from .common import _print_json
+ 
+ 
+@@ -105,9 +105,10 @@ def _no_store_yet(client: Client) -> bool:
+     """Whether this repo's local SQLite store does not exist, so a read would create it."""
+     if client.mode == "remote":
+         return False
+-    url = store_url()   # the client's own rule, so the two cannot disagree (#380)
+-    if url is None:
++    cfg = _find_config()
++    if cfg is None:
+         return True
++    url = f"sqlite:///{cfg.parent / 'okl.db'}"
+     if url.startswith("sqlite:///") and url != "sqlite:///:memory:":
+         return not Path(url.removeprefix("sqlite:///")).exists()
+     return False

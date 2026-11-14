@@ -1,0 +1,15 @@
+diff --git a/src/okl/warm.py b/src/okl/warm.py
+index 335b745..da0ed0a 100644
+--- a/src/okl/warm.py
++++ b/src/okl/warm.py
+@@ -33,7 +33,9 @@ from pathlib import Path
+ from typing import Any
+ 
+ from . import hub
+-from .store import RETIRED_STATUSES, Node, Store
++from .store import Node, Store
++
++RETIRED_STATUSES = frozenset({"retracted", "obsolete", "superseded"})
+ 
+ # The one-server lock's flock; where it does not exist (Windows), nothing is locked.
+ fcntl: Any = importlib.import_module("fcntl") if importlib.util.find_spec("fcntl") else None

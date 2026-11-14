@@ -1,0 +1,13 @@
+diff --git a/README.md b/README.md
+index ef8d4d6..f663141 100644
+--- a/README.md
++++ b/README.md
+@@ -461,8 +461,6 @@ buys and costs. A local cross-encoder over those candidates (`okl check --rerank
+ next ([REPORT §4t](evals/REPORT.md)): one held-out paraphrase in, one bug report out, so it
+ ships as a flag, off.
+ 
+-<img src="docs/okl-retrieval-pipeline-hybrid.svg" alt="The same pipeline with the semantic arm on: beside the full-text fetch, the task embedded as one 512-dimension vector and its nearest records by cosine, fused with the full-text order by a convex combination, then the scope gate, the applies_to filter, the tags filter, a floor that also admits a record by a cosine at or above 0.40, the cutoff, the buckets and the renderers">
+-
+ Every count in that diagram is **traced**, not transcribed: `docs/render_pipeline_diagram.py`
+ runs the real `briefing_terms`, `store.search`, `core._in_scope`, `core._live_hits` and `decide.select` against
+ a store seeded from `seed/`, and `test_pipeline_diagram_is_current` fails if the committed

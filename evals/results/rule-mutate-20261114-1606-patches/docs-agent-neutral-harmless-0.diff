@@ -1,0 +1,12 @@
+diff --git a/docs/COMMANDS.md b/docs/COMMANDS.md
+index c32ed60..612dd09 100644
+--- a/docs/COMMANDS.md
++++ b/docs/COMMANDS.md
+@@ -180,3 +180,7 @@ okl seed <pack> --strict
+                      #   paths or name; without it the same findings are printed as
+                      #   warnings and the import runs
+ ```
++
++The `okl` commands above work with any agent that can run a shell command. The slash
++commands (`/triggers`, `/record`) are Claude Code-only; with another agent, run the `okl`
++command they wrap.

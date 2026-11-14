@@ -1,0 +1,28 @@
+diff --git a/src/okl/drift.py b/src/okl/drift.py
+index 7038068..3a7e9d6 100644
+--- a/src/okl/drift.py
++++ b/src/okl/drift.py
+@@ -176,9 +176,9 @@ def scan_drift(nodes: Iterable[Node], repo: str, repo_dir: str = ".") -> tuple[l
+             continue   # a retired lesson is not a rule anyone keeps proven (R2)
+         globs = [g for g in n.files.split(",") if g.strip()]
+         last = _git_last_change_ms(globs, repo_dir)
++        checked += 1
+         if last is None:
+             continue  # git couldn't attribute a change — not evidence of drift
+-        checked += 1
+         base = n.verified_at
+         # A stamp with no observed check behind it is an assertion, and an assertion is not
+         # a verification: that is the whole claim this tool makes. The snapshot path has
+@@ -451,11 +451,8 @@ def render_drift(hits: list[DriftHit], checked: int | None = None) -> str:
+     # This docstring's own point was once violated right here: with nothing checked, the
+     # all-clear still printed, so an empty store reported "OK" in CI (issue #21). The
+     # all-clear now states how many rules it rests on, and says so when that is zero.
+-    if not hits and checked == 0:
+-        return ("OKL drift: NOTHING CHECKED — no rule governing files in this repo was found, "
+-                "so this is not an all-clear.")
+     if not hits:
+-        basis = f"{checked} rule(s) checked, " if checked is not None else ""
++        basis = f"{checked} rule(s) checked, " if checked else ""
+         return (f"OKL drift: OK — {basis}no encoded rule's governed source changed after its "
+                 "last verification.")
+     lines = [f"OKL drift: {len(hits)} rule(s) may be stale (source changed after verification):", ""]

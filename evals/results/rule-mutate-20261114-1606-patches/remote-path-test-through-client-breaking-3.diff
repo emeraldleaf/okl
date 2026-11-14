@@ -1,0 +1,35 @@
+diff --git a/tests/test_retire.py b/tests/test_retire.py
+index 712ce7c..387d6d7 100644
+--- a/tests/test_retire.py
++++ b/tests/test_retire.py
+@@ -284,28 +284,15 @@ def test_a_retirement_survives_an_older_okl_rewriting_the_lesson(repo):
+ 
+ def test_mcp_and_a_service_can_retire(remote):
+     """Agents on MCP and repos on a service get the same verb, through the real client."""
+-    import asyncio
+-    pytest.importorskip("mcp")
+-    from okl.mcp_server import _build
+-
+     # ARRANGE
+     core.record(remote.store, id="a", type="Rule", title="old", scope="org")
+     core.record(remote.store, id="b", type="Rule", title="new", scope="org")
+ 
+-    def text(res):
+-        if isinstance(res, tuple):
+-            res = res[0]
+-        c = getattr(res, "content", res)
+-        if isinstance(c, list | tuple):
+-            c = c[0]
+-        return getattr(c, "text", str(c))
+-
+     # ACT
+-    out = text(asyncio.run(_build().call_tool("okl_retire", {
+-        "id": "a", "reason": "replaced", "by": "b"})))
++    r = remote.api.post("/retire", json={"id": "a", "reason": "replaced", "by": "b"})
+ 
+     # ASSERT
+-    assert out.startswith("retired a"), out
++    assert r.status_code == 200, r.text
+     assert remote.store.get_node("a").status == "superseded"
+     assert [(r.kind, r.by) for r in remote.store.retirements("a")] == [("superseded", "b")]
+ 

@@ -1,0 +1,26 @@
+diff --git a/tests/test_addressable_lessons.py b/tests/test_addressable_lessons.py
+index de54bf8..82263bb 100644
+--- a/tests/test_addressable_lessons.py
++++ b/tests/test_addressable_lessons.py
+@@ -318,21 +318,6 @@ def test_mcp_record_works_over_a_service_and_points_only_to_update(remote):
+     assert remote.store.get_node("m1").title == "t"
+ 
+ 
+-def test_an_id_with_a_slash_works_over_a_service(remote, capsys):
+-    """GET /node/{id} did not match an id holding "/", so show and update were a 404 over a
+-    service while they worked locally."""
+-    # ARRANGE
+-    assert main(["record", "--id", "auth/idor", "--type", "Rule", "--scope", "org",
+-                 "--title", "t"]) == 0
+-    capsys.readouterr()
+-
+-    # ACT / ASSERT
+-    assert main(["show", "auth/idor"]) == 0
+-    assert "[auth/idor]" in capsys.readouterr().out
+-    assert main(["update", "auth/idor", "--fix", "g"]) == 0
+-    assert remote.store.get_node("auth/idor").fix == "g"
+-
+-
+ def test_a_service_update_with_a_wrong_type_is_refused_and_writes_nothing(remote):
+     """/update took any JSON: ttl_days="x" was written, the reply was an error, and every
+     later read of the lesson was a 500."""

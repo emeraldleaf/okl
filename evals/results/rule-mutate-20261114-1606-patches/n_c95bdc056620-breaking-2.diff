@@ -1,0 +1,13 @@
+diff --git a/src/okl/scaffold/hooks/posttooluse-okl-edit.sh b/src/okl/scaffold/hooks/posttooluse-okl-edit.sh
+index c2f82a0..30e162f 100755
+--- a/src/okl/scaffold/hooks/posttooluse-okl-edit.sh
++++ b/src/okl/scaffold/hooks/posttooluse-okl-edit.sh
+@@ -31,7 +31,7 @@ while [[ "$d" != "/" ]]; do
+   d=$(dirname "$d")
+ done
+ [[ -n "$config" ]] || exit 0
+-grep -q '"on_edit"' "$config" 2>/dev/null || exit 0
++grep -q '"on-edit"' "$config" 2>/dev/null || exit 0
+ 
+ # python3 reads the payload below. Checks were approved here, so a silence would read as "they
+ # passed": say they did not run instead, in JSON built without python (a fixed text).

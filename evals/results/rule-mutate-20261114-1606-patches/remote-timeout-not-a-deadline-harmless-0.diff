@@ -1,0 +1,29 @@
+diff --git a/tests/test_unbriefed_paths.py b/tests/test_unbriefed_paths.py
+index 6901640..58be276 100644
+--- a/tests/test_unbriefed_paths.py
++++ b/tests/test_unbriefed_paths.py
+@@ -17,6 +17,24 @@ HOOK = Path(__file__).resolve().parents[1] / "src" / "okl" / "scaffold" / "hooks
+ BARE = "/usr/bin:/bin"   # a system python3 to parse JSON, and no okl
+ 
+ 
++def test_retry_loop_worst_case_stays_under_the_host_limit():
++    """Claude Code cancels a UserPromptSubmit hook at 30 s and lets the prompt through, so the
++    retry loop's numbers are read from the shipped hook and budgeted against that."""
++    import re
++
++    from okl.client import _HTTP_TIMEOUT_S
++
++    text = HOOK.read_text()
++    tries = int(re.search(r"for attempt in ((?:\d ?)+); do", text).group(1).split()[-1])
++    slow_s = int(re.search(r"SECONDS - started\)\) -ge (\d+) \]\] && break", text).group(1))
++    pause_s = float(re.search(r"sleep (\d+(?:\.\d+)?)\n\s+done", text).group(1))
++    addresses = 4   # a host name can resolve to several; urllib tries each in turn
++    # Every try but the last is quick (under slow_s, or the loop stops); the last may use
++    # the whole timeout once per address.
++    worst = (tries - 1) * (slow_s + pause_s) + _HTTP_TIMEOUT_S * addresses
++    assert worst < 30, f"hook worst case is {worst} s against a 30 s host limit"
++
++
+ def _stub(path: Path, body: str, shebang: str = "#!/bin/sh") -> Path:
+     path.parent.mkdir(parents=True, exist_ok=True)
+     path.write_text(f"{shebang}\n{body}\n"); path.chmod(0o755)

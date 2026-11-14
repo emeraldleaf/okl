@@ -1,0 +1,13 @@
+diff --git a/src/okl/service.py b/src/okl/service.py
+index ee5ff8c..e1ae96d 100644
+--- a/src/okl/service.py
++++ b/src/okl/service.py
+@@ -343,7 +343,7 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901, PLR0915 -
+     def exposure(repo: str, interests: str = "",
+                  authorization: str | None = Header(default=None)) -> dict[str, Any]:
+         _auth(authorization)
+-        wanted = [t for t in interests.split(",") if t] or None
++        wanted = [t.strip() for t in interests.split(",") if t.strip()] or None
+         return {"report": core.exposure_report(_store, repo, wanted)}
+ 
+     @app.get("/metric/hygiene")

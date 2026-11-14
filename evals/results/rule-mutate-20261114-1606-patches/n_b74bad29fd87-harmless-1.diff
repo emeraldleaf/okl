@@ -1,0 +1,30 @@
+diff --git a/src/okl/store.py b/src/okl/store.py
+index ec1ffc7..66e58a3 100644
+--- a/src/okl/store.py
++++ b/src/okl/store.py
+@@ -592,6 +592,12 @@ class _Backend(Protocol):
+         - briefings returns every row oldest first, `repo` filtering exactly, with each
+           row's node ids in the order they were logged, and its drifted ids (empty for a
+           row logged before that column existed).
++
++      put_embedding / embeddings / has_embeddings
++        - One vector per (node id, model): putting again replaces the text hash and
++          vector, never adds a second row.
++        - embeddings(model) returns only that model's rows, vectors byte for byte.
++        - has_embeddings(model) is True exactly when embeddings(model) is non-empty.
+     """
+ 
+     def init_schema(self) -> None: ...
+diff --git a/tests/test_okl.py b/tests/test_okl.py
+index c1c5246..ded2c44 100644
+--- a/tests/test_okl.py
++++ b/tests/test_okl.py
+@@ -1755,6 +1755,8 @@ def _backend_conformance(store, label):
+     store.delete_embedding(a, "m")
+     assert [i for i, _, _ in store.embeddings("m")] == [b], f"{label}: delete"
+     assert store.embeddings("other") == [(a, "h9", b"\x01")], f"{label}: models are separate"
++    assert store.has_embeddings("m") and store.has_embeddings("other"), f"{label}: has_embeddings"
++    assert not store.has_embeddings("never-stored"), f"{label}: has_embeddings for an unknown model"
+ 
+ 
+ def test_sqlite_backend_conformance(store):

@@ -1,0 +1,21 @@
+diff --git a/src/okl/seed.py b/src/okl/seed.py
+index 7d8bad9..99bf6a2 100644
+--- a/src/okl/seed.py
++++ b/src/okl/seed.py
+@@ -22,6 +22,7 @@ from pathlib import Path
+ 
+ from . import core, hygiene
+ from .client import Client
++from .store import RETIRED_STATUSES
+ 
+ 
+ def hygiene_warnings_for_file(path: str, repo_names: list[str] | None = None) -> list[str]:
+@@ -114,7 +115,7 @@ def _held_under_old_names(client: Client, pack: str) -> dict[str, str]:
+     for n in client.all_nodes():
+         parts = n.id.split(":", 2)
+         if (len(parts) == 3 and parts[0] == "seed" and parts[1] != pack
+-                and core.current_pack(parts[1]) == pack and n.status != "superseded"):
++                and core.current_pack(parts[1]) == pack and n.status not in RETIRED_STATUSES):
+             held[parts[2]] = n.id
+     return held
+ 

@@ -1,0 +1,21 @@
+diff --git a/docs/render_pipeline_diagram.py b/docs/render_pipeline_diagram.py
+index 18c4fcf..45e7406 100644
+--- a/docs/render_pipeline_diagram.py
++++ b/docs/render_pipeline_diagram.py
+@@ -40,6 +40,7 @@ from okl import decide, semantic  # noqa: E402
+ from okl.core import (  # noqa: E402
+     COMMON_WORD_MIN_RECORDS,
+     COMMON_WORD_SHARE,
++    MAX_BRIEFING_TERMS,
+     RETIRED_STATUSES,
+     _also_matched,
+     _apply_floor,
+@@ -377,7 +378,7 @@ def render(d: dict) -> str:
+          f'{d["corpus"]} records', "", 1.0, 0.0, ""),
+         ("1", "QUERY", "The task's subject words, not the sentence",
+          "Function words, chat filler and single characters drop out; each word counts once, "
+-         "up to 40. No subject word, or a message a harness wrote, is briefed nothing.",
++         f"up to {MAX_BRIEFING_TERMS}. No subject word, or a message a harness wrote, is briefed nothing.",
+          f'{d["terms"]} words', "searched", 0.0, 0.0, ""),
+         ("2", "RANK", "Fetch 3x more candidates than needed",
+          "SQLite FTS5, weighted title x8, body x4, symptom x4, aliases x4, triggers x4, fix x2, tags x1. "

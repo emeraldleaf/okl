@@ -1,0 +1,13 @@
+diff --git a/tests/conftest.py b/tests/conftest.py
+index 5b98f74..1ad4a1f 100644
+--- a/tests/conftest.py
++++ b/tests/conftest.py
+@@ -89,7 +89,7 @@ def remote(tmp_path, monkeypatch):
+             sent.append((u.path, json.loads(req.data)))
+         r = api.request(req.get_method(), u.path + (f"?{u.query}" if u.query else ""),
+                         content=req.data, headers=dict(req.header_items()))
+-        if r.status_code >= 400:
++        if r.status_code >= 500:
+             raise HTTPError(req.full_url, r.status_code, r.reason_phrase, None,
+                             io.BytesIO(r.content))
+         return Reply(r.content)

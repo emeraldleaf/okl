@@ -1,0 +1,14 @@
+diff --git a/src/okl/client.py b/src/okl/client.py
+index 2a5f7f8..936b5f9 100644
+--- a/src/okl/client.py
++++ b/src/okl/client.py
+@@ -719,7 +719,8 @@ def _no_answer(url: str, e: OSError | http.client.HTTPException) -> OKLNoAnswerE
+     if isinstance(e, TimeoutError):
+         cause = f"no full reply came within {_HTTP_TIMEOUT_S} s"
+     elif isinstance(e, OSError):   # RemoteDisconnected is an HTTPException as well
+-        cause = f"the connection was dropped before a full reply ({str(e) or type(e).__name__})"
++        detail = " ".join(str(e).split())[:200] or type(e).__name__   # one line, like the branch below
++        cause = f"the connection was dropped before a full reply ({detail})"
+     else:
+         # repr, and cut short: a banner from whatever answered on that port carries its own
+         # line breaks and can run to 64 KB, and the CLI prints this as one line.

@@ -1,0 +1,42 @@
+diff --git a/ci/check-diagram-renders.py b/ci/check-diagram-renders.py
+new file mode 100644
+index 0000000..cb63248
+--- /dev/null
++++ b/ci/check-diagram-renders.py
+@@ -0,0 +1,36 @@
++#!/usr/bin/env python3
++"""Fail if a committed .svg render is missing text from its .excalidraw source."""
++import html
++import json
++import re
++import sys
++from pathlib import Path
++
++ROOT = Path(__file__).resolve().parent.parent
++
++
++def words(s: str) -> set[str]:
++    return set(re.findall(r"\w+", s))
++
++
++def main() -> int:
++    bad = 0
++    for src in sorted((ROOT / "docs").rglob("*.excalidraw")):
++        svg = src.with_suffix(".svg")
++        if not svg.exists():
++            print(f"{src.relative_to(ROOT)}: no rendered .svg next to it")
++            bad += 1
++            continue
++        rendered = words(html.unescape(re.sub(r"<[^>]+>", " ", svg.read_text())))
++        for el in json.loads(src.read_text()).get("elements", []):
++            if el.get("type") != "text" or el.get("isDeleted"):
++                continue
++            missing = words(el.get("text", "")) - rendered
++            if missing:
++                print(f"{src.relative_to(ROOT)}: {el['text']!r} not in render ({sorted(missing)})")
++                bad += 1
++    return 1 if bad else 0
++
++
++if __name__ == "__main__":
++    sys.exit(main())

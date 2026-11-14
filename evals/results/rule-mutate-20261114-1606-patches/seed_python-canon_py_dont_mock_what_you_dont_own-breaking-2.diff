@@ -1,0 +1,19 @@
+diff --git a/src/okl/protection.py b/src/okl/protection.py
+index e939f2d..fa4d72b 100644
+--- a/src/okl/protection.py
++++ b/src/okl/protection.py
+@@ -372,11 +372,11 @@ def _from_block(text: str, branch: str) -> tuple[str | None, list[str], Verdict
+     return next(iter(names.values())), codeowners.owner_paths(extra), None
+ 
+ 
+-def check(paths: list[str] | None, owner: str | None, get: Get = _gh_get,
+-          repo: Callable[[], dict | None] = _gh_repo) -> Verdict:
++def check(paths: list[str] | None, owner: str | None) -> Verdict:
+     """Whether GitHub enforces `owner`'s approval of `paths` against the identity running this.
+     With no owner recorded here, both come from okl's block on the default branch."""
+-    info = repo()
++    get = _gh_get
++    info = _gh_repo()
+     name = info.get("nameWithOwner") if isinstance(info, dict) else None
+     if not isinstance(info, dict) or not isinstance(name, str):
+         return Verdict(UNKNOWN, "gh cannot read this repository (install gh and run `gh auth login`)", {})

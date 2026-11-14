@@ -1,0 +1,15 @@
+diff --git a/ci/okl-verify.yml b/ci/okl-verify.yml
+index 6c3c143..39f346a 100644
+--- a/ci/okl-verify.yml
++++ b/ci/okl-verify.yml
+@@ -119,9 +119,7 @@ jobs:
+           # WAS configured and okl still did not run -- unreachable, refused, or holding no
+           # rule for this repo -- something broke, and passing would hide an outage behind
+           # a green check. The job knows which it is; okl's exit code alone cannot say.
+-          if [ "$rc" -eq 2 ] && [ -z "${OKL_SERVICE_URL:-}${OKL_DATABASE_URL:-}${snapshot}" ]; then
+-            echo "::warning title=Drift not checked::No knowledge store is available to this job, so no rule was checked for drift. This step passing is NOT an all-clear. Commit \`okl export --drift\` to give CI one."
+-          elif [ "$rc" -ne 0 ]; then
++          if [ "$rc" -eq 1 ]; then
+             exit "$rc"
+           fi
+ 

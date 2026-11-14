@@ -1,0 +1,28 @@
+diff --git a/src/okl/client.py b/src/okl/client.py
+index 2a5f7f8..1a6601e 100644
+--- a/src/okl/client.py
++++ b/src/okl/client.py
+@@ -18,7 +18,7 @@ from urllib.error import HTTPError, URLError
+ from urllib.parse import quote, urlencode
+ 
+ from . import core, decide, drift, warm
+-from .store import Node, Store
++from .store import STACK_TAGS, Node, Store, split_tags
+ 
+ CONFIG_DIR = ".okl"
+ CONFIG_FILE = "config.json"
+@@ -399,6 +399,14 @@ class Client:
+                 kw["limit"] = limit
+             store = self._local_store()
+             result = core.check(store, repo, task, **kw)
++            if self.interests and result.get("lessons"):
++                held = {t.strip().lower() for t in self.interests}
++
++                def _fits(entry: dict) -> bool:
++                    n = store.get_node(entry.get("id", ""))
++                    stacks = split_tags(n.tags if n else None) & STACK_TAGS
++                    return not stacks or bool(stacks & held)
++                result["lessons"] = [e for e in result["lessons"] if _fits(e)]
+             if result.get("warm_reason") == "not_running":
+                 result["warm_unavailable"] = _revive_warm(result["warm_unavailable"])
+         self._add_standing(result, repo)

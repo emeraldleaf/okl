@@ -1,0 +1,13 @@
+diff --git a/src/okl/cli/on_edit.py b/src/okl/cli/on_edit.py
+index 094c096..b79dfc8 100644
+--- a/src/okl/cli/on_edit.py
++++ b/src/okl/cli/on_edit.py
+@@ -36,7 +36,7 @@ from .verification import _run_check, _stored_check, shown
+ if TYPE_CHECKING:
+     from ..store import Node
+ 
+-KEY = "on_edit"          # in .okl/config.json: {lesson id: approval hash}
++KEY = "edit_checks"        # in .okl/config.json: {lesson id: approval hash}
+ TIMEOUT = 30             # seconds one check may take at edit time
+ BUDGET = 50              # seconds for every check one edit runs, from okl's start
+ HOOK_TIMEOUT = 60        # seconds okl registers the edit hook with, so Claude Code stops it there

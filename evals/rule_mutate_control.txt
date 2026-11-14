@@ -1,0 +1,5 @@
+
+
+def _store_hint() -> str | None:
+    import os
+    return os.environ.get("OKL_DATABASE_URL")

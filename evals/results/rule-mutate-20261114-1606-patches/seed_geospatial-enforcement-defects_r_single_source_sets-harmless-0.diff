@@ -1,0 +1,23 @@
+diff --git a/src/okl/cli/lessons.py b/src/okl/cli/lessons.py
+index d7537b9..b62d417 100644
+--- a/src/okl/cli/lessons.py
++++ b/src/okl/cli/lessons.py
+@@ -15,7 +15,7 @@ from typing import Any
+ 
+ from .. import changes, core
+ from ..client import Client, OKLNoAnswerError, OKLRejectedError, OKLUnreachableError
+-from ..store import backend_errors
++from ..store import RETIRED_STATUSES, backend_errors
+ from .common import _print_json
+ from .packs import _bundled_seed_dir, _empty_store_guidance
+ from .verification import _refresh_snapshot
+@@ -669,6 +669,9 @@ def cmd_dedup(args: argparse.Namespace) -> int:
+     if not pairs:
+         print(f"OKL dedup: OK — no pair of the {len(nodes)} records scores at or above "
+               f"{args.threshold}.")
++        retracted = sum(1 for n in client.all_nodes() if n.status in RETIRED_STATUSES and n.status not in core._UNBRIEFED)
++        if retracted:
++            print(f"  ({retracted} retracted record(s) were compared too, since they are still briefed as AVOID.)")
+         return 0
+ 
+     print(f"OKL dedup: {len(pairs)} candidate pair(s) at or above {args.threshold}, "

@@ -1,0 +1,51 @@
+diff --git a/src/okl/core.py b/src/okl/core.py
+index 7aca4d8..21a2571 100644
+--- a/src/okl/core.py
++++ b/src/okl/core.py
+@@ -37,6 +37,26 @@ from .store import (
+ from .store import STACK_TAGS as STACK_TAGS
+ 
+ 
++class CachingBackend:
++    """Serves repeat `get_node` calls from memory and forwards everything else."""
++
++    def __init__(self, inner: Any) -> None:
++        self._inner = inner
++        self._nodes: dict[str, Node | None] = {}
++
++    def get_node(self, node_id: str) -> Node | None:
++        if node_id not in self._nodes:
++            self._nodes[node_id] = self._inner.get_node(node_id)
++        return self._nodes[node_id]
++
++    def upsert_node(self, node: Node) -> None:
++        self._inner.upsert_node(node)
++        self._nodes[node.id] = node
++
++    def __getattr__(self, name: str) -> Any:
++        return getattr(self._inner, name)
++
++
+ def _node_public(n: Node) -> dict[str, Any]:
+     """A record as the API exposes it: every field, plus computed staleness.
+ 
+diff --git a/tests/test_stem.py b/tests/test_stem.py
+index 503c162..46fb422 100644
+--- a/tests/test_stem.py
++++ b/tests/test_stem.py
+@@ -107,6 +107,15 @@ def test_the_line_and_the_floor_count_another_form_of_a_word(store):
+         assert res["rules"][0]["matched_terms"] == ["rotate", "webhook", "signing", "secrets"], decision
+ 
+ 
++def test_a_caching_backend_reads_a_node_from_memory_after_the_first_read(store):
++    nid = core.record(store, type="Rule", title="pin the base image", scope="org")
++    backend = core.CachingBackend(store._impl)
++    first = backend.get_node(nid)
++    assert first is not None and first.title == "pin the base image"
++    store._impl.close()
++    assert backend.get_node(nid) is first
++
++
+ def test_the_floor_counts_two_forms_of_one_word_once(store):
+     """"migrate" and "migrations" are one word shared with a lesson that says "migration" only in
+     its body, as the line counts them, so the two-word floor does not keep it on that alone

@@ -1,0 +1,22 @@
+diff --git a/src/okl/recap.py b/src/okl/recap.py
+index 2fc321a..d86b3ec 100644
+--- a/src/okl/recap.py
++++ b/src/okl/recap.py
+@@ -20,7 +20,7 @@ from typing import Any
+ 
+ from .core import governing
+ from .drift import SNAPSHOT_FILE
+-from .store import RETIRED_STATUSES, Node
++from .store import Node
+ 
+ # A briefed lesson's id follows its bold title: `- **FIX: title** [id]` (R1).
+ _ID = re.compile(r"\*\* \[([^\]\s]+)\]")
+@@ -128,7 +128,7 @@ def recap(nodes: list[Node], repo: str, repo_dir: str, transcript: str | None, *
+     by_id = {n.id: n for n in nodes}
+     counts = briefed_ids(transcript) if transcript else Counter()
+     briefed = [(by_id[i], c) for i, c in counts.most_common()
+-               if i in by_id and by_id[i].status not in RETIRED_STATUSES][:limit]
++               if i in by_id and by_id[i].status not in {"retracted", "obsolete", "superseded"}][:limit]
+     start = since or (session_start(transcript) if transcript else None)
+     changed = governing(nodes, repo, changed_paths(repo_dir, start)) if (start or transcript) else []
+     # Capped too: a session that ran for days changes most of a repo.

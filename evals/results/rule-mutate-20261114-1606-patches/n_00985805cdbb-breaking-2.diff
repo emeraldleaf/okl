@@ -1,0 +1,13 @@
+diff --git a/src/okl/recap.py b/src/okl/recap.py
+index 2fc321a..283f2e2 100644
+--- a/src/okl/recap.py
++++ b/src/okl/recap.py
+@@ -191,7 +191,7 @@ def window_start(since: str | None, transcript: str | None, now_ms: int) -> int:
+         try:
+             return _iso_ms(start)
+         except ValueError:
+-            pass    # an unreadable transcript time is the default window, never an error
++            pass    # ignore ValueError and fall through to the default window (#279)
+     return now_ms - 86_400_000
+ 
+ 

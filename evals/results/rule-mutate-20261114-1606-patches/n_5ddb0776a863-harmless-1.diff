@@ -1,0 +1,43 @@
+diff --git a/src/okl/drift.py b/src/okl/drift.py
+index 7038068..d17d496 100644
+--- a/src/okl/drift.py
++++ b/src/okl/drift.py
+@@ -54,6 +54,11 @@ class DriftHit:
+ 
+ 
+ 
++def _globs(files: str) -> list[str]:
++    """The non-empty globs of a comma-separated `files` declaration."""
++    return [g for g in files.split(",") if g.strip()]
++
++
+ def _git_last_change_ms(globs: list[str], repo_dir: str) -> int | None:
+     """Epoch-ms of the most recent commit touching any path matching `globs`.
+ 
+@@ -174,7 +179,7 @@ def scan_drift(nodes: Iterable[Node], repo: str, repo_dir: str = ".") -> tuple[l
+             continue
+         if not n.files or n.status in RETIRED_STATUSES:
+             continue   # a retired lesson is not a rule anyone keeps proven (R2)
+-        globs = [g for g in n.files.split(",") if g.strip()]
++        globs = _globs(n.files)
+         last = _git_last_change_ms(globs, repo_dir)
+         if last is None:
+             continue  # git couldn't attribute a change — not evidence of drift
+@@ -286,7 +291,7 @@ def _record_drift(rec: dict[str, Any], repo_scope: str, repo_dir: str) -> dict[s
+         # Retired: scan_drift skips it, so marking it STALE here broke "the briefing and
+         # the CI gate never disagree", with no okl reverify able to clear it (R2 review).
+         return None
+-    globs = [g for g in rec["files"].split(",") if g.strip()]
++    globs = _globs(rec["files"])
+     last = _git_last_change_ms(globs, repo_dir)
+     base = rec.get("verified_at")
+     if base is None:
+@@ -426,7 +431,7 @@ def governs_nothing(nodes: Iterable[Node], repo: str, repo_dir: str = ".") -> li
+         if (not n.files or not (n.scope == repo_scope or n.repo == repo)
+                 or n.status in RETIRED_STATUSES):
+             continue
+-        globs = [g for g in n.files.split(",") if g.strip()]
++        globs = _globs(n.files)
+         if not any(path_matches(g, p) for g in globs for p in paths):
+             out.append(n)
+     return out

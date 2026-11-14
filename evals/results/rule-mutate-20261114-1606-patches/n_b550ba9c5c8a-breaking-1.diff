@@ -1,0 +1,13 @@
+diff --git a/src/okl/semantic.py b/src/okl/semantic.py
+index fa82068..132bed7 100644
+--- a/src/okl/semantic.py
++++ b/src/okl/semantic.py
+@@ -40,7 +40,7 @@ EXTRA = "observed-knowledge-ledger[hybrid]"
+ # (true pairs 0.3 to 0.5, chat filler up to 0.42), and 0.40 is the line at which the six
+ # short real prompts gain at most one record each; 0.25, the first pass, admitted 31 records
+ # to one of them. Lower lines buy paraphrase recall at the cost of precision; see §4q.
+-SUBJECT_SIMILARITY = 0.40
++SUBJECT_SIMILARITY = 0.45
+ 
+ 
+ class SemanticUnavailableError(RuntimeError):

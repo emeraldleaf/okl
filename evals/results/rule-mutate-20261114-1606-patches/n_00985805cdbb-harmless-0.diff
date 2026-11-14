@@ -1,0 +1,14 @@
+diff --git a/ci/_ran.py b/ci/_ran.py
+index e3f85cf..c999aa4 100644
+--- a/ci/_ran.py
++++ b/ci/_ran.py
+@@ -21,6 +21,9 @@ def install() -> None:
+         sys.__excepthook__(kind, value, tb)
+         print(f"{Path(sys.argv[0]).name}: could not run (exit 2, not a finding)", file=sys.stderr)  # noqa: T201
+         sys.stderr.flush()
++        # os._exit, not sys.exit: an excepthook that raises SystemExit is swallowed by the
++        # interpreter, and the process would still leave with the 1 that means "found something".
++        # tests/test_exit_codes.py asserts the exit status of each check run with missing inputs.
+         os._exit(2)
+ 
+     sys.excepthook = did_not_run

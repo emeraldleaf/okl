@@ -1,0 +1,20 @@
+diff --git a/tests/test_hybrid.py b/tests/test_hybrid.py
+index 6a4f43e..3a4ac21 100644
+--- a/tests/test_hybrid.py
++++ b/tests/test_hybrid.py
+@@ -73,6 +73,15 @@ def test_build_index_embeds_each_record_once_and_only_changed_text_again(store,
+     assert semantic.build_index(store)["embedded"] == 1
+ 
+ 
++def test_build_index_drops_the_vector_of_a_record_that_is_gone(store, fake_model):
++    """A vector whose record no longer exists is removed, and counted, on the next `okl embed`."""
++    _seed(store)
++    store.put_embedding("gone-id", semantic.MODEL_ID, "h", semantic.pack([1.0]))
++    res = semantic.build_index(store)
++    assert res["removed"] == 1
++    assert "gone-id" not in {i for i, _, _ in store.embeddings(semantic.MODEL_ID)}
++
++
+ def test_semantic_search_ranks_by_cosine_and_round_trips_the_vectors(store, fake_model):
+     """Nearest first by cosine over the stored vectors, which read back as they were written."""
+     a, b = _seed(store)

@@ -1,0 +1,13 @@
+diff --git a/src/okl/cli/verification.py b/src/okl/cli/verification.py
+index 44803e8..ba578e4 100644
+--- a/src/okl/cli/verification.py
++++ b/src/okl/cli/verification.py
+@@ -672,7 +672,7 @@ def cmd_export(args: argparse.Namespace) -> int:
+         print(f"wrote {path} with 0 rules — {why}", file=sys.stderr)
+         _warn_off_branch(client, snapshot=path)
+         return 2
+-    print(f"wrote {path}: {n} rule(s). Commit it — CI's drift gate reads the committed copy.")
++    print(f"wrote {path}: {n} rule(s). Commit {path.name} — CI's drift gate reads the committed copy.")
+     _warn_off_branch(client, snapshot=path)
+     return 0
+ 

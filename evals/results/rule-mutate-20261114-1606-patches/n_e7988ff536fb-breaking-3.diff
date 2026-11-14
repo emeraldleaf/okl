@@ -1,0 +1,13 @@
+diff --git a/src/okl/cli/packs.py b/src/okl/cli/packs.py
+index 780302d..6ec12ed 100644
+--- a/src/okl/cli/packs.py
++++ b/src/okl/cli/packs.py
+@@ -145,7 +145,7 @@ def _list_seed_packs(seed_dir: Path, interests: set[str]) -> int:
+     packs = sorted(str(f) for f in seed_dir.glob("*.json"))
+     if not packs:
+         print(f"no seed packs found under {seed_dir}", file=sys.stderr)
+-        return 2
++        return 0
+     print("Seed packs available (nothing has been imported):\n")
+     for pk in packs:
+         f = Path(pk)

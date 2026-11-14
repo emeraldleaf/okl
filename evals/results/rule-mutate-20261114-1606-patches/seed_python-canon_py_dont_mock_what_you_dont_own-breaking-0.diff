@@ -1,0 +1,19 @@
+diff --git a/tests/test_hybrid.py b/tests/test_hybrid.py
+index 6a4f43e..8848200 100644
+--- a/tests/test_hybrid.py
++++ b/tests/test_hybrid.py
+@@ -50,7 +50,13 @@ def store():
+ @pytest.fixture
+ def fake_model(monkeypatch):
+     """The stub model in place of the real one, so no extra or download is needed."""
+-    monkeypatch.setattr(semantic, "load_model", lambda *a, **k: FakeModel())
++    import sys
++    import types
++
++    stub = types.ModuleType("model2vec")
++    stub.StaticModel = types.SimpleNamespace(from_pretrained=lambda *a, **k: FakeModel())
++    monkeypatch.setitem(sys.modules, "model2vec", stub)
++    monkeypatch.setattr(semantic, "_LOADED", {})
+ 
+ 
+ def _seed(store):

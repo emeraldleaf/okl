@@ -1,0 +1,24 @@
+diff --git a/tests/test_okl.py b/tests/test_okl.py
+index c1c5246..f3cd0e3 100644
+--- a/tests/test_okl.py
++++ b/tests/test_okl.py
+@@ -2135,7 +2135,8 @@ def test_pipeline_diagram_is_current():
+     with tempfile.TemporaryDirectory() as d:
+         out = Path(d) / "regen.svg"
+         r = subprocess.run([sys.executable, str(root / "docs" / "render_pipeline_diagram.py"),
+-                            "--out", str(out)], capture_output=True, text=True, cwd=root)
++                            "--out", str(out)], capture_output=True, text=True, cwd=root,
++                           env={k: v for k, v in os.environ.items() if not k.startswith("OKL_")})
+         assert r.returncode == 0, f"generator failed: {r.stderr[-400:]}"
+ 
+         # ASSERT — byte-identical. The generator traces a store seeded from committed files,
+@@ -2165,7 +2166,8 @@ def test_hybrid_pipeline_diagram_is_current():
+     with tempfile.TemporaryDirectory() as d:
+         out = Path(d) / "regen.svg"
+         r = subprocess.run([sys.executable, str(root / "docs" / "render_pipeline_diagram.py"),
+-                            "--hybrid", "linear", "--out", str(out)], capture_output=True, text=True, cwd=root)
++                            "--hybrid", "linear", "--out", str(out)], capture_output=True, text=True, cwd=root,
++                           env={k: v for k, v in os.environ.items() if not k.startswith("OKL_")})
+         assert r.returncode == 0, f"generator failed: {r.stderr[-400:]}"
+         assert out.read_text() == svg.read_text(), (
+             "docs/okl-retrieval-pipeline-hybrid.svg is stale; re-run: "

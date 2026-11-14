@@ -1,0 +1,25 @@
+diff --git a/src/okl/rerank.py b/src/okl/rerank.py
+index b31561a..8ed565b 100644
+--- a/src/okl/rerank.py
++++ b/src/okl/rerank.py
+@@ -66,7 +66,19 @@ def rerank(task: str, nodes: list[Node], model_id: str = MODEL_ID,
+     head, tail = nodes[:pool], nodes[pool:]
+     if not head:
+         return nodes, {}
+-    model = load_model(model_id, offline=True)
++    try:
++        from fastembed.rerank.cross_encoder import TextCrossEncoder
++    except ImportError as e:
++        raise RerankUnavailableError(f"the rerank extra is not installed: pip install '{EXTRA}'") from e
++    with hub.loading(offline=True):
++        if model_id not in _LOADED:
++            try:
++                _LOADED[model_id] = TextCrossEncoder(model_name=model_id, cache_dir=str(hub.model_cache_dir()))
++            except (OSError, ValueError, RuntimeError) as e:
++                raise RerankUnavailableError(
++                    f"the reranker {model_id} is not cached locally ({type(e).__name__}); run `okl embed` once online"
++                ) from e
++        model = _LOADED[model_id]
+     scores = [float(s) for s in model.rerank(task, [pair_text(n) for n in head])]
+     order = sorted(zip(head, scores, strict=True), key=lambda p: -p[1])
+     return [n for n, _ in order] + tail, {n.id: s for n, s in order}

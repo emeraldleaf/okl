@@ -1,0 +1,21 @@
+diff --git a/src/okl/cli/lessons.py b/src/okl/cli/lessons.py
+index d7537b9..303c68c 100644
+--- a/src/okl/cli/lessons.py
++++ b/src/okl/cli/lessons.py
+@@ -355,16 +355,6 @@ def cmd_record(args: argparse.Namespace) -> int:
+         # text names the vocabulary they need. A traceback buries that under a stack.
+         print(f"NOT RECORDED — {e}", file=sys.stderr)
+         return 2
+-    except OKLNoAnswerError as e:
+-        # The service took the request before the answer was lost, so the lesson may be
+-        # stored. "NOT RECORDED" sent people to record it again, and without --id the
+-        # second write is a second lesson.
+-        again = (f"check with `okl show {args.id}` before recording it again"
+-                 if args.id else
+-                 "check with `okl search` before recording it again, or it may be stored twice")
+-        print(f"MAYBE RECORDED — the service may have stored this lesson; {again}.\n{e}",
+-              file=sys.stderr)
+-        return 2
+     except OKLUnreachableError as e:
+         print(f"NOT RECORDED — {e}", file=sys.stderr)
+         return 2
