@@ -1,0 +1,142 @@
+{
+ "section": "4bd, seen while drafting",
+ "tasks": 5,
+ "rows": [
+  {
+   "pr": 115,
+   "lesson": "n_adea7f2c7373",
+   "check": "python3 -m pytest -q -k 'stored_data_never_reaches_a_shell'",
+   "files": "",
+   "frozen": {
+    "passed": true,
+    "own_failure": false,
+    "why": "passed",
+    "exit": 0,
+    "tail": [
+     ".                                                                        [100%]Running teardown with pytest sessionfinish...",
+     "",
+     "1 passed, 124 deselected in 0.41s"
+    ],
+    "seconds": 3.3
+   },
+   "end": {
+    "passed": true,
+    "own_failure": false,
+    "why": "passed",
+    "exit": 0,
+    "tail": [
+     ".                                                                        [100%]Running teardown with pytest sessionfinish...",
+     "",
+     "1 passed, 125 deselected in 0.41s"
+    ],
+    "seconds": 2.9
+   },
+   "tells_them_apart": false
+  },
+  {
+   "pr": 168,
+   "lesson": "seed:rag-defects:qz_judge_self",
+   "check": null,
+   "files": ""
+  },
+  {
+   "pr": 196,
+   "lesson": "n_57cc4b427f05",
+   "check": "python3 -m pytest -q tests/test_scaffold.py -k committed_tree",
+   "files": "",
+   "frozen": {
+    "passed": false,
+    "own_failure": true,
+    "why": "exit 0, signal missing",
+    "exit": 0,
+    "tail": [
+     ".                                                                        [100%]Running teardown with pytest sessionfinish...",
+     "",
+     "1 passed, 53 deselected in 0.53s"
+    ],
+    "seconds": 3.4
+   },
+   "end": {
+    "passed": false,
+    "own_failure": true,
+    "why": "exit 0, signal missing",
+    "exit": 0,
+    "tail": [
+     ".                                                                        [100%]Running teardown with pytest sessionfinish...",
+     "",
+     "1 passed, 53 deselected in 0.52s"
+    ],
+    "seconds": 3.4
+   },
+   "tells_them_apart": false
+  },
+  {
+   "pr": 198,
+   "lesson": "n_473aec369b25",
+   "check": "python3 -m pytest -q -k 'off_series_instrument'",
+   "files": "",
+   "frozen": {
+    "passed": true,
+    "own_failure": false,
+    "why": "passed",
+    "exit": 0,
+    "tail": [
+     ".                                                                        [100%]Running teardown with pytest sessionfinish...",
+     "",
+     "1 passed, 314 deselected in 0.90s"
+    ],
+    "seconds": 3.4
+   },
+   "end": {
+    "passed": true,
+    "own_failure": false,
+    "why": "passed",
+    "exit": 0,
+    "tail": [
+     ".                                                                        [100%]Running teardown with pytest sessionfinish...",
+     "",
+     "1 passed, 320 deselected in 0.88s"
+    ],
+    "seconds": 3.4
+   },
+   "tells_them_apart": false
+  },
+  {
+   "pr": 309,
+   "lesson": "n_02cc84da158d",
+   "check": "python3 -m pytest -q -k 'naming_a_store_by_env_var or client_resolves_the_shared_layer or test_store_resolution'",
+   "files": "",
+   "frozen": {
+    "passed": true,
+    "own_failure": false,
+    "why": "passed",
+    "exit": 0,
+    "tail": [
+     "..                                                                       [100%]Running teardown with pytest sessionfinish...",
+     "",
+     "2 passed, 528 deselected in 1.53s"
+    ],
+    "seconds": 4.5
+   },
+   "end": {
+    "passed": true,
+    "own_failure": false,
+    "why": "passed",
+    "exit": 0,
+    "tail": [
+     "..                                                                       [100%]Running teardown with pytest sessionfinish...",
+     "",
+     "2 passed, 540 deselected in 1.51s"
+    ],
+    "seconds": 4.4
+   },
+   "tells_them_apart": false
+  }
+ ],
+ "told_apart": 0,
+ "with_a_check": 4,
+ "with_files": 0,
+ "okl_commit_at_start": "8ed0b1d+dirty",
+ "okl_commit": "8ed0b1d+dirty",
+ "at": "2026-11-13T03:50Z"
+}

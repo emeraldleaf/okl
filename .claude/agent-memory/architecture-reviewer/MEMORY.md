@@ -1,4 +1,4 @@
 - [Review findings log](review_findings_log.md) — recurring finding classes with counts; promote to a gate at 3
 - [Harness transcripts](reference_harness_transcripts.md) — drift_mutate sessions; eval claude -p calls under the checkout's own project directory give call counts and times; gitStatus cut at 2k
 - [Claude Code output limits](reference_claude_code_output_limits.md) — Bash 30,000 chars; MCP 25k tokens; hook timeout 600 s (UserPromptSubmit 30 s); from the binary
-- [Reproducing receipts](reference_reproducing_receipts.md) — old commit's briefing via git archive src+seed, absolute PYTHONPATH; anatomy-story via a shim okl
+- [Reproducing receipts](reference_reproducing_receipts.md) — old commit's briefing via git archive src+seed, absolute PYTHONPATH; anatomy-story via a shim okl; a venv with no editable pth proves a check ran the tree
