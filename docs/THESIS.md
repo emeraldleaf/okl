@@ -28,8 +28,8 @@ Two rules hold throughout:
 
 | the claim says | today | evidence |
 |---|---|---|
-| it briefs the agent with what applies | built for lessons whose subject the task names; not for a lesson that applies to what the code does, which only a channel that reads the code can reach ([EVALUATION](EVALUATION.md)) | 42% → 7% defects reproduced on eight bait tasks, pooled over seven A/B runs ([REPORT](../evals/REPORT.md) §5 finding 7); on real work, 0 of 2 lessons that applied by what the code did reached the agent through any arm that ran (47 of 48 text and arm pairs ran), ranked 54th to 299th of 364 (§4ak) |
-| it notices when something you maintain falls out of step | built for lessons that govern files and carry a check, including docs a lesson names (this README is one); not yet for docs, diagrams, specs, reports or results in general (#317, #314) | 16 of the 155 lessons recorded here were watched at the 2026-10-31 census below, 12 after #318 moved four whose check CI runs (§4ah); of 52 patches written to break those lessons, a judge confirmed 36 as breaks, and drift caught 14 of them (§4af); after #318, it caught 16 of 24 on the nine whose check runs from the commit, counts only (§4ah) |
+| it briefs the agent with what applies | built for lessons whose subject the task names; not for a lesson that applies to what the code does, which only a channel that reads the code can reach ([EVALUATION](EVALUATION.md)) | 42% → 7% defects reproduced on eight bait tasks, pooled over seven A/B runs ([REPORT](../evals/REPORT.md) §5 finding 7); on real work, the briefing named about a third of the lessons a change needed (§4al, model-judged; its human audit is #394), and 0 of 2 lessons that applied by what the code did reached the agent through any arm that ran (47 of 48 text and arm pairs ran), ranked 54th to 299th of 364 (§4ak). Reaching the agent is not acting on it: in pilots on real past bugs, a lesson in a list of ten changed the code far less often than the same lesson given alone (§4ax, §4ay) |
+| it notices when something you maintain falls out of step | built for lessons that govern files and carry a check, including docs a lesson names (this README is one); not yet for docs, diagrams, specs, reports or results in general (#317, #314) | 16 of the 155 lessons recorded here were watched at the 2026-10-31 census below, 12 after #318 moved four whose check CI runs (§4ah); of 52 patches written to break those lessons, a judge confirmed 36 as breaks, and drift caught 14 of them (§4af); after #318, it caught 16 of 24 on the nine whose check runs from the commit, counts only (§4ah). A flag asks for a re-check; whether the check then sees the break depends on what it tests: lessons' own checks caught none of the later breaks of their lessons (§4bd), and on fresh breaks, checks that sweep their rule caught about half and older checks about a quarter, a gap too few lessons were tried to settle (§4bf). The judge behind these breaks is not yet checked against a person (#446) |
 | it has the agent bring it back, telling you or asking first | partly: a drifted lesson blocks the push or fails CI, and the briefing marks it STALE; telling or asking for other artifacts is #317 | §4ae, §4af |
 | each session's lessons are recorded | partly: in Claude Code, the Stop hook asks what was learned once per session id while its marker in the temp folder stands, so a long-running session can go a day of work unasked (#391) | this repository's own working session was last asked on 2026-11-07 and not again before `missed-evidence-20261108-0344.json` was made on 2026-11-08 |
 | every claim is backed by a check, or marked unchecked | built: a briefed lesson no observed check backs, and drift has no verdict on, is marked UNCHECKED (#222); 72 of 168 lessons have a check at the 2026-11-02 census | census and briefing marks below |
@@ -51,6 +51,14 @@ Each figure names its receipt in `evals/results/`.
 
 
 ## History
+
+- **2026-11-14.** Three read-only reviews (#446) checked the claims against the evidence and found
+  the docs promising more than the results: "each proven by a check", "goes stale loudly",
+  "briefed haiku beat unbriefed sonnet", transfer to other repositories. The README, the guide and
+  the evaluation standard now say what was measured (#452), and the posts that said a check makes a
+  rule hold were corrected. The table above gained reach on real work (§4al), the list result
+  (§4ax, §4ay) and what checks catch (§4bd, §4bf). The claim itself is unchanged: it is the aim, and
+  the table says how much of it holds.
 
 - **2026-11-02.** The first rule above changed, at the maintainer's direction: okl had run no
   generative model of its own, and now runs one when the person asks, so that `okl review` could
