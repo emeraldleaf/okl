@@ -16,7 +16,10 @@
   store, replaced when the same session is logged again: whether the review was asked for and ran, the
   files and lessons it listed, and for each sub-agent it started its model, the lessons it opened,
   whether it edited anything in the repository and which files, the tests it ran, and its tokens,
-  with the review's tokens and time. These are counted from the first command that ran `okl check
+  with the review's tokens and time (tokens are the work: input, output and cache creation. The cache
+  reads, which a call makes of the session's whole context and which cost far less, are kept apart, in
+  the row and in each check, so a review is not reported as millions of tokens of work; and the row
+  counts the Agent calls that came back as an error, which started no sub-agent). These are counted from the first command that ran `okl check
   --change` after the hook's note (a grep or a commit message that names it does not count, and a run
   before the note reviewed another state; a prompt you typed between the note and the run means the
   request was skipped, and with several notes in a session the row is the last one's) to the next

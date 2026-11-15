@@ -128,7 +128,10 @@ okl recap --transcript <path> --log-review
                      #   listed, and for each sub-agent the review started its model, the lessons it
                      #   opened, whether it edited anything in the repository and which files (the
                      #   edits elsewhere only counted), the tests it ran (a runner name, repository
-                     #   paths and the outcome), and its tokens, with the review's tokens and seconds,
+                     #   paths and the outcome), and its tokens, with the review's tokens and seconds
+                     #   (tokens are the work, input, output and cache creation; the cache reads, which a
+                     #   call makes of the whole context and which cost far less, are kept apart), and how
+                     #   many Agent calls came back as an error,
                      #   all counted from the review's command to the next prompt you typed, or to a
                      #   Stop-hook summary at which none of the review's sub-agents is still running (a
                      #   background one is running until its completion is reported, in any of the
@@ -152,7 +155,7 @@ okl recap --transcript <path> --log-review
                      #   no such log); a review_log setting that is not on or off; the store cannot
                      #   be opened or written.
 okl recap --reviews  # the review log, from those rows: how often the review was asked for and run,
-                     #   lessons checked per review, how many checks were followed by an edit, tokens
+                     #   lessons checked per review, how many checks were followed by an edit, tokens (the work, with the cache reads apart)
                      #   and seconds per review, and per lesson how often it was checked and how often
                      #   that was followed by an edit. An edit after a check means the review acted on
                      #   that lesson, not that it caught a break: the log cannot tell whether the edit

@@ -150,7 +150,9 @@ In Claude Code, the Stop hook also logs the review, so the default can be judged
 each stop after the first it runs `okl recap --log-review`, which reads the session's transcript and
 its sub-agents' under `~/.claude/projects` and writes one row about the review to your store (ids,
 paths, counts and model names; no code, command line or session text). `okl recap --reviews` reads
-the rows back. No model is called, and the agent is not told. The cost is time at the stop: the hook
+the rows back, with a review's tokens as the work (input, output, cache creation) and its cache reads
+said apart: a call re-reads the session's whole context, so a short review shows millions of cache
+reads that cost far less than the work. No model is called, and the agent is not told. The cost is time at the stop: the hook
 waits for it. Timed as a full process (`evals/review_log_time.py`, receipt
 `evals/results/review-log-time-20261115-0821.json`), the largest real transcript on my machine, 569 MB,
 took about 0.8 seconds. The hook cuts it off at about 5 seconds, so a slower read costs a missed row,

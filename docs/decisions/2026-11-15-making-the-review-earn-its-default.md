@@ -101,7 +101,9 @@ again:
 - each sub-agent the review started, with its model, the lessons it was given or opened, whether it
   edited anything in the repository and which files, a count of the edits elsewhere, the tests it ran
   (a runner name, paths that exist in the repository, and the outcome), and its tokens;
-- the review's tokens and duration.
+- the review's tokens and duration, and how many Agent calls came back as an error. Tokens are the
+  work (input, output and cache creation); the cache reads, which dwarf it and cost far less, are
+  kept apart in the row and in each check, and the report says so.
 
 No code, command line or text from the session is stored: only ids, paths, counts and model names. The
 row goes where the store is: `.okl/okl.db` by default, and a shared database if `OKL_DATABASE_URL`
