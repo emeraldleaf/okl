@@ -604,11 +604,13 @@ def test_one_line_nested_past_the_parser_costs_that_line_and_not_the_reading(tmp
     """A line of JSON nested deeper than the parser can hold raises RecursionError, which would end
     the reading; it is dropped and the rest is read."""
     deep = "[" * 200_000 + "]" * 200_000
-    t = write(tmp_path, [user(0, "x"), deep, *start_review()[1:]])
+    t = write(tmp_path, [*start_review(), deep,
+                         turn(120, "m2", call("tu-a", "Agent", prompt=shown("les-a")), usage=(1, 1, 1, 1))])
 
     r = reviewlog.read_review(t)
 
     assert (r.readable, r.asked, r.ran, r.files_changed) == (True, True, True, 4)
+    assert [c["lessons"] for c in r.checks] == [["les-a"]]       # the line after the deep one is read
 
 
 def test_only_lessons_the_store_has_reach_a_row(tmp_path):

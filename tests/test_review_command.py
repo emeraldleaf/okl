@@ -74,9 +74,9 @@ def test_rows_logged_in_the_same_millisecond_come_back_in_one_order(tmp_path, mo
     id on Postgres and gets a new rowid on SQLite, so neither can say which came first."""
     monkeypatch.setattr(store_mod, "_now_ms", lambda: 1_000)
     s = Store(f"sqlite:///{tmp_path / 'okl.db'}")
-    for session, repo in (("s2", "r"), ("s1", "r"), ("s0", "other")):
+    for session, repo in (("s1", "r"), ("s2", "r"), ("s0", "other")):
         s.log_review(session, repo, asked=True, ran=False)
-    s.log_review("s2", "r", asked=True, ran=True)      # replaced: it must not move to the end
+    s.log_review("s1", "r", asked=True, ran=True)      # replaced: it must not move to the end
 
     assert [(x.repo, x.session_id) for x in s.reviews()] == [("other", "s0"), ("r", "s1"), ("r", "s2")]
     assert [x.session_id for x in s.reviews("r")] == ["s1", "s2"]
