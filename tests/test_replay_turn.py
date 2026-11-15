@@ -186,3 +186,43 @@ def test_stage_two_runs_only_after_stage_one_reads_helps(monkeypatch):
             assert "stage 2 is not run" in str(e), reading
         else:
             raise AssertionError(f"stage 2 started after {reading!r}")
+
+
+LOOK = REPO / "evals" / "results" / "replay-turn-look-20261115-0054.json"
+ALT_FIRST = REPO / "evals" / "results" / "replay-alternatives-4bg-20261115-0102.json"
+CHECK_FINAL = REPO / "evals" / "results" / "replay-check-4bg-20261115-0114.json"
+ALT_FINAL = REPO / "evals" / "results" / "replay-alternatives-4bg-20261115-0115.json"
+
+
+def _section() -> str:
+    text = (REPO / "evals" / "REPORT.md").read_text()
+    return text.split("## 4bg.", 1)[1].split("\n## ", 1)[0]
+
+
+def test_the_look_quotes_its_receipt():
+    """Every figure §4bg's look quotes is read here from its receipt, made from committed code."""
+    sec, r = _section(), json.loads(LOOK.read_text())
+    assert LOOK.name in sec and r["sessions"] == r["of"] == 15 and "usable" not in r
+    assert r["okl_commit"] == r["okl_commit_at_start"] and not r["okl_commit"].endswith("+dirty")
+    ay = r["per_task_4ay"]
+    for pr, rate in r["per_task_in_turn"].items():
+        row = f"| #{pr} | {rate} | {ay['ten_plain'][pr]} | {ay['one_at_a_time'][pr]} |"
+        assert row in sec, row
+    rates = (r["pass_rate_in_turn"], r["pass_rate_4ay"]["ten_plain"], r["pass_rate_4ay"]["one_at_a_time"])
+    assert f"| averaged over tasks | {rates[0]} | {rates[1]} | {rates[2]} |" in sec
+    assert (r["edited"], r["sessions_with_harm"]) == (7, 0) and "Seven of the 15 sessions edited" in sec
+
+
+def test_the_grader_checks_quote_their_receipts():
+    """Every grader fails frozen and passes fixed; the first check of alternative fixes told 9 of 14 apart with
+    the graders as they were, and the check after the five were strengthened tells all 14 apart."""
+    import hashlib
+    sec, now = _section(), hashlib.sha256(turn.GRADERS.read_bytes()).hexdigest()
+    first, check, alt = (json.loads(p.read_text()) for p in (ALT_FIRST, CHECK_FINAL, ALT_FINAL))
+    assert all(p.name in sec for p in (ALT_FIRST, CHECK_FINAL, ALT_FINAL))
+    assert (first["valid"], first["of"]) == (9, 14) and first["graders_sha256"] != now
+    assert sorted(x["id"] for x in first["rows"] if not x["valid"]) == ["t01", "t05", "t06", "t07", "t09"]
+    assert (check["valid"], check["of"], alt["valid"], alt["of"]) == (18, 18, 14, 14)
+    for r in (check, alt):
+        assert r["graders_sha256"] == now and r["okl_commit"] == r["okl_commit_at_start"]
+        assert not r["okl_commit"].endswith("+dirty") and "usable" not in r
