@@ -18,6 +18,7 @@ import statistics
 import sys
 import tempfile
 import time
+from collections.abc import Iterator
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -31,7 +32,7 @@ MADE_UP = (1000, 5000)
 
 
 @contextlib.contextmanager
-def _store_at(url: str):
+def _store_at(url: str) -> Iterator[None]:
     """Point okl at `url` for this process only, as OKL_DATABASE_URL would; restored after."""
     before = os.environ.get("OKL_DATABASE_URL")
     os.environ["OKL_DATABASE_URL"] = url
