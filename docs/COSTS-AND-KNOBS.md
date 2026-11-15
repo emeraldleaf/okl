@@ -131,8 +131,8 @@ read all of it. okl calls no model for this; the agent's own turns are the cost.
 median of about 170,000 tokens, nearly all of them cached context the session re-reads, about
 $0.21 at API prices and 43 seconds. That cost, and a catch rate below the bar §4au set, kept it
 off by default until 0.17.0. Since §4ay the agent checks each lesson it picks in its own fresh
-sub-agent (in Claude Code on Sonnet, the model it was measured with, so the cost does not grow
-with a larger session model), which costs more again: in that test, ten lessons asked one at a time took about
+sub-agent (in Claude Code on Sonnet, the model it was measured with, so its checks do not run on
+a larger session model; the session itself still runs on its own), which costs more again: in that test, ten lessons asked one at a time took about
 seven times the cost and six times the time of a single pass. With the agent choosing its own
 lessons (REPORT §4az, receipt `review-e2e-20261111-1543.json`), a session with the review cost
 $0.73 API-priced on average and a median of 214 seconds, and passed in 0.2 of its sessions (5 of 25,

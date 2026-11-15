@@ -4,8 +4,8 @@
 
 - **The review after writing runs its checks on Sonnet** (Claude Code). Each lesson it checks runs in a
   sub-agent, and an unnamed sub-agent runs on the session's own model. So in an Opus session the review
-  started ten Opus sessions, costing more than REPORT §4az measured, and in a Haiku session it ran on a
-  model it was never tested with. The step now names Sonnet, the model §4ay and §4az measured it with.
+  started ten Opus sessions, on a model §4az did not measure and at a higher price per token, and in a
+  Haiku session it ran on a model it was never tested with. The step now names Sonnet, the model §4ay and §4az measured it with.
 
 ## 0.17.0
 
