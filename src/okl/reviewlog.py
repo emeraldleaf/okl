@@ -11,9 +11,11 @@ is left out, and nothing raises into the Stop hook this rides on. A reading hold
 model names and booleans only: no code, no command line and no text from the session.
 
 The review is a window of the transcript. It starts at the first command that ran `okl check
---change`, and ends at the first Stop-hook summary after that, or at the next prompt a person wrote,
-whichever comes first. Tokens, time and sub-agents are counted inside it: a session that goes on
-to other work after its review must not have that work counted as the review's.
+--change` after the Stop hook's note (one before the note reviewed another state; without a note,
+the first one), and ends at the next prompt a person typed, or at a Stop-hook summary with no
+sub-agent it started still pending, whichever comes first. Tokens, time and sub-agents are counted
+inside it, and a sub-agent's own lines up to its end: a session that goes on to other work after its
+review must not have that work counted as the review's.
 
 Claude Code 2.1.302 also writes `api-request-blob` lines that repeat an assistant message's tool
 calls after their results. Only assistant and user lines are read for calls, and a call counts once.
@@ -79,7 +81,7 @@ class ReviewReading:
 def _loads(line: bytes) -> dict[str, Any] | None:
     try:
         d = json.loads(line)
-    except ValueError:
+    except (ValueError, RecursionError):        # a line nested past what the parser can hold is lost, not the reading
         return None
     return d if isinstance(d, dict) else None
 
@@ -228,25 +230,31 @@ class _AgentScan:
                                reviewcmd.parse_test_outcome(bool(b.get("is_error")), _text(b.get("content")))})
 
     def finish(self) -> dict[str, Any]:
-        """The reading. A call with no result in the file reported no error, so an edit counts."""
-        for path in self._edits.values():
-            self._edited(path)
+        """The reading. `edited` is an edit inside the repository whose result reported no error: a
+        call with no result is not counted, since the log is evidence for a default and undercounting
+        is the safer error (a later stop reads the session again). An edit elsewhere is only counted in
+        `edited_outside`. A test run with no result is `unknown`."""
         tests = self.tests + [{"runner": r, "targets": t, "outcome": "unknown"}
                               for r, t in self._runs.values()]
         return {"lessons": self.lessons, "edited_files": sorted(self.inside)[:MAX_FILES],
-                "edited_outside": len(self.outside), "edited": bool(self.inside or self.outside),
+                "edited_outside": len(self.outside), "edited": bool(self.inside),
                 "tests": tests[:MAX_TESTS], "tokens": self.tally.tokens, "model": self.model,
                 "last": self.tally.last}
 
 
-def _read_agent(path: Path, root: str | None) -> dict[str, Any] | None:
-    """One sub-agent's transcript read; None when the file cannot be opened."""
+def _read_agent(path: Path, root: str | None, until: float | None) -> dict[str, Any] | None:
+    """One sub-agent's transcript read, up to `until` (the end of the review's window, when it ended);
+    None when the file cannot be opened. A sub-agent the review started and later resumed for other
+    work has that work after `until`, and it is not the review's."""
     scan = _AgentScan(root)
     try:
         with path.open("rb") as f:
             for line in f:
                 d = _loads(line)
-                if d is not None:
+                if d is None:
+                    continue
+                ts = _ts(d)
+                if until is None or ts is None or ts <= until:
                     scan.feed(d)
     except OSError:
         return None
@@ -276,7 +284,7 @@ def _metas(sub_dir: Path) -> dict[str, tuple[str, dict[str, Any]]]:
 def _carries_note(d: dict[str, Any]) -> bool:
     """Whether a transcript line is the Stop hook's feedback with the review note in it, as
     opposed to the same words in a tool result (a grep of okl's own source, say) or in a message
-    another session sent and quoted them in."""
+    another session sent and quoted them in (that starts `<agent-message`, not `Stop hook`)."""
     marker = NOTE.decode()
     kind = d.get("type")
     if kind == "system":
@@ -285,33 +293,35 @@ def _carries_note(d: dict[str, Any]) -> bool:
     if kind == "attachment":
         att = d.get("attachment")
         return isinstance(att, dict) and "hook" in str(att.get("type", "")) and marker in json.dumps(att)
-    if kind == "user" and not d.get("origin"):     # `origin` marks a message from another session
-        content = _message(d).get("content")
-        texts = ([content] if isinstance(content, str) else
-                 [b.get("text") for b in _blocks(d) if b.get("type") == "text"])
-        return any(isinstance(t, str) and marker in t and t.lstrip().startswith("Stop hook") for t in texts)
+    if kind == "user":
+        return any(marker in t and t.lstrip().startswith("Stop hook") for t in _user_texts(d))
     return False
 
 
-def _is_human_prompt(d: dict[str, Any]) -> bool:
-    """Whether a line is a prompt a person wrote: a user line that is not a tool result, not marked
-    meta, not from another session, and not a task notification, a reminder or hook feedback."""
-    if d.get("type") != "user" or d.get("isMeta") or d.get("origin"):
-        return False
+def _user_texts(d: dict[str, Any]) -> list[str]:
+    """The text a user line carries: its string, or its text blocks; none for a tool result."""
     content = _message(d).get("content")
     if isinstance(content, str):
-        text = content
-    elif isinstance(content, list) and not any(b.get("type") == "tool_result" for b in _blocks(d)):
-        text = " ".join(str(b.get("text", "")) for b in _blocks(d) if b.get("type") == "text")
-    else:
+        return [content]
+    if isinstance(content, list) and not any(b.get("type") == "tool_result" for b in _blocks(d)):
+        return [str(b.get("text", "")) for b in _blocks(d) if b.get("type") == "text"]
+    return []
+
+
+def _is_human_prompt(d: dict[str, Any]) -> bool:
+    """Whether a line is a prompt a person typed. Claude Code 2.1.302 marks one `origin: {"kind":
+    "human"}`; a task notification and another session's message carry other kinds, and are not a
+    person. An older transcript has no `origin`, and there a user line is a prompt unless it is a tool
+    result, marked meta, empty, or a notification, a reminder or hook feedback by its text."""
+    if d.get("type") != "user" or d.get("isMeta"):
         return False
-    text = text.lstrip()
-    return bool(text) and not text.startswith(_NOT_A_PROMPT)
-
-
-def _ends_window(d: dict[str, Any]) -> bool:
-    """Whether a line closes the review: a Stop-hook summary (the session stopped) or a new prompt."""
-    return (d.get("type") == "system" and d.get("subtype") == "stop_hook_summary") or _is_human_prompt(d)
+    text = " ".join(_user_texts(d)).strip()
+    if not text:
+        return False
+    origin = d.get("origin")
+    if origin:
+        return isinstance(origin, dict) and origin.get("kind") == "human"
+    return not text.startswith(_NOT_A_PROMPT)
 
 
 class _Main:
@@ -320,17 +330,35 @@ class _Main:
     Before the review starts only two cheap tests run on each line, since a long session's
     transcript is hundreds of megabytes: does it hold the note, and does it hold `--change`. From
     the review's first call to its end every line is read; after its end only the note matters.
+
+    Where the Stop hook asked for the review, it is the first command that ran `okl check --change`
+    after the note: one before the note reviewed a different state, so a window opened before the
+    note is thrown away, tallies and all. Without a note, the first command that ran it.
+
+    The review ends at the next prompt a person typed, or at a Stop-hook summary with no sub-agent
+    the review started still pending. In Claude Code every Agent call returns at once as
+    `async_launched` and the agent stops until a task notification names it; the review steps check
+    one lesson after another, so the session stops between lessons and the review is not over.
     """
 
     def __init__(self) -> None:
-        self.asked = False
+        self.asked = False           # the note is in the transcript
+        self.noted = False           # ... and has been read, so a review from here on follows it
+        self._clear()
+
+    def _clear(self) -> None:
+        """Start with no review window open."""
         self.started = False
         self.ended = False
+        self.after_note = False      # the open window began after the note
         self.start: float | None = None
+        self.end_ts: float | None = None
         self.review_id: str | None = None
         self.files: int | None = None
         self.listed: int | None = None
         self.agents: dict[str, dict[str, Any]] = {}     # Agent tool_use id -> its input and result
+        self.pending: set[str] = set()                  # Agent calls not yet reported back
+        self.awaiting: dict[str, Any] = {}              # a pending call's id -> the agent id it launched
         self.tally = _Tally()
 
     def feed(self, line: bytes) -> None:
@@ -343,15 +371,27 @@ class _Main:
         if d is None:
             return
         if has_note and _carries_note(d):
-            self.asked = True
+            self._note()
         if not self.started:
             if self._try_start(d):
                 self._event(d)
         elif not self.ended:
-            if _ends_window(d):
-                self.ended = True
-            else:
-                self._event(d)
+            self._step(d)
+
+    def _note(self) -> None:
+        """The Stop hook asked for the review. A window open from before it is not that review."""
+        self.asked = True
+        if self.started and not self.after_note:
+            self._clear()
+        self.noted = True
+
+    def _step(self, d: dict[str, Any]) -> None:
+        """Read one line of an open window, or end it."""
+        stopped = d.get("type") == "system" and d.get("subtype") == "stop_hook_summary"
+        if _is_human_prompt(d) or (stopped and not self.pending):
+            self.ended, self.end_ts = True, _ts(d)
+        else:
+            self._event(d)
 
     def _try_start(self, d: dict[str, Any]) -> bool:
         """Start the review at this line if it runs the review; whether it did."""
@@ -361,6 +401,7 @@ class _Main:
             if (b.get("type") == "tool_use" and b.get("name") == "Bash" and isinstance(cmd, str)
                     and reviewcmd.is_review_command(cmd)):
                 self.started, self.start, self.review_id = True, _ts(d), b.get("id")
+                self.after_note = self.noted
                 return True
         return False
 
@@ -373,15 +414,33 @@ class _Main:
                     and isinstance(b.get("id"), str) and b["id"] not in self.agents:
                 inp = b.get("input")
                 self.agents[b["id"]] = {"input": inp if isinstance(inp, dict) else {}}
+                self.pending.add(b["id"])
         for b in results:
-            tid = b.get("tool_use_id")
-            if tid == self.review_id and self.files is None and self.listed is None:
-                self._counts(_text(b.get("content")))
-            elif tid in self.agents and len(results) == 1:
-                # toolUseResult describes the line's one result; with several, it says nothing of which
-                res = d.get("toolUseResult")
-                if isinstance(res, dict):
-                    self.agents[tid].update(agent_id=res.get("agentId"), model=res.get("resolvedModel"))
+            # toolUseResult describes the line's one result; with several, it says nothing of which
+            self._result(b, d.get("toolUseResult") if len(results) == 1 else None)
+        if self.pending and not results and d.get("type") == "user":
+            self._notified(" ".join(_user_texts(d)))
+
+    def _result(self, b: dict[str, Any], res: Any) -> None:
+        """A tool result: the review's own output, or a sub-agent's launch or completion."""
+        tid = b.get("tool_use_id")
+        if tid == self.review_id and self.files is None and self.listed is None:
+            self._counts(_text(b.get("content")))
+        elif tid in self.agents:
+            res = res if isinstance(res, dict) else {}
+            if res:
+                self.agents[tid].update(agent_id=res.get("agentId"), model=res.get("resolvedModel"))
+            if res.get("status") == "async_launched" or res.get("isAsync") is True:
+                self.awaiting[tid] = res.get("agentId")      # running in the background: wait for its notification
+            else:
+                self.pending.discard(tid)
+
+    def _notified(self, text: str) -> None:
+        """A user line that names a pending sub-agent (a task notification) reports it back."""
+        for tid in list(self.pending):
+            aid = self.awaiting.get(tid)
+            if tid in text or (isinstance(aid, str) and aid in text):
+                self.pending.discard(tid)
 
     def _counts(self, text: str) -> None:
         if (m := _FILES.search(text)):
@@ -443,18 +502,19 @@ def _checks(main: _Main, sub_dir: Path, repo_dir: str | None,
     out = []
     for tool_id, call in main.agents.items():
         agent_id, meta = metas.get(tool_id, (call.get("agent_id"), {}))
-        out.append(_check(sub_dir, agent_id, meta, call, repo_dir=repo_dir, known_ids=known_ids))
+        out.append(_check(sub_dir, agent_id, meta, call, repo_dir=repo_dir, known_ids=known_ids,
+                          until=main.end_ts))
     return out
 
 
-def _check(sub_dir: Path, agent_id: Any, meta: dict[str, Any], call: dict[str, Any], *,
-           repo_dir: str | None, known_ids: set[str] | None) -> tuple[dict[str, Any], dict[str, Any] | None]:
+def _check(sub_dir: Path, agent_id: Any, meta: dict[str, Any], call: dict[str, Any], *, repo_dir: str | None,
+           known_ids: set[str] | None, until: float | None) -> tuple[dict[str, Any], dict[str, Any] | None]:
     """One sub-agent the review started, as the row keeps it, and what its transcript held."""
     prompt = call["input"].get("prompt")
     prompt = prompt if isinstance(prompt, str) else ""
     read = None
     if isinstance(agent_id, str) and _AGENT_ID.fullmatch(agent_id):
-        read = _read_agent(sub_dir / f"agent-{agent_id}.jsonl", repo_dir)
+        read = _read_agent(sub_dir / f"agent-{agent_id}.jsonl", repo_dir, until)
     else:
         agent_id = None
     ids = (read["lessons"] if read else []) + _SHOWN.findall(prompt) + reviewcmd.text_show_ids(prompt)

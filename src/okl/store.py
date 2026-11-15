@@ -632,7 +632,8 @@ class _Backend(Protocol):
 
       log_review(run) / reviews(repo)
         - One row per (session id, repo): logging the same pair again REPLACES it, never adds
-          a second. reviews returns every row oldest first, `repo` filtering exactly, with
+          a second. reviews returns every row oldest first (ties by repo, then session id, the
+          same on both backends), `repo` filtering exactly, with
           `asked` and `ran` as bools, the counts None where they were None, and the checks
           as logged. The table is created when a store opens, so a store from before it
           gains it.
@@ -1050,8 +1051,10 @@ class _SQLiteBackend(_Backend):
         with self._lock:
             sql = ("SELECT session_id, repo, at, asked, ran, files_changed, lessons_listed, tokens, "
                    "duration_s, checks FROM review_run")
-            rows = (self.conn.execute(sql + " WHERE repo=? ORDER BY at, rowid", (repo,))
-                    if repo is not None else self.conn.execute(sql + " ORDER BY at, rowid"))
+            # Ties break on the key, which both backends hold: a replaced row gets a new rowid on SQLite
+            # and keeps its id on Postgres, so neither says which came first.
+            rows = (self.conn.execute(sql + " WHERE repo=? ORDER BY at, repo, session_id", (repo,))
+                    if repo is not None else self.conn.execute(sql + " ORDER BY at, repo, session_id"))
             return [_row_to_review(dict(r)) for r in rows.fetchall()]
 
     def close(self) -> None:
@@ -1140,7 +1143,7 @@ class _PostgresBackend(_Backend):
                 expect TEXT, commit_id TEXT)""")
             cur.execute("CREATE INDEX IF NOT EXISTS check_run_node ON check_run(node_id, at)")
             cur.execute("""CREATE TABLE IF NOT EXISTS review_run(
-                id BIGSERIAL, session_id TEXT NOT NULL, repo TEXT NOT NULL, at BIGINT NOT NULL,
+                session_id TEXT NOT NULL, repo TEXT NOT NULL, at BIGINT NOT NULL,
                 asked BOOLEAN NOT NULL, ran BOOLEAN NOT NULL, files_changed BIGINT,
                 lessons_listed BIGINT, tokens BIGINT, duration_s BIGINT, checks TEXT NOT NULL,
                 PRIMARY KEY (session_id, repo))""")
@@ -1309,8 +1312,8 @@ class _PostgresBackend(_Backend):
     def reviews(self, repo: str | None) -> list[ReviewRun]:
         sql = ("SELECT session_id, repo, at, asked, ran, files_changed, lessons_listed, tokens, "
                "duration_s, checks FROM review_run")
-        rows = (self._fetch(sql + " WHERE repo = %s ORDER BY at, id", (repo,))
-                if repo is not None else self._fetch(sql + " ORDER BY at, id", ()))
+        rows = (self._fetch(sql + " WHERE repo = %s ORDER BY at, repo, session_id", (repo,))
+                if repo is not None else self._fetch(sql + " ORDER BY at, repo, session_id", ()))
         return [_row_to_review(r) for r in rows]
 
     def close(self) -> None:

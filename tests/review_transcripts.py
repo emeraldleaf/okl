@@ -23,9 +23,22 @@ def at(sec: int) -> str:
 
 
 def user(sec: int, text: str, **extra) -> str:
-    """A user line: a prompt a person typed, unless `extra` says otherwise (isMeta, origin)."""
+    """A user line with no `origin`, the shape of an older transcript: a prompt a person typed
+    unless `extra` says otherwise (isMeta, origin)."""
     return json.dumps({"type": "user", "timestamp": at(sec), "message": {"role": "user", "content": text},
                        **extra})
+
+
+def typed(sec: int, text: str) -> str:
+    """A prompt a person typed, as 2.1.302 writes it: `origin: {"kind": "human"}`."""
+    return user(sec, text, origin={"kind": "human"})
+
+
+def notification(sec: int, agent_id: str) -> str:
+    """The user line that reports a background sub-agent back: not a person (its origin says so) and
+    not marked meta, and it names the agent in a `<task-id>`."""
+    return user(sec, f"<task-notification><task-id>{agent_id}</task-id><status>completed</status>"
+                     "</task-notification>", origin={"kind": "task-notification"})
 
 
 def feedback(sec: int, note: bool = True) -> str:
@@ -111,17 +124,19 @@ def start_review(sec: int = 110) -> list[str]:
     """The lines that start a review: the person's prompt, the hook's note, the review command and
     its output, with the command repeated by a blob line as 2.1.302 writes it."""
     rev = call("tu-rev", "Bash", command="okl check --change")
-    return [user(0, "fix the bug"), feedback(sec - 10),
+    return [typed(0, "fix the bug"), feedback(sec - 10),
             turn(sec, "m1", rev, usage=(10, 20, 30, 40)), result(sec + 2, "tu-rev", REVIEW_OUT), blob(rev)]
 
 
-def two_agents(tmp_path: Path, root: Path, tail: list[str] | None = None) -> Path:
+def two_agents(tmp_path: Path, root: Path, tail: list[str] | None = None, lead: list[str] | None = None) -> Path:
     """A review with two sub-agents: `aaa` opens les-a, edits a file and runs a test; `bbb` opens
-    les-b and changes nothing. `tail` replaces the lines after the review's last message."""
+    les-b and changes nothing. `tail` replaces the lines after the review's last message, and `lead`
+    comes before the prompt, the note and the review."""
     a1 = call("tu-a1", "Agent", description="SECRET DESCRIPTION", prompt=shown("les-a"),
               subagent_type="general-purpose")
     a2 = call("tu-a2", "Agent", description="second", prompt="look at les-b")
     main_lines = [
+        *(lead or []),
         *start_review(),
         # two blocks, one message: its usage (10 tokens) is on both lines and counts once
         turn(120, "m2", say("starting the first"), a1, usage=(1, 2, 3, 4)),
@@ -149,3 +164,31 @@ def two_agents(tmp_path: Path, root: Path, tail: list[str] | None = None) -> Pat
         "aaa": ({"toolUseId": "tu-a1", "model": "opus", "pickedEffortModel": "opus",
                  "description": "SECRET DESCRIPTION"}, agent_a),
         "bbb": ({"toolUseId": "tu-a2", "model": "sonnet"}, agent_b)})
+
+
+def background_review(tmp_path: Path, root: Path, lessons: int = 3) -> Path:
+    """A review as 2.1.302 saved every one: each Agent call returns `async_launched`, the agent stops
+    (a Stop-hook summary) until a task notification names the sub-agent, then launches the next, one
+    lesson after another, and stops a last time. A prompt the person types afterwards starts other work."""
+    main_lines = [*start_review()]
+    t = 120
+    agents = {}
+    for n in range(1, lessons + 1):
+        aid, tid = f"ag{n}", f"tu-{n}"
+        launch = call(tid, "Agent", prompt=f"check lesson les-{n}: okl show les-{n}", model="sonnet")
+        main_lines += [turn(t, f"a{n}", launch, usage=(1, 1, 1, 1)),
+                       result(t + 1, tid, "launched", agentId=aid, status="async_launched"), blob(launch),
+                       turn(t + 2, f"w{n}", say("waiting for the sub-agent"), usage=(1, 1, 1, 1)),
+                       stop_summary(t + 3), notification(t + 60, aid)]
+        agents[aid] = ({"toolUseId": tid, "model": "sonnet"}, [
+            turn(t + 10, f"s{n}", call(f"sh{n}", "Bash", command=f"okl show les-{n}"), usage=(1, 1, 1, 1)),
+            result(t + 11, f"sh{n}", f"[les-{n}] Rule"),
+            turn(t + 20, f"e{n}", call(f"ed{n}", "Edit", file_path=f"{root}/src/f{n}.py"), usage=(1, 1, 1, 1)),
+            result(t + 21, f"ed{n}", "ok")])
+        t += 100
+    late = call("tu-late", "Agent", prompt="okl show les-9 then build the feature")
+    main_lines += [turn(t, "fin", say("checked every lesson"), usage=(1, 1, 1, 1)), stop_summary(t + 1),
+                   typed(t + 600, "now do the next task"),
+                   turn(t + 610, "late", late, usage=(9000, 0, 0, 0)),
+                   result(t + 611, "tu-late", "launched", agentId="late", status="async_launched")]
+    return write(tmp_path, main_lines, agents)

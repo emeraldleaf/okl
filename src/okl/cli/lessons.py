@@ -7,8 +7,10 @@ import contextlib
 import hashlib
 import json
 import os
+import signal
 import sys
 import tempfile
+import threading
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -530,6 +532,29 @@ def _review_plan(client: Client, args: argparse.Namespace) -> tuple[bool, str | 
     return writing, None
 
 
+LOG_DEADLINE = 4     # seconds the log may take; the Stop hook's own watchdog TERMs it at 4 and KILLs at 5
+
+
+@contextlib.contextmanager
+def _deadline(seconds: int) -> Any:
+    """Leave quietly, exit 0, if the block runs past `seconds`: a SIGALRM of this process's own, so a
+    log started through a launcher that the hook's kill reaches only in part still ends by itself.
+    Only where there is a SIGALRM and this is the main thread; elsewhere the block has no limit."""
+    if not hasattr(signal, "SIGALRM") or threading.current_thread() is not threading.main_thread():
+        yield
+        return
+
+    def fire(_signum: int, _frame: Any) -> None:
+        raise SystemExit(0)
+    previous = signal.signal(signal.SIGALRM, fire)
+    signal.alarm(seconds)
+    try:
+        yield
+    finally:
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, previous)
+
+
 def _recap_reviews(client: Client, repo_dir: str, args: argparse.Namespace) -> int:
     """`okl recap --log-review` and `--reviews`: write the session's review row, and read the log
     back (#464). `--log-review` exits 0 whatever the transcript held, and whether it logged or
@@ -552,11 +577,12 @@ def _recap_reviews(client: Client, repo_dir: str, args: argparse.Namespace) -> i
             print(f"okl recap: cannot read --since {args.since!r}; give ISO 8601 or 90m, 6h, 2d.", file=sys.stderr)
             return 2
     try:
-        store = client._local_store()
         if writing:
-            _say_logged(*recap.log_review(store, client.repo, args.transcript, repo_dir), args.transcript)
+            with _deadline(LOG_DEADLINE):
+                store = client._local_store()
+                _say_logged(*recap.log_review(store, client.repo, args.transcript, repo_dir), args.transcript)
         if args.reviews:
-            data = recap.reviews_report(store, client.repo, since_ms=since, top=args.limit)
+            data = recap.reviews_report(client._local_store(), client.repo, since_ms=since, top=args.limit)
             print(json.dumps(data, indent=2) if args.format == "json" else recap.render_reviews(data), end="")
     except backend_errors() + (OSError, OKLNotConfiguredError) as e:
         print(f"okl recap: the review log cannot be used: {e}", file=sys.stderr)

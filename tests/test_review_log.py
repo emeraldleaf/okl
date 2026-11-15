@@ -14,9 +14,11 @@ import pytest
 from review_transcripts import (
     NOTE,
     REVIEW_OUT,
+    background_review,
     blob,
     call,
     feedback,
+    notification,
     repo_root,
     result,
     say,
@@ -25,6 +27,7 @@ from review_transcripts import (
     stop_summary,
     turn,
     two_agents,
+    typed,
     user,
     write,
 )
@@ -152,6 +155,11 @@ def test_the_words_in_a_tool_result_or_a_peers_message_are_not_the_note(tmp_path
     "okl check --task 'add a login page'",
     "git diff --change",
     "rg okl check --change",
+    "timeout 5 grep 'okl check --change' docs",
+    "bash -c 'echo okl check --change'",
+    "echo $(echo okl check --change)",
+    "echo '$(okl check --change)'",
+    "cat <<-EOF\n\tokl check --change\n\tEOF",
 ])
 def test_a_command_that_only_mentions_the_review_does_not_start_one(tmp_path, command):
     """A grep, an echo, a commit message, a heredoc, a `python -c` string and the hook's own call are
@@ -175,6 +183,21 @@ def test_a_command_that_only_mentions_the_review_does_not_start_one(tmp_path, co
     "cd /work/repo && okl check --change | head -80",
     "time uv run okl check --change",
     "echo start; okl check --change",
+    "timeout 120 okl check --change",
+    "timeout -s KILL 2m okl check --change",
+    "nice -n 5 okl check --change",
+    "uvx okl check --change",
+    "out=$(okl check --change)",
+    "echo \"$(okl check --change)\" | head",
+    "bash -c 'okl check --change'",
+    "sh -lc 'cd /work/repo && okl check --change'",
+    "{ okl check --change; }",
+    "(okl check --change)",
+    "! okl check --change",
+    "if okl check --change; then :; fi",
+    "while okl check --change; do break; done",
+    "okl check --change=main",
+    "`okl check --change`",
 ])
 def test_an_executed_command_starts_the_review(tmp_path, command):
     """okl as the command word: bare, by path, through python, through the variable a script keeps it in."""
@@ -202,13 +225,16 @@ def test_the_review_starts_at_the_executed_command_not_at_an_earlier_mention(tmp
 
 # --- the review's window -------------------------------------------------------------------------
 
-def test_a_later_unrelated_turn_is_not_the_review(tmp_path):
-    """A person's next prompt ends the review. The work after it, with its own sub-agent that opens a
-    lesson and edits a file, changes neither the tokens, the time nor the checks."""
+@pytest.mark.parametrize("prompt", [typed, user], ids=["typed (origin human)", "older shape (no origin)"])
+def test_a_later_unrelated_turn_is_not_the_review(tmp_path, prompt):
+    """A person's next prompt ends the review, in the shape 2.1.302 writes it (`origin` human) and in an
+    older one. The work after it, with its own sub-agent that opens a lesson and edits a file, changes
+    neither the tokens, the time nor the checks. The review's own sub-agents are still pending when it
+    comes (nothing reported them back), and it ends the review all the same."""
     root = repo_root(tmp_path)
     later = call("tu-later", "Agent", prompt="build the export; first okl show les-b", model="opus")
     tail = [turn(300, "m4", say("done"), usage=(5, 5, 5, 5)),
-            user(7200, "now build the export feature"),
+            prompt(7200, "now build the export feature"),
             turn(7210, "m5", later, usage=(5000, 0, 0, 0)), result(7211, "tu-later", "launched", agentId="ccc"),
             blob(later),
             turn(9000, "m6", say("feature done"), usage=(900000, 0, 0, 0))]
@@ -229,11 +255,13 @@ def test_a_later_unrelated_turn_is_not_the_review(tmp_path):
     assert [c["edited"] for c in r.checks] == [True, False]
 
 
-def test_a_stop_hook_summary_ends_the_review(tmp_path):
-    """The session stopped: whatever the agent does after the stop, say a resumed turn, is not the review."""
+def test_a_stop_hook_summary_ends_the_review_once_every_subagent_has_reported(tmp_path):
+    """The session stopped with nothing pending: whatever the agent does after the stop, say a resumed
+    turn, is not the review."""
     root = repo_root(tmp_path)
     later = call("tu-late", "Agent", prompt="more work")
-    tail = [turn(300, "m4", say("done"), usage=(5, 5, 5, 5)), stop_summary(305),
+    tail = [notification(250, "aaa"), notification(251, "bbb"),
+            turn(300, "m4", say("done"), usage=(5, 5, 5, 5)), stop_summary(305),
             turn(400, "m5", later, usage=(7000, 0, 0, 0)), result(401, "tu-late", "launched", agentId="ddd")]
 
     r = reviewlog.read_review(two_agents(tmp_path, root, tail=tail), repo_dir=str(root))
@@ -242,12 +270,121 @@ def test_a_stop_hook_summary_ends_the_review(tmp_path):
     assert (r.tokens, r.duration_s) == (172, 190)
 
 
+def test_a_stop_while_a_subagent_is_still_running_does_not_end_the_review(tmp_path):
+    """Every Agent call returns at once as async_launched and the agent stops to wait: a stop with a
+    launched sub-agent unreported is not the end. One that never reports runs the review to the next
+    prompt a person types, or the end of the file."""
+    root = repo_root(tmp_path)
+    next_one = call("tu-3", "Agent", prompt=shown("les-b"))
+    tail = [turn(300, "m4", say("waiting"), usage=(5, 5, 5, 5)), stop_summary(305),
+            notification(310, "aaa"),         # aaa reported; bbb never does
+            turn(320, "m5", next_one, usage=(1, 1, 1, 1)), result(321, "tu-3", "launched", agentId="eee",
+                                                                  status="async_launched"),
+            stop_summary(330)]
+
+    r = reviewlog.read_review(two_agents(tmp_path, root, tail=tail), repo_dir=str(root))
+
+    assert [c["agent"] for c in r.checks] == ["aaa", "bbb", "eee"]
+
+
+def test_a_review_that_launches_stops_and_resumes_per_lesson_is_logged_whole(tmp_path):
+    """The shape of every real review: launch, async_launched, stop, a task notification (not a person)
+    naming the sub-agent, the next launch, and so on for three lessons, then a last stop. All three
+    are checks, with their edits; the work a prompt of the person's starts after it is not."""
+    root = repo_root(tmp_path)
+
+    r = reviewlog.read_review(background_review(tmp_path, root), repo_dir=str(root))
+
+    assert [(c["agent"], c["lessons"], c["edited"], c["edited_files"]) for c in r.checks] == [
+        ("ag1", ["les-1"], True, ["src/f1.py"]), ("ag2", ["les-2"], True, ["src/f2.py"]),
+        ("ag3", ["les-3"], True, ["src/f3.py"])]
+    # the tokens: the review command (100), three launches and three waits (4 each), the last message
+    # (4), and each sub-agent's two messages (4 each); the late Agent call's 9000 is not there
+    assert r.tokens == 100 + 6 * 4 + 4 + 3 * 8
+    assert r.duration_s == 420 - 110      # from the review command to the last message
+
+
+def test_an_unasked_run_before_the_note_is_not_the_asked_review(tmp_path):
+    """The agent ran the review on its own, then the Stop hook asked for it and the agent ran it
+    again. The first reviewed another state: only the run after the note is logged, with its own
+    sub-agents, tokens and time."""
+    root = repo_root(tmp_path)
+    early = call("tu-early", "Bash", command="okl check --change")
+    lead = [turn(20, "e1", early, usage=(500, 0, 0, 0)), result(21, "tu-early", REVIEW_OUT),
+            turn(30, "e2", call("tu-old", "Agent", prompt=shown("les-z")), usage=(500, 0, 0, 0)),
+            result(31, "tu-old", "launched", agentId="old")]
+
+    r = reviewlog.read_review(two_agents(tmp_path, root, lead=lead), repo_dir=str(root))
+
+    assert (r.asked, r.ran) == (True, True)
+    assert [c["agent"] for c in r.checks] == ["aaa", "bbb"]
+    assert (r.tokens, r.duration_s) == (172, 190)
+
+
+def test_a_note_with_no_review_after_it_is_asked_and_not_run(tmp_path):
+    """The agent ran the review before the note and not after it: the session was asked, and the review
+    it was asked for did not run. The earlier run is not logged as this session's review."""
+    t = write(tmp_path, [
+        user(0, "x"),
+        turn(20, "e1", call("tu-early", "Bash", command="okl check --change"), usage=(500, 0, 0, 0)),
+        result(21, "tu-early", REVIEW_OUT),
+        feedback(100),
+        turn(110, "m1", say("nothing worth recording"), usage=(9, 9, 9, 9))])
+
+    r = reviewlog.read_review(t)
+
+    assert (r.asked, r.ran, r.loggable) == (True, False, True)
+    assert (r.files_changed, r.lessons_listed, r.tokens, r.duration_s, r.checks) == (None, None, None, None, [])
+
+
+def test_a_subagent_resumed_after_the_window_ends_is_read_only_up_to_the_end(tmp_path):
+    """A review sub-agent the person later resumes for other work has that work in its own transcript,
+    after the review's end. Its lines up to the end count, and none after."""
+    root = repo_root(tmp_path)
+    tail = [turn(300, "m4", say("done"), usage=(5, 5, 5, 5)), typed(400, "now something else")]
+    t = two_agents(tmp_path, root, tail=tail)
+    resumed = [turn(500, "r1", call("e9", "Edit", file_path=f"{root}/src/other.py"), usage=(3000, 0, 0, 0)),
+               result(501, "e9", "ok"),
+               turn(502, "r2", call("s9", "Bash", command="okl show les-z; pytest tests/test_x.py"),
+                    usage=(3000, 0, 0, 0)),
+               result(503, "s9", "1 passed")]
+    agent_a = t.parent / "sess-1" / "subagents" / "agent-aaa.jsonl"
+    agent_a.write_text(agent_a.read_text() + "\n".join(resumed) + "\n")
+
+    r = reviewlog.read_review(t, repo_dir=str(root), known_ids={"les-a", "les-b", "les-z"})
+
+    a, _b = r.checks
+    assert (a["lessons"], a["edited_files"], len(a["tests"])) == (["les-a"], ["src/x.py"], 1)
+    assert (r.tokens, r.duration_s) == (172, 190)
+
+
+def test_who_is_a_person(tmp_path):
+    """A prompt a person typed carries `origin` human. A task notification, another session's message
+    and any other origin are not a person, whatever their text; with no origin, the text decides."""
+    def line(**kw):
+        return json.loads(user(0, kw.pop("text", "do the next thing"), **kw))
+    is_person = reviewlog._is_human_prompt
+
+    assert is_person(line(origin={"kind": "human"}))
+    assert is_person(line(origin={"kind": "human"}, text="<task-notification> a person may paste anything"))
+    assert not is_person(line(origin={"kind": "task-notification"}))
+    assert not is_person(line(origin={"kind": "peer"}, isMeta=False))
+    assert not is_person(line(origin={"kind": "system"}))
+    assert not is_person(line(origin="human"))                       # not the shape 2.1.302 writes
+    assert is_person(line())                                          # an older transcript
+    assert not is_person(line(text="<task-notification>done</task-notification>"))
+    assert not is_person(line(text="Stop hook feedback: ..."))
+    assert not is_person(line(isMeta=True))
+    assert not is_person(line(text="   "))
+    assert not is_person(json.loads(result(0, "t", "text")))          # a tool result
+
+
 def test_lines_no_person_wrote_do_not_end_the_review(tmp_path):
     """A task notification, a reminder, the hook's feedback, a peer's message and a tool result are all
     user lines, and none is a prompt: the review goes on past them."""
     root = repo_root(tmp_path)
     second = call("tu-a3", "Agent", prompt=shown("les-b"))
-    tail = [user(200, "<task-notification>agent aaa finished</task-notification>"),
+    tail = [notification(200, "aaa"),
             user(201, "<system-reminder>a reminder</system-reminder>", isMeta=True),
             feedback(202),
             user(203, "<agent-message>a peer says hello</agent-message>", isMeta=True, origin={"kind": "peer"}),
@@ -382,39 +519,96 @@ def test_the_model_is_the_one_the_subagent_ran_on_and_inherit_names_none(tmp_pat
 
 # --- what is kept ----------------------------------------------------------------------------------
 
+def _one_agent(tmp_path, lines):
+    """A review whose one sub-agent, `eee`, has these lines."""
+    return write(tmp_path, [*start_review(),
+                            turn(30, "m2", call("tu-a", "Agent", prompt="p"), usage=(1, 1, 1, 1)),
+                            result(31, "tu-a", "launched", agentId="eee")], {"eee": (None, lines)})
+
+
 def test_an_edit_the_tool_refused_is_not_an_edit_and_the_mcp_tool_counts_as_opened(tmp_path):
     """A call whose result is an error changed nothing; `okl_get`'s id is a lesson opened."""
-    t = write(tmp_path, [
-        *start_review(),
-        turn(30, "m2", call("tu-a", "Agent", prompt="p"), usage=(1, 1, 1, 1)),
-        result(31, "tu-a", "launched", agentId="eee")], {"eee": (None, [
-            turn(40, "e1", call("x1", "Edit", file_path="/r/a.py"), usage=(1, 1, 1, 1)),
-            result(41, "x1", "String to replace not found", error=True),
-            turn(42, "e2", call("x2", "mcp__okl__okl_get", id="les-a"), usage=(1, 1, 1, 1))])})
+    root = repo_root(tmp_path)
+    t = _one_agent(tmp_path, [
+        turn(40, "e1", call("x1", "Edit", file_path=f"{root}/a.py"), usage=(1, 1, 1, 1)),
+        result(41, "x1", "String to replace not found", error=True),
+        turn(42, "e2", call("x2", "mcp__okl__okl_get", id="les-a"), usage=(1, 1, 1, 1))])
 
-    (c,) = reviewlog.read_review(t).checks
+    (c,) = reviewlog.read_review(t, repo_dir=str(root)).checks
 
     assert c["edited"] is False and c["lessons"] == ["les-a"]
 
 
-def test_a_path_outside_the_repository_is_a_count_never_a_path(tmp_path):
-    """An edit elsewhere (a home directory, a scratch folder) says only that the sub-agent edited."""
+def test_a_call_with_no_result_is_not_counted(tmp_path):
+    """The log is evidence for a default, so a call nothing answered is not an edit, and undercounting
+    is the safer error: a later stop reads the session again. A test run with no result is unknown."""
     root = repo_root(tmp_path)
-    t = write(tmp_path, [
-        *start_review(),
-        turn(30, "m2", call("tu-a", "Agent", prompt="p"), usage=(1, 1, 1, 1)),
-        result(31, "tu-a", "launched", agentId="eee")], {"eee": (None, [
-            turn(40, "e1", call("x1", "Edit", file_path="/home/jane/secret-project/notes.md"), usage=(1, 1, 1, 1)),
-            result(41, "x1", "edited"),
-            turn(42, "e2", call("x2", "Write", file_path=f"{root}/../elsewhere.py"), usage=(1, 1, 1, 1)),
-            result(43, "x2", "written"),
-            turn(44, "e3", call("x3", "Write", file_path=f"{root}/src/in.py"), usage=(1, 1, 1, 1)),
-            result(45, "x3", "written")])})
+    t = _one_agent(tmp_path, [
+        turn(40, "e1", call("x1", "Edit", file_path=f"{root}/src/a.py"), usage=(1, 1, 1, 1)),
+        turn(41, "e2", call("x2", "Bash", command="pytest tests/test_x.py"), usage=(1, 1, 1, 1))])
+
+    (c,) = reviewlog.read_review(t, repo_dir=str(root)).checks
+
+    assert (c["edited"], c["edited_files"], c["edited_outside"]) == (False, [], 0)
+    assert c["tests"] == [{"runner": "pytest", "targets": ["tests/test_x.py"], "outcome": "unknown"}]
+
+
+def test_a_path_outside_the_repository_is_a_count_never_a_path(tmp_path):
+    """An edit elsewhere (a home directory, a scratch folder) is counted, not named, and an edit in
+    the repository is the one that makes `edited`."""
+    root = repo_root(tmp_path)
+    t = _one_agent(tmp_path, [
+        turn(40, "e1", call("x1", "Edit", file_path="/home/jane/secret-project/notes.md"), usage=(1, 1, 1, 1)),
+        result(41, "x1", "edited"),
+        turn(42, "e2", call("x2", "Write", file_path=f"{root}/../elsewhere.py"), usage=(1, 1, 1, 1)),
+        result(43, "x2", "written"),
+        turn(44, "e3", call("x3", "Write", file_path=f"{root}/src/in.py"), usage=(1, 1, 1, 1)),
+        result(45, "x3", "written")])
 
     (c,) = reviewlog.read_review(t, repo_dir=str(root)).checks
 
     assert (c["edited"], c["edited_files"], c["edited_outside"]) == (True, ["src/in.py"], 2)
     assert "jane" not in json.dumps(c) and "elsewhere" not in json.dumps(c)
+
+
+def test_an_edit_only_outside_the_repository_is_not_an_edit_to_follow(tmp_path):
+    """The report counts checks followed by an edit in the repository. A sub-agent that wrote only to /tmp
+    left the code as it was: `edited` is False, and the edit is a count beside it."""
+    root = repo_root(tmp_path)
+    t = _one_agent(tmp_path, [
+        turn(40, "e1", call("x1", "Write", file_path="/tmp/scratch-notes.md"), usage=(1, 1, 1, 1)),
+        result(41, "x1", "written")])
+
+    (c,) = reviewlog.read_review(t, repo_dir=str(root)).checks
+
+    assert (c["edited"], c["edited_files"], c["edited_outside"]) == (False, [], 1)
+
+
+def test_a_link_into_the_repository_is_inside_and_a_link_out_of_it_is_not(tmp_path):
+    """Paths are compared as real paths, so `/tmp` and `/private/tmp` agree on a Mac: here a link
+    to the repository stands in, and a link out of it."""
+    root = repo_root(tmp_path)
+    outside = tmp_path / "elsewhere"; outside.mkdir()
+    (tmp_path / "via").symlink_to(root)
+    (root / "escape").symlink_to(outside)
+
+    assert reviewcmd.inside(f"{tmp_path}/via/src/a.py", str(root)) == "src/a.py"
+    assert reviewcmd.inside(f"{root}/src/a.py", str(tmp_path / "via")) == "src/a.py"
+    assert reviewcmd.inside(f"{root}/escape/a.py", str(root)) is None
+    assert reviewcmd.inside(f"{tmp_path}/work/repo2/a.py", str(root)) is None
+    assert reviewcmd.inside("src/a.py", str(root)) == "src/a.py" and reviewcmd.inside("../a.py", str(root)) is None
+    assert reviewcmd.inside("/anywhere/a.py", None) is None
+
+
+def test_one_line_nested_past_the_parser_costs_that_line_and_not_the_reading(tmp_path):
+    """A line of JSON nested deeper than the parser can hold raises RecursionError, which would end
+    the reading; it is dropped and the rest is read."""
+    deep = "[" * 200_000 + "]" * 200_000
+    t = write(tmp_path, [user(0, "x"), deep, *start_review()[1:]])
+
+    r = reviewlog.read_review(t)
+
+    assert (r.readable, r.asked, r.ran, r.files_changed) == (True, True, True, 4)
 
 
 def test_only_lessons_the_store_has_reach_a_row(tmp_path):
@@ -482,6 +676,47 @@ def test_a_test_run_keeps_a_fixed_runner_and_existing_paths_only(tmp_path, comma
     stored = json.dumps(c)
     assert not any(w in stored for w in ("hunter2", "sqp_abc123", "api_key", "s3cr3t", "jane.doe", "TestLogin",
                                          "password", "API_TOKEN"))
+
+
+@pytest.mark.parametrize(("command", "runner"), [
+    ("pytest tests", "pytest"), ("python3 -m pytest tests", "pytest"), ("uv run pytest tests", "pytest"),
+    ("npx jest tests", "jest"), ("bunx vitest run tests", "vitest"), ("xargs pytest tests", "pytest"),
+    ("pnpm exec jest tests", "jest"), ("yarn exec jest tests", "jest"), ("timeout 60 pytest tests", "pytest"),
+    ("FOO=1 python -m pytest tests", "pytest"), ("cd sub && pytest tests", "pytest"),
+    ("bash -c 'pytest tests'", "pytest"), ("npm test", "npm test"),
+    ("python tool.py --runner pytest", None), ("python -c \"import pytest\"", None),
+    ("python3 -m pip install pytest", None), ("node scripts/run.js jest", None),
+    ("ls tests/pytest", None), ("echo pytest", None),
+])
+def test_a_runner_is_the_command_not_a_word_further_along(tmp_path, command, runner):
+    """The runner is the command word after the wrappers, the module after `python -m`, or what `npx`,
+    `xargs`, `pnpm exec` and `yarn exec` run. Any other word that names one is an argument."""
+    root = repo_root(tmp_path)
+    for d in ("sub", "tests"):
+        (root / d).mkdir(exist_ok=True)
+
+    run = reviewcmd.parse_test_run(command, str(root))
+
+    assert (run[0] if run else None) == runner
+
+
+def test_a_path_is_read_as_the_command_writes_it(tmp_path):
+    """`cd sub && pytest x.py`: x.py is under `sub`, not the repository, so it is not kept; a path that
+    is the repository's own is."""
+    root = repo_root(tmp_path)
+    (root / "sub").mkdir()
+    (root / "sub" / "x.py").write_text("x = 1\n")
+
+    assert reviewcmd.parse_test_run("cd sub && pytest x.py", str(root)) == ("pytest", [])
+    assert reviewcmd.parse_test_run("cd sub && pytest sub/x.py", str(root)) == ("pytest", ["sub/x.py"])
+
+
+def test_a_shift_in_arithmetic_is_not_a_heredoc():
+    """`$((x<<EOF))` is arithmetic. Read as a heredoc it would swallow the lines after it, and with
+    them a review command that ran."""
+    assert reviewcmd.is_review_command("echo $((x<<EOF))\nokl check --change\nEOF")
+    assert not reviewcmd.is_review_command("cat <<EOF\nokl check --change\nEOF")
+    assert not reviewcmd.is_review_command("echo $((1<<3)); cat <<EOF\nokl check --change\nEOF")
 
 
 def test_the_commands_the_parser_recognizes():

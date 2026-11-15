@@ -5,6 +5,7 @@ reads the rows back. The parser is tested in test_review_log.py, the Stop hook's
 test_review_log_hook.py. Transcripts are synthetic (tests/review_transcripts.py).
 """
 import json
+import signal
 import sqlite3
 import time
 from pathlib import Path
@@ -24,7 +25,7 @@ from review_transcripts import (
 
 from okl import recap
 from okl import store as store_mod
-from okl.cli import main
+from okl.cli import lessons, main
 from okl.client import Client
 from okl.store import Store
 
@@ -66,6 +67,19 @@ def test_a_store_from_before_the_log_gains_its_table_when_opened(tmp_path):
 
     assert [x.session_id for x in reopened.reviews()] == ["s"]
     assert reopened.get_node("l1") is not None
+
+
+def test_rows_logged_in_the_same_millisecond_come_back_in_one_order(tmp_path, monkeypatch):
+    """A tie on the time breaks on repo then session, which both backends hold: a replaced row keeps its
+    id on Postgres and gets a new rowid on SQLite, so neither can say which came first."""
+    monkeypatch.setattr(store_mod, "_now_ms", lambda: 1_000)
+    s = Store(f"sqlite:///{tmp_path / 'okl.db'}")
+    for session, repo in (("s2", "r"), ("s1", "r"), ("s0", "other")):
+        s.log_review(session, repo, asked=True, ran=False)
+    s.log_review("s2", "r", asked=True, ran=True)      # replaced: it must not move to the end
+
+    assert [(x.repo, x.session_id) for x in s.reviews()] == [("other", "s0"), ("r", "s1"), ("r", "s2")]
+    assert [x.session_id for x in s.reviews("r")] == ["s1", "s2"]
 
 
 # --- the command -----------------------------------------------------------------------------------
@@ -327,3 +341,24 @@ def test_the_review_commands_say_when_nothing_is_configured(tmp_path, monkeypatc
     assert "NOT CONFIGURED" in capsys.readouterr().err
     assert main(["recap", "--transcript", str(tmp_path / "t.jsonl"), "--log-review"]) == 0
     assert "never set up" in capsys.readouterr().err
+
+
+@pytest.mark.skipif(not hasattr(signal, "SIGALRM"), reason="needs SIGALRM")
+def test_the_log_leaves_by_itself_when_it_runs_past_its_deadline(repo, tmp_path, monkeypatch, capsys):
+    """The hook kills the logger at four seconds, but a launcher can leave its child running: the
+    command sets an alarm of its own and leaves quietly with exit 0, whatever it was doing, and puts the
+    alarm and its handler back."""
+    before = signal.getsignal(signal.SIGALRM)
+    monkeypatch.setattr(lessons, "LOG_DEADLINE", 1)
+    monkeypatch.setattr(recap, "log_review", lambda *a, **k: time.sleep(30))
+    t = two_agents(tmp_path, repo)
+
+    start = time.monotonic()
+    with pytest.raises(SystemExit) as left:
+        main(["recap", "--transcript", str(t), "--log-review"])
+
+    assert left.value.code == 0 and time.monotonic() - start < 10
+    got = capsys.readouterr()
+    assert (got.out, got.err) == ("", "")
+    assert signal.alarm(0) == 0 and signal.getsignal(signal.SIGALRM) == before     # no alarm left, handler restored
+    assert _rows(repo) == []

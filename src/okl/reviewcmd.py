@@ -4,7 +4,9 @@ it open, which tests did it run.
 A transcript holds the commands an agent ran, and also the commands it only wrote about: a grep
 for `okl check --change`, a commit message, a heredoc, a `python -c` string. Only a command that
 was executed counts, so a line is split into the commands it runs (on `&&`, `||`, `;`, `|` and
-newlines, outside quotes and outside heredoc bodies) and each is judged by its command word.
+newlines, outside quotes and outside heredoc bodies) and each is judged by its command word, after
+the assignments, wrappers and shell keywords in front of it. A command a shell runs from a string
+(`bash -c '...'`, `$(...)`, backticks) is read again the same way.
 
 The log keeps no command-line text. A test run is stored as a fixed runner name and the paths it
 named that exist in the repository, never the text that matched: a command line can carry a
@@ -20,13 +22,20 @@ import shlex
 from pathlib import Path
 
 MAX_TARGETS = 6
+_DEPTH = 3          # how many times a command's own command strings are read again
 
 _ASSIGN = re.compile(r"[A-Za-z_]\w*=")
 _OKL_VAR = re.compile(r"\$\{?OKL\w*(?:\[[@*]\])?\}?")
 _HEREDOC = re.compile(r"<<(-?)\s*(['\"]?)([A-Za-z_]\w*)\2")
 _PYTHON = re.compile(r"python[\d.]*")
-_WRAPPERS = frozenset({"time", "env", "nohup", "exec", "command"})   # run the command that follows
-_RUN_WRAPPERS = frozenset({"uv", "poetry", "pipenv", "pipx"})        # `uv run okl ...`
+_SHELL_FLAGS = re.compile(r"-[a-z]{0,3}c")             # -c, -lc, -ec: the next word is the script
+_DURATION = re.compile(r"\d+(?:\.\d+)?[smhd]?")
+# Words that stand before the command and do not change which one runs.
+_PREFIXES = frozenset({"time", "env", "nohup", "exec", "command",
+                       "{", "(", "!", "if", "then", "elif", "else", "do", "while", "until"})
+_FLAG_WRAPPERS = frozenset({"npx", "bunx", "xargs", "uvx"})          # their own flags, then the command
+_RUN_WRAPPERS = {"uv": "run", "poetry": "run", "pipenv": "run", "pipx": "run", "pnpm": "exec", "yarn": "exec"}
+_SHELLS = frozenset({"sh", "bash", "zsh", "dash", "ksh"})
 # A command that prints or searches text, so a test runner's name in it is a mention, not a run.
 _NOT_RUNNERS = frozenset({"grep", "egrep", "fgrep", "rg", "ack", "cat", "less", "more", "head", "tail",
                           "sed", "awk", "ls", "echo", "printf", "git", "find", "wc", "which", "type",
@@ -65,15 +74,37 @@ def _skip_heredoc_bodies(command: str, i: int, pending: list[tuple[str, bool]]) 
     return i
 
 
+def _closing(command: str, start: int) -> int:
+    """The index of the `)` that closes the `(` before `start`, skipping quoted text; the end if none."""
+    depth, quote, i = 1, "", start
+    while i < len(command):
+        c = command[i]
+        if quote:
+            quote = "" if c == quote else quote
+        elif c in "'\"":
+            quote = c
+        elif c == "(":
+            depth += 1
+        elif c == ")":
+            depth -= 1
+            if depth == 0:
+                return i
+        i += 1
+    return len(command)
+
+
 class _Splitter:
-    """One pass over a command line, cutting it into the commands it runs."""
+    """One pass over a command line, cutting it into the commands it runs, and collecting the
+    command lines inside `$(...)` and backticks, which run as commands of their own."""
 
     def __init__(self, command: str) -> None:
         self.command = command
         self.out: list[list[str]] = []
+        self.nested: list[str] = []
         self.cur: list[str] = []
         self.quote = ""
         self.i = 0
+        self.arith = 0                                  # inside `$((...))`, where `<<` is a shift
         self.pending: list[tuple[str, bool]] = []      # heredocs opened on the line being read
 
     def flush(self) -> None:
@@ -91,6 +122,8 @@ class _Splitter:
 
     def step(self, c: str) -> None:
         """Read the character at `self.i`; `self.i` ends on the last one it used."""
+        if self.quote != "'":
+            self.nested_command(c)
         if self.quote:
             self.cur.append(c)
             if c == "\\" and self.quote == '"':
@@ -113,11 +146,29 @@ class _Splitter:
         elif c in ";|":
             self.flush()
         else:
-            if c == "<" and self.command.startswith("<<", self.i) and not self.command.startswith("<<<", self.i):
-                m = _HEREDOC.match(self.command, self.i)
-                if m:
-                    self.pending.append((m.group(3), bool(m.group(1))))
-            self.cur.append(c)
+            self.other(c)
+
+    def other(self, c: str) -> None:
+        """A character that cuts nothing: it may open a heredoc."""
+        if c == "<" and not self.arith and self.command.startswith("<<", self.i) \
+                and not self.command.startswith("<<<", self.i):
+            m = _HEREDOC.match(self.command, self.i)
+            if m:
+                self.pending.append((m.group(3), bool(m.group(1))))
+        self.cur.append(c)
+
+    def nested_command(self, c: str) -> None:
+        """Note a `$(...)` or backtick command, to be read on its own, and where `$((...))` arithmetic
+        opens and closes, since `<<` in it is a shift and no heredoc."""
+        if c == "$" and self.command.startswith("$((", self.i):
+            self.arith += 1
+        elif self.arith and c == ")" and self.command.startswith("))", self.i):
+            self.arith -= 1
+        elif c == "$" and self.command.startswith("$(", self.i):
+            self.nested.append(self.command[self.i + 2:_closing(self.command, self.i + 2)])
+        elif c == "`":
+            end = self.command.find("`", self.i + 1)
+            self.nested.append(self.command[self.i + 1:end if end > 0 else len(self.command)])
 
     def escape(self) -> None:
         """Keep the character a backslash protects, whatever it is."""
@@ -130,32 +181,94 @@ def segments(command: str) -> list[list[str]]:
     """The commands a shell line runs, each as its words, quotes removed.
 
     Split on `&&`, `||`, `;`, `|` and newlines that are not inside quotes; the body of a heredoc
-    is text, not commands, and is left out. `$(...)` is not entered.
+    is text, not commands, and is left out. `$(...)` is not entered here; `executed` does.
     """
     return _Splitter(command).run()
 
 
+def _flags(words: list[str], i: int) -> int:
+    """How many words from `i` are options, for a wrapper that takes its own before the command."""
+    n = 0
+    while i + n < len(words) and words[i + n].startswith("-"):
+        n += 1
+    return n
+
+
+def _timeout_args(words: list[str], i: int) -> int:
+    """The words of `timeout`'s own options and its duration, from `i`."""
+    n = 0
+    while i + n < len(words) and words[i + n].startswith("-"):
+        n += 2 if words[i + n] in ("-s", "-k") else 1
+    if i + n < len(words) and _DURATION.fullmatch(words[i + n]):
+        n += 1
+    return n
+
+
+def _nice_args(words: list[str], i: int) -> int:
+    """The words of `nice`'s adjustment, from `i`: `-n 5`, `-5` or `--adjustment=5`."""
+    nxt = words[i] if i < len(words) else ""
+    if nxt == "-n":
+        return 2
+    return 1 if re.fullmatch(r"-\d+|--adjustment=.*", nxt) else 0
+
+
+def _skip(words: list[str], i: int) -> int:
+    """How many words from `i` stand before the command word (0 when the command word is at `i`)."""
+    w = words[i]
+    if _ASSIGN.match(w) or w in _PREFIXES:
+        return 1
+    if w in _RUN_WRAPPERS and words[i + 1:i + 2] == [_RUN_WRAPPERS[w]]:
+        return 2
+    if w in _FLAG_WRAPPERS:
+        return 1 + _flags(words, i + 1)
+    if w == "timeout":
+        return 1 + _timeout_args(words, i + 1)
+    return 1 + _nice_args(words, i + 1) if w == "nice" else 0
+
+
 def _command(words: list[str]) -> list[str]:
-    """`words` from the command word on: leading `VAR=value` assignments and the wrappers that run
-    what follows (`time`, `env`, `uv run`) are skipped."""
+    """`words` from the command word on: leading `VAR=value` assignments, the wrappers that run
+    what follows (`time`, `env`, `timeout 5`, `nice`, `uv run`, `uvx`, `npx`) and the shell keywords and
+    brackets that open a command (`if`, `then`, `{`, `(`, `!`) are skipped."""
+    words, closed = list(words), False
+    while words and words[0].startswith("("):
+        head = words[0].lstrip("(")
+        words, closed = ([head] if head else []) + words[1:], True
+    if closed and words:
+        words[-1] = words[-1].rstrip(")")
     i = 0
-    while i < len(words):
-        w = words[i]
-        if _ASSIGN.match(w) or w in _WRAPPERS:
-            i += 1
-        elif w in _RUN_WRAPPERS and words[i + 1:i + 2] == ["run"]:
-            i += 2
-        else:
-            break
+    while i < len(words) and (step := _skip(words, i)):
+        i += step
     return words[i:]
+
+
+def _shell_script(words: list[str]) -> str | None:
+    """The script a shell is given on its command line (`bash -c '...'`), or None."""
+    if words[0].rsplit("/", 1)[-1] not in _SHELLS:
+        return None
+    return next((words[i + 1] for i in range(1, len(words) - 1) if _SHELL_FLAGS.fullmatch(words[i])), None)
+
+
+def executed(command: str, depth: int = 0) -> list[list[str]]:
+    """Every command a command line runs, each from its command word on, with the commands it runs
+    from strings: a `bash -c` script, `$(...)` and backticks."""
+    splitter = _Splitter(command)
+    found: list[list[str]] = []
+    for words in splitter.run():
+        if not (cmd := _command(words)):
+            continue
+        found.append(cmd)
+        if depth < _DEPTH and (script := _shell_script(cmd)) is not None:
+            found += executed(script, depth + 1)
+    if depth < _DEPTH:
+        for inner in splitter.nested:
+            found += executed(inner, depth + 1)
+    return found
 
 
 def _okl_args(words: list[str]) -> list[str] | None:
     """The arguments okl was given, when the command word is okl: `okl`, a path ending in `/okl`,
     `python -m okl`, or the variable a script keeps it in (`$OKL`, `"${OKL[@]}"`); else None."""
-    words = _command(words)
-    if not words:
-        return None
     cmd = words[0]
     if cmd == "okl" or cmd.endswith("/okl") or _OKL_VAR.fullmatch(cmd):
         return words[1:]
@@ -172,11 +285,13 @@ def _hook_format(args: list[str]) -> bool:
 
 def is_review_command(command: str) -> bool:
     """Whether a Bash command line runs the review: a command that is `okl` with `check` and
-    `--change`, and not the Stop hook's own `--format hook` note. A line that only mentions it
-    (a grep, an echo, a commit message, a heredoc, a `python -c` string) does not."""
-    for words in segments(command):
+    `--change` (or `--change=BASE`), and not the Stop hook's own `--format hook` note. A line that
+    only mentions it (a grep, an echo, a commit message, a heredoc, a `python -c` string) does not;
+    one that runs it through a wrapper, a keyword, a `bash -c` script or `$(...)` does."""
+    for words in executed(command):
         args = _okl_args(words)
-        if args is not None and "check" in args and "--change" in args and not _hook_format(args):
+        if (args is not None and "check" in args and not _hook_format(args)
+                and any(a == "--change" or a.startswith("--change=") for a in args)):
             return True
     return False
 
@@ -197,7 +312,7 @@ def _first_id(args: list[str]) -> str | None:
 def command_show_ids(command: str) -> list[str]:
     """The lesson ids that `okl show <id>` commands in a Bash command line open."""
     ids = []
-    for words in segments(command):
+    for words in executed(command):
         args = _okl_args(words)
         if args and args[0] == "show" and (i := _first_id(args[1:])):
             ids.append(i)
@@ -231,8 +346,13 @@ def _runner_at(words: list[str], i: int) -> tuple[str, int] | None:
 
 
 def _runner(words: list[str]) -> tuple[str, int] | None:
-    """The canonical runner a command starts, and the index of the word after it, or None."""
-    return next((r for i in range(len(words)) if (r := _runner_at(words, i))), None)
+    """The canonical runner a command starts, and the index of the word after it, or None. Anchored:
+    the runner is the command word (the wrappers are already gone), or the module after
+    `python -m`. A word further along (`python tool.py --runner pytest`) is an argument."""
+    if (found := _runner_at(words, 0)) is not None or not _PYTHON.fullmatch(words[0].rsplit("/", 1)[-1]):
+        return found
+    module = next((i + 1 for i in range(1, len(words) - 1) if words[i] == "-m"), None)
+    return _runner_at(words, module) if module is not None else None
 
 
 def _existing(token: str, root: str | None) -> str | None:
@@ -241,7 +361,7 @@ def _existing(token: str, root: str | None) -> str | None:
         return None
     try:
         base = Path(root).resolve()
-        found = (base / token).resolve()    # an absolute token replaces the base
+        found = (base / token).resolve()    # an absolute token replaces the base; both sides are real paths
         if found == base or base not in found.parents or not found.exists():
             return None
     except (OSError, ValueError):
@@ -252,17 +372,16 @@ def _existing(token: str, root: str | None) -> str | None:
 def parse_test_run(command: str, root: str | None = None) -> tuple[str, list[str]] | None:
     """The test runner a Bash command line starts, and the paths in the repository it named; or None.
 
-    The runner is a fixed name (`pytest`, `npm test`, `mvn test`), not the text that matched. A path
-    counts only if it exists under `root`, and what follows `-k`, `-m`, `--grep`, `-run`, `-t`,
-    `--test-name-pattern` or `--` is never read: those carry names and patterns, which can be
-    anything. A command that only searches or prints (`grep pytest`) is not a run.
+    The runner is a fixed name (`pytest`, `npm test`, `mvn test`), not the text that matched, and it
+    is the command itself: the command word, the module after `python -m`, or what `npx`, `uv run`,
+    `xargs` and the like run. A word further along is an argument, and a command that only searches
+    or prints (`grep pytest`) is not a run. A path counts only if it exists under `root` as written,
+    so `cd sub && pytest x.py`, whose path is relative to `sub`, keeps none. What follows `-k`, `-m`,
+    `--grep`, `-run`, `-t`, `--test-name-pattern` or `--` is never read: those carry names and
+    patterns, which can be anything.
     """
-    for words in segments(command):
-        words = _command(words)
-        if not words or words[0] in _NOT_RUNNERS:
-            continue
-        found = _runner(words)
-        if found is None:
+    for words in executed(command):
+        if words[0] in _NOT_RUNNERS or (found := _runner(words)) is None:
             continue
         name, start = found
         targets: list[str] = []
@@ -291,12 +410,13 @@ def parse_test_outcome(is_error: bool, text: str) -> str:
 
 def inside(path: str, root: str | None) -> str | None:
     """`path` relative to the repository at `root`, or None when it is outside it, or when there
-    is no repository to measure from. A relative path is the repository's own unless it climbs out."""
+    is no repository to measure from. Both are real paths (`/tmp` is `/private/tmp` on a Mac), so a
+    link into the repository is inside and one out of it is not. A relative path is the
+    repository's own unless it climbs out."""
     if not root:
         return None
-    norm, base = os.path.normpath(path), os.path.normpath(root)
-    if not Path(norm).is_absolute():
+    if not Path(path).is_absolute():
+        norm = os.path.normpath(path)
         return None if norm == ".." or norm.startswith(".." + os.sep) else norm
-    if norm.startswith(base.rstrip(os.sep) + os.sep):
-        return norm[len(base.rstrip(os.sep)) + 1:]
-    return None
+    real, base = os.path.realpath(path), os.path.realpath(root).rstrip(os.sep)
+    return real[len(base) + 1:] if real.startswith(base + os.sep) else None
