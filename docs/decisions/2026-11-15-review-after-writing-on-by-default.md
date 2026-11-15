@@ -73,6 +73,9 @@ was turned on. Any of these would justify it:
 
 ## What follows
 
+The work below is laid out, with what, why and how, in
+[the plan that follows this decision](2026-11-15-making-the-review-earn-its-default.md).
+
 - **Better reach for less:** a cheaper model per checked lesson, so the review can check more
   lessons than ten (#456).
 - **Lessons with checks skip the pick:** an approved check runs after every edit (`okl on-edit`,
