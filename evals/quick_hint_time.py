@@ -18,9 +18,9 @@ import statistics
 import sys
 import tempfile
 import time
-from collections.abc import Iterator
 from datetime import UTC, datetime
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import drift_replay as dr
@@ -31,18 +31,10 @@ REPEATS = 7
 MADE_UP = (1000, 5000)
 
 
-@contextlib.contextmanager
-def _store_at(url: str) -> Iterator[None]:
-    """Point okl at `url` for this process only, as OKL_DATABASE_URL would; restored after."""
-    before = os.environ.get("OKL_DATABASE_URL")
-    os.environ["OKL_DATABASE_URL"] = url
-    try:
-        yield
-    finally:
-        if before is None:
-            os.environ.pop("OKL_DATABASE_URL", None)
-        else:
-            os.environ["OKL_DATABASE_URL"] = before
+def _store_at(url: str) -> contextlib.AbstractContextManager:
+    """Point okl at `url` for this process only, as OKL_DATABASE_URL would, and put the environment
+    back after. Written, never read: okl.client.store_url() is the one reader (lesson n_02cc84da158d)."""
+    return mock.patch.dict(os.environ, {"OKL_DATABASE_URL": url})
 
 
 def _time_hint() -> dict:
