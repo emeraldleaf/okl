@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.17.0
 
 - **The review after writing is on by default** (`okl check --change`; decided, not measured). The
   Stop hook now asks the agent, before it finishes a session that changed files, to check the code
