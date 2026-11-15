@@ -51,3 +51,27 @@ def test_the_judge_is_scored_per_stratum_and_reweighted_to_the_runs():
     assert (out["intact_precision"]["k"], out["intact_precision"]["n"]) == (1, 2)
     assert out["protection_removed"] == 1 and out["passed"] is False
     assert out["sensitivity_reweighted"] == round(75 / 105, 4) and out["specificity_reweighted"] == round(1 - 25 / 55, 4)
+
+
+def test_the_audits_section_quotes_its_receipts():
+    """REPORT §4bh: every figure is read from the audit's receipts, its draw made before any score, and who
+    labelled each set is said; the key's broken population is §4bc to §4be's 124."""
+    import json
+    report = (ROOT / "evals" / "REPORT.md").read_text()
+    sec = report.split("## 4bh.", 1)[1].split("\n## ", 1)[0]
+    draw = json.loads((ROOT / "evals" / "results" / "audit-draw-20261114-1932.json").read_text())
+    got = json.loads((ROOT / "evals" / "results" / "audit-20261114-1937.json").read_text())
+    assert "audit-draw-20261114-1932.json" in sec and "audit-20261114-1937.json" in sec
+    assert draw["sets"] == {"adjudication": 21, "key": 30, "judge": 60}
+    assert draw["key_population"]["dev:broken"] + draw["key_population"]["test:broken"] == 124
+    a, k, j = got["adjudication"], got["key"], got["judge"]
+    assert (a["agreements_overturned"], a["agreements_sampled"], a["kappa_judge_vs_final"], a["passed"]) == (2, 10, 0.865, False)
+    assert "2 of 10 overturned, κ 0.865" in sec
+    assert (k["broken_precision"]["k"], k["broken_precision"]["n"], k["table"]["broken->followed"]) == (4, 12, 7)
+    assert "4 of the 12" in sec and "read 7 of them as followed" in sec
+    lo, hi = k["broken_precision"]["wilson95"]
+    assert f"[{lo:.3f}, {hi:.3f}]" in sec.replace("0.1381", "0.138")
+    assert (j["broken_precision"]["k"], j["broken_precision"]["n"], j["intact_precision"]["k"], j["passed"]) == (26, 30, 20, True)
+    assert (j["none_broken_share"]["k"], j["protection_removed"]) == (10, 3)
+    assert "not by a person" in sec and "I labelled the 21 adjudication pairs blind" in sec
+    assert all(v.startswith(("the maintainer", "a second model")) for v in got["labelled_by"].values())
