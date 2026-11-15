@@ -1,0 +1,758 @@
+{
+ "t01": {
+  "others": [
+   {
+    "id": "model-reply-parse-fails-open-loudly",
+    "text": "[model-reply-parse-fails-open-loudly] Rule · A step that reads a model's reply must find the result anywhere in it, and say so on the PR when there is none\nsymptom: a CI step that reviews a PR with a model reports 'could not parse the reply', passes, and the PR merges with no review verdict\nfix: extract the last JSON object carrying the expected keys from anywhere in the reply; when none is found, still fail open if blocking would train bypass, but annotate the PR (::warning) that there is no verdict; test with a prose-prefixed reply, stray braces, a reply quoting the format, and none"
+   },
+   {
+    "id": "merge-needs-resolved-threads",
+    "text": "[merge-needs-resolved-threads] Rule · main requires resolved review conversations — a green PR stays BLOCKED until bot threads are resolved\nsymptom: every check on a PR passes, gh pr merge says the requirements are not met (mergeStateStatus BLOCKED), and a merge-and-wait loop stalls\nfix: after addressing a review finding, reply on the thread with the fixing commit and resolve it (gh api graphql resolveReviewThread with the thread id from reviewThreads), then merge; check mergeStateStatus before assuming a check is pending"
+   },
+   {
+    "id": "seed:dotnet-canon:r_encoding_loop",
+    "text": "[seed:dotnet-canon:r_encoding_loop] Rule · Encode every 'never again / always when' finding to the smallest surface that catches it — a fix PR without the rule is a half-finished job\nsymptom: a merged fix for a recurring antipattern with no corresponding rule/gate change\nfix: land the rule with the fix (same or paired PR); track deferred encodings as labeled placeholders, never as the encoding itself"
+   },
+   {
+    "id": "n_a7634ef53a8f",
+    "text": "[n_a7634ef53a8f] Decision · The encoding loop has no runtime input — every lesson enters from author time or CI time\nsymptom: a defect class that only a running system reveals (pagination silently dropped, a limit hit under real load, a partial-failure path) has no way into the store until a human finds it some other way\nfix: treat observability as a SOURCE of records rather than a competitor to them: when a runtime-only defect is found, record it with found_by naming the trace or metric that showed it; do not claim the loop covers runtime until some record actually cites one"
+   },
+   {
+    "id": "n_e99ea322dee5",
+    "text": "[n_e99ea322dee5] Defect · A review bot that skips a PR reports success — a green check is not a review\nsymptom: a PR shows the review bot's check green and has no review comments, and nobody asked whether a review ran\nfix: read the check's description, not its colour; count the bot's actual reviews and comments; on a repo where the bot reviews on request only, request it explicitly ('@coderabbitai review') and wait before merging"
+   },
+   {
+    "id": "n_ce6a27cc432f",
+    "text": "[n_ce6a27cc432f] Defect · A resolver that falls back to a default location turns a missing setup into a successful write nobody reads\nsymptom: a write command run before setup, or in the wrong directory, exits 0, and the data never appears where every reader looks\nfix: make the resolver refuse when nothing names the target (one exception the entry point turns into 'could not run'), instead of guarding commands one at a time; test that every command exits 2, prints nothing to stdout, and leaves no file behind"
+   },
+   {
+    "id": "optional-feature-shipped-text",
+    "text": "[optional-feature-shipped-text] Defect · Making a feature optional leaves every shipped sentence that assumes it false somewhere\nsymptom: a reviewer in a consumer repo flags generated text describing a gate, step or file that repo was set up without\nfix: when a feature becomes optional, grep every shipped template for sentences that assume it and reword them to what holds in every configuration (here: the briefing and okl drift mark the lesson STALE; a gate fails where installed). Fix generated files upstream in the template, never in the consumer repo."
+   },
+   {
+    "id": "n_8519bf0f71c6",
+    "text": "[n_8519bf0f71c6] Gate · The encoding loop's write side needs a mechanical catch — a session-end hook that asks 'what did we learn?'\nsymptom: sessions end with fixed code but no recorded lesson; the same finding resurfaces in a later review\nfix: install stop-okl-encode.sh (okl init or okl scaffold) and register it under hooks.Stop"
+   },
+   {
+    "id": "review-bot-watch-matches-wrong-comment",
+    "text": "[review-bot-watch-matches-wrong-comment] Defect · A wait loop keyed on a review bot's result text matched the same words inside a skip or rate-limit notice, and missed a finding added by an edit\nsymptom: a background watch reports a review as finished or clean, but the PR has no new review; or a finding appears in a comment that was already read\nfix: key the wait on a review object (pulls/<n>/reviews with a body) or on the reply to YOUR request, created after it, never on the bot's status check, which reads 'pass' when it hit its review limit and reviewed nothing (quartzose #14, emeraldleaf-dev #28, 2026-10-10); reject any comment carrying the bot's rate-limit or skip marker; a 'Review finished' reply is not a review either, since the bot is incremental and answers a request with it while skipping commits it already saw (quartzose #18, 2026-10-24): require a review object or a 'No actionable comments' note updated after the last push; after each review, list the bot's comments by updated_at as well as created_at, and re-read any edited after you replied; and read the review's body, not only its inline comments: a finding on lines outside the PR's diff cannot be posted inline, so it appears only in the body under 'Outside diff range comments', with no inline comment and no 'Actionable comments posted' line (okl #280, 2026-10-24). A clean note counts only when its 'Reviewing files ... between X and Y' line ends at the PR's head and the summary is not marked 'Currently processing': while a new review runs, the summary keeps the previous review's 'No actionable comments' line beside the in-progress marker, so it read as clean two minutes into a full review (okl #286, 2026-10-25). And an empty-bodied review object is the container for the bot's reply on a thread, not a review, yet it marks the head reviewed: a plain request then answers 'Action not completed', and only '@coderabbitai full review' reviews the changes since (okl #286, 2026-10-25)"
+   }
+  ],
+  "target_rank_in_search": 11,
+  "candidates": 358
+ },
+ "t02": {
+  "others": [
+   {
+    "id": "n_b550ba9c5c8a",
+    "text": "[n_b550ba9c5c8a] Rule · Diagrams and the README are review surfaces — held by a claims gate, not by drift enrolment\nsymptom: a diagram or README states counts, figures or components the report or code no longer supports; or a committed diagram nothing links to\nfix: edit the .excalidraw source and re-render (the SVG is a render; say loudly in the commit if it is stale); run ./ci/check-diagram-figures.sh; delete a diagram nothing links to rather than maintain it"
+   },
+   {
+    "id": "thesis-maintain-anything",
+    "text": "[thesis-maintain-anything] Decision · okl's scope is everything a team maintains: keep the agent true to your rules, specs and docs, keep those current as the code moves, and keep learning\nsymptom: work on okl that treats it as a store of lessons only, or treats docs, diagrams, specs, the report, results or research as outside its job; or a change to what okl is for that leaves the thesis and its measured baseline as they were\nfix: hold okl's work to this scope (issue #317): anything a team maintains can be tied to what it describes, flagged when that moves, brought back in line by the agent in the session with the person told or asked first, and confirmed by a check or an honest review; keep detection mechanical (no model calls in okl's own loop) and write nothing to the store without the person knowing; keep docs/THESIS.md and its baseline current whenever the thesis or the measured results move The thesis (docs/THESIS.md) is the primary, complete record of that scope: every promise okl makes today, in the README, the docs or the maintainer's site, is listed there with its status and evidence, and a wider direction is added beside those promises, never in place of them; when other copy promises something the thesis does not, update the thesis deliberately or correct the copy."
+   },
+   {
+    "id": "generated-diagram-traced-old-path",
+    "text": "[generated-diagram-traced-old-path] Defect · A generated diagram went wrong anyway: its generator traced a code path production had stopped using, and its freshness test only compared it with its own render\nsymptom: a diagram generated from the code shows counts the live system no longer produces, while its freshness test stays green\nfix: make the generator call the functions production calls, not a re-implementation of them, and cross-check its result against the production entry point (here _live_hits) so it aborts when they disagree; a render-vs-generator freshness test cannot notice the generator drifting from production"
+   },
+   {
+    "id": "n_5ddb0776a863",
+    "text": "[n_5ddb0776a863] Defect · A CI gate that reads gitignored state checks nothing in CI, and passes\nsymptom: a gate is green on every PR and never red, and the data it inspects lives in a file the repository ignores\nfix: make the gate count what it inspected and treat zero as 'did not run' (its own exit code), never as clean; then decide explicitly how CI gets the data, rather than letting its absence read as success. The same holds for any report or summary line that states a clean result: carry the inspected count beside it and say 'unknown' at zero (okl recap --report printed 'every lesson is proven' with drift having checked nothing, caught in review on okl #281, 2026-10-24)"
+   },
+   {
+    "id": "worktree-no-store-reverify",
+    "text": "[worktree-no-store-reverify] Rule · A git worktree has no okl store: re-verify drift from the main checkout after moving the branch there\nsymptom: a branch built in a git worktree (a workflow's isolation: worktree, or git worktree add) changes files that rules govern, and okl verify / okl reverify cannot run there, so the PR's drift gate would go red\nfix: commit and push the branch from the worktree, then git worktree remove it (a branch checked out in a worktree cannot be switched to elsewhere), git switch to the branch in the main checkout, run okl reverify --yes, commit okl-drift.json, and confirm okl drift --gate --snapshot okl-drift.json exits 0 after that commit, since the gate reads the committed snapshot. Do not point OKL_DATABASE_URL at the main store from the worktree without its config: the store takes the folder name as the repo, skips repo-scoped rules and looks like it worked; if you must verify there, copy .okl/config.json in first"
+   },
+   {
+    "id": "empty-drift-snapshot-fails-ci",
+    "text": "[empty-drift-snapshot-fails-ci] Defect · A committed drift snapshot with zero rules fails CI, and okl verify never creates the first one\nsymptom: a new user commits okl-drift.json on day one, before any lesson has --files, and the okl-verify CI step fails with 'NOTHING CHECKED' (exit 2); or a user verifies a lesson and finds no okl-drift.json to commit\nfix: commit okl-drift.json only once a lesson governs files: run okl export --drift once, then let okl verify refresh it; documented in the Quickstart. Candidate code fix: have export --drift refuse (exit 2) to write a snapshot with zero rules, so the trap cannot be set"
+   },
+   {
+    "id": "seed:dotnet-canon:r_docs_review_surface",
+    "text": "[seed:dotnet-canon:r_docs_review_surface] Rule · Docs and diagrams are the review surface, not byproducts — stale ones make every review reason against a fiction\nsymptom: a topology/pattern-changing PR with no doc or diagram delta\nfix: update the depicting doc/diagram in the same PR, or name the deferred issue in the PR body"
+   },
+   {
+    "id": "n_6b65aa35593c",
+    "text": "[n_6b65aa35593c] Rule · A diagram with numbers in it is generated from the system, or it is already wrong\nsymptom: a committed diagram or doc states counts, thresholds or shapes that someone transcribed by hand\nfix: generate the artifact from the live system and add a freshness test that regenerates and diffs; trace against committed inputs, never a developer's local state, or the test passes only on the machine that last rendered it"
+   },
+   {
+    "id": "comparison-table-one-sitting-generated",
+    "text": "[comparison-table-one-sitting-generated] Rule · A table comparing configurations is a comparison only if one sitting produced every column, and it stays true only if it is generated from those receipts\nsymptom: a docs or README table of measured figures quotes numbers its cited receipts do not contain, or its columns come from runs at different commits or store sizes, so a difference between columns may be the store and not the setting\nfix: re-run every column in one sitting at one commit against one store, print the table from those receipts with a script (okl: evals/standing_table.py), and have the script refuse receipts that disagree on commit or store size; label configurations that differ in more than the setting under comparison (okl: harness versus hook interests)"
+   }
+  ],
+  "target_rank_in_search": 11,
+  "candidates": 357
+ },
+ "t03": {
+  "others": [
+   {
+    "id": "n_5ddb0776a863",
+    "text": "[n_5ddb0776a863] Defect · A CI gate that reads gitignored state checks nothing in CI, and passes\nsymptom: a gate is green on every PR and never red, and the data it inspects lives in a file the repository ignores\nfix: make the gate count what it inspected and treat zero as 'did not run' (its own exit code), never as clean; then decide explicitly how CI gets the data, rather than letting its absence read as success. The same holds for any report or summary line that states a clean result: carry the inspected count beside it and say 'unknown' at zero (okl recap --report printed 'every lesson is proven' with drift having checked nothing, caught in review on okl #281, 2026-10-24)"
+   },
+   {
+    "id": "n_31bde92d9003",
+    "text": "[n_31bde92d9003] Rule · Verification stamps come from observed checks with stored evidence — never from the claimant's assertion\nsymptom: a 'verified' flag settable by whoever makes the claim, with no record of what check (if any) backed it\nfix: no run, no stamp: verification API takes evidence produced by an executed check; keep assertion-based flags only for importing historical receipts"
+   },
+   {
+    "id": "n_b0457b37c65a",
+    "text": "[n_b0457b37c65a] Decision · A controlled vocabulary is closed per store, not fixed in the package\nsymptom: a validated vocabulary ships as a constant, so a team using a language or subject the authors did not anticipate must fork to file a lesson\nfix: keep the shipped set as a FLOOR and let the store declare additions as records; validate against floor union declared, and validate the declaration itself against the floor only so the first one is writable"
+   },
+   {
+    "id": "n_5db37b759b1e",
+    "text": "[n_5db37b759b1e] Defect · Removing a step because you read the code is assert-from-memory — the reviewer caught it in a shipped workflow\nsymptom: a step or safeguard deleted on the strength of 'the code already does this', with no test asserting it\nfix: write the test that makes the claim executable BEFORE deleting the thing that compensated for it; prove it by breaking the behaviour and watching the test go red"
+   },
+   {
+    "id": "n_713b8c104f12",
+    "text": "[n_713b8c104f12] Defect · An empty result and a mistyped filter must not look identical\nsymptom: a query with a filter flag returns zero rows and exit 0, and the flag value was never validated\nfix: validate the filter's FORM and refuse a malformed one with exit 2; for a well-formed value the data has never seen, still run but say so and name the values that do exist"
+   },
+   {
+    "id": "n_58119d0a63d9",
+    "text": "[n_58119d0a63d9] Rule · Init must wire, not instruct — every 'now copy X / add Y to config' printout is a surface nobody runs\nsymptom: an installer prints manual follow-up steps (register this hook, copy this workflow, add to settings)\nfix: make init perform each registration itself, idempotent and non-clobbering; warn loudly only for what it truly cannot do (e.g. no git repo -> drift disabled)"
+   },
+   {
+    "id": "n_02cc84da158d",
+    "text": "[n_02cc84da158d] Defect · OKL_DATABASE_URL was honoured by the store and ignored by every CLI command\nsymptom: a documented storage env var works in one entry point and is silently overridden in another; writes land somewhere other than where the operator pointed them\nfix: resolve the storage target in ONE place that every entry point calls; if a component deliberately ignores the variable, refuse loudly rather than silently substituting a default"
+   },
+   {
+    "id": "n_c95bdc056620",
+    "text": "[n_c95bdc056620] Defect · A rename sweeps the thing renamed, not the checks that test for the old name — capability checks keyed on a name break silently\nsymptom: after renaming a package, service, or identifier, a conditional that greps for the old name stops matching and takes its fallback branch without erroring\nfix: grep the old name to zero across CI, scripts, and docs as part of the rename; key capability checks on structure (a path that must exist) rather than on a name that can change"
+   },
+   {
+    "id": "n_a7634ef53a8f",
+    "text": "[n_a7634ef53a8f] Decision · The encoding loop has no runtime input — every lesson enters from author time or CI time\nsymptom: a defect class that only a running system reveals (pagination silently dropped, a limit hit under real load, a partial-failure path) has no way into the store until a human finds it some other way\nfix: treat observability as a SOURCE of records rather than a competitor to them: when a runtime-only defect is found, record it with found_by naming the trace or metric that showed it; do not claim the loop covers runtime until some record actually cites one"
+   }
+  ],
+  "target_rank_in_search": 16,
+  "candidates": 175
+ },
+ "t04": {
+  "others": [
+   {
+    "id": "snapshot-from-worktree-drops-repo-rules",
+    "text": "[snapshot-from-worktree-drops-repo-rules] Defect · A drift snapshot regenerated in a git worktree without .okl/config.json names the repo after the folder and drops the repo's own rules\nsymptom: okl verify or okl reverify in a worktree with no .okl/config.json refuses to refresh okl-drift.json (SnapshotShrinkError: the repo would take the folder's name and the repo's own rules would leave the gate); before #213 it rewrote the snapshot silently and the gate reported fewer rules\nfix: Before any verify/reverify/export in a worktree, copy the main checkout's .okl/config.json into it (and point OKL_DATABASE_URL at the main store per command); after, check the snapshot's repo and rule count against the previous commit before committing it."
+   },
+   {
+    "id": "n_5ddb0776a863",
+    "text": "[n_5ddb0776a863] Defect · A CI gate that reads gitignored state checks nothing in CI, and passes\nsymptom: a gate is green on every PR and never red, and the data it inspects lives in a file the repository ignores\nfix: make the gate count what it inspected and treat zero as 'did not run' (its own exit code), never as clean; then decide explicitly how CI gets the data, rather than letting its absence read as success. The same holds for any report or summary line that states a clean result: carry the inspected count beside it and say 'unknown' at zero (okl recap --report printed 'every lesson is proven' with drift having checked nothing, caught in review on okl #281, 2026-10-24)"
+   },
+   {
+    "id": "thesis-maintain-anything",
+    "text": "[thesis-maintain-anything] Decision · okl's scope is everything a team maintains: keep the agent true to your rules, specs and docs, keep those current as the code moves, and keep learning\nsymptom: work on okl that treats it as a store of lessons only, or treats docs, diagrams, specs, the report, results or research as outside its job; or a change to what okl is for that leaves the thesis and its measured baseline as they were\nfix: hold okl's work to this scope (issue #317): anything a team maintains can be tied to what it describes, flagged when that moves, brought back in line by the agent in the session with the person told or asked first, and confirmed by a check or an honest review; keep detection mechanical (no model calls in okl's own loop) and write nothing to the store without the person knowing; keep docs/THESIS.md and its baseline current whenever the thesis or the measured results move The thesis (docs/THESIS.md) is the primary, complete record of that scope: every promise okl makes today, in the README, the docs or the maintainer's site, is listed there with its status and evidence, and a wider direction is added beside those promises, never in place of them; when other copy promises something the thesis does not, update the thesis deliberately or correct the copy."
+   },
+   {
+    "id": "n_f6d01e368155",
+    "text": "[n_f6d01e368155] Defect · A self-detection check keyed on one module's path breaks silently when that module moves\nsymptom: after a refactor moves or renames a module, a repo's own CI starts testing the released package instead of the branch, and every check stays green\nfix: detect a checkout by its package root (src/okl/__init__.py), not by one module; before moving or renaming a file, grep every workflow, script and test for its old path (the rename rule)"
+   },
+   {
+    "id": "n_f215b68b925c",
+    "text": "[n_f215b68b925c] Defect · Re-running okl init without --repo renames the repo to the folder name\nsymptom: okl init --dry-run, re-run in a repo whose .okl/config.json says repo=quartzose, announces 'okl init --repo Quartzose'; running it would rewrite the repo name\nfix: fixed in 1b97b0a (2026-10-05): init takes --repo, else the name in this directory's own .okl/config.json, else the folder's name, so a plain re-run keeps the configured name. tests/test_okl.py::test_init_rerun_keeps_the_configured_repo_name guards it; if a re-run or its dry run proposes a different repo name again, that guard has regressed"
+   },
+   {
+    "id": "n_713b8c104f12",
+    "text": "[n_713b8c104f12] Defect · An empty result and a mistyped filter must not look identical\nsymptom: a query with a filter flag returns zero rows and exit 0, and the flag value was never validated\nfix: validate the filter's FORM and refuse a malformed one with exit 2; for a well-formed value the data has never seen, still run but say so and name the values that do exist"
+   },
+   {
+    "id": "owned-file-features-check-the-kept-copy",
+    "text": "[owned-file-features-check-the-kept-copy] Rule · A feature that relies on new content in an okl-owned file must check the copy init kept, not the one okl ships\nsymptom: okl init --ci wrote .github/okl-version and printed 'CI pinned' beside an edited pre-0.11.0 workflow whose install step never reads it, so CI kept installing the newest okl\nfix: Before acting on what an owned file does, read the copy on disk, scoped to the part that matters and ignoring comments (install._workflow_reads_pin); when it lacks the behaviour, act on nothing, say so, and name okl init --force"
+   },
+   {
+    "id": "n_ce6a27cc432f",
+    "text": "[n_ce6a27cc432f] Defect · A resolver that falls back to a default location turns a missing setup into a successful write nobody reads\nsymptom: a write command run before setup, or in the wrong directory, exits 0, and the data never appears where every reader looks\nfix: make the resolver refuse when nothing names the target (one exception the entry point turns into 'could not run'), instead of guarding commands one at a time; test that every command exits 2, prints nothing to stdout, and leaves no file behind"
+   },
+   {
+    "id": "eval-scripts-no-exposure",
+    "text": "[eval-scripts-no-exposure] Rule · Every caller of Client.check that briefs no agent asks for it unlogged\nsymptom: okl metric's exposure counts jump after an eval, a pre-flight or an okl intake run: briefing rows logged for lessons no agent was shown\nfix: pass log=False to Client.check (okl intake does; the service honours it as the check request's log field), or set OKL_BRIEFING_LOG=0 before building the Client in an eval or pre-flight script; test it by running the caller against a throwaway store and asserting no briefing row was written"
+   }
+  ],
+  "target_rank_in_search": 36,
+  "candidates": 353
+ },
+ "t05": {
+  "others": [
+   {
+    "id": "n_dc7429065f5d",
+    "text": "[n_dc7429065f5d] Defect · check returns nearly the whole store as 'relevant' — ranking works, filtering doesn't\nsymptom: a specific task's briefing lists 80%+ of all nodes in scope as relevant\nfix: add a relevance cutoff (rank score threshold or top-k) so the briefing stays short; measure against the ADR's miss-rate trigger before tightening"
+   },
+   {
+    "id": "n_9ba48d85ed19",
+    "text": "[n_9ba48d85ed19] Gate · Pre-flight the retrieval before spending on an eval — it is deterministic and answers in milliseconds\nsymptom: an eval result read as a regression, with no check that each case still receives the input it is testing\nfix: run a pre-flight asserting every case's governing record is present in the retrieval it will be given; refuse the run on an unexpected miss; keep known gaps in a named register with reasons, never silent"
+   },
+   {
+    "id": "n_041a066035b2",
+    "text": "[n_041a066035b2] Rule · applies_to stays opt-in: revisit only when off-stack share or framework-bound share roughly doubles\nsymptom: someone proposes backfilling applies_to across the whole corpus, or asks whether the field is pulling its weight\nfix: keep it unset by default and set it only per-record at record time; re-measure the two shares before changing the policy, and never derive the value from a tag"
+   },
+   {
+    "id": "n_b83c550a0ca4",
+    "text": "[n_b83c550a0ca4] Decision · okl stores lessons as typed records found by full-text search, not an ontology store; RDF is a one-way export when something needs it\nsymptom: a proposal to ingest an ontology, store lessons as RDF triples, or query them with SPARQL or a graph database\nfix: keep records, FTS and one-step relationships; when a consumer needs RDF, add a one-way JSON-LD export (never imported back, tested with a real RDF parser); revisit only on a consumer, on exposure-log or A/B misses that cluster around same-concept-different-words (try a measured term map first), or if the job becomes reasoning over a shared concept hierarchy"
+   },
+   {
+    "id": "seed:rag-defects:qz_identity",
+    "text": "[seed:rag-defects:qz_identity] Rule · Don't infer by resemblance what you can look up — document identity is indexed & pre-filtered, not ranked\nsymptom: a question about which documents share a property, or how many there are, answered by similarity search over chunks, so the answer changes with top-k"
+   },
+   {
+    "id": "review-bot-watch-matches-wrong-comment",
+    "text": "[review-bot-watch-matches-wrong-comment] Defect · A wait loop keyed on a review bot's result text matched the same words inside a skip or rate-limit notice, and missed a finding added by an edit\nsymptom: a background watch reports a review as finished or clean, but the PR has no new review; or a finding appears in a comment that was already read\nfix: key the wait on a review object (pulls/<n>/reviews with a body) or on the reply to YOUR request, created after it, never on the bot's status check, which reads 'pass' when it hit its review limit and reviewed nothing (quartzose #14, emeraldleaf-dev #28, 2026-10-10); reject any comment carrying the bot's rate-limit or skip marker; a 'Review finished' reply is not a review either, since the bot is incremental and answers a request with it while skipping commits it already saw (quartzose #18, 2026-10-24): require a review object or a 'No actionable comments' note updated after the last push; after each review, list the bot's comments by updated_at as well as created_at, and re-read any edited after you replied; and read the review's body, not only its inline comments: a finding on lines outside the PR's diff cannot be posted inline, so it appears only in the body under 'Outside diff range comments', with no inline comment and no 'Actionable comments posted' line (okl #280, 2026-10-24). A clean note counts only when its 'Reviewing files ... between X and Y' line ends at the PR's head and the summary is not marked 'Currently processing': while a new review runs, the summary keeps the previous review's 'No actionable comments' line beside the in-progress marker, so it read as clean two minutes into a full review (okl #286, 2026-10-25). And an empty-bodied review object is the container for the bot's reply on a thread, not a review, yet it marks the head reviewed: a plain request then answers 'Action not completed', and only '@coderabbitai full review' reviews the changes since (okl #286, 2026-10-25)"
+   },
+   {
+    "id": "readonly-agents-side-effects",
+    "text": "[readonly-agents-side-effects] Defect · Telling review agents 'read-only' does not stop side effects: repo scripts and hooks write\nsymptom: after a read-only multi-agent review, git status shows a new file and the knowledge store has rows nobody asked for\nfix: give agents an explicit list of commands that write (receipt scripts, hooks, anything that logs), point them at a copy of the store, and after the run diff git status and the store's row counts against a snapshot taken before; clean up only what the run created"
+   },
+   {
+    "id": "n_a7634ef53a8f",
+    "text": "[n_a7634ef53a8f] Decision · The encoding loop has no runtime input — every lesson enters from author time or CI time\nsymptom: a defect class that only a running system reveals (pagination silently dropped, a limit hit under real load, a partial-failure path) has no way into the store until a human finds it some other way\nfix: treat observability as a SOURCE of records rather than a competitor to them: when a runtime-only defect is found, record it with found_by naming the trace or metric that showed it; do not claim the loop covers runtime until some record actually cites one"
+   },
+   {
+    "id": "n_849a5b0425ef",
+    "text": "[n_849a5b0425ef] Defect · A tag that records where a lesson was FOUND cannot be filtered on as though it recorded where it APPLIES\nsymptom: a filter treating a provenance label as a scoping predicate; briefings getting shorter and a known-covered task starting to fail\nfix: revert to any-match; record applicability separately from provenance before trying again, and measure any retrieval change with the A/B before believing it"
+   }
+  ],
+  "target_rank_in_search": 5,
+  "candidates": 305
+ },
+ "t06": {
+  "others": [
+   {
+    "id": "refusal-offers-no-destructive-shortcut",
+    "text": "[refusal-offers-no-destructive-shortcut] Rule · A refusal shown to an agent names only the safe verb, never a one-step destructive alternative\nsymptom: an error an agent will read says 'or pass --replace / --force to overwrite' for the operation that caused the incident the refusal exists to prevent\nfix: on surfaces agents read (MCP replies, hook text), point only at the safe operation; keep deliberate overwrites on the human CLI, behind an explicit flag, and test that the agent-facing refusal does not mention it"
+   },
+   {
+    "id": "n_90066f354f1e",
+    "text": "[n_90066f354f1e] Defect · A recorded lesson protects reasoning; only a merged fix protects execution\nsymptom: a defect the store already knows about recurs in the same session, in a branch cut from a base that predates its fix\nfix: when later work depends on a fix that is still in review, branch from the branch that carries it, not from main; and read a recurrence as a question about where the fix LIVES, not about whether the lesson was written down"
+   },
+   {
+    "id": "n_ce6a27cc432f",
+    "text": "[n_ce6a27cc432f] Defect · A resolver that falls back to a default location turns a missing setup into a successful write nobody reads\nsymptom: a write command run before setup, or in the wrong directory, exits 0, and the data never appears where every reader looks\nfix: make the resolver refuse when nothing names the target (one exception the entry point turns into 'could not run'), instead of guarding commands one at a time; test that every command exits 2, prints nothing to stdout, and leaves no file behind"
+   },
+   {
+    "id": "empty-drift-snapshot-fails-ci",
+    "text": "[empty-drift-snapshot-fails-ci] Defect · A committed drift snapshot with zero rules fails CI, and okl verify never creates the first one\nsymptom: a new user commits okl-drift.json on day one, before any lesson has --files, and the okl-verify CI step fails with 'NOTHING CHECKED' (exit 2); or a user verifies a lesson and finds no okl-drift.json to commit\nfix: commit okl-drift.json only once a lesson governs files: run okl export --drift once, then let okl verify refresh it; documented in the Quickstart. Candidate code fix: have export --drift refuse (exit 2) to write a snapshot with zero rules, so the trap cannot be set"
+   },
+   {
+    "id": "n_8b3345b90621",
+    "text": "[n_8b3345b90621] Defect · A hook runs in the session's current directory — anchor it to the project, or one cd breaks every prompt\nsymptom: a context or gate hook starts blocking or silently skipping after a command changed directory; restarting the session fixes it\nfix: cd to $CLAUDE_PROJECT_DIR at the top of every hook; when a hook blocks, print the tool's own reason and the directory it ran from rather than a guessed one; and in agent sessions run directory changes inside a subshell"
+   },
+   {
+    "id": "n_8519bf0f71c6",
+    "text": "[n_8519bf0f71c6] Gate · The encoding loop's write side needs a mechanical catch — a session-end hook that asks 'what did we learn?'\nsymptom: sessions end with fixed code but no recorded lesson; the same finding resurfaces in a later review\nfix: install stop-okl-encode.sh (okl init or okl scaffold) and register it under hooks.Stop"
+   },
+   {
+    "id": "optional-feature-shipped-text",
+    "text": "[optional-feature-shipped-text] Defect · Making a feature optional leaves every shipped sentence that assumes it false somewhere\nsymptom: a reviewer in a consumer repo flags generated text describing a gate, step or file that repo was set up without\nfix: when a feature becomes optional, grep every shipped template for sentences that assume it and reword them to what holds in every configuration (here: the briefing and okl drift mark the lesson STALE; a gate fails where installed). Fix generated files upstream in the template, never in the consumer repo."
+   },
+   {
+    "id": "typed-closed-request-models",
+    "text": "[typed-closed-request-models] Rule · Every request body gets a closed, typed model; an untyped dict lets wrong types into the store\nsymptom: an endpoint takes dict[str, Any] (or extra fields are ignored) and a wrong type is written before anything rejects it\nfix: type every request model, closed with extra='forbid'; and validate types at the domain's write path too (Node.validate here), so a bad value is refused before it is stored whichever entry point sent it"
+   },
+   {
+    "id": "n_5ddb0776a863",
+    "text": "[n_5ddb0776a863] Defect · A CI gate that reads gitignored state checks nothing in CI, and passes\nsymptom: a gate is green on every PR and never red, and the data it inspects lives in a file the repository ignores\nfix: make the gate count what it inspected and treat zero as 'did not run' (its own exit code), never as clean; then decide explicitly how CI gets the data, rather than letting its absence read as success. The same holds for any report or summary line that states a clean result: carry the inspected count beside it and say 'unknown' at zero (okl recap --report printed 'every lesson is proven' with drift having checked nothing, caught in review on okl #281, 2026-10-24)"
+   }
+  ],
+  "target_rank_in_search": null,
+  "candidates": 294
+ },
+ "t07": {
+  "others": [
+   {
+    "id": "refusal-offers-no-destructive-shortcut",
+    "text": "[refusal-offers-no-destructive-shortcut] Rule · A refusal shown to an agent names only the safe verb, never a one-step destructive alternative\nsymptom: an error an agent will read says 'or pass --replace / --force to overwrite' for the operation that caused the incident the refusal exists to prevent\nfix: on surfaces agents read (MCP replies, hook text), point only at the safe operation; keep deliberate overwrites on the human CLI, behind an explicit flag, and test that the agent-facing refusal does not mention it"
+   },
+   {
+    "id": "n_90066f354f1e",
+    "text": "[n_90066f354f1e] Defect · A recorded lesson protects reasoning; only a merged fix protects execution\nsymptom: a defect the store already knows about recurs in the same session, in a branch cut from a base that predates its fix\nfix: when later work depends on a fix that is still in review, branch from the branch that carries it, not from main; and read a recurrence as a question about where the fix LIVES, not about whether the lesson was written down"
+   },
+   {
+    "id": "n_ce6a27cc432f",
+    "text": "[n_ce6a27cc432f] Defect · A resolver that falls back to a default location turns a missing setup into a successful write nobody reads\nsymptom: a write command run before setup, or in the wrong directory, exits 0, and the data never appears where every reader looks\nfix: make the resolver refuse when nothing names the target (one exception the entry point turns into 'could not run'), instead of guarding commands one at a time; test that every command exits 2, prints nothing to stdout, and leaves no file behind"
+   },
+   {
+    "id": "empty-drift-snapshot-fails-ci",
+    "text": "[empty-drift-snapshot-fails-ci] Defect · A committed drift snapshot with zero rules fails CI, and okl verify never creates the first one\nsymptom: a new user commits okl-drift.json on day one, before any lesson has --files, and the okl-verify CI step fails with 'NOTHING CHECKED' (exit 2); or a user verifies a lesson and finds no okl-drift.json to commit\nfix: commit okl-drift.json only once a lesson governs files: run okl export --drift once, then let okl verify refresh it; documented in the Quickstart. Candidate code fix: have export --drift refuse (exit 2) to write a snapshot with zero rules, so the trap cannot be set"
+   },
+   {
+    "id": "n_8b3345b90621",
+    "text": "[n_8b3345b90621] Defect · A hook runs in the session's current directory — anchor it to the project, or one cd breaks every prompt\nsymptom: a context or gate hook starts blocking or silently skipping after a command changed directory; restarting the session fixes it\nfix: cd to $CLAUDE_PROJECT_DIR at the top of every hook; when a hook blocks, print the tool's own reason and the directory it ran from rather than a guessed one; and in agent sessions run directory changes inside a subshell"
+   },
+   {
+    "id": "n_8519bf0f71c6",
+    "text": "[n_8519bf0f71c6] Gate · The encoding loop's write side needs a mechanical catch — a session-end hook that asks 'what did we learn?'\nsymptom: sessions end with fixed code but no recorded lesson; the same finding resurfaces in a later review\nfix: install stop-okl-encode.sh (okl init or okl scaffold) and register it under hooks.Stop"
+   },
+   {
+    "id": "optional-feature-shipped-text",
+    "text": "[optional-feature-shipped-text] Defect · Making a feature optional leaves every shipped sentence that assumes it false somewhere\nsymptom: a reviewer in a consumer repo flags generated text describing a gate, step or file that repo was set up without\nfix: when a feature becomes optional, grep every shipped template for sentences that assume it and reword them to what holds in every configuration (here: the briefing and okl drift mark the lesson STALE; a gate fails where installed). Fix generated files upstream in the template, never in the consumer repo."
+   },
+   {
+    "id": "typed-closed-request-models",
+    "text": "[typed-closed-request-models] Rule · Every request body gets a closed, typed model; an untyped dict lets wrong types into the store\nsymptom: an endpoint takes dict[str, Any] (or extra fields are ignored) and a wrong type is written before anything rejects it\nfix: type every request model, closed with extra='forbid'; and validate types at the domain's write path too (Node.validate here), so a bad value is refused before it is stored whichever entry point sent it"
+   },
+   {
+    "id": "n_5ddb0776a863",
+    "text": "[n_5ddb0776a863] Defect · A CI gate that reads gitignored state checks nothing in CI, and passes\nsymptom: a gate is green on every PR and never red, and the data it inspects lives in a file the repository ignores\nfix: make the gate count what it inspected and treat zero as 'did not run' (its own exit code), never as clean; then decide explicitly how CI gets the data, rather than letting its absence read as success. The same holds for any report or summary line that states a clean result: carry the inspected count beside it and say 'unknown' at zero (okl recap --report printed 'every lesson is proven' with drift having checked nothing, caught in review on okl #281, 2026-10-24)"
+   }
+  ],
+  "target_rank_in_search": null,
+  "candidates": 294
+ },
+ "t08": {
+  "others": [
+   {
+    "id": "seed:geospatial-enforcement-defects:r_surface_needs_trigger",
+    "text": "[seed:geospatial-enforcement-defects:r_surface_needs_trigger] Rule · Every enforcement surface needs a mechanical trigger and an honest AUTOMATIC-vs-RUN ledger\nsymptom: a rules doc lists surfaces without saying which actually run automatically\nfix: maintain an AUTOMATIC-vs-RUN ledger; update it whenever a gate is added or closed"
+   },
+   {
+    "id": "seed:python-canon:py_one_type_checker",
+    "text": "[seed:python-canon:py_one_type_checker] Rule · Gate CI on one type checker, and write down what would make you switch\nsymptom: two type checkers disagreeing in CI, or a proposal to switch checkers with no stated reason\nfix: one checker gates CI; record the trigger that would make you switch, and revisit when it fires"
+   },
+   {
+    "id": "seed:dotnet-defects:nc_arch_reviewer",
+    "text": "[seed:dotnet-defects:nc_arch_reviewer] Defect · A surface nobody runs is documentation, not enforcement\nsymptom: a review agent, linter or gate described in the docs as enforcement that no hook, CI job or command ever invokes"
+   },
+   {
+    "id": "seed:geospatial-enforcement-defects:g_review_agent_in_ci",
+    "text": "[seed:geospatial-enforcement-defects:g_review_agent_in_ci] Gate · Run the architecture/review agent headless in CI on every PR diff\nsymptom: architecture rules live only as an agent/checklist that a human must remember to run\nfix: add a CI job that runs the agent on the diff and fails on must-fix; soft-pass until the key is configured"
+   },
+   {
+    "id": "n_02aa43137a2e",
+    "text": "[n_02aa43137a2e] Defect · A review bot's 'review triggered' is not a review: wait for its result, which can still be a rate limit\nsymptom: a wait loop stops on the bot's acknowledgement and the PR is merged or reported as reviewed; or a PR whose requested review was rate-limited sits open for days with nothing following it up\nfix: key the wait on the result ('No actionable comments', 'Actionable comments posted' or a submitted review); treat 'rate limited' as not reviewed and schedule a re-request (about hourly, so the PR does not fill with rate-limit replies) rather than leaving it; know the plan's hourly limit (1 per developer on the free and small-OSS plans; 5 on Essentials, falling to 1 after a heavy week) and queue PRs past it rather than opening more at once"
+   },
+   {
+    "id": "optional-feature-shipped-text",
+    "text": "[optional-feature-shipped-text] Defect · Making a feature optional leaves every shipped sentence that assumes it false somewhere\nsymptom: a reviewer in a consumer repo flags generated text describing a gate, step or file that repo was set up without\nfix: when a feature becomes optional, grep every shipped template for sentences that assume it and reword them to what holds in every configuration (here: the briefing and okl drift mark the lesson STALE; a gate fails where installed). Fix generated files upstream in the template, never in the consumer repo."
+   },
+   {
+    "id": "n_ec568941f68a",
+    "text": "[n_ec568941f68a] Defect · Honouring a config source in the resolver but not in the 'is it configured' gate splits read from write\nsymptom: one command accepts a store location and a sibling command refuses the same location as unconfigured\nfix: every source that can name the target must be recognised by the gate that decides whether one was named; when widening the gate, check what the gate was originally protecting is still caught somewhere"
+   },
+   {
+    "id": "n_50f0ddf7ea19",
+    "text": "[n_50f0ddf7ea19] Decision · okl gates CI on mypy; revisit when a faster checker passes src/okl with no new ignores\nsymptom: a proposal to switch okl's type checker\nfix: keep mypy until a faster checker type-checks src/okl with no new ignores and cuts CI time; then measure and decide"
+   },
+   {
+    "id": "seed:dotnet-canon:r_aspire_azure_fallback",
+    "text": "[seed:dotnet-canon:r_aspire_azure_fallback] Rule · Azure-only Aspire resources are gated on publish mode — no local emulator means dev must skip them\nsymptom: local AppHost failing to start services over a missing Azure subscription\nfix: gate Azure-only resources on publish mode"
+   }
+  ],
+  "target_rank_in_search": 262,
+  "candidates": 333
+ },
+ "t09": {
+  "others": [
+   {
+    "id": "owned-file-features-check-the-kept-copy",
+    "text": "[owned-file-features-check-the-kept-copy] Rule · A feature that relies on new content in an okl-owned file must check the copy init kept, not the one okl ships\nsymptom: okl init --ci wrote .github/okl-version and printed 'CI pinned' beside an edited pre-0.11.0 workflow whose install step never reads it, so CI kept installing the newest okl\nfix: Before acting on what an owned file does, read the copy on disk, scoped to the part that matters and ignoring comments (install._workflow_reads_pin); when it lacks the behaviour, act on nothing, say so, and name okl init --force"
+   },
+   {
+    "id": "n_ce6a27cc432f",
+    "text": "[n_ce6a27cc432f] Defect · A resolver that falls back to a default location turns a missing setup into a successful write nobody reads\nsymptom: a write command run before setup, or in the wrong directory, exits 0, and the data never appears where every reader looks\nfix: make the resolver refuse when nothing names the target (one exception the entry point turns into 'could not run'), instead of guarding commands one at a time; test that every command exits 2, prints nothing to stdout, and leaves no file behind"
+   },
+   {
+    "id": "worktree-no-store-reverify",
+    "text": "[worktree-no-store-reverify] Rule · A git worktree has no okl store: re-verify drift from the main checkout after moving the branch there\nsymptom: a branch built in a git worktree (a workflow's isolation: worktree, or git worktree add) changes files that rules govern, and okl verify / okl reverify cannot run there, so the PR's drift gate would go red\nfix: commit and push the branch from the worktree, then git worktree remove it (a branch checked out in a worktree cannot be switched to elsewhere), git switch to the branch in the main checkout, run okl reverify --yes, commit okl-drift.json, and confirm okl drift --gate --snapshot okl-drift.json exits 0 after that commit, since the gate reads the committed snapshot. Do not point OKL_DATABASE_URL at the main store from the worktree without its config: the store takes the folder name as the repo, skips repo-scoped rules and looks like it worked; if you must verify there, copy .okl/config.json in first"
+   },
+   {
+    "id": "n_1eaf9a5f24e2",
+    "text": "[n_1eaf9a5f24e2] Defect · A lesson verified on an unmerged branch breaks the drift gate on every other branch\nsymptom: after recording and verifying a lesson whose governed file changes in one open PR, okl-verify fails on the other open PRs: 'verified on <sha>, a commit outside this branch's history, and the governed files differ from it'\nfix: record a lesson that governs a file changed only on an unmerged branch without --files (or clear them with okl update <id> --files ''), and give it --files and its okl verify on main after the change merges; read the gate's exit code (okl drift --gate ...; echo $?), never its last printed line"
+   },
+   {
+    "id": "n_85b9d0a7823d",
+    "text": "[n_85b9d0a7823d] Defect · An adversarial eval's blindness decays as the repo accumulates its own receipts\nsymptom: A re-run of a break-it-on-purpose eval hides the same files as the first run, but the repo now holds the first run's patches, its write-up of every miss, and checks that became readable scripts\nfix: Before each re-run, list what the adversary can read that describes the checks (scripts, receipts, write-ups, tests of the checks) and hide it; never hide what it must read or edit to do its job; register the hiding list as a departure."
+   },
+   {
+    "id": "n_f6d01e368155",
+    "text": "[n_f6d01e368155] Defect · A self-detection check keyed on one module's path breaks silently when that module moves\nsymptom: after a refactor moves or renames a module, a repo's own CI starts testing the released package instead of the branch, and every check stays green\nfix: detect a checkout by its package root (src/okl/__init__.py), not by one module; before moving or renaming a file, grep every workflow, script and test for its old path (the rename rule)"
+   },
+   {
+    "id": "n_ec568941f68a",
+    "text": "[n_ec568941f68a] Defect · Honouring a config source in the resolver but not in the 'is it configured' gate splits read from write\nsymptom: one command accepts a store location and a sibling command refuses the same location as unconfigured\nfix: every source that can name the target must be recognised by the gate that decides whether one was named; when widening the gate, check what the gate was originally protecting is still caught somewhere"
+   },
+   {
+    "id": "guarantee-holds-on-every-write-path",
+    "text": "[guarantee-holds-on-every-write-path] Rule · A documented guarantee ('X is refused') must hold on every path that can produce X, not just the entry point you checked\nsymptom: a doc, diagram or launch post says a tool refuses or always enforces something, and the claim was checked against one command\nfix: before publishing refused, always or never, list every path that writes the thing (CLI, MCP tool, seed or import, API) and check each; state the guarantee per path, or say how the exceptions are marked"
+   },
+   {
+    "id": "idea-to-issue-through-review",
+    "text": "[idea-to-issue-through-review] Rule · An idea from outside reading becomes tracked work only through an issue: classify it, review it, file it\nsymptom: an improvement discussed in a session (from a post, a book, a review, a thread) lives only in the chat, and the next session cannot find it; or an issue filed straight from the chat states the code as remembered rather than as it is, or duplicates one already open\nfix: classify first (feature, defect, experiment, option on an existing issue, docs); search existing issues by title AND body (gh issue list --search, or --json body) before drafting; draft from the code on main with a dated 'where it stands' section; run an independent read-only fidelity review and apply its corrections; file with the label and cross-references, replacing placeholders with real numbers; experiments carry a pre-registration section; nothing stays only in the chat"
+   }
+  ],
+  "target_rank_in_search": 112,
+  "candidates": 350
+ },
+ "t10": {
+  "others": [
+   {
+    "id": "n_5ddb0776a863",
+    "text": "[n_5ddb0776a863] Defect · A CI gate that reads gitignored state checks nothing in CI, and passes\nsymptom: a gate is green on every PR and never red, and the data it inspects lives in a file the repository ignores\nfix: make the gate count what it inspected and treat zero as 'did not run' (its own exit code), never as clean; then decide explicitly how CI gets the data, rather than letting its absence read as success. The same holds for any report or summary line that states a clean result: carry the inspected count beside it and say 'unknown' at zero (okl recap --report printed 'every lesson is proven' with drift having checked nothing, caught in review on okl #281, 2026-10-24)"
+   },
+   {
+    "id": "n_ec568941f68a",
+    "text": "[n_ec568941f68a] Defect · Honouring a config source in the resolver but not in the 'is it configured' gate splits read from write\nsymptom: one command accepts a store location and a sibling command refuses the same location as unconfigured\nfix: every source that can name the target must be recognised by the gate that decides whether one was named; when widening the gate, check what the gate was originally protecting is still caught somewhere"
+   },
+   {
+    "id": "n_713b8c104f12",
+    "text": "[n_713b8c104f12] Defect · An empty result and a mistyped filter must not look identical\nsymptom: a query with a filter flag returns zero rows and exit 0, and the flag value was never validated\nfix: validate the filter's FORM and refuse a malformed one with exit 2; for a well-formed value the data has never seen, still run but say so and name the values that do exist"
+   },
+   {
+    "id": "n_02cc84da158d",
+    "text": "[n_02cc84da158d] Defect · OKL_DATABASE_URL was honoured by the store and ignored by every CLI command\nsymptom: a documented storage env var works in one entry point and is silently overridden in another; writes land somewhere other than where the operator pointed them\nfix: resolve the storage target in ONE place that every entry point calls; if a component deliberately ignores the variable, refuse loudly rather than silently substituting a default"
+   },
+   {
+    "id": "n_5db37b759b1e",
+    "text": "[n_5db37b759b1e] Defect · Removing a step because you read the code is assert-from-memory — the reviewer caught it in a shipped workflow\nsymptom: a step or safeguard deleted on the strength of 'the code already does this', with no test asserting it\nfix: write the test that makes the claim executable BEFORE deleting the thing that compensated for it; prove it by breaking the behaviour and watching the test go red"
+   },
+   {
+    "id": "n_b0457b37c65a",
+    "text": "[n_b0457b37c65a] Decision · A controlled vocabulary is closed per store, not fixed in the package\nsymptom: a validated vocabulary ships as a constant, so a team using a language or subject the authors did not anticipate must fork to file a lesson\nfix: keep the shipped set as a FLOOR and let the store declare additions as records; validate against floor union declared, and validate the declaration itself against the floor only so the first one is writable"
+   },
+   {
+    "id": "n_119528a07fa5",
+    "text": "[n_119528a07fa5] Defect · A subprocess test inherits the developer's state; the same test on a clean checkout hits a precondition\nsymptom: a test passes locally and fails in CI on an exit code from a guard that never fires on a machine that already has the data\nfix: test the unit that was untested, not the pipeline around it; when a subprocess needs data the repo does not commit, either supply it in the test or call the function directly"
+   },
+   {
+    "id": "seed:geospatial-enforcement-defects:d_ungated_zone",
+    "text": "[seed:geospatial-enforcement-defects:d_ungated_zone] Defect · Code outside the linter/type/scan source-roots is gated by nothing\nsymptom: a .py/.ts/.cs dir ships code but appears in no linter/type/scan source-root and no CI trigger path\nfix: add the dir to CI trigger paths + the lint/scan invocation; list remaining ungated zones in the ledger"
+   },
+   {
+    "id": "n_58119d0a63d9",
+    "text": "[n_58119d0a63d9] Rule · Init must wire, not instruct — every 'now copy X / add Y to config' printout is a surface nobody runs\nsymptom: an installer prints manual follow-up steps (register this hook, copy this workflow, add to settings)\nfix: make init perform each registration itself, idempotent and non-clobbering; warn loudly only for what it truly cannot do (e.g. no git repo -> drift disabled)"
+   }
+  ],
+  "target_rank_in_search": 3,
+  "candidates": 174
+ },
+ "t11": {
+  "others": [
+   {
+    "id": "refusal-offers-no-destructive-shortcut",
+    "text": "[refusal-offers-no-destructive-shortcut] Rule · A refusal shown to an agent names only the safe verb, never a one-step destructive alternative\nsymptom: an error an agent will read says 'or pass --replace / --force to overwrite' for the operation that caused the incident the refusal exists to prevent\nfix: on surfaces agents read (MCP replies, hook text), point only at the safe operation; keep deliberate overwrites on the human CLI, behind an explicit flag, and test that the agent-facing refusal does not mention it"
+   },
+   {
+    "id": "n_90066f354f1e",
+    "text": "[n_90066f354f1e] Defect · A recorded lesson protects reasoning; only a merged fix protects execution\nsymptom: a defect the store already knows about recurs in the same session, in a branch cut from a base that predates its fix\nfix: when later work depends on a fix that is still in review, branch from the branch that carries it, not from main; and read a recurrence as a question about where the fix LIVES, not about whether the lesson was written down"
+   },
+   {
+    "id": "n_ce6a27cc432f",
+    "text": "[n_ce6a27cc432f] Defect · A resolver that falls back to a default location turns a missing setup into a successful write nobody reads\nsymptom: a write command run before setup, or in the wrong directory, exits 0, and the data never appears where every reader looks\nfix: make the resolver refuse when nothing names the target (one exception the entry point turns into 'could not run'), instead of guarding commands one at a time; test that every command exits 2, prints nothing to stdout, and leaves no file behind"
+   },
+   {
+    "id": "empty-drift-snapshot-fails-ci",
+    "text": "[empty-drift-snapshot-fails-ci] Defect · A committed drift snapshot with zero rules fails CI, and okl verify never creates the first one\nsymptom: a new user commits okl-drift.json on day one, before any lesson has --files, and the okl-verify CI step fails with 'NOTHING CHECKED' (exit 2); or a user verifies a lesson and finds no okl-drift.json to commit\nfix: commit okl-drift.json only once a lesson governs files: run okl export --drift once, then let okl verify refresh it; documented in the Quickstart. Candidate code fix: have export --drift refuse (exit 2) to write a snapshot with zero rules, so the trap cannot be set"
+   },
+   {
+    "id": "n_8b3345b90621",
+    "text": "[n_8b3345b90621] Defect · A hook runs in the session's current directory — anchor it to the project, or one cd breaks every prompt\nsymptom: a context or gate hook starts blocking or silently skipping after a command changed directory; restarting the session fixes it\nfix: cd to $CLAUDE_PROJECT_DIR at the top of every hook; when a hook blocks, print the tool's own reason and the directory it ran from rather than a guessed one; and in agent sessions run directory changes inside a subshell"
+   },
+   {
+    "id": "n_8519bf0f71c6",
+    "text": "[n_8519bf0f71c6] Gate · The encoding loop's write side needs a mechanical catch — a session-end hook that asks 'what did we learn?'\nsymptom: sessions end with fixed code but no recorded lesson; the same finding resurfaces in a later review\nfix: install stop-okl-encode.sh (okl init or okl scaffold) and register it under hooks.Stop"
+   },
+   {
+    "id": "optional-feature-shipped-text",
+    "text": "[optional-feature-shipped-text] Defect · Making a feature optional leaves every shipped sentence that assumes it false somewhere\nsymptom: a reviewer in a consumer repo flags generated text describing a gate, step or file that repo was set up without\nfix: when a feature becomes optional, grep every shipped template for sentences that assume it and reword them to what holds in every configuration (here: the briefing and okl drift mark the lesson STALE; a gate fails where installed). Fix generated files upstream in the template, never in the consumer repo."
+   },
+   {
+    "id": "typed-closed-request-models",
+    "text": "[typed-closed-request-models] Rule · Every request body gets a closed, typed model; an untyped dict lets wrong types into the store\nsymptom: an endpoint takes dict[str, Any] (or extra fields are ignored) and a wrong type is written before anything rejects it\nfix: type every request model, closed with extra='forbid'; and validate types at the domain's write path too (Node.validate here), so a bad value is refused before it is stored whichever entry point sent it"
+   },
+   {
+    "id": "n_5ddb0776a863",
+    "text": "[n_5ddb0776a863] Defect · A CI gate that reads gitignored state checks nothing in CI, and passes\nsymptom: a gate is green on every PR and never red, and the data it inspects lives in a file the repository ignores\nfix: make the gate count what it inspected and treat zero as 'did not run' (its own exit code), never as clean; then decide explicitly how CI gets the data, rather than letting its absence read as success. The same holds for any report or summary line that states a clean result: carry the inspected count beside it and say 'unknown' at zero (okl recap --report printed 'every lesson is proven' with drift having checked nothing, caught in review on okl #281, 2026-10-24)"
+   }
+  ],
+  "target_rank_in_search": 17,
+  "candidates": 294
+ },
+ "t12": {
+  "others": [
+   {
+    "id": "judge-reads-the-experiment-too",
+    "text": "[judge-reads-the-experiment-too] Rule · A judge that reads the repo reads the experiment too: withhold the experiment's own files from its worktree\nsymptom: a judged experiment is re-run on main, where its planted facts, earlier receipts with every verdict, and the report's prose about the run are all committed\nfix: build the judge's worktree from the run's commit minus the experiment's own files (the plants, earlier receipts, the instrument, tests that quote plants, report sections about the run); check the plants against what the judge can read, not against the commit; register the withholding before any judgment, and report what it hid from lessons that cite those files"
+   },
+   {
+    "id": "verification-scope-is-the-thesis",
+    "text": "[verification-scope-is-the-thesis] Decision · Drift's slice is a mechanism, not okl's scope: the thesis promises every briefed lesson is proven or visibly not, in both directions\nsymptom: work on drift, verify, reverify or the briefing is judged by the lessons that declare files and a check (16 of 155 here on 2026-10-31), while most briefed lessons carry no check and no proof status\nfix: hold every change to drift, verification or the briefing to the README's promise (each lesson, doc and diagram proven by a check you choose, flagged when what it covers changes, corrected or retired as you build): measure it on all lessons briefed, not the watched ones; label each lesson's proof status; and keep both directions in view: the repo moving away from its lessons and its docs (the gate: code against the rules, docs against the code they describe, #314) and the lessons moving away from the repo (re-check, review, correct or retire, #315)"
+   },
+   {
+    "id": "idea-to-issue-through-review",
+    "text": "[idea-to-issue-through-review] Rule · An idea from outside reading becomes tracked work only through an issue: classify it, review it, file it\nsymptom: an improvement discussed in a session (from a post, a book, a review, a thread) lives only in the chat, and the next session cannot find it; or an issue filed straight from the chat states the code as remembered rather than as it is, or duplicates one already open\nfix: classify first (feature, defect, experiment, option on an existing issue, docs); search existing issues by title AND body (gh issue list --search, or --json body) before drafting; draft from the code on main with a dated 'where it stands' section; run an independent read-only fidelity review and apply its corrections; file with the label and cross-references, replacing placeholders with real numbers; experiments carry a pre-registration section; nothing stays only in the chat"
+   },
+   {
+    "id": "n_a7634ef53a8f",
+    "text": "[n_a7634ef53a8f] Decision · The encoding loop has no runtime input — every lesson enters from author time or CI time\nsymptom: a defect class that only a running system reveals (pagination silently dropped, a limit hit under real load, a partial-failure path) has no way into the store until a human finds it some other way\nfix: treat observability as a SOURCE of records rather than a competitor to them: when a runtime-only defect is found, record it with found_by naming the trace or metric that showed it; do not claim the loop covers runtime until some record actually cites one"
+   },
+   {
+    "id": "thesis-maintain-anything",
+    "text": "[thesis-maintain-anything] Decision · okl's scope is everything a team maintains: keep the agent true to your rules, specs and docs, keep those current as the code moves, and keep learning\nsymptom: work on okl that treats it as a store of lessons only, or treats docs, diagrams, specs, the report, results or research as outside its job; or a change to what okl is for that leaves the thesis and its measured baseline as they were\nfix: hold okl's work to this scope (issue #317): anything a team maintains can be tied to what it describes, flagged when that moves, brought back in line by the agent in the session with the person told or asked first, and confirmed by a check or an honest review; keep detection mechanical (no model calls in okl's own loop) and write nothing to the store without the person knowing; keep docs/THESIS.md and its baseline current whenever the thesis or the measured results move The thesis (docs/THESIS.md) is the primary, complete record of that scope: every promise okl makes today, in the README, the docs or the maintainer's site, is listed there with its status and evidence, and a wider direction is added beside those promises, never in place of them; when other copy promises something the thesis does not, update the thesis deliberately or correct the copy."
+   },
+   {
+    "id": "docs-agent-neutral",
+    "text": "[docs-agent-neutral] Decision · okl's docs are agent-neutral; Claude Code-only parts are labelled as such"
+   },
+   {
+    "id": "n_5ddb0776a863",
+    "text": "[n_5ddb0776a863] Defect · A CI gate that reads gitignored state checks nothing in CI, and passes\nsymptom: a gate is green on every PR and never red, and the data it inspects lives in a file the repository ignores\nfix: make the gate count what it inspected and treat zero as 'did not run' (its own exit code), never as clean; then decide explicitly how CI gets the data, rather than letting its absence read as success. The same holds for any report or summary line that states a clean result: carry the inspected count beside it and say 'unknown' at zero (okl recap --report printed 'every lesson is proven' with drift having checked nothing, caught in review on okl #281, 2026-10-24)"
+   },
+   {
+    "id": "n_0adfbf18d9f7",
+    "text": "[n_0adfbf18d9f7] Claim · Writing each function's contract down exposes the bugs that break it: a 50-docstring pass found three\nsymptom: a readability pass treated as cosmetic, so what its writers notice is not followed up\nfix: ask whoever writes docstrings to report every place the code contradicts the contract they are writing, and file those as issues rather than softening the docstring"
+   },
+   {
+    "id": "eval-scripts-no-exposure",
+    "text": "[eval-scripts-no-exposure] Rule · Every caller of Client.check that briefs no agent asks for it unlogged\nsymptom: okl metric's exposure counts jump after an eval, a pre-flight or an okl intake run: briefing rows logged for lessons no agent was shown\nfix: pass log=False to Client.check (okl intake does; the service honours it as the check request's log field), or set OKL_BRIEFING_LOG=0 before building the Client in an eval or pre-flight script; test it by running the caller against a throwaway store and asserting no briefing row was written"
+   }
+  ],
+  "target_rank_in_search": null,
+  "candidates": 350
+ },
+ "t13": {
+  "others": [
+   {
+    "id": "n_ce6a27cc432f",
+    "text": "[n_ce6a27cc432f] Defect · A resolver that falls back to a default location turns a missing setup into a successful write nobody reads\nsymptom: a write command run before setup, or in the wrong directory, exits 0, and the data never appears where every reader looks\nfix: make the resolver refuse when nothing names the target (one exception the entry point turns into 'could not run'), instead of guarding commands one at a time; test that every command exits 2, prints nothing to stdout, and leaves no file behind"
+   },
+   {
+    "id": "n_8519bf0f71c6",
+    "text": "[n_8519bf0f71c6] Gate · The encoding loop's write side needs a mechanical catch — a session-end hook that asks 'what did we learn?'\nsymptom: sessions end with fixed code but no recorded lesson; the same finding resurfaces in a later review\nfix: install stop-okl-encode.sh (okl init or okl scaffold) and register it under hooks.Stop"
+   },
+   {
+    "id": "n_02aa43137a2e",
+    "text": "[n_02aa43137a2e] Defect · A review bot's 'review triggered' is not a review: wait for its result, which can still be a rate limit\nsymptom: a wait loop stops on the bot's acknowledgement and the PR is merged or reported as reviewed; or a PR whose requested review was rate-limited sits open for days with nothing following it up\nfix: key the wait on the result ('No actionable comments', 'Actionable comments posted' or a submitted review); treat 'rate limited' as not reviewed and schedule a re-request (about hourly, so the PR does not fill with rate-limit replies) rather than leaving it; know the plan's hourly limit (1 per developer on the free and small-OSS plans; 5 on Essentials, falling to 1 after a heavy week) and queue PRs past it rather than opening more at once"
+   },
+   {
+    "id": "n_b83c550a0ca4",
+    "text": "[n_b83c550a0ca4] Decision · okl stores lessons as typed records found by full-text search, not an ontology store; RDF is a one-way export when something needs it\nsymptom: a proposal to ingest an ontology, store lessons as RDF triples, or query them with SPARQL or a graph database\nfix: keep records, FTS and one-step relationships; when a consumer needs RDF, add a one-way JSON-LD export (never imported back, tested with a real RDF parser); revisit only on a consumer, on exposure-log or A/B misses that cluster around same-concept-different-words (try a measured term map first), or if the job becomes reasoning over a shared concept hierarchy"
+   },
+   {
+    "id": "n_ec568941f68a",
+    "text": "[n_ec568941f68a] Defect · Honouring a config source in the resolver but not in the 'is it configured' gate splits read from write\nsymptom: one command accepts a store location and a sibling command refuses the same location as unconfigured\nfix: every source that can name the target must be recognised by the gate that decides whether one was named; when widening the gate, check what the gate was originally protecting is still caught somewhere"
+   },
+   {
+    "id": "n_5ddb0776a863",
+    "text": "[n_5ddb0776a863] Defect · A CI gate that reads gitignored state checks nothing in CI, and passes\nsymptom: a gate is green on every PR and never red, and the data it inspects lives in a file the repository ignores\nfix: make the gate count what it inspected and treat zero as 'did not run' (its own exit code), never as clean; then decide explicitly how CI gets the data, rather than letting its absence read as success. The same holds for any report or summary line that states a clean result: carry the inspected count beside it and say 'unknown' at zero (okl recap --report printed 'every lesson is proven' with drift having checked nothing, caught in review on okl #281, 2026-10-24)"
+   },
+   {
+    "id": "n_a7634ef53a8f",
+    "text": "[n_a7634ef53a8f] Decision · The encoding loop has no runtime input — every lesson enters from author time or CI time\nsymptom: a defect class that only a running system reveals (pagination silently dropped, a limit hit under real load, a partial-failure path) has no way into the store until a human finds it some other way\nfix: treat observability as a SOURCE of records rather than a competitor to them: when a runtime-only defect is found, record it with found_by naming the trace or metric that showed it; do not claim the loop covers runtime until some record actually cites one"
+   },
+   {
+    "id": "optional-feature-shipped-text",
+    "text": "[optional-feature-shipped-text] Defect · Making a feature optional leaves every shipped sentence that assumes it false somewhere\nsymptom: a reviewer in a consumer repo flags generated text describing a gate, step or file that repo was set up without\nfix: when a feature becomes optional, grep every shipped template for sentences that assume it and reword them to what holds in every configuration (here: the briefing and okl drift mark the lesson STALE; a gate fails where installed). Fix generated files upstream in the template, never in the consumer repo."
+   },
+   {
+    "id": "readonly-agents-side-effects",
+    "text": "[readonly-agents-side-effects] Defect · Telling review agents 'read-only' does not stop side effects: repo scripts and hooks write\nsymptom: after a read-only multi-agent review, git status shows a new file and the knowledge store has rows nobody asked for\nfix: give agents an explicit list of commands that write (receipt scripts, hooks, anything that logs), point them at a copy of the store, and after the run diff git status and the store's row counts against a snapshot taken before; clean up only what the run created"
+   }
+  ],
+  "target_rank_in_search": null,
+  "candidates": 291
+ },
+ "t14": {
+  "others": [
+   {
+    "id": "judge-reads-the-experiment-too",
+    "text": "[judge-reads-the-experiment-too] Rule · A judge that reads the repo reads the experiment too: withhold the experiment's own files from its worktree\nsymptom: a judged experiment is re-run on main, where its planted facts, earlier receipts with every verdict, and the report's prose about the run are all committed\nfix: build the judge's worktree from the run's commit minus the experiment's own files (the plants, earlier receipts, the instrument, tests that quote plants, report sections about the run); check the plants against what the judge can read, not against the commit; register the withholding before any judgment, and report what it hid from lessons that cite those files"
+   },
+   {
+    "id": "verification-scope-is-the-thesis",
+    "text": "[verification-scope-is-the-thesis] Decision · Drift's slice is a mechanism, not okl's scope: the thesis promises every briefed lesson is proven or visibly not, in both directions\nsymptom: work on drift, verify, reverify or the briefing is judged by the lessons that declare files and a check (16 of 155 here on 2026-10-31), while most briefed lessons carry no check and no proof status\nfix: hold every change to drift, verification or the briefing to the README's promise (each lesson, doc and diagram proven by a check you choose, flagged when what it covers changes, corrected or retired as you build): measure it on all lessons briefed, not the watched ones; label each lesson's proof status; and keep both directions in view: the repo moving away from its lessons and its docs (the gate: code against the rules, docs against the code they describe, #314) and the lessons moving away from the repo (re-check, review, correct or retire, #315)"
+   },
+   {
+    "id": "idea-to-issue-through-review",
+    "text": "[idea-to-issue-through-review] Rule · An idea from outside reading becomes tracked work only through an issue: classify it, review it, file it\nsymptom: an improvement discussed in a session (from a post, a book, a review, a thread) lives only in the chat, and the next session cannot find it; or an issue filed straight from the chat states the code as remembered rather than as it is, or duplicates one already open\nfix: classify first (feature, defect, experiment, option on an existing issue, docs); search existing issues by title AND body (gh issue list --search, or --json body) before drafting; draft from the code on main with a dated 'where it stands' section; run an independent read-only fidelity review and apply its corrections; file with the label and cross-references, replacing placeholders with real numbers; experiments carry a pre-registration section; nothing stays only in the chat"
+   },
+   {
+    "id": "n_a7634ef53a8f",
+    "text": "[n_a7634ef53a8f] Decision · The encoding loop has no runtime input — every lesson enters from author time or CI time\nsymptom: a defect class that only a running system reveals (pagination silently dropped, a limit hit under real load, a partial-failure path) has no way into the store until a human finds it some other way\nfix: treat observability as a SOURCE of records rather than a competitor to them: when a runtime-only defect is found, record it with found_by naming the trace or metric that showed it; do not claim the loop covers runtime until some record actually cites one"
+   },
+   {
+    "id": "thesis-maintain-anything",
+    "text": "[thesis-maintain-anything] Decision · okl's scope is everything a team maintains: keep the agent true to your rules, specs and docs, keep those current as the code moves, and keep learning\nsymptom: work on okl that treats it as a store of lessons only, or treats docs, diagrams, specs, the report, results or research as outside its job; or a change to what okl is for that leaves the thesis and its measured baseline as they were\nfix: hold okl's work to this scope (issue #317): anything a team maintains can be tied to what it describes, flagged when that moves, brought back in line by the agent in the session with the person told or asked first, and confirmed by a check or an honest review; keep detection mechanical (no model calls in okl's own loop) and write nothing to the store without the person knowing; keep docs/THESIS.md and its baseline current whenever the thesis or the measured results move The thesis (docs/THESIS.md) is the primary, complete record of that scope: every promise okl makes today, in the README, the docs or the maintainer's site, is listed there with its status and evidence, and a wider direction is added beside those promises, never in place of them; when other copy promises something the thesis does not, update the thesis deliberately or correct the copy."
+   },
+   {
+    "id": "docs-agent-neutral",
+    "text": "[docs-agent-neutral] Decision · okl's docs are agent-neutral; Claude Code-only parts are labelled as such"
+   },
+   {
+    "id": "n_5ddb0776a863",
+    "text": "[n_5ddb0776a863] Defect · A CI gate that reads gitignored state checks nothing in CI, and passes\nsymptom: a gate is green on every PR and never red, and the data it inspects lives in a file the repository ignores\nfix: make the gate count what it inspected and treat zero as 'did not run' (its own exit code), never as clean; then decide explicitly how CI gets the data, rather than letting its absence read as success. The same holds for any report or summary line that states a clean result: carry the inspected count beside it and say 'unknown' at zero (okl recap --report printed 'every lesson is proven' with drift having checked nothing, caught in review on okl #281, 2026-10-24)"
+   },
+   {
+    "id": "n_0adfbf18d9f7",
+    "text": "[n_0adfbf18d9f7] Claim · Writing each function's contract down exposes the bugs that break it: a 50-docstring pass found three\nsymptom: a readability pass treated as cosmetic, so what its writers notice is not followed up\nfix: ask whoever writes docstrings to report every place the code contradicts the contract they are writing, and file those as issues rather than softening the docstring"
+   },
+   {
+    "id": "eval-scripts-no-exposure",
+    "text": "[eval-scripts-no-exposure] Rule · Every caller of Client.check that briefs no agent asks for it unlogged\nsymptom: okl metric's exposure counts jump after an eval, a pre-flight or an okl intake run: briefing rows logged for lessons no agent was shown\nfix: pass log=False to Client.check (okl intake does; the service honours it as the check request's log field), or set OKL_BRIEFING_LOG=0 before building the Client in an eval or pre-flight script; test it by running the caller against a throwaway store and asserting no briefing row was written"
+   }
+  ],
+  "target_rank_in_search": 103,
+  "candidates": 350
+ },
+ "t15": {
+  "others": [
+   {
+    "id": "seed:rag-defects:qz_broken_tool",
+    "text": "[seed:rag-defects:qz_broken_tool] Defect · An agent whose primary tool throws on every call measures a broken tool, not an architecture\nsymptom: an agent retries the same tool call until its step budget is gone because every call throws, and the comparison then blames the agent architecture"
+   },
+   {
+    "id": "falsifier-relative-to-control",
+    "text": "[falsifier-relative-to-control] Rule · A pre-registered falsifier is written relative to the control arm measured on the same store, never as an absolute figure\nsymptom: a pre-registered falsifier fires on the control arm itself, or no cell of a calibration grid can satisfy the selection rule because the baseline already violates it\nfix: state every falsifier as a difference from the control arm (the same prompts, the same store, run in the same session), with the allowed size named; when a baseline figure is quoted in the pre-registration, re-measure it on the store the change will run on before writing it; after the fact, apply the rule as written and say so, then report the relative reading beside it rather than quietly substituting the one that passes. A shipping bar is a different thing: a level a feature must reach to be turned on may be absolute, as long as it is labelled a bar and not used to test whether an effect exists"
+   },
+   {
+    "id": "seed:rag-defects:qz_agent_contract",
+    "text": "[seed:rag-defects:qz_agent_contract] Rule · The agent's capability surface is an allowlist; side-effect machinery is built with the first mutating tool\nsymptom: an agent loop that will call a tool name the model invented, or a mutating tool shipped without argument validation, an approval mode or alerting"
+   },
+   {
+    "id": "n_93f96eae7359",
+    "text": "[n_93f96eae7359] Defect · The field designed to be matched against was the one field not indexed\nsymptom: a searchable entity whose index column list is shorter than its content fields\nfix: index every field the design treats as matchable, with weights; rebuild the index on open for stores created before, since the code fix alone leaves existing data broken"
+   },
+   {
+    "id": "n_849a5b0425ef",
+    "text": "[n_849a5b0425ef] Defect · A tag that records where a lesson was FOUND cannot be filtered on as though it recorded where it APPLIES\nsymptom: a filter treating a provenance label as a scoping predicate; briefings getting shorter and a known-covered task starting to fail\nfix: revert to any-match; record applicability separately from provenance before trying again, and measure any retrieval change with the A/B before believing it"
+   },
+   {
+    "id": "n_a7634ef53a8f",
+    "text": "[n_a7634ef53a8f] Decision · The encoding loop has no runtime input — every lesson enters from author time or CI time\nsymptom: a defect class that only a running system reveals (pagination silently dropped, a limit hit under real load, a partial-failure path) has no way into the store until a human finds it some other way\nfix: treat observability as a SOURCE of records rather than a competitor to them: when a runtime-only defect is found, record it with found_by naming the trace or metric that showed it; do not claim the loop covers runtime until some record actually cites one"
+   },
+   {
+    "id": "n_0aefd5072428",
+    "text": "[n_0aefd5072428] Claim · Audit verdict: 'Loop Engineering' (B.K. Pandey) — sound taxonomy, exhortation-level; misses cross-run learning and enforcement"
+   },
+   {
+    "id": "n_5a9589af345f",
+    "text": "[n_5a9589af345f] Defect · A remote write path that hides validation errors as outages — the agent couldn't tell 'bad tag' from 'service down'\nsymptom: an agent's record attempts fail with HTTP 500 / 'unreachable' while the service is healthy; the agent invented values outside a closed vocabulary\nfix: map validation errors to 400 with detail; client raises ValueError with the detail on 4xx and OKLUnreachable only on network/5xx; apply repo default before the mode branch"
+   },
+   {
+    "id": "seed:dotnet-defects:nc_idor",
+    "text": "[seed:dotnet-defects:nc_idor] Defect · Missing ownership scope check is an IDOR (CWE-639) and slips through tests-by-omission\nsymptom: an endpoint fetches an entity by id with no owner/tenant predicate\nfix: add the caller's owner id to the WHERE clause; return 404 (not 403) on no match"
+   }
+  ],
+  "target_rank_in_search": 28,
+  "candidates": 310
+ },
+ "t16": {
+  "others": [
+   {
+    "id": "seed:geospatial-defects:d16",
+    "text": "[seed:geospatial-defects:d16] Defect · GDAL temp files (CPL_TMPDIR) not covered by TMPDIR — filled boot disk to zero\nsymptom: the boot disk fills during a data run even though TMPDIR points at the data drive; files appear under / from a library's own temp setting"
+   },
+   {
+    "id": "seed:frontend-canon:rxc_query_keys",
+    "text": "[seed:frontend-canon:rxc_query_keys] Rule · Query keys are a typed convention — [feature, entity, params] via key factories, not ad-hoc strings\nsymptom: hand-written query key arrays/strings scattered across components\nfix: define per-feature key factories and use them for both queries and invalidation"
+   },
+   {
+    "id": "seed:dotnet-canon:r_cache_write_path",
+    "text": "[seed:dotnet-canon:r_cache_write_path] Rule · Cache invalidation happens in the write path — the mutating handler invalidates, not 'later' or via TTL\nsymptom: a write handler touching a cached entity with no cache update in the same handler\nfix: invalidate/update the cache in the mutating handler itself"
+   },
+   {
+    "id": "rerank-ships-off",
+    "text": "[rerank-ships-off] Decision · The cross-encoder second stage ships off: it reorders both ways and its scores cannot replace the relevance floor\nsymptom: a proposal to make okl check --rerank the default, to admit a candidate by its reranker rank or score, or to try another passage cross-encoder on the same pool\nfix: keep --rerank, OKL_RERANK and the config key off by default and documented as the measured experiment. REPORT §4u then settled both follow-ups: no cosine-plus-rank line admits a lifted lesson without admitting chat filler (admission grid), and the floor's two-word rule for semantic-only candidates admits the one lesson it was built for while the cutoff still drops it behind fifteen kept records (reverted to None). The next retrieval pre-registration is the ORDER among kept records (title/symptom/alias matches over body matches, or a per-type cutoff), measured first on the six prompts; do not re-run a passage cross-encoder on this pool or re-measure these two rules expecting a different answer."
+   },
+   {
+    "id": "seed:rag-defects:qz_broken_tool",
+    "text": "[seed:rag-defects:qz_broken_tool] Defect · An agent whose primary tool throws on every call measures a broken tool, not an architecture\nsymptom: an agent retries the same tool call until its step budget is gone because every call throws, and the comparison then blames the agent architecture"
+   },
+   {
+    "id": "seed:dotnet-decisions:pd_testcontainers_real_providers",
+    "text": "[seed:dotnet-decisions:pd_testcontainers_real_providers] Decision · Integration tests run against real DB/cache containers — InMemory and SQLite fakes hide provider-specific bugs"
+   },
+   {
+    "id": "n_b6cc6890ba26",
+    "text": "[n_b6cc6890ba26] Defect · A subprocess that shells out to a coding agent must run in a clean room, or the repo's own hooks answer it\nsymptom: a scripted agent call returns something that answers a hook rather than the prompt\nfix: run the subprocess from a temp cwd (mktemp -d), never the repo root; the fix belongs in every place that shells out to an agent, not just the first one that hit it"
+   },
+   {
+    "id": "idea-to-issue-through-review",
+    "text": "[idea-to-issue-through-review] Rule · An idea from outside reading becomes tracked work only through an issue: classify it, review it, file it\nsymptom: an improvement discussed in a session (from a post, a book, a review, a thread) lives only in the chat, and the next session cannot find it; or an issue filed straight from the chat states the code as remembered rather than as it is, or duplicates one already open\nfix: classify first (feature, defect, experiment, option on an existing issue, docs); search existing issues by title AND body (gh issue list --search, or --json body) before drafting; draft from the code on main with a dated 'where it stands' section; run an independent read-only fidelity review and apply its corrections; file with the label and cross-references, replacing placeholders with real numbers; experiments carry a pre-registration section; nothing stays only in the chat"
+   },
+   {
+    "id": "seed:python-canon:py_pyproject_versions",
+    "text": "[seed:python-canon:py_pyproject_versions] Rule · pyproject.toml is the one home for versions: ranges for what users install, exact pins for the tools that gate CI\nsymptom: a tool version pinned in a workflow file, or dev tools shipped as an installable extra\nfix: versions only in pyproject.toml; exact pins for gate tools; dev tools in [dependency-groups]"
+   }
+  ],
+  "target_rank_in_search": 1,
+  "candidates": 316
+ },
+ "t17": {
+  "others": [
+   {
+    "id": "seed:geospatial-enforcement-defects:g_gate_every_dir",
+    "text": "[seed:geospatial-enforcement-defects:g_gate_every_dir] Gate · Gate every executable directory; lint each import-tree from its own root\nsymptom: lint clean locally but I001/import-order fails in CI, or a dir has no gate at all\nfix: one lint step per import-tree run from that tree's root; add every shipping dir to CI trigger paths"
+   },
+   {
+    "id": "seed:geospatial-enforcement-defects:d_cwd_isort",
+    "text": "[seed:geospatial-enforcement-defects:d_cwd_isort] Defect · ruff isort is CWD-anchored: sibling imports sort differently from a subdir vs the repo root\nsymptom: ruff I001 in CI on files that pass ruff locally\nfix: lint each import tree from its own root (separate step, working-directory at that root)"
+   },
+   {
+    "id": "n_473aec369b25",
+    "text": "[n_473aec369b25] Defect · Changing the judge mid-series silently voids every cross-run comparison\nsymptom: both arms of an A/B move in the same direction between runs, and the run's grader was changed without being pre-registered\nfix: pin the grader in the pre-registration and assert it at run time: the harness should refuse, or loudly mark, a run whose judge differs from the series it will be compared against; treat any instrument change as starting a new series"
+   },
+   {
+    "id": "n_b6cc6890ba26",
+    "text": "[n_b6cc6890ba26] Defect · A subprocess that shells out to a coding agent must run in a clean room, or the repo's own hooks answer it\nsymptom: a scripted agent call returns something that answers a hook rather than the prompt\nfix: run the subprocess from a temp cwd (mktemp -d), never the repo root; the fix belongs in every place that shells out to an agent, not just the first one that hit it"
+   },
+   {
+    "id": "n_8b3345b90621",
+    "text": "[n_8b3345b90621] Defect · A hook runs in the session's current directory — anchor it to the project, or one cd breaks every prompt\nsymptom: a context or gate hook starts blocking or silently skipping after a command changed directory; restarting the session fixes it\nfix: cd to $CLAUDE_PROJECT_DIR at the top of every hook; when a hook blocks, print the tool's own reason and the directory it ran from rather than a guessed one; and in agent sessions run directory changes inside a subshell"
+   },
+   {
+    "id": "n_57cc4b427f05",
+    "text": "[n_57cc4b427f05] Rule · Audits read the repo, not the working tree — a scan of dirty files answers a question main would answer differently\nsymptom: a gate/audit passes locally but fails in CI (or vice versa), or an uncommitted edit changes an audit verdict\nfix: iterate git ls-files, not the directory tree; if working-tree scanning is genuinely wanted (pre-commit), say so explicitly and separately"
+   },
+   {
+    "id": "n_8a6e1abce5cc",
+    "text": "[n_8a6e1abce5cc] Defect · A --dry-run test cannot reach code that runs after the dry-run returns\nsymptom: a feature's tests all pass while a code path in the same feature crashes, and every test exercises it through an early-exit flag\nfix: when a feature emits output at more than one point, cover each point; a flag that short-circuits the run makes every assertion after it structurally unreachable, and the suite gives no sign of it"
+   },
+   {
+    "id": "n_aa3e45a2ecd6",
+    "text": "[n_aa3e45a2ecd6] Rule · Provenance references rot precisely because nothing reads them — validate them at startup\nsymptom: an identifier stored as provenance that no code path dereferences\nfix: resolve every such reference at startup and refuse to run on a miss; a field nothing reads is a field nothing checks"
+   },
+   {
+    "id": "n_ce6a27cc432f",
+    "text": "[n_ce6a27cc432f] Defect · A resolver that falls back to a default location turns a missing setup into a successful write nobody reads\nsymptom: a write command run before setup, or in the wrong directory, exits 0, and the data never appears where every reader looks\nfix: make the resolver refuse when nothing names the target (one exception the entry point turns into 'could not run'), instead of guarding commands one at a time; test that every command exits 2, prints nothing to stdout, and leaves no file behind"
+   }
+  ],
+  "target_rank_in_search": 1,
+  "candidates": 306
+ },
+ "t18": {
+  "others": [
+   {
+    "id": "n_8b3345b90621",
+    "text": "[n_8b3345b90621] Defect · A hook runs in the session's current directory — anchor it to the project, or one cd breaks every prompt\nsymptom: a context or gate hook starts blocking or silently skipping after a command changed directory; restarting the session fixes it\nfix: cd to $CLAUDE_PROJECT_DIR at the top of every hook; when a hook blocks, print the tool's own reason and the directory it ran from rather than a guessed one; and in agent sessions run directory changes inside a subshell"
+   },
+   {
+    "id": "n_8519bf0f71c6",
+    "text": "[n_8519bf0f71c6] Gate · The encoding loop's write side needs a mechanical catch — a session-end hook that asks 'what did we learn?'\nsymptom: sessions end with fixed code but no recorded lesson; the same finding resurfaces in a later review\nfix: install stop-okl-encode.sh (okl init or okl scaffold) and register it under hooks.Stop"
+   },
+   {
+    "id": "n_5db37b759b1e",
+    "text": "[n_5db37b759b1e] Defect · Removing a step because you read the code is assert-from-memory — the reviewer caught it in a shipped workflow\nsymptom: a step or safeguard deleted on the strength of 'the code already does this', with no test asserting it\nfix: write the test that makes the claim executable BEFORE deleting the thing that compensated for it; prove it by breaking the behaviour and watching the test go red"
+   },
+   {
+    "id": "n_5ddb0776a863",
+    "text": "[n_5ddb0776a863] Defect · A CI gate that reads gitignored state checks nothing in CI, and passes\nsymptom: a gate is green on every PR and never red, and the data it inspects lives in a file the repository ignores\nfix: make the gate count what it inspected and treat zero as 'did not run' (its own exit code), never as clean; then decide explicitly how CI gets the data, rather than letting its absence read as success. The same holds for any report or summary line that states a clean result: carry the inspected count beside it and say 'unknown' at zero (okl recap --report printed 'every lesson is proven' with drift having checked nothing, caught in review on okl #281, 2026-10-24)"
+   },
+   {
+    "id": "n_428707b5e596",
+    "text": "[n_428707b5e596] Defect · A hook that fires is not a hook that's heard — PreToolUse stdout never reaches the model, so the 'enforced read' was silently unread\nsymptom: a context-injecting hook logs as fired, its output is correct, and the agent's behavior is unchanged\nfix: deliver briefings via UserPromptSubmit (stdout -> context, stdin carries the real prompt as the task, exit 2 fails closed); keep an E2E behavioral test with a bare control repo. Plain PreToolUse stdout still never reaches the model; PreToolUse JSON additionalContext now does, so tool-time context is possible (see [pretooluse-additionalcontext]) and needs the same E2E test before anyone relies on it"
+   },
+   {
+    "id": "n_967ef9825472",
+    "text": "[n_967ef9825472] Rule · Anything written into someone else's repo is idempotent and non-clobbering; anything derived migrates on open\nsymptom: a schema/index change with no migration path, or an installer that overwrites a file it did not write\nfix: detect the old shape on open and rebuild from the canonical table; write only when absent unless --force, and test the second run"
+   },
+   {
+    "id": "n_02cc84da158d",
+    "text": "[n_02cc84da158d] Defect · OKL_DATABASE_URL was honoured by the store and ignored by every CLI command\nsymptom: a documented storage env var works in one entry point and is silently overridden in another; writes land somewhere other than where the operator pointed them\nfix: resolve the storage target in ONE place that every entry point calls; if a component deliberately ignores the variable, refuse loudly rather than silently substituting a default"
+   },
+   {
+    "id": "n_c95bdc056620",
+    "text": "[n_c95bdc056620] Defect · A rename sweeps the thing renamed, not the checks that test for the old name — capability checks keyed on a name break silently\nsymptom: after renaming a package, service, or identifier, a conditional that greps for the old name stops matching and takes its fallback branch without erroring\nfix: grep the old name to zero across CI, scripts, and docs as part of the rename; key capability checks on structure (a path that must exist) rather than on a name that can change"
+   },
+   {
+    "id": "n_e7988ff536fb",
+    "text": "[n_e7988ff536fb] Rule · Exit codes are this CLI's public API: 0 clean, 1 findings, 2 refused\nsymptom: a new command, or a new error path in an existing one, that returns 0 or 1 on a condition meaning 'this did not run'\nfix: return 2 and print the reason to stderr; add a test asserting the code and that stdout stayed empty"
+   }
+  ],
+  "target_rank_in_search": 3,
+  "candidates": 180
+ }
+}
