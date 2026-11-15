@@ -443,3 +443,18 @@ def test_the_end_to_end_steps_are_the_ones_its_receipt_ran():
     e2e = _e2e_module()
     receipt = json.loads((REPO / "evals" / "results" / "review-e2e-20261111-1543.json").read_text())
     assert receipt["instrument"] == e2e.INSTRUMENT
+
+
+def test_the_list_position_note_quotes_its_receipt():
+    """§4ax's note on the right lesson's place: every figure read from its receipt, made from committed code."""
+    receipt = json.loads((REPO / "evals" / "results" / "list-position-20261115-0542.json").read_text())
+    report = (REPO / "evals" / "REPORT.md").read_text()
+    sec = report.split("## 4ax.", 1)[1].split("\n## 4ay.", 1)[0]
+    assert "list-position-20261115-0542.json" in sec
+    assert receipt["sessions"] == 75 and "75 list sessions" in sec
+    assert (receipt["first"]["passed"], receipt["first"]["of"]) == (1, 9) and "passed 1 of 9" in sec
+    assert (receipt["second_to_tenth"]["passed"], receipt["second_to_tenth"]["of"]) == (9, 66) and "9 of 66" in sec
+    assert receipt["by_task"]["198"]["places_passed"][0] == 2 and max(receipt["by_task"]["198"]["places_passed"]) == 10
+    t309 = receipt["by_task"]["309"]
+    assert t309["passed"] == 0 and t309["places_failed"].count(1) == 6 and "failed all 6 times it came first" in sec
+    assert receipt["okl_commit"] == receipt["okl_commit_at_start"] and not receipt["okl_commit"].endswith("+dirty")

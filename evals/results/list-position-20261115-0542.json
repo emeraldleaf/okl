@@ -1,0 +1,182 @@
+{
+ "what": "exploratory: the right lesson's place in a list of ten, from \u00a74ax's and \u00a74ay's receipts",
+ "at": "2026-11-15T05:42Z",
+ "sources": {
+  "4ax": "replay-list-20261111-0249.json",
+  "4ay": "replay-one-20261111-1355.json"
+ },
+ "places_recorded": 50,
+ "places_recovered": 25,
+ "sessions": 75,
+ "by_place": {
+  "1": {
+   "passed": 1,
+   "of": 9
+  },
+  "2": {
+   "passed": 3,
+   "of": 9
+  },
+  "3": {
+   "passed": 0,
+   "of": 9
+  },
+  "4": {
+   "passed": 0,
+   "of": 12
+  },
+  "5": {
+   "passed": 0,
+   "of": 6
+  },
+  "6": {
+   "passed": 2,
+   "of": 12
+  },
+  "7": {
+   "passed": 0,
+   "of": 9
+  },
+  "8": {
+   "passed": 2,
+   "of": 3
+  },
+  "10": {
+   "passed": 2,
+   "of": 6
+  }
+ },
+ "first": {
+  "passed": 1,
+  "of": 9
+ },
+ "second_to_tenth": {
+  "passed": 9,
+  "of": 66
+ },
+ "top_three": {
+  "passed": 4,
+  "of": 27
+ },
+ "fourth_to_tenth": {
+  "passed": 6,
+  "of": 48
+ },
+ "by_task": {
+  "115": {
+   "passed": 0,
+   "of": 15,
+   "places_passed": [],
+   "places_failed": [
+    2,
+    2,
+    2,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    5,
+    5,
+    5,
+    10,
+    10,
+    10
+   ]
+  },
+  "168": {
+   "passed": 1,
+   "of": 15,
+   "places_passed": [
+    1
+   ],
+   "places_failed": [
+    1,
+    1,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    6,
+    6,
+    6,
+    7,
+    7,
+    7
+   ]
+  },
+  "196": {
+   "passed": 0,
+   "of": 15,
+   "places_passed": [],
+   "places_failed": [
+    3,
+    3,
+    3,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    6,
+    6,
+    6,
+    7,
+    7,
+    7
+   ]
+  },
+  "198": {
+   "passed": 9,
+   "of": 15,
+   "places_passed": [
+    2,
+    2,
+    2,
+    6,
+    6,
+    8,
+    8,
+    10,
+    10
+   ],
+   "places_failed": [
+    6,
+    6,
+    6,
+    6,
+    8,
+    10
+   ]
+  },
+  "309": {
+   "passed": 0,
+   "of": 15,
+   "places_passed": [],
+   "places_failed": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    2,
+    2,
+    2,
+    5,
+    5,
+    5,
+    7,
+    7,
+    7
+   ]
+  }
+ },
+ "script_sha256": "844bc2146bb8a7f692592e6d8bb4bb14395143c7297850404100ac8e52400c70",
+ "okl_commit_at_start": "fd80b78",
+ "okl_commit": "fd80b78"
+}

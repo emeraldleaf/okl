@@ -6101,6 +6101,9 @@ The reading points at handing lessons over one at a time, once the code exists (
 works when the agent is also given lessons that do not apply is not tested here: every arm with one
 lesson had the right one.
 
+
+*Note, 2026-11-15, exploratory:* does the right lesson's place in the list matter? Across this section's and §4ay's 75 list sessions it did not: first in the list it passed 1 of 9, second to tenth 9 of 66. The task decided, not the place: #198's lesson passed from places 2 to 10, and #309's failed all 6 times it came first (`evals/list_position.py`, receipt `list-position-20261115-0542.json`; §4ay's places recovered from the seeded function both sections used). So ranking the right lesson first does not rescue a list.
+
 ## 4ay. PRE-REGISTERED, A PILOT: the same ten lessons, asked about one at a time (2026-11-11)
 
 Written before any session in this section runs. §4ax found that a lesson which changes the code
