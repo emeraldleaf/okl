@@ -20,6 +20,20 @@ for common stacks (`dotnet`, `geospatial`, `python-rag`, `react`). Stack-specifi
 blanks are marked `<<FILL>>`; after scaffolding, `grep -rn '<<FILL' .` lists every
 one to complete.
 
+The kit's scripts read these environment variables, each optional:
+
+| Variable | Read by | What it sets |
+|---|---|---|
+| `CANON_WARN`, `CANON_FAIL` | `gates/check-canon-size.sh` | the line counts above which `CLAUDE.md` warns and fails: 200 and 300 unless set |
+| `OKL_DIAGRAM_SRC_EXT`, `OKL_DIAGRAM_OUT_EXT` | `gates/check-diagram-pairs.sh` | the extensions of a diagram's source and its render: `excalidraw` and `svg` unless set |
+| `REVIEW_CMD` | `ci/review-agent.sh` | the reviewer: any CLI that reads a prompt on stdin. Unset, the review is skipped ([COSTS-AND-KNOBS.md](COSTS-AND-KNOBS.md) has what it costs) |
+| `REVIEW_BASE_REF` | `ci/review-agent.sh` | what the diff is taken against: `origin/main` unless set. The kit's workflow passes the pull request's base |
+| `AGENT_FILE` | `ci/review-agent.sh` | the reviewer's instructions. Unset, the first `architecture-reviewer.md` within three directories of the root |
+| `REVIEW_REPO_DIR` | `ci/review-agent.sh` | the checkout, so a reviewer that can read files is told where it is. With `GIT_DIR` set as well, it is also told that git already points there |
+| `REVIEW_PR_TITLE`, `REVIEW_PR_BODY` | `ci/review-agent.sh` | what the change says it does (the body's first 4,000 bytes) |
+| `REVIEW_BRIEFING_FILE` | `ci/review-agent.sh` | a file holding `okl check`'s briefing for the change (its first 20,000 bytes) |
+| `GENERATOR_MODEL`, `JUDGE_MODEL` | `evals/run_evals.py` | the models that answer and grade. The harness refuses to run when both are set and the same |
+
 It also stamps two **first-party method skills** — `encoding-loop` (turn a finding
 into a promoted, recorded lesson) and `verify-before-claiming` (evidence before you
 assert a result). The broader engineering-discipline skills (systematic debugging,

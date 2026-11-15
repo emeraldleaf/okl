@@ -345,17 +345,18 @@ def _uninstall_mcp(act: str, dry_run: bool) -> list[str]:
     if _symlinked(path) is not None:
         return [f"{path} (a symlink — the okl server entry not removed)"]
     try:
-        cfg = json.loads(path.read_text())
+        # Not `cfg`: that name holds .okl/config.json, and tests/test_docs.py reads its keys by it.
+        mcp = json.loads(path.read_text())
     except json.JSONDecodeError:
         return [f"{path} (not valid JSON — the okl server entry, if any, not removed)"]
-    servers = cfg.get("mcpServers") if isinstance(cfg, dict) else None
+    servers = mcp.get("mcpServers") if isinstance(mcp, dict) else None
     if not (isinstance(servers, dict) and "okl" in servers):
         return []
     if servers["okl"] not in (MCP_ENTRY, *LEGACY_MCP_ENTRIES):
         return [f"{path} okl server (changed from what okl wrote)"]
     del servers["okl"]
     if not dry_run:
-        path.write_text(json.dumps(cfg, indent=2) + "\n")
+        path.write_text(json.dumps(mcp, indent=2) + "\n")
     print(f"✓ {act} the okl MCP server from {path}")
     return []
 

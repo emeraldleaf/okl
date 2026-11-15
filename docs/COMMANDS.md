@@ -112,9 +112,11 @@ okl export --drift   # write okl-drift.json, the committed snapshot CI's drift g
                      #   writes it to another path (default: okl-drift.json at the project root).
 okl doctor           # names other agent-memory tools installed beside okl (claude-mem,
                      #   agentmemory, ECC, beads) and how each collides with okl's hooks,
-                     #   and whether the pre-push drift gate is installed and CI gates
-                     #   drift; with `init --owner`, asks GitHub (through gh) whether
-                     #   the owner's approval is enforced; and which org lessons this
+                     #   read from Claude Code's settings files (the user's in CLAUDE_CONFIG_DIR
+                     #   when that is set, else ~/.claude, then the project's); and whether
+                     #   the pre-push drift gate is installed and CI gates drift; with
+                     #   `init --owner`, asks GitHub (through gh) whether the owner's
+                     #   approval is enforced; and which org lessons this
                      #   repo's interests keep out of every briefing, with the default
                      #   subjects the list lacks. Writes nothing.
 okl --version        # the installed release, for a repo whose hooks run a pinned okl
@@ -252,8 +254,10 @@ okl warm start       # start the local process that keeps EmbeddingGemma (int8) 
                      #   warm extra; --wait N waits for it to load. stop, status, and serve (the
                      #   process itself, in the foreground) too; after `okl warm stop` the default
                      #   leaves it off until `okl warm start`, `index` or `serve`. About 1.6 GB from
-                     #   startup (it runs one inference before it serves). One runs at a time; its
-                     #   log is ~/.cache/okl/warm.log.
+                     #   startup (it runs one inference before it serves). One runs at a time per
+                     #   user, at the socket ~/.cache/okl/warm.sock (under XDG_CACHE_HOME when that
+                     #   is set; OKL_WARM_SOCKET names another path). Its log is the socket's path
+                     #   with .log for .sock: ~/.cache/okl/warm.log by default.
 okl warm index       # embed this store's lessons for it, one vector per phrasing; again after
                      #   lessons change (only changed ones are embedded)
 okl check --index    # append every other lesson in scope as `- [id] title`, so an agent can
