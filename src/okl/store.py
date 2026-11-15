@@ -374,8 +374,9 @@ class ReviewRun:
     `checks` is one dict per sub-agent the review started: `agent` (its id), `model` (None when
     unknown), `lessons` (the lesson ids it was given or opened), `edited`, `edited_files` (paths in
     the repository, relative), `edited_outside` (how many it edited elsewhere: a count, never a path),
-    `tests` (a fixed runner name, existing repository paths and the outcome), `tokens` and `read`
-    (whether its transcript could be read; an unread one claims no edit either way).
+    `tests` (a fixed runner name, existing repository paths and the outcome), `tokens`,
+    `cache_read_tokens` and `read` (whether its transcript could be read; an unread one claims no
+    edit either way).
     """
 
     at: int                    # epoch milliseconds, when it was logged
@@ -385,8 +386,10 @@ class ReviewRun:
     ran: bool                  # the agent ran `okl check --change`
     files_changed: int | None = None     # None: not readable from the transcript
     lessons_listed: int | None = None
-    tokens: int | None = None            # the review's, with its sub-agents'
+    tokens: int | None = None            # the work, with its sub-agents': input, output and cache creation
+    cache_read_tokens: int | None = None  # cache reads apart, which dwarf the work and cost far less
     duration_s: int | None = None
+    failed_launches: int = 0             # Agent calls that came back as an error, and started nothing
     checks: tuple[dict[str, Any], ...] = ()
 
 
@@ -530,14 +533,16 @@ class Store:
     # -- review runs (#464) ----------------------------------------------------------
     def log_review(self, session_id: str, repo: str, *, asked: bool, ran: bool,
                    files_changed: int | None = None, lessons_listed: int | None = None,
-                   tokens: int | None = None, duration_s: int | None = None,
+                   tokens: int | None = None, cache_read_tokens: int | None = None,
+                   duration_s: int | None = None, failed_launches: int = 0,
                    checks: Iterable[dict[str, Any]] = ()) -> None:
         """Write the review log row for (`session_id`, `repo`), replacing the one an earlier stop
         of the same session wrote: the transcript grows, so the last reading is the whole one."""
         self._impl.log_review(ReviewRun(
             at=_now_ms(), session_id=session_id, repo=repo, asked=asked, ran=ran,
             files_changed=files_changed, lessons_listed=lessons_listed, tokens=tokens,
-            duration_s=duration_s, checks=tuple(checks)))
+            cache_read_tokens=cache_read_tokens, duration_s=duration_s, failed_launches=failed_launches,
+            checks=tuple(checks)))
 
     def reviews(self, repo: str | None = None) -> list[ReviewRun]:
         """Every logged review run, oldest first. `repo` filters exactly; None means all."""
@@ -711,7 +716,8 @@ def _row_to_review(r: dict) -> ReviewRun:
     return ReviewRun(at=r["at"], session_id=r["session_id"], repo=r["repo"], asked=bool(r["asked"]),
                      ran=bool(r["ran"]), files_changed=r["files_changed"],
                      lessons_listed=r["lessons_listed"], tokens=r["tokens"],
-                     duration_s=r["duration_s"], checks=tuple(json.loads(r["checks"] or "[]")))
+                     cache_read_tokens=r["cache_read_tokens"], duration_s=r["duration_s"],
+                     failed_launches=r["failed_launches"] or 0, checks=tuple(json.loads(r["checks"] or "[]")))
 
 
 def _row_to_briefing(r: dict) -> Briefing:
@@ -801,7 +807,8 @@ class _SQLiteBackend(_Backend):
         c.execute("""CREATE TABLE IF NOT EXISTS review_run(
             session_id TEXT NOT NULL, repo TEXT NOT NULL, at INTEGER NOT NULL,
             asked INTEGER NOT NULL, ran INTEGER NOT NULL, files_changed INTEGER,
-            lessons_listed INTEGER, tokens INTEGER, duration_s INTEGER,
+            lessons_listed INTEGER, tokens INTEGER, cache_read_tokens INTEGER, duration_s INTEGER,
+            failed_launches INTEGER NOT NULL DEFAULT 0,
             checks TEXT NOT NULL, PRIMARY KEY (session_id, repo))""")
         # One vector per record per embedding model (#258); derived from the node table
         # by `okl embed`, so a store from before it simply gains the empty table.
@@ -1042,15 +1049,17 @@ class _SQLiteBackend(_Backend):
         with self._lock:
             self.conn.execute(
                 "INSERT OR REPLACE INTO review_run(session_id, repo, at, asked, ran, files_changed, "
-                "lessons_listed, tokens, duration_s, checks) VALUES(?,?,?,?,?,?,?,?,?,?)",
+                "lessons_listed, tokens, cache_read_tokens, duration_s, failed_launches, checks) "
+                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
                 (run.session_id, run.repo, run.at, int(run.asked), int(run.ran), run.files_changed,
-                 run.lessons_listed, run.tokens, run.duration_s, json.dumps(list(run.checks))))
+                 run.lessons_listed, run.tokens, run.cache_read_tokens, run.duration_s, run.failed_launches,
+                 json.dumps(list(run.checks))))
             self.conn.commit()
 
     def reviews(self, repo: str | None) -> list[ReviewRun]:
         with self._lock:
             sql = ("SELECT session_id, repo, at, asked, ran, files_changed, lessons_listed, tokens, "
-                   "duration_s, checks FROM review_run")
+                   "cache_read_tokens, duration_s, failed_launches, checks FROM review_run")
             # Ties break on the key, which both backends hold: a replaced row gets a new rowid on SQLite
             # and keeps its id on Postgres, so neither says which came first.
             rows = (self.conn.execute(sql + " WHERE repo=? ORDER BY at, repo, session_id", (repo,))
@@ -1145,7 +1154,8 @@ class _PostgresBackend(_Backend):
             cur.execute("""CREATE TABLE IF NOT EXISTS review_run(
                 session_id TEXT NOT NULL, repo TEXT NOT NULL, at BIGINT NOT NULL,
                 asked BOOLEAN NOT NULL, ran BOOLEAN NOT NULL, files_changed BIGINT,
-                lessons_listed BIGINT, tokens BIGINT, duration_s BIGINT, checks TEXT NOT NULL,
+                lessons_listed BIGINT, tokens BIGINT, cache_read_tokens BIGINT, duration_s BIGINT,
+                failed_launches BIGINT NOT NULL DEFAULT 0, checks TEXT NOT NULL,
                 PRIMARY KEY (session_id, repo))""")
             cur.execute("""CREATE TABLE IF NOT EXISTS embedding(
                 node_id TEXT NOT NULL, model TEXT NOT NULL, text_hash TEXT NOT NULL,
@@ -1301,17 +1311,20 @@ class _PostgresBackend(_Backend):
     def log_review(self, run: ReviewRun) -> None:
         with self.conn.cursor() as cur:
             cur.execute("INSERT INTO review_run(session_id, repo, at, asked, ran, files_changed, "
-                        "lessons_listed, tokens, duration_s, checks) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) "
+                        "lessons_listed, tokens, cache_read_tokens, duration_s, failed_launches, checks) "
+                        "VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) "
                         "ON CONFLICT(session_id, repo) DO UPDATE SET at=EXCLUDED.at, "
                         "asked=EXCLUDED.asked, ran=EXCLUDED.ran, files_changed=EXCLUDED.files_changed, "
                         "lessons_listed=EXCLUDED.lessons_listed, tokens=EXCLUDED.tokens, "
-                        "duration_s=EXCLUDED.duration_s, checks=EXCLUDED.checks",
+                        "cache_read_tokens=EXCLUDED.cache_read_tokens, duration_s=EXCLUDED.duration_s, "
+                        "failed_launches=EXCLUDED.failed_launches, checks=EXCLUDED.checks",
                         (run.session_id, run.repo, run.at, run.asked, run.ran, run.files_changed,
-                         run.lessons_listed, run.tokens, run.duration_s, json.dumps(list(run.checks))))
+                         run.lessons_listed, run.tokens, run.cache_read_tokens, run.duration_s,
+                         run.failed_launches, json.dumps(list(run.checks))))
 
     def reviews(self, repo: str | None) -> list[ReviewRun]:
         sql = ("SELECT session_id, repo, at, asked, ran, files_changed, lessons_listed, tokens, "
-               "duration_s, checks FROM review_run")
+               "cache_read_tokens, duration_s, failed_launches, checks FROM review_run")
         # COLLATE "C": bytes, as SQLite orders text, not the database's locale, which puts "a" and "B"
         # the other way about
         order = ' ORDER BY at, repo COLLATE "C", session_id COLLATE "C"'

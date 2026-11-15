@@ -71,7 +71,7 @@ def test_with_three_notes_the_last_ones_review_is_the_row(tmp_path):
 
     assert (r.asked, r.ran) == (True, True)
     assert [c["agent"] for c in r.checks] == ["aaa", "bbb"]
-    assert (r.tokens, r.duration_s) == (172, 190)
+    assert (r.tokens, r.duration_s) == (111, 190)
 
 
 def test_three_notes_the_last_skipped_and_an_earlier_one_run_is_asked_and_not_run(tmp_path):
@@ -104,7 +104,32 @@ def test_a_run_before_any_note_keeps_the_rule_it_had(tmp_path):
 
     r = reviewlog.read_review(t)
 
-    assert (r.asked, r.ran, r.tokens, r.duration_s) == (False, True, 12, 1)
+    assert (r.asked, r.ran, r.tokens, r.duration_s) == (False, True, 9, 1)
+
+
+def test_a_prompt_that_mentions_a_tool_result_still_skips_the_request(tmp_path):
+    """In a transcript of the older shape a user line is a prompt unless it is a result, which only the
+    parsed line says. A byte test for the words would have dropped this person's question unread, and the
+    run after it would have been logged as the note's review."""
+    t = write(tmp_path, [user(0, "fix it"), feedback(100),
+                         user(200, 'what is a "tool_result" in a transcript?'), *_run(300)])
+
+    r = reviewlog.read_review(t)
+
+    assert (r.asked, r.ran) == (True, False)
+
+
+def test_a_prompt_that_mentions_a_tool_result_ends_an_open_window(tmp_path):
+    """And one typed inside the review ends it, the later work not counted."""
+    root = repo_root(tmp_path)
+    tail = [turn(300, "m4", say("done"), usage=(5, 5, 5, 5)),
+            user(400, 'why did the "tool_result" come back empty?'),
+            turn(410, "m5", call("tu-late", "Agent", prompt="more"), usage=(5000, 0, 0, 0))]
+
+    r = reviewlog.read_review(two_agents(tmp_path, root, tail=tail, older=True), repo_dir=str(root))
+
+    assert [c["agent"] for c in r.checks] == ["aaa", "bbb"]
+    assert r.tokens == 111
 
 
 # --- who typed ------------------------------------------------------------------------------------------
@@ -166,8 +191,8 @@ def test_every_shape_a_completion_arrives_in_releases_the_subagent(tmp_path, sha
     r = reviewlog.read_review(_released_by(tmp_path, SHAPES[shape]()), known_ids={"les-a", "les-z"})
 
     assert [c["agent"] for c in r.checks] == ["aaa"]
-    # the review command (100), a launch, a wait and the last message (4 each), the sub-agent's one message (4)
-    assert r.tokens == 100 + 3 * 4 + 4 and r.duration_s == 300 - 110
+    # the review command (60), a launch, a wait and the last message (3 each), the sub-agent's one message (3)
+    assert r.tokens == 60 + 3 * 3 + 3 and r.duration_s == 300 - 110
 
 
 @pytest.mark.parametrize("report", [
@@ -225,8 +250,8 @@ def test_one_finished_as_a_queued_command_mid_turn_and_one_as_a_user_line(tmp_pa
 
     assert [(c["agent"], c["lessons"], c["edited"]) for c in r.checks] == [
         ("aaa", ["les-a"], True), ("bbb", ["les-b"], True)]
-    # the review command (100), two launches and three more messages (4 each), each sub-agent's two (4 each)
-    assert r.tokens == 100 + 5 * 4 + 2 * 2 * 4
+    # the review command (60), two launches and three more messages (3 each), each sub-agent's two (3 each)
+    assert r.tokens == 60 + 5 * 3 + 2 * 2 * 3
     assert r.duration_s == 260 - 110
 
 

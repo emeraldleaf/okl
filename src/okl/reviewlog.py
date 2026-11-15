@@ -22,8 +22,8 @@ A background sub-agent is pending from its Agent call until a notification repor
 whichever of the shapes Claude Code writes one in (see `_reported`). Tokens, time and sub-agents are
 counted inside the window, and a sub-agent's own lines up to its end: a session that goes on to other
 work after its review must not have that work counted as the review's. An Agent call that came back
-as an error started no sub-agent: it is no check, and `failed_launches` counts it; the count is not
-kept in the row, which has no column for it.
+as an error started no sub-agent: it is no check, and `failed_launches` counts it. Tokens are the
+work (input, output, cache creation) and cache reads are kept apart, in the row and in each check.
 
 Claude Code 2.1.302 also writes `api-request-blob` lines that repeat an assistant message's tool
 calls after their results. Only assistant and user lines are read for calls, and a call counts once.
@@ -83,9 +83,10 @@ class ReviewReading:
     ran: bool = False                  # the agent ran `okl check --change` itself
     files_changed: int | None = None   # from the review's own output, when readable
     lessons_listed: int | None = None
-    tokens: int | None = None          # the review's, with its sub-agents'
+    tokens: int | None = None          # the work: input, output and cache creation, with its sub-agents'
+    cache_read_tokens: int | None = None   # cache reads, apart: the context a call re-reads, at a far lower price
     duration_s: int | None = None
-    failed_launches: int = 0           # Agent calls that came back as an error: no check; not kept in the row
+    failed_launches: int = 0           # Agent calls that came back as an error: no check
     checks: list[dict[str, Any]] = field(default_factory=list)
 
     @property
@@ -153,11 +154,14 @@ class _Tally:
 
     Claude Code writes one line per content block of an assistant message, each carrying the
     message's usage, so a message is counted once, by its id, at the largest figure logged for it.
+    The work (input, output and cache creation) and the cache reads are kept apart: a session's
+    whole context is read from the cache on every call, so the reads dwarf the work and cost far less.
     """
 
     def __init__(self) -> None:
-        self._by_id: dict[str, int] = {}
-        self._anonymous = 0
+        self._work: dict[str, int] = {}
+        self._cache: dict[str, int] = {}
+        self._anonymous = [0, 0]
         self.seen = False
         self.last: float | None = None
 
@@ -170,17 +174,23 @@ class _Tally:
         if d.get("type") != "assistant" or not isinstance(usage, dict):
             return
         self.seen = True
-        total = sum(_num(usage.get(k)) for k in ("input_tokens", "output_tokens",
-                                                 "cache_creation_input_tokens", "cache_read_input_tokens"))
+        work = sum(_num(usage.get(k)) for k in ("input_tokens", "output_tokens", "cache_creation_input_tokens"))
+        cache = _num(usage.get("cache_read_input_tokens"))
         mid = m.get("id")
         if isinstance(mid, str) and mid:
-            self._by_id[mid] = max(self._by_id.get(mid, 0), total)
+            self._work[mid] = max(self._work.get(mid, 0), work)
+            self._cache[mid] = max(self._cache.get(mid, 0), cache)
         else:
-            self._anonymous += total
+            self._anonymous[0] += work
+            self._anonymous[1] += cache
 
     @property
     def tokens(self) -> int:
-        return sum(self._by_id.values()) + self._anonymous
+        return sum(self._work.values()) + self._anonymous[0]
+
+    @property
+    def cache_read(self) -> int:
+        return sum(self._cache.values()) + self._anonymous[1]
 
 
 # --- the sub-agents ----------------------------------------------------------------------------------
@@ -257,14 +267,17 @@ class _AgentScan:
                               for r, t in self._runs.values()]
         return {"lessons": self.lessons, "edited_files": sorted(self.inside)[:MAX_FILES],
                 "edited_outside": len(self.outside), "edited": bool(self.inside),
-                "tests": tests[:MAX_TESTS], "tokens": self.tally.tokens, "model": self.model,
+                "tests": tests[:MAX_TESTS], "tokens": self.tally.tokens, "cache_read_tokens": self.tally.cache_read,
+                "model": self.model,
                 "last": self.tally.last}
 
 
 def _read_agent(path: Path, root: str | None, until: float | None) -> dict[str, Any] | None:
     """One sub-agent's transcript read, up to `until` (the end of the review's window, when it ended);
     None when the file cannot be opened. A sub-agent the review started and later resumed for other
-    work has that work after `until`, and it is not the review's."""
+    work has that work after `until`, and it is not the review's. There is no lower bound on its lines:
+    an Agent or Task call always starts a fresh sub-agent, and a resume goes through SendMessage, which
+    the window never counts as a check."""
     scan = _AgentScan(root)
     try:
         with path.open("rb") as f:
@@ -436,7 +449,9 @@ class _Main:
         """Whether a line could be a prompt a person typed, by two byte tests that need no parse."""
         if any(p in line for p in _HUMAN_KIND):
             return True
-        return not self.origin_era and any(p in line for p in _USER_TYPE) and b"tool_result" not in line
+        # No test for a tool result here: a prompt that mentions one would be skipped, and the parsed
+        # line says which user lines are results (`_has_tool_result`).
+        return not self.origin_era and any(p in line for p in _USER_TYPE)
 
     def _worth_parsing(self, line: bytes, has_note: bool) -> bool:
         if has_note:
@@ -571,14 +586,14 @@ def _read(path: Path, reading: ReviewReading, repo_dir: str | None,
         return reading
     reading.files_changed, reading.lessons_listed = main.files, main.listed
     reading.failed_launches = main.failed
-    tokens, seen_tokens, last = main.tally.tokens, main.tally.seen, main.tally.last
+    tokens, cache, seen_tokens, last = main.tally.tokens, main.tally.cache_read, main.tally.seen, main.tally.last
     for check, read in _checks(main, path.parent / path.stem / "subagents", repo_dir, known_ids):
         reading.checks.append(check)
         if read:
-            tokens, seen_tokens = tokens + int(check["tokens"]), True
+            tokens, cache, seen_tokens = tokens + int(check["tokens"]), cache + int(check["cache_read_tokens"]), True
             if read["last"] is not None:
                 last = read["last"] if last is None else max(last, read["last"])
-    reading.tokens = tokens if seen_tokens else None
+    reading.tokens, reading.cache_read_tokens = (tokens, cache) if seen_tokens else (None, None)
     if main.start is not None and last is not None:
         reading.duration_s = max(0, round(last - main.start))
     return reading
@@ -622,5 +637,6 @@ def _check(sub_dir: Path, agent_id: Any, meta: dict[str, Any], call: dict[str, A
         "edited_outside": read["edited_outside"] if read else 0,
         "tests": read["tests"] if read else [],
         "tokens": read["tokens"] if read else None,
+        "cache_read_tokens": read["cache_read_tokens"] if read else None,
     }
     return check, read

@@ -59,10 +59,11 @@ def test_a_review_with_two_subagents_one_that_edits_and_one_that_does_not(tmp_pa
     assert a["tests"] == [{"runner": "pytest", "targets": ["tests/test_x.py"], "outcome": "passed"}]
     assert (b["agent"], b["model"], b["lessons"], b["edited"], b["edited_files"], b["tests"]) == (
         "bbb", "claude-sonnet-4-6", ["les-b"], False, [], [])
-    # tokens: the main transcript's messages from the first call on (100 + 10 + 10 + 20, the two-block
-    # message once, the blob lines none) and every sub-agent's (4 messages of 4, 2 of 8); the time
-    # runs from the first call to the last event
-    assert r.tokens == 140 + 16 + 16
+    # tokens, the work (input + output + cache creation) and the cache reads apart: the main transcript's
+    # messages from the first call on (60, 6, 6 and 15 of work; 40, 4, 4 and 5 of cache reads; the
+    # two-block message once, the blob lines none) and every sub-agent's (4 messages of 3 and 1, 2 of 6 and 2)
+    assert (r.tokens, r.cache_read_tokens) == (87 + 12 + 12, 53 + 4 + 4)
+    assert (a["tokens"], a["cache_read_tokens"], b["tokens"], b["cache_read_tokens"]) == (12, 4, 12, 4)
     assert r.duration_s == 300 - 110
 
 
@@ -106,7 +107,7 @@ def test_a_review_with_no_subagents(tmp_path):
     r = reviewlog.read_review(t)
 
     assert (r.asked, r.ran, r.checks) == (True, True, [])
-    assert (r.files_changed, r.lessons_listed, r.tokens, r.duration_s) == (4, 12, 4 + 8, 70)
+    assert (r.files_changed, r.lessons_listed, r.tokens, r.duration_s) == (4, 12, 3 + 6, 70)
 
 
 def test_the_note_was_shown_but_no_review_ran(tmp_path):
@@ -231,7 +232,7 @@ def test_the_review_starts_at_the_executed_command_not_at_an_earlier_mention(tmp
 
     r = reviewlog.read_review(t)
 
-    assert (r.ran, r.tokens, r.duration_s) == (True, 4 + 8, 60)
+    assert (r.ran, r.tokens, r.duration_s) == (True, 3 + 6, 60)
 
 
 # --- the review's window -------------------------------------------------------------------------
@@ -261,7 +262,7 @@ def test_a_later_unrelated_turn_is_not_the_review(tmp_path, prompt):
     base = _read(tmp_path / "again")
 
     assert [c["agent"] for c in r.checks] == ["aaa", "bbb"]
-    assert (r.tokens, r.duration_s) == (base.tokens, base.duration_s) == (172, 190)
+    assert (r.tokens, r.duration_s) == (base.tokens, base.duration_s) == (111, 190)
     assert all("les-b" not in c["lessons"] or c["agent"] == "bbb" for c in r.checks)
     assert [c["edited"] for c in r.checks] == [True, False]
 
@@ -278,7 +279,7 @@ def test_a_stop_hook_summary_ends_the_review_once_every_subagent_has_reported(tm
     r = reviewlog.read_review(two_agents(tmp_path, root, tail=tail), repo_dir=str(root))
 
     assert [c["agent"] for c in r.checks] == ["aaa", "bbb"]
-    assert (r.tokens, r.duration_s) == (172, 190)
+    assert (r.tokens, r.duration_s) == (111, 190)
 
 
 def test_a_stop_while_a_subagent_is_still_running_does_not_end_the_review(tmp_path):
@@ -309,9 +310,10 @@ def test_a_review_that_launches_stops_and_resumes_per_lesson_is_logged_whole(tmp
     assert [(c["agent"], c["lessons"], c["edited"], c["edited_files"]) for c in r.checks] == [
         ("ag1", ["les-1"], True, ["src/f1.py"]), ("ag2", ["les-2"], True, ["src/f2.py"]),
         ("ag3", ["les-3"], True, ["src/f3.py"])]
-    # the tokens: the review command (100), three launches and three waits (4 each), the last message
-    # (4), and each sub-agent's two messages (4 each); the late Agent call's 9000 is not there
-    assert r.tokens == 100 + 6 * 4 + 4 + 3 * 8
+    # the work: the review command (60), three launches and three waits (3 each), the last message (3),
+    # and each sub-agent's two messages (3 each); the late Agent call's 9000 is not there. Cache reads:
+    # 40, 6 more for the launches and waits, 1, and 2 for each sub-agent
+    assert (r.tokens, r.cache_read_tokens) == (60 + 6 * 3 + 3 + 3 * 6, 40 + 6 + 1 + 3 * 2)
     assert r.duration_s == 420 - 110      # from the review command to the last message
 
 
@@ -329,7 +331,7 @@ def test_an_unasked_run_before_the_note_is_not_the_asked_review(tmp_path):
 
     assert (r.asked, r.ran) == (True, True)
     assert [c["agent"] for c in r.checks] == ["aaa", "bbb"]
-    assert (r.tokens, r.duration_s) == (172, 190)
+    assert (r.tokens, r.duration_s) == (111, 190)
 
 
 def test_a_note_with_no_review_after_it_is_asked_and_not_run(tmp_path):
@@ -366,7 +368,7 @@ def test_a_subagent_resumed_after_the_window_ends_is_read_only_up_to_the_end(tmp
 
     a, _b = r.checks
     assert (a["lessons"], a["edited_files"], len(a["tests"])) == (["les-a"], ["src/x.py"], 1)
-    assert (r.tokens, r.duration_s) == (172, 190)
+    assert (r.tokens, r.duration_s) == (111, 190)
 
 
 def test_who_is_a_person(tmp_path):

@@ -109,6 +109,10 @@ def main() -> int:
             cases.append({"label": "synthetic worst case", "messages": made, **case})
         for rank, t in enumerate(sorted((p.resolve() for p in args.transcripts), key=lambda p: -p.stat().st_size), 1):
             cases.append({"label": f"real transcript {rank} by size", **time_one(t, scratch, args.runs)})
+    failed = [str(c["label"]) for c in cases if any(c["exit_codes"])]
+    if failed:
+        print(f"a run exited non-zero, so there is no receipt: {', '.join(failed)}", file=sys.stderr)
+        return 1
     real = [c for c in cases if str(c["label"]).startswith("real")]
     receipt: dict[str, object] = {
         "experiment": "review log read time (#464)",

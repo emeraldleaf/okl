@@ -1751,7 +1751,7 @@ def _backend_conformance(store, label):
            "tests": [], "tokens": 7, "read": True}
     store.log_review("conf-session", "conf-repo", asked=True, ran=False)
     store.log_review("conf-session", "conf-repo", asked=True, ran=True, files_changed=2, lessons_listed=5,
-                     tokens=900, duration_s=31, checks=[one])
+                     tokens=900, cache_read_tokens=3_000_000_000, duration_s=31, failed_launches=2, checks=[one])
     store.log_review("conf-session", "other-repo", asked=False, ran=True)
     got = store.reviews("conf-repo")
     assert len(got) == 1 and (got[0].asked, got[0].ran) == (True, True), f"{label}: a logged session must be replaced"
@@ -1759,6 +1759,7 @@ def _backend_conformance(store, label):
     assert (got[0].files_changed, got[0].lessons_listed, got[0].tokens, got[0].duration_s) == (2, 5, 900, 31), \
         f"{label}: review counts"
     assert got[0].checks == (one,), f"{label}: review checks"
+    assert (got[0].cache_read_tokens, got[0].failed_launches) == (3_000_000_000, 2), f"{label}: review cache reads"
     assert [x.repo for x in store.reviews("other-repo")] == ["other-repo"], f"{label}: review repo filter"
     assert store.reviews("other-repo")[0].tokens is None, f"{label}: an unread count must read back None"
     assert len(store.reviews()) >= 2, f"{label}: reviews(None) must return every repo's rows"

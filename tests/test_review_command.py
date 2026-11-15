@@ -36,10 +36,10 @@ def test_a_session_logged_again_replaces_its_row(tmp_path):
     """One row per (session, repo): the transcript grew since the last stop, so the last reading wins."""
     s = Store(f"sqlite:///{tmp_path / 'okl.db'}")
     check = {"agent": "a", "model": "opus", "lessons": ["l1"], "edited": True, "edited_files": ["x.py"],
-             "edited_outside": 0, "tests": [], "tokens": 5, "read": True}
+             "edited_outside": 0, "tests": [], "tokens": 5, "cache_read_tokens": 50, "read": True}
     s.log_review("s1", "r", asked=True, ran=False)
     s.log_review("s1", "r", asked=True, ran=True, files_changed=3, lessons_listed=9, tokens=100,
-                 duration_s=40, checks=[check])
+                 cache_read_tokens=2_000_000, duration_s=40, failed_launches=2, checks=[check])
     s.log_review("s1", "other", asked=False, ran=True)
     s.log_review("s2", "r", asked=True, ran=False)
 
@@ -48,8 +48,10 @@ def test_a_session_logged_again_replaces_its_row(tmp_path):
     assert [(x.session_id, x.asked, x.ran) for x in mine] == [("s1", True, True), ("s2", True, False)]
     first = mine[0]
     assert (first.files_changed, first.lessons_listed, first.tokens, first.duration_s) == (3, 9, 100, 40)
+    assert (first.cache_read_tokens, first.failed_launches) == (2_000_000, 2)
     assert first.checks == (check,) and isinstance(first.asked, bool)
     assert (mine[1].files_changed, mine[1].tokens, mine[1].checks) == (None, None, ())
+    assert (mine[1].cache_read_tokens, mine[1].failed_launches) == (None, 0)
     assert len(s.reviews()) == 3 and [x.repo for x in s.reviews("other")] == ["other"]
 
 
@@ -122,6 +124,9 @@ def test_log_review_writes_the_row_and_exits_0(repo, tmp_path, capsys):
     assert [c["lessons"] for c in row.checks] == [["les-a"], ["les-b"]]
     assert row.checks[0]["edited_files"] == ["src/x.py"]       # relative to the repository okl runs in
     assert row.checks[0]["model"] == "claude-opus-5-5"
+    # the work and the cache reads apart, in the row and in each check
+    assert (row.tokens, row.cache_read_tokens) == (111, 61)
+    assert [(c["tokens"], c["cache_read_tokens"]) for c in row.checks] == [(12, 4), (12, 4)]
     # a later stop of the same session replaces the row
     assert main(["recap", "--transcript", str(t), "--log-review"]) == 0
     assert len(_rows(repo)) == 1
@@ -253,18 +258,32 @@ def test_ids_that_are_no_lesson_here_never_reach_the_row(repo, tmp_path, capsys)
     assert "hunter2" not in json.dumps(row.checks) and "another-secret" not in json.dumps(row.checks)
 
 
+def test_a_failed_launch_is_counted_in_the_row(repo, tmp_path):
+    """An Agent call that came back as an error started no sub-agent: no check, and a count in the row."""
+    bad = call("tu-bad", "Agent", prompt="p")
+    t = write(tmp_path, [*start_review(), turn(120, "m2", bad, usage=(1, 1, 1, 1)),
+                         result(121, "tu-bad", "no such agent type", error=True)])
+
+    assert main(["recap", "--transcript", str(t), "--log-review"]) == 0
+
+    (row,) = _rows(repo)
+    assert (row.failed_launches, row.checks) == (1, ())
+
+
 def _check(lessons, *, read=True, edited=False):
     return {"agent": "a", "model": "opus", "lessons": lessons, "read": read, "edited": edited,
-            "edited_files": [], "edited_outside": 0, "tests": [], "tokens": 1}
+            "edited_files": [], "edited_outside": 0, "tests": [], "tokens": 1, "cache_read_tokens": 100}
 
 
 def _fill(store):
     """Four sessions: two reviews with checks, one asked and skipped, one run without being asked."""
     store.log_review("s1", "r", asked=True, ran=True, files_changed=3, lessons_listed=10, tokens=1000,
-                     duration_s=60, checks=[_check(["les-a"], edited=True), _check(["les-b"])])
+                     cache_read_tokens=400_000, duration_s=60,
+                     checks=[_check(["les-a"], edited=True), _check(["les-b"])])
     store.log_review("s2", "r", asked=True, ran=True, files_changed=2, lessons_listed=10, tokens=3000,
-                     duration_s=120, checks=[_check(["les-a"]), _check(["les-c"], read=False),
-                                             _check([])])      # a sub-agent that was given no lesson
+                     cache_read_tokens=2_000_000, duration_s=120, failed_launches=1,
+                     checks=[_check(["les-a"]), _check(["les-c"], read=False),
+                             _check([])])      # a sub-agent that was given no lesson
     store.log_review("s3", "r", asked=True, ran=False)
     store.log_review("s4", "r", asked=False, ran=True)         # no figures could be read
     store.log_review("s5", "other", asked=True, ran=True)      # another repo's, left out
@@ -285,6 +304,8 @@ def test_the_report_counts_what_the_log_holds(repo):
     assert (r["checks"], r["checks_read"], r["checks_unread"], r["checks_acted_on"]) == (4, 3, 1, 1)
     assert r["subagents_without_lesson"] == 1
     assert r["tokens"] == {"median": 2000, "mean": 2000.0, "max": 3000}
+    assert r["cache_read_tokens"] == {"median": 1_200_000, "mean": 1_200_000.0, "max": 2_000_000}
+    assert r["failed_launches"] == 1
     assert r["duration_s"] == {"median": 90, "mean": 90.0, "max": 120}
     # most checked first, then most edited, then by id; edits count over the checks that were read
     assert [(x["id"], x["checked"], x["read"], x["edited"]) for x in r["lessons"]] == [
@@ -309,7 +330,10 @@ def test_the_report_says_acted_on_not_caught_and_claude_code_only(repo, capsys):
     assert "**Reviews run:** 3, 2 against sessions that changed files (1 where" in out
     assert "**Lessons checked per review:** median 2, mean 1.3, most 2; 1 reviews started no sub-agent." in out
     assert "**Checks:** 4 (a sub-agent given a lesson); 1 could not be read, and of the 3 that could, 1 (33%)" in out
-    assert "Tokens: median 2,000, mean 2,000, largest 3,000." in out and "Duration: median 90 s" in out
+    # the work is the cost; the reads of the context, far larger and far cheaper, are said apart
+    assert ("Tokens: median 2,000, mean 2,000, largest 3,000 (cache reads, which a call makes of the whole "
+            "context and which cost far less, not counted: median 1,200,000, largest 2,000,000).") in out
+    assert "Duration: median 90 s" in out and "1 Agent call came back as an error" in out
     assert "- [les-a] the first lesson: checked 2×, 1 of the 2 read followed by an edit" in out
     assert "caught" not in out.replace("not that it caught a break", "")     # nothing else claims a catch
 

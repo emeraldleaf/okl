@@ -341,7 +341,9 @@ def log_review(store: Store, repo: str, transcript: str | Path, repo_dir: str | 
         return reading, False
     store.log_review(reading.session, repo, asked=reading.asked, ran=reading.ran,
                      files_changed=reading.files_changed, lessons_listed=reading.lessons_listed,
-                     tokens=reading.tokens, duration_s=reading.duration_s, checks=reading.checks)
+                     tokens=reading.tokens, cache_read_tokens=reading.cache_read_tokens,
+                     duration_s=reading.duration_s, failed_launches=reading.failed_launches,
+                     checks=reading.checks)
     return reading, True
 
 
@@ -386,6 +388,8 @@ def reviews_report(store: Store, repo: str, *, since_ms: int = 0, top: int = 5) 
         "checks_acted_on": sum(1 for c in read if c.get("edited")),
         "subagents_without_lesson": sum(1 for r in ran for c in r.checks if not c.get("lessons")),
         "tokens": _spread([r.tokens for r in ran if r.tokens is not None]),
+        "cache_read_tokens": _spread([r.cache_read_tokens for r in ran if r.cache_read_tokens is not None]),
+        "failed_launches": sum(r.failed_launches for r in ran),
         "duration_s": _spread([r.duration_s for r in ran if r.duration_s is not None]),
         "lessons": [{"id": i, "title": titles.get(i, "(no longer in the store)"), **t}
                     for i, t in ranked[:top]],
@@ -432,8 +436,15 @@ def render_reviews(r: dict[str, Any]) -> str:
     if r["subagents_without_lesson"]:
         out.append(f"{r['subagents_without_lesson']} sub-agents the review started named no lesson and are "
                    "not counted as checks.")
-    out += ["", f"**Cost per review.** {_stat('Tokens', r['tokens'], '')} "
-                f"{_stat('Duration', r['duration_s'], ' s')}"]
+    tokens = _stat("Tokens", r["tokens"], "")
+    if r["cache_read_tokens"]:
+        cache = r["cache_read_tokens"]
+        tokens = (tokens.rstrip(".") + f" (cache reads, which a call makes of the whole context and which cost "
+                  f"far less, not counted: median {cache['median']:,.0f}, largest {cache['max']:,.0f}).")
+    out += ["", f"**Cost per review.** {tokens} {_stat('Duration', r['duration_s'], ' s')}"]
+    if r["failed_launches"]:
+        n = r["failed_launches"]
+        out.append(f"{n} Agent {'call' if n == 1 else 'calls'} came back as an error and started no sub-agent.")
     if r["lessons"]:
         out += ["", f"**Per lesson**, most checked first ({r['lessons_total']} lessons checked):"]
         out += [f"- [{x['id']}] {x['title']}: checked {x['checked']}×, {x['edited']} of the {x['read']} "
