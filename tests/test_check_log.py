@@ -114,7 +114,7 @@ def test_reverify_keeps_the_run_of_a_stored_check_that_now_fails(repo):
     assert rc == 1
     assert [(r.passed, r.outcome) for r in _checks()] == [(True, "exit 0"), (False, "exit 1")]
     assert _checks()[-1].seconds is not None, "reverify's run did not keep its time (#467)"
-    heads =[subprocess.run(["git", "rev-parse", ref], cwd=repo, capture_output=True,
+    heads = [subprocess.run(["git", "rev-parse", ref], cwd=repo, capture_output=True,
                             text=True).stdout.strip() for ref in ("HEAD~1", "HEAD")]
     assert [r.commit for r in _checks()] == heads
 
@@ -329,3 +329,33 @@ def test_a_service_from_before_run_times_still_keeps_the_run(remote, capsys):
     posted = [b for p, b in remote.sent if p == "/check-run"]
     assert ["seconds" in b for b in posted] == [True, False], posted
 
+
+
+@pytest.mark.parametrize(("detail", "retried"), [
+    ([{"type": "extra_forbidden", "loc": ["body", "seconds"], "msg": "Zusätzliche Eingaben nicht erlaubt"}], True),
+    ([{"type": "extra_forbidden", "loc": ["body", "surprise"], "msg": "seconds are fine, surprise is not"}], False),
+    ("seconds is not permitted", False),
+    (None, False),
+])
+def test_the_retry_without_a_time_reads_what_was_refused_not_the_words(detail, retried):
+    """The client sends a run again without its time only when the 422's structured detail
+    refused `seconds`: a translated message still retries, and a message that merely mentions
+    the word, about another field or with no structure at all, does not (#467 review)."""
+    from types import SimpleNamespace
+
+    from okl.client import OKLRejectedError
+    sent = []
+
+    def post(path, body):
+        sent.append(body)
+        if "seconds" in body:
+            # worded as _post words it, the detail inside the message
+            raise OKLRejectedError(f"OKL service rejected the request (422): {detail}", status=422, detail=detail)
+    me = SimpleNamespace(_post=post)
+    run = {"id": "les", "passed": True, "command": "true", "outcome": "exit 0"}
+    if retried:
+        Client._post_check_run(me, run, 0.4)
+    else:
+        with pytest.raises(OKLRejectedError):
+            Client._post_check_run(me, run, 0.4)
+    assert ["seconds" in b for b in sent] == ([True, False] if retried else [True])

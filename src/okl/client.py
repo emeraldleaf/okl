@@ -344,7 +344,7 @@ class Client:
                     detail = ""
             if 400 <= e.code < 500:
                 raise OKLRejectedError(f"OKL service rejected the request ({e.code}): {detail or e.reason}",
-                                       status=e.code) from e
+                                       status=e.code, detail=detail) from e
             raise OKLUnreachableError(f"OKL service error at {url}: {e.code} {detail or e.reason}") from e
         except URLError as e:
             raise OKLUnreachableError(f"OKL service unreachable at {url}: {e}") from e
@@ -595,14 +595,15 @@ class Client:
         before #467 refuses the field (its request model is closed: a 422 naming `seconds`). The
         run is the record; its time only lets `okl on-edit add --quick` offer it, so a run kept
         untimed is kept as one never timed, which --quick never approves. Any other refusal
-        stands."""
+        stands. Which field was refused is read from the 422's structured detail, never its
+        message: a reworded or translated message must not turn a kept run into a lost one."""
         if seconds is None:
             self._post("/check-run", run)
             return
         try:
             self._post("/check-run", {**run, "seconds": seconds})
         except OKLRejectedError as e:
-            if e.status != 422 or "seconds" not in str(e):
+            if e.status != 422 or not _refuses_field(e.detail, "seconds"):
                 raise
             self._post("/check-run", run)
 
@@ -791,18 +792,29 @@ def _json_reply(url: str, body: bytes) -> Any:
             f"JSON ({shown!r}); is something other than okl answering at this address?") from e
 
 
+def _refuses_field(detail: Any, field: str) -> bool:
+    """Whether a 422's structured detail, pydantic's list of errors, refused the input `field`:
+    an error whose `loc` ends with it."""
+    return isinstance(detail, list) and any(
+        isinstance(d, dict) and isinstance(d.get("loc"), list) and d["loc"][-1:] == [field] for d in detail)
+
+
 class OKLRejectedError(ValueError):
     """Raised when a shared service answered and refused the request (any 4xx, such as a
     401 for a missing token or a 400 for an unknown tag). The caller's mistake, not an
     outage; a ValueError, so the CLI's backstop still turns it into exit 2.
 
     `status` is the HTTP code, so a caller can tell a 404 from an older service that
-    lacks a route apart from a 401 it must not paper over.
+    lacks a route apart from a 401 it must not paper over. `detail` is the service's
+    structured answer (for a 422, pydantic's list of errors, each with the `loc` of the
+    input it refused), so a caller can branch on what was refused rather than on the
+    message's words.
     """
 
-    def __init__(self, message: str, status: int | None = None) -> None:
+    def __init__(self, message: str, status: int | None = None, detail: Any = None) -> None:
         super().__init__(message)
         self.status = status
+        self.detail = detail
 
 
 class OKLNotConfiguredError(ValueError):
