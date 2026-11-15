@@ -17,6 +17,18 @@ okl reverify         # re-run the stored check of every drifted lesson, and of a
                      #   (or --yes), because they come from the store; --dry-run lists only;
                      #   --untimed also re-runs, once, each lesson whose check could run on edit
                      #   and has no timed run, so `okl on-edit add --quick` can judge it
+okl retire <id> --reason "why"
+                     # retire a lesson, keeping the reason with it; nothing is deleted. With no
+                     #   other flag it was wrong: it stays briefed as AVOID, so nobody restates
+                     #   it as fact. --by <id> names the lesson that replaces it: briefings leave
+                     #   this one out and point to that one. --obsolete: its subject is gone, and
+                     #   it is no longer briefed. Not both. A resolved defect is not retired; it
+                     #   keeps briefing against its return. Drift stops checking a retired lesson,
+                     #   and one that governs files refreshes okl-drift.json as `okl verify` does.
+                     #   Exit 2, writing nothing, when it is refused, with the reason (a --by
+                     #   lesson that is missing, retired or scoped more narrowly, for one), or the
+                     #   store cannot be reached; exit 2 too when a service's answer is lost
+                     #   (MAYBE RETIRED: running it again is safe).
 okl intake pr <n>    # a PR's resolved review threads, each with the commit that resolved it (named in
                      #   a reply, or else the first commit after it to touch the file, marked a
                      #   guess), the lessons a briefing on it already shows, the encoding-loop
@@ -48,6 +60,16 @@ okl on-edit          # the approved lesson checks, which run after every edit in
                      #   changed since approved), 0 when every one passed or the file lies
                      #   outside the repo; each gets --timeout (30 s) and one edit --budget (50 s). Nothing is
                      #   stamped verified, and nothing runs until a check is approved.
+okl on-edit list     # what `okl on-edit` alone prints: the approved checks, each with the command
+                     #   it runs, marked NOT RUN when its stored check changed since it was
+                     #   approved or its lesson can no longer have one (gone, retired, another
+                     #   repo's, no stored check, or an unprintable character in its command,
+                     #   signal, title or files); then the lessons that could be added, with the
+                     #   command each would run. Exit 2, for every on-edit command, when there is
+                     #   no .okl/config.json here or above or the store cannot be read.
+okl on-edit remove <id>...
+                     # stop running these lessons' checks after an edit, then list as `list`
+                     #   does; exit 2, changing nothing, when one of them was never approved.
 okl changes          # what a change did to the files lessons name, read from git with no model:
                      #   new, deleted and renamed files, and code moved between files (5 or more
                      #   lines removed from one file and added to another, which git's rename
@@ -55,21 +77,26 @@ okl changes          # what a change did to the files lessons name, read from gi
                      #   still names a removed path; and, for each of this repo's lessons left
                      #   pointing at the wrong place, a proposed `okl update --files` (a deleted
                      #   file's lesson is yours to re-point, drop or retire). Compares the merge base
-                     #   with --base (default: the remote's default branch) to --head (default HEAD);
-                     #   --format json for an agent; writes nothing; exit 2 when git cannot read it.
+                     #   with --base (default: the remote's default branch) to --head (default HEAD),
+                     #   in the git checkout --repo-dir names (default: the current directory; the
+                     #   lessons still come from this directory's store); --format json for an
+                     #   agent; writes nothing; exit 2 when git cannot read it.
 okl review           # opt-in: a model reads each lesson that governs no files and that no check
                      #   backs (the ones the briefing marks UNCHECKED) against the repo at HEAD,
                      #   in a scratch worktree, and reports each it questions (detail wrong,
                      #   outlived or stale) with the words that no longer hold; writes nothing.
                      #   It asks before the first model call (--yes skips; unattended without
                      #   it, exit 2); --list names the lessons and calls no model; <id>... judges
-                     #   only those; --judge '<cmd>' swaps the judge (§4ai's rates are the default's). Exit 1 some
-                     #   questioned; else 2 could not run or a lesson got no answer; 0 none
-                     #   questioned. REPORT §4ai measured the default.
+                     #   only those; --judge '<cmd>' swaps the judge (§4ai's rates are the default's);
+                     #   --workers sets how many lessons are judged at once (3), and --timeout the
+                     #   seconds each may take (300). Exit 1 some questioned; else 2 could not run
+                     #   or a lesson got no answer; 0 none questioned. REPORT §4ai measured the
+                     #   default.
 okl drift --gate     # flag lessons whose governed source changed after they were last verified
                      #   (exit 1 on drift, 2 when nothing could be checked; the pre-push hook
                      #   and CI run it; lessons last checked on another branch are listed
-                     #   below the report, exit code unchanged)
+                     #   below the report, exit code unchanged). --repo-dir names the git
+                     #   checkout whose history it reads (default: the current directory).
 okl export --drift   # write okl-drift.json, the committed snapshot CI's drift gate reads
                      #   when it has no store; `okl verify` creates it for the first lesson
                      #   with --files and refreshes it after that (with no CI workflow, it
@@ -81,7 +108,8 @@ okl export --drift   # write okl-drift.json, the committed snapshot CI's drift g
                      #   cannot clear it (editing both fields can; review is the guard).
                      #   Every refresh refuses to drop a rule the committed copy holds and
                      #   this store does not (another clone's), or to write one for another
-                     #   repo, and names them; --allow-shrink writes it anyway.
+                     #   repo, and names them; --allow-shrink writes it anyway. --output (-o)
+                     #   writes it to another path (default: okl-drift.json at the project root).
 okl doctor           # names other agent-memory tools installed beside okl (claude-mem,
                      #   agentmemory, ECC, beads) and how each collides with okl's hooks,
                      #   and whether the pre-push drift gate is installed and CI gates
@@ -90,9 +118,14 @@ okl doctor           # names other agent-memory tools installed beside okl (clau
                      #   repo's interests keep out of every briefing, with the default
                      #   subjects the list lacks. Writes nothing.
 okl --version        # the installed release, for a repo whose hooks run a pinned okl
-okl coverage         # ratio of encoded-knowledge lines to code lines — a health signal
+okl coverage         # ratio of encoded-knowledge lines to code lines — a health signal.
+                     #   Code lines are those of the .py, .cs, .ts, .tsx, .js, .jsx, .go, .rs,
+                     #   .java and .rb files git tracks in --repo-dir (default: the current
+                     #   directory); --format json for a script.
 okl bootstrap        # cold-start a new repo: propose starter notes from its own
-                     #   git history + docs into a reviewable file you edit, then seed
+                     #   git history + docs into a reviewable file you edit, then seed.
+                     #   --out names the file (default okl-bootstrap.json); --repo-dir the
+                     #   checkout it reads (default: the current directory).
 okl metric           # recurrence: defect classes that came back, split by whether a
                      #   gate existed, with how many defects the number can speak for;
                      #   exposure: how many briefings okl has logged, the lessons
@@ -102,6 +135,14 @@ okl metric           # recurrence: defect classes that came back, split by wheth
                      #   code had changed since its check) and over-scope (org lessons
                      #   whose title, symptom or fix names one repository's world),
                      #   each with its denominator and the lessons it flags
+okl dedup            # pairs of lessons that may say the same thing, for a person to rule on;
+                     #   it never merges. Only lessons a briefing can show are compared: a
+                     #   superseded or obsolete one is left out, and a retracted one, briefed as
+                     #   AVOID, stays in. --threshold: the similarity, 0 to 1, a pair must reach
+                     #   (default 0.45, set to over-report); --limit: pairs to print (20). Keep
+                     #   one of a pair and retire the other with `okl retire <other> --by <kept>
+                     #   --reason "..."`. Exit 1 when it finds a pair, 0 when none, 2 when okl is
+                     #   not configured here.
 okl check --path src/orders.py
                      # every lesson whose `files` govern a file, before it is read or edited,
                      #   with its drift and proof marks, in any --format (repeatable; #94).
@@ -234,4 +275,32 @@ okl seed <pack> --strict
                      #   a record is trace-shaped, or an org record names one repository's
                      #   paths or name; without it the same findings are printed as
                      #   warnings and the import runs
+okl connect https://okl.internal --token "$OKL_TOKEN"
+                     # point this repo at a shared okl service: writes the URL as service_url,
+                     #   and with --token the token, to .okl/config.json in the current
+                     #   directory, keeping the rest of the config. The .gitignore okl writes
+                     #   in .okl/ keeps that file out of git, and on macOS and Linux a config
+                     #   that holds a token is readable by its owner only. In CI and on shared
+                     #   machines, give the token as OKL_TOKEN instead. `okl init --service <url>`
+                     #   writes the same URL, with no token. Running the service: docs/DEPLOY.md.
+okl serve            # run the shared HTTP service (needs the `service` extra); --host (default
+                     #   0.0.0.0) and --port (default 8080). With OKL_TOKEN set, every route but
+                     #   /health needs it. Without it, off loopback, serve refuses to start (exit
+                     #   2), since every route would be open; --allow-no-token, or
+                     #   OKL_ALLOW_NO_TOKEN=1, starts it anyway, for a proxy in front that
+                     #   authenticates. Exit 2 as well when FastAPI or uvicorn is missing.
+okl mcp              # serve okl's MCP tools over stdio, for any agent that speaks MCP (needs the
+                     #   `mcp` extra): okl_check, okl_search, okl_get, okl_record, okl_update and
+                     #   okl_retire, on the same store as the CLI. The agent's MCP config starts
+                     #   it; for Claude Code, `okl init` registers it in .mcp.json when the extra
+                     #   is installed. Exit 2 when the MCP SDK is missing or has no server class
+                     #   okl knows.
+okl scaffold .       # stamp the method kit into a folder (default: the current one): what
+                     #   docs/SCAFFOLD.md lists, including skills and commands under .claude/
+                     #   for Claude Code. It never overwrites a file unless --force, and lists
+                     #   the <<FILL>> slots left to complete. --repo names the repo (default: the
+                     #   folder's name); --profile <stack> adds that stack's rules to
+                     #   .claude/rules/ (repeatable); --plugin also writes
+                     #   .claude-plugin/plugin.json, a Claude Code plugin manifest; --verbose
+                     #   lists each file written.
 ```

@@ -6,8 +6,10 @@ Part of okl's documentation; the [README](../README.md) is the short version. Th
 covering both) and, when it wires Claude Code, three hook scripts plus their registration. In a
 git repository it also installs a pre-push hook that runs the drift gate (`--no-git-hook`
 skips it). `--ci` installs `.github/workflows/okl-verify.yml`, which runs the gate on every
-PR, instead of the hook. A hook an earlier `init` installed stays: `--no-git-hook` only stops
-`init` installing it, and `okl init --uninstall` removes it.
+PR, instead of the hook, and `--no-ci` leaves it out; `init` records both choices in
+`.okl/config.json`, so a later run keeps them. A hook or workflow an earlier `init` installed
+stays: `--no-git-hook` and `--no-ci` only stop `init` installing them, and
+`okl init --uninstall` removes them.
 CI has no store of its own (the local one is gitignored), so give it one: once a lesson
 governs files, commit `okl-drift.json` (`okl verify` refreshes it; `okl export --drift`
 writes it; a snapshot of the rules drift reads, no lesson bodies), or set the
@@ -122,9 +124,10 @@ settings or workflow path that is a link, or sits under one, is refused and name
 
 The Stop hook asks the agent, before it finishes a session that changed files, to run
 `okl check --change` and check the code it wrote against the lessons
-([REPORT §4at](../evals/REPORT.md)); `okl init --no-review-after-writing` turns it off, and
-`OKL_REVIEW_AFTER_WRITING=0` (or `1`) decides for one session. The cost is the list: every
-lesson in scope, one line each, about 270 bytes (roughly 60 tokens) a lesson, so about 80 KB
+([REPORT §4at](../evals/REPORT.md)); `okl init --no-review-after-writing` turns it off and
+`okl init --review-after-writing` turns it back on (`init` records the choice in
+`.okl/config.json`), and `OKL_REVIEW_AFTER_WRITING=0` (or `1`) decides for one session.
+The cost is the list: every lesson in scope, one line each, about 270 bytes (roughly 60 tokens) a lesson, so about 80 KB
 for 300 lessons, read once per session that changed something, plus the lessons the agent
 then opens with `okl show`. Nothing is cut, because in id order a cut would drop lessons at
 random. Where the agent's tool shows long output as a preview with the rest in a saved file,
