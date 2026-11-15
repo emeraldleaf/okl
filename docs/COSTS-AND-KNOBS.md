@@ -144,6 +144,22 @@ result: I judge a missed lesson to cost more than these sessions do. Turn it off
 more to you. The reasoning, its gap and what would reverse it are in
 [the decision record](decisions/2026-11-15-review-after-writing-on-by-default.md).
 
+### The log of what the review did
+
+In Claude Code, the Stop hook also logs the review, so the default can be judged on real sessions: at
+each stop after the first it runs `okl recap --log-review`, which reads the session's transcript and
+its sub-agents' under `~/.claude/projects` and writes one row about the review to your store (ids,
+paths, counts and model names; no code, command line or session text). `okl recap --reviews` reads
+the rows back. No model is called, and the agent is not told. The cost is time at the stop: the hook
+waits for it, about 0.6 seconds on a 146 MB transcript in the worst case I timed (0.3 seconds on the
+largest real one; `evals/results/review-log-time-20261114-2345.txt`), and cuts it off at about 5
+seconds, so a slower read costs a missed row, never a held stop. Where the review after writing is off for the repo,
+nothing is logged. To keep the review and drop only the log, set `OKL_REVIEW_LOG=0` for a session, or
+`"review_log": false` in `.okl/config.json` for the repo (the environment wins; any other value is
+refused). A directory never set up with `okl init` is never logged, even with a store URL exported.
+The row goes wherever the store is: a shared database named by `OKL_DATABASE_URL` receives it, and a
+shared service (`OKL_SERVICE_URL`) is refused.
+
 ## Architecture review in CI (off by default)
 
 The kit ships a reviewer that reads a PR diff against your encoded rules and fails the

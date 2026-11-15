@@ -1,0 +1,6 @@
+review log read time · 2026-11-14T23:45Z · okl recap --transcript <t> --log-review (#464), a new process each, as the Stop hook runs it; three runs, wall seconds
+no transcript content is here: sizes and seconds only. The hook cuts the logger off with TERM at 4 s and KILL at 5 s.
+store opened, transcript and sub-agents read, row written; a scratch repo with .okl/config.json.
+worst case, a 146.0 MB transcript: synthetic, 32042 messages of about 4.5 KB, the review starts on the first lines and no prompt or Stop-hook summary closes it, so every line is parsed: median 0.57 s (runs 0.60, 0.57, 0.56)
+largest real transcript here, a 147.2 MB transcript: median 0.26 s (runs 0.32, 0.25, 0.26)
+parse alone, reviewlog.read_review, no process start or store: 146.0 MB synthetic 0.49 s; 147.2 MB real 0.18 s; 569.1 MB real 0.77 s
