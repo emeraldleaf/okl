@@ -457,4 +457,5 @@ def test_the_list_position_note_quotes_its_receipt():
     assert receipt["by_task"]["198"]["places_passed"][0] == 2 and max(receipt["by_task"]["198"]["places_passed"]) == 10
     t309 = receipt["by_task"]["309"]
     assert t309["passed"] == 0 and t309["places_failed"].count(1) == 6 and "failed all 6 times it came first" in sec
+    assert "only 25 distinct task and place pairs" in sec and "cannot rule a place effect out" in sec
     assert receipt["okl_commit"] == receipt["okl_commit_at_start"] and not receipt["okl_commit"].endswith("+dirty")
