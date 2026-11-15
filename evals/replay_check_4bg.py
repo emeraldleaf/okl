@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """REPORT §4bg: prove each grader of the replay task set fails on the frozen code and passes on the fixed.
 
-No model is called. For every task of evals/replay-tasks-4bg.json it checks out the frozen commit in a
-throwaway git worktree, copies tests/replay_graders_4bg.py in as tests/test_replay_grader.py (as the
-replay does) and runs that task's grader there, in the environment a replay gives it: none of this
+No model is called. For every task of a set (evals/replay-tasks-<set>.json, §4bg's own by default) it checks
+out the frozen commit in a throwaway git worktree, copies the set's graders (tests/replay_graders_<set>.py) in
+as tests/test_replay_grader.py (as the replay does) and runs that task's grader there, in the environment a
+replay gives it: none of this
 session's CLAUDE*, OKL_*, GIT_* or MCP_* variables, PYTHONPATH on the worktree's own src, the warm
 model off, and OKL_BRIEFING_LOG unset. Then the same at the end commit.
 
@@ -16,16 +17,21 @@ model off, and OKL_BRIEFING_LOG unset. Then the same at the end commit.
 
     python3 evals/replay_check_4bg.py               # every task; writes evals/results/replay-check-4bg-<stamp>.json
     python3 evals/replay_check_4bg.py --only t01 t05 --no-receipt
+    python3 evals/replay_check_4bg.py --set 457     # another set; writes replay-check-457-<stamp>.json
+    python3 evals/replay_check_4bg.py --set 4bg --set 457   # both at once; replay-check-4bg+457-<stamp>.json
+
+Each set keeps its own tasks file, graders module and alternatives directory, and a task's grader is always
+run from its own set's module; task ids must be unique across the sets checked together.
 
 `--alternatives` asks the other question of the same graders: can they tell a different correct fix from a
 plausible wrong one? For each broken task it takes a worktree at `frozen`, applies
-evals/replay-alternatives-4bg/<id>-right.patch and runs the grader, then does the same in a fresh worktree
+evals/replay-alternatives-<set>/<id>-right.patch and runs the grader, then does the same in a fresh worktree
 with <id>-wrong.patch (what each patch is, and why the wrong one is wrong, is in that directory's notes.json):
 
   a task's pair is valid when the right fix passes (pytest's exit 0 with a test run) and the wrong fix fails
                    by an assertion of the grader's own (the rule `frozen` is held to above).
 
-It writes evals/results/replay-alternatives-4bg-<stamp>.json. A right fix that fails means the grader is
+It writes evals/results/replay-alternatives-<set>-<stamp>.json. A right fix that fails means the grader is
 over-specific or the fix is wrong; a wrong fix that passes means the grader misses what the fix leaves.
 Neither is repaired here: the receipt reports them as they are.
 """
@@ -48,8 +54,21 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import run_guard
 
 REPO = Path(__file__).resolve().parents[1]
-TASKS = REPO / "evals" / "replay-tasks-4bg.json"
-GRADERS = REPO / "tests" / "replay_graders_4bg.py"
+DEFAULT_SET = "4bg"
+SET_NAME = re.compile(r"[0-9a-z]+")
+
+
+def set_paths(name: str) -> dict[str, Path]:
+    """A set's tasks file, graders module and alternatives directory, by the names every set keeps."""
+    if not SET_NAME.fullmatch(name):
+        raise ValueError(f"not a set name: {name!r}")
+    return {"tasks": REPO / "evals" / f"replay-tasks-{name}.json",
+            "graders": REPO / "tests" / f"replay_graders_{name}.py",
+            "alternatives": REPO / "evals" / f"replay-alternatives-{name}"}
+
+
+TASKS = set_paths(DEFAULT_SET)["tasks"]
+GRADERS = set_paths(DEFAULT_SET)["graders"]
 RESULTS = REPO / "evals" / "results"
 DROP = ("CLAUDE", "OKL_", "GIT_", "MCP_")
 TIMEOUT = 900
@@ -59,7 +78,37 @@ FAILURE_LINE = re.compile(r"^(?P<file>/\S.*?):(?P<line>\d+): (?P<exc>[\w.]+)(?::
 TEMP_PATH = re.compile(r"(?:/private)?/(?:var/folders/\w+/\w+/T|tmp)/\S+")   # a receipt names no scratch directory
 GRADER_FILE = "tests/test_replay_grader.py"
 OWN_ASSERTIONS = ("AssertionError", "Failed", "_pytest.outcomes.Failed")
-ALTERNATIVES = REPO / "evals" / "replay-alternatives-4bg"
+ALTERNATIVES = set_paths(DEFAULT_SET)["alternatives"]
+
+
+def load(sets: list[str]) -> list[tuple[str, dict[str, Any]]]:
+    """Every task of `sets`, in order, each beside the set it came from; a task id two sets share is refused,
+    since rows, patches and receipts are keyed by it."""
+    out: list[tuple[str, dict[str, Any]]] = []
+    for name in dict.fromkeys(sets):
+        out += [(name, t) for t in json.loads(set_paths(name)["tasks"].read_text())]
+    ids = [t["id"] for _, t in out]
+    if dupes := sorted({i for i in ids if ids.count(i) > 1}):
+        raise ValueError(f"task ids in more than one set: {', '.join(dupes)}")
+    return out
+
+
+def provenance(sets: list[str]) -> dict[str, Any]:
+    """What a receipt names of the files it checked: one set as §4bg's receipts always did, several as a list."""
+    files = [{"set": name, "tasks_file": str(set_paths(name)["tasks"].relative_to(REPO)),
+              "tasks_sha256": hashlib.sha256(set_paths(name)["tasks"].read_bytes()).hexdigest(),
+              "graders_file": str(set_paths(name)["graders"].relative_to(REPO)),
+              "graders_sha256": hashlib.sha256(set_paths(name)["graders"].read_bytes()).hexdigest()}
+             for name in dict.fromkeys(sets)]
+    if len(files) == 1:
+        return {"tasks_file": files[0]["tasks_file"], "tasks_sha256": files[0]["tasks_sha256"],
+                "graders_sha256": files[0]["graders_sha256"], "sets": files}
+    return {"sets": files}
+
+
+def label(sets: list[str]) -> str:
+    """The sets a receipt covers, as its file name carries them."""
+    return "+".join(dict.fromkeys(sets))
 
 
 def env_for(tree: Path) -> dict[str, str]:
@@ -105,9 +154,9 @@ def failures_in(output: str) -> list[dict[str, Any]]:
     return found
 
 
-def run_grader(tree: Tree, grader: str) -> dict[str, Any]:
+def run_grader(tree: Tree, grader: str, graders: Path = GRADERS) -> dict[str, Any]:
     """Copy the graders in as the replay does and run one of them: its exit code and where it failed."""
-    shutil.copy(GRADERS, tree.path / GRADER_FILE)
+    shutil.copy(graders, tree.path / GRADER_FILE)
     argv = [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "--tb=line", GRADER_FILE, "-k", grader]
     try:
         p = subprocess.run(argv, cwd=tree.path, env=env_for(tree.path), capture_output=True, text=True, timeout=TIMEOUT)
@@ -130,14 +179,14 @@ def where(result: dict[str, Any]) -> str | None:
         else f"{f['file'].split('/tree/')[-1]}:{f['line']} {f['exc']}: {f['msg']}"
 
 
-def check(task: dict[str, Any]) -> dict[str, Any]:
+def check(task: dict[str, Any], graders: Path = GRADERS) -> dict[str, Any]:
     """One task: its grader at the frozen commit and at the end commit, and whether the pair is valid."""
     row: dict[str, Any] = {"id": task["id"], "pr": task["pr"], "grader": task["grader"],
                            "needs_nothing": task["needs_nothing"], "frozen": task["frozen"], "end": task["end"]}
     for name in ("frozen", "end"):
         tree = Tree(task[name], f"{task['id']}-{name}")
         try:
-            result = run_grader(tree, task["grader"])
+            result = run_grader(tree, task["grader"], graders)
         finally:
             tree.close()
         row[f"exit_{name}"] = result["exit"]
@@ -163,31 +212,35 @@ def apply_patch(tree: Tree, patch: Path) -> str | None:
     return None if p.returncode == 0 else (p.stderr.strip().splitlines() or ["git apply failed"])[-1][:160]
 
 
-def try_alternative(task: dict[str, Any], kind: str) -> dict[str, Any]:
+def try_alternative(task: dict[str, Any], kind: str, graders: Path = GRADERS,
+                    alternatives: Path = ALTERNATIVES) -> dict[str, Any]:
     """The grader at the frozen commit with `<id>-<kind>.patch` applied, in a worktree of its own."""
-    patch = ALTERNATIVES / f"{task['id']}-{kind}.patch"
+    patch = alternatives / f"{task['id']}-{kind}.patch"
     tree = Tree(task["frozen"], f"{task['id']}-{kind}")
     try:
         refused = apply_patch(tree, patch)
         if refused:
             return {"exit": None, "line": f"patch not applied: {refused}", "own_assertion": False, "ran": 0,
                     "tail": refused}
-        result = run_grader(tree, task["grader"])
+        result = run_grader(tree, task["grader"], graders)
     finally:
         tree.close()
     return {"exit": result["exit"], "line": where(result), "own_assertion": result["own_assertion"],
             "ran": result["ran"], "tail": result["tail"]}
 
 
-def check_alternatives(task: dict[str, Any]) -> dict[str, Any]:
+def check_alternatives(task: dict[str, Any], graders: Path = GRADERS,
+                       alternatives: Path = ALTERNATIVES) -> dict[str, Any]:
     """One broken task: its grader on a right fix and on a wrong fix, and whether it told them apart."""
-    right, wrong = try_alternative(task, "right"), try_alternative(task, "wrong")
+    right = try_alternative(task, "right", graders, alternatives)
+    wrong = try_alternative(task, "wrong", graders, alternatives)
     row: dict[str, Any] = {
         "id": task["id"], "pr": task["pr"], "grader": task["grader"], "frozen": task["frozen"],
         "right_exit": right["exit"], "right_failing_line": right["line"], "right_ran": right["ran"],
         "wrong_exit": wrong["exit"], "wrong_failing_line": wrong["line"], "wrong_ran": wrong["ran"],
         "wrong_own_assertion": wrong["own_assertion"],
-        "right_patch_sha256": patch_sha(task["id"], "right"), "wrong_patch_sha256": patch_sha(task["id"], "wrong"),
+        "right_patch_sha256": patch_sha(task["id"], "right", alternatives),
+        "wrong_patch_sha256": patch_sha(task["id"], "wrong", alternatives),
     }
     row["valid"] = (right["exit"] == 0 and right["ran"] > 0
                     and wrong["exit"] == 1 and wrong["own_assertion"])
@@ -197,19 +250,35 @@ def check_alternatives(task: dict[str, Any]) -> dict[str, Any]:
     return row
 
 
-def patch_sha(task_id: str, kind: str) -> str | None:
+def patch_sha(task_id: str, kind: str, alternatives: Path = ALTERNATIVES) -> str | None:
     """The sha256 of one alternative patch, or None when there is none."""
-    patch = ALTERNATIVES / f"{task_id}-{kind}.patch"
+    patch = alternatives / f"{task_id}-{kind}.patch"
     return hashlib.sha256(patch.read_bytes()).hexdigest() if patch.is_file() else None
 
 
-def main_alternatives(tasks: list[dict[str, Any]], no_receipt: bool) -> int:
+def write_receipt(kind: str, sets: list[str], body: dict[str, Any]) -> Path:
+    """evals/results/<kind>-<sets>-<stamp>.json."""
+    RESULTS.mkdir(exist_ok=True)
+    path = RESULTS / f"{kind}-{label(sets)}-{datetime.now(UTC).strftime('%Y%m%d-%H%M')}.json"
+    path.write_text(json.dumps(body, indent=1) + "\n")
+    print(f"wrote {path.relative_to(REPO)}")
+    return path
+
+
+def alternatives_dirs(sets: list[str]) -> str | list[str]:
+    """Where the alternative patches were read: one directory, as §4bg's receipts name it, or one per set."""
+    dirs = [str(set_paths(name)["alternatives"].relative_to(REPO)) for name in dict.fromkeys(sets)]
+    return dirs[0] if len(dirs) == 1 else dirs
+
+
+def main_alternatives(tasks: list[tuple[str, dict[str, Any]]], sets: list[str], no_receipt: bool) -> int:
     """Run each broken task's right and wrong fixes, print one line per task, and write the receipt."""
-    broken = [t for t in tasks if not t["needs_nothing"]]
+    broken = [(name, t) for name, t in tasks if not t["needs_nothing"]]
     run = run_guard.start()
     rows = []
-    for t in broken:
-        row = check_alternatives(t)
+    for name, t in broken:
+        paths = set_paths(name)
+        row = {**check_alternatives(t, paths["graders"], paths["alternatives"]), "set": name}
         rows.append(row)
         verdict = "told apart" if row["valid"] else "NOT TOLD APART"
         print(f"{t['id']} pr{t['pr']:<4} right exit {row['right_exit']} {row['right_failing_line'] or '-'}"
@@ -222,69 +291,66 @@ def main_alternatives(tasks: list[dict[str, Any]], no_receipt: bool) -> int:
     if no_receipt:
         return 0 if valid == len(rows) else 1
     receipt = run.stamp({
-        "check": "replay-alternatives-4bg", "tasks_file": str(TASKS.relative_to(REPO)),
-        "tasks_sha256": hashlib.sha256(TASKS.read_bytes()).hexdigest(),
-        "graders_sha256": hashlib.sha256(GRADERS.read_bytes()).hexdigest(),
-        "alternatives_dir": str(ALTERNATIVES.relative_to(REPO)),
+        "check": f"replay-alternatives-{label(sets)}", **provenance(sets),
+        "alternatives_dir": alternatives_dirs(sets),
         "dropped_env_prefixes": list(DROP), "pytest_k": "the grader's name", "python": sys.version.split()[0],
         "tasks_checked": [r["id"] for r in rows], "valid": valid, "of": len(rows),
         "all_valid": valid == len(rows), "rows": rows,
     })
-    RESULTS.mkdir(exist_ok=True)
-    path = RESULTS / f"replay-alternatives-4bg-{datetime.now(UTC).strftime('%Y%m%d-%H%M')}.json"
-    path.write_text(json.dumps(receipt, indent=1) + "\n")
-    print(f"wrote {path.relative_to(REPO)}")
+    write_receipt("replay-alternatives", sets, receipt)
     return 0 if receipt["all_valid"] and receipt.get("usable", True) else 1
 
 
 def main() -> int:
     """Check each task, print one line per task, and write the receipt; 1 when any task is not valid."""
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    ap.add_argument("--set", dest="sets", action="append", default=[],
+                    help=f"a task set by name, repeatable (default: {DEFAULT_SET})")
     ap.add_argument("--only", nargs="*", default=[], help="task ids to check (default: all)")
     ap.add_argument("--no-receipt", action="store_true", help="print only; write no receipt")
     ap.add_argument("--tail", action="store_true", help="also print the end of each pytest run")
     ap.add_argument("--alternatives", action="store_true",
                     help="instead: run each broken task's grader on a right and a wrong fix of the frozen code")
     args = ap.parse_args()
-    every = json.loads(TASKS.read_text())
-    unknown = sorted(set(args.only) - {t["id"] for t in every})
+    sets = list(dict.fromkeys(args.sets or [DEFAULT_SET]))
+    try:
+        every = load(sets)
+    except (ValueError, FileNotFoundError) as e:
+        print(f"replay_check_4bg: {e}", file=sys.stderr)
+        return 2
+    unknown = sorted(set(args.only) - {t["id"] for _, t in every})
     if unknown:
         # A selector that matches nothing must not report 0/0 as all valid (review of #454).
         print(f"replay_check_4bg: no such task: {', '.join(unknown)}", file=sys.stderr)
         return 2
-    tasks = [t for t in every if not args.only or t["id"] in args.only]
-    if args.alternatives and not any(not t.get("needs_nothing") for t in tasks):
+    tasks = [(name, t) for name, t in every if not args.only or t["id"] in args.only]
+    if args.alternatives and not any(not t.get("needs_nothing") for _, t in tasks):
         print("replay_check_4bg: the tasks selected are all controls, which have no alternative fixes", file=sys.stderr)
         return 2
     if args.alternatives:
-        return main_alternatives(tasks, args.no_receipt)
+        return main_alternatives(tasks, sets, args.no_receipt)
     run = run_guard.start()
     rows = []
-    for t in tasks:
-        row = check(t)
+    for name, t in tasks:
+        row = {**check(t, set_paths(name)["graders"]), "set": name}
         rows.append(row)
         verdict = "valid" if row["valid"] else "INVALID"
         print(f"{t['id']} pr{t['pr']:<4} frozen exit {row['exit_frozen']} {row['line_frozen'] or '-'}"
               f" | end exit {row['exit_end']} {row['line_end'] or '-'} | {verdict}", flush=True)
-        for name in ("frozen", "end"):
-            if f"tail_{name}" in row:
-                print(f"   {name}: {row[f'tail_{name}']}", flush=True)
+        for when in ("frozen", "end"):
+            if f"tail_{when}" in row:
+                print(f"   {when}: {row[f'tail_{when}']}", flush=True)
     valid = sum(r["valid"] for r in rows)
     print(f"\n{valid}/{len(rows)} valid")
     if args.no_receipt:
         return 0 if valid == len(rows) else 1
     receipt = run.stamp({
-        "check": "replay-check-4bg", "tasks_file": str(TASKS.relative_to(REPO)),
-        "tasks_sha256": hashlib.sha256(TASKS.read_bytes()).hexdigest(),
-        "graders_sha256": hashlib.sha256(GRADERS.read_bytes()).hexdigest(),
+        "check": f"replay-check-{label(sets)}", **provenance(sets),
         "dropped_env_prefixes": list(DROP), "pytest_k": "the grader's name", "python": sys.version.split()[0],
         "tasks_checked": [r["id"] for r in rows], "valid": valid, "of": len(rows),
         "all_valid": valid == len(rows), "rows": rows,
     })
-    RESULTS.mkdir(exist_ok=True)
-    path = RESULTS / f"replay-check-4bg-{datetime.now(UTC).strftime('%Y%m%d-%H%M')}.json"
-    path.write_text(json.dumps(receipt, indent=1) + "\n")
-    print(f"wrote {path.relative_to(REPO)}")
+    write_receipt("replay-check", sets, receipt)
     return 0 if receipt["all_valid"] and receipt.get("usable", True) else 1
 
 
