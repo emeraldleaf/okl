@@ -1,0 +1,14 @@
+diff --git a/src/okl/cli/health.py b/src/okl/cli/health.py
+index f7c43b4..08e9c48 100644
+--- a/src/okl/cli/health.py
++++ b/src/okl/cli/health.py
+@@ -107,6 +107,9 @@ def _no_store_yet(client: Client) -> bool:
+     if url is None:
+         cfg = _find_config()
+         return cfg is None or not (cfg.parent / "okl.db").exists()
++    if url == "":
++        # An empty value names no store, as the client reads it: nothing to read without a config.
++        return _find_config() is None
+     if url.startswith("sqlite:///") and url != "sqlite:///:memory:":
+         return not Path(url.removeprefix("sqlite:///")).exists()
+     return False

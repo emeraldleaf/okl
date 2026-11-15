@@ -20,7 +20,7 @@ import ab_harness as ab
 
 # okl's code, the eval scripts, and what a replay reads mid-run: the graders copied into each room and
 # the replay task files (#446). Not the receipts a run writes.
-READS = ("src/okl", "evals/*.py", "tests/replay_graders_4aw.py", "evals/replay-*.json")
+READS = ("src/okl", "evals/*.py", "tests/replay_graders_*.py", "evals/replay-*.json")
 
 
 class Run:

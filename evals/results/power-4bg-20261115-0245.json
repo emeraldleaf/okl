@@ -1,0 +1,218 @@
+{
+ "section": "4bg/4bh power",
+ "at": "2026-11-15T02:45:47+00:00",
+ "sources": [
+  "replay-list-20261111-0249.json",
+  "replay-one-20261111-1355.json"
+ ],
+ "sims": 1000,
+ "bootstrap": 1000,
+ "seed": 4447,
+ "gain": 0.25,
+ "margin": 0.15,
+ "narrow": 0.2,
+ "delta_at_gain": 0.547,
+ "delta_at_margin": 0.672,
+ "one_minus_list_on_4ay": 0.457,
+ "assumptions": [
+  "the five tasks of 4ax/4ay stand in for the spread of the new tasks",
+  "a task's true rate is a Beta(1+k, 1+5-k) draw from its five earlier sessions",
+  "asking in turn sits a fixed share of the way from the list to one at a time on every task",
+  "a file framing that narrows costs the same on every task, on top of 4ax's framing spread"
+ ],
+ "power_447": [
+  {
+   "tasks": 8,
+   "repeats": 2,
+   "list_costs": 0.743,
+   "beats_list_at_gain": 0.35,
+   "beats_list_when_equal_to_one": 0.723,
+   "beats_list_false_alarm": 0.066,
+   "not_worse_when_equal": 0.475,
+   "not_worse_false_alarm_at_margin": 0.115,
+   "true_gain_at_gain": 0.248,
+   "true_vs_one_at_margin": -0.151
+  },
+  {
+   "tasks": 8,
+   "repeats": 3,
+   "list_costs": 0.819,
+   "beats_list_at_gain": 0.487,
+   "beats_list_when_equal_to_one": 0.82,
+   "beats_list_false_alarm": 0.053,
+   "not_worse_when_equal": 0.46,
+   "not_worse_false_alarm_at_margin": 0.089,
+   "true_gain_at_gain": 0.249,
+   "true_vs_one_at_margin": -0.15
+  },
+  {
+   "tasks": 8,
+   "repeats": 5,
+   "list_costs": 0.909,
+   "beats_list_at_gain": 0.684,
+   "beats_list_when_equal_to_one": 0.897,
+   "beats_list_false_alarm": 0.049,
+   "not_worse_when_equal": 0.599,
+   "not_worse_false_alarm_at_margin": 0.078,
+   "true_gain_at_gain": 0.252,
+   "true_vs_one_at_margin": -0.151
+  },
+  {
+   "tasks": 10,
+   "repeats": 2,
+   "list_costs": 0.798,
+   "beats_list_at_gain": 0.434,
+   "beats_list_when_equal_to_one": 0.812,
+   "beats_list_false_alarm": 0.029,
+   "not_worse_when_equal": 0.382,
+   "not_worse_false_alarm_at_margin": 0.067,
+   "true_gain_at_gain": 0.249,
+   "true_vs_one_at_margin": -0.149
+  },
+  {
+   "tasks": 10,
+   "repeats": 3,
+   "list_costs": 0.906,
+   "beats_list_at_gain": 0.613,
+   "beats_list_when_equal_to_one": 0.898,
+   "beats_list_false_alarm": 0.04,
+   "not_worse_when_equal": 0.547,
+   "not_worse_false_alarm_at_margin": 0.082,
+   "true_gain_at_gain": 0.253,
+   "true_vs_one_at_margin": -0.15
+  },
+  {
+   "tasks": 10,
+   "repeats": 5,
+   "list_costs": 0.945,
+   "beats_list_at_gain": 0.712,
+   "beats_list_when_equal_to_one": 0.938,
+   "beats_list_false_alarm": 0.039,
+   "not_worse_when_equal": 0.683,
+   "not_worse_false_alarm_at_margin": 0.08,
+   "true_gain_at_gain": 0.247,
+   "true_vs_one_at_margin": -0.149
+  },
+  {
+   "tasks": 14,
+   "repeats": 2,
+   "list_costs": 0.903,
+   "beats_list_at_gain": 0.518,
+   "beats_list_when_equal_to_one": 0.905,
+   "beats_list_false_alarm": 0.028,
+   "not_worse_when_equal": 0.51,
+   "not_worse_false_alarm_at_margin": 0.092,
+   "true_gain_at_gain": 0.249,
+   "true_vs_one_at_margin": -0.15
+  },
+  {
+   "tasks": 14,
+   "repeats": 3,
+   "list_costs": 0.957,
+   "beats_list_at_gain": 0.692,
+   "beats_list_when_equal_to_one": 0.967,
+   "beats_list_false_alarm": 0.036,
+   "not_worse_when_equal": 0.627,
+   "not_worse_false_alarm_at_margin": 0.069,
+   "true_gain_at_gain": 0.249,
+   "true_vs_one_at_margin": -0.149
+  },
+  {
+   "tasks": 14,
+   "repeats": 5,
+   "list_costs": 0.99,
+   "beats_list_at_gain": 0.863,
+   "beats_list_when_equal_to_one": 0.976,
+   "beats_list_false_alarm": 0.033,
+   "not_worse_when_equal": 0.799,
+   "not_worse_false_alarm_at_margin": 0.063,
+   "true_gain_at_gain": 0.249,
+   "true_vs_one_at_margin": -0.15
+  }
+ ],
+ "power_450": [
+  {
+   "tasks": 8,
+   "repeats": 2,
+   "narrows_at_drop": 0.214,
+   "narrows_false_alarm": 0.039,
+   "ruled_out_when_none": 0.304,
+   "true_diff_at_drop": -0.173,
+   "true_diff_when_none": 0.002
+  },
+  {
+   "tasks": 8,
+   "repeats": 3,
+   "narrows_at_drop": 0.293,
+   "narrows_false_alarm": 0.054,
+   "ruled_out_when_none": 0.297,
+   "true_diff_at_drop": -0.177,
+   "true_diff_when_none": -0.001
+  },
+  {
+   "tasks": 8,
+   "repeats": 5,
+   "narrows_at_drop": 0.321,
+   "narrows_false_alarm": 0.054,
+   "ruled_out_when_none": 0.365,
+   "true_diff_at_drop": -0.168,
+   "true_diff_when_none": -0.001
+  },
+  {
+   "tasks": 10,
+   "repeats": 2,
+   "narrows_at_drop": 0.221,
+   "narrows_false_alarm": 0.036,
+   "ruled_out_when_none": 0.264,
+   "true_diff_at_drop": -0.18,
+   "true_diff_when_none": 0.003
+  },
+  {
+   "tasks": 10,
+   "repeats": 3,
+   "narrows_at_drop": 0.299,
+   "narrows_false_alarm": 0.038,
+   "ruled_out_when_none": 0.33,
+   "true_diff_at_drop": -0.177,
+   "true_diff_when_none": -0.001
+  },
+  {
+   "tasks": 10,
+   "repeats": 5,
+   "narrows_at_drop": 0.36,
+   "narrows_false_alarm": 0.052,
+   "ruled_out_when_none": 0.413,
+   "true_diff_at_drop": -0.177,
+   "true_diff_when_none": 0.0
+  },
+  {
+   "tasks": 14,
+   "repeats": 2,
+   "narrows_at_drop": 0.268,
+   "narrows_false_alarm": 0.034,
+   "ruled_out_when_none": 0.365,
+   "true_diff_at_drop": -0.175,
+   "true_diff_when_none": -0.003
+  },
+  {
+   "tasks": 14,
+   "repeats": 3,
+   "narrows_at_drop": 0.382,
+   "narrows_false_alarm": 0.029,
+   "ruled_out_when_none": 0.452,
+   "true_diff_at_drop": -0.18,
+   "true_diff_when_none": -0.0
+  },
+  {
+   "tasks": 14,
+   "repeats": 5,
+   "narrows_at_drop": 0.444,
+   "narrows_false_alarm": 0.03,
+   "ruled_out_when_none": 0.52,
+   "true_diff_at_drop": -0.181,
+   "true_diff_when_none": 0.003
+  }
+ ],
+ "okl_commit_at_start": "026266e",
+ "okl_commit": "026266e"
+}

@@ -1,0 +1,26 @@
+diff --git a/src/okl/core.py b/src/okl/core.py
+index 78b7bd9..19aa876 100644
+--- a/src/okl/core.py
++++ b/src/okl/core.py
+@@ -108,11 +108,19 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
+     #                 defects rather than emitting one undifferentiated list.
+     #   4. ROUTE    — turn the buckets into an ordered list of imperatives.
+     repo_scope = f"repo:{repo}"
+-    hits = [n for n in store.search(task, limit=limit * 3)
+-            if _in_scope(n, repo_scope, interests)]
+     # Superseded and obsolete lessons leave BEFORE the cut, so they never take a slot from
+     # a live one; a superseded one leaves a pointer to its replacement (okl review R2).
+     # check never read SUPERSEDES, so a replaced lesson was briefed beside its successor.
++    # An obsolete lesson that used up the window is made up for: the search widens by as many
++    # as were left out.
++    fetch = limit * 3
++    while True:
++        found = store.search(task, limit=fetch)
++        hits = [n for n in found if _in_scope(n, repo_scope, interests)]
++        obsolete = sum(1 for n in hits if n.status == "obsolete")
++        if not obsolete or len(found) < fetch:
++            break
++        fetch += obsolete
+     replaced = [_replacement(store, n) for n in hits if n.status == "superseded"]
+     hits = [n for n in hits if n.status not in ("superseded", "obsolete")]
+     # THE CUTOFF. store.search returns BM25-ranked results, but full-text matching is

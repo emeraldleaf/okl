@@ -1,0 +1,22 @@
+diff --git a/src/okl/core.py b/src/okl/core.py
+index 4b527f9..4a04152 100644
+--- a/src/okl/core.py
++++ b/src/okl/core.py
+@@ -158,7 +158,7 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
+     # THE PIPELINE, in four steps. Each one narrows what reaches the agent:
+     #
+     #   1. SEARCH   — full-text match the task description against every record's title
+-    #                 and body. We ask for 3x `limit` because the next two steps throw
++    #                 and body. We ask for 10x `limit` because the next two steps throw
+     #                 records away, and we would rather over-fetch cheaply than come up
+     #                 short after filtering.
+     #   2. FILTER   — drop anything this repo may not see (scope) or does not care about
+@@ -272,7 +272,7 @@ def _live_hits(store: Store, task: str, limit: int, repo_scope: str,
+     query = " ".join(briefing_terms(task))
+     if not query:
+         return [], []
+-    fetch = limit * 3
++    fetch = limit * 10   # the floor throws more away than the old 3x window allowed for
+     for _ in range(3):
+         found = store.search(query, limit=fetch)
+         live: list[Node] = []

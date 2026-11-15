@@ -1,0 +1,13 @@
+diff --git a/src/okl/core.py b/src/okl/core.py
+index 78b7bd9..7ba0213 100644
+--- a/src/okl/core.py
++++ b/src/okl/core.py
+@@ -321,7 +321,7 @@ def _carry_over(store: Store, kw: dict[str, Any], node_id: str, *,
+             f"`okl update {node_id} --<field> ...` (the okl_update tool over MCP), which keeps "
+             "its proof; to overwrite it entirely, record it again with --replace.")
+     kw["created_at"] = old.created_at
+-    if keep_verification and old.status in RETIRED_STATUSES and kw.get("status") is None:
++    if keep_verification and old.status in RETIRED_STATUSES and kw.get("status") in (None, "live"):
+         # A re-seed rewrites a pack's lessons from the pack; a retirement made here is a
+         # local decision the pack knows nothing about, and must survive it (R2).
+         kw["status"] = old.status

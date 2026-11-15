@@ -1,0 +1,97 @@
+diff --git a/src/okl/cli/intake.py b/src/okl/cli/intake.py
+index e92e1ca..99487a1 100644
+--- a/src/okl/cli/intake.py
++++ b/src/okl/cli/intake.py
+@@ -34,6 +34,7 @@ def _add_nearest(found: list[intake.Finding]) -> None:
+     client = Client()
+     if not client.configured:
+         return
++    client.log_briefings = False   # this lookup is no agent's briefing: it must not count as exposure
+     for f in found:
+         try:
+             result = client.check(f.summary, limit=3)
+diff --git a/src/okl/client.py b/src/okl/client.py
+index 6b6ce96..041b406 100644
+--- a/src/okl/client.py
++++ b/src/okl/client.py
+@@ -178,6 +178,7 @@ class Client:
+         self.hybrid = hybrid_setting(os.environ.get("OKL_HYBRID"), self.config.get("hybrid"))
+         self.index = False   # the index arm (REPORT §4r): set per call by `okl check --index`
+         self.near_misses = False   # the near-miss arm (REPORT §4s): `okl check --near-misses`
++        self.log_briefings = True   # False for a lookup no agent sees (okl intake), so exposure counts only shown briefings
+         self.rerank = rerank_setting(os.environ.get("OKL_RERANK"), self.config.get("rerank"))
+         self.decision = decision_setting(os.environ.get("OKL_DECISION"), self.config.get("decision"))
+         self.warm = warm_setting(os.environ.get("OKL_WARM"), self.config.get("warm"))
+@@ -332,6 +333,8 @@ class Client:
+                    "rerank": self.rerank, "decision": self.decision}
+         if limit is not None:
+             payload["limit"] = limit
++        if not self.log_briefings:
++            payload["log"] = False   # the service logs what it answers unless told this one is not shown
+         if self.mode == "remote":
+             result = self._post_check(payload)
+             # An older service drops a request field it does not know and answers an ordinary
+@@ -368,7 +371,7 @@ class Client:
+         # not in core, because only the client has this repo's checkout: a shared service
+         # answering /check has no git history to compare against.
+         drift.annotate_briefing(result, repo, str(root))
+-        if self.mode != "remote":
++        if self.mode != "remote" and self.log_briefings:
+             # Over a shared service the service logs the briefing it answers; locally, the
+             # client is the only one who sees it (#129). Logged after the drift marks, so
+             # the log keeps which briefed lessons were stale at the time (#252).
+@@ -381,7 +384,7 @@ class Client:
+             raise ValueError("no paths given: nothing was checked")
+         result = self._check_paths(repo, paths, root)
+         drift.annotate_briefing(result, repo, str(root))
+-        if self.mode != "remote":
++        if self.mode != "remote" and self.log_briefings:
+             core.record_briefing(self._local_store(), repo, result)
+         return result
+ 
+@@ -394,7 +397,10 @@ class Client:
+             # answer as a local store would, rather than report a refusal (CodeRabbit sweep 6).
+             result = core.no_paths_answer(repo)
+         elif self.mode == "remote":
+-            result = self._post("/check", {"repo": repo, "task": "", "paths": inside})
++            payload: dict[str, Any] = {"repo": repo, "task": "", "paths": inside}
++            if not self.log_briefings:
++                payload["log"] = False
++            result = self._post("/check", payload)
+             # An older service drops a field it does not know and briefs an empty task: never
+             # read that as "nothing governs this file".
+             if not isinstance(result.get("paths"), list):
+diff --git a/src/okl/service.py b/src/okl/service.py
+index f891de1..7e65be6 100644
+--- a/src/okl/service.py
++++ b/src/okl/service.py
+@@ -52,6 +52,9 @@ class CheckReq(BaseModel):
+     # How candidates become a briefing (#291, REPORT §4w); a closed set, so an unknown value is a
+     # 422 from validation rather than a 500 from inside check.
+     decision: Literal["floor", "calibrated", "tiered"] = decide.DEFAULT
++    # False for a lookup no agent will see (okl intake's nearest-lesson query): the service logs a
++    # briefing for every /check it answers, and exposure counts must hold only briefings shown.
++    log: bool = True
+ 
+ 
+ class RecordReq(BaseModel):
+@@ -234,7 +237,8 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901, PLR0915 -
+             if not req.paths:
+                 raise HTTPException(status_code=422, detail="no paths given: nothing was checked")
+             result = core.check_paths(_store, req.repo, req.paths)
+-            core.record_briefing(_store, req.repo, result)
++            if req.log:
++                core.record_briefing(_store, req.repo, result)
+             return result
+         if not req.task.strip():
+             raise HTTPException(status_code=422, detail="give a task, or the paths of the files about to change")
+@@ -242,7 +246,8 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901, PLR0915 -
+                             interests=req.interests, hybrid=req.hybrid, index=req.index,
+                             near_misses=req.near_misses, rerank=req.rerank, decision=req.decision)
+         # The service is the only party that sees every client's briefings (#129).
+-        core.record_briefing(_store, req.repo, result)
++        if req.log:
++            core.record_briefing(_store, req.repo, result)
+         return result
+ 
+     @app.post("/record")

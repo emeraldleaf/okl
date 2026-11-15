@@ -1,0 +1,58 @@
+{
+  "t01": {
+    "right": "A per-client log_briefings flag (False for the lookup) that Client.check honours locally and sends as a `log: false` request field the service's /check honours, set by intake's _add_nearest; no per-call kwarg.",
+    "wrong": "Honours the flag only for the local store; over a service the request carries no such field, so the service still logs a briefing per finding."
+  },
+  "t02": {
+    "right": "Reads the .svg beside each .excalidraw (committed copy or on disk), parses its <text> elements as XML and compares them, as a multiset of trimmed lines, with the source's text; any difference (stale or foreign text, so also any name the code lacks) fails, as does an unparseable render.",
+    "wrong": "Runs the existing name check over the render's text too, so a render naming something the code lacks fails, but a stale render whose names all exist (different from the source) still passes."
+  },
+  "t03": {
+    "right": "A validate_snapshot() shape check (rules a list, each entry an object with text id/title/scope/files and typed verified_at/verified_by) raising ValueError, called when the snapshot is read and again at the top of nodes_from_snapshot; the CLI catches ValueError from both and exits 2.",
+    "wrong": "Refuses only a non-list `rules` (the string case); an entry that is not a dict, or lacks fields, still raises a traceback (exit 1)."
+  },
+  "t04": {
+    "right": "Moves the store-location decision into Client.local_store_url() (empty OKL_DATABASE_URL is unset, one source of truth) and makes _local_store and health._no_store_yet both use it, so they cannot disagree.",
+    "wrong": "Adds an empty-value branch to _no_store_yet that answers only 'no store yet when there is no config', omitting the okl.db-exists check, so with a config and no okl.db doctor/init still create it."
+  },
+  "t05": {
+    "right": "check doubles the search window while the floor leaves fewer than `limit` hits and the search still returned a full window; _live_hits takes the window and reports whether the search was exhausted.",
+    "wrong": "Raises the fixed window from 3x to 10x limit: a qualifying record ranked past 10x limit still reads as no close match."
+  },
+  "t06": {
+    "right": "check doubles the search window until it holds `limit` live (not obsolete, not superseded) in-scope hits or the search comes back short, instead of widening by a counted number.",
+    "wrong": "Widens by the count of obsolete lessons only (looped); superseded lessons still use up the window, so a live match ranked below superseded ones still leaves a limit-1 briefing empty."
+  },
+  "t07": {
+    "right": "In _carry_over a re-import (keep_verification) of a lesson whose stored status is retired always keeps that status, whether the pack leaves status unset or sets one (same layer as the described fix: the only one every caller, local and over a service, passes through).",
+    "wrong": "Keeps the retired status only when the pack's status is unset or 'live'; a pack that sets narrowed, open, stale or resolved still restores the retired lesson."
+  },
+  "t08": {
+    "right": "Removes git log and git show from the reviewer's allow-list (leaving merge-base and rev-parse) and, to keep the reviewer's instructions true, updates the prompt text in ci/review-agent.sh and its scaffold mirror (identically) to name merge-base --is-ancestor and rev-parse.",
+    "wrong": "Removes only git show; git log, which takes --output=<file> and writes it, stays allowed (the comment is changed to claim the rest is read-only)."
+  },
+  "t09": {
+    "right": "In Client._check_paths, remote mode with no inside path builds core.check_paths' empty answer on a throwaway in-memory store (dropping its store_records, which measured that store) instead of posting; no new core helper and no service change.",
+    "wrong": "Short-circuits only when every outside path is absolute (a string heuristic); a relative path outside the repo such as ../x.py, alone or mixed, still posts an empty list and gets the 422."
+  },
+  "t10": {
+    "right": "Rewrites the drift step as `rc=0; okl drift --gate || rc=$?` with one exit path: warn and exit 0 only when rc is 2 and neither OKL_SERVICE_URL nor OKL_DATABASE_URL is set, otherwise exit with the gate's own code; applied identically to all three mirrored copies.",
+    "wrong": "Applies the same change to .github/workflows/okl-verify.yml only; the shipped copies (ci/okl-verify.yml and the scaffold's) still turn exit 2 into a green warning, and the mirror test fails."
+  },
+  "t11": {
+    "right": "core.retire, after validation and before any write, returns the lesson untouched when its status already is the target and the newest retirement-log entry has the same kind, trimmed reason and replacement.",
+    "wrong": "Applies the same early return only to a plain 'wrong' retirement; a retried obsolete or superseded (--by) retirement still appends another row."
+  },
+  "t12": {
+    "right": "The once-per-session marker's file name hashes the session, the repo the result answers for (result['repo']) and the checkout root (config dir or cwd), so neither another repo name nor another directory shares a marker.",
+    "wrong": "Adds an optional repo argument fed from args.repo (None unless --repo is passed, which the hook never does) and keys on it only when given; the function ignores result['repo'], so by default the marker is still the session alone."
+  },
+  "t13": {
+    "right": "Client.record coerces the three bool fields of the service's request model (replace, verified, keep_verification) to real bools before posting, so null is never sent; the service routes /node/{node_id:path} so ids with a slash match.",
+    "wrong": "Drops None values before posting (fixes the 422) but for the slash id only changes the client's quote() to safe='/', which sends a raw slash to a route that still takes no slash, so GET /node/<id with slash> still 404s."
+  },
+  "t14": {
+    "right": "Replaces the resolve-once step with a per-layer loop (OKL_BIN, pinned config, PATH okl, python3 -m okl): run each distinct layer's command in turn and move to the next when it exits 126 or 127; only an okl that started and failed is 'not briefed'; all three hook copies re-stamped and identical.",
+    "wrong": "Same loop but resumes on exit 127 only; a pin that exists but cannot start (exit 126, e.g. a removed interpreter) still ends in 'not briefed'."
+  }
+}

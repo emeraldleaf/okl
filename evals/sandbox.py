@@ -110,19 +110,30 @@ def with_effort(argv: list[str], effort: str) -> list[str]:
     return [*argv[:2], "--effort", effort, *argv[2:]]
 
 
-def ask(argv: list[str], prompt: str, *, model: str, effort: str, timeout: int, cwd: Path) -> dict[str, Any]:
+def ask(argv: list[str], prompt: str, *, model: str, effort: str, timeout: int, cwd: Path,
+        tree: Path | None = None, unset: tuple[str, ...] = ()) -> dict[str, Any]:
     """One headless session, run from `cwd` (never this checkout) with a clean environment and a
     pinned effort. Returns its text, cost, the models that answered, its turns and the effort, or
     an `error` when it timed out, gave no readable reply, failed, or was not answered by `model`
-    (a usage limit looks like that). The caller records `models` and `effort` with each row."""
+    (a usage limit looks like that). The caller records `models` and `effort` with each row.
+
+    `tree` puts that copy's code first on PYTHONPATH, for an agent that runs the copy's tests: without
+    it they import whichever okl the interpreter finds. `unset` leaves out variables clean_env sets, for
+    an agent whose task is the behaviour one of them turns off (OKL_BRIEFING_LOG, for a defect in what
+    gets logged): only in a copy with no store of this checkout's to log into."""
     if inside_repo(cwd):
         raise ValueError(f"a model call must not run inside the checkout ({cwd}): it would read this repository's "
                          "git status, commit subjects included")
+    if tree is not None and inside_repo(tree):
+        raise ValueError(f"tree {tree} is inside the checkout")
     cmd = with_effort(argv, effort)
     base = {"effort": effort, "models": [], "cost_usd": 0.0}
+    env = clean_env(tree=tree)
+    for name in unset:
+        env.pop(name, None)
     try:
         p = subprocess.run(cmd, input=prompt, capture_output=True, text=True, timeout=timeout, cwd=cwd,
-                           env=clean_env())
+                           env=env)
     except subprocess.TimeoutExpired:
         return {**base, "error": f"timed out after {timeout}s"}
     try:

@@ -86,6 +86,22 @@ def test_a_good_reply_carries_its_models_and_effort(monkeypatch, tmp_path):
     assert (got["cost_usd"], got["turns"], got["effort"]) == (0.01, 1, "low")
 
 
+def test_a_session_can_run_its_copys_code_and_leave_a_variable_unset(monkeypatch, tmp_path):
+    """An agent that runs a copy's tests imports the copy's okl, and one whose task is what gets logged
+    is not run with the logging turned off; by default neither changes."""
+    seen = []
+    monkeypatch.setattr(sb.subprocess, "run", lambda cmd, **kw: seen.append(kw["env"]) or subprocess.CompletedProcess(
+        cmd, 0, stdout=_envelope(["claude-sonnet-5-5"]), stderr=""))
+    sb.ask(["claude", "-p"], "q", model="sonnet", effort="low", timeout=5, cwd=tmp_path)
+    sb.ask(["claude", "-p"], "q", model="sonnet", effort="low", timeout=5, cwd=tmp_path, tree=tmp_path,
+           unset=("OKL_BRIEFING_LOG",))
+    plain, copy = seen
+    assert plain["OKL_BRIEFING_LOG"] == "0" and plain.get("PYTHONPATH") != str(tmp_path / "src")
+    assert "OKL_BRIEFING_LOG" not in copy and copy["PYTHONPATH"] == str(tmp_path / "src") and copy["OKL_WARM"] == "0"
+    with pytest.raises(ValueError, match="inside the checkout"):
+        sb.ask(["claude", "-p"], "q", model="sonnet", effort="low", timeout=5, cwd=tmp_path, tree=sb.REPO)
+
+
 def test_a_timeout_an_unreadable_reply_and_an_error_reply_are_errors(monkeypatch, tmp_path):
     """None of them is an answer, and none is silent."""
     def timeout(cmd, **kw):

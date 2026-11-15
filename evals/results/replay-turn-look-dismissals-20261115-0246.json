@@ -1,0 +1,114 @@
+{
+ "section": "4bg look, what the sessions said",
+ "at": "2026-11-15T02:46Z",
+ "tasks": [
+  168,
+  196,
+  198,
+  309
+ ],
+ "sessions": 12,
+ "failed": 9,
+ "named_and_failed": 8,
+ "script_sha256": "82cfb95f5d1f5364669d8c6074dab0fb7f9d1ebcbf41ae9dc97fd4c8b6c1a208",
+ "rows": [
+  {
+   "pr": 168,
+   "rep": 0,
+   "passed": false,
+   "room": "okl-4aw-m2rh711g",
+   "named": true,
+   "said": "seed:rag-defects:qz_judge_self]: The judge≠generator refusal at startup is unchanged. Nothing needed changing. - [n_69f673496137]: I checked the key test against a known-bad case. Disabling the `implemented` check made `test_a_sample_with_no_implementation_is_a_failure_not_a_clean_run` fail, and I t"
+  },
+  {
+   "pr": 168,
+   "rep": 1,
+   "passed": false,
+   "room": "okl-4aw-e3rarflq",
+   "named": false,
+   "said": null
+  },
+  {
+   "pr": 168,
+   "rep": 2,
+   "passed": false,
+   "room": "okl-4aw-6mq7nd2_",
+   "named": true,
+   "said": "seed:rag-defects:qz_judge_self]**: The harness's existing refusal to run when the judge equals the generator is untouched. Nothing to change. - **[n_aa3e45a2ecd6]**: `defect_node` handling is unchanged. The new `generator_model` and `judge_model` fields are recorded as provenance, and the harness do"
+  },
+  {
+   "pr": 196,
+   "rep": 0,
+   "passed": false,
+   "room": "okl-4aw-j5ysacvl",
+   "named": true,
+   "said": "n_57cc4b427f05]**: Nothing needed. `precision.py` builds its store from the committed `seed/*.json` packs, not from a live store or the working tree. - **[n_b578addf6269]**: Nothing needed. The briefing's own search now goes through `briefing_terms`, so the change reaches the briefings the harness f"
+  },
+  {
+   "pr": 196,
+   "rep": 1,
+   "passed": false,
+   "room": "okl-4aw-y9o737x7",
+   "named": true,
+   "said": "n_57cc4b427f05**: The change adds no audit that scans the working tree. Nothing to change. - **n_b83c550a0ca4**: The change keeps the records-and-full-text-search design and adds no RDF or ontology. Nothing to change. - **n_849a5b0425ef**: The change doesn't filter on stack tags. It filters on query"
+  },
+  {
+   "pr": 196,
+   "rep": 2,
+   "passed": false,
+   "room": "okl-4aw-9_0je94f",
+   "named": true,
+   "said": "n_57cc4b427f05:** No audit in this change scans the working tree. The precision check reads the committed `seed/` packs. Nothing to change. - **n_9ba48d85ed19:** I couldn't run `evals/preflight.py`, so I haven't confirmed every eval task still gets its rule. The 24–47-word eval tasks sit under the c"
+  },
+  {
+   "pr": 198,
+   "rep": 0,
+   "passed": true,
+   "room": "okl-4aw-d4ys7k9j",
+   "named": true,
+   "said": "n_473aec369b25**: The change widens the judge's window, which is an instrument change. The series guard only compared the generator and judge commands, so it would not have noticed. I extended the guard in `evals/ab_harness.py` to compare `judge_max_chars` against the modal value across receipts, tr"
+  },
+  {
+   "pr": 198,
+   "rep": 1,
+   "passed": true,
+   "room": "okl-4aw-kz8stit3",
+   "named": true,
+   "said": "n_473aec369b25:** The change breaks this lesson, so I fixed it. The judge window is a new instrument parameter, but the guard only compared the generator and judge commands. The guard now also compares `judge_max_chars`, and receipts that predate it count as 8,000. I added the window to the construc"
+  },
+  {
+   "pr": 198,
+   "rep": 2,
+   "passed": true,
+   "room": "okl-4aw-votp0dak",
+   "named": true,
+   "said": "n_473aec369b25:** This is the same instrument-change problem as n_fe26d1897041. The guard fix above covers it, and REPORT §4m already pre-registers the change. - **pretooluse-additionalcontext:** There are no hooks in this change, so it doesn't apply. - **remote-timeout-not-a-deadline:** There is no"
+  },
+  {
+   "pr": 309,
+   "rep": 0,
+   "passed": false,
+   "room": "okl-4aw-chi_qvgs",
+   "named": true,
+   "said": "n_02cc84da158d] The change doesn't touch storage-target resolution, so I changed nothing. [filter-after-fetch-widens-window] There is no post-fetch filtering here, so I changed nothing. [seed:dotnet-canon:r_pagination_cap] This isn't a list endpoint, so I changed nothing. [seed:rag-defects:qz_jud"
+  },
+  {
+   "pr": 309,
+   "rep": 1,
+   "passed": false,
+   "room": "okl-4aw-6tddz_qr",
+   "named": true,
+   "said": "n_02cc84da158d]**: The change doesn't touch how the storage target is resolved. - **[seed:rag-defects:qz_judge_self]**: The judges are Sonnet sub-agents, blind to which arm they're grading. This change doesn't set the judge model or the generator model, so it has no bearing. - **[seed:geospatial-def"
+  },
+  {
+   "pr": 309,
+   "rep": 2,
+   "passed": false,
+   "room": "okl-4aw-66gqb2kp",
+   "named": true,
+   "said": "n_02cc84da158d]** The change adds no new entry point for the store target. `evals/stem_latency.py` reads `OKL_DATABASE_URL` and copies that store rather than opening it. No change needed. **[falsifier-relative-to-control]** The §4ad rule is already relative to the control arm (15% more than the uns"
+  }
+ ],
+ "okl_commit_at_start": "5f3defb",
+ "okl_commit": "5f3defb"
+}
