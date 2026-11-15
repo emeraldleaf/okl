@@ -1567,7 +1567,7 @@ def review_menu(nodes: Iterable[Node], repo: str, interests: list[str] | None) -
     order, which says nothing about relevance: what the review after writing picks from. In
     REPORT §4at's development half, a model given an explanation of a change and this list
     found more of the lessons the change broke than the search did. On other repositories it is
-    not yet measured, so the review stays opt-in. The set a briefing can show: superseded and
+    not yet measured; the review is on by default by decision, not by that measure. The set a briefing can show: superseded and
     obsolete lessons are left out, and a retracted one stays in as what to avoid."""
     scope = f"repo:{repo}"
     return [_also_entry(n) for n in sorted(nodes, key=lambda n: n.id)
@@ -1587,13 +1587,14 @@ REVIEW_STEPS = (
     "this change break this lesson? If it does, fix that and run the tests that cover it; if it does not, "
     "or the lesson has no bearing on this change, change nothing for it. In a pilot on five past bugs, "
     "the same ten lessons checked together in one pass caught far less than when each was asked on its "
-    "own (REPORT §4ax, §4ay).",
+    "own (REPORT §4ax, §4ay), even when the one pass was asked to check each in turn (§4bg).",
     "If you cannot start a sub-agent, check them yourself one at a time, one lesson per pass, and say "
-    "the review ran without fresh contexts: that is weaker, and not measured.",
+    "the review ran without fresh contexts: that is weaker. Checked in turn in one session, an agent "
+    "gave the lesson the change broke a one-line verdict and moved on (REPORT §4bg, a first look).",
     "Say which lessons you checked, which a change broke and what you changed for each, and which needed "
     "nothing.",
 )
-# What the Stop hook adds when a repo turns the review on (`okl init --review-after-writing`).
+# What the Stop hook adds unless a repo turns the review off (`okl init --no-review-after-writing`).
 REVIEW_NOTE = ("REVIEW AFTER WRITING (on in this repo): before you answer the question below, check the "
                "code this session wrote against the lessons. Run `okl check --change` and follow its steps.")
 

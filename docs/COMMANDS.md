@@ -28,15 +28,16 @@ okl standing         # the lessons this repo names on every task briefing, one l
                      #   ten: the ones most needed on earlier work, named on every task, raised the
                      #   briefing's reach on later work). A lesson the briefing already names is not
                      #   repeated, a file briefing gets none, and OKL_STANDING=0 leaves them out.
-okl on-edit          # the lesson checks that run when the agent edits a file the lesson governs
+okl on-edit          # the approved lesson checks, which run after every edit in the repo, those
+                     #   of the lessons governing the edited file first
                      #   (Claude Code's edit hook calls `okl on-edit run <file>`; another agent's
                      #   hook can too). `okl on-edit add <id>...` shows each stored command and
                      #   approves it on your yes (--yes skips the question; unattended without it,
                      #   exit 2), pinned to the command's hash: a command that changes afterwards
                      #   is not run until approved again. `remove <id>...` drops one. `run` exits
                      #   1 when a check failed, 2 when one could not be judged (out of time, or
-                     #   changed since approved), 0 when every one passed or none governs the
-                     #   file; each gets --timeout (30 s) and one edit --budget (50 s). Nothing is
+                     #   changed since approved), 0 when every one passed or the file lies
+                     #   outside the repo; each gets --timeout (30 s) and one edit --budget (50 s). Nothing is
                      #   stamped verified, and nothing runs until a check is approved.
 okl changes          # what a change did to the files lessons name, read from git with no model:
                      #   new, deleted and renamed files, and code moved between files (5 or more
@@ -111,10 +112,10 @@ okl check --change [BASE]
                      #   the changed code does, pick the ten lessons it most likely breaks, check
                      #   each in its own fresh sub-agent with one question (does this change break
                      #   it?), fix only what breaks one and run its tests again. okl calls no model;
-                     #   the agent does the review. A step under measurement (REPORT §4at to §4ay). --format json for a script. --format hook
-                     #   prints only the Stop hook's one-line note, where `okl init
-                     #   --review-after-writing` turned it on (OKL_REVIEW_AFTER_WRITING=1 or 0 for
-                     #   one session); off by default. A retracted lesson stays in the list as
+                     #   the agent does the review. A step under measurement (REPORT §4at to §4bg). --format json for a script. --format hook
+                     #   prints only the Stop hook's one-line note, unless `okl init
+                     #   --no-review-after-writing` turned it off (OKL_REVIEW_AFTER_WRITING=1 or 0 for
+                     #   one session); on by default. A retracted lesson stays in the list as
                      #   what to avoid. Exit 2 when git or the store cannot be read, or BASE
                      #   starts with '-'.
 okl embed            # build or refresh one local vector per record for --hybrid briefings

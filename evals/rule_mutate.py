@@ -508,7 +508,8 @@ def sensitivity(args: argparse.Namespace) -> int:
     as_far = sum(abs(gap(set(c))) >= abs(observed) - 1e-12 for c in splits)
     nodes, _ = nodes_and_refusals()
     governs = {lid: [g.strip() for g in (nodes[lid].files or "").split(",") if g.strip()] for lid in POPULATION}
-    # okl on-edit runs a lesson's check only after an edit to a file the lesson governs.
+    # okl on-edit as §4bf measured it ran a lesson's check only after an edit to a file the lesson governs;
+    # since 0.17.0 it runs every approved check after any edit (#450).
     fires = [p for p in breaks if governs[p["lesson"]]
              and any(dm.overlaps(f, governs[p["lesson"]]) for f in dm.changed_files(p["diff"]))]
     out = {

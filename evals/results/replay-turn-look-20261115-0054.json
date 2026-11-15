@@ -1,0 +1,310 @@
+{
+ "section": "4bg look (exploratory)",
+ "at": "2026-11-15T00:54Z",
+ "ask": "764da260a1cc3de4",
+ "lists": "5db23cae9529d97e",
+ "model": "sonnet",
+ "effort": "medium",
+ "sessions": 15,
+ "of": 15,
+ "pass_rate_in_turn": 0.2,
+ "per_task_in_turn": {
+  "115": 0,
+  "168": 0,
+  "196": 0,
+  "198": 1,
+  "309": 0
+ },
+ "per_task_4ay": {
+  "alone_told": {
+   "115": 0.6,
+   "168": 1,
+   "196": 1,
+   "198": 1,
+   "309": 0
+  },
+  "ten_plain": {
+   "115": 0,
+   "168": 0,
+   "196": 0,
+   "198": 0.4,
+   "309": 0
+  },
+  "one_at_a_time": {
+   "115": 0,
+   "168": 0.8,
+   "196": 1,
+   "198": 1,
+   "309": 0.8
+  }
+ },
+ "pass_rate_4ay": {
+  "alone_told": 0.72,
+  "ten_plain": 0.08,
+  "one_at_a_time": 0.72
+ },
+ "edited": 7,
+ "sessions_with_harm": 0,
+ "median_seconds": 126.7,
+ "usd_per_session": 0.149,
+ "script_sha256": "de89081d789497f1e7be3f2878cd333b0e41147f182f11bbda7ff42bdd926974",
+ "rows": [
+  {
+   "pr": 115,
+   "rep": 0,
+   "passed": false,
+   "edited": true,
+   "harm": [],
+   "turns": 5,
+   "seconds": 64.4,
+   "usd": 0.10810990000000001,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-r034xfeo",
+   "summary": "1 failed, 82 deselected in 0.35s",
+   "said": "t `--run` stamps nothing, and the new test asserts that. I changed nothing.\n- **n_58119d0a63d9:** The change adds no init instructions, so I changed nothing.\n- **n_e7988ff536fb:** Both `verify <id>` paths exit 2 and the unknown-id message goes to stderr. The suggestion text goes to stdout on purpose. I changed nothing.\n\nI added one hostile-glob case to `test_verify_without_a_check_suggests_one_and_drift_says_what_to_do` in `tests/test_okl.py`. Nothing else needed changing. `tests/test_okl.py` ran with 80 passed and 2 skipped (the Postgres conformance tests, which need `OKL_TEST_POSTGRES_URL`)."
+  },
+  {
+   "pr": 115,
+   "rep": 1,
+   "passed": false,
+   "edited": true,
+   "harm": [],
+   "turns": 6,
+   "seconds": 84.5,
+   "usd": 0.1113709,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-nqv8cj74",
+   "summary": "1 failed, 82 deselected in 0.35s",
+   "said": "rify <id>` with no `--run` stamps nothing, and the test asserts `verified_at` stays unset, so I changed nothing.\n- n_58119d0a63d9: the change prints no manual setup steps that init should perform, so I changed nothing.\n- n_e7988ff536fb: the suggestion path, unknown ids and unreachable stores all return 2. The suggestion path prints its output to stdout, and the unknown-id test asserts the reason goes to stderr. I changed nothing.\n\nI added one test, for a hostile glob reaching the new test-finder. `python3 -m pytest -q tests/test_okl.py` gives 81 passed, 2 skipped. I haven't committed anything."
+  },
+  {
+   "pr": 115,
+   "rep": 2,
+   "passed": false,
+   "edited": true,
+   "harm": [],
+   "turns": 8,
+   "seconds": 101.1,
+   "usd": 0.14800760000000002,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-3kzz5pbr",
+   "summary": "1 failed, 82 deselected in 0.36s",
+   "said": ". I changed nothing.\n- **n_58119d0a63d9:** It has no bearing on this change. I changed nothing.\n- **n_e7988ff536fb:** The unknown-id path returns 2 with its reason on stderr, but its test didn't check that stdout stayed empty. I added that assertion. The no-`--run` suggestion still prints to stdout and exits 2 by design, since that listing is the requested output.\n\nI added two tests in `tests/test_okl.py`: a hostile-glob test for `_tests_touching`, and an empty-stdout assertion on the unknown-id path. `python3 -m pytest -q tests/test_okl.py` gives 81 passed and 2 skipped. Nothing is committed."
+  },
+  {
+   "pr": 168,
+   "rep": 1,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 6,
+   "seconds": 138.7,
+   "usd": 0.0952586,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-e3rarflq",
+   "summary": "1 failed, 1 passed, 5 deselected in 0.07s",
+   "said": "ct_node` is read. Nothing to change.\n- **n_5ddb0776a863:** The report prints the count of samples with no code next to the failure count, and the tests don't read gitignored state. Nothing to change.\n- **n_fe26d1897041:** The change adds no guard that compares against the latest receipt, and the existing modal-instrument comparison is unchanged. Nothing to change.\n- **py_protocol_isinstance_names_only:** The change uses no Protocol and no `isinstance` conformance check. Nothing to change.\n\nNothing needed changing. The change was already complete and I edited no files, and nothing is committed."
+  },
+  {
+   "pr": 168,
+   "rep": 0,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 9,
+   "seconds": 186.5,
+   "usd": 0.10479830000000001,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-m2rh711g",
+   "summary": "1 failed, 1 passed, 5 deselected in 0.06s",
+   "said": "The change has no Protocol or `isinstance` use. Nothing needed changing.\n\nThe change was already complete, so I made no edits; the only edit I made was a temporary one to check the test, which I reverted. All 10 tests in `tests/test_ab_harness.py` pass. The full suite has 5 failures in `test_docs`, `test_okl` and `test_scaffold`. They come from missing `CLAUDE.md`, `AGENTS.md` and `.mcp.json` in this checkout and a package version mismatch (0.16.0 installed against 0.8.3). None of them involve the harness. I did not run the suite on the commit before this change to confirm they fail there too."
+  },
+  {
+   "pr": 168,
+   "rep": 2,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 6,
+   "seconds": 180.5,
+   "usd": 0.09578840000000002,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-6mq7nd2_",
+   "summary": "1 failed, 1 passed, 5 deselected in 0.05s",
+   "said": "report still leads with the failure count, and it now also says how many failures were \"no implementation to judge\". Unevaluable samples count toward the 20% usability bar and stay out of the denominators. Nothing to change.\n- **[n_fe26d1897041]**: The change adds no guard that compares against the latest receipt. The REPORT \u00a74k text relies on `okl_commit` to mark the change of instrument. Nothing to change.\n- **[seed:python-canon:py_protocol_isinstance_names_only]**: There is no Protocol or `isinstance` use here. Nothing to change.\n\nNothing needed changing. I made no edits and did not commit."
+  },
+  {
+   "pr": 196,
+   "rep": 0,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 15,
+   "seconds": 126.7,
+   "usd": 0.12964679999999998,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-j5ysacvl",
+   "summary": "1 failed, 6 deselected in 0.07s",
+   "said": "full suite has 337 passed, 2 skipped and 5 failed: `test_docs` (seed corpus count), `test_service_check`, and three in `test_scaffold` (mirror files, package version, plugin manifest).\n\nI couldn't run the suite on the commit before the change to see whether those failures were already there. The three scaffold failures look environmental (installed version and mirror files) and none touches the briefing code. `test_service_check` is the one worth a look: it logged 0 briefings where it expects 1, which could be a stray `OKL_BRIEFING_LOG=0` in the shell. I couldn't read the environment to check."
+  },
+  {
+   "pr": 198,
+   "rep": 0,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 12,
+   "seconds": 50.1,
+   "usd": 0.15408529999999998,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-d4ys7k9j",
+   "summary": "2 passed, 5 deselected in 0.06s",
+   "said": "affect the A/B arm design or the noise floor, so I changed nothing.\n- **py_docstrings**: The change adds no public functions or classes, so I changed nothing.\n- **pretooluse-additionalcontext**: The change doesn't touch hooks, so I changed nothing.\n- **remote-timeout-not-a-deadline**: The change adds no network or retry code, so I changed nothing.\n\nI made one change: the series guard in `evals/ab_harness.py` now treats the judge's window as part of the instrument. The tests in `tests/test_ab_harness.py` pass (17). I didn't run `ruff`, because that command needed approval. Nothing is committed."
+  },
+  {
+   "pr": 196,
+   "rep": 1,
+   "passed": false,
+   "edited": true,
+   "harm": [],
+   "turns": 26,
+   "seconds": 150.6,
+   "usd": 0.19397940000000002,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-y9o737x7",
+   "summary": "1 failed, 6 deselected in 0.09s",
+   "said": "ged no source code. `tests/test_briefing_terms.py` passes with 30 tests.\n\nThe full `tests` run had 5 failures: `test_service_check` in `tests/test_okl.py`, plus failures in `tests/test_docs.py` and `tests/test_scaffold.py`. I couldn't confirm whether they also fail without the change, because the sandbox blocked the stash and environment commands I tried. `test_service_check` found no logged briefing, so it may come from an `OKL_BRIEFING_LOG` setting in this shell. I didn't confirm that. The `tests/test_scaffold.py` failures are about package version and mirrored files, so they look unrelated."
+  },
+  {
+   "pr": 196,
+   "rep": 2,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 23,
+   "seconds": 164.5,
+   "usd": 0.15998130000000002,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-9_0je94f",
+   "summary": "1 failed, 6 deselected in 0.09s",
+   "said": "on reads 0.16.0 where the test expects 0.8.5. I didn't confirm that they also fail without the change.\n- **`test_service_check` is unresolved:** it asserts 1 briefing was logged and got 0. Its task has real subject words, so the stoplist shouldn't affect it. I suspect `OKL_BRIEFING_LOG=0` is set in this shell, but I couldn't confirm it.\n\nAll 25 test cases in `tests/test_briefing_terms.py` passed, including the one that runs the precision check on the seed packs.\n\nPlease run `python3 evals/preflight.py` and `OKL_BRIEFING_LOG= python3 -m pytest -q tests/test_okl.py::test_service_check` yourself."
+  },
+  {
+   "pr": 198,
+   "rep": 2,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 13,
+   "seconds": 56.5,
+   "usd": 0.17222659999999998,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-votp0dak",
+   "summary": "2 passed, 5 deselected in 0.06s",
+   "said": "* This is the same instrument-change problem as n_fe26d1897041. The guard fix above covers it, and REPORT \u00a74m already pre-registers the change.\n- **pretooluse-additionalcontext:** There are no hooks in this change, so it doesn't apply.\n- **remote-timeout-not-a-deadline:** There is no new network code in this change, so it doesn't apply.\n\n**Summary:** I extended the series guard in `evals/ab_harness.py` to compare `judge_max_chars` against the modal series, and I added a regression test. `python3 -m pytest -q tests/test_ab_harness.py` gives 18 passed. I ran only that file. Nothing is committed."
+  },
+  {
+   "pr": 198,
+   "rep": 1,
+   "passed": true,
+   "edited": true,
+   "harm": [],
+   "turns": 14,
+   "seconds": 81.4,
+   "usd": 0.1720665,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-kz8stit3",
+   "summary": "2 passed, 5 deselected in 0.05s",
+   "said": "g on the change, since no hooks are involved.\n- **remote-timeout-not-a-deadline:** This lesson has no bearing on the change, since no remote calls were added.\n- **n_473aec369b25:** The change breaks this lesson, so I fixed it. The judge window is a new instrument parameter, but the guard only compared the generator and judge commands. The guard now also compares `judge_max_chars`, and receipts that predate it count as 8,000. I added the window to the constructed receipts in the existing test and a legacy-series case that must warn.\n\nI changed `evals/ab_harness.py` and `tests/test_scaffold.py`."
+  },
+  {
+   "pr": 309,
+   "rep": 2,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 15,
+   "seconds": 106.3,
+   "usd": 0.2548612,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-66gqb2kp",
+   "summary": "1 failed, 1 passed, 5 deselected in 0.05s",
+   "said": "ge needed.\n\nI changed nothing; the change was ready as it stood. Of the 181 tests I ran, 2 failed and 2 were skipped for want of a Postgres URL. The tests ran from `tests/test_stem.py`, `test_bench.py`, `test_relevance_floor.py`, `test_okl.py`, `test_warm.py`, `test_docs.py` and `test_drift_branches.py`. The two failures look unrelated to stemming:\n- **`test_docs`:** it needs a `CLAUDE.md` that this checkout doesn't have.\n- **`test_service_check`:** it finds zero logged briefings. I think `OKL_BRIEFING_LOG=0` is set in my shell, but I couldn't confirm that or re-run it with the variable unset."
+  },
+  {
+   "pr": 309,
+   "rep": 0,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 7,
+   "seconds": 171.1,
+   "usd": 0.17395470000000005,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-chi_qvgs",
+   "summary": "1 failed, 1 passed, 5 deselected in 0.05s",
+   "said": "34ef53a8f] This adds no runtime-defect record, so I changed nothing.\n\n`tests/test_stem.py` and `tests/test_bench.py` pass (6 passed). The wider `tests/` run had 8 failures, all from this sandbox: missing `CLAUDE.md`, `AGENTS.md` and `.mcp.json`, an installed package version of 0.16.0 against the repo's 0.9.0, and empty briefing logs in the recap and hygiene tests. I didn't re-run on the parent commit to confirm they were already failing there, but none touch the stemming code.\n\n**Summary:** Nothing needed changing. The change was already consistent with the lessons and its stemming tests pass."
+  },
+  {
+   "pr": 309,
+   "rep": 1,
+   "passed": false,
+   "edited": false,
+   "harm": [],
+   "turns": 17,
+   "seconds": 277.7,
+   "usd": 0.1558931,
+   "effort": "medium",
+   "models": [
+    "claude-sonnet-5-5"
+   ],
+   "room": "okl-4aw-6tddz_qr",
+   "summary": "1 failed, 1 passed, 5 deselected in 0.05s",
+   "said": "lled as having none.\n- **[filter-after-fetch-widens-window]**: There is no post-fetch filtering here.\n- **[seed:dotnet-canon:r_pagination_cap]**: No list endpoint is involved.\n- **[n_02cc84da158d]**: The change doesn't touch how the storage target is resolved.\n- **[seed:rag-defects:qz_judge_self]**: The judges are Sonnet sub-agents, blind to which arm they're grading. This change doesn't set the judge model or the generator model, so it has no bearing.\n- **[seed:geospatial-defects:d18]**: No class counts are involved.\n- **[n_a7634ef53a8f]**: The change doesn't touch the encoding loop's inputs."
+  }
+ ],
+ "okl_commit_at_start": "76d235e",
+ "okl_commit": "76d235e"
+}

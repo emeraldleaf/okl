@@ -206,11 +206,12 @@ def _e2e_module():
 
 
 def test_the_end_to_end_arms_differ_only_in_the_review_steps():
-    """§4az: one pass is the steps before #427, each alone is today's, and they share everything else."""
+    """§4az: one pass is the steps before #427, each alone the steps #427 shipped, frozen as §4az ran them
+    (the review's own text has moved on since, with §4bg), and they share everything else."""
     e2e = _e2e_module()
     from okl import core
-    assert e2e.STEPS["review_each_alone"] == core.REVIEW_STEPS
-    assert e2e.STEPS["review_one_pass"] != core.REVIEW_STEPS
+    assert e2e.STEPS["review_each_alone"] == e2e.NEW_STEPS and e2e.NEW_STEPS[:2] == core.REVIEW_STEPS[:2]
+    assert e2e.STEPS["review_one_pass"] != e2e.NEW_STEPS
     assert e2e.STEPS["review_one_pass"][:2] == core.REVIEW_STEPS[:2]
     assert "sub-agent" not in " ".join(e2e.STEPS["review_one_pass"])
 
@@ -434,3 +435,11 @@ def test_the_choosing_figures_are_the_receipts():
     assert f"the pick on {missed['pick']} of 58, the pool and the screen on {missed['pool']}" in flat
     assert receipt["reading"] == "choosing does not improve enough"
     assert receipt["changes"] == receipt["of"] == 58 and receipt["broken_lessons"] == 124
+
+
+def test_the_end_to_end_steps_are_the_ones_its_receipt_ran():
+    """§4az's instrument, rebuilt from the frozen steps, is the one its receipt names: the review's own text has
+    moved on (§4bg), and the frozen copy must not drift with it."""
+    e2e = _e2e_module()
+    receipt = json.loads((REPO / "evals" / "results" / "review-e2e-20261111-1543.json").read_text())
+    assert receipt["instrument"] == e2e.INSTRUMENT

@@ -1,0 +1,16 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 592197c..5d374c4 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -144,8 +144,9 @@ jobs:
+             # settings file, since the command line is word-split; GIT_DIR points the clean
+             # room's git at the checkout. Only forms that cannot write: not branch or tag, which
+             # can create and delete refs while the token is in the environment and the model
+-            # reads PR text (CI reviewer on #307). Any other shell command is refused in -p mode.
+-            printf '%s' '{"permissions":{"allow":["Bash(git log:*)","Bash(git show:*)","Bash(git merge-base:*)","Bash(git rev-parse:*)"]}}' \
++            # reads PR text (CI reviewer on #307); show is out too, as it writes with --output.
++            # Any other shell command is refused in -p mode.
++            printf '%s' '{"permissions":{"allow":["Bash(git log:*)","Bash(git merge-base:*)","Bash(git rev-parse:*)"]}}' \
+               > "$RUNNER_TEMP/review-settings.json"
+             export GIT_DIR="$GITHUB_WORKSPACE/.git" GIT_WORK_TREE="$GITHUB_WORKSPACE"
+             REVIEW_CMD="$CLAUDE_BIN -p --model sonnet --max-turns 40 --tools Read,Grep,Glob,Bash --settings $RUNNER_TEMP/review-settings.json --add-dir $GITHUB_WORKSPACE"

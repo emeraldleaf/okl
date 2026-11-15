@@ -396,7 +396,7 @@ Nothing in okl reads a comment. Here is what you can do instead:
 | A doc changes and no lesson governs it | Ask whether a claim in it deserves a lesson with a check. |
 | Every few weeks | Run `okl metric` (lessons never shown; unproven lessons shown most), `okl dedup` (near-duplicates) and `okl drift`. |
 
-**Claude Code:** at the first stop of a session that changed files, a hook asks what was learned. It offers the session's failed commands as candidates. It also lists the lessons the session was briefed on and those whose governed files changed, with the update, retire and verify commands for each.
+**Claude Code:** at the first stop of a session that changed files, a hook first asks the agent for the review after writing (on by default: each lesson the change most likely breaks, checked in a sub-agent of its own), then asks what was learned. It offers the session's failed commands as candidates. It also lists the lessons the session was briefed on and those whose governed files changed, with the update, retire and verify commands for each.
 
 **Other agents:** there is no end-of-session question. Add this to the instruction file: *"Before you finish, if this task taught us something worth keeping, record it with `okl_record`. Run `okl drift` and report any lesson it lists."* Over MCP, okl offers `okl_check`, `okl_record`, `okl_update`, `okl_retire`, `okl_get` and `okl_search`. Seeding, verifying and drift are CLI commands the agent runs in a shell.
 

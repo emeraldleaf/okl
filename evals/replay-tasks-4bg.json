@@ -1,0 +1,584 @@
+[
+ {
+  "id": "t01",
+  "pr": 388,
+  "set": "4bg",
+  "kind": "new-file",
+  "needs_nothing": false,
+  "title": "okl intake pr <n>: a PR's resolved review findings, put to the encoding loop (#376)",
+  "issues": [
+   {
+    "title": "okl intake pr <n>: bring a PR's resolved review findings into the encoding loop",
+    "body": "## Where it stands (main, 24784b4)\nThe Stop hook is the only mechanical intake: it asks what the session itself learned. A finding made anywhere else reaches the store only when an agent records it by hand. That includes a PR's review threads, a CI failure and a live check run against a deployed system. In one consumer repo this week:\n- seven review comments on one PR held two real regressions;\n- a live container check on another PR found a case-insensitive match reopening routes that config meant to close.\n\nBoth reached okl only because the session agent recorded them by hand. A PR that no session opens is never asked.\n\n## Proposal\n`okl intake pr <n>` lists the PR's resolved review threads and the commits that resolved them (through `gh`). For each it asks the encoding-loop question: encode it or not, at which surface (test, CI, rule, lesson), and if not, why not. It prints the `okl record` and `okl verify` commands for the ones to encode. Optionally, a CI job comments on a merged PR with the findings no lesson covers.\n\n## Tests\n- Against a fixture of a PR's threads (recorded `gh` JSON, no network), it lists each resolved thread with its resolving commit.\n- Unresolved threads are left out.\n- The printed commands are ones the CLI accepts.\n\nRelated: #97 (a candidate inbox), #190 (a one-off review of past CodeRabbit findings).\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n"
+   }
+  ],
+  "base": "95e78e632cf48bfe3317a88e30d72c3fe941a176",
+  "frozen": "100d09fc092e340eafb6d341d8ac7073b6db12a5",
+  "end": "a563615e8dc8715a243821ae78b00b28cce33b79",
+  "task_commit": "100d09fc092e340eafb6d341d8ac7073b6db12a5",
+  "lesson": "eval-scripts-no-exposure",
+  "lesson_text": "[eval-scripts-no-exposure] Rule · Every caller of Client.check that briefs no agent asks for it unlogged\nsymptom: okl metric's exposure counts jump after an eval, a pre-flight or an okl intake run: briefing rows logged for lessons no agent was shown\nfix: set OKL_BRIEFING_LOG=0 before building the Client in an eval or pre-flight script; test it by running the caller against a throwaway store and asserting no briefing row was written\nbody: cause: Client.check logs each local briefing as exposure (client.py, core.record_briefing). ab_harness.py switched it off, but evals/layout_preflight.py did not, and one run wrote 8 false rows into the real store on 2026-10-10. A new eval script that copies the Client call pattern inherits the same leak; preflight.py is safe only because it calls core.check directly.\n",
+  "lesson_redactions": [
+   {
+    "removed": "pass log=False to Client.check (okl intake does; the service honours it as the check request's log field), or ",
+    "why": "names this task's own fix: the log=False option PR #388 added to Client.check"
+   }
+  ],
+  "lesson_created": "2026-10-10T12:44Z",
+  "in_sample": false,
+  "named_file": "evals/layout_preflight.py",
+  "fix_files": [
+   "src/okl/cli/intake.py",
+   "src/okl/client.py",
+   "src/okl/service.py"
+  ],
+  "test_file": "tests/test_replay_grader.py",
+  "grader": "test_t01_pr388",
+  "tests_after": [],
+  "relax": {},
+  "defect": "src/okl/cli/intake.py::_add_nearest calls client.check(..), which logs a briefing per finding, so exposure counts briefings no agent saw.",
+  "fix": "The lookup is not logged (the check is asked for unlogged, locally and over a service)."
+ },
+ {
+  "id": "t02",
+  "pr": 383,
+  "set": "4bg",
+  "kind": "new-file",
+  "needs_nothing": false,
+  "title": "Architecture diagrams of okl itself, generated where the code holds the facts and checked where they are drawn",
+  "issues": [],
+  "base": "e5b4fefc88b275be11750d256d9c676f6ca1d938",
+  "frozen": "36710c9c429c4f0d7acb9412e7f1cf2913df9849",
+  "end": "e5be51c241045c42765f4d8779053aef135a9d7e",
+  "task_commit": "36710c9c429c4f0d7acb9412e7f1cf2913df9849",
+  "lesson": "n_0637c92c032f",
+  "lesson_text": "[n_0637c92c032f] Rule · A render is a separate artifact from its source and needs its own assertion\nsymptom: a diagram, chart or generated doc whose source and render are both committed with no check tying them together\nfix: assert a claim present in the source is also present in the render; re-render and eyeball the raster before committing\nbody: cause: an SVG/PNG committed beside a source file is what readers actually see, and nothing links them once the render step is manual. The gate must assert the render carries the source's claims, or an edited source with a stale render passes every check.\n",
+  "lesson_redactions": [],
+  "lesson_created": "2026-09-01T03:10Z",
+  "in_sample": false,
+  "named_file": "ci/check-diagram-figures.sh",
+  "fix_files": [
+   "ci/check-diagram-names.py"
+  ],
+  "test_file": "tests/test_replay_grader.py",
+  "grader": "test_t02_pr383",
+  "tests_after": [],
+  "relax": {},
+  "defect": "ci/check-diagram-names.py reads only the .excalidraw source, so a stale or wrong .svg passes.",
+  "fix": "Also check the render's text against the source (and the render's own names against the code)."
+ },
+ {
+  "id": "t03",
+  "pr": 37,
+  "set": "4bg",
+  "kind": "other-file",
+  "needs_nothing": false,
+  "title": "Give CI a store: a committed drift snapshot",
+  "issues": [
+   {
+    "title": "Give CI a store: a committed drift snapshot",
+    "body": "## Problem\nThis repo's CI has no knowledge store, so the `okl-verify` drift step runs, checks nothing and warns \"Drift not checked\" (#21 made that honest, but it is still unchecked). The same is true for any consumer without a hosted service, and for every fork PR, which gets no secrets.\n\nThe obvious fix — commit the rules and `okl seed` them in CI — produces a false all-clear: seeding goes through `record()`, which stamps `verified_at` fresh, so every rule looks just-verified and nothing ever drifts.\n\n## Plan\n- `okl export --drift` writes `okl-drift.json`: the in-scope rules that govern files (`id`, `title`, `scope`, `files`, `verified_at`, `verified_by`), sorted, no bodies, no generated timestamp (stable diffs).\n- `okl drift --snapshot okl-drift.json` reads the **committed** snapshot (`git show HEAD:`), not the working tree, and builds nodes in memory — no store, no `record()`, real timestamps.\n- The snapshot is refused (exit 2) when an entry's `verified_at` falls outside the window around the minute stamped in its `verified_by` evidence (one minute before to five after, for clock skew) — a hand-edited timestamp does not clear drift. A deliberate forgery of both fields is still possible; it shows in the PR diff, where review is the guard.\n- `okl verify` refreshes the snapshot when one exists, so re-verifying and updating CI's view is one step.\n- `okl-verify.yml` (all three mirrors) uses the snapshot when no service is configured and the file is tracked.\n- Drift's advice line stops recommending `okl record --verified` (which CLAUDE.md bans) and names `okl verify`.\n\nA hosted service (#26 territory) stays compatible: `OKL_SERVICE_URL` still wins when set.\n\n"
+   }
+  ],
+  "base": "cb266d03c5d8a6fbce14ef48718933f21aa173b2",
+  "frozen": "a42872dcfd42fc0089ec363a8e12a62831ab7e47",
+  "end": "d1b09b97c7ec06c25097029601cfb9fff3af3b93",
+  "task_commit": "a42872dcfd42fc0089ec363a8e12a62831ab7e47",
+  "lesson": "n_e7988ff536fb",
+  "lesson_text": "[n_e7988ff536fb] Rule · Exit codes are this CLI's public API: 0 clean, 1 findings, 2 refused\nsymptom: a new command, or a new error path in an existing one, that returns 0 or 1 on a condition meaning 'this did not run'\nfix: return 2 and print the reason to stderr; add a test asserting the code and that stdout stayed empty\nbody: cause: okl runs inside other people's hooks and CI, where the exit code is the only thing read. 0 means the check ran and found nothing; 1 means it ran and found something (drift, duplicates); 2 means it could not run at all — unconfigured, unreachable, rejected credentials, invalid input. Collapsing 2 into 0 is the silence-as-safety failure the whole tool exists to prevent, and collapsing it into 1 makes a misconfiguration look like a finding.\n",
+  "lesson_redactions": [],
+  "lesson_created": "2026-09-02T01:26Z",
+  "in_sample": false,
+  "named_file": null,
+  "fix_files": [
+   "src/okl/drift.py"
+  ],
+  "test_file": "tests/test_replay_grader.py",
+  "grader": "test_t03_pr37",
+  "tests_after": [],
+  "relax": {},
+  "defect": "A malformed okl-drift.json (rules a string, or an entry that is not a dict) raises a traceback (exit 1, which --gate reads as drift found).",
+  "fix": "Refuse a malformed snapshot with exit 2."
+ },
+ {
+  "id": "t04",
+  "pr": 380,
+  "set": "4bg",
+  "kind": "other-file",
+  "needs_nothing": false,
+  "title": "doctor, init and metric say what the interests hide (#374)",
+  "issues": [
+   {
+    "title": "A repo set up before a default interest never gets it, and nothing says how many lessons its interests hide",
+    "body": "## Where it stands (main, 24784b4, 2026-11-06)\n- `_init_interests` (`src/okl/cli/install.py:613`) only fills an empty interest list. That is deliberate since #340: a re-run never overrides a list someone chose. Detection has since added `security` and `method`, because the portable lessons are filed under them. A repo configured before that change keeps its narrower list through every upgrade.\n- `core._in_scope` (`src/okl/core.py:49`) hides every org lesson whose subjects are outside the list. One consumer repo was configured in July with five interests and neither of those two. In it, 26 of 70 org lessons never reached a briefing, among them the authorization-test and IDOR lessons.\n- `okl metric` reported \"42 of 45 never shown\". Its denominator, \"lessons this repo can be briefed\", already leaves the hidden ones out (`core.exposure_report` counts only what `_in_scope` passes). So the report never mentioned the other 26, and nobody looked.\n\n## Proposal\n1. `okl doctor` and a re-run of `okl init` report how many org lessons the interests hide. They name the default subjects the config lacks, with the command that adds them. Neither changes the list, so #340's rule stands.\n2. `okl metric` reports the count the interests hide, beside the lessons this repo can be briefed.\n\n## Tests\n- A store holds an org lesson tagged only `security`, and the config lacks `security`. `okl doctor` names the lesson and the missing subject.\n- A re-run of `okl init` prints the offer and leaves `interests` unchanged.\n- `okl metric` counts that lesson as hidden by interests.\n\nRelated: #340, #91.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n"
+   }
+  ],
+  "base": "24784b4d80c391addc8a41289d5dadfa947c7fc4",
+  "frozen": "c17c7d53d2837fee992888dca199a8ce98244fbd",
+  "end": "558a9afe7a94c3bb9b8b55086a024dfadf15e0df",
+  "task_commit": "c17c7d53d2837fee992888dca199a8ce98244fbd",
+  "lesson": "n_02cc84da158d",
+  "lesson_text": "[n_02cc84da158d] Defect · OKL_DATABASE_URL was honoured by the store and ignored by every CLI command\nsymptom: a documented storage env var works in one entry point and is silently overridden in another; writes land somewhere other than where the operator pointed them\nfix: resolve the storage target in ONE place that every entry point calls; if a component deliberately ignores the variable, refuse loudly rather than silently substituting a default\nbody: cause: Store honoured OKL_DATABASE_URL from v0.1 and the HTTP service passed it through, but Client._local_store built a config-adjacent sqlite URL unconditionally - so every CLI command ignored it. Pointing the variable at Postgres and running okl record reported success and wrote to a local file. Found while building a diagram generator that needed a scratch store: the seed step printed 'seeded 10 records' and the target database was empty, which is the exit-0-with-no-output case the verify_materialized gate exists for. The variable was never unsupported; it was supported in the layer nobody entered through.\n",
+  "lesson_redactions": [],
+  "lesson_created": "2026-09-03T13:22Z",
+  "in_sample": false,
+  "named_file": null,
+  "fix_files": [
+   "src/okl/cli/health.py"
+  ],
+  "test_file": "tests/test_replay_grader.py",
+  "grader": "test_t04_pr380",
+  "tests_after": [],
+  "relax": {},
+  "defect": "cli/health.py::_no_store_yet re-reads OKL_DATABASE_URL with `is None`, but the client treats an empty value as unset, so with OKL_DATABASE_URL=\"\" okl doctor creates .okl/okl.db.",
+  "fix": "Treat an empty OKL_DATABASE_URL as unset."
+ },
+ {
+  "id": "t05",
+  "pr": 259,
+  "set": "4bg",
+  "kind": "same-file",
+  "needs_nothing": false,
+  "title": "check: a relevance floor before the top-12 cutoff",
+  "issues": [
+   {
+    "title": "Briefing precision: a relevance floor before the top-12 cutoff, measured",
+    "body": "## Why\n\nThe briefing always fills its twelve slots. The search is an OR of the task's subject words, ranked by BM25, cut at the limit, with no floor on how well a record matched. On a short or generic prompt that means twelve records chosen by one shared word. From the probe in PR #256 (`evals/results/probe-rephrase-20261021.txt`, six prompts taken verbatim from one session, this repo's interests):\n\n| prompt | records returned | matched one word only | the word |\n| --- | --- | --- | --- |\n| \"this seems like a major point to scrutinize\" | 12 | 12 | point, major |\n| \"what about the org knowledge idea, is that a niche?\" | 10 | 10 | org |\n| \"give me a doc for that too\" | 12 | 12 | give, doc |\n| \"how do we come up with a good plan for governing github copilot and mcp\" | 12 | 10 | plan, governing, come |\n\nThose twelve arrive in the agent's context as imperatives under \"Do this\", including a remote-sensing compositing rule for the word \"point\". The hook output for the first prompt is about 8,800 characters, roughly 2,200 tokens, on every such prompt. This is the recorded defect \"ranking works, filtering doesn't\" in its remaining form: the cutoff bounded the count, not the relevance.\n\n## What to do\n\nAdd a relevance floor before the cutoff, and report what it removed:\n\n- A record is briefed only if it matches **two or more** of the task's subject words, or one word when the task has only one. On the probe this keeps 0, 4, 0, 0, 2 and 3 of the twelve for the six prompts above, and keeps **all eight** authored eval tasks' governing records (each matches 2 to 10 words). A rarity-based floor (a word in at most 3% of the store) was also tried and loses two of the eight, so it is the wrong shape.\n- When the floor empties the briefing, say so in the hook line: \"0 relevant lessons; 12 weak matches trimmed\" is a different fact from \"0 lessons in the store\", and both differ from silence.\n- `okl check --format json` gains the matched-word count per record and the number trimmed by the floor, so the exposure log can keep it.\n\n## Measure before merging\n\n`evals/preflight.py` must stay green (it already asserts each task's record is present). Re-run `evals/probe_rephrase.py` and commit the receipt beside the one in PR #256; the floor must not change any \"yes\" in its recall table. Then one A/B on the §4m instrument, since a shorter briefing is also a cheaper one and #234 is already measuring briefing size.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n"
+   }
+  ],
+  "base": "7a82dd7fd2ca799593d3e4c52d61496c7064029d",
+  "frozen": "b584a2d74c19810c08f3188dac9bad74ac8458f3",
+  "end": "c1fcde2aa7fddeba6081efb0bd6b3b2db32e4c1b",
+  "task_commit": "b584a2d74c19810c08f3188dac9bad74ac8458f3",
+  "lesson": "filter-after-fetch-widens-window",
+  "lesson_text": "[filter-after-fetch-widens-window] Defect · Filtering results after a fixed-size fetch shrinks the window: widen the fetch by what was dropped\nsymptom: after some records start being excluded (retired, hidden, filtered), a small top-k returns fewer results or none, and the briefing says nothing matched although a live match ranks just below\nfix: re-fetch with the window widened by the number excluded (bounded retries), or filter inside the query; test a small limit with excluded records ranked above a live one\nbody: cause: okl R2 dropped superseded and obsolete lessons after store.search fetched 3x limit; three obsolete matches above a live one left a limit-1 briefing empty, reading 'no encoded rule matched'.\n",
+  "lesson_redactions": [],
+  "lesson_created": "2026-10-10T23:18Z",
+  "in_sample": false,
+  "named_file": null,
+  "fix_files": [
+   "src/okl/core.py"
+  ],
+  "test_file": "tests/test_replay_grader.py",
+  "grader": "test_t05_pr259",
+  "tests_after": [],
+  "relax": {},
+  "defect": "The relevance floor filters a fixed window after fetching, so a qualifying record just past the window reads as no close match.",
+  "fix": "Widen the fetch while the floor leaves the window short."
+ },
+ {
+  "id": "t06",
+  "pr": 163,
+  "set": "4bg",
+  "kind": "same-file",
+  "needs_nothing": false,
+  "title": "Retire a lesson with a reason: wrong, replaced or obsolete (okl review R2)",
+  "issues": [],
+  "base": "f2bdf85d2394684c74400400e0b901dd2aa666fe",
+  "frozen": "35fbf04beda6492f4e9790f8f74ac6883146c494",
+  "end": "282165982337dd56c1be8e448e9dc4263a4c8727",
+  "task_commit": "35fbf04beda6492f4e9790f8f74ac6883146c494",
+  "lesson": "filter-after-fetch-widens-window",
+  "lesson_text": "[filter-after-fetch-widens-window] Defect · Filtering results after a fixed-size fetch shrinks the window: widen the fetch by what was dropped\nsymptom: after some records start being excluded (retired, hidden, filtered), a small top-k returns fewer results or none, and the briefing says nothing matched although a live match ranks just below\nfix: re-fetch with the window widened by the number excluded (bounded retries), or filter inside the query; test a small limit with excluded records ranked above a live one",
+  "lesson_redactions": [
+   {
+    "removed": "body: cause: okl R2 dropped superseded and obsolete lessons after store.search fetched 3x limit; three obsolete matches above a live one left a limit-1 briefing empty, reading 'no encoded rule matched'.",
+    "why": "describes this task's own incident: the lesson was written from it (in_sample), so it gives the bug away"
+   }
+  ],
+  "lesson_created": "2026-10-10T23:18Z",
+  "in_sample": true,
+  "named_file": null,
+  "fix_files": [
+   "src/okl/core.py"
+  ],
+  "test_file": "tests/test_replay_grader.py",
+  "grader": "test_t06_pr163",
+  "tests_after": [],
+  "relax": {},
+  "defect": "Retired lessons use up the search window, so one live match ranked below obsolete ones leaves a limit-1 briefing empty.",
+  "fix": "Widen the fetch by the number of retired lessons left out."
+ },
+ {
+  "id": "t07",
+  "pr": 163,
+  "set": "4bg",
+  "kind": "same-file",
+  "needs_nothing": false,
+  "title": "Retire a lesson with a reason: wrong, replaced or obsolete (okl review R2)",
+  "issues": [],
+  "base": "f2bdf85d2394684c74400400e0b901dd2aa666fe",
+  "frozen": "35fbf04beda6492f4e9790f8f74ac6883146c494",
+  "end": "282165982337dd56c1be8e448e9dc4263a4c8727",
+  "task_commit": "35fbf04beda6492f4e9790f8f74ac6883146c494",
+  "lesson": "importer-keeps-local-decision",
+  "lesson_text": "[importer-keeps-local-decision] Defect · An importer that rewrites records from their source must keep a decision made locally on them\nsymptom: a re-import, re-seed or sync restores a field someone changed on purpose locally (a status, an override), because the source sets that field too\nfix: make the local decision win explicitly; test with a source that sets the field, not only one that omits it",
+  "lesson_redactions": [
+   {
+    "removed": " (here: a retired status is kept whatever the pack says, and only the verb that retires can change it)",
+    "why": "names this task's own fix: the retired status kept whatever the pack says, changed only by okl retire"
+   },
+   {
+    "removed": "body: cause: okl R2 kept a local retirement across okl seed only when the pack gave no status; eight bundled lessons say status live, so a re-seed quietly brought retired lessons back. The guard tested for the source's silence instead of for the local decision.",
+    "why": "describes this task's own incident: the lesson was written from it (in_sample), so it gives the bug away"
+   }
+  ],
+  "lesson_created": "2026-10-10T23:18Z",
+  "in_sample": true,
+  "named_file": null,
+  "fix_files": [
+   "src/okl/core.py"
+  ],
+  "test_file": "tests/test_replay_grader.py",
+  "grader": "test_t07_pr163",
+  "tests_after": [],
+  "relax": {},
+  "defect": "okl seed restores a retired lesson when the pack sets a status.",
+  "fix": "A retired status is kept whatever the pack says; only okl retire changes it."
+ },
+ {
+  "id": "t08",
+  "pr": 307,
+  "set": "4bg",
+  "kind": "other-file",
+  "needs_nothing": false,
+  "title": "Free review gates: the reviewer on the Claude subscription, a docs-figure gate, Postgres in CI",
+  "issues": [],
+  "base": "485f0ed5229e06301648a85f42de98144f1a4fb0",
+  "frozen": "42c386e42e4e3255dfdf72bd8e9a684e454f8010",
+  "end": "1ccded407bca77b254403d3d55d0d329d8ac19bf",
+  "task_commit": "42c386e42e4e3255dfdf72bd8e9a684e454f8010",
+  "lesson": "n_916330f61994",
+  "lesson_text": "[n_916330f61994] Rule · A comment asserting a safety property is not the property\nsymptom: a comment justifying a decision by asserting an invariant, with no test or code enforcing it\nfix: make the claim executable — write the file, then assert git would not stage the secret\nbody: cause: a comment read '.okl/ is gitignored' as justification for writing a machine-local path there, and nothing in the code ever wrote a .gitignore. A later feature stored a bearer token in the same directory on the strength of that comment, so git add . committed a shared secret.\n",
+  "lesson_redactions": [],
+  "lesson_created": "2026-09-01T02:18Z",
+  "in_sample": false,
+  "named_file": ".okl/config.json",
+  "fix_files": [
+   ".github/workflows/ci.yml"
+  ],
+  "test_file": "tests/test_replay_grader.py",
+  "grader": "test_t08_pr307",
+  "tests_after": [],
+  "relax": {},
+  "defect": "A workflow comment says the review agent's allow-list holds only forms that cannot write, but .github/workflows/ci.yml allows Bash(git log:*) and Bash(git show:*), which take --output and write.",
+  "fix": "Allow only git subcommands that cannot write (merge-base, rev-parse)."
+ },
+ {
+  "id": "t09",
+  "pr": 362,
+  "set": "4bg",
+  "kind": "same-file",
+  "needs_nothing": false,
+  "title": "okl check --path: the lessons that govern a file, before it is read or edited (#94)",
+  "issues": [],
+  "base": "6bae22d6e3ef1ff444e4f451f3fb0a224b008973",
+  "frozen": "2cae25336f244351e9f90d7b4fd9fcba8a0c592c",
+  "end": "48a44485718ad2ec0ca03f1479d5cb449bf22e5a",
+  "task_commit": "2cae25336f244351e9f90d7b4fd9fcba8a0c592c",
+  "lesson": "remote-path-test-through-client",
+  "lesson_text": "[remote-path-test-through-client] Defect · A remote path tested only by posting to the service never exercises the client that calls it\nsymptom: a client feature works locally and its service endpoint passes its own tests, but every real call through the client fails (a 422 on a null the client sends, a 404 on an id the client URL-encodes)\nfix: test every remote path through the real client: route its HTTP library to the in-process app (patch urlopen to a TestClient) so the client's encoding, defaults and error mapping meet the server's validation; keep one such test per endpoint the client calls, and give it an input the client filters or trims before sending, down to empty\nbody: cause: okl R1's service tests posted JSON straight to the app, and the client was only ever tested in local mode. Two defects lived in the gap: the MCP tool sent replace=null, which the typed service model refuses, so every record over a service failed; and GET /node/{id} never matched an id holding a slash the client had encoded. Both reviewers of R1 found them; no test could have.\n",
+  "lesson_redactions": [
+   {
+    "removed": " (sweep 6: paths all outside the repo became an empty list the service refused)",
+    "why": "names this task's own incident: paths all outside the repo becoming an empty list the service refused"
+   }
+  ],
+  "lesson_created": "2026-10-10T21:56Z",
+  "in_sample": false,
+  "named_file": null,
+  "fix_files": [
+   "src/okl/client.py",
+   "src/okl/core.py"
+  ],
+  "test_file": "tests/test_replay_grader.py",
+  "grader": "test_t09_pr362",
+  "tests_after": [],
+  "relax": {},
+  "defect": "Over a service, Client().check(\"\", paths=[...all outside the repo...]) posts an empty paths list, which the service refuses (422).",
+  "fix": "Answer locally, without asking the service, when no path is inside the repo."
+ },
+ {
+  "id": "t10",
+  "pr": 34,
+  "set": "4bg",
+  "kind": "other-file",
+  "needs_nothing": false,
+  "title": "Make the drift gate say when it checked nothing, instead of passing",
+  "issues": [
+   {
+    "title": "drift --gate passes against an empty store, checking nothing",
+    "body": "`okl drift --gate` exits 0 when the store it reads is empty (`src/okl/cli.py`, `cmd_drift`: it returns 1 only when `hits and args.gate`).\n\nIn CI without `OKL_SERVICE_URL`, `drift` reads the repo-local `.okl/`, which `okl init` gitignores. So the store is empty, there are no hits, and the gate passes having checked nothing. `check` already refuses to report clean on an empty or unconfigured store; `drift --gate` should fail closed the same way, since \"no drift\" and \"nothing was checked\" look identical to the PR author.\n\nFound in emeraldleaf-dev, which removed its drift workflow for this reason (see its AGENTS.md, \"The knowledge layer\").\n\n**Suggested fix:** under `--gate`, exit non-zero when the store holds no records for the repo (or none that declare `files`), with a message naming the cause. Or document that the workflow must run `okl seed` first, and have `okl init`'s generated workflow do so.\n"
+   }
+  ],
+  "base": "c31be96e8b9aa1b4354fae2ff1c48483076ff3bc",
+  "frozen": "a5c42aa7d2d85d6a68019422ca9886df2e88cd2c",
+  "end": "d77c50b48b975712d67e771216a4ddc633b21e77",
+  "task_commit": "a5c42aa7d2d85d6a68019422ca9886df2e88cd2c",
+  "lesson": "n_e7988ff536fb",
+  "lesson_text": "[n_e7988ff536fb] Rule · Exit codes are this CLI's public API: 0 clean, 1 findings, 2 refused\nsymptom: a new command, or a new error path in an existing one, that returns 0 or 1 on a condition meaning 'this did not run'\nfix: return 2 and print the reason to stderr; add a test asserting the code and that stdout stayed empty\nbody: cause: okl runs inside other people's hooks and CI, where the exit code is the only thing read. 0 means the check ran and found nothing; 1 means it ran and found something (drift, duplicates); 2 means it could not run at all — unconfigured, unreachable, rejected credentials, invalid input. Collapsing 2 into 0 is the silence-as-safety failure the whole tool exists to prevent, and collapsing it into 1 makes a misconfiguration look like a finding.\n",
+  "lesson_redactions": [],
+  "lesson_created": "2026-09-02T01:26Z",
+  "in_sample": false,
+  "named_file": null,
+  "fix_files": [
+   "ci/okl-verify.yml",
+   ".github/workflows/okl-verify.yml",
+   "src/okl/scaffold/ci/okl-verify.yml"
+  ],
+  "test_file": "tests/test_replay_grader.py",
+  "grader": "test_t10_pr34",
+  "tests_after": [],
+  "relax": {},
+  "defect": "The shipped CI drift step turns exit 2 (did not run) into a green warning even when a store is configured.",
+  "fix": "Warn only when no store is configured; otherwise propagate exit 2."
+ },
+ {
+  "id": "t11",
+  "pr": 163,
+  "set": "4bg",
+  "kind": "other-file",
+  "needs_nothing": false,
+  "title": "Retire a lesson with a reason: wrong, replaced or obsolete (okl review R2)",
+  "issues": [],
+  "base": "f2bdf85d2394684c74400400e0b901dd2aa666fe",
+  "frozen": "18aaf2773cdd911fefb735b4f49f6c4260f80083",
+  "end": "3b65d2f613159d58120aa1774cc4fdf6ab2d94a4",
+  "task_commit": "18aaf2773cdd911fefb735b4f49f6c4260f80083",
+  "lesson": "remote-timeout-not-a-deadline",
+  "lesson_text": "[remote-timeout-not-a-deadline] Defect · A per-socket timeout is not a deadline, and a failure after the request was sent is not 'not written'\nsymptom: a fail-closed hook against a stalled shared service runs past its host's time limit (Claude Code cancels a UserPromptSubmit hook at 30 s and lets the prompt through unbriefed), or a write reported as lost turns up stored twice after the user retries\nfix: budget the caller's worst case per address and per read (or set a real deadline around the whole call), and stop retrying a try that failed slowly, since that is an outage rather than a transient; catch the post-send errors (OSError, http.client.HTTPException) after URLError and fail closed on them; for a write, say 'maybe recorded' (search before retrying, or retry idempotently with the same id), never 'not recorded', and test the retry you call safe: an identical second call must write nothing new; keep a test that reads the retry loop's numbers from the shipped hook and asserts the worst case stays under the host's limit\nbody: cause: Python urllib's timeout applies to each connect attempt, once per address the host resolves to, and to each socket read; it is not a limit on the whole call, and a DNS lookup is not covered at all. urllib wraps connect and send failures in URLError, but failures while reading the reply escape raw: TimeoutError, ConnectionResetError, RemoteDisconnected, BadStatusLine, IncompleteRead. okl's client caught only HTTPError and URLError, so a stalled service crashed okl check with a traceback, and the hook's three 10 s tries took 31.6 s (okl #156, review R10). Two black-holed addresses still took 31.5 s at 5 s a try. Also: bash SECONDS counts whole seconds, so a '-ge N' elapsed check only guarantees a try under N-1 s reads as quick.\n",
+  "lesson_redactions": [
+   {
+    "removed": ", which an append-only history row breaks even when the status write is idempotent (okl #163)",
+    "why": "cites PR #163's retry test, this task's own fix"
+   }
+  ],
+  "lesson_created": "2026-10-10T15:22Z",
+  "in_sample": false,
+  "named_file": null,
+  "fix_files": [
+   "src/okl/core.py"
+  ],
+  "test_file": "tests/test_replay_grader.py",
+  "grader": "test_t11_pr163",
+  "tests_after": [],
+  "relax": {},
+  "defect": "okl_retire says a retry is safe, but every retry appends another retirement row.",
+  "fix": "An identical retirement request writes nothing."
+ },
+ {
+  "id": "t12",
+  "pr": 363,
+  "set": "4bg",
+  "kind": "same-file",
+  "needs_nothing": false,
+  "title": "Brief a file's lessons when Claude Code reads it, and REPORT §4aj's result (#94)",
+  "issues": [],
+  "base": "2cae25336f244351e9f90d7b4fd9fcba8a0c592c",
+  "frozen": "411a08a74a2c459bcfc0c59d922159e1a99db0c8",
+  "end": "48a44485718ad2ec0ca03f1479d5cb449bf22e5a",
+  "task_commit": "411a08a74a2c459bcfc0c59d922159e1a99db0c8",
+  "lesson": "temp-marker-keyed-by-scope",
+  "lesson_text": "[temp-marker-keyed-by-scope] Defect · A once-a-session marker in the temp directory keyed by the session alone drops a lesson in another checkout\nsymptom: a file briefing leaves out a lesson as already briefed, though this checkout never showed it: another checkout passed the same session id\nfix: key any temp-directory marker by everything that scopes what it remembers; prefer a key that errs toward a repeat, never toward a dropped lesson\nbody: cause: the read hook's dedupe marker (okl #94) hashed only the session id. Claude Code's hook cds to one project, but okl check --path --session is a CLI contract another agent's hook can call from several checkouts, and seed ids repeat across stores, so a lesson briefed in one checkout was dropped in another, even where its copy said something else.\n",
+  "lesson_redactions": [
+   {
+    "removed": ": here the session, the directory okl runs from and the repo (_once_per_session's where), encoded with surrogatepass",
+    "why": "names this task's own fix: the key made of session, directory and repo, with the _once_per_session parameter that carries it"
+   },
+   {
+    "removed": " CodeRabbit sweep 6 found the session-only key; the local review of #366 found that a repo-name key still collided for two checkouts with the same name.",
+    "why": "names this task's own fix (CodeRabbit sweep 6) and the review of #366 that refined it"
+   }
+  ],
+  "lesson_created": "2026-11-05T02:58Z",
+  "in_sample": true,
+  "named_file": "src/okl/cli/lessons.py",
+  "fix_files": [
+   "src/okl/cli/lessons.py"
+  ],
+  "test_file": "tests/test_replay_grader.py",
+  "grader": "test_t12_pr363",
+  "tests_after": [],
+  "relax": {},
+  "defect": "The read hook's once-per-session marker is keyed by the session only, so another repo given the same session id loses a lesson.",
+  "fix": "Key the marker by the repo (scope) as well as the session."
+ },
+ {
+  "id": "t13",
+  "pr": 161,
+  "set": "4bg",
+  "kind": "same-file",
+  "needs_nothing": false,
+  "title": "Make lessons addressable and safely editable (okl review R1)",
+  "issues": [],
+  "base": "66e78ef241acb4d4bccbe653d4f0f368fc471536",
+  "frozen": "a550e95288cf26097e1b45cfc35dbfe179978483",
+  "end": "694cc78e4d6b5c4ad7b13f7e113580ce613f512e",
+  "task_commit": "a550e95288cf26097e1b45cfc35dbfe179978483",
+  "lesson": "remote-path-test-through-client",
+  "lesson_text": "[remote-path-test-through-client] Defect · A remote path tested only by posting to the service never exercises the client that calls it\nsymptom: a client feature works locally and its service endpoint passes its own tests, but every real call through the client fails (a 422 on a null the client sends, a 404 on an id the client URL-encodes)\nfix: test every remote path through the real client: route its HTTP library to the in-process app (patch urlopen to a TestClient) so the client's encoding, defaults and error mapping meet the server's validation; keep one such test per endpoint the client calls, and give it an input the client filters or trims before sending, down to empty (sweep 6: paths all outside the repo became an empty list the service refused)",
+  "lesson_redactions": [
+   {
+    "removed": "body: cause: okl R1's service tests posted JSON straight to the app, and the client was only ever tested in local mode. Two defects lived in the gap: the MCP tool sent replace=null, which the typed service model refuses, so every record over a service failed; and GET /node/{id} never matched an id holding a slash the client had encoded. Both reviewers of R1 found them; no test could have.",
+    "why": "describes this task's own incident: the lesson was written from it (in_sample), so it gives the bug away"
+   }
+  ],
+  "lesson_created": "2026-10-10T21:56Z",
+  "in_sample": true,
+  "named_file": null,
+  "fix_files": [
+   "src/okl/client.py",
+   "src/okl/service.py",
+   "src/okl/mcp_server.py"
+  ],
+  "test_file": "tests/test_replay_grader.py",
+  "grader": "test_t13_pr161",
+  "tests_after": [],
+  "relax": {},
+  "defect": "Over a service, MCP okl_record sent replace=null (422, so every record failed) and GET /node/{id} missed ids containing a slash.",
+  "fix": "Drop None values before posting; route ids that contain a slash."
+ },
+ {
+  "id": "t14",
+  "pr": 363,
+  "set": "4bg",
+  "kind": "new-file",
+  "needs_nothing": false,
+  "title": "Brief a file's lessons when Claude Code reads it, and REPORT §4aj's result (#94)",
+  "issues": [],
+  "base": "2cae25336f244351e9f90d7b4fd9fcba8a0c592c",
+  "frozen": "411a08a74a2c459bcfc0c59d922159e1a99db0c8",
+  "end": "da2879799cb92de6a4c475645c9557e7ea67f2ff",
+  "task_commit": "411a08a74a2c459bcfc0c59d922159e1a99db0c8",
+  "lesson": "hook-cli-version-skew",
+  "lesson_text": "[hook-cli-version-skew] Rule · A hook that calls a CLI must survive an older CLI — plugins and CLIs update separately\nsymptom: a hook starts passing a new flag or format to the tool it wraps, and some users' prompts are blocked with 'invalid choice' or 'unrecognized arguments'\nfix: in the hook, detect the old CLI's refusal (argparse 'invalid choice' / exit 2 with that text) and fall back to the previous behaviour; test the fallback with a stub CLI that rejects the new argument\nbody: cause: a Claude Code plugin updates from the repo's main branch, but the CLI it shells out to is installed separately (pipx) and only changes when the user upgrades it. A fail-closed hook asking an older CLI for a new format exits 2 and blocks every prompt. Found designing okl's --format hook notice, 2026-09-29.\n",
+  "lesson_redactions": [],
+  "lesson_created": "2026-09-30T03:02Z",
+  "in_sample": false,
+  "named_file": null,
+  "fix_files": [
+   "hooks/posttooluse-okl-read.sh",
+   ".claude/hooks/posttooluse-okl-read.sh",
+   "src/okl/scaffold/hooks/posttooluse-okl-read.sh"
+  ],
+  "test_file": "tests/test_replay_grader.py",
+  "grader": "test_t14_pr363",
+  "tests_after": [],
+  "relax": {},
+  "defect": "hooks/posttooluse-okl-read.sh runs the first okl it resolves and, on exit 126/127, says not briefed instead of trying the next layer as the prompt hook does.",
+  "fix": "Resume at the next layer when the resolved okl cannot start."
+ },
+ {
+  "id": "t15",
+  "pr": 269,
+  "set": "4bg",
+  "kind": "none",
+  "needs_nothing": true,
+  "title": "The index arm, built and pre-registered: every other lesson in scope, for an agent that can fetch",
+  "issues": [],
+  "base": "1fba45c65592e56b2a9f50419aa40ce1cae03d0a",
+  "frozen": "96da803fbf99903d8adf45dd5387b013cba29816",
+  "end": "96da803fbf99903d8adf45dd5387b013cba29816",
+  "task_commit": "96da803fbf99903d8adf45dd5387b013cba29816",
+  "lesson": "eval-scripts-no-exposure",
+  "lesson_text": "[eval-scripts-no-exposure] Rule · Every caller of Client.check that briefs no agent asks for it unlogged\nsymptom: okl metric's exposure counts jump after an eval, a pre-flight or an okl intake run: briefing rows logged for lessons no agent was shown\nfix: pass log=False to Client.check (okl intake does; the service honours it as the check request's log field), or set OKL_BRIEFING_LOG=0 before building the Client in an eval or pre-flight script; test it by running the caller against a throwaway store and asserting no briefing row was written\nbody: cause: Client.check logs each local briefing as exposure (client.py, core.record_briefing). ab_harness.py switched it off, but evals/layout_preflight.py did not, and one run wrote 8 false rows into the real store on 2026-10-10. A new eval script that copies the Client call pattern inherits the same leak; preflight.py is safe only because it calls core.check directly.\n",
+  "lesson_redactions": [],
+  "lesson_created": "2026-10-10T12:44Z",
+  "in_sample": false,
+  "named_file": "evals/layout_preflight.py",
+  "fix_files": [],
+  "test_file": "tests/test_replay_grader.py",
+  "grader": "test_t15_pr269",
+  "tests_after": [],
+  "relax": {},
+  "defect": "None: the new indexed arm in evals/ab_harness.py already passes OKL_BRIEFING_LOG=0.",
+  "fix": "None needed.",
+  "control_mutation": "in evals/ab_harness.py get_briefing, env={**os.environ, \"OKL_BRIEFING_LOG\": \"0\"} becomes env={**os.environ}: the grader fails (the indexed arm's briefing was logged)"
+ },
+ {
+  "id": "t16",
+  "pr": 274,
+  "set": "4bg",
+  "kind": "none",
+  "needs_nothing": true,
+  "title": "The reranker's model lives under the cache home, not the system temp directory",
+  "issues": [],
+  "base": "3af00a9842eba3a57b3132b0a4026ea0929ceedb",
+  "frozen": "a3bc9d43121c8c53d88702d3551dc0097a95c228",
+  "end": "a3bc9d43121c8c53d88702d3551dc0097a95c228",
+  "task_commit": "a3bc9d43121c8c53d88702d3551dc0097a95c228",
+  "lesson": "fastembed-cache-in-tmpdir",
+  "lesson_text": "[fastembed-cache-in-tmpdir] Rule · fastembed keeps its models in the system temp directory by default, so a cached model can vanish and a model sweep must spare the ones in use\nsymptom: a tool that loaded its ONNX model offline yesterday says the model is not cached today; or the temp directory holds gigabytes of model blobs nobody remembers downloading\nfix: when a model must stay available offline, pass an explicit cache_dir under the user's cache home (or set FASTEMBED_CACHE_PATH) rather than relying on the temp dir; when sweeping the cache, keep only the blobs the models in use reference: each model dir's symlinks resolve to its blobs, and the shared blobs/ tree is hashed files under two-character directories, so delete files, never directories, and prune empty dirs after\nbody: cause: fastembed's default cache_dir is tempfile.gettempdir()/fastembed_cache (on macOS a per-user /var/folders/.../T path that the system prunes). okl's reranker spike left 2.7 GB of ONNX blobs there (2026-10-24); the shipped reranker lives in the same tree, and macOS can evict it, after which okl check --rerank reports the model as not cached until okl embed runs online again.\n",
+  "lesson_redactions": [],
+  "lesson_created": "2026-10-24T03:14Z",
+  "in_sample": false,
+  "named_file": null,
+  "fix_files": [],
+  "test_file": "tests/test_replay_grader.py",
+  "grader": "test_t16_pr274",
+  "tests_after": [],
+  "relax": {},
+  "defect": "None: the reranker already loads with cache_dir under the user's cache home.",
+  "fix": "None needed.",
+  "control_mutation": "in src/okl/rerank.py, drop cache_dir=str(hub.model_cache_dir()) from the TextCrossEncoder(...) call: the grader fails"
+ },
+ {
+  "id": "t17",
+  "pr": 262,
+  "set": "4bg",
+  "kind": "none",
+  "needs_nothing": true,
+  "title": "harness: refuse a run whose working tree moved",
+  "issues": [],
+  "base": "cef748afffa19af5095d381eea7f9bfda4578491",
+  "frozen": "d970dc5322bfcdd6447ef677dc30bceb2d21bbcf",
+  "end": "d970dc5322bfcdd6447ef677dc30bceb2d21bbcf",
+  "task_commit": "d970dc5322bfcdd6447ef677dc30bceb2d21bbcf",
+  "lesson": "harness-reads-a-moving-working-tree",
+  "lesson_text": "[harness-reads-a-moving-working-tree] Defect · An eval run that renders from the working tree must own it: a branch switch mid-run changes the code behind half the samples and the commit the receipt names\nsymptom: a receipt's okl_commit names a branch other than the one the run was started on, or the harness log's first line and the receipt disagree about HEAD; samples late in a run were produced by code the pre-registration never described\nfix: run the harness from a dedicated git worktree pinned to the pre-registered commit, never from the tree other work uses; have the harness record HEAD at start, re-read it before writing the receipt, and when they differ stamp both and set usable=false; until that lands, do not switch branches in a checkout with a run in progress\nbody: cause: ab_harness runs the briefed arm as 'python -m okl' against src/ in the checkout and stamps okl_commit from the tree's HEAD when it writes the receipt, at the end. On 2026-10-22 the tree was switched from the symptom-rule branch (acdcb99) to the relevance-floor branch during a 25-minute run to answer a review; the receipt (ab-20261022-0455) names b54e075 and the later samples were briefed by code with the floor. The briefings were identical by §4n's identity test, so the result survived, but only by argument.\n",
+  "lesson_redactions": [],
+  "lesson_created": "2026-10-22T04:57Z",
+  "in_sample": false,
+  "named_file": "evals/ab_harness.py",
+  "fix_files": [],
+  "test_file": "tests/test_replay_grader.py",
+  "grader": "test_t17_pr262",
+  "tests_after": [],
+  "relax": {},
+  "defect": "None: the harness already records HEAD at the start, re-reads it before the receipt, and marks a run whose tree moved not usable.",
+  "fix": "None needed.",
+  "control_mutation": "moved = head_moved(started_at_commit, _okl_commit()) becomes moved = None: the grader fails"
+ },
+ {
+  "id": "t18",
+  "pr": 50,
+  "set": "4bg",
+  "kind": "none",
+  "needs_nothing": true,
+  "title": "Safe install and uninstall: fingerprinted files, okl init --uninstall, OKL_DISABLED_HOOKS",
+  "issues": [
+   {
+    "title": "Safe install and uninstall: fingerprinted okl files, okl init --uninstall, OKL_DISABLED_HOOKS",
+    "body": "## Problem\n- `okl init` overwrites `.claude/hooks/*.sh` on every run (`_install_claude_wiring`): a local edit is silently lost. That breaks the recorded rule that anything okl writes into someone else's repo is idempotent and non-clobbering.\n- There is no uninstall. Removing okl means hand-editing `.claude/settings.json`, `.mcp.json` and deleting files, next to other tools' hooks (claude-mem, agentmemory, ECC, beads — see #40).\n- There is no switch to turn one hook off while keeping the other, e.g. the Stop question when another tool's Stop hooks already run (#40).\n\nECC does this well (hook IDs + fingerprints, surgical uninstall, `ECC_DISABLED_HOOKS`); this is the okl-sized version.\n\n## Design\n1. **Self-verifying fingerprint.** Each okl-owned file (both hooks, the CI workflow) carries `# okl-fingerprint: sha256:<hash of the rest of the file>`. Matching hash = an unmodified okl file of *any* version → safe to upgrade or remove. Mismatch = edited → kept, reported, `--force` to replace. No local state, so it works for a teammate who cloned the repo. A test fails with the correct value when a fingerprint is stale.\n2. **`okl init` stops clobbering.** It upgrades unmodified okl files, installs missing ones, and keeps edited ones with a warning.\n3. **`okl init --uninstall [--dry-run]`.** Removes okl's exact hook entries from settings (dropping empty groups/events), the `okl` MCP entry if it is exactly what okl wrote, and fingerprint-matching files. Never touches `.okl/` (the store is user data). Prints what it kept and why.\n4. **`OKL_DISABLED_HOOKS=briefing,encode`.** Honoured by the hook scripts; each exits 0 when named.\n"
+   }
+  ],
+  "base": "ac05cbc00e0b7b54d0c94995fa99262254e17701",
+  "frozen": "c602355fc88dc7e07710053fedd26a5d6a3eb8b7",
+  "end": "c602355fc88dc7e07710053fedd26a5d6a3eb8b7",
+  "task_commit": "c602355fc88dc7e07710053fedd26a5d6a3eb8b7",
+  "lesson": "n_58119d0a63d9",
+  "lesson_text": "[n_58119d0a63d9] Rule · Init must wire, not instruct — every 'now copy X / add Y to config' printout is a surface nobody runs\nsymptom: an installer prints manual follow-up steps (register this hook, copy this workflow, add to settings)\nfix: make init perform each registration itself, idempotent and non-clobbering; warn loudly only for what it truly cannot do (e.g. no git repo -> drift disabled)\nbody: cause: the installer stops where the mechanical work gets fiddly (JSON merging, no-clobber checks), so the last mile becomes a printed TODO — and the component it gates (hooks, CI verifier, MCP tools) silently never runs. okl init had four of these at once: hooks installed but unregistered in settings.json, a CI workflow that was a copy instruction, verify steps that were echo placeholders, and an MCP registration hint. The fix is always the same shape: do the merge idempotently (preserve existing config, never duplicate, never clobber), and reserve printed output for genuinely human decisions.\n",
+  "lesson_redactions": [],
+  "lesson_created": "2026-08-09T22:42Z",
+  "in_sample": false,
+  "named_file": null,
+  "fix_files": [],
+  "test_file": "tests/test_replay_grader.py",
+  "grader": "test_t18_pr50",
+  "tests_after": [],
+  "relax": {},
+  "defect": "None: init registers its hook settings itself, idempotently, and uninstall removes exactly them.",
+  "fix": "None needed.",
+  "control_mutation": "in _merge_hook_settings, wanted = [...] becomes wanted = []: the grader fails"
+ }
+]

@@ -49,7 +49,25 @@ OLD_STEPS = (   # the steps before #427, as main had them, frozen so this receip
     "does not apply, or the code already does what it says, leave the code alone.",
     "Say which lessons you checked, what you changed for each, and why the rest needed nothing.",
 )
-NEW_STEPS = core.REVIEW_STEPS
+NEW_STEPS = (   # the steps §4az ran (#427), frozen so its receipt stays reproducible when the review's text moves
+    "Say what the changed code does, one mechanism per sentence: what it calls and from where, what it "
+    "reads and writes (files, databases, environment, network, output), what it assumes, how it fails "
+    "and what it returns or prints then, what its tests check and with what data, and what the docs it "
+    "changes now claim.",
+    "From the lessons below, pick the ten this change is most likely to break: the ones about something "
+    "the code does. Any that govern a file it touched are listed first, and are read as well.",
+    "Check each one on its own, in a fresh context: start a sub-agent for it, a session with none of this "
+    "conversation, one lesson each and one after another, since each may change code. Give it the lesson's "
+    "full text (`okl show <id>`, the okl_get tool), the files this change touched, and one question: does "
+    "this change break this lesson? If it does, fix that and run the tests that cover it; if it does not, "
+    "or the lesson has no bearing on this change, change nothing for it. In a pilot on five past bugs, "
+    "the same ten lessons checked together in one pass caught far less than when each was asked on its "
+    "own (REPORT §4ax, §4ay).",
+    "If you cannot start a sub-agent, check them yourself one at a time, one lesson per pass, and say "
+    "the review ran without fresh contexts: that is weaker, and not measured.",
+    "Say which lessons you checked, which a change broke and what you changed for each, and which needed "
+    "nothing.",
+)
 STEPS = {"review_one_pass": OLD_STEPS, "review_each_alone": NEW_STEPS}
 ASK = f"""
 Before you finish, this repository asks you to run its review after writing. Its output, as `okl check --change` prints it for this change, is in {dr.LIST_FILE}: follow its steps. okl is not installed in this copy, so wherever a step says `okl show <id>`, read the lesson's full text at {dr.LESSON_DIR}/<id>.md instead.
@@ -65,7 +83,7 @@ DEFAULT_GAIN, OVER_ONE_PASS, EXTRA_HARM, FOLLOWED, MIN_COMPLETE = 0.25, 0.15, 2,
 def review_md(task: dict, arm: str, db: Path, files: list[str]) -> str:
     """The review as `okl check --change` renders it for this change, with the arm's steps."""
     text = dr.review_text(task, db, files)
-    rendered = "\n".join(f"{i}. {s}" for i, s in enumerate(NEW_STEPS, 1))
+    rendered = "\n".join(f"{i}. {s}" for i, s in enumerate(core.REVIEW_STEPS, 1))   # what the renderer prints today
     assert rendered in text, "the renderer's steps moved"
     return text.replace(rendered, "\n".join(f"{i}. {s}" for i, s in enumerate(STEPS[arm], 1)))
 

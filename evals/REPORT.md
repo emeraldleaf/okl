@@ -5795,6 +5795,9 @@ to read a rate from. On §4av's 70 cases, chosen without regard to disagreement,
 one lesson at a time agreed on 62. What stands is narrower: this third model did not settle these
 cases.
 
+
+*Note, 2026-11-14:* 0.17.0 turns the review after writing on by default, by the maintainer's decision and not by this reading, which stands as registered: a missed lesson was judged to cost more than the review's sessions. The CHANGELOG and docs say so.
+
 ## 4av. PRE-REGISTERED: do yes/no conditions make two models agree on whether a change broke a lesson? (2026-11-10)
 
 Written before any call in this section runs. §4au's follow-up found that three models, asked
@@ -6218,6 +6221,9 @@ What it means, not pre-registered:
 3. One session gave its sub-agents only part of the change (one read the first 400 lines of the
    diff), so a sub-agent can miss what lies past what it was handed.
 4. It costs 6.9 times no review and 2.6 times the old one, at 2.8 times the old one's time.
+
+
+*Note, 2026-11-14:* 0.17.0 turns the review after writing on by default, by the maintainer's decision and not by this reading, which stands as registered: a missed lesson was judged to cost more than the review's sessions. The CHANGELOG and docs say so.
 
 ## 4ba. PRE-REGISTERED, A PILOT: does a plan written before any code find the lesson a change needs? (2026-11-11)
 
@@ -6903,6 +6909,72 @@ check catches only what it tests, citing this section.
   - Any lesson outside the 18, any other repository or breaker model.
   - Whether a check written blind from the rule would cover more forms. That is the test §4be named, and
     it now has 61 judged breaks to run on.
+
+## 4bg. EXPLORATORY, NOT PRE-REGISTERED: is a list's cost its instruction? A first look on §4ay's tasks (2026-11-14)
+
+§4ax found that a lesson which changed the code 0.6 of the time alone changed it 0.08–0.2 of the time in a list of
+ten. §4ay found that the same ten, asked about one at a time with each in a fresh session, got 0.72, at about seven
+times the cost. Those two differed in what the agent was asked as well as in how many sessions it ran. #447 asked
+whether the instruction was the cost: one session, the same ten, asked in one at a time's own words to check the
+change against each in turn. I built a test of that on fourteen new tasks (below). Before spending its three hours,
+I ran the new arm alone on §4ay's five tasks, to see whether the test was worth making. It was not.
+
+**The look.** One arm, *in turn*: §4ay's ten lessons in §4ay's order, in one session, under the words "This team
+keeps the lessons below. Check this change against each of them in turn, in the order given: if the change breaks
+it, fix that; if it does not, or the lesson has no bearing on this change, change nothing for it. Before moving on to
+the next lesson, write one line naming it by its id and saying what you found." Three repeats a task, which is 15
+Sonnet sessions at effort medium, graded by §4aw's behaviour graders (`evals/replay_turn_look.py`, receipt
+`replay-turn-look-20261115-0054.json`).
+
+| task | in turn | list (§4ay) | one at a time (§4ay) |
+|---|---|---|---|
+| #115 | 0 | 0 | 0 |
+| #168 | 0 | 0 | 0.8 |
+| #196 | 0 | 0 | 1 |
+| #198 | 1 | 0.4 | 1 |
+| #309 | 0 | 0 | 0.8 |
+| averaged over tasks | 0.2 | 0.08 | 0.72 |
+
+**What the agent did.** It followed the instruction, writing a verdict for each lesson. Take the four tasks one at a
+time fixed in at least four of five sessions (#168, #196, #198, #309). In turn failed 9 of their 12 sessions, all on
+#168, #196 and #309. In 8 of those 9, the agent named the right lesson and dismissed it in one line, for example
+"The judge≠generator refusal at startup is unchanged. Nothing needed changing." In the ninth its reply does not
+name it (receipt `replay-turn-look-dismissals-20261115-0246.json`, read from the sessions Claude Code saved). Given that lesson alone in a fresh
+session, §4ay's agent read the code and found the break in 4 or 5 of 5 sessions. Seven of the 15 sessions edited
+something, and none broke another test.
+
+**How firm.** Exploratory: 15 sessions, on tasks six sections have used, read against §4ay's receipt from another
+day. The environment had also changed since §4ay. Since #451 a session runs with okl's briefing log off, which makes
+one unrelated test fail, and several sessions spent turns on it. That cannot explain a lesson that was read and
+dismissed.
+
+**What it means.** The list's cost is not its instruction. Asked to check ten lessons in one session, the agent
+checks each of them, shallowly; a fresh session per lesson is what makes it look properly. `okl check --change`
+already asks for one sub-agent per lesson, so nothing in okl changes, and the run on fourteen new tasks (about 310
+sessions) was not made. Settles open question `review-without-fresh-contexts`: the review's own fallback now says
+what this found. The cost of ten sessions will have to be cut another way. Each of these is a test of its
+own:
+- fewer lessons per review;
+- the ten run side by side;
+- a cheaper model per lesson.
+
+**The task set built for the test, kept for those.** `evals/replay-tasks-4bg.json` holds 14 changes from this
+repository as first written, each with a defect a stored lesson names, and 4 controls whose change already followed
+its lesson. Alongside it:
+- each task's nine other lessons, the ones okl's search ranks highest for its words among the lessons as they stood
+  (`evals/replay-lists-4bg.json`, built by `evals/replay_lists_4bg.py`);
+- the harness for the planned run (`evals/replay_turn.py`);
+- its power simulation (`evals/power_4bg.py`, receipt `power-4bg-20261115-0245.json`).
+
+Every grader in `tests/replay_graders_4bg.py` fails on the frozen code by an assertion and passes on the real fix
+(receipt `replay-check-4bg-20261115-0114.json`). For each task, an agent that had read neither the graders nor the real fixes wrote a second
+right fix and a wrong one. All fourteen right fixes passed. Five wrong ones passed too, because those graders tested
+only the incident's own example of the rule (receipt `replay-alternatives-4bg-20261115-0102.json`, made while
+the check script was still uncommitted; the graders' and tasks' hashes it records are those of the commit before
+the strengthening). I added the
+missing cases, and all fourteen pairs are now told apart (receipt `replay-alternatives-4bg-20261115-0115.json`). For those five, the second check is not
+blind: I wrote the cases after seeing which wrong fixes passed. The file-tie test (#450) is not in the set: only 3
+of the 14 lessons name one file while the fix lands in another.
 
 ## 5. Findings
 

@@ -1,0 +1,18 @@
+diff --git a/src/okl/client.py b/src/okl/client.py
+index 2633f75..111c461 100644
+--- a/src/okl/client.py
++++ b/src/okl/client.py
+@@ -389,7 +389,12 @@ class Client:
+         """core.check_paths over this repo's view, locally or from the service, with the paths
+         made repo-relative and those outside the repo listed apart."""
+         inside, outside = _repo_relative(paths, root)
+-        if self.mode == "remote":
++        if self.mode == "remote" and not inside and all(Path(p).is_absolute() for p in outside):
++            # An absolute path elsewhere on disk is outside the repo: nothing governs it, and the
++            # service refuses an empty list, so answer with nothing instead of asking.
++            result = core.check_paths(Store("sqlite:///:memory:"), repo, [])
++            result.pop("store_records", None)
++        elif self.mode == "remote":
+             result = self._post("/check", {"repo": repo, "task": "", "paths": inside})
+             # An older service drops a field it does not know and briefs an empty task: never
+             # read that as "nothing governs this file".

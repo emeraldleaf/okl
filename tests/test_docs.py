@@ -679,12 +679,14 @@ OPEN_QUESTIONS = {
         "scaffold-effect",
     ("docs/EVALUATION.md", "and sessions with nothing to learn | Not measured (#251)"):
         "capture-without-fabrication",
-    ("src/okl/core.py", "On other repositories it is not yet measured, so the review stays opt-in"):
+    ("src/okl/core.py", "On other repositories it is not yet measured; the review is on by default by decision"):
         "review-after-writing-beyond-one-repository",
-    ("src/okl/core.py", "the review ran without fresh contexts: that is weaker, and not measured"):
-        "review-without-fresh-contexts",
     ("docs/GETTING-STARTED.md", "Whether a failing check at the edit changes what an agent writes has not been measured yet"):
         "check-on-edit-changes-the-code",
+    ("README.md", "whether that holds on real work in another repository is not yet measured"):
+        "transfer-to-another-repository",
+    ("docs/EVALUATION.md", "not yet measured as a channel"):
+        "on-edit-as-a-reach-channel",
 }
 # The phrase, used for something that is not a question waiting on an answer, with why.
 NOT_OPEN = {

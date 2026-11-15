@@ -254,8 +254,8 @@ def test_the_run_guard_watches_what_a_replay_reads_mid_run():
     """outcome_regrade copies the graders into each room per session; an edit to them mid-run changed
     the instrument behind half the sessions without the guard noticing (#446)."""
     import run_guard
-    assert {"tests/replay_graders_4aw.py", "evals/replay-*.json"} <= set(run_guard.READS)
-    assert (ROOT / "tests" / "replay_graders_4aw.py").exists() and list((ROOT / "evals").glob("replay-*.json"))
+    assert {"tests/replay_graders_*.py", "evals/replay-*.json"} <= set(run_guard.READS)
+    assert list((ROOT / "tests").glob("replay_graders_*.py")) and list((ROOT / "evals").glob("replay-*.json"))
 
 
 def test_the_4af_note_quotes_its_receipt():

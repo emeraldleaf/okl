@@ -1,0 +1,117 @@
+diff --git a/.github/workflows/okl-verify.yml b/.github/workflows/okl-verify.yml
+index 853a9db..0f767f8 100644
+--- a/.github/workflows/okl-verify.yml
++++ b/.github/workflows/okl-verify.yml
+@@ -76,21 +76,22 @@ jobs:
+       - name: Drift gate — rules whose governed code changed after last verification
+         # The exit code is the verdict: 0 checked and clean, 1 drift found, 2 did not run.
+         # "Did not run" is the case this step used to report as a pass: with no store in CI
+-        # (okl init gitignores it) the gate checked nothing and printed OK. It now says so,
+-        # as a warning annotation on the PR rather than a failure, because an unseeded
+-        # store is a setup gap, not a defect in the change under review -- and failing on it
+-        # would block every pull request from the moment okl is installed. To make this
+-        # step a real check, give CI a store: set the OKL_SERVICE_URL secret, or seed one.
++        # (okl init gitignores it) the gate checked nothing and printed OK. With NO store named
++        # it now says so, as a warning annotation on the PR rather than a failure, because an
++        # unseeded store is a setup gap, not a defect in the change under review -- and failing
++        # on it would block every pull request from the moment okl is installed. With a store
++        # named (OKL_SERVICE_URL or OKL_DATABASE_URL) a gate that did not run is a broken
++        # gate -- the service is down, the credential is wrong -- and the step fails with the
++        # gate's own exit code, as it does for drift. To make this step a real check, give CI
++        # a store: set the OKL_SERVICE_URL secret, or seed one.
+         run: |
+-          set +e
+-          okl drift --gate
+-          rc=$?
+-          set -e
+-          if [ "$rc" -eq 2 ]; then
++          rc=0
++          okl drift --gate || rc=$?
++          if [ "$rc" -eq 2 ] && [ -z "${OKL_SERVICE_URL:-}${OKL_DATABASE_URL:-}" ]; then
+             echo "::warning title=Drift not checked::No knowledge store is available to this job, so no rule was checked for drift. This step passing is NOT an all-clear."
+-          elif [ "$rc" -ne 0 ]; then
+-            exit "$rc"
++            exit 0
+           fi
++          exit "$rc"
+ 
+       - name: Method gates (when the scaffold kit is present)
+         run: |
+diff --git a/ci/okl-verify.yml b/ci/okl-verify.yml
+index 853a9db..0f767f8 100644
+--- a/ci/okl-verify.yml
++++ b/ci/okl-verify.yml
+@@ -76,21 +76,22 @@ jobs:
+       - name: Drift gate — rules whose governed code changed after last verification
+         # The exit code is the verdict: 0 checked and clean, 1 drift found, 2 did not run.
+         # "Did not run" is the case this step used to report as a pass: with no store in CI
+-        # (okl init gitignores it) the gate checked nothing and printed OK. It now says so,
+-        # as a warning annotation on the PR rather than a failure, because an unseeded
+-        # store is a setup gap, not a defect in the change under review -- and failing on it
+-        # would block every pull request from the moment okl is installed. To make this
+-        # step a real check, give CI a store: set the OKL_SERVICE_URL secret, or seed one.
++        # (okl init gitignores it) the gate checked nothing and printed OK. With NO store named
++        # it now says so, as a warning annotation on the PR rather than a failure, because an
++        # unseeded store is a setup gap, not a defect in the change under review -- and failing
++        # on it would block every pull request from the moment okl is installed. With a store
++        # named (OKL_SERVICE_URL or OKL_DATABASE_URL) a gate that did not run is a broken
++        # gate -- the service is down, the credential is wrong -- and the step fails with the
++        # gate's own exit code, as it does for drift. To make this step a real check, give CI
++        # a store: set the OKL_SERVICE_URL secret, or seed one.
+         run: |
+-          set +e
+-          okl drift --gate
+-          rc=$?
+-          set -e
+-          if [ "$rc" -eq 2 ]; then
++          rc=0
++          okl drift --gate || rc=$?
++          if [ "$rc" -eq 2 ] && [ -z "${OKL_SERVICE_URL:-}${OKL_DATABASE_URL:-}" ]; then
+             echo "::warning title=Drift not checked::No knowledge store is available to this job, so no rule was checked for drift. This step passing is NOT an all-clear."
+-          elif [ "$rc" -ne 0 ]; then
+-            exit "$rc"
++            exit 0
+           fi
++          exit "$rc"
+ 
+       - name: Method gates (when the scaffold kit is present)
+         run: |
+diff --git a/src/okl/scaffold/ci/okl-verify.yml b/src/okl/scaffold/ci/okl-verify.yml
+index 853a9db..0f767f8 100644
+--- a/src/okl/scaffold/ci/okl-verify.yml
++++ b/src/okl/scaffold/ci/okl-verify.yml
+@@ -76,21 +76,22 @@ jobs:
+       - name: Drift gate — rules whose governed code changed after last verification
+         # The exit code is the verdict: 0 checked and clean, 1 drift found, 2 did not run.
+         # "Did not run" is the case this step used to report as a pass: with no store in CI
+-        # (okl init gitignores it) the gate checked nothing and printed OK. It now says so,
+-        # as a warning annotation on the PR rather than a failure, because an unseeded
+-        # store is a setup gap, not a defect in the change under review -- and failing on it
+-        # would block every pull request from the moment okl is installed. To make this
+-        # step a real check, give CI a store: set the OKL_SERVICE_URL secret, or seed one.
++        # (okl init gitignores it) the gate checked nothing and printed OK. With NO store named
++        # it now says so, as a warning annotation on the PR rather than a failure, because an
++        # unseeded store is a setup gap, not a defect in the change under review -- and failing
++        # on it would block every pull request from the moment okl is installed. With a store
++        # named (OKL_SERVICE_URL or OKL_DATABASE_URL) a gate that did not run is a broken
++        # gate -- the service is down, the credential is wrong -- and the step fails with the
++        # gate's own exit code, as it does for drift. To make this step a real check, give CI
++        # a store: set the OKL_SERVICE_URL secret, or seed one.
+         run: |
+-          set +e
+-          okl drift --gate
+-          rc=$?
+-          set -e
+-          if [ "$rc" -eq 2 ]; then
++          rc=0
++          okl drift --gate || rc=$?
++          if [ "$rc" -eq 2 ] && [ -z "${OKL_SERVICE_URL:-}${OKL_DATABASE_URL:-}" ]; then
+             echo "::warning title=Drift not checked::No knowledge store is available to this job, so no rule was checked for drift. This step passing is NOT an all-clear."
+-          elif [ "$rc" -ne 0 ]; then
+-            exit "$rc"
++            exit 0
+           fi
++          exit "$rc"
+ 
+       - name: Method gates (when the scaffold kit is present)
+         run: |

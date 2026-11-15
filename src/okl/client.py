@@ -151,16 +151,23 @@ def warm_setting(env: str | None, configured: Any) -> bool | None:
     raise ValueError(f"warm must be on or off, not {raw!r}")
 
 
-def review_setting(env: str | None, configured: Any) -> bool:
+def review_setting(env: str | None, configured: Any, set_up: bool = True) -> bool:
     """Whether the Stop hook asks for the review after writing (`okl check --change`; REPORT
     §4at): OKL_REVIEW_AFTER_WRITING wins over the config's `review_after_writing`, read as warm
-    is (on/1/true or off/0/false); unset is off. Any other value is refused: a mistyped "ture"
-    silently leaving it off would look the same as off."""
+    is (on/1/true or off/0/false); unset is on. On by default since 0.17.0, by the maintainer's
+    decision rather than a measured bar: the maintainer judges a missed lesson to cost more than
+    the review's sessions; in its pilot (§4az) it fixed some past defects where no review fixed
+    none, short of the bar it set for a default. Unset is on only where the repo was set up for okl (`set_up`: a
+    .okl/config.json found): a session with only a store URL exported, in a repo that never ran
+    `okl init`, did not opt in to anything (review of 0.17.0). Any other value is refused: a mistyped
+    "of" silently leaving it on would look the same as on."""
     raw = env if env not in (None, "") else configured
-    if raw in (None, "", False, "0", "off", "false", "no"):
-        return False
+    if raw in (None, ""):
+        return set_up
     if raw in (True, "1", "on", "true", "yes"):
         return True
+    if raw in (False, "0", "off", "false", "no"):
+        return False
     raise ValueError(f"review_after_writing must be on or off, not {raw!r}")
 
 
@@ -199,6 +206,7 @@ class Client:
     """Uniform surface over local-store and remote-service modes."""
 
     def __init__(self, config: dict[str, Any] | None = None) -> None:
+        set_up = config is not None or _find_config() is not None
         self.config = config if config is not None else load_config()
         self.service_url = os.environ.get("OKL_SERVICE_URL") or self.config.get("service_url")
         self.repo = self.config.get("repo") or Path.cwd().name
@@ -214,10 +222,10 @@ class Client:
                                     [str(i).strip() for i in self.config.get("standing") or [] if str(i).strip()])
         self.warm = warm_setting(os.environ.get("OKL_WARM"), self.config.get("warm"))
         # The review after writing (`okl check --change`; REPORT §4at): the Stop hook asks for it
-        # only where the config's `review_after_writing` turns it on; OKL_REVIEW_AFTER_WRITING=1 or 0
+        # unless the config's `review_after_writing` turns it off; OKL_REVIEW_AFTER_WRITING=1 or 0
         # overrides the config for one session.
         self.review_after_writing = review_setting(os.environ.get("OKL_REVIEW_AFTER_WRITING"),
-                                                   self.config.get("review_after_writing"))
+                                                   self.config.get("review_after_writing"), set_up)
         self._store: Store | None = None
 
     @property

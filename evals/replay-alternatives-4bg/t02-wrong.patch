@@ -1,0 +1,49 @@
+diff --git a/ci/check-diagram-names.py b/ci/check-diagram-names.py
+index 8fe1987..ccc194d 100755
+--- a/ci/check-diagram-names.py
++++ b/ci/check-diagram-names.py
+@@ -29,6 +29,7 @@ import json
+ import re
+ import subprocess
+ import sys
++import xml.etree.ElementTree as ET
+ from collections.abc import Callable
+ from pathlib import Path
+ from typing import Any
+@@ -102,6 +103,12 @@ def diagram_text(raw: str) -> str:
+                      if e.get("type") == "text" and not e.get("isDeleted"))
+ 
+ 
++def render_text(svg: str) -> str:
++    """The text of every <text> element of an exported .svg render, one per line."""
++    root = ET.fromstring(svg)
++    return "\n".join("".join(e.itertext()) for e in root.iter() if e.tag.rsplit("}", 1)[-1] == "text")
++
++
+ def _tracked(path: str, files: set[str]) -> bool:
+     name = path.removeprefix("./")
+     return any(f == name or f.endswith("/" + name) for f in files)
+@@ -138,8 +145,13 @@ def main(argv: list[str]) -> int:
+         if committed:
+             paths = [p for p in repo.files() if p.startswith("docs/") and p.endswith(".excalidraw")]
+             sources = {p: repo.read(p) for p in paths}
++            tracked = set(repo.files())
++            renders = {p: repo.read(p.removesuffix(".excalidraw") + ".svg") for p in paths
++                       if p.removesuffix(".excalidraw") + ".svg" in tracked}
+         else:
+             sources = {p: Path(p).read_text(encoding="utf-8") for p in argv}
++            renders = {p: Path(p).with_suffix(".svg").read_text(encoding="utf-8") for p in argv
++                       if Path(p).with_suffix(".svg").is_file()}
+         known = known_names(repo)
+     except (OSError, subprocess.CalledProcessError, ValueError, KeyError) as e:
+         _say(f"check-diagram-names: could not run: {e}", err=True)
+@@ -150,6 +162,9 @@ def main(argv: list[str]) -> int:
+     failed = False
+     for path, raw in sorted(sources.items()):
+         problems = unknown(diagram_text(raw), known)
++        if path in renders:
++            # The render must name only what the code has, like its source.
++            problems += unknown(render_text(renders[path]), known)
+         _say(f"-- {path}")
+         if problems:
+             failed = True

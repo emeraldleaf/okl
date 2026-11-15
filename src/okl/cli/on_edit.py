@@ -1,11 +1,12 @@
-"""`okl on-edit`: run a lesson's check when the agent edits a file the lesson governs (#435).
+"""`okl on-edit`: run the approved lessons' checks after the agent edits a file in the repository
+(#435, #450), those governing the edited file first.
 
 A lesson can name the files it governs and carry the command that proves it, but the command
 ran only when a person ran `okl verify` or `okl reverify`; the gates notice only that a governed
 file changed. A lesson handed over alone changed the code where the same lesson in a list of ten
 mostly did not (REPORT §4ax), and a failing check is not a list item. So after an edit, the
-checks of the lessons governing the edited file run, and a failure goes straight back to the
-agent beside its edit.
+approved checks run, those of the lessons governing the edited file first, and a failure goes
+straight back to the agent beside its edit.
 
 Only checks a person approved run. The commands come from the store, which on a shared service
 holds records other people wrote, and stored data reaching a shell unasked is how a shared
@@ -14,6 +15,15 @@ command and asks, and the approval is the command's hash: a check whose stored c
 afterwards is not run until it is approved again. The command runs through `okl verify`'s own
 runner, the one place okl hands a confirmed command to a shell. Nothing here stamps a lesson
 verified or blocks an edit: verification stays `okl verify`, on a commit.
+
+A lesson's files say where it was found, not everywhere it holds. A lesson whose check CI already
+runs is given none (#39), many rules hold wherever code does what they are about, and a lesson tied
+to one file can be broken in another its files never name (#450). Tied to files only, the hook would
+have run a check for 4 of REPORT §4bf's 61 confirmed breaks. So every approved check runs after any
+edit inside the repository: those of the lessons governing the edited file first, since the budget
+is spent in order, then the rest. Files decide the order, and drift; never whether a check runs.
+For a check CI runs, this changes when a break is found, at the edit rather than at the push, not
+whether.
 """
 from __future__ import annotations
 
@@ -49,7 +59,7 @@ def approval(run: str, expect: str | None) -> str:
 
 
 def cmd_on_edit(args: argparse.Namespace) -> int:
-    """List the approved edit-time checks, approve or drop some by id, or run the ones governing
+    """List the approved edit-time checks, approve or drop some by id, or run them after an edit to
     the files given. Exit 2 when there is no config here or the store cannot be read, an id
     cannot be approved, or approval was not given; `run` exits 1 when a check failed."""
     started = time.monotonic()
@@ -109,7 +119,6 @@ def _why_not(node: Node | None, repo: str) -> str | None:
     reasons = (
         (node.status in RETIRED_STATUSES, f"it is retired ({node.status})"),
         (node.scope not in ("org", f"repo:{repo}"), f"it belongs to another repository ({shown(node.scope)})"),
-        (not node.files, "it governs no files, so no edit would run it: give it files with okl update --files"),
         (check is None, "it has no stored check: prove it first with "
                         f"okl verify {shown(node.id)} --run \"<check>\" --expect \"<signal>\""),
         # What the person approves must be what runs: a control code, a zero-width or a direction
@@ -137,11 +146,12 @@ def _add(args: argparse.Namespace, approved: dict[str, str], nodes: dict[str, No
     # A refusal leaves stdout empty, so where it will refuse, the plan goes to stderr with it.
     asking = args.yes or sys.stdin.isatty()
     out = sys.stdout if asking else sys.stderr
-    print("When the agent edits a file one of these lessons governs, okl will run its stored check, "
-          "a command from the store, in this repository:", file=out)
+    print("After EVERY edit the agent makes in this repository, okl will run each of these lessons' stored "
+          "checks, a command from the store (first when the edit touches a file the lesson governs), so "
+          "approve only checks that are quick:", file=out)
     for i in wanted:
         run, expect = _stored_check(nodes[i].verified_by) or ("", None)
-        print(f"  [{shown(i)}] {nodes[i].title}\n      files: {nodes[i].files}\n      runs:  {run}"
+        print(f"  [{shown(i)}] {nodes[i].title}\n      files: {nodes[i].files or 'none'}\n      runs:  {run}"
               + (f"\n      passes when its output contains {expect!r}" if expect else ""), file=out)
     if not asking:
         # Said to whoever ran it, often an agent: the way forward is a person, not a flag
@@ -171,7 +181,8 @@ def _remove(args: argparse.Namespace, approved: dict[str, str], _nodes: dict[str
 def _list(approved: dict[str, str], nodes: dict[str, Node], repo: str) -> None:
     """The approved checks, each with whether it still runs, then the lessons that could be added."""
     if approved:
-        print(f"{len(approved)} lesson check(s) run when the agent edits a file they govern:")
+        print(f"{len(approved)} lesson check(s) run after every edit in this repository, those governing "
+              "the edited file first:")
         for i, pinned in sorted(approved.items()):
             node = nodes.get(i)
             chk = _stored_check(node.verified_by) if node else None
@@ -186,29 +197,40 @@ def _list(approved: dict[str, str], nodes: dict[str, Node], repo: str) -> None:
     can = sorted((n for n in nodes.values() if n.id not in approved and _why_not(n, repo) is None),
                  key=lambda n: n.id)
     if can:
-        print(f"{len(can)} more could be added (they govern files and carry a stored check):")
+        print(f"{len(can)} more could be added (they carry a stored check):")
         for n in can:
             print(f"  [{shown(n.id)}] {n.title}\n      runs: {(_stored_check(n.verified_by) or ('',))[0]}")  # printable: _why_not
 
 
 def _run(args: argparse.Namespace, root: Path, approved: dict[str, str], nodes: dict[str, Node], repo: str,
          *, started: float) -> int:
-    """Run the approved checks of the lessons governing the edited files; report what failed.
+    """Run every approved check after an edit inside the repository, those of the lessons governing
+    the edited files first (see the module's notes); report what failed.
 
     Exit 1 when a check failed; 2 when none failed but one could not be judged (out of time, its
-    command changed since approval), since a caller reads 0 as every check passing; 0 when every
-    check that governs the files ran and passed, or none governs them. The path is read as the
-    file briefing reads it, so a tracked symlink is governed by its own name (review of #441).
+    command changed since approval, its lesson gone), since a caller reads 0 as every check passing;
+    0 when every check that ran passed, or the edit lies outside the repository. A check whose
+    lesson does not govern the edited file starts only when its whole --timeout still fits in the
+    budget; one that does not fit is skipped at this edit, said in the text output and not to the
+    agent, since CI runs the same check and nothing the agent did made it slow. The path is read as
+    the file briefing reads it, so a tracked symlink is governed by its own name (review of #441).
     """
     inside, _outside = _repo_relative(list(args.targets), root)
     rel = sorted(set(inside))
-    hits = sorted((n for n in core.governing(list(nodes.values()), repo, set(rel)) if n.id in approved),
+    governed = sorted((n for n in core.governing(list(nodes.values()), repo, set(rel)) if n.id in approved),
+                      key=lambda n: n.id) if rel else []
+    first = {n.id for n in governed}
+    rest = sorted((n for i in approved if i not in first and (n := nodes.get(i)) is not None),
                   key=lambda n: n.id) if rel else []
-    failed: list[tuple[Node, str, str | None, str, str]] = []
-    notes: list[str] = []
+    failed: list[tuple[Node, str, str | None, str, str, bool]] = []
+    # An approval whose lesson is gone cannot run: said, so exit 0 still means every check that should run did.
+    notes = [f"[{shown(i)}]: not run, because no lesson has this id any more; the person can drop it with "
+             f"okl on-edit remove {shown(i)}" for i in sorted(approved) if rel and i not in nodes]
+    skipped: list[str] = []
     passed = 0
     deadline = started + args.budget   # from okl's start, so a slow store read counts too
-    for n in hits:
+    for n in governed + rest:   # in this order: the budget is spent on the governing lessons first
+        mine = n.id in first
         chk = _stored_check(n.verified_by)
         why = _why_not(n, repo)
         if chk is None or why or approval(*chk) != approved[n.id]:
@@ -218,6 +240,9 @@ def _run(args: argparse.Namespace, root: Path, approved: dict[str, str], nodes: 
                          + f"; the person can review it with okl on-edit add {shown(n.id)}")
             continue
         left = deadline - time.monotonic()
+        if not mine and left < args.timeout:
+            skipped.append(shown(n.id))
+            continue
         if left <= 0:
             notes.append(f"[{shown(n.id)}] {n.title}: not run, out of time for this edit ({args.budget}s)")
             continue
@@ -231,39 +256,64 @@ def _run(args: argparse.Namespace, root: Path, approved: dict[str, str], nodes: 
         elif result.timed_out:
             notes.append(f"[{shown(n.id)}] {n.title}: its check did not finish in {timeout}s, so it was not judged")
         else:
-            failed.append((n, run, expect, result.outcome, said.getvalue()))
+            failed.append((n, run, expect, result.outcome, said.getvalue(), mine))
     text = _report(rel, failed, notes)
     code = 1 if failed else 2 if notes else 0
+    later = (f"okl on-edit: not run at this edit, too little of the {args.budget}s budget left for their "
+             f"--timeout: {', '.join(skipped)}; they run at an edit with time to spare, and in CI") if skipped else ""
     if args.format == "hook":
         if text:
             print(json.dumps({"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": text}}))
     elif code == 2:
-        print(text, file=sys.stderr)
+        print("\n".join(x for x in (text, later) if x), file=sys.stderr)
     else:
-        print(text or (f"okl on-edit: {passed} approved check(s) passed for {', '.join(rel)}" if hits
-                       else f"okl on-edit: no approved check governs {', '.join(rel) or 'these files'}"))
+        ran = governed or rest
+        print("\n".join(x for x in (
+            text or (f"okl on-edit: {passed} approved check(s) passed for {', '.join(rel)}" if ran
+                     else f"okl on-edit: no approved check ran for {', '.join(rel) or 'these files'}"
+                     + ("" if rel else " (outside this repository)")), later) if x))
     return code
 
 
 def _report(paths: list[str], failed: list, notes: list[str]) -> str:
     """What the agent is told: each failing lesson with its fix, the command and the end of its
-    output, then anything not run. Empty when every check passed."""
+    output, then anything not run. Empty when every check passed. A failing check of a lesson that
+    governs the edited file is the agent's to fix; one whose lesson does not govern it may have
+    failed before this edit, so the agent is told to find out first, not to fix code it never
+    touched on the strength of it."""
     lines: list[str] = []
-    if failed:
+    here = [f for f in failed if f[5]]
+    elsewhere = [f for f in failed if not f[5]]
+    if here:
         lines.append(f"OKL CHECK FAILED after editing {', '.join(paths)}: a lesson that governs this file "
                      "carries a check, and the check fails now.")
-        for n, run, expect, outcome, said in failed:
-            fix = " ".join((n.fix or "").split())
-            lines.append(f"- [{shown(n.id)}] {n.title}")
-            if fix:
-                lines.append(f"  fix: {shown(fix[:400])}")
-            lines.append(f"  check: {run}" + (f"  (passes when its output contains {expect!r})" if expect else ""))
-            tail = [ln for ln in said.splitlines()[1:] if ln.strip()]
-            lines.append(f"  result: {outcome}" + (": the last lines it printed:" if tail else ""))
-            lines.extend(f"    {ln}" for ln in tail)
+        lines.extend(_failure_lines(here))
         lines.append("Fix the code so the check passes, and run it again yourself to see. If the lesson itself "
                      "is out of date, say so to the person rather than changing the check. okl recorded nothing.")
+    if elsewhere:
+        lines.append(f"OKL CHECK FAILED{' also' if here else ''} after editing {', '.join(paths)}: a check you "
+                     "approved for the whole repository fails now. Its lesson does not govern this file, so it "
+                     "may have failed before this edit.")
+        lines.extend(_failure_lines(elsewhere))
+        lines.append("Find out first whether your change caused it (run the check on the code without your "
+                     "change, or read what it tests). If it did, fix that; if it failed already, say so to the "
+                     "person and leave that code alone. okl recorded nothing.")
     if notes:
         lines.append("OKL: some checks for this edit were not run:" if not failed else "Also not run:")
         lines.extend(f"- {s}" for s in notes)
     return "\n".join(lines)
+
+
+def _failure_lines(failed: list) -> list[str]:
+    """Each failing lesson: its title, its fix, the command and the end of what it printed."""
+    lines: list[str] = []
+    for n, run, expect, outcome, said, _mine in failed:
+        fix = " ".join((n.fix or "").split())
+        lines.append(f"- [{shown(n.id)}] {n.title}")
+        if fix:
+            lines.append(f"  fix: {shown(fix[:400])}")
+        lines.append(f"  check: {run}" + (f"  (passes when its output contains {expect!r})" if expect else ""))
+        tail = [ln for ln in said.splitlines()[1:] if ln.strip()]
+        lines.append(f"  result: {outcome}" + (": the last lines it printed:" if tail else ""))
+        lines.extend(f"    {ln}" for ln in tail)
+    return lines

@@ -13,17 +13,17 @@ It guards against drift both ways: your agent drifting from your rules, and your
 and docs drifting from the code.<br>
 Your rules, architecture decisions, past defects, documentation and diagrams: recorded once,
 briefed to your agent before every task (by a hook in Claude Code; any MCP agent can ask for
-the same briefing), each proven by a check you choose, flagged before you push (or in CI) when
-what it covers changes, and corrected or retired as you build. Prompts advise; the gate
-enforces. Use it in one repo, or share one store across every repo your team runs.<br>
+the same briefing), each one you prove tied to a check you choose, flagged before you push (or in CI)
+when what it covers changes, and corrected or retired as you build. A briefing advises; the gate
+holds a push until a changed lesson's check runs again. Use it in one repo, or share one store across every repo your team runs.<br>
 Under the hood: typed records, keyword search and one-step links. No model runs by default,
 okl calls no generative model unasked, and nothing is captured automatically. Three local models
 are optional, measured and off until you turn them on: an embedding arm, a reranker and a warm
 embedding model, `okl warm` ([REPORT §4q, §4t, §4z](evals/REPORT.md)). The scaffold's optional
 review step runs a generative model only if you name one, and `okl review`, which checks the
 lessons nothing re-checks, runs one only when you run it ([REPORT §4ai](evals/REPORT.md)). A lesson is written
-on purpose and proven by a check. The claim in full, how much of it holds today and how it
-has changed: [docs/THESIS.md](docs/THESIS.md).
+on purpose and proven by a check you choose, or marked unchecked. The claim in full, how much of it
+holds today and how it has changed: [docs/THESIS.md](docs/THESIS.md).
 
 [![PyPI](https://img.shields.io/pypi/v/observed-knowledge-ledger?color=blue&label=PyPI)](https://pypi.org/project/observed-knowledge-ledger/)
 [![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
@@ -56,7 +56,7 @@ sample, one-shot code on bait tasks; [what it does and does not show](#measured-
 | When | What okl does |
 |---|---|
 | An agent is writing your code, docs, artifacts or diagrams | the briefing puts your matching lessons in front of it before it writes, selected by the task's words and, in Claude Code, by the files it reads |
-| The agent is about to repeat a defect you already paid for | the same briefing carries that defect's lesson |
+| The agent is about to repeat a defect you already paid for | the briefing carries that defect's lesson when the task's words or files match it |
 | Code a lesson covers changes after its last check | `okl drift` goes red; the pre-push hook holds the push (or CI fails) until the check passes again or the code is back to what passed; the next briefing marks the lesson STALE |
 | A lesson turns out to be wrong | `okl retire --reason` keeps it, briefed as AVOID so nobody restates it; nothing is deleted |
 | A lesson is replaced | `okl retire --by <new-id>`; the briefing points to the replacement |
@@ -140,8 +140,8 @@ okl doctor                  # flags other memory tools, double wiring, where dri
 |---|---|---|---|
 | Briefing before each task | a hook on every prompt, automatic, fails closed | the `okl_check` tool, when the agent calls it | `okl check` in the terminal or a script |
 | Briefing when a file is read | a hook after each Read: the lessons governing the file, once a session | `okl_check` with `path` | `okl check --path` |
-| A lesson's check after an edit (opt-in) | a hook after each edit runs the checks you approved with `okl on-edit add` for the lessons governing the file, and hands a failure back | not yet: an agent's own hook can call `okl on-edit run <file>` | `okl on-edit run <file>` |
-| Review after writing (opt-in) | the Stop hook asks for it after `okl init --review-after-writing` | not yet: the list is about 20k tokens in a 300-lesson store, and the review starts a fresh sub-agent for each lesson it checks | `okl check --change` |
+| A lesson's check after an edit (opt-in) | a hook after each edit in the repo runs every check you approved with `okl on-edit add`, those of the lessons governing the edited file first, and hands a failure back | not yet: an agent's own hook can call `okl on-edit run <file>` | `okl on-edit run <file>` |
+| Review after writing (on by default) | the Stop hook asks for it once the work changed files; `okl init --no-review-after-writing` turns it off | not yet: the list is about 20k tokens in a 300-lesson store, and the review starts a fresh sub-agent for each lesson it checks | `okl check --change` |
 | Recording what was learned | the Stop hook asks once per session that changed files | the `okl_record` tool | `okl record` |
 | Proof and drift | `okl verify`, `okl reverify`, `okl drift` | the same commands | the same commands |
 | The gate | the pre-push hook | the pre-push hook | the pre-push hook, or the CI workflow (`okl init --ci`) |
@@ -210,9 +210,11 @@ back, because the person or agent doing the new work never saw that rule. The kn
 existed; it was not in front of whoever needed it, at the moment they needed it. And when it
 was, it was often out of date: the code it described had moved on.
 
-okl answers both. **The relevant lessons are read automatically at the start of a task, not
-looked up if someone remembers to**, and **a lesson stays true or goes stale loudly**: each is
-proven by a check you choose and re-opened when the code it covers changes.
+okl answers both. **The lessons that match a task are put in front of the agent at its start, not
+looked up if someone remembers to**, and **a lesson with a check is re-opened when the code it
+covers changes**. Neither is complete yet. On real work the briefing named about a third of the
+lessons a change needed (REPORT §4al, model-judged), and a check catches the forms of its rule it
+tests, not every form (§4bf).
 
 **This is a v0 starter, not production-hardened.** It ships an end-to-end test suite (`pytest -q`
 shows the suite and its result in your environment). The core is stdlib-only with zero
@@ -222,8 +224,8 @@ required dependencies.
 
 **A store of your engineering lessons, and the machinery that keeps them true.** Typed
 records (rules, architecture decisions, known defects, gates, tombstones, retractions) that
-are briefed into an agent's context before a task and go stale loudly when the code they
-describe moves on. Everything measured in [evals/REPORT.md](evals/REPORT.md) measures this.
+are briefed into an agent's context before a task and flagged for a re-check when the files
+they govern change. Everything measured in [evals/REPORT.md](evals/REPORT.md) measures this.
 
 It is worth being precise about what that store fills up with, because "lessons a
 codebase has learned" invites the picture of a bug database. In the 183-record corpus
@@ -302,9 +304,10 @@ Three honest limits on that table:
 ## How okl differs
 
 - **From memory layers** (mem0, Zep, Letta, the Claude Code memory plugins): they recall what
-  the agent experienced; okl keeps what must stay true, and proves it with a check you chose.
+  the agent experienced; okl keeps what must stay true, and ties it to a check you chose.
 - **From rules files** (`CLAUDE.md`, `AGENTS.md`): a briefing selects the few lessons that
-  match the task; a rules file loads whole, every time, and nothing re-checks it.
+  match the task and okl re-checks them; a rules file loads whole, every time. No run has compared
+  the two yet, and an agent acts on a lesson in a list of ten far less than on one alone (REPORT §4ax).
 - **From instruction-file linters**: they check that a path or command a rules file names still
   exists; okl runs your check, and blocks the push when its code moved.
 - **From documentation platforms**: they draft and review; okl drafts nothing and blocks a push.
@@ -348,11 +351,10 @@ judge are different models; method + raw receipts in [evals/REPORT.md](evals/REP
   reproduced without the briefing in any committed receipt (46–48 unbriefed samples each),
   so they cannot show a reduction; the rate limiter has reproduced 1 of 41 times without
   the briefing (§4m) and 2 of 44 with it (REPORT §4d, §4m, §5 finding 6).
-- The result worth remembering, from those first runs: **briefed haiku (12%) beat
-  unbriefed sonnet (33%)**. It suggests the briefing is a cost lever, not just a quality
-  lever — it can hold a cheaper model above a frontier model's unbriefed floor on the
-  org's known failure modes. Two caveats: the haiku run was never repeated, and it was
-  judged by sonnet where the sonnet runs were judged by haiku.
+- A lead from those first runs, not a result: briefed haiku (12%) came in under unbriefed
+  sonnet (33%). The haiku run was never repeated, it was judged by sonnet where the sonnet runs
+  were judged by haiku, and the gap between model tiers sits inside the run-to-run noise §5
+  finding 4 measures. Whether the briefing can let a cheaper model stand in is untested.
 - Every run above predates the briefing's **Decisions** section: until recently a
   Decision that won a slot was silently dropped; it now appears under its own heading.
   No eval task's briefing held one, so the eight measured briefings are byte-identical
@@ -366,8 +368,9 @@ judge are different models; method + raw receipts in [evals/REPORT.md](evals/REP
 The figure is also a transfer result. The eight tasks are fresh code written from a task
 prompt, and the defect classes they invite were learned in other projects: each task names
 its lesson in [evals/tasks.jsonl](evals/tasks.jsonl), and those lessons arrive through six of
-the twelve seed packs. A lesson paid for in one project prevented the defect in code written
-for another. In the pooled runs the briefing held each task's lesson with three exceptions,
+the twelve seed packs. On these bait tasks, a lesson paid for in one project prevented the
+defect in code written for another; whether that holds on real work in another repository is
+not yet measured (#254, #413). In the pooled runs the briefing held each task's lesson with three exceptions,
 whose arms measure the briefing without it: `exit_code_trust`'s ranked below the twelve-record
 cutoff in every run until the lesson gained a symptom on 2026-10-22 (REPORT §4b, §4o);
 `rate_limiter`'s was filtered out in the reverted §4d run; and `react_fetch`'s was filtered
@@ -559,6 +562,14 @@ Your store and your tasks will differ.
 | Context | **~1,580 tokens** by default on one representative task (five lessons in full, twelve named in a line; ~780 under `--decision calibrated`, ~1,810 under `--decision floor`); on real prompts the median is **~720** ([REPORT §4y](evals/REPORT.md)), before the briefing's marks, which added about 5% on okl's own store (`briefing-marks-size-20261101-1110.txt`; the selection re-measured on current code, `real-20261102-heldout-size.txt`). Down to **~400** for only the action list at `--limit 3` |
 
 
+**Per session, the review after writing** (on by default since 0.17.0): in Claude Code, before the
+question below, the Stop hook asks the agent to check the code it wrote against the lessons, each lesson it picks in a
+sub-agent of its own. It is the largest cost per session. On five past bugs in this repository a
+session with the review cost $0.73 API-priced on average and a median of 214 seconds, against $0.11
+and 160 seconds with no review, about 6.9 times the cost
+([REPORT §4az](evals/REPORT.md), receipt `review-e2e-20261111-1543.json`).
+`okl init --no-review-after-writing` turns it off; `OKL_REVIEW_AFTER_WRITING=0` skips it for one session.
+
 **Per session:** in Claude Code, the Stop hook interrupts once at the end to ask what was learned. It
 blocks the first stop only, and answering it is the whole write side of the loop. With
 the question it lists up to five commands that failed during the session, read from the
@@ -602,9 +613,11 @@ Every knob, what `okl init` writes, how to turn parts off, and the opt-in archit
 ## Questions
 
 **How do I stop my agent repeating a bug it already fixed?** Record the fix as a lesson with a
-symptom, a fix and the files it governs, then `okl verify` it with the test that proves it. Any
-task that shares its words is briefed with it first; if the code it covers changes, the push
-waits until the check passes again.
+symptom, a fix and the files it governs, then `okl verify` it with a test. Any task that shares
+its words is briefed with it first; if the code it covers changes, the push waits until the check
+passes again. Write that test to check the rule, not only the incident: in this repository, no
+lesson's own check caught any of 124 later breaks of its lesson (REPORT §4bd), and checks that
+sweep their rule across the code caught about half of fresh breaks (§4bf).
 
 **What happens when the code a lesson covers changes?** `okl drift` lists it, the pre-push hook
 holds the push (or CI fails), and the next briefing marks it STALE. `okl reverify` re-runs its

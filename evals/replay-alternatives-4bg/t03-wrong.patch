@@ -1,0 +1,32 @@
+diff --git a/src/okl/cli.py b/src/okl/cli.py
+index ab2cbc7..3f84380 100644
+--- a/src/okl/cli.py
++++ b/src/okl/cli.py
+@@ -466,10 +466,10 @@ def _drift_from_snapshot(args, client: Client) -> int:
+     from . import drift
+     try:
+         snap = drift.read_committed_snapshot(args.snapshot, args.repo_dir)
++        nodes, problems = drift.nodes_from_snapshot(snap)
+     except ValueError as e:
+         print(f"OKL SNAPSHOT REFUSED — {e}", file=sys.stderr)
+         return 2
+-    nodes, problems = drift.nodes_from_snapshot(snap)
+     if problems:
+         print(f"OKL SNAPSHOT REFUSED — {len(problems)} entr(y/ies) cannot be trusted; re-run "
+               "`okl verify` for each and re-export:\n  " + "\n  ".join(problems), file=sys.stderr)
+diff --git a/src/okl/drift.py b/src/okl/drift.py
+index dd75ce4..c791f06 100644
+--- a/src/okl/drift.py
++++ b/src/okl/drift.py
+@@ -252,7 +252,10 @@ def nodes_from_snapshot(snap: dict[str, Any]) -> tuple[list[Node], list[str]]:
+     """Nodes to feed scan_drift, and one problem line per entry that cannot be trusted."""
+     nodes: list[Node] = []
+     problems: list[str] = []
+-    for r in snap.get("rules", []):
++    rules = snap.get("rules", [])
++    if not isinstance(rules, list):
++        raise ValueError(f"`rules` must be a list of entries, not {type(rules).__name__}")
++    for r in rules:
+         why = stamp_problem(r)
+         if why:
+             problems.append(f"[{r.get('id')}] {why}")

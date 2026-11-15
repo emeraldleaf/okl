@@ -1,0 +1,59 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 592197c..37c3a73 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -142,10 +142,12 @@ jobs:
+             chmod +x "$CLAUDE_BIN"
+             # Read-only git, so it can check that a receipt's commit is reachable: allowed by a
+             # settings file, since the command line is word-split; GIT_DIR points the clean
+-            # room's git at the checkout. Only forms that cannot write: not branch or tag, which
+-            # can create and delete refs while the token is in the environment and the model
+-            # reads PR text (CI reviewer on #307). Any other shell command is refused in -p mode.
+-            printf '%s' '{"permissions":{"allow":["Bash(git log:*)","Bash(git show:*)","Bash(git merge-base:*)","Bash(git rev-parse:*)"]}}' \
++            # room's git at the checkout. Only subcommands that cannot write: not branch or tag,
++            # which can create and delete refs while the token is in the environment and the
++            # model reads PR text, and not log or show either, since both take --output=<file>
++            # and write it (CI reviewer on #307). Reachability needs only `merge-base
++            # --is-ancestor` and `rev-parse`. Any other shell command is refused in -p mode.
++            printf '%s' '{"permissions":{"allow":["Bash(git merge-base:*)","Bash(git rev-parse:*)"]}}' \
+               > "$RUNNER_TEMP/review-settings.json"
+             export GIT_DIR="$GITHUB_WORKSPACE/.git" GIT_WORK_TREE="$GITHUB_WORKSPACE"
+             REVIEW_CMD="$CLAUDE_BIN -p --model sonnet --max-turns 40 --tools Read,Grep,Glob,Bash --settings $RUNNER_TEMP/review-settings.json --add-dir $GITHUB_WORKSPACE"
+diff --git a/ci/review-agent.sh b/ci/review-agent.sh
+index f59ae56..89b51c5 100755
+--- a/ci/review-agent.sh
++++ b/ci/review-agent.sh
+@@ -72,12 +72,12 @@ fi
+ # cites and a claim to the code: the findings a diff alone cannot show (review on #300).
+ repo_note=""
+ if [[ -n "${REVIEW_REPO_DIR:-}" ]]; then
+-  repo_note="The repository is checked out at $REVIEW_REPO_DIR and you can read any file in it. Use that: open the receipt every published figure cites and compare the number, and open the code a claim is about. Where your tools allow read-only git (log, show, merge-base), use it to check that a commit a receipt names is reachable."
++  repo_note="The repository is checked out at $REVIEW_REPO_DIR and you can read any file in it. Use that: open the receipt every published figure cites and compare the number, and open the code a claim is about. Where your tools allow read-only git (merge-base, rev-parse), use it to check that a commit a receipt names is reachable (git merge-base --is-ancestor <commit> HEAD)."
+   # A coding agent refuses `cd <dir> && git ...` (git in a new directory can run its hooks) and
+   # `git -C <dir> ...` matches no allow rule, so a reviewer told only the path never ran git
+   # (CI reviewer on #307). GIT_DIR already points git at the checkout: say so.
+   if [[ -n "${GIT_DIR:-}" ]]; then
+-    repo_note+=" git already points at the checkout: run git log, git show and git merge-base exactly as they are, with no cd and no -C (both are refused)."
++    repo_note+=" git already points at the checkout: run git merge-base and git rev-parse exactly as they are, with no cd and no -C (both are refused)."
+   fi
+ fi
+ 
+diff --git a/src/okl/scaffold/ci/review-agent.sh b/src/okl/scaffold/ci/review-agent.sh
+index f59ae56..89b51c5 100755
+--- a/src/okl/scaffold/ci/review-agent.sh
++++ b/src/okl/scaffold/ci/review-agent.sh
+@@ -72,12 +72,12 @@ fi
+ # cites and a claim to the code: the findings a diff alone cannot show (review on #300).
+ repo_note=""
+ if [[ -n "${REVIEW_REPO_DIR:-}" ]]; then
+-  repo_note="The repository is checked out at $REVIEW_REPO_DIR and you can read any file in it. Use that: open the receipt every published figure cites and compare the number, and open the code a claim is about. Where your tools allow read-only git (log, show, merge-base), use it to check that a commit a receipt names is reachable."
++  repo_note="The repository is checked out at $REVIEW_REPO_DIR and you can read any file in it. Use that: open the receipt every published figure cites and compare the number, and open the code a claim is about. Where your tools allow read-only git (merge-base, rev-parse), use it to check that a commit a receipt names is reachable (git merge-base --is-ancestor <commit> HEAD)."
+   # A coding agent refuses `cd <dir> && git ...` (git in a new directory can run its hooks) and
+   # `git -C <dir> ...` matches no allow rule, so a reviewer told only the path never ran git
+   # (CI reviewer on #307). GIT_DIR already points git at the checkout: say so.
+   if [[ -n "${GIT_DIR:-}" ]]; then
+-    repo_note+=" git already points at the checkout: run git log, git show and git merge-base exactly as they are, with no cd and no -C (both are refused)."
++    repo_note+=" git already points at the checkout: run git merge-base and git rev-parse exactly as they are, with no cd and no -C (both are refused)."
+   fi
+ fi
+ 

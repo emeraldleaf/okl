@@ -83,7 +83,7 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                     default=None,
                     help="--review-after-writing has the Stop hook ask the agent, before it finishes, to "
                          "check the code it wrote against the lessons (`okl check --change`; a step under "
-                         "measurement, REPORT §4at to §4ay); --no-review-after-writing turns it off. Default: off, "
+                         "measurement, REPORT §4at to §4bg); --no-review-after-writing turns it off. Default: on, "
                          "or whatever an earlier run chose. Recorded in .okl/config.json")
     pi.add_argument("--owner", metavar="HANDLE",
                     help="name a person (@user, @org/team or an email) code owner of docs/THESIS.md and "
@@ -123,7 +123,7 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                            "one line each, with the steps of the review after writing: explain the change, "
                            "pick the lessons it most likely breaks, read and check each, fix. Calls no "
                            "model. A step under measurement (REPORT §4at). With --format hook, only the "
-                           "Stop hook's note, where `review_after_writing` is on in .okl/config.json "
+                           "Stop hook's note, unless `review_after_writing` is off in .okl/config.json "
                            "(OKL_REVIEW_AFTER_WRITING=1 or 0 for one session)")
     pk.add_argument("--repo")
     pk.add_argument("--hook-event", dest="hook_event", choices=["UserPromptSubmit", "PostToolUse", "SessionStart"],
@@ -338,9 +338,10 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
     pst.set_defaults(func=cmd_standing)
 
     poe = sub.add_parser(
-        "on-edit", help="the lesson checks that run when the agent edits a file the lesson governs (#435): "
-                        "list them, approve some by id (add) or drop them (remove), or run the ones governing "
-                        "the files given (run, what the Claude Code edit hook calls)")
+        "on-edit", help="the lesson checks that run after every edit the agent makes in the repo, those of "
+                        "the lessons governing the edited file first (#435, #450): list them, approve some by id "
+                        "(add) or drop them (remove), or run them for the files given (run, what the Claude "
+                        "Code edit hook calls)")
     poe.set_defaults(func=cmd_on_edit, action="list", targets=[])
     poe_sub = poe.add_subparsers(dest="action")
     poe_sub.add_parser("list", help="the approved checks, and the lessons whose check could be approved")
@@ -348,11 +349,12 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
     poe_add.add_argument("targets", nargs="+", metavar="id", help="lesson ids, as the briefing shows them in [brackets]")
     poe_add.add_argument("--yes", action="store_true",
                          help="approve the commands it shows without asking; review them first, since they "
-                              "come from the store and will run on every edit to the files they govern")
+                              "come from the store and will run after every edit in the repository")
     poe_rm = poe_sub.add_parser("remove", help="stop running these lessons' checks on edit")
     poe_rm.add_argument("targets", nargs="+", metavar="id", help="lesson ids")
-    poe_run = poe_sub.add_parser("run", help="run the approved checks of the lessons governing these files "
-                                             "(what the Claude Code edit hook calls); exit 1 when one fails")
+    poe_run = poe_sub.add_parser("run", help="run every approved check after an edit to these files, those of "
+                                             "the lessons governing them first (what the Claude Code edit hook "
+                                             "calls); exit 1 when one fails")
     poe_run.add_argument("targets", nargs="+", metavar="file", help="the edited files")
     poe_run.add_argument("--format", choices=["text", "hook"], default="text",
                          help="hook prints Claude Code's PostToolUse JSON, and nothing when every check passed")

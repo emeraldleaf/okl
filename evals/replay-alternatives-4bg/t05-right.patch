@@ -1,0 +1,79 @@
+diff --git a/src/okl/core.py b/src/okl/core.py
+index 4b527f9..b7ed359 100644
+--- a/src/okl/core.py
++++ b/src/okl/core.py
+@@ -167,7 +167,7 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
+     #                 defects rather than emitting one undifferentiated list.
+     #   4. ROUTE    — turn the buckets into an ordered list of imperatives.
+     repo_scope = f"repo:{repo}"
+-    hits, replaced = _live_hits(store, task, limit, repo_scope, interests)
++    terms = briefing_terms(task)
+     # THE FLOOR. The search is an OR of the task's subject words, so on a short or generic
+     # task every slot fills with records that share one word with it ("point", "doc"):
+     # twelve imperatives chosen by a word in common, at about two thousand tokens a
+@@ -175,7 +175,17 @@ def check(store: Store, repo: str, task: str, limit: int = 12,
+     # when it shares two subject words with the task, or one that is in its title or
+     # symptom, or one when the task has only one word. Trimmed records are counted, not hidden: the
+     # briefing says how many weak matches it left out.
+-    hits, matched, weak = _apply_floor(store, hits, briefing_terms(task))
++    # The search window is a guess at how many records the steps above throw away. When the
++    # floor leaves fewer than `limit` of a full window, a qualifying record may sit just past
++    # it, which would read as "no close match": double the window until the briefing is full
++    # or the search has no more to give.
++    window = limit * 3
++    while True:
++        hits, replaced, exhausted = _live_hits(store, task, window, repo_scope, interests)
++        hits, matched, weak = _apply_floor(store, hits, terms)
++        if exhausted or len(hits) >= limit:
++            break
++        window *= 2
+     # THE CUTOFF. store.search returns BM25-ranked results, but full-text matching is
+     # permissive: on a mature store a plausible task matches most of it, so without a
+     # cap the "briefing" becomes the library. Ranking already put the best first, so
+@@ -257,8 +267,8 @@ def _apply_floor(store: Store, hits: list[Node], terms: list[str],
+     return kept, matched, len(hits) - len(kept)
+ 
+ 
+-def _live_hits(store: Store, task: str, limit: int, repo_scope: str,
+-               interests: list[str] | None) -> tuple[list[Node], list[dict[str, Any]]]:
++def _live_hits(store: Store, task: str, window: int, repo_scope: str,
++               interests: list[str] | None) -> tuple[list[Node], list[dict[str, Any]], bool]:
+     """Steps 1 and 2 without retired lessons, and the pointers for the replaced ones.
+ 
+     Obsolete lessons, and superseded ones whose live replacement this repo can see, leave
+@@ -266,15 +276,20 @@ def _live_hits(store: Store, task: str, limit: int, repo_scope: str,
+     read SUPERSEDES, so a replaced lesson was briefed beside its successor. A superseded
+     lesson with no such replacement stays briefed: dropping it would leave nothing. The
+     search widens by as many as were left out, so they do not use up its window either.
++
++    `window` is how many records the search is asked for; the last value says whether it
++    came back short of that, which means the store has no further match to give.
+     """
+     # The search runs on the task's subject words, never on an empty query: the store
+     # turns an empty query into a substring match on "" that returns every record.
+     query = " ".join(briefing_terms(task))
+     if not query:
+-        return [], []
+-    fetch = limit * 3
++        return [], [], True
++    fetch = window
++    exhausted = False
+     for _ in range(3):
+         found = store.search(query, limit=fetch)
++        exhausted = len(found) < fetch
+         live: list[Node] = []
+         replaced: list[dict[str, Any]] = []
+         left_out = 0
+@@ -288,10 +303,10 @@ def _live_hits(store: Store, task: str, limit: int, repo_scope: str,
+                                      "by_title": to.title})
+                 continue
+             live.append(n)
+-        if not left_out or len(found) < fetch:
++        if not left_out or exhausted:
+             break
+         fetch += left_out
+-    return live, replaced
++    return live, replaced, exhausted
+ 
+ 
+ def _live_replacement(store: Store, n: Node, repo_scope: str,

@@ -1,0 +1,32 @@
+diff --git a/src/okl/cli/lessons.py b/src/okl/cli/lessons.py
+index c4b8e23..d87b666 100644
+--- a/src/okl/cli/lessons.py
++++ b/src/okl/cli/lessons.py
+@@ -14,7 +14,7 @@ from pathlib import Path
+ from typing import Any
+ 
+ from .. import core
+-from ..client import Client, OKLNoAnswerError, OKLUnreachableError
++from ..client import Client, OKLNoAnswerError, OKLUnreachableError, _find_config
+ from .common import _print_json
+ from .packs import _bundled_seed_dir, _empty_store_guidance
+ from .verification import _refresh_snapshot
+@@ -128,8 +128,16 @@ def _once_per_session(result: dict[str, Any], session: str) -> None:
+     """Drop from a file briefing the lessons this session was already briefed by file, unless
+     drift marks one (stale, or never verified), and remember the rest (#94). A lesson the agent
+     has read once need not fill its context again on every read of the file; a stale one is
+-    news each time. Remembered in the temp directory, per session, as the Stop hook's marker is."""
+-    seen_file = Path(tempfile.gettempdir()) / f"okl-read-briefed-{hashlib.sha256(session.encode()).hexdigest()[:16]}"
++    news each time. Remembered in the temp directory, per session, as the Stop hook's marker is.
++
++    A session id names one conversation, but two repos can be given the same one (a copied
++    settings file, a harness that numbers its sessions), and a lesson briefed in one has not been
++    briefed in the other: the marker belongs to the session AND the repo it was briefed in,
++    named by the repo the result answers for and the directory its checkout is rooted in."""
++    cfg = _find_config()
++    root = cfg.parent.parent if cfg else Path.cwd()
++    identity = f"{session}\0{result.get('repo') or ''}\0{root}"
++    seen_file = Path(tempfile.gettempdir()) / f"okl-read-briefed-{hashlib.sha256(identity.encode()).hexdigest()[:16]}"
+     try:
+         seen = set(seen_file.read_text().split())
+     except OSError:

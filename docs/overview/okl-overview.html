@@ -213,8 +213,8 @@ h1::after { content: ''; position: absolute; left: 0; bottom: 0; width: 84px; he
       <div class="stage">
         <div class="badge"><svg class="ic"><use href="#i-bot"/></svg></div>
         <h3>In front of the agent</h3>
-        <div class="what">Task arrives → ranked and filtered → briefing in context</div>
-        <span class="chip">before every task *</span>
+        <div class="what">Task arrives → briefing in context → code written → each likely lesson checked on its own</div>
+        <span class="chip">before each task, after each change *</span>
       </div>
       <div class="arrow"><svg class="ic"><use href="#i-arrow"/></svg></div>
       <div class="stage">
@@ -237,7 +237,7 @@ h1::after { content: ''; position: absolute; left: 0; bottom: 0; width: 84px; he
       <rect x="544" y="26" width="180" height="24"/>
       <text x="634" y="44" text-anchor="middle">lessons flow back</text>
     </svg>
-    <p class="foot-note">* Claude Code hooks brief every prompt and ask at session end what was learned; other MCP agents call okl_check. The push gate works with any agent.</p>
+    <p class="foot-note">* Claude Code hooks brief every prompt, run the checks you approved after each edit, and at session end ask for the review after writing (on by default) and what was learned; other MCP agents call okl_check. The push gate works with any agent.</p>
   </section>
 
   <section class="panels">

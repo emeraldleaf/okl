@@ -1,0 +1,80 @@
+diff --git a/ci/check-diagram-names.py b/ci/check-diagram-names.py
+index 8fe1987..b5b2a23 100755
+--- a/ci/check-diagram-names.py
++++ b/ci/check-diagram-names.py
+@@ -29,6 +29,8 @@ import json
+ import re
+ import subprocess
+ import sys
++import xml.etree.ElementTree as ET
++from collections import Counter
+ from collections.abc import Callable
+ from pathlib import Path
+ from typing import Any
+@@ -102,6 +104,30 @@ def diagram_text(raw: str) -> str:
+                      if e.get("type") == "text" and not e.get("isDeleted"))
+ 
+ 
++def _lines(text: str) -> Counter[str]:
++    """The non-blank, trimmed lines of `text`, counted: a diagram is the same text however its
++    elements are ordered or wrapped."""
++    return Counter(ln.strip() for ln in text.splitlines() if ln.strip())
++
++
++def render_text(svg: str) -> str:
++    """The text of every <text> element of an exported .svg render, one per line."""
++    root = ET.fromstring(svg)
++    return "\n".join("".join(e.itertext()) for e in root.iter() if e.tag.rsplit("}", 1)[-1] == "text")
++
++
++def stale(source_text: str, svg: str) -> list[str]:
++    """How the render's text differs from the source's: lines only the source has (the render
++    was never re-exported) and lines only the render has (it shows what the source dropped)."""
++    try:
++        drawn = _lines(render_text(svg))
++    except ET.ParseError as e:
++        return [f"the render is not valid SVG: {e}"]
++    wanted = _lines(source_text)
++    return ([f"render lacks text the source has: {ln!r}" for ln in sorted((wanted - drawn))]
++            + [f"render shows text the source lacks: {ln!r}" for ln in sorted((drawn - wanted))])
++
++
+ def _tracked(path: str, files: set[str]) -> bool:
+     name = path.removeprefix("./")
+     return any(f == name or f.endswith("/" + name) for f in files)
+@@ -138,8 +164,13 @@ def main(argv: list[str]) -> int:
+         if committed:
+             paths = [p for p in repo.files() if p.startswith("docs/") and p.endswith(".excalidraw")]
+             sources = {p: repo.read(p) for p in paths}
++            tracked = set(repo.files())
++            renders = {p: repo.read(p.removesuffix(".excalidraw") + ".svg") for p in paths
++                       if p.removesuffix(".excalidraw") + ".svg" in tracked}
+         else:
+             sources = {p: Path(p).read_text(encoding="utf-8") for p in argv}
++            renders = {p: Path(p).with_suffix(".svg").read_text(encoding="utf-8") for p in argv
++                       if Path(p).with_suffix(".svg").is_file()}
+         known = known_names(repo)
+     except (OSError, subprocess.CalledProcessError, ValueError, KeyError) as e:
+         _say(f"check-diagram-names: could not run: {e}", err=True)
+@@ -149,13 +180,19 @@ def main(argv: list[str]) -> int:
+         return 0
+     failed = False
+     for path, raw in sorted(sources.items()):
+-        problems = unknown(diagram_text(raw), known)
++        text = diagram_text(raw)
++        problems = unknown(text, known)
++        if path in renders:
++            # The picture people see is the .svg: it must say what the source says, and so name
++            # only what the code has. A render nobody re-exported passes the source's check alone.
++            problems += stale(text, renders[path])
+         _say(f"-- {path}")
+         if problems:
+             failed = True
+             _say("\n".join(f"   FAIL: {p}" for p in problems))
+         else:
+-            _say("   ok: every command, flag, tool, hook, script and mark it names exists")
++            _say("   ok: every command, flag, tool, hook, script and mark it names exists"
++                 + (", and its render says the same" if path in renders else ""))
+     if failed:
+         _say("\nA drawn diagram names something the code no longer has. Fix the diagram "
+              "(edit the .excalidraw, re-export the .svg), or, if a name here is prose, see "
