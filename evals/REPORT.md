@@ -7058,7 +7058,8 @@ checked by its script.
 **Candidates.** §4bc's 58 past changes, each with at least one lesson the answer key called broken. The key
 was not trusted (§4bh). Each change was read again for a defect that stood when it was frozen, was fixed
 later, and is named by a lesson in the store, whichever lesson that was. Three agents (Claude) screened a third
-of the changes each, and I read every grader and every lesson's fit before merging. Every candidate, and each of
+of the changes each, and the agent that built the set (Claude) read every grader and every lesson's fit before
+merging; I did not review them one by one. Every candidate, and each of
 the 94 defects looked at and set aside, is recorded with its reason (`replay-screen-457.json`).
 
 | outcome | changes |
@@ -7167,7 +7168,8 @@ Some right fixes chose another design than the real fix, and the graders passed 
   defect (doctor leaves the CI note out and keeps exit 0 or 1). The agent noticed after writing t21's right fix,
   which refuses with exit 2 instead.
 - **t23:** the rooms for t28 and t29 showed t23's real fix, and its right fix matches it.
-- **The graders' authors** (the three screening agents, and I in review) read the real fixes, as §4bg's did.
+- **The graders' authors** (the three screening agents, and the building agent in review) read the real fixes, as
+  §4bg's did.
 
 **Power at the new size.** `evals/power_4bg.py --grown` (receipt `power-457-20261115-1927.json`) sizes the two
 contrasts #457 names. Each draws tasks from an earlier receipt, gives each drawn task a true rate from a Beta
@@ -7197,7 +7199,7 @@ nominal 0.05: percentile intervals from resampling few tasks are too narrow.
 
 **How firm.**
 - **One repository.** The set carries this repository's biases. #413's public-repository tasks stay a separate set.
-- **Lesson fit was judged by one reviewer,** and some fits are stretched: t20 (a "runs on demand, runs never"
+- **Lesson fit was judged by one reviewer, an agent,** and some fits are stretched: t20 (a "runs on demand, runs never"
   lesson for how a metric defines armed), t27 (a hook and an older CLI, for a client and an older service), and
   t39 (a checkout's config rather than an environment variable).
 - **Lesson texts are today's,** with this task's clauses removed, as in §4bg.
