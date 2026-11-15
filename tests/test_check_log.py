@@ -7,6 +7,7 @@ catches; this log is what any later measure of them reads.
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import shlex
 import sqlite3
@@ -283,7 +284,7 @@ def test_a_store_from_before_run_times_gains_the_column_on_open(tmp_path):
     s.close()
     again = Store(f"sqlite:///{db}")
 
-    with sqlite3.connect(db) as c:
+    with contextlib.closing(sqlite3.connect(db)) as c:
         cols = [r[1] for r in c.execute("PRAGMA table_info(check_run)")]
     assert cols.count("seconds") == 1, cols
     assert [(r.command, r.seconds) for r in again.checks("x")] == [("pytest -q", None), ("pytest -q", 2.5)]

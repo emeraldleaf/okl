@@ -556,8 +556,9 @@ def cmd_reverify(args: argparse.Namespace) -> int:
 
 
 def _untimed_targets(args: argparse.Namespace, client: Client, by_id: dict[str, Node], taken: set[str]) -> list[str]:
-    """With --untimed, the ids of the lessons `okl on-edit add --quick` lists as time unknown that
-    are not already in `taken`, by id; else none. The test is on_edit's own, not a copy of it."""
+    """With --untimed, the ids of the lessons whose check could run on edit and whose latest run is
+    untimed, passed or failed (on_edit.untimed), that are not already in `taken`, by id; else none.
+    The test is on_edit's own, not a copy of it."""
     if not getattr(args, "untimed", False):
         return []
     from .on_edit import untimed  # on_edit imports this module, so not at the top

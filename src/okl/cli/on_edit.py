@@ -45,7 +45,7 @@ import math
 import sys
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from .. import core
 from ..client import Client, OKLUnreachableError, _find_config, _repo_relative, save_config
@@ -259,31 +259,48 @@ FAILED = "failed"        # check_time: the latest run of the lesson's stored che
 UNTIMED = "untimed"      # check_time: no timed passing run of it among the runs okl can see
 
 
-def check_time(client: Client, node: Node) -> float | str:
-    """How long the lesson's stored check (the command and signal an approval pins) took at its latest
-    logged run, which passed; FAILED when that run failed; UNTIMED when it passed untimed (logged before
-    okl timed runs) or the runs `okl show` lists hold none of it. A run of another command is another
-    check, whatever it took. One test for both readers: `okl on-edit add --quick` lists the UNTIMED
-    lessons apart, and `okl reverify --untimed` re-runs them once to time them."""
+def _latest_run(client: Client, node: Node) -> dict[str, Any] | None:
+    """The latest logged run of the lesson's stored check, the command and signal an approval pins,
+    among the runs `okl show` lists; None when they hold none of it. A run of another command is
+    another check, whatever it took."""
     check = _stored_check(node.verified_by)
     got = client.get(node.id) if check else None
     if not check or not got:
-        return UNTIMED
+        return None
     mine = [r for r in got.get("checks") or []
             if (r.get("command"), r.get("expect") or None) == (check[0], check[1] or None)]
-    if not mine:
+    return mine[-1] if mine else None
+
+
+def _seconds_of(run: dict[str, Any]) -> float | None:
+    """How long a logged run took; None for one logged before okl timed runs."""
+    took = run.get("seconds")
+    if isinstance(took, int | float) and not isinstance(took, bool) and math.isfinite(took):
+        return float(took)
+    return None
+
+
+def check_time(client: Client, node: Node) -> float | str:
+    """How long the lesson's stored check took at its latest logged run, which passed; FAILED when
+    that run failed; UNTIMED when it passed untimed or there is none. `okl on-edit add --quick` offers
+    the quick ones and lists the UNTIMED ones apart as time unknown."""
+    last = _latest_run(client, node)
+    if last is None:
         return UNTIMED
-    if not mine[-1].get("passed"):
+    if not last.get("passed"):
         return FAILED
-    took = mine[-1].get("seconds")
-    timed = isinstance(took, int | float) and not isinstance(took, bool) and math.isfinite(took)
-    return float(took) if timed else UNTIMED
+    took = _seconds_of(last)
+    return UNTIMED if took is None else took
 
 
 def untimed(client: Client, nodes: dict[str, Node]) -> list[Node]:
-    """The lessons whose check could run on edit, approved or not, and is UNTIMED, by id: the ones
-    `okl on-edit add --quick` lists as time unknown, which `okl reverify --untimed` re-runs."""
-    return [n for n in _addable({}, nodes, client.repo) if check_time(client, n) == UNTIMED]
+    """The lessons whose check could run on edit, approved or not, and whose latest run is untimed,
+    passed or failed, by id: the ones `okl reverify --untimed` re-runs once to time them. That is
+    --quick's time-unknown list and, beside it, the checks whose untimed last run failed: a check that
+    failed before okl timed runs is re-run too (CodeRabbit on #467), or it could never be timed or
+    offered until its lesson drifted."""
+    return [n for n in _addable({}, nodes, client.repo)
+            if (last := _latest_run(client, n)) is None or _seconds_of(last) is None]
 
 
 def _by_time(client: Client, lessons: list[Node], under: float) -> tuple[list[tuple[Node, float]], list[Node], int, int]:

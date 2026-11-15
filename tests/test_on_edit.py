@@ -67,8 +67,9 @@ def _took(env, lesson_id, seconds):
     """Set how long the lesson's latest logged run took, as if okl verify had timed it so (None: as
     a run logged before okl timed them). Deterministic, where a real sleep would make the test slow
     and its margins a race; that verify really times a run is test_check_log's to show."""
+    import contextlib
     import sqlite3
-    with sqlite3.connect(env["OKL_DATABASE_URL"].removeprefix("sqlite:///")) as c:
+    with contextlib.closing(sqlite3.connect(env["OKL_DATABASE_URL"].removeprefix("sqlite:///"))) as c, c:
         c.execute("UPDATE check_run SET seconds = ? WHERE rowid = (SELECT max(rowid) FROM check_run "
                   "WHERE node_id = ?)", (seconds, lesson_id))
 
@@ -643,3 +644,26 @@ def test_the_quick_hint_reads_nothing_from_a_shared_service(remote, monkeypatch,
     assert main(["on-edit"]) == 0
     out = capsys.readouterr().out
     assert "[les]" in out and "okl on-edit add --quick" not in out, out
+
+
+def test_untimed_re_runs_a_check_whose_untimed_last_run_failed(remote):
+    """A check that failed before okl timed runs is re-run by `okl reverify --untimed`, or it could
+    never be timed or offered until its lesson drifted; --quick still never offers a failing one, and a
+    timed run, passed or failed, is not re-run (CodeRabbit on #467)."""
+    from okl import core
+    from okl.cli import on_edit
+    from okl.client import Client
+    for lid, passed, took in (("failed-untimed", False, None), ("passed-untimed", True, None),
+                              ("failed-timed", False, 0.3), ("passed-timed", True, 0.3)):
+        core.record(remote.store, id=lid, type="Rule", title=lid, scope="org")
+        core.verify(remote.store, lid, f"`true {lid}` exit 0 @ 2026-11-15T00:00Z")
+        core.log_check(remote.store, lid, passed=passed, command=f"true {lid}",
+                       outcome="exit 0" if passed else "exit 1", seconds=took)
+    client = Client()
+    nodes = {n.id: n for n in client.all_nodes()}
+    assert [n.id for n in on_edit.untimed(client, nodes)] == ["failed-untimed", "passed-untimed"]
+    assert on_edit.check_time(client, nodes["failed-untimed"]) == on_edit.FAILED
+    quick, unknown, _slow, failing = on_edit._by_time(client, on_edit._addable({}, nodes, client.repo),
+                                                      on_edit.QUICK)
+    assert [n.id for n, _t in quick] == ["passed-timed"] and [n.id for n in unknown] == ["passed-untimed"]
+    assert failing == 2
