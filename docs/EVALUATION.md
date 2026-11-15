@@ -241,6 +241,10 @@ before the code merged.
    graded by the test the real fix added; compliance, harm, success and cost reported together.
 6. **Capture without invention** (#251): congruent, harmless and pristine sessions, and how often
    each records a lesson.
+7. **Making the review after writing earn its default.** It is on by default by decision since
+   0.17.0. The work that decides whether that holds: a person's labels on the answer key, the
+   review's model, a log of what it does in real use, and a larger graded set. See
+   [the plan](decisions/2026-11-15-making-the-review-earn-its-default.md).
 
 ## Related
 
