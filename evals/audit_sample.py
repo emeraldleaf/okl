@@ -206,6 +206,28 @@ def answered(labels: dict, ids: list[str]) -> dict[str, str]:
     return out
 
 
+def coverage(ids: list[str], got: dict[str, str]) -> dict:
+    """How much of a set was labelled: answered, decided (answered and not unsure) and of how many. A set
+    with an item unanswered is incomplete, and an incomplete set passes no bar: rates over the items
+    someone happened to answer are not the drawn sample's (CodeRabbit, the 0.18.0 sweep)."""
+    answered_n = sum(i in got for i in ids)
+    return {"answered": answered_n, "decided": sum(i in got and got[i] != "unsure" for i in ids), "of": len(ids),
+            "complete": answered_n == len(ids)}
+
+
+def matching_draw(key_bytes: bytes, items_bytes: bytes) -> dict:
+    """The draw receipt the private key and the page's items were written with, found by their hashes,
+    never by which receipt is newest: a key or items from another draw would score labels against
+    answers they were never given for. Exactly one receipt must match both."""
+    want = (hashlib.sha256(key_bytes).hexdigest(), hashlib.sha256(items_bytes).hexdigest())
+    found = [d for d in (json.loads(p.read_text()) for p in sorted(RESULTS.glob("audit-draw-*.json")))
+             if (d.get("answers_file_sha256"), d.get("items_sha256")) == want]
+    if len(found) != 1:
+        raise ValueError(f"{len(found)} draw receipts match the private key and items (need exactly 1): "
+                         "the key or the page's items are not the ones a committed draw wrote")
+    return found[0]
+
+
 def share(k: int, n: int) -> dict:
     """k of n with its Wilson 95% interval."""
     return {"k": k, "n": n, "rate": round(k / n, 4) if n else None, "wilson95": dr.wilson(k, n)}
@@ -217,8 +239,9 @@ def score_key(key: dict, got: dict[str, str]) -> dict:
     table = Counter(f'{key[i]["key"]}->{got[i]}' for i in ids if i in got)
     broken = [i for i in ids if key[i]["key"] == "broken" and i in got and got[i] != "unsure"]
     b = share(sum(got[i] == "broken" for i in broken), len(broken))
-    return {"answered": sum(i in got for i in ids), "of": len(ids), "table": dict(table), "broken_precision": b,
-            "bar": KEY_BROKEN_PRECISION, "passed": b["n"] > 0 and b["rate"] >= KEY_BROKEN_PRECISION}
+    cover = coverage(ids, got)
+    return {**cover, "table": dict(table), "broken_precision": b, "bar": KEY_BROKEN_PRECISION,
+            "passed": cover["complete"] and b["n"] > 0 and b["rate"] >= KEY_BROKEN_PRECISION}
 
 
 def score_judge(key: dict, got: dict[str, str], population: dict[str, int]) -> dict:
@@ -239,22 +262,33 @@ def score_judge(key: dict, got: dict[str, str], population: dict[str, int]) -> d
     false_broken = population["broken"] * (1 - (pb["rate"] or 0.0))
     true_intact = population["intact"] * (pi["rate"] or 0.0) + population["none"] * (1 - (pn["rate"] or 0.0)) + false_broken
     specificity = round(1 - false_broken / true_intact, 4) if true_intact else None
-    return {"answered": sum(i in got for i in ids), "of": len(ids), "table": dict(table),
+    cover = coverage(ids, got)
+    return {**cover, "table": dict(table),
             "broken_precision": pb, "intact_precision": pi, "none_broken_share": pn,
             "protection_removed": sum(got.get(i) == "protection" for i in ids),
             "sensitivity_reweighted": sensitivity, "specificity_reweighted": specificity,
             "bars": {"broken_precision": JUDGE_BROKEN_PRECISION, "intact_precision": JUDGE_INTACT_PRECISION},
-            "passed": (pb["n"] > 0 and pb["rate"] >= JUDGE_BROKEN_PRECISION and pi["n"] > 0
-                       and pi["rate"] >= JUDGE_INTACT_PRECISION)}
+            "passed": (cover["complete"] and pb["n"] > 0 and pb["rate"] >= JUDGE_BROKEN_PRECISION
+                       and pi["n"] > 0 and pi["rate"] >= JUDGE_INTACT_PRECISION)}
 
 
 def score(args: argparse.Namespace) -> int:
     """Score all three sets from the page's labels; #394's through its own script, unchanged."""
     guard = run_guard.start()
-    key = json.loads((PRIVATE / "key.json").read_text())
+    key_bytes = (PRIVATE / "key.json").read_bytes()
+    try:
+        draw = matching_draw(key_bytes, (PRIVATE / "items.json").read_bytes())
+    except ValueError as e:
+        print(f"audit_sample score: {e}", file=sys.stderr)
+        return 2
+    key = json.loads(key_bytes)
     labels = json.loads(Path(args.labels).read_text())
+    stray = sorted(set(labels) - set(key))
+    if stray:
+        print(f"audit_sample score: {len(stray)} labelled id(s) are not in this draw ({', '.join(stray[:5])}): "
+              "the labels are for another draw", file=sys.stderr)
+        return 2
     got = answered(labels, list(key))
-    draw = json.loads(sorted(RESULTS.glob("audit-draw-*.json"))[-1].read_text())
     adj_labels = PRIVATE / "adjudication-labels.json"
     adj_labels.write_text(json.dumps({i: v for i, v in got.items() if key[i]["set"] == "adjudication"}))
     adj.score(str(adj_labels))
@@ -268,6 +302,10 @@ def score(args: argparse.Namespace) -> int:
     dest = RESULTS / f"audit-{datetime.now(UTC):%Y%m%d-%H%M}.json"
     dest.write_text(json.dumps(out, indent=1) + "\n")
     print(json.dumps({k: out[k].get("passed", out[k].get("status")) for k in ("adjudication", "key", "judge")}))
+    for k in ("key", "judge"):
+        if not out[k]["complete"]:
+            print(f"{k}: {out[k]['answered']} of {out[k]['of']} labelled, so it passes no bar until every item is",
+                  file=sys.stderr)
     print(f"receipt: {dest.relative_to(REPO)}")
     return 0
 
