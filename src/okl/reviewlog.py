@@ -526,8 +526,15 @@ class _Main:
     def _result(self, b: dict[str, Any], res: Any) -> None:
         """A tool result: the review's own output, or a sub-agent's launch, completion or failure."""
         tid = b.get("tool_use_id")
-        if tid == self.review_id and self.files is None and self.listed is None:
-            self._counts(_text(b.get("content")))
+        if tid == self.review_id:
+            if b.get("is_error"):
+                # The command was refused, or okl could not run it: no review ran. This window closes,
+                # and a note's request stays open for a run that does (CodeRabbit, the 0.18.0 sweep).
+                noted = self.noted
+                self._clear()
+                self.waiting = noted
+            elif self.files is None and self.listed is None:
+                self._counts(_text(b.get("content")))
         elif tid in self.agents:
             if b.get("is_error"):
                 del self.agents[tid]            # the call started no sub-agent

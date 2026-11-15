@@ -167,6 +167,11 @@ def test_the_words_in_a_tool_result_or_a_peers_message_are_not_the_note(tmp_path
     'git commit -m "$(cat <<\'EOF\'\nit\'s (not closed, `okl check --change`\nEOF\n)" && echo done',
     "echo `okl check --change",
     "echo `date` okl check --change",
+    # found by the 0.18.0 sweep: a comment's `;` cuts nothing, and `-m okl` after a script is its argument
+    "echo hi # see; okl check --change",
+    "ls  # okl check --change",
+    "python tool.py -m okl check --change",
+    "python -c 'x' -m okl check --change",
 ])
 def test_a_command_that_only_mentions_the_review_does_not_start_one(tmp_path, command):
     """A grep, an echo, a commit message, a heredoc, a `python -c` string and the hook's own call are
@@ -208,6 +213,10 @@ def test_a_command_that_only_mentions_the_review_does_not_start_one(tmp_path, co
     "uv run --no-sync okl check --change",
     "uv run --with x okl check --change",
     "uvx --from okl okl check --change",
+    "python -W ignore -m okl check --change",
+    "okl check --change  # the review after writing",
+    "echo $#; okl check --change",
+    "# first the review\nokl check --change",
     'echo "$(cat <<\'EOF\'\nit\'s (open\nEOF\n)" && okl check --change',
     "echo \"$(echo ')')\" && okl check --change",
 ])
@@ -705,6 +714,8 @@ def test_a_test_run_keeps_a_fixed_runner_and_existing_paths_only(tmp_path, comma
     ("python tool.py --runner pytest", None), ("python -c \"import pytest\"", None),
     ("python3 -m pip install pytest", None), ("node scripts/run.js jest", None),
     ("ls tests/pytest", None), ("echo pytest", None),
+    ("python tool.py -m pytest tests", None), ("python -X dev -m pytest tests", "pytest"),
+    ("python -W ignore -m pytest tests", "pytest"),
 ])
 def test_a_runner_is_the_command_not_a_word_further_along(tmp_path, command, runner):
     """The runner is the command word after the wrappers, the module after `python -m`, or what `npx`,

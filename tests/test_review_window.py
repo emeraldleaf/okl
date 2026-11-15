@@ -288,3 +288,19 @@ def test_a_sequential_background_review_logs_all_three_whatever_shape_its_comple
 
     assert [c["agent"] for c in r.checks] == ["ag1", "ag2", "ag3"]
     assert r.duration_s == 420 - 110
+
+
+def test_a_refused_review_command_is_no_run_and_the_request_stays_open(tmp_path):
+    """The review command came back as an error (the person refused it, or okl could not run): no review
+    ran, so the note's request is still open, and the run after it is the review (found by the 0.18.0
+    sweep). With no run after it, the session is asked and not ran."""
+    refused = [turn(15, "rref", call("tu-ref", "Bash", command="okl check --change"), usage=(500, 500, 500, 500)),
+               result(16, "tu-ref", "Permission denied", error=True)]
+    alone = write(tmp_path, [typed(0, "fix it"), feedback(10), *refused, typed(30, "never mind")])
+    assert (reviewlog.read_review(alone).ran, reviewlog.read_review(alone).tokens) == (False, None)
+
+    then = write(tmp_path, [typed(0, "fix it"), feedback(10), *refused, *_run(20, "tu-ok")], session="sess-2")
+    r = reviewlog.read_review(then)
+
+    assert (r.asked, r.ran) == (True, True)
+    assert (r.tokens, r.duration_s) == (3, 1)    # the run's own, not the refused call's 1,500
