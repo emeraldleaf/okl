@@ -685,6 +685,10 @@ OPEN_QUESTIONS = {
         "review-without-fresh-contexts",
     ("docs/GETTING-STARTED.md", "Whether a failing check at the edit changes what an agent writes has not been measured yet"):
         "check-on-edit-changes-the-code",
+    ("README.md", "whether that holds on real work in another repository is not yet measured"):
+        "transfer-to-another-repository",
+    ("docs/EVALUATION.md", "not yet measured as a channel"):
+        "on-edit-as-a-reach-channel",
 }
 # The phrase, used for something that is not a question waiting on an answer, with why.
 NOT_OPEN = {

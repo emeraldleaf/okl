@@ -642,7 +642,7 @@ run, are watched by drift through their `files`:
   relies on, or the lockfile when a version matters. Every extra file adds re-checks.
 - **Back doc claims with a check.** A README that documents a flag can carry a lesson whose check
   reads the README and the CLI. This is the typical lesson with files
-  ([Getting started §3](GETTING-STARTED.md#3-put-your-docs-in-the-canon-so-they-cannot-drift-silently)).
+  ([Getting started §3](GETTING-STARTED.md#3-put-your-docs-in-the-canon-so-a-change-to-what-they-describe-is-flagged)).
 - **Write decisions down as ADRs,** so they load as decisions the agent will not silently reverse
   ([Load your rules](LOAD-YOUR-RULES.md#6-adrs-including-superseded-ones)).
 - **Keep the always-on file short.** `CLAUDE.md` or `AGENTS.md` holds the rules every task needs.
