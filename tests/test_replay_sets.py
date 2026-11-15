@@ -56,6 +56,7 @@ def test_task_ids_and_graders_are_unique_across_the_sets():
     ids = [t["id"] for t in every]
     assert len(ids) == len(set(ids))
     names = [t["grader"] for t in every]
+    assert len(names) == len(set(names)), sorted(n for n in set(names) if names.count(n) > 1)
     assert not [a for a in names for b in names if a != b and a in b]
     assert [i for _, i in sorted((int(x[1:]), x) for x in ids)] == [f"t{n:02d}" for n in range(1, len(ids) + 1)]
 
@@ -125,6 +126,7 @@ RESULTS = REPO / "evals" / "results"
 CHECK_FIRST = RESULTS / "replay-check-457-20261115-1800.json"
 ALT_FIRST = RESULTS / "replay-alternatives-457-20261115-1904.json"
 CHANGED_AFTER_ALTERNATIVES = ["t19", "t26", "t36"]   # strengthened after the first alternatives check
+CHANGED_IN_REVIEW = ["t25", "t46"]                   # strengthened from code review on #477, after the second
 
 
 def _sha(path: Path) -> str:
@@ -171,27 +173,30 @@ def test_the_first_receipts_are_the_graders_as_phase_one_left_them():
 def test_every_grader_changed_after_the_alternatives_says_so():
     """A grader strengthened after the alternatives check was not written blind, and says so where it changed."""
     text = check.set_paths("457")["graders"].read_text()
-    for tid in CHANGED_AFTER_ALTERNATIVES:
+    for tid in CHANGED_AFTER_ALTERNATIVES + CHANGED_IN_REVIEW:
         section = text.split(f"# ---- {tid} · ", 1)[1].split("\n# ---- ", 1)[0]
         assert "after the alternatives check" in section, tid
 
 
-CHECK_FINAL = RESULTS / "replay-check-457-20261115-1921.json"
-ALT_FINAL = RESULTS / "replay-alternatives-457-20261115-1925.json"
+CHECK_SECOND = RESULTS / "replay-check-457-20261115-1921.json"
+ALT_SECOND = RESULTS / "replay-alternatives-457-20261115-1925.json"
 SCREEN = RESULTS / "replay-screen-457.json"
 POWER = RESULTS / "power-457-20261115-1927.json"
 NOT_TOLD_APART = ["t22", "t47"]   # each wrong fix leaves what the task's real fix itself left
 
 
-def test_the_final_receipts_are_the_graders_as_they_are():
-    """After the three changes, every grader is valid again, every right fix passes, and 27 of 29 pairs are told
-    apart; both receipts read today's tasks, graders and patches, from committed code."""
-    final, alt = (json.loads(p.read_text()) for p in (CHECK_FINAL, ALT_FINAL))
+def test_the_second_receipts_are_the_graders_after_the_first_changes():
+    """After the three changes the alternatives prompted, every grader was valid again, every right fix passed, and
+    27 of 29 pairs were told apart. Both receipts read today's tasks and patches, from committed code, and a
+    graders file the review of #477 changed again since."""
+    second, alt = (json.loads(p.read_text()) for p in (CHECK_SECOND, ALT_SECOND))
     paths = check.set_paths("457")
-    for r in (final, alt):
-        assert "usable" not in r and _clean(r)
-        assert r["graders_sha256"] == _sha(paths["graders"]) and r["tasks_sha256"] == _sha(paths["tasks"])
-    _valid_rows(final)
+    first = json.loads(ALT_FIRST.read_text())
+    for r in (second, alt):
+        assert "usable" not in r and _clean(r) and r["tasks_sha256"] == _sha(paths["tasks"])
+        assert r["graders_sha256"] not in (_sha(paths["graders"]), first["graders_sha256"])
+    assert second["graders_sha256"] == alt["graders_sha256"]
+    _valid_rows(second)
     assert (alt["valid"], alt["of"]) == (27, 29) and all(r["right_exit"] == 0 and r["right_ran"] for r in alt["rows"])
     assert sorted(r["id"] for r in alt["rows"] if not r["valid"]) == NOT_TOLD_APART
     for row in alt["rows"]:
@@ -205,13 +210,16 @@ def _section() -> str:
 
 
 def test_the_section_names_only_receipts_that_exist():
-    """Every receipt the section cites is committed."""
+    """Every receipt the section cites is committed: tracked by git, not only present on this disk."""
     import re
+    import subprocess
     sec = _section()
     named = set(re.findall(r"`([\w.-]+-\d{8}-\d{4}\.json|replay-screen-457\.json)`", sec))
-    assert {p.name for p in (CHECK_FIRST, ALT_FIRST, CHECK_FINAL, ALT_FINAL, SCREEN, POWER)} <= named
+    assert {p.name for p in (CHECK_FIRST, ALT_FIRST, CHECK_SECOND, ALT_SECOND, SCREEN, POWER)} <= named
+    tracked = set(subprocess.run(["git", "ls-files", "--", "evals/results"], cwd=REPO, capture_output=True,
+                                 text=True, check=True).stdout.split())
     for name in named:
-        assert (RESULTS / name).is_file(), name
+        assert f"evals/results/{name}" in tracked, name
 
 
 def test_the_section_counts_are_the_screening_records():
@@ -249,7 +257,7 @@ def test_the_section_table_is_the_alternatives_receipts():
     failed in the first check and after the changes."""
     sec = _section()
     first = {r["id"]: r for r in json.loads(ALT_FIRST.read_text())["rows"]}
-    final = {r["id"]: r for r in json.loads(ALT_FINAL.read_text())["rows"]}
+    final = {r["id"]: r for r in json.loads(ALT_SECOND.read_text())["rows"]}
     yes = {True: "yes", False: "no"}
     for t in _tasks("457"):
         if t["needs_nothing"]:

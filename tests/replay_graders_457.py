@@ -489,7 +489,8 @@ def _t25_service():
 def test_t25_pr266(tmp_path, named_by):
     """The seed comparison seeds throwaway stores whatever shared service this shell or directory names: run
     with OKL_SERVICE_URL set, or from a directory whose .okl/config.json names a service, it sends that service
-    nothing. Control: with no service named it runs and prints its comparison."""
+    nothing, and still runs its comparison on its own throwaway stores (exit 0, its recall printed). Control: with
+    no service named it runs and prints its comparison."""
     script = ROOT / "evals" / "compare_seed_briefings.py"
     plain = _run([sys.executable, str(script), "--against", "HEAD"], tmp_path, _env())
     assert plain.returncode == 0 and "held-out recall" in plain.stdout, (plain.stdout[-300:], plain.stderr[-600:])
@@ -505,7 +506,10 @@ def test_t25_pr266(tmp_path, named_by):
         ran = _run([sys.executable, str(script), "--against", "HEAD"], cwd, env)
 
     assert not seen, f"the comparison sent the shared service {len(seen)} request(s), first {seen[0]!r}"
-    assert "Traceback" not in ran.stderr, ran.stderr[-600:]
+    # Exit 0 and the comparison's own output, as the control asks: ending without a traceback does not show the
+    # comparison ran (from code review on #477, after the alternatives check).
+    assert ran.returncode == 0 and "held-out recall" in ran.stdout, \
+        (named_by, ran.returncode, ran.stdout[-300:], "Traceback" in ran.stderr, ran.stderr[-600:])
 
 
 # ---- t26 · PR 299 · filter-after-fetch-widens-window --------------------------------------------
@@ -1601,7 +1605,8 @@ def test_t45_pr362(where, tmp_path, monkeypatch, request):
 def _t46_workflow(edit):
     """okl's shipped CI workflow, edited by hand as a team might: "comment" drops the install step's
     commands that read the pin but keeps its comments (which name the pin file), "other-step" drops the whole
-    step's reading and has another step print the pin file, "python" only moves the Python version, so the
+    step's reading and has another step print the pin file, "diagnostic-step" has a later step show the
+    installed package (naming it) and print the pin file, "python" only moves the Python version, so the
     install step still reads the pin."""
     lines = (ROOT / "src" / "okl" / "scaffold" / "ci" / "okl-verify.yml").read_text().splitlines()
     start = next(i for i, line in enumerate(lines) if line.strip() == "- name: Install okl")
@@ -1615,15 +1620,20 @@ def _t46_workflow(edit):
     step.append(f"{indent}    pip install observed-knowledge-ledger")
     if edit == "other-step":
         step += [f"{indent}- name: Show the pinned okl", f"{indent}  run: cat .github/okl-version || true"]
+    if edit == "diagnostic-step":
+        step += [f"{indent}- name: Show what was installed", f"{indent}  run: |",
+                 f"{indent}    pip show observed-knowledge-ledger", f"{indent}    cat .github/okl-version"]
     return "\n".join(lines[:start] + step + lines[end:]) + "\n"
 
 
-@pytest.mark.parametrize(("edit", "pinned"), [("comment", False), ("other-step", False), ("python", True),
-                                              (None, True)])
+# "diagnostic-step" was added from code review on #477, after the alternatives check: a fix that took any step
+# naming the package for the install step counted a later diagnostic step's `cat` of the pin as reading it.
+@pytest.mark.parametrize(("edit", "pinned"), [("comment", False), ("other-step", False), ("diagnostic-step", False),
+                                              ("python", True), (None, True)])
 def test_t46_pr339(tmp_path, edit, pinned):
     """`okl init --ci` writes the CI pin (.github/okl-version) only when the workflow it keeps actually installs
     okl from it: a kept, edited workflow whose install step no longer reads the pin gets none, though a comment
-    in that step, or another step, still names the file. Control: an edit elsewhere in the workflow, and okl's
+    in that step, or another step (one that also names the package), still names the file. Control: an edit elsewhere in the workflow, and okl's
     own unedited workflow, still get the pin of this release. okl runs as a release installed from an index,
     which is the only install that pins."""
     import okl
