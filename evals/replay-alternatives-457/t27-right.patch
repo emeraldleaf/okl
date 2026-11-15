@@ -1,0 +1,109 @@
+diff --git a/src/okl/client.py b/src/okl/client.py
+index 47fc8b3..5733d29 100644
+--- a/src/okl/client.py
++++ b/src/okl/client.py
+@@ -275,7 +275,17 @@ class Client:
+         if limit is not None:
+             payload["limit"] = limit
+         if self.mode == "remote":
+-            result = self._post("/check", payload)
++            try:
++                result = self._post("/check", payload)
++            except OKLRejectedError as e:
++                # A service that knows `decision` but predates this one refuses the request
++                # (422 naming the field), and every check, the prompt hook's included, would
++                # fail closed until it is upgraded. Ask again with the decision it predates
++                # this one by; the result then says which decision answered (below).
++                older = _OLDER_DECISION.get(self.decision)
++                if not (older and e.status == 422 and "decision" in str(e)):
++                    raise
++                result = self._post("/check", {**payload, "decision": older})
+             # An older service drops a request field it does not know and answers an ordinary
+             # briefing; a caller who asked for the index or the near misses must not read
+             # that as "none" (review on #270).
+@@ -577,6 +587,12 @@ def _json_reply(url: str, body: bytes) -> Any:
+             f"JSON ({shown!r}); is something other than okl answering at this address?") from e
+ 
+ 
++# The decision to ask an older service for when it refuses this one: "tiered" briefs in full
++# what "calibrated" briefs, so a service that knows only floor and calibrated answers its
++# first tier.
++_OLDER_DECISION = {"tiered": "calibrated"}
++
++
+ class OKLRejectedError(ValueError):
+     """Raised when a shared service answered and refused the request (any 4xx, such as a
+     401 for a missing token or a 400 for an unknown tag). The caller's mistake, not an
+diff --git a/tests/test_triggers.py b/tests/test_triggers.py
+index d5f5f67..2e7f9b0 100644
+--- a/tests/test_triggers.py
++++ b/tests/test_triggers.py
+@@ -299,6 +299,68 @@ def test_a_remote_check_says_which_decision_answered(monkeypatch):
+     assert new["decision"] == "tiered" and "decision_unavailable" not in new
+ 
+ 
++def test_a_service_that_refuses_tiered_is_asked_for_calibrated(monkeypatch):
++    """A service that knows `decision` but only floor and calibrated answers "tiered" with a
++    422. Every check, the prompt hook's included, failed closed against it; the client asks
++    again with calibrated and says so. Driven through the real client against such an app."""
++    import io
++    from typing import Literal
++    from urllib.error import HTTPError
++    from urllib.parse import urlsplit
++
++    pytest.importorskip("fastapi")
++    pytest.importorskip("httpx")
++    from fastapi import FastAPI
++    from fastapi.testclient import TestClient
++    from pydantic import BaseModel
++
++    from okl.client import Client, OKLRejectedError
++
++    s = _store_with([{"title": "retry the uploader with backoff",
++                      "triggers": ["uploads to the bucket fail intermittently and the job gives up"]}])
++
++    class OldCheckReq(BaseModel):
++        repo: str
++        task: str
++        limit: int = 12
++        decision: Literal["floor", "calibrated"] = "calibrated"
++
++    old_app = FastAPI()
++
++    @old_app.post("/check")
++    def check(req: OldCheckReq) -> dict:
++        return core.check(s, req.repo, req.task, limit=req.limit, decision=req.decision)
++
++    api = TestClient(old_app)
++    sent: list[str] = []
++
++    class Reply(io.BytesIO):
++        def __enter__(self): return self
++        def __exit__(self, *exc): self.close()
++
++    def urlopen(req, timeout=None):
++        sent.append(json.loads(req.data)["decision"])
++        r = api.request(req.get_method(), urlsplit(req.full_url).path, content=req.data,
++                        headers=dict(req.header_items()))
++        if r.status_code >= 400:
++            raise HTTPError(req.full_url, r.status_code, r.reason_phrase, None, io.BytesIO(r.content))
++        return Reply(r.content)
++
++    monkeypatch.setattr("okl.client._req.urlopen", urlopen)
++    monkeypatch.setattr("okl.client.drift.annotate_briefing", lambda *a, **k: None)
++    monkeypatch.delenv("OKL_DECISION", raising=False)
++    c = Client(config={"repo": "r", "service_url": "http://old.invalid"})
++    res = c.check("the uploader job gives up when bucket uploads fail intermittently")
++    assert sent == ["tiered", "calibrated"]
++    assert core.briefed_ids(res) == ["r0"]
++    assert res["decision"] == "calibrated" and "upgrade the service" in res["decision_unavailable"]
++
++    # A refusal of something else is still a refusal, after the one retry.
++    with pytest.raises(OKLRejectedError):
++        Client(config={"repo": "r", "service_url": "http://old.invalid"}).check("x", limit="many")
++    s.close()
++
++
+ def test_okl_triggers_lists_own_advice_lessons_without_triggers_and_the_briefing_names_them(tmp_path):
+     """`okl triggers` lists the store's own advice lessons with no triggers (a pack's lessons,
+     Vocabulary and lessons with triggers left out), and the hook's line for the person names

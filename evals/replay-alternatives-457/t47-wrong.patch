@@ -1,0 +1,16 @@
+diff --git a/src/okl/cli/intake.py b/src/okl/cli/intake.py
+index e92e1ca..9252866 100644
+--- a/src/okl/cli/intake.py
++++ b/src/okl/cli/intake.py
+@@ -37,7 +37,10 @@ def _add_nearest(found: list[intake.Finding]) -> None:
+     for f in found:
+         try:
+             result = client.check(f.summary, limit=3)
+-        except (OKLUnreachableError, OSError, ValueError):
++        except (OKLUnreachableError, OSError, ValueError) as e:
++            # Not silently: a store that could not be read is not one that holds no lesson.
++            print(f"okl intake: could not read the store to name the lessons that cover these "
++                  f"findings: {e}", file=sys.stderr)
+             return
+         titles = {item["id"]: item.get("title", "") for bucket in result.values()
+                   if isinstance(bucket, list) for item in bucket

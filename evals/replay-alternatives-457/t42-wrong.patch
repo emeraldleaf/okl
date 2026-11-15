@@ -1,0 +1,15 @@
+diff --git a/src/okl/warm.py b/src/okl/warm.py
+index 0f5598c..ca95b1c 100644
+--- a/src/okl/warm.py
++++ b/src/okl/warm.py
+@@ -304,6 +304,10 @@ def start(*, wait_s: float = 0.0) -> dict[str, Any] | None:
+         time.sleep(0.25)
+         running = ping()
+         if running:
++            # Pay the model's slow first inference now, with a long timeout, so the first
++            # prompt after a start does not run past the half second it waits.
++            with contextlib.suppress(WarmUnavailableError):
++                embed(["warm up"], "query", timeout=60.0)
+             return running
+     return None
+ 

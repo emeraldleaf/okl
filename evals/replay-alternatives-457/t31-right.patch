@@ -1,0 +1,63 @@
+diff --git a/evals/probe_rephrase.py b/evals/probe_rephrase.py
+index 672f052..ebc6e21 100644
+--- a/evals/probe_rephrase.py
++++ b/evals/probe_rephrase.py
+@@ -85,6 +85,20 @@ VARIANTS = {
+ }
+ LABELS = ["authored", "ticket", "paraphrase", "bug-report"]
+ tasks = [json.loads(line) for line in Path('evals/tasks.jsonl').read_text().splitlines() if line.strip()]
++# Resolve every task's provenance before printing a row. A governing lesson the store does not
++# hold used to read as a retrieval MISS and then crash the probe with a traceback, after the
++# earlier tasks' rows were already printed as a receipt. Refused here, with the ids named.
++unresolved = [(t["id"], t.get("defect_node")) for t in tasks
++              if not t.get("defect_node") or store.get_node(t["defect_node"]) is None]
++no_variants = [t["id"] for t in tasks if t["id"] not in VARIANTS]
++if unresolved or no_variants:
++    for tid, nid in unresolved:
++        print(f"REFUSING TO RUN: task {tid} names governing lesson {nid!r}, which this store "
++              "does not hold", file=sys.stderr)
++    for tid in no_variants:
++        print(f"REFUSING TO RUN: task {tid} has no rephrasings in VARIANTS", file=sys.stderr)
++    print("Fix the id in evals/tasks.jsonl, or seed the record it names.", file=sys.stderr)
++    raise SystemExit(2)
+ print(f"store: {N} nodes · repo={REPO} · hook interests={INTERESTS}\n")
+ print("A. RECALL: is the governing lesson in the top-12? (harness config = no interests; hook config = repo interests)  rank = position in the ranked in-scope list")
+ print(f"{'task':16} {'variant':11} {'harness':8} {'hook':8} {'rank':>5}/{'live':<5} matched terms")
+diff --git a/tests/test_probe_rephrase.py b/tests/test_probe_rephrase.py
+new file mode 100644
+index 0000000..c5a0bb0
+--- /dev/null
++++ b/tests/test_probe_rephrase.py
+@@ -0,0 +1,32 @@
++"""evals/probe_rephrase.py resolves each task's governing lesson before it prints a row."""
++import json
++import os
++import subprocess
++import sys
++from pathlib import Path
++
++ROOT = Path(__file__).resolve().parents[1]
++
++
++def test_probe_refuses_a_governing_lesson_the_store_does_not_hold(tmp_path):
++    from okl import core
++    from okl.store import Store
++
++    (tmp_path / ".okl").mkdir()
++    (tmp_path / ".okl" / "config.json").write_text(json.dumps({"repo": "okl"}))
++    s = Store(f"sqlite:///{tmp_path / '.okl' / 'okl.db'}")
++    core.record(s, id="held", type="Rule", scope="org", title="check object ownership on every id route")
++    s.close()
++    (tmp_path / "evals").mkdir()
++    (tmp_path / "evals" / "tasks.jsonl").write_text("\n".join(json.dumps(t) for t in (
++        {"id": "idor_endpoint", "task": "add GET /orders/{id}", "defect_node": "held"},
++        {"id": "price_tamper", "task": "POST /orders with a price", "defect_node": "typo_id"},
++    )) + "\n")
++    env = {k: v for k, v in os.environ.items()
++           if k not in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN")}
++    env["PYTHONPATH"] = str(ROOT / "src")
++    r = subprocess.run([sys.executable, str(ROOT / "evals" / "probe_rephrase.py")], cwd=tmp_path,
++                       env=env, capture_output=True, text=True)
++    assert r.returncode == 2, r.stdout + r.stderr
++    assert "typo_id" in r.stderr and "Traceback" not in r.stderr
++    assert "idor_endpoint" not in r.stdout, "no row may print before the references resolve"

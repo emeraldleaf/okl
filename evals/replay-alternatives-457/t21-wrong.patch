@@ -1,0 +1,21 @@
+diff --git a/src/okl/cli.py b/src/okl/cli.py
+index 0bb41b8..2c25037 100644
+--- a/src/okl/cli.py
++++ b/src/okl/cli.py
+@@ -456,8 +456,14 @@ def cmd_doctor(args) -> int:
+     twice = coexist.double_wiring(root, Path.home())
+     if twice:
+         print(f"\n! {twice}")
+-    # Informational: a choice, not a finding (#111).
+-    if cfg and json.loads(cfg.read_text()).get("ci") is False:
++    # Informational: a choice, not a finding (#111). A config that cannot be read must
++    # not end doctor in a traceback.
++    try:
++        ci_off = bool(cfg) and json.loads(cfg.read_text()).get("ci") is False
++    except (OSError, json.JSONDecodeError) as e:
++        print(f"OKL: cannot read {cfg}: {e}", file=sys.stderr)
++        return 2
++    if ci_off:
+         print("\n• drift is not gated in CI here (okl init --no-ci); run `okl drift --gate` from "
+               "another CI or a git hook")
+     return 1 if (found or twice) else 0

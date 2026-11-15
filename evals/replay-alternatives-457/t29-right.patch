@@ -1,0 +1,81 @@
+diff --git a/src/okl/cli/lessons.py b/src/okl/cli/lessons.py
+index 23ee8db..5cae80a 100644
+--- a/src/okl/cli/lessons.py
++++ b/src/okl/cli/lessons.py
+@@ -580,7 +580,13 @@ def cmd_dedup(args: argparse.Namespace) -> int:
+     if not client.configured:
+         print("OKL NOT CONFIGURED — run `okl init` here, or `okl connect <url>`.", file=sys.stderr)
+         return 2
+-    nodes = list(client.all_nodes())
++    # The set a briefing can show: a superseded lesson (a pack rename leaves one beside each
++    # copy) or an obsolete one is already resolved, and comparing it reported every copy as a
++    # duplicate pair with exit 1, burying the real ones. A retracted lesson is still briefed
++    # (as AVOID), so it stays in and is marked.
++    every = list(client.all_nodes())
++    nodes = [n for n in every if n.status not in core._UNBRIEFED]
++    retired = len(every) - len(nodes)
+     store = client._local_store() if client.mode == "local" else None
+     idf = core._idf(store) if store is not None else {}
+ 
+@@ -596,18 +602,20 @@ def cmd_dedup(args: argparse.Namespace) -> int:
+                     pairs.append((score, a, b))
+     pairs.sort(key=lambda p: -p[0])
+ 
++    left_out = (f" ({retired} superseded or obsolete left out)" if retired else "")
+     if not pairs:
+         print(f"OKL dedup: OK — no pair of the {len(nodes)} records scores at or above "
+-              f"{args.threshold}.")
++              f"{args.threshold}{left_out}.")
+         return 0
+ 
+     print(f"OKL dedup: {len(pairs)} candidate pair(s) at or above {args.threshold}, "
+-          f"out of {len(nodes)} records.\n"
++          f"out of {len(nodes)} records{left_out}.\n"
+           "These are candidates for a human to rule on, not confirmed duplicates.\n")
+     for score, a, b in pairs[: args.limit]:
+         print(f"  {score:.2f}")
+         for n in (a, b):
+-            print(f"    [{n.id}] {n.type} · {n.scope}")
++            mark = f" · {n.status}" if n.status == "retracted" else ""
++            print(f"    [{n.id}] {n.type} · {n.scope}{mark}")
+             print(f"       {n.title}")
+             if n.symptom:
+                 print(f"       symptom: {n.symptom[:88]}")
+diff --git a/tests/test_retire.py b/tests/test_retire.py
+index ee47a88..073694b 100644
+--- a/tests/test_retire.py
++++ b/tests/test_retire.py
+@@ -551,3 +551,33 @@ def test_mcp_retire_says_to_refresh_the_snapshot_when_the_lesson_governs_files(r
+     plain = text(asyncio.run(_build().call_tool("okl_retire", {"id": "refund-new", "reason": "x"})))
+     assert "okl export --drift" in governs, governs
+     assert "okl export" not in plain, plain
++
++
++def test_dedup_compares_only_what_a_briefing_can_show(repo, capsys):
++    """A lesson superseded by its copy, or an obsolete one, is resolved: dedup reported each
++    such pair with exit 1. A retracted lesson is still briefed, so it is compared and marked."""
++    c = Client()
++
++    def lesson(i):
++        c.record(id=i, type="Rule", title="refunds post to the ledger before the charge",
++                 scope="repo", body="refund ledger ordering rule")
++
++    for i in ("a", "b", "c"):
++        lesson(i)
++    assert main(["retire", "b", "--by", "a", "--reason", "copy"]) == 0
++    assert main(["retire", "c", "--obsolete", "--reason", "gone"]) == 0
++    capsys.readouterr()
++    assert main(["dedup"]) == 0
++    out = capsys.readouterr().out
++    assert "OK" in out and "2 superseded or obsolete left out" in out
++
++    lesson("d")
++    capsys.readouterr()
++    assert main(["dedup"]) == 1
++    out = capsys.readouterr().out
++    assert "1 candidate pair(s)" in out and "[b]" not in out and "[c]" not in out
++
++    assert main(["retire", "d", "--reason", "wrong"]) == 0
++    capsys.readouterr()
++    assert main(["dedup"]) == 1
++    assert "[d] Rule · repo:r · retracted" in capsys.readouterr().out

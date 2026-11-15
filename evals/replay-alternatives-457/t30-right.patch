@@ -1,0 +1,65 @@
+diff --git a/src/okl/cli/health.py b/src/okl/cli/health.py
+index f7c43b4..f417c07 100644
+--- a/src/okl/cli/health.py
++++ b/src/okl/cli/health.py
+@@ -67,13 +67,15 @@ def _interest_lines(client: Client, *, say_unread: bool = True, shown: int = 5)
+     never stands for "nothing hidden"; never an error, since the command already did its job.
+     """
+     from .. import core
+-    from ..client import OKLRejectedError
+     from ..store import split_tags
+     if not client.configured or not client.interests or _no_store_yet(client):
+         return []
+     try:
+         hidden = core.hidden_by_interests(client.all_nodes(), client.repo, client.interests)
+-    except (OKLUnreachableError, OKLRejectedError, OSError) as e:
++    except Exception as e:  # noqa: BLE001 - informational: any failed read is said, never raised
++        # Not only okl's own errors and OSError: a corrupt SQLite file raises sqlite3's
++        # DatabaseError and a Postgres store that is down raises psycopg's OperationalError,
++        # and either ended doctor in a traceback whose exit 1 reads as a finding.
+         why = (str(e).strip().splitlines() or [type(e).__name__])[0]
+         return [f"\n• what this repo's interests hide: not reported, the store could not be read ({why})"] \
+             if say_unread else []
+diff --git a/tests/test_okl.py b/tests/test_okl.py
+index 51fa6c7..89bbc85 100644
+--- a/tests/test_okl.py
++++ b/tests/test_okl.py
+@@ -3386,6 +3386,38 @@ def test_doctor_init_and_metric_say_what_the_interests_hide(tmp_path, monkeypatc
+     assert "out of every briefing" not in capsys.readouterr().out
+ 
+ 
++def test_doctor_reports_an_unreadable_store_of_any_backend_without_a_traceback(tmp_path, monkeypatch, capsys):
++    """A corrupt SQLite file (sqlite3's DatabaseError) or a Postgres store that is down
++    (psycopg's OperationalError) is a store that could not be read: doctor says so and keeps
++    its 0-or-1 contract, instead of ending in a traceback with exit 1."""
++    import subprocess
++
++    from okl.cli import main
++    from okl.client import Client
++    monkeypatch.setenv("HOME", str(tmp_path))
++    monkeypatch.chdir(tmp_path)
++    subprocess.run(["git", "init", "-q", "."], check=True)
++    assert main(["init", "--repo", "r", "--no-claude", "--no-seed", "--no-ci", "--interests", "python"]) == 0
++    capsys.readouterr()
++
++    # A corrupt store file, read for real.
++    (tmp_path / ".okl" / "okl.db").write_bytes(b"this is not a sqlite database" * 100)
++    assert main(["doctor"]) in (0, 1)
++    out = capsys.readouterr().out
++    assert "the store could not be read" in out, out
++
++    # A Postgres store that is down: psycopg's errors share no base with okl's or OSError.
++    class OperationalError(Exception):
++        pass
++
++    def down(self):
++        raise OperationalError("connection to server at 10.0.0.5 port 5432 failed")
++    monkeypatch.setattr(Client, "all_nodes", down)
++    assert main(["doctor"]) in (0, 1)
++    out = capsys.readouterr().out
++    assert "the store could not be read (connection to server" in out, out
++
++
+ def test_what_the_interests_hide_never_fails_a_command_or_creates_a_store(tmp_path, monkeypatch, capsys):
+     """Doctor and init report what the interests hide only as information (#374). A store
+     that refuses the read (a 401 from a service whose token is not set yet) or cannot be

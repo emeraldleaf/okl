@@ -1,0 +1,51 @@
+diff --git a/evals/drift_widen_cost.py b/evals/drift_widen_cost.py
+index 839abd7..bcf9762 100644
+--- a/evals/drift_widen_cost.py
++++ b/evals/drift_widen_cost.py
+@@ -53,8 +53,19 @@ def main() -> int:
+     ap = argparse.ArgumentParser()
+     ap.add_argument("--after", default="HEAD", help="the commit whose snapshot holds #318's files")
+     args = ap.parse_args()
+-    before = {lid: dr.governs(rule) for lid, rule in dr.snapshot(BEFORE).items() if dr.governs(rule)}
++    # A revision git cannot resolve read as a snapshot with no lessons, so every lesson's files
++    # came out "cleared" and the receipt was written. Refused (exit 2) before anything runs,
++    # as is a revision whose committed snapshot holds no lessons: neither is a measurement.
++    if args.after.startswith("-") or not dr.git_ok("rev-parse", "--verify", "--quiet",
++                                                   f"{args.after}^{{commit}}"):
++        print(f"REFUSING: --after {args.after!r} is not a commit git can resolve here", file=sys.stderr)
++        return 2
+     now = dr.snapshot(args.after)
++    if not now:
++        print(f"REFUSING: the snapshot at --after {args.after!r} holds no lessons "
++              "(no okl-drift.json there, or an empty one)", file=sys.stderr)
++        return 2
++    before = {lid: dr.governs(rule) for lid, rule in dr.snapshot(BEFORE).items() if dr.governs(rule)}
+     after = {lid: dr.governs(now.get(lid) or {}) for lid in before}
+     lists = {"before": before, "after": after}
+     merges = count(dr.git("rev-list", "--first-parent", f"{SINCE}..{BEFORE}").split(), lists)
+diff --git a/tests/test_drift_replay.py b/tests/test_drift_replay.py
+index b799bca..80c1876 100644
+--- a/tests/test_drift_replay.py
++++ b/tests/test_drift_replay.py
+@@ -435,3 +435,21 @@ def test_each_side_of_an_event_reads_the_paths_its_snapshot_named(dr, tmp_path):
+     assert kinds[(b0, b2)] == "no governed paths"
+     got, left = dr.pairs(dr.snapshot("HEAD", bare), "HEAD", bare)
+     assert not got and b3 and left["no governed paths"] >= 1
++
++
++@pytest.mark.parametrize("rev", ["no-such-revision", "3af67a8x", "--all", "HEAD~999999"])
++def test_the_widen_cost_refuses_a_revision_git_cannot_resolve(monkeypatch, capsys, rev):
++    """§4ah: a mistyped --after read as a snapshot with no lessons, reported every lesson's
++    files as cleared and wrote a receipt. It is refused, with exit 2, and nothing is written."""
++    monkeypatch.setattr(sys, "path", list(sys.path))
++    spec = importlib.util.spec_from_file_location("drift_widen_cost", HERE / "evals" / "drift_widen_cost.py")
++    wc = importlib.util.module_from_spec(spec)
++    monkeypatch.setitem(sys.modules, "drift_widen_cost", wc)
++    spec.loader.exec_module(wc)
++    results = HERE / "evals" / "results"
++    before = set(results.iterdir())
++    monkeypatch.setattr(sys, "argv", ["drift_widen_cost.py", f"--after={rev}"])
++    assert wc.main() == 2
++    err = capsys.readouterr().err
++    assert "REFUSING" in err and rev in err
++    assert set(results.iterdir()) == before, "a refused run wrote a receipt"

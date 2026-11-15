@@ -1,0 +1,64 @@
+diff --git a/ci/check-diagram-names.py b/ci/check-diagram-names.py
+index 8fe1987..1c1bcca 100755
+--- a/ci/check-diagram-names.py
++++ b/ci/check-diagram-names.py
+@@ -9,7 +9,9 @@ their text and fails on any name the code no longer has:
+   okl <command>    a subcommand of the CLI parser
+   --<flag>         a flag some CLI parser defines (or one of EXTERNAL_FLAGS)
+   okl_<tool>       an MCP tool okl_mcp serves
+-  <Event>          a Claude Code hook event, registered in hooks/hooks.json
++  <Event>          a Claude Code hook event, registered in hooks/hooks.json: every CamelCase
++                   word the diagram shows is read as one, so a misspelt or invented event
++                   fails rather than going unread (or one of NOT_EVENTS)
+   <path>.sh/.yml   a tracked file: the path the diagram names, or its basename
+   <MARK>           an all-caps briefing mark, present in core.py or drift.py
+ 
+@@ -42,6 +44,11 @@ PROSE = frozenset({"runs", "stamps", "cannot", "can", "keeps", "is"})
+ EXTERNAL_FLAGS = frozenset({"--no-verify"})
+ HOOK_EVENTS = ("UserPromptSubmit", "PreToolUse", "PostToolUse", "Stop", "SubagentStop",
+                "SessionStart", "SessionEnd", "PreCompact", "Notification")
++# A hook event is a CamelCase word. Matching only the names above let a misspelt or invented
++# event pass unread; every CamelCase word is now a claim that must resolve. CamelCase words
++# that are not events are listed here, a deliberate act like PROSE: a word here is never checked.
++NOT_EVENTS = frozenset({"GitHub", "JavaScript", "TypeScript"})
++CAMEL = re.compile(r"\b[A-Z][a-z]+(?:[A-Z][a-z]+)+\b")
+ 
+ 
+ def _git(*args: str) -> str:
+@@ -116,8 +123,9 @@ def unknown(text: str, known: dict[str, Any]) -> list[str]:
+          lambda f: f in known["flags"], "{}: no CLI parser defines it"),
+         (set(re.findall(r"\b(okl_[a-z_]+)\b", text)),
+          lambda t: t in known["tools"], "{}: no such MCP tool in src/okl/mcp_server.py"),
+-        ({e for e in HOOK_EVENTS if re.search(rf"\b{e}\b", text)},
+-         lambda e: e in known["events"], "{}: not a hook hooks/hooks.json registers"),
++        ((set(CAMEL.findall(text)) | {e for e in HOOK_EVENTS if re.search(rf"\b{e}\b", text)})
++         - NOT_EVENTS,
++         lambda e: e in known["events"], "{}: not a hook event hooks/hooks.json registers"),
+         (set(re.findall(r"[\w./-]*[\w-]\.(?:sh|yml)\b", text)),
+          lambda p: _tracked(p, known["files"]), "{}: no tracked file by that path or name"),
+         (set(re.findall(r"\b[A-Z]{5,}\b", text)),
+diff --git a/tests/test_architecture.py b/tests/test_architecture.py
+index 19db7db..a437e38 100644
+--- a/tests/test_architecture.py
++++ b/tests/test_architecture.py
+@@ -59,3 +59,20 @@ def test_the_name_check_fails_on_each_kind_of_name_the_code_lacks(tmp_path):
+     for name in ("okl frobnicate", "--no-such-flag", "okl_teleport", "PreCompact",
+                  "stop-okl-encode2.sh", "gates/ghost.yml", "UNVANISHED"):
+         assert f"FAIL: {name}" in bad.stdout, (name, bad.stdout)
++
++
++def test_a_misspelt_or_invented_hook_event_is_read_and_fails(tmp_path):
++    """The check matched only a fixed list of event names, so an event the list did not hold,
++    misspelt or invented, was never looked at and passed. Every CamelCase word is a claim."""
++    def run(*texts: str) -> subprocess.CompletedProcess[str]:
++        p = tmp_path / f"d{len(list(tmp_path.iterdir()))}.excalidraw"
++        p.write_text(json.dumps({"type": "excalidraw", "elements": [
++            {"type": "text", "text": t} for t in texts]}))
++        return subprocess.run([sys.executable, str(CHECK), str(p)], capture_output=True,
++                              text=True, cwd=ROOT)
++
++    for wrong in ("UserPromtSubmit", "PostToolUsed", "PreCommit", "BeforePrompt"):
++        r = run("the hook on", wrong, "runs okl check")
++        assert r.returncode == 1 and f"FAIL: {wrong}" in r.stdout, (wrong, r.stdout)
++    ok = run("UserPromptSubmit", "PostToolUse", "Stop", "a GitHub Actions job")
++    assert ok.returncode == 0, ok.stdout + ok.stderr

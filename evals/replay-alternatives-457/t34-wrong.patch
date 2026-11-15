@@ -1,0 +1,15 @@
+diff --git a/ci/check-init-flags.py b/ci/check-init-flags.py
+index 47c891a..29eda42 100755
+--- a/ci/check-init-flags.py
++++ b/ci/check-init-flags.py
+@@ -29,7 +29,9 @@ for doc in ("README.md", "docs/GETTING-STARTED.md"):
+         # the sentence names; beside `okl verify`, a bare `--files` is verify's.
+         if not re.search(r"`okl (?!init\b)\w+", unit):
+             flags.update(re.findall(r"`(--[a-z][a-z-]+)[^`]*`", unit))
+-missing = sorted(f for f in flags if f not in help_text)
++# Match the flag as a word, not anywhere as a substring: `--no-c` is only the start of
++# `--no-ci`, which `okl init` refuses as ambiguous.
++missing = sorted(f for f in flags if not re.search(re.escape(f) + r"\b", help_text))
+ if missing or not flags:
+     sys.exit(f"documented but missing from `okl init --help`: {missing}")
+ print("INIT FLAGS EXIST", sorted(flags))  # noqa: T201 - a check script reports on stdout

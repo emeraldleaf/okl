@@ -1,0 +1,16 @@
+diff --git a/src/okl/core.py b/src/okl/core.py
+index e192118..806404f 100644
+--- a/src/okl/core.py
++++ b/src/okl/core.py
+@@ -593,5 +593,10 @@ def recurrence_report(store: Store) -> dict[str, Any]:
+         else:
+             unarmed.append(row)
+ 
++    # Coverage counts only defects a Gate catches: a Rule linked CATCHES is a practice
++    # nothing runs, and must not inflate how many defects the armed figure speaks for.
++    gated = {d for d in gates_for
++             if any(nodes[e.src].type == "Gate" for e in store.edges(["CATCHES"])
++                    if e.dst == d and e.src in nodes)}
+     return {"armed": armed, "unarmed": unarmed,
+-            "defects": len(defect_ids), "defects_with_gate": len(gates_for)}
++            "defects": len(defect_ids), "defects_with_gate": len(gated)}

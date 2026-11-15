@@ -1,0 +1,29 @@
+diff --git a/src/okl/service.py b/src/okl/service.py
+index 5c4af27..448e597 100644
+--- a/src/okl/service.py
++++ b/src/okl/service.py
+@@ -374,6 +374,12 @@ def __getattr__(name: str) -> FastAPI:
+     if name == "app":
+         global _app
+         if _app is None:
++            # `uvicorn okl.service:app` never passes through `okl serve`'s refusal, so the
++            # attribute an ASGI host imports refuses to serve with no token itself (#371).
++            if "OKL_TOKEN" not in os.environ and os.environ.get("OKL_ALLOW_NO_TOKEN") != "1":
++                raise RuntimeError(
++                    "OKL: refusing to build okl.service:app without OKL_TOKEN: every route would "
++                    "be open. Set OKL_TOKEN, or OKL_ALLOW_NO_TOKEN=1 when a proxy authenticates.")
+             _app = create_app()
+         return _app
+     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+diff --git a/tests/test_okl.py b/tests/test_okl.py
+index a4aa803..e7cb869 100644
+--- a/tests/test_okl.py
++++ b/tests/test_okl.py
+@@ -361,6 +361,7 @@ def test_asgi_entrypoint_resolves_to_a_real_app_without_importing_the_database(m
+ 
+     # ARRANGE — a database URL that would fail loudly if anything connected to it
+     monkeypatch.setenv("OKL_DATABASE_URL", "sqlite:///:memory:")
++    monkeypatch.setenv("OKL_TOKEN", "t")     # without one the attribute refuses (#371)
+     monkeypatch.setattr(svc, "_app", None)   # forget any app a previous test built
+ 
+     # ASSERT (1) — importing does not build the app, so it does not touch storage

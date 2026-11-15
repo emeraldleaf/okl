@@ -1,0 +1,28 @@
+diff --git a/evals/drift_mutate.py b/evals/drift_mutate.py
+index c6d84fb..2b81c1d 100644
+--- a/evals/drift_mutate.py
++++ b/evals/drift_mutate.py
+@@ -100,7 +100,8 @@ def ci_run_lesson(cmd: str) -> bool:
+ 
+ def judged(result: str) -> str | None:
+     """The judge's verdict from its answer, or None when it gave no valid one."""
+-    m = re.search(r"\{.*\}", result, re.S)
++    # Non-greedy: a greedy match ran on to the last "}" in the reply, past the verdict.
++    m = re.search(r"\{.*?\}", result, re.S)
+     try:
+         got = json.loads(m.group(0)) if m else None
+     except ValueError:
+diff --git a/evals/lesson_census.py b/evals/lesson_census.py
+index aae4b08..fa2092e 100644
+--- a/evals/lesson_census.py
++++ b/evals/lesson_census.py
+@@ -95,7 +95,8 @@ def plant(text: str, old: str, new: str) -> str:
+ 
+ def parse_verdict(result: str) -> dict | None:
+     """The judge's JSON object, or None when its answer holds no valid one."""
+-    m = re.search(r"\{.*\}", result, re.S)
++    # Non-greedy: a greedy match ran on to the last "}" in the reply, past the verdict.
++    m = re.search(r"\{.*?\}", result, re.S)
+     try:
+         got = json.loads(m.group(0)) if m else None
+     except ValueError:

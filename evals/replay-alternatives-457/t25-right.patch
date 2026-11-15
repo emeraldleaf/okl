@@ -1,0 +1,66 @@
+diff --git a/evals/compare_seed_briefings.py b/evals/compare_seed_briefings.py
+index 09cb6a3..f55b9f7 100644
+--- a/evals/compare_seed_briefings.py
++++ b/evals/compare_seed_briefings.py
+@@ -31,11 +31,20 @@ BUCKETS = ("rules", "relevant_defects", "armed_gates", "live_retractions", "in_s
+ 
+ 
+ def _seeded(seed_dir: Path, db: Path) -> Store:
+-    """A store seeded from every pack in `seed_dir`, at `db` (this process's env only)."""
++    """A store seeded from every pack in `seed_dir`, at `db` (this process's env only).
++
++    The client is pinned to that throwaway file. A default Client() goes remote whenever
++    OKL_SERVICE_URL is set or the directory's .okl/config.json names a service, and would
++    write both seed trees into that shared service. So the service variable is dropped,
++    the directory's config is not read, and a client that is not local is refused.
++    """
+     from okl.client import Client
+     from okl.seed import seed_from_file
++    os.environ.pop("OKL_SERVICE_URL", None)
+     os.environ["OKL_DATABASE_URL"] = f"sqlite:///{db}"
+-    client = Client()
++    client = Client(config={"repo": "okl"})
++    if client.mode != "local":
++        raise SystemExit("REFUSING: the throwaway seed store is not local")
+     for pack in sorted(seed_dir.glob("*.json")):
+         seed_from_file(client, str(pack))
+     return client._local_store()
+diff --git a/tests/test_compare_seed_briefings.py b/tests/test_compare_seed_briefings.py
+new file mode 100644
+index 0000000..ab2e84d
+--- /dev/null
++++ b/tests/test_compare_seed_briefings.py
+@@ -0,0 +1,33 @@
++"""evals/compare_seed_briefings.py seeds throwaway stores; they must never be a service."""
++import importlib.util
++import json
++from pathlib import Path
++
++SCRIPT = Path(__file__).resolve().parents[1] / "evals" / "compare_seed_briefings.py"
++
++
++def test_seeded_store_stays_local_whatever_names_a_service(tmp_path, monkeypatch):
++    spec = importlib.util.spec_from_file_location("compare_seed_briefings", SCRIPT)
++    mod = importlib.util.module_from_spec(spec)
++    spec.loader.exec_module(mod)
++
++    # A service named both ways a default Client() would follow, and no network allowed.
++    monkeypatch.setenv("OKL_SERVICE_URL", "http://shared.invalid")
++    (tmp_path / ".okl").mkdir()
++    (tmp_path / ".okl" / "config.json").write_text(
++        json.dumps({"repo": "r", "service_url": "http://shared.invalid"}))
++    monkeypatch.chdir(tmp_path)
++
++    def no_network(*a, **k):
++        raise AssertionError("the throwaway seed store reached a service")
++
++    monkeypatch.setattr("okl.client._req.urlopen", no_network)
++    packs = tmp_path / "seed"; packs.mkdir()
++    (packs / "p.json").write_text(json.dumps({"nodes": [
++        {"key": "k", "type": "Rule", "scope": "org", "repo": "x", "title": "pin the decoder"}]}))
++    monkeypatch.setenv("OKL_DATABASE_URL", f"sqlite:///{tmp_path / 'unused.db'}")
++
++    store = mod._seeded(packs, tmp_path / "throwaway.db")
++
++    assert store.get_node("seed:p:k") is not None
++    assert (tmp_path / "throwaway.db").exists()

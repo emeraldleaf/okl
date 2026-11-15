@@ -1,0 +1,81 @@
+diff --git a/src/okl/core.py b/src/okl/core.py
+index 4eafcb6..8fbd9f3 100644
+--- a/src/okl/core.py
++++ b/src/okl/core.py
+@@ -681,12 +681,17 @@ def _also_matched(store: Store, query: str, limit: int, repo_scope: str, interes
+     """The tiered decision's second tier: what cleared the calibrated line past its cap, then
+     what the floor keeps, each once and not already shown, at most `limit`; and how many more
+     there were. On real prompts the line alone left out most of the lessons that applied, and
+-    nearly all of them were among the floor's (REPORT §4x, §4y)."""
++    nearly all of them were among the floor's (REPORT §4x, §4y).
++
++    The floor is asked for `limit` MORE than the lessons already shown in full, and read
++    whole: those shown are dropped after the fetch, and a window of only `limit` filled
++    with them left this tier empty at a small limit while other lessons matched."""
+     _cands, kept, _matched, _weak, _replaced, _cand = _floor_widened(
+-        store, query, limit, repo_scope, interests, hybrid=hybrid, rerank=rerank, first=first)
++        store, query, limit + len(shown), repo_scope, interests, hybrid=hybrid, rerank=rerank,
++        first=first)
+     seen = set(shown)
+     also = []
+-    for n in (*overflow, *kept[:limit]):
++    for n in (*overflow, *kept):
+         if n.id not in seen:
+             seen.add(n.id)
+             also.append(n)
+diff --git a/tests/test_triggers.py b/tests/test_triggers.py
+index d5f5f67..bcb6583 100644
+--- a/tests/test_triggers.py
++++ b/tests/test_triggers.py
+@@ -128,6 +128,51 @@ def test_the_tiered_decision_names_what_the_cap_cuts_and_what_the_floor_keeps():
+         s.close()
+ 
+ 
++def test_the_second_tier_is_not_emptied_by_the_lessons_shown_in_full_at_a_small_limit():
++    """The floor's window used to be `limit` wide and the lessons shown in full were dropped
++    after it: at limit 1 the one slot was the shown lesson, so the second tier came back empty
++    while two other lessons matched. Widened by what is dropped, it names them."""
++    s = _store_with([
++        {"title": "retry the uploader with backoff",
++         "triggers": ["uploads to the bucket fail intermittently and the job gives up"]},
++        {"title": "uploader logging format"},
++        {"title": "bucket uploads checksum"},
++    ])
++    try:
++        task = "the uploader job gives up when bucket uploads fail intermittently"
++        full = core.check(s, repo="r", task=task)
++        everything = {e["id"] for e in full["also_matched"]}
++        assert everything == {"r1", "r2"}
++        for limit in (1, 2):
++            res = core.check(s, repo="r", task=task, limit=limit)
++            assert core.briefed_ids(res) == ["r0"]
++            also = [e["id"] for e in res["also_matched"]]
++            assert len(also) == limit and set(also) <= everything, (limit, also)
++    finally:
++        s.close()
++
++
++def test_the_second_tier_widens_past_a_window_the_shown_and_weak_lessons_fill():
++    """At limit 1 the floor's first window is three wide: the lesson shown in full and two
++    weak matches fill it, and a lesson the floor keeps ranks just below. Reading that window
++    whole is not enough; the fetch must be widened by the lessons it will drop."""
++    s = _store_with([
++        {"title": "retry the uploader with backoff",
++         "triggers": ["uploads to the bucket fail intermittently and the job gives up"]},
++        *({"title": f"w{i} note", "body": "intermittently intermittently"} for i in range(3)),
++        {"title": "sizing notes", "body": "when a bucket write may fail, size the queue " + "and more text " * 30},
++        *({"title": f"filler {i}", "body": "bucket stuff"} for i in range(10)),
++        *({"title": f"filler2 {i}", "body": "fail stuff"} for i in range(10)),
++    ])
++    try:
++        res = core.check(s, repo="r", limit=1,
++                         task="the uploader job gives up when bucket uploads fail intermittently")
++        assert core.briefed_ids(res) == ["r0"]
++        assert [e["id"] for e in res["also_matched"]] == ["r4"]
++    finally:
++        s.close()
++
++
+ def test_a_second_tier_line_carries_the_first_sentence_of_the_fix_cut_at_a_word():
+     """A line is the title and the first sentence of the fix, at most ALSO_FIX_CHARS of it,
+     cut at a word; a lesson with no fix is its title alone."""

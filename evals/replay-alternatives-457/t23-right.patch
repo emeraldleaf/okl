@@ -1,0 +1,62 @@
+diff --git a/src/okl/core.py b/src/okl/core.py
+index 3afec7c..a459dec 100644
+--- a/src/okl/core.py
++++ b/src/okl/core.py
+@@ -321,9 +321,15 @@ def record(store: Store, *, type: str, title: str, scope: str, repo: str | None
+     """
+     if scope == "repo" and repo:
+         scope = f"repo:{repo}"
+-    if status in ("superseded", "obsolete") and not keep_verification:
+-        raise ValueError(f"status {status!r} is set by `okl retire`, which keeps the reason "
+-                         "(and, for superseded, the replacement)")
++    if status in ("superseded", "obsolete"):
++        # Refused on every write path: a plain record, a re-import (`okl seed`,
++        # keep_verification) and a service's /record all come through here. The one write
++        # that may carry such a status is a rewrite of a lesson ALREADY retired, whose
++        # retirement (and its logged reason) _carry_over keeps whatever the write says.
++        old = store.get_node(id) if id is not None else None
++        if old is None or old.status not in RETIRED_STATUSES:
++            raise ValueError(f"status {status!r} is set by `okl retire`, which keeps the "
++                             "reason (and, for superseded, the replacement)")
+     # Annotated dict[str, Any] because Node's fields are genuinely heterogeneous
+     # (str, int, None); without it the ** splat is checked against whichever field
+     # type mypy infers for the whole dict and every argument looks wrong.
+diff --git a/tests/test_retire.py b/tests/test_retire.py
+index 4071b1a..66a24f0 100644
+--- a/tests/test_retire.py
++++ b/tests/test_retire.py
+@@ -468,3 +468,34 @@ def test_dedup_recommends_retire(repo, capsys):
+     capsys.readouterr()
+     main(["dedup"])
+     assert "okl retire" in capsys.readouterr().out
++
++
++def test_a_reimport_cannot_retire_a_lesson_without_a_reason(repo):
++    """okl seed (keep_verification) and a service's /record went around `okl retire`:
++    a pack could create a lesson already retired, or retire a live one, with no reason."""
++    from okl.seed import seed_from_file
++
++    s = _store_with(dict(id="live", type="Rule", title="live", scope="org"))
++    for status in ("superseded", "obsolete"):
++        with pytest.raises(ValueError, match="okl retire"):
++            core.record(s, id="new", type="Rule", title="n", scope="org", status=status,
++                        keep_verification=True)
++        assert s.get_node("new") is None
++        with pytest.raises(ValueError, match="okl retire"):
++            core.record(s, id="live", type="Rule", title="live", scope="org", status=status,
++                        keep_verification=True)
++        assert s.get_node("live").status is None and s.retirements("live") == []
++
++    # Through okl seed: the pack's retired lesson is refused, not imported retired.
++    pack = repo / "site.json"
++    pack.write_text(json.dumps({"nodes": [{"key": "grid", "type": "Rule", "scope": "org",
++                                           "repo": "r", "title": "Grid", "status": "obsolete"}]}))
++    with pytest.raises(ValueError, match="okl retire"):
++        seed_from_file(Client(), str(pack))
++    assert Client().get("seed:site:grid") is None
++
++    # A lesson already retired may be re-imported: its retirement is kept.
++    core.retire(s, "live", "gone", obsolete=True)
++    core.record(s, id="live", type="Rule", title="live", scope="org", status="obsolete",
++                keep_verification=True)
++    assert s.get_node("live").status == "obsolete"

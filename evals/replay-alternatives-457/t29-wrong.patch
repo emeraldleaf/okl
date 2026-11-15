@@ -1,0 +1,15 @@
+diff --git a/src/okl/cli/lessons.py b/src/okl/cli/lessons.py
+index 23ee8db..e9bff65 100644
+--- a/src/okl/cli/lessons.py
++++ b/src/okl/cli/lessons.py
+@@ -580,7 +580,9 @@ def cmd_dedup(args: argparse.Namespace) -> int:
+     if not client.configured:
+         print("OKL NOT CONFIGURED — run `okl init` here, or `okl connect <url>`.", file=sys.stderr)
+         return 2
+-    nodes = list(client.all_nodes())
++    # A lesson superseded by its copy (a pack rename leaves one beside each) is resolved
++    # already; comparing it reports every copy as a duplicate pair.
++    nodes = [n for n in client.all_nodes() if n.status != "superseded"]
+     store = client._local_store() if client.mode == "local" else None
+     idf = core._idf(store) if store is not None else {}
+ 

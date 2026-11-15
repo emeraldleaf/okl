@@ -1,0 +1,14 @@
+diff --git a/src/okl/client.py b/src/okl/client.py
+index 6b6ce96..448299c 100644
+--- a/src/okl/client.py
++++ b/src/okl/client.py
+@@ -418,6 +418,9 @@ class Client:
+         # place. Found by live-testing the MCP server: every scope="repo" record failed.
+         if kwargs.get("repo") is None:
+             kwargs["repo"] = self.repo
++        if kwargs.get("supersedes") is not None and kwargs.get("supersedes") == kwargs.get("id"):
++            # As `okl retire` refuses: a lesson superseded by itself leaves every briefing.
++            raise ValueError("a lesson cannot replace itself: supersedes must name its old id")
+         if self.mode == "remote":
+             # None means "not given": the service has defaults for every optional field,
+             # and a null where it expects a boolean (replace) is a 422 (review of okl R1).

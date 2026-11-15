@@ -1,0 +1,87 @@
+diff --git a/src/okl/client.py b/src/okl/client.py
+index 3039c31..f01d576 100644
+--- a/src/okl/client.py
++++ b/src/okl/client.py
+@@ -381,8 +381,18 @@ class Client:
+ 
+     def _check_paths(self, repo: str, paths: list[str], root: Path) -> dict:
+         """core.check_paths over this repo's view, locally or from the service, with the paths
+-        made repo-relative and those outside the repo listed apart."""
++        made repo-relative and those outside the repo listed apart. No paths, or none inside
++        the repo, is refused (ValueError) before any request: a check of no files answered with
++        no lessons reads as a clean check that nothing governs them."""
++        if not paths:
++            raise ValueError("no paths to check: an empty list checks no file; give the files "
++                             "about to be read or changed")
+         inside, outside = _repo_relative(paths, root)
++        if not inside:
++            # Every path is outside the repo, so nothing here was checked: say that, rather
++            # than answer a check of no files.
++            raise ValueError(f"no path given is inside this repo ({root}): {', '.join(outside)}; "
++                             "nothing was checked")
+         if self.mode == "remote":
+             result = self._post("/check", {"repo": repo, "task": "", "paths": inside})
+             # An older service drops a field it does not know and briefs an empty task: never
+diff --git a/src/okl/core.py b/src/okl/core.py
+index 8ff5e13..510051c 100644
+--- a/src/okl/core.py
++++ b/src/okl/core.py
+@@ -343,7 +343,12 @@ def check_paths(store: Store, repo: str, paths: list[str]) -> dict[str, Any]:
+     file, where check() answers the one it asks before a task. They are found by the files a
+     lesson names, not by words, so none is ranked out: every lesson governing the file is
+     briefed. A path outside the repo, or one no lesson names, is answered with nothing, and
+-    `store_records` then says whether the store held anything to match against."""
++    `store_records` then says whether the store held anything to match against. No paths at
++    all is refused (ValueError): a check of no files answered with no lessons read as a clean
++    check that nothing governs them."""
++    if not paths:
++        raise ValueError("no paths to check: an empty list checks no file; give the files "
++                         "about to be read or changed")
+     hits = sorted(governing(store.all_nodes(), repo, set(paths)), key=lambda n: n.id)
+     buckets = _bucket_by_type(hits)
+     _attach_catches(store, buckets["armed_gates"])
+diff --git a/src/okl/service.py b/src/okl/service.py
+index e3c43f0..367d0bb 100644
+--- a/src/okl/service.py
++++ b/src/okl/service.py
+@@ -218,6 +218,10 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901, PLR0915 -
+     def check(req: CheckReq, authorization: str | None = Header(default=None)) -> dict[str, Any]:
+         _auth(authorization)
+         if req.paths is not None:
++            if not req.paths:
++                # An empty list checks no file: answered, it read as "nothing governs them".
++                raise HTTPException(status_code=422, detail="paths is empty: give the files about to "
++                                                            "be read or changed, or a task")
+             result = core.check_paths(_store, req.repo, req.paths)
+             core.record_briefing(_store, req.repo, result)
+             return result
+diff --git a/tests/test_check_paths.py b/tests/test_check_paths.py
+index 515438b..c7c3f2b 100644
+--- a/tests/test_check_paths.py
++++ b/tests/test_check_paths.py
+@@ -141,3 +141,25 @@ def test_okl_check_mcp_tool_takes_a_path(tmp_path, monkeypatch):
+         assert asked.startswith("⚠️ okl_check needs a task, or a path"), asked
+ 
+     asyncio.run(exercise())
++
++
++def test_a_check_of_no_files_is_refused_not_answered_clean(remote, tmp_path):
++    """Client.check with paths=[] and the service's /check with "paths": [] answered a briefing
++    with no lessons: a check of no files read as a clean one. Refused on every path: core, the
++    local and the remote client, the service, and a list whose every path is outside the repo."""
++    _record(remote.store, "scoped-orders", "src/orders.py")
++    with pytest.raises(ValueError, match="no paths to check"):
++        core.check_paths(remote.store, "r", [])
++    with pytest.raises(ValueError, match="no paths to check"):
++        Client().check("", paths=[])                                   # remote: no request sent
++    r = remote.api.post("/check", json={"repo": "r", "task": "", "paths": []})
++    assert r.status_code == 422 and "paths is empty" in r.json()["detail"]
++    with pytest.raises(ValueError, match="no path given is inside this repo"):
++        Client().check("", paths=["/etc/hosts"])
++
++    local = Client({"repo": "r"})
++    local.service_url = None
++    local._store = remote.store
++    with pytest.raises(ValueError, match="no paths to check"):
++        local.check("", paths=[])
++    assert [x["id"] for x in local.check("", paths=["src/orders.py"])["rules"]] == ["scoped-orders"]

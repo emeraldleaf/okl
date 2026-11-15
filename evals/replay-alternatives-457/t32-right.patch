@@ -1,0 +1,85 @@
+diff --git a/evals/hybrid_grid.py b/evals/hybrid_grid.py
+index 5d50aab..f94fadf 100644
+--- a/evals/hybrid_grid.py
++++ b/evals/hybrid_grid.py
+@@ -25,8 +25,18 @@ PROBE_VARIANTS = {t["id"]: t for t in tasks}
+ 
+ 
+ def ids(task: str, hybrid: str | None, interests: list[str] | None) -> list[str]:
+-    """The briefed ids for `task` under one setting."""
++    """The briefed ids for `task` under one setting.
++
++    Refuses (exit 2) when a hybrid setting was asked for and the semantic arm did not run:
++    core.check then answers by full-text alone, and the cell would print the full-text
++    result as the semantic arm's measurement (no model cached, no extra, no vectors).
++    """
+     res = core.check(store, repo=REPO, task=task, interests=interests, hybrid=hybrid)
++    if hybrid and (res.get("hybrid_unavailable") or res.get("hybrid") != hybrid):
++        print(f"REFUSING TO RUN: the semantic arm did not run for hybrid={hybrid} "
++              f"({res.get('hybrid_unavailable') or 'the result does not report it on'}); "
++              "its cells would be full-text results.", file=sys.stderr)
++        raise SystemExit(2)
+     return [r["id"] for b in BUCKETS for r in res.get(b, [])]
+ 
+ 
+@@ -35,6 +45,9 @@ def recall(hybrid: str | None, variants: dict[str, dict[str, str]], label: str)
+     return sum(t["defect_node"] in ids(variants[t["id"]][label], hybrid, None) for t in tasks)
+ 
+ 
++# Before any cell is printed: the arm must run here, with the settings the grid uses.
++for _mode in ("rrf", "linear"):
++    ids(tasks[0]["task"], _mode, None)
+ print(f"store: {len(store.all_nodes())} records · {len(store.embeddings(semantic.MODEL_ID))} with a vector · hook interests={INTERESTS}")
+ print("line   mode    authored  held-out ticket/paraphrase/bug  precision prompts (hook config)")
+ base = {p: len(ids(p, None, INTERESTS)) for p in prompts}
+diff --git a/tests/test_hybrid_grid.py b/tests/test_hybrid_grid.py
+new file mode 100644
+index 0000000..fa950df
+--- /dev/null
++++ b/tests/test_hybrid_grid.py
+@@ -0,0 +1,45 @@
++"""evals/hybrid_grid.py must not print full-text results as the semantic arm's cells."""
++import json
++import os
++import subprocess
++import sys
++from pathlib import Path
++
++import pytest
++
++ROOT = Path(__file__).resolve().parents[1]
++
++
++def _grid_dir(tmp_path: Path, vectors: bool) -> Path:
++    from okl import core, semantic
++    from okl.store import Store
++
++    (tmp_path / ".okl").mkdir()
++    (tmp_path / ".okl" / "config.json").write_text(json.dumps({"repo": "okl"}))
++    s = Store(f"sqlite:///{tmp_path / '.okl' / 'okl.db'}")
++    nid = core.record(s, type="Rule", scope="org", title="check object ownership on every id route")
++    if vectors:
++        s.put_embedding(nid, semantic.MODEL_ID, "h", semantic.pack([0.1] * 8))
++    s.close()
++    ev = tmp_path / "evals"; ev.mkdir()
++    (ev / "tasks.jsonl").write_text(json.dumps(
++        {"id": "idor_endpoint", "task": "add an orders route by id", "defect_node": nid}) + "\n")
++    (ev / "heldout_variants.json").write_text(json.dumps(
++        {"idor_endpoint": {"ticket": "orders by id", "paraphrase": "fetch one order", "bug-report": "see others' orders"}}))
++    (ev / "probe_prompts.json").write_text(json.dumps({"prompts": ["give me a doc for that"]}))
++    return tmp_path
++
++
++@pytest.mark.parametrize("vectors", [False, True], ids=["no vectors", "no cached model"])
++def test_the_grid_refuses_when_the_semantic_arm_falls_back(tmp_path, vectors):
++    cwd = _grid_dir(tmp_path, vectors)
++    env = {k: v for k, v in os.environ.items()
++           if k not in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN")}
++    env["PYTHONPATH"] = str(ROOT / "src")
++    # An empty model cache: with vectors present, the model is what is missing.
++    env["HF_HOME"] = env["HF_HUB_CACHE"] = str(tmp_path / "empty-hf-cache")
++    r = subprocess.run([sys.executable, str(ROOT / "evals" / "hybrid_grid.py")], cwd=cwd, env=env,
++                       capture_output=True, text=True)
++    assert r.returncode == 2, r.stdout + r.stderr
++    assert "semantic arm did not run" in r.stderr
++    assert "rrf" not in r.stdout and "linear" not in r.stdout, r.stdout

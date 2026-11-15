@@ -1,0 +1,42 @@
+diff --git a/docs/render_pipeline_diagram.py b/docs/render_pipeline_diagram.py
+index 1d13547..48e3fc8 100644
+--- a/docs/render_pipeline_diagram.py
++++ b/docs/render_pipeline_diagram.py
+@@ -26,8 +26,6 @@ from __future__ import annotations
+ 
+ import argparse
+ import json
+-import os
+-import subprocess
+ import sys
+ import tempfile
+ from pathlib import Path
+@@ -66,15 +64,19 @@ SEED_INTERESTS = ["python", "method", "security", "agent-safety",
+ def _seeded_store(tmpdir: str) -> Store:
+     """Build a store from every committed seed file, via the shipped seed path."""
+     url = f"sqlite:///{Path(tmpdir) / 'trace.db'}"
+-    # A configured service URL would send the seeds to the live service instead of this
+-    # throwaway store (review on #266), so the variable that selects one is dropped.
+-    env = {k: v for k, v in os.environ.items() if k != "OKL_SERVICE_URL"}
+-    env["OKL_DATABASE_URL"] = url
+-    for f in sorted((REPO / "seed").glob("*.json")):
+-        r = subprocess.run([sys.executable, "-m", "okl", "seed", str(f)],
+-                           capture_output=True, text=True, env=env, cwd=REPO)
+-        if r.returncode != 0:
+-            raise SystemExit(f"ABORT: seeding {f.name} failed — {r.stderr.strip()[:200]}")
++    # A configured service would send the seeds to the live service instead of this
++    # throwaway store (review on #266). `okl seed` run from the checkout read its
++    # .okl/config.json, which may name one, so the seed runs in-process through the shipped
++    # seed function, on a client given its own config and this throwaway store.
++    from okl.client import Client
++    from okl.seed import seed_from_file
++    client = Client(config={"repo": TRACE_REPO})
++    client._store = Store(url)
++    try:
++        for f in sorted((REPO / "seed").glob("*.json")):
++            seed_from_file(client, str(f))
++    except (OSError, ValueError) as e:
++        raise SystemExit(f"ABORT: seeding failed — {str(e)[:200]}") from e
+     store = Store(url)
+     # verify_materialized: assert records actually landed, never trust exit 0. The first
+     # version of this function printed "seeded 10 records" while writing nothing here,

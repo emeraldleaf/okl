@@ -1,0 +1,160 @@
+diff --git a/src/okl/cli/intake.py b/src/okl/cli/intake.py
+index e92e1ca..a7cd1e4 100644
+--- a/src/okl/cli/intake.py
++++ b/src/okl/cli/intake.py
+@@ -5,7 +5,7 @@ import argparse
+ import sys
+ 
+ from .. import intake
+-from ..client import Client, OKLUnreachableError
++from ..client import Client
+ 
+ 
+ def cmd_intake(args: argparse.Namespace) -> int:
+@@ -21,26 +21,39 @@ def cmd_intake(args: argparse.Namespace) -> int:
+     except intake.IntakeError as e:
+         print(f"okl intake: {e}", file=sys.stderr)
+         return 2
+-    _add_nearest(found)
+-    print(intake.as_json(found, pr) if args.format == "json" else intake.render(found, pr), end="")
++    unchecked = _add_nearest(found)
++    if unchecked:
++        print(f"okl intake: which lessons already cover these findings is unknown: {unchecked}",
++              file=sys.stderr)
++    print(intake.as_json(found, pr, unchecked) if args.format == "json"
++          else intake.render(found, pr, unchecked), end="")
+     return 0
+ 
+ 
+-def _add_nearest(found: list[intake.Finding]) -> None:
++def _add_nearest(found: list[intake.Finding]) -> str | None:
+     """Name the lessons a briefing on each finding would show, so one a lesson already covers is
+     refined with okl update rather than recorded twice. The briefing, not a raw search: a search
+     always returns its best match, and on a finding no lesson covers that named an unrelated one.
+-    Skipped quietly with no store: the list is still worth having."""
++
++    Returns why it could not look, or None when it looked at every finding. A finding looked up
++    gets a list, empty when a briefing shows none; one never looked up keeps None. The list is
++    still worth having without a store, but a store that could not be read must not read as one
++    that answered and holds nothing: the reason travels with the list."""
++    if not found:
++        return None
+     client = Client()
+     if not client.configured:
+-        return
+-    for f in found:
++        return "no okl store is configured here (okl init, or okl connect)"
++    for done, f in enumerate(found):
+         try:
+             result = client.check(f.summary, limit=3)
+-        except (OKLUnreachableError, OSError, ValueError):
+-            return
++        except Exception as e:  # noqa: BLE001 - any failed read is said, never a clean answer
++            why = (str(e).strip().splitlines() or [type(e).__name__])[0]
++            return (f"the store could not be read ({why})"
++                    + (f"; looked up {done} of {len(found)} finding(s)" if done else ""))
+         titles = {item["id"]: item.get("title", "") for bucket in result.values()
+                   if isinstance(bucket, list) for item in bucket
+                   if isinstance(item, dict) and item.get("id") and item.get("title")}
+         ids = [a["id"] for a in result.get("next_actions", []) if a.get("id")][:3]
+-        f.briefed = [f"[{i}] {titles.get(i, '')}".rstrip() for i in ids] or None
++        f.briefed = [f"[{i}] {titles.get(i, '')}".rstrip() for i in ids]
++    return None
+diff --git a/src/okl/intake.py b/src/okl/intake.py
+index b400797..80ea265 100644
+--- a/src/okl/intake.py
++++ b/src/okl/intake.py
+@@ -60,7 +60,9 @@ class Finding:
+     commit: str | None             # the resolving commit's short sha, when one is known
+     commit_title: str | None
+     found_how: str | None          # "named in a reply", or the guess
+-    briefed: list[str] | None = None   # "[id] title" of each lesson a briefing on it would show
++    # "[id] title" of each lesson a briefing on it would show: [] when it was looked up and a
++    # briefing shows none, None when it was never looked up (no store, or one that failed).
++    briefed: list[str] | None = None
+ 
+     def where(self) -> str:
+         """`path:line`, or the path alone for a comment on the whole file."""
+@@ -151,13 +153,17 @@ QUESTION = ("Encode it? Where would it be held: a test, a CI check, a rule, or a
+             "(okl record)? If not, say why not.")
+ 
+ 
+-def render(fs: list[Finding], pr: dict) -> str:
+-    """The worksheet: each resolved finding, the question, and the commands to answer it."""
++def render(fs: list[Finding], pr: dict, unchecked: str | None = None) -> str:
++    """The worksheet: each resolved finding, the question, and the commands to answer it.
++    `unchecked` is why the lessons that already cover them could not be looked up: said once
++    at the top, so no finding reads as one no lesson covers."""
+     n = int(pr.get("number") or 0)
+     head = f"okl intake pr {n}: {len(fs)} resolved review thread(s) on \"{pr.get('title', '')}\""
+     if not fs:
+         return head + ".\nNothing to ask: no review thread on it was resolved."
+     lines = [head, ""]
++    if unchecked:
++        lines += [f"Not looked up, so unknown: which lessons already cover these ({unchecked}).", ""]
+     for i, f in enumerate(fs, 1):
+         lines.append(f"[{i}] {f.where()} · {f.author}"
+                      + (f" · resolved by {f.resolved_by}" if f.resolved_by else ""))
+@@ -171,14 +177,19 @@ def render(fs: list[Finding], pr: dict) -> str:
+         if f.briefed:
+             lines.append("    a briefing on it already shows: " + "; ".join(f.briefed))
+             lines.append("    (if one of these covers it, refine that one: okl update <id>)")
++        elif f.briefed is not None:
++            lines.append("    a briefing on it shows no lesson yet")
+         lines += [f"    {QUESTION}", f"    {record_command(f, n)}", f"    {verify_command()}", ""]
+     return "\n".join(lines).rstrip() + "\n"
+ 
+ 
+-def as_json(fs: list[Finding], pr: dict) -> str:
+-    """The same, for an agent: each finding with its commands."""
++def as_json(fs: list[Finding], pr: dict, unchecked: str | None = None) -> str:
++    """The same, for an agent: each finding with its commands, and `lessons_unchecked`, why the
++    lessons that cover them could not be looked up (null when they were: a finding's `briefed`
++    is then [] when none does)."""
+     n = int(pr.get("number") or 0)
+     return json.dumps({"pr": n, "title": pr.get("title"), "url": pr.get("url"), "question": QUESTION,
++                       "lessons_unchecked": unchecked,
+                        "findings": [{**asdict(f), "record": record_command(f, n), "verify": verify_command()}
+                                     for f in fs]}, indent=2)
+ 
+diff --git a/tests/test_intake.py b/tests/test_intake.py
+index 5854804..4452efc 100644
+--- a/tests/test_intake.py
++++ b/tests/test_intake.py
+@@ -145,3 +145,36 @@ def test_a_pr_gh_cannot_find_is_an_error_not_an_empty_list(monkeypatch, missing)
+     monkeypatch.setattr(intake, "_gh", lambda *a: json.dumps(body))
+     with pytest.raises(intake.IntakeError, match="no PR #9"):
+         intake.fetch(9, "o/r")
++
++
++def test_a_store_that_cannot_be_read_is_not_a_store_that_covers_nothing(monkeypatch, capsys, tmp_path):
++    """_add_nearest returned silently when the store could not be read, so every finding read as
++    one no lesson covers, exactly as with a store that answered and holds none."""
++    from okl.cli import main
++    from okl.client import Client, OKLUnreachableError
++    monkeypatch.chdir(tmp_path)
++    monkeypatch.setenv("OKL_DATABASE_URL", f"sqlite:///{tmp_path / 'store.db'}")
++    monkeypatch.setattr(intake, "fetch", lambda n, repo=None: (PR, _files_of()))
++
++    # A store that answers and holds nothing: each finding says so, and nothing is unknown.
++    assert main(["intake", "pr", "7"]) == 0
++    answered = capsys.readouterr()
++    assert answered.out.count("a briefing on it shows no lesson yet") == 3
++    assert "unknown" not in answered.out + answered.err
++    assert main(["intake", "pr", "7", "--format", "json"]) == 0
++    data = json.loads(capsys.readouterr().out)
++    assert data["lessons_unchecked"] is None and [f["briefed"] for f in data["findings"]] == [[], [], []]
++
++    # A store that cannot be read: said, and no finding reads as covered by none.
++    def down(self, *a, **k):
++        raise OKLUnreachableError("OKL service unreachable at http://okl.test: connection refused")
++    monkeypatch.setattr(Client, "check", down)
++    assert main(["intake", "pr", "7"]) == 0
++    failed = capsys.readouterr()
++    assert "Not looked up, so unknown" in failed.out and "connection refused" in failed.out
++    assert "shows no lesson yet" not in failed.out
++    assert "unknown" in failed.err
++    assert main(["intake", "pr", "7", "--format", "json"]) == 0
++    data = json.loads(capsys.readouterr().out)
++    assert "could not be read" in data["lessons_unchecked"]
++    assert [f["briefed"] for f in data["findings"]] == [None, None, None]

@@ -1,0 +1,43 @@
+diff --git a/evals/layout_preflight.py b/evals/layout_preflight.py
+index 9888d34..fa0d76c 100644
+--- a/evals/layout_preflight.py
++++ b/evals/layout_preflight.py
+@@ -73,7 +73,8 @@ def main() -> int:
+     lost_any = False
+     for line in (REPO / "evals" / "tasks.jsonl").read_text().splitlines():
+         task = json.loads(line)
+-        result = client.check(task["task"], repo="okl")
++        # log=False: this script briefs no agent, so its checks are not exposure.
++        result = client.check(task["task"], repo="okl", log=False)
+         a = old.render_check_for_agent(result)
+         b = new.render_check_for_agent(result)
+         total_old += len(a)
+diff --git a/src/okl/client.py b/src/okl/client.py
+index 46cad7e..5629d13 100644
+--- a/src/okl/client.py
++++ b/src/okl/client.py
+@@ -184,10 +184,13 @@ class Client:
+             raise OKLUnreachableError(f"OKL service unreachable at {url}: {e}") from e
+ 
+     # -- operations ---------------------------------------------------------
+-    def check(self, task: str, repo: str | None = None, limit: int | None = None) -> dict:
++    def check(self, task: str, repo: str | None = None, limit: int | None = None,
++              log: bool = True) -> dict:
+         """The briefing for starting `task` in `repo` (default: this repo), as core.check returns it.
+ 
+         Lessons whose governed code changed since their last check come back marked.
++        `log=False` is for a caller that briefs no agent (an eval, a pre-flight): its
++        briefing is not exposure, so it is not logged.
+         Over a shared service, raises ValueError when the service rejects the request (any
+         4xx, such as a 401 for a missing token) and OKLUnreachableError when it cannot be
+         reached or fails on its side (a network error or any 5xx).
+@@ -206,7 +209,8 @@ class Client:
+             result = core.check(store, repo, task, **kw)
+             # Over a shared service the service logs the briefing it answers; locally, the
+             # client is the only one who sees it (#129).
+-            core.record_briefing(store, repo, result)
++            if log:
++                core.record_briefing(store, repo, result)
+         # Mark briefed lessons whose code changed since their last check (#93). Done here,
+         # not in core, because only the client has this repo's checkout: a shared service
+         # answering /check has no git history to compare against.

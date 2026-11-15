@@ -1,0 +1,16 @@
+diff --git a/evals/drift_widen_cost.py b/evals/drift_widen_cost.py
+index 839abd7..504fcd0 100644
+--- a/evals/drift_widen_cost.py
++++ b/evals/drift_widen_cost.py
+@@ -55,6 +55,11 @@ def main() -> int:
+     args = ap.parse_args()
+     before = {lid: dr.governs(rule) for lid, rule in dr.snapshot(BEFORE).items() if dr.governs(rule)}
+     now = dr.snapshot(args.after)
++    if not now:
++        # A mistyped revision reads as a snapshot with no lessons: say so, so the receipt
++        # is not taken for a measurement of #318's lists.
++        print(f"warning: no snapshot lessons at --after {args.after!r}; every lesson will read "
++              "as governing nothing there", file=sys.stderr)
+     after = {lid: dr.governs(now.get(lid) or {}) for lid in before}
+     lists = {"before": before, "after": after}
+     merges = count(dr.git("rev-list", "--first-parent", f"{SINCE}..{BEFORE}").split(), lists)

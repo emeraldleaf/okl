@@ -1,0 +1,51 @@
+diff --git a/src/okl/core.py b/src/okl/core.py
+index e192118..32c00a1 100644
+--- a/src/okl/core.py
++++ b/src/okl/core.py
+@@ -573,9 +573,12 @@ def recurrence_report(store: Store) -> dict[str, Any]:
+     # new recurrence quietly lower the coverage percentage. Only classes are counted.
+     reports = {e.src for e in recurs if e.dst in nodes}
+     defect_ids = {i for i, n in nodes.items() if n.type == "Defect" and i not in reports}
++    # Only a Gate arms a defect. Any record can be linked CATCHES (a Rule, a Claim), but a
++    # Rule is a practice nothing runs: counting it as arming put defects with no mechanical
++    # check among the armed ones, and in the coverage figure, as if something enforced them.
+     gates_for: dict[str, list[str]] = {}
+     for e in store.edges(["CATCHES"]):
+-        if e.dst in defect_ids and e.src in nodes:
++        if e.dst in defect_ids and e.src in nodes and nodes[e.src].type == "Gate":
+             gates_for.setdefault(e.dst, []).append(nodes[e.src].title)
+ 
+     armed: list[dict[str, Any]] = []
+diff --git a/tests/test_okl.py b/tests/test_okl.py
+index cea95dc..e58157b 100644
+--- a/tests/test_okl.py
++++ b/tests/test_okl.py
+@@ -1929,6 +1929,28 @@ def test_recurrence_report_counts_what_the_metric_could_not_see(store):
+     assert rule not in {x["defect_id"] for x in core.recurrence_report(store)["unarmed"]}
+ 
+ 
++def test_recurrence_report_counts_only_a_gate_as_arming(store):
++    """A Rule linked CATCHES is a practice nothing runs, not a gate: the defect it names
++    stays unarmed and out of the gated count."""
++    d = core.record(store, type="Defect", title="ruled defect", scope="org")
++    rule = core.record(store, type="Rule", title="a rule about it", scope="org")
++    core.link(store, rule, "CATCHES", d)
++    back = core.record(store, type="Defect", title="it came back", scope="repo", repo="svc")
++    core.link(store, back, "RECURS_IN", d)
++
++    r = core.recurrence_report(store)
++    assert r["armed"] == []
++    assert [x["defect_id"] for x in r["unarmed"]] == [d]
++    assert (r["defects_with_gate"], r["defects"]) == (0, 1)
++
++    gate = core.record(store, type="Gate", title="the gate", scope="org")
++    core.link(store, gate, "CATCHES", d)
++    r = core.recurrence_report(store)
++    assert [x["defect_id"] for x in r["armed"]] == [d]
++    assert r["armed"][0]["gates"] == ["the gate"]
++    assert r["defects_with_gate"] == 1
++
++
+ def test_metric_output_never_prints_a_bare_tick(tmp_path, monkeypatch):
+     """The CLI line carries its coverage, lists recurrences without a gate, and refuses
+     an unconfigured directory rather than reporting on a store that is not there."""

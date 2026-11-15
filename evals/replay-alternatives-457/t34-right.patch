@@ -1,0 +1,57 @@
+diff --git a/ci/check-init-flags.py b/ci/check-init-flags.py
+index 47c891a..c785ae3 100755
+--- a/ci/check-init-flags.py
++++ b/ci/check-init-flags.py
+@@ -29,7 +29,12 @@ for doc in ("README.md", "docs/GETTING-STARTED.md"):
+         # the sentence names; beside `okl verify`, a bare `--files` is verify's.
+         if not re.search(r"`okl (?!init\b)\w+", unit):
+             flags.update(re.findall(r"`(--[a-z][a-z-]+)[^`]*`", unit))
+-missing = sorted(f for f in flags if f not in help_text)
++# Whole flags only. A substring test passed text that is just the start of real flags
++# (`--no-c`, `--no`), which `okl init` refuses as ambiguous; a flag token here ends where
++# the next character is neither a letter, digit nor hyphen.
++FLAG = r"(?<![\w-])--[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?![\w-])"
++known = set(re.findall(FLAG, help_text))
++missing = sorted(f for f in flags if f not in known)
+ if missing or not flags:
+     sys.exit(f"documented but missing from `okl init --help`: {missing}")
+ print("INIT FLAGS EXIST", sorted(flags))  # noqa: T201 - a check script reports on stdout
+diff --git a/tests/test_check_init_flags.py b/tests/test_check_init_flags.py
+new file mode 100644
+index 0000000..1f16f27
+--- /dev/null
++++ b/tests/test_check_init_flags.py
+@@ -0,0 +1,33 @@
++"""ci/check-init-flags.py: a documented okl init flag must be a whole flag init knows."""
++import os
++import shutil
++import subprocess
++import sys
++from pathlib import Path
++
++import pytest
++
++ROOT = Path(__file__).resolve().parents[1]
++
++
++def _run(tmp_path: Path, readme: str) -> subprocess.CompletedProcess[str]:
++    (tmp_path / "ci").mkdir(exist_ok=True)
++    shutil.copy(ROOT / "ci" / "check-init-flags.py", tmp_path / "ci" / "check-init-flags.py")
++    (tmp_path / "docs").mkdir(exist_ok=True)
++    (tmp_path / "docs" / "GETTING-STARTED.md").write_text("Nothing about setup here.\n")
++    (tmp_path / "README.md").write_text(readme)
++    env = {**os.environ, "PYTHONPATH": str(ROOT / "src")}
++    return subprocess.run([sys.executable, str(tmp_path / "ci" / "check-init-flags.py")],
++                          cwd=tmp_path, env=env, capture_output=True, text=True)
++
++
++@pytest.mark.parametrize("partial", ["--no-c", "--no", "--int", "--git"])
++def test_the_start_of_a_real_flag_is_not_a_flag(tmp_path, partial):
++    r = _run(tmp_path, f"Run `okl init {partial}` in the repo.\n")
++    assert r.returncode != 0, r.stdout
++    assert partial in r.stderr
++
++
++def test_whole_flags_pass(tmp_path):
++    r = _run(tmp_path, "Run `okl init --no-ci --interests python --no-claude` once.\n")
++    assert r.returncode == 0, r.stderr

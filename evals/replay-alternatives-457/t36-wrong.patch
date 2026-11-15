@@ -1,0 +1,17 @@
+diff --git a/src/okl/store.py b/src/okl/store.py
+index 16fbf89..c1915aa 100644
+--- a/src/okl/store.py
++++ b/src/okl/store.py
+@@ -629,9 +629,11 @@ class _SQLiteBackend(_Backend):
+                                         coalesce(symptom,''), coalesce(fix,''),
+                                         replace(coalesce(tags,''), ',', ' '),
+                                         coalesce(aliases,''), coalesce(triggers,'') FROM node""")
++            # Committed only once the whole rebuild has succeeded: a failure after the DROP
++            # must not be committed with the LIKE fallback below.
++            c.commit()
+         except self._sqlite3.OperationalError:
+             self._has_fts = False   # FTS5 not compiled in — fall back to LIKE
+-        c.commit()
+ 
+     def _fts_stale(self) -> bool:
+         """Whether the full-text index lacks a column or was built with another tokenizer than

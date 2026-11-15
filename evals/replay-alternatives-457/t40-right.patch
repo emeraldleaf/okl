@@ -1,0 +1,180 @@
+diff --git a/src/okl/cli.py b/src/okl/cli.py
+index 8900013..6cd8013 100644
+--- a/src/okl/cli.py
++++ b/src/okl/cli.py
+@@ -27,11 +27,41 @@ def _print_json(obj) -> None:
+     sys.stdout.write("\n")
+ 
+ 
+-def _merge_hook_settings(claude: Path) -> bool:
++def _symlink_on_path(path: Path) -> Path | None:
++    """The first symbolic link among `path` and its parents below the repo root (the
++    working directory init runs in), or None.
++
++    A cloned repository can hold a symlink at any path okl writes (.claude/settings.json,
++    .mcp.json, a hook, the workflow) or a symlinked .claude/ itself, and an ordinary write
++    follows it out of the repo. A dangling link counts: writing through it creates its target.
++    """
++    root = Path.cwd()
++    p = path if path.is_absolute() else root / path
++    while p != root and p != p.parent:
++        if p.is_symlink():
++            return p
++        p = p.parent
++    return None
++
++
++def _refuse_symlink(path: Path) -> bool:
++    """True, having said why, when writing `path` would follow a symlink out of the repo."""
++    link = _symlink_on_path(path)
++    if link is None:
++        return False
++    print(f"! refusing to write {path}: {link} is a symbolic link (to {link.readlink()}), and "
++          "okl writes only inside this repository. Replace the link with a real file or "
++          "directory, then re-run.")
++    return True
++
++
++def _merge_hook_settings(claude: Path) -> bool | None:
+     """Register both okl hooks in .claude/settings.json. Idempotent: existing settings and
+     unrelated hooks are preserved; an already-registered okl hook is left alone. A hook
+-    that is installed but unregistered is a surface nobody runs."""
++    that is installed but unregistered is a surface nobody runs. None when refused."""
+     settings_path = claude / "settings.json"
++    if _refuse_symlink(settings_path):
++        return None
+     try:
+         settings = json.loads(settings_path.read_text()) if settings_path.exists() else {}
+     except json.JSONDecodeError:
+@@ -73,6 +103,8 @@ def _place_owned(dst: Path, shipped: str, label: str, force: bool) -> None:
+     version), or with --force; an edited one is kept and reported.
+     """
+     from . import ownership
++    if _refuse_symlink(dst):
++        return
+     state = ownership.status(dst, shipped)
+     if state == ownership.MISSING or (state == ownership.OKL and dst.read_text() != shipped):
+         verb = "installed" if state == ownership.MISSING else "upgraded"
+@@ -98,8 +130,11 @@ def _uninstall(dry_run: bool) -> int:
+     """Remove what okl owns and nothing else (#49). The store (.okl/) is user data and is
+     never touched; an edited okl file is kept and named, never deleted."""
+     act = "would remove" if dry_run else "removed"
+-    kept = (_uninstall_files(act, dry_run) + _uninstall_hook_registrations(act, dry_run)
+-            + _uninstall_mcp(act, dry_run))
++    settings = Path(".claude/settings.json")
++    registrations = ([f"{settings} (a symbolic link is on its path; okl's hook entries not removed)"]
++                     if _symlink_on_path(settings) is not None
++                     else _uninstall_hook_registrations(act, dry_run))
++    kept = _uninstall_files(act, dry_run) + registrations + _uninstall_mcp(act, dry_run)
+     for k in kept:
+         print(f"! kept {k}")
+     print("• .okl/ (your store and config) is never removed by uninstall; delete it yourself "
+@@ -116,6 +151,11 @@ def _uninstall_files(act: str, dry_run: bool) -> list[str]:
+                      (Path(".claude/hooks/stop-okl-encode.sh"),
+                       scaffold / "hooks" / "stop-okl-encode.sh"),
+                      (Path(".github/workflows/okl-verify.yml"), scaffold / "ci" / "okl-verify.yml")]:
++        if _symlink_on_path(dst) is not None:
++            # Removing through a symlinked directory deletes a file outside the repo.
++            if dst.exists() or dst.is_symlink():
++                kept.append(f"{dst} (a symbolic link is on its path; not touched)")
++            continue
+         state = ownership.status(dst, src.read_text())
+         if state == ownership.OKL:
+             if not dry_run:
+@@ -165,6 +205,8 @@ def _uninstall_hook_registrations(act: str, dry_run: bool) -> list[str]:
+ 
+ def _uninstall_mcp(act: str, dry_run: bool) -> list[str]:
+     path = Path(".mcp.json")
++    if _symlink_on_path(path) is not None:
++        return [f"{path} (a symbolic link; the okl server entry, if any, not removed)"]
+     if not path.exists():
+         return []
+     try:
+@@ -267,14 +309,17 @@ def _install_claude_wiring(claude: Path, force: bool = False) -> None:
+     Stop encode reminder (the write-side catch). Scripts come from the packaged scaffold —
+     one canonical source, no drift. Also registers the MCP server when the extra exists."""
+     hooks = claude / "hooks"
++    if _refuse_symlink(hooks):
++        return
+     hooks.mkdir(exist_ok=True)
+     scaffold_hooks = Path(__file__).parent / "scaffold" / "hooks"
+     for name, label in [("userpromptsubmit-okl-check.sh", "pre-task check hook (UserPromptSubmit)"),
+                         ("stop-okl-encode.sh", "encode reminder (Stop hook)")]:
+         _place_owned(hooks / name, (scaffold_hooks / name).read_text(), label, force)
+-    if _merge_hook_settings(claude):
++    merged = _merge_hook_settings(claude)
++    if merged:
+         print("✓ registered both hooks in .claude/settings.json (UserPromptSubmit + Stop)")
+-    else:
++    elif merged is not None:
+         print("• hooks already registered in .claude/settings.json")
+     # MCP: register the okl server only if the extra is importable (a registration whose
+     # dependency is missing would be a broken tool, worse than none).
+@@ -285,6 +330,8 @@ def _install_claude_wiring(claude: Path, force: bool = False) -> None:
+         print("  to register the agent tools. (The distribution is not named `okl`; PyPI refuses that.)")
+         return
+     mcp_path = Path(".mcp.json")
++    if _refuse_symlink(mcp_path):
++        return
+     mcp_cfg = json.loads(mcp_path.read_text()) if mcp_path.exists() else {}
+     servers = mcp_cfg.setdefault("mcpServers", {})
+     if "okl" not in servers:
+diff --git a/tests/test_scaffold.py b/tests/test_scaffold.py
+index 63d67b8..129b334 100644
+--- a/tests/test_scaffold.py
++++ b/tests/test_scaffold.py
+@@ -937,6 +937,54 @@ def test_okl_owned_files_carry_a_current_fingerprint():
+             f"src/okl/scaffold/{rel}` (should be {ownership.digest(text)}) and copy the mirrors")
+ 
+ 
++def test_init_and_uninstall_refuse_to_write_through_a_symlink(tmp_path):
++    """A cloned repo can hold a symlink where okl writes. init and uninstall refuse it, name
++    the link, and leave the outside target byte-identical (or, for a dangling link, absent)."""
++    import json
++    import sys
++
++    outside = tmp_path / "outside"; outside.mkdir()
++    env = {**os.environ, "HOME": str(tmp_path)}
++    env.pop("OKL_DATABASE_URL", None); env.pop("OKL_SERVICE_URL", None)
++
++    def okl(repo, *a):
++        return subprocess.run([sys.executable, "-m", "okl", *a], cwd=repo, env=env,
++                              capture_output=True, text=True)
++
++    # 1. A symlinked settings file, a dangling .mcp.json and a dangling workflow.
++    repo = tmp_path / "r1"; (repo / ".claude").mkdir(parents=True)
++    subprocess.run(["git", "init", "-q", str(repo)], check=True)
++    target = outside / "settings.json"
++    target.write_text(json.dumps({"model": "theirs"}))
++    before = target.read_bytes()
++    (repo / ".claude" / "settings.json").symlink_to(target)
++    (repo / ".mcp.json").symlink_to(outside / "mcp.json")
++    (repo / ".github").mkdir()
++    (repo / ".github" / "workflows").symlink_to(outside / "wf", target_is_directory=True)
++    r = okl(repo, "init", "--repo", "r")
++    assert r.returncode == 0, r.stdout + r.stderr
++    assert "refusing to write" in r.stdout and "symbolic link" in r.stdout
++    assert target.read_bytes() == before
++    assert not (outside / "mcp.json").exists() and not (outside / "wf").exists()
++    r = okl(repo, "init", "--uninstall")
++    assert target.read_bytes() == before, "uninstall rewrote a file outside the repo"
++
++    # 2. A symlinked .claude/ directory: nothing lands in, or is removed from, its target.
++    repo = tmp_path / "r2"; repo.mkdir()
++    subprocess.run(["git", "init", "-q", str(repo)], check=True)
++    claude_out = outside / "claude"; (claude_out / "hooks").mkdir(parents=True)
++    hook_src = (Path(__file__).resolve().parents[1] / "src" / "okl" / "scaffold" / "hooks"
++                / "stop-okl-encode.sh")
++    (claude_out / "hooks" / "stop-okl-encode.sh").write_text(hook_src.read_text())
++    (claude_out / "settings.json").write_text("{}")
++    (repo / ".claude").symlink_to(claude_out, target_is_directory=True)
++    snapshot = {p: p.read_bytes() for p in claude_out.rglob("*") if p.is_file()}
++    r = okl(repo, "init", "--repo", "r")
++    assert r.returncode == 0 and "refusing to write" in r.stdout, r.stdout + r.stderr
++    okl(repo, "init", "--uninstall")
++    assert {p: p.read_bytes() for p in claude_out.rglob("*") if p.is_file()} == snapshot
++
++
+ def test_init_never_clobbers_and_uninstall_removes_only_okls(tmp_path):
+     """#49: `okl init` overwrote the hooks on every run, and there was no uninstall.
+ 

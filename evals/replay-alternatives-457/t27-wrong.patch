@@ -1,0 +1,21 @@
+diff --git a/src/okl/cli/lessons.py b/src/okl/cli/lessons.py
+index aca8b03..652a5fb 100644
+--- a/src/okl/cli/lessons.py
++++ b/src/okl/cli/lessons.py
+@@ -71,7 +71,15 @@ def cmd_check(args: argparse.Namespace) -> int:
+         return 2
+     _apply_check_flags(client, args)
+     try:
+-        result = client.check(args.task, repo=args.repo, limit=args.limit)
++        try:
++            result = client.check(args.task, repo=args.repo, limit=args.limit)
++        except ValueError as e:
++            # A service that predates the tiered decision refuses it with a 422; the prompt
++            # hook must not fail closed on that, so ask it for the calibrated decision.
++            if client.decision != "tiered" or "422" not in str(e) or "decision" not in str(e):
++                raise
++            client.decision = "calibrated"
++            result = client.check(args.task, repo=args.repo, limit=args.limit)
+     except OKLUnreachableError as e:
+         # FAIL CLOSED — loud, non-zero, no reassuring empty result.
+         print(f"OKL UNREACHABLE — refusing to report a clean check.\n{e}", file=sys.stderr)

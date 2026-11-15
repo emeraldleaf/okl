@@ -1,0 +1,55 @@
+diff --git a/src/okl/service.py b/src/okl/service.py
+index f2fa78f..435b3be 100644
+--- a/src/okl/service.py
++++ b/src/okl/service.py
+@@ -57,7 +57,9 @@ class RecordReq(BaseModel):
+     symptom: str | None = None
+     fix: str | None = None
+     tags: str | None = None
+-    aliases: str | None = None
++    # A string or a list: a seed pack writes a list, core.record joins either form, and
++    # `okl seed` against a service sends the pack's list as it is.
++    aliases: str | list[str] | None = None
+     # Was missing, and pydantic drops unknown fields silently: `okl record --applies-to`
+     # against a shared service stored the lesson as valid on every stack (docs audit).
+     applies_to: str | None = None
+@@ -108,7 +110,7 @@ class UpdateFields(BaseModel):
+     fix: str | None = None
+     tags: str | None = None
+     applies_to: str | None = None
+-    aliases: str | None = None
++    aliases: str | list[str] | None = None   # either form, as /record takes it
+ 
+ 
+ class UpdateReq(BaseModel):
+diff --git a/tests/test_aliases.py b/tests/test_aliases.py
+index d9d67db..0cb42f5 100644
+--- a/tests/test_aliases.py
++++ b/tests/test_aliases.py
+@@ -53,3 +53,26 @@ def test_a_seed_pack_may_write_aliases_as_a_list(tmp_path):
+     assert r.returncode == 0, r.stdout + r.stderr
+     shown = json.loads(_okl(tmp_path, "show", "seed:my-pack:a", "--format", "json").stdout)
+     assert shown["aliases"] == "logged out on refresh; session lost"
++
++
++def test_aliases_as_a_list_reach_a_service_through_the_client(remote, tmp_path):
++    """A seed pack writes aliases as a list and core accepts it locally; over a service
++    the same list must not be refused (it was a 422), on record, update or okl seed."""
++    from okl.client import Client
++    from okl.seed import seed_from_file
++
++    c = Client()
++    c.record(id="a1", type="Rule", title="refresh tokens", scope="org",
++             aliases=["logged out on refresh", "session lost"])
++    assert remote.store.get_node("a1").aliases == "logged out on refresh; session lost"
++    c.update("a1", aliases=["JWT", "token expiry"])
++    assert remote.store.get_node("a1").aliases == "JWT; token expiry"
++    c.update("a1", aliases="one phrase")
++    assert remote.store.get_node("a1").aliases == "one phrase"
++
++    pack = tmp_path / "p.json"
++    pack.write_text(json.dumps({"nodes": [{"key": "k", "type": "Rule", "scope": "org",
++                                           "repo": "x", "title": "t",
++                                           "aliases": ["cold start", "first request"]}]}))
++    seed_from_file(Client(), str(pack))
++    assert remote.store.get_node("seed:p:k").aliases == "cold start; first request"

@@ -1,0 +1,65 @@
+diff --git a/src/okl/cli.py b/src/okl/cli.py
+index f5b5ee0..2ec588c 100644
+--- a/src/okl/cli.py
++++ b/src/okl/cli.py
+@@ -8,6 +8,7 @@ from __future__ import annotations
+ import argparse
+ import contextlib
+ import json
++import shlex
+ import sys
+ from pathlib import Path
+ 
+@@ -497,7 +498,7 @@ def cmd_bootstrap(args) -> int:
+         print("  Nothing found. This command reads only git history and file names, so it")
+         print("  comes up empty on young repos and on ones whose history is uninformative.")
+     print("  Review + edit (set scope, add symptom/cause/fix, delete noise), then:")
+-    print(f"    okl seed {out}")
++    print(f"    okl seed {shlex.quote(str(out))}")
+     print("\n  Better: ask your coding agent to run /seed-from-codebase (stamped by")
+     print("  `okl scaffold`). It reads the code itself — the guard rails, the CI config,")
+     print("  the fix commits — and proposes records with a file:line citation each.")
+@@ -560,7 +561,10 @@ def _empty_store_guidance(client: Client) -> list[str]:
+             packs.append((f, count))
+     if packs:
+         lines.append(f"    bundled packs that match your interests ({', '.join(sorted(interests))}):")
+-        lines += [f"      okl seed {f}    ({count} records)" for f, count in packs]
++        # Quoted for the shell: these lines are meant to be pasted, and the pack's path
++        # (an install or checkout location) can hold a space or a quote.
++        lines += [f"      okl seed {shlex.quote(str(f))}    ({count} records)"
++                  for f, count in packs]
+     elif interests:
+         lines.append("    no bundled pack matches your interests; `okl seed` lists all of them")
+     else:
+diff --git a/tests/test_okl.py b/tests/test_okl.py
+index 5768d89..8f9f57d 100644
+--- a/tests/test_okl.py
++++ b/tests/test_okl.py
+@@ -1773,3 +1773,27 @@ def test_empty_store_guidance_is_tailored_and_reaches_the_person_not_the_agent(t
+     # 4. A populated store gets nothing.
+     okl("record", "--type", "Rule", "--scope", "repo", "--title", "one lesson")
+     assert "store is empty" not in okl("init", "--repo", "r").stdout
++
++
++def test_empty_store_guidance_quotes_the_pack_path_for_the_shell(tmp_path, monkeypatch):
++    """The advice is pasted into a shell, so a pack path holding a space or a quote
++    must come back as ONE argument naming that exact path."""
++    import shlex
++
++    import okl.cli as cli
++    from okl.client import Client
++
++    monkeypatch.delenv("OKL_DATABASE_URL", raising=False)
++    monkeypatch.delenv("OKL_SERVICE_URL", raising=False)
++    monkeypatch.chdir(tmp_path)
++    packs = tmp_path / "it's a dir; $(touch pwned) (x)"
++    packs.mkdir()
++    pack = packs / "react pack.json"
++    pack.write_text(json.dumps({"nodes": [{"title": "t", "tags": "react"}]}))
++    monkeypatch.setattr(cli, "_bundled_seed_dir", lambda: packs)
++
++    client = Client({"repo": "r", "interests": ["react"]})
++    lines = [ln for ln in cli._empty_store_guidance(client) if "okl seed " in ln]
++    assert lines, "the matching pack should be named"
++    argv = shlex.split(lines[0].rsplit("(", 1)[0])
++    assert argv == ["okl", "seed", str(pack)]

@@ -1,0 +1,16 @@
+diff --git a/src/okl/client.py b/src/okl/client.py
+index 3039c31..e708cfe 100644
+--- a/src/okl/client.py
++++ b/src/okl/client.py
+@@ -381,7 +381,10 @@ class Client:
+ 
+     def _check_paths(self, repo: str, paths: list[str], root: Path) -> dict:
+         """core.check_paths over this repo's view, locally or from the service, with the paths
+-        made repo-relative and those outside the repo listed apart."""
++        made repo-relative and those outside the repo listed apart. An empty list is refused: a
++        check of no files answered with no lessons read as a clean check."""
++        if not paths:
++            raise ValueError("no paths to check: give the files about to be read or changed")
+         inside, outside = _repo_relative(paths, root)
+         if self.mode == "remote":
+             result = self._post("/check", {"repo": repo, "task": "", "paths": inside})
