@@ -1,0 +1,1209 @@
+{
+ "check": "replay-screen-457",
+ "what": "every candidate of §4bc's 58 past changes, screened for #457 by the procedure §4bg used: the tasks it gave, or why it gave none, and every defect looked at and set aside, with the reason. Compiled by hand from the notes the screening agents kept (Claude, reading the code and running graders; no replay session); nothing was run to make this file.",
+ "candidates": 58,
+ "used": 26,
+ "rejected": 32,
+ "rejected_by_class": {
+  "no behaviour": 17,
+  "already a §4aw or §4bg task": 6,
+  "no stored lesson names it": 7,
+  "never fixed": 1,
+  "unreachable without a model or the fix's own names": 1
+ },
+ "defects_set_aside": 94,
+ "rows": [
+  {
+   "pr": 278,
+   "title": "The probe prints a rejection line, and the evals README carries the standing measures",
+   "key_broken": [
+    "doc-claim-governs-doc-and-code",
+    "n_6b65aa35593c"
+   ],
+   "tasks": [],
+   "outcome": "rejected",
+   "class": "no behaviour",
+   "rejected": [
+    {
+     "defect": "71a6b42: the README's standing table mixed receipts from two commits and two store sizes, with two latencies from no receipt",
+     "reason": "no test can reach it without the fix's own names: the fix re-ran the three arms into new receipts and added evals/standing_table.py; the defect is in prose and figures (n_6b65aa35593c and doc-claim-governs-doc-and-code name the class)"
+    }
+   ]
+  },
+  {
+   "pr": 283,
+   "title": "Dependencies: the seven bot updates in one change, and the bot stops raising floors",
+   "key_broken": [
+    "seed:geospatial-enforcement-defects:r_pin_gating_tools"
+   ],
+   "tasks": [],
+   "outcome": "rejected",
+   "class": "no behaviour",
+   "rejected": [
+    {
+     "defect": null,
+     "reason": "a dependency and Dependabot-config batch: no later commit fixes anything it wrote, and there is no behaviour to grade"
+    }
+   ]
+  },
+  {
+   "pr": 308,
+   "title": "§4ac: Porter stemming raised bench recall at the same null rate",
+   "key_broken": [
+    "seed:python-canon:py_unclosed_sqlite"
+   ],
+   "tasks": [
+    "t35"
+   ],
+   "outcome": "used",
+   "class": null,
+   "rejected": [
+    {
+     "defect": "be34723: the key's seed:python-canon:py_unclosed_sqlite",
+     "reason": "the key's lesson does not fit this PR's fix; the real defect is task b05 under n_e49be14d6207"
+    }
+   ]
+  },
+  {
+   "pr": 269,
+   "title": "The index arm, built and pre-registered: every other lesson in scope, for an agent that can fetch",
+   "key_broken": [
+    "falsifier-relative-to-control",
+    "n_5ddb0776a863",
+    "n_9ba48d85ed19",
+    "n_b578addf6269",
+    "remote-path-test-through-client",
+    "seed:dotnet-canon:r_experiment_sunset",
+    "seed:rag-defects:qz_crosstab"
+   ],
+   "tasks": [
+    "t34"
+   ],
+   "outcome": "used",
+   "class": null,
+   "rejected": [
+    {
+     "defect": "ba97fe7: --arms baseline,indexed,indexed ran and counted the indexed arm twice",
+     "reason": "no stored lesson names it"
+    },
+    {
+     "defect": "9fa8d3f: the docs test's briefed counts read every non-baseline arm",
+     "reason": "a test-only fix (tests/test_docs.py) with no stored lesson naming it"
+    }
+   ]
+  },
+  {
+   "pr": 312,
+   "title": "Measure drift and stale lessons (§4ae, §4af, §4ag), and make the README's headline the thesis",
+   "key_broken": [
+    "docs-agent-neutral",
+    "harness-reads-a-moving-working-tree",
+    "n_0637c92c032f",
+    "seed:dotnet-canon:r_grep_to_zero"
+   ],
+   "tasks": [
+    "t37"
+   ],
+   "outcome": "used",
+   "class": null,
+   "rejected": [
+    {
+     "defect": "01cdb85, 76c9c76: judges read today's lesson text beside the run's code; a lesson missing from store and receipt was judged blank",
+     "reason": "no test can reach it without the fix's own names or a model: the reads happen inside judge()/rejudge(), which call claude, and as_recorded/text_sha were invented by the fix"
+    },
+    {
+     "defect": "01cdb85: the replay's judge lost every judgment on one time-out",
+     "reason": "reachable only through drift_replay.judge(), which runs the claude CLI; no stored lesson names it"
+    },
+    {
+     "defect": "3f0d43e, 8c6ad3c: drift_replay classified each event by the lesson's final governed paths, not the snapshot the gate read then",
+     "reason": "no stored lesson names it"
+    }
+   ]
+  },
+  {
+   "pr": 359,
+   "title": "Bash scripts test with [[ ]], and a test holds it (#356)",
+   "key_broken": [
+    "n_e7988ff536fb"
+   ],
+   "tasks": [],
+   "outcome": "rejected",
+   "class": "no stored lesson names it",
+   "rejected": [
+    {
+     "defect": "the [[ ]] conversion's pattern check let an OKL_BRIEFING_LIMIT past SQLite's integer range through to okl, blocking the prompt (fixed on main in da28797)",
+     "reason": "no stored lesson names it: bash-double-brackets names [[ ]]'s arithmetic evaluation and octal reading, and the frozen code follows it by matching a pattern; nothing names an out-of-range number"
+    },
+    {
+     "defect": "the [ ] check missed a tab-separated test and a path with a space (a416aa6)",
+     "reason": "the fix is in a test (tests/test_scaffold.py) and no stored lesson names it"
+    }
+   ]
+  },
+  {
+   "pr": 112,
+   "title": "Release 0.7.8: re-seeding keeps verification (#110), lessons watching deleted files (#109), init --no-ci (#111)",
+   "key_broken": [
+    "n_31bde92d9003",
+    "n_696a70084e1a"
+   ],
+   "tasks": [
+    "t21"
+   ],
+   "outcome": "used",
+   "class": null,
+   "rejected": [
+    {
+     "defect": "1180878: `bool(cfg) and cfg.read_text()` did not narrow Path | None for mypy.",
+     "reason": "the fix has no behaviour (a type annotation narrowing only). The behaviour fix of the same round (doctor on a bad config) is a03."
+    },
+    {
+     "defect": "6c7d6ca's README lines on --ci and the reworded drift notice ('match nothing committed here').",
+     "reason": "docs and wording only; a grader would read the fix's own text."
+    }
+   ]
+  },
+  {
+   "pr": 267,
+   "title": "An optional semantic arm beside the full-text search, measured and not made the default",
+   "key_broken": [
+    "n_b578addf6269",
+    "seed:rag-defects:qz_judge_crash"
+   ],
+   "tasks": [
+    "t32",
+    "t39"
+   ],
+   "outcome": "used",
+   "class": null,
+   "rejected": [
+    {
+     "defect": "6e75c9b: a task with no subject words reported the semantic arm as on",
+     "reason": "no stored lesson names it"
+    },
+    {
+     "defect": "2018eb4: linear fusion gave a semantic-only candidate zero weight when every cosine tied",
+     "reason": "no stored lesson names it (nothing about zero-range normalisation)"
+    },
+    {
+     "defect": "4554496: the embedding model was loaded again on every check in a long-lived process",
+     "reason": "no stored lesson names it (a cost, not a correctness rule in the store)"
+    },
+    {
+     "defect": "a3e2afd / 6e75c9b: okl embed --model, mypy overrides for the optional extra, a timeout on the trace's seeding",
+     "reason": "no stored lesson names them; a removed flag and tooling settings"
+    }
+   ]
+  },
+  {
+   "pr": 30,
+   "title": "Name an empty store at init, with the next steps that fit this repo",
+   "key_broken": [
+    "n_849a5b0425ef"
+   ],
+   "tasks": [
+    "t19"
+   ],
+   "outcome": "used",
+   "class": null,
+   "rejected": [
+    {
+     "defect": "The /seed-from-codebase lookup in the empty-store advice was relative to the current directory, so from a subdirectory it missed a command installed at the root and advised `okl scaffold .` there (55d649c, first half).",
+     "reason": "no stored lesson names it (searched cwd, project root, subdirectory, walk up; the hits are about ruff's isort, hooks resolving binaries and a resolver's default location). The other half of 55d649c is a01."
+    }
+   ]
+  },
+  {
+   "pr": 383,
+   "title": "Architecture diagrams of okl itself, generated where the code holds the facts and checked where they are drawn",
+   "key_broken": [
+    "n_0637c92c032f",
+    "n_5ddb0776a863",
+    "n_e7988ff536fb"
+   ],
+   "tasks": [
+    "t44"
+   ],
+   "outcome": "used",
+   "class": null,
+   "rejected": [
+    {
+     "defect": "the name check read only the .excalidraw source, not its .svg render (e5be51c)",
+     "reason": "already a task of §4bg (t02, PR 383, n_0637c92c032f); the misspelt-event defect of the same commit is task c05"
+    }
+   ]
+  },
+  {
+   "pr": 35,
+   "title": "Make okl metric state its coverage and count recurrences it could not see",
+   "key_broken": [
+    "n_e7988ff536fb"
+   ],
+   "tasks": [
+    "t20"
+   ],
+   "outcome": "used",
+   "class": null,
+   "rejected": [
+    {
+     "defect": "A defect whose RECURS_IN points at a non-Defect record was dropped from the recurrence report's denominator of defect classes (c4a418a).",
+     "reason": "no stored lesson names it: the nearest, measure-the-population-not-the-slice, is about a study reporting a safeguard's precision without its coverage, not about which records a metric counts as a class. The other half of c4a418a (only a Gate arms) is a02."
+    },
+    {
+     "defect": "The change removed Client.recurrence(), shipped in v0.5.0; c4a418a restored it.",
+     "reason": "no stored lesson names keeping a released public method; and a grader would have to call a method that does not exist at frozen."
+    }
+   ]
+  },
+  {
+   "pr": 77,
+   "title": "Easy first run: stack detection + starter lessons, visible briefing notice, okl reverify",
+   "key_broken": [
+    "n_5ddb0776a863",
+    "n_adea7f2c7373",
+    "n_b4050b826687",
+    "n_e7988ff536fb"
+   ],
+   "tasks": [
+    "t48"
+   ],
+   "outcome": "used",
+   "class": null,
+   "rejected": [
+    {
+     "defect": "okl reverify ended in a TimeoutExpired traceback on one slow check, leaving later lessons unchecked (fixed on main in 5dbfe3e)",
+     "reason": "no stored lesson names it; #77 gives control c09 (hook-cli-version-skew) instead"
+    },
+    {
+     "defect": "okl_search results carried no lesson id, though /record tells the agent to reuse one (fixed on main in 5dbfe3e)",
+     "reason": "no stored lesson names it"
+    }
+   ]
+  },
+  {
+   "pr": 135,
+   "title": "Log which lessons each briefing showed, and report exposure in okl metric",
+   "key_broken": [
+    "doc-claim-governs-doc-and-code",
+    "n_6b65aa35593c"
+   ],
+   "tasks": [
+    "t22"
+   ],
+   "outcome": "used",
+   "class": null,
+   "rejected": []
+  },
+  {
+   "pr": 86,
+   "title": "Docs: state supported platforms; Windows untested (#85)",
+   "key_broken": [
+    "doc-claim-governs-doc-and-code"
+   ],
+   "tasks": [],
+   "outcome": "rejected",
+   "class": "no behaviour",
+   "rejected": [
+    {
+     "defect": null,
+     "reason": "docs only: the commits after the change reword README and the guide (git is needed only for drift)"
+    }
+   ]
+  },
+  {
+   "pr": 158,
+   "title": "ADR (proposed): org lessons live in a ledger repo, adopted by pull request",
+   "key_broken": [
+    "n_aa3e45a2ecd6",
+    "n_adea7f2c7373"
+   ],
+   "tasks": [],
+   "outcome": "rejected",
+   "class": "no behaviour",
+   "rejected": [
+    {
+     "defect": null,
+     "reason": "a decision record only"
+    }
+   ]
+  },
+  {
+   "pr": 34,
+   "title": "Make the drift gate say when it checked nothing, instead of passing",
+   "key_broken": [
+    "n_58119d0a63d9",
+    "n_e7988ff536fb",
+    "seed:dotnet-review-surfaces:rs_workflow_hardening_baseline"
+   ],
+   "tasks": [],
+   "outcome": "rejected",
+   "class": "already a §4aw or §4bg task",
+   "rejected": [
+    {
+     "defect": null,
+     "reason": "the only fix after it (d77c50b) is §4bg's t10"
+    }
+   ]
+  },
+  {
+   "pr": 150,
+   "title": "Say a lesson stays red until its check passes, in the README and guide too",
+   "key_broken": [
+    "doc-claim-governs-doc-and-code"
+   ],
+   "tasks": [],
+   "outcome": "rejected",
+   "class": "no behaviour",
+   "rejected": [
+    {
+     "defect": null,
+     "reason": "docs only: the review fix names the other way a stale lesson clears"
+    }
+   ]
+  },
+  {
+   "pr": 162,
+   "title": "REPORT §4j: the ids' A/B run, 4/23 unbriefed against 0/23 briefed",
+   "key_broken": [
+    "n_473aec369b25"
+   ],
+   "tasks": [],
+   "outcome": "rejected",
+   "class": "no behaviour",
+   "rejected": [
+    {
+     "defect": null,
+     "reason": "report text only: one briefed sample counted as unevaluable"
+    }
+   ]
+  },
+  {
+   "pr": 274,
+   "title": "The reranker's model lives under the cache home, not the system temp directory",
+   "key_broken": [
+    "seed:python-canon:py_dont_mock_what_you_dont_own"
+   ],
+   "tasks": [],
+   "outcome": "rejected",
+   "class": "no behaviour",
+   "rejected": [
+    {
+     "defect": null,
+     "reason": "the only fix after it is to a costs doc; §4bg's control t16 already uses this change"
+    }
+   ]
+  },
+  {
+   "pr": 275,
+   "title": "REPORT §4u: the two §4t follow-ups measured; nothing changes in behaviour",
+   "key_broken": [
+    "seed:geospatial-enforcement-defects:r_single_source_sets"
+   ],
+   "tasks": [
+    "t33"
+   ],
+   "outcome": "used",
+   "class": null,
+   "rejected": []
+  },
+  {
+   "pr": 198,
+   "title": "A/B: the judge reads the whole submission (part of #182)",
+   "key_broken": [
+    "n_00985805cdbb",
+    "n_8a6e1abce5cc"
+   ],
+   "tasks": [],
+   "outcome": "rejected",
+   "class": "already a §4aw or §4bg task",
+   "rejected": [
+    {
+     "defect": "7f4cb3a: the judge's window was not part of the instrument-drift check",
+     "reason": "already a task of §4aw (same PR and lesson, n_473aec369b25)"
+    },
+    {
+     "defect": "7f4cb3a: an over-window submission was labelled NO CODE / 'no implementation to judge' in the log and report",
+     "reason": "no stored lesson names it: the key's n_00985805cdbb is about comments and n_8a6e1abce5cc about --dry-run tests; nothing in the store is about a failure label naming the wrong cause"
+    }
+   ]
+  },
+  {
+   "pr": 373,
+   "title": "The service refuses to open the store without OKL_TOKEN (#371)",
+   "key_broken": [
+    "doc-claim-governs-doc-and-code"
+   ],
+   "tasks": [
+    "t41"
+   ],
+   "outcome": "used",
+   "class": null,
+   "rejected": [
+    {
+     "defect": "post-review commits ceca22e and cb86582",
+     "reason": "the fix has no behaviour: DEPLOY.md and SCAFFOLD.md wording; the code defect fixed inside the PR (1d0ec6f, the ASGI entry point) is task c02"
+    },
+    {
+     "defect": "an empty OKL_TOKEN counted as set in one read and unset in another (empty-secret-is-unset)",
+     "reason": "fixed by the change itself (d4c63d8), not after it; c02 still includes an empty token among its cases"
+    },
+    {
+     "defect": "a test's stub of uvicorn.run missed the re-imported module (stub-the-module-the-code-imports)",
+     "reason": "the defect and its fix are in a test (tests/test_okl.py); no behaviour of okl to grade"
+    }
+   ]
+  },
+  {
+   "pr": 168,
+   "title": "A/B: a sample with no code is unevaluable; receipts name the model (#164)",
+   "key_broken": [
+    "n_8a6e1abce5cc",
+    "seed:rag-defects:qz_fixtures"
+   ],
+   "tasks": [],
+   "outcome": "rejected",
+   "class": "already a §4aw or §4bg task",
+   "rejected": [
+    {
+     "defect": "bb2995f: the judge==generator guard compared command strings, so a judge resolving to the generator's model ran",
+     "reason": "already a task of §4aw (same PR and lesson, seed:rag-defects:qz_judge_self)"
+    },
+    {
+     "defect": null,
+     "reason": "no other defect the change wrote was fixed later with a stored lesson naming it: bb2995f is the only commit after it in the PR; the 8,000-character judge window it carried over was #198's own change, and the later resolved_models fix (cf2ddcc) is a #305 tools-on defect, not #168's code"
+    }
+   ]
+  },
+  {
+   "pr": 161,
+   "title": "Make lessons addressable and safely editable (okl review R1)",
+   "key_broken": [
+    "doc-claim-governs-doc-and-code",
+    "n_6b65aa35593c",
+    "n_b550ba9c5c8a",
+    "seed:dotnet-canon:r_docs_review_surface",
+    "seed:dotnet-canon:r_optimistic_concurrency",
+    "seed:geospatial-enforcement-defects:r_single_source_sets"
+   ],
+   "tasks": [],
+   "outcome": "rejected",
+   "class": "no stored lesson names it",
+   "rejected": [
+    {
+     "defect": "c0280ad: the client turned an HTTPError into OKLRejectedError without closing it, leaking the response's socket (a ResourceWarning that failed the Python 3.14 suite).",
+     "reason": "no stored lesson names it: the two lessons about unclosed resources (seed:python-canon:py_unclosed_sqlite, unclosed-sqlite-in-test-pr154) name SQLite connections only. A behaviour grader would also need a real socket for the warning to appear (the in-process service fixture's error bodies are BytesIO)."
+    },
+    {
+     "defect": "c0280ad / b9620e7: 'keeps its proof' qualified, org scope described as visibility.",
+     "reason": "docs and wording only. §4bg's t13 already holds #161's remote-path defects."
+    }
+   ]
+  },
+  {
+   "pr": 388,
+   "title": "okl intake pr <n>: a PR's resolved review findings, put to the encoding loop (#376)",
+   "key_broken": [
+    "review-bot-watch-matches-wrong-comment"
+   ],
+   "tasks": [
+    "t47"
+   ],
+   "outcome": "used",
+   "class": null,
+   "rejected": [
+    {
+     "defect": "a check by paths still logged a briefing with log=False (f3cf7c2)",
+     "reason": "same PR and lesson as §4bg's t01 (eval-scripts-no-exposure)"
+    },
+    {
+     "defect": "only the first page of threads and commits read; findings ordered by URL (6125c92); a category label taken as a finding's title; a bare repo name passed to gh (a563615); gh -F typing owner and name (f3cf7c2)",
+     "reason": "no stored lesson names any of them; the silent skipped lookup of 6125c92 is task c10"
+    }
+   ]
+  },
+  {
+   "pr": 37,
+   "title": "Give CI a store: a committed drift snapshot",
+   "key_broken": [
+    "n_02cc84da158d",
+    "n_e7988ff536fb",
+    "seed:dotnet-defects:nc_arch_reviewer"
+   ],
+   "tasks": [],
+   "outcome": "rejected",
+   "class": "already a §4aw or §4bg task",
+   "rejected": [
+    {
+     "defect": null,
+     "reason": "the only code fix after it (d1b09b9) is §4bg's t03; the rest commit and refresh the drift snapshot"
+    }
+   ]
+  },
+  {
+   "pr": 256,
+   "title": "evals: a rephrasing probe for retrieval, with its receipt",
+   "key_broken": [
+    "generated-diagram-traced-old-path",
+    "seed:rag-defects:qz_fixtures"
+   ],
+   "tasks": [
+    "t31"
+   ],
+   "outcome": "used",
+   "class": null,
+   "rejected": [
+    {
+     "defect": "44c9fc4: the rank column searched only the first 400 records, so a rank past them read as absent",
+     "reason": "no stored lesson names it: filter-after-fetch-widens-window is about a filter shrinking a top-k, and diagnostic-on-stage-window cites this whole-store rank only as the setting of a different defect"
+    },
+    {
+     "defect": "44c9fc4: the price_tamper paraphrase shared a word with its lesson",
+     "reason": "the fix has no behaviour (a hand-written variant reworded)"
+    }
+   ]
+  },
+  {
+   "pr": 300,
+   "title": "okl warm: a local model that briefs by meaning too, on once a store is indexed (REPORT §4z)",
+   "key_broken": [
+    "comparison-table-one-sitting-generated",
+    "harness-reads-a-moving-working-tree"
+   ],
+   "tasks": [
+    "t42"
+   ],
+   "outcome": "used",
+   "class": null,
+   "rejected": [
+    {
+     "defect": "the server ended on a client that gave up (broken pipe), and a second server started while one was loading (fixed in 5c6a377)",
+     "reason": "no stored lesson names either"
+    },
+    {
+     "defect": "a lesson with no vector was held to the meaning line on words alone (5c6a377); no-flock AttributeError and the served count taken before the reply (98b7a03); the warm default on a shared store and auto-start keyed on the message's words (3fc6c65); a stop sent while loading (40c82ee); no Unix sockets raising AttributeError (661e63c)",
+     "reason": "no stored lesson names any of them (auto-start keyed on words is close to n_c95bdc056620, but that lesson is about a rename, and no test reaches it without the fix's own warm_reason field)"
+    }
+   ]
+  },
+  {
+   "pr": 299,
+   "title": "Two tiers: the default names every lesson that matched (REPORT §4y)",
+   "key_broken": [
+    "comparison-table-one-sitting-generated",
+    "index-in-context-not-fetched"
+   ],
+   "tasks": [
+    "t26",
+    "t27"
+   ],
+   "outcome": "used",
+   "class": null,
+   "rejected": [
+    {
+     "defect": "e17cfe7 (second half): a retracted lesson or a Tombstone in the second tier was listed with its old fix as advice.",
+     "reason": "no stored lesson names it. The first half of e17cfe7 is a08."
+    },
+    {
+     "defect": "0d2f083: a lesson past its TTL in the second tier lacked the full briefing's STALE mark.",
+     "reason": "no stored lesson names it (briefing-hides-unproven-lessons is about proof labels for lessons without files, another mechanism), and a grader would have to look for the fix's own mark text."
+    },
+    {
+     "defect": "385ec20 / d5fe4c6: the action list said no rule applied (and 'Proceed') while the full briefing showed a matched lesson that routes no action.",
+     "reason": "no stored lesson names it."
+    },
+    {
+     "defect": "b3008de: tests cleared the store but not the settings that change a briefing; e17cfe7's evals/briefing_size.py environment and real_prompts.py misses.",
+     "reason": "test and eval tooling only, no product behaviour. e1b250d is a09."
+    }
+   ]
+  },
+  {
+   "pr": 305,
+   "title": "§4ab pre-registered: does a line that says when, or a tool that says to call it, get a lesson opened?",
+   "key_broken": [
+    "falsifier-relative-to-control"
+   ],
+   "tasks": [],
+   "outcome": "rejected",
+   "class": "unreachable without a model or the fix's own names",
+   "rejected": [
+    {
+     "defect": "88fd552, 84a3894, 3fbef68: the when, when-tool and tier arms ran without their treatment, or failed every tier arm together",
+     "reason": "no test can reach it without the fix's own names or a model: the fail-closed decision lives in ab_harness.main() behind startup probes that run the claude CLI with tools; the only seam, unchanged_by_style, changed signature in 84a3894 and was wrapped by tier_headers_for (3fbef68), so a different right fix need not keep it (n_b578addf6269 would fit)"
+    },
+    {
+     "defect": "032f174, d97e55c, cf2ddcc: unlogged fetch paths, tools-on generators without --restricted, the instrument compared as the base command",
+     "reason": "no test can reach it without a model: each is a claude command line the harness builds and runs; a grader could only compare command strings, which a different right fix need not produce; no stored lesson names the fetch-path rule"
+    }
+   ]
+  },
+  {
+   "pr": 50,
+   "title": "Safe install and uninstall: fingerprinted files, okl init --uninstall, OKL_DISABLED_HOOKS",
+   "key_broken": [
+    "n_e7988ff536fb",
+    "seed:geospatial-enforcement-defects:r_single_source_sets"
+   ],
+   "tasks": [
+    "t40"
+   ],
+   "outcome": "used",
+   "class": null,
+   "rejected": [
+    {
+     "defect": "Owned files written in text mode (\\n becomes \\r\\n on Windows, breaking a bash shebang), fixed in 893655e by writing exact bytes",
+     "reason": "no test can reach it on this platform (POSIX text mode does not translate newlines), and no stored lesson names it; #50's symlink defect is task c01, and §4bg's t18 is its control with n_58119d0a63d9"
+    }
+   ]
+  },
+  {
+   "pr": 115,
+   "title": "okl verify <id> suggests a check; drift and reverify say what to do in plain words",
+   "key_broken": [
+    "doc-claim-governs-doc-and-code"
+   ],
+   "tasks": [],
+   "outcome": "rejected",
+   "class": "already a §4aw or §4bg task",
+   "rejected": [
+    {
+     "defect": null,
+     "reason": "its quoting fix is §4aw's task (n_adea7f2c7373); the rest is a message and guide wording"
+    }
+   ]
+  },
+  {
+   "pr": 290,
+   "title": "A check-time model load stays offline after an online one in the same process",
+   "key_broken": [
+    "seed:python-canon:py_dont_mock_what_you_dont_own"
+   ],
+   "tasks": [],
+   "outcome": "rejected",
+   "class": "no stored lesson names it",
+   "rejected": [
+    {
+     "defect": "f05eafe: hub.loading read HF_HUB_OFFLINE and TRANSFORMERS_OFFLINE with any(), not huggingface_hub's precedence (HF_HUB_OFFLINE=0 outranks TRANSFORMERS_OFFLINE=1).",
+     "reason": "no stored lesson names it (searched precedence, hugging, HF_HUB, offline); the answer key's py_dont_mock_what_you_dont_own is about mocking third-party code in tests."
+    }
+   ]
+  },
+  {
+   "pr": 163,
+   "title": "Retire a lesson with a reason: wrong, replaced or obsolete (okl review R2)",
+   "key_broken": [
+    "remote-timeout-not-a-deadline",
+    "seed:dotnet-canon:r_no_nplus1",
+    "seed:geospatial-enforcement-defects:r_single_source_sets"
+   ],
+   "tasks": [
+    "t23"
+   ],
+   "outcome": "used",
+   "class": null,
+   "rejected": [
+    {
+     "defect": "11f543d (second half): retire wrote the status before logging the reason, so a failure part-way left a retired lesson with no reason.",
+     "reason": "no stored lesson names write ordering under a partial failure (remote-timeout-not-a-deadline is about a client's lost answer, and §4bg's t11 already uses it for #163); a grader would also have to inject a failure into a store method mid-write. The first half of 11f543d is a05."
+    }
+   ]
+  },
+  {
+   "pr": 265,
+   "title": "Measured claims match every receipt: floor, never-reproduced tasks, §4i pooling, pre-flight interests",
+   "key_broken": [
+    "doc-claim-governs-doc-and-code",
+    "n_57cc4b427f05",
+    "n_6b65aa35593c",
+    "pooled-receipts-miss-report-corrections",
+    "scope-literature-gap-claims"
+   ],
+   "tasks": [],
+   "outcome": "rejected",
+   "class": "no behaviour",
+   "rejected": [
+    {
+     "defect": null,
+     "reason": "the fix has no behaviour: the commits after the change are a pool recut and re-rendered figures (REPORT, README, anatomy sheet); the harness guard code in its range came from merging #262"
+    }
+   ]
+  },
+  {
+   "pr": 89,
+   "title": "Docs: run the drift gate without GitHub Actions",
+   "key_broken": [
+    "doc-claim-governs-doc-and-code"
+   ],
+   "tasks": [],
+   "outcome": "rejected",
+   "class": "no behaviour",
+   "rejected": [
+    {
+     "defect": null,
+     "reason": "docs only (README, guide), and nothing later fixes code it wrote"
+    }
+   ]
+  },
+  {
+   "pr": 66,
+   "title": "Docs catch up with the eval report (#22)",
+   "key_broken": [
+    "n_6b65aa35593c"
+   ],
+   "tasks": [],
+   "outcome": "rejected",
+   "class": "no behaviour",
+   "rejected": [
+    {
+     "defect": null,
+     "reason": "docs and hook comments only, and nothing later fixes code it wrote"
+    }
+   ]
+  },
+  {
+   "pr": 122,
+   "title": "Add seed/python-canon.json: the .NET canon's pragmatism, in Python",
+   "key_broken": [
+    "doc-claim-governs-doc-and-code"
+   ],
+   "tasks": [],
+   "outcome": "rejected",
+   "class": "no behaviour",
+   "rejected": [
+    {
+     "defect": null,
+     "reason": "docs only: the review fix says init imports the canon only into a new, empty store"
+    }
+   ]
+  },
+  {
+   "pr": 326,
+   "title": "Watched lessons check what they claim (#318)",
+   "key_broken": [
+    "doc-claim-governs-doc-and-code",
+    "docs-agent-neutral",
+    "falsifier-relative-to-control"
+   ],
+   "tasks": [
+    "t38"
+   ],
+   "outcome": "used",
+   "class": null,
+   "rejected": [
+    {
+     "defect": "ebea5ae: check-portable-ungated counted applies_to 'any' as gated, though the briefing ungates it",
+     "reason": "no stored lesson names it (n_07faa4565128 is the rule the check enforces, not this misreading; nothing in the store is about a check reading a field differently from the product)"
+    },
+    {
+     "defect": "ebea5ae, 477e8f0: drift_mutate resumed patches from the other --blind mode, or judged against an edited lesson",
+     "reason": "no test can reach it without the fix's own names or a model: the resume happens inside main(), which runs breaker and judge models in worktrees, and resumable() was invented by the fix; no stored lesson names it"
+    },
+    {
+     "defect": "ebea5ae: RELATED-WORK called drift a detector; the defaults check's stub URL was http",
+     "reason": "the fix has no behaviour (wording, and a URL that is never contacted)"
+    }
+   ]
+  },
+  {
+   "pr": 259,
+   "title": "check: a relevance floor before the top-12 cutoff",
+   "key_broken": [
+    "filter-after-fetch-widens-window",
+    "n_849a5b0425ef",
+    "seed:dotnet-canon:r_no_nplus1"
+   ],
+   "tasks": [],
+   "outcome": "rejected",
+   "class": "already a §4aw or §4bg task",
+   "rejected": [
+    {
+     "defect": "834756d (exhaustion): _live_hits judged exhaustion against the widened window instead of the one its last search asked for.",
+     "reason": "the defect is already a task of §4bg (t05: same PR, same lesson filter-after-fetch-widens-window); and it was introduced by c1fcde2, t05's own fix, so it is not present at the change as first written."
+    },
+    {
+     "defect": "834756d (neighbours): the floor asked the store for every hit's neighbours even when no hit cleared it, so no link could rescue one.",
+     "reason": "efficiency only, same results; the answer key's seed:dotnet-canon:r_no_nplus1 states 'no query inside a loop over another query's results', which the end commit still breaks whenever one hit is strong, so no grader of the lesson's rule passes at end."
+    },
+    {
+     "defect": "834756d (diagram): the pipeline trace now aborts if check() widened past its window.",
+     "reason": "docs tooling only."
+    }
+   ]
+  },
+  {
+   "pr": 266,
+   "title": "Lessons carry aliases: a developer's words for a lesson, indexed and measured on a blind held-out set",
+   "key_broken": [
+    "n_b74bad29fd87",
+    "remote-path-test-through-client",
+    "seed:geospatial-enforcement-defects:r_single_source_sets"
+   ],
+   "tasks": [
+    "t24",
+    "t25"
+   ],
+   "outcome": "used",
+   "class": null,
+   "rejected": [
+    {
+     "defect": "8b43848 (middle): join_aliases([]) returned None, so core.update(aliases=[]) read as 'not given' instead of clearing.",
+     "reason": "no stored lesson names it: the nearest, empty-secret-is-unset, prescribes reading an empty value as unset everywhere, the opposite of this fix. The other two parts of 8b43848 are a06 and a07."
+    }
+   ]
+  },
+  {
+   "pr": 343,
+   "title": "Open questions in the docs name what settles them (#334)",
+   "key_broken": [
+    "n_aa3e45a2ecd6"
+   ],
+   "tasks": [],
+   "outcome": "rejected",
+   "class": "no behaviour",
+   "rejected": [
+    {
+     "defect": null,
+     "reason": "a test-only gate (tests/test_docs.py) with no later fix of a defect it wrote"
+    }
+   ]
+  },
+  {
+   "pr": 363,
+   "title": "Brief a file's lessons when Claude Code reads it, and REPORT §4aj's result (#94)",
+   "key_broken": [
+    "harness-reads-a-moving-working-tree",
+    "hook-cli-version-skew",
+    "thesis-maintain-anything"
+   ],
+   "tasks": [],
+   "outcome": "rejected",
+   "class": "no stored lesson names it",
+   "rejected": [
+    {
+     "defect": "the read hook exited silently, unbriefed, with no python3 on PATH (fixed on main in e3c3df1)",
+     "reason": "no stored lesson names it (n_7e292a18d45d even allows a best-effort hook to disable silently)"
+    },
+    {
+     "defect": "the read hook's marker keyed by session only (48a4448); a resolved okl that cannot start (da28797)",
+     "reason": "already tasks of §4bg (t12 temp-marker-keyed-by-scope, t14 hook-cli-version-skew); the in-PR review commits (e53f70c, 874e1a8, 09f0315) are docs, receipts and return values"
+    }
+   ]
+  },
+  {
+   "pr": 362,
+   "title": "okl check --path: the lessons that govern a file, before it is read or edited (#94)",
+   "key_broken": [
+    "n_713b8c104f12",
+    "remote-path-test-through-client"
+   ],
+   "tasks": [
+    "t45"
+   ],
+   "outcome": "used",
+   "class": null,
+   "rejected": [
+    {
+     "defect": "paths all outside the repo posted an empty list the service refused (48a4448)",
+     "reason": "already a task of §4bg (t09, PR 362, remote-path-test-through-client)"
+    },
+    {
+     "defect": "path_matches ignored git's pathspec magic; a symlinked file was governed by its target; --limit cut a file's lessons (all in 82bad02)",
+     "reason": "no stored lesson names them (drift-verdict-paths-agree is about drift's staleness predicates, not path matching); the empty-paths defect of the same commit is task c06"
+    }
+   ]
+  },
+  {
+   "pr": 280,
+   "title": "The relevance floor weighs a one-word match by how common the word is (REPORT §4v)",
+   "key_broken": [
+    "doc-claim-governs-doc-and-code",
+    "n_00985805cdbb"
+   ],
+   "tasks": [],
+   "outcome": "rejected",
+   "class": "no stored lesson names it",
+   "rejected": [
+    {
+     "defect": "d73a910: evals/probe_rephrase.py's --common-share took nan, infinities and shares outside [0, 1].",
+     "reason": "no stored lesson names an option accepting values outside its domain: n_713b8c104f12 is about a query filter whose mistype reads as an empty result (exit 0, zero rows), which this is not. Eval-script only."
+    },
+    {
+     "defect": "9796687: `COMMON_WORD_SHARE or 1.0` read a share of 0 as unset, so every word passed the one-word rule.",
+     "reason": "no stored lesson names this fix: empty-secret-is-unset (created 2026-11-07, after) has the same 'set in one read, unset in another' shape, but its fix normalises the falsy value to unset, which is what the frozen code effectively did; the real fix made 0 a setting."
+    },
+    {
+     "defect": "4c34fcf, 5ab665b, 162214a: the five-record exception stated the right way round, diagrams, the standing table.",
+     "reason": "docs, diagrams and receipts only."
+    }
+   ]
+  },
+  {
+   "pr": 387,
+   "title": "A renamed seed pack takes the records a store holds under its old name with it (#379)",
+   "key_broken": [
+    "importer-keeps-local-decision",
+    "n_c95bdc056620"
+   ],
+   "tasks": [
+    "t28",
+    "t29"
+   ],
+   "outcome": "used",
+   "class": null,
+   "rejected": [
+    {
+     "defect": "2de8bae: okl dedup gave every pair the same advice (retire one --by the other), which applied to a retracted record drops its AVOID warning.",
+     "reason": "output wording and advice: a grader would have to read the fix's own mark and advice text. The compared-set defect of the same lesson (a9d813f, fff706c) is a11; a863e97 is a10."
+    }
+   ]
+  },
+  {
+   "pr": 307,
+   "title": "Free review gates: the reviewer on the Claude subscription, a docs-figure gate, Postgres in CI",
+   "key_broken": [
+    "doc-claim-governs-doc-and-code",
+    "harness-reads-a-moving-working-tree",
+    "n_57cc4b427f05",
+    "n_916330f61994"
+   ],
+   "tasks": [],
+   "outcome": "rejected",
+   "class": "no stored lesson names it",
+   "rejected": [
+    {
+     "defect": "the docs-figure gate missed a number and its unit split across two lines (1ccded4)",
+     "reason": "doc-claim-governs-doc-and-code names it ('normalise whitespace when matching prose, because doc lines wrap'), but the gate and its fix live entirely in tests/test_docs.py: no non-test code to grade, so left out (see the report)"
+    },
+    {
+     "defect": "a published figure moved to another measurement passed the figure gate (1ccded4, NEAR)",
+     "reason": "no test can reach it without the fix's own table of measurement words; also a test-file gate"
+    },
+    {
+     "defect": "evals/model_files.py set HF_HOME while HF_HUB_CACHE outranks it (1ccded4); semantic_scale.py's 'after the read' as a difference of medians (1ccded4)",
+     "reason": "no stored lesson names either"
+    },
+    {
+     "defect": "the review agent's allow-list allowed git forms that write (1ccded4)",
+     "reason": "already a task of §4bg (t08, PR 307, n_916330f61994)"
+    }
+   ]
+  },
+  {
+   "pr": 339,
+   "title": "Release 0.11.0",
+   "key_broken": [
+    "n_c95bdc056620"
+   ],
+   "tasks": [
+    "t46"
+   ],
+   "outcome": "used",
+   "class": null,
+   "rejected": [
+    {
+     "defect": "okl init --ci pinned CI beside a kept workflow that does not read the pin (fixed in d55c1ca)",
+     "reason": "that defect predates the change (its frozen commit would be the bare release bump 3d3e4b4); the refinement of the same check (f7d9e02, a comment or another step counted as a read) is task c07"
+    }
+   ]
+  },
+  {
+   "pr": 309,
+   "title": "Stemming as a measured setting, off: §4ad's rule fails on size",
+   "key_broken": [
+    "harness-reads-a-moving-working-tree",
+    "n_02cc84da158d",
+    "n_b74bad29fd87",
+    "seed:geospatial-enforcement-defects:r_single_source_sets",
+    "seed:python-canon:py_dont_mock_what_you_dont_own",
+    "seed:python-canon:py_unclosed_sqlite",
+    "unclosed-sqlite-in-test-pr154"
+   ],
+   "tasks": [
+    "t36"
+   ],
+   "outcome": "used",
+   "class": null,
+   "rejected": [
+    {
+     "defect": "9d35cd0 / c526c63 / 66ef6fc: stem_latency.py timed a service, timed LIKE without FTS5, or copied the wrong store",
+     "reason": "the store-copy defect is already a task of §4aw (n_02cc84da158d); the rest are reachable only through stem_latency.main(), which reads private inputs (evals/bench/private/real-arms-heldout.json), or through child_env, a function the fix invented"
+    },
+    {
+     "defect": "66ef6fc: an index declared tokenize=porter (bare or double-quoted) read as unicode61 and was not rebuilt",
+     "reason": "same PR and lesson as b06 (n_967ef9825472); a second task on one rule from one PR adds little independent signal"
+    },
+    {
+     "defect": "0427ceb: a failed rebuild fell back to LIKE, which cannot see tags and leaves writes off the index",
+     "reason": "the data-loss half is task b06; the remaining behaviour (raise rather than fall back) has no stored lesson naming it"
+    },
+    {
+     "defect": "9d35cd0: the relevance floor counted two forms of one stem as two shared words",
+     "reason": "no stored lesson names it"
+    },
+    {
+     "defect": "1d2cdde, 845c831, 0272157: real_prompts tally read recall, F1 and the selection rules from a pool with unjudged pairs",
+     "reason": "no stored lesson names it: seed:rag-defects:pooled_recall_blind_spot (created after) is about items no arm retrieved, outside the pool, not unjudged pairs inside it; and cmd_tally reads private files"
+    }
+   ]
+  },
+  {
+   "pr": 333,
+   "title": "Anatomy sheet and briefing sizes, current with main",
+   "key_broken": [
+    "n_b550ba9c5c8a"
+   ],
+   "tasks": [],
+   "outcome": "rejected",
+   "class": "no behaviour",
+   "rejected": [
+    {
+     "defect": null,
+     "reason": "the fix has no behaviour: docs, figures, a re-rendered sheet and one docstring; no later fix on main"
+    }
+   ]
+  },
+  {
+   "pr": 75,
+   "title": "Pre-HN: fix three bugs and ~74 drifted doc claims found by a docs audit",
+   "key_broken": [
+    "n_5ddb0776a863",
+    "n_6b65aa35593c",
+    "n_e7988ff536fb"
+   ],
+   "tasks": [],
+   "outcome": "rejected",
+   "class": "no behaviour",
+   "rejected": [
+    {
+     "defect": null,
+     "reason": "the fix has no behaviour: the only post-review commit (5d47cc1) corrects the evals README and adds a test skip without httpx, and no later commit on main fixes code #75 wrote"
+    }
+   ]
+  },
+  {
+   "pr": 325,
+   "title": "okl warm stop: answered when it stops a server, and a stop stays (#320)",
+   "key_broken": [
+    "remote-timeout-not-a-deadline"
+   ],
+   "tasks": [
+    "t43"
+   ],
+   "outcome": "used",
+   "class": null,
+   "rejected": [
+    {
+     "defect": null,
+     "reason": "only one defect fixed after the change (f9e0a00), taken as c04; the in-PR commits before it (7834a5e, e8e4b3a, 266ec69) are the change itself"
+    }
+   ]
+  },
+  {
+   "pr": 380,
+   "title": "doctor, init and metric say what the interests hide (#374)",
+   "key_broken": [
+    "guarantee-holds-on-every-write-path",
+    "n_02cc84da158d"
+   ],
+   "tasks": [
+    "t30"
+   ],
+   "outcome": "used",
+   "class": null,
+   "rejected": [
+    {
+     "defect": "00399bb (second half): a test's monkeypatch.undo() reverted conftest's store guard, giving a developer's exported OKL_DATABASE_URL back mid-test.",
+     "reason": "test infrastructure only (tests/conftest.py, no product file): no non-test fix file, and the grader itself runs under that conftest. The first half of 00399bb (a Postgres store that is down) is graded in a12 with the corrupt-store case of 558a9af; §4bg's t04 already holds 558a9af's empty-URL case."
+    }
+   ]
+  },
+  {
+   "pr": 167,
+   "title": "A 200 that is not JSON is no answer; MCP okl_record says MAYBE (R10 leftovers)",
+   "key_broken": [
+    "remote-timeout-not-a-deadline"
+   ],
+   "tasks": [],
+   "outcome": "rejected",
+   "class": "never fixed",
+   "rejected": [
+    {
+     "defect": null,
+     "reason": "no later fix of what #167 wrote was found: _json_reply is unchanged since its introducing commit (git log -S finds only 8eb1d2c), and the MCP okl_record MAYBE RECORDED / NOT RECORDED handlers, the CLI's MAYBE paths and _post/_get's error mapping read the same on main (adba789). Nothing to replay."
+    }
+   ]
+  },
+  {
+   "pr": 197,
+   "title": "A developer guide: how okl is built, tested, measured and released",
+   "key_broken": [
+    "doc-claim-governs-doc-and-code",
+    "docs-agent-neutral"
+   ],
+   "tasks": [],
+   "outcome": "rejected",
+   "class": "no behaviour",
+   "rejected": [
+    {
+     "defect": null,
+     "reason": "docs only (the developer guide)"
+    }
+   ]
+  },
+  {
+   "pr": 335,
+   "title": "verify: the outcome example names --timeout's real default (600s)",
+   "key_broken": [
+    "n_00985805cdbb",
+    "seed:geospatial-enforcement-defects:r_single_source_sets"
+   ],
+   "tasks": [],
+   "outcome": "rejected",
+   "class": "no behaviour",
+   "rejected": [
+    {
+     "defect": null,
+     "reason": "the change is one docstring; no behaviour, no later fix"
+    }
+   ]
+  },
+  {
+   "pr": 55,
+   "title": "Fresh-install end-to-end run (REPORT §10): the loop from a wheel, two findings",
+   "key_broken": [
+    "n_37ea04a8a0ac"
+   ],
+   "tasks": [],
+   "outcome": "rejected",
+   "class": "no behaviour",
+   "rejected": [
+    {
+     "defect": null,
+     "reason": "report and README only"
+    }
+   ]
+  },
+  {
+   "pr": 131,
+   "title": "Let the prompt hook send a smaller briefing, and quote one measured set of sizes",
+   "key_broken": [
+    "doc-claim-governs-doc-and-code",
+    "n_6b65aa35593c"
+   ],
+   "tasks": [],
+   "outcome": "rejected",
+   "class": "no stored lesson names it",
+   "rejected": [
+    {
+     "defect": "cmd_check read args.compact directly, so a library caller's hand-built Namespace without it raised AttributeError (fixed in 9e39773)",
+     "reason": "no stored lesson names it"
+    },
+    {
+     "defect": "an OKL_BRIEFING_LIMIT past SQLite's integer range reached okl and blocked the prompt (fixed on main in da28797)",
+     "reason": "not a defect of #131: its `[ \"$OKL_BRIEFING_LIMIT\" -gt 0 ]` refuses such a number ('integer expression expected'), so the limit was ignored; the pass-through came with #359's [[ ]] pattern (see #359)"
+    }
+   ]
+  }
+ ]
+}

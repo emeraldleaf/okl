@@ -176,6 +176,108 @@ def test_every_grader_changed_after_the_alternatives_says_so():
         assert "after the alternatives check" in section, tid
 
 
+CHECK_FINAL = RESULTS / "replay-check-457-20261115-1921.json"
+ALT_FINAL = RESULTS / "replay-alternatives-457-20261115-1925.json"
+SCREEN = RESULTS / "replay-screen-457.json"
+POWER = RESULTS / "power-457-20261115-1927.json"
+NOT_TOLD_APART = ["t22", "t47"]   # each wrong fix leaves what the task's real fix itself left
+
+
+def test_the_final_receipts_are_the_graders_as_they_are():
+    """After the three changes, every grader is valid again, every right fix passes, and 27 of 29 pairs are told
+    apart; both receipts read today's tasks, graders and patches, from committed code."""
+    final, alt = (json.loads(p.read_text()) for p in (CHECK_FINAL, ALT_FINAL))
+    paths = check.set_paths("457")
+    for r in (final, alt):
+        assert "usable" not in r and _clean(r)
+        assert r["graders_sha256"] == _sha(paths["graders"]) and r["tasks_sha256"] == _sha(paths["tasks"])
+    _valid_rows(final)
+    assert (alt["valid"], alt["of"]) == (27, 29) and all(r["right_exit"] == 0 and r["right_ran"] for r in alt["rows"])
+    assert sorted(r["id"] for r in alt["rows"] if not r["valid"]) == NOT_TOLD_APART
+    for row in alt["rows"]:
+        assert row["right_patch_sha256"] == _sha(paths["alternatives"] / f"{row['id']}-right.patch"), row["id"]
+        assert row["wrong_patch_sha256"] == _sha(paths["alternatives"] / f"{row['id']}-wrong.patch"), row["id"]
+
+
+def _section() -> str:
+    text = (REPO / "evals" / "REPORT.md").read_text()
+    return text.split("## 4bi.", 1)[1].split("\n## ", 1)[0]
+
+
+def test_the_section_names_only_receipts_that_exist():
+    """Every receipt the section cites is committed."""
+    import re
+    sec = _section()
+    named = set(re.findall(r"`([\w.-]+-\d{8}-\d{4}\.json|replay-screen-457\.json)`", sec))
+    assert {p.name for p in (CHECK_FIRST, ALT_FIRST, CHECK_FINAL, ALT_FINAL, SCREEN, POWER)} <= named
+    for name in named:
+        assert (RESULTS / name).is_file(), name
+
+
+def test_the_section_counts_are_the_screening_records():
+    """58 candidates, 26 used, 32 rejected by class, and the defects set aside, as the record holds them; every
+    used change is a task's, and every rejected one says why."""
+    sec, r = _section(), json.loads(SCREEN.read_text())
+    assert (r["candidates"], r["used"], r["rejected"]) == (58, 26, 32) and sum(r["rejected_by_class"].values()) == 32
+    assert f"each of\nthe {r['defects_set_aside']} defects" in sec
+    assert f"| used: 29 broken tasks and one control | {r['used']} |" in sec
+    for row in r["rows"]:
+        assert (row["outcome"] == "used") == bool(row["tasks"]), row["pr"]
+        assert row["outcome"] == "used" or (row["class"] and row["rejected"]), row["pr"]
+    assert {t["pr"] for t in _tasks("457")} == {row["pr"] for row in r["rows"] if row["outcome"] == "used"}
+    labels = {"no behaviour": "nothing with behaviour was fixed", "no stored lesson names it": "no stored lesson names",
+              "already a §4aw or §4bg task": "already a task of §4aw or §4bg", "never fixed": "never fixed",
+              "unreachable without a model or the fix's own names": "reachable only through a model"}
+    for cls, n in r["rejected_by_class"].items():
+        line = next(ln for ln in sec.splitlines() if ln.startswith("| rejected: ") and labels[cls] in ln)
+        assert line.endswith(f"| {n} |"), (cls, line)
+
+
+def test_the_section_states_the_tasks_as_they_are():
+    """The in-sample lessons and the redactions the section counts are the tasks'."""
+    sec, broken = _section(), [t for t in _tasks("457") if not t["needs_nothing"]]
+    late = [t["id"] for t in broken if t["in_sample"]]
+    assert f"The lessons of {len(late)} of the {len(broken)} broken tasks" in sec
+    assert ", ".join(late[:-1]) + f" and {late[-1]}" in " ".join(sec.split())
+    redacted = [t for t in _tasks("457") if t["lesson_redactions"]]
+    clauses = sum(len(t["lesson_redactions"]) for t in redacted)
+    assert f"{clauses} clauses from the lessons of\n{len(redacted)} tasks" in sec
+
+
+def test_the_section_table_is_the_alternatives_receipts():
+    """Each task's row: its change and lesson, whether its right fix passed both checks, and whether its wrong fix
+    failed in the first check and after the changes."""
+    sec = _section()
+    first = {r["id"]: r for r in json.loads(ALT_FIRST.read_text())["rows"]}
+    final = {r["id"]: r for r in json.loads(ALT_FINAL.read_text())["rows"]}
+    yes = {True: "yes", False: "no"}
+    for t in _tasks("457"):
+        if t["needs_nothing"]:
+            continue
+        right = first[t["id"]]["right_exit"] == 0 and final[t["id"]]["right_exit"] == 0
+        row = (f"| {t['id']} | #{t['pr']} | `{t['lesson'].split(':')[-1]}` | {yes[right]} | "
+               f"{yes[first[t['id']]['valid']]} | {yes[final[t['id']]['valid']]} |")
+        assert row in sec, row
+    changed = sorted(i for i in first if not first[i]["valid"] and final[i]["valid"])
+    assert changed == CHANGED_AFTER_ALTERNATIVES
+
+
+def test_the_section_power_table_is_its_receipt():
+    """Every power figure the section quotes is the receipt's, which was made from committed code."""
+    sec, r = _section(), json.loads(POWER.read_text())
+    assert "usable" not in r and _clean(r) and r["sims"] == 1000
+    review = {(x["tasks"], x["repeats"]): x for x in r["power_review"]}
+    cheap = {(x["tasks"], x["repeats"]): x for x in r["power_cheap"]}
+    for n, k in ((14, 5), (29, 3), (43, 1), (43, 2), (43, 3), (43, 5)):
+        a, b = review[(n, k)], cheap[(n, k)]
+        row = (f"| {n} | {k} | {a['beats_none_at_gain']} | {a['beats_none_as_seen']} | {a['beats_none_false_alarm']} |"
+               f" {b['not_worse_when_equal']} | {b['not_worse_false_alarm_at_margin']} |")
+        assert row in sec, row
+    assert r["repeats_needed"]["review_beats_none_at_gain"]["43"] == r["repeats_needed"]["haiku_not_worse_when_equal"]["43"] == 2
+    assert r["repeats_needed"]["review_beats_none_at_gain"]["14"] is None
+    assert (r["review_gain"], r["cheap_margin"], r["review_true_gain_as_seen"]) == (0.25, 0.15, 0.14)
+
+
 def test_a_grader_runs_from_its_own_sets_module(monkeypatch, tmp_path):
     """The check copies the graders of the task's own set into the room, not §4bg's."""
     copied = []
