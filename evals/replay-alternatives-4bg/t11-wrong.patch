@@ -1,0 +1,16 @@
+diff --git a/src/okl/core.py b/src/okl/core.py
+index 3afec7c..33639ae 100644
+--- a/src/okl/core.py
++++ b/src/okl/core.py
+@@ -499,6 +499,11 @@ def retire(store: Store, node_id: str, reason: str, *, by: str | None = None,
+                              f"({n.scope}): a replacement must be visible wherever the lesson "
+                              "it replaces was")
+     kind = "superseded" if by else ("obsolete" if obsolete else "wrong")
++    # A retry of a plain retirement (no replacement, not obsolete) is already on record.
++    if kind == "wrong" and n.status == _RETIRED_AS[kind]:
++        logged = store.retirements(node_id)
++        if logged and (logged[-1].kind, logged[-1].reason) == (kind, reason.strip()):
++            return get(store, node_id) or {}
+     n.status = _RETIRED_AS[kind]
+     store.add_node(n)
+     if by is not None:

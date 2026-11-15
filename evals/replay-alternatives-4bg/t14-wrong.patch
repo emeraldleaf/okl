@@ -1,0 +1,300 @@
+diff --git a/.claude/hooks/posttooluse-okl-read.sh b/.claude/hooks/posttooluse-okl-read.sh
+index dc6997a..87f4ff9 100755
+--- a/.claude/hooks/posttooluse-okl-read.sh
++++ b/.claude/hooks/posttooluse-okl-read.sh
+@@ -1,5 +1,5 @@
+ #!/usr/bin/env bash
+-# okl-fingerprint: sha256:3a3d05ddf2f33b8c2e3861a8c8b6732c841c16eb7c679b67fc2f0625dc0c29ec
++# okl-fingerprint: sha256:caf8122e54a579bb55879bb3ec34cee228d99207f25894b697fbd17fe6d854dc
+ # PostToolUse hook on Read — brief the lessons that govern a file when the agent reads it (#94).
+ #
+ # The prompt hook briefs once, when a prompt is sent; within a long turn the edit a lesson
+@@ -47,7 +47,7 @@ file=$(printf '%s\n' "$parsed" | sed -n 1p)
+ session_id=$(printf '%s\n' "$parsed" | sed -n 2p)
+ [[ -n "$file" ]] || exit 0
+ 
+-# Same resolver as the other hooks (env → pinned config → PATH → python3 -m okl). OKL is an
++# Same layers as the other hooks (env → pinned config → PATH → python3 -m okl). OKL is an
+ # array, so a path with spaces stays one word; a pinned value is a path, or a python followed
+ # by " -m okl" that can still import okl.
+ try_pinned() {
+@@ -58,22 +58,26 @@ try_pinned() {
+   esac
+ }
+ OKL=()
+-resolve_okl() {
+-  if [[ -n "${OKL_BIN:-}" ]] && try_pinned "$OKL_BIN"; then return 0; fi
+-  local d="$PWD"
+-  while [[ "$d" != "/" ]]; do
+-    if [[ -f "$d/.okl/config.json" ]]; then
+-      local bin
+-      bin=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("okl_bin") or "")' \
+-            "$d/.okl/config.json" 2>/dev/null || true)
+-      if [[ -n "$bin" ]] && try_pinned "$bin"; then return 0; fi
+-      break
+-    fi
+-    d=$(dirname "$d")
+-  done
+-  if command -v okl >/dev/null 2>&1; then OKL=(okl); return 0; fi
+-  if python3 -c "import okl" >/dev/null 2>&1; then OKL=(python3 -m okl); return 0; fi
+-  return 1
++# The command layer $1 gives: 1 OKL_BIN, 2 the okl_bin pinned in .okl/config.json, 3 okl on PATH,
++# 4 python3 -m okl. Sets OKL and returns 0, or returns 1 when that layer has nothing that can run.
++layer_okl() {
++  OKL=()
++  case "$1" in
++    1) [[ -n "${OKL_BIN:-}" ]] && try_pinned "$OKL_BIN" ;;
++    2) local d="$PWD" bin
++       while [[ "$d" != "/" ]]; do
++         if [[ -f "$d/.okl/config.json" ]]; then
++           bin=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("okl_bin") or "")' \
++                 "$d/.okl/config.json" 2>/dev/null || true)
++           [[ -n "$bin" ]] && try_pinned "$bin"
++           break
++         fi
++         d=$(dirname "$d")
++       done ;;
++    3) command -v okl >/dev/null 2>&1 && OKL=(okl) ;;
++    4) python3 -c "import okl" >/dev/null 2>&1 && OKL=(python3 -m okl) ;;
++  esac
++  [[ "${#OKL[@]}" -gt 0 ]]
+ }
+ 
+ # One line of context when okl cannot answer: never a silence the agent reads as "no rules".
+@@ -85,15 +89,30 @@ print(json.dumps({"hookSpecificOutput": {"hookEventName": "PostToolUse", "additi
+     "cannot see; check before relying on what you read."}}))' "$file" "$1"
+ }
+ 
+-if ! resolve_okl; then
++errf=$(mktemp 2>/dev/null || echo "")
++found=0; rc=1; out=""; tried="|"
++for layer in 1 2 3 4; do
++  layer_okl "$layer" || continue
++  # One command reached through two layers (pinned, and on PATH) is run once.
++  if [[ "${#OKL[@]}" -eq 1 ]]; then key=$(command -v "${OKL[0]}" 2>/dev/null || printf '%s' "${OKL[0]}")
++  else key="${OKL[*]}"; fi
++  case "$tried" in *"|$key|"*) continue ;; esac
++  tried="${tried}${key}|"
++  found=1
++  [[ -n "$errf" ]] && : > "$errf"   # keep only the last attempt's reason
++  out=$("${OKL[@]}" check --path "$file" --format hook --hook-event PostToolUse \
++        ${session_id:+--session "$session_id"} 2>"${errf:-/dev/null}")
++  rc=$?
++  # A command that resolved but cannot start (a pin whose python was removed, a missing binary):
++  # the next layer may work, as in the prompt hook. Any other answer is okl's own.
++  case "$rc" in 127) continue ;; esac
++  break
++done
++if [[ "$found" -eq 0 ]]; then
++  [[ -n "$errf" ]] && rm -f "$errf"
+   not_briefed "okl could not be found (not as OKL_BIN, a pin in .okl/config.json, on PATH, or as python3 -m okl)"
+   exit 0
+ fi
+-
+-errf=$(mktemp 2>/dev/null || echo "")
+-out=$("${OKL[@]}" check --path "$file" --format hook --hook-event PostToolUse \
+-      ${session_id:+--session "$session_id"} 2>"${errf:-/dev/null}")
+-rc=$?
+ if [[ "$rc" -eq 0 ]]; then
+   printf '%s' "$out"
+ else
+diff --git a/hooks/posttooluse-okl-read.sh b/hooks/posttooluse-okl-read.sh
+index dc6997a..87f4ff9 100755
+--- a/hooks/posttooluse-okl-read.sh
++++ b/hooks/posttooluse-okl-read.sh
+@@ -1,5 +1,5 @@
+ #!/usr/bin/env bash
+-# okl-fingerprint: sha256:3a3d05ddf2f33b8c2e3861a8c8b6732c841c16eb7c679b67fc2f0625dc0c29ec
++# okl-fingerprint: sha256:caf8122e54a579bb55879bb3ec34cee228d99207f25894b697fbd17fe6d854dc
+ # PostToolUse hook on Read — brief the lessons that govern a file when the agent reads it (#94).
+ #
+ # The prompt hook briefs once, when a prompt is sent; within a long turn the edit a lesson
+@@ -47,7 +47,7 @@ file=$(printf '%s\n' "$parsed" | sed -n 1p)
+ session_id=$(printf '%s\n' "$parsed" | sed -n 2p)
+ [[ -n "$file" ]] || exit 0
+ 
+-# Same resolver as the other hooks (env → pinned config → PATH → python3 -m okl). OKL is an
++# Same layers as the other hooks (env → pinned config → PATH → python3 -m okl). OKL is an
+ # array, so a path with spaces stays one word; a pinned value is a path, or a python followed
+ # by " -m okl" that can still import okl.
+ try_pinned() {
+@@ -58,22 +58,26 @@ try_pinned() {
+   esac
+ }
+ OKL=()
+-resolve_okl() {
+-  if [[ -n "${OKL_BIN:-}" ]] && try_pinned "$OKL_BIN"; then return 0; fi
+-  local d="$PWD"
+-  while [[ "$d" != "/" ]]; do
+-    if [[ -f "$d/.okl/config.json" ]]; then
+-      local bin
+-      bin=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("okl_bin") or "")' \
+-            "$d/.okl/config.json" 2>/dev/null || true)
+-      if [[ -n "$bin" ]] && try_pinned "$bin"; then return 0; fi
+-      break
+-    fi
+-    d=$(dirname "$d")
+-  done
+-  if command -v okl >/dev/null 2>&1; then OKL=(okl); return 0; fi
+-  if python3 -c "import okl" >/dev/null 2>&1; then OKL=(python3 -m okl); return 0; fi
+-  return 1
++# The command layer $1 gives: 1 OKL_BIN, 2 the okl_bin pinned in .okl/config.json, 3 okl on PATH,
++# 4 python3 -m okl. Sets OKL and returns 0, or returns 1 when that layer has nothing that can run.
++layer_okl() {
++  OKL=()
++  case "$1" in
++    1) [[ -n "${OKL_BIN:-}" ]] && try_pinned "$OKL_BIN" ;;
++    2) local d="$PWD" bin
++       while [[ "$d" != "/" ]]; do
++         if [[ -f "$d/.okl/config.json" ]]; then
++           bin=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("okl_bin") or "")' \
++                 "$d/.okl/config.json" 2>/dev/null || true)
++           [[ -n "$bin" ]] && try_pinned "$bin"
++           break
++         fi
++         d=$(dirname "$d")
++       done ;;
++    3) command -v okl >/dev/null 2>&1 && OKL=(okl) ;;
++    4) python3 -c "import okl" >/dev/null 2>&1 && OKL=(python3 -m okl) ;;
++  esac
++  [[ "${#OKL[@]}" -gt 0 ]]
+ }
+ 
+ # One line of context when okl cannot answer: never a silence the agent reads as "no rules".
+@@ -85,15 +89,30 @@ print(json.dumps({"hookSpecificOutput": {"hookEventName": "PostToolUse", "additi
+     "cannot see; check before relying on what you read."}}))' "$file" "$1"
+ }
+ 
+-if ! resolve_okl; then
++errf=$(mktemp 2>/dev/null || echo "")
++found=0; rc=1; out=""; tried="|"
++for layer in 1 2 3 4; do
++  layer_okl "$layer" || continue
++  # One command reached through two layers (pinned, and on PATH) is run once.
++  if [[ "${#OKL[@]}" -eq 1 ]]; then key=$(command -v "${OKL[0]}" 2>/dev/null || printf '%s' "${OKL[0]}")
++  else key="${OKL[*]}"; fi
++  case "$tried" in *"|$key|"*) continue ;; esac
++  tried="${tried}${key}|"
++  found=1
++  [[ -n "$errf" ]] && : > "$errf"   # keep only the last attempt's reason
++  out=$("${OKL[@]}" check --path "$file" --format hook --hook-event PostToolUse \
++        ${session_id:+--session "$session_id"} 2>"${errf:-/dev/null}")
++  rc=$?
++  # A command that resolved but cannot start (a pin whose python was removed, a missing binary):
++  # the next layer may work, as in the prompt hook. Any other answer is okl's own.
++  case "$rc" in 127) continue ;; esac
++  break
++done
++if [[ "$found" -eq 0 ]]; then
++  [[ -n "$errf" ]] && rm -f "$errf"
+   not_briefed "okl could not be found (not as OKL_BIN, a pin in .okl/config.json, on PATH, or as python3 -m okl)"
+   exit 0
+ fi
+-
+-errf=$(mktemp 2>/dev/null || echo "")
+-out=$("${OKL[@]}" check --path "$file" --format hook --hook-event PostToolUse \
+-      ${session_id:+--session "$session_id"} 2>"${errf:-/dev/null}")
+-rc=$?
+ if [[ "$rc" -eq 0 ]]; then
+   printf '%s' "$out"
+ else
+diff --git a/src/okl/scaffold/hooks/posttooluse-okl-read.sh b/src/okl/scaffold/hooks/posttooluse-okl-read.sh
+index dc6997a..87f4ff9 100755
+--- a/src/okl/scaffold/hooks/posttooluse-okl-read.sh
++++ b/src/okl/scaffold/hooks/posttooluse-okl-read.sh
+@@ -1,5 +1,5 @@
+ #!/usr/bin/env bash
+-# okl-fingerprint: sha256:3a3d05ddf2f33b8c2e3861a8c8b6732c841c16eb7c679b67fc2f0625dc0c29ec
++# okl-fingerprint: sha256:caf8122e54a579bb55879bb3ec34cee228d99207f25894b697fbd17fe6d854dc
+ # PostToolUse hook on Read — brief the lessons that govern a file when the agent reads it (#94).
+ #
+ # The prompt hook briefs once, when a prompt is sent; within a long turn the edit a lesson
+@@ -47,7 +47,7 @@ file=$(printf '%s\n' "$parsed" | sed -n 1p)
+ session_id=$(printf '%s\n' "$parsed" | sed -n 2p)
+ [[ -n "$file" ]] || exit 0
+ 
+-# Same resolver as the other hooks (env → pinned config → PATH → python3 -m okl). OKL is an
++# Same layers as the other hooks (env → pinned config → PATH → python3 -m okl). OKL is an
+ # array, so a path with spaces stays one word; a pinned value is a path, or a python followed
+ # by " -m okl" that can still import okl.
+ try_pinned() {
+@@ -58,22 +58,26 @@ try_pinned() {
+   esac
+ }
+ OKL=()
+-resolve_okl() {
+-  if [[ -n "${OKL_BIN:-}" ]] && try_pinned "$OKL_BIN"; then return 0; fi
+-  local d="$PWD"
+-  while [[ "$d" != "/" ]]; do
+-    if [[ -f "$d/.okl/config.json" ]]; then
+-      local bin
+-      bin=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("okl_bin") or "")' \
+-            "$d/.okl/config.json" 2>/dev/null || true)
+-      if [[ -n "$bin" ]] && try_pinned "$bin"; then return 0; fi
+-      break
+-    fi
+-    d=$(dirname "$d")
+-  done
+-  if command -v okl >/dev/null 2>&1; then OKL=(okl); return 0; fi
+-  if python3 -c "import okl" >/dev/null 2>&1; then OKL=(python3 -m okl); return 0; fi
+-  return 1
++# The command layer $1 gives: 1 OKL_BIN, 2 the okl_bin pinned in .okl/config.json, 3 okl on PATH,
++# 4 python3 -m okl. Sets OKL and returns 0, or returns 1 when that layer has nothing that can run.
++layer_okl() {
++  OKL=()
++  case "$1" in
++    1) [[ -n "${OKL_BIN:-}" ]] && try_pinned "$OKL_BIN" ;;
++    2) local d="$PWD" bin
++       while [[ "$d" != "/" ]]; do
++         if [[ -f "$d/.okl/config.json" ]]; then
++           bin=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("okl_bin") or "")' \
++                 "$d/.okl/config.json" 2>/dev/null || true)
++           [[ -n "$bin" ]] && try_pinned "$bin"
++           break
++         fi
++         d=$(dirname "$d")
++       done ;;
++    3) command -v okl >/dev/null 2>&1 && OKL=(okl) ;;
++    4) python3 -c "import okl" >/dev/null 2>&1 && OKL=(python3 -m okl) ;;
++  esac
++  [[ "${#OKL[@]}" -gt 0 ]]
+ }
+ 
+ # One line of context when okl cannot answer: never a silence the agent reads as "no rules".
+@@ -85,15 +89,30 @@ print(json.dumps({"hookSpecificOutput": {"hookEventName": "PostToolUse", "additi
+     "cannot see; check before relying on what you read."}}))' "$file" "$1"
+ }
+ 
+-if ! resolve_okl; then
++errf=$(mktemp 2>/dev/null || echo "")
++found=0; rc=1; out=""; tried="|"
++for layer in 1 2 3 4; do
++  layer_okl "$layer" || continue
++  # One command reached through two layers (pinned, and on PATH) is run once.
++  if [[ "${#OKL[@]}" -eq 1 ]]; then key=$(command -v "${OKL[0]}" 2>/dev/null || printf '%s' "${OKL[0]}")
++  else key="${OKL[*]}"; fi
++  case "$tried" in *"|$key|"*) continue ;; esac
++  tried="${tried}${key}|"
++  found=1
++  [[ -n "$errf" ]] && : > "$errf"   # keep only the last attempt's reason
++  out=$("${OKL[@]}" check --path "$file" --format hook --hook-event PostToolUse \
++        ${session_id:+--session "$session_id"} 2>"${errf:-/dev/null}")
++  rc=$?
++  # A command that resolved but cannot start (a pin whose python was removed, a missing binary):
++  # the next layer may work, as in the prompt hook. Any other answer is okl's own.
++  case "$rc" in 127) continue ;; esac
++  break
++done
++if [[ "$found" -eq 0 ]]; then
++  [[ -n "$errf" ]] && rm -f "$errf"
+   not_briefed "okl could not be found (not as OKL_BIN, a pin in .okl/config.json, on PATH, or as python3 -m okl)"
+   exit 0
+ fi
+-
+-errf=$(mktemp 2>/dev/null || echo "")
+-out=$("${OKL[@]}" check --path "$file" --format hook --hook-event PostToolUse \
+-      ${session_id:+--session "$session_id"} 2>"${errf:-/dev/null}")
+-rc=$?
+ if [[ "$rc" -eq 0 ]]; then
+   printf '%s' "$out"
+ else

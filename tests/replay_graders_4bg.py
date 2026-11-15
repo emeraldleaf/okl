@@ -164,11 +164,16 @@ _INTAKE = ("import json, sys\nfrom okl import intake\nfrom okl.cli import main\n
            "sys.exit(main(['intake', 'pr', '7']))\n")
 
 
-def test_t01_pr388(tmp_path, monkeypatch):
+@pytest.mark.parametrize("where", ["local", "service"])
+def test_t01_pr388(where, tmp_path, monkeypatch, request):
     """The lookup `okl intake` makes to name the lesson that already covers a finding briefs no agent, so it
-    must not count as one: no briefing row afterwards. Control: the lesson is still named, and an agent's own
-    briefing is still logged. Intake runs in its own process, so a fix that switches logging off in-process
-    cannot reach the control."""
+    must not count as one: no briefing row afterwards, in a local store and in a shared service's. Control: the
+    lesson is still named, and an agent's own briefing is still logged. Intake runs in its own process locally,
+    and with the environment restored after it over a service, so a fix that switches logging off for the
+    process cannot reach the control."""
+    if where == "service":
+        _t01_over_a_service(request.getfixturevalue("_service"), monkeypatch)
+        return
     from okl.client import Client
     from okl.store import Store
     monkeypatch.chdir(tmp_path)
@@ -192,6 +197,30 @@ def test_t01_pr388(tmp_path, monkeypatch):
     store = Store(url)
     assert len(store.briefings()) == 1
     store.close()
+
+
+def _t01_over_a_service(service, monkeypatch):
+    """t01 with the repo connected to a service: the same lookup, through the Client's remote code."""
+    from unittest import mock
+
+    from okl import intake
+    from okl.cli import main
+    from okl.client import Client
+    Client().record(id="price-from-catalogue", type="Defect", scope="repo",
+                    title="Never trust the price the client sends for an order",
+                    symptom="an order is saved with the client's price",
+                    fix="read the price from the catalogue on the server",
+                    triggers=["don't trust the client's price for an order"])
+    monkeypatch.setattr(intake, "fetch", lambda number, repo=None: (_PRICE_PR, lambda sha: set()))
+    out = io.StringIO()
+    with mock.patch.dict(os.environ), contextlib.redirect_stdout(out):
+        rc = main(["intake", "pr", "7"])
+
+    assert rc in (0, None), out.getvalue()[-400:]
+    assert "price-from-catalogue" in out.getvalue(), out.getvalue()[-400:]   # control: the lookup still names it
+    assert service.store.briefings() == [], "over a service, intake's lookup was logged as a briefing no agent saw"
+    Client().check("don't trust the client's price for an order")             # control: an agent's briefing is logged
+    assert len(service.store.briefings()) == 1
 
 
 # ---- t02 · PR 383 · n_0637c92c032f --------------------------------------------------------------
@@ -296,29 +325,31 @@ def _weak_first_store():
     return WeakFirst("sqlite:///:memory:")
 
 
-@pytest.mark.parametrize("weak_first", [True, False])
-def test_t05_pr259(weak_first):
+@pytest.mark.parametrize(("weak_first", "weak"), [(True, 40), (True, 200), (False, 40)])
+def test_t05_pr259(weak_first, weak):
     """When the first window of the search holds only weak matches, the briefing still finds the record that
-    qualifies, ranked just past it: not 'no close match'. The weak ones stay out. Control: with the natural
-    ranking the same record is found."""
+    qualifies, ranked past it: not 'no close match'. Just past the window (40 weak ahead), and well past it (200,
+    more than a fixed window ten times the limit holds): the fetch widens while the floor leaves it short. The
+    weak ones stay out. Control: with the natural ranking the same record is found."""
     from okl import core
     from okl.store import Store
     s = _weak_first_store() if weak_first else Store("sqlite:///:memory:")
     fillers = {core.record(s, type="Rule", title=f"filler rule {i}", scope="org", body="the price is set")
-               for i in range(40)}
+               for i in range(weak)}
     wanted = core.record(s, type="Rule", title="money handling", scope="org", body="the catalogue sets the price")
 
     res = core.check(s, repo="r", task="price catalogue")
 
-    assert wanted in _ids(res), "a qualifying record just past the first window read as no match"
+    assert wanted in _ids(res), "a qualifying record past the first window read as no match"
     assert not fillers & _ids(res), "the weak matches the floor drops came back"
     assert res["match_count"] == 1
 
 
 # ---- t06 · PR 163 · filter-after-fetch-widens-window --------------------------------------------
 
-def _retire_store(retired):
-    """A store with `retired` obsolete lessons ranking above one live one, all matching 'refund ledger'."""
+def _retire_store(retired, how):
+    """A store with `retired` retired lessons ranking above one live one, all matching 'refund ledger': made
+    obsolete, or superseded by the live one."""
     from okl import core
     from okl.store import Store
     s = Store("sqlite:///:memory:")
@@ -326,49 +357,56 @@ def _retire_store(retired):
         core.record(s, id=f"gone{i}", type="Rule", title="refund ledger refund ledger", scope="org", fix="f")
     core.record(s, id="live", type="Rule", title="refund ledger", scope="org", fix="f")
     for i in range(retired):
-        core.retire(s, f"gone{i}", "gone", obsolete=True)
+        if how == "obsolete":
+            core.retire(s, f"gone{i}", "gone", obsolete=True)
+        else:
+            core.retire(s, f"gone{i}", "replaced", by="live")
     return s
 
 
-@pytest.mark.parametrize("retired", [3, 0])
-def test_t06_pr163(retired):
-    """Retired lessons do not use up the search window: with three obsolete matches above the one live one, a
-    briefing of one slot still shows the live one, and never a retired one. Control: with none retired, the same."""
+@pytest.mark.parametrize(("retired", "how"), [(3, "obsolete"), (3, "superseded"), (0, "obsolete")])
+def test_t06_pr163(retired, how):
+    """Retired lessons do not use up the search window: with three obsolete matches, or three superseded by
+    the live one, above the one live one, a briefing of one slot still shows the live one as its rule, and
+    never a retired one as a rule. Control: with none retired, the same."""
     from okl import core
-    s = _retire_store(retired)
+    s = _retire_store(retired, how)
 
     res = core.check(s, "r", "refund ledger", limit=1)
 
     assert [r["id"] for r in res["rules"]] == ["live"], _ids(res)
-    assert not any(i.startswith("gone") for i in _ids(res))
+    if how == "obsolete":
+        assert not any(i.startswith("gone") for i in _ids(res))
 
 
 # ---- t07 · PR 163 · importer-keeps-local-decision -----------------------------------------------
 
-def _pack(path, other_title):
-    """A seed pack of two lessons that both say status live."""
+def _pack(path, other_title, status="live"):
+    """A seed pack of two lessons that both set `status`."""
     path.write_text(json.dumps({"nodes": [
-        {"key": "grid", "type": "Rule", "scope": "org", "repo": "r", "title": "Grid", "status": "live"},
-        {"key": "other", "type": "Rule", "scope": "org", "repo": "r", "title": other_title, "status": "live"}]}))
+        {"key": "grid", "type": "Rule", "scope": "org", "repo": "r", "title": "Grid", "status": status},
+        {"key": "other", "type": "Rule", "scope": "org", "repo": "r", "title": other_title, "status": status}]}))
 
 
-def test_t07_pr163(tmp_path):
-    """A retirement made locally survives a re-seed of a pack that sets the lesson's status. Control: the
-    re-seed still imports everything else (another lesson's new title) and a lesson never retired stays live."""
+@pytest.mark.parametrize("status", ["live", "open"])
+def test_t07_pr163(status, tmp_path):
+    """A retirement made locally survives a re-seed of a pack that sets the lesson's status, whichever status
+    it sets. Control: the re-seed still imports everything else (another lesson's new title, and the status the
+    pack sets on a lesson never retired)."""
     from okl.store import Store
     _configure(tmp_path, "r")
     pack = tmp_path / "site.json"
-    _pack(pack, "Other v1")
+    _pack(pack, "Other v1", status)
     assert _okl(tmp_path, "seed", str(pack)).returncode == 0
     assert _okl(tmp_path, "retire", "seed:site:grid", "--obsolete", "--reason", "gone").returncode == 0
-    _pack(pack, "Other v2")
+    _pack(pack, "Other v2", status)
 
     assert _okl(tmp_path, "seed", str(pack)).returncode == 0
 
     store = Store(f"sqlite:///{tmp_path / '.okl' / 'okl.db'}")
     assert store.get_node("seed:site:grid").status == "obsolete", "the re-seed brought a retired lesson back"
     assert store.get_node("seed:site:other").title == "Other v2"
-    assert store.get_node("seed:site:other").status in (None, "", "live")
+    assert store.get_node("seed:site:other").status in ((None, "", "live") if status == "live" else (status,))
     store.close()
 
 
@@ -413,26 +451,28 @@ def test_t08_pr307(tmp_path):
 
 # ---- t09 · PR 362 · remote-path-test-through-client ---------------------------------------------
 
-def test_t09_pr362(_service, tmp_path):
+@pytest.mark.parametrize("away", ["/etc/hosts", "../outside.py"])
+def test_t09_pr362(away, _service, tmp_path):
     """Over a service, a check of files that all lie outside the repo is answered (nothing there can be
-    governed), not refused: no error, no match, the paths named as outside. Control: a path inside the repo is
-    still answered by the service, alone and beside one outside."""
+    governed), not refused: no error, no match, the path named as outside. Outside by an absolute path, or by a
+    relative one that climbs out. Control: a path inside the repo is still answered by the service, alone and
+    beside one outside."""
     from okl import core
     from okl.client import Client
     core.record(_service.store, id="orders-rule", type="Rule", title="orders rule", scope="org",
                 files="src/orders.py", fix="do the orders thing", symptom="when orders")
 
     try:
-        outside, refused = Client().check("", paths=["/etc/hosts"]), None
+        outside, refused = Client().check("", paths=[away]), None
     except Exception as e:  # noqa: BLE001 - whatever the client raises is the refusal this asserts is gone
         outside, refused = None, e
 
     assert refused is None, f"the check was refused: {refused}"
-    assert outside["outside_repo"] == ["/etc/hosts"] and outside["match_count"] == 0
+    assert len(outside["outside_repo"]) == 1 and outside["match_count"] == 0
     inside = Client().check("", paths=["src/orders.py"])
     assert "orders-rule" in _ids(inside)
-    mixed = Client().check("", paths=["src/orders.py", "/etc/hosts"])
-    assert "orders-rule" in _ids(mixed) and mixed["outside_repo"] == ["/etc/hosts"]
+    mixed = Client().check("", paths=["src/orders.py", away])
+    assert "orders-rule" in _ids(mixed) and len(mixed["outside_repo"]) == 1
 
 
 # ---- t10 · PR 34 · n_e7988ff536fb ---------------------------------------------------------------

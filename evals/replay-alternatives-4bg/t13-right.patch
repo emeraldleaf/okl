@@ -1,0 +1,30 @@
+diff --git a/src/okl/client.py b/src/okl/client.py
+index f455634..62dc56c 100644
+--- a/src/okl/client.py
++++ b/src/okl/client.py
+@@ -258,6 +258,12 @@ class Client:
+         if kwargs.get("repo") is None:
+             kwargs["repo"] = self.repo
+         if self.mode == "remote":
++            # The service's request model takes these three as true or false, never null (a
++            # null is a 422 that fails every record), where core.record reads None as "not
++            # given": an agent tool that passes `replace=None` for "not asked" means False.
++            for flag in ("replace", "verified", "keep_verification"):
++                if flag in kwargs:
++                    kwargs[flag] = bool(kwargs[flag])
+             return self._post("/record", kwargs)["id"]
+         return core.record(self._local_store(), **kwargs)
+ 
+diff --git a/src/okl/service.py b/src/okl/service.py
+index eca2395..59dff5f 100644
+--- a/src/okl/service.py
++++ b/src/okl/service.py
+@@ -183,7 +183,7 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901
+         except (TypeError, ValueError) as e:
+             raise HTTPException(status_code=400, detail=str(e)) from e
+ 
+-    @app.get("/node/{node_id}")
++    @app.get("/node/{node_id:path}")
+     def node(node_id: str, authorization: str | None = Header(default=None)) -> dict[str, Any]:
+         _auth(authorization)
+         # A missing lesson is an explicit null, so a 404 keeps meaning "no such route"

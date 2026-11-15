@@ -1,0 +1,25 @@
+diff --git a/src/okl/client.py b/src/okl/client.py
+index 2633f75..4e7d35f 100644
+--- a/src/okl/client.py
++++ b/src/okl/client.py
+@@ -389,7 +389,19 @@ class Client:
+         """core.check_paths over this repo's view, locally or from the service, with the paths
+         made repo-relative and those outside the repo listed apart."""
+         inside, outside = _repo_relative(paths, root)
+-        if self.mode == "remote":
++        if self.mode == "remote" and not inside:
++            # Nothing outside the repo can be governed, and the service refuses an empty list
++            # ("nothing was checked"): asking it is a refusal for an answer already known. Build
++            # the answer core builds for no paths, on a store with nothing in it, and drop what
++            # that store measured: `store_records` says how much the service holds, which this
++            # answer did not ask.
++            empty = Store("sqlite:///:memory:")
++            try:
++                result = core.check_paths(empty, repo, [])
++            finally:
++                empty.close()
++            result.pop("store_records", None)
++        elif self.mode == "remote":
+             result = self._post("/check", {"repo": repo, "task": "", "paths": inside})
+             # An older service drops a field it does not know and briefs an empty task: never
+             # read that as "nothing governs this file".

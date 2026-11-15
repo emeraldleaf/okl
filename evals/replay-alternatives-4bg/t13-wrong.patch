@@ -1,0 +1,24 @@
+diff --git a/src/okl/client.py b/src/okl/client.py
+index f455634..c9e0309 100644
+--- a/src/okl/client.py
++++ b/src/okl/client.py
+@@ -258,7 +258,9 @@ class Client:
+         if kwargs.get("repo") is None:
+             kwargs["repo"] = self.repo
+         if self.mode == "remote":
+-            return self._post("/record", kwargs)["id"]
++            # None means "not given": the service has defaults, and a null where it expects a
++            # boolean (replace) is a 422.
++            return self._post("/record", {k: v for k, v in kwargs.items() if v is not None})["id"]
+         return core.record(self._local_store(), **kwargs)
+ 
+     def update(self, node_id: str, **fields: Any) -> dict:
+@@ -279,7 +281,7 @@ class Client:
+         if self.mode == "remote":
+             # A missing lesson is {"node": null}, never a 404: a service too old to have
+             # this route answers 404, and that must not read as "no such lesson".
+-            return self._get(f"/node/{quote(node_id, safe='')}")["node"]
++            return self._get(f"/node/{quote(node_id, safe='/')}")["node"]
+         return core.get(self._local_store(), node_id)
+ 
+     def search(self, query: str, scope: str | None = None,

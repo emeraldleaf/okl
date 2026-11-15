@@ -1,0 +1,76 @@
+diff --git a/src/okl/cli.py b/src/okl/cli.py
+index ab2cbc7..3f84380 100644
+--- a/src/okl/cli.py
++++ b/src/okl/cli.py
+@@ -466,10 +466,10 @@ def _drift_from_snapshot(args, client: Client) -> int:
+     from . import drift
+     try:
+         snap = drift.read_committed_snapshot(args.snapshot, args.repo_dir)
++        nodes, problems = drift.nodes_from_snapshot(snap)
+     except ValueError as e:
+         print(f"OKL SNAPSHOT REFUSED — {e}", file=sys.stderr)
+         return 2
+-    nodes, problems = drift.nodes_from_snapshot(snap)
+     if problems:
+         print(f"OKL SNAPSHOT REFUSED — {len(problems)} entr(y/ies) cannot be trusted; re-run "
+               "`okl verify` for each and re-export:\n  " + "\n  ".join(problems), file=sys.stderr)
+diff --git a/src/okl/drift.py b/src/okl/drift.py
+index dd75ce4..9763788 100644
+--- a/src/okl/drift.py
++++ b/src/okl/drift.py
+@@ -220,6 +220,35 @@ def stamp_problem(rule: dict[str, Any]) -> str | None:
+     return None
+ 
+ 
++def validate_snapshot(snap: Any) -> None:
++    """Raise ValueError, naming the first fault, unless `snap` has the shape drift reads.
++
++    The file is hand-editable and a bad merge can leave anything in it; a gate that reads it
++    must refuse it as unreadable rather than crash on it. Each rule needs the fields
++    nodes_from_snapshot indexes, of the types the stamp check does arithmetic or matching on.
++    """
++    if not isinstance(snap, dict):
++        raise ValueError("the snapshot is not a JSON object")
++    rules = snap.get("rules", [])
++    if not isinstance(rules, list):
++        raise ValueError(f"`rules` must be a list of entries, not {type(rules).__name__}")
++    for i, r in enumerate(rules):
++        if not isinstance(r, dict):
++            raise ValueError(f"rules[{i}] must be an object, not {type(r).__name__}")
++        for key in ("id", "title", "scope"):
++            if not isinstance(r.get(key), str):
++                raise ValueError(f"rules[{i}] needs a text `{key}`")
++        if not isinstance(r.get("files"), str):
++            raise ValueError(f"rules[{i}] needs `files` as the text of its comma-separated globs")
++        if r.get("type") is not None and not isinstance(r["type"], str):
++            raise ValueError(f"rules[{i}] `type` must be text or null")
++        at = r.get("verified_at")
++        if at is not None and (not isinstance(at, int) or isinstance(at, bool)):
++            raise ValueError(f"rules[{i}] `verified_at` must be a millisecond timestamp or null")
++        if r.get("verified_by") is not None and not isinstance(r["verified_by"], str):
++            raise ValueError(f"rules[{i}] `verified_by` must be text or null")
++
++
+ def read_committed_snapshot(path: str, repo_dir: str = ".") -> dict[str, Any]:
+     """The snapshot as COMMITTED at HEAD, never the working-tree copy.
+ 
+@@ -245,11 +274,18 @@ def read_committed_snapshot(path: str, repo_dir: str = ".") -> dict[str, Any]:
+         raise ValueError(f"{path} is not valid JSON: {e}") from e
+     if not isinstance(snap, dict) or snap.get("format") != SNAPSHOT_FORMAT:
+         raise ValueError(f"{path} is not an {SNAPSHOT_FORMAT} file")
++    try:
++        validate_snapshot(snap)
++    except ValueError as e:
++        raise ValueError(f"{path} is malformed: {e}") from e
+     return snap
+ 
+ 
+ def nodes_from_snapshot(snap: dict[str, Any]) -> tuple[list[Node], list[str]]:
+-    """Nodes to feed scan_drift, and one problem line per entry that cannot be trusted."""
++    """Nodes to feed scan_drift, and one problem line per entry that cannot be trusted.
++
++    Raises ValueError when the snapshot is malformed (see validate_snapshot)."""
++    validate_snapshot(snap)
+     nodes: list[Node] = []
+     problems: list[str] = []
+     for r in snap.get("rules", []):
