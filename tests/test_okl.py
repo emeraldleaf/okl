@@ -1744,6 +1744,25 @@ def _backend_conformance(store, label):
     assert runs[0].at <= runs[1].at, f"{label}: checks not oldest first"
     assert [r.node_id for r in store.checks(b)] == [b], f"{label}: check filter"
 
+    # ASSERT (12) — the review log keeps one row per (session, repo): logging the pair again replaces
+    # it, the repo filter is exact, flags read back as bools, a count left out reads back None, and the
+    # checks come back as logged (#464).
+    one = {"agent": "x", "model": "opus", "lessons": [a], "edited": True, "edited_files": ["f.py"],
+           "tests": [], "tokens": 7, "read": True}
+    store.log_review("conf-session", "conf-repo", asked=True, ran=False)
+    store.log_review("conf-session", "conf-repo", asked=True, ran=True, files_changed=2, lessons_listed=5,
+                     tokens=900, duration_s=31, checks=[one])
+    store.log_review("conf-session", "other-repo", asked=False, ran=True)
+    got = store.reviews("conf-repo")
+    assert len(got) == 1 and (got[0].asked, got[0].ran) == (True, True), f"{label}: a logged session must be replaced"
+    assert isinstance(got[0].asked, bool) and isinstance(got[0].ran, bool), f"{label}: review flags must be bools"
+    assert (got[0].files_changed, got[0].lessons_listed, got[0].tokens, got[0].duration_s) == (2, 5, 900, 31), \
+        f"{label}: review counts"
+    assert got[0].checks == (one,), f"{label}: review checks"
+    assert [x.repo for x in store.reviews("other-repo")] == ["other-repo"], f"{label}: review repo filter"
+    assert store.reviews("other-repo")[0].tokens is None, f"{label}: an unread count must read back None"
+    assert len(store.reviews()) >= 2, f"{label}: reviews(None) must return every repo's rows"
+
     # Semantic vectors (#258): one per record per model, replaced on re-put, dropped on delete,
     # read back byte for byte.
     store.put_embedding(a, "m", "h1", b"\x00\x00\x80\x3f")

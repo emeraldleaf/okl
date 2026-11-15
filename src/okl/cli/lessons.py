@@ -14,7 +14,13 @@ from pathlib import Path
 from typing import Any
 
 from .. import changes, core
-from ..client import Client, OKLNoAnswerError, OKLRejectedError, OKLUnreachableError
+from ..client import (
+    Client,
+    OKLNoAnswerError,
+    OKLNotConfiguredError,
+    OKLRejectedError,
+    OKLUnreachableError,
+)
 from ..store import backend_errors
 from .common import _print_json
 from .packs import _bundled_seed_dir, _empty_store_guidance
@@ -469,18 +475,64 @@ def cmd_recap(args: argparse.Namespace) -> int:
     if not client.configured:
         print("OKL NOT CONFIGURED — no store to recap from.", file=sys.stderr)
         return 2
+    repo_dir = str(_snapshot_path().parent)
+    if getattr(args, "log_review", False) or getattr(args, "reviews", False):
+        return _recap_reviews(client, repo_dir, args)
     try:
         nodes = client.all_nodes()
     except OKLUnreachableError as e:
         print(f"OKL UNREACHABLE — no recap.\n{e}", file=sys.stderr)
         return 2
-    repo_dir = str(_snapshot_path().parent)
     if getattr(args, "report", False):
         return _recap_report(client, repo_dir, args)
     result = recap.recap(nodes, client.repo, repo_dir, args.transcript,
                          since=args.since, limit=args.limit)
     print(recap.render(result), end="")
     return 0
+
+
+def _recap_reviews(client: Client, repo_dir: str, args: argparse.Namespace) -> int:
+    """`okl recap --log-review` and `--reviews`: write the session's review row, and read the log
+    back (#464). Exit 0 whatever the transcript held; exit 2 only when the store cannot be used."""
+    import time
+
+    from .. import recap
+    if client.mode != "local":
+        print("okl recap --log-review and --reviews use the local store; a shared service keeps its own.",
+              file=sys.stderr)
+        return 2
+    if args.log_review and not args.transcript:
+        print("okl recap --log-review needs --transcript <path>, the session's transcript.", file=sys.stderr)
+        return 2
+    since = 0
+    if args.reviews and args.since:
+        try:
+            since = recap.window_start(args.since, None, int(time.time() * 1000))
+        except ValueError:
+            print(f"okl recap: cannot read --since {args.since!r}; give ISO 8601 or 90m, 6h, 2d.", file=sys.stderr)
+            return 2
+    try:
+        store = client._local_store()
+        if args.log_review:
+            _say_logged(*recap.log_review(store, client.repo, args.transcript, repo_dir), args.transcript)
+        if args.reviews:
+            data = recap.reviews_report(store, client.repo, since_ms=since, top=args.limit)
+            print(json.dumps(data, indent=2) if args.format == "json" else recap.render_reviews(data), end="")
+    except backend_errors() + (OSError, OKLNotConfiguredError) as e:
+        print(f"okl recap: the review log cannot be used: {e}", file=sys.stderr)
+        return 2
+    return 0
+
+
+def _say_logged(reading: Any, written: bool, transcript: str) -> None:
+    """One line on what `okl recap --log-review` did; the Stop hook discards it."""
+    if not reading.readable:
+        print(f"okl recap: cannot read {transcript}; nothing logged.", file=sys.stderr)
+    elif not written:
+        print("nothing logged: the session neither asked for a review nor ran one.")
+    else:
+        print(f"logged session {reading.session}: review {'run' if reading.ran else 'asked for, not run'}, "
+              f"{len(reading.checks)} sub-agents.")
 
 
 def _recap_report(client: Client, repo_dir: str, args: argparse.Namespace) -> int:
