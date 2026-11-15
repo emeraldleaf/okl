@@ -196,6 +196,15 @@ a default (§4az), it has been measured on one repository only ([REPORT §4at](.
 the list costs about 60 tokens a lesson, and each lesson checked is a sub-agent session. Turn it
 off with `okl init --no-review-after-writing`, or for one session with `OKL_REVIEW_AFTER_WRITING=0`.
 
+In Claude Code, okl also keeps a log of what that review did, so the default can be judged on real
+sessions. At a later stop of the session, the Stop hook reads the session's transcript, silently and
+for no more than a few seconds, and writes one row about it to your local store: whether the review
+was asked for and ran, which lessons each sub-agent checked, whether it edited anything and which
+files, the tests it ran, and the tokens and time it took. No code and no text from the session is
+stored. `okl recap --reviews` reads the rows back. An edit after a check means the review acted on
+that lesson, not that it caught a break, and the log cannot tell which. It covers Claude Code
+sessions only: another agent leaves no transcript okl can read.
+
 ### What a good lesson contains
 
 Whoever writes it, you or the agent, a lesson is one record. Check the draft for these:

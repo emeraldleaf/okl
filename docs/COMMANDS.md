@@ -119,6 +119,27 @@ okl check --change [BASE]
                      #   one session); on by default. A retracted lesson stays in the list as
                      #   what to avoid. Exit 2 when git or the store cannot be read, or BASE
                      #   starts with '-'.
+okl recap --transcript <path> --log-review
+                     # in Claude Code: read the session's transcript and keep one row about its
+                     #   review after writing in the local store, replaced when the same session is
+                     #   logged again: whether Claude Code's Stop hook asked for the review and the
+                     #   agent ran `okl check --change`, the files and lessons it listed, and for each
+                     #   sub-agent the review started its model, the lessons it opened, whether it
+                     #   edited anything and which files, the tests it ran with their outcome, and
+                     #   its tokens, with the review's tokens and seconds. Ids, paths, counts and
+                     #   model names only: no code and no text from the session. The Stop hook runs it
+                     #   at a later stop, silently and cut off after a few seconds. A session that
+                     #   neither asked for the review nor ran it is not logged. Exit 0 even when there
+                     #   was no review or the transcript cannot be read; exit 2 only when the store
+                     #   cannot be written (a shared service keeps no such log).
+okl recap --reviews  # the review log, from those rows: how often the review was asked for and run,
+                     #   lessons checked per review, how many checks were followed by an edit, tokens
+                     #   and seconds per review, and per lesson how often it was checked and how often
+                     #   that was followed by an edit. An edit after a check means the review acted on
+                     #   that lesson, not that it caught a break: the log cannot tell whether the edit
+                     #   fixed a real one. Claude Code sessions only, since other agents leave no
+                     #   transcript okl can read. --since limits it, --limit sets how many lessons are
+                     #   listed, --format json for a script.
 okl embed            # build or refresh one local vector per record for --hybrid briefings
                      #   (needs the `hybrid` extra; downloads a 131 MB static model once;
                      #   re-embeds only records whose text changed). Off by default: a check

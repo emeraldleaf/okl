@@ -7,6 +7,23 @@
   started ten Opus sessions, on a model §4az did not measure and at a higher price per token, and in a
   Haiku session it ran on a model it was never tested with. The step now names Sonnet, the model §4ay and §4az measured it with.
 
+- **A log of what each review after writing does** (#464). The review is on by default as a
+  decision, not a measured result, and the decision record names real-use evidence that it almost
+  never acts as what would reverse it. Nothing collected that evidence, because only the session's
+  transcript sees the review: the agent runs it and okl calls no model. Now, in Claude Code, the Stop
+  hook reads the transcript at a later stop of the session (silently, cut off after a few seconds,
+  never changing whether the stop is held) and writes one row to the local store, replaced when the
+  same session is logged again: whether the review was asked for and ran, the files and lessons it
+  listed, and for each sub-agent it started its model, the lessons it opened, whether it edited
+  anything and which files, the tests it ran, and its tokens, with the review's tokens and time.
+  Ids, paths, counts and model names only; no code and no session text. A store from before this
+  gains the table when it opens, on SQLite and Postgres. `okl recap --reviews` reads it back: reviews
+  asked for and run, lessons checked per review, how many checks were followed by an edit, cost per
+  review, and per lesson how often it was checked and acted on. An edit after a check means the review
+  acted on that lesson, not that it caught a break, and the report says so. It covers Claude Code
+  sessions only. The Stop hook is an okl-owned file and changed, so `okl init` upgrades an unedited
+  copy and keeps one you edited; the log needs the new one.
+
 ## 0.17.0
 
 - **The review after writing is on by default** (`okl check --change`; decided, not measured). The
