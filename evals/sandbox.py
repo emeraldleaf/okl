@@ -136,18 +136,54 @@ def ask(argv: list[str], prompt: str, *, model: str, effort: str, timeout: int, 
                            env=env)
     except subprocess.TimeoutExpired:
         return {**base, "error": f"timed out after {timeout}s"}
-    try:
-        envelope = json.loads(p.stdout)
-    except ValueError:
+    streamed = "stream-json" in argv
+    envelope, agents = _streamed(p.stdout) if streamed else (_json(p.stdout), [])
+    if envelope is None:
         return {**base, "error": (p.stderr or p.stdout or f"exit {p.returncode}, no output")[-300:]}
     models = sorted(envelope.get("modelUsage") or {})
     out = {**base, "result": envelope.get("result") or "", "models": models,
-           "cost_usd": envelope.get("total_cost_usd") or 0.0, "turns": envelope.get("num_turns")}
+           "cost_usd": envelope.get("total_cost_usd") or 0.0, "turns": envelope.get("num_turns"),
+           **({"sub_agents": len(agents), "agent_inputs": agents} if streamed else {})}
     if envelope.get("is_error"):
         return {**out, "error": out["result"][-300:] or "the session reported an error"}
     if not any(model in m for m in models):
         return {**out, "error": f"answered by {models}, not {model}"}
     return out
+
+
+def _json(stdout: str) -> dict[str, Any] | None:
+    """`--output-format json`'s one envelope, or None when there is none."""
+    try:
+        envelope = json.loads(stdout)
+    except ValueError:
+        return None
+    return envelope if isinstance(envelope, dict) else None
+
+
+def _streamed(stdout: str) -> tuple[dict[str, Any] | None, list[dict[str, Any]]]:
+    """`--output-format stream-json`'s closing result event, and the input of each sub-agent the session
+    itself started (the Agent tool, called Task before), in order. The only output that shows what a session
+    handed its sub-agents (REPORT §4az counted them the same way)."""
+    envelope, agents = None, []
+    for line in stdout.splitlines():
+        try:
+            event = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(event, dict):
+            envelope = event if event.get("type") == "result" else envelope
+            agents += _agents_started(event)
+    return envelope, agents
+
+
+def _agents_started(event: dict[str, Any]) -> list[dict[str, Any]]:
+    """What each Agent call in one stream event was handed. A sub-agent's own events carry its parent's
+    tool-use id, so a call made inside one is not counted as the session's."""
+    message = event.get("message")
+    if event.get("parent_tool_use_id") or not isinstance(message, dict) or not isinstance(message.get("content"), list):
+        return []
+    return [part["input"] if isinstance(part.get("input"), dict) else {} for part in message["content"]
+            if isinstance(part, dict) and part.get("type") == "tool_use" and part.get("name") in ("Agent", "Task")]
 
 
 def connect(target: str | Path, uri: bool = False) -> sqlite3.Connection:
