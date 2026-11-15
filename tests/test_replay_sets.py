@@ -121,6 +121,30 @@ def test_a_combined_run_reads_every_set_and_refuses_a_shared_id(monkeypatch, tmp
     assert check.label(["x1", "x2", "x1"]) == "x1+x2"
 
 
+CHECK_457 = REPO / "evals" / "results" / "replay-check-457-20261115-1800.json"
+
+
+def test_the_new_sets_check_quotes_its_receipt():
+    """Every broken task's grader fails on its frozen code by an assertion of its own and passes on the real fix,
+    and the control's passes as it stands; the receipt was made from committed code, on the tasks and graders as
+    they are now, so a grader changed later (after the alternatives check) needs a new receipt."""
+    import hashlib
+    r = json.loads(CHECK_457.read_text())
+    paths = check.set_paths("457")
+    assert r["check"] == "replay-check-457" and r["all_valid"] and "usable" not in r
+    assert r["valid"] == r["of"] == len(_tasks("457")) == len(r["rows"])
+    assert r["tasks_sha256"] == hashlib.sha256(paths["tasks"].read_bytes()).hexdigest()
+    assert r["graders_sha256"] == hashlib.sha256(paths["graders"].read_bytes()).hexdigest()
+    assert r["okl_commit"] == r["okl_commit_at_start"] and not r["okl_commit"].endswith("+dirty")
+    controls = {t["id"] for t in _tasks("457") if t["needs_nothing"]}
+    for row in r["rows"]:
+        assert row["exit_end"] == 0 and row["ran_end"] > 0, row["id"]
+        if row["id"] in controls:
+            assert row["exit_frozen"] == 0, row["id"]
+        else:
+            assert row["exit_frozen"] == 1 and row["own_assertion_frozen"], row["id"]
+
+
 def test_a_grader_runs_from_its_own_sets_module(monkeypatch, tmp_path):
     """The check copies the graders of the task's own set into the room, not §4bg's."""
     copied = []
