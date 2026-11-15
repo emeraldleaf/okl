@@ -140,7 +140,8 @@ turning it on. Checking the ten in turn in one session would cost a single pass,
 gave the lesson the change broke a one-line verdict (REPORT §4bg, a first look), so the review keeps a
 sub-agent per lesson. Since 0.17.0 it is on by default anyway, as my decision rather than a measured
 result: I judge a missed lesson to cost more than these sessions do. Turn it off if the cost matters
-more to you.
+more to you. The reasoning, its gap and what would reverse it are in
+[the decision record](decisions/2026-11-15-review-after-writing-on-by-default.md).
 
 ## Architecture review in CI (off by default)
 
