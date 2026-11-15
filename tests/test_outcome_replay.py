@@ -435,3 +435,11 @@ def test_the_choosing_figures_are_the_receipts():
     assert f"the pick on {missed['pick']} of 58, the pool and the screen on {missed['pool']}" in flat
     assert receipt["reading"] == "choosing does not improve enough"
     assert receipt["changes"] == receipt["of"] == 58 and receipt["broken_lessons"] == 124
+
+
+def test_the_end_to_end_steps_are_the_ones_its_receipt_ran():
+    """§4az's instrument, rebuilt from the frozen steps, is the one its receipt names: the review's own text has
+    moved on (§4bg), and the frozen copy must not drift with it."""
+    e2e = _e2e_module()
+    receipt = json.loads((REPO / "evals" / "results" / "review-e2e-20261111-1543.json").read_text())
+    assert receipt["instrument"] == e2e.INSTRUMENT

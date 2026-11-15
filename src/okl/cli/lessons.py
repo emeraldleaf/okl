@@ -128,8 +128,8 @@ def _review_after_writing(client: Client, args: argparse.Namespace) -> int:
     lesson in scope one line each, with the steps of the review after writing (REPORT §4at).
     okl calls no model: the agent explains its change, picks, reads and checks.
 
-    With --format hook it prints only the Stop hook's note, and only when the repo turns the
-    review on and something changed. Exit 0 when it ran, 2 when git or the store could not be
+    With --format hook it prints only the Stop hook's note, and only when the review is on (the
+    default where okl was set up, unless the repo turns it off) and something changed. Exit 0 when it ran, 2 when git or the store could not be
     read, or a flag that shapes a briefing (--limit, --compact, --format actions) was given."""
     if args.format == "hook":
         _review_note(client, args)

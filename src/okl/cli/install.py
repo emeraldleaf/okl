@@ -78,8 +78,8 @@ OWNER_DENY = ("Bash(gh api *protection*)", "Bash(gh api *Protection*)", "Bash(gh
 # okl registers exactly these commands; uninstall removes exactly these and nothing else. Each is
 # (event, the tools it answers for events Claude Code filters by tool, command, seconds Claude
 # Code may run it, or None for its default). The read hook briefs the lessons governing a file
-# when it is read, which comes before an edit (#94); the edit hook runs the approved checks of the
-# lessons governing a file after an edit (#435), under a timeout of okl's own: Claude Code's
+# when it is read, which comes before an edit (#94); the edit hook runs every approved check after an
+# edit, the edited file's lessons first (#435, #450), under a timeout of okl's own: Claude Code's
 # default for a PostToolUse hook is ten minutes, not the minute okl's budget was written for.
 HOOKS: tuple[tuple[str, str | None, str, int | None], ...] = (
     ("UserPromptSubmit", None, '"$CLAUDE_PROJECT_DIR"/.claude/hooks/userpromptsubmit-okl-check.sh', None),

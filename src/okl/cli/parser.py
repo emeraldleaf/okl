@@ -349,11 +349,12 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
     poe_add.add_argument("targets", nargs="+", metavar="id", help="lesson ids, as the briefing shows them in [brackets]")
     poe_add.add_argument("--yes", action="store_true",
                          help="approve the commands it shows without asking; review them first, since they "
-                              "come from the store and will run on every edit to the files they govern")
+                              "come from the store and will run after every edit in the repository")
     poe_rm = poe_sub.add_parser("remove", help="stop running these lessons' checks on edit")
     poe_rm.add_argument("targets", nargs="+", metavar="id", help="lesson ids")
-    poe_run = poe_sub.add_parser("run", help="run the approved checks of the lessons governing these files "
-                                             "(what the Claude Code edit hook calls); exit 1 when one fails")
+    poe_run = poe_sub.add_parser("run", help="run every approved check after an edit to these files, those of "
+                                             "the lessons governing them first (what the Claude Code edit hook "
+                                             "calls); exit 1 when one fails")
     poe_run.add_argument("targets", nargs="+", metavar="file", help="the edited files")
     poe_run.add_argument("--format", choices=["text", "hook"], default="text",
                          help="hook prints Claude Code's PostToolUse JSON, and nothing when every check passed")

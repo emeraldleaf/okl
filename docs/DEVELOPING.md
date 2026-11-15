@@ -100,8 +100,9 @@ okl is developed with its own hooks switched on:
 
 - **Before every prompt,** the Claude Code UserPromptSubmit hook briefs the agent with the lessons that
   match the prompt.
-- **At the end of a session,** the Claude Code Stop hook asks what was learned and lists the lessons
-  the session touched (`okl recap`). Answer it.
+- **At the end of a session,** the Claude Code Stop hook first asks for the review after writing
+  (`okl check --change`, on by default), then asks what was learned and lists the lessons the
+  session touched (`okl recap`). Answer both.
 - **Recording:** `okl record` with a stable `--id`, a deliberate `--scope` (`org` if true
   in any repo, `repo` if true only here), and tags from the closed vocabulary.
 - **Correcting:** `okl update <id>` changes a lesson and keeps its proof, unless its

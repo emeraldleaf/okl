@@ -52,7 +52,9 @@ def kept() -> dict[tuple, dict]:
     if not OUT.exists():
         return {}
     want = (ASK_SHA, o.sha(ro.rl.LISTS))
-    return {o.ident(r): r for r in map(json.loads, OUT.read_text().splitlines()) if (r.get("ask"), r.get("lists")) == want}
+    return {o.ident(r): r for r in map(json.loads, OUT.read_text().splitlines())
+            if (r.get("ask"), r.get("lists")) == want and r.get("effort") == EFFORT
+            and any(MODEL in m for m in r.get("models") or [])}
 
 
 def session(call: dict, task: dict, before: set[str]) -> dict | None:

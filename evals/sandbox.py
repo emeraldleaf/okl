@@ -128,7 +128,7 @@ def ask(argv: list[str], prompt: str, *, model: str, effort: str, timeout: int, 
         raise ValueError(f"tree {tree} is inside the checkout")
     cmd = with_effort(argv, effort)
     base = {"effort": effort, "models": [], "cost_usd": 0.0}
-    env = clean_env(tree=tree)
+    env = clean_env(tree=tree.resolve() if tree is not None else None)   # a relative tree resolves in the child's cwd
     for name in unset:
         env.pop(name, None)
     try:

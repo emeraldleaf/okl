@@ -99,7 +99,12 @@ def kept(stage: int) -> dict[tuple, dict]:
         return {}
     want = inputs()
     return {ident(r): r for r in map(json.loads, OUT.read_text().splitlines())
-            if r.get("inputs") == want and r.get("stage") == stage}
+            if r.get("inputs") == want and r.get("stage") == stage and same_setup(r)}
+
+
+def same_setup(row: dict) -> bool:
+    """A row made with this harness's model and effort: changing either never pools with the old rows."""
+    return row.get("effort") == EFFORT and any(MODEL in m for m in row.get("models") or [])
 
 
 def position(task: dict, rep: int) -> int:
@@ -141,11 +146,17 @@ def grade(room: Path, task: dict) -> dict:
     """The task's frozen grader on the tree the session left: exit 0 is a pass."""
     (room / GRADER_IN_ROOM).parent.mkdir(parents=True, exist_ok=True)
     (room / GRADER_IN_ROOM).write_text(GRADERS.read_text())
-    p = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "--tb=line", "-rfE",
-                        f"{GRADER_IN_ROOM}::{task['grader']}"], cwd=room, capture_output=True, text=True,
-                       env=grade_env(room), timeout=o.TIMEOUT)
+    try:
+        p = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "--tb=line", "-rfE",
+                            f"{GRADER_IN_ROOM}::{task['grader']}"], cwd=room, capture_output=True, text=True,
+                           env=grade_env(room), timeout=o.TIMEOUT)
+    except subprocess.TimeoutExpired:
+        # Code the session left can hang the grader: that session fails (no verdict counts against the
+        # claim), and the run goes on to save every other session (review of #454).
+        return {"passed": False, "exit": None, "summary": f"the grader did not finish in {o.TIMEOUT}s"}
+    finally:
+        (room / GRADER_IN_ROOM).unlink(missing_ok=True)
     tail = p.stdout.strip().splitlines()[-1:] if p.stdout.strip() else [p.stderr.strip()[-200:]]
-    (room / GRADER_IN_ROOM).unlink(missing_ok=True)
     return {"passed": p.returncode == 0, "exit": p.returncode, "summary": tail[0]}
 
 
@@ -192,7 +203,10 @@ def finish(room: Path, task: dict, before: set[str]) -> dict:
     (room / "CHANGE.diff").unlink(missing_ok=True)
     changed = changed_files(room)
     patch = o.patch_of(room)
-    harm = sorted(failing(room, harm_files(task)) - before)
+    try:
+        harm: list[str] | None = sorted(failing(room, harm_files(task)) - before)
+    except subprocess.TimeoutExpired:
+        harm = None   # the task's own tests did not finish: harm unknown, never counted as none
     got = grade(room, task)
     return {"passed": got["passed"], "grader_exit": got["exit"], "summary": got["summary"], "edited": bool(patch),
             "changed": changed, "harm": harm, "patch_chars": len(patch), "patch": patch[:20000]}
@@ -236,9 +250,17 @@ def one_session(call: dict, task: dict, before: set[str]) -> dict | None:
 
 
 def session(call: dict, task: dict, before: set[str]) -> dict | None:
-    """One planned session of any arm, stamped with what it ran under."""
+    """One planned session of any arm, stamped with the inputs read before it started. If they changed
+    while it ran, it is dropped (no row, so a later run repeats it), never stamped with inputs it did not
+    use (review of #454)."""
+    stamp = inputs()
     row = (one_session if call["arm"] == "one" else single_session)(call, task, before)
-    return {**row, "inputs": inputs(), "okl_commit": o.git("rev-parse", "HEAD").strip()} if row else None
+    if row is None:
+        return None
+    if inputs() != stamp:
+        print(f"  {call['id']} {call['arm']}{call['rep']}: its inputs changed while it ran; dropped", file=sys.stderr, flush=True)
+        return None
+    return {**row, "inputs": stamp, "okl_commit": o.git("rev-parse", "HEAD").strip()}
 
 
 def preflight() -> list[str]:
@@ -283,7 +305,11 @@ def run(stage: int, limit: int | None) -> int:
     with OUT.open("a") as sink, ThreadPoolExecutor(max_workers=WORKERS) as pool:
         futures = {pool.submit(session, c, by_id[c["id"]], before[c["id"]]): c for c in todo}
         for f in as_completed(futures):
-            row = f.result()
+            try:
+                row = f.result()
+            except Exception as e:  # noqa: BLE001 - one session's crash must not lose the others' rows
+                print(f"  {futures[f]['id']} {futures[f]['arm']}{futures[f]['rep']}: {e!r}", file=sys.stderr, flush=True)
+                row = None
             if row:
                 sink.write(json.dumps(row) + "\n"); sink.flush()
                 empty = 0
@@ -410,6 +436,7 @@ def score(stage: int, write: bool) -> int:
            "controls_broken": {a: sum(not r["passed"] for r in of(a, controls)) for a in arms},
            "controls_sessions": {a: len(of(a, controls)) for a in arms},
            "sessions_with_harm": {a: sum(bool(r["harm"]) for r in rows if r["arm"] == a) for a in arms},
+           "sessions_harm_unknown": {a: sum(r.get("harm") is None for r in rows if r["arm"] == a) for a in arms},
            "edited": {a: sum(r["edited"] for r in of(a, broken)) for a in arms},
            "one_other_edits_median": median(r["other_edits"] for r in ones) if ones else None,
            "one_other_edits_total": sum(r["other_edits"] for r in ones),

@@ -20,9 +20,9 @@ touches only the current directory, and only these:
 | `.okl/.gitignore` | keeps `.okl/` (config and store) out of git, with no edit to your own `.gitignore` |
 | `.okl/okl.db` | the local store (local mode only; seeded with the starter lessons and your stack's packs unless `--no-seed`) |
 | `.claude/hooks/userpromptsubmit-okl-check.sh` | **executable**; runs when you submit a task, injects the briefing |
-| `.claude/hooks/stop-okl-encode.sh` | **executable**; runs at session end, asks what was learned |
+| `.claude/hooks/stop-okl-encode.sh` | **executable**; runs at session end: asks for the review after writing (on unless turned off) and what was learned |
 | `.claude/hooks/posttooluse-okl-read.sh` | **executable**; runs after the agent reads a file, briefs the lessons that govern it |
-| `.claude/hooks/posttooluse-okl-edit.sh` | **executable**; runs after the agent edits a file, runs the lesson checks you approved for it with `okl on-edit add` (none until you approve one) |
+| `.claude/hooks/posttooluse-okl-edit.sh` | **executable**; runs after the agent edits a file in the repo, runs every lesson check you approved with `okl on-edit add`, the file's lessons first (none until you approve one) |
 | `.claude/settings.json` | registers those four hooks (merged in place; your existing keys are preserved) |
 | `.mcp.json` | registers the okl MCP server — only when the `mcp` extra is installed |
 | `.github/workflows/okl-verify.yml` | **a CI workflow** running the drift gate on pull requests — only with `--ci`, or where an earlier okl installed it |
@@ -52,8 +52,10 @@ a `UserPromptSubmit` hook that runs `check` on
 the prompt you actually typed and puts the briefing into the model's context (the
 enforced read — it must be this event: `PreToolUse` stdout never reaches the model,
 which an end-to-end test caught the hard way), and a session-end hook that blocks the first stop
-of a session that changed files with one question — *did this session learn anything
-worth `okl record`ing?* — so the write side of the loop gets a mechanical prompt too,
+of a session that changed files. It first asks for the review after writing (`okl check --change`:
+check the code just written against the lessons, each in a sub-agent of its own; on by default,
+`okl init --no-review-after-writing` turns it off), then one question — *did this session learn
+anything worth `okl record`ing?* — so the write side of the loop gets a mechanical prompt too,
 not just a convention. It fires once per session and never loops. The third runs after the
 agent reads a file (`PostToolUse` on `Read`): it returns `okl check --path` for that file as
 `additionalContext`, which Claude Code puts next to the read's result, before any edit. Each
@@ -62,8 +64,8 @@ gets nothing; when okl cannot answer it says so in one line. REPORT §4aj measur
 briefing arrives (5 of 5 sessions); it did not show that it changes the edit. The fourth runs
 after the agent edits a file (`PostToolUse` on `Edit`, `Write`, `MultiEdit` and `NotebookEdit`).
 Until you approve a check with `okl on-edit add` it returns after one read of `.okl/config.json`,
-without starting okl. Once one is approved it runs `okl on-edit run` for the file: the approved
-checks of the lessons governing it, each with its own timeout, and a failure goes back to the
+without starting okl. Once one is approved it runs `okl on-edit run` for the file: every approved
+check, those of the lessons governing the file first, each with its own timeout, and a failure goes back to the
 agent as `additionalContext`. It never blocks and never stamps a lesson verified.
 
 **Other agents (AGENTS.md):** `okl scaffold` (not `init`) writes the repo canon to both

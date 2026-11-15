@@ -418,3 +418,57 @@ def test_every_approved_check_runs_after_any_edit_governing_ones_first(tmp_path)
     assert governing_first.index("[zz-orders]") < governing_first.index("[aa-whole]")
     outside = _okl(repo, env, "on-edit", "run", "--format", "hook", "/etc/hosts")
     assert (outside.returncode, outside.stdout) == (0, ""), outside.stdout
+
+
+def test_a_failing_check_from_another_files_lesson_says_it_may_predate_the_edit(tmp_path):
+    """A check whose lesson does not govern the edited file may have failed before the agent touched anything:
+    the agent is told so, and to find out before changing code it never touched, never told that a lesson
+    governing its file fails (review of #450). One governing the edited file keeps its own header."""
+    repo, env = _repo(tmp_path)
+    _lesson(repo, env, "zz-orders")
+    assert _okl(repo, env, "on-edit", "add", "zz-orders", "--yes").returncode == 0
+    (repo / "src" / "orders.py").write_text("BAD = 1\n")          # broken before the edit below
+
+    other = _context(_okl(repo, env, "on-edit", "run", "--format", "hook", str(repo / "check.py")))
+    assert "does not govern this file, so it may have failed before this edit" in other
+    assert "Find out first whether your change caused it" in other
+    assert "a lesson that governs this file" not in other and "Fix the code so the check passes" not in other
+    own = _context(_okl(repo, env, "on-edit", "run", "--format", "hook", str(repo / "src" / "orders.py")))
+    assert "a lesson that governs this file carries a check" in own and "may have failed before" not in own
+
+
+def test_an_approval_whose_lesson_is_gone_is_said_not_passed_over(tmp_path):
+    """Exit 0 means every approved check ran: an approval left for a lesson the store no longer holds is
+    named as not run, with exit 2, beside the checks that did run."""
+    repo, env = _repo(tmp_path)
+    run = _lesson(repo, env)
+    assert _okl(repo, env, "on-edit", "add", "ledger", "--yes").returncode == 0
+    config = _config(repo)
+    config["on_edit"]["ghost"] = approval(run, "ORDERS OK")
+    (repo / ".okl" / "config.json").write_text(json.dumps(config))
+    r = _okl(repo, env, "on-edit", "run", str(repo / "src" / "orders.py"))
+    assert r.returncode == 2 and "[ghost]: not run, because no lesson has this id" in r.stderr, r.stderr
+
+
+def test_each_check_runs_once_and_one_that_cannot_fit_waits_for_another_edit(tmp_path):
+    """A lesson governing the edited file is not run a second time with the rest; and a check of another
+    file's lesson starts only when its whole timeout fits in what is left of the budget, so it is never
+    started short and reported as not finishing: it is skipped at that edit, said in the text output, and
+    not handed to the agent, with nothing failed."""
+    repo, env = _repo(tmp_path)
+    _lesson(repo, env, "zz-marks", run=f"{PY} marks.py")         # governs src/orders.py
+    _lesson(repo, env, "aa-whole", files="")
+    assert _okl(repo, env, "on-edit", "add", "zz-marks", "aa-whole", "--yes").returncode == 0
+    (repo / "ran.txt").unlink()                                    # okl verify ran it once to prove the lesson
+    r = _okl(repo, env, "on-edit", "run", str(repo / "src" / "orders.py"))
+    assert r.returncode == 0, r.stderr
+    assert (repo / "ran.txt").read_text() == "x", "the governing lesson's check ran more than once"
+
+    (repo / "ran.txt").unlink()
+    tight = _okl(repo, env, "on-edit", "run", "--timeout", "30", "--budget", "20", str(repo / "check.py"))
+    assert tight.returncode == 0, tight.stderr
+    assert "not run at this edit" in tight.stdout and "aa-whole" in tight.stdout and "zz-marks" in tight.stdout
+    assert not (repo / "ran.txt").exists(), "a check was started with less than its timeout left"
+    hook = _okl(repo, env, "on-edit", "run", "--format", "hook", "--timeout", "30", "--budget", "20",
+                str(repo / "check.py"))
+    assert (hook.returncode, hook.stdout) == (0, ""), hook.stdout

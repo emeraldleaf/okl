@@ -7,18 +7,22 @@
   it wrote against the lessons, each lesson it picks in a sub-agent of its own, unless the repo
   turns it off: `okl init --no-review-after-writing`, `"review_after_writing": false` in
   `.okl/config.json`, or `OKL_REVIEW_AFTER_WRITING=0` for one session. **Upgrading turns it on in
-  every repo that never chose**; one that ran `okl init --no-review-after-writing` keeps it off.
-  This is a decision, not a result: a missed lesson costs more than the review's sessions, but in its
-  pilot the review fixed 1 in 5 past bugs where no review fixed none (REPORT §4az), short of the bar
-  it had set for a default, on five tasks of one repository, at about seven times a session's cost.
-  `okl init` now says it is on, what it costs and how to turn it off. Whether it holds beyond this
+  every repo set up with `okl init` that never chose**; one that ran `okl init
+  --no-review-after-writing` keeps it off, and a directory never set up (only a store URL exported)
+  gets it only with `OKL_REVIEW_AFTER_WRITING=1`. This is my decision, not a result: I judge a missed
+  lesson to cost more than the review's sessions. Both bars it was tested against were missed: in
+  §4au it reached 17.4% of the broken lessons against a 30% bar, and end to end in §4az it passed in
+  0.2 of its sessions (5 of 25, on 2 of 5 past bugs) where no review passed in none, short of the bar
+  for a default, on five tasks of one repository, at about 6.9 times a session's cost. `okl init` now
+  says it is on, what it costs and how to turn it off, and the README's costs section shows it. Whether it holds beyond this
   repository is still to measure (`review-after-writing-beyond-one-repository`).
 
 - **The review's own text says what checking in one pass does** (REPORT §4bg). Its fallback, for an
   agent that cannot start a sub-agent, said checking the lessons one per pass in one session was
   weaker and not measured. A first look measured it: asked to check the ten in turn in one session,
-  the agent gave the lesson the change broke a one-line verdict and moved on, and fixed 0.2 of five
-  past bugs against 0.72 with a sub-agent per lesson. The text now says so.
+  the agent gave the lesson the change broke a one-line verdict and moved on, and passed 0.2 on five
+  past bugs against 0.72 when the same ten were asked one at a time, each in a fresh session (§4ay).
+  The text now says so.
 
 - **A lesson's check runs after the agent edits** (#435, #450; opt-in). A lesson can
   name its files and carry the command that proves it, but the command ran only when someone ran
@@ -45,8 +49,8 @@
   carries no files (#39), and a lesson tied to one file can be broken in another (#450). Tied to
   files only, the hook would have run a check for 4 of REPORT §4bf's 61 confirmed breaks; for a check
   CI runs, running it at every edit finds the break while the agent works rather than at the push. **A check
-  approved before this release ran only on edits to its lesson's files, and now runs after every
-  edit;** the command is the one approved, pinned by its hash, but review the list with `okl on-edit`
+  approved on main before #450 ran only on edits to its lesson's files, and now runs after every
+  edit** (`okl on-edit` was in no release before this one); the command is the one approved, pinned by its hash, but review the list with `okl on-edit`
   and drop any that is too slow to run that often. With nothing approved the hook returns after one read of `.okl/config.json`, without
   starting okl; when okl fails, it says the checks did not run. It never blocks an edit and
   never stamps a lesson verified. Other agents can call `okl on-edit run <file>` from their

@@ -186,11 +186,11 @@ says what its code does, picks the ten lessons the change most likely breaks, an
 one on its own in a fresh sub-agent, fixing only what breaks one. In a pilot on five real past
 bugs, asking each lesson of a fixed list of ten on its own reached a pass rate of 0.72, against
 0.08 when the same ten were given together as a list (REPORT §4ay, receipt `replay-one-20261111-1355.json`);
-with the agent choosing its own ten, the review fixed 1 in 5 against none for the earlier
-one-pass review (REPORT §4az). Asking the ten in turn in one session, instead of a sub-agent each,
+with the agent choosing its own ten, the review passed in 0.2 of its sessions (5 of 25, on 2 of the
+5 bugs) against none for the earlier one-pass review (REPORT §4az). Asking the ten in turn in one session, instead of a sub-agent each,
 did not work: the agent gave the lesson the change broke a one-line verdict (REPORT §4bg, a first
-look). okl calls no model for it. It is on by default because a missed lesson costs more than the
-review does, not because a measure settled it: in its pilot it fell short of the bar it had set for
+look). okl calls no model for it. It is on by default because I judge a missed lesson to cost more
+than the review does, not because a measure settled it: in its pilot it fell short of the bar it had set for
 a default (§4az), it has been measured on one repository only ([REPORT §4at](../evals/REPORT.md)),
 the list costs about 60 tokens a lesson, and each lesson checked is a sub-agent session. Turn it
 off with `okl init --no-review-after-writing`, or for one session with `OKL_REVIEW_AFTER_WRITING=0`.
@@ -304,7 +304,7 @@ output contains that text. Give it: exit 0 alone can come from a check that ran 
 stale, `okl reverify` re-runs it with no parameters. There is no way to mark a lesson
 verified without running something: `okl record --verified` is refused.
 
-### Run a lesson's check when the agent edits its files (opt-in)
+### Run lessons' checks after the agent's edits (opt-in)
 
 A proven lesson can also run its check while the agent works. In Claude Code, after each edit inside
 the repository, a hook runs every check you approved, those of the lessons governing the edited file

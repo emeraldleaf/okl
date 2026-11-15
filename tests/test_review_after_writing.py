@@ -293,3 +293,21 @@ def test_the_review_asks_each_lesson_on_its_own_in_a_fresh_context():
     assert "does this change break this lesson?" in steps
     assert "If you cannot start a sub-agent" in steps and "say the review ran without fresh contexts" in steps
     assert "§4ay" in core.render_review({"repo": "r", "files": ["a.py"], "lessons": []})
+
+
+def test_on_by_default_only_where_the_repo_was_set_up_for_okl(tmp_path, monkeypatch):
+    """A session with a store URL exported, in a directory that never ran `okl init`, did not opt in: the
+    review stays off there unless OKL_REVIEW_AFTER_WRITING=1 asks for it. With a .okl/config.json found, it
+    is on by default (review of 0.17.0)."""
+    from okl.client import Client, review_setting
+    assert review_setting(None, None, set_up=False) is False and review_setting("1", None, set_up=False) is True
+    bare = tmp_path / "bare"; bare.mkdir()
+    monkeypatch.chdir(bare)
+    monkeypatch.setenv("OKL_DATABASE_URL", f"sqlite:///{tmp_path / 'store.db'}")   # this test's own, restored after
+    monkeypatch.delenv("OKL_REVIEW_AFTER_WRITING", raising=False)
+    assert Client().configured and Client().review_after_writing is False
+    monkeypatch.setenv("OKL_REVIEW_AFTER_WRITING", "1")
+    assert Client().review_after_writing is True
+    monkeypatch.delenv("OKL_REVIEW_AFTER_WRITING")
+    (bare / ".okl").mkdir(); (bare / ".okl" / "config.json").write_text(json.dumps({"repo": "bare"}))
+    assert Client().review_after_writing is True

@@ -133,12 +133,14 @@ $0.21 at API prices and 43 seconds. That cost, and a catch rate below the bar §
 off by default until 0.17.0. Since §4ay the agent checks each lesson it picks in its own fresh
 sub-agent, which costs more again: in that test, ten lessons asked one at a time took about
 seven times the cost and six times the time of a single pass. With the agent choosing its own
-lessons (REPORT §4az, receipt `review-e2e-20261111-1543.json`), a review cost a median of $0.73 API-priced and 214 seconds, and fixed 1 in
-5 of the past bugs tested, against none for the earlier one-pass review: short of the bar for
+lessons (REPORT §4az, receipt `review-e2e-20261111-1543.json`), a session with the review cost
+$0.73 API-priced on average and a median of 214 seconds, and passed in 0.2 of its sessions (5 of 25,
+on 2 of the 5 past bugs tested), against none for the earlier one-pass review: short of the bar for
 turning it on. Checking the ten in turn in one session would cost a single pass, but the agent then
 gave the lesson the change broke a one-line verdict (REPORT §4bg, a first look), so the review keeps a
-sub-agent per lesson. Since 0.17.0 it is on by default anyway, as a decision rather than a measured
-result: a missed lesson costs more than these sessions do. Turn it off if the cost matters more to you.
+sub-agent per lesson. Since 0.17.0 it is on by default anyway, as my decision rather than a measured
+result: I judge a missed lesson to cost more than these sessions do. Turn it off if the cost matters
+more to you.
 
 ## Architecture review in CI (off by default)
 

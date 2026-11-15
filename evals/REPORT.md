@@ -5795,6 +5795,9 @@ to read a rate from. On §4av's 70 cases, chosen without regard to disagreement,
 one lesson at a time agreed on 62. What stands is narrower: this third model did not settle these
 cases.
 
+
+*Note, 2026-11-14:* 0.17.0 turns the review after writing on by default, by the maintainer's decision and not by this reading, which stands as registered: a missed lesson was judged to cost more than the review's sessions. The CHANGELOG and docs say so.
+
 ## 4av. PRE-REGISTERED: do yes/no conditions make two models agree on whether a change broke a lesson? (2026-11-10)
 
 Written before any call in this section runs. §4au's follow-up found that three models, asked
@@ -6218,6 +6221,9 @@ What it means, not pre-registered:
 3. One session gave its sub-agents only part of the change (one read the first 400 lines of the
    diff), so a sub-agent can miss what lies past what it was handed.
 4. It costs 6.9 times no review and 2.6 times the old one, at 2.8 times the old one's time.
+
+
+*Note, 2026-11-14:* 0.17.0 turns the review after writing on by default, by the maintainer's decision and not by this reading, which stands as registered: a missed lesson was judged to cost more than the review's sessions. The CHANGELOG and docs say so.
 
 ## 4ba. PRE-REGISTERED, A PILOT: does a plan written before any code find the lesson a change needs? (2026-11-11)
 

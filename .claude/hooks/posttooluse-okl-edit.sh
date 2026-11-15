@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:c36ab983495c2129ae22756e330faa90b9115862d12c693e0f54acbc0b956528
-# PostToolUse hook on Edit|Write|MultiEdit|NotebookEdit — after the agent edits a file, run the
-# checks of the lessons that govern it, the ones the person approved, and hand any failure back
-# beside the edit (#435).
+# okl-fingerprint: sha256:3aa7d839b0c50130cb88fd747262f212430728830774aa6fc330d347e0414e5c
+# PostToolUse hook on Edit|Write|MultiEdit|NotebookEdit — after the agent edits a file in the
+# repository, run every lesson check the person approved, those of the lessons governing the file
+# first, and hand any failure back beside the edit (#435, #450).
 #
 # A lesson can carry the command that proves it, but nothing ran it while the agent worked: the
 # gates only notice that a governed file changed. A lesson handed over on its own changed the
@@ -102,7 +102,7 @@ not_run() {
 import json, sys
 print(json.dumps({"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext":
     f"OKL CHECKS NOT RUN for {sys.argv[1]}: {sys.argv[2]}. Lesson checks approved in this "
-    "repository may govern this file; run them before relying on the edit."}}))' "$file" "$1"
+    "repository did not run after this edit; run them before relying on it."}}))' "$file" "$1"
 }
 
 if ! resolve_okl; then
@@ -128,7 +128,7 @@ while { [[ "$rc" -eq 126 ]] || [[ "$rc" -eq 127 ]]; } && [[ "$run_s" -lt 2 ]]; d
 done
 # What okl printed goes to the agent whatever its exit: the JSON names a failing check (exit 1)
 # or a check it could not judge (exit 2). Exit 0 with nothing printed is every check passing, or
-# none governing the file. Any other silence is okl failing: a crash exits 1 with nothing on
+# the file lying outside the repository. Any other silence is okl failing: a crash exits 1 with nothing on
 # stdout, and passing that on as silence read as "the checks passed" (review of #441).
 if [[ -n "$out" ]]; then
   printf '%s' "$out"

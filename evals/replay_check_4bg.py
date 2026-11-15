@@ -246,7 +246,16 @@ def main() -> int:
     ap.add_argument("--alternatives", action="store_true",
                     help="instead: run each broken task's grader on a right and a wrong fix of the frozen code")
     args = ap.parse_args()
-    tasks = [t for t in json.loads(TASKS.read_text()) if not args.only or t["id"] in args.only]
+    every = json.loads(TASKS.read_text())
+    unknown = sorted(set(args.only) - {t["id"] for t in every})
+    if unknown:
+        # A selector that matches nothing must not report 0/0 as all valid (review of #454).
+        print(f"replay_check_4bg: no such task: {', '.join(unknown)}", file=sys.stderr)
+        return 2
+    tasks = [t for t in every if not args.only or t["id"] in args.only]
+    if args.alternatives and not any(not t.get("needs_nothing") for t in tasks):
+        print("replay_check_4bg: the tasks selected are all controls, which have no alternative fixes", file=sys.stderr)
+        return 2
     if args.alternatives:
         return main_alternatives(tasks, args.no_receipt)
     run = run_guard.start()
