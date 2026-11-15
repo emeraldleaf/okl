@@ -247,3 +247,17 @@ def test_a_row_is_kept_only_under_this_model_and_effort():
     assert turn.same_setup({"effort": turn.EFFORT, "models": ["claude-sonnet-5-5"]})
     assert not turn.same_setup({"effort": "high", "models": ["claude-sonnet-5-5"]})
     assert not turn.same_setup({"effort": turn.EFFORT, "models": ["claude-haiku-5-5"]})
+
+
+def test_what_the_sessions_said_quotes_its_receipt():
+    """§4bg's count of sessions that named the right lesson and still failed is read from the transcripts by
+    a committed step, made from committed code, and the power receipt the section cites is usable."""
+    sec = _section()
+    said = json.loads((REPO / "evals" / "results" / "replay-turn-look-dismissals-20261115-0246.json").read_text())
+    assert "replay-turn-look-dismissals-20261115-0246.json" in sec
+    assert (said["sessions"], said["failed"], said["named_and_failed"]) == (12, 9, 8)
+    assert "In turn failed 9 of their 12 sessions" in sec and "In 8 of those 9" in sec
+    assert said["okl_commit"] == said["okl_commit_at_start"] and not said["okl_commit"].endswith("+dirty")
+    power = json.loads((REPO / "evals" / "results" / "power-4bg-20261115-0245.json").read_text())
+    assert "power-4bg-20261115-0245.json" in sec and "usable" not in power
+    assert not power["okl_commit"].endswith("+dirty")
