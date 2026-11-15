@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:bf8c73393ced15df0cc59f52302e981c5217de00fdf197149dba24ec12745093
+# okl-fingerprint: sha256:14544536ce98352b907bd51d773a5e95de1727b8b46f12ffbee6a4fc32e4e1ac
 # Stop hook — the write-side mechanical catch for the encoding loop.
 #
 # The read side (okl check) is enforced by the UserPromptSubmit hook; nothing enforced the WRITE
@@ -116,14 +116,18 @@ transcript=$(printf '%s\n' "$parsed" | sed -n 3p)
 # paths, counts and model names; nothing the session said). Never part of the stop: it prints
 # nothing, it cannot change the exit code, and it is cut off after a few seconds, so a slow
 # transcript or a store that will not open costs a missed row and never a held stop. An okl too
-# old to know `--log-review` refuses it, and the refusal goes nowhere. The watchdog is shell
-# only, since macOS has no `timeout`: TERM after four seconds, KILL a second later.
+# old to know `--log-review` refuses it, and the refusal goes nowhere. okl itself writes nothing
+# where the review after writing is off for the repo, or OKL_REVIEW_LOG=0 (or `review_log: false`
+# in .okl/config.json) turns the log off. The watchdog is shell only, since macOS has no
+# `timeout`: TERM after four seconds, KILL a second later. It holds its own sleeps as jobs it
+# waits on, so killing it on a fast finish also ends the sleep it was in, and leaves none running.
 log_review() {
   [[ -n "$transcript" ]] && [[ -r "$transcript" ]] || return 0
   local logger watchdog
   "${OKL[@]}" recap --transcript "$transcript" --log-review >/dev/null 2>&1 </dev/null &
   logger=$!
-  ( sleep 4; kill "$logger"; sleep 1; kill -9 "$logger" ) >/dev/null 2>&1 &
+  ( trap 'kill "$s" 2>/dev/null; exit 0' TERM
+    sleep 4 & s=$!; wait "$s"; kill "$logger"; sleep 1 & s=$!; wait "$s"; kill -9 "$logger" ) >/dev/null 2>&1 &
   watchdog=$!
   wait "$logger" >/dev/null 2>&1
   kill "$watchdog" >/dev/null 2>&1
