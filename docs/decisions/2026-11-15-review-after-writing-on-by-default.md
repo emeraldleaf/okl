@@ -41,8 +41,10 @@ sessions.
 
 On five past bugs, a session with the review cost $0.73 API-priced on average against $0.11 with
 none, about 6.9 times, and took a median of 214 seconds against 160 (§4az, receipt
-`review-e2e-20261111-1543.json`). Every user pays that on every session that changes files,
-unless they turn it off.
+`review-e2e-20261111-1543.json`). Those are estimates from replayed sessions at API prices: what a
+review costs a user depends on how much their sessions change and how they are billed (on a
+subscription it uses allowance, not money). Every session that changes files carries that extra
+work unless the review is turned off.
 
 ## The gap this does not close
 
