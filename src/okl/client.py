@@ -22,6 +22,17 @@ from .store import Node, Store
 
 CONFIG_DIR = ".okl"
 CONFIG_FILE = "config.json"
+# Every key .okl/config.json holds, declared once (#455). tests/test_docs.py reads the code for
+# the keys it reads or writes (where `config`, `cfg`, a `.config` attribute or load_config()
+# holds the file, and the hooks) and fails on one missing here, or on one here the code no
+# longer reads; it then fails on any key here that no living doc names. So a new key joins
+# this set, and the docs, before it ships.
+CONFIG_KEYS = frozenset({
+    "repo", "interests", "okl_bin", "ci", "git_hook", "review_after_writing", "owner", "owned",  # okl init
+    "service_url", "token",                                    # okl connect
+    "standing", "on_edit",                                     # okl standing, okl on-edit
+    "decision", "warm", "hybrid", "rerank", "review_log",      # set by hand
+})
 
 # How long to wait on the shared service. It is not a limit on the whole call: urllib
 # applies it to each connect and each read, and tries a connect once per address the host

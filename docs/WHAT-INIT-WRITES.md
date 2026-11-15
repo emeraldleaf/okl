@@ -16,7 +16,7 @@ touches only the current directory, and only these:
 
 | Path | What it is |
 |---|---|
-| `.okl/config.json` | repo name, subject interests, and the path to your `okl` binary |
+| `.okl/config.json` | the repo's settings: its name, subject interests, the path to your `okl` binary and the choices listed below the table |
 | `.okl/.gitignore` | keeps `.okl/` (config and store) out of git, with no edit to your own `.gitignore` |
 | `.okl/okl.db` | the local store (local mode only; seeded with the starter lessons and your stack's packs unless `--no-seed`) |
 | `.claude/hooks/userpromptsubmit-okl-check.sh` | **executable**; runs when you submit a task, injects the briefing |
@@ -30,6 +30,27 @@ touches only the current directory, and only these:
 | `.github/CODEOWNERS` (or the CODEOWNERS file GitHub already reads) | **okl's block of owner-approved paths** — only with `--owner @you`: names you code owner of `docs/THESIS.md`, of every place GitHub reads CODEOWNERS from and of any `--owned` path, so a branch rule requiring code-owner review, which you set up, needs your approval for each change. Spliced into an existing file in its own line endings, changing no line of yours; `okl doctor` says whether GitHub enforces it ([docs/AGENT-IDENTITY.md](AGENT-IDENTITY.md)). Commit it |
 | `.claude/settings.json` `permissions.deny` | **in Claude Code, with `--owner`: deny rules** for the usual ways to edit branch protection or rulesets through `gh api` (REST or GraphQL) and to merge past them (`gh pr merge --admin`, the merge API). They advise the agent; the branch rule is what enforces |
 | `.git/hooks/pre-push` (or your `core.hooksPath`) | **executable**; in a git repository with no okl workflow, or with `--git-hook`; runs the drift gate before a push and blocks only on drift; never written over another tool's hook |
+
+`init` keeps these keys in `.okl/config.json`, so a re-run keeps its answers:
+
+- `"repo"`: the repo's name.
+- `"interests"`: the subjects this repo works in. An org lesson that has tags is briefed here
+  only when it shares one. They come from `--interests`, or from the stacks `init` detects in a
+  repo that has none.
+- `"okl_bin"`: how the hooks run okl on this machine (the end of this page says how).
+- `"ci"` and `"git_hook"`: whether `init` installs the CI workflow and the pre-push hook. Both
+  are written even when they are the defaults, so a later run does not change its answer.
+- `"review_after_writing"`: written only when you pass `--review-after-writing` or
+  `--no-review-after-writing`. Without it, the review after writing is on.
+- `"owner"` and `"owned"`: with `--owner` and `--owned`, who approves changes to okl's
+  owner-approved paths, and the paths you added. `okl doctor` reads them.
+- `"service_url"`: with `--service`, the shared service.
+
+Other commands keep their own keys in `.okl/config.json`. `okl connect` writes
+`"service_url"` and, with `--token`, `"token"`; a config holding a token is written readable by
+you alone, and `OKL_SERVICE_URL` and `OKL_TOKEN` win over both keys. `okl standing` keeps
+`"standing"`, and `okl on-edit` keeps `"on_edit"`. The settings you add by hand (`"decision"`,
+`"warm"`, `"hybrid"`, `"rerank"` and `"review_log"`) are in [COSTS-AND-KNOBS.md](COSTS-AND-KNOBS.md).
 
 Re-running `init` is safe: it keeps the repo name already configured here (`--repo` renames,
 which stops the old `repo:<name>` lessons from briefing), upgrades okl's own files, keeps any you edited (say so
@@ -49,7 +70,8 @@ run `okl connect` and point it somewhere yourself.
 `init` writes `.okl/config.json`. When it wires Claude Code (the repo has a `.claude/`
 directory, `claude` is on PATH, or you passed `--claude`), it also installs four hooks:
 a `UserPromptSubmit` hook that runs `check` on
-the prompt you actually typed and puts the briefing into the model's context (the
+the prompt you actually typed (or on `OKL_TASK` instead, when that is set) and puts the
+briefing into the model's context (the
 enforced read — it must be this event: `PreToolUse` stdout never reaches the model,
 which an end-to-end test caught the hard way), and a session-end hook that blocks the first stop
 of a session that changed files. It first asks for the review after writing (`okl check --change`:

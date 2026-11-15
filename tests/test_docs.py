@@ -8,6 +8,7 @@ Nothing failed. These tests make each of those a CI failure that names its fix.
 """
 from __future__ import annotations
 
+import ast
 import json
 import re
 import subprocess
@@ -745,6 +746,327 @@ def test_the_coverage_check_names_a_missing_command_and_flag():
         "is documented (docs/COMMANDS.md, README.md)"]
 
 
+# The same direction for two more sets okl's code defines (#455): the keys of .okl/config.json
+# and the environment variables okl reads. Before this, nine of the seventeen keys were named in
+# no doc as a key of that file, and twenty of the variables in no doc at all. Each set is read
+# from the code, Python by its syntax tree and shell by its expansions, never from the docs, so a
+# key or a variable added later fails here until a doc names it.
+SHIPPED_SHELL = "src/okl/scaffold"   # the shell okl ships; the repo's hooks/ and gates/ are its mirrors
+CONFIG_HOLDERS = ("config", "cfg")   # the names the code gives .okl/config.json's contents
+NAME = r"[A-Z_][A-Z0-9_]*"           # an environment variable, as okl and its scripts write them
+
+
+def _committed(*specs: str) -> dict[str, str]:
+    """Each committed file the pathspecs match, with its text (CLAUDE.md: audits read the repo)."""
+    names = subprocess.run(["git", "-C", str(ROOT), "ls-files", *specs], capture_output=True,
+                           text=True, check=True).stdout.split()
+    return {name: (ROOT / name).read_text() for name in names}
+
+
+def _shell_sources() -> dict[str, str]:
+    """The shell okl ships: the agent hooks, the git hook, the gates and the kit's review script."""
+    return {name: text for name, text in _committed(SHIPPED_SHELL).items()
+            if name.endswith(".sh") or "/git-hooks/" in name}
+
+
+def _key_uses(tree, holds, methods, stores):
+    """Each (line, key expression) where `tree` uses a key of a mapping `holds` accepts:
+    `.<method>(key)`, `[key]` (a read only, unless `stores`), and `key in`."""
+    for n in ast.walk(tree):
+        if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute) and n.func.attr in methods \
+                and n.args and holds(n.func.value):
+            yield n.lineno, n.args[0]
+        elif isinstance(n, ast.Subscript) and holds(n.value) and (stores or isinstance(n.ctx, ast.Load)):
+            yield n.lineno, n.slice
+        elif isinstance(n, ast.Compare) and isinstance(n.ops[0], ast.In | ast.NotIn) and holds(n.comparators[0]):
+            yield n.lineno, n.left
+
+
+def _holds_config(node) -> bool:
+    """Whether `node` is .okl/config.json's contents as the code names them: `config` or `cfg`,
+    a `.config` attribute (the Client's), load_config(), or json.loads(cfg.read_text())."""
+    code = ast.unparse(node)
+    holder = "|".join(CONFIG_HOLDERS)
+    return (code in CONFIG_HOLDERS or code.endswith((".config", "load_config()"))
+            or re.fullmatch(rf"(?:json\.)?loads\((?:{holder})\.read_text\(\)\)", code) is not None)
+
+
+def _string_constants(tree) -> dict[str, str]:
+    """A module's top-level `NAME = "text"` assignments."""
+    return {t.id: n.value.value for n in tree.body if isinstance(n, ast.Assign)
+            and isinstance(n.value, ast.Constant) and isinstance(n.value.value, str)
+            for t in n.targets if isinstance(t, ast.Name)}
+
+
+def _config_keys_in(sources: dict[str, str]) -> tuple[dict[str, set[str]], list[str]]:
+    """Each .okl/config.json key the Python in `sources` reads or writes, with the files that do,
+    and each use whose key is neither a string nor a module's string constant: a key this cannot
+    name must fail the test, never pass it unseen."""
+    trees = {path: ast.parse(text) for path, text in sources.items()}
+    dotted = {path.removeprefix("src/").removesuffix(".py").replace("/", "."): path for path in trees}
+    constants = {path: _string_constants(tree) for path, tree in trees.items()}
+    keys: dict[str, set[str]] = {}
+    unnamed: list[str] = []
+    for path, tree in trees.items():
+        names = dict(constants[path])
+        package = path.removeprefix("src/").removesuffix(".py").split("/")
+        for n in ast.walk(tree):   # `from .on_edit import KEY as ON_EDIT_KEY` names on_edit's constant
+            if isinstance(n, ast.ImportFrom) and n.level and n.module:
+                origin = dotted.get(".".join([*package[:-n.level], *n.module.split(".")]), "")
+                names |= {a.asname or a.name: constants[origin][a.name] for a in n.names
+                          if a.name in constants.get(origin, {})}
+        for line, key in _key_uses(tree, _holds_config, ("get", "pop", "setdefault"), stores=True):
+            name = key.value if isinstance(key, ast.Constant) else names.get(getattr(key, "id", ""))
+            if isinstance(name, str):
+                keys.setdefault(name, set()).add(path)
+            else:
+                unnamed.append(f"{path}:{line}: {ast.unparse(key)}")
+    return keys, unnamed
+
+
+def _hook_config_keys(sources: dict[str, str]) -> dict[str, set[str]]:
+    """Each .okl/config.json key the shell in `sources` reads, in a command that names the file
+    (`config.json`, or `$config` holding its path): a `.get("key")` in its Python, a `'"key"'`
+    grep pattern or a `"key":` sed pattern."""
+    keys: dict[str, set[str]] = {}
+    for path, text in sources.items():
+        for line in text.replace("\\\n", " ").splitlines():
+            if not line.lstrip().startswith("#") and re.search(r"config\.json|\$\{?config\b", line):
+                for m in re.finditer(r"""\.get\(\s*["'](\w+)["']|'"(\w+)"'|"(\w+)":""", line):
+                    keys.setdefault(m[1] or m[2] or m[3], set()).add(path)
+    return keys
+
+
+def _doc_units(text: str):
+    """Each paragraph, list item, table row and fenced command entry of a doc, with what covers
+    it: the headings it sits under, its table's header row, or its list's lead-in when that ends
+    in a colon, as ci/check-agent-neutral.py reads a doc (here, a blank line may come between)."""
+    headings: dict[int, str] = {}
+    for i, part in enumerate(re.split(r"^(```.*?^```)", text, flags=re.S | re.M)):
+        if i % 2:   # a fenced block: each line that starts an entry, with the comment lines under it
+            yield from ((entry, " ".join(headings.values())) for entry in re.split(r"\n(?=[^\s#])", part))
+            continue
+        lead = ""   # the paragraph the next list follows, when it ends in a colon
+        for block in re.split(r"\n\s*\n", part):
+            for m in re.finditer(r"^(#+)\s.*$", block, re.M):
+                headings = {k: v for k, v in headings.items() if k < len(m[1])} | {len(m[1]): m[0]}
+            under = " ".join(headings.values())
+            if block.lstrip().startswith("|"):
+                rows = block.strip().splitlines()
+                yield from ((row, f"{under} {rows[0]}") for row in rows)
+                lead = ""
+                continue
+            items = re.split(r"\n(?=\s*(?:[-*]|\d+\.)\s)", block)
+            if not re.match(r"\s*(?:[-*]|\d+\.)\s", items[0]):   # a paragraph first, not a list going on
+                lead = items[0] if items[0].rstrip().endswith(":") else ""
+            yield from ((item, f"{under} {lead}") for item in items)
+
+
+def _config_key_problems(living: dict[str, str], keys) -> list[str]:
+    """Each key no living doc names as a key of .okl/config.json: written `key` or "key" in a
+    unit that names the file, or that a heading, table header or lead-in naming it covers. A bare
+    word is not enough: `repo` and `owner` are also lesson fields, and `ci` is a folder."""
+    covered = set()
+    for text in living.values():
+        for unit, over in _doc_units(text):
+            if "config.json" in unit or "config.json" in over:
+                covered |= {k for k in keys if re.search(rf'`{re.escape(k)}`|"{re.escape(k)}"', unit)}
+    return [f'`{k}` is in no living doc (README.md, docs/) as a key of .okl/config.json: write it as `{k}` '
+            f'or "{k}" where the doc names .okl/config.json, in docs/WHAT-INIT-WRITES.md for a key a '
+            "command writes or docs/COSTS-AND-KNOBS.md for a setting" for k in sorted(set(keys) - covered)]
+
+
+def _python_env_reads(sources: dict[str, str]) -> tuple[dict[str, set[str]], list[str]]:
+    """Each environment variable the Python in `sources` reads, with the files that do:
+    `os.environ.get(x)`, `os.getenv(x)`, `os.environ[x]` read, `x in os.environ`. A write
+    (`os.environ[x] = `, `.pop`, `.setdefault`) is not a read. Also each read whose name is not a
+    string, which must fail the test rather than pass it unseen."""
+    found: dict[str, set[str]] = {}
+    unnamed: list[str] = []
+    for path, text in sources.items():
+        tree = ast.parse(text)
+        uses = [*_key_uses(tree, lambda n: ast.unparse(n) in ("os.environ", "environ"), ("get",), stores=False),
+                *((n.lineno, n.args[0]) for n in ast.walk(tree) if isinstance(n, ast.Call) and n.args
+                  and ast.unparse(n.func) in ("os.getenv", "getenv"))]
+        for line, key in uses:
+            if isinstance(key, ast.Constant) and isinstance(key.value, str):
+                found.setdefault(key.value, set()).add(path)
+            else:
+                unnamed.append(f"{path}:{line}: {ast.unparse(key)}")
+    return found, unnamed
+
+
+# What bash sets itself (its manual's "Bash Variables"): expanding one is not an environment read,
+# though no line of the script assigns it.
+BASH_SETS = frozenset({"BASH", "BASHPID", "BASH_LINENO", "BASH_REMATCH", "BASH_SOURCE", "BASH_VERSION",
+                       "EUID", "HOSTNAME", "IFS", "LINENO", "OLDPWD", "OPTARG", "OPTIND", "OSTYPE",
+                       "PIPESTATUS", "PPID", "PWD", "RANDOM", "REPLY", "SECONDS", "UID"})
+# A shell script read left to right, one token at a time: what expands and what is assigned.
+SHELL_TOKEN = re.compile(rf"""
+    <<-?[ \t]*(?P<quote>['"]?)(?P<tag>\w+)(?P=quote)(?P<line>[^\n]*)\n(?P<body>.*?)^[ \t]*(?P=tag)[ \t]*$
+  | '[^']*'                                                     # single-quoted: nothing expands
+  | (?P<double>"(?:[^"\\]|\\.)*")                               # double-quoted: expansions only
+  | (?<![^\s;&|()])\#[^\n]*                                     # a comment
+  | \\.                                                         # an escaped character
+  | (?<![^\s;&|()])(?:(?:local|export|declare|readonly)[ \t]+(?:-\w+[ \t]+)*)?(?P<assign>{NAME})(?:\[[^\]]*\])?\+?=
+  | (?<![^\s;&|()])for[ \t]+(?P<loop>{NAME})[ \t]+in\b
+  | \$\{{?\#?(?P<ref>{NAME})
+""", re.X | re.S | re.M)
+EXPANSION = re.compile(rf"\$\{{?\#?({NAME})")
+EMBEDDED_READ = re.compile(rf"""environ(?:\.get\(|\[)\s*["']({NAME})["']|getenv\(\s*["']({NAME})["']""")
+
+
+def _shell_env_reads(text: str) -> set[str]:
+    """The upper-case variables a shell script expands before any line of it assigns them (in
+    code, in double quotes, and in a heredoc whose delimiter is unquoted), and those its embedded
+    Python reads from os.environ that the script does not set itself, such as a value handed to
+    python3 on its own command line."""
+    expanded: dict[str, int] = {}
+    assigned: dict[str, int] = {}
+    for m in SHELL_TOKEN.finditer(text):
+        if m["assign"] or m["loop"]:
+            assigned.setdefault(m["assign"] or m["loop"], m.start())
+            continue
+        body = "" if m["quote"] else m["body"] or ""
+        for name in EXPANSION.findall(m[0] if m["ref"] else m["double"] or f"{m['line'] or ''}\n{body}"):
+            expanded.setdefault(name, m.start())
+    reads = {name for name, at in expanded.items() if name not in BASH_SETS and assigned.get(name, len(text)) > at}
+    return reads | ({a or b for a, b in EMBEDDED_READ.findall(text)} - set(assigned))
+
+
+def _env_reads(python: dict[str, str], shell: dict[str, str]) -> tuple[dict[str, set[str]], list[str]]:
+    """Each environment variable the code reads, with the files that do, and the Python reads
+    whose name is not a string."""
+    found, unnamed = _python_env_reads(python)
+    for path, text in shell.items():
+        for name in _shell_env_reads(text):
+            found.setdefault(name, set()).add(path)
+    return found, unnamed
+
+
+# The variables okl reads that no doc of okl's explains: each is another program's, read with the
+# meaning that program gives it. A variable okl gives a meaning to is documented instead, so keep
+# this short.
+NOT_OKLS = {
+    "CLAUDE_PROJECT_DIR": "Claude Code sets it to the project's root for the hooks it runs, which start there",
+    "GITHUB_ACTIONS": "GitHub sets it on its runners; the kit's review script then writes annotations",
+    "TMPDIR": "the system's temporary directory, where the Stop hook keeps its once-a-session marker",
+    "HF_HUB_OFFLINE": "Hugging Face's offline switch: okl sets it while loading a cached model and reads "
+                      "it to put it back",
+    "TRANSFORMERS_OFFLINE": "Hugging Face's older name for HF_HUB_OFFLINE, read as huggingface_hub reads it",
+}
+
+
+def _env_problems(living: dict[str, str], reads: dict[str, set[str]], not_okls: dict[str, str]) -> list[str]:
+    """Each variable the code reads that no living doc names and NOT_OKLS does not explain, and
+    each NOT_OKLS entry the code no longer reads."""
+    problems = [f"`{name}` is read by {', '.join(sorted(files))} and named in no living doc (README.md, "
+                "docs/): document it beside the variables it works with, or, if another program "
+                "defines it, add it to NOT_OKLS with the reason"
+                for name, files in sorted(reads.items())
+                if name not in not_okls and not any(_names(text, name) for text in living.values())]
+    return problems + [f"NOT_OKLS names `{name}`, which okl no longer reads: remove it"
+                       for name in sorted(set(not_okls) - set(reads))]
+
+
+def test_every_config_key_the_code_reads_is_declared():
+    """client.CONFIG_KEYS is every .okl/config.json key the code reads or writes, Python and
+    hooks, and nothing else (#455): the set the docs test below holds the docs to. A new key fails
+    here until it is declared, and then there until a doc names it."""
+    from okl.client import CONFIG_KEYS
+    python = _committed("src/okl/*.py")
+    keys, unnamed = _config_keys_in(python)
+    used = set(keys) | set(_hook_config_keys(_shell_sources()))
+    # The reader finds a key by the name the config is held under; whatever load_config() returns
+    # must be held under one of them, or its keys would go unread.
+    elsewhere = [f"{path}:{n.lineno}" for path, text in python.items() for n in ast.walk(ast.parse(text))
+                 if isinstance(n, ast.Assign) and ast.unparse(n.value).endswith("load_config()")
+                 and not all(ast.unparse(t) in (*CONFIG_HOLDERS, "self.config") for t in n.targets)]
+
+    assert not unnamed, f"a config key this cannot name; use a string or a module's constant: {unnamed}"
+    assert not elsewhere, f"hold load_config()'s result as `config` or `cfg`: {elsewhere}"
+    assert len(keys) > 12, keys     # okl uses seventeen; a reader that finds few is broken
+    assert used == CONFIG_KEYS, (f"used in the code, not in client.CONFIG_KEYS: {sorted(used - CONFIG_KEYS)}; "
+                                 f"in CONFIG_KEYS, used nowhere: {sorted(CONFIG_KEYS - used)}")
+
+
+def test_every_config_key_is_in_the_docs():
+    """Every key in client.CONFIG_KEYS is named as a key of .okl/config.json in a living doc
+    (README.md, docs/): `key` or "key", where the doc names the file (#455)."""
+    from okl.client import CONFIG_KEYS
+    problems = _config_key_problems(_living_docs(), CONFIG_KEYS)
+
+    assert not problems, "config keys no doc names:\n  " + "\n  ".join(problems)
+
+
+def test_every_environment_variable_okl_reads_is_in_the_docs():
+    """Every environment variable okl's Python and the shell it ships read is named in a living
+    doc, unless NOT_OKLS says whose it is (#455)."""
+    reads, unnamed = _env_reads(_committed("src/okl/*.py"), _shell_sources())
+    problems = _env_problems(_living_docs(), reads, NOT_OKLS)
+
+    assert not unnamed, f"a variable this cannot name; read it by a string: {unnamed}"
+    assert len(reads) > 30, reads   # okl reads over forty; a reader that finds few is broken
+    # One from each place: the Python, an agent hook, a gate and the kit's review script.
+    assert {"OKL_DATABASE_URL", "OKL_TASK", "OKL_DIAGRAM_OUT_EXT", "REVIEW_BASE_REF"} <= set(reads)
+    assert not problems, "environment variables no doc names:\n  " + "\n  ".join(problems)
+
+
+SHELL_FIXTURE = r"""#!/usr/bin/env bash
+LOCAL=1
+echo "$LOCAL ${OKL_EXPANDED:-x} $PWD ${#OKL_LENGTH}" '$OKL_SINGLE_QUOTED'
+# $OKL_IN_A_COMMENT
+cat <<'EOF'
+$OKL_IN_A_QUOTED_HEREDOC
+EOF
+cat <<EOF
+$OKL_IN_A_HEREDOC
+EOF
+echo "OKL_IN_A_STRING=1 is not an assignment"; echo "$OKL_IN_A_STRING"
+OKL_HANDED="$x" python3 -c 'import os; print(os.environ["OKL_HANDED"], os.environ.get("OKL_EMBEDDED"))'
+"""
+
+
+def test_the_config_and_environment_checks_name_what_is_missing():
+    """Red where they should be: a key or a variable new code reads with no doc, a key's every
+    mention removed, a key named away from .okl/config.json, a stale NOT_OKLS entry; and a write,
+    a quoted word, a comment and a value handed to python3 are not reads."""
+    from okl.client import CONFIG_KEYS
+    living = _living_docs()
+
+    # A key new code reads, as a string, through another module's constant, and one it cannot name.
+    keys, unnamed = _config_keys_in({
+        "src/okl/a.py": 'KEY = "on_edit"\n',
+        "src/okl/b.py": "from .a import KEY as K\ndef f(cfg, k):\n"
+                        '    return cfg.get("frobnicate"), load_config()[K], self.config.pop(k)\n'})
+    assert set(keys) == {"frobnicate", "on_edit"}
+    assert unnamed == ["src/okl/b.py:3: k"]
+    assert _config_key_problems(living, {"frobnicate"}) == [
+        '`frobnicate` is in no living doc (README.md, docs/) as a key of .okl/config.json: write it as '
+        '`frobnicate` or "frobnicate" where the doc names .okl/config.json, in docs/WHAT-INIT-WRITES.md '
+        "for a key a command writes or docs/COSTS-AND-KNOBS.md for a setting"]
+    # Every mention of `owned` as a key removed from the docs.
+    dropped = {name: text.replace('"owned"', '"ownd"').replace("`owned`", "`ownd`") for name, text in living.items()}
+    assert [p.split(" is ")[0] for p in _config_key_problems(dropped, CONFIG_KEYS)] == ["`owned`"]
+    # Named, but not as a key of the file; then under a heading that names it.
+    assert _config_key_problems({"a.md": 'Set `"owned"` here.\n'}, {"owned"}) != []
+    assert _config_key_problems({"a.md": "## What `.okl/config.json` holds\n\n| Key | What |\n|---|---|\n"
+                                         '| `"owned"` | paths |\n'}, {"owned"}) == []
+
+    # A variable read in Python, and one in a hook; writes, quotes, comments and hand-offs are not.
+    python = {"src/okl/x.py": 'import os\nos.environ["OKL_SET"] = "1"\nos.environ.pop("OKL_POPPED", None)\n'
+                              'a = os.environ.get("OKL_GOT") or os.getenv("OKL_GETENV") or os.environ.get(a)\n'}
+    reads, unnamed = _env_reads(python, {"hooks/x.sh": SHELL_FIXTURE})
+    assert set(reads) == {"OKL_GOT", "OKL_GETENV", "OKL_EXPANDED", "OKL_LENGTH", "OKL_IN_A_HEREDOC",
+                          "OKL_IN_A_STRING", "OKL_EMBEDDED"}
+    assert unnamed == ["src/okl/x.py:4: a"]
+    assert _env_problems({"a.md": "Set `OKL_GOT`."}, {"OKL_GOT": {"x.py"}, "OKL_NEW": {"x.sh"}}, {}) == [
+        "`OKL_NEW` is read by x.sh and named in no living doc (README.md, docs/): document it beside "
+        "the variables it works with, or, if another program defines it, add it to NOT_OKLS with the reason"]
+    assert _env_problems(living, {}, {"OKL_GONE": "why"}) == [
+        "NOT_OKLS names `OKL_GONE`, which okl no longer reads: remove it"]
+
+
 # Every place the docs say something is not yet measured or still open, and the open question it
 # waits on (#334). Docs kept saying "not yet measured" after the measurement had landed, and a
 # review caught it three times (the anatomy sheet on #333 had three). The REPORT result or
@@ -890,18 +1212,20 @@ def test_the_opt_in_claim_check_fails_on_a_bare_claim_and_a_stale_entry():
         "no doc claims 'calls no generative model' any more: remove its entry"]
 
 
-def test_the_docs_state_on_edits_defaults_as_the_code_has_them():
+def test_the_docs_state_defaults_as_the_code_has_them():
     """COSTS-AND-KNOBS, COMMANDS and GETTING-STARTED quote on-edit's defaults: the seconds a check gets
-    after an edit, the seconds one edit gets, the hook's registered timeout and --quick's limit. Each
-    quote is built here from the constants, so a default changed without its docs, or a doc changed
-    without its default, fails (#470). The CHANGELOG's released sections are history, not held to
-    later code."""
+    after an edit, the seconds one edit gets, the hook's registered timeout and --quick's limit; and
+    COMMANDS quotes `okl dedup`'s threshold. Each quote is built here from the constants, so a default
+    changed without its docs, or a doc changed without its default, fails (#470, #455). The
+    CHANGELOG's released sections are history, not held to later code."""
     from okl.cli.on_edit import BUDGET, HOOK_TIMEOUT, QUICK, TIMEOUT
+    from okl.core import DEDUP_THRESHOLD
     quotes = {
         "docs/COSTS-AND-KNOBS.md": [f"at most {TIMEOUT} seconds each and {BUDGET} an edit",
                                     f"last passing run took {QUICK} seconds or less",
                                     f"above 0 and up to {TIMEOUT}"],
-        "docs/COMMANDS.md": [f"--timeout ({TIMEOUT} s) and one edit --budget ({BUDGET} s)"],
+        "docs/COMMANDS.md": [f"--timeout ({TIMEOUT} s) and one edit --budget ({BUDGET} s)",
+                             f"(default {DEDUP_THRESHOLD}, set to over-report)"],
         "docs/GETTING-STARTED.md": [f"last passing run took {QUICK} s or less",
                                     f"each gets {TIMEOUT} seconds and one edit gets {BUDGET} in all, inside the "
                                     f"{HOOK_TIMEOUT}-second timeout",
@@ -909,4 +1233,4 @@ def test_the_docs_state_on_edits_defaults_as_the_code_has_them():
     }
     missing = [(doc, q) for doc, qs in quotes.items() for q in qs
                if q not in " ".join((ROOT / doc).read_text().split())]
-    assert not missing, f"a doc no longer quotes on-edit's default as the code has it: {missing}"
+    assert not missing, f"a doc no longer quotes a default as the code has it: {missing}"
