@@ -74,6 +74,7 @@ def synthetic(path: Path, megabytes: float) -> int:
 
 def time_one(transcript: Path, scratch: Path, runs: int) -> dict[str, object]:
     """`okl recap --log-review` on `transcript`, `runs` times, each a new process in the scratch repo."""
+    transcript = transcript.resolve()          # the process runs in the scratch repo, not where this was called from
     env = {"PATH": os.environ["PATH"], "HOME": str(scratch), "PYTHONPATH": str(REPO / "src")}
     seconds, codes = [], []
     for _ in range(runs):
@@ -106,7 +107,7 @@ def main() -> int:
             made = synthetic(scratch / "projects" / "synthetic.jsonl", args.synthetic_mb)
             case = time_one(scratch / "projects" / "synthetic.jsonl", scratch, args.runs)
             cases.append({"label": "synthetic worst case", "messages": made, **case})
-        for rank, t in enumerate(sorted(args.transcripts, key=lambda p: -p.stat().st_size), 1):
+        for rank, t in enumerate(sorted((p.resolve() for p in args.transcripts), key=lambda p: -p.stat().st_size), 1):
             cases.append({"label": f"real transcript {rank} by size", **time_one(t, scratch, args.runs)})
     real = [c for c in cases if str(c["label"]).startswith("real")]
     receipt: dict[str, object] = {

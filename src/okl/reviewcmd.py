@@ -33,8 +33,17 @@ _DURATION = re.compile(r"\d+(?:\.\d+)?[smhd]?")
 # Words that stand before the command and do not change which one runs.
 _PREFIXES = frozenset({"time", "env", "nohup", "exec", "command",
                        "{", "(", "!", "if", "then", "elif", "else", "do", "while", "until"})
-_FLAG_WRAPPERS = frozenset({"npx", "bunx", "xargs", "uvx"})          # their own flags, then the command
+_FLAG_WRAPPERS = frozenset({"npx", "bunx", "xargs", "uvx"})          # their own options, then the command
 _RUN_WRAPPERS = {"uv": "run", "poetry": "run", "pipenv": "run", "pipx": "run", "pnpm": "exec", "yarn": "exec"}
+# The options of a wrapper that take the next word as their value; any other option stands alone, and
+# `--opt=value` is one word. Without the table `uv run --with x okl ...` would take `x` for the command.
+_UV = frozenset({"--with", "--with-editable", "--with-requirements", "--python", "-p", "--project", "--directory",
+                 "--env-file", "--extra", "--group", "--no-group", "--only-group", "--package", "--index",
+                 "--default-index", "--index-url", "--find-links", "--from", "--config-file", "--cache-dir"})
+_TAKES = {"uv": _UV, "uvx": _UV, "poetry": frozenset({"--directory", "-C", "--project", "--python", "-p"}),
+          "pipenv": frozenset({"--python", "--pypi-mirror"}), "pipx": frozenset({"--spec", "--python", "--index-url"}),
+          "npx": frozenset({"-p", "--package", "-c", "--call"}), "bunx": frozenset({"-p", "--package"}),
+          "xargs": frozenset({"-n", "-I", "-P", "-L", "-d", "-s", "-E", "-a", "-J"})}
 _SHELLS = frozenset({"sh", "bash", "zsh", "dash", "ksh"})
 # A command that prints or searches text, so a test runner's name in it is a mention, not a run.
 _NOT_RUNNERS = frozenset({"grep", "egrep", "fgrep", "rg", "ack", "cat", "less", "more", "head", "tail",
@@ -75,14 +84,25 @@ def _skip_heredoc_bodies(command: str, i: int, pending: list[tuple[str, bool]]) 
 
 
 def _closing(command: str, start: int) -> int:
-    """The index of the `)` that closes the `(` before `start`, skipping quoted text; the end if none."""
+    """The index of the `)` that closes the `(` before `start`, skipping quoted text and the bodies of
+    heredocs, which are text whatever parentheses and quotes they hold; the end if none."""
     depth, quote, i = 1, "", start
+    pending: list[tuple[str, bool]] = []
     while i < len(command):
         c = command[i]
         if quote:
+            i += 1 if c == "\\" and quote == '"' else 0
             quote = "" if c == quote else quote
         elif c in "'\"":
             quote = c
+        elif c == "\\":
+            i += 1
+        elif c == "\n":
+            i = _skip_heredoc_bodies(command, i + 1, pending) - 1
+            pending = []
+        elif c == "<" and command.startswith("<<", i) and not command.startswith("<<<", i):
+            if m := _HEREDOC.match(command, i):
+                pending.append((m.group(3), bool(m.group(1))))
         elif c == "(":
             depth += 1
         elif c == ")":
@@ -122,8 +142,8 @@ class _Splitter:
 
     def step(self, c: str) -> None:
         """Read the character at `self.i`; `self.i` ends on the last one it used."""
-        if self.quote != "'":
-            self.nested_command(c)
+        if self.quote != "'" and self.nested_command(c):
+            return
         if self.quote:
             self.cur.append(c)
             if c == "\\" and self.quote == '"':
@@ -157,18 +177,30 @@ class _Splitter:
                 self.pending.append((m.group(3), bool(m.group(1))))
         self.cur.append(c)
 
-    def nested_command(self, c: str) -> None:
+    def nested_command(self, c: str) -> bool:
         """Note a `$(...)` or backtick command, to be read on its own, and where `$((...))` arithmetic
-        opens and closes, since `<<` in it is a shift and no heredoc."""
-        if c == "$" and self.command.startswith("$((", self.i):
+        opens and closes, since `<<` in it is a shift and no heredoc. A complete substitution is taken
+        whole into the word being built and the cursor left on its last character, so this pass never
+        reads inside it: a heredoc body in `$(cat <<'EOF' ...)` is text, and `okl check --change` in a
+        commit message's backticks is not a run. Whether it took one."""
+        cmd = self.command
+        if c == "$" and cmd.startswith("$((", self.i):
             self.arith += 1
-        elif self.arith and c == ")" and self.command.startswith("))", self.i):
+        elif self.arith and c == ")" and cmd.startswith("))", self.i):
             self.arith -= 1
-        elif c == "$" and self.command.startswith("$(", self.i):
-            self.nested.append(self.command[self.i + 2:_closing(self.command, self.i + 2)])
-        elif c == "`":
-            end = self.command.find("`", self.i + 1)
-            self.nested.append(self.command[self.i + 1:end if end > 0 else len(self.command)])
+        elif c == "$" and cmd.startswith("$(", self.i):
+            end = _closing(cmd, self.i + 2)
+            return self.take(cmd[self.i + 2:end], end)
+        elif c == "`" and (end := cmd.find("`", self.i + 1)) > 0:
+            return self.take(cmd[self.i + 1:end], end)
+        return False
+
+    def take(self, inner: str, end: int) -> bool:
+        """Keep `inner` to be read as a command line, and the text through `end` in the current word."""
+        self.nested.append(inner)
+        self.cur.append(self.command[self.i:end + 1])
+        self.i = end
+        return True
 
     def escape(self) -> None:
         """Keep the character a backslash protects, whatever it is."""
@@ -186,11 +218,11 @@ def segments(command: str) -> list[list[str]]:
     return _Splitter(command).run()
 
 
-def _flags(words: list[str], i: int) -> int:
-    """How many words from `i` are options, for a wrapper that takes its own before the command."""
-    n = 0
-    while i + n < len(words) and words[i + n].startswith("-"):
-        n += 1
+def _options(words: list[str], i: int, wrapper: str) -> int:
+    """How many words from `i` are the options of `wrapper`, each with its value when it takes one."""
+    takes, n = _TAKES.get(wrapper, frozenset()), 0
+    while i + n < len(words) and words[i + n].startswith("-") and words[i + n] != "--":
+        n += 2 if words[i + n] in takes else 1
     return n
 
 
@@ -218,9 +250,9 @@ def _skip(words: list[str], i: int) -> int:
     if _ASSIGN.match(w) or w in _PREFIXES:
         return 1
     if w in _RUN_WRAPPERS and words[i + 1:i + 2] == [_RUN_WRAPPERS[w]]:
-        return 2
+        return 2 + _options(words, i + 2, w)
     if w in _FLAG_WRAPPERS:
-        return 1 + _flags(words, i + 1)
+        return 1 + _options(words, i + 1, w)
     if w == "timeout":
         return 1 + _timeout_args(words, i + 1)
     return 1 + _nice_args(words, i + 1) if w == "nice" else 0
@@ -410,13 +442,11 @@ def parse_test_outcome(is_error: bool, text: str) -> str:
 
 def inside(path: str, root: str | None) -> str | None:
     """`path` relative to the repository at `root`, or None when it is outside it, or when there
-    is no repository to measure from. Both are real paths (`/tmp` is `/private/tmp` on a Mac), so a
-    link into the repository is inside and one out of it is not. A relative path is the
-    repository's own unless it climbs out."""
+    is no repository to measure from. A relative path is taken from the repository. Both are real
+    paths (`/tmp` is `/private/tmp` on a Mac), so a link into the repository is inside, and one out of
+    it, relative or not, is not."""
     if not root:
         return None
-    if not Path(path).is_absolute():
-        norm = os.path.normpath(path)
-        return None if norm == ".." or norm.startswith(".." + os.sep) else norm
-    real, base = os.path.realpath(path), os.path.realpath(root).rstrip(os.sep)
+    real = os.path.realpath(Path(root) / path)         # an absolute `path` replaces the root
+    base = os.path.realpath(root).rstrip(os.sep)
     return real[len(base) + 1:] if real.startswith(base + os.sep) else None

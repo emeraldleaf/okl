@@ -10,12 +10,20 @@ That format is Claude Code's and undocumented, so every read here fails soft: wh
 is left out, and nothing raises into the Stop hook this rides on. A reading holds ids, paths, counts,
 model names and booleans only: no code, no command line and no text from the session.
 
-The review is a window of the transcript. It starts at the first command that ran `okl check
---change` after the Stop hook's note (one before the note reviewed another state; without a note,
-the first one), and ends at the next prompt a person typed, or at a Stop-hook summary with no
-sub-agent it started still pending, whichever comes first. Tokens, time and sub-agents are counted
-inside it, and a sub-agent's own lines up to its end: a session that goes on to other work after its
-review must not have that work counted as the review's.
+A row describes one review, the last one the Stop hook asked for. A note asks for one: the first
+command that ran `okl check --change` after it and before the next prompt a person typed. A prompt
+first means the request was skipped (asked, not ran), and a run after that prompt is nobody's review.
+With several notes in one session the last one counts, and the earlier notes and their runs are not
+logged. A run before any note keeps the rule it had: the first one, unasked.
+
+The review is a window of the transcript. It opens at that run and ends at the next prompt a person
+typed, or at a Stop-hook summary with no sub-agent it started still pending, whichever comes first.
+A background sub-agent is pending from its Agent call until a notification reports it finished, in
+whichever of the shapes Claude Code writes one in (see `_reported`). Tokens, time and sub-agents are
+counted inside the window, and a sub-agent's own lines up to its end: a session that goes on to other
+work after its review must not have that work counted as the review's. An Agent call that came back
+as an error started no sub-agent: it is no check, and `failed_launches` counts it; the count is not
+kept in the row, which has no column for it.
 
 Claude Code 2.1.302 also writes `api-request-blob` lines that repeat an assistant message's tool
 calls after their results. Only assistant and user lines are read for calls, and a call counts once.
@@ -53,6 +61,16 @@ _FILES = re.compile(r"(\d+) file\(s\) changed since")
 _LISTED = re.compile(r"This review lists (\d+) lesson\(s\)")
 # What Claude Code writes as a user line that no person typed.
 _NOT_A_PROMPT = ("<task-notification", "<agent-message", "<system-reminder", "Stop hook")
+# The bytes that mark a line a person typed, as 2.1.302 writes it, and a user line, in both spellings of JSON.
+_HUMAN_KIND = (b'"kind":"human"', b'"kind": "human"')
+_USER_TYPE = (b'"type":"user"', b'"type": "user"')
+# A notification's `<status>` when the sub-agent is done. The four values every one of about 2,400
+# notifications in two real transcripts carried; a task still running is `running`, in a `task_status`
+# attachment, and does not report anything.
+_TERMINAL = frozenset({"completed", "failed", "killed", "stopped"})
+_STATUS = re.compile(r"<status>\s*([^<]*?)\s*</status>")
+_TASK_ID = re.compile(r"<task-id>\s*([^<\s]+)\s*</task-id>")
+_TOOL_ID = re.compile(r"<tool-use-id>\s*([^<\s]+)\s*</tool-use-id>")
 
 
 @dataclass
@@ -67,6 +85,7 @@ class ReviewReading:
     lessons_listed: int | None = None
     tokens: int | None = None          # the review's, with its sub-agents'
     duration_s: int | None = None
+    failed_launches: int = 0           # Agent calls that came back as an error: no check; not kept in the row
     checks: list[dict[str, Any]] = field(default_factory=list)
 
     @property
@@ -308,100 +327,167 @@ def _user_texts(d: dict[str, Any]) -> list[str]:
     return []
 
 
-def _is_human_prompt(d: dict[str, Any]) -> bool:
+def _has_tool_result(d: dict[str, Any]) -> bool:
+    return any(b.get("type") == "tool_result" for b in _blocks(d))
+
+
+def _is_human_prompt(d: dict[str, Any], origin_era: bool = False) -> bool:
     """Whether a line is a prompt a person typed. Claude Code 2.1.302 marks one `origin: {"kind":
-    "human"}`; a task notification and another session's message carry other kinds, and are not a
-    person. An older transcript has no `origin`, and there a user line is a prompt unless it is a tool
-    result, marked meta, empty, or a notification, a reminder or hook feedback by its text."""
-    if d.get("type") != "user" or d.get("isMeta"):
-        return False
-    text = " ".join(_user_texts(d)).strip()
-    if not text:
+    "human"}`, even one with no text (an image); a task notification and another session's message
+    carry other kinds, and are not a person. A compact summary is not one either. A transcript with no
+    `origin` is an older one, and there a user line is a prompt unless it is a tool result, marked meta,
+    empty, or a notification, a reminder or hook feedback by its text; but once a transcript has shown
+    an `origin` (`origin_era`), a user line without one is not a typed prompt."""
+    if d.get("type") != "user" or d.get("isMeta") or d.get("isCompactSummary") or _has_tool_result(d):
         return False
     origin = d.get("origin")
     if origin:
         return isinstance(origin, dict) and origin.get("kind") == "human"
-    return not text.startswith(_NOT_A_PROMPT)
+    text = " ".join(_user_texts(d)).strip()
+    return not origin_era and bool(text) and not text.startswith(_NOT_A_PROMPT)
+
+
+def _notification_ids(text: str) -> list[str]:
+    """The task and tool-use ids of each task notification in `text` that reports a sub-agent done: its
+    `<status>` is a terminal one, or it names none. A notification of a task still running does not."""
+    ids: list[str] = []
+    for chunk in text.split("<task-notification")[1:]:
+        status = _STATUS.search(chunk)
+        if status and status.group(1).lower() not in _TERMINAL:
+            continue
+        ids += _TASK_ID.findall(chunk) + _TOOL_ID.findall(chunk)
+    return ids
+
+
+def _reported(d: dict[str, Any]) -> list[str]:
+    """The ids a transcript line reports finished. 2.1.302 writes a finished background sub-agent in
+    four shapes, counted over two real transcripts (about 160 as user lines, 190 as `queued_command`
+    attachments, 1,700 in `queue-operation` lines, and a `task_status` attachment for a task still
+    running): a user line that is a task notification or a peer's hand-back, an attachment of type
+    `queued_command` with the notification in its `prompt`, one of type `task_status` with a terminal
+    status, and a `queue-operation` line with the notification as its `content`. Any other line that
+    mentions an id, a user line that merely quotes one included, reports nothing."""
+    kind = d.get("type")
+    if kind == "user":
+        if _has_tool_result(d):
+            return []
+        origin: dict[str, Any] = d["origin"] if isinstance(d.get("origin"), dict) else {}
+        ids = [origin.get("from"), origin.get("senderTaskId")] if origin.get("kind") == "peer" and origin.get("handback") else []
+        text = " ".join(_user_texts(d))
+        if origin.get("kind") == "task-notification" or "<task-notification" in text:
+            ids += _notification_ids(text)
+        return [i for i in ids if isinstance(i, str) and i]
+    if kind == "attachment":
+        att: dict[str, Any] = d["attachment"] if isinstance(d.get("attachment"), dict) else {}
+        if att.get("type") == "queued_command" and isinstance(att.get("prompt"), str):
+            return _notification_ids(att["prompt"])
+        task = att.get("taskId")
+        if att.get("type") == "task_status" and isinstance(task, str) and str(att.get("status")).lower() in _TERMINAL:
+            return [task]
+        return []
+    content = d.get("content")
+    return _notification_ids(content) if kind == "queue-operation" and isinstance(content, str) else []
 
 
 class _Main:
     """One pass over the main transcript.
 
-    Before the review starts only two cheap tests run on each line, since a long session's
-    transcript is hundreds of megabytes: does it hold the note, and does it hold `--change`. From
-    the review's first call to its end every line is read; after its end only the note matters.
+    Before the review starts only a few cheap tests run on each line, since a long session's transcript
+    is hundreds of megabytes: does it hold the note, does it hold `--change`, and, once a note is
+    waiting for its review, could it be a prompt a person typed. From the review's first call to its
+    end every line is read; after its end only a note matters.
 
-    Where the Stop hook asked for the review, it is the first command that ran `okl check --change`
-    after the note: one before the note reviewed a different state, so a window opened before the
-    note is thrown away, tallies and all. Without a note, the first command that ran it.
+    A note's review is the first command that ran `okl check --change` after that note and before the
+    next prompt a person typed. A prompt first means the request was skipped, and a run after it is
+    nobody's review. With several notes in one session the row describes the last: the earlier notes,
+    and any run after them, are thrown away, tallies and all. A run before any note keeps the rule it
+    had: the first command that ran it, unasked, until a note says another review was asked for.
 
-    The review ends at the next prompt a person typed, or at a Stop-hook summary with no sub-agent
-    the review started still pending. In Claude Code every Agent call returns at once as
-    `async_launched` and the agent stops until a task notification names it; the review steps check
-    one lesson after another, so the session stops between lessons and the review is not over.
+    The review ends at the next prompt a person typed, or at a Stop-hook summary with no sub-agent the
+    review started still pending. In Claude Code every Agent call returns at once as `async_launched`
+    and the agent stops until a notification names the sub-agent; the review steps check one lesson
+    after another, so the session stops between lessons and the review is not over. An Agent call
+    that came back as an error started nothing: it is no check, and it is counted apart.
     """
 
     def __init__(self) -> None:
-        self.asked = False           # the note is in the transcript
-        self.noted = False           # ... and has been read, so a review from here on follows it
+        self.asked = False           # a note is in the transcript
+        self.noted = False           # ... so a review counts only for the last note
+        self.waiting = False         # the last note's review has not run, and no prompt has skipped it
+        self.origin_era = False      # a user line has carried `origin`: no origin is no typed prompt
         self._clear()
 
     def _clear(self) -> None:
         """Start with no review window open."""
         self.started = False
         self.ended = False
-        self.after_note = False      # the open window began after the note
         self.start: float | None = None
         self.end_ts: float | None = None
         self.review_id: str | None = None
         self.files: int | None = None
         self.listed: int | None = None
+        self.failed = 0                                 # Agent calls that came back as an error
         self.agents: dict[str, dict[str, Any]] = {}     # Agent tool_use id -> its input and result
         self.pending: set[str] = set()                  # Agent calls not yet reported back
         self.awaiting: dict[str, Any] = {}              # a pending call's id -> the agent id it launched
         self.tally = _Tally()
 
+    def _maybe_prompt(self, line: bytes) -> bool:
+        """Whether a line could be a prompt a person typed, by two byte tests that need no parse."""
+        if any(p in line for p in _HUMAN_KIND):
+            return True
+        return not self.origin_era and any(p in line for p in _USER_TYPE) and b"tool_result" not in line
+
+    def _worth_parsing(self, line: bytes, has_note: bool) -> bool:
+        if has_note:
+            return True
+        if self.started:
+            return not self.ended
+        return b"--change" in line or (self.waiting and self._maybe_prompt(line))
+
     def feed(self, line: bytes) -> None:
+        if not self.origin_era and any(p in line for p in _HUMAN_KIND):
+            self.origin_era = True
         has_note = NOTE in line
-        if self.ended and not has_note:
-            return
-        if not self.started and not has_note and b"--change" not in line:
-            return
-        d = _loads(line)
-        if d is None:
+        if not self._worth_parsing(line, has_note) or (d := _loads(line)) is None:
             return
         if has_note and _carries_note(d):
             self._note()
-        if not self.started:
-            if self._try_start(d):
-                self._event(d)
-        elif not self.ended:
-            self._step(d)
+        if self.started:
+            if not self.ended:
+                self._step(d)
+        elif self._try_start(d):
+            self._event(d)
+        elif self.waiting and _is_human_prompt(d, self.origin_era):
+            self.waiting = False        # the person typed before the review ran: the request was skipped
 
     def _note(self) -> None:
-        """The Stop hook asked for the review. A window open from before it is not that review."""
+        """The Stop hook asked for the review. Whatever ran before, for no note or an earlier one, is not
+        this note's review. (The note comes in two lines, the hook's summary and its feedback, before
+        anything can run: the second finds nothing to throw away.)"""
         self.asked = True
-        if self.started and not self.after_note:
-            self._clear()
-        self.noted = True
+        self._clear()
+        self.noted = self.waiting = True
 
     def _step(self, d: dict[str, Any]) -> None:
         """Read one line of an open window, or end it."""
         stopped = d.get("type") == "system" and d.get("subtype") == "stop_hook_summary"
-        if _is_human_prompt(d) or (stopped and not self.pending):
+        if _is_human_prompt(d, self.origin_era) or (stopped and not self.pending):
             self.ended, self.end_ts = True, _ts(d)
         else:
             self._event(d)
 
     def _try_start(self, d: dict[str, Any]) -> bool:
-        """Start the review at this line if it runs the review; whether it did."""
+        """Start the review at this line if it runs the review, and it is the one to read; whether it did."""
+        if self.noted and not self.waiting:
+            return False
         for b in _blocks(d):
             inp = b.get("input")
             cmd = inp.get("command") if isinstance(inp, dict) else None
             if (b.get("type") == "tool_use" and b.get("name") == "Bash" and isinstance(cmd, str)
                     and reviewcmd.is_review_command(cmd)):
                 self.started, self.start, self.review_id = True, _ts(d), b.get("id")
-                self.after_note = self.noted
+                self.waiting = False
                 return True
         return False
 
@@ -418,15 +504,20 @@ class _Main:
         for b in results:
             # toolUseResult describes the line's one result; with several, it says nothing of which
             self._result(b, d.get("toolUseResult") if len(results) == 1 else None)
-        if self.pending and not results and d.get("type") == "user":
-            self._notified(" ".join(_user_texts(d)))
+        if self.pending:
+            self._release(_reported(d))
 
     def _result(self, b: dict[str, Any], res: Any) -> None:
-        """A tool result: the review's own output, or a sub-agent's launch or completion."""
+        """A tool result: the review's own output, or a sub-agent's launch, completion or failure."""
         tid = b.get("tool_use_id")
         if tid == self.review_id and self.files is None and self.listed is None:
             self._counts(_text(b.get("content")))
         elif tid in self.agents:
+            if b.get("is_error"):
+                del self.agents[tid]            # the call started no sub-agent
+                self.pending.discard(tid)
+                self.failed += 1
+                return
             res = res if isinstance(res, dict) else {}
             if res:
                 self.agents[tid].update(agent_id=res.get("agentId"), model=res.get("resolvedModel"))
@@ -435,11 +526,10 @@ class _Main:
             else:
                 self.pending.discard(tid)
 
-    def _notified(self, text: str) -> None:
-        """A user line that names a pending sub-agent (a task notification) reports it back."""
+    def _release(self, ids: list[str]) -> None:
+        """A pending sub-agent is done when its tool call's id, or the agent's own, is reported."""
         for tid in list(self.pending):
-            aid = self.awaiting.get(tid)
-            if tid in text or (isinstance(aid, str) and aid in text):
+            if tid in ids or self.awaiting.get(tid) in ids:
                 self.pending.discard(tid)
 
     def _counts(self, text: str) -> None:
@@ -480,6 +570,7 @@ def _read(path: Path, reading: ReviewReading, repo_dir: str | None,
     if not main.started:
         return reading
     reading.files_changed, reading.lessons_listed = main.files, main.listed
+    reading.failed_launches = main.failed
     tokens, seen_tokens, last = main.tally.tokens, main.tally.seen, main.tally.last
     for check, read in _checks(main, path.parent / path.stem / "subagents", repo_dir, known_ids):
         reading.checks.append(check)

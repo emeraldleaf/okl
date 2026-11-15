@@ -17,7 +17,7 @@ from urllib import request as _req
 import pytest
 
 from okl import core
-from okl.store import Node, Store
+from okl.store import Node, ReviewRun, Store
 
 
 def check_floor(*args, **kwargs):
@@ -1762,6 +1762,11 @@ def _backend_conformance(store, label):
     assert [x.repo for x in store.reviews("other-repo")] == ["other-repo"], f"{label}: review repo filter"
     assert store.reviews("other-repo")[0].tokens is None, f"{label}: an unread count must read back None"
     assert len(store.reviews()) >= 2, f"{label}: reviews(None) must return every repo's rows"
+    # a tie on the time breaks on the key as bytes: "B" before "a", which a locale's order would reverse
+    for session in ("b-sess", "B-sess", "a-sess"):
+        store._impl.log_review(ReviewRun(at=5_000, session_id=session, repo="tie-repo", asked=True, ran=False))
+    assert [x.session_id for x in store.reviews("tie-repo")] == ["B-sess", "a-sess", "b-sess"], \
+        f"{label}: review ties must order as bytes"
 
     # Semantic vectors (#258): one per record per model, replaced on re-put, dropped on delete,
     # read back byte for byte.

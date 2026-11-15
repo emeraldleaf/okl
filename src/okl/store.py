@@ -632,8 +632,8 @@ class _Backend(Protocol):
 
       log_review(run) / reviews(repo)
         - One row per (session id, repo): logging the same pair again REPLACES it, never adds
-          a second. reviews returns every row oldest first (ties by repo, then session id, the
-          same on both backends), `repo` filtering exactly, with
+          a second. reviews returns every row oldest first (ties by repo, then session id, as bytes,
+          the same on both backends), `repo` filtering exactly, with
           `asked` and `ran` as bools, the counts None where they were None, and the checks
           as logged. The table is created when a store opens, so a store from before it
           gains it.
@@ -1312,8 +1312,11 @@ class _PostgresBackend(_Backend):
     def reviews(self, repo: str | None) -> list[ReviewRun]:
         sql = ("SELECT session_id, repo, at, asked, ran, files_changed, lessons_listed, tokens, "
                "duration_s, checks FROM review_run")
-        rows = (self._fetch(sql + " WHERE repo = %s ORDER BY at, repo, session_id", (repo,))
-                if repo is not None else self._fetch(sql + " ORDER BY at, repo, session_id", ()))
+        # COLLATE "C": bytes, as SQLite orders text, not the database's locale, which puts "a" and "B"
+        # the other way about
+        order = ' ORDER BY at, repo COLLATE "C", session_id COLLATE "C"'
+        rows = (self._fetch(sql + " WHERE repo = %s" + order, (repo,))
+                if repo is not None else self._fetch(sql + order, ()))
         return [_row_to_review(r) for r in rows]
 
     def close(self) -> None:

@@ -343,22 +343,78 @@ def test_the_review_commands_say_when_nothing_is_configured(tmp_path, monkeypatc
     assert "never set up" in capsys.readouterr().err
 
 
-@pytest.mark.skipif(not hasattr(signal, "SIGALRM"), reason="needs SIGALRM")
-def test_the_log_leaves_by_itself_when_it_runs_past_its_deadline(repo, tmp_path, monkeypatch, capsys):
+needs_alarm = pytest.mark.skipif(not hasattr(signal, "SIGALRM"), reason="needs SIGALRM")
+
+
+@needs_alarm
+def test_the_log_step_is_abandoned_quietly_when_it_runs_past_its_deadline(repo, tmp_path, monkeypatch, capsys):
     """The hook kills the logger at four seconds, but a launcher can leave its child running: the
-    command sets an alarm of its own and leaves quietly with exit 0, whatever it was doing, and puts the
-    alarm and its handler back."""
+    command sets an alarm of its own, abandons the log step quietly and exits 0, and puts the alarm and
+    its handler back."""
     before = signal.getsignal(signal.SIGALRM)
     monkeypatch.setattr(lessons, "LOG_DEADLINE", 1)
     monkeypatch.setattr(recap, "log_review", lambda *a, **k: time.sleep(30))
     t = two_agents(tmp_path, repo)
 
     start = time.monotonic()
-    with pytest.raises(SystemExit) as left:
-        main(["recap", "--transcript", str(t), "--log-review"])
+    code = main(["recap", "--transcript", str(t), "--log-review"])
 
-    assert left.value.code == 0 and time.monotonic() - start < 10
+    assert code == 0 and time.monotonic() - start < 10
     got = capsys.readouterr()
     assert (got.out, got.err) == ("", "")
     assert signal.alarm(0) == 0 and signal.getsignal(signal.SIGALRM) == before     # no alarm left, handler restored
     assert _rows(repo) == []
+
+
+@needs_alarm
+def test_an_alarm_during_the_log_step_still_prints_the_report(repo, tmp_path, monkeypatch, capsys):
+    """`--log-review --reviews`: the alarm abandons only the log step. The report is still printed, as one
+    JSON document on stdout."""
+    _fill(Client()._local_store())
+    monkeypatch.setattr(lessons, "LOG_DEADLINE", 1)
+    monkeypatch.setattr(recap, "log_review", lambda *a, **k: time.sleep(30))
+    t = two_agents(tmp_path, repo)
+
+    code = main(["recap", "--transcript", str(t), "--log-review", "--reviews", "--format", "json"])
+
+    got = capsys.readouterr()
+    assert code == 0 and got.err == ""
+    assert json.loads(got.out)["sessions"] == 4      # the four rows _fill wrote; the log step wrote none
+
+
+@needs_alarm
+def test_the_reader_cannot_swallow_the_deadline_and_write_a_part_read_row(repo, tmp_path, monkeypatch):
+    """The reader catches every Exception so it never fails a stop. The deadline is not one, so a read
+    cut off by it leaves no row, rather than a row from what was read so far."""
+    from okl import reviewlog
+
+    def slow(path, reading, repo_dir, known_ids):
+        reading.readable = reading.asked = True      # what it had read when the time ran out: enough for a row
+        time.sleep(30)
+    monkeypatch.setattr(lessons, "LOG_DEADLINE", 1)
+    monkeypatch.setattr(reviewlog, "_read", slow)
+    t = two_agents(tmp_path, repo)
+
+    assert main(["recap", "--transcript", str(t), "--log-review"]) == 0
+
+    assert _rows(repo) == []
+
+
+@needs_alarm
+def test_an_alarm_set_before_the_deadline_gets_its_remaining_time_back():
+    """The deadline is a guest of the process's one alarm: it puts back the handler that was there, and
+    an earlier alarm with the seconds it had left, rather than cancelling it."""
+    before = signal.getsignal(signal.SIGALRM)
+    signal.alarm(100)
+    try:
+        with lessons._deadline(5):
+            time.sleep(0.05)
+        remaining = signal.alarm(0)
+    finally:
+        signal.alarm(0)
+
+    assert 95 <= remaining <= 100
+    assert signal.getsignal(signal.SIGALRM) == before
+    with lessons._deadline(5):
+        pass
+    assert signal.alarm(0) == 0                                 # and with none before, none is left after

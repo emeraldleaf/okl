@@ -160,6 +160,12 @@ def test_the_words_in_a_tool_result_or_a_peers_message_are_not_the_note(tmp_path
     "echo $(echo okl check --change)",
     "echo '$(okl check --change)'",
     "cat <<-EOF\n\tokl check --change\n\tEOF",
+    # a commit message or a PR body written through a heredoc inside $(...): the body is text
+    'git commit -m "$(cat <<\'EOF\'\nFix the thing\n\nRun `okl check --change` before you push.\nEOF\n)"',
+    'gh pr create --title t --body "$(cat <<\'EOF\'\n## Summary\n- run `okl check --change`\nEOF\n)"',
+    'git commit -m "$(cat <<\'EOF\'\nit\'s (not closed, `okl check --change`\nEOF\n)" && echo done',
+    "echo `okl check --change",
+    "echo `date` okl check --change",
 ])
 def test_a_command_that_only_mentions_the_review_does_not_start_one(tmp_path, command):
     """A grep, an echo, a commit message, a heredoc, a `python -c` string and the hook's own call are
@@ -198,6 +204,11 @@ def test_a_command_that_only_mentions_the_review_does_not_start_one(tmp_path, co
     "while okl check --change; do break; done",
     "okl check --change=main",
     "`okl check --change`",
+    "uv run --no-sync okl check --change",
+    "uv run --with x okl check --change",
+    "uvx --from okl okl check --change",
+    'echo "$(cat <<\'EOF\'\nit\'s (open\nEOF\n)" && okl check --change',
+    "echo \"$(echo ')')\" && okl check --change",
 ])
 def test_an_executed_command_starts_the_review(tmp_path, command):
     """okl as the command word: bare, by path, through python, through the variable a script keeps it in."""
@@ -241,7 +252,7 @@ def test_a_later_unrelated_turn_is_not_the_review(tmp_path, prompt):
     work = [turn(7220, "z1", call("s", "Bash", command="okl show les-b"), usage=(1, 1, 1, 1)),
             turn(7300, "z2", call("w", "Write", file_path=f"{root}/src/export.py"), usage=(1, 1, 1, 1)),
             result(7301, "w", "written")]
-    t = two_agents(tmp_path, root, tail=tail)
+    t = two_agents(tmp_path, root, tail=tail, older=prompt is user)
     sub = t.parent / "sess-1" / "subagents"
     (sub / "agent-ccc.jsonl").write_text("\n".join(work) + "\n")
     (sub / "agent-ccc.meta.json").write_text(json.dumps({"toolUseId": "tu-later", "model": "opus"}))
@@ -386,7 +397,7 @@ def test_lines_no_person_wrote_do_not_end_the_review(tmp_path):
     second = call("tu-a3", "Agent", prompt=shown("les-b"))
     tail = [notification(200, "aaa"),
             user(201, "<system-reminder>a reminder</system-reminder>", isMeta=True),
-            feedback(202),
+            feedback(202, note=False),
             user(203, "<agent-message>a peer says hello</agent-message>", isMeta=True, origin={"kind": "peer"}),
             turn(210, "m5", second, usage=(1, 1, 1, 1)), result(211, "tu-a3", "launched", agentId="eee"),
             turn(300, "m4", say("done"), usage=(5, 5, 5, 5))]
@@ -597,6 +608,7 @@ def test_a_link_into_the_repository_is_inside_and_a_link_out_of_it_is_not(tmp_pa
     assert reviewcmd.inside(f"{root}/escape/a.py", str(root)) is None
     assert reviewcmd.inside(f"{tmp_path}/work/repo2/a.py", str(root)) is None
     assert reviewcmd.inside("src/a.py", str(root)) == "src/a.py" and reviewcmd.inside("../a.py", str(root)) is None
+    assert reviewcmd.inside("escape/a.py", str(root)) is None          # a relative path through a link out
     assert reviewcmd.inside("/anywhere/a.py", None) is None
 
 
@@ -685,6 +697,8 @@ def test_a_test_run_keeps_a_fixed_runner_and_existing_paths_only(tmp_path, comma
     ("npx jest tests", "jest"), ("bunx vitest run tests", "vitest"), ("xargs pytest tests", "pytest"),
     ("pnpm exec jest tests", "jest"), ("yarn exec jest tests", "jest"), ("timeout 60 pytest tests", "pytest"),
     ("FOO=1 python -m pytest tests", "pytest"), ("cd sub && pytest tests", "pytest"),
+    ("uv run --no-sync pytest tests", "pytest"), ("uv run --with x python -m pytest tests", "pytest"),
+    ("xargs -n 1 pytest tests", "pytest"),
     ("bash -c 'pytest tests'", "pytest"), ("npm test", "npm test"),
     ("python tool.py --runner pytest", None), ("python -c \"import pytest\"", None),
     ("python3 -m pip install pytest", None), ("node scripts/run.js jest", None),
@@ -700,6 +714,15 @@ def test_a_runner_is_the_command_not_a_word_further_along(tmp_path, command, run
     run = reviewcmd.parse_test_run(command, str(root))
 
     assert (run[0] if run else None) == runner
+
+
+def test_a_run_through_a_wrapper_keeps_its_test_record(tmp_path):
+    """`uv run --no-sync pytest tests/test_x.py` is a pytest run with that target, as the bare command is."""
+    root = repo_root(tmp_path)
+
+    assert reviewcmd.parse_test_run("uv run --no-sync pytest tests/test_x.py", str(root)) == ("pytest", ["tests/test_x.py"])
+    assert reviewcmd.parse_test_run("uv run --with a-pkg pytest tests/test_x.py", str(root)) == ("pytest", ["tests/test_x.py"])
+    assert reviewcmd.parse_test_run("pytest tests/test_x.py", str(root)) == ("pytest", ["tests/test_x.py"])
 
 
 def test_a_path_is_read_as_the_command_writes_it(tmp_path):

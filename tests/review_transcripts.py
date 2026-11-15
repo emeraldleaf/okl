@@ -34,11 +34,52 @@ def typed(sec: int, text: str) -> str:
     return user(sec, text, origin={"kind": "human"})
 
 
-def notification(sec: int, agent_id: str) -> str:
-    """The user line that reports a background sub-agent back: not a person (its origin says so) and
-    not marked meta, and it names the agent in a `<task-id>`."""
-    return user(sec, f"<task-notification><task-id>{agent_id}</task-id><status>completed</status>"
-                     "</task-notification>", origin={"kind": "task-notification"})
+def _notice(agent_id: str, status: str | None, tool_id: str | None) -> str:
+    """A task notification's text: the task (the agent's own id), the Agent call's id, the status."""
+    return ("<task-notification>"
+            + f"<task-id>{agent_id}</task-id>" + (f"<tool-use-id>{tool_id}</tool-use-id>" if tool_id else "")
+            + (f"<status>{status}</status>" if status else "") + "<summary>Agent finished</summary></task-notification>")
+
+
+def notification(sec: int, agent_id: str, status: str | None = "completed", tool_id: str | None = None) -> str:
+    """Shape (a), the user line that reports a background sub-agent back: not a person (its origin says
+    so), not marked meta, and it names the agent in a `<task-id>`."""
+    return user(sec, _notice(agent_id, status, tool_id), origin={"kind": "task-notification"})
+
+
+def handback(sec: int, agent_id: str) -> str:
+    """Shape (a), the other kind: a peer's hand-back, a meta user line whose origin names the agent."""
+    return user(sec, "<agent-message>the report</agent-message>", isMeta=True,
+                origin={"kind": "peer", "from": agent_id, "senderTaskId": agent_id, "name": "reviewer",
+                        "handback": True})
+
+
+def queued_command(sec: int, agent_id: str, status: str | None = "completed", tool_id: str | None = None) -> str:
+    """Shape (b): an `attachment` of type `queued_command`, the notification in its `prompt`. 2.1.302 wrote
+    most completions this way, and a mid-turn one has no user line at all."""
+    return json.dumps({"type": "attachment", "timestamp": at(sec), "attachment": {
+        "type": "queued_command", "prompt": _notice(agent_id, status, tool_id), "commandMode": "task-notification",
+        "origin": {"kind": "task-notification"}}})
+
+
+def task_status(sec: int, agent_id: str, status: str) -> str:
+    """Shape (c): an `attachment` of type `task_status`, by `taskId`. Seen `running`, and `completed`."""
+    return json.dumps({"type": "attachment", "timestamp": at(sec), "attachment": {
+        "type": "task_status", "taskId": agent_id, "taskType": "local_agent", "status": status,
+        "description": "a sub-agent", "deltaSummary": "", "outputFilePath": "/tmp/out"}})
+
+
+def queue_op(sec: int, agent_id: str, status: str | None = "completed", tool_id: str | None = None,
+             operation: str = "enqueue") -> str:
+    """Shape (d): a `queue-operation` line whose `content` is the notification."""
+    return json.dumps({"type": "queue-operation", "operation": operation, "timestamp": at(sec), "sessionId": "s",
+                       "content": _notice(agent_id, status, tool_id)})
+
+
+def image_prompt(sec: int) -> str:
+    """A prompt a person typed that is only an image: `origin` human and no text."""
+    return json.dumps({"type": "user", "timestamp": at(sec), "origin": {"kind": "human"}, "message": {
+        "role": "user", "content": [{"type": "image", "source": {"type": "base64", "data": ""}}]}})
 
 
 def feedback(sec: int, note: bool = True) -> str:
@@ -48,10 +89,12 @@ def feedback(sec: int, note: bool = True) -> str:
     return user(sec, text, isMeta=True)
 
 
-def stop_summary(sec: int) -> str:
-    """The `system` line Claude Code writes when a Stop hook has run: the session stopped."""
+def stop_summary(sec: int, note: bool = False) -> str:
+    """The `system` line Claude Code writes when a Stop hook has run: the session stopped. With `note`,
+    the hook's feedback, the review note in it, is in `hookErrors`, as it is when the hook blocks."""
+    errors = ['["$CLAUDE_PROJECT_DIR"/.claude/hooks/stop-okl-encode.sh]: ' + NOTE] if note else []
     return json.dumps({"type": "system", "subtype": "stop_hook_summary", "timestamp": at(sec),
-                       "hookCount": 1, "hookErrors": [], "preventedContinuation": False})
+                       "hookCount": 1, "hookErrors": errors, "preventedContinuation": False})
 
 
 def call(tid: str, name: str, **inp) -> dict:
@@ -120,15 +163,17 @@ def repo_root(tmp_path: Path) -> Path:
     return r
 
 
-def start_review(sec: int = 110) -> list[str]:
-    """The lines that start a review: the person's prompt, the hook's note, the review command and
-    its output, with the command repeated by a blob line as 2.1.302 writes it."""
+def start_review(sec: int = 110, older: bool = False) -> list[str]:
+    """The lines that start a review: the person's prompt (an older transcript's, with no `origin`, when
+    `older`), the hook's note, the review command and its output, with the command repeated by a blob
+    line as 2.1.302 writes it."""
     rev = call("tu-rev", "Bash", command="okl check --change")
-    return [typed(0, "fix the bug"), feedback(sec - 10),
+    return [(user if older else typed)(0, "fix the bug"), feedback(sec - 10),
             turn(sec, "m1", rev, usage=(10, 20, 30, 40)), result(sec + 2, "tu-rev", REVIEW_OUT), blob(rev)]
 
 
-def two_agents(tmp_path: Path, root: Path, tail: list[str] | None = None, lead: list[str] | None = None) -> Path:
+def two_agents(tmp_path: Path, root: Path, tail: list[str] | None = None, lead: list[str] | None = None,
+               older: bool = False) -> Path:
     """A review with two sub-agents: `aaa` opens les-a, edits a file and runs a test; `bbb` opens
     les-b and changes nothing. `tail` replaces the lines after the review's last message, and `lead`
     comes before the prompt, the note and the review."""
@@ -137,7 +182,7 @@ def two_agents(tmp_path: Path, root: Path, tail: list[str] | None = None, lead: 
     a2 = call("tu-a2", "Agent", description="second", prompt="look at les-b")
     main_lines = [
         *(lead or []),
-        *start_review(),
+        *start_review(older=older),
         # two blocks, one message: its usage (10 tokens) is on both lines and counts once
         turn(120, "m2", say("starting the first"), a1, usage=(1, 2, 3, 4)),
         result(121, "tu-a1", "launched", agentId="aaa", status="async_launched"), blob(a1),
@@ -166,10 +211,13 @@ def two_agents(tmp_path: Path, root: Path, tail: list[str] | None = None, lead: 
         "bbb": ({"toolUseId": "tu-a2", "model": "sonnet"}, agent_b)})
 
 
-def background_review(tmp_path: Path, root: Path, lessons: int = 3) -> Path:
+def background_review(tmp_path: Path, root: Path, lessons: int = 3, report=None) -> Path:
     """A review as 2.1.302 saved every one: each Agent call returns `async_launched`, the agent stops
     (a Stop-hook summary) until a task notification names the sub-agent, then launches the next, one
-    lesson after another, and stops a last time. A prompt the person types afterwards starts other work."""
+    lesson after another, and stops a last time. A prompt the person types afterwards starts other work.
+    `report(sec, agent_id)` is the line that reports a sub-agent finished: a task notification user line
+    unless another shape is given."""
+    report = report or notification
     main_lines = [*start_review()]
     t = 120
     agents = {}
@@ -179,7 +227,7 @@ def background_review(tmp_path: Path, root: Path, lessons: int = 3) -> Path:
         main_lines += [turn(t, f"a{n}", launch, usage=(1, 1, 1, 1)),
                        result(t + 1, tid, "launched", agentId=aid, status="async_launched"), blob(launch),
                        turn(t + 2, f"w{n}", say("waiting for the sub-agent"), usage=(1, 1, 1, 1)),
-                       stop_summary(t + 3), notification(t + 60, aid)]
+                       stop_summary(t + 3), report(t + 60, aid)]
         agents[aid] = ({"toolUseId": tid, "model": "sonnet"}, [
             turn(t + 10, f"s{n}", call(f"sh{n}", "Bash", command=f"okl show les-{n}"), usage=(1, 1, 1, 1)),
             result(t + 11, f"sh{n}", f"[les-{n}] Rule"),

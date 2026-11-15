@@ -6,11 +6,13 @@ import argparse
 import contextlib
 import hashlib
 import json
+import math
 import os
 import signal
 import sys
 import tempfile
 import threading
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -532,27 +534,48 @@ def _review_plan(client: Client, args: argparse.Namespace) -> tuple[bool, str | 
     return writing, None
 
 
-LOG_DEADLINE = 4     # seconds the log may take; the Stop hook's own watchdog TERMs it at 4 and KILLs at 5
+LOG_DEADLINE = 4     # seconds the log step may take; the Stop hook's own watchdog TERMs it at 4 and KILLs at 5
+
+
+class _LogDeadline(BaseException):
+    """The log step ran out of time. Not an Exception, so the reader's own `except Exception` cannot
+    swallow it and go on to write a row from what it had read."""
 
 
 @contextlib.contextmanager
 def _deadline(seconds: int) -> Any:
-    """Leave quietly, exit 0, if the block runs past `seconds`: a SIGALRM of this process's own, so a
-    log started through a launcher that the hook's kill reaches only in part still ends by itself.
-    Only where there is a SIGALRM and this is the main thread; elsewhere the block has no limit."""
+    """Raise `_LogDeadline` in the block if it runs past `seconds`: a SIGALRM of this process's own, so a
+    log started through a launcher that the hook's kill reaches only in part still ends by itself. Only
+    where there is a SIGALRM and this is the main thread; elsewhere the block has no limit. The handler
+    and any alarm that was already set are put back, the alarm with the time it had left."""
     if not hasattr(signal, "SIGALRM") or threading.current_thread() is not threading.main_thread():
         yield
         return
 
     def fire(_signum: int, _frame: Any) -> None:
-        raise SystemExit(0)
+        raise _LogDeadline
     previous = signal.signal(signal.SIGALRM, fire)
-    signal.alarm(seconds)
+    started = time.monotonic()
+    earlier = signal.alarm(seconds)           # the seconds an alarm set before this one still had to run
     try:
         yield
     finally:
         signal.alarm(0)
         signal.signal(signal.SIGALRM, previous)
+        if earlier:
+            signal.alarm(max(1, earlier - math.ceil(time.monotonic() - started)))
+
+
+def _log_step(client: Client, args: argparse.Namespace, repo_dir: str) -> None:
+    """Write the session's review row. Past `LOG_DEADLINE` this step is abandoned, quietly, and the
+    command goes on: with `--reviews` beside it the report is still printed."""
+    from .. import recap
+    try:
+        with _deadline(LOG_DEADLINE):
+            store = client._local_store()
+            _say_logged(*recap.log_review(store, client.repo, args.transcript, repo_dir), args.transcript)
+    except _LogDeadline:
+        pass
 
 
 def _recap_reviews(client: Client, repo_dir: str, args: argparse.Namespace) -> int:
@@ -560,8 +583,6 @@ def _recap_reviews(client: Client, repo_dir: str, args: argparse.Namespace) -> i
     back (#464). `--log-review` exits 0 whatever the transcript held, and whether it logged or
     not; it exits 2 for a usage error, a service, a setting it cannot read, or a store it cannot
     write. Its status goes to stderr, so `--reviews --format json` stays one JSON document."""
-    import time
-
     from .. import recap
     writing, refusal = _review_plan(client, args)
     if refusal:
@@ -578,9 +599,7 @@ def _recap_reviews(client: Client, repo_dir: str, args: argparse.Namespace) -> i
             return 2
     try:
         if writing:
-            with _deadline(LOG_DEADLINE):
-                store = client._local_store()
-                _say_logged(*recap.log_review(store, client.repo, args.transcript, repo_dir), args.transcript)
+            _log_step(client, args, repo_dir)
         if args.reviews:
             data = recap.reviews_report(client._local_store(), client.repo, since_ms=since, top=args.limit)
             print(json.dumps(data, indent=2) if args.format == "json" else recap.render_reviews(data), end="")
@@ -603,8 +622,6 @@ def _say_logged(reading: Any, written: bool, transcript: str) -> None:
 
 def _recap_report(client: Client, repo_dir: str, args: argparse.Namespace) -> int:
     """`okl recap --report`: how the session went, from the local store's logs (#279)."""
-    import time
-
     from .. import recap
     if client.mode != "local":
         print("okl recap --report reads the local store's logs; a shared service keeps its own.",
