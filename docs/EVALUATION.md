@@ -207,8 +207,8 @@ before the code merged.
 | prompt | the prompt, with the reply before it for a short one | yes (the reply: not yet) |
 | plan | the agent's statement of the task before it writes code | the agent can ask (`okl_check`); nothing yet makes it |
 | file | the lessons governing a file as it is read | yes, `okl check --path` (§4aj) |
-| change | the code as it is written | opt-in: `okl on-edit` runs a governed lesson's check after an edit (#441); not yet measured as a channel |
-| pull request | lessons against the diff, judged one by one | opt-in: the review after writing (`okl check --change`) asks ten the agent picks, each in a fresh context; reach measured on real PRs (§4ao–§4aq), and end to end 0.2 on five tasks (§4az) |
+| change | the code as it is written | opt-in: `okl on-edit` runs every approved lesson's check after any edit in the repo, those governing the edited file first (#441, #450); not yet measured as a channel |
+| pull request | lessons against the diff, judged one by one | on by default since 0.17.0, by decision: the review after writing (`okl check --change`) asks ten the agent picks, each in a fresh context; reach measured on real PRs (§4ao–§4aq), and end to end 0.2 on five tasks (§4az) |
 
 ## Where each evaluation runs
 

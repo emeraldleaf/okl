@@ -206,11 +206,12 @@ def _e2e_module():
 
 
 def test_the_end_to_end_arms_differ_only_in_the_review_steps():
-    """§4az: one pass is the steps before #427, each alone is today's, and they share everything else."""
+    """§4az: one pass is the steps before #427, each alone the steps #427 shipped, frozen as §4az ran them
+    (the review's own text has moved on since, with §4bg), and they share everything else."""
     e2e = _e2e_module()
     from okl import core
-    assert e2e.STEPS["review_each_alone"] == core.REVIEW_STEPS
-    assert e2e.STEPS["review_one_pass"] != core.REVIEW_STEPS
+    assert e2e.STEPS["review_each_alone"] == e2e.NEW_STEPS and e2e.NEW_STEPS[:2] == core.REVIEW_STEPS[:2]
+    assert e2e.STEPS["review_one_pass"] != e2e.NEW_STEPS
     assert e2e.STEPS["review_one_pass"][:2] == core.REVIEW_STEPS[:2]
     assert "sub-agent" not in " ".join(e2e.STEPS["review_one_pass"])
 

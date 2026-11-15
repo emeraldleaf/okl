@@ -1,4 +1,5 @@
-"""`okl on-edit`: run a lesson's check when the agent edits a file the lesson governs (#435).
+"""`okl on-edit`: run the approved lessons' checks after the agent edits a file in the repository
+(#435, #450), those governing the edited file first.
 
 A lesson can name the files it governs and carry the command that proves it, but the command
 ran only when a person ran `okl verify` or `okl reverify`; the gates notice only that a governed
@@ -14,6 +15,15 @@ command and asks, and the approval is the command's hash: a check whose stored c
 afterwards is not run until it is approved again. The command runs through `okl verify`'s own
 runner, the one place okl hands a confirmed command to a shell. Nothing here stamps a lesson
 verified or blocks an edit: verification stays `okl verify`, on a commit.
+
+A lesson's files say where it was found, not everywhere it holds. A lesson whose check CI already
+runs is given none (#39), many rules hold wherever code does what they are about, and a lesson tied
+to one file can be broken in another its files never name (#450). Tied to files only, the hook would
+have run a check for 4 of REPORT §4bf's 61 confirmed breaks. So every approved check runs after any
+edit inside the repository: those of the lessons governing the edited file first, since the budget
+is spent in order, then the rest. Files decide the order, and drift; never whether a check runs.
+For a check CI runs, this changes when a break is found, at the edit rather than at the push, not
+whether.
 """
 from __future__ import annotations
 
@@ -109,7 +119,6 @@ def _why_not(node: Node | None, repo: str) -> str | None:
     reasons = (
         (node.status in RETIRED_STATUSES, f"it is retired ({node.status})"),
         (node.scope not in ("org", f"repo:{repo}"), f"it belongs to another repository ({shown(node.scope)})"),
-        (not node.files, "it governs no files, so no edit would run it: give it files with okl update --files"),
         (check is None, "it has no stored check: prove it first with "
                         f"okl verify {shown(node.id)} --run \"<check>\" --expect \"<signal>\""),
         # What the person approves must be what runs: a control code, a zero-width or a direction
@@ -137,11 +146,12 @@ def _add(args: argparse.Namespace, approved: dict[str, str], nodes: dict[str, No
     # A refusal leaves stdout empty, so where it will refuse, the plan goes to stderr with it.
     asking = args.yes or sys.stdin.isatty()
     out = sys.stdout if asking else sys.stderr
-    print("When the agent edits a file one of these lessons governs, okl will run its stored check, "
-          "a command from the store, in this repository:", file=out)
+    print("After EVERY edit the agent makes in this repository, okl will run each of these lessons' stored "
+          "checks, a command from the store (first when the edit touches a file the lesson governs), so "
+          "approve only checks that are quick:", file=out)
     for i in wanted:
         run, expect = _stored_check(nodes[i].verified_by) or ("", None)
-        print(f"  [{shown(i)}] {nodes[i].title}\n      files: {nodes[i].files}\n      runs:  {run}"
+        print(f"  [{shown(i)}] {nodes[i].title}\n      files: {nodes[i].files or 'none'}\n      runs:  {run}"
               + (f"\n      passes when its output contains {expect!r}" if expect else ""), file=out)
     if not asking:
         # Said to whoever ran it, often an agent: the way forward is a person, not a flag
@@ -171,7 +181,8 @@ def _remove(args: argparse.Namespace, approved: dict[str, str], _nodes: dict[str
 def _list(approved: dict[str, str], nodes: dict[str, Node], repo: str) -> None:
     """The approved checks, each with whether it still runs, then the lessons that could be added."""
     if approved:
-        print(f"{len(approved)} lesson check(s) run when the agent edits a file they govern:")
+        print(f"{len(approved)} lesson check(s) run after every edit in this repository, those governing "
+              "the edited file first:")
         for i, pinned in sorted(approved.items()):
             node = nodes.get(i)
             chk = _stored_check(node.verified_by) if node else None
@@ -186,24 +197,29 @@ def _list(approved: dict[str, str], nodes: dict[str, Node], repo: str) -> None:
     can = sorted((n for n in nodes.values() if n.id not in approved and _why_not(n, repo) is None),
                  key=lambda n: n.id)
     if can:
-        print(f"{len(can)} more could be added (they govern files and carry a stored check):")
+        print(f"{len(can)} more could be added (they carry a stored check):")
         for n in can:
             print(f"  [{shown(n.id)}] {n.title}\n      runs: {(_stored_check(n.verified_by) or ('',))[0]}")  # printable: _why_not
 
 
 def _run(args: argparse.Namespace, root: Path, approved: dict[str, str], nodes: dict[str, Node], repo: str,
          *, started: float) -> int:
-    """Run the approved checks of the lessons governing the edited files; report what failed.
+    """Run every approved check after an edit inside the repository, those of the lessons governing
+    the edited files first (see the module's notes); report what failed.
 
     Exit 1 when a check failed; 2 when none failed but one could not be judged (out of time, its
     command changed since approval), since a caller reads 0 as every check passing; 0 when every
-    check that governs the files ran and passed, or none governs them. The path is read as the
+    approved check ran and passed, or the edit lies outside the repository. The path is read as the
     file briefing reads it, so a tracked symlink is governed by its own name (review of #441).
     """
     inside, _outside = _repo_relative(list(args.targets), root)
     rel = sorted(set(inside))
-    hits = sorted((n for n in core.governing(list(nodes.values()), repo, set(rel)) if n.id in approved),
+    governed = sorted((n for n in core.governing(list(nodes.values()), repo, set(rel)) if n.id in approved),
+                      key=lambda n: n.id) if rel else []
+    first = {n.id for n in governed}
+    rest = sorted((n for i in approved if i not in first and (n := nodes.get(i)) is not None),
                   key=lambda n: n.id) if rel else []
+    hits = governed + rest   # in this order: the budget is spent on the governing lessons first
     failed: list[tuple[Node, str, str | None, str, str]] = []
     notes: list[str] = []
     passed = 0
@@ -241,7 +257,8 @@ def _run(args: argparse.Namespace, root: Path, approved: dict[str, str], nodes: 
         print(text, file=sys.stderr)
     else:
         print(text or (f"okl on-edit: {passed} approved check(s) passed for {', '.join(rel)}" if hits
-                       else f"okl on-edit: no approved check governs {', '.join(rel) or 'these files'}"))
+                       else f"okl on-edit: no approved check ran for {', '.join(rel) or 'these files'}"
+                            + ("" if rel else " (outside this repository)")))
     return code
 
 

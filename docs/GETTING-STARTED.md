@@ -178,7 +178,7 @@ holds, or propose a correction (`okl update`) or retirement (`okl retire`) for y
 approve. That question is the safety net for the lessons nobody stopped to say out loud;
 answer it, or say explicitly that nothing was worth keeping.
 
-**The review after writing** (opt-in): in Claude Code, after `okl init --review-after-writing`,
+**The review after writing** (on by default): in Claude Code, once a session has changed files,
 the Stop hook first asks the agent to run `okl check --change` and check the code it wrote
 against the lessons. The command lists the files changed since the main branch, committed or
 not, and every lesson in scope one line each, those governing a changed file first. The agent
@@ -187,9 +187,13 @@ one on its own in a fresh sub-agent, fixing only what breaks one. In a pilot on 
 bugs, asking each lesson of a fixed list of ten on its own reached a pass rate of 0.72, against
 0.08 when the same ten were given together as a list (REPORT §4ay, receipt `replay-one-20261111-1355.json`);
 with the agent choosing its own ten, the review fixed 1 in 5 against none for the earlier
-one-pass review (REPORT §4az). okl calls no model for it. It is off by default:
-it has been measured on one repository only ([REPORT §4at](../evals/REPORT.md)), and the list
-costs about 60 tokens a lesson.
+one-pass review (REPORT §4az). Asking the ten in turn in one session, instead of a sub-agent each,
+did not work: the agent gave the lesson the change broke a one-line verdict (REPORT §4bg, a first
+look). okl calls no model for it. It is on by default because a missed lesson costs more than the
+review does, not because a measure settled it: in its pilot it fell short of the bar it had set for
+a default (§4az), it has been measured on one repository only ([REPORT §4at](../evals/REPORT.md)),
+the list costs about 60 tokens a lesson, and each lesson checked is a sub-agent session. Turn it
+off with `okl init --no-review-after-writing`, or for one session with `OKL_REVIEW_AFTER_WRITING=0`.
 
 ### What a good lesson contains
 
@@ -302,10 +306,15 @@ verified without running something: `okl record --verified` is refused.
 
 ### Run a lesson's check when the agent edits its files (opt-in)
 
-A proven lesson can also run its check while the agent works. In Claude Code, after each edit, a
-hook runs the checks of the lessons governing the edited file and hands a failure straight back to
-the agent, beside its edit; a pass says nothing. Only checks you approve run, because each command
-comes from the store, and on a shared store other people wrote some of them:
+A proven lesson can also run its check while the agent works. In Claude Code, after each edit inside
+the repository, a hook runs every check you approved, those of the lessons governing the edited file
+first, and hands a failure straight back to the agent, beside its edit; a pass says nothing. Every
+approved check runs, not only those of the file's lessons, because a lesson's files say where it was
+found, not everywhere it holds: a rule whose check CI runs carries none (#39), and a lesson tied to
+one file can be broken in another. Tied to files only, the hook would have run few of the checks that
+catch real breaks ([REPORT §4bf](../evals/REPORT.md)). For a check CI runs, this finds the break while
+the agent is still working rather than at the push. Only checks you approve run, because each
+command comes from the store, and on a shared store other people wrote some of them:
 
 ```bash
 okl on-edit                                # the approved checks, and the ones that could be

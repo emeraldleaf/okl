@@ -6944,7 +6944,8 @@ dismissed.
 **What it means.** The list's cost is not its instruction. Asked to check ten lessons in one session, the agent
 checks each of them, shallowly; a fresh session per lesson is what makes it look properly. `okl check --change`
 already asks for one sub-agent per lesson, so nothing in okl changes, and the run on fourteen new tasks (about 310
-sessions) was not made. The cost of ten sessions will have to be cut another way. Each of these is a test of its
+sessions) was not made. Settles open question `review-without-fresh-contexts`: the review's own fallback now says
+what this found. The cost of ten sessions will have to be cut another way. Each of these is a test of its
 own:
 - fewer lessons per review;
 - the ten run side by side;

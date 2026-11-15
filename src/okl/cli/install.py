@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 
 from .. import core
-from ..client import Client, _find_config, load_config, save_config
+from ..client import Client, _find_config, load_config, review_setting, save_config
 from .on_edit import HOOK_TIMEOUT
 from .packs import _empty_store_guidance, _seed_first_run
 
@@ -997,14 +997,21 @@ def _install_ci_verifier(force: bool = False) -> None:
 
 
 def _say_review_after_writing(cfg: dict) -> None:
-    """With the review after writing on, say so, and say when this project's Stop hook cannot
-    ask for it: an edited copy from before it, which init keeps unless --force. Read from the
-    copy on disk, comments ignored, as _workflow_reads_pin reads the workflow. A hook okl's
-    plugin provides lives outside the project and is not read."""
-    if not cfg.get("review_after_writing"):
+    """With the review after writing on (the default since 0.17.0), say so, what it costs and how to
+    turn it off, and say when this project's Stop hook cannot ask for it: an edited copy from before
+    it, which init keeps unless --force. Read from the copy on disk, comments ignored, as
+    _workflow_reads_pin reads the workflow. A hook okl's plugin provides lives outside the project
+    and is not read."""
+    try:
+        on = review_setting(None, cfg.get("review_after_writing"))
+    except ValueError:
+        return   # okl check refuses the value itself, with the reason
+    if not on:
         return
     print("• review after writing: on. Before the agent finishes, the Stop hook asks it to check its "
-          "code against the lessons (`okl check --change`)")
+          "code against the lessons (`okl check --change`), each lesson in a sub-agent of its own, "
+          "which costs a session per lesson checked. Turn it off with `okl init "
+          "--no-review-after-writing`, or for one session with OKL_REVIEW_AFTER_WRITING=0")
     try:
         text = STOP_HOOK.read_text(errors="replace")
     except OSError:
