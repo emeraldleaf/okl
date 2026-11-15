@@ -44,7 +44,10 @@
   lesson's files say where it was found, not everywhere it holds: a rule whose check CI runs
   carries no files (#39), and a lesson tied to one file can be broken in another (#450). Tied to
   files only, the hook would have run a check for 4 of REPORT §4bf's 61 confirmed breaks; for a check
-  CI runs, running it at every edit finds the break while the agent works rather than at the push. With nothing approved the hook returns after one read of `.okl/config.json`, without
+  CI runs, running it at every edit finds the break while the agent works rather than at the push. **A check
+  approved before this release ran only on edits to its lesson's files, and now runs after every
+  edit;** the command is the one approved, pinned by its hash, but review the list with `okl on-edit`
+  and drop any that is too slow to run that often. With nothing approved the hook returns after one read of `.okl/config.json`, without
   starting okl; when okl fails, it says the checks did not run. It never blocks an edit and
   never stamps a lesson verified. Other agents can call `okl on-edit run <file>` from their
   own hooks. `okl init` installs and registers the hook; `OKL_DISABLED_HOOKS=edit` switches it
