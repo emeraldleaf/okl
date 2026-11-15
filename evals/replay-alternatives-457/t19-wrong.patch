@@ -1,0 +1,14 @@
+diff --git a/src/okl/cli.py b/src/okl/cli.py
+index f5b5ee0..764ffe8 100644
+--- a/src/okl/cli.py
++++ b/src/okl/cli.py
+@@ -560,7 +560,8 @@ def _empty_store_guidance(client: Client) -> list[str]:
+             packs.append((f, count))
+     if packs:
+         lines.append(f"    bundled packs that match your interests ({', '.join(sorted(interests))}):")
+-        lines += [f"      okl seed {f}    ({count} records)" for f, count in packs]
++        # Quoted, so a pack path with a space in it pastes as one argument.
++        lines += [f'      okl seed "{f}"    ({count} records)' for f, count in packs]
+     elif interests:
+         lines.append("    no bundled pack matches your interests; `okl seed` lists all of them")
+     else:

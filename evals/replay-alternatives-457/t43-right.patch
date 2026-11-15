@@ -1,0 +1,104 @@
+diff --git a/src/okl/cli/warm.py b/src/okl/cli/warm.py
+index ada033f..6b480e7 100644
+--- a/src/okl/cli/warm.py
++++ b/src/okl/cli/warm.py
+@@ -34,7 +34,8 @@ def _stop(_args: argparse.Namespace) -> int:
+ 
+ 
+ def _status(_args: argparse.Namespace) -> int:
+-    up = warm.ping()
++    # A person's question, not a prompt's: wait as long as a busy server can take (#320).
++    up = warm.ping(timeout=warm.CONTROL_TIMEOUT_S)
+     print(f"running · {up['model']} · pid {up['pid']} · loaded in {up['loaded_s']} s" if up
+           else f"not running · `okl warm start` · socket {warm.socket_path()}")
+     return 0 if up else 1
+diff --git a/src/okl/warm.py b/src/okl/warm.py
+index bbef1fc..4bb463d 100644
+--- a/src/okl/warm.py
++++ b/src/okl/warm.py
+@@ -55,6 +55,11 @@ WEIGHT = 8.0       # §4w: the top of a broad rise on the selection split
+ LINE = 5.767926
+ NEAREST = 36       # the model's own candidates, as many as the full-text window
+ TIMEOUT_S = 0.5    # what a prompt waits for the prompt's vector before briefing without it
++# What a person's `okl warm status` and `okl warm stop` wait. The server answers one connection at
++# a time, so a request queued behind a longer one (an index batch) waits for it to finish: read
++# within TIMEOUT_S, a busy server looked not running, and a stop it took and obeyed looked
++# unanswered (#320). The server's own wait on a connection is as long.
++CONTROL_TIMEOUT_S = 30.0
+ IDLE_EXIT_S = 4 * 3600
+ # How long after a start the default waits before starting the server again: loading takes about
+ # a second, so a server that is not up by then failed, and starting another each prompt would
+@@ -462,13 +467,14 @@ def revive() -> str:
+     return "started"
+ 
+ 
+-def stop() -> bool:
++def stop(timeout: float = CONTROL_TIMEOUT_S) -> bool:
+     """Ask a running server to exit, and keep the default from starting it again until `okl warm
+     start` (review on #300). False when none answered. The record is left after the request: the
+     server reads it too, and left first it could end the server before the request was read,
+-    which then said none had answered (#320)."""
++    which then said none had answered (#320). It waits CONTROL_TIMEOUT_S, not a prompt's
++    TIMEOUT_S, since a busy server reads the request only once its current one is done."""
+     try:
+-        _ask({"op": "stop"}, TIMEOUT_S)
++        _ask({"op": "stop"}, timeout)
+     except WarmUnavailableError:
+         return False
+     finally:
+diff --git a/tests/test_warm.py b/tests/test_warm.py
+index 367d819..2816837 100644
+--- a/tests/test_warm.py
++++ b/tests/test_warm.py
+@@ -482,6 +482,51 @@ def test_a_stop_is_answered_when_the_server_looks_for_the_record_first(monkeypat
+     assert not server.is_alive()
+ 
+ 
++def test_status_and_stop_wait_for_a_server_busy_with_a_longer_request(monkeypatch, capsys):
++    """The server answers one connection at a time. Behind a request longer than a prompt's
++    TIMEOUT_S (an index batch), `okl warm status` said not running and `okl warm stop`, which the
++    server took and obeyed, said none had answered (#320)."""
++    from okl.cli import main
++
++    busy_s = warm.TIMEOUT_S * 4
++    path = Path(tempfile.mkdtemp(prefix="okl", dir="/tmp")) / "w.sock"
++    monkeypatch.setenv("OKL_WARM_SOCKET", str(path))
++
++    def slow_docs(texts, kind):
++        if kind == "doc":
++            time.sleep(busy_s)
++        return _stub(texts, kind)
++
++    monkeypatch.setattr(warm, "load_model", lambda: slow_docs)
++    server = threading.Thread(target=warm.serve, kwargs={"idle_exit_s": 30}, daemon=True)
++    server.start()
++    deadline = time.monotonic() + 5
++    while warm.ping() is None and time.monotonic() < deadline:
++        time.sleep(0.05)
++
++    def keep_busy():
++        warm.embed(["a lesson"], "doc", timeout=30)
++
++    def busy_now():
++        t = threading.Thread(target=keep_busy, daemon=True)
++        t.start()
++        time.sleep(0.1)   # the batch is being embedded
++        return t
++
++    t = busy_now()
++    assert main(["warm", "status"]) == 0
++    assert "running" in capsys.readouterr().out
++    t.join(timeout=10)
++
++    t = busy_now()
++    main(["warm", "stop"])
++    assert capsys.readouterr().out.startswith("stopped")
++    t.join(timeout=10)
++    server.join(timeout=10)
++    assert not server.is_alive()
++    warm.resume()
++
++
+ def test_a_server_okl_starts_itself_does_not_undo_a_stop(monkeypatch):
+     """start() spawned `okl warm serve`, which undoes `okl warm stop` for a person who runs it,
+     so a prompt that found no server just as a stop landed brought the server back for good

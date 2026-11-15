@@ -15,7 +15,7 @@ Four pieces of work, in this order:
 | 1 | Settle the answer key: a person labels the key's pairs blind | not done: I decided not to label them (2026-11-15), so the key stays unvalidated |
 | 2 | Run the review's checks on the model it was measured with | done in #463: Sonnet, in Claude Code |
 | 3 | Log what each review does in real use, and report it | done in #468, released in 0.18.0 |
-| 4 | Grow the graded replay set to about 40 tasks | #457 |
+| 4 | Grow the graded replay set to about 40 tasks | built for #457: 43 broken tasks, checked against blind alternatives, with power at that size (REPORT §4bi); no run on them yet |
 
 Parked: whether a cheaper model can check one lesson as well as Sonnet (#456). That is a cost
 question only, worth testing once piece 4 makes a test decisive.

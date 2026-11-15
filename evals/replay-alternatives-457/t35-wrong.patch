@@ -1,0 +1,23 @@
+diff --git a/evals/bench/run.py b/evals/bench/run.py
+index c30c435..edbc83d 100644
+--- a/evals/bench/run.py
++++ b/evals/bench/run.py
+@@ -77,6 +77,9 @@ def build_corpus(where: Path) -> Store:
+     (where / ".okl").mkdir(parents=True, exist_ok=True)
+     (where / ".okl" / "config.json").write_text(json.dumps({"repo": REPO}))
+     here = Path.cwd()
++    # OKL_DATABASE_URL wins over the config written above: set aside while the throwaway
++    # corpus is seeded, so an exported variable cannot send the packs into a real store.
++    saved = os.environ.pop("OKL_DATABASE_URL", None)
+     os.chdir(where)
+     try:
+         client = Client()
+@@ -89,6 +92,8 @@ def build_corpus(where: Path) -> Store:
+         return store
+     finally:
+         os.chdir(here)
++        if saved is not None:
++            os.environ["OKL_DATABASE_URL"] = saved
+ 
+ 
+ def load_triggers(store: Store, path: Path) -> int:

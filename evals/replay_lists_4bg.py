@@ -7,8 +7,10 @@ none citing the task's PR or its grader. §4ax built its lists by hand and kept 
 keeps the builder, so the lists can be rebuilt and checked.
 
     python3 evals/replay_lists_4bg.py [--write]
+    python3 evals/replay_lists_4bg.py --set 457 --store /path/to/.okl/okl.db --write
 
-Reads a read-only copy of this checkout's store; writes evals/replay-lists-4bg.json with --write.
+Reads a read-only copy of this checkout's store (or the one --store names); writes the set's lists,
+evals/replay-lists-<set>.json (§4bg's own by default), with --write.
 The store keeps no history of a lesson's words or status, so "as they stood" means the lessons that
 existed then, as they read and stand today: one edited since reads as edited, and one retired since
 is left out though it was live then. The tasks' own lessons are treated the same way (their text is
@@ -19,6 +21,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -33,8 +36,9 @@ from okl.drift import _NOT_ADVICE
 from okl.store import RETIRED_STATUSES, Node, Store
 
 REPO = Path(__file__).resolve().parents[1]
-TASKS = REPO / "evals" / "replay-tasks-4bg.json"
-LISTS = REPO / "evals" / "replay-lists-4bg.json"
+DEFAULT_SET = "4bg"
+TASKS = REPO / "evals" / f"replay-tasks-{DEFAULT_SET}.json"
+LISTS = REPO / "evals" / f"replay-lists-{DEFAULT_SET}.json"
 STORE = REPO / ".okl" / "okl.db"
 OTHERS, FETCH = 9, 400
 
@@ -103,19 +107,24 @@ def build(task: dict, snapshot: Path, side: Path) -> dict:
 def main() -> int:
     """Build every task's list; print a summary, and write the file with --write."""
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--set", default=DEFAULT_SET, help=f"the task set, by name (default: {DEFAULT_SET})")
+    ap.add_argument("--store", type=Path, default=STORE, help="the store to copy (default: this checkout's)")
     ap.add_argument("--write", action="store_true")
     args = ap.parse_args()
-    tasks = json.loads(TASKS.read_text())
+    if not re.fullmatch(r"[0-9a-z]+", args.set):
+        raise SystemExit(f"not a set name: {args.set!r}")
+    tasks = json.loads((REPO / "evals" / f"replay-tasks-{args.set}.json").read_text())
+    lists_file = REPO / "evals" / f"replay-lists-{args.set}.json"
     with tempfile.TemporaryDirectory(prefix="okl-lists-") as side:
         snapshot = Path(side) / "store.db"
-        sb.copy_sqlite(STORE, snapshot)
+        sb.copy_sqlite(args.store, snapshot)
         lists = {t["id"]: build(t, snapshot, Path(side)) for t in tasks}
     for tid, row in lists.items():
         print(f"{tid}: right lesson ranked {row['target_rank_in_search']} of {row['candidates']}; "
               f"others {[o['id'] for o in row['others']]}")
     if args.write:
-        LISTS.write_text(json.dumps(lists, indent=1, ensure_ascii=False) + "\n")
-        print(f"wrote {LISTS.relative_to(REPO)}")
+        lists_file.write_text(json.dumps(lists, indent=1, ensure_ascii=False) + "\n")
+        print(f"wrote {lists_file.relative_to(REPO)}")
     return 0
 
 

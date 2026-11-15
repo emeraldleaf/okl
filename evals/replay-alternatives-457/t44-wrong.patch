@@ -1,0 +1,23 @@
+diff --git a/ci/check-diagram-names.py b/ci/check-diagram-names.py
+index 8fe1987..f3ac210 100755
+--- a/ci/check-diagram-names.py
++++ b/ci/check-diagram-names.py
+@@ -42,6 +42,9 @@ PROSE = frozenset({"runs", "stamps", "cannot", "can", "keeps", "is"})
+ EXTERNAL_FLAGS = frozenset({"--no-verify"})
+ HOOK_EVENTS = ("UserPromptSubmit", "PreToolUse", "PostToolUse", "Stop", "SubagentStop",
+                "SessionStart", "SessionEnd", "PreCompact", "Notification")
++# Any word shaped like a hook event is read, not only the names above, so a misspelt one
++# ("UserPromtSubmit") is checked too.
++EVENT_SHAPE = re.compile(r"\b[A-Z]\w*(?:Submit|ToolUse|Stop|Start|End|Compact)\b")
+ 
+ 
+ def _git(*args: str) -> str:
+@@ -116,7 +119,7 @@ def unknown(text: str, known: dict[str, Any]) -> list[str]:
+          lambda f: f in known["flags"], "{}: no CLI parser defines it"),
+         (set(re.findall(r"\b(okl_[a-z_]+)\b", text)),
+          lambda t: t in known["tools"], "{}: no such MCP tool in src/okl/mcp_server.py"),
+-        ({e for e in HOOK_EVENTS if re.search(rf"\b{e}\b", text)},
++        (set(EVENT_SHAPE.findall(text)) | {e for e in HOOK_EVENTS if re.search(rf"\b{e}\b", text)},
+          lambda e: e in known["events"], "{}: not a hook hooks/hooks.json registers"),
+         (set(re.findall(r"[\w./-]*[\w-]\.(?:sh|yml)\b", text)),
+          lambda p: _tracked(p, known["files"]), "{}: no tracked file by that path or name"),

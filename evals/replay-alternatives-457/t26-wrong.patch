@@ -1,0 +1,15 @@
+diff --git a/src/okl/core.py b/src/okl/core.py
+index 4eafcb6..d6abf50 100644
+--- a/src/okl/core.py
++++ b/src/okl/core.py
+@@ -686,7 +686,9 @@ def _also_matched(store: Store, query: str, limit: int, repo_scope: str, interes
+         store, query, limit, repo_scope, interests, hybrid=hybrid, rerank=rerank, first=first)
+     seen = set(shown)
+     also = []
+-    for n in (*overflow, *kept[:limit]):
++    # Read the floor's whole window: the lessons shown in full are dropped below, and
++    # slicing first let them use up the tier's slots.
++    for n in (*overflow, *kept):
+         if n.id not in seen:
+             seen.add(n.id)
+             also.append(n)

@@ -1,0 +1,15 @@
+diff --git a/evals/compare_seed_briefings.py b/evals/compare_seed_briefings.py
+index 09cb6a3..a584858 100644
+--- a/evals/compare_seed_briefings.py
++++ b/evals/compare_seed_briefings.py
+@@ -35,7 +35,9 @@ def _seeded(seed_dir: Path, db: Path) -> Store:
+     from okl.client import Client
+     from okl.seed import seed_from_file
+     os.environ["OKL_DATABASE_URL"] = f"sqlite:///{db}"
+-    client = Client()
++    # An explicit config, not the directory's: a checkout's .okl/config.json may name a
++    # shared service, and these stores are throwaway.
++    client = Client(config={"repo": "okl"})
+     for pack in sorted(seed_dir.glob("*.json")):
+         seed_from_file(client, str(pack))
+     return client._local_store()

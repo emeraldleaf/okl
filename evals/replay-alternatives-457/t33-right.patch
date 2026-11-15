@@ -1,0 +1,81 @@
+diff --git a/evals/admission_grid.py b/evals/admission_grid.py
+index a0a1a41..d179b1a 100644
+--- a/evals/admission_grid.py
++++ b/evals/admission_grid.py
+@@ -44,6 +44,11 @@ def pool_view(text: str, interests: list[str] | None) -> tuple[list[dict], set[s
+     cand = core.ranked_candidates(store, text, 36, "linear", rerank=True)
+     if cand.rerank_note:
+         sys.exit(f"admission grid: the reranker did not run ({cand.rerank_note})")
++    # The grid's other axis is the semantic arm's cosine. When that arm falls back to
++    # full-text (no model cached, no extra, no vectors) every cosine is missing, and the
++    # grid would print a table with no cosines in it as a measurement.
++    if cand.note:
++        sys.exit(f"admission grid: the semantic arm did not run ({cand.note})")
+     scope = f"repo:{REPO}"
+     live = [n for n in cand.nodes if core._in_scope(n, scope, interests) and n.status not in core.RETIRED_STATUSES]
+     kept, _matched, _weak = core._apply_floor(store, live, core.briefing_terms(text), cand)
+@@ -60,6 +65,8 @@ def admitted(row: dict, c: float, k: int) -> bool:
+             and row["rank"] is not None and row["rank"] <= k)
+ 
+ 
++# Both stages must run with the settings the grid uses, before any row is printed.
++pool_view(next(iter(tasks.values()))["task"], None)
+ print(f"store {len(store.all_nodes())} records · repo={REPO} · window 36 per arm, linear, reranked pool "
+       f"{core.rerank_stage.RERANK_POOL} · floor {semantic.SUBJECT_SIMILARITY} cosine for a semantic-only candidate")
+ print("\nA. Governing lessons the floor DROPS on the selection set (harness config), with what the rule would see:")
+diff --git a/tests/test_admission_grid.py b/tests/test_admission_grid.py
+new file mode 100644
+index 0000000..368568d
+--- /dev/null
++++ b/tests/test_admission_grid.py
+@@ -0,0 +1,50 @@
++"""evals/admission_grid.py must not print a cosine grid when the semantic arm did not run."""
++import json
++import os
++import subprocess
++import sys
++from pathlib import Path
++
++import pytest
++
++ROOT = Path(__file__).resolve().parents[1]
++
++
++def _grid_dir(tmp_path: Path, vectors: bool) -> Path:
++    from okl import core, semantic
++    from okl.store import Store
++
++    (tmp_path / ".okl").mkdir()
++    (tmp_path / ".okl" / "config.json").write_text(json.dumps({"repo": "okl"}))
++    s = Store(f"sqlite:///{tmp_path / '.okl' / 'okl.db'}")
++    nid = core.record(s, type="Rule", scope="org", title="check object ownership on every id route")
++    if vectors:
++        s.put_embedding(nid, semantic.MODEL_ID, "h", semantic.pack([0.1] * 8))
++    s.close()
++    ev = tmp_path / "evals"; ev.mkdir()
++    (ev / "tasks.jsonl").write_text(json.dumps(
++        {"id": "idor_endpoint", "task": "add an orders route by id", "defect_node": nid}) + "\n")
++    (ev / "probe_rephrase.py").write_text(
++        'VARIANTS = {\n "idor_endpoint": ["orders by id", "fetch one order", "see others orders"],\n}\n')
++    (ev / "probe_prompts.json").write_text(json.dumps({"prompts": ["give me a doc for that"]}))
++    return tmp_path
++
++
++@pytest.mark.parametrize("vectors", [False, True], ids=["no vectors", "no cached model"])
++def test_the_grid_stops_when_the_semantic_arm_falls_back(tmp_path, vectors):
++    from okl import rerank
++    try:
++        rerank.load_model()
++    except rerank.RerankUnavailableError:
++        pytest.skip("the reranker cannot run here, and the grid stops on that first")
++    cwd = _grid_dir(tmp_path, vectors)
++    env = {k: v for k, v in os.environ.items()
++           if k not in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN")}
++    env["PYTHONPATH"] = str(ROOT / "src")
++    # An empty Hugging Face cache: the embedder is missing, the reranker (okl's own cache) is not.
++    env["HF_HOME"] = env["HF_HUB_CACHE"] = str(tmp_path / "empty-hf-cache")
++    r = subprocess.run([sys.executable, str(ROOT / "evals" / "admission_grid.py")], cwd=cwd, env=env,
++                       capture_output=True, text=True)
++    assert r.returncode != 0, r.stdout + r.stderr
++    assert "the semantic arm did not run" in r.stderr, r.stderr
++    assert "GRID" not in r.stdout and r.stdout == "", r.stdout

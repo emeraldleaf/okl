@@ -1,0 +1,16 @@
+diff --git a/evals/hybrid_grid.py b/evals/hybrid_grid.py
+index 5d50aab..ed9fc1d 100644
+--- a/evals/hybrid_grid.py
++++ b/evals/hybrid_grid.py
+@@ -35,6 +35,11 @@ def recall(hybrid: str | None, variants: dict[str, dict[str, str]], label: str)
+     return sum(t["defect_node"] in ids(variants[t["id"]][label], hybrid, None) for t in tasks)
+ 
+ 
++# The semantic arm needs vectors: without them every hybrid cell is the full-text result.
++if not store.embeddings(semantic.MODEL_ID):
++    print("REFUSING TO RUN: no record has a vector, so the semantic arm cannot run; "
++          "run `okl embed` first.", file=sys.stderr)
++    raise SystemExit(2)
+ print(f"store: {len(store.all_nodes())} records · {len(store.embeddings(semantic.MODEL_ID))} with a vector · hook interests={INTERESTS}")
+ print("line   mode    authored  held-out ticket/paraphrase/bug  precision prompts (hook config)")
+ base = {p: len(ids(p, None, INTERESTS)) for p in prompts}

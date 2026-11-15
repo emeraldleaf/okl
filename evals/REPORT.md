@@ -7047,6 +7047,185 @@ What it means:
 them changes. Whether the pick is as weak as they say is to be tested on tasks graded by a test on the
 code (#457), which needs no person's labels, not on a model's key.
 
+## 4bi. The graded replay set grown to 43 broken tasks (#457): how it was built and checked (2026-11-15)
+
+This is infrastructure for a later pre-registered run, not a result. No session ran, and nothing here measures
+okl. #457 asked for about 40 graded tasks, because every decisive test of the review was short of them: at
+§4bg's 14, the review against no review has a power of about 0.5 (below). `evals/replay-tasks-457.json` adds 29
+broken tasks and one control (t19 to t48) to §4bg's 14 and four. They were built by §4bg's procedure and
+checked by its script.
+
+**Candidates.** §4bc's 58 past changes, each with at least one lesson the answer key called broken. The key
+was not trusted (§4bh). Each change was read again for a defect that stood when it was frozen, was fixed
+later, and is named by a lesson in the store, whichever lesson that was. Three agents (Claude) screened a third
+of the changes each, and the agent that built the set (Claude) read every grader and every lesson's fit before
+merging; I did not review them one by one. Every candidate, and each of
+the 94 defects looked at and set aside, is recorded with its reason (`replay-screen-457.json`).
+
+| outcome | changes |
+|---|---|
+| used: 29 broken tasks and one control | 26 |
+| rejected: nothing with behaviour was fixed (docs, report, figures or wording only) | 17 |
+| rejected: no stored lesson names the defect | 7 |
+| rejected: the only fix is already a task of §4aw or §4bg | 6 |
+| rejected: never fixed | 1 |
+| rejected: reachable only through a model or a name the fix invented | 1 |
+
+**Each task** is frozen where its defect stands (the change as first written, or the parent of the fix when
+commits in between matter) and ends at the commit that fixed it. Its grader in `tests/replay_graders_457.py`:
+- checks behaviour through what the frozen code offers (the CLI, a public function both commits have, the
+  shipped script or hook run as a process), never a name the fix invented;
+- tests the rule the lesson states across cases, not only the incident's own example;
+- carries a positive control, so a fix that refuses everything or does nothing fails;
+- fails at the frozen commit by an assertion of its own and passes at the fix.
+
+Each lesson's text then lost any clause naming the task's own fix, PR or incident: 11 clauses from the lessons of
+7 tasks, each recorded in the task's `lesson_redactions`. Each task also got its nine other lessons from
+`evals/replay_lists_4bg.py --set 457`. The check and the list builder take a set by name, so one copy of each
+serves both sets, and `--set 4bg --set 457` checks both at once. Without `--set`, the builder rebuilds §4bg's 18
+lists identically.
+
+**In-sample lessons.** The lessons of 8 of the 29 broken tasks were recorded after the task's frozen commit:
+t22, t23, t29, t37, t40, t41, t42 and t46. Some were written from the incident itself, which is what the
+redactions above remove. A lesson written after a change can name its defect more exactly than one an agent
+could have had at the time.
+
+**The validity check.** Before the alternatives, all 30 graders were valid (`replay-check-457-20261115-1800.json`).
+After the changes below, all 30 were valid again (`replay-check-457-20261115-1921.json`), and again after
+the review of #477 changed two more (`replay-check-457-20261115-2012.json`).
+
+**The alternatives check.** An agent wrote a second right fix and a wrong one for t19 to t47
+(`evals/replay-alternatives-457/`). It was given only each task's id, PR, title, issues, frozen commit, lesson,
+lesson text, kind, defect and named file, and a one-commit copy of the repository at each frozen commit. It was not
+given the end commit, the real fix, the fix's files or anything about the graders. The first check, on the
+graders as built (`replay-alternatives-457-20261115-1904.json`), passed all 29 right fixes and told 24 of 29
+pairs apart. Five wrong fixes passed:
+- **t19:** it quoted the pack path in double quotes. The grader's folders held a space and a single quote, which
+  double quotes survive.
+- **t26:** it read the floor's whole window but never widened that window for the lessons shown in full. No case
+  filled the window with the shown lesson and weaker matches.
+- **t36:** it committed the index rebuild only on success but never rolled a failed one back. The grader only
+  closed the store that failed, which discards the pending drop.
+- **t22 and t47:** the wrong fix leaves what the real fix itself left. t22's real fix sets
+  `OKL_BRIEFING_LOG=0`, which a shared service never sees, and t47's real fix adds only a line on stderr. A grader
+  that failed these would fail the real fix, so neither grader was changed, and neither pair is told apart.
+
+**Grader changes, disclosed.** These were made after seeing which wrong fixes passed, so they are not blind:
+- **t19:** a third folder, whose name holds a double quote.
+- **t26:** a case at limit 1 in which one-word matches rank between the shown lesson and the others that matched.
+- **t36:** the store whose rebuild failed now takes a write before it is closed.
+
+Each still fails at the frozen commit by its own assertion, and passes the real fix and the right alternative.
+The check after them (`replay-alternatives-457-20261115-1925.json`) passed all 29 right fixes and told 27 of 29
+pairs apart. Each changed section of the graders says so. One grader changed before the alternatives check, when
+the building agent read the screened graders: t43's stand-in server stays busy for 2.5 s instead of 4 s, so a
+right fix that waits about 3 s is not failed. Its alternatives check is blind.
+
+**After the review of #477.** CodeRabbit's review of the whole branch led to two more changes, also made after
+the alternatives were seen:
+- **t25:** with a service named, the comparison must now exit 0 and print its comparison, as the control does.
+  Before, ending without a traceback was enough, so a fix that refused to run passed.
+- **t46:** a later step after an unpinned install shows the installed package (`pip show
+  observed-knowledge-ledger`) and prints the pin file. That is another step, which t46's defect names. The real fix
+  rejects it, and the blind right fix accepts it, because it takes any step naming the package for the install
+  step. That right fix was right only as far as the old grader asked, and it now counts as failing. The same two
+  lines inside the install step itself are accepted by the real fix too, so they are not a case, as with t22 and
+  t47.
+
+The check after these (`replay-alternatives-457-20261115-2015.json`) passes 28 of 29 right fixes and tells 26
+of 29 pairs apart: t22 and t47 by design, and t46, whose right fix fails.
+
+| task | change | lesson | right fix passed, first check | now | wrong fix failed, first check | now |
+|---|---|---|---|---|---|---|
+| t19 | #30 | `n_adea7f2c7373` | yes | yes | no | yes |
+| t20 | #35 | `d_invoked_by_nothing` | yes | yes | yes | yes |
+| t21 | #112 | `n_e7988ff536fb` | yes | yes | yes | yes |
+| t22 | #135 | `eval-scripts-no-exposure` | yes | yes | no | no |
+| t23 | #163 | `guarantee-holds-on-every-write-path` | yes | yes | yes | yes |
+| t24 | #266 | `remote-path-test-through-client` | yes | yes | yes | yes |
+| t25 | #266 | `n_e49be14d6207` | yes | yes | yes | yes |
+| t26 | #299 | `filter-after-fetch-widens-window` | yes | yes | no | yes |
+| t27 | #299 | `hook-cli-version-skew` | yes | yes | yes | yes |
+| t28 | #387 | `guarantee-holds-on-every-write-path` | yes | yes | yes | yes |
+| t29 | #387 | `report-commands-use-briefable-set` | yes | yes | yes | yes |
+| t30 | #380 | `n_e7988ff536fb` | yes | yes | yes | yes |
+| t31 | #256 | `n_aa3e45a2ecd6` | yes | yes | yes | yes |
+| t32 | #267 | `n_b578addf6269` | yes | yes | yes | yes |
+| t33 | #275 | `n_b578addf6269` | yes | yes | yes | yes |
+| t34 | #269 | `doc-init-flags` | yes | yes | yes | yes |
+| t35 | #308 | `n_e49be14d6207` | yes | yes | yes | yes |
+| t36 | #309 | `n_967ef9825472` | yes | yes | no | yes |
+| t37 | #312 | `model-reply-parse-fails-open-loudly` | yes | yes | yes | yes |
+| t38 | #326 | `n_713b8c104f12` | yes | yes | yes | yes |
+| t39 | #267 | `n_e49be14d6207` | yes | yes | yes | yes |
+| t40 | #50 | `n_d8166465591e` | yes | yes | yes | yes |
+| t41 | #373 | `fail-closed-at-every-entry-point` | yes | yes | yes | yes |
+| t42 | #300 | `model-server-warm-up-before-serving` | yes | yes | yes | yes |
+| t43 | #325 | `remote-timeout-not-a-deadline` | yes | yes | yes | yes |
+| t44 | #383 | `n_b4050b826687` | yes | yes | yes | yes |
+| t45 | #362 | `n_713b8c104f12` | yes | yes | yes | yes |
+| t46 | #339 | `owned-file-features-check-the-kept-copy` | yes | no | yes | yes |
+| t47 | #388 | `n_5ddb0776a863` | yes | yes | no | no |
+
+Some right fixes chose another design than the real fix, and the graders passed them:
+- t21 refuses with exit 2;
+- t40 prints the refusal and still exits 0;
+- t41's opt-in is `OKL_ALLOW_NO_TOKEN=1`;
+- t43 waits 30 s;
+- t45 also refuses a list of paths that all lie outside the repository;
+- t47 adds a field.
+
+**How blind the alternatives were.**
+- **The alternatives agent's shell started inside this checkout, by a mistake in how it was launched.** The
+  checkout holds the graders. The agent reports reading nothing there. Its only contact was a heredoc that
+  created an empty file, `pwned`, at the checkout's root, which it deleted at once.
+- **t21:** the room for t30, the same `okl doctor` code a month later, showed the project's real fix for t21's
+  defect (doctor leaves the CI note out and keeps exit 0 or 1). The agent noticed after writing t21's right fix,
+  which refuses with exit 2 instead.
+- **t23:** the rooms for t28 and t29 showed t23's real fix, and its right fix matches it.
+- **The graders' authors** (the three screening agents, and the building agent in review) read the real fixes, as
+  §4bg's did.
+
+**Power at the new size.** `evals/power_4bg.py --grown` (receipt `power-457-20261115-1927.json`) sizes the two
+contrasts #457 names. Each draws tasks from an earlier receipt, gives each drawn task a true rate from a Beta
+posterior on its five sessions, and reads paired differences over tasks with intervals from resampling tasks.
+- **The review after writing against no review.** Profiles come from §4az's none and each-alone arms. The
+  smallest gain is §4az's own bar, 0.25. The review's rate on each task is none's plus a fixed multiple of the
+  distance to §4az's each-alone rate, kept within 0 and 1, with the multiple chosen so the mean true gain is 0.25. A gain is read when
+  the 95% interval is above 0.
+- **Haiku against Sonnet checking one lesson (#456).** No Haiku session exists, so this is modelled as
+  non-inferiority with #456's margin of 0.15. Sonnet's rates come from §4ay's one at a time, and Haiku's rate is
+  a fixed amount lower. Haiku reads as not worse when the 90% interval's lower end is above -0.15. Power is read
+  with the two equal; the false alarm is read with Haiku worse by exactly the margin on average.
+
+| tasks | repeats | the review beats none, at a gain of 0.25 | at §4az's own gain (0.14) | false alarm, no gain | Haiku not worse, when equal | false alarm, at the margin |
+|---|---|---|---|---|---|---|
+| 14 | 5 | 0.554 | 0.373 | 0.038 | 0.742 | 0.074 |
+| 29 | 3 | 0.818 | 0.493 | 0.036 | 0.868 | 0.065 |
+| 43 | 1 | 0.711 | 0.357 | 0.024 | 0.603 | 0.068 |
+| 43 | 2 | 0.858 | 0.521 | 0.028 | 0.814 | 0.047 |
+| 43 | 3 | 0.94 | 0.66 | 0.032 | 0.948 | 0.056 |
+| 43 | 5 | 0.951 | 0.737 | 0.036 | 0.988 | 0.052 |
+
+At 43 broken tasks, two repeats reach 0.8 for both contrasts, and three give 0.94 or more. At §4bg's 14, five
+repeats give 0.554 for the review, and no number of repeats tried reaches 0.8. If the review's gain is only what
+§4az saw, 0.14 on average, five repeats at 43 tasks give 0.737. The Haiku false alarm at 14 tasks is above the
+nominal 0.05: percentile intervals from resampling few tasks are too narrow.
+
+**How firm.**
+- **One repository.** The set carries this repository's biases. #413's public-repository tasks stay a separate set.
+- **Lesson fit was judged by one reviewer, an agent,** and some fits are stretched: t20 (a "runs on demand, runs never"
+  lesson for how a metric defines armed), t27 (a hook and an older CLI, for a client and an older service), and
+  t39 (a checkout's config rather than an environment variable).
+- **Lesson texts are today's,** with this task's clauses removed, as in §4bg.
+- **The graders run on this machine.** t30's Postgres case needs psycopg, and t42 and t43 time a stand-in server,
+  so a heavily loaded machine could misread them.
+- **The power simulation rests on five tasks.** Five earlier tasks stand in for the spread of the review's gain
+  over 43, and that gain sat in one task of five.
+
+What it is for: 43 broken tasks, §4bg's 14 and these 29, with five controls, on which the review's decisive tests
+can be pre-registered.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every

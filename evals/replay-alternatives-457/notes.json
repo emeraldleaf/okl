@@ -1,0 +1,118 @@
+{
+  "t19": {
+    "right": "Quotes each pack path in the empty-store advice (and okl bootstrap's follow-up line) with shlex.quote, so any path, including one with a space, a quote or $(...), pastes as exactly one argument; adds a test that shlex-splits the advice back to the path.",
+    "wrong": "Wraps the pack path in double quotes, which fixes a path with a space but still breaks (or expands) on a path holding a double quote, a backtick or $(...), since double quotes do not neutralise them."
+  },
+  "t20": {
+    "right": "Counts only CATCHES edges whose source is a Gate when deciding which defects are armed, so a defect linked only from a Rule is reported as unarmed and left out of the gated coverage count; adds a test.",
+    "wrong": "Leaves gates_for built from any CATCHES source and only recomputes the defects_with_gate figure from Gate sources, so a recurrence of a defect that only a Rule catches is still listed among the armed recurrences (with the Rule named as its gate)."
+  },
+  "t21": {
+    "right": "Reads .okl/config.json once, up front, in okl doctor, and turns every way it can fail (a folder, no permission, invalid JSON, or valid JSON that is not an object) into exit 2 with the reason on stderr and nothing on stdout; adds a test for each case.",
+    "wrong": "Wraps the CI-note read in try/except for OSError and JSONDecodeError (exit 2), but still calls .get on whatever json.loads returned, so a config holding valid JSON that is not an object ([] or a string) still ends doctor in an AttributeError traceback with exit 1."
+  },
+  "t22": {
+    "right": "Adds a log flag to Client.check that skips the local briefing log and is sent to the service as the /check request's log field (CheckReq.log, honoured by the service), and makes evals/layout_preflight.py ask for its checks unlogged; tested locally and through the real client against the in-process service.",
+    "wrong": "Adds log=False to Client.check and passes it from layout_preflight.py, but honours it only on the local path and never sends it to the service, so when the client is remote (OKL_SERVICE_URL or a configured service) the service still logs a briefing row per eval task into the store okl metric reads."
+  },
+  "t23": {
+    "right": "Refuses a superseded or obsolete status in core.record on every write path (plain record, okl seed's keep_verification re-import, a service's /record), allowing it only on a rewrite of a lesson that is already retired, whose retirement _carry_over keeps; adds tests for a new lesson, a live lesson and a seed pack.",
+    "wrong": "Refuses the retired status under keep_verification only when the id is new, so okl seed or a service /record with keep_verification can no longer create a lesson already retired, but re-importing an existing live lesson with status obsolete or superseded still retires it with no reason logged."
+  },
+  "t24": {
+    "right": "Types aliases as a string or a list of strings on both the service's RecordReq and UpdateFields (core joins either form), and tests record, update and okl seed with list aliases through the real client against the in-process service.",
+    "wrong": "Widens aliases to accept a list on RecordReq only, so okl seed and record through a service work, but UpdateFields still takes only a string and okl update / Client.update with a list of aliases is still refused with a 422 by the service."
+  },
+  "t25": {
+    "right": "Pins compare_seed_briefings.py's throwaway seeding client to local: drops OKL_SERVICE_URL from the process env, builds Client with an explicit config instead of the directory's, and refuses if the client is still remote; adds a test with a service named both by env and by config and the network patched to fail.",
+    "wrong": "Builds the client with an explicit config so a service_url in the directory's .okl/config.json is ignored, but leaves OKL_SERVICE_URL in the environment, which Client still honours, so with that variable exported both seed trees are still written to the shared service."
+  },
+  "t26": {
+    "right": "Asks the floor for limit plus the number of lessons already shown in full (so its widening loop refetches when the shown ones fill the window) and reads its whole result before dropping the shown ones, so the second tier is not emptied at a small limit; tests at limit 1 and 2, including a window filled by the shown lesson and weak matches.",
+    "wrong": "Removes the kept[:limit] slice so the floor's whole window is read before the shown lessons are dropped, but still fetches a window sized for limit, so when the lesson shown in full plus weak matches fill that window (limit 1, a qualifying lesson ranked fourth) the floor never widens and the second tier is still empty."
+  },
+  "t27": {
+    "right": "In Client.check's remote path, catches the service's 422 refusal of the decision field when tiered was asked and asks once more with calibrated (tiered's first tier), so the existing note marks the briefing decision_unavailable; covers the CLI, the prompt hook and MCP alike; tested through the real client against an app that knows only floor and calibrated.",
+    "wrong": "Adds the 422 fallback to calibrated only in the okl check command (the prompt hook's path), leaving Client.check itself unchanged, so the MCP okl_check tool and any other Client.check caller still fail closed against a service that knows only floor and calibrated."
+  },
+  "t28": {
+    "right": "Refuses supersedes equal to the id being recorded in core.record itself (a ValueError, so 400 from the service and exit 2 from the CLI), so the CLI, okl seed, MCP and any service client are all covered; tests core, the client and a raw POST to /record.",
+    "wrong": "Adds the self-supersede refusal to Client.record only, so the CLI, okl seed and MCP are guarded, but core.record and the service's /record still accept supersedes == id from a direct caller or any other HTTP client and retire the lesson as superseded by itself."
+  },
+  "t29": {
+    "right": "Makes okl dedup compare only the set a briefing can show (drops core._UNBRIEFED: superseded and obsolete), says how many it left out, and keeps retracted lessons in, marked; tests that a superseded copy and an obsolete lesson give exit 0 and a retracted one is still compared and marked.",
+    "wrong": "Drops only superseded lessons from okl dedup's comparison, so the pack-rename copies stop showing, but an obsolete lesson that resembles a live one is still reported as a duplicate pair with exit 1."
+  },
+  "t30": {
+    "right": "Makes doctor's (and init's) informational report of what the interests hide treat any failure to read the store as 'could not be read' (a broad except with a noqa, since the line is informational), so a corrupt SQLite file or a Postgres store that is down no longer ends doctor in a traceback with exit 1; tests a real corrupt file and a psycopg-like OperationalError.",
+    "wrong": "Adds sqlite3.Error to the caught exceptions, which handles a corrupt local SQLite store, but a Postgres store that is down still raises psycopg's OperationalError (no common base with sqlite3.Error or OSError) and still ends doctor in a traceback with exit 1."
+  },
+  "t31": {
+    "right": "Resolves every task's governing lesson id (and its rephrasings) against the store before printing anything, and on a miss refuses to run with exit 2, naming the unresolved ids on stderr; adds a subprocess test with one held and one mistyped id asserting exit 2, no traceback and no rows printed.",
+    "wrong": "Guards the two places that crashed on a missing lesson, so the probe no longer ends in a traceback, but never validates the ids up front: a mistyped governing lesson is still reported as a retrieval MISS in the receipt's recall rows, and the run exits 0 as if it measured something."
+  },
+  "t32": {
+    "right": "Makes hybrid_grid.py refuse (exit 2, reason on stderr) whenever a hybrid cell's core.check result reports hybrid_unavailable or not the asked-for arm, and checks both fusion modes once before printing any row; tests the two fallback causes (no vectors, and vectors but no cached model) by subprocess.",
+    "wrong": "Refuses to run only when the store holds no vectors, so with vectors present but the model not cached (or the hybrid extra missing) the semantic arm still falls back to full-text and the grid prints full-text results as the semantic arm's cells."
+  },
+  "t33": {
+    "right": "Makes admission_grid.py's pool_view stop when the semantic arm fell back (cand.note set: no model, no extra or no vectors), as it already did for the reranker, and runs one pool_view before printing anything so no partial grid is emitted; tests both fallback causes by subprocess (skipped where the reranker itself cannot run).",
+    "wrong": "Adds a start-up check that the semantic model loads, which catches a missing model or extra, but never looks at whether the arm actually ran per query, so a store with no vectors still falls back to full-text and the grid prints a cosine table with no cosines in it."
+  },
+  "t34": {
+    "right": "Makes ci/check-init-flags.py compare each documented flag against the set of whole flag tokens in okl init --help (a token ends where the next character is not a letter, digit or hyphen), so --no-c, --no or --git no longer pass; adds a test that runs the script on docs naming partial and whole flags.",
+    "wrong": "Requires a word boundary after the documented flag in the help text, which refuses --no-c (followed by 'i') but still passes --no and --git, because the hyphen in --no-ci / --no-claude / --git-hook counts as a word boundary."
+  },
+  "t35": {
+    "right": "Sets aside OKL_DATABASE_URL, OKL_SERVICE_URL and OKL_TOKEN while bench build_corpus seeds its throwaway store (restoring them after), and refuses if the client is not local; tests with both variables exported, the network patched to fail, and a real store that must stay unchanged.",
+    "wrong": "Sets aside only OKL_DATABASE_URL while the corpus is seeded, so an exported database URL no longer receives the packs, but with OKL_SERVICE_URL exported the client is still remote and every seed pack is written to that shared service."
+  },
+  "t36": {
+    "right": "Wraps the FTS rebuild's DROP/CREATE/INSERT so any failure rolls the transaction back before falling into the LIKE fallback (the old index stands and the next open retries), and treats an index holding fewer rows than the node table as stale so a store an earlier failure already emptied heals on open; tests a failed rebuild followed by a write, then a reopen, and an emptied index.",
+    "wrong": "Moves the commit inside the try so the rebuild is committed only on success, but never rolls back, so after a failure the DROP stays pending on the connection and the next write in the same process (okl record, okl seed) commits it; the next open then creates an empty index in the right shape that is never rebuilt."
+  },
+  "t37": {
+    "right": "Adds drift_replay.last_verdict, which tries every '{' as the start of a JSON value (json raw_decode) and returns the last object whose verdict is allowed, and makes drift_mutate.judged and lesson_census.parse_verdict use it; tests prose braces, a quoted format, a trailing note, two verdicts, a nested object and none.",
+    "wrong": "Makes the regex non-greedy, which fixes a trailing note after the verdict, but the first '{...}' is still the only candidate, so braces in the prose before the verdict, a quoted answer format, or a verdict object holding a nested object still read as no verdict, and of two verdicts the first wins."
+  },
+  "t38": {
+    "right": "Makes drift_widen_cost.py refuse (exit 2, reason on stderr, no receipt) an --after that git cannot resolve to a commit (rev-parse --verify, and no leading '-'), and one whose committed snapshot holds no lessons, before any counting; tests mistyped, option-like and out-of-range revisions.",
+    "wrong": "Prints a warning on stderr when the snapshot at --after holds no lessons, but still runs, reports every lesson's governed files as cleared and writes the receipt, so a mistyped revision still produces a receipt that reads as a measurement."
+  },
+  "t39": {
+    "right": "Runs each okl seed of the diagram trace from the throwaway directory under a config of its own (repo only, no service), drops OKL_SERVICE_URL and OKL_TOKEN, and puts the checkout's src first on PYTHONPATH so the same okl runs; tests a checkout whose .okl/config.json names a refusing service and asserts the throwaway store holds the seed.",
+    "wrong": "Replaces the okl seed subprocess with an in-process seed through a Client given its own config and the throwaway store, which ignores the checkout's service_url, but Client still honours OKL_SERVICE_URL from the environment the subprocess used to drop, so with that variable exported the trace's seed packs are sent to the service again."
+  },
+  "t40": {
+    "right": "Adds a guard that walks each destination and its parents up to the repo root and refuses (naming the link) if any is a symlink, dangling or not, and applies it to every init write (hooks dir and files, settings.json, .mcp.json, the CI workflow) and every uninstall edit or removal; tests a symlinked settings file, a dangling .mcp.json, a symlinked workflows dir and a symlinked .claude/, asserting the outside targets are unchanged.",
+    "wrong": "Refuses only when the destination file itself is a symlink, so a symlinked settings.json or .mcp.json is caught, but a symlinked parent (a symlinked .claude/ or .github/workflows/) is not, and init still writes the hooks, settings and workflow (and uninstall still deletes and rewrites them) outside the repo."
+  },
+  "t41": {
+    "right": "Makes the module attribute okl.service:app (what uvicorn and every ASGI host import) refuse to build the app with no OKL_TOKEN or an empty one unless OKL_ALLOW_NO_TOKEN=1 is set, naming that opt-in in the refusal; updates DEPLOY.md and the entrypoint test, and adds a test of unset, empty, opted-in and token cases.",
+    "wrong": "Adds the refusal to okl.service:app but tests only whether OKL_TOKEN is present in the environment, so an empty OKL_TOKEN (what compose's ${OKL_TOKEN:-} hands the process) still builds the app and serves every route with no token."
+  },
+  "t42": {
+    "right": "Runs one throwaway query inference in warm.serve after the model loads and before the socket is bound, so ONNX's first-run cost is paid at startup and loaded_s reports the time until it can answer; tests with an encoder whose first call is slow that the warm-up ran before the socket existed and the first real request answers within TIMEOUT_S.",
+    "wrong": "Warms the model from the client side in warm.start, sending a throwaway embed once a ping answers, which only happens when start waits (okl warm start --wait N, okl warm index); the default okl warm start (wait 0) and a server run with okl warm serve never warm up, so the first prompt after those starts still pays the slow first inference and is briefed without the model."
+  },
+  "t43": {
+    "right": "Adds CONTROL_TIMEOUT_S (30 s, the server's own per-connection wait) and makes okl warm status ping and warm.stop wait that long instead of a prompt's TIMEOUT_S, so a server busy with a longer request (an index batch) reads as running and a stop it takes and obeys is reported as stopped; tests both against a stub server kept busy by a slow doc embed.",
+    "wrong": "Makes okl warm status wait 30 s, so a busy server reads as running, but leaves warm.stop at TIMEOUT_S, so okl warm stop sent to a server busy with an index batch still times out and reports that no server answered although the server reads the stop and exits."
+  },
+  "t44": {
+    "right": "Treats every CamelCase word in a drawn diagram (plus the known single-word event names) as a hook-event claim that must be registered in hooks/hooks.json, with a deliberate NOT_EVENTS allowlist for CamelCase words that are not events, so a misspelt or invented event fails; tests misspelt and invented names and real ones beside prose.",
+    "wrong": "Also reads words shaped like an event with a known suffix (Submit, ToolUse, Stop, Start, End, Compact), which catches a misspelt prefix such as UserPromtSubmit, but an invented event with another shape (PreCommit, BeforePrompt) or a misspelt suffix (PostToolUsed) is still never looked at and passes."
+  },
+  "t45": {
+    "right": "Refuses a check of no files on every path: core.check_paths raises on an empty list, the service's /check answers 422 for \"paths\": [], and Client.check (local or remote) raises before any request for an empty list or one whose every path is outside the repo; tests core, both client modes, a raw POST and the all-outside case.",
+    "wrong": "Refuses an empty paths list in the Client only, so okl check, MCP and Client.check are covered, but the service's /check still answers {\"paths\": []} from any other client (and core.check_paths([]) from a direct caller) with a briefing of no lessons that reads as a clean check."
+  },
+  "t46": {
+    "right": "Makes _workflow_reads_pin read only the run commands of the step that installs okl (the run block naming observed-knowledge-ledger), with shell comments dropped, so a mention in a YAML or shell comment or in another step no longer counts as the install step reading .github/okl-version; tests the shipped workflow, an unpinned one, comments and another step.",
+    "wrong": "Ignores whole-line comments before searching, which catches a pin mentioned only in a comment line, but still counts the mention anywhere else in the workflow, so another step that reads .github/okl-version (or a trailing comment on a command line) still makes init pin CI beside an install step that installs the newest okl."
+  },
+  "t47": {
+    "right": "Makes _add_nearest return why it could not look the lessons up (no store, or a read that failed, with how many findings it did reach), keeps a looked-up finding's briefed as [] when a briefing shows none and None when never looked up, and has the worksheet and the JSON (lessons_unchecked) say the coverage is unknown, plus a stderr line; tests a store that answers none against one that cannot be read.",
+    "wrong": "Prints a warning to stderr when the store cannot be read but still returns silently into the same worksheet and JSON, so for anything reading the output (an agent reading --format json) every finding still reads exactly as one no lesson covers, as with a store that answered and holds none."
+  }
+}

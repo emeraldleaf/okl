@@ -1,0 +1,17 @@
+diff --git a/evals/admission_grid.py b/evals/admission_grid.py
+index a0a1a41..268f638 100644
+--- a/evals/admission_grid.py
++++ b/evals/admission_grid.py
+@@ -25,6 +25,12 @@ from okl import core, semantic
+ from okl.client import Client, load_config
+ 
+ store = Client()._local_store()
++# The grid reads the semantic arm's cosines: stop here if its model cannot load, rather than
++# print a cosine grid from a full-text fallback.
++try:
++    semantic.load_model()
++except semantic.SemanticUnavailableError as e:
++    sys.exit(f"admission grid: the semantic arm cannot run ({e})")
+ cfg = load_config()
+ REPO = cfg.get("repo") or "okl"
+ INTERESTS = cfg.get("interests")

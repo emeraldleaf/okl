@@ -1,0 +1,78 @@
+diff --git a/src/okl/cli.py b/src/okl/cli.py
+index 0bb41b8..83b594c 100644
+--- a/src/okl/cli.py
++++ b/src/okl/cli.py
+@@ -450,6 +450,21 @@ def cmd_doctor(args) -> int:
+     """
+     from . import coexist
+     cfg = _find_config()
++    # Read the config before reporting anything. A config that cannot be read (a folder,
++    # no permission, not JSON, not a JSON object) means doctor cannot say what this repo
++    # chose; that is a refusal (exit 2, reason on stderr), never a traceback, whose exit 1
++    # reads as a finding.
++    settings: dict = {}
++    if cfg:
++        try:
++            settings = json.loads(cfg.read_text())
++        except (OSError, ValueError) as e:
++            print(f"OKL: cannot read {cfg}: {e}", file=sys.stderr)
++            return 2
++        if not isinstance(settings, dict):
++            print(f"OKL: {cfg} is not a JSON object; fix or re-run `okl init`.",
++                  file=sys.stderr)
++            return 2
+     root = cfg.parent.parent if cfg else Path.cwd()
+     found = coexist.detect(root, Path.home())
+     print(coexist.render(found))
+@@ -457,7 +472,7 @@ def cmd_doctor(args) -> int:
+     if twice:
+         print(f"\n! {twice}")
+     # Informational: a choice, not a finding (#111).
+-    if cfg and json.loads(cfg.read_text()).get("ci") is False:
++    if settings.get("ci") is False:
+         print("\n• drift is not gated in CI here (okl init --no-ci); run `okl drift --gate` from "
+               "another CI or a git hook")
+     return 1 if (found or twice) else 0
+diff --git a/tests/test_scaffold.py b/tests/test_scaffold.py
+index 1cd41a3..891eec5 100644
+--- a/tests/test_scaffold.py
++++ b/tests/test_scaffold.py
+@@ -879,6 +879,38 @@ def test_doctor_names_memory_tools_beside_okl_and_changes_nothing(tmp_path):
+     assert r.returncode == 0 and "3 agent-memory tool(s) installed beside okl" in r.stdout
+ 
+ 
++def test_doctor_refuses_an_unreadable_config_with_exit_2(tmp_path):
++    """A config doctor cannot read (not a JSON object, a folder, not JSON) is a refusal:
++    exit 2 and the reason on stderr, never a traceback whose exit 1 reads as a finding."""
++    import shutil
++    import subprocess
++    import sys
++
++    proj, home = tmp_path / "proj", tmp_path / "home"
++    (proj / ".okl").mkdir(parents=True); home.mkdir()
++    env = {**os.environ, "HOME": str(home), "USERPROFILE": str(home)}
++    env.pop("CLAUDE_CONFIG_DIR", None)
++    cfg = proj / ".okl" / "config.json"
++
++    def doctor():
++        return subprocess.run([sys.executable, "-m", "okl", "doctor"], capture_output=True,
++                              text=True, cwd=proj, env=env)
++
++    for content in ("[]", '"ci"', "{ not json"):
++        cfg.write_text(content)
++        r = doctor()
++        assert r.returncode == 2, (content, r.stdout, r.stderr)
++        assert "Traceback" not in r.stderr and "config.json" in r.stderr
++        assert r.stdout == ""
++    cfg.unlink(); cfg.mkdir()
++    r = doctor()
++    assert r.returncode == 2 and "Traceback" not in r.stderr, r.stderr
++    shutil.rmtree(cfg)
++    cfg.write_text('{"repo": "r", "ci": false}')
++    r = doctor()
++    assert r.returncode == 0 and "not gated in CI" in r.stdout, r.stdout + r.stderr
++
++
+ def test_doctor_reads_settings_the_way_claude_code_resolves_them(tmp_path, monkeypatch):
+     """#44 review: doctor must resolve settings as Claude Code does, or it reports a tool
+     that is off, misses one that is on, or crashes on a file it could have skipped.

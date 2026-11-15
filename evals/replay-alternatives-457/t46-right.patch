@@ -1,0 +1,87 @@
+diff --git a/src/okl/cli/install.py b/src/okl/cli/install.py
+index 52dd809..c8c1f5c 100644
+--- a/src/okl/cli/install.py
++++ b/src/okl/cli/install.py
+@@ -724,11 +724,43 @@ def _install_ci_verifier(force: bool = False) -> None:
+ def _workflow_reads_pin() -> bool:
+     """Whether the workflow at WORKFLOW reads the pin. One okl wrote before 0.11.0, edited since
+     (Dependabot bumps it) and so kept, installs the newest okl whatever the pin says: writing it
+-    there reported a pin CI never used (the 0.11.0 release sweep)."""
++    there reported a pin CI never used (the 0.11.0 release sweep).
++
++    Read where it matters: the step that installs okl, its commands only. A mention anywhere in
++    the file, a comment or another step, said the pin was read by an install step that never
++    reads it."""
+     try:
+-        return OKL_VERSION_FILE.as_posix() in WORKFLOW.read_text(errors="replace")
++        text = WORKFLOW.read_text(errors="replace")
+     except OSError:
+         return False
++    return any(OKL_VERSION_FILE.as_posix() in block
++               for block in _run_blocks(text) if "observed-knowledge-ledger" in block)
++
++
++def _run_blocks(workflow: str) -> list[str]:
++    """Each step's `run:` commands in a GitHub Actions workflow, comments dropped: an inline
++    `run: <command>`, or the lines of a `run: |` block (indented deeper than the key). No YAML
++    library, since okl has none as a dependency; this is the one shape workflows write."""
++    blocks: list[str] = []
++    lines = workflow.splitlines()
++    i = 0
++    while i < len(lines):
++        m = re.match(r"^(\s*)(?:-\s+)?run:\s*(.*)$", lines[i])
++        i += 1
++        if not m:
++            continue
++        indent, rest = len(m.group(1)), m.group(2).strip()
++        body: list[str] = []
++        if re.fullmatch(r"[|>][-+0-9]*(\s+#.*)?", rest):
++            while i < len(lines) and (not lines[i].strip()
++                                      or len(lines[i]) - len(lines[i].lstrip()) > indent):
++                body.append(lines[i])
++                i += 1
++        else:
++            body.append(rest)
++        commands = [re.sub(r"(^|\s)#.*$", "", ln).rstrip() for ln in body]
++        blocks.append("\n".join(c for c in commands if c.strip()))
++    return blocks
+ 
+ 
+ GIT_HOOK_SRC = Path(__file__).parent.parent / "scaffold" / "git-hooks" / "pre-push"
+diff --git a/tests/test_scaffold.py b/tests/test_scaffold.py
+index ecb35c3..c64cd16 100644
+--- a/tests/test_scaffold.py
++++ b/tests/test_scaffold.py
+@@ -2499,6 +2499,32 @@ def test_okl_init_ci_pins_nothing_beside_an_edited_workflow_that_does_not_read_i
+     assert pin.read_text() == "0.12.0\n", out
+ 
+ 
++def test_only_the_install_step_reading_the_pin_counts(tmp_path, monkeypatch):
++    """A kept workflow reads the pin only when its okl install step does, in a command: a mention
++    in a comment, or in another step, said CI was pinned beside an install step that installs the
++    newest okl (0.11.0 review)."""
++    from okl.cli import install
++    monkeypatch.chdir(tmp_path)
++    (tmp_path / ".github" / "workflows").mkdir(parents=True)
++    shipped = install.WORKFLOW_SRC.read_text()
++    unpinned = "\n".join(ln for ln in shipped.splitlines() if "okl-version" not in ln) + "\n"
++    assert "pip install observed-knowledge-ledger" in unpinned
++
++    def reads(text: str) -> bool:
++        install.WORKFLOW.write_text(text)
++        return install._workflow_reads_pin()
++
++    assert reads(shipped)
++    assert not reads(unpinned)
++    # A YAML comment above the step, and a shell comment inside it.
++    assert not reads(unpinned.replace("      - name: Install okl\n",
++                                      "      # pinned by .github/okl-version\n      - name: Install okl\n"))
++    assert not reads(unpinned.replace("pip install observed-knowledge-ledger\n",
++                                      "pip install observed-knowledge-ledger  # see .github/okl-version\n"))
++    # Another step reads it; the install step still installs the newest release.
++    assert not reads(unpinned + "      - name: Show the pin\n        run: cat .github/okl-version\n")
++
++
+ def test_okl_init_ci_pins_nothing_beside_a_refused_symlink(ci_repo, tmp_path):
+     """A workflow path that is a symlink is refused, not followed, even when it points at okl's
+     own workflow, and no pin goes beside it (0.11.0 review)."""

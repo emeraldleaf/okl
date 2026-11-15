@@ -1,0 +1,14 @@
+diff --git a/src/okl/service.py b/src/okl/service.py
+index f2fa78f..754fd49 100644
+--- a/src/okl/service.py
++++ b/src/okl/service.py
+@@ -57,7 +57,8 @@ class RecordReq(BaseModel):
+     symptom: str | None = None
+     fix: str | None = None
+     tags: str | None = None
+-    aliases: str | None = None
++    # A string or a list: a seed pack writes a list, and core.record joins either form.
++    aliases: str | list[str] | None = None
+     # Was missing, and pydantic drops unknown fields silently: `okl record --applies-to`
+     # against a shared service stored the lesson as valid on every stack (docs audit).
+     applies_to: str | None = None

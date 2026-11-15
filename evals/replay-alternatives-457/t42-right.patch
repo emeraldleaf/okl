@@ -1,0 +1,56 @@
+diff --git a/src/okl/warm.py b/src/okl/warm.py
+index 0f5598c..7147a94 100644
+--- a/src/okl/warm.py
++++ b/src/okl/warm.py
+@@ -226,6 +226,12 @@ def serve(path: Path | None = None, *, idle_exit_s: float = IDLE_EXIT_S) -> int:
+     path = path or socket_path()
+     started = time.perf_counter()
+     encode = load_model()
++    # One throwaway inference before the socket exists. ONNX Runtime allocates its working
++    # memory on the first run, so without this the first prompt after every start paid that
++    # cost, ran past the half second a prompt waits, and was briefed without the model. Paid
++    # here, a prompt arriving while it runs finds no socket and is briefed at once, and
++    # `loaded_s` is the time until the server could answer within TIMEOUT_S.
++    encode(["warm up"], "query")
+     loaded_s = time.perf_counter() - started
+     path.parent.mkdir(parents=True, exist_ok=True)
+     with contextlib.suppress(FileNotFoundError):
+diff --git a/tests/test_warm.py b/tests/test_warm.py
+index 666423c..ceb4bbe 100644
+--- a/tests/test_warm.py
++++ b/tests/test_warm.py
+@@ -126,6 +126,34 @@ def test_the_server_answers_ping_embed_and_stop(monkeypatch):
+     assert warm.ping() is None
+ 
+ 
++def test_the_server_pays_the_first_inference_before_it_listens(monkeypatch):
++    """The model's first inference is slow (ONNX allocates on it). Run before the socket is
++    bound, the first real request after a start answers within the time a prompt waits."""
++    path = Path(tempfile.mkdtemp(prefix="okl", dir="/tmp")) / "w.sock"
++    monkeypatch.setenv("OKL_WARM_SOCKET", str(path))
++    seen: list[bool] = []
++
++    def slow_first(texts, kind):
++        seen.append(path.exists())
++        if len(seen) == 1:
++            time.sleep(warm.TIMEOUT_S * 3)
++        return _stub(texts, kind)
++
++    monkeypatch.setattr(warm, "load_model", lambda: slow_first)
++    server = threading.Thread(target=warm.serve, kwargs={"idle_exit_s": 30}, daemon=True)
++    server.start()
++    deadline = time.monotonic() + 10
++    while warm.ping() is None and time.monotonic() < deadline:
++        time.sleep(0.05)
++    try:
++        assert seen and seen[0] is False, "the first inference ran after the socket was bound"
++        assert warm.ping()["loaded_s"] >= warm.TIMEOUT_S * 3
++        assert warm.embed(["a session token"], "query") == _stub(["a session token"], "query")
++    finally:
++        warm.stop()
++        server.join(timeout=5)
++
++
+ def test_the_warm_setting_reads_env_over_config():
+     """Off unless set; OKL_WARM wins over the config; an unknown value is refused."""
+     assert warm_setting(None, None) is False

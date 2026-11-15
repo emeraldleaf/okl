@@ -1,0 +1,136 @@
+diff --git a/evals/layout_preflight.py b/evals/layout_preflight.py
+index 9888d34..454e5b5 100644
+--- a/evals/layout_preflight.py
++++ b/evals/layout_preflight.py
+@@ -73,7 +73,9 @@ def main() -> int:
+     lost_any = False
+     for line in (REPO / "evals" / "tasks.jsonl").read_text().splitlines():
+         task = json.loads(line)
+-        result = client.check(task["task"], repo="okl")
++        # log=False: this script briefs no agent, so its checks are not exposure and must
++        # not reach the briefing log okl metric reads (local store or shared service).
++        result = client.check(task["task"], repo="okl", log=False)
+         a = old.render_check_for_agent(result)
+         b = new.render_check_for_agent(result)
+         total_old += len(a)
+diff --git a/src/okl/client.py b/src/okl/client.py
+index 46cad7e..51e0711 100644
+--- a/src/okl/client.py
++++ b/src/okl/client.py
+@@ -184,10 +184,13 @@ class Client:
+             raise OKLUnreachableError(f"OKL service unreachable at {url}: {e}") from e
+ 
+     # -- operations ---------------------------------------------------------
+-    def check(self, task: str, repo: str | None = None, limit: int | None = None) -> dict:
++    def check(self, task: str, repo: str | None = None, limit: int | None = None,
++              log: bool = True) -> dict:
+         """The briefing for starting `task` in `repo` (default: this repo), as core.check returns it.
+ 
+         Lessons whose governed code changed since their last check come back marked.
++        `log=False` is for a caller that briefs no agent (an eval, a pre-flight): its
++        briefing is not exposure, so it is not logged, locally or by the service.
+         Over a shared service, raises ValueError when the service rejects the request (any
+         4xx, such as a 401 for a missing token) and OKLUnreachableError when it cannot be
+         reached or fails on its side (a network error or any 5xx).
+@@ -196,6 +199,8 @@ class Client:
+         payload = {"repo": repo, "task": task, "interests": self.interests or None}
+         if limit is not None:
+             payload["limit"] = limit
++        if not log:
++            payload["log"] = False
+         if self.mode == "remote":
+             result = self._post("/check", payload)
+         else:
+@@ -206,7 +211,8 @@ class Client:
+             result = core.check(store, repo, task, **kw)
+             # Over a shared service the service logs the briefing it answers; locally, the
+             # client is the only one who sees it (#129).
+-            core.record_briefing(store, repo, result)
++            if log:
++                core.record_briefing(store, repo, result)
+         # Mark briefed lessons whose code changed since their last check (#93). Done here,
+         # not in core, because only the client has this repo's checkout: a shared service
+         # answering /check has no git history to compare against.
+diff --git a/src/okl/service.py b/src/okl/service.py
+index bf07e85..61d15fb 100644
+--- a/src/okl/service.py
++++ b/src/okl/service.py
+@@ -38,6 +38,7 @@ class CheckReq(BaseModel):
+     task: str
+     limit: int = 12
+     interests: list[str] | None = None   # the calling repo's declared subject tags
++    log: bool = True                     # False: a caller that briefs no agent (an eval)
+ 
+ 
+ class RecordReq(BaseModel):
+@@ -134,8 +135,10 @@ def create_app(store: Store | None = None) -> FastAPI:  # noqa: C901
+         _auth(authorization)
+         result = core.check(_store, req.repo, req.task, limit=req.limit,
+                             interests=req.interests)
+-        # The service is the only party that sees every client's briefings (#129).
+-        core.record_briefing(_store, req.repo, result)
++        # The service is the only party that sees every client's briefings (#129). A
++        # caller that briefs no agent asks for its check unlogged: it is not exposure.
++        if req.log:
++            core.record_briefing(_store, req.repo, result)
+         return result
+ 
+     @app.post("/record")
+diff --git a/tests/test_okl.py b/tests/test_okl.py
+index 76d207b..ec432c6 100644
+--- a/tests/test_okl.py
++++ b/tests/test_okl.py
+@@ -3390,3 +3390,53 @@ def test_the_suite_is_deaf_to_a_real_store_named_in_the_environment(store):
+     a "throwaway" Client would land in the real store. Here it lands in a temp one."""
+     import os
+     assert all(v not in os.environ for v in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN"))
++
++
++def test_check_unlogged_writes_no_briefing_row_locally_or_through_the_service(tmp_path, monkeypatch):
++    """A caller that briefs no agent (an eval, a pre-flight) asks for its check unlogged:
++    no briefing row lands in the store okl metric reads, whether the client is local or
++    goes through a service. A plain check still logs."""
++    import io
++    import urllib.request
++
++    from okl.client import Client
++
++    monkeypatch.chdir(tmp_path)
++    monkeypatch.delenv("OKL_BRIEFING_LOG", raising=False)
++    monkeypatch.setenv("OKL_DATABASE_URL", f"sqlite:///{tmp_path}/local.db")
++    local = Client({"repo": "r"})
++    s = local._local_store()
++    core.record(s, type="Rule", title="pin the decoder axes", scope="org")
++    local.check("decoder axes", log=False)
++    assert s.briefings() == []
++    local.check("decoder axes")
++    assert len(s.briefings()) == 1
++
++    pytest.importorskip("fastapi")
++    pytest.importorskip("httpx")
++    from fastapi.testclient import TestClient
++
++    from okl.service import create_app
++
++    svc = Store("sqlite:///:memory:")
++    core.record(svc, type="Rule", title="pin the decoder axes", scope="org")
++    http = TestClient(create_app(store=svc))
++
++    class _Resp(io.BytesIO):
++        status = 200
++        def __enter__(self): return self
++        def __exit__(self, *a): return False
++
++    def fake_urlopen(req, timeout=None):
++        path = req.full_url.split("svc.test", 1)[1]
++        r = http.post(path, content=req.data, headers=dict(req.header_items()))
++        assert r.status_code == 200, r.text
++        return _Resp(r.content)
++
++    monkeypatch.delenv("OKL_DATABASE_URL")
++    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
++    remote = Client({"repo": "r", "service_url": "http://svc.test"})
++    remote.check("decoder axes", log=False)
++    assert svc.briefings() == []
++    remote.check("decoder axes")
++    assert len(svc.briefings()) == 1

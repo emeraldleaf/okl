@@ -1,0 +1,16 @@
+diff --git a/src/okl/core.py b/src/okl/core.py
+index 3afec7c..5bc999a 100644
+--- a/src/okl/core.py
++++ b/src/okl/core.py
+@@ -321,7 +321,10 @@ def record(store: Store, *, type: str, title: str, scope: str, repo: str | None
+     """
+     if scope == "repo" and repo:
+         scope = f"repo:{repo}"
+-    if status in ("superseded", "obsolete") and not keep_verification:
++    # A re-import may carry the status of a lesson it already holds, but it must not
++    # create a lesson that starts out retired with no reason logged.
++    if status in ("superseded", "obsolete") and (
++            not keep_verification or id is None or store.get_node(id) is None):
+         raise ValueError(f"status {status!r} is set by `okl retire`, which keeps the reason "
+                          "(and, for superseded, the replacement)")
+     # Annotated dict[str, Any] because Node's fields are genuinely heterogeneous

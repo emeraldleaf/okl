@@ -1,0 +1,109 @@
+diff --git a/docs/DEPLOY.md b/docs/DEPLOY.md
+index 68a7044..82ffc13 100644
+--- a/docs/DEPLOY.md
++++ b/docs/DEPLOY.md
+@@ -90,8 +90,11 @@ uvicorn okl.service:app --host 0.0.0.0 --port 8080   # standard ASGI entrypoint
+ Both work and serve the same app. Use the second one under a process manager or in a
+ container, since it is the form every platform's default start command takes. It does
+ not pass through `okl serve`'s refusal, and the app cannot see the address it is bound
+-to, so with no token it starts anyway and logs one warning: `OKL_TOKEN is not set`. If
+-that line is in your deploy log, the store is open.
++to, so `okl.service:app` refuses on its own: with no token (an empty one counts as none)
++the import fails and the server does not start. When a proxy in front authenticates every
++request, or only this machine can reach the port, set `OKL_ALLOW_NO_TOKEN=1` to serve
++anyway; the app then logs one warning, `OKL_TOKEN is not set`. If that line is in your
++deploy log, the store is open.
+ 
+ Confirm it is up:
+ 
+diff --git a/src/okl/service.py b/src/okl/service.py
+index 5c4af27..0827fbc 100644
+--- a/src/okl/service.py
++++ b/src/okl/service.py
+@@ -374,11 +374,37 @@ def __getattr__(name: str) -> FastAPI:
+     if name == "app":
+         global _app
+         if _app is None:
++            refusal = _no_token_refusal()
++            if refusal:
++                raise RuntimeError(refusal)
+             _app = create_app()
+         return _app
+     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+ 
+ 
++# The explicit opt-in for serving `okl.service:app` with no token, as `--allow-no-token` is
++# for `okl serve`: a proxy in front authenticates every request, or only this machine can
++# reach the port.
++ALLOW_NO_TOKEN = "OKL_ALLOW_NO_TOKEN"  # noqa: S105 - the name of a switch, not a secret
++
++
++def _no_token_refusal() -> str | None:
++    """Why `okl.service:app` must not be built, or None when it may.
++
++    `okl serve` refuses to serve off loopback without OKL_TOKEN, but `uvicorn okl.service:app`,
++    the documented start for a process manager or a container, never passes through it, and
++    the app cannot see the address it is bound to. So the attribute every ASGI host imports
++    fails closed itself: no token (an empty one counts as none) and no explicit opt-in, no app
++    (#371).
++    """
++    if os.environ.get("OKL_TOKEN") or os.environ.get(ALLOW_NO_TOKEN) == "1":
++        return None
++    return ("OKL: refusing to build okl.service:app without OKL_TOKEN: every route, GET /nodes "
++            "included, would be open to anyone who can reach the port. Set OKL_TOKEN, or set "
++            f"{ALLOW_NO_TOKEN}=1 when a proxy in front authenticates or only this machine can "
++            "reach it (docs/DEPLOY.md §2).")
++
++
+ def run(host: str = "0.0.0.0", port: int = 8080) -> None:
+     """Serve the app with uvicorn. `create_app()` is called here, not at import."""
+     import uvicorn
+diff --git a/tests/test_okl.py b/tests/test_okl.py
+index a4aa803..3407580 100644
+--- a/tests/test_okl.py
++++ b/tests/test_okl.py
+@@ -361,6 +361,7 @@ def test_asgi_entrypoint_resolves_to_a_real_app_without_importing_the_database(m
+ 
+     # ARRANGE — a database URL that would fail loudly if anything connected to it
+     monkeypatch.setenv("OKL_DATABASE_URL", "sqlite:///:memory:")
++    monkeypatch.setenv("OKL_TOKEN", "t")     # without one the attribute refuses (#371)
+     monkeypatch.setattr(svc, "_app", None)   # forget any app a previous test built
+ 
+     # ASSERT (1) — importing does not build the app, so it does not touch storage
+@@ -3104,6 +3105,36 @@ def test_serve_with_the_opt_in_reaches_the_server_on_the_host_asked(monkeypatch)
+     assert started == ["0.0.0.0", "127.0.0.1"]
+ 
+ 
++def test_the_asgi_entrypoint_refuses_to_serve_without_a_token(monkeypatch):
++    """`uvicorn okl.service:app` never passes through okl serve's refusal, so the attribute it
++    imports fails closed itself: no token, or an empty one, builds no app, and the refusal
++    names the opt-in; OKL_ALLOW_NO_TOKEN=1 or a token builds it (#371)."""
++    pytest.importorskip("fastapi")
++    pytest.importorskip("httpx")
++    from fastapi.testclient import TestClient
++
++    import okl.service as svc
++
++    monkeypatch.setenv("OKL_DATABASE_URL", "sqlite:///:memory:")
++    monkeypatch.delenv("OKL_ALLOW_NO_TOKEN", raising=False)
++    for value in (None, ""):
++        monkeypatch.setattr(svc, "_app", None)
++        if value is None:
++            monkeypatch.delenv("OKL_TOKEN", raising=False)
++        else:
++            monkeypatch.setenv("OKL_TOKEN", value)
++        with pytest.raises(RuntimeError, match="OKL_ALLOW_NO_TOKEN=1"):
++            svc.app  # noqa: B018 - the attribute access is what an ASGI host does
++        assert svc._app is None
++
++    monkeypatch.setenv("OKL_ALLOW_NO_TOKEN", "1")
++    assert TestClient(svc.app).get("/nodes").status_code == 200
++    monkeypatch.setattr(svc, "_app", None)
++    monkeypatch.delenv("OKL_ALLOW_NO_TOKEN")
++    monkeypatch.setenv("OKL_TOKEN", "s3cret")
++    assert TestClient(svc.app).get("/nodes").status_code == 401
++
++
+ def test_a_service_built_with_no_token_says_its_routes_are_open(monkeypatch, caplog):
+     """`uvicorn okl.service:app` never passes through okl serve's refusal, and create_app
+     cannot see the address it is bound to, so the app itself warns on every start with no

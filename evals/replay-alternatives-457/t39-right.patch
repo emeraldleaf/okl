@@ -1,0 +1,65 @@
+diff --git a/docs/render_pipeline_diagram.py b/docs/render_pipeline_diagram.py
+index 1d13547..568ee3c 100644
+--- a/docs/render_pipeline_diagram.py
++++ b/docs/render_pipeline_diagram.py
+@@ -66,13 +66,19 @@ SEED_INTERESTS = ["python", "method", "security", "agent-safety",
+ def _seeded_store(tmpdir: str) -> Store:
+     """Build a store from every committed seed file, via the shipped seed path."""
+     url = f"sqlite:///{Path(tmpdir) / 'trace.db'}"
+-    # A configured service URL would send the seeds to the live service instead of this
+-    # throwaway store (review on #266), so the variable that selects one is dropped.
+-    env = {k: v for k, v in os.environ.items() if k != "OKL_SERVICE_URL"}
++    # A configured service would send the seeds to the live service instead of this
++    # throwaway store (review on #266). It can be named two ways, and both are closed: the
++    # variable is dropped, and the seed runs from the throwaway directory under a config of
++    # its own, never from the checkout, whose .okl/config.json may carry a service_url.
++    env = {k: v for k, v in os.environ.items() if k not in ("OKL_SERVICE_URL", "OKL_TOKEN")}
+     env["OKL_DATABASE_URL"] = url
++    # The checkout's okl, as the trace below uses, wherever the seed now runs from.
++    env["PYTHONPATH"] = os.pathsep.join([str(REPO / "src"), *filter(None, [os.environ.get("PYTHONPATH")])])
++    (Path(tmpdir) / ".okl").mkdir(exist_ok=True)
++    (Path(tmpdir) / ".okl" / "config.json").write_text(json.dumps({"repo": TRACE_REPO}))
+     for f in sorted((REPO / "seed").glob("*.json")):
+         r = subprocess.run([sys.executable, "-m", "okl", "seed", str(f)],
+-                           capture_output=True, text=True, env=env, cwd=REPO)
++                           capture_output=True, text=True, env=env, cwd=tmpdir)
+         if r.returncode != 0:
+             raise SystemExit(f"ABORT: seeding {f.name} failed — {r.stderr.strip()[:200]}")
+     store = Store(url)
+diff --git a/tests/test_render_pipeline_seed.py b/tests/test_render_pipeline_seed.py
+new file mode 100644
+index 0000000..41f5bd0
+--- /dev/null
++++ b/tests/test_render_pipeline_seed.py
+@@ -0,0 +1,31 @@
++"""docs/render_pipeline_diagram.py seeds a throwaway store, never a configured service."""
++import importlib.util
++import json
++from pathlib import Path
++
++ROOT = Path(__file__).resolve().parents[1]
++
++
++def test_the_trace_seeds_its_own_store_when_the_checkout_names_a_service(tmp_path, monkeypatch):
++    spec = importlib.util.spec_from_file_location("render_pipeline_diagram",
++                                                  ROOT / "docs" / "render_pipeline_diagram.py")
++    mod = importlib.util.module_from_spec(spec)
++    spec.loader.exec_module(mod)
++
++    # A checkout whose own config points at a service (here one that refuses every connection).
++    checkout = tmp_path / "checkout"
++    (checkout / "seed").mkdir(parents=True)
++    (checkout / "seed" / "tiny.json").write_text(json.dumps({"nodes": [
++        {"key": "k", "type": "Rule", "scope": "org", "repo": "x", "title": "pin the decoder axes"}]}))
++    (checkout / ".okl").mkdir()
++    (checkout / ".okl" / "config.json").write_text(
++        json.dumps({"repo": "okl", "service_url": "http://127.0.0.1:9"}))
++    monkeypatch.setattr(mod, "REPO", checkout)
++    monkeypatch.delenv("OKL_SERVICE_URL", raising=False)
++    monkeypatch.setenv("PYTHONPATH", str(ROOT / "src"))
++
++    trace_dir = tmp_path / "trace"; trace_dir.mkdir()
++    store = mod._seeded_store(str(trace_dir))
++
++    assert [n.id for n in store.all_nodes()] == ["seed:tiny:k"]
++    store.close()

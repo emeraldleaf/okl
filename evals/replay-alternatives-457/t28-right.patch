@@ -1,0 +1,49 @@
+diff --git a/src/okl/core.py b/src/okl/core.py
+index 74ddca9..a59765b 100644
+--- a/src/okl/core.py
++++ b/src/okl/core.py
+@@ -1074,6 +1074,12 @@ def record(store: Store, *, type: str, title: str, scope: str, repo: str | None
+     # An explicit id names the lesson; omit it and the store mints a fresh random one.
+     if supersedes is not None and id is None:
+         raise ValueError("supersedes names the lesson's old id, so it needs the new one: pass id")
++    if supersedes is not None and supersedes == id:
++        # As `okl retire` refuses: retired as superseded by itself, the lesson would leave
++        # every briefing with nothing to take its place. Refused here, where the CLI, okl
++        # seed, MCP and a service's /record all write, not in one caller.
++        raise ValueError(f"a lesson cannot replace itself: supersedes names {id!r}, the id "
++                         "being recorded; it must name the lesson's old id")
+     prior = store.get_node(supersedes) if supersedes else None
+     if prior is not None and prior.status == "superseded":
+         prior = None                                  # moved already: nothing to carry or retire
+diff --git a/tests/test_seed_renames.py b/tests/test_seed_renames.py
+index 45e5670..b02e8b2 100644
+--- a/tests/test_seed_renames.py
++++ b/tests/test_seed_renames.py
+@@ -190,3 +190,27 @@ def test_a_record_already_moved_is_neither_carried_nor_retired_again():
+ 
+     assert len(store.retirements("seed:old-p:k")) == 1
+     assert store.get_node("seed:other-p:k").status not in ("superseded", "obsolete")
++
++
++def test_a_lesson_cannot_supersede_itself_on_any_path(remote):
++    """record(id=x, supersedes=x) retired x as superseded by itself, out of every briefing,
++    while okl retire refuses a lesson replacing itself. Refused in core, so locally, through
++    the client and from any client of the service alike."""
++    from okl.client import OKLRejectedError
++    from okl.store import Store
++
++    store = Store("sqlite:///:memory:")
++    core.record(store, id="x", type="Rule", title="t", scope="org")
++    with pytest.raises(ValueError, match="cannot replace itself"):
++        core.record(store, id="x", type="Rule", title="t", scope="org",
++                    keep_verification=True, supersedes="x")
++    assert store.get_node("x").status is None and store.retirements("x") == []
++
++    Client().record(id="y", type="Rule", title="t", scope="org", repo=None)
++    with pytest.raises(OKLRejectedError, match="cannot replace itself"):
++        Client().record(id="y", type="Rule", title="t", scope="org", repo=None,
++                        keep_verification=True, supersedes="y")
++    r = remote.api.post("/record", json={"id": "y", "type": "Rule", "title": "t", "scope": "org",
++                                         "keep_verification": True, "supersedes": "y"})
++    assert r.status_code == 400 and "cannot replace itself" in r.json()["detail"]
++    assert remote.store.get_node("y").status is None and remote.store.retirements("y") == []

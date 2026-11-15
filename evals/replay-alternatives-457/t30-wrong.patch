@@ -1,0 +1,22 @@
+diff --git a/src/okl/cli/health.py b/src/okl/cli/health.py
+index f7c43b4..b75e979 100644
+--- a/src/okl/cli/health.py
++++ b/src/okl/cli/health.py
+@@ -5,6 +5,7 @@ import argparse
+ import contextlib
+ import json
+ import os
++import sqlite3
+ import sys
+ from collections import Counter
+ from datetime import UTC, datetime
+@@ -73,7 +74,8 @@ def _interest_lines(client: Client, *, say_unread: bool = True, shown: int = 5)
+         return []
+     try:
+         hidden = core.hidden_by_interests(client.all_nodes(), client.repo, client.interests)
+-    except (OKLUnreachableError, OKLRejectedError, OSError) as e:
++    except (OKLUnreachableError, OKLRejectedError, OSError, sqlite3.Error) as e:
++        # sqlite3.Error too: a corrupt store file is a store that could not be read.
+         why = (str(e).strip().splitlines() or [type(e).__name__])[0]
+         return [f"\n• what this repo's interests hide: not reported, the store could not be read ({why})"] \
+             if say_unread else []

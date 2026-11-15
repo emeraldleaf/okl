@@ -1,0 +1,26 @@
+diff --git a/evals/probe_rephrase.py b/evals/probe_rephrase.py
+index 672f052..5b73daf 100644
+--- a/evals/probe_rephrase.py
++++ b/evals/probe_rephrase.py
+@@ -96,7 +96,8 @@ for t in tasks:
+         r2 = nid in returned(core.check(store, repo=REPO, task=task, interests=INTERESTS))
+         rk, live = rank_of(task, nid, None)
+         hits[label][0] += r1; hits[label][1] += r2
+-        m = matched(task, n)
++        # A lesson the store does not hold has no prose to match: say so, do not crash.
++        m = matched(task, n) if n is not None else ["<lesson not in store>"]
+         print(f"{t['id']:16} {label:11} {'yes' if r1 else 'MISS':8} {'yes' if r2 else 'MISS':8} {str(rk):>5}/{live:<5} {m[:6]}")
+ print("\nrecall by variant (of 8):", {k: f"harness {v[0]}/8, hook {v[1]}/8" for k, v in hits.items()})
+ 
+@@ -122,6 +123,10 @@ for p in PROMPTS:
+ 
+ print("\nC. The same two policies on the governing lesson of each AUTHORED eval task (would a threshold cost recall?)")
+ for t in tasks:
+-    n = store.get_node(t["defect_node"]); m = matched(t["task"], n)
++    n = store.get_node(t["defect_node"])
++    if n is None:
++        print(f"  {t['id']:16} governing lesson {t['defect_node']!r} not in store")
++        continue
++    m = matched(t["task"], n)
+     rare = min((df(x) for x in m), default=None)
+     print(f"  {t['id']:16} matched={len(m):2} rarest df={rare}  >=2:{'ok' if len(m)>=2 else 'LOST'}  rare<=3%:{'ok' if rare is not None and rare/N<=0.03 else 'LOST'}")

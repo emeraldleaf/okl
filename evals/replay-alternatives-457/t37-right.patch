@@ -1,0 +1,112 @@
+diff --git a/evals/drift_mutate.py b/evals/drift_mutate.py
+index c6d84fb..ee67134 100644
+--- a/evals/drift_mutate.py
++++ b/evals/drift_mutate.py
+@@ -99,13 +99,9 @@ def ci_run_lesson(cmd: str) -> bool:
+ 
+ 
+ def judged(result: str) -> str | None:
+-    """The judge's verdict from its answer, or None when it gave no valid one."""
+-    m = re.search(r"\{.*\}", result, re.S)
+-    try:
+-        got = json.loads(m.group(0)) if m else None
+-    except ValueError:
+-        return None
+-    return got["verdict"] if isinstance(got, dict) and got.get("verdict") in ("broken", "intact", "unsure") else None
++    """The judge's verdict from its answer, found anywhere in it, or None when it gave no valid one."""
++    got = dr.last_verdict(result, ("broken", "intact", "unsure"))
++    return got["verdict"] if got else None
+ 
+ 
+ def changed_files(diff: str) -> list[str]:
+diff --git a/evals/drift_replay.py b/evals/drift_replay.py
+index 3b5a4f0..1e789fb 100644
+--- a/evals/drift_replay.py
++++ b/evals/drift_replay.py
+@@ -293,6 +293,27 @@ def draw(items: list[T], n: int, key: Callable[[T], str]) -> list[T]:
+     return sorted(items, key=lambda i: hashlib.sha256(f"{SEED}:{key(i)}".encode()).hexdigest())[:n]
+ 
+ 
++def last_verdict(reply: str, allowed: tuple[str, ...] | frozenset[str]) -> dict | None:
++    """The last JSON object anywhere in a judge's reply whose "verdict" is one of `allowed`,
++    or None when there is none.
++
++    Each `{` is tried as the start of a JSON value, so prose with braces in it, a quoted answer
++    format (whose "verdict" is not an allowed value), a trailing note, or an object nested in
++    the verdict cannot hide it; of two verdicts the last is the answer. A greedy match from the
++    first `{` to the last `}` read every one of those replies as no verdict.
++    """
++    decoder = json.JSONDecoder()
++    found = None
++    for m in re.finditer(r"\{", reply):
++        try:
++            got, _end = decoder.raw_decode(reply, m.start())
++        except ValueError:
++            continue
++        if isinstance(got, dict) and got.get("verdict") in allowed:
++            found = got
++    return found
++
++
+ def wilson(k: int, n: int, z: float = 1.96) -> list[float]:
+     """The 95% Wilson interval for k of n."""
+     if n == 0:
+diff --git a/evals/lesson_census.py b/evals/lesson_census.py
+index aae4b08..74b3777 100644
+--- a/evals/lesson_census.py
++++ b/evals/lesson_census.py
+@@ -94,13 +94,8 @@ def plant(text: str, old: str, new: str) -> str:
+ 
+ 
+ def parse_verdict(result: str) -> dict | None:
+-    """The judge's JSON object, or None when its answer holds no valid one."""
+-    m = re.search(r"\{.*\}", result, re.S)
+-    try:
+-        got = json.loads(m.group(0)) if m else None
+-    except ValueError:
+-        return None
+-    return got if isinstance(got, dict) and got.get("verdict") in VERDICTS else None
++    """The judge's JSON object, found anywhere in its answer, or None when it holds no valid one."""
++    return dr.last_verdict(result, VERDICTS)
+ 
+ 
+ def summarize(items: list[dict]) -> dict:
+diff --git a/tests/test_drift_replay.py b/tests/test_drift_replay.py
+index bc5980d..2de1846 100644
+--- a/tests/test_drift_replay.py
++++ b/tests/test_drift_replay.py
+@@ -269,3 +269,34 @@ def test_the_mutation_run_counts_catches_misses_and_ci_by_group(monkeypatch):
+     assert s["against_ci"]["other_lessons"] == {"drift_only": 1, "both": 0, "ci_only": 1, "neither": 1, "breaks": 3}
+     assert s["against_ci"]["ci_run_lessons"]["both"] == 1
+     assert s["controls"] == {"n": 1, "check_failed": 1}
++
++
++def _load(monkeypatch, name):
++    monkeypatch.setattr(sys, "path", list(sys.path))     # the scripts put evals/ on the path
++    spec = importlib.util.spec_from_file_location(name, HERE / "evals" / f"{name}.py")
++    mod = importlib.util.module_from_spec(spec)
++    monkeypatch.setitem(sys.modules, name, mod)
++    spec.loader.exec_module(mod)
++    return mod
++
++
++# {v} is the verdict the reply means, {w} an earlier one it replaces.
++REPLIES = [
++    ('Looking at {{the diff}} and set {{x}}: {{"verdict": "{v}"}}', True),
++    ('You asked for {{"verdict": "broken|intact|unsure"}}. Here it is: {{"verdict": "{v}"}}', True),
++    ('{{"verdict": "{v}", "why": "see the note"}}\nNote: the hunk at {{line 4}} is cosmetic.', True),
++    ('First I thought {{"verdict": "{w}"}} but on reflection {{"verdict": "{v}"}}', True),
++    ('```json\n{{"verdict": "{v}", "detail": {{"file": "a.py", "code": "if x: {{}}"}}}}\n```', True),
++    ("no json here at all", False),
++    ('{{"verdict": "probably"}}', False),
++]
++
++
++@pytest.mark.parametrize("reply, has", REPLIES)
++def test_a_judge_reply_is_read_wherever_its_verdict_is(monkeypatch, reply, has):
++    """A greedy match from the first { to the last } read prose braces, a quoted answer format,
++    a trailing note and two verdicts as no verdict; the last valid object is the answer."""
++    lc, dm = _load(monkeypatch, "lesson_census"), _load(monkeypatch, "drift_mutate")
++    got = lc.parse_verdict(reply.format(v="stale", w="current"))
++    assert (got or {}).get("verdict") == ("stale" if has else None)
++    assert dm.judged(reply.format(v="broken", w="intact")) == ("broken" if has else None)

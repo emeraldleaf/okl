@@ -1,0 +1,79 @@
+diff --git a/evals/bench/run.py b/evals/bench/run.py
+index c30c435..4be5682 100644
+--- a/evals/bench/run.py
++++ b/evals/bench/run.py
+@@ -41,6 +41,8 @@ from okl.client import Client  # noqa: E402
+ from okl.seed import seed_from_file  # noqa: E402
+ from okl.store import Store  # noqa: E402
+ 
++# The variables that name a store; none may reach the throwaway corpus's client.
++STORE_VARS = ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN")
+ QUERIES = ROOT / "evals" / "bench" / "queries.jsonl"
+ NULLS = ROOT / "evals" / "bench" / "private" / "null_prompts.jsonl"
+ REPO = "bench"
+@@ -77,9 +79,16 @@ def build_corpus(where: Path) -> Store:
+     (where / ".okl").mkdir(parents=True, exist_ok=True)
+     (where / ".okl" / "config.json").write_text(json.dumps({"repo": REPO}))
+     here = Path.cwd()
++    # The corpus is throwaway: the client must not follow a storage variable the caller's
++    # shell exported. OKL_DATABASE_URL would put every pack into that real store (where the
++    # bench then strips triggers) and OKL_SERVICE_URL into a shared service, so they are
++    # set aside while the corpus is built and restored after.
++    saved = {k: os.environ.pop(k) for k in STORE_VARS if k in os.environ}
+     os.chdir(where)
+     try:
+         client = Client()
++        if client.mode != "local":
++            sys.exit("bench: the throwaway corpus is not a local store; refusing to seed it")
+         for pack in sorted((ROOT / "seed").glob("*.json")):
+             seed_from_file(client, str(pack))
+         store = client._local_store()
+@@ -89,6 +98,7 @@ def build_corpus(where: Path) -> Store:
+         return store
+     finally:
+         os.chdir(here)
++        os.environ.update(saved)
+ 
+ 
+ def load_triggers(store: Store, path: Path) -> int:
+diff --git a/tests/test_bench_corpus.py b/tests/test_bench_corpus.py
+new file mode 100644
+index 0000000..56b2425
+--- /dev/null
++++ b/tests/test_bench_corpus.py
+@@ -0,0 +1,35 @@
++"""evals/bench/run.py builds its corpus in a throwaway store, whatever the shell exported."""
++import importlib.util
++from pathlib import Path
++
++ROOT = Path(__file__).resolve().parents[1]
++
++
++def test_build_corpus_ignores_exported_storage_variables(tmp_path, monkeypatch):
++    from okl import core
++    from okl.store import Store
++
++    spec = importlib.util.spec_from_file_location("bench_run", ROOT / "evals" / "bench" / "run.py")
++    bench = importlib.util.module_from_spec(spec)
++    spec.loader.exec_module(bench)
++
++    real = tmp_path / "real.db"
++    s = Store(f"sqlite:///{real}")
++    core.record(s, id="mine", type="Rule", scope="org", title="a lesson the person wrote")
++    s.close()
++    monkeypatch.setenv("OKL_DATABASE_URL", f"sqlite:///{real}")
++    monkeypatch.setenv("OKL_SERVICE_URL", "http://shared.invalid")
++
++    def no_network(*a, **k):
++        raise AssertionError("the bench corpus reached a service")
++    monkeypatch.setattr("okl.client._req.urlopen", no_network)
++
++    corpus = bench.build_corpus(tmp_path / "corpus")
++
++    assert len(corpus.all_nodes()) > 50
++    assert corpus.get_node("mine") is None
++    s = Store(f"sqlite:///{real}")
++    assert [n.id for n in s.all_nodes()] == ["mine"], "a pack reached the real store"
++    s.close()
++    import os
++    assert os.environ["OKL_DATABASE_URL"] == f"sqlite:///{real}", "the caller's env is restored"
