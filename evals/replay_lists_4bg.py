@@ -9,6 +9,10 @@ keeps the builder, so the lists can be rebuilt and checked.
     python3 evals/replay_lists_4bg.py [--write]
 
 Reads a read-only copy of this checkout's store; writes evals/replay-lists-4bg.json with --write.
+The store keeps no history of a lesson's words or status, so "as they stood" means the lessons that
+existed then, as they read and stand today: one edited since reads as edited, and one retired since
+is left out though it was live then. The tasks' own lessons are treated the same way (their text is
+today's, with this task's fix removed), and REPORT §4bg says so.
 """
 from __future__ import annotations
 

@@ -59,7 +59,8 @@ must come from an executed check. It also means **never pass untrusted input to
 Two commands run those recorded commands again, and on a shared store other people may have
 recorded them. `okl reverify` lists them and runs them only after you confirm, or with
 `--yes`. `okl on-edit add <id>` shows a lesson's command and, once you approve it, runs it
-**unattended after every edit your agent makes to a file that lesson governs**, until you
+**unattended after every edit your agent makes in the repository** (since 0.17.0; before, only
+after edits to a file that lesson governs), until you
 `okl on-edit remove` it. An approval is pinned to the exact command and its expected signal,
 so a command that changes in the store afterwards does not run until you approve it again,
 and okl refuses to approve any command, signal, title or file list holding a control, format

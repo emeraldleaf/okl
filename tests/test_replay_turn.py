@@ -228,6 +228,27 @@ def test_the_grader_checks_quote_their_receipts():
         assert not r["okl_commit"].endswith("+dirty") and "usable" not in r
 
 
+def test_a_grader_that_hangs_fails_that_session_and_leaves_the_run_going(monkeypatch, tmp_path):
+    """Code a session left can hang the grader: the session fails (no verdict counts against the claim), the
+    grader file is removed, and nothing is raised into the run's loop (review of #454)."""
+    import subprocess as sp
+
+    def hang(*a, **k):
+        raise sp.TimeoutExpired(cmd="pytest", timeout=1)
+    monkeypatch.setattr(turn.subprocess, "run", hang)
+    (tmp_path / "tests").mkdir()
+    got = turn.grade(tmp_path, {"grader": "test_t01_pr388"})
+    assert got["passed"] is False and got["exit"] is None and "did not finish" in got["summary"]
+    assert not (tmp_path / turn.GRADER_IN_ROOM).exists()
+
+
+def test_a_row_is_kept_only_under_this_model_and_effort():
+    """Changing the harness's model or effort never pools with rows made under the old one."""
+    assert turn.same_setup({"effort": turn.EFFORT, "models": ["claude-sonnet-5-5"]})
+    assert not turn.same_setup({"effort": "high", "models": ["claude-sonnet-5-5"]})
+    assert not turn.same_setup({"effort": turn.EFFORT, "models": ["claude-haiku-5-5"]})
+
+
 def test_what_the_sessions_said_quotes_its_receipt():
     """§4bg's count of sessions that named the right lesson and still failed is read from the transcripts by
     a committed step, made from committed code, and the power receipt the section cites is usable."""

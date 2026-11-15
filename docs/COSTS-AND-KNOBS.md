@@ -115,11 +115,11 @@ fingerprint, so unless one is byte-identical to the current version, `init` keep
 same for a teammate who cloned the repo. okl never writes through a symlink: a hook,
 settings or workflow path that is a link, or sits under one, is refused and named.
 
-## The review after writing (off by default)
+## The review after writing (on by default)
 
-`okl init --review-after-writing` has the Stop hook ask the agent, before it finishes, to
-run `okl check --change` and check the code it wrote against the lessons
-([REPORT §4at](../evals/REPORT.md)); `--no-review-after-writing` turns it off, and
+The Stop hook asks the agent, before it finishes a session that changed files, to run
+`okl check --change` and check the code it wrote against the lessons
+([REPORT §4at](../evals/REPORT.md)); `okl init --no-review-after-writing` turns it off, and
 `OKL_REVIEW_AFTER_WRITING=0` (or `1`) decides for one session. The cost is the list: every
 lesson in scope, one line each, about 270 bytes (roughly 60 tokens) a lesson, so about 80 KB
 for 300 lessons, read once per session that changed something, plus the lessons the agent
@@ -129,13 +129,18 @@ as Claude Code does past about 30,000 characters, the list's first line tells th
 read all of it. okl calls no model for this; the agent's own turns are the cost. Measured on
 20 of this repository's changes with 280 lessons in scope (REPORT §4au), one review took a
 median of about 170,000 tokens, nearly all of them cached context the session re-reads, about
-$0.21 at API prices and 43 seconds. That cost, and a catch rate below the bar §4au set, are why
-it is off by default. Since §4ay the agent checks each lesson it picks in its own fresh
+$0.21 at API prices and 43 seconds. That cost, and a catch rate below the bar §4au set, kept it
+off by default until 0.17.0. Since §4ay the agent checks each lesson it picks in its own fresh
 sub-agent, which costs more again: in that test, ten lessons asked one at a time took about
 seven times the cost and six times the time of a single pass. With the agent choosing its own
-lessons (REPORT §4az, receipt `review-e2e-20261111-1543.json`), a review cost a median of $0.73 API-priced and 214 seconds, and fixed 1 in
-5 of the past bugs tested, against none for the earlier one-pass review: short of the bar for
-turning it on, so it stays off by default.
+lessons (REPORT §4az, receipt `review-e2e-20261111-1543.json`), a session with the review cost
+$0.73 API-priced on average and a median of 214 seconds, and passed in 0.2 of its sessions (5 of 25,
+on 2 of the 5 past bugs tested), against none for the earlier one-pass review: short of the bar for
+turning it on. Checking the ten in turn in one session would cost a single pass, but the agent then
+gave the lesson the change broke a one-line verdict (REPORT §4bg, a first look), so the review keeps a
+sub-agent per lesson. Since 0.17.0 it is on by default anyway, as my decision rather than a measured
+result: I judge a missed lesson to cost more than these sessions do. Turn it off if the cost matters
+more to you.
 
 ## Architecture review in CI (off by default)
 

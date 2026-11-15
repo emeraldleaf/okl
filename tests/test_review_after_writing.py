@@ -182,7 +182,7 @@ def test_the_hook_note_says_when_it_is_on_and_cannot_run(tmp_path, monkeypatch, 
     assert main(["check", "--change", "--format", "hook"]) == 0
     out = capsys.readouterr().out
     assert "on in this repo, but okl could not list the changes" in out and "okl check --change <" in out
-    (r / ".okl" / "config.json").write_text(json.dumps({"repo": "solo"}))
+    (r / ".okl" / "config.json").write_text(json.dumps({"repo": "solo", "review_after_writing": False}))
 
     def no_git(*a, **k):
         raise AssertionError("git was asked although the review is off")
@@ -192,26 +192,29 @@ def test_the_hook_note_says_when_it_is_on_and_cannot_run(tmp_path, monkeypatch, 
 
 
 def test_the_hook_note_follows_the_setting(repo, capsys, monkeypatch):
-    """Off unless the config turns it on; the environment overrides the config either way."""
+    """On unless the config turns it off (the default since 0.17.0); the environment overrides the
+    config either way."""
     monkeypatch.delenv("OKL_REVIEW_AFTER_WRITING", raising=False)
-    assert main(["check", "--change", "--format", "hook"]) == 0
-    assert capsys.readouterr().out == ""
-    (repo / ".okl" / "config.json").write_text(json.dumps({"repo": "r", "review_after_writing": True}))
+    (repo / ".okl" / "config.json").write_text(json.dumps({"repo": "r"}))
     assert main(["check", "--change", "--format", "hook"]) == 0
     assert capsys.readouterr().out.strip() == core.REVIEW_NOTE
-    monkeypatch.setenv("OKL_REVIEW_AFTER_WRITING", "0")
+    (repo / ".okl" / "config.json").write_text(json.dumps({"repo": "r", "review_after_writing": False}))
     assert main(["check", "--change", "--format", "hook"]) == 0
     assert capsys.readouterr().out == ""
-    (repo / ".okl" / "config.json").write_text(json.dumps({"repo": "r"}))
     monkeypatch.setenv("OKL_REVIEW_AFTER_WRITING", "1")
     assert main(["check", "--change", "--format", "hook"]) == 0
     assert capsys.readouterr().out.strip() == core.REVIEW_NOTE
+    (repo / ".okl" / "config.json").write_text(json.dumps({"repo": "r"}))
+    monkeypatch.setenv("OKL_REVIEW_AFTER_WRITING", "0")
+    assert main(["check", "--change", "--format", "hook"]) == 0
+    assert capsys.readouterr().out == ""
 
 
 def test_a_setting_okl_cannot_read_is_refused_not_ignored(repo, capsys, monkeypatch):
     """A mistyped value that left the review off would look exactly like off."""
     from okl.client import review_setting
-    assert review_setting(None, "on") is True and review_setting("0", True) is False and review_setting("", None) is False
+    assert review_setting(None, "on") is True and review_setting("0", True) is False and review_setting("", None) is True
+    assert review_setting(None, False) is False and review_setting("off", None) is False
     with pytest.raises(ValueError, match="must be on or off"):
         review_setting(None, "ture")
     (repo / ".okl" / "config.json").write_text(json.dumps({"repo": "r", "review_after_writing": "ture"}))
@@ -228,6 +231,9 @@ def test_init_says_when_the_stop_hook_on_disk_cannot_ask_for_the_review(tmp_path
     hooks = tmp_path / ".claude" / "hooks"; hooks.mkdir(parents=True)
     install._say_review_after_writing({"review_after_writing": False})
     assert capsys.readouterr().out == ""
+    install._say_review_after_writing({})   # on by default: init says so, what it costs, and how to turn it off
+    said = capsys.readouterr().out
+    assert "review after writing: on" in said and "--no-review-after-writing" in said and "session per lesson" in said
     (hooks / "stop-okl-encode.sh").write_text("# okl check --change appears only in a comment\nexit 2\n")
     install._say_review_after_writing({"review_after_writing": True})
     out = capsys.readouterr().out
@@ -248,7 +254,8 @@ def test_the_hook_note_is_silent_when_nothing_changed(repo, capsys, monkeypatch)
 
 
 def test_the_stop_hook_asks_for_the_review_only_where_it_is_on(repo, tmp_path):
-    """The note comes before the encode question, and an unset repo sees the question alone."""
+    """The note comes before the encode question; a repo that turned it off sees the question alone,
+    and an unset one gets the note, the default since 0.17.0."""
     hook = Path(__file__).resolve().parents[1] / "src" / "okl" / "scaffold" / "hooks" / "stop-okl-encode.sh"
     markers = tmp_path / "markers"; markers.mkdir()
     env = {"PATH": os.environ["PATH"], "HOME": str(tmp_path), "TMPDIR": str(markers),
@@ -259,9 +266,10 @@ def test_the_stop_hook_asks_for_the_review_only_where_it_is_on(repo, tmp_path):
         return subprocess.run(["bash", str(hook)], cwd=repo, text=True, capture_output=True, env=env,
                               input=json.dumps({"session_id": session, "stop_hook_active": False}))
 
+    (repo / ".okl" / "config.json").write_text(json.dumps({"repo": "r", "review_after_writing": False}))
     r = stop("off")
     assert r.returncode == 2 and "ENCODING LOOP" in r.stderr and "REVIEW AFTER WRITING" not in r.stderr
-    (repo / ".okl" / "config.json").write_text(json.dumps({"repo": "r", "review_after_writing": True}))
+    (repo / ".okl" / "config.json").write_text(json.dumps({"repo": "r"}))
     r = stop("on")
     assert r.returncode == 2 and "okl check --change" in r.stderr
     assert r.stderr.index("REVIEW AFTER WRITING") < r.stderr.index("ENCODING LOOP")
@@ -285,3 +293,21 @@ def test_the_review_asks_each_lesson_on_its_own_in_a_fresh_context():
     assert "does this change break this lesson?" in steps
     assert "If you cannot start a sub-agent" in steps and "say the review ran without fresh contexts" in steps
     assert "§4ay" in core.render_review({"repo": "r", "files": ["a.py"], "lessons": []})
+
+
+def test_on_by_default_only_where_the_repo_was_set_up_for_okl(tmp_path, monkeypatch):
+    """A session with a store URL exported, in a directory that never ran `okl init`, did not opt in: the
+    review stays off there unless OKL_REVIEW_AFTER_WRITING=1 asks for it. With a .okl/config.json found, it
+    is on by default (review of 0.17.0)."""
+    from okl.client import Client, review_setting
+    assert review_setting(None, None, set_up=False) is False and review_setting("1", None, set_up=False) is True
+    bare = tmp_path / "bare"; bare.mkdir()
+    monkeypatch.chdir(bare)
+    monkeypatch.setenv("OKL_DATABASE_URL", f"sqlite:///{tmp_path / 'store.db'}")   # this test's own, restored after
+    monkeypatch.delenv("OKL_REVIEW_AFTER_WRITING", raising=False)
+    assert Client().configured and Client().review_after_writing is False
+    monkeypatch.setenv("OKL_REVIEW_AFTER_WRITING", "1")
+    assert Client().review_after_writing is True
+    monkeypatch.delenv("OKL_REVIEW_AFTER_WRITING")
+    (bare / ".okl").mkdir(); (bare / ".okl" / "config.json").write_text(json.dumps({"repo": "bare"}))
+    assert Client().review_after_writing is True

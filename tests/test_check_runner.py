@@ -243,7 +243,7 @@ def test_nothing_shown_before_a_question_carries_a_control_character(tmp_path):
     # the id-only lesson can be approved; the list then prints the approved branch too
     shown.append(_okl(repo, env, "on-edit", "add", "z\u202e\x1b[8m", "--yes"))
     shown.append(_okl(repo, env, "on-edit"))
-    assert "1 lesson check(s) run when the agent edits" in shown[-1].stdout, shown[-1].stdout
+    assert "1 lesson check(s) run after every edit" in shown[-1].stdout, shown[-1].stdout
     raw = [s for lid, (title, run) in hostile.items() for s in (lid, title, run) if s and not s.isprintable()]
     for r in shown:
         for stream in (r.stdout, r.stderr):
