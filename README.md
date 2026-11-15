@@ -562,8 +562,8 @@ Your store and your tasks will differ.
 | Context | **~1,580 tokens** by default on one representative task (five lessons in full, twelve named in a line; ~780 under `--decision calibrated`, ~1,810 under `--decision floor`); on real prompts the median is **~720** ([REPORT §4y](evals/REPORT.md)), before the briefing's marks, which added about 5% on okl's own store (`briefing-marks-size-20261101-1110.txt`; the selection re-measured on current code, `real-20261102-heldout-size.txt`). Down to **~400** for only the action list at `--limit 3` |
 
 
-**Per session, the review after writing** (on by default since 0.17.0): before the question below, the
-Stop hook asks the agent to check the code it wrote against the lessons, each lesson it picks in a
+**Per session, the review after writing** (on by default since 0.17.0): in Claude Code, before the
+question below, the Stop hook asks the agent to check the code it wrote against the lessons, each lesson it picks in a
 sub-agent of its own. It is the largest cost per session. On five past bugs in this repository a
 session with the review cost $0.73 API-priced on average and a median of 214 seconds, against $0.11
 and 160 seconds with no review, about 6.9 times the cost
