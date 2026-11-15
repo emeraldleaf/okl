@@ -129,10 +129,16 @@ okl recap --transcript <path> --log-review
                      #   opened, whether it edited anything in the repository and which files (the
                      #   edits elsewhere only counted), the tests it ran (a runner name, repository
                      #   paths and the outcome), and its tokens, with the review's tokens and seconds,
-                     #   all counted from the first command that ran `okl check --change` after the
-                     #   hook's note (the first one when there is no note) to the next prompt you typed,
-                     #   or to a Stop-hook summary at which none of the review's sub-agents is still
-                     #   running, so the stops between one lesson and the next do not end it. Ids, paths,
+                     #   all counted from the review's command to the next prompt you typed, or to a
+                     #   Stop-hook summary at which none of the review's sub-agents is still running (a
+                     #   background one is running until its completion is reported, in any of the
+                     #   shapes Claude Code writes it), so the stops between one lesson and the next
+                     #   do not end it. The review is the first command that ran `okl check --change`
+                     #   after the hook's note and before your next prompt; a prompt first means the
+                     #   request was skipped (asked, not run). With several notes in a session the row
+                     #   describes the last one: the earlier notes, and their runs, are not logged.
+                     #   With no note at all, the first run counts. An Agent call that returned an
+                     #   error started no sub-agent and is no check (the row does not count it). Ids, paths,
                      #   counts and model names only: no code, no command
                      #   line, no text from the session. The Stop hook runs it at a later stop, silently
                      #   and cut off after about five seconds.

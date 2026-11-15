@@ -82,13 +82,16 @@ at every later one it runs `okl recap --transcript <path> --log-review`, silentl
 five seconds, so a slow or failing read never delays or blocks a stop. The row is replaced each time,
 since the transcript has grown.
 
-**What counts as the review.** The first command that ran `okl check --change` after the hook's note
-(a grep, an echo or a commit message that names it is not a run; a run before the note reviewed
-another state and is dropped), until the next prompt a person typed, or a Stop-hook summary at which
-none of the review's sub-agents is still running. Claude Code returns every Agent call at once and the
-agent stops to wait for its notification, so a review of three lessons stops three times and is not
-over. Tokens, time and sub-agents are counted inside that window, and a sub-agent's own lines up to
-its end.
+**What counts as the review.** A note asks for one review: the first command that ran `okl check
+--change` after it and before the next prompt a person typed (a grep, an echo or a commit message that
+names it is not a run). A prompt first means the request was skipped, and with several notes in a
+session the row describes the last. A run before the note reviewed another state and is dropped. The
+review ends at the next typed prompt, or at a Stop-hook summary at which none of the review's
+sub-agents is still running. Claude Code returns every Agent call at once and the agent stops to wait
+for its notification, which arrives as a user line, a queued command, a task status or a queue
+operation, so a review of three lessons stops three times and is not over. Tokens, time and sub-agents
+are counted inside that window, and a sub-agent's own lines up to its end. An Agent call that came
+back as an error started nothing and is no check.
 
 **What it records,** in the store, one row per session and repo, replaced when the session is logged
 again:

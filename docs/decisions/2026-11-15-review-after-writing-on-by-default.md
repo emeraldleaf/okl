@@ -70,7 +70,7 @@ was turned on. Any of these would justify it:
    here weakens. `okl recap --reviews` now measures this (#464): how often the review was asked for
    and run, how many of its checks were followed by an edit in the repository, and what a review
    cost. Its limits: an edit after a check is the review acting on a lesson, not catching a break,
-   and it covers Claude Code sessions only.
+   it logs one review a session, the last one the hook asked for, and it covers Claude Code sessions only.
 3. **The cost drives people off.** If on-by-default leads users to remove okl, a default that
    loses the whole loop costs more than the misses it prevents.
 
