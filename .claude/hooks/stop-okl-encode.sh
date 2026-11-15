@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# okl-fingerprint: sha256:044d28f24226faa255ca2904e1578341feffa5e3a8203b5aee0bfa91116ab9c9
+# okl-fingerprint: sha256:14544536ce98352b907bd51d773a5e95de1727b8b46f12ffbee6a4fc32e4e1ac
 # Stop hook — the write-side mechanical catch for the encoding loop.
 #
 # The read side (okl check) is enforced by the UserPromptSubmit hook; nothing enforced the WRITE
@@ -7,7 +7,8 @@
 # rule is a half-finished job"). This hook asks the question at the ship moment, once:
 # if the session changed the working tree, block the first stop (exit 2) with a prompt to
 # either `okl record` the lesson or state that there is none. It never fires twice in one
-# session (marker file) and never loops (stop_hook_active guard).
+# session (marker file) and never loops (stop_hook_active guard). At every later stop it also
+# logs what the session's review after writing did (`okl recap --log-review`, #464), silently.
 set -uo pipefail
 
 # Anchor to the project. A hook runs in the session's CURRENT directory, and a `cd` in any
@@ -110,8 +111,37 @@ stop_hook_active=$(printf '%s\n' "$parsed" | sed -n 2p)
 transcript=$(printf '%s\n' "$parsed" | sed -n 3p)
 [[ -n "$stop_hook_active" ]] || stop_hook_active="false"
 
+# What the session's review after writing did (#464): at a stop after the first, the transcript
+# holds the whole review, so okl reads it and keeps one row per session in the local store (ids,
+# paths, counts and model names; nothing the session said). Never part of the stop: it prints
+# nothing, it cannot change the exit code, and it is cut off after a few seconds, so a slow
+# transcript or a store that will not open costs a missed row and never a held stop. An okl too
+# old to know `--log-review` refuses it, and the refusal goes nowhere. okl itself writes nothing
+# where the review after writing is off for the repo, or OKL_REVIEW_LOG=0 (or `review_log: false`
+# in .okl/config.json) turns the log off. The watchdog is shell only, since macOS has no
+# `timeout`: TERM after four seconds, KILL a second later. It holds its own sleeps as jobs it
+# waits on, so killing it on a fast finish also ends the sleep it was in, and leaves none running.
+log_review() {
+  [[ -n "$transcript" ]] && [[ -r "$transcript" ]] || return 0
+  local logger watchdog
+  "${OKL[@]}" recap --transcript "$transcript" --log-review >/dev/null 2>&1 </dev/null &
+  logger=$!
+  ( trap 'kill "$s" 2>/dev/null; exit 0' TERM
+    sleep 4 & s=$!; wait "$s"; kill "$logger"; sleep 1 & s=$!; wait "$s"; kill -9 "$logger" ) >/dev/null 2>&1 &
+  watchdog=$!
+  wait "$logger" >/dev/null 2>&1
+  kill "$watchdog" >/dev/null 2>&1
+  wait "$watchdog" >/dev/null 2>&1
+  return 0
+}
+
 # Never loop: if we already blocked once and Claude is stopping again, let it stop.
-[[ "${stop_hook_active}" = "true" ]] && exit 0
+if [[ "${stop_hook_active}" = "true" ]]; then log_review 2>/dev/null; exit 0; fi
+
+# Once per session (fall back to a repo-scoped marker when no session id is provided). Read
+# before the work check, so that every later stop logs the review, whatever the tree holds.
+marker="${TMPDIR:-/tmp}/okl-encode-reminder-${session_id:-$(pwd | cksum | cut -d' ' -f1)}"
+if [[ -e "$marker" ]]; then log_review 2>/dev/null; exit 0; fi
 
 # Only fire when the session plausibly did work: uncommitted changes, or a commit in the
 # last hour (covers commit-then-stop sessions).
@@ -124,9 +154,6 @@ elif last=$(git log -1 --format=%ct 2>/dev/null); then
 fi
 [[ "$changed" = "1" ]] || exit 0
 
-# Once per session (fall back to a repo-scoped marker when no session id is provided).
-marker="${TMPDIR:-/tmp}/okl-encode-reminder-${session_id:-$(pwd | cksum | cut -d' ' -f1)}"
-[[ -e "$marker" ]] && exit 0
 touch "$marker" 2>/dev/null || true
 
 # The review after writing (REPORT §4at), first, unless the repo turns it off (on by default

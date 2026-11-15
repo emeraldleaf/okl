@@ -579,7 +579,11 @@ touched: up to five it was briefed on most often, and up to five whose governed 
 changed, each with the command that corrects, retires or re-proves it. The agent proposes
 a change in one line and makes it once you agree. To read the whole session back afterwards, `okl recap --report` lists the
 briefings, the lessons recorded and retired, the checks run and failed, the commits, and what
-is stale now, from the store's own logs.
+is stale now, from the store's own logs. `okl recap --reviews` reads another log: in Claude Code, the
+Stop hook records at a later stop what the review after writing did, read from the session's
+transcript (whether it ran, the lessons its sub-agents checked, whether each edited, the tokens and
+time), and the report says how often a check was followed by an edit. An edit after a check means the
+review acted on that lesson, not that it caught a break.
 
 A full briefing costs roughly **1,580 tokens** on the measurement above (~780 for the line
 alone, ~1,810 under the floor's twelve), fine for a main session with a large window and still a real share for a subagent
@@ -628,9 +632,12 @@ stored check; a pass re-stamps it. Putting the code back as it was clears it too
 six MCP tools do. The briefing on every prompt and the session-end question are Claude Code
 hooks; other agents call `okl_check` ([how](docs/GETTING-STARTED.md#using-another-agent)).
 
-**Does it capture my sessions automatically?** No. A lesson is written on purpose, by you or
-by the agent when you say so; in Claude Code, the Stop hook asks once. Nothing records tool calls, and no
-model is called in the loop.
+**Does it capture my sessions automatically?** No lesson is: it is written on purpose, by you or
+by the agent when you say so, and in Claude Code the Stop hook asks once. No model is called in the
+loop. One thing is kept without being asked: in Claude Code, at a later stop, the Stop hook reads the
+session's transcript and its sub-agents' (under `~/.claude/projects`) and logs what the review after
+writing did, as ids, paths, counts and model names, with no code, command line or session text, in
+your store. `okl recap --reviews` reads it back, and `OKL_REVIEW_LOG=0` turns it off.
 
 **Can I run it beside claude-mem, mem0 or another memory tool?** Yes; they are different
 layers. `okl doctor` names what is installed and the three known collisions

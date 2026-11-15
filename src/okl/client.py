@@ -171,6 +171,19 @@ def review_setting(env: str | None, configured: Any, set_up: bool = True) -> boo
     raise ValueError(f"review_after_writing must be on or off, not {raw!r}")
 
 
+def review_log_setting(env: str | None, configured: Any) -> bool:
+    """Whether the Stop hook's log of the review after writing may write its row
+    (`okl recap --log-review`, #464): on unless OKL_REVIEW_LOG is 0/off/false or the config's
+    `review_log` is false; the environment wins over the config. Any other value is refused, as
+    review_setting refuses one: a mistyped "of" silently leaving the log on would look the same as on."""
+    raw = env if env not in (None, "") else configured
+    if raw in (None, "") or raw in (True, "1", "on", "true", "yes"):
+        return True
+    if raw in (False, "0", "off", "false", "no"):
+        return False
+    raise ValueError(f"review_log must be on or off, not {raw!r}")
+
+
 def _revive_warm(note: str) -> str:
     """What the person is told after a prompt found no warm server, having started one for the
     next prompt when it should; this one does not wait for a model to load (REPORT §4z). A
@@ -227,6 +240,12 @@ class Client:
         self.review_after_writing = review_setting(os.environ.get("OKL_REVIEW_AFTER_WRITING"),
                                                    self.config.get("review_after_writing"), set_up)
         self._store: Store | None = None
+
+    @property
+    def review_log(self) -> bool:
+        """Whether the review log may write (`review_log_setting`). Read when asked, not when the
+        client is built: a setting okl cannot read must stop the log, not every command."""
+        return review_log_setting(os.environ.get("OKL_REVIEW_LOG"), self.config.get("review_log"))
 
     @property
     def mode(self) -> str:

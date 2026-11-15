@@ -76,6 +76,19 @@ whenever your agent runs; the one after an edit runs the commands you approved w
 executes the okl named by `OKL_BIN` or `.okl/config.json`. Read them before installing, the same as any other hook, and
 review changes to them the same way you would review CI configuration.
 
+In Claude Code, the Stop hook also **reads your session transcripts**. At a later stop it runs
+`okl recap --log-review`, which opens the session's transcript and each sub-agent's under
+`~/.claude/projects` (they hold everything the session said and ran) and writes one row derived from
+them to the store: lesson ids, repository paths, counts, model names and booleans, no code, no command
+line and no text from the session. A test run is kept as a fixed runner name and paths that exist in
+the repository; an edit outside the repository is kept as a count and never named. The store is where okl keeps
+everything else: `.okl/okl.db` by default, but a shared database if `OKL_DATABASE_URL` names one, and
+then the rows go there and to everyone who can read it. A shared service refuses the log. Nothing is
+sent to a model; the row leaves this machine only if `OKL_DATABASE_URL` names a database elsewhere.
+The hook cuts the read off after about five seconds. To stop it,
+set `OKL_REVIEW_LOG=0` or `"review_log": false` in `.okl/config.json`; it is also off where the review
+after writing is off, and `OKL_DISABLED_HOOKS=encode` disables the whole Stop hook.
+
 ## What ships in the package
 
 The published distribution includes seed data: real engineering rules, architecture

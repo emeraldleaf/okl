@@ -119,6 +119,50 @@ okl check --change [BASE]
                      #   one session); on by default. A retracted lesson stays in the list as
                      #   what to avoid. Exit 2 when git or the store cannot be read, or BASE
                      #   starts with '-'.
+okl recap --transcript <path> --log-review
+                     # in Claude Code: read the session's transcript, and its sub-agents' under
+                     #   ~/.claude/projects, and keep one row about its review after writing in the
+                     #   store (the local file, or the database OKL_DATABASE_URL names), replaced when
+                     #   the same session is logged again: whether Claude Code's Stop hook asked for
+                     #   the review and the agent ran `okl check --change`, the files and lessons it
+                     #   listed, and for each sub-agent the review started its model, the lessons it
+                     #   opened, whether it edited anything in the repository and which files (the
+                     #   edits elsewhere only counted), the tests it ran (a runner name, repository
+                     #   paths and the outcome), and its tokens, with the review's tokens and seconds
+                     #   (tokens are the work, input, output and cache creation; the cache reads, which a
+                     #   call makes of the whole context and which cost far less, are kept apart), and how
+                     #   many Agent calls came back as an error,
+                     #   all counted from the review's command to the next prompt you typed, or to a
+                     #   Stop-hook summary at which none of the review's sub-agents is still running (a
+                     #   background one is running until its completion is reported, in any of the
+                     #   shapes Claude Code writes it), so the stops between one lesson and the next
+                     #   do not end it. The review is the first command that ran `okl check --change`
+                     #   after the hook's note and before your next prompt; a prompt first means the
+                     #   request was skipped (asked, not run). With several notes in a session the row
+                     #   describes the last one: the earlier notes, and their runs, are not logged.
+                     #   With no note at all, the first run counts. An Agent call that returned an
+                     #   error started no sub-agent and is no check (the row does not count it). Ids, paths,
+                     #   counts and model names only: no code, no command
+                     #   line, no text from the session. The Stop hook runs it at a later stop, silently
+                     #   and cut off after about five seconds.
+                     #   It writes nothing, and exits 0, where the directory was never set up with
+                     #   `okl init` (a store URL exported does not enroll it), where the review after
+                     #   writing is off, where OKL_REVIEW_LOG=0 or `"review_log": false` in
+                     #   .okl/config.json turns the log off (the environment wins), and for a session
+                     #   that neither asked for the review nor ran it. Status goes to stderr. Exit 0 as
+                     #   well when the transcript cannot be read. Exit 2: no --transcript; --report
+                     #   given beside it; OKL_SERVICE_URL or `service_url` set (a shared service keeps
+                     #   no such log); a review_log setting that is not on or off; the store cannot
+                     #   be opened or written.
+okl recap --reviews  # the review log, from those rows: how often the review was asked for and run,
+                     #   lessons checked per review, how many checks were followed by an edit, tokens (the work, with the cache reads apart)
+                     #   and seconds per review, and per lesson how often it was checked and how often
+                     #   that was followed by an edit. An edit after a check means the review acted on
+                     #   that lesson, not that it caught a break: the log cannot tell whether the edit
+                     #   fixed a real one, and only an edit in the repository counts. Claude Code sessions only, since other agents leave no
+                     #   transcript okl can read. --since limits it, --limit sets how many lessons are
+                     #   listed, --format json for a script; beside --log-review it still prints only
+                     #   the report on stdout. Exit 2: --report given beside it, a service, or no store.
 okl embed            # build or refresh one local vector per record for --hybrid briefings
                      #   (needs the `hybrid` extra; downloads a 131 MB static model once;
                      #   re-embeds only records whose text changed). Off by default: a check

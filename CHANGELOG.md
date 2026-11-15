@@ -7,6 +7,40 @@
   started ten Opus sessions, on a model §4az did not measure and at a higher price per token, and in a
   Haiku session it ran on a model it was never tested with. The step now names Sonnet, the model §4ay and §4az measured it with.
 
+- **A log of what each review after writing does** (#464). The review is on by default as a
+  decision, not a measured result, and the decision record names real-use evidence that it almost
+  never acts as what would reverse it. Nothing collected that evidence, because only the session's
+  transcript sees the review: the agent runs it and okl calls no model. Now, in Claude Code, the Stop
+  hook reads the session's transcript and its sub-agents' at each stop after the first (silently, cut
+  off after about five seconds, never changing whether the stop is held) and writes one row to the
+  store, replaced when the same session is logged again: whether the review was asked for and ran, the
+  files and lessons it listed, and for each sub-agent it started its model, the lessons it opened,
+  whether it edited anything in the repository and which files, the tests it ran, and its tokens,
+  with the review's tokens and time (tokens are the work: input, output and cache creation. The cache
+  reads, which a call makes of the session's whole context and which cost far less, are kept apart, in
+  the row and in each check, so a review is not reported as millions of tokens of work; and the row
+  counts the Agent calls that came back as an error, which started no sub-agent). These are counted from the first command that ran `okl check
+  --change` after the hook's note (a grep or a commit message that names it does not count, and a run
+  before the note reviewed another state; a prompt you typed between the note and the run means the
+  request was skipped, and with several notes in a session the row is the last one's) to the next
+  prompt you typed, or to a Stop-hook summary at which none of the review's sub-agents is still running
+  (a background one is running until its completion is reported, in any of the four shapes Claude Code
+  2.1.302 writes it in, not only as a user line): Claude Code returns every Agent call at once
+  and the agent stops to wait, so a review of three lessons stops three times and is not over. Work
+  after the review is not the review's, and neither are a sub-agent's lines after it. Ids, paths, counts and model names only: no code, no
+  command line and no session text; a test run is a fixed runner name and repository paths, and an
+  edit outside the repository is a count, and does not make a check one that was followed by an
+  edit. A store from before this gains the table when it opens, on
+  SQLite and Postgres. `okl recap --reviews` reads it back: reviews asked for and run, lessons checked
+  per review, how many checks were followed by an edit, cost per review, and per lesson how often it
+  was checked and acted on. An edit after a check means the review acted on that lesson, not that it
+  caught a break, and the report says so. It covers Claude Code sessions only. **Where the rows go:**
+  wherever the store is, so `OKL_DATABASE_URL` naming a shared database sends them there (SECURITY.md
+  §3), and a shared service is refused. It writes nothing where the review after writing is off, in a
+  directory never set up with `okl init`, or with `OKL_REVIEW_LOG=0` (or `"review_log": false` in
+  `.okl/config.json`). The Stop hook is an okl-owned file and changed, so `okl init` upgrades an
+  unedited copy and keeps one you edited; the log needs the new one.
+
 ## 0.17.0
 
 - **The review after writing is on by default** (`okl check --change`; decided, not measured). The

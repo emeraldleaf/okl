@@ -161,7 +161,9 @@ root_package = "okl"
 # not import each other either. changes reads git and the lessons' files, below the client the CLI
 # reaches it through. Modules not listed (bootstrap, codeowners, coexist, hygiene,
 # intake, ownership, scaffold_cmd) import nothing from okl, and protection only codeowners (the
-# contract below); all but hygiene, which core and seed use, are used only by the CLI.
+# contract below); all but hygiene, which core and seed use, are used only by the CLI. The review
+# log's reader sits below the store: reviewlog reads transcripts and imports only reviewcmd, which
+# reads command lines and imports nothing, so neither can reach the store or anything above it.
 name = "Dependencies point one way: CLI -> adapters -> client -> core -> store"
 type = "layers"
 layers = [
@@ -172,6 +174,8 @@ layers = [
   "okl.core | okl.drift",
   "okl.semantic | okl.rerank | okl.decide | okl.warm",
   "okl.store | okl.hub",
+  "okl.reviewlog",
+  "okl.reviewcmd",
 ]
 
 [[tool.importlinter.contracts]]

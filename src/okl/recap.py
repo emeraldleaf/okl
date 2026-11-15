@@ -13,14 +13,16 @@ from __future__ import annotations
 
 import json
 import re
+import statistics
 import subprocess
 from collections import Counter
 from pathlib import Path
 from typing import Any
 
+from . import reviewlog
 from .core import governing
 from .drift import SNAPSHOT_FILE
-from .store import RETIRED_STATUSES, Node
+from .store import RETIRED_STATUSES, Node, ReviewRun, Store
 
 # A briefed lesson's id follows its bold title: `- **FIX: title** [id]` (R1).
 _ID = re.compile(r"\*\* \[([^\]\s]+)\]")
@@ -315,4 +317,141 @@ def render_report(r: dict[str, Any]) -> str:
                    "attribute), so this report cannot say what is proven.")
     out.append("\nNot covered yet: corrections made with `okl update`, which carry no timestamp, and "
                "anything a shared service logged.")
+    return "\n".join(out) + "\n"
+
+
+# --- the review log (#464) -------------------------------------------------------------------------
+#
+# What each session's review after writing did, read from the Claude Code transcript at the end of
+# the session and kept in the local store, so the default can be judged on real sessions. The agent
+# runs the review and okl calls no model, so only the transcript sees it. The parser is reviewlog.py;
+# this is the part that reaches the store and reads the log back.
+
+
+def log_review(store: Store, repo: str, transcript: str | Path, repo_dir: str | None = None
+               ) -> tuple[reviewlog.ReviewReading, bool]:
+    """Read `transcript` and write the session's review row; (the reading, whether a row was written).
+
+    A session that neither asked for a review nor ran one is not written. A session logged again
+    replaces its row: the transcript has grown since the stop before.
+    """
+    known = {n.id for n in store.all_nodes()}
+    reading = reviewlog.read_review(transcript, repo_dir=repo_dir, known_ids=known)
+    if not reading.loggable:
+        return reading, False
+    store.log_review(reading.session, repo, asked=reading.asked, ran=reading.ran,
+                     files_changed=reading.files_changed, lessons_listed=reading.lessons_listed,
+                     tokens=reading.tokens, cache_read_tokens=reading.cache_read_tokens,
+                     duration_s=reading.duration_s, failed_launches=reading.failed_launches,
+                     checks=reading.checks)
+    return reading, True
+
+
+def _checks_of(rows: list[ReviewRun]) -> list[dict[str, Any]]:
+    """The checks of the reviews that ran: sub-agents the review gave at least one lesson."""
+    return [c for r in rows if r.ran for c in r.checks if c.get("lessons")]
+
+
+def _spread(values: list[int]) -> dict[str, float] | None:
+    return ({"median": statistics.median(values), "mean": round(statistics.fmean(values), 1),
+             "max": max(values)} if values else None)
+
+
+def reviews_report(store: Store, repo: str, *, since_ms: int = 0, top: int = 5) -> dict[str, Any]:
+    """The review log as data: how often the review was asked for and run, what it checked, how
+    often a check ended in an edit, what it cost, and per lesson how often it was checked and acted on."""
+    rows = [r for r in store.reviews(repo) if r.at >= since_ms]
+    ran = [r for r in rows if r.ran]
+    titles = {n.id: n.title for n in store.all_nodes()}
+    checks = _checks_of(rows)
+    read = [c for c in checks if c.get("read")]
+    per_review = [len({i for c in r.checks for i in c.get("lessons", [])}) for r in ran]
+    by_lesson: dict[str, dict[str, int]] = {}
+    for c in checks:
+        for i in c["lessons"]:
+            t = by_lesson.setdefault(i, {"checked": 0, "read": 0, "edited": 0})
+            t["checked"] += 1
+            t["read"] += bool(c.get("read"))
+            t["edited"] += bool(c.get("read") and c.get("edited"))
+    ranked = sorted(by_lesson.items(), key=lambda kv: (-kv[1]["checked"], -kv[1]["edited"], kv[0]))
+    return {
+        "repo": repo, "since": since_ms, "sessions": len(rows),
+        "asked": sum(r.asked for r in rows), "asked_and_ran": sum(r.asked and r.ran for r in rows),
+        "asked_not_run": sum(r.asked and not r.ran for r in rows),
+        "ran_unasked": sum(r.ran and not r.asked for r in rows),
+        "ran": len(ran),
+        "ran_on_changed_files": sum((r.files_changed or 0) > 0 for r in ran),
+        "files_changed_unread": sum(r.files_changed is None for r in ran),
+        "lessons_per_review": _spread(per_review),
+        "reviews_without_subagent": sum(not r.checks for r in ran),
+        "checks": len(checks), "checks_read": len(read), "checks_unread": len(checks) - len(read),
+        "checks_acted_on": sum(1 for c in read if c.get("edited")),
+        "subagents_without_lesson": sum(1 for r in ran for c in r.checks if not c.get("lessons")),
+        "tokens": _spread([r.tokens for r in ran if r.tokens is not None]),
+        "cache_read_tokens": _spread([r.cache_read_tokens for r in ran if r.cache_read_tokens is not None]),
+        "failed_launches": sum(r.failed_launches for r in ran),
+        "duration_s": _spread([r.duration_s for r in ran if r.duration_s is not None]),
+        "lessons": [{"id": i, "title": titles.get(i, "(no longer in the store)"), **t}
+                    for i, t in ranked[:top]],
+        "lessons_total": len(ranked),
+    }
+
+
+def _pct(part: int, whole: int) -> str:
+    return f"{round(100 * part / whole)}%" if whole else "none"
+
+
+def _stat(label: str, s: dict[str, float] | None, unit: str) -> str:
+    if not s:
+        return f"{label}: not readable for any review."
+    return (f"{label}: median {s['median']:,.0f}{unit}, mean {s['mean']:,.0f}{unit}, "
+            f"largest {s['max']:,.0f}{unit}.")
+
+
+def render_reviews(r: dict[str, Any]) -> str:
+    """The review log as Markdown, for a terminal or a pull request."""
+    out = [f"## okl review log · {r['repo']} · {r['sessions']} sessions logged", "",
+           "The review after writing, read from the transcripts of Claude Code sessions. Other agents "
+           "leave no transcript okl can read, so this covers Claude Code sessions only. A session "
+           "that neither asked for the review nor ran one is not logged."]
+    if not r["sessions"]:
+        out += ["", "Nothing is logged for this repo yet. The Stop hook logs a session at a later stop "
+                "once the review was asked for or run."]
+        return "\n".join(out) + "\n"
+    more = f" ({r['ran_unasked']} more ran without being asked)" if r["ran_unasked"] else ""
+    unread = (f" ({r['files_changed_unread']} where the review's own output could not be read)"
+              if r["files_changed_unread"] else "")
+    out += ["",
+            f"**Asked for:** {r['asked']} sessions. It ran in {r['asked_and_ran']} "
+            f"({_pct(r['asked_and_ran'], r['asked'])}) and was skipped in {r['asked_not_run']}{more}.",
+            f"**Reviews run:** {r['ran']}, {r['ran_on_changed_files']} against sessions that changed "
+            f"files{unread}."]
+    spread = r["lessons_per_review"]
+    if spread:
+        out.append(f"**Lessons checked per review:** median {spread['median']:g}, mean {spread['mean']:g}, "
+                   f"most {spread['max']:g}; {r['reviews_without_subagent']} reviews started no sub-agent.")
+    out.append(f"**Checks:** {r['checks']} (a sub-agent given a lesson); {r['checks_unread']} could not be "
+               f"read, and of the {r['checks_read']} that could, {r['checks_acted_on']} "
+               f"({_pct(r['checks_acted_on'], r['checks_read'])}) were followed by an edit.")
+    if r["subagents_without_lesson"]:
+        out.append(f"{r['subagents_without_lesson']} sub-agents the review started named no lesson and are "
+                   "not counted as checks.")
+    tokens = _stat("Tokens", r["tokens"], "")
+    if r["cache_read_tokens"]:
+        cache = r["cache_read_tokens"]
+        tokens = (tokens.rstrip(".") + f" (cache reads, which a call makes of the whole context and which cost "
+                  f"far less, not counted: median {cache['median']:,.0f}, largest {cache['max']:,.0f}).")
+    out += ["", f"**Cost per review.** {tokens} {_stat('Duration', r['duration_s'], ' s')}"]
+    if r["failed_launches"]:
+        n = r["failed_launches"]
+        out.append(f"{n} Agent {'call' if n == 1 else 'calls'} came back as an error and started no sub-agent.")
+    if r["lessons"]:
+        out += ["", f"**Per lesson**, most checked first ({r['lessons_total']} lessons checked):"]
+        out += [f"- [{x['id']}] {x['title']}: checked {x['checked']}×, {x['edited']} of the {x['read']} "
+                "read followed by an edit" for x in r["lessons"]]
+        if r["lessons_total"] > len(r["lessons"]):
+            out.append(f"  and {r['lessons_total'] - len(r['lessons'])} more: `--limit` shows more.")
+    out += ["", "An edit after a check means the review acted on that lesson, not that it caught a break: "
+            "whether the edit fixed a real break is not something this log can tell. A check that opened "
+            "several lessons counts its edit for each."]
     return "\n".join(out) + "\n"

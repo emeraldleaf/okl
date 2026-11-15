@@ -1,6 +1,6 @@
 # Plan: making the review after writing earn its default
 
-- **Status:** In progress, started 2026-11-15
+- **Status:** In progress, started 2026-11-15. Piece 3 is built in #464, and is true once that pull request merges.
 - **Follows:** [The review after writing is on by default](2026-11-15-review-after-writing-on-by-default.md),
   which turned it on by decision while it missed both of its measured bars. This plan is the work
   that decides whether that decision holds, and how the review gets to the result it shows when the
@@ -14,7 +14,7 @@ Four pieces of work, in this order:
 |---|---|---|
 | 1 | Settle the answer key: a person labels the key's pairs blind | the page is ready; waiting on the maintainer's labels |
 | 2 | Run the review's checks on the model it was measured with | done in #463: Sonnet, in Claude Code |
-| 3 | Log what each review does in real use, and report it | designed below; #464 |
+| 3 | Log what each review does in real use, and report it | built in #464, below as it ships |
 | 4 | Grow the graded replay set to about 40 tasks | #457 |
 
 Parked: whether a cheaper model can check one lesson as well as Sonnet (#456). That is a cost
@@ -74,26 +74,51 @@ model the session runs on.
 **Where the evidence is.** okl calls no model: the agent runs the review, and okl prints the steps
 (`okl check --change`) and serves lesson texts (`okl show`, `okl_get`). The whole review is visible
 only in the session's transcript, which Claude Code saves locally for the session and for each
-sub-agent. okl's Stop hook already reads the main transcript (`okl recap --transcript`).
+sub-agent under `~/.claude/projects`. okl's Stop hook already reads the main transcript (`okl recap
+--transcript`).
 
-**When.** At the session's last stop, in Claude Code. Its Stop hook blocks only the first stop and exits early after
-that; before that early exit it runs `okl recap --transcript <path> --log-review`, silently and with
-a time limit, so a slow or failing parse never delays or blocks the stop.
+**When.** In Claude Code, at each stop after the first. The Stop hook blocks only the first stop;
+at every later one it runs `okl recap --transcript <path> --log-review`, silently, cut off after about
+five seconds, so a slow or failing read never delays or blocks a stop. The row is replaced each time,
+since the transcript has grown.
 
-**What it records,** in the local store, one row per review:
+**What counts as the review.** A note asks for one review: the first command that ran `okl check
+--change` after it and before the next prompt a person typed (a grep, an echo or a commit message that
+names it is not a run). A prompt first means the request was skipped, and with several notes in a
+session the row describes the last. A run before the note reviewed another state and is dropped. The
+review ends at the next typed prompt, or at a Stop-hook summary at which none of the review's
+sub-agents is still running. Claude Code returns every Agent call at once and the agent stops to wait
+for its notification, which arrives as a user line, a queued command, a task status or a queue
+operation, so a review of three lessons stops three times and is not over. Tokens, time and sub-agents
+are counted inside that window, and a sub-agent's own lines up to its end. An Agent call that came
+back as an error started nothing and is no check.
+
+**What it records,** in the store, one row per session and repo, replaced when the session is logged
+again:
 - the session, repo and time;
-- the files changed and the number of lessons listed;
-- each lesson checked, with its sub-agent's model, whether that sub-agent edited anything, and the
-  files it edited;
-- the tests the review ran, and their result;
-- the review's tokens and duration.
+- whether the review was asked for and whether it ran;
+- the files changed and the number of lessons listed, from the review's own output;
+- each sub-agent the review started, with its model, the lessons it was given or opened, whether it
+  edited anything in the repository and which files, a count of the edits elsewhere, the tests it ran
+  (a runner name, paths that exist in the repository, and the outcome), and its tokens;
+- the review's tokens and duration, and how many Agent calls came back as an error. Tokens are the
+  work (input, output and cache creation); the cache reads, which dwarf it and cost far less, are
+  kept apart in the row and in each check, and the report says so.
 
-No code or text from the session is stored: only ids, paths and counts. Nothing leaves the machine.
+No code, command line or text from the session is stored: only ids, paths, counts and model names. The
+row goes where the store is: `.okl/okl.db` by default, and a shared database if `OKL_DATABASE_URL`
+names one. A shared service refuses the log. Nothing is sent to a model, and the row leaves the
+machine only if the store is elsewhere.
+
+**When it writes nothing.** Where the review after writing is off for the repo, where
+`OKL_REVIEW_LOG=0` (or `review_log: false` in `.okl/config.json`) turns the log off, in a directory
+never set up with `okl init` (a store URL exported does not enroll it), and for a session that neither
+asked for the review nor ran it.
 
 **What it reports.** `okl recap --reviews`:
-- reviews run, against sessions that changed files;
+- reviews run, against sessions that changed files, and reviews asked for and skipped;
 - lessons checked per review;
-- the share of checks that led to an edit;
+- the share of checks that led to an edit in the repository;
 - cost per review;
 - per lesson, how often it was checked and how often that led to an edit.
 
@@ -101,10 +126,12 @@ No code or text from the session is stored: only ids, paths and counts. Nothing 
 something: the log cannot tell whether the edit fixed a real break. The report says so in those
 words. It covers Claude Code sessions only, since other agents leave no transcript okl can read.
 
-**How it is tested.** Synthetic transcripts: a review with sub-agents, one without, one whose checks
-edited and one whose did not, a skipped review, and a transcript that cannot be parsed. Plus a test
-that the hook stays silent and inside its time limit when the parse fails, and the mirror and
-fingerprint updates the repo's rules require.
+**How it is tested.** Synthetic transcripts in the shape Claude Code writes: a review with
+sub-agents, one without, one whose checks edited and one whose did not, a review that stops and resumes
+once per lesson, a run before the note, a note with no review after it, a prompt that ends the
+window, a sub-agent resumed afterwards, a skipped review, and a transcript that cannot be parsed. Tests
+that the hook stays silent and inside its time limit and leaves nothing running when the read fails, and
+the mirror and fingerprint updates the repo's rules require.
 
 ### 4. Growing the graded replay set (#457)
 
