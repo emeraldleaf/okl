@@ -170,7 +170,10 @@ def test_a_check_runs_without_the_callers_store_or_repository(dr, history, tmp_p
     monkeypatch.setenv("OKL_DATABASE_URL", "sqlite:////nowhere/okl.db")
     r = dr.Replayer(tmp_path / "scratch", repo)
     try:
-        assert not [k for k in r.env if k.startswith("OKL_") and k != "OKL_WARM_SOCKET"]
+        # Only what the harness sets on purpose: no warm model, none started, no briefing logged (#446).
+        assert not [k for k in r.env if k.startswith("OKL_")
+                    and k not in ("OKL_WARM_SOCKET", "OKL_BRIEFING_LOG", "OKL_WARM")]
+        assert (r.env["OKL_BRIEFING_LOG"], r.env["OKL_WARM"]) == ("0", "0")
         assert "GIT_DIR" not in r.env and r.env["PYTHONPATH"].endswith("/src")
     finally:
         r.close()
@@ -385,11 +388,12 @@ def test_a_stopped_run_resumes_only_patches_judged_against_the_lesson_as_it_is(m
     monkeypatch.setitem(sys.modules, "drift_mutate", dm)
     spec.loader.exec_module(dm)
     partial = tmp_path / "partial.jsonl"
-    lines = [{"lesson": "a", "lesson_sha": "s1", "kind": "breaking", "k": 0},
-             {"lesson": "b", "lesson_sha": "old", "kind": "breaking", "k": 0},
-             {"lesson": "c", "kind": "breaking", "k": 0}]          # written before hashes were kept
+    lines = [{"lesson": "a", "lesson_sha": "s1", "okl_commit": dm.CODE, "kind": "breaking", "k": 0},
+             {"lesson": "b", "lesson_sha": "old", "okl_commit": dm.CODE, "kind": "breaking", "k": 0},
+             {"lesson": "c", "kind": "breaking", "k": 0},          # written before hashes were kept
+             {"lesson": "d", "lesson_sha": "s4", "okl_commit": "0000000", "kind": "breaking", "k": 0}]   # another instrument (#446)
     partial.write_text("\n".join(_json.dumps(x) for x in lines) + "\n")
-    assert set(dm.resumable(partial, {"a": "s1", "b": "new", "c": "s3"})) == {("a", "breaking", 0)}
+    assert set(dm.resumable(partial, {"a": "s1", "b": "new", "c": "s3", "d": "s4"})) == {("a", "breaking", 0)}
     assert dm.resumable(tmp_path / "none.jsonl", {}) == {}
 
 

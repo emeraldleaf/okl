@@ -1,0 +1,73 @@
+{
+ "section": "\u00a74bf",
+ "what": "what \u00a74bf's breaker and judge sessions sent, saw and did, from their saved files",
+ "at": "2026-11-14T18:43Z",
+ "run": "k7ezkwzs",
+ "rejudge": "8-njs9s5",
+ "code": "b741abb6a5dd",
+ "breakers": {
+  "sessions": 108,
+  "effort": {
+   "medium": 108
+  },
+  "claude_md": 0,
+  "git_status": 108,
+  "status_named_4bf": 108,
+  "status_named_a_deleted_file": 108,
+  "status_named_a_check_script": 108,
+  "check_scripts_named": {
+   "CHANGELOG.md": 108,
+   "ci/check-agent-neutral.py": 108,
+   "ci/check-diagram-figures.sh": 108,
+   "ci/check-diagram-names.py": 108,
+   "evals/REPORT.md": 108
+  },
+  "sessions_reaching_for_a_hidden_file": 11,
+  "hidden_paths_reached_for": 11,
+  "hidden_reads_that_returned_content": 0,
+  "outside_worktree_calls": 0,
+  "main_checkout_calls": 0,
+  "per_lesson_sessions": {
+   "n_e7988ff536fb": 6,
+   "n_5ddb0776a863": 6,
+   "n_00985805cdbb": 6,
+   "remote-timeout-not-a-deadline": 6,
+   "n_849a5b0425ef": 6,
+   "n_adea7f2c7373": 6,
+   "n_8a6e1abce5cc": 6,
+   "n_b550ba9c5c8a": 6,
+   "n_b74bad29fd87": 6,
+   "n_c95bdc056620": 6,
+   "n_02cc84da158d": 6,
+   "n_0637c92c032f": 6,
+   "harness-reads-a-moving-working-tree": 6,
+   "seed:geospatial-enforcement-defects:r_single_source_sets": 6,
+   "seed:python-canon:py_dont_mock_what_you_dont_own": 6,
+   "remote-path-test-through-client": 6,
+   "docs-agent-neutral": 6,
+   "n_6b65aa35593c": 6
+  }
+ },
+ "judges": {
+  "first pass": {
+   "sessions": 108,
+   "effort": {
+    "medium": 108
+   },
+   "claude_md": 0,
+   "git_status": 0,
+   "no_answer_saved": 5,
+   "tool_call_as_text": 2
+  },
+  "re-judge": {
+   "sessions": 6,
+   "effort": {
+    "medium": 6
+   },
+   "claude_md": 0,
+   "git_status": 0,
+   "no_answer_saved": 3,
+   "tool_call_as_text": 2
+  }
+ }
+}

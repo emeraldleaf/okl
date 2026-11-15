@@ -46,8 +46,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import drift_replay as dr
+import sandbox as sb
 
 BASE = "eb93b16"
+CODE = dr.git("rev-parse", "--short=12", "HEAD").strip()   # the instrument each row was made by (#446)
 BREAKING, HARMLESS = 4, 2
 TIMEOUT = 300
 SEED = 264
@@ -172,6 +174,26 @@ def overlaps(path: str, governed: list[str]) -> bool:
                or fnmatch.fnmatch(path, g) for g in governed)
 
 
+JUDGE_CHARS = 12000
+
+
+def for_judge(diff: str) -> str:
+    """The diff as the judge sees it: whole, or cut at JUDGE_CHARS with a line saying so. Before
+    #446 a long diff was cut silently, and §4bf judged one control on 7% of it."""
+    if len(diff) <= JUDGE_CHARS:
+        return diff
+    return diff[:JUDGE_CHARS] + f"\n[the diff is cut here: it has {len(diff)} characters, and you see the first {JUDGE_CHARS}]"
+
+
+def at_base(wt: Path, base: str) -> None:
+    """Refuse to break a tree that is not clean at BASE. git() never raises, so a reset that failed
+    (a stale lock, a full disk) left the last break in place and the next one stacked on it (#446)."""
+    head = dr.git("rev-parse", "HEAD", repo=wt).strip()
+    dirty = dr.git("status", "--porcelain", repo=wt).strip()
+    if head != base or dirty:
+        raise RuntimeError(f"the breaker's tree is not clean at BASE: HEAD {head[:12]}, {len(dirty.splitlines())} changes")
+
+
 def resumable(partial: Path, shas: dict[str, str | None]) -> dict[tuple, dict]:
     """The patches a stopped run already made, by (lesson, kind, k), kept only where the lesson text
     they were judged against is still the lesson's: one edited in the store between the runs
@@ -180,7 +202,8 @@ def resumable(partial: Path, shas: dict[str, str | None]) -> dict[tuple, dict]:
     if partial.exists():
         for line in partial.read_text().splitlines():
             got = json.loads(line)
-            if got.get("lesson_sha") is not None and got.get("lesson_sha") == shas.get(got["lesson"]):
+            if (got.get("lesson_sha") is not None and got.get("lesson_sha") == shas.get(got["lesson"])
+                    and got.get("okl_commit") == CODE):   # never resume rows another instrument made (#446)
                 done[(got["lesson"], got["kind"], got["k"])] = got
     return done
 
@@ -200,7 +223,7 @@ def hidden(wt: Path, cmd: str, governed: list[str], blind: bool) -> list[str]:
 def claude(cmd: list[str], prompt: str, cwd: Path) -> dict:
     """One headless session: its result text, cost and the models it ran on, or the error."""
     try:
-        p = subprocess.run(cmd, input=prompt, capture_output=True, text=True, timeout=TIMEOUT, cwd=cwd)
+        p = subprocess.run(cmd, input=prompt, capture_output=True, text=True, timeout=TIMEOUT, cwd=cwd, env=sb.clean_env())
     except subprocess.TimeoutExpired:
         return {"error": "timed out"}
     try:
@@ -296,7 +319,7 @@ def main() -> int:
         else:
             lessons.append((lid, rule, check))
 
-    room = Path(tempfile.mkdtemp(prefix="okl-mutate-"))
+    room = Path(tempfile.mkdtemp(prefix="okl-w-"))   # a breaker's path names no experiment (#446)
     (room / "control").mkdir()
     control = dr.Replayer(room / "control")
     try:
@@ -315,7 +338,7 @@ def main() -> int:
         n = nodes[lid]
         text = LESSON.format(title=n.title, symptom=n.symptom or "", fix=n.fix or "")
         files = dr.governs(rule)
-        wt = room / f"breaker-{slot}-{lid[:16]}"
+        wt = room / f"t{slot}"
         dr.git("worktree", "add", "-q", "--detach", str(wt), base)
         (room / f"eval-{slot}").mkdir()
         r = dr.Replayer(room / f"eval-{slot}")
@@ -332,6 +355,7 @@ def main() -> int:
                         continue
                     dr.git("checkout", "-q", "-f", "--detach", base, repo=wt)
                     dr.git("clean", "-fdxq", repo=wt)
+                    at_base(wt, base)
                     kept_out = hidden(wt, cmd, files, args.blind)
                     for x in kept_out:
                         (shutil.rmtree if (wt / x).is_dir() else Path.unlink)(wt / x)
@@ -339,16 +363,18 @@ def main() -> int:
                              "different change." if earlier else "")
                     prompt = (BREAK_PROMPT.format(lesson=text, avoid=avoid) if kind == "breaking" else
                               HARMLESS_PROMPT.format(lesson=text, files=", ".join(files), avoid=avoid))
-                    s = claude(BREAKER, prompt, wt)
+                    with sb.no_git(wt):
+                        s = claude(BREAKER, prompt, wt)
                     dr.git("checkout", "-q", "HEAD", "--", *kept_out, repo=wt)
-                    diff = dr.git("diff", "HEAD", repo=wt)
-                    p = {"lesson": lid, "lesson_sha": shas[lid], "kind": kind, "k": k, "ci_run": ci_run_lesson(cmd), "diff": diff,
+                    dr.git("add", "-A", repo=wt)   # staged first, so the diff carries files the breaker created (#446)
+                    diff = dr.git("diff", "--cached", "HEAD", repo=wt)
+                    p = {"lesson": lid, "lesson_sha": shas[lid], "okl_commit": CODE, "kind": kind, "k": k,
+                         "ci_run": ci_run_lesson(cmd), "diff": diff, "judge_diff_cut": len(diff) > JUDGE_CHARS,
                          "said": (s.get("result") or "")[-300:], "breaker_cost": s.get("cost_usd", 0.0),
                          "breaker_models": s.get("models", [])}
                     if s.get("error"):
                         p["error"] = s["error"]
                     if diff:
-                        dr.git("add", "-A", repo=wt)
                         dr.git("-c", "user.name=drift-mutate", "-c", "user.email=drift-mutate@localhost",
                                "-c", "core.hooksPath=/dev/null", "commit", "-q", "--no-verify", "-m", f"{kind} {k} for {lid}", repo=wt)
                         commit = dr.git("rev-parse", "HEAD", repo=wt).strip()
@@ -358,7 +384,7 @@ def main() -> int:
                         p["check"] = r.verdict(commit, cmd, expect)
                         if kind == "breaking":
                             p["ci"], p["ci_failed"] = run_ci(r, commit, skip)
-                        j = claude(JUDGE, JUDGE_PROMPT.format(lesson=text, diff=diff[:12000]), room)
+                        j = claude(JUDGE, JUDGE_PROMPT.format(lesson=text, diff=for_judge(diff)), room)
                         p["judge"], p["judge_cost"] = judged(j.get("result") or ""), j.get("cost_usd", 0.0)
                         p["judge_models"] = j.get("models", [])
                         p["judge_said"] = (j.get("result") or j.get("error") or "")[-300:]
@@ -387,10 +413,10 @@ def main() -> int:
         "what": f"drift catch rate (REPORT {'§4ah, the re-run' if args.base != BASE else '§4af'})",
         "at": f"{datetime.now(UTC):%Y-%m-%dT%H:%MZ}",
         "code": dr.git("rev-parse", "--short=12", "HEAD").strip(), "base": base[:12], "blind": args.blind,
-        "breaker": " ".join(BREAKER), "judge": " ".join(JUDGE), "ci_steps": CI_STEPS,
+        "breaker": " ".join(BREAKER), "judge": " ".join(JUDGE), "ci_steps": CI_STEPS, "model_env": sb.MODEL_ENV,
         "models": {who: sorted({m for p in patches for m in p.get(f"{who}_models", [])}) for who in ("breaker", "judge")},
         "ci_at_base": {"verdict": ci_base, "failed": ci_base_failed}, "left_out": left_out,
-        "lessons": [lid for lid, _r, _c in lessons], "main_checkout_changed": moved,
+        "lessons": [lid for lid, _r, _c in lessons], "room": room.name, "main_checkout_changed": moved,
         "lesson_sha": {lid: dr.text_sha(nodes[lid]) for lid, _r, _c in lessons},
         "cost_usd": round(sum(p.get("breaker_cost", 0) + p.get("judge_cost", 0) for p in patches), 2),
         "summary": summarize(patches),

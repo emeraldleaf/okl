@@ -29,6 +29,7 @@ import briefing_arms as ba
 import lesson_review as lr
 import realwork_label as rl
 import realwork_reach as rr
+import sandbox as sb
 
 ANSWERS = lr.PRIVATE / "review-states-4ao.jsonl"
 SORTER = ["claude", "-p", "--model", "opus", "--restricted", "--strict-mcp-config", "--output-format", "json",
@@ -73,7 +74,7 @@ def needed_evidence() -> dict[tuple[int, str], str]:
 def ask(prompt: str, room: str) -> list:
     """The sorter's array for `prompt`, or nothing when it gave none (a later round asks again)."""
     try:
-        p = subprocess.run(SORTER, input=prompt, capture_output=True, text=True, timeout=SORT_TIMEOUT, cwd=room)
+        p = subprocess.run(SORTER, input=prompt, capture_output=True, text=True, timeout=SORT_TIMEOUT, cwd=room, env=sb.clean_env())
     except subprocess.TimeoutExpired:
         return []
     try:

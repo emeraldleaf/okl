@@ -26,6 +26,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import explain_search as es
 import outcome_replay as o
 import run_guard
+import sandbox as sb
 
 OUT = o.REPO / "evals" / "bench" / "private" / "realwork" / "plan-reach-4ba.jsonl"
 ARMS = ("task", "plan", "diff")
@@ -58,7 +59,9 @@ LEAD, OVER_TASK, MIN_COMPLETE = 0.6, 0.25, 68
 def ask(cmd: list[str], prompt: str, cwd: Path | None = None) -> str | None:
     """One model call's text, or None (a usage limit looks like this)."""
     try:
-        p = subprocess.run(cmd, input=prompt, capture_output=True, text=True, timeout=o.TIMEOUT, cwd=cwd)
+        with sb.empty_room() as room:   # with no cwd, an empty room, never the checkout (#446)
+            p = subprocess.run(cmd, input=prompt, capture_output=True, text=True, timeout=o.TIMEOUT,
+                               cwd=cwd or room, env=sb.clean_env())
         reply = json.loads(p.stdout)
     except (subprocess.TimeoutExpired, ValueError):
         return None

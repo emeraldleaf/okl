@@ -3767,6 +3767,17 @@ misses rests on four judgments, so the registered result stands, and neither cla
   - Whether wider file lists would cost more re-checks than they catch. §4ae's replay can count
     that on the history without new checks.
 
+*Note, 2026-11-14 (the harness review for #446): not comparable with §4bd–§4bf as it stands.*
+- **A check that crashed or collected nothing counted as failing,** and so as a catch. §4bd and §4bf
+  count it as cannot judge.
+- **The judge never saw a file the breaker created,** and the saved patches leave such files out.
+- **The receipt keeps only pass or fail,** so the 38.9% cannot be re-sorted. Compare it with §4bf's
+  figures only after a re-run with today's instrument.
+
+The judge's missing verdicts fell mostly on doc-claim lessons (7 of the 11 here, and the same lessons in
+§4ah), so they were not random. Drift caught 7 of the 11 breaking patches with no verdict, 3 of the 4 the
+re-judge called broken, against 14 of the 36 judged broken.
+
 ## 4ag. PRE-REGISTERED: the lessons nothing re-checks. How many have gone stale? (2026-10-31)
 
 Written before any lesson is judged. §4ae and §4af measure drift inside its scope; this measures
@@ -4204,6 +4215,10 @@ the repository is also behind both wrong verdicts on harmless patches.
   `doc-install-name`, `--replace` for `doc-verified-refused`, and the plugin manifest and the
   rival for the two pattern checks. Two are questions of claim, put to their lessons: `DEPLOY.md`
   for `doc-init-flags`, and the guidance for `n_07faa4565128`.
+
+*Note, 2026-11-14 (the harness review for #446).* The re-run shares §4af's instrument, so the same
+note applies: a crashed check counted as a catch, the judge did not see files the breaker created, and
+the figures are not comparable with §4bd–§4bf until a re-run.
 
 ## 4ai. PRE-REGISTERED: a review of the lessons nothing re-checks, on a scale that names wrong details and outlived workarounds (#315)
 
@@ -6270,6 +6285,15 @@ bottom of that range, so in every pairing choosing accounts for about 60% or mor
 0.72, and perhaps all of it. Whether anything else costs as well, such as agents cutting a review
 short, these runs cannot say.
 
+*Erratum, 2026-11-14 (the harness review for #446).* The picker's call passed no working directory, so in
+every arm it ran from where the script started, a checkout of this repository, and the session read that
+checkout's git status: the branch, the last five commit subjects and changed, deleted and untracked file
+names. By the
+reviewer's reading of the saved sessions, one of those subjects stated this section's question. The plan
+writer ran in a stripped copy of the repository, with no history to show. Every arm's picker read the same
+status, and its first subject named the plan arm's treatment, so the arms cannot be assumed to have been
+affected alike; how much it moved them is not known. The calls now run from an empty directory with a clean environment (`evals/sandbox.py`). *Correction, 2026-11-14 (the second review on #451):* an earlier version of this erratum said the calls read the repository's CLAUDE.md. A saved session run the same way shows they did not: `--restricted` skips it. What they did read is the git status.
+
 ## 4bb. PRE-REGISTERED, A PILOT: does a line saying when a lesson applies, by mechanism, help a picker find it? (2026-11-11)
 
 Written before any line or pick in this section. §4az and §4ba found choosing to be the gap: with the
@@ -6330,6 +6354,15 @@ What it means, not pre-registered:
 4. Across §4ba and this, no way of choosing from the information before or just after writing found
    these two. What would is reading the code where it touches the mechanism, which is what the
    review's own reading of the change does, or a lesson whose files name the code it governs.
+
+*Erratum, 2026-11-14 (the harness review for #446).* The when-line writer and the picker ran from a
+checkout of this repository, with no working directory given, and read its git status: the branch, the
+last five commit subjects and changed, deleted and untracked file names. By the reviewer's reading of the
+saved sessions, one subject stated this section's question, which names the treatment, so the two arms cannot be assumed to
+have been affected alike; how much it moved them is not known. Separately, the id matcher accepted any id
+ending in the key's text, so "x_abc" matched "abc"; by the reviewer's reading of the writer's saved
+sessions, every id matched exactly or after a colon, so no line relied on it. Both are fixed: the calls run from an empty directory with a clean
+environment, and an echoed id matches only after a prefix's colon. *Correction, 2026-11-14 (the second review on #451):* an earlier version of this erratum said the calls read the repository's CLAUDE.md. A saved session run the same way shows they did not: `--restricted` skips it. What they did read is the git status.
 
 ## 4bc. PRE-REGISTERED: can okl choose the lessons a change breaks better than a model picking from the list? (2026-11-12)
 
@@ -6427,6 +6460,15 @@ What it means, not pre-registered:
 What it points at: a screen that tells lessons apart, asking the review's own question (does this
 change break this lesson?) or using a stronger model, and the fused list cut to the review's size.
 Each needs its own pre-registration on changes no arm here has seen.
+
+*Erratum, 2026-11-14 (the harness review for #446).* The picker, the describer and the screener ran from
+this checkout, with no working directory given, and read its git status: the branch, the last five commit
+subjects (one of them, by the reviewer's reading of the saved sessions, stated this section's question)
+and changed, deleted and untracked file names. How much that moved the picks and the "bears" verdicts is
+not known. The
+screener also read any `"bears"` value by its truth, so the string `"false"` would have counted as
+bearing; the reviewer found only true and false in the saved replies, so that did not happen. Both are
+fixed, with tests. *Correction, 2026-11-14 (the second review on #451):* an earlier version of this erratum said the calls read the repository's CLAUDE.md. A saved session run the same way shows they did not: `--restricted` skips it. What they did read is the git status.
 
 ## 4bd. PRE-REGISTERED: would a lesson's own check, run at the edit, have caught the breaks past changes made? (2026-11-12)
 
@@ -6829,6 +6871,20 @@ So the registered reading stands as registered, but it is not firm: whether chec
 catch more than older checks is undecided on 18 lessons. What does hold is how each check missed (the
 table above), and that a check can pass at BASE while being unable to fail.
 
+**What the breakers saw.** *Note, 2026-11-14 (the reviews on #451), not registered.* Each breaker worked in
+a git worktree of this repository, so its context carried that worktree's git status (receipt
+`harness-transcripts-4bf-k7ezkwzs.json`, read from the saved sessions):
+- **All 108 breakers' status named the experiment** in its commit subjects ("§4bf pre-registration: fresh
+  breaks of each rule on today's code").
+- **All 108 listed the hidden check scripts as deleted:** `ci/check-agent-neutral.py`,
+  `ci/check-diagram-figures.sh` and `ci/check-diagram-names.py`. So a breaker knew those scripts' names,
+  not what they test, the same limit §4ah disclosed.
+- **11 sessions reached for a hidden file,** by a file tool or a shell command the session was refused, and
+  none got its content; no call left its own tree.
+- **Every breaker and judge request ran at effort `medium`,** and none loaded the repository's CLAUDE.md.
+
+From #446 a breaker works with its tree's git link hidden, in a folder whose name says nothing.
+
 **What follows, as registered.** The misses go to #415's checks, with the table above naming the gap in
 each. The guide did not yet say what a check at the edit can miss; its `okl on-edit` section now says a
 check catches only what it tests, citing this section.
@@ -6911,6 +6967,39 @@ check catches only what it tests, citing this section.
 
 ## 6. Threats to validity (read before quoting)
 
+- **What a model call ran with was not recorded until #446 (2026-11-14).**
+  - **Effort.** A call made with `--restricted` (the breakers, the mutation and census judges, the pickers)
+    ignores the user's settings and runs at the model's default effort: all of §4bf's 108 breaker and 114
+    judge sessions sent `medium` (receipt `harness-transcripts-4bf-k7ezkwzs.json`), as did a probe from the
+    checkout. A call without it reads the user's settings file, which sets `xhigh`:
+    the A/B harness's default generator and judge commands, and its model probe. No receipt recorded
+    either. From #446 the A/B receipts record the settings file's effort, and a new experiment pins effort
+    through `sandbox.ask`.
+  - **Environment.** Until #446 most children inherited the launching session's variables and git's, and
+    okl's too, except where a script dropped them (drift_replay's checks already did). `CLAUDE_EFFORT` among
+    them is only reported by the CLI, not read, so it did not set the effort.
+  - **Git status.** A call run inside a git tree reads its branch, last five commit subjects and changed,
+    deleted and untracked file names. The breakers of §4af, §4ah and §4bf worked in worktrees of this
+    repository, so their status named the experiment in its subjects and listed the files hidden from them
+    as deleted (§4bf's note gives the counts). §4ai's census judges also ran in a worktree, whose status
+    listed the census files removed from it; §4ag's listed only `okl-drift.json`. The pickers of §4ba–§4bc
+    read the status too (their errata). From #446 a breaker's or census judge's tree has its git link hidden
+    while it works, and calls that need no files run outside any git tree.
+- **Instruments changed at #446 (2026-11-14), so later runs do not pool with earlier receipts.** A receipt
+  whose run built its children with `sandbox.clean_env` carries `model_env`; the A/B harness's also records
+  the settings file's effort. Per series:
+  - **A/B harness:** the generator and judge run with a clean environment; their commands are unchanged.
+  - **§4ae–§4ai, §4bf, and the real-work and review snapshots:** the store copy carries its write-ahead log.
+  - **§4ag, §4ai:** the census judge runs with a clean environment and its git link hidden.
+  - **§4aj:** the agent and its hook run with a clean environment.
+  - **§4al–§4bc's model calls** (labels, suggestions, sorts, reviews, drafts, picks and screens): a clean
+    environment, and §4ba–§4bc's from an empty directory.
+  - **§4bd, §4be, §4bf:** checks run with a clean environment; a judge's cut diff now says so; breakers
+    see no git status, and their folders' names say nothing of the experiment.
+  - **§4aw–§4bb replays:** the agent runs with a clean environment; the saved patch includes new files, so
+    `edited` counts a session that only added one.
+  - **§4af, §4ah:** the judge sees files the breaker created; a run resumes only rows its own commit
+    made; breakers see no git status.
 - **The task set is bait, constructed from the store's own lessons.** This measures
   exactly one thing: whether retrieval of known lessons prevents their known defect
   classes. It does NOT measure general code quality, novel-problem performance, or

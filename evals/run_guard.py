@@ -18,7 +18,9 @@ from typing import Any
 
 import ab_harness as ab
 
-READS = ("src/okl", "evals/*.py")   # okl's code and the eval scripts, not the receipts a run writes
+# okl's code, the eval scripts, and what a replay reads mid-run: the graders copied into each room and
+# the replay task files (#446). Not the receipts a run writes.
+READS = ("src/okl", "evals/*.py", "tests/replay_graders_4aw.py", "evals/replay-*.json")
 
 
 class Run:
@@ -31,6 +33,12 @@ class Run:
         """Add the commit at the start and at the end; a run whose code moved is not usable, and says so."""
         now = ab.tree_state(READS)
         receipt["okl_commit_at_start"], receipt["okl_commit"] = self.started[0], now[0]
+        # Receipts from before #446 ran their children in the launching session's environment; this marks
+        # one whose run built them with sandbox.clean_env, so the two are never pooled. Only when it did:
+        # a blanket default named a run whose child got os.environ (review on #451).
+        sb = sys.modules.get("sandbox")
+        if sb is not None and getattr(sb, "USED", False):
+            receipt.setdefault("model_env", sb.MODEL_ENV)
         moved = ab.head_moved(self.started, now)
         if moved:
             receipt["usable"] = False

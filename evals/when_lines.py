@@ -79,7 +79,7 @@ def own_id(key: str, ids: list[str]) -> str | None:
     is left unanswered."""
     if key in ids:
         return key
-    ends = [i for i in ids if i.endswith(f":{key}") or i.endswith(key)]
+    ends = [i for i in ids if i.endswith(f":{key}")]   # a dropped prefix ends at a colon; "x_abc" is not "abc" (#446)
     return ends[0] if len(ends) == 1 else None
 
 

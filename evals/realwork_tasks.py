@@ -33,6 +33,9 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "src"))
 from okl import intake  # noqa: E402
 
+sys.path.insert(0, str(REPO / "evals"))
+import sandbox as sb  # noqa: E402
+
 GH_REPO = "emeraldleaf/okl"
 SINCE = "2026-09-15"
 WITH_REVIEW, WITHOUT_REVIEW = 40, 10
@@ -61,8 +64,7 @@ def snapshot_store() -> tuple[Path, str]:
     """Copy this machine's store to the private folder; its path and sha256."""
     PRIVATE.mkdir(parents=True, exist_ok=True)
     src = REPO / ".okl" / "okl.db"
-    with sqlite3.connect(src) as live, sqlite3.connect(PRIVATE / "store.db") as copy:
-        live.backup(copy)
+    sb.copy_sqlite(src, PRIVATE / "store.db")   # read-only, with its log; never the live store read-write (#446)
     digest = hashlib.sha256((PRIVATE / "store.db").read_bytes()).hexdigest()
     return PRIVATE / "store.db", digest
 
