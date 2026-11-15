@@ -110,7 +110,8 @@ okl check --change [BASE]
                      #   governing a changed file first; about 60 tokens a lesson, never cut,
                      #   its first line saying to read all of it), with the steps: say what
                      #   the changed code does, pick the ten lessons it most likely breaks, check
-                     #   each in its own fresh sub-agent with one question (does this change break
+                     #   each in its own fresh sub-agent (on Sonnet in Claude Code, the model it was
+                     #   measured with) with one question (does this change break
                      #   it?), fix only what breaks one and run its tests again. okl calls no model;
                      #   the agent does the review. A step under measurement (REPORT §4at to §4bg). --format json for a script. --format hook
                      #   prints only the Stop hook's one-line note, unless `okl init

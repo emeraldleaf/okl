@@ -311,3 +311,12 @@ def test_on_by_default_only_where_the_repo_was_set_up_for_okl(tmp_path, monkeypa
     monkeypatch.delenv("OKL_REVIEW_AFTER_WRITING")
     (bare / ".okl").mkdir(); (bare / ".okl" / "config.json").write_text(json.dumps({"repo": "bare"}))
     assert Client().review_after_writing is True
+
+
+def test_the_review_runs_each_check_on_the_model_it_was_measured_with():
+    """§4ay and §4az measured the review with Sonnet sub-agents. Unnamed, a sub-agent runs on the session's
+    model: ten of a larger one cost more than measured, and a smaller one was never measured. The step names
+    Sonnet, labelled as Claude Code's, and says why."""
+    steps = " ".join(" ".join(core.REVIEW_STEPS).split())
+    assert "In Claude Code, run each on Sonnet (the Agent tool's model: sonnet)" in steps
+    assert "the model the review was measured with (REPORT §4ay, §4az)" in steps
