@@ -1,6 +1,6 @@
 # ADR: The review after writing is on by default
 
-- **Status:** Accepted (2026-11-14), shipped in 0.17.0
+- **Status:** Accepted: decided 2026-11-14, shipped in 0.17.0, written up 2026-11-15 (the date in the file's name)
 - **Decided by:** the maintainer, as a judgement on the evidence below, not by a pre-registered bar.
   Both bars the review was tested against were missed, and this record says why it is on anyway,
   so that a later reading of "missed its bar" does not quietly turn it off again.
