@@ -121,28 +121,59 @@ def test_a_combined_run_reads_every_set_and_refuses_a_shared_id(monkeypatch, tmp
     assert check.label(["x1", "x2", "x1"]) == "x1+x2"
 
 
-CHECK_457 = REPO / "evals" / "results" / "replay-check-457-20261115-1800.json"
+RESULTS = REPO / "evals" / "results"
+CHECK_FIRST = RESULTS / "replay-check-457-20261115-1800.json"
+ALT_FIRST = RESULTS / "replay-alternatives-457-20261115-1904.json"
+CHANGED_AFTER_ALTERNATIVES = ["t19", "t26", "t36"]   # strengthened after the first alternatives check
 
 
-def test_the_new_sets_check_quotes_its_receipt():
-    """Every broken task's grader fails on its frozen code by an assertion of its own and passes on the real fix,
-    and the control's passes as it stands; the receipt was made from committed code, on the tasks and graders as
-    they are now, so a grader changed later (after the alternatives check) needs a new receipt."""
+def _sha(path: Path) -> str:
     import hashlib
-    r = json.loads(CHECK_457.read_text())
-    paths = check.set_paths("457")
-    assert r["check"] == "replay-check-457" and r["all_valid"] and "usable" not in r
-    assert r["valid"] == r["of"] == len(_tasks("457")) == len(r["rows"])
-    assert r["tasks_sha256"] == hashlib.sha256(paths["tasks"].read_bytes()).hexdigest()
-    assert r["graders_sha256"] == hashlib.sha256(paths["graders"].read_bytes()).hexdigest()
-    assert r["okl_commit"] == r["okl_commit_at_start"] and not r["okl_commit"].endswith("+dirty")
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _clean(receipt: dict) -> bool:
+    """Made from committed code that did not move during the run."""
+    return receipt["okl_commit"] == receipt["okl_commit_at_start"] and not receipt["okl_commit"].endswith("+dirty")
+
+
+def _valid_rows(r: dict) -> None:
+    """Every broken task's grader fails on its frozen code by an assertion of its own and passes on the real fix,
+    and a control's passes as it stands."""
     controls = {t["id"] for t in _tasks("457") if t["needs_nothing"]}
+    assert r["valid"] == r["of"] == len(_tasks("457")) == len(r["rows"]) and r["all_valid"]
     for row in r["rows"]:
         assert row["exit_end"] == 0 and row["ran_end"] > 0, row["id"]
         if row["id"] in controls:
             assert row["exit_frozen"] == 0, row["id"]
         else:
             assert row["exit_frozen"] == 1 and row["own_assertion_frozen"], row["id"]
+
+
+def test_the_first_receipts_are_the_graders_as_phase_one_left_them():
+    """The first validity check passed all 30; the first alternatives check, on the same graders, passed every right
+    fix and told 24 of 29 pairs apart. Both were made from committed code before any grader changed, so they read
+    a graders file other than today's, which the three strengthened graders account for."""
+    first, alt = (json.loads(p.read_text()) for p in (CHECK_FIRST, ALT_FIRST))
+    assert first["check"] == "replay-check-457" and "usable" not in first and _clean(first)
+    _valid_rows(first)
+    assert alt["check"] == "replay-alternatives-457" and "usable" not in alt and _clean(alt)
+    assert alt["graders_sha256"] == first["graders_sha256"] != _sha(check.set_paths("457")["graders"])
+    assert alt["tasks_sha256"] == first["tasks_sha256"] == _sha(check.set_paths("457")["tasks"])
+    assert (alt["valid"], alt["of"]) == (24, 29) and all(r["right_exit"] == 0 for r in alt["rows"])
+    assert sorted(r["id"] for r in alt["rows"] if not r["valid"]) == ["t19", "t22", "t26", "t36", "t47"]
+    for row in alt["rows"]:
+        patches = check.set_paths("457")["alternatives"]
+        assert row["right_patch_sha256"] == _sha(patches / f"{row['id']}-right.patch"), row["id"]
+        assert row["wrong_patch_sha256"] == _sha(patches / f"{row['id']}-wrong.patch"), row["id"]
+
+
+def test_every_grader_changed_after_the_alternatives_says_so():
+    """A grader strengthened after the alternatives check was not written blind, and says so where it changed."""
+    text = check.set_paths("457")["graders"].read_text()
+    for tid in CHANGED_AFTER_ALTERNATIVES:
+        section = text.split(f"# ---- {tid} · ", 1)[1].split("\n# ---- ", 1)[0]
+        assert "after the alternatives check" in section, tid
 
 
 def test_a_grader_runs_from_its_own_sets_module(monkeypatch, tmp_path):

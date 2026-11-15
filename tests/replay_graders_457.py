@@ -169,12 +169,14 @@ def _t19_seed_targets(text, cwd):
     return found
 
 
-@pytest.mark.parametrize("folder", ["okl tools", "Joe's okl"])
+# A space, a single quote, and a double quote: quoting the path in double quotes survives the first two
+# but not the third (added after the alternatives check, where a double-quoting fix passed).
+@pytest.mark.parametrize("folder", ["okl tools", "Joe's okl", 'the "okl" tools'])
 @pytest.mark.parametrize("entry", ["init", "check"])
 def test_t19_pr30(tmp_path, entry, folder):
     """The `okl seed <pack>` command okl suggests for an empty store, pasted into a shell, names the pack, when
-    okl lives under a folder whose name holds a space or a quote: from `okl init` and from `okl check`'s
-    advice. Control: the pack that fits the repo's interests is still suggested."""
+    okl lives under a folder whose name holds a space, a single quote or a double quote: from `okl init` and
+    from `okl check`'s advice. Control: the pack that fits the repo's interests is still suggested."""
     src, pack = _t19_install(tmp_path, folder)
     repo = _git_repo(tmp_path / "repo", {"a.py": "x = 1\n"})
     env = _env(PYTHONPATH=str(src))
@@ -520,16 +522,42 @@ def _t26_store(s, strong, weak):
     return set(shown), set(also)
 
 
+def _t26_one_word_first():
+    """A store whose search ranks every record sharing one subject word with the task ("ledger", in the
+    title only) between the lessons the calibrated line shows and the ones that match in their bodies."""
+    from okl.store import Store
+
+    class Ranked(Store):
+        def search(self, query, scope=None, node_types=None, limit=25):
+            rows = super().search(query, scope, node_types, 500)
+            rows.sort(key=lambda n: 0 if n.title.startswith("Ledger reconciliation")
+                      else 2 if n.title.startswith("Nightly batch") else 1)
+            return rows[:limit]
+    return Ranked("sqlite:///:memory:")
+
+
+# The last case was added after the alternatives check, where a fix that read the floor's whole window but
+# never widened it for the lessons shown in full passed: at limit 1 the shown lesson and one-word matches
+# fill that window, and the lessons that matched are ranked past it.
 @pytest.mark.parametrize(("strong", "limit", "where"), [
-    (3, 3, "local"), (4, 2, "local"), (5, 5, "local"), (3, 12, "local"), (3, 3, "service")])
+    (3, 3, "local"), (4, 2, "local"), (5, 5, "local"), (3, 12, "local"), (3, 3, "service"),
+    (1, 1, "one-word-first")])
 def test_t26_pr299(request, strong, limit, where):
     """The tiered briefing's second tier names the other lessons that matched, up to the limit, whatever the
     lessons shown in full take from the top of the ranking: at a small limit whose shown lessons are the
-    floor's first, it is not left empty; locally and through the client over a service. Control: at the
-    default limit the same, and no lesson is listed in both tiers."""
+    floor's first, it is not left empty; locally, through the client over a service, and when weaker one-word
+    matches rank between the shown lesson and the others that matched. Control: at the default limit the
+    same, no lesson is listed in both tiers, and a one-word match is never listed."""
     from okl import core
     from okl.store import Store
-    s = request.getfixturevalue("_service").store if where == "service" else Store("sqlite:///:memory:")
+    if where == "service":
+        s = request.getfixturevalue("_service").store
+    elif where == "one-word-first":
+        s = _t26_one_word_first()
+        for i in range(8):
+            core.record(s, type="Rule", title=f"Ledger export {i}", scope="org", fix=f"export batch {i}")
+    else:
+        s = Store("sqlite:///:memory:")
     strong_ids, weak_ids = _t26_store(s, strong, 6)
     task = "ledger reconciliation across timezones"
     try:
@@ -539,13 +567,14 @@ def test_t26_pr299(request, strong, limit, where):
         else:
             res = core.check(s, "r", task, limit=limit, decision="tiered")
     finally:
-        if where == "local":
+        if where != "service":
             s.close()
 
     shown = _ids({k: v for k, v in res.items() if k != "also_matched"})
     also = [e["id"] for e in res.get("also_matched") or []]
     assert shown, f"nothing was shown in full: {res}"
     assert not set(also) & shown, "a lesson shown in full was listed again in the second tier"
+    assert set(also) <= strong_ids | weak_ids, f"a one-word match was listed in the second tier: {also}"
     assert len(also) == min(limit, len(strong_ids | weak_ids) - len(shown)), \
         f"limit {limit}: {len(shown)} shown, second tier {also} though {len(weak_ids)} more matched"
 
@@ -1059,13 +1088,17 @@ def test_t35_pr308(tmp_path, monkeypatch, named):
 _T36_WORDS = ("migration", "catalogue", "pagination")
 
 
+# "written" was added after the alternatives check, where a fix that committed the rebuild only on success but
+# never rolled the failed one back passed: the store that failed to rebuild was only closed, which discards
+# the pending drop, while a write through it commits that drop.
+@pytest.mark.parametrize("after", ["closed", "written"])
 @pytest.mark.parametrize("then", ["unicode61", "porter unicode61"])
-def test_t36_pr309(tmp_path, monkeypatch, then):
+def test_t36_pr309(tmp_path, monkeypatch, then, after):
     """The full-text index is derived from the node table and rebuilt on open when its tokenizer setting
     changes. A rebuild that fails part-way (here the setting names a tokenizer this SQLite lacks) must not
-    leave a store whose index looks current but is empty: the next open, under the old setting or a valid
-    new one, still finds every lesson. Control: the lessons are found before the failure, and the store opens
-    and searches normally after it."""
+    leave a store whose index looks current but is empty, whether the store that failed is closed at once or
+    first takes a write: the next open, under the old setting or a valid new one, still finds every lesson.
+    Control: the lessons are found before the failure, and the store opens and searches normally after it."""
     from okl import core
     from okl import store as okl_store
     from okl.store import Store
@@ -1077,8 +1110,17 @@ def test_t36_pr309(tmp_path, monkeypatch, then):
     s.close()
 
     monkeypatch.setattr(okl_store, "FTS_TOKENIZE", "t36_no_such_tokenizer")
-    with contextlib.suppress(Exception):     # refusing to open is a right answer too
-        Store(url).close()
+    try:
+        failed = Store(url)
+    except Exception:  # noqa: BLE001 - refusing to open is a right answer too
+        failed = None
+    if failed is not None:
+        try:
+            if after == "written":
+                with contextlib.suppress(Exception):   # refusing the write is a right answer too
+                    core.record(failed, type="Rule", scope="org", title="rollback handling", body="the rollback rule")
+        finally:
+            failed.close()
     monkeypatch.setattr(okl_store, "FTS_TOKENIZE", then)
     try:
         s = Store(url)
