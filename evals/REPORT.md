@@ -6956,7 +6956,7 @@ its lesson. Alongside it:
 - each task's nine other lessons, the ones okl's search ranks highest for its words among the lessons as they stood
   (`evals/replay-lists-4bg.json`, built by `evals/replay_lists_4bg.py`);
 - the harness for the planned run (`evals/replay_turn.py`);
-- its power simulation (`evals/power_4bg.py`, receipt `power-4bg-20261115-0012.json`).
+- its power simulation (`evals/power_4bg.py`, receipt `power-4bg-20261115-0245.json`).
 
 Every grader in `tests/replay_graders_4bg.py` fails on the frozen code by an assertion and passes on the real fix
 (receipt `replay-check-4bg-20261115-0114.json`). For each task, an agent that had read neither the graders nor the real fixes wrote a second

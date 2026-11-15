@@ -9,6 +9,7 @@ used, so it is a steer on whether §4bg's run on fourteen new tasks is worth mak
 
     python3 evals/replay_turn_look.py run
     python3 evals/replay_turn_look.py score [--receipt]
+    python3 evals/replay_turn_look.py dismissals [--receipt]   # what each session said of the right lesson
 """
 from __future__ import annotations
 
@@ -132,12 +133,66 @@ def score(write: bool) -> int:
     return 0 if len(rows) == len(calls()) else 2
 
 
+PROJECTS = Path.home() / ".claude" / "projects"
+STRONG = 0.8   # the tasks §4ay's one at a time fixed in at least four of five sessions
+
+
+def said_of(room: str, lesson: str) -> list[str]:
+    """What a session wrote about `lesson`, from the transcript Claude Code saved for its room: each
+    piece of the agent's own text that names the lesson's id, with what follows it."""
+    found = []
+    for folder in PROJECTS.glob(f"*{room.replace('_', '-')}*"):
+        for log in folder.glob("*.jsonl"):
+            for line in log.read_text(errors="replace").splitlines():
+                try:
+                    event = json.loads(line)
+                except ValueError:
+                    continue
+                content = (event.get("message") or {}).get("content") if event.get("type") == "assistant" else None
+                for part in content if isinstance(content, list) else []:
+                    text = part.get("text", "") if isinstance(part, dict) and part.get("type") == "text" else ""
+                    if lesson in text:
+                        i = text.index(lesson)
+                        found.append(" ".join(text[i: i + 300].split()))
+    return found
+
+
+def dismissals(write: bool) -> int:
+    """On the tasks one at a time nearly always fixed, whether each in-turn session named the right lesson,
+    and what it said of it: the figure REPORT §4bg quotes, read from the saved sessions."""
+    guard = run_guard.start()
+    tasks = {t["pr"]: t for t in o.tasks()}
+    strong = sorted(int(p) for p, r in json.loads(AY.read_text())["per_task"]["one_at_a_time"].items() if r >= STRONG)
+    rows = []
+    for r in sorted(kept().values(), key=lambda x: (x["pr"], x["rep"])):
+        if r["pr"] not in strong:
+            continue
+        said = said_of(r["room"], tasks[r["pr"]]["lesson"])
+        rows.append({"pr": r["pr"], "rep": r["rep"], "passed": r["passed"], "room": r["room"],
+                     "named": bool(said), "said": said[-1] if said else None})
+    out = {"section": "4bg look, what the sessions said", "at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%MZ"),
+           "tasks": strong, "sessions": len(rows), "failed": sum(not x["passed"] for x in rows),
+           "named_and_failed": sum(x["named"] and not x["passed"] for x in rows),
+           "script_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(), "rows": rows}
+    out = guard.stamp(out)
+    print(json.dumps({k: v for k, v in out.items() if k != "rows"}, indent=1))
+    for x in rows:
+        print(f"  #{x['pr']} rep{x['rep']} passed={x['passed']} named={x['named']}: {(x['said'] or '')[:160]}")
+    if write:
+        dest = o.REPO / "evals" / "results" / f"replay-turn-look-dismissals-{datetime.now(UTC):%Y%m%d-%H%M}.json"
+        dest.write_text(json.dumps(out, indent=1, ensure_ascii=False) + "\n")
+        print(f"receipt: {dest.relative_to(o.REPO)}")
+    return 0
+
+
 def main() -> int:
-    """run or score."""
+    """run, score, or read what the sessions said."""
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("step", choices=["run", "score"])
+    ap.add_argument("step", choices=["run", "score", "dismissals"])
     ap.add_argument("--receipt", action="store_true")
     a = ap.parse_args()
+    if a.step == "dismissals":
+        return dismissals(a.receipt)
     return run() if a.step == "run" else score(a.receipt)
 
 

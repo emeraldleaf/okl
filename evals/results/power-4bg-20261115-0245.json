@@ -1,6 +1,6 @@
 {
  "section": "4bg/4bh power",
- "at": "2026-11-15T00:12:35+00:00",
+ "at": "2026-11-15T02:45:47+00:00",
  "sources": [
   "replay-list-20261111-0249.json",
   "replay-one-20261111-1355.json"
@@ -213,8 +213,6 @@
    "true_diff_when_none": 0.003
   }
  ],
- "okl_commit_at_start": "dae6fb3+dirty",
- "okl_commit": "dae6fb3+dirty",
- "usable": false,
- "working_tree_moved": true
+ "okl_commit_at_start": "026266e",
+ "okl_commit": "026266e"
 }
