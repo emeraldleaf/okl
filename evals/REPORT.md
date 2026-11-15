@@ -6929,10 +6929,11 @@ Sonnet sessions at effort medium, graded by §4aw's behaviour graders (`evals/re
 | #309 | 0 | 0 | 0.8 |
 | averaged over tasks | 0.2 | 0.08 | 0.72 |
 
-**What the agent did.** It followed the instruction, writing a verdict for each lesson. Take the three tasks where
-one at a time nearly always fixed the defect (#168, #196, #309). In eight of the nine sessions on them, the agent
-named the right lesson and dismissed it in one line, for example "The judge≠generator refusal at startup is
-unchanged. Nothing needed changing." In the ninth its reply does not name it. Given that lesson alone in a fresh
+**What the agent did.** It followed the instruction, writing a verdict for each lesson. Take the four tasks one at a
+time fixed in at least four of five sessions (#168, #196, #198, #309). In turn failed 9 of their 12 sessions, all on
+#168, #196 and #309. In 8 of those 9, the agent named the right lesson and dismissed it in one line, for example
+"The judge≠generator refusal at startup is unchanged. Nothing needed changing." In the ninth its reply does not
+name it (receipt `replay-turn-look-dismissals-20261115-0246.json`, read from the sessions Claude Code saved). Given that lesson alone in a fresh
 session, §4ay's agent read the code and found the break in 4 or 5 of 5 sessions. Seven of the 15 sessions edited
 something, and none broke another test.
 
@@ -6961,7 +6962,9 @@ its lesson. Alongside it:
 Every grader in `tests/replay_graders_4bg.py` fails on the frozen code by an assertion and passes on the real fix
 (receipt `replay-check-4bg-20261115-0114.json`). For each task, an agent that had read neither the graders nor the real fixes wrote a second
 right fix and a wrong one. All fourteen right fixes passed. Five wrong ones passed too, because those graders tested
-only the incident's own example of the rule (receipt `replay-alternatives-4bg-20261115-0102.json`). I added the
+only the incident's own example of the rule (receipt `replay-alternatives-4bg-20261115-0102.json`, made while
+the check script was still uncommitted; the graders' and tasks' hashes it records are those of the commit before
+the strengthening). I added the
 missing cases, and all fourteen pairs are now told apart (receipt `replay-alternatives-4bg-20261115-0115.json`). For those five, the second check is not
 blind: I wrote the cases after seeing which wrong fixes passed. The file-tie test (#450) is not in the set: only 3
 of the 14 lessons name one file while the fix lands in another.
