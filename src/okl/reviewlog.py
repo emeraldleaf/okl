@@ -8,19 +8,28 @@ names the main transcript's tool call that started it (`toolUseId`) and the mode
 
 That format is Claude Code's and undocumented, so every read here fails soft: what cannot be read
 is left out, and nothing raises into the Stop hook this rides on. A reading holds ids, paths, counts,
-model names and booleans only: no code and no text from the session.
+model names and booleans only: no code, no command line and no text from the session.
 
-Imports nothing from okl, so the parser has no way to reach the store.
+The review is a window of the transcript. It starts at the first command that ran `okl check
+--change`, and ends at the first Stop-hook summary after that, or at the next prompt a person wrote,
+whichever comes first. Tokens, time and sub-agents are counted inside it: a session that goes on
+to other work after its review must not have that work counted as the review's.
+
+Claude Code 2.1.302 also writes `api-request-blob` lines that repeat an assistant message's tool
+calls after their results. Only assistant and user lines are read for calls, and a call counts once.
+
+Imports nothing from okl (reviewcmd reads command lines), so the parser has no way to reach the store.
 """
 from __future__ import annotations
 
 import json
-import os
 import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+from . import reviewcmd
 
 NOTE = b"REVIEW AFTER WRITING"        # what the Stop hook's one-line note starts with (core.REVIEW_NOTE)
 EDIT_TOOLS = frozenset({"Edit", "Write", "MultiEdit", "NotebookEdit"})
@@ -29,26 +38,19 @@ EDIT_TOOLS = frozenset({"Edit", "Write", "MultiEdit", "NotebookEdit"})
 # pair out, and tests/test_single_source.py fails on a second copy of a collection.
 SUBAGENT_TOOL, SUBAGENT_TOOL_OLD = "Agent", "Task"
 # Sanity limits on one sub-agent's lists, so a runaway session cannot grow a row without end.
-MAX_LESSONS, MAX_FILES, MAX_TESTS, MAX_TARGETS = 100, 100, 50, 6
+MAX_LESSONS, MAX_FILES, MAX_TESTS = 100, 100, 50
 
 _ID = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_.:@+/-]{0,199}")
 _AGENT_ID = re.compile(r"[A-Za-z0-9_-]{1,80}")
 _MODEL = re.compile(r"[\w.:/\[\]-]{1,80}")
-_SHOW = re.compile(r"\bokl\b\s+show\b([^;&|\n]*)", re.I)
 # `okl show` prints `[<id>] Rule · org · created ...` first; a lesson pasted into a prompt keeps it.
 _SHOWN = re.compile(r"^\[([^\]\s]+)\] \w+ · ", re.M)
+# The two counts come from the review's own output (core.render_review); a test renders it and
+# reads them back, so a change to that wording fails there rather than here, quietly.
 _FILES = re.compile(r"(\d+) file\(s\) changed since")
 _LISTED = re.compile(r"This review lists (\d+) lesson\(s\)")
-_NOT_RUNNERS = frozenset({"grep", "egrep", "fgrep", "rg", "ack", "cat", "less", "more", "head", "tail",
-                          "sed", "awk", "ls", "echo", "printf", "git", "find", "wc", "which", "type",
-                          "pip", "pip3", "man", "vim", "nano", "diff", "cp", "mv", "rm", "touch"})
-_RUNNER = re.compile(
-    r"(?<![\w-])(pytest|py\.test|unittest|tox|nox|jest|vitest|mocha|rspec|phpunit|ctest"
-    r"|(?:npm|yarn|pnpm|bun)(?:\s+run)?\s+test|go\s+test|cargo\s+(?:nextest\s+run|test)"
-    r"|dotnet\s+test|mvn(?:\s+-\S+)*\s+test|gradlew?\s+test|make\s+test|swift\s+test)(?![\w.-])")
-_TARGET = re.compile(r"[\w@.+-]+/(?:[\w@.+-]+/?)*|[\w.-]+\.(?:py|js|jsx|ts|tsx|mjs|rb|go|rs|cs|java|php|sh|swift)")
-_FAILED = re.compile(r"\b[1-9]\d* (?:failed|failures?|errors?)\b|\bFAILED\b", re.I)
-_PASSED = re.compile(r"\b\d+ passed\b|\bOK\b|\bPASS(?:ED)?\b|\ball tests passed\b", re.I)
+# What Claude Code writes as a user line that no person typed.
+_NOT_A_PROMPT = ("<task-notification", "<agent-message", "<system-reminder", "Stop hook")
 
 
 @dataclass
@@ -61,7 +63,7 @@ class ReviewReading:
     ran: bool = False                  # the agent ran `okl check --change` itself
     files_changed: int | None = None   # from the review's own output, when readable
     lessons_listed: int | None = None
-    tokens: int | None = None          # the review's, with its sub-agents', from the first call on
+    tokens: int | None = None          # the review's, with its sub-agents'
     duration_s: int | None = None
     checks: list[dict[str, Any]] = field(default_factory=list)
 
@@ -88,6 +90,10 @@ def _message(d: dict[str, Any]) -> dict[str, Any]:
 
 
 def _blocks(d: dict[str, Any]) -> list[dict[str, Any]]:
+    """The content blocks of an assistant or user line; no other kind of line carries a call that
+    ran (an `api-request-blob` line repeats the calls of a message already written)."""
+    if d.get("type") not in ("assistant", "user"):
+        return []
     content = _message(d).get("content")
     return [b for b in content if isinstance(b, dict)] if isinstance(content, list) else []
 
@@ -115,6 +121,12 @@ def _num(v: Any) -> int:
     return int(v) if isinstance(v, int | float) and not isinstance(v, bool) else 0
 
 
+def _model(*candidates: Any) -> str | None:
+    """The first candidate that names a model. `inherit` is what a sub-agent says when it takes its
+    parent's model, and names none."""
+    return next((c for c in candidates if isinstance(c, str) and c != "inherit" and _MODEL.fullmatch(c)), None)
+
+
 class _Tally:
     """The tokens and the time span of a run of transcript lines.
 
@@ -126,17 +138,15 @@ class _Tally:
         self._by_id: dict[str, int] = {}
         self._anonymous = 0
         self.seen = False
-        self.first: float | None = None
         self.last: float | None = None
 
     def add(self, d: dict[str, Any]) -> None:
         ts = _ts(d)
         if ts is not None:
-            self.first = ts if self.first is None else min(self.first, ts)
             self.last = ts if self.last is None else max(self.last, ts)
         m = _message(d)
         usage = m.get("usage")
-        if not isinstance(usage, dict):
+        if d.get("type") != "assistant" or not isinstance(usage, dict):
             return
         self.seen = True
         total = sum(_num(usage.get(k)) for k in ("input_tokens", "output_tokens",
@@ -152,78 +162,6 @@ class _Tally:
         return sum(self._by_id.values()) + self._anonymous
 
 
-# --- what a command line means ---------------------------------------------------------------------
-
-def is_review_command(command: str) -> bool:
-    """Whether a Bash command runs the review: `okl check --change`, however okl is reached, but
-    not the Stop hook's own `--format hook` note."""
-    for seg in re.split(r"[;&|\n]+", command):
-        if (re.search(r"\bokl\b", seg, re.I) and re.search(r"\bcheck\b", seg)
-                and re.search(r"\s--change\b", seg) and not re.search(r"--format[ =]\s*hook\b", seg)):
-            return True
-    return False
-
-
-def show_ids(text: str) -> list[str]:
-    """The lesson ids `okl show <id>` names in `text`, in order; flags are skipped."""
-    ids = []
-    for m in _SHOW.finditer(text):
-        toks = m.group(1).split()
-        i = 0
-        while i < len(toks):
-            if toks[i] == "--format":
-                i += 2
-            elif toks[i].startswith("-"):
-                i += 1
-            else:
-                ids.append(toks[i].strip("\"'`"))
-                break
-    return ids
-
-
-def parse_test_run(command: str) -> tuple[str, list[str]] | None:
-    """The test runner a Bash command starts and the paths it names, or None. A search or print
-    command that only mentions a runner (`grep pytest`) is not a run."""
-    for seg in re.split(r"[;&|\n]+", command):
-        words = seg.split()
-        while words and re.fullmatch(r"\w+=\S*", words[0]):   # FOO=1 pytest: the variable is not the command
-            words.pop(0)
-        if not words or words[0] in _NOT_RUNNERS:
-            continue
-        m = _RUNNER.search(seg)
-        if not m:
-            continue
-        targets: list[str] = []
-        for tok in seg[m.end():].split():
-            t = tok.strip("\"'`").split("::")[0]
-            if _TARGET.fullmatch(t) and t not in targets:
-                targets.append(t[:200])
-        return " ".join(m.group(1).split()), targets[:MAX_TARGETS]
-    return None
-
-
-def parse_test_outcome(is_error: bool, text: str) -> str:
-    """"passed", "failed" or "unknown", from what a test command's result says."""
-    if text.lstrip().startswith("<tool_use_error>"):
-        return "unknown"       # the tool refused; no test ran
-    if is_error or _FAILED.search(text):
-        return "failed"
-    return "passed" if _PASSED.search(text) else "unknown"
-
-
-def _rel(path: str, root: str | None) -> str:
-    """`path` relative to the repository when it is inside it."""
-    if root:
-        base = root.rstrip(os.sep) + os.sep
-        if path.startswith(base):
-            return path[len(base):]
-    return path
-
-
-def _valid_id(i: str) -> bool:
-    return bool(_ID.fullmatch(i))
-
-
 # --- the sub-agents ----------------------------------------------------------------------------------
 
 class _AgentScan:
@@ -233,17 +171,20 @@ class _AgentScan:
     def __init__(self, root: str | None) -> None:
         self.root = root
         self.lessons: list[str] = []
-        self.edited: set[str] = set()
+        self.inside: set[str] = set()        # edited paths in the repository, relative
+        self.outside: set[str] = set()       # edited paths elsewhere: only their number is kept
         self.tests: list[dict[str, Any]] = []
-        self.model = ""
+        self.model: str | None = None
         self.tally = _Tally()
+        self._seen: set[str] = set()                            # tool call ids already counted
         self._edits: dict[str, str] = {}                        # an edit call's id -> its path
         self._runs: dict[str, tuple[str, list[str]]] = {}       # a test call's id -> runner, targets
 
     def feed(self, d: dict[str, Any]) -> None:
         """Fold one transcript line in."""
         self.tally.add(d)
-        self.model = self.model or _model(_message(d).get("model"))
+        if d.get("type") == "assistant":
+            self.model = self.model or _model(_message(d).get("model"))
         for b in _blocks(d):
             if b.get("type") == "tool_use":
                 self._call(b)
@@ -252,38 +193,50 @@ class _AgentScan:
 
     def _call(self, b: dict[str, Any]) -> None:
         name, tid, inp = str(b.get("name", "")), b.get("id"), b.get("input")
+        if not isinstance(tid, str) or tid in self._seen:
+            return
+        self._seen.add(tid)
         inp = inp if isinstance(inp, dict) else {}
         if name in EDIT_TOOLS:
             path = inp.get("file_path") or inp.get("notebook_path")
-            if isinstance(path, str) and path and isinstance(tid, str):
-                self._edits[tid] = _rel(path, self.root)
+            if isinstance(path, str) and path:
+                self._edits[tid] = path
         elif name == "Bash" and isinstance(inp.get("command"), str):
-            self.lessons += show_ids(inp["command"])
-            run = parse_test_run(inp["command"])
-            if run and isinstance(tid, str):
+            self.lessons += reviewcmd.command_show_ids(inp["command"])
+            run = reviewcmd.parse_test_run(inp["command"], self.root)
+            if run:
                 self._runs[tid] = run
         elif name.endswith("okl_get") and isinstance(inp.get("id"), str):
             self.lessons.append(inp["id"])
+
+    def _edited(self, path: str) -> None:
+        rel = reviewcmd.inside(path, self.root)
+        if rel is None:
+            self.outside.add(path)
+        else:
+            self.inside.add(rel)
 
     def _result(self, b: dict[str, Any]) -> None:
         rid = b.get("tool_use_id")
         if rid in self._edits:
             path = self._edits.pop(rid)
             if not b.get("is_error"):       # an edit the tool refused changed nothing
-                self.edited.add(path)
+                self._edited(path)
         if rid in self._runs:
             runner, targets = self._runs.pop(rid)
             self.tests.append({"runner": runner, "targets": targets, "outcome":
-                               parse_test_outcome(bool(b.get("is_error")), _text(b.get("content")))})
+                               reviewcmd.parse_test_outcome(bool(b.get("is_error")), _text(b.get("content")))})
 
     def finish(self) -> dict[str, Any]:
         """The reading. A call with no result in the file reported no error, so an edit counts."""
-        edited = self.edited | set(self._edits.values())
+        for path in self._edits.values():
+            self._edited(path)
         tests = self.tests + [{"runner": r, "targets": t, "outcome": "unknown"}
                               for r, t in self._runs.values()]
-        return {"lessons": self.lessons, "edited_files": sorted(edited)[:MAX_FILES],
-                "edited": bool(edited), "tests": tests[:MAX_TESTS], "tokens": self.tally.tokens,
-                "model": self.model, "last": self.tally.last}
+        return {"lessons": self.lessons, "edited_files": sorted(self.inside)[:MAX_FILES],
+                "edited_outside": len(self.outside), "edited": bool(self.inside or self.outside),
+                "tests": tests[:MAX_TESTS], "tokens": self.tally.tokens, "model": self.model,
+                "last": self.tally.last}
 
 
 def _read_agent(path: Path, root: str | None) -> dict[str, Any] | None:
@@ -318,23 +271,61 @@ def _metas(sub_dir: Path) -> dict[str, tuple[str, dict[str, Any]]]:
     return out
 
 
-def _model(*candidates: Any) -> str:
-    return next((c for c in candidates if isinstance(c, str) and _MODEL.fullmatch(c)), "")
-
-
 # --- the main transcript -----------------------------------------------------------------------------
+
+def _carries_note(d: dict[str, Any]) -> bool:
+    """Whether a transcript line is the Stop hook's feedback with the review note in it, as
+    opposed to the same words in a tool result (a grep of okl's own source, say) or in a message
+    another session sent and quoted them in."""
+    marker = NOTE.decode()
+    kind = d.get("type")
+    if kind == "system":
+        errors = d.get("hookErrors")
+        return isinstance(errors, list) and any(isinstance(e, str) and marker in e for e in errors)
+    if kind == "attachment":
+        att = d.get("attachment")
+        return isinstance(att, dict) and "hook" in str(att.get("type", "")) and marker in json.dumps(att)
+    if kind == "user" and not d.get("origin"):     # `origin` marks a message from another session
+        content = _message(d).get("content")
+        texts = ([content] if isinstance(content, str) else
+                 [b.get("text") for b in _blocks(d) if b.get("type") == "text"])
+        return any(isinstance(t, str) and marker in t and t.lstrip().startswith("Stop hook") for t in texts)
+    return False
+
+
+def _is_human_prompt(d: dict[str, Any]) -> bool:
+    """Whether a line is a prompt a person wrote: a user line that is not a tool result, not marked
+    meta, not from another session, and not a task notification, a reminder or hook feedback."""
+    if d.get("type") != "user" or d.get("isMeta") or d.get("origin"):
+        return False
+    content = _message(d).get("content")
+    if isinstance(content, str):
+        text = content
+    elif isinstance(content, list) and not any(b.get("type") == "tool_result" for b in _blocks(d)):
+        text = " ".join(str(b.get("text", "")) for b in _blocks(d) if b.get("type") == "text")
+    else:
+        return False
+    text = text.lstrip()
+    return bool(text) and not text.startswith(_NOT_A_PROMPT)
+
+
+def _ends_window(d: dict[str, Any]) -> bool:
+    """Whether a line closes the review: a Stop-hook summary (the session stopped) or a new prompt."""
+    return (d.get("type") == "system" and d.get("subtype") == "stop_hook_summary") or _is_human_prompt(d)
+
 
 class _Main:
     """One pass over the main transcript.
 
     Before the review starts only two cheap tests run on each line, since a long session's
     transcript is hundreds of megabytes: does it hold the note, and does it hold `--change`. From
-    the review's first call on every line is read, which is a short tail.
+    the review's first call to its end every line is read; after its end only the note matters.
     """
 
     def __init__(self) -> None:
         self.asked = False
         self.started = False
+        self.ended = False
         self.start: float | None = None
         self.review_id: str | None = None
         self.files: int | None = None
@@ -344,6 +335,8 @@ class _Main:
 
     def feed(self, line: bytes) -> None:
         has_note = NOTE in line
+        if self.ended and not has_note:
+            return
         if not self.started and not has_note and b"--change" not in line:
             return
         d = _loads(line)
@@ -352,18 +345,24 @@ class _Main:
         if has_note and _carries_note(d):
             self.asked = True
         if not self.started:
-            self._try_start(d)
-        if self.started:
-            self._event(d)
+            if self._try_start(d):
+                self._event(d)
+        elif not self.ended:
+            if _ends_window(d):
+                self.ended = True
+            else:
+                self._event(d)
 
-    def _try_start(self, d: dict[str, Any]) -> None:
+    def _try_start(self, d: dict[str, Any]) -> bool:
+        """Start the review at this line if it runs the review; whether it did."""
         for b in _blocks(d):
             inp = b.get("input")
             cmd = inp.get("command") if isinstance(inp, dict) else None
             if (b.get("type") == "tool_use" and b.get("name") == "Bash" and isinstance(cmd, str)
-                    and is_review_command(cmd)):
+                    and reviewcmd.is_review_command(cmd)):
                 self.started, self.start, self.review_id = True, _ts(d), b.get("id")
-                return
+                return True
+        return False
 
     def _event(self, d: dict[str, Any]) -> None:
         self.tally.add(d)
@@ -393,32 +392,13 @@ class _Main:
             self.listed = int(m.group(1))
 
 
-def _carries_note(d: dict[str, Any]) -> bool:
-    """Whether a transcript line is the Stop hook's feedback with the review note in it, as
-    opposed to the same words in a tool result (a grep of okl's own source, say)."""
-    marker = NOTE.decode()
-    kind = d.get("type")
-    if kind == "system":
-        errors = d.get("hookErrors")
-        return isinstance(errors, list) and any(isinstance(e, str) and marker in e for e in errors)
-    if kind == "attachment":
-        att = d.get("attachment")
-        return isinstance(att, dict) and "hook" in str(att.get("type", "")) and marker in json.dumps(att)
-    if kind == "user":
-        content = _message(d).get("content")
-        texts = ([content] if isinstance(content, str) else
-                 [b.get("text") for b in _blocks(d) if b.get("type") == "text"])
-        return any(isinstance(t, str) and marker in t and ("Stop hook" in t or "stop-okl-encode" in t)
-                   for t in texts)
-    return False
-
-
 def read_review(transcript: str | Path, *, repo_dir: str | None = None,
                 known_ids: set[str] | None = None) -> ReviewReading:
     """What the session's transcript says about its review after writing; never raises.
 
-    `repo_dir` makes the edited paths relative to the repository. `known_ids`, when given, keeps
-    only lesson ids the store has, so nothing but a lesson's id reaches a row from a command line.
+    `repo_dir` makes the edited paths and test targets relative to the repository, and is what a
+    path must be inside to be kept. `known_ids`, when given, keeps only lesson ids the store has,
+    so nothing but a lesson's id reaches a row from a command line.
     """
     path = Path(transcript)
     reading = ReviewReading(session=path.stem)
@@ -441,13 +421,8 @@ def _read(path: Path, reading: ReviewReading, repo_dir: str | None,
     if not main.started:
         return reading
     reading.files_changed, reading.lessons_listed = main.files, main.listed
-    tokens = main.tally.tokens
-    seen_tokens, last = main.tally.seen, main.tally.last
-    sub_dir = path.parent / path.stem / "subagents"
-    metas = _metas(sub_dir) if main.agents else {}
-    for tool_id, call in main.agents.items():
-        agent_id, meta = metas.get(tool_id, (call.get("agent_id"), {}))
-        check, read = _check(sub_dir, agent_id, meta, call, repo_dir=repo_dir, known_ids=known_ids)
+    tokens, seen_tokens, last = main.tally.tokens, main.tally.seen, main.tally.last
+    for check, read in _checks(main, path.parent / path.stem / "subagents", repo_dir, known_ids):
         reading.checks.append(check)
         if read:
             tokens, seen_tokens = tokens + int(check["tokens"]), True
@@ -457,6 +432,19 @@ def _read(path: Path, reading: ReviewReading, repo_dir: str | None,
     if main.start is not None and last is not None:
         reading.duration_s = max(0, round(last - main.start))
     return reading
+
+
+def _checks(main: _Main, sub_dir: Path, repo_dir: str | None,
+            known_ids: set[str] | None) -> list[tuple[dict[str, Any], dict[str, Any] | None]]:
+    """Each sub-agent the review started, in order, as the row keeps it with what its transcript held.
+    Each is matched to its meta file by the tool call that started it; without one, by the agent id
+    the call's own result named."""
+    metas = _metas(sub_dir) if main.agents else {}
+    out = []
+    for tool_id, call in main.agents.items():
+        agent_id, meta = metas.get(tool_id, (call.get("agent_id"), {}))
+        out.append(_check(sub_dir, agent_id, meta, call, repo_dir=repo_dir, known_ids=known_ids))
+    return out
 
 
 def _check(sub_dir: Path, agent_id: Any, meta: dict[str, Any], call: dict[str, Any], *,
@@ -469,16 +457,18 @@ def _check(sub_dir: Path, agent_id: Any, meta: dict[str, Any], call: dict[str, A
         read = _read_agent(sub_dir / f"agent-{agent_id}.jsonl", repo_dir)
     else:
         agent_id = None
-    ids = (read["lessons"] if read else []) + _SHOWN.findall(prompt) + show_ids(prompt)
-    lessons = list(dict.fromkeys(i for i in ids if _valid_id(i) and (known_ids is None or i in known_ids)))
+    ids = (read["lessons"] if read else []) + _SHOWN.findall(prompt) + reviewcmd.text_show_ids(prompt)
+    lessons = list(dict.fromkeys(i for i in ids if _ID.fullmatch(i) and (known_ids is None or i in known_ids)))
     check: dict[str, Any] = {
         "agent": agent_id,
-        "model": _model(meta.get("model"), meta.get("pickedEffortModel"), call.get("model"),
-                        read["model"] if read else None, call["input"].get("model")),
+        # what the sub-agent ran on, as its own transcript says; then what was asked for
+        "model": _model(read["model"] if read else None, meta.get("model"), meta.get("pickedEffortModel"),
+                        call.get("model"), call["input"].get("model")),
         "lessons": lessons[:MAX_LESSONS],
         "read": read is not None,
         "edited": bool(read and read["edited"]),
         "edited_files": read["edited_files"] if read else [],
+        "edited_outside": read["edited_outside"] if read else 0,
         "tests": read["tests"] if read else [],
         "tokens": read["tokens"] if read else None,
     }

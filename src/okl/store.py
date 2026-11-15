@@ -371,9 +371,11 @@ class ReviewRun:
 
     Only ids, paths, counts, model names and booleans: nothing a session said or wrote. Its own
     table, like the check log, so an older okl rewriting a lesson's row cannot lose it.
-    `checks` is one dict per sub-agent the review started: `agent` (its id), `model`, `lessons`
-    (the lesson ids it was given or opened), `edited`, `edited_files`, `tests`, `tokens` and
-    `read` (whether its transcript could be read; an unread one claims no edit either way).
+    `checks` is one dict per sub-agent the review started: `agent` (its id), `model` (None when
+    unknown), `lessons` (the lesson ids it was given or opened), `edited`, `edited_files` (paths in
+    the repository, relative), `edited_outside` (how many it edited elsewhere: a count, never a path),
+    `tests` (a fixed runner name, existing repository paths and the outcome), `tokens` and `read`
+    (whether its transcript could be read; an unread one claims no edit either way).
     """
 
     at: int                    # epoch milliseconds, when it was logged

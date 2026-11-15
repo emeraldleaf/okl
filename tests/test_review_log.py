@@ -1,171 +1,66 @@
-"""The review log: what each session's review after writing did, read from its transcript (#464).
+"""The review log's parser: what a transcript says the review did (#464).
 
 0.17.0 turned the review on by default as a decision, not a measured result, and named real-use
 evidence that it almost never acts as what would reverse it. Nothing collected that evidence. The
 agent runs the review and okl calls no model, so only the session's transcript sees it: that it ran,
 the sub-agents it started, the lessons each opened, what each edited, the tests run, the tokens.
-The Stop hook now reads the transcript at a later stop and keeps one row per session; `okl recap
---reviews` reads the rows back. Every transcript here is synthetic, written in the shape Claude
-Code saves: one line per content block, the main transcript beside a folder of sub-agent
-transcripts with their meta files.
+Every transcript here is synthetic, in the shape Claude Code 2.1.302 saves (tests/review_transcripts.py).
+The command, the store and the report are in test_review_command.py, the Stop hook in
+test_review_log_hook.py.
 """
 import json
-import sqlite3
-import time
-from datetime import UTC, datetime, timedelta
-from pathlib import Path
 
 import pytest
+from review_transcripts import (
+    NOTE,
+    REVIEW_OUT,
+    blob,
+    call,
+    feedback,
+    repo_root,
+    result,
+    say,
+    shown,
+    start_review,
+    stop_summary,
+    turn,
+    two_agents,
+    user,
+    write,
+)
 
-from okl import core, recap, reviewlog
-from okl import store as store_mod
-from okl.cli import main
-from okl.client import Client
-from okl.store import Store
-
-T0 = datetime(2026, 11, 14, 10, 0, 0, tzinfo=UTC)
-REVIEW_OUT = ("## OKL review after writing — r · 4 file(s) changed since main (merge base abc1234), "
-              "committed or not\n\nThis review lists 12 lesson(s) in about 1 KB. Read all of it before "
-              "you pick.\n")
-NOTE = ("REVIEW AFTER WRITING (on in this repo): before you answer the question below, check the code "
-        "this session wrote against the lessons. Run `okl check --change` and follow its steps.")
-
-
-# --- building transcripts --------------------------------------------------------------------------
-
-def _at(sec: int) -> str:
-    return (T0 + timedelta(seconds=sec)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
-
-
-def _user(sec: int, text: str) -> str:
-    return json.dumps({"type": "user", "timestamp": _at(sec), "message": {"role": "user", "content": text}})
+from okl import core, reviewcmd, reviewlog
+from okl.store import Node
 
 
-def _feedback(sec: int, note: bool = True) -> str:
-    """The Stop hook's blocking feedback, as Claude Code writes it into the transcript."""
-    text = ('Stop hook feedback:\n["$CLAUDE_PROJECT_DIR"/.claude/hooks/stop-okl-encode.sh]: '
-            + (NOTE + "\n" if note else "") + "ENCODING LOOP — before this session ends: did it surface a lesson?")
-    return json.dumps({"type": "user", "isMeta": True, "timestamp": _at(sec),
-                       "message": {"role": "user", "content": text}})
+def _read(tmp_path, **kw):
+    """The reading of the two-agent session, with its repository directory."""
+    root = repo_root(tmp_path)
+    return reviewlog.read_review(two_agents(tmp_path, root, **kw), repo_dir=str(root),
+                                 known_ids={"les-a", "les-b"})
 
 
-def _call(tid: str, name: str, **inp) -> dict:
-    return {"type": "tool_use", "id": tid, "name": name, "input": inp}
-
-
-def _say(text: str) -> dict:
-    return {"type": "text", "text": text}
-
-
-def _turn(sec: int, mid: str, *blocks: dict, usage: tuple[int, int, int, int] = (1, 1, 1, 1),
-          model: str = "claude-opus-5-5") -> str:
-    """One assistant message: Claude Code writes a line per content block, each with the whole
-    message's usage, so a message with two blocks must still be counted once."""
-    u = dict(zip(("input_tokens", "output_tokens", "cache_creation_input_tokens",
-                  "cache_read_input_tokens"), usage, strict=True))
-    return "\n".join(json.dumps({"type": "assistant", "timestamp": _at(sec), "message": {
-        "id": mid, "role": "assistant", "model": model, "content": [b], "usage": u}}) for b in blocks)
-
-
-def _result(sec: int, tid: str, text: str, *, error: bool = False, **tool_use_result) -> str:
-    line = {"type": "user", "timestamp": _at(sec), "message": {"role": "user", "content": [
-        {"type": "tool_result", "tool_use_id": tid, "content": text, "is_error": error}]}}
-    if tool_use_result:
-        line["toolUseResult"] = tool_use_result
-    return json.dumps(line)
-
-
-def _write(tmp_path: Path, main_lines: list[str], agents: dict | None = None, session: str = "sess-1") -> Path:
-    """`<projects>/<session>.jsonl`, and for each agent id (meta or None, transcript lines or None)
-    the files Claude Code keeps under `<session>/subagents/`."""
-    proj = tmp_path / "projects"
-    proj.mkdir(exist_ok=True)
-    t = proj / f"{session}.jsonl"
-    t.write_text("\n".join(main_lines) + "\n")
-    for aid, (meta, lines) in (agents or {}).items():
-        sub = proj / session / "subagents"
-        sub.mkdir(parents=True, exist_ok=True)
-        if lines is not None:
-            (sub / f"agent-{aid}.jsonl").write_text("\n".join(lines) + "\n")
-        if meta is not None:
-            (sub / f"agent-{aid}.meta.json").write_text(json.dumps(meta))
-    return t
-
-
-def _shown(lesson: str) -> str:
-    """A lesson's text as `okl show` prints it, pasted into a sub-agent's prompt."""
-    return f"[{lesson}] Rule · org · created 2026-11-01 10:00Z\n  a title\n  fix: do the thing"
-
-
-def _two_agents(tmp_path: Path, root: str = "/work/repo") -> Path:
-    """A review with two sub-agents: `aaa` opens les-a, edits a file and runs a test; `bbb` opens
-    les-b and changes nothing."""
-    main_lines = [
-        _user(0, "fix the bug"),
-        _feedback(100),
-        _turn(110, "m1", _call("tu-rev", "Bash", command="okl check --change"), usage=(10, 20, 30, 40)),
-        _result(112, "tu-rev", REVIEW_OUT),
-        # two blocks, one message: its usage (10 tokens) is on both lines and counts once
-        _turn(120, "m2", _say("starting the first"),
-              _call("tu-a1", "Agent", description="SECRET DESCRIPTION", prompt=_shown("les-a"),
-                    subagent_type="general-purpose"), usage=(1, 2, 3, 4)),
-        _result(121, "tu-a1", "launched", agentId="aaa", status="async_launched"),
-        _turn(122, "m3", _call("tu-a2", "Agent", description="second", prompt="look at les-b"),
-              usage=(1, 2, 3, 4)),
-        _result(123, "tu-a2", "launched", agentId="bbb", status="async_launched"),
-        _turn(300, "m4", _say("done"), usage=(5, 5, 5, 5)),
-    ]
-    agent_a = [
-        _turn(130, "a1", _call("x1", "Bash", command="okl show les-a"), usage=(1, 1, 1, 1)),
-        _result(131, "x1", "[les-a] Rule · org"),
-        _turn(140, "a2", _call("e1", "Edit", file_path=f"{root}/src/x.py", new_string="SECRET CODE",
-                               old_string="OLDTEXT"), usage=(1, 1, 1, 1)),
-        _result(141, "e1", "edited"),
-        _turn(150, "a3", _call("t1", "Bash", command="pytest tests/test_x.py -q 2>&1 | tail -3"),
-              usage=(1, 1, 1, 1)),
-        _result(151, "t1", "3 passed in 0.1s"),
-        _turn(160, "a4", _say("fixed"), usage=(1, 1, 1, 1)),
-    ]
-    agent_b = [
-        _turn(170, "b1", _call("y1", "Bash", command="okl show les-b"), usage=(2, 2, 2, 2), model="claude-sonnet-4-6"),
-        _result(171, "y1", "[les-b] Rule · org"),
-        _turn(250, "b2", _say("no bearing"), usage=(2, 2, 2, 2), model="claude-sonnet-4-6"),
-    ]
-    return _write(tmp_path, main_lines, {
-        "aaa": ({"toolUseId": "tu-a1", "model": "opus", "pickedEffortModel": "opus",
-                 "description": "SECRET DESCRIPTION"}, agent_a),
-        "bbb": ({"toolUseId": "tu-a2", "model": "sonnet"}, agent_b)})
-
-
-# --- what the transcript says --------------------------------------------------------------------
+# --- the review, and what it opened and edited --------------------------------------------------
 
 def test_a_review_with_two_subagents_one_that_edits_and_one_that_does_not(tmp_path):
-    """Asked, run, the files and lessons its own output named, then per sub-agent: its model from the
-    meta file, the lessons it opened, whether and what it edited, the tests it ran with their outcome."""
-    t = _two_agents(tmp_path)
-
-    r = reviewlog.read_review(t, repo_dir="/work/repo", known_ids={"les-a", "les-b"})
+    """Asked, run, the files and lessons its own output named, then per sub-agent: its model, the
+    lessons it opened, whether and what it edited, the tests it ran with their outcome."""
+    r = _read(tmp_path)
 
     assert (r.session, r.readable, r.asked, r.ran, r.loggable) == ("sess-1", True, True, True, True)
     assert (r.files_changed, r.lessons_listed) == (4, 12)
     a, b = r.checks
-    assert (a["agent"], a["model"], a["lessons"], a["read"]) == ("aaa", "opus", ["les-a"], True)
-    assert (a["edited"], a["edited_files"]) == (True, ["src/x.py"])          # relative to the repository
+    # the model its own transcript names, a full id, over the alias in the meta file
+    assert (a["agent"], a["model"], a["lessons"], a["read"]) == ("aaa", "claude-opus-5-5", ["les-a"], True)
+    assert (a["edited"], a["edited_files"], a["edited_outside"]) == (True, ["src/x.py"], 0)
     assert a["tests"] == [{"runner": "pytest", "targets": ["tests/test_x.py"], "outcome": "passed"}]
     assert (b["agent"], b["model"], b["lessons"], b["edited"], b["edited_files"], b["tests"]) == (
-        "bbb", "sonnet", ["les-b"], False, [], [])
+        "bbb", "claude-sonnet-4-6", ["les-b"], False, [], [])
     # tokens: the main transcript's messages from the first call on (100 + 10 + 10 + 20, the two-block
-    # message once) and every sub-agent's (4 messages of 4, 2 of 8); the time runs to the last event
+    # message once, the blob lines none) and every sub-agent's (4 messages of 4, 2 of 8); the time
+    # runs from the first call to the last event
     assert r.tokens == 140 + 16 + 16
     assert r.duration_s == 300 - 110
-
-
-def test_a_row_holds_no_code_and_no_session_text(tmp_path):
-    """Ids, paths, counts, model names and booleans: not the edit's text, not the sub-agent's description."""
-    r = reviewlog.read_review(_two_agents(tmp_path), repo_dir="/work/repo")
-
-    stored = json.dumps([r.checks, r.session, r.files_changed])
-    assert not any(w in stored for w in ("SECRET", "OLDTEXT", "launched", "fixed"))
 
 
 def test_the_marker_is_the_start_of_the_note_the_hook_prints():
@@ -174,15 +69,36 @@ def test_the_marker_is_the_start_of_the_note_the_hook_prints():
     assert core.REVIEW_NOTE.startswith(reviewlog.NOTE.decode())
 
 
+def test_the_counts_are_read_from_the_wording_the_review_prints(tmp_path):
+    """The files and lessons come from `okl check --change`'s own text. A change to that wording must
+    fail here, not turn every row's counts to None."""
+    menu = core.review_menu([Node(id="a", type="Rule", title="a", scope="org"),
+                             Node(id="b", type="Rule", title="b", scope="org")], "r", None)
+    text = core.render_review({"repo": "r", "base": "main", "merge_base": "abc1234def",
+                               "files": ["x.py", "y.py", "z.py"], "lessons": menu})
+    none = core.render_review({"repo": "r", "base": "main", "files": [], "lessons": []})
+
+    def reading(out, name):
+        lines = [user(0, "x"), feedback(5),
+                 turn(10, "m1", call("tu-rev", "Bash", command="okl check --change"), usage=(1, 1, 1, 1)),
+                 result(11, "tu-rev", out)]
+        return reviewlog.read_review(write(tmp_path, lines, session=name))
+
+    r = reading(text, "listed")
+    assert (r.files_changed, r.lessons_listed) == (3, 2)
+    empty = reading(none, "empty")
+    assert (empty.files_changed, empty.lessons_listed) == (0, None)
+
+
 def test_a_review_with_no_subagents(tmp_path):
     """The agent that cannot start a sub-agent checks the lessons itself: a review that ran with no
     checks, and its own tokens and time."""
-    t = _write(tmp_path, [
-        _user(0, "x"), _feedback(10),
-        _turn(20, "m1", _call("tu-rev", "Bash", command="cd /work/repo && okl check --change main | head -80"),
-              usage=(1, 1, 1, 1)),
-        _result(21, "tu-rev", REVIEW_OUT),
-        _turn(90, "m2", _say("checked them myself"), usage=(2, 2, 2, 2))])
+    t = write(tmp_path, [
+        user(0, "x"), feedback(10),
+        turn(20, "m1", call("tu-rev", "Bash", command="cd /work/repo && okl check --change main | head -80"),
+             usage=(1, 1, 1, 1)),
+        result(21, "tu-rev", REVIEW_OUT),
+        turn(90, "m2", say("checked them myself"), usage=(2, 2, 2, 2))])
 
     r = reviewlog.read_review(t)
 
@@ -192,8 +108,8 @@ def test_a_review_with_no_subagents(tmp_path):
 
 def test_the_note_was_shown_but_no_review_ran(tmp_path):
     """The review asked for and skipped: a row that says so, with no tokens or time to claim."""
-    t = _write(tmp_path, [_user(0, "x"), _feedback(10),
-                          _turn(20, "m1", _say("nothing worth recording"), usage=(9, 9, 9, 9))])
+    t = write(tmp_path, [user(0, "x"), feedback(10),
+                         turn(20, "m1", say("nothing worth recording"), usage=(9, 9, 9, 9))])
 
     r = reviewlog.read_review(t)
 
@@ -203,40 +119,193 @@ def test_the_note_was_shown_but_no_review_ran(tmp_path):
 
 def test_no_note_and_no_review_is_not_logged(tmp_path):
     """A session the hook never asked, with no review run, says nothing about the review."""
-    t = _write(tmp_path, [_user(0, "x"), _feedback(10, note=False), _turn(20, "m1", _say("ok"))])
+    t = write(tmp_path, [user(0, "x"), feedback(10, note=False), turn(20, "m1", say("ok"))])
 
     r = reviewlog.read_review(t)
 
     assert (r.readable, r.asked, r.ran, r.loggable) == (True, False, False, False)
 
 
-def test_the_words_in_a_tool_result_are_not_the_note_and_the_hooks_own_call_is_not_the_review(tmp_path):
-    """okl's own source and docs hold the note's words and `okl check --change`: a grep that prints
-    them, or the hook-format call, must not read as a request or a review."""
-    t = _write(tmp_path, [
-        _user(0, "x"),
-        _turn(5, "m1", _call("g", "Bash", command="grep -rn 'REVIEW AFTER WRITING' src")),
-        _result(6, "g", f"src/okl/core.py:1598:REVIEW_NOTE = {NOTE}"),
-        _turn(7, "m2", _call("h", "Bash", command="okl check --change --format hook"), usage=(1, 1, 1, 1)),
-        _result(8, "h", NOTE)])
+def test_the_words_in_a_tool_result_or_a_peers_message_are_not_the_note(tmp_path):
+    """okl's own source holds the note's words, and another session may quote the hook's feedback to
+    this one: neither is a request from this session's Stop hook."""
+    t = write(tmp_path, [
+        user(0, "x"),
+        turn(5, "m1", call("g", "Bash", command="grep -rn 'REVIEW AFTER WRITING' src")),
+        result(6, "g", f"src/okl/core.py:1598:REVIEW_NOTE = {NOTE}"),
+        user(7, f'<agent-message from="reviewer">Stop hook feedback:\n[stop-okl-encode.sh]: {NOTE}</agent-message>',
+             isMeta=True, origin={"kind": "peer", "name": "reviewer"})])
+
+    assert reviewlog.read_review(t).asked is False
+
+
+# --- which command starts a review ---------------------------------------------------------------
+
+@pytest.mark.parametrize("command", [
+    "grep -R 'okl check --change' docs/",
+    "echo 'okl check --change'",
+    'git commit -m "run okl check --change before you push"',
+    "cat <<'EOF'\nokl check --change\nEOF",
+    "python3 -c \"import os; os.system('okl check --change')\"",
+    "echo \"a; okl check --change\"",
+    "okl check --change --format hook",
+    "okl check --task 'add a login page'",
+    "git diff --change",
+    "rg okl check --change",
+])
+def test_a_command_that_only_mentions_the_review_does_not_start_one(tmp_path, command):
+    """A grep, an echo, a commit message, a heredoc, a `python -c` string and the hook's own call are
+    text or another command: the review ran only where okl was the command word."""
+    t = write(tmp_path, [user(0, "x"), turn(20, "m1", call("tu", "Bash", command=command), usage=(5, 5, 5, 5)),
+                         result(21, "tu", REVIEW_OUT)])
 
     r = reviewlog.read_review(t)
 
-    assert (r.asked, r.ran) == (False, False)
+    assert (r.ran, r.tokens, r.checks) == (False, None, [])
 
+
+@pytest.mark.parametrize("command", [
+    "okl check --change",
+    "FOO=1 okl check --change main",
+    "/home/me/.venv/bin/okl check --change",
+    "python3 -m okl check --format json --change origin/main",
+    ".venv/bin/python -m okl check --change",
+    '"$OKL" check --change 2>&1 | head',
+    '"${OKL[@]}" check --change',
+    "cd /work/repo && okl check --change | head -80",
+    "time uv run okl check --change",
+    "echo start; okl check --change",
+])
+def test_an_executed_command_starts_the_review(tmp_path, command):
+    """okl as the command word: bare, by path, through python, through the variable a script keeps it in."""
+    assert reviewcmd.is_review_command(command)
+    t = write(tmp_path, [user(0, "x"), turn(20, "m1", call("tu", "Bash", command=command), usage=(5, 5, 5, 5)),
+                         result(21, "tu", REVIEW_OUT)])
+
+    assert reviewlog.read_review(t).ran is True
+
+
+def test_the_review_starts_at_the_executed_command_not_at_an_earlier_mention(tmp_path):
+    """A grep for the command comes first and costs tokens; the window opens at the run after it."""
+    t = write(tmp_path, [
+        user(0, "x"), feedback(5),
+        turn(10, "m0", call("g", "Bash", command="grep -rn 'okl check --change' docs"), usage=(500, 0, 0, 0)),
+        result(11, "g", "docs/COMMANDS.md:106:okl check --change [BASE]"),
+        turn(100, "m1", call("tu-rev", "Bash", command="okl check --change"), usage=(1, 1, 1, 1)),
+        result(101, "tu-rev", REVIEW_OUT),
+        turn(160, "m2", say("done"), usage=(2, 2, 2, 2))])
+
+    r = reviewlog.read_review(t)
+
+    assert (r.ran, r.tokens, r.duration_s) == (True, 4 + 8, 60)
+
+
+# --- the review's window -------------------------------------------------------------------------
+
+def test_a_later_unrelated_turn_is_not_the_review(tmp_path):
+    """A person's next prompt ends the review. The work after it, with its own sub-agent that opens a
+    lesson and edits a file, changes neither the tokens, the time nor the checks."""
+    root = repo_root(tmp_path)
+    later = call("tu-later", "Agent", prompt="build the export; first okl show les-b", model="opus")
+    tail = [turn(300, "m4", say("done"), usage=(5, 5, 5, 5)),
+            user(7200, "now build the export feature"),
+            turn(7210, "m5", later, usage=(5000, 0, 0, 0)), result(7211, "tu-later", "launched", agentId="ccc"),
+            blob(later),
+            turn(9000, "m6", say("feature done"), usage=(900000, 0, 0, 0))]
+    work = [turn(7220, "z1", call("s", "Bash", command="okl show les-b"), usage=(1, 1, 1, 1)),
+            turn(7300, "z2", call("w", "Write", file_path=f"{root}/src/export.py"), usage=(1, 1, 1, 1)),
+            result(7301, "w", "written")]
+    t = two_agents(tmp_path, root, tail=tail)
+    sub = t.parent / "sess-1" / "subagents"
+    (sub / "agent-ccc.jsonl").write_text("\n".join(work) + "\n")
+    (sub / "agent-ccc.meta.json").write_text(json.dumps({"toolUseId": "tu-later", "model": "opus"}))
+
+    r = reviewlog.read_review(t, repo_dir=str(root), known_ids={"les-a", "les-b"})
+    base = _read(tmp_path / "again")
+
+    assert [c["agent"] for c in r.checks] == ["aaa", "bbb"]
+    assert (r.tokens, r.duration_s) == (base.tokens, base.duration_s) == (172, 190)
+    assert all("les-b" not in c["lessons"] or c["agent"] == "bbb" for c in r.checks)
+    assert [c["edited"] for c in r.checks] == [True, False]
+
+
+def test_a_stop_hook_summary_ends_the_review(tmp_path):
+    """The session stopped: whatever the agent does after the stop, say a resumed turn, is not the review."""
+    root = repo_root(tmp_path)
+    later = call("tu-late", "Agent", prompt="more work")
+    tail = [turn(300, "m4", say("done"), usage=(5, 5, 5, 5)), stop_summary(305),
+            turn(400, "m5", later, usage=(7000, 0, 0, 0)), result(401, "tu-late", "launched", agentId="ddd")]
+
+    r = reviewlog.read_review(two_agents(tmp_path, root, tail=tail), repo_dir=str(root))
+
+    assert [c["agent"] for c in r.checks] == ["aaa", "bbb"]
+    assert (r.tokens, r.duration_s) == (172, 190)
+
+
+def test_lines_no_person_wrote_do_not_end_the_review(tmp_path):
+    """A task notification, a reminder, the hook's feedback, a peer's message and a tool result are all
+    user lines, and none is a prompt: the review goes on past them."""
+    root = repo_root(tmp_path)
+    second = call("tu-a3", "Agent", prompt=shown("les-b"))
+    tail = [user(200, "<task-notification>agent aaa finished</task-notification>"),
+            user(201, "<system-reminder>a reminder</system-reminder>", isMeta=True),
+            feedback(202),
+            user(203, "<agent-message>a peer says hello</agent-message>", isMeta=True, origin={"kind": "peer"}),
+            turn(210, "m5", second, usage=(1, 1, 1, 1)), result(211, "tu-a3", "launched", agentId="eee"),
+            turn(300, "m4", say("done"), usage=(5, 5, 5, 5))]
+
+    r = reviewlog.read_review(two_agents(tmp_path, root, tail=tail), repo_dir=str(root))
+
+    assert [c["agent"] for c in r.checks] == ["aaa", "bbb", "eee"]
+
+
+# --- the shape Claude Code 2.1.302 writes ----------------------------------------------------------
+
+def test_a_blob_line_repeating_a_refused_edit_does_not_make_it_an_edit(tmp_path):
+    """2.1.302 writes an `api-request-blob` line that repeats an assistant message's tool_use after its
+    result. Read as a call, it re-opens an edit the tool refused, and the sub-agent edited nothing."""
+    root = repo_root(tmp_path)
+    edit = call("e1", "Edit", file_path=f"{root}/src/x.py", old_string="a", new_string="b")
+    run = call("t1", "Bash", command="pytest tests/test_x.py")
+    agent = [turn(40, "x1", edit, usage=(1, 1, 1, 1)),
+             result(41, "e1", "<tool_use_error>String to replace not found</tool_use_error>", error=True),
+             blob(edit),
+             turn(50, "x2", run, usage=(1, 1, 1, 1)), result(51, "t1", "3 passed in 0.1s"), blob(run)]
+    t = write(tmp_path, [*start_review(),
+                         turn(120, "m2", call("tu-a", "Agent", prompt="p"), usage=(1, 1, 1, 1)),
+                         result(121, "tu-a", "launched", agentId="fff")], {"fff": (None, agent)})
+
+    (c,) = reviewlog.read_review(t, repo_dir=str(root)).checks
+
+    assert c["edited"] is False and c["edited_files"] == [] and c["edited_outside"] == 0
+    assert c["tests"] == [{"runner": "pytest", "targets": ["tests/test_x.py"], "outcome": "passed"}]   # once
+
+
+def test_a_call_counts_once_in_the_main_transcript_too(tmp_path):
+    """The blob that repeats the review command and the Agent call neither starts a second review
+    nor makes a second check."""
+    rev = call("tu-rev", "Bash", command="okl check --change")
+    agent_call = call("tu-a", "Agent", prompt="p")
+    t = write(tmp_path, [user(0, "x"), feedback(5),
+                         turn(10, "m1", rev, usage=(1, 1, 1, 1)), result(11, "tu-rev", REVIEW_OUT), blob(rev),
+                         turn(20, "m2", agent_call, usage=(1, 1, 1, 1)),
+                         result(21, "tu-a", "launched", agentId="ggg"), blob(agent_call), blob(agent_call)])
+
+    r = reviewlog.read_review(t)
+
+    assert len(r.checks) == 1 and (r.files_changed, r.lessons_listed) == (4, 12)
+
+
+# --- sub-agents that cannot be read ----------------------------------------------------------------
 
 def test_a_subagent_whose_meta_file_is_missing_is_found_by_the_agent_id_the_call_returned(tmp_path):
     """The meta file ties a sub-agent to its call by tool id; without it the call's own result names
-    the agent, and the model falls back to the sub-agent's transcript."""
-    main_lines = [
-        _user(0, "x"), _feedback(10),
-        _turn(20, "m1", _call("tu-rev", "Bash", command="okl check --change"), usage=(1, 1, 1, 1)),
-        _result(21, "tu-rev", REVIEW_OUT),
-        _turn(30, "m2", _call("tu-a", "Agent", prompt="check it"), usage=(1, 1, 1, 1)),
-        _result(31, "tu-a", "launched", agentId="ccc")]
-    agent = [_turn(40, "c1", _call("x", "Bash", command="okl show les-c"), usage=(1, 1, 1, 1),
-                   model="claude-sonnet-4-6"), _result(41, "x", "text")]
-    t = _write(tmp_path, main_lines, {"ccc": (None, agent)})
+    the agent, and the model comes from the sub-agent's transcript."""
+    agent = [turn(40, "c1", call("x", "Bash", command="okl show les-c"), usage=(1, 1, 1, 1),
+                  model="claude-sonnet-4-6"), result(41, "x", "text")]
+    t = write(tmp_path, [*start_review(),
+                         turn(130, "m2", call("tu-a", "Agent", prompt="check it"), usage=(1, 1, 1, 1)),
+                         result(131, "tu-a", "launched", agentId="ccc")], {"ccc": (None, agent)})
 
     (c,) = reviewlog.read_review(t).checks
 
@@ -246,12 +315,12 @@ def test_a_subagent_whose_meta_file_is_missing_is_found_by_the_agent_id_the_call
 def test_a_subagent_with_neither_meta_nor_transcript_is_recorded_as_unread(tmp_path):
     """What cannot be read is left out, not guessed: no edit is claimed either way, and the lesson
     its prompt carried (as `okl show` prints it) is still named."""
-    t = _write(tmp_path, [
-        _user(0, "x"),
-        _turn(20, "m1", _call("tu-rev", "Bash", command="okl check --change"), usage=(1, 1, 1, 1)),
-        _result(21, "tu-rev", REVIEW_OUT),
-        _turn(30, "m2", _call("tu-a", "Agent", prompt=_shown("les-z"), model="haiku"), usage=(1, 1, 1, 1)),
-        _result(31, "tu-a", "plain text, no agent id")])
+    t = write(tmp_path, [
+        user(0, "x"),
+        turn(20, "m1", call("tu-rev", "Bash", command="okl check --change"), usage=(1, 1, 1, 1)),
+        result(21, "tu-rev", REVIEW_OUT),
+        turn(30, "m2", call("tu-a", "Agent", prompt=shown("les-z"), model="haiku"), usage=(1, 1, 1, 1)),
+        result(31, "tu-a", "plain text, no agent id")])
 
     (c,) = reviewlog.read_review(t).checks
 
@@ -261,11 +330,11 @@ def test_a_subagent_with_neither_meta_nor_transcript_is_recorded_as_unread(tmp_p
 
 def test_a_meta_file_whose_transcript_is_missing_is_unread(tmp_path):
     """The meta file names the agent and its model, but with no transcript nothing else is known."""
-    t = _write(tmp_path, [
-        _user(0, "x"),
-        _turn(20, "m1", _call("tu-rev", "Bash", command="okl check --change"), usage=(1, 1, 1, 1)),
-        _result(21, "tu-rev", REVIEW_OUT),
-        _turn(30, "m2", _call("tu-a", "Task", prompt=_shown("les-a")), usage=(1, 1, 1, 1))],
+    t = write(tmp_path, [
+        user(0, "x"),
+        turn(20, "m1", call("tu-rev", "Bash", command="okl check --change"), usage=(1, 1, 1, 1)),
+        result(21, "tu-rev", REVIEW_OUT),
+        turn(30, "m2", call("tu-a", "Task", prompt=shown("les-a")), usage=(1, 1, 1, 1))],
         {"ddd": ({"toolUseId": "tu-a", "model": "opus"}, None)})
 
     (c,) = reviewlog.read_review(t).checks
@@ -290,232 +359,148 @@ def test_an_unreadable_transcript_never_raises(tmp_path, make):
     assert r.readable is (make in ("garbage", "empty"))
 
 
-def test_an_edit_the_tool_refused_is_not_an_edit(tmp_path):
-    """A call whose result is an error changed nothing; one the transcript has no result for is counted."""
-    t = _write(tmp_path, [
-        _user(0, "x"),
-        _turn(20, "m1", _call("tu-rev", "Bash", command="okl check --change"), usage=(1, 1, 1, 1)),
-        _result(21, "tu-rev", REVIEW_OUT),
-        _turn(30, "m2", _call("tu-a", "Agent", prompt="p"), usage=(1, 1, 1, 1)),
-        _result(31, "tu-a", "launched", agentId="eee")], {"eee": (None, [
-            _turn(40, "e1", _call("x1", "Edit", file_path="/r/a.py"), usage=(1, 1, 1, 1)),
-            _result(41, "x1", "String to replace not found", error=True),
-            _turn(42, "e2", _call("x2", "mcp__okl__okl_get", id="les-a"), usage=(1, 1, 1, 1))])})
+# --- the model -------------------------------------------------------------------------------------
+
+def test_the_model_is_the_one_the_subagent_ran_on_and_inherit_names_none(tmp_path):
+    """The transcript's own model first, then the meta file's; `inherit` is not a model, so it is null."""
+    def agent(model, meta_model):
+        return ({"toolUseId": "tu-a", "model": meta_model},
+                [turn(40, "c1", say("hi"), usage=(1, 1, 1, 1), model=model)] if model else [user(40, "no reply")])
+
+    def model_of(name, spec):
+        t = write(tmp_path, [*start_review(),
+                             turn(130, "m2", call("tu-a", "Agent", prompt="p"), usage=(1, 1, 1, 1))],
+                  {"aaa": spec}, session=name)
+        return reviewlog.read_review(t).checks[0]["model"]
+
+    assert model_of("full", agent("claude-sonnet-4-6", "opus")) == "claude-sonnet-4-6"
+    assert model_of("alias", agent(None, "sonnet")) == "sonnet"
+    assert model_of("inherit", agent(None, "inherit")) is None
+    assert model_of("synthetic", agent("<synthetic>", "inherit")) is None
+    assert model_of("both", agent("claude-opus-5-5", "inherit")) == "claude-opus-5-5"
+
+
+# --- what is kept ----------------------------------------------------------------------------------
+
+def test_an_edit_the_tool_refused_is_not_an_edit_and_the_mcp_tool_counts_as_opened(tmp_path):
+    """A call whose result is an error changed nothing; `okl_get`'s id is a lesson opened."""
+    t = write(tmp_path, [
+        *start_review(),
+        turn(30, "m2", call("tu-a", "Agent", prompt="p"), usage=(1, 1, 1, 1)),
+        result(31, "tu-a", "launched", agentId="eee")], {"eee": (None, [
+            turn(40, "e1", call("x1", "Edit", file_path="/r/a.py"), usage=(1, 1, 1, 1)),
+            result(41, "x1", "String to replace not found", error=True),
+            turn(42, "e2", call("x2", "mcp__okl__okl_get", id="les-a"), usage=(1, 1, 1, 1))])})
 
     (c,) = reviewlog.read_review(t).checks
 
-    assert c["edited"] is False and c["lessons"] == ["les-a"]     # the MCP tool's id counts as opened
+    assert c["edited"] is False and c["lessons"] == ["les-a"]
+
+
+def test_a_path_outside_the_repository_is_a_count_never_a_path(tmp_path):
+    """An edit elsewhere (a home directory, a scratch folder) says only that the sub-agent edited."""
+    root = repo_root(tmp_path)
+    t = write(tmp_path, [
+        *start_review(),
+        turn(30, "m2", call("tu-a", "Agent", prompt="p"), usage=(1, 1, 1, 1)),
+        result(31, "tu-a", "launched", agentId="eee")], {"eee": (None, [
+            turn(40, "e1", call("x1", "Edit", file_path="/home/jane/secret-project/notes.md"), usage=(1, 1, 1, 1)),
+            result(41, "x1", "edited"),
+            turn(42, "e2", call("x2", "Write", file_path=f"{root}/../elsewhere.py"), usage=(1, 1, 1, 1)),
+            result(43, "x2", "written"),
+            turn(44, "e3", call("x3", "Write", file_path=f"{root}/src/in.py"), usage=(1, 1, 1, 1)),
+            result(45, "x3", "written")])})
+
+    (c,) = reviewlog.read_review(t, repo_dir=str(root)).checks
+
+    assert (c["edited"], c["edited_files"], c["edited_outside"]) == (True, ["src/in.py"], 2)
+    assert "jane" not in json.dumps(c) and "elsewhere" not in json.dumps(c)
 
 
 def test_only_lessons_the_store_has_reach_a_row(tmp_path):
     """A command line is session text: an id that is no lesson here, or no id at all, is dropped."""
-    t = _write(tmp_path, [
-        _user(0, "x"),
-        _turn(20, "m1", _call("tu-rev", "Bash", command="okl check --change"), usage=(1, 1, 1, 1)),
-        _result(21, "tu-rev", REVIEW_OUT),
-        _turn(30, "m2", _call("tu-a", "Agent", prompt="p"), usage=(1, 1, 1, 1)),
-        _result(31, "tu-a", "launched", agentId="fff")], {"fff": (None, [
-            _turn(40, "f1", _call("x1", "Bash", command="okl show les-a; okl show 'rm -rf /'; okl show nope"),
-                  usage=(1, 1, 1, 1))])})
+    t = write(tmp_path, [
+        user(0, "x"),
+        turn(20, "m1", call("tu-rev", "Bash", command="okl check --change"), usage=(1, 1, 1, 1)),
+        result(21, "tu-rev", REVIEW_OUT),
+        turn(30, "m2", call("tu-a", "Agent", prompt="p"), usage=(1, 1, 1, 1)),
+        result(31, "tu-a", "launched", agentId="fff")], {"fff": (None, [
+            turn(40, "f1", call("x1", "Bash", command="okl show les-a; okl show 'rm -rf /'; okl show nope"),
+                 usage=(1, 1, 1, 1))])})
 
     (c,) = reviewlog.read_review(t, known_ids={"les-a"}).checks
     (open_c,) = reviewlog.read_review(t).checks
 
     assert c["lessons"] == ["les-a"]
-    assert open_c["lessons"] == ["les-a", "rm", "nope"]     # without the store, only the id's shape is held
+    # without the store only an id's shape is held: `nope` passes it, a quoted sentence does not
+    assert open_c["lessons"] == ["les-a", "nope"]
+
+
+def test_a_row_holds_no_code_and_no_session_text(tmp_path):
+    """Ids, paths, counts, model names and booleans: not the edit's text, not the sub-agent's description."""
+    r = _read(tmp_path)
+
+    stored = json.dumps([r.checks, r.session, r.files_changed])
+    assert not any(w in stored for w in ("SECRET", "OLDTEXT", "launched", "fixed"))
+
+
+# a path that exists for each name a command line can hide a secret in: the existence test alone
+# would keep them, so only skipping the flag's value, and what follows `--`, keeps them out
+_SECRET_DIRS = ["api_key", "s3cr3t", "jane.doe@corp.com", "TestLogin", "tests"]
+
+
+@pytest.mark.parametrize(("command", "expected"), [
+    ("mvn -Ddb.password=hunter2 -Dsonar.login=sqp_abc123 test", ("mvn test", [])),
+    ('pytest -k "api_key/abc"', ("pytest", [])),
+    ("pytest tests/test_x.py -- --password s3cr3t/abc", ("pytest", ["tests/test_x.py"])),
+    ('npx mocha --grep "jane.doe@corp.com/x" tests/test_x.py', ("mocha", ["tests/test_x.py"])),
+    ("go test -run TestLogin/with_password_hunter2 ./...", ("go test", [])),
+    ("pytest -m 's3cr3t/abc' tests/test_x.py::test_a", ("pytest", ["tests/test_x.py"])),
+    ("jest -t 'api_key/abc' --testNamePattern x tests", ("jest", ["tests"])),
+    ("API_TOKEN=sqp_abc123 python3 -m pytest tests/test_x.py", ("pytest", ["tests/test_x.py"])),
+])
+def test_a_test_run_keeps_a_fixed_runner_and_existing_paths_only(tmp_path, command, expected):
+    """The runner is a fixed name, never the matched text; a target is a path that exists in the
+    repository; the value of -k, -m, --grep, -run, -t and --test-name-pattern, and everything after
+    `--`, is never read; and a secret in the command line is nowhere in the row."""
+    root = repo_root(tmp_path)
+    for d in _SECRET_DIRS:
+        (root / d).mkdir(exist_ok=True)
+        (root / d / "abc").write_text("x")
+        (root / d / "x").write_text("x")
+    (root / "TestLogin" / "with_password_hunter2").write_text("x")
+    agent = [turn(40, "x1", call("t1", "Bash", command=command), usage=(1, 1, 1, 1)),
+             result(41, "t1", "1 passed in 0.1s")]
+    t = write(tmp_path, [*start_review(),
+                         turn(130, "m2", call("tu-a", "Agent", prompt="p"), usage=(1, 1, 1, 1)),
+                         result(131, "tu-a", "launched", agentId="ggg")], {"ggg": (None, agent)})
+
+    (c,) = reviewlog.read_review(t, repo_dir=str(root)).checks
+
+    (run,) = c["tests"]
+    assert (run["runner"], run["targets"]) == expected
+    stored = json.dumps(c)
+    assert not any(w in stored for w in ("hunter2", "sqp_abc123", "api_key", "s3cr3t", "jane.doe", "TestLogin",
+                                         "password", "API_TOKEN"))
 
 
 def test_the_commands_the_parser_recognizes():
-    """The review's command, the lessons `okl show` names, and a test run: a mention is not a run."""
-    assert reviewlog.is_review_command("okl check --change")
-    assert reviewlog.is_review_command("python3 -m okl check --format json --change origin/main")
-    assert reviewlog.is_review_command('"$OKL" check --change 2>&1 | head')
-    assert not reviewlog.is_review_command("okl check --change --format hook")
-    assert not reviewlog.is_review_command("okl check --task 'add a login page'")
-    assert not reviewlog.is_review_command("git diff --change")
-    assert reviewlog.show_ids("okl show a; okl show --format json b && okl show c --format json") == ["a", "b", "c"]
-    assert reviewlog.parse_test_run("FOO=1 .venv/bin/pytest -q tests/a.py::test_x tests/sub/") == (
-        "pytest", ["tests/a.py", "tests/sub/"])
-    assert reviewlog.parse_test_run("cd app && npm run test -- src/x.test.ts")[0] == "npm run test"
-    assert reviewlog.parse_test_run("grep -rn pytest docs/") is None
-    assert reviewlog.parse_test_run("ruff check .") is None
-    assert reviewlog.parse_test_outcome(False, "5 passed in 1s") == "passed"
-    assert reviewlog.parse_test_outcome(False, "5 passed, 1 failed") == "failed"
-    assert reviewlog.parse_test_outcome(True, "Exit code 1") == "failed"
-    assert reviewlog.parse_test_outcome(False, "collected nothing") == "unknown"
-
-
-# --- the store ---------------------------------------------------------------------------------
-
-def test_a_session_logged_again_replaces_its_row(tmp_path):
-    """One row per (session, repo): the transcript grew since the last stop, so the last reading wins."""
-    s = Store(f"sqlite:///{tmp_path / 'okl.db'}")
-    check = {"agent": "a", "model": "opus", "lessons": ["l1"], "edited": True, "edited_files": ["x.py"],
-             "tests": [], "tokens": 5, "read": True}
-    s.log_review("s1", "r", asked=True, ran=False)
-    s.log_review("s1", "r", asked=True, ran=True, files_changed=3, lessons_listed=9, tokens=100,
-                 duration_s=40, checks=[check])
-    s.log_review("s1", "other", asked=False, ran=True)
-    s.log_review("s2", "r", asked=True, ran=False)
-
-    mine = s.reviews("r")
-
-    assert [(x.session_id, x.asked, x.ran) for x in mine] == [("s1", True, True), ("s2", True, False)]
-    first = mine[0]
-    assert (first.files_changed, first.lessons_listed, first.tokens, first.duration_s) == (3, 9, 100, 40)
-    assert first.checks == (check,) and isinstance(first.asked, bool)
-    assert (mine[1].files_changed, mine[1].tokens, mine[1].checks) == (None, None, ())
-    assert len(s.reviews()) == 3 and [x.repo for x in s.reviews("other")] == ["other"]
-
-
-def test_a_store_from_before_the_log_gains_its_table_when_opened(tmp_path):
-    """An older okl never made `review_run`: opening the store makes it, and keeps what was in it."""
-    path = tmp_path / "okl.db"
-    s = Store(f"sqlite:///{path}")
-    s.add_node(store_mod.Node(id="l1", type="Rule", scope="org", title="a lesson"))
-    s.close()
-    db = sqlite3.connect(path)
-    db.execute("DROP TABLE review_run"); db.commit(); db.close()
-
-    reopened = Store(f"sqlite:///{path}")
-    reopened.log_review("s", "r", asked=True, ran=False)
-
-    assert [x.session_id for x in reopened.reviews()] == ["s"]
-    assert reopened.get_node("l1") is not None
-
-
-# --- the command -----------------------------------------------------------------------------------
-
-@pytest.fixture
-def repo(tmp_path, monkeypatch):
-    """A configured repository with a local store and two lessons."""
-    r = tmp_path / "repo"; (r / ".okl").mkdir(parents=True)
-    (r / ".okl" / "config.json").write_text(json.dumps({"repo": "r"}))
-    monkeypatch.chdir(r)
-    c = Client()
-    c.record(id="les-a", type="Rule", title="the first lesson", scope="org")
-    c.record(id="les-b", type="Rule", title="the second lesson", scope="org")
-    return r
-
-
-def _rows(repo: Path):
-    return Client()._local_store().reviews("r")
-
-
-def test_log_review_writes_the_row_and_exits_0(repo, tmp_path, capsys):
-    """The command reads the transcript, writes the row with paths relative to the repository, and a
-    later stop of the same session replaces it rather than adding a second."""
-    t = _two_agents(tmp_path, root=str(repo))
-
-    assert main(["recap", "--transcript", str(t), "--log-review"]) == 0
-
-    assert "logged session sess-1" in capsys.readouterr().out
-    (row,) = _rows(repo)
-    assert (row.session_id, row.asked, row.ran, row.files_changed, row.lessons_listed) == ("sess-1", True, True, 4, 12)
-    assert [c["lessons"] for c in row.checks] == [["les-a"], ["les-b"]]
-    assert row.checks[0]["edited_files"] == ["src/x.py"]       # relative to the repository okl runs in
-    # a later stop of the same session replaces the row
-    assert main(["recap", "--transcript", str(t), "--log-review"]) == 0
-    assert len(_rows(repo)) == 1
-
-
-def test_log_review_exits_0_and_writes_nothing_when_there_was_no_review(repo, tmp_path, capsys):
-    """A session with no review, and a transcript that cannot be read, are both exit 0 and no row."""
-    quiet = _write(tmp_path, [_user(0, "x"), _turn(5, "m1", _say("ok"))], session="quiet")
-
-    assert main(["recap", "--transcript", str(quiet), "--log-review"]) == 0
-    assert "nothing logged" in capsys.readouterr().out
-    assert main(["recap", "--transcript", str(tmp_path / "gone.jsonl"), "--log-review"]) == 0
-    assert "cannot read" in capsys.readouterr().err
-    assert _rows(repo) == []
-
-
-def test_log_review_exits_2_only_when_the_store_cannot_be_written(repo, tmp_path, monkeypatch, capsys):
-    """Exit 2 is for a store that refuses the write, and for no transcript named; nothing else."""
-    t = _two_agents(tmp_path)
-
-    def refuse(self, run):
-        raise sqlite3.OperationalError("attempt to write a readonly database")
-    monkeypatch.setattr(store_mod._SQLiteBackend, "log_review", refuse)
-
-    assert main(["recap", "--transcript", str(t), "--log-review"]) == 2
-    err = capsys.readouterr().err
-    assert "review log cannot be used" in err and "readonly" in err
-    assert main(["recap", "--log-review"]) == 2     # no transcript named: a usage refusal, nothing written
-    assert "needs --transcript" in capsys.readouterr().err
-
-
-def _check(lessons, *, read=True, edited=False):
-    return {"agent": "a", "model": "opus", "lessons": lessons, "read": read, "edited": edited,
-            "edited_files": [], "tests": [], "tokens": 1}
-
-
-def _fill(store):
-    """Four sessions: two reviews with checks, one asked and skipped, one run without being asked."""
-    store.log_review("s1", "r", asked=True, ran=True, files_changed=3, lessons_listed=10, tokens=1000,
-                     duration_s=60, checks=[_check(["les-a"], edited=True), _check(["les-b"])])
-    store.log_review("s2", "r", asked=True, ran=True, files_changed=2, lessons_listed=10, tokens=3000,
-                     duration_s=120, checks=[_check(["les-a"]), _check(["les-c"], read=False),
-                                             _check([])])      # a sub-agent that was given no lesson
-    store.log_review("s3", "r", asked=True, ran=False)
-    store.log_review("s4", "r", asked=False, ran=True)         # no figures could be read
-    store.log_review("s5", "other", asked=True, ran=True)      # another repo's, left out
-
-
-def test_the_report_counts_what_the_log_holds(repo):
-    """The report's figures, from four sessions in one repo and one in another, each hand-counted."""
-    store = Client()._local_store()
-    _fill(store)
-
-    r = recap.reviews_report(store, "r")
-
-    assert (r["sessions"], r["asked"], r["asked_and_ran"], r["asked_not_run"], r["ran_unasked"]) == (4, 3, 2, 1, 1)
-    assert (r["ran"], r["ran_on_changed_files"], r["files_changed_unread"]) == (3, 2, 1)
-    assert r["lessons_per_review"] == {"median": 2, "mean": 1.3, "max": 2}      # 2, 2 and 0 lessons
-    assert r["reviews_without_subagent"] == 1
-    # checks are sub-agents given a lesson: four; one unread; of the three read, one led to an edit
-    assert (r["checks"], r["checks_read"], r["checks_unread"], r["checks_acted_on"]) == (4, 3, 1, 1)
-    assert r["subagents_without_lesson"] == 1
-    assert r["tokens"] == {"median": 2000, "mean": 2000.0, "max": 3000}
-    assert r["duration_s"] == {"median": 90, "mean": 90.0, "max": 120}
-    # most checked first, then most edited, then by id; edits count over the checks that were read
-    assert [(x["id"], x["checked"], x["read"], x["edited"]) for x in r["lessons"]] == [
-        ("les-a", 2, 2, 1), ("les-b", 1, 1, 0), ("les-c", 1, 0, 0)]
-    assert r["lessons"][0]["title"] == "the first lesson"
-    assert r["lessons"][2]["title"] == "(no longer in the store)"
-    assert recap.reviews_report(store, "r", since_ms=int(time.time() * 1000) + 60_000)["sessions"] == 0
-    assert len(recap.reviews_report(store, "r", top=1)["lessons"]) == 1
-
-
-def test_the_report_says_acted_on_not_caught_and_claude_code_only(repo, capsys):
-    """An edit after a check is the review acting on a lesson; whether it fixed a real break is what the
-    log cannot tell. Other agents leave no transcript, so the report says whose sessions it covers."""
-    _fill(Client()._local_store())
-
-    assert main(["recap", "--reviews"]) == 0
-
-    out = capsys.readouterr().out
-    assert "Claude Code sessions only" in out
-    assert "acted on that lesson, not that it caught a break" in out
-    assert "**Asked for:** 3 sessions. It ran in 2 (67%) and was skipped in 1 (1 more ran without being asked)." in out
-    assert "**Reviews run:** 3, 2 against sessions that changed files (1 where" in out
-    assert "**Lessons checked per review:** median 2, mean 1.3, most 2; 1 reviews started no sub-agent." in out
-    assert "**Checks:** 4 (a sub-agent given a lesson); 1 could not be read, and of the 3 that could, 1 (33%)" in out
-    assert "Tokens: median 2,000, mean 2,000, largest 3,000." in out and "Duration: median 90 s" in out
-    assert "- [les-a] the first lesson: checked 2×, 1 of the 2 read followed by an edit" in out
-    assert "caught" not in out.replace("not that it caught a break", "")     # nothing else claims a catch
-
-
-def test_the_report_as_json_and_when_nothing_is_logged(repo, capsys):
-    """An empty log says so rather than printing zeros; JSON carries the same figures; a window the
-    command cannot read is refused."""
-    assert main(["recap", "--reviews"]) == 0
-    empty = capsys.readouterr().out
-    assert "Nothing is logged for this repo yet" in empty and "Claude Code sessions only" in empty
-
-    _fill(Client()._local_store())
-    assert main(["recap", "--reviews", "--format", "json", "--limit", "2"]) == 0
-    data = json.loads(capsys.readouterr().out)
-    assert data["checks_acted_on"] == 1 and len(data["lessons"]) == 2 and data["lessons_total"] == 3
-    assert main(["recap", "--reviews", "--since", "garbled"]) == 2
-    assert "cannot read --since" in capsys.readouterr().err
+    """The lessons `okl show` names, the runner names, and a test run's outcome; a mention is not a run."""
+    assert reviewcmd.command_show_ids("okl show a; okl show --format json b && okl show c --format json") == [
+        "a", "b", "c"]
+    assert reviewcmd.command_show_ids("grep 'okl show a' notes.md; echo okl show b") == []
+    assert reviewcmd.text_show_ids("run `okl show les-a` then okl show --format json les-b") == ["les-a", "les-b"]
+    for command, runner in [("npm run test", "npm test"), ("yarn test", "yarn test"), ("cargo nextest run", "cargo nextest"),
+                            ("cargo test", "cargo test"), ("./gradlew -q test", "gradle test"),
+                            ("python3 -m unittest discover", "unittest"), ("py.test -x", "pytest"),
+                            ("dotnet test", "dotnet test"), ("make test", "make test"), ("./mvnw verify test", "mvn test")]:
+        assert reviewcmd.parse_test_run(command) == (runner, []), command
+    assert reviewcmd.parse_test_run("grep -rn pytest docs/") is None
+    assert reviewcmd.parse_test_run("ruff check .") is None
+    assert reviewcmd.parse_test_run("git commit -m 'pytest passed'") is None
+    assert reviewcmd.parse_test_outcome(False, "5 passed in 1s") == "passed"
+    assert reviewcmd.parse_test_outcome(False, "5 passed, 1 failed") == "failed"
+    assert reviewcmd.parse_test_outcome(True, "Exit code 1") == "failed"
+    assert reviewcmd.parse_test_outcome(False, "collected nothing") == "unknown"
+    assert reviewcmd.segments("echo 'a; b' && ls | wc\ncat <<EOF\nokl check --change\nEOF\nls") == [
+        ["echo", "a; b"], ["ls"], ["wc"], ["cat", "<<EOF"], ["ls"]]

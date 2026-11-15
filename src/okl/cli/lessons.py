@@ -20,6 +20,7 @@ from ..client import (
     OKLNotConfiguredError,
     OKLRejectedError,
     OKLUnreachableError,
+    _find_config,
 )
 from ..store import backend_errors
 from .common import _print_json
@@ -472,12 +473,12 @@ def cmd_recap(args: argparse.Namespace) -> int:
     from .. import recap
     from .verification import _snapshot_path
     client = Client()
-    if not client.configured:
-        print("OKL NOT CONFIGURED — no store to recap from.", file=sys.stderr)
-        return 2
     repo_dir = str(_snapshot_path().parent)
     if getattr(args, "log_review", False) or getattr(args, "reviews", False):
         return _recap_reviews(client, repo_dir, args)
+    if not client.configured:
+        print("OKL NOT CONFIGURED — no store to recap from.", file=sys.stderr)
+        return 2
     try:
         nodes = client.all_nodes()
     except OKLUnreachableError as e:
@@ -491,19 +492,58 @@ def cmd_recap(args: argparse.Namespace) -> int:
     return 0
 
 
+def _log_skipped(client: Client) -> str | None:
+    """Why `okl recap --log-review` writes nothing here, or None when it may: a directory never set
+    up with `okl init` (a store URL exported does not enroll it), a repo that turned the review
+    after writing off, or one that turned the log off. A setting okl cannot read raises ValueError."""
+    if _find_config() is None:
+        return "this directory was never set up with `okl init` (no .okl/config.json)"
+    if not client.review_after_writing:
+        return "the review after writing is off here, so there is no review to log"
+    if not client.review_log:
+        return "the review log is off here (OKL_REVIEW_LOG=0, or review_log false in .okl/config.json)"
+    return None
+
+
+def _review_plan(client: Client, args: argparse.Namespace) -> tuple[bool, str | None]:
+    """What the review commands will do: (whether to write a row, the reason to refuse with exit 2
+    or None). A row that is skipped is said on stderr, and is not a refusal."""
+    if args.report:
+        return False, "okl recap: --report does not combine with --log-review or --reviews; run them apart."
+    if args.log_review and not args.transcript:
+        return False, "okl recap --log-review needs --transcript <path>, the session's transcript."
+    skipped = None
+    if args.log_review:
+        try:
+            skipped = _log_skipped(client)
+        except ValueError as e:
+            return False, f"okl recap: {e}"
+    if skipped:
+        print(f"nothing logged: {skipped}.", file=sys.stderr)
+    writing = bool(args.log_review and not skipped)
+    if writing or args.reviews:
+        if not client.configured:
+            return False, "OKL NOT CONFIGURED — no store to recap from."
+        if client.mode != "local":
+            return False, ("okl recap --log-review and --reviews use the local store; a shared service "
+                           "keeps its own.")
+    return writing, None
+
+
 def _recap_reviews(client: Client, repo_dir: str, args: argparse.Namespace) -> int:
     """`okl recap --log-review` and `--reviews`: write the session's review row, and read the log
-    back (#464). Exit 0 whatever the transcript held; exit 2 only when the store cannot be used."""
+    back (#464). `--log-review` exits 0 whatever the transcript held, and whether it logged or
+    not; it exits 2 for a usage error, a service, a setting it cannot read, or a store it cannot
+    write. Its status goes to stderr, so `--reviews --format json` stays one JSON document."""
     import time
 
     from .. import recap
-    if client.mode != "local":
-        print("okl recap --log-review and --reviews use the local store; a shared service keeps its own.",
-              file=sys.stderr)
+    writing, refusal = _review_plan(client, args)
+    if refusal:
+        print(refusal, file=sys.stderr)
         return 2
-    if args.log_review and not args.transcript:
-        print("okl recap --log-review needs --transcript <path>, the session's transcript.", file=sys.stderr)
-        return 2
+    if not (writing or args.reviews):
+        return 0
     since = 0
     if args.reviews and args.since:
         try:
@@ -513,7 +553,7 @@ def _recap_reviews(client: Client, repo_dir: str, args: argparse.Namespace) -> i
             return 2
     try:
         store = client._local_store()
-        if args.log_review:
+        if writing:
             _say_logged(*recap.log_review(store, client.repo, args.transcript, repo_dir), args.transcript)
         if args.reviews:
             data = recap.reviews_report(store, client.repo, since_ms=since, top=args.limit)
@@ -525,14 +565,14 @@ def _recap_reviews(client: Client, repo_dir: str, args: argparse.Namespace) -> i
 
 
 def _say_logged(reading: Any, written: bool, transcript: str) -> None:
-    """One line on what `okl recap --log-review` did; the Stop hook discards it."""
+    """One line on what `okl recap --log-review` did, on stderr; the Stop hook discards it."""
     if not reading.readable:
         print(f"okl recap: cannot read {transcript}; nothing logged.", file=sys.stderr)
     elif not written:
-        print("nothing logged: the session neither asked for a review nor ran one.")
+        print("nothing logged: the session neither asked for a review nor ran one.", file=sys.stderr)
     else:
         print(f"logged session {reading.session}: review {'run' if reading.ran else 'asked for, not run'}, "
-              f"{len(reading.checks)} sub-agents.")
+              f"{len(reading.checks)} sub-agents.", file=sys.stderr)
 
 
 def _recap_report(client: Client, repo_dir: str, args: argparse.Namespace) -> int:

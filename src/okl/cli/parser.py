@@ -296,11 +296,13 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                           "and failed, commits, and what is stale now, from the store's own logs (#279)")
     prc.add_argument("--log-review", action="store_true",
                      help="read the transcript for the session's review after writing and write one row "
-                          "of it to the local store: whether it was asked for and ran, the sub-agents it "
+                          "of it to the store: whether it was asked for and ran, the sub-agents it "
                           "started with their model, the lessons each opened, what each edited, the tests "
                           "run, and the tokens and time it took. Ids, paths, counts and model names only. "
-                          "The Stop hook runs this at a later stop; exit 0 even when there was no review "
-                          "(#464)")
+                          "The Stop hook runs this at a later stop. It writes nothing, and exits 0, where "
+                          "the directory was never set up with `okl init`, the review after writing is off, "
+                          "or the log is off (OKL_REVIEW_LOG=0, or review_log false in .okl/config.json); "
+                          "exit 0 as well when there was no review (#464)")
     prc.add_argument("--reviews", action="store_true",
                      help="the review log: how often the review was asked for and run, lessons checked per "
                           "review, how often a check was followed by an edit, what it cost, and per lesson "

@@ -160,9 +160,9 @@ root_package = "okl"
 # Higher layers may import lower ones, never the reverse; `|` marks siblings that must
 # not import each other either. changes reads git and the lessons' files, below the client the CLI
 # reaches it through. Modules not listed (bootstrap, codeowners, coexist, hygiene,
-# intake, ownership, reviewlog, scaffold_cmd) import nothing from okl, and protection only
-# codeowners (the contract below); all but hygiene, which core and seed use, and reviewlog, which
-# recap uses, are used only by the CLI.
+# intake, ownership, reviewcmd, scaffold_cmd) import nothing from okl, and protection only
+# codeowners (the contract below); reviewlog imports only reviewcmd. All but hygiene, which core
+# and seed use, and reviewcmd and reviewlog, which recap uses, are used only by the CLI.
 name = "Dependencies point one way: CLI -> adapters -> client -> core -> store"
 type = "layers"
 layers = [
