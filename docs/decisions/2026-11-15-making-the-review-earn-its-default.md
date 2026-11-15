@@ -12,9 +12,9 @@ Four pieces of work, in this order:
 
 | | what | where it stands |
 |---|---|---|
-| 1 | Settle the answer key: a person labels the key's pairs blind | the page is ready; waiting on the maintainer's labels |
+| 1 | Settle the answer key: a person labels the key's pairs blind | not done: I decided not to label them (2026-11-15), so the key stays unvalidated |
 | 2 | Run the review's checks on the model it was measured with | done in #463: Sonnet, in Claude Code |
-| 3 | Log what each review does in real use, and report it | built in #464, below as it ships |
+| 3 | Log what each review does in real use, and report it | done in #468, released in 0.18.0 |
 | 4 | Grow the graded replay set to about 40 tasks | #457 |
 
 Parked: whether a cheaper model can check one lesson as well as Sonnet (#456). That is a cost
@@ -33,8 +33,8 @@ own ten, end to end, it passed 0.2 of its sessions (§4az). Each piece of this p
 1. **The ground truth under the picking results is unvalidated.** §4bc's "the pick holds 0.465 of
    the broken lessons", §4bd's "0 of 124 caught" and §4be's counts all score against a model's answer
    key. In the audit, a second model agreed with only 4 of the 12 pairs that key called broken
-   (§4bh). Until a person labels them, nobody knows whether picking is as weak as those sections
-   say.
+   (§4bh). No person will label them (piece 1), so whether picking is as weak as those sections say
+   is to be answered on tasks graded by tests (piece 4), not on a model's key.
 2. **The review ran on whatever model the session used.** Its evidence is all Sonnet. An Opus
    session started ten Opus sub-agents and cost more than measured; a smaller model was never
    tested.
@@ -62,6 +62,12 @@ with the draw (broken precision at least 0.8).
 - **If it does not,** those sections are corrected with dated notes, the figures citing them are
   changed (the README, the decision record, the site's methods page and two posts), and §4bd's
   reading changes: some of the 124 were not broken, so there was nothing for a check to catch.
+
+**Status, 2026-11-15:** not done. I decided not to label the pairs. The key stays unvalidated, and
+§4bc to §4be stay read as scored against a model's key, as their dated notes in the REPORT already
+say; nothing in them is corrected or confirmed. Whether picking is as weak as they say moves to
+piece 4: tasks whose grade is a test on the code, which needs no person's labels. If the key is
+ever settled, the cheapest way is the 12 pairs it called broken, the ones its bar is on.
 
 ### 2. The review's model
 
@@ -149,8 +155,8 @@ are needed to build it, only agent work.
 
 ## What would change this plan
 
-- **If the key labels show picking is fine,** the review's gap is elsewhere, and the plan's weight
-  moves to piece 3's real-use evidence.
+- **If a graded test on the larger set shows picking is fine,** the review's gap is elsewhere, and
+  the plan's weight moves to piece 3's real-use evidence.
 - **If real use shows the review almost never acts,** the decision record's second reversal
   condition is met, and the default is reconsidered on that evidence.
 - **If a decisive test on the larger set shows no gain,** the first reversal condition is met.
