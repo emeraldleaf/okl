@@ -7,7 +7,11 @@ catches; this log is what any later measure of them reads.
 """
 from __future__ import annotations
 
+import contextlib
 import json
+import shlex
+import sqlite3
+import sys
 
 import pytest
 
@@ -67,6 +71,21 @@ def test_a_passing_check_is_kept_beside_its_stamp(repo):
     assert Client().get("les")["verified_by"].startswith("`echo 2 passed` exit 0")
 
 
+def test_verify_keeps_how_long_each_run_took(repo):
+    """Each run keeps its time, pass, failure and timeout alike, so `okl on-edit add --quick` can
+    tell a one-second check from a three-minute suite without running anything (#467)."""
+    nap = f"{shlex.quote(sys.executable)} -c 'import time; time.sleep(0.3)'"
+    assert main(["verify", "les", "--run", nap]) == 0
+    assert main(["verify", "les", "--run", "exit 3"]) == 1
+    assert main(["verify", "les", "--run", "sleep 5", "--timeout", "1"]) == 1
+
+    took = [r.seconds for r in _checks()]
+    assert 0.3 <= took[0] < 30, took
+    assert took[1] is not None and 0 <= took[1] < 30, took
+    assert 1 <= took[2] < 30, took
+    assert Client().get("les")["checks"][0]["seconds"] == took[0], "okl show and okl_get carry the time"
+
+
 def test_reverify_keeps_the_run_of_a_stored_check_that_now_fails(repo):
     """reverify re-runs a drifted lesson's stored check through verify, so the run where
     that check catches the change is kept: the catch this log exists for."""
@@ -94,6 +113,7 @@ def test_reverify_keeps_the_run_of_a_stored_check_that_now_fails(repo):
     # each against the commit it ran at
     assert rc == 1
     assert [(r.passed, r.outcome) for r in _checks()] == [(True, "exit 0"), (False, "exit 1")]
+    assert _checks()[-1].seconds is not None, "reverify's run did not keep its time (#467)"
     heads = [subprocess.run(["git", "rev-parse", ref], cwd=repo, capture_output=True,
                             text=True).stdout.strip() for ref in ("HEAD~1", "HEAD")]
     assert [r.commit for r in _checks()] == heads
@@ -160,9 +180,13 @@ def test_get_lists_only_the_latest_runs_but_counts_them_all(tmp_path):
     ({"node_id": "nope"}, "no node"),
     ({"command": " "}, "command"),
     ({"commit": "HEAD; rm -rf ."}, "commit"),
+    ({"seconds": -1.0}, "seconds"),
+    ({"seconds": float("nan")}, "seconds"),
+    ({"seconds": float("inf")}, "seconds"),
 ])
 def test_log_check_refuses_what_it_cannot_record_truthfully(tmp_path, kwargs, message):
-    """A run with no command, a commit that is not an object name, or no lesson is refused."""
+    """A run with no command, a commit that is not an object name, a time that is not a finite
+    number of seconds of at least zero (#467), or no lesson is refused."""
     s = Store(f"sqlite:///{tmp_path / 'okl.db'}")
     core.record(s, id="x", type="Rule", title="x", scope="org")
     args = {"node_id": "x", "passed": False, "command": "pytest", "outcome": "exit 1", **kwargs}
@@ -242,3 +266,96 @@ def test_the_service_refuses_an_unknown_field(remote):
                                             "outcome": "exit 0", "surprise": 1})
     assert r.status_code == 422
 
+
+def test_a_store_from_before_run_times_gains_the_column_on_open(tmp_path):
+    """A check log written before #467 has no `seconds` column: opening the store adds it, its
+    rows read back untimed, new runs keep their time, and opening it again changes nothing
+    (lesson n_967ef9825472)."""
+    db = tmp_path / "old.db"
+    c = sqlite3.connect(db)
+    c.execute("""CREATE TABLE check_run(
+        at INTEGER NOT NULL, node_id TEXT NOT NULL, passed INTEGER NOT NULL,
+        command TEXT NOT NULL, outcome TEXT NOT NULL, expect TEXT, commit_id TEXT)""")
+    c.execute("INSERT INTO check_run VALUES(1, 'x', 1, 'pytest -q', 'exit 0', 'passed', NULL)")
+    c.commit(); c.close()
+
+    s = Store(f"sqlite:///{db}")
+    s.log_check("x", True, "pytest -q", "exit 0", expect="passed", seconds=2.5)
+    s.close()
+    again = Store(f"sqlite:///{db}")
+
+    with contextlib.closing(sqlite3.connect(db)) as c:
+        cols = [r[1] for r in c.execute("PRAGMA table_info(check_run)")]
+    assert cols.count("seconds") == 1, cols
+    assert [(r.command, r.seconds) for r in again.checks("x")] == [("pytest -q", None), ("pytest -q", 2.5)]
+    again.close()
+
+
+def test_a_service_keeps_each_runs_time(remote):
+    """Through the client's real remote code, the time reaches the service's store (#467)."""
+    core.record(remote.store, id="les", type="Rule", title="t", scope="org")
+
+    assert main(["verify", "les", "--run", "true"]) == 0
+
+    [run] = remote.store.checks("les")
+    assert run.seconds is not None and run.seconds >= 0
+    assert [b.get("seconds") for p, b in remote.sent if p == "/check-run"] == [run.seconds]
+
+
+def test_a_service_from_before_run_times_still_keeps_the_run(remote, capsys):
+    """A service whose closed request model has no `seconds` refuses it with a 422: the client
+    sends the run again without its time, so the run is kept, untimed, as one never timed, which
+    `okl on-edit add --quick` never approves. Upgrading the client first must not lose the log."""
+    from fastapi import Body, HTTPException
+    core.record(remote.store, id="les", type="Rule", title="t", scope="org")
+    known = {"id", "passed", "command", "outcome", "expect", "commit"}
+
+    def older(body: dict = Body(...)) -> dict:  # noqa: B008 - how FastAPI declares a request body
+        extra = sorted(set(body) - known)
+        if extra:   # what pydantic's extra="forbid" answers
+            raise HTTPException(422, detail=[{"type": "extra_forbidden", "loc": ["body", k],
+                                              "msg": "Extra inputs are not permitted"} for k in extra])
+        core.log_check(remote.store, body["id"], passed=body["passed"], command=body["command"],
+                       outcome=body["outcome"], expect=body.get("expect"), commit=body.get("commit"))
+        return {"ok": True}
+    remote.app.router.routes = [r for r in remote.app.router.routes
+                                if getattr(r, "path", "") != "/check-run"]
+    remote.app.post("/check-run")(older)
+
+    assert main(["verify", "les", "--run", "true"]) == 0
+
+    assert [(r.passed, r.seconds) for r in remote.store.checks("les")] == [(True, None)]
+    assert "not logged" not in capsys.readouterr().err
+    posted = [b for p, b in remote.sent if p == "/check-run"]
+    assert ["seconds" in b for b in posted] == [True, False], posted
+
+
+
+@pytest.mark.parametrize(("detail", "retried"), [
+    ([{"type": "extra_forbidden", "loc": ["body", "seconds"], "msg": "Zusätzliche Eingaben nicht erlaubt"}], True),
+    ([{"type": "extra_forbidden", "loc": ["body", "surprise"], "msg": "seconds are fine, surprise is not"}], False),
+    ("seconds is not permitted", False),
+    (None, False),
+])
+def test_the_retry_without_a_time_reads_what_was_refused_not_the_words(detail, retried):
+    """The client sends a run again without its time only when the 422's structured detail
+    refused `seconds`: a translated message still retries, and a message that merely mentions
+    the word, about another field or with no structure at all, does not (#467 review)."""
+    from types import SimpleNamespace
+
+    from okl.client import OKLRejectedError
+    sent = []
+
+    def post(path, body):
+        sent.append(body)
+        if "seconds" in body:
+            # worded as _post words it, the detail inside the message
+            raise OKLRejectedError(f"OKL service rejected the request (422): {detail}", status=422, detail=detail)
+    me = SimpleNamespace(_post=post)
+    run = {"id": "les", "passed": True, "command": "true", "outcome": "exit 0"}
+    if retried:
+        Client._post_check_run(me, run, 0.4)
+    else:
+        with pytest.raises(OKLRejectedError):
+            Client._post_check_run(me, run, 0.4)
+    assert ["seconds" in b for b in sent] == ([True, False] if retried else [True])

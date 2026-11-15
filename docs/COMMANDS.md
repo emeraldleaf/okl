@@ -14,7 +14,9 @@ okl verify <id> --run "pytest -q" --expect "passed"
 okl reverify         # re-run the stored check of every drifted lesson, and of any last checked
                      #   on another branch, and re-stamp the passes;
                      #   lists the commands first and runs them only after you confirm
-                     #   (or --yes), because they come from the store; --dry-run lists only
+                     #   (or --yes), because they come from the store; --dry-run lists only;
+                     #   --untimed also re-runs, once, each lesson whose check could run on edit
+                     #   and has no timed run, so `okl on-edit add --quick` can judge it
 okl intake pr <n>    # a PR's resolved review threads, each with the commit that resolved it (named in
                      #   a reply, or else the first commit after it to touch the file, marked a
                      #   guess), the lessons a briefing on it already shows, the encoding-loop
@@ -34,7 +36,14 @@ okl on-edit          # the approved lesson checks, which run after every edit in
                      #   hook can too). `okl on-edit add <id>...` shows each stored command and
                      #   approves it on your yes (--yes skips the question; unattended without it,
                      #   exit 2), pinned to the command's hash: a command that changes afterwards
-                     #   is not run until approved again. `remove <id>...` drops one. `run` exits
+                     #   is not run until approved again. `add --quick` does the same for the
+                     #   lessons whose stored check last passed in at most --under seconds (10;
+                     #   above 0, up to 30, 2.5 works), as okl verify and okl reverify timed it,
+                     #   each shown with its time; a check that failed its last run is left out,
+                     #   and one never timed is listed apart by id and title, never approved
+                     #   (`okl reverify --untimed` times them). While none is approved, `okl
+                     #   on-edit` and `okl init` say how many are quick (local stores only).
+                     #   `remove <id>...` drops one. `run` exits
                      #   1 when a check failed, 2 when one could not be judged (out of time, or
                      #   changed since approved), 0 when every one passed or the file lies
                      #   outside the repo; each gets --timeout (30 s) and one edit --budget (50 s). Nothing is

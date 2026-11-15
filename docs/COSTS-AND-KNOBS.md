@@ -84,6 +84,9 @@ lessons briefed when the agent reads a file), `OKL_DISABLED_HOOKS=edit` (the les
 after an edit), or several, comma-separated. The edit hook costs one read of `.okl/config.json`
 an edit until you approve a check with `okl on-edit add`; after that, the approved checks' own
 run time, at most 30 seconds each and 50 an edit (`okl on-edit run --timeout` and `--budget`).
+`okl on-edit add --quick` offers only the checks whose last passing run took 10 seconds or less
+(`--under N` to choose another limit, above 0 and up to 30). A check never timed costs one run of
+it to time, with `okl reverify --untimed`, which shows the commands and asks first.
 **Set `OKL_DISABLED_HOOKS=encode` for headless runs (`claude -p`, CI agents, scripts):**
 print mode emits only the final message, and a blocked stop makes the reply to "what did
 we learn?" that final message — the answer you asked for is then only in the transcript.

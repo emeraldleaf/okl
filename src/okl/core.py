@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import functools
 import hashlib
+import math
 import os
 import re
 from collections import Counter
@@ -1310,25 +1311,31 @@ def get(store: Store, node_id: str) -> dict[str, Any] | None:
 
 
 def log_check(store: Store, node_id: str, *, passed: bool, command: str, outcome: str,
-              expect: str | None = None, commit: str | None = None) -> None:
-    """Keep one run of a lesson's check, pass or fail (okl review R3).
+              expect: str | None = None, commit: str | None = None,
+              seconds: float | None = None) -> None:
+    """Keep one run of a lesson's check, pass or fail (okl review R3), and how long it took
+    (#467), when the caller timed it.
 
     The stamp keeps only the last pass, so a check that caught a regression left no trace,
     and nothing could tell a check that has caught changes from one that never failed.
     Refuses a run it cannot record truthfully: no command, a commit that is not an object
-    name (it is shown beside the run, and a shared store is written by other people), or
-    a lesson that does not exist.
+    name (it is shown beside the run, and a shared store is written by other people), a
+    time that is not a finite number of seconds of at least zero (`okl on-edit add --quick`
+    chooses checks by it), or a lesson that does not exist.
     """
     if not command or not command.strip():
         raise ValueError("refusing to log a check run without the command that ran")
     if commit is not None and not re.fullmatch(r"[0-9a-f]{7,64}", commit):
         raise ValueError(f"commit must be a git object name (7-64 hex digits), got {commit!r}")
+    if seconds is not None and (not math.isfinite(seconds) or seconds < 0):
+        raise ValueError(f"seconds must be a finite number of at least 0, got {seconds!r}")
     if store.get_node(node_id) is None:
         raise ValueError(f"no node with id {node_id!r}")
     # The command as it ran, unstripped, so it matches the one in the lesson's evidence;
     # an empty expected signal is no signal.
     store.log_check(node_id, bool(passed), command, outcome.strip() or "unknown",
-                    expect=expect or None, commit=commit)
+                    expect=expect or None, commit=commit,
+                    seconds=None if seconds is None else float(seconds))
 
 
 _RETIRED_AS = {"wrong": "retracted", "obsolete": "obsolete", "superseded": "superseded"}

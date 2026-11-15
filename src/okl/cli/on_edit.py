@@ -24,6 +24,15 @@ edit inside the repository: those of the lessons governing the edited file first
 is spent in order, then the rest. Files decide the order, and drift; never whether a check runs.
 For a check CI runs, this changes when a break is found, at the edit rather than at the push, not
 whether.
+
+Which checks are quick enough to run after every edit is the person's call, made from each check's
+time (#467): `okl verify` and `okl reverify` log how long each run took, and `okl on-edit add
+--quick` offers the lessons whose stored check last passed in at most `--under` seconds, each shown
+and approved on one yes, pinned as one named by id is. A check never timed is listed apart and never
+offered: its time is unknown, not short, and `okl reverify --untimed` re-runs such checks once, on
+the person's yes, to time them. Runs here are neither logged nor timed, so an edit never
+adds to the check log: `okl recap` counts a logged run as a stale lesson re-checked, and changing
+what counts there is not this command's to do.
 """
 from __future__ import annotations
 
@@ -36,7 +45,7 @@ import math
 import sys
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from .. import core
 from ..client import Client, OKLUnreachableError, _find_config, _repo_relative, save_config
@@ -50,6 +59,7 @@ KEY = "on_edit"          # in .okl/config.json: {lesson id: approval hash}
 TIMEOUT = 30             # seconds one check may take at edit time
 BUDGET = 50              # seconds for every check one edit runs, from okl's start
 HOOK_TIMEOUT = 60        # seconds okl registers the edit hook with, so Claude Code stops it there
+QUICK = 10               # seconds: `okl on-edit add --quick` offers the checks whose last pass took at most this
 
 
 def approval(run: str, expect: str | None) -> str:
@@ -95,7 +105,7 @@ def _on_edit(args: argparse.Namespace, started: float) -> int:
     if args.action == "run":
         return _run(args, path.parent.parent, approved, nodes, client.repo, started=started)
     change = {"add": _add, "remove": _remove}.get(args.action)
-    code = change(args, approved, nodes, client.repo) if change else None
+    code = change(args, approved, nodes, client) if change else None
     if code:
         return code
     if change and approved != (config.get(KEY) or {}):
@@ -104,7 +114,7 @@ def _on_edit(args: argparse.Namespace, started: float) -> int:
         else:
             config.pop(KEY, None)
         save_config(config, path.parent.parent)
-    _list(approved, nodes, client.repo)
+    _list(approved, nodes, client)
     return 0
 
 
@@ -131,28 +141,79 @@ def _why_not(node: Node | None, repo: str) -> str | None:
     return next((why for bad, why in reasons if bad), None)
 
 
-def _add(args: argparse.Namespace, approved: dict[str, str], nodes: dict[str, Node], repo: str) -> int | None:
-    """Show each command and approve them on the person's yes, or --yes; None when approved."""
+def _add(args: argparse.Namespace, approved: dict[str, str], nodes: dict[str, Node], client: Client) -> int | None:
+    """Show each command and approve them on the person's yes, or --yes; None when approved. With
+    --quick, the lessons shown are the quick ones (_add_quick), not ones named by id."""
     wanted = list(dict.fromkeys(args.targets))
-    if not wanted:
-        print("okl on-edit add: name the lessons by id (okl on-edit lists the ones that can be added)",
-              file=sys.stderr)
+    under = getattr(args, "under", None)
+    if getattr(args, "quick", False):
+        if wanted:
+            print("okl on-edit add: --quick chooses the lessons by their checks' time; name lessons by id "
+                  "or pass --quick, not both", file=sys.stderr)
+            return 2
+        return _add_quick(args, approved, nodes, client, QUICK if under is None else under)
+    if under is not None:
+        print("okl on-edit add: --under goes with --quick, which chooses the lessons by it", file=sys.stderr)
         return 2
-    bad = [(i, why) for i in wanted if (why := _why_not(nodes.get(i), repo))]
+    if not wanted:
+        print("okl on-edit add: name the lessons by id (okl on-edit lists the ones that can be added), or "
+              "pass --quick for the ones whose check is quick", file=sys.stderr)
+        return 2
+    bad = [(i, why) for i in wanted if (why := _why_not(nodes.get(i), client.repo))]
     if bad:
         for i, why in bad:
             print(f"okl on-edit: cannot add [{shown(i)}]: {why}", file=sys.stderr)
         return 2
+    return _approve(args, wanted, approved, nodes)
+
+
+def _add_quick(args: argparse.Namespace, approved: dict[str, str], nodes: dict[str, Node], client: Client,
+               under: float) -> int | None:
+    """Offer the lessons that could be added whose stored check last passed in at most `under`
+    seconds, each shown with its time, and approve them as _approve does. The ones never timed are
+    listed apart, by id and title, and never offered; the slow ones and the ones whose check last
+    failed are counted."""
+    if under > TIMEOUT:
+        print(f"okl on-edit add: --under {under:g} is longer than the {TIMEOUT} seconds a check gets after an "
+              "edit, so a check that slow would never be judged there", file=sys.stderr)
+        return 2
+    quick, unknown, slow, failing = _by_time(client, _addable(approved, nodes, client.repo), under)
+    apart = []
+    if unknown:
+        apart.append("Time unknown, so --quick does not offer these: no run of their check has been timed yet.")
+        apart.extend(f"  [{shown(n.id)}] {n.title}" for n in unknown)
+        apart.append("`okl reverify --untimed` re-runs their checks once to time them; it shows them and asks "
+                     "first.")
+    left = [f"{slow} whose last passing run took over {under:g} s" if slow else "",
+            f"{failing} whose check failed its last run" if failing else ""]
+    if any(left):
+        apart.append("Also left out: " + ", ".join(x for x in left if x) + ".")
+    if not quick:
+        print("\n".join([f"okl on-edit add --quick: no lesson's check last passed in {under:g} s or less, so "
+                         "there is nothing to approve.", *apart]))
+        return None
+    times = {n.id: t for n, t in quick}
+    return _approve(args, list(times), approved, nodes, times=times, apart=apart,
+                    intro=(f"These {len(quick)} lesson checks" if len(quick) > 1 else "This lesson check")
+                    + f" last passed in {under:g} s or less.")
+
+
+def _approve(args: argparse.Namespace, wanted: list[str], approved: dict[str, str], nodes: dict[str, Node], *,
+             times: dict[str, float] | None = None, apart: list[str] | None = None, intro: str = "") -> int | None:
+    """Show each lesson's stored command (with its last time, given `times`), then `apart`, and approve
+    them all on one yes, or --yes; refuse unattended without --yes. None when approved."""
     # A refusal leaves stdout empty, so where it will refuse, the plan goes to stderr with it.
     asking = args.yes or sys.stdin.isatty()
     out = sys.stdout if asking else sys.stderr
+    if intro:
+        print(intro, file=out)
     print("After EVERY edit the agent makes in this repository, okl will run each of these lessons' stored "
           "checks, a command from the store (first when the edit touches a file the lesson governs), so "
           "approve only checks that are quick:", file=out)
     for i in wanted:
-        run, expect = _stored_check(nodes[i].verified_by) or ("", None)
-        print(f"  [{shown(i)}] {nodes[i].title}\n      files: {nodes[i].files or 'none'}\n      runs:  {run}"
-              + (f"\n      passes when its output contains {expect!r}" if expect else ""), file=out)
+        print(_offered(nodes[i], (times or {}).get(i)), file=out)
+    for line in apart or []:
+        print(line, file=out)
     if not asking:
         # Said to whoever ran it, often an agent: the way forward is a person, not a flag
         # (lesson refusal-offers-no-destructive-shortcut).
@@ -167,7 +228,17 @@ def _add(args: argparse.Namespace, approved: dict[str, str], nodes: dict[str, No
     return None
 
 
-def _remove(args: argparse.Namespace, approved: dict[str, str], _nodes: dict[str, Node], _repo: str) -> int | None:
+def _offered(node: Node, took: float | None = None) -> str:
+    """One lesson as add shows it before asking: its files, the command it would run, the signal that
+    command must print, and with `took`, how long its last passing run took."""
+    run, expect = _stored_check(node.verified_by) or ("", None)
+    return (f"  [{shown(node.id)}] {node.title}\n      files: {node.files or 'none'}\n      runs:  {run}"
+            + (f"\n      passes when its output contains {expect!r}" if expect else "")
+            + (f"\n      last passing run took {_took(took)}" if took is not None else ""))
+
+
+def _remove(args: argparse.Namespace, approved: dict[str, str], _nodes: dict[str, Node],
+            _client: Client) -> int | None:
     """Drop the named approvals in place; 2, changing nothing, when one was never approved."""
     unknown = [i for i in args.targets if i not in approved]
     if unknown:
@@ -178,8 +249,105 @@ def _remove(args: argparse.Namespace, approved: dict[str, str], _nodes: dict[str
     return None
 
 
-def _list(approved: dict[str, str], nodes: dict[str, Node], repo: str) -> None:
-    """The approved checks, each with whether it still runs, then the lessons that could be added."""
+def _addable(approved: dict[str, str], nodes: dict[str, Node], repo: str) -> list[Node]:
+    """The lessons whose check could be approved and is not, by id."""
+    return sorted((n for n in nodes.values() if n.id not in approved and _why_not(n, repo) is None),
+                  key=lambda n: n.id)
+
+
+FAILED = "failed"        # check_time: the latest run of the lesson's stored check failed
+UNTIMED = "untimed"      # check_time: no timed passing run of it among the runs okl can see
+
+
+def _latest_run(client: Client, node: Node) -> dict[str, Any] | None:
+    """The latest logged run of the lesson's stored check, the command and signal an approval pins,
+    among the runs `okl show` lists; None when they hold none of it. A run of another command is
+    another check, whatever it took."""
+    check = _stored_check(node.verified_by)
+    got = client.get(node.id) if check else None
+    if not check or not got:
+        return None
+    mine = [r for r in got.get("checks") or []
+            if (r.get("command"), r.get("expect") or None) == (check[0], check[1] or None)]
+    return mine[-1] if mine else None
+
+
+def _seconds_of(run: dict[str, Any]) -> float | None:
+    """How long a logged run took; None for one logged before okl timed runs."""
+    took = run.get("seconds")
+    if isinstance(took, int | float) and not isinstance(took, bool) and math.isfinite(took):
+        return float(took)
+    return None
+
+
+def check_time(client: Client, node: Node) -> float | str:
+    """How long the lesson's stored check took at its latest logged run, which passed; FAILED when
+    that run failed; UNTIMED when it passed untimed or there is none. `okl on-edit add --quick` offers
+    the quick ones and lists the UNTIMED ones apart as time unknown."""
+    last = _latest_run(client, node)
+    if last is None:
+        return UNTIMED
+    if not last.get("passed"):
+        return FAILED
+    took = _seconds_of(last)
+    return UNTIMED if took is None else took
+
+
+def untimed(client: Client, nodes: dict[str, Node]) -> list[Node]:
+    """The lessons whose check could run on edit, approved or not, and whose latest run is untimed,
+    passed or failed, by id: the ones `okl reverify --untimed` re-runs once to time them. That is
+    --quick's time-unknown list and, beside it, the checks whose untimed last run failed: a check that
+    failed before okl timed runs is re-run too (CodeRabbit on #467), or it could never be timed or
+    offered until its lesson drifted."""
+    return [n for n in _addable({}, nodes, client.repo)
+            if (last := _latest_run(client, n)) is None or _seconds_of(last) is None]
+
+
+def _by_time(client: Client, lessons: list[Node], under: float) -> tuple[list[tuple[Node, float]], list[Node], int, int]:
+    """`lessons` sorted by their check's last run: the quick ones (last passed in at most `under`
+    seconds) with that time, the UNTIMED ones, and how many were slow and how many last failed. A
+    check whose latest run failed would fail at every edit, so it is not offered, however fast."""
+    quick: list[tuple[Node, float]] = []
+    unknown: list[Node] = []
+    slow = failing = 0
+    for n in lessons:
+        took = check_time(client, n)
+        if took == FAILED:
+            failing += 1
+        elif isinstance(took, str):     # UNTIMED
+            unknown.append(n)
+        elif took <= under:
+            quick.append((n, took))
+        else:
+            slow += 1
+    return quick, unknown, slow, failing
+
+
+def _took(seconds: float) -> str:
+    """A run's time as the lists show it."""
+    return f"{seconds:.1f} s" if seconds >= 0.05 else "under 0.1 s"
+
+
+def quick_hint(client: Client, approved: dict | None, nodes: dict[str, Node] | None = None) -> str | None:
+    """The line `okl init` and `okl on-edit` say when no check is approved and some lessons' checks
+    last passed in at most QUICK seconds; None when a check is approved or none is quick. None on a
+    shared service too: it reads each lesson's runs, one request per lesson there, on every listing.
+    Locally that is one indexed read per lesson, cheap at the size of okl's own store."""
+    if approved or client.mode == "remote":
+        return None
+    if nodes is None:
+        nodes = {n.id: n for n in client.all_nodes()}
+    count = len(_by_time(client, _addable({}, nodes, client.repo), QUICK)[0])
+    if not count:
+        return None
+    return (f"{count} lesson check{'' if count == 1 else 's'} ran in under {QUICK} s; "
+            "`okl on-edit add --quick` shows them and asks.")
+
+
+def _list(approved: dict[str, str], nodes: dict[str, Node], client: Client) -> None:
+    """The approved checks, each with whether it still runs, then the lessons that could be added,
+    and with none approved, how many of those are quick."""
+    repo = client.repo
     if approved:
         print(f"{len(approved)} lesson check(s) run after every edit in this repository, those governing "
               "the edited file first:")
@@ -194,8 +362,10 @@ def _list(approved: dict[str, str], nodes: dict[str, Node], repo: str) -> None:
     else:
         print("No lesson checks run on edit here. Approve the ones that are quick and need nothing but "
               "this checkout: okl on-edit add <id>...")
-    can = sorted((n for n in nodes.values() if n.id not in approved and _why_not(n, repo) is None),
-                 key=lambda n: n.id)
+        hint = quick_hint(client, approved, nodes)
+        if hint:
+            print(hint)
+    can = _addable(approved, nodes, repo)
     if can:
         print(f"{len(can)} more could be added (they carry a stored check):")
         for n in can:

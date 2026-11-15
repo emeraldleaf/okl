@@ -16,7 +16,8 @@ from pathlib import Path
 
 from .. import core
 from ..client import Client, _find_config, load_config, review_setting, save_config
-from .on_edit import HOOK_TIMEOUT
+from .on_edit import HOOK_TIMEOUT, quick_hint
+from .on_edit import KEY as ON_EDIT_KEY
 from .packs import _empty_store_guidance, _seed_first_run
 
 
@@ -749,6 +750,7 @@ def cmd_init(args: argparse.Namespace) -> int:
     if Client().mode != "remote":
         for line in _interest_lines(Client(), say_unread=False):
             print(line)
+        _say_quick_checks(cfg)
     # Said at install time, the one moment someone is reading okl's output and deciding
     # what to wire. Informational here: init succeeded; `okl doctor` is the re-runnable check.
     from .. import coexist
@@ -756,6 +758,18 @@ def cmd_init(args: argparse.Namespace) -> int:
     if found:
         print("\n" + coexist.render(found))
     return 0
+
+
+def _say_quick_checks(cfg: dict) -> None:
+    """With no lesson check approved to run on edit, say how many lessons' checks last passed
+    quickly, and how to see them (#467). Nothing when one is approved or none is quick. A line of
+    advice: whatever stops it from being worked out leaves init's result as it was."""
+    try:
+        hint = quick_hint(Client(), cfg.get(ON_EDIT_KEY))
+    except Exception:  # noqa: BLE001 - see above
+        return
+    if hint:
+        print(f"• {hint}")
 
 
 def _init_owner(cfg: dict, args: argparse.Namespace) -> bool:

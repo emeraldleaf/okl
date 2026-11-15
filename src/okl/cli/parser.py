@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import math
 
 from .. import __version__, core, decide, semantic
 from .changes import cmd_changes
@@ -22,7 +23,7 @@ from .lessons import (
     cmd_triggers,
     cmd_update,
 )
-from .on_edit import BUDGET, HOOK_TIMEOUT, TIMEOUT, cmd_on_edit
+from .on_edit import BUDGET, HOOK_TIMEOUT, QUICK, TIMEOUT, cmd_on_edit
 from .packs import cmd_seed
 from .review import cmd_review
 from .servers import cmd_mcp, cmd_serve
@@ -37,6 +38,19 @@ def _seconds(value: str) -> int:
     n = int(value)
     if n < 1:
         raise argparse.ArgumentTypeError(f"{value!r} is not a number of seconds of at least 1")
+    return n
+
+
+def _seconds_above_zero(value: str) -> float:
+    """`okl on-edit add --under`: a number of seconds above 0, a fraction allowed (2.5), since run
+    times are shown to a tenth of a second. Zero or less offers nothing, and a value that is not
+    finite is no limit."""
+    try:
+        n = float(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{value!r} is not a number of seconds") from None
+    if not math.isfinite(n) or n <= 0:
+        raise argparse.ArgumentTypeError(f"{value!r} is not a number of seconds above 0")
     return n
 
 
@@ -330,6 +344,10 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
                      help="run the listed stored commands without asking (they come from the store)")
     prv.add_argument("--dry-run", dest="dry_run", action="store_true",
                      help="list what would be re-run, run nothing")
+    prv.add_argument("--untimed", action="store_true",
+                     help="also re-run, once, the stored check of each lesson that could run on edit and has "
+                          "no timed run okl can see (the ones okl on-edit add --quick lists as time unknown), "
+                          "so --quick can judge it; a pass re-stamps it, as any re-run does")
     prv.add_argument("--timeout", type=int, default=600)
     prv.set_defaults(func=cmd_reverify)
 
@@ -360,7 +378,15 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
     poe_sub = poe.add_subparsers(dest="action")
     poe_sub.add_parser("list", help="the approved checks, and the lessons whose check could be approved")
     poe_add = poe_sub.add_parser("add", help="show each lesson's stored command and approve it to run on edit")
-    poe_add.add_argument("targets", nargs="+", metavar="id", help="lesson ids, as the briefing shows them in [brackets]")
+    poe_add.add_argument("targets", nargs="*", metavar="id",
+                         help="lesson ids, as the briefing shows them in [brackets]; or none, with --quick")
+    poe_add.add_argument("--quick", action="store_true",
+                         help="instead of ids: the lessons whose stored check last passed in at most --under "
+                              "seconds, as okl verify and okl reverify timed it, each shown with its time and "
+                              "approved on one yes; one never timed is listed apart and not approved")
+    poe_add.add_argument("--under", type=_seconds_above_zero, default=None, metavar="N",
+                         help=f"with --quick, the longest last passing run to offer, in seconds, above 0 and "
+                              f"at most the {TIMEOUT} a check gets after an edit (default {QUICK}; 2.5 works)")
     poe_add.add_argument("--yes", action="store_true",
                          help="approve the commands it shows without asking; review them first, since they "
                               "come from the store and will run after every edit in the repository")
