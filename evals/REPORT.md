@@ -7042,6 +7042,11 @@ What it means:
 4. **What would settle it.** A person labels the key's broken pairs: the 12 drawn here, or more. Until
    then, read §4bc to §4be as measured against a model's key.
 
+*Note, 2026-11-15 (later):* I decided not to label the key's pairs, so the key stays unvalidated and
+§4bc to §4be stay read as measured against a model's key; their notes already say so, and no figure in
+them changes. Whether the pick is as weak as they say is to be tested on tasks graded by a test on the
+code (#457), which needs no person's labels, not on a model's key.
+
 ## 5. Findings
 
 1. **The briefing works, in both tiers.** Sonnet: 33% → 4%. Haiku: 38% → 12%. Every
