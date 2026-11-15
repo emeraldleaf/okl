@@ -29,6 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import briefing_arms as ba
 import realwork_label as rl
 import realwork_reach as rr
+import sandbox as sb
 
 REPO = rr.REPO
 PRIVATE = REPO / "evals" / "bench" / "private" / "realwork"
@@ -78,7 +79,7 @@ def ask(prompt: str, room: Path) -> tuple[list | None, dict]:
     """The reviewer's array for `prompt` (None when it gave none) and what the call cost."""
     start = time.monotonic()
     try:
-        p = subprocess.run(REVIEWER, input=prompt, capture_output=True, text=True, timeout=TIMEOUT, cwd=room)
+        p = subprocess.run(REVIEWER, input=prompt, capture_output=True, text=True, timeout=TIMEOUT, cwd=room, env=sb.clean_env())
     except subprocess.TimeoutExpired:
         return None, {"seconds": TIMEOUT, "error": "timeout"}
     use: dict = {"seconds": round(time.monotonic() - start, 1)}

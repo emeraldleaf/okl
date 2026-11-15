@@ -33,6 +33,9 @@ sys.path.insert(0, str(REPO / "src"))
 from okl.client import _find_config, store_url  # noqa: E402 - the client's own rule for which config applies
 from okl.store import fts_tokenizer  # noqa: E402
 
+sys.path.insert(0, str(REPO / "evals"))
+import sandbox as sb  # noqa: E402
+
 # Each setting enters the CLI through the same `python -c`, so both pay the same start-up.
 RUN = "import runpy, sys; sys.argv[0] = 'okl'; runpy.run_module('okl', run_name='__main__', alter_sys=True)"
 TOKENIZE = {"unstemmed": "unicode61", "stemmed": "porter unicode61"}
@@ -54,12 +57,7 @@ def store_copy(live: Path, where: Path, setting: str, env: dict[str, str]) -> Pa
     """A copy of the live store with its index built for `setting`, read through SQLite's
     backup so a write the live store has in flight is not copied half done."""
     dst = where / f"{setting}.db"
-    src, out = sqlite3.connect(f"file:{live}?mode=ro", uri=True), sqlite3.connect(dst)
-    try:
-        src.backup(out)
-    finally:
-        src.close()
-        out.close()
+    sb.copy_sqlite(live, dst)   # read-only, escaped, with its log (#446)
     # One untimed check builds the index the setting wants.
     subprocess.run([sys.executable, "-c", SETTINGS[setting], "check", "--task", "warm up the index", "--warm", "off"],
                    env={**env, "OKL_DATABASE_URL": f"sqlite:///{dst}"}, cwd=REPO, capture_output=True, check=True)

@@ -22,6 +22,8 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+import sandbox as sb
+
 PRIVATE = Path(__file__).resolve().parent / "bench" / "private" / "realwork"
 SUGGESTER = ["claude", "-p", "--model", "sonnet", "--restricted", "--strict-mcp-config", "--output-format", "json",
              "--tools", ""]
@@ -90,7 +92,7 @@ def suggest(task: dict, pairs: list[dict], room: Path) -> dict[str, dict]:
         prompt = PROMPT.format(title=task["title"], issues=issues, change=task["diff"],
                                lessons="\n\n".join(lesson_text(p["id"], p["lesson"]) for p in pending))
         try:
-            r = subprocess.run(SUGGESTER, input=prompt, capture_output=True, text=True, timeout=TIMEOUT, cwd=room)
+            r = subprocess.run(SUGGESTER, input=prompt, capture_output=True, text=True, timeout=TIMEOUT, cwd=room, env=sb.clean_env())
             got = last_array(json.loads(r.stdout).get("result") or "") or []
         except (subprocess.TimeoutExpired, ValueError):
             got = []

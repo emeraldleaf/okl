@@ -46,6 +46,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import drift_replay as dr
+import sandbox as sb
 
 from okl.store import RETIRED_STATUSES, Node
 
@@ -226,6 +227,19 @@ def summarize_4ai(items: list[dict]) -> dict:
     }
 
 
+def resumed(partial: Path) -> dict[str, dict]:
+    """The judgments a stopped run kept that a resume may reuse: only those made in a clean environment
+    with the tree's git link hidden. An earlier one saw the worktree's git status and the session's
+    variables, and mixing the two would pool instruments (review on #451)."""
+    done: dict[str, dict] = {}
+    if partial.exists():
+        for line in partial.read_text().splitlines():
+            got = json.loads(line)
+            if got.get("model_env") == sb.MODEL_ENV:
+                done[got["id"]] = got
+    return done
+
+
 def judge(census_path: Path, workers: int, section: str = "4ag") -> int:
     """Run §4ag (or §4ai) on the census receipt and write its receipt."""
     prompt, verdicts = SECTIONS[section]
@@ -272,11 +286,7 @@ def judge(census_path: Path, workers: int, section: str = "4ag") -> int:
     items.sort(key=lambda x: order[x["id"]])
 
     partial = Path(tempfile.gettempdir()) / f"okl-stale-{section}-{census_path.stem}.jsonl"
-    done = {}
-    if partial.exists():
-        for line in partial.read_text().splitlines():
-            got = json.loads(line)
-            done[got["id"]] = got
+    done = resumed(partial)
     room = Path(tempfile.mkdtemp(prefix="okl-judge-"))
     wt = room / "repo"
     dr.git("worktree", "add", "-q", "--detach", str(wt), rev)
@@ -294,10 +304,13 @@ def judge(census_path: Path, workers: int, section: str = "4ag") -> int:
         text = {f: getattr(n, f) or "" for f in ("title", "symptom", "fix", "body")}
         if x["role"] == "positive":
             text = {f: plant(t, x["planted"]["old"], x["planted"]["new"]) for f, t in text.items()}
-        out = {"id": x["id"]}
+        out = {"id": x["id"], "model_env": sb.MODEL_ENV}
         try:
+            # In a scratch tree of the repository on purpose: the judge reads the code to say whether a
+            # lesson still holds. Its environment is clean, and the tree's git link is hidden around the
+            # whole pool below (#446).
             p = subprocess.run(JUDGE, input=prompt.format(**text), capture_output=True, text=True,
-                               timeout=TIMEOUT, cwd=wt)
+                               timeout=TIMEOUT, cwd=wt, env=sb.clean_env())
             env = json.loads(p.stdout) if p.stdout.strip().startswith("{") else {}
             got = parse_verdict(env.get("result") or "", verdicts)
             out.update(got or {"error": (env.get("result") or p.stderr or "no output")[-300:]})
@@ -310,7 +323,10 @@ def judge(census_path: Path, workers: int, section: str = "4ag") -> int:
         return {**x, **out}
 
     try:
-        with ThreadPoolExecutor(max_workers=workers) as pool:
+        # Once for every judge, not per judge: the workers share this tree, and a second rename of a link
+        # already moved raised (review on #451). §4ai's judges otherwise read a status listing the census
+        # files removed from the tree.
+        with sb.no_git(wt), ThreadPoolExecutor(max_workers=workers) as pool:
             judged = list(pool.map(one, items))
     finally:
         dr.git("worktree", "remove", "--force", str(wt))

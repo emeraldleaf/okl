@@ -59,7 +59,7 @@ def commit_times(base: str, commit: str) -> tuple[int, int]:
 
 def briefings() -> list[tuple[int, set[str]]]:
     """Every briefing logged for okl: when (seconds) and which lessons it showed."""
-    con = sqlite3.connect(f"file:{REPO / '.okl' / 'okl.db'}?mode=ro", uri=True)
+    con = sqlite3.connect((REPO / ".okl" / "okl.db").resolve().as_uri() + "?mode=ro", uri=True)   # escaped (#446)
     try:
         rows = con.execute("SELECT at, node_ids FROM briefing WHERE repo = 'okl'").fetchall()
     finally:

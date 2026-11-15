@@ -35,6 +35,7 @@ import drift_mutate as dm
 import drift_replay as dr
 import lesson_review as lr
 import run_guard
+import sandbox as sb
 
 REPO = dr.REPO
 RESULTS = dr.RESULTS
@@ -280,13 +281,13 @@ def run(args: argparse.Namespace) -> int:
     shas = {lid: dr.text_sha(n) for lid, n in nodes.items()}
     seen = {k: r for k, r in done().items() if r["base"] == base[:12] and r["lesson_sha"] == shas[r["lesson"]]}
     main_status = git("status", "--porcelain")
-    room = Path(tempfile.mkdtemp(prefix="okl-4bf-"))
+    room = Path(tempfile.mkdtemp(prefix="okl-w-"))   # a breaker's path names no experiment (#446)
 
     def work(slot: int, lid: str) -> list[dict]:
         n = nodes[lid]
         text = dm.LESSON.format(title=n.title, symptom=n.symptom or "", fix=n.fix or "")
         governed = [g.strip() for g in (n.files or "").split(",") if g.strip()]
-        wt = room / f"breaker-{slot}"
+        wt = room / f"t{slot}"
         git("worktree", "add", "-q", "--detach", str(wt), base)
         out = []
         try:
@@ -300,6 +301,7 @@ def run(args: argparse.Namespace) -> int:
                         continue
                     git("checkout", "-q", "-f", "--detach", base, repo=wt)
                     git("clean", "-fdxq", repo=wt)
+                    dm.at_base(wt, base)
                     kept_out = hidden(wt, governed)
                     for x in kept_out:
                         (shutil.rmtree if (wt / x).is_dir() else Path.unlink)(wt / x)
@@ -307,12 +309,15 @@ def run(args: argparse.Namespace) -> int:
                              "different change." if earlier else "")
                     prompt = (dm.BREAK_PROMPT.format(lesson=text, avoid=avoid) if kind == "breaking" else
                               HARMLESS_PROMPT.format(lesson=text, avoid=avoid))
-                    s = dm.claude(dm.BREAKER, prompt, wt)
+                    with sb.no_git(wt):   # the session reads no git status, so no commit subject (#446)
+                        s = dm.claude(dm.BREAKER, prompt, wt)
                     git("checkout", "-q", "HEAD", "--", *kept_out, repo=wt)
                     git("add", "-A", repo=wt)
                     diff = git("diff", "--cached", "HEAD", repo=wt)   # with any file the breaker created
                     p = {"lesson": lid, "group": POPULATION[lid]["group"], "lesson_sha": shas[lid], "base": base[:12],
-                         "okl_commit": guard.started[0], "kind": kind, "k": k, "hidden": kept_out, "diff": diff,
+                         "okl_commit": guard.started[0], "room": room.name, "kind": kind, "k": k, "hidden": kept_out,
+                         "diff": diff,
+                         "judge_diff_cut": len(diff) > dm.JUDGE_CHARS,
                          "said": (s.get("result") or "")[-300:], "breaker_cost": s.get("cost_usd", 0.0),
                          "breaker_models": s.get("models", [])}
                     if s.get("error"):
@@ -324,7 +329,7 @@ def run(args: argparse.Namespace) -> int:
                             raise RuntimeError(f"could not commit {kind} {k} for {lid}")
                         p["checks"] = run_checks(wt, lid)
                         p["sorted"] = {name: sort_one(r) for name, r in p["checks"].items()}
-                        j = dm.claude(dm.JUDGE, dm.JUDGE_PROMPT.format(lesson=text, diff=diff[:12000]), room)
+                        j = dm.claude(dm.JUDGE, dm.JUDGE_PROMPT.format(lesson=text, diff=dm.for_judge(diff)), room)
                         p["judge"], p["judge_cost"] = dm.judged(j.get("result") or ""), j.get("cost_usd", 0.0)
                         p["judge_models"] = j.get("models", [])
                         p["judge_said"] = (j.get("result") or j.get("error") or "")[-300:]

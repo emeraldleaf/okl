@@ -131,7 +131,7 @@ def session(call: dict, task: dict, before: set[str]) -> dict | None:
             (room / extra).unlink(missing_ok=True)
         if (room / dr.LESSON_DIR).exists():
             subprocess.run(["rm", "-rf", str(room / dr.LESSON_DIR)], check=True)
-        patch = o.git("diff", cwd=room)
+        patch = o.patch_of(room)
         harm = [b for b in o.run_tests(room, task)["bad"] if b not in before]
         got = regrade.grade(room, task)
     return {**call, "instrument": INSTRUMENT, "passed": got["passed"], "summary": got["summary"], "edited": bool(patch), "harm": harm,

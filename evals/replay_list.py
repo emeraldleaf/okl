@@ -91,7 +91,7 @@ def session(call: dict, task: dict, before: set[str]) -> dict | None:
             print(f"  {name}: answered as {models}: {(reply.get('result') or '')[-160:]!r}", file=sys.stderr, flush=True)
             return None
         (room / "CHANGE.diff").unlink(missing_ok=True)
-        patch = o.git("diff", cwd=room)
+        patch = o.patch_of(room)
         harm = [b for b in o.run_tests(room, task)["bad"] if b not in before]
         got = regrade.grade(room, task)
     return {**call, "wrap": WRAP_SHA, "lists": o.sha(LISTS), "position": position(call["pr"], call["rep"]) if call["arm"].startswith("ten") else None,

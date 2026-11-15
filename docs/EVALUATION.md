@@ -130,6 +130,69 @@ mistake no lesson named.
     written from what the author expects: a fixture written by the code's author shares its
     assumptions (the store's `qz_fixtures` lesson, and the bug it let through in #388).
 
+## What every pre-registration states
+
+A review of the series in November 2026 (#446) found careful procedure, with controls run in the same
+sitting and deviations disclosed. It also found three gaps: no check that the samples could detect
+the effects their bars named, ground truth no person had checked, and arms that differed in more than
+one way at once. From then on, a pre-registration in [REPORT.md](../evals/REPORT.md) states the
+following three blocks before any data are seen. It cannot amend them afterwards; relaxing one makes
+the section exploratory.
+
+**1. Power and reading.**
+- **The unit of analysis:** the task or the lesson, whichever the data cluster in, never the sample.
+- **The smallest effect worth acting on,** and the planned number of units.
+- **Power,** from a committed simulation that resamples earlier receipts. Below 0.8 the section is a
+  pilot: it may not make a call to ship, or feed a figure into the docs.
+- **The reading is on the 95% interval,** in three outcomes: *supported*, *contradicted* or
+  *inconclusive*, with the action to take if inconclusive. A "within" claim takes two one-sided tests,
+  not where a point estimate falls.
+- **Small samples:** exact, Beta or cluster-bootstrap intervals, not ones that rest on the central
+  limit theorem.
+- **Budget:** spent on units before repeats.
+
+Sources: Lakens, Scheel and Isager, *Advances in Methods and Practices in Psychological Science* 2018;
+Gelman and Carlin, *Perspectives on Psychological Science* 2014; Card et al., EMNLP 2020; Bowyer,
+Aitchison and Ivanova, ICML 2025; Miller, *Adding Error Bars to Evals*, 2024.
+
+**2. Ground truth.**
+- **What the outcome is, per item.** For example: what makes a lesson's claim false of the repository,
+  and whether removing what enforces a rule counts as breaking it.
+- **The oracle, and what it can see.** A judge sees at least what the arm it grades sees (the store's
+  `judge-sees-less-than-the-arm` lesson; §4bf's judge was asked about the repository and shown only a
+  diff).
+- **For a model oracle,** three more things:
+  - a person labels a calibration set blind, stated by size, strata and the bar it must meet
+    (sensitivity, specificity and agreement, with intervals);
+  - the oracle answers each item more than once, and its self-agreement is reported;
+  - rates are corrected for the oracle's measured error.
+- **The no-verdict policy:** "unsure" and no answer count against the claim, and the best and worst
+  cases are reported.
+- **Graders are frozen before any session runs,** and each is checked on alternative right and wrong
+  fixes written by someone blind to the arms.
+
+Sources: Bavaresco et al., ACL 2025; Zheng et al., NeurIPS 2023; Lee et al., *How to Correctly Report
+LLM-as-a-Judge Evaluations*, 2025; Boyeau et al., ICML 2025; Zhu et al., *Establishing Best Practices
+for Building Rigorous Agentic Benchmarks*, 2025; Yu et al., ACL 2025.
+
+**3. Design and exposure.**
+- **A table of every way the compared arms differ:** count, instruction, contexts and compute, timing,
+  and what each can see. It names the one factor the contrast isolates and marks the rest matched or
+  confounded.
+- **A check that each unit receives its treatment.** For example, that a group member's check reads the
+  repository at all: §4bf's n_0637c92c032f did not.
+- **The mediators to log:** what was picked, and the grader's state after each pass.
+- **A ledger of what earlier sections have seen** (tasks, lessons, changes). The confirmatory set must
+  be unseen; the five tasks of §4aw–§4bb served six sections.
+- **Model calls go through `evals/sandbox.py`'s `ask`:** an empty room, or a scratch copy with no history of
+  this repository, never the checkout or one of its worktrees, since a session reads the git status of the
+  tree it runs in; a clean environment; a pinned,
+  recorded effort; and a check of which model answered. A breaker that must work in a tree of the
+  repository works with its git link hidden.
+
+Sources: Kapoor et al., *AI Agents That Matter*, TMLR 2025; Gelman and Loken, *The garden of forking
+paths*, 2013; Nosek et al., PNAS 2018.
+
 ## Retrieval: the channels, and what each can see
 
 A lesson can reach the agent through five channels, and §4ak shows they are not interchangeable:

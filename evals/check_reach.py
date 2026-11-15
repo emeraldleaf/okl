@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import subprocess
 import sys
 import tempfile
@@ -34,6 +33,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 import explain_search as es
 import lesson_review as lr
 import run_guard
+import sandbox as sb
 
 from okl.cli.verification import _stored_check
 from okl.client import Client
@@ -52,8 +52,7 @@ MISSING = ("No such file or directory", "can't open file", "ERROR: file or direc
 
 def env_for(tree: Path) -> dict[str, str]:
     """The check's environment: this tree's code first, no store named (lesson n_119528a07fa5)."""
-    env = {k: v for k, v in os.environ.items() if k not in ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN")}
-    return {**env, "PYTHONPATH": str(tree / "src"), "OKL_BRIEFING_LOG": "0"}
+    return sb.clean_env(tree=tree)   # before #446 it kept every OKL_ and git variable but three
 
 
 def run_check(tree: Path, run: str, expect: str | None) -> dict:

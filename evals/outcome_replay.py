@@ -17,7 +17,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 import random
 import re
 import shutil
@@ -34,6 +33,7 @@ from statistics import mean
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import run_guard
+import sandbox as sb
 
 REPO = Path(__file__).resolve().parents[1]
 TASKS = REPO / "evals" / "replay-tasks-4aw.json"
@@ -98,11 +98,19 @@ def git(*args: str, cwd: Path = REPO) -> str:
 
 
 def env_for(room: Path) -> dict[str, str]:
-    """The room's own package ahead of the installed one, and no store from outside."""
-    drop = ("OKL_DATABASE_URL", "OKL_SERVICE_URL", "OKL_TOKEN")
-    env = {k: v for k, v in os.environ.items() if k not in drop}
-    return {**env, "PYTHONPATH": str(room / "src"), "OKL_BRIEFING_LOG": "0",
-            "PATH": f"{Path(sys.executable).parent}{os.pathsep}{os.environ['PATH']}"}
+    """The room's own package ahead of the installed one, and none of the launching session's, okl's
+    or git's variables: before #446 a session inherited them, its effort level among them."""
+    return sb.clean_env(tree=room)
+
+
+def patch_of(room: Path) -> str:
+    """What the session left in `room` against the frozen commit, files it created included. A plain
+    `git diff` reads tracked files only, so a new file the agent wrote was left out of the patch a
+    later regrade applies (#446)."""
+    git("add", "-A", cwd=room)
+    patch = git("diff", "--cached", cwd=room)
+    git("reset", "-q", cwd=room)   # unstaged again, so a grader that reads the index sees the tree as before
+    return patch
 
 
 @contextmanager
@@ -215,7 +223,7 @@ def session(call: dict, task: dict) -> dict | None:
             return None
         (room / "CHANGE.diff").unlink(missing_ok=True)
         changed = [line[3:] for line in git("status", "--porcelain", cwd=room).splitlines()]
-        patch = git("diff", cwd=room)
+        patch = patch_of(room)
         overlay(room, task)
         result = run_tests(room, task)
     return {**call, "prompt": PROMPT_SHA, "contracts": sha(CONTRACTS), "passed": not grader_failed(result, task), "bad": result["bad"],
