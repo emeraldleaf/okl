@@ -340,6 +340,10 @@ DOC_FIGURES = {
     "1.6 GB": [("warm-memory-20261027-0530.txt", r"default(?:\s+\d+){6}\s+(\d+)", 0.001)],
     # The review log's read (#464): the size of the largest real transcript it was timed on, as a process.
     "569 MB": [("review-log-time-20261115-0848.json", r'"largest_real_megabytes": ([\d.]+)')],
+    # The quick hint's cost as okl init works it out (#470): okl's own store and two made-up ones.
+    "17 ms": [("quick-hint-time-20261115-1710.json", r'"okl\'s own store": \{[\s\S]*?"median_ms": ([\d.]+)')],
+    "48 ms": [("quick-hint-time-20261115-1710.json", r'"made up, 1,000 lessons": \{[\s\S]*?"median_ms": ([\d.]+)')],
+    "231 ms": [("quick-hint-time-20261115-1710.json", r'"made up, 5,000 lessons": \{[\s\S]*?"median_ms": ([\d.]+)')],
 }
 # Not measurements: a bound the docs set, or arithmetic, with why.
 THRESHOLDS = {
@@ -368,6 +372,9 @@ NEAR = {
     "114 ms": r"prompt",
     "1.6 GB": r"memory|holds|warm",
     "569 MB": r"transcript",
+    "17 ms": r"own store|quick",
+    "48 ms": r"1,000 lessons|made-up",
+    "231 ms": r"5,000|made-up",
 }
 
 

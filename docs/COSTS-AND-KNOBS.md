@@ -86,7 +86,10 @@ an edit until you approve a check with `okl on-edit add`; after that, the approv
 run time, at most 30 seconds each and 50 an edit (`okl on-edit run --timeout` and `--budget`).
 `okl on-edit add --quick` offers only the checks whose last passing run took 10 seconds or less
 (`--under N` to choose another limit, above 0 and up to 30). A check never timed costs one run of
-it to time, with `okl reverify --untimed`, which shows the commands and asks first.
+it to time, with `okl reverify --untimed`, which shows the commands and asks first. While no check
+is approved, `okl on-edit` and `okl init` count the quick ones, reading each lesson's check log once,
+on a local store only: about 17 ms on okl's own store, 48 ms on a made-up store of 1,000 lessons and
+231 ms on one of 5,000, growing with the number of lessons that carry a check.
 **Set `OKL_DISABLED_HOOKS=encode` for headless runs (`claude -p`, CI agents, scripts):**
 print mode emits only the final message, and a blocked stop makes the reply to "what did
 we learn?" that final message — the answer you asked for is then only in the transcript.

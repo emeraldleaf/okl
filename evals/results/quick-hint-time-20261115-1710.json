@@ -1,0 +1,27 @@
+{
+ "what": "the quick hint's cost, as okl init works it out (#470)",
+ "repeats": 7,
+ "at": "2026-11-15T17:10Z",
+ "stores": {
+  "okl's own store": {
+   "lessons": 396,
+   "could_run_on_edit": 100,
+   "median_ms": 16.6,
+   "max_ms": 17.2
+  },
+  "made up, 1,000 lessons": {
+   "lessons": 1000,
+   "could_run_on_edit": 1000,
+   "median_ms": 48.2,
+   "max_ms": 50.1
+  },
+  "made up, 5,000 lessons": {
+   "lessons": 5000,
+   "could_run_on_edit": 5000,
+   "median_ms": 230.8,
+   "max_ms": 235.1
+  }
+ },
+ "okl_commit_at_start": "9881fb5",
+ "okl_commit": "9881fb5"
+}
