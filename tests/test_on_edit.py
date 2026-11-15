@@ -514,14 +514,15 @@ def test_quick_offers_only_the_checks_that_last_passed_quickly_and_asks_first(tm
     offered, apart = refused.stderr.split("Time unknown")
     assert "[fast]" in offered and "[slow]" in offered and "last passing run took 0.4 s" in offered
     assert "[failing]" not in refused.stderr and "[never]" not in offered
-    assert "[never]" in apart and f"okl verify never --run {shlex.quote(marks)} --expect 'ORDERS OK'" in apart
+    assert "[never]" in apart and "`okl reverify --untimed` re-runs their checks once to time them" in apart
+    assert "okl verify" not in apart and "marks.py" not in apart, "the never-timed are listed by id and title only"
     assert "1 whose check failed its last run" in apart
     assert "approves them in a terminal" in refused.stderr and "--yes" not in refused.stderr
     assert "on_edit" not in _config(repo)
 
-    under = _okl(repo, env, "on-edit", "add", "--quick", "--under", "1", "--yes")
+    under = _okl(repo, env, "on-edit", "add", "--quick", "--under", "2.5", "--yes")
     assert under.returncode == 0, under.stderr
-    assert "[slow]" not in under.stdout.split("Time unknown")[0] and "1 whose last passing run took over 1 s" in under.stdout
+    assert "[slow]" not in under.stdout.split("Time unknown")[0] and "1 whose last passing run took over 2.5 s" in under.stdout
     assert _config(repo)["on_edit"] == {"fast": approval(marks, "ORDERS OK")}
 
     rest = _okl(repo, env, "on-edit", "add", "--quick", "--yes")
@@ -549,12 +550,16 @@ def test_quick_judges_the_stored_check_by_its_own_runs(tmp_path):
     (("--quick", "fast"), "not both"),
     (("--under", "5", "fast"), "--under goes with --quick"),
     (("--quick", "--under", "31"), "longer than the 30 seconds"),
-    (("--quick", "--under", "0"), "at least 1"),
+    (("--quick", "--under", "0"), "above 0"),
+    (("--quick", "--under", "-1"), "above 0"),
+    (("--quick", "--under", "nan"), "above 0"),
+    (("--quick", "--under", "soon"), "is not a number of seconds"),
     ((), "pass --quick"),
 ])
 def test_quick_refuses_what_it_cannot_do(tmp_path, args, why):
-    """--quick chooses the lessons, so it takes no ids; --under means nothing without it, and a limit
-    past the time a check gets after an edit would offer checks that are never judged there."""
+    """--quick chooses the lessons, so it takes no ids; --under means nothing without it, offers
+    nothing at zero or less, and past the time a check gets after an edit would offer checks that
+    are never judged there."""
     repo, env, _marks = _timed_lessons(tmp_path)
     r = _okl(repo, env, "on-edit", "add", *args, "--yes")
     assert (r.returncode, r.stdout) == (2, ""), r.stdout
@@ -583,3 +588,58 @@ def test_the_quick_hint_is_said_only_when_nothing_is_approved_and_a_check_is_qui
     assert _okl(repo, env, "on-edit", "add", "never", "--yes").returncode == 0
     assert hint not in _okl(repo, env, "on-edit").stdout
     assert hint not in _okl(repo, env, "init", "--repo", "r", "--no-seed", "--claude").stdout
+
+
+def test_reverify_untimed_times_the_checks_quick_cannot_judge(tmp_path):
+    """Every run logged before okl timed them is untimed, so on an existing store --quick could offer
+    nothing until lessons drifted one by one. `okl reverify --untimed` adds to reverify's set each
+    lesson --quick lists as time unknown, even one that has not drifted, and no timed one; --dry-run
+    runs nothing; without the flag the set is what it was. A pass re-stamps the lesson, and the
+    closing line says to commit the drift snapshot it changed (#467)."""
+    repo, env = _repo(tmp_path)
+    marks = f"{PY} marks.py"
+    _lesson(repo, env, "timed", run=marks)              # governs src/orders.py, so okl-drift.json is written
+    _took(env, "timed", 0.4)
+    _lesson(repo, env, "never", run=f"{marks} ")
+    _took(env, "never", None)
+    mark, snap = repo / "ran.txt", repo / "okl-drift.json"
+    mark.unlink()
+    before = snap.read_bytes()
+
+    plain = _okl(repo, env, "reverify", "--dry-run")
+    assert (plain.returncode, plain.stdout.strip()) == (0, "okl reverify: nothing has drifted."), plain.stdout
+    dry = _okl(repo, env, "reverify", "--untimed", "--dry-run")
+    assert dry.returncode == 1, dry.stderr      # a plan, and --dry-run ran none of it
+    assert "[never]" in dry.stdout and "(never timed)" in dry.stdout and "[timed]" not in dry.stdout
+    assert not mark.exists() and snap.read_bytes() == before, "--dry-run ran a check or re-stamped"
+    unasked = _okl(repo, env, "reverify", "--untimed")
+    assert unasked.returncode == 2 and not mark.exists() and "refusing to run stored commands" in unasked.stderr
+
+    ran = _okl(repo, env, "reverify", "--untimed", "--yes")
+    assert ran.returncode == 0, ran.stderr
+    assert mark.exists() and "okl reverify: 1 re-verified, 0 failed" in ran.stdout
+    assert "The re-stamps changed okl-drift.json: commit it" in ran.stdout
+    quick = _okl(repo, env, "on-edit", "add", "--quick")
+    assert "[never]" in quick.stderr and "Time unknown" not in quick.stderr, quick.stderr
+    done = _okl(repo, env, "reverify", "--untimed", "--dry-run")
+    assert done.returncode == 0 and "every lesson check that could run on edit is timed" in done.stdout
+
+
+def test_the_quick_hint_reads_nothing_from_a_shared_service(remote, monkeypatch, capsys):
+    """On a shared service the hint would read each lesson's runs, one request per lesson, on every
+    `okl on-edit` listing, so it is not worked out there; --quick, asked for, still is (#467)."""
+    from okl import core
+    from okl.cli import main, on_edit
+    from okl.client import Client
+    core.record(remote.store, id="les", type="Rule", title="a quick lesson", scope="org")
+    core.verify(remote.store, "les", "`true` exit 0 @ 2026-11-15T00:00Z")
+    core.log_check(remote.store, "les", passed=True, command="true", outcome="exit 0", seconds=0.2)
+    nodes = {n.id: n for n in Client().all_nodes()}
+    assert len(on_edit._by_time(Client(), on_edit._addable({}, nodes, "r"), on_edit.QUICK)[0]) == 1
+
+    def per_lesson(*_a, **_k):
+        raise AssertionError("the hint read a lesson's runs over the service")
+    monkeypatch.setattr(Client, "get", per_lesson)
+    assert main(["on-edit"]) == 0
+    out = capsys.readouterr().out
+    assert "[les]" in out and "okl on-edit add --quick" not in out, out

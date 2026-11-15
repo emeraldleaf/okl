@@ -29,7 +29,8 @@ Which checks are quick enough to run after every edit is the person's call, made
 time (#467): `okl verify` and `okl reverify` log how long each run took, and `okl on-edit add
 --quick` offers the lessons whose stored check last passed in at most `--under` seconds, each shown
 and approved on one yes, pinned as one named by id is. A check never timed is listed apart and never
-offered: its time is unknown, not short. Runs here are neither logged nor timed, so an edit never
+offered: its time is unknown, not short, and `okl reverify --untimed` re-runs such checks once, on
+the person's yes, to time them. Runs here are neither logged nor timed, so an edit never
 adds to the check log: `okl recap` counts a logged run as a stale lesson re-checked, and changing
 what counts there is not this command's to do.
 """
@@ -41,7 +42,6 @@ import hashlib
 import io
 import json
 import math
-import shlex
 import sys
 import time
 from pathlib import Path
@@ -168,36 +168,34 @@ def _add(args: argparse.Namespace, approved: dict[str, str], nodes: dict[str, No
 
 
 def _add_quick(args: argparse.Namespace, approved: dict[str, str], nodes: dict[str, Node], client: Client,
-               under: int) -> int | None:
+               under: float) -> int | None:
     """Offer the lessons that could be added whose stored check last passed in at most `under`
     seconds, each shown with its time, and approve them as _approve does. The ones never timed are
-    listed apart and never offered; the slow ones and the ones whose check last failed are counted."""
+    listed apart, by id and title, and never offered; the slow ones and the ones whose check last
+    failed are counted."""
     if under > TIMEOUT:
-        print(f"okl on-edit add: --under {under} is longer than the {TIMEOUT} seconds a check gets after an "
+        print(f"okl on-edit add: --under {under:g} is longer than the {TIMEOUT} seconds a check gets after an "
               "edit, so a check that slow would never be judged there", file=sys.stderr)
         return 2
     quick, unknown, slow, failing = _by_time(client, _addable(approved, nodes, client.repo), under)
     apart = []
     if unknown:
-        # `okl reverify` re-runs only the drifted lessons, so each gets the command that times it.
-        apart.append("Time unknown, so --quick does not offer these: no run of their check has been timed "
-                     "yet. `okl reverify` times the drifted ones it re-runs; time another with the line shown:")
-        for n in unknown:
-            run, expect = _stored_check(n.verified_by) or ("", None)
-            apart.append(f"  [{shown(n.id)}] {n.title}\n      time it: okl verify {shlex.quote(n.id)} --run "
-                         f"{shlex.quote(run)}" + (f" --expect {shlex.quote(expect)}" if expect else ""))
-    left = [f"{slow} whose last passing run took over {under} s" if slow else "",
+        apart.append("Time unknown, so --quick does not offer these: no run of their check has been timed yet.")
+        apart.extend(f"  [{shown(n.id)}] {n.title}" for n in unknown)
+        apart.append("`okl reverify --untimed` re-runs their checks once to time them; it shows them and asks "
+                     "first.")
+    left = [f"{slow} whose last passing run took over {under:g} s" if slow else "",
             f"{failing} whose check failed its last run" if failing else ""]
     if any(left):
         apart.append("Also left out: " + ", ".join(x for x in left if x) + ".")
     if not quick:
-        print("\n".join([f"okl on-edit add --quick: no lesson's check last passed in {under} s or less, so "
+        print("\n".join([f"okl on-edit add --quick: no lesson's check last passed in {under:g} s or less, so "
                          "there is nothing to approve.", *apart]))
         return None
     times = {n.id: t for n, t in quick}
     return _approve(args, list(times), approved, nodes, times=times, apart=apart,
                     intro=(f"These {len(quick)} lesson checks" if len(quick) > 1 else "This lesson check")
-                    + f" last passed in {under} s or less.")
+                    + f" last passed in {under:g} s or less.")
 
 
 def _approve(args: argparse.Namespace, wanted: list[str], approved: dict[str, str], nodes: dict[str, Node], *,
@@ -257,38 +255,52 @@ def _addable(approved: dict[str, str], nodes: dict[str, Node], repo: str) -> lis
                   key=lambda n: n.id)
 
 
-def _last_run(client: Client, node: Node) -> tuple[bool, float | None] | None:
-    """The latest logged run of the lesson's stored check, the command and signal an approval pins:
-    whether it passed, and how long it took (None when that run was not timed). None when the runs
-    `okl show` lists hold none of it. A run of another command is another check, whatever it took."""
+FAILED = "failed"        # check_time: the latest run of the lesson's stored check failed
+UNTIMED = "untimed"      # check_time: no timed passing run of it among the runs okl can see
+
+
+def check_time(client: Client, node: Node) -> float | str:
+    """How long the lesson's stored check (the command and signal an approval pins) took at its latest
+    logged run, which passed; FAILED when that run failed; UNTIMED when it passed untimed (logged before
+    okl timed runs) or the runs `okl show` lists hold none of it. A run of another command is another
+    check, whatever it took. One test for both readers: `okl on-edit add --quick` lists the UNTIMED
+    lessons apart, and `okl reverify --untimed` re-runs them once to time them."""
     check = _stored_check(node.verified_by)
     got = client.get(node.id) if check else None
     if not check or not got:
-        return None
+        return UNTIMED
     mine = [r for r in got.get("checks") or []
             if (r.get("command"), r.get("expect") or None) == (check[0], check[1] or None)]
     if not mine:
-        return None
+        return UNTIMED
+    if not mine[-1].get("passed"):
+        return FAILED
     took = mine[-1].get("seconds")
     timed = isinstance(took, int | float) and not isinstance(took, bool) and math.isfinite(took)
-    return bool(mine[-1].get("passed")), float(took) if timed else None
+    return float(took) if timed else UNTIMED
+
+
+def untimed(client: Client, nodes: dict[str, Node]) -> list[Node]:
+    """The lessons whose check could run on edit, approved or not, and is UNTIMED, by id: the ones
+    `okl on-edit add --quick` lists as time unknown, which `okl reverify --untimed` re-runs."""
+    return [n for n in _addable({}, nodes, client.repo) if check_time(client, n) == UNTIMED]
 
 
 def _by_time(client: Client, lessons: list[Node], under: float) -> tuple[list[tuple[Node, float]], list[Node], int, int]:
     """`lessons` sorted by their check's last run: the quick ones (last passed in at most `under`
-    seconds) with that time, the ones never timed, and how many were slow and how many last failed.
-    A check whose latest run failed would fail at every edit, so it is not offered, however fast."""
+    seconds) with that time, the UNTIMED ones, and how many were slow and how many last failed. A
+    check whose latest run failed would fail at every edit, so it is not offered, however fast."""
     quick: list[tuple[Node, float]] = []
     unknown: list[Node] = []
     slow = failing = 0
     for n in lessons:
-        last = _last_run(client, n)
-        if last is not None and not last[0]:
+        took = check_time(client, n)
+        if took == FAILED:
             failing += 1
-        elif last is None or last[1] is None:
+        elif isinstance(took, str):     # UNTIMED
             unknown.append(n)
-        elif last[1] <= under:
-            quick.append((n, last[1]))
+        elif took <= under:
+            quick.append((n, took))
         else:
             slow += 1
     return quick, unknown, slow, failing
@@ -301,8 +313,10 @@ def _took(seconds: float) -> str:
 
 def quick_hint(client: Client, approved: dict | None, nodes: dict[str, Node] | None = None) -> str | None:
     """The line `okl init` and `okl on-edit` say when no check is approved and some lessons' checks
-    last passed in at most QUICK seconds; None when a check is approved or none is quick."""
-    if approved:
+    last passed in at most QUICK seconds; None when a check is approved or none is quick. None on a
+    shared service too: it reads each lesson's runs, one request per lesson there, on every listing.
+    Locally that is one indexed read per lesson, cheap at the size of okl's own store."""
+    if approved or client.mode == "remote":
         return None
     if nodes is None:
         nodes = {n.id: n for n in client.all_nodes()}

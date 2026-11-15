@@ -497,6 +497,11 @@ def cmd_reverify(args: argparse.Namespace) -> int:
     service holds records other people wrote, so they are listed and run only after a
     confirmation or --yes: stored data reaching a shell unasked is how a shared store
     becomes remote code execution.
+
+    With --untimed, also each lesson whose check could run on edit and has no timed run okl can
+    see (#467): every run logged before okl timed them is untimed, so on an existing store `okl
+    on-edit add --quick` could offer nothing until lessons drifted one by one. Same list, same
+    question, same re-stamp of each pass, so the drift snapshot changes as with any re-run.
     """
     from .. import drift
     client = Client()
@@ -516,8 +521,11 @@ def cmd_reverify(args: argparse.Namespace) -> int:
     targets = [(h.node_id, h.title) for h in hits]
     targets += [(n.id, n.title) for n, _c in drift.off_branch(nodes, client.repo, root)
                 if n.id not in {h.node_id for h in hits}]
+    timing = _untimed_targets(args, client, by_id, {nid for nid, _t in targets})
+    targets += [(nid, by_id[nid].title) for nid in timing]
     if not targets:
-        print("okl reverify: nothing has drifted.")
+        print("okl reverify: nothing has drifted" + (", and every lesson check that could run on edit is "
+                                                     "timed." if getattr(args, "untimed", False) else "."))
         return 0
     plan, manual = [], []
     for nid, title in targets:
@@ -529,18 +537,39 @@ def cmd_reverify(args: argparse.Namespace) -> int:
     if plan:
         print(f"okl reverify will run {len(plan)} stored check(s), from the store:")
         for nid, (run, _exp) in plan:
-            print(f"  [{shown(nid)}] {shown(run)}")
+            print(f"  [{shown(nid)}] {shown(run)}" + ("  (never timed)" if nid in timing else ""))
     stop = _reverify_permitted(args, bool(plan), bool(manual))
     if stop is not None:
         return stop
+    snap = _snapshot_path()
+    before = _contents(snap)
     failed = 0
     for nid, (run, exp) in plan:
         rc = cmd_verify(argparse.Namespace(node_id=nid, run=run, expect=exp, timeout=args.timeout,
                                            branch_warning=False))
         failed += rc != 0
-    print(f"okl reverify: {len(plan) - failed} re-verified, {failed} failed, {len(manual)} need a first check.")
+    refreshed = snap.exists() and _contents(snap) != before
+    print(f"okl reverify: {len(plan) - failed} re-verified, {failed} failed, {len(manual)} need a first check."
+          + (f" The re-stamps changed {snap.name}: commit it, since CI reads it, not the store." if refreshed else ""))
     _warn_off_branch(client)
     return 1 if (failed or manual) else 0
+
+
+def _untimed_targets(args: argparse.Namespace, client: Client, by_id: dict[str, Node], taken: set[str]) -> list[str]:
+    """With --untimed, the ids of the lessons `okl on-edit add --quick` lists as time unknown that
+    are not already in `taken`, by id; else none. The test is on_edit's own, not a copy of it."""
+    if not getattr(args, "untimed", False):
+        return []
+    from .on_edit import untimed  # on_edit imports this module, so not at the top
+    return [n.id for n in untimed(client, by_id) if n.id not in taken]
+
+
+def _contents(path: Path) -> bytes | None:
+    """The file's bytes, or None when there is none to read."""
+    try:
+        return path.read_bytes()
+    except OSError:
+        return None
 
 
 def _snapshot_path() -> Path:
