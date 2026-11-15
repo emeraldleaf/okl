@@ -152,8 +152,8 @@ its sub-agents' under `~/.claude/projects` and writes one row about the review t
 paths, counts and model names; no code, command line or session text). `okl recap --reviews` reads
 the rows back. No model is called, and the agent is not told. The cost is time at the stop: the hook
 waits for it. Timed as a full process (`evals/review_log_time.py`, receipt
-`evals/results/review-log-time-20261115-0727.json`), the largest real transcript on my machine, 569 MB,
-took about a second. The hook cuts it off at about 5 seconds, so a slower read costs a missed row,
+`evals/results/review-log-time-20261115-0821.json`), the largest real transcript on my machine, 569 MB,
+took about 0.8 seconds. The hook cuts it off at about 5 seconds, so a slower read costs a missed row,
 never a held stop. Where the review after writing is off for the repo,
 nothing is logged. To keep the review and drop only the log, set `OKL_REVIEW_LOG=0` for a session, or
 `"review_log": false` in `.okl/config.json` for the repo (the environment wins; any other value is

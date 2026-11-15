@@ -1,6 +1,6 @@
 {
   "experiment": "review log read time (#464)",
-  "date": "2026-11-15T07:27Z",
+  "date": "2026-11-15T08:21Z",
   "command": "okl recap --transcript <t> --log-review, a new process each, in a scratch repository",
   "runs": 3,
   "note": "sizes and seconds only; no transcript content and no path. The Stop hook cuts the logger off with TERM at 4 s and KILL at 5 s.",
@@ -12,10 +12,10 @@
       "megabytes": 146.0,
       "seconds": [
         0.59,
-        0.58,
-        0.6
+        0.57,
+        0.57
       ],
-      "median_seconds": 0.59,
+      "median_seconds": 0.57,
       "exit_codes": [
         0,
         0,
@@ -27,11 +27,11 @@
       "bytes": 569050727,
       "megabytes": 569.1,
       "seconds": [
-        1.08,
-        0.98,
-        1.05
+        0.95,
+        0.82,
+        0.82
       ],
-      "median_seconds": 1.05,
+      "median_seconds": 0.82,
       "exit_codes": [
         0,
         0,
@@ -40,14 +40,14 @@
     },
     {
       "label": "real transcript 2 by size",
-      "bytes": 147704757,
-      "megabytes": 147.7,
+      "bytes": 148008599,
+      "megabytes": 148.0,
       "seconds": [
-        0.32,
-        0.31,
-        0.31
+        0.27,
+        0.27,
+        0.26
       ],
-      "median_seconds": 0.31,
+      "median_seconds": 0.27,
       "exit_codes": [
         0,
         0,
@@ -56,9 +56,9 @@
     }
   ],
   "largest_real_megabytes": 569.1,
-  "largest_real_median_seconds": 1.05,
+  "largest_real_median_seconds": 0.82,
   "synthetic_megabytes": 146.0,
-  "synthetic_median_seconds": 0.59,
-  "okl_commit_at_start": "22b9b5f",
-  "okl_commit": "22b9b5f"
+  "synthetic_median_seconds": 0.57,
+  "okl_commit_at_start": "0937509",
+  "okl_commit": "0937509"
 }

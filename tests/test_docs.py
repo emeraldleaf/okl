@@ -339,7 +339,7 @@ DOC_FIGURES = {
     "114 ms": [("warm-latency-20261029-0243.txt", r"added by the model, per prompt.*?median ([\d.]+) ms")],
     "1.6 GB": [("warm-memory-20261027-0530.txt", r"default(?:\s+\d+){6}\s+(\d+)", 0.001)],
     # The review log's read (#464): the size of the largest real transcript it was timed on, as a process.
-    "569 MB": [("review-log-time-20261115-0727.json", r'"largest_real_megabytes": ([\d.]+)')],
+    "569 MB": [("review-log-time-20261115-0821.json", r'"largest_real_megabytes": ([\d.]+)')],
 }
 # Not measurements: a bound the docs set, or arithmetic, with why.
 THRESHOLDS = {
