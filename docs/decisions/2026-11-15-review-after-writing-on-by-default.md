@@ -50,7 +50,8 @@ work unless the review is turned off.
 
 The review works when the right lesson is among the ten it checks, and the agent's own pick puts it
 there less than half the time: the pick held 0.47 of the broken lessons across 58 past changes
-(§4bc). End to end, picking its own lessons, the review passed in 0.2 of its sessions (5 of 25, on
+(§4bc), as a model's answer key labelled them; a second model agreed with a third of that key's
+broken labels, so the figure rests on labels no person has checked (§4bh). End to end, picking its own lessons, the review passed in 0.2 of its sessions (5 of 25, on
 2 of 5 bugs) where no review passed in none (§4az). Its reach was 17.4% of the broken lessons
 against a 30% bar (§4au). It is the only measured step that turns lessons into changes, and today
 it runs at roughly a quarter of what it does when the right lesson is in its ten. All of this rests

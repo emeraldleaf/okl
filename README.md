@@ -616,8 +616,9 @@ Every knob, what `okl init` writes, how to turn parts off, and the opt-in archit
 symptom, a fix and the files it governs, then `okl verify` it with a test. Any task that shares
 its words is briefed with it first; if the code it covers changes, the push waits until the check
 passes again. Write that test to check the rule, not only the incident: in this repository, no
-lesson's own check caught any of 124 later breaks of its lesson (REPORT §4bd), and checks that
-sweep their rule across the code caught about half of fresh breaks (§4bf).
+lesson's own check caught any of 124 later breaks of its lesson (REPORT §4bd; the breaks are a
+model's labels, which a second model agreed with a third of the time, so a person has yet to check
+them, §4bh), and checks that sweep their rule across the code caught about half of fresh breaks (§4bf).
 
 **What happens when the code a lesson covers changes?** `okl drift` lists it, the pre-push hook
 holds the push (or CI fails), and the next briefing marks it STALE. `okl reverify` re-runs its

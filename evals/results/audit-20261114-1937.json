@@ -1,0 +1,103 @@
+{
+ "what": "the audit for #446",
+ "labelled_by": {
+  "adjudication": "the maintainer, blind",
+  "key": "a second model annotator (Claude, reading each change), not a person",
+  "judge": "a second model annotator (Claude, applying each patch and running its checks), not a person"
+ },
+ "at": "2026-11-14T19:37Z",
+ "draw_items_sha256": "3a4a8458f1b25ce03d08d99054c42095c3ba23dc0b4f657f8f7eb2140adde5d2",
+ "adjudication": {
+  "section": "4al",
+  "step": "audit (double annotation, adjudicated)",
+  "at": "2026-11-14T19:37Z",
+  "adjudicated": 21,
+  "of": 21,
+  "agreements_sampled": 10,
+  "agreements_overturned": 2,
+  "disagreements_adjudicated": 11,
+  "judge_right_on_disagreements": 6,
+  "kappa_judge_vs_final": 0.865,
+  "pairs_scored": 120,
+  "undecided": [],
+  "bar": {
+   "agreements_overturned_max": 1,
+   "kappa": 0.6
+  },
+  "passed": false,
+  "status": "failed"
+ },
+ "key": {
+  "answered": 30,
+  "of": 30,
+  "table": {
+   "broken->broken": 4,
+   "followed->followed": 11,
+   "related->followed": 3,
+   "broken->followed": 7,
+   "broken->related": 1,
+   "related->related": 3,
+   "followed->related": 1
+  },
+  "broken_precision": {
+   "k": 4,
+   "n": 12,
+   "rate": 0.3333,
+   "wilson95": [
+    0.1381,
+    0.6094
+   ]
+  },
+  "bar": 0.8,
+  "passed": false
+ },
+ "judge": {
+  "answered": 60,
+  "of": 60,
+  "table": {
+   "intact->intact": 20,
+   "none->broken": 10,
+   "broken->broken": 26,
+   "broken->protection": 3,
+   "broken->intact": 1
+  },
+  "broken_precision": {
+   "k": 26,
+   "n": 30,
+   "rate": 0.8667,
+   "wilson95": [
+    0.7032,
+    0.9469
+   ]
+  },
+  "intact_precision": {
+   "k": 20,
+   "n": 20,
+   "rate": 1.0,
+   "wilson95": [
+    0.8389,
+    1.0
+   ]
+  },
+  "none_broken_share": {
+   "k": 10,
+   "n": 10,
+   "rate": 1.0,
+   "wilson95": [
+    0.7225,
+    1.0
+   ]
+  },
+  "protection_removed": 3,
+  "sensitivity_reweighted": 0.7893,
+  "specificity_reweighted": 0.8405,
+  "bars": {
+   "broken_precision": 0.8,
+   "intact_precision": 0.8
+  },
+  "passed": true
+ },
+ "okl_commit_at_start": "673f235",
+ "okl_commit": "673f235",
+ "model_env": "sandbox.clean_env (#446)"
+}

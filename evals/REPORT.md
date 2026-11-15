@@ -4854,6 +4854,9 @@ calibration set for the conformal cutoff; with the needed lessons at a median ra
 90% cutoff will be deep, and its briefing size will be reported beside it. Outside this section, none
 of these figures is quoted until #394 passes.
 
+
+*Note, 2026-11-15:* the audit #394 asked for ran (§4bh): 2 of 10 sampled agreements were overturned against a bar of 1, at κ 0.865. By that bar, the reach figures above are not audited.
+
 ## 4am. PRE-REGISTERED: can the briefing reach more of what real work needs? Three arms on a time split (2026-11-08)
 
 Written before any arm is computed on either half. It follows §4al, which found the default briefing
@@ -6476,6 +6479,9 @@ screener also read any `"bears"` value by its truth, so the string `"false"` wou
 bearing; the reviewer found only true and false in the saved replies, so that did not happen. Both are
 fixed, with tests. *Correction, 2026-11-14 (the second review on #451):* an earlier version of this erratum said the calls read the repository's CLAUDE.md. A saved session run the same way shows they did not: `--restricted` skips it. What they did read is the git status.
 
+
+*Note, 2026-11-15:* the 124 broken lessons this section counts are the answer key's. In the audit (§4bh), a second model agreed with 4 of the 12 drawn from them. Neither labeller is a person, so the key is unvalidated, and this section's figures are against a model's key.
+
 ## 4bd. PRE-REGISTERED: would a lesson's own check, run at the edit, have caught the breaks past changes made? (2026-11-12)
 
 Written before any check in this section ran on these changes. Since #441, okl can run a lesson's
@@ -6582,6 +6588,9 @@ What it means, not pre-registered:
    any of them; a check that tests the rule across the code would also need to govern the files the
    rule covers.
 
+
+*Note, 2026-11-15:* the 124 broken lessons this section counts are the answer key's. In the audit (§4bh), a second model agreed with 4 of the 12 drawn from them. Neither labeller is a person, so the key is unvalidated, and this section's figures are against a model's key.
+
 ## 4be. PRE-REGISTERED, A PILOT, IN-SAMPLE: would okl's rule-wide checks (#415) have caught these breaks? (2026-11-12)
 
 Written before any of these checks ran on these changes. §4bd found that no broken lesson's own check,
@@ -6652,6 +6661,9 @@ What it means, not pre-registered:
    back in time to judge them. By the registered reading, the next test writes fresh breaks of each
    rule on today's code, where today's checks pass to begin with (§4af's method), and compares each
    lesson's own check with its rule-wide one on the same breaks.
+
+
+*Note, 2026-11-15:* the 124 broken lessons this section counts are the answer key's. In the audit (§4bh), a second model agreed with 4 of the 12 drawn from them. Neither labeller is a person, so the key is unvalidated, and this section's figures are against a model's key.
 
 ## 4bf. PRE-REGISTERED: on fresh breaks of each rule on today's code, do the checks `okl on-edit` runs catch them? (2026-11-13)
 
@@ -6910,6 +6922,9 @@ check catches only what it tests, citing this section.
   - Whether a check written blind from the rule would cover more forms. That is the test §4be named, and
     it now has 61 judged breaks to run on.
 
+
+*Note, 2026-11-15:* in the audit (§4bh), all 10 patches the judge gave no verdict were breaks, drawn from §4af's, §4ah's and this section's runs. So the reading above that counts the no-verdict breaking patches as missed is the better estimate.
+
 ## 4bg. EXPLORATORY, NOT PRE-REGISTERED: is a list's cost its instruction? A first look on §4ay's tasks (2026-11-14)
 
 §4ax found that a lesson which changed the code 0.6 of the time alone changed it 0.08–0.2 of the time in a list of
@@ -6975,6 +6990,54 @@ the strengthening). I added the
 missing cases, and all fourteen pairs are now told apart (receipt `replay-alternatives-4bg-20261115-0115.json`). For those five, the second check is not
 blind: I wrote the cases after seeing which wrong fixes passed. The file-tie test (#450) is not in the set: only 3
 of the 14 lessons name one file while the fix lands in another.
+
+## 4bh. The ground-truth audit (#446, #394): the judge holds, and the answer key is unvalidated (2026-11-15)
+
+The review of the evaluations (#446) found that no person had checked the series' ground truth. Three
+sets of model labels carried it:
+- §4al's needed-labeller, the judge #394 asked a person to adjudicate;
+- the answer key that sorted needed lessons into broken or followed (§4ap's sort), the source of the
+  124 broken lessons that §4bc, §4bd and §4be count;
+- the judge that rules whether a break left a lesson's claim false (§4af, §4ah, §4bf).
+
+The audit drew three blind sets (receipt `audit-draw-20261114-1932.json`, seed 446). The key's and
+the judge's bars were committed in `8cb38ba`, before any label was scored in `071accd`; the
+adjudication's bar is #394's own. The sets:
+- 21 adjudication pairs;
+- 30 key pairs: 12 the key called broken, 12 followed, 6 related;
+- 60 judge patches: 30 it called broken, 20 intact, 10 with no verdict.
+
+**Who labelled.** I labelled the 21 adjudication pairs blind. The other 90 were labelled by a second model
+(Claude, reading each change, and applying each patch and running its checks), not by a person, and the
+receipt says so (`audit-20261114-1937.json`). Two of the three results are therefore agreement between
+models, not ground truth. Which Claude model drafted those 90 was not recorded. The key and §4bf's
+judge were Opus, so the second model may share their biases, and the judge's pass does not show
+independent confirmation.
+
+| set | labelled by | bar | result |
+|---|---|---|---|
+| adjudication (#394) | me, blind | at most 1 sampled agreement overturned, κ at least 0.6 | **failed**: 2 of 10 overturned, κ 0.865 |
+| judge | a second model | broken and intact precision at least 0.8 | **passed**: broken 26 of 30, intact 20 of 20 |
+| answer key | a second model | broken precision at least 0.8 | **failed**: 4 of the 12 it called broken |
+
+What it means:
+1. **#394 failed by one.** The §4al judge's needed labels agree with mine at κ 0.865, but 2 of the 10
+   sampled agreements were overturned, one more than its bar allowed. By #394's own bar, §4al's reach
+   figures are not audited.
+2. **The judge holds, and its silences were breaks.** Its broken calls were right 26 times in 30 (Wilson
+   95% [0.703, 0.947]) and its intact calls 20 times in 20. Three of its broken calls read as
+   *protection removed*: what enforced the rule was gone or weaker, but the claim still held. All 10
+   patches it gave no verdict were breaks. So for §4bf, the reading that counts the no-verdict breaking
+   patches as missed is the better estimate than the one registered.
+3. **The key's broken class is unvalidated, and three sections rest on it.** The second model agreed with
+   4 of the 12 pairs the key called broken (Wilson 95% [0.138, 0.609]), and read 7 of them as followed.
+   That does not show the key is wrong, since neither labeller is a person. It is not a difference of
+   version either: both saw the change as first written, the commit before its first review comment.
+   But §4bc's shares of broken lessons held (the pick's 0.465), §4bd's "0 of 124 caught" and §4be's
+   counts all take the key's 124 broken lessons as true. If many were not broken, part of §4bd's result
+   is explained without any check failing: there was nothing to catch.
+4. **What would settle it.** A person labels the key's broken pairs: the 12 drawn here, or more. Until
+   then, read §4bc to §4be as measured against a model's key.
 
 ## 5. Findings
 

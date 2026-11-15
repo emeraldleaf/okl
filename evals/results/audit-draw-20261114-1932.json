@@ -1,0 +1,46 @@
+{
+ "what": "the person's audit for #446: what was drawn, with no answer in it",
+ "seed": 446,
+ "at": "2026-11-14T19:32Z",
+ "sets": {
+  "adjudication": 21,
+  "key": 30,
+  "judge": 60
+ },
+ "key_draw": {
+  "broken": 12,
+  "followed": 12,
+  "related": 6
+ },
+ "key_population": {
+  "dev:broken": 70,
+  "dev:followed": 200,
+  "dev:related": 1532,
+  "test:broken": 54,
+  "test:followed": 113,
+  "test:related": 1083
+ },
+ "judge_draw": {
+  "broken": 30,
+  "intact": 20,
+  "none": 10
+ },
+ "judge_runs": {
+  "4af": "drift-mutate-20261031-1522",
+  "4ah": "drift-mutate-20261101-1935",
+  "4bf": "rule-mutate-20261114-1606"
+ },
+ "judge_population": {
+  "broken": 121,
+  "intact": 85,
+  "none": 28
+ },
+ "judge_left_out": {
+  "lesson text changed since the run": 6
+ },
+ "items_sha256": "3a4a8458f1b25ce03d08d99054c42095c3ba23dc0b4f657f8f7eb2140adde5d2",
+ "answers_file_sha256": "9b2ce263f8f0c478b201f8f1a047ff14b8cc3ea24a2d79542d3419e3cf970d1f",
+ "okl_commit_at_start": "d8596a4",
+ "okl_commit": "d8596a4",
+ "model_env": "sandbox.clean_env (#446)"
+}
