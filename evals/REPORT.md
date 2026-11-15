@@ -7000,8 +7000,9 @@ sets of model labels carried it:
   124 broken lessons that §4bc, §4bd and §4be count;
 - the judge that rules whether a break left a lesson's claim false (§4af, §4ah, §4bf).
 
-The audit drew three blind sets, with its bars committed before any label was scored (receipt
-`audit-draw-20261114-1932.json`, seed 446):
+The audit drew three blind sets (receipt `audit-draw-20261114-1932.json`, seed 446). The key's and
+the judge's bars were committed in `8cb38ba`, before any label was scored in `071accd`; the
+adjudication's bar is #394's own. The sets:
 - 21 adjudication pairs;
 - 30 key pairs: 12 the key called broken, 12 followed, 6 related;
 - 60 judge patches: 30 it called broken, 20 intact, 10 with no verdict.
@@ -7009,7 +7010,9 @@ The audit drew three blind sets, with its bars committed before any label was sc
 **Who labelled.** I labelled the 21 adjudication pairs blind. The other 90 were labelled by a second model
 (Claude, reading each change, and applying each patch and running its checks), not by a person, and the
 receipt says so (`audit-20261114-1937.json`). Two of the three results are therefore agreement between
-models, not ground truth.
+models, not ground truth. Which Claude model drafted those 90 was not recorded. The key and §4bf's
+judge were Opus, so the second model may share their biases, and the judge's pass does not show
+independent confirmation.
 
 | set | labelled by | bar | result |
 |---|---|---|---|

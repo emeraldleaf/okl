@@ -73,5 +73,9 @@ def test_the_audits_section_quotes_its_receipts():
     assert f"[{lo:.3f}, {hi:.3f}]" in sec.replace("0.1381", "0.138")
     assert (j["broken_precision"]["k"], j["broken_precision"]["n"], j["intact_precision"]["k"], j["passed"]) == (26, 30, 20, True)
     assert (j["none_broken_share"]["k"], j["protection_removed"]) == (10, 3)
+    jlo, jhi = j["broken_precision"]["wilson95"]
+    assert f"[{jlo:.3f}, {jhi:.3f}]" in sec and "Three of its broken calls" in sec
+    assert draw["judge_left_out"] == {"lesson text changed since the run": 6}
+    assert "`8cb38ba`" in sec and "`071accd`" in sec
     assert "not by a person" in sec and "I labelled the 21 adjudication pairs blind" in sec
     assert all(v.startswith(("the maintainer", "a second model")) for v in got["labelled_by"].values())
