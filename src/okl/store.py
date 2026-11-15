@@ -361,6 +361,9 @@ class CheckRun:
     outcome: str               # "exit 0", "exit 1", "timed out after 120s", ...
     expect: str | None = None
     commit: str | None = None
+    # How long the run took, in seconds (#467): what `okl on-edit add --quick` chooses by. None
+    # for a run logged before okl timed them, or by a client that did not.
+    seconds: float | None = None
 
 
 @dataclass(frozen=True)
@@ -520,11 +523,12 @@ class Store:
 
     # -- check runs (okl review R3) ---------------------------------------------
     def log_check(self, node_id: str, passed: bool, command: str, outcome: str, *,
-                  expect: str | None = None, commit: str | None = None) -> None:
+                  expect: str | None = None, commit: str | None = None,
+                  seconds: float | None = None) -> None:
         """Append one run of a lesson's check. Append-only: each run is a row."""
         self._impl.log_check(CheckRun(at=_now_ms(), node_id=node_id, passed=passed,
                                       command=command, outcome=outcome, expect=expect,
-                                      commit=commit))
+                                      commit=commit, seconds=seconds))
 
     def checks(self, node_id: str) -> list[CheckRun]:
         """Every check run logged for `node_id`, oldest first."""
@@ -708,7 +712,7 @@ def _row_to_check(r: dict) -> CheckRun:
     """A check_run row as a CheckRun; SQLite stores the flag as 0/1, Postgres as a boolean."""
     return CheckRun(at=r["at"], node_id=r["node_id"], passed=bool(r["passed"]),
                     command=r["command"], outcome=r["outcome"], expect=r["expect"],
-                    commit=r["commit_id"])
+                    commit=r["commit_id"], seconds=r.get("seconds"))
 
 
 def _row_to_review(r: dict) -> ReviewRun:
@@ -799,7 +803,10 @@ class _SQLiteBackend(_Backend):
         # Every run of a lesson's check, pass or fail (R3). Its own table for the same reason.
         c.execute("""CREATE TABLE IF NOT EXISTS check_run(
             at INTEGER NOT NULL, node_id TEXT NOT NULL, passed INTEGER NOT NULL,
-            command TEXT NOT NULL, outcome TEXT NOT NULL, expect TEXT, commit_id TEXT)""")
+            command TEXT NOT NULL, outcome TEXT NOT NULL, expect TEXT, commit_id TEXT,
+            seconds REAL)""")
+        # How long each run took (#467); a store from before it gains the column, its rows untimed.
+        self._add_column("check_run", "seconds", "REAL")
         # reverify can run a check hundreds of times; reads are always one lesson's runs.
         c.execute("CREATE INDEX IF NOT EXISTS check_run_node ON check_run(node_id, at)")
         # What each session's review after writing did (#464): one row per session and repo,
@@ -853,6 +860,18 @@ class _SQLiteBackend(_Backend):
                 raise
             self._has_fts = False
         c.commit()
+
+    def _add_column(self, table: str, column: str, kind: str) -> None:
+        """Give a table from before `column` existed that column (lesson n_967ef9825472). Two
+        processes opening an old store at once can both find it missing, and the second ALTER
+        then finds it there: that is the column it wanted, not an error."""
+        if column in {r[1] for r in self.conn.execute(f"PRAGMA table_info({table})").fetchall()}:
+            return
+        try:
+            self.conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {kind}")
+        except self._sqlite3.OperationalError as e:
+            if "duplicate column" not in str(e):
+                raise
 
     def _fts_stale(self) -> bool:
         """Whether the full-text index lacks a column or was built with another tokenizer than
@@ -1032,16 +1051,16 @@ class _SQLiteBackend(_Backend):
     def log_check(self, run: CheckRun) -> None:
         with self._lock:
             self.conn.execute(
-                "INSERT INTO check_run(at, node_id, passed, command, outcome, expect, commit_id) "
-                "VALUES(?,?,?,?,?,?,?)",
+                "INSERT INTO check_run(at, node_id, passed, command, outcome, expect, commit_id, "
+                "seconds) VALUES(?,?,?,?,?,?,?,?)",
                 (run.at, run.node_id, int(run.passed), run.command, run.outcome, run.expect,
-                 run.commit))
+                 run.commit, run.seconds))
             self.conn.commit()
 
     def checks(self, node_id: str) -> list[CheckRun]:
         with self._lock:
             rows = self.conn.execute(
-                "SELECT at, node_id, passed, command, outcome, expect, commit_id FROM check_run "
+                "SELECT at, node_id, passed, command, outcome, expect, commit_id, seconds FROM check_run "
                 "WHERE node_id=? ORDER BY at, rowid", (node_id,)).fetchall()
             return [_row_to_check(dict(r)) for r in rows]
 
@@ -1149,7 +1168,9 @@ class _PostgresBackend(_Backend):
             cur.execute("""CREATE TABLE IF NOT EXISTS check_run(
                 id BIGSERIAL PRIMARY KEY, at BIGINT NOT NULL, node_id TEXT NOT NULL,
                 passed BOOLEAN NOT NULL, command TEXT NOT NULL, outcome TEXT NOT NULL,
-                expect TEXT, commit_id TEXT)""")
+                expect TEXT, commit_id TEXT, seconds DOUBLE PRECISION)""")
+            # How long each run took (#467); a store from before it gains the column.
+            cur.execute("ALTER TABLE check_run ADD COLUMN IF NOT EXISTS seconds DOUBLE PRECISION")
             cur.execute("CREATE INDEX IF NOT EXISTS check_run_node ON check_run(node_id, at)")
             cur.execute("""CREATE TABLE IF NOT EXISTS review_run(
                 session_id TEXT NOT NULL, repo TEXT NOT NULL, at BIGINT NOT NULL,
@@ -1299,12 +1320,12 @@ class _PostgresBackend(_Backend):
     def log_check(self, run: CheckRun) -> None:
         with self.conn.cursor() as cur:
             cur.execute("INSERT INTO check_run(at, node_id, passed, command, outcome, expect, "
-                        "commit_id) VALUES(%s,%s,%s,%s,%s,%s,%s)",
+                        "commit_id, seconds) VALUES(%s,%s,%s,%s,%s,%s,%s,%s)",
                         (run.at, run.node_id, run.passed, run.command, run.outcome, run.expect,
-                         run.commit))
+                         run.commit, run.seconds))
 
     def checks(self, node_id: str) -> list[CheckRun]:
-        rows = self._fetch("SELECT at, node_id, passed, command, outcome, expect, commit_id "
+        rows = self._fetch("SELECT at, node_id, passed, command, outcome, expect, commit_id, seconds "
                            "FROM check_run WHERE node_id = %s ORDER BY at, id", (node_id,))
         return [_row_to_check(r) for r in rows]
 

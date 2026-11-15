@@ -1733,14 +1733,14 @@ def _backend_conformance(store, label):
 
     # ASSERT (11) — the check log appends pass and fail alike, reads back oldest first with
     # every field, filters by lesson, and survives a rewrite of the lesson's row (R3).
-    store.log_check(a, False, "pytest -q", "exit 1", expect="passed", commit="abc1234")
+    store.log_check(a, False, "pytest -q", "exit 1", expect="passed", commit="abc1234", seconds=12.25)
     store.log_check(a, True, "pytest -q", "exit 0")
     store.log_check(b, True, "true", "exit 0")
     store.add_node(store.get_node(a))
     runs = store.checks(a)
-    assert [(r.passed, r.command, r.outcome, r.expect, r.commit) for r in runs] == [
-        (False, "pytest -q", "exit 1", "passed", "abc1234"),
-        (True, "pytest -q", "exit 0", None, None)], f"{label}: checks"
+    assert [(r.passed, r.command, r.outcome, r.expect, r.commit, r.seconds) for r in runs] == [
+        (False, "pytest -q", "exit 1", "passed", "abc1234", 12.25),
+        (True, "pytest -q", "exit 0", None, None, None)], f"{label}: checks (an untimed run reads back None, #467)"
     assert runs[0].at <= runs[1].at, f"{label}: checks not oldest first"
     assert [r.node_id for r in store.checks(b)] == [b], f"{label}: check filter"
 
@@ -1801,6 +1801,40 @@ def test_postgres_backend_conformance():
         _backend_conformance(pg, "postgres")
     finally:
         pg.close()
+        with psycopg.connect(url, autocommit=True) as teardown:
+            teardown.execute(f"DROP SCHEMA IF EXISTS {schema} CASCADE")
+
+
+def test_a_postgres_check_log_from_before_run_times_gains_the_column_on_open():
+    """A Postgres check log written before #467 has no `seconds` column: opening the store adds
+    it, its rows read back untimed, new runs keep their time, and a second open changes nothing
+    (lesson n_967ef9825472). In a scratch schema, so no real store is touched."""
+    url = _postgres_url()
+    import psycopg
+    schema = "okl_check_seconds_test"
+    with psycopg.connect(url, autocommit=True) as setup:
+        setup.execute(f"DROP SCHEMA IF EXISTS {schema} CASCADE")
+        setup.execute(f"CREATE SCHEMA {schema}")
+        setup.execute(f"""CREATE TABLE {schema}.check_run(
+            id BIGSERIAL PRIMARY KEY, at BIGINT NOT NULL, node_id TEXT NOT NULL,
+            passed BOOLEAN NOT NULL, command TEXT NOT NULL, outcome TEXT NOT NULL,
+            expect TEXT, commit_id TEXT)""")
+        setup.execute(f"INSERT INTO {schema}.check_run(at, node_id, passed, command, outcome) "
+                      "VALUES(1, 'x', true, 'pytest -q', 'exit 0')")
+    sep = "&" if "?" in url else "?"
+    scoped = f"{url}{sep}options=-csearch_path%3D{schema}"
+    try:
+        pg = Store(scoped)
+        pg.log_check("x", True, "pytest -q", "exit 0", seconds=2.5)
+        pg.close()
+        again = Store(scoped)
+        assert [(r.command, r.seconds) for r in again.checks("x")] == [("pytest -q", None), ("pytest -q", 2.5)]
+        again.close()
+        with psycopg.connect(url, autocommit=True) as c:
+            kinds = c.execute("SELECT data_type FROM information_schema.columns WHERE table_schema = %s "
+                              "AND table_name = 'check_run' AND column_name = 'seconds'", (schema,)).fetchall()
+        assert kinds == [("double precision",)], kinds
+    finally:
         with psycopg.connect(url, autocommit=True) as teardown:
             teardown.execute(f"DROP SCHEMA IF EXISTS {schema} CASCADE")
 

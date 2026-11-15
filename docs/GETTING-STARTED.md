@@ -334,13 +334,21 @@ command comes from the store, and on a shared store other people wrote some of t
 ```bash
 okl on-edit                                # the approved checks, and the ones that could be
 okl on-edit add discount-server-side       # shows the command, asks, then runs it on each edit
+okl on-edit add --quick                    # the checks whose last passing run took 10 s or less
 okl on-edit remove discount-server-side
 ```
 
 Approve checks that finish in a few seconds and need nothing but the checkout: each gets 30
 seconds and one edit gets 50 in all, inside the 60-second timeout okl registers the hook with,
 and a check that runs out of time is stopped (on macOS and Linux, with the processes in its
-group) and reported as not judged. If a lesson's stored command changes, for instance
+group) and reported as not judged. To find the quick ones, `okl verify` and `okl reverify` keep
+how long each run took, and `okl on-edit add --quick` lists the lessons whose stored check last
+passed in 10 seconds or less (`--under N` for another limit, up to 30), each command with its
+time, and approves them on one yes, each still pinned to its command. It leaves out a check that
+failed its last run, and lists apart one never timed (last run before okl kept times) with the
+`okl verify` line that times it; `--quick` never approves those. While nothing is approved, `okl
+on-edit` and `okl init` say how many checks are quick. Runs at the edit are not timed or logged.
+If a lesson's stored command changes, for instance
 after `okl verify` with a different `--run`, it stops running until you approve it again. The
 hook stamps nothing: a lesson is still verified only by `okl verify`. Another agent's own hook
 can call `okl on-edit run <file>`. A check catches only what it tests: a break of the same rule in

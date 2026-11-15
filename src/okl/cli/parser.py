@@ -22,7 +22,7 @@ from .lessons import (
     cmd_triggers,
     cmd_update,
 )
-from .on_edit import BUDGET, HOOK_TIMEOUT, TIMEOUT, cmd_on_edit
+from .on_edit import BUDGET, HOOK_TIMEOUT, QUICK, TIMEOUT, cmd_on_edit
 from .packs import cmd_seed
 from .review import cmd_review
 from .servers import cmd_mcp, cmd_serve
@@ -32,7 +32,8 @@ from .warm import cmd_warm
 
 
 def _seconds(value: str) -> int:
-    """`okl on-edit run --timeout` and `--budget`: a whole number of seconds, at least 1. A zero
+    """`okl on-edit run --timeout` and `--budget`, and `okl on-edit add --under`: a whole number of
+    seconds, at least 1. A zero
     or negative limit marked every check out of time, or was quietly read as 1 (review of #441)."""
     n = int(value)
     if n < 1:
@@ -360,7 +361,15 @@ def build_parser() -> argparse.ArgumentParser:  # noqa: PLR0915 - one declarativ
     poe_sub = poe.add_subparsers(dest="action")
     poe_sub.add_parser("list", help="the approved checks, and the lessons whose check could be approved")
     poe_add = poe_sub.add_parser("add", help="show each lesson's stored command and approve it to run on edit")
-    poe_add.add_argument("targets", nargs="+", metavar="id", help="lesson ids, as the briefing shows them in [brackets]")
+    poe_add.add_argument("targets", nargs="*", metavar="id",
+                         help="lesson ids, as the briefing shows them in [brackets]; or none, with --quick")
+    poe_add.add_argument("--quick", action="store_true",
+                         help="instead of ids: the lessons whose stored check last passed in at most --under "
+                              "seconds, as okl verify and okl reverify timed it, each shown with its time and "
+                              "approved on one yes; one never timed is listed apart and not approved")
+    poe_add.add_argument("--under", type=_seconds, default=None, metavar="N",
+                         help=f"with --quick, the longest last passing run to offer, in seconds (default {QUICK}, "
+                              f"at most the {TIMEOUT} a check gets after an edit)")
     poe_add.add_argument("--yes", action="store_true",
                          help="approve the commands it shows without asking; review them first, since they "
                               "come from the store and will run after every edit in the repository")

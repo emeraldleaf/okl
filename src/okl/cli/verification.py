@@ -13,6 +13,7 @@ import shlex
 import signal
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING, NamedTuple
 
@@ -57,7 +58,6 @@ def _stop_group(proc: subprocess.Popen) -> None:
 
 def _group_gone(proc: subprocess.Popen, within: float) -> bool:
     """Whether the check's whole group has exited within `within` seconds."""
-    import time
     killpg = getattr(os, "killpg", None)
     deadline = time.monotonic() + within
     while time.monotonic() < deadline:
@@ -193,12 +193,14 @@ def shown(text: str) -> str:
     return text if text.isprintable() else repr(text)
 
 
-def _log_check(args: argparse.Namespace, passed: bool, outcome: str, commit: str | None) -> None:
-    """Keep this run in the lesson's check log (okl review R3). The log records the check;
-    it is never part of it, so a run that cannot be logged warns and changes no verdict."""
+def _log_check(args: argparse.Namespace, passed: bool, outcome: str, commit: str | None,
+               seconds: float | None = None) -> None:
+    """Keep this run in the lesson's check log (okl review R3), with how long it took (#467).
+    The log records the check; it is never part of it, so a run that cannot be logged warns
+    and changes no verdict."""
     try:
         Client().log_check(args.node_id, passed=passed, command=args.run, outcome=outcome,
-                           expect=args.expect or None, commit=commit)
+                           expect=args.expect or None, commit=commit, seconds=seconds)
     except OKLNoAnswerError as e:
         print(f"  ! this check's result may not have been logged: {e}", file=sys.stderr)
     # The log is advisory, so nothing it raises may reach the verdict. A full disk, a locked
@@ -244,18 +246,22 @@ def cmd_verify(args: argparse.Namespace) -> int:
         return 2
     if not args.run:
         return _suggest_check(args.node_id)
+    # Timed for the check log (#467): `okl on-edit add --quick` offers the checks whose last
+    # passing run was quick. The check's own run only, from start to its verdict.
+    began = time.monotonic()
     output, outcome, _timed_out = _run_check(args)
+    seconds = round(time.monotonic() - began, 3)
     # The commit the check ran at: drift diffs the governed files there against HEAD
     # instead of comparing clocks (#102). It goes into the evidence before the stamp, which
     # binds it in the committed snapshot and keeps older okl versions able to read it.
     root = _snapshot_path().parent
     commit = _head_commit(root)
     if output is None:
-        _log_check(args, False, outcome, _clean_commit(root, commit))
+        _log_check(args, False, outcome, _clean_commit(root, commit), seconds)
         return 1
     # Logged before the stamp is sent: the check passed whatever happens to the stamp, and
     # a stamp that fails must not take the record of the run with it (CodeRabbit on #170).
-    _log_check(args, True, outcome, _clean_commit(root, commit))
+    _log_check(args, True, outcome, _clean_commit(root, commit), seconds)
     stamp = datetime.now(UTC).strftime("%Y-%m-%dT%H:%MZ")
     evidence = (f"`{args.run}` exit 0" + (f", matched {args.expect!r}" if args.expect else "")
                 + (f" on commit {commit[:12]}" if commit else "") + f" @ {stamp}")

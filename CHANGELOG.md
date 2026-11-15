@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+- **Quick lesson checks are easy to find and approve** (#467). A lesson in a list rarely changes the
+  code, while an approved check runs after every edit whether anything reads it or not; but nothing
+  was approved out of the box, and okl could not tell a one-second check from a three-minute suite
+  without running commands nobody had approved. Now `okl verify` and `okl reverify` keep how long
+  each run took, in the check log beside its result (`okl show --format json` and `okl_get` carry
+  it), and `okl on-edit add --quick` lists the lessons whose stored check last passed in 10 seconds
+  or less (`--under N` for another limit, up to the 30 a check gets after an edit), each command
+  shown with its time, and approves them on one yes, each pinned to its command's hash as before;
+  unattended without `--yes` it shows them and refuses, as `okl on-edit add` does. A check that
+  failed its last run is left out, and one never timed (every run logged before this release) is
+  listed apart with the `okl verify` line that times it and is never approved by `--quick`. While
+  no check is approved, `okl on-edit` and `okl init` say in one line how many are quick. Runs at
+  the edit are not timed or logged, so an edit adds nothing to the check log. A store from before
+  this gains the column when it opens, on SQLite and Postgres, its runs untimed; a shared service
+  from before it keeps a newer client's runs without their time. Unchanged: every command is shown
+  and confirmed, the budget (30 seconds a check, 50 an edit), and nothing runs unapproved.
+
 - **The review after writing runs its checks on Sonnet** (Claude Code). Each lesson it checks runs in a
   sub-agent, and an unnamed sub-agent runs on the session's own model. So in an Opus session the review
   started ten Opus sessions, on a model §4az did not measure and at a higher price per token, and in a
