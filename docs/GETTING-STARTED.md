@@ -2,12 +2,12 @@
 
 okl keeps what your codebase has learned — its conventions, the decisions made on purpose,
 the mistakes already made once, and the claims its docs make — and puts the relevant ones
-in front of Claude Code before every task. Each entry is proven by a check, and the drift
-gate (before each push, or in CI) flags it when the files it governs change.
+in front of Claude Code before every task. An entry you prove carries a check you choose, and
+the drift gate (before each push, or in CI) flags it when the files it governs change.
 
 This guide gets you from nothing to that loop working, then shows the two habits that make
 it pay off: **adding to the canon as you build a feature**, and **putting your docs in the
-canon so they cannot drift silently**. Every command here was run, in this order, in a fresh
+canon so a change to what they describe is flagged**. Every command here was run, in this order, in a fresh
 repository. The running example is a small service called `shop`.
 Starting from an empty folder instead, with no CI, linters or tests yet? [Set up a repository
 from scratch](FROM-SCRATCH.md) builds those first, for Python, .NET or TypeScript.
@@ -185,7 +185,7 @@ not, and every lesson in scope one line each, those governing a changed file fir
 says what its code does, picks the ten lessons the change most likely breaks, and checks each
 one on its own in a fresh sub-agent, fixing only what breaks one. In a pilot on five real past
 bugs, asking each lesson of a fixed list of ten on its own reached a pass rate of 0.72, against
-0.08 when the same ten were checked together (REPORT §4ay, receipt `replay-one-20261111-1355.json`);
+0.08 when the same ten were given together as a list (REPORT §4ay, receipt `replay-one-20261111-1355.json`);
 with the agent choosing its own ten, the review fixed 1 in 5 against none for the earlier
 one-pass review (REPORT §4az). okl calls no model for it. It is off by default:
 it has been measured on one repository only ([REPORT §4at](../evals/REPORT.md)), and the list
@@ -341,7 +341,7 @@ and commit it, and `okl verify` keeps that committed copy current.
 
 ---
 
-## 3. Put your docs in the canon, so they cannot drift silently
+## 3. Put your docs in the canon, so a change to what they describe is flagged
 
 A README, an architecture doc or a diagram is a set of claims about code. When the code
 moves, the claims go stale and nothing says so. okl cannot read a paragraph and judge it —
