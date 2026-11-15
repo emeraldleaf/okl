@@ -182,7 +182,10 @@ CHECK_SECOND = RESULTS / "replay-check-457-20261115-1921.json"
 ALT_SECOND = RESULTS / "replay-alternatives-457-20261115-1925.json"
 SCREEN = RESULTS / "replay-screen-457.json"
 POWER = RESULTS / "power-457-20261115-1927.json"
-NOT_TOLD_APART = ["t22", "t47"]   # each wrong fix leaves what the task's real fix itself left
+CHECK_FINAL = RESULTS / "replay-check-457-20261115-2012.json"
+ALT_FINAL = RESULTS / "replay-alternatives-457-20261115-2015.json"
+BY_DESIGN = ["t22", "t47"]   # each wrong fix leaves what the task's real fix itself left
+RIGHT_FALLS_SHORT = ["t46"]  # the right fix fails a case the real fix handles (from the review of #477)
 
 
 def test_the_second_receipts_are_the_graders_after_the_first_changes():
@@ -198,8 +201,29 @@ def test_the_second_receipts_are_the_graders_after_the_first_changes():
     assert second["graders_sha256"] == alt["graders_sha256"]
     _valid_rows(second)
     assert (alt["valid"], alt["of"]) == (27, 29) and all(r["right_exit"] == 0 and r["right_ran"] for r in alt["rows"])
-    assert sorted(r["id"] for r in alt["rows"] if not r["valid"]) == NOT_TOLD_APART
+    assert sorted(r["id"] for r in alt["rows"] if not r["valid"]) == BY_DESIGN
     for row in alt["rows"]:
+        assert row["right_patch_sha256"] == _sha(paths["alternatives"] / f"{row['id']}-right.patch"), row["id"]
+        assert row["wrong_patch_sha256"] == _sha(paths["alternatives"] / f"{row['id']}-wrong.patch"), row["id"]
+
+
+def test_the_final_receipts_are_the_graders_as_they_are():
+    """After the review of #477, every grader is valid again; every right fix passes but t46's, which fails a case
+    the real fix handles, and every wrong fix fails but the two that leave what the real fix left. Both receipts
+    read today's tasks, graders and patches, from committed code."""
+    final, alt = (json.loads(p.read_text()) for p in (CHECK_FINAL, ALT_FINAL))
+    paths = check.set_paths("457")
+    for r in (final, alt):
+        assert "usable" not in r and _clean(r)
+        assert r["graders_sha256"] == _sha(paths["graders"]) and r["tasks_sha256"] == _sha(paths["tasks"])
+    _valid_rows(final)
+    assert sorted(r["id"] for r in alt["rows"] if r["right_exit"] != 0) == RIGHT_FALLS_SHORT
+    assert sorted(r["id"] for r in alt["rows"] if r["wrong_exit"] == 0) == BY_DESIGN
+    assert sorted(r["id"] for r in alt["rows"] if not r["valid"]) == sorted(BY_DESIGN + RIGHT_FALLS_SHORT)
+    assert (alt["valid"], alt["of"]) == (26, 29)
+    for row in alt["rows"]:
+        if row["right_exit"] != 0:
+            assert row["right_exit"] == 1 and "diagnostic-step" in row["right_failing_line"], row["id"]
         assert row["right_patch_sha256"] == _sha(paths["alternatives"] / f"{row['id']}-right.patch"), row["id"]
         assert row["wrong_patch_sha256"] == _sha(paths["alternatives"] / f"{row['id']}-wrong.patch"), row["id"]
 
@@ -215,7 +239,8 @@ def test_the_section_names_only_receipts_that_exist():
     import subprocess
     sec = _section()
     named = set(re.findall(r"`([\w.-]+-\d{8}-\d{4}\.json|replay-screen-457\.json)`", sec))
-    assert {p.name for p in (CHECK_FIRST, ALT_FIRST, CHECK_SECOND, ALT_SECOND, SCREEN, POWER)} <= named
+    assert {p.name for p in (CHECK_FIRST, ALT_FIRST, CHECK_SECOND, ALT_SECOND, CHECK_FINAL, ALT_FINAL, SCREEN,
+                             POWER)} <= named
     tracked = set(subprocess.run(["git", "ls-files", "--", "evals/results"], cwd=REPO, capture_output=True,
                                  text=True, check=True).stdout.split())
     for name in named:
@@ -253,20 +278,24 @@ def test_the_section_states_the_tasks_as_they_are():
 
 
 def test_the_section_table_is_the_alternatives_receipts():
-    """Each task's row: its change and lesson, whether its right fix passed both checks, and whether its wrong fix
-    failed in the first check and after the changes."""
+    """Each task's row: its change and lesson, whether its right fix passed and its wrong fix failed, in the first
+    check and in the latest. The three graders the first check prompted are the pairs it alone did not tell apart."""
     sec = _section()
     first = {r["id"]: r for r in json.loads(ALT_FIRST.read_text())["rows"]}
-    final = {r["id"]: r for r in json.loads(ALT_SECOND.read_text())["rows"]}
+    second = {r["id"]: r for r in json.loads(ALT_SECOND.read_text())["rows"]}
+    final = {r["id"]: r for r in json.loads(ALT_FINAL.read_text())["rows"]}
     yes = {True: "yes", False: "no"}
+
+    def wrong_failed(r):
+        return r["wrong_exit"] == 1 and r["wrong_own_assertion"]
     for t in _tasks("457"):
         if t["needs_nothing"]:
             continue
-        right = first[t["id"]]["right_exit"] == 0 and final[t["id"]]["right_exit"] == 0
-        row = (f"| {t['id']} | #{t['pr']} | `{t['lesson'].split(':')[-1]}` | {yes[right]} | "
-               f"{yes[first[t['id']]['valid']]} | {yes[final[t['id']]['valid']]} |")
+        a, b = first[t["id"]], final[t["id"]]
+        row = (f"| {t['id']} | #{t['pr']} | `{t['lesson'].split(':')[-1]}` | {yes[a['right_exit'] == 0]} | "
+               f"{yes[b['right_exit'] == 0]} | {yes[wrong_failed(a)]} | {yes[wrong_failed(b)]} |")
         assert row in sec, row
-    changed = sorted(i for i in first if not first[i]["valid"] and final[i]["valid"])
+    changed = sorted(i for i in first if not first[i]["valid"] and second[i]["valid"])
     assert changed == CHANGED_AFTER_ALTERNATIVES
 
 

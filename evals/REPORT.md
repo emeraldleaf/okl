@@ -7091,7 +7091,8 @@ redactions above remove. A lesson written after a change can name its defect mor
 could have had at the time.
 
 **The validity check.** Before the alternatives, all 30 graders were valid (`replay-check-457-20261115-1800.json`).
-After the changes below, all 30 were valid again (`replay-check-457-20261115-1921.json`).
+After the changes below, all 30 were valid again (`replay-check-457-20261115-1921.json`), and again after
+the review of #477 changed two more (`replay-check-457-20261115-2012.json`).
 
 **The alternatives check.** An agent wrote a second right fix and a wrong one for t19 to t47
 (`evals/replay-alternatives-457/`). It was given only each task's id, PR, title, issues, frozen commit, lesson,
@@ -7115,42 +7116,56 @@ pairs apart. Five wrong fixes passed:
 - **t36:** the store whose rebuild failed now takes a write before it is closed.
 
 Each still fails at the frozen commit by its own assertion, and passes the real fix and the right alternative.
-The final check (`replay-alternatives-457-20261115-1925.json`) passes all 29 right fixes and tells 27 of 29 pairs
-apart. Each changed section of the graders says so. One grader changed before the alternatives check, when I read
-the screened graders: t43's stand-in server stays busy for 2.5 s instead of 4 s, so a right fix that waits about
-3 s is not failed. Its alternatives check is blind.
+The check after them (`replay-alternatives-457-20261115-1925.json`) passed all 29 right fixes and told 27 of 29
+pairs apart. Each changed section of the graders says so. One grader changed before the alternatives check, when
+the building agent read the screened graders: t43's stand-in server stays busy for 2.5 s instead of 4 s, so a
+right fix that waits about 3 s is not failed. Its alternatives check is blind.
 
-| task | change | lesson | right fix passed | wrong fix failed, first check | after the changes |
-|---|---|---|---|---|---|
-| t19 | #30 | `n_adea7f2c7373` | yes | no | yes |
-| t20 | #35 | `d_invoked_by_nothing` | yes | yes | yes |
-| t21 | #112 | `n_e7988ff536fb` | yes | yes | yes |
-| t22 | #135 | `eval-scripts-no-exposure` | yes | no | no |
-| t23 | #163 | `guarantee-holds-on-every-write-path` | yes | yes | yes |
-| t24 | #266 | `remote-path-test-through-client` | yes | yes | yes |
-| t25 | #266 | `n_e49be14d6207` | yes | yes | yes |
-| t26 | #299 | `filter-after-fetch-widens-window` | yes | no | yes |
-| t27 | #299 | `hook-cli-version-skew` | yes | yes | yes |
-| t28 | #387 | `guarantee-holds-on-every-write-path` | yes | yes | yes |
-| t29 | #387 | `report-commands-use-briefable-set` | yes | yes | yes |
-| t30 | #380 | `n_e7988ff536fb` | yes | yes | yes |
-| t31 | #256 | `n_aa3e45a2ecd6` | yes | yes | yes |
-| t32 | #267 | `n_b578addf6269` | yes | yes | yes |
-| t33 | #275 | `n_b578addf6269` | yes | yes | yes |
-| t34 | #269 | `doc-init-flags` | yes | yes | yes |
-| t35 | #308 | `n_e49be14d6207` | yes | yes | yes |
-| t36 | #309 | `n_967ef9825472` | yes | no | yes |
-| t37 | #312 | `model-reply-parse-fails-open-loudly` | yes | yes | yes |
-| t38 | #326 | `n_713b8c104f12` | yes | yes | yes |
-| t39 | #267 | `n_e49be14d6207` | yes | yes | yes |
-| t40 | #50 | `n_d8166465591e` | yes | yes | yes |
-| t41 | #373 | `fail-closed-at-every-entry-point` | yes | yes | yes |
-| t42 | #300 | `model-server-warm-up-before-serving` | yes | yes | yes |
-| t43 | #325 | `remote-timeout-not-a-deadline` | yes | yes | yes |
-| t44 | #383 | `n_b4050b826687` | yes | yes | yes |
-| t45 | #362 | `n_713b8c104f12` | yes | yes | yes |
-| t46 | #339 | `owned-file-features-check-the-kept-copy` | yes | yes | yes |
-| t47 | #388 | `n_5ddb0776a863` | yes | no | no |
+**After the review of #477.** CodeRabbit's review of the whole branch led to two more changes, also made after
+the alternatives were seen:
+- **t25:** with a service named, the comparison must now exit 0 and print its comparison, as the control does.
+  Before, ending without a traceback was enough, so a fix that refused to run passed.
+- **t46:** a later step after an unpinned install shows the installed package (`pip show
+  observed-knowledge-ledger`) and prints the pin file. That is another step, which t46's defect names. The real fix
+  rejects it, and the blind right fix accepts it, because it takes any step naming the package for the install
+  step. That right fix was right only as far as the old grader asked, and it now counts as failing. The same two
+  lines inside the install step itself are accepted by the real fix too, so they are not a case, as with t22 and
+  t47.
+
+The check after these (`replay-alternatives-457-20261115-2015.json`) passes 28 of 29 right fixes and tells 26
+of 29 pairs apart: t22 and t47 by design, and t46, whose right fix fails.
+
+| task | change | lesson | right fix passed, first check | now | wrong fix failed, first check | now |
+|---|---|---|---|---|---|---|
+| t19 | #30 | `n_adea7f2c7373` | yes | yes | no | yes |
+| t20 | #35 | `d_invoked_by_nothing` | yes | yes | yes | yes |
+| t21 | #112 | `n_e7988ff536fb` | yes | yes | yes | yes |
+| t22 | #135 | `eval-scripts-no-exposure` | yes | yes | no | no |
+| t23 | #163 | `guarantee-holds-on-every-write-path` | yes | yes | yes | yes |
+| t24 | #266 | `remote-path-test-through-client` | yes | yes | yes | yes |
+| t25 | #266 | `n_e49be14d6207` | yes | yes | yes | yes |
+| t26 | #299 | `filter-after-fetch-widens-window` | yes | yes | no | yes |
+| t27 | #299 | `hook-cli-version-skew` | yes | yes | yes | yes |
+| t28 | #387 | `guarantee-holds-on-every-write-path` | yes | yes | yes | yes |
+| t29 | #387 | `report-commands-use-briefable-set` | yes | yes | yes | yes |
+| t30 | #380 | `n_e7988ff536fb` | yes | yes | yes | yes |
+| t31 | #256 | `n_aa3e45a2ecd6` | yes | yes | yes | yes |
+| t32 | #267 | `n_b578addf6269` | yes | yes | yes | yes |
+| t33 | #275 | `n_b578addf6269` | yes | yes | yes | yes |
+| t34 | #269 | `doc-init-flags` | yes | yes | yes | yes |
+| t35 | #308 | `n_e49be14d6207` | yes | yes | yes | yes |
+| t36 | #309 | `n_967ef9825472` | yes | yes | no | yes |
+| t37 | #312 | `model-reply-parse-fails-open-loudly` | yes | yes | yes | yes |
+| t38 | #326 | `n_713b8c104f12` | yes | yes | yes | yes |
+| t39 | #267 | `n_e49be14d6207` | yes | yes | yes | yes |
+| t40 | #50 | `n_d8166465591e` | yes | yes | yes | yes |
+| t41 | #373 | `fail-closed-at-every-entry-point` | yes | yes | yes | yes |
+| t42 | #300 | `model-server-warm-up-before-serving` | yes | yes | yes | yes |
+| t43 | #325 | `remote-timeout-not-a-deadline` | yes | yes | yes | yes |
+| t44 | #383 | `n_b4050b826687` | yes | yes | yes | yes |
+| t45 | #362 | `n_713b8c104f12` | yes | yes | yes | yes |
+| t46 | #339 | `owned-file-features-check-the-kept-copy` | yes | no | yes | yes |
+| t47 | #388 | `n_5ddb0776a863` | yes | yes | no | no |
 
 Some right fixes chose another design than the real fix, and the graders passed them:
 - t21 refuses with exit 2;
