@@ -263,13 +263,19 @@ words: the request or error that led to it first. The briefing finds a lesson by
 symptom, aliases and triggers ([how](RETRIEVAL.md)), so `okl record` says so when you give none.
 With `--files` it also prints the `okl verify` command to run next: until a check passes,
 drift reports the lesson as never verified, so a drift gate goes red on it.
+`--alias` (repeatable) is a short phrase a developer uses when the lesson bites ("session
+lost"), indexed like the symptom. `--applies-to` names the stacks the lesson is valid for,
+comma-separated, or `any`: an `org` lesson that names stacks is left out of a repo whose
+interests name none of them. Leave it unset, as above, unless the lesson is false off that stack.
 
 The same record from a Decision needs only `--type Decision`, `--title` and a `--body`
 starting `why:`. To correct a lesson later, change only what is wrong:
 `okl update discount-server-side --fix "..."` keeps everything else, including its proof
 (changing `--files` clears the proof until the check passes again: `okl reverify`), and
 `okl show discount-server-side` prints the whole lesson, with how often its check has
-passed and failed (every `okl verify` run is kept). Recording an existing id again
+passed and failed (every `okl verify` run is kept). On `okl update`, `--alias` and
+`--trigger` replace the lesson's list with the ones given (`--alias ""` clears it), and
+`--applies-to ""` clears its stacks. Recording an existing id again
 is refused (`--replace` overwrites it entirely). There is no delete command, on purpose:
 a lesson that turns out wrong or replaced is retired with a reason, and kept
 (`okl retire discount-server-side --reason "..." [--by <new-id>]`).

@@ -670,6 +670,81 @@ okl log
     assert found == ["a.md: `okl frobnicate` is not a command", "a.md: `okl init` has no --no-sead"]
 
 
+# The other direction (#455, lesson omission-drift-uncaught): the checks above fail a doc that
+# names what the CLI does not have, and nothing failed a doc that left out what it does have.
+# docs/COMMANDS.md is titled "Every okl command" and lacked ten; sixteen flags were in no doc.
+# The set is read from the parser, so a new command or flag fails here until a doc names it.
+REFERENCE = ("docs/COMMANDS.md", "README.md")   # where a command must be named as `okl <path>`
+
+
+def _living_docs() -> dict[str, str]:
+    """README.md and every doc under docs/ that check-doc-commands reads: the dated records
+    (posts, decision records, receipts, the CHANGELOG, the REPORT) are left out as it leaves them."""
+    return {name: text for name, text in _doc_commands().docs().items()
+            if name == "README.md" or (name.startswith("docs/") and name.endswith(".md"))}
+
+
+def _names(text: str, words: str) -> bool:
+    """Whether `text` writes `words` (`okl on-edit list`, `--repo-dir`) whole, spaced by blanks."""
+    pattern = r"[ \t]+".join(map(re.escape, words.split()))
+    return re.search(rf"(?<![\w./-]){pattern}(?![\w-])", text) is not None
+
+
+def _coverage_problems(living: dict[str, str], cli: list[tuple[str, bool, list[str]]]) -> list[str]:
+    """Each command the REFERENCE docs do not name as `okl <path>`, and each long flag no living
+    doc names, with where it must go."""
+    problems = []
+    for path, runs, flags in cli:
+        where = [name for name in REFERENCE if _names(living.get(name, ""), path)]
+        if runs and not where:
+            problems.append(f"`{path}` is in neither {' nor '.join(REFERENCE)}: add it to docs/COMMANDS.md, "
+                            "a command line and its aligned `#` comments")
+        problems.extend(f"`{path} {flag}` is in no living doc (README.md, docs/): document it where "
+                        f"`{path}` is documented ({', '.join(where) or 'docs/COMMANDS.md'})"
+                        for flag in flags if not any(_names(text, flag) for text in living.values()))
+    return problems
+
+
+def test_every_command_and_flag_the_cli_has_is_in_the_docs():
+    """Every command and subcommand the parser has is named as `okl <path>` in docs/COMMANDS.md or
+    the README, and every long flag in a living doc; what help hides is not held (#455)."""
+    cli = list(_doc_commands().every_command())
+    problems = _coverage_problems(_living_docs(), cli)
+
+    # A walk that found nothing would pass; okl has over thirty commands and a hundred flags.
+    assert len(cli) > 30, cli
+    assert sum(len(flags) for _, _, flags in cli) > 100, cli
+    assert not problems, "the CLI has what no doc names:\n  " + "\n  ".join(problems)
+
+
+def test_the_coverage_check_names_a_missing_command_and_flag():
+    """Red where it should be: a command's entry cut from docs/COMMANDS.md, a flag's one mention
+    removed, and the walk skips what help hides and a command that only groups subcommands."""
+    cli = list(_doc_commands().every_command())
+    living = _living_docs()
+    by_path = {path: (runs, flags) for path, runs, flags in cli}
+    assert by_path["okl intake"][0] is False     # it only groups `okl intake pr`
+    assert by_path["okl intake pr"][0] is True
+    assert "--wait" in by_path["okl warm"][1]
+    assert "--spawned" not in by_path["okl warm"][1]   # hidden from help with argparse.SUPPRESS
+    assert {"--ci", "--no-ci"} <= set(by_path["okl init"][1])
+    assert "--help" not in by_path["okl init"][1]
+
+    # Cut `okl dedup`'s entry: its command line and the comment lines under it.
+    entry = re.compile(r"^okl dedup\b.*\n(?: +#.*\n)*", re.M)
+    assert len(entry.findall(living["docs/COMMANDS.md"])) == 1, "move this test's entry with the docs"
+    cut = {**living, "docs/COMMANDS.md": entry.sub("", living["docs/COMMANDS.md"])}
+    assert "`okl dedup` is in neither docs/COMMANDS.md nor README.md: add it to docs/COMMANDS.md, " \
+           "a command line and its aligned `#` comments" in _coverage_problems(cut, cli)
+
+    # Drop every mention of `okl review --workers`.
+    assert sum(text.count("--workers") for text in living.values()) == 1, "move this test's flag with the docs"
+    dropped = {name: text.replace("--workers", "--wrkrs") for name, text in living.items()}
+    assert _coverage_problems(dropped, cli) == [
+        "`okl review --workers` is in no living doc (README.md, docs/): document it where `okl review` "
+        "is documented (docs/COMMANDS.md, README.md)"]
+
+
 # Every place the docs say something is not yet measured or still open, and the open question it
 # waits on (#334). Docs kept saying "not yet measured" after the measurement had landed, and a
 # review caught it three times (the anatomy sheet on #333 had three). The REPORT result or
