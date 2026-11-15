@@ -30,7 +30,7 @@ session did 0.2 (§4bg). That is why the review is on by default.
 **But it reaches that result only when the right lesson is among the ones it checks.** Picking its
 own ten, end to end, it passed 0.2 of its sessions (§4az). Each piece of this plan answers one gap:
 
-1. **The ground truth under the picking results is unvalidated.** §4bc's "the pick holds 0.47 of
+1. **The ground truth under the picking results is unvalidated.** §4bc's "the pick holds 0.465 of
    the broken lessons", §4bd's "0 of 124 caught" and §4be's counts all score against a model's answer
    key. In the audit, a second model agreed with only 4 of the 12 pairs that key called broken
    (§4bh). Until a person labels them, nobody knows whether picking is as weak as those sections
