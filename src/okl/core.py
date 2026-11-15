@@ -1582,7 +1582,10 @@ REVIEW_STEPS = (
     "From the lessons below, pick the ten this change is most likely to break: the ones about something "
     "the code does. Any that govern a file it touched are listed first, and are read as well.",
     "Check each one on its own, in a fresh context: start a sub-agent for it, a session with none of this "
-    "conversation, one lesson each and one after another, since each may change code. Give it the lesson's "
+    "conversation, one lesson each and one after another, since each may change code. In Claude Code, run "
+    "each on Sonnet (the Agent tool's model: sonnet), the model the review was measured with (REPORT §4ay, "
+    "§4az): a sub-agent otherwise runs on the session's own model, which costs more on a larger one, and a "
+    "smaller one was never tested. Give it the lesson's "
     "full text (`okl show <id>`, the okl_get tool), the files this change touched, and one question: does "
     "this change break this lesson? If it does, fix that and run the tests that cover it; if it does not, "
     "or the lesson has no bearing on this change, change nothing for it. In a pilot on five past bugs, "

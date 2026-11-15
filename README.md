@@ -564,7 +564,7 @@ Your store and your tasks will differ.
 
 **Per session, the review after writing** (on by default since 0.17.0): in Claude Code, before the
 question below, the Stop hook asks the agent to check the code it wrote against the lessons, each lesson it picks in a
-sub-agent of its own. It is the largest cost per session. On five past bugs in this repository a
+sub-agent of its own, on Sonnet, the model it was measured with. It is the largest cost per session. On five past bugs in this repository a
 session with the review cost $0.73 API-priced on average and a median of 214 seconds, against $0.11
 and 160 seconds with no review, about 6.9 times the cost
 ([REPORT §4az](evals/REPORT.md), receipt `review-e2e-20261111-1543.json`).
