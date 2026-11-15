@@ -6,8 +6,10 @@ Part of okl's documentation; the [README](../README.md) is the short version. Th
 covering both) and, when it wires Claude Code, three hook scripts plus their registration. In a
 git repository it also installs a pre-push hook that runs the drift gate (`--no-git-hook`
 skips it). `--ci` installs `.github/workflows/okl-verify.yml`, which runs the gate on every
-PR, instead of the hook. A hook an earlier `init` installed stays: `--no-git-hook` only stops
-`init` installing it, and `okl init --uninstall` removes it.
+PR, instead of the hook, and `--no-ci` leaves it out; `init` records both choices in
+`.okl/config.json` (`"ci"` and `"git_hook"`), so a later run keeps them. A hook or workflow
+an earlier `init` installed stays: `--no-git-hook` and `--no-ci` only stop `init` installing them, and
+`okl init --uninstall` removes them.
 CI has no store of its own (the local one is gitignored), so give it one: once a lesson
 governs files, commit `okl-drift.json` (`okl verify` refreshes it; `okl export --drift`
 writes it; a snapshot of the rules drift reads, no lesson bodies), or set the
@@ -66,7 +68,12 @@ okl init --interests "python,security"    # drop records tagged for stacks you d
   inclusively — an org record passes when it is untagged or shares any one tag with your
   interests, so declaring `python` keeps out a record tagged only `dotnet`, but not one
   tagged `dotnet,security` when you also declared `security`. Only a record's
-  `applies_to` excludes by stack.
+  `applies_to` excludes by stack. `okl init --interests` keeps the list as `"interests"` in
+  `.okl/config.json`.
+- **Standing lessons** are named on every task briefing in the repo, one line each, whatever
+  the task says. `okl standing add` and `remove` choose them, at most ten, and keep them as
+  `"standing"` in `.okl/config.json`. A lesson the briefing already names is not repeated, and a
+  file briefing gets none. `OKL_STANDING=0` leaves them out.
 - **Scope records `repo:` rather than `org`** when a lesson is local. Org scope is a claim
   that every project in the organization should see it, and it costs every project's
   budget to be wrong about that.
@@ -82,11 +89,16 @@ hook off by name with `OKL_DISABLED_HOOKS=briefing` (the pre-task read),
 `OKL_DISABLED_HOOKS=encode` (the end-of-session question), `OKL_DISABLED_HOOKS=read` (the
 lessons briefed when the agent reads a file), `OKL_DISABLED_HOOKS=edit` (the lesson checks
 after an edit), or several, comma-separated. The edit hook costs one read of `.okl/config.json`
-an edit until you approve a check with `okl on-edit add`; after that, the approved checks' own
-run time, at most 30 seconds each and 50 an edit (`okl on-edit run --timeout` and `--budget`).
+an edit until you approve a check with `okl on-edit add`, which keeps each approval there under
+`"on_edit"`: the lesson's id and a hash of its command and expected output. After that, it costs
+the approved checks' own run time, at most 30 seconds each and 50 an edit
+(`okl on-edit run --timeout` and `--budget`).
 `okl on-edit add --quick` offers only the checks whose last passing run took 10 seconds or less
 (`--under N` to choose another limit, above 0 and up to 30). A check never timed costs one run of
-it to time, with `okl reverify --untimed`, which shows the commands and asks first.
+it to time, with `okl reverify --untimed`, which shows the commands and asks first. While no check
+is approved, `okl on-edit` and `okl init` count the quick ones, reading each lesson's check log once,
+on a local store only: about 17 ms on okl's own store, 48 ms on a made-up store of 1,000 lessons and
+231 ms on one of 5,000, growing with the number of lessons that carry a check.
 **Set `OKL_DISABLED_HOOKS=encode` for headless runs (`claude -p`, CI agents, scripts):**
 print mode emits only the final message, and a blocked stop makes the reply to "what did
 we learn?" that final message — the answer you asked for is then only in the transcript.
@@ -122,9 +134,11 @@ settings or workflow path that is a link, or sits under one, is refused and name
 
 The Stop hook asks the agent, before it finishes a session that changed files, to run
 `okl check --change` and check the code it wrote against the lessons
-([REPORT §4at](../evals/REPORT.md)); `okl init --no-review-after-writing` turns it off, and
-`OKL_REVIEW_AFTER_WRITING=0` (or `1`) decides for one session. The cost is the list: every
-lesson in scope, one line each, about 270 bytes (roughly 60 tokens) a lesson, so about 80 KB
+([REPORT §4at](../evals/REPORT.md)); `okl init --no-review-after-writing` turns it off and
+`okl init --review-after-writing` turns it back on (`init` records the choice as
+`"review_after_writing"` in `.okl/config.json`), and `OKL_REVIEW_AFTER_WRITING=0` (or `1`)
+decides for one session.
+The cost is the list: every lesson in scope, one line each, about 270 bytes (roughly 60 tokens) a lesson, so about 80 KB
 for 300 lessons, read once per session that changed something, plus the lessons the agent
 then opens with `okl show`. Nothing is cut, because in id order a cut would drop lessons at
 random. Where the agent's tool shows long output as a preview with the rest in a saved file,

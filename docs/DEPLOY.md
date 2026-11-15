@@ -123,6 +123,8 @@ okl connect https://okl.internal --token "$OKL_TOKEN"
 inside `.okl/` so that file is never committed. Prefer supplying the token through the
 `OKL_TOKEN` environment variable in CI and shared machines; the config file is a
 convenience for a developer laptop.
+`okl init --repo checkout-api --service https://okl.internal` writes the same URL in the init
+step; it takes no token, so the token still comes from `OKL_TOKEN` or `okl connect --token`.
 
 That is the whole client setup. From then on:
 

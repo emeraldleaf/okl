@@ -10,6 +10,9 @@ decision records, receipts, the CHANGELOG and the REPORT.
 
 A command the docs name as not built yet is listed in PLANNED with its issue; a placeholder
 (`okl <command>`, `okl ...`) names no command and is skipped.
+
+every_command() walks the same parser the other way, for tests/test_docs.py's coverage test
+(#455): every command and flag the CLI has must be named in a doc.
 """
 from __future__ import annotations
 
@@ -18,6 +21,7 @@ import re
 import shlex
 import subprocess
 import sys
+from collections.abc import Iterator
 from pathlib import Path
 
 if __name__ == "__main__":   # a crash is "did not run": exit 2, never 1 (ci/_ran.py)
@@ -91,6 +95,26 @@ def commands(code: str) -> list[list[str]]:
 
 def _subparsers(p: argparse.ArgumentParser) -> argparse._SubParsersAction | None:
     return next((a for a in p._actions if isinstance(a, argparse._SubParsersAction)), None)
+
+
+def every_command(parser: argparse.ArgumentParser | None = None,
+                  path: str = "okl") -> Iterator[tuple[str, bool, list[str]]]:
+    """Each command the CLI has, nested ones too, as (`okl <path>`, whether it runs on its own,
+    its long flags), for the docs' coverage of the CLI (#455): the other direction from
+    problems(). What help hides (argparse.SUPPRESS) is left out, and so is --help. A parser that
+    must be given a subcommand (`okl`, `okl intake`) does not run on its own; its flags still count."""
+    parser = parser or build_parser()
+    sub = _subparsers(parser)
+    flags = [o for a in parser._actions if a.help != argparse.SUPPRESS and not isinstance(a, argparse._HelpAction)
+             for o in a.option_strings if o.startswith("--")]
+    yield path, not (sub and sub.required), flags
+    if sub:
+        hidden = {c.dest for c in sub._choices_actions if c.help == argparse.SUPPRESS}
+        seen: set[int] = set()
+        for name, child in sub.choices.items():
+            if name not in hidden and id(child) not in seen:   # an alias is the same parser again
+                seen.add(id(child))
+                yield from every_command(child, f"{path} {name}")
 
 
 def problems(files: dict[str, str]) -> tuple[list[str], int]:
