@@ -1,0 +1,20 @@
+{
+ "section": "4al",
+ "step": "audit (double annotation, adjudicated)",
+ "at": "2026-11-14T19:37Z",
+ "adjudicated": 21,
+ "of": 21,
+ "agreements_sampled": 10,
+ "agreements_overturned": 2,
+ "disagreements_adjudicated": 11,
+ "judge_right_on_disagreements": 6,
+ "kappa_judge_vs_final": 0.865,
+ "pairs_scored": 120,
+ "undecided": [],
+ "bar": {
+  "agreements_overturned_max": 1,
+  "kappa": 0.6
+ },
+ "passed": false,
+ "status": "failed"
+}
