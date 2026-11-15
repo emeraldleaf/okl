@@ -806,3 +806,25 @@ def test_the_opt_in_claim_check_fails_on_a_bare_claim_and_a_stale_entry():
                                            "only if you name one."}, claims) == []
     assert _opt_in_claim_problems({"a.md": "Nothing here."}, claims) == [
         "no doc claims 'calls no generative model' any more: remove its entry"]
+
+
+def test_the_docs_state_on_edits_defaults_as_the_code_has_them():
+    """COSTS-AND-KNOBS, COMMANDS and GETTING-STARTED quote on-edit's defaults: the seconds a check gets
+    after an edit, the seconds one edit gets, the hook's registered timeout and --quick's limit. Each
+    quote is built here from the constants, so a default changed without its docs, or a doc changed
+    without its default, fails (#470). The CHANGELOG's released sections are history, not held to
+    later code."""
+    from okl.cli.on_edit import BUDGET, HOOK_TIMEOUT, QUICK, TIMEOUT
+    quotes = {
+        "docs/COSTS-AND-KNOBS.md": [f"at most {TIMEOUT} seconds each and {BUDGET} an edit",
+                                    f"last passing run took {QUICK} seconds or less",
+                                    f"above 0 and up to {TIMEOUT}"],
+        "docs/COMMANDS.md": [f"--timeout ({TIMEOUT} s) and one edit --budget ({BUDGET} s)"],
+        "docs/GETTING-STARTED.md": [f"last passing run took {QUICK} s or less",
+                                    f"each gets {TIMEOUT} seconds and one edit gets {BUDGET} in all, inside the "
+                                    f"{HOOK_TIMEOUT}-second timeout",
+                                    f"passed in {QUICK} seconds or less", f"above 0 and up to {TIMEOUT}"],
+    }
+    missing = [(doc, q) for doc, qs in quotes.items() for q in qs
+               if q not in " ".join((ROOT / doc).read_text().split())]
+    assert not missing, f"a doc no longer quotes on-edit's default as the code has it: {missing}"
