@@ -200,8 +200,9 @@ In Claude Code, okl also keeps a log of what that review did, so the default can
 sessions. At a later stop of the session, the Stop hook reads the session's transcript and its
 sub-agents' (under `~/.claude/projects`), silently and for no more than about five seconds, and writes
 one row about it to your store: whether the review was asked for and ran, which lessons each sub-agent
-checked, whether it edited anything and which files, the tests it ran, and the tokens and time it took,
-counted from the review's first command to the next stop or prompt of yours. No code, no command line
+checked, whether it edited anything in the repository and which files, the tests it ran, and the tokens
+and time it took, counted from the review's command to the next prompt you typed, or the stop after the
+last of its sub-agents has reported. No code, no command line
 and no text from the session is stored, only ids, paths, counts and model names. The store is your
 local file unless `OKL_DATABASE_URL` names a shared database, and then the row goes there.
 `okl recap --reviews` reads the rows back. An edit after a check means the review acted on that lesson,
