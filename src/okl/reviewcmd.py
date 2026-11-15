@@ -153,6 +153,10 @@ class _Splitter:
         elif c in "'\"":
             self.quote = c
             self.cur.append(c)
+        elif c == "#" and (not self.cur or self.cur[-1] in " \t"):
+            # A comment runs to the end of the line, and a `;` or `|` in it cuts nothing.
+            end = self.command.find("\n", self.i)
+            self.i = (len(self.command) if end < 0 else end) - 1
         elif c == "\\":
             self.cur.append(c)
             self.escape()
@@ -304,10 +308,23 @@ def _okl_args(words: list[str]) -> list[str] | None:
     cmd = words[0]
     if cmd == "okl" or cmd.endswith("/okl") or _OKL_VAR.fullmatch(cmd):
         return words[1:]
-    if _PYTHON.fullmatch(cmd.rsplit("/", 1)[-1]):
-        for i in range(1, len(words) - 1):
-            if words[i] == "-m" and words[i + 1] == "okl":
-                return words[i + 2:]
+    if _PYTHON.fullmatch(cmd.rsplit("/", 1)[-1]) and (m := _python_module(words)) is not None and words[m] == "okl":
+        return words[m + 1:]
+    return None
+
+
+def _python_module(words: list[str]) -> int | None:
+    """Where the module `python -m` runs is in `words`, read among the interpreter's own options only.
+    They end at `-c`, at `--` and at the script, the first word that is no option: in `python tool.py
+    -m okl` the `-m okl` is the script's argument, and okl does not run."""
+    i = 1
+    while i < len(words):
+        w = words[i]
+        if w == "-m":
+            return i + 1 if i + 1 < len(words) else None
+        if w in ("-c", "--") or not w.startswith("-"):
+            return None
+        i += 2 if w in ("-W", "-X") else 1
     return None
 
 
@@ -383,7 +400,7 @@ def _runner(words: list[str]) -> tuple[str, int] | None:
     `python -m`. A word further along (`python tool.py --runner pytest`) is an argument."""
     if (found := _runner_at(words, 0)) is not None or not _PYTHON.fullmatch(words[0].rsplit("/", 1)[-1]):
         return found
-    module = next((i + 1 for i in range(1, len(words) - 1) if words[i] == "-m"), None)
+    module = _python_module(words)
     return _runner_at(words, module) if module is not None else None
 
 

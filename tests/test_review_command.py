@@ -328,7 +328,7 @@ def test_the_report_says_acted_on_not_caught_and_claude_code_only(repo, capsys):
     assert "acted on that lesson, not that it caught a break" in out
     assert "**Asked for:** 3 sessions. It ran in 2 (67%) and was skipped in 1 (1 more ran without being asked)." in out
     assert "**Reviews run:** 3, 2 against sessions that changed files (1 where" in out
-    assert "**Lessons checked per review:** median 2, mean 1.3, most 2; 1 reviews started no sub-agent." in out
+    assert "**Lessons checked per review:** median 2, mean 1.3, most 2; 1 review started no sub-agent." in out
     assert "**Checks:** 4 (a sub-agent given a lesson); 1 could not be read, and of the 3 that could, 1 (33%)" in out
     # the work is the cost; the reads of the context, far larger and far cheaper, are said apart
     assert ("Tokens: median 2,000, mean 2,000, largest 3,000 (cache reads, which a call makes of the whole "
@@ -442,3 +442,21 @@ def test_an_alarm_set_before_the_deadline_gets_its_remaining_time_back():
     with lessons._deadline(5):
         pass
     assert signal.alarm(0) == 0                                 # and with none before, none is left after
+
+
+def test_the_review_report_says_one_session_not_one_sessions():
+    """Counts of one read in the singular (found running the review log end to end before 0.18.0)."""
+    from okl import recap
+    one = {"repo": "r", "sessions": 1, "asked": 1, "asked_and_ran": 1, "asked_not_run": 0, "ran_unasked": 0,
+           "ran": 1, "ran_on_changed_files": 1, "files_changed_unread": 0,
+           "lessons_per_review": {"median": 1, "mean": 1, "max": 1}, "reviews_without_subagent": 1,
+           "checks": 2, "checks_read": 2, "checks_unread": 0, "checks_acted_on": 1, "subagents_without_lesson": 1,
+           "tokens": None, "cache_read_tokens": None, "duration_s": None, "failed_launches": 0,
+           "lessons": [{"id": "a", "title": "t", "checked": 1, "read": 1, "edited": 1}], "lessons_total": 1}
+    out = recap.render_reviews(one)
+    for said in ("· 1 session logged", "**Asked for:** 1 session.", "1 review started no sub-agent",
+                 "(50%) was followed by an edit", "1 sub-agent the review started named no lesson and is not",
+                 "(1 lesson checked)"):
+        assert said in out, said
+    for wrong in ("1 sessions", "1 reviews", "1 sub-agents", "1 lessons"):
+        assert wrong not in out, wrong

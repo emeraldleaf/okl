@@ -408,9 +408,14 @@ def _stat(label: str, s: dict[str, float] | None, unit: str) -> str:
             f"largest {s['max']:,.0f}{unit}.")
 
 
+def _n(count: int, word: str) -> str:
+    """A count and its noun, singular for one: "1 session", "2 sessions"."""
+    return f"{count} {word}" + ("" if count == 1 else "s")
+
+
 def render_reviews(r: dict[str, Any]) -> str:
     """The review log as Markdown, for a terminal or a pull request."""
-    out = [f"## okl review log · {r['repo']} · {r['sessions']} sessions logged", "",
+    out = [f"## okl review log · {r['repo']} · {_n(r['sessions'], 'session')} logged", "",
            "The review after writing, read from the transcripts of Claude Code sessions. Other agents "
            "leave no transcript okl can read, so this covers Claude Code sessions only. A session "
            "that neither asked for the review nor ran one is not logged."]
@@ -422,20 +427,22 @@ def render_reviews(r: dict[str, Any]) -> str:
     unread = (f" ({r['files_changed_unread']} where the review's own output could not be read)"
               if r["files_changed_unread"] else "")
     out += ["",
-            f"**Asked for:** {r['asked']} sessions. It ran in {r['asked_and_ran']} "
+            f"**Asked for:** {_n(r['asked'], 'session')}. It ran in {r['asked_and_ran']} "
             f"({_pct(r['asked_and_ran'], r['asked'])}) and was skipped in {r['asked_not_run']}{more}.",
             f"**Reviews run:** {r['ran']}, {r['ran_on_changed_files']} against sessions that changed "
             f"files{unread}."]
     spread = r["lessons_per_review"]
     if spread:
         out.append(f"**Lessons checked per review:** median {spread['median']:g}, mean {spread['mean']:g}, "
-                   f"most {spread['max']:g}; {r['reviews_without_subagent']} reviews started no sub-agent.")
+                   f"most {spread['max']:g}; {_n(r['reviews_without_subagent'], 'review')} started no sub-agent.")
     out.append(f"**Checks:** {r['checks']} (a sub-agent given a lesson); {r['checks_unread']} could not be "
                f"read, and of the {r['checks_read']} that could, {r['checks_acted_on']} "
-               f"({_pct(r['checks_acted_on'], r['checks_read'])}) were followed by an edit.")
+               f"({_pct(r['checks_acted_on'], r['checks_read'])}) "
+               f"{'was' if r['checks_acted_on'] == 1 else 'were'} followed by an edit.")
     if r["subagents_without_lesson"]:
-        out.append(f"{r['subagents_without_lesson']} sub-agents the review started named no lesson and are "
-                   "not counted as checks.")
+        n = r["subagents_without_lesson"]
+        out.append(f"{_n(n, 'sub-agent')} the review started named no lesson and "
+                   f"{'is' if n == 1 else 'are'} not counted as checks.")
     tokens = _stat("Tokens", r["tokens"], "")
     if r["cache_read_tokens"]:
         cache = r["cache_read_tokens"]
@@ -446,7 +453,7 @@ def render_reviews(r: dict[str, Any]) -> str:
         n = r["failed_launches"]
         out.append(f"{n} Agent {'call' if n == 1 else 'calls'} came back as an error and started no sub-agent.")
     if r["lessons"]:
-        out += ["", f"**Per lesson**, most checked first ({r['lessons_total']} lessons checked):"]
+        out += ["", f"**Per lesson**, most checked first ({_n(r['lessons_total'], 'lesson')} checked):"]
         out += [f"- [{x['id']}] {x['title']}: checked {x['checked']}×, {x['edited']} of the {x['read']} "
                 "read followed by an edit" for x in r["lessons"]]
         if r["lessons_total"] > len(r["lessons"]):
