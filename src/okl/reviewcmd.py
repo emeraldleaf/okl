@@ -12,7 +12,7 @@ The log keeps no command-line text. A test run is stored as a fixed runner name 
 named that exist in the repository, never the text that matched: a command line can carry a
 password (`mvn -Ddb.password=...`), a token, or a test name that is somebody's address.
 
-Imports nothing from okl.
+Imports nothing from okl; the import contract in pyproject.toml holds it below the store.
 """
 from __future__ import annotations
 

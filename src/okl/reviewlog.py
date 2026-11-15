@@ -28,7 +28,8 @@ work (input, output, cache creation) and cache reads are kept apart, in the row 
 Claude Code 2.1.302 also writes `api-request-blob` lines that repeat an assistant message's tool
 calls after their results. Only assistant and user lines are read for calls, and a call counts once.
 
-Imports nothing from okl (reviewcmd reads command lines), so the parser has no way to reach the store.
+Imports only reviewcmd from okl. The import contract in pyproject.toml holds both below the store, so
+the parser has no way to reach it.
 """
 from __future__ import annotations
 
