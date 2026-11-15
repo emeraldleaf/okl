@@ -157,3 +157,38 @@ def test_the_manifest_holds_every_task_with_the_right_lesson_listed():
     assert set(rows) == {t["id"] for t in graded.tasks()}
     assert all(r["right_listed_at"] for r in rows.values())
     assert all(len(r["review_sha256"]) == 64 and len(r["lessons_sha256"]) == 64 for r in rows.values())
+
+
+def _section() -> str:
+    report = (REPO / "evals" / "REPORT.md").read_text()
+    start = report.index("## 4bj.")
+    return report[start:report.index("\n## ", start + 1)]
+
+
+def test_the_section_states_the_reviews_as_the_manifest_records_them():
+    """The pre-registration's counts are the manifest's: lessons listed, right lessons written later, those
+    governing a changed file, the lesson left out, and the changes the tasks come from."""
+    from statistics import median
+    text, rows = _section(), json.loads(graded.MANIFEST.read_text())
+    broken = {t["id"] for t in graded.tasks() if not t.get("needs_nothing")}
+    mine = [r for r in rows["tasks"] if r["id"] in broken]
+    listed = [r["lessons_listed"] for r in mine]
+    assert f"list {min(listed)} to {max(listed)} lessons (median {median(listed):g})" in text
+    assert f"which is so for {sum(r['right_written_later'] for r in mine)} of the 43" in text
+    governs = [r["id"] for r in mine if r["right_governs_a_changed_file"]]
+    assert f"in {len(governs)} of the 43 tasks\n({', '.join(governs)})" in text
+    assert f"this checkout's store ({rows['store']['records']} records)" in text
+    dropped = {i for r in rows["tasks"] for i in r["dropped_citing_the_change"]}
+    assert dropped == {"remote-timeout-not-a-deadline"} and "`remote-timeout-not-a-deadline`" in text
+    changes = len({t["frozen"] for t in graded.tasks() if t["id"] in broken})
+    assert f"§4bi's 29, from {changes} distinct changes" in text and f"43 tasks come from {changes} changes" in text
+
+
+def test_the_section_quotes_its_check_receipt():
+    """The grader check it cites exists, read every grader as checked, and ran on committed code."""
+    text = _section()
+    name = "review-graded-check-20261115-2310.json"
+    receipt = json.loads((REPO / "evals" / "results" / name).read_text())
+    assert name in text and f"all {receipt['tasks']} read as checked" in text
+    assert receipt["read_as_checked"] == receipt["tasks"] == 48 and receipt["wrong"] == []
+    assert not str(receipt["okl_commit"]).endswith("+dirty")

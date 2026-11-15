@@ -1,0 +1,454 @@
+{
+ "section": "4bj",
+ "step": "check",
+ "at": "2026-11-15T23:10Z",
+ "inputs": {
+  "tasks_4bg": "3426484f394e931f",
+  "graders_4bg": "7b572ccee9c11ed3",
+  "tasks_457": "21dcb47f8f3c6640",
+  "graders_457": "0e12f402938887ff",
+  "manifest": "584e9ffc38815af3",
+  "words": "941c159ee0452c0a"
+ },
+ "tasks": 48,
+ "read_as_checked": 48,
+ "wrong": [],
+ "script_sha256": "a7037b335dc9c0f49003382ddfbd7d28aea20ee79e6031223c04db02985fb142",
+ "rows": [
+  {
+   "id": "t01",
+   "set": "4bg",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "2 failed in 0.36s"
+  },
+  {
+   "id": "t02",
+   "set": "4bg",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "2 failed, 1 passed in 0.41s"
+  },
+  {
+   "id": "t03",
+   "set": "4bg",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "3 failed, 1 passed in 0.60s"
+  },
+  {
+   "id": "t04",
+   "set": "4bg",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "1 failed, 1 passed in 0.91s"
+  },
+  {
+   "id": "t05",
+   "set": "4bg",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "2 failed, 1 passed in 0.12s"
+  },
+  {
+   "id": "t06",
+   "set": "4bg",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "2 failed, 1 passed in 0.09s"
+  },
+  {
+   "id": "t07",
+   "set": "4bg",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "2 failed in 0.57s"
+  },
+  {
+   "id": "t08",
+   "set": "4bg",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "1 failed in 0.14s"
+  },
+  {
+   "id": "t09",
+   "set": "4bg",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "2 failed in 0.17s"
+  },
+  {
+   "id": "t10",
+   "set": "4bg",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "1 failed, 6 passed in 0.14s"
+  },
+  {
+   "id": "t11",
+   "set": "4bg",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "1 failed in 0.24s"
+  },
+  {
+   "id": "t12",
+   "set": "4bg",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "1 failed in 0.97s"
+  },
+  {
+   "id": "t13",
+   "set": "4bg",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "2 failed in 0.19s"
+  },
+  {
+   "id": "t14",
+   "set": "4bg",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "3 failed, 1 passed in 1.00s"
+  },
+  {
+   "id": "t15",
+   "set": "4bg",
+   "control": true,
+   "ok": true,
+   "frozen_passed": true,
+   "end_passed": null,
+   "frozen_summary": "1 passed in 0.33s"
+  },
+  {
+   "id": "t16",
+   "set": "4bg",
+   "control": true,
+   "ok": true,
+   "frozen_passed": true,
+   "end_passed": null,
+   "frozen_summary": "1 passed in 0.08s"
+  },
+  {
+   "id": "t17",
+   "set": "4bg",
+   "control": true,
+   "ok": true,
+   "frozen_passed": true,
+   "end_passed": null,
+   "frozen_summary": "2 passed in 0.09s"
+  },
+  {
+   "id": "t18",
+   "set": "4bg",
+   "control": true,
+   "ok": true,
+   "frozen_passed": true,
+   "end_passed": null,
+   "frozen_summary": "1 passed in 1.03s"
+  },
+  {
+   "id": "t19",
+   "set": "457",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "6 failed in 0.88s"
+  },
+  {
+   "id": "t20",
+   "set": "457",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "6 failed in 0.24s"
+  },
+  {
+   "id": "t21",
+   "set": "457",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "4 failed, 2 passed in 1.15s"
+  },
+  {
+   "id": "t22",
+   "set": "457",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "1 failed in 0.25s"
+  },
+  {
+   "id": "t23",
+   "set": "457",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "7 failed in 0.59s"
+  },
+  {
+   "id": "t24",
+   "set": "457",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "3 failed, 3 passed in 0.30s"
+  },
+  {
+   "id": "t25",
+   "set": "457",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "2 failed in 3.06s"
+  },
+  {
+   "id": "t26",
+   "set": "457",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "4 failed, 2 passed in 0.26s"
+  },
+  {
+   "id": "t27",
+   "set": "457",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "2 failed in 0.25s"
+  },
+  {
+   "id": "t28",
+   "set": "457",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "3 failed in 0.27s"
+  },
+  {
+   "id": "t29",
+   "set": "457",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "2 failed, 2 passed in 1.57s"
+  },
+  {
+   "id": "t30",
+   "set": "457",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "2 failed in 1.33s"
+  },
+  {
+   "id": "t31",
+   "set": "457",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "2 failed, 1 passed in 0.41s"
+  },
+  {
+   "id": "t32",
+   "set": "457",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "2 failed, 1 passed in 0.60s"
+  },
+  {
+   "id": "t33",
+   "set": "457",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "2 failed, 1 passed in 0.51s"
+  },
+  {
+   "id": "t34",
+   "set": "457",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "2 failed, 2 passed in 0.79s"
+  },
+  {
+   "id": "t35",
+   "set": "457",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "2 failed, 1 passed in 1.73s"
+  },
+  {
+   "id": "t36",
+   "set": "457",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "4 failed in 0.21s"
+  },
+  {
+   "id": "t37",
+   "set": "457",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "2 failed in 0.19s"
+  },
+  {
+   "id": "t38",
+   "set": "457",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "2 failed, 1 passed in 0.39s"
+  },
+  {
+   "id": "t39",
+   "set": "457",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "1 failed, 2 passed in 3.86s"
+  },
+  {
+   "id": "t40",
+   "set": "457",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "7 failed in 6.97s"
+  },
+  {
+   "id": "t41",
+   "set": "457",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "2 failed, 3 passed in 1.56s"
+  },
+  {
+   "id": "t42",
+   "set": "457",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "1 failed in 0.82s"
+  },
+  {
+   "id": "t43",
+   "set": "457",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "2 failed, 3 passed in 5.05s"
+  },
+  {
+   "id": "t44",
+   "set": "457",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "4 failed, 4 passed in 0.87s"
+  },
+  {
+   "id": "t45",
+   "set": "457",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "3 failed in 0.46s"
+  },
+  {
+   "id": "t46",
+   "set": "457",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "3 failed, 2 passed in 2.92s"
+  },
+  {
+   "id": "t47",
+   "set": "457",
+   "control": false,
+   "ok": true,
+   "frozen_passed": false,
+   "end_passed": true,
+   "frozen_summary": "1 failed in 0.58s"
+  },
+  {
+   "id": "t48",
+   "set": "457",
+   "control": true,
+   "ok": true,
+   "frozen_passed": true,
+   "end_passed": null,
+   "frozen_summary": "3 passed in 0.31s"
+  }
+ ],
+ "okl_commit_at_start": "c5de372",
+ "okl_commit": "c5de372",
+ "model_env": "sandbox.clean_env (#446)"
+}
