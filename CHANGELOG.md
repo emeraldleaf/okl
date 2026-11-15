@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.18.0
 
 - **Quick lesson checks are easy to find and approve** (#467). A lesson in a list rarely changes the
   code, while an approved check runs after every edit whether anything reads it or not; but nothing
