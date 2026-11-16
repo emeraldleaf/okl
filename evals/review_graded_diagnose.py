@@ -157,6 +157,9 @@ def diagnose(write: bool) -> int:
                            "of_receipt": "review-graded-20261116-0321.json", "inputs": g.inputs(),
                            "verdicts_sha256": hashlib.sha256(VERDICTS.read_bytes()).hexdigest(),
                            "classifier": verdicts["classifier"],
+                           # No model is called here; without this the guard would stamp sandbox.clean_env, set by
+                           # an import, not by any call (#479).
+                           "model_env": "none: no model is called",
                            "script_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
                            "summary": summary, "sessions": out})
     print(json.dumps(summary, indent=1))
