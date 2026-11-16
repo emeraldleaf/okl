@@ -1,6 +1,6 @@
 {
  "section": "4bk",
- "at": "2026-11-16T05:06Z",
+ "at": "2026-11-16T05:19Z",
  "of_receipt": "review-graded-20261116-0321.json",
  "inputs": {
   "tasks_4bg": "3426484f394e931f",
@@ -10,9 +10,9 @@
   "manifest": "584e9ffc38815af3",
   "words": "941c159ee0452c0a"
  },
- "verdicts_sha256": "9c581bccc0a1acb98b7d34ad637d28d3082bdb46de0f1f2b19912063696b6571",
+ "verdicts_sha256": "60b46e2e45a32180831fa9bd124a72aff7b4eae7a2ce486bf9094f43375349e7",
  "fit_sha256": "aceeb48ae8f78c763cac1e308e2e18673cc83729003de062e8252e901752d8df",
- "classifier": "an agent (Claude), reading each final message after the run was scored, so not blind to whether the session passed; every message stated its verdict at its start. Six named a break in part and are classed broken (t04 review0 and review1, t09 review0, t32 review1, t46 review0 and review1); three found the code sound and added a test, and are classed not_broken (t03 review0 and review1, t09 review1). The architecture review of #480 moved t09 review1 to not_broken under this rule",
+ "classifier": "an agent (Claude), reading each final message after the run was scored, so not blind to whether the session passed; every message stated its verdict at its start. Six named a break in part and are classed broken (t04 review0 and review1, t09 review0, t32 review1, t46 review0 and review1); three found the code sound and added a test, and are classed not_broken (t03 review0 and review1, t09 review1). t09 review1 was moved to not_broken under this rule after the architecture review of #480 flagged it",
  "model_env": "none: no model is called",
  "script_sha256": "c6db4c7af6879cd91d4e11b0008875bc4177550a563d50736e5437243fe115d1",
  "summary": {
@@ -1587,6 +1587,6 @@
    "broken_in_part": false
   }
  ],
- "okl_commit_at_start": "1abe47d",
- "okl_commit": "1abe47d"
+ "okl_commit_at_start": "539af6a",
+ "okl_commit": "539af6a"
 }

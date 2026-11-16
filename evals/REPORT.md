@@ -7378,10 +7378,10 @@ to the outcome, each in a committed file the receipt hashes:
   break* when it found the code keeps the lesson, even where it added a test the lesson asks for.
 - how plainly each right lesson fits the defect its task file states (`evals/review-graded-4bj-fit.json`).
 
-Receipt `review-graded-diagnosis-20261116-0506.json`. The reader matches the right lesson as the run's
+Receipt `review-graded-diagnosis-20261116-0519.json`. The reader matches the right lesson as the run's
 `right_checked` does, on the sub-agents' full inputs, and joins the sub-agent it was handed to on the Agent
 call's id. It refuses any session whose transcript disagrees with its row. None did. An architecture review
-re-derived every session independently and found the same facts.
+re-derived every session independently, with scripts not committed here, and found the same facts.
 
 | where the session went | sessions | passed |
 |---|---|---|
@@ -7393,15 +7393,15 @@ re-derived every session independently and found the same facts.
 
 Of the 63 failed sessions, 42 never gave the right lesson to a sub-agent. 16 gave it and were told the change
 does not break it. 5 were told it does, and their fix did not pass the grader; one of those five (t45
-review1) fixed a break other than the task's defect.
+review1) fixed a break other than the task's defect, as the verdicts file records.
 
 What it shows:
 1. **Picking loses the most.** On 20 of the 43 tasks the right lesson reached no sub-agent in either session; on
    9 it did in one, and on 14 in both.
    - **In 7 of the 49 sessions that never handed it on, the right lesson's line was in no tool result the
      session got back.** All 7 failed. Reading the list came back cut to Claude Code's preview: output past
-     about 30,000 characters is saved to a file, and the session sees its first 2 KB. The list's first line
-     says to read all of it, and where the tool showed only part, to read the rest where it was saved. These
+     about 30,000 characters is saved to a file, and the session sees its first 2 KB. The list's opening
+     lines say to read all of it, and where the tool showed only part, to read the rest where it was saved. These
      sessions read only part of the rest. Across the 86 sessions, a read of the list came back cut in 23, and 4
      of those passed, against 19 of the other 63.
    - **The other 31 sessions that started sub-agents had the line in front of them.** The 36 sessions that
@@ -7421,9 +7421,9 @@ What it shows:
      - t30: the errors the code handled, not the one it did not.
      - t33: the lesson's two examples, not the fallback the harness did not stop on.
      - t36: the rebuild's success path, not its failure.
-   - **On t28 the fit is arguable.** One sub-agent reached the right path: `record` accepted a lesson replacing
-     itself, which `okl retire` refuses. It dismissed it because that refusal was documented only in
-     `retire()`'s docstring.
+   - **On t28 the fit is arguable.** One sub-agent reached the path. It saw `retire()`'s refusals, a lesson
+     replacing itself among them, and that `_supersede` skips them. It named only the rule that a replacement
+     be live, and dismissed the break because it found no claim that `retire()`'s rules hold on every path.
    - **On t14 the lesson is about an older CLI and the defect about one that cannot start,** a loose fit.
 3. **Fixing loses little.** Told the change breaks the lesson, 13 of 18 sessions passed. The six that named a
    break in part all passed. The twelve that named it outright passed 7.
@@ -7431,7 +7431,7 @@ What it shows:
    file themselves and 4 of those passed. Of the 6 that did not, 1 passed, and 2 of those 6 never saw its line.
 
 What it suggests, not tested:
-- **The list's delivery.** In real use, `okl check --change` prints the same list, with the same first line. A
+- **The list's delivery.** In real use, `okl check --change` prints the same list, with the same opening lines. A
   list that arrives whole, or one the agent is told to page through in steps, is cheap to test on the same tasks.
 - **Picking is the larger loss, and none of the three ways of picking tried so far cleared its pre-registered
   bar (§4ba to §4bc).** In §4bc a pool of about 30 lessons held 0.586 of the broken lessons, against the pick's

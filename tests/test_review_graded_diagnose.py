@@ -12,7 +12,7 @@ from pathlib import Path
 from statistics import median
 
 REPO = Path(__file__).resolve().parent.parent
-RECEIPT = "review-graded-diagnosis-20261116-0506.json"
+RECEIPT = "review-graded-diagnosis-20261116-0519.json"
 
 
 def _load(name: str):
@@ -102,6 +102,16 @@ def test_the_summary_is_what_the_sessions_say():
     assert sm["dismissed_in_both_sessions"] == sorted(t for t, v in dismissed.items() if v == 2)
     assert sm["list_cut"] == {"sessions": sum(s["list_cut"] for s in ss),
                               "passed": sum(s["list_cut"] and s["passed"] for s in ss)}
+    assert sm["never_saw_line"] == {
+        "with_sub_agents": sum(not s["saw_right_line"] and s["sub_agents"] > 0 for s in ss),
+        "no_sub_agent": sum(not s["saw_right_line"] and s["sub_agents"] == 0 for s in ss),
+        "handed": sum(not s["saw_right_line"] and s["right_handed"] for s in ss)}
+    # "All 7 failed. Reading the list came back cut": every never-handed session that missed the line was cut.
+    assert all(s["list_cut"] for s in ss if not s["right_handed"] and not s["saw_right_line"])
+    fit = json.loads((REPO / "evals" / "review-graded-4bj-fit.json").read_text())
+    assert sm["fit"] == {k: dict(Counter(c for c, _ in fit[k].values())) for k in ("never_handed", "dismissed_both_failed")}
+    verdicts = json.loads((REPO / "evals" / "review-graded-4bj-verdicts.json").read_text())
+    assert {f"{s['id']} review{s['rep']}" for s in ss if s["broken_in_part"]} == set(verdicts["broken_in_part"])
 
 
 def test_the_section_quotes_the_receipt():
@@ -123,7 +133,9 @@ def test_the_section_quotes_the_receipt():
             f"{lost['handed_called_broken']} were told it does, and their fix did not pass the grader; one of those "
             f"{['zero', 'one', 'two', 'three', 'four', 'five', 'six'][lost['handed_called_broken']]} (t45 review1)") in text
     t45 = [s for s in ss if s["id"] == "t45" and s["rep"] == 1][0]
-    assert t45["verdict"] == "broken" and not t45["passed"]
+    verdicts = json.loads((REPO / "evals" / "review-graded-4bj-verdicts.json").read_text())
+    assert t45["verdict"] == "broken" and not t45["passed"] and list(verdicts["off_target_fix"]) == ["t45 review1"]
+    assert abs(lost["handed_called_not_broken"] / failed - 0.25) < 0.05 and "Checking loses about a quarter" in text
     hi = sm["tasks_handed_in"]
     assert (f"On {hi['0']} of the 43 tasks the right lesson reached no sub-agent in either session; on {hi['1']} it "
             f"did in one, and on {hi['2']} in both") in text
@@ -177,6 +189,7 @@ def test_the_section_quotes_the_receipt():
     pick = json.loads((REPO / "evals" / "results" / "pick-fix-20261112-0425.json").read_text())
     assert f"held {pick['recall']['pool']} of the broken lessons, against the pick's {pick['recall']['pick']}" in text
     assert round(pick["mean_size"]["pool"]) == 30 and "a pool of about 30 lessons" in text
+    assert round(pick["mean_size"]["pool"] / pick["mean_size"]["pick"]) == 3 and "at three times the size" in text
     changes = len({tasks[t]["frozen"] for t in {s["id"] for s in ss}})
     assert f"43 tasks from {changes} changes" in text
 
