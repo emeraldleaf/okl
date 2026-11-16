@@ -230,6 +230,11 @@ def _from_rows(r: dict) -> dict:
                                         "out_of_sample": graded.contrast(rows, [i for i in broken if i not in ins])[
                                             "as_run"]})),
         "out_rates": {a: round(mean(per[a][i] for i in broken if i not in ins), 3) for a in graded.ARMS},
+        "in_rates": {a: round(mean(per[a][i] for i in ins), 3) for a in graded.ARMS},
+        "by_set": {st: graded.contrast(rows, [t["id"] for t in ts if t["set"] == st and t["id"] in broken])["as_run"][
+            "mean"] for st in graded.SETS},
+        "none_passed": sorted({x["id"] for x in of("none", broken) if x["passed"]}),
+        "secs": {a: median(x["seconds"] for x in rows if x["arm"] == a) for a in graded.ARMS},
         "pass_rate": {a: round(mean(per[a].values()), 3) for a in graded.ARMS},
         "passes": {a: sum(x["passed"] for x in of(a, broken)) for a in graded.ARMS},
         "sessions": {a: len(of(a, broken)) for a in graded.ARMS},
@@ -285,7 +290,7 @@ def test_the_result_states_the_rows_figures():
     for arm in graded.ARMS:
         row = (f"| {arm} | {got['pass_rate'][arm]} | {got['passes'][arm]} of {got['sessions'][arm]} | "
                f"{got['tasks_passed'][arm]} | {got['edited'][arm]} of {got['sessions'][arm]} | "
-               f"${got['usd'][arm]:.3f} | ")
+               f"${got['usd'][arm]:.3f} | {round(got['secs'][arm])} s |")
         assert row in text, arm
     c = got["contrast"]["against"]
     assert (f"the review passed {c['mean']} more often than no review, with a 95% interval of {c['ci95'][0]} to "
@@ -312,6 +317,22 @@ def test_the_result_states_the_rows_figures():
     assert f"cost {got['cost_ratio']:.1f} times one without" in text
     assert f"(${got['usd']['review']:.4f} against ${got['usd']['none']:.4f} a session, from the rows)" in text
     assert f"took {got['time_ratio']:.1f} times as long" in text and f"${r['api_priced_usd']} in all" in text
+    assert f"the review passed {got['in_rates']['review']:g} against {got['in_rates']['none']:g} (gain" in text
+    assert f"By set, the gain is {got['by_set']['4bg']} on §4bg's 14 tasks and {got['by_set']['457']} on §4bi's 29" \
+        in text
+    assert got["none_passed"] == ["t43"] and "passed only on t43, in both sessions, where the review passed too" in text
+    assert f"at about {got['cost_ratio']:.1f} times a session's cost" in text
+
+
+def test_the_note_under_4az_quotes_the_rows():
+    """§4az's dated note carries §4bj's gain and its out-of-sample gain."""
+    got = _from_rows(_result())
+    c, out = got["contrast"]["against"], got["split"]["out_of_sample"]
+    report = (REPO / "evals" / "REPORT.md").read_text()
+    start = report.index("## 4az.")
+    note = " ".join(report[start:report.index("\n## ", start + 1)].split())
+    assert (f"a gain of {c['mean']} (95% interval {c['ci95'][0]:.2f} to {c['ci95'][1]:.2f}), just under this "
+            f"section's bar of 0.25, and {out['mean']} on the 31 tasks") in note
 
 
 DOCS_QUOTING = ("README.md", "docs/COSTS-AND-KNOBS.md", "docs/GETTING-STARTED.md", "docs/EVALUATION.md",
@@ -345,3 +366,15 @@ def test_the_docs_quote_the_measured_gain_as_the_rows_give_it():
     for doc in ("docs/GETTING-STARTED.md", "docs/decisions/2026-11-15-review-after-writing-on-by-default.md"):
         flat = " ".join((REPO / doc).read_text().split())
         assert f"about {got['cost_ratio']:.1f} times" in flat and f"{out['mean']}" in flat, doc
+        assert f"passed {got['pass_rate']['review']} of its sessions against {got['pass_rate']['none']}" in flat, doc
+    flat = lambda doc: " ".join((REPO / doc).read_text().split())  # noqa: E731
+    record = flat("docs/decisions/2026-11-15-review-after-writing-on-by-default.md")
+    assert f"reached a sub-agent in {got['handed'][0]} of {got['sessions']['review']}" in record
+    assert f"cost ${got['usd']['review']:.2f} against ${got['usd']['none']:.2f}" in record
+    plan = flat("docs/decisions/2026-11-15-making-the-review-earn-its-default.md")
+    assert f"{got['pass_rate']['review']} against {got['pass_rate']['none']} with no review" in plan
+    assert f"and {out['mean']} where the lesson came before the change" in plan
+    assert f"and {out['mean']} where the lesson came before the change" in flat("docs/EVALUATION.md")
+    readme = flat("README.md")
+    assert (f"a median of {round(got['secs']['review'])} seconds, against ${got['usd']['none']:.2f} and "
+            f"{round(got['secs']['none'])} seconds with no review") in readme

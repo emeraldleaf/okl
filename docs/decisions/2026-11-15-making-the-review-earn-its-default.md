@@ -19,7 +19,8 @@ Four pieces of work, in this order:
 | 4 | Grow the graded replay set to about 40 tasks | built for #457: 43 broken tasks, checked against blind alternatives, with power at that size (REPORT §4bi); the review against none ran on them: a gain of 0.244, just under the bar of 0.25 with an interval that includes it, and 0.145 where the lesson came before the change (REPORT §4bj) |
 
 Parked: whether a cheaper model can check one lesson as well as Sonnet (#456). That is a cost
-question only, worth testing once piece 4 makes a test decisive.
+question only, worth testing once piece 4 makes a test decisive; piece 4's test has now run (REPORT
+§4bj), so it can be tested on the same set.
 
 ## Why
 
